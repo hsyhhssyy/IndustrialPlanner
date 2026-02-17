@@ -38,6 +38,7 @@
 | 重叠停机结算禁用 | `stage1-prd-refined.md` / FR-SIM-03 | AC-03B |
 | 开始仿真/退出仿真与1x/2x/4x速率控制 | `stage1-prd-refined.md` / FR-SIM-04 | AC-02B |
 | 开始仿真/退出仿真模式切换 | `stage1-prd-refined.md` / FR-SIM-04 | AC-02B |
+| 退出仿真清空全部运行态内容 | `stage1-prd-refined.md` / FR-SIM-04 | AC-02B, AC-05 |
 | 仿真模式锁编辑 | `stage1-prd-refined.md` / FR-SIM-04 | AC-02C |
 | 物品取货口边缘有效摆放 | `stage1-prd-refined.md` / FR-BUILD-01 | AC-08 |
 | 取货口方向字段为可选实现项 | `stage1-data-dictionary.md` / 2.8A PickupPortConfig | AC-08 |
