@@ -15,6 +15,7 @@ import { fullRuntimeReset } from "../core/simulation"
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import {
+  BUILDING_PROTOTYPE_MAP,
   BUILDING_PROTOTYPES,
   DEFAULT_EXTERNAL_INVENTORY,
   DEFAULT_GRID_SIZE,
@@ -22,15 +23,18 @@ import {
   type BeltCell,
   type BeltEdge,
   type BeltSegment,
+  type BeltTransitItem,
   type BuildingPrototypeId,
   type GridPoint,
   type GridSize,
   type ItemId,
   type LogisticsMode,
   type MachineInstance,
+  type MachinePort,
   type MachineRuntimeState,
   type MachineRuntimeStatus,
   type PortDirection,
+  type PickupPortConfig,
   type PlotSnapshot,
   type SimulationSpeed,
 } from "../types/domain"
@@ -47,12 +51,15 @@ type AppState = {
   machineProgress: Record<string, number>
   machineInternal: Record<string, number>
   beltInTransit: Record<string, number>
+  beltTransitItems: BeltTransitItem[]
+  beltEmitCooldown: Record<string, number>
   machineRuntime: Record<string, MachineRuntimeState>
   tickCount: number
   productionWindow: ItemWindow
   consumptionWindow: ItemWindow
 
   machines: MachineInstance[]
+  pickupPortConfigs: Record<string, PickupPortConfig>
   selectedMachineId: string | null
   activePrototypeId: BuildingPrototypeId
   interactionMode: "place" | "idle" | "delete" | "logistics"
@@ -67,6 +74,7 @@ type AppState = {
   beltDragBaseCells: BeltCell[]
   beltDragBaseSegments: BeltSegment[]
   beltDeleteMode: "by_cell" | "by_connected_component"
+  selectedBeltSegmentKey: string | null
   toastMessage: string | null
 
   plotSaves: Partial<Record<GridSize, PlotSnapshot>>
@@ -87,6 +95,7 @@ type AppState = {
   moveMachine: (machineId: string, x: number, y: number) => void
   rotateSelectedMachine: () => void
   deleteSelectedMachine: () => void
+  setPickupPortSelectedItem: (machineId: string, itemId: ItemId | null) => void
 
   setLogisticsMode: (mode: LogisticsMode) => void
   startBeltDrag: (x: number, y: number) => void
@@ -94,6 +103,7 @@ type AppState = {
   finishBeltDrag: () => void
   cancelBeltDraw: () => void
   setBeltDeleteMode: (mode: "by_cell" | "by_connected_component") => void
+  selectBeltSegment: (segmentKey: string | null) => void
   deleteBeltAt: (x: number, y: number) => void
   clearToast: () => void
 }
@@ -105,6 +115,7 @@ const emptyPlot = (): PlotSnapshot => ({
   beltCells: [],
   beltEdges: [],
   beltSegments: [],
+  pickupPortConfigs: {},
 })
 
 const cloneSnapshot = (snapshot: PlotSnapshot): PlotSnapshot => ({
@@ -121,6 +132,14 @@ const cloneSnapshot = (snapshot: PlotSnapshot): PlotSnapshot => ({
     from: { ...segment.from },
     to: { ...segment.to },
   })),
+  pickupPortConfigs: Object.fromEntries(
+    Object.entries(snapshot.pickupPortConfigs).map(([machineId, config]) => [
+      machineId,
+      {
+        ...config,
+      },
+    ]),
+  ),
 })
 
 function emptyWindow(): ItemWindow {
@@ -503,18 +522,6 @@ function isExitDirectionValid(direction: PortDirection, from: GridPoint, to: Gri
   return stepDirection(from, to) === direction
 }
 
-function createCellsFromEdges(edges: BeltEdge[], machines: MachineInstance[]): BeltCell[] {
-  const allPoints = edges.flatMap((edge) => edge.path)
-  const unique = new Map<string, GridPoint>()
-  allPoints.forEach((point) => {
-    if (!getPortAtPoint(machines, point)) {
-      unique.set(pointKey(point), point)
-    }
-  })
-
-  return createBeltCells(Array.from(unique.values()))
-}
-
 function createCellsFromSegments(segments: BeltSegment[], machines: MachineInstance[]): BeltCell[] {
   const unique = new Map<string, GridPoint>()
 
@@ -662,20 +669,6 @@ function deleteBeltLineByRules(segments: BeltSegment[], start: GridPoint): BeltS
   return segments.filter((segment) => !removedIds.has(segment.id))
 }
 
-function filterEdgesByRemainingSegments(edges: BeltEdge[], segments: BeltSegment[]): BeltEdge[] {
-  const keys = new Set(segments.map((segment) => getSegmentKey(segment.from, segment.to)))
-  return edges.filter((edge) => {
-    for (let index = 1; index < edge.path.length; index += 1) {
-      const from = edge.path[index - 1]
-      const to = edge.path[index]
-      if (!keys.has(getSegmentKey(from, to))) {
-        return false
-      }
-    }
-    return true
-  })
-}
-
 function hasMachineBodyAtPoint(machines: MachineInstance[], point: GridPoint): boolean {
   return machines.some(
     (machine) =>
@@ -700,6 +693,8 @@ function resetRuntimeOnly(state: AppState) {
     machineProgress: {},
     machineInternal: reset.runtimeStock.machineInternal,
     beltInTransit: reset.runtimeStock.beltInTransit,
+    beltTransitItems: [],
+    beltEmitCooldown: {},
     machineRuntime: {},
     tickCount: 0,
     productionWindow: emptyWindow(),
@@ -720,6 +715,174 @@ function needsPower(machine: MachineInstance): boolean {
   return machine.prototypeId === "crusher_3x3" || machine.prototypeId === "storage_box_3x3"
 }
 
+const BELT_TICKS_PER_CELL = 20
+
+function machineInputKey(machineId: string, itemId: ItemId): string {
+  return `${machineId}:in:${itemId}`
+}
+
+function machineOutputKey(machineId: string, itemId: ItemId): string {
+  return `${machineId}:out:${itemId}`
+}
+
+function getMachineInputStoredTotal(machineId: string, machineInternal: Record<string, number>): number {
+  const prefix = `${machineId}:in:`
+  return Object.entries(machineInternal).reduce((sum, [key, value]) => {
+    if (!key.startsWith(prefix)) {
+      return sum
+    }
+    return sum + value
+  }, 0)
+}
+
+function getMachineOutputStoredTotal(machineId: string, machineInternal: Record<string, number>): number {
+  const prefix = `${machineId}:out:`
+  return Object.entries(machineInternal).reduce((sum, [key, value]) => {
+    if (!key.startsWith(prefix)) {
+      return sum
+    }
+    return sum + value
+  }, 0)
+}
+
+function buildOutgoingMap(segments: BeltSegment[]): Map<string, GridPoint[]> {
+  const outgoing = new Map<string, GridPoint[]>()
+  segments.forEach((segment) => {
+    const key = pointKey(segment.from)
+    const current = outgoing.get(key) ?? []
+    if (!current.some((point) => point.x === segment.to.x && point.y === segment.to.y)) {
+      outgoing.set(key, [...current, segment.to])
+    }
+  })
+
+  return outgoing
+}
+
+function buildPortMaps(machines: MachineInstance[]) {
+  const outPorts = machines.flatMap((machine) =>
+    getMachinePorts(machine).filter((port) => port.type === "out"),
+  )
+  const inPorts = machines.flatMap((machine) =>
+    getMachinePorts(machine).filter((port) => port.type === "in"),
+  )
+
+  const inPortByPoint = new Map<string, (typeof inPorts)[number]>()
+  inPorts.forEach((port) => {
+    inPortByPoint.set(`${port.x},${port.y}`, port)
+  })
+
+  return {
+    outPorts,
+    inPortByPoint,
+  }
+}
+
+function pickNextPoint(candidates: GridPoint[]): GridPoint | null {
+  if (candidates.length === 0) {
+    return null
+  }
+
+  const sorted = [...candidates].sort((a, b) => {
+    if (a.y !== b.y) {
+      return a.y - b.y
+    }
+    return a.x - b.x
+  })
+
+  return sorted[0] ?? null
+}
+
+function buildPathFromOutputPort(
+  start: GridPoint,
+  outgoing: Map<string, GridPoint[]>,
+  inPortByPoint: Map<string, MachinePort>,
+): GridPoint[] {
+  const path: GridPoint[] = [{ ...start }]
+  const visited = new Set<string>()
+  visited.add(pointKey(start))
+
+  let current = start
+  for (let step = 0; step < 600; step += 1) {
+    const nextCandidates = outgoing.get(pointKey(current)) ?? []
+    const next = pickNextPoint(nextCandidates)
+    if (!next) {
+      break
+    }
+
+    path.push({ ...next })
+    const nextKey = pointKey(next)
+    if (inPortByPoint.has(nextKey)) {
+      break
+    }
+
+    if (visited.has(nextKey)) {
+      break
+    }
+
+    visited.add(nextKey)
+    current = next
+  }
+
+  return path
+}
+
+function rebuildBeltEdgesFromSegments(
+  machines: MachineInstance[],
+  segments: BeltSegment[],
+): BeltEdge[] {
+  const outgoing = buildOutgoingMap(segments)
+  const { outPorts, inPortByPoint } = buildPortMaps(machines)
+
+  const nextEdges: BeltEdge[] = []
+  outPorts.forEach((outPort) => {
+    const path = buildPathFromOutputPort(
+      { x: outPort.x, y: outPort.y },
+      outgoing,
+      inPortByPoint,
+    )
+
+    if (path.length < 2) {
+      return
+    }
+
+    const end = path[path.length - 1]
+    if (!end) {
+      return
+    }
+
+    const endInPort = inPortByPoint.get(pointKey(end))
+    if (!endInPort) {
+      return
+    }
+
+    const duplicate = nextEdges.some(
+      (edge) =>
+        edge.from.machineId === outPort.machineId &&
+        edge.from.portId === outPort.portId &&
+        edge.to.machineId === endInPort.machineId &&
+        edge.to.portId === endInPort.portId,
+    )
+    if (duplicate) {
+      return
+    }
+
+    nextEdges.push({
+      id: `e_auto_${outPort.machineId}_${outPort.portId}_${endInPort.machineId}_${endInPort.portId}`,
+      from: {
+        machineId: outPort.machineId,
+        portId: outPort.portId,
+      },
+      to: {
+        machineId: endInPort.machineId,
+        portId: endInPort.portId,
+      },
+      path,
+    })
+  })
+
+  return nextEdges
+}
+
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
@@ -732,12 +895,15 @@ export const useAppStore = create<AppState>()(
       machineProgress: initial.machineProgress,
       machineInternal: initial.runtimeStock.machineInternal,
       beltInTransit: initial.runtimeStock.beltInTransit,
+      beltTransitItems: [],
+      beltEmitCooldown: {},
       machineRuntime: {},
       tickCount: 0,
       productionWindow: emptyWindow(),
       consumptionWindow: emptyWindow(),
 
       machines: [],
+      pickupPortConfigs: {},
       selectedMachineId: null,
       activePrototypeId: BUILDING_PROTOTYPES[0].id,
       interactionMode: "idle",
@@ -752,13 +918,51 @@ export const useAppStore = create<AppState>()(
       beltDragBaseCells: [],
       beltDragBaseSegments: [],
       beltDeleteMode: "by_cell",
+      selectedBeltSegmentKey: null,
       toastMessage: null,
 
       plotSaves: {
         60: emptyPlot(),
       },
 
-      startSimulation: () => set({ mode: "simulate", toastMessage: "仿真已开始（10Hz）" }),
+      startSimulation: () =>
+        set((state) => {
+          const pickupPorts = state.machines.filter(
+            (machine) => machine.prototypeId === "pickup_port_3x1",
+          )
+          const hasOreSelectedPickup = pickupPorts.some(
+            (pickup) => state.pickupPortConfigs[pickup.id]?.selectedItemId === "originium_ore",
+          )
+
+          const hasAnyPowerPole = state.machines.some(
+            (machine) => machine.prototypeId === "power_pole_2x2",
+          )
+          const hasMachineNeedsPower = state.machines.some(
+            (machine) => machine.prototypeId === "crusher_3x3" || machine.prototypeId === "storage_box_3x3",
+          )
+
+          let toastMessage = "仿真已开始（10Hz）"
+          if (!hasOreSelectedPickup) {
+            toastMessage = "仿真已开始：取货口未选择“源石矿”，产线不会出料"
+          } else if (hasMachineNeedsPower && !hasAnyPowerPole) {
+            toastMessage = "仿真已开始：缺少供电桩，需供电后机器才能运行"
+          }
+
+          const rebuiltEdges = rebuildBeltEdgesFromSegments(state.machines, state.beltSegments)
+
+          return {
+            mode: "simulate",
+            beltEdges: rebuiltEdges,
+            interactionMode: "idle",
+            logisticsMode: "none",
+            beltDrawStart: null,
+            beltDragLast: null,
+            beltDragTrace: [],
+            beltDragBaseCells: [],
+            beltDragBaseSegments: [],
+            toastMessage,
+          }
+        }),
       stopSimulationAndResetAll: () =>
         set((state) => ({
           mode: "edit",
@@ -785,6 +989,7 @@ export const useAppStore = create<AppState>()(
             beltCells: state.beltCells,
             beltEdges: state.beltEdges,
             beltSegments: state.beltSegments,
+            pickupPortConfigs: state.pickupPortConfigs,
           }
 
           const targetSnapshot = state.plotSaves[size] ?? emptyPlot()
@@ -800,6 +1005,7 @@ export const useAppStore = create<AppState>()(
             beltCells: cloneSnapshot(targetSnapshot).beltCells,
             beltEdges: cloneSnapshot(targetSnapshot).beltEdges,
             beltSegments: cloneSnapshot(targetSnapshot).beltSegments,
+            pickupPortConfigs: cloneSnapshot(targetSnapshot).pickupPortConfigs,
             selectedMachineId: null,
             beltDrawStart: null,
             beltDragLast: null,
@@ -824,11 +1030,184 @@ export const useAppStore = create<AppState>()(
           let consumedOre = 0
           const runtime: Record<string, MachineRuntimeState> = {}
 
-          const incomingByMachine = new Map<string, BeltEdge[]>()
-          state.beltEdges.forEach((edge) => {
-            const list = incomingByMachine.get(edge.to.machineId) ?? []
-            incomingByMachine.set(edge.to.machineId, [...list, edge])
+          const nextMachineInternal: Record<string, number> = { ...state.machineInternal }
+          const outgoing = buildOutgoingMap(state.beltSegments)
+          const { outPorts, inPortByPoint } = buildPortMaps(state.machines)
+          const rebuiltEdges = rebuildBeltEdgesFromSegments(state.machines, state.beltSegments)
+
+          const beltCellKeys = new Set(state.beltCells.map((cell) => `${cell.x},${cell.y}`))
+          const occupiedCellKeys = new Set<string>()
+
+          const isCellPoint = (point: GridPoint): boolean => beltCellKeys.has(`${point.x},${point.y}`)
+
+          const currentCellKeyOfItem = (item: BeltTransitItem): string | null => {
+            if (item.path.length === 0) {
+              return null
+            }
+            const currentPoint = item.path[Math.min(item.stepIndex, item.path.length - 1)]
+            if (!currentPoint || !isCellPoint(currentPoint)) {
+              return null
+            }
+            return pointKey(currentPoint)
+          }
+
+          state.beltTransitItems.forEach((item) => {
+            const cellKey = currentCellKeyOfItem(item)
+            if (cellKey) {
+              occupiedCellKeys.add(cellKey)
+            }
           })
+
+          const cooldownAfterDecay: Record<string, number> = {}
+          Object.entries(state.beltEmitCooldown).forEach(([portKey, cooldown]) => {
+            cooldownAfterDecay[portKey] = Math.max(0, cooldown - 1)
+          })
+
+          const movedItems: BeltTransitItem[] = []
+          const itemsToUpdate = [...state.beltTransitItems]
+
+          const removeCurrentCellOccupancy = (item: BeltTransitItem) => {
+            const currentPoint = item.path[Math.min(item.stepIndex, item.path.length - 1)]
+            if (currentPoint && isCellPoint(currentPoint)) {
+              occupiedCellKeys.delete(pointKey(currentPoint))
+            }
+          }
+
+          itemsToUpdate.forEach((item) => {
+            if (item.path.length < 2) {
+              return
+            }
+
+            const isAtPathEnd = item.stepIndex >= item.path.length - 1
+            if (isAtPathEnd) {
+              movedItems.push(item)
+              return
+            }
+
+            const nextTick = item.stepTick + 1
+            if (nextTick < BELT_TICKS_PER_CELL) {
+              movedItems.push({
+                ...item,
+                stepTick: nextTick,
+              })
+              return
+            }
+
+            const nextIndex = Math.min(item.stepIndex + 1, item.path.length - 1)
+            const nextPoint = item.path[nextIndex]
+            const currentPoint = item.path[item.stepIndex]
+            if (!nextPoint || !currentPoint) {
+              movedItems.push(item)
+              return
+            }
+
+            const nextIsCell = isCellPoint(nextPoint)
+            const nextCellKey = pointKey(nextPoint)
+
+            if (nextIsCell && occupiedCellKeys.has(nextCellKey)) {
+              movedItems.push(item)
+              return
+            }
+
+            removeCurrentCellOccupancy(item)
+            if (nextIsCell) {
+              occupiedCellKeys.add(nextCellKey)
+            }
+
+            const arrivedInPort = inPortByPoint.has(nextCellKey)
+            if (arrivedInPort) {
+              const inPort = inPortByPoint.get(nextCellKey)
+              if (inPort) {
+                const targetMachine = state.machines.find((entry) => entry.id === inPort.machineId)
+                if (targetMachine?.prototypeId === "crusher_3x3") {
+                  const inputCapacity =
+                    BUILDING_PROTOTYPE_MAP[targetMachine.prototypeId].inputStorageCapacity ?? 0
+                  const inputStored = getMachineInputStoredTotal(targetMachine.id, nextMachineInternal)
+                  if (inputStored >= inputCapacity) {
+                    movedItems.push(item)
+                    return
+                  }
+
+                  const arriveKey = machineInputKey(inPort.machineId, item.itemId)
+                  nextMachineInternal[arriveKey] = (nextMachineInternal[arriveKey] ?? 0) + 1
+                }
+              }
+              return
+            }
+
+            movedItems.push({
+              ...item,
+              stepIndex: nextIndex,
+              stepTick: 0,
+            })
+          })
+
+          const emittedItems: BeltTransitItem[] = []
+
+          outPorts.forEach((outPort) => {
+            const outKey = `${outPort.machineId}:${outPort.portId}`
+            const cooldown = cooldownAfterDecay[outKey] ?? 0
+            if (cooldown > 0) {
+              return
+            }
+
+            const machine = state.machines.find((entry) => entry.id === outPort.machineId)
+            if (!machine) {
+              return
+            }
+
+            let itemId: ItemId | null = null
+            let sourceKey: string | null = null
+            if (machine.prototypeId === "pickup_port_3x1") {
+              itemId = state.pickupPortConfigs[machine.id]?.selectedItemId ?? null
+            } else if (machine.prototypeId === "crusher_3x3") {
+              itemId = "originium_powder"
+              sourceKey = machineOutputKey(machine.id, itemId)
+            }
+
+            if (!itemId) {
+              return
+            }
+
+            const path = buildPathFromOutputPort(
+              { x: outPort.x, y: outPort.y },
+              outgoing,
+              inPortByPoint,
+            )
+            if (path.length < 2) {
+              return
+            }
+
+            const firstCell = path[1]
+            if (!firstCell || !isCellPoint(firstCell)) {
+              return
+            }
+
+            const firstCellKey = pointKey(firstCell)
+            if (occupiedCellKeys.has(firstCellKey)) {
+              return
+            }
+
+            if (sourceKey) {
+              const sourceStock = nextMachineInternal[sourceKey] ?? 0
+              if (sourceStock <= 0) {
+                return
+              }
+              nextMachineInternal[sourceKey] = sourceStock - 1
+            }
+
+            occupiedCellKeys.add(firstCellKey)
+            emittedItems.push({
+              id: `ti_${outPort.machineId}_${outPort.portId}_${state.tickCount}_${Math.floor(Math.random() * 100000)}`,
+              itemId,
+              path,
+              stepIndex: 1,
+              stepTick: 0,
+            })
+            cooldownAfterDecay[outKey] = BELT_TICKS_PER_CELL
+          })
+
+          const finalTransitItems = [...movedItems, ...emittedItems]
 
           const nextMachines = state.machines.map((machine) => {
             let status: MachineRuntimeStatus = "running"
@@ -860,21 +1239,44 @@ export const useAppStore = create<AppState>()(
               return machine
             }
 
-            let nextProgress = machine.progressTick + 1
-            if (nextProgress >= 20) {
-              const incomingEdges = incomingByMachine.get(machine.id) ?? []
-              const hasOreInput = incomingEdges.some((edge) => {
-                const fromMachine = state.machines.find((candidate) => candidate.id === edge.from.machineId)
-                return fromMachine?.prototypeId === "pickup_port_3x1"
-              })
+            const outputCapacity = BUILDING_PROTOTYPE_MAP[machine.prototypeId].outputStorageCapacity ?? 50
 
-              if (!hasOreInput) {
+            const oreInKey = machineInputKey(machine.id, "originium_ore")
+            const powderOutKey = machineOutputKey(machine.id, "originium_powder")
+
+            const inputStored = getMachineInputStoredTotal(machine.id, nextMachineInternal)
+            const outputStored = getMachineOutputStoredTotal(machine.id, nextMachineInternal)
+
+            let nextProgress = machine.progressTick
+
+            if (nextProgress > 0) {
+              nextProgress += 1
+
+              if (nextProgress >= 20) {
+                if (outputStored >= outputCapacity) {
+                  nextProgress = 19
+                } else {
+                  producedPowder += 1
+                  nextMachineInternal[powderOutKey] = (nextMachineInternal[powderOutKey] ?? 0) + 1
+                  nextProgress = 0
+                }
+              }
+            } else {
+              if (inputStored <= 0) {
                 status = "starved"
                 missingInputs = ["originium_ore"]
+              } else if (outputStored >= outputCapacity) {
+                status = "running"
               } else {
-                consumedOre += 1
-                producedPowder += 1
-                nextProgress -= 20
+                const oreStock = nextMachineInternal[oreInKey] ?? 0
+                if (oreStock > 0) {
+                  nextMachineInternal[oreInKey] = oreStock - 1
+                  consumedOre += 1
+                  nextProgress = 1
+                } else {
+                  status = "starved"
+                  missingInputs = ["originium_ore"]
+                }
               }
             }
 
@@ -909,6 +1311,14 @@ export const useAppStore = create<AppState>()(
             machines: nextMachines,
             machineRuntime: runtime,
             machineProgress,
+            machineInternal: nextMachineInternal,
+            beltEdges: rebuiltEdges,
+            beltTransitItems: finalTransitItems,
+            beltEmitCooldown: cooldownAfterDecay,
+            beltInTransit: {
+              originium_ore: finalTransitItems.filter((item) => item.itemId === "originium_ore").length,
+              originium_powder: finalTransitItems.filter((item) => item.itemId === "originium_powder").length,
+            },
             externalInventory: nextExternal,
             productionWindow: nextProdWindowPowder,
             consumptionWindow: nextConsWindowPowder,
@@ -930,6 +1340,7 @@ export const useAppStore = create<AppState>()(
           logisticsMode: mode === "logistics" ? state.logisticsMode : "none",
           beltDrawStart: null,
           selectedMachineId: mode === "place" ? null : state.selectedMachineId,
+          selectedBeltSegmentKey: mode === "idle" ? state.selectedBeltSegmentKey : null,
           beltDragBaseCells: [],
           beltDragBaseSegments: [],
         })),
@@ -946,6 +1357,17 @@ export const useAppStore = create<AppState>()(
           }
 
           const nextMachine = createMachine(state.activePrototypeId, x, y)
+          const nextPickupPortConfigs =
+            nextMachine.prototypeId === "pickup_port_3x1"
+              ? {
+                  ...state.pickupPortConfigs,
+                  [nextMachine.id]: {
+                    machineId: nextMachine.id,
+                    selectedItemId: null,
+                  },
+                }
+              : state.pickupPortConfigs
+
           const nextMachines = recalculatePlacementStates(
             [...state.machines, nextMachine],
             state.selectedGridSize,
@@ -953,6 +1375,7 @@ export const useAppStore = create<AppState>()(
 
           return {
             machines: nextMachines,
+            pickupPortConfigs: nextPickupPortConfigs,
             selectedMachineId: nextMachine.id,
             toastMessage: null,
             plotSaves: {
@@ -962,6 +1385,7 @@ export const useAppStore = create<AppState>()(
                 beltCells: state.beltCells,
                 beltEdges: state.beltEdges,
                 beltSegments: state.beltSegments,
+                pickupPortConfigs: nextPickupPortConfigs,
               },
             },
           }
@@ -976,15 +1400,19 @@ export const useAppStore = create<AppState>()(
             state.machines.filter((machine) => machine.id !== machineId),
             state.selectedGridSize,
           )
-          const nextEdges = state.beltEdges.filter(
-            (edge) => edge.from.machineId !== machineId && edge.to.machineId !== machineId,
-          )
+          const nextPickupPortConfigs = Object.fromEntries(
+            Object.entries(state.pickupPortConfigs).filter(([id]) => id !== machineId),
+          ) as Record<string, PickupPortConfig>
+          const nextEdges = rebuildBeltEdgesFromSegments(nextMachines, state.beltSegments)
 
           return {
             machines: nextMachines,
+            pickupPortConfigs: nextPickupPortConfigs,
             beltEdges: nextEdges,
             beltCells: state.beltCells,
             beltSegments: state.beltSegments,
+            beltTransitItems: [],
+            beltEmitCooldown: {},
             selectedMachineId: state.selectedMachineId === machineId ? null : state.selectedMachineId,
             toastMessage: null,
             plotSaves: {
@@ -994,6 +1422,7 @@ export const useAppStore = create<AppState>()(
                 beltCells: state.beltCells,
                 beltEdges: nextEdges,
                 beltSegments: state.beltSegments,
+                pickupPortConfigs: nextPickupPortConfigs,
               },
             },
           }
@@ -1006,9 +1435,12 @@ export const useAppStore = create<AppState>()(
 
           return {
             machines: [],
+            pickupPortConfigs: {},
             beltCells: state.beltCells,
             beltEdges: [],
             beltSegments: state.beltSegments,
+            beltTransitItems: [],
+            beltEmitCooldown: {},
             selectedMachineId: null,
             toastMessage: "已删除所有建筑（传送带已保留）",
             plotSaves: {
@@ -1018,6 +1450,7 @@ export const useAppStore = create<AppState>()(
                 beltCells: state.beltCells,
                 beltEdges: [],
                 beltSegments: state.beltSegments,
+                pickupPortConfigs: {},
               },
             },
           }
@@ -1058,27 +1491,25 @@ export const useAppStore = create<AppState>()(
               !oldPortKeys.has(`${segment.to.x},${segment.to.y}`),
           )
 
-          const nextEdges = filterEdgesByRemainingSegments(
-            state.beltEdges.filter(
-              (edge) => edge.from.machineId !== machineId && edge.to.machineId !== machineId,
-            ),
-            detachedSegments,
-          )
           const nextCells = createCellsFromSegments(detachedSegments, nextMachines)
+          const rebuiltEdges = rebuildBeltEdgesFromSegments(nextMachines, detachedSegments)
 
           return {
             machines: nextMachines,
             beltSegments: detachedSegments,
-            beltEdges: nextEdges,
+            beltEdges: rebuiltEdges,
             beltCells: nextCells,
+            beltTransitItems: [],
+            beltEmitCooldown: {},
             toastMessage: null,
             plotSaves: {
               ...state.plotSaves,
               [state.selectedGridSize]: {
                 machines: nextMachines,
                 beltCells: nextCells,
-                beltEdges: nextEdges,
+                beltEdges: rebuiltEdges,
                 beltSegments: detachedSegments,
+                pickupPortConfigs: state.pickupPortConfigs,
               },
             },
           }
@@ -1104,6 +1535,7 @@ export const useAppStore = create<AppState>()(
                 beltCells: state.beltCells,
                 beltEdges: state.beltEdges,
                 beltSegments: state.beltSegments,
+                pickupPortConfigs: state.pickupPortConfigs,
               },
             },
           }
@@ -1119,15 +1551,19 @@ export const useAppStore = create<AppState>()(
             state.machines.filter((machine) => machine.id !== machineId),
             state.selectedGridSize,
           )
-          const nextEdges = state.beltEdges.filter(
-            (edge) => edge.from.machineId !== machineId && edge.to.machineId !== machineId,
-          )
+          const nextPickupPortConfigs = Object.fromEntries(
+            Object.entries(state.pickupPortConfigs).filter(([id]) => id !== machineId),
+          ) as Record<string, PickupPortConfig>
+          const nextEdges = rebuildBeltEdgesFromSegments(nextMachines, state.beltSegments)
 
           return {
             machines: nextMachines,
+            pickupPortConfigs: nextPickupPortConfigs,
             beltEdges: nextEdges,
             beltCells: state.beltCells,
             beltSegments: state.beltSegments,
+            beltTransitItems: [],
+            beltEmitCooldown: {},
             selectedMachineId: null,
             toastMessage: null,
             plotSaves: {
@@ -1137,6 +1573,49 @@ export const useAppStore = create<AppState>()(
                 beltCells: state.beltCells,
                 beltEdges: nextEdges,
                 beltSegments: state.beltSegments,
+                pickupPortConfigs: nextPickupPortConfigs,
+              },
+            },
+          }
+        }),
+
+      setPickupPortSelectedItem: (machineId, itemId) =>
+        set((state) => {
+          if (state.mode !== "edit") {
+            return {
+              toastMessage: "仿真模式下禁止修改取货口出货物品",
+            }
+          }
+
+          const machine = state.machines.find((entry) => entry.id === machineId)
+          if (!machine || machine.prototypeId !== "pickup_port_3x1") {
+            return state
+          }
+
+          const current = state.pickupPortConfigs[machineId]
+          if (current?.selectedItemId === itemId) {
+            return state
+          }
+
+          const nextPickupPortConfigs: Record<string, PickupPortConfig> = {
+            ...state.pickupPortConfigs,
+            [machineId]: {
+              machineId,
+              selectedItemId: itemId,
+            },
+          }
+
+          return {
+            pickupPortConfigs: nextPickupPortConfigs,
+            toastMessage: itemId ? `取货口已选择：${itemId}` : "取货口已清空选择",
+            plotSaves: {
+              ...state.plotSaves,
+              [state.selectedGridSize]: {
+                machines: state.machines,
+                beltCells: state.beltCells,
+                beltEdges: state.beltEdges,
+                beltSegments: state.beltSegments,
+                pickupPortConfigs: nextPickupPortConfigs,
               },
             },
           }
@@ -1355,6 +1834,7 @@ export const useAppStore = create<AppState>()(
                 beltCells: nextBeltCells,
                 beltEdges: state.beltEdges,
                 beltSegments: nextSegments,
+                pickupPortConfigs: state.pickupPortConfigs,
               },
             },
           }
@@ -1409,18 +1889,23 @@ export const useAppStore = create<AppState>()(
             }
           }
 
-          const nextEdge: BeltEdge = {
-            id: `e_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
-            from: { machineId: startPort.machineId, portId: startPort.portId },
-            to: { machineId: endPort.machineId, portId: endPort.portId },
-            path: trace,
-          }
-          const nextEdges = [...state.beltEdges, nextEdge]
+          const nextEdges = rebuildBeltEdgesFromSegments(state.machines, state.beltSegments)
 
           return {
             beltEdges: nextEdges,
+            beltTransitItems: [],
+            beltEmitCooldown: {},
             ...resetDragState,
-            toastMessage: `连接已创建，共 ${trace.length} 格`,
+            toastMessage:
+              nextEdges.some(
+                (edge) =>
+                  edge.from.machineId === startPort.machineId &&
+                  edge.from.portId === startPort.portId &&
+                  edge.to.machineId === endPort.machineId &&
+                  edge.to.portId === endPort.portId,
+              )
+                ? `连接已创建，共 ${trace.length} 格`
+                : "已完成拖拽铺设（未形成 out -> in 连接）",
             plotSaves: {
               ...state.plotSaves,
               [state.selectedGridSize]: {
@@ -1428,6 +1913,7 @@ export const useAppStore = create<AppState>()(
                 beltCells: state.beltCells,
                 beltEdges: nextEdges,
                 beltSegments: state.beltSegments,
+                pickupPortConfigs: state.pickupPortConfigs,
               },
             },
           }
@@ -1442,6 +1928,11 @@ export const useAppStore = create<AppState>()(
           toastMessage: "已取消传送带绘制",
         }),
       setBeltDeleteMode: (mode) => set({ beltDeleteMode: mode }),
+      selectBeltSegment: (segmentKey) =>
+        set((state) => ({
+          selectedBeltSegmentKey: segmentKey,
+          selectedMachineId: segmentKey ? null : state.selectedMachineId,
+        })),
       deleteBeltAt: (x, y) =>
         set((state) => {
           if (state.mode !== "edit" || state.interactionMode !== "delete") {
@@ -1466,7 +1957,7 @@ export const useAppStore = create<AppState>()(
             }
 
             nextSegments = remainingSegments
-            nextEdges = filterEdgesByRemainingSegments(state.beltEdges, remainingSegments)
+            nextEdges = rebuildBeltEdgesFromSegments(state.machines, remainingSegments)
             finalBelts = createCellsFromSegments(remainingSegments, state.machines)
           } else {
             if (nextBelts.length === state.beltCells.length) {
@@ -1476,11 +1967,6 @@ export const useAppStore = create<AppState>()(
             }
 
             const nextCellKeys = new Set(nextBelts.map((cell) => `${cell.x},${cell.y}`))
-            nextEdges = state.beltEdges.filter((edge) =>
-              edge.path.every(
-                (point) => getPortAtPoint(state.machines, point) || nextCellKeys.has(`${point.x},${point.y}`),
-              ),
-            )
             nextSegments = state.beltSegments.filter(
               (segment) =>
                 (getPortAtPoint(state.machines, segment.from) ||
@@ -1488,6 +1974,7 @@ export const useAppStore = create<AppState>()(
                 (getPortAtPoint(state.machines, segment.to) ||
                   nextCellKeys.has(`${segment.to.x},${segment.to.y}`)),
             )
+            nextEdges = rebuildBeltEdgesFromSegments(state.machines, nextSegments)
             finalBelts = nextBelts
           }
 
@@ -1495,6 +1982,8 @@ export const useAppStore = create<AppState>()(
             beltCells: finalBelts,
             beltEdges: nextEdges,
             beltSegments: nextSegments,
+            beltTransitItems: [],
+            beltEmitCooldown: {},
             toastMessage:
               state.beltDeleteMode === "by_cell"
                 ? "已按格删除传送带"
@@ -1506,6 +1995,7 @@ export const useAppStore = create<AppState>()(
                 beltCells: finalBelts,
                 beltEdges: nextEdges,
                 beltSegments: nextSegments,
+                pickupPortConfigs: state.pickupPortConfigs,
               },
             },
           }
@@ -1529,6 +2019,7 @@ export const useAppStore = create<AppState>()(
           mode: "edit",
           speed: 1,
           machines: recalculatePlacementStates(snapshot.machines, selectedGridSize),
+          pickupPortConfigs: snapshot.pickupPortConfigs ?? {},
           beltCells: snapshot.beltCells,
           beltEdges: snapshot.beltEdges,
           beltSegments:
@@ -1538,6 +2029,7 @@ export const useAppStore = create<AppState>()(
                 ? deriveSegmentsFromEdges(snapshot.beltEdges)
                 : deriveSegmentsFromCells(snapshot.beltCells),
           selectedMachineId: null,
+          selectedBeltSegmentKey: null,
           interactionMode: "idle",
           logisticsMode: "none",
           beltDrawStart: null,
@@ -1550,6 +2042,10 @@ export const useAppStore = create<AppState>()(
           machineRuntime: {},
           tickCount: 0,
           machineProgress: {},
+          machineInternal: {},
+          beltInTransit: {},
+          beltTransitItems: [],
+          beltEmitCooldown: {},
           productionPerMin: { originium_ore: 0, originium_powder: 0 },
           consumptionPerMin: { originium_ore: 0, originium_powder: 0 },
           productionWindow: emptyWindow(),

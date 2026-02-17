@@ -155,6 +155,24 @@ body {
   font-size: 14px;
 }
 
+.stat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.stat-table th,
+.stat-table td {
+  border-bottom: 1px solid #2f3a4a;
+  padding: 6px 4px;
+  text-align: left;
+}
+
+.stat-table th {
+  color: #b2bfd2;
+  font-weight: 600;
+}
+
 .chip {
   border: 1px solid #3c4b60;
   border-radius: 999px;

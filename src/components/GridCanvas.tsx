@@ -8,6 +8,7 @@ const BUILDING_STROKE_WIDTH = 1
 const BUILDING_STROKE_WIDTH_SELECTED = 2
 const BUILDING_GAP_MIN = 0.8
 const BUILDING_GAP_RATIO = 0.06
+const BELT_TICKS_PER_CELL = 20
 
 export function GridCanvas() {
   const selectedGridSize = useAppStore((state) => state.selectedGridSize)
@@ -17,12 +18,17 @@ export function GridCanvas() {
   const selectedMachineId = useAppStore((state) => state.selectedMachineId)
   const activePrototypeId = useAppStore((state) => state.activePrototypeId)
   const machineRuntime = useAppStore((state) => state.machineRuntime)
+  const pickupPortConfigs = useAppStore((state) => state.pickupPortConfigs)
   const placeMachineAt = useAppStore((state) => state.placeMachineAt)
   const deleteMachineById = useAppStore((state) => state.deleteMachineById)
   const selectMachine = useAppStore((state) => state.selectMachine)
   const moveMachine = useAppStore((state) => state.moveMachine)
   const logisticsMode = useAppStore((state) => state.logisticsMode)
+  const beltCells = useAppStore((state) => state.beltCells)
   const beltSegments = useAppStore((state) => state.beltSegments)
+  const beltTransitItems = useAppStore((state) => state.beltTransitItems)
+  const selectedBeltSegmentKey = useAppStore((state) => state.selectedBeltSegmentKey)
+  const selectBeltSegment = useAppStore((state) => state.selectBeltSegment)
   const beltDragBaseSegments = useAppStore((state) => state.beltDragBaseSegments)
   const beltDrawStart = useAppStore((state) => state.beltDrawStart)
   const startBeltDrag = useAppStore((state) => state.startBeltDrag)
@@ -131,12 +137,6 @@ export function GridCanvas() {
 
     const baseKeys = new Set(
       beltDragBaseSegments.map((segment) => segmentKey(segment.from, segment.to)),
-    )
-
-    const portKeySet = new Set(
-      machines.flatMap((machine) =>
-        getMachinePorts(machine).map((port) => `${port.x},${port.y}`),
-      ),
     )
 
     return beltSegments.map((segment, index) => {
@@ -379,6 +379,75 @@ export function GridCanvas() {
       .filter((item): item is NonNullable<typeof item> => item !== null)
   }, [beltSegments, beltDragBaseSegments, machines, isBeltDragging, cellSize])
 
+  const beltTransitRenderItems = useMemo(() => {
+    return beltTransitItems
+      .map((item) => {
+        if (item.path.length < 2) {
+          return null
+        }
+
+        const current = item.path[Math.min(item.stepIndex, item.path.length - 1)]
+        if (!current) {
+          return null
+        }
+
+        const previous = item.path[Math.max(0, item.stepIndex - 1)] ?? current
+        const next = item.path[Math.min(item.stepIndex + 1, item.path.length - 1)] ?? current
+
+        const inDx = Math.sign(current.x - previous.x)
+        const inDy = Math.sign(current.y - previous.y)
+        const outDx = Math.sign(next.x - current.x)
+        const outDy = Math.sign(next.y - current.y)
+
+        const startX = current.x + 0.5 - inDx * 0.5
+        const startY = current.y + 0.5 - inDy * 0.5
+        const endX = current.x + 0.5 + outDx * 0.5
+        const endY = current.y + 0.5 + outDy * 0.5
+        const centerX = current.x + 0.5
+        const centerY = current.y + 0.5
+
+        const t = Math.min(1, Math.max(0, item.stepTick / BELT_TICKS_PER_CELL))
+        const isCorner = inDx !== outDx && inDy !== outDy && (inDx !== 0 || inDy !== 0)
+
+        let gx = 0
+        let gy = 0
+
+        if (isCorner) {
+          if (t < 0.5) {
+            const localT = t * 2
+            gx = startX + (centerX - startX) * localT
+            gy = startY + (centerY - startY) * localT
+          } else {
+            const localT = (t - 0.5) * 2
+            gx = centerX + (endX - centerX) * localT
+            gy = centerY + (endY - centerY) * localT
+          }
+        } else {
+          gx = startX + (endX - startX) * t
+          gy = startY + (endY - startY) * t
+        }
+
+        return {
+          id: item.id,
+          x: gx * cellSize,
+          y: gy * cellSize,
+          fill: item.itemId === "originium_ore" ? "#c9d1db" : "#d7c0ff",
+          stroke: item.itemId === "originium_ore" ? "#7e8a99" : "#7a5bb8",
+        }
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+  }, [beltTransitItems, cellSize])
+
+  const beltCellRenderItems = useMemo(
+    () =>
+      beltCells.map((cell) => ({
+        key: `${cell.x},${cell.y}`,
+        x: cell.x * cellSize,
+        y: cell.y * cellSize,
+      })),
+    [beltCells, cellSize],
+  )
+
   return (
     <main className="canvas-shell">
       <div className="canvas-meta">
@@ -534,10 +603,12 @@ export function GridCanvas() {
             }
 
             selectMachine(null)
+            selectBeltSegment(null)
             return
           }
 
           selectMachine(null)
+          selectBeltSegment(null)
         }}
         onMouseMove={(event) => {
           if (mode !== "edit" || isSpacePressed) {
@@ -624,6 +695,36 @@ export function GridCanvas() {
             strokeWidth={Math.max(3, cellSize * 0.28)}
             listening={false}
           />
+          {beltCellRenderItems.map((cell) => (
+            <Group key={`belt-cell-${cell.key}`}>
+              {selectedBeltSegmentKey === cell.key && (
+                <Rect
+                  x={cell.x + 1}
+                  y={cell.y + 1}
+                  width={Math.max(2, cellSize - 2)}
+                  height={Math.max(2, cellSize - 2)}
+                  stroke="#f7d06a"
+                  strokeWidth={Math.max(1, cellSize * 0.08)}
+                  fillEnabled={false}
+                  listening={false}
+                />
+              )}
+              <Rect
+                x={cell.x}
+                y={cell.y}
+                width={cellSize}
+                height={cellSize}
+                fill="rgba(0,0,0,0)"
+                listening={interactionMode === "idle"}
+                onClick={(event) => {
+                  event.cancelBubble = true
+                  if (interactionMode === "idle") {
+                    selectBeltSegment(cell.key)
+                  }
+                }}
+              />
+            </Group>
+          ))}
           {beltSegmentRenderItems.map((segment) => (
             <Group key={segment.id}>
               <Line
@@ -701,6 +802,23 @@ export function GridCanvas() {
               )}
             </Group>
           ))}
+          {beltTransitRenderItems.map((item) => {
+            const size = Math.max(3.2, cellSize * 0.34)
+            return (
+              <Rect
+                key={item.id}
+                x={item.x - size / 2}
+                y={item.y - size / 2}
+                width={size}
+                height={size}
+                fill={item.fill}
+                stroke={item.stroke}
+                strokeWidth={1}
+                cornerRadius={Math.max(0.8, size * 0.16)}
+                listening={false}
+              />
+            )
+          })}
           {machines.map((machine) => {
             const isSelected = machine.id === selectedMachineId
             const machineX = machine.x * cellSize
@@ -709,6 +827,9 @@ export function GridCanvas() {
             const machineH = machine.h * cellSize
             const blocked = machine.placementState !== "valid"
             const runtimeStatus = machineRuntime[machine.id]?.status
+            const showPickupUnselectedIcon =
+              machine.prototypeId === "pickup_port_3x1" &&
+              (pickupPortConfigs[machine.id]?.selectedItemId ?? null) === null
             const frameStrokeWidth = isSelected
               ? BUILDING_STROKE_WIDTH_SELECTED
               : BUILDING_STROKE_WIDTH
@@ -807,6 +928,19 @@ export function GridCanvas() {
                     y={frameInset + visualGap / 2 + machineH / 2 - 8}
                     width={Math.max(1, machineW - frameStrokeWidth - visualGap)}
                     align="center"
+                  />
+                )}
+
+                {showPickupUnselectedIcon && (
+                  <Text
+                    text="?"
+                    fill="#ffd166"
+                    fontStyle="bold"
+                    fontSize={Math.max(12, cellSize * 0.7)}
+                    y={frameInset + visualGap / 2 + machineH / 2 - Math.max(8, cellSize * 0.5)}
+                    width={Math.max(1, machineW - frameStrokeWidth - visualGap)}
+                    align="center"
+                    listening={false}
                   />
                 )}
 

@@ -53,11 +53,25 @@ export type BeltSegment = {
   to: GridPoint
 }
 
+export type BeltTransitItem = {
+  id: string
+  itemId: ItemId
+  path: GridPoint[]
+  stepIndex: number
+  stepTick: number
+}
+
+export type PickupPortConfig = {
+  machineId: string
+  selectedItemId: ItemId | null
+}
+
 export type PlotSnapshot = {
   machines: MachineInstance[]
   beltCells: BeltCell[]
   beltEdges: BeltEdge[]
   beltSegments: BeltSegment[]
+  pickupPortConfigs: Record<string, PickupPortConfig>
 }
 
 export type MachinePlacementState = "valid" | "overlap" | "invalid_boundary"
@@ -103,6 +117,9 @@ export type BuildingPrototype = {
   w: number
   h: number
   ports: PortDef[]
+  storageCapacity?: number
+  inputStorageCapacity?: number
+  outputStorageCapacity?: number
 }
 
 export type RuntimeStock = {
@@ -145,6 +162,9 @@ export const BUILDING_PROTOTYPES: BuildingPrototype[] = [
     shortName: "粉碎机",
     w: 3,
     h: 3,
+    storageCapacity: 50,
+    inputStorageCapacity: 50,
+    outputStorageCapacity: 50,
     ports: [
       { id: "in_0", type: "in", direction: "+y", offsetX: 0, offsetY: 0 },
       { id: "in_1", type: "in", direction: "+y", offsetX: 1, offsetY: 0 },
