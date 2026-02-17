@@ -6,6 +6,21 @@
 - 坐标与尺寸使用网格单位（整数）。
 - 数量默认非负。
 
+## 1.1 地块尺寸
+
+```ts
+type GridSize = 60 | 80 | 100
+
+type PlotId = string
+```
+
+字段约束：
+
+- Phase1 仅允许 `60x60`、`80x80` 与 `100x100`
+- 默认地块尺寸为 `60x60`
+- Phase1 暂以尺寸值作为 `PlotId`（如 `"60"`、`"80"`、`"100"`）
+- 未来可扩展为“地块名（PlotId） + 尺寸（GridSize）”，允许多个同尺寸地块
+
 ## 2. 核心实体
 
 ## 2.1 Machine
@@ -24,6 +39,7 @@ type Machine = {
   enabled: boolean
   progress: number
   placementState: "valid" | "overlap" | "invalid_boundary"
+  statusIcon?: "starved" | "blocked_overlap" | "unpowered"
   ports: Port[]
 }
 ```
@@ -110,6 +126,8 @@ type Inventory = Record<string, number>
 
 字段约束：
 
+- `Inventory` 在 Stage1 表示系统外仓库库存（全局库存）
+- 不包含工业地块内机器、物流系统与仓储建筑中的物品
 - key 为 `itemId`
 - value 为整数且 >= 0
 
@@ -147,14 +165,24 @@ type MachineRuntimeState = {
 ## 2.7 SimulationSpeed
 
 ```ts
-type SimulationSpeed = 0 | 1 | 2 | 4
+type SimulationSpeed = 1 | 2 | 4
 ```
 
 字段约束：
 
-- `0` 表示暂停
 - `1` 表示基准速率（配置数据基准）
 - `2` 与 `4` 为倍速推进
+
+## 2.7A AppMode
+
+```ts
+type AppMode = "edit" | "simulate"
+```
+
+字段约束：
+
+- `edit`：允许编辑工业区内容
+- `simulate`：锁定编辑，仅允许仿真控制（退出仿真、1x/2x/4x）
 
 ## 2.8 BuildingPrototype
 
@@ -170,6 +198,24 @@ type BuildingPrototype = {
   runtimeRule?: RuntimeRule
 }
 ```
+
+## 2.8A PickupPortConfig
+
+```ts
+type PickupPortConfig = {
+  machineId: string
+  selectedItemId: string | null
+  showUnselectedIcon: boolean
+  outputSide?: "top" | "right" | "bottom" | "left"
+}
+```
+
+字段约束：
+
+- 物品取货口放置后默认 `selectedItemId = null`
+- 仅在用户于右下详情面板选择后开始出货
+- `selectedItemId = null` 时 `showUnselectedIcon = true`
+- `outputSide` 为可选方向字段，Phase1 可不配置；若配置则用于显式指定出口朝向
 
 ## 2.9 PlacementRule
 
@@ -190,6 +236,31 @@ type PortLayout = {
 }
 ```
 
+字段约束：
+
+- 配置文件仅保存 0° 朝向端口坐标
+- 90°/180°/270° 端口坐标由运行时旋转计算
+
+## 2.10A PortRotationTransform
+
+```ts
+type PortRotationTransform = {
+  baseRotation: 0
+  allowedRotations: [0, 90, 180, 270]
+}
+```
+
+计算约束（局部坐标，建筑尺寸为 `w x h`）：
+
+- 0°：`(x, y)`
+- 90°：`(h - 1 - y, x)`
+- 180°：`(w - 1 - x, h - 1 - y)`
+- 270°：`(y, w - 1 - x)`
+
+说明：
+
+- 仅支持 90° 步进旋转，因此端口坐标计算结果保持整数网格。
+
 ## 2.11 RuntimeRule
 
 ```ts
@@ -200,6 +271,23 @@ type RuntimeRule = {
   externalSourceItemFilter?: "any"
 }
 ```
+
+## 2.11A ExternalWarehouse
+
+```ts
+type ExternalWarehouse = {
+  inventory: Record<string, number>
+  infiniteItems: string[]
+}
+```
+
+字段约束：
+
+- 系统外仓库容量无限
+- `originium_ore` 必须在 `infiniteItems` 中
+- 其他物品由存储箱提交量累积，不可无限取用
+- Phase1 不提供仓库手动清空操作
+- 退出仿真或执行重置库存时，`inventory` 必须被清空到初始状态
 
 ## 2.12 ConveyorCellRule
 
@@ -229,12 +317,38 @@ type ConveyorSpec = {
 
 - 传送带速度固定为每 2 秒移动 1 格
 
+## 2.12B ConveyorDeleteMode
+
+```ts
+type ConveyorDeleteMode = "by_cell" | "by_connected_component"
+```
+
+字段约束：
+
+- `by_cell`：逐格删除
+- `by_connected_component`：删除联通传送带整体
+- 联通采用 4 邻接（上/下/左/右）
+
+## 2.14 PanelDisplayRule
+
+```ts
+type PanelDisplayRule = {
+  itemSort: "ore_first_then_powder_then_itemId"
+  unselectedPickupIcon: "?"
+}
+```
+
+字段约束：
+
+- 物品排序：`originium_ore` 优先，其次 `originium_powder`，其余按 `itemId` 字母序
+- 取货口未选图标固定为 `?`
+
 ## 2.13 PowerCoverage
 
 ```ts
 type PowerCoverage = {
   poleMachineId: string
-  area: { width: 8; height: 8 }
+  area: { width: 12; height: 12 }
   anchor: "center"
   metric: "rect"
 }
@@ -242,8 +356,11 @@ type PowerCoverage = {
 
 字段约束：
 
-- 供电范围为以供电桩中心为基准的 8x8 矩形格子
+- 供电范围为以供电桩中心为基准的 12x12 矩形格子
+- 供电桩 2x2 本体位于该 12x12 矩形中心区域
 - 建筑任一格落在范围内即判定有电
+- 若供电桩左上角为 `(x, y)`，则供电范围左上角固定为 `(x - 5, y - 5)`，宽高固定为 `12x12`
+- 覆盖范围超出工业区域边界时，按工业区域边界裁剪后再做“任一格落入”判定
 
 ## 3. 典型建筑模板（首批）
 
@@ -284,9 +401,8 @@ type PowerCoverage = {
 
 ```ts
 const inventory: Inventory = {
-  ore: 0,
-  ingot: 0,
-  gear: 0,
+  originium_ore: 0,
+  originium_powder: 0,
 }
 ```
 
