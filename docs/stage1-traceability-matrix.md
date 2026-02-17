@@ -7,11 +7,11 @@
 | 顶部仿真控制条 | `stage1-prd-refined.md` / FR-LAYOUT-04 | AC-02B |
 | 地块尺寸选择（60/80/100） | `stage1-prd-refined.md` / FR-LAYOUT-03 | AC-00, AC-05B |
 | 放置机器 | `stage1-prd-refined.md` / FR-CANVAS-02 | AC-01 |
-| 拖入放置/拖出删除 | `stage1-prd-refined.md` / FR-CANVAS-02 | 回归：新建/删除机器 |
+| 放置模式点击放置/删除模式删除 | `stage1-prd-refined.md` / FR-CANVAS-02 | 回归：新建/删除机器 |
 | 拖拽/框选移动 | `stage1-prd-refined.md` / FR-CANVAS-02 | 回归：画布操作 |
 | 删除机器 | `stage1-prd-refined.md` / FR-CANVAS-03 | 回归：新建/删除机器 |
 | 缩放平移 | `stage1-prd-refined.md` / FR-CANVAS-04 | 性能基线：交互流畅 |
-| 整格缩放与最小全图 | `stage1-prd-refined.md` / FR-CANVAS-04 | AC-00 |
+| 连续缩放与最小全图 | `stage1-prd-refined.md` / FR-CANVAS-04 | AC-00 |
 | 选中工具条与 R 旋转 | `stage1-prd-refined.md` / FR-CANVAS-05 | AC-06 |
 | 建筑仅90°旋转与端口相对保持 | `stage1-prd-refined.md` / FR-CANVAS-05 | AC-06 |
 | 端口单朝向配置与旋转自动计算 | `stage1-prd-refined.md` / FR-CANVAS-05 | AC-06B |
@@ -47,10 +47,11 @@
 | 供电覆盖坐标公式 `(x-5,y-5)` + `12x12` | `stage1-prd-refined.md` / FR-BUILD-03 | AC-10 |
 | 物流存储箱系统外出货 | `stage1-prd-refined.md` / FR-BUILD-04 | AC-11 |
 | 灌装机 6 入 6 出端口 | `stage1-prd-refined.md` / FR-BUILD-05 | AC-12 |
-| 传送带不重叠与三种交汇 | `stage1-prd-refined.md` / FR-BELT-01 | AC-09 |
+| 传送带不重叠与桥接/分流/汇流 | `stage1-prd-refined.md` / FR-BELT-01 | AC-09 |
 | 传送带交叉直行互不干扰 | `stage1-prd-refined.md` / FR-BELT-02 | AC-09 |
-| 分流左中右轮询（顺时针） | `stage1-prd-refined.md` / FR-BELT-03 | AC-09 |
-| 汇流左中右轮询（顺时针） | `stage1-prd-refined.md` / FR-BELT-04 | AC-09 |
+| 分流单入多出判定 | `stage1-prd-refined.md` / FR-BELT-03 | AC-09 |
+| 汇流多入单出判定 | `stage1-prd-refined.md` / FR-BELT-04 | AC-09 |
+| 删除建筑保留传送带 | `stage1-prd-refined.md` / FR-CANVAS-03 | AC-09B |
 | 传送带速度每2秒1格 | `stage1-prd-refined.md` / FR-BELT-05 | AC-17 |
 | 全局库存 | `stage1-prd-refined.md` / FR-INV-01 | AC-01, AC-05 |
 | 重置库存 | `stage1-prd-refined.md` / FR-INV-02 | AC-05 |

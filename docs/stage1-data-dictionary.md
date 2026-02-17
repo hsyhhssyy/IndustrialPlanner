@@ -58,6 +58,7 @@ type Machine = {
 type Port = {
   id: string
   type: "in" | "out"
+  direction: "+x" | "-x" | "+y" | "-y"
   offsetX: number
   offsetY: number
 }
@@ -67,6 +68,7 @@ type Port = {
 
 - `offsetX`, `offsetY` 为机器局部坐标
 - `type` 仅允许 `in` 或 `out`
+- `direction` 表示端口法向方向，运行时用于进出方向合法性校验
 
 ## 2.3 Edge
 
@@ -87,6 +89,28 @@ type Edge = {
 - 不允许重复边（同 `from` + `to`）
 - `path` 为用户手绘网格路径点序列
 - `mode` 对应物流模式
+
+补充数据模型（实现态）：
+
+```ts
+type BeltSegment = {
+  id: string
+  from: { x: number; y: number }
+  to: { x: number; y: number }
+}
+
+type BeltCell = {
+  id: string
+  x: number
+  y: number
+}
+```
+
+字段约束：
+
+- `BeltSegment` 是传送带规则判断的主数据（节点度数、分流/汇流/桥接、对撞校验）。
+- `BeltCell` 是网格占用与删除可视化数据。
+- `Edge` 仅表示机器间有效 `out -> in` 业务连接。
 
 ## 2.4 Recipe
 
@@ -300,10 +324,12 @@ type ConveyorCellRule =
 
 字段约束：
 
-- 传送带格子不允许重叠
-- 仅允许 `cross`、`split`、`merge` 三种操作
-- `split` 与 `merge` 的三路顺序采用左/中/右轮询
-- 左/中/右顺序以顺时针方向定义
+- 节点可分类为 `bridge(桥)`、`split(分)`、`merge(汇)`
+- `bridge`：四向连接且两横两纵，作为直行交叉
+- `split`：`inCount = 1` 且 `outCount >= 2`
+- `merge`：`outCount = 1` 且 `inCount >= 2`
+- 节点由 3 向扩展到 4 向时，若该节点被本次绘制当作拐点或端点使用，则必须满足 `split` 或 `merge`
+- 禁止对撞：同一节点同轴双入或同轴双出
 
 ## 2.12A ConveyorSpec
 
@@ -328,6 +354,7 @@ type ConveyorDeleteMode = "by_cell" | "by_connected_component"
 - `by_cell`：逐格删除
 - `by_connected_component`：删除联通传送带整体
 - 联通采用 4 邻接（上/下/左/右）
+- 删除建筑不会触发上述两种传送带删除；建筑删除仅清理其连接引用（`Edge`）
 
 ## 2.14 PanelDisplayRule
 
@@ -395,7 +422,9 @@ type PowerCoverage = {
 ### 3.6 传送带节点
 
 - 不允许重叠
-- 支持交叉、分流、汇流
+- 支持桥接（交叉直行）、分流、汇流
+- 分流判定：单入多出；汇流判定：多入单出
+- 桥接判定：四向连通且两横两纵
 
 ## 4. Stage1 最小示例
 

@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/components/GridCanvas.tsx","./src/components/LeftToolbar.tsx","./src/components/RightPanel.tsx","./src/components/TopBar.tsx","./src/core/belts.ts","./src/core/machines.ts","./src/core/simulation.ts","./src/state/appStore.ts","./src/types/domain.ts"],"version":"5.6.3"}

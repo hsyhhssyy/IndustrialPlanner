@@ -14,9 +14,9 @@
 | 建筑 | `filler_6x4` | 灌装机 | 6x4 | 6个输入口（长边） | 6个输出口（对侧长边） | 长边端口成组定义 | 启用 | Phase1 |
 | 配方 | `r_crusher_originium_powder_basic` | 原矿粉碎（基础） | 2秒/周期 | 1×`originium_ore` | 1×`originium_powder` | 粉碎机执行；数据基准为1x | 启用 | Phase1 |
 | 配方（兼容） | `r_future_dual_output` | 未来双产物示例 | 6秒/周期 | 2×`originium_ore` | 1×`originium_powder`（`out_main`）+ 1×`slag`（`out_side`） | 双产物+指定出口，需兼容读取/存档 | 兼容未启用 | Phase2+ |
-| 物流规则 | `belt_cell_cross` | 传送带交叉 | 单格节点 | 两组对向入口 | 两组对向出口 | 两路直行互不干扰 | 启用 | Phase1 |
-| 物流规则 | `belt_cell_split` | 传送带分流 | 单格节点 | 1入口 | 3出口 | 左/中/右顺序轮询（顺时针定义） | 启用 | Phase1 |
-| 物流规则 | `belt_cell_merge` | 传送带汇流 | 单格节点 | 3入口 | 1出口 | 左/中/右顺序轮询（顺时针定义） | 启用 | Phase1 |
+| 物流规则 | `belt_cell_bridge` | 传送带桥接 | 单格节点 | 两横两纵 | 两横两纵 | 四向交叉直行，两路互不干扰 | 启用 | Phase1 |
+| 物流规则 | `belt_cell_split` | 传送带分流 | 单格节点 | 单入 | 多出 | `inCount=1` 且 `outCount>=2` | 启用 | Phase1 |
+| 物流规则 | `belt_cell_merge` | 传送带汇流 | 单格节点 | 多入 | 单出 | `outCount=1` 且 `inCount>=2` | 启用 | Phase1 |
 | 物流参数 | `belt_speed` | 传送带速度 | 常量 | - | - | 固定每2秒移动1格 | 启用 | Phase1 |
 | 仓储参数 | `external_warehouse` | 系统外仓库 | 全局库存 | 存储箱提交 | 取货口回取 | 非矿按库存回取；矿无限；右上区域展示存量与每分钟产消 | 启用 | Phase1 |
 | 仿真参数 | `sim_control` | 顶部仿真控制 | 常量 | - | - | 顶部“开始仿真/退出仿真”+`1/2/4` 倍速；仿真中锁定编辑；退出仿真时清空全部运行态内容 | 启用 | Phase1 |

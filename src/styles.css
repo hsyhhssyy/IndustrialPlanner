@@ -1,0 +1,167 @@
+:root {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #e5ebf3;
+  background: #151a22;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.top-bar {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: #1f2632;
+  border-bottom: 1px solid #2f3a4a;
+}
+
+.top-bar-left {
+  display: flex;
+  gap: 8px;
+}
+
+.top-bar-right,
+.chip-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.primary-btn,
+.speed-btn {
+  border: 1px solid #3c4b60;
+  background: #263246;
+  color: #e5ebf3;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.toast-btn {
+  border: 1px solid #4c677d;
+  background: #244058;
+  color: #cbe0f6;
+  border-radius: 6px;
+  padding: 6px 10px;
+  max-width: 360px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.speed-btn.active {
+  background: #395c93;
+  border-color: #4f7bc4;
+}
+
+.speed-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.layout-shell {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 260px 1fr 340px;
+  gap: 12px;
+  padding: 12px;
+}
+
+.left-toolbar,
+.right-panel,
+.canvas-shell {
+  background: #1b222d;
+  border: 1px solid #2f3a4a;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.left-toolbar h2,
+.right-panel h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.left-toolbar h3 {
+  margin: 10px 0 6px;
+  font-size: 13px;
+  color: #b2bfd2;
+}
+
+.prototype-list {
+  display: grid;
+  gap: 8px;
+}
+
+.toolbar-divider {
+  border-top: 1px solid #2f3a4a;
+  margin: 10px 0;
+}
+
+.canvas-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.canvas-meta {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  color: #a7b0bf;
+  font-size: 13px;
+}
+
+.stage-frame {
+  border: 1px solid #2f3a4a;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #161c27;
+}
+
+.panel-card {
+  border: 1px solid #2f3a4a;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.note {
+  color: #a7b0bf;
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 10px;
+  font-size: 14px;
+}
+
+.chip {
+  border: 1px solid #3c4b60;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.chip.muted {
+  opacity: 0.6;
+}
