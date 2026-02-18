@@ -1,0 +1,684 @@
+version: 2
+name: IndustrialPlanner Domain Model Data
+scope: project
+updatedAt: 2026-02-18
+
+# 统一约定：
+# - 设备端口均以 0° 为基准定义，运行时按 90°倍数旋转。
+# - 坐标以设备左上角为原点，localCellX/localCellY 为占格内坐标。
+# - edge: N/S/E/W；direction: Input/Output。
+# - 端口可配置 allowedItems + allowedTypes。
+# - 当前默认策略：所有建筑端口 allowedTypes=[solid]，allowedItems.mode=recipe_items。
+# - 未来可切换 allowedItems.mode=whitelist。
+
+conventions:
+  orientationBase: "0deg"
+  runtimeKinds:
+    - processor
+    - storage
+    - conveyor
+    - junction
+  itemTypes:
+    - solid
+    - liquid
+  stallReasons:
+    - NONE
+    - NO_POWER
+    - OVERLAP
+    - NO_INPUT
+    - OUTPUT_BLOCKED
+    - CONFIG_ERROR
+  portAllowance:
+    allowedItemsModes:
+      - recipe_items
+      - recipe_inputs
+      - recipe_outputs
+      - whitelist
+      - any
+    allowedTypesMode:
+      - whitelist
+  defaultPortAllowance:
+    allowedItems:
+      mode: recipe_items
+      whitelist: []
+    allowedTypes: [solid]
+
+items:
+  - id: originium_ore
+    displayName: 源石矿
+    category: raw
+    type: solid
+  - id: originium_powder
+    displayName: 源石粉末
+    category: product
+    type: solid
+
+recipes:
+  - id: r_crusher_originium_powder_basic
+    machineType: crusher_3x3
+    cycleTicks: 60
+    inputs:
+      - itemId: originium_ore
+        amount: 1
+    outputs:
+      - itemId: originium_powder
+        amount: 1
+
+placementRules:
+  pickup_port_free_placement:
+    description: 当前版本取货口不要求贴工业区边界，满足地块内且不重叠即可
+    appliesTo:
+      - pickup_port_3x1
+    validation:
+      type: footprintInBoundsAndNoOverlap
+
+powerModel:
+  sourceType: power_pole_2x2
+  rule: any_cell_of_building_within_square_has_power
+  range:
+    shape: square
+    width: 12
+    height: 12
+    centeredOn: power_pole_center
+  notes:
+    - 供电桩 2x2，本体位于供电范围 12x12 的几何中心。
+    - 目标建筑只要任意一格落入该 12x12 范围即判定“有电”。
+    - 若建筑未被任一供电桩覆盖，或供电条件异常，则运行态可标记 NO_POWER。
+
+logisticsRules:
+  overlap:
+    allowed: false
+    description: 传送带不允许重叠
+  allowedOperations:
+    - crossing
+    - splitting
+    - merging
+  crossing:
+    deviceType: bridge_1x1
+    description: 同一格仅允许对侧连通交叉（N-S 与 W-E），两路互不干扰
+    channels:
+      - pair: [N, S]
+      - pair: [W, E]
+  splitting:
+    deviceType: splitter_1x1
+    topology:
+      inputs: 1
+      outputs: 3
+    behavior:
+      policy: round_robin
+      outputOrder: [left, center, right]
+      orderReference: relative_to_input_heading
+      allowPartialConnections: true
+  merging:
+    deviceType: merger_1x1
+    topology:
+      inputs: 3
+      outputs: 1
+    behavior:
+      policy: round_robin
+      inputOrder: [left, center, right]
+      orderReference: relative_to_output_heading
+      allowPartialConnections: true
+
+# 设备定义：端口均是“占格边”而不是点。
+devices:
+  - id: pickup_port_3x1
+    runtimeKind: storage
+    size:
+      width: 3
+      height: 1
+    placementConstraintRef: pickup_port_free_placement
+    roles:
+      - feeder
+      - external_source
+    configSchema:
+      selectableSourceItem:
+        type: itemId
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+        description: 可选择任意“当前配方物品集合”中的固体物品作为取出目标
+    notes:
+      - pickup_port_3x1 使用固定端口，不使用动态端口。
+      - 基准方向下，唯一出口位于中间格南侧；通过旋转适配边界方向。
+    ports0:
+      - id: p_out_mid
+        localCellX: 1
+        localCellY: 0
+        edge: S
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+
+  - id: crusher_3x3
+    runtimeKind: processor
+    size:
+      width: 3
+      height: 3
+    ports0:
+      - id: in_w_0
+        localCellX: 0
+        localCellY: 0
+        edge: W
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes: [solid]
+      - id: in_w_1
+        localCellX: 0
+        localCellY: 1
+        edge: W
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes: [solid]
+      - id: in_w_2
+        localCellX: 0
+        localCellY: 2
+        edge: W
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_e_0
+        localCellX: 2
+        localCellY: 0
+        edge: E
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_e_1
+        localCellX: 2
+        localCellY: 1
+        edge: E
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_e_2
+        localCellX: 2
+        localCellY: 2
+        edge: E
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes: [solid]
+
+  - id: power_pole_2x2
+    runtimeKind: storage
+    size:
+      width: 2
+      height: 2
+    ports0: []
+    suppliesPower: true
+    powerProfile:
+      rangeRef: powerModel
+
+  - id: storage_box_3x3
+    runtimeKind: storage
+    size:
+      width: 3
+      height: 3
+    ports0:
+      - id: in_w_0
+        localCellX: 0
+        localCellY: 0
+        edge: W
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: in_w_1
+        localCellX: 0
+        localCellY: 1
+        edge: W
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: in_w_2
+        localCellX: 0
+        localCellY: 2
+        edge: W
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_e_0
+        localCellX: 2
+        localCellY: 0
+        edge: E
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_e_1
+        localCellX: 2
+        localCellY: 1
+        edge: E
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_e_2
+        localCellX: 2
+        localCellY: 2
+        edge: E
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+    capabilities:
+      internalStorage: true
+      externalShipment: true
+    shipment:
+      mode: optional
+      unit: per_minute
+      description: 可配置每分钟将库存物品提交到工业系统之外
+
+  - id: filler_6x4
+    runtimeKind: processor
+    size:
+      width: 6
+      height: 4
+    ports0:
+      - id: in_n_0
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: in_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: in_n_2
+        localCellX: 2
+        localCellY: 0
+        edge: N
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: in_n_3
+        localCellX: 3
+        localCellY: 0
+        edge: N
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: in_n_4
+        localCellX: 4
+        localCellY: 0
+        edge: N
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: in_n_5
+        localCellX: 5
+        localCellY: 0
+        edge: N
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_s_0
+        localCellX: 0
+        localCellY: 3
+        edge: S
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_s_1
+        localCellX: 1
+        localCellY: 3
+        edge: S
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_s_2
+        localCellX: 2
+        localCellY: 3
+        edge: S
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_s_3
+        localCellX: 3
+        localCellY: 3
+        edge: S
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_s_4
+        localCellX: 4
+        localCellY: 3
+        edge: S
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_s_5
+        localCellX: 5
+        localCellY: 3
+        edge: S
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+    notes:
+      - 灌装机两条长度为 6 的长边分别作为入口边与出口边。
+      - 运行实现中应保证“6 入 + 6 出”。
+
+  - id: belt_straight_1x1
+    runtimeKind: conveyor
+    size:
+      width: 1
+      height: 1
+    ports0:
+      - id: in_w
+        localCellX: 0
+        localCellY: 0
+        edge: W
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_e
+        localCellX: 0
+        localCellY: 0
+        edge: E
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+    transferAllowance:
+      allowedItems:
+        mode: recipe_items
+        whitelist: []
+      allowedTypes: [solid]
+
+  - id: belt_turn_cw_1x1
+    runtimeKind: conveyor
+    size:
+      width: 1
+      height: 1
+    ports0:
+      - id: in_n
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_e
+        localCellX: 0
+        localCellY: 0
+        edge: E
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+    transferAllowance:
+      allowedItems:
+        mode: recipe_items
+        whitelist: []
+      allowedTypes: [solid]
+
+  - id: belt_turn_ccw_1x1
+    runtimeKind: conveyor
+    size:
+      width: 1
+      height: 1
+    ports0:
+      - id: in_n
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_w
+        localCellX: 0
+        localCellY: 0
+        edge: W
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+    transferAllowance:
+      allowedItems:
+        mode: recipe_items
+        whitelist: []
+      allowedTypes: [solid]
+
+  - id: splitter_1x1
+    runtimeKind: junction
+    size:
+      width: 1
+      height: 1
+    ports0:
+      - id: in_w
+        localCellX: 0
+        localCellY: 0
+        edge: W
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_n
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_e
+        localCellX: 0
+        localCellY: 0
+        edge: E
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_s
+        localCellX: 0
+        localCellY: 0
+        edge: S
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+    behaviorRef: logisticsRules.splitting
+    transferAllowance:
+      allowedItems:
+        mode: recipe_items
+        whitelist: []
+      allowedTypes: [solid]
+
+  - id: merger_1x1
+    runtimeKind: junction
+    size:
+      width: 1
+      height: 1
+    ports0:
+      - id: in_n
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: in_w
+        localCellX: 0
+        localCellY: 0
+        edge: W
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: in_s
+        localCellX: 0
+        localCellY: 0
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_e
+        localCellX: 0
+        localCellY: 0
+        edge: E
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+    behaviorRef: logisticsRules.merging
+    transferAllowance:
+      allowedItems:
+        mode: recipe_items
+        whitelist: []
+      allowedTypes: [solid]
+
+  - id: bridge_1x1
+    runtimeKind: junction
+    size:
+      width: 1
+      height: 1
+    ports0:
+      - id: in_n
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_n
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: in_s
+        localCellX: 0
+        localCellY: 0
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_s
+        localCellX: 0
+        localCellY: 0
+        edge: S
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: in_w
+        localCellX: 0
+        localCellY: 0
+        edge: W
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_w
+        localCellX: 0
+        localCellY: 0
+        edge: W
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: in_e
+        localCellX: 0
+        localCellY: 0
+        edge: E
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+      - id: out_e
+        localCellX: 0
+        localCellY: 0
+        edge: E
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes: [solid]
+    behaviorRef: logisticsRules.crossing
+    transferAllowance:
+      allowedItems:
+        mode: recipe_items
+        whitelist: []
+      allowedTypes: [solid]
