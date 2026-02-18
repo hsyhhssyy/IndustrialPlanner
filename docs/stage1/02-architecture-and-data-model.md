@@ -37,6 +37,7 @@
 
 - `id: string`
 - `runtimeKind: 'processor' | 'storage' | 'conveyor' | 'junction'`
+- `requiresPower: boolean`
 - `size: { width: number; height: number }`
 - `ports0: PortDef[]`（仅 0°）
 - `display: { shortName?: string }`
@@ -49,7 +50,7 @@
 - `edge: 'N' | 'S' | 'E' | 'W'`
 - `direction: 'Input' | 'Output'`
 - `allowedItems: { mode: 'recipe_items' | 'recipe_inputs' | 'recipe_outputs' | 'whitelist' | 'any'; whitelist: string[] }`
-- `allowedTypes: string[]`
+- `allowedTypes: { mode: 'whitelist' | 'solid' | 'liquid'; whitelist: string[] }`
 
 ## 3.3 设备实例 `DeviceInstance`
 
@@ -70,8 +71,14 @@
 按 `runtimeKind` 扩展：
 
 - `processor`: `inputBuffer`, `outputBuffer`
-- `conveyor/junction`: `slot`（容量 1）
+- `conveyor`: `slot`（容量 1）
+- `junction`: 按设备语义定义槽位（`splitter/merger` 为单 `slot`，`bridge` 为 `nsSlot + weSlot`）
 - `storage`: `inventory`
+
+供电扩展约束：
+
+- 仅当设备 `requiresPower=true` 时，才参与 `NO_POWER` 判定。
+- Stage1 当前仅 `crusher_3x3` 为 `requiresPower=true`。
 
 ## 4. 坐标与旋转
 
@@ -97,17 +104,18 @@
 - 地块基础信息
 - 设备实例列表
 - 用户配置（如默认模式、最近速度）
-- 系统外库存初始值（若需要持久化）
 
-不建议持久化运行中瞬态（如 reservation、本 tick 计划队列）。
+不建议持久化运行中瞬态（如本 tick 计划队列）。
 
 ## 7. 错误处理策略
 
-- 配置非法：标记 `CONFIG_ERROR`，阻止运行
+- 配置非法：标记 `CONFIG_ERROR`
 - 设备重叠：标记 `OVERLAP`
 - 输入不足：`NO_INPUT`
 - 输出阻塞：`OUTPUT_BLOCKED`
 - 未被供电覆盖或供电条件异常：`NO_POWER`
+
+供电边界补充（Stage1）：供电桩 `2x2` 位于一个 `12x12` 供电正方形区域的几何中心，建筑任意占格落入该区域即视为有电。
 
 错误来源应可追踪到设备级，供右侧面板展示。
 
