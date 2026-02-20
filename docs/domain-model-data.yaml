@@ -13,9 +13,17 @@ updatedAt: 2026-02-18
 # - 当前默认策略：大多数建筑端口 allowedTypes=[solid]，allowedItems.mode=recipe_items。
 # - pickup_port 的可选物品配置使用 allowedItems.mode=any。
 # - 未来可切换 allowedItems.mode=whitelist。
+# - 时间型配方参数统一使用“标准秒”表达（例如 cycleSeconds），运行时按当前 tickRateHz 换算为 tick。
 
 conventions:
   orientationBase: "0deg"
+  timeTerminology:
+    standardSecond:
+      description: 规则层固定时间单位，不受仿真倍速影响
+      tickMappingAt20Hz: 20
+    standardMinute:
+      description: 规则层固定时间单位，不受仿真倍速影响
+      tickMappingAt20Hz: 1200
   runtimeKinds:
     - processor
     - storage
@@ -78,7 +86,7 @@ items:
 recipes:
   - id: r_crusher_originium_powder_basic
     machineType: crusher_3x3
-    cycleTicks: 60
+    cycleSeconds: 2
     inputs:
       - itemId: originium_ore
         amount: 1

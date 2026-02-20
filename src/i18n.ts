@@ -1,0 +1,206 @@
+import type { DeviceTypeId, EditMode } from './domain/types'
+
+export type Language = 'zh-CN' | 'en-US'
+
+export const LANGUAGE_OPTIONS: Array<{ value: Language; label: string }> = [
+  { value: 'zh-CN', label: '中文' },
+  { value: 'en-US', label: 'English' },
+]
+
+const MESSAGES: Record<Language, Record<string, string>> = {
+  'zh-CN': {
+    'app.title': '终末地工业系统仿真器 Stage1',
+    'app.language': '语言',
+    'top.start': '开始仿真',
+    'top.stop': '退出仿真',
+    'top.zoomHint': '缩放：{size}px（最大约 12x12 视图，分段步进）',
+    'top.runningHint': '仿真中：编辑动作已禁用',
+    'top.editHint': '编辑态：可放置/移动/铺设/删除',
+    'left.mode': '模式',
+    'left.device': '设备',
+    'left.logisticsSubMode': '物流子模式',
+    'left.placeBelt': '放置传送带',
+    'left.deleteSubMode': '删除子模式',
+    'left.deleteSingle': '单格',
+    'left.deleteWholeBelt': '整条传送带',
+    'left.deleteAll': '删除所有内容',
+    'right.lot': '地块',
+    'right.stats': '仓库统计',
+    'right.simDebug': '仿真调试',
+    'right.selected': '选中详情',
+    'right.noneSelected': '未选中对象',
+    'debug.expectedTps': '期望 Tick/s',
+    'debug.measuredTps': '实测 Tick/s',
+    'debug.simTick': '当前 Tick',
+    'debug.simSeconds': '仿真秒数',
+    'debug.cellSeconds': '理论单格耗时(s)',
+    'debug.beltPerMin': '理论单带吞吐(/min)',
+    'table.itemName': '物品名称',
+    'table.producedPerMinute': '产出每分',
+    'table.consumedPerMinute': '消耗每分',
+    'table.currentStock': '当前库存',
+    'detail.instanceId': '实例ID',
+    'detail.deviceType': '建筑类型',
+    'detail.rotation': '旋转角度',
+    'detail.position': '位置',
+    'detail.status': '状态',
+    'detail.currentStatus': '当前状态',
+    'detail.internalStatus': '内部状态',
+    'detail.internal.noRuntime': '未进入仿真',
+    'detail.internal.canAccept': '可接受物品（空槽）',
+    'detail.internal.occupiedHalf': '占用中（0-0.5），progress={progress}',
+    'detail.internal.canTry': '可尝试提供（0.5-1），progress={progress}',
+    'detail.internal.readyCommit': '待递交（progress=1）',
+    'detail.currentItem': '当前物品',
+    'detail.progress01': '当前进度',
+    'detail.currentRecipe': '当前配方',
+    'detail.productionProgress': '生产进度',
+    'detail.avgProducedPerSecond': '平均生产个数/s',
+    'detail.avgTransitTicks': '平均运输每件(tick)',
+    'detail.cacheInputBuffer': '输入缓存',
+    'detail.cacheOutputBuffer': '输出缓存',
+    'detail.cacheInventory': '库存缓存',
+    'detail.cacheSlot': '主槽缓存',
+    'detail.cacheNsSlot': '南北槽缓存',
+    'detail.cacheWeSlot': '东西槽缓存',
+    'detail.empty': '空',
+    'detail.pickupItem': '取货物品',
+    'detail.unselected': '未选择',
+    'detail.submitWarehouse': '提交到仓库（每 10 秒批量）',
+  },
+  'en-US': {
+    'app.title': 'Industrial System Simulator Stage1',
+    'app.language': 'Language',
+    'top.start': 'Start Simulation',
+    'top.stop': 'Exit Simulation',
+    'top.zoomHint': 'Zoom: {size}px (max around 12x12 view, segmented steps)',
+    'top.runningHint': 'Simulation running: editing disabled',
+    'top.editHint': 'Edit mode: place/move/route/delete',
+    'left.mode': 'Mode',
+    'left.device': 'Devices',
+    'left.logisticsSubMode': 'Logistics Sub Mode',
+    'left.placeBelt': 'Place Belt',
+    'left.deleteSubMode': 'Delete Sub Mode',
+    'left.deleteSingle': 'Single Cell',
+    'left.deleteWholeBelt': 'Whole Belt',
+    'left.deleteAll': 'Delete All',
+    'right.lot': 'Lot',
+    'right.stats': 'Warehouse Stats',
+    'right.simDebug': 'Simulation Debug',
+    'right.selected': 'Selection Details',
+    'right.noneSelected': 'No Selection',
+    'debug.expectedTps': 'Expected Tick/s',
+    'debug.measuredTps': 'Measured Tick/s',
+    'debug.simTick': 'Current Tick',
+    'debug.simSeconds': 'Sim Seconds',
+    'debug.cellSeconds': 'Theoretical sec/cell',
+    'debug.beltPerMin': 'Theoretical belt /min',
+    'table.itemName': 'Item',
+    'table.producedPerMinute': 'Produced/min',
+    'table.consumedPerMinute': 'Consumed/min',
+    'table.currentStock': 'Current Stock',
+    'detail.instanceId': 'Instance ID',
+    'detail.deviceType': 'Device Type',
+    'detail.rotation': 'Rotation',
+    'detail.position': 'Position',
+    'detail.status': 'Status',
+    'detail.currentStatus': 'Current Status',
+    'detail.internalStatus': 'Internal Status',
+    'detail.internal.noRuntime': 'Not in simulation',
+    'detail.internal.canAccept': 'Can Accept (empty slot)',
+    'detail.internal.occupiedHalf': 'Occupied (0-0.5), progress={progress}',
+    'detail.internal.canTry': 'Can Try (0.5-1), progress={progress}',
+    'detail.internal.readyCommit': 'Ready to Commit (progress=1)',
+    'detail.currentItem': 'Current Item',
+    'detail.progress01': 'Progress',
+    'detail.currentRecipe': 'Current Recipe',
+    'detail.productionProgress': 'Production Progress',
+    'detail.avgProducedPerSecond': 'Avg Produced Items/s',
+    'detail.avgTransitTicks': 'Avg Transit Ticks/Item',
+    'detail.cacheInputBuffer': 'Input Buffer',
+    'detail.cacheOutputBuffer': 'Output Buffer',
+    'detail.cacheInventory': 'Inventory Buffer',
+    'detail.cacheSlot': 'Main Slot',
+    'detail.cacheNsSlot': 'NS Slot',
+    'detail.cacheWeSlot': 'WE Slot',
+    'detail.empty': 'Empty',
+    'detail.pickupItem': 'Pickup Item',
+    'detail.unselected': 'Unselected',
+    'detail.submitWarehouse': 'Submit to Warehouse (batch every 10s)',
+  },
+}
+
+const MODE_MESSAGES: Record<Language, Record<EditMode, string>> = {
+  'zh-CN': {
+    select: '选择模式',
+    place: '放置模式',
+    logistics: '物流模式',
+    delete: '删除模式',
+  },
+  'en-US': {
+    select: 'Select',
+    place: 'Place',
+    logistics: 'Logistics',
+    delete: 'Delete',
+  },
+}
+
+const DEVICE_MESSAGES: Record<Language, Record<DeviceTypeId, string>> = {
+  'zh-CN': {
+    pickup_port_3x1: '取货口',
+    crusher_3x3: '粉碎机',
+    power_pole_2x2: '电桩',
+    storage_box_3x3: '存储箱',
+    belt_straight_1x1: '直线传送带',
+    belt_turn_cw_1x1: '顺时针转角带',
+    belt_turn_ccw_1x1: '逆时针转角带',
+    splitter_1x1: '分流器',
+    merger_1x1: '汇流器',
+    bridge_1x1: '桥接器',
+  },
+  'en-US': {
+    pickup_port_3x1: 'Pickup Port',
+    crusher_3x3: 'Crusher',
+    power_pole_2x2: 'Power Pole',
+    storage_box_3x3: 'Storage Box',
+    belt_straight_1x1: 'Straight Belt',
+    belt_turn_cw_1x1: 'CW Turn Belt',
+    belt_turn_ccw_1x1: 'CCW Turn Belt',
+    splitter_1x1: 'Splitter',
+    merger_1x1: 'Merger',
+    bridge_1x1: 'Bridge',
+  },
+}
+
+const ITEM_MESSAGES: Record<Language, Record<string, string>> = {
+  'zh-CN': {
+    originium_ore: '源石矿',
+    originium_powder: '源石粉末',
+  },
+  'en-US': {
+    originium_ore: 'Originium Ore',
+    originium_powder: 'Originium Powder',
+  },
+}
+
+export function createTranslator(language: Language) {
+  return (key: string, params?: Record<string, string | number>) => {
+    const template = MESSAGES[language][key] ?? key
+    if (!params) return template
+    return Object.entries(params).reduce((acc, [paramKey, paramValue]) => {
+      return acc.replaceAll(`{${paramKey}}`, String(paramValue))
+    }, template)
+  }
+}
+
+export function getModeLabel(language: Language, mode: EditMode) {
+  return MODE_MESSAGES[language][mode]
+}
+
+export function getDeviceLabel(language: Language, typeId: DeviceTypeId) {
+  return DEVICE_MESSAGES[language][typeId]
+}
+
+export function getItemLabel(language: Language, itemId: string) {
+  return ITEM_MESSAGES[language][itemId] ?? itemId
+}
