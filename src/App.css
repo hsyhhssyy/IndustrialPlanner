@@ -119,6 +119,7 @@ button:disabled {
     linear-gradient(to right, #2c3340 1px, transparent 1px),
     linear-gradient(to bottom, #2c3340 1px, transparent 1px);
   background-size: 18px 18px;
+  background-position: -0.5px -0.5px;
   border: 1px solid #2f3a4a;
   flex: 0 0 auto;
   position: absolute;
@@ -155,6 +156,13 @@ button:disabled {
   z-index: 0;
 }
 
+.power-range-outline {
+  position: absolute;
+  border: 1px solid #7ba4dd;
+  pointer-events: none;
+  z-index: 1;
+}
+
 .device {
   position: absolute;
   overflow: visible;
@@ -175,6 +183,61 @@ button:disabled {
   font-size: 12px;
   overflow: hidden;
   border-radius: 2px;
+}
+
+.device-surface.textured-surface {
+  background: transparent;
+}
+
+.device-texture {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  object-fit: fill;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.device-surface.textured-surface > span,
+.device-surface.textured-surface > em,
+.device-surface.textured-surface > .junction-icon {
+  position: relative;
+  z-index: 1;
+}
+
+.device-label {
+  text-align: center;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.device-surface.pickup-port-surface > .device-label.pickup-label-vertical {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  white-space: nowrap;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.device-surface.pickup-port-surface {
+  border-color: #7ba4dd;
+}
+
+.device-surface.pickup-port-surface span {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.device-surface.grinder-surface {
+  border-color: #7ba4dd;
+}
+
+.device-surface.grinder-surface span {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .junction-icon {
@@ -221,34 +284,51 @@ button:disabled {
   width: 100%;
   height: 100%;
   display: block;
+  shape-rendering: geometricPrecision;
 }
 
-.belt-track-outline,
-.belt-track-inner {
+.belt-track-fill,
+.belt-track-edge,
+.belt-edge-mask-outer,
+.belt-edge-mask-inner {
   fill: none;
   stroke-linecap: butt;
-}
-
-.belt-track-outline {
-  stroke: rgba(94, 120, 107, 0.92);
-  stroke-width: 72;
   stroke-linejoin: round;
 }
 
-.belt-track-inner {
-  stroke: rgba(170, 214, 191, 0.88);
-  stroke-width: 64;
-  stroke-linejoin: round;
+.belt-device {
+  --belt-fill: #ffa50026;
+  --belt-edge: orange;
+}
+
+.belt-track-fill {
+  stroke: var(--belt-fill);
+  stroke-width: 51;
+}
+
+.belt-track-edge {
+  stroke: var(--belt-edge);
+  stroke-width: 51;
+}
+
+.belt-edge-mask-outer {
+  stroke: white;
+  stroke-width: 51;
+}
+
+.belt-edge-mask-inner {
+  stroke: black;
+  stroke-width: 45;
 }
 
 .belt-arrow {
   position: absolute;
   left: 50%;
   top: 50%;
-  color: rgba(226, 237, 232, 0.68);
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1;
+  width: 12px;
+  height: 10px;
+  background: var(--belt-edge);
+  clip-path: polygon(20% 8%, 20% 92%, 92% 50%);
   pointer-events: none;
 }
 
@@ -262,18 +342,33 @@ button:disabled {
 .belt-item-box {
   position: absolute;
   transform: translate(-50%, -50%);
-  border-radius: 2px;
+  border-radius: 3px;
+  box-sizing: border-box;
+  border: 1px solid rgba(120, 136, 160, 0.9);
+  background: rgba(32, 42, 58, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
 }
 
-.belt-item-box.item-originium_ore {
+.belt-item-box.item-item_originium_ore {
+  border-color: #7e8a99;
   background: #c9d1db;
-  border: 1px solid #7e8a99;
 }
 
-.belt-item-box.item-originium_powder {
+.belt-item-box.item-item_originium_powder {
+  border-color: #7a5bb8;
   background: #d7c0ff;
-  border: 1px solid #7a5bb8;
+}
+
+.belt-item-cover {
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+  image-rendering: auto;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.35));
 }
 
 .device.selected {
@@ -289,12 +384,9 @@ button:disabled {
   box-shadow: 0 0 0 1px #f7d06a inset;
 }
 
-.belt-device.selected .belt-track-outline {
-  stroke: rgba(247, 208, 106, 0.9);
-}
-
-.belt-device.selected .belt-track-inner {
-  stroke: rgba(255, 232, 174, 0.9);
+.belt-device.selected {
+  --belt-fill: rgba(255, 232, 174, 0.45);
+  --belt-edge: rgba(247, 208, 106, 0.9);
 }
 
 .place-ghost {
@@ -323,12 +415,9 @@ button:disabled {
   border-color: #ff6b6b;
 }
 
-.belt-device.stalled .belt-track-outline {
-  stroke: rgba(164, 71, 82, 0.95);
-}
-
-.belt-device.stalled .belt-track-inner {
-  stroke: rgba(236, 122, 135, 0.78);
+.belt-device.stalled {
+  --belt-fill: rgba(236, 122, 135, 0.45);
+  --belt-edge: rgba(164, 71, 82, 0.95);
 }
 
 .device em {
@@ -349,7 +438,7 @@ button:disabled {
 .port-chevron {
   position: absolute;
   pointer-events: none;
-  z-index: 1;
+  z-index: 6;
 }
 
 .port-chevron svg {
@@ -388,7 +477,7 @@ button:disabled {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 6;
+  z-index: 7;
 }
 
 .right-panel {

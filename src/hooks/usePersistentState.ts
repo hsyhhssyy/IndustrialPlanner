@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 
-export function usePersistentState<T>(key: string, initial: T) {
+export function usePersistentState<T>(key: string, initial: T, normalize?: (value: T) => T) {
   const [state, setState] = useState<T>(() => {
     try {
       const raw = localStorage.getItem(key)
-      if (!raw) return initial
-      return JSON.parse(raw) as T
+      const parsed = raw ? (JSON.parse(raw) as T) : initial
+      return normalize ? normalize(parsed) : parsed
     } catch {
-      return initial
+      return normalize ? normalize(initial) : initial
     }
   })
 

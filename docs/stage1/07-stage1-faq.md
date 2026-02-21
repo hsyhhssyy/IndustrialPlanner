@@ -58,7 +58,7 @@ Stage1 仅保留 `originium_ore -> originium_powder` 所需设备与规则。
 
 这是领域模型的一部分，由设备类型字段 `requiresPower` 显式声明。
 
-Stage1 当前口径：仅 `crusher_3x3` 的 `requiresPower=true`，其余设备为 `false`。
+Stage1 当前口径：仅 `item_port_grinder_1` 的 `requiresPower=true`，其余设备为 `false`。
 
 ## Q9：2x2 供电桩的 12x12 覆盖边界如何理解？
 

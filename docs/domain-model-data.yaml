@@ -71,31 +71,31 @@ conventions:
   powerRequirement:
     defaultRequiresPower: false
     stage1PoweredDevices:
-      - crusher_3x3
+      - item_port_grinder_1
 
 items:
-  - id: originium_ore
+  - id: item_originium_ore
     displayName: 源石矿
     category: ore
     type: solid
-  - id: originium_powder
+  - id: item_originium_powder
     displayName: 源石粉末
     category: product
     type: solid
 
 recipes:
   - id: r_crusher_originium_powder_basic
-    machineType: crusher_3x3
+    machineType: item_port_grinder_1
     cycleSeconds: 2
     inputs:
-      - itemId: originium_ore
+      - itemId: item_originium_ore
         amount: 1
     outputs:
-      - itemId: originium_powder
+      - itemId: item_originium_powder
         amount: 1
 
 powerModel:
-  sourceType: power_pole_2x2
+  sourceType: item_port_power_diffuser_1
   rule: any_cell_of_building_within_square_has_power
   discreteEvaluation:
     anchor: power_pole_top_left_cell
@@ -167,7 +167,7 @@ logisticsRules:
 
 # 设备定义：端口均是“占格边”而不是点。
 devices:
-  - id: pickup_port_3x1
+  - id: item_port_unloader_1
     runtimeKind: storage
     requiresPower: false
     size:
@@ -187,14 +187,14 @@ devices:
           whitelist: []
         description: 可选择任意已定义固体物品作为取出目标（包含中间产物）
     notes:
-      - pickup_port_3x1 使用固定端口，不使用动态端口。
-      - 基准方向下，唯一出口位于中间格南侧；通过旋转适配不同连线方向。
-      - pickup_port_3x1 不绑定 placementConstraintRef，允许自由放置与旋转。
+      - item_port_unloader_1 使用固定端口，不使用动态端口。
+      - 基准方向下，唯一出口位于中间格北侧；通过旋转适配不同连线方向。
+      - item_port_unloader_1 不绑定 placementConstraintRef，允许自由放置与旋转。
     ports0:
       - id: p_out_mid
         localCellX: 1
         localCellY: 0
-        edge: S
+        edge: N
         direction: Output
         allowedItems:
           mode: any
@@ -203,39 +203,17 @@ devices:
           mode: solid
           whitelist: []
 
-  - id: crusher_3x3
+  - id: item_port_grinder_1
     runtimeKind: processor
     requiresPower: true
     size:
       width: 3
       height: 3
     ports0:
-      - id: in_w_0
-        localCellX: 0
-        localCellY: 0
-        edge: W
-        direction: Input
-        allowedItems:
-          mode: recipe_inputs
-          whitelist: []
-        allowedTypes:
-          mode: solid
-          whitelist: []
-      - id: in_w_1
-        localCellX: 0
-        localCellY: 1
-        edge: W
-        direction: Input
-        allowedItems:
-          mode: recipe_inputs
-          whitelist: []
-        allowedTypes:
-          mode: solid
-          whitelist: []
-      - id: in_w_2
+      - id: in_s_0
         localCellX: 0
         localCellY: 2
-        edge: W
+        edge: S
         direction: Input
         allowedItems:
           mode: recipe_inputs
@@ -243,10 +221,32 @@ devices:
         allowedTypes:
           mode: solid
           whitelist: []
-      - id: out_e_0
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 2
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_2
         localCellX: 2
+        localCellY: 2
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_0
+        localCellX: 0
         localCellY: 0
-        edge: E
+        edge: N
         direction: Output
         allowedItems:
           mode: recipe_outputs
@@ -254,10 +254,10 @@ devices:
         allowedTypes:
           mode: solid
           whitelist: []
-      - id: out_e_1
-        localCellX: 2
-        localCellY: 1
-        edge: E
+      - id: out_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
         direction: Output
         allowedItems:
           mode: recipe_outputs
@@ -265,10 +265,10 @@ devices:
         allowedTypes:
           mode: solid
           whitelist: []
-      - id: out_e_2
+      - id: out_n_2
         localCellX: 2
-        localCellY: 2
-        edge: E
+        localCellY: 0
+        edge: N
         direction: Output
         allowedItems:
           mode: recipe_outputs
@@ -277,7 +277,7 @@ devices:
           mode: solid
           whitelist: []
 
-  - id: power_pole_2x2
+  - id: item_port_power_diffuser_1
     runtimeKind: storage
     requiresPower: false
     size:
@@ -288,7 +288,7 @@ devices:
     powerProfile:
       rangeRef: powerModel
 
-  - id: storage_box_3x3
+  - id: item_port_storager_1
     runtimeKind: storage
     requiresPower: false
     size:
@@ -300,32 +300,10 @@ devices:
         default: true
         description: 是否将该存储箱库存按批次计入全局仓库统计池；默认开启（提交）。
     ports0:
-      - id: in_w_0
-        localCellX: 0
-        localCellY: 0
-        edge: W
-        direction: Input
-        allowedItems:
-          mode: recipe_items
-          whitelist: []
-        allowedTypes:
-          mode: solid
-          whitelist: []
-      - id: in_w_1
-        localCellX: 0
-        localCellY: 1
-        edge: W
-        direction: Input
-        allowedItems:
-          mode: recipe_items
-          whitelist: []
-        allowedTypes:
-          mode: solid
-          whitelist: []
-      - id: in_w_2
+      - id: in_s_0
         localCellX: 0
         localCellY: 2
-        edge: W
+        edge: S
         direction: Input
         allowedItems:
           mode: recipe_items
@@ -333,10 +311,32 @@ devices:
         allowedTypes:
           mode: solid
           whitelist: []
-      - id: out_e_0
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 2
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_2
         localCellX: 2
+        localCellY: 2
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_0
+        localCellX: 0
         localCellY: 0
-        edge: E
+        edge: N
         direction: Output
         allowedItems:
           mode: recipe_items
@@ -344,10 +344,10 @@ devices:
         allowedTypes:
           mode: solid
           whitelist: []
-      - id: out_e_1
-        localCellX: 2
-        localCellY: 1
-        edge: E
+      - id: out_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
         direction: Output
         allowedItems:
           mode: recipe_items
@@ -355,10 +355,10 @@ devices:
         allowedTypes:
           mode: solid
           whitelist: []
-      - id: out_e_2
+      - id: out_n_2
         localCellX: 2
-        localCellY: 2
-        edge: E
+        localCellY: 0
+        edge: N
         direction: Output
         allowedItems:
           mode: recipe_items

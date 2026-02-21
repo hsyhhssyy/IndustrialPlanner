@@ -3,7 +3,7 @@ import './App.css'
 import { DEVICE_TYPE_BY_ID, ITEMS, PLACEABLE_TYPES, RECIPES } from './domain/registry'
 import { applyLogisticsPath, deleteConnectedBelts, longestValidLogisticsPrefix, nextId, pathFromTrace } from './domain/logistics'
 import { buildOccupancyMap, cellToDeviceId, EDGE_ANGLE, getDeviceById, getRotatedPorts, isWithinLot, linksFromLayout, OPPOSITE_EDGE } from './domain/geometry'
-import type { DeviceInstance, DeviceRuntime, DeviceTypeId, Edge, EditMode, LayoutState, Rotation, SimState, SlotData } from './domain/types'
+import type { DeviceInstance, DeviceRuntime, DeviceTypeId, Edge, EditMode, ItemId, LayoutState, Rotation, SimState, SlotData } from './domain/types'
 import { usePersistentState } from './hooks/usePersistentState'
 import { createTranslator, getDeviceLabel, getItemLabel, getModeLabel, LANGUAGE_OPTIONS, type Language } from './i18n'
 import {
@@ -38,7 +38,11 @@ function getInternalStatusText(
 }
 
 function formatItemPair(language: Language, ore: number, powder: number) {
-  return `${getItemLabel(language, 'originium_ore')}: ${ore}, ${getItemLabel(language, 'originium_powder')}: ${powder}`
+  return `${getItemLabel(language, 'item_originium_ore')}: ${ore}, ${getItemLabel(language, 'item_originium_powder')}: ${powder}`
+}
+
+function getItemIconPath(itemId: ItemId) {
+  return `/itemicon/${itemId}.png`
 }
 
 function formatSlotValue(
@@ -74,16 +78,20 @@ function cycleTicksFromSeconds(cycleSeconds: number, tickRateHz: number) {
   return Math.max(1, Math.round(cycleSeconds * tickRateHz))
 }
 
-const BASE_CELL_SIZE = 24
+const BASE_CELL_SIZE = 64
+const BELT_VIEWBOX_SIZE = 64
 
 const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>(['splitter_1x1', 'merger_1x1', 'bridge_1x1'])
 const HIDDEN_CHEVRON_DEVICE_TYPES = new Set<DeviceTypeId>(['splitter_1x1', 'merger_1x1', 'bridge_1x1'])
+function isKnownDeviceTypeId(typeId: unknown): typeId is DeviceTypeId {
+  return typeof typeId === 'string' && typeId in DEVICE_TYPE_BY_ID
+}
 
 const EDGE_ANCHOR: Record<Edge, { x: number; y: number }> = {
-  N: { x: 50, y: 0 },
-  S: { x: 50, y: 100 },
-  W: { x: 0, y: 50 },
-  E: { x: 100, y: 50 },
+  N: { x: 32, y: 0 },
+  S: { x: 32, y: 64 },
+  W: { x: 0, y: 32 },
+  E: { x: 64, y: 32 },
 }
 
 function buildBeltTrackPath(inEdge: Edge, outEdge: Edge) {
@@ -92,7 +100,7 @@ function buildBeltTrackPath(inEdge: Edge, outEdge: Edge) {
   if (OPPOSITE_EDGE[inEdge] === outEdge) {
     return `M ${start.x} ${start.y} L ${end.x} ${end.y}`
   }
-  return `M ${start.x} ${start.y} L 50 50 L ${end.x} ${end.y}`
+  return `M ${start.x} ${start.y} L 32 32 L ${end.x} ${end.y}`
 }
 
 function lerp(a: number, b: number, t: number) {
@@ -113,15 +121,15 @@ function getBeltItemPosition(inEdge: Edge, outEdge: Edge, progress01: number) {
   if (t < 0.5) {
     const local = t / 0.5
     return {
-      x: lerp(start.x, 50, local),
-      y: lerp(start.y, 50, local),
+      x: lerp(start.x, 32, local),
+      y: lerp(start.y, 32, local),
     }
   }
 
   const local = (t - 0.5) / 0.5
   return {
-    x: lerp(50, end.x, local),
-    y: lerp(50, end.y, local),
+    x: lerp(32, end.x, local),
+    y: lerp(32, end.y, local),
   }
 }
 
@@ -130,6 +138,13 @@ function junctionArrowPoints(edge: Edge) {
   if (edge === 'W') return '32,44 20,50 32,56'
   if (edge === 'N') return '44,32 50,20 56,32'
   return '44,68 50,80 56,68'
+}
+
+function rotatedFootprintSize(size: { width: number; height: number }, rotation: Rotation) {
+  if (rotation === 90 || rotation === 270) {
+    return { width: size.height, height: size.width }
+  }
+  return size
 }
 
 function getMaxCellSizeForViewport(viewport: HTMLDivElement | null) {
@@ -150,16 +165,16 @@ function clampViewportOffset(
     canvasSize.height <= viewportSize.height
       ? (viewportSize.height - canvasSize.height) / 2
       : clamp(offset.y, viewportSize.height - canvasSize.height, 0)
-  return { x, y }
+  return { x: Math.round(x), y: Math.round(y) }
 }
 
 function App() {
   const [layout, setLayout] = usePersistentState<LayoutState>('stage1-layout', { lotSize: 60, devices: [] })
   const [language, setLanguage] = usePersistentState<Language>('stage1-language', 'zh-CN')
   const [mode, setMode] = usePersistentState<EditMode>('stage1-mode', 'select')
-  const [placeType, setPlaceType] = usePersistentState<DeviceTypeId>('stage1-place-type', 'crusher_3x3')
+  const [placeType, setPlaceType] = usePersistentState<DeviceTypeId>('stage1-place-type', 'item_port_grinder_1')
   const [deleteWholeBelt, setDeleteWholeBelt] = usePersistentState<boolean>('stage1-delete-whole-belt', false)
-  const [cellSize, setCellSize] = usePersistentState<number>('stage1-cell-size', 24)
+  const [cellSize, setCellSize] = usePersistentState<number>('stage1-cell-size', 64)
   const [selection, setSelection] = useState<string[]>([])
   const [sim, setSim] = useState<SimState>(() => createInitialSimState())
   const [logStart, setLogStart] = useState<{ x: number; y: number } | null>(null)
@@ -183,10 +198,71 @@ function App() {
   const simTimerRef = useRef<number | null>(null)
   const tickRateSampleRef = useRef<{ tick: number; ms: number } | null>(null)
   const simTickRef = useRef(0)
+  const unknownDevicePromptKeyRef = useRef<string>('')
 
   const occupancyMap = useMemo(() => buildOccupancyMap(layout), [layout])
   const cellDeviceMap = useMemo(() => cellToDeviceId(layout), [layout])
   const t = useMemo(() => createTranslator(language), [language])
+
+  const unknownDevices = useMemo(
+    () => layout.devices.filter((device) => !isKnownDeviceTypeId((device as DeviceInstance & { typeId: unknown }).typeId)),
+    [layout.devices],
+  )
+
+  useEffect(() => {
+    const hasLegacyStorageId = layout.devices.some(
+      (device) => String((device as DeviceInstance & { typeId: unknown }).typeId) === 'storage_box_3x3',
+    )
+    const hasLegacyPowerPoleId = layout.devices.some(
+      (device) => String((device as DeviceInstance & { typeId: unknown }).typeId) === 'power_pole_2x2',
+    )
+    if (!hasLegacyStorageId && !hasLegacyPowerPoleId) return
+
+    setLayout((current) => ({
+      ...current,
+      devices: current.devices.map((device) =>
+        String((device as DeviceInstance & { typeId: unknown }).typeId) === 'storage_box_3x3'
+          ? { ...device, typeId: 'item_port_storager_1' }
+          : String((device as DeviceInstance & { typeId: unknown }).typeId) === 'power_pole_2x2'
+            ? { ...device, typeId: 'item_port_power_diffuser_1' }
+            : device,
+      ),
+    }))
+  }, [layout.devices, setLayout])
+
+  useEffect(() => {
+    if (!isKnownDeviceTypeId(placeType)) {
+      setPlaceType('item_port_grinder_1')
+    }
+  }, [placeType, setPlaceType])
+
+  useEffect(() => {
+    if (unknownDevices.length === 0) {
+      unknownDevicePromptKeyRef.current = ''
+      return
+    }
+
+    const promptKey = unknownDevices
+      .map((device) => `${device.instanceId}:${String((device as DeviceInstance & { typeId: unknown }).typeId)}`)
+      .join('|')
+    if (promptKey === unknownDevicePromptKeyRef.current) return
+    unknownDevicePromptKeyRef.current = promptKey
+
+    const unknownTypeIds = Array.from(
+      new Set(unknownDevices.map((device) => String((device as DeviceInstance & { typeId: unknown }).typeId))),
+    )
+    const confirmed = window.confirm(
+      `检测到旧存档不兼容设备类型：${unknownTypeIds.join(', ')}。\n点击“确定”将删除无法识别的设备。`,
+    )
+    if (!confirmed) return
+
+    const removedIds = new Set(unknownDevices.map((device) => device.instanceId))
+    setLayout((current) => ({
+      ...current,
+      devices: current.devices.filter((device) => isKnownDeviceTypeId((device as DeviceInstance & { typeId: unknown }).typeId)),
+    }))
+    setSelection((current) => current.filter((id) => !removedIds.has(id)))
+  }, [unknownDevices, setLayout])
 
   useEffect(() => {
     if (simTimerRef.current !== null) {
@@ -549,12 +625,24 @@ function App() {
           key: `${device.instanceId}:${runtime.slot.enteredTick}:${runtime.slot.itemId}`,
           itemId: runtime.slot.itemId,
           progress01: runtime.slot.progress01,
-          x: (device.origin.x + position.x / 100) * BASE_CELL_SIZE,
-          y: (device.origin.y + position.y / 100) * BASE_CELL_SIZE,
+          x: (device.origin.x + position.x / BELT_VIEWBOX_SIZE) * BASE_CELL_SIZE,
+          y: (device.origin.y + position.y / BELT_VIEWBOX_SIZE) * BASE_CELL_SIZE,
         },
       ]
     })
   }, [layout.devices, sim.runtimeById])
+
+  const powerRangeOutlines = useMemo(() => {
+    return layout.devices
+      .filter((device) => device.typeId === 'item_port_power_diffuser_1')
+      .map((device) => ({
+        key: `power-range-${device.instanceId}`,
+        left: (device.origin.x - 5) * BASE_CELL_SIZE,
+        top: (device.origin.y - 5) * BASE_CELL_SIZE,
+        width: 12 * BASE_CELL_SIZE,
+        height: 12 * BASE_CELL_SIZE,
+      }))
+  }, [layout.devices])
 
   const portChevrons = useMemo(() => {
     if (mode !== 'logistics' && mode !== 'select') return []
@@ -640,7 +728,17 @@ function App() {
         </div>
         <div className="topbar-controls">
           {!sim.isRunning ? (
-            <button onClick={() => setSim((current) => startSimulation(layout, current))}>{t('top.start')}</button>
+            <button
+              onClick={() => {
+                if (unknownDevices.length > 0) {
+                  window.alert('当前存档包含无法识别的旧设备，请先确认删除后再开始仿真。')
+                  return
+                }
+                setSim((current) => startSimulation(layout, current))
+              }}
+            >
+              {t('top.start')}
+            </button>
           ) : (
             <button onClick={() => setSim((current) => stopSimulation(current))}>{t('top.stop')}</button>
           )}
@@ -737,10 +835,44 @@ function App() {
             >
               <div className="lot-border" />
 
+              {powerRangeOutlines.map((outline) => (
+                <div
+                  key={outline.key}
+                  className="power-range-outline"
+                  style={{
+                    left: outline.left,
+                    top: outline.top,
+                    width: outline.width,
+                    height: outline.height,
+                  }}
+                />
+              ))}
+
               {layout.devices.map((device) => {
                 const type = DEVICE_TYPE_BY_ID[device.typeId]
+                if (!type) return null
+                const footprintSize = rotatedFootprintSize(type.size, device.rotation)
+                const surfaceContentWidthPx = footprintSize.width * BASE_CELL_SIZE - 6
+                const surfaceContentHeightPx = footprintSize.height * BASE_CELL_SIZE - 6
+                const isQuarterTurn = device.rotation === 90 || device.rotation === 270
+                const textureWidthPx = isQuarterTurn ? surfaceContentHeightPx : surfaceContentWidthPx
+                const textureHeightPx = isQuarterTurn ? surfaceContentWidthPx : surfaceContentHeightPx
                 const runtime = sim.runtimeById[device.instanceId]
                 const status = runtimeLabel(runtime)
+                const isPickupPort = device.typeId === 'item_port_unloader_1'
+                const isGrinder = device.typeId === 'item_port_grinder_1'
+                const isPowerPole = device.typeId === 'item_port_power_diffuser_1'
+                const isStorage = device.typeId === 'item_port_storager_1'
+                const isTexturedDevice = isPickupPort || isGrinder || isPowerPole || isStorage
+                const textureSrc = isPickupPort
+                  ? '/sprites/item_port_unloader_1.png'
+                  : isGrinder
+                    ? '/sprites/item_port_grinder_1.png'
+                    : isPowerPole
+                      ? '/sprites/item_port_power_diffuser_1.png'
+                    : isStorage
+                      ? '/sprites/item_port_storager_1.png'
+                    : null
                 const isBelt = device.typeId.startsWith('belt_')
                 const isSplitter = device.typeId === 'splitter_1x1'
                 const isMerger = device.typeId === 'merger_1x1'
@@ -768,26 +900,54 @@ function App() {
                     style={{
                       left: device.origin.x * BASE_CELL_SIZE,
                       top: device.origin.y * BASE_CELL_SIZE,
-                      width: type.size.width * BASE_CELL_SIZE,
-                      height: type.size.height * BASE_CELL_SIZE,
+                      width: footprintSize.width * BASE_CELL_SIZE,
+                      height: footprintSize.height * BASE_CELL_SIZE,
                     }}
                     title={`${device.typeId} | ${status}`}
                   >
                     {isBelt ? (
                       <div className="belt-track-wrap">
-                        <svg className="belt-track-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                          <path d={beltPath} className="belt-track-outline" />
-                          <path d={beltPath} className="belt-track-inner" />
+                        <svg className="belt-track-svg" viewBox={`0 0 ${BELT_VIEWBOX_SIZE} ${BELT_VIEWBOX_SIZE}`} preserveAspectRatio="none" aria-hidden="true">
+                          {(() => {
+                            const beltEdgeMaskId = `belt-edge-mask-${device.instanceId}`
+                            return (
+                              <>
+                                <defs>
+                                  <mask id={beltEdgeMaskId} maskUnits="userSpaceOnUse">
+                                    <rect x="0" y="0" width={BELT_VIEWBOX_SIZE} height={BELT_VIEWBOX_SIZE} fill="black" />
+                                    <path d={beltPath} className="belt-edge-mask-outer" />
+                                    <path d={beltPath} className="belt-edge-mask-inner" />
+                                  </mask>
+                                </defs>
+                                <path d={beltPath} className="belt-track-fill" />
+                                <path d={beltPath} className="belt-track-edge" mask={`url(#${beltEdgeMaskId})`} />
+                              </>
+                            )
+                          })()}
                         </svg>
                         <span
                           className="belt-arrow"
                           style={{ transform: `translate(-50%, -50%) rotate(${EDGE_ANGLE[beltOutEdge]}deg)` }}
-                        >
-                          ›
-                        </span>
+                        />
                       </div>
                     ) : (
-                      <div className="device-surface">
+                      <div
+                        className={`device-surface ${isPickupPort ? 'pickup-port-surface' : ''} ${isGrinder ? 'grinder-surface' : ''} ${isTexturedDevice ? 'textured-surface' : ''}`}
+                      >
+                        {textureSrc && (
+                          <img
+                            className="device-texture"
+                            src={textureSrc}
+                            alt=""
+                            aria-hidden="true"
+                            draggable={false}
+                            style={{
+                              width: `${textureWidthPx}px`,
+                              height: `${textureHeightPx}px`,
+                              transform: `translate(-50%, -50%) rotate(${device.rotation}deg)`,
+                            }}
+                          />
+                        )}
                         {(isSplitter || isMerger) && (
                           <div className="junction-icon" aria-hidden="true">
                             <svg className="junction-icon-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -803,8 +963,12 @@ function App() {
                             </svg>
                           </div>
                         )}
-                        {!HIDDEN_DEVICE_LABEL_TYPES.has(device.typeId) && <span>{getDeviceLabel(language, device.typeId)}</span>}
-                        {device.typeId === 'pickup_port_3x1' && !device.config.pickupItemId && <em>?</em>}
+                        {!HIDDEN_DEVICE_LABEL_TYPES.has(device.typeId) && (
+                          <span className={`device-label ${isPickupPort ? 'pickup-label' : ''} ${isPickupPort && isQuarterTurn ? 'pickup-label-vertical' : ''}`}>
+                            {getDeviceLabel(language, device.typeId)}
+                          </span>
+                        )}
+                        {isPickupPort && !device.config.pickupItemId && <em>?</em>}
                       </div>
                     )}
                   </div>
@@ -819,11 +983,13 @@ function App() {
                     style={{
                       left: item.x,
                       top: item.y,
-                      width: `${BASE_CELL_SIZE * 0.28}px`,
-                      height: `${BASE_CELL_SIZE * 0.28}px`,
+                      width: `${BASE_CELL_SIZE * 0.5}px`,
+                      height: `${BASE_CELL_SIZE * 0.5}px`,
                     }}
                     title={`${getItemLabel(language, item.itemId)} @ ${item.progress01.toFixed(2)}`}
-                  />
+                  >
+                    <img className="belt-item-cover" src={getItemIconPath(item.itemId)} alt="" draggable={false} />
+                  </span>
                 ))}
               </div>
 
@@ -990,8 +1156,8 @@ function App() {
                       <span>
                         {formatItemPair(
                           language,
-                          selectedRuntime.inputBuffer.originium_ore ?? 0,
-                          selectedRuntime.inputBuffer.originium_powder ?? 0,
+                          selectedRuntime.inputBuffer.item_originium_ore ?? 0,
+                          selectedRuntime.inputBuffer.item_originium_powder ?? 0,
                         )}
                       </span>
                     </div>
@@ -1002,8 +1168,8 @@ function App() {
                       <span>
                         {formatItemPair(
                           language,
-                          selectedRuntime.outputBuffer.originium_ore ?? 0,
-                          selectedRuntime.outputBuffer.originium_powder ?? 0,
+                          selectedRuntime.outputBuffer.item_originium_ore ?? 0,
+                          selectedRuntime.outputBuffer.item_originium_powder ?? 0,
                         )}
                       </span>
                     </div>
@@ -1014,8 +1180,8 @@ function App() {
                       <span>
                         {formatItemPair(
                           language,
-                          selectedRuntime.inventory.originium_ore ?? 0,
-                          selectedRuntime.inventory.originium_powder ?? 0,
+                          selectedRuntime.inventory.item_originium_ore ?? 0,
+                          selectedRuntime.inventory.item_originium_powder ?? 0,
                         )}
                       </span>
                     </div>
@@ -1040,7 +1206,7 @@ function App() {
                   )}
                 </>
               )}
-              {selectedDevice.typeId === 'pickup_port_3x1' && (
+              {selectedDevice.typeId === 'item_port_unloader_1' && (
                 <div className="picker">
                   <label>{t('detail.pickupItem')}</label>
                   <select
@@ -1052,7 +1218,7 @@ function App() {
                         ...current,
                         devices: current.devices.map((device) =>
                           device.instanceId === selectedDevice.instanceId
-                            ? { ...device, config: { ...device.config, pickupItemId: value ? (value as 'originium_ore' | 'originium_powder') : undefined } }
+                            ? { ...device, config: { ...device.config, pickupItemId: value ? (value as ItemId) : undefined } }
                             : device,
                         ),
                       }))
@@ -1067,7 +1233,7 @@ function App() {
                   </select>
                 </div>
               )}
-              {selectedDevice.typeId === 'storage_box_3x3' && (
+              {selectedDevice.typeId === 'item_port_storager_1' && (
                 <label className="toggle">
                   <input
                     type="checkbox"

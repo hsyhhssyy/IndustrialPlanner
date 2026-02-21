@@ -100,7 +100,7 @@ Plan 阶段只做可行性判断与预留，Commit 阶段才真实变更容器�
 - `progress01` 表示槽内物品运输进度
 - 到达提交点后执行向下游交付
 
-供电规则补充：仅 `requiresPower=true` 的设备参与供电判定；Stage1 中仅 `crusher_3x3` 需要供电。
+供电规则补充：仅 `requiresPower=true` 的设备参与供电判定；Stage1 中仅 `item_port_grinder_1` 需要供电。
 
 ## 5.3 `storage`
 

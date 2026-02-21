@@ -78,7 +78,7 @@
 供电扩展约束：
 
 - 仅当设备 `requiresPower=true` 时，才参与 `NO_POWER` 判定。
-- Stage1 当前仅 `crusher_3x3` 为 `requiresPower=true`。
+- Stage1 当前仅 `item_port_grinder_1` 为 `requiresPower=true`。
 
 ## 4. 坐标与旋转
 

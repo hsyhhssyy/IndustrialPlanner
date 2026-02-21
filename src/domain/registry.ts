@@ -4,23 +4,23 @@ const solidAllowance = { mode: 'solid' as const, whitelist: [] }
 const recipeItemsAllowance = { mode: 'recipe_items' as const, whitelist: [] }
 
 export const ITEMS: ItemDef[] = [
-  { id: 'originium_ore', displayName: '源石矿', type: 'solid' },
-  { id: 'originium_powder', displayName: '源石粉末', type: 'solid' },
+  { id: 'item_originium_ore', displayName: '源石矿', type: 'solid' },
+  { id: 'item_originium_powder', displayName: '源石粉末', type: 'solid' },
 ]
 
 export const RECIPES: RecipeDef[] = [
   {
     id: 'r_crusher_originium_powder_basic',
-    machineType: 'crusher_3x3',
+    machineType: 'item_port_grinder_1',
     cycleSeconds: 2,
-    inputs: [{ itemId: 'originium_ore', amount: 1 }],
-    outputs: [{ itemId: 'originium_powder', amount: 1 }],
+    inputs: [{ itemId: 'item_originium_ore', amount: 1 }],
+    outputs: [{ itemId: 'item_originium_powder', amount: 1 }],
   },
 ]
 
 export const DEVICE_TYPES: DeviceTypeDef[] = [
   {
-    id: 'pickup_port_3x1',
+    id: 'item_port_unloader_1',
     runtimeKind: 'storage',
     requiresPower: false,
     size: { width: 3, height: 1 },
@@ -30,7 +30,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
         id: 'p_out_mid',
         localCellX: 1,
         localCellY: 0,
-        edge: 'S',
+        edge: 'N',
         direction: 'Output',
         allowedItems: { mode: 'any', whitelist: [] },
         allowedTypes: solidAllowance,
@@ -38,26 +38,26 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     ],
   },
   {
-    id: 'crusher_3x3',
+    id: 'item_port_grinder_1',
     runtimeKind: 'processor',
     requiresPower: true,
     size: { width: 3, height: 3 },
     shortName: 'Crusher',
     ports0: [
-      ...[0, 1, 2].map((y) => ({
-        id: `in_w_${y}`,
-        localCellX: 0,
-        localCellY: y,
-        edge: 'W' as const,
+      ...[0, 1, 2].map((x) => ({
+        id: `in_s_${x}`,
+        localCellX: x,
+        localCellY: 2,
+        edge: 'S' as const,
         direction: 'Input' as const,
         allowedItems: { mode: 'recipe_inputs' as const, whitelist: [] },
         allowedTypes: solidAllowance,
       })),
-      ...[0, 1, 2].map((y) => ({
-        id: `out_e_${y}`,
-        localCellX: 2,
-        localCellY: y,
-        edge: 'E' as const,
+      ...[0, 1, 2].map((x) => ({
+        id: `out_n_${x}`,
+        localCellX: x,
+        localCellY: 0,
+        edge: 'N' as const,
         direction: 'Output' as const,
         allowedItems: { mode: 'recipe_outputs' as const, whitelist: [] },
         allowedTypes: solidAllowance,
@@ -65,7 +65,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     ],
   },
   {
-    id: 'power_pole_2x2',
+    id: 'item_port_power_diffuser_1',
     runtimeKind: 'storage',
     requiresPower: false,
     size: { width: 2, height: 2 },
@@ -73,26 +73,26 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     ports0: [],
   },
   {
-    id: 'storage_box_3x3',
+    id: 'item_port_storager_1',
     runtimeKind: 'storage',
     requiresPower: false,
     size: { width: 3, height: 3 },
     shortName: 'Storage',
     ports0: [
-      ...[0, 1, 2].map((y) => ({
-        id: `in_w_${y}`,
-        localCellX: 0,
-        localCellY: y,
-        edge: 'W' as const,
+      ...[0, 1, 2].map((x) => ({
+        id: `in_s_${x}`,
+        localCellX: x,
+        localCellY: 2,
+        edge: 'S' as const,
         direction: 'Input' as const,
         allowedItems: recipeItemsAllowance,
         allowedTypes: solidAllowance,
       })),
-      ...[0, 1, 2].map((y) => ({
-        id: `out_e_${y}`,
-        localCellX: 2,
-        localCellY: y,
-        edge: 'E' as const,
+      ...[0, 1, 2].map((x) => ({
+        id: `out_n_${x}`,
+        localCellX: x,
+        localCellY: 0,
+        edge: 'N' as const,
         direction: 'Output' as const,
         allowedItems: recipeItemsAllowance,
         allowedTypes: solidAllowance,

@@ -147,10 +147,10 @@ const MODE_MESSAGES: Record<Language, Record<EditMode, string>> = {
 
 const DEVICE_MESSAGES: Record<Language, Record<DeviceTypeId, string>> = {
   'zh-CN': {
-    pickup_port_3x1: '取货口',
-    crusher_3x3: '粉碎机',
-    power_pole_2x2: '电桩',
-    storage_box_3x3: '存储箱',
+    item_port_unloader_1: '取货口',
+    item_port_grinder_1: '粉碎机',
+    item_port_power_diffuser_1: '电桩',
+    item_port_storager_1: '存储箱',
     belt_straight_1x1: '直线传送带',
     belt_turn_cw_1x1: '顺时针转角带',
     belt_turn_ccw_1x1: '逆时针转角带',
@@ -159,10 +159,10 @@ const DEVICE_MESSAGES: Record<Language, Record<DeviceTypeId, string>> = {
     bridge_1x1: '桥接器',
   },
   'en-US': {
-    pickup_port_3x1: 'Pickup Port',
-    crusher_3x3: 'Crusher',
-    power_pole_2x2: 'Power Pole',
-    storage_box_3x3: 'Storage Box',
+    item_port_unloader_1: 'Pickup Port',
+    item_port_grinder_1: 'Crusher',
+    item_port_power_diffuser_1: 'Power Pole',
+    item_port_storager_1: 'Storage Box',
     belt_straight_1x1: 'Straight Belt',
     belt_turn_cw_1x1: 'CW Turn Belt',
     belt_turn_ccw_1x1: 'CCW Turn Belt',
@@ -174,12 +174,12 @@ const DEVICE_MESSAGES: Record<Language, Record<DeviceTypeId, string>> = {
 
 const ITEM_MESSAGES: Record<Language, Record<string, string>> = {
   'zh-CN': {
-    originium_ore: '源石矿',
-    originium_powder: '源石粉末',
+    item_originium_ore: '源石矿',
+    item_originium_powder: '源石粉末',
   },
   'en-US': {
-    originium_ore: 'Originium Ore',
-    originium_powder: 'Originium Powder',
+    item_originium_ore: 'Originium Ore',
+    item_originium_powder: 'Originium Powder',
   },
 }
 

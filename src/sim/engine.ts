@@ -74,8 +74,8 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
 
 function emptyWarehouse() {
   return {
-    originium_ore: Number.POSITIVE_INFINITY,
-    originium_powder: 0,
+    item_originium_ore: Number.POSITIVE_INFINITY,
+    item_originium_powder: 0,
   }
 }
 
@@ -160,16 +160,16 @@ function sourceSlotLane(device: DeviceInstance, runtime: DeviceRuntime, fromPort
 }
 
 function peekOutputItem(device: DeviceInstance, runtime: DeviceRuntime): ItemId | null {
-  if (device.typeId === 'pickup_port_3x1') return device.config.pickupItemId ?? null
+  if (device.typeId === 'item_port_unloader_1') return device.config.pickupItemId ?? null
 
   if ('outputBuffer' in runtime) {
-    if ((runtime.outputBuffer.originium_powder ?? 0) > 0) return 'originium_powder'
+    if ((runtime.outputBuffer.item_originium_powder ?? 0) > 0) return 'item_originium_powder'
     return null
   }
 
   if ('inventory' in runtime) {
-    if ((runtime.inventory.originium_ore ?? 0) > 0) return 'originium_ore'
-    if ((runtime.inventory.originium_powder ?? 0) > 0) return 'originium_powder'
+    if ((runtime.inventory.item_originium_ore ?? 0) > 0) return 'item_originium_ore'
+    if ((runtime.inventory.item_originium_powder ?? 0) > 0) return 'item_originium_powder'
     return null
   }
 
@@ -200,9 +200,10 @@ function peekReadyItemForLane(device: DeviceInstance, runtime: DeviceRuntime, la
 }
 
 function hasReadyOutput(device: DeviceInstance, runtime: DeviceRuntime) {
-  if (device.typeId === 'pickup_port_3x1') return Boolean(device.config.pickupItemId)
-  if ('outputBuffer' in runtime) return (runtime.outputBuffer.originium_powder ?? 0) > 0
-  if ('inventory' in runtime) return (runtime.inventory.originium_ore ?? 0) > 0 || (runtime.inventory.originium_powder ?? 0) > 0
+  if (device.typeId === 'item_port_unloader_1') return Boolean(device.config.pickupItemId)
+  if ('outputBuffer' in runtime) return (runtime.outputBuffer.item_originium_powder ?? 0) > 0
+  if ('inventory' in runtime)
+    return (runtime.inventory.item_originium_ore ?? 0) > 0 || (runtime.inventory.item_originium_powder ?? 0) > 0
   if ('nsSlot' in runtime && 'weSlot' in runtime) {
     const slotReady = Boolean(runtime.slot && runtime.slot.progress01 >= 1)
     const nsReady = Boolean(runtime.nsSlot && runtime.nsSlot.progress01 >= 1)
@@ -238,7 +239,7 @@ function inPowerRange(target: DeviceInstance, poles: DeviceInstance[]) {
 }
 
 function pickupHasConfig(device: DeviceInstance) {
-  return device.typeId !== 'pickup_port_3x1' || Boolean(device.config.pickupItemId)
+  return device.typeId !== 'item_port_unloader_1' || Boolean(device.config.pickupItemId)
 }
 
 function resetRuntimeByLayout(layout: LayoutState) {
@@ -295,8 +296,8 @@ export function createInitialSimState(): SimState {
     warehouse: emptyWarehouse(),
     stats: {
       simSeconds: 0,
-      producedPerMinute: { originium_ore: 0, originium_powder: 0 },
-      consumedPerMinute: { originium_ore: 0, originium_powder: 0 },
+      producedPerMinute: { item_originium_ore: 0, item_originium_powder: 0 },
+      consumedPerMinute: { item_originium_ore: 0, item_originium_powder: 0 },
     },
     minuteWindowDeltas: [],
   }
@@ -305,14 +306,14 @@ export function createInitialSimState(): SimState {
 export function startSimulation(layout: LayoutState, sim: SimState): SimState {
   const runtimeById = resetRuntimeByLayout(layout)
   const overlaps = detectOverlaps(layout)
-  const poles = layout.devices.filter((device) => device.typeId === 'power_pole_2x2')
+  const poles = layout.devices.filter((device) => device.typeId === 'item_port_power_diffuser_1')
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
     let stall: StallReason = 'NONE'
     if (overlaps.has(device.instanceId)) stall = 'OVERLAP'
     else if (!pickupHasConfig(device)) stall = 'CONFIG_ERROR'
-    else if (device.typeId === 'crusher_3x3' && !inPowerRange(device, poles)) stall = 'NO_POWER'
+    else if (device.typeId === 'item_port_grinder_1' && !inPowerRange(device, poles)) stall = 'NO_POWER'
     normalizeRuntimeState(runtime, stall)
   }
 
@@ -324,8 +325,8 @@ export function startSimulation(layout: LayoutState, sim: SimState): SimState {
     warehouse: emptyWarehouse(),
     stats: {
       simSeconds: 0,
-      producedPerMinute: { originium_ore: 0, originium_powder: 0 },
-      consumedPerMinute: { originium_ore: 0, originium_powder: 0 },
+      producedPerMinute: { item_originium_ore: 0, item_originium_powder: 0 },
+      consumedPerMinute: { item_originium_ore: 0, item_originium_powder: 0 },
     },
     minuteWindowDeltas: [],
   }
@@ -337,11 +338,11 @@ export function stopSimulation(sim: SimState): SimState {
     isRunning: false,
     tick: 0,
     runtimeById: {},
-    warehouse: { originium_ore: 0, originium_powder: 0 },
+    warehouse: { item_originium_ore: 0, item_originium_powder: 0 },
     stats: {
       simSeconds: 0,
-      producedPerMinute: { originium_ore: 0, originium_powder: 0 },
-      consumedPerMinute: { originium_ore: 0, originium_powder: 0 },
+      producedPerMinute: { item_originium_ore: 0, item_originium_powder: 0 },
+      consumedPerMinute: { item_originium_ore: 0, item_originium_powder: 0 },
     },
     minuteWindowDeltas: [],
   }
@@ -349,17 +350,17 @@ export function stopSimulation(sim: SimState): SimState {
 
 function tryConsumeCrusherInput(runtime: DeviceRuntime) {
   if (!('inputBuffer' in runtime)) return false
-  const ore = runtime.inputBuffer.originium_ore ?? 0
+  const ore = runtime.inputBuffer.item_originium_ore ?? 0
   if (ore <= 0) return false
-  runtime.inputBuffer.originium_ore = ore - 1
+  runtime.inputBuffer.item_originium_ore = ore - 1
   return true
 }
 
 function withSlidingWindowPerMinute(windowDeltas: Array<Partial<Record<ItemId, number>>>) {
-  const producedPerMinute: Record<ItemId, number> = { originium_ore: 0, originium_powder: 0 }
-  const consumedPerMinute: Record<ItemId, number> = { originium_ore: 0, originium_powder: 0 }
+  const producedPerMinute: Record<ItemId, number> = { item_originium_ore: 0, item_originium_powder: 0 }
+  const consumedPerMinute: Record<ItemId, number> = { item_originium_ore: 0, item_originium_powder: 0 }
 
-  for (const itemId of ['originium_ore', 'originium_powder'] as const) {
+  for (const itemId of ['item_originium_ore', 'item_originium_powder'] as const) {
     let produced = 0
     let consumed = 0
     for (const deltaByTick of windowDeltas) {
@@ -408,7 +409,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
     normalizeRuntimeState(runtime, 'NONE')
 
-    if (device.typeId === 'crusher_3x3' && 'outputBuffer' in runtime && 'inputBuffer' in runtime) {
+    if (device.typeId === 'item_port_grinder_1' && 'outputBuffer' in runtime && 'inputBuffer' in runtime) {
       const recipe = RECIPES[0]
       const recipeCycleTicks = cycleTicksFromSeconds(recipe.cycleSeconds, sim.tickRateHz)
       if (runtime.cycleProgressTicks <= 0 && !tryConsumeCrusherInput(runtime)) {
@@ -429,12 +430,12 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
       }
     }
 
-    if (device.typeId === 'storage_box_3x3' && 'inventory' in runtime) {
+    if (device.typeId === 'item_port_storager_1' && 'inventory' in runtime) {
       runtime.submitAccumulatorTicks += 1
       const enabled = device.config.submitToWarehouse ?? true
       if (enabled && runtime.submitAccumulatorTicks >= storageSubmitTicks) {
         runtime.submitAccumulatorTicks = 0
-        for (const itemId of ['originium_ore', 'originium_powder'] as const) {
+        for (const itemId of ['item_originium_ore', 'item_originium_powder'] as const) {
           const amount = runtime.inventory[itemId] ?? 0
           if (amount <= 0) continue
           runtime.inventory[itemId] = 0
@@ -527,7 +528,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     if (!runtime || runtime.isStalled) continue
     const outLinks = links.outMap.get(device.instanceId) ?? []
 
-    if (device.typeId === 'pickup_port_3x1' && 'submitAccumulatorTicks' in runtime) {
+    if (device.typeId === 'item_port_unloader_1' && 'submitAccumulatorTicks' in runtime) {
       if (!device.config.pickupItemId || outLinks.length === 0) {
         runtime.submitAccumulatorTicks = 0
         continue
@@ -556,10 +557,10 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     const fromDevice = layout.devices.find((d) => d.instanceId === plan.fromId)
     if (!fromRuntime || !toRuntime || !fromDevice) continue
 
-    if (fromDevice.typeId === 'pickup_port_3x1') {
-      if (plan.itemId === 'originium_ore' && Number.isFinite(warehouse.originium_ore)) {
-        warehouse.originium_ore = Math.max(0, warehouse.originium_ore - 1)
-        mark(totalDelta, 'originium_ore', -1)
+    if (fromDevice.typeId === 'item_port_unloader_1') {
+      if (plan.itemId === 'item_originium_ore' && Number.isFinite(warehouse.item_originium_ore)) {
+        warehouse.item_originium_ore = Math.max(0, warehouse.item_originium_ore - 1)
+        mark(totalDelta, 'item_originium_ore', -1)
       }
     } else {
       if (plan.fromLane === 'output') {
@@ -621,7 +622,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 }
 
 export function initialStorageConfig(deviceTypeId: string) {
-  if (deviceTypeId === 'storage_box_3x3') return { submitToWarehouse: true }
+  if (deviceTypeId === 'item_port_storager_1') return { submitToWarehouse: true }
   return {}
 }
 
@@ -633,18 +634,18 @@ export function runtimeLabel(runtime: DeviceRuntime | undefined) {
 }
 
 export function getInventory(runtime: DeviceRuntime | undefined) {
-  const empty = { originium_ore: 0, originium_powder: 0 }
+  const empty = { item_originium_ore: 0, item_originium_powder: 0 }
   if (!runtime) return empty
   if ('inventory' in runtime) {
     return {
-      originium_ore: runtime.inventory.originium_ore ?? 0,
-      originium_powder: runtime.inventory.originium_powder ?? 0,
+      item_originium_ore: runtime.inventory.item_originium_ore ?? 0,
+      item_originium_powder: runtime.inventory.item_originium_powder ?? 0,
     }
   }
   if ('inputBuffer' in runtime && 'outputBuffer' in runtime) {
     return {
-      originium_ore: runtime.inputBuffer.originium_ore ?? 0,
-      originium_powder: runtime.outputBuffer.originium_powder ?? 0,
+      item_originium_ore: runtime.inputBuffer.item_originium_ore ?? 0,
+      item_originium_powder: runtime.outputBuffer.item_originium_powder ?? 0,
     }
   }
   return empty

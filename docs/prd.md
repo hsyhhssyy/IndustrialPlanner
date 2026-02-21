@@ -97,10 +97,10 @@
 
 ### 设备（10类）
 
-* pickup_port_3x1
-* crusher_3x3
-* power_pole_2x2
-* storage_box_3x3
+* item_port_unloader_1
+* item_port_grinder_1
+* item_port_power_diffuser_1
+* item_port_storager_1
 * belt_straight_1x1
 * belt_turn_cw_1x1
 * belt_turn_ccw_1x1
@@ -173,7 +173,7 @@ runtimeKind:
 
 Stage1 当前口径：
 
-* 仅 crusher_3x3 需要供电
+* 仅 item_port_grinder_1 需要供电
 * 其他设备 requiresPower=false
 
 ## 2.3 编辑可落盘 vs 规则合法性（统一定义）

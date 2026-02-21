@@ -57,8 +57,8 @@ function boundaryKey(x: number, y: number, edge: Edge) {
 function allowedItemIds(port: RotatedPort): Set<ItemId> | 'any' {
   const mode = port.allowedItems.mode
   if (mode === 'any' || mode === 'recipe_items') return 'any'
-  if (mode === 'recipe_inputs') return new Set(['originium_ore'])
-  if (mode === 'recipe_outputs') return new Set(['originium_powder'])
+  if (mode === 'recipe_inputs') return new Set(['item_originium_ore'])
+  if (mode === 'recipe_outputs') return new Set(['item_originium_powder'])
   return new Set(port.allowedItems.whitelist)
 }
 
@@ -75,6 +75,7 @@ export function isItemCompatible(output: RotatedPort, input: RotatedPort): boole
 
 export function getFootprintCells(device: DeviceInstance) {
   const type = DEVICE_TYPE_BY_ID[device.typeId]
+  if (!type) return []
   const cells: Array<{ x: number; y: number }> = []
   for (let y = 0; y < type.size.height; y += 1) {
     for (let x = 0; x < type.size.width; x += 1) {
@@ -87,6 +88,7 @@ export function getFootprintCells(device: DeviceInstance) {
 
 export function getRotatedPorts(device: DeviceInstance): RotatedPort[] {
   const type = DEVICE_TYPE_BY_ID[device.typeId]
+  if (!type) return []
   return type.ports0.map((port: PortDef) => {
     const p = rotatePoint(port.localCellX, port.localCellY, type.size.width, type.size.height, device.rotation)
     return {
@@ -128,7 +130,9 @@ export function detectOverlaps(layout: LayoutState) {
 }
 
 export function isWithinLot(device: DeviceInstance, lotSize: number) {
-  return getFootprintCells(device).every((cell) => cell.x >= 0 && cell.y >= 0 && cell.x < lotSize && cell.y < lotSize)
+  const footprint = getFootprintCells(device)
+  if (footprint.length === 0) return false
+  return footprint.every((cell) => cell.x >= 0 && cell.y >= 0 && cell.x < lotSize && cell.y < lotSize)
 }
 
 export function linksFromLayout(layout: LayoutState): PortLink[] {

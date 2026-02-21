@@ -11,12 +11,12 @@ export type StallReason =
   | 'OUTPUT_BLOCKED'
   | 'CONFIG_ERROR'
 
-export type ItemId = 'originium_ore' | 'originium_powder'
+export type ItemId = 'item_originium_ore' | 'item_originium_powder'
 export type DeviceTypeId =
-  | 'pickup_port_3x1'
-  | 'crusher_3x3'
-  | 'power_pole_2x2'
-  | 'storage_box_3x3'
+  | 'item_port_unloader_1'
+  | 'item_port_grinder_1'
+  | 'item_port_power_diffuser_1'
+  | 'item_port_storager_1'
   | 'belt_straight_1x1'
   | 'belt_turn_cw_1x1'
   | 'belt_turn_ccw_1x1'
@@ -61,7 +61,7 @@ export interface DeviceTypeDef {
 
 export interface RecipeDef {
   id: 'r_crusher_originium_powder_basic'
-  machineType: 'crusher_3x3'
+  machineType: 'item_port_grinder_1'
   cycleSeconds: number
   inputs: Array<{ itemId: ItemId; amount: number }>
   outputs: Array<{ itemId: ItemId; amount: number }>
@@ -106,8 +106,8 @@ export interface PortLink {
 }
 
 export interface WarehouseState {
-  originium_ore: number
-  originium_powder: number
+  item_originium_ore: number
+  item_originium_powder: number
 }
 
 export interface WarehouseStats {
