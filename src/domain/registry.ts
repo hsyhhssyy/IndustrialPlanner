@@ -1,4 +1,4 @@
-import type { DeviceTypeDef, ItemDef, RecipeDef } from './types'
+import type { BaseDef, DeviceTypeDef, ItemDef, RecipeDef } from './types'
 
 const solidAllowance = { mode: 'solid' as const, whitelist: [] }
 const liquidAllowance = { mode: 'liquid' as const, whitelist: [] }
@@ -7,6 +7,13 @@ const recipeItemsAllowance = { mode: 'recipe_items' as const, whitelist: [] }
 export const ITEMS: ItemDef[] = [
   { id: 'item_originium_ore', displayName: '源石矿', type: 'solid' },
   { id: 'item_originium_powder', displayName: '源石粉末', type: 'solid' },
+  { id: 'item_iron_ore', displayName: '蓝铁矿', type: 'solid' },
+  { id: 'item_iron_nugget', displayName: '蓝铁块', type: 'solid' },
+  { id: 'item_iron_powder', displayName: '蓝铁粉末', type: 'solid' },
+  { id: 'item_plant_moss_3', displayName: '砂叶', type: 'solid' },
+  { id: 'item_plant_moss_seed_3', displayName: '砂叶种子', type: 'solid' },
+  { id: 'item_plant_moss_powder_3', displayName: '砂叶粉末', type: 'solid' },
+  { id: 'item_iron_enr_powder', displayName: '致密蓝铁粉末', type: 'solid' },
 ]
 
 export const RECIPES: RecipeDef[] = [
@@ -17,6 +24,58 @@ export const RECIPES: RecipeDef[] = [
     inputs: [{ itemId: 'item_originium_ore', amount: 1 }],
     outputs: [{ itemId: 'item_originium_powder', amount: 1 }],
   },
+  {
+    id: 'r_furnace_iron_nugget_from_iron_ore_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_iron_ore', amount: 1 }],
+    outputs: [{ itemId: 'item_iron_nugget', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_iron_nugget_from_iron_powder_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_iron_powder', amount: 1 }],
+    outputs: [{ itemId: 'item_iron_nugget', amount: 1 }],
+  },
+  {
+    id: 'r_crusher_iron_powder_from_iron_nugget_basic',
+    machineType: 'item_port_grinder_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_iron_nugget', amount: 1 }],
+    outputs: [{ itemId: 'item_iron_powder', amount: 1 }],
+  },
+  {
+    id: 'r_seedcol_moss_seed_from_moss_basic',
+    machineType: 'item_port_seedcol_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_3', amount: 1 }],
+    outputs: [{ itemId: 'item_plant_moss_seed_3', amount: 2 }],
+  },
+  {
+    id: 'r_planter_moss_from_moss_seed_basic',
+    machineType: 'item_port_planter_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_seed_3', amount: 1 }],
+    outputs: [{ itemId: 'item_plant_moss_3', amount: 1 }],
+  },
+  {
+    id: 'r_crusher_moss_powder_from_moss_basic',
+    machineType: 'item_port_grinder_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_3', amount: 1 }],
+    outputs: [{ itemId: 'item_plant_moss_powder_3', amount: 3 }],
+  },
+  {
+    id: 'r_grinder_iron_enr_powder_from_iron_and_moss_powder_basic',
+    machineType: 'item_port_grinder_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_iron_powder', amount: 2 },
+      { itemId: 'item_plant_moss_powder_3', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_iron_enr_powder', amount: 1 }],
+  },
 ]
 
 export const DEVICE_TYPES: DeviceTypeDef[] = [
@@ -26,6 +85,16 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 3, height: 1 },
     shortName: 'Pickup',
+    placementConstraints: [
+      {
+        kind: 'edge_contact',
+        edgeMode: 'opposite_of_port',
+        portId: 'p_out_mid',
+        minAdjacentCells: 1,
+        targetTagsAny: ['bus'],
+        violationMessageKey: 'toast.rule.pickupRequiresBus',
+      },
+    ],
     ports0: [
       {
         id: 'p_out_mid',
@@ -452,7 +521,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 4, height: 4 },
     shortName: 'BusSource',
-    tags: ['武陵'],
+    tags: ['武陵', 'bus'],
     ports0: [],
   },
   {
@@ -461,7 +530,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 4, height: 8 },
     shortName: 'BusSegment',
-    tags: ['武陵'],
+    tags: ['武陵', 'bus'],
     ports0: [],
   },
   {
@@ -701,3 +770,74 @@ export const PLACEABLE_TYPES = DEVICE_TYPES.filter(
 
 export const BELT_TYPES = new Set(['belt_straight_1x1', 'belt_turn_cw_1x1', 'belt_turn_ccw_1x1'])
 export const JUNCTION_TYPES = new Set(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
+
+export const BASES: BaseDef[] = [
+  {
+    id: 'valley4_protocol_core',
+    name: '协议核心区',
+    placeableSize: 70,
+    outerRing: { top: 4, right: 2, bottom: 2, left: 4 },
+    tags: ['四号谷地'],
+    foundationBuildings: [
+      {
+        instanceId: 'base_valley4_bus_source_1',
+        typeId: 'item_port_log_hongs_bus_source',
+        origin: { x: -4, y: -4 },
+        rotation: 0,
+      },
+      ...Array.from({ length: 9 }, (_, index) => ({
+        instanceId: `base_valley4_bus_right_${index + 1}`,
+        typeId: 'item_port_log_hongs_bus' as const,
+        origin: { x: index * 8, y: -4 },
+        rotation: 90 as const,
+      })),
+      ...Array.from({ length: 9 }, (_, index) => ({
+        instanceId: `base_valley4_bus_down_${index + 1}`,
+        typeId: 'item_port_log_hongs_bus' as const,
+        origin: { x: -4, y: index * 8 },
+        rotation: 0 as const,
+      })),
+    ],
+  },
+  {
+    id: 'valley4_refugee_shelter',
+    name: '难民暂居处',
+    placeableSize: 40,
+    outerRing: { top: 4, right: 0, bottom: 0, left: 0 },
+    tags: ['四号谷地'],
+    foundationBuildings: Array.from({ length: 5 }, (_, index) => ({
+      instanceId: `base_valley4_refugee_top_${index + 1}`,
+      typeId: 'item_port_log_hongs_bus' as const,
+      origin: { x: index * 8, y: -4 },
+      rotation: 90 as const,
+    })),
+  },
+  {
+    id: 'valley4_infra_outpost',
+    name: '基建前站',
+    placeableSize: 40,
+    outerRing: { top: 4, right: 0, bottom: 0, left: 0 },
+    tags: ['四号谷地'],
+    foundationBuildings: Array.from({ length: 5 }, (_, index) => ({
+      instanceId: `base_valley4_infra_top_${index + 1}`,
+      typeId: 'item_port_log_hongs_bus' as const,
+      origin: { x: index * 8, y: -4 },
+      rotation: 90 as const,
+    })),
+  },
+  {
+    id: 'valley4_rebuilt_command',
+    name: '重建指挥部',
+    placeableSize: 40,
+    outerRing: { top: 4, right: 0, bottom: 0, left: 0 },
+    tags: ['四号谷地'],
+    foundationBuildings: Array.from({ length: 5 }, (_, index) => ({
+      instanceId: `base_valley4_rebuild_top_${index + 1}`,
+      typeId: 'item_port_log_hongs_bus' as const,
+      origin: { x: index * 8, y: -4 },
+      rotation: 90 as const,
+    })),
+  },
+]
+
+export const BASE_BY_ID: Record<string, BaseDef> = Object.fromEntries(BASES.map((base) => [base.id, base]))

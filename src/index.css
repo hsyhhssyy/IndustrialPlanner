@@ -8,3 +8,116 @@ body {
 #root {
   height: 100vh;
 }
+
+.global-toast {
+  position: fixed;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  min-width: 220px;
+  max-width: min(70vw, 640px);
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #4f7bc4;
+  background: rgba(27, 34, 45, 0.96);
+  color: #e5ebf3;
+  font-size: 14px;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.global-toast--success {
+  border-color: #37c87a;
+}
+
+.global-toast--warning {
+  border-color: #ffd166;
+}
+
+.global-toast--error {
+  border-color: #ff5d5d;
+}
+
+.global-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 11, 17, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+}
+
+.global-dialog-floating-layer {
+  position: fixed;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1150;
+}
+
+.global-dialog {
+  min-width: 320px;
+  max-width: min(78vw, 680px);
+  background: rgba(27, 34, 45, 0.98);
+  border: 1px solid #4f7bc4;
+  border-radius: 10px;
+  padding: 14px 16px;
+  color: #e5ebf3;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
+}
+
+.global-dialog.floating {
+  min-width: 360px;
+}
+
+.global-dialog--success {
+  border-color: #37c87a;
+}
+
+.global-dialog--warning {
+  border-color: #ffd166;
+}
+
+.global-dialog--error {
+  border-color: #ff5d5d;
+}
+
+.global-dialog-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.global-dialog-message {
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.global-dialog-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.global-dialog-btn {
+  min-width: 76px;
+  border: 1px solid #35516f;
+  border-radius: 6px;
+  background: #223247;
+  color: #e5ebf3;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.global-dialog-btn.primary {
+  border-color: #4f7bc4;
+  background: #395c93;
+}

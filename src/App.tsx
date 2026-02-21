@@ -1,12 +1,28 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { DEVICE_TYPE_BY_ID, ITEMS, PLACEABLE_TYPES, RECIPES } from './domain/registry'
+import { BASE_BY_ID, BASES, DEVICE_TYPE_BY_ID, ITEMS, PLACEABLE_TYPES, RECIPES } from './domain/registry'
 import { getDeviceSpritePath } from './domain/deviceSprites'
 import { applyLogisticsPath, deleteConnectedBelts, longestValidLogisticsPrefix, nextId, pathFromTrace } from './domain/logistics'
 import { buildOccupancyMap, cellToDeviceId, EDGE_ANGLE, getDeviceById, getRotatedPorts, isWithinLot, linksFromLayout, OPPOSITE_EDGE } from './domain/geometry'
-import type { DeviceInstance, DeviceRuntime, DeviceTypeId, Edge, EditMode, ItemId, LayoutState, Rotation, SimState, SlotData } from './domain/types'
+import { validatePlacementConstraints } from './domain/placement'
+import type {
+  BaseId,
+  DeviceInstance,
+  DeviceRuntime,
+  DeviceTypeId,
+  Edge,
+  EditMode,
+  ItemId,
+  LayoutState,
+  PreloadInputConfigEntry,
+  Rotation,
+  SimState,
+  SlotData,
+} from './domain/types'
 import { usePersistentState } from './hooks/usePersistentState'
 import { createTranslator, getDeviceLabel, getItemLabel, getModeLabel, LANGUAGE_OPTIONS, type Language } from './i18n'
+import { dialogAlertNonBlocking, dialogConfirm } from './ui/dialog'
+import { showToast } from './ui/toast'
 import {
   createInitialSimState,
   initialStorageConfig,
@@ -38,8 +54,111 @@ function getInternalStatusText(
   return t('detail.internal.readyCommit', { progress: slot.progress01.toFixed(2) })
 }
 
-function formatItemPair(language: Language, ore: number, powder: number) {
-  return `${getItemLabel(language, 'item_originium_ore')}: ${ore}, ${getItemLabel(language, 'item_originium_powder')}: ${powder}`
+function formatInventoryAmounts(
+  language: Language,
+  amounts: Partial<Record<ItemId, number>>,
+  t: (key: string, params?: Record<string, string | number>) => string,
+) {
+  const entries = ITEMS.map((item) => ({ itemId: item.id, amount: Math.max(0, amounts[item.id] ?? 0) })).filter(
+    (entry) => entry.amount > 0,
+  )
+  if (entries.length === 0) return t('detail.empty')
+  return entries.map((entry) => `${getItemLabel(language, entry.itemId)}: ${entry.amount}`).join(', ')
+}
+
+function processorBufferSpec(typeId: DeviceTypeId) {
+  const deviceType = DEVICE_TYPE_BY_ID[typeId]
+  return {
+    inputCapacity: Math.max(1, Math.floor(deviceType.inputBufferCapacity ?? 50)),
+    outputCapacity: Math.max(1, Math.floor(deviceType.outputBufferCapacity ?? 50)),
+    inputSlots: Math.max(1, Math.floor(deviceType.inputBufferSlots ?? 1)),
+    outputSlots: Math.max(1, Math.floor(deviceType.outputBufferSlots ?? 1)),
+  }
+}
+
+type ProcessorPreloadSlot = { itemId: ItemId | null; amount: number }
+
+type ItemPickerState =
+  | { kind: 'pickup'; deviceInstanceId: string }
+  | { kind: 'preload'; deviceInstanceId: string; slotIndex: number }
+
+function buildProcessorPreloadSlots(device: DeviceInstance, slotCount: number, inputCapacity: number): ProcessorPreloadSlot[] {
+  const slots = Array.from({ length: slotCount }, () => ({ itemId: null, amount: 0 }) as ProcessorPreloadSlot)
+  const preloadInputs = device.config.preloadInputs
+  if (Array.isArray(preloadInputs) && preloadInputs.length > 0) {
+    for (const entry of preloadInputs) {
+      if (!entry || typeof entry.slotIndex !== 'number') continue
+      const slotIndex = Math.floor(entry.slotIndex)
+      if (slotIndex < 0 || slotIndex >= slots.length) continue
+      slots[slotIndex] = {
+        itemId: entry.itemId,
+        amount: clamp(Math.floor(entry.amount ?? 0), 0, inputCapacity),
+      }
+    }
+    return slots
+  }
+
+  if (device.config.preloadInputItemId) {
+    slots[0] = {
+      itemId: device.config.preloadInputItemId,
+      amount: clamp(Math.floor(device.config.preloadInputAmount ?? 0), 0, inputCapacity),
+    }
+  }
+  return slots
+}
+
+function serializeProcessorPreloadSlots(slots: ProcessorPreloadSlot[]): PreloadInputConfigEntry[] {
+  return slots.flatMap((slot, slotIndex) =>
+    slot.itemId
+      ? [
+          {
+            slotIndex,
+            itemId: slot.itemId,
+            amount: Math.max(0, Math.floor(slot.amount)),
+          },
+        ]
+      : [],
+  )
+}
+
+function formatInputBufferAmounts(
+  language: Language,
+  amounts: Partial<Record<ItemId, number>>,
+  slots: number,
+  capacity: number,
+  t: (key: string, params?: Record<string, string | number>) => string,
+) {
+  const entries: Array<{ itemId: ItemId; amount: number }> = []
+  let total = 0
+  for (const item of ITEMS) {
+    const amount = Math.max(0, amounts[item.id] ?? 0)
+    if (amount <= 0) continue
+    total += amount
+    entries.push({ itemId: item.id, amount })
+  }
+  if (entries.length === 0) return `${t('detail.empty')} (0/${slots}, 0/${capacity})`
+  const detail = entries.map((entry) => `${getItemLabel(language, entry.itemId)}: ${entry.amount}`).join(', ')
+  return `${detail} (${entries.length}/${slots}, ${total}/${capacity})`
+}
+
+function formatOutputBufferAmounts(
+  language: Language,
+  amounts: Partial<Record<ItemId, number>>,
+  slots: number,
+  capacity: number,
+  t: (key: string, params?: Record<string, string | number>) => string,
+) {
+  const entries: Array<{ itemId: ItemId; amount: number }> = []
+  let total = 0
+  for (const item of ITEMS) {
+    const amount = Math.max(0, amounts[item.id] ?? 0)
+    if (amount <= 0) continue
+    total += amount
+    entries.push({ itemId: item.id, amount })
+  }
+  if (entries.length === 0) return `${t('detail.empty')} (0/${slots}, 0/${capacity})`
+  const detail = entries.map((entry) => `${getItemLabel(language, entry.itemId)}: ${entry.amount}`).join(', ')
+  return `${detail} (${entries.length}/${slots}, ${total}/${capacity})`
 }
 
 function getItemIconPath(itemId: ItemId) {
@@ -156,8 +275,57 @@ const BELT_VIEWBOX_SIZE = 64
 
 const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
 const HIDDEN_CHEVRON_DEVICE_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
+const OUT_OF_LOT_TOAST_KEY = 'toast.outOfLot'
+const FALLBACK_PLACEMENT_TOAST_KEY = 'toast.invalidPlacementFallback'
 function isKnownDeviceTypeId(typeId: unknown): typeId is DeviceTypeId {
   return typeof typeId === 'string' && typeId in DEVICE_TYPE_BY_ID
+}
+
+function isKnownBaseId(baseId: unknown): baseId is BaseId {
+  return typeof baseId === 'string' && baseId in BASE_BY_ID
+}
+
+function createLayoutForBase(baseId: BaseId): LayoutState {
+  const base = BASE_BY_ID[baseId]
+  return {
+    baseId: base.id,
+    lotSize: base.placeableSize,
+    devices: base.foundationBuildings.map((building) => ({
+      ...building,
+      config: building.config ?? initialStorageConfig(building.typeId),
+    })),
+  }
+}
+
+function resolveBaseFromLayout(layout: LayoutState | (Partial<LayoutState> & { lotSize?: number })): BaseId {
+  if (isKnownBaseId(layout.baseId)) return layout.baseId
+  if (layout.lotSize === 40) return 'valley4_rebuilt_command'
+  if (layout.lotSize === 60) return 'valley4_protocol_core'
+  return 'valley4_protocol_core'
+}
+
+function normalizeLayoutForBase(rawLayout: LayoutState | undefined, baseId: BaseId): LayoutState {
+  const base = BASE_BY_ID[baseId]
+  const fallback = createLayoutForBase(baseId)
+  if (!rawLayout) return fallback
+
+  const foundationById = new Map(base.foundationBuildings.map((device) => [device.instanceId, device]))
+  const cleanedDevices = rawLayout.devices.filter((device) => isKnownDeviceTypeId(device.typeId) && isWithinLot(device, base.placeableSize))
+  const cleanedWithoutFoundation = cleanedDevices.filter((device) => !foundationById.has(device.instanceId))
+  const foundationDevices = base.foundationBuildings.map((building) => {
+    const existing = cleanedDevices.find((device) => device.instanceId === building.instanceId)
+    if (existing) return existing
+    return {
+      ...building,
+      config: building.config ?? initialStorageConfig(building.typeId),
+    }
+  })
+
+  return {
+    baseId,
+    lotSize: base.placeableSize,
+    devices: [...foundationDevices, ...cleanedWithoutFoundation],
+  }
 }
 
 const EDGE_ANCHOR: Record<Edge, { x: number; y: number }> = {
@@ -244,50 +412,54 @@ function clampViewportOffset(
 type StaticDeviceLayerProps = {
   devices: DeviceInstance[]
   selectionSet: ReadonlySet<string>
+  invalidSelectionSet: ReadonlySet<string>
+  previewOriginsById: ReadonlyMap<string, { x: number; y: number }>
   language: Language
 }
 
-const StaticDeviceLayer = memo(({ devices, selectionSet, language }: StaticDeviceLayerProps) => {
+const StaticDeviceLayer = memo(({ devices, selectionSet, invalidSelectionSet, previewOriginsById, language }: StaticDeviceLayerProps) => {
   return (
     <>
       {devices.map((device) => {
+        const previewOrigin = previewOriginsById.get(device.instanceId)
+        const renderDevice = previewOrigin ? { ...device, origin: previewOrigin } : device
         const type = DEVICE_TYPE_BY_ID[device.typeId]
         if (!type) return null
-        const footprintSize = rotatedFootprintSize(type.size, device.rotation)
+        const footprintSize = rotatedFootprintSize(type.size, renderDevice.rotation)
         const surfaceContentWidthPx = footprintSize.width * BASE_CELL_SIZE - 6
         const surfaceContentHeightPx = footprintSize.height * BASE_CELL_SIZE - 6
-        const isQuarterTurn = device.rotation === 90 || device.rotation === 270
+        const isQuarterTurn = renderDevice.rotation === 90 || renderDevice.rotation === 270
         const textureWidthPx = isQuarterTurn ? surfaceContentHeightPx : surfaceContentWidthPx
         const textureHeightPx = isQuarterTurn ? surfaceContentWidthPx : surfaceContentHeightPx
-        const isPickupPort = device.typeId === 'item_port_unloader_1'
-        const isGrinder = device.typeId === 'item_port_grinder_1'
-        const textureSrc = getDeviceSpritePath(device.typeId)
+        const isPickupPort = renderDevice.typeId === 'item_port_unloader_1'
+        const isGrinder = renderDevice.typeId === 'item_port_grinder_1'
+        const textureSrc = getDeviceSpritePath(renderDevice.typeId)
         const isTexturedDevice = textureSrc !== null
-        const isBelt = device.typeId.startsWith('belt_')
-        const isSplitter = device.typeId === 'item_log_splitter'
-        const isMerger = device.typeId === 'item_log_converger'
-        const beltPorts = isBelt ? getRotatedPorts(device) : []
+        const isBelt = renderDevice.typeId.startsWith('belt_')
+        const isSplitter = renderDevice.typeId === 'item_log_splitter'
+        const isMerger = renderDevice.typeId === 'item_log_converger'
+        const beltPorts = isBelt ? getRotatedPorts(renderDevice) : []
         const beltInEdge = isBelt ? beltPorts.find((port) => port.direction === 'Input')?.edge ?? 'W' : 'W'
         const beltOutEdge = isBelt ? beltPorts.find((port) => port.direction === 'Output')?.edge ?? 'E' : 'E'
         const beltPath = buildBeltTrackPath(beltInEdge, beltOutEdge)
         const splitterOutputEdges = isSplitter
-          ? getRotatedPorts(device)
+          ? getRotatedPorts(renderDevice)
               .filter((port) => port.direction === 'Output')
               .map((port) => port.edge)
           : []
-        const mergerOutputEdges = isMerger ? [getRotatedPorts(device).find((port) => port.direction === 'Output')?.edge ?? 'W'] : []
+        const mergerOutputEdges = isMerger ? [getRotatedPorts(renderDevice).find((port) => port.direction === 'Output')?.edge ?? 'W'] : []
         const junctionArrowEdges = isSplitter ? splitterOutputEdges : mergerOutputEdges
         return (
           <div
             key={device.instanceId}
-            className={`device ${isBelt ? 'belt-device' : ''} ${selectionSet.has(device.instanceId) ? 'selected' : ''}`}
+            className={`device ${isBelt ? 'belt-device' : ''} ${selectionSet.has(device.instanceId) ? 'selected' : ''} ${invalidSelectionSet.has(device.instanceId) ? 'drag-invalid' : ''}`}
             style={{
-              left: device.origin.x * BASE_CELL_SIZE,
-              top: device.origin.y * BASE_CELL_SIZE,
+              left: renderDevice.origin.x * BASE_CELL_SIZE,
+              top: renderDevice.origin.y * BASE_CELL_SIZE,
               width: footprintSize.width * BASE_CELL_SIZE,
               height: footprintSize.height * BASE_CELL_SIZE,
             }}
-            title={device.typeId}
+            title={renderDevice.typeId}
           >
             {isBelt ? (
               <div className="belt-track-wrap">
@@ -325,7 +497,7 @@ const StaticDeviceLayer = memo(({ devices, selectionSet, language }: StaticDevic
                     style={{
                       width: `${textureWidthPx}px`,
                       height: `${textureHeightPx}px`,
-                      transform: `translate(-50%, -50%) rotate(${device.rotation}deg)`,
+                      transform: `translate(-50%, -50%) rotate(${renderDevice.rotation}deg)`,
                     }}
                   />
                 )}
@@ -335,17 +507,17 @@ const StaticDeviceLayer = memo(({ devices, selectionSet, language }: StaticDevic
                       <line className="junction-cross-line" x1="20" y1="50" x2="80" y2="50" />
                       <line className="junction-cross-line" x1="50" y1="20" x2="50" y2="80" />
                       {junctionArrowEdges.map((edge) => (
-                        <polyline key={`${device.instanceId}-${edge}`} className="junction-arrow-line" points={junctionArrowPoints(edge)} />
+                        <polyline key={`${renderDevice.instanceId}-${edge}`} className="junction-arrow-line" points={junctionArrowPoints(edge)} />
                       ))}
                     </svg>
                   </div>
                 )}
-                {!HIDDEN_DEVICE_LABEL_TYPES.has(device.typeId) && (
+                {!HIDDEN_DEVICE_LABEL_TYPES.has(renderDevice.typeId) && (
                   <span className={`device-label ${isPickupPort ? 'pickup-label' : ''} ${isPickupPort && isQuarterTurn ? 'pickup-label-vertical' : ''}`}>
-                    {getDeviceLabel(language, device.typeId)}
+                    {getDeviceLabel(language, renderDevice.typeId)}
                   </span>
                 )}
-                {isPickupPort && !device.config.pickupItemId && <em>?</em>}
+                {isPickupPort && !renderDevice.config.pickupItemId && <em>?</em>}
               </div>
             )}
           </div>
@@ -356,10 +528,12 @@ const StaticDeviceLayer = memo(({ devices, selectionSet, language }: StaticDevic
 })
 
 function App() {
-  const [layout, setLayout] = usePersistentState<LayoutState>('stage1-layout', { lotSize: 60, devices: [] })
+  const [activeBaseId, setActiveBaseId] = usePersistentState<BaseId>('stage1-active-base', 'valley4_protocol_core')
+  const [layoutsByBase, setLayoutsByBase] = usePersistentState<Partial<Record<BaseId, LayoutState>>>('stage1-layouts-by-base', {})
   const [language, setLanguage] = usePersistentState<Language>('stage1-language', 'zh-CN')
   const [mode, setMode] = usePersistentState<EditMode>('stage1-mode', 'select')
   const [placeType, setPlaceType] = usePersistentState<DeviceTypeId>('stage1-place-type', 'item_port_grinder_1')
+  const [placeRotation, setPlaceRotation] = usePersistentState<Rotation>('stage1-place-rotation', 0)
   const [deleteWholeBelt, setDeleteWholeBelt] = usePersistentState<boolean>('stage1-delete-whole-belt', false)
   const [cellSize, setCellSize] = usePersistentState<number>('stage1-cell-size', 64)
   const [selection, setSelection] = useState<string[]>([])
@@ -369,6 +543,10 @@ function App() {
   const [logTrace, setLogTrace] = useState<Array<{ x: number; y: number }>>([])
   const [hoverCell, setHoverCell] = useState<{ x: number; y: number } | null>(null)
   const [dragBasePositions, setDragBasePositions] = useState<Record<string, { x: number; y: number }> | null>(null)
+  const [dragPreviewPositions, setDragPreviewPositions] = useState<Record<string, { x: number; y: number }>>({})
+  const [dragPreviewValid, setDragPreviewValid] = useState(true)
+  const [dragInvalidMessage, setDragInvalidMessage] = useState<string | null>(null)
+  const [dragInvalidSelection, setDragInvalidSelection] = useState<Set<string>>(new Set())
   const [dragStartCell, setDragStartCell] = useState<{ x: number; y: number } | null>(null)
   const [dragRect, setDragRect] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
   const [dragOrigin, setDragOrigin] = useState<{ x: number; y: number } | null>(null)
@@ -377,8 +555,39 @@ function App() {
   const [isPanning, setIsPanning] = useState(false)
   const [panStart, setPanStart] = useState<{ clientX: number; clientY: number; offsetX: number; offsetY: number } | null>(null)
   const [measuredTickRate, setMeasuredTickRate] = useState(0)
+  const [itemPickerState, setItemPickerState] = useState<ItemPickerState | null>(null)
 
+  const layout = useMemo(() => normalizeLayoutForBase(layoutsByBase[activeBaseId], activeBaseId), [layoutsByBase, activeBaseId])
+  const setLayout = useCallback(
+    (updater: LayoutState | ((current: LayoutState) => LayoutState)) => {
+      setLayoutsByBase((currentAll) => {
+        const currentLayout = normalizeLayoutForBase(currentAll[activeBaseId], activeBaseId)
+        const nextLayout = typeof updater === 'function' ? (updater as (current: LayoutState) => LayoutState)(currentLayout) : updater
+        const normalizedNext = normalizeLayoutForBase(nextLayout, activeBaseId)
+        return {
+          ...currentAll,
+          [activeBaseId]: normalizedNext,
+        }
+      })
+    },
+    [activeBaseId, setLayoutsByBase],
+  )
+
+  const currentBaseId = activeBaseId
+  const currentBase = BASE_BY_ID[currentBaseId]
+  const foundationDevices = currentBase.foundationBuildings
+  const foundationIdSet = new Set(foundationDevices.map((device) => device.instanceId))
+  const baseGroups = [
+    { key: 'valley4', titleKey: 'right.baseGroup.valley4', tag: '四号谷地' },
+    { key: 'wuling', titleKey: 'right.baseGroup.wuling', tag: '武陵' },
+  ] as const
   const zoomScale = cellSize / BASE_CELL_SIZE
+  const canvasWidthCells = layout.lotSize + currentBase.outerRing.left + currentBase.outerRing.right
+  const canvasHeightCells = layout.lotSize + currentBase.outerRing.top + currentBase.outerRing.bottom
+  const canvasOffsetXPx = currentBase.outerRing.left * BASE_CELL_SIZE
+  const canvasOffsetYPx = currentBase.outerRing.top * BASE_CELL_SIZE
+  const canvasWidthPx = canvasWidthCells * BASE_CELL_SIZE
+  const canvasHeightPx = canvasHeightCells * BASE_CELL_SIZE
 
   const gridRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -388,6 +597,7 @@ function App() {
   const tickRateSampleRef = useRef<{ tick: number; ms: number } | null>(null)
   const simTickRef = useRef(0)
   const unknownDevicePromptKeyRef = useRef<string>('')
+  const legacyLayoutMigratedRef = useRef(false)
 
   const occupancyMap = useMemo(() => buildOccupancyMap(layout), [layout])
   const cellDeviceMap = useMemo(() => cellToDeviceId(layout), [layout])
@@ -397,6 +607,41 @@ function App() {
     () => layout.devices.filter((device) => !isKnownDeviceTypeId((device as DeviceInstance & { typeId: unknown }).typeId)),
     [layout.devices],
   )
+
+  useEffect(() => {
+    if (legacyLayoutMigratedRef.current) return
+    legacyLayoutMigratedRef.current = true
+
+    const legacyRaw = window.localStorage.getItem('stage1-layout')
+    if (!legacyRaw) return
+
+    try {
+      const parsed = JSON.parse(legacyRaw) as Partial<LayoutState>
+      const legacyBaseId = resolveBaseFromLayout(parsed)
+      const hasTarget = Boolean(layoutsByBase[legacyBaseId])
+      if (!hasTarget) {
+        const migratedLayout = normalizeLayoutForBase(
+          {
+            baseId: legacyBaseId,
+            lotSize: BASE_BY_ID[legacyBaseId].placeableSize,
+            devices: Array.isArray(parsed.devices) ? parsed.devices as DeviceInstance[] : [],
+          },
+          legacyBaseId,
+        )
+        setLayoutsByBase((current) => ({ ...current, [legacyBaseId]: migratedLayout }))
+      }
+      if (!isKnownBaseId(activeBaseId)) {
+        setActiveBaseId(legacyBaseId)
+      }
+    } catch {
+      return
+    }
+  }, [activeBaseId, layoutsByBase, setActiveBaseId, setLayoutsByBase])
+
+  useEffect(() => {
+    if (isKnownBaseId(activeBaseId)) return
+    setActiveBaseId('valley4_protocol_core')
+  }, [activeBaseId, setActiveBaseId])
 
   useEffect(() => {
     const hasLegacyStorageId = layout.devices.some(
@@ -450,18 +695,32 @@ function App() {
     const unknownTypeIds = Array.from(
       new Set(unknownDevices.map((device) => String((device as DeviceInstance & { typeId: unknown }).typeId))),
     )
-    const confirmed = window.confirm(
-      `检测到旧存档不兼容设备类型：${unknownTypeIds.join(', ')}。\n点击“确定”将删除无法识别的设备。`,
-    )
-    if (!confirmed) return
+    let cancelled = false
 
-    const removedIds = new Set(unknownDevices.map((device) => device.instanceId))
-    setLayout((current) => ({
-      ...current,
-      devices: current.devices.filter((device) => isKnownDeviceTypeId((device as DeviceInstance & { typeId: unknown }).typeId)),
-    }))
-    setSelection((current) => current.filter((id) => !removedIds.has(id)))
-  }, [unknownDevices, setLayout])
+    void (async () => {
+      const confirmed = await dialogConfirm(
+        t('dialog.legacyUnknownTypesConfirm', { types: unknownTypeIds.join(', ') }),
+        {
+          title: t('dialog.title.confirm'),
+          confirmText: t('dialog.ok'),
+          cancelText: t('dialog.cancel'),
+          variant: 'warning',
+        },
+      )
+      if (!confirmed || cancelled) return
+
+      const removedIds = new Set(unknownDevices.map((device) => device.instanceId))
+      setLayout((current) => ({
+        ...current,
+        devices: current.devices.filter((device) => isKnownDeviceTypeId((device as DeviceInstance & { typeId: unknown }).typeId)),
+      }))
+      setSelection((current) => current.filter((id) => !removedIds.has(id)))
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [unknownDevices, setLayout, t])
 
   useEffect(() => {
     if (simRafRef.current !== null) {
@@ -545,11 +804,18 @@ function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== 'r' || selection.length === 0 || sim.isRunning) return
+      if (event.key.toLowerCase() !== 'r' || sim.isRunning) return
+      event.preventDefault()
+      if (mode === 'place') {
+        setPlaceRotation((current) => ((current + 90) % 360) as Rotation)
+        return
+      }
+      if (selection.length === 0) return
       setLayout((current) => ({
         ...current,
         devices: current.devices.map((device) => {
           if (!selection.includes(device.instanceId)) return device
+          if (foundationIdSet.has(device.instanceId)) return device
           if (device.typeId.startsWith('belt_')) return device
           const nextRotation = ((device.rotation + 90) % 360) as Rotation
           return { ...device, rotation: nextRotation }
@@ -558,13 +824,13 @@ function App() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selection, setLayout, sim.isRunning])
+  }, [mode, selection, setLayout, sim.isRunning, foundationIdSet, setPlaceRotation])
 
   useEffect(() => {
     const viewport = viewportRef.current
     if (!viewport) return
-    const canvasWidth = layout.lotSize * BASE_CELL_SIZE * zoomScale
-    const canvasHeight = layout.lotSize * BASE_CELL_SIZE * zoomScale
+    const canvasWidth = canvasWidthPx * zoomScale
+    const canvasHeight = canvasHeightPx * zoomScale
     setViewOffset((current) =>
       clampViewportOffset(
         current,
@@ -572,36 +838,53 @@ function App() {
         { width: canvasWidth, height: canvasHeight },
       ),
     )
-  }, [layout.lotSize, zoomScale])
+  }, [canvasHeightPx, canvasWidthPx, zoomScale])
 
-  const toCell = (clientX: number, clientY: number) => {
+  const toRawCell = (clientX: number, clientY: number) => {
     const viewportRect = viewportRef.current?.getBoundingClientRect()
     if (!viewportRect) return null
     const scaledCellSize = BASE_CELL_SIZE * zoomScale
-    const x = Math.floor((clientX - viewportRect.left - viewOffset.x) / scaledCellSize)
-    const y = Math.floor((clientY - viewportRect.top - viewOffset.y) / scaledCellSize)
-    if (x < 0 || y < 0 || x >= layout.lotSize || y >= layout.lotSize) return null
+    const rawX = Math.floor((clientX - viewportRect.left - viewOffset.x) / scaledCellSize)
+    const rawY = Math.floor((clientY - viewportRect.top - viewOffset.y) / scaledCellSize)
+    const x = rawX - currentBase.outerRing.left
+    const y = rawY - currentBase.outerRing.top
     return { x, y }
   }
 
-  const toPlaceOrigin = (cell: { x: number; y: number }, typeId: DeviceTypeId) => {
+  const toCell = (clientX: number, clientY: number) => {
+    const rawCell = toRawCell(clientX, clientY)
+    if (!rawCell) return null
+    if (rawCell.x < 0 || rawCell.y < 0 || rawCell.x >= layout.lotSize || rawCell.y >= layout.lotSize) return null
+    return rawCell
+  }
+
+  const toPlaceOrigin = (cell: { x: number; y: number }, typeId: DeviceTypeId, rotation: Rotation) => {
     const type = DEVICE_TYPE_BY_ID[typeId]
+    const footprint = rotatedFootprintSize(type.size, rotation)
     return {
-      x: Math.floor(cell.x + 0.5 - type.size.width / 2),
-      y: Math.floor(cell.y + 0.5 - type.size.height / 2),
+      x: Math.floor(cell.x + 0.5 - footprint.width / 2),
+      y: Math.floor(cell.y + 0.5 - footprint.height / 2),
     }
   }
 
   const placeDevice = (cell: { x: number; y: number }) => {
-    const origin = toPlaceOrigin(cell, placeType)
+    const origin = toPlaceOrigin(cell, placeType, placeRotation)
     const instance: DeviceInstance = {
       instanceId: nextId(placeType),
       typeId: placeType,
       origin,
-      rotation: 0,
+      rotation: placeRotation,
       config: initialStorageConfig(placeType),
     }
-    if (!isWithinLot(instance, layout.lotSize)) return
+    if (!isWithinLot(instance, layout.lotSize)) {
+      showToast(t(OUT_OF_LOT_TOAST_KEY), { variant: 'warning' })
+      return
+    }
+    const validation = validatePlacementConstraints(layout, instance)
+    if (!validation.isValid) {
+      showToast(t(validation.messageKey ?? FALLBACK_PLACEMENT_TOAST_KEY), { variant: 'warning' })
+      return
+    }
     setLayout((current) => ({ ...current, devices: [...current.devices, instance] }))
   }
 
@@ -633,6 +916,7 @@ function App() {
       if (sim.isRunning) return
       const id = cellDeviceMap.get(`${cell.x},${cell.y}`)
       if (!id) return
+      if (foundationIdSet.has(id)) return
       if (deleteWholeBelt) {
         setLayout((current) => deleteConnectedBelts(current, cell.x, cell.y))
       } else {
@@ -652,14 +936,29 @@ function App() {
 
     const clickedId = cellDeviceMap.get(`${cell.x},${cell.y}`)
     if (clickedId) {
-      const activeSelection = selection.includes(clickedId) ? selection : [clickedId]
+      const activeSelection = (selection.includes(clickedId) ? selection : [clickedId]).filter((id) => !foundationIdSet.has(id))
       if (!selection.includes(clickedId)) setSelection(activeSelection)
+      if (activeSelection.length === 0) {
+        setDragBasePositions(null)
+        setDragPreviewPositions({})
+        setDragPreviewValid(true)
+        setDragInvalidMessage(null)
+        setDragInvalidSelection(new Set())
+        setDragStartCell(null)
+        setDragOrigin(null)
+        setDragRect(null)
+        return
+      }
       const base: Record<string, { x: number; y: number }> = {}
       for (const id of activeSelection) {
         const device = getDeviceById(layout, id)
         if (device) base[id] = { ...device.origin }
       }
       setDragBasePositions(base)
+      setDragPreviewPositions(base)
+      setDragPreviewValid(true)
+      setDragInvalidMessage(null)
+      setDragInvalidSelection(new Set())
       setDragStartCell(cell)
       setDragOrigin(cell)
       setDragRect(null)
@@ -667,6 +966,11 @@ function App() {
     }
 
     setSelection([])
+    setDragBasePositions(null)
+    setDragPreviewPositions({})
+    setDragPreviewValid(true)
+    setDragInvalidMessage(null)
+    setDragInvalidSelection(new Set())
     setDragOrigin(cell)
     setDragRect({ x1: cell.x, y1: cell.y, x2: cell.x, y2: cell.y })
   }
@@ -675,8 +979,8 @@ function App() {
     if (isPanning && panStart) {
       const viewport = viewportRef.current
       if (!viewport) return
-      const canvasWidth = layout.lotSize * BASE_CELL_SIZE * zoomScale
-      const canvasHeight = layout.lotSize * BASE_CELL_SIZE * zoomScale
+      const canvasWidth = canvasWidthPx * zoomScale
+      const canvasHeight = canvasHeightPx * zoomScale
       const nextOffset = {
         x: panStart.offsetX + (event.clientX - panStart.clientX),
         y: panStart.offsetY + (event.clientY - panStart.clientY),
@@ -691,14 +995,16 @@ function App() {
       return
     }
 
-    const cell = toCell(event.clientX, event.clientY)
-    if (!cell) {
+    const rawCell = toRawCell(event.clientX, event.clientY)
+    if (!rawCell) {
       setHoverCell(null)
       return
     }
+    const cell = rawCell.x >= 0 && rawCell.y >= 0 && rawCell.x < layout.lotSize && rawCell.y < layout.lotSize ? rawCell : null
     setHoverCell(cell)
 
     if (mode === 'logistics' && logStart) {
+      if (!cell) return
       const last = logTrace[logTrace.length - 1]
       if (last && last.x === cell.x && last.y === cell.y) return
       setLogTrace((current) => [...current, cell])
@@ -707,25 +1013,49 @@ function App() {
     }
 
     if (mode === 'select' && dragBasePositions && dragOrigin && selection.length > 0 && !sim.isRunning) {
-      const dx = cell.x - dragOrigin.x
-      const dy = cell.y - dragOrigin.y
-      setLayout((current) => {
-        const moved = current.devices.map((device) => {
-          if (!selection.includes(device.instanceId)) return device
-          const base = dragBasePositions[device.instanceId]
-          if (!base) return device
+      const dx = rawCell.x - dragOrigin.x
+      const dy = rawCell.y - dragOrigin.y
+      const previewPositions: Record<string, { x: number; y: number }> = {}
+      for (const id of selection) {
+        const base = dragBasePositions[id]
+        if (!base) continue
+        previewPositions[id] = { x: base.x + dx, y: base.y + dy }
+      }
+      setDragPreviewPositions(previewPositions)
+
+      const previewLayout: LayoutState = {
+        ...layout,
+        devices: layout.devices.map((device) => {
+          const preview = previewPositions[device.instanceId]
+          if (!preview) return device
           return {
             ...device,
-            origin: { x: base.x + dx, y: base.y + dy },
+            origin: preview,
           }
-        })
-
-        if (!moved.every((device) => isWithinLot(device, current.lotSize))) return current
-        return { ...current, devices: moved }
-      })
-      setDragStartCell(cell)
+        }),
+      }
+      const movedSelection = previewLayout.devices.filter((device) => selection.includes(device.instanceId))
+      const outOfLotDevice = movedSelection.find((device) => !isWithinLot(device, layout.lotSize))
+      let invalidMessageKey: string | null = null
+      if (outOfLotDevice) {
+        invalidMessageKey = OUT_OF_LOT_TOAST_KEY
+      } else {
+        const constraintFailure = movedSelection
+          .map((device) => validatePlacementConstraints(previewLayout, device))
+          .find((result) => !result.isValid)
+        if (constraintFailure && !constraintFailure.isValid) {
+          invalidMessageKey = constraintFailure.messageKey ?? FALLBACK_PLACEMENT_TOAST_KEY
+        }
+      }
+      const isValidPlacement = invalidMessageKey === null
+      setDragPreviewValid(isValidPlacement)
+      setDragInvalidMessage(invalidMessageKey)
+      setDragInvalidSelection(isValidPlacement ? new Set() : new Set(selection))
+      setDragStartCell(rawCell)
       return
     }
+
+    if (!cell) return
 
     if (mode === 'select' && dragOrigin && dragRect) {
       setDragRect({ ...dragRect, x2: cell.x, y2: cell.y })
@@ -737,14 +1067,12 @@ function App() {
     }
   }
 
-  const onCanvasMouseUp = (event: React.MouseEvent<HTMLDivElement>) => {
+  const onCanvasMouseUp = () => {
     if (isPanning) {
       setIsPanning(false)
       setPanStart(null)
       return
     }
-
-    const cell = toCell(event.clientX, event.clientY)
 
     if (mode === 'logistics' && logStart && logCurrent && !sim.isRunning) {
       const path = logisticsPreview
@@ -772,14 +1100,40 @@ function App() {
               })
             : false,
         )
+        .filter((device) => !foundationIdSet.has(device.instanceId))
         .map((device) => device.instanceId)
       setSelection(ids)
       setDragRect(null)
       setDragOrigin(null)
+      setDragBasePositions(null)
+      setDragPreviewPositions({})
+      setDragPreviewValid(true)
+      setDragInvalidMessage(null)
+      setDragInvalidSelection(new Set())
       return
     }
 
-    if (mode === 'select' && dragStartCell && dragOrigin && cell && selection.length > 0 && !sim.isRunning) {
+    if (mode === 'select' && dragStartCell && dragOrigin && dragBasePositions && selection.length > 0 && !sim.isRunning) {
+      if (dragPreviewValid) {
+        setLayout((current) => ({
+          ...current,
+          devices: current.devices.map((device) => {
+            if (!selection.includes(device.instanceId)) return device
+            const preview = dragPreviewPositions[device.instanceId]
+            if (!preview) return device
+            return {
+              ...device,
+              origin: { ...preview },
+            }
+          }),
+        }))
+      } else if (dragInvalidMessage) {
+        showToast(t(dragInvalidMessage), { variant: 'warning' })
+      }
+      setDragPreviewPositions({})
+      setDragPreviewValid(true)
+      setDragInvalidMessage(null)
+      setDragInvalidSelection(new Set())
       setDragStartCell(null)
       setDragOrigin(null)
       setDragBasePositions(null)
@@ -790,6 +1144,10 @@ function App() {
     setDragOrigin(null)
     setDragRect(null)
     setDragBasePositions(null)
+    setDragPreviewPositions({})
+    setDragPreviewValid(true)
+    setDragInvalidMessage(null)
+    setDragInvalidSelection(new Set())
   }
 
   const onCanvasWheel = (event: React.WheelEvent<HTMLDivElement>) => {
@@ -816,7 +1174,7 @@ function App() {
     const clampedOffset = clampViewportOffset(
       nextOffset,
       { width: viewport.clientWidth, height: viewport.clientHeight },
-      { width: layout.lotSize * BASE_CELL_SIZE * (next / BASE_CELL_SIZE), height: layout.lotSize * BASE_CELL_SIZE * (next / BASE_CELL_SIZE) },
+      { width: canvasWidthPx * (next / BASE_CELL_SIZE), height: canvasHeightPx * (next / BASE_CELL_SIZE) },
     )
     setViewOffset(clampedOffset)
     setCellSize(next)
@@ -831,6 +1189,132 @@ function App() {
     if (!selectedDevice) return undefined
     return sim.runtimeById[selectedDevice.instanceId]
   }, [selectedDevice, sim.runtimeById])
+
+  const selectedPickupItemId =
+    selectedDevice?.typeId === 'item_port_unloader_1' ? selectedDevice.config.pickupItemId : undefined
+  const selectedProcessorBufferSpec =
+    selectedDevice && DEVICE_TYPE_BY_ID[selectedDevice.typeId].runtimeKind === 'processor'
+      ? processorBufferSpec(selectedDevice.typeId)
+      : null
+  const selectedPreloadSlots = useMemo(() => {
+    if (!selectedDevice || DEVICE_TYPE_BY_ID[selectedDevice.typeId].runtimeKind !== 'processor' || !selectedProcessorBufferSpec) return []
+    return buildProcessorPreloadSlots(selectedDevice, selectedProcessorBufferSpec.inputSlots, selectedProcessorBufferSpec.inputCapacity)
+  }, [selectedDevice, selectedProcessorBufferSpec])
+  const selectedPreloadTotal = useMemo(
+    () => selectedPreloadSlots.reduce((sum, slot) => sum + Math.max(0, slot.amount), 0),
+    [selectedPreloadSlots],
+  )
+
+  const pickerTargetDevice = useMemo(() => {
+    if (!itemPickerState) return null
+    return getDeviceById(layout, itemPickerState.deviceInstanceId)
+  }, [itemPickerState, layout])
+
+  const pickerPreloadSlots = useMemo(() => {
+    if (!itemPickerState || itemPickerState.kind !== 'preload' || !pickerTargetDevice) return []
+    const spec = processorBufferSpec(pickerTargetDevice.typeId)
+    return buildProcessorPreloadSlots(pickerTargetDevice, spec.inputSlots, spec.inputCapacity)
+  }, [itemPickerState, pickerTargetDevice])
+
+  const pickerSelectedItemId = useMemo(() => {
+    if (!itemPickerState || !pickerTargetDevice) return undefined
+    if (itemPickerState.kind === 'pickup') return pickerTargetDevice.config.pickupItemId
+    return pickerPreloadSlots[itemPickerState.slotIndex]?.itemId ?? undefined
+  }, [itemPickerState, pickerPreloadSlots, pickerTargetDevice])
+
+  const pickerDisabledItemIds = useMemo(() => {
+    if (!itemPickerState || itemPickerState.kind !== 'preload') return new Set<ItemId>()
+    return new Set(
+      pickerPreloadSlots
+        .filter((slot, slotIndex) => slotIndex !== itemPickerState.slotIndex && Boolean(slot.itemId))
+        .map((slot) => slot.itemId as ItemId),
+    )
+  }, [itemPickerState, pickerPreloadSlots])
+
+  useEffect(() => {
+    if (sim.isRunning) {
+      setItemPickerState(null)
+      return
+    }
+    if (!itemPickerState) return
+    const target = getDeviceById(layout, itemPickerState.deviceInstanceId)
+    if (!target) {
+      setItemPickerState(null)
+      return
+    }
+    if (itemPickerState.kind === 'pickup' && target.typeId !== 'item_port_unloader_1') {
+      setItemPickerState(null)
+      return
+    }
+    if (itemPickerState.kind === 'preload' && DEVICE_TYPE_BY_ID[target.typeId].runtimeKind !== 'processor') {
+      setItemPickerState(null)
+    }
+  }, [itemPickerState, layout, sim.isRunning])
+
+  useEffect(() => {
+    if (!itemPickerState) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setItemPickerState(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [itemPickerState])
+
+  const updatePickupItem = useCallback(
+    (deviceInstanceId: string, pickupItemId: ItemId | undefined) => {
+      setLayout((current) => ({
+        ...current,
+        devices: current.devices.map((device) =>
+          device.instanceId === deviceInstanceId
+            ? { ...device, config: { ...device.config, pickupItemId } }
+            : device,
+        ),
+      }))
+    },
+    [setLayout],
+  )
+
+  const updateProcessorPreloadSlot = useCallback(
+    (deviceInstanceId: string, slotIndex: number, patch: { itemId?: ItemId | null; amount?: number }) => {
+      setLayout((current) => ({
+        ...current,
+        devices: current.devices.map((device) => {
+          if (device.instanceId !== deviceInstanceId) return device
+          if (DEVICE_TYPE_BY_ID[device.typeId].runtimeKind !== 'processor') return device
+
+          const spec = processorBufferSpec(device.typeId)
+          const slots = buildProcessorPreloadSlots(device, spec.inputSlots, spec.inputCapacity)
+          if (slotIndex < 0 || slotIndex >= slots.length) return device
+
+          const currentSlot = slots[slotIndex]
+          const nextItemId = patch.itemId !== undefined ? patch.itemId : currentSlot.itemId
+          const requestedAmount = patch.amount !== undefined ? patch.amount : currentSlot.amount
+          const normalizedAmount = nextItemId
+            ? clamp(Math.floor(Number.isFinite(requestedAmount) ? requestedAmount : 0), 0, spec.inputCapacity)
+            : 0
+
+          slots[slotIndex] = {
+            itemId: nextItemId ?? null,
+            amount: normalizedAmount,
+          }
+
+          const otherTotal = slots.reduce((sum, slot, index) => (index === slotIndex ? sum : sum + Math.max(0, slot.amount)), 0)
+          const maxCurrentAmount = Math.max(0, spec.inputCapacity - otherTotal)
+          slots[slotIndex].amount = clamp(slots[slotIndex].amount, 0, maxCurrentAmount)
+
+          const nextConfig = { ...device.config }
+          const serialized = serializeProcessorPreloadSlots(slots)
+          if (serialized.length > 0) nextConfig.preloadInputs = serialized
+          else delete nextConfig.preloadInputs
+          delete nextConfig.preloadInputItemId
+          delete nextConfig.preloadInputAmount
+          return { ...device, config: nextConfig }
+        }),
+      }))
+    },
+    [setLayout],
+  )
 
   const logisticsPreview = useMemo(() => {
     if (!logStart || !logCurrent || logTrace.length === 0) return null
@@ -863,6 +1347,7 @@ function App() {
   }, [layout.devices, sim.runtimeById])
 
   const selectionSet = useMemo(() => new Set(selection), [selection])
+  const dragPreviewOriginsById = useMemo(() => new Map(Object.entries(dragPreviewPositions)), [dragPreviewPositions])
 
   const runtimeStallOverlays = useMemo(() => {
     return layout.devices.flatMap((device) => {
@@ -910,9 +1395,10 @@ function App() {
     }
 
     const result: Array<{ key: string; x: number; y: number; angle: number; width: number; height: number }> = []
-    const chevronLength = BASE_CELL_SIZE * (1 / 5)
-    const chevronThickness = BASE_CELL_SIZE * (2 / 3)
-    const outsideOffset = chevronLength / 2
+    const chevronLength = BASE_CELL_SIZE * (1 / 6)
+    const chevronThickness = BASE_CELL_SIZE * (2 / 5)
+    const chevronGap = BASE_CELL_SIZE * (1 / 12)
+    const outsideOffset = chevronLength / 2 + chevronGap
     for (const device of layout.devices) {
       if (device.typeId.startsWith('belt_')) continue
       if (HIDDEN_CHEVRON_DEVICE_TYPES.has(device.typeId)) continue
@@ -946,20 +1432,56 @@ function App() {
 
   const placePreview = useMemo(() => {
     if (mode !== 'place' || !hoverCell || sim.isRunning) return null
-    const origin = toPlaceOrigin(hoverCell, placeType)
+    const origin = toPlaceOrigin(hoverCell, placeType, placeRotation)
     const instance: DeviceInstance = {
       instanceId: 'preview',
       typeId: placeType,
       origin,
-      rotation: 0,
+      rotation: placeRotation,
       config: {},
     }
+    const type = DEVICE_TYPE_BY_ID[placeType]
+    const footprintSize = rotatedFootprintSize(type.size, placeRotation)
+    const textureSrc = getDeviceSpritePath(placeType)
+    const surfaceContentWidthPx = footprintSize.width * BASE_CELL_SIZE - 6
+    const surfaceContentHeightPx = footprintSize.height * BASE_CELL_SIZE - 6
+    const isQuarterTurn = placeRotation === 90 || placeRotation === 270
+    const textureWidthPx = isQuarterTurn ? surfaceContentHeightPx : surfaceContentWidthPx
+    const textureHeightPx = isQuarterTurn ? surfaceContentWidthPx : surfaceContentHeightPx
+    const chevronLength = BASE_CELL_SIZE * (1 / 6)
+    const chevronThickness = BASE_CELL_SIZE * (2 / 5)
+    const chevronGap = BASE_CELL_SIZE * (1 / 12)
+    const outsideOffset = chevronLength / 2 + chevronGap
+    const chevrons = getRotatedPorts(instance).map((port) => {
+      const localCenterX = (port.x - origin.x + 0.5) * BASE_CELL_SIZE
+      const localCenterY = (port.y - origin.y + 0.5) * BASE_CELL_SIZE
+      let x = localCenterX
+      let y = localCenterY
+      if (port.edge === 'N') y = (port.y - origin.y) * BASE_CELL_SIZE - outsideOffset
+      if (port.edge === 'S') y = (port.y - origin.y + 1) * BASE_CELL_SIZE + outsideOffset
+      if (port.edge === 'W') x = (port.x - origin.x) * BASE_CELL_SIZE - outsideOffset
+      if (port.edge === 'E') x = (port.x - origin.x + 1) * BASE_CELL_SIZE + outsideOffset
+      return {
+        key: `preview-${port.instanceId}-${port.portId}-${port.x}-${port.y}-${port.edge}-${port.direction}`,
+        x,
+        y,
+        angle: port.direction === 'Input' ? EDGE_ANGLE[OPPOSITE_EDGE[port.edge]] : EDGE_ANGLE[port.edge],
+        width: chevronLength,
+        height: chevronThickness,
+      }
+    })
     return {
       origin,
-      type: DEVICE_TYPE_BY_ID[placeType],
-      isValid: isWithinLot(instance, layout.lotSize),
+      type,
+      rotation: placeRotation,
+      textureSrc,
+      textureWidthPx,
+      textureHeightPx,
+      footprintSize,
+      chevrons,
+      isValid: isWithinLot(instance, layout.lotSize) && validatePlacementConstraints(layout, instance).isValid,
     }
-  }, [hoverCell, layout.lotSize, mode, placeType, sim.isRunning])
+  }, [hoverCell, layout, mode, placeRotation, placeType, sim.isRunning])
 
   const uiHint = sim.isRunning ? t('top.runningHint') : t('top.editHint')
 
@@ -982,9 +1504,13 @@ function App() {
         <div className="topbar-controls">
           {!sim.isRunning ? (
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (unknownDevices.length > 0) {
-                  window.alert('当前存档包含无法识别的旧设备，请先确认删除后再开始仿真。')
+                  dialogAlertNonBlocking(t('dialog.legacyUnknownTypesStartBlocked'), {
+                    title: t('dialog.title.warning'),
+                    closeText: t('dialog.ok'),
+                    variant: 'warning',
+                  })
                   return
                 }
                 setSim((current) => startSimulation(layout, current))
@@ -1075,11 +1601,19 @@ function App() {
                 {t('left.deleteWholeBelt')}
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (sim.isRunning) return
-                  const confirmed = window.confirm(t('left.deleteAllConfirm'))
+                  const confirmed = await dialogConfirm(t('left.deleteAllConfirm'), {
+                    title: t('dialog.title.confirm'),
+                    confirmText: t('dialog.ok'),
+                    cancelText: t('dialog.cancel'),
+                    variant: 'warning',
+                  })
                   if (!confirmed) return
-                  setLayout((current) => ({ ...current, devices: [] }))
+                  setLayout((current) => ({
+                    ...current,
+                    devices: current.devices.filter((device) => foundationIdSet.has(device.instanceId)),
+                  }))
                   setSelection([])
                 }}
               >
@@ -1104,128 +1638,202 @@ function App() {
               ref={gridRef}
               className={`grid-canvas mode-${mode}`}
               style={{
-                width: layout.lotSize * BASE_CELL_SIZE,
-                height: layout.lotSize * BASE_CELL_SIZE,
+                width: canvasWidthPx,
+                height: canvasHeightPx,
                 backgroundSize: `${BASE_CELL_SIZE}px ${BASE_CELL_SIZE}px`,
                 transformOrigin: 'top left',
                 transform: `translate(${viewOffset.x}px, ${viewOffset.y}px) scale(${zoomScale})`,
               }}
             >
-              <div className="lot-border" />
+              <div
+                className="world-layer"
+                style={{
+                  left: canvasOffsetXPx,
+                  top: canvasOffsetYPx,
+                  width: layout.lotSize * BASE_CELL_SIZE,
+                  height: layout.lotSize * BASE_CELL_SIZE,
+                }}
+              >
+                <div className="lot-border" />
 
-              {powerRangeOutlines.map((outline) => (
-                <div
-                  key={outline.key}
-                  className="power-range-outline"
-                  style={{
-                    left: outline.left,
-                    top: outline.top,
-                    width: outline.width,
-                    height: outline.height,
-                  }}
-                />
-              ))}
-
-              <StaticDeviceLayer devices={layout.devices} selectionSet={selectionSet} language={language} />
-
-              {runtimeStallOverlays.map((overlay) => (
-                <div
-                  key={overlay.key}
-                  className={`device-runtime-overlay ${overlay.isBelt ? 'is-belt' : 'is-device'}`}
-                  style={{
-                    left: overlay.left,
-                    top: overlay.top,
-                    width: overlay.width,
-                    height: overlay.height,
-                  }}
-                />
-              ))}
-
-              <div className="in-transit-overlay" aria-hidden="true">
-                {inTransitItems.map((item) => (
-                  <span
-                    key={item.key}
-                    className={`belt-item-box item-${item.itemId}`}
+                {powerRangeOutlines.map((outline) => (
+                  <div
+                    key={outline.key}
+                    className="power-range-outline"
                     style={{
-                      left: item.x,
-                      top: item.y,
-                      width: `${BASE_CELL_SIZE * 0.5}px`,
-                      height: `${BASE_CELL_SIZE * 0.5}px`,
+                      left: outline.left,
+                      top: outline.top,
+                      width: outline.width,
+                      height: outline.height,
                     }}
-                    title={`${getItemLabel(language, item.itemId)} @ ${item.progress01.toFixed(2)}`}
+                  />
+                ))}
+
+                <StaticDeviceLayer
+                  devices={layout.devices}
+                  selectionSet={selectionSet}
+                  invalidSelectionSet={dragInvalidSelection}
+                  previewOriginsById={dragPreviewOriginsById}
+                  language={language}
+                />
+
+                {runtimeStallOverlays.map((overlay) => (
+                  <div
+                    key={overlay.key}
+                    className={`device-runtime-overlay ${overlay.isBelt ? 'is-belt' : 'is-device'}`}
+                    style={{
+                      left: overlay.left,
+                      top: overlay.top,
+                      width: overlay.width,
+                      height: overlay.height,
+                    }}
+                  />
+                ))}
+
+                <div className="in-transit-overlay" aria-hidden="true">
+                  {inTransitItems.map((item) => (
+                    <span
+                      key={item.key}
+                      className={`belt-item-box item-${item.itemId}`}
+                      style={{
+                        left: item.x,
+                        top: item.y,
+                        width: `${BASE_CELL_SIZE * 0.5}px`,
+                        height: `${BASE_CELL_SIZE * 0.5}px`,
+                      }}
+                      title={`${getItemLabel(language, item.itemId)} @ ${item.progress01.toFixed(2)}`}
+                    >
+                      <img className="belt-item-cover" src={getItemIconPath(item.itemId)} alt="" draggable={false} />
+                    </span>
+                  ))}
+                </div>
+
+                {portChevrons.map((chevron) => (
+                  <div
+                    key={chevron.key}
+                    className="port-chevron"
+                    style={{
+                      left: chevron.x,
+                      top: chevron.y,
+                      width: chevron.width,
+                      height: chevron.height,
+                      transform: `translate(-50%, -50%) rotate(${chevron.angle}deg)`,
+                    }}
                   >
-                    <img className="belt-item-cover" src={getItemIconPath(item.itemId)} alt="" draggable={false} />
-                  </span>
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                      <polyline className="port-chevron-outline" points="0,12 100,50 0,88" />
+                      <polyline className="port-chevron-inner" points="0,22 84,50 0,78" />
+                    </svg>
+                  </div>
+                ))}
+
+                {placePreview && (
+                  <div
+                    className={`place-ghost ${placePreview.isValid ? 'valid' : 'invalid'}`}
+                    style={{
+                      left: placePreview.origin.x * BASE_CELL_SIZE,
+                      top: placePreview.origin.y * BASE_CELL_SIZE,
+                      width: placePreview.footprintSize.width * BASE_CELL_SIZE,
+                      height: placePreview.footprintSize.height * BASE_CELL_SIZE,
+                    }}
+                  >
+                    <div className="place-ghost-surface">
+                      {placePreview.textureSrc && (
+                        <img
+                          className="place-ghost-texture"
+                          src={placePreview.textureSrc}
+                          alt=""
+                          aria-hidden="true"
+                          draggable={false}
+                          style={{
+                            width: `${placePreview.textureWidthPx}px`,
+                            height: `${placePreview.textureHeightPx}px`,
+                            transform: `translate(-50%, -50%) rotate(${placePreview.rotation}deg)`,
+                          }}
+                        />
+                      )}
+                    </div>
+                    {placePreview.chevrons.map((chevron) => (
+                      <div
+                        key={chevron.key}
+                        className="port-chevron place-ghost-chevron"
+                        style={{
+                          left: chevron.x,
+                          top: chevron.y,
+                          width: chevron.width,
+                          height: chevron.height,
+                          transform: `translate(-50%, -50%) rotate(${chevron.angle}deg)`,
+                        }}
+                      >
+                        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                          <polyline className="port-chevron-outline" points="0,12 100,50 0,88" />
+                          <polyline className="port-chevron-inner" points="0,22 84,50 0,78" />
+                        </svg>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {dragRect && (
+                  <div
+                    className="selection-rect"
+                    style={{
+                      left: Math.min(dragRect.x1, dragRect.x2) * BASE_CELL_SIZE,
+                      top: Math.min(dragRect.y1, dragRect.y2) * BASE_CELL_SIZE,
+                      width: (Math.abs(dragRect.x2 - dragRect.x1) + 1) * BASE_CELL_SIZE,
+                      height: (Math.abs(dragRect.y2 - dragRect.y1) + 1) * BASE_CELL_SIZE,
+                    }}
+                  />
+                )}
+
+                {logisticsPreview?.map((cell, index) => (
+                  <div
+                    key={`preview-${cell.x}-${cell.y}-${index}`}
+                    className="log-preview"
+                    style={{ left: cell.x * BASE_CELL_SIZE, top: cell.y * BASE_CELL_SIZE, width: BASE_CELL_SIZE, height: BASE_CELL_SIZE }}
+                  />
                 ))}
               </div>
-
-              {portChevrons.map((chevron) => (
-                <div
-                  key={chevron.key}
-                  className="port-chevron"
-                  style={{
-                    left: chevron.x,
-                    top: chevron.y,
-                    width: chevron.width,
-                    height: chevron.height,
-                    transform: `translate(-50%, -50%) rotate(${chevron.angle}deg)`,
-                  }}
-                >
-                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                    <polyline className="port-chevron-outline" points="0,12 100,50 0,88" />
-                    <polyline className="port-chevron-inner" points="0,22 84,50 0,78" />
-                  </svg>
-                </div>
-              ))}
-
-              {placePreview && (
-                <div
-                  className={`place-ghost ${placePreview.isValid ? 'valid' : 'invalid'}`}
-                  style={{
-                    left: placePreview.origin.x * BASE_CELL_SIZE,
-                    top: placePreview.origin.y * BASE_CELL_SIZE,
-                    width: placePreview.type.size.width * BASE_CELL_SIZE,
-                    height: placePreview.type.size.height * BASE_CELL_SIZE,
-                  }}
-                />
-              )}
-
-              {dragRect && (
-                <div
-                  className="selection-rect"
-                  style={{
-                    left: Math.min(dragRect.x1, dragRect.x2) * BASE_CELL_SIZE,
-                    top: Math.min(dragRect.y1, dragRect.y2) * BASE_CELL_SIZE,
-                    width: (Math.abs(dragRect.x2 - dragRect.x1) + 1) * BASE_CELL_SIZE,
-                    height: (Math.abs(dragRect.y2 - dragRect.y1) + 1) * BASE_CELL_SIZE,
-                  }}
-                />
-              )}
-
-              {logisticsPreview?.map((cell, index) => (
-                <div
-                  key={`preview-${cell.x}-${cell.y}-${index}`}
-                  className="log-preview"
-                  style={{ left: cell.x * BASE_CELL_SIZE, top: cell.y * BASE_CELL_SIZE, width: BASE_CELL_SIZE, height: BASE_CELL_SIZE }}
-                />
-              ))}
             </div>
           </div>
         </section>
 
         <aside className="panel right-panel">
           <h3>{t('right.lot')}</h3>
-          <div className="row">
-            {[60, 40].map((size) => (
-              <button
-                key={size}
-                className={layout.lotSize === size ? 'active' : ''}
-                onClick={() => setLayout((current) => ({ ...current, lotSize: size as 40 | 60 }))}
-              >
-                {size}x{size}
-              </button>
-            ))}
+          {baseGroups.map((group) => {
+            const groupedBases = BASES.filter((base) => base.tags.includes(group.tag))
+            return (
+              <section key={group.key} className="base-group-section">
+                <h4 className="base-group-title">{t(group.titleKey)}</h4>
+                <div className="row">
+                  {groupedBases.length > 0 ? (
+                    groupedBases.map((base) => (
+                      <button
+                        key={base.id}
+                        className={currentBaseId === base.id ? 'active' : ''}
+                        onClick={() => {
+                          setActiveBaseId(base.id)
+                          setSelection([])
+                        }}
+                      >
+                        {base.name}
+                      </button>
+                    ))
+                  ) : (
+                    <p className="base-group-empty">{t('right.baseGroup.empty')}</p>
+                  )}
+                </div>
+              </section>
+            )
+          })}
+          <div className="kv"><span>{t('right.basePlaceableSize')}</span><span>{currentBase.placeableSize}x{currentBase.placeableSize}</span></div>
+          <div className="kv">
+            <span>{t('right.baseOuterRing')}</span>
+            <span>
+              T{currentBase.outerRing.top} R{currentBase.outerRing.right} B{currentBase.outerRing.bottom} L{currentBase.outerRing.left}
+            </span>
           </div>
+          <div className="kv"><span>{t('right.baseTags')}</span><span>{currentBase.tags.join(', ') || '-'}</span></div>
 
           <h3>{t('right.stats')}</h3>
           <table className="stats-table">
@@ -1323,10 +1931,12 @@ function App() {
                     <div className="kv">
                       <span>{t('detail.cacheInputBuffer')}</span>
                       <span>
-                        {formatItemPair(
+                        {formatInputBufferAmounts(
                           language,
-                          selectedRuntime.inputBuffer.item_originium_ore ?? 0,
-                          selectedRuntime.inputBuffer.item_originium_powder ?? 0,
+                          selectedRuntime.inputBuffer,
+                          selectedProcessorBufferSpec?.inputSlots ?? 1,
+                          selectedProcessorBufferSpec?.inputCapacity ?? 50,
+                          t,
                         )}
                       </span>
                     </div>
@@ -1335,10 +1945,12 @@ function App() {
                     <div className="kv">
                       <span>{t('detail.cacheOutputBuffer')}</span>
                       <span>
-                        {formatItemPair(
+                        {formatOutputBufferAmounts(
                           language,
-                          selectedRuntime.outputBuffer.item_originium_ore ?? 0,
-                          selectedRuntime.outputBuffer.item_originium_powder ?? 0,
+                          selectedRuntime.outputBuffer,
+                          selectedProcessorBufferSpec?.outputSlots ?? 1,
+                          selectedProcessorBufferSpec?.outputCapacity ?? 50,
+                          t,
                         )}
                       </span>
                     </div>
@@ -1346,13 +1958,7 @@ function App() {
                   {'inventory' in selectedRuntime && (
                     <div className="kv">
                       <span>{t('detail.cacheInventory')}</span>
-                      <span>
-                        {formatItemPair(
-                          language,
-                          selectedRuntime.inventory.item_originium_ore ?? 0,
-                          selectedRuntime.inventory.item_originium_powder ?? 0,
-                        )}
-                      </span>
+                      <span>{formatInventoryAmounts(language, selectedRuntime.inventory, t)}</span>
                     </div>
                   )}
                   {'slot' in selectedRuntime && (
@@ -1378,28 +1984,31 @@ function App() {
               {selectedDevice.typeId === 'item_port_unloader_1' && (
                 <div className="picker">
                   <label>{t('detail.pickupItem')}</label>
-                  <select
+                  <button
+                    type="button"
+                    className="picker-open-btn"
                     disabled={sim.isRunning}
-                    value={selectedDevice.config.pickupItemId ?? ''}
-                    onChange={(event) => {
-                      const value = event.target.value
-                      setLayout((current) => ({
-                        ...current,
-                        devices: current.devices.map((device) =>
-                          device.instanceId === selectedDevice.instanceId
-                            ? { ...device, config: { ...device.config, pickupItemId: value ? (value as ItemId) : undefined } }
-                            : device,
-                        ),
-                      }))
-                    }}
+                    onClick={() => setItemPickerState({ kind: 'pickup', deviceInstanceId: selectedDevice.instanceId })}
                   >
-                    <option value="">{t('detail.unselected')}</option>
-                    {ITEMS.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {getItemLabel(language, item.id)}
-                      </option>
-                    ))}
-                  </select>
+                    <span className="pickup-picker-current">
+                      {selectedPickupItemId ? (
+                        <img
+                          className="pickup-picker-current-icon"
+                          src={getItemIconPath(selectedPickupItemId)}
+                          alt=""
+                          aria-hidden="true"
+                          draggable={false}
+                        />
+                      ) : (
+                        <span className="pickup-picker-current-icon pickup-picker-current-icon--empty">?</span>
+                      )}
+                      <span>
+                        {selectedPickupItemId
+                          ? getItemLabel(language, selectedPickupItemId)
+                          : t('detail.unselected')}
+                      </span>
+                    </span>
+                  </button>
                 </div>
               )}
               {selectedDevice.typeId === 'item_port_storager_1' && (
@@ -1423,12 +2032,145 @@ function App() {
                   {t('detail.submitWarehouse')}
                 </label>
               )}
+              {DEVICE_TYPE_BY_ID[selectedDevice.typeId].runtimeKind === 'processor' && (
+                <div className="picker">
+                  <label>{t('detail.preloadInput')}</label>
+                  <div className="preload-slot-list">
+                    {selectedPreloadSlots.map((slot, slotIndex) => (
+                      <div key={`${selectedDevice.instanceId}-preload-${slotIndex}`} className="preload-slot-row">
+                        <span className="preload-slot-label">{t('detail.preloadSlot', { index: slotIndex + 1 })}</span>
+                        <button
+                          type="button"
+                          className="picker-open-btn"
+                          disabled={sim.isRunning}
+                          onClick={() =>
+                            setItemPickerState({
+                              kind: 'preload',
+                              deviceInstanceId: selectedDevice.instanceId,
+                              slotIndex,
+                            })
+                          }
+                        >
+                          <span className="pickup-picker-current">
+                            {slot.itemId ? (
+                              <img
+                                className="pickup-picker-current-icon"
+                                src={getItemIconPath(slot.itemId)}
+                                alt=""
+                                aria-hidden="true"
+                                draggable={false}
+                              />
+                            ) : (
+                              <span className="pickup-picker-current-icon pickup-picker-current-icon--empty">?</span>
+                            )}
+                            <span>{slot.itemId ? getItemLabel(language, slot.itemId) : t('detail.unselected')}</span>
+                          </span>
+                        </button>
+                        <input
+                          type="number"
+                          min={0}
+                          max={selectedProcessorBufferSpec?.inputCapacity ?? 50}
+                          step={1}
+                          disabled={sim.isRunning || !slot.itemId}
+                          value={slot.amount}
+                          onChange={(event) => {
+                            const parsed = Number.parseInt(event.target.value, 10)
+                            const nextAmount = Number.isFinite(parsed) ? parsed : 0
+                            updateProcessorPreloadSlot(selectedDevice.instanceId, slotIndex, { amount: nextAmount })
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <small>
+                    {t('detail.preloadInputHint', {
+                      cap: selectedProcessorBufferSpec?.inputCapacity ?? 50,
+                      slots: selectedProcessorBufferSpec?.inputSlots ?? 1,
+                    })}
+                  </small>
+                  <small>
+                    {t('detail.preloadInputTotal', {
+                      total: selectedPreloadTotal,
+                      cap: selectedProcessorBufferSpec?.inputCapacity ?? 50,
+                    })}
+                  </small>
+                </div>
+              )}
             </>
           ) : (
             <p>{t('right.noneSelected')}</p>
           )}
         </aside>
       </main>
+
+      {itemPickerState && pickerTargetDevice && (
+        <div
+          className="global-dialog-backdrop"
+          role="presentation"
+          onClick={() => setItemPickerState(null)}
+        >
+          <div
+            className="global-dialog pickup-item-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('detail.itemPickerTitle')}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="global-dialog-title">
+              {itemPickerState.kind === 'pickup'
+                ? t('detail.pickupDialogTitle')
+                : t('detail.preloadDialogTitle', { index: itemPickerState.slotIndex + 1 })}
+            </div>
+            <div className="pickup-item-list">
+              <button
+                type="button"
+                className={`pickup-item-option ${!pickerSelectedItemId ? 'active' : ''}`}
+                onClick={() => {
+                  if (itemPickerState.kind === 'pickup') {
+                    updatePickupItem(pickerTargetDevice.instanceId, undefined)
+                  } else {
+                    updateProcessorPreloadSlot(pickerTargetDevice.instanceId, itemPickerState.slotIndex, { itemId: null })
+                  }
+                  setItemPickerState(null)
+                }}
+              >
+                <span className="pickup-item-option-icon pickup-item-option-icon--empty">?</span>
+                <span>{t('detail.unselected')}</span>
+              </button>
+              {ITEMS.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`pickup-item-option ${pickerSelectedItemId === item.id ? 'active' : ''}`}
+                  disabled={itemPickerState.kind === 'preload' && pickerDisabledItemIds.has(item.id)}
+                  onClick={() => {
+                    if (itemPickerState.kind === 'pickup') {
+                      updatePickupItem(pickerTargetDevice.instanceId, item.id)
+                    } else {
+                      updateProcessorPreloadSlot(pickerTargetDevice.instanceId, itemPickerState.slotIndex, { itemId: item.id })
+                    }
+                    setItemPickerState(null)
+                  }}
+                >
+                  <img
+                    className="pickup-item-option-icon"
+                    src={getItemIconPath(item.id)}
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                  />
+                  <span>{getItemLabel(language, item.id)}</span>
+                </button>
+              ))}
+            </div>
+            <div className="global-dialog-actions">
+              <button className="global-dialog-btn" onClick={() => setItemPickerState(null)}>
+                {t('dialog.cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

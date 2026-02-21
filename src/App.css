@@ -144,6 +144,23 @@
   padding: 2px 0 4px;
 }
 
+.base-group-section {
+  margin-bottom: 12px;
+}
+
+.base-group-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: #b2bfd2;
+}
+
+.base-group-empty {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #8391a8;
+}
+
 .place-device-icon {
   width: 22px;
   height: 22px;
@@ -186,6 +203,10 @@ button:disabled {
   position: absolute;
   top: 0;
   left: 0;
+}
+
+.world-layer {
+  position: absolute;
 }
 
 .canvas-viewport {
@@ -445,26 +466,58 @@ button:disabled {
   box-shadow: 0 0 0 1px #f7d06a inset;
 }
 
+.device.drag-invalid .device-surface {
+  border: 3px solid #ff5d5d;
+  box-shadow: 0 0 0 1px rgba(86, 10, 10, 0.4) inset;
+}
+
 .belt-device.selected {
   --belt-fill: rgba(255, 232, 174, 0.45);
   --belt-edge: rgba(247, 208, 106, 0.9);
 }
 
+.belt-device.drag-invalid {
+  --belt-fill: rgba(255, 93, 93, 0.35);
+  --belt-edge: rgba(255, 93, 93, 0.95);
+}
+
 .place-ghost {
   position: absolute;
   pointer-events: none;
-  border: 1px dashed;
-  background: rgba(79, 123, 196, 0.25);
+  border: 3px solid rgba(255, 255, 255, 0.96);
+  box-sizing: border-box;
+  background: rgba(79, 123, 196, 0.22);
   z-index: 5;
 }
 
 .place-ghost.valid {
-  border-color: #4f7bc4;
+  box-shadow: 0 0 0 1px rgba(79, 123, 196, 0.8) inset;
 }
 
 .place-ghost.invalid {
-  border-color: #ff6b6b;
+  border: 5px solid #ff5d5d;
   background: rgba(255, 107, 107, 0.2);
+  box-shadow: 0 0 0 1px rgba(86, 10, 10, 0.4) inset;
+}
+
+.place-ghost-surface {
+  position: absolute;
+  inset: 2px;
+  overflow: hidden;
+}
+
+.place-ghost-texture {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  object-fit: fill;
+  transform-origin: center;
+  opacity: 0.8;
+  filter: brightness(1.08) contrast(1.02);
+}
+
+.place-ghost-chevron {
+  z-index: 7;
 }
 
 .device.stalled {
@@ -534,12 +587,12 @@ button:disabled {
 
 .port-chevron-outline {
   stroke: rgba(50, 66, 87, 0.88);
-  stroke-width: 7;
+  stroke-width: 31.5;
 }
 
 .port-chevron-inner {
   stroke: rgba(233, 239, 249, 0.9);
-  stroke-width: 4.5;
+  stroke-width: 20.25;
 }
 
 .log-preview {
@@ -587,6 +640,158 @@ button:disabled {
   border: 1px solid #35516f;
   border-radius: 6px;
   padding: 6px;
+}
+
+.picker-open-btn {
+  width: 100%;
+  background: #243042;
+  color: #e5ebf3;
+  border: 1px solid #35516f;
+  border-radius: 6px;
+  padding: 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.picker-open-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pickup-picker-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pickup-picker-current-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: #1b222d;
+}
+
+.pickup-picker-current-icon--empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #4f7bc4;
+  color: #ffd166;
+}
+
+.pickup-item-dialog {
+  min-width: 360px;
+  max-width: min(88vw, 860px);
+}
+
+.pickup-item-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 108px));
+  justify-content: start;
+  gap: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+  margin-top: 6px;
+}
+
+.pickup-item-option {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #35516f;
+  border-radius: 6px;
+  background: #223247;
+  color: #e5ebf3;
+  padding: 6px 6px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.pickup-item-option.active {
+  border-color: #4f7bc4;
+  background: #395c93;
+}
+
+.pickup-item-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.preload-slot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preload-slot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px;
+  gap: 8px;
+  row-gap: 6px;
+  align-items: stretch;
+}
+
+.preload-slot-label {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: #9fb3c9;
+}
+
+.preload-slot-row input[type='number'] {
+  width: 100%;
+  box-sizing: border-box;
+  height: 38px;
+  margin: 0;
+  background: #243042;
+  color: #e5ebf3;
+  border: 1px solid #35516f;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.preload-slot-row .picker-open-btn {
+  height: 38px;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+}
+
+.preload-slot-row .pickup-picker-current {
+  width: 100%;
+  min-width: 0;
+}
+
+.preload-slot-row .pickup-picker-current > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pickup-item-option-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: #1b222d;
+  flex: 0 0 auto;
+}
+
+.pickup-item-option > span:last-child {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.pickup-item-option-icon--empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #4f7bc4;
+  color: #ffd166;
 }
 
 .row {

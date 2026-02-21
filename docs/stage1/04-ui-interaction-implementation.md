@@ -121,3 +121,96 @@
 2. 在 `DEVICE_SPRITE_REGISTRATIONS` 追加设备与文件名映射。
 
 渲染层会自动根据 `typeId` 读取图像路径，无需再修改 `App.tsx` 的设备分支判断。
+
+## 11. 全局提示与对话框（Toast / Modal）使用规范
+
+Stage1 已提供统一的全局提示工具，避免业务层直接调用浏览器原生 `window.alert/window.confirm`。
+
+### 11.1 Toast（轻提示，自动消失）
+
+适用场景：
+
+- 普通状态反馈（如“保存成功”“操作已完成”）
+- 不要求用户确认已读
+
+调用方式：
+
+```ts
+import { showToast } from '../../src/ui/toast'
+
+showToast('操作成功')
+showToast('规则校验失败', { variant: 'warning' })
+showToast('网络异常，请稍后重试', { variant: 'error', durationMs: 3000 })
+```
+
+约束：
+
+- 默认显示 2 秒
+- 不阻塞业务流程
+- 不承载“必须阅读后再继续”的关键提示
+
+### 11.2 Modal 对话框（重要提示/确认）
+
+统一入口：`src/ui/dialog.tsx`
+
+#### A) Confirm（阻塞确认）
+
+适用：危险操作、删除、覆盖等需要显式确认。
+
+```ts
+import { dialogConfirm } from '../../src/ui/dialog'
+
+const confirmed = await dialogConfirm('确认删除所有内容吗？', {
+	title: '确认',
+	confirmText: '确定',
+	cancelText: '取消',
+	variant: 'warning',
+})
+if (!confirmed) return
+```
+
+#### B) Alert（阻塞版）
+
+适用：必须中断当前流程，直到用户确认。
+
+```ts
+import { dialogAlertBlocking } from '../../src/ui/dialog'
+
+await dialogAlertBlocking('检测到关键错误，请修复后继续。', {
+	title: '提示',
+	closeText: '确定',
+	variant: 'error',
+})
+```
+
+#### C) Alert（非阻塞版，需用户点击确定）
+
+适用：重要提示，业务流程可继续，但要求用户“已读确认”。
+
+```ts
+import { dialogAlertNonBlocking } from '../../src/ui/dialog'
+
+dialogAlertNonBlocking('当前存档包含旧版本设备，请尽快处理。', {
+	title: '提示',
+	closeText: '确定',
+	variant: 'warning',
+})
+```
+
+语义说明：
+
+- 非阻塞 alert **不是 toast**
+- 非阻塞 alert 不会阻塞主流程，但弹层必须用户点击“确定”才会关闭
+
+### 11.3 i18n 接入约束
+
+- 业务层调用时优先传入 `t('xxx.key')` 翻译后的文本
+- 规则配置中的放置失败提示使用 key（例如 `violationMessageKey`）
+- 禁止在业务逻辑里新增硬编码中英文混杂文案
+
+### 11.4 选型建议（快速决策）
+
+- 仅提示、无需确认：`showToast`
+- 需要用户二选一：`dialogConfirm`
+- 必须停住流程等待确认：`dialogAlertBlocking`
+- 重要提示但不阻塞流程，且要求已读：`dialogAlertNonBlocking`

@@ -295,8 +295,40 @@ Stage1 当前口径：
 * outputBuffer
 * progress01 表示生产周期
 
+缓存与槽位（新增冻结口径）：
+
+* `inputBufferCapacity` / `outputBufferCapacity`：输入/输出缓存总容量（按件数计）
+* `inputBufferSlots` / `outputBufferSlots`：输入/输出可并存物品种类数（槽位数）
+* 两类参数均为**设备类型属性**，由领域模型定义；不是运行时硬编码常量
+* 当前默认配置（Stage1 当前实现口径）：所有 `processor` 设备
+  * `inputBufferCapacity = 50`
+  * `outputBufferCapacity = 50`
+  * `inputBufferSlots = 1`
+  * `outputBufferSlots = 1`
+
 输入端口共用 inputBuffer
 输出端口共用 outputBuffer
+
+接收规则（输入/输出缓存一致）：
+
+* 先判定总容量：写入后总件数不得超过 `*BufferCapacity`
+* 再判定槽位：
+  * 若待写入物品已在缓存中，占用槽位不增加
+  * 若待写入物品不在缓存中，则仅当“当前已占用槽位 < `*BufferSlots`”时可写入
+* 当 `*BufferSlots = 1` 时：
+  * 缓存为空可接收任意符合端口要求的物品
+  * 缓存非空仅可接收当前缓存中的该物品
+
+生产完成写出规则：
+
+* 周期完成时，若 `outputBuffer` 因容量或槽位限制无法完整写入本次产物，设备进入 `OUTPUT_BLOCKED`
+* 周期保持在完成点（`progress01 = 1`）等待输出缓存可写入后再提交产物并进入下一周期
+
+编辑态预置输入缓存：
+
+* 编辑模式可为任意 `processor` 设备配置“预置输入物品 + 数量”
+* 开始仿真时将预置值写入该设备 `inputBuffer`
+* 预置数量必须被夹取到 `[0, inputBufferCapacity]`
 
 ---
 
@@ -465,7 +497,7 @@ progress01 ∈ [0,1]
 ## 9.1 仓库
 
 * 统一库存池（取货口从仓库取货，存储箱可提交到仓库）
-* 存储箱提交行为为用户可选配置，默认值为“提交”；开启后按仿真时间每 10 秒批量提交一次该存储箱内所有物品到仓库
+* 存储箱提交行为为用户可选配置，默认值为“提交”；开启后按仿真时间每 1 秒批量提交一次该存储箱内所有物品到仓库
 * pickup_port 可选择任意已定义物品（包括 `item_originium_powder`）
 * 仓库统计与地图上设备增减解耦
 * 每次进入仿真前，仓库库存重置为统一初始值：`item_originium_ore=∞`，其他物品=`0`

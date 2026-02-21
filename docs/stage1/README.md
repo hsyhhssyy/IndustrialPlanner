@@ -7,7 +7,7 @@
 1. [01-scope-and-dod.md](./01-scope-and-dod.md)：范围边界、术语、DoD、冻结清单
 2. [02-architecture-and-data-model.md](./02-architecture-and-data-model.md)：前端架构、模块分层、核心数据结构
 3. [03-simulation-engine-guide.md](./03-simulation-engine-guide.md)：离散 Tick 引擎、两阶段更新、设备运行规则
-4. [04-ui-interaction-implementation.md](./04-ui-interaction-implementation.md)：页面布局、编辑模式、视觉规范映射
+4. [04-ui-interaction-implementation.md](./04-ui-interaction-implementation.md)：页面布局、编辑模式、视觉规范映射、全局 Toast/Modal 使用方式
 5. [05-development-plan-and-tasks.md](./05-development-plan-and-tasks.md)：里程碑、任务拆分、交付节奏
 6. [06-test-and-acceptance.md](./06-test-and-acceptance.md)：该文档表明本项目Stage1不存在测试。
 7. [07-stage1-faq.md](./07-stage1-faq.md)：口径澄清与常见问题

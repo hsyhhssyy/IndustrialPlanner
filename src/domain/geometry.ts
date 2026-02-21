@@ -1,4 +1,4 @@
-import { DEVICE_TYPE_BY_ID, BELT_TYPES } from './registry'
+import { DEVICE_TYPE_BY_ID, BELT_TYPES, RECIPES } from './registry'
 import type {
   DeviceInstance,
   Direction,
@@ -54,11 +54,14 @@ function boundaryKey(x: number, y: number, edge: Edge) {
   return `${x},${y - 1}|S`
 }
 
+const RECIPE_INPUT_ITEM_IDS = new Set<ItemId>(RECIPES.flatMap((recipe) => recipe.inputs.map((entry) => entry.itemId)))
+const RECIPE_OUTPUT_ITEM_IDS = new Set<ItemId>(RECIPES.flatMap((recipe) => recipe.outputs.map((entry) => entry.itemId)))
+
 function allowedItemIds(port: RotatedPort): Set<ItemId> | 'any' {
   const mode = port.allowedItems.mode
   if (mode === 'any' || mode === 'recipe_items') return 'any'
-  if (mode === 'recipe_inputs') return new Set(['item_originium_ore'])
-  if (mode === 'recipe_outputs') return new Set(['item_originium_powder'])
+  if (mode === 'recipe_inputs') return RECIPE_INPUT_ITEM_IDS
+  if (mode === 'recipe_outputs') return RECIPE_OUTPUT_ITEM_IDS
   return new Set(port.allowedItems.whitelist)
 }
 

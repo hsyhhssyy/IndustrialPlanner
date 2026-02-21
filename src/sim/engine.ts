@@ -1,4 +1,4 @@
-import { DEVICE_TYPE_BY_ID, RECIPES } from '../domain/registry'
+import { DEVICE_TYPE_BY_ID, ITEMS, RECIPES } from '../domain/registry'
 import { detectOverlaps, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
 import type {
   DeviceInstance,
@@ -13,8 +13,14 @@ import type {
 const BASE_TICK_RATE = 20
 const CONVEYOR_SECONDS_PER_CELL = 2
 const PICKUP_BLOCK_WINDOW_SECONDS = CONVEYOR_SECONDS_PER_CELL
-const STORAGE_SUBMIT_INTERVAL_SECONDS = 10
-const ITEM_IDS: ItemId[] = ['item_originium_ore', 'item_originium_powder']
+const STORAGE_SUBMIT_INTERVAL_SECONDS = 1
+const DEFAULT_PROCESSOR_BUFFER_CAPACITY = 50
+const DEFAULT_PROCESSOR_BUFFER_SLOTS = 1
+const ITEM_IDS: ItemId[] = ITEMS.map((item) => item.id)
+
+function createItemNumberRecord(initialValue = 0): Record<ItemId, number> {
+  return Object.fromEntries(ITEM_IDS.map((itemId) => [itemId, initialValue])) as Record<ItemId, number>
+}
 
 function cycleTicksFromSeconds(cycleSeconds: number, tickRateHz: number) {
   return Math.max(1, Math.round(cycleSeconds * tickRateHz))
@@ -68,6 +74,7 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
       outputBuffer: {},
       cycleProgressTicks: 0,
       producedItemsTotal: 0,
+      activeRecipeId: undefined,
     }
   }
   if (def.runtimeKind === 'storage') {
@@ -96,17 +103,17 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
 
 function emptyWarehouse() {
   return {
+    ...createItemNumberRecord(0),
     item_originium_ore: Number.POSITIVE_INFINITY,
-    item_originium_powder: 0,
   }
 }
 
 function emptyPerMinuteRecord(): Record<ItemId, number> {
-  return { item_originium_ore: 0, item_originium_powder: 0 }
+  return createItemNumberRecord(0)
 }
 
-function createWindowDelta(item_originium_ore = 0, item_originium_powder = 0): Partial<Record<ItemId, number>> {
-  return { item_originium_ore, item_originium_powder }
+function createWindowDelta(delta: Partial<Record<ItemId, number>> = {}): Partial<Record<ItemId, number>> {
+  return Object.fromEntries(ITEM_IDS.map((itemId) => [itemId, delta[itemId] ?? 0])) as Partial<Record<ItemId, number>>
 }
 
 function normalizeRuntimeState(runtime: DeviceRuntime, stallReason: StallReason) {
@@ -118,13 +125,79 @@ function mark(output: Partial<Record<ItemId, number>>, itemId: ItemId, delta: nu
   output[itemId] = (output[itemId] ?? 0) + delta
 }
 
+function processorBufferSpec(deviceTypeId: DeviceInstance['typeId'], bufferKind: 'input' | 'output') {
+  const def = DEVICE_TYPE_BY_ID[deviceTypeId]
+  const capacityRaw = bufferKind === 'input' ? def.inputBufferCapacity : def.outputBufferCapacity
+  const slotsRaw = bufferKind === 'input' ? def.inputBufferSlots : def.outputBufferSlots
+  const capacity = Math.max(1, Math.floor(capacityRaw ?? DEFAULT_PROCESSOR_BUFFER_CAPACITY))
+  const slots = Math.max(1, Math.floor(slotsRaw ?? DEFAULT_PROCESSOR_BUFFER_SLOTS))
+  return { capacity, slots }
+}
+
+function bufferTotal(buffer: Partial<Record<ItemId, number>>) {
+  return ITEM_IDS.reduce((sum, itemId) => sum + Math.max(0, buffer[itemId] ?? 0), 0)
+}
+
+function bufferUsedSlots(buffer: Partial<Record<ItemId, number>>) {
+  return ITEM_IDS.reduce((count, itemId) => count + ((buffer[itemId] ?? 0) > 0 ? 1 : 0), 0)
+}
+
+function canAcceptBufferAmount(
+  buffer: Partial<Record<ItemId, number>>,
+  itemId: ItemId,
+  amount: number,
+  capacity: number,
+  slots: number,
+) {
+  if (amount <= 0) return true
+  if ((buffer[itemId] ?? 0) <= 0 && bufferUsedSlots(buffer) >= slots) return false
+  return bufferTotal(buffer) + amount <= capacity
+}
+
+function canAcceptProcessorInput(runtime: DeviceRuntime, deviceTypeId: DeviceInstance['typeId'], itemId: ItemId, amount: number) {
+  if (!('inputBuffer' in runtime)) return false
+  const spec = processorBufferSpec(deviceTypeId, 'input')
+  return canAcceptBufferAmount(runtime.inputBuffer, itemId, amount, spec.capacity, spec.slots)
+}
+
+function tryAddProcessorInput(runtime: DeviceRuntime, deviceTypeId: DeviceInstance['typeId'], itemId: ItemId, amount: number) {
+  if (!('inputBuffer' in runtime)) return false
+  if (!canAcceptProcessorInput(runtime, deviceTypeId, itemId, amount)) return false
+  runtime.inputBuffer[itemId] = (runtime.inputBuffer[itemId] ?? 0) + amount
+  return true
+}
+
+function canAcceptProcessorOutputBatch(
+  runtime: DeviceRuntime,
+  deviceTypeId: DeviceInstance['typeId'],
+  outputs: Array<{ itemId: ItemId; amount: number }>,
+) {
+  if (!('outputBuffer' in runtime)) return false
+  const spec = processorBufferSpec(deviceTypeId, 'output')
+  const shadowBuffer = { ...runtime.outputBuffer }
+  for (const output of outputs) {
+    if (!canAcceptBufferAmount(shadowBuffer, output.itemId, output.amount, spec.capacity, spec.slots)) return false
+    shadowBuffer[output.itemId] = (shadowBuffer[output.itemId] ?? 0) + output.amount
+  }
+  return true
+}
+
+function commitProcessorOutputBatch(runtime: DeviceRuntime, outputs: Array<{ itemId: ItemId; amount: number }>) {
+  if (!('outputBuffer' in runtime)) return 0
+  let producedCount = 0
+  for (const output of outputs) {
+    runtime.outputBuffer[output.itemId] = (runtime.outputBuffer[output.itemId] ?? 0) + output.amount
+    producedCount += output.amount
+  }
+  return producedCount
+}
+
 function addToStorage(runtime: DeviceRuntime, itemId: ItemId, amount: number) {
   if ('inventory' in runtime) {
     runtime.inventory[itemId] = (runtime.inventory[itemId] ?? 0) + amount
+    return true
   }
-  if ('inputBuffer' in runtime) {
-    runtime.inputBuffer[itemId] = (runtime.inputBuffer[itemId] ?? 0) + amount
-  }
+  return false
 }
 
 function getSlotRef(runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we'): SlotData | null {
@@ -180,6 +253,34 @@ function canReceiveOnPortWithPlan(
   return { lane, canTry: false, canAccept: false }
 }
 
+function canAcceptIntoLane(device: DeviceInstance, runtime: DeviceRuntime, lane: ReceiveLane, itemId: ItemId) {
+  if (lane !== 'output') return true
+  if ('inputBuffer' in runtime) return canAcceptProcessorInput(runtime, device.typeId, itemId, 1)
+  return true
+}
+
+function tryReceiveToLane(
+  device: DeviceInstance,
+  runtime: DeviceRuntime,
+  lane: ReceiveLane,
+  toPortId: string,
+  itemId: ItemId,
+  tick: number,
+) {
+  if (lane === 'output') {
+    if ('inputBuffer' in runtime) return tryAddProcessorInput(runtime, device.typeId, itemId, 1)
+    return addToStorage(runtime, itemId, 1)
+  }
+  const incomingEdge = toPortId.slice(-1).toUpperCase() as keyof typeof OPPOSITE_EDGE
+  setSlotRef(runtime, lane, {
+    itemId,
+    progress01: 0,
+    enteredFrom: OPPOSITE_EDGE[incomingEdge],
+    enteredTick: tick,
+  })
+  return true
+}
+
 function sourceSlotLane(device: DeviceInstance, runtime: DeviceRuntime, fromPortId: string): 'slot' | 'ns' | 'we' | 'output' {
   if (device.typeId === 'item_log_connector') {
     if (fromPortId.endsWith('_n') || fromPortId.endsWith('_s')) return 'ns'
@@ -193,13 +294,16 @@ function peekOutputItem(device: DeviceInstance, runtime: DeviceRuntime): ItemId 
   if (device.typeId === 'item_port_unloader_1') return device.config.pickupItemId ?? null
 
   if ('outputBuffer' in runtime) {
-    if ((runtime.outputBuffer.item_originium_powder ?? 0) > 0) return 'item_originium_powder'
+    for (const itemId of ITEM_IDS) {
+      if ((runtime.outputBuffer[itemId] ?? 0) > 0) return itemId
+    }
     return null
   }
 
   if ('inventory' in runtime) {
-    if ((runtime.inventory.item_originium_ore ?? 0) > 0) return 'item_originium_ore'
-    if ((runtime.inventory.item_originium_powder ?? 0) > 0) return 'item_originium_powder'
+    for (const itemId of ITEM_IDS) {
+      if ((runtime.inventory[itemId] ?? 0) > 0) return itemId
+    }
     return null
   }
 
@@ -231,9 +335,8 @@ function peekReadyItemForLane(device: DeviceInstance, runtime: DeviceRuntime, la
 
 function hasReadyOutput(device: DeviceInstance, runtime: DeviceRuntime) {
   if (device.typeId === 'item_port_unloader_1') return Boolean(device.config.pickupItemId)
-  if ('outputBuffer' in runtime) return (runtime.outputBuffer.item_originium_powder ?? 0) > 0
-  if ('inventory' in runtime)
-    return (runtime.inventory.item_originium_ore ?? 0) > 0 || (runtime.inventory.item_originium_powder ?? 0) > 0
+  if ('outputBuffer' in runtime) return ITEM_IDS.some((itemId) => (runtime.outputBuffer[itemId] ?? 0) > 0)
+  if ('inventory' in runtime) return ITEM_IDS.some((itemId) => (runtime.inventory[itemId] ?? 0) > 0)
   if ('nsSlot' in runtime && 'weSlot' in runtime) {
     const slotReady = Boolean(runtime.slot && runtime.slot.progress01 >= 1)
     const nsReady = Boolean(runtime.nsSlot && runtime.nsSlot.progress01 >= 1)
@@ -278,6 +381,22 @@ function resetRuntimeByLayout(layout: LayoutState) {
     runtimeById[device.instanceId] = runtimeForDevice(device)
   }
   return runtimeById
+}
+
+function preloadEntriesForDevice(device: DeviceInstance) {
+  if (Array.isArray(device.config.preloadInputs) && device.config.preloadInputs.length > 0) {
+    return [...device.config.preloadInputs].sort((left, right) => left.slotIndex - right.slotIndex)
+  }
+  if (device.config.preloadInputItemId) {
+    return [
+      {
+        slotIndex: 0,
+        itemId: device.config.preloadInputItemId,
+        amount: device.config.preloadInputAmount ?? 0,
+      },
+    ]
+  }
+  return []
 }
 
 function cloneSlot(slot: SlotData | null): SlotData | null {
@@ -346,6 +465,14 @@ export function startSimulation(layout: LayoutState, sim: SimState): SimState {
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
     const deviceDef = DEVICE_TYPE_BY_ID[device.typeId]
+    if ('inputBuffer' in runtime) {
+      const inputSpec = processorBufferSpec(device.typeId, 'input')
+      for (const preload of preloadEntriesForDevice(device)) {
+        const preloadAmount = Math.max(0, Math.floor(preload.amount ?? 0))
+        if (!preload.itemId || preloadAmount <= 0) continue
+        tryAddProcessorInput(runtime, device.typeId, preload.itemId, Math.min(preloadAmount, inputSpec.capacity))
+      }
+    }
     let stall: StallReason = 'NONE'
     if (overlaps.has(device.instanceId)) stall = 'OVERLAP'
     else if (!pickupHasConfig(device)) stall = 'CONFIG_ERROR'
@@ -378,7 +505,7 @@ export function stopSimulation(sim: SimState): SimState {
     isRunning: false,
     tick: 0,
     runtimeById: {},
-    warehouse: { item_originium_ore: 0, item_originium_powder: 0 },
+    warehouse: createItemNumberRecord(0),
     stats: {
       simSeconds: 0,
       producedPerMinute: emptyPerMinuteRecord(),
@@ -391,12 +518,28 @@ export function stopSimulation(sim: SimState): SimState {
   }
 }
 
-function tryConsumeCrusherInput(runtime: DeviceRuntime) {
+function recipeById(recipeId: string | undefined) {
+  if (!recipeId) return undefined
+  return RECIPES.find((recipe) => recipe.id === recipeId)
+}
+
+function consumeRecipeInputs(runtime: DeviceRuntime, recipe: (typeof RECIPES)[number]) {
   if (!('inputBuffer' in runtime)) return false
-  const ore = runtime.inputBuffer.item_originium_ore ?? 0
-  if (ore <= 0) return false
-  runtime.inputBuffer.item_originium_ore = ore - 1
+  for (const input of recipe.inputs) {
+    if ((runtime.inputBuffer[input.itemId] ?? 0) < input.amount) return false
+  }
+  for (const input of recipe.inputs) {
+    runtime.inputBuffer[input.itemId] = Math.max(0, (runtime.inputBuffer[input.itemId] ?? 0) - input.amount)
+  }
   return true
+}
+
+function pickRunnableRecipe(deviceTypeId: DeviceInstance['typeId'], runtime: DeviceRuntime) {
+  const recipes = RECIPES.filter((recipe) => recipe.machineType === deviceTypeId)
+  for (const recipe of recipes) {
+    if (consumeRecipeInputs(runtime, recipe)) return recipe
+  }
+  return null
 }
 
 function ensureMinuteWindow(sim: SimState, capacity: number) {
@@ -451,24 +594,42 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
     normalizeRuntimeState(runtime, 'NONE')
 
-    if (device.typeId === 'item_port_grinder_1' && 'outputBuffer' in runtime && 'inputBuffer' in runtime) {
-      const recipe = RECIPES[0]
-      const recipeCycleTicks = cycleTicksFromSeconds(recipe.cycleSeconds, sim.tickRateHz)
-      if (runtime.cycleProgressTicks <= 0 && !tryConsumeCrusherInput(runtime)) {
-        normalizeRuntimeState(runtime, 'NO_INPUT')
-      } else {
-        runtime.cycleProgressTicks += 1
-        runtime.progress01 = runtime.cycleProgressTicks / recipeCycleTicks
-        if (runtime.cycleProgressTicks >= recipeCycleTicks) {
-          runtime.cycleProgressTicks = 0
-          runtime.progress01 = 0
-          let producedThisCycle = 0
-          for (const output of recipe.outputs) {
-            mark(runtime.outputBuffer, output.itemId, output.amount)
-            producedThisCycle += output.amount
-          }
-          runtime.producedItemsTotal += producedThisCycle
+    if ('outputBuffer' in runtime && 'inputBuffer' in runtime) {
+      const activeRecipe = recipeById(runtime.activeRecipeId)
+
+      if (runtime.cycleProgressTicks <= 0) {
+        const selectedRecipe = pickRunnableRecipe(device.typeId, runtime)
+        if (!selectedRecipe) {
+          normalizeRuntimeState(runtime, 'NO_INPUT')
+        } else {
+          runtime.activeRecipeId = selectedRecipe.id
+          runtime.cycleProgressTicks = 1
+          const recipeCycleTicks = cycleTicksFromSeconds(selectedRecipe.cycleSeconds, sim.tickRateHz)
+          runtime.progress01 = runtime.cycleProgressTicks / recipeCycleTicks
         }
+      } else if (activeRecipe) {
+        const recipeCycleTicks = cycleTicksFromSeconds(activeRecipe.cycleSeconds, sim.tickRateHz)
+        if (runtime.cycleProgressTicks < recipeCycleTicks) {
+          runtime.cycleProgressTicks += 1
+        }
+        runtime.progress01 = Math.min(1, runtime.cycleProgressTicks / recipeCycleTicks)
+
+        if (runtime.cycleProgressTicks >= recipeCycleTicks) {
+          if (!canAcceptProcessorOutputBatch(runtime, device.typeId, activeRecipe.outputs)) {
+            runtime.cycleProgressTicks = recipeCycleTicks
+            runtime.progress01 = 1
+            normalizeRuntimeState(runtime, 'OUTPUT_BLOCKED')
+          } else {
+            const producedThisCycle = commitProcessorOutputBatch(runtime, activeRecipe.outputs)
+            runtime.producedItemsTotal += producedThisCycle
+            runtime.cycleProgressTicks = 0
+            runtime.progress01 = 0
+            runtime.activeRecipeId = undefined
+          }
+        }
+      } else {
+        runtime.cycleProgressTicks = 0
+        runtime.progress01 = 0
       }
     }
 
@@ -477,7 +638,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
       const enabled = device.config.submitToWarehouse ?? true
       if (enabled && runtime.submitAccumulatorTicks >= storageSubmitTicks) {
         runtime.submitAccumulatorTicks = 0
-        for (const itemId of ['item_originium_ore', 'item_originium_powder'] as const) {
+        for (const itemId of ITEM_IDS) {
           const amount = runtime.inventory[itemId] ?? 0
           if (amount <= 0) continue
           runtime.inventory[itemId] = 0
@@ -540,6 +701,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         const itemId = peekReadyItemForLane(device, runtime, fromLane)
         if (!itemId) continue
         if (!recvState.canAccept) continue
+        if (!canAcceptIntoLane(toDevice, toRuntime, recvState.lane, itemId)) continue
 
         transferPlans.push({
           fromId: device.instanceId,
@@ -599,10 +761,16 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     const fromDevice = deviceById.get(plan.fromId)
     if (!fromRuntime || !toRuntime || !fromDevice) continue
 
+    const toDevice = deviceById.get(plan.toId)
+    if (!toDevice) continue
+
+    const received = tryReceiveToLane(toDevice, toRuntime, plan.lane, plan.toPortId, plan.itemId, sim.tick)
+    if (!received) continue
+
     if (fromDevice.typeId === 'item_port_unloader_1') {
-      if (plan.itemId === 'item_originium_ore' && Number.isFinite(warehouse.item_originium_ore)) {
-        warehouse.item_originium_ore = Math.max(0, warehouse.item_originium_ore - 1)
-        mark(totalDelta, 'item_originium_ore', -1)
+      if (Number.isFinite(warehouse[plan.itemId])) {
+        warehouse[plan.itemId] = Math.max(0, warehouse[plan.itemId] - 1)
+        mark(totalDelta, plan.itemId, -1)
       }
     } else {
       if (plan.fromLane === 'output') {
@@ -627,18 +795,6 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         setSlotRef(fromRuntime, plan.fromLane, null)
       }
     }
-
-    if (plan.lane === 'output') {
-      addToStorage(toRuntime, plan.itemId, 1)
-    } else {
-      const incomingEdge = plan.toPortId.slice(-1).toUpperCase() as keyof typeof OPPOSITE_EDGE
-      setSlotRef(toRuntime, plan.lane, {
-        itemId: plan.itemId,
-        progress01: 0,
-        enteredFrom: OPPOSITE_EDGE[incomingEdge],
-        enteredTick: sim.tick,
-      })
-    }
   }
 
   const nextTick = sim.tick + 1
@@ -658,7 +814,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     }
   }
 
-  const nextDelta = createWindowDelta(totalDelta.item_originium_ore ?? 0, totalDelta.item_originium_powder ?? 0)
+  const nextDelta = createWindowDelta(totalDelta)
   minuteWindowDeltas[writeIndex] = nextDelta
   for (const itemId of ITEM_IDS) {
     const delta = nextDelta[itemId] ?? 0

@@ -11,7 +11,16 @@ export type StallReason =
   | 'OUTPUT_BLOCKED'
   | 'CONFIG_ERROR'
 
-export type ItemId = 'item_originium_ore' | 'item_originium_powder'
+export type ItemId =
+  | 'item_originium_ore'
+  | 'item_originium_powder'
+  | 'item_iron_ore'
+  | 'item_iron_nugget'
+  | 'item_iron_powder'
+  | 'item_plant_moss_3'
+  | 'item_plant_moss_seed_3'
+  | 'item_plant_moss_powder_3'
+  | 'item_iron_enr_powder'
 export type DeviceTypeId =
   | 'item_port_unloader_1'
   | 'item_port_grinder_1'
@@ -40,6 +49,12 @@ export type DeviceTypeId =
   | 'item_log_converger'
   | 'item_log_connector'
 
+export type BaseId =
+  | 'valley4_protocol_core'
+  | 'valley4_rebuilt_command'
+  | 'valley4_infra_outpost'
+  | 'valley4_refugee_shelter'
+
 export interface ItemDef {
   id: ItemId
   displayName: string
@@ -66,6 +81,19 @@ export interface PortDef {
   allowedTypes: TypeAllowance
 }
 
+export interface EdgeContactPlacementConstraint {
+  kind: 'edge_contact'
+  edgeMode: 'explicit' | 'opposite_of_port'
+  edge?: Edge
+  portId?: string
+  minAdjacentCells: number
+  targetTypeIds?: DeviceTypeId[]
+  targetTagsAny?: string[]
+  violationMessageKey?: string
+}
+
+export type PlacementConstraint = EdgeContactPlacementConstraint
+
 export interface DeviceTypeDef {
   id: DeviceTypeId
   runtimeKind: RuntimeKind
@@ -73,20 +101,34 @@ export interface DeviceTypeDef {
   size: { width: number; height: number }
   shortName: string
   tags?: string[]
+  inputBufferCapacity?: number
+  outputBufferCapacity?: number
+  inputBufferSlots?: number
+  outputBufferSlots?: number
+  placementConstraints?: PlacementConstraint[]
   ports0: PortDef[]
 }
 
 export interface RecipeDef {
-  id: 'r_crusher_originium_powder_basic'
-  machineType: 'item_port_grinder_1'
+  id: string
+  machineType: DeviceTypeId
   cycleSeconds: number
   inputs: Array<{ itemId: ItemId; amount: number }>
   outputs: Array<{ itemId: ItemId; amount: number }>
 }
 
+export interface PreloadInputConfigEntry {
+  slotIndex: number
+  itemId: ItemId
+  amount: number
+}
+
 export interface DeviceConfig {
   pickupItemId?: ItemId
   submitToWarehouse?: boolean
+  preloadInputs?: PreloadInputConfigEntry[]
+  preloadInputItemId?: ItemId
+  preloadInputAmount?: number
 }
 
 export interface DeviceInstance {
@@ -95,6 +137,28 @@ export interface DeviceInstance {
   origin: { x: number; y: number }
   rotation: Rotation
   config: DeviceConfig
+}
+
+export interface BaseFoundationDef {
+  instanceId: string
+  typeId: DeviceTypeId
+  origin: { x: number; y: number }
+  rotation: Rotation
+  config?: DeviceConfig
+}
+
+export interface BaseDef {
+  id: BaseId
+  name: string
+  placeableSize: number
+  outerRing: {
+    top: number
+    right: number
+    bottom: number
+    left: number
+  }
+  tags: string[]
+  foundationBuildings: BaseFoundationDef[]
 }
 
 export type EditMode = 'select' | 'place' | 'logistics' | 'delete'
@@ -122,10 +186,7 @@ export interface PortLink {
   to: RotatedPort
 }
 
-export interface WarehouseState {
-  item_originium_ore: number
-  item_originium_powder: number
-}
+export type WarehouseState = Record<ItemId, number>
 
 export interface WarehouseStats {
   simSeconds: number
@@ -144,6 +205,7 @@ export interface ProcessorRuntime extends BaseRuntime {
   outputBuffer: Partial<Record<ItemId, number>>
   cycleProgressTicks: number
   producedItemsTotal: number
+  activeRecipeId?: string
 }
 
 export interface StorageRuntime extends BaseRuntime {
@@ -188,7 +250,8 @@ export interface SimState {
 }
 
 export interface LayoutState {
-  lotSize: 40 | 60
+  baseId: BaseId
+  lotSize: number
   devices: DeviceInstance[]
 }
 
