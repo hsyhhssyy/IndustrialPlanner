@@ -15,6 +15,22 @@ export type ItemId = 'item_originium_ore' | 'item_originium_powder'
 export type DeviceTypeId =
   | 'item_port_unloader_1'
   | 'item_port_grinder_1'
+  | 'item_port_furnance_1'
+  | 'item_port_cmpt_mc_1'
+  | 'item_port_shaper_1'
+  | 'item_port_seedcol_1'
+  | 'item_port_planter_1'
+  | 'item_port_winder_1'
+  | 'item_port_filling_pd_mc_1'
+  | 'item_port_tools_asm_mc_1'
+  | 'item_port_thickener_1'
+  | 'item_port_power_sta_1'
+  | 'item_port_mix_pool_1'
+  | 'item_port_xiranite_oven_1'
+  | 'item_port_dismantler_1'
+  | 'item_port_log_hongs_bus_source'
+  | 'item_port_log_hongs_bus'
+  | 'item_port_liquid_storager_1'
   | 'item_port_power_diffuser_1'
   | 'item_port_storager_1'
   | 'belt_straight_1x1'
@@ -56,6 +72,7 @@ export interface DeviceTypeDef {
   requiresPower: boolean
   size: { width: number; height: number }
   shortName: string
+  tags?: string[]
   ports0: PortDef[]
 }
 

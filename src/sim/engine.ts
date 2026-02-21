@@ -345,10 +345,11 @@ export function startSimulation(layout: LayoutState, sim: SimState): SimState {
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
+    const deviceDef = DEVICE_TYPE_BY_ID[device.typeId]
     let stall: StallReason = 'NONE'
     if (overlaps.has(device.instanceId)) stall = 'OVERLAP'
     else if (!pickupHasConfig(device)) stall = 'CONFIG_ERROR'
-    else if (device.typeId === 'item_port_grinder_1' && !inPowerRange(device, poles)) stall = 'NO_POWER'
+    else if (deviceDef.requiresPower && !inPowerRange(device, poles)) stall = 'NO_POWER'
     normalizeRuntimeState(runtime, stall)
   }
 

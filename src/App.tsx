@@ -117,9 +117,33 @@ const PLACE_GROUP_LABEL_KEY: Record<PlaceGroupKey, string> = {
 function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
   if (typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector') return 'logistics'
   if (typeId === 'item_port_unloader_1') return 'resource'
-  if (typeId === 'item_port_storager_1') return 'storage'
-  if (typeId === 'item_port_grinder_1') return 'basic_production'
-  if (typeId === 'item_port_power_diffuser_1') return 'power'
+  if (
+    typeId === 'item_port_storager_1' ||
+    typeId === 'item_port_log_hongs_bus_source' ||
+    typeId === 'item_port_log_hongs_bus' ||
+    typeId === 'item_port_liquid_storager_1'
+  )
+    return 'storage'
+  if (
+    typeId === 'item_port_grinder_1' ||
+    typeId === 'item_port_furnance_1' ||
+    typeId === 'item_port_cmpt_mc_1' ||
+    typeId === 'item_port_shaper_1' ||
+    typeId === 'item_port_seedcol_1' ||
+    typeId === 'item_port_planter_1'
+  )
+    return 'basic_production'
+  if (
+    typeId === 'item_port_winder_1' ||
+    typeId === 'item_port_filling_pd_mc_1' ||
+    typeId === 'item_port_tools_asm_mc_1' ||
+    typeId === 'item_port_thickener_1' ||
+    typeId === 'item_port_mix_pool_1' ||
+    typeId === 'item_port_xiranite_oven_1' ||
+    typeId === 'item_port_dismantler_1'
+  )
+    return 'advanced_manufacturing'
+  if (typeId === 'item_port_power_diffuser_1' || typeId === 'item_port_power_sta_1') return 'power'
   return 'functional'
 }
 
@@ -1233,6 +1257,9 @@ function App() {
           <h3>{t('right.selected')}</h3>
           {selectedDevice ? (
             <>
+              {DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags && DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags!.length > 0 && (
+                <div className="kv"><span>{t('detail.tags')}</span><span>{DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags!.join(', ')}</span></div>
+              )}
               <div className="kv"><span>{t('detail.instanceId')}</span><span>{selectedDevice.instanceId}</span></div>
               <div className="kv"><span>{t('detail.deviceType')}</span><span>{getDeviceLabel(language, selectedDevice.typeId)}</span></div>
               <div className="kv"><span>{t('detail.rotation')}</span><span>{selectedDevice.rotation}</span></div>

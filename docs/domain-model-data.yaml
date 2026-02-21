@@ -68,10 +68,26 @@ conventions:
     allowedTypes:
       mode: solid
       whitelist: []
+  tags:
+    description: 建筑类型可选标签字段，用于标记特殊功能或特性
+    type: string_array
   powerRequirement:
     defaultRequiresPower: false
     stage1PoweredDevices:
       - item_port_grinder_1
+      - item_port_furnance_1
+      - item_port_cmpt_mc_1
+      - item_port_shaper_1
+      - item_port_seedcol_1
+      - item_port_planter_1
+      - item_port_winder_1
+      - item_port_filling_pd_mc_1
+      - item_port_tools_asm_mc_1
+      - item_port_thickener_1
+      - item_port_power_sta_1
+      - item_port_mix_pool_1
+      - item_port_xiranite_oven_1
+      - item_port_dismantler_1
 
 items:
   - id: item_originium_ore
@@ -275,6 +291,1488 @@ devices:
           whitelist: []
         allowedTypes:
           mode: solid
+          whitelist: []
+
+  - id: item_port_furnance_1
+    runtimeKind: processor
+    requiresPower: true
+    size:
+      width: 3
+      height: 3
+    ports0:
+      - id: in_s_0
+        localCellX: 0
+        localCellY: 2
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 2
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_2
+        localCellX: 2
+        localCellY: 2
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_0
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_2
+        localCellX: 2
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+
+  - id: item_port_cmpt_mc_1
+    runtimeKind: processor
+    requiresPower: true
+    size:
+      width: 3
+      height: 3
+    ports0:
+      - id: in_s_0
+        localCellX: 0
+        localCellY: 2
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 2
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_2
+        localCellX: 2
+        localCellY: 2
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_0
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_2
+        localCellX: 2
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+
+  - id: item_port_shaper_1
+    runtimeKind: processor
+    requiresPower: true
+    size:
+      width: 3
+      height: 3
+    ports0:
+      - id: in_s_0
+        localCellX: 0
+        localCellY: 2
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 2
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_2
+        localCellX: 2
+        localCellY: 2
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_0
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_2
+        localCellX: 2
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+
+  - id: item_port_seedcol_1
+    runtimeKind: processor
+    requiresPower: true
+    size:
+      width: 5
+      height: 5
+    ports0:
+      - id: in_s_0
+        localCellX: 0
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_2
+        localCellX: 2
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_3
+        localCellX: 3
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_4
+        localCellX: 4
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_0
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_2
+        localCellX: 2
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_3
+        localCellX: 3
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_4
+        localCellX: 4
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+
+  - id: item_port_planter_1
+    runtimeKind: processor
+    requiresPower: true
+    size:
+      width: 5
+      height: 5
+    ports0:
+      - id: in_s_0
+        localCellX: 0
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_2
+        localCellX: 2
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_3
+        localCellX: 3
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_4
+        localCellX: 4
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_0
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_2
+        localCellX: 2
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_3
+        localCellX: 3
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_4
+        localCellX: 4
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+
+  - id: item_port_winder_1
+    runtimeKind: processor
+    requiresPower: true
+    size:
+      width: 6
+      height: 4
+    ports0:
+      - id: in_s_0
+        localCellX: 0
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_2
+        localCellX: 2
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_3
+        localCellX: 3
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_4
+        localCellX: 4
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_5
+        localCellX: 5
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_0
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_2
+        localCellX: 2
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_3
+        localCellX: 3
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_4
+        localCellX: 4
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_5
+        localCellX: 5
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+
+  - id: item_port_filling_pd_mc_1
+    runtimeKind: processor
+    requiresPower: true
+    size:
+      width: 6
+      height: 4
+    ports0:
+      - id: in_s_0
+        localCellX: 0
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_2
+        localCellX: 2
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_3
+        localCellX: 3
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_4
+        localCellX: 4
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_5
+        localCellX: 5
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_0
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_2
+        localCellX: 2
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_3
+        localCellX: 3
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_4
+        localCellX: 4
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_5
+        localCellX: 5
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+
+  - id: item_port_tools_asm_mc_1
+    runtimeKind: processor
+    requiresPower: true
+    size:
+      width: 6
+      height: 4
+    ports0:
+      - id: in_s_0
+        localCellX: 0
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_2
+        localCellX: 2
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_3
+        localCellX: 3
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_4
+        localCellX: 4
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_5
+        localCellX: 5
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_0
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_2
+        localCellX: 2
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_3
+        localCellX: 3
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_4
+        localCellX: 4
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_5
+        localCellX: 5
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+
+  - id: item_port_thickener_1
+    runtimeKind: processor
+    requiresPower: true
+    size:
+      width: 6
+      height: 4
+    ports0:
+      - id: in_s_0
+        localCellX: 0
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_2
+        localCellX: 2
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_3
+        localCellX: 3
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_4
+        localCellX: 4
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_5
+        localCellX: 5
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_0
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_2
+        localCellX: 2
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_3
+        localCellX: 3
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_4
+        localCellX: 4
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_5
+        localCellX: 5
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+
+  - id: item_port_power_sta_1
+    runtimeKind: processor
+    requiresPower: true
+    size:
+      width: 2
+      height: 2
+    ports0:
+      - id: in_s_0
+        localCellX: 0
+        localCellY: 1
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 1
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+
+  - id: item_port_mix_pool_1
+    runtimeKind: processor
+    requiresPower: true
+    tags:
+      - 武陵
+    size:
+      width: 5
+      height: 5
+    ports0:
+      - id: out_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_3
+        localCellX: 3
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_3
+        localCellX: 3
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_w_1
+        localCellX: 0
+        localCellY: 1
+        edge: W
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: liquid
+          whitelist: []
+      - id: out_w_3
+        localCellX: 0
+        localCellY: 3
+        edge: W
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: liquid
+          whitelist: []
+      - id: in_e_1
+        localCellX: 4
+        localCellY: 1
+        edge: E
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: liquid
+          whitelist: []
+      - id: in_e_3
+        localCellX: 4
+        localCellY: 3
+        edge: E
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: liquid
+          whitelist: []
+
+  - id: item_port_xiranite_oven_1
+    runtimeKind: processor
+    requiresPower: true
+    tags:
+      - 武陵
+    size:
+      width: 5
+      height: 5
+    ports0:
+      - id: out_n_0
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_2
+        localCellX: 2
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_3
+        localCellX: 3
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_4
+        localCellX: 4
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_0
+        localCellX: 0
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_2
+        localCellX: 2
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_3
+        localCellX: 3
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_4
+        localCellX: 4
+        localCellY: 4
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_e_2
+        localCellX: 4
+        localCellY: 2
+        edge: E
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: liquid
+          whitelist: []
+
+  - id: item_port_dismantler_1
+    runtimeKind: processor
+    requiresPower: true
+    tags:
+      - 武陵
+    size:
+      width: 6
+      height: 4
+    ports0:
+      - id: out_n_0
+        localCellX: 0
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_1
+        localCellX: 1
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_2
+        localCellX: 2
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_3
+        localCellX: 3
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_4
+        localCellX: 4
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_n_5
+        localCellX: 5
+        localCellY: 0
+        edge: N
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_0
+        localCellX: 0
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_1
+        localCellX: 1
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_2
+        localCellX: 2
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_3
+        localCellX: 3
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_4
+        localCellX: 4
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: in_s_5
+        localCellX: 5
+        localCellY: 3
+        edge: S
+        direction: Input
+        allowedItems:
+          mode: recipe_inputs
+          whitelist: []
+        allowedTypes:
+          mode: solid
+          whitelist: []
+      - id: out_w_2
+        localCellX: 0
+        localCellY: 2
+        edge: W
+        direction: Output
+        allowedItems:
+          mode: recipe_outputs
+          whitelist: []
+        allowedTypes:
+          mode: liquid
+          whitelist: []
+
+  - id: item_port_log_hongs_bus_source
+    runtimeKind: storage
+    requiresPower: false
+    tags:
+      - 武陵
+    size:
+      width: 4
+      height: 4
+    ports0: []
+
+  - id: item_port_log_hongs_bus
+    runtimeKind: storage
+    requiresPower: false
+    tags:
+      - 武陵
+    size:
+      width: 4
+      height: 8
+    ports0: []
+
+  - id: item_port_liquid_storager_1
+    runtimeKind: storage
+    requiresPower: false
+    tags:
+      - 武陵
+    size:
+      width: 3
+      height: 3
+    ports0:
+      - id: in_w_1
+        localCellX: 0
+        localCellY: 1
+        edge: W
+        direction: Input
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes:
+          mode: liquid
+          whitelist: []
+      - id: out_e_1
+        localCellX: 2
+        localCellY: 1
+        edge: E
+        direction: Output
+        allowedItems:
+          mode: recipe_items
+          whitelist: []
+        allowedTypes:
+          mode: liquid
           whitelist: []
 
   - id: item_port_power_diffuser_1

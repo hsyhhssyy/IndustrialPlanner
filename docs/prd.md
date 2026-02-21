@@ -171,6 +171,10 @@ runtimeKind:
 
 * requiresPower（是否需要供电才能运转）
 
+每个设备类型可选声明：
+
+* tags: string[]（用于标记建筑特殊功能或特性，可为空或包含多个字符串）
+
 Stage1 当前口径：
 
 * 仅 item_port_grinder_1 需要供电

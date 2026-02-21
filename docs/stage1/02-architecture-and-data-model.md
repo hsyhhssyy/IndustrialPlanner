@@ -38,6 +38,7 @@
 - `id: string`
 - `runtimeKind: 'processor' | 'storage' | 'conveyor' | 'junction'`
 - `requiresPower: boolean`
+- `tags?: string[]`（可选；用于标记建筑特性，如“武陵”）
 - `size: { width: number; height: number }`
 - `ports0: PortDef[]`（仅 0°）
 - `display: { shortName?: string }`
