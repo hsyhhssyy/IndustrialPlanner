@@ -2,7 +2,7 @@
 
 ## 1. 目标声明
 
-Stage1 的目标是交付“可编辑 + 可仿真 + 可观察”的工业系统最小闭环，覆盖 `originium_ore -> originium_powder` 基础产线。
+Stage1 的目标是交付“可编辑 + 可仿真 + 可观察”的工业系统最小闭环，覆盖 `item_originium_ore -> item_originium_powder` 基础产线。
 
 用户必须能够：
 
@@ -25,13 +25,13 @@ Stage1 的目标是交付“可编辑 + 可仿真 + 可观察”的工业系统�
 - `belt_straight_1x1`
 - `belt_turn_cw_1x1`
 - `belt_turn_ccw_1x1`
-- `splitter_1x1`
-- `merger_1x1`
-- `bridge_1x1`
+- `item_log_splitter`
+- `item_log_converger`
+- `item_log_connector`
 
 ### 2.2 物品与配方
 
-- 物品：`originium_ore`, `originium_powder`
+- 物品：`item_originium_ore`, `item_originium_powder`
 - 配方：`r_crusher_originium_powder_basic`
 
 ### 2.3 明确不做
@@ -55,11 +55,11 @@ Stage1 的目标是交付“可编辑 + 可仿真 + 可观察”的工业系统�
 
 统计口径补充：
 
-- 取货口从仓库取货，且可选择任意已定义物品（包括 `originium_powder`）。
+- 取货口从仓库取货，且可选择任意已定义物品（包括 `item_originium_powder`）。
 - 存储箱是否将库存提交到仓库由用户配置项控制，默认提交（开启）；开启后按仿真时间每 10 秒批量提交一次该存储箱内所有物品。
 - 统计仅反映仓库内物品总量与变化速率，不随当前地图设备增减直接变化。
 - `/min` 按仿真时间计算，不受倍速按钮影响。
-- 每次进入仿真前，仓库库存重置为统一初始值：`originium_ore=∞`，其他物品=`0`。
+- 每次进入仿真前，仓库库存重置为统一初始值：`item_originium_ore=∞`，其他物品=`0`。
 - 退出仿真时清空仓库物品数量与统计快照。
 
 配置校验口径补充：
@@ -70,7 +70,7 @@ Stage1 的目标是交付“可编辑 + 可仿真 + 可观察”的工业系统�
 
 以下全部满足，Stage1 才可判定完成：
 
-1. 可搭建并稳定运行 `originium_ore -> originium_powder` 产线
+1. 可搭建并稳定运行 `item_originium_ore -> item_originium_powder` 产线
 2. 统计面板可稳定反映仓库物品总量与变化速率
 3. 缺料、堵塞、重叠等停机原因可被明确识别并展示
 4. 能看到仓库统计与设备运行状态（按当前项目口径呈现）

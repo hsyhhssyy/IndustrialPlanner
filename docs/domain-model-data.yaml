@@ -128,7 +128,7 @@ logisticsRules:
     - splitting
     - merging
   crossing:
-    deviceType: bridge_1x1
+    deviceType: item_log_connector
     description: 同一格仅允许对侧连通交叉（N-S 与 W-E），两路互不干扰
     perChannelSlotCapacity: 1
     forbidSameEdgeTransfer: true
@@ -145,7 +145,7 @@ logisticsRules:
       - pair: [N, S]
       - pair: [W, E]
   splitting:
-    deviceType: splitter_1x1
+    deviceType: item_log_splitter
     topology:
       inputs: 1
       outputs: 3
@@ -155,7 +155,7 @@ logisticsRules:
       orderReference: relative_to_input_heading
       allowPartialConnections: true
   merging:
-    deviceType: merger_1x1
+    deviceType: item_log_converger
     topology:
       inputs: 3
       outputs: 1
@@ -489,17 +489,17 @@ devices:
         mode: solid
         whitelist: []
 
-  - id: splitter_1x1
+  - id: item_log_splitter
     runtimeKind: junction
     requiresPower: false
     size:
       width: 1
       height: 1
     ports0:
-      - id: in_w
+      - id: in_e
         localCellX: 0
         localCellY: 0
-        edge: W
+        edge: E
         direction: Input
         allowedItems:
           mode: recipe_items
@@ -518,10 +518,10 @@ devices:
         allowedTypes:
           mode: solid
           whitelist: []
-      - id: out_e
+      - id: out_w
         localCellX: 0
         localCellY: 0
-        edge: E
+        edge: W
         direction: Output
         allowedItems:
           mode: recipe_items
@@ -549,7 +549,7 @@ devices:
         mode: solid
         whitelist: []
 
-  - id: merger_1x1
+  - id: item_log_converger
     runtimeKind: junction
     requiresPower: false
     size:
@@ -567,10 +567,10 @@ devices:
         allowedTypes:
           mode: solid
           whitelist: []
-      - id: in_w
+      - id: in_e
         localCellX: 0
         localCellY: 0
-        edge: W
+        edge: E
         direction: Input
         allowedItems:
           mode: recipe_items
@@ -589,10 +589,10 @@ devices:
         allowedTypes:
           mode: solid
           whitelist: []
-      - id: out_e
+      - id: out_w
         localCellX: 0
         localCellY: 0
-        edge: E
+        edge: W
         direction: Output
         allowedItems:
           mode: recipe_items
@@ -609,7 +609,7 @@ devices:
         mode: solid
         whitelist: []
 
-  - id: bridge_1x1
+  - id: item_log_connector
     runtimeKind: junction
     requiresPower: false
     channelSlots:

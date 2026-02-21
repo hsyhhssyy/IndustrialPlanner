@@ -181,22 +181,22 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     ],
   },
   {
-    id: 'splitter_1x1',
+    id: 'item_log_splitter',
     runtimeKind: 'junction',
     requiresPower: false,
     size: { width: 1, height: 1 },
     shortName: 'Split',
     ports0: [
       {
-        id: 'in_w',
+        id: 'in_e',
         localCellX: 0,
         localCellY: 0,
-        edge: 'W',
+        edge: 'E',
         direction: 'Input',
         allowedItems: recipeItemsAllowance,
         allowedTypes: solidAllowance,
       },
-      ...(['N', 'E', 'S'] as const).map((edge) => ({
+      ...(['N', 'W', 'S'] as const).map((edge) => ({
         id: `out_${edge.toLowerCase()}`,
         localCellX: 0,
         localCellY: 0,
@@ -208,13 +208,13 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     ],
   },
   {
-    id: 'merger_1x1',
+    id: 'item_log_converger',
     runtimeKind: 'junction',
     requiresPower: false,
     size: { width: 1, height: 1 },
     shortName: 'Merge',
     ports0: [
-      ...(['N', 'W', 'S'] as const).map((edge) => ({
+      ...(['N', 'E', 'S'] as const).map((edge) => ({
         id: `in_${edge.toLowerCase()}`,
         localCellX: 0,
         localCellY: 0,
@@ -224,10 +224,10 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
         allowedTypes: solidAllowance,
       })),
       {
-        id: 'out_e',
+        id: 'out_w',
         localCellX: 0,
         localCellY: 0,
-        edge: 'E',
+        edge: 'W',
         direction: 'Output',
         allowedItems: recipeItemsAllowance,
         allowedTypes: solidAllowance,
@@ -235,7 +235,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     ],
   },
   {
-    id: 'bridge_1x1',
+    id: 'item_log_connector',
     runtimeKind: 'junction',
     requiresPower: false,
     size: { width: 1, height: 1 },
@@ -272,4 +272,4 @@ export const PLACEABLE_TYPES = DEVICE_TYPES.filter(
 )
 
 export const BELT_TYPES = new Set(['belt_straight_1x1', 'belt_turn_cw_1x1', 'belt_turn_ccw_1x1'])
-export const JUNCTION_TYPES = new Set(['splitter_1x1', 'merger_1x1', 'bridge_1x1'])
+export const JUNCTION_TYPES = new Set(['item_log_splitter', 'item_log_converger', 'item_log_connector'])

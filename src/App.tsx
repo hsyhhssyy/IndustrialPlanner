@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { DEVICE_TYPE_BY_ID, ITEMS, PLACEABLE_TYPES, RECIPES } from './domain/registry'
+import { getDeviceSpritePath } from './domain/deviceSprites'
 import { applyLogisticsPath, deleteConnectedBelts, longestValidLogisticsPrefix, nextId, pathFromTrace } from './domain/logistics'
 import { buildOccupancyMap, cellToDeviceId, EDGE_ANGLE, getDeviceById, getRotatedPorts, isWithinLot, linksFromLayout, OPPOSITE_EDGE } from './domain/geometry'
 import type { DeviceInstance, DeviceRuntime, DeviceTypeId, Edge, EditMode, ItemId, LayoutState, Rotation, SimState, SlotData } from './domain/types'
@@ -45,6 +46,13 @@ function getItemIconPath(itemId: ItemId) {
   return `/itemicon/${itemId}.png`
 }
 
+function getDeviceMenuIconPath(typeId: DeviceTypeId) {
+  if (typeId === 'item_log_splitter') return '/device-icons/item_log_splitter.png'
+  if (typeId === 'item_log_converger') return '/device-icons/item_log_converger.png'
+  if (typeId === 'item_log_connector') return '/device-icons/item_log_connector.png'
+  return `/device-icons/${typeId}.png`
+}
+
 function formatSlotValue(
   slot: SlotData | null,
   language: Language,
@@ -74,6 +82,47 @@ function getZoomStep(cellSize: number) {
   return 30
 }
 
+type PlaceGroupKey =
+  | 'logistics'
+  | 'resource'
+  | 'storage'
+  | 'basic_production'
+  | 'advanced_manufacturing'
+  | 'power'
+  | 'functional'
+  | 'combat_support'
+
+const PLACE_GROUP_ORDER: PlaceGroupKey[] = [
+  'logistics',
+  'resource',
+  'storage',
+  'basic_production',
+  'advanced_manufacturing',
+  'power',
+  'functional',
+  'combat_support',
+]
+
+const PLACE_GROUP_LABEL_KEY: Record<PlaceGroupKey, string> = {
+  logistics: 'left.group.logistics',
+  resource: 'left.group.resource',
+  storage: 'left.group.storage',
+  basic_production: 'left.group.basicProduction',
+  advanced_manufacturing: 'left.group.advancedManufacturing',
+  power: 'left.group.power',
+  functional: 'left.group.functional',
+  combat_support: 'left.group.combatSupport',
+}
+
+function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
+  if (typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector') return 'logistics'
+  if (typeId === 'item_port_unloader_1') return 'resource'
+  if (typeId === 'item_port_storager_1') return 'storage'
+  if (typeId === 'item_port_grinder_1') return 'basic_production'
+  if (typeId === 'item_port_power_diffuser_1') return 'power'
+  return 'functional'
+}
+
 function cycleTicksFromSeconds(cycleSeconds: number, tickRateHz: number) {
   return Math.max(1, Math.round(cycleSeconds * tickRateHz))
 }
@@ -81,8 +130,8 @@ function cycleTicksFromSeconds(cycleSeconds: number, tickRateHz: number) {
 const BASE_CELL_SIZE = 64
 const BELT_VIEWBOX_SIZE = 64
 
-const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>(['splitter_1x1', 'merger_1x1', 'bridge_1x1'])
-const HIDDEN_CHEVRON_DEVICE_TYPES = new Set<DeviceTypeId>(['splitter_1x1', 'merger_1x1', 'bridge_1x1'])
+const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
+const HIDDEN_CHEVRON_DEVICE_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
 function isKnownDeviceTypeId(typeId: unknown): typeId is DeviceTypeId {
   return typeof typeId === 'string' && typeId in DEVICE_TYPE_BY_ID
 }
@@ -168,6 +217,120 @@ function clampViewportOffset(
   return { x: Math.round(x), y: Math.round(y) }
 }
 
+type StaticDeviceLayerProps = {
+  devices: DeviceInstance[]
+  selectionSet: ReadonlySet<string>
+  language: Language
+}
+
+const StaticDeviceLayer = memo(({ devices, selectionSet, language }: StaticDeviceLayerProps) => {
+  return (
+    <>
+      {devices.map((device) => {
+        const type = DEVICE_TYPE_BY_ID[device.typeId]
+        if (!type) return null
+        const footprintSize = rotatedFootprintSize(type.size, device.rotation)
+        const surfaceContentWidthPx = footprintSize.width * BASE_CELL_SIZE - 6
+        const surfaceContentHeightPx = footprintSize.height * BASE_CELL_SIZE - 6
+        const isQuarterTurn = device.rotation === 90 || device.rotation === 270
+        const textureWidthPx = isQuarterTurn ? surfaceContentHeightPx : surfaceContentWidthPx
+        const textureHeightPx = isQuarterTurn ? surfaceContentWidthPx : surfaceContentHeightPx
+        const isPickupPort = device.typeId === 'item_port_unloader_1'
+        const isGrinder = device.typeId === 'item_port_grinder_1'
+        const textureSrc = getDeviceSpritePath(device.typeId)
+        const isTexturedDevice = textureSrc !== null
+        const isBelt = device.typeId.startsWith('belt_')
+        const isSplitter = device.typeId === 'item_log_splitter'
+        const isMerger = device.typeId === 'item_log_converger'
+        const beltPorts = isBelt ? getRotatedPorts(device) : []
+        const beltInEdge = isBelt ? beltPorts.find((port) => port.direction === 'Input')?.edge ?? 'W' : 'W'
+        const beltOutEdge = isBelt ? beltPorts.find((port) => port.direction === 'Output')?.edge ?? 'E' : 'E'
+        const beltPath = buildBeltTrackPath(beltInEdge, beltOutEdge)
+        const splitterOutputEdges = isSplitter
+          ? getRotatedPorts(device)
+              .filter((port) => port.direction === 'Output')
+              .map((port) => port.edge)
+          : []
+        const mergerOutputEdges = isMerger ? [getRotatedPorts(device).find((port) => port.direction === 'Output')?.edge ?? 'W'] : []
+        const junctionArrowEdges = isSplitter ? splitterOutputEdges : mergerOutputEdges
+        return (
+          <div
+            key={device.instanceId}
+            className={`device ${isBelt ? 'belt-device' : ''} ${selectionSet.has(device.instanceId) ? 'selected' : ''}`}
+            style={{
+              left: device.origin.x * BASE_CELL_SIZE,
+              top: device.origin.y * BASE_CELL_SIZE,
+              width: footprintSize.width * BASE_CELL_SIZE,
+              height: footprintSize.height * BASE_CELL_SIZE,
+            }}
+            title={device.typeId}
+          >
+            {isBelt ? (
+              <div className="belt-track-wrap">
+                <svg className="belt-track-svg" viewBox={`0 0 ${BELT_VIEWBOX_SIZE} ${BELT_VIEWBOX_SIZE}`} preserveAspectRatio="none" aria-hidden="true">
+                  {(() => {
+                    const beltEdgeMaskId = `belt-edge-mask-${device.instanceId}`
+                    return (
+                      <>
+                        <defs>
+                          <mask id={beltEdgeMaskId} maskUnits="userSpaceOnUse">
+                            <rect x="0" y="0" width={BELT_VIEWBOX_SIZE} height={BELT_VIEWBOX_SIZE} fill="black" />
+                            <path d={beltPath} className="belt-edge-mask-outer" />
+                            <path d={beltPath} className="belt-edge-mask-inner" />
+                          </mask>
+                        </defs>
+                        <path d={beltPath} className="belt-track-fill" />
+                        <path d={beltPath} className="belt-track-edge" mask={`url(#${beltEdgeMaskId})`} />
+                      </>
+                    )
+                  })()}
+                </svg>
+                <span className="belt-arrow" style={{ transform: `translate(-50%, -50%) rotate(${EDGE_ANGLE[beltOutEdge]}deg)` }} />
+              </div>
+            ) : (
+              <div
+                className={`device-surface ${isPickupPort ? 'pickup-port-surface' : ''} ${isGrinder ? 'grinder-surface' : ''} ${isTexturedDevice ? 'textured-surface' : ''}`}
+              >
+                {textureSrc && (
+                  <img
+                    className="device-texture"
+                    src={textureSrc}
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                    style={{
+                      width: `${textureWidthPx}px`,
+                      height: `${textureHeightPx}px`,
+                      transform: `translate(-50%, -50%) rotate(${device.rotation}deg)`,
+                    }}
+                  />
+                )}
+                {(isSplitter || isMerger) && !isTexturedDevice && (
+                  <div className="junction-icon" aria-hidden="true">
+                    <svg className="junction-icon-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                      <line className="junction-cross-line" x1="20" y1="50" x2="80" y2="50" />
+                      <line className="junction-cross-line" x1="50" y1="20" x2="50" y2="80" />
+                      {junctionArrowEdges.map((edge) => (
+                        <polyline key={`${device.instanceId}-${edge}`} className="junction-arrow-line" points={junctionArrowPoints(edge)} />
+                      ))}
+                    </svg>
+                  </div>
+                )}
+                {!HIDDEN_DEVICE_LABEL_TYPES.has(device.typeId) && (
+                  <span className={`device-label ${isPickupPort ? 'pickup-label' : ''} ${isPickupPort && isQuarterTurn ? 'pickup-label-vertical' : ''}`}>
+                    {getDeviceLabel(language, device.typeId)}
+                  </span>
+                )}
+                {isPickupPort && !device.config.pickupItemId && <em>?</em>}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </>
+  )
+})
+
 function App() {
   const [layout, setLayout] = usePersistentState<LayoutState>('stage1-layout', { lotSize: 60, devices: [] })
   const [language, setLanguage] = usePersistentState<Language>('stage1-language', 'zh-CN')
@@ -195,7 +358,9 @@ function App() {
 
   const gridRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
-  const simTimerRef = useRef<number | null>(null)
+  const simRafRef = useRef<number | null>(null)
+  const simAccumulatorMsRef = useRef(0)
+  const simLastFrameMsRef = useRef(0)
   const tickRateSampleRef = useRef<{ tick: number; ms: number } | null>(null)
   const simTickRef = useRef(0)
   const unknownDevicePromptKeyRef = useRef<string>('')
@@ -216,7 +381,11 @@ function App() {
     const hasLegacyPowerPoleId = layout.devices.some(
       (device) => String((device as DeviceInstance & { typeId: unknown }).typeId) === 'power_pole_2x2',
     )
-    if (!hasLegacyStorageId && !hasLegacyPowerPoleId) return
+    const hasLegacyJunctionId = layout.devices.some((device) => {
+      const typeId = String((device as DeviceInstance & { typeId: unknown }).typeId)
+      return typeId === 'splitter_1x1' || typeId === 'merger_1x1' || typeId === 'bridge_1x1'
+    })
+    if (!hasLegacyStorageId && !hasLegacyPowerPoleId && !hasLegacyJunctionId) return
 
     setLayout((current) => ({
       ...current,
@@ -225,6 +394,12 @@ function App() {
           ? { ...device, typeId: 'item_port_storager_1' }
           : String((device as DeviceInstance & { typeId: unknown }).typeId) === 'power_pole_2x2'
             ? { ...device, typeId: 'item_port_power_diffuser_1' }
+              : String((device as DeviceInstance & { typeId: unknown }).typeId) === 'splitter_1x1'
+                ? { ...device, typeId: 'item_log_splitter' }
+                : String((device as DeviceInstance & { typeId: unknown }).typeId) === 'merger_1x1'
+                  ? { ...device, typeId: 'item_log_converger' }
+                  : String((device as DeviceInstance & { typeId: unknown }).typeId) === 'bridge_1x1'
+                    ? { ...device, typeId: 'item_log_connector' }
             : device,
       ),
     }))
@@ -265,22 +440,53 @@ function App() {
   }, [unknownDevices, setLayout])
 
   useEffect(() => {
-    if (simTimerRef.current !== null) {
-      window.clearInterval(simTimerRef.current)
-      simTimerRef.current = null
+    if (simRafRef.current !== null) {
+      window.cancelAnimationFrame(simRafRef.current)
+      simRafRef.current = null
     }
 
+    simAccumulatorMsRef.current = 0
+    simLastFrameMsRef.current = 0
     if (!sim.isRunning) return
-    const intervalMs = 1000 / (sim.tickRateHz * sim.speed)
-    simTimerRef.current = window.setInterval(() => {
-      setSim((current) => tickSimulation(layout, current))
-    }, intervalMs)
+
+    const maxTicksPerFrame = 8
+    const stepMs = 1000 / (sim.tickRateHz * sim.speed)
+
+    const onFrame = (nowMs: number) => {
+      if (simLastFrameMsRef.current === 0) {
+        simLastFrameMsRef.current = nowMs
+      }
+
+      const deltaMs = nowMs - simLastFrameMsRef.current
+      simLastFrameMsRef.current = nowMs
+      simAccumulatorMsRef.current += Math.max(0, deltaMs)
+
+      const dueTicks = Math.floor(simAccumulatorMsRef.current / stepMs)
+      const ticksToRun = Math.min(maxTicksPerFrame, dueTicks)
+
+      if (ticksToRun > 0) {
+        simAccumulatorMsRef.current -= ticksToRun * stepMs
+        setSim((current) => {
+          let next = current
+          for (let i = 0; i < ticksToRun; i += 1) {
+            next = tickSimulation(layout, next)
+          }
+          return next
+        })
+      }
+
+      simRafRef.current = window.requestAnimationFrame(onFrame)
+    }
+
+    simRafRef.current = window.requestAnimationFrame(onFrame)
 
     return () => {
-      if (simTimerRef.current !== null) {
-        window.clearInterval(simTimerRef.current)
-        simTimerRef.current = null
+      if (simRafRef.current !== null) {
+        window.cancelAnimationFrame(simRafRef.current)
+        simRafRef.current = null
       }
+      simAccumulatorMsRef.current = 0
+      simLastFrameMsRef.current = 0
     }
   }, [layout, sim.isRunning, sim.speed, sim.tickRateHz])
 
@@ -632,6 +838,29 @@ function App() {
     })
   }, [layout.devices, sim.runtimeById])
 
+  const selectionSet = useMemo(() => new Set(selection), [selection])
+
+  const runtimeStallOverlays = useMemo(() => {
+    return layout.devices.flatMap((device) => {
+      const runtime = sim.runtimeById[device.instanceId]
+      const status = runtimeLabel(runtime)
+      if (status === 'running' || status === 'idle') return []
+      const type = DEVICE_TYPE_BY_ID[device.typeId]
+      if (!type) return []
+      const footprintSize = rotatedFootprintSize(type.size, device.rotation)
+      return [
+        {
+          key: `stall-${device.instanceId}`,
+          left: device.origin.x * BASE_CELL_SIZE,
+          top: device.origin.y * BASE_CELL_SIZE,
+          width: footprintSize.width * BASE_CELL_SIZE,
+          height: footprintSize.height * BASE_CELL_SIZE,
+          isBelt: device.typeId.startsWith('belt_'),
+        },
+      ]
+    })
+  }, [layout.devices, sim.runtimeById])
+
   const powerRangeOutlines = useMemo(() => {
     return layout.devices
       .filter((device) => device.typeId === 'item_port_power_diffuser_1')
@@ -768,15 +997,38 @@ function App() {
           {mode === 'place' && (
             <>
               <h3>{t('left.device')}</h3>
-              {PLACEABLE_TYPES.map((deviceType) => (
-                <button
-                  key={deviceType.id}
-                  className={placeType === deviceType.id ? 'active' : ''}
-                  onClick={() => setPlaceType(deviceType.id)}
-                >
-                  {getDeviceLabel(language, deviceType.id)}
-                </button>
-              ))}
+              <div className="place-groups-scroll">
+                {PLACE_GROUP_ORDER.map((groupKey) => {
+                  const devices = PLACEABLE_TYPES.filter((deviceType) => getPlaceGroup(deviceType.id) === groupKey)
+                  return (
+                    <section key={groupKey} className="place-group-section">
+                      <h4 className="place-group-title">{t(PLACE_GROUP_LABEL_KEY[groupKey])}</h4>
+                      {devices.length > 0 ? (
+                        <div className="place-device-grid">
+                          {devices.map((deviceType) => (
+                            <button
+                              key={deviceType.id}
+                              className={`place-device-button ${placeType === deviceType.id ? 'active' : ''}`}
+                              onClick={() => setPlaceType(deviceType.id)}
+                            >
+                              <img
+                                className="place-device-icon"
+                                src={getDeviceMenuIconPath(deviceType.id)}
+                                alt=""
+                                aria-hidden="true"
+                                draggable={false}
+                              />
+                              <span className="place-device-label">{getDeviceLabel(language, deviceType.id)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="place-group-empty">{t('left.group.empty')}</div>
+                      )}
+                    </section>
+                  )
+                })}
+              </div>
             </>
           )}
 
@@ -801,6 +1053,8 @@ function App() {
               <button
                 onClick={() => {
                   if (sim.isRunning) return
+                  const confirmed = window.confirm(t('left.deleteAllConfirm'))
+                  if (!confirmed) return
                   setLayout((current) => ({ ...current, devices: [] }))
                   setSelection([])
                 }}
@@ -848,132 +1102,20 @@ function App() {
                 />
               ))}
 
-              {layout.devices.map((device) => {
-                const type = DEVICE_TYPE_BY_ID[device.typeId]
-                if (!type) return null
-                const footprintSize = rotatedFootprintSize(type.size, device.rotation)
-                const surfaceContentWidthPx = footprintSize.width * BASE_CELL_SIZE - 6
-                const surfaceContentHeightPx = footprintSize.height * BASE_CELL_SIZE - 6
-                const isQuarterTurn = device.rotation === 90 || device.rotation === 270
-                const textureWidthPx = isQuarterTurn ? surfaceContentHeightPx : surfaceContentWidthPx
-                const textureHeightPx = isQuarterTurn ? surfaceContentWidthPx : surfaceContentHeightPx
-                const runtime = sim.runtimeById[device.instanceId]
-                const status = runtimeLabel(runtime)
-                const isPickupPort = device.typeId === 'item_port_unloader_1'
-                const isGrinder = device.typeId === 'item_port_grinder_1'
-                const isPowerPole = device.typeId === 'item_port_power_diffuser_1'
-                const isStorage = device.typeId === 'item_port_storager_1'
-                const isTexturedDevice = isPickupPort || isGrinder || isPowerPole || isStorage
-                const textureSrc = isPickupPort
-                  ? '/sprites/item_port_unloader_1.png'
-                  : isGrinder
-                    ? '/sprites/item_port_grinder_1.png'
-                    : isPowerPole
-                      ? '/sprites/item_port_power_diffuser_1.png'
-                    : isStorage
-                      ? '/sprites/item_port_storager_1.png'
-                    : null
-                const isBelt = device.typeId.startsWith('belt_')
-                const isSplitter = device.typeId === 'splitter_1x1'
-                const isMerger = device.typeId === 'merger_1x1'
-                const beltPorts = isBelt ? getRotatedPorts(device) : []
-                const beltInEdge = isBelt
-                  ? beltPorts.find((port) => port.direction === 'Input')?.edge ?? 'W'
-                  : 'W'
-                const beltOutEdge = isBelt
-                  ? beltPorts.find((port) => port.direction === 'Output')?.edge ?? 'E'
-                  : 'E'
-                const beltPath = buildBeltTrackPath(beltInEdge, beltOutEdge)
-                const splitterOutputEdges = isSplitter
-                  ? getRotatedPorts(device)
-                      .filter((port) => port.direction === 'Output')
-                      .map((port) => port.edge)
-                  : []
-                const mergerOutputEdges = isMerger
-                  ? [getRotatedPorts(device).find((port) => port.direction === 'Output')?.edge ?? 'E']
-                  : []
-                const junctionArrowEdges = isSplitter ? splitterOutputEdges : mergerOutputEdges
-                return (
-                  <div
-                    key={device.instanceId}
-                    className={`device ${isBelt ? 'belt-device' : ''} ${selection.includes(device.instanceId) ? 'selected' : ''} ${status !== 'running' && status !== 'idle' ? 'stalled' : ''}`}
-                    style={{
-                      left: device.origin.x * BASE_CELL_SIZE,
-                      top: device.origin.y * BASE_CELL_SIZE,
-                      width: footprintSize.width * BASE_CELL_SIZE,
-                      height: footprintSize.height * BASE_CELL_SIZE,
-                    }}
-                    title={`${device.typeId} | ${status}`}
-                  >
-                    {isBelt ? (
-                      <div className="belt-track-wrap">
-                        <svg className="belt-track-svg" viewBox={`0 0 ${BELT_VIEWBOX_SIZE} ${BELT_VIEWBOX_SIZE}`} preserveAspectRatio="none" aria-hidden="true">
-                          {(() => {
-                            const beltEdgeMaskId = `belt-edge-mask-${device.instanceId}`
-                            return (
-                              <>
-                                <defs>
-                                  <mask id={beltEdgeMaskId} maskUnits="userSpaceOnUse">
-                                    <rect x="0" y="0" width={BELT_VIEWBOX_SIZE} height={BELT_VIEWBOX_SIZE} fill="black" />
-                                    <path d={beltPath} className="belt-edge-mask-outer" />
-                                    <path d={beltPath} className="belt-edge-mask-inner" />
-                                  </mask>
-                                </defs>
-                                <path d={beltPath} className="belt-track-fill" />
-                                <path d={beltPath} className="belt-track-edge" mask={`url(#${beltEdgeMaskId})`} />
-                              </>
-                            )
-                          })()}
-                        </svg>
-                        <span
-                          className="belt-arrow"
-                          style={{ transform: `translate(-50%, -50%) rotate(${EDGE_ANGLE[beltOutEdge]}deg)` }}
-                        />
-                      </div>
-                    ) : (
-                      <div
-                        className={`device-surface ${isPickupPort ? 'pickup-port-surface' : ''} ${isGrinder ? 'grinder-surface' : ''} ${isTexturedDevice ? 'textured-surface' : ''}`}
-                      >
-                        {textureSrc && (
-                          <img
-                            className="device-texture"
-                            src={textureSrc}
-                            alt=""
-                            aria-hidden="true"
-                            draggable={false}
-                            style={{
-                              width: `${textureWidthPx}px`,
-                              height: `${textureHeightPx}px`,
-                              transform: `translate(-50%, -50%) rotate(${device.rotation}deg)`,
-                            }}
-                          />
-                        )}
-                        {(isSplitter || isMerger) && (
-                          <div className="junction-icon" aria-hidden="true">
-                            <svg className="junction-icon-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                              <line className="junction-cross-line" x1="20" y1="50" x2="80" y2="50" />
-                              <line className="junction-cross-line" x1="50" y1="20" x2="50" y2="80" />
-                              {junctionArrowEdges.map((edge) => (
-                                <polyline
-                                  key={`${device.instanceId}-${edge}`}
-                                  className="junction-arrow-line"
-                                  points={junctionArrowPoints(edge)}
-                                />
-                              ))}
-                            </svg>
-                          </div>
-                        )}
-                        {!HIDDEN_DEVICE_LABEL_TYPES.has(device.typeId) && (
-                          <span className={`device-label ${isPickupPort ? 'pickup-label' : ''} ${isPickupPort && isQuarterTurn ? 'pickup-label-vertical' : ''}`}>
-                            {getDeviceLabel(language, device.typeId)}
-                          </span>
-                        )}
-                        {isPickupPort && !device.config.pickupItemId && <em>?</em>}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+              <StaticDeviceLayer devices={layout.devices} selectionSet={selectionSet} language={language} />
+
+              {runtimeStallOverlays.map((overlay) => (
+                <div
+                  key={overlay.key}
+                  className={`device-runtime-overlay ${overlay.isBelt ? 'is-belt' : 'is-device'}`}
+                  style={{
+                    left: overlay.left,
+                    top: overlay.top,
+                    width: overlay.width,
+                    height: overlay.height,
+                  }}
+                />
+              ))}
 
               <div className="in-transit-overlay" aria-hidden="true">
                 {inTransitItems.map((item) => (

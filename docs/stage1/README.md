@@ -11,6 +11,7 @@
 5. [05-development-plan-and-tasks.md](./05-development-plan-and-tasks.md)：里程碑、任务拆分、交付节奏
 6. [06-test-and-acceptance.md](./06-test-and-acceptance.md)：该文档表明本项目Stage1不存在测试。
 7. [07-stage1-faq.md](./07-stage1-faq.md)：口径澄清与常见问题
+8. [08-performance-notes.md](./08-performance-notes.md)：高倍速仿真性能优化专题与排查清单
 
 ## 使用方式
 

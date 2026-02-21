@@ -94,7 +94,7 @@ export function pathFromTrace(trace: Array<{ x: number; y: number }>) {
 }
 
 function createJunctionAt(
-  typeId: 'splitter_1x1' | 'merger_1x1' | 'bridge_1x1',
+  typeId: 'item_log_splitter' | 'item_log_converger' | 'item_log_connector',
   x: number,
   y: number,
   rotation: Rotation,
@@ -414,12 +414,12 @@ export function applyLogisticsPath(layout: LayoutState, path: Array<{ x: number;
       const flow = beltInOutEdge(d)
       replacedIds.add(d.instanceId)
       nextDevices.push(
-        createJunctionAt('splitter_1x1', first.x, first.y, flow ? rotationFromEdge('W', flow.inEdge) : 0),
+        createJunctionAt('item_log_splitter', first.x, first.y, flow ? rotationFromEdge('E', flow.inEdge) : 0),
       )
     }
   } else if (startOnGhost) {
     const splitterInEdge = startGhostFlow?.inEdge ?? OPPOSITE_EDGE[startOutEdge]
-    nextDevices.push(createJunctionAt('splitter_1x1', first.x, first.y, rotationFromEdge('W', splitterInEdge)))
+    nextDevices.push(createJunctionAt('item_log_splitter', first.x, first.y, rotationFromEdge('E', splitterInEdge)))
   } else {
     nextDevices.push(createBeltAt(first.x, first.y, OPPOSITE_EDGE[startOutEdge], startOutEdge))
   }
@@ -430,12 +430,12 @@ export function applyLogisticsPath(layout: LayoutState, path: Array<{ x: number;
       const flow = beltInOutEdge(d)
       replacedIds.add(d.instanceId)
       nextDevices.push(
-        createJunctionAt('merger_1x1', last.x, last.y, flow ? rotationFromEdge('E', flow.outEdge) : 0),
+        createJunctionAt('item_log_converger', last.x, last.y, flow ? rotationFromEdge('W', flow.outEdge) : 0),
       )
     }
   } else if (endOnGhost) {
     const mergerOutEdge = endGhostFlow?.outEdge ?? OPPOSITE_EDGE[endInEdge]
-    nextDevices.push(createJunctionAt('merger_1x1', last.x, last.y, rotationFromEdge('E', mergerOutEdge)))
+    nextDevices.push(createJunctionAt('item_log_converger', last.x, last.y, rotationFromEdge('W', mergerOutEdge)))
   } else {
     nextDevices.push(createBeltAt(last.x, last.y, endInEdge, OPPOSITE_EDGE[endInEdge]))
   }
@@ -468,7 +468,7 @@ export function applyLogisticsPath(layout: LayoutState, path: Array<{ x: number;
       if (createdBridgeCells.has(currentKey)) {
         continue
       }
-      nextDevices.push(createJunctionAt('bridge_1x1', current.x, current.y, 0))
+      nextDevices.push(createJunctionAt('item_log_connector', current.x, current.y, 0))
       createdBridgeCells.add(currentKey)
       continue
     }
@@ -480,7 +480,7 @@ export function applyLogisticsPath(layout: LayoutState, path: Array<{ x: number;
         if (createdBridgeCells.has(currentKey)) {
           continue
         }
-        nextDevices.push(createJunctionAt('bridge_1x1', current.x, current.y, 0))
+        nextDevices.push(createJunctionAt('item_log_connector', current.x, current.y, 0))
         createdBridgeCells.add(currentKey)
         continue
       }

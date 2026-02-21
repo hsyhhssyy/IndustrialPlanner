@@ -20,9 +20,9 @@ export type DeviceTypeId =
   | 'belt_straight_1x1'
   | 'belt_turn_cw_1x1'
   | 'belt_turn_ccw_1x1'
-  | 'splitter_1x1'
-  | 'merger_1x1'
-  | 'bridge_1x1'
+  | 'item_log_splitter'
+  | 'item_log_converger'
+  | 'item_log_connector'
 
 export interface ItemDef {
   id: ItemId
@@ -165,6 +165,9 @@ export interface SimState {
   warehouse: WarehouseState
   stats: WarehouseStats
   minuteWindowDeltas: Array<Partial<Record<ItemId, number>>>
+  minuteWindowCursor: number
+  minuteWindowCount: number
+  minuteWindowCapacity: number
 }
 
 export interface LayoutState {

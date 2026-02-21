@@ -14,6 +14,7 @@ const BASE_TICK_RATE = 20
 const CONVEYOR_SECONDS_PER_CELL = 2
 const PICKUP_BLOCK_WINDOW_SECONDS = CONVEYOR_SECONDS_PER_CELL
 const STORAGE_SUBMIT_INTERVAL_SECONDS = 10
+const ITEM_IDS: ItemId[] = ['item_originium_ore', 'item_originium_powder']
 
 function cycleTicksFromSeconds(cycleSeconds: number, tickRateHz: number) {
   return Math.max(1, Math.round(cycleSeconds * tickRateHz))
@@ -31,6 +32,27 @@ type TransferPlan = {
   toPortId: string
   itemId: ItemId
   lane: 'slot' | 'ns' | 'we' | 'output'
+}
+
+type NeighborGraph = ReturnType<typeof neighborsFromLinks>
+
+const layoutNeighborCache = new WeakMap<LayoutState, NeighborGraph>()
+const layoutDeviceByIdCache = new WeakMap<LayoutState, Map<string, DeviceInstance>>()
+
+function getNeighbors(layout: LayoutState) {
+  const cached = layoutNeighborCache.get(layout)
+  if (cached) return cached
+  const built = neighborsFromLinks(layout)
+  layoutNeighborCache.set(layout, built)
+  return built
+}
+
+function getDeviceByIdMap(layout: LayoutState) {
+  const cached = layoutDeviceByIdCache.get(layout)
+  if (cached) return cached
+  const built = new Map(layout.devices.map((device) => [device.instanceId, device]))
+  layoutDeviceByIdCache.set(layout, built)
+  return built
 }
 
 function baseRuntime(): Pick<DeviceRuntime, 'progress01' | 'stallReason' | 'isStalled'> {
@@ -79,6 +101,14 @@ function emptyWarehouse() {
   }
 }
 
+function emptyPerMinuteRecord(): Record<ItemId, number> {
+  return { item_originium_ore: 0, item_originium_powder: 0 }
+}
+
+function createWindowDelta(item_originium_ore = 0, item_originium_powder = 0): Partial<Record<ItemId, number>> {
+  return { item_originium_ore, item_originium_powder }
+}
+
 function normalizeRuntimeState(runtime: DeviceRuntime, stallReason: StallReason) {
   runtime.stallReason = stallReason
   runtime.isStalled = stallReason !== 'NONE'
@@ -111,7 +141,7 @@ function setSlotRef(runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we', value: S
 }
 
 function canReceiveOnPort(device: DeviceInstance, runtime: DeviceRuntime, toPortId: string) {
-  if (device.typeId === 'bridge_1x1') {
+  if (device.typeId === 'item_log_connector') {
     if (toPortId.endsWith('_n') || toPortId.endsWith('_s')) return 'ns'
     return 'we'
   }
@@ -151,7 +181,7 @@ function canReceiveOnPortWithPlan(
 }
 
 function sourceSlotLane(device: DeviceInstance, runtime: DeviceRuntime, fromPortId: string): 'slot' | 'ns' | 'we' | 'output' {
-  if (device.typeId === 'bridge_1x1') {
+  if (device.typeId === 'item_log_connector') {
     if (fromPortId.endsWith('_n') || fromPortId.endsWith('_s')) return 'ns'
     return 'we'
   }
@@ -215,7 +245,7 @@ function hasReadyOutput(device: DeviceInstance, runtime: DeviceRuntime) {
 }
 
 function orderedOutLinks(device: DeviceInstance, runtime: DeviceRuntime, outLinks: ReturnType<typeof neighborsFromLinks>['links']) {
-  if ((device.typeId !== 'splitter_1x1' && device.typeId !== 'merger_1x1') || outLinks.length <= 1) return outLinks
+  if ((device.typeId !== 'item_log_splitter' && device.typeId !== 'item_log_converger') || outLinks.length <= 1) return outLinks
   if (!('rrIndex' in runtime)) return outLinks
   const offset = runtime.rrIndex % outLinks.length
   return [...outLinks.slice(offset), ...outLinks.slice(0, offset)]
@@ -287,6 +317,7 @@ function cloneRuntime(runtime: DeviceRuntime): DeviceRuntime {
 }
 
 export function createInitialSimState(): SimState {
+  const initialWindowCapacity = cycleTicksFromSeconds(60, BASE_TICK_RATE)
   return {
     isRunning: false,
     speed: 1,
@@ -296,14 +327,18 @@ export function createInitialSimState(): SimState {
     warehouse: emptyWarehouse(),
     stats: {
       simSeconds: 0,
-      producedPerMinute: { item_originium_ore: 0, item_originium_powder: 0 },
-      consumedPerMinute: { item_originium_ore: 0, item_originium_powder: 0 },
+      producedPerMinute: emptyPerMinuteRecord(),
+      consumedPerMinute: emptyPerMinuteRecord(),
     },
-    minuteWindowDeltas: [],
+    minuteWindowDeltas: Array.from({ length: initialWindowCapacity }, () => createWindowDelta()),
+    minuteWindowCursor: 0,
+    minuteWindowCount: 0,
+    minuteWindowCapacity: initialWindowCapacity,
   }
 }
 
 export function startSimulation(layout: LayoutState, sim: SimState): SimState {
+  const minuteWindowCapacity = cycleTicksFromSeconds(60, sim.tickRateHz)
   const runtimeById = resetRuntimeByLayout(layout)
   const overlaps = detectOverlaps(layout)
   const poles = layout.devices.filter((device) => device.typeId === 'item_port_power_diffuser_1')
@@ -325,14 +360,18 @@ export function startSimulation(layout: LayoutState, sim: SimState): SimState {
     warehouse: emptyWarehouse(),
     stats: {
       simSeconds: 0,
-      producedPerMinute: { item_originium_ore: 0, item_originium_powder: 0 },
-      consumedPerMinute: { item_originium_ore: 0, item_originium_powder: 0 },
+      producedPerMinute: emptyPerMinuteRecord(),
+      consumedPerMinute: emptyPerMinuteRecord(),
     },
-    minuteWindowDeltas: [],
+    minuteWindowDeltas: Array.from({ length: minuteWindowCapacity }, () => createWindowDelta()),
+    minuteWindowCursor: 0,
+    minuteWindowCount: 0,
+    minuteWindowCapacity,
   }
 }
 
 export function stopSimulation(sim: SimState): SimState {
+  const minuteWindowCapacity = cycleTicksFromSeconds(60, sim.tickRateHz)
   return {
     ...sim,
     isRunning: false,
@@ -341,10 +380,13 @@ export function stopSimulation(sim: SimState): SimState {
     warehouse: { item_originium_ore: 0, item_originium_powder: 0 },
     stats: {
       simSeconds: 0,
-      producedPerMinute: { item_originium_ore: 0, item_originium_powder: 0 },
-      consumedPerMinute: { item_originium_ore: 0, item_originium_powder: 0 },
+      producedPerMinute: emptyPerMinuteRecord(),
+      consumedPerMinute: emptyPerMinuteRecord(),
     },
-    minuteWindowDeltas: [],
+    minuteWindowDeltas: Array.from({ length: minuteWindowCapacity }, () => createWindowDelta()),
+    minuteWindowCursor: 0,
+    minuteWindowCount: 0,
+    minuteWindowCapacity,
   }
 }
 
@@ -356,25 +398,23 @@ function tryConsumeCrusherInput(runtime: DeviceRuntime) {
   return true
 }
 
-function withSlidingWindowPerMinute(windowDeltas: Array<Partial<Record<ItemId, number>>>) {
-  const producedPerMinute: Record<ItemId, number> = { item_originium_ore: 0, item_originium_powder: 0 }
-  const consumedPerMinute: Record<ItemId, number> = { item_originium_ore: 0, item_originium_powder: 0 }
-
-  for (const itemId of ['item_originium_ore', 'item_originium_powder'] as const) {
-    let produced = 0
-    let consumed = 0
-    for (const deltaByTick of windowDeltas) {
-      const delta = deltaByTick[itemId] ?? 0
-      if (delta > 0) produced += delta
-      else if (delta < 0) consumed += Math.abs(delta)
+function ensureMinuteWindow(sim: SimState, capacity: number) {
+  if (sim.minuteWindowCapacity === capacity && sim.minuteWindowDeltas.length === capacity) {
+    return {
+      buffer: sim.minuteWindowDeltas,
+      cursor: sim.minuteWindowCursor,
+      count: sim.minuteWindowCount,
+      producedPerMinute: { ...sim.stats.producedPerMinute },
+      consumedPerMinute: { ...sim.stats.consumedPerMinute },
     }
-    producedPerMinute[itemId] = produced
-    consumedPerMinute[itemId] = consumed
   }
 
   return {
-    producedPerMinute,
-    consumedPerMinute,
+    buffer: Array.from({ length: capacity }, () => createWindowDelta()),
+    cursor: 0,
+    count: 0,
+    producedPerMinute: emptyPerMinuteRecord(),
+    consumedPerMinute: emptyPerMinuteRecord(),
   }
 }
 
@@ -390,7 +430,8 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   for (const [instanceId, runtime] of Object.entries(sim.runtimeById)) {
     runtimeById[instanceId] = cloneRuntime(runtime)
   }
-  const links = neighborsFromLinks(layout)
+  const links = getNeighbors(layout)
+  const deviceById = getDeviceByIdMap(layout)
   const transferPlans: TransferPlan[] = []
   const reservedReceivers = new Set<string>()
   const lanesClearingThisTick = new Set<string>()
@@ -475,7 +516,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
       for (const link of outLinks) {
         const toRuntime = runtimeById[link.to.instanceId]
-        const toDevice = layout.devices.find((d) => d.instanceId === link.to.instanceId)
+        const toDevice = deviceById.get(link.to.instanceId)
         if (!toRuntime || !toDevice) continue
 
         const recvState = canReceiveOnPortWithPlan(toDevice, toRuntime, link.to.portId, reservedReceivers, lanesClearingThisTick)
@@ -513,7 +554,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         reservedReceivers.add(`${toDevice.instanceId}:${recvState.lane}`)
         lanesClearingThisTick.add(`${device.instanceId}:${fromLane}`)
 
-        if ((device.typeId === 'splitter_1x1' || device.typeId === 'merger_1x1') && 'rrIndex' in runtime && outLinks.length > 0) {
+        if ((device.typeId === 'item_log_splitter' || device.typeId === 'item_log_converger') && 'rrIndex' in runtime && outLinks.length > 0) {
           runtime.rrIndex = (runtime.rrIndex + 1) % outLinks.length
         }
 
@@ -554,7 +595,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   for (const plan of transferPlans) {
     const fromRuntime = runtimeById[plan.fromId]
     const toRuntime = runtimeById[plan.toId]
-    const fromDevice = layout.devices.find((d) => d.instanceId === plan.fromId)
+    const fromDevice = deviceById.get(plan.fromId)
     if (!fromRuntime || !toRuntime || !fromDevice) continue
 
     if (fromDevice.typeId === 'item_port_unloader_1') {
@@ -601,14 +642,36 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
   const nextTick = sim.tick + 1
   const simSeconds = nextTick / sim.tickRateHz
-  const minuteWindowDeltas = [...sim.minuteWindowDeltas, { ...totalDelta }]
-  if (minuteWindowDeltas.length > perMinuteWindowTicks) {
-    minuteWindowDeltas.splice(0, minuteWindowDeltas.length - perMinuteWindowTicks)
+  const minuteWindow = ensureMinuteWindow(sim, perMinuteWindowTicks)
+  const minuteWindowDeltas = minuteWindow.buffer
+  const producedPerMinute = minuteWindow.producedPerMinute
+  const consumedPerMinute = minuteWindow.consumedPerMinute
+  const writeIndex = minuteWindow.cursor
+
+  if (minuteWindow.count >= perMinuteWindowTicks) {
+    const expired = minuteWindowDeltas[writeIndex] ?? createWindowDelta()
+    for (const itemId of ITEM_IDS) {
+      const delta = expired[itemId] ?? 0
+      if (delta > 0) producedPerMinute[itemId] = Math.max(0, producedPerMinute[itemId] - delta)
+      else if (delta < 0) consumedPerMinute[itemId] = Math.max(0, consumedPerMinute[itemId] - Math.abs(delta))
+    }
   }
+
+  const nextDelta = createWindowDelta(totalDelta.item_originium_ore ?? 0, totalDelta.item_originium_powder ?? 0)
+  minuteWindowDeltas[writeIndex] = nextDelta
+  for (const itemId of ITEM_IDS) {
+    const delta = nextDelta[itemId] ?? 0
+    if (delta > 0) producedPerMinute[itemId] += delta
+    else if (delta < 0) consumedPerMinute[itemId] += Math.abs(delta)
+  }
+
+  const nextMinuteWindowCursor = (writeIndex + 1) % perMinuteWindowTicks
+  const nextMinuteWindowCount = Math.min(minuteWindow.count + 1, perMinuteWindowTicks)
 
   const nextStats = {
     simSeconds,
-    ...withSlidingWindowPerMinute(minuteWindowDeltas),
+    producedPerMinute,
+    consumedPerMinute,
   }
 
   return {
@@ -618,6 +681,9 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     warehouse,
     stats: nextStats,
     minuteWindowDeltas,
+    minuteWindowCursor: nextMinuteWindowCursor,
+    minuteWindowCount: nextMinuteWindowCount,
+    minuteWindowCapacity: perMinuteWindowTicks,
   }
 }
 

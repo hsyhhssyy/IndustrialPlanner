@@ -104,14 +104,14 @@
 * belt_straight_1x1
 * belt_turn_cw_1x1
 * belt_turn_ccw_1x1
-* splitter_1x1
-* merger_1x1
-* bridge_1x1
+* item_log_splitter
+* item_log_converger
+* item_log_connector
 
 ### 物品
 
-* originium_ore
-* originium_powder
+* item_originium_ore
+* item_originium_powder
 
 ### 启用配方
 
@@ -236,7 +236,7 @@ Stage1 当前口径：
 
 * 端口匹配键：`(instanceId, localCellX, localCellY, edge, direction)`。
 * 同一设备内若出现相同匹配键重复，属于非法定义，需要修复领域模型。
-* `bridge_1x1` 的 `in_n/out_n` 等“同边一入一出”属于合法定义。
+* `item_log_connector` 的 `in_n/out_n` 等“同边一入一出”属于合法定义。
 
 系统不存在寻路。
 
@@ -449,7 +449,7 @@ progress01 ∈ [0,1]
 * 清空运行态
 * 清空仓库统计快照
 * 清空仓库物品数量
-* 下一次启动仿真时，仓库从统一初始值重建：`originium_ore=∞`，其他物品=`0`
+* 下一次启动仿真时，仓库从统一初始值重建：`item_originium_ore=∞`，其他物品=`0`
 * 清空设备进度
 
 ---
@@ -462,9 +462,9 @@ progress01 ∈ [0,1]
 
 * 统一库存池（取货口从仓库取货，存储箱可提交到仓库）
 * 存储箱提交行为为用户可选配置，默认值为“提交”；开启后按仿真时间每 10 秒批量提交一次该存储箱内所有物品到仓库
-* pickup_port 可选择任意已定义物品（包括 `originium_powder`）
+* pickup_port 可选择任意已定义物品（包括 `item_originium_powder`）
 * 仓库统计与地图上设备增减解耦
-* 每次进入仿真前，仓库库存重置为统一初始值：`originium_ore=∞`，其他物品=`0`
+* 每次进入仿真前，仓库库存重置为统一初始值：`item_originium_ore=∞`，其他物品=`0`
 
 ---
 
@@ -514,7 +514,7 @@ progress01 ∈ [0,1]
 
 满足：
 
-1. 可搭建 originium_ore → originium_powder 产线
+1. 可搭建 item_originium_ore → item_originium_powder 产线
 2. 仓库统计可稳定反映物品总量与变化速率
 3. 缺料提示明确
 4. 可见仓库统计与设备状态

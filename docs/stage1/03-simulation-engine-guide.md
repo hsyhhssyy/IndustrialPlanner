@@ -111,7 +111,7 @@ Plan 阶段只做可行性判断与预留，Commit 阶段才真实变更容器�
 
 ## 6. 仿真控制行为
 
-- **开始仿真**：初始化全部 runtime state、统计采样器，并重置仓库库存为统一初始值（`originium_ore=∞`，其他物品=`0`）
+- **开始仿真**：初始化全部 runtime state、统计采样器，并重置仓库库存为统一初始值（`item_originium_ore=∞`，其他物品=`0`）
 - **退出仿真**：清空设备进度、仓库统计快照、仓库物品数量、临时队列
 - **倍速切换**：仅影响单位真实时间内 tick 数，不改变单 tick 规则
 
@@ -136,4 +136,63 @@ Plan 阶段只做可行性判断与预留，Commit 阶段才真实变更容器�
 - 孤立物流段不影响仓库统计；删除孤立物流仅触发拓扑重建，不需要额外统计补偿。
 
 排序：矿物优先，其余按 `itemId` 字母序。
+
+## 8. 性能优化实现（2026-02）
+
+### 8.1 调度模型：`requestAnimationFrame + accumulator`
+
+- 为降低高倍速（尤其 `4x/16x`）下的节拍抖动，仿真调度从固定间隔定时器改为：
+	- 浏览器帧驱动（`requestAnimationFrame`）
+	- 时间累积器（`accumulator`）
+	- 每帧按累积时间批量执行多个 tick
+- 建议增加“单帧最大 tick 上限”（例如 `maxTicksPerFrame`），防止掉帧后一次性补偿过多 tick 造成长任务。
+
+推荐伪代码：
+
+```text
+onFrame(now):
+	delta = now - last
+	accumulator += delta
+	ticksToRun = floor(accumulator / stepMs)
+	ticksToRun = min(ticksToRun, maxTicksPerFrame)
+	if ticksToRun > 0:
+		accumulator -= ticksToRun * stepMs
+		批量执行 tickSimulation(ticksToRun 次)
+	requestAnimationFrame(onFrame)
+```
+
+说明：
+
+- `stepMs = 1000 / (tickRateHz * speed)`。
+- 该模型目标是“稳定吞吐 + 可控补偿”，而不是严格按固定毫秒触发回调。
+
+### 8.2 统计窗口：环形缓冲（Ring Buffer）
+
+- 旧实现问题：每 tick 通过 `[...]` 复制 `minuteWindowDeltas` 并全窗口重算，易在高倍速触发周期性 GC 抖动。
+- 新口径：
+	- 使用固定容量环形缓冲保存最近 60 秒 tick 增量
+	- 写入新 tick 前先移除即将被覆盖槽位对累计值的影响
+	- 增量加入当前 tick，再更新 `/min` 聚合值
+- 推荐状态字段：
+	- `minuteWindowDeltas`
+	- `minuteWindowCursor`
+	- `minuteWindowCount`
+	- `minuteWindowCapacity`
+
+该方案将统计更新复杂度稳定在 O(物品种类数)，避免与窗口长度线性相关。
+
+### 8.3 Tick 内对象分配治理
+
+- 继续建议（后续迭代可选）：
+	- 减少“每 tick 全量 clone runtime”
+	- 改为“按脏实例局部拷贝/局部写回”
+- 目标：降低持续分配压力，进一步削弱高倍速下的 GC 峰值。
+
+### 8.4 性能验收建议
+
+- 复测场景固定：同布局下分别录制 `1x/2x/4x/16x`。
+- 重点观察：
+	- Main 线程长任务分布是否由“周期尖峰”转为平滑
+	- React `beginWork` 占比是否下降
+	- 实测 Tick/s 是否更贴近期望值
 

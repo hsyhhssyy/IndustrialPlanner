@@ -9,7 +9,7 @@
 
 因此，退出仿真后会从干净统计状态重新累计。
 
-并且，Stage1 统一口径为：每次进入仿真时，仓库都从统一初始值重建：`originium_ore=∞`，其他物品=`0`。
+并且，Stage1 统一口径为：每次进入仿真时，仓库都从统一初始值重建：`item_originium_ore=∞`，其他物品=`0`。
 
 ## Q2：`/min` 会不会受 `x16` 倍速影响？
 
@@ -52,7 +52,7 @@
 
 为减少阶段内歧义并聚焦最小闭环产线，`filler_6x4` 已从 Stage1 冻结清单移除。
 
-Stage1 仅保留 `originium_ore -> originium_powder` 所需设备与规则。
+Stage1 仅保留 `item_originium_ore -> item_originium_powder` 所需设备与规则。
 
 ## Q8：设备“是否需要电力”在哪里定义？
 
@@ -76,7 +76,7 @@ Stage1 当前口径：仅 `item_port_grinder_1` 的 `requiresPower=true`，其�
 
 ## Q10：Bridge 的槽位模型是什么？
 
-`bridge_1x1` 采用“双通道双槽位”：
+`item_log_connector` 采用“双通道双槽位”：
 
 - N-S 通道一个槽位（`nsSlot`）
 - W-E 通道一个槽位（`weSlot`）
@@ -98,7 +98,7 @@ Stage1 当前口径：仅 `item_port_grinder_1` 的 `requiresPower=true`，其�
 
 Stage1 不建议引入 left/right handed 两种 Bridge 设备。
 
-当前 `bridge_1x1` 只承担“正交双通道穿越”语义（N-S 与 W-E），与左右手无关。
+当前 `item_log_connector` 只承担“正交双通道穿越”语义（N-S 与 W-E），与左右手无关。
 
 建议：
 

@@ -106,3 +106,18 @@
 
 - `starved` 为显示层状态，语义等同 `Idle`（未工作）。
 - 运行态枚举仍以 `stallReason` 为准，不新增 `STARVED` 枚举值。
+
+## 10. 设备图像批量注册（实现约定）
+
+设备图像采用“注册表驱动”而非渲染层硬编码：
+
+- 注册入口：`src/domain/deviceSprites.ts`
+- 注册结构：`DEVICE_SPRITE_REGISTRATIONS`
+- 应用函数：`getDeviceSpritePath(typeId)`
+
+批量新增设备图像时，仅需两步：
+
+1. 将图像文件放入 `public/sprites/`。
+2. 在 `DEVICE_SPRITE_REGISTRATIONS` 追加设备与文件名映射。
+
+渲染层会自动根据 `typeId` 读取图像路径，无需再修改 `App.tsx` 的设备分支判断。

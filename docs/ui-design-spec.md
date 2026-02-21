@@ -148,8 +148,8 @@
 ## 8. 在途物品视觉
 
 - 在途物品以小方块表示，沿带段按 tick 插值移动。
-- `originium_ore`：灰白系（填充 `#c9d1db`，描边 `#7e8a99`）。
-- `originium_powder`：紫色系（填充 `#d7c0ff`，描边 `#7a5bb8`）。
+- `item_originium_ore`：灰白系（填充 `#c9d1db`，描边 `#7e8a99`）。
+- `item_originium_powder`：紫色系（填充 `#d7c0ff`，描边 `#7a5bb8`）。
 - 拐角移动使用“两段式过渡”，减少视觉跳变。
 
 ## 9. 状态反馈系统
