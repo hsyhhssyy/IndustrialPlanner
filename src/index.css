@@ -107,6 +107,24 @@ body {
   gap: 8px;
 }
 
+.global-dialog-input {
+  width: 100%;
+  margin-top: 10px;
+  box-sizing: border-box;
+  border: 1px solid #35516f;
+  border-radius: 6px;
+  background: #1b222d;
+  color: #e5ebf3;
+  padding: 8px 10px;
+  font-size: 14px;
+  outline: none;
+}
+
+.global-dialog-input:focus {
+  border-color: #4f7bc4;
+  box-shadow: 0 0 0 1px rgba(79, 123, 196, 0.55);
+}
+
 .global-dialog-btn {
   min-width: 76px;
   border: 1px solid #35516f;

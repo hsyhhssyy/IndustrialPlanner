@@ -17,6 +17,10 @@ const STORAGE_SUBMIT_INTERVAL_SECONDS = 10
 const DEFAULT_PROCESSOR_BUFFER_CAPACITY = 50
 const DEFAULT_PROCESSOR_BUFFER_SLOTS = 1
 const ITEM_IDS: ItemId[] = ITEMS.map((item) => item.id)
+const INFINITE_WAREHOUSE_TAG = '矿石'
+const INFINITE_WAREHOUSE_ITEMS = new Set<ItemId>(
+  ITEMS.filter((item) => item.tags?.includes(INFINITE_WAREHOUSE_TAG)).map((item) => item.id),
+)
 
 function createItemNumberRecord(initialValue = 0): Record<ItemId, number> {
   return Object.fromEntries(ITEM_IDS.map((itemId) => [itemId, initialValue])) as Record<ItemId, number>
@@ -111,10 +115,16 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
 }
 
 function emptyWarehouse() {
-  return {
-    ...createItemNumberRecord(0),
-    item_originium_ore: Number.POSITIVE_INFINITY,
+  const warehouse = createItemNumberRecord(0)
+  for (const itemId of INFINITE_WAREHOUSE_ITEMS) {
+    warehouse[itemId] = Number.POSITIVE_INFINITY
   }
+  return warehouse
+}
+
+function canPickupFromWarehouse(warehouse: Record<ItemId, number>, itemId: ItemId) {
+  const stock = warehouse[itemId] ?? 0
+  return Number.isFinite(stock) ? stock > 0 : stock > 0
 }
 
 function emptyPerMinuteRecord(): Record<ItemId, number> {
@@ -360,8 +370,12 @@ function sourceSlotLane(device: DeviceInstance, runtime: DeviceRuntime, fromPort
   return 'output'
 }
 
-function peekOutputItem(device: DeviceInstance, runtime: DeviceRuntime): ItemId | null {
-  if (device.typeId === 'item_port_unloader_1') return device.config.pickupItemId ?? null
+function peekOutputItem(device: DeviceInstance, runtime: DeviceRuntime, warehouse: Record<ItemId, number>): ItemId | null {
+  if (device.typeId === 'item_port_unloader_1') {
+    const pickupItemId = device.config.pickupItemId
+    if (!pickupItemId) return null
+    return canPickupFromWarehouse(warehouse, pickupItemId) ? pickupItemId : null
+  }
 
   if ('outputBuffer' in runtime) {
     for (const itemId of ITEM_IDS) {
@@ -385,8 +399,9 @@ function readyItemForLane(
   runtime: DeviceRuntime,
   lane: 'slot' | 'ns' | 'we' | 'output',
   conveyorSpeed: number,
+  warehouse: Record<ItemId, number>,
 ) {
-  if (lane === 'output') return peekOutputItem(device, runtime)
+  if (lane === 'output') return peekOutputItem(device, runtime, warehouse)
   const slot = getSlotRef(runtime, lane)
   if (!slot) return null
   if (slot.progress01 < 0.5) return null
@@ -396,15 +411,23 @@ function readyItemForLane(
   return null
 }
 
-function peekReadyItemForLane(device: DeviceInstance, runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we' | 'output') {
-  if (lane === 'output') return peekOutputItem(device, runtime)
+function peekReadyItemForLane(
+  device: DeviceInstance,
+  runtime: DeviceRuntime,
+  lane: 'slot' | 'ns' | 'we' | 'output',
+  warehouse: Record<ItemId, number>,
+) {
+  if (lane === 'output') return peekOutputItem(device, runtime, warehouse)
   const slot = getSlotRef(runtime, lane)
   if (!slot || slot.progress01 < 1) return null
   return slot.itemId
 }
 
-function hasReadyOutput(device: DeviceInstance, runtime: DeviceRuntime) {
-  if (device.typeId === 'item_port_unloader_1') return Boolean(device.config.pickupItemId)
+function hasReadyOutput(device: DeviceInstance, runtime: DeviceRuntime, warehouse: Record<ItemId, number>) {
+  if (device.typeId === 'item_port_unloader_1') {
+    const pickupItemId = device.config.pickupItemId
+    return Boolean(pickupItemId && canPickupFromWarehouse(warehouse, pickupItemId))
+  }
   if ('outputBuffer' in runtime) return ITEM_IDS.some((itemId) => (runtime.outputBuffer[itemId] ?? 0) > 0)
   if ('inventory' in runtime) return ITEM_IDS.some((itemId) => (runtime.inventory[itemId] ?? 0) > 0)
   if ('nsSlot' in runtime && 'weSlot' in runtime) {
@@ -849,7 +872,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         if (!lanesAdvancedThisTick.has(laneAdvanceKey)) {
           const beforeSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
           const beforeProgress = beforeSlot?.progress01 ?? null
-          readyItemForLane(device, runtime, fromLane, conveyorSpeed)
+          readyItemForLane(device, runtime, fromLane, conveyorSpeed, warehouse)
           lanesAdvancedThisTick.add(laneAdvanceKey)
           const afterSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
           const afterProgress = afterSlot?.progress01 ?? null
@@ -858,7 +881,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
           }
         }
 
-        const itemId = peekReadyItemForLane(device, runtime, fromLane)
+        const itemId = peekReadyItemForLane(device, runtime, fromLane, warehouse)
         if (!itemId) continue
         if (!recvState.canAccept) continue
         if (!canAcceptIntoLane(toDevice, toRuntime, recvState.lane, itemId)) continue
@@ -914,7 +937,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
       outLinks.length > 0 &&
       !plannedSenders.has(device.instanceId) &&
       hasInternalBuffer(runtime) &&
-      hasReadyOutput(device, runtime)
+      hasReadyOutput(device, runtime, warehouse)
     ) {
       normalizeRuntimeState(runtime, 'DOWNSTREAM_BLOCKED')
       continue

@@ -1,4 +1,4 @@
-import { DEVICE_TYPE_BY_ID } from './registry'
+import { BASE_BY_ID, DEVICE_TYPE_BY_ID } from './registry'
 import { buildOccupancyMap, EDGE_DELTA, getRotatedPorts, OPPOSITE_EDGE } from './geometry'
 import type { DeviceInstance, DeviceTypeDef, Edge, LayoutState, PlacementConstraint } from './types'
 
@@ -88,6 +88,16 @@ export function passesPlacementConstraints(layout: LayoutState, instance: Device
 
 export function validatePlacementConstraints(layout: LayoutState, instance: DeviceInstance): PlacementValidationResult {
   const type = DEVICE_TYPE_BY_ID[instance.typeId]
+  const base = BASE_BY_ID[layout.baseId]
+  const isBaseFoundationDevice = base?.foundationBuildings.some((building) => building.instanceId === instance.instanceId) ?? false
+
+  if (type?.tags?.includes('武陵') && !isBaseFoundationDevice && !base?.tags.includes('武陵')) {
+    return {
+      isValid: false,
+      messageKey: 'toast.rule.wulingOnly',
+    }
+  }
+
   if (!type?.placementConstraints || type.placementConstraints.length === 0) {
     return { isValid: true }
   }

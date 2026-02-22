@@ -32,7 +32,7 @@ import type {
 } from './domain/types'
 import { usePersistentState } from './hooks/usePersistentState'
 import { createTranslator, getDeviceLabel, getItemLabel, getModeLabel, LANGUAGE_OPTIONS, type Language } from './i18n'
-import { dialogAlertNonBlocking, dialogConfirm } from './ui/dialog'
+import { dialogAlertNonBlocking, dialogConfirm, dialogPrompt } from './ui/dialog'
 import { showToast } from './ui/toast'
 import {
   createInitialSimState,
@@ -139,6 +139,37 @@ type ItemPickerState =
   | { kind: 'pickup'; deviceInstanceId: string }
   | { kind: 'preload'; deviceInstanceId: string; slotIndex: number }
 
+type BlueprintDeviceSnapshot = {
+  typeId: DeviceTypeId
+  rotation: Rotation
+  origin: { x: number; y: number }
+  config: DeviceInstance['config']
+}
+
+type BlueprintSnapshot = {
+  id: string
+  name: string
+  createdAt: string
+  baseId: BaseId
+  devices: BlueprintDeviceSnapshot[]
+}
+
+type BlueprintPlacementPreview = {
+  devices: DeviceInstance[]
+  isValid: boolean
+  invalidMessageKey: string | null
+}
+
+type BlueprintLocalRect = {
+  typeId: DeviceTypeId
+  rotation: Rotation
+  config: DeviceInstance['config']
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 function buildProcessorPreloadSlots(device: DeviceInstance, slotCapacities: number[]): ProcessorPreloadSlot[] {
   const slotCount = slotCapacities.length
   const slots = Array.from({ length: slotCount }, () => ({ itemId: null, amount: 0 }) as ProcessorPreloadSlot)
@@ -177,6 +208,64 @@ function serializeProcessorPreloadSlots(slots: ProcessorPreloadSlot[]): PreloadI
         ]
       : [],
   )
+}
+
+function cloneDeviceConfig(config: DeviceInstance['config']): DeviceInstance['config'] {
+  return JSON.parse(JSON.stringify(config ?? {})) as DeviceInstance['config']
+}
+
+function rotateBlueprintRects(rects: BlueprintLocalRect[], rotation: Rotation) {
+  if (rects.length === 0) return rects
+
+  const bounds = rects.reduce(
+    (acc, rect) => ({
+      minX: Math.min(acc.minX, rect.x),
+      minY: Math.min(acc.minY, rect.y),
+      maxX: Math.max(acc.maxX, rect.x + rect.width),
+      maxY: Math.max(acc.maxY, rect.y + rect.height),
+    }),
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+  )
+
+  const normalized = rects.map((rect) => ({
+    ...rect,
+    x: rect.x - bounds.minX,
+    y: rect.y - bounds.minY,
+  }))
+
+  const width = bounds.maxX - bounds.minX
+  const height = bounds.maxY - bounds.minY
+
+  if (rotation === 0) return normalized
+
+  if (rotation === 90) {
+    return normalized.map((rect) => ({
+      ...rect,
+      x: height - (rect.y + rect.height),
+      y: rect.x,
+      width: rect.height,
+      height: rect.width,
+      rotation: ((rect.rotation + 90) % 360) as Rotation,
+    }))
+  }
+
+  if (rotation === 180) {
+    return normalized.map((rect) => ({
+      ...rect,
+      x: width - (rect.x + rect.width),
+      y: height - (rect.y + rect.height),
+      rotation: ((rect.rotation + 180) % 360) as Rotation,
+    }))
+  }
+
+  return normalized.map((rect) => ({
+    ...rect,
+    x: rect.y,
+    y: width - (rect.x + rect.width),
+    width: rect.height,
+    height: rect.width,
+    rotation: ((rect.rotation + 270) % 360) as Rotation,
+  }))
 }
 
 function formatInputBufferAmounts(
@@ -592,12 +681,13 @@ function App() {
   const [layoutsByBase, setLayoutsByBase] = usePersistentState<Partial<Record<BaseId, LayoutState>>>('stage1-layouts-by-base', {})
   const [language, setLanguage] = usePersistentState<Language>('stage1-language', 'zh-CN')
   const [mode, setMode] = usePersistentState<EditMode>('stage1-mode', 'select')
-  const [placeType, setPlaceType] = usePersistentState<DeviceTypeId>('stage1-place-type', 'item_port_grinder_1')
+  const [placeType, setPlaceType] = usePersistentState<DeviceTypeId | ''>('stage1-place-type', '')
   const [placeRotation, setPlaceRotation] = usePersistentState<Rotation>('stage1-place-rotation', 0)
   const [deleteTool, setDeleteTool] = usePersistentState<'single' | 'wholeBelt' | 'box'>('stage1-delete-tool', 'single')
   const [leftPanelWidth, setLeftPanelWidth] = usePersistentState<number>('stage1-left-panel-width', 340)
   const [rightPanelWidth, setRightPanelWidth] = usePersistentState<number>('stage1-right-panel-width', 340)
   const [cellSize, setCellSize] = usePersistentState<number>('stage1-cell-size', 64)
+  const [blueprints, setBlueprints] = usePersistentState<BlueprintSnapshot[]>('stage1-blueprints', [])
   const [selection, setSelection] = useState<string[]>([])
   const [sim, setSim] = useState<SimState>(() => createInitialSimState())
   const [logStart, setLogStart] = useState<{ x: number; y: number } | null>(null)
@@ -612,12 +702,15 @@ function App() {
   const [dragStartCell, setDragStartCell] = useState<{ x: number; y: number } | null>(null)
   const [dragRect, setDragRect] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
   const [dragOrigin, setDragOrigin] = useState<{ x: number; y: number } | null>(null)
-  const [logisticsTool, setLogisticsTool] = useState<'belt'>('belt')
+  const [placeOperation, setPlaceOperation] = useState<'default' | 'belt'>('default')
   const [viewOffset, setViewOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const [panStart, setPanStart] = useState<{ clientX: number; clientY: number; offsetX: number; offsetY: number } | null>(null)
   const [measuredTickRate, setMeasuredTickRate] = useState(0)
   const [itemPickerState, setItemPickerState] = useState<ItemPickerState | null>(null)
+  const [selectedBlueprintId, setSelectedBlueprintId] = useState<string | null>(null)
+  const [clipboardBlueprint, setClipboardBlueprint] = useState<BlueprintSnapshot | null>(null)
+  const [blueprintPlacementRotation, setBlueprintPlacementRotation] = useState<Rotation>(0)
 
   const layout = useMemo(() => normalizeLayoutForBase(layoutsByBase[activeBaseId], activeBaseId), [layoutsByBase, activeBaseId])
   const setLayout = useCallback(
@@ -666,6 +759,156 @@ function App() {
   const occupancyMap = useMemo(() => buildOccupancyMap(layout), [layout])
   const cellDeviceMap = useMemo(() => cellToDeviceId(layout), [layout])
   const t = useMemo(() => createTranslator(language), [language])
+
+  const saveSelectionAsBlueprint = useCallback(async () => {
+    const selectedIdSet = new Set(selection)
+    const selectedDevices = layout.devices.filter(
+      (device) => selectedIdSet.has(device.instanceId) && !foundationIdSet.has(device.instanceId),
+    )
+
+    if (selectedDevices.length === 0) {
+      showToast(t('toast.blueprintNoSelection'), { variant: 'warning' })
+      return
+    }
+
+    const minX = Math.min(...selectedDevices.map((device) => device.origin.x))
+    const minY = Math.min(...selectedDevices.map((device) => device.origin.y))
+    const createdAt = new Date().toISOString()
+    const defaultName = `BP-${createdAt.slice(0, 19).replace('T', ' ')}`
+    const inputName = await dialogPrompt(t('dialog.blueprintNamePrompt'), defaultName, {
+      title: t('left.blueprintSubMode'),
+      confirmText: t('dialog.ok'),
+      cancelText: t('dialog.cancel'),
+      variant: 'info',
+    })
+    if (inputName === null) return
+    const name = inputName.trim()
+    if (!name) {
+      showToast(t('toast.blueprintNameRequired'), { variant: 'warning' })
+      return
+    }
+    const snapshot: BlueprintSnapshot = {
+      id: `bp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      createdAt,
+      baseId: activeBaseId,
+      devices: selectedDevices.map((device) => ({
+        typeId: device.typeId,
+        rotation: device.rotation,
+        origin: { x: device.origin.x - minX, y: device.origin.y - minY },
+        config: cloneDeviceConfig(device.config),
+      })),
+    }
+
+    try {
+      setBlueprints((current) => [snapshot, ...current].slice(0, 100))
+      showToast(t('toast.blueprintSaved', { name, count: snapshot.devices.length }))
+    } catch {
+      showToast(t('toast.blueprintSaveFailed'), { variant: 'error' })
+    }
+  }, [activeBaseId, foundationIdSet, layout.devices, selection, setBlueprints, t])
+
+  const selectedBlueprint = useMemo(() => {
+    if (!selectedBlueprintId) return null
+    return blueprints.find((blueprint) => blueprint.id === selectedBlueprintId) ?? null
+  }, [blueprints, selectedBlueprintId])
+
+  const activePlacementBlueprint = useMemo(() => {
+    if (clipboardBlueprint) return clipboardBlueprint
+    if (mode === 'blueprint') return selectedBlueprint
+    return null
+  }, [clipboardBlueprint, mode, selectedBlueprint])
+
+  const buildBlueprintPlacementPreview = useCallback(
+    (
+      snapshot: BlueprintSnapshot | null,
+      anchorCell: { x: number; y: number },
+      placementRotation: Rotation,
+    ): BlueprintPlacementPreview | null => {
+      if (!snapshot || snapshot.devices.length === 0) return null
+
+      const baseRects: BlueprintLocalRect[] = snapshot.devices.map((entry) => {
+        const size = rotatedFootprintSize(DEVICE_TYPE_BY_ID[entry.typeId].size, entry.rotation)
+        return {
+          typeId: entry.typeId,
+          rotation: entry.rotation,
+          config: entry.config,
+          x: entry.origin.x,
+          y: entry.origin.y,
+          width: size.width,
+          height: size.height,
+        }
+      })
+
+      const rotatedRects = rotateBlueprintRects(baseRects, placementRotation)
+      const rotatedBounds = rotatedRects.reduce(
+        (acc, rect) => ({
+          minX: Math.min(acc.minX, rect.x),
+          minY: Math.min(acc.minY, rect.y),
+          maxX: Math.max(acc.maxX, rect.x + rect.width),
+          maxY: Math.max(acc.maxY, rect.y + rect.height),
+        }),
+        { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+      )
+      const blueprintWidth = rotatedBounds.maxX - rotatedBounds.minX
+      const blueprintHeight = rotatedBounds.maxY - rotatedBounds.minY
+      const topLeftX = Math.round(anchorCell.x + 0.5 - blueprintWidth / 2)
+      const topLeftY = Math.round(anchorCell.y + 0.5 - blueprintHeight / 2)
+
+      const previewDevices: DeviceInstance[] = rotatedRects.map((entry, index) => ({
+        instanceId: `blueprint-preview-${index}`,
+        typeId: entry.typeId,
+        origin: {
+          x: topLeftX + entry.x,
+          y: topLeftY + entry.y,
+        },
+        rotation: entry.rotation,
+        config: cloneDeviceConfig(entry.config),
+      }))
+
+      const invalidOutOfLot = previewDevices.some((device) => !isWithinLot(device, layout.lotSize))
+      if (invalidOutOfLot) {
+        return {
+          devices: previewDevices,
+          isValid: false,
+          invalidMessageKey: OUT_OF_LOT_TOAST_KEY,
+        }
+      }
+
+      const previewLayout: LayoutState = {
+        ...layout,
+        devices: [...layout.devices, ...previewDevices],
+      }
+      const invalidConstraint = previewDevices
+        .map((device) => validatePlacementConstraints(previewLayout, device))
+        .find((result) => !result.isValid)
+
+      if (invalidConstraint && !invalidConstraint.isValid) {
+        return {
+          devices: previewDevices,
+          isValid: false,
+          invalidMessageKey: invalidConstraint.messageKey ?? FALLBACK_PLACEMENT_TOAST_KEY,
+        }
+      }
+
+      return {
+        devices: previewDevices,
+        isValid: true,
+        invalidMessageKey: null,
+      }
+    },
+    [layout],
+  )
+
+  useEffect(() => {
+    if (blueprints.length === 0) {
+      setSelectedBlueprintId(null)
+      return
+    }
+    if (!selectedBlueprintId) return
+    if (blueprints.some((blueprint) => blueprint.id === selectedBlueprintId)) return
+    setSelectedBlueprintId(null)
+  }, [blueprints, selectedBlueprintId])
 
   const unknownDevices = useMemo(
     () => layout.devices.filter((device) => !isKnownDeviceTypeId((device as DeviceInstance & { typeId: unknown }).typeId)),
@@ -739,8 +982,8 @@ function App() {
   }, [layout.devices, setLayout])
 
   useEffect(() => {
-    if (!isKnownDeviceTypeId(placeType)) {
-      setPlaceType('item_port_grinder_1')
+    if (placeType !== '' && !isKnownDeviceTypeId(placeType)) {
+      setPlaceType('')
     }
   }, [placeType, setPlaceType])
 
@@ -780,11 +1023,17 @@ function App() {
   }, [setLeftPanelWidth, setRightPanelWidth])
 
   useEffect(() => {
-    if (!sim.isRunning) return
-    if (mode !== 'select') {
-      setMode('select')
+    if (sim.isRunning) {
+      if (mode !== 'select') {
+        setMode('select')
+      }
+      return
     }
-  }, [mode, setMode, sim.isRunning])
+    if (mode === 'select') {
+      setMode('place')
+      setPlaceType('')
+    }
+  }, [mode, setMode, setPlaceType, sim.isRunning])
 
   useEffect(() => {
     if (unknownDevices.length === 0) {
@@ -910,27 +1159,145 @@ function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== 'r' || sim.isRunning) return
+      if (sim.isRunning) return
+      const target = event.target as HTMLElement | null
+      const isTypingTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        Boolean(target?.isContentEditable)
+      if (isTypingTarget) return
+
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'c') {
+        if (selection.length < 2) {
+          showToast(t('toast.blueprintCopyNeedsMultiSelect'), { variant: 'warning' })
+          return
+        }
+        event.preventDefault()
+        const selectedIdSet = new Set(selection)
+        const selectedDevices = layout.devices.filter(
+          (device) => selectedIdSet.has(device.instanceId) && !foundationIdSet.has(device.instanceId),
+        )
+        if (selectedDevices.length < 2) {
+          showToast(t('toast.blueprintCopyNeedsMultiSelect'), { variant: 'warning' })
+          return
+        }
+
+        const minX = Math.min(...selectedDevices.map((device) => device.origin.x))
+        const minY = Math.min(...selectedDevices.map((device) => device.origin.y))
+        const createdAt = new Date().toISOString()
+        const tempSnapshot: BlueprintSnapshot = {
+          id: `clipboard_${Date.now()}`,
+          name: 'clipboard',
+          createdAt,
+          baseId: activeBaseId,
+          devices: selectedDevices.map((device) => ({
+            typeId: device.typeId,
+            rotation: device.rotation,
+            origin: { x: device.origin.x - minX, y: device.origin.y - minY },
+            config: cloneDeviceConfig(device.config),
+          })),
+        }
+        setClipboardBlueprint(tempSnapshot)
+        setBlueprintPlacementRotation(0)
+        showToast(t('toast.blueprintClipboardReady', { count: tempSnapshot.devices.length }))
+        return
+      }
+
+      if (event.key.toLowerCase() !== 'r') return
       event.preventDefault()
-      if (mode === 'place') {
+      if (activePlacementBlueprint) {
+        setBlueprintPlacementRotation((current) => ((current + 90) % 360) as Rotation)
+        return
+      }
+      if (mode === 'place' && placeType) {
         setPlaceRotation((current) => ((current + 90) % 360) as Rotation)
         return
       }
       if (selection.length === 0) return
-      setLayout((current) => ({
-        ...current,
-        devices: current.devices.map((device) => {
-          if (!selection.includes(device.instanceId)) return device
-          if (foundationIdSet.has(device.instanceId)) return device
-          if (device.typeId.startsWith('belt_')) return device
-          const nextRotation = ((device.rotation + 90) % 360) as Rotation
-          return { ...device, rotation: nextRotation }
-        }),
-      }))
+
+      const selectedRotatable = layout.devices.filter(
+        (device) => selection.includes(device.instanceId) && !foundationIdSet.has(device.instanceId),
+      )
+      if (selectedRotatable.length === 0) return
+
+      const selectedBounds = selectedRotatable.reduce(
+        (acc, device) => {
+          const type = DEVICE_TYPE_BY_ID[device.typeId]
+          const size = rotatedFootprintSize(type.size, device.rotation)
+          const right = device.origin.x + size.width
+          const bottom = device.origin.y + size.height
+          return {
+            minX: Math.min(acc.minX, device.origin.x),
+            minY: Math.min(acc.minY, device.origin.y),
+            maxX: Math.max(acc.maxX, right),
+            maxY: Math.max(acc.maxY, bottom),
+          }
+        },
+        { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+      )
+
+      const centerX = (selectedBounds.minX + selectedBounds.maxX) / 2
+      const centerY = (selectedBounds.minY + selectedBounds.maxY) / 2
+
+      const rotatedById = new Map<string, DeviceInstance>()
+      for (const device of selectedRotatable) {
+        const currentSize = rotatedFootprintSize(DEVICE_TYPE_BY_ID[device.typeId].size, device.rotation)
+        const currentCenterX = device.origin.x + currentSize.width / 2
+        const currentCenterY = device.origin.y + currentSize.height / 2
+        const nextCenterX = centerX - (currentCenterY - centerY)
+        const nextCenterY = centerY + (currentCenterX - centerX)
+        const nextRotation = ((device.rotation + 90) % 360) as Rotation
+        const nextSize = rotatedFootprintSize(DEVICE_TYPE_BY_ID[device.typeId].size, nextRotation)
+        const nextOrigin = {
+          x: Math.round(nextCenterX - nextSize.width / 2),
+          y: Math.round(nextCenterY - nextSize.height / 2),
+        }
+        rotatedById.set(device.instanceId, {
+          ...device,
+          rotation: nextRotation,
+          origin: nextOrigin,
+        })
+      }
+
+      const nextLayout: LayoutState = {
+        ...layout,
+        devices: layout.devices.map((device) => rotatedById.get(device.instanceId) ?? device),
+      }
+
+      const outOfLotDevice = Array.from(rotatedById.values()).find((device) => !isWithinLot(device, nextLayout.lotSize))
+      if (outOfLotDevice) {
+        showToast(t(OUT_OF_LOT_TOAST_KEY), { variant: 'warning' })
+        return
+      }
+
+      const constraintFailure = Array.from(rotatedById.values())
+        .map((device) => validatePlacementConstraints(nextLayout, device))
+        .find((result) => !result.isValid)
+      if (constraintFailure && !constraintFailure.isValid) {
+        showToast(t(constraintFailure.messageKey ?? FALLBACK_PLACEMENT_TOAST_KEY), { variant: 'warning' })
+        return
+      }
+
+      setLayout(nextLayout)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [mode, selection, setLayout, sim.isRunning, foundationIdSet, setPlaceRotation])
+  }, [
+    activeBaseId,
+    activePlacementBlueprint,
+    blueprintPlacementRotation,
+    foundationIdSet,
+    mode,
+    layout,
+    selection,
+    setLayout,
+    setBlueprintPlacementRotation,
+    setClipboardBlueprint,
+    sim.isRunning,
+    setPlaceRotation,
+    placeType,
+    t,
+  ])
 
   useEffect(() => {
     const viewport = viewportRef.current
@@ -974,6 +1341,7 @@ function App() {
   }
 
   const placeDevice = (cell: { x: number; y: number }) => {
+    if (!placeType) return false
     const origin = toPlaceOrigin(cell, placeType, placeRotation)
     const instance: DeviceInstance = {
       instanceId: nextId(placeType),
@@ -984,12 +1352,12 @@ function App() {
     }
     if (!isWithinLot(instance, layout.lotSize)) {
       showToast(t(OUT_OF_LOT_TOAST_KEY), { variant: 'warning' })
-      return
+      return false
     }
     const validation = validatePlacementConstraints(layout, instance)
     if (!validation.isValid) {
       showToast(t(validation.messageKey ?? FALLBACK_PLACEMENT_TOAST_KEY), { variant: 'warning' })
-      return
+      return false
     }
     setLayout((current) => {
       if (!MANUAL_LOGISTICS_JUNCTION_TYPES.has(instance.typeId)) {
@@ -1014,12 +1382,13 @@ function App() {
         devices: [...current.devices.filter((device) => !replacedBeltIds.has(device.instanceId)), instance],
       }
     })
+    return true
   }
 
   const onCanvasMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
     if (event.button === 1) {
       event.preventDefault()
-      if (mode === 'logistics') {
+      if (mode === 'place' && placeOperation === 'belt') {
         setLogStart(null)
         setLogCurrent(null)
         setLogTrace([])
@@ -1029,14 +1398,73 @@ function App() {
       return
     }
 
+    if (event.button === 2) {
+      event.preventDefault()
+      if (!sim.isRunning && clipboardBlueprint) {
+        setClipboardBlueprint(null)
+        setBlueprintPlacementRotation(0)
+        showToast(t('toast.blueprintClipboardCancelled'))
+        return
+      }
+      if (!sim.isRunning && mode === 'place') {
+        setPlaceOperation('default')
+        setLogStart(null)
+        setLogCurrent(null)
+        setLogTrace([])
+        setPlaceType('')
+      }
+      if (!sim.isRunning && mode === 'blueprint') {
+        setSelectedBlueprintId(null)
+        setBlueprintPlacementRotation(0)
+      }
+      return
+    }
+
     if (event.button !== 0) return
 
     const cell = toCell(event.clientX, event.clientY)
     if (!cell) return
 
-    if (mode === 'place') {
+    if (mode === 'place' && placeOperation === 'belt') {
       if (sim.isRunning) return
-      placeDevice(cell)
+      setLogStart(cell)
+      setLogCurrent(cell)
+      setLogTrace([cell])
+      return
+    }
+
+    if (mode === 'place' && placeType) {
+      if (sim.isRunning) return
+      const placed = placeDevice(cell)
+      if (placed) {
+        setPlaceType('')
+      }
+      return
+    }
+
+    if (activePlacementBlueprint) {
+      if (sim.isRunning) return
+      const preview = buildBlueprintPlacementPreview(activePlacementBlueprint, cell, blueprintPlacementRotation)
+      if (!preview) {
+        showToast(t('toast.blueprintNoSelection'), { variant: 'warning' })
+        return
+      }
+      if (!preview.isValid) {
+        showToast(t(preview.invalidMessageKey ?? FALLBACK_PLACEMENT_TOAST_KEY), { variant: 'warning' })
+        return
+      }
+
+      setLayout((current) => ({
+        ...current,
+        devices: [
+          ...current.devices,
+          ...preview.devices.map((device) => ({
+            ...device,
+            instanceId: nextId(device.typeId),
+          })),
+        ],
+      }))
+      showToast(t('toast.blueprintPlaced', { name: activePlacementBlueprint.name, count: preview.devices.length }))
       return
     }
 
@@ -1063,14 +1491,6 @@ function App() {
         setLayout((current) => ({ ...current, devices: current.devices.filter((device) => device.instanceId !== id) }))
       }
       setSelection([])
-      return
-    }
-
-    if (mode === 'logistics') {
-      if (sim.isRunning) return
-      setLogStart(cell)
-      setLogCurrent(cell)
-      setLogTrace([cell])
       return
     }
 
@@ -1143,7 +1563,7 @@ function App() {
     const cell = rawCell.x >= 0 && rawCell.y >= 0 && rawCell.x < layout.lotSize && rawCell.y < layout.lotSize ? rawCell : null
     setHoverCell(cell)
 
-    if (mode === 'logistics' && logStart) {
+    if (mode === 'place' && placeOperation === 'belt' && logStart) {
       if (!cell) return
       const last = logTrace[logTrace.length - 1]
       if (last && last.x === cell.x && last.y === cell.y) return
@@ -1152,7 +1572,7 @@ function App() {
       return
     }
 
-    if (mode === 'select' && dragBasePositions && dragOrigin && selection.length > 0 && !sim.isRunning) {
+    if ((mode === 'select' || (mode === 'place' && !placeType)) && dragBasePositions && dragOrigin && selection.length > 0 && !sim.isRunning) {
       const dx = rawCell.x - dragOrigin.x
       const dy = rawCell.y - dragOrigin.y
       const previewPositions: Record<string, { x: number; y: number }> = {}
@@ -1202,12 +1622,12 @@ function App() {
       return
     }
 
-    if (mode === 'select' && dragOrigin && dragRect) {
+    if ((mode === 'select' || (mode === 'place' && !placeType)) && dragOrigin && dragRect) {
       setDragRect({ ...dragRect, x2: cell.x, y2: cell.y })
       return
     }
 
-    if (mode === 'select' && dragStartCell) {
+    if ((mode === 'select' || (mode === 'place' && !placeType)) && dragStartCell) {
       setDragStartCell(cell)
     }
   }
@@ -1219,9 +1639,9 @@ function App() {
       return
     }
 
-    if (mode === 'logistics' && logStart && logCurrent && !sim.isRunning) {
+    if (mode === 'place' && placeOperation === 'belt' && logStart && logCurrent && !sim.isRunning) {
       const path = logisticsPreview
-      if (path && path.length >= 2 && logisticsTool === 'belt') {
+      if (path && path.length >= 2) {
         setLayout((current) => applyLogisticsPath(current, path))
       }
       setLogStart(null)
@@ -1280,7 +1700,7 @@ function App() {
       return
     }
 
-    if (mode === 'select' && dragRect && dragOrigin) {
+    if ((mode === 'select' || (mode === 'place' && !placeType)) && dragRect && dragOrigin) {
       const xMin = Math.min(dragRect.x1, dragRect.x2)
       const xMax = Math.max(dragRect.x1, dragRect.x2)
       const yMin = Math.min(dragRect.y1, dragRect.y2)
@@ -1308,7 +1728,7 @@ function App() {
       return
     }
 
-    if (mode === 'select' && dragStartCell && dragOrigin && dragBasePositions && selection.length > 0 && !sim.isRunning) {
+    if ((mode === 'select' || (mode === 'place' && !placeType)) && dragStartCell && dragOrigin && dragBasePositions && selection.length > 0 && !sim.isRunning) {
       if (dragPreviewValid) {
         setLayout((current) => ({
           ...current,
@@ -1516,7 +1936,7 @@ function App() {
   }, [layout, logStart, logCurrent, logTrace])
 
   const logisticsPreviewDevices = useMemo(() => {
-    if (mode !== 'logistics' || !logisticsPreview || logisticsPreview.length < 1) return []
+    if (mode !== 'place' || placeOperation !== 'belt' || !logisticsPreview || logisticsPreview.length < 1) return []
     const projectedLayout = applyLogisticsPath(layout, logisticsPreview)
     if (projectedLayout === layout) return []
     const projectedCellMap = cellToDeviceId(projectedLayout)
@@ -1537,7 +1957,7 @@ function App() {
     }
 
     return result
-  }, [layout, logisticsPreview, mode])
+  }, [layout, logisticsPreview, mode, placeOperation])
 
   const inTransitItems = useMemo(() => {
     return layout.devices.flatMap((device) => {
@@ -1598,7 +2018,7 @@ function App() {
   }, [layout.devices])
 
   const portChevrons = useMemo(() => {
-    if (mode !== 'logistics' && mode !== 'select') return []
+    if (mode !== 'select' && !(mode === 'place' && (placeOperation === 'belt' || !placeType))) return []
     const links = linksFromLayout(layout)
     const connectedPortKeys = new Set<string>()
     const keyOf = (port: { instanceId: string; portId: string; x: number; y: number; edge: string }) =>
@@ -1625,10 +2045,10 @@ function App() {
           : device
       if (device.typeId.startsWith('belt_')) continue
       if (HIDDEN_CHEVRON_DEVICE_TYPES.has(device.typeId)) continue
-      if (mode === 'select' && !selection.includes(device.instanceId)) continue
+      if ((mode === 'select' || (mode === 'place' && !placeType)) && !selection.includes(device.instanceId)) continue
       for (const port of getRotatedPorts(renderDevice)) {
         const portKey = keyOf(port)
-        if (mode === 'logistics' && connectedPortKeys.has(portKey)) continue
+        if (mode === 'place' && placeOperation === 'belt' && connectedPortKeys.has(portKey)) continue
 
         const centerX = (port.x + 0.5) * BASE_CELL_SIZE
         const centerY = (port.y + 0.5) * BASE_CELL_SIZE
@@ -1651,10 +2071,10 @@ function App() {
     }
 
     return result
-  }, [layout, dragPreviewPositions, mode, selection])
+  }, [layout, dragPreviewPositions, mode, selection, placeType, placeOperation])
 
   const placePreview = useMemo(() => {
-    if (mode !== 'place' || !hoverCell || sim.isRunning) return null
+    if (mode !== 'place' || !placeType || !hoverCell || sim.isRunning) return null
     const origin = toPlaceOrigin(hoverCell, placeType, placeRotation)
     const instance: DeviceInstance = {
       instanceId: 'preview',
@@ -1705,6 +2125,11 @@ function App() {
       isValid: isWithinLot(instance, layout.lotSize) && validatePlacementConstraints(layout, instance).isValid,
     }
   }, [hoverCell, layout, mode, placeRotation, placeType, sim.isRunning])
+
+  const blueprintPlacementPreview = useMemo(() => {
+    if (!activePlacementBlueprint || sim.isRunning || !hoverCell) return null
+    return buildBlueprintPlacementPreview(activePlacementBlueprint, hoverCell, blueprintPlacementRotation)
+  }, [activePlacementBlueprint, blueprintPlacementRotation, buildBlueprintPlacementPreview, hoverCell, sim.isRunning])
 
   const uiHint = sim.isRunning ? t('top.runningHint') : t('top.editHint')
 
@@ -1764,6 +2189,8 @@ function App() {
           </label>
         </div>
         <div className="topbar-controls">
+          <span className="hint hint-dynamic">{uiHint}</span>
+          <span className="hint">{t('top.zoomHint', { size: cellSize })}</span>
           {!sim.isRunning ? (
             <button
               onClick={async () => {
@@ -1792,8 +2219,6 @@ function App() {
               {speed}x
             </button>
           ))}
-          <span className="hint">{t('top.zoomHint', { size: cellSize })}</span>
-          <span className="hint">{uiHint}</span>
         </div>
       </header>
 
@@ -1808,8 +2233,22 @@ function App() {
           {!sim.isRunning && (
             <>
               <h3>{t('left.mode')}</h3>
-              {(['select', 'place', 'logistics', 'delete'] as const).map((entry) => (
-                <button key={entry} className={mode === entry ? 'active' : ''} onClick={() => setMode(entry)}>
+              {(['place', 'blueprint', 'delete'] as const).map((entry) => (
+                <button
+                  key={entry}
+                  className={mode === entry ? 'active' : ''}
+                  onClick={() => {
+                    if (sim.isRunning && entry === 'place') return
+                    if (entry === 'place') {
+                      setPlaceOperation('default')
+                      setLogStart(null)
+                      setLogCurrent(null)
+                      setLogTrace([])
+                      setPlaceType('')
+                    }
+                    setMode(entry)
+                  }}
+                >
                   {getModeLabel(language, entry)}
                 </button>
               ))}
@@ -1818,6 +2257,50 @@ function App() {
 
           {!sim.isRunning && mode === 'place' && (
             <>
+              <h3>{t('left.operation')}</h3>
+              <div className="place-device-grid">
+                <button
+                  className={`place-device-button ${placeOperation === 'default' && !placeType ? 'active' : ''}`}
+                  onClick={() => {
+                    setPlaceOperation('default')
+                    setPlaceType('')
+                    setLogStart(null)
+                    setLogCurrent(null)
+                    setLogTrace([])
+                  }}
+                >
+                  <span className="operation-pointer-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                      <path d="M5 3L5 18L9.5 13.5L13 21L16.2 19.6L12.8 12.1L18.8 12.1L5 3Z" />
+                    </svg>
+                  </span>
+                  <span className="place-device-label">{t('left.operationSelect')}</span>
+                </button>
+
+                <button
+                  className={`place-device-button ${placeOperation === 'belt' ? 'active' : ''}`}
+                  onClick={() => {
+                    setPlaceOperation('belt')
+                    setPlaceType('')
+                    setLogStart(null)
+                    setLogCurrent(null)
+                    setLogTrace([])
+                  }}
+                >
+                  <img className="place-device-icon" src="/device-icons/item_log_belt_01.png" alt="" aria-hidden="true" draggable={false} />
+                  <span className="place-device-label">{t('left.placeBelt')}</span>
+                </button>
+
+                <button className="place-device-button" onClick={saveSelectionAsBlueprint}>
+                  <span className="operation-pointer-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                      <path d="M6 3H16L20 7V21H6V3ZM8 5V19H18V8H15V5H8ZM10 13H16V17H10V13Z" />
+                    </svg>
+                  </span>
+                  <span className="place-device-label">{t('left.saveBlueprint')}</span>
+                </button>
+              </div>
+
               <h3>{t('left.device')}</h3>
               <div className="place-groups-scroll">
                 {PLACE_GROUP_ORDER.map((groupKey) => {
@@ -1831,7 +2314,10 @@ function App() {
                             <button
                               key={deviceType.id}
                               className={`place-device-button ${placeType === deviceType.id ? 'active' : ''}`}
-                              onClick={() => setPlaceType(deviceType.id)}
+                              onClick={() => {
+                                setPlaceOperation('default')
+                                setPlaceType(deviceType.id)
+                              }}
                             >
                               <img
                                 className="place-device-icon"
@@ -1851,15 +2337,6 @@ function App() {
                   )
                 })}
               </div>
-            </>
-          )}
-
-          {!sim.isRunning && mode === 'logistics' && (
-            <>
-              <h3>{t('left.logisticsSubMode')}</h3>
-              <button className={logisticsTool === 'belt' ? 'active' : ''} onClick={() => setLogisticsTool('belt')}>
-                {t('left.placeBelt')}
-              </button>
             </>
           )}
 
@@ -1897,6 +2374,37 @@ function App() {
             </>
           )}
 
+          {!sim.isRunning && mode === 'blueprint' && (
+            <>
+              <h3>{t('left.blueprintSubMode')}</h3>
+              {blueprints.length === 0 ? (
+                <div className="place-group-empty">{t('left.blueprintEmpty')}</div>
+              ) : (
+                <div className="place-groups-scroll">
+                  <section className="place-group-section">
+                    <div className="place-device-grid">
+                      {blueprints.map((blueprint) => (
+                        <button
+                          key={blueprint.id}
+                          className={`place-device-button ${selectedBlueprintId === blueprint.id ? 'active' : ''}`}
+                          onClick={() => {
+                            setSelectedBlueprintId(blueprint.id)
+                            showToast(t('toast.blueprintSelected', { name: blueprint.name }))
+                          }}
+                        >
+                          <span className="place-device-label">{blueprint.name}</span>
+                          <span className="place-device-label place-device-label-subtle">
+                            {t('left.blueprintCount', { count: blueprint.devices.length })}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+              )}
+            </>
+          )}
+
           {sim.isRunning && statsAndDebugSection}
         </aside>
 
@@ -1920,6 +2428,7 @@ function App() {
             onMouseUp={onCanvasMouseUp}
             onMouseLeave={onCanvasMouseUp}
             onWheel={onCanvasWheel}
+            onContextMenu={(event) => event.preventDefault()}
             onAuxClick={(event) => event.preventDefault()}
           >
             <div
@@ -1965,7 +2474,7 @@ function App() {
                   language={language}
                 />
 
-                {mode === 'logistics' && logisticsPreviewDevices.length > 0 && (
+                {mode === 'place' && placeOperation === 'belt' && logisticsPreviewDevices.length > 0 && (
                   <StaticDeviceLayer
                     devices={logisticsPreviewDevices}
                     selectionSet={new Set()}
@@ -1973,6 +2482,17 @@ function App() {
                     previewOriginsById={new Map()}
                     language={language}
                     extraClassName="logistics-preview-device"
+                  />
+                )}
+
+                {blueprintPlacementPreview && blueprintPlacementPreview.devices.length > 0 && (
+                  <StaticDeviceLayer
+                    devices={blueprintPlacementPreview.devices}
+                    selectionSet={new Set()}
+                    invalidSelectionSet={new Set()}
+                    previewOriginsById={new Map()}
+                    language={language}
+                    extraClassName={`blueprint-preview-device ${blueprintPlacementPreview.isValid ? 'valid' : 'invalid'}`}
                   />
                 )}
 

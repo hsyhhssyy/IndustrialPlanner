@@ -12,16 +12,7 @@ export type StallReason =
   | 'DOWNSTREAM_BLOCKED'
   | 'CONFIG_ERROR'
 
-export type ItemId =
-  | 'item_originium_ore'
-  | 'item_originium_powder'
-  | 'item_iron_ore'
-  | 'item_iron_nugget'
-  | 'item_iron_powder'
-  | 'item_plant_moss_3'
-  | 'item_plant_moss_seed_3'
-  | 'item_plant_moss_powder_3'
-  | 'item_iron_enr_powder'
+export type ItemId = string
 export type DeviceTypeId =
   | 'item_port_unloader_1'
   | 'item_port_grinder_1'
@@ -60,6 +51,7 @@ export interface ItemDef {
   id: ItemId
   displayName: string
   type: 'solid'
+  tags?: string[]
 }
 
 export interface PortAllowance {
@@ -164,7 +156,7 @@ export interface BaseDef {
   foundationBuildings: BaseFoundationDef[]
 }
 
-export type EditMode = 'select' | 'place' | 'logistics' | 'delete'
+export type EditMode = 'select' | 'place' | 'logistics' | 'delete' | 'blueprint'
 
 export interface OccupancyEntry {
   x: number

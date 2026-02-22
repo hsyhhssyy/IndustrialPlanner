@@ -48,12 +48,22 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .hint {
   color: #b2bfd2;
   font-size: 14px;
-  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.hint-dynamic {
+  margin-left: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .main-grid {
@@ -182,9 +192,29 @@
   object-fit: contain;
 }
 
+.operation-pointer-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.operation-pointer-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
 .place-device-label {
   flex: 1;
   min-width: 0;
+}
+
+.place-device-label-subtle {
+  color: #a7b0bf;
+  font-size: 12px;
 }
 
 button.active {
@@ -635,6 +665,49 @@ button:disabled {
 
 .logistics-preview-device .belt-arrow {
   background: rgba(255, 255, 255, 0.98);
+}
+
+.blueprint-preview-device {
+  pointer-events: none;
+  z-index: 5;
+}
+
+.blueprint-preview-device .device-surface {
+  border-style: dashed;
+}
+
+.blueprint-preview-device.valid::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(255, 255, 255, 0.98);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.blueprint-preview-device.valid .device-surface {
+  border-color: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 0 0 1px rgba(79, 123, 196, 0.82) inset;
+}
+
+.blueprint-preview-device.invalid::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 3px solid #ff5d5d;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.blueprint-preview-device.invalid .device-surface {
+  border-color: #ff5d5d;
+  box-shadow: 0 0 0 1px rgba(86, 10, 10, 0.45) inset;
+  background: rgba(106, 31, 46, 0.34);
+}
+
+.blueprint-preview-device.invalid.belt-device {
+  --belt-fill: rgba(255, 93, 93, 0.3);
+  --belt-edge: rgba(255, 93, 93, 0.95);
 }
 
 .temp-overlay-layer {

@@ -71,6 +71,14 @@ conventions:
   tags:
     description: 建筑类型可选标签字段，用于标记特殊功能或特性
     type: string_array
+  itemTags:
+    description: 物品可选标签字段，用于标记资源语义或规则分组
+    type: string_array
+  warehousePolicy:
+    infiniteByItemTag:
+      enabled: true
+      tag: 矿石
+      description: 命中该 tag 的物品在仓库中保持无限库存（不随取货口出货扣减）
   powerRequirement:
     defaultRequiresPower: false
     stage1PoweredDevices:
@@ -114,40 +122,307 @@ conventions:
       amountClampBy: inputBufferSlotCapacities[slotIndex]
 
 items:
-  - id: item_originium_ore
-    displayName: 源石矿
-    category: ore
-    type: solid
-  - id: item_originium_powder
-    displayName: 源石粉末
+  - id: item_bottled_food_1
+    displayName: 柑实罐头
     category: product
     type: solid
-  - id: item_iron_ore
-    displayName: 蓝铁矿
-    category: ore
+  - id: item_bottled_food_2
+    displayName: 优质柑实罐头
+    category: product
+    type: solid
+  - id: item_bottled_food_3
+    displayName: 精选柑实罐头
+    category: product
+    type: solid
+  - id: item_bottled_food_4
+    displayName: 锦草软饮
+    category: product
+    type: solid
+  - id: item_bottled_rec_hp_1
+    displayName: 荞愈胶囊
+    category: product
+    type: solid
+  - id: item_bottled_rec_hp_2
+    displayName: 优质荞愈胶囊
+    category: product
+    type: solid
+  - id: item_bottled_rec_hp_3
+    displayName: 精选荞愈胶囊
+    category: product
+    type: solid
+  - id: item_bottled_rec_hp_4
+    displayName: 芽针针剂
+    category: product
+    type: solid
+  - id: item_carbon_enr
+    displayName: 稳定碳块
+    category: intermediate
+    type: solid
+  - id: item_carbon_enr_powder
+    displayName: 致密碳粉末
+    category: intermediate
+    type: solid
+  - id: item_carbon_mtl
+    displayName: 碳块
+    category: intermediate
+    type: solid
+  - id: item_carbon_powder
+    displayName: 碳粉末
+    category: intermediate
+    type: solid
+  - id: item_crystal_enr
+    displayName: 密制晶体
+    category: intermediate
+    type: solid
+  - id: item_crystal_enr_powder
+    displayName: 致密晶体粉末
+    category: intermediate
+    type: solid
+  - id: item_crystal_powder
+    displayName: 晶体外壳粉末
+    category: intermediate
+    type: solid
+  - id: item_crystal_shell
+    displayName: 晶体外壳
+    category: intermediate
+    type: solid
+  - id: item_equip_script_1
+    displayName: 紫晶装备原件
+    category: intermediate
+    type: solid
+  - id: item_equip_script_2
+    displayName: 蓝铁装备原件
+    category: intermediate
+    type: solid
+  - id: item_equip_script_3
+    displayName: 高晶装备原件
+    category: intermediate
+    type: solid
+  - id: item_equip_script_4
+    displayName: 息壤装备原件
+    category: intermediate
+    type: solid
+  - id: item_glass_bottle
+    displayName: 紫晶质瓶
+    category: intermediate
+    type: solid
+  - id: item_glass_cmpt
+    displayName: 紫晶零件
+    category: intermediate
+    type: solid
+  - id: item_glass_enr_bottle
+    displayName: 高晶质瓶
+    category: intermediate
+    type: solid
+  - id: item_glass_enr_cmpt
+    displayName: 高晶零件
+    category: intermediate
+    type: solid
+  - id: item_iron_bottle
+    displayName: 蓝铁瓶
+    category: intermediate
+    type: solid
+  - id: item_iron_cmpt
+    displayName: 铁制零件
+    category: intermediate
+    type: solid
+  - id: item_iron_enr
+    displayName: 钢块
+    category: intermediate
+    type: solid
+  - id: item_iron_enr_bottle
+    displayName: 钢质瓶
+    category: intermediate
+    type: solid
+  - id: item_iron_enr_cmpt
+    displayName: 钢制零件
+    category: intermediate
+    type: solid
+  - id: item_iron_enr_powder
+    displayName: 致密蓝铁粉末
+    category: intermediate
     type: solid
   - id: item_iron_nugget
     displayName: 蓝铁块
     category: intermediate
     type: solid
+  - id: item_iron_ore
+    displayName: 蓝铁矿
+    category: ore
+    type: solid
+    tags: [矿石]
   - id: item_iron_powder
     displayName: 蓝铁粉末
     category: intermediate
+    type: solid
+  - id: item_liquid_plant_grass_1
+    displayName: 锦草溶液
+    category: liquid
+    type: solid
+  - id: item_liquid_plant_grass_2
+    displayName: 芽针溶液
+    category: liquid
+    type: solid
+  - id: item_liquid_water
+    displayName: 清水
+    category: liquid
+    type: solid
+  - id: item_liquid_xiranite
+    displayName: 液化息壤
+    category: liquid
+    type: solid
+  - id: item_muck_feces_1
+    displayName: 驮兽粪便
+    category: intermediate
+    type: solid
+  - id: item_muck_xiranite_1
+    displayName: 膨地啪
+    category: intermediate
+    type: solid
+  - id: item_originium_enr_powder
+    displayName: 致密源石粉末
+    category: intermediate
+    type: solid
+  - id: item_originium_ore
+    displayName: 源矿
+    category: ore
+    type: solid
+    tags: [矿石]
+  - id: item_originium_powder
+    displayName: 源石粉末
+    category: intermediate
+    type: solid
+  - id: item_plant_bbflower_1
+    displayName: 酮化灌木
+    category: plant
+    type: solid
+  - id: item_plant_bbflower_powder_1
+    displayName: 酮化灌木粉末
+    category: plant
+    type: solid
+  - id: item_plant_bbflower_seed_1
+    displayName: 酮化树种
+    category: seed
+    type: solid
+  - id: item_plant_grass_1
+    displayName: 锦草
+    category: plant
+    type: solid
+  - id: item_plant_grass_2
+    displayName: 芽针
+    category: plant
+    type: solid
+  - id: item_plant_grass_powder_1
+    displayName: 锦草粉末
+    category: plant
+    type: solid
+  - id: item_plant_grass_powder_2
+    displayName: 芽针粉末
+    category: plant
+    type: solid
+  - id: item_plant_grass_seed_1
+    displayName: 锦草种子
+    category: seed
+    type: solid
+  - id: item_plant_grass_seed_2
+    displayName: 芽针种子
+    category: seed
+    type: solid
+  - id: item_plant_moss_1
+    displayName: 荞花
+    category: plant
+    type: solid
+  - id: item_plant_moss_2
+    displayName: 柑实
+    category: plant
     type: solid
   - id: item_plant_moss_3
     displayName: 砂叶
     category: plant
     type: solid
+  - id: item_plant_moss_enr_powder_1
+    displayName: 细磨荞花粉末
+    category: plant
+    type: solid
+  - id: item_plant_moss_enr_powder_2
+    displayName: 细磨柑实粉末
+    category: plant
+    type: solid
+  - id: item_plant_moss_powder_1
+    displayName: 荞花粉末
+    category: plant
+    type: solid
+  - id: item_plant_moss_powder_2
+    displayName: 柑实粉末
+    category: plant
+    type: solid
+  - id: item_plant_moss_powder_3
+    displayName: 砂叶粉末
+    category: plant
+    type: solid
+  - id: item_plant_moss_seed_1
+    displayName: 荞花种子
+    category: seed
+    type: solid
+  - id: item_plant_moss_seed_2
+    displayName: 柑实种子
+    category: seed
+    type: solid
   - id: item_plant_moss_seed_3
     displayName: 砂叶种子
     category: seed
     type: solid
-  - id: item_plant_moss_powder_3
-    displayName: 砂叶粉末
+  - id: item_plant_tundra_insect_powder_1
+    displayName: item_plant_tundra_insect_powder_1
+    category: plant
+    type: solid
+  - id: item_plant_tundra_insect_powder_2
+    displayName: item_plant_tundra_insect_powder_2
+    category: plant
+    type: solid
+  - id: item_proc_battery_1
+    displayName: 低容谷地电池
+    category: product
+    type: solid
+  - id: item_proc_battery_2
+    displayName: 中容谷地电池
+    category: product
+    type: solid
+  - id: item_proc_battery_3
+    displayName: 高容谷地电池
+    category: product
+    type: solid
+  - id: item_proc_battery_4
+    displayName: 低容武陵电池
+    category: product
+    type: solid
+  - id: item_proc_bomb_1
+    displayName: 工业爆炸物
+    category: product
+    type: solid
+  - id: item_quartz_enr
+    displayName: 高晶纤维
     category: intermediate
     type: solid
-  - id: item_iron_enr_powder
-    displayName: 致密蓝铁粉末
+  - id: item_quartz_enr_powder
+    displayName: 高晶粉末
+    category: intermediate
+    type: solid
+  - id: item_quartz_glass
+    displayName: 紫晶纤维
+    category: intermediate
+    type: solid
+  - id: item_quartz_powder
+    displayName: 紫晶粉末
+    category: intermediate
+    type: solid
+  - id: item_quartz_sand
+    displayName: 紫晶矿
+    category: ore
+    type: solid
+    tags: [矿石]
+  - id: item_xiranite_powder
+    displayName: 息壤
     category: intermediate
     type: solid
 
@@ -188,6 +463,51 @@ recipes:
     outputs:
       - itemId: item_iron_powder
         amount: 1
+  - id: r_crusher_quartz_powder_from_quartz_glass_basic
+    machineType: item_port_grinder_1
+    cycleSeconds: 2
+    inputs:
+      - itemId: item_quartz_glass
+        amount: 1
+    outputs:
+      - itemId: item_quartz_powder
+        amount: 1
+  - id: r_crusher_carbon_powder_from_carbon_mtl_basic
+    machineType: item_port_grinder_1
+    cycleSeconds: 2
+    inputs:
+      - itemId: item_carbon_mtl
+        amount: 1
+    outputs:
+      - itemId: item_carbon_powder
+        amount: 2
+  - id: r_crusher_crystal_powder_from_crystal_shell_basic
+    machineType: item_port_grinder_1
+    cycleSeconds: 2
+    inputs:
+      - itemId: item_crystal_shell
+        amount: 1
+    outputs:
+      - itemId: item_crystal_powder
+        amount: 1
+  - id: r_crusher_moss_powder_1_from_moss_1_basic
+    machineType: item_port_grinder_1
+    cycleSeconds: 2
+    inputs:
+      - itemId: item_plant_moss_1
+        amount: 1
+    outputs:
+      - itemId: item_plant_moss_powder_1
+        amount: 2
+  - id: r_crusher_moss_powder_2_from_moss_2_basic
+    machineType: item_port_grinder_1
+    cycleSeconds: 2
+    inputs:
+      - itemId: item_plant_moss_2
+        amount: 1
+    outputs:
+      - itemId: item_plant_moss_powder_2
+        amount: 2
   - id: r_seedcol_moss_seed_from_moss_basic
     machineType: item_port_seedcol_1
     cycleSeconds: 2
@@ -215,8 +535,35 @@ recipes:
     outputs:
       - itemId: item_plant_moss_powder_3
         amount: 3
-  - id: r_grinder_iron_enr_powder_from_iron_and_moss_powder_basic
+  - id: r_crusher_bbflower_powder_from_bbflower_basic
     machineType: item_port_grinder_1
+    cycleSeconds: 2
+    inputs:
+      - itemId: item_plant_bbflower_1
+        amount: 1
+    outputs:
+      - itemId: item_plant_bbflower_powder_1
+        amount: 2
+  - id: r_crusher_grass_powder_1_from_grass_1_basic
+    machineType: item_port_grinder_1
+    cycleSeconds: 2
+    inputs:
+      - itemId: item_plant_grass_1
+        amount: 1
+    outputs:
+      - itemId: item_plant_grass_powder_1
+        amount: 2
+  - id: r_crusher_grass_powder_2_from_grass_2_basic
+    machineType: item_port_grinder_1
+    cycleSeconds: 2
+    inputs:
+      - itemId: item_plant_grass_2
+        amount: 1
+    outputs:
+      - itemId: item_plant_grass_powder_2
+        amount: 2
+  - id: r_thickener_iron_enr_powder_from_iron_and_moss_powder_basic
+    machineType: item_port_thickener_1
     cycleSeconds: 2
     inputs:
       - itemId: item_iron_powder
@@ -225,6 +572,46 @@ recipes:
         amount: 1
     outputs:
       - itemId: item_iron_enr_powder
+        amount: 1
+  - id: r_furnace_iron_enr_from_iron_enr_powder_basic
+    machineType: item_port_furnance_1
+    cycleSeconds: 2
+    inputs:
+      - itemId: item_iron_enr_powder
+        amount: 1
+    outputs:
+      - itemId: item_iron_enr
+        amount: 1
+  - id: r_component_iron_enr_cmpt_from_iron_enr_basic
+    machineType: item_port_cmpt_mc_1
+    cycleSeconds: 2
+    inputs:
+      - itemId: item_iron_enr
+        amount: 1
+    outputs:
+      - itemId: item_iron_enr_cmpt
+        amount: 1
+  - id: r_thickener_originium_enr_powder_from_originium_and_moss_powder_basic
+    machineType: item_port_thickener_1
+    cycleSeconds: 2
+    inputs:
+      - itemId: item_originium_powder
+        amount: 2
+      - itemId: item_plant_moss_powder_3
+        amount: 1
+    outputs:
+      - itemId: item_originium_enr_powder
+        amount: 1
+  - id: r_packaging_battery_from_iron_cmpt_and_originium_enr_powder_basic
+    machineType: item_port_tools_asm_mc_1
+    cycleSeconds: 10
+    inputs:
+      - itemId: item_iron_enr_cmpt
+        amount: 10
+      - itemId: item_originium_enr_powder
+        amount: 15
+    outputs:
+      - itemId: item_proc_battery_3
         amount: 1
 
 powerModel:
@@ -1069,6 +1456,8 @@ devices:
     size:
       width: 6
       height: 4
+    inputBufferSlots: 2
+    inputBufferSlotCapacities: [50, 50]
     ports0:
       - id: in_s_0
         localCellX: 0
@@ -1209,6 +1598,8 @@ devices:
     size:
       width: 6
       height: 4
+    inputBufferSlots: 2
+    inputBufferSlotCapacities: [50, 50]
     ports0:
       - id: in_s_0
         localCellX: 0
@@ -1349,6 +1740,8 @@ devices:
     size:
       width: 6
       height: 4
+    inputBufferSlots: 2
+    inputBufferSlotCapacities: [50, 50]
     ports0:
       - id: in_s_0
         localCellX: 0
@@ -1489,6 +1882,8 @@ devices:
     size:
       width: 6
       height: 4
+    inputBufferSlots: 2
+    inputBufferSlotCapacities: [50, 50]
     ports0:
       - id: in_s_0
         localCellX: 0

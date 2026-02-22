@@ -20,13 +20,24 @@ export interface DialogOptions {
 export interface NonBlockingAlertOptions extends DialogOptions {
 }
 
-interface BlockingDialogRequest {
+interface BlockingDialogBaseRequest {
   id: number
-  kind: 'alert' | 'confirm'
   message: string
   options: DialogOptions
+}
+
+interface BlockingAlertConfirmRequest extends BlockingDialogBaseRequest {
+  kind: 'alert' | 'confirm'
   resolve: (result: boolean) => void
 }
+
+interface BlockingPromptRequest extends BlockingDialogBaseRequest {
+  kind: 'prompt'
+  defaultValue: string
+  resolve: (result: string | null) => void
+}
+
+type BlockingDialogRequest = BlockingAlertConfirmRequest | BlockingPromptRequest
 
 interface NonBlockingAlertItem {
   id: number
@@ -88,6 +99,22 @@ export function dialogAlertBlocking(message: string, options: DialogOptions = {}
   })
 }
 
+export function dialogPrompt(message: string, defaultValue = '', options: DialogOptions = {}) {
+  return new Promise<string | null>((resolve) => {
+    emit({
+      type: 'blocking',
+      request: {
+        id: ++dialogSeq,
+        kind: 'prompt',
+        message,
+        defaultValue,
+        options,
+        resolve,
+      },
+    })
+  })
+}
+
 export function dialogAlertNonBlocking(message: string, options: NonBlockingAlertOptions = {}) {
   emit({
     type: 'non-blocking-alert',
@@ -102,12 +129,14 @@ export function dialogAlertNonBlocking(message: string, options: NonBlockingAler
 interface DialogContextValue {
   confirm: (message: string, options?: DialogOptions) => Promise<boolean>
   alertBlocking: (message: string, options?: DialogOptions) => Promise<void>
+  prompt: (message: string, defaultValue?: string, options?: DialogOptions) => Promise<string | null>
   alertNonBlocking: (message: string, options?: NonBlockingAlertOptions) => void
 }
 
 const DialogContext = createContext<DialogContextValue>({
   confirm: dialogConfirm,
   alertBlocking: dialogAlertBlocking,
+  prompt: dialogPrompt,
   alertNonBlocking: dialogAlertNonBlocking,
 })
 
@@ -126,6 +155,7 @@ export function DialogProvider({ children }: PropsWithChildren) {
   const [blockingQueue, setBlockingQueue] = useState<BlockingDialogRequest[]>([])
   const [activeBlocking, setActiveBlocking] = useState<BlockingDialogRequest | null>(null)
   const [nonBlockingAlerts, setNonBlockingAlerts] = useState<NonBlockingAlertItem[]>([])
+  const [promptInputValue, setPromptInputValue] = useState('')
 
   useEffect(() => {
     return subscribe((event) => {
@@ -143,18 +173,31 @@ export function DialogProvider({ children }: PropsWithChildren) {
     setBlockingQueue((current) => current.slice(1))
   }, [activeBlocking, blockingQueue])
 
+  useEffect(() => {
+    if (!activeBlocking || activeBlocking.kind !== 'prompt') {
+      setPromptInputValue('')
+      return
+    }
+    setPromptInputValue(activeBlocking.defaultValue)
+  }, [activeBlocking])
+
   const contextValue = useMemo<DialogContextValue>(
     () => ({
       confirm: dialogConfirm,
       alertBlocking: dialogAlertBlocking,
+      prompt: dialogPrompt,
       alertNonBlocking: dialogAlertNonBlocking,
     }),
     [],
   )
 
-  const closeBlocking = (result: boolean) => {
+  const closeBlocking = (result: boolean | string | null) => {
     if (!activeBlocking) return
-    activeBlocking.resolve(result)
+    if (activeBlocking.kind === 'prompt') {
+      activeBlocking.resolve(typeof result === 'string' || result === null ? result : null)
+    } else {
+      activeBlocking.resolve(Boolean(result))
+    }
     setActiveBlocking(null)
   }
 
@@ -167,13 +210,35 @@ export function DialogProvider({ children }: PropsWithChildren) {
           <div className={`global-dialog ${resolveVariantClass(activeBlocking.options.variant)}`} role="dialog" aria-modal="true">
             {activeBlocking.options.title && <div className="global-dialog-title">{activeBlocking.options.title}</div>}
             <div className="global-dialog-message">{activeBlocking.message}</div>
+            {activeBlocking.kind === 'prompt' && (
+              <input
+                className="global-dialog-input"
+                type="text"
+                value={promptInputValue}
+                onChange={(event) => setPromptInputValue(event.target.value)}
+                autoFocus
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    closeBlocking(promptInputValue)
+                  }
+                  if (event.key === 'Escape') {
+                    event.preventDefault()
+                    closeBlocking(null)
+                  }
+                }}
+              />
+            )}
             <div className="global-dialog-actions">
-              {activeBlocking.kind === 'confirm' && (
+              {(activeBlocking.kind === 'confirm' || activeBlocking.kind === 'prompt') && (
                 <button className="global-dialog-btn" onClick={() => closeBlocking(false)}>
                   {activeBlocking.options.cancelText ?? 'Cancel'}
                 </button>
               )}
-              <button className="global-dialog-btn primary" onClick={() => closeBlocking(true)}>
+              <button
+                className="global-dialog-btn primary"
+                onClick={() => closeBlocking(activeBlocking.kind === 'prompt' ? promptInputValue : true)}
+              >
                 {activeBlocking.options.confirmText ?? activeBlocking.options.closeText ?? 'OK'}
               </button>
             </div>
