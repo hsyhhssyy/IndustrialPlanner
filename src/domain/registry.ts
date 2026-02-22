@@ -154,11 +154,67 @@ export const RECIPES: RecipeDef[] = [
     outputs: [{ itemId: 'item_plant_moss_seed_3', amount: 2 }],
   },
   {
+    id: 'r_seedcol_moss_seed_1_from_moss_1_basic',
+    machineType: 'item_port_seedcol_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_1', amount: 1 }],
+    outputs: [{ itemId: 'item_plant_moss_seed_1', amount: 2 }],
+  },
+  {
+    id: 'r_seedcol_moss_seed_2_from_moss_2_basic',
+    machineType: 'item_port_seedcol_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_2', amount: 1 }],
+    outputs: [{ itemId: 'item_plant_moss_seed_2', amount: 2 }],
+  },
+  {
+    id: 'r_seedcol_bbflower_seed_from_bbflower_basic',
+    machineType: 'item_port_seedcol_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_bbflower_1', amount: 1 }],
+    outputs: [{ itemId: 'item_plant_bbflower_seed_1', amount: 2 }],
+  },
+  {
+    id: 'r_seedcol_grass_seed_1_from_grass_1_basic',
+    machineType: 'item_port_seedcol_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_grass_1', amount: 1 }],
+    outputs: [{ itemId: 'item_plant_grass_seed_1', amount: 1 }],
+  },
+  {
+    id: 'r_seedcol_grass_seed_2_from_grass_2_basic',
+    machineType: 'item_port_seedcol_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_grass_2', amount: 1 }],
+    outputs: [{ itemId: 'item_plant_grass_seed_2', amount: 1 }],
+  },
+  {
     id: 'r_planter_moss_from_moss_seed_basic',
     machineType: 'item_port_planter_1',
     cycleSeconds: 2,
     inputs: [{ itemId: 'item_plant_moss_seed_3', amount: 1 }],
     outputs: [{ itemId: 'item_plant_moss_3', amount: 1 }],
+  },
+  {
+    id: 'r_planter_moss_1_from_moss_seed_1_basic',
+    machineType: 'item_port_planter_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_seed_1', amount: 1 }],
+    outputs: [{ itemId: 'item_plant_moss_1', amount: 1 }],
+  },
+  {
+    id: 'r_planter_moss_2_from_moss_seed_2_basic',
+    machineType: 'item_port_planter_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_seed_2', amount: 1 }],
+    outputs: [{ itemId: 'item_plant_moss_2', amount: 1 }],
+  },
+  {
+    id: 'r_planter_bbflower_from_bbflower_seed_basic',
+    machineType: 'item_port_planter_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_bbflower_seed_1', amount: 1 }],
+    outputs: [{ itemId: 'item_plant_bbflower_1', amount: 1 }],
   },
   {
     id: 'r_crusher_moss_powder_from_moss_basic',
@@ -199,6 +255,16 @@ export const RECIPES: RecipeDef[] = [
     outputs: [{ itemId: 'item_iron_enr_powder', amount: 1 }],
   },
   {
+    id: 'r_thickener_quartz_enr_powder_from_quartz_and_moss_powder_basic',
+    machineType: 'item_port_thickener_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_quartz_powder', amount: 2 },
+      { itemId: 'item_plant_moss_powder_3', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_quartz_enr_powder', amount: 1 }],
+  },
+  {
     id: 'r_furnace_iron_enr_from_iron_enr_powder_basic',
     machineType: 'item_port_furnance_1',
     cycleSeconds: 2,
@@ -206,11 +272,179 @@ export const RECIPES: RecipeDef[] = [
     outputs: [{ itemId: 'item_iron_enr', amount: 1 }],
   },
   {
+    id: 'r_furnace_quartz_glass_from_quartz_sand_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_quartz_sand', amount: 1 }],
+    outputs: [{ itemId: 'item_quartz_glass', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_crystal_shell_from_originium_ore_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_originium_ore', amount: 1 }],
+    outputs: [{ itemId: 'item_crystal_shell', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_quartz_glass_from_quartz_powder_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_quartz_powder', amount: 1 }],
+    outputs: [{ itemId: 'item_quartz_glass', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_crystal_shell_from_crystal_powder_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_crystal_powder', amount: 1 }],
+    outputs: [{ itemId: 'item_crystal_shell', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_crystal_powder_from_originium_powder_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_originium_powder', amount: 1 }],
+    outputs: [{ itemId: 'item_crystal_powder', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_crystal_enr_powder_from_originium_enr_powder_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_originium_enr_powder', amount: 1 }],
+    outputs: [{ itemId: 'item_crystal_enr_powder', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_crystal_enr_from_crystal_enr_powder_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_crystal_enr_powder', amount: 1 }],
+    outputs: [{ itemId: 'item_crystal_enr', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_quartz_enr_from_quartz_enr_powder_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_quartz_enr_powder', amount: 1 }],
+    outputs: [{ itemId: 'item_quartz_enr', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_carbon_enr_from_carbon_enr_powder_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_carbon_enr_powder', amount: 1 }],
+    outputs: [{ itemId: 'item_carbon_enr', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_carbon_mtl_from_moss_1_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_1', amount: 1 }],
+    outputs: [{ itemId: 'item_carbon_mtl', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_carbon_mtl_from_moss_2_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_2', amount: 1 }],
+    outputs: [{ itemId: 'item_carbon_mtl', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_carbon_mtl_from_moss_3_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_3', amount: 1 }],
+    outputs: [{ itemId: 'item_carbon_mtl', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_carbon_mtl_from_grass_1_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_grass_1', amount: 1 }],
+    outputs: [{ itemId: 'item_carbon_mtl', amount: 2 }],
+  },
+  {
+    id: 'r_furnace_carbon_mtl_from_grass_2_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_grass_2', amount: 1 }],
+    outputs: [{ itemId: 'item_carbon_mtl', amount: 2 }],
+  },
+  {
+    id: 'r_furnace_carbon_powder_from_moss_powder_1_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_powder_1', amount: 1 }],
+    outputs: [{ itemId: 'item_carbon_powder', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_carbon_powder_from_moss_powder_2_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_powder_2', amount: 1 }],
+    outputs: [{ itemId: 'item_carbon_powder', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_carbon_powder_from_moss_powder_3_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_powder_3', amount: 3 }],
+    outputs: [{ itemId: 'item_carbon_powder', amount: 2 }],
+  },
+  {
+    id: 'r_furnace_carbon_powder_from_grass_powder_1_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_grass_powder_1', amount: 1 }],
+    outputs: [{ itemId: 'item_carbon_powder', amount: 2 }],
+  },
+  {
+    id: 'r_furnace_carbon_powder_from_grass_powder_2_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_grass_powder_2', amount: 1 }],
+    outputs: [{ itemId: 'item_carbon_powder', amount: 2 }],
+  },
+  {
+    id: 'r_furnace_carbon_enr_powder_from_moss_enr_powder_1_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_enr_powder_1', amount: 1 }],
+    outputs: [{ itemId: 'item_carbon_enr_powder', amount: 1 }],
+  },
+  {
+    id: 'r_furnace_carbon_enr_powder_from_moss_enr_powder_2_basic',
+    machineType: 'item_port_furnance_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_plant_moss_enr_powder_2', amount: 1 }],
+    outputs: [{ itemId: 'item_carbon_enr_powder', amount: 1 }],
+  },
+  {
     id: 'r_component_iron_enr_cmpt_from_iron_enr_basic',
     machineType: 'item_port_cmpt_mc_1',
     cycleSeconds: 2,
     inputs: [{ itemId: 'item_iron_enr', amount: 1 }],
     outputs: [{ itemId: 'item_iron_enr_cmpt', amount: 1 }],
+  },
+  {
+    id: 'r_component_iron_cmpt_from_iron_nugget_basic',
+    machineType: 'item_port_cmpt_mc_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_iron_nugget', amount: 1 }],
+    outputs: [{ itemId: 'item_iron_cmpt', amount: 1 }],
+  },
+  {
+    id: 'r_component_glass_cmpt_from_quartz_glass_basic',
+    machineType: 'item_port_cmpt_mc_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_quartz_glass', amount: 1 }],
+    outputs: [{ itemId: 'item_glass_cmpt', amount: 1 }],
+  },
+  {
+    id: 'r_component_glass_enr_cmpt_from_quartz_enr_basic',
+    machineType: 'item_port_cmpt_mc_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_quartz_enr', amount: 1 }],
+    outputs: [{ itemId: 'item_glass_enr_cmpt', amount: 1 }],
   },
   {
     id: 'r_thickener_originium_enr_powder_from_originium_and_moss_powder_basic',
@@ -223,6 +457,46 @@ export const RECIPES: RecipeDef[] = [
     outputs: [{ itemId: 'item_originium_enr_powder', amount: 1 }],
   },
   {
+    id: 'r_thickener_carbon_enr_powder_from_carbon_and_moss_powder_basic',
+    machineType: 'item_port_thickener_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_carbon_powder', amount: 2 },
+      { itemId: 'item_plant_moss_powder_3', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_carbon_enr_powder', amount: 1 }],
+  },
+  {
+    id: 'r_thickener_crystal_enr_powder_from_crystal_and_moss_powder_basic',
+    machineType: 'item_port_thickener_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_crystal_powder', amount: 2 },
+      { itemId: 'item_plant_moss_powder_3', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_crystal_enr_powder', amount: 1 }],
+  },
+  {
+    id: 'r_thickener_moss_enr_powder_1_from_moss_powder_1_and_moss_powder_basic',
+    machineType: 'item_port_thickener_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_plant_moss_powder_1', amount: 2 },
+      { itemId: 'item_plant_moss_powder_3', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_plant_moss_enr_powder_1', amount: 1 }],
+  },
+  {
+    id: 'r_thickener_moss_enr_powder_2_from_moss_powder_2_and_moss_powder_basic',
+    machineType: 'item_port_thickener_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_plant_moss_powder_2', amount: 2 },
+      { itemId: 'item_plant_moss_powder_3', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_plant_moss_enr_powder_2', amount: 1 }],
+  },
+  {
     id: 'r_packaging_battery_from_iron_cmpt_and_originium_enr_powder_basic',
     machineType: 'item_port_tools_asm_mc_1',
     cycleSeconds: 10,
@@ -231,6 +505,34 @@ export const RECIPES: RecipeDef[] = [
       { itemId: 'item_originium_enr_powder', amount: 15 },
     ],
     outputs: [{ itemId: 'item_proc_battery_3', amount: 1 }],
+  },
+  {
+    id: 'r_shaper_iron_bottle_from_iron_nugget_basic',
+    machineType: 'item_port_shaper_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_iron_nugget', amount: 2 }],
+    outputs: [{ itemId: 'item_iron_bottle', amount: 1 }],
+  },
+  {
+    id: 'r_shaper_glass_bottle_from_quartz_glass_basic',
+    machineType: 'item_port_shaper_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_quartz_glass', amount: 2 }],
+    outputs: [{ itemId: 'item_glass_bottle', amount: 1 }],
+  },
+  {
+    id: 'r_shaper_iron_enr_bottle_from_iron_enr_basic',
+    machineType: 'item_port_shaper_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_iron_enr', amount: 2 }],
+    outputs: [{ itemId: 'item_iron_enr_bottle', amount: 1 }],
+  },
+  {
+    id: 'r_shaper_glass_enr_bottle_from_quartz_enr_basic',
+    machineType: 'item_port_shaper_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_quartz_enr', amount: 2 }],
+    outputs: [{ itemId: 'item_glass_enr_bottle', amount: 1 }],
   },
 ]
 
@@ -928,6 +1230,8 @@ export const DEVICE_TYPE_BY_ID: Record<string, DeviceTypeDef> = Object.fromEntri
   DEVICE_TYPES.map((deviceType) => [deviceType.id, deviceType]),
 )
 
+export const ITEM_BY_ID: Record<string, ItemDef> = Object.fromEntries(ITEMS.map((item) => [item.id, item]))
+
 export const PLACEABLE_TYPES = DEVICE_TYPES.filter(
   (deviceType) => !deviceType.id.startsWith('belt_'),
 )
@@ -1005,3 +1309,47 @@ export const BASES: BaseDef[] = [
 ]
 
 export const BASE_BY_ID: Record<string, BaseDef> = Object.fromEntries(BASES.map((base) => [base.id, base]))
+
+function validateRegistryConsistency() {
+  const errors: string[] = []
+  const recipeIdSet = new Set<string>()
+  const itemIdSet = new Set<string>()
+
+  for (const item of ITEMS) {
+    if (itemIdSet.has(item.id)) {
+      errors.push(`重复物品ID: ${item.id}`)
+      continue
+    }
+    itemIdSet.add(item.id)
+  }
+
+  for (const recipe of RECIPES) {
+    if (recipeIdSet.has(recipe.id)) {
+      errors.push(`重复配方ID: ${recipe.id}`)
+      continue
+    }
+    recipeIdSet.add(recipe.id)
+
+    if (!DEVICE_TYPE_BY_ID[recipe.machineType]) {
+      errors.push(`配方 ${recipe.id} 引用了未定义设备: ${recipe.machineType}`)
+    }
+
+    for (const input of recipe.inputs) {
+      if (!itemIdSet.has(input.itemId)) {
+        errors.push(`配方 ${recipe.id} 输入物品未定义: ${input.itemId}`)
+      }
+    }
+
+    for (const output of recipe.outputs) {
+      if (!itemIdSet.has(output.itemId)) {
+        errors.push(`配方 ${recipe.id} 输出物品未定义: ${output.itemId}`)
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`领域模型/Registry 校验失败:\n${errors.map((message) => `- ${message}`).join('\n')}`)
+  }
+}
+
+validateRegistryConsistency()
