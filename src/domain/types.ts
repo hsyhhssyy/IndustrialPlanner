@@ -237,7 +237,7 @@ export type DeviceRuntime = ProcessorRuntime | StorageRuntime | ConveyorRuntime 
 
 export interface SimState {
   isRunning: boolean
-  speed: 0.25 | 1 | 2 | 4 | 16
+  speed: 0 | 0.25 | 1 | 2 | 4 | 16
   tick: number
   tickRateHz: number
   runtimeById: Record<string, DeviceRuntime>

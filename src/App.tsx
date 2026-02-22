@@ -34,7 +34,7 @@ import { usePersistentState } from './hooks/usePersistentState'
 import { createTranslator, getDeviceLabel, getItemLabel, getModeLabel, LANGUAGE_OPTIONS, type Language } from './i18n'
 import { dialogAlertNonBlocking, dialogConfirm, dialogPrompt } from './ui/dialog'
 import { showToast } from './ui/toast'
-import { WikiPanel } from './ui/wikiPanel'
+import { WikiPanel } from './ui/wikiPanel.tsx'
 import {
   createInitialSimState,
   initialStorageConfig,
@@ -565,9 +565,40 @@ type StaticDeviceLayerProps = {
   previewOriginsById: ReadonlyMap<string, { x: number; y: number }>
   language: Language
   extraClassName?: string
+  showRuntimeItemIcons?: boolean
+  runtimeById?: Readonly<Record<string, DeviceRuntime>>
 }
 
-const StaticDeviceLayer = memo(({ devices, selectionSet, invalidSelectionSet, previewOriginsById, language, extraClassName }: StaticDeviceLayerProps) => {
+const StaticDeviceLayer = memo(
+  ({
+    devices,
+    selectionSet,
+    invalidSelectionSet,
+    previewOriginsById,
+    language,
+    extraClassName,
+    showRuntimeItemIcons = false,
+    runtimeById = {},
+  }: StaticDeviceLayerProps) => {
+  function getRuntimeIconItemId(device: DeviceInstance): ItemId | undefined {
+    if (!showRuntimeItemIcons) return undefined
+    const type = DEVICE_TYPE_BY_ID[device.typeId]
+    if (!type || type.runtimeKind !== 'processor') return undefined
+    const runtime = runtimeById[device.instanceId]
+    if (!runtime || !('outputBuffer' in runtime) || !('inputBuffer' in runtime)) return undefined
+
+    for (const item of ITEMS) {
+      if ((runtime.outputBuffer[item.id] ?? 0) > 0) return item.id
+    }
+
+    if (runtime.cycleProgressTicks > 0 && runtime.activeRecipeId) {
+      const recipe = RECIPES.find((entry) => entry.id === runtime.activeRecipeId)
+      if (recipe && recipe.outputs.length > 0) return recipe.outputs[0].itemId
+    }
+
+    return undefined
+  }
+
   return (
     <>
       {devices.map((device) => {
@@ -585,6 +616,9 @@ const StaticDeviceLayer = memo(({ devices, selectionSet, invalidSelectionSet, pr
         const isGrinder = renderDevice.typeId === 'item_port_grinder_1'
         const textureSrc = getDeviceSpritePath(renderDevice.typeId)
         const isTexturedDevice = textureSrc !== null
+        const pickupItemId = isPickupPort ? renderDevice.config.pickupItemId : undefined
+        const runtimeIconItemId = getRuntimeIconItemId(renderDevice)
+        const displayItemIconId = pickupItemId ?? runtimeIconItemId
         const isBelt = renderDevice.typeId.startsWith('belt_')
         const isSplitter = renderDevice.typeId === 'item_log_splitter'
         const isMerger = renderDevice.typeId === 'item_log_converger'
@@ -662,12 +696,15 @@ const StaticDeviceLayer = memo(({ devices, selectionSet, invalidSelectionSet, pr
                     </svg>
                   </div>
                 )}
-                {!HIDDEN_DEVICE_LABEL_TYPES.has(renderDevice.typeId) && (
+                {displayItemIconId && (
+                  <img className="device-item-icon" src={getItemIconPath(displayItemIconId)} alt="" aria-hidden="true" draggable={false} />
+                )}
+                {!displayItemIconId && !HIDDEN_DEVICE_LABEL_TYPES.has(renderDevice.typeId) && (
                   <span className={`device-label ${isPickupPort ? 'pickup-label' : ''} ${isPickupPort && isQuarterTurn ? 'pickup-label-vertical' : ''}`}>
                     {getDeviceLabel(language, renderDevice.typeId)}
                   </span>
                 )}
-                {isPickupPort && !renderDevice.config.pickupItemId && <em>?</em>}
+                {isPickupPort && !pickupItemId && <em>?</em>}
               </div>
             )}
           </div>
@@ -2142,7 +2179,13 @@ function App() {
     return buildBlueprintPlacementPreview(activePlacementBlueprint, hoverCell, blueprintPlacementRotation)
   }, [activePlacementBlueprint, blueprintPlacementRotation, buildBlueprintPlacementPreview, hoverCell, sim.isRunning])
 
-  const uiHint = sim.isRunning ? t('top.runningHint') : t('top.editHint')
+  const uiHint = sim.isRunning
+    ? t('top.runningHint')
+    : mode === 'blueprint'
+      ? t('top.blueprintHint')
+      : mode === 'delete'
+        ? t('top.deleteHint')
+        : t('top.editHint')
 
   const beginPanelResize = (side: 'left' | 'right', startX: number) => {
     resizeStateRef.current = {
@@ -2222,13 +2265,13 @@ function App() {
           ) : (
             <button onClick={() => setSim((current) => stopSimulation(current))}>{t('top.stop')}</button>
           )}
-          {[0.25, 1, 2, 4, 16].map((speed) => (
+          {[0, 0.25, 1, 2, 4, 16].map((speed) => (
             <button
               key={speed}
               className={sim.speed === speed ? 'active' : ''}
-              onClick={() => setSim((current) => ({ ...current, speed: speed as 0.25 | 1 | 2 | 4 | 16 }))}
+              onClick={() => setSim((current) => ({ ...current, speed: speed as 0 | 0.25 | 1 | 2 | 4 | 16 }))}
             >
-              {speed}x
+              {speed === 0 ? t('top.pauseSpeed') : `${speed}x`}
             </button>
           ))}
         </div>
@@ -2484,6 +2527,8 @@ function App() {
                   invalidSelectionSet={dragInvalidSelection}
                   previewOriginsById={dragPreviewOriginsById}
                   language={language}
+                  showRuntimeItemIcons={sim.isRunning}
+                  runtimeById={sim.runtimeById}
                 />
 
                 {mode === 'place' && placeOperation === 'belt' && logisticsPreviewDevices.length > 0 && (
@@ -2494,6 +2539,7 @@ function App() {
                     previewOriginsById={new Map()}
                     language={language}
                     extraClassName="logistics-preview-device"
+                    showRuntimeItemIcons={false}
                   />
                 )}
 
@@ -2505,6 +2551,7 @@ function App() {
                     previewOriginsById={new Map()}
                     language={language}
                     extraClassName={`blueprint-preview-device ${blueprintPlacementPreview.isValid ? 'valid' : 'invalid'}`}
+                    showRuntimeItemIcons={false}
                   />
                 )}
 

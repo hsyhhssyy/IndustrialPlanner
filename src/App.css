@@ -306,7 +306,7 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 24px;
   overflow: hidden;
   border-radius: 2px;
 }
@@ -336,6 +336,14 @@ button:disabled {
   text-align: center;
   line-height: 1.2;
   letter-spacing: 0;
+}
+
+.device-item-icon {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  image-rendering: auto;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.45));
 }
 
 .device-surface.pickup-port-surface > .device-label.pickup-label-vertical {
