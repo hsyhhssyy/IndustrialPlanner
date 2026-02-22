@@ -59,7 +59,9 @@
 .main-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: 260px 1fr 340px;
+  --left-panel-width: 340px;
+  --right-panel-width: 340px;
+  grid-template-columns: var(--left-panel-width) 8px 1fr 8px var(--right-panel-width);
   min-height: 0;
 }
 
@@ -68,6 +70,18 @@
   border-right: 1px solid #2f3a4a;
   padding: 12px;
   overflow: auto;
+}
+
+.panel-resizer {
+  background: #1b222d;
+  border-right: 1px solid #2f3a4a;
+  border-left: 1px solid #2f3a4a;
+  cursor: col-resize;
+  user-select: none;
+}
+
+.panel-resizer:hover {
+  background: #243042;
 }
 
 .left-panel {
@@ -595,13 +609,32 @@ button:disabled {
   stroke-width: 20.25;
 }
 
-.log-preview {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  background: rgba(214, 162, 68, 0.35);
-  border: 1px solid #d6a244;
+.logistics-preview-device {
+  pointer-events: none;
   z-index: 5;
+}
+
+.logistics-preview-device::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(255, 255, 255, 0.98);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.logistics-preview-device .device-surface {
+  border-color: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.86) inset;
+}
+
+.logistics-preview-device.belt-device {
+  --belt-fill: rgba(255, 255, 255, 0.2);
+  --belt-edge: rgba(255, 255, 255, 0.98);
+}
+
+.logistics-preview-device .belt-arrow {
+  background: rgba(255, 255, 255, 0.98);
 }
 
 .temp-overlay-layer {

@@ -8,7 +8,8 @@ export type StallReason =
   | 'NO_POWER'
   | 'OVERLAP'
   | 'NO_INPUT'
-  | 'OUTPUT_BLOCKED'
+  | 'OUTPUT_BUFFER_FULL'
+  | 'DOWNSTREAM_BLOCKED'
   | 'CONFIG_ERROR'
 
 export type ItemId =

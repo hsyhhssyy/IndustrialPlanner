@@ -1,4 +1,3 @@
-import { JUNCTION_TYPES } from './registry'
 import {
   EDGE_ANGLE,
   OPPOSITE_EDGE,
@@ -10,6 +9,7 @@ import {
   inferPortDirection,
   isBeltLike,
   isWithinLot,
+  linksFromLayout,
 } from './geometry'
 import type { DeviceInstance, Edge, LayoutState, Rotation } from './types'
 
@@ -131,34 +131,40 @@ export function deleteConnectedBelts(layout: LayoutState, x: number, y: number):
   const start = getDeviceById(layout, startId)
   if (!start || !isBeltLike(start.typeId)) return layout
 
-  const queue: Array<{ x: number; y: number }> = [{ x, y }]
+  const beltAdjacency = new Map<string, Set<string>>()
+  for (const link of linksFromLayout(layout)) {
+    const fromDevice = getDeviceById(layout, link.from.instanceId)
+    const toDevice = getDeviceById(layout, link.to.instanceId)
+    if (!fromDevice || !toDevice) continue
+    if (!isBeltLike(fromDevice.typeId) || !isBeltLike(toDevice.typeId)) continue
+    const fromBucket = beltAdjacency.get(fromDevice.instanceId) ?? new Set<string>()
+    fromBucket.add(toDevice.instanceId)
+    beltAdjacency.set(fromDevice.instanceId, fromBucket)
+
+    const toBucket = beltAdjacency.get(toDevice.instanceId) ?? new Set<string>()
+    toBucket.add(fromDevice.instanceId)
+    beltAdjacency.set(toDevice.instanceId, toBucket)
+  }
+
+  const queue: string[] = [startId]
   const seen = new Set<string>()
   const toDelete = new Set<string>()
 
   while (queue.length > 0) {
-    const current = queue.shift()
-    if (!current) break
-    const key = `${current.x},${current.y}`
-    if (seen.has(key)) continue
-    seen.add(key)
+    const currentId = queue.shift()
+    if (!currentId) break
+    if (seen.has(currentId)) continue
+    seen.add(currentId)
 
-    const deviceId = cellMap.get(key)
-    if (!deviceId) continue
-    const device = getDeviceById(layout, deviceId)
+    const device = getDeviceById(layout, currentId)
     if (!device) continue
-    if (!isBeltLike(device.typeId)) {
-      if (JUNCTION_TYPES.has(device.typeId)) continue
-      continue
-    }
+    if (!isBeltLike(device.typeId)) continue
     toDelete.add(device.instanceId)
 
-    for (const delta of [
-      { dx: 1, dy: 0 },
-      { dx: -1, dy: 0 },
-      { dx: 0, dy: 1 },
-      { dx: 0, dy: -1 },
-    ]) {
-      queue.push({ x: current.x + delta.dx, y: current.y + delta.dy })
+    const neighbors = beltAdjacency.get(currentId)
+    if (!neighbors) continue
+    for (const neighborId of neighbors) {
+      if (!seen.has(neighborId)) queue.push(neighborId)
     }
   }
 
@@ -184,6 +190,20 @@ function beltInOutEdge(device: DeviceInstance): { inEdge: Edge; outEdge: Edge } 
   const outPort = ports.find((port) => inferPortDirection(port.portId) === 'Output')
   if (!inPort || !outPort) return null
   return { inEdge: inPort.edge, outEdge: outPort.edge }
+}
+
+function hasBeltOutputLink(layout: LayoutState, instanceId: string, edge: Edge) {
+  const links = linksFromLayout(layout)
+  return links.some((link) => link.from.instanceId === instanceId && link.from.edge === edge)
+}
+
+function hasBeltInputLink(layout: LayoutState, instanceId: string, edge: Edge) {
+  const links = linksFromLayout(layout)
+  return links.some((link) => link.to.instanceId === instanceId && link.to.edge === edge)
+}
+
+function canRewriteBeltFlow(inEdge: Edge, outEdge: Edge) {
+  return inEdge !== outEdge
 }
 
 function endpointAllowed(
@@ -412,10 +432,17 @@ export function applyLogisticsPath(layout: LayoutState, path: Array<{ x: number;
     const d = getDeviceById(layout, startOn)
     if (d && isBeltLike(d.typeId)) {
       const flow = beltInOutEdge(d)
-      replacedIds.add(d.instanceId)
-      nextDevices.push(
-        createJunctionAt('item_log_splitter', first.x, first.y, flow ? rotationFromEdge('E', flow.inEdge) : 0),
-      )
+      const shouldForceBeltContinue =
+        !!flow && !hasBeltOutputLink(layout, d.instanceId, flow.outEdge) && canRewriteBeltFlow(flow.inEdge, startOutEdge)
+      if (shouldForceBeltContinue && flow) {
+        replacedIds.add(d.instanceId)
+        nextDevices.push(createBeltAt(first.x, first.y, flow.inEdge, startOutEdge))
+      } else {
+        replacedIds.add(d.instanceId)
+        nextDevices.push(
+          createJunctionAt('item_log_splitter', first.x, first.y, flow ? rotationFromEdge('E', flow.inEdge) : 0),
+        )
+      }
     }
   } else if (startOnGhost) {
     const splitterInEdge = startGhostFlow?.inEdge ?? OPPOSITE_EDGE[startOutEdge]
@@ -428,10 +455,17 @@ export function applyLogisticsPath(layout: LayoutState, path: Array<{ x: number;
     const d = getDeviceById(layout, endOn)
     if (d && isBeltLike(d.typeId)) {
       const flow = beltInOutEdge(d)
-      replacedIds.add(d.instanceId)
-      nextDevices.push(
-        createJunctionAt('item_log_converger', last.x, last.y, flow ? rotationFromEdge('W', flow.outEdge) : 0),
-      )
+      const shouldForceBeltConnect =
+        !!flow && !hasBeltInputLink(layout, d.instanceId, flow.inEdge) && canRewriteBeltFlow(endInEdge, flow.outEdge)
+      if (shouldForceBeltConnect && flow) {
+        replacedIds.add(d.instanceId)
+        nextDevices.push(createBeltAt(last.x, last.y, endInEdge, flow.outEdge))
+      } else {
+        replacedIds.add(d.instanceId)
+        nextDevices.push(
+          createJunctionAt('item_log_converger', last.x, last.y, flow ? rotationFromEdge('W', flow.outEdge) : 0),
+        )
+      }
     }
   } else if (endOnGhost) {
     const mergerOutEdge = endGhostFlow?.outEdge ?? OPPOSITE_EDGE[endInEdge]

@@ -130,6 +130,10 @@ function normalizeRuntimeState(runtime: DeviceRuntime, stallReason: StallReason)
   runtime.isStalled = stallReason !== 'NONE'
 }
 
+function isHardBlockedStall(stallReason: StallReason) {
+  return stallReason === 'CONFIG_ERROR' || stallReason === 'OVERLAP' || stallReason === 'NO_POWER'
+}
+
 function mark(output: Partial<Record<ItemId, number>>, itemId: ItemId, delta: number) {
   output[itemId] = (output[itemId] ?? 0) + delta
 }
@@ -413,6 +417,38 @@ function hasReadyOutput(device: DeviceInstance, runtime: DeviceRuntime) {
   return false
 }
 
+function hasInternalBuffer(runtime: DeviceRuntime) {
+  return 'outputBuffer' in runtime || 'inventory' in runtime
+}
+
+function shouldMarkDownstreamBlockedNoBuffer(
+  device: DeviceInstance,
+  runtime: DeviceRuntime,
+  lanesAdvancedThisTick: ReadonlySet<string>,
+) {
+  const laneStates: Array<{ lane: 'slot' | 'ns' | 'we'; slot: SlotData | null }> = []
+  if ('slot' in runtime) laneStates.push({ lane: 'slot', slot: runtime.slot })
+  if ('nsSlot' in runtime) laneStates.push({ lane: 'ns', slot: runtime.nsSlot })
+  if ('weSlot' in runtime) laneStates.push({ lane: 'we', slot: runtime.weSlot })
+
+  for (const laneState of laneStates) {
+    const slot = laneState.slot
+    if (!slot) continue
+    if (slot.progress01 < 0.5) continue
+
+    if (slot.progress01 >= 1) {
+      return true
+    }
+
+    const laneKey = `${device.instanceId}:${laneState.lane}`
+    if (!lanesAdvancedThisTick.has(laneKey)) {
+      return true
+    }
+  }
+
+  return false
+}
+
 function orderedOutLinks(device: DeviceInstance, runtime: DeviceRuntime, outLinks: ReturnType<typeof neighborsFromLinks>['links']) {
   if ((device.typeId !== 'item_log_splitter' && device.typeId !== 'item_log_converger') || outLinks.length <= 1) return outLinks
   if (!('rrIndex' in runtime)) return outLinks
@@ -689,7 +725,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     const runtime = runtimeById[device.instanceId]
     if (!runtime) continue
 
-    if (runtime.stallReason === 'CONFIG_ERROR' || runtime.stallReason === 'OVERLAP' || runtime.stallReason === 'NO_POWER') {
+    if (isHardBlockedStall(runtime.stallReason)) {
       continue
     }
 
@@ -722,7 +758,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
           if (!canAcceptProcessorOutputBatch(runtime, device.typeId, activeRecipe.outputs)) {
             runtime.cycleProgressTicks = recipeCycleTicks
             runtime.progress01 = 1
-            normalizeRuntimeState(runtime, 'OUTPUT_BLOCKED')
+            normalizeRuntimeState(runtime, 'OUTPUT_BUFFER_FULL')
           } else {
             const producedThisCycle = commitProcessorOutputBatch(runtime, device.typeId, activeRecipe.outputs)
             runtime.producedItemsTotal += producedThisCycle
@@ -795,7 +831,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     changed = false
     for (const device of layout.devices) {
       const runtime = runtimeById[device.instanceId]
-      if (!runtime || runtime.isStalled || plannedSenders.has(device.instanceId)) continue
+      if (!runtime || isHardBlockedStall(runtime.stallReason) || plannedSenders.has(device.instanceId)) continue
       const rawOutLinks = links.outMap.get(device.instanceId) ?? []
       const outLinks = orderedOutLinks(device, runtime, rawOutLinks)
 
@@ -853,7 +889,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
-    if (!runtime || runtime.isStalled) continue
+    if (!runtime || isHardBlockedStall(runtime.stallReason)) continue
     const outLinks = links.outMap.get(device.instanceId) ?? []
 
     if (device.typeId === 'item_port_unloader_1' && 'submitAccumulatorTicks' in runtime) {
@@ -869,13 +905,28 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
       runtime.submitAccumulatorTicks += 1
       if (runtime.submitAccumulatorTicks >= pickupBlockTicks) {
-        normalizeRuntimeState(runtime, 'OUTPUT_BLOCKED')
+        normalizeRuntimeState(runtime, 'DOWNSTREAM_BLOCKED')
       }
       continue
     }
 
-    if (outLinks.length > 0 && !plannedSenders.has(device.instanceId) && hasReadyOutput(device, runtime)) {
-      normalizeRuntimeState(runtime, 'OUTPUT_BLOCKED')
+    if (
+      outLinks.length > 0 &&
+      !plannedSenders.has(device.instanceId) &&
+      hasInternalBuffer(runtime) &&
+      hasReadyOutput(device, runtime)
+    ) {
+      normalizeRuntimeState(runtime, 'DOWNSTREAM_BLOCKED')
+      continue
+    }
+
+    if (
+      outLinks.length > 0 &&
+      !plannedSenders.has(device.instanceId) &&
+      !hasInternalBuffer(runtime) &&
+      shouldMarkDownstreamBlockedNoBuffer(device, runtime, lanesAdvancedThisTick)
+    ) {
+      normalizeRuntimeState(runtime, 'DOWNSTREAM_BLOCKED')
     }
   }
 

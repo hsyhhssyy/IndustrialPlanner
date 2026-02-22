@@ -3,7 +3,18 @@ import './App.css'
 import { BASE_BY_ID, BASES, DEVICE_TYPE_BY_ID, ITEMS, PLACEABLE_TYPES, RECIPES } from './domain/registry'
 import { getDeviceSpritePath } from './domain/deviceSprites'
 import { applyLogisticsPath, deleteConnectedBelts, longestValidLogisticsPrefix, nextId, pathFromTrace } from './domain/logistics'
-import { buildOccupancyMap, cellToDeviceId, EDGE_ANGLE, getDeviceById, getRotatedPorts, isWithinLot, linksFromLayout, OPPOSITE_EDGE } from './domain/geometry'
+import {
+  buildOccupancyMap,
+  cellToDeviceId,
+  EDGE_ANGLE,
+  getDeviceById,
+  getFootprintCells,
+  getRotatedPorts,
+  includesCell,
+  isWithinLot,
+  linksFromLayout,
+  OPPOSITE_EDGE,
+} from './domain/geometry'
 import { validatePlacementConstraints } from './domain/placement'
 import type {
   BaseId,
@@ -44,7 +55,7 @@ function getInternalStatusText(
   if (!runtime) return t('detail.internal.noRuntime')
 
   if (!selectedDevice.typeId.startsWith('belt_') || !('slot' in runtime)) {
-    return runtime.stallReason
+    return getRuntimeStatusText(runtime, t)
   }
 
   const slot = runtime.slot
@@ -52,6 +63,42 @@ function getInternalStatusText(
   if (slot.progress01 < 0.5) return t('detail.internal.occupiedHalf', { progress: slot.progress01.toFixed(2) })
   if (slot.progress01 < 1) return t('detail.internal.canTry', { progress: slot.progress01.toFixed(2) })
   return t('detail.internal.readyCommit', { progress: slot.progress01.toFixed(2) })
+}
+
+function getRuntimeStatusText(
+  runtime: DeviceRuntime | undefined,
+  t: (key: string, params?: Record<string, string | number>) => string,
+) {
+  const status = runtimeLabel(runtime)
+  const keyByStatus: Record<string, string> = {
+    idle: 'detail.status.idle',
+    running: 'detail.status.running',
+    starved: 'detail.status.starved',
+    no_power: 'detail.status.noPower',
+    overlap: 'detail.status.overlap',
+    output_buffer_full: 'detail.status.outputBlocked',
+    downstream_blocked: 'detail.status.outputBlocked',
+    config_error: 'detail.status.configError',
+  }
+  const key = keyByStatus[status]
+  if (key) return t(key)
+  return status
+}
+
+function shouldShowRuntimeStallOverlay(device: DeviceInstance, runtime: DeviceRuntime | undefined) {
+  const status = runtimeLabel(runtime)
+  if (status === 'running' || status === 'idle') return false
+  if (!runtime) return false
+  if (
+    device.typeId.startsWith('belt_') &&
+    (runtime.stallReason === 'DOWNSTREAM_BLOCKED' || runtime.stallReason === 'OUTPUT_BUFFER_FULL')
+  ) {
+    return false
+  }
+  if (runtime.stallReason === 'DOWNSTREAM_BLOCKED' && ('outputBuffer' in runtime || 'inventory' in runtime)) {
+    return false
+  }
+  return true
 }
 
 function formatInventoryAmounts(
@@ -288,6 +335,7 @@ const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'i
 const HIDDEN_CHEVRON_DEVICE_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
 const OUT_OF_LOT_TOAST_KEY = 'toast.outOfLot'
 const FALLBACK_PLACEMENT_TOAST_KEY = 'toast.invalidPlacementFallback'
+const MANUAL_LOGISTICS_JUNCTION_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
 function isKnownDeviceTypeId(typeId: unknown): typeId is DeviceTypeId {
   return typeof typeId === 'string' && typeId in DEVICE_TYPE_BY_ID
 }
@@ -426,9 +474,10 @@ type StaticDeviceLayerProps = {
   invalidSelectionSet: ReadonlySet<string>
   previewOriginsById: ReadonlyMap<string, { x: number; y: number }>
   language: Language
+  extraClassName?: string
 }
 
-const StaticDeviceLayer = memo(({ devices, selectionSet, invalidSelectionSet, previewOriginsById, language }: StaticDeviceLayerProps) => {
+const StaticDeviceLayer = memo(({ devices, selectionSet, invalidSelectionSet, previewOriginsById, language, extraClassName }: StaticDeviceLayerProps) => {
   return (
     <>
       {devices.map((device) => {
@@ -463,7 +512,7 @@ const StaticDeviceLayer = memo(({ devices, selectionSet, invalidSelectionSet, pr
         return (
           <div
             key={device.instanceId}
-            className={`device ${isBelt ? 'belt-device' : ''} ${selectionSet.has(device.instanceId) ? 'selected' : ''} ${invalidSelectionSet.has(device.instanceId) ? 'drag-invalid' : ''}`}
+            className={`device ${isBelt ? 'belt-device' : ''} ${selectionSet.has(device.instanceId) ? 'selected' : ''} ${invalidSelectionSet.has(device.instanceId) ? 'drag-invalid' : ''} ${extraClassName ?? ''}`.trim()}
             style={{
               left: renderDevice.origin.x * BASE_CELL_SIZE,
               top: renderDevice.origin.y * BASE_CELL_SIZE,
@@ -545,7 +594,9 @@ function App() {
   const [mode, setMode] = usePersistentState<EditMode>('stage1-mode', 'select')
   const [placeType, setPlaceType] = usePersistentState<DeviceTypeId>('stage1-place-type', 'item_port_grinder_1')
   const [placeRotation, setPlaceRotation] = usePersistentState<Rotation>('stage1-place-rotation', 0)
-  const [deleteWholeBelt, setDeleteWholeBelt] = usePersistentState<boolean>('stage1-delete-whole-belt', false)
+  const [deleteTool, setDeleteTool] = usePersistentState<'single' | 'wholeBelt' | 'box'>('stage1-delete-tool', 'single')
+  const [leftPanelWidth, setLeftPanelWidth] = usePersistentState<number>('stage1-left-panel-width', 340)
+  const [rightPanelWidth, setRightPanelWidth] = usePersistentState<number>('stage1-right-panel-width', 340)
   const [cellSize, setCellSize] = usePersistentState<number>('stage1-cell-size', 64)
   const [selection, setSelection] = useState<string[]>([])
   const [sim, setSim] = useState<SimState>(() => createInitialSimState())
@@ -609,6 +660,8 @@ function App() {
   const simTickRef = useRef(0)
   const unknownDevicePromptKeyRef = useRef<string>('')
   const legacyLayoutMigratedRef = useRef(false)
+  const deleteBoxConfirmingRef = useRef(false)
+  const resizeStateRef = useRef<null | { side: 'left' | 'right'; startX: number; startWidth: number }>(null)
 
   const occupancyMap = useMemo(() => buildOccupancyMap(layout), [layout])
   const cellDeviceMap = useMemo(() => cellToDeviceId(layout), [layout])
@@ -690,6 +743,48 @@ function App() {
       setPlaceType('item_port_grinder_1')
     }
   }, [placeType, setPlaceType])
+
+  useEffect(() => {
+    setLeftPanelWidth((current) => clamp(Number.isFinite(current) ? current : 340, 260, 560))
+  }, [setLeftPanelWidth])
+
+  useEffect(() => {
+    setRightPanelWidth((current) => clamp(Number.isFinite(current) ? current : 340, 260, 560))
+  }, [setRightPanelWidth])
+
+  useEffect(() => {
+    const onMouseMove = (event: MouseEvent) => {
+      const state = resizeStateRef.current
+      if (!state) return
+
+      if (state.side === 'left') {
+        const nextWidth = clamp(state.startWidth + (event.clientX - state.startX), 260, 560)
+        setLeftPanelWidth(nextWidth)
+        return
+      }
+
+      const nextWidth = clamp(state.startWidth - (event.clientX - state.startX), 260, 560)
+      setRightPanelWidth(nextWidth)
+    }
+
+    const onMouseUp = () => {
+      resizeStateRef.current = null
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [setLeftPanelWidth, setRightPanelWidth])
+
+  useEffect(() => {
+    if (!sim.isRunning) return
+    if (mode !== 'select') {
+      setMode('select')
+    }
+  }, [mode, setMode, sim.isRunning])
 
   useEffect(() => {
     if (unknownDevices.length === 0) {
@@ -896,7 +991,29 @@ function App() {
       showToast(t(validation.messageKey ?? FALLBACK_PLACEMENT_TOAST_KEY), { variant: 'warning' })
       return
     }
-    setLayout((current) => ({ ...current, devices: [...current.devices, instance] }))
+    setLayout((current) => {
+      if (!MANUAL_LOGISTICS_JUNCTION_TYPES.has(instance.typeId)) {
+        return { ...current, devices: [...current.devices, instance] }
+      }
+
+      const footprint = getFootprintCells(instance)
+      if (footprint.length === 0) {
+        return { ...current, devices: [...current.devices, instance] }
+      }
+
+      const replacedBeltIds = new Set<string>()
+      for (const device of current.devices) {
+        if (!device.typeId.startsWith('belt_')) continue
+        if (footprint.some((cellPos) => includesCell(device, cellPos.x, cellPos.y))) {
+          replacedBeltIds.add(device.instanceId)
+        }
+      }
+
+      return {
+        ...current,
+        devices: [...current.devices.filter((device) => !replacedBeltIds.has(device.instanceId)), instance],
+      }
+    })
   }
 
   const onCanvasMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -925,10 +1042,22 @@ function App() {
 
     if (mode === 'delete') {
       if (sim.isRunning) return
+      if (deleteTool === 'box') {
+        setSelection([])
+        setDragStartCell(null)
+        setDragBasePositions(null)
+        setDragPreviewPositions({})
+        setDragPreviewValid(true)
+        setDragInvalidMessage(null)
+        setDragInvalidSelection(new Set())
+        setDragOrigin(cell)
+        setDragRect({ x1: cell.x, y1: cell.y, x2: cell.x, y2: cell.y })
+        return
+      }
       const id = cellDeviceMap.get(`${cell.x},${cell.y}`)
       if (!id) return
       if (foundationIdSet.has(id)) return
-      if (deleteWholeBelt) {
+      if (deleteTool === 'wholeBelt') {
         setLayout((current) => deleteConnectedBelts(current, cell.x, cell.y))
       } else {
         setLayout((current) => ({ ...current, devices: current.devices.filter((device) => device.instanceId !== id) }))
@@ -1068,6 +1197,11 @@ function App() {
 
     if (!cell) return
 
+    if (mode === 'delete' && deleteTool === 'box' && dragOrigin && dragRect) {
+      setDragRect({ ...dragRect, x2: cell.x, y2: cell.y })
+      return
+    }
+
     if (mode === 'select' && dragOrigin && dragRect) {
       setDragRect({ ...dragRect, x2: cell.x, y2: cell.y })
       return
@@ -1078,7 +1212,7 @@ function App() {
     }
   }
 
-  const onCanvasMouseUp = () => {
+  const onCanvasMouseUp = async () => {
     if (isPanning) {
       setIsPanning(false)
       setPanStart(null)
@@ -1093,6 +1227,56 @@ function App() {
       setLogStart(null)
       setLogCurrent(null)
       setLogTrace([])
+      return
+    }
+
+    if (mode === 'delete' && deleteTool === 'box' && dragRect && dragOrigin && !sim.isRunning) {
+      if (deleteBoxConfirmingRef.current) return
+      deleteBoxConfirmingRef.current = true
+
+      const xMin = Math.min(dragRect.x1, dragRect.x2)
+      const xMax = Math.max(dragRect.x1, dragRect.x2)
+      const yMin = Math.min(dragRect.y1, dragRect.y2)
+      const yMax = Math.max(dragRect.y1, dragRect.y2)
+      const idsInRect = new Set<string>()
+
+      setDragStartCell(null)
+      setDragOrigin(null)
+      setDragRect(null)
+      setDragBasePositions(null)
+      setDragPreviewPositions({})
+      setDragPreviewValid(true)
+      setDragInvalidMessage(null)
+      setDragInvalidSelection(new Set())
+
+      for (const [key, entries] of occupancyMap.entries()) {
+        const [x, y] = key.split(',').map(Number)
+        if (x < xMin || x > xMax || y < yMin || y > yMax) continue
+        for (const entry of entries) {
+          if (foundationIdSet.has(entry.instanceId)) continue
+          idsInRect.add(entry.instanceId)
+        }
+      }
+
+      try {
+        if (idsInRect.size > 0) {
+          const confirmed = await dialogConfirm(t('left.deleteBoxConfirm', { count: idsInRect.size }), {
+            title: t('dialog.title.confirm'),
+            confirmText: t('dialog.ok'),
+            cancelText: t('dialog.cancel'),
+            variant: 'warning',
+          })
+          if (confirmed) {
+            setLayout((current) => ({
+              ...current,
+              devices: current.devices.filter((device) => !idsInRect.has(device.instanceId)),
+            }))
+            setSelection((current) => current.filter((id) => !idsInRect.has(id)))
+          }
+        }
+      } finally {
+        deleteBoxConfirmingRef.current = false
+      }
       return
     }
 
@@ -1331,6 +1515,30 @@ function App() {
     return longestValidLogisticsPrefix(layout, candidatePath)
   }, [layout, logStart, logCurrent, logTrace])
 
+  const logisticsPreviewDevices = useMemo(() => {
+    if (mode !== 'logistics' || !logisticsPreview || logisticsPreview.length < 1) return []
+    const projectedLayout = applyLogisticsPath(layout, logisticsPreview)
+    if (projectedLayout === layout) return []
+    const projectedCellMap = cellToDeviceId(projectedLayout)
+    const seenProjectedIds = new Set<string>()
+    const result: DeviceInstance[] = []
+
+    for (const cell of logisticsPreview) {
+      const projectedId = projectedCellMap.get(`${cell.x},${cell.y}`)
+      if (!projectedId || seenProjectedIds.has(projectedId)) continue
+      seenProjectedIds.add(projectedId)
+      const projectedDevice = getDeviceById(projectedLayout, projectedId)
+      if (!projectedDevice) continue
+      if (!projectedDevice.typeId.startsWith('belt_') && !HIDDEN_DEVICE_LABEL_TYPES.has(projectedDevice.typeId)) continue
+      result.push({
+        ...projectedDevice,
+        instanceId: `preview-${projectedDevice.instanceId}`,
+      })
+    }
+
+    return result
+  }, [layout, logisticsPreview, mode])
+
   const inTransitItems = useMemo(() => {
     return layout.devices.flatMap((device) => {
       if (!device.typeId.startsWith('belt_')) return []
@@ -1360,8 +1568,7 @@ function App() {
   const runtimeStallOverlays = useMemo(() => {
     return layout.devices.flatMap((device) => {
       const runtime = sim.runtimeById[device.instanceId]
-      const status = runtimeLabel(runtime)
-      if (status === 'running' || status === 'idle') return []
+      if (!shouldShowRuntimeStallOverlay(device, runtime)) return []
       const type = DEVICE_TYPE_BY_ID[device.typeId]
       if (!type) return []
       const footprintSize = rotatedFootprintSize(type.size, device.rotation)
@@ -1408,10 +1615,18 @@ function App() {
     const chevronGap = BASE_CELL_SIZE * (1 / 12)
     const outsideOffset = chevronLength / 2 + chevronGap
     for (const device of layout.devices) {
+      const previewOrigin = dragPreviewPositions[device.instanceId]
+      const renderDevice =
+        mode === 'select' && previewOrigin
+          ? {
+              ...device,
+              origin: previewOrigin,
+            }
+          : device
       if (device.typeId.startsWith('belt_')) continue
       if (HIDDEN_CHEVRON_DEVICE_TYPES.has(device.typeId)) continue
       if (mode === 'select' && !selection.includes(device.instanceId)) continue
-      for (const port of getRotatedPorts(device)) {
+      for (const port of getRotatedPorts(renderDevice)) {
         const portKey = keyOf(port)
         if (mode === 'logistics' && connectedPortKeys.has(portKey)) continue
 
@@ -1436,7 +1651,7 @@ function App() {
     }
 
     return result
-  }, [layout, mode, selection])
+  }, [layout, dragPreviewPositions, mode, selection])
 
   const placePreview = useMemo(() => {
     if (mode !== 'place' || !hoverCell || sim.isRunning) return null
@@ -1493,6 +1708,45 @@ function App() {
 
   const uiHint = sim.isRunning ? t('top.runningHint') : t('top.editHint')
 
+  const beginPanelResize = (side: 'left' | 'right', startX: number) => {
+    resizeStateRef.current = {
+      side,
+      startX,
+      startWidth: side === 'left' ? leftPanelWidth : rightPanelWidth,
+    }
+  }
+
+  const statsAndDebugSection = (
+    <>
+      <h3>{t('right.stats')}</h3>
+      <table className="stats-table">
+        <thead>
+          <tr>
+            <th>{t('table.itemName')}</th>
+            <th>{t('table.producedPerMinute')}</th>
+            <th>{t('table.consumedPerMinute')}</th>
+            <th>{t('table.currentStock')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ITEMS.map((item) => (
+            <tr key={item.id}>
+              <td>{getItemLabel(language, item.id)}</td>
+              <td>{sim.stats.producedPerMinute[item.id].toFixed(2)}</td>
+              <td>{sim.stats.consumedPerMinute[item.id].toFixed(2)}</td>
+              <td>{Number.isFinite(sim.warehouse[item.id]) ? sim.warehouse[item.id] : '∞'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h3>{t('right.simDebug')}</h3>
+      <div className="kv"><span>{t('debug.measuredTps')}</span><span>{measuredTickRate.toFixed(2)}</span></div>
+      <div className="kv"><span>{t('debug.simTick')}</span><span>{sim.tick}</span></div>
+      <div className="kv"><span>{t('debug.simSeconds')}</span><span>{sim.stats.simSeconds.toFixed(2)}</span></div>
+    </>
+  )
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -1543,16 +1797,26 @@ function App() {
         </div>
       </header>
 
-      <main className="main-grid">
+      <main
+        className="main-grid"
+        style={{
+          ['--left-panel-width' as string]: `${leftPanelWidth}px`,
+          ['--right-panel-width' as string]: `${rightPanelWidth}px`,
+        }}
+      >
         <aside className="panel left-panel">
-          <h3>{t('left.mode')}</h3>
-          {(['select', 'place', 'logistics', 'delete'] as const).map((entry) => (
-            <button key={entry} className={mode === entry ? 'active' : ''} onClick={() => setMode(entry)}>
-              {getModeLabel(language, entry)}
-            </button>
-          ))}
+          {!sim.isRunning && (
+            <>
+              <h3>{t('left.mode')}</h3>
+              {(['select', 'place', 'logistics', 'delete'] as const).map((entry) => (
+                <button key={entry} className={mode === entry ? 'active' : ''} onClick={() => setMode(entry)}>
+                  {getModeLabel(language, entry)}
+                </button>
+              ))}
+            </>
+          )}
 
-          {mode === 'place' && (
+          {!sim.isRunning && mode === 'place' && (
             <>
               <h3>{t('left.device')}</h3>
               <div className="place-groups-scroll">
@@ -1590,7 +1854,7 @@ function App() {
             </>
           )}
 
-          {mode === 'logistics' && (
+          {!sim.isRunning && mode === 'logistics' && (
             <>
               <h3>{t('left.logisticsSubMode')}</h3>
               <button className={logisticsTool === 'belt' ? 'active' : ''} onClick={() => setLogisticsTool('belt')}>
@@ -1599,14 +1863,17 @@ function App() {
             </>
           )}
 
-          {mode === 'delete' && (
+          {!sim.isRunning && mode === 'delete' && (
             <>
               <h3>{t('left.deleteSubMode')}</h3>
-              <button className={!deleteWholeBelt ? 'active' : ''} onClick={() => setDeleteWholeBelt(false)}>
+              <button className={deleteTool === 'single' ? 'active' : ''} onClick={() => setDeleteTool('single')}>
                 {t('left.deleteSingle')}
               </button>
-              <button className={deleteWholeBelt ? 'active' : ''} onClick={() => setDeleteWholeBelt(true)}>
+              <button className={deleteTool === 'wholeBelt' ? 'active' : ''} onClick={() => setDeleteTool('wholeBelt')}>
                 {t('left.deleteWholeBelt')}
+              </button>
+              <button className={deleteTool === 'box' ? 'active' : ''} onClick={() => setDeleteTool('box')}>
+                {t('left.deleteBox')}
               </button>
               <button
                 onClick={async () => {
@@ -1629,7 +1896,20 @@ function App() {
               </button>
             </>
           )}
+
+          {sim.isRunning && statsAndDebugSection}
         </aside>
+
+        <div
+          className="panel-resizer panel-resizer-left"
+          onMouseDown={(event) => {
+            event.preventDefault()
+            beginPanelResize('left', event.clientX)
+          }}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize left panel"
+        />
 
         <section className="canvas-panel panel">
           <div
@@ -1684,6 +1964,17 @@ function App() {
                   previewOriginsById={dragPreviewOriginsById}
                   language={language}
                 />
+
+                {mode === 'logistics' && logisticsPreviewDevices.length > 0 && (
+                  <StaticDeviceLayer
+                    devices={logisticsPreviewDevices}
+                    selectionSet={new Set()}
+                    invalidSelectionSet={new Set()}
+                    previewOriginsById={new Map()}
+                    language={language}
+                    extraClassName="logistics-preview-device"
+                  />
+                )}
 
                 {runtimeStallOverlays.map((overlay) => (
                   <div
@@ -1794,17 +2085,21 @@ function App() {
                   />
                 )}
 
-                {logisticsPreview?.map((cell, index) => (
-                  <div
-                    key={`preview-${cell.x}-${cell.y}-${index}`}
-                    className="log-preview"
-                    style={{ left: cell.x * BASE_CELL_SIZE, top: cell.y * BASE_CELL_SIZE, width: BASE_CELL_SIZE, height: BASE_CELL_SIZE }}
-                  />
-                ))}
               </div>
             </div>
           </div>
         </section>
+
+        <div
+          className="panel-resizer panel-resizer-right"
+          onMouseDown={(event) => {
+            event.preventDefault()
+            beginPanelResize('right', event.clientX)
+          }}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize right panel"
+        />
 
         <aside className="panel right-panel">
           <h3>{t('right.lot')}</h3>
@@ -1843,33 +2138,6 @@ function App() {
           </div>
           <div className="kv"><span>{t('right.baseTags')}</span><span>{currentBase.tags.join(', ') || '-'}</span></div>
 
-          <h3>{t('right.stats')}</h3>
-          <table className="stats-table">
-            <thead>
-              <tr>
-                <th>{t('table.itemName')}</th>
-                <th>{t('table.producedPerMinute')}</th>
-                <th>{t('table.consumedPerMinute')}</th>
-                <th>{t('table.currentStock')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ITEMS.map((item) => (
-                <tr key={item.id}>
-                  <td>{getItemLabel(language, item.id)}</td>
-                  <td>{sim.stats.producedPerMinute[item.id].toFixed(2)}</td>
-                  <td>{sim.stats.consumedPerMinute[item.id].toFixed(2)}</td>
-                  <td>{Number.isFinite(sim.warehouse[item.id]) ? sim.warehouse[item.id] : '∞'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <h3>{t('right.simDebug')}</h3>
-          <div className="kv"><span>{t('debug.measuredTps')}</span><span>{measuredTickRate.toFixed(2)}</span></div>
-          <div className="kv"><span>{t('debug.simTick')}</span><span>{sim.tick}</span></div>
-          <div className="kv"><span>{t('debug.simSeconds')}</span><span>{sim.stats.simSeconds.toFixed(2)}</span></div>
-
           <h3>{t('right.selected')}</h3>
           {selectedDevice ? (
             <>
@@ -1880,7 +2148,7 @@ function App() {
               <div className="kv"><span>{t('detail.deviceType')}</span><span>{getDeviceLabel(language, selectedDevice.typeId)}</span></div>
               <div className="kv"><span>{t('detail.rotation')}</span><span>{selectedDevice.rotation}</span></div>
               <div className="kv"><span>{t('detail.position')}</span><span>{selectedDevice.origin.x},{selectedDevice.origin.y}</span></div>
-              <div className="kv"><span>{t('detail.currentStatus')}</span><span>{runtimeLabel(selectedRuntime)}</span></div>
+              <div className="kv"><span>{t('detail.currentStatus')}</span><span>{getRuntimeStatusText(selectedRuntime, t)}</span></div>
               <div className="kv">
                 <span>{t('detail.internalStatus')}</span>
                 <span>{getInternalStatusText(selectedDevice, selectedRuntime, t)}</span>
