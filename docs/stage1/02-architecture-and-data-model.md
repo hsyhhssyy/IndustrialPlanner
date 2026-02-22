@@ -40,10 +40,10 @@
 - `requiresPower: boolean`
 - `tags?: string[]`（可选；用于标记建筑特性，如“武陵”）
 - `size: { width: number; height: number }`
-- `inputBufferCapacity?: number`（仅 `processor`；输入缓存总容量）
-- `outputBufferCapacity?: number`（仅 `processor`；输出缓存总容量）
 - `inputBufferSlots?: number`（仅 `processor`；输入缓存可并存物品种类数）
 - `outputBufferSlots?: number`（仅 `processor`；输出缓存可并存物品种类数）
+- `inputBufferSlotCapacities?: number[]`（仅 `processor`；输入缓存按槽位容量上限）
+- `outputBufferSlotCapacities?: number[]`（仅 `processor`；输出缓存按槽位容量上限）
 - `ports0: PortDef[]`（仅 0°）
 - `display: { shortName?: string }`
 
@@ -66,8 +66,7 @@
 - `config: Record<string, unknown>`（如 pickup 选矿）
    - `pickupItemId?: ItemId`（取货口）
    - `submitToWarehouse?: boolean`（存储箱）
-   - `preloadInputItemId?: ItemId`（processor 编辑态预置输入物品）
-   - `preloadInputAmount?: number`（processor 编辑态预置输入数量）
+   - `preloadInputs?: Array<{ slotIndex: number; itemId: ItemId; amount: number }>`（processor 编辑态按槽位预置输入）
 
 ## 3.4 统一运行态 `RuntimeState`
 
@@ -80,8 +79,9 @@
 按 `runtimeKind` 扩展：
 
 - `processor`: `inputBuffer`, `outputBuffer`
-   - 容量由 `inputBufferCapacity/outputBufferCapacity` 约束
    - 槽位由 `inputBufferSlots/outputBufferSlots` 约束
+   - 每个槽位容量由 `inputBufferSlotCapacities/outputBufferSlotCapacities` 约束
+   - 槽位容量**不共享**，并且不同槽位上限可不一致
    - 当槽位=1时，缓存非空后仅接受当前缓存物品类型
 - `conveyor`: `slot`（容量 1）
 - `junction`: 按设备语义定义槽位（`splitter/merger` 为单 `slot`，`bridge` 为 `nsSlot + weSlot`）

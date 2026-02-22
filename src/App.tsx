@@ -68,11 +68,21 @@ function formatInventoryAmounts(
 
 function processorBufferSpec(typeId: DeviceTypeId) {
   const deviceType = DEVICE_TYPE_BY_ID[typeId]
+  const inputSlotCapacitiesRaw = (deviceType.inputBufferSlotCapacities ?? []).map((value) => Math.max(1, Math.floor(value)))
+  const outputSlotCapacitiesRaw = (deviceType.outputBufferSlotCapacities ?? []).map((value) => Math.max(1, Math.floor(value)))
+  const fallbackInputCapacity = Math.max(1, Math.floor(deviceType.inputBufferCapacity ?? 50))
+  const fallbackOutputCapacity = Math.max(1, Math.floor(deviceType.outputBufferCapacity ?? 50))
+  const inputSlots = Math.max(1, Math.floor(deviceType.inputBufferSlots ?? 1), inputSlotCapacitiesRaw.length)
+  const outputSlots = Math.max(1, Math.floor(deviceType.outputBufferSlots ?? 1), outputSlotCapacitiesRaw.length)
+  const inputSlotCapacities = Array.from({ length: inputSlots }, (_, index) => inputSlotCapacitiesRaw[index] ?? fallbackInputCapacity)
+  const outputSlotCapacities = Array.from({ length: outputSlots }, (_, index) => outputSlotCapacitiesRaw[index] ?? fallbackOutputCapacity)
   return {
-    inputCapacity: Math.max(1, Math.floor(deviceType.inputBufferCapacity ?? 50)),
-    outputCapacity: Math.max(1, Math.floor(deviceType.outputBufferCapacity ?? 50)),
-    inputSlots: Math.max(1, Math.floor(deviceType.inputBufferSlots ?? 1)),
-    outputSlots: Math.max(1, Math.floor(deviceType.outputBufferSlots ?? 1)),
+    inputSlots,
+    outputSlots,
+    inputSlotCapacities,
+    outputSlotCapacities,
+    inputTotalCapacity: inputSlotCapacities.reduce((sum, cap) => sum + cap, 0),
+    outputTotalCapacity: outputSlotCapacities.reduce((sum, cap) => sum + cap, 0),
   }
 }
 
@@ -82,7 +92,8 @@ type ItemPickerState =
   | { kind: 'pickup'; deviceInstanceId: string }
   | { kind: 'preload'; deviceInstanceId: string; slotIndex: number }
 
-function buildProcessorPreloadSlots(device: DeviceInstance, slotCount: number, inputCapacity: number): ProcessorPreloadSlot[] {
+function buildProcessorPreloadSlots(device: DeviceInstance, slotCapacities: number[]): ProcessorPreloadSlot[] {
+  const slotCount = slotCapacities.length
   const slots = Array.from({ length: slotCount }, () => ({ itemId: null, amount: 0 }) as ProcessorPreloadSlot)
   const preloadInputs = device.config.preloadInputs
   if (Array.isArray(preloadInputs) && preloadInputs.length > 0) {
@@ -92,7 +103,7 @@ function buildProcessorPreloadSlots(device: DeviceInstance, slotCount: number, i
       if (slotIndex < 0 || slotIndex >= slots.length) continue
       slots[slotIndex] = {
         itemId: entry.itemId,
-        amount: clamp(Math.floor(entry.amount ?? 0), 0, inputCapacity),
+        amount: clamp(Math.floor(entry.amount ?? 0), 0, slotCapacities[slotIndex] ?? 50),
       }
     }
     return slots
@@ -101,7 +112,7 @@ function buildProcessorPreloadSlots(device: DeviceInstance, slotCount: number, i
   if (device.config.preloadInputItemId) {
     slots[0] = {
       itemId: device.config.preloadInputItemId,
-      amount: clamp(Math.floor(device.config.preloadInputAmount ?? 0), 0, inputCapacity),
+      amount: clamp(Math.floor(device.config.preloadInputAmount ?? 0), 0, slotCapacities[0] ?? 50),
     }
   }
   return slots
@@ -1198,7 +1209,7 @@ function App() {
       : null
   const selectedPreloadSlots = useMemo(() => {
     if (!selectedDevice || DEVICE_TYPE_BY_ID[selectedDevice.typeId].runtimeKind !== 'processor' || !selectedProcessorBufferSpec) return []
-    return buildProcessorPreloadSlots(selectedDevice, selectedProcessorBufferSpec.inputSlots, selectedProcessorBufferSpec.inputCapacity)
+    return buildProcessorPreloadSlots(selectedDevice, selectedProcessorBufferSpec.inputSlotCapacities)
   }, [selectedDevice, selectedProcessorBufferSpec])
   const selectedPreloadTotal = useMemo(
     () => selectedPreloadSlots.reduce((sum, slot) => sum + Math.max(0, slot.amount), 0),
@@ -1213,7 +1224,7 @@ function App() {
   const pickerPreloadSlots = useMemo(() => {
     if (!itemPickerState || itemPickerState.kind !== 'preload' || !pickerTargetDevice) return []
     const spec = processorBufferSpec(pickerTargetDevice.typeId)
-    return buildProcessorPreloadSlots(pickerTargetDevice, spec.inputSlots, spec.inputCapacity)
+    return buildProcessorPreloadSlots(pickerTargetDevice, spec.inputSlotCapacities)
   }, [itemPickerState, pickerTargetDevice])
 
   const pickerSelectedItemId = useMemo(() => {
@@ -1284,24 +1295,21 @@ function App() {
           if (DEVICE_TYPE_BY_ID[device.typeId].runtimeKind !== 'processor') return device
 
           const spec = processorBufferSpec(device.typeId)
-          const slots = buildProcessorPreloadSlots(device, spec.inputSlots, spec.inputCapacity)
+          const slots = buildProcessorPreloadSlots(device, spec.inputSlotCapacities)
           if (slotIndex < 0 || slotIndex >= slots.length) return device
 
           const currentSlot = slots[slotIndex]
           const nextItemId = patch.itemId !== undefined ? patch.itemId : currentSlot.itemId
           const requestedAmount = patch.amount !== undefined ? patch.amount : currentSlot.amount
+          const slotCap = spec.inputSlotCapacities[slotIndex] ?? 50
           const normalizedAmount = nextItemId
-            ? clamp(Math.floor(Number.isFinite(requestedAmount) ? requestedAmount : 0), 0, spec.inputCapacity)
+            ? clamp(Math.floor(Number.isFinite(requestedAmount) ? requestedAmount : 0), 0, slotCap)
             : 0
 
           slots[slotIndex] = {
             itemId: nextItemId ?? null,
             amount: normalizedAmount,
           }
-
-          const otherTotal = slots.reduce((sum, slot, index) => (index === slotIndex ? sum : sum + Math.max(0, slot.amount)), 0)
-          const maxCurrentAmount = Math.max(0, spec.inputCapacity - otherTotal)
-          slots[slotIndex].amount = clamp(slots[slotIndex].amount, 0, maxCurrentAmount)
 
           const nextConfig = { ...device.config }
           const serialized = serializeProcessorPreloadSlots(slots)
@@ -1906,8 +1914,8 @@ function App() {
                       const progress = recipe
                         ? `${(selectedRuntime.progress01 * 100).toFixed(1)}% (${selectedRuntime.cycleProgressTicks}/${recipeCycleTicks})`
                         : `${(selectedRuntime.progress01 * 100).toFixed(1)}%`
-                      const simSeconds = sim.tick / sim.tickRateHz
-                      const avgItemsPerSecond = simSeconds > 0 ? selectedRuntime.producedItemsTotal / simSeconds : 0
+                      const lastCompletedCycleTicks = selectedRuntime.lastCompletedCycleTicks
+                      const lastCompletionIntervalTicks = selectedRuntime.lastCompletionIntervalTicks
 
                       return (
                         <>
@@ -1920,8 +1928,12 @@ function App() {
                             <span>{progress}</span>
                           </div>
                           <div className="kv">
-                            <span>{t('detail.avgProducedPerSecond')}</span>
-                            <span>{avgItemsPerSecond.toFixed(3)}</span>
+                            <span>{t('detail.lastCompletedCycleTicks')}</span>
+                            <span>{lastCompletedCycleTicks > 0 ? `${lastCompletedCycleTicks} Ticks` : '-'}</span>
+                          </div>
+                          <div className="kv">
+                            <span>{t('detail.lastCompletionIntervalTicks')}</span>
+                            <span>{lastCompletionIntervalTicks > 0 ? `${lastCompletionIntervalTicks} Ticks` : '-'}</span>
                           </div>
                         </>
                       )
@@ -1935,7 +1947,7 @@ function App() {
                           language,
                           selectedRuntime.inputBuffer,
                           selectedProcessorBufferSpec?.inputSlots ?? 1,
-                          selectedProcessorBufferSpec?.inputCapacity ?? 50,
+                          selectedProcessorBufferSpec?.inputTotalCapacity ?? 50,
                           t,
                         )}
                       </span>
@@ -1949,7 +1961,7 @@ function App() {
                           language,
                           selectedRuntime.outputBuffer,
                           selectedProcessorBufferSpec?.outputSlots ?? 1,
-                          selectedProcessorBufferSpec?.outputCapacity ?? 50,
+                          selectedProcessorBufferSpec?.outputTotalCapacity ?? 50,
                           t,
                         )}
                       </span>
@@ -2032,7 +2044,7 @@ function App() {
                   {t('detail.submitWarehouse')}
                 </label>
               )}
-              {DEVICE_TYPE_BY_ID[selectedDevice.typeId].runtimeKind === 'processor' && (
+              {DEVICE_TYPE_BY_ID[selectedDevice.typeId].runtimeKind === 'processor' && !sim.isRunning && (
                 <div className="picker">
                   <label>{t('detail.preloadInput')}</label>
                   <div className="preload-slot-list">
@@ -2069,7 +2081,7 @@ function App() {
                         <input
                           type="number"
                           min={0}
-                          max={selectedProcessorBufferSpec?.inputCapacity ?? 50}
+                          max={selectedProcessorBufferSpec?.inputSlotCapacities[slotIndex] ?? 50}
                           step={1}
                           disabled={sim.isRunning || !slot.itemId}
                           value={slot.amount}
@@ -2084,14 +2096,14 @@ function App() {
                   </div>
                   <small>
                     {t('detail.preloadInputHint', {
-                      cap: selectedProcessorBufferSpec?.inputCapacity ?? 50,
+                      cap: selectedProcessorBufferSpec?.inputTotalCapacity ?? 50,
                       slots: selectedProcessorBufferSpec?.inputSlots ?? 1,
                     })}
                   </small>
                   <small>
                     {t('detail.preloadInputTotal', {
                       total: selectedPreloadTotal,
-                      cap: selectedProcessorBufferSpec?.inputCapacity ?? 50,
+                      cap: selectedProcessorBufferSpec?.inputTotalCapacity ?? 50,
                     })}
                   </small>
                 </div>

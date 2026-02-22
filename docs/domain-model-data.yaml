@@ -88,6 +88,30 @@ conventions:
       - item_port_mix_pool_1
       - item_port_xiranite_oven_1
       - item_port_dismantler_1
+  processorBufferPolicy:
+    description: processor 缓存容量由“槽位独立上限”定义，不采用跨槽位共享总上限
+    deviceTypeFields:
+      - inputBufferSlots
+      - outputBufferSlots
+      - inputBufferSlotCapacities
+      - outputBufferSlotCapacities
+    stage1Defaults:
+      inputBufferSlots: 1
+      outputBufferSlots: 1
+      inputBufferSlotCapacities: [50]
+      outputBufferSlotCapacities: [50]
+    criticalRules:
+      - 槽位上限不共享：每个槽位独立校验容量
+      - 槽位上限可不一致：不同槽位可配置不同上限
+      - 新物品进入缓存时必须先占用空槽位
+      - 已绑定物品持续写入原槽位并受该槽位上限约束
+    editModePreloadInput:
+      configKeys:
+        - slotIndex
+        - itemId
+        - amount
+      configPath: device.config.preloadInputs[]
+      amountClampBy: inputBufferSlotCapacities[slotIndex]
 
 items:
   - id: item_originium_ore

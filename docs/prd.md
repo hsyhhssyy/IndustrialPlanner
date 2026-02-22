@@ -297,24 +297,27 @@ Stage1 当前口径：
 
 缓存与槽位（新增冻结口径）：
 
-* `inputBufferCapacity` / `outputBufferCapacity`：输入/输出缓存总容量（按件数计）
 * `inputBufferSlots` / `outputBufferSlots`：输入/输出可并存物品种类数（槽位数）
+* `inputBufferSlotCapacities` / `outputBufferSlotCapacities`：输入/输出缓存“按槽位”容量上限数组（按件数计）
 * 两类参数均为**设备类型属性**，由领域模型定义；不是运行时硬编码常量
+* 槽位容量规则：
+  * **上限不共享**：每个槽位独立校验自身容量，不存在跨槽位共享总上限
+  * **可不一致**：不同槽位可配置不同上限（例如 `[20, 50]`）
 * 当前默认配置（Stage1 当前实现口径）：所有 `processor` 设备
-  * `inputBufferCapacity = 50`
-  * `outputBufferCapacity = 50`
   * `inputBufferSlots = 1`
   * `outputBufferSlots = 1`
+  * `inputBufferSlotCapacities = [50]`
+  * `outputBufferSlotCapacities = [50]`
 
 输入端口共用 inputBuffer
 输出端口共用 outputBuffer
 
 接收规则（输入/输出缓存一致）：
 
-* 先判定总容量：写入后总件数不得超过 `*BufferCapacity`
-* 再判定槽位：
-  * 若待写入物品已在缓存中，占用槽位不增加
-  * 若待写入物品不在缓存中，则仅当“当前已占用槽位 < `*BufferSlots`”时可写入
+* 先判定槽位绑定：
+  * 若待写入物品已绑定到某槽位，则继续写入该槽位
+  * 若待写入物品尚未绑定，则仅当有空槽位时可绑定写入
+* 再判定槽位容量：写入后该物品在其绑定槽位中的数量不得超过该槽位上限
 * 当 `*BufferSlots = 1` 时：
   * 缓存为空可接收任意符合端口要求的物品
   * 缓存非空仅可接收当前缓存中的该物品
@@ -326,9 +329,9 @@ Stage1 当前口径：
 
 编辑态预置输入缓存：
 
-* 编辑模式可为任意 `processor` 设备配置“预置输入物品 + 数量”
+* 编辑模式可为任意 `processor` 设备配置“按槽位的预置输入列表”
 * 开始仿真时将预置值写入该设备 `inputBuffer`
-* 预置数量必须被夹取到 `[0, inputBufferCapacity]`
+* 每个槽位的预置数量必须被夹取到该槽位自身上限
 
 ---
 
@@ -497,7 +500,7 @@ progress01 ∈ [0,1]
 ## 9.1 仓库
 
 * 统一库存池（取货口从仓库取货，存储箱可提交到仓库）
-* 存储箱提交行为为用户可选配置，默认值为“提交”；开启后按仿真时间每 1 秒批量提交一次该存储箱内所有物品到仓库
+* 存储箱提交行为为用户可选配置，默认值为“提交”；开启后按仿真时间每 10 秒批量提交一次该存储箱内所有物品到仓库
 * pickup_port 可选择任意已定义物品（包括 `item_originium_powder`）
 * 仓库统计与地图上设备增减解耦
 * 每次进入仿真前，仓库库存重置为统一初始值：`item_originium_ore=∞`，其他物品=`0`

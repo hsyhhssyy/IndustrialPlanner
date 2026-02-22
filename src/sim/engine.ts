@@ -13,7 +13,7 @@ import type {
 const BASE_TICK_RATE = 20
 const CONVEYOR_SECONDS_PER_CELL = 2
 const PICKUP_BLOCK_WINDOW_SECONDS = CONVEYOR_SECONDS_PER_CELL
-const STORAGE_SUBMIT_INTERVAL_SECONDS = 1
+const STORAGE_SUBMIT_INTERVAL_SECONDS = 10
 const DEFAULT_PROCESSOR_BUFFER_CAPACITY = 50
 const DEFAULT_PROCESSOR_BUFFER_SLOTS = 1
 const ITEM_IDS: ItemId[] = ITEMS.map((item) => item.id)
@@ -39,6 +39,8 @@ type TransferPlan = {
   itemId: ItemId
   lane: 'slot' | 'ns' | 'we' | 'output'
 }
+
+type ProcessorBufferKind = 'input' | 'output'
 
 type NeighborGraph = ReturnType<typeof neighborsFromLinks>
 
@@ -68,12 +70,19 @@ function baseRuntime(): Pick<DeviceRuntime, 'progress01' | 'stallReason' | 'isSt
 function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
   const def = DEVICE_TYPE_BY_ID[device.typeId]
   if (def.runtimeKind === 'processor') {
+    const inputSpec = processorBufferSpec(device.typeId, 'input')
+    const outputSpec = processorBufferSpec(device.typeId, 'output')
     return {
       ...baseRuntime(),
       inputBuffer: {},
       outputBuffer: {},
+      inputSlotItems: Array.from({ length: inputSpec.slots }, () => null),
+      outputSlotItems: Array.from({ length: outputSpec.slots }, () => null),
       cycleProgressTicks: 0,
       producedItemsTotal: 0,
+      lastCompletedCycleTicks: 0,
+      lastCompletionTick: null,
+      lastCompletionIntervalTicks: 0,
       activeRecipeId: undefined,
     }
   }
@@ -127,44 +136,90 @@ function mark(output: Partial<Record<ItemId, number>>, itemId: ItemId, delta: nu
 
 function processorBufferSpec(deviceTypeId: DeviceInstance['typeId'], bufferKind: 'input' | 'output') {
   const def = DEVICE_TYPE_BY_ID[deviceTypeId]
+  const slotCapsRaw =
+    bufferKind === 'input' ? def.inputBufferSlotCapacities ?? [] : def.outputBufferSlotCapacities ?? []
+  const normalizedSlotCaps = slotCapsRaw.map((value) => Math.max(1, Math.floor(value)))
   const capacityRaw = bufferKind === 'input' ? def.inputBufferCapacity : def.outputBufferCapacity
   const slotsRaw = bufferKind === 'input' ? def.inputBufferSlots : def.outputBufferSlots
-  const capacity = Math.max(1, Math.floor(capacityRaw ?? DEFAULT_PROCESSOR_BUFFER_CAPACITY))
-  const slots = Math.max(1, Math.floor(slotsRaw ?? DEFAULT_PROCESSOR_BUFFER_SLOTS))
-  return { capacity, slots }
+  const fallbackCapacity = Math.max(1, Math.floor(capacityRaw ?? DEFAULT_PROCESSOR_BUFFER_CAPACITY))
+  const slots = Math.max(1, Math.floor(slotsRaw ?? DEFAULT_PROCESSOR_BUFFER_SLOTS), normalizedSlotCaps.length)
+  const slotCapacities = Array.from({ length: slots }, (_, index) => normalizedSlotCaps[index] ?? fallbackCapacity)
+  return {
+    slots,
+    slotCapacities,
+    totalCapacity: slotCapacities.reduce((sum, cap) => sum + cap, 0),
+  }
 }
 
-function bufferTotal(buffer: Partial<Record<ItemId, number>>) {
-  return ITEM_IDS.reduce((sum, itemId) => sum + Math.max(0, buffer[itemId] ?? 0), 0)
+function findSlotIndexByItem(slotItems: Array<ItemId | null>, itemId: ItemId) {
+  return slotItems.findIndex((slotItemId) => slotItemId === itemId)
 }
 
-function bufferUsedSlots(buffer: Partial<Record<ItemId, number>>) {
-  return ITEM_IDS.reduce((count, itemId) => count + ((buffer[itemId] ?? 0) > 0 ? 1 : 0), 0)
+function findFirstEmptySlot(slotItems: Array<ItemId | null>) {
+  return slotItems.findIndex((slotItemId) => slotItemId === null)
 }
 
-function canAcceptBufferAmount(
+function clearSlotBindingIfEmpty(
   buffer: Partial<Record<ItemId, number>>,
+  slotItems: Array<ItemId | null>,
+  itemId: ItemId,
+) {
+  if ((buffer[itemId] ?? 0) > 0) return
+  const slotIndex = findSlotIndexByItem(slotItems, itemId)
+  if (slotIndex >= 0) {
+    slotItems[slotIndex] = null
+  }
+}
+
+function canAcceptProcessorBufferAmount(
+  runtime: DeviceRuntime,
+  deviceTypeId: DeviceInstance['typeId'],
+  bufferKind: ProcessorBufferKind,
   itemId: ItemId,
   amount: number,
-  capacity: number,
-  slots: number,
 ) {
+  if (!('inputBuffer' in runtime) || !('outputBuffer' in runtime)) return false
   if (amount <= 0) return true
-  if ((buffer[itemId] ?? 0) <= 0 && bufferUsedSlots(buffer) >= slots) return false
-  return bufferTotal(buffer) + amount <= capacity
+
+  const spec = processorBufferSpec(deviceTypeId, bufferKind)
+  const buffer = bufferKind === 'input' ? runtime.inputBuffer : runtime.outputBuffer
+  const slotItems = bufferKind === 'input' ? runtime.inputSlotItems : runtime.outputSlotItems
+  const existingSlotIndex = findSlotIndexByItem(slotItems, itemId)
+  const targetSlotIndex = existingSlotIndex >= 0 ? existingSlotIndex : findFirstEmptySlot(slotItems)
+  if (targetSlotIndex < 0) return false
+
+  const slotCapacity = spec.slotCapacities[targetSlotIndex] ?? DEFAULT_PROCESSOR_BUFFER_CAPACITY
+  const nextAmount = (buffer[itemId] ?? 0) + amount
+  return nextAmount <= slotCapacity
 }
 
-function canAcceptProcessorInput(runtime: DeviceRuntime, deviceTypeId: DeviceInstance['typeId'], itemId: ItemId, amount: number) {
-  if (!('inputBuffer' in runtime)) return false
-  const spec = processorBufferSpec(deviceTypeId, 'input')
-  return canAcceptBufferAmount(runtime.inputBuffer, itemId, amount, spec.capacity, spec.slots)
+function tryAddProcessorBufferAmount(
+  runtime: DeviceRuntime,
+  deviceTypeId: DeviceInstance['typeId'],
+  bufferKind: ProcessorBufferKind,
+  itemId: ItemId,
+  amount: number,
+) {
+  if (!('inputBuffer' in runtime) || !('outputBuffer' in runtime)) return false
+  if (!canAcceptProcessorBufferAmount(runtime, deviceTypeId, bufferKind, itemId, amount)) return false
+  const buffer = bufferKind === 'input' ? runtime.inputBuffer : runtime.outputBuffer
+  const slotItems = bufferKind === 'input' ? runtime.inputSlotItems : runtime.outputSlotItems
+  let slotIndex = findSlotIndexByItem(slotItems, itemId)
+  if (slotIndex < 0) {
+    slotIndex = findFirstEmptySlot(slotItems)
+    if (slotIndex < 0) return false
+    slotItems[slotIndex] = itemId
+  }
+  buffer[itemId] = (buffer[itemId] ?? 0) + amount
+  return true
 }
 
 function tryAddProcessorInput(runtime: DeviceRuntime, deviceTypeId: DeviceInstance['typeId'], itemId: ItemId, amount: number) {
-  if (!('inputBuffer' in runtime)) return false
-  if (!canAcceptProcessorInput(runtime, deviceTypeId, itemId, amount)) return false
-  runtime.inputBuffer[itemId] = (runtime.inputBuffer[itemId] ?? 0) + amount
-  return true
+  return tryAddProcessorBufferAmount(runtime, deviceTypeId, 'input', itemId, amount)
+}
+
+function canAcceptProcessorInput(runtime: DeviceRuntime, deviceTypeId: DeviceInstance['typeId'], itemId: ItemId, amount: number) {
+  return canAcceptProcessorBufferAmount(runtime, deviceTypeId, 'input', itemId, amount)
 }
 
 function canAcceptProcessorOutputBatch(
@@ -173,21 +228,32 @@ function canAcceptProcessorOutputBatch(
   outputs: Array<{ itemId: ItemId; amount: number }>,
 ) {
   if (!('outputBuffer' in runtime)) return false
-  const spec = processorBufferSpec(deviceTypeId, 'output')
   const shadowBuffer = { ...runtime.outputBuffer }
+  const shadowSlotItems = [...runtime.outputSlotItems]
   for (const output of outputs) {
-    if (!canAcceptBufferAmount(shadowBuffer, output.itemId, output.amount, spec.capacity, spec.slots)) return false
+    const slotSpec = processorBufferSpec(deviceTypeId, 'output')
+    const existingSlotIndex = findSlotIndexByItem(shadowSlotItems, output.itemId)
+    const slotIndex = existingSlotIndex >= 0 ? existingSlotIndex : findFirstEmptySlot(shadowSlotItems)
+    if (slotIndex < 0) return false
+    const slotCapacity = slotSpec.slotCapacities[slotIndex] ?? DEFAULT_PROCESSOR_BUFFER_CAPACITY
+    if ((shadowBuffer[output.itemId] ?? 0) + output.amount > slotCapacity) return false
+    if (existingSlotIndex < 0) shadowSlotItems[slotIndex] = output.itemId
     shadowBuffer[output.itemId] = (shadowBuffer[output.itemId] ?? 0) + output.amount
   }
   return true
 }
 
-function commitProcessorOutputBatch(runtime: DeviceRuntime, outputs: Array<{ itemId: ItemId; amount: number }>) {
+function commitProcessorOutputBatch(
+  runtime: DeviceRuntime,
+  deviceTypeId: DeviceInstance['typeId'],
+  outputs: Array<{ itemId: ItemId; amount: number }>,
+) {
   if (!('outputBuffer' in runtime)) return 0
   let producedCount = 0
   for (const output of outputs) {
-    runtime.outputBuffer[output.itemId] = (runtime.outputBuffer[output.itemId] ?? 0) + output.amount
-    producedCount += output.amount
+    if (tryAddProcessorBufferAmount(runtime, deviceTypeId, 'output', output.itemId, output.amount)) {
+      producedCount += output.amount
+    }
   }
   return producedCount
 }
@@ -399,6 +465,32 @@ function preloadEntriesForDevice(device: DeviceInstance) {
   return []
 }
 
+function tryAddProcessorInputAtSlot(
+  runtime: DeviceRuntime,
+  deviceTypeId: DeviceInstance['typeId'],
+  slotIndex: number,
+  itemId: ItemId,
+  amount: number,
+) {
+  if (!('inputBuffer' in runtime)) return false
+  const spec = processorBufferSpec(deviceTypeId, 'input')
+  if (slotIndex < 0 || slotIndex >= spec.slots) return false
+  if (amount <= 0) return true
+
+  const existingSlotIndex = findSlotIndexByItem(runtime.inputSlotItems, itemId)
+  if (existingSlotIndex >= 0 && existingSlotIndex !== slotIndex) return false
+  const boundItem = runtime.inputSlotItems[slotIndex]
+  if (boundItem && boundItem !== itemId) return false
+
+  const slotCapacity = spec.slotCapacities[slotIndex] ?? DEFAULT_PROCESSOR_BUFFER_CAPACITY
+  const nextAmount = (runtime.inputBuffer[itemId] ?? 0) + amount
+  if (nextAmount > slotCapacity) return false
+
+  runtime.inputSlotItems[slotIndex] = itemId
+  runtime.inputBuffer[itemId] = nextAmount
+  return true
+}
+
 function cloneSlot(slot: SlotData | null): SlotData | null {
   if (!slot) return null
   return { ...slot }
@@ -410,6 +502,8 @@ function cloneRuntime(runtime: DeviceRuntime): DeviceRuntime {
       ...runtime,
       inputBuffer: { ...runtime.inputBuffer },
       outputBuffer: { ...runtime.outputBuffer },
+      inputSlotItems: [...runtime.inputSlotItems],
+      outputSlotItems: [...runtime.outputSlotItems],
     }
   }
 
@@ -457,7 +551,8 @@ export function createInitialSimState(): SimState {
 }
 
 export function startSimulation(layout: LayoutState, sim: SimState): SimState {
-  const minuteWindowCapacity = cycleTicksFromSeconds(60, sim.tickRateHz)
+  const tickRateHz = BASE_TICK_RATE
+  const minuteWindowCapacity = cycleTicksFromSeconds(60, tickRateHz)
   const runtimeById = resetRuntimeByLayout(layout)
   const overlaps = detectOverlaps(layout)
   const poles = layout.devices.filter((device) => device.typeId === 'item_port_power_diffuser_1')
@@ -470,7 +565,8 @@ export function startSimulation(layout: LayoutState, sim: SimState): SimState {
       for (const preload of preloadEntriesForDevice(device)) {
         const preloadAmount = Math.max(0, Math.floor(preload.amount ?? 0))
         if (!preload.itemId || preloadAmount <= 0) continue
-        tryAddProcessorInput(runtime, device.typeId, preload.itemId, Math.min(preloadAmount, inputSpec.capacity))
+        const slotCapacity = inputSpec.slotCapacities[preload.slotIndex] ?? DEFAULT_PROCESSOR_BUFFER_CAPACITY
+        tryAddProcessorInputAtSlot(runtime, device.typeId, preload.slotIndex, preload.itemId, Math.min(preloadAmount, slotCapacity))
       }
     }
     let stall: StallReason = 'NONE'
@@ -484,6 +580,7 @@ export function startSimulation(layout: LayoutState, sim: SimState): SimState {
     ...sim,
     isRunning: true,
     tick: 0,
+    tickRateHz,
     runtimeById,
     warehouse: emptyWarehouse(),
     stats: {
@@ -499,11 +596,13 @@ export function startSimulation(layout: LayoutState, sim: SimState): SimState {
 }
 
 export function stopSimulation(sim: SimState): SimState {
-  const minuteWindowCapacity = cycleTicksFromSeconds(60, sim.tickRateHz)
+  const tickRateHz = BASE_TICK_RATE
+  const minuteWindowCapacity = cycleTicksFromSeconds(60, tickRateHz)
   return {
     ...sim,
     isRunning: false,
     tick: 0,
+    tickRateHz,
     runtimeById: {},
     warehouse: createItemNumberRecord(0),
     stats: {
@@ -530,6 +629,7 @@ function consumeRecipeInputs(runtime: DeviceRuntime, recipe: (typeof RECIPES)[nu
   }
   for (const input of recipe.inputs) {
     runtime.inputBuffer[input.itemId] = Math.max(0, (runtime.inputBuffer[input.itemId] ?? 0) - input.amount)
+    clearSlotBindingIfEmpty(runtime.inputBuffer, runtime.inputSlotItems, input.itemId)
   }
   return true
 }
@@ -580,9 +680,10 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   const reservedReceivers = new Set<string>()
   const lanesClearingThisTick = new Set<string>()
   const lanesAdvancedThisTick = new Set<string>()
+  const lanesReachedHalfThisTick = new Set<string>()
 
   const warehouse = { ...sim.warehouse }
-  const totalDelta: Partial<Record<ItemId, number>> = {}
+  const processorDelta: Partial<Record<ItemId, number>> = {}
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
@@ -604,6 +705,9 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         } else {
           runtime.activeRecipeId = selectedRecipe.id
           runtime.cycleProgressTicks = 1
+            for (const input of selectedRecipe.inputs) {
+              mark(processorDelta, input.itemId, -input.amount)
+            }
           const recipeCycleTicks = cycleTicksFromSeconds(selectedRecipe.cycleSeconds, sim.tickRateHz)
           runtime.progress01 = runtime.cycleProgressTicks / recipeCycleTicks
         }
@@ -620,8 +724,16 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
             runtime.progress01 = 1
             normalizeRuntimeState(runtime, 'OUTPUT_BLOCKED')
           } else {
-            const producedThisCycle = commitProcessorOutputBatch(runtime, activeRecipe.outputs)
+            const producedThisCycle = commitProcessorOutputBatch(runtime, device.typeId, activeRecipe.outputs)
             runtime.producedItemsTotal += producedThisCycle
+            runtime.lastCompletedCycleTicks = runtime.cycleProgressTicks
+            const completionTick = sim.tick + 1
+            runtime.lastCompletionIntervalTicks =
+              runtime.lastCompletionTick === null ? 0 : Math.max(1, completionTick - runtime.lastCompletionTick)
+            runtime.lastCompletionTick = completionTick
+            for (const output of activeRecipe.outputs) {
+              mark(processorDelta, output.itemId, output.amount)
+            }
             runtime.cycleProgressTicks = 0
             runtime.progress01 = 0
             runtime.activeRecipeId = undefined
@@ -643,7 +755,6 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
           if (amount <= 0) continue
           runtime.inventory[itemId] = 0
           if (Number.isFinite(warehouse[itemId])) warehouse[itemId] += amount
-          mark(totalDelta, itemId, amount)
         }
       }
     }
@@ -651,18 +762,30 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     if ('slot' in runtime && runtime.slot) {
       const slot = runtime.slot
       if (slot.progress01 < 0.5) {
+        const beforeProgress = slot.progress01
         slot.progress01 = Math.min(0.5, slot.progress01 + conveyorSpeed)
         runtime.progress01 = slot.progress01
+        if (beforeProgress < 0.5 && slot.progress01 >= 0.5) {
+          lanesReachedHalfThisTick.add(`${device.instanceId}:slot`)
+        }
       }
     }
 
     if ('nsSlot' in runtime && runtime.nsSlot && runtime.nsSlot.progress01 < 0.5) {
+      const beforeProgress = runtime.nsSlot.progress01
       runtime.nsSlot.progress01 = Math.min(0.5, runtime.nsSlot.progress01 + conveyorSpeed)
       runtime.progress01 = runtime.nsSlot.progress01
+      if (beforeProgress < 0.5 && runtime.nsSlot.progress01 >= 0.5) {
+        lanesReachedHalfThisTick.add(`${device.instanceId}:ns`)
+      }
     }
     if ('weSlot' in runtime && runtime.weSlot && runtime.weSlot.progress01 < 0.5) {
+      const beforeProgress = runtime.weSlot.progress01
       runtime.weSlot.progress01 = Math.min(0.5, runtime.weSlot.progress01 + conveyorSpeed)
       runtime.progress01 = runtime.weSlot.progress01
+      if (beforeProgress < 0.5 && runtime.weSlot.progress01 >= 0.5) {
+        lanesReachedHalfThisTick.add(`${device.instanceId}:we`)
+      }
     }
   }
 
@@ -686,6 +809,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
         const fromLane = sourceSlotLane(device, runtime, link.from.portId)
         const laneAdvanceKey = `${device.instanceId}:${fromLane}`
+        if (lanesReachedHalfThisTick.has(laneAdvanceKey)) continue
         if (!lanesAdvancedThisTick.has(laneAdvanceKey)) {
           const beforeSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
           const beforeProgress = beforeSlot?.progress01 ?? null
@@ -770,12 +894,12 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     if (fromDevice.typeId === 'item_port_unloader_1') {
       if (Number.isFinite(warehouse[plan.itemId])) {
         warehouse[plan.itemId] = Math.max(0, warehouse[plan.itemId] - 1)
-        mark(totalDelta, plan.itemId, -1)
       }
     } else {
       if (plan.fromLane === 'output') {
         if ('outputBuffer' in fromRuntime) {
           fromRuntime.outputBuffer[plan.itemId] = Math.max(0, (fromRuntime.outputBuffer[plan.itemId] ?? 0) - 1)
+          clearSlotBindingIfEmpty(fromRuntime.outputBuffer, fromRuntime.outputSlotItems, plan.itemId)
         } else if ('inventory' in fromRuntime) {
           fromRuntime.inventory[plan.itemId] = Math.max(0, (fromRuntime.inventory[plan.itemId] ?? 0) - 1)
         }
@@ -801,29 +925,25 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   const simSeconds = nextTick / sim.tickRateHz
   const minuteWindow = ensureMinuteWindow(sim, perMinuteWindowTicks)
   const minuteWindowDeltas = minuteWindow.buffer
-  const producedPerMinute = minuteWindow.producedPerMinute
-  const consumedPerMinute = minuteWindow.consumedPerMinute
-  const writeIndex = minuteWindow.cursor
+  const writeIndex = sim.tick % perMinuteWindowTicks
 
-  if (minuteWindow.count >= perMinuteWindowTicks) {
-    const expired = minuteWindowDeltas[writeIndex] ?? createWindowDelta()
+  const nextDelta = createWindowDelta(processorDelta)
+  minuteWindowDeltas[writeIndex] = nextDelta
+
+  const nextMinuteWindowCursor = nextTick % perMinuteWindowTicks
+  const nextMinuteWindowCount = Math.min(sim.tick + 1, perMinuteWindowTicks)
+
+  const producedPerMinute = emptyPerMinuteRecord()
+  const consumedPerMinute = emptyPerMinuteRecord()
+  const slotsToSum = nextMinuteWindowCount
+  for (let index = 0; index < slotsToSum; index += 1) {
+    const deltaRecord = minuteWindowDeltas[index] ?? createWindowDelta()
     for (const itemId of ITEM_IDS) {
-      const delta = expired[itemId] ?? 0
-      if (delta > 0) producedPerMinute[itemId] = Math.max(0, producedPerMinute[itemId] - delta)
-      else if (delta < 0) consumedPerMinute[itemId] = Math.max(0, consumedPerMinute[itemId] - Math.abs(delta))
+      const delta = deltaRecord[itemId] ?? 0
+      if (delta > 0) producedPerMinute[itemId] += delta
+      else if (delta < 0) consumedPerMinute[itemId] += Math.abs(delta)
     }
   }
-
-  const nextDelta = createWindowDelta(totalDelta)
-  minuteWindowDeltas[writeIndex] = nextDelta
-  for (const itemId of ITEM_IDS) {
-    const delta = nextDelta[itemId] ?? 0
-    if (delta > 0) producedPerMinute[itemId] += delta
-    else if (delta < 0) consumedPerMinute[itemId] += Math.abs(delta)
-  }
-
-  const nextMinuteWindowCursor = (writeIndex + 1) % perMinuteWindowTicks
-  const nextMinuteWindowCount = Math.min(minuteWindow.count + 1, perMinuteWindowTicks)
 
   const nextStats = {
     simSeconds,

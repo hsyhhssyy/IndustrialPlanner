@@ -105,6 +105,8 @@ export interface DeviceTypeDef {
   outputBufferCapacity?: number
   inputBufferSlots?: number
   outputBufferSlots?: number
+  inputBufferSlotCapacities?: number[]
+  outputBufferSlotCapacities?: number[]
   placementConstraints?: PlacementConstraint[]
   ports0: PortDef[]
 }
@@ -203,8 +205,13 @@ export interface BaseRuntime {
 export interface ProcessorRuntime extends BaseRuntime {
   inputBuffer: Partial<Record<ItemId, number>>
   outputBuffer: Partial<Record<ItemId, number>>
+  inputSlotItems: Array<ItemId | null>
+  outputSlotItems: Array<ItemId | null>
   cycleProgressTicks: number
   producedItemsTotal: number
+  lastCompletedCycleTicks: number
+  lastCompletionTick: number | null
+  lastCompletionIntervalTicks: number
   activeRecipeId?: string
 }
 
