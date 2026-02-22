@@ -34,6 +34,7 @@ import { usePersistentState } from './hooks/usePersistentState'
 import { createTranslator, getDeviceLabel, getItemLabel, getModeLabel, LANGUAGE_OPTIONS, type Language } from './i18n'
 import { dialogAlertNonBlocking, dialogConfirm, dialogPrompt } from './ui/dialog'
 import { showToast } from './ui/toast'
+import { WikiPanel } from './ui/wikiPanel'
 import {
   createInitialSimState,
   initialStorageConfig,
@@ -711,6 +712,7 @@ function App() {
   const [selectedBlueprintId, setSelectedBlueprintId] = useState<string | null>(null)
   const [clipboardBlueprint, setClipboardBlueprint] = useState<BlueprintSnapshot | null>(null)
   const [blueprintPlacementRotation, setBlueprintPlacementRotation] = useState<Rotation>(0)
+  const [isWikiOpen, setIsWikiOpen] = useState(false)
 
   const layout = useMemo(() => normalizeLayoutForBase(layoutsByBase[activeBaseId], activeBaseId), [layoutsByBase, activeBaseId])
   const setLayout = useCallback(
@@ -1298,6 +1300,15 @@ function App() {
     placeType,
     t,
   ])
+
+  useEffect(() => {
+    if (!isWikiOpen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsWikiOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isWikiOpen])
 
   useEffect(() => {
     const viewport = viewportRef.current
@@ -2187,6 +2198,7 @@ function App() {
               ))}
             </select>
           </label>
+          <button onClick={() => setIsWikiOpen(true)}>{t('top.wiki')}</button>
         </div>
         <div className="topbar-controls">
           <span className="hint hint-dynamic">{uiHint}</span>
@@ -2971,6 +2983,8 @@ function App() {
           </div>
         </div>
       )}
+
+      {isWikiOpen && <WikiPanel language={language} t={t} onClose={() => setIsWikiOpen(false)} />}
     </div>
   )
 }

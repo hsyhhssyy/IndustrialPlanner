@@ -791,6 +791,328 @@ button:disabled {
   max-width: min(88vw, 860px);
 }
 
+.wiki-dialog {
+  width: 80vw;
+  height: 80vh;
+  min-width: 80vw;
+  min-height: 80vh;
+  max-width: 80vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wiki-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wiki-dialog-body {
+  margin-top: 8px;
+  flex: 1;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.wiki-dialog-body.is-help {
+  overflow: auto;
+}
+
+.wiki-dialog-body.is-split {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.wiki-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.wiki-primary-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 6px 0;
+  background: #1b222d;
+}
+
+.wiki-tab-btn {
+  border: 1px solid #35516f;
+  border-radius: 6px;
+  background: #223247;
+  color: #e5ebf3;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.wiki-tab-btn.active {
+  border-color: #4f7bc4;
+  background: #395c93;
+}
+
+.wiki-split-layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.wiki-list-pane,
+.wiki-content-pane {
+  border: 1px solid #2f3a4a;
+  border-radius: 8px;
+  background: #1b222d;
+  padding: 10px 12px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.wiki-entry-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: auto;
+}
+
+.wiki-content-pane {
+  overflow: auto;
+}
+
+.wiki-entry-btn {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #35516f;
+  border-radius: 6px;
+  background: #223247;
+  color: #e5ebf3;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.wiki-entry-main {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-direction: row;
+  gap: 6px;
+  min-width: 0;
+}
+
+.wiki-entry-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex: 0 0 30px;
+  background: transparent;
+}
+
+.wiki-entry-btn.active {
+  border-color: #4f7bc4;
+  background: #395c93;
+}
+
+.wiki-recipe-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  justify-content: stretch;
+}
+
+.wiki-recipe-card {
+  border: 1px solid #2f3a4a;
+  border-radius: 6px;
+  background: #223247;
+  padding: 8px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.wiki-recipe-machine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+  color: #d7e1ee;
+  margin-bottom: 6px;
+}
+
+.wiki-recipe-machine-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.wiki-recipe-cycle {
+  margin-left: auto;
+  color: #a7b0bf;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.wiki-recipe-flow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.wiki-recipe-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.wiki-recipe-chip-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wiki-item-main {
+  width: 6em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid #35516f;
+  text-align: center;
+}
+
+.wiki-item-name {
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wiki-item-icon {
+  width: 60px;
+  height: 60px;
+  flex: 0 0 60px;
+}
+
+.wiki-item-qty {
+  align-self: center;
+  font-size: 24px;
+  color: #b2bfd2;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.wiki-recipe-arrow {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #b2bfd2;
+  font-weight: 600;
+}
+
+.wiki-recipe-arrow-line {
+  flex: 0 0 2ch;
+  height: 1px;
+  background: #4f7bc4;
+}
+
+.wiki-recipe-arrow-drawn {
+  width: 2.2ch;
+  height: 8px;
+  display: inline-block;
+  overflow: visible;
+}
+
+.wiki-recipe-arrow-drawn line,
+.wiki-recipe-arrow-drawn path {
+  stroke: #4f7bc4;
+  fill: #4f7bc4;
+}
+
+.wiki-recipe-arrow-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid #35516f;
+  border-radius: 999px;
+  background: #1b283a;
+  color: #e5ebf3;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.wiki-section-subtitle {
+  margin: 10px 0 6px;
+  font-size: 13px;
+  color: #b2bfd2;
+  font-weight: 600;
+}
+
+.wiki-empty-text {
+  color: #a7b0bf;
+  font-size: 13px;
+}
+
+@media (max-width: 980px), (max-height: 760px) {
+  .wiki-split-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(180px, 36%) 1fr;
+  }
+}
+
+@media (min-width: 1500px) {
+  .wiki-recipe-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+
+  .wiki-recipe-card {
+    max-width: calc(50% - 4px);
+  }
+}
+
+.wiki-section {
+  border: 1px solid #2f3a4a;
+  border-radius: 8px;
+  background: #1b222d;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.wiki-section h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: #e5ebf3;
+}
+
+.wiki-section ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #b2bfd2;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .pickup-item-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(92px, 108px));

@@ -587,6 +587,66 @@ export const RECIPES: RecipeDef[] = [
     outputs: [{ itemId: 'item_equip_script_4', amount: 1 }],
   },
   {
+    id: 'r_filling_bottled_food_1_from_glass_bottle_and_moss_powder_2_basic',
+    machineType: 'item_port_filling_pd_mc_1',
+    cycleSeconds: 10,
+    inputs: [
+      { itemId: 'item_glass_bottle', amount: 5 },
+      { itemId: 'item_plant_moss_powder_2', amount: 5 },
+    ],
+    outputs: [{ itemId: 'item_bottled_food_1', amount: 1 }],
+  },
+  {
+    id: 'r_filling_bottled_food_2_from_iron_bottle_and_moss_powder_2_basic',
+    machineType: 'item_port_filling_pd_mc_1',
+    cycleSeconds: 10,
+    inputs: [
+      { itemId: 'item_iron_bottle', amount: 10 },
+      { itemId: 'item_plant_moss_powder_2', amount: 10 },
+    ],
+    outputs: [{ itemId: 'item_bottled_food_2', amount: 1 }],
+  },
+  {
+    id: 'r_filling_bottled_food_3_from_iron_enr_bottle_and_moss_enr_powder_2_basic',
+    machineType: 'item_port_filling_pd_mc_1',
+    cycleSeconds: 10,
+    inputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 10 },
+      { itemId: 'item_plant_moss_enr_powder_2', amount: 10 },
+    ],
+    outputs: [{ itemId: 'item_bottled_food_3', amount: 1 }],
+  },
+  {
+    id: 'r_filling_bottled_rec_hp_1_from_glass_bottle_and_moss_powder_1_basic',
+    machineType: 'item_port_filling_pd_mc_1',
+    cycleSeconds: 10,
+    inputs: [
+      { itemId: 'item_glass_bottle', amount: 5 },
+      { itemId: 'item_plant_moss_powder_1', amount: 5 },
+    ],
+    outputs: [{ itemId: 'item_bottled_rec_hp_1', amount: 1 }],
+  },
+  {
+    id: 'r_filling_bottled_rec_hp_2_from_iron_bottle_and_moss_powder_1_basic',
+    machineType: 'item_port_filling_pd_mc_1',
+    cycleSeconds: 10,
+    inputs: [
+      { itemId: 'item_iron_bottle', amount: 10 },
+      { itemId: 'item_plant_moss_powder_1', amount: 10 },
+    ],
+    outputs: [{ itemId: 'item_bottled_rec_hp_2', amount: 1 }],
+  },
+  {
+    id: 'r_filling_bottled_rec_hp_3_from_iron_enr_bottle_and_moss_enr_powder_1_basic',
+    machineType: 'item_port_filling_pd_mc_1',
+    cycleSeconds: 10,
+    inputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 10 },
+      { itemId: 'item_plant_moss_enr_powder_1', amount: 10 },
+    ],
+    outputs: [{ itemId: 'item_bottled_rec_hp_3', amount: 1 }],
+  },
+  {
     id: 'r_shaper_iron_bottle_from_iron_nugget_basic',
     machineType: 'item_port_shaper_1',
     cycleSeconds: 2,
