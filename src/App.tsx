@@ -785,9 +785,12 @@ function App() {
 
   const gridRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
+  const layoutRef = useRef(layout)
+  const simStateRef = useRef(sim)
   const simRafRef = useRef<number | null>(null)
   const simAccumulatorMsRef = useRef(0)
   const simLastFrameMsRef = useRef(0)
+  const simUiLastCommitMsRef = useRef(0)
   const tickRateSampleRef = useRef<{ tick: number; ms: number } | null>(null)
   const simTickRef = useRef(0)
   const unknownDevicePromptKeyRef = useRef<string>('')
@@ -798,6 +801,18 @@ function App() {
   const occupancyMap = useMemo(() => buildOccupancyMap(layout), [layout])
   const cellDeviceMap = useMemo(() => cellToDeviceId(layout), [layout])
   const t = useMemo(() => createTranslator(language), [language])
+
+  const updateSim = useCallback((updater: (current: SimState) => SimState) => {
+    const next = updater(simStateRef.current)
+    simStateRef.current = next
+    simTickRef.current = next.tick
+    setSim(next)
+    return next
+  }, [])
+
+  useEffect(() => {
+    layoutRef.current = layout
+  }, [layout])
 
   const saveSelectionAsBlueprint = useCallback(async () => {
     const selectedIdSet = new Set(selection)
@@ -1124,10 +1139,12 @@ function App() {
 
     simAccumulatorMsRef.current = 0
     simLastFrameMsRef.current = 0
+    simUiLastCommitMsRef.current = 0
     if (!sim.isRunning) return
 
     const maxTicksPerFrame = 8
     const stepMs = 1000 / (sim.tickRateHz * sim.speed)
+    const uiCommitIntervalMs = 120
 
     const onFrame = (nowMs: number) => {
       if (simLastFrameMsRef.current === 0) {
@@ -1143,13 +1160,17 @@ function App() {
 
       if (ticksToRun > 0) {
         simAccumulatorMsRef.current -= ticksToRun * stepMs
-        setSim((current) => {
-          let next = current
-          for (let i = 0; i < ticksToRun; i += 1) {
-            next = tickSimulation(layout, next)
-          }
-          return next
-        })
+        let next = simStateRef.current
+        for (let i = 0; i < ticksToRun; i += 1) {
+          next = tickSimulation(layoutRef.current, next)
+        }
+        simStateRef.current = next
+        simTickRef.current = next.tick
+
+        if (simUiLastCommitMsRef.current === 0 || nowMs - simUiLastCommitMsRef.current >= uiCommitIntervalMs) {
+          simUiLastCommitMsRef.current = nowMs
+          setSim(next)
+        }
       }
 
       simRafRef.current = window.requestAnimationFrame(onFrame)
@@ -1164,12 +1185,9 @@ function App() {
       }
       simAccumulatorMsRef.current = 0
       simLastFrameMsRef.current = 0
+      simUiLastCommitMsRef.current = 0
     }
-  }, [layout, sim.isRunning, sim.speed, sim.tickRateHz])
-
-  useEffect(() => {
-    simTickRef.current = sim.tick
-  }, [sim.tick])
+  }, [sim.isRunning, sim.speed, sim.tickRateHz])
 
   useEffect(() => {
     if (!sim.isRunning) {
@@ -2257,19 +2275,19 @@ function App() {
                   })
                   return
                 }
-                setSim((current) => startSimulation(layout, current))
+                updateSim((current) => startSimulation(layout, current))
               }}
             >
               {t('top.start')}
             </button>
           ) : (
-            <button onClick={() => setSim((current) => stopSimulation(current))}>{t('top.stop')}</button>
+            <button onClick={() => updateSim((current) => stopSimulation(current))}>{t('top.stop')}</button>
           )}
           {[0, 0.25, 1, 2, 4, 16].map((speed) => (
             <button
               key={speed}
               className={sim.speed === speed ? 'active' : ''}
-              onClick={() => setSim((current) => ({ ...current, speed: speed as 0 | 0.25 | 1 | 2 | 4 | 16 }))}
+              onClick={() => updateSim((current) => ({ ...current, speed: speed as 0 | 0.25 | 1 | 2 | 4 | 16 }))}
             >
               {speed === 0 ? t('top.pauseSpeed') : `${speed}x`}
             </button>
@@ -2527,8 +2545,7 @@ function App() {
                   invalidSelectionSet={dragInvalidSelection}
                   previewOriginsById={dragPreviewOriginsById}
                   language={language}
-                  showRuntimeItemIcons={sim.isRunning}
-                  runtimeById={sim.runtimeById}
+                  showRuntimeItemIcons={false}
                 />
 
                 {mode === 'place' && placeOperation === 'belt' && logisticsPreviewDevices.length > 0 && (

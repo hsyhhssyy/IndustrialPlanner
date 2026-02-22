@@ -86,6 +86,35 @@ npm run build
 npm run preview
 ```
 
+## 部署到 GitHub Pages
+
+本项目已内置 GitHub Actions 工作流，会在推送到 `main` / `master` / `v2` 分支时自动构建并部署到 GitHub Pages。
+
+### 1) 仓库设置
+
+在 GitHub 仓库中依次打开：
+
+- `Settings -> Pages`
+- `Build and deployment -> Source` 选择 `GitHub Actions`
+
+### 2) 自定义域名
+
+仓库已提供 `public/CNAME`，目标域名为：
+
+- `endfield.anonymous-test.top`
+
+发布后在 `Settings -> Pages` 中确认 `Custom domain` 显示该域名，并建议开启 `Enforce HTTPS`。
+
+### 3) DNS 配置（你的域名服务商处）
+
+为 `endfield.anonymous-test.top` 添加 `CNAME` 记录：
+
+- Host/Name: `endfield`
+- Type: `CNAME`
+- Value/Target: `hsyhhssyy.github.io`
+
+生效后可直接通过该域名访问页面。
+
 ## 操作方式（代码核对版）
 
 1. 进入放置模式，先使用“选择操作”确认你可以正常选中与移动设备。
