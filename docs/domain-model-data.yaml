@@ -956,6 +956,94 @@ recipes:
     outputs:
       - itemId: item_proc_battery_3
         amount: 1
+  - id: r_packaging_bomb_from_glass_cmpt_and_bbflower_powder_basic
+    machineType: item_port_tools_asm_mc_1
+    cycleSeconds: 10
+    inputs:
+      - itemId: item_glass_cmpt
+        amount: 5
+      - itemId: item_plant_bbflower_powder_1
+        amount: 1
+    outputs:
+      - itemId: item_proc_bomb_1
+        amount: 1
+  - id: r_packaging_battery_1_from_glass_cmpt_and_originium_powder_basic
+    machineType: item_port_tools_asm_mc_1
+    cycleSeconds: 10
+    inputs:
+      - itemId: item_glass_cmpt
+        amount: 5
+      - itemId: item_originium_powder
+        amount: 10
+    outputs:
+      - itemId: item_proc_battery_1
+        amount: 1
+  - id: r_packaging_battery_2_from_iron_cmpt_and_originium_powder_basic
+    machineType: item_port_tools_asm_mc_1
+    cycleSeconds: 10
+    inputs:
+      - itemId: item_iron_cmpt
+        amount: 10
+      - itemId: item_originium_powder
+        amount: 15
+    outputs:
+      - itemId: item_proc_battery_2
+        amount: 1
+  - id: r_packaging_battery_4_from_xiranite_and_originium_enr_powder_basic
+    machineType: item_port_tools_asm_mc_1
+    cycleSeconds: 10
+    inputs:
+      - itemId: item_xiranite_powder
+        amount: 5
+      - itemId: item_originium_enr_powder
+        amount: 15
+    outputs:
+      - itemId: item_proc_battery_4
+        amount: 1
+  - id: r_winder_equip_script_1_from_crystal_shell_and_quartz_glass_basic
+    machineType: item_port_winder_1
+    cycleSeconds: 10
+    inputs:
+      - itemId: item_crystal_shell
+        amount: 5
+      - itemId: item_quartz_glass
+        amount: 5
+    outputs:
+      - itemId: item_equip_script_1
+        amount: 1
+  - id: r_winder_equip_script_2_from_crystal_shell_and_iron_nugget_basic
+    machineType: item_port_winder_1
+    cycleSeconds: 10
+    inputs:
+      - itemId: item_crystal_shell
+        amount: 10
+      - itemId: item_iron_nugget
+        amount: 10
+    outputs:
+      - itemId: item_equip_script_2
+        amount: 1
+  - id: r_winder_equip_script_3_from_crystal_enr_and_quartz_enr_basic
+    machineType: item_port_winder_1
+    cycleSeconds: 10
+    inputs:
+      - itemId: item_crystal_enr
+        amount: 10
+      - itemId: item_quartz_enr
+        amount: 10
+    outputs:
+      - itemId: item_equip_script_3
+        amount: 1
+  - id: r_winder_equip_script_4_from_crystal_enr_and_xiranite_powder_basic
+    machineType: item_port_winder_1
+    cycleSeconds: 10
+    inputs:
+      - itemId: item_crystal_enr
+        amount: 10
+      - itemId: item_xiranite_powder
+        amount: 10
+    outputs:
+      - itemId: item_equip_script_4
+        amount: 1
   - id: r_shaper_iron_bottle_from_iron_nugget_basic
     machineType: item_port_shaper_1
     cycleSeconds: 2
