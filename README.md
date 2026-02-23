@@ -127,7 +127,7 @@ npm run preview
 ## 目录结构
 
 ```text
-docs/                需求、架构、仿真规则、UI规范与开发指引
+.docs/               需求、架构、仿真规则、UI规范与开发指引
 public/              静态资源（设备图标、物品图标、贴图）
 src/domain/          领域模型、几何与物流规则、注册表
 src/sim/             仿真引擎（Tick / Plan / Commit）
@@ -137,16 +137,16 @@ src/i18n.ts          中英文本与标签映射
 
 ## 领域数据与扩展约定
 
-- 统一数据源文档：`docs/domain-model-data.yaml`
+- 统一数据源文档：`.docs/domain-model-data.yaml`
 - 新增物品时：同步更新领域模型与注册表，保证 `id` 唯一
 - 新增配方时：至少补齐 `machineType`、`inputs`、`outputs`、`cycleSeconds`
 - 若配方引用了未定义物品，必须先补物品定义
 
 ## 设计与规则文档
 
-- 产品规格：`docs/prd.md`
-- UI 规范：`docs/ui-design-spec.md`
-- Stage1 指南：`docs/stage1/README.md`
+- 产品规格：`.docs/prd.md`
+- UI 规范：`.docs/ui-design-spec.md`
+- Stage1 指南：`.docs/stage1/README.md`
 
 ## 开发注意事项
 

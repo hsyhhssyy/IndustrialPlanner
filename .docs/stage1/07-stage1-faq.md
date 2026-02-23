@@ -62,7 +62,7 @@ Stage1 当前口径：仅 `item_port_grinder_1` 的 `requiresPower=true`，其�
 
 ## Q9：2x2 供电桩的 12x12 覆盖边界如何理解？
 
-以主规范为准：`docs/domain-model-data.yaml` 的 `powerModel`（含 `discreteEvaluation`）是唯一权威定义。
+以主规范为准：`.docs/domain-model-data.yaml` 的 `powerModel`（含 `discreteEvaluation`）是唯一权威定义。
 
 其几何语义为：以供电桩为中心构造一个 `12x12` 的正方形供电区域，供电桩 `2x2` 本体位于该区域几何中心；目标建筑任意占格落入该区域即判定有电。
 
@@ -72,7 +72,7 @@ Stage1 当前口径：仅 `item_port_grinder_1` 的 `requiresPower=true`，其�
 - 供电桩本体占据 `(x,y)~(x+1,y+1)`。
 - 等价离散判定区间：`x:[x-5,x+6]`、`y:[y-5,y+6]`（含边界）。
 
-若 FAQ 与主规范文字不一致，统一以 `docs/domain-model-data.yaml` 为准。
+若 FAQ 与主规范文字不一致，统一以 `.docs/domain-model-data.yaml` 为准。
 
 ## Q10：Bridge 的槽位模型是什么？
 

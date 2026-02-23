@@ -133,7 +133,7 @@
 
 ## 8. 项目级领域数据源
 
-项目统一领域数据定义请以 [docs/domain-model-data.yaml](../domain-model-data.yaml) 为准。
+项目统一领域数据定义请以 [.docs/domain-model-data.yaml](../domain-model-data.yaml) 为准。
 
 - Stage1 文档负责说明实现原则与边界。
 - 项目级数据文件负责承载可直接编码消费的设备/端口/规则数据。

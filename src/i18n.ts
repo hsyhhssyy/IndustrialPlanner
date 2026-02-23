@@ -11,6 +11,10 @@ const MESSAGES: Record<Language, Record<string, string>> = {
   'zh-CN': {
     'app.title': '终末地工业系统仿真器',
     'app.language': '语言',
+    'app.info.copyright': '© {year} 集成工业仿真',
+    'app.info.icp': '京ICP备2022033983号-2',
+    'app.info.github': 'GitHub 仓库',
+    'app.info.disclaimer': '明日方舟：终末地是鹰角网络的商标。本工具与鹰角网络无关，未获其认可。图片和数据资源来自明日方舟：终末地游戏数据，版权归鹰角网络所有。',
     'top.start': '开始仿真',
     'top.stop': '退出仿真',
     'top.wiki': '打开合成百科',
@@ -160,6 +164,10 @@ const MESSAGES: Record<Language, Record<string, string>> = {
   'en-US': {
     'app.title': 'Endfield Industrial System Simulator',
     'app.language': 'Language',
+    'app.info.copyright': '© {year} Integrated Industry Simulator',
+    'app.info.icp': '京ICP备2022033983号-2',
+    'app.info.github': 'GitHub Repository',
+    'app.info.disclaimer': 'Arknights: Endfield is a trademark of Hypergryph. This tool is not affiliated with or endorsed by Hypergryph. Images and data resources come from Arknights: Endfield game data, and copyright belongs to Hypergryph.',
     'top.start': 'Start Simulation',
     'top.stop': 'Exit Simulation',
     'top.wiki': 'Open Craft Wiki',

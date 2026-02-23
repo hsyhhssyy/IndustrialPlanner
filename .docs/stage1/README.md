@@ -1,6 +1,6 @@
 # Stage1 开发指导文档集
 
-本目录将 `docs/prd.md` 与 `docs/ui-design-spec.md` 的冻结要求，整理为可执行的 Stage1 开发指引。
+本目录将 `.docs/prd.md` 与 `.docs/ui-design-spec.md` 的冻结要求，整理为可执行的 Stage1 开发指引。
 
 ## 文档导航
 
@@ -28,5 +28,5 @@
 
 ## 参考来源
 
-- 产品需求：`docs/prd.md`
-- UI 规范：`docs/ui-design-spec.md`
+- 产品需求：`.docs/prd.md`
+- UI 规范：`.docs/ui-design-spec.md`
