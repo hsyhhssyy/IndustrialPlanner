@@ -88,16 +88,50 @@ npm run preview
 
 ## 部署到 GitHub Pages
 
-本项目已内置 GitHub Actions 工作流，会在推送到 `main` / `master` / `v2` 分支时自动构建并部署到 GitHub Pages。
+本项目已内置 GitHub Actions 工作流：
 
-### 1) 仓库设置
+- 仅在 **发布 GitHub Release** 时自动构建并部署到 GitHub Pages
+- 也支持在 Actions 页手动触发（`workflow_dispatch`）
+
+对应工作流文件：`.github/workflows/deploy-pages.yml`
+
+### 1) 发布版本（触发 Pages 部署）
+
+#### 方式 A（推荐）：GitHub 网页手动发布
+
+1. 打开仓库 `Releases` 页面
+2. 点击 `Draft a new release`
+3. 选择或创建版本标签（如 `v1.2.0`）
+4. 填写标题与说明后点击 `Publish release`
+
+发布完成后会自动触发 Pages 部署。
+
+#### 方式 B（可选）：命令行发布
+
+```bash
+# 示例：发布 v1.2.0（会创建并发布 Release，从而触发 Pages）
+gh release create v1.2.0 \
+	--target v2 \
+	--title "v1.2.0" \
+	--notes "Release v1.2.0"
+```
+
+可选：先做一次构建校验再发布。
+
+```bash
+npm run build && gh release create v1.2.0 --target v2 --title "v1.2.0" --notes "Release v1.2.0"
+```
+
+> 若仅使用网页手动发布，可忽略命令行方式，无需安装 `gh`。
+
+### 2) 仓库设置
 
 在 GitHub 仓库中依次打开：
 
 - `Settings -> Pages`
 - `Build and deployment -> Source` 选择 `GitHub Actions`
 
-### 2) 自定义域名
+### 3) 自定义域名
 
 仓库已提供 `public/CNAME`，目标域名为：
 
@@ -105,7 +139,7 @@ npm run preview
 
 发布后在 `Settings -> Pages` 中确认 `Custom domain` 显示该域名，并建议开启 `Enforce HTTPS`。
 
-### 3) DNS 配置（你的域名服务商处）
+### 4) DNS 配置（你的域名服务商处）
 
 为 `endfield.anonymous-test.top` 添加 `CNAME` 记录：
 
