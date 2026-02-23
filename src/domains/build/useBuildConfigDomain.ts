@@ -1,0 +1,112 @@
+import { useCallback } from 'react'
+import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
+import type { DeviceInstance, ItemId, LayoutState, PreloadInputConfigEntry } from '../../domain/types'
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value))
+}
+
+type ProcessorPreloadSlot = { itemId: ItemId | null; amount: number }
+
+type UseBuildConfigDomainParams = {
+  setLayout: (updater: LayoutState | ((current: LayoutState) => LayoutState)) => void
+  isOreItemId: (itemId: ItemId | undefined) => boolean
+  processorBufferSpec: (typeId: DeviceInstance['typeId']) => { inputSlotCapacities: number[] }
+  buildProcessorPreloadSlots: (device: DeviceInstance, slotCapacities: number[]) => ProcessorPreloadSlot[]
+  serializeProcessorPreloadSlots: (slots: ProcessorPreloadSlot[]) => PreloadInputConfigEntry[]
+}
+
+export function useBuildConfigDomain({
+  setLayout,
+  isOreItemId,
+  processorBufferSpec,
+  buildProcessorPreloadSlots,
+  serializeProcessorPreloadSlots,
+}: UseBuildConfigDomainParams) {
+  const updatePickupItem = useCallback(
+    (deviceInstanceId: string, pickupItemId: ItemId | undefined) => {
+      setLayout((current) => ({
+        ...current,
+        devices: current.devices.map((device) =>
+          device.instanceId === deviceInstanceId
+            ? (() => {
+                const nextConfig = { ...device.config, pickupItemId }
+                if (!pickupItemId) {
+                  delete nextConfig.pickupIgnoreInventory
+                } else if (isOreItemId(pickupItemId)) {
+                  nextConfig.pickupIgnoreInventory = true
+                }
+                return { ...device, config: nextConfig }
+              })()
+            : device,
+        ),
+      }))
+    },
+    [isOreItemId, setLayout],
+  )
+
+  const updatePickupIgnoreInventory = useCallback(
+    (deviceInstanceId: string, enabled: boolean) => {
+      setLayout((current) => ({
+        ...current,
+        devices: current.devices.map((device) => {
+          if (device.instanceId !== deviceInstanceId || device.typeId !== 'item_port_unloader_1') return device
+          const pickupItemId = device.config.pickupItemId
+          if (!pickupItemId) return { ...device, config: { ...device.config, pickupIgnoreInventory: false } }
+          return {
+            ...device,
+            config: {
+              ...device.config,
+              pickupIgnoreInventory: isOreItemId(pickupItemId) ? true : enabled,
+            },
+          }
+        }),
+      }))
+    },
+    [isOreItemId, setLayout],
+  )
+
+  const updateProcessorPreloadSlot = useCallback(
+    (deviceInstanceId: string, slotIndex: number, patch: { itemId?: ItemId | null; amount?: number }) => {
+      setLayout((current) => ({
+        ...current,
+        devices: current.devices.map((device) => {
+          if (device.instanceId !== deviceInstanceId) return device
+          if (DEVICE_TYPE_BY_ID[device.typeId].runtimeKind !== 'processor') return device
+
+          const spec = processorBufferSpec(device.typeId)
+          const slots = buildProcessorPreloadSlots(device, spec.inputSlotCapacities)
+          if (slotIndex < 0 || slotIndex >= slots.length) return device
+
+          const currentSlot = slots[slotIndex]
+          const nextItemId = patch.itemId !== undefined ? patch.itemId : currentSlot.itemId
+          const requestedAmount = patch.amount !== undefined ? patch.amount : currentSlot.amount
+          const slotCap = spec.inputSlotCapacities[slotIndex] ?? 50
+          const normalizedAmount = nextItemId
+            ? clamp(Math.floor(Number.isFinite(requestedAmount) ? requestedAmount : 0), 0, slotCap)
+            : 0
+
+          slots[slotIndex] = {
+            itemId: nextItemId ?? null,
+            amount: normalizedAmount,
+          }
+
+          const nextConfig = { ...device.config }
+          const serialized = serializeProcessorPreloadSlots(slots)
+          if (serialized.length > 0) nextConfig.preloadInputs = serialized
+          else delete nextConfig.preloadInputs
+          delete nextConfig.preloadInputItemId
+          delete nextConfig.preloadInputAmount
+          return { ...device, config: nextConfig }
+        }),
+      }))
+    },
+    [buildProcessorPreloadSlots, processorBufferSpec, serializeProcessorPreloadSlots, setLayout],
+  )
+
+  return {
+    updatePickupItem,
+    updatePickupIgnoreInventory,
+    updateProcessorPreloadSlot,
+  }
+}

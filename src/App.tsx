@@ -1,21 +1,16 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { BASE_BY_ID, BASES, DEVICE_TYPE_BY_ID, ITEMS, PLACEABLE_TYPES, RECIPES } from './domain/registry'
+import { BASE_BY_ID, DEVICE_TYPE_BY_ID, ITEMS, PLACEABLE_TYPES, RECIPES } from './domain/registry'
 import { getDeviceSpritePath } from './domain/deviceSprites'
-import { applyLogisticsPath, deleteConnectedBelts, longestValidLogisticsPrefix, nextId, pathFromTrace } from './domain/logistics'
 import {
   buildOccupancyMap,
   cellToDeviceId,
   EDGE_ANGLE,
   getDeviceById,
-  getFootprintCells,
   getRotatedPorts,
-  includesCell,
   isWithinLot,
-  linksFromLayout,
   OPPOSITE_EDGE,
 } from './domain/geometry'
-import { validatePlacementConstraints } from './domain/placement'
 import type {
   BaseId,
   DeviceInstance,
@@ -27,22 +22,35 @@ import type {
   LayoutState,
   PreloadInputConfigEntry,
   Rotation,
-  SimState,
   SlotData,
 } from './domain/types'
 import { usePersistentState } from './hooks/usePersistentState'
-import { createTranslator, getDeviceLabel, getItemLabel, getModeLabel, LANGUAGE_OPTIONS, type Language } from './i18n'
-import { dialogAlertNonBlocking, dialogConfirm, dialogPrompt } from './ui/dialog'
-import { showToast } from './ui/toast'
+import { createTranslator, getDeviceLabel, getItemLabel, type Language } from './i18n'
+import { dialogAlertNonBlocking, dialogConfirm } from './ui/dialog'
 import { WikiPanel } from './ui/wikiPanel.tsx'
 import { PlannerPanel } from './ui/plannerPanel.tsx'
+import { LeftPanel } from './ui/panels/LeftPanel'
+import { CenterPanel } from './ui/panels/CenterPanel'
+import { RightPanel } from './ui/panels/RightPanel'
+import { TopBar } from './ui/TopBar'
+import { SiteInfoBar } from './ui/SiteInfoBar'
+import { ItemPickerDialog } from './ui/dialogs/ItemPickerDialog'
+import { WorldContent } from './ui/world/WorldContent'
+import { useKnowledgeDomain } from './domains/knowledge/useKnowledgeDomain'
+import { useSimulationDomain } from './domains/simulation/useSimulationDomain'
+import { useObservabilityDomain } from './domains/observability/useObservabilityDomain'
+import { PLACE_GROUP_LABEL_KEY, PLACE_GROUP_ORDER, getPlaceGroup, useBuildDomainActions } from './domains/build/useBuildDomain'
+import { useBuildInteractionDomain } from './domains/build/useBuildInteractionDomain'
+import { useBuildPreviewDomain } from './domains/build/useBuildPreviewDomain'
+import { useBuildConfigDomain } from './domains/build/useBuildConfigDomain'
+import { useBuildHotkeysDomain } from './domains/build/useBuildHotkeysDomain'
+import { useBlueprintDomain } from './domains/blueprint/useBlueprintDomain'
+import { useBlueprintHotkeysDomain } from './domains/blueprint/useBlueprintHotkeysDomain'
 import {
-  createInitialSimState,
   initialStorageConfig,
   runtimeLabel,
   startSimulation,
   stopSimulation,
-  tickSimulation,
 } from './sim/engine'
 
 function clamp(value: number, min: number, max: number) {
@@ -141,37 +149,6 @@ type ItemPickerState =
   | { kind: 'pickup'; deviceInstanceId: string }
   | { kind: 'preload'; deviceInstanceId: string; slotIndex: number }
 
-type BlueprintDeviceSnapshot = {
-  typeId: DeviceTypeId
-  rotation: Rotation
-  origin: { x: number; y: number }
-  config: DeviceInstance['config']
-}
-
-type BlueprintSnapshot = {
-  id: string
-  name: string
-  createdAt: string
-  baseId: BaseId
-  devices: BlueprintDeviceSnapshot[]
-}
-
-type BlueprintPlacementPreview = {
-  devices: DeviceInstance[]
-  isValid: boolean
-  invalidMessageKey: string | null
-}
-
-type BlueprintLocalRect = {
-  typeId: DeviceTypeId
-  rotation: Rotation
-  config: DeviceInstance['config']
-  x: number
-  y: number
-  width: number
-  height: number
-}
-
 function buildProcessorPreloadSlots(device: DeviceInstance, slotCapacities: number[]): ProcessorPreloadSlot[] {
   const slotCount = slotCapacities.length
   const slots = Array.from({ length: slotCount }, () => ({ itemId: null, amount: 0 }) as ProcessorPreloadSlot)
@@ -212,63 +189,6 @@ function serializeProcessorPreloadSlots(slots: ProcessorPreloadSlot[]): PreloadI
   )
 }
 
-function cloneDeviceConfig(config: DeviceInstance['config']): DeviceInstance['config'] {
-  return JSON.parse(JSON.stringify(config ?? {})) as DeviceInstance['config']
-}
-
-function rotateBlueprintRects(rects: BlueprintLocalRect[], rotation: Rotation) {
-  if (rects.length === 0) return rects
-
-  const bounds = rects.reduce(
-    (acc, rect) => ({
-      minX: Math.min(acc.minX, rect.x),
-      minY: Math.min(acc.minY, rect.y),
-      maxX: Math.max(acc.maxX, rect.x + rect.width),
-      maxY: Math.max(acc.maxY, rect.y + rect.height),
-    }),
-    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
-  )
-
-  const normalized = rects.map((rect) => ({
-    ...rect,
-    x: rect.x - bounds.minX,
-    y: rect.y - bounds.minY,
-  }))
-
-  const width = bounds.maxX - bounds.minX
-  const height = bounds.maxY - bounds.minY
-
-  if (rotation === 0) return normalized
-
-  if (rotation === 90) {
-    return normalized.map((rect) => ({
-      ...rect,
-      x: height - (rect.y + rect.height),
-      y: rect.x,
-      width: rect.height,
-      height: rect.width,
-      rotation: ((rect.rotation + 90) % 360) as Rotation,
-    }))
-  }
-
-  if (rotation === 180) {
-    return normalized.map((rect) => ({
-      ...rect,
-      x: width - (rect.x + rect.width),
-      y: height - (rect.y + rect.height),
-      rotation: ((rect.rotation + 180) % 360) as Rotation,
-    }))
-  }
-
-  return normalized.map((rect) => ({
-    ...rect,
-    x: rect.y,
-    y: width - (rect.x + rect.width),
-    width: rect.height,
-    height: rect.width,
-    rotation: ((rect.rotation + 270) % 360) as Rotation,
-  }))
-}
 
 function formatInputBufferAmounts(
   language: Language,
@@ -374,71 +294,6 @@ function getZoomStep(cellSize: number) {
   return 30
 }
 
-type PlaceGroupKey =
-  | 'logistics'
-  | 'resource'
-  | 'storage'
-  | 'basic_production'
-  | 'advanced_manufacturing'
-  | 'power'
-  | 'functional'
-  | 'combat_support'
-
-const PLACE_GROUP_ORDER: PlaceGroupKey[] = [
-  'logistics',
-  'resource',
-  'storage',
-  'basic_production',
-  'advanced_manufacturing',
-  'power',
-  'functional',
-  'combat_support',
-]
-
-const PLACE_GROUP_LABEL_KEY: Record<PlaceGroupKey, string> = {
-  logistics: 'left.group.logistics',
-  resource: 'left.group.resource',
-  storage: 'left.group.storage',
-  basic_production: 'left.group.basicProduction',
-  advanced_manufacturing: 'left.group.advancedManufacturing',
-  power: 'left.group.power',
-  functional: 'left.group.functional',
-  combat_support: 'left.group.combatSupport',
-}
-
-function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
-  if (typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector') return 'logistics'
-  if (typeId === 'item_port_unloader_1') return 'storage'
-  if (
-    typeId === 'item_port_storager_1' ||
-    typeId === 'item_port_log_hongs_bus_source' ||
-    typeId === 'item_port_log_hongs_bus' ||
-    typeId === 'item_port_liquid_storager_1'
-  )
-    return 'storage'
-  if (
-    typeId === 'item_port_grinder_1' ||
-    typeId === 'item_port_furnance_1' ||
-    typeId === 'item_port_cmpt_mc_1' ||
-    typeId === 'item_port_shaper_1' ||
-    typeId === 'item_port_seedcol_1' ||
-    typeId === 'item_port_planter_1'
-  )
-    return 'basic_production'
-  if (
-    typeId === 'item_port_winder_1' ||
-    typeId === 'item_port_filling_pd_mc_1' ||
-    typeId === 'item_port_tools_asm_mc_1' ||
-    typeId === 'item_port_thickener_1' ||
-    typeId === 'item_port_mix_pool_1' ||
-    typeId === 'item_port_xiranite_oven_1' ||
-    typeId === 'item_port_dismantler_1'
-  )
-    return 'advanced_manufacturing'
-  if (typeId === 'item_port_power_diffuser_1' || typeId === 'item_port_power_sta_1') return 'power'
-  return 'functional'
-}
-
 function cycleTicksFromSeconds(cycleSeconds: number, tickRateHz: number) {
   return Math.max(1, Math.round(cycleSeconds * tickRateHz))
 }
@@ -454,7 +309,6 @@ const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'i
 const HIDDEN_CHEVRON_DEVICE_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
 const OUT_OF_LOT_TOAST_KEY = 'toast.outOfLot'
 const FALLBACK_PLACEMENT_TOAST_KEY = 'toast.invalidPlacementFallback'
-const MANUAL_LOGISTICS_JUNCTION_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
 const ORE_ITEM_TAG = '矿石'
 const ORE_ITEM_ID_SET = new Set<ItemId>(ITEMS.filter((item) => item.tags?.includes(ORE_ITEM_TAG)).map((item) => item.id))
 
@@ -762,9 +616,7 @@ function App() {
   const [leftPanelWidth, setLeftPanelWidth] = usePersistentState<number>('stage1-left-panel-width', 340)
   const [rightPanelWidth, setRightPanelWidth] = usePersistentState<number>('stage1-right-panel-width', 340)
   const [cellSize, setCellSize] = usePersistentState<number>('stage1-cell-size', 64)
-  const [blueprints, setBlueprints] = usePersistentState<BlueprintSnapshot[]>('stage1-blueprints', [])
   const [selection, setSelection] = useState<string[]>([])
-  const [sim, setSim] = useState<SimState>(() => createInitialSimState())
   const [logStart, setLogStart] = useState<{ x: number; y: number } | null>(null)
   const [logCurrent, setLogCurrent] = useState<{ x: number; y: number } | null>(null)
   const [logTrace, setLogTrace] = useState<Array<{ x: number; y: number }>>([])
@@ -779,17 +631,7 @@ function App() {
   const [dragOrigin, setDragOrigin] = useState<{ x: number; y: number } | null>(null)
   const [placeOperation, setPlaceOperation] = useState<'default' | 'belt'>('default')
   const [viewOffset, setViewOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
-  const [isPanning, setIsPanning] = useState(false)
-  const [panStart, setPanStart] = useState<{ clientX: number; clientY: number; offsetX: number; offsetY: number } | null>(null)
-  const [measuredTickRate, setMeasuredTickRate] = useState(0)
   const [itemPickerState, setItemPickerState] = useState<ItemPickerState | null>(null)
-  const [selectedBlueprintId, setSelectedBlueprintId] = useState<string | null>(null)
-  const [clipboardBlueprint, setClipboardBlueprint] = useState<BlueprintSnapshot | null>(null)
-  const [blueprintPlacementRotation, setBlueprintPlacementRotation] = useState<Rotation>(0)
-  const [isWikiOpen, setIsWikiOpen] = useState(false)
-  const [isPlannerOpen, setIsPlannerOpen] = useState(false)
-  const [showAllStatsRows, setShowAllStatsRows] = useState(false)
-  const [statsTableMaxHeight, setStatsTableMaxHeight] = useState<number | null>(null)
 
   const layout = useMemo(() => normalizeLayoutForBase(layoutsByBase[activeBaseId], activeBaseId), [layoutsByBase, activeBaseId])
   const setLayout = useCallback(
@@ -811,10 +653,6 @@ function App() {
   const currentBase = BASE_BY_ID[currentBaseId]
   const foundationDevices = currentBase.foundationBuildings
   const foundationIdSet = new Set(foundationDevices.map((device) => device.instanceId))
-  const baseGroups = [
-    { key: 'valley4', titleKey: 'right.baseGroup.valley4', tag: '四号谷地' },
-    { key: 'wuling', titleKey: 'right.baseGroup.wuling', tag: '武陵' },
-  ] as const
   const zoomScale = cellSize / BASE_CELL_SIZE
   const canvasWidthCells = layout.lotSize + currentBase.outerRing.left + currentBase.outerRing.right
   const canvasHeightCells = layout.lotSize + currentBase.outerRing.top + currentBase.outerRing.bottom
@@ -825,19 +663,14 @@ function App() {
 
   const gridRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
-  const statsTableRef = useRef<HTMLTableElement | null>(null)
   const layoutRef = useRef(layout)
-  const simStateRef = useRef(sim)
-  const simRafRef = useRef<number | null>(null)
-  const simAccumulatorMsRef = useRef(0)
-  const simLastFrameMsRef = useRef(0)
-  const simUiLastCommitMsRef = useRef(0)
-  const tickRateSampleRef = useRef<{ tick: number; ms: number } | null>(null)
-  const simTickRef = useRef(0)
   const unknownDevicePromptKeyRef = useRef<string>('')
   const legacyLayoutMigratedRef = useRef(false)
   const deleteBoxConfirmingRef = useRef(false)
   const resizeStateRef = useRef<null | { side: 'left' | 'right'; startX: number; startWidth: number }>(null)
+
+  const { isWikiOpen, setIsWikiOpen, isPlannerOpen, setIsPlannerOpen } = useKnowledgeDomain()
+  const { sim, updateSim, measuredTickRate } = useSimulationDomain({ layoutRef })
 
   const occupancyMap = useMemo(() => buildOccupancyMap(layout), [layout])
   const cellDeviceMap = useMemo(() => cellToDeviceId(layout), [layout])
@@ -846,6 +679,13 @@ function App() {
     () => PLACEABLE_TYPES.filter((deviceType) => !deviceType.tags?.includes('武陵') || currentBase.tags.includes('武陵')),
     [currentBase],
   )
+  const { handleDeleteAll, handleDeleteAllBelts, handleClearLot } = useBuildDomainActions({
+    simIsRunning: sim.isRunning,
+    t,
+    foundationIdSet,
+    setLayout,
+    setSelection,
+  })
 
   useEffect(() => {
     if (!placeType) return
@@ -855,157 +695,29 @@ function App() {
     }
   }, [placeType, setPlaceType, visiblePlaceableTypes])
 
-  const updateSim = useCallback((updater: (current: SimState) => SimState) => {
-    const next = updater(simStateRef.current)
-    simStateRef.current = next
-    simTickRef.current = next.tick
-    setSim(next)
-    return next
-  }, [])
-
   useEffect(() => {
     layoutRef.current = layout
   }, [layout])
-
-  const saveSelectionAsBlueprint = useCallback(async () => {
-    const selectedIdSet = new Set(selection)
-    const selectedDevices = layout.devices.filter(
-      (device) => selectedIdSet.has(device.instanceId) && !foundationIdSet.has(device.instanceId),
-    )
-
-    if (selectedDevices.length === 0) {
-      showToast(t('toast.blueprintNoSelection'), { variant: 'warning' })
-      return
-    }
-
-    const minX = Math.min(...selectedDevices.map((device) => device.origin.x))
-    const minY = Math.min(...selectedDevices.map((device) => device.origin.y))
-    const createdAt = new Date().toISOString()
-    const defaultName = `BP-${createdAt.slice(0, 19).replace('T', ' ')}`
-    const inputName = await dialogPrompt(t('dialog.blueprintNamePrompt'), defaultName, {
-      title: t('left.blueprintSubMode'),
-      confirmText: t('dialog.ok'),
-      cancelText: t('dialog.cancel'),
-      variant: 'info',
-    })
-    if (inputName === null) return
-    const name = inputName.trim()
-    if (!name) {
-      showToast(t('toast.blueprintNameRequired'), { variant: 'warning' })
-      return
-    }
-    const snapshot: BlueprintSnapshot = {
-      id: `bp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      name,
-      createdAt,
-      baseId: activeBaseId,
-      devices: selectedDevices.map((device) => ({
-        typeId: device.typeId,
-        rotation: device.rotation,
-        origin: { x: device.origin.x - minX, y: device.origin.y - minY },
-        config: cloneDeviceConfig(device.config),
-      })),
-    }
-
-    try {
-      setBlueprints((current) => [snapshot, ...current].slice(0, 100))
-      showToast(t('toast.blueprintSaved', { name, count: snapshot.devices.length }))
-    } catch {
-      showToast(t('toast.blueprintSaveFailed'), { variant: 'error' })
-    }
-  }, [activeBaseId, foundationIdSet, layout.devices, selection, setBlueprints, t])
-
-  const selectedBlueprint = useMemo(() => {
-    if (!selectedBlueprintId) return null
-    return blueprints.find((blueprint) => blueprint.id === selectedBlueprintId) ?? null
-  }, [blueprints, selectedBlueprintId])
-
-  const activePlacementBlueprint = useMemo(() => {
-    if (clipboardBlueprint) return clipboardBlueprint
-    if (mode === 'blueprint') return selectedBlueprint
-    return null
-  }, [clipboardBlueprint, mode, selectedBlueprint])
-
-  const buildBlueprintPlacementPreview = useCallback(
-    (
-      snapshot: BlueprintSnapshot | null,
-      anchorCell: { x: number; y: number },
-      placementRotation: Rotation,
-    ): BlueprintPlacementPreview | null => {
-      if (!snapshot || snapshot.devices.length === 0) return null
-
-      const baseRects: BlueprintLocalRect[] = snapshot.devices.map((entry) => {
-        const size = rotatedFootprintSize(DEVICE_TYPE_BY_ID[entry.typeId].size, entry.rotation)
-        return {
-          typeId: entry.typeId,
-          rotation: entry.rotation,
-          config: entry.config,
-          x: entry.origin.x,
-          y: entry.origin.y,
-          width: size.width,
-          height: size.height,
-        }
-      })
-
-      const rotatedRects = rotateBlueprintRects(baseRects, placementRotation)
-      const rotatedBounds = rotatedRects.reduce(
-        (acc, rect) => ({
-          minX: Math.min(acc.minX, rect.x),
-          minY: Math.min(acc.minY, rect.y),
-          maxX: Math.max(acc.maxX, rect.x + rect.width),
-          maxY: Math.max(acc.maxY, rect.y + rect.height),
-        }),
-        { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
-      )
-      const blueprintWidth = rotatedBounds.maxX - rotatedBounds.minX
-      const blueprintHeight = rotatedBounds.maxY - rotatedBounds.minY
-      const topLeftX = Math.round(anchorCell.x + 0.5 - blueprintWidth / 2)
-      const topLeftY = Math.round(anchorCell.y + 0.5 - blueprintHeight / 2)
-
-      const previewDevices: DeviceInstance[] = rotatedRects.map((entry, index) => ({
-        instanceId: `blueprint-preview-${index}`,
-        typeId: entry.typeId,
-        origin: {
-          x: topLeftX + entry.x,
-          y: topLeftY + entry.y,
-        },
-        rotation: entry.rotation,
-        config: cloneDeviceConfig(entry.config),
-      }))
-
-      const invalidOutOfLot = previewDevices.some((device) => !isWithinLot(device, layout.lotSize))
-      if (invalidOutOfLot) {
-        return {
-          devices: previewDevices,
-          isValid: false,
-          invalidMessageKey: OUT_OF_LOT_TOAST_KEY,
-        }
-      }
-
-      const previewLayout: LayoutState = {
-        ...layout,
-        devices: [...layout.devices, ...previewDevices],
-      }
-      const invalidConstraint = previewDevices
-        .map((device) => validatePlacementConstraints(previewLayout, device))
-        .find((result) => !result.isValid)
-
-      if (invalidConstraint && !invalidConstraint.isValid) {
-        return {
-          devices: previewDevices,
-          isValid: false,
-          invalidMessageKey: invalidConstraint.messageKey ?? FALLBACK_PLACEMENT_TOAST_KEY,
-        }
-      }
-
-      return {
-        devices: previewDevices,
-        isValid: true,
-        invalidMessageKey: null,
-      }
-    },
-    [layout],
-  )
+  const {
+    blueprints,
+    selectedBlueprintId,
+    setSelectedBlueprintId,
+    clipboardBlueprint,
+    setClipboardBlueprint,
+    blueprintPlacementRotation,
+    setBlueprintPlacementRotation,
+    activePlacementBlueprint,
+    saveSelectionAsBlueprint,
+    buildBlueprintPlacementPreview,
+    cloneDeviceConfig,
+  } = useBlueprintDomain({
+    activeBaseId,
+    mode,
+    layout,
+    selection,
+    foundationIdSet,
+    t,
+  })
 
   useEffect(() => {
     if (blueprints.length === 0) {
@@ -1184,268 +896,32 @@ function App() {
     }
   }, [unknownDevices, setLayout, t])
 
-  useEffect(() => {
-    if (simRafRef.current !== null) {
-      window.cancelAnimationFrame(simRafRef.current)
-      simRafRef.current = null
-    }
-
-    simAccumulatorMsRef.current = 0
-    simLastFrameMsRef.current = 0
-    simUiLastCommitMsRef.current = 0
-    if (!sim.isRunning) return
-
-    const maxTicksPerFrame = 8
-    const stepMs = 1000 / (sim.tickRateHz * sim.speed)
-    const effectiveTickRate = sim.tickRateHz * sim.speed
-    const targetUiFps = clamp(effectiveTickRate, 5, 30)
-    const uiCommitIntervalMs = 1000 / targetUiFps
-
-    const onFrame = (nowMs: number) => {
-      if (simLastFrameMsRef.current === 0) {
-        simLastFrameMsRef.current = nowMs
-      }
-
-      const deltaMs = nowMs - simLastFrameMsRef.current
-      simLastFrameMsRef.current = nowMs
-      simAccumulatorMsRef.current += Math.max(0, deltaMs)
-
-      const dueTicks = Math.floor(simAccumulatorMsRef.current / stepMs)
-      const ticksToRun = Math.min(maxTicksPerFrame, dueTicks)
-
-      if (ticksToRun > 0) {
-        simAccumulatorMsRef.current -= ticksToRun * stepMs
-        let next = simStateRef.current
-        for (let i = 0; i < ticksToRun; i += 1) {
-          next = tickSimulation(layoutRef.current, next)
-        }
-        simStateRef.current = next
-        simTickRef.current = next.tick
-
-        if (simUiLastCommitMsRef.current === 0 || nowMs - simUiLastCommitMsRef.current >= uiCommitIntervalMs) {
-          simUiLastCommitMsRef.current = nowMs
-          setSim(next)
-        }
-      }
-
-      simRafRef.current = window.requestAnimationFrame(onFrame)
-    }
-
-    simRafRef.current = window.requestAnimationFrame(onFrame)
-
-    return () => {
-      if (simRafRef.current !== null) {
-        window.cancelAnimationFrame(simRafRef.current)
-        simRafRef.current = null
-      }
-      simAccumulatorMsRef.current = 0
-      simLastFrameMsRef.current = 0
-      simUiLastCommitMsRef.current = 0
-    }
-  }, [sim.isRunning, sim.speed, sim.tickRateHz])
-
-  useEffect(() => {
-    const autoPauseSimulation = () => {
-      updateSim((current) => {
-        if (!current.isRunning || current.speed === 0) return current
-        return { ...current, speed: 0 }
-      })
-    }
-
-    const onVisibilityChange = () => {
-      if (document.hidden) {
-        autoPauseSimulation()
-      }
-    }
-
-    const onWindowBlur = () => {
-      autoPauseSimulation()
-    }
-
-    document.addEventListener('visibilitychange', onVisibilityChange)
-    window.addEventListener('blur', onWindowBlur)
-
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibilityChange)
-      window.removeEventListener('blur', onWindowBlur)
-    }
-  }, [updateSim])
-
-  useEffect(() => {
-    if (!sim.isRunning) {
-      setMeasuredTickRate(0)
-      tickRateSampleRef.current = null
-      return
-    }
-
-    tickRateSampleRef.current = { tick: simTickRef.current, ms: performance.now() }
-    const timer = window.setInterval(() => {
-      const prev = tickRateSampleRef.current
-      if (!prev) {
-        tickRateSampleRef.current = { tick: simTickRef.current, ms: performance.now() }
-        return
-      }
-      const nowMs = performance.now()
-      const currentTick = simTickRef.current
-      const deltaTick = currentTick - prev.tick
-      const deltaSec = (nowMs - prev.ms) / 1000
-      if (deltaSec > 0) setMeasuredTickRate(deltaTick / deltaSec)
-      tickRateSampleRef.current = { tick: currentTick, ms: nowMs }
-    }, 1000)
-
-    return () => window.clearInterval(timer)
-  }, [sim.isRunning])
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (sim.isRunning) return
-      const target = event.target as HTMLElement | null
-      const isTypingTarget =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        Boolean(target?.isContentEditable)
-      if (isTypingTarget) return
-
-      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'c') {
-        if (selection.length < 2) {
-          showToast(t('toast.blueprintCopyNeedsMultiSelect'), { variant: 'warning' })
-          return
-        }
-        event.preventDefault()
-        const selectedIdSet = new Set(selection)
-        const selectedDevices = layout.devices.filter(
-          (device) => selectedIdSet.has(device.instanceId) && !foundationIdSet.has(device.instanceId),
-        )
-        if (selectedDevices.length < 2) {
-          showToast(t('toast.blueprintCopyNeedsMultiSelect'), { variant: 'warning' })
-          return
-        }
-
-        const minX = Math.min(...selectedDevices.map((device) => device.origin.x))
-        const minY = Math.min(...selectedDevices.map((device) => device.origin.y))
-        const createdAt = new Date().toISOString()
-        const tempSnapshot: BlueprintSnapshot = {
-          id: `clipboard_${Date.now()}`,
-          name: 'clipboard',
-          createdAt,
-          baseId: activeBaseId,
-          devices: selectedDevices.map((device) => ({
-            typeId: device.typeId,
-            rotation: device.rotation,
-            origin: { x: device.origin.x - minX, y: device.origin.y - minY },
-            config: cloneDeviceConfig(device.config),
-          })),
-        }
-        setClipboardBlueprint(tempSnapshot)
-        setBlueprintPlacementRotation(0)
-        showToast(t('toast.blueprintClipboardReady', { count: tempSnapshot.devices.length }))
-        return
-      }
-
-      if (event.key.toLowerCase() !== 'r') return
-      event.preventDefault()
-      if (activePlacementBlueprint) {
-        setBlueprintPlacementRotation((current) => ((current + 90) % 360) as Rotation)
-        return
-      }
-      if (mode === 'place' && placeType) {
-        setPlaceRotation((current) => ((current + 90) % 360) as Rotation)
-        return
-      }
-      if (selection.length === 0) return
-
-      const selectedRotatable = layout.devices.filter(
-        (device) => selection.includes(device.instanceId) && !foundationIdSet.has(device.instanceId),
-      )
-      if (selectedRotatable.length === 0) return
-
-      const selectedBounds = selectedRotatable.reduce(
-        (acc, device) => {
-          const type = DEVICE_TYPE_BY_ID[device.typeId]
-          const size = rotatedFootprintSize(type.size, device.rotation)
-          const right = device.origin.x + size.width
-          const bottom = device.origin.y + size.height
-          return {
-            minX: Math.min(acc.minX, device.origin.x),
-            minY: Math.min(acc.minY, device.origin.y),
-            maxX: Math.max(acc.maxX, right),
-            maxY: Math.max(acc.maxY, bottom),
-          }
-        },
-        { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
-      )
-
-      const centerX = (selectedBounds.minX + selectedBounds.maxX) / 2
-      const centerY = (selectedBounds.minY + selectedBounds.maxY) / 2
-
-      const rotatedById = new Map<string, DeviceInstance>()
-      for (const device of selectedRotatable) {
-        const currentSize = rotatedFootprintSize(DEVICE_TYPE_BY_ID[device.typeId].size, device.rotation)
-        const currentCenterX = device.origin.x + currentSize.width / 2
-        const currentCenterY = device.origin.y + currentSize.height / 2
-        const nextCenterX = centerX - (currentCenterY - centerY)
-        const nextCenterY = centerY + (currentCenterX - centerX)
-        const nextRotation = ((device.rotation + 90) % 360) as Rotation
-        const nextSize = rotatedFootprintSize(DEVICE_TYPE_BY_ID[device.typeId].size, nextRotation)
-        const nextOrigin = {
-          x: Math.round(nextCenterX - nextSize.width / 2),
-          y: Math.round(nextCenterY - nextSize.height / 2),
-        }
-        rotatedById.set(device.instanceId, {
-          ...device,
-          rotation: nextRotation,
-          origin: nextOrigin,
-        })
-      }
-
-      const nextLayout: LayoutState = {
-        ...layout,
-        devices: layout.devices.map((device) => rotatedById.get(device.instanceId) ?? device),
-      }
-
-      const outOfLotDevice = Array.from(rotatedById.values()).find((device) => !isWithinLot(device, nextLayout.lotSize))
-      if (outOfLotDevice) {
-        showToast(t(OUT_OF_LOT_TOAST_KEY), { variant: 'warning' })
-        return
-      }
-
-      const constraintFailure = Array.from(rotatedById.values())
-        .map((device) => validatePlacementConstraints(nextLayout, device))
-        .find((result) => !result.isValid)
-      if (constraintFailure && !constraintFailure.isValid) {
-        showToast(t(constraintFailure.messageKey ?? FALLBACK_PLACEMENT_TOAST_KEY), { variant: 'warning' })
-        return
-      }
-
-      setLayout(nextLayout)
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [
+  useBlueprintHotkeysDomain({
+    simIsRunning: sim.isRunning,
     activeBaseId,
     activePlacementBlueprint,
-    blueprintPlacementRotation,
-    foundationIdSet,
-    mode,
     layout,
     selection,
-    setLayout,
-    setBlueprintPlacementRotation,
+    foundationIdSet,
+    cloneDeviceConfig,
     setClipboardBlueprint,
-    sim.isRunning,
-    setPlaceRotation,
-    placeType,
+    setBlueprintPlacementRotation,
     t,
-  ])
+  })
 
-  useEffect(() => {
-    if (!isWikiOpen) return
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsWikiOpen(false)
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [isWikiOpen])
+  useBuildHotkeysDomain({
+    simIsRunning: sim.isRunning,
+    mode,
+    placeType,
+    setPlaceRotation,
+    selection,
+    layout,
+    foundationIdSet,
+    setLayout,
+    outOfLotToastKey: OUT_OF_LOT_TOAST_KEY,
+    fallbackPlacementToastKey: FALLBACK_PLACEMENT_TOAST_KEY,
+    t,
+  })
 
   useEffect(() => {
     const viewport = viewportRef.current
@@ -1460,495 +936,6 @@ function App() {
       ),
     )
   }, [canvasHeightPx, canvasWidthPx, zoomScale])
-
-  const toRawCell = (clientX: number, clientY: number) => {
-    const viewportRect = viewportRef.current?.getBoundingClientRect()
-    if (!viewportRect) return null
-    const scaledCellSize = BASE_CELL_SIZE * zoomScale
-    const rawX = Math.floor((clientX - viewportRect.left - viewOffset.x) / scaledCellSize)
-    const rawY = Math.floor((clientY - viewportRect.top - viewOffset.y) / scaledCellSize)
-    const x = rawX - currentBase.outerRing.left
-    const y = rawY - currentBase.outerRing.top
-    return { x, y }
-  }
-
-  const toCell = (clientX: number, clientY: number) => {
-    const rawCell = toRawCell(clientX, clientY)
-    if (!rawCell) return null
-    if (rawCell.x < 0 || rawCell.y < 0 || rawCell.x >= layout.lotSize || rawCell.y >= layout.lotSize) return null
-    return rawCell
-  }
-
-  const toPlaceOrigin = (cell: { x: number; y: number }, typeId: DeviceTypeId, rotation: Rotation) => {
-    const type = DEVICE_TYPE_BY_ID[typeId]
-    const footprint = rotatedFootprintSize(type.size, rotation)
-    return {
-      x: Math.floor(cell.x + 0.5 - footprint.width / 2),
-      y: Math.floor(cell.y + 0.5 - footprint.height / 2),
-    }
-  }
-
-  const placeDevice = (cell: { x: number; y: number }) => {
-    if (!placeType) return false
-    const origin = toPlaceOrigin(cell, placeType, placeRotation)
-    const instance: DeviceInstance = {
-      instanceId: nextId(placeType),
-      typeId: placeType,
-      origin,
-      rotation: placeRotation,
-      config: initialStorageConfig(placeType),
-    }
-    if (!isWithinLot(instance, layout.lotSize)) {
-      showToast(t(OUT_OF_LOT_TOAST_KEY), { variant: 'warning' })
-      return false
-    }
-    const validation = validatePlacementConstraints(layout, instance)
-    if (!validation.isValid) {
-      showToast(t(validation.messageKey ?? FALLBACK_PLACEMENT_TOAST_KEY), { variant: 'warning' })
-      return false
-    }
-    setLayout((current) => {
-      if (!MANUAL_LOGISTICS_JUNCTION_TYPES.has(instance.typeId)) {
-        return { ...current, devices: [...current.devices, instance] }
-      }
-
-      const footprint = getFootprintCells(instance)
-      if (footprint.length === 0) {
-        return { ...current, devices: [...current.devices, instance] }
-      }
-
-      const replacedBeltIds = new Set<string>()
-      for (const device of current.devices) {
-        if (!device.typeId.startsWith('belt_')) continue
-        if (footprint.some((cellPos) => includesCell(device, cellPos.x, cellPos.y))) {
-          replacedBeltIds.add(device.instanceId)
-        }
-      }
-
-      return {
-        ...current,
-        devices: [...current.devices.filter((device) => !replacedBeltIds.has(device.instanceId)), instance],
-      }
-    })
-    return true
-  }
-
-  const onCanvasMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (event.button === 1) {
-      event.preventDefault()
-      if (mode === 'place' && placeOperation === 'belt') {
-        setLogStart(null)
-        setLogCurrent(null)
-        setLogTrace([])
-      }
-      setIsPanning(true)
-      setPanStart({ clientX: event.clientX, clientY: event.clientY, offsetX: viewOffset.x, offsetY: viewOffset.y })
-      return
-    }
-
-    if (event.button === 2) {
-      event.preventDefault()
-      if (!sim.isRunning && clipboardBlueprint) {
-        setClipboardBlueprint(null)
-        setBlueprintPlacementRotation(0)
-        showToast(t('toast.blueprintClipboardCancelled'))
-        return
-      }
-      if (!sim.isRunning && mode === 'place') {
-        setPlaceOperation('default')
-        setLogStart(null)
-        setLogCurrent(null)
-        setLogTrace([])
-        setPlaceType('')
-      }
-      if (!sim.isRunning && mode === 'blueprint') {
-        setSelectedBlueprintId(null)
-        setBlueprintPlacementRotation(0)
-      }
-      return
-    }
-
-    if (event.button !== 0) return
-
-    const cell = toCell(event.clientX, event.clientY)
-    if (!cell) return
-
-    if (mode === 'place' && placeOperation === 'belt') {
-      if (sim.isRunning) return
-      setLogStart(cell)
-      setLogCurrent(cell)
-      setLogTrace([cell])
-      return
-    }
-
-    if (mode === 'place' && placeType) {
-      if (sim.isRunning) return
-      const placed = placeDevice(cell)
-      if (placed) {
-        setPlaceType('')
-      }
-      return
-    }
-
-    if (activePlacementBlueprint) {
-      if (sim.isRunning) return
-      const preview = buildBlueprintPlacementPreview(activePlacementBlueprint, cell, blueprintPlacementRotation)
-      if (!preview) {
-        showToast(t('toast.blueprintNoSelection'), { variant: 'warning' })
-        return
-      }
-      if (!preview.isValid) {
-        showToast(t(preview.invalidMessageKey ?? FALLBACK_PLACEMENT_TOAST_KEY), { variant: 'warning' })
-        return
-      }
-
-      setLayout((current) => ({
-        ...current,
-        devices: [
-          ...current.devices,
-          ...preview.devices.map((device) => ({
-            ...device,
-            instanceId: nextId(device.typeId),
-          })),
-        ],
-      }))
-      showToast(t('toast.blueprintPlaced', { name: activePlacementBlueprint.name, count: preview.devices.length }))
-      return
-    }
-
-    if (mode === 'delete') {
-      if (sim.isRunning) return
-      setSelection([])
-      setDragStartCell(null)
-      setDragBasePositions(null)
-      setDragPreviewPositions({})
-      setDragPreviewValid(true)
-      setDragInvalidMessage(null)
-      setDragInvalidSelection(new Set())
-      setDragOrigin(cell)
-      setDragRect({ x1: cell.x, y1: cell.y, x2: cell.x, y2: cell.y })
-      return
-    }
-
-    const clickedId = cellDeviceMap.get(`${cell.x},${cell.y}`)
-    if (clickedId) {
-      const activeSelection = (selection.includes(clickedId) ? selection : [clickedId]).filter((id) => !foundationIdSet.has(id))
-      if (!selection.includes(clickedId)) setSelection(activeSelection)
-      if (activeSelection.length === 0) {
-        setDragBasePositions(null)
-        setDragPreviewPositions({})
-        setDragPreviewValid(true)
-        setDragInvalidMessage(null)
-        setDragInvalidSelection(new Set())
-        setDragStartCell(null)
-        setDragOrigin(null)
-        setDragRect(null)
-        return
-      }
-      const base: Record<string, { x: number; y: number }> = {}
-      for (const id of activeSelection) {
-        const device = getDeviceById(layout, id)
-        if (device) base[id] = { ...device.origin }
-      }
-      setDragBasePositions(base)
-      setDragPreviewPositions(base)
-      setDragPreviewValid(true)
-      setDragInvalidMessage(null)
-      setDragInvalidSelection(new Set())
-      setDragStartCell(cell)
-      setDragOrigin(cell)
-      setDragRect(null)
-      return
-    }
-
-    setSelection([])
-    setDragBasePositions(null)
-    setDragPreviewPositions({})
-    setDragPreviewValid(true)
-    setDragInvalidMessage(null)
-    setDragInvalidSelection(new Set())
-    setDragOrigin(cell)
-    setDragRect({ x1: cell.x, y1: cell.y, x2: cell.x, y2: cell.y })
-  }
-
-  const onCanvasMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (isPanning && panStart) {
-      const viewport = viewportRef.current
-      if (!viewport) return
-      const canvasWidth = canvasWidthPx * zoomScale
-      const canvasHeight = canvasHeightPx * zoomScale
-      const nextOffset = {
-        x: panStart.offsetX + (event.clientX - panStart.clientX),
-        y: panStart.offsetY + (event.clientY - panStart.clientY),
-      }
-      setViewOffset(
-        clampViewportOffset(
-          nextOffset,
-          { width: viewport.clientWidth, height: viewport.clientHeight },
-          { width: canvasWidth, height: canvasHeight },
-        ),
-      )
-      return
-    }
-
-    const rawCell = toRawCell(event.clientX, event.clientY)
-    if (!rawCell) {
-      setHoverCell(null)
-      return
-    }
-    const cell = rawCell.x >= 0 && rawCell.y >= 0 && rawCell.x < layout.lotSize && rawCell.y < layout.lotSize ? rawCell : null
-    setHoverCell(cell)
-
-    if (mode === 'place' && placeOperation === 'belt' && logStart) {
-      if (!cell) return
-      const last = logTrace[logTrace.length - 1]
-      if (last && last.x === cell.x && last.y === cell.y) return
-      setLogTrace((current) => [...current, cell])
-      setLogCurrent(cell)
-      return
-    }
-
-    if ((mode === 'select' || (mode === 'place' && !placeType)) && dragBasePositions && dragOrigin && selection.length > 0 && !sim.isRunning) {
-      const dx = rawCell.x - dragOrigin.x
-      const dy = rawCell.y - dragOrigin.y
-      const previewPositions: Record<string, { x: number; y: number }> = {}
-      for (const id of selection) {
-        const base = dragBasePositions[id]
-        if (!base) continue
-        previewPositions[id] = { x: base.x + dx, y: base.y + dy }
-      }
-      setDragPreviewPositions(previewPositions)
-
-      const previewLayout: LayoutState = {
-        ...layout,
-        devices: layout.devices.map((device) => {
-          const preview = previewPositions[device.instanceId]
-          if (!preview) return device
-          return {
-            ...device,
-            origin: preview,
-          }
-        }),
-      }
-      const movedSelection = previewLayout.devices.filter((device) => selection.includes(device.instanceId))
-      const outOfLotDevice = movedSelection.find((device) => !isWithinLot(device, layout.lotSize))
-      let invalidMessageKey: string | null = null
-      if (outOfLotDevice) {
-        invalidMessageKey = OUT_OF_LOT_TOAST_KEY
-      } else {
-        const constraintFailure = movedSelection
-          .map((device) => validatePlacementConstraints(previewLayout, device))
-          .find((result) => !result.isValid)
-        if (constraintFailure && !constraintFailure.isValid) {
-          invalidMessageKey = constraintFailure.messageKey ?? FALLBACK_PLACEMENT_TOAST_KEY
-        }
-      }
-      const isValidPlacement = invalidMessageKey === null
-      setDragPreviewValid(isValidPlacement)
-      setDragInvalidMessage(invalidMessageKey)
-      setDragInvalidSelection(isValidPlacement ? new Set() : new Set(selection))
-      setDragStartCell(rawCell)
-      return
-    }
-
-    if (!cell) return
-
-    if (mode === 'delete' && dragOrigin && dragRect) {
-      setDragRect({ ...dragRect, x2: cell.x, y2: cell.y })
-      return
-    }
-
-    if ((mode === 'select' || (mode === 'place' && !placeType)) && dragOrigin && dragRect) {
-      setDragRect({ ...dragRect, x2: cell.x, y2: cell.y })
-      return
-    }
-
-    if ((mode === 'select' || (mode === 'place' && !placeType)) && dragStartCell) {
-      setDragStartCell(cell)
-    }
-  }
-
-  const onCanvasMouseUp = async () => {
-    if (isPanning) {
-      setIsPanning(false)
-      setPanStart(null)
-      return
-    }
-
-    if (mode === 'place' && placeOperation === 'belt' && logStart && logCurrent && !sim.isRunning) {
-      const path = logisticsPreview
-      if (path && path.length >= 2) {
-        setLayout((current) => applyLogisticsPath(current, path))
-      }
-      setLogStart(null)
-      setLogCurrent(null)
-      setLogTrace([])
-      return
-    }
-
-    if (mode === 'delete' && dragRect && dragOrigin && !sim.isRunning) {
-      if (deleteBoxConfirmingRef.current) return
-      deleteBoxConfirmingRef.current = true
-
-      const xMin = Math.min(dragRect.x1, dragRect.x2)
-      const xMax = Math.max(dragRect.x1, dragRect.x2)
-      const yMin = Math.min(dragRect.y1, dragRect.y2)
-      const yMax = Math.max(dragRect.y1, dragRect.y2)
-      const idsInRect = new Set<string>()
-
-      setDragStartCell(null)
-      setDragOrigin(null)
-      setDragRect(null)
-      setDragBasePositions(null)
-      setDragPreviewPositions({})
-      setDragPreviewValid(true)
-      setDragInvalidMessage(null)
-      setDragInvalidSelection(new Set())
-
-      const isSingleCellRect = xMin === xMax && yMin === yMax
-
-      if (isSingleCellRect) {
-        try {
-          const id = cellDeviceMap.get(`${xMin},${yMin}`)
-          if (id && !foundationIdSet.has(id)) {
-            if (deleteTool === 'wholeBelt') {
-              setLayout((current) => deleteConnectedBelts(current, xMin, yMin))
-            } else {
-              setLayout((current) => ({ ...current, devices: current.devices.filter((device) => device.instanceId !== id) }))
-            }
-            setSelection((current) => current.filter((currentId) => currentId !== id))
-          }
-        } finally {
-          deleteBoxConfirmingRef.current = false
-        }
-        return
-      }
-
-      for (const [key, entries] of occupancyMap.entries()) {
-        const [x, y] = key.split(',').map(Number)
-        if (x < xMin || x > xMax || y < yMin || y > yMax) continue
-        for (const entry of entries) {
-          if (foundationIdSet.has(entry.instanceId)) continue
-          idsInRect.add(entry.instanceId)
-        }
-      }
-
-      try {
-        if (idsInRect.size > 0) {
-          const confirmed = await dialogConfirm(t('left.deleteBoxConfirm', { count: idsInRect.size }), {
-            title: t('dialog.title.confirm'),
-            confirmText: t('dialog.ok'),
-            cancelText: t('dialog.cancel'),
-            variant: 'warning',
-          })
-          if (confirmed) {
-            setLayout((current) => ({
-              ...current,
-              devices: current.devices.filter((device) => !idsInRect.has(device.instanceId)),
-            }))
-            setSelection((current) => current.filter((id) => !idsInRect.has(id)))
-          }
-        }
-      } finally {
-        deleteBoxConfirmingRef.current = false
-      }
-      return
-    }
-
-    if ((mode === 'select' || (mode === 'place' && !placeType)) && dragRect && dragOrigin) {
-      const xMin = Math.min(dragRect.x1, dragRect.x2)
-      const xMax = Math.max(dragRect.x1, dragRect.x2)
-      const yMin = Math.min(dragRect.y1, dragRect.y2)
-      const yMax = Math.max(dragRect.y1, dragRect.y2)
-      const ids = layout.devices
-        .filter((device) =>
-          DEVICE_TYPE_BY_ID[device.typeId]
-            ? DEVICE_TYPE_BY_ID[device.typeId] &&
-              [...occupancyMap.entries()].some(([key, value]) => {
-                const [x, y] = key.split(',').map(Number)
-                return x >= xMin && x <= xMax && y >= yMin && y <= yMax && value.some((entry) => entry.instanceId === device.instanceId)
-              })
-            : false,
-        )
-        .filter((device) => !foundationIdSet.has(device.instanceId))
-        .map((device) => device.instanceId)
-      setSelection(ids)
-      setDragRect(null)
-      setDragOrigin(null)
-      setDragBasePositions(null)
-      setDragPreviewPositions({})
-      setDragPreviewValid(true)
-      setDragInvalidMessage(null)
-      setDragInvalidSelection(new Set())
-      return
-    }
-
-    if ((mode === 'select' || (mode === 'place' && !placeType)) && dragStartCell && dragOrigin && dragBasePositions && selection.length > 0 && !sim.isRunning) {
-      if (dragPreviewValid) {
-        setLayout((current) => ({
-          ...current,
-          devices: current.devices.map((device) => {
-            if (!selection.includes(device.instanceId)) return device
-            const preview = dragPreviewPositions[device.instanceId]
-            if (!preview) return device
-            return {
-              ...device,
-              origin: { ...preview },
-            }
-          }),
-        }))
-      } else if (dragInvalidMessage) {
-        showToast(t(dragInvalidMessage), { variant: 'warning' })
-      }
-      setDragPreviewPositions({})
-      setDragPreviewValid(true)
-      setDragInvalidMessage(null)
-      setDragInvalidSelection(new Set())
-      setDragStartCell(null)
-      setDragOrigin(null)
-      setDragBasePositions(null)
-      return
-    }
-
-    setDragStartCell(null)
-    setDragOrigin(null)
-    setDragRect(null)
-    setDragBasePositions(null)
-    setDragPreviewPositions({})
-    setDragPreviewValid(true)
-    setDragInvalidMessage(null)
-    setDragInvalidSelection(new Set())
-  }
-
-  const onCanvasWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    const viewport = viewportRef.current
-    if (!viewport) return
-    const maxCellSize = getMaxCellSizeForViewport(viewport)
-    const baseStep = getZoomStep(cellSize)
-    const deltaStrength = clamp(Math.round(Math.abs(event.deltaY) / 100), 1, 3)
-    const step = baseStep * deltaStrength
-    const next = clamp(cellSize + (event.deltaY < 0 ? step : -step), 12, maxCellSize)
-    if (next === cellSize) return
-
-    const viewportRect = viewport.getBoundingClientRect()
-    const anchorX = event.clientX - viewportRect.left
-    const anchorY = event.clientY - viewportRect.top
-    const scaledCellSize = BASE_CELL_SIZE * zoomScale
-    const worldX = (anchorX - viewOffset.x) / scaledCellSize
-    const worldY = (anchorY - viewOffset.y) / scaledCellSize
-    const nextOffset = {
-      x: anchorX - worldX * BASE_CELL_SIZE * (next / BASE_CELL_SIZE),
-      y: anchorY - worldY * BASE_CELL_SIZE * (next / BASE_CELL_SIZE),
-    }
-    const clampedOffset = clampViewportOffset(
-      nextOffset,
-      { width: viewport.clientWidth, height: viewport.clientHeight },
-      { width: canvasWidthPx * (next / BASE_CELL_SIZE), height: canvasHeightPx * (next / BASE_CELL_SIZE) },
-    )
-    setViewOffset(clampedOffset)
-    setCellSize(next)
-  }
 
   const selectedDevice = useMemo(() => {
     if (selection.length !== 1) return null
@@ -2036,117 +1023,98 @@ function App() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [itemPickerState])
 
-  const updatePickupItem = useCallback(
-    (deviceInstanceId: string, pickupItemId: ItemId | undefined) => {
-      setLayout((current) => ({
-        ...current,
-        devices: current.devices.map((device) =>
-          device.instanceId === deviceInstanceId
-            ? (() => {
-                const nextConfig = { ...device.config, pickupItemId }
-                if (!pickupItemId) {
-                  delete nextConfig.pickupIgnoreInventory
-                } else if (isOreItemId(pickupItemId)) {
-                  nextConfig.pickupIgnoreInventory = true
-                }
-                return { ...device, config: nextConfig }
-              })()
-            : device,
-        ),
-      }))
-    },
-    [setLayout],
-  )
+  const { updatePickupItem, updatePickupIgnoreInventory, updateProcessorPreloadSlot } = useBuildConfigDomain({
+    setLayout,
+    isOreItemId,
+    processorBufferSpec,
+    buildProcessorPreloadSlots,
+    serializeProcessorPreloadSlots,
+  })
 
-  const updatePickupIgnoreInventory = useCallback(
-    (deviceInstanceId: string, enabled: boolean) => {
-      setLayout((current) => ({
-        ...current,
-        devices: current.devices.map((device) => {
-          if (device.instanceId !== deviceInstanceId || device.typeId !== 'item_port_unloader_1') return device
-          const pickupItemId = device.config.pickupItemId
-          if (!pickupItemId) return { ...device, config: { ...device.config, pickupIgnoreInventory: false } }
-          return {
-            ...device,
-            config: {
-              ...device.config,
-              pickupIgnoreInventory: isOreItemId(pickupItemId) ? true : enabled,
-            },
-          }
-        }),
-      }))
-    },
-    [setLayout],
-  )
+  const { toPlaceOrigin, logisticsPreview, logisticsPreviewDevices, portChevrons, placePreview } = useBuildPreviewDomain({
+    layout,
+    mode,
+    placeType,
+    placeRotation,
+    placeOperation,
+    selection,
+    dragPreviewPositions,
+    hoverCell,
+    simIsRunning: sim.isRunning,
+    logStart,
+    logCurrent,
+    logTrace,
+    baseCellSize: BASE_CELL_SIZE,
+    edgeAngle: EDGE_ANGLE,
+    hiddenChevronDeviceTypes: HIDDEN_CHEVRON_DEVICE_TYPES,
+    hiddenLabelDeviceTypes: HIDDEN_DEVICE_LABEL_TYPES,
+  })
 
-  const updateProcessorPreloadSlot = useCallback(
-    (deviceInstanceId: string, slotIndex: number, patch: { itemId?: ItemId | null; amount?: number }) => {
-      setLayout((current) => ({
-        ...current,
-        devices: current.devices.map((device) => {
-          if (device.instanceId !== deviceInstanceId) return device
-          if (DEVICE_TYPE_BY_ID[device.typeId].runtimeKind !== 'processor') return device
-
-          const spec = processorBufferSpec(device.typeId)
-          const slots = buildProcessorPreloadSlots(device, spec.inputSlotCapacities)
-          if (slotIndex < 0 || slotIndex >= slots.length) return device
-
-          const currentSlot = slots[slotIndex]
-          const nextItemId = patch.itemId !== undefined ? patch.itemId : currentSlot.itemId
-          const requestedAmount = patch.amount !== undefined ? patch.amount : currentSlot.amount
-          const slotCap = spec.inputSlotCapacities[slotIndex] ?? 50
-          const normalizedAmount = nextItemId
-            ? clamp(Math.floor(Number.isFinite(requestedAmount) ? requestedAmount : 0), 0, slotCap)
-            : 0
-
-          slots[slotIndex] = {
-            itemId: nextItemId ?? null,
-            amount: normalizedAmount,
-          }
-
-          const nextConfig = { ...device.config }
-          const serialized = serializeProcessorPreloadSlots(slots)
-          if (serialized.length > 0) nextConfig.preloadInputs = serialized
-          else delete nextConfig.preloadInputs
-          delete nextConfig.preloadInputItemId
-          delete nextConfig.preloadInputAmount
-          return { ...device, config: nextConfig }
-        }),
-      }))
-    },
-    [setLayout],
-  )
-
-  const logisticsPreview = useMemo(() => {
-    if (!logStart || !logCurrent || logTrace.length === 0) return null
-    const candidatePath = pathFromTrace(logTrace)
-    if (!candidatePath) return null
-    return longestValidLogisticsPrefix(layout, candidatePath)
-  }, [layout, logStart, logCurrent, logTrace])
-
-  const logisticsPreviewDevices = useMemo(() => {
-    if (mode !== 'place' || placeOperation !== 'belt' || !logisticsPreview || logisticsPreview.length < 1) return []
-    const projectedLayout = applyLogisticsPath(layout, logisticsPreview)
-    if (projectedLayout === layout) return []
-    const projectedCellMap = cellToDeviceId(projectedLayout)
-    const seenProjectedIds = new Set<string>()
-    const result: DeviceInstance[] = []
-
-    for (const cell of logisticsPreview) {
-      const projectedId = projectedCellMap.get(`${cell.x},${cell.y}`)
-      if (!projectedId || seenProjectedIds.has(projectedId)) continue
-      seenProjectedIds.add(projectedId)
-      const projectedDevice = getDeviceById(projectedLayout, projectedId)
-      if (!projectedDevice) continue
-      if (!projectedDevice.typeId.startsWith('belt_') && !HIDDEN_DEVICE_LABEL_TYPES.has(projectedDevice.typeId)) continue
-      result.push({
-        ...projectedDevice,
-        instanceId: `preview-${projectedDevice.instanceId}`,
-      })
-    }
-
-    return result
-  }, [layout, logisticsPreview, mode, placeOperation])
+  const { isPanning, onCanvasMouseDown, onCanvasMouseMove, onCanvasMouseUp, onCanvasWheel } = useBuildInteractionDomain({
+    viewportRef,
+    currentBaseOuterRing: currentBase.outerRing,
+    zoomScale,
+    viewOffset,
+    setViewOffset,
+    canvasWidthPx,
+    canvasHeightPx,
+    baseCellSize: BASE_CELL_SIZE,
+    cellSize,
+    setCellSize,
+    getMaxCellSizeForViewport,
+    getZoomStep,
+    clampViewportOffset,
+    layout,
+    setLayout,
+    mode,
+    placeOperation,
+    setPlaceOperation,
+    placeType,
+    setPlaceType,
+    placeRotation,
+    toPlaceOrigin,
+    simIsRunning: sim.isRunning,
+    logisticsPreview,
+    logStart,
+    setLogStart,
+    logCurrent,
+    setLogCurrent,
+    logTrace,
+    setLogTrace,
+    selection,
+    setSelection,
+    dragBasePositions,
+    setDragBasePositions,
+    dragPreviewPositions,
+    setDragPreviewPositions,
+    dragPreviewValid,
+    setDragPreviewValid,
+    dragInvalidMessage,
+    setDragInvalidMessage,
+    setDragInvalidSelection,
+    dragStartCell,
+    setDragStartCell,
+    dragRect,
+    setDragRect,
+    dragOrigin,
+    setDragOrigin,
+    setHoverCell,
+    cellDeviceMap,
+    occupancyMap,
+    foundationIdSet,
+    deleteTool,
+    deleteBoxConfirmingRef,
+    activePlacementBlueprint,
+    clipboardBlueprint,
+    buildBlueprintPlacementPreview,
+    blueprintPlacementRotation,
+    setBlueprintPlacementRotation,
+    setClipboardBlueprint,
+    setSelectedBlueprintId,
+    t,
+    outOfLotToastKey: OUT_OF_LOT_TOAST_KEY,
+    fallbackPlacementToastKey: FALLBACK_PLACEMENT_TOAST_KEY,
+  })
 
   const inTransitItems = useMemo(() => {
     return layout.devices.flatMap((device) => {
@@ -2206,115 +1174,6 @@ function App() {
       }))
   }, [layout.devices])
 
-  const portChevrons = useMemo(() => {
-    if (mode !== 'select' && !(mode === 'place' && (placeOperation === 'belt' || !placeType))) return []
-    const links = linksFromLayout(layout)
-    const connectedPortKeys = new Set<string>()
-    const keyOf = (port: { instanceId: string; portId: string; x: number; y: number; edge: string }) =>
-      `${port.instanceId}:${port.portId}:${port.x}:${port.y}:${port.edge}`
-
-    for (const link of links) {
-      connectedPortKeys.add(keyOf(link.from))
-      connectedPortKeys.add(keyOf(link.to))
-    }
-
-    const result: Array<{ key: string; x: number; y: number; angle: number; width: number; height: number }> = []
-    const chevronLength = BASE_CELL_SIZE * (1 / 6)
-    const chevronThickness = BASE_CELL_SIZE * (2 / 5)
-    const chevronGap = BASE_CELL_SIZE * (1 / 12)
-    const outsideOffset = chevronLength / 2 + chevronGap
-    for (const device of layout.devices) {
-      const previewOrigin = dragPreviewPositions[device.instanceId]
-      const renderDevice =
-        mode === 'select' && previewOrigin
-          ? {
-              ...device,
-              origin: previewOrigin,
-            }
-          : device
-      if (device.typeId.startsWith('belt_')) continue
-      if (HIDDEN_CHEVRON_DEVICE_TYPES.has(device.typeId)) continue
-      if ((mode === 'select' || (mode === 'place' && !placeType)) && !selection.includes(device.instanceId)) continue
-      for (const port of getRotatedPorts(renderDevice)) {
-        const portKey = keyOf(port)
-        if (mode === 'place' && placeOperation === 'belt' && connectedPortKeys.has(portKey)) continue
-
-        const centerX = (port.x + 0.5) * BASE_CELL_SIZE
-        const centerY = (port.y + 0.5) * BASE_CELL_SIZE
-        let x = centerX
-        let y = centerY
-        if (port.edge === 'N') y = port.y * BASE_CELL_SIZE - outsideOffset
-        if (port.edge === 'S') y = (port.y + 1) * BASE_CELL_SIZE + outsideOffset
-        if (port.edge === 'W') x = port.x * BASE_CELL_SIZE - outsideOffset
-        if (port.edge === 'E') x = (port.x + 1) * BASE_CELL_SIZE + outsideOffset
-
-        result.push({
-          key: portKey,
-          x,
-          y,
-          angle: port.direction === 'Input' ? EDGE_ANGLE[OPPOSITE_EDGE[port.edge]] : EDGE_ANGLE[port.edge],
-          width: chevronLength,
-          height: chevronThickness,
-        })
-      }
-    }
-
-    return result
-  }, [layout, dragPreviewPositions, mode, selection, placeType, placeOperation])
-
-  const placePreview = useMemo(() => {
-    if (mode !== 'place' || !placeType || !hoverCell || sim.isRunning) return null
-    const origin = toPlaceOrigin(hoverCell, placeType, placeRotation)
-    const instance: DeviceInstance = {
-      instanceId: 'preview',
-      typeId: placeType,
-      origin,
-      rotation: placeRotation,
-      config: {},
-    }
-    const type = DEVICE_TYPE_BY_ID[placeType]
-    const footprintSize = rotatedFootprintSize(type.size, placeRotation)
-    const textureSrc = getDeviceSpritePath(placeType)
-    const surfaceContentWidthPx = footprintSize.width * BASE_CELL_SIZE - 6
-    const surfaceContentHeightPx = footprintSize.height * BASE_CELL_SIZE - 6
-    const isQuarterTurn = placeRotation === 90 || placeRotation === 270
-    const textureWidthPx = isQuarterTurn ? surfaceContentHeightPx : surfaceContentWidthPx
-    const textureHeightPx = isQuarterTurn ? surfaceContentWidthPx : surfaceContentHeightPx
-    const chevronLength = BASE_CELL_SIZE * (1 / 6)
-    const chevronThickness = BASE_CELL_SIZE * (2 / 5)
-    const chevronGap = BASE_CELL_SIZE * (1 / 12)
-    const outsideOffset = chevronLength / 2 + chevronGap
-    const chevrons = getRotatedPorts(instance).map((port) => {
-      const localCenterX = (port.x - origin.x + 0.5) * BASE_CELL_SIZE
-      const localCenterY = (port.y - origin.y + 0.5) * BASE_CELL_SIZE
-      let x = localCenterX
-      let y = localCenterY
-      if (port.edge === 'N') y = (port.y - origin.y) * BASE_CELL_SIZE - outsideOffset
-      if (port.edge === 'S') y = (port.y - origin.y + 1) * BASE_CELL_SIZE + outsideOffset
-      if (port.edge === 'W') x = (port.x - origin.x) * BASE_CELL_SIZE - outsideOffset
-      if (port.edge === 'E') x = (port.x - origin.x + 1) * BASE_CELL_SIZE + outsideOffset
-      return {
-        key: `preview-${port.instanceId}-${port.portId}-${port.x}-${port.y}-${port.edge}-${port.direction}`,
-        x,
-        y,
-        angle: port.direction === 'Input' ? EDGE_ANGLE[OPPOSITE_EDGE[port.edge]] : EDGE_ANGLE[port.edge],
-        width: chevronLength,
-        height: chevronThickness,
-      }
-    })
-    return {
-      origin,
-      type,
-      rotation: placeRotation,
-      textureSrc,
-      textureWidthPx,
-      textureHeightPx,
-      footprintSize,
-      chevrons,
-      isValid: isWithinLot(instance, layout.lotSize) && validatePlacementConstraints(layout, instance).isValid,
-    }
-  }, [hoverCell, layout, mode, placeRotation, placeType, sim.isRunning])
-
   const blueprintPlacementPreview = useMemo(() => {
     if (!activePlacementBlueprint || sim.isRunning || !hoverCell) return null
     return buildBlueprintPlacementPreview(activePlacementBlueprint, hoverCell, blueprintPlacementRotation)
@@ -2341,93 +1200,16 @@ function App() {
     return itemIds
   }, [layout.devices])
 
-  const statsRows = useMemo(
-    () => {
-      const rows = ITEMS.map((item) => ({
-        itemId: item.id,
-        producedPerMinute: sim.stats.producedPerMinute[item.id],
-        consumedPerMinute: sim.stats.consumedPerMinute[item.id],
-        stock: ignoredInfiniteItemIds.has(item.id) ? Number.POSITIVE_INFINITY : sim.warehouse[item.id],
-        everProduced: sim.stats.everProduced[item.id] ?? 0,
-        everConsumed: sim.stats.everConsumed[item.id] ?? 0,
-        everStockPositive: sim.stats.everStockPositive[item.id] ?? 0,
-      })).filter((row) => {
-        const hasProduced = row.everProduced > 0
-        const hasConsumed = row.everConsumed > 0
-        const hasStock = row.everStockPositive > 0
-        if (!Number.isFinite(row.stock)) {
-          return hasProduced || hasConsumed || ignoredInfiniteItemIds.has(row.itemId)
-        }
-        return hasProduced || hasConsumed || hasStock
-      })
-
-      const hasPriorityStock = (row: (typeof rows)[number]) => {
-        if (Number.isFinite(row.stock)) return row.stock > 0
-        return row.consumedPerMinute > 0
-      }
-
-      rows.sort((a, b) => {
-        const priorityDiff = Number(hasPriorityStock(b)) - Number(hasPriorityStock(a))
-        if (priorityDiff !== 0) return priorityDiff
-
-        const producedDiff = b.producedPerMinute - a.producedPerMinute
-        if (producedDiff !== 0) return producedDiff
-
-        return a.itemId.localeCompare(b.itemId)
-      })
-
-      return rows
-    },
-    [ignoredInfiniteItemIds, sim.stats.consumedPerMinute, sim.stats.producedPerMinute, sim.warehouse],
-  )
-
-  const hasMoreStatsRows = statsRows.length > STATS_TOP_N
-  const visibleStatsRows = hasMoreStatsRows && !showAllStatsRows ? statsRows.slice(0, STATS_TOP_N) : statsRows
-
-  useEffect(() => {
-    const measureStatsTableHeight = () => {
-      const table = statsTableRef.current
-      if (!table) {
-        setStatsTableMaxHeight(null)
-        return
-      }
-
-      const bodyRows = Array.from(table.tBodies[0]?.rows ?? [])
-      if (bodyRows.length <= STATS_TOP_N) {
-        setStatsTableMaxHeight(null)
-        return
-      }
-
-      const headerHeight = table.tHead?.rows[0]?.getBoundingClientRect().height ?? 0
-      const firstTwentyRowsHeight = bodyRows
-        .slice(0, STATS_TOP_N)
-        .reduce((sum, row) => sum + row.getBoundingClientRect().height, 0)
-
-      setStatsTableMaxHeight(Math.ceil(headerHeight + firstTwentyRowsHeight + 2))
-    }
-
-    const frameId = window.requestAnimationFrame(measureStatsTableHeight)
-    window.addEventListener('resize', measureStatsTableHeight)
-
-    return () => {
-      window.cancelAnimationFrame(frameId)
-      window.removeEventListener('resize', measureStatsTableHeight)
-    }
-  }, [language, showAllStatsRows, visibleStatsRows.length])
-
-  const renderStatsBreakHeader = useCallback(
-    (label: string) => {
-      if (language !== 'zh-CN' || label.length <= 2) return label
-      return (
-        <>
-          <span>{label.slice(0, 2)}</span>
-          <br />
-          <span>{label.slice(2)}</span>
-        </>
-      )
-    },
-    [language],
-  )
+  const { statsAndDebugSection } = useObservabilityDomain({
+    sim,
+    measuredTickRate,
+    ignoredInfiniteItemIds,
+    language,
+    t,
+    formatCompactNumber,
+    formatCompactStock,
+    statsTopN: STATS_TOP_N,
+  })
 
   const beginPanelResize = (side: 'left' | 'right', startX: number) => {
     resizeStateRef.current = {
@@ -2437,99 +1219,103 @@ function App() {
     }
   }
 
-  const statsAndDebugSection = (
-    <>
-      <h3>{t('right.stats')}</h3>
-      <div className="stats-meta-row">
-        <span className="stats-meta-text">{t('stats.topNHint', { count: visibleStatsRows.length, total: statsRows.length })}</span>
-        {hasMoreStatsRows && (
-          <button className="stats-toggle-btn" onClick={() => setShowAllStatsRows((current) => !current)}>
-            {showAllStatsRows ? t('stats.showTop', { count: STATS_TOP_N }) : t('stats.showAll')}
-          </button>
-        )}
-      </div>
-      <div className="stats-table-wrap" style={statsTableMaxHeight ? { maxHeight: `${statsTableMaxHeight}px` } : undefined}>
-        <table ref={statsTableRef} className="stats-table">
-          <thead>
-            <tr>
-              <th className="stats-break-header">{renderStatsBreakHeader(t('table.itemName'))}</th>
-              <th className="stats-break-header">{renderStatsBreakHeader(t('table.producedPerMinute'))}</th>
-              <th className="stats-break-header">{renderStatsBreakHeader(t('table.consumedPerMinute'))}</th>
-              <th className="stats-break-header">{renderStatsBreakHeader(t('table.currentStock'))}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleStatsRows.map((row) => (
-              <tr key={row.itemId}>
-                <td>{getItemLabel(language, row.itemId)}</td>
-                <td>{formatCompactNumber(row.producedPerMinute)}</td>
-                <td>{formatCompactNumber(row.consumedPerMinute)}</td>
-                <td>{formatCompactStock(row.stock)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+  const mainDeviceLayer = (
+    <StaticDeviceLayer
+      devices={layout.devices}
+      selectionSet={selectionSet}
+      invalidSelectionSet={dragInvalidSelection}
+      previewOriginsById={dragPreviewOriginsById}
+      language={language}
+      showRuntimeItemIcons={false}
+    />
+  )
 
-      <h3>{t('right.simDebug')}</h3>
-      <div className="kv"><span>{t('debug.measuredTps')}</span><span>{measuredTickRate.toFixed(2)}</span></div>
-      <div className="kv"><span>{t('debug.simTick')}</span><span>{sim.tick}</span></div>
-      <div className="kv"><span>{t('debug.simSeconds')}</span><span>{sim.stats.simSeconds.toFixed(2)}</span></div>
-    </>
+  const logisticsPreviewLayer =
+    mode === 'place' && placeOperation === 'belt' && logisticsPreviewDevices.length > 0 ? (
+      <StaticDeviceLayer
+        devices={logisticsPreviewDevices}
+        selectionSet={new Set()}
+        invalidSelectionSet={new Set()}
+        previewOriginsById={new Map()}
+        language={language}
+        extraClassName="logistics-preview-device"
+        showRuntimeItemIcons={false}
+      />
+    ) : null
+
+  const blueprintPreviewLayer =
+    blueprintPlacementPreview && blueprintPlacementPreview.devices.length > 0 ? (
+      <StaticDeviceLayer
+        devices={blueprintPlacementPreview.devices}
+        selectionSet={new Set()}
+        invalidSelectionSet={new Set()}
+        previewOriginsById={new Map()}
+        language={language}
+        extraClassName={`blueprint-preview-device ${blueprintPlacementPreview.isValid ? 'valid' : 'invalid'}`}
+        showRuntimeItemIcons={false}
+      />
+    ) : null
+
+  const worldContent = (
+    <WorldContent
+      baseCellSize={BASE_CELL_SIZE}
+      canvasOffsetXPx={canvasOffsetXPx}
+      canvasOffsetYPx={canvasOffsetYPx}
+      lotSize={layout.lotSize}
+      powerRangeOutlines={powerRangeOutlines}
+      mainDeviceLayer={mainDeviceLayer}
+      logisticsPreviewLayer={logisticsPreviewLayer}
+      blueprintPreviewLayer={blueprintPreviewLayer}
+      runtimeStallOverlays={runtimeStallOverlays}
+      inTransitItems={inTransitItems}
+      getItemLabelText={(itemId) => getItemLabel(language, itemId)}
+      getItemIconPath={getItemIconPath}
+      portChevrons={portChevrons}
+      placePreview={placePreview}
+      dragRect={dragRect}
+    />
+  )
+
+  const handleStartSimulation = useCallback(() => {
+    if (unknownDevices.length > 0) {
+      dialogAlertNonBlocking(t('dialog.legacyUnknownTypesStartBlocked'), {
+        title: t('dialog.title.warning'),
+        closeText: t('dialog.ok'),
+        variant: 'warning',
+      })
+      return
+    }
+    updateSim((current) => startSimulation(layout, current))
+  }, [layout, t, unknownDevices.length, updateSim])
+
+  const handleItemPickerSelect = useCallback(
+    (itemId: ItemId | null) => {
+      if (!itemPickerState || !pickerTargetDevice) return
+      if (itemPickerState.kind === 'pickup') {
+        updatePickupItem(pickerTargetDevice.instanceId, itemId ?? undefined)
+      } else {
+        updateProcessorPreloadSlot(pickerTargetDevice.instanceId, itemPickerState.slotIndex, { itemId })
+      }
+    },
+    [itemPickerState, pickerTargetDevice, updatePickupItem, updateProcessorPreloadSlot],
   )
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div className="topbar-left">
-          <div className="topbar-title">{t('app.title')}</div>
-          <label className="language-switch">
-            <span>{t('app.language')}</span>
-            <select value={language} onChange={(event) => setLanguage(event.target.value as Language)}>
-              {LANGUAGE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button onClick={() => setIsWikiOpen(true)}>{t('top.wiki')}</button>
-          <button onClick={() => setIsPlannerOpen(true)}>{t('top.planner')}</button>
-        </div>
-        <div className="topbar-controls">
-          <span className="hint hint-dynamic">{uiHint}</span>
-          {sim.isRunning && sim.speed === 0 && <span className="hint hint-paused">{t('top.pausedIndicator')}</span>}
-          <span className="hint">{t('top.zoomHint', { size: cellSize })}</span>
-          {!sim.isRunning ? (
-            <button
-              onClick={async () => {
-                if (unknownDevices.length > 0) {
-                  dialogAlertNonBlocking(t('dialog.legacyUnknownTypesStartBlocked'), {
-                    title: t('dialog.title.warning'),
-                    closeText: t('dialog.ok'),
-                    variant: 'warning',
-                  })
-                  return
-                }
-                updateSim((current) => startSimulation(layout, current))
-              }}
-            >
-              {t('top.start')}
-            </button>
-          ) : (
-            <button onClick={() => updateSim((current) => stopSimulation(current))}>{t('top.stop')}</button>
-          )}
-          {[0, 0.25, 1, 2, 4, 16].map((speed) => (
-            <button
-              key={speed}
-              className={sim.speed === speed ? 'active' : ''}
-              onClick={() => updateSim((current) => ({ ...current, speed: speed as 0 | 0.25 | 1 | 2 | 4 | 16 }))}
-            >
-              {speed === 0 ? t('top.pauseSpeed') : `${speed}x`}
-            </button>
-          ))}
-        </div>
-      </header>
+      <TopBar
+        language={language}
+        setLanguage={setLanguage}
+        onOpenWiki={() => setIsWikiOpen(true)}
+        onOpenPlanner={() => setIsPlannerOpen(true)}
+        uiHint={uiHint}
+        isRunning={sim.isRunning}
+        speed={sim.speed}
+        cellSize={cellSize}
+        onStart={handleStartSimulation}
+        onStop={() => updateSim((current) => stopSimulation(current))}
+        onSetSpeed={(speed) => updateSim((current) => ({ ...current, speed }))}
+        t={t}
+      />
 
       <main
         className="main-grid"
@@ -2538,236 +1324,43 @@ function App() {
           ['--right-panel-width' as string]: `${rightPanelWidth}px`,
         }}
       >
-        <aside className="panel left-panel">
-          {!sim.isRunning && (
-            <>
-              <h3>{t('left.mode')}</h3>
-              {(['place', 'blueprint', 'delete'] as const).map((entry) => (
-                <button
-                  key={entry}
-                  className={mode === entry ? 'active' : ''}
-                  onClick={() => {
-                    if (sim.isRunning && entry === 'place') return
-                    if (entry === 'place') {
-                      setPlaceOperation('default')
-                      setLogStart(null)
-                      setLogCurrent(null)
-                      setLogTrace([])
-                      setPlaceType('')
-                    }
-                    setMode(entry)
-                  }}
-                >
-                  {getModeLabel(language, entry)}
-                </button>
-              ))}
-            </>
-          )}
-
-          {!sim.isRunning && mode === 'place' && (
-            <>
-              <h3>{t('left.operation')}</h3>
-              <div className="place-device-grid">
-                <button
-                  className={`place-device-button ${placeOperation === 'default' && !placeType ? 'active' : ''}`}
-                  onClick={() => {
-                    setPlaceOperation('default')
-                    setPlaceType('')
-                    setLogStart(null)
-                    setLogCurrent(null)
-                    setLogTrace([])
-                  }}
-                >
-                  <span className="operation-pointer-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                      <path d="M5 3L5 18L9.5 13.5L13 21L16.2 19.6L12.8 12.1L18.8 12.1L5 3Z" />
-                    </svg>
-                  </span>
-                  <span className="place-device-label">{t('left.operationSelect')}</span>
-                </button>
-
-                <button
-                  className={`place-device-button ${placeOperation === 'belt' ? 'active' : ''}`}
-                  onClick={() => {
-                    setPlaceOperation('belt')
-                    setPlaceType('')
-                    setLogStart(null)
-                    setLogCurrent(null)
-                    setLogTrace([])
-                  }}
-                >
-                  <img className="place-device-icon" src="/device-icons/item_log_belt_01.png" alt="" aria-hidden="true" draggable={false} />
-                  <span className="place-device-label">{t('left.placeBelt')}</span>
-                </button>
-
-                <button className="place-device-button" onClick={saveSelectionAsBlueprint}>
-                  <span className="operation-pointer-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                      <path d="M6 3H16L20 7V21H6V3ZM8 5V19H18V8H15V5H8ZM10 13H16V17H10V13Z" />
-                    </svg>
-                  </span>
-                  <span className="place-device-label">{t('left.saveBlueprint')}</span>
-                </button>
-              </div>
-
-              <h3>{t('left.device')}</h3>
-              <div className="place-groups-scroll">
-                {PLACE_GROUP_ORDER.map((groupKey) => {
-                  const devices = visiblePlaceableTypes.filter((deviceType) => getPlaceGroup(deviceType.id) === groupKey)
-                  if (devices.length === 0) return null
-                  return (
-                    <section key={groupKey} className="place-group-section">
-                      <h4 className="place-group-title">{t(PLACE_GROUP_LABEL_KEY[groupKey])}</h4>
-                      <div className="place-device-grid">
-                        {devices.map((deviceType) => (
-                          <button
-                            key={deviceType.id}
-                            className={`place-device-button ${placeType === deviceType.id ? 'active' : ''}`}
-                            onClick={() => {
-                              setPlaceOperation('default')
-                              setPlaceType(deviceType.id)
-                            }}
-                          >
-                            <img
-                              className="place-device-icon"
-                              src={getDeviceMenuIconPath(deviceType.id)}
-                              alt=""
-                              aria-hidden="true"
-                              draggable={false}
-                            />
-                            <span className="place-device-label">{getDeviceLabel(language, deviceType.id)}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </section>
-                  )
-                })}
-              </div>
-            </>
-          )}
-
-          {!sim.isRunning && mode === 'delete' && (
-            <>
-              <h3>{t('left.deleteModeGroup')}</h3>
-              <div className="delete-belt-mode-row">
-                <span className="delete-belt-mode-label">{t('left.beltDeleteMode')}</span>
-                <label className="switch-toggle switch-toggle-inline" aria-label={t('left.beltDeleteMode')}>
-                  <span className={`switch-side-label ${deleteTool !== 'wholeBelt' ? 'active' : ''}`}>{t('left.deleteSingle')}</span>
-                  <input
-                    type="checkbox"
-                    checked={deleteTool === 'wholeBelt'}
-                    onChange={(event) => {
-                      setDeleteTool(event.target.checked ? 'wholeBelt' : 'single')
-                    }}
-                  />
-                  <span className="switch-track" aria-hidden="true">
-                    <span className="switch-thumb" />
-                  </span>
-                  <span className={`switch-side-label ${deleteTool === 'wholeBelt' ? 'active' : ''}`}>{t('left.deleteWhole')}</span>
-                </label>
-              </div>
-
-              <h3>{t('left.deleteOpsGroup')}</h3>
-              <button
-                onClick={async () => {
-                  if (sim.isRunning) return
-                  const confirmed = await dialogConfirm(t('left.deleteAllConfirm'), {
-                    title: t('dialog.title.confirm'),
-                    confirmText: t('dialog.ok'),
-                    cancelText: t('dialog.cancel'),
-                    variant: 'warning',
-                  })
-                  if (!confirmed) return
-                  setLayout((current) => ({
-                    ...current,
-                    devices: current.devices.filter((device) => foundationIdSet.has(device.instanceId)),
-                  }))
-                  setSelection([])
-                }}
-              >
-                {t('left.deleteAll')}
-              </button>
-              <button
-                onClick={async () => {
-                  if (sim.isRunning) return
-                  const confirmed = await dialogConfirm(t('left.deleteAllBeltsConfirm'), {
-                    title: t('dialog.title.confirm'),
-                    confirmText: t('dialog.ok'),
-                    cancelText: t('dialog.cancel'),
-                    variant: 'warning',
-                  })
-                  if (!confirmed) return
-                  setLayout((current) => ({
-                    ...current,
-                    devices: current.devices.filter(
-                      (device) =>
-                        device.typeId !== 'item_log_connector' &&
-                        device.typeId !== 'item_log_splitter' &&
-                        device.typeId !== 'item_log_converger' &&
-                        !device.typeId.startsWith('belt_'),
-                    ),
-                  }))
-                  setSelection([])
-                }}
-              >
-                {t('left.deleteAllBelts')}
-              </button>
-              <button
-                onClick={async () => {
-                  if (sim.isRunning) return
-                  const confirmed = await dialogConfirm(t('left.clearLotConfirm'), {
-                    title: t('dialog.title.confirm'),
-                    confirmText: t('dialog.ok'),
-                    cancelText: t('dialog.cancel'),
-                    variant: 'warning',
-                  })
-                  if (!confirmed) return
-                  setLayout((current) => ({
-                    ...current,
-                    devices: current.devices.filter(
-                      (device) => foundationIdSet.has(device.instanceId) || !isWithinLot(device, current.lotSize),
-                    ),
-                  }))
-                  setSelection([])
-                }}
-              >
-                {t('left.clearLot')}
-              </button>
-            </>
-          )}
-
-          {!sim.isRunning && mode === 'blueprint' && (
-            <>
-              <h3>{t('left.blueprintSubMode')}</h3>
-              {blueprints.length === 0 ? (
-                <div className="place-group-empty">{t('left.blueprintEmpty')}</div>
-              ) : (
-                <div className="place-groups-scroll">
-                  <section className="place-group-section">
-                    <div className="place-device-grid">
-                      {blueprints.map((blueprint) => (
-                        <button
-                          key={blueprint.id}
-                          className={`place-device-button ${selectedBlueprintId === blueprint.id ? 'active' : ''}`}
-                          onClick={() => {
-                            setSelectedBlueprintId(blueprint.id)
-                          }}
-                        >
-                          <span className="place-device-label">{blueprint.name}</span>
-                          <span className="place-device-label place-device-label-subtle">
-                            {t('left.blueprintCount', { count: blueprint.devices.length })}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-                </div>
-              )}
-            </>
-          )}
-
-          {sim.isRunning && statsAndDebugSection}
-        </aside>
+        <LeftPanel
+          simIsRunning={sim.isRunning}
+          mode={mode}
+          setMode={setMode}
+          language={language}
+          t={t}
+          placeOperation={placeOperation}
+          setPlaceOperation={setPlaceOperation}
+          placeType={placeType}
+          setPlaceType={setPlaceType}
+          setLogStart={setLogStart}
+          setLogCurrent={setLogCurrent}
+          setLogTrace={setLogTrace}
+          visiblePlaceableTypes={visiblePlaceableTypes}
+          placeGroupOrder={PLACE_GROUP_ORDER}
+          placeGroupLabelKey={PLACE_GROUP_LABEL_KEY}
+          getPlaceGroup={getPlaceGroup}
+          getDeviceMenuIconPath={getDeviceMenuIconPath}
+          saveSelectionAsBlueprint={() => {
+            void saveSelectionAsBlueprint()
+          }}
+          deleteTool={deleteTool}
+          setDeleteTool={setDeleteTool}
+          onDeleteAll={() => {
+            void handleDeleteAll()
+          }}
+          onDeleteAllBelts={() => {
+            void handleDeleteAllBelts()
+          }}
+          onClearLot={() => {
+            void handleClearLot()
+          }}
+          blueprints={blueprints}
+          selectedBlueprintId={selectedBlueprintId}
+          setSelectedBlueprintId={setSelectedBlueprintId}
+          statsAndDebugSection={statsAndDebugSection}
+        />
 
         <div
           className="panel-resizer panel-resizer-left"
@@ -2780,199 +1373,22 @@ function App() {
           aria-label="Resize left panel"
         />
 
-        <section className="canvas-panel panel">
-          <div
-            ref={viewportRef}
-            className={`canvas-viewport${isPanning ? ' panning' : ''}`}
-            onMouseDown={onCanvasMouseDown}
-            onMouseMove={onCanvasMouseMove}
-            onMouseUp={onCanvasMouseUp}
-            onMouseLeave={onCanvasMouseUp}
-            onWheel={onCanvasWheel}
-            onContextMenu={(event) => event.preventDefault()}
-            onAuxClick={(event) => event.preventDefault()}
-          >
-            <div
-              ref={gridRef}
-              className={`grid-canvas mode-${mode}`}
-              style={{
-                width: canvasWidthPx,
-                height: canvasHeightPx,
-                backgroundSize: `${BASE_CELL_SIZE}px ${BASE_CELL_SIZE}px`,
-                transformOrigin: 'top left',
-                transform: `translate(${viewOffset.x}px, ${viewOffset.y}px) scale(${zoomScale})`,
-              }}
-            >
-              <div
-                className="world-layer"
-                style={{
-                  left: canvasOffsetXPx,
-                  top: canvasOffsetYPx,
-                  width: layout.lotSize * BASE_CELL_SIZE,
-                  height: layout.lotSize * BASE_CELL_SIZE,
-                }}
-              >
-                <div className="lot-border" />
-
-                {powerRangeOutlines.map((outline) => (
-                  <div
-                    key={outline.key}
-                    className="power-range-outline"
-                    style={{
-                      left: outline.left,
-                      top: outline.top,
-                      width: outline.width,
-                      height: outline.height,
-                    }}
-                  />
-                ))}
-
-                <StaticDeviceLayer
-                  devices={layout.devices}
-                  selectionSet={selectionSet}
-                  invalidSelectionSet={dragInvalidSelection}
-                  previewOriginsById={dragPreviewOriginsById}
-                  language={language}
-                  showRuntimeItemIcons={false}
-                />
-
-                {mode === 'place' && placeOperation === 'belt' && logisticsPreviewDevices.length > 0 && (
-                  <StaticDeviceLayer
-                    devices={logisticsPreviewDevices}
-                    selectionSet={new Set()}
-                    invalidSelectionSet={new Set()}
-                    previewOriginsById={new Map()}
-                    language={language}
-                    extraClassName="logistics-preview-device"
-                    showRuntimeItemIcons={false}
-                  />
-                )}
-
-                {blueprintPlacementPreview && blueprintPlacementPreview.devices.length > 0 && (
-                  <StaticDeviceLayer
-                    devices={blueprintPlacementPreview.devices}
-                    selectionSet={new Set()}
-                    invalidSelectionSet={new Set()}
-                    previewOriginsById={new Map()}
-                    language={language}
-                    extraClassName={`blueprint-preview-device ${blueprintPlacementPreview.isValid ? 'valid' : 'invalid'}`}
-                    showRuntimeItemIcons={false}
-                  />
-                )}
-
-                {runtimeStallOverlays.map((overlay) => (
-                  <div
-                    key={overlay.key}
-                    className={`device-runtime-overlay ${overlay.isBelt ? 'is-belt' : 'is-device'}`}
-                    style={{
-                      left: overlay.left,
-                      top: overlay.top,
-                      width: overlay.width,
-                      height: overlay.height,
-                    }}
-                  />
-                ))}
-
-                <div className="in-transit-overlay" aria-hidden="true">
-                  {inTransitItems.map((item) => (
-                    <span
-                      key={item.key}
-                      className={`belt-item-box item-${item.itemId}`}
-                      style={{
-                        left: item.x,
-                        top: item.y,
-                        width: `${BASE_CELL_SIZE * 0.5}px`,
-                        height: `${BASE_CELL_SIZE * 0.5}px`,
-                      }}
-                      title={`${getItemLabel(language, item.itemId)} @ ${item.progress01.toFixed(2)}`}
-                    >
-                      <img className="belt-item-cover" src={getItemIconPath(item.itemId)} alt="" draggable={false} />
-                    </span>
-                  ))}
-                </div>
-
-                {portChevrons.map((chevron) => (
-                  <div
-                    key={chevron.key}
-                    className="port-chevron"
-                    style={{
-                      left: chevron.x,
-                      top: chevron.y,
-                      width: chevron.width,
-                      height: chevron.height,
-                      transform: `translate(-50%, -50%) rotate(${chevron.angle}deg)`,
-                    }}
-                  >
-                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                      <polyline className="port-chevron-outline" points="0,12 100,50 0,88" />
-                      <polyline className="port-chevron-inner" points="0,22 84,50 0,78" />
-                    </svg>
-                  </div>
-                ))}
-
-                {placePreview && (
-                  <div
-                    className={`place-ghost ${placePreview.isValid ? 'valid' : 'invalid'}`}
-                    style={{
-                      left: placePreview.origin.x * BASE_CELL_SIZE,
-                      top: placePreview.origin.y * BASE_CELL_SIZE,
-                      width: placePreview.footprintSize.width * BASE_CELL_SIZE,
-                      height: placePreview.footprintSize.height * BASE_CELL_SIZE,
-                    }}
-                  >
-                    <div className="place-ghost-surface">
-                      {placePreview.textureSrc && (
-                        <img
-                          className="place-ghost-texture"
-                          src={placePreview.textureSrc}
-                          alt=""
-                          aria-hidden="true"
-                          draggable={false}
-                          style={{
-                            width: `${placePreview.textureWidthPx}px`,
-                            height: `${placePreview.textureHeightPx}px`,
-                            transform: `translate(-50%, -50%) rotate(${placePreview.rotation}deg)`,
-                          }}
-                        />
-                      )}
-                    </div>
-                    {placePreview.chevrons.map((chevron) => (
-                      <div
-                        key={chevron.key}
-                        className="port-chevron place-ghost-chevron"
-                        style={{
-                          left: chevron.x,
-                          top: chevron.y,
-                          width: chevron.width,
-                          height: chevron.height,
-                          transform: `translate(-50%, -50%) rotate(${chevron.angle}deg)`,
-                        }}
-                      >
-                        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                          <polyline className="port-chevron-outline" points="0,12 100,50 0,88" />
-                          <polyline className="port-chevron-inner" points="0,22 84,50 0,78" />
-                        </svg>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {dragRect && (
-                  <div
-                    className="selection-rect"
-                    style={{
-                      left: Math.min(dragRect.x1, dragRect.x2) * BASE_CELL_SIZE,
-                      top: Math.min(dragRect.y1, dragRect.y2) * BASE_CELL_SIZE,
-                      width: (Math.abs(dragRect.x2 - dragRect.x1) + 1) * BASE_CELL_SIZE,
-                      height: (Math.abs(dragRect.y2 - dragRect.y1) + 1) * BASE_CELL_SIZE,
-                    }}
-                  />
-                )}
-
-              </div>
-            </div>
-          </div>
-        </section>
+        <CenterPanel
+          viewportRef={viewportRef}
+          gridRef={gridRef}
+          mode={mode}
+          isPanning={isPanning}
+          canvasWidthPx={canvasWidthPx}
+          canvasHeightPx={canvasHeightPx}
+          baseCellSize={BASE_CELL_SIZE}
+          viewOffset={viewOffset}
+          zoomScale={zoomScale}
+          onMouseDown={onCanvasMouseDown}
+          onMouseMove={onCanvasMouseMove}
+          onMouseUp={onCanvasMouseUp}
+          onWheel={onCanvasWheel}
+          worldContent={worldContent}
+        />
 
         <div
           className="panel-resizer panel-resizer-right"
@@ -2985,435 +1401,53 @@ function App() {
           aria-label="Resize right panel"
         />
 
-        <aside className="panel right-panel">
-          <h3>{t('right.lot')}</h3>
-          {baseGroups.map((group) => {
-            if (group.key === 'wuling') {
-              return (
-                <section key={group.key} className="base-group-section">
-                  <h4 className="base-group-title">{t(group.titleKey)}</h4>
-                  <div className="row">
-                    <p className="base-group-empty">{t('right.baseGroup.comingSoon')}</p>
-                  </div>
-                </section>
-              )
-            }
-            const groupedBases = BASES.filter((base) => base.tags.includes(group.tag))
-            return (
-              <section key={group.key} className="base-group-section">
-                <h4 className="base-group-title">{t(group.titleKey)}</h4>
-                <div className="row">
-                  {groupedBases.length > 0 ? (
-                    groupedBases.map((base) => (
-                      <button
-                        key={base.id}
-                        className={currentBaseId === base.id ? 'active' : ''}
-                        onClick={() => {
-                          setActiveBaseId(base.id)
-                          setSelection([])
-                        }}
-                      >
-                        {base.name}
-                      </button>
-                    ))
-                  ) : (
-                    <p className="base-group-empty">{t('right.baseGroup.empty')}</p>
-                  )}
-                </div>
-              </section>
-            )
-          })}
-          <div className="kv"><span>{t('right.basePlaceableSize')}</span><span>{currentBase.placeableSize}x{currentBase.placeableSize}</span></div>
-          <div className="kv">
-            <span>{t('right.baseOuterRing')}</span>
-            <span>
-              T{currentBase.outerRing.top} R{currentBase.outerRing.right} B{currentBase.outerRing.bottom} L{currentBase.outerRing.left}
-            </span>
-          </div>
-          <div className="kv"><span>{t('right.baseTags')}</span><span>{currentBase.tags.join(', ') || '-'}</span></div>
-
-          <h3>{t('right.selected')}</h3>
-          {selectedDevice ? (
-            <>
-              {DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags && DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags!.length > 0 && (
-                <div className="kv"><span>{t('detail.tags')}</span><span>{DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags!.join(', ')}</span></div>
-              )}
-              <div className="kv"><span>{t('detail.instanceId')}</span><span>{selectedDevice.instanceId}</span></div>
-              <div className="kv"><span>{t('detail.deviceType')}</span><span>{getDeviceLabel(language, selectedDevice.typeId)}</span></div>
-              <div className="kv"><span>{t('detail.rotation')}</span><span>{selectedDevice.rotation}</span></div>
-              <div className="kv"><span>{t('detail.position')}</span><span>{selectedDevice.origin.x},{selectedDevice.origin.y}</span></div>
-              <div className="kv"><span>{t('detail.currentStatus')}</span><span>{getRuntimeStatusText(selectedRuntime, t)}</span></div>
-              <div className="kv">
-                <span>{t('detail.internalStatus')}</span>
-                <span>{getInternalStatusText(selectedDevice, selectedRuntime, t)}</span>
-              </div>
-              {selectedDevice.typeId.startsWith('belt_') && selectedRuntime && 'slot' in selectedRuntime && (
-                <>
-                  <div className="kv">
-                    <span>{t('detail.currentItem')}</span>
-                    <span>{selectedRuntime.slot ? getItemLabel(language, selectedRuntime.slot.itemId) : t('detail.empty')}</span>
-                  </div>
-                  <div className="kv">
-                    <span>{t('detail.progress01')}</span>
-                    <span>{selectedRuntime.slot ? selectedRuntime.slot.progress01.toFixed(2) : '0.00'}</span>
-                  </div>
-                  <div className="kv">
-                    <span>{t('detail.avgTransitTicks')}</span>
-                    <span>
-                      {'transportSamples' in selectedRuntime && selectedRuntime.transportSamples > 0
-                        ? (selectedRuntime.transportTotalTicks / selectedRuntime.transportSamples).toFixed(2)
-                        : '-'}
-                    </span>
-                  </div>
-                </>
-              )}
-              {selectedRuntime && (
-                <>
-                  {'inputBuffer' in selectedRuntime && 'outputBuffer' in selectedRuntime && (
-                    (() => {
-                      const recipe = recipeForDevice(selectedDevice.typeId)
-                      const recipeCycleTicks = recipe ? cycleTicksFromSeconds(recipe.cycleSeconds, sim.tickRateHz) : 0
-                      const progress = recipe
-                        ? `${(selectedRuntime.progress01 * 100).toFixed(1)}% (${selectedRuntime.cycleProgressTicks}/${recipeCycleTicks})`
-                        : `${(selectedRuntime.progress01 * 100).toFixed(1)}%`
-                      const lastCompletedCycleTicks = selectedRuntime.lastCompletedCycleTicks
-                      const lastCompletionIntervalTicks = selectedRuntime.lastCompletionIntervalTicks
-
-                      return (
-                        <>
-                          <div className="kv">
-                            <span>{t('detail.currentRecipe')}</span>
-                            <span>{formatRecipeSummary(selectedDevice.typeId, language)}</span>
-                          </div>
-                          <div className="kv">
-                            <span>{t('detail.productionProgress')}</span>
-                            <span>{progress}</span>
-                          </div>
-                          <div className="kv">
-                            <span>{t('detail.lastCompletedCycleTicks')}</span>
-                            <span>{lastCompletedCycleTicks > 0 ? `${lastCompletedCycleTicks} Ticks` : '-'}</span>
-                          </div>
-                          <div className="kv">
-                            <span>{t('detail.lastCompletionIntervalTicks')}</span>
-                            <span>{lastCompletionIntervalTicks > 0 ? `${lastCompletionIntervalTicks} Ticks` : '-'}</span>
-                          </div>
-                        </>
-                      )
-                    })()
-                  )}
-                  {'inputBuffer' in selectedRuntime && (
-                    <div className="kv">
-                      <span>{t('detail.cacheInputBuffer')}</span>
-                      <span>
-                        {formatInputBufferAmounts(
-                          language,
-                          selectedRuntime.inputBuffer,
-                          selectedProcessorBufferSpec?.inputSlots ?? 1,
-                          selectedProcessorBufferSpec?.inputTotalCapacity ?? 50,
-                          t,
-                        )}
-                      </span>
-                    </div>
-                  )}
-                  {'outputBuffer' in selectedRuntime && (
-                    <div className="kv">
-                      <span>{t('detail.cacheOutputBuffer')}</span>
-                      <span>
-                        {formatOutputBufferAmounts(
-                          language,
-                          selectedRuntime.outputBuffer,
-                          selectedProcessorBufferSpec?.outputSlots ?? 1,
-                          selectedProcessorBufferSpec?.outputTotalCapacity ?? 50,
-                          t,
-                        )}
-                      </span>
-                    </div>
-                  )}
-                  {'inventory' in selectedRuntime && (
-                    <div className="kv">
-                      <span>{t('detail.cacheInventory')}</span>
-                      <span>{formatInventoryAmounts(language, selectedRuntime.inventory, t)}</span>
-                    </div>
-                  )}
-                  {'slot' in selectedRuntime && (
-                    <div className="kv">
-                      <span>{t('detail.cacheSlot')}</span>
-                      <span>{formatSlotValue(selectedRuntime.slot, language, t)}</span>
-                    </div>
-                  )}
-                  {'nsSlot' in selectedRuntime && (
-                    <div className="kv">
-                      <span>{t('detail.cacheNsSlot')}</span>
-                      <span>{formatSlotValue(selectedRuntime.nsSlot, language, t)}</span>
-                    </div>
-                  )}
-                  {'weSlot' in selectedRuntime && (
-                    <div className="kv">
-                      <span>{t('detail.cacheWeSlot')}</span>
-                      <span>{formatSlotValue(selectedRuntime.weSlot, language, t)}</span>
-                    </div>
-                  )}
-                </>
-              )}
-              {selectedDevice.typeId === 'item_port_unloader_1' && (
-                <>
-                  <div className="kv kv-no-border kv-pickup-inline">
-                    <span>{t('detail.pickupItem')}</span>
-                    <span className="kv-pickup-inline-value">
-                      <span className="kv-pickup-stack">
-                        <button
-                          type="button"
-                          className="picker-open-btn picker-open-btn-inline"
-                          disabled={sim.isRunning}
-                          onClick={() => setItemPickerState({ kind: 'pickup', deviceInstanceId: selectedDevice.instanceId })}
-                        >
-                          <span className="pickup-picker-current">
-                            {selectedPickupItemId ? (
-                              <img
-                                className="pickup-picker-current-icon"
-                                src={getItemIconPath(selectedPickupItemId)}
-                                alt=""
-                                aria-hidden="true"
-                                draggable={false}
-                              />
-                            ) : (
-                              <span className="pickup-picker-current-icon pickup-picker-current-icon--empty">?</span>
-                            )}
-                            <span>
-                              {selectedPickupItemId
-                                ? getItemLabel(language, selectedPickupItemId)
-                                : t('detail.unselected')}
-                            </span>
-                          </span>
-                        </button>
-                        <label className="switch-toggle switch-toggle-inline" aria-label={t('detail.pickupIgnoreInventory')}>
-                          <span className={`switch-side-label ${!selectedPickupIgnoreInventory ? 'active' : ''}`}>
-                            {t('detail.pickupUseStock')}
-                          </span>
-                          <input
-                            type="checkbox"
-                            checked={selectedPickupIgnoreInventory}
-                            disabled={sim.isRunning || !selectedPickupItemId || selectedPickupItemIsOre}
-                            onChange={(event) => {
-                              updatePickupIgnoreInventory(selectedDevice.instanceId, event.target.checked)
-                            }}
-                          />
-                          <span className="switch-track" aria-hidden="true">
-                            <span className="switch-thumb" />
-                          </span>
-                          <span className={`switch-side-label ${selectedPickupIgnoreInventory ? 'active' : ''}`}>
-                            {t('detail.pickupIgnoreShort')}
-                          </span>
-                        </label>
-                      </span>
-                    </span>
-                  </div>
-                </>
-              )}
-              {selectedDevice.typeId === 'item_port_storager_1' && (
-                <div className="kv kv-switch">
-                  <span>{t('detail.submitWarehouse')}</span>
-                  <span className="kv-switch-value">
-                    <label className="switch-toggle" aria-label={t('detail.submitWarehouse')}>
-                      <input
-                        type="checkbox"
-                        checked={selectedDevice.config.submitToWarehouse ?? true}
-                        disabled={sim.isRunning}
-                        onChange={(event) => {
-                          const checked = event.target.checked
-                          setLayout((current) => ({
-                            ...current,
-                            devices: current.devices.map((device) =>
-                              device.instanceId === selectedDevice.instanceId
-                                ? { ...device, config: { ...device.config, submitToWarehouse: checked } }
-                                : device,
-                            ),
-                          }))
-                        }}
-                      />
-                      <span className="switch-track" aria-hidden="true">
-                        <span className="switch-thumb" />
-                      </span>
-                    </label>
-                  </span>
-                </div>
-              )}
-              {DEVICE_TYPE_BY_ID[selectedDevice.typeId].runtimeKind === 'processor' && !sim.isRunning && (
-                <div className="picker">
-                  <label>{t('detail.preloadInput')}</label>
-                  <div className="preload-slot-list">
-                    {selectedPreloadSlots.map((slot, slotIndex) => (
-                      <div key={`${selectedDevice.instanceId}-preload-${slotIndex}`} className="preload-slot-row">
-                        <span className="preload-slot-label">{t('detail.preloadSlot', { index: slotIndex + 1 })}</span>
-                        <button
-                          type="button"
-                          className="picker-open-btn"
-                          disabled={sim.isRunning}
-                          onClick={() =>
-                            setItemPickerState({
-                              kind: 'preload',
-                              deviceInstanceId: selectedDevice.instanceId,
-                              slotIndex,
-                            })
-                          }
-                        >
-                          <span className="pickup-picker-current">
-                            {slot.itemId ? (
-                              <img
-                                className="pickup-picker-current-icon"
-                                src={getItemIconPath(slot.itemId)}
-                                alt=""
-                                aria-hidden="true"
-                                draggable={false}
-                              />
-                            ) : (
-                              <span className="pickup-picker-current-icon pickup-picker-current-icon--empty">?</span>
-                            )}
-                            <span>{slot.itemId ? getItemLabel(language, slot.itemId) : t('detail.unselected')}</span>
-                          </span>
-                        </button>
-                        <input
-                          type="number"
-                          min={0}
-                          max={selectedProcessorBufferSpec?.inputSlotCapacities[slotIndex] ?? 50}
-                          step={1}
-                          disabled={sim.isRunning || !slot.itemId}
-                          value={slot.amount}
-                          onChange={(event) => {
-                            const parsed = Number.parseInt(event.target.value, 10)
-                            const nextAmount = Number.isFinite(parsed) ? parsed : 0
-                            updateProcessorPreloadSlot(selectedDevice.instanceId, slotIndex, { amount: nextAmount })
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <small>
-                    {t('detail.preloadInputHint', {
-                      cap: selectedProcessorBufferSpec?.inputTotalCapacity ?? 50,
-                      slots: selectedProcessorBufferSpec?.inputSlots ?? 1,
-                    })}
-                  </small>
-                  <small>
-                    {t('detail.preloadInputTotal', {
-                      total: selectedPreloadTotal,
-                      cap: selectedProcessorBufferSpec?.inputTotalCapacity ?? 50,
-                    })}
-                  </small>
-                </div>
-              )}
-            </>
-          ) : (
-            <p>{t('right.noneSelected')}</p>
-          )}
-        </aside>
+        <RightPanel
+          t={t}
+          language={language}
+          currentBaseId={currentBaseId}
+          currentBase={currentBase}
+          setActiveBaseId={setActiveBaseId}
+          setSelection={setSelection}
+          selectedDevice={selectedDevice}
+          selectedRuntime={selectedRuntime}
+          sim={sim}
+          getRuntimeStatusText={getRuntimeStatusText}
+          getInternalStatusText={getInternalStatusText}
+          formatRecipeSummary={formatRecipeSummary}
+          cycleTicksFromSeconds={cycleTicksFromSeconds}
+          recipeForDevice={recipeForDevice}
+          formatInputBufferAmounts={formatInputBufferAmounts}
+          formatOutputBufferAmounts={formatOutputBufferAmounts}
+          formatInventoryAmounts={formatInventoryAmounts}
+          formatSlotValue={formatSlotValue}
+          selectedProcessorBufferSpec={selectedProcessorBufferSpec}
+          selectedPreloadSlots={selectedPreloadSlots}
+          selectedPreloadTotal={selectedPreloadTotal}
+          selectedPickupItemId={selectedPickupItemId}
+          selectedPickupItemIsOre={selectedPickupItemIsOre}
+          selectedPickupIgnoreInventory={selectedPickupIgnoreInventory}
+          getItemIconPath={getItemIconPath}
+          setItemPickerState={setItemPickerState}
+          updatePickupIgnoreInventory={updatePickupIgnoreInventory}
+          setLayout={setLayout}
+          updateProcessorPreloadSlot={updateProcessorPreloadSlot}
+          simIsRunning={sim.isRunning}
+        />
       </main>
 
-      <div className="site-info-bar" role="contentinfo" aria-label={t('app.info.copyright', { year: currentYear })}>
-        <div className="site-info-line">
-          <span>{t('app.info.copyright', { year: currentYear })}</span>
-          <span className="site-info-sep">|</span>
-          <a
-            className="site-info-link"
-            href="https://beian.miit.gov.cn/"
-            target="_blank"
-            rel="noreferrer"
-            aria-label={t('app.info.icp')}
-          >
-            <span className="site-info-shield" aria-hidden="true">
-              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                <path d="M12 2L4 5V11C4 16.2 7.4 21 12 22C16.6 21 20 16.2 20 11V5L12 2ZM10.8 15.8L7.2 12.2L8.6 10.8L10.8 13L15.4 8.4L16.8 9.8L10.8 15.8Z" />
-              </svg>
-            </span>
-            <span>{t('app.info.icp')}</span>
-          </a>
-          <span className="site-info-sep">|</span>
-          <a
-            className="site-info-link"
-            href="https://github.com/hsyhhssyy/IndustrialPlanner"
-            target="_blank"
-            rel="noreferrer"
-            aria-label={t('app.info.github')}
-          >
-            <span className="site-info-brand-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                <path d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 0 0 7.87 10.92c.58.1.8-.25.8-.56v-2.16c-3.2.7-3.88-1.35-3.88-1.35-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.76 2.69 1.25 3.34.96.1-.75.4-1.25.73-1.54-2.56-.3-5.25-1.28-5.25-5.7 0-1.26.45-2.3 1.2-3.11-.13-.3-.52-1.53.1-3.18 0 0 .97-.31 3.18 1.19a11.1 11.1 0 0 1 5.8 0c2.2-1.5 3.17-1.2 3.17-1.2.63 1.66.24 2.89.12 3.19.74.81 1.19 1.85 1.19 3.1 0 4.43-2.7 5.39-5.27 5.67.41.35.78 1.03.78 2.08v3.08c0 .31.2.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" />
-              </svg>
-            </span>
-            <span>{t('app.info.github')}</span>
-          </a>
-          <span className="site-info-sep">|</span>
-          <span className="site-info-disclaimer">{t('app.info.disclaimer')}</span>
-        </div>
-      </div>
+      <SiteInfoBar currentYear={currentYear} t={t} />
 
       {itemPickerState && pickerTargetDevice && (
-        <div
-          className="global-dialog-backdrop"
-          role="presentation"
-          onClick={() => setItemPickerState(null)}
-        >
-          <div
-            className="global-dialog pickup-item-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('detail.itemPickerTitle')}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="global-dialog-title">
-              {itemPickerState.kind === 'pickup'
-                ? t('detail.pickupDialogTitle')
-                : t('detail.preloadDialogTitle', { index: itemPickerState.slotIndex + 1 })}
-            </div>
-            <div className="pickup-item-list">
-              <button
-                type="button"
-                className={`pickup-item-option ${!pickerSelectedItemId ? 'active' : ''}`}
-                onClick={() => {
-                  if (itemPickerState.kind === 'pickup') {
-                    updatePickupItem(pickerTargetDevice.instanceId, undefined)
-                  } else {
-                    updateProcessorPreloadSlot(pickerTargetDevice.instanceId, itemPickerState.slotIndex, { itemId: null })
-                  }
-                  setItemPickerState(null)
-                }}
-              >
-                <span className="pickup-item-option-icon pickup-item-option-icon--empty">?</span>
-                <span>{t('detail.unselected')}</span>
-              </button>
-              {ITEMS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`pickup-item-option ${pickerSelectedItemId === item.id ? 'active' : ''}`}
-                  disabled={itemPickerState.kind === 'preload' && pickerDisabledItemIds.has(item.id)}
-                  onClick={() => {
-                    if (itemPickerState.kind === 'pickup') {
-                      updatePickupItem(pickerTargetDevice.instanceId, item.id)
-                    } else {
-                      updateProcessorPreloadSlot(pickerTargetDevice.instanceId, itemPickerState.slotIndex, { itemId: item.id })
-                    }
-                    setItemPickerState(null)
-                  }}
-                >
-                  <img
-                    className="pickup-item-option-icon"
-                    src={getItemIconPath(item.id)}
-                    alt=""
-                    aria-hidden="true"
-                    draggable={false}
-                  />
-                  <span>{getItemLabel(language, item.id)}</span>
-                </button>
-              ))}
-            </div>
-            <div className="global-dialog-actions">
-              <button className="global-dialog-btn" onClick={() => setItemPickerState(null)}>
-                {t('dialog.cancel')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ItemPickerDialog
+          itemPickerState={itemPickerState}
+          pickerSelectedItemId={pickerSelectedItemId}
+          pickerDisabledItemIds={pickerDisabledItemIds}
+          language={language}
+          t={t}
+          getItemIconPath={getItemIconPath}
+          onClose={() => setItemPickerState(null)}
+          onSelectItem={handleItemPickerSelect}
+        />
       )}
 
       {isWikiOpen && <WikiPanel language={language} t={t} onClose={() => setIsWikiOpen(false)} />}
