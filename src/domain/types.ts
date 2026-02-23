@@ -120,6 +120,7 @@ export interface PreloadInputConfigEntry {
 
 export interface DeviceConfig {
   pickupItemId?: ItemId
+  pickupIgnoreInventory?: boolean
   submitToWarehouse?: boolean
   preloadInputs?: PreloadInputConfigEntry[]
   preloadInputItemId?: ItemId
@@ -187,6 +188,9 @@ export interface WarehouseStats {
   simSeconds: number
   producedPerMinute: Record<ItemId, number>
   consumedPerMinute: Record<ItemId, number>
+  everProduced: Record<ItemId, number>
+  everConsumed: Record<ItemId, number>
+  everStockPositive: Record<ItemId, number>
 }
 
 export interface BaseRuntime {

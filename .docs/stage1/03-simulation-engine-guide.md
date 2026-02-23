@@ -80,6 +80,12 @@ Plan 阶段只做可行性判断与预留，Commit 阶段才真实变更容器�
 - 采用基于标准秒的时间窗判定：在一个运输间隔窗口（当前为 `2 秒`）内若一次都未成功出货，则标记 `OUTPUT_BLOCKED`。
 - 成功出货后计数器立即清零。
 
+## 4.3 取货口“无视库存”口径
+
+- `pickupIgnoreInventory=false`：取货口仅在仓库库存可用时可出货，成功交接后扣减仓库库存。
+- `pickupIgnoreInventory=true`：取货口可无视仓库库存持续出货，且成功交接后不扣减仓库库存。
+- 当取货口选择了带 `矿石` tag 的物品时，`pickupIgnoreInventory` 视为强制开启（不可关闭）。
+
 ## 5. runtimeKind 运行逻辑
 
 ## 5.1 `processor`

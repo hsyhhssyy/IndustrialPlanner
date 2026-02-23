@@ -79,6 +79,15 @@ conventions:
       enabled: true
       tag: 矿石
       description: 命中该 tag 的物品在仓库中保持无限库存（不随取货口出货扣减）
+    pickupIgnoreInventory:
+      configKey: pickupIgnoreInventory
+      type: boolean
+      default: false
+      description: 取货口可选“无视库存”模式；开启后可无视仓库库存持续出货，且不扣减仓库库存。
+      forcedTrueWhenPickupItemTag: 矿石
+      uiBehaviorWhenForced:
+        defaultOn: true
+        editable: false
   powerRequirement:
     defaultRequiresPower: false
     stage1PoweredDevices:
@@ -1434,6 +1443,11 @@ devices:
           mode: solid
           whitelist: []
         description: 可选择任意已定义固体物品作为取出目标（包含中间产物）
+      pickupIgnoreInventory:
+        type: boolean
+        default: false
+        description: 是否无视仓库库存进行取货；开启后该取货口出货不扣减仓库库存。
+        forcedTrueWhenSelectableSourceItemTag: 矿石
     notes:
       - item_port_unloader_1 使用固定端口，不使用动态端口。
       - 基准方向下，唯一出口位于中间格北侧；通过旋转适配不同连线方向。

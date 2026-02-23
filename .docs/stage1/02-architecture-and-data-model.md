@@ -65,6 +65,7 @@
 - `rotation: 0 | 90 | 180 | 270`
 - `config: Record<string, unknown>`（如 pickup 选矿）
    - `pickupItemId?: ItemId`（取货口）
+   - `pickupIgnoreInventory?: boolean`（取货口；是否无视仓库库存，矿石类物品强制为 `true`）
    - `submitToWarehouse?: boolean`（存储箱）
    - `preloadInputs?: Array<{ slotIndex: number; itemId: ItemId; amount: number }>`（processor 编辑态按槽位预置输入）
 

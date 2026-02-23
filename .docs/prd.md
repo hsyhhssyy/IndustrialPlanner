@@ -503,6 +503,9 @@ progress01 ∈ [0,1]
 * 统一库存池（取货口从仓库取货，存储箱可提交到仓库）
 * 存储箱提交行为为用户可选配置，默认值为“提交”；开启后按仿真时间每 10 秒批量提交一次该存储箱内所有物品到仓库
 * pickup_port 可选择任意已定义物品（包括 `item_originium_powder`）
+* pickup_port 新增配置项 `pickupIgnoreInventory`（是否无视库存），默认 `false`
+* 当 `pickupIgnoreInventory=true` 时，pickup_port 可持续出货且不扣减仓库该物品库存
+* 若 pickup_port 选择了带 `矿石` tag 的物品，则 `pickupIgnoreInventory` 强制为 `true`，并在 UI 中禁止编辑
 * 仓库统计与地图上设备增减解耦
 * 每次进入仿真前，仓库库存重置为统一初始值：`item_originium_ore=∞`，其他物品=`0`
 
@@ -521,6 +524,7 @@ progress01 ∈ [0,1]
 
 * /min 按仿真时间计算，按照滑动窗口计算。
 * 不受 1x / 2x / 4x / 16x 影响。
+* 当物品被任一 pickup_port 以“无视库存”方式取出时，该物品在“当前库存”列显示为 `∞`。
 
 排序：
 

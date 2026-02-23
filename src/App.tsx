@@ -329,6 +329,30 @@ function formatSlotValue(
   return `${getItemLabel(language, slot.itemId)} @ ${slot.progress01.toFixed(2)}`
 }
 
+function formatCompactNumber(value: number) {
+  const abs = Math.abs(value)
+  const sign = value < 0 ? '-' : ''
+  if (abs >= 10000) {
+    return `${sign}${Math.floor(abs / 1000)}k`
+  }
+
+  const integerDigits = Math.floor(abs).toString().length
+  if (integerDigits > 2) {
+    return `${Math.round(value)}`
+  }
+  return value.toFixed(2)
+}
+
+function formatCompactStock(value: number) {
+  if (!Number.isFinite(value)) return '∞'
+  const abs = Math.abs(value)
+  const sign = value < 0 ? '-' : ''
+  if (abs >= 10000) {
+    return `${sign}${Math.floor(abs / 1000)}k`
+  }
+  return `${Math.round(value)}`
+}
+
 function recipeForDevice(typeId: DeviceTypeId) {
   return RECIPES.find((recipe) => recipe.machineType === typeId)
 }
@@ -383,7 +407,7 @@ const PLACE_GROUP_LABEL_KEY: Record<PlaceGroupKey, string> = {
 
 function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
   if (typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector') return 'logistics'
-  if (typeId === 'item_port_unloader_1') return 'resource'
+  if (typeId === 'item_port_unloader_1') return 'storage'
   if (
     typeId === 'item_port_storager_1' ||
     typeId === 'item_port_log_hongs_bus_source' ||
@@ -420,12 +444,23 @@ function cycleTicksFromSeconds(cycleSeconds: number, tickRateHz: number) {
 
 const BASE_CELL_SIZE = 64
 const BELT_VIEWBOX_SIZE = 64
+const STATS_TOP_N = 20
+const LEFT_PANEL_MIN_WIDTH = 340
+const RIGHT_PANEL_MIN_WIDTH = 260
+const PANEL_MAX_WIDTH = 560
 
 const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
 const HIDDEN_CHEVRON_DEVICE_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
 const OUT_OF_LOT_TOAST_KEY = 'toast.outOfLot'
 const FALLBACK_PLACEMENT_TOAST_KEY = 'toast.invalidPlacementFallback'
 const MANUAL_LOGISTICS_JUNCTION_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
+const ORE_ITEM_TAG = '矿石'
+const ORE_ITEM_ID_SET = new Set<ItemId>(ITEMS.filter((item) => item.tags?.includes(ORE_ITEM_TAG)).map((item) => item.id))
+
+function isOreItemId(itemId: ItemId | undefined) {
+  return Boolean(itemId && ORE_ITEM_ID_SET.has(itemId))
+}
+
 function isKnownDeviceTypeId(typeId: unknown): typeId is DeviceTypeId {
   return typeof typeId === 'string' && typeId in DEVICE_TYPE_BY_ID
 }
@@ -751,6 +786,8 @@ function App() {
   const [clipboardBlueprint, setClipboardBlueprint] = useState<BlueprintSnapshot | null>(null)
   const [blueprintPlacementRotation, setBlueprintPlacementRotation] = useState<Rotation>(0)
   const [isWikiOpen, setIsWikiOpen] = useState(false)
+  const [showAllStatsRows, setShowAllStatsRows] = useState(false)
+  const [statsTableMaxHeight, setStatsTableMaxHeight] = useState<number | null>(null)
 
   const layout = useMemo(() => normalizeLayoutForBase(layoutsByBase[activeBaseId], activeBaseId), [layoutsByBase, activeBaseId])
   const setLayout = useCallback(
@@ -786,6 +823,7 @@ function App() {
 
   const gridRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
+  const statsTableRef = useRef<HTMLTableElement | null>(null)
   const layoutRef = useRef(layout)
   const simStateRef = useRef(sim)
   const simRafRef = useRef<number | null>(null)
@@ -802,6 +840,18 @@ function App() {
   const occupancyMap = useMemo(() => buildOccupancyMap(layout), [layout])
   const cellDeviceMap = useMemo(() => cellToDeviceId(layout), [layout])
   const t = useMemo(() => createTranslator(language), [language])
+  const visiblePlaceableTypes = useMemo(
+    () => PLACEABLE_TYPES.filter((deviceType) => !deviceType.tags?.includes('武陵') || currentBase.tags.includes('武陵')),
+    [currentBase],
+  )
+
+  useEffect(() => {
+    if (!placeType) return
+    const stillVisible = visiblePlaceableTypes.some((deviceType) => deviceType.id === placeType)
+    if (!stillVisible) {
+      setPlaceType('')
+    }
+  }, [placeType, setPlaceType, visiblePlaceableTypes])
 
   const updateSim = useCallback((updater: (current: SimState) => SimState) => {
     const next = updater(simStateRef.current)
@@ -1043,11 +1093,11 @@ function App() {
   }, [placeType, setPlaceType])
 
   useEffect(() => {
-    setLeftPanelWidth((current) => clamp(Number.isFinite(current) ? current : 340, 260, 560))
+    setLeftPanelWidth((current) => clamp(Number.isFinite(current) ? current : 340, LEFT_PANEL_MIN_WIDTH, PANEL_MAX_WIDTH))
   }, [setLeftPanelWidth])
 
   useEffect(() => {
-    setRightPanelWidth((current) => clamp(Number.isFinite(current) ? current : 340, 260, 560))
+    setRightPanelWidth((current) => clamp(Number.isFinite(current) ? current : 340, RIGHT_PANEL_MIN_WIDTH, PANEL_MAX_WIDTH))
   }, [setRightPanelWidth])
 
   useEffect(() => {
@@ -1056,12 +1106,12 @@ function App() {
       if (!state) return
 
       if (state.side === 'left') {
-        const nextWidth = clamp(state.startWidth + (event.clientX - state.startX), 260, 560)
+        const nextWidth = clamp(state.startWidth + (event.clientX - state.startX), LEFT_PANEL_MIN_WIDTH, PANEL_MAX_WIDTH)
         setLeftPanelWidth(nextWidth)
         return
       }
 
-      const nextWidth = clamp(state.startWidth - (event.clientX - state.startX), 260, 560)
+      const nextWidth = clamp(state.startWidth - (event.clientX - state.startX), RIGHT_PANEL_MIN_WIDTH, PANEL_MAX_WIDTH)
       setRightPanelWidth(nextWidth)
     }
 
@@ -1145,7 +1195,9 @@ function App() {
 
     const maxTicksPerFrame = 8
     const stepMs = 1000 / (sim.tickRateHz * sim.speed)
-    const uiCommitIntervalMs = 120
+    const effectiveTickRate = sim.tickRateHz * sim.speed
+    const targetUiFps = clamp(effectiveTickRate, 5, 30)
+    const uiCommitIntervalMs = 1000 / targetUiFps
 
     const onFrame = (nowMs: number) => {
       if (simLastFrameMsRef.current === 0) {
@@ -1189,6 +1241,33 @@ function App() {
       simUiLastCommitMsRef.current = 0
     }
   }, [sim.isRunning, sim.speed, sim.tickRateHz])
+
+  useEffect(() => {
+    const autoPauseSimulation = () => {
+      updateSim((current) => {
+        if (!current.isRunning || current.speed === 0) return current
+        return { ...current, speed: 0 }
+      })
+    }
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        autoPauseSimulation()
+      }
+    }
+
+    const onWindowBlur = () => {
+      autoPauseSimulation()
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('blur', onWindowBlur)
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('blur', onWindowBlur)
+    }
+  }, [updateSim])
 
   useEffect(() => {
     if (!sim.isRunning) {
@@ -1537,27 +1616,15 @@ function App() {
 
     if (mode === 'delete') {
       if (sim.isRunning) return
-      if (deleteTool === 'box') {
-        setSelection([])
-        setDragStartCell(null)
-        setDragBasePositions(null)
-        setDragPreviewPositions({})
-        setDragPreviewValid(true)
-        setDragInvalidMessage(null)
-        setDragInvalidSelection(new Set())
-        setDragOrigin(cell)
-        setDragRect({ x1: cell.x, y1: cell.y, x2: cell.x, y2: cell.y })
-        return
-      }
-      const id = cellDeviceMap.get(`${cell.x},${cell.y}`)
-      if (!id) return
-      if (foundationIdSet.has(id)) return
-      if (deleteTool === 'wholeBelt') {
-        setLayout((current) => deleteConnectedBelts(current, cell.x, cell.y))
-      } else {
-        setLayout((current) => ({ ...current, devices: current.devices.filter((device) => device.instanceId !== id) }))
-      }
       setSelection([])
+      setDragStartCell(null)
+      setDragBasePositions(null)
+      setDragPreviewPositions({})
+      setDragPreviewValid(true)
+      setDragInvalidMessage(null)
+      setDragInvalidSelection(new Set())
+      setDragOrigin(cell)
+      setDragRect({ x1: cell.x, y1: cell.y, x2: cell.x, y2: cell.y })
       return
     }
 
@@ -1684,7 +1751,7 @@ function App() {
 
     if (!cell) return
 
-    if (mode === 'delete' && deleteTool === 'box' && dragOrigin && dragRect) {
+    if (mode === 'delete' && dragOrigin && dragRect) {
       setDragRect({ ...dragRect, x2: cell.x, y2: cell.y })
       return
     }
@@ -1717,7 +1784,7 @@ function App() {
       return
     }
 
-    if (mode === 'delete' && deleteTool === 'box' && dragRect && dragOrigin && !sim.isRunning) {
+    if (mode === 'delete' && dragRect && dragOrigin && !sim.isRunning) {
       if (deleteBoxConfirmingRef.current) return
       deleteBoxConfirmingRef.current = true
 
@@ -1735,6 +1802,25 @@ function App() {
       setDragPreviewValid(true)
       setDragInvalidMessage(null)
       setDragInvalidSelection(new Set())
+
+      const isSingleCellRect = xMin === xMax && yMin === yMax
+
+      if (isSingleCellRect) {
+        try {
+          const id = cellDeviceMap.get(`${xMin},${yMin}`)
+          if (id && !foundationIdSet.has(id)) {
+            if (deleteTool === 'wholeBelt') {
+              setLayout((current) => deleteConnectedBelts(current, xMin, yMin))
+            } else {
+              setLayout((current) => ({ ...current, devices: current.devices.filter((device) => device.instanceId !== id) }))
+            }
+            setSelection((current) => current.filter((currentId) => currentId !== id))
+          }
+        } finally {
+          deleteBoxConfirmingRef.current = false
+        }
+        return
+      }
 
       for (const [key, entries] of occupancyMap.entries()) {
         const [x, y] = key.split(',').map(Number)
@@ -1874,6 +1960,11 @@ function App() {
 
   const selectedPickupItemId =
     selectedDevice?.typeId === 'item_port_unloader_1' ? selectedDevice.config.pickupItemId : undefined
+  const selectedPickupItemIsOre = isOreItemId(selectedPickupItemId)
+  const selectedPickupIgnoreInventory =
+    selectedDevice?.typeId === 'item_port_unloader_1' && selectedPickupItemId
+      ? selectedPickupItemIsOre || Boolean(selectedDevice.config.pickupIgnoreInventory)
+      : false
   const selectedProcessorBufferSpec =
     selectedDevice && DEVICE_TYPE_BY_ID[selectedDevice.typeId].runtimeKind === 'processor'
       ? processorBufferSpec(selectedDevice.typeId)
@@ -1949,9 +2040,38 @@ function App() {
         ...current,
         devices: current.devices.map((device) =>
           device.instanceId === deviceInstanceId
-            ? { ...device, config: { ...device.config, pickupItemId } }
+            ? (() => {
+                const nextConfig = { ...device.config, pickupItemId }
+                if (!pickupItemId) {
+                  delete nextConfig.pickupIgnoreInventory
+                } else if (isOreItemId(pickupItemId)) {
+                  nextConfig.pickupIgnoreInventory = true
+                }
+                return { ...device, config: nextConfig }
+              })()
             : device,
         ),
+      }))
+    },
+    [setLayout],
+  )
+
+  const updatePickupIgnoreInventory = useCallback(
+    (deviceInstanceId: string, enabled: boolean) => {
+      setLayout((current) => ({
+        ...current,
+        devices: current.devices.map((device) => {
+          if (device.instanceId !== deviceInstanceId || device.typeId !== 'item_port_unloader_1') return device
+          const pickupItemId = device.config.pickupItemId
+          if (!pickupItemId) return { ...device, config: { ...device.config, pickupIgnoreInventory: false } }
+          return {
+            ...device,
+            config: {
+              ...device.config,
+              pickupIgnoreInventory: isOreItemId(pickupItemId) ? true : enabled,
+            },
+          }
+        }),
       }))
     },
     [setLayout],
@@ -2206,6 +2326,107 @@ function App() {
         ? t('top.deleteHint')
         : t('top.editHint')
 
+  const ignoredInfiniteItemIds = useMemo(() => {
+    const itemIds = new Set<ItemId>()
+    for (const device of layout.devices) {
+      if (device.typeId !== 'item_port_unloader_1') continue
+      const pickupItemId = device.config.pickupItemId
+      if (!pickupItemId) continue
+      if (isOreItemId(pickupItemId) || device.config.pickupIgnoreInventory) {
+        itemIds.add(pickupItemId)
+      }
+    }
+    return itemIds
+  }, [layout.devices])
+
+  const statsRows = useMemo(
+    () => {
+      const rows = ITEMS.map((item) => ({
+        itemId: item.id,
+        producedPerMinute: sim.stats.producedPerMinute[item.id],
+        consumedPerMinute: sim.stats.consumedPerMinute[item.id],
+        stock: ignoredInfiniteItemIds.has(item.id) ? Number.POSITIVE_INFINITY : sim.warehouse[item.id],
+        everProduced: sim.stats.everProduced[item.id] ?? 0,
+        everConsumed: sim.stats.everConsumed[item.id] ?? 0,
+        everStockPositive: sim.stats.everStockPositive[item.id] ?? 0,
+      })).filter((row) => {
+        const hasProduced = row.everProduced > 0
+        const hasConsumed = row.everConsumed > 0
+        const hasStock = row.everStockPositive > 0
+        if (!Number.isFinite(row.stock)) {
+          return hasProduced || hasConsumed || ignoredInfiniteItemIds.has(row.itemId)
+        }
+        return hasProduced || hasConsumed || hasStock
+      })
+
+      const hasPriorityStock = (row: (typeof rows)[number]) => {
+        if (Number.isFinite(row.stock)) return row.stock > 0
+        return row.consumedPerMinute > 0
+      }
+
+      rows.sort((a, b) => {
+        const priorityDiff = Number(hasPriorityStock(b)) - Number(hasPriorityStock(a))
+        if (priorityDiff !== 0) return priorityDiff
+
+        const producedDiff = b.producedPerMinute - a.producedPerMinute
+        if (producedDiff !== 0) return producedDiff
+
+        return a.itemId.localeCompare(b.itemId)
+      })
+
+      return rows
+    },
+    [ignoredInfiniteItemIds, sim.stats.consumedPerMinute, sim.stats.producedPerMinute, sim.warehouse],
+  )
+
+  const hasMoreStatsRows = statsRows.length > STATS_TOP_N
+  const visibleStatsRows = hasMoreStatsRows && !showAllStatsRows ? statsRows.slice(0, STATS_TOP_N) : statsRows
+
+  useEffect(() => {
+    const measureStatsTableHeight = () => {
+      const table = statsTableRef.current
+      if (!table) {
+        setStatsTableMaxHeight(null)
+        return
+      }
+
+      const bodyRows = Array.from(table.tBodies[0]?.rows ?? [])
+      if (bodyRows.length <= STATS_TOP_N) {
+        setStatsTableMaxHeight(null)
+        return
+      }
+
+      const headerHeight = table.tHead?.rows[0]?.getBoundingClientRect().height ?? 0
+      const firstTwentyRowsHeight = bodyRows
+        .slice(0, STATS_TOP_N)
+        .reduce((sum, row) => sum + row.getBoundingClientRect().height, 0)
+
+      setStatsTableMaxHeight(Math.ceil(headerHeight + firstTwentyRowsHeight + 2))
+    }
+
+    const frameId = window.requestAnimationFrame(measureStatsTableHeight)
+    window.addEventListener('resize', measureStatsTableHeight)
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      window.removeEventListener('resize', measureStatsTableHeight)
+    }
+  }, [language, showAllStatsRows, visibleStatsRows.length])
+
+  const renderStatsBreakHeader = useCallback(
+    (label: string) => {
+      if (language !== 'zh-CN' || label.length <= 2) return label
+      return (
+        <>
+          <span>{label.slice(0, 2)}</span>
+          <br />
+          <span>{label.slice(2)}</span>
+        </>
+      )
+    },
+    [language],
+  )
+
   const beginPanelResize = (side: 'left' | 'right', startX: number) => {
     resizeStateRef.current = {
       side,
@@ -2217,26 +2438,36 @@ function App() {
   const statsAndDebugSection = (
     <>
       <h3>{t('right.stats')}</h3>
-      <table className="stats-table">
-        <thead>
-          <tr>
-            <th>{t('table.itemName')}</th>
-            <th>{t('table.producedPerMinute')}</th>
-            <th>{t('table.consumedPerMinute')}</th>
-            <th>{t('table.currentStock')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ITEMS.map((item) => (
-            <tr key={item.id}>
-              <td>{getItemLabel(language, item.id)}</td>
-              <td>{sim.stats.producedPerMinute[item.id].toFixed(2)}</td>
-              <td>{sim.stats.consumedPerMinute[item.id].toFixed(2)}</td>
-              <td>{Number.isFinite(sim.warehouse[item.id]) ? sim.warehouse[item.id] : '∞'}</td>
+      <div className="stats-meta-row">
+        <span className="stats-meta-text">{t('stats.topNHint', { count: visibleStatsRows.length, total: statsRows.length })}</span>
+        {hasMoreStatsRows && (
+          <button className="stats-toggle-btn" onClick={() => setShowAllStatsRows((current) => !current)}>
+            {showAllStatsRows ? t('stats.showTop', { count: STATS_TOP_N }) : t('stats.showAll')}
+          </button>
+        )}
+      </div>
+      <div className="stats-table-wrap" style={statsTableMaxHeight ? { maxHeight: `${statsTableMaxHeight}px` } : undefined}>
+        <table ref={statsTableRef} className="stats-table">
+          <thead>
+            <tr>
+              <th className="stats-break-header">{renderStatsBreakHeader(t('table.itemName'))}</th>
+              <th className="stats-break-header">{renderStatsBreakHeader(t('table.producedPerMinute'))}</th>
+              <th className="stats-break-header">{renderStatsBreakHeader(t('table.consumedPerMinute'))}</th>
+              <th className="stats-break-header">{renderStatsBreakHeader(t('table.currentStock'))}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {visibleStatsRows.map((row) => (
+              <tr key={row.itemId}>
+                <td>{getItemLabel(language, row.itemId)}</td>
+                <td>{formatCompactNumber(row.producedPerMinute)}</td>
+                <td>{formatCompactNumber(row.consumedPerMinute)}</td>
+                <td>{formatCompactStock(row.stock)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <h3>{t('right.simDebug')}</h3>
       <div className="kv"><span>{t('debug.measuredTps')}</span><span>{measuredTickRate.toFixed(2)}</span></div>
@@ -2264,6 +2495,7 @@ function App() {
         </div>
         <div className="topbar-controls">
           <span className="hint hint-dynamic">{uiHint}</span>
+          {sim.isRunning && sim.speed === 0 && <span className="hint hint-paused">{t('top.pausedIndicator')}</span>}
           <span className="hint">{t('top.zoomHint', { size: cellSize })}</span>
           {!sim.isRunning ? (
             <button
@@ -2378,35 +2610,32 @@ function App() {
               <h3>{t('left.device')}</h3>
               <div className="place-groups-scroll">
                 {PLACE_GROUP_ORDER.map((groupKey) => {
-                  const devices = PLACEABLE_TYPES.filter((deviceType) => getPlaceGroup(deviceType.id) === groupKey)
+                  const devices = visiblePlaceableTypes.filter((deviceType) => getPlaceGroup(deviceType.id) === groupKey)
+                  if (devices.length === 0) return null
                   return (
                     <section key={groupKey} className="place-group-section">
                       <h4 className="place-group-title">{t(PLACE_GROUP_LABEL_KEY[groupKey])}</h4>
-                      {devices.length > 0 ? (
-                        <div className="place-device-grid">
-                          {devices.map((deviceType) => (
-                            <button
-                              key={deviceType.id}
-                              className={`place-device-button ${placeType === deviceType.id ? 'active' : ''}`}
-                              onClick={() => {
-                                setPlaceOperation('default')
-                                setPlaceType(deviceType.id)
-                              }}
-                            >
-                              <img
-                                className="place-device-icon"
-                                src={getDeviceMenuIconPath(deviceType.id)}
-                                alt=""
-                                aria-hidden="true"
-                                draggable={false}
-                              />
-                              <span className="place-device-label">{getDeviceLabel(language, deviceType.id)}</span>
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="place-group-empty">{t('left.group.empty')}</div>
-                      )}
+                      <div className="place-device-grid">
+                        {devices.map((deviceType) => (
+                          <button
+                            key={deviceType.id}
+                            className={`place-device-button ${placeType === deviceType.id ? 'active' : ''}`}
+                            onClick={() => {
+                              setPlaceOperation('default')
+                              setPlaceType(deviceType.id)
+                            }}
+                          >
+                            <img
+                              className="place-device-icon"
+                              src={getDeviceMenuIconPath(deviceType.id)}
+                              alt=""
+                              aria-hidden="true"
+                              draggable={false}
+                            />
+                            <span className="place-device-label">{getDeviceLabel(language, deviceType.id)}</span>
+                          </button>
+                        ))}
+                      </div>
                     </section>
                   )
                 })}
@@ -2416,16 +2645,26 @@ function App() {
 
           {!sim.isRunning && mode === 'delete' && (
             <>
-              <h3>{t('left.deleteSubMode')}</h3>
-              <button className={deleteTool === 'single' ? 'active' : ''} onClick={() => setDeleteTool('single')}>
-                {t('left.deleteSingle')}
-              </button>
-              <button className={deleteTool === 'wholeBelt' ? 'active' : ''} onClick={() => setDeleteTool('wholeBelt')}>
-                {t('left.deleteWholeBelt')}
-              </button>
-              <button className={deleteTool === 'box' ? 'active' : ''} onClick={() => setDeleteTool('box')}>
-                {t('left.deleteBox')}
-              </button>
+              <h3>{t('left.deleteModeGroup')}</h3>
+              <div className="delete-belt-mode-row">
+                <span className="delete-belt-mode-label">{t('left.beltDeleteMode')}</span>
+                <label className="switch-toggle switch-toggle-inline" aria-label={t('left.beltDeleteMode')}>
+                  <span className={`switch-side-label ${deleteTool !== 'wholeBelt' ? 'active' : ''}`}>{t('left.deleteSingle')}</span>
+                  <input
+                    type="checkbox"
+                    checked={deleteTool === 'wholeBelt'}
+                    onChange={(event) => {
+                      setDeleteTool(event.target.checked ? 'wholeBelt' : 'single')
+                    }}
+                  />
+                  <span className="switch-track" aria-hidden="true">
+                    <span className="switch-thumb" />
+                  </span>
+                  <span className={`switch-side-label ${deleteTool === 'wholeBelt' ? 'active' : ''}`}>{t('left.deleteWhole')}</span>
+                </label>
+              </div>
+
+              <h3>{t('left.deleteOpsGroup')}</h3>
               <button
                 onClick={async () => {
                   if (sim.isRunning) return
@@ -2445,6 +2684,52 @@ function App() {
               >
                 {t('left.deleteAll')}
               </button>
+              <button
+                onClick={async () => {
+                  if (sim.isRunning) return
+                  const confirmed = await dialogConfirm(t('left.deleteAllBeltsConfirm'), {
+                    title: t('dialog.title.confirm'),
+                    confirmText: t('dialog.ok'),
+                    cancelText: t('dialog.cancel'),
+                    variant: 'warning',
+                  })
+                  if (!confirmed) return
+                  setLayout((current) => ({
+                    ...current,
+                    devices: current.devices.filter(
+                      (device) =>
+                        device.typeId !== 'item_log_connector' &&
+                        device.typeId !== 'item_log_splitter' &&
+                        device.typeId !== 'item_log_converger' &&
+                        !device.typeId.startsWith('belt_'),
+                    ),
+                  }))
+                  setSelection([])
+                }}
+              >
+                {t('left.deleteAllBelts')}
+              </button>
+              <button
+                onClick={async () => {
+                  if (sim.isRunning) return
+                  const confirmed = await dialogConfirm(t('left.clearLotConfirm'), {
+                    title: t('dialog.title.confirm'),
+                    confirmText: t('dialog.ok'),
+                    cancelText: t('dialog.cancel'),
+                    variant: 'warning',
+                  })
+                  if (!confirmed) return
+                  setLayout((current) => ({
+                    ...current,
+                    devices: current.devices.filter(
+                      (device) => foundationIdSet.has(device.instanceId) || !isWithinLot(device, current.lotSize),
+                    ),
+                  }))
+                  setSelection([])
+                }}
+              >
+                {t('left.clearLot')}
+              </button>
             </>
           )}
 
@@ -2463,7 +2748,6 @@ function App() {
                           className={`place-device-button ${selectedBlueprintId === blueprint.id ? 'active' : ''}`}
                           onClick={() => {
                             setSelectedBlueprintId(blueprint.id)
-                            showToast(t('toast.blueprintSelected', { name: blueprint.name }))
                           }}
                         >
                           <span className="place-device-label">{blueprint.name}</span>
@@ -2701,6 +2985,16 @@ function App() {
         <aside className="panel right-panel">
           <h3>{t('right.lot')}</h3>
           {baseGroups.map((group) => {
+            if (group.key === 'wuling') {
+              return (
+                <section key={group.key} className="base-group-section">
+                  <h4 className="base-group-title">{t(group.titleKey)}</h4>
+                  <div className="row">
+                    <p className="base-group-empty">{t('right.baseGroup.comingSoon')}</p>
+                  </div>
+                </section>
+              )
+            }
             const groupedBases = BASES.filter((base) => base.tags.includes(group.tag))
             return (
               <section key={group.key} className="base-group-section">
@@ -2859,55 +3153,87 @@ function App() {
                 </>
               )}
               {selectedDevice.typeId === 'item_port_unloader_1' && (
-                <div className="picker">
-                  <label>{t('detail.pickupItem')}</label>
-                  <button
-                    type="button"
-                    className="picker-open-btn"
-                    disabled={sim.isRunning}
-                    onClick={() => setItemPickerState({ kind: 'pickup', deviceInstanceId: selectedDevice.instanceId })}
-                  >
-                    <span className="pickup-picker-current">
-                      {selectedPickupItemId ? (
-                        <img
-                          className="pickup-picker-current-icon"
-                          src={getItemIconPath(selectedPickupItemId)}
-                          alt=""
-                          aria-hidden="true"
-                          draggable={false}
-                        />
-                      ) : (
-                        <span className="pickup-picker-current-icon pickup-picker-current-icon--empty">?</span>
-                      )}
-                      <span>
-                        {selectedPickupItemId
-                          ? getItemLabel(language, selectedPickupItemId)
-                          : t('detail.unselected')}
+                <>
+                  <div className="kv kv-no-border kv-pickup-inline">
+                    <span>{t('detail.pickupItem')}</span>
+                    <span className="kv-pickup-inline-value">
+                      <span className="kv-pickup-stack">
+                        <button
+                          type="button"
+                          className="picker-open-btn picker-open-btn-inline"
+                          disabled={sim.isRunning}
+                          onClick={() => setItemPickerState({ kind: 'pickup', deviceInstanceId: selectedDevice.instanceId })}
+                        >
+                          <span className="pickup-picker-current">
+                            {selectedPickupItemId ? (
+                              <img
+                                className="pickup-picker-current-icon"
+                                src={getItemIconPath(selectedPickupItemId)}
+                                alt=""
+                                aria-hidden="true"
+                                draggable={false}
+                              />
+                            ) : (
+                              <span className="pickup-picker-current-icon pickup-picker-current-icon--empty">?</span>
+                            )}
+                            <span>
+                              {selectedPickupItemId
+                                ? getItemLabel(language, selectedPickupItemId)
+                                : t('detail.unselected')}
+                            </span>
+                          </span>
+                        </button>
+                        <label className="switch-toggle switch-toggle-inline" aria-label={t('detail.pickupIgnoreInventory')}>
+                          <span className={`switch-side-label ${!selectedPickupIgnoreInventory ? 'active' : ''}`}>
+                            {t('detail.pickupUseStock')}
+                          </span>
+                          <input
+                            type="checkbox"
+                            checked={selectedPickupIgnoreInventory}
+                            disabled={sim.isRunning || !selectedPickupItemId || selectedPickupItemIsOre}
+                            onChange={(event) => {
+                              updatePickupIgnoreInventory(selectedDevice.instanceId, event.target.checked)
+                            }}
+                          />
+                          <span className="switch-track" aria-hidden="true">
+                            <span className="switch-thumb" />
+                          </span>
+                          <span className={`switch-side-label ${selectedPickupIgnoreInventory ? 'active' : ''}`}>
+                            {t('detail.pickupIgnoreShort')}
+                          </span>
+                        </label>
                       </span>
                     </span>
-                  </button>
-                </div>
+                  </div>
+                </>
               )}
               {selectedDevice.typeId === 'item_port_storager_1' && (
-                <label className="toggle">
-                  <input
-                    type="checkbox"
-                    checked={selectedDevice.config.submitToWarehouse ?? true}
-                    disabled={sim.isRunning}
-                    onChange={(event) => {
-                      const checked = event.target.checked
-                      setLayout((current) => ({
-                        ...current,
-                        devices: current.devices.map((device) =>
-                          device.instanceId === selectedDevice.instanceId
-                            ? { ...device, config: { ...device.config, submitToWarehouse: checked } }
-                            : device,
-                        ),
-                      }))
-                    }}
-                  />
-                  {t('detail.submitWarehouse')}
-                </label>
+                <div className="kv kv-switch">
+                  <span>{t('detail.submitWarehouse')}</span>
+                  <span className="kv-switch-value">
+                    <label className="switch-toggle" aria-label={t('detail.submitWarehouse')}>
+                      <input
+                        type="checkbox"
+                        checked={selectedDevice.config.submitToWarehouse ?? true}
+                        disabled={sim.isRunning}
+                        onChange={(event) => {
+                          const checked = event.target.checked
+                          setLayout((current) => ({
+                            ...current,
+                            devices: current.devices.map((device) =>
+                              device.instanceId === selectedDevice.instanceId
+                                ? { ...device, config: { ...device.config, submitToWarehouse: checked } }
+                                : device,
+                            ),
+                          }))
+                        }}
+                      />
+                      <span className="switch-track" aria-hidden="true">
+                        <span className="switch-thumb" />
+                      </span>
+                    </label>
+                  </span>
+                </div>
               )}
               {DEVICE_TYPE_BY_ID[selectedDevice.typeId].runtimeKind === 'processor' && !sim.isRunning && (
                 <div className="picker">

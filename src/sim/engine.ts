@@ -127,6 +127,14 @@ function canPickupFromWarehouse(warehouse: Record<ItemId, number>, itemId: ItemI
   return Number.isFinite(stock) ? stock > 0 : stock > 0
 }
 
+function shouldIgnorePickupInventory(device: DeviceInstance) {
+  if (device.typeId !== 'item_port_unloader_1') return false
+  const pickupItemId = device.config.pickupItemId
+  if (!pickupItemId) return false
+  if (INFINITE_WAREHOUSE_ITEMS.has(pickupItemId)) return true
+  return Boolean(device.config.pickupIgnoreInventory)
+}
+
 function emptyPerMinuteRecord(): Record<ItemId, number> {
   return createItemNumberRecord(0)
 }
@@ -374,7 +382,7 @@ function peekOutputItem(device: DeviceInstance, runtime: DeviceRuntime, warehous
   if (device.typeId === 'item_port_unloader_1') {
     const pickupItemId = device.config.pickupItemId
     if (!pickupItemId) return null
-    return canPickupFromWarehouse(warehouse, pickupItemId) ? pickupItemId : null
+    return shouldIgnorePickupInventory(device) || canPickupFromWarehouse(warehouse, pickupItemId) ? pickupItemId : null
   }
 
   if ('outputBuffer' in runtime) {
@@ -426,7 +434,7 @@ function peekReadyItemForLane(
 function hasReadyOutput(device: DeviceInstance, runtime: DeviceRuntime, warehouse: Record<ItemId, number>) {
   if (device.typeId === 'item_port_unloader_1') {
     const pickupItemId = device.config.pickupItemId
-    return Boolean(pickupItemId && canPickupFromWarehouse(warehouse, pickupItemId))
+    return Boolean(pickupItemId && (shouldIgnorePickupInventory(device) || canPickupFromWarehouse(warehouse, pickupItemId)))
   }
   if ('outputBuffer' in runtime) return ITEM_IDS.some((itemId) => (runtime.outputBuffer[itemId] ?? 0) > 0)
   if ('inventory' in runtime) return ITEM_IDS.some((itemId) => (runtime.inventory[itemId] ?? 0) > 0)
@@ -601,6 +609,9 @@ export function createInitialSimState(): SimState {
       simSeconds: 0,
       producedPerMinute: emptyPerMinuteRecord(),
       consumedPerMinute: emptyPerMinuteRecord(),
+      everProduced: emptyPerMinuteRecord(),
+      everConsumed: emptyPerMinuteRecord(),
+      everStockPositive: emptyPerMinuteRecord(),
     },
     minuteWindowDeltas: Array.from({ length: initialWindowCapacity }, () => createWindowDelta()),
     minuteWindowCursor: 0,
@@ -646,6 +657,9 @@ export function startSimulation(layout: LayoutState, sim: SimState): SimState {
       simSeconds: 0,
       producedPerMinute: emptyPerMinuteRecord(),
       consumedPerMinute: emptyPerMinuteRecord(),
+      everProduced: emptyPerMinuteRecord(),
+      everConsumed: emptyPerMinuteRecord(),
+      everStockPositive: emptyPerMinuteRecord(),
     },
     minuteWindowDeltas: Array.from({ length: minuteWindowCapacity }, () => createWindowDelta()),
     minuteWindowCursor: 0,
@@ -668,6 +682,9 @@ export function stopSimulation(sim: SimState): SimState {
       simSeconds: 0,
       producedPerMinute: emptyPerMinuteRecord(),
       consumedPerMinute: emptyPerMinuteRecord(),
+      everProduced: emptyPerMinuteRecord(),
+      everConsumed: emptyPerMinuteRecord(),
+      everStockPositive: emptyPerMinuteRecord(),
     },
     minuteWindowDeltas: Array.from({ length: minuteWindowCapacity }, () => createWindowDelta()),
     minuteWindowCursor: 0,
@@ -966,7 +983,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     if (!received) continue
 
     if (fromDevice.typeId === 'item_port_unloader_1') {
-      if (Number.isFinite(warehouse[plan.itemId])) {
+      if (!shouldIgnorePickupInventory(fromDevice) && Number.isFinite(warehouse[plan.itemId])) {
         warehouse[plan.itemId] = Math.max(0, warehouse[plan.itemId] - 1)
       }
     } else {
@@ -1023,6 +1040,23 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     simSeconds,
     producedPerMinute,
     consumedPerMinute,
+    everProduced: { ...sim.stats.everProduced },
+    everConsumed: { ...sim.stats.everConsumed },
+    everStockPositive: { ...sim.stats.everStockPositive },
+  }
+
+  for (const itemId of ITEM_IDS) {
+    const delta = nextDelta[itemId] ?? 0
+    if (delta > 0) {
+      nextStats.everProduced[itemId] = (nextStats.everProduced[itemId] ?? 0) + delta
+    } else if (delta < 0) {
+      nextStats.everConsumed[itemId] = (nextStats.everConsumed[itemId] ?? 0) + Math.abs(delta)
+    }
+
+    const stock = warehouse[itemId] ?? 0
+    if (Number.isFinite(stock) && stock > 0) {
+      nextStats.everStockPositive[itemId] = 1
+    }
   }
 
   return {

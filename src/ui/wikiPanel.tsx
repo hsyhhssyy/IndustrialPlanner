@@ -13,11 +13,6 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
   const [selectedDeviceId, setSelectedDeviceId] = useState(DEVICE_TYPES[0]?.id ?? '')
   const [selectedItemId, setSelectedItemId] = useState(ITEMS[0]?.id ?? '')
 
-  const operationHelpIntro =
-    language === 'zh-CN'
-      ? '本页提供两套操作手册：新手版（先跑通产线）与高级版（高效编辑与排障）。内容基于当前代码实现，不是仅按 PRD 假设。'
-      : 'This page provides two manuals: Beginner (first working line) and Advanced (efficient editing and troubleshooting), based on actual implemented behavior.'
-
   const beginnerHelpSections: Array<{ title: string; steps: string[] }> =
     language === 'zh-CN'
       ? [
@@ -361,10 +356,6 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
 
           {activeTab === 'guide' && (
             <>
-              <section className="wiki-section">
-                <p>{operationHelpIntro}</p>
-              </section>
-
               {beginnerHelpSections.map((section, index) => (
                 <section key={`${section.title}-${index}`} className="wiki-section">
                   <h4>{section.title}</h4>
@@ -380,10 +371,6 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
 
           {activeTab === 'advanced' && (
             <>
-              <section className="wiki-section">
-                <p>{operationHelpIntro}</p>
-              </section>
-
               {advancedHelpSections.map((section, index) => (
                 <section key={`${section.title}-${index}`} className="wiki-section">
                   <h4>{section.title}</h4>
