@@ -35,6 +35,7 @@ import { createTranslator, getDeviceLabel, getItemLabel, getModeLabel, LANGUAGE_
 import { dialogAlertNonBlocking, dialogConfirm, dialogPrompt } from './ui/dialog'
 import { showToast } from './ui/toast'
 import { WikiPanel } from './ui/wikiPanel.tsx'
+import { PlannerPanel } from './ui/plannerPanel.tsx'
 import {
   createInitialSimState,
   initialStorageConfig,
@@ -786,6 +787,7 @@ function App() {
   const [clipboardBlueprint, setClipboardBlueprint] = useState<BlueprintSnapshot | null>(null)
   const [blueprintPlacementRotation, setBlueprintPlacementRotation] = useState<Rotation>(0)
   const [isWikiOpen, setIsWikiOpen] = useState(false)
+  const [isPlannerOpen, setIsPlannerOpen] = useState(false)
   const [showAllStatsRows, setShowAllStatsRows] = useState(false)
   const [statsTableMaxHeight, setStatsTableMaxHeight] = useState<number | null>(null)
 
@@ -2492,6 +2494,7 @@ function App() {
             </select>
           </label>
           <button onClick={() => setIsWikiOpen(true)}>{t('top.wiki')}</button>
+          <button onClick={() => setIsPlannerOpen(true)}>{t('top.planner')}</button>
         </div>
         <div className="topbar-controls">
           <span className="hint hint-dynamic">{uiHint}</span>
@@ -3414,6 +3417,7 @@ function App() {
       )}
 
       {isWikiOpen && <WikiPanel language={language} t={t} onClose={() => setIsWikiOpen(false)} />}
+      {isPlannerOpen && <PlannerPanel language={language} t={t} onClose={() => setIsPlannerOpen(false)} />}
     </div>
   )
 }
