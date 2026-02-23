@@ -18,7 +18,7 @@ const MANUAL_LOGISTICS_JUNCTION_TYPES = new Set<DeviceTypeId>(['item_log_splitte
 
 type LayoutUpdater = LayoutState | ((current: LayoutState) => LayoutState)
 
-type BuildInteractionParams = {
+type BuildInteractionViewportParams = {
   viewportRef: MutableRefObject<HTMLDivElement | null>
   currentBaseOuterRing: { left: number; top: number }
   zoomScale: number
@@ -36,6 +36,9 @@ type BuildInteractionParams = {
     viewportSize: { width: number; height: number },
     canvasSize: { width: number; height: number },
   ) => { x: number; y: number }
+}
+
+type BuildInteractionBuildParams = {
   layout: LayoutState
   setLayout: (updater: LayoutUpdater) => void
   mode: EditMode
@@ -47,6 +50,13 @@ type BuildInteractionParams = {
   toPlaceOrigin: (cell: Cell, typeId: DeviceTypeId, rotation: Rotation) => Cell
   simIsRunning: boolean
   logisticsPreview: Cell[] | null
+  cellDeviceMap: Map<string, string>
+  occupancyMap: Map<string, Array<{ instanceId: string }>>
+  foundationIdSet: ReadonlySet<string>
+  deleteTool: 'single' | 'wholeBelt' | 'box'
+}
+
+type BuildInteractionStateParams = {
   logStart: Cell | null
   setLogStart: Dispatch<SetStateAction<Cell | null>>
   logCurrent: Cell | null
@@ -71,11 +81,10 @@ type BuildInteractionParams = {
   dragOrigin: Cell | null
   setDragOrigin: Dispatch<SetStateAction<Cell | null>>
   setHoverCell: Dispatch<SetStateAction<Cell | null>>
-  cellDeviceMap: Map<string, string>
-  occupancyMap: Map<string, Array<{ instanceId: string }>>
-  foundationIdSet: ReadonlySet<string>
-  deleteTool: 'single' | 'wholeBelt' | 'box'
   deleteBoxConfirmingRef: MutableRefObject<boolean>
+}
+
+type BuildInteractionBlueprintParams = {
   activePlacementBlueprint: BlueprintSnapshot | null
   clipboardBlueprint: BlueprintSnapshot | null
   buildBlueprintPlacementPreview: (
@@ -86,77 +95,104 @@ type BuildInteractionParams = {
   blueprintPlacementRotation: Rotation
   setBlueprintPlacementRotation: Dispatch<SetStateAction<Rotation>>
   setClipboardBlueprint: Dispatch<SetStateAction<BlueprintSnapshot | null>>
-  setSelectedBlueprintId: Dispatch<SetStateAction<string | null>>
+  setArmedBlueprintId: Dispatch<SetStateAction<string | null>>
+}
+
+type BuildInteractionI18nParams = {
   t: (key: string, params?: Record<string, string | number>) => string
   outOfLotToastKey: string
   fallbackPlacementToastKey: string
 }
 
+type BuildInteractionParams = {
+  viewport: BuildInteractionViewportParams
+  build: BuildInteractionBuildParams
+  interaction: BuildInteractionStateParams
+  blueprint: BuildInteractionBlueprintParams
+  i18n: BuildInteractionI18nParams
+}
+
 export function useBuildInteractionDomain({
-  viewportRef,
-  currentBaseOuterRing,
-  zoomScale,
-  viewOffset,
-  setViewOffset,
-  canvasWidthPx,
-  canvasHeightPx,
-  baseCellSize,
-  cellSize,
-  setCellSize,
-  getMaxCellSizeForViewport,
-  getZoomStep,
-  clampViewportOffset,
-  layout,
-  setLayout,
-  mode,
-  placeOperation,
-  setPlaceOperation,
-  placeType,
-  setPlaceType,
-  placeRotation,
-  toPlaceOrigin,
-  simIsRunning,
-  logisticsPreview,
-  logStart,
-  setLogStart,
-  logCurrent,
-  setLogCurrent,
-  logTrace,
-  setLogTrace,
-  selection,
-  setSelection,
-  dragBasePositions,
-  setDragBasePositions,
-  dragPreviewPositions,
-  setDragPreviewPositions,
-  dragPreviewValid,
-  setDragPreviewValid,
-  dragInvalidMessage,
-  setDragInvalidMessage,
-  setDragInvalidSelection,
-  dragStartCell,
-  setDragStartCell,
-  dragRect,
-  setDragRect,
-  dragOrigin,
-  setDragOrigin,
-  setHoverCell,
-  cellDeviceMap,
-  occupancyMap,
-  foundationIdSet,
-  deleteTool,
-  deleteBoxConfirmingRef,
-  activePlacementBlueprint,
-  clipboardBlueprint,
-  buildBlueprintPlacementPreview,
-  blueprintPlacementRotation,
-  setBlueprintPlacementRotation,
-  setClipboardBlueprint,
-  setSelectedBlueprintId,
-  t,
-  outOfLotToastKey,
-  fallbackPlacementToastKey,
+  viewport,
+  build,
+  interaction,
+  blueprint,
+  i18n,
 }: BuildInteractionParams) {
+  const {
+    viewportRef,
+    currentBaseOuterRing,
+    zoomScale,
+    viewOffset,
+    setViewOffset,
+    canvasWidthPx,
+    canvasHeightPx,
+    baseCellSize,
+    cellSize,
+    setCellSize,
+    getMaxCellSizeForViewport,
+    getZoomStep,
+    clampViewportOffset,
+  } = viewport
+
+  const {
+    layout,
+    setLayout,
+    mode,
+    placeOperation,
+    setPlaceOperation,
+    placeType,
+    setPlaceType,
+    placeRotation,
+    toPlaceOrigin,
+    simIsRunning,
+    logisticsPreview,
+    cellDeviceMap,
+    occupancyMap,
+    foundationIdSet,
+    deleteTool,
+  } = build
+
+  const {
+    logStart,
+    setLogStart,
+    logCurrent,
+    setLogCurrent,
+    logTrace,
+    setLogTrace,
+    selection,
+    setSelection,
+    dragBasePositions,
+    setDragBasePositions,
+    dragPreviewPositions,
+    setDragPreviewPositions,
+    dragPreviewValid,
+    setDragPreviewValid,
+    dragInvalidMessage,
+    setDragInvalidMessage,
+    setDragInvalidSelection,
+    dragStartCell,
+    setDragStartCell,
+    dragRect,
+    setDragRect,
+    dragOrigin,
+    setDragOrigin,
+    setHoverCell,
+    deleteBoxConfirmingRef,
+  } = interaction
+
+  const {
+    activePlacementBlueprint,
+    clipboardBlueprint,
+    buildBlueprintPlacementPreview,
+    blueprintPlacementRotation,
+    setBlueprintPlacementRotation,
+    setClipboardBlueprint,
+    setArmedBlueprintId,
+  } = blueprint
+
+  const { t, outOfLotToastKey, fallbackPlacementToastKey } = i18n
+
   const [isPanning, setIsPanning] = useState(false)
   const [panStart, setPanStart] = useState<PanStart | null>(null)
 
@@ -281,7 +317,6 @@ export function useBuildInteractionDomain({
         if (!simIsRunning && clipboardBlueprint) {
           setClipboardBlueprint(null)
           setBlueprintPlacementRotation(0)
-          showToast(t('toast.blueprintClipboardCancelled'))
           return
         }
         if (!simIsRunning && mode === 'place') {
@@ -292,7 +327,7 @@ export function useBuildInteractionDomain({
           setPlaceType('')
         }
         if (!simIsRunning && mode === 'blueprint') {
-          setSelectedBlueprintId(null)
+          setArmedBlueprintId(null)
           setBlueprintPlacementRotation(0)
         }
         return
@@ -342,7 +377,6 @@ export function useBuildInteractionDomain({
             })),
           ],
         }))
-        showToast(t('toast.blueprintPlaced', { name: activePlacementBlueprint.name, count: preview.devices.length }))
         return
       }
 
@@ -424,7 +458,6 @@ export function useBuildInteractionDomain({
       setLogTrace,
       setPlaceOperation,
       setPlaceType,
-      setSelectedBlueprintId,
       setSelection,
       simIsRunning,
       t,

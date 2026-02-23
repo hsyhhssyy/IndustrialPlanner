@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { usePersistentState } from '../../core/usePersistentState'
-import { dialogPrompt } from '../../ui/dialog'
+import { dialogConfirm, dialogPrompt } from '../../ui/dialog'
 import { showToast } from '../../ui/toast'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { isWithinLot } from '../../domain/geometry'
@@ -19,6 +19,8 @@ export type BlueprintSnapshot = {
   id: string
   name: string
   createdAt: string
+  updatedAt?: string
+  version?: number
   baseId: BaseId
   devices: BlueprintDeviceSnapshot[]
 }
@@ -38,6 +40,17 @@ type BlueprintLocalRect = {
   width: number
   height: number
 }
+
+type BlueprintSharePayload = {
+  schema: 'industrial-planner-blueprint'
+  version: number
+  name: string
+  createdAt: string
+  baseId: string
+  devices: BlueprintDeviceSnapshot[]
+}
+
+type BlueprintShareImport = BlueprintSharePayload | { blueprint: BlueprintSharePayload }
 
 function cloneDeviceConfig(config: DeviceInstance['config']): DeviceInstance['config'] {
   return JSON.parse(JSON.stringify(config ?? {})) as DeviceInstance['config']
@@ -97,6 +110,65 @@ function rotateBlueprintRects(rects: BlueprintLocalRect[], rotation: Rotation) {
   }))
 }
 
+function sanitizeRotation(value: unknown): Rotation {
+  if (value === 0 || value === 90 || value === 180 || value === 270) return value
+  return 0
+}
+
+function sanitizeName(name: string) {
+  return name.replace(/[\\/:*?"<>|]+/g, '_').trim() || 'blueprint'
+}
+
+function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
+  if (!input || typeof input !== 'object') return null
+  const candidate = input as BlueprintShareImport
+  const payload = 'blueprint' in candidate ? candidate.blueprint : candidate
+  if (!payload || typeof payload !== 'object') return null
+
+  const schema = (payload as Record<string, unknown>).schema
+  const version = (payload as Record<string, unknown>).version
+  const name = (payload as Record<string, unknown>).name
+  const createdAt = (payload as Record<string, unknown>).createdAt
+  const baseId = (payload as Record<string, unknown>).baseId
+  const devices = (payload as Record<string, unknown>).devices
+
+  if (schema !== 'industrial-planner-blueprint') return null
+  if (typeof version !== 'number' || version < 1) return null
+  if (typeof name !== 'string' || !name.trim()) return null
+  if (typeof createdAt !== 'string' || !createdAt) return null
+  if (typeof baseId !== 'string' || !baseId) return null
+  if (!Array.isArray(devices) || devices.length === 0) return null
+
+  const parsedDevices: BlueprintDeviceSnapshot[] = []
+  for (const entry of devices) {
+    if (!entry || typeof entry !== 'object') return null
+    const typeId = (entry as Record<string, unknown>).typeId
+    const rotation = (entry as Record<string, unknown>).rotation
+    const origin = (entry as Record<string, unknown>).origin
+    const config = (entry as Record<string, unknown>).config
+    if (typeof typeId !== 'string' || !(typeId in DEVICE_TYPE_BY_ID)) return null
+    if (!origin || typeof origin !== 'object') return null
+    const x = (origin as Record<string, unknown>).x
+    const y = (origin as Record<string, unknown>).y
+    if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) return null
+    parsedDevices.push({
+      typeId: typeId as DeviceTypeId,
+      rotation: sanitizeRotation(rotation),
+      origin: { x: Math.round(x), y: Math.round(y) },
+      config: cloneDeviceConfig((config ?? {}) as DeviceInstance['config']),
+    })
+  }
+
+  return {
+    schema: 'industrial-planner-blueprint',
+    version,
+    name: name.trim(),
+    createdAt,
+    baseId,
+    devices: parsedDevices,
+  }
+}
+
 type UseBlueprintDomainParams = {
   activeBaseId: BaseId
   mode: string
@@ -109,6 +181,7 @@ type UseBlueprintDomainParams = {
 export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foundationIdSet, t }: UseBlueprintDomainParams) {
   const [blueprints, setBlueprints] = usePersistentState<BlueprintSnapshot[]>('stage1-blueprints', [])
   const [selectedBlueprintId, setSelectedBlueprintId] = usePersistentState<string | null>('stage1-selected-blueprint-id', null)
+  const [armedBlueprintId, setArmedBlueprintId] = usePersistentState<string | null>('stage1-armed-blueprint-id', null)
   const [clipboardBlueprint, setClipboardBlueprint] = usePersistentState<BlueprintSnapshot | null>('stage1-clipboard-blueprint', null)
   const [blueprintPlacementRotation, setBlueprintPlacementRotation] = usePersistentState<Rotation>('stage1-blueprint-rotation', 0)
 
@@ -141,6 +214,8 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
       id: `bp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       name,
       createdAt,
+      updatedAt: createdAt,
+      version: 1,
       baseId: activeBaseId,
       devices: selectedDevices.map((device) => ({
         typeId: device.typeId,
@@ -163,11 +238,217 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
     return blueprints.find((blueprint) => blueprint.id === selectedBlueprintId) ?? null
   }, [blueprints, selectedBlueprintId])
 
+  const armedBlueprint = useMemo(() => {
+    if (!armedBlueprintId) return null
+    return blueprints.find((blueprint) => blueprint.id === armedBlueprintId) ?? null
+  }, [armedBlueprintId, blueprints])
+
+  const selectBlueprint = useCallback(
+    (id: string | null) => {
+      setSelectedBlueprintId(id)
+      if (id === null) {
+        setArmedBlueprintId(null)
+      }
+    },
+    [setArmedBlueprintId, setSelectedBlueprintId],
+  )
+
+  const armBlueprint = useCallback(
+    (id: string) => {
+      const target = blueprints.find((blueprint) => blueprint.id === id)
+      if (!target) return
+      setSelectedBlueprintId(id)
+      setArmedBlueprintId(id)
+      setBlueprintPlacementRotation(0)
+    },
+    [blueprints, setArmedBlueprintId, setBlueprintPlacementRotation, setSelectedBlueprintId],
+  )
+
+  const disarmBlueprint = useCallback(() => {
+    setArmedBlueprintId(null)
+    setBlueprintPlacementRotation(0)
+  }, [setArmedBlueprintId, setBlueprintPlacementRotation])
+
+  const renameBlueprint = useCallback(
+    async (id: string) => {
+      const target = blueprints.find((blueprint) => blueprint.id === id)
+      if (!target) return
+      const inputName = await dialogPrompt(t('dialog.blueprintRenamePrompt'), target.name, {
+        title: t('left.blueprintSubMode'),
+        confirmText: t('dialog.ok'),
+        cancelText: t('dialog.cancel'),
+        variant: 'info',
+      })
+      if (inputName === null) return
+      const nextName = inputName.trim()
+      if (!nextName) {
+        showToast(t('toast.blueprintNameRequired'), { variant: 'warning' })
+        return
+      }
+      const updatedAt = new Date().toISOString()
+      setBlueprints((current) =>
+        current.map((blueprint) =>
+          blueprint.id === id
+            ? {
+                ...blueprint,
+                name: nextName,
+                updatedAt,
+                version: blueprint.version ?? 1,
+              }
+            : blueprint,
+        ),
+      )
+      showToast(t('toast.blueprintRenamed', { name: nextName }))
+    },
+    [blueprints, setBlueprints, t],
+  )
+
+  const getBlueprintShareText = useCallback(
+    (id: string) => {
+      const target = blueprints.find((blueprint) => blueprint.id === id)
+      if (!target) return null
+      const payload: BlueprintSharePayload = {
+        schema: 'industrial-planner-blueprint',
+        version: target.version ?? 1,
+        name: target.name,
+        createdAt: target.createdAt,
+        baseId: target.baseId,
+        devices: target.devices,
+      }
+      return JSON.stringify(payload, null, 2)
+    },
+    [blueprints],
+  )
+
+  const shareBlueprintToClipboard = useCallback(
+    async (id: string) => {
+      const target = blueprints.find((blueprint) => blueprint.id === id)
+      if (!target) return
+      const shareText = getBlueprintShareText(id)
+      if (!shareText) return
+      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+        showToast(t('toast.blueprintShareUnsupported'), { variant: 'warning' })
+        return
+      }
+      try {
+        await navigator.clipboard.writeText(shareText)
+        showToast(t('toast.blueprintSharedClipboard', { name: target.name }))
+      } catch {
+        showToast(t('toast.blueprintShareFailed'), { variant: 'error' })
+      }
+    },
+    [blueprints, getBlueprintShareText, t],
+  )
+
+  const shareBlueprintToFile = useCallback(
+    (id: string) => {
+      const target = blueprints.find((blueprint) => blueprint.id === id)
+      if (!target) return
+      const shareText = getBlueprintShareText(id)
+      if (!shareText) return
+      const blob = new Blob([shareText], { type: 'application/json;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const downloadName = `${sanitizeName(target.name)}.blueprint.json`
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = downloadName
+      document.body.append(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+      showToast(t('toast.blueprintSharedFile', { name: target.name }))
+    },
+    [blueprints, getBlueprintShareText, t],
+  )
+
+  const importBlueprintFromText = useCallback(
+    async (rawText: string) => {
+      const text = rawText.trim()
+      if (!text) {
+        showToast(t('toast.blueprintImportEmpty'), { variant: 'warning' })
+        return false
+      }
+
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(text)
+      } catch {
+        showToast(t('toast.blueprintImportInvalidJson'), { variant: 'warning' })
+        return false
+      }
+
+      const payload = normalizeSharePayload(parsed)
+      if (!payload) {
+        showToast(t('toast.blueprintImportInvalidPayload'), { variant: 'warning' })
+        return false
+      }
+
+      const createdAt = new Date().toISOString()
+      const snapshot: BlueprintSnapshot = {
+        id: `bp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        name: payload.name,
+        createdAt,
+        updatedAt: createdAt,
+        version: payload.version,
+        baseId: activeBaseId,
+        devices: payload.devices.map((device) => ({
+          typeId: device.typeId,
+          rotation: sanitizeRotation(device.rotation),
+          origin: { ...device.origin },
+          config: cloneDeviceConfig(device.config),
+        })),
+      }
+
+      setBlueprints((current) => [snapshot, ...current].slice(0, 100))
+      setSelectedBlueprintId(snapshot.id)
+      showToast(t('toast.blueprintImported', { name: snapshot.name, count: snapshot.devices.length }))
+      return true
+    },
+    [activeBaseId, setBlueprints, setSelectedBlueprintId, t],
+  )
+
+  const importBlueprintFromFile = useCallback(
+    async (file: File) => {
+      try {
+        const text = await file.text()
+        return await importBlueprintFromText(text)
+      } catch {
+        showToast(t('toast.blueprintImportFileFailed'), { variant: 'error' })
+        return false
+      }
+    },
+    [importBlueprintFromText, t],
+  )
+
+  const deleteBlueprint = useCallback(
+    async (id: string) => {
+      const target = blueprints.find((blueprint) => blueprint.id === id)
+      if (!target) return
+      const confirmed = await dialogConfirm(t('dialog.blueprintDeleteConfirm', { name: target.name }), {
+        title: t('dialog.title.confirm'),
+        confirmText: t('dialog.ok'),
+        cancelText: t('dialog.cancel'),
+        variant: 'warning',
+      })
+      if (!confirmed) return
+      setBlueprints((current) => current.filter((blueprint) => blueprint.id !== id))
+      if (selectedBlueprintId === id) {
+        setSelectedBlueprintId(null)
+      }
+      if (armedBlueprintId === id) {
+        setArmedBlueprintId(null)
+        setBlueprintPlacementRotation(0)
+      }
+      showToast(t('toast.blueprintDeleted', { name: target.name }))
+    },
+    [armedBlueprintId, blueprints, selectedBlueprintId, setArmedBlueprintId, setBlueprintPlacementRotation, setBlueprints, setSelectedBlueprintId, t],
+  )
+
   const activePlacementBlueprint = useMemo(() => {
     if (clipboardBlueprint) return clipboardBlueprint
-    if (mode === 'blueprint') return selectedBlueprint
+    if (mode === 'blueprint') return armedBlueprint
     return null
-  }, [clipboardBlueprint, mode, selectedBlueprint])
+  }, [armedBlueprint, clipboardBlueprint, mode])
 
   const buildBlueprintPlacementPreview = useCallback(
     (snapshot: BlueprintSnapshot | null, anchorCell: { x: number; y: number }, placementRotation: Rotation): BlueprintPlacementPreview | null => {
@@ -251,11 +532,23 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
     setBlueprints,
     selectedBlueprintId,
     setSelectedBlueprintId,
+    armedBlueprintId,
+    setArmedBlueprintId,
     clipboardBlueprint,
     setClipboardBlueprint,
     blueprintPlacementRotation,
     setBlueprintPlacementRotation,
     selectedBlueprint,
+    armedBlueprint,
+    selectBlueprint,
+    armBlueprint,
+    disarmBlueprint,
+    renameBlueprint,
+    shareBlueprintToClipboard,
+    shareBlueprintToFile,
+    importBlueprintFromText,
+    importBlueprintFromFile,
+    deleteBlueprint,
     activePlacementBlueprint,
     saveSelectionAsBlueprint,
     buildBlueprintPlacementPreview,

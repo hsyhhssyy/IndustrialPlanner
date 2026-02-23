@@ -248,6 +248,60 @@
   padding: 2px 0 4px;
 }
 
+.blueprint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.blueprint-top-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.blueprint-file-input {
+  display: none;
+}
+
+.blueprint-card {
+  border: 1px solid #2f3a4a;
+  border-radius: 6px;
+  padding: 6px;
+  background: #1a2431;
+}
+
+.blueprint-card.selected {
+  border-color: #4f7bc4;
+}
+
+.blueprint-card.armed {
+  border-color: #f7d06a;
+}
+
+.blueprint-primary {
+  margin-bottom: 0 !important;
+}
+
+.blueprint-action-row {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.blueprint-action-button {
+  margin-bottom: 0 !important;
+  padding: 5px 8px !important;
+  font-size: 12px !important;
+}
+
+.blueprint-action-button.danger {
+  border-color: #8f3f4f !important;
+  background: #3a2129 !important;
+}
+
 .base-group-section {
   margin-bottom: 12px;
 }

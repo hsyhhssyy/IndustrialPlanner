@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
+import { dialogPrompt } from '../dialog'
 import { getDeviceLabel, getModeLabel, type Language } from '../../i18n'
 import type { DeviceTypeDef, DeviceTypeId, EditMode } from '../../domain/types'
 
@@ -44,7 +45,16 @@ type LeftPanelProps = {
   onClearLot: () => void
   blueprints: BlueprintSnapshot[]
   selectedBlueprintId: string | null
+  armedBlueprintId: string | null
   setSelectedBlueprintId: (id: string | null) => void
+  armBlueprint: (id: string) => void
+  disarmBlueprint: () => void
+  renameBlueprint: (id: string) => void
+  shareBlueprintToClipboard: (id: string) => void
+  shareBlueprintToFile: (id: string) => void
+  importBlueprintFromText: (text: string) => Promise<boolean>
+  importBlueprintFromFile: (file: File) => Promise<boolean>
+  deleteBlueprint: (id: string) => void
   statsAndDebugSection: ReactNode
 }
 
@@ -74,9 +84,20 @@ export function LeftPanel({
   onClearLot,
   blueprints,
   selectedBlueprintId,
+  armedBlueprintId,
   setSelectedBlueprintId,
+  armBlueprint,
+  disarmBlueprint,
+  renameBlueprint,
+  shareBlueprintToClipboard,
+  shareBlueprintToFile,
+  importBlueprintFromText,
+  importBlueprintFromFile,
+  deleteBlueprint,
   statsAndDebugSection,
 }: LeftPanelProps) {
+  const blueprintFileInputRef = useRef<HTMLInputElement | null>(null)
+
   return (
     <aside className="panel left-panel">
       {!simIsRunning && (
@@ -217,25 +238,88 @@ export function LeftPanel({
       {!simIsRunning && mode === 'blueprint' && (
         <>
           <h3>{t('left.blueprintSubMode')}</h3>
+          <div className="blueprint-top-actions">
+            <button
+              className="blueprint-action-button"
+              onClick={async () => {
+                const input = await dialogPrompt(t('dialog.blueprintImportPrompt'), '', {
+                  title: t('left.blueprintSubMode'),
+                  confirmText: t('dialog.ok'),
+                  cancelText: t('dialog.cancel'),
+                  variant: 'info',
+                })
+                if (input === null) return
+                void importBlueprintFromText(input)
+              }}
+            >
+              {t('left.blueprintImportText')}
+            </button>
+            <button className="blueprint-action-button" onClick={() => blueprintFileInputRef.current?.click()}>
+              {t('left.blueprintImportFile')}
+            </button>
+            <input
+              ref={blueprintFileInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="blueprint-file-input"
+              onChange={(event) => {
+                const input = event.currentTarget
+                const file = input.files?.item(0) ?? null
+                input.value = ''
+                if (!file) return
+                void importBlueprintFromFile(file).catch(() => void 0)
+              }}
+            />
+          </div>
           {blueprints.length === 0 ? (
             <div className="place-group-empty">{t('left.blueprintEmpty')}</div>
           ) : (
             <div className="place-groups-scroll">
               <section className="place-group-section">
-                <div className="place-device-grid">
+                <div className="blueprint-list">
                   {blueprints.map((blueprint) => (
-                    <button
+                    <div
                       key={blueprint.id}
-                      className={`place-device-button ${selectedBlueprintId === blueprint.id ? 'active' : ''}`}
-                      onClick={() => {
-                        setSelectedBlueprintId(blueprint.id)
-                      }}
+                      className={`blueprint-card ${selectedBlueprintId === blueprint.id ? 'selected' : ''} ${armedBlueprintId === blueprint.id ? 'armed' : ''}`.trim()}
                     >
-                      <span className="place-device-label">{blueprint.name}</span>
-                      <span className="place-device-label place-device-label-subtle">
-                        {t('left.blueprintCount', { count: blueprint.devices.length })}
-                      </span>
-                    </button>
+                      <button
+                        className={`place-device-button blueprint-primary ${selectedBlueprintId === blueprint.id ? 'active' : ''}`}
+                        onClick={() => {
+                          setSelectedBlueprintId(blueprint.id)
+                        }}
+                      >
+                        <span className="place-device-label">{blueprint.name}</span>
+                        <span className="place-device-label place-device-label-subtle">
+                          {t('left.blueprintCount', { count: blueprint.devices.length })}
+                        </span>
+                      </button>
+
+                      {selectedBlueprintId === blueprint.id && (
+                        <div className="blueprint-action-row">
+                          {armedBlueprintId === blueprint.id ? (
+                            <button className="blueprint-action-button" onClick={disarmBlueprint}>
+                              {t('left.blueprintDisarm')}
+                            </button>
+                          ) : (
+                            <button className="blueprint-action-button" onClick={() => armBlueprint(blueprint.id)}>
+                              {t('left.blueprintArm')}
+                            </button>
+                          )}
+                          <button className="blueprint-action-button" onClick={() => void renameBlueprint(blueprint.id)}>
+                            {t('left.blueprintRename')}
+                          </button>
+                          <button className="blueprint-action-button" onClick={() => void shareBlueprintToClipboard(blueprint.id)}>
+                            {t('left.blueprintShareClipboard')}
+                          </button>
+                          <button className="blueprint-action-button" onClick={() => shareBlueprintToFile(blueprint.id)}>
+                            {t('left.blueprintShareFile')}
+                          </button>
+                          <button className="blueprint-action-button danger" onClick={() => void deleteBlueprint(blueprint.id)}>
+                            {t('left.blueprintDelete')}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </section>

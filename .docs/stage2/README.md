@@ -1,5 +1,7 @@
 # Stage2 开发指导文档集（重定义）
 
+本目录用于承接 Stage1 基线后的增量迭代，强调“变更可追溯、升级可迁移、结果可验证、异常可回滚”。
+
 ## 阶段说明
 
 Stage2 已重定义为原 PRD 的 Stage3 能力方向：
@@ -10,18 +12,22 @@ Stage2 已重定义为原 PRD 的 Stage3 能力方向：
 
 本阶段首个交付模块为“产线规划器（基础版）”，用于在现有仿真编辑器中提供静态产能计算能力。
 
-当前迭代已补充地区约束基础能力：
+## 主线文档（建议先读）
 
-- 目标区提供地区切换入口（当前仅开放“四号谷地”）。
-- 非“武陵”地区下，对“武陵”tag 物品与相关配方执行禁用过滤。
-- 过滤规则同时作用于目标输入与计算配方集合，保证展示与结果一致。
-- 结果区采用三列伪表格卡片布局（物品/配方、需求、设备），并将输入吞吐放入第一列次信息区域。
-- 蓝铁块/蓝铁粉末互转配方采用“条件启用”策略：仅在双需求场景可选并参与计算。
-- 种植机/采种机闭环按配方倍率平衡计算机器数，作为正常链路不显示循环异常提示。
+1. [00-change-log-and-goals.md](./00-change-log-and-goals.md)：相对 Stage1 的变更总览、目标与非目标
+2. [01-scope-and-dod-stage2.md](./01-scope-and-dod-stage2.md)：范围边界、DoD、验收口径
+3. [02-design-delta.md](./02-design-delta.md)：架构/数据/交互增量设计（仅记录差异）
+4. [03-migration-guide.md](./03-migration-guide.md)：从 Stage1 升级到 Stage2 的迁移与兼容策略
+5. [04-api-and-contract-changes.md](./04-api-and-contract-changes.md)：接口、状态、事件契约变化
+6. [05-regression-test-plan.md](./05-regression-test-plan.md)：回归测试矩阵与通过标准
+7. [06-risk-and-rollback.md](./06-risk-and-rollback.md)：风险、观测指标、回滚预案
+8. [07-release-notes.md](./07-release-notes.md)：发布说明、已知限制、后续计划
 
-## 文档导航
+## 专题文档（按需阅读）
 
 1. [01-planner-module-mvp.md](./01-planner-module-mvp.md)：产线规划器基础版需求与完成定义
+2. [02-toast-governance.md](./02-toast-governance.md)：全局提示（Toast）降噪规范与落地表
+3. [code-structure-smell-review.md](./code-structure-smell-review.md)：代码结构异味审查记录
 
 ## 与 Stage1 的关系
 

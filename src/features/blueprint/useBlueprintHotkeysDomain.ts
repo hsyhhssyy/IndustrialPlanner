@@ -12,6 +12,7 @@ type UseBlueprintHotkeysDomainParams = {
   cloneDeviceConfig: (config: DeviceInstance['config']) => DeviceInstance['config']
   setClipboardBlueprint: (value: BlueprintSnapshot) => void
   setBlueprintPlacementRotation: (updater: Rotation | ((current: Rotation) => Rotation)) => void
+  setArmedBlueprintId: (updater: string | null | ((current: string | null) => string | null)) => void
   activePlacementBlueprint: BlueprintSnapshot | null
   t: (key: string, params?: Record<string, string | number>) => string
 }
@@ -25,6 +26,7 @@ export function useBlueprintHotkeysDomain({
   cloneDeviceConfig,
   setClipboardBlueprint,
   setBlueprintPlacementRotation,
+  setArmedBlueprintId,
   activePlacementBlueprint,
   t,
 }: UseBlueprintHotkeysDomainParams) {
@@ -74,6 +76,14 @@ export function useBlueprintHotkeysDomain({
         return
       }
 
+      if (event.key === 'Escape') {
+        if (!activePlacementBlueprint) return
+        event.preventDefault()
+        setArmedBlueprintId(null)
+        setBlueprintPlacementRotation(0)
+        return
+      }
+
       if (event.key.toLowerCase() !== 'r') return
       if (!activePlacementBlueprint) return
       event.preventDefault()
@@ -89,6 +99,7 @@ export function useBlueprintHotkeysDomain({
     foundationIdSet,
     layout,
     selection,
+    setArmedBlueprintId,
     setBlueprintPlacementRotation,
     setClipboardBlueprint,
     simIsRunning,

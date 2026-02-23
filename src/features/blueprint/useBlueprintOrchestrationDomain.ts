@@ -6,6 +6,8 @@ type UseBlueprintOrchestrationDomainParams = {
   blueprints: BlueprintSnapshot[]
   selectedBlueprintId: string | null
   setSelectedBlueprintId: (id: string | null) => void
+  armedBlueprintId: string | null
+  setArmedBlueprintId: (id: string | null) => void
   activePlacementBlueprint: BlueprintSnapshot | null
   simIsRunning: boolean
   hoverCell: { x: number; y: number } | null
@@ -21,6 +23,8 @@ export function useBlueprintOrchestrationDomain({
   blueprints,
   selectedBlueprintId,
   setSelectedBlueprintId,
+  armedBlueprintId,
+  setArmedBlueprintId,
   activePlacementBlueprint,
   simIsRunning,
   hoverCell,
@@ -30,12 +34,19 @@ export function useBlueprintOrchestrationDomain({
   useEffect(() => {
     if (blueprints.length === 0) {
       setSelectedBlueprintId(null)
+      setArmedBlueprintId(null)
       return
     }
     if (!selectedBlueprintId) return
     if (blueprints.some((blueprint) => blueprint.id === selectedBlueprintId)) return
     setSelectedBlueprintId(null)
-  }, [blueprints, selectedBlueprintId, setSelectedBlueprintId])
+  }, [blueprints, selectedBlueprintId, setArmedBlueprintId, setSelectedBlueprintId])
+
+  useEffect(() => {
+    if (!armedBlueprintId) return
+    if (blueprints.some((blueprint) => blueprint.id === armedBlueprintId)) return
+    setArmedBlueprintId(null)
+  }, [armedBlueprintId, blueprints, setArmedBlueprintId])
 
   const blueprintPlacementPreview = useMemo(() => {
     if (!activePlacementBlueprint || simIsRunning || !hoverCell) return null
