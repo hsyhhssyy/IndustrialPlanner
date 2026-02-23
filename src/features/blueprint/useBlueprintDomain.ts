@@ -1,10 +1,11 @@
 import { useCallback, useMemo } from 'react'
-import { usePersistentState } from '../../hooks/usePersistentState'
+import { usePersistentState } from '../../core/usePersistentState'
 import { dialogPrompt } from '../../ui/dialog'
 import { showToast } from '../../ui/toast'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { isWithinLot } from '../../domain/geometry'
 import { validatePlacementConstraints } from '../../domain/placement'
+import { rotatedFootprintSize } from '../../domain/shared/math'
 import type { BaseId, DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
 
 type BlueprintDeviceSnapshot = {
@@ -40,13 +41,6 @@ type BlueprintLocalRect = {
 
 function cloneDeviceConfig(config: DeviceInstance['config']): DeviceInstance['config'] {
   return JSON.parse(JSON.stringify(config ?? {})) as DeviceInstance['config']
-}
-
-function rotatedFootprintSize(size: { width: number; height: number }, rotation: Rotation) {
-  if (rotation === 90 || rotation === 270) {
-    return { width: size.height, height: size.width }
-  }
-  return size
 }
 
 function rotateBlueprintRects(rects: BlueprintLocalRect[], rotation: Rotation) {

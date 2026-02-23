@@ -4,16 +4,10 @@ import { cellToDeviceId, getDeviceById, getRotatedPorts, isWithinLot, linksFromL
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { validatePlacementConstraints } from '../../domain/placement'
 import { getDeviceSpritePath } from '../../domain/deviceSprites'
+import { rotatedFootprintSize } from '../../domain/shared/math'
 import type { DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
 
 type Cell = { x: number; y: number }
-
-function rotatedFootprintSize(size: { width: number; height: number }, rotation: Rotation) {
-  if (rotation === 90 || rotation === 270) {
-    return { width: size.height, height: size.width }
-  }
-  return size
-}
 
 type UseBuildPreviewDomainParams = {
   layout: LayoutState

@@ -1,5 +1,6 @@
 import { DEVICE_TYPE_BY_ID, ITEMS, RECIPES } from '../domain/registry'
 import { detectOverlaps, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
+import { cycleTicksFromSeconds } from '../domain/shared/simulation'
 import type {
   DeviceInstance,
   DeviceRuntime,
@@ -24,10 +25,6 @@ const INFINITE_WAREHOUSE_ITEMS = new Set<ItemId>(
 
 function createItemNumberRecord(initialValue = 0): Record<ItemId, number> {
   return Object.fromEntries(ITEM_IDS.map((itemId) => [itemId, initialValue])) as Record<ItemId, number>
-}
-
-function cycleTicksFromSeconds(cycleSeconds: number, tickRateHz: number) {
-  return Math.max(1, Math.round(cycleSeconds * tickRateHz))
 }
 
 function conveyorSpeedPerTick(tickRateHz: number) {
@@ -1075,13 +1072,6 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 export function initialStorageConfig(deviceTypeId: string) {
   if (deviceTypeId === 'item_port_storager_1') return { submitToWarehouse: true }
   return {}
-}
-
-export function runtimeLabel(runtime: DeviceRuntime | undefined) {
-  if (!runtime) return 'idle'
-  if (runtime.stallReason === 'NO_INPUT') return 'starved'
-  if (runtime.stallReason === 'NONE') return 'running'
-  return runtime.stallReason.toLowerCase()
 }
 
 export function getInventory(runtime: DeviceRuntime | undefined) {

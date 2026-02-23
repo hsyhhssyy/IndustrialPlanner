@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEven
 import { ITEMS, RECIPES } from '../domain/registry'
 import { buildProductionPlan, type PlannerTargetInput, type PlannerTreeNode } from '../domain/planner'
 import type { DeviceTypeId, ItemId } from '../domain/types'
-import { usePersistentState } from '../hooks/usePersistentState'
+import { usePersistentState } from '../core/usePersistentState'
 import { getDeviceLabel, getItemLabel, type Language } from '../i18n'
 
 type PlannerPanelProps = {

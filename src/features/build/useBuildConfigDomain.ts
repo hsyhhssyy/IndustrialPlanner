@@ -1,10 +1,7 @@
 import { useCallback } from 'react'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
+import { clamp } from '../../domain/shared/math'
 import type { DeviceInstance, ItemId, LayoutState, PreloadInputConfigEntry } from '../../domain/types'
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
 
 type ProcessorPreloadSlot = { itemId: ItemId | null; amount: number }
 

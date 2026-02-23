@@ -3,6 +3,7 @@ import { applyLogisticsPath, deleteConnectedBelts, nextId } from '../../domain/l
 import { getDeviceById, getFootprintCells, includesCell, isBeltLike, isWithinLot } from '../../domain/geometry'
 import { validatePlacementConstraints } from '../../domain/placement'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
+import { clamp } from '../../domain/shared/math'
 import type { DeviceInstance, DeviceTypeId, EditMode, LayoutState, Rotation } from '../../domain/types'
 import { dialogConfirm } from '../../ui/dialog'
 import { showToast } from '../../ui/toast'
@@ -89,10 +90,6 @@ type BuildInteractionParams = {
   t: (key: string, params?: Record<string, string | number>) => string
   outOfLotToastKey: string
   fallbackPlacementToastKey: string
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
 }
 
 export function useBuildInteractionDomain({

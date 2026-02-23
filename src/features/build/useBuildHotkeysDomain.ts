@@ -2,15 +2,9 @@ import { useEffect } from 'react'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { isWithinLot } from '../../domain/geometry'
 import { validatePlacementConstraints } from '../../domain/placement'
+import { rotatedFootprintSize } from '../../domain/shared/math'
 import { showToast } from '../../ui/toast'
 import type { DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
-
-function rotatedFootprintSize(size: { width: number; height: number }, rotation: Rotation) {
-  if (rotation === 90 || rotation === 270) {
-    return { width: size.height, height: size.width }
-  }
-  return size
-}
 
 type UseBuildHotkeysDomainParams = {
   simIsRunning: boolean
