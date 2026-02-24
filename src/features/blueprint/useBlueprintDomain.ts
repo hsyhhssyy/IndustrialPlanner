@@ -1,7 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { usePersistentState } from '../../core/usePersistentState'
-import { dialogConfirm, dialogPrompt } from '../../ui/dialog'
-import { showToast } from '../../ui/toast'
+import { uiEffects } from '../../app/uiEffects'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { isWithinLot } from '../../domain/geometry'
 import { validatePlacementConstraints } from '../../domain/placement'
@@ -171,14 +170,14 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
 
 type UseBlueprintDomainParams = {
   activeBaseId: BaseId
-  mode: string
+  placeOperation: 'default' | 'belt' | 'pipe' | 'blueprint'
   layout: LayoutState
   selection: string[]
   foundationIdSet: ReadonlySet<string>
   t: (key: string, params?: Record<string, string | number>) => string
 }
 
-export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foundationIdSet, t }: UseBlueprintDomainParams) {
+export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selection, foundationIdSet, t }: UseBlueprintDomainParams) {
   const [blueprints, setBlueprints] = usePersistentState<BlueprintSnapshot[]>('stage1-blueprints', [])
   const [selectedBlueprintId, setSelectedBlueprintId] = usePersistentState<string | null>('stage1-selected-blueprint-id', null)
   const [armedBlueprintId, setArmedBlueprintId] = usePersistentState<string | null>('stage1-armed-blueprint-id', null)
@@ -190,7 +189,7 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
     const selectedDevices = layout.devices.filter((device) => selectedIdSet.has(device.instanceId) && !foundationIdSet.has(device.instanceId))
 
     if (selectedDevices.length === 0) {
-      showToast(t('toast.blueprintNoSelection'), { variant: 'warning' })
+      uiEffects.toast(t('toast.blueprintNoSelection'), { variant: 'warning' })
       return
     }
 
@@ -198,7 +197,7 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
     const minY = Math.min(...selectedDevices.map((device) => device.origin.y))
     const createdAt = new Date().toISOString()
     const defaultName = `BP-${createdAt.slice(0, 19).replace('T', ' ')}`
-    const inputName = await dialogPrompt(t('dialog.blueprintNamePrompt'), defaultName, {
+    const inputName = await uiEffects.prompt(t('dialog.blueprintNamePrompt'), defaultName, {
       title: t('left.blueprintSubMode'),
       confirmText: t('dialog.ok'),
       cancelText: t('dialog.cancel'),
@@ -207,7 +206,7 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
     if (inputName === null) return
     const name = inputName.trim()
     if (!name) {
-      showToast(t('toast.blueprintNameRequired'), { variant: 'warning' })
+      uiEffects.toast(t('toast.blueprintNameRequired'), { variant: 'warning' })
       return
     }
     const snapshot: BlueprintSnapshot = {
@@ -227,9 +226,9 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
 
     try {
       setBlueprints((current) => [snapshot, ...current].slice(0, 100))
-      showToast(t('toast.blueprintSaved', { name, count: snapshot.devices.length }))
+      uiEffects.toast(t('toast.blueprintSaved', { name, count: snapshot.devices.length }))
     } catch {
-      showToast(t('toast.blueprintSaveFailed'), { variant: 'error' })
+      uiEffects.toast(t('toast.blueprintSaveFailed'), { variant: 'error' })
     }
   }, [activeBaseId, foundationIdSet, layout.devices, selection, setBlueprints, t])
 
@@ -273,7 +272,7 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
     async (id: string) => {
       const target = blueprints.find((blueprint) => blueprint.id === id)
       if (!target) return
-      const inputName = await dialogPrompt(t('dialog.blueprintRenamePrompt'), target.name, {
+      const inputName = await uiEffects.prompt(t('dialog.blueprintRenamePrompt'), target.name, {
         title: t('left.blueprintSubMode'),
         confirmText: t('dialog.ok'),
         cancelText: t('dialog.cancel'),
@@ -282,7 +281,7 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
       if (inputName === null) return
       const nextName = inputName.trim()
       if (!nextName) {
-        showToast(t('toast.blueprintNameRequired'), { variant: 'warning' })
+        uiEffects.toast(t('toast.blueprintNameRequired'), { variant: 'warning' })
         return
       }
       const updatedAt = new Date().toISOString()
@@ -298,7 +297,7 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
             : blueprint,
         ),
       )
-      showToast(t('toast.blueprintRenamed', { name: nextName }))
+      uiEffects.toast(t('toast.blueprintRenamed', { name: nextName }))
     },
     [blueprints, setBlueprints, t],
   )
@@ -327,14 +326,14 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
       const shareText = getBlueprintShareText(id)
       if (!shareText) return
       if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
-        showToast(t('toast.blueprintShareUnsupported'), { variant: 'warning' })
+        uiEffects.toast(t('toast.blueprintShareUnsupported'), { variant: 'warning' })
         return
       }
       try {
         await navigator.clipboard.writeText(shareText)
-        showToast(t('toast.blueprintSharedClipboard', { name: target.name }))
+        uiEffects.toast(t('toast.blueprintSharedClipboard', { name: target.name }))
       } catch {
-        showToast(t('toast.blueprintShareFailed'), { variant: 'error' })
+        uiEffects.toast(t('toast.blueprintShareFailed'), { variant: 'error' })
       }
     },
     [blueprints, getBlueprintShareText, t],
@@ -356,7 +355,7 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
       anchor.click()
       anchor.remove()
       URL.revokeObjectURL(url)
-      showToast(t('toast.blueprintSharedFile', { name: target.name }))
+      uiEffects.toast(t('toast.blueprintSharedFile', { name: target.name }))
     },
     [blueprints, getBlueprintShareText, t],
   )
@@ -365,7 +364,7 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
     async (rawText: string) => {
       const text = rawText.trim()
       if (!text) {
-        showToast(t('toast.blueprintImportEmpty'), { variant: 'warning' })
+        uiEffects.toast(t('toast.blueprintImportEmpty'), { variant: 'warning' })
         return false
       }
 
@@ -373,13 +372,13 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
       try {
         parsed = JSON.parse(text)
       } catch {
-        showToast(t('toast.blueprintImportInvalidJson'), { variant: 'warning' })
+        uiEffects.toast(t('toast.blueprintImportInvalidJson'), { variant: 'warning' })
         return false
       }
 
       const payload = normalizeSharePayload(parsed)
       if (!payload) {
-        showToast(t('toast.blueprintImportInvalidPayload'), { variant: 'warning' })
+        uiEffects.toast(t('toast.blueprintImportInvalidPayload'), { variant: 'warning' })
         return false
       }
 
@@ -401,7 +400,7 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
 
       setBlueprints((current) => [snapshot, ...current].slice(0, 100))
       setSelectedBlueprintId(snapshot.id)
-      showToast(t('toast.blueprintImported', { name: snapshot.name, count: snapshot.devices.length }))
+      uiEffects.toast(t('toast.blueprintImported', { name: snapshot.name, count: snapshot.devices.length }))
       return true
     },
     [activeBaseId, setBlueprints, setSelectedBlueprintId, t],
@@ -413,7 +412,7 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
         const text = await file.text()
         return await importBlueprintFromText(text)
       } catch {
-        showToast(t('toast.blueprintImportFileFailed'), { variant: 'error' })
+        uiEffects.toast(t('toast.blueprintImportFileFailed'), { variant: 'error' })
         return false
       }
     },
@@ -424,7 +423,7 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
     async (id: string) => {
       const target = blueprints.find((blueprint) => blueprint.id === id)
       if (!target) return
-      const confirmed = await dialogConfirm(t('dialog.blueprintDeleteConfirm', { name: target.name }), {
+      const confirmed = await uiEffects.confirm(t('dialog.blueprintDeleteConfirm', { name: target.name }), {
         title: t('dialog.title.confirm'),
         confirmText: t('dialog.ok'),
         cancelText: t('dialog.cancel'),
@@ -439,16 +438,16 @@ export function useBlueprintDomain({ activeBaseId, mode, layout, selection, foun
         setArmedBlueprintId(null)
         setBlueprintPlacementRotation(0)
       }
-      showToast(t('toast.blueprintDeleted', { name: target.name }))
+      uiEffects.toast(t('toast.blueprintDeleted', { name: target.name }))
     },
     [armedBlueprintId, blueprints, selectedBlueprintId, setArmedBlueprintId, setBlueprintPlacementRotation, setBlueprints, setSelectedBlueprintId, t],
   )
 
   const activePlacementBlueprint = useMemo(() => {
     if (clipboardBlueprint) return clipboardBlueprint
-    if (mode === 'blueprint') return armedBlueprint
+    if (placeOperation === 'blueprint') return armedBlueprint
     return null
-  }, [armedBlueprint, clipboardBlueprint, mode])
+  }, [armedBlueprint, clipboardBlueprint, placeOperation])
 
   const buildBlueprintPlacementPreview = useCallback(
     (snapshot: BlueprintSnapshot | null, anchorCell: { x: number; y: number }, placementRotation: Rotation): BlueprintPlacementPreview | null => {

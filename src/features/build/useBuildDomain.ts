@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { dialogConfirm } from '../../ui/dialog'
+import { uiEffects } from '../../app/uiEffects'
 import { isWithinLot } from '../../domain/geometry'
 import type { DeviceTypeId, LayoutState } from '../../domain/types'
 
@@ -93,7 +93,7 @@ export function useBuildDomainActions({
 }: UseBuildDomainActionsParams) {
   const handleDeleteAll = useCallback(async () => {
     if (simIsRunning) return
-    const confirmed = await dialogConfirm(t('left.deleteAllConfirm'), {
+    const confirmed = await uiEffects.confirm(t('left.deleteAllConfirm'), {
       title: t('dialog.title.confirm'),
       confirmText: t('dialog.ok'),
       cancelText: t('dialog.cancel'),
@@ -109,7 +109,7 @@ export function useBuildDomainActions({
 
   const handleDeleteAllBelts = useCallback(async () => {
     if (simIsRunning) return
-    const confirmed = await dialogConfirm(t('left.deleteAllBeltsConfirm'), {
+    const confirmed = await uiEffects.confirm(t('left.deleteAllBeltsConfirm'), {
       title: t('dialog.title.confirm'),
       confirmText: t('dialog.ok'),
       cancelText: t('dialog.cancel'),
@@ -135,7 +135,7 @@ export function useBuildDomainActions({
 
   const handleClearLot = useCallback(async () => {
     if (simIsRunning) return
-    const confirmed = await dialogConfirm(t('left.clearLotConfirm'), {
+    const confirmed = await uiEffects.confirm(t('left.clearLotConfirm'), {
       title: t('dialog.title.confirm'),
       confirmText: t('dialog.ok'),
       cancelText: t('dialog.cancel'),

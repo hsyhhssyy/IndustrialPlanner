@@ -1,0 +1,69 @@
+# ============================================
+# Full-Stack Project Configuration Template
+# ============================================
+# For: Frontend-backend separation, multi-language projects (e.g. Next.js + Python, React + Go, etc.)
+
+# Project name (will be auto-filled by Claude Code based on conversation)
+project_name: ""
+
+# Language server configuration
+# Select based on actual languages used in the project
+languages:
+  - typescript    # Frontend: TypeScript/JavaScript
+  - python        # Backend: Python
+  # Optionally add other languages:
+  # - go          # Go backend
+  # - rust        # Rust service
+  # - java        # Java backend
+  - markdown
+
+# File encoding
+encoding: "utf-8"
+
+# Git ignore files configuration
+ignore_all_files_in_gitignore: true
+
+# Additional paths to ignore
+ignored_paths:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/.next/**"
+  - "**/__pycache__/**"
+  - "**/venv/**"
+  - "**/.venv/**"
+  - "**/coverage/**"
+  - "**/.turbo/**"
+
+# Read-only mode
+read_only: false
+
+# Excluded tools
+excluded_tools: []
+
+# Base modes
+base_modes:
+  - editing
+  - interactive
+
+# Default modes
+default_modes: []
+
+# Project initialization prompt
+initial_prompt: |
+  Welcome to {PROJECT_NAME}!
+
+  This is a full-stack project with multiple programming languages. I've configured:
+  - TypeScript language server (frontend)
+  - Python language server (backend)
+  - Editing mode - code can be modified
+  - Interactive mode - will confirm actions with you
+
+  Common tasks:
+  - "Analyze frontend and backend structure" - Understand project architecture
+  - "Add new API" - Develop backend endpoints
+  - "Add new page" - Develop frontend pages
+  - "Fix bug" - Debug and fix issues
+  - "Optimize performance" - Improve application performance
+
+  Let me know what you need help with!

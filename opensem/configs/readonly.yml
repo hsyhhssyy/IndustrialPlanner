@@ -1,0 +1,68 @@
+# ============================================
+# Readonly Analysis Mode Configuration Template
+# ============================================
+# For: Analyzing external codebases, code review, learning, research without modifying code
+
+# Project name (will be auto-filled by Claude Code based on conversation)
+project_name: ""
+
+# Language server configuration
+# Select based on the target codebase's language
+languages:
+  - typescript
+  - python
+  # Add other required language servers...
+  - markdown
+
+# File encoding
+encoding: "utf-8"
+
+# Git ignore files configuration
+ignore_all_files_in_gitignore: true
+
+# Additional paths to ignore
+ignored_paths:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/.next/**"
+  - "**/__pycache__/**"
+  - "**/venv/**"
+  - "**/.venv/**"
+  - "**/coverage/**"
+  - "**/.git/**"
+
+# Read-only mode - CRITICAL SETTING!
+read_only: true
+
+# Excluded tools
+# In readonly mode, editing tools are automatically disabled
+excluded_tools: []
+
+# Base modes
+base_modes:
+  - interactive   # Keep only interactive mode
+
+# Default modes
+default_modes: []
+
+# Project initialization prompt
+initial_prompt: |
+  You are analyzing {PROJECT_NAME} in **READ-ONLY MODE**.
+
+  This mode is for:
+  - Code review and code analysis
+  - Learning and understanding codebases
+  - Researching external project architecture
+  - Generating documentation and reports
+
+  NOTE: All editing operations are disabled in this mode.
+
+  Available commands:
+  - "Analyze project structure" - Understand code organization
+  - "Explain this code" - Understand code logic
+  - "Find all references" - Track function/variable usage
+  - "Generate architecture diagram" - Visualize project structure
+  - "Summarize functionality" - Summarize module features
+
+  What would you like to learn?

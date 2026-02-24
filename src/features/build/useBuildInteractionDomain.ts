@@ -1,150 +1,37 @@
-import { useCallback, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { applyLogisticsPath, deleteConnectedBelts, nextId } from '../../domain/logistics'
-import { getDeviceById, getFootprintCells, includesCell, isBeltLike, isPipeLike, isWithinLot } from '../../domain/geometry'
+import { getDeviceById, isBeltLike, isWithinLot } from '../../domain/geometry'
 import { validatePlacementConstraints } from '../../domain/placement'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { clamp } from '../../domain/shared/math'
-import type { DeviceInstance, DeviceTypeId, EditMode, LayoutState, Rotation } from '../../domain/types'
-import { dialogConfirm } from '../../ui/dialog'
-import { showToast } from '../../ui/toast'
-import { initialStorageConfig } from '../../sim/engine'
-import type { BlueprintSnapshot } from '../blueprint/useBlueprintDomain'
+import type { LayoutState } from '../../domain/types'
+import { uiEffects } from '../../app/uiEffects'
+import { useAppContext } from '../../app/AppContext'
+import { tryPlaceDevice } from './interactionCommands'
+import {
+  type BuildInteractionHandlers,
+  type BuildInteractionParams,
+  type Cell,
+  type PanStart,
+} from './buildInteraction.contract'
 
-type Cell = { x: number; y: number }
-type DragRect = { x1: number; y1: number; x2: number; y2: number }
-type PanStart = { clientX: number; clientY: number; offsetX: number; offsetY: number }
-
-const MANUAL_LOGISTICS_JUNCTION_TYPES = new Set<DeviceTypeId>([
-  'item_log_splitter',
-  'item_log_converger',
-  'item_log_connector',
-  'item_pipe_splitter',
-  'item_pipe_converger',
-  'item_pipe_connector',
-])
-
-function isManualBeltJunctionType(typeId: DeviceTypeId) {
-  return typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector'
-}
-
-function isManualPipeJunctionType(typeId: DeviceTypeId) {
-  return typeId === 'item_pipe_splitter' || typeId === 'item_pipe_converger' || typeId === 'item_pipe_connector'
-}
-
-type LayoutUpdater = LayoutState | ((current: LayoutState) => LayoutState)
-
-type BuildInteractionViewportParams = {
-  viewportRef: MutableRefObject<HTMLDivElement | null>
-  currentBaseOuterRing: { left: number; top: number }
-  zoomScale: number
-  viewOffset: { x: number; y: number }
-  setViewOffset: Dispatch<SetStateAction<{ x: number; y: number }>>
-  canvasWidthPx: number
-  canvasHeightPx: number
-  baseCellSize: number
-  cellSize: number
-  setCellSize: Dispatch<SetStateAction<number>>
-  getMaxCellSizeForViewport: (viewport: HTMLDivElement | null) => number
-  getZoomStep: (cellSize: number) => number
-  clampViewportOffset: (
-    offset: { x: number; y: number },
-    viewportSize: { width: number; height: number },
-    canvasSize: { width: number; height: number },
-  ) => { x: number; y: number }
-}
-
-type BuildInteractionBuildParams = {
-  layout: LayoutState
-  setLayout: (updater: LayoutUpdater) => void
-  mode: EditMode
-  placeOperation: 'default' | 'belt' | 'pipe'
-  setPlaceOperation: Dispatch<SetStateAction<'default' | 'belt' | 'pipe'>>
-  placeType: DeviceTypeId | ''
-  setPlaceType: Dispatch<SetStateAction<DeviceTypeId | ''>>
-  placeRotation: Rotation
-  toPlaceOrigin: (cell: Cell, typeId: DeviceTypeId, rotation: Rotation) => Cell
-  simIsRunning: boolean
-  logisticsPreview: Cell[] | null
-  cellDeviceMap: Map<string, string>
-  occupancyMap: Map<string, Array<{ instanceId: string }>>
-  foundationIdSet: ReadonlySet<string>
-  deleteTool: 'single' | 'wholeBelt' | 'box'
-}
-
-type BuildInteractionStateParams = {
-  logStart: Cell | null
-  setLogStart: Dispatch<SetStateAction<Cell | null>>
-  logCurrent: Cell | null
-  setLogCurrent: Dispatch<SetStateAction<Cell | null>>
-  logTrace: Cell[]
-  setLogTrace: Dispatch<SetStateAction<Cell[]>>
-  selection: string[]
-  setSelection: Dispatch<SetStateAction<string[]>>
-  dragBasePositions: Record<string, Cell> | null
-  setDragBasePositions: Dispatch<SetStateAction<Record<string, Cell> | null>>
-  dragPreviewPositions: Record<string, Cell>
-  setDragPreviewPositions: Dispatch<SetStateAction<Record<string, Cell>>>
-  dragPreviewValid: boolean
-  setDragPreviewValid: Dispatch<SetStateAction<boolean>>
-  dragInvalidMessage: string | null
-  setDragInvalidMessage: Dispatch<SetStateAction<string | null>>
-  setDragInvalidSelection: Dispatch<SetStateAction<Set<string>>>
-  dragStartCell: Cell | null
-  setDragStartCell: Dispatch<SetStateAction<Cell | null>>
-  dragRect: DragRect | null
-  setDragRect: Dispatch<SetStateAction<DragRect | null>>
-  dragOrigin: Cell | null
-  setDragOrigin: Dispatch<SetStateAction<Cell | null>>
-  setHoverCell: Dispatch<SetStateAction<Cell | null>>
-  deleteBoxConfirmingRef: MutableRefObject<boolean>
-}
-
-type BuildInteractionBlueprintParams = {
-  activePlacementBlueprint: BlueprintSnapshot | null
-  clipboardBlueprint: BlueprintSnapshot | null
-  buildBlueprintPlacementPreview: (
-    snapshot: BlueprintSnapshot | null,
-    anchorCell: Cell,
-    placementRotation: Rotation,
-  ) => { devices: DeviceInstance[]; isValid: boolean; invalidMessageKey: string | null } | null
-  blueprintPlacementRotation: Rotation
-  setBlueprintPlacementRotation: Dispatch<SetStateAction<Rotation>>
-  setClipboardBlueprint: Dispatch<SetStateAction<BlueprintSnapshot | null>>
-  setArmedBlueprintId: Dispatch<SetStateAction<string | null>>
-}
-
-type BuildInteractionI18nParams = {
-  t: (key: string, params?: Record<string, string | number>) => string
-  outOfLotToastKey: string
-  fallbackPlacementToastKey: string
-}
-
-type BuildInteractionParams = {
-  viewport: BuildInteractionViewportParams
-  build: BuildInteractionBuildParams
-  interaction: BuildInteractionStateParams
-  blueprint: BuildInteractionBlueprintParams
-  i18n: BuildInteractionI18nParams
-}
-
+// 输入：五组参数（viewport/build/interaction/blueprint/i18n），分别承载坐标、业务状态、交互状态、蓝图状态与文案。
+// 输出：稳定的画布事件处理器集合与平移状态，供 App 直接绑定到画布组件。
 export function useBuildInteractionDomain({
   viewport,
   build,
-  interaction,
   blueprint,
   i18n,
-}: BuildInteractionParams) {
+}: BuildInteractionParams): BuildInteractionHandlers {
   const {
     viewportRef,
     currentBaseOuterRing,
     zoomScale,
     viewOffset,
-    setViewOffset,
     canvasWidthPx,
     canvasHeightPx,
     baseCellSize,
     cellSize,
-    setCellSize,
     getMaxCellSizeForViewport,
     getZoomStep,
     clampViewportOffset,
@@ -153,11 +40,6 @@ export function useBuildInteractionDomain({
   const {
     layout,
     setLayout,
-    mode,
-    placeOperation,
-    setPlaceOperation,
-    placeType,
-    setPlaceType,
     placeRotation,
     toPlaceOrigin,
     simIsRunning,
@@ -165,36 +47,50 @@ export function useBuildInteractionDomain({
     cellDeviceMap,
     occupancyMap,
     foundationIdSet,
-    deleteTool,
   } = build
 
   const {
-    logStart,
-    setLogStart,
-    logCurrent,
-    setLogCurrent,
-    logTrace,
-    setLogTrace,
-    selection,
-    setSelection,
-    dragBasePositions,
-    setDragBasePositions,
-    dragPreviewPositions,
-    setDragPreviewPositions,
-    dragPreviewValid,
-    setDragPreviewValid,
-    dragInvalidMessage,
-    setDragInvalidMessage,
-    setDragInvalidSelection,
-    dragStartCell,
-    setDragStartCell,
-    dragRect,
-    setDragRect,
-    dragOrigin,
-    setDragOrigin,
-    setHoverCell,
-    deleteBoxConfirmingRef,
-  } = interaction
+    editor: {
+      state: {
+        mode,
+        placeOperation,
+        placeType,
+        deleteTool,
+        selection,
+        logStart,
+        logCurrent,
+        logTrace,
+        dragBasePositions,
+        dragPreviewPositions,
+        dragPreviewValid,
+        dragInvalidMessage,
+        dragStartCell,
+        dragRect,
+        dragOrigin,
+      },
+      actions: {
+        setViewOffset,
+        setCellSize,
+        setPlaceOperation,
+        setPlaceType,
+        setSelection,
+        setLogStart,
+        setLogCurrent,
+        setLogTrace,
+        setHoverCell,
+        setDragBasePositions,
+        setDragPreviewPositions,
+        setDragPreviewValid,
+        setDragInvalidMessage,
+        setDragInvalidSelection,
+        setDragStartCell,
+        setDragRect,
+        setDragOrigin,
+      },
+    },
+  } = useAppContext()
+
+  const deleteBoxConfirmingRef = useRef(false)
 
   const {
     activePlacementBlueprint,
@@ -258,52 +154,17 @@ export function useBuildInteractionDomain({
   const placeDevice = useCallback(
     (cell: Cell) => {
       if (!placeType) return false
-      const origin = toPlaceOrigin(cell, placeType, placeRotation)
-      const instance: DeviceInstance = {
-        instanceId: nextId(placeType),
-        typeId: placeType,
-        origin,
-        rotation: placeRotation,
-        config: initialStorageConfig(placeType),
-      }
-      if (!isWithinLot(instance, layout.lotSize)) {
-        showToast(t(outOfLotToastKey), { variant: 'warning' })
-        return false
-      }
-      const validation = validatePlacementConstraints(layout, instance)
-      if (!validation.isValid) {
-        showToast(t(validation.messageKey ?? fallbackPlacementToastKey), { variant: 'warning' })
-        return false
-      }
-
-      setLayout((current) => {
-        if (!MANUAL_LOGISTICS_JUNCTION_TYPES.has(instance.typeId)) {
-          return { ...current, devices: [...current.devices, instance] }
-        }
-
-        const footprint = getFootprintCells(instance)
-        if (footprint.length === 0) {
-          return { ...current, devices: [...current.devices, instance] }
-        }
-
-        const replacedBeltIds = new Set<string>()
-        const replacePipeTrack = isManualPipeJunctionType(instance.typeId)
-        const replaceBeltTrack = isManualBeltJunctionType(instance.typeId)
-        for (const device of current.devices) {
-          if (replaceBeltTrack && !isBeltLike(device.typeId)) continue
-          if (replacePipeTrack && !isPipeLike(device.typeId)) continue
-          if (!replaceBeltTrack && !replacePipeTrack) continue
-          if (footprint.some((cellPos) => includesCell(device, cellPos.x, cellPos.y))) {
-            replacedBeltIds.add(device.instanceId)
-          }
-        }
-
-        return {
-          ...current,
-          devices: [...current.devices.filter((device) => !replacedBeltIds.has(device.instanceId)), instance],
-        }
+      return tryPlaceDevice({
+        cell,
+        placeType,
+        placeRotation,
+        layout,
+        toPlaceOrigin,
+        setLayout,
+        outOfLotToastKey,
+        fallbackPlacementToastKey,
+        t,
       })
-      return true
     },
     [
       fallbackPlacementToastKey,
@@ -345,9 +206,10 @@ export function useBuildInteractionDomain({
           setLogTrace([])
           setPlaceType('')
         }
-        if (!simIsRunning && mode === 'blueprint') {
+        if (!simIsRunning && mode === 'place' && placeOperation === 'blueprint') {
           setArmedBlueprintId(null)
           setBlueprintPlacementRotation(0)
+          setPlaceOperation('default')
         }
         return
       }
@@ -378,11 +240,11 @@ export function useBuildInteractionDomain({
         if (simIsRunning) return
         const preview = buildBlueprintPlacementPreview(activePlacementBlueprint, cell, blueprintPlacementRotation)
         if (!preview) {
-          showToast(t('toast.blueprintNoSelection'), { variant: 'warning' })
+          uiEffects.toast(t('toast.blueprintNoSelection'), { variant: 'warning' })
           return
         }
         if (!preview.isValid) {
-          showToast(t(preview.invalidMessageKey ?? fallbackPlacementToastKey), { variant: 'warning' })
+          uiEffects.toast(t(preview.invalidMessageKey ?? fallbackPlacementToastKey), { variant: 'warning' })
           return
         }
 
@@ -697,7 +559,7 @@ export function useBuildInteractionDomain({
 
         try {
           if (idsInRect.size > 0) {
-            const confirmed = await dialogConfirm(t('left.deleteBoxConfirm', { count: idsInRect.size }), {
+            const confirmed = await uiEffects.confirm(t('left.deleteBoxConfirm', { count: idsInRect.size }), {
               title: t('dialog.title.confirm'),
               confirmText: t('dialog.ok'),
               cancelText: t('dialog.cancel'),
@@ -760,7 +622,7 @@ export function useBuildInteractionDomain({
             }),
           }))
         } else if (dragInvalidMessage) {
-          showToast(t(dragInvalidMessage), { variant: 'warning' })
+          uiEffects.toast(t(dragInvalidMessage), { variant: 'warning' })
         }
         setDragPreviewPositions({})
         setDragPreviewValid(true)

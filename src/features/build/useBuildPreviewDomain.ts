@@ -6,6 +6,7 @@ import { validatePlacementConstraints } from '../../domain/placement'
 import { getDeviceSpritePath } from '../../domain/deviceSprites'
 import { rotatedFootprintSize } from '../../domain/shared/math'
 import type { DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
+import type { PlaceOperation } from '../../app/AppContext'
 
 type Cell = { x: number; y: number }
 
@@ -14,7 +15,7 @@ type UseBuildPreviewDomainParams = {
   mode: string
   placeType: DeviceTypeId | ''
   placeRotation: Rotation
-  placeOperation: 'default' | 'belt' | 'pipe'
+  placeOperation: PlaceOperation
   selection: string[]
   dragPreviewPositions: Record<string, Cell>
   hoverCell: Cell | null

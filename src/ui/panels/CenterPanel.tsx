@@ -1,48 +1,58 @@
-import type { MouseEventHandler, ReactNode, RefObject, WheelEventHandler } from 'react'
+import type { ReactNode, RefObject } from 'react'
+import { useEffect } from 'react'
+import { useAppContext } from '../../app/AppContext'
+import { useBuildInteractionDomain } from '../../features/build/useBuildInteractionDomain'
+import type { BuildInteractionParams } from '../../features/build/buildInteraction.contract'
 
 type CenterPanelProps = {
   viewportRef: RefObject<HTMLDivElement | null>
   gridRef: RefObject<HTMLDivElement | null>
+  interactionParams: BuildInteractionParams
   mode: string
-  isPanning: boolean
   canvasWidthPx: number
   canvasHeightPx: number
   baseCellSize: number
   viewOffset: { x: number; y: number }
   zoomScale: number
-  onMouseDown: MouseEventHandler<HTMLDivElement>
-  onMouseMove: MouseEventHandler<HTMLDivElement>
-  onMouseUp: MouseEventHandler<HTMLDivElement>
-  onWheel: WheelEventHandler<HTMLDivElement>
   worldContent: ReactNode
 }
 
 export function CenterPanel({
   viewportRef,
   gridRef,
+  interactionParams,
   mode,
-  isPanning,
   canvasWidthPx,
   canvasHeightPx,
   baseCellSize,
   viewOffset,
   zoomScale,
-  onMouseDown,
-  onMouseMove,
-  onMouseUp,
-  onWheel,
   worldContent,
 }: CenterPanelProps) {
+  const { eventBus } = useAppContext()
+  const { isPanning, onCanvasMouseDown, onCanvasMouseMove, onCanvasMouseUp, onCanvasWheel } = useBuildInteractionDomain(interactionParams)
+
+  useEffect(() => {
+    const unsubscribeFocus = eventBus.on('ui.center.focus', () => {
+      viewportRef.current?.focus()
+    })
+
+    return () => {
+      unsubscribeFocus()
+    }
+  }, [eventBus, viewportRef])
+
   return (
     <section className="canvas-panel panel">
       <div
         ref={viewportRef}
+        tabIndex={-1}
         className={`canvas-viewport${isPanning ? ' panning' : ''}`}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
-        onWheel={onWheel}
+        onMouseDown={onCanvasMouseDown}
+        onMouseMove={onCanvasMouseMove}
+        onMouseUp={onCanvasMouseUp}
+        onMouseLeave={onCanvasMouseUp}
+        onWheel={onCanvasWheel}
         onContextMenu={(event) => event.preventDefault()}
         onAuxClick={(event) => event.preventDefault()}
       >

@@ -1,5 +1,6 @@
 import { useRef, type ReactNode } from 'react'
-import { dialogPrompt } from '../dialog'
+import { useAppContext } from '../../app/AppContext'
+import { uiEffects } from '../../app/uiEffects'
 import { getDeviceLabel, getModeLabel, type Language } from '../../i18n'
 import type { DeviceTypeDef, DeviceTypeId, EditMode } from '../../domain/types'
 
@@ -22,80 +23,41 @@ type BlueprintSnapshot = {
 type LeftPanelProps = {
   simIsRunning: boolean
   mode: EditMode
-  setMode: (mode: EditMode) => void
   language: Language
   t: (key: string, params?: Record<string, string | number>) => string
-  placeOperation: 'default' | 'belt' | 'pipe'
-  setPlaceOperation: (operation: 'default' | 'belt' | 'pipe') => void
+  placeOperation: 'default' | 'belt' | 'pipe' | 'blueprint'
   placeType: DeviceTypeId | ''
-  setPlaceType: (type: DeviceTypeId | '') => void
-  setLogStart: (value: { x: number; y: number } | null) => void
-  setLogCurrent: (value: { x: number; y: number } | null) => void
-  setLogTrace: (value: Array<{ x: number; y: number }>) => void
   visiblePlaceableTypes: DeviceTypeDef[]
   placeGroupOrder: PlaceGroupKey[]
   placeGroupLabelKey: Record<PlaceGroupKey, string>
   getPlaceGroup: (typeId: DeviceTypeId) => PlaceGroupKey
   getDeviceMenuIconPath: (typeId: DeviceTypeId) => string
-  saveSelectionAsBlueprint: () => void
   deleteTool: 'single' | 'wholeBelt' | 'box'
-  setDeleteTool: (tool: 'single' | 'wholeBelt' | 'box') => void
-  onDeleteAll: () => void
-  onDeleteAllBelts: () => void
-  onClearLot: () => void
   blueprints: BlueprintSnapshot[]
   selectedBlueprintId: string | null
   armedBlueprintId: string | null
-  setSelectedBlueprintId: (id: string | null) => void
-  armBlueprint: (id: string) => void
-  disarmBlueprint: () => void
-  renameBlueprint: (id: string) => void
-  shareBlueprintToClipboard: (id: string) => void
-  shareBlueprintToFile: (id: string) => void
-  importBlueprintFromText: (text: string) => Promise<boolean>
-  importBlueprintFromFile: (file: File) => Promise<boolean>
-  deleteBlueprint: (id: string) => void
   statsAndDebugSection: ReactNode
 }
 
 export function LeftPanel({
   simIsRunning,
   mode,
-  setMode,
   language,
   t,
   placeOperation,
-  setPlaceOperation,
   placeType,
-  setPlaceType,
-  setLogStart,
-  setLogCurrent,
-  setLogTrace,
   visiblePlaceableTypes,
   placeGroupOrder,
   placeGroupLabelKey,
   getPlaceGroup,
   getDeviceMenuIconPath,
-  saveSelectionAsBlueprint,
   deleteTool,
-  setDeleteTool,
-  onDeleteAll,
-  onDeleteAllBelts,
-  onClearLot,
   blueprints,
   selectedBlueprintId,
   armedBlueprintId,
-  setSelectedBlueprintId,
-  armBlueprint,
-  disarmBlueprint,
-  renameBlueprint,
-  shareBlueprintToClipboard,
-  shareBlueprintToFile,
-  importBlueprintFromText,
-  importBlueprintFromFile,
-  deleteBlueprint,
   statsAndDebugSection,
 }: LeftPanelProps) {
+  const { eventBus } = useAppContext()
   const blueprintFileInputRef = useRef<HTMLInputElement | null>(null)
 
   return (
@@ -103,20 +65,19 @@ export function LeftPanel({
       {!simIsRunning && (
         <>
           <h3>{t('left.mode')}</h3>
-          {(['place', 'blueprint', 'delete'] as const).map((entry) => (
+          {(['place', 'delete'] as const).map((entry) => (
             <button
               key={entry}
               className={mode === entry ? 'active' : ''}
               onClick={() => {
                 if (simIsRunning && entry === 'place') return
                 if (entry === 'place') {
-                  setPlaceOperation('default')
-                  setLogStart(null)
-                  setLogCurrent(null)
-                  setLogTrace([])
-                  setPlaceType('')
+                  eventBus.emit('left.place.operation.set', 'default')
+                  eventBus.emit('left.place.trace.reset', undefined)
+                  eventBus.emit('left.place.type.set', '')
                 }
-                setMode(entry)
+                eventBus.emit('left.mode.set', entry)
+                eventBus.emit('ui.center.focus', undefined)
               }}
             >
               {getModeLabel(language, entry)}
@@ -132,11 +93,10 @@ export function LeftPanel({
             <button
               className={`place-device-button ${placeOperation === 'default' && !placeType ? 'active' : ''}`}
               onClick={() => {
-                setPlaceOperation('default')
-                setPlaceType('')
-                setLogStart(null)
-                setLogCurrent(null)
-                setLogTrace([])
+                eventBus.emit('left.place.operation.set', 'default')
+                eventBus.emit('left.place.type.set', '')
+                eventBus.emit('left.place.trace.reset', undefined)
+                eventBus.emit('ui.center.focus', undefined)
               }}
             >
               <span className="operation-pointer-icon" aria-hidden="true">
@@ -150,11 +110,10 @@ export function LeftPanel({
             <button
               className={`place-device-button ${placeOperation === 'belt' ? 'active' : ''}`}
               onClick={() => {
-                setPlaceOperation('belt')
-                setPlaceType('')
-                setLogStart(null)
-                setLogCurrent(null)
-                setLogTrace([])
+                eventBus.emit('left.place.operation.set', 'belt')
+                eventBus.emit('left.place.type.set', '')
+                eventBus.emit('left.place.trace.reset', undefined)
+                eventBus.emit('ui.center.focus', undefined)
               }}
             >
               <img className="place-device-icon" src="/device-icons/item_log_belt_01.png" alt="" aria-hidden="true" draggable={false} />
@@ -164,18 +123,17 @@ export function LeftPanel({
             <button
               className={`place-device-button ${placeOperation === 'pipe' ? 'active' : ''}`}
               onClick={() => {
-                setPlaceOperation('pipe')
-                setPlaceType('')
-                setLogStart(null)
-                setLogCurrent(null)
-                setLogTrace([])
+                eventBus.emit('left.place.operation.set', 'pipe')
+                eventBus.emit('left.place.type.set', '')
+                eventBus.emit('left.place.trace.reset', undefined)
+                eventBus.emit('ui.center.focus', undefined)
               }}
             >
               <img className="place-device-icon" src="/device-icons/item_log_belt_01.png" alt="" aria-hidden="true" draggable={false} />
               <span className="place-device-label">{t('left.placePipe')}</span>
             </button>
 
-            <button className="place-device-button" onClick={saveSelectionAsBlueprint}>
+            <button className="place-device-button" onClick={() => eventBus.emit('left.blueprint.saveSelection', undefined)}>
               <span className="operation-pointer-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
                   <path d="M6 3H16L20 7V21H6V3ZM8 5V19H18V8H15V5H8ZM10 13H16V17H10V13Z" />
@@ -199,8 +157,9 @@ export function LeftPanel({
                         key={deviceType.id}
                         className={`place-device-button ${placeType === deviceType.id ? 'active' : ''}`}
                         onClick={() => {
-                          setPlaceOperation('default')
-                          setPlaceType(deviceType.id)
+                          eventBus.emit('left.place.operation.set', 'default')
+                          eventBus.emit('left.place.type.set', deviceType.id)
+                          eventBus.emit('ui.center.focus', undefined)
                         }}
                       >
                         <img
@@ -232,7 +191,7 @@ export function LeftPanel({
                 type="checkbox"
                 checked={deleteTool === 'wholeBelt'}
                 onChange={(event) => {
-                  setDeleteTool(event.target.checked ? 'wholeBelt' : 'single')
+                  eventBus.emit('left.delete.tool.set', event.target.checked ? 'wholeBelt' : 'single')
                 }}
               />
               <span className="switch-track" aria-hidden="true">
@@ -243,27 +202,27 @@ export function LeftPanel({
           </div>
 
           <h3>{t('left.deleteOpsGroup')}</h3>
-          <button onClick={onDeleteAll}>{t('left.deleteAll')}</button>
-          <button onClick={onDeleteAllBelts}>{t('left.deleteAllBelts')}</button>
-          <button onClick={onClearLot}>{t('left.clearLot')}</button>
+          <button onClick={() => eventBus.emit('left.delete.all', undefined)}>{t('left.deleteAll')}</button>
+          <button onClick={() => eventBus.emit('left.delete.allBelts', undefined)}>{t('left.deleteAllBelts')}</button>
+          <button onClick={() => eventBus.emit('left.clearLot', undefined)}>{t('left.clearLot')}</button>
         </>
       )}
 
-      {!simIsRunning && mode === 'blueprint' && (
+      {!simIsRunning && mode === 'place' && (
         <>
           <h3>{t('left.blueprintSubMode')}</h3>
           <div className="blueprint-top-actions">
             <button
               className="blueprint-action-button"
               onClick={async () => {
-                const input = await dialogPrompt(t('dialog.blueprintImportPrompt'), '', {
+                const input = await uiEffects.prompt(t('dialog.blueprintImportPrompt'), '', {
                   title: t('left.blueprintSubMode'),
                   confirmText: t('dialog.ok'),
                   cancelText: t('dialog.cancel'),
                   variant: 'info',
                 })
                 if (input === null) return
-                void importBlueprintFromText(input)
+                eventBus.emit('left.blueprint.importText', input)
               }}
             >
               {t('left.blueprintImportText')}
@@ -281,7 +240,7 @@ export function LeftPanel({
                 const file = input.files?.item(0) ?? null
                 input.value = ''
                 if (!file) return
-                void importBlueprintFromFile(file).catch(() => void 0)
+                eventBus.emit('left.blueprint.importFile', file)
               }}
             />
           </div>
@@ -299,7 +258,7 @@ export function LeftPanel({
                       <button
                         className={`place-device-button blueprint-primary ${selectedBlueprintId === blueprint.id ? 'active' : ''}`}
                         onClick={() => {
-                          setSelectedBlueprintId(blueprint.id)
+                          eventBus.emit('left.blueprint.select', blueprint.id)
                         }}
                       >
                         <span className="place-device-label">{blueprint.name}</span>
@@ -311,24 +270,38 @@ export function LeftPanel({
                       {selectedBlueprintId === blueprint.id && (
                         <div className="blueprint-action-row">
                           {armedBlueprintId === blueprint.id ? (
-                            <button className="blueprint-action-button" onClick={disarmBlueprint}>
+                            <button
+                              className="blueprint-action-button"
+                              onClick={() => {
+                                eventBus.emit('left.blueprint.disarm', undefined)
+                                eventBus.emit('left.place.operation.set', 'default')
+                              }}
+                            >
                               {t('left.blueprintDisarm')}
                             </button>
                           ) : (
-                            <button className="blueprint-action-button" onClick={() => armBlueprint(blueprint.id)}>
+                            <button
+                              className="blueprint-action-button"
+                              onClick={() => {
+                                eventBus.emit('left.mode.set', 'place')
+                                eventBus.emit('left.place.operation.set', 'blueprint')
+                                eventBus.emit('left.blueprint.arm', blueprint.id)
+                                eventBus.emit('ui.center.focus', undefined)
+                              }}
+                            >
                               {t('left.blueprintArm')}
                             </button>
                           )}
-                          <button className="blueprint-action-button" onClick={() => void renameBlueprint(blueprint.id)}>
+                          <button className="blueprint-action-button" onClick={() => eventBus.emit('left.blueprint.rename', blueprint.id)}>
                             {t('left.blueprintRename')}
                           </button>
-                          <button className="blueprint-action-button" onClick={() => void shareBlueprintToClipboard(blueprint.id)}>
+                          <button className="blueprint-action-button" onClick={() => eventBus.emit('left.blueprint.shareClipboard', blueprint.id)}>
                             {t('left.blueprintShareClipboard')}
                           </button>
-                          <button className="blueprint-action-button" onClick={() => shareBlueprintToFile(blueprint.id)}>
+                          <button className="blueprint-action-button" onClick={() => eventBus.emit('left.blueprint.shareFile', blueprint.id)}>
                             {t('left.blueprintShareFile')}
                           </button>
-                          <button className="blueprint-action-button danger" onClick={() => void deleteBlueprint(blueprint.id)}>
+                          <button className="blueprint-action-button danger" onClick={() => eventBus.emit('left.blueprint.delete', blueprint.id)}>
                             {t('left.blueprintDelete')}
                           </button>
                         </div>

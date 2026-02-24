@@ -1,0 +1,65 @@
+# ============================================
+# Python Project Configuration Template
+# ============================================
+# For: Django, FastAPI, Flask, Data Science, Machine Learning, Scripts and other Python projects
+
+# Project name (will be auto-filled by Claude Code based on conversation)
+project_name: ""
+
+# Language server configuration
+languages:
+  - python
+  - markdown
+
+# File encoding
+encoding: "utf-8"
+
+# Git ignore files configuration
+ignore_all_files_in_gitignore: true
+
+# Additional paths to ignore
+ignored_paths:
+  - "**/__pycache__/**"
+  - "**/venv/**"
+  - "**/.venv/**"
+  - "**/env/**"
+  - "**/.env/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/*.egg-info/**"
+  - "**/.pytest_cache/**"
+  - "**/.mypy_cache/**"
+  - "**/.coverage/**"
+  - "**/node_modules/**"
+
+# Read-only mode
+read_only: false
+
+# Excluded tools
+excluded_tools: []
+
+# Base modes
+base_modes:
+  - editing
+  - interactive
+
+# Default modes
+default_modes: []
+
+# Project initialization prompt
+initial_prompt: |
+  Welcome to {PROJECT_NAME}!
+
+  This is a Python project. I've configured:
+  - Python language server (supports .py files)
+  - Editing mode - code can be modified
+  - Interactive mode - will confirm actions with you
+
+  Common tasks:
+  - "Analyze code structure" - Understand project architecture
+  - "Add new feature" - Develop new features
+  - "Fix bug" - Debug and fix issues
+  - "Optimize performance" - Improve code efficiency
+  - "Write tests" - Add unit tests
+
+  Let me know what you need help with!
