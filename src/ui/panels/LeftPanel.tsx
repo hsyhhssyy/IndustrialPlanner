@@ -1,63 +1,29 @@
-import { useRef, type ReactNode } from 'react'
+import { useRef } from 'react'
 import { useAppContext } from '../../app/AppContext'
 import { uiEffects } from '../../app/uiEffects'
-import { getDeviceLabel, getModeLabel, type Language } from '../../i18n'
-import type { DeviceTypeDef, DeviceTypeId, EditMode } from '../../domain/types'
+import { useWorkbenchContext } from '../../app/WorkbenchContext'
+import { getDeviceLabel, getModeLabel } from '../../i18n'
 
-type PlaceGroupKey =
-  | 'logistics'
-  | 'resource'
-  | 'storage'
-  | 'basic_production'
-  | 'advanced_manufacturing'
-  | 'power'
-  | 'functional'
-  | 'combat_support'
-
-type BlueprintSnapshot = {
-  id: string
-  name: string
-  devices: Array<unknown>
-}
-
-type LeftPanelProps = {
-  simIsRunning: boolean
-  mode: EditMode
-  language: Language
-  t: (key: string, params?: Record<string, string | number>) => string
-  placeOperation: 'default' | 'belt' | 'pipe' | 'blueprint'
-  placeType: DeviceTypeId | ''
-  visiblePlaceableTypes: DeviceTypeDef[]
-  placeGroupOrder: PlaceGroupKey[]
-  placeGroupLabelKey: Record<PlaceGroupKey, string>
-  getPlaceGroup: (typeId: DeviceTypeId) => PlaceGroupKey
-  getDeviceMenuIconPath: (typeId: DeviceTypeId) => string
-  deleteTool: 'single' | 'wholeBelt' | 'box'
-  blueprints: BlueprintSnapshot[]
-  selectedBlueprintId: string | null
-  armedBlueprintId: string | null
-  statsAndDebugSection: ReactNode
-}
-
-export function LeftPanel({
-  simIsRunning,
-  mode,
-  language,
-  t,
-  placeOperation,
-  placeType,
-  visiblePlaceableTypes,
-  placeGroupOrder,
-  placeGroupLabelKey,
-  getPlaceGroup,
-  getDeviceMenuIconPath,
-  deleteTool,
-  blueprints,
-  selectedBlueprintId,
-  armedBlueprintId,
-  statsAndDebugSection,
-}: LeftPanelProps) {
+export function LeftPanel() {
   const { eventBus } = useAppContext()
+  const {
+    simIsRunning,
+    mode,
+    language,
+    t,
+    placeOperation,
+    placeType,
+    visiblePlaceableTypes,
+    placeGroupOrder,
+    placeGroupLabelKey,
+    getPlaceGroup,
+    getDeviceMenuIconPath,
+    deleteTool,
+    blueprints,
+    selectedBlueprintId,
+    armedBlueprintId,
+    statsAndDebugSection,
+  } = useWorkbenchContext()
   const blueprintFileInputRef = useRef<HTMLInputElement | null>(null)
 
   return (
@@ -65,7 +31,7 @@ export function LeftPanel({
       {!simIsRunning && (
         <>
           <h3>{t('left.mode')}</h3>
-          {(['place', 'delete'] as const).map((entry) => (
+          {(['place', 'blueprint', 'delete'] as const).map((entry) => (
             <button
               key={entry}
               className={mode === entry ? 'active' : ''}
@@ -75,6 +41,9 @@ export function LeftPanel({
                   eventBus.emit('left.place.operation.set', 'default')
                   eventBus.emit('left.place.trace.reset', undefined)
                   eventBus.emit('left.place.type.set', '')
+                }
+                if (entry === 'blueprint') {
+                  eventBus.emit('left.place.operation.set', 'blueprint')
                 }
                 eventBus.emit('left.mode.set', entry)
                 eventBus.emit('ui.center.focus', undefined)
@@ -208,7 +177,7 @@ export function LeftPanel({
         </>
       )}
 
-      {!simIsRunning && mode === 'place' && (
+      {!simIsRunning && mode === 'blueprint' && (
         <>
           <h3>{t('left.blueprintSubMode')}</h3>
           <div className="blueprint-top-actions">
@@ -274,7 +243,6 @@ export function LeftPanel({
                               className="blueprint-action-button"
                               onClick={() => {
                                 eventBus.emit('left.blueprint.disarm', undefined)
-                                eventBus.emit('left.place.operation.set', 'default')
                               }}
                             >
                               {t('left.blueprintDisarm')}
@@ -283,7 +251,7 @@ export function LeftPanel({
                             <button
                               className="blueprint-action-button"
                               onClick={() => {
-                                eventBus.emit('left.mode.set', 'place')
+                                eventBus.emit('left.mode.set', 'blueprint')
                                 eventBus.emit('left.place.operation.set', 'blueprint')
                                 eventBus.emit('left.blueprint.arm', blueprint.id)
                                 eventBus.emit('ui.center.focus', undefined)

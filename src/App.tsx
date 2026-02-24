@@ -32,6 +32,7 @@ import { createTranslator, getItemLabel, type Language } from './i18n'
 import { WikiPanel } from './ui/wikiPanel.tsx'
 import { PlannerPanel } from './ui/plannerPanel.tsx'
 import { useAppContext } from './app/AppContext'
+import { WorkbenchProvider } from './app/WorkbenchContext'
 import { LeftPanel } from './ui/panels/LeftPanel'
 import { CenterPanel } from './ui/panels/CenterPanel'
 import { RightPanel } from './ui/panels/RightPanel'
@@ -453,7 +454,9 @@ function App() {
 
   const uiHint = sim.isRunning
     ? t('top.runningHint')
-    : mode === 'delete'
+    : mode === 'blueprint'
+      ? t('top.blueprintHint')
+      : mode === 'delete'
         ? t('top.deleteHint')
         : t('top.editHint')
 
@@ -588,12 +591,13 @@ function App() {
       selectBlueprint(id)
     })
     const unsubscribeArmBlueprint = eventBus.on('left.blueprint.arm', (id) => {
-      setMode('place')
+      setMode('blueprint')
       setPlaceOperation('blueprint')
       armBlueprint(id)
     })
     const unsubscribeDisarmBlueprint = eventBus.on('left.blueprint.disarm', () => {
-      setPlaceOperation('default')
+      setMode('blueprint')
+      setPlaceOperation('blueprint')
       disarmBlueprint()
     })
     const unsubscribeRenameBlueprint = eventBus.on('left.blueprint.rename', (id) => {
@@ -666,24 +670,28 @@ function App() {
           ['--right-panel-width' as string]: `${rightPanelWidth}px`,
         }}
       >
-        <LeftPanel
-          simIsRunning={sim.isRunning}
-          mode={mode}
-          language={language}
-          t={t}
-          placeOperation={placeOperation}
-          placeType={placeType}
-          visiblePlaceableTypes={visiblePlaceableTypes}
-          placeGroupOrder={PLACE_GROUP_ORDER}
-          placeGroupLabelKey={PLACE_GROUP_LABEL_KEY}
-          getPlaceGroup={getPlaceGroup}
-          getDeviceMenuIconPath={getDeviceMenuIconPath}
-          deleteTool={deleteTool}
-          blueprints={blueprints}
-          selectedBlueprintId={selectedBlueprintId}
-          armedBlueprintId={armedBlueprintId}
-          statsAndDebugSection={statsAndDebugSection}
-        />
+        <WorkbenchProvider
+          value={{
+            simIsRunning: sim.isRunning,
+            mode,
+            language,
+            t,
+            placeOperation,
+            placeType,
+            visiblePlaceableTypes,
+            placeGroupOrder: PLACE_GROUP_ORDER,
+            placeGroupLabelKey: PLACE_GROUP_LABEL_KEY,
+            getPlaceGroup,
+            getDeviceMenuIconPath,
+            deleteTool,
+            blueprints,
+            selectedBlueprintId,
+            armedBlueprintId,
+            statsAndDebugSection,
+          }}
+        >
+          <LeftPanel />
+        </WorkbenchProvider>
 
         <div
           className="panel-resizer panel-resizer-left"

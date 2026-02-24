@@ -206,10 +206,12 @@ export function useBuildInteractionDomain({
           setLogTrace([])
           setPlaceType('')
         }
-        if (!simIsRunning && mode === 'place' && placeOperation === 'blueprint') {
+        if (!simIsRunning && (mode === 'blueprint' || (mode === 'place' && placeOperation === 'blueprint'))) {
           setArmedBlueprintId(null)
           setBlueprintPlacementRotation(0)
-          setPlaceOperation('default')
+          if (mode === 'blueprint') {
+            setPlaceOperation('blueprint')
+          }
         }
         return
       }
