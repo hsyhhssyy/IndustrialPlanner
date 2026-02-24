@@ -1,6 +1,6 @@
 import { useCallback, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react'
 import { applyLogisticsPath, deleteConnectedBelts, nextId } from '../../domain/logistics'
-import { getDeviceById, getFootprintCells, includesCell, isBeltLike, isWithinLot } from '../../domain/geometry'
+import { getDeviceById, getFootprintCells, includesCell, isBeltLike, isPipeLike, isWithinLot } from '../../domain/geometry'
 import { validatePlacementConstraints } from '../../domain/placement'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { clamp } from '../../domain/shared/math'
@@ -14,7 +14,22 @@ type Cell = { x: number; y: number }
 type DragRect = { x1: number; y1: number; x2: number; y2: number }
 type PanStart = { clientX: number; clientY: number; offsetX: number; offsetY: number }
 
-const MANUAL_LOGISTICS_JUNCTION_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
+const MANUAL_LOGISTICS_JUNCTION_TYPES = new Set<DeviceTypeId>([
+  'item_log_splitter',
+  'item_log_converger',
+  'item_log_connector',
+  'item_pipe_splitter',
+  'item_pipe_converger',
+  'item_pipe_connector',
+])
+
+function isManualBeltJunctionType(typeId: DeviceTypeId) {
+  return typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector'
+}
+
+function isManualPipeJunctionType(typeId: DeviceTypeId) {
+  return typeId === 'item_pipe_splitter' || typeId === 'item_pipe_converger' || typeId === 'item_pipe_connector'
+}
 
 type LayoutUpdater = LayoutState | ((current: LayoutState) => LayoutState)
 
@@ -42,8 +57,8 @@ type BuildInteractionBuildParams = {
   layout: LayoutState
   setLayout: (updater: LayoutUpdater) => void
   mode: EditMode
-  placeOperation: 'default' | 'belt'
-  setPlaceOperation: Dispatch<SetStateAction<'default' | 'belt'>>
+  placeOperation: 'default' | 'belt' | 'pipe'
+  setPlaceOperation: Dispatch<SetStateAction<'default' | 'belt' | 'pipe'>>
   placeType: DeviceTypeId | ''
   setPlaceType: Dispatch<SetStateAction<DeviceTypeId | ''>>
   placeRotation: Rotation
@@ -272,8 +287,12 @@ export function useBuildInteractionDomain({
         }
 
         const replacedBeltIds = new Set<string>()
+        const replacePipeTrack = isManualPipeJunctionType(instance.typeId)
+        const replaceBeltTrack = isManualBeltJunctionType(instance.typeId)
         for (const device of current.devices) {
-          if (!device.typeId.startsWith('belt_')) continue
+          if (replaceBeltTrack && !isBeltLike(device.typeId)) continue
+          if (replacePipeTrack && !isPipeLike(device.typeId)) continue
+          if (!replaceBeltTrack && !replacePipeTrack) continue
           if (footprint.some((cellPos) => includesCell(device, cellPos.x, cellPos.y))) {
             replacedBeltIds.add(device.instanceId)
           }
@@ -302,7 +321,7 @@ export function useBuildInteractionDomain({
     (event: React.MouseEvent<HTMLDivElement>) => {
       if (event.button === 1) {
         event.preventDefault()
-        if (mode === 'place' && placeOperation === 'belt') {
+        if (mode === 'place' && (placeOperation === 'belt' || placeOperation === 'pipe')) {
           setLogStart(null)
           setLogCurrent(null)
           setLogTrace([])
@@ -338,7 +357,7 @@ export function useBuildInteractionDomain({
       const cell = toCell(event.clientX, event.clientY)
       if (!cell) return
 
-      if (mode === 'place' && placeOperation === 'belt') {
+      if (mode === 'place' && (placeOperation === 'belt' || placeOperation === 'pipe')) {
         if (simIsRunning) return
         setLogStart(cell)
         setLogCurrent(cell)
@@ -496,7 +515,7 @@ export function useBuildInteractionDomain({
       const cell = rawCell.x >= 0 && rawCell.y >= 0 && rawCell.x < layout.lotSize && rawCell.y < layout.lotSize ? rawCell : null
       setHoverCell(cell)
 
-      if (mode === 'place' && placeOperation === 'belt' && logStart) {
+      if (mode === 'place' && (placeOperation === 'belt' || placeOperation === 'pipe') && logStart) {
         if (!cell) return
         const last = logTrace[logTrace.length - 1]
         if (last && last.x === cell.x && last.y === cell.y) return
@@ -608,10 +627,11 @@ export function useBuildInteractionDomain({
         return
       }
 
-      if (mode === 'place' && placeOperation === 'belt' && logStart && logCurrent && !simIsRunning) {
+      if (mode === 'place' && (placeOperation === 'belt' || placeOperation === 'pipe') && logStart && logCurrent && !simIsRunning) {
         const path = logisticsPreview
         if (path && path.length >= 2) {
-          setLayout((current) => applyLogisticsPath(current, path))
+          const family = placeOperation === 'pipe' ? 'pipe' : 'belt'
+          setLayout((current) => applyLogisticsPath(current, path, family))
         }
         setLogStart(null)
         setLogCurrent(null)

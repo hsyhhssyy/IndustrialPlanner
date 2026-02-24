@@ -1,4 +1,4 @@
-import { DEVICE_TYPE_BY_ID, BELT_TYPES, RECIPES } from './registry'
+import { DEVICE_TYPE_BY_ID, BELT_TYPES, PIPE_TYPES, RECIPES } from './registry'
 import type {
   DeviceInstance,
   Direction,
@@ -124,10 +124,41 @@ export function buildOccupancyMap(layout: LayoutState) {
 
 export function detectOverlaps(layout: LayoutState) {
   const overlapIds = new Set<string>()
+
+  const isBeltFamilyLogistics = (typeId: string) =>
+    BELT_TYPES.has(typeId) || typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector'
+
+  const isPipeFamilyLogistics = (typeId: string) =>
+    PIPE_TYPES.has(typeId) || typeId === 'item_pipe_splitter' || typeId === 'item_pipe_converger' || typeId === 'item_pipe_connector'
+
   for (const entries of buildOccupancyMap(layout).values()) {
-    if (entries.length > 1) {
-      for (const entry of entries) overlapIds.add(entry.instanceId)
+    if (entries.length <= 1) continue
+
+    let beltFamilyCount = 0
+    let pipeFamilyCount = 0
+    let hasOtherType = false
+
+    for (const entry of entries) {
+      const device = layout.devices.find((candidate) => candidate.instanceId === entry.instanceId)
+      if (!device) {
+        hasOtherType = true
+        continue
+      }
+      if (isBeltFamilyLogistics(device.typeId)) {
+        beltFamilyCount += 1
+        continue
+      }
+      if (isPipeFamilyLogistics(device.typeId)) {
+        pipeFamilyCount += 1
+        continue
+      }
+      hasOtherType = true
     }
+
+    const allowBeltPipeCoexist = !hasOtherType && beltFamilyCount <= 1 && pipeFamilyCount <= 1
+    if (allowBeltPipeCoexist) continue
+
+    for (const entry of entries) overlapIds.add(entry.instanceId)
   }
   return overlapIds
 }
@@ -196,6 +227,14 @@ export function getDeviceById(layout: LayoutState, instanceId: string) {
 
 export function isBeltLike(typeId: string) {
   return BELT_TYPES.has(typeId)
+}
+
+export function isPipeLike(typeId: string) {
+  return PIPE_TYPES.has(typeId)
+}
+
+export function isTrackLike(typeId: string) {
+  return isBeltLike(typeId) || isPipeLike(typeId)
 }
 
 export function edgeFromDelta(dx: number, dy: number): Edge {

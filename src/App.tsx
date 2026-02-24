@@ -86,6 +86,9 @@ function getDeviceMenuIconPath(typeId: DeviceTypeId) {
   if (typeId === 'item_log_splitter') return '/device-icons/item_log_splitter.png'
   if (typeId === 'item_log_converger') return '/device-icons/item_log_converger.png'
   if (typeId === 'item_log_connector') return '/device-icons/item_log_connector.png'
+  if (typeId === 'item_pipe_splitter') return '/device-icons/item_log_splitter.png'
+  if (typeId === 'item_pipe_converger') return '/device-icons/item_log_converger.png'
+  if (typeId === 'item_pipe_connector') return '/device-icons/item_log_connector.png'
   return `/device-icons/${typeId}.png`
 }
 
@@ -104,8 +107,22 @@ const LEFT_PANEL_MIN_WIDTH = 340
 const RIGHT_PANEL_MIN_WIDTH = 260
 const PANEL_MAX_WIDTH = 560
 
-const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
-const HIDDEN_CHEVRON_DEVICE_TYPES = new Set<DeviceTypeId>(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
+const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>([
+  'item_log_splitter',
+  'item_log_converger',
+  'item_log_connector',
+  'item_pipe_splitter',
+  'item_pipe_converger',
+  'item_pipe_connector',
+])
+const HIDDEN_CHEVRON_DEVICE_TYPES = new Set<DeviceTypeId>([
+  'item_log_splitter',
+  'item_log_converger',
+  'item_log_connector',
+  'item_pipe_splitter',
+  'item_pipe_converger',
+  'item_pipe_connector',
+])
 const OUT_OF_LOT_TOAST_KEY = 'toast.outOfLot'
 const FALLBACK_PLACEMENT_TOAST_KEY = 'toast.invalidPlacementFallback'
 
@@ -170,7 +187,7 @@ const StaticDeviceLayer = memo(
         const pickupItemId = isPickupPort ? renderDevice.config.pickupItemId : undefined
         const runtimeIconItemId = getRuntimeIconItemId(renderDevice)
         const displayItemIconId = pickupItemId ?? runtimeIconItemId
-        const isBelt = renderDevice.typeId.startsWith('belt_')
+        const isBelt = renderDevice.typeId.startsWith('belt_') || renderDevice.typeId.startsWith('pipe_')
         const isSplitter = renderDevice.typeId === 'item_log_splitter'
         const isMerger = renderDevice.typeId === 'item_log_converger'
         const beltPorts = isBelt ? getRotatedPorts(renderDevice) : []
@@ -288,7 +305,7 @@ function App() {
   const [dragStartCell, setDragStartCell] = useState<{ x: number; y: number } | null>(null)
   const [dragRect, setDragRect] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
   const [dragOrigin, setDragOrigin] = useState<{ x: number; y: number } | null>(null)
-  const [placeOperation, setPlaceOperation] = useState<'default' | 'belt'>('default')
+  const [placeOperation, setPlaceOperation] = useState<'default' | 'belt' | 'pipe'>('default')
   const [viewOffset, setViewOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
 
   const gridRef = useRef<HTMLDivElement | null>(null)
@@ -673,7 +690,7 @@ function App() {
   )
 
   const logisticsPreviewLayer =
-    mode === 'place' && placeOperation === 'belt' && logisticsPreviewDevices.length > 0 ? (
+    mode === 'place' && (placeOperation === 'belt' || placeOperation === 'pipe') && logisticsPreviewDevices.length > 0 ? (
       <StaticDeviceLayer
         devices={logisticsPreviewDevices}
         selectionSet={new Set()}

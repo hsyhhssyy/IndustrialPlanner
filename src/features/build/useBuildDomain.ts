@@ -36,7 +36,15 @@ export const PLACE_GROUP_LABEL_KEY: Record<PlaceGroupKey, string> = {
 }
 
 export function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
-  if (typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector') return 'logistics'
+  if (
+    typeId === 'item_log_splitter' ||
+    typeId === 'item_log_converger' ||
+    typeId === 'item_log_connector' ||
+    typeId === 'item_pipe_splitter' ||
+    typeId === 'item_pipe_converger' ||
+    typeId === 'item_pipe_connector'
+  )
+    return 'logistics'
   if (typeId === 'item_port_unloader_1') return 'storage'
   if (
     typeId === 'item_port_storager_1' ||
@@ -115,7 +123,11 @@ export function useBuildDomainActions({
           device.typeId !== 'item_log_connector' &&
           device.typeId !== 'item_log_splitter' &&
           device.typeId !== 'item_log_converger' &&
-          !device.typeId.startsWith('belt_'),
+          device.typeId !== 'item_pipe_connector' &&
+          device.typeId !== 'item_pipe_splitter' &&
+          device.typeId !== 'item_pipe_converger' &&
+          !device.typeId.startsWith('belt_') &&
+          !device.typeId.startsWith('pipe_'),
       ),
     }))
     setSelection([])

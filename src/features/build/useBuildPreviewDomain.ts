@@ -14,7 +14,7 @@ type UseBuildPreviewDomainParams = {
   mode: string
   placeType: DeviceTypeId | ''
   placeRotation: Rotation
-  placeOperation: 'default' | 'belt'
+  placeOperation: 'default' | 'belt' | 'pipe'
   selection: string[]
   dragPreviewPositions: Record<string, Cell>
   hoverCell: Cell | null
@@ -59,12 +59,14 @@ export function useBuildPreviewDomain({
     if (!logStart || !logCurrent || logTrace.length === 0) return null
     const candidatePath = pathFromTrace(logTrace)
     if (!candidatePath) return null
-    return longestValidLogisticsPrefix(layout, candidatePath)
-  }, [layout, logStart, logCurrent, logTrace])
+    const family = placeOperation === 'pipe' ? 'pipe' : 'belt'
+    return longestValidLogisticsPrefix(layout, candidatePath, family)
+  }, [layout, logStart, logCurrent, logTrace, placeOperation])
 
   const logisticsPreviewDevices = useMemo(() => {
-    if (mode !== 'place' || placeOperation !== 'belt' || !logisticsPreview || logisticsPreview.length < 1) return []
-    const projectedLayout = applyLogisticsPath(layout, logisticsPreview)
+    if (mode !== 'place' || (placeOperation !== 'belt' && placeOperation !== 'pipe') || !logisticsPreview || logisticsPreview.length < 1) return []
+    const family = placeOperation === 'pipe' ? 'pipe' : 'belt'
+    const projectedLayout = applyLogisticsPath(layout, logisticsPreview, family)
     if (projectedLayout === layout) return []
     const projectedCellMap = cellToDeviceId(projectedLayout)
     const seenProjectedIds = new Set<string>()
@@ -76,7 +78,7 @@ export function useBuildPreviewDomain({
       seenProjectedIds.add(projectedId)
       const projectedDevice = getDeviceById(projectedLayout, projectedId)
       if (!projectedDevice) continue
-      if (!projectedDevice.typeId.startsWith('belt_') && !hiddenLabelDeviceTypes.has(projectedDevice.typeId)) continue
+      if (!projectedDevice.typeId.startsWith('belt_') && !projectedDevice.typeId.startsWith('pipe_') && !hiddenLabelDeviceTypes.has(projectedDevice.typeId)) continue
       result.push({
         ...projectedDevice,
         instanceId: `preview-${projectedDevice.instanceId}`,
@@ -87,7 +89,7 @@ export function useBuildPreviewDomain({
   }, [hiddenLabelDeviceTypes, layout, logisticsPreview, mode, placeOperation])
 
   const portChevrons = useMemo(() => {
-    if (mode !== 'select' && !(mode === 'place' && (placeOperation === 'belt' || !placeType))) return []
+    if (mode !== 'select' && !(mode === 'place' && ((placeOperation === 'belt' || placeOperation === 'pipe') || !placeType))) return []
     const links = linksFromLayout(layout)
     const connectedPortKeys = new Set<string>()
     const keyOf = (port: { instanceId: string; portId: string; x: number; y: number; edge: string }) =>
@@ -117,7 +119,7 @@ export function useBuildPreviewDomain({
       if ((mode === 'select' || (mode === 'place' && !placeType)) && !selection.includes(device.instanceId)) continue
       for (const port of getRotatedPorts(renderDevice)) {
         const portKey = keyOf(port)
-        if (mode === 'place' && placeOperation === 'belt' && connectedPortKeys.has(portKey)) continue
+        if (mode === 'place' && (placeOperation === 'belt' || placeOperation === 'pipe') && connectedPortKeys.has(portKey)) continue
 
         const centerX = (port.x + 0.5) * baseCellSize
         const centerY = (port.y + 0.5) * baseCellSize

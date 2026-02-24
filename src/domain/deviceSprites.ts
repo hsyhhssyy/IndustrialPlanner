@@ -29,6 +29,9 @@ export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
   { typeId: 'item_log_splitter', fileName: 'item_log_splitter.png' },
   { typeId: 'item_log_converger', fileName: 'item_log_converger.png' },
   { typeId: 'item_log_connector', fileName: 'item_log_connector.png' },
+  { typeId: 'item_pipe_splitter', fileName: 'item_log_splitter.png' },
+  { typeId: 'item_pipe_converger', fileName: 'item_log_converger.png' },
+  { typeId: 'item_pipe_connector', fileName: 'item_log_connector.png' },
 ]
 
 export const DEVICE_SPRITE_BY_TYPE: Partial<Record<DeviceTypeId, string>> = Object.fromEntries(

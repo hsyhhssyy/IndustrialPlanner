@@ -111,16 +111,6 @@ export function RightPanel({
     <aside className="panel right-panel">
       <h3>{t('right.lot')}</h3>
       {baseGroups.map((group) => {
-        if (group.key === 'wuling') {
-          return (
-            <section key={group.key} className="base-group-section">
-              <h4 className="base-group-title">{t(group.titleKey)}</h4>
-              <div className="row">
-                <p className="base-group-empty">{t('right.baseGroup.comingSoon')}</p>
-              </div>
-            </section>
-          )
-        }
         const groupedBases = BASES.filter((base) => base.tags.includes(group.tag))
         return (
           <section key={group.key} className="base-group-section">

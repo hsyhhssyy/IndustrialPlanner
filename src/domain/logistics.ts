@@ -1,6 +1,7 @@
 import {
   EDGE_ANGLE,
   OPPOSITE_EDGE,
+  buildOccupancyMap,
   cellToDeviceId,
   directionFromEdges,
   edgeFromDelta,
@@ -8,12 +9,19 @@ import {
   getRotatedPorts,
   inferPortDirection,
   isBeltLike,
+  isPipeLike,
   isWithinLot,
   linksFromLayout,
 } from './geometry'
 import type { DeviceInstance, Edge, LayoutState, Rotation } from './types'
 
 let idCounter = 1
+
+export type LogisticsFamily = 'belt' | 'pipe'
+
+function isDeviceInstance(value: DeviceInstance | null): value is DeviceInstance {
+  return value !== null
+}
 
 export function nextId(prefix: string) {
   idCounter += 1
@@ -94,7 +102,13 @@ export function pathFromTrace(trace: Array<{ x: number; y: number }>) {
 }
 
 function createJunctionAt(
-  typeId: 'item_log_splitter' | 'item_log_converger' | 'item_log_connector',
+  typeId:
+    | 'item_log_splitter'
+    | 'item_log_converger'
+    | 'item_log_connector'
+    | 'item_pipe_splitter'
+    | 'item_pipe_converger'
+    | 'item_pipe_connector',
   x: number,
   y: number,
   rotation: Rotation,
@@ -108,16 +122,58 @@ function createJunctionAt(
   }
 }
 
-function createBeltAt(
+function isTrackLikeByFamily(typeId: string, family: LogisticsFamily) {
+  return family === 'belt' ? isBeltLike(typeId) : isPipeLike(typeId)
+}
+
+function splitJunctionTypeByFamily(family: LogisticsFamily) {
+  return family === 'belt' ? 'item_log_splitter' : 'item_pipe_splitter'
+}
+
+function convergerJunctionTypeByFamily(family: LogisticsFamily) {
+  return family === 'belt' ? 'item_log_converger' : 'item_pipe_converger'
+}
+
+function connectorJunctionTypeByFamily(family: LogisticsFamily) {
+  return family === 'belt' ? 'item_log_connector' : 'item_pipe_connector'
+}
+
+function isBeltFamilyJunction(typeId: string) {
+  return typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector'
+}
+
+function isPipeFamilyJunction(typeId: string) {
+  return typeId === 'item_pipe_splitter' || typeId === 'item_pipe_converger' || typeId === 'item_pipe_connector'
+}
+
+function isLogisticsLikeByFamily(typeId: string, family: LogisticsFamily) {
+  return family === 'belt'
+    ? isBeltLike(typeId) || isBeltFamilyJunction(typeId)
+    : isPipeLike(typeId) || isPipeFamilyJunction(typeId)
+}
+
+function isCrossFamilyLogistics(typeId: string, family: LogisticsFamily) {
+  return family === 'belt'
+    ? isPipeLike(typeId) || isPipeFamilyJunction(typeId)
+    : isBeltLike(typeId) || isBeltFamilyJunction(typeId)
+}
+
+function createTrackAt(
+  family: LogisticsFamily,
   x: number,
   y: number,
   inEdge: 'N' | 'S' | 'E' | 'W',
   outEdge: 'N' | 'S' | 'E' | 'W',
 ): DeviceInstance {
   const result = directionFromEdges(inEdge, outEdge)
+  const typeId =
+    family === 'belt'
+      ? (result.typeId as DeviceInstance['typeId'])
+      : (result.typeId.replace('belt_', 'pipe_') as DeviceInstance['typeId'])
+
   return {
-    instanceId: nextId(result.typeId),
-    typeId: result.typeId as DeviceInstance['typeId'],
+    instanceId: nextId(typeId),
+    typeId,
     origin: { x, y },
     rotation: result.rotation,
     config: {},
@@ -175,7 +231,7 @@ export function deleteConnectedBelts(layout: LayoutState, x: number, y: number):
 }
 
 function canCrossStraight(existingType: string) {
-  return existingType === 'belt_straight_1x1'
+  return existingType === 'belt_straight_1x1' || existingType === 'pipe_straight_1x1'
 }
 
 function rotationFromEdge(baseEdge: Edge, targetEdge: Edge): Rotation {
@@ -184,7 +240,7 @@ function rotationFromEdge(baseEdge: Edge, targetEdge: Edge): Rotation {
 }
 
 function beltInOutEdge(device: DeviceInstance): { inEdge: Edge; outEdge: Edge } | null {
-  if (!isBeltLike(device.typeId)) return null
+  if (!isBeltLike(device.typeId) && !isPipeLike(device.typeId)) return null
   const ports = getRotatedPorts(device)
   const inPort = ports.find((port) => inferPortDirection(port.portId) === 'Input')
   const outPort = ports.find((port) => inferPortDirection(port.portId) === 'Output')
@@ -208,25 +264,42 @@ function canRewriteBeltFlow(inEdge: Edge, outEdge: Edge) {
 
 function endpointAllowed(
   layout: LayoutState,
+  occupancyMap: Map<string, Array<{ x: number; y: number; instanceId: string }>>,
+  family: LogisticsFamily,
   cell: { x: number; y: number },
   requiredDirection: 'Input' | 'Output',
   requiredEdge: Edge,
 ) {
-  const cellMap = cellToDeviceId(layout)
-  const occupiedId = cellMap.get(`${cell.x},${cell.y}`)
-  if (!occupiedId) return true
+  const entries = occupancyMap.get(`${cell.x},${cell.y}`)
+  if (!entries || entries.length === 0) return true
 
-  const device = getDeviceById(layout, occupiedId)
-  if (!device) return false
-  if (isBeltLike(device.typeId)) return true
+  let hasLogisticsOverlay = false
+  let hasBlockingEntity = false
 
-  return getRotatedPorts(device).some(
-    (port) =>
-      port.x === cell.x &&
-      port.y === cell.y &&
-      port.edge === requiredEdge &&
-      inferPortDirection(port.portId) === requiredDirection,
-  )
+  for (const entry of entries) {
+    const device = getDeviceById(layout, entry.instanceId)
+    if (!device) {
+      hasBlockingEntity = true
+      continue
+    }
+
+    if (isLogisticsLikeByFamily(device.typeId, family) || isCrossFamilyLogistics(device.typeId, family)) {
+      hasLogisticsOverlay = true
+      continue
+    }
+
+    const matchesPort = getRotatedPorts(device).some(
+      (port) =>
+        port.x === cell.x &&
+        port.y === cell.y &&
+        port.edge === requiredEdge &&
+        inferPortDirection(port.portId) === requiredDirection,
+    )
+    if (matchesPort) return true
+    hasBlockingEntity = true
+  }
+
+  return hasLogisticsOverlay && !hasBlockingEntity
 }
 
 function validAxisPath(path: Array<{ x: number; y: number }>) {
@@ -319,17 +392,18 @@ function isStraightFlow(flow: { inEdge: Edge; outEdge: Edge } | null) {
 }
 
 function isAlongExistingBelt(
+  family: LogisticsFamily,
   layout: LayoutState,
   prev: { x: number; y: number },
   current: { x: number; y: number },
   next: { x: number; y: number },
 ) {
-  const cellMap = cellToDeviceId(layout)
-  const occupyId = cellMap.get(`${current.x},${current.y}`)
-  if (!occupyId) return false
-
-  const existing = getDeviceById(layout, occupyId)
-  if (!existing || !isBeltLike(existing.typeId)) return false
+  const entries = buildOccupancyMap(layout).get(`${current.x},${current.y}`) ?? []
+  const existing = entries
+    .map((entry) => getDeviceById(layout, entry.instanceId))
+    .filter(isDeviceInstance)
+    .find((device) => isTrackLikeByFamily(device.typeId, family))
+  if (!existing) return false
 
   const flow = beltInOutEdge(existing)
   if (!flow) return false
@@ -341,29 +415,29 @@ function isAlongExistingBelt(
   return onFlowIn && onFlowOut
 }
 
-function isValidLogisticsPathPrefix(layout: LayoutState, path: Array<{ x: number; y: number }>) {
+function isValidLogisticsPathPrefix(layout: LayoutState, path: Array<{ x: number; y: number }>, family: LogisticsFamily) {
   if (path.length < 1) return false
   if (!validAxisPath(path)) return false
   if (path.length === 1) return true
   if (hasRepeatedSegment(path)) return false
 
-  const cellMap = cellToDeviceId(layout)
+  const occupancyMap = buildOccupancyMap(layout)
   const first = path[0]
   const last = path[path.length - 1]
 
   const startOutEdge = edgeFromDelta(path[1].x - first.x, path[1].y - first.y)
   const endInEdge = edgeFromDelta(path[path.length - 2].x - last.x, path[path.length - 2].y - last.y)
 
-  if (!endpointAllowed(layout, first, 'Output', startOutEdge)) return false
-  if (!endpointAllowed(layout, last, 'Input', endInEdge)) return false
+  if (!endpointAllowed(layout, occupancyMap, family, first, 'Output', startOutEdge)) return false
+  if (!endpointAllowed(layout, occupancyMap, family, last, 'Input', endInEdge)) return false
 
   const pathCrossCells = selfCrossCells(path)
 
   for (let i = 1; i < path.length - 1; i += 1) {
     const current = path[i]
     const key = `${current.x},${current.y}`
-    const occupyId = cellMap.get(`${current.x},${current.y}`)
-    if (!occupyId) {
+    const entries = occupancyMap.get(`${current.x},${current.y}`) ?? []
+    if (entries.length === 0) {
       if (pathCrossCells.has(key)) {
         const ghostFlow = ghostFlowAtCell(path, current)
         if (isStraightFlow(ghostFlow)) continue
@@ -371,38 +445,67 @@ function isValidLogisticsPathPrefix(layout: LayoutState, path: Array<{ x: number
       }
       continue
     }
-    const existing = getDeviceById(layout, occupyId)
-    if (existing && canCrossStraight(existing.typeId)) continue
-    return false
+
+    const sameFamilyTrack = entries
+      .map((entry) => getDeviceById(layout, entry.instanceId))
+      .filter(isDeviceInstance)
+      .find((device) => isTrackLikeByFamily(device.typeId, family))
+    const hasSameFamilyNonTrack = entries.some((entry) => {
+      const device = getDeviceById(layout, entry.instanceId)
+      return device !== null && isLogisticsLikeByFamily(device.typeId, family) && !isTrackLikeByFamily(device.typeId, family)
+    })
+    const hasBlockingNonLogistics = entries.some((entry) => {
+      const device = getDeviceById(layout, entry.instanceId)
+      return device !== null && !isLogisticsLikeByFamily(device.typeId, family) && !isCrossFamilyLogistics(device.typeId, family)
+    })
+
+    if (pathCrossCells.has(key)) {
+      const ghostFlow = ghostFlowAtCell(path, current)
+      if (!isStraightFlow(ghostFlow)) return false
+      if (sameFamilyTrack && !canCrossStraight(sameFamilyTrack.typeId)) return false
+      if (hasSameFamilyNonTrack || hasBlockingNonLogistics) return false
+      continue
+    }
+
+    if (sameFamilyTrack && canCrossStraight(sameFamilyTrack.typeId)) continue
+    if (sameFamilyTrack || hasSameFamilyNonTrack || hasBlockingNonLogistics) return false
   }
 
   if (path.length >= 3) {
     const prev = path[path.length - 3]
     const current = path[path.length - 2]
     const next = path[path.length - 1]
-    if (isAlongExistingBelt(layout, prev, current, next)) return false
+    if (isAlongExistingBelt(family, layout, prev, current, next)) return false
   }
 
   return true
 }
 
-export function longestValidLogisticsPrefix(layout: LayoutState, path: Array<{ x: number; y: number }>) {
+export function longestValidLogisticsPrefix(
+  layout: LayoutState,
+  path: Array<{ x: number; y: number }>,
+  family: LogisticsFamily = 'belt',
+) {
   if (path.length === 0) return []
 
   let prefix = [path[0]]
   for (let i = 1; i < path.length; i += 1) {
     const trial = [...prefix, path[i]]
-    if (!isValidLogisticsPathPrefix(layout, trial)) break
+    if (!isValidLogisticsPathPrefix(layout, trial, family)) break
     prefix = trial
   }
 
   return prefix
 }
 
-export function applyLogisticsPath(layout: LayoutState, path: Array<{ x: number; y: number }>): LayoutState {
+export function applyLogisticsPath(
+  layout: LayoutState,
+  path: Array<{ x: number; y: number }>,
+  family: LogisticsFamily = 'belt',
+): LayoutState {
   if (path.length < 2 || !validAxisPath(path)) return layout
 
-  const cellMap = cellToDeviceId(layout)
+  const occupancyMap = buildOccupancyMap(layout)
   const nextDevices = [...layout.devices]
   const replacedIds = new Set<string>()
 
@@ -418,60 +521,56 @@ export function applyLogisticsPath(layout: LayoutState, path: Array<{ x: number;
   const startOutEdge = edgeFromDelta(path[1].x - first.x, path[1].y - first.y)
   const endInEdge = edgeFromDelta(path[path.length - 2].x - last.x, path[path.length - 2].y - last.y)
 
-  if (!endpointAllowed(layout, first, 'Output', startOutEdge)) return layout
-  if (!endpointAllowed(layout, last, 'Input', endInEdge)) return layout
+  if (!endpointAllowed(layout, occupancyMap, family, first, 'Output', startOutEdge)) return layout
+  if (!endpointAllowed(layout, occupancyMap, family, last, 'Input', endInEdge)) return layout
 
-  const startOn = cellMap.get(`${first.x},${first.y}`)
-  const endOn = cellMap.get(`${last.x},${last.y}`)
+  const startOn = (occupancyMap.get(`${first.x},${first.y}`) ?? [])
+    .map((entry) => getDeviceById(layout, entry.instanceId))
+    .filter(isDeviceInstance)
+    .find((device) => isTrackLikeByFamily(device.typeId, family))
+  const endOn = (occupancyMap.get(`${last.x},${last.y}`) ?? [])
+    .map((entry) => getDeviceById(layout, entry.instanceId))
+    .filter(isDeviceInstance)
+    .find((device) => isTrackLikeByFamily(device.typeId, family))
   const startOnGhost = (visitCount.get(`${first.x},${first.y}`) ?? 0) > 1
   const endOnGhost = (visitCount.get(`${last.x},${last.y}`) ?? 0) > 1
   const startGhostFlow = startOnGhost ? ghostFlowAtCell(path, first) : null
   const endGhostFlow = endOnGhost ? ghostFlowAtCell(path, last) : null
 
   if (startOn) {
-    const d = getDeviceById(layout, startOn)
-    if (d && isBeltLike(d.typeId)) {
-      const flow = beltInOutEdge(d)
-      const shouldForceBeltContinue =
-        !!flow && !hasBeltOutputLink(layout, d.instanceId, flow.outEdge) && canRewriteBeltFlow(flow.inEdge, startOutEdge)
-      if (shouldForceBeltContinue && flow) {
-        replacedIds.add(d.instanceId)
-        nextDevices.push(createBeltAt(first.x, first.y, flow.inEdge, startOutEdge))
-      } else {
-        replacedIds.add(d.instanceId)
-        nextDevices.push(
-          createJunctionAt('item_log_splitter', first.x, first.y, flow ? rotationFromEdge('E', flow.inEdge) : 0),
-        )
-      }
+    const flow = beltInOutEdge(startOn)
+    const shouldForceBeltContinue =
+      !!flow && !hasBeltOutputLink(layout, startOn.instanceId, flow.outEdge) && canRewriteBeltFlow(flow.inEdge, startOutEdge)
+    if (shouldForceBeltContinue && flow) {
+      replacedIds.add(startOn.instanceId)
+      nextDevices.push(createTrackAt(family, first.x, first.y, flow.inEdge, startOutEdge))
+    } else {
+      replacedIds.add(startOn.instanceId)
+      nextDevices.push(createJunctionAt(splitJunctionTypeByFamily(family), first.x, first.y, flow ? rotationFromEdge('E', flow.inEdge) : 0))
     }
   } else if (startOnGhost) {
     const splitterInEdge = startGhostFlow?.inEdge ?? OPPOSITE_EDGE[startOutEdge]
-    nextDevices.push(createJunctionAt('item_log_splitter', first.x, first.y, rotationFromEdge('E', splitterInEdge)))
+    nextDevices.push(createJunctionAt(splitJunctionTypeByFamily(family), first.x, first.y, rotationFromEdge('E', splitterInEdge)))
   } else {
-    nextDevices.push(createBeltAt(first.x, first.y, OPPOSITE_EDGE[startOutEdge], startOutEdge))
+    nextDevices.push(createTrackAt(family, first.x, first.y, OPPOSITE_EDGE[startOutEdge], startOutEdge))
   }
 
   if (endOn) {
-    const d = getDeviceById(layout, endOn)
-    if (d && isBeltLike(d.typeId)) {
-      const flow = beltInOutEdge(d)
-      const shouldForceBeltConnect =
-        !!flow && !hasBeltInputLink(layout, d.instanceId, flow.inEdge) && canRewriteBeltFlow(endInEdge, flow.outEdge)
-      if (shouldForceBeltConnect && flow) {
-        replacedIds.add(d.instanceId)
-        nextDevices.push(createBeltAt(last.x, last.y, endInEdge, flow.outEdge))
-      } else {
-        replacedIds.add(d.instanceId)
-        nextDevices.push(
-          createJunctionAt('item_log_converger', last.x, last.y, flow ? rotationFromEdge('W', flow.outEdge) : 0),
-        )
-      }
+    const flow = beltInOutEdge(endOn)
+    const shouldForceBeltConnect =
+      !!flow && !hasBeltInputLink(layout, endOn.instanceId, flow.inEdge) && canRewriteBeltFlow(endInEdge, flow.outEdge)
+    if (shouldForceBeltConnect && flow) {
+      replacedIds.add(endOn.instanceId)
+      nextDevices.push(createTrackAt(family, last.x, last.y, endInEdge, flow.outEdge))
+    } else {
+      replacedIds.add(endOn.instanceId)
+      nextDevices.push(createJunctionAt(convergerJunctionTypeByFamily(family), last.x, last.y, flow ? rotationFromEdge('W', flow.outEdge) : 0))
     }
   } else if (endOnGhost) {
     const mergerOutEdge = endGhostFlow?.outEdge ?? OPPOSITE_EDGE[endInEdge]
-    nextDevices.push(createJunctionAt('item_log_converger', last.x, last.y, rotationFromEdge('W', mergerOutEdge)))
+    nextDevices.push(createJunctionAt(convergerJunctionTypeByFamily(family), last.x, last.y, rotationFromEdge('W', mergerOutEdge)))
   } else {
-    nextDevices.push(createBeltAt(last.x, last.y, endInEdge, OPPOSITE_EDGE[endInEdge]))
+    nextDevices.push(createTrackAt(family, last.x, last.y, endInEdge, OPPOSITE_EDGE[endInEdge]))
   }
 
   for (let i = 1; i < path.length - 1; i += 1) {
@@ -482,7 +581,20 @@ export function applyLogisticsPath(layout: LayoutState, path: Array<{ x: number;
     const outEdge = edgeFromDelta(next.x - current.x, next.y - current.y)
     const currentKey = `${current.x},${current.y}`
 
-    const occupyId = cellMap.get(`${current.x},${current.y}`)
+    const entries = occupancyMap.get(`${current.x},${current.y}`) ?? []
+    const sameFamilyTrack = entries
+      .map((entry) => getDeviceById(layout, entry.instanceId))
+      .filter(isDeviceInstance)
+      .find((device) => isTrackLikeByFamily(device.typeId, family))
+    const sameFamilyNonTrack = entries
+      .map((entry) => getDeviceById(layout, entry.instanceId))
+      .filter(isDeviceInstance)
+      .find((device) => isLogisticsLikeByFamily(device.typeId, family) && !isTrackLikeByFamily(device.typeId, family))
+    const hasBlockingNonLogistics = entries.some((entry) => {
+      const device = getDeviceById(layout, entry.instanceId)
+      return device !== null && !isLogisticsLikeByFamily(device.typeId, family) && !isCrossFamilyLogistics(device.typeId, family)
+    })
+
     if (pathCrossSet.has(currentKey)) {
       if (currentKey === firstKey || currentKey === lastKey) {
         continue
@@ -491,42 +603,41 @@ export function applyLogisticsPath(layout: LayoutState, path: Array<{ x: number;
       if (!isStraightFlow(ghostFlow)) {
         return layout
       }
-      if (occupyId) {
-        const existing = getDeviceById(layout, occupyId)
-        if (existing && canCrossStraight(existing.typeId)) {
-          replacedIds.add(existing.instanceId)
-        } else if (!replacedIds.has(occupyId)) {
+      if (sameFamilyTrack) {
+        if (canCrossStraight(sameFamilyTrack.typeId)) {
+          replacedIds.add(sameFamilyTrack.instanceId)
+        } else if (!replacedIds.has(sameFamilyTrack.instanceId)) {
           return layout
         }
+      }
+      if (sameFamilyNonTrack || hasBlockingNonLogistics) {
+        return layout
       }
       if (createdBridgeCells.has(currentKey)) {
         continue
       }
-      nextDevices.push(createJunctionAt('item_log_connector', current.x, current.y, 0))
+      nextDevices.push(createJunctionAt(connectorJunctionTypeByFamily(family), current.x, current.y, 0))
       createdBridgeCells.add(currentKey)
       continue
     }
 
-    if (occupyId) {
-      const existing = getDeviceById(layout, occupyId)
-      if (existing && canCrossStraight(existing.typeId)) {
-        replacedIds.add(existing.instanceId)
+    if (sameFamilyTrack) {
+      if (canCrossStraight(sameFamilyTrack.typeId)) {
+        replacedIds.add(sameFamilyTrack.instanceId)
         if (createdBridgeCells.has(currentKey)) {
           continue
         }
-        nextDevices.push(createJunctionAt('item_log_connector', current.x, current.y, 0))
+        nextDevices.push(createJunctionAt(connectorJunctionTypeByFamily(family), current.x, current.y, 0))
         createdBridgeCells.add(currentKey)
         continue
       }
-      if (existing && (existing.typeId === 'belt_turn_ccw_1x1' || existing.typeId === 'belt_turn_cw_1x1')) {
-        return layout
-      }
-      if (!replacedIds.has(occupyId)) {
+      if (!replacedIds.has(sameFamilyTrack.instanceId)) {
         return layout
       }
     }
+    if (sameFamilyNonTrack || hasBlockingNonLogistics) return layout
 
-    nextDevices.push(createBeltAt(current.x, current.y, inEdge, outEdge))
+    nextDevices.push(createTrackAt(family, current.x, current.y, inEdge, outEdge))
   }
 
   const filtered = nextDevices.filter((device) => !replacedIds.has(device.instanceId))

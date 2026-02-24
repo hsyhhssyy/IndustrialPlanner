@@ -25,8 +25,8 @@ type LeftPanelProps = {
   setMode: (mode: EditMode) => void
   language: Language
   t: (key: string, params?: Record<string, string | number>) => string
-  placeOperation: 'default' | 'belt'
-  setPlaceOperation: (operation: 'default' | 'belt') => void
+  placeOperation: 'default' | 'belt' | 'pipe'
+  setPlaceOperation: (operation: 'default' | 'belt' | 'pipe') => void
   placeType: DeviceTypeId | ''
   setPlaceType: (type: DeviceTypeId | '') => void
   setLogStart: (value: { x: number; y: number } | null) => void
@@ -159,6 +159,20 @@ export function LeftPanel({
             >
               <img className="place-device-icon" src="/device-icons/item_log_belt_01.png" alt="" aria-hidden="true" draggable={false} />
               <span className="place-device-label">{t('left.placeBelt')}</span>
+            </button>
+
+            <button
+              className={`place-device-button ${placeOperation === 'pipe' ? 'active' : ''}`}
+              onClick={() => {
+                setPlaceOperation('pipe')
+                setPlaceType('')
+                setLogStart(null)
+                setLogCurrent(null)
+                setLogTrace([])
+              }}
+            >
+              <img className="place-device-icon" src="/device-icons/item_log_belt_01.png" alt="" aria-hidden="true" draggable={false} />
+              <span className="place-device-label">{t('left.placePipe')}</span>
             </button>
 
             <button className="place-device-button" onClick={saveSelectionAsBlueprint}>

@@ -1284,6 +1284,90 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     ],
   },
   {
+    id: 'pipe_straight_1x1',
+    runtimeKind: 'conveyor',
+    requiresPower: false,
+    size: { width: 1, height: 1 },
+    shortName: 'Pipe',
+    tags: ['武陵'],
+    ports0: [
+      {
+        id: 'in_w',
+        localCellX: 0,
+        localCellY: 0,
+        edge: 'W',
+        direction: 'Input',
+        allowedItems: recipeItemsAllowance,
+        allowedTypes: liquidAllowance,
+      },
+      {
+        id: 'out_e',
+        localCellX: 0,
+        localCellY: 0,
+        edge: 'E',
+        direction: 'Output',
+        allowedItems: recipeItemsAllowance,
+        allowedTypes: liquidAllowance,
+      },
+    ],
+  },
+  {
+    id: 'pipe_turn_cw_1x1',
+    runtimeKind: 'conveyor',
+    requiresPower: false,
+    size: { width: 1, height: 1 },
+    shortName: 'PipeTurn↱',
+    tags: ['武陵'],
+    ports0: [
+      {
+        id: 'in_n',
+        localCellX: 0,
+        localCellY: 0,
+        edge: 'N',
+        direction: 'Input',
+        allowedItems: recipeItemsAllowance,
+        allowedTypes: liquidAllowance,
+      },
+      {
+        id: 'out_e',
+        localCellX: 0,
+        localCellY: 0,
+        edge: 'E',
+        direction: 'Output',
+        allowedItems: recipeItemsAllowance,
+        allowedTypes: liquidAllowance,
+      },
+    ],
+  },
+  {
+    id: 'pipe_turn_ccw_1x1',
+    runtimeKind: 'conveyor',
+    requiresPower: false,
+    size: { width: 1, height: 1 },
+    shortName: 'PipeTurn↰',
+    tags: ['武陵'],
+    ports0: [
+      {
+        id: 'in_n',
+        localCellX: 0,
+        localCellY: 0,
+        edge: 'N',
+        direction: 'Input',
+        allowedItems: recipeItemsAllowance,
+        allowedTypes: liquidAllowance,
+      },
+      {
+        id: 'out_w',
+        localCellX: 0,
+        localCellY: 0,
+        edge: 'W',
+        direction: 'Output',
+        allowedItems: recipeItemsAllowance,
+        allowedTypes: liquidAllowance,
+      },
+    ],
+  },
+  {
     id: 'item_log_splitter',
     runtimeKind: 'junction',
     requiresPower: false,
@@ -1364,6 +1448,90 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
       },
     ]),
   },
+  {
+    id: 'item_pipe_splitter',
+    runtimeKind: 'junction',
+    requiresPower: false,
+    size: { width: 1, height: 1 },
+    shortName: 'PipeSplit',
+    tags: ['武陵'],
+    ports0: [
+      {
+        id: 'in_e',
+        localCellX: 0,
+        localCellY: 0,
+        edge: 'E',
+        direction: 'Input',
+        allowedItems: recipeItemsAllowance,
+        allowedTypes: liquidAllowance,
+      },
+      ...(['N', 'W', 'S'] as const).map((edge) => ({
+        id: `out_${edge.toLowerCase()}`,
+        localCellX: 0,
+        localCellY: 0,
+        edge,
+        direction: 'Output' as const,
+        allowedItems: recipeItemsAllowance,
+        allowedTypes: liquidAllowance,
+      })),
+    ],
+  },
+  {
+    id: 'item_pipe_converger',
+    runtimeKind: 'junction',
+    requiresPower: false,
+    size: { width: 1, height: 1 },
+    shortName: 'PipeMerge',
+    tags: ['武陵'],
+    ports0: [
+      ...(['N', 'E', 'S'] as const).map((edge) => ({
+        id: `in_${edge.toLowerCase()}`,
+        localCellX: 0,
+        localCellY: 0,
+        edge,
+        direction: 'Input' as const,
+        allowedItems: recipeItemsAllowance,
+        allowedTypes: liquidAllowance,
+      })),
+      {
+        id: 'out_w',
+        localCellX: 0,
+        localCellY: 0,
+        edge: 'W',
+        direction: 'Output',
+        allowedItems: recipeItemsAllowance,
+        allowedTypes: liquidAllowance,
+      },
+    ],
+  },
+  {
+    id: 'item_pipe_connector',
+    runtimeKind: 'junction',
+    requiresPower: false,
+    size: { width: 1, height: 1 },
+    shortName: 'PipeBridge',
+    tags: ['武陵'],
+    ports0: (['N', 'S', 'W', 'E'] as const).flatMap((edge) => [
+      {
+        id: `in_${edge.toLowerCase()}`,
+        localCellX: 0,
+        localCellY: 0,
+        edge,
+        direction: 'Input' as const,
+        allowedItems: recipeItemsAllowance,
+        allowedTypes: liquidAllowance,
+      },
+      {
+        id: `out_${edge.toLowerCase()}`,
+        localCellX: 0,
+        localCellY: 0,
+        edge,
+        direction: 'Output' as const,
+        allowedItems: recipeItemsAllowance,
+        allowedTypes: liquidAllowance,
+      },
+    ]),
+  },
 ]
 
 export const DEVICE_TYPE_BY_ID: Record<string, DeviceTypeDef> = Object.fromEntries(
@@ -1373,13 +1541,23 @@ export const DEVICE_TYPE_BY_ID: Record<string, DeviceTypeDef> = Object.fromEntri
 export const ITEM_BY_ID: Record<string, ItemDef> = Object.fromEntries(ITEMS.map((item) => [item.id, item]))
 
 export const PLACEABLE_TYPES = DEVICE_TYPES.filter(
-  (deviceType) => !deviceType.id.startsWith('belt_'),
+  (deviceType) => !deviceType.id.startsWith('belt_') && !deviceType.id.startsWith('pipe_'),
 )
 
 export const BELT_TYPES = new Set(['belt_straight_1x1', 'belt_turn_cw_1x1', 'belt_turn_ccw_1x1'])
+export const PIPE_TYPES = new Set(['pipe_straight_1x1', 'pipe_turn_cw_1x1', 'pipe_turn_ccw_1x1'])
 export const JUNCTION_TYPES = new Set(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
+export const PIPE_JUNCTION_TYPES = new Set(['item_pipe_splitter', 'item_pipe_converger', 'item_pipe_connector'])
 
 export const BASES: BaseDef[] = [
+  {
+    id: 'wuling_protocol_core',
+    name: '协议核心区',
+    placeableSize: 80,
+    outerRing: { top: 3, right: 3, bottom: 3, left: 3 },
+    tags: ['武陵'],
+    foundationBuildings: [],
+  },
   {
     id: 'valley4_protocol_core',
     name: '协议核心区',
