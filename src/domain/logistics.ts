@@ -185,14 +185,19 @@ export function deleteConnectedBelts(layout: LayoutState, x: number, y: number):
   const startId = cellMap.get(`${x},${y}`)
   if (!startId) return layout
   const start = getDeviceById(layout, startId)
-  if (!start || !isBeltLike(start.typeId)) return layout
+  if (!start) return layout
+
+  const family: LogisticsFamily | null = isBeltLike(start.typeId) ? 'belt' : isPipeLike(start.typeId) ? 'pipe' : null
+  if (!family) return layout
+
+  const isFamilyTrack = (typeId: string) => isTrackLikeByFamily(typeId, family)
 
   const beltAdjacency = new Map<string, Set<string>>()
   for (const link of linksFromLayout(layout)) {
     const fromDevice = getDeviceById(layout, link.from.instanceId)
     const toDevice = getDeviceById(layout, link.to.instanceId)
     if (!fromDevice || !toDevice) continue
-    if (!isBeltLike(fromDevice.typeId) || !isBeltLike(toDevice.typeId)) continue
+    if (!isFamilyTrack(fromDevice.typeId) || !isFamilyTrack(toDevice.typeId)) continue
     const fromBucket = beltAdjacency.get(fromDevice.instanceId) ?? new Set<string>()
     fromBucket.add(toDevice.instanceId)
     beltAdjacency.set(fromDevice.instanceId, fromBucket)
@@ -214,7 +219,7 @@ export function deleteConnectedBelts(layout: LayoutState, x: number, y: number):
 
     const device = getDeviceById(layout, currentId)
     if (!device) continue
-    if (!isBeltLike(device.typeId)) continue
+    if (!isFamilyTrack(device.typeId)) continue
     toDelete.add(device.instanceId)
 
     const neighbors = beltAdjacency.get(currentId)
@@ -262,6 +267,21 @@ function canRewriteBeltFlow(inEdge: Edge, outEdge: Edge) {
   return inEdge !== outEdge
 }
 
+function hasMatchingPortAtCell(
+  device: DeviceInstance,
+  cell: { x: number; y: number },
+  requiredDirection: 'Input' | 'Output',
+  requiredEdge: Edge,
+) {
+  return getRotatedPorts(device).some(
+    (port) =>
+      port.x === cell.x &&
+      port.y === cell.y &&
+      port.edge === requiredEdge &&
+      inferPortDirection(port.portId) === requiredDirection,
+  )
+}
+
 function endpointAllowed(
   layout: LayoutState,
   occupancyMap: Map<string, Array<{ x: number; y: number; instanceId: string }>>,
@@ -273,7 +293,7 @@ function endpointAllowed(
   const entries = occupancyMap.get(`${cell.x},${cell.y}`)
   if (!entries || entries.length === 0) return true
 
-  let hasLogisticsOverlay = false
+  let hasPassThroughOverlay = false
   let hasBlockingEntity = false
 
   for (const entry of entries) {
@@ -283,23 +303,57 @@ function endpointAllowed(
       continue
     }
 
-    if (isLogisticsLikeByFamily(device.typeId, family) || isCrossFamilyLogistics(device.typeId, family)) {
-      hasLogisticsOverlay = true
+    if (isTrackLikeByFamily(device.typeId, family)) {
+      hasPassThroughOverlay = true
       continue
     }
 
-    const matchesPort = getRotatedPorts(device).some(
-      (port) =>
-        port.x === cell.x &&
-        port.y === cell.y &&
-        port.edge === requiredEdge &&
-        inferPortDirection(port.portId) === requiredDirection,
-    )
-    if (matchesPort) return true
+    if (isLogisticsLikeByFamily(device.typeId, family)) {
+      if (hasMatchingPortAtCell(device, cell, requiredDirection, requiredEdge)) return true
+      hasBlockingEntity = true
+      continue
+    }
+
+    if (isCrossFamilyLogistics(device.typeId, family)) {
+      hasPassThroughOverlay = true
+      continue
+    }
+
+    if (hasMatchingPortAtCell(device, cell, requiredDirection, requiredEdge)) return true
     hasBlockingEntity = true
   }
 
-  return hasLogisticsOverlay && !hasBlockingEntity
+  return hasPassThroughOverlay && !hasBlockingEntity
+}
+
+function endpointAnchoredByExistingDevice(
+  layout: LayoutState,
+  occupancyMap: Map<string, Array<{ x: number; y: number; instanceId: string }>>,
+  family: LogisticsFamily,
+  cell: { x: number; y: number },
+  requiredDirection: 'Input' | 'Output',
+  requiredEdge: Edge,
+) {
+  const entries = occupancyMap.get(`${cell.x},${cell.y}`)
+  if (!entries || entries.length === 0) return false
+
+  for (const entry of entries) {
+    const device = getDeviceById(layout, entry.instanceId)
+    if (!device) continue
+
+    if (isTrackLikeByFamily(device.typeId, family)) continue
+
+    if (isLogisticsLikeByFamily(device.typeId, family)) {
+      if (hasMatchingPortAtCell(device, cell, requiredDirection, requiredEdge)) return true
+      continue
+    }
+
+    if (isCrossFamilyLogistics(device.typeId, family)) continue
+
+    if (hasMatchingPortAtCell(device, cell, requiredDirection, requiredEdge)) return true
+  }
+
+  return false
 }
 
 function validAxisPath(path: Array<{ x: number; y: number }>) {
@@ -536,6 +590,8 @@ export function applyLogisticsPath(
   const endOnGhost = (visitCount.get(`${last.x},${last.y}`) ?? 0) > 1
   const startGhostFlow = startOnGhost ? ghostFlowAtCell(path, first) : null
   const endGhostFlow = endOnGhost ? ghostFlowAtCell(path, last) : null
+  const startAnchored = endpointAnchoredByExistingDevice(layout, occupancyMap, family, first, 'Output', startOutEdge)
+  const endAnchored = endpointAnchoredByExistingDevice(layout, occupancyMap, family, last, 'Input', endInEdge)
 
   if (startOn) {
     const flow = beltInOutEdge(startOn)
@@ -551,6 +607,8 @@ export function applyLogisticsPath(
   } else if (startOnGhost) {
     const splitterInEdge = startGhostFlow?.inEdge ?? OPPOSITE_EDGE[startOutEdge]
     nextDevices.push(createJunctionAt(splitJunctionTypeByFamily(family), first.x, first.y, rotationFromEdge('E', splitterInEdge)))
+  } else if (startAnchored) {
+    // anchored by existing endpoint device (building port or same-family junction), do not place overlapping track segment
   } else {
     nextDevices.push(createTrackAt(family, first.x, first.y, OPPOSITE_EDGE[startOutEdge], startOutEdge))
   }
@@ -569,6 +627,8 @@ export function applyLogisticsPath(
   } else if (endOnGhost) {
     const mergerOutEdge = endGhostFlow?.outEdge ?? OPPOSITE_EDGE[endInEdge]
     nextDevices.push(createJunctionAt(convergerJunctionTypeByFamily(family), last.x, last.y, rotationFromEdge('W', mergerOutEdge)))
+  } else if (endAnchored) {
+    // anchored by existing endpoint device (building port or same-family junction), do not place overlapping track segment
   } else {
     nextDevices.push(createTrackAt(family, last.x, last.y, endInEdge, OPPOSITE_EDGE[endInEdge]))
   }

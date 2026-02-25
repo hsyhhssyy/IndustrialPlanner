@@ -564,6 +564,14 @@ button:disabled {
   stroke-linejoin: round;
 }
 
+.pipe-fluid-fill {
+  fill: none;
+  stroke: rgba(130, 214, 255, 0.72);
+  stroke-linecap: butt;
+  stroke-linejoin: round;
+  transition: stroke-width 120ms linear;
+}
+
 .belt-device {
   --belt-fill: #ffa50026;
   --belt-edge: orange;

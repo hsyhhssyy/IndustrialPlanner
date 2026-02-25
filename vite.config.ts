@@ -6,6 +6,6 @@ export default defineConfig({
   base: './',
   plugins: [react()],
   server: {
-    allowedHosts: ['coder.hsyhhssyy.net'],
+    allowedHosts: ['coder.hsyhhssyy.net', 'industrialplanner-7ab124.coder-page.hsyhhssyy.net'],
   },
 })

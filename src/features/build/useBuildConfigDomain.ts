@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
+import { DEVICE_TYPE_BY_ID, ITEM_BY_ID } from '../../domain/registry'
 import { clamp } from '../../domain/shared/math'
 import type { DeviceInstance, ItemId, LayoutState, PreloadInputConfigEntry } from '../../domain/types'
 
@@ -22,15 +22,17 @@ export function useBuildConfigDomain({
 }: UseBuildConfigDomainParams) {
   const updatePickupItem = useCallback(
     (deviceInstanceId: string, pickupItemId: ItemId | undefined) => {
+      const normalizedPickupItemId =
+        pickupItemId && ITEM_BY_ID[pickupItemId]?.type === 'solid' ? pickupItemId : undefined
       setLayout((current) => ({
         ...current,
         devices: current.devices.map((device) =>
           device.instanceId === deviceInstanceId
             ? (() => {
-                const nextConfig = { ...device.config, pickupItemId }
-                if (!pickupItemId) {
+                const nextConfig = { ...device.config, pickupItemId: normalizedPickupItemId }
+                if (!normalizedPickupItemId) {
                   delete nextConfig.pickupIgnoreInventory
-                } else if (isOreItemId(pickupItemId)) {
+                } else if (isOreItemId(normalizedPickupItemId)) {
                   nextConfig.pickupIgnoreInventory = true
                 }
                 return { ...device, config: nextConfig }
@@ -63,6 +65,20 @@ export function useBuildConfigDomain({
     [isOreItemId, setLayout],
   )
 
+  const updatePumpOutputItem = useCallback(
+    (deviceInstanceId: string, pumpOutputItemId: ItemId | undefined) => {
+      setLayout((current) => ({
+        ...current,
+        devices: current.devices.map((device) =>
+          device.instanceId === deviceInstanceId && device.typeId === 'item_port_water_pump_1'
+            ? { ...device, config: { ...device.config, pumpOutputItemId } }
+            : device,
+        ),
+      }))
+    },
+    [setLayout],
+  )
+
   const updateProcessorPreloadSlot = useCallback(
     (deviceInstanceId: string, slotIndex: number, patch: { itemId?: ItemId | null; amount?: number }) => {
       setLayout((current) => ({
@@ -76,16 +92,24 @@ export function useBuildConfigDomain({
           if (slotIndex < 0 || slotIndex >= slots.length) return device
 
           const currentSlot = slots[slotIndex]
-          const nextItemId = patch.itemId !== undefined ? patch.itemId : currentSlot.itemId
-          const requestedAmount = patch.amount !== undefined ? patch.amount : currentSlot.amount
+          const hasItemPatch = patch.itemId !== undefined
+          const nextItemId = hasItemPatch ? (patch.itemId ?? null) : currentSlot.itemId
+          let requestedAmount = patch.amount !== undefined ? patch.amount : currentSlot.amount
+          if (hasItemPatch && nextItemId && patch.amount === undefined) {
+            const normalizedCurrent = Math.floor(Number.isFinite(currentSlot.amount) ? currentSlot.amount : 0)
+            if (normalizedCurrent <= 0) {
+              requestedAmount = 1
+            }
+          }
           const slotCap = spec.inputSlotCapacities[slotIndex] ?? 50
           const normalizedAmount = nextItemId
             ? clamp(Math.floor(Number.isFinite(requestedAmount) ? requestedAmount : 0), 0, slotCap)
             : 0
+          const finalItemId = nextItemId && normalizedAmount > 0 ? nextItemId : null
 
           slots[slotIndex] = {
-            itemId: nextItemId ?? null,
-            amount: normalizedAmount,
+            itemId: finalItemId,
+            amount: finalItemId ? normalizedAmount : 0,
           }
 
           const nextConfig = { ...device.config }
@@ -104,6 +128,7 @@ export function useBuildConfigDomain({
   return {
     updatePickupItem,
     updatePickupIgnoreInventory,
+    updatePumpOutputItem,
     updateProcessorPreloadSlot,
   }
 }

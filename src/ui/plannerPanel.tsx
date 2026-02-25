@@ -141,11 +141,15 @@ function walkTree(node: PlannerTreeNode, visit: (node: PlannerTreeNode) => void)
 
 function isBenignPlantCycle(card: Pick<PlannerFlatCard, 'isCycle' | 'machineType'>) {
   if (!card.isCycle) return false
-  return card.machineType === 'item_port_seedcol_1' || card.machineType === 'item_port_planter_1'
+  return (
+    card.machineType === 'item_port_seedcol_1' ||
+    card.machineType === 'item_port_planter_1' ||
+    card.machineType === 'item_port_hydro_planter_1'
+  )
 }
 
 function isPlantLoopMachine(machineType: DeviceTypeId) {
-  return machineType === 'item_port_seedcol_1' || machineType === 'item_port_planter_1'
+  return machineType === 'item_port_seedcol_1' || machineType === 'item_port_planter_1' || machineType === 'item_port_hydro_planter_1'
 }
 
 function collectDemandByItem(roots: PlannerTreeNode[]) {
@@ -405,6 +409,8 @@ export function PlannerPanel({ language, t, onClose }: PlannerPanelProps) {
     if (deviceId === 'item_log_splitter') return '/device-icons/item_log_splitter.png'
     if (deviceId === 'item_log_converger') return '/device-icons/item_log_converger.png'
     if (deviceId === 'item_log_connector') return '/device-icons/item_log_connector.png'
+    if (deviceId === 'item_port_hydro_planter_1') return '/device-icons/item_port_planter_1.png'
+    if (deviceId === 'item_port_liquid_filling_pd_mc_1') return '/device-icons/item_port_filling_pd_mc_1.png'
     return `/device-icons/${deviceId}.png`
   }
 
@@ -451,7 +457,7 @@ export function PlannerPanel({ language, t, onClose }: PlannerPanelProps) {
 
     for (const aggregate of aggregateMap.values()) {
       const recipeX = getSelectedRecipeForItem(aggregate.itemId)
-      if (!recipeX || recipeX.machineType !== 'item_port_planter_1') continue
+      if (!recipeX || (recipeX.machineType !== 'item_port_planter_1' && recipeX.machineType !== 'item_port_hydro_planter_1')) continue
 
       const outputX = recipeX.outputs.find((entry) => entry.itemId === aggregate.itemId)
       if (!outputX || outputX.amount <= 0) continue

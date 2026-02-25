@@ -60,10 +60,17 @@ type RightPanelProps = {
   selectedPreloadSlots: ProcessorPreloadSlot[]
   selectedPreloadTotal: number
   selectedPickupItemId: ItemId | undefined
+  selectedPumpOutputItemId: ItemId | undefined
   selectedPickupItemIsOre: boolean
   selectedPickupIgnoreInventory: boolean
   getItemIconPath: (itemId: ItemId) => string
-  setItemPickerState: (state: { kind: 'pickup'; deviceInstanceId: string } | { kind: 'preload'; deviceInstanceId: string; slotIndex: number } | null) => void
+  setItemPickerState: (
+    state:
+      | { kind: 'pickup'; deviceInstanceId: string }
+      | { kind: 'pumpOutput'; deviceInstanceId: string }
+      | { kind: 'preload'; deviceInstanceId: string; slotIndex: number }
+      | null
+  ) => void
   updatePickupIgnoreInventory: (deviceInstanceId: string, enabled: boolean) => void
   setLayout: (updater: LayoutState | ((current: LayoutState) => LayoutState)) => void
   updateProcessorPreloadSlot: (deviceInstanceId: string, slotIndex: number, patch: { itemId?: ItemId | null; amount?: number }) => void
@@ -93,6 +100,7 @@ export function RightPanel({
   selectedPreloadSlots,
   selectedPreloadTotal,
   selectedPickupItemId,
+  selectedPumpOutputItemId,
   selectedPickupItemIsOre,
   selectedPickupIgnoreInventory,
   getItemIconPath,
@@ -102,6 +110,14 @@ export function RightPanel({
   updateProcessorPreloadSlot,
   simIsRunning,
 }: RightPanelProps) {
+  const getPreloadSlotLabel = (deviceTypeId: DeviceInstance['typeId'], slotIndex: number) => {
+    if (deviceTypeId === 'item_port_xiranite_oven_1') {
+      if (slotIndex === 0) return t('detail.preloadSlotSolidInput')
+      if (slotIndex === 1) return t('detail.preloadSlotLiquidInput')
+    }
+    return t('detail.preloadSlot', { index: slotIndex + 1 })
+  }
+
   const baseGroups = [
     { key: 'valley4', titleKey: 'right.baseGroup.valley4', tag: '四号谷地' },
     { key: 'wuling', titleKey: 'right.baseGroup.wuling', tag: '武陵' },
@@ -323,6 +339,40 @@ export function RightPanel({
               </div>
             </>
           )}
+          {selectedDevice.typeId === 'item_port_water_pump_1' && (
+            <>
+              <div className="kv kv-no-border kv-pickup-inline">
+                <span>{t('detail.pumpOutputLiquid')}</span>
+                <span className="kv-pickup-inline-value">
+                  <button
+                    type="button"
+                    className="picker-open-btn picker-open-btn-inline"
+                    disabled={simIsRunning}
+                    onClick={() => setItemPickerState({ kind: 'pumpOutput', deviceInstanceId: selectedDevice.instanceId })}
+                  >
+                    <span className="pickup-picker-current">
+                      {selectedPumpOutputItemId ? (
+                        <img
+                          className="pickup-picker-current-icon"
+                          src={getItemIconPath(selectedPumpOutputItemId)}
+                          alt=""
+                          aria-hidden="true"
+                          draggable={false}
+                        />
+                      ) : (
+                        <span className="pickup-picker-current-icon pickup-picker-current-icon--empty">?</span>
+                      )}
+                      <span>
+                        {selectedPumpOutputItemId
+                          ? getItemLabel(language, selectedPumpOutputItemId)
+                          : t('detail.unselected')}
+                      </span>
+                    </span>
+                  </button>
+                </span>
+              </div>
+            </>
+          )}
           {selectedDevice.typeId === 'item_port_storager_1' && (
             <div className="kv kv-switch">
               <span>{t('detail.submitWarehouse')}</span>
@@ -357,7 +407,7 @@ export function RightPanel({
               <div className="preload-slot-list">
                 {selectedPreloadSlots.map((slot, slotIndex) => (
                   <div key={`${selectedDevice.instanceId}-preload-${slotIndex}`} className="preload-slot-row">
-                    <span className="preload-slot-label">{t('detail.preloadSlot', { index: slotIndex + 1 })}</span>
+                    <span className="preload-slot-label">{getPreloadSlotLabel(selectedDevice.typeId, slotIndex)}</span>
                     <button
                       type="button"
                       className="picker-open-btn"

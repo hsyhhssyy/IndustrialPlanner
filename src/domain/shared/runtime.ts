@@ -31,9 +31,12 @@ export function shouldShowRuntimeStallOverlay(device: DeviceInstance, runtime: D
   const status = runtimeLabel(runtime)
   if (status === 'running' || status === 'idle') return false
   if (!runtime) return false
+  const isBelt = device.typeId.startsWith('belt_')
+  const isPipe = device.typeId.startsWith('pipe_') || device.typeId.startsWith('item_pipe_')
+  const isTransientBlocked = runtime.stallReason === 'DOWNSTREAM_BLOCKED' || runtime.stallReason === 'OUTPUT_BUFFER_FULL'
   if (
-    device.typeId.startsWith('belt_') &&
-    (runtime.stallReason === 'DOWNSTREAM_BLOCKED' || runtime.stallReason === 'OUTPUT_BUFFER_FULL')
+    (isBelt || isPipe) &&
+    isTransientBlocked
   ) {
     return false
   }

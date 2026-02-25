@@ -129,6 +129,9 @@ conventions:
         - amount
       configPath: device.config.preloadInputs[]
       amountClampBy: inputBufferSlotCapacities[slotIndex]
+      uiSemantics:
+        onPickItemWhenAmountIsZero: set_amount_to_1
+        onSetAmountToZero: clear_item_selection
 
 items:
   - id: item_bottled_food_1

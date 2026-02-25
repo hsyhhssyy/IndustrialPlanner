@@ -1,4 +1,4 @@
-import { DEVICE_TYPE_BY_ID, ITEMS, RECIPES } from '../domain/registry'
+import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
 import { detectOverlaps, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
 import { cycleTicksFromSeconds } from '../domain/shared/simulation'
 import type {
@@ -12,11 +12,18 @@ import type {
 } from '../domain/types'
 
 const BASE_TICK_RATE = 20
-const CONVEYOR_SECONDS_PER_CELL = 2
-const PICKUP_BLOCK_WINDOW_SECONDS = CONVEYOR_SECONDS_PER_CELL
+const BELT_SECONDS_PER_CELL = 2
+const PIPE_SECONDS_PER_CELL = 0.5
+const PICKUP_BLOCK_WINDOW_SECONDS = BELT_SECONDS_PER_CELL
 const STORAGE_SUBMIT_INTERVAL_SECONDS = 10
-const WATER_PUMP_ITEM_ID: ItemId = 'item_liquid_water'
-const WATER_PUMP_BUFFER_TARGET = 200
+const DEFAULT_WATER_PUMP_ITEM_ID: ItemId = 'item_liquid_water'
+const WATER_PUMP_SELECTABLE_ITEM_IDS: ItemId[] = [
+  'item_liquid_water',
+  'item_liquid_plant_grass_1',
+  'item_liquid_plant_grass_2',
+  'item_liquid_xiranite',
+]
+const WATER_PUMP_SELECTABLE_ITEM_SET = new Set<ItemId>(WATER_PUMP_SELECTABLE_ITEM_IDS)
 const DEFAULT_PROCESSOR_BUFFER_CAPACITY = 50
 const DEFAULT_PROCESSOR_BUFFER_SLOTS = 1
 const ITEM_IDS: ItemId[] = ITEMS.map((item) => item.id)
@@ -29,8 +36,13 @@ function createItemNumberRecord(initialValue = 0): Record<ItemId, number> {
   return Object.fromEntries(ITEM_IDS.map((itemId) => [itemId, initialValue])) as Record<ItemId, number>
 }
 
-function conveyorSpeedPerTick(tickRateHz: number) {
-  return 1 / Math.max(1, CONVEYOR_SECONDS_PER_CELL * tickRateHz)
+function isPipeTransportType(typeId: DeviceInstance['typeId']) {
+  return typeId.startsWith('pipe_') || typeId.startsWith('item_pipe_')
+}
+
+function transportSpeedPerTick(typeId: DeviceInstance['typeId'], tickRateHz: number) {
+  const secondsPerCell = isPipeTransportType(typeId) ? PIPE_SECONDS_PER_CELL : BELT_SECONDS_PER_CELL
+  return 1 / Math.max(1, secondsPerCell * tickRateHz)
 }
 
 type TransferPlan = {
@@ -151,6 +163,12 @@ function isHardBlockedStall(stallReason: StallReason) {
   return stallReason === 'CONFIG_ERROR' || stallReason === 'OVERLAP' || stallReason === 'NO_POWER'
 }
 
+function waterPumpOutputItemId(device: DeviceInstance): ItemId {
+  const configured = device.config.pumpOutputItemId
+  if (configured && WATER_PUMP_SELECTABLE_ITEM_SET.has(configured)) return configured
+  return DEFAULT_WATER_PUMP_ITEM_ID
+}
+
 function mark(output: Partial<Record<ItemId, number>>, itemId: ItemId, delta: number) {
   output[itemId] = (output[itemId] ?? 0) + delta
 }
@@ -192,6 +210,18 @@ function clearSlotBindingIfEmpty(
   }
 }
 
+function preferredInputSlotIndex(deviceTypeId: DeviceInstance['typeId'], itemId: ItemId) {
+  if (
+    deviceTypeId !== 'item_port_xiranite_oven_1' &&
+    deviceTypeId !== 'item_port_liquid_filling_pd_mc_1' &&
+    deviceTypeId !== 'item_port_hydro_planter_1'
+  )
+    return null
+  const itemType = ITEM_BY_ID[itemId]?.type
+  if (itemType === 'liquid') return 1
+  return 0
+}
+
 function canAcceptProcessorBufferAmount(
   runtime: DeviceRuntime,
   deviceTypeId: DeviceInstance['typeId'],
@@ -206,8 +236,12 @@ function canAcceptProcessorBufferAmount(
   const buffer = bufferKind === 'input' ? runtime.inputBuffer : runtime.outputBuffer
   const slotItems = bufferKind === 'input' ? runtime.inputSlotItems : runtime.outputSlotItems
   const existingSlotIndex = findSlotIndexByItem(slotItems, itemId)
-  const targetSlotIndex = existingSlotIndex >= 0 ? existingSlotIndex : findFirstEmptySlot(slotItems)
+  const preferredSlotIndex = bufferKind === 'input' ? preferredInputSlotIndex(deviceTypeId, itemId) : null
+  const targetSlotIndex =
+    existingSlotIndex >= 0 ? existingSlotIndex : preferredSlotIndex ?? findFirstEmptySlot(slotItems)
   if (targetSlotIndex < 0) return false
+  if (targetSlotIndex >= slotItems.length) return false
+  if (existingSlotIndex < 0 && slotItems[targetSlotIndex] && slotItems[targetSlotIndex] !== itemId) return false
 
   const slotCapacity = spec.slotCapacities[targetSlotIndex] ?? DEFAULT_PROCESSOR_BUFFER_CAPACITY
   const nextAmount = (buffer[itemId] ?? 0) + amount
@@ -227,8 +261,11 @@ function tryAddProcessorBufferAmount(
   const slotItems = bufferKind === 'input' ? runtime.inputSlotItems : runtime.outputSlotItems
   let slotIndex = findSlotIndexByItem(slotItems, itemId)
   if (slotIndex < 0) {
-    slotIndex = findFirstEmptySlot(slotItems)
+    const preferredSlotIndex = bufferKind === 'input' ? preferredInputSlotIndex(deviceTypeId, itemId) : null
+    slotIndex = preferredSlotIndex ?? findFirstEmptySlot(slotItems)
     if (slotIndex < 0) return false
+    if (slotIndex >= slotItems.length) return false
+    if (slotItems[slotIndex] && slotItems[slotIndex] !== itemId) return false
     slotItems[slotIndex] = itemId
   }
   buffer[itemId] = (buffer[itemId] ?? 0) + amount
@@ -294,6 +331,19 @@ function getSlotRef(runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we'): SlotDat
   return null
 }
 
+function isBridgeConnectorType(typeId: DeviceInstance['typeId']) {
+  return typeId === 'item_log_connector' || typeId === 'item_pipe_connector'
+}
+
+function isRoundRobinJunctionType(typeId: DeviceInstance['typeId']) {
+  return (
+    typeId === 'item_log_splitter' ||
+    typeId === 'item_log_converger' ||
+    typeId === 'item_pipe_splitter' ||
+    typeId === 'item_pipe_converger'
+  )
+}
+
 function setSlotRef(runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we', value: SlotData | null) {
   if (lane === 'slot' && 'slot' in runtime) runtime.slot = value
   if (lane === 'ns' && 'nsSlot' in runtime) runtime.nsSlot = value
@@ -301,7 +351,7 @@ function setSlotRef(runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we', value: S
 }
 
 function canReceiveOnPort(device: DeviceInstance, runtime: DeviceRuntime, toPortId: string) {
-  if (device.typeId === 'item_log_connector') {
+  if (isBridgeConnectorType(device.typeId)) {
     if (toPortId.endsWith('_n') || toPortId.endsWith('_s')) return 'ns'
     return 'we'
   }
@@ -369,7 +419,7 @@ function tryReceiveToLane(
 }
 
 function sourceSlotLane(device: DeviceInstance, runtime: DeviceRuntime, fromPortId: string): 'slot' | 'ns' | 'we' | 'output' {
-  if (device.typeId === 'item_log_connector') {
+  if (isBridgeConnectorType(device.typeId)) {
     if (fromPortId.endsWith('_n') || fromPortId.endsWith('_s')) return 'ns'
     return 'we'
   }
@@ -480,7 +530,7 @@ function shouldMarkDownstreamBlockedNoBuffer(
 }
 
 function orderedOutLinks(device: DeviceInstance, runtime: DeviceRuntime, outLinks: ReturnType<typeof neighborsFromLinks>['links']) {
-  if ((device.typeId !== 'item_log_splitter' && device.typeId !== 'item_log_converger') || outLinks.length <= 1) return outLinks
+  if (!isRoundRobinJunctionType(device.typeId) || outLinks.length <= 1) return outLinks
   if (!('rrIndex' in runtime)) return outLinks
   const offset = runtime.rrIndex % outLinks.length
   return [...outLinks.slice(offset), ...outLinks.slice(0, offset)]
@@ -740,7 +790,6 @@ function ensureMinuteWindow(sim: SimState, capacity: number) {
 export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   if (!sim.isRunning) return sim
 
-  const conveyorSpeed = conveyorSpeedPerTick(sim.tickRateHz)
   const pickupBlockTicks = cycleTicksFromSeconds(PICKUP_BLOCK_WINDOW_SECONDS, sim.tickRateHz)
   const storageSubmitTicks = cycleTicksFromSeconds(STORAGE_SUBMIT_INTERVAL_SECONDS, sim.tickRateHz)
   const perMinuteWindowTicks = cycleTicksFromSeconds(60, sim.tickRateHz)
@@ -835,17 +884,18 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     }
 
     if (device.typeId === 'item_port_water_pump_1' && 'inventory' in runtime) {
-      const currentWater = runtime.inventory[WATER_PUMP_ITEM_ID] ?? 0
-      if (currentWater < WATER_PUMP_BUFFER_TARGET) {
-        runtime.inventory[WATER_PUMP_ITEM_ID] = WATER_PUMP_BUFFER_TARGET
+      const selectedItemId = waterPumpOutputItemId(device)
+      for (const itemId of WATER_PUMP_SELECTABLE_ITEM_IDS) {
+        runtime.inventory[itemId] = itemId === selectedItemId ? Number.POSITIVE_INFINITY : 0
       }
     }
 
     if ('slot' in runtime && runtime.slot) {
+      const transportSpeed = transportSpeedPerTick(device.typeId, sim.tickRateHz)
       const slot = runtime.slot
       if (slot.progress01 < 0.5) {
         const beforeProgress = slot.progress01
-        slot.progress01 = Math.min(0.5, slot.progress01 + conveyorSpeed)
+        slot.progress01 = Math.min(0.5, slot.progress01 + transportSpeed)
         runtime.progress01 = slot.progress01
         if (beforeProgress < 0.5 && slot.progress01 >= 0.5) {
           lanesReachedHalfThisTick.add(`${device.instanceId}:slot`)
@@ -854,16 +904,18 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     }
 
     if ('nsSlot' in runtime && runtime.nsSlot && runtime.nsSlot.progress01 < 0.5) {
+      const transportSpeed = transportSpeedPerTick(device.typeId, sim.tickRateHz)
       const beforeProgress = runtime.nsSlot.progress01
-      runtime.nsSlot.progress01 = Math.min(0.5, runtime.nsSlot.progress01 + conveyorSpeed)
+      runtime.nsSlot.progress01 = Math.min(0.5, runtime.nsSlot.progress01 + transportSpeed)
       runtime.progress01 = runtime.nsSlot.progress01
       if (beforeProgress < 0.5 && runtime.nsSlot.progress01 >= 0.5) {
         lanesReachedHalfThisTick.add(`${device.instanceId}:ns`)
       }
     }
     if ('weSlot' in runtime && runtime.weSlot && runtime.weSlot.progress01 < 0.5) {
+      const transportSpeed = transportSpeedPerTick(device.typeId, sim.tickRateHz)
       const beforeProgress = runtime.weSlot.progress01
-      runtime.weSlot.progress01 = Math.min(0.5, runtime.weSlot.progress01 + conveyorSpeed)
+      runtime.weSlot.progress01 = Math.min(0.5, runtime.weSlot.progress01 + transportSpeed)
       runtime.progress01 = runtime.weSlot.progress01
       if (beforeProgress < 0.5 && runtime.weSlot.progress01 >= 0.5) {
         lanesReachedHalfThisTick.add(`${device.instanceId}:we`)
@@ -893,9 +945,10 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         const laneAdvanceKey = `${device.instanceId}:${fromLane}`
         if (lanesReachedHalfThisTick.has(laneAdvanceKey)) continue
         if (!lanesAdvancedThisTick.has(laneAdvanceKey)) {
+          const transportSpeed = transportSpeedPerTick(device.typeId, sim.tickRateHz)
           const beforeSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
           const beforeProgress = beforeSlot?.progress01 ?? null
-          readyItemForLane(device, runtime, fromLane, conveyorSpeed, warehouse)
+          readyItemForLane(device, runtime, fromLane, transportSpeed, warehouse)
           lanesAdvancedThisTick.add(laneAdvanceKey)
           const afterSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
           const afterProgress = afterSlot?.progress01 ?? null
@@ -923,7 +976,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         reservedReceivers.add(`${toDevice.instanceId}:${recvState.lane}`)
         lanesClearingThisTick.add(`${device.instanceId}:${fromLane}`)
 
-        if ((device.typeId === 'item_log_splitter' || device.typeId === 'item_log_converger') && 'rrIndex' in runtime && outLinks.length > 0) {
+        if (isRoundRobinJunctionType(device.typeId) && 'rrIndex' in runtime && outLinks.length > 0) {
           runtime.rrIndex = (runtime.rrIndex + 1) % outLinks.length
         }
 
@@ -1080,6 +1133,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
 export function initialStorageConfig(deviceTypeId: string) {
   if (deviceTypeId === 'item_port_storager_1') return { submitToWarehouse: true }
+  if (deviceTypeId === 'item_port_water_pump_1') return { pumpOutputItemId: DEFAULT_WATER_PUMP_ITEM_ID }
   return {}
 }
 

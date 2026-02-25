@@ -108,8 +108,9 @@ export function useBuildPreviewDomain({
     const outsideOffset = chevronLength / 2 + chevronGap
     for (const device of layout.devices) {
       const previewOrigin = dragPreviewPositions[device.instanceId]
+      const shouldFollowDragPreview = mode === 'select' || (mode === 'place' && !placeType)
       const renderDevice =
-        mode === 'select' && previewOrigin
+        shouldFollowDragPreview && previewOrigin
           ? {
               ...device,
               origin: previewOrigin,

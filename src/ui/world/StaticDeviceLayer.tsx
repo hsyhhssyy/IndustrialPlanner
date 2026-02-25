@@ -1,15 +1,18 @@
-import { memo } from 'react'
+import { memo, useEffect, useRef } from 'react'
 import { getDeviceSpritePath } from '../../domain/deviceSprites'
 import { EDGE_ANGLE, getRotatedPorts } from '../../domain/geometry'
 import { buildBeltTrackPath, junctionArrowPoints } from '../../domain/shared/beltVisual'
 import { rotatedFootprintSize } from '../../domain/shared/math'
 import { getDeviceLabel } from '../../i18n'
-import { DEVICE_TYPE_BY_ID, ITEMS, RECIPES } from '../../domain/registry'
+import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../../domain/registry'
 import type { DeviceInstance, DeviceRuntime, DeviceTypeId, ItemId } from '../../domain/types'
 import type { Language } from '../../i18n'
 
 const BASE_CELL_SIZE = 64
 const BELT_VIEWBOX_SIZE = 64
+const PIPE_FILL_HOLD_TICKS = 4
+const LIQUID_COLOR_TAG_PREFIX = 'liquid_color:'
+const DEFAULT_PIPE_FLUID_COLOR = 'rgba(130, 214, 255, 0.72)'
 
 const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>([
   'item_log_splitter',
@@ -29,6 +32,7 @@ export type StaticDeviceLayerProps = {
   extraClassName?: string
   showRuntimeItemIcons?: boolean
   runtimeById?: Readonly<Record<string, DeviceRuntime>>
+  simTick?: number
 }
 
 function getItemIconPath(itemId: ItemId) {
@@ -45,7 +49,79 @@ export const StaticDeviceLayer = memo(
     extraClassName,
     showRuntimeItemIcons = false,
     runtimeById = {},
+    simTick = 0,
   }: StaticDeviceLayerProps) => {
+    const pipeLastFluidStateRef = useRef<Map<string, { tick: number; itemId: ItemId }>>(new Map())
+
+    useEffect(() => {
+      const liveIds = new Set(devices.map((device) => device.instanceId))
+      for (const instanceId of pipeLastFluidStateRef.current.keys()) {
+        if (!liveIds.has(instanceId)) {
+          pipeLastFluidStateRef.current.delete(instanceId)
+        }
+      }
+    }, [devices])
+
+    function slotLiquidData(slot: unknown): { itemId: ItemId; progress01: number } | null {
+      if (!slot || typeof slot !== 'object') return null
+      const maybeItemId = (slot as { itemId?: unknown }).itemId
+      const maybeProgress = (slot as { progress01?: unknown }).progress01
+      if (typeof maybeItemId !== 'string') return null
+      if (typeof maybeProgress !== 'number') return null
+      const itemDef = ITEM_BY_ID[maybeItemId]
+      if (!itemDef || itemDef.type !== 'liquid') return null
+      const progress01 = Math.min(1, Math.max(0, maybeProgress))
+      if (progress01 <= 0) return null
+      return { itemId: maybeItemId, progress01 }
+    }
+
+    function pipeFluidColor(itemId: ItemId): string {
+      const itemDef = ITEM_BY_ID[itemId]
+      const colorTag = itemDef?.tags?.find((tag) => tag.startsWith(LIQUID_COLOR_TAG_PREFIX))
+      if (!colorTag) return DEFAULT_PIPE_FLUID_COLOR
+      const colorValue = colorTag.slice(LIQUID_COLOR_TAG_PREFIX.length).trim()
+      return colorValue || DEFAULT_PIPE_FLUID_COLOR
+    }
+
+    function pipeFluidItemNow(device: DeviceInstance): ItemId | null {
+      const runtime = runtimeById[device.instanceId]
+      if (!runtime) return null
+
+      const candidates: Array<{ itemId: ItemId; progress01: number }> = []
+
+      if ('slot' in runtime) {
+        const liquid = slotLiquidData(runtime.slot)
+        if (liquid) candidates.push(liquid)
+      }
+
+      if ('nsSlot' in runtime || 'weSlot' in runtime) {
+        const nsLiquid = 'nsSlot' in runtime ? slotLiquidData(runtime.nsSlot) : null
+        const weLiquid = 'weSlot' in runtime ? slotLiquidData(runtime.weSlot) : null
+        if (nsLiquid) candidates.push(nsLiquid)
+        if (weLiquid) candidates.push(weLiquid)
+      }
+
+      if (candidates.length === 0) return null
+      candidates.sort((left, right) => right.progress01 - left.progress01)
+      return candidates[0]?.itemId ?? null
+    }
+
+    function visiblePipeFluidItem(device: DeviceInstance): ItemId | null {
+      const itemNow = pipeFluidItemNow(device)
+      if (itemNow) {
+        pipeLastFluidStateRef.current.set(device.instanceId, { tick: simTick, itemId: itemNow })
+        return itemNow
+      }
+
+      const lastState = pipeLastFluidStateRef.current.get(device.instanceId)
+      if (!lastState) return null
+      if (simTick < lastState.tick) {
+        pipeLastFluidStateRef.current.delete(device.instanceId)
+        return null
+      }
+      return simTick - lastState.tick <= PIPE_FILL_HOLD_TICKS ? lastState.itemId : null
+    }
+
     function getRuntimeIconItemId(device: DeviceInstance): ItemId | undefined {
       if (!showRuntimeItemIcons) return undefined
       const type = DEVICE_TYPE_BY_ID[device.typeId]
@@ -94,6 +170,9 @@ export const StaticDeviceLayer = memo(
           const beltInEdge = isLogisticsTrack ? beltPorts.find((port) => port.direction === 'Input')?.edge ?? 'W' : 'W'
           const beltOutEdge = isLogisticsTrack ? beltPorts.find((port) => port.direction === 'Output')?.edge ?? 'E' : 'E'
           const beltPath = buildBeltTrackPath(beltInEdge, beltOutEdge)
+          const pipeFluidItemId = isPipe ? visiblePipeFluidItem(renderDevice) : null
+          const pipeHasWater = Boolean(pipeFluidItemId)
+          const pipeFluidWidth = 16
           const splitterOutputEdges = isSplitter
             ? getRotatedPorts(renderDevice)
                 .filter((port) => port.direction === 'Output')
@@ -128,6 +207,9 @@ export const StaticDeviceLayer = memo(
                             </mask>
                           </defs>
                           <path d={beltPath} className="belt-track-fill" />
+                          {isPipe && pipeHasWater ? (
+                            <path d={beltPath} className="pipe-fluid-fill" style={{ strokeWidth: pipeFluidWidth, stroke: pipeFluidColor(pipeFluidItemId!) }} />
+                          ) : null}
                           <path d={beltPath} className="belt-track-edge" mask={`url(#${beltEdgeMaskId})`} />
                         </>
                       )

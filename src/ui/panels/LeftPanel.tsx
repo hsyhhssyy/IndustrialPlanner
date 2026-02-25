@@ -98,7 +98,7 @@ export function LeftPanel() {
                 eventBus.emit('ui.center.focus', undefined)
               }}
             >
-              <img className="place-device-icon" src="/device-icons/item_log_belt_01.png" alt="" aria-hidden="true" draggable={false} />
+              <img className="place-device-icon" src="/device-icons/item_log_pipe_01.png" alt="" aria-hidden="true" draggable={false} />
               <span className="place-device-label">{t('left.placePipe')}</span>
             </button>
 

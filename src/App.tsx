@@ -83,11 +83,13 @@ function getDeviceMenuIconPath(typeId: DeviceTypeId) {
   if (typeId === 'item_log_splitter') return '/device-icons/item_log_splitter.png'
   if (typeId === 'item_log_converger') return '/device-icons/item_log_converger.png'
   if (typeId === 'item_log_connector') return '/device-icons/item_log_connector.png'
-  if (typeId === 'item_pipe_splitter') return '/device-icons/item_log_splitter.png'
-  if (typeId === 'item_pipe_converger') return '/device-icons/item_log_converger.png'
-  if (typeId === 'item_pipe_connector') return '/device-icons/item_log_connector.png'
+  if (typeId === 'item_pipe_splitter') return '/device-icons/item_pipe_splitter.png'
+  if (typeId === 'item_pipe_converger') return '/device-icons/item_pipe_converger.png'
+  if (typeId === 'item_pipe_connector') return '/device-icons/item_pipe_connector.png'
   if (typeId === 'item_port_water_pump_1') return '/device-icons/liquid_placeholder_structure.svg'
   if (typeId === 'item_port_liquid_storager_1') return '/device-icons/liquid_placeholder_structure.svg'
+  if (typeId === 'item_port_hydro_planter_1') return '/device-icons/item_port_planter_1.png'
+  if (typeId === 'item_port_liquid_filling_pd_mc_1') return '/device-icons/item_port_filling_pd_mc_1.png'
   return `/device-icons/${typeId}.png`
 }
 
@@ -115,11 +117,7 @@ const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>([
   'item_pipe_connector',
 ])
 const HIDDEN_CHEVRON_DEVICE_TYPES = new Set<DeviceTypeId>([
-  'item_log_splitter',
-  'item_log_converger',
   'item_log_connector',
-  'item_pipe_splitter',
-  'item_pipe_converger',
   'item_pipe_connector',
 ])
 const OUT_OF_LOT_TOAST_KEY = 'toast.outOfLot'
@@ -361,6 +359,7 @@ function App() {
     selectedDevice,
     selectedRuntime,
     selectedPickupItemId,
+    selectedPumpOutputItemId,
     selectedPickupItemIsOre,
     selectedPickupIgnoreInventory,
     selectedProcessorBufferSpec,
@@ -368,6 +367,8 @@ function App() {
     selectedPreloadTotal,
     pickerTargetDevice,
     pickerSelectedItemId,
+    pickerFilter,
+    pickerAllowsEmpty,
     pickerDisabledItemIds,
     handleItemPickerSelect,
     updatePickupIgnoreInventory,
@@ -502,6 +503,8 @@ function App() {
       previewOriginsById={dragPreviewOriginsById}
       language={language}
       showRuntimeItemIcons={false}
+      runtimeById={sim.runtimeById}
+      simTick={sim.tick}
     />
   )
 
@@ -753,6 +756,7 @@ function App() {
           selectedPreloadSlots={selectedPreloadSlots}
           selectedPreloadTotal={selectedPreloadTotal}
           selectedPickupItemId={selectedPickupItemId}
+          selectedPumpOutputItemId={selectedPumpOutputItemId}
           selectedPickupItemIsOre={selectedPickupItemIsOre}
           selectedPickupIgnoreInventory={selectedPickupIgnoreInventory}
           getItemIconPath={getItemIconPath}
@@ -771,6 +775,8 @@ function App() {
           itemPickerState={itemPickerState}
           pickerSelectedItemId={pickerSelectedItemId}
           pickerDisabledItemIds={pickerDisabledItemIds}
+          pickerFilter={pickerFilter}
+          pickerAllowsEmpty={pickerAllowsEmpty}
           language={language}
           t={t}
           getItemIconPath={getItemIconPath}

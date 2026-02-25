@@ -65,8 +65,24 @@ function allowedItemIds(port: RotatedPort): Set<ItemId> | 'any' {
   return new Set(port.allowedItems.whitelist)
 }
 
+function allowedTypeSet(port: RotatedPort): Set<'solid' | 'liquid'> {
+  const mode = port.allowedTypes.mode
+  if (mode === 'solid') return new Set(['solid'])
+  if (mode === 'liquid') return new Set(['liquid'])
+  return new Set(port.allowedTypes.whitelist)
+}
+
+function isTypeCompatible(output: RotatedPort, input: RotatedPort): boolean {
+  const outTypes = allowedTypeSet(output)
+  const inTypes = allowedTypeSet(input)
+  for (const value of outTypes) {
+    if (inTypes.has(value)) return true
+  }
+  return false
+}
+
 export function isItemCompatible(output: RotatedPort, input: RotatedPort): boolean {
-  if (output.allowedTypes.mode === 'liquid' || input.allowedTypes.mode === 'liquid') return false
+  if (!isTypeCompatible(output, input)) return false
   const outAllowed = allowedItemIds(output)
   const inAllowed = allowedItemIds(input)
   if (outAllowed === 'any' || inAllowed === 'any') return true

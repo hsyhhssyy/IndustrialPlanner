@@ -60,12 +60,14 @@ export function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
     typeId === 'item_port_cmpt_mc_1' ||
     typeId === 'item_port_shaper_1' ||
     typeId === 'item_port_seedcol_1' ||
-    typeId === 'item_port_planter_1'
+    typeId === 'item_port_planter_1' ||
+    typeId === 'item_port_hydro_planter_1'
   )
     return 'basic_production'
   if (
     typeId === 'item_port_winder_1' ||
     typeId === 'item_port_filling_pd_mc_1' ||
+    typeId === 'item_port_liquid_filling_pd_mc_1' ||
     typeId === 'item_port_tools_asm_mc_1' ||
     typeId === 'item_port_thickener_1' ||
     typeId === 'item_port_mix_pool_1' ||

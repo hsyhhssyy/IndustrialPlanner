@@ -182,6 +182,14 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
               '退出仿真用于回到编辑迭代，重跑时会重新初始化运行态。',
             ],
           },
+          {
+            title: 'F) 已知问题（待修复）',
+            steps: [
+              '当前版本中，传送带/管道的“长度与首件到达时间”可能存在 +1 格时间偏差。',
+              '例如 5 格链路在部分场景下可能约需 6 格时间才出现第一个物体/液体。',
+              '这是已记录问题，暂不影响本次版本的功能验证，后续会单独修复。',
+            ],
+          },
         ]
       : [
           {
@@ -228,6 +236,14 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
               'Exit simulation to return to editing and iterate quickly.',
             ],
           },
+          {
+            title: 'F) Known Issue (Pending Fix)',
+            steps: [
+              'In the current build, belt/pipe route length and first-item arrival timing may be off by about +1 cell-time.',
+              'For example, a 5-cell route may sometimes take about 6 cell-times before the first item/liquid appears.',
+              'This is tracked as a known issue and intentionally left unchanged in this iteration.',
+            ],
+          },
         ]
 
   const selectedDeviceRecipes = useMemo(
@@ -251,6 +267,8 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
     if (deviceId === 'item_log_splitter') return '/device-icons/item_log_splitter.png'
     if (deviceId === 'item_log_converger') return '/device-icons/item_log_converger.png'
     if (deviceId === 'item_log_connector') return '/device-icons/item_log_connector.png'
+    if (deviceId === 'item_port_hydro_planter_1') return '/device-icons/item_port_planter_1.png'
+    if (deviceId === 'item_port_liquid_filling_pd_mc_1') return '/device-icons/item_port_filling_pd_mc_1.png'
     return `/device-icons/${deviceId}.png`
   }
 

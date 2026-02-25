@@ -31,7 +31,7 @@
 | Rule Contract | 配方候选过滤规则 | 修改 | 部分兼容 | 可选配方受地区与条件配方规则共同约束 |
 | Rule Contract | 地区流体可用性规则 | 新增 | 部分兼容 | 武陵地区开放流体工业内容，四号谷地过滤武陵专属内容 |
 | Rule Contract | 管道传染规则 | 新增 | 部分兼容 | 同一管道系统单液体锁定，异液输入在排空前阻塞 |
-| Rule Contract | 管道本体无方向规则 | 新增 | 部分兼容 | 管道本体可从任意方向向任意方向输送液体 |
+| Rule Contract | 管道本体有方向规则 | 新增 | 部分兼容 | 管道本体需按端口方向输送液体 |
 | Rule Contract | 分流/汇流方向规则 | 新增 | 部分兼容 | 分流器/汇流器方向不匹配时不运输 |
 | Rule Contract | 连通管道容量规则 | 新增 | 部分兼容 | 连通管道本体等效管道缓存池容量为 `2 × 管道长度` |
 | Rule Contract | 真实储液罐方向规则 | 新增 | 部分兼容 | 设备“储液罐”为定向设备，`1` 入口 + `1` 出口 |
@@ -89,7 +89,7 @@ const fluidLock = resolveFluidSystemLock(fluidSystem)
 const canInject = canInjectFluid(fluidSystem, inputFluid, fluidLock) // 异液且未排空 => false
 const pipeBodyLength = measureConnectedPipeBodyLength(fluidSystem)
 const pipeBodyCapacity = pipeBodyLength * 2
-const canFlowThroughPipeBody = true // 管道本体无方向
+const canFlowThroughPipeBody = isPipeBodyDirectionMatched(pipeSegment, flowDir) // 管道本体有方向
 const splitterFlowEnabled = isPipeSplitterDirectionMatched(splitter, flowDir)
 const convergerFlowEnabled = isPipeConvergerDirectionMatched(converger, flowDir)
 const canPlacePump = validatePlacementRegion('water_pump', tileRegion) // 仅扩展区域 => true

@@ -21,8 +21,10 @@ export type DeviceTypeId =
   | 'item_port_shaper_1'
   | 'item_port_seedcol_1'
   | 'item_port_planter_1'
+  | 'item_port_hydro_planter_1'
   | 'item_port_winder_1'
   | 'item_port_filling_pd_mc_1'
+  | 'item_port_liquid_filling_pd_mc_1'
   | 'item_port_tools_asm_mc_1'
   | 'item_port_thickener_1'
   | 'item_port_power_sta_1'
@@ -51,6 +53,7 @@ export type DeviceTypeId =
 export type BaseId =
   | 'valley4_protocol_core'
   | 'wuling_protocol_core'
+  | 'wuling_tianwangping_aid'
   | 'valley4_rebuilt_command'
   | 'valley4_infra_outpost'
   | 'valley4_refugee_shelter'
@@ -58,7 +61,7 @@ export type BaseId =
 export interface ItemDef {
   id: ItemId
   displayName: string
-  type: 'solid'
+  type: 'solid' | 'liquid'
   tags?: string[]
 }
 
@@ -129,6 +132,7 @@ export interface PreloadInputConfigEntry {
 export interface DeviceConfig {
   pickupItemId?: ItemId
   pickupIgnoreInventory?: boolean
+  pumpOutputItemId?: ItemId
   submitToWarehouse?: boolean
   preloadInputs?: PreloadInputConfigEntry[]
   preloadInputItemId?: ItemId
