@@ -190,6 +190,10 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
               '这是已记录问题，暂不影响本次版本的功能验证，后续会单独修复。',
             ],
           },
+          {
+            title: 'G) Q&A',
+            steps: ['为什么仓库存取线基段可以随便摆放？你开始仿真试试呢？'],
+          },
         ]
       : [
           {
@@ -243,6 +247,10 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
               'For example, a 5-cell route may sometimes take about 6 cell-times before the first item/liquid appears.',
               'This is tracked as a known issue and intentionally left unchanged in this iteration.',
             ],
+          },
+          {
+            title: 'G) Q&A',
+            steps: ['Why can warehouse bus-line base segments be placed arbitrarily? Try starting the simulation.'],
           },
         ]
 

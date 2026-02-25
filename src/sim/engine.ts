@@ -1,5 +1,5 @@
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
-import { detectOverlaps, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
+import { detectOverlaps, getFootprintCells, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
 import { cycleTicksFromSeconds } from '../domain/shared/simulation'
 import type {
   DeviceInstance,
@@ -31,6 +31,9 @@ const INFINITE_WAREHOUSE_TAG = '矿石'
 const INFINITE_WAREHOUSE_ITEMS = new Set<ItemId>(
   ITEMS.filter((item) => item.tags?.includes(INFINITE_WAREHOUSE_TAG)).map((item) => item.id),
 )
+const BUS_SOURCE_TYPE_ID: DeviceInstance['typeId'] = 'item_port_log_hongs_bus_source'
+const BUS_SEGMENT_TYPE_ID: DeviceInstance['typeId'] = 'item_port_log_hongs_bus'
+const PICKUP_TYPE_ID: DeviceInstance['typeId'] = 'item_port_unloader_1'
 
 function createItemNumberRecord(initialValue = 0): Record<ItemId, number> {
   return Object.fromEntries(ITEM_IDS.map((itemId) => [itemId, initialValue])) as Record<ItemId, number>
@@ -160,7 +163,120 @@ function normalizeRuntimeState(runtime: DeviceRuntime, stallReason: StallReason)
 }
 
 function isHardBlockedStall(stallReason: StallReason) {
-  return stallReason === 'CONFIG_ERROR' || stallReason === 'OVERLAP' || stallReason === 'NO_POWER'
+  return (
+    stallReason === 'CONFIG_ERROR' ||
+    stallReason === 'OVERLAP' ||
+    stallReason === 'NO_POWER' ||
+    stallReason === 'BUS_NOT_CONNECTED' ||
+    stallReason === 'PICKUP_BUS_NOT_CONNECTED'
+  )
+}
+
+function neighborCellKeys(x: number, y: number) {
+  return [`${x + 1},${y}`, `${x - 1},${y}`, `${x},${y + 1}`, `${x},${y - 1}`]
+}
+
+function analyzeWarehouseBusConnectivity(layout: LayoutState) {
+  const busDevices = layout.devices.filter(
+    (device) => device.typeId === BUS_SOURCE_TYPE_ID || device.typeId === BUS_SEGMENT_TYPE_ID,
+  )
+  if (busDevices.length === 0) {
+    return {
+      disconnectedBusSegmentIds: new Set<string>(),
+      pickupBlockedByDisconnectedBusIds: new Set<string>(),
+    }
+  }
+
+  const busDeviceById = new Map(busDevices.map((device) => [device.instanceId, device]))
+  const busOccupancy = new Map<string, Set<string>>()
+  for (const device of busDevices) {
+    for (const cell of getFootprintCells(device)) {
+      const key = `${cell.x},${cell.y}`
+      const bucket = busOccupancy.get(key)
+      if (bucket) bucket.add(device.instanceId)
+      else busOccupancy.set(key, new Set([device.instanceId]))
+    }
+  }
+
+  const adjacency = new Map<string, Set<string>>()
+  for (const device of busDevices) {
+    const neighbors = adjacency.get(device.instanceId) ?? new Set<string>()
+    adjacency.set(device.instanceId, neighbors)
+
+    for (const cell of getFootprintCells(device)) {
+      for (const neighborKey of neighborCellKeys(cell.x, cell.y)) {
+        const occupantIds = busOccupancy.get(neighborKey)
+        if (!occupantIds) continue
+        for (const neighborId of occupantIds) {
+          if (neighborId === device.instanceId) continue
+          neighbors.add(neighborId)
+        }
+      }
+    }
+  }
+
+  const disconnectedBusSegmentIds = new Set<string>()
+  const visited = new Set<string>()
+  for (const device of busDevices) {
+    if (visited.has(device.instanceId)) continue
+    const queue = [device.instanceId]
+    const component = new Set<string>()
+    let hasSource = false
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()!
+      if (visited.has(currentId)) continue
+      visited.add(currentId)
+      component.add(currentId)
+
+      const currentDevice = busDeviceById.get(currentId)
+      if (currentDevice?.typeId === BUS_SOURCE_TYPE_ID) hasSource = true
+
+      const nextIds = adjacency.get(currentId)
+      if (!nextIds) continue
+      for (const nextId of nextIds) {
+        if (!visited.has(nextId)) queue.push(nextId)
+      }
+    }
+
+    if (!hasSource) {
+      for (const id of component) {
+        const d = busDeviceById.get(id)
+        if (d?.typeId === BUS_SEGMENT_TYPE_ID) disconnectedBusSegmentIds.add(id)
+      }
+    }
+  }
+
+  const disconnectedBusOccupancy = new Set<string>()
+  for (const segmentId of disconnectedBusSegmentIds) {
+    const segment = busDeviceById.get(segmentId)
+    if (!segment) continue
+    for (const cell of getFootprintCells(segment)) {
+      disconnectedBusOccupancy.add(`${cell.x},${cell.y}`)
+    }
+  }
+
+  const pickupBlockedByDisconnectedBusIds = new Set<string>()
+  for (const pickup of layout.devices) {
+    if (pickup.typeId !== PICKUP_TYPE_ID) continue
+    const pickupCells = getFootprintCells(pickup)
+    let blocked = false
+    for (const cell of pickupCells) {
+      for (const neighborKey of neighborCellKeys(cell.x, cell.y)) {
+        if (disconnectedBusOccupancy.has(neighborKey)) {
+          blocked = true
+          break
+        }
+      }
+      if (blocked) break
+    }
+    if (blocked) pickupBlockedByDisconnectedBusIds.add(pickup.instanceId)
+  }
+
+  return {
+    disconnectedBusSegmentIds,
+    pickupBlockedByDisconnectedBusIds,
+  }
 }
 
 function waterPumpOutputItemId(device: DeviceInstance): ItemId {
@@ -675,6 +791,7 @@ export function startSimulation(layout: LayoutState, sim: SimState): SimState {
   const runtimeById = resetRuntimeByLayout(layout)
   const overlaps = detectOverlaps(layout)
   const poles = layout.devices.filter((device) => device.typeId === 'item_port_power_diffuser_1')
+  const { disconnectedBusSegmentIds, pickupBlockedByDisconnectedBusIds } = analyzeWarehouseBusConnectivity(layout)
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
@@ -690,6 +807,8 @@ export function startSimulation(layout: LayoutState, sim: SimState): SimState {
     }
     let stall: StallReason = 'NONE'
     if (overlaps.has(device.instanceId)) stall = 'OVERLAP'
+    else if (disconnectedBusSegmentIds.has(device.instanceId)) stall = 'BUS_NOT_CONNECTED'
+    else if (pickupBlockedByDisconnectedBusIds.has(device.instanceId)) stall = 'PICKUP_BUS_NOT_CONNECTED'
     else if (!pickupHasConfig(device)) stall = 'CONFIG_ERROR'
     else if (deviceDef.requiresPower && !inPowerRange(device, poles)) stall = 'NO_POWER'
     normalizeRuntimeState(runtime, stall)

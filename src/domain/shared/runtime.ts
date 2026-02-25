@@ -20,6 +20,8 @@ export function getRuntimeStatusText(
     overlap: 'detail.status.overlap',
     output_buffer_full: 'detail.status.outputBlocked',
     downstream_blocked: 'detail.status.outputBlocked',
+    bus_not_connected: 'detail.status.busNotConnected',
+    pickup_bus_not_connected: 'detail.status.pickupBusNotConnected',
     config_error: 'detail.status.configError',
   }
   const key = keyByStatus[status]

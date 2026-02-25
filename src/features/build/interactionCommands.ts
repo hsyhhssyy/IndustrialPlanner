@@ -29,6 +29,16 @@ export function tryPlaceDevice({
   fallbackPlacementToastKey,
   t,
 }: PlaceDeviceParams) {
+  const placementCount = layout.devices.filter((device) => device.typeId === placeType).length
+  if (placeType === 'item_port_log_hongs_bus_source' && placementCount >= 1) {
+    showToast(t('toast.rule.busSourceMax1'), { variant: 'warning' })
+    return false
+  }
+  if (placeType === 'item_port_xiranite_oven_1' && placementCount >= 2) {
+    showToast(t('toast.rule.xiraniteOvenMax2'), { variant: 'warning' })
+    return false
+  }
+
   const origin = toPlaceOrigin(cell, placeType, placeRotation)
   const instance: DeviceInstance = {
     instanceId: nextId(placeType),

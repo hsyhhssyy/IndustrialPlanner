@@ -10,6 +10,8 @@ export type StallReason =
   | 'NO_INPUT'
   | 'OUTPUT_BUFFER_FULL'
   | 'DOWNSTREAM_BLOCKED'
+  | 'BUS_NOT_CONNECTED'
+  | 'PICKUP_BUS_NOT_CONNECTED'
   | 'CONFIG_ERROR'
 
 export type ItemId = string
