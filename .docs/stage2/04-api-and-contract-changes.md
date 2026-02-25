@@ -24,11 +24,17 @@
 | State | 武陵建筑上限状态 | 新增 | 部分兼容 | 新增地区建筑上限配置与已放置计数状态 |
 | State | 武陵建筑上限来源 | 新增 | 兼容 | 上限 `N` 由领域模型配置提供 |
 | State | 管道系统液体锁定 | 新增 | 部分兼容 | 新增管道系统当前液体类型锁定与排空状态 |
+| State | 管道本体连通容量 | 新增 | 部分兼容 | 新增连通管道本体长度与等效管道缓存池容量（`2 × 长度`） |
+| State | 管道分流/汇流方向 | 新增 | 部分兼容 | 新增分流器/汇流器朝向与方向匹配判定状态 |
 | State | 反应池缓存与路由状态 | 新增 | 部分兼容 | 新增 3 固体缓存位、2 液体缓存位、配方选择与产物路由配置 |
 | State | 水培设备注册状态 | 新增 | 部分兼容 | 新增水培设备实体注册（当前为待补领域模型） |
 | Rule Contract | 配方候选过滤规则 | 修改 | 部分兼容 | 可选配方受地区与条件配方规则共同约束 |
 | Rule Contract | 地区流体可用性规则 | 新增 | 部分兼容 | 武陵地区开放流体工业内容，四号谷地过滤武陵专属内容 |
 | Rule Contract | 管道传染规则 | 新增 | 部分兼容 | 同一管道系统单液体锁定，异液输入在排空前阻塞 |
+| Rule Contract | 管道本体无方向规则 | 新增 | 部分兼容 | 管道本体可从任意方向向任意方向输送液体 |
+| Rule Contract | 分流/汇流方向规则 | 新增 | 部分兼容 | 分流器/汇流器方向不匹配时不运输 |
+| Rule Contract | 连通管道容量规则 | 新增 | 部分兼容 | 连通管道本体等效管道缓存池容量为 `2 × 管道长度` |
+| Rule Contract | 真实储液罐方向规则 | 新增 | 部分兼容 | 设备“储液罐”为定向设备，`1` 入口 + `1` 出口 |
 | Rule Contract | 扩展区域流体放置规则 | 新增 | 部分兼容 | 武陵扩展区域允许放置抽水泵/管道/储水罐/管路设备 |
 | Rule Contract | 抽水泵放置规则 | 新增 | 部分兼容 | 抽水泵仅允许放置在扩展区域，基地内放置失败 |
 | Rule Contract | 紫晶矿分类规则 | 修改 | 兼容 | 紫晶矿按矿物（固体）规则参与过滤与运输判定 |
@@ -81,6 +87,11 @@ const recipe = pickUserSelectedOrDefault(itemId, conditionalFiltered)
 const fluidReady = validateFluidTopology(pipes, machines, recipe)
 const fluidLock = resolveFluidSystemLock(fluidSystem)
 const canInject = canInjectFluid(fluidSystem, inputFluid, fluidLock) // 异液且未排空 => false
+const pipeBodyLength = measureConnectedPipeBodyLength(fluidSystem)
+const pipeBodyCapacity = pipeBodyLength * 2
+const canFlowThroughPipeBody = true // 管道本体无方向
+const splitterFlowEnabled = isPipeSplitterDirectionMatched(splitter, flowDir)
+const convergerFlowEnabled = isPipeConvergerDirectionMatched(converger, flowDir)
 const canPlacePump = validatePlacementRegion('water_pump', tileRegion) // 仅扩展区域 => true
 const extensionFluidAllowed = validateExtensionFluidPlacement(region, deviceType) // 武陵扩展区域放置流体设施
 const amethystOreCategory = getItemCategory('item_amethyst_ore') // mineral(solid)

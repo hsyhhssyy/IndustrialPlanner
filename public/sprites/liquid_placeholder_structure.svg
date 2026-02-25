@@ -1,0 +1,5 @@
+<svg width="96" height="96" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Liquid structure placeholder">
+  <rect x="8" y="8" width="80" height="80" rx="12" fill="#2B3642" fill-opacity="0.45" stroke="#95D7FF" stroke-width="4"/>
+  <rect x="22" y="22" width="52" height="52" rx="8" fill="#5F7082" fill-opacity="0.35" stroke="#B9E9FF" stroke-width="2"/>
+  <path d="M48 30 C39 38 34 44 34 52 C34 60 40 66 48 66 C56 66 62 60 62 52 C62 44 57 38 48 30Z" fill="#86D5FF" fill-opacity="0.65"/>
+</svg>

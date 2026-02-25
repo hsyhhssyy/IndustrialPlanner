@@ -86,6 +86,8 @@ function getDeviceMenuIconPath(typeId: DeviceTypeId) {
   if (typeId === 'item_pipe_splitter') return '/device-icons/item_log_splitter.png'
   if (typeId === 'item_pipe_converger') return '/device-icons/item_log_converger.png'
   if (typeId === 'item_pipe_connector') return '/device-icons/item_log_connector.png'
+  if (typeId === 'item_port_water_pump_1') return '/device-icons/liquid_placeholder_structure.svg'
+  if (typeId === 'item_port_liquid_storager_1') return '/device-icons/liquid_placeholder_structure.svg'
   return `/device-icons/${typeId}.png`
 }
 

@@ -85,12 +85,14 @@ export const StaticDeviceLayer = memo(
           const pickupItemId = isPickupPort ? renderDevice.config.pickupItemId : undefined
           const runtimeIconItemId = getRuntimeIconItemId(renderDevice)
           const displayItemIconId = pickupItemId ?? runtimeIconItemId
-          const isBelt = renderDevice.typeId.startsWith('belt_') || renderDevice.typeId.startsWith('pipe_')
+          const isPipe = renderDevice.typeId.startsWith('pipe_')
+          const isBelt = renderDevice.typeId.startsWith('belt_')
+          const isLogisticsTrack = isBelt || isPipe
           const isSplitter = renderDevice.typeId === 'item_log_splitter'
           const isMerger = renderDevice.typeId === 'item_log_converger'
-          const beltPorts = isBelt ? getRotatedPorts(renderDevice) : []
-          const beltInEdge = isBelt ? beltPorts.find((port) => port.direction === 'Input')?.edge ?? 'W' : 'W'
-          const beltOutEdge = isBelt ? beltPorts.find((port) => port.direction === 'Output')?.edge ?? 'E' : 'E'
+          const beltPorts = isLogisticsTrack ? getRotatedPorts(renderDevice) : []
+          const beltInEdge = isLogisticsTrack ? beltPorts.find((port) => port.direction === 'Input')?.edge ?? 'W' : 'W'
+          const beltOutEdge = isLogisticsTrack ? beltPorts.find((port) => port.direction === 'Output')?.edge ?? 'E' : 'E'
           const beltPath = buildBeltTrackPath(beltInEdge, beltOutEdge)
           const splitterOutputEdges = isSplitter
             ? getRotatedPorts(renderDevice)
@@ -102,7 +104,7 @@ export const StaticDeviceLayer = memo(
           return (
             <div
               key={renderDevice.instanceId}
-              className={`device ${isBelt ? 'belt-device' : ''} ${selectionSet.has(renderDevice.instanceId) ? 'selected' : ''} ${invalidSelectionSet.has(renderDevice.instanceId) ? 'drag-invalid' : ''} ${extraClassName ?? ''}`.trim()}
+              className={`device ${isLogisticsTrack ? 'belt-device' : ''} ${isPipe ? 'pipe-device' : ''} ${selectionSet.has(renderDevice.instanceId) ? 'selected' : ''} ${invalidSelectionSet.has(renderDevice.instanceId) ? 'drag-invalid' : ''} ${extraClassName ?? ''}`.trim()}
               style={{
                 left: renderDevice.origin.x * BASE_CELL_SIZE,
                 top: renderDevice.origin.y * BASE_CELL_SIZE,
@@ -111,7 +113,7 @@ export const StaticDeviceLayer = memo(
               }}
               title={renderDevice.typeId}
             >
-              {isBelt ? (
+              {isLogisticsTrack ? (
                 <div className="belt-track-wrap">
                   <svg className="belt-track-svg" viewBox={`0 0 ${BELT_VIEWBOX_SIZE} ${BELT_VIEWBOX_SIZE}`} preserveAspectRatio="none" aria-hidden="true">
                     {(() => {
@@ -131,7 +133,7 @@ export const StaticDeviceLayer = memo(
                       )
                     })()}
                   </svg>
-                  <span className="belt-arrow" style={{ transform: `translate(-50%, -50%) rotate(${EDGE_ANGLE[beltOutEdge]}deg)` }} />
+                  {!isPipe ? <span className="belt-arrow" style={{ transform: `translate(-50%, -50%) rotate(${EDGE_ANGLE[beltOutEdge]}deg)` }} /> : null}
                 </div>
               ) : (
                 <div

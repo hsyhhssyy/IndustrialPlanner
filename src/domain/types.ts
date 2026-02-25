@@ -31,6 +31,7 @@ export type DeviceTypeId =
   | 'item_port_dismantler_1'
   | 'item_port_log_hongs_bus_source'
   | 'item_port_log_hongs_bus'
+  | 'item_port_water_pump_1'
   | 'item_port_liquid_storager_1'
   | 'item_port_power_diffuser_1'
   | 'item_port_storager_1'

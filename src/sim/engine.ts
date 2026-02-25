@@ -15,6 +15,8 @@ const BASE_TICK_RATE = 20
 const CONVEYOR_SECONDS_PER_CELL = 2
 const PICKUP_BLOCK_WINDOW_SECONDS = CONVEYOR_SECONDS_PER_CELL
 const STORAGE_SUBMIT_INTERVAL_SECONDS = 10
+const WATER_PUMP_ITEM_ID: ItemId = 'item_liquid_water'
+const WATER_PUMP_BUFFER_TARGET = 200
 const DEFAULT_PROCESSOR_BUFFER_CAPACITY = 50
 const DEFAULT_PROCESSOR_BUFFER_SLOTS = 1
 const ITEM_IDS: ItemId[] = ITEMS.map((item) => item.id)
@@ -829,6 +831,13 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
           runtime.inventory[itemId] = 0
           if (Number.isFinite(warehouse[itemId])) warehouse[itemId] += amount
         }
+      }
+    }
+
+    if (device.typeId === 'item_port_water_pump_1' && 'inventory' in runtime) {
+      const currentWater = runtime.inventory[WATER_PUMP_ITEM_ID] ?? 0
+      if (currentWater < WATER_PUMP_BUFFER_TARGET) {
+        runtime.inventory[WATER_PUMP_ITEM_ID] = WATER_PUMP_BUFFER_TARGET
       }
     }
 

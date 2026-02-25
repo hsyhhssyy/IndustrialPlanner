@@ -53,6 +53,7 @@ export function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
     typeId === 'item_port_liquid_storager_1'
   )
     return 'storage'
+  if (typeId === 'item_port_water_pump_1') return 'resource'
   if (
     typeId === 'item_port_grinder_1' ||
     typeId === 'item_port_furnance_1' ||

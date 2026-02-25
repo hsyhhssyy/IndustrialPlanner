@@ -1140,6 +1140,25 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     ports0: [],
   },
   {
+    id: 'item_port_water_pump_1',
+    runtimeKind: 'storage',
+    requiresPower: false,
+    size: { width: 3, height: 3 },
+    shortName: 'WaterPump',
+    tags: ['武陵'],
+    ports0: [
+      {
+        id: 'out_e_1',
+        localCellX: 2,
+        localCellY: 1,
+        edge: 'E',
+        direction: 'Output',
+        allowedItems: { mode: 'whitelist', whitelist: ['item_liquid_water'] },
+        allowedTypes: liquidAllowance,
+      },
+    ],
+  },
+  {
     id: 'item_port_liquid_storager_1',
     runtimeKind: 'storage',
     requiresPower: false,

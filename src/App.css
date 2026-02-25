@@ -567,26 +567,35 @@ button:disabled {
 .belt-device {
   --belt-fill: #ffa50026;
   --belt-edge: orange;
+  --track-stroke-width: 51;
+  --track-mask-inner-width: 45;
+}
+
+.pipe-device {
+  --belt-fill: rgba(130, 138, 148, 0.42);
+  --belt-edge: rgba(152, 211, 255, 0.96);
+  --track-stroke-width: 32;
+  --track-mask-inner-width: 28;
 }
 
 .belt-track-fill {
   stroke: var(--belt-fill);
-  stroke-width: 51;
+  stroke-width: var(--track-stroke-width);
 }
 
 .belt-track-edge {
   stroke: var(--belt-edge);
-  stroke-width: 51;
+  stroke-width: var(--track-stroke-width);
 }
 
 .belt-edge-mask-outer {
   stroke: white;
-  stroke-width: 51;
+  stroke-width: var(--track-stroke-width);
 }
 
 .belt-edge-mask-inner {
   stroke: black;
-  stroke-width: 45;
+  stroke-width: var(--track-mask-inner-width);
 }
 
 .belt-arrow {
