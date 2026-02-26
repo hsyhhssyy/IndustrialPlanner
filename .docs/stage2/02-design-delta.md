@@ -1,5 +1,7 @@
 # Stage2 增量设计说明（Design Delta）
 
+> 冻结说明（2026-02-26）：本文件中的未落地设计已转入 Stage3。Stage2 当前有效口径请以 `README.md` 与 `01-scope-and-dod-stage2.md` 为准。
+
 ## 1. 设计原则
 
 - 仅记录相对 Stage1 的差异，不重复 Stage1 冻结基线。
