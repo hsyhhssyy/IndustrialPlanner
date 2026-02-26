@@ -5,6 +5,7 @@ import {
   buildOccupancyMap,
   cellToDeviceId,
   EDGE_ANGLE,
+  isBelt,
 } from './domain/geometry'
 import { getBeltItemPosition } from './domain/shared/beltVisual'
 import {
@@ -64,7 +65,7 @@ function getInternalStatusText(
 ) {
   if (!runtime) return t('detail.internal.noRuntime')
 
-  if (!selectedDevice.typeId.startsWith('belt_') || !('slot' in runtime)) {
+  if (!isBelt(selectedDevice.typeId) || !('slot' in runtime)) {
     return getRuntimeStatusText(runtime, t)
   }
 
@@ -86,8 +87,8 @@ function getDeviceMenuIconPath(typeId: DeviceTypeId) {
   if (typeId === 'item_pipe_splitter') return '/device-icons/item_pipe_splitter.png'
   if (typeId === 'item_pipe_converger') return '/device-icons/item_pipe_converger.png'
   if (typeId === 'item_pipe_connector') return '/device-icons/item_pipe_connector.png'
-  if (typeId === 'item_port_water_pump_1') return '/device-icons/liquid_placeholder_structure.svg'
-  if (typeId === 'item_port_liquid_storager_1') return '/device-icons/liquid_placeholder_structure.svg'
+  if (typeId === 'item_port_water_pump_1') return '/device-icons/item_port_pump_1.png'
+  if (typeId === 'item_port_liquid_storager_1') return '/device-icons/item_port_liquid_storager_1.png'
   if (typeId === 'item_port_hydro_planter_1') return '/device-icons/item_port_planter_1.png'
   if (typeId === 'item_port_liquid_filling_pd_mc_1') return '/device-icons/item_port_filling_pd_mc_1.png'
   return `/device-icons/${typeId}.png`
@@ -114,10 +115,6 @@ const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>([
   'item_log_connector',
   'item_pipe_splitter',
   'item_pipe_converger',
-  'item_pipe_connector',
-])
-const HIDDEN_CHEVRON_DEVICE_TYPES = new Set<DeviceTypeId>([
-  'item_log_connector',
   'item_pipe_connector',
 ])
 const OUT_OF_LOT_TOAST_KEY = 'toast.outOfLot'
@@ -159,6 +156,9 @@ function App() {
         setPlaceOperation,
         setViewOffset,
         setSelection,
+        setLogStart,
+        setLogCurrent,
+        setLogTrace,
       },
     },
     eventBus,
@@ -209,6 +209,15 @@ function App() {
       setPlaceType('')
     }
   }, [placeType, setPlaceType, visiblePlaceableTypes])
+
+  useEffect(() => {
+    if (placeOperation !== 'pipe') return
+    if (currentBase.tags.includes('武陵')) return
+    setPlaceOperation('default')
+    setLogStart(null)
+    setLogCurrent(null)
+    setLogTrace([])
+  }, [currentBase.tags, placeOperation, setLogCurrent, setLogStart, setLogTrace, setPlaceOperation])
 
   useEffect(() => {
     layoutRef.current = layout
@@ -298,19 +307,6 @@ function App() {
     }
   }, [setLeftPanelWidth, setRightPanelWidth])
 
-  useEffect(() => {
-    if (sim.isRunning) {
-      if (mode !== 'select') {
-        setMode('select')
-      }
-      return
-    }
-    if (mode === 'select') {
-      setMode('place')
-      setPlaceType('')
-    }
-  }, [mode, setMode, setPlaceType, sim.isRunning])
-
   useBlueprintHotkeysDomain({
     simIsRunning: sim.isRunning,
     activeBaseId,
@@ -333,6 +329,7 @@ function App() {
     selection,
     layout,
     foundationIdSet,
+    currentBaseOuterRing: currentBase.outerRing,
     setLayout,
     outOfLotToastKey: OUT_OF_LOT_TOAST_KEY,
     fallbackPlacementToastKey: FALLBACK_PLACEMENT_TOAST_KEY,
@@ -373,6 +370,14 @@ function App() {
     handleItemPickerSelect,
     updatePickupIgnoreInventory,
     updateProcessorPreloadSlot,
+    reactorRecipeCandidates,
+    selectedReactorPoolConfig,
+    reactorSolidOutputItemCandidates,
+    reactorLiquidOutputItemCandidates,
+    updateReactorSelectedRecipe,
+    updateReactorSolidOutputItem,
+    updateReactorLiquidOutputItemA,
+    updateReactorLiquidOutputItemB,
   } = useBuildPickerDomain({
     layout,
     selection,
@@ -382,8 +387,9 @@ function App() {
     isOreItemId,
   })
 
-  const { toPlaceOrigin, logisticsPreview, logisticsPreviewDevices, portChevrons, placePreview } = useBuildPreviewDomain({
+  const { toPlaceOrigin, logisticsPreview, logisticsPreviewDevices, logisticsEndpointHighlights, portChevrons, placePreview } = useBuildPreviewDomain({
     layout,
+    currentBaseOuterRing: currentBase.outerRing,
     mode,
     placeType,
     placeRotation,
@@ -397,7 +403,6 @@ function App() {
     logTrace,
     baseCellSize: BASE_CELL_SIZE,
     edgeAngle: EDGE_ANGLE,
-    hiddenChevronDeviceTypes: HIDDEN_CHEVRON_DEVICE_TYPES,
     hiddenLabelDeviceTypes: HIDDEN_DEVICE_LABEL_TYPES,
   })
 
@@ -548,6 +553,7 @@ function App() {
       inTransitItems={inTransitItems}
       getItemLabelText={(itemId) => getItemLabel(language, itemId)}
       getItemIconPath={getItemIconPath}
+      logisticsEndpointHighlights={logisticsEndpointHighlights}
       portChevrons={portChevrons}
       placePreview={placePreview}
       dragRect={dragRect}
@@ -681,6 +687,7 @@ function App() {
             mode,
             language,
             t,
+            canUsePipePlacement: currentBase.tags.includes('武陵'),
             placeOperation,
             placeType,
             visiblePlaceableTypes,
@@ -764,6 +771,14 @@ function App() {
           updatePickupIgnoreInventory={updatePickupIgnoreInventory}
           setLayout={setLayout}
           updateProcessorPreloadSlot={updateProcessorPreloadSlot}
+          reactorRecipeCandidates={reactorRecipeCandidates}
+          selectedReactorPoolConfig={selectedReactorPoolConfig}
+          reactorSolidOutputItemCandidates={reactorSolidOutputItemCandidates}
+          reactorLiquidOutputItemCandidates={reactorLiquidOutputItemCandidates}
+          updateReactorSelectedRecipe={updateReactorSelectedRecipe}
+          updateReactorSolidOutputItem={updateReactorSolidOutputItem}
+          updateReactorLiquidOutputItemA={updateReactorLiquidOutputItemA}
+          updateReactorLiquidOutputItemB={updateReactorLiquidOutputItemB}
           simIsRunning={sim.isRunning}
         />
       </main>

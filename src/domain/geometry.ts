@@ -1,4 +1,4 @@
-import { DEVICE_TYPE_BY_ID, BELT_TYPES, PIPE_TYPES, RECIPES } from './registry'
+import { DEVICE_TYPE_BY_ID, RECIPES } from './registry'
 import type {
   DeviceInstance,
   Direction,
@@ -141,12 +141,6 @@ export function buildOccupancyMap(layout: LayoutState) {
 export function detectOverlaps(layout: LayoutState) {
   const overlapIds = new Set<string>()
 
-  const isBeltFamilyLogistics = (typeId: string) =>
-    BELT_TYPES.has(typeId) || typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector'
-
-  const isPipeFamilyLogistics = (typeId: string) =>
-    PIPE_TYPES.has(typeId) || typeId === 'item_pipe_splitter' || typeId === 'item_pipe_converger' || typeId === 'item_pipe_connector'
-
   for (const entries of buildOccupancyMap(layout).values()) {
     if (entries.length <= 1) continue
 
@@ -160,11 +154,11 @@ export function detectOverlaps(layout: LayoutState) {
         hasOtherType = true
         continue
       }
-      if (isBeltFamilyLogistics(device.typeId)) {
+      if (isBeltLike(device.typeId)) {
         beltFamilyCount += 1
         continue
       }
-      if (isPipeFamilyLogistics(device.typeId)) {
+      if (isPipeLike(device.typeId)) {
         pipeFamilyCount += 1
         continue
       }
@@ -177,12 +171,6 @@ export function detectOverlaps(layout: LayoutState) {
     for (const entry of entries) overlapIds.add(entry.instanceId)
   }
   return overlapIds
-}
-
-export function isWithinLot(device: DeviceInstance, lotSize: number) {
-  const footprint = getFootprintCells(device)
-  if (footprint.length === 0) return false
-  return footprint.every((cell) => cell.x >= 0 && cell.y >= 0 && cell.x < lotSize && cell.y < lotSize)
 }
 
 export function linksFromLayout(layout: LayoutState): PortLink[] {
@@ -241,16 +229,40 @@ export function getDeviceById(layout: LayoutState, instanceId: string) {
   return layout.devices.find((device) => device.instanceId === instanceId) ?? null
 }
 
+function hasDeviceTag(typeId: string, tag: string) {
+  return DEVICE_TYPE_BY_ID[typeId]?.tags?.includes(tag) ?? false
+}
+
+export function isBelt(typeId: string) {
+  return typeId === 'belt_straight_1x1' || typeId === 'belt_turn_cw_1x1' || typeId === 'belt_turn_ccw_1x1'
+}
+
+export function isBeltJunction(typeId: string) {
+  return typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector'
+}
+
 export function isBeltLike(typeId: string) {
-  return BELT_TYPES.has(typeId)
+  return isBelt(typeId) || isBeltJunction(typeId)
 }
 
 export function isPipeLike(typeId: string) {
-  return PIPE_TYPES.has(typeId)
+  return isPipe(typeId) || isPipeJunction(typeId)
+}
+
+export function isPipe(typeId: string) {
+  return typeId === 'pipe_straight_1x1' || typeId === 'pipe_turn_cw_1x1' || typeId === 'pipe_turn_ccw_1x1'
+}
+
+export function isPipeJunction(typeId: string) {
+  return typeId === 'item_pipe_splitter' || typeId === 'item_pipe_converger' || typeId === 'item_pipe_connector'
 }
 
 export function isTrackLike(typeId: string) {
   return isBeltLike(typeId) || isPipeLike(typeId)
+}
+
+export function shouldHidePortChevron(typeId: string) {
+  return hasDeviceTag(typeId, 'ChevronHidden')
 }
 
 export function edgeFromDelta(dx: number, dy: number): Edge {

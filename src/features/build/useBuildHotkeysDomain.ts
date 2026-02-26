@@ -1,10 +1,13 @@
 import { useEffect } from 'react'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
-import { isWithinLot } from '../../domain/geometry'
 import { validatePlacementConstraints } from '../../domain/placement'
+import { isDeviceWithinAllowedPlacementArea } from '../../domain/shared/placementArea'
 import { rotatedFootprintSize } from '../../domain/shared/math'
 import { showToast } from '../../ui/toast'
 import type { DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
+import type { OuterRing } from './buildInteraction.contract'
+
+const NON_ROTATABLE_PLACED_TYPE_IDS = new Set<DeviceTypeId>(['item_port_unloader_1', 'item_port_loader_1'])
 
 type UseBuildHotkeysDomainParams = {
   simIsRunning: boolean
@@ -14,6 +17,7 @@ type UseBuildHotkeysDomainParams = {
   selection: string[]
   layout: LayoutState
   foundationIdSet: ReadonlySet<string>
+  currentBaseOuterRing: OuterRing
   setLayout: (updater: LayoutState) => void
   outOfLotToastKey: string
   fallbackPlacementToastKey: string
@@ -28,6 +32,7 @@ export function useBuildHotkeysDomain({
   selection,
   layout,
   foundationIdSet,
+  currentBaseOuterRing,
   setLayout,
   outOfLotToastKey,
   fallbackPlacementToastKey,
@@ -54,7 +59,10 @@ export function useBuildHotkeysDomain({
       if (selection.length === 0) return
 
       const selectedRotatable = layout.devices.filter(
-        (device) => selection.includes(device.instanceId) && !foundationIdSet.has(device.instanceId),
+        (device) =>
+          selection.includes(device.instanceId) &&
+          !foundationIdSet.has(device.instanceId) &&
+          !NON_ROTATABLE_PLACED_TYPE_IDS.has(device.typeId),
       )
       if (selectedRotatable.length === 0) return
 
@@ -102,7 +110,9 @@ export function useBuildHotkeysDomain({
         devices: layout.devices.map((device) => rotatedById.get(device.instanceId) ?? device),
       }
 
-      const outOfLotDevice = Array.from(rotatedById.values()).find((device) => !isWithinLot(device, nextLayout.lotSize))
+      const outOfLotDevice = Array.from(rotatedById.values()).find((device) => {
+        return !isDeviceWithinAllowedPlacementArea(device, nextLayout.lotSize, currentBaseOuterRing)
+      })
       if (outOfLotDevice) {
         showToast(t(outOfLotToastKey), { variant: 'warning' })
         return
@@ -124,6 +134,7 @@ export function useBuildHotkeysDomain({
   }, [
     fallbackPlacementToastKey,
     foundationIdSet,
+    currentBaseOuterRing,
     layout,
     mode,
     outOfLotToastKey,

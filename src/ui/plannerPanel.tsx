@@ -640,7 +640,11 @@ export function PlannerPanel({ language, t, onClose }: PlannerPanelProps) {
                 >
                   {t('planner.region.valley4')}
                 </button>
-                <button type="button" className="planner-region-btn" disabled title={t('planner.region.wulingLocked')}>
+                <button
+                  type="button"
+                  className={`planner-region-btn ${plannerState.region === 'wuling' ? 'active' : ''}`.trim()}
+                  onClick={() => setRegion('wuling')}
+                >
                   {t('planner.region.wuling')}
                 </button>
               </div>

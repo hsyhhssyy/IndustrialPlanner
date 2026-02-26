@@ -1,11 +1,11 @@
 import { useCallback, useMemo } from 'react'
 import { usePersistentState } from '../../core/usePersistentState'
 import { uiEffects } from '../../app/uiEffects'
-import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
-import { isWithinLot } from '../../domain/geometry'
+import { BASE_BY_ID, DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { validatePlacementConstraints } from '../../domain/placement'
 import { rotatedFootprintSize } from '../../domain/shared/math'
 import type { BaseId, DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
+import { isDeviceWithinAllowedPlacementArea } from '../../domain/shared/placementArea'
 
 type BlueprintDeviceSnapshot = {
   typeId: DeviceTypeId
@@ -492,7 +492,8 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         config: cloneDeviceConfig(entry.config),
       }))
 
-      const invalidOutOfLot = previewDevices.some((device) => !isWithinLot(device, layout.lotSize))
+      const baseOuterRing = BASE_BY_ID[activeBaseId].outerRing
+      const invalidOutOfLot = previewDevices.some((device) => !isDeviceWithinAllowedPlacementArea(device, layout.lotSize, baseOuterRing))
       if (invalidOutOfLot) {
         return {
           devices: previewDevices,
@@ -523,7 +524,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         invalidMessageKey: null,
       }
     },
-    [layout],
+    [activeBaseId, layout],
   )
 
   return {

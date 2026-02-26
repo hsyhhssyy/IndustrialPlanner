@@ -910,6 +910,36 @@ export const RECIPES: RecipeDef[] = [
     ],
     outputs: [{ itemId: 'item_plant_grass_2', amount: 2 }],
   },
+  {
+    id: 'r_mix_pool_liquid_plant_grass_1_from_powder_and_water_basic',
+    machineType: 'item_port_mix_pool_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_plant_grass_powder_1', amount: 1 },
+      { itemId: 'item_liquid_water', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_liquid_plant_grass_1', amount: 1 }],
+  },
+  {
+    id: 'r_mix_pool_liquid_plant_grass_2_from_powder_and_water_basic',
+    machineType: 'item_port_mix_pool_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_plant_grass_powder_2', amount: 1 },
+      { itemId: 'item_liquid_water', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_liquid_plant_grass_2', amount: 1 }],
+  },
+  {
+    id: 'r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic',
+    machineType: 'item_port_mix_pool_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_xiranite_powder', amount: 1 },
+      { itemId: 'item_liquid_water', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_liquid_xiranite', amount: 1 }],
+  },
 ]
 
 export const DEVICE_TYPES: DeviceTypeDef[] = [
@@ -936,6 +966,34 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
         localCellY: 0,
         edge: 'N',
         direction: 'Output',
+        allowedItems: { mode: 'any', whitelist: [] },
+        allowedTypes: solidAllowance,
+      },
+    ],
+  },
+  {
+    id: 'item_port_loader_1',
+    runtimeKind: 'storage',
+    requiresPower: false,
+    size: { width: 3, height: 1 },
+    shortName: 'Loader',
+    placementConstraints: [
+      {
+        kind: 'edge_contact',
+        edgeMode: 'opposite_of_port',
+        portId: 'p_in_mid',
+        minAdjacentCells: 1,
+        targetTagsAny: ['bus'],
+        violationMessageKey: 'toast.rule.pickupRequiresBus',
+      },
+    ],
+    ports0: [
+      {
+        id: 'p_in_mid',
+        localCellX: 1,
+        localCellY: 0,
+        edge: 'N',
+        direction: 'Input',
         allowedItems: { mode: 'any', whitelist: [] },
         allowedTypes: solidAllowance,
       },
@@ -1109,6 +1167,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: true,
     size: { width: 5, height: 5 },
     shortName: 'HydroPlanter',
+    tags: ['武陵'],
     inputBufferSlots: 2,
     inputBufferSlotCapacities: [50, 50],
     ports0: [
@@ -1319,6 +1378,10 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: true,
     size: { width: 5, height: 5 },
     shortName: 'MixPool',
+    inputBufferSlots: 5,
+    outputBufferSlots: 1,
+    inputBufferSlotCapacities: [50, 50, 50, 50, 50],
+    outputBufferSlotCapacities: [1],
     tags: ['武陵'],
     ports0: [
       ...[1, 3].map((x) => ({
@@ -1365,6 +1428,8 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: true,
     size: { width: 5, height: 5 },
     shortName: 'XiraniteOven',
+    maxPlacementCount: 2,
+    placementLimitToastKey: 'toast.rule.xiraniteOvenMax2',
     inputBufferSlots: 2,
     inputBufferSlotCapacities: [50, 50],
     tags: ['武陵'],
@@ -1441,6 +1506,8 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 4, height: 4 },
     shortName: 'BusSource',
+    maxPlacementCount: 1,
+    placementLimitToastKey: 'toast.rule.busSourceMax1',
     tags: ['武陵', 'bus'],
     ports0: [],
   },
@@ -1450,6 +1517,8 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 4, height: 8 },
     shortName: 'BusSegment',
+    maxPlacementCount: 8,
+    placementLimitToastKey: 'toast.rule.busSegmentMax8',
     tags: ['武陵', 'bus'],
     ports0: [],
   },
@@ -1459,7 +1528,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 3, height: 3 },
     shortName: 'WaterPump',
-    tags: ['武陵'],
+    tags: ['武陵', 'OuterRingAllowed', 'InnerRingNotAllowed'],
     ports0: [
       {
         id: 'out_e_1',
@@ -1481,7 +1550,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 3, height: 3 },
     shortName: 'LiquidStorage',
-    tags: ['武陵'],
+    tags: ['武陵', 'OuterRingAllowed'],
     ports0: [
       {
         id: 'in_w_1',
@@ -1544,6 +1613,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 1, height: 1 },
     shortName: 'Belt',
+    tags: ['BeltFamily'],
     ports0: [
       {
         id: 'in_w',
@@ -1571,6 +1641,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 1, height: 1 },
     shortName: 'Turn↱',
+    tags: ['BeltFamily'],
     ports0: [
       {
         id: 'in_n',
@@ -1598,6 +1669,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 1, height: 1 },
     shortName: 'Turn↰',
+    tags: ['BeltFamily'],
     ports0: [
       {
         id: 'in_n',
@@ -1625,7 +1697,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 1, height: 1 },
     shortName: 'Pipe',
-    tags: ['武陵'],
+    tags: ['武陵', 'PipeFamily', 'OuterRingAllowed'],
     ports0: [
       {
         id: 'in_w',
@@ -1653,7 +1725,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 1, height: 1 },
     shortName: 'PipeTurn↱',
-    tags: ['武陵'],
+    tags: ['武陵', 'PipeFamily', 'OuterRingAllowed'],
     ports0: [
       {
         id: 'in_n',
@@ -1681,7 +1753,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 1, height: 1 },
     shortName: 'PipeTurn↰',
-    tags: ['武陵'],
+    tags: ['武陵', 'PipeFamily', 'OuterRingAllowed'],
     ports0: [
       {
         id: 'in_n',
@@ -1709,6 +1781,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 1, height: 1 },
     shortName: 'Split',
+    tags: ['BeltFamily'],
     ports0: [
       {
         id: 'in_e',
@@ -1736,6 +1809,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 1, height: 1 },
     shortName: 'Merge',
+    tags: ['BeltFamily'],
     ports0: [
       ...(['N', 'E', 'S'] as const).map((edge) => ({
         id: `in_${edge.toLowerCase()}`,
@@ -1763,6 +1837,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 1, height: 1 },
     shortName: 'Bridge',
+    tags: ['BeltFamily', 'ChevronHidden'],
     ports0: (['N', 'S', 'W', 'E'] as const).flatMap((edge) => [
       {
         id: `in_${edge.toLowerCase()}`,
@@ -1790,7 +1865,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 1, height: 1 },
     shortName: 'PipeSplit',
-    tags: ['武陵'],
+    tags: ['武陵', 'PipeFamily', 'OuterRingAllowed'],
     ports0: [
       {
         id: 'in_e',
@@ -1818,7 +1893,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 1, height: 1 },
     shortName: 'PipeMerge',
-    tags: ['武陵'],
+    tags: ['武陵', 'PipeFamily', 'OuterRingAllowed'],
     ports0: [
       ...(['N', 'E', 'S'] as const).map((edge) => ({
         id: `in_${edge.toLowerCase()}`,
@@ -1846,7 +1921,7 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     requiresPower: false,
     size: { width: 1, height: 1 },
     shortName: 'PipeBridge',
-    tags: ['武陵'],
+    tags: ['武陵', 'PipeFamily', 'OuterRingAllowed', 'ChevronHidden'],
     ports0: (['N', 'S', 'W', 'E'] as const).flatMap((edge) => [
       {
         id: `in_${edge.toLowerCase()}`,
@@ -1876,21 +1951,21 @@ export const DEVICE_TYPE_BY_ID: Record<string, DeviceTypeDef> = Object.fromEntri
 
 export const ITEM_BY_ID: Record<string, ItemDef> = Object.fromEntries(ITEMS.map((item) => [item.id, item]))
 
-export const PLACEABLE_TYPES = DEVICE_TYPES.filter(
-  (deviceType) => !deviceType.id.startsWith('belt_') && !deviceType.id.startsWith('pipe_'),
-)
-
 export const BELT_TYPES = new Set(['belt_straight_1x1', 'belt_turn_cw_1x1', 'belt_turn_ccw_1x1'])
 export const PIPE_TYPES = new Set(['pipe_straight_1x1', 'pipe_turn_cw_1x1', 'pipe_turn_ccw_1x1'])
 export const JUNCTION_TYPES = new Set(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
 export const PIPE_JUNCTION_TYPES = new Set(['item_pipe_splitter', 'item_pipe_converger', 'item_pipe_connector'])
+
+export const PLACEABLE_TYPES = DEVICE_TYPES.filter(
+  (deviceType) => !BELT_TYPES.has(deviceType.id) && !PIPE_TYPES.has(deviceType.id),
+)
 
 export const BASES: BaseDef[] = [
   {
     id: 'wuling_protocol_core',
     name: '协议核心区',
     placeableSize: 80,
-    outerRing: { top: 3, right: 3, bottom: 3, left: 3 },
+    outerRing: { top: 4, right: 4, bottom: 4, left: 4 },
     tags: ['武陵'],
     foundationBuildings: [],
   },
@@ -1898,7 +1973,7 @@ export const BASES: BaseDef[] = [
     id: 'wuling_tianwangping_aid',
     name: '天王坪援建点',
     placeableSize: 50,
-    outerRing: { top: 3, right: 3, bottom: 3, left: 3 },
+    outerRing: { top: 4, right: 4, bottom: 4, left: 4 },
     tags: ['武陵'],
     foundationBuildings: [],
   },

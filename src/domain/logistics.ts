@@ -10,9 +10,10 @@ import {
   inferPortDirection,
   isBeltLike,
   isPipeLike,
-  isWithinLot,
   linksFromLayout,
 } from './geometry'
+import { BASE_BY_ID } from './registry'
+import { isDeviceWithinAllowedPlacementArea } from './shared/placementArea'
 import type { DeviceInstance, Edge, LayoutState, Rotation } from './types'
 
 let idCounter = 1
@@ -703,8 +704,14 @@ export function applyLogisticsPath(
   const filtered = nextDevices.filter((device) => !replacedIds.has(device.instanceId))
   const finalLayout: LayoutState = { ...layout, devices: filtered }
 
+  if (family === 'pipe') {
+    return finalLayout
+  }
+
+  const outerRing = BASE_BY_ID[finalLayout.baseId]?.outerRing ?? { top: 0, right: 0, bottom: 0, left: 0 }
+
   return {
     ...finalLayout,
-    devices: finalLayout.devices.filter((device) => isWithinLot(device, finalLayout.lotSize)),
+    devices: finalLayout.devices.filter((device) => isDeviceWithinAllowedPlacementArea(device, finalLayout.lotSize, outerRing)),
   }
 }

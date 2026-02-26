@@ -23,6 +23,7 @@ export type LeftPanelViewModel = {
   mode: EditMode
   language: Language
   t: (key: string, params?: Record<string, string | number>) => string
+  canUsePipePlacement: boolean
   placeOperation: 'default' | 'belt' | 'pipe' | 'blueprint'
   placeType: DeviceTypeId | ''
   visiblePlaceableTypes: DeviceTypeDef[]

@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef } from 'react'
 import { getDeviceSpritePath } from '../../domain/deviceSprites'
-import { EDGE_ANGLE, getRotatedPorts } from '../../domain/geometry'
+import { EDGE_ANGLE, getRotatedPorts, isBelt, isPipe } from '../../domain/geometry'
 import { buildBeltTrackPath, junctionArrowPoints } from '../../domain/shared/beltVisual'
 import { rotatedFootprintSize } from '../../domain/shared/math'
 import { getDeviceLabel } from '../../i18n'
@@ -22,6 +22,13 @@ const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>([
   'item_pipe_converger',
   'item_pipe_connector',
 ])
+
+const REACTOR_LIQUID_PORT_TAGS: Record<string, string> = {
+  in_e_1: '1',
+  in_e_3: '2',
+  out_w_1: '3',
+  out_w_3: '4',
+}
 
 export type StaticDeviceLayerProps = {
   devices: DeviceInstance[]
@@ -141,6 +148,30 @@ export const StaticDeviceLayer = memo(
       return undefined
     }
 
+    function reactorLiquidPortTagStyle(
+      port: { x: number; y: number; edge: 'N' | 'S' | 'W' | 'E' },
+      origin: { x: number; y: number },
+    ) {
+      const localX = port.x - origin.x
+      const localY = port.y - origin.y
+      const centerX = (localX + 0.5) * BASE_CELL_SIZE
+      const centerY = (localY + 0.5) * BASE_CELL_SIZE
+      const insetOffset = BASE_CELL_SIZE * 0.24
+      const offsetByEdge =
+        port.edge === 'W'
+          ? { dx: insetOffset, dy: 0 }
+          : port.edge === 'E'
+            ? { dx: -insetOffset, dy: 0 }
+            : port.edge === 'N'
+              ? { dx: 0, dy: insetOffset }
+              : { dx: 0, dy: -insetOffset }
+
+      return {
+        left: `${centerX + offsetByEdge.dx}px`,
+        top: `${centerY + offsetByEdge.dy}px`,
+      }
+    }
+
     return (
       <>
         {devices.map((device) => {
@@ -161,29 +192,35 @@ export const StaticDeviceLayer = memo(
           const pickupItemId = isPickupPort ? renderDevice.config.pickupItemId : undefined
           const runtimeIconItemId = getRuntimeIconItemId(renderDevice)
           const displayItemIconId = pickupItemId ?? runtimeIconItemId
-          const isPipe = renderDevice.typeId.startsWith('pipe_')
-          const isBelt = renderDevice.typeId.startsWith('belt_')
-          const isLogisticsTrack = isBelt || isPipe
+          const isPipeTrack = isPipe(renderDevice.typeId)
+          const isBeltTrack = isBelt(renderDevice.typeId)
+          const isLogisticsTrack = isBeltTrack || isPipeTrack
           const isSplitter = renderDevice.typeId === 'item_log_splitter'
           const isMerger = renderDevice.typeId === 'item_log_converger'
-          const beltPorts = isLogisticsTrack ? getRotatedPorts(renderDevice) : []
+          const needsRotatedPorts = isLogisticsTrack || renderDevice.typeId === 'item_port_mix_pool_1'
+          const rotatedPorts = needsRotatedPorts ? getRotatedPorts(renderDevice) : []
+          const beltPorts = isLogisticsTrack ? rotatedPorts : []
           const beltInEdge = isLogisticsTrack ? beltPorts.find((port) => port.direction === 'Input')?.edge ?? 'W' : 'W'
           const beltOutEdge = isLogisticsTrack ? beltPorts.find((port) => port.direction === 'Output')?.edge ?? 'E' : 'E'
           const beltPath = buildBeltTrackPath(beltInEdge, beltOutEdge)
-          const pipeFluidItemId = isPipe ? visiblePipeFluidItem(renderDevice) : null
+          const pipeFluidItemId = isPipeTrack ? visiblePipeFluidItem(renderDevice) : null
           const pipeHasWater = Boolean(pipeFluidItemId)
           const pipeFluidWidth = 16
           const splitterOutputEdges = isSplitter
-            ? getRotatedPorts(renderDevice)
+            ? rotatedPorts
                 .filter((port) => port.direction === 'Output')
                 .map((port) => port.edge)
             : []
-          const mergerOutputEdges = isMerger ? [getRotatedPorts(renderDevice).find((port) => port.direction === 'Output')?.edge ?? 'W'] : []
+          const mergerOutputEdges = isMerger ? [rotatedPorts.find((port) => port.direction === 'Output')?.edge ?? 'W'] : []
           const junctionArrowEdges = isSplitter ? splitterOutputEdges : mergerOutputEdges
+          const reactorLiquidPortTags =
+            renderDevice.typeId === 'item_port_mix_pool_1' && selectionSet.has(renderDevice.instanceId)
+              ? rotatedPorts.filter((port) => REACTOR_LIQUID_PORT_TAGS[port.portId])
+              : []
           return (
             <div
               key={renderDevice.instanceId}
-              className={`device ${isLogisticsTrack ? 'belt-device' : ''} ${isPipe ? 'pipe-device' : ''} ${selectionSet.has(renderDevice.instanceId) ? 'selected' : ''} ${invalidSelectionSet.has(renderDevice.instanceId) ? 'drag-invalid' : ''} ${extraClassName ?? ''}`.trim()}
+              className={`device ${isLogisticsTrack ? 'belt-device' : ''} ${isPipeTrack ? 'pipe-device' : ''} ${selectionSet.has(renderDevice.instanceId) ? 'selected' : ''} ${invalidSelectionSet.has(renderDevice.instanceId) ? 'drag-invalid' : ''} ${extraClassName ?? ''}`.trim()}
               style={{
                 left: renderDevice.origin.x * BASE_CELL_SIZE,
                 top: renderDevice.origin.y * BASE_CELL_SIZE,
@@ -207,7 +244,7 @@ export const StaticDeviceLayer = memo(
                             </mask>
                           </defs>
                           <path d={beltPath} className="belt-track-fill" />
-                          {isPipe && pipeHasWater ? (
+                          {isPipeTrack && pipeHasWater ? (
                             <path d={beltPath} className="pipe-fluid-fill" style={{ strokeWidth: pipeFluidWidth, stroke: pipeFluidColor(pipeFluidItemId!) }} />
                           ) : null}
                           <path d={beltPath} className="belt-track-edge" mask={`url(#${beltEdgeMaskId})`} />
@@ -215,7 +252,7 @@ export const StaticDeviceLayer = memo(
                       )
                     })()}
                   </svg>
-                  {!isPipe ? <span className="belt-arrow" style={{ transform: `translate(-50%, -50%) rotate(${EDGE_ANGLE[beltOutEdge]}deg)` }} /> : null}
+                  {!isPipeTrack ? <span className="belt-arrow" style={{ transform: `translate(-50%, -50%) rotate(${EDGE_ANGLE[beltOutEdge]}deg)` }} /> : null}
                 </div>
               ) : (
                 <div
@@ -255,6 +292,15 @@ export const StaticDeviceLayer = memo(
                     </span>
                   )}
                   {isPickupPort && !pickupItemId && <em>?</em>}
+                  {reactorLiquidPortTags.map((port) => (
+                    <span
+                      key={`${renderDevice.instanceId}-liquid-port-tag-${port.portId}`}
+                      className="reactor-liquid-port-tag"
+                      style={reactorLiquidPortTagStyle(port, renderDevice.origin)}
+                    >
+                      {REACTOR_LIQUID_PORT_TAGS[port.portId]}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>

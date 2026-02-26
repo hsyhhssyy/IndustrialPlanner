@@ -1,6 +1,7 @@
 import { BASES, DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import type { BaseDef, BaseId, DeviceInstance, DeviceRuntime, ItemId, LayoutState, SimState, SlotData } from '../../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../../i18n'
+import { isBelt } from '../../domain/geometry'
 
 type ProcessorBufferSpec = {
   inputSlots: number
@@ -74,6 +75,24 @@ type RightPanelProps = {
   updatePickupIgnoreInventory: (deviceInstanceId: string, enabled: boolean) => void
   setLayout: (updater: LayoutState | ((current: LayoutState) => LayoutState)) => void
   updateProcessorPreloadSlot: (deviceInstanceId: string, slotIndex: number, patch: { itemId?: ItemId | null; amount?: number }) => void
+  reactorRecipeCandidates: Array<{
+    id: string
+    cycleSeconds: number
+    inputs: Array<{ itemId: ItemId; amount: number }>
+    outputs: Array<{ itemId: ItemId; amount: number }>
+  }>
+  selectedReactorPoolConfig: {
+    selectedRecipeIds: string[]
+    solidOutputItemId?: string
+    liquidOutputItemIdA?: string
+    liquidOutputItemIdB?: string
+  } | null
+  reactorSolidOutputItemCandidates: ItemId[]
+  reactorLiquidOutputItemCandidates: ItemId[]
+  updateReactorSelectedRecipe: (deviceInstanceId: string, slotIndex: 0 | 1, recipeId: string | null) => void
+  updateReactorSolidOutputItem: (deviceInstanceId: string, itemId: ItemId | null) => void
+  updateReactorLiquidOutputItemA: (deviceInstanceId: string, itemId: ItemId | null) => void
+  updateReactorLiquidOutputItemB: (deviceInstanceId: string, itemId: ItemId | null) => void
   simIsRunning: boolean
 }
 
@@ -108,6 +127,14 @@ export function RightPanel({
   updatePickupIgnoreInventory,
   setLayout,
   updateProcessorPreloadSlot,
+  reactorRecipeCandidates,
+  selectedReactorPoolConfig,
+  reactorSolidOutputItemCandidates,
+  reactorLiquidOutputItemCandidates,
+  updateReactorSelectedRecipe,
+  updateReactorSolidOutputItem,
+  updateReactorLiquidOutputItemA,
+  updateReactorLiquidOutputItemB,
   simIsRunning,
 }: RightPanelProps) {
   const getPreloadSlotLabel = (deviceTypeId: DeviceInstance['typeId'], slotIndex: number) => {
@@ -116,6 +143,16 @@ export function RightPanel({
       if (slotIndex === 1) return t('detail.preloadSlotLiquidInput')
     }
     return t('detail.preloadSlot', { index: slotIndex + 1 })
+  }
+
+  const getReactorRecipeOptionLabel = (recipe: {
+    id: string
+    inputs: Array<{ itemId: ItemId; amount: number }>
+    outputs: Array<{ itemId: ItemId; amount: number }>
+  }) => {
+    const inputLabel = recipe.inputs.map((entry) => `${getItemLabel(language, entry.itemId)} x${entry.amount}`).join(' + ')
+    const outputLabel = recipe.outputs.map((entry) => `${getItemLabel(language, entry.itemId)} x${entry.amount}`).join(' + ')
+    return `${inputLabel} -> ${outputLabel}`
   }
 
   const baseGroups = [
@@ -176,7 +213,7 @@ export function RightPanel({
             <span>{t('detail.internalStatus')}</span>
             <span>{getInternalStatusText(selectedDevice, selectedRuntime, t)}</span>
           </div>
-          {selectedDevice.typeId.startsWith('belt_') && selectedRuntime && 'slot' in selectedRuntime && (
+          {isBelt(selectedDevice.typeId) && selectedRuntime && 'slot' in selectedRuntime && (
             <>
               <div className="kv">
                 <span>{t('detail.currentItem')}</span>
@@ -200,6 +237,50 @@ export function RightPanel({
             <>
               {'inputBuffer' in selectedRuntime && 'outputBuffer' in selectedRuntime && (
                 (() => {
+                  if (selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning) {
+                    const laneRecipeIds = selectedRuntime.reactorActiveRecipeIds ?? [undefined, undefined]
+                    const laneProgressTicks = selectedRuntime.reactorCycleProgressTicks ?? [0, 0]
+                    const lastCompletedCycleTicks = selectedRuntime.lastCompletedCycleTicks
+                    const lastCompletionIntervalTicks = selectedRuntime.lastCompletionIntervalTicks
+
+                    return (
+                      <>
+                        {[0, 1].map((laneIndex) => {
+                          const recipeId = laneRecipeIds[laneIndex] ?? selectedReactorPoolConfig?.selectedRecipeIds[laneIndex]
+                          const recipe = recipeId ? reactorRecipeCandidates.find((entry) => entry.id === recipeId) : undefined
+                          const recipeLabel = recipe ? getReactorRecipeOptionLabel(recipe) : t('detail.reactorNoRecipe')
+                          const cycleTicks = recipe ? cycleTicksFromSeconds(recipe.cycleSeconds, sim.tickRateHz) : 0
+                          const laneTicks = laneProgressTicks[laneIndex] ?? 0
+                          const progress =
+                            recipe && cycleTicks > 0
+                              ? `${(Math.min(1, laneTicks / cycleTicks) * 100).toFixed(1)}% (${laneTicks}/${cycleTicks})`
+                              : '-'
+
+                          return (
+                            <div key={`reactor-parallel-progress-${laneIndex}`}>
+                              <div className="kv">
+                                <span>{t('detail.reactorRecipeSlot', { index: laneIndex + 1 })}</span>
+                                <span>{recipeLabel}</span>
+                              </div>
+                              <div className="kv">
+                                <span>{t('detail.reactorParallelProgress', { index: laneIndex + 1 })}</span>
+                                <span>{progress}</span>
+                              </div>
+                            </div>
+                          )
+                        })}
+                        <div className="kv">
+                          <span>{t('detail.lastCompletedCycleTicks')}</span>
+                          <span>{lastCompletedCycleTicks > 0 ? `${lastCompletedCycleTicks} Ticks` : '-'}</span>
+                        </div>
+                        <div className="kv">
+                          <span>{t('detail.lastCompletionIntervalTicks')}</span>
+                          <span>{lastCompletionIntervalTicks > 0 ? `${lastCompletionIntervalTicks} Ticks` : '-'}</span>
+                        </div>
+                      </>
+                    )
+                  }
+
                   const recipe = recipeForDevice(selectedDevice.typeId)
                   const recipeCycleTicks = recipe ? cycleTicksFromSeconds(recipe.cycleSeconds, sim.tickRateHz) : 0
                   const progress = recipe
@@ -231,32 +312,55 @@ export function RightPanel({
                 })()
               )}
               {'inputBuffer' in selectedRuntime && (
-                <div className="kv">
-                  <span>{t('detail.cacheInputBuffer')}</span>
-                  <span>
-                    {formatInputBufferAmounts(
-                      language,
-                      selectedRuntime.inputBuffer,
-                      selectedProcessorBufferSpec?.inputSlots ?? 1,
-                      selectedProcessorBufferSpec?.inputTotalCapacity ?? 50,
-                      t,
-                    )}
-                  </span>
-                </div>
+                selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning
+                  ? (
+                    <>
+                      <div className="kv">
+                        <span>{t('detail.reactorSlots')}</span>
+                        <span>-</span>
+                      </div>
+                      {selectedRuntime.inputSlotItems.slice(0, 5).map((itemId, slotIndex) => {
+                        const amount = itemId ? (selectedRuntime.inputBuffer[itemId] ?? 0) : 0
+                        const value = itemId ? `${getItemLabel(language, itemId)} x${amount}` : t('detail.empty')
+                        return (
+                          <div key={`reactor-runtime-slot-${slotIndex}`} className="kv">
+                            <span>{t('detail.preloadSlot', { index: slotIndex + 1 })}</span>
+                            <span>{value}</span>
+                          </div>
+                        )
+                      })}
+                    </>
+                    )
+                  : (
+                    <div className="kv">
+                      <span>{t('detail.cacheInputBuffer')}</span>
+                      <span>
+                        {formatInputBufferAmounts(
+                          language,
+                          selectedRuntime.inputBuffer,
+                          selectedProcessorBufferSpec?.inputSlots ?? 1,
+                          selectedProcessorBufferSpec?.inputTotalCapacity ?? 50,
+                          t,
+                        )}
+                      </span>
+                    </div>
+                    )
               )}
               {'outputBuffer' in selectedRuntime && (
-                <div className="kv">
-                  <span>{t('detail.cacheOutputBuffer')}</span>
-                  <span>
-                    {formatOutputBufferAmounts(
-                      language,
-                      selectedRuntime.outputBuffer,
-                      selectedProcessorBufferSpec?.outputSlots ?? 1,
-                      selectedProcessorBufferSpec?.outputTotalCapacity ?? 50,
-                      t,
-                    )}
-                  </span>
-                </div>
+                !(selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning) && (
+                  <div className="kv">
+                    <span>{t('detail.cacheOutputBuffer')}</span>
+                    <span>
+                      {formatOutputBufferAmounts(
+                        language,
+                        selectedRuntime.outputBuffer,
+                        selectedProcessorBufferSpec?.outputSlots ?? 1,
+                        selectedProcessorBufferSpec?.outputTotalCapacity ?? 50,
+                        t,
+                      )}
+                    </span>
+                  </div>
+                )
               )}
               {'inventory' in selectedRuntime && (
                 <div className="kv">
@@ -399,6 +503,89 @@ export function RightPanel({
                   </span>
                 </label>
               </span>
+            </div>
+          )}
+          {selectedDevice.typeId === 'item_port_mix_pool_1' && !simIsRunning && selectedReactorPoolConfig && (
+            <div className="picker">
+              <label>{t('detail.reactorPool')}</label>
+              {[0, 1].map((index) => {
+                const recipeId = selectedReactorPoolConfig.selectedRecipeIds[index] ?? ''
+                return (
+                  <div key={`reactor-recipe-slot-${index}`} className="preload-slot-row">
+                    <span className="preload-slot-label">{t('detail.reactorRecipeSlot', { index: index + 1 })}</span>
+                    <select
+                      value={recipeId}
+                      onChange={(event) => {
+                        const value = event.target.value.trim()
+                        updateReactorSelectedRecipe(selectedDevice.instanceId, index as 0 | 1, value.length > 0 ? value : null)
+                      }}
+                    >
+                      <option value="">{t('detail.reactorNoRecipe')}</option>
+                      {reactorRecipeCandidates.map((recipe) => (
+                        <option key={recipe.id} value={recipe.id}>
+                          {getReactorRecipeOptionLabel(recipe)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )
+              })}
+
+              <div className="preload-slot-row">
+                <span className="preload-slot-label">{t('detail.reactorSolidOutputItem')}</span>
+                <select
+                  value={selectedReactorPoolConfig.solidOutputItemId ?? ''}
+                  onChange={(event) => {
+                    const value = event.target.value.trim()
+                    updateReactorSolidOutputItem(selectedDevice.instanceId, value.length > 0 ? (value as ItemId) : null)
+                  }}
+                >
+                  <option value="">{t('detail.reactorNoRecipe')}</option>
+                  {reactorSolidOutputItemCandidates.map((itemId) => (
+                    <option key={`reactor-solid-${itemId}`} value={itemId}>
+                      {getItemLabel(language, itemId)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="preload-slot-row">
+                <span className="preload-slot-label">{t('detail.reactorLiquidOutA')}</span>
+                <select
+                  value={selectedReactorPoolConfig.liquidOutputItemIdA ?? ''}
+                  onChange={(event) => {
+                    const value = event.target.value.trim()
+                    updateReactorLiquidOutputItemA(selectedDevice.instanceId, value.length > 0 ? (value as ItemId) : null)
+                  }}
+                >
+                  <option value="">{t('detail.reactorNoRecipe')}</option>
+                  {reactorLiquidOutputItemCandidates.map((itemId) => (
+                    <option key={`reactor-liquid-${itemId}`} value={itemId}>
+                      {getItemLabel(language, itemId)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="preload-slot-row">
+                <span className="preload-slot-label">{t('detail.reactorLiquidOutB')}</span>
+                <select
+                  value={selectedReactorPoolConfig.liquidOutputItemIdB ?? ''}
+                  onChange={(event) => {
+                    const value = event.target.value.trim()
+                    updateReactorLiquidOutputItemB(selectedDevice.instanceId, value.length > 0 ? (value as ItemId) : null)
+                  }}
+                >
+                  <option value="">{t('detail.reactorNoRecipe')}</option>
+                  {reactorLiquidOutputItemCandidates.map((itemId) => (
+                    <option key={`reactor-liquid-b-${itemId}`} value={itemId}>
+                      {getItemLabel(language, itemId)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <small>{t('detail.reactorHint')}</small>
             </div>
           )}
           {DEVICE_TYPE_BY_ID[selectedDevice.typeId].runtimeKind === 'processor' && !simIsRunning && (

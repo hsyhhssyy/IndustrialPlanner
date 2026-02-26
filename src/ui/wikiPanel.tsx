@@ -8,129 +8,123 @@ type WikiPanelProps = {
   onClose: () => void
 }
 
+const HIDDEN_DEVICE_IDS_IN_WIKI = new Set([
+  'belt_straight_1x1',
+  'belt_turn_cw_1x1',
+  'belt_turn_ccw_1x1',
+  'pipe_straight_1x1',
+  'pipe_turn_cw_1x1',
+  'pipe_turn_ccw_1x1',
+])
+
 export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
+  const wikiDeviceTypes = useMemo(
+    () => DEVICE_TYPES.filter((device) => !HIDDEN_DEVICE_IDS_IN_WIKI.has(device.id)),
+    [],
+  )
   const [activeTab, setActiveTab] = useState<'guide' | 'advanced' | 'device' | 'item'>('guide')
-  const [selectedDeviceId, setSelectedDeviceId] = useState(DEVICE_TYPES[0]?.id ?? '')
+  const [selectedDeviceId, setSelectedDeviceId] = useState(wikiDeviceTypes[0]?.id ?? '')
   const [selectedItemId, setSelectedItemId] = useState(ITEMS[0]?.id ?? '')
 
   const beginnerHelpSections: Array<{ title: string; steps: string[] }> =
     language === 'zh-CN'
       ? [
           {
-            title: '1) 先认识界面（真实入口）',
+            title: '1) 界面怎么看',
             steps: [
-              '顶栏：语言切换、打开 Wiki、开始/退出仿真、倍速按钮（0.25x/1x/2x/4x/16x）。',
-              '左侧主模式：放置 / 蓝图 / 删除。注意“选择”不是主模式按钮，而是放置模式内的操作按钮。',
-              '中间画布：滚轮缩放、鼠标中键平移；右键可取消当前放置/蓝图操作。',
-              '右侧：基地切换、选中详情；仿真运行时统计与调试会移动到左侧显示。',
+              '顶栏：语言切换、打开合成百科、开始/退出仿真、速度切换。',
+              '左侧：放置、蓝图、删除三个主要模式。',
+              '中间画布：用于摆放建筑和连接运输线。',
+              '右侧：显示选中建筑的详情、配方与运行信息。',
             ],
           },
           {
-            title: '2) 最短上手流程（建议照做）',
+            title: '2) 鼠标操作',
             steps: [
-              '进入放置模式，先点“选择操作”按钮，确认你可以正常选中设备。',
-              '放置取货口（item_port_unloader_1），然后在右侧详情里设置取货物品。',
-              '放置生产设备与存储设备（如粉碎机 + 存储箱）。',
-              '在放置模式点“铺设传送带”，左键拖拽连接端口。',
-              '点击“开始仿真”，观察在途物品和仓库统计是否变化。',
+              '左键：选择或放置。',
+              '左键拖拽：铺设传送带或框选建筑（取决于当前操作）。',
+              '鼠标滚轮：缩放画布。',
+              '鼠标中键拖拽：平移画布。',
+              '右键：取消当前放置或蓝图预览。',
             ],
           },
           {
-            title: '3) 放置模式里的操作要点',
+            title: '3) 常用快捷键',
             steps: [
-              '“选择操作”：用于选中、框选、拖拽移动设备（仿真中不可编辑）。',
-              '“铺设传送带”：左键拖拽；路径长度不足 2 格不会提交。',
-              '“保存为蓝图”：对当前多选设备保存命名蓝图。',
-              '设备列表支持分组；点击设备后进入放置预览，左键落盘。',
-              '重叠允许落盘但会在仿真时停机；越界不能落盘。',
+              'R：旋转当前放置预览或蓝图预览。',
+              'Ctrl+C：复制当前多选建筑为临时蓝图（需至少选中 2 个）。',
+              'Esc：退出当前工具或取消当前操作。',
+              'Delete：删除当前选中的建筑。',
             ],
           },
           {
-            title: '4) 物流铺设（你会看到的真实行为）',
+            title: '4) 一次完整操作流程',
             steps: [
-              '起点/终点可在端口、空地、已有传送带上；允许空地到空地孤立物流。',
-              '会自动创建 splitter / converger / connector（桥接）节点。',
-              '跨直线带可桥接；跨拐角带不允许。',
-              '拖拽出现非法尾段时，系统会截断，仅提交“最后合法前缀”。',
-              '右键可取消当前物流草稿。',
+              '进入“放置”模式，先放取货口，再放生产设备和存储设备。',
+              '切到铺设传送带，把上游和下游端口连接起来。',
+              '选中设备后，在右侧检查配方和输入输出是否正确。',
+              '点击“开始仿真”，观察物品是否持续流动。',
+              '若无产出，先排查断线、方向、库存是否为空。',
             ],
           },
           {
-            title: '5) 仿真与观察',
+            title: '5) 界面信息说明',
             steps: [
-              '开始仿真前会做配置与兼容性检查；失败会提示。',
-              '仿真中可查看：仓库库存、产出每分、消耗每分、实测 Tick/s、仿真秒数。',
-              '可在右侧选中设备查看状态、缓存、当前物品与进度。',
-              '退出仿真后可继续编辑布局并重跑。',
-            ],
-          },
-          {
-            title: '6) 常见异常怎么处理',
-            steps: [
-              'NO_INPUT（缺料）：检查上游是否供料、端口方向是否正确、传送带是否接通。',
-              'OUTPUT_BLOCKED（输出阻塞）：检查下游是否满载或下游链路是否断开。',
-              'OVERLAP（重叠）：编辑态可存在，但进入仿真后会停机，需回编辑态拆分重叠。',
-              'NO_POWER（无电）：对需要供电的设备检查是否在电力覆盖范围内。',
-              'CONFIG_ERROR（配置错误）：重点检查取货口物品选择、预置输入与关键参数。',
+              '仓库面板：看每种物品当前库存与变化趋势。',
+              '设备详情：看设备状态、缓存、当前配方和进度。',
+              '仿真控制区：开始、暂停、退出，以及速度切换。',
+              '蓝图面板：保存、重命名、导入、放置已保存蓝图。',
+              '合成百科设备页/物品页：查询某台设备可用配方，或某个物品的来路与去路。',
             ],
           },
         ]
       : [
           {
-            title: '1) UI Entry Points (As Implemented)',
+            title: '1) How to read the UI',
             steps: [
-              'Top bar: language, wiki, start/stop simulation, speed controls (0.25x/1x/2x/4x/16x).',
-              'Main left modes are Place / Blueprint / Delete.',
-              'Select is an operation inside Place mode, not a top-level mode button.',
-              'Canvas supports wheel zoom, middle-mouse pan, and right-click cancel for active placement/blueprint action.',
+              'Top bar: language, wiki, start/stop simulation, and speed controls.',
+              'Left side: Place, Blueprint, and Delete are the main modes.',
+              'Center canvas: place buildings and connect transport lines.',
+              'Right side: details of the selected building, recipes, and runtime info.',
             ],
           },
           {
-            title: '2) Shortest First Success Path',
+            title: '2) Mouse controls',
             steps: [
-              'In Place mode, switch to Select operation first and verify selection works.',
-              'Place Pickup Port, then configure pickup item in details panel.',
-              'Place processor + storage endpoint.',
-              'Switch to belt operation and connect outputs/inputs by drag routing.',
-              'Start simulation and verify throughput in warehouse stats.',
+              'Left click: select or place.',
+              'Left drag: route belts or box-select (depends on current tool).',
+              'Mouse wheel: zoom the canvas.',
+              'Middle mouse drag: pan the canvas.',
+              'Right click: cancel current placement or blueprint preview.',
             ],
           },
           {
-            title: '3) Place Mode Operations',
+            title: '3) Common hotkeys',
             steps: [
-              'Select operation: single/multi select, box select, drag move.',
-              'Belt operation: drag to route belts and commit valid paths.',
-              'Save as Blueprint stores current multi-selection as reusable snapshot.',
-              'Out-of-lot is blocked; overlap may be saved but stalls at runtime.',
+              'R: rotate current placement preview or blueprint preview.',
+              'Ctrl+C: copy current multi-selection as a temporary blueprint (needs at least 2 buildings).',
+              'Esc: exit current tool or cancel current action.',
+              'Delete: remove selected buildings.',
             ],
           },
           {
-            title: '4) Belt Routing Behavior',
+            title: '4) One complete workflow',
             steps: [
-              'Drag with left mouse to route belts. Paths shorter than 2 cells are preview-only.',
-              'Routes can start/end on ports, empty cells, or existing belts.',
-              'Auto junctions: splitter / converger / connector are created by topology context.',
-              'Crossing straight belts is bridge-able; crossing corner belts is invalid.',
-              'On illegal tails, only the longest valid prefix is committed.',
+              'Enter Place mode, put down a pickup port, then a machine and a storage building.',
+              'Switch to belt routing and connect upstream and downstream ports.',
+              'Select buildings and check recipe/input/output in the right panel.',
+              'Start simulation and check whether items keep moving.',
+              'If output is missing, first check broken lines, wrong direction, or empty supply.',
             ],
           },
           {
-            title: '5) Simulation and Monitoring',
+            title: '5) What each panel shows',
             steps: [
-              'Start runs validation first, then tick simulation.',
-              'Observe in-transit items, warehouse table, and device runtime details.',
-              'Debug panel shows measured Tick/s and sim time.',
-              'Exit simulation and iterate layout quickly.',
-            ],
-          },
-          {
-            title: '6) Troubleshooting',
-            steps: [
-              'NO_INPUT: verify upstream supply, belt continuity, and port directions.',
-              'OUTPUT_BLOCKED: check downstream capacity and route continuity.',
-              'OVERLAP: fix overlaps in edit mode; overlaps stall after simulation starts.',
-              'NO_POWER: verify coverage for power-required machines.',
-              'CONFIG_ERROR: verify pickup selections and critical runtime configs.',
+              'Warehouse panel: current stock and trend per item.',
+              'Building details: state, buffers, active recipe, and progress.',
+              'Simulation controls: start, pause, stop, and speed options.',
+              'Blueprint panel: save, rename, import, and place saved blueprints.',
+              'Wiki Device/Item tabs: check available recipes and item dependencies.',
             ],
           },
         ]
@@ -139,118 +133,44 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
     language === 'zh-CN'
       ? [
           {
-            title: 'A) 高效率编辑手法',
+            title: 'A) 已知问题',
             steps: [
-              '多选至少 2 个设备后按 Ctrl+C，进入临时蓝图放置状态。',
-              '临时蓝图状态下按 R 旋转预览，左键落盘，右键取消。',
-              '蓝图模式可从历史蓝图列表选择并投放，适合批量复用模块。',
-              '侧栏支持拖拽调宽（左/右 260~560px），适配不同屏幕与信息密度。',
+              '部分情况下，传送带或管道的首件到达时间会比预期慢一小段。',
+              '反应池同时跑两条配方时，吞吐可能低于预期上限。',
+              '存货口与取货口放下后暂不支持旋转。',
+              '个别复杂布局下，面板统计更新可能出现短暂延迟。',
             ],
           },
           {
-            title: 'B) 旋转与移动的实际规则',
+            title: 'B) 常见问答（Q&A）',
             steps: [
-              '按 R：若当前是设备放置预览，则旋转待放置设备。',
-              '按 R：若当前是蓝图预览，则旋转蓝图。',
-              '按 R：若有选中设备，则按选中集合中心做 90° 旋转（并执行越界/约束校验）。',
-              '拖拽移动支持预览与合法性校验，非法时会提示并拒绝提交。',
+              'Q：为什么设备不工作？ A：先检查是否有输入物品、传送带是否连通、端口方向是否正确。',
+              'Q：为什么明明接上了还是没产出？ A：查看设备详情里的配方、输入输出缓存和状态提示。',
+              'Q：为什么放不下建筑？ A：通常是越界、重叠或数量上限触发，先换位置再试。',
+              'Q：为什么切到武陵和四号谷地后可选内容不同？ A：两个地区规则不同，物品与配方会按地区过滤。',
+              'Q：为什么我导入蓝图成功但放置失败？ A：常见原因是当前位置空间不足，或朝向与连线不匹配。',
             ],
-          },
-          {
-            title: 'C) 物流细节与边界条件',
-            steps: [
-              '整条传送带删除是按带拓扑连通删除，不是简单方格泛删。',
-              '框选删除会弹确认对话框，避免误删。',
-              '物流预览会渲染真实带体和自动节点预览，便于提前发现冲突。',
-              '桥接器通道语义固定，建议结合设备详情里的槽位状态排查拥堵。',
-            ],
-          },
-          {
-            title: 'D) 运行态诊断顺序（建议）',
-            steps: [
-              '先看仓库统计是否有净增长，再看关键设备当前状态。',
-              '若是带体问题，优先看 belt 的 slot 与 progress01（是否卡在 0.5 或 1.0）。',
-              '若是生产设备问题，查看 input/output buffer 与当前配方进度。',
-              '存储箱是否提交仓库由选项控制（submitToWarehouse），确认统计口径时务必检查。',
-            ],
-          },
-          {
-            title: 'E) 仿真与数据口径提醒',
-            steps: [
-              '倍速会改变真实时间推进速度，不改变仿真时间口径。',
-              '仓库中带“矿石”标签的物品为无限库存来源（显示为 ∞）。',
-              '退出仿真用于回到编辑迭代，重跑时会重新初始化运行态。',
-            ],
-          },
-          {
-            title: 'F) 已知问题（待修复）',
-            steps: [
-              '当前版本中，传送带/管道的“长度与首件到达时间”可能存在 +1 格时间偏差。',
-              '例如 5 格链路在部分场景下可能约需 6 格时间才出现第一个物体/液体。',
-              '这是已记录问题，暂不影响本次版本的功能验证，后续会单独修复。',
-            ],
-          },
-          {
-            title: 'G) Q&A',
-            steps: ['为什么仓库存取线基段可以随便摆放？你开始仿真试试呢？'],
           },
         ]
       : [
           {
-            title: 'A) Efficient Editing Workflow',
+            title: 'A) Known issues',
             steps: [
-              'Select at least 2 devices, press Ctrl+C to enter temporary blueprint placement.',
-              'In temporary blueprint placement: R rotates, left click commits, right click cancels.',
-              'Blueprint mode lets you pick saved blueprints for repeated module placement.',
-              'Both side panels are resizable (260~560px) for dense workflows.',
+              'In some cases, first-item arrival on belts or pipes can be slightly slower than expected.',
+              'When a reactor pool runs two recipes at once, throughput may stay below expected peak.',
+              'Pickup Port and Warehouse Loader Port cannot be rotated after placement.',
+              'On very complex layouts, panel stats may refresh with a short delay.',
             ],
           },
           {
-            title: 'B) Rotation and Move Rules',
+            title: 'B) Q&A',
             steps: [
-              'R rotates device placement preview when placing devices.',
-              'R rotates blueprint preview when placing blueprints.',
-              'R rotates selected devices around group center with boundary/constraint checks.',
-              'Drag-move uses preview validation and refuses invalid commits.',
+              'Q: Why is a building not running? A: Check input supply, line continuity, and port direction first.',
+              'Q: Why is there no output after wiring? A: Inspect recipe selection, input/output buffers, and status text.',
+              'Q: Why can’t I place a building here? A: Common reasons are out-of-bound placement, overlap, or count limit.',
+              'Q: Why do available items differ by region? A: Regions use different rules, so item and recipe lists are filtered.',
+              'Q: Why does blueprint import succeed but placement fail? A: Usually the target area is too tight or orientation does not fit.',
             ],
-          },
-          {
-            title: 'C) Logistics Edge Cases',
-            steps: [
-              'Whole-belt delete follows belt topology connectivity, not naive grid flood delete.',
-              'Box delete always asks for confirmation.',
-              'Logistics preview renders actual belt/junction visuals before commit.',
-              'Use slot/progress details to diagnose bridge and lane congestion.',
-            ],
-          },
-          {
-            title: 'D) Runtime Diagnosis Order',
-            steps: [
-              'Check global warehouse trend first, then inspect bottleneck devices.',
-              'For belts, inspect slot/progress01 (stuck near 0.5 or 1.0).',
-              'For processors, inspect input/output buffers and active recipe progress.',
-              'Storage contribution to warehouse depends on submitToWarehouse toggle.',
-            ],
-          },
-          {
-            title: 'E) Simulation Semantics Notes',
-            steps: [
-              'Speed multiplier changes real-time throughput, not simulation-time semantics.',
-              'Items tagged as ores are initialized as infinite warehouse sources (∞).',
-              'Exit simulation to return to editing and iterate quickly.',
-            ],
-          },
-          {
-            title: 'F) Known Issue (Pending Fix)',
-            steps: [
-              'In the current build, belt/pipe route length and first-item arrival timing may be off by about +1 cell-time.',
-              'For example, a 5-cell route may sometimes take about 6 cell-times before the first item/liquid appears.',
-              'This is tracked as a known issue and intentionally left unchanged in this iteration.',
-            ],
-          },
-          {
-            title: 'G) Q&A',
-            steps: ['Why can warehouse bus-line base segments be placed arbitrarily? Try starting the simulation.'],
           },
         ]
 
@@ -275,6 +195,7 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
     if (deviceId === 'item_log_splitter') return '/device-icons/item_log_splitter.png'
     if (deviceId === 'item_log_converger') return '/device-icons/item_log_converger.png'
     if (deviceId === 'item_log_connector') return '/device-icons/item_log_connector.png'
+    if (deviceId === 'item_port_water_pump_1') return '/device-icons/item_port_pump_1.png'
     if (deviceId === 'item_port_hydro_planter_1') return '/device-icons/item_port_planter_1.png'
     if (deviceId === 'item_port_liquid_filling_pd_mc_1') return '/device-icons/item_port_filling_pd_mc_1.png'
     return `/device-icons/${deviceId}.png`
@@ -415,7 +336,7 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
               <aside className="wiki-list-pane">
                 <h4>{t('wiki.device.listTitle')}</h4>
                 <div className="wiki-entry-list">
-                  {DEVICE_TYPES.map((device) => (
+                  {wikiDeviceTypes.map((device) => (
                     <button
                       key={device.id}
                       type="button"

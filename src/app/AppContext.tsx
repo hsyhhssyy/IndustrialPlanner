@@ -113,7 +113,7 @@ const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = usePersistentState<Language>('stage1-language', 'zh-CN')
-  const [mode, setMode] = usePersistentState<EditMode>('stage1-mode', 'select')
+  const [mode, setMode] = usePersistentState<EditMode>('stage1-mode', 'place')
   const [placeType, setPlaceType] = usePersistentState<DeviceTypeId | ''>('stage1-place-type', '')
   const [placeRotation, setPlaceRotation] = usePersistentState<0 | 90 | 180 | 270>('stage1-place-rotation', 0)
   const [deleteTool, setDeleteTool] = usePersistentState<'single' | 'wholeBelt' | 'box'>('stage1-delete-tool', 'single')
@@ -165,6 +165,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       unsubscribeSetDeleteTool()
     }
   }, [eventBus, setDeleteTool, setLanguage, setMode, setPlaceType])
+
+  useEffect(() => {
+    if ((mode as unknown as string) === 'select') {
+      setMode('place')
+    }
+  }, [mode, setMode])
 
   useEffect(() => {
     if (!isWikiOpen && !isPlannerOpen) return

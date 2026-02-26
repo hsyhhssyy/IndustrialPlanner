@@ -7,6 +7,7 @@ type DeviceSpriteRegistration = {
 
 export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
   { typeId: 'item_port_unloader_1', fileName: 'item_port_unloader_1.png' },
+  { typeId: 'item_port_loader_1', fileName: 'item_port_loader_1.png' },
   { typeId: 'item_port_grinder_1', fileName: 'item_port_grinder_1.png' },
   { typeId: 'item_port_furnance_1', fileName: 'item_port_furnance_1.png' },
   { typeId: 'item_port_cmpt_mc_1', fileName: 'item_port_cmpt_mc_1.png' },
@@ -26,7 +27,7 @@ export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
   { typeId: 'item_port_log_hongs_bus_source', fileName: 'item_port_log_hongs_bus_source.png' },
   { typeId: 'item_port_log_hongs_bus', fileName: 'item_port_log_hongs_bus.png' },
   { typeId: 'item_port_water_pump_1', fileName: 'liquid_placeholder_structure.svg' },
-  { typeId: 'item_port_liquid_storager_1', fileName: 'liquid_placeholder_structure.svg' },
+  { typeId: 'item_port_liquid_storager_1', fileName: 'liquid_placeholder_structure.png' },
   { typeId: 'item_port_power_diffuser_1', fileName: 'item_port_power_diffuser_1.png' },
   { typeId: 'item_port_storager_1', fileName: 'item_port_storager_1.png' },
   { typeId: 'item_log_splitter', fileName: 'item_log_splitter.png' },

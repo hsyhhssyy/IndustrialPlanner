@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { uiEffects } from '../../app/uiEffects'
-import { isWithinLot } from '../../domain/geometry'
 import type { DeviceTypeId, LayoutState } from '../../domain/types'
+import { isBeltLike, isPipeLike } from '../../domain/geometry'
 
 type PlaceGroupKey =
   | 'logistics'
@@ -45,7 +45,7 @@ export function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
     typeId === 'item_pipe_connector'
   )
     return 'logistics'
-  if (typeId === 'item_port_unloader_1') return 'storage'
+  if (typeId === 'item_port_unloader_1' || typeId === 'item_port_loader_1') return 'storage'
   if (
     typeId === 'item_port_storager_1' ||
     typeId === 'item_port_log_hongs_bus_source' ||
@@ -122,15 +122,7 @@ export function useBuildDomainActions({
     setLayout((current) => ({
       ...current,
       devices: current.devices.filter(
-        (device) =>
-          device.typeId !== 'item_log_connector' &&
-          device.typeId !== 'item_log_splitter' &&
-          device.typeId !== 'item_log_converger' &&
-          device.typeId !== 'item_pipe_connector' &&
-          device.typeId !== 'item_pipe_splitter' &&
-          device.typeId !== 'item_pipe_converger' &&
-          !device.typeId.startsWith('belt_') &&
-          !device.typeId.startsWith('pipe_'),
+        (device) => !isBeltLike(device.typeId) && !isPipeLike(device.typeId),
       ),
     }))
     setSelection([])
@@ -147,7 +139,7 @@ export function useBuildDomainActions({
     if (!confirmed) return
     setLayout((current) => ({
       ...current,
-      devices: current.devices.filter((device) => foundationIdSet.has(device.instanceId) || !isWithinLot(device, current.lotSize)),
+      devices: current.devices.filter((device) => foundationIdSet.has(device.instanceId)),
     }))
     setSelection([])
   }, [foundationIdSet, setLayout, setSelection, simIsRunning, t])

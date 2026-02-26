@@ -11,6 +11,7 @@ export function LeftPanel() {
     mode,
     language,
     t,
+    canUsePipePlacement,
     placeOperation,
     placeType,
     visiblePlaceableTypes,
@@ -91,6 +92,7 @@ export function LeftPanel() {
 
             <button
               className={`place-device-button ${placeOperation === 'pipe' ? 'active' : ''}`}
+              disabled={!canUsePipePlacement}
               onClick={() => {
                 eventBus.emit('left.place.operation.set', 'pipe')
                 eventBus.emit('left.place.type.set', '')

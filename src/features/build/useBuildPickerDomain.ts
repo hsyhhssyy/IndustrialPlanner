@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getDeviceById } from '../../domain/geometry'
-import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
+import { DEVICE_TYPE_BY_ID, ITEMS, RECIPES } from '../../domain/registry'
 import { buildProcessorPreloadSlots, processorBufferSpec, serializeProcessorPreloadSlots } from '../../domain/shared/deviceConfig'
 import type { DeviceRuntime, ItemId, LayoutState } from '../../domain/types'
+import { normalizeReactorPoolConfig } from '../../sim/reactorPool'
+import { useReactorPoolConfigDomain } from './reactorPoolConfigDomain'
 import { useBuildConfigDomain } from './useBuildConfigDomain'
 
 type ItemPickerState =
@@ -56,6 +58,9 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     serializeProcessorPreloadSlots,
   })
 
+  const { updateReactorSelectedRecipe, updateReactorSolidOutputItem, updateReactorLiquidOutputItemA, updateReactorLiquidOutputItemB } =
+    useReactorPoolConfigDomain({ setLayout })
+
   const selectedDevice = useMemo(() => {
     if (selection.length !== 1) return null
     return getDeviceById(layout, selection[0])
@@ -90,6 +95,26 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
   const selectedPreloadTotal = useMemo(
     () => selectedPreloadSlots.reduce((sum, slot) => sum + Math.max(0, slot.amount), 0),
     [selectedPreloadSlots],
+  )
+
+  const reactorRecipeCandidates = useMemo(
+    () => RECIPES.filter((recipe) => recipe.machineType === 'item_port_mix_pool_1'),
+    [],
+  )
+
+  const selectedReactorPoolConfig = useMemo(() => {
+    if (!selectedDevice || selectedDevice.typeId !== 'item_port_mix_pool_1') return null
+    return normalizeReactorPoolConfig(selectedDevice.config)
+  }, [selectedDevice])
+
+  const reactorSolidOutputItemCandidates = useMemo(
+    () => ITEMS.filter((item) => item.type === 'solid').map((item) => item.id),
+    [],
+  )
+
+  const reactorLiquidOutputItemCandidates = useMemo(
+    () => ITEMS.filter((item) => item.type === 'liquid').map((item) => item.id),
+    [],
   )
 
   const pickerTargetDevice = useMemo(() => {
@@ -213,5 +238,13 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     handleItemPickerSelect,
     updatePickupIgnoreInventory,
     updateProcessorPreloadSlot,
+    reactorRecipeCandidates,
+    selectedReactorPoolConfig,
+    reactorSolidOutputItemCandidates,
+    reactorLiquidOutputItemCandidates,
+    updateReactorSelectedRecipe,
+    updateReactorSolidOutputItem,
+    updateReactorLiquidOutputItemA,
+    updateReactorLiquidOutputItemB,
   }
 }

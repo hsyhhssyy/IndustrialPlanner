@@ -1,9 +1,17 @@
-import { getFootprintCells, includesCell, isBeltLike, isPipeLike, isWithinLot } from '../../domain/geometry'
+import { getFootprintCells, includesCell, isBeltLike, isPipeLike } from '../../domain/geometry'
 import { validatePlacementConstraints } from '../../domain/placement'
+import { isDeviceWithinAllowedPlacementArea } from '../../domain/shared/placementArea'
 import type { DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
 import { initialStorageConfig } from '../../sim/engine'
 import { showToast } from '../../ui/toast'
-import { MANUAL_LOGISTICS_JUNCTION_TYPES, isManualBeltJunctionType, isManualPipeJunctionType, type Cell } from './buildInteraction.contract'
+import {
+  MANUAL_LOGISTICS_JUNCTION_TYPES,
+  getPlacementLimitViolationToastKey,
+  type OuterRing,
+  isManualBeltJunctionType,
+  isManualPipeJunctionType,
+  type Cell,
+} from './buildInteraction.contract'
 import { nextId } from '../../domain/logistics'
 
 type PlaceDeviceParams = {
@@ -11,6 +19,7 @@ type PlaceDeviceParams = {
   placeType: DeviceTypeId
   placeRotation: Rotation
   layout: LayoutState
+  currentBaseOuterRing: OuterRing
   toPlaceOrigin: (cell: Cell, typeId: DeviceTypeId, rotation: Rotation) => Cell
   setLayout: (updater: LayoutState | ((current: LayoutState) => LayoutState)) => void
   outOfLotToastKey: string
@@ -23,19 +32,16 @@ export function tryPlaceDevice({
   placeType,
   placeRotation,
   layout,
+  currentBaseOuterRing,
   toPlaceOrigin,
   setLayout,
   outOfLotToastKey,
   fallbackPlacementToastKey,
   t,
 }: PlaceDeviceParams) {
-  const placementCount = layout.devices.filter((device) => device.typeId === placeType).length
-  if (placeType === 'item_port_log_hongs_bus_source' && placementCount >= 1) {
-    showToast(t('toast.rule.busSourceMax1'), { variant: 'warning' })
-    return false
-  }
-  if (placeType === 'item_port_xiranite_oven_1' && placementCount >= 2) {
-    showToast(t('toast.rule.xiraniteOvenMax2'), { variant: 'warning' })
+  const placementLimitToastKey = getPlacementLimitViolationToastKey(layout, placeType)
+  if (placementLimitToastKey) {
+    showToast(t(placementLimitToastKey), { variant: 'warning' })
     return false
   }
 
@@ -48,8 +54,13 @@ export function tryPlaceDevice({
     config: initialStorageConfig(placeType),
   }
 
-  if (!isWithinLot(instance, layout.lotSize)) {
-    showToast(t(outOfLotToastKey), { variant: 'warning' })
+  if (!isDeviceWithinAllowedPlacementArea(instance, layout.lotSize, currentBaseOuterRing)) {
+    const isWaterPumpInsideIndustrialArea =
+      placeType === 'item_port_water_pump_1' &&
+      getFootprintCells(instance).some(
+        (cellPos) => cellPos.x >= 0 && cellPos.y >= 0 && cellPos.x < layout.lotSize && cellPos.y < layout.lotSize,
+      )
+    showToast(t(isWaterPumpInsideIndustrialArea ? 'toast.rule.waterPumpOuterOnly' : outOfLotToastKey), { variant: 'warning' })
     return false
   }
 

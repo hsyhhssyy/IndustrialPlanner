@@ -44,6 +44,13 @@ type PlacePreviewChevron = {
   height: number
 }
 
+type LogisticsEndpointHighlight = {
+  key: string
+  x: number
+  y: number
+  kind: 'start' | 'end'
+}
+
 type PlacePreview = {
   origin: { x: number; y: number }
   footprintSize: { width: number; height: number }
@@ -70,6 +77,7 @@ type WorldContentProps = {
   inTransitItems: TransitItem[]
   getItemLabelText: (itemId: ItemId) => string
   getItemIconPath: (itemId: ItemId) => string
+  logisticsEndpointHighlights: LogisticsEndpointHighlight[]
   portChevrons: PortChevron[]
   placePreview: PlacePreview | null
   dragRect: DragRect | null
@@ -88,6 +96,7 @@ export function WorldContent({
   inTransitItems,
   getItemLabelText,
   getItemIconPath,
+  logisticsEndpointHighlights,
   portChevrons,
   placePreview,
   dragRect,
@@ -120,6 +129,19 @@ export function WorldContent({
       {mainDeviceLayer}
       {logisticsPreviewLayer}
       {blueprintPreviewLayer}
+
+      {logisticsEndpointHighlights.map((highlight) => (
+        <div
+          key={highlight.key}
+          className={`logistics-endpoint-highlight ${highlight.kind}`}
+          style={{
+            left: highlight.x * baseCellSize,
+            top: highlight.y * baseCellSize,
+            width: baseCellSize,
+            height: baseCellSize,
+          }}
+        />
+      ))}
 
       {runtimeStallOverlays.map((overlay) => (
         <div

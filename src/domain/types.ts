@@ -17,6 +17,7 @@ export type StallReason =
 export type ItemId = string
 export type DeviceTypeId =
   | 'item_port_unloader_1'
+  | 'item_port_loader_1'
   | 'item_port_grinder_1'
   | 'item_port_furnance_1'
   | 'item_port_cmpt_mc_1'
@@ -107,6 +108,8 @@ export interface DeviceTypeDef {
   size: { width: number; height: number }
   shortName: string
   tags?: string[]
+  maxPlacementCount?: number
+  placementLimitToastKey?: string
   inputBufferCapacity?: number
   outputBufferCapacity?: number
   inputBufferSlots?: number
@@ -139,6 +142,13 @@ export interface DeviceConfig {
   preloadInputs?: PreloadInputConfigEntry[]
   preloadInputItemId?: ItemId
   preloadInputAmount?: number
+  reactorPool?: {
+    selectedRecipeIds?: string[]
+    solidOutputItemId?: ItemId
+    liquidOutputItemId?: ItemId
+    liquidOutputItemIdA?: ItemId
+    liquidOutputItemIdB?: ItemId
+  }
 }
 
 export interface DeviceInstance {
@@ -171,7 +181,7 @@ export interface BaseDef {
   foundationBuildings: BaseFoundationDef[]
 }
 
-export type EditMode = 'select' | 'place' | 'logistics' | 'delete' | 'blueprint'
+export type EditMode = 'place' | 'delete' | 'blueprint'
 
 export interface OccupancyEntry {
   x: number
@@ -219,11 +229,13 @@ export interface ProcessorRuntime extends BaseRuntime {
   inputSlotItems: Array<ItemId | null>
   outputSlotItems: Array<ItemId | null>
   cycleProgressTicks: number
+  reactorCycleProgressTicks?: [number, number]
   producedItemsTotal: number
   lastCompletedCycleTicks: number
   lastCompletionTick: number | null
   lastCompletionIntervalTicks: number
   activeRecipeId?: string
+  reactorActiveRecipeIds?: [string | undefined, string | undefined]
 }
 
 export interface StorageRuntime extends BaseRuntime {

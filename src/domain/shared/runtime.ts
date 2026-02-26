@@ -1,4 +1,5 @@
 import type { DeviceInstance, DeviceRuntime } from '../types'
+import { isBeltLike, isPipeLike } from '../geometry'
 
 export function runtimeLabel(runtime: DeviceRuntime | undefined) {
   if (!runtime) return 'idle'
@@ -33,8 +34,8 @@ export function shouldShowRuntimeStallOverlay(device: DeviceInstance, runtime: D
   const status = runtimeLabel(runtime)
   if (status === 'running' || status === 'idle') return false
   if (!runtime) return false
-  const isBelt = device.typeId.startsWith('belt_')
-  const isPipe = device.typeId.startsWith('pipe_') || device.typeId.startsWith('item_pipe_')
+  const isBelt = isBeltLike(device.typeId)
+  const isPipe = isPipeLike(device.typeId)
   const isTransientBlocked = runtime.stallReason === 'DOWNSTREAM_BLOCKED' || runtime.stallReason === 'OUTPUT_BUFFER_FULL'
   if (
     (isBelt || isPipe) &&

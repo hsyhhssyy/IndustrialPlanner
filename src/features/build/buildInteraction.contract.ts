@@ -7,8 +7,14 @@ import type {
 } from 'react'
 import type { BlueprintSnapshot } from '../blueprint/useBlueprintDomain'
 import type { DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
+import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
+import {
+  allowsOuterRingPlacement,
+  isCellWithinPlacementArea as isCellWithinPlacementAreaByRule,
+} from '../../domain/shared/placementArea'
 
 export type Cell = { x: number; y: number }
+export type OuterRing = { top: number; right: number; bottom: number; left: number }
 export type DragRect = { x1: number; y1: number; x2: number; y2: number }
 export type PanStart = { clientX: number; clientY: number; offsetX: number; offsetY: number }
 export type LayoutUpdater = LayoutState | ((current: LayoutState) => LayoutState)
@@ -30,10 +36,27 @@ export function isManualPipeJunctionType(typeId: DeviceTypeId) {
   return typeId === 'item_pipe_splitter' || typeId === 'item_pipe_converger' || typeId === 'item_pipe_connector'
 }
 
+export function allowsOuterRingPlacementForType(typeId: DeviceTypeId) {
+  return allowsOuterRingPlacement(typeId)
+}
+
+export function isCellWithinPlacementArea(cell: Cell, lotSize: number, outerRing: OuterRing, allowOuterRing: boolean) {
+  return isCellWithinPlacementAreaByRule(cell, lotSize, outerRing, allowOuterRing)
+}
+
+export function getPlacementLimitViolationToastKey(layout: LayoutState, placeType: DeviceTypeId): string | null {
+  const type = DEVICE_TYPE_BY_ID[placeType]
+  const maxPlacementCount = type?.maxPlacementCount
+  const placementLimitToastKey = type?.placementLimitToastKey
+  if (typeof maxPlacementCount !== 'number') return null
+  const placementCount = layout.devices.filter((device) => device.typeId === placeType).length
+  return placementCount >= maxPlacementCount ? placementLimitToastKey ?? 'toast.invalidPlacementFallback' : null
+}
+
 // 输入契约：视口相关参数仅负责坐标换算与缩放平移，不承载业务规则。
 export type BuildInteractionViewportParams = {
   viewportRef: MutableRefObject<HTMLDivElement | null>
-  currentBaseOuterRing: { left: number; top: number }
+  currentBaseOuterRing: OuterRing
   zoomScale: number
   viewOffset: { x: number; y: number }
   canvasWidthPx: number

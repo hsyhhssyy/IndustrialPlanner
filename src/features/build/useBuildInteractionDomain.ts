@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState } from 'react'
 import { applyLogisticsPath, deleteConnectedBelts, nextId } from '../../domain/logistics'
-import { getDeviceById, isBeltLike, isPipeLike, isWithinLot } from '../../domain/geometry'
+import { getDeviceById, isBeltLike, isPipeLike } from '../../domain/geometry'
 import { validatePlacementConstraints } from '../../domain/placement'
+import { isDeviceWithinAllowedPlacementArea } from '../../domain/shared/placementArea'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { clamp } from '../../domain/shared/math'
 import type { LayoutState } from '../../domain/types'
@@ -9,9 +10,11 @@ import { uiEffects } from '../../app/uiEffects'
 import { useAppContext } from '../../app/AppContext'
 import { tryPlaceDevice } from './interactionCommands'
 import {
+  allowsOuterRingPlacementForType,
   type BuildInteractionHandlers,
   type BuildInteractionParams,
   type Cell,
+  isCellWithinPlacementArea,
   type PanStart,
 } from './buildInteraction.contract'
 
@@ -145,10 +148,16 @@ export function useBuildInteractionDomain({
     (clientX: number, clientY: number) => {
       const rawCell = toRawCell(clientX, clientY)
       if (!rawCell) return null
-      if (rawCell.x < 0 || rawCell.y < 0 || rawCell.x >= layout.lotSize || rawCell.y >= layout.lotSize) return null
+      const allowOuterRingInCurrentContext =
+        mode === 'delete' ||
+        (mode === 'place' &&
+          (placeOperation === 'pipe' ||
+            !placeType ||
+            (Boolean(placeType) && allowsOuterRingPlacementForType(placeType))))
+      if (!isCellWithinPlacementArea(rawCell, layout.lotSize, currentBaseOuterRing, allowOuterRingInCurrentContext)) return null
       return rawCell
     },
-    [layout.lotSize, toRawCell],
+    [currentBaseOuterRing, layout.lotSize, mode, placeOperation, placeType, toRawCell],
   )
 
   const placeDevice = useCallback(
@@ -159,6 +168,7 @@ export function useBuildInteractionDomain({
         placeType,
         placeRotation,
         layout,
+        currentBaseOuterRing,
         toPlaceOrigin,
         setLayout,
         outOfLotToastKey,
@@ -376,7 +386,15 @@ export function useBuildInteractionDomain({
         setHoverCell(null)
         return
       }
-      const cell = rawCell.x >= 0 && rawCell.y >= 0 && rawCell.x < layout.lotSize && rawCell.y < layout.lotSize ? rawCell : null
+      const allowOuterRingInCurrentContext =
+        mode === 'delete' ||
+        (mode === 'place' &&
+          (placeOperation === 'pipe' ||
+            !placeType ||
+            (Boolean(placeType) && allowsOuterRingPlacementForType(placeType))))
+      const cell = isCellWithinPlacementArea(rawCell, layout.lotSize, currentBaseOuterRing, allowOuterRingInCurrentContext)
+        ? rawCell
+        : null
       setHoverCell(cell)
 
       if (mode === 'place' && (placeOperation === 'belt' || placeOperation === 'pipe') && logStart) {
@@ -388,7 +406,7 @@ export function useBuildInteractionDomain({
         return
       }
 
-      if ((mode === 'select' || (mode === 'place' && !placeType)) && dragBasePositions && dragOrigin && selection.length > 0 && !simIsRunning) {
+      if (mode === 'place' && !placeType && dragBasePositions && dragOrigin && selection.length > 0 && !simIsRunning) {
         const dx = rawCell.x - dragOrigin.x
         const dy = rawCell.y - dragOrigin.y
         const previewPositions: Record<string, Cell> = {}
@@ -411,7 +429,9 @@ export function useBuildInteractionDomain({
           }),
         }
         const movedSelection = previewLayout.devices.filter((device) => selection.includes(device.instanceId))
-        const outOfLotDevice = movedSelection.find((device) => !isWithinLot(device, layout.lotSize))
+        const outOfLotDevice = movedSelection.find(
+          (device) => !isDeviceWithinAllowedPlacementArea(device, layout.lotSize, currentBaseOuterRing),
+        )
         let invalidMessageKey: string | null = null
         if (outOfLotDevice) {
           invalidMessageKey = outOfLotToastKey
@@ -438,12 +458,12 @@ export function useBuildInteractionDomain({
         return
       }
 
-      if ((mode === 'select' || (mode === 'place' && !placeType)) && dragOrigin && dragRect) {
+      if (mode === 'place' && !placeType && dragOrigin && dragRect) {
         setDragRect({ ...dragRect, x2: cell.x, y2: cell.y })
         return
       }
 
-      if ((mode === 'select' || (mode === 'place' && !placeType)) && dragStartCell) {
+      if (mode === 'place' && !placeType && dragStartCell) {
         setDragStartCell(cell)
       }
     },
@@ -456,6 +476,7 @@ export function useBuildInteractionDomain({
       dragRect,
       dragStartCell,
       fallbackPlacementToastKey,
+      currentBaseOuterRing,
       layout,
       logStart,
       logTrace,
@@ -581,7 +602,7 @@ export function useBuildInteractionDomain({
         return
       }
 
-      if ((mode === 'select' || (mode === 'place' && !placeType)) && dragRect && dragOrigin) {
+      if (mode === 'place' && !placeType && dragRect && dragOrigin) {
         const xMin = Math.min(dragRect.x1, dragRect.x2)
         const xMax = Math.max(dragRect.x1, dragRect.x2)
         const yMin = Math.min(dragRect.y1, dragRect.y2)
@@ -609,7 +630,7 @@ export function useBuildInteractionDomain({
         return
       }
 
-      if ((mode === 'select' || (mode === 'place' && !placeType)) && dragStartCell && dragOrigin && dragBasePositions && selection.length > 0 && !simIsRunning) {
+      if (mode === 'place' && !placeType && dragStartCell && dragOrigin && dragBasePositions && selection.length > 0 && !simIsRunning) {
         if (dragPreviewValid) {
           setLayout((current) => ({
             ...current,

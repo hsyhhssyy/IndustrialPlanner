@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { getRotatedPorts } from '../../domain/geometry'
+import { getRotatedPorts, isBelt } from '../../domain/geometry'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import type { DeviceInstance, DeviceRuntime, LayoutState } from '../../domain/types'
 
@@ -26,7 +26,7 @@ export function useWorldOverlaysDomain({
 }: UseWorldOverlaysDomainParams) {
   const inTransitItems = useMemo(() => {
     return layout.devices.flatMap((device) => {
-      if (!device.typeId.startsWith('belt_')) return []
+      if (!isBelt(device.typeId)) return []
       const runtime = runtimeById[device.instanceId]
       if (!runtime || !('slot' in runtime) || !runtime.slot) return []
 
@@ -61,7 +61,7 @@ export function useWorldOverlaysDomain({
           top: device.origin.y * baseCellSize,
           width: footprintSize.width * baseCellSize,
           height: footprintSize.height * baseCellSize,
-          isBelt: device.typeId.startsWith('belt_'),
+          isBelt: isBelt(device.typeId),
         },
       ]
     })

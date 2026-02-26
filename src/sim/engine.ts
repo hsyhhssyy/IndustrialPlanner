@@ -1,11 +1,21 @@
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
-import { detectOverlaps, getFootprintCells, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
+import { detectOverlaps, getFootprintCells, isBelt, isPipeLike, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
 import { cycleTicksFromSeconds } from '../domain/shared/simulation'
+import {
+  isReactorPoolType,
+  reactorAcceptInputFromPort,
+  reactorCanAcceptRecipeOutputs,
+  reactorCommitRecipeOutputs,
+  reactorConsumeSharedItem,
+  reactorPeekOutputForPort,
+  reactorSelectedRecipeIds,
+} from './reactorPool'
 import type {
   DeviceInstance,
   DeviceRuntime,
   ItemId,
   LayoutState,
+  ProcessorRuntime,
   SimState,
   SlotData,
   StallReason,
@@ -34,13 +44,14 @@ const INFINITE_WAREHOUSE_ITEMS = new Set<ItemId>(
 const BUS_SOURCE_TYPE_ID: DeviceInstance['typeId'] = 'item_port_log_hongs_bus_source'
 const BUS_SEGMENT_TYPE_ID: DeviceInstance['typeId'] = 'item_port_log_hongs_bus'
 const PICKUP_TYPE_ID: DeviceInstance['typeId'] = 'item_port_unloader_1'
+const LOADER_TYPE_ID: DeviceInstance['typeId'] = 'item_port_loader_1'
 
 function createItemNumberRecord(initialValue = 0): Record<ItemId, number> {
   return Object.fromEntries(ITEM_IDS.map((itemId) => [itemId, initialValue])) as Record<ItemId, number>
 }
 
 function isPipeTransportType(typeId: DeviceInstance['typeId']) {
-  return typeId.startsWith('pipe_') || typeId.startsWith('item_pipe_')
+  return isPipeLike(typeId)
 }
 
 function transportSpeedPerTick(typeId: DeviceInstance['typeId'], tickRateHz: number) {
@@ -90,6 +101,7 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
   if (def.runtimeKind === 'processor') {
     const inputSpec = processorBufferSpec(device.typeId, 'input')
     const outputSpec = processorBufferSpec(device.typeId, 'output')
+    const isReactor = isReactorPoolType(device.typeId)
     return {
       ...baseRuntime(),
       inputBuffer: {},
@@ -97,11 +109,13 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
       inputSlotItems: Array.from({ length: inputSpec.slots }, () => null),
       outputSlotItems: Array.from({ length: outputSpec.slots }, () => null),
       cycleProgressTicks: 0,
+      reactorCycleProgressTicks: isReactor ? [0, 0] : undefined,
       producedItemsTotal: 0,
       lastCompletedCycleTicks: 0,
       lastCompletionTick: null,
       lastCompletionIntervalTicks: 0,
       activeRecipeId: undefined,
+      reactorActiveRecipeIds: isReactor ? [undefined, undefined] : undefined,
     }
   }
   if (def.runtimeKind === 'storage') {
@@ -183,7 +197,7 @@ function analyzeWarehouseBusConnectivity(layout: LayoutState) {
   if (busDevices.length === 0) {
     return {
       disconnectedBusSegmentIds: new Set<string>(),
-      pickupBlockedByDisconnectedBusIds: new Set<string>(),
+      busEdgePortBlockedByDisconnectedBusIds: new Set<string>(),
     }
   }
 
@@ -256,12 +270,12 @@ function analyzeWarehouseBusConnectivity(layout: LayoutState) {
     }
   }
 
-  const pickupBlockedByDisconnectedBusIds = new Set<string>()
-  for (const pickup of layout.devices) {
-    if (pickup.typeId !== PICKUP_TYPE_ID) continue
-    const pickupCells = getFootprintCells(pickup)
+  const busEdgePortBlockedByDisconnectedBusIds = new Set<string>()
+  for (const edgePort of layout.devices) {
+    if (edgePort.typeId !== PICKUP_TYPE_ID && edgePort.typeId !== LOADER_TYPE_ID) continue
+    const edgePortCells = getFootprintCells(edgePort)
     let blocked = false
-    for (const cell of pickupCells) {
+    for (const cell of edgePortCells) {
       for (const neighborKey of neighborCellKeys(cell.x, cell.y)) {
         if (disconnectedBusOccupancy.has(neighborKey)) {
           blocked = true
@@ -270,12 +284,12 @@ function analyzeWarehouseBusConnectivity(layout: LayoutState) {
       }
       if (blocked) break
     }
-    if (blocked) pickupBlockedByDisconnectedBusIds.add(pickup.instanceId)
+    if (blocked) busEdgePortBlockedByDisconnectedBusIds.add(edgePort.instanceId)
   }
 
   return {
     disconnectedBusSegmentIds,
-    pickupBlockedByDisconnectedBusIds,
+    busEdgePortBlockedByDisconnectedBusIds,
   }
 }
 
@@ -338,6 +352,88 @@ function preferredInputSlotIndex(deviceTypeId: DeviceInstance['typeId'], itemId:
   return 0
 }
 
+function findEvictableInputSlotIndex(runtime: DeviceRuntime, deviceTypeId: DeviceInstance['typeId'], incomingItemId: ItemId) {
+  if (!('inputBuffer' in runtime) || !('outputBuffer' in runtime)) return -1
+  if (runtime.cycleProgressTicks > 0 || runtime.activeRecipeId) return -1
+
+  const recipes = RECIPES.filter((recipe) => recipe.machineType === deviceTypeId)
+  if (recipes.length <= 1) return -1
+
+  const incomingSupported = recipes.some((recipe) => recipe.inputs.some((input) => input.itemId === incomingItemId))
+  if (!incomingSupported) return -1
+
+  for (let slotIndex = 0; slotIndex < runtime.inputSlotItems.length; slotIndex += 1) {
+    const boundItemId = runtime.inputSlotItems[slotIndex]
+    if (!boundItemId || boundItemId === incomingItemId) continue
+    const buffered = runtime.inputBuffer[boundItemId] ?? 0
+    if (buffered <= 0) return slotIndex
+  }
+
+  return -1
+}
+
+function resolveProcessorTargetSlotIndex(
+  runtime: ProcessorRuntime,
+  deviceTypeId: DeviceInstance['typeId'],
+  bufferKind: ProcessorBufferKind,
+  itemId: ItemId,
+) {
+  const slotItems = bufferKind === 'input' ? runtime.inputSlotItems : runtime.outputSlotItems
+  const existingSlotIndex = findSlotIndexByItem(slotItems, itemId)
+  if (existingSlotIndex >= 0) {
+    return {
+      slotItems,
+      existingSlotIndex,
+      targetSlotIndex: existingSlotIndex,
+      evictSlotIndex: -1,
+    }
+  }
+
+  const preferredSlotIndex = bufferKind === 'input' ? preferredInputSlotIndex(deviceTypeId, itemId) : null
+  if (
+    preferredSlotIndex !== null &&
+    preferredSlotIndex >= 0 &&
+    preferredSlotIndex < slotItems.length &&
+    !slotItems[preferredSlotIndex]
+  ) {
+    return {
+      slotItems,
+      existingSlotIndex,
+      targetSlotIndex: preferredSlotIndex,
+      evictSlotIndex: -1,
+    }
+  }
+
+  const firstEmptySlotIndex = findFirstEmptySlot(slotItems)
+  if (firstEmptySlotIndex >= 0) {
+    return {
+      slotItems,
+      existingSlotIndex,
+      targetSlotIndex: firstEmptySlotIndex,
+      evictSlotIndex: -1,
+    }
+  }
+
+  if (bufferKind === 'input') {
+    const evictSlotIndex = findEvictableInputSlotIndex(runtime, deviceTypeId, itemId)
+    if (evictSlotIndex >= 0) {
+      return {
+        slotItems,
+        existingSlotIndex,
+        targetSlotIndex: evictSlotIndex,
+        evictSlotIndex,
+      }
+    }
+  }
+
+  return {
+    slotItems,
+    existingSlotIndex,
+    targetSlotIndex: -1,
+    evictSlotIndex: -1,
+  }
+}
+
 function canAcceptProcessorBufferAmount(
   runtime: DeviceRuntime,
   deviceTypeId: DeviceInstance['typeId'],
@@ -350,14 +446,10 @@ function canAcceptProcessorBufferAmount(
 
   const spec = processorBufferSpec(deviceTypeId, bufferKind)
   const buffer = bufferKind === 'input' ? runtime.inputBuffer : runtime.outputBuffer
-  const slotItems = bufferKind === 'input' ? runtime.inputSlotItems : runtime.outputSlotItems
-  const existingSlotIndex = findSlotIndexByItem(slotItems, itemId)
-  const preferredSlotIndex = bufferKind === 'input' ? preferredInputSlotIndex(deviceTypeId, itemId) : null
-  const targetSlotIndex =
-    existingSlotIndex >= 0 ? existingSlotIndex : preferredSlotIndex ?? findFirstEmptySlot(slotItems)
+  const { slotItems, targetSlotIndex, evictSlotIndex } = resolveProcessorTargetSlotIndex(runtime as ProcessorRuntime, deviceTypeId, bufferKind, itemId)
   if (targetSlotIndex < 0) return false
   if (targetSlotIndex >= slotItems.length) return false
-  if (existingSlotIndex < 0 && slotItems[targetSlotIndex] && slotItems[targetSlotIndex] !== itemId) return false
+  if (slotItems[targetSlotIndex] && slotItems[targetSlotIndex] !== itemId && evictSlotIndex !== targetSlotIndex) return false
 
   const slotCapacity = spec.slotCapacities[targetSlotIndex] ?? DEFAULT_PROCESSOR_BUFFER_CAPACITY
   const nextAmount = (buffer[itemId] ?? 0) + amount
@@ -374,14 +466,20 @@ function tryAddProcessorBufferAmount(
   if (!('inputBuffer' in runtime) || !('outputBuffer' in runtime)) return false
   if (!canAcceptProcessorBufferAmount(runtime, deviceTypeId, bufferKind, itemId, amount)) return false
   const buffer = bufferKind === 'input' ? runtime.inputBuffer : runtime.outputBuffer
-  const slotItems = bufferKind === 'input' ? runtime.inputSlotItems : runtime.outputSlotItems
+  const { slotItems, targetSlotIndex, evictSlotIndex } = resolveProcessorTargetSlotIndex(runtime as ProcessorRuntime, deviceTypeId, bufferKind, itemId)
   let slotIndex = findSlotIndexByItem(slotItems, itemId)
   if (slotIndex < 0) {
-    const preferredSlotIndex = bufferKind === 'input' ? preferredInputSlotIndex(deviceTypeId, itemId) : null
-    slotIndex = preferredSlotIndex ?? findFirstEmptySlot(slotItems)
+    slotIndex = targetSlotIndex
     if (slotIndex < 0) return false
     if (slotIndex >= slotItems.length) return false
-    if (slotItems[slotIndex] && slotItems[slotIndex] !== itemId) return false
+    if (slotItems[slotIndex] && slotItems[slotIndex] !== itemId) {
+      if (evictSlotIndex !== slotIndex || bufferKind !== 'input') return false
+      const evictedItemId = slotItems[slotIndex]
+      if (evictedItemId) {
+        runtime.inputBuffer[evictedItemId] = 0
+      }
+      slotItems[slotIndex] = null
+    }
     slotItems[slotIndex] = itemId
   }
   buffer[itemId] = (buffer[itemId] ?? 0) + amount
@@ -390,6 +488,12 @@ function tryAddProcessorBufferAmount(
 
 function tryAddProcessorInput(runtime: DeviceRuntime, deviceTypeId: DeviceInstance['typeId'], itemId: ItemId, amount: number) {
   return tryAddProcessorBufferAmount(runtime, deviceTypeId, 'input', itemId, amount)
+}
+
+function tryAddReactorInput(runtime: DeviceRuntime, toPortId: string, itemId: ItemId, amount: number) {
+  if (!('inputBuffer' in runtime) || !('outputBuffer' in runtime)) return false
+  const inputSpec = processorBufferSpec('item_port_mix_pool_1', 'input')
+  return reactorAcceptInputFromPort(runtime as ProcessorRuntime, toPortId, itemId, amount, inputSpec.slotCapacities)
 }
 
 function canAcceptProcessorInput(runtime: DeviceRuntime, deviceTypeId: DeviceInstance['typeId'], itemId: ItemId, amount: number) {
@@ -460,6 +564,16 @@ function isRoundRobinJunctionType(typeId: DeviceInstance['typeId']) {
   )
 }
 
+function isConvergerType(typeId: DeviceInstance['typeId']) {
+  return typeId === 'item_log_converger' || typeId === 'item_pipe_converger'
+}
+
+const CONVERGER_INPUT_PORT_ORDER = ['in_n', 'in_e', 'in_s'] as const
+
+function indexInConvergerInputOrder(portId: string) {
+  return CONVERGER_INPUT_PORT_ORDER.findIndex((entry) => entry === portId)
+}
+
 function setSlotRef(runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we', value: SlotData | null) {
   if (lane === 'slot' && 'slot' in runtime) runtime.slot = value
   if (lane === 'ns' && 'nsSlot' in runtime) runtime.nsSlot = value
@@ -506,9 +620,14 @@ function canReceiveOnPortWithPlan(
   return { lane, canTry: false, canAccept: false }
 }
 
-function canAcceptIntoLane(device: DeviceInstance, runtime: DeviceRuntime, lane: ReceiveLane, itemId: ItemId) {
+function canAcceptIntoLane(device: DeviceInstance, runtime: DeviceRuntime, lane: ReceiveLane, toPortId: string, itemId: ItemId) {
   if (lane !== 'output') return true
-  if ('inputBuffer' in runtime) return canAcceptProcessorInput(runtime, device.typeId, itemId, 1)
+  if ('inputBuffer' in runtime) {
+    if (isReactorPoolType(device.typeId)) {
+      return tryAddReactorInput(cloneRuntime(runtime), toPortId, itemId, 1)
+    }
+    return canAcceptProcessorInput(runtime, device.typeId, itemId, 1)
+  }
   return true
 }
 
@@ -521,7 +640,10 @@ function tryReceiveToLane(
   tick: number,
 ) {
   if (lane === 'output') {
-    if ('inputBuffer' in runtime) return tryAddProcessorInput(runtime, device.typeId, itemId, 1)
+    if ('inputBuffer' in runtime) {
+      if (isReactorPoolType(device.typeId)) return tryAddReactorInput(runtime, toPortId, itemId, 1)
+      return tryAddProcessorInput(runtime, device.typeId, itemId, 1)
+    }
     return addToStorage(runtime, itemId, 1)
   }
   const incomingEdge = toPortId.slice(-1).toUpperCase() as keyof typeof OPPOSITE_EDGE
@@ -652,6 +774,61 @@ function orderedOutLinks(device: DeviceInstance, runtime: DeviceRuntime, outLink
   return [...outLinks.slice(offset), ...outLinks.slice(0, offset)]
 }
 
+function peekReadyItemForSourceLink(
+  fromDevice: DeviceInstance,
+  fromRuntime: DeviceRuntime,
+  fromPortId: string,
+  warehouse: Record<ItemId, number>,
+) {
+  const fromLane = sourceSlotLane(fromDevice, fromRuntime, fromPortId)
+  if (fromLane === 'output' && isReactorPoolType(fromDevice.typeId) && 'inputBuffer' in fromRuntime && 'outputBuffer' in fromRuntime) {
+    return reactorPeekOutputForPort(fromRuntime as ProcessorRuntime, fromDevice.config, fromPortId)
+  }
+  return peekReadyItemForLane(fromDevice, fromRuntime, fromLane, warehouse)
+}
+
+function buildConvergerPreferredInputPortMap(
+  layout: LayoutState,
+  runtimeById: Record<string, DeviceRuntime>,
+  links: ReturnType<typeof neighborsFromLinks>,
+  deviceById: Map<string, DeviceInstance>,
+  warehouse: Record<ItemId, number>,
+) {
+  const preferredPortByConvergerId = new Map<string, string>()
+
+  for (const device of layout.devices) {
+    if (!isConvergerType(device.typeId)) continue
+    const runtime = runtimeById[device.instanceId]
+    if (!runtime || !('rrIndex' in runtime)) continue
+
+    const inLinks = links.inMap.get(device.instanceId) ?? []
+    const availablePorts = new Set<string>()
+
+    for (const inLink of inLinks) {
+      const sourceRuntime = runtimeById[inLink.from.instanceId]
+      const sourceDevice = deviceById.get(inLink.from.instanceId)
+      if (!sourceRuntime || !sourceDevice) continue
+      if (isHardBlockedStall(sourceRuntime.stallReason)) continue
+      const readyItem = peekReadyItemForSourceLink(sourceDevice, sourceRuntime, inLink.from.portId, warehouse)
+      if (!readyItem) continue
+      availablePorts.add(inLink.to.portId)
+    }
+
+    if (availablePorts.size === 0) continue
+
+    const baseOffset = runtime.rrIndex % CONVERGER_INPUT_PORT_ORDER.length
+    for (let step = 0; step < CONVERGER_INPUT_PORT_ORDER.length; step += 1) {
+      const probeIndex = (baseOffset + step) % CONVERGER_INPUT_PORT_ORDER.length
+      const probePort = CONVERGER_INPUT_PORT_ORDER[probeIndex]
+      if (!availablePorts.has(probePort)) continue
+      preferredPortByConvergerId.set(device.instanceId, probePort)
+      break
+    }
+  }
+
+  return preferredPortByConvergerId
+}
+
 function inPowerRange(target: DeviceInstance, poles: DeviceInstance[]) {
   const targetCells = [] as Array<{ x: number; y: number }>
   const type = DEVICE_TYPE_BY_ID[target.typeId]
@@ -736,6 +913,8 @@ function cloneRuntime(runtime: DeviceRuntime): DeviceRuntime {
       outputBuffer: { ...runtime.outputBuffer },
       inputSlotItems: [...runtime.inputSlotItems],
       outputSlotItems: [...runtime.outputSlotItems],
+      reactorCycleProgressTicks: runtime.reactorCycleProgressTicks ? [...runtime.reactorCycleProgressTicks] as [number, number] : undefined,
+      reactorActiveRecipeIds: runtime.reactorActiveRecipeIds ? [...runtime.reactorActiveRecipeIds] as [string | undefined, string | undefined] : undefined,
     }
   }
 
@@ -787,11 +966,12 @@ export function createInitialSimState(): SimState {
 
 export function startSimulation(layout: LayoutState, sim: SimState): SimState {
   const tickRateHz = BASE_TICK_RATE
+  const speed = sim.speed === 0 ? 1 : sim.speed
   const minuteWindowCapacity = cycleTicksFromSeconds(60, tickRateHz)
   const runtimeById = resetRuntimeByLayout(layout)
   const overlaps = detectOverlaps(layout)
   const poles = layout.devices.filter((device) => device.typeId === 'item_port_power_diffuser_1')
-  const { disconnectedBusSegmentIds, pickupBlockedByDisconnectedBusIds } = analyzeWarehouseBusConnectivity(layout)
+  const { disconnectedBusSegmentIds, busEdgePortBlockedByDisconnectedBusIds } = analyzeWarehouseBusConnectivity(layout)
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
@@ -808,7 +988,7 @@ export function startSimulation(layout: LayoutState, sim: SimState): SimState {
     let stall: StallReason = 'NONE'
     if (overlaps.has(device.instanceId)) stall = 'OVERLAP'
     else if (disconnectedBusSegmentIds.has(device.instanceId)) stall = 'BUS_NOT_CONNECTED'
-    else if (pickupBlockedByDisconnectedBusIds.has(device.instanceId)) stall = 'PICKUP_BUS_NOT_CONNECTED'
+    else if (busEdgePortBlockedByDisconnectedBusIds.has(device.instanceId)) stall = 'PICKUP_BUS_NOT_CONNECTED'
     else if (!pickupHasConfig(device)) stall = 'CONFIG_ERROR'
     else if (deviceDef.requiresPower && !inPowerRange(device, poles)) stall = 'NO_POWER'
     normalizeRuntimeState(runtime, stall)
@@ -817,6 +997,7 @@ export function startSimulation(layout: LayoutState, sim: SimState): SimState {
   return {
     ...sim,
     isRunning: true,
+    speed,
     tick: 0,
     tickRateHz,
     runtimeById,
@@ -878,12 +1059,105 @@ function consumeRecipeInputs(runtime: DeviceRuntime, recipe: (typeof RECIPES)[nu
   return true
 }
 
-function pickRunnableRecipe(deviceTypeId: DeviceInstance['typeId'], runtime: DeviceRuntime) {
-  const recipes = RECIPES.filter((recipe) => recipe.machineType === deviceTypeId)
-  for (const recipe of recipes) {
+function pickRunnableRecipeForDevice(device: DeviceInstance, runtime: DeviceRuntime) {
+  const recipes = RECIPES.filter((recipe) => recipe.machineType === device.typeId)
+  const filteredRecipes = isReactorPoolType(device.typeId)
+    ? (() => {
+        const selectedIds = reactorSelectedRecipeIds(device.config)
+        if (selectedIds.length === 0) return []
+        const selectedSet = new Set(selectedIds)
+        return recipes.filter((recipe) => selectedSet.has(recipe.id))
+      })()
+    : recipes
+
+  for (const recipe of filteredRecipes) {
     if (consumeRecipeInputs(runtime, recipe)) return recipe
   }
   return null
+}
+
+function tryStartProcessorCycleOnTick(
+  device: DeviceInstance,
+  runtime: DeviceRuntime,
+  tickRateHz: number,
+  processorDelta: Partial<Record<ItemId, number>>,
+) {
+  if (!('outputBuffer' in runtime && 'inputBuffer' in runtime)) return
+  if (isReactorPoolType(device.typeId)) return
+  if (runtime.cycleProgressTicks > 0) return
+
+  const selectedRecipe = pickRunnableRecipeForDevice(device, runtime)
+  if (!selectedRecipe) return
+
+  runtime.activeRecipeId = selectedRecipe.id
+  runtime.cycleProgressTicks = 1
+  for (const input of selectedRecipe.inputs) {
+    mark(processorDelta, input.itemId, -input.amount)
+  }
+  const recipeCycleTicks = cycleTicksFromSeconds(selectedRecipe.cycleSeconds, tickRateHz)
+  runtime.progress01 = runtime.cycleProgressTicks / recipeCycleTicks
+  normalizeRuntimeState(runtime, 'NONE')
+}
+
+function tryStartReactorLanesOnTick(
+  device: DeviceInstance,
+  runtime: DeviceRuntime,
+  tickRateHz: number,
+  processorDelta: Partial<Record<ItemId, number>>,
+) {
+  if (!('outputBuffer' in runtime && 'inputBuffer' in runtime)) return
+  if (!isReactorPoolType(device.typeId)) return
+
+  const selectedRecipes = reactorSelectedRecipeIds(device.config)
+    .map((recipeId) => recipeById(recipeId))
+    .filter((recipe): recipe is NonNullable<typeof recipe> => Boolean(recipe))
+    .slice(0, 2)
+
+  const laneProgress: [number, number] = runtime.reactorCycleProgressTicks
+    ? [...runtime.reactorCycleProgressTicks] as [number, number]
+    : [0, 0]
+  const laneRecipeIds: [string | undefined, string | undefined] = runtime.reactorActiveRecipeIds
+    ? [...runtime.reactorActiveRecipeIds] as [string | undefined, string | undefined]
+    : [undefined, undefined]
+
+  let startedAnyLane = false
+  let maxProgress01 = runtime.progress01
+
+  for (let laneIndex = 0 as 0 | 1; laneIndex <= 1; laneIndex = (laneIndex + 1) as 0 | 1) {
+    const laneRecipe = selectedRecipes[laneIndex]
+    if (!laneRecipe) continue
+
+    if (laneRecipeIds[laneIndex] !== laneRecipe.id && laneProgress[laneIndex] <= 0) {
+      laneRecipeIds[laneIndex] = laneRecipe.id
+    }
+
+    if (laneProgress[laneIndex] > 0) {
+      const cycleTicks = cycleTicksFromSeconds(laneRecipe.cycleSeconds, tickRateHz)
+      maxProgress01 = Math.max(maxProgress01, Math.min(1, laneProgress[laneIndex] / cycleTicks))
+      continue
+    }
+
+    const consumed = consumeRecipeInputs(runtime, laneRecipe)
+    if (!consumed) continue
+
+    laneProgress[laneIndex] = 1
+    startedAnyLane = true
+    for (const input of laneRecipe.inputs) {
+      mark(processorDelta, input.itemId, -input.amount)
+    }
+    const cycleTicks = cycleTicksFromSeconds(laneRecipe.cycleSeconds, tickRateHz)
+    maxProgress01 = Math.max(maxProgress01, Math.min(1, laneProgress[laneIndex] / cycleTicks))
+  }
+
+  runtime.reactorCycleProgressTicks = laneProgress
+  runtime.reactorActiveRecipeIds = laneRecipeIds
+  runtime.activeRecipeId = laneRecipeIds[0]
+  runtime.cycleProgressTicks = laneProgress[0]
+  runtime.progress01 = maxProgress01
+
+  if (startedAnyLane) {
+    normalizeRuntimeState(runtime, 'NONE')
+  }
 }
 
 function ensureMinuteWindow(sim: SimState, capacity: number) {
@@ -939,52 +1213,148 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     normalizeRuntimeState(runtime, 'NONE')
 
     if ('outputBuffer' in runtime && 'inputBuffer' in runtime) {
-      const activeRecipe = recipeById(runtime.activeRecipeId)
+      if (isReactorPoolType(device.typeId)) {
+        const selectedRecipes = reactorSelectedRecipeIds(device.config)
+          .map((recipeId) => recipeById(recipeId))
+          .filter((recipe): recipe is NonNullable<typeof recipe> => Boolean(recipe))
+          .slice(0, 2)
 
-      if (runtime.cycleProgressTicks <= 0) {
-        const selectedRecipe = pickRunnableRecipe(device.typeId, runtime)
-        if (!selectedRecipe) {
-          normalizeRuntimeState(runtime, 'NO_INPUT')
-        } else {
-          runtime.activeRecipeId = selectedRecipe.id
-          runtime.cycleProgressTicks = 1
-            for (const input of selectedRecipe.inputs) {
+        const laneProgress: [number, number] = runtime.reactorCycleProgressTicks
+          ? [...runtime.reactorCycleProgressTicks] as [number, number]
+          : [0, 0]
+        const laneRecipeIds: [string | undefined, string | undefined] = runtime.reactorActiveRecipeIds
+          ? [...runtime.reactorActiveRecipeIds] as [string | undefined, string | undefined]
+          : [undefined, undefined]
+
+        let hasRunnableOrRunningLane = false
+        let hasOutputBlockedLane = false
+        let maxProgress01 = 0
+
+        for (let laneIndex = 0 as 0 | 1; laneIndex <= 1; laneIndex = (laneIndex + 1) as 0 | 1) {
+          const laneRecipe = selectedRecipes[laneIndex]
+          if (!laneRecipe) {
+            laneProgress[laneIndex] = 0
+            laneRecipeIds[laneIndex] = undefined
+            continue
+          }
+
+          if (laneRecipeIds[laneIndex] !== laneRecipe.id) {
+            laneRecipeIds[laneIndex] = laneRecipe.id
+            laneProgress[laneIndex] = 0
+          }
+
+          const recipeCycleTicks = cycleTicksFromSeconds(laneRecipe.cycleSeconds, sim.tickRateHz)
+
+          if (laneProgress[laneIndex] <= 0) {
+            const consumed = consumeRecipeInputs(runtime, laneRecipe)
+            if (!consumed) {
+              continue
+            }
+            laneProgress[laneIndex] = 1
+            for (const input of laneRecipe.inputs) {
               mark(processorDelta, input.itemId, -input.amount)
             }
-          const recipeCycleTicks = cycleTicksFromSeconds(selectedRecipe.cycleSeconds, sim.tickRateHz)
-          runtime.progress01 = runtime.cycleProgressTicks / recipeCycleTicks
-        }
-      } else if (activeRecipe) {
-        const recipeCycleTicks = cycleTicksFromSeconds(activeRecipe.cycleSeconds, sim.tickRateHz)
-        if (runtime.cycleProgressTicks < recipeCycleTicks) {
-          runtime.cycleProgressTicks += 1
-        }
-        runtime.progress01 = Math.min(1, runtime.cycleProgressTicks / recipeCycleTicks)
+          } else if (laneProgress[laneIndex] < recipeCycleTicks) {
+            laneProgress[laneIndex] += 1
+          }
 
-        if (runtime.cycleProgressTicks >= recipeCycleTicks) {
-          if (!canAcceptProcessorOutputBatch(runtime, device.typeId, activeRecipe.outputs)) {
-            runtime.cycleProgressTicks = recipeCycleTicks
-            runtime.progress01 = 1
-            normalizeRuntimeState(runtime, 'OUTPUT_BUFFER_FULL')
-          } else {
-            const producedThisCycle = commitProcessorOutputBatch(runtime, device.typeId, activeRecipe.outputs)
+          if (laneProgress[laneIndex] > 0) {
+            hasRunnableOrRunningLane = true
+            maxProgress01 = Math.max(maxProgress01, Math.min(1, laneProgress[laneIndex] / recipeCycleTicks))
+          }
+
+          if (laneProgress[laneIndex] >= recipeCycleTicks) {
+            const outputBlocked = !reactorCanAcceptRecipeOutputs(
+              runtime as ProcessorRuntime,
+              laneRecipe,
+              processorBufferSpec(device.typeId, 'input').slotCapacities,
+            )
+
+            if (outputBlocked) {
+              laneProgress[laneIndex] = recipeCycleTicks
+              hasOutputBlockedLane = true
+              continue
+            }
+
+            const producedThisCycle = reactorCommitRecipeOutputs(
+              runtime as ProcessorRuntime,
+              laneRecipe,
+              processorBufferSpec(device.typeId, 'input').slotCapacities,
+            )
             runtime.producedItemsTotal += producedThisCycle
-            runtime.lastCompletedCycleTicks = runtime.cycleProgressTicks
+            runtime.lastCompletedCycleTicks = laneProgress[laneIndex]
             const completionTick = sim.tick + 1
             runtime.lastCompletionIntervalTicks =
               runtime.lastCompletionTick === null ? 0 : Math.max(1, completionTick - runtime.lastCompletionTick)
             runtime.lastCompletionTick = completionTick
-            for (const output of activeRecipe.outputs) {
+            for (const output of laneRecipe.outputs) {
               mark(processorDelta, output.itemId, output.amount)
             }
-            runtime.cycleProgressTicks = 0
-            runtime.progress01 = 0
-            runtime.activeRecipeId = undefined
+            laneProgress[laneIndex] = 0
           }
         }
+
+        runtime.reactorCycleProgressTicks = laneProgress
+        runtime.reactorActiveRecipeIds = laneRecipeIds
+        runtime.activeRecipeId = laneRecipeIds[0]
+        runtime.cycleProgressTicks = laneProgress[0]
+        runtime.progress01 = maxProgress01
+
+        if (hasOutputBlockedLane) {
+          normalizeRuntimeState(runtime, 'OUTPUT_BUFFER_FULL')
+        } else if (!hasRunnableOrRunningLane) {
+          normalizeRuntimeState(runtime, 'NO_INPUT')
+        }
       } else {
-        runtime.cycleProgressTicks = 0
-        runtime.progress01 = 0
+        const activeRecipe = recipeById(runtime.activeRecipeId)
+
+        if (runtime.cycleProgressTicks <= 0) {
+          const selectedRecipe = pickRunnableRecipeForDevice(device, runtime)
+          if (!selectedRecipe) {
+            normalizeRuntimeState(runtime, 'NO_INPUT')
+          } else {
+            runtime.activeRecipeId = selectedRecipe.id
+            runtime.cycleProgressTicks = 1
+            for (const input of selectedRecipe.inputs) {
+              mark(processorDelta, input.itemId, -input.amount)
+            }
+            const recipeCycleTicks = cycleTicksFromSeconds(selectedRecipe.cycleSeconds, sim.tickRateHz)
+            runtime.progress01 = runtime.cycleProgressTicks / recipeCycleTicks
+          }
+        } else if (activeRecipe) {
+          const recipeCycleTicks = cycleTicksFromSeconds(activeRecipe.cycleSeconds, sim.tickRateHz)
+          if (runtime.cycleProgressTicks < recipeCycleTicks) {
+            runtime.cycleProgressTicks += 1
+          }
+          runtime.progress01 = Math.min(1, runtime.cycleProgressTicks / recipeCycleTicks)
+
+          if (runtime.cycleProgressTicks >= recipeCycleTicks) {
+            const outputBlocked = !canAcceptProcessorOutputBatch(runtime, device.typeId, activeRecipe.outputs)
+
+            if (outputBlocked) {
+              runtime.cycleProgressTicks = recipeCycleTicks
+              runtime.progress01 = 1
+              normalizeRuntimeState(runtime, 'OUTPUT_BUFFER_FULL')
+            } else {
+              const producedThisCycle = commitProcessorOutputBatch(runtime, device.typeId, activeRecipe.outputs)
+              runtime.producedItemsTotal += producedThisCycle
+              runtime.lastCompletedCycleTicks = runtime.cycleProgressTicks
+              const completionTick = sim.tick + 1
+              runtime.lastCompletionIntervalTicks =
+                runtime.lastCompletionTick === null ? 0 : Math.max(1, completionTick - runtime.lastCompletionTick)
+              runtime.lastCompletionTick = completionTick
+              for (const output of activeRecipe.outputs) {
+                mark(processorDelta, output.itemId, output.amount)
+              }
+              runtime.cycleProgressTicks = 0
+              runtime.progress01 = 0
+              runtime.activeRecipeId = undefined
+            }
+          }
+        } else {
+          runtime.cycleProgressTicks = 0
+          runtime.progress01 = 0
+        }
       }
     }
 
@@ -1046,6 +1416,8 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   let changed = true
   while (changed) {
     changed = false
+    const convergerPreferredInputPortById = buildConvergerPreferredInputPortMap(layout, runtimeById, links, deviceById, warehouse)
+
     for (const device of layout.devices) {
       const runtime = runtimeById[device.instanceId]
       if (!runtime || isHardBlockedStall(runtime.stallReason) || plannedSenders.has(device.instanceId)) continue
@@ -1060,26 +1432,38 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         const recvState = canReceiveOnPortWithPlan(toDevice, toRuntime, link.to.portId, reservedReceivers, lanesClearingThisTick)
         if (!recvState.lane || !recvState.canTry) continue
 
-        const fromLane = sourceSlotLane(device, runtime, link.from.portId)
-        const laneAdvanceKey = `${device.instanceId}:${fromLane}`
-        if (lanesReachedHalfThisTick.has(laneAdvanceKey)) continue
-        if (!lanesAdvancedThisTick.has(laneAdvanceKey)) {
-          const transportSpeed = transportSpeedPerTick(device.typeId, sim.tickRateHz)
-          const beforeSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
-          const beforeProgress = beforeSlot?.progress01 ?? null
-          readyItemForLane(device, runtime, fromLane, transportSpeed, warehouse)
-          lanesAdvancedThisTick.add(laneAdvanceKey)
-          const afterSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
-          const afterProgress = afterSlot?.progress01 ?? null
-          if (beforeProgress !== null && afterProgress !== null && afterProgress > beforeProgress) {
-            changed = true
-          }
+        if (isConvergerType(toDevice.typeId)) {
+          const preferredPort = convergerPreferredInputPortById.get(toDevice.instanceId)
+          if (preferredPort && preferredPort !== link.to.portId) continue
         }
 
-        const itemId = peekReadyItemForLane(device, runtime, fromLane, warehouse)
+        const fromLane = sourceSlotLane(device, runtime, link.from.portId)
+        let itemId: ItemId | null = null
+
+        if (fromLane === 'output' && isReactorPoolType(device.typeId) && 'inputBuffer' in runtime && 'outputBuffer' in runtime) {
+          itemId = reactorPeekOutputForPort(runtime as ProcessorRuntime, device.config, link.from.portId)
+        } else {
+          const laneAdvanceKey = `${device.instanceId}:${fromLane}`
+          if (lanesReachedHalfThisTick.has(laneAdvanceKey)) continue
+          if (!lanesAdvancedThisTick.has(laneAdvanceKey)) {
+            const transportSpeed = transportSpeedPerTick(device.typeId, sim.tickRateHz)
+            const beforeSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
+            const beforeProgress = beforeSlot?.progress01 ?? null
+            readyItemForLane(device, runtime, fromLane, transportSpeed, warehouse)
+            lanesAdvancedThisTick.add(laneAdvanceKey)
+            const afterSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
+            const afterProgress = afterSlot?.progress01 ?? null
+            if (beforeProgress !== null && afterProgress !== null && afterProgress > beforeProgress) {
+              changed = true
+            }
+          }
+
+          itemId = peekReadyItemForLane(device, runtime, fromLane, warehouse)
+        }
+
         if (!itemId) continue
         if (!recvState.canAccept) continue
-        if (!canAcceptIntoLane(toDevice, toRuntime, recvState.lane, itemId)) continue
+        if (!canAcceptIntoLane(toDevice, toRuntime, recvState.lane, link.to.portId, itemId)) continue
 
         transferPlans.push({
           fromId: device.instanceId,
@@ -1097,6 +1481,13 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
         if (isRoundRobinJunctionType(device.typeId) && 'rrIndex' in runtime && outLinks.length > 0) {
           runtime.rrIndex = (runtime.rrIndex + 1) % outLinks.length
+        }
+
+        if (isConvergerType(toDevice.typeId) && 'rrIndex' in toRuntime) {
+          const pickedInputOrderIndex = indexInConvergerInputOrder(link.to.portId)
+          if (pickedInputOrderIndex >= 0) {
+            toRuntime.rrIndex = (pickedInputOrderIndex + 1) % CONVERGER_INPUT_PORT_ORDER.length
+          }
         }
 
         changed = true
@@ -1160,13 +1551,22 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     const received = tryReceiveToLane(toDevice, toRuntime, plan.lane, plan.toPortId, plan.itemId, sim.tick)
     if (!received) continue
 
+    if (toDevice.typeId === LOADER_TYPE_ID && 'inventory' in toRuntime) {
+      toRuntime.inventory[plan.itemId] = Math.max(0, (toRuntime.inventory[plan.itemId] ?? 0) - 1)
+      if (Number.isFinite(warehouse[plan.itemId])) {
+        warehouse[plan.itemId] += 1
+      }
+    }
+
     if (fromDevice.typeId === 'item_port_unloader_1') {
       if (!shouldIgnorePickupInventory(fromDevice) && Number.isFinite(warehouse[plan.itemId])) {
         warehouse[plan.itemId] = Math.max(0, warehouse[plan.itemId] - 1)
       }
     } else {
       if (plan.fromLane === 'output') {
-        if ('outputBuffer' in fromRuntime) {
+        if (isReactorPoolType(fromDevice.typeId) && 'inputBuffer' in fromRuntime && 'outputBuffer' in fromRuntime) {
+          reactorConsumeSharedItem(fromRuntime as ProcessorRuntime, plan.itemId, 1)
+        } else if ('outputBuffer' in fromRuntime) {
           fromRuntime.outputBuffer[plan.itemId] = Math.max(0, (fromRuntime.outputBuffer[plan.itemId] ?? 0) - 1)
           clearSlotBindingIfEmpty(fromRuntime.outputBuffer, fromRuntime.outputSlotItems, plan.itemId)
         } else if ('inventory' in fromRuntime) {
@@ -1174,7 +1574,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         }
       } else {
         if (
-          fromDevice.typeId.startsWith('belt_') &&
+          isBelt(fromDevice.typeId) &&
           plan.fromLane === 'slot' &&
           'slot' in fromRuntime &&
           fromRuntime.slot &&
@@ -1188,6 +1588,13 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         setSlotRef(fromRuntime, plan.fromLane, null)
       }
     }
+  }
+
+  for (const device of layout.devices) {
+    const runtime = runtimeById[device.instanceId]
+    if (!runtime || isHardBlockedStall(runtime.stallReason)) continue
+    tryStartReactorLanesOnTick(device, runtime, sim.tickRateHz, processorDelta)
+    tryStartProcessorCycleOnTick(device, runtime, sim.tickRateHz, processorDelta)
   }
 
   const nextTick = sim.tick + 1

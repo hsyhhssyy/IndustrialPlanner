@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, type Dispatch, type SetStateAction } from 'react'
 import { BASE_BY_ID } from '../../domain/registry'
-import { isWithinLot } from '../../domain/geometry'
 import { isKnownDeviceTypeId } from '../../domain/shared/predicates'
+import { isDeviceWithinAllowedPlacementArea } from '../../domain/shared/placementArea'
 import type { BaseId, DeviceInstance, LayoutState } from '../../domain/types'
 import { usePersistentState } from '../../core/usePersistentState'
 import { dialogConfirm } from '../../ui/dialog'
@@ -36,7 +36,7 @@ function normalizeLayoutForBase(rawLayout: LayoutState | undefined, baseId: Base
   if (!rawLayout) return fallback
 
   const foundationById = new Map(base.foundationBuildings.map((device) => [device.instanceId, device]))
-  const cleanedDevices = rawLayout.devices.filter((device) => isWithinLot(device, base.placeableSize))
+  const cleanedDevices = rawLayout.devices.filter((device) => isDeviceWithinAllowedPlacementArea(device, base.placeableSize, base.outerRing))
   const cleanedWithoutFoundation = cleanedDevices.filter((device) => !foundationById.has(device.instanceId))
   const foundationDevices = base.foundationBuildings.map((building) => {
     const existing = cleanedDevices.find((device) => device.instanceId === building.instanceId)
