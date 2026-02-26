@@ -135,6 +135,7 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
           {
             title: 'A) 已知问题',
             steps: [
+              '我增强了传送带绘制，使其可以自动创建分流器汇流器，并且可以从空地开始或者结束。但是绘制传送带跨越传送带时遇到的各种情况，可能会有一些罕见情况没处理，有可能会出现意外的创建分流器或者汇流器的情况。',
               '部分情况下，传送带或管道的首件到达时间会比预期慢一小段。',
               '反应池同时跑两条配方时，吞吐可能低于预期上限。',
               '存货口与取货口放下后暂不支持旋转。',
@@ -156,6 +157,7 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
           {
             title: 'A) Known issues',
             steps: [
+              'Belt drawing has been enhanced to auto-create splitters/convergers and to start or end from empty ground. However, when drawing belts that cross other belts, some rare edge cases may still be uncovered, and unexpected splitter/converger creation can occur.',
               'In some cases, first-item arrival on belts or pipes can be slightly slower than expected.',
               'When a reactor pool runs two recipes at once, throughput may stay below expected peak.',
               'Pickup Port and Warehouse Loader Port cannot be rotated after placement.',

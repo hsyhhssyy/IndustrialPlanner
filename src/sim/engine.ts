@@ -1,4 +1,4 @@
-import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
+import { BASE_BY_ID, DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
 import { detectOverlaps, getFootprintCells, isBelt, isPipeLike, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
 import { cycleTicksFromSeconds } from '../domain/shared/simulation'
 import {
@@ -108,6 +108,8 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
       outputBuffer: {},
       inputSlotItems: Array.from({ length: inputSpec.slots }, () => null),
       outputSlotItems: Array.from({ length: outputSpec.slots }, () => null),
+      solidInputRrIndex: solidInputPortOrder(device.typeId).length > 1 ? 0 : undefined,
+      solidOutputRrIndex: solidOutputPortOrder(device.typeId).length > 1 ? 0 : undefined,
       cycleProgressTicks: 0,
       reactorCycleProgressTicks: isReactor ? [0, 0] : undefined,
       producedItemsTotal: 0,
@@ -123,6 +125,8 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
       ...baseRuntime(),
       inventory: {},
       submitAccumulatorTicks: 0,
+      solidInputRrIndex: solidInputPortOrder(device.typeId).length > 1 ? 0 : undefined,
+      solidOutputRrIndex: solidOutputPortOrder(device.typeId).length > 1 ? 0 : undefined,
     }
   }
   if (def.runtimeKind === 'conveyor') {
@@ -191,6 +195,12 @@ function neighborCellKeys(x: number, y: number) {
 }
 
 function analyzeWarehouseBusConnectivity(layout: LayoutState) {
+  const baseFoundationBusSegmentIds = new Set(
+    (BASE_BY_ID[layout.baseId]?.foundationBuildings ?? [])
+      .filter((building) => building.typeId === BUS_SEGMENT_TYPE_ID)
+      .map((building) => building.instanceId),
+  )
+
   const busDevices = layout.devices.filter(
     (device) => device.typeId === BUS_SOURCE_TYPE_ID || device.typeId === BUS_SEGMENT_TYPE_ID,
   )
@@ -236,6 +246,7 @@ function analyzeWarehouseBusConnectivity(layout: LayoutState) {
     const queue = [device.instanceId]
     const component = new Set<string>()
     let hasSource = false
+    let hasBaseFoundationBusSegment = false
 
     while (queue.length > 0) {
       const currentId = queue.shift()!
@@ -245,6 +256,7 @@ function analyzeWarehouseBusConnectivity(layout: LayoutState) {
 
       const currentDevice = busDeviceById.get(currentId)
       if (currentDevice?.typeId === BUS_SOURCE_TYPE_ID) hasSource = true
+      if (baseFoundationBusSegmentIds.has(currentId)) hasBaseFoundationBusSegment = true
 
       const nextIds = adjacency.get(currentId)
       if (!nextIds) continue
@@ -253,7 +265,7 @@ function analyzeWarehouseBusConnectivity(layout: LayoutState) {
       }
     }
 
-    if (!hasSource) {
+    if (!hasSource && !hasBaseFoundationBusSegment) {
       for (const id of component) {
         const d = busDeviceById.get(id)
         if (d?.typeId === BUS_SEGMENT_TYPE_ID) disconnectedBusSegmentIds.add(id)
@@ -568,10 +580,34 @@ function isConvergerType(typeId: DeviceInstance['typeId']) {
   return typeId === 'item_log_converger' || typeId === 'item_pipe_converger'
 }
 
+function isSplitterType(typeId: DeviceInstance['typeId']) {
+  return typeId === 'item_log_splitter' || typeId === 'item_pipe_splitter'
+}
+
 const CONVERGER_INPUT_PORT_ORDER = ['in_n', 'in_e', 'in_s'] as const
 
 function indexInConvergerInputOrder(portId: string) {
   return CONVERGER_INPUT_PORT_ORDER.findIndex((entry) => entry === portId)
+}
+
+function allowsSolidInputType(allowedTypes: { mode: 'solid' | 'liquid' | 'whitelist'; whitelist: Array<'solid' | 'liquid'> }) {
+  if (allowedTypes.mode === 'solid') return true
+  if (allowedTypes.mode === 'liquid') return false
+  return allowedTypes.whitelist.includes('solid')
+}
+
+function solidInputPortOrder(typeId: DeviceInstance['typeId']) {
+  const def = DEVICE_TYPE_BY_ID[typeId]
+  return def.ports0
+    .filter((port) => port.direction === 'Input' && allowsSolidInputType(port.allowedTypes))
+    .map((port) => port.id)
+}
+
+function solidOutputPortOrder(typeId: DeviceInstance['typeId']) {
+  const def = DEVICE_TYPE_BY_ID[typeId]
+  return def.ports0
+    .filter((port) => port.direction === 'Output' && allowsSolidInputType(port.allowedTypes))
+    .map((port) => port.id)
 }
 
 function setSlotRef(runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we', value: SlotData | null) {
@@ -768,10 +804,32 @@ function shouldMarkDownstreamBlockedNoBuffer(
 }
 
 function orderedOutLinks(device: DeviceInstance, runtime: DeviceRuntime, outLinks: ReturnType<typeof neighborsFromLinks>['links']) {
-  if (!isRoundRobinJunctionType(device.typeId) || outLinks.length <= 1) return outLinks
-  if (!('rrIndex' in runtime)) return outLinks
-  const offset = runtime.rrIndex % outLinks.length
-  return [...outLinks.slice(offset), ...outLinks.slice(0, offset)]
+  let orderedLinks = outLinks
+
+  if (isRoundRobinJunctionType(device.typeId) && outLinks.length > 1 && 'rrIndex' in runtime) {
+    const offset = runtime.rrIndex % outLinks.length
+    orderedLinks = [...outLinks.slice(offset), ...outLinks.slice(0, offset)]
+  }
+
+  if (('outputBuffer' in runtime || 'inventory' in runtime) && typeof runtime.solidOutputRrIndex === 'number') {
+    const outputPortOrder = solidOutputPortOrder(device.typeId)
+    if (outputPortOrder.length > 1) {
+      const offset = runtime.solidOutputRrIndex % outputPortOrder.length
+      const rotatedPortOrder = [...outputPortOrder.slice(offset), ...outputPortOrder.slice(0, offset)]
+      const portPriority = new Map(rotatedPortOrder.map((portId, index) => [portId, index]))
+
+      orderedLinks = [...orderedLinks].sort((left, right) => {
+        const leftPriority = portPriority.get(left.from.portId)
+        const rightPriority = portPriority.get(right.from.portId)
+        if (leftPriority === undefined && rightPriority === undefined) return 0
+        if (leftPriority === undefined) return 1
+        if (rightPriority === undefined) return -1
+        return leftPriority - rightPriority
+      })
+    }
+  }
+
+  return orderedLinks
 }
 
 function peekReadyItemForSourceLink(
@@ -827,6 +885,53 @@ function buildConvergerPreferredInputPortMap(
   }
 
   return preferredPortByConvergerId
+}
+
+function buildDevicePreferredSolidInputPortMap(
+  layout: LayoutState,
+  runtimeById: Record<string, DeviceRuntime>,
+  links: ReturnType<typeof neighborsFromLinks>,
+  deviceById: Map<string, DeviceInstance>,
+  warehouse: Record<ItemId, number>,
+) {
+  const preferredPortByDeviceId = new Map<string, string>()
+
+  for (const device of layout.devices) {
+    const runtime = runtimeById[device.instanceId]
+    if (!runtime || (!('inputBuffer' in runtime) && !('inventory' in runtime))) continue
+    if (typeof runtime.solidInputRrIndex !== 'number') continue
+
+    const inputPortOrder = solidInputPortOrder(device.typeId)
+    if (inputPortOrder.length <= 1) continue
+
+    const inLinks = links.inMap.get(device.instanceId) ?? []
+    const availablePorts = new Set<string>()
+
+    for (const inLink of inLinks) {
+      if (!inputPortOrder.includes(inLink.to.portId)) continue
+      const sourceRuntime = runtimeById[inLink.from.instanceId]
+      const sourceDevice = deviceById.get(inLink.from.instanceId)
+      if (!sourceRuntime || !sourceDevice) continue
+      if (isHardBlockedStall(sourceRuntime.stallReason)) continue
+      const readyItem = peekReadyItemForSourceLink(sourceDevice, sourceRuntime, inLink.from.portId, warehouse)
+      if (!readyItem) continue
+      if (ITEM_BY_ID[readyItem]?.type !== 'solid') continue
+      availablePorts.add(inLink.to.portId)
+    }
+
+    if (availablePorts.size === 0) continue
+
+    const baseOffset = runtime.solidInputRrIndex % inputPortOrder.length
+    for (let step = 0; step < inputPortOrder.length; step += 1) {
+      const probeIndex = (baseOffset + step) % inputPortOrder.length
+      const probePort = inputPortOrder[probeIndex]
+      if (!availablePorts.has(probePort)) continue
+      preferredPortByDeviceId.set(device.instanceId, probePort)
+      break
+    }
+  }
+
+  return preferredPortByDeviceId
 }
 
 function inPowerRange(target: DeviceInstance, poles: DeviceInstance[]) {
@@ -1417,6 +1522,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   while (changed) {
     changed = false
     const convergerPreferredInputPortById = buildConvergerPreferredInputPortMap(layout, runtimeById, links, deviceById, warehouse)
+    const devicePreferredSolidInputPortById = buildDevicePreferredSolidInputPortMap(layout, runtimeById, links, deviceById, warehouse)
 
     for (const device of layout.devices) {
       const runtime = runtimeById[device.instanceId]
@@ -1436,6 +1542,9 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
           const preferredPort = convergerPreferredInputPortById.get(toDevice.instanceId)
           if (preferredPort && preferredPort !== link.to.portId) continue
         }
+
+        const preferredSolidInputPort = devicePreferredSolidInputPortById.get(toDevice.instanceId)
+        if (preferredSolidInputPort && preferredSolidInputPort !== link.to.portId) continue
 
         const fromLane = sourceSlotLane(device, runtime, link.from.portId)
         let itemId: ItemId | null = null
@@ -1480,13 +1589,39 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         lanesClearingThisTick.add(`${device.instanceId}:${fromLane}`)
 
         if (isRoundRobinJunctionType(device.typeId) && 'rrIndex' in runtime && outLinks.length > 0) {
-          runtime.rrIndex = (runtime.rrIndex + 1) % outLinks.length
+          if (isSplitterType(device.typeId)) {
+            const pickedOutLinkIndex = outLinks.findIndex((outLink) => outLink === link)
+            const safePickedIndex = pickedOutLinkIndex >= 0 ? pickedOutLinkIndex : 0
+            runtime.rrIndex = (runtime.rrIndex + safePickedIndex + 1) % outLinks.length
+          } else {
+            runtime.rrIndex = (runtime.rrIndex + 1) % outLinks.length
+          }
         }
 
         if (isConvergerType(toDevice.typeId) && 'rrIndex' in toRuntime) {
           const pickedInputOrderIndex = indexInConvergerInputOrder(link.to.portId)
           if (pickedInputOrderIndex >= 0) {
             toRuntime.rrIndex = (pickedInputOrderIndex + 1) % CONVERGER_INPUT_PORT_ORDER.length
+          }
+        }
+
+        if (('inputBuffer' in toRuntime || 'inventory' in toRuntime) && typeof toRuntime.solidInputRrIndex === 'number') {
+          const inputPortOrder = solidInputPortOrder(toDevice.typeId)
+          if (inputPortOrder.length > 1) {
+            const pickedInputOrderIndex = inputPortOrder.findIndex((portId) => portId === link.to.portId)
+            if (pickedInputOrderIndex >= 0) {
+              toRuntime.solidInputRrIndex = (pickedInputOrderIndex + 1) % inputPortOrder.length
+            }
+          }
+        }
+
+        if (('outputBuffer' in runtime || 'inventory' in runtime) && typeof runtime.solidOutputRrIndex === 'number') {
+          const outputPortOrder = solidOutputPortOrder(device.typeId)
+          if (outputPortOrder.length > 1 && ITEM_BY_ID[itemId]?.type === 'solid') {
+            const pickedOutputOrderIndex = outputPortOrder.findIndex((portId) => portId === link.from.portId)
+            if (pickedOutputOrderIndex >= 0) {
+              runtime.solidOutputRrIndex = (pickedOutputOrderIndex + 1) % outputPortOrder.length
+            }
           }
         }
 

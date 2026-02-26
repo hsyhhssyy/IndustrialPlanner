@@ -8,7 +8,9 @@ import {
   getDeviceById,
   getRotatedPorts,
   inferPortDirection,
+  isBelt,
   isBeltLike,
+  isPipe,
   isPipeLike,
   linksFromLayout,
 } from './geometry'
@@ -125,6 +127,10 @@ function createJunctionAt(
 
 function isTrackLikeByFamily(typeId: string, family: LogisticsFamily) {
   return family === 'belt' ? isBeltLike(typeId) : isPipeLike(typeId)
+}
+
+function isTrackByFamily(typeId: string, family: LogisticsFamily) {
+  return family === 'belt' ? isBelt(typeId) : isPipe(typeId)
 }
 
 function splitJunctionTypeByFamily(family: LogisticsFamily) {
@@ -304,7 +310,7 @@ function endpointAllowed(
       continue
     }
 
-    if (isTrackLikeByFamily(device.typeId, family)) {
+    if (isTrackByFamily(device.typeId, family)) {
       hasPassThroughOverlay = true
       continue
     }
@@ -342,7 +348,7 @@ function endpointAnchoredByExistingDevice(
     const device = getDeviceById(layout, entry.instanceId)
     if (!device) continue
 
-    if (isTrackLikeByFamily(device.typeId, family)) continue
+    if (isTrackByFamily(device.typeId, family)) continue
 
     if (isLogisticsLikeByFamily(device.typeId, family)) {
       if (hasMatchingPortAtCell(device, cell, requiredDirection, requiredEdge)) return true
@@ -582,11 +588,11 @@ export function applyLogisticsPath(
   const startOn = (occupancyMap.get(`${first.x},${first.y}`) ?? [])
     .map((entry) => getDeviceById(layout, entry.instanceId))
     .filter(isDeviceInstance)
-    .find((device) => isTrackLikeByFamily(device.typeId, family))
+    .find((device) => isTrackByFamily(device.typeId, family))
   const endOn = (occupancyMap.get(`${last.x},${last.y}`) ?? [])
     .map((entry) => getDeviceById(layout, entry.instanceId))
     .filter(isDeviceInstance)
-    .find((device) => isTrackLikeByFamily(device.typeId, family))
+    .find((device) => isTrackByFamily(device.typeId, family))
   const startOnGhost = (visitCount.get(`${first.x},${first.y}`) ?? 0) > 1
   const endOnGhost = (visitCount.get(`${last.x},${last.y}`) ?? 0) > 1
   const startGhostFlow = startOnGhost ? ghostFlowAtCell(path, first) : null

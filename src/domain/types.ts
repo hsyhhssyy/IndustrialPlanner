@@ -228,6 +228,8 @@ export interface ProcessorRuntime extends BaseRuntime {
   outputBuffer: Partial<Record<ItemId, number>>
   inputSlotItems: Array<ItemId | null>
   outputSlotItems: Array<ItemId | null>
+  solidInputRrIndex?: number
+  solidOutputRrIndex?: number
   cycleProgressTicks: number
   reactorCycleProgressTicks?: [number, number]
   producedItemsTotal: number
@@ -241,6 +243,8 @@ export interface ProcessorRuntime extends BaseRuntime {
 export interface StorageRuntime extends BaseRuntime {
   inventory: Partial<Record<ItemId, number>>
   submitAccumulatorTicks: number
+  solidInputRrIndex?: number
+  solidOutputRrIndex?: number
 }
 
 export interface SlotData {
