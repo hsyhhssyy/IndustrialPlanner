@@ -4,9 +4,9 @@ import { cycleTicksFromSeconds } from '../domain/shared/simulation'
 import {
   isReactorPoolType,
   reactorAcceptInputFromPort,
-  reactorCanAcceptRecipeOutputs,
-  reactorCommitRecipeOutputs,
-  reactorConsumeSharedItem,
+  reactorCanAcceptRecipeOutputsInSharedSlotPool,
+  reactorCommitRecipeOutputsToSharedSlotPool,
+  reactorConsumeItemFromSharedSlotPool,
   reactorPeekOutputForPort,
   reactorSelectedRecipeIds,
 } from './reactorPool'
@@ -1369,7 +1369,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
           }
 
           if (laneProgress[laneIndex] >= recipeCycleTicks) {
-            const outputBlocked = !reactorCanAcceptRecipeOutputs(
+            const outputBlocked = !reactorCanAcceptRecipeOutputsInSharedSlotPool(
               runtime as ProcessorRuntime,
               laneRecipe,
               processorBufferSpec(device.typeId, 'input').slotCapacities,
@@ -1381,7 +1381,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
               continue
             }
 
-            const producedThisCycle = reactorCommitRecipeOutputs(
+            const producedThisCycle = reactorCommitRecipeOutputsToSharedSlotPool(
               runtime as ProcessorRuntime,
               laneRecipe,
               processorBufferSpec(device.typeId, 'input').slotCapacities,
@@ -1700,7 +1700,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     } else {
       if (plan.fromLane === 'output') {
         if (isReactorPoolType(fromDevice.typeId) && 'inputBuffer' in fromRuntime && 'outputBuffer' in fromRuntime) {
-          reactorConsumeSharedItem(fromRuntime as ProcessorRuntime, plan.itemId, 1)
+          reactorConsumeItemFromSharedSlotPool(fromRuntime as ProcessorRuntime, plan.itemId, 1)
         } else if ('outputBuffer' in fromRuntime) {
           fromRuntime.outputBuffer[plan.itemId] = Math.max(0, (fromRuntime.outputBuffer[plan.itemId] ?? 0) - 1)
           clearSlotBindingIfEmpty(fromRuntime.outputBuffer, fromRuntime.outputSlotItems, plan.itemId)

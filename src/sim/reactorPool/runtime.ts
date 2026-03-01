@@ -3,15 +3,13 @@ import { ITEM_BY_ID } from '../../domain/registry'
 import { normalizeReactorPoolConfig } from './config'
 import {
   findBoundSlotIndex,
+  findFirstEmptySlot,
   isReactorInputPort,
   isReactorLiquidInputPort,
   isReactorSolidInputPort,
   isLiquidItem,
 } from './slotMap'
 import { isReactorLiquidOutputPort, isReactorSolidOutputPort } from './types'
-
-const REACTOR_SOLID_SLOT_INDICES = [0, 1, 2]
-const REACTOR_LIQUID_SLOT_INDICES = [3, 4]
 
 function clearSlotIfEmpty(buffer: Partial<Record<ItemId, number>>, slotItems: Array<ItemId | null>, itemId: ItemId) {
   if ((buffer[itemId] ?? 0) > 0) return
@@ -41,28 +39,7 @@ function tryAddAtFixedSlot(
   return true
 }
 
-function findBoundSlotIndexInRange(slotItems: Array<ItemId | null>, itemId: ItemId, slotIndices: number[]) {
-  for (const slotIndex of slotIndices) {
-    if (slotIndex < 0 || slotIndex >= slotItems.length) continue
-    if (slotItems[slotIndex] === itemId) return slotIndex
-  }
-  return -1
-}
-
-function findFirstEmptySlotInRange(slotItems: Array<ItemId | null>, slotIndices: number[]) {
-  for (const slotIndex of slotIndices) {
-    if (slotIndex < 0 || slotIndex >= slotItems.length) continue
-    if (!slotItems[slotIndex]) return slotIndex
-  }
-  return -1
-}
-
-function reactorPreferredSlotIndices(itemId: ItemId) {
-  const itemType = ITEM_BY_ID[itemId]?.type
-  return isLiquidItem(itemType) ? REACTOR_LIQUID_SLOT_INDICES : REACTOR_SOLID_SLOT_INDICES
-}
-
-function tryAddToSharedSlots(
+function tryAddToSharedSlotPool(
   buffer: Partial<Record<ItemId, number>>,
   slotItems: Array<ItemId | null>,
   slotCapacities: number[],
@@ -70,13 +47,8 @@ function tryAddToSharedSlots(
   amount: number,
 ) {
   if (amount <= 0) return true
-  const preferredSlotIndices = reactorPreferredSlotIndices(itemId)
   const existingSlotIndex = findBoundSlotIndex(slotItems, itemId)
-  const existingPreferredSlotIndex = findBoundSlotIndexInRange(slotItems, itemId, preferredSlotIndices)
-  const targetSlotIndex =
-    existingSlotIndex >= 0
-      ? existingSlotIndex
-      : (existingPreferredSlotIndex >= 0 ? existingPreferredSlotIndex : findFirstEmptySlotInRange(slotItems, preferredSlotIndices))
+  const targetSlotIndex = existingSlotIndex >= 0 ? existingSlotIndex : findFirstEmptySlot(slotItems)
   if (targetSlotIndex < 0) return false
   return tryAddAtFixedSlot(buffer, slotItems, slotCapacities, targetSlotIndex, itemId, amount)
 }
@@ -92,7 +64,7 @@ export function reactorAcceptInputFromPort(
   const itemType = ITEM_BY_ID[itemId]?.type
   if (isReactorLiquidInputPort(toPortId) && !isLiquidItem(itemType)) return false
   if (isReactorSolidInputPort(toPortId) && isLiquidItem(itemType)) return false
-  return tryAddToSharedSlots(runtime.inputBuffer, runtime.inputSlotItems, inputSlotCapacities, itemId, amount)
+  return tryAddToSharedSlotPool(runtime.inputBuffer, runtime.inputSlotItems, inputSlotCapacities, itemId, amount)
 }
 
 export function reactorPeekOutputForPort(runtime: ProcessorRuntime, deviceConfig: DeviceConfig, fromPortId: string): ItemId | null {
@@ -107,7 +79,7 @@ export function reactorPeekOutputForPort(runtime: ProcessorRuntime, deviceConfig
   return (runtime.inputBuffer[itemId] ?? 0) > 0 ? itemId : null
 }
 
-export function reactorCanAcceptRecipeOutputs(
+export function reactorCanAcceptRecipeOutputsInSharedSlotPool(
   runtime: ProcessorRuntime,
   recipe: RecipeDef,
   sharedSlotCapacities: number[],
@@ -116,7 +88,7 @@ export function reactorCanAcceptRecipeOutputs(
   const shadowSlots = [...runtime.inputSlotItems]
 
   for (const output of recipe.outputs) {
-    if (!tryAddToSharedSlots(shadowBuffer, shadowSlots, sharedSlotCapacities, output.itemId, output.amount)) {
+    if (!tryAddToSharedSlotPool(shadowBuffer, shadowSlots, sharedSlotCapacities, output.itemId, output.amount)) {
       return false
     }
   }
@@ -124,7 +96,7 @@ export function reactorCanAcceptRecipeOutputs(
   return true
 }
 
-export function reactorCommitRecipeOutputs(
+export function reactorCommitRecipeOutputsToSharedSlotPool(
   runtime: ProcessorRuntime,
   recipe: RecipeDef,
   sharedSlotCapacities: number[],
@@ -132,7 +104,7 @@ export function reactorCommitRecipeOutputs(
   let produced = 0
 
   for (const output of recipe.outputs) {
-    const ok = tryAddToSharedSlots(runtime.inputBuffer, runtime.inputSlotItems, sharedSlotCapacities, output.itemId, output.amount)
+    const ok = tryAddToSharedSlotPool(runtime.inputBuffer, runtime.inputSlotItems, sharedSlotCapacities, output.itemId, output.amount)
     if (!ok) break
     produced += output.amount
   }
@@ -144,7 +116,7 @@ export function reactorSelectedRecipeIds(deviceConfig: DeviceConfig): string[] {
   return normalizeReactorPoolConfig(deviceConfig).selectedRecipeIds
 }
 
-export function reactorConsumeSharedItem(runtime: ProcessorRuntime, itemId: ItemId, amount: number) {
+export function reactorConsumeItemFromSharedSlotPool(runtime: ProcessorRuntime, itemId: ItemId, amount: number) {
   if (amount <= 0) return true
   if ((runtime.inputBuffer[itemId] ?? 0) < amount) return false
   runtime.inputBuffer[itemId] = Math.max(0, (runtime.inputBuffer[itemId] ?? 0) - amount)
