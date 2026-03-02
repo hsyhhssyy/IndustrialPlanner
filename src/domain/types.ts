@@ -105,6 +105,8 @@ export interface DeviceTypeDef {
   id: DeviceTypeId
   runtimeKind: RuntimeKind
   requiresPower: boolean
+  powerDemand: number
+  powerSupply: number
   size: { width: number; height: number }
   shortName: string
   tags?: string[]

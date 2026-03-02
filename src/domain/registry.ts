@@ -1,8 +1,47 @@
-import type { BaseDef, DeviceTypeDef, ItemDef, RecipeDef } from './types'
+import type { BaseDef, DeviceTypeDef, DeviceTypeId, ItemDef, RecipeDef } from './types'
 
 const solidAllowance = { mode: 'solid' as const, whitelist: [] }
 const liquidAllowance = { mode: 'liquid' as const, whitelist: [] }
 const recipeItemsAllowance = { mode: 'recipe_items' as const, whitelist: [] }
+
+const DEVICE_POWER_PROFILE: Record<DeviceTypeId, { powerDemand: number; powerSupply: number }> = {
+  item_port_unloader_1: { powerDemand: 0, powerSupply: 0 },
+  item_port_loader_1: { powerDemand: 0, powerSupply: 0 },
+  item_port_grinder_1: { powerDemand: 5, powerSupply: 0 },
+  item_port_furnance_1: { powerDemand: 5, powerSupply: 0 },
+  item_port_cmpt_mc_1: { powerDemand: 20, powerSupply: 0 },
+  item_port_shaper_1: { powerDemand: 10, powerSupply: 0 },
+  item_port_seedcol_1: { powerDemand: 10, powerSupply: 0 },
+  item_port_planter_1: { powerDemand: 20, powerSupply: 0 },
+  item_port_hydro_planter_1: { powerDemand: 20, powerSupply: 0 },
+  item_port_winder_1: { powerDemand: 10, powerSupply: 0 },
+  item_port_filling_pd_mc_1: { powerDemand: 20, powerSupply: 0 },
+  item_port_liquid_filling_pd_mc_1: { powerDemand: 20, powerSupply: 0 },
+  item_port_tools_asm_mc_1: { powerDemand: 20, powerSupply: 0 },
+  item_port_thickener_1: { powerDemand: 50, powerSupply: 0 },
+  item_port_power_sta_1: { powerDemand: 0, powerSupply: 1 },
+  item_port_mix_pool_1: { powerDemand: 50, powerSupply: 0 },
+  item_port_xiranite_oven_1: { powerDemand: 50, powerSupply: 0 },
+  item_port_dismantler_1: { powerDemand: 20, powerSupply: 0 },
+  item_port_log_hongs_bus_source: { powerDemand: 0, powerSupply: 0 },
+  item_port_log_hongs_bus: { powerDemand: 0, powerSupply: 0 },
+  item_port_water_pump_1: { powerDemand: 10, powerSupply: 0 },
+  item_port_liquid_storager_1: { powerDemand: 0, powerSupply: 0 },
+  item_port_power_diffuser_1: { powerDemand: 0, powerSupply: 0 },
+  item_port_storager_1: { powerDemand: 5, powerSupply: 0 },
+  belt_straight_1x1: { powerDemand: 0, powerSupply: 0 },
+  belt_turn_cw_1x1: { powerDemand: 0, powerSupply: 0 },
+  belt_turn_ccw_1x1: { powerDemand: 0, powerSupply: 0 },
+  pipe_straight_1x1: { powerDemand: 0, powerSupply: 0 },
+  pipe_turn_cw_1x1: { powerDemand: 0, powerSupply: 0 },
+  pipe_turn_ccw_1x1: { powerDemand: 0, powerSupply: 0 },
+  item_log_splitter: { powerDemand: 0, powerSupply: 0 },
+  item_log_converger: { powerDemand: 0, powerSupply: 0 },
+  item_log_connector: { powerDemand: 0, powerSupply: 0 },
+  item_pipe_splitter: { powerDemand: 0, powerSupply: 0 },
+  item_pipe_converger: { powerDemand: 0, powerSupply: 0 },
+  item_pipe_connector: { powerDemand: 0, powerSupply: 0 },
+}
 
 export const ITEMS: ItemDef[] = [
   { id: 'item_bottled_food_1', displayName: '柑实罐头', type: 'solid' },
@@ -942,7 +981,7 @@ export const RECIPES: RecipeDef[] = [
   },
 ]
 
-export const DEVICE_TYPES: DeviceTypeDef[] = [
+const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'>> = [
   {
     id: 'item_port_unloader_1',
     runtimeKind: 'storage',
@@ -1944,6 +1983,11 @@ export const DEVICE_TYPES: DeviceTypeDef[] = [
     ]),
   },
 ]
+
+export const DEVICE_TYPES: DeviceTypeDef[] = DEVICE_TYPES_BASE.map((deviceType) => ({
+  ...deviceType,
+  ...DEVICE_POWER_PROFILE[deviceType.id],
+}))
 
 export const DEVICE_TYPE_BY_ID: Record<string, DeviceTypeDef> = Object.fromEntries(
   DEVICE_TYPES.map((deviceType) => [deviceType.id, deviceType]),
