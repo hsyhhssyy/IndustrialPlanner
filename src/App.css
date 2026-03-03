@@ -1875,6 +1875,34 @@ button:disabled {
   flex-direction: column;
 }
 
+.planner-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.planner-result-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.planner-tab-btn {
+  width: auto !important;
+  margin: 0 !important;
+  padding: 4px 10px !important;
+  border: 1px solid #35516f;
+  border-radius: 6px;
+  background: #223247;
+  color: #e5ebf3;
+  font-size: 12px;
+}
+
+.planner-tab-btn.active {
+  border-color: #4f7bc4;
+  background: #395c93;
+}
+
 .planner-summary-pane {
   display: flex;
   flex-direction: column;
@@ -2237,4 +2265,160 @@ button:disabled {
   margin: 4px 0 0;
   color: #ffd166;
   font-size: 12px;
+}
+
+.planner-flow-canvas {
+  margin-top: 8px;
+  border: 1px solid #2f3a4a;
+  border-radius: 8px;
+  background: #1b2432;
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+  min-height: 420px;
+}
+
+.planner-flow-canvas.is-panning {
+  cursor: grabbing;
+}
+
+.planner-flow-reset-btn {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 4;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+}
+
+.planner-flow-viewport {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.planner-flow-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.planner-flow-edge {
+  fill: none;
+  stroke: #7aa8e3;
+  stroke-width: 2;
+}
+
+.planner-flow-svg marker path {
+  fill: #7aa8e3;
+}
+
+.planner-flow-edge-label {
+  fill: #d9e7fb;
+  font-size: 11px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  paint-order: stroke;
+  stroke: rgba(17, 23, 33, 0.95);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.planner-flow-node {
+  position: absolute;
+  border: 1px solid #35516f;
+  border-radius: 8px;
+  background: #223247;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  box-sizing: border-box;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.planner-flow-node-layer {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  border: 1px solid #4f7bc4;
+  background: #1f2a38;
+  color: #d9e7ff;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.planner-flow-node:active {
+  cursor: grabbing;
+}
+
+.planner-flow-products {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.planner-flow-product-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.planner-flow-product-row img {
+  width: auto;
+  height: 44px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.planner-flow-product-row span {
+  font-size: 12px;
+  color: #e5edf9;
+  white-space: pre-line;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.planner-flow-node.is-dual .planner-flow-products {
+  padding-left: 6px;
+}
+
+.planner-flow-dual-link {
+  position: absolute;
+  left: 2px;
+  top: 20px;
+  width: 2px;
+  height: 34px;
+  background: #8cb8f3;
+  border-radius: 999px;
+}
+
+.planner-flow-node-meta {
+  border-top: 1px solid #2f3a4a;
+  padding-top: 6px;
+  font-size: 12px;
+  color: #b8c9e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

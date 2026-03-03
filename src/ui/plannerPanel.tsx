@@ -53,6 +53,54 @@ type PlannerFlatCard = {
   outputFlows: Array<{ itemId: ItemId; perMinute: number }>
 }
 
+type PlannerResultTab = 'list' | 'flowByDevice'
+
+type FlowGraphNode = {
+  id: string
+  key: string
+  machineType: DeviceTypeId | null
+  machineCount: number
+  recipeId: string | null
+  isRaw: boolean
+  level: number
+  displayItemIds: ItemId[]
+  inputFlows: Array<{ itemId: ItemId; perMinute: number }>
+  outputFlows: Array<{ itemId: ItemId; perMinute: number }>
+}
+
+type FlowGraphEdge = {
+  id: string
+  sourceId: string
+  targetId: string
+  itemId: ItemId
+  perMinute: number
+}
+
+type FlowNodePosition = {
+  x: number
+  y: number
+}
+
+type FlowAutoLayoutResult = {
+  positions: Record<string, FlowNodePosition>
+  layerByNode: Record<string, number>
+}
+
+type FlowNodeDragState = {
+  nodeId: string
+  startPointerX: number
+  startPointerY: number
+  startX: number
+  startY: number
+}
+
+type FlowPanState = {
+  startPointerX: number
+  startPointerY: number
+  startOffsetX: number
+  startOffsetY: number
+}
+
 function createTargetId() {
   return `planner_target_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
@@ -127,6 +175,23 @@ function formatBelts(value: number) {
   return `${Math.max(0, Math.ceil(value - 1e-9))}`
 }
 
+function formatMachineExact(value: number) {
+  if (!Number.isFinite(value)) return '0'
+  const normalized = Math.max(0, value)
+  if (Math.abs(normalized - Math.round(normalized)) < 1e-6) {
+    return `${Math.round(normalized)}`
+  }
+  const fixed = normalized >= 100 ? normalized.toFixed(1) : normalized.toFixed(2)
+  return fixed.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1')
+}
+
+function formatFlowNodeItemName(language: Language, name: string) {
+  if (language !== 'zh-CN') return name
+  const chars = Array.from(name)
+  if (chars.length <= 8) return name
+  return `${chars.slice(0, 8).join('')}\n${chars.slice(8).join('')}`
+}
+
 function formatFlowList(language: Language, flows: Array<{ itemId: ItemId; perMinute: number }>) {
   if (flows.length === 0) return '-'
   return flows.map((flow) => `${getItemLabel(language, flow.itemId)} ${formatRate(flow.perMinute)}/min`).join(' | ')
@@ -152,6 +217,14 @@ function isPlantLoopMachine(machineType: DeviceTypeId) {
   return machineType === 'item_port_seedcol_1' || machineType === 'item_port_planter_1' || machineType === 'item_port_hydro_planter_1'
 }
 
+function isSeedCollectorMachine(machineType: DeviceTypeId | null) {
+  return machineType === 'item_port_seedcol_1'
+}
+
+function isPlanterMachine(machineType: DeviceTypeId | null) {
+  return machineType === 'item_port_planter_1' || machineType === 'item_port_hydro_planter_1'
+}
+
 function collectDemandByItem(roots: PlannerTreeNode[]) {
   const demandByItem = new Map<ItemId, number>()
   for (const root of roots) {
@@ -174,7 +247,15 @@ export function PlannerPanel({ language, t, onClose }: PlannerPanelProps) {
     normalizePlannerState,
   )
   const [dragState, setDragState] = useState<DragState | null>(null)
+  const [activeResultTab, setActiveResultTab] = useState<PlannerResultTab>('list')
+  const [flowScale, setFlowScale] = useState(1)
+  const [flowOffset, setFlowOffset] = useState<FlowNodePosition>({ x: 40, y: 40 })
+  const [flowNodePositions, setFlowNodePositions] = useState<Record<string, FlowNodePosition>>({})
+  const [flowNodeLayers, setFlowNodeLayers] = useState<Record<string, number>>({})
+  const [flowNodeDragState, setFlowNodeDragState] = useState<FlowNodeDragState | null>(null)
+  const [flowPanState, setFlowPanState] = useState<FlowPanState | null>(null)
   const dialogRef = useRef<HTMLDivElement | null>(null)
+  const flowViewportRef = useRef<HTMLDivElement | null>(null)
   const BELT_THROUGHPUT_PER_MINUTE = 30
 
   const WULING_TAG = '武陵'
@@ -308,6 +389,67 @@ export function PlannerPanel({ language, t, onClose }: PlannerPanelProps) {
       window.removeEventListener('mouseup', onMouseUp)
     }
   }, [dragState])
+
+  useEffect(() => {
+    if (!flowNodeDragState && !flowPanState) return
+
+    const onMouseMove = (event: MouseEvent) => {
+      if (flowNodeDragState) {
+        const nextX = flowNodeDragState.startX + (event.clientX - flowNodeDragState.startPointerX) / flowScale
+        const nextY = flowNodeDragState.startY + (event.clientY - flowNodeDragState.startPointerY) / flowScale
+        setFlowNodePositions((current) => ({
+          ...current,
+          [flowNodeDragState.nodeId]: { x: nextX, y: nextY },
+        }))
+        return
+      }
+      if (flowPanState) {
+        setFlowOffset({
+          x: flowPanState.startOffsetX + (event.clientX - flowPanState.startPointerX),
+          y: flowPanState.startOffsetY + (event.clientY - flowPanState.startPointerY),
+        })
+      }
+    }
+
+    const onMouseUp = () => {
+      setFlowNodeDragState(null)
+      setFlowPanState(null)
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [flowNodeDragState, flowPanState, flowScale])
+
+  useEffect(() => {
+    const viewport = flowViewportRef.current
+    if (!viewport) return
+
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      const rect = viewport.getBoundingClientRect()
+      const pointerX = event.clientX - rect.left
+      const pointerY = event.clientY - rect.top
+      const factor = event.deltaY > 0 ? 0.9 : 1.1
+      const nextScale = clamp(flowScale * factor, 0.4, 2)
+      if (Math.abs(nextScale - flowScale) < 1e-6) return
+
+      const worldX = (pointerX - flowOffset.x) / flowScale
+      const worldY = (pointerY - flowOffset.y) / flowScale
+
+      setFlowScale(nextScale)
+      setFlowOffset({
+        x: pointerX - worldX * nextScale,
+        y: pointerY - worldY * nextScale,
+      })
+    }
+
+    viewport.addEventListener('wheel', onWheel, { passive: false })
+    return () => viewport.removeEventListener('wheel', onWheel)
+  }, [flowOffset.x, flowOffset.y, flowScale])
 
   const targetInputs = useMemo<PlannerTargetInput[]>(
     () =>
@@ -551,6 +693,624 @@ export function PlannerPanel({ language, t, onClose }: PlannerPanelProps) {
     })
   }, [baseDemandByItem, planResult.roots, plannerState.recipeSelectionByItem, recipeById, recipeIdsByOutputItem])
 
+  const flowGraph = useMemo(() => {
+    const nodeByKey = new Map<string, FlowGraphNode>()
+
+    const ensureNode = (card: PlannerFlatCard) => {
+      const nodeKey = card.isRawDemand || !card.machineType || !card.recipeId ? `raw|${card.itemId}` : `${card.machineType}|${card.recipeId}`
+      const existing = nodeByKey.get(nodeKey)
+      if (existing) {
+        existing.level = Math.min(existing.level, card.level)
+        existing.machineCount += card.machineCount
+        for (const flow of card.inputFlows) {
+          const current = existing.inputFlows.find((entry) => entry.itemId === flow.itemId)
+          if (current) {
+            current.perMinute += flow.perMinute
+          } else {
+            existing.inputFlows.push({ ...flow })
+          }
+        }
+        const outputFlows =
+          card.isRawDemand || !card.recipeId
+            ? [{ itemId: card.itemId, perMinute: card.demandPerMinute }]
+            : card.outputFlows
+        for (const flow of outputFlows) {
+          const current = existing.outputFlows.find((entry) => entry.itemId === flow.itemId)
+          if (current) {
+            current.perMinute += flow.perMinute
+          } else {
+            existing.outputFlows.push({ ...flow })
+          }
+        }
+        if (!existing.displayItemIds.includes(card.itemId)) {
+          existing.displayItemIds.push(card.itemId)
+        }
+        return
+      }
+
+      const displayItemIds =
+        card.isRawDemand || !card.recipeId
+          ? [card.itemId]
+          : (recipeById.get(card.recipeId)?.outputs.map((entry) => entry.itemId) ?? [card.itemId])
+
+      nodeByKey.set(nodeKey, {
+        id: nodeKey,
+        key: nodeKey,
+        machineType: card.machineType,
+        machineCount: card.machineCount,
+        recipeId: card.recipeId,
+        isRaw: card.isRawDemand || !card.machineType,
+        level: card.level,
+        displayItemIds: displayItemIds.slice(0, 2),
+        inputFlows: card.inputFlows.map((entry) => ({ ...entry })),
+        outputFlows:
+          card.isRawDemand || !card.recipeId
+            ? [{ itemId: card.itemId, perMinute: card.demandPerMinute }]
+            : card.outputFlows.map((entry) => ({ ...entry })),
+      })
+    }
+
+    for (const card of flatCards) {
+      ensureNode(card)
+    }
+
+    const nodes = [...nodeByKey.values()].sort((a, b) => a.level - b.level || a.id.localeCompare(b.id))
+
+    const producersByItem = new Map<ItemId, Array<{ nodeId: string; perMinute: number }>>()
+    const consumersByItem = new Map<ItemId, Array<{ nodeId: string; perMinute: number }>>()
+
+    for (const node of nodes) {
+      for (const output of node.outputFlows) {
+        const list = producersByItem.get(output.itemId) ?? []
+        list.push({ nodeId: node.id, perMinute: Math.max(0, output.perMinute) })
+        producersByItem.set(output.itemId, list)
+      }
+      for (const input of node.inputFlows) {
+        const list = consumersByItem.get(input.itemId) ?? []
+        list.push({ nodeId: node.id, perMinute: Math.max(0, input.perMinute) })
+        consumersByItem.set(input.itemId, list)
+      }
+    }
+
+    const edges: FlowGraphEdge[] = []
+    const itemIds = new Set<ItemId>([...producersByItem.keys(), ...consumersByItem.keys()])
+
+    for (const itemId of itemIds) {
+      const producers = (producersByItem.get(itemId) ?? []).map((entry) => ({ ...entry }))
+      const consumers = (consumersByItem.get(itemId) ?? []).map((entry) => ({ ...entry }))
+      if (producers.length === 0 || consumers.length === 0) continue
+
+      for (const consumer of consumers) {
+        let needed = consumer.perMinute
+        for (const producer of producers) {
+          if (needed <= 1e-9) break
+          if (producer.perMinute <= 1e-9) continue
+          if (producer.nodeId === consumer.nodeId) continue
+          const flow = Math.min(needed, producer.perMinute)
+          if (flow <= 1e-9) continue
+          producer.perMinute -= flow
+          needed -= flow
+          edges.push({
+            id: `${itemId}|${producer.nodeId}|${consumer.nodeId}|${edges.length}`,
+            sourceId: producer.nodeId,
+            targetId: consumer.nodeId,
+            itemId,
+            perMinute: flow,
+          })
+        }
+      }
+    }
+
+    return {
+      nodes,
+      edges,
+    }
+  }, [flatCards, recipeById])
+
+  const autoFlowLayout = useMemo<FlowAutoLayoutResult>(() => {
+    const spacingX = 340
+    const spacingY = 150
+    const nodes = flowGraph.nodes
+    const edges = flowGraph.edges
+    if (nodes.length === 0) {
+      return {
+        positions: {},
+        layerByNode: {},
+      }
+    }
+
+    const nodeIdSet = new Set(nodes.map((node) => node.id))
+    const outgoing = new Map<string, string[]>()
+    const incoming = new Map<string, string[]>()
+    for (const node of nodes) {
+      outgoing.set(node.id, [])
+      incoming.set(node.id, [])
+    }
+    for (const edge of edges) {
+      if (!nodeIdSet.has(edge.sourceId) || !nodeIdSet.has(edge.targetId)) continue
+      outgoing.get(edge.sourceId)?.push(edge.targetId)
+      incoming.get(edge.targetId)?.push(edge.sourceId)
+    }
+
+    let index = 0
+    const stack: string[] = []
+    const onStack = new Set<string>()
+    const dfn = new Map<string, number>()
+    const low = new Map<string, number>()
+    const sccIdByNode = new Map<string, number>()
+    const sccNodes: string[][] = []
+
+    const tarjanDfs = (nodeId: string) => {
+      dfn.set(nodeId, index)
+      low.set(nodeId, index)
+      index += 1
+      stack.push(nodeId)
+      onStack.add(nodeId)
+
+      for (const nextId of outgoing.get(nodeId) ?? []) {
+        if (!dfn.has(nextId)) {
+          tarjanDfs(nextId)
+          low.set(nodeId, Math.min(low.get(nodeId) ?? 0, low.get(nextId) ?? 0))
+        } else if (onStack.has(nextId)) {
+          low.set(nodeId, Math.min(low.get(nodeId) ?? 0, dfn.get(nextId) ?? 0))
+        }
+      }
+
+      if ((low.get(nodeId) ?? -1) !== (dfn.get(nodeId) ?? -2)) return
+
+      const currentScc: string[] = []
+      while (stack.length > 0) {
+        const top = stack.pop() as string
+        onStack.delete(top)
+        sccIdByNode.set(top, sccNodes.length)
+        currentScc.push(top)
+        if (top === nodeId) break
+      }
+      sccNodes.push(currentScc)
+    }
+
+    for (const node of nodes) {
+      if (!dfn.has(node.id)) tarjanDfs(node.id)
+    }
+
+    const sccOutgoing = new Map<number, Set<number>>()
+    const sccIndegree = new Map<number, number>()
+    const sccLayer = new Map<number, number>()
+    for (let scc = 0; scc < sccNodes.length; scc += 1) {
+      sccOutgoing.set(scc, new Set<number>())
+      sccIndegree.set(scc, 0)
+      sccLayer.set(scc, 0)
+    }
+
+    for (const edge of edges) {
+      const sourceScc = sccIdByNode.get(edge.sourceId)
+      const targetScc = sccIdByNode.get(edge.targetId)
+      if (sourceScc === undefined || targetScc === undefined) continue
+      if (sourceScc === targetScc) continue
+      const nextSet = sccOutgoing.get(sourceScc)
+      if (!nextSet || nextSet.has(targetScc)) continue
+      nextSet.add(targetScc)
+      sccIndegree.set(targetScc, (sccIndegree.get(targetScc) ?? 0) + 1)
+    }
+
+    const queue: number[] = []
+    for (let scc = 0; scc < sccNodes.length; scc += 1) {
+      if ((sccIndegree.get(scc) ?? 0) === 0) {
+        queue.push(scc)
+      }
+    }
+
+    while (queue.length > 0) {
+      const current = queue.shift() as number
+      const currentLayer = sccLayer.get(current) ?? 0
+      for (const next of sccOutgoing.get(current) ?? []) {
+        const nextLayer = sccLayer.get(next) ?? 0
+        if (currentLayer + 1 > nextLayer) {
+          sccLayer.set(next, currentLayer + 1)
+        }
+        sccIndegree.set(next, (sccIndegree.get(next) ?? 0) - 1)
+        if ((sccIndegree.get(next) ?? 0) === 0) {
+          queue.push(next)
+        }
+      }
+    }
+
+    const nodeLayer = new Map<string, number>()
+    let minLayer = Number.POSITIVE_INFINITY
+    for (const node of nodes) {
+      const scc = sccIdByNode.get(node.id)
+      const layer = scc === undefined ? 0 : sccLayer.get(scc) ?? 0
+      nodeLayer.set(node.id, layer)
+      minLayer = Math.min(minLayer, layer)
+    }
+    if (!Number.isFinite(minLayer)) minLayer = 0
+
+    const visualLayerByNode = new Map(nodeLayer)
+    for (const edge of edges) {
+      const source = nodes.find((node) => node.id === edge.sourceId)
+      const target = nodes.find((node) => node.id === edge.targetId)
+      if (!source || !target) continue
+      const isPlanterSeedRelation =
+        (isPlanterMachine(source.machineType) && isSeedCollectorMachine(target.machineType)) ||
+        (isSeedCollectorMachine(source.machineType) && isPlanterMachine(target.machineType))
+      if (!isPlanterSeedRelation) continue
+
+      const sourceLayer = visualLayerByNode.get(source.id) ?? 0
+      const targetLayer = visualLayerByNode.get(target.id) ?? 0
+      const unifiedLayer = Math.min(sourceLayer, targetLayer)
+      visualLayerByNode.set(source.id, unifiedLayer)
+      visualLayerByNode.set(target.id, unifiedLayer)
+    }
+
+    const targetItemSet = new Set(targetInputs.map((target) => target.itemId))
+    const targetNodeIdSet = new Set<string>()
+    for (const card of flatCards) {
+      if (!targetItemSet.has(card.itemId)) continue
+      const nodeId = card.isRawDemand || !card.machineType || !card.recipeId ? `raw|${card.itemId}` : `${card.machineType}|${card.recipeId}`
+      targetNodeIdSet.add(nodeId)
+    }
+
+    let maxVisualLayer = 0
+    for (const value of visualLayerByNode.values()) {
+      if (value > maxVisualLayer) maxVisualLayer = value
+    }
+    for (const nodeId of targetNodeIdSet) {
+      if (!visualLayerByNode.has(nodeId)) continue
+      visualLayerByNode.set(nodeId, maxVisualLayer)
+    }
+
+    const normalizedLayerByNode = new Map<string, number>()
+    const layerNodes = new Map<number, string[]>()
+    for (const node of nodes) {
+      const layer = (visualLayerByNode.get(node.id) ?? 0) - minLayer
+      normalizedLayerByNode.set(node.id, layer)
+      const list = layerNodes.get(layer) ?? []
+      list.push(node.id)
+      layerNodes.set(layer, list)
+    }
+
+    const nodeById = new Map(nodes.map((node) => [node.id, node]))
+
+    const pairFlowByTarget = new Map<string, number>()
+    for (const edge of edges) {
+      const key = `${edge.sourceId}->${edge.targetId}`
+      pairFlowByTarget.set(key, (pairFlowByTarget.get(key) ?? 0) + edge.perMinute)
+    }
+
+    type RowCell = { kind: 'node'; nodeId: string } | { kind: 'ghost' }
+    const rows: Array<Map<number, RowCell>> = []
+    const assignedNodes = new Set<string>()
+
+    const reserveNodeInRow = (rowMap: Map<number, RowCell>, nodeId: string) => {
+      const layer = normalizedLayerByNode.get(nodeId)
+      if (layer === undefined) return
+      const existing = rowMap.get(layer)
+      if (!existing) {
+        rowMap.set(layer, { kind: 'node', nodeId })
+      }
+    }
+
+    const reserveGhostChain = (rowMap: Map<number, RowCell>, fromLayer: number, toLayer: number) => {
+      const min = Math.min(fromLayer, toLayer)
+      const max = Math.max(fromLayer, toLayer)
+      for (let layer = min + 1; layer < max; layer += 1) {
+        if (!rowMap.has(layer)) {
+          rowMap.set(layer, { kind: 'ghost' })
+        }
+      }
+    }
+
+    const pickBackbonePredecessor = (targetId: string, localVisited: Set<string>) => {
+      const targetLayer = normalizedLayerByNode.get(targetId) ?? 0
+      const candidates = (incoming.get(targetId) ?? [])
+        .map((sourceId) => {
+          const sourceLayer = normalizedLayerByNode.get(sourceId) ?? targetLayer
+          const span = Math.abs(targetLayer - sourceLayer)
+          const flow = pairFlowByTarget.get(`${sourceId}->${targetId}`) ?? 0
+          const sourceNode = nodeById.get(sourceId)
+          const targetNode = nodeById.get(targetId)
+          const planterSeedBonus =
+            sourceNode && targetNode &&
+            ((isPlanterMachine(sourceNode.machineType) && isSeedCollectorMachine(targetNode.machineType)) ||
+              (isSeedCollectorMachine(sourceNode.machineType) && isPlanterMachine(targetNode.machineType)))
+              ? 1
+              : 0
+          return {
+            sourceId,
+            span,
+            flow,
+            alreadyAssigned: assignedNodes.has(sourceId) ? 1 : 0,
+            localVisited: localVisited.has(sourceId) ? 1 : 0,
+            planterSeedBonus,
+          }
+        })
+        .filter((entry) => entry.localVisited === 0)
+
+      if (candidates.length === 0) return null
+
+      const preferred = candidates.filter((entry) => entry.alreadyAssigned === 0)
+      const pool = preferred.length > 0 ? preferred : candidates
+      pool.sort((a, b) => {
+        if (a.span !== b.span) return b.span - a.span
+        if (a.planterSeedBonus !== b.planterSeedBonus) return b.planterSeedBonus - a.planterSeedBonus
+        if (a.flow !== b.flow) return b.flow - a.flow
+        return a.sourceId.localeCompare(b.sourceId)
+      })
+
+      return pool[0]?.sourceId ?? null
+    }
+
+    const buildBackboneRow = (startId: string) => {
+      const rowMap = new Map<number, RowCell>()
+      const localVisited = new Set<string>()
+
+      let currentId: string | null = startId
+      while (currentId) {
+        localVisited.add(currentId)
+        reserveNodeInRow(rowMap, currentId)
+        assignedNodes.add(currentId)
+
+        const nextId = pickBackbonePredecessor(currentId, localVisited)
+        if (!nextId) break
+
+        const currentLayer = normalizedLayerByNode.get(currentId)
+        const nextLayer = normalizedLayerByNode.get(nextId)
+        if (currentLayer !== undefined && nextLayer !== undefined) {
+          reserveGhostChain(rowMap, currentLayer, nextLayer)
+        }
+
+        currentId = nextId
+      }
+
+      return rowMap
+    }
+
+    const undirected = new Map<string, Set<string>>()
+    for (const node of nodes) {
+      undirected.set(node.id, new Set<string>())
+    }
+    for (const edge of edges) {
+      undirected.get(edge.sourceId)?.add(edge.targetId)
+      undirected.get(edge.targetId)?.add(edge.sourceId)
+    }
+
+    const componentByNode = new Map<string, number>()
+    const componentNodes = new Map<number, string[]>()
+    let componentCounter = 0
+    for (const node of nodes) {
+      if (componentByNode.has(node.id)) continue
+      const stack = [node.id]
+      const ids: string[] = []
+      componentByNode.set(node.id, componentCounter)
+      while (stack.length > 0) {
+        const current = stack.pop() as string
+        ids.push(current)
+        for (const next of undirected.get(current) ?? []) {
+          if (componentByNode.has(next)) continue
+          componentByNode.set(next, componentCounter)
+          stack.push(next)
+        }
+      }
+      componentNodes.set(componentCounter, ids)
+      componentCounter += 1
+    }
+
+    const componentIds = [...componentNodes.keys()].sort((a, b) => {
+      const aNodes = componentNodes.get(a) ?? []
+      const bNodes = componentNodes.get(b) ?? []
+      const aHasTarget = aNodes.some((id) => targetNodeIdSet.has(id)) ? 1 : 0
+      const bHasTarget = bNodes.some((id) => targetNodeIdSet.has(id)) ? 1 : 0
+      if (aHasTarget !== bHasTarget) return bHasTarget - aHasTarget
+      const aMaxLayer = aNodes.reduce((max, id) => Math.max(max, normalizedLayerByNode.get(id) ?? 0), 0)
+      const bMaxLayer = bNodes.reduce((max, id) => Math.max(max, normalizedLayerByNode.get(id) ?? 0), 0)
+      if (aMaxLayer !== bMaxLayer) return bMaxLayer - aMaxLayer
+      return a - b
+    })
+
+    for (const componentId of componentIds) {
+      const nodeIds = componentNodes.get(componentId) ?? []
+      const componentNodeSet = new Set(nodeIds)
+
+      const componentSinks = nodes
+        .filter((node) => componentNodeSet.has(node.id) && (outgoing.get(node.id)?.length ?? 0) === 0)
+        .sort((a, b) => {
+          const targetA = targetNodeIdSet.has(a.id) ? 1 : 0
+          const targetB = targetNodeIdSet.has(b.id) ? 1 : 0
+          if (targetA !== targetB) return targetB - targetA
+          const la = normalizedLayerByNode.get(a.id) ?? 0
+          const lb = normalizedLayerByNode.get(b.id) ?? 0
+          if (la !== lb) return lb - la
+          return a.id.localeCompare(b.id)
+        })
+
+      for (const sink of componentSinks) {
+        if (assignedNodes.has(sink.id)) continue
+        rows.push(buildBackboneRow(sink.id))
+      }
+
+      const componentRemaining = nodes
+        .filter((node) => componentNodeSet.has(node.id) && !assignedNodes.has(node.id))
+        .sort((a, b) => {
+          const targetA = targetNodeIdSet.has(a.id) ? 1 : 0
+          const targetB = targetNodeIdSet.has(b.id) ? 1 : 0
+          if (targetA !== targetB) return targetB - targetA
+          const la = normalizedLayerByNode.get(a.id) ?? 0
+          const lb = normalizedLayerByNode.get(b.id) ?? 0
+          if (la !== lb) return lb - la
+          const outA = outgoing.get(a.id)?.length ?? 0
+          const outB = outgoing.get(b.id)?.length ?? 0
+          if (outA !== outB) return outA - outB
+          return a.id.localeCompare(b.id)
+        })
+
+      for (const node of componentRemaining) {
+        if (assignedNodes.has(node.id)) continue
+        rows.push(buildBackboneRow(node.id))
+      }
+    }
+
+    const nextPositions: Record<string, FlowNodePosition> = {}
+    const nextLayerByNode: Record<string, number> = {}
+
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+      const rowMap = rows[rowIndex]
+      const rowY = 40 + rowIndex * spacingY
+      for (const [layer, cell] of [...rowMap.entries()].sort((a, b) => a[0] - b[0])) {
+        if (cell.kind !== 'node') continue
+        nextLayerByNode[cell.nodeId] = layer
+        nextPositions[cell.nodeId] = {
+          x: 60 + layer * spacingX,
+          y: rowY,
+        }
+      }
+    }
+
+    for (const node of nodes) {
+      if (nextPositions[node.id]) continue
+      const layer = normalizedLayerByNode.get(node.id) ?? 0
+      const fallbackRow = rows.length
+      nextLayerByNode[node.id] = layer
+      nextPositions[node.id] = {
+        x: 60 + layer * spacingX,
+        y: 40 + fallbackRow * spacingY,
+      }
+    }
+
+    const rowByNode = new Map<string, number>()
+    for (const node of nodes) {
+      const position = nextPositions[node.id]
+      if (!position) continue
+      const row = Math.max(0, Math.round((position.y - 40) / spacingY))
+      rowByNode.set(node.id, row)
+    }
+
+    const buildOccupancy = () => {
+      const byRow = new Map<number, Map<number, string>>()
+      for (const node of nodes) {
+        const nodeId = node.id
+        const row = rowByNode.get(nodeId)
+        const layer = nextLayerByNode[nodeId]
+        if (row === undefined || layer === undefined) continue
+        const rowMap = byRow.get(row) ?? new Map<number, string>()
+        rowMap.set(layer, nodeId)
+        byRow.set(row, rowMap)
+      }
+      return byRow
+    }
+
+    const planterSeedPairs: Array<{ planterId: string; seedId: string }> = []
+    const seenPlanterSeed = new Set<string>()
+    for (const edge of edges) {
+      const sourceNode = nodeById.get(edge.sourceId)
+      const targetNode = nodeById.get(edge.targetId)
+      if (!sourceNode || !targetNode) continue
+
+      const isPair =
+        (isPlanterMachine(sourceNode.machineType) && isSeedCollectorMachine(targetNode.machineType)) ||
+        (isSeedCollectorMachine(sourceNode.machineType) && isPlanterMachine(targetNode.machineType))
+      if (!isPair) continue
+
+      const planterId = isPlanterMachine(sourceNode.machineType) ? sourceNode.id : targetNode.id
+      const seedId = isSeedCollectorMachine(sourceNode.machineType) ? sourceNode.id : targetNode.id
+      const key = `${planterId}|${seedId}`
+      if (seenPlanterSeed.has(key)) continue
+      seenPlanterSeed.add(key)
+      planterSeedPairs.push({ planterId, seedId })
+    }
+
+    planterSeedPairs.sort((a, b) => {
+      const rowA = rowByNode.get(a.planterId) ?? 0
+      const rowB = rowByNode.get(b.planterId) ?? 0
+      return rowA - rowB
+    })
+
+    const movedSeedSet = new Set<string>()
+    for (const pair of planterSeedPairs) {
+      if (movedSeedSet.has(pair.seedId)) continue
+
+      const plannerRow = rowByNode.get(pair.planterId)
+      const seedLayer = nextLayerByNode[pair.seedId]
+      if (plannerRow === undefined || seedLayer === undefined) continue
+
+      let occupancy = buildOccupancy()
+      const seedCurrentRow = rowByNode.get(pair.seedId)
+      if (seedCurrentRow === undefined) continue
+
+      const canPlaceAtRow = (row: number) => {
+        if (row < 0) return false
+        const rowMap = occupancy.get(row)
+        const currentAtLayer = rowMap?.get(seedLayer)
+        if (currentAtLayer && currentAtLayer !== pair.seedId) return false
+
+        let leftOccupied = false
+        let rightOccupied = false
+        if (rowMap) {
+          for (const layer of rowMap.keys()) {
+            if (layer < seedLayer) leftOccupied = true
+            if (layer > seedLayer) rightOccupied = true
+            if (leftOccupied && rightOccupied) break
+          }
+        }
+        return !(leftOccupied && rightOccupied)
+      }
+
+      if (Math.abs(seedCurrentRow - plannerRow) === 1 && canPlaceAtRow(seedCurrentRow)) {
+        movedSeedSet.add(pair.seedId)
+        continue
+      }
+
+      const candidateRows = [plannerRow - 1, plannerRow + 1]
+      const availableRows = candidateRows.filter((row) => canPlaceAtRow(row))
+
+      if (availableRows.length > 0) {
+        availableRows.sort((a, b) => {
+          const aCount = occupancy.get(a)?.size ?? 0
+          const bCount = occupancy.get(b)?.size ?? 0
+          if (aCount !== bCount) return aCount - bCount
+          return a - b
+        })
+        rowByNode.set(pair.seedId, availableRows[0])
+        movedSeedSet.add(pair.seedId)
+        continue
+      }
+
+      const insertRow = plannerRow + 1
+      for (const node of nodes) {
+        const nodeId = node.id
+        if (nodeId === pair.seedId) continue
+        const row = rowByNode.get(nodeId)
+        if (row === undefined) continue
+        if (row >= insertRow) {
+          rowByNode.set(nodeId, row + 1)
+        }
+      }
+      rowByNode.set(pair.seedId, insertRow)
+      occupancy = buildOccupancy()
+      void occupancy
+      movedSeedSet.add(pair.seedId)
+    }
+
+    for (const node of nodes) {
+      const nodeId = node.id
+      const row = rowByNode.get(nodeId)
+      if (row === undefined) continue
+      nextPositions[nodeId] = {
+        ...nextPositions[nodeId],
+        y: 40 + row * spacingY,
+      }
+    }
+
+    return {
+      positions: nextPositions,
+      layerByNode: nextLayerByNode,
+    }
+  }, [flatCards, flowGraph.edges, flowGraph.nodes, targetInputs])
+
+  useEffect(() => {
+    setFlowNodePositions(autoFlowLayout.positions)
+    setFlowNodeLayers(autoFlowLayout.layerByNode)
+  }, [autoFlowLayout])
+
   const hasNonBenignCycle = useMemo(() => {
     return flatCards.some((card) => card.isCycle && !isBenignPlantCycle(card))
   }, [flatCards])
@@ -580,6 +1340,102 @@ export function PlannerPanel({ language, t, onClose }: PlannerPanelProps) {
       total,
     }
   }, [flatCards, language])
+
+  const FLOW_NODE_WIDTH = 220
+
+  const getFlowNodeHeight = (node: FlowGraphNode) => (node.displayItemIds.length > 1 ? 128 : 96)
+
+  const getFlowNodeCenter = (nodeId: string) => {
+    const node = flowGraph.nodes.find((entry) => entry.id === nodeId)
+    const position = flowNodePositions[nodeId]
+    if (!node || !position) return null
+    const width = FLOW_NODE_WIDTH
+    const height = getFlowNodeHeight(node)
+    return {
+      x: position.x + width / 2,
+      y: position.y + height / 2,
+      left: position.x,
+      right: position.x + width,
+      centerY: position.y + height / 2,
+    }
+  }
+
+  const flowEdgesWithGeometry = useMemo(() => {
+    return flowGraph.edges
+      .map((edge) => {
+        const sourceNode = flowGraph.nodes.find((node) => node.id === edge.sourceId)
+        const targetNode = flowGraph.nodes.find((node) => node.id === edge.targetId)
+        const sourceCenter = getFlowNodeCenter(edge.sourceId)
+        const targetCenter = getFlowNodeCenter(edge.targetId)
+        if (!sourceNode || !targetNode || !sourceCenter || !targetCenter) return null
+
+        const sourceOutToLeft = isSeedCollectorMachine(sourceNode.machineType)
+        const targetInFromRight = isSeedCollectorMachine(targetNode.machineType)
+
+        const sourceX = sourceOutToLeft ? sourceCenter.left : sourceCenter.right
+        const sourceY = sourceCenter.centerY
+        const targetX = targetInFromRight ? targetCenter.right : targetCenter.left
+        const targetY = targetCenter.centerY
+        const c1x = sourceX + (sourceOutToLeft ? -56 : 56)
+        const c1y = sourceY
+        const c2x = targetX + (targetInFromRight ? 56 : -56)
+        const c2y = targetY
+        const labelX = (sourceX + targetX) / 2
+        const labelY = (sourceY + targetY) / 2
+
+        return {
+          ...edge,
+          path: `M ${sourceX} ${sourceY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${targetX} ${targetY}`,
+          labelX,
+          labelY,
+        }
+      })
+      .filter((edge): edge is NonNullable<typeof edge> => Boolean(edge))
+  }, [flowGraph.edges, flowGraph.nodes, flowNodePositions])
+
+  const onFlowNodeMouseDown = (event: ReactMouseEvent<HTMLDivElement>, nodeId: string) => {
+    if (event.button !== 0) return
+    const current = flowNodePositions[nodeId]
+    if (!current) return
+    setFlowNodeDragState({
+      nodeId,
+      startPointerX: event.clientX,
+      startPointerY: event.clientY,
+      startX: current.x,
+      startY: current.y,
+    })
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  const onFlowViewportMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
+    const targetElement = event.target instanceof Element ? event.target : null
+    const hitNode = targetElement?.closest('.planner-flow-node')
+    const hitControl = targetElement?.closest('button')
+    const isMiddleButton = event.button === 1
+    const isLeftOnBlank = event.button === 0 && !hitNode && !hitControl
+    if (!isMiddleButton && !isLeftOnBlank) return
+    setFlowPanState({
+      startPointerX: event.clientX,
+      startPointerY: event.clientY,
+      startOffsetX: flowOffset.x,
+      startOffsetY: flowOffset.y,
+    })
+    event.preventDefault()
+  }
+
+  const onFlowViewportAuxClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (event.button === 1) {
+      event.preventDefault()
+    }
+  }
+
+  const onResetFlowLayout = () => {
+    setFlowNodePositions(autoFlowLayout.positions)
+    setFlowNodeLayers(autoFlowLayout.layerByNode)
+    setFlowScale(1)
+    setFlowOffset({ x: 40, y: 40 })
+  }
 
   const onHeaderMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (event.button !== 0) return
@@ -710,10 +1566,33 @@ export function PlannerPanel({ language, t, onClose }: PlannerPanelProps) {
 
           <div className="planner-right-pane">
             <section className="planner-result-pane">
-              <h4>{t('planner.resultTitle')}</h4>
+              <div className="planner-result-head">
+                <h4>{t('planner.resultTitle')}</h4>
+                <div className="planner-result-tabs" role="tablist" aria-label={t('planner.resultTitle')}>
+                  <button
+                    type="button"
+                    className={`planner-tab-btn ${activeResultTab === 'list' ? 'active' : ''}`.trim()}
+                    role="tab"
+                    aria-selected={activeResultTab === 'list'}
+                    onClick={() => setActiveResultTab('list')}
+                  >
+                    {t('planner.tab.list')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`planner-tab-btn ${activeResultTab === 'flowByDevice' ? 'active' : ''}`.trim()}
+                    role="tab"
+                    aria-selected={activeResultTab === 'flowByDevice'}
+                    onClick={() => setActiveResultTab('flowByDevice')}
+                  >
+                    {t('planner.tab.flowByDevice')}
+                  </button>
+                </div>
+              </div>
+
               {targetInputs.length === 0 ? (
                 <p className="planner-empty">{t('planner.noTarget')}</p>
-              ) : (
+              ) : activeResultTab === 'list' ? (
                 <div className="planner-levels-wrap">
                   <div className="planner-card-list">
                     <div className="planner-card-table-head" aria-hidden="true">
@@ -797,6 +1676,84 @@ export function PlannerPanel({ language, t, onClose }: PlannerPanelProps) {
 
                   {hasNonBenignCycle && <p className="planner-cycle-warning">{t('planner.cycleWarning')}</p>}
                   {planResult.depthLimited && <p className="planner-cycle-warning">{t('planner.depthWarning')}</p>}
+                </div>
+              ) : (
+                <div
+                  ref={flowViewportRef}
+                  className={`planner-flow-canvas ${flowPanState ? 'is-panning' : ''}`.trim()}
+                  onMouseDown={onFlowViewportMouseDown}
+                  onAuxClick={onFlowViewportAuxClick}
+                >
+                  <button type="button" className="planner-flow-reset-btn" onClick={onResetFlowLayout}>
+                    {t('planner.flow.resetLayout')}
+                  </button>
+                  {flowGraph.nodes.length === 0 ? (
+                    <p className="planner-empty">{t('planner.flow.empty')}</p>
+                  ) : (
+                    <div
+                      className="planner-flow-viewport"
+                      style={{
+                        transform: `translate(${flowOffset.x}px, ${flowOffset.y}px) scale(${flowScale})`,
+                        transformOrigin: '0 0',
+                      }}
+                    >
+                      <svg className="planner-flow-svg" aria-hidden="true">
+                        <defs>
+                          <marker id="planner-flow-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L8,4 L0,8 Z" />
+                          </marker>
+                        </defs>
+                        {flowEdgesWithGeometry.map((edge) => (
+                          <g key={edge.id}>
+                            <path className="planner-flow-edge" d={edge.path} markerEnd="url(#planner-flow-arrow)" />
+                            <text className="planner-flow-edge-label" x={edge.labelX} y={edge.labelY}>
+                              <tspan x={edge.labelX} dy="-0.6em">
+                                {`${getItemLabel(language, edge.itemId)} ${formatRate(edge.perMinute)}/min`}
+                              </tspan>
+                              <tspan x={edge.labelX} dy="1.2em">
+                                {`${t('planner.flow.beltCount', { count: formatBelts(edge.perMinute / BELT_THROUGHPUT_PER_MINUTE) })}`}
+                              </tspan>
+                            </text>
+                          </g>
+                        ))}
+                      </svg>
+
+                      {flowGraph.nodes.map((node) => {
+                        const position = flowNodePositions[node.id]
+                        if (!position) return null
+                        const nodeHeight = getFlowNodeHeight(node)
+                        return (
+                          <div
+                            key={node.id}
+                            className={`planner-flow-node ${node.displayItemIds.length > 1 ? 'is-dual' : ''}`.trim()}
+                            style={{
+                              width: `${FLOW_NODE_WIDTH}px`,
+                              height: `${nodeHeight}px`,
+                              left: `${position.x}px`,
+                              top: `${position.y}px`,
+                            }}
+                            onMouseDown={(event) => onFlowNodeMouseDown(event, node.id)}
+                          >
+                            <span className="planner-flow-node-layer" aria-label={t('planner.flow.layerAria', { layer: (flowNodeLayers[node.id] ?? 0) + 1 })}>
+                              {(flowNodeLayers[node.id] ?? 0) + 1}
+                            </span>
+                            <div className="planner-flow-products">
+                              {node.displayItemIds.slice(0, 2).map((itemId) => (
+                                <div key={`${node.id}-${itemId}`} className="planner-flow-product-row">
+                                  <img src={getItemIconPath(itemId)} alt="" aria-hidden="true" draggable={false} />
+                                  <span>{formatFlowNodeItemName(language, getItemLabel(language, itemId))}</span>
+                                </div>
+                              ))}
+                              {node.displayItemIds.length > 1 && <span className="planner-flow-dual-link" aria-hidden="true" />}
+                            </div>
+                            <div className="planner-flow-node-meta">
+                              {node.isRaw || !node.machineType ? t('planner.raw') : `${getDeviceLabel(language, node.machineType)} x${formatMachineExact(node.machineCount)}`}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </section>
