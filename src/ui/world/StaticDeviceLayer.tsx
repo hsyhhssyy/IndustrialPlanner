@@ -29,6 +29,7 @@ const REACTOR_LIQUID_PORT_TAGS: Record<string, string> = {
   out_w_1: '3',
   out_w_3: '4',
 }
+const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
 
 export type StaticDeviceLayerProps = {
   devices: DeviceInstance[]
@@ -186,19 +187,44 @@ export const StaticDeviceLayer = memo(
           const textureWidthPx = isQuarterTurn ? surfaceContentHeightPx : surfaceContentWidthPx
           const textureHeightPx = isQuarterTurn ? surfaceContentWidthPx : surfaceContentHeightPx
           const isPickupPort = renderDevice.typeId === 'item_port_unloader_1'
+          const isProtocolHub = renderDevice.typeId === 'item_port_sp_hub_1'
           const isGrinder = renderDevice.typeId === 'item_port_grinder_1'
           const textureSrc = getDeviceSpritePath(renderDevice.typeId)
           const isTexturedDevice = textureSrc !== null
-          const pickupItemId = isPickupPort ? renderDevice.config.pickupItemId : undefined
+          const pickupOutputEntry = isPickupPort
+            ? (renderDevice.config.protocolHubOutputs ?? []).find((entry) => entry.portId === PICKUP_OUTPUT_PORT_ID)
+            : undefined
+          const pickupItemId = isPickupPort ? pickupOutputEntry?.itemId ?? renderDevice.config.pickupItemId : undefined
           const runtimeIconItemId = getRuntimeIconItemId(renderDevice)
-          const displayItemIconId = pickupItemId ?? runtimeIconItemId
+          const displayItemIconId = runtimeIconItemId
+          const configuredPortItemEntries =
+            isPickupPort || isProtocolHub
+              ? (renderDevice.config.protocolHubOutputs ?? [])
+                  .filter((entry) => Boolean(entry.itemId))
+                  .map((entry) => ({ portId: entry.portId, itemId: entry.itemId as ItemId }))
+              : []
           const isPipeTrack = isPipe(renderDevice.typeId)
           const isBeltTrack = isBelt(renderDevice.typeId)
           const isLogisticsTrack = isBeltTrack || isPipeTrack
           const isSplitter = renderDevice.typeId === 'item_log_splitter'
           const isMerger = renderDevice.typeId === 'item_log_converger'
-          const needsRotatedPorts = isLogisticsTrack || renderDevice.typeId === 'item_port_mix_pool_1'
+          const needsRotatedPorts =
+            isLogisticsTrack || renderDevice.typeId === 'item_port_mix_pool_1' || configuredPortItemEntries.length > 0
           const rotatedPorts = needsRotatedPorts ? getRotatedPorts(renderDevice) : []
+          const configuredPortIcons = configuredPortItemEntries
+            .map((entry) => {
+              const port = rotatedPorts.find((candidate) => candidate.portId === entry.portId)
+              if (!port) return null
+              const localX = port.x - renderDevice.origin.x
+              const localY = port.y - renderDevice.origin.y
+              return {
+                key: `${renderDevice.instanceId}-port-item-${entry.portId}`,
+                itemId: entry.itemId,
+                left: (localX + 0.5) * BASE_CELL_SIZE,
+                top: (localY + 0.5) * BASE_CELL_SIZE,
+              }
+            })
+            .filter((entry): entry is { key: string; itemId: ItemId; left: number; top: number } => Boolean(entry))
           const beltPorts = isLogisticsTrack ? rotatedPorts : []
           const beltInEdge = isLogisticsTrack ? beltPorts.find((port) => port.direction === 'Input')?.edge ?? 'W' : 'W'
           const beltOutEdge = isLogisticsTrack ? beltPorts.find((port) => port.direction === 'Output')?.edge ?? 'E' : 'E'
@@ -286,7 +312,19 @@ export const StaticDeviceLayer = memo(
                   {displayItemIconId && (
                     <img className="device-item-icon" src={getItemIconPath(displayItemIconId)} alt="" aria-hidden="true" draggable={false} />
                   )}
-                  {!displayItemIconId && !HIDDEN_DEVICE_LABEL_TYPES.has(renderDevice.typeId) && (
+                  {configuredPortIcons.map((entry) => (
+                    <img
+                      key={entry.key}
+                      className="device-port-item-icon"
+                      src={getItemIconPath(entry.itemId)}
+                      alt=""
+                      aria-hidden="true"
+                      draggable={false}
+                      style={{ left: `${entry.left}px`, top: `${entry.top}px` }}
+                    />
+                  ))}
+                  {((isProtocolHub && !HIDDEN_DEVICE_LABEL_TYPES.has(renderDevice.typeId)) ||
+                    (!isProtocolHub && !displayItemIconId && configuredPortIcons.length === 0 && !HIDDEN_DEVICE_LABEL_TYPES.has(renderDevice.typeId))) && (
                     <span className={`device-label ${isPickupPort ? 'pickup-label' : ''} ${isPickupPort && isQuarterTurn ? 'pickup-label-vertical' : ''}`}>
                       {getDeviceLabel(language, renderDevice.typeId)}
                     </span>

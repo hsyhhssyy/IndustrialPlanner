@@ -6,12 +6,18 @@ import type { BaseId, DeviceInstance, LayoutState } from '../../domain/types'
 import { usePersistentState } from '../../core/usePersistentState'
 import { dialogConfirm } from '../../ui/dialog'
 import { initialStorageConfig } from '../../sim/engine'
+import { APP_VERSION, normalizeLayoutsByBaseStorage } from '../../migrations/versioning'
 
 type UseBaseLayoutDomainParams = {
   cellSize: number
   baseCellSize: number
   setSelection: Dispatch<SetStateAction<string[]>>
   t: (key: string, params?: Record<string, string | number>) => string
+}
+
+type LayoutsByBaseStorage = {
+  version: string
+  layoutsByBase: Partial<Record<BaseId, LayoutState>>
 }
 
 function isKnownBaseId(baseId: unknown): baseId is BaseId {
@@ -56,28 +62,41 @@ function normalizeLayoutForBase(rawLayout: LayoutState | undefined, baseId: Base
 
 export function useBaseLayoutDomain({ cellSize, baseCellSize, setSelection, t }: UseBaseLayoutDomainParams) {
   const [activeBaseId, setActiveBaseId] = usePersistentState<BaseId>('stage1-active-base', 'valley4_protocol_core')
-  const [layoutsByBase, setLayoutsByBase] = usePersistentState<Partial<Record<BaseId, LayoutState>>>('stage1-layouts-by-base', {})
+  const [layoutsStorage, setLayoutsStorage] = usePersistentState<LayoutsByBaseStorage>(
+    'stage1-layouts-by-base',
+    { version: APP_VERSION, layoutsByBase: {} },
+    normalizeLayoutsByBaseStorage,
+  )
+
+  const layoutsByBase = layoutsStorage.layoutsByBase
 
   const layout = useMemo(() => normalizeLayoutForBase(layoutsByBase[activeBaseId], activeBaseId), [layoutsByBase, activeBaseId])
   const setLayout = useCallback(
     (updater: LayoutState | ((current: LayoutState) => LayoutState)) => {
-      setLayoutsByBase((currentAll) => {
+      setLayoutsStorage((currentStorage) => {
+        const currentAll = currentStorage.layoutsByBase
         const currentLayout = normalizeLayoutForBase(currentAll[activeBaseId], activeBaseId)
         const nextLayout = typeof updater === 'function' ? (updater as (current: LayoutState) => LayoutState)(currentLayout) : updater
         const normalizedNext = normalizeLayoutForBase(nextLayout, activeBaseId)
         return {
-          ...currentAll,
-          [activeBaseId]: normalizedNext,
+          version: APP_VERSION,
+          layoutsByBase: {
+            ...currentAll,
+            [activeBaseId]: normalizedNext,
+          },
         }
       })
     },
-    [activeBaseId, setLayoutsByBase],
+    [activeBaseId, setLayoutsStorage],
   )
 
   const currentBaseId = activeBaseId
   const currentBase = BASE_BY_ID[currentBaseId]
   const foundationDevices = currentBase.foundationBuildings
   const foundationIdSet = new Set(foundationDevices.map((device) => device.instanceId))
+  const foundationMovableIdSet = new Set(
+    foundationDevices.filter((device) => device.movable).map((device) => device.instanceId),
+  )
 
   const zoomScale = cellSize / baseCellSize
   const canvasWidthCells = layout.lotSize + currentBase.outerRing.left + currentBase.outerRing.right
@@ -154,6 +173,7 @@ export function useBaseLayoutDomain({ cellSize, baseCellSize, setSelection, t }:
     currentBaseId,
     currentBase,
     foundationIdSet,
+    foundationMovableIdSet,
     zoomScale,
     canvasOffsetXPx,
     canvasOffsetYPx,

@@ -1,47 +1,8 @@
-import type { BaseDef, DeviceTypeDef, DeviceTypeId, ItemDef, RecipeDef } from './types'
+import type { BaseDef, DeviceTypeDef, ItemDef, RecipeDef } from './types'
 
 const solidAllowance = { mode: 'solid' as const, whitelist: [] }
 const liquidAllowance = { mode: 'liquid' as const, whitelist: [] }
 const recipeItemsAllowance = { mode: 'recipe_items' as const, whitelist: [] }
-
-const DEVICE_POWER_PROFILE: Record<DeviceTypeId, { powerDemand: number; powerSupply: number }> = {
-  item_port_unloader_1: { powerDemand: 0, powerSupply: 0 },
-  item_port_loader_1: { powerDemand: 0, powerSupply: 0 },
-  item_port_grinder_1: { powerDemand: 5, powerSupply: 0 },
-  item_port_furnance_1: { powerDemand: 5, powerSupply: 0 },
-  item_port_cmpt_mc_1: { powerDemand: 20, powerSupply: 0 },
-  item_port_shaper_1: { powerDemand: 10, powerSupply: 0 },
-  item_port_seedcol_1: { powerDemand: 10, powerSupply: 0 },
-  item_port_planter_1: { powerDemand: 20, powerSupply: 0 },
-  item_port_hydro_planter_1: { powerDemand: 20, powerSupply: 0 },
-  item_port_winder_1: { powerDemand: 10, powerSupply: 0 },
-  item_port_filling_pd_mc_1: { powerDemand: 20, powerSupply: 0 },
-  item_port_liquid_filling_pd_mc_1: { powerDemand: 20, powerSupply: 0 },
-  item_port_tools_asm_mc_1: { powerDemand: 20, powerSupply: 0 },
-  item_port_thickener_1: { powerDemand: 50, powerSupply: 0 },
-  item_port_power_sta_1: { powerDemand: 0, powerSupply: 1 },
-  item_port_mix_pool_1: { powerDemand: 50, powerSupply: 0 },
-  item_port_xiranite_oven_1: { powerDemand: 50, powerSupply: 0 },
-  item_port_dismantler_1: { powerDemand: 20, powerSupply: 0 },
-  item_port_log_hongs_bus_source: { powerDemand: 0, powerSupply: 0 },
-  item_port_log_hongs_bus: { powerDemand: 0, powerSupply: 0 },
-  item_port_water_pump_1: { powerDemand: 10, powerSupply: 0 },
-  item_port_liquid_storager_1: { powerDemand: 0, powerSupply: 0 },
-  item_port_power_diffuser_1: { powerDemand: 0, powerSupply: 0 },
-  item_port_storager_1: { powerDemand: 5, powerSupply: 0 },
-  belt_straight_1x1: { powerDemand: 0, powerSupply: 0 },
-  belt_turn_cw_1x1: { powerDemand: 0, powerSupply: 0 },
-  belt_turn_ccw_1x1: { powerDemand: 0, powerSupply: 0 },
-  pipe_straight_1x1: { powerDemand: 0, powerSupply: 0 },
-  pipe_turn_cw_1x1: { powerDemand: 0, powerSupply: 0 },
-  pipe_turn_ccw_1x1: { powerDemand: 0, powerSupply: 0 },
-  item_log_splitter: { powerDemand: 0, powerSupply: 0 },
-  item_log_converger: { powerDemand: 0, powerSupply: 0 },
-  item_log_connector: { powerDemand: 0, powerSupply: 0 },
-  item_pipe_splitter: { powerDemand: 0, powerSupply: 0 },
-  item_pipe_converger: { powerDemand: 0, powerSupply: 0 },
-  item_pipe_connector: { powerDemand: 0, powerSupply: 0 },
-}
 
 export const ITEMS: ItemDef[] = [
   { id: 'item_bottled_food_1', displayName: '柑实罐头', type: 'solid' },
@@ -981,11 +942,12 @@ export const RECIPES: RecipeDef[] = [
   },
 ]
 
-const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'>> = [
+const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
   {
     id: 'item_port_unloader_1',
     runtimeKind: 'storage',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 3, height: 1 },
     shortName: 'Pickup',
     placementConstraints: [
@@ -1014,6 +976,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_loader_1',
     runtimeKind: 'storage',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 3, height: 1 },
     shortName: 'Loader',
     placementConstraints: [
@@ -1042,6 +1005,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_grinder_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 5,
     size: { width: 3, height: 3 },
     shortName: 'Crusher',
     ports0: [
@@ -1069,6 +1033,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_furnance_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 5,
     size: { width: 3, height: 3 },
     shortName: 'Furnace',
     ports0: [
@@ -1096,6 +1061,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_cmpt_mc_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 20,
     size: { width: 3, height: 3 },
     shortName: 'Component',
     ports0: [
@@ -1123,6 +1089,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_shaper_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 10,
     size: { width: 3, height: 3 },
     shortName: 'Shaper',
     ports0: [
@@ -1150,6 +1117,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_seedcol_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 10,
     size: { width: 5, height: 5 },
     shortName: 'SeedCol',
     ports0: [
@@ -1177,6 +1145,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_planter_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 20,
     size: { width: 5, height: 5 },
     shortName: 'Planter',
     ports0: [
@@ -1204,6 +1173,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_hydro_planter_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 20,
     size: { width: 5, height: 5 },
     shortName: 'HydroPlanter',
     tags: ['武陵'],
@@ -1243,6 +1213,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_winder_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 10,
     size: { width: 6, height: 4 },
     shortName: 'Winder',
     inputBufferSlots: 2,
@@ -1272,6 +1243,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_filling_pd_mc_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 20,
     size: { width: 6, height: 4 },
     shortName: 'Filling',
     inputBufferSlots: 2,
@@ -1301,6 +1273,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_liquid_filling_pd_mc_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 20,
     size: { width: 6, height: 4 },
     shortName: 'LiquidFilling',
     inputBufferSlots: 2,
@@ -1339,6 +1312,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_tools_asm_mc_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 20,
     size: { width: 6, height: 4 },
     shortName: 'Pack',
     inputBufferSlots: 2,
@@ -1368,6 +1342,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_thickener_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 50,
     size: { width: 6, height: 4 },
     shortName: 'Thicken',
     inputBufferSlots: 2,
@@ -1396,7 +1371,8 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
   {
     id: 'item_port_power_sta_1',
     runtimeKind: 'processor',
-    requiresPower: true,
+    requiresPower: false,
+    powerDemand: 0,
     size: { width: 2, height: 2 },
     shortName: 'HeatPool',
     ports0: [
@@ -1415,6 +1391,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_mix_pool_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 50,
     size: { width: 5, height: 5 },
     shortName: 'MixPool',
     inputBufferSlots: 5,
@@ -1465,6 +1442,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_xiranite_oven_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 50,
     size: { width: 5, height: 5 },
     shortName: 'XiraniteOven',
     maxPlacementCount: 2,
@@ -1506,6 +1484,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_dismantler_1',
     runtimeKind: 'processor',
     requiresPower: true,
+    powerDemand: 20,
     size: { width: 6, height: 4 },
     shortName: 'Dismantler',
     tags: ['武陵'],
@@ -1543,6 +1522,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_log_hongs_bus_source',
     runtimeKind: 'storage',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 4, height: 4 },
     shortName: 'BusSource',
     maxPlacementCount: 1,
@@ -1554,6 +1534,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_log_hongs_bus',
     runtimeKind: 'storage',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 4, height: 8 },
     shortName: 'BusSegment',
     maxPlacementCount: 8,
@@ -1562,9 +1543,92 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     ports0: [],
   },
   {
+    id: 'item_port_sp_hub_1',
+    runtimeKind: 'storage',
+    requiresPower: false,
+    powerDemand: 0,
+    size: { width: 9, height: 9 },
+    shortName: 'ProtocolHub',
+    ports0: [
+      ...[1, 2, 3, 4, 5, 6, 7].map((x) => ({
+        id: `in_n_${x + 1}`,
+        localCellX: x,
+        localCellY: 0,
+        edge: 'N' as const,
+        direction: 'Input' as const,
+        allowedItems: { mode: 'any' as const, whitelist: [] },
+        allowedTypes: solidAllowance,
+      })),
+      ...[1, 2, 3, 4, 5, 6, 7].map((x) => ({
+        id: `in_s_${x + 1}`,
+        localCellX: x,
+        localCellY: 8,
+        edge: 'S' as const,
+        direction: 'Input' as const,
+        allowedItems: { mode: 'any' as const, whitelist: [] },
+        allowedTypes: solidAllowance,
+      })),
+      {
+        id: 'out_w_2',
+        localCellX: 0,
+        localCellY: 1,
+        edge: 'W',
+        direction: 'Output',
+        allowedItems: { mode: 'any', whitelist: [] },
+        allowedTypes: solidAllowance,
+      },
+      {
+        id: 'out_w_5',
+        localCellX: 0,
+        localCellY: 4,
+        edge: 'W',
+        direction: 'Output',
+        allowedItems: { mode: 'any', whitelist: [] },
+        allowedTypes: solidAllowance,
+      },
+      {
+        id: 'out_w_8',
+        localCellX: 0,
+        localCellY: 7,
+        edge: 'W',
+        direction: 'Output',
+        allowedItems: { mode: 'any', whitelist: [] },
+        allowedTypes: solidAllowance,
+      },
+      {
+        id: 'out_e_2',
+        localCellX: 8,
+        localCellY: 1,
+        edge: 'E',
+        direction: 'Output',
+        allowedItems: { mode: 'any', whitelist: [] },
+        allowedTypes: solidAllowance,
+      },
+      {
+        id: 'out_e_5',
+        localCellX: 8,
+        localCellY: 4,
+        edge: 'E',
+        direction: 'Output',
+        allowedItems: { mode: 'any', whitelist: [] },
+        allowedTypes: solidAllowance,
+      },
+      {
+        id: 'out_e_8',
+        localCellX: 8,
+        localCellY: 7,
+        edge: 'E',
+        direction: 'Output',
+        allowedItems: { mode: 'any', whitelist: [] },
+        allowedTypes: solidAllowance,
+      },
+    ],
+  },
+  {
     id: 'item_port_water_pump_1',
     runtimeKind: 'storage',
     requiresPower: false,
+    powerDemand: 10,
     size: { width: 3, height: 3 },
     shortName: 'WaterPump',
     tags: ['武陵', 'OuterRingAllowed', 'InnerRingNotAllowed'],
@@ -1587,6 +1651,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_liquid_storager_1',
     runtimeKind: 'storage',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 3, height: 3 },
     shortName: 'LiquidStorage',
     tags: ['武陵', 'OuterRingAllowed'],
@@ -1615,6 +1680,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_power_diffuser_1',
     runtimeKind: 'storage',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 2, height: 2 },
     shortName: 'Pole',
     ports0: [],
@@ -1623,6 +1689,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_port_storager_1',
     runtimeKind: 'storage',
     requiresPower: false,
+    powerDemand: 5,
     size: { width: 3, height: 3 },
     shortName: 'Storage',
     ports0: [
@@ -1650,6 +1717,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'belt_straight_1x1',
     runtimeKind: 'conveyor',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 1, height: 1 },
     shortName: 'Belt',
     tags: ['BeltFamily'],
@@ -1678,6 +1746,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'belt_turn_cw_1x1',
     runtimeKind: 'conveyor',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 1, height: 1 },
     shortName: 'Turn↱',
     tags: ['BeltFamily'],
@@ -1706,6 +1775,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'belt_turn_ccw_1x1',
     runtimeKind: 'conveyor',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 1, height: 1 },
     shortName: 'Turn↰',
     tags: ['BeltFamily'],
@@ -1734,6 +1804,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'pipe_straight_1x1',
     runtimeKind: 'conveyor',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 1, height: 1 },
     shortName: 'Pipe',
     tags: ['武陵', 'PipeFamily', 'OuterRingAllowed'],
@@ -1762,6 +1833,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'pipe_turn_cw_1x1',
     runtimeKind: 'conveyor',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 1, height: 1 },
     shortName: 'PipeTurn↱',
     tags: ['武陵', 'PipeFamily', 'OuterRingAllowed'],
@@ -1790,6 +1862,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'pipe_turn_ccw_1x1',
     runtimeKind: 'conveyor',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 1, height: 1 },
     shortName: 'PipeTurn↰',
     tags: ['武陵', 'PipeFamily', 'OuterRingAllowed'],
@@ -1818,6 +1891,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_log_splitter',
     runtimeKind: 'junction',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 1, height: 1 },
     shortName: 'Split',
     tags: ['BeltFamily'],
@@ -1846,6 +1920,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_log_converger',
     runtimeKind: 'junction',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 1, height: 1 },
     shortName: 'Merge',
     tags: ['BeltFamily'],
@@ -1874,6 +1949,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_log_connector',
     runtimeKind: 'junction',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 1, height: 1 },
     shortName: 'Bridge',
     tags: ['BeltFamily', 'ChevronHidden'],
@@ -1902,6 +1978,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_pipe_splitter',
     runtimeKind: 'junction',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 1, height: 1 },
     shortName: 'PipeSplit',
     tags: ['武陵', 'PipeFamily', 'OuterRingAllowed'],
@@ -1930,6 +2007,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_pipe_converger',
     runtimeKind: 'junction',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 1, height: 1 },
     shortName: 'PipeMerge',
     tags: ['武陵', 'PipeFamily', 'OuterRingAllowed'],
@@ -1958,6 +2036,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
     id: 'item_pipe_connector',
     runtimeKind: 'junction',
     requiresPower: false,
+    powerDemand: 0,
     size: { width: 1, height: 1 },
     shortName: 'PipeBridge',
     tags: ['武陵', 'PipeFamily', 'OuterRingAllowed', 'ChevronHidden'],
@@ -1984,10 +2063,7 @@ const DEVICE_TYPES_BASE: Array<Omit<DeviceTypeDef, 'powerDemand' | 'powerSupply'
   },
 ]
 
-export const DEVICE_TYPES: DeviceTypeDef[] = DEVICE_TYPES_BASE.map((deviceType) => ({
-  ...deviceType,
-  ...DEVICE_POWER_PROFILE[deviceType.id],
-}))
+export const DEVICE_TYPES: DeviceTypeDef[] = DEVICE_TYPES_BASE
 
 export const DEVICE_TYPE_BY_ID: Record<string, DeviceTypeDef> = Object.fromEntries(
   DEVICE_TYPES.map((deviceType) => [deviceType.id, deviceType]),
@@ -1999,9 +2075,10 @@ export const BELT_TYPES = new Set(['belt_straight_1x1', 'belt_turn_cw_1x1', 'bel
 export const PIPE_TYPES = new Set(['pipe_straight_1x1', 'pipe_turn_cw_1x1', 'pipe_turn_ccw_1x1'])
 export const JUNCTION_TYPES = new Set(['item_log_splitter', 'item_log_converger', 'item_log_connector'])
 export const PIPE_JUNCTION_TYPES = new Set(['item_pipe_splitter', 'item_pipe_converger', 'item_pipe_connector'])
+export const HIDDEN_PLACEABLE_TYPE_IDS = new Set(['item_port_sp_hub_1'])
 
 export const PLACEABLE_TYPES = DEVICE_TYPES.filter(
-  (deviceType) => !BELT_TYPES.has(deviceType.id) && !PIPE_TYPES.has(deviceType.id),
+  (deviceType) => !BELT_TYPES.has(deviceType.id) && !PIPE_TYPES.has(deviceType.id) && !HIDDEN_PLACEABLE_TYPE_IDS.has(deviceType.id),
 )
 
 export const BASES: BaseDef[] = [
@@ -2011,7 +2088,15 @@ export const BASES: BaseDef[] = [
     placeableSize: 80,
     outerRing: { top: 4, right: 4, bottom: 4, left: 4 },
     tags: ['武陵'],
-    foundationBuildings: [],
+    foundationBuildings: [
+      {
+        instanceId: 'base_wuling_protocol_hub_1',
+        typeId: 'item_port_sp_hub_1',
+        origin: { x: 0, y: 0 },
+        rotation: 0,
+        movable: true,
+      },
+    ],
   },
   {
     id: 'wuling_tianwangping_aid',
@@ -2019,7 +2104,15 @@ export const BASES: BaseDef[] = [
     placeableSize: 50,
     outerRing: { top: 4, right: 4, bottom: 4, left: 4 },
     tags: ['武陵'],
-    foundationBuildings: [],
+    foundationBuildings: [
+      {
+        instanceId: 'base_wuling_tianwangping_hub_1',
+        typeId: 'item_port_sp_hub_1',
+        origin: { x: 0, y: 0 },
+        rotation: 0,
+        movable: true,
+      },
+    ],
   },
   {
     id: 'valley4_protocol_core',
@@ -2029,22 +2122,32 @@ export const BASES: BaseDef[] = [
     tags: ['四号谷地'],
     foundationBuildings: [
       {
+        instanceId: 'base_valley4_protocol_hub_1',
+        typeId: 'item_port_sp_hub_1',
+        origin: { x: 0, y: 0 },
+        rotation: 0,
+        movable: true,
+      },
+      {
         instanceId: 'base_valley4_bus_source_1',
         typeId: 'item_port_log_hongs_bus_source',
         origin: { x: -4, y: -4 },
         rotation: 0,
+        movable: false,
       },
       ...Array.from({ length: 9 }, (_, index) => ({
         instanceId: `base_valley4_bus_right_${index + 1}`,
         typeId: 'item_port_log_hongs_bus' as const,
         origin: { x: index * 8, y: -4 },
         rotation: 90 as const,
+        movable: false,
       })),
       ...Array.from({ length: 9 }, (_, index) => ({
         instanceId: `base_valley4_bus_down_${index + 1}`,
         typeId: 'item_port_log_hongs_bus' as const,
         origin: { x: -4, y: index * 8 },
         rotation: 0 as const,
+        movable: false,
       })),
     ],
   },
@@ -2054,12 +2157,22 @@ export const BASES: BaseDef[] = [
     placeableSize: 40,
     outerRing: { top: 4, right: 0, bottom: 0, left: 0 },
     tags: ['四号谷地'],
-    foundationBuildings: Array.from({ length: 5 }, (_, index) => ({
-      instanceId: `base_valley4_refugee_top_${index + 1}`,
-      typeId: 'item_port_log_hongs_bus' as const,
-      origin: { x: index * 8, y: -4 },
-      rotation: 90 as const,
-    })),
+    foundationBuildings: [
+      {
+        instanceId: 'base_valley4_refugee_hub_1',
+        typeId: 'item_port_sp_hub_1',
+        origin: { x: 0, y: 0 },
+        rotation: 0,
+        movable: true,
+      },
+      ...Array.from({ length: 5 }, (_, index) => ({
+        instanceId: `base_valley4_refugee_top_${index + 1}`,
+        typeId: 'item_port_log_hongs_bus' as const,
+        origin: { x: index * 8, y: -4 },
+        rotation: 90 as const,
+        movable: false,
+      })),
+    ],
   },
   {
     id: 'valley4_infra_outpost',
@@ -2067,12 +2180,22 @@ export const BASES: BaseDef[] = [
     placeableSize: 40,
     outerRing: { top: 4, right: 0, bottom: 0, left: 0 },
     tags: ['四号谷地'],
-    foundationBuildings: Array.from({ length: 5 }, (_, index) => ({
-      instanceId: `base_valley4_infra_top_${index + 1}`,
-      typeId: 'item_port_log_hongs_bus' as const,
-      origin: { x: index * 8, y: -4 },
-      rotation: 90 as const,
-    })),
+    foundationBuildings: [
+      {
+        instanceId: 'base_valley4_infra_hub_1',
+        typeId: 'item_port_sp_hub_1',
+        origin: { x: 0, y: 0 },
+        rotation: 0,
+        movable: true,
+      },
+      ...Array.from({ length: 5 }, (_, index) => ({
+        instanceId: `base_valley4_infra_top_${index + 1}`,
+        typeId: 'item_port_log_hongs_bus' as const,
+        origin: { x: index * 8, y: -4 },
+        rotation: 90 as const,
+        movable: false,
+      })),
+    ],
   },
   {
     id: 'valley4_rebuilt_command',
@@ -2080,12 +2203,22 @@ export const BASES: BaseDef[] = [
     placeableSize: 40,
     outerRing: { top: 4, right: 0, bottom: 0, left: 0 },
     tags: ['四号谷地'],
-    foundationBuildings: Array.from({ length: 5 }, (_, index) => ({
-      instanceId: `base_valley4_rebuild_top_${index + 1}`,
-      typeId: 'item_port_log_hongs_bus' as const,
-      origin: { x: index * 8, y: -4 },
-      rotation: 90 as const,
-    })),
+    foundationBuildings: [
+      {
+        instanceId: 'base_valley4_rebuild_hub_1',
+        typeId: 'item_port_sp_hub_1',
+        origin: { x: 0, y: 0 },
+        rotation: 0,
+        movable: true,
+      },
+      ...Array.from({ length: 5 }, (_, index) => ({
+        instanceId: `base_valley4_rebuild_top_${index + 1}`,
+        typeId: 'item_port_log_hongs_bus' as const,
+        origin: { x: index * 8, y: -4 },
+        rotation: 90 as const,
+        movable: false,
+      })),
+    ],
   },
 ]
 
@@ -2125,6 +2258,13 @@ function validateRegistryConsistency() {
       if (!itemIdSet.has(output.itemId)) {
         errors.push(`配方 ${recipe.id} 输出物品未定义: ${output.itemId}`)
       }
+    }
+  }
+
+  for (const base of BASES) {
+    const protocolHubCount = base.foundationBuildings.filter((building) => building.typeId === 'item_port_sp_hub_1').length
+    if (protocolHubCount !== 1) {
+      errors.push(`基地 ${base.id} 的协议核心数量必须为 1，当前为 ${protocolHubCount}`)
     }
   }
 

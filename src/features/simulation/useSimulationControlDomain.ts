@@ -1,16 +1,17 @@
 import { useCallback } from 'react'
 import { dialogAlertNonBlocking } from '../../ui/dialog'
 import { startSimulation } from '../../sim/engine'
-import type { LayoutState, SimState } from '../../domain/types'
+import type { LayoutState, PowerMode, SimState } from '../../domain/types'
 
 type UseSimulationControlDomainParams = {
   unknownDevicesCount: number
   t: (key: string, params?: Record<string, string | number>) => string
   layout: LayoutState
+  powerMode: PowerMode
   updateSim: (updater: (current: SimState) => SimState) => SimState
 }
 
-export function useSimulationControlDomain({ unknownDevicesCount, t, layout, updateSim }: UseSimulationControlDomainParams) {
+export function useSimulationControlDomain({ unknownDevicesCount, t, layout, powerMode, updateSim }: UseSimulationControlDomainParams) {
   const handleStartSimulation = useCallback(() => {
     if (unknownDevicesCount > 0) {
       dialogAlertNonBlocking(t('dialog.legacyUnknownTypesStartBlocked'), {
@@ -20,8 +21,8 @@ export function useSimulationControlDomain({ unknownDevicesCount, t, layout, upd
       })
       return
     }
-    updateSim((current) => startSimulation(layout, current))
-  }, [layout, t, unknownDevicesCount, updateSim])
+    updateSim((current) => startSimulation(layout, current, powerMode))
+  }, [layout, powerMode, t, unknownDevicesCount, updateSim])
 
   return {
     handleStartSimulation,

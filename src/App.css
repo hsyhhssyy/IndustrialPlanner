@@ -200,6 +200,52 @@
   font-weight: 600;
 }
 
+.right-lot-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.right-lot-heading > h3 {
+  margin: 0;
+}
+
+.right-lot-tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.right-lot-tooltip-trigger {
+  width: auto !important;
+  margin: 0 !important;
+  padding: 1px 6px !important;
+  font-size: 11px !important;
+  line-height: 1.3;
+  border-radius: 999px !important;
+  color: #b7c6db;
+  background: #1f2a3a !important;
+  border: 1px solid #3f5f86 !important;
+}
+
+.right-lot-tooltip-bubble {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: 18em;
+  padding: 8px 10px;
+  border: 1px solid #3b536f;
+  border-radius: 8px;
+  background: #1a2432;
+  color: #d9e3f2;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: normal;
+  word-break: break-all;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
 .topbar button {
   width: auto;
   margin: 0;
@@ -473,6 +519,18 @@ button:disabled {
   object-fit: contain;
   image-rendering: auto;
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.45));
+}
+
+.device-port-item-icon {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+  image-rendering: auto;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+  z-index: 2;
 }
 
 .device-surface.pickup-port-surface > .device-label.pickup-label-vertical {

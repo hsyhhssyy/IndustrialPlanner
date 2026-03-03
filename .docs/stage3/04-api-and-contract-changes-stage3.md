@@ -6,15 +6,13 @@
 
 - `DeviceConfig` 新增：
   - `powerDemand: number`
-  - `powerSupply: number`
 
 约束：
-- 全设备必须显式配置二者。
-- 设备功率基础单位统一为 `kW`（`powerDemand/powerSupply` 均按 `kW` 录入与展示）。
-- 未使用字段一律显式填 `0`，禁止省略。
-- 消费设备 `powerSupply` 显式为 `0`，`powerDemand` 按设备口径给出。
-- 发电设备 `powerDemand` 显式为 `0`，`powerSupply` 按设备口径给出。
-- 复合设备可同时存在。
+- 全设备必须显式配置 `powerDemand`。
+- 设备功率基础单位统一为 `kW`（`powerDemand` 按 `kW` 录入与展示）。
+- 未耗电设备 `powerDemand` 显式填 `0`，禁止省略。
+- `requiresPower=false` 且 `powerDemand>0` 为合法组合，语义为“设备有功耗但不参与供电覆盖阻塞判定”。
+- 设备供电能力（原 `powerSupply`）不在当前阶段设备字段中建模，后续另行设计。
 
 ### 1.2 反应池口径确认
 
@@ -44,8 +42,6 @@
   - `powerAvg10m`
   - `powerAvg1h`
   - `totalDemand`
-  - `totalSupply`
-  - `netPower`
 - 时间口径沿用 Stage1：`1 标准秒 = X Tick`（当前实现 `X=20`），统计窗口按标准秒换算。
 
 ### 2.2 运行阻塞码

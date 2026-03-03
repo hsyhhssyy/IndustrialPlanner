@@ -10,7 +10,7 @@
 
 1. 新增电力统计：耗电、发电、净功率，即时/10 分钟/1 小时视图。
 2. 缺电行为调整：以当前 `NO_POWER`（阻塞停机）为基线，Stage3 交付目标为拆分为 `LOW_POWER` 与 `OUT_OF_POWER_RANGE`（均阻塞）并移除 `NO_POWER`。
-3. 全设备显式补齐 `powerDemand/powerSupply`，设备属性页展示功率字段；发电设备 `powerDemand=0`。
+3. 全设备显式补齐 `powerDemand`，设备属性页展示功率字段；发电设备 `powerDemand=0`。
 4. 反应池维持既有“5 共享槽位”口径（已验收）。
 5. 修复反应池槽位分配残留逻辑，运行时统一按 5 共享槽位分配。
 6. 自动布线（Auto Routing）作为 Stage3 必做项，支持后台队列异步生成蓝图。

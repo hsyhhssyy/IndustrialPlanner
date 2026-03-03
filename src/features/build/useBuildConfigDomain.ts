@@ -3,6 +3,9 @@ import { DEVICE_TYPE_BY_ID, ITEM_BY_ID } from '../../domain/registry'
 import { clamp } from '../../domain/shared/math'
 import type { DeviceInstance, ItemId, LayoutState, PreloadInputConfigEntry } from '../../domain/types'
 
+const PROTOCOL_HUB_OUTPUT_PORT_IDS = ['out_w_2', 'out_w_5', 'out_w_8', 'out_e_2', 'out_e_5', 'out_e_8'] as const
+const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
+
 type ProcessorPreloadSlot = { itemId: ItemId | null; amount: number }
 
 type UseBuildConfigDomainParams = {
@@ -20,6 +23,10 @@ export function useBuildConfigDomain({
   buildProcessorPreloadSlots,
   serializeProcessorPreloadSlots,
 }: UseBuildConfigDomainParams) {
+  const normalizeProtocolHubOutputItemId = useCallback((itemId: ItemId | undefined) => {
+    return itemId && ITEM_BY_ID[itemId]?.type === 'solid' ? itemId : undefined
+  }, [])
+
   const updatePickupItem = useCallback(
     (deviceInstanceId: string, pickupItemId: ItemId | undefined) => {
       const normalizedPickupItemId =
@@ -27,9 +34,34 @@ export function useBuildConfigDomain({
       setLayout((current) => ({
         ...current,
         devices: current.devices.map((device) =>
-          device.instanceId === deviceInstanceId
+          device.instanceId === deviceInstanceId && device.typeId === 'item_port_unloader_1'
             ? (() => {
+                const outputsByPort = new Map((device.config.protocolHubOutputs ?? []).map((entry) => [entry.portId, { ...entry }]))
+                if (normalizedPickupItemId) {
+                  outputsByPort.set(PICKUP_OUTPUT_PORT_ID, {
+                    portId: PICKUP_OUTPUT_PORT_ID,
+                    itemId: normalizedPickupItemId,
+                    ignoreInventory: isOreItemId(normalizedPickupItemId) ? true : Boolean(outputsByPort.get(PICKUP_OUTPUT_PORT_ID)?.ignoreInventory),
+                  })
+                } else {
+                  outputsByPort.delete(PICKUP_OUTPUT_PORT_ID)
+                }
+
+                const nextOutputs = Array.from(outputsByPort.values())
+                  .filter((entry) => Boolean(entry.itemId))
+                  .map((entry) => ({
+                    portId: entry.portId,
+                    itemId: entry.itemId,
+                    ignoreInventory: Boolean(entry.ignoreInventory),
+                  }))
+
                 const nextConfig = { ...device.config, pickupItemId: normalizedPickupItemId }
+                if (nextOutputs.length > 0) {
+                  nextConfig.protocolHubOutputs = nextOutputs
+                } else {
+                  delete nextConfig.protocolHubOutputs
+                }
+
                 if (!normalizedPickupItemId) {
                   delete nextConfig.pickupIgnoreInventory
                 } else if (isOreItemId(normalizedPickupItemId)) {
@@ -50,12 +82,30 @@ export function useBuildConfigDomain({
         ...current,
         devices: current.devices.map((device) => {
           if (device.instanceId !== deviceInstanceId || device.typeId !== 'item_port_unloader_1') return device
-          const pickupItemId = device.config.pickupItemId
+          const pickupEntry = (device.config.protocolHubOutputs ?? []).find((entry) => entry.portId === PICKUP_OUTPUT_PORT_ID)
+          const pickupItemId = pickupEntry?.itemId ?? device.config.pickupItemId
           if (!pickupItemId) return { ...device, config: { ...device.config, pickupIgnoreInventory: false } }
+
+          const outputsByPort = new Map((device.config.protocolHubOutputs ?? []).map((entry) => [entry.portId, { ...entry }]))
+          outputsByPort.set(PICKUP_OUTPUT_PORT_ID, {
+            portId: PICKUP_OUTPUT_PORT_ID,
+            itemId: pickupItemId,
+            ignoreInventory: isOreItemId(pickupItemId) ? true : enabled,
+          })
+
+          const nextOutputs = Array.from(outputsByPort.values())
+            .filter((entry) => Boolean(entry.itemId))
+            .map((entry) => ({
+              portId: entry.portId,
+              itemId: entry.itemId,
+              ignoreInventory: Boolean(entry.ignoreInventory),
+            }))
+
           return {
             ...device,
             config: {
               ...device.config,
+              protocolHubOutputs: nextOutputs,
               pickupIgnoreInventory: isOreItemId(pickupItemId) ? true : enabled,
             },
           }
@@ -77,6 +127,86 @@ export function useBuildConfigDomain({
       }))
     },
     [setLayout],
+  )
+
+  const updateProtocolHubOutputItem = useCallback(
+    (deviceInstanceId: string, portId: string, itemId: ItemId | undefined) => {
+      if (!PROTOCOL_HUB_OUTPUT_PORT_IDS.includes(portId as (typeof PROTOCOL_HUB_OUTPUT_PORT_IDS)[number])) return
+      const normalizedItemId = normalizeProtocolHubOutputItemId(itemId)
+      setLayout((current) => ({
+        ...current,
+        devices: current.devices.map((device) => {
+          if (device.instanceId !== deviceInstanceId || device.typeId !== 'item_port_sp_hub_1') return device
+          const outputsByPort = new Map((device.config.protocolHubOutputs ?? []).map((entry) => [entry.portId, { ...entry }]))
+          const currentEntry = outputsByPort.get(portId) ?? { portId }
+          const nextEntry = {
+            ...currentEntry,
+            itemId: normalizedItemId,
+            ignoreInventory: normalizedItemId
+              ? isOreItemId(normalizedItemId)
+                ? true
+                : Boolean(currentEntry.ignoreInventory)
+              : false,
+          }
+          outputsByPort.set(portId, nextEntry)
+          const nextOutputs = PROTOCOL_HUB_OUTPUT_PORT_IDS.map((id) => outputsByPort.get(id) ?? { portId: id })
+            .filter((entry) => Boolean(entry.itemId))
+            .map((entry) => ({
+              portId: entry.portId,
+              itemId: entry.itemId,
+              ignoreInventory: Boolean(entry.ignoreInventory),
+            }))
+
+          const nextConfig = { ...device.config }
+          if (nextOutputs.length > 0) {
+            nextConfig.protocolHubOutputs = nextOutputs
+          } else {
+            delete nextConfig.protocolHubOutputs
+          }
+          return { ...device, config: nextConfig }
+        }),
+      }))
+    },
+    [isOreItemId, normalizeProtocolHubOutputItemId, setLayout],
+  )
+
+  const updateProtocolHubOutputIgnoreInventory = useCallback(
+    (deviceInstanceId: string, portId: string, enabled: boolean) => {
+      if (!PROTOCOL_HUB_OUTPUT_PORT_IDS.includes(portId as (typeof PROTOCOL_HUB_OUTPUT_PORT_IDS)[number])) return
+      setLayout((current) => ({
+        ...current,
+        devices: current.devices.map((device) => {
+          if (device.instanceId !== deviceInstanceId || device.typeId !== 'item_port_sp_hub_1') return device
+
+          const outputsByPort = new Map((device.config.protocolHubOutputs ?? []).map((entry) => [entry.portId, { ...entry }]))
+          const currentEntry = outputsByPort.get(portId)
+          const itemId = currentEntry?.itemId
+          if (!itemId) return device
+
+          outputsByPort.set(portId, {
+            ...currentEntry,
+            ignoreInventory: isOreItemId(itemId) ? true : enabled,
+          })
+
+          const nextOutputs = PROTOCOL_HUB_OUTPUT_PORT_IDS.map((id) => outputsByPort.get(id) ?? { portId: id })
+            .filter((entry) => Boolean(entry.itemId))
+            .map((entry) => ({
+              portId: entry.portId,
+              itemId: entry.itemId,
+              ignoreInventory: Boolean(entry.ignoreInventory),
+            }))
+
+          const nextConfig = { ...device.config }
+          if (nextOutputs.length > 0) {
+            nextConfig.protocolHubOutputs = nextOutputs
+          } else {
+            delete nextConfig.protocolHubOutputs
+          }
+          return { ...device, config: nextConfig }
+        }),
+      }))
+    },
+    [isOreItemId, setLayout],
   )
 
   const updateProcessorPreloadSlot = useCallback(
@@ -128,6 +258,8 @@ export function useBuildConfigDomain({
   return {
     updatePickupItem,
     updatePickupIgnoreInventory,
+    updateProtocolHubOutputItem,
+    updateProtocolHubOutputIgnoreInventory,
     updatePumpOutputItem,
     updateProcessorPreloadSlot,
   }

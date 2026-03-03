@@ -9,6 +9,7 @@ import { useBuildConfigDomain } from './useBuildConfigDomain'
 
 type ItemPickerState =
   | { kind: 'pickup'; deviceInstanceId: string }
+  | { kind: 'protocolHubOutput'; deviceInstanceId: string; portId: string; portIndex: number }
   | { kind: 'pumpOutput'; deviceInstanceId: string }
   | { kind: 'preload'; deviceInstanceId: string; slotIndex: number }
 
@@ -37,6 +38,8 @@ const PUMP_SELECTABLE_LIQUID_IDS = new Set<ItemId>([
   'item_liquid_plant_grass_2',
   'item_liquid_xiranite',
 ])
+const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
+const PROTOCOL_HUB_OUTPUT_PORT_IDS = ['out_w_2', 'out_w_5', 'out_w_8', 'out_e_2', 'out_e_5', 'out_e_8'] as const
 
 type UseBuildPickerDomainParams = {
   layout: LayoutState
@@ -50,7 +53,14 @@ type UseBuildPickerDomainParams = {
 export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunning, setLayout, isOreItemId }: UseBuildPickerDomainParams) {
   const [itemPickerState, setItemPickerState] = useState<ItemPickerState | null>(null)
 
-  const { updatePickupItem, updatePickupIgnoreInventory, updatePumpOutputItem, updateProcessorPreloadSlot } = useBuildConfigDomain({
+  const {
+    updatePickupItem,
+    updatePickupIgnoreInventory,
+    updateProtocolHubOutputItem,
+    updateProtocolHubOutputIgnoreInventory,
+    updatePumpOutputItem,
+    updateProcessorPreloadSlot,
+  } = useBuildConfigDomain({
     setLayout,
     isOreItemId,
     processorBufferSpec,
@@ -72,11 +82,18 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
   }, [runtimeById, selectedDevice])
 
   const selectedPickupItemId =
-    selectedDevice?.typeId === 'item_port_unloader_1' ? selectedDevice.config.pickupItemId : undefined
+    selectedDevice?.typeId === 'item_port_unloader_1'
+      ? (selectedDevice.config.protocolHubOutputs ?? []).find((entry) => entry.portId === PICKUP_OUTPUT_PORT_ID)?.itemId ??
+        selectedDevice.config.pickupItemId
+      : undefined
   const selectedPickupItemIsOre = isOreItemId(selectedPickupItemId)
   const selectedPickupIgnoreInventory =
     selectedDevice?.typeId === 'item_port_unloader_1' && selectedPickupItemId
-      ? selectedPickupItemIsOre || Boolean(selectedDevice.config.pickupIgnoreInventory)
+      ? selectedPickupItemIsOre ||
+        Boolean(
+          (selectedDevice.config.protocolHubOutputs ?? []).find((entry) => entry.portId === PICKUP_OUTPUT_PORT_ID)?.ignoreInventory ??
+            selectedDevice.config.pickupIgnoreInventory,
+        )
       : false
   const selectedPumpOutputItemId =
     selectedDevice?.typeId === 'item_port_water_pump_1'
@@ -84,6 +101,22 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
         ? (selectedDevice.config.pumpOutputItemId ?? DEFAULT_PUMP_OUTPUT_ITEM_ID)
         : DEFAULT_PUMP_OUTPUT_ITEM_ID
       : undefined
+  const selectedProtocolHubOutputs = useMemo(() => {
+    if (selectedDevice?.typeId !== 'item_port_sp_hub_1') return []
+    const byPortId = new Map((selectedDevice.config.protocolHubOutputs ?? []).map((entry) => [entry.portId, entry]))
+    return PROTOCOL_HUB_OUTPUT_PORT_IDS.map((portId, portIndex) => {
+      const entry = byPortId.get(portId)
+      const itemId = entry?.itemId
+      const itemIsOre = isOreItemId(itemId)
+      return {
+        portId,
+        portIndex,
+        itemId,
+        itemIsOre,
+        ignoreInventory: itemId ? itemIsOre || Boolean(entry?.ignoreInventory) : false,
+      }
+    })
+  }, [isOreItemId, selectedDevice])
   const selectedProcessorBufferSpec =
     selectedDevice && DEVICE_TYPE_BY_ID[selectedDevice.typeId].runtimeKind === 'processor'
       ? processorBufferSpec(selectedDevice.typeId)
@@ -130,7 +163,14 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
 
   const pickerSelectedItemId = useMemo(() => {
     if (!itemPickerState || !pickerTargetDevice) return undefined
-    if (itemPickerState.kind === 'pickup') return pickerTargetDevice.config.pickupItemId
+    if (itemPickerState.kind === 'pickup') {
+      return (pickerTargetDevice.config.protocolHubOutputs ?? []).find((entry) => entry.portId === PICKUP_OUTPUT_PORT_ID)?.itemId ??
+        pickerTargetDevice.config.pickupItemId
+    }
+    if (itemPickerState.kind === 'protocolHubOutput') {
+      const entry = (pickerTargetDevice.config.protocolHubOutputs ?? []).find((item) => item.portId === itemPickerState.portId)
+      return entry?.itemId
+    }
     if (itemPickerState.kind === 'pumpOutput') {
       const configured = pickerTargetDevice.config.pumpOutputItemId ?? DEFAULT_PUMP_OUTPUT_ITEM_ID
       return PUMP_SELECTABLE_LIQUID_IDS.has(configured) ? configured : DEFAULT_PUMP_OUTPUT_ITEM_ID
@@ -141,6 +181,9 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
   const pickerFilter = useMemo<ItemPickerFilter | undefined>(() => {
     if (!itemPickerState) return undefined
     if (itemPickerState.kind === 'pickup') {
+      return { allowedTypes: ['solid'] }
+    }
+    if (itemPickerState.kind === 'protocolHubOutput') {
       return { allowedTypes: ['solid'] }
     }
     if (itemPickerState.kind === 'pumpOutput') {
@@ -184,6 +227,10 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       setItemPickerState(null)
       return
     }
+    if (itemPickerState.kind === 'protocolHubOutput' && target.typeId !== 'item_port_sp_hub_1') {
+      setItemPickerState(null)
+      return
+    }
     if (itemPickerState.kind === 'pumpOutput' && target.typeId !== 'item_port_water_pump_1') {
       setItemPickerState(null)
       return
@@ -208,6 +255,8 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       if (!itemPickerState || !pickerTargetDevice) return
       if (itemPickerState.kind === 'pickup') {
         updatePickupItem(pickerTargetDevice.instanceId, itemId ?? undefined)
+      } else if (itemPickerState.kind === 'protocolHubOutput') {
+        updateProtocolHubOutputItem(pickerTargetDevice.instanceId, itemPickerState.portId, itemId ?? undefined)
       } else if (itemPickerState.kind === 'pumpOutput') {
         const nextItemId = itemId && PUMP_SELECTABLE_LIQUID_IDS.has(itemId) ? itemId : DEFAULT_PUMP_OUTPUT_ITEM_ID
         updatePumpOutputItem(pickerTargetDevice.instanceId, nextItemId)
@@ -215,7 +264,14 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
         updateProcessorPreloadSlot(pickerTargetDevice.instanceId, itemPickerState.slotIndex, { itemId })
       }
     },
-    [itemPickerState, pickerTargetDevice, updatePickupItem, updatePumpOutputItem, updateProcessorPreloadSlot],
+    [
+      itemPickerState,
+      pickerTargetDevice,
+      updatePickupItem,
+      updateProtocolHubOutputItem,
+      updatePumpOutputItem,
+      updateProcessorPreloadSlot,
+    ],
   )
 
   return {
@@ -227,6 +283,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     selectedPumpOutputItemId,
     selectedPickupItemIsOre,
     selectedPickupIgnoreInventory,
+    selectedProtocolHubOutputs,
     selectedProcessorBufferSpec,
     selectedPreloadSlots,
     selectedPreloadTotal,
@@ -237,6 +294,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     pickerDisabledItemIds,
     handleItemPickerSelect,
     updatePickupIgnoreInventory,
+    updateProtocolHubOutputIgnoreInventory,
     updateProcessorPreloadSlot,
     reactorRecipeCandidates,
     selectedReactorPoolConfig,

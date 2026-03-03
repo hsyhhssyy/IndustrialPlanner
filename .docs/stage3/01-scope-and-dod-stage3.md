@@ -4,7 +4,7 @@
 
 ### 1.1 电力模型
 
-- 为全设备显式补齐 `powerDemand/powerSupply` 字段。
+- 为全设备显式补齐 `powerDemand` 字段。
 - 提供设备级与全局级耗电/发电/净功率展示。
 - 提供即时值、10 分钟均值、1 小时均值（标准秒）统计。
 - 基线当前缺电语义为阻塞停机（`NO_POWER`）；Stage3 内完成状态码拆分。
@@ -32,7 +32,7 @@
 
 ## 3. DoD
 
-1. `powerDemand/powerSupply` 完整进入领域模型与展示。
+1. `powerDemand` 完整进入领域模型与展示。
 2. 缺电场景下设备阻塞停机；接网前置不被放宽。
 3. 电力三窗口统计按标准秒正确滚动。
 4. `NO_POWER` 已移除，并由 `LOW_POWER` / `OUT_OF_POWER_RANGE` 替代。

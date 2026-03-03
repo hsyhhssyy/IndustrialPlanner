@@ -5,7 +5,8 @@ export type Direction = 'Input' | 'Output'
 export type RuntimeKind = 'processor' | 'storage' | 'conveyor' | 'junction'
 export type StallReason =
   | 'NONE'
-  | 'NO_POWER'
+  | 'LOW_POWER'
+  | 'OUT_OF_POWER_RANGE'
   | 'OVERLAP'
   | 'NO_INPUT'
   | 'OUTPUT_BUFFER_FULL'
@@ -36,6 +37,7 @@ export type DeviceTypeId =
   | 'item_port_dismantler_1'
   | 'item_port_log_hongs_bus_source'
   | 'item_port_log_hongs_bus'
+  | 'item_port_sp_hub_1'
   | 'item_port_water_pump_1'
   | 'item_port_liquid_storager_1'
   | 'item_port_power_diffuser_1'
@@ -106,7 +108,6 @@ export interface DeviceTypeDef {
   runtimeKind: RuntimeKind
   requiresPower: boolean
   powerDemand: number
-  powerSupply: number
   size: { width: number; height: number }
   shortName: string
   tags?: string[]
@@ -136,9 +137,16 @@ export interface PreloadInputConfigEntry {
   amount: number
 }
 
+export interface ProtocolHubOutputConfigEntry {
+  portId: string
+  itemId?: ItemId
+  ignoreInventory?: boolean
+}
+
 export interface DeviceConfig {
   pickupItemId?: ItemId
   pickupIgnoreInventory?: boolean
+  protocolHubOutputs?: ProtocolHubOutputConfigEntry[]
   pumpOutputItemId?: ItemId
   submitToWarehouse?: boolean
   preloadInputs?: PreloadInputConfigEntry[]
@@ -166,6 +174,7 @@ export interface BaseFoundationDef {
   typeId: DeviceTypeId
   origin: { x: number; y: number }
   rotation: Rotation
+  movable: boolean
   config?: DeviceConfig
 }
 
@@ -240,6 +249,8 @@ export interface ProcessorRuntime extends BaseRuntime {
   lastCompletionIntervalTicks: number
   activeRecipeId?: string
   reactorActiveRecipeIds?: [string | undefined, string | undefined]
+  thermalPowerTicksRemaining?: number
+  thermalPowerKw?: number
 }
 
 export interface StorageRuntime extends BaseRuntime {
@@ -271,8 +282,11 @@ export interface JunctionRuntime extends BaseRuntime {
 
 export type DeviceRuntime = ProcessorRuntime | StorageRuntime | ConveyorRuntime | JunctionRuntime
 
+export type PowerMode = 'real' | 'infinite'
+
 export interface SimState {
   isRunning: boolean
+  powerMode: PowerMode
   speed: 0 | 0.25 | 1 | 2 | 4 | 16
   tick: number
   tickRateHz: number
@@ -283,6 +297,11 @@ export interface SimState {
   minuteWindowCursor: number
   minuteWindowCount: number
   minuteWindowCapacity: number
+  powerStats: {
+    totalSupplyKw: number
+    totalDemandKw: number
+    batteryPercent: number
+  }
 }
 
 export interface LayoutState {

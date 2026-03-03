@@ -4,6 +4,7 @@ import { getItemLabel, type Language } from '../../i18n'
 
 type ItemPickerState =
   | { kind: 'pickup'; deviceInstanceId: string }
+  | { kind: 'protocolHubOutput'; deviceInstanceId: string; portId: string; portIndex: number }
   | { kind: 'pumpOutput'; deviceInstanceId: string }
   | { kind: 'preload'; deviceInstanceId: string; slotIndex: number }
 
@@ -64,6 +65,8 @@ export function ItemPickerDialog({
         <div className="global-dialog-title">
           {itemPickerState.kind === 'pickup'
             ? t('detail.pickupDialogTitle')
+            : itemPickerState.kind === 'protocolHubOutput'
+              ? t('detail.protocolHubOutputDialogTitle', { index: itemPickerState.portIndex + 1 })
             : itemPickerState.kind === 'pumpOutput'
               ? t('detail.pumpOutputDialogTitle')
               : t('detail.preloadDialogTitle', { index: itemPickerState.slotIndex + 1 })}

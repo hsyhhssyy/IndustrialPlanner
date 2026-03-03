@@ -15,7 +15,9 @@ import type {
   DeviceRuntime,
   ItemId,
   LayoutState,
+  PowerMode,
   ProcessorRuntime,
+  RecipeDef,
   SimState,
   SlotData,
   StallReason,
@@ -44,7 +46,48 @@ const INFINITE_WAREHOUSE_ITEMS = new Set<ItemId>(
 const BUS_SOURCE_TYPE_ID: DeviceInstance['typeId'] = 'item_port_log_hongs_bus_source'
 const BUS_SEGMENT_TYPE_ID: DeviceInstance['typeId'] = 'item_port_log_hongs_bus'
 const PICKUP_TYPE_ID: DeviceInstance['typeId'] = 'item_port_unloader_1'
+const PROTOCOL_HUB_TYPE_ID: DeviceInstance['typeId'] = 'item_port_sp_hub_1'
 const LOADER_TYPE_ID: DeviceInstance['typeId'] = 'item_port_loader_1'
+const THERMAL_POOL_TYPE_ID: DeviceInstance['typeId'] = 'item_port_power_sta_1'
+const PROTOCOL_HUB_SUPPLY_KW = 200
+const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
+const PROTOCOL_HUB_OUTPUT_PORT_IDS = ['out_w_2', 'out_w_5', 'out_w_8', 'out_e_2', 'out_e_5', 'out_e_8'] as const
+const PROTOCOL_HUB_WAREHOUSE_INPUT_PORT_IDS = new Set([
+  'in_n_2',
+  'in_n_3',
+  'in_n_4',
+  'in_n_5',
+  'in_n_6',
+  'in_n_7',
+  'in_n_8',
+  'in_s_2',
+  'in_s_3',
+  'in_s_4',
+  'in_s_5',
+  'in_s_6',
+  'in_s_7',
+  'in_s_8',
+])
+
+const THERMAL_POOL_FUEL_RULES: Array<{ itemId: ItemId; burnSeconds: number; powerKw: number }> = [
+  { itemId: 'item_originium_ore', burnSeconds: 8, powerKw: 50 },
+  { itemId: 'item_proc_battery_1', burnSeconds: 40, powerKw: 220 },
+  { itemId: 'item_proc_battery_2', burnSeconds: 40, powerKw: 420 },
+  { itemId: 'item_proc_battery_3', burnSeconds: 40, powerKw: 1100 },
+  { itemId: 'item_proc_battery_4', burnSeconds: 40, powerKw: 1600 },
+]
+
+const THERMAL_POOL_VIRTUAL_RECIPES: RecipeDef[] = THERMAL_POOL_FUEL_RULES.map((rule) => ({
+  id: `virtual_thermal_pool_${rule.itemId}`,
+  machineType: THERMAL_POOL_TYPE_ID,
+  cycleSeconds: rule.burnSeconds,
+  inputs: [{ itemId: rule.itemId, amount: 1 }],
+  outputs: [],
+}))
+
+const THERMAL_POOL_POWER_BY_RECIPE_ID = new Map(
+  THERMAL_POOL_VIRTUAL_RECIPES.map((recipe, index) => [recipe.id, THERMAL_POOL_FUEL_RULES[index].powerKw]),
+)
 
 function createItemNumberRecord(initialValue = 0): Record<ItemId, number> {
   return Object.fromEntries(ITEM_IDS.map((itemId) => [itemId, initialValue])) as Record<ItemId, number>
@@ -159,12 +202,37 @@ function canPickupFromWarehouse(warehouse: Record<ItemId, number>, itemId: ItemI
   return Number.isFinite(stock) ? stock > 0 : stock > 0
 }
 
-function shouldIgnorePickupInventory(device: DeviceInstance) {
-  if (device.typeId !== 'item_port_unloader_1') return false
-  const pickupItemId = device.config.pickupItemId
-  if (!pickupItemId) return false
-  if (INFINITE_WAREHOUSE_ITEMS.has(pickupItemId)) return true
-  return Boolean(device.config.pickupIgnoreInventory)
+function configuredOutputEntry(device: DeviceInstance, fromPortId: string) {
+  if (device.typeId === PICKUP_TYPE_ID) {
+    if (fromPortId !== PICKUP_OUTPUT_PORT_ID) return undefined
+    const fromPortConfig = (device.config.protocolHubOutputs ?? []).find((entry) => entry.portId === PICKUP_OUTPUT_PORT_ID)
+    if (fromPortConfig) return fromPortConfig
+    if (!device.config.pickupItemId) return undefined
+    return {
+      portId: PICKUP_OUTPUT_PORT_ID,
+      itemId: device.config.pickupItemId,
+      ignoreInventory: device.config.pickupIgnoreInventory,
+    }
+  }
+  if (device.typeId === PROTOCOL_HUB_TYPE_ID) {
+    return (device.config.protocolHubOutputs ?? []).find((entry) => entry.portId === fromPortId)
+  }
+  return undefined
+}
+
+function shouldIgnoreConfiguredOutputInventory(device: DeviceInstance, fromPortId: string, itemId: ItemId) {
+  const entry = configuredOutputEntry(device, fromPortId)
+  if (!entry || entry.itemId !== itemId) return false
+  if (INFINITE_WAREHOUSE_ITEMS.has(itemId)) return true
+  return Boolean(entry.ignoreInventory)
+}
+
+function configuredOutputItemForPort(device: DeviceInstance, warehouse: Record<ItemId, number>, fromPortId: string) {
+  const entry = configuredOutputEntry(device, fromPortId)
+  const itemId = entry?.itemId
+  if (!itemId) return null
+  if (shouldIgnoreConfiguredOutputInventory(device, fromPortId, itemId)) return itemId
+  return canPickupFromWarehouse(warehouse, itemId) ? itemId : null
 }
 
 function emptyPerMinuteRecord(): Record<ItemId, number> {
@@ -184,10 +252,106 @@ function isHardBlockedStall(stallReason: StallReason) {
   return (
     stallReason === 'CONFIG_ERROR' ||
     stallReason === 'OVERLAP' ||
-    stallReason === 'NO_POWER' ||
     stallReason === 'BUS_NOT_CONNECTED' ||
     stallReason === 'PICKUP_BUS_NOT_CONNECTED'
   )
+}
+
+function isWarehouseSubmitPort(device: DeviceInstance, toPortId: string) {
+  if (device.typeId === LOADER_TYPE_ID) return true
+  if (device.typeId === PROTOCOL_HUB_TYPE_ID) return PROTOCOL_HUB_WAREHOUSE_INPUT_PORT_IDS.has(toPortId)
+  return false
+}
+
+function updateThermalPoolPowerAndGetSupplyKw(
+  layout: LayoutState,
+  runtimeById: Record<string, DeviceRuntime>,
+  tickRateHz: number,
+  processorDelta: Partial<Record<ItemId, number>>,
+) {
+  void processorDelta
+  let totalSupplyKw = 0
+
+  for (const device of layout.devices) {
+    if (device.typeId === PROTOCOL_HUB_TYPE_ID) {
+      totalSupplyKw += PROTOCOL_HUB_SUPPLY_KW
+    }
+  }
+
+  for (const device of layout.devices) {
+    if (device.typeId !== THERMAL_POOL_TYPE_ID) continue
+    const runtime = runtimeById[device.instanceId]
+    if (!runtime || !('inputBuffer' in runtime)) continue
+
+    if (runtime.cycleProgressTicks <= 0 || !runtime.activeRecipeId) {
+      runtime.thermalPowerTicksRemaining = 0
+      runtime.thermalPowerKw = 0
+      continue
+    }
+
+    const activeRecipe = recipeById(runtime.activeRecipeId)
+    if (!activeRecipe || activeRecipe.machineType !== THERMAL_POOL_TYPE_ID) {
+      runtime.thermalPowerTicksRemaining = 0
+      runtime.thermalPowerKw = 0
+      continue
+    }
+
+    const activeKw = THERMAL_POOL_POWER_BY_RECIPE_ID.get(activeRecipe.id) ?? 0
+    if (activeKw <= 0) {
+      runtime.thermalPowerTicksRemaining = 0
+      runtime.thermalPowerKw = 0
+      continue
+    }
+
+    totalSupplyKw += activeKw
+    runtime.thermalPowerKw = activeKw
+    const cycleTicks = cycleTicksFromSeconds(activeRecipe.cycleSeconds, tickRateHz)
+    runtime.thermalPowerTicksRemaining = Math.max(0, cycleTicks - runtime.cycleProgressTicks)
+  }
+
+  return totalSupplyKw
+}
+
+function buildPowerAvailabilityByDeviceId(
+  layout: LayoutState,
+  runtimeById: Record<string, DeviceRuntime>,
+  poles: DeviceInstance[],
+  tickRateHz: number,
+  processorDelta: Partial<Record<ItemId, number>>,
+) {
+  const unpoweredById = new Set<string>()
+  const outOfRangeById = new Set<string>()
+  const powerCandidates: Array<{ instanceId: string; demandKw: number }> = []
+
+  const totalSupplyKw = updateThermalPoolPowerAndGetSupplyKw(layout, runtimeById, tickRateHz, processorDelta)
+
+  for (const device of layout.devices) {
+    const deviceDef = DEVICE_TYPE_BY_ID[device.typeId]
+    if (!deviceDef.requiresPower) continue
+    if (!inPowerRange(device, poles)) {
+      outOfRangeById.add(device.instanceId)
+      continue
+    }
+
+    const demandKw = Math.max(0, deviceDef.powerDemand ?? 0)
+    if (demandKw <= 0) continue
+    powerCandidates.push({ instanceId: device.instanceId, demandKw })
+  }
+
+  let remainingSupplyKw = totalSupplyKw
+  for (const candidate of powerCandidates) {
+    if (remainingSupplyKw >= candidate.demandKw) {
+      remainingSupplyKw -= candidate.demandKw
+      continue
+    }
+    unpoweredById.add(candidate.instanceId)
+  }
+
+  return { unpoweredById, outOfRangeById, totalSupplyKw }
+}
+
+function totalPowerDemandKw(layout: LayoutState) {
+  return layout.devices.reduce((sum, device) => sum + Math.max(0, DEVICE_TYPE_BY_ID[device.typeId]?.powerDemand ?? 0), 0)
 }
 
 function neighborCellKeys(x: number, y: number) {
@@ -701,11 +865,20 @@ function sourceSlotLane(device: DeviceInstance, runtime: DeviceRuntime, fromPort
   return 'output'
 }
 
-function peekOutputItem(device: DeviceInstance, runtime: DeviceRuntime, warehouse: Record<ItemId, number>): ItemId | null {
-  if (device.typeId === 'item_port_unloader_1') {
-    const pickupItemId = device.config.pickupItemId
-    if (!pickupItemId) return null
-    return shouldIgnorePickupInventory(device) || canPickupFromWarehouse(warehouse, pickupItemId) ? pickupItemId : null
+function peekOutputItem(
+  device: DeviceInstance,
+  runtime: DeviceRuntime,
+  warehouse: Record<ItemId, number>,
+  fromPortId?: string,
+): ItemId | null {
+  if (device.typeId === PICKUP_TYPE_ID || device.typeId === PROTOCOL_HUB_TYPE_ID) {
+    if (fromPortId) return configuredOutputItemForPort(device, warehouse, fromPortId)
+    const probePorts = device.typeId === PICKUP_TYPE_ID ? [PICKUP_OUTPUT_PORT_ID] : PROTOCOL_HUB_OUTPUT_PORT_IDS
+    for (const portId of probePorts) {
+      const itemId = configuredOutputItemForPort(device, warehouse, portId)
+      if (itemId) return itemId
+    }
+    return null
   }
 
   if ('outputBuffer' in runtime) {
@@ -731,8 +904,9 @@ function readyItemForLane(
   lane: 'slot' | 'ns' | 'we' | 'output',
   conveyorSpeed: number,
   warehouse: Record<ItemId, number>,
+  fromPortId?: string,
 ) {
-  if (lane === 'output') return peekOutputItem(device, runtime, warehouse)
+  if (lane === 'output') return peekOutputItem(device, runtime, warehouse, fromPortId)
   const slot = getSlotRef(runtime, lane)
   if (!slot) return null
   if (slot.progress01 < 0.5) return null
@@ -747,17 +921,17 @@ function peekReadyItemForLane(
   runtime: DeviceRuntime,
   lane: 'slot' | 'ns' | 'we' | 'output',
   warehouse: Record<ItemId, number>,
+  fromPortId?: string,
 ) {
-  if (lane === 'output') return peekOutputItem(device, runtime, warehouse)
+  if (lane === 'output') return peekOutputItem(device, runtime, warehouse, fromPortId)
   const slot = getSlotRef(runtime, lane)
   if (!slot || slot.progress01 < 1) return null
   return slot.itemId
 }
 
 function hasReadyOutput(device: DeviceInstance, runtime: DeviceRuntime, warehouse: Record<ItemId, number>) {
-  if (device.typeId === 'item_port_unloader_1') {
-    const pickupItemId = device.config.pickupItemId
-    return Boolean(pickupItemId && (shouldIgnorePickupInventory(device) || canPickupFromWarehouse(warehouse, pickupItemId)))
+  if (device.typeId === PICKUP_TYPE_ID || device.typeId === PROTOCOL_HUB_TYPE_ID) {
+    return Boolean(peekOutputItem(device, runtime, warehouse))
   }
   if ('outputBuffer' in runtime) return ITEM_IDS.some((itemId) => (runtime.outputBuffer[itemId] ?? 0) > 0)
   if ('inventory' in runtime) return ITEM_IDS.some((itemId) => (runtime.inventory[itemId] ?? 0) > 0)
@@ -842,7 +1016,7 @@ function peekReadyItemForSourceLink(
   if (fromLane === 'output' && isReactorPoolType(fromDevice.typeId) && 'inputBuffer' in fromRuntime && 'outputBuffer' in fromRuntime) {
     return reactorPeekOutputForPort(fromRuntime as ProcessorRuntime, fromDevice.config, fromPortId)
   }
-  return peekReadyItemForLane(fromDevice, fromRuntime, fromLane, warehouse)
+  return peekReadyItemForLane(fromDevice, fromRuntime, fromLane, warehouse, fromPortId)
 }
 
 function buildConvergerPreferredInputPortMap(
@@ -952,7 +1126,13 @@ function inPowerRange(target: DeviceInstance, poles: DeviceInstance[]) {
 }
 
 function pickupHasConfig(device: DeviceInstance) {
-  return device.typeId !== 'item_port_unloader_1' || Boolean(device.config.pickupItemId)
+  if (device.typeId === PICKUP_TYPE_ID) {
+    return Boolean(configuredOutputEntry(device, PICKUP_OUTPUT_PORT_ID)?.itemId)
+  }
+  if (device.typeId === PROTOCOL_HUB_TYPE_ID) {
+    return PROTOCOL_HUB_OUTPUT_PORT_IDS.some((portId) => Boolean(configuredOutputEntry(device, portId)?.itemId))
+  }
+  return true
 }
 
 function resetRuntimeByLayout(layout: LayoutState) {
@@ -1049,6 +1229,7 @@ export function createInitialSimState(): SimState {
   const initialWindowCapacity = cycleTicksFromSeconds(60, BASE_TICK_RATE)
   return {
     isRunning: false,
+    powerMode: 'infinite',
     speed: 1,
     tick: 0,
     tickRateHz: BASE_TICK_RATE,
@@ -1066,10 +1247,15 @@ export function createInitialSimState(): SimState {
     minuteWindowCursor: 0,
     minuteWindowCount: 0,
     minuteWindowCapacity: initialWindowCapacity,
+    powerStats: {
+      totalSupplyKw: 0,
+      totalDemandKw: 0,
+      batteryPercent: 100,
+    },
   }
 }
 
-export function startSimulation(layout: LayoutState, sim: SimState): SimState {
+export function startSimulation(layout: LayoutState, sim: SimState, powerMode: PowerMode): SimState {
   const tickRateHz = BASE_TICK_RATE
   const speed = sim.speed === 0 ? 1 : sim.speed
   const minuteWindowCapacity = cycleTicksFromSeconds(60, tickRateHz)
@@ -1095,13 +1281,14 @@ export function startSimulation(layout: LayoutState, sim: SimState): SimState {
     else if (disconnectedBusSegmentIds.has(device.instanceId)) stall = 'BUS_NOT_CONNECTED'
     else if (busEdgePortBlockedByDisconnectedBusIds.has(device.instanceId)) stall = 'PICKUP_BUS_NOT_CONNECTED'
     else if (!pickupHasConfig(device)) stall = 'CONFIG_ERROR'
-    else if (deviceDef.requiresPower && !inPowerRange(device, poles)) stall = 'NO_POWER'
+    else if (powerMode === 'real' && deviceDef.requiresPower && !inPowerRange(device, poles)) stall = 'OUT_OF_POWER_RANGE'
     normalizeRuntimeState(runtime, stall)
   }
 
   return {
     ...sim,
     isRunning: true,
+    powerMode,
     speed,
     tick: 0,
     tickRateHz,
@@ -1119,6 +1306,11 @@ export function startSimulation(layout: LayoutState, sim: SimState): SimState {
     minuteWindowCursor: 0,
     minuteWindowCount: 0,
     minuteWindowCapacity,
+    powerStats: {
+      totalSupplyKw: powerMode === 'infinite' ? Number.POSITIVE_INFINITY : 0,
+      totalDemandKw: totalPowerDemandKw(layout),
+      batteryPercent: 100,
+    },
   }
 }
 
@@ -1144,12 +1336,23 @@ export function stopSimulation(sim: SimState): SimState {
     minuteWindowCursor: 0,
     minuteWindowCount: 0,
     minuteWindowCapacity,
+    powerStats: {
+      totalSupplyKw: 0,
+      totalDemandKw: 0,
+      batteryPercent: 100,
+    },
   }
 }
 
 function recipeById(recipeId: string | undefined) {
   if (!recipeId) return undefined
   return RECIPES.find((recipe) => recipe.id === recipeId)
+    ?? THERMAL_POOL_VIRTUAL_RECIPES.find((recipe) => recipe.id === recipeId)
+}
+
+function recipesForDevice(deviceTypeId: DeviceInstance['typeId']) {
+  if (deviceTypeId === THERMAL_POOL_TYPE_ID) return THERMAL_POOL_VIRTUAL_RECIPES
+  return RECIPES.filter((recipe) => recipe.machineType === deviceTypeId)
 }
 
 function consumeRecipeInputs(runtime: DeviceRuntime, recipe: (typeof RECIPES)[number]) {
@@ -1165,7 +1368,7 @@ function consumeRecipeInputs(runtime: DeviceRuntime, recipe: (typeof RECIPES)[nu
 }
 
 function pickRunnableRecipeForDevice(device: DeviceInstance, runtime: DeviceRuntime) {
-  const recipes = RECIPES.filter((recipe) => recipe.machineType === device.typeId)
+  const recipes = recipesForDevice(device.typeId)
   const filteredRecipes = isReactorPoolType(device.typeId)
     ? (() => {
         const selectedIds = reactorSelectedRecipeIds(device.config)
@@ -1306,10 +1509,38 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
   const warehouse = { ...sim.warehouse }
   const processorDelta: Partial<Record<ItemId, number>> = {}
+  const totalDemandKw = totalPowerDemandKw(layout)
+  let totalSupplyKw = sim.powerMode === 'infinite' ? Number.POSITIVE_INFINITY : 0
+  let unpoweredById = new Set<string>()
+  let outOfRangeById = new Set<string>()
+
+  if (sim.powerMode === 'real') {
+    const poles = layout.devices.filter((device) => device.typeId === 'item_port_power_diffuser_1')
+    const powerAvailability = buildPowerAvailabilityByDeviceId(
+      layout,
+      runtimeById,
+      poles,
+      sim.tickRateHz,
+      processorDelta,
+    )
+    totalSupplyKw = powerAvailability.totalSupplyKw
+    unpoweredById = powerAvailability.unpoweredById
+    outOfRangeById = powerAvailability.outOfRangeById
+  }
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
     if (!runtime) continue
+
+    if (outOfRangeById.has(device.instanceId)) {
+      normalizeRuntimeState(runtime, 'OUT_OF_POWER_RANGE')
+      continue
+    }
+
+    if (unpoweredById.has(device.instanceId)) {
+      normalizeRuntimeState(runtime, 'LOW_POWER')
+      continue
+    }
 
     if (isHardBlockedStall(runtime.stallReason)) {
       continue
@@ -1558,7 +1789,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
             const transportSpeed = transportSpeedPerTick(device.typeId, sim.tickRateHz)
             const beforeSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
             const beforeProgress = beforeSlot?.progress01 ?? null
-            readyItemForLane(device, runtime, fromLane, transportSpeed, warehouse)
+            readyItemForLane(device, runtime, fromLane, transportSpeed, warehouse, link.from.portId)
             lanesAdvancedThisTick.add(laneAdvanceKey)
             const afterSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
             const afterProgress = afterSlot?.progress01 ?? null
@@ -1567,7 +1798,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
             }
           }
 
-          itemId = peekReadyItemForLane(device, runtime, fromLane, warehouse)
+          itemId = peekReadyItemForLane(device, runtime, fromLane, warehouse, link.from.portId)
         }
 
         if (!itemId) continue
@@ -1686,15 +1917,15 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     const received = tryReceiveToLane(toDevice, toRuntime, plan.lane, plan.toPortId, plan.itemId, sim.tick)
     if (!received) continue
 
-    if (toDevice.typeId === LOADER_TYPE_ID && 'inventory' in toRuntime) {
+    if (isWarehouseSubmitPort(toDevice, plan.toPortId) && 'inventory' in toRuntime) {
       toRuntime.inventory[plan.itemId] = Math.max(0, (toRuntime.inventory[plan.itemId] ?? 0) - 1)
       if (Number.isFinite(warehouse[plan.itemId])) {
         warehouse[plan.itemId] += 1
       }
     }
 
-    if (fromDevice.typeId === 'item_port_unloader_1') {
-      if (!shouldIgnorePickupInventory(fromDevice) && Number.isFinite(warehouse[plan.itemId])) {
+    if (fromDevice.typeId === PICKUP_TYPE_ID || fromDevice.typeId === PROTOCOL_HUB_TYPE_ID) {
+      if (!shouldIgnoreConfiguredOutputInventory(fromDevice, plan.fromPortId, plan.itemId) && Number.isFinite(warehouse[plan.itemId])) {
         warehouse[plan.itemId] = Math.max(0, warehouse[plan.itemId] - 1)
       }
     } else {
@@ -1789,6 +2020,11 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     minuteWindowCursor: nextMinuteWindowCursor,
     minuteWindowCount: nextMinuteWindowCount,
     minuteWindowCapacity: perMinuteWindowTicks,
+    powerStats: {
+      totalSupplyKw,
+      totalDemandKw,
+      batteryPercent: 100,
+    },
   }
 }
 

@@ -4,7 +4,6 @@
 
 - 新增设备功率字段：
   - `powerDemand: number`
-  - `powerSupply: number`
 - 新增功率聚合计算：
   - `totalDemand`
   - `totalSupply`
@@ -20,7 +19,7 @@
   - 新增 `OUT_OF_POWER_RANGE`（阻塞）
 - 新增全局电池模型（非设备）用于供需不足判定数据源。
 - 设备属性展示：
-  - 展示 `powerDemand/powerSupply`
+  - 展示 `powerDemand`
   - 发电设备 `powerDemand` 固定显示 `0`
 
 ## 2. 自动布线（Auto Routing）

@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { BASES, DEVICE_TYPE_BY_ID } from '../../domain/registry'
-import type { BaseDef, BaseId, DeviceInstance, DeviceRuntime, ItemId, LayoutState, SimState, SlotData } from '../../domain/types'
+import type { BaseDef, BaseId, DeviceInstance, DeviceRuntime, ItemId, LayoutState, PowerMode, SimState, SlotData } from '../../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../../i18n'
 import { isBelt } from '../../domain/geometry'
 
@@ -19,6 +20,9 @@ type RightPanelProps = {
   language: Language
   currentBaseId: BaseId
   currentBase: BaseDef
+  totalPowerDemandKw: number
+  powerMode: PowerMode
+  setPowerMode: (mode: PowerMode) => void
   setActiveBaseId: (id: BaseId) => void
   setSelection: (updater: string[] | ((current: string[]) => string[])) => void
   selectedDevice: DeviceInstance | null
@@ -64,15 +68,24 @@ type RightPanelProps = {
   selectedPumpOutputItemId: ItemId | undefined
   selectedPickupItemIsOre: boolean
   selectedPickupIgnoreInventory: boolean
+  selectedProtocolHubOutputs: Array<{
+    portId: string
+    portIndex: number
+    itemId: ItemId | undefined
+    itemIsOre: boolean
+    ignoreInventory: boolean
+  }>
   getItemIconPath: (itemId: ItemId) => string
   setItemPickerState: (
     state:
       | { kind: 'pickup'; deviceInstanceId: string }
+      | { kind: 'protocolHubOutput'; deviceInstanceId: string; portId: string; portIndex: number }
       | { kind: 'pumpOutput'; deviceInstanceId: string }
       | { kind: 'preload'; deviceInstanceId: string; slotIndex: number }
       | null
   ) => void
   updatePickupIgnoreInventory: (deviceInstanceId: string, enabled: boolean) => void
+  updateProtocolHubOutputIgnoreInventory: (deviceInstanceId: string, portId: string, enabled: boolean) => void
   setLayout: (updater: LayoutState | ((current: LayoutState) => LayoutState)) => void
   updateProcessorPreloadSlot: (deviceInstanceId: string, slotIndex: number, patch: { itemId?: ItemId | null; amount?: number }) => void
   reactorRecipeCandidates: Array<{
@@ -101,6 +114,9 @@ export function RightPanel({
   language,
   currentBaseId,
   currentBase,
+  totalPowerDemandKw,
+  powerMode,
+  setPowerMode,
   setActiveBaseId,
   setSelection,
   selectedDevice,
@@ -122,9 +138,11 @@ export function RightPanel({
   selectedPumpOutputItemId,
   selectedPickupItemIsOre,
   selectedPickupIgnoreInventory,
+  selectedProtocolHubOutputs,
   getItemIconPath,
   setItemPickerState,
   updatePickupIgnoreInventory,
+  updateProtocolHubOutputIgnoreInventory,
   setLayout,
   updateProcessorPreloadSlot,
   reactorRecipeCandidates,
@@ -159,37 +177,81 @@ export function RightPanel({
     { key: 'valley4', titleKey: 'right.baseGroup.valley4', tag: '四号谷地' },
     { key: 'wuling', titleKey: 'right.baseGroup.wuling', tag: '武陵' },
   ] as const
+  const [showMultiBaseTooltip, setShowMultiBaseTooltip] = useState(false)
 
   return (
     <aside className="panel right-panel">
-      <h3>{t('right.lot')}</h3>
-      {baseGroups.map((group) => {
-        const groupedBases = BASES.filter((base) => base.tags.includes(group.tag))
-        return (
-          <section key={group.key} className="base-group-section">
-            <h4 className="base-group-title">{t(group.titleKey)}</h4>
-            <div className="row">
-              {groupedBases.length > 0 ? (
-                groupedBases.map((base) => (
-                  <button
-                    key={base.id}
-                    className={currentBaseId === base.id ? 'active' : ''}
-                    onClick={() => {
-                      setActiveBaseId(base.id)
-                      setSelection([])
-                    }}
-                  >
-                    {base.name}
-                  </button>
-                ))
-              ) : (
-                <p className="base-group-empty">{t('right.baseGroup.empty')}</p>
-              )}
-            </div>
-          </section>
-        )
-      })}
+      <div className="right-lot-heading">
+        <h3>{t('right.lot')}</h3>
+        <span
+          className="right-lot-tooltip-wrap"
+          onMouseEnter={() => setShowMultiBaseTooltip(true)}
+          onMouseLeave={() => setShowMultiBaseTooltip(false)}
+        >
+          <button
+            type="button"
+            className="right-lot-tooltip-trigger"
+            aria-label={t('right.multiBaseHintLabel')}
+            onClick={() => setShowMultiBaseTooltip((current) => !current)}
+            onBlur={() => setShowMultiBaseTooltip(false)}
+          >
+            {t('right.multiBaseHintLabel')}
+          </button>
+          {showMultiBaseTooltip && (
+            <span className="right-lot-tooltip-bubble" role="tooltip">
+              {t('right.multiBaseHintContent')}
+            </span>
+          )}
+        </span>
+      </div>
+      {simIsRunning ? (
+        <section className="base-group-section">
+          <p className="base-group-title">{currentBase.name}</p>
+        </section>
+      ) : (
+        baseGroups.map((group) => {
+          const groupedBases = BASES.filter((base) => base.tags.includes(group.tag))
+          return (
+            <section key={group.key} className="base-group-section">
+              <h4 className="base-group-title">{t(group.titleKey)}</h4>
+              <div className="row">
+                {groupedBases.length > 0 ? (
+                  groupedBases.map((base) => (
+                    <button
+                      key={base.id}
+                      className={currentBaseId === base.id ? 'active' : ''}
+                      onClick={() => {
+                        if (simIsRunning) return
+                        setActiveBaseId(base.id)
+                        setSelection([])
+                      }}
+                    >
+                      {base.name}
+                    </button>
+                  ))
+                ) : (
+                  <p className="base-group-empty">{t('right.baseGroup.empty')}</p>
+                )}
+              </div>
+            </section>
+          )
+        })
+      )}
       <div className="kv"><span>{t('right.basePlaceableSize')}</span><span>{currentBase.placeableSize}x{currentBase.placeableSize}</span></div>
+      <div className="kv"><span>{t('right.totalPowerDemand')}</span><span>{totalPowerDemandKw} kW</span></div>
+      <div className="kv">
+        <span>{t('right.powerMode')}</span>
+        <span>
+          <select
+            value={powerMode}
+            disabled={simIsRunning}
+            onChange={(event) => setPowerMode(event.target.value as PowerMode)}
+          >
+            <option value="real">{t('right.powerMode.real')}</option>
+            <option value="infinite">{t('right.powerMode.infinite')}</option>
+          </select>
+        </span>
+      </div>
       <div className="kv">
         <span>{t('right.baseOuterRing')}</span>
         <span>
@@ -475,6 +537,70 @@ export function RightPanel({
                   </button>
                 </span>
               </div>
+            </>
+          )}
+          {selectedDevice.typeId === 'item_port_sp_hub_1' && (
+            <>
+              <div className="kv">
+                <span>{t('detail.protocolHubOutputs')}</span>
+                <span>{selectedProtocolHubOutputs.length}</span>
+              </div>
+              {selectedProtocolHubOutputs.map((entry) => (
+                <div key={`protocol-hub-output-${entry.portId}`} className="kv kv-no-border kv-pickup-inline">
+                  <span>{t('detail.protocolHubOutputPort', { index: entry.portIndex + 1 })}</span>
+                  <span className="kv-pickup-inline-value">
+                    <span className="kv-pickup-stack">
+                      <button
+                        type="button"
+                        className="picker-open-btn picker-open-btn-inline"
+                        disabled={simIsRunning}
+                        onClick={() =>
+                          setItemPickerState({
+                            kind: 'protocolHubOutput',
+                            deviceInstanceId: selectedDevice.instanceId,
+                            portId: entry.portId,
+                            portIndex: entry.portIndex,
+                          })
+                        }
+                      >
+                        <span className="pickup-picker-current">
+                          {entry.itemId ? (
+                            <img
+                              className="pickup-picker-current-icon"
+                              src={getItemIconPath(entry.itemId)}
+                              alt=""
+                              aria-hidden="true"
+                              draggable={false}
+                            />
+                          ) : (
+                            <span className="pickup-picker-current-icon pickup-picker-current-icon--empty">?</span>
+                          )}
+                          <span>{entry.itemId ? getItemLabel(language, entry.itemId) : t('detail.unselected')}</span>
+                        </span>
+                      </button>
+                      <label className="switch-toggle switch-toggle-inline" aria-label={t('detail.pickupIgnoreInventory')}>
+                        <span className={`switch-side-label ${!entry.ignoreInventory ? 'active' : ''}`}>
+                          {t('detail.pickupUseStock')}
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={entry.ignoreInventory}
+                          disabled={simIsRunning || !entry.itemId || entry.itemIsOre}
+                          onChange={(event) => {
+                            updateProtocolHubOutputIgnoreInventory(selectedDevice.instanceId, entry.portId, event.target.checked)
+                          }}
+                        />
+                        <span className="switch-track" aria-hidden="true">
+                          <span className="switch-thumb" />
+                        </span>
+                        <span className={`switch-side-label ${entry.ignoreInventory ? 'active' : ''}`}>
+                          {t('detail.pickupIgnoreShort')}
+                        </span>
+                      </label>
+                    </span>
+                  </span>
+                </div>
+              ))}
             </>
           )}
           {selectedDevice.typeId === 'item_port_storager_1' && (

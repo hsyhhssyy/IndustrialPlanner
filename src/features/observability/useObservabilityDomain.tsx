@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ITEMS } from '../../domain/registry'
-import type { ItemId, SimState } from '../../domain/types'
+import type { ItemId, PowerMode, SimState } from '../../domain/types'
 import { getItemLabel, type Language } from '../../i18n'
 
 type UseObservabilityDomainParams = {
   sim: SimState
   measuredTickRate: number
   ignoredInfiniteItemIds: ReadonlySet<ItemId>
+  powerMode: PowerMode
   language: Language
   t: (key: string, params?: Record<string, string | number>) => string
   formatCompactNumber: (value: number) => string
@@ -18,6 +19,7 @@ export function useObservabilityDomain({
   sim,
   measuredTickRate,
   ignoredInfiniteItemIds,
+  powerMode,
   language,
   t,
   formatCompactNumber,
@@ -110,6 +112,13 @@ export function useObservabilityDomain({
 
   const statsAndDebugSection = (
     <>
+      <div className="kv">
+        <span>
+          {`${t('right.powerDemand')}/${t('right.powerSupply')} ${formatCompactNumber(sim.powerStats.totalDemandKw)}/${powerMode === 'infinite' ? t('right.infinity') : formatCompactNumber(sim.powerStats.totalSupplyKw)} kW`}
+        </span>
+        <span>100%</span>
+      </div>
+
       <h3>{t('right.stats')}</h3>
       <div className="stats-meta-row">
         <span className="stats-meta-text">{t('stats.topNHint', { count: visibleStatsRows.length, total: statsRows.length })}</span>

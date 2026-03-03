@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import './App.css'
-import { PLACEABLE_TYPES } from './domain/registry'
+import { DEVICE_TYPE_BY_ID, PLACEABLE_TYPES } from './domain/registry'
 import {
   buildOccupancyMap,
   cellToDeviceId,
@@ -27,6 +27,7 @@ import type {
   DeviceRuntime,
   DeviceTypeId,
   ItemId,
+  PowerMode,
 } from './domain/types'
 import { usePersistentState } from './core/usePersistentState'
 import { createTranslator, getItemLabel, type Language } from './i18n'
@@ -123,6 +124,7 @@ function App() {
   const currentYear = new Date().getFullYear()
   const [leftPanelWidth, setLeftPanelWidth] = usePersistentState<number>('stage1-left-panel-width', 340)
   const [rightPanelWidth, setRightPanelWidth] = usePersistentState<number>('stage1-right-panel-width', 340)
+  const [powerMode, setPowerMode] = usePersistentState<PowerMode>('stage3-power-mode', 'infinite')
 
   const gridRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -172,6 +174,7 @@ function App() {
     currentBaseId,
     currentBase,
     foundationIdSet,
+    foundationMovableIdSet,
     zoomScale,
     canvasOffsetXPx,
     canvasOffsetYPx,
@@ -329,6 +332,7 @@ function App() {
     selection,
     layout,
     foundationIdSet,
+    foundationMovableIdSet,
     currentBaseOuterRing: currentBase.outerRing,
     setLayout,
     outOfLotToastKey: OUT_OF_LOT_TOAST_KEY,
@@ -359,6 +363,7 @@ function App() {
     selectedPumpOutputItemId,
     selectedPickupItemIsOre,
     selectedPickupIgnoreInventory,
+    selectedProtocolHubOutputs,
     selectedProcessorBufferSpec,
     selectedPreloadSlots,
     selectedPreloadTotal,
@@ -369,6 +374,7 @@ function App() {
     pickerDisabledItemIds,
     handleItemPickerSelect,
     updatePickupIgnoreInventory,
+    updateProtocolHubOutputIgnoreInventory,
     updateProcessorPreloadSlot,
     reactorRecipeCandidates,
     selectedReactorPoolConfig,
@@ -430,6 +436,7 @@ function App() {
       cellDeviceMap,
       occupancyMap,
       foundationIdSet,
+      foundationMovableIdSet,
     },
     blueprint: {
       activePlacementBlueprint,
@@ -471,11 +478,21 @@ function App() {
   const ignoredInfiniteItemIds = useMemo(() => {
     const itemIds = new Set<ItemId>()
     for (const device of layout.devices) {
-      if (device.typeId !== 'item_port_unloader_1') continue
-      const pickupItemId = device.config.pickupItemId
-      if (!pickupItemId) continue
-      if (isOreItemId(pickupItemId) || device.config.pickupIgnoreInventory) {
-        itemIds.add(pickupItemId)
+      if (device.typeId !== 'item_port_unloader_1' && device.typeId !== 'item_port_sp_hub_1') continue
+      const outputs = device.config.protocolHubOutputs ?? []
+      for (const output of outputs) {
+        const outputItemId = output.itemId
+        if (!outputItemId) continue
+        if (isOreItemId(outputItemId) || output.ignoreInventory) {
+          itemIds.add(outputItemId)
+        }
+      }
+
+      if (device.typeId === 'item_port_unloader_1' && outputs.length === 0) {
+        const pickupItemId = device.config.pickupItemId
+        if (pickupItemId && (isOreItemId(pickupItemId) || device.config.pickupIgnoreInventory)) {
+          itemIds.add(pickupItemId)
+        }
       }
     }
     return itemIds
@@ -485,12 +502,18 @@ function App() {
     sim,
     measuredTickRate,
     ignoredInfiniteItemIds,
+    powerMode,
     language,
     t,
     formatCompactNumber,
     formatCompactStock,
     statsTopN: STATS_TOP_N,
   })
+
+  const totalPowerDemandKw = useMemo(
+    () => layout.devices.reduce((sum, device) => sum + (DEVICE_TYPE_BY_ID[device.typeId]?.powerDemand ?? 0), 0),
+    [layout.devices],
+  )
 
   const beginPanelResize = (side: 'left' | 'right', startX: number) => {
     resizeStateRef.current = {
@@ -564,6 +587,7 @@ function App() {
     unknownDevicesCount,
     t,
     layout,
+    powerMode,
     updateSim,
   })
 
@@ -745,6 +769,9 @@ function App() {
           language={language}
           currentBaseId={currentBaseId}
           currentBase={currentBase}
+          totalPowerDemandKw={totalPowerDemandKw}
+          powerMode={powerMode}
+          setPowerMode={setPowerMode}
           setActiveBaseId={setActiveBaseId}
           setSelection={setSelection}
           selectedDevice={selectedDevice}
@@ -766,9 +793,11 @@ function App() {
           selectedPumpOutputItemId={selectedPumpOutputItemId}
           selectedPickupItemIsOre={selectedPickupItemIsOre}
           selectedPickupIgnoreInventory={selectedPickupIgnoreInventory}
+          selectedProtocolHubOutputs={selectedProtocolHubOutputs}
           getItemIconPath={getItemIconPath}
           setItemPickerState={setItemPickerState}
           updatePickupIgnoreInventory={updatePickupIgnoreInventory}
+          updateProtocolHubOutputIgnoreInventory={updateProtocolHubOutputIgnoreInventory}
           setLayout={setLayout}
           updateProcessorPreloadSlot={updateProcessorPreloadSlot}
           reactorRecipeCandidates={reactorRecipeCandidates}

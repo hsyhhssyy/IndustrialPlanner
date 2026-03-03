@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { showToast } from '../../ui/toast'
 import type { BaseId, DeviceInstance, LayoutState, Rotation } from '../../domain/types'
 import type { BlueprintSnapshot } from './useBlueprintDomain'
+import { APP_VERSION } from '../../migrations/versioning'
 
 type UseBlueprintHotkeysDomainParams = {
   simIsRunning: boolean
@@ -62,6 +63,7 @@ export function useBlueprintHotkeysDomain({
           id: `clipboard_${Date.now()}`,
           name: 'clipboard',
           createdAt,
+          version: APP_VERSION,
           baseId: activeBaseId,
           devices: selectedDevices.map((device) => ({
             typeId: device.typeId,

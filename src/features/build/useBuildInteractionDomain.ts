@@ -50,7 +50,13 @@ export function useBuildInteractionDomain({
     cellDeviceMap,
     occupancyMap,
     foundationIdSet,
+    foundationMovableIdSet,
   } = build
+
+  const canMoveDevice = useCallback(
+    (instanceId: string) => !foundationIdSet.has(instanceId) || foundationMovableIdSet.has(instanceId),
+    [foundationIdSet, foundationMovableIdSet],
+  )
 
   const {
     editor: {
@@ -289,7 +295,7 @@ export function useBuildInteractionDomain({
 
       const clickedId = cellDeviceMap.get(`${cell.x},${cell.y}`)
       if (clickedId) {
-        const activeSelection = (selection.includes(clickedId) ? selection : [clickedId]).filter((id) => !foundationIdSet.has(id))
+        const activeSelection = (selection.includes(clickedId) ? selection : [clickedId]).filter((id) => canMoveDevice(id))
         if (!selection.includes(clickedId)) setSelection(activeSelection)
         if (activeSelection.length === 0) {
           resetDragState()
@@ -328,6 +334,8 @@ export function useBuildInteractionDomain({
       cellDeviceMap,
       fallbackPlacementToastKey,
       foundationIdSet,
+      foundationMovableIdSet,
+      canMoveDevice,
       layout,
       mode,
       placeDevice,
@@ -505,7 +513,7 @@ export function useBuildInteractionDomain({
   )
 
   const onCanvasMouseUp = useCallback(
-    async (_event: React.MouseEvent<HTMLDivElement>) => {
+    async () => {
       if (isPanning) {
         setIsPanning(false)
         setPanStart(null)
@@ -617,7 +625,7 @@ export function useBuildInteractionDomain({
                 })
               : false,
           )
-          .filter((device) => !foundationIdSet.has(device.instanceId))
+          .filter((device) => canMoveDevice(device.instanceId))
           .map((device) => device.instanceId)
         setSelection(ids)
         setDragRect(null)
@@ -671,6 +679,8 @@ export function useBuildInteractionDomain({
       dragRect,
       dragStartCell,
       foundationIdSet,
+      foundationMovableIdSet,
+      canMoveDevice,
       isPanning,
       layout.devices,
       logCurrent,

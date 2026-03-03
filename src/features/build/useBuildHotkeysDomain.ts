@@ -17,6 +17,7 @@ type UseBuildHotkeysDomainParams = {
   selection: string[]
   layout: LayoutState
   foundationIdSet: ReadonlySet<string>
+  foundationMovableIdSet: ReadonlySet<string>
   currentBaseOuterRing: OuterRing
   setLayout: (updater: LayoutState) => void
   outOfLotToastKey: string
@@ -32,6 +33,7 @@ export function useBuildHotkeysDomain({
   selection,
   layout,
   foundationIdSet,
+  foundationMovableIdSet,
   currentBaseOuterRing,
   setLayout,
   outOfLotToastKey,
@@ -61,7 +63,7 @@ export function useBuildHotkeysDomain({
       const selectedRotatable = layout.devices.filter(
         (device) =>
           selection.includes(device.instanceId) &&
-          !foundationIdSet.has(device.instanceId) &&
+            (!foundationIdSet.has(device.instanceId) || foundationMovableIdSet.has(device.instanceId)) &&
           !NON_ROTATABLE_PLACED_TYPE_IDS.has(device.typeId),
       )
       if (selectedRotatable.length === 0) return
@@ -134,6 +136,7 @@ export function useBuildHotkeysDomain({
   }, [
     fallbackPlacementToastKey,
     foundationIdSet,
+    foundationMovableIdSet,
     currentBaseOuterRing,
     layout,
     mode,

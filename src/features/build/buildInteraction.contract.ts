@@ -83,6 +83,7 @@ export type BuildInteractionBuildParams = {
   cellDeviceMap: Map<string, string>
   occupancyMap: Map<string, Array<{ instanceId: string }>>
   foundationIdSet: ReadonlySet<string>
+  foundationMovableIdSet: ReadonlySet<string>
 }
 
 export type BuildInteractionBlueprintParams = {

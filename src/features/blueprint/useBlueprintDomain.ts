@@ -6,6 +6,7 @@ import { validatePlacementConstraints } from '../../domain/placement'
 import { rotatedFootprintSize } from '../../domain/shared/math'
 import type { BaseId, DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
 import { isDeviceWithinAllowedPlacementArea } from '../../domain/shared/placementArea'
+import { APP_VERSION, migrateDeviceConfigToV1, normalizeBlueprintSnapshotsStorage } from '../../migrations/versioning'
 
 type BlueprintDeviceSnapshot = {
   typeId: DeviceTypeId
@@ -19,7 +20,7 @@ export type BlueprintSnapshot = {
   name: string
   createdAt: string
   updatedAt?: string
-  version?: number
+  version: string
   baseId: BaseId
   devices: BlueprintDeviceSnapshot[]
 }
@@ -42,7 +43,7 @@ type BlueprintLocalRect = {
 
 type BlueprintSharePayload = {
   schema: 'industrial-planner-blueprint'
-  version: number
+  version: string
   name: string
   createdAt: string
   baseId: string
@@ -125,14 +126,20 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
   if (!payload || typeof payload !== 'object') return null
 
   const schema = (payload as Record<string, unknown>).schema
-  const version = (payload as Record<string, unknown>).version
+  const versionRaw = (payload as Record<string, unknown>).version
   const name = (payload as Record<string, unknown>).name
   const createdAt = (payload as Record<string, unknown>).createdAt
   const baseId = (payload as Record<string, unknown>).baseId
   const devices = (payload as Record<string, unknown>).devices
 
   if (schema !== 'industrial-planner-blueprint') return null
-  if (typeof version !== 'number' || version < 1) return null
+  const version =
+    typeof versionRaw === 'string'
+      ? versionRaw
+      : typeof versionRaw === 'number'
+        ? String(versionRaw)
+        : APP_VERSION
+  if (!version) return null
   if (typeof name !== 'string' || !name.trim()) return null
   if (typeof createdAt !== 'string' || !createdAt) return null
   if (typeof baseId !== 'string' || !baseId) return null
@@ -154,7 +161,7 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
       typeId: typeId as DeviceTypeId,
       rotation: sanitizeRotation(rotation),
       origin: { x: Math.round(x), y: Math.round(y) },
-      config: cloneDeviceConfig((config ?? {}) as DeviceInstance['config']),
+      config: migrateDeviceConfigToV1(cloneDeviceConfig((config ?? {}) as DeviceInstance['config'])),
     })
   }
 
@@ -178,10 +185,18 @@ type UseBlueprintDomainParams = {
 }
 
 export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selection, foundationIdSet, t }: UseBlueprintDomainParams) {
-  const [blueprints, setBlueprints] = usePersistentState<BlueprintSnapshot[]>('stage1-blueprints', [])
+  const [blueprints, setBlueprints] = usePersistentState<BlueprintSnapshot[]>(
+    'stage1-blueprints',
+    [],
+    normalizeBlueprintSnapshotsStorage,
+  )
   const [selectedBlueprintId, setSelectedBlueprintId] = usePersistentState<string | null>('stage1-selected-blueprint-id', null)
   const [armedBlueprintId, setArmedBlueprintId] = usePersistentState<string | null>('stage1-armed-blueprint-id', null)
-  const [clipboardBlueprint, setClipboardBlueprint] = usePersistentState<BlueprintSnapshot | null>('stage1-clipboard-blueprint', null)
+  const [clipboardBlueprint, setClipboardBlueprint] = usePersistentState<BlueprintSnapshot | null>(
+    'stage1-clipboard-blueprint',
+    null,
+    (value) => normalizeBlueprintSnapshotsStorage(value ? [value] : [])[0] ?? null,
+  )
   const [blueprintPlacementRotation, setBlueprintPlacementRotation] = usePersistentState<Rotation>('stage1-blueprint-rotation', 0)
 
   const saveSelectionAsBlueprint = useCallback(async () => {
@@ -214,7 +229,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
       name,
       createdAt,
       updatedAt: createdAt,
-      version: 1,
+      version: APP_VERSION,
       baseId: activeBaseId,
       devices: selectedDevices.map((device) => ({
         typeId: device.typeId,
@@ -292,7 +307,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
                 ...blueprint,
                 name: nextName,
                 updatedAt,
-                version: blueprint.version ?? 1,
+                version: blueprint.version || APP_VERSION,
               }
             : blueprint,
         ),
@@ -308,7 +323,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
       if (!target) return null
       const payload: BlueprintSharePayload = {
         schema: 'industrial-planner-blueprint',
-        version: target.version ?? 1,
+        version: target.version || APP_VERSION,
         name: target.name,
         createdAt: target.createdAt,
         baseId: target.baseId,

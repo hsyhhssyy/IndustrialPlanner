@@ -12,7 +12,7 @@
 ## 2. 升级步骤
 
 1. 升级代码并构建通过。
-2. 校验全设备 `powerDemand/powerSupply` 字段加载与展示。
+2. 校验全设备 `powerDemand` 字段加载与展示。
 3. 校验发电设备 `powerDemand=0` 展示口径。
 4. 校验缺电阻塞停机语义与状态码拆分（当前 `NO_POWER`，目标 `LOW_POWER/OUT_OF_POWER_RANGE`，均阻塞）。
 5. 校验自动布线任务队列与蓝图生成能力。

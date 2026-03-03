@@ -14,7 +14,7 @@
 
 ### 3.1 新增能力
 
-- 设备功率属性：`powerDemand`、`powerSupply`
+- 设备功率属性：`powerDemand`
 - 功率聚合：总耗电、总发电、净功率
 - 功率统计窗口：即时值、10 分钟均值、1 小时均值（标准秒）
 - 设备属性页展示功率字段（发电设备 `powerDemand` 显示 `0`）
@@ -55,7 +55,7 @@
 
 ### 7.1 保留为 Stage3 活跃项
 
-- 电力领域模型需将 `powerDemand/powerSupply` 全设备显式补齐。
+- 电力领域模型需将 `powerDemand` 全设备显式补齐。
 - 当前代码中电力不足仍触发 `NO_POWER` 硬阻塞；Stage3 交付目标为完成 `LOW_POWER/OUT_OF_POWER_RANGE` 拆分并移除 `NO_POWER`。
 - 未实现电力即时值/10 分钟/1 小时统计窗口。
 - 设备属性页尚未展示功率字段（含发电设备 `powerDemand=0` 展示口径）。
