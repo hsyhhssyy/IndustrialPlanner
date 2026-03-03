@@ -39,6 +39,7 @@ export function tryPlaceDevice({
   fallbackPlacementToastKey,
   t,
 }: PlaceDeviceParams) {
+  const isXiraniteOven = placeType === 'item_port_xiranite_oven_1'
   const placementLimitToastKey = getPlacementLimitViolationToastKey(layout, placeType)
   if (placementLimitToastKey) {
     showToast(t(placementLimitToastKey), { variant: 'warning' })
@@ -97,6 +98,13 @@ export function tryPlaceDevice({
       devices: [...current.devices.filter((device) => !replacedBeltIds.has(device.instanceId)), instance],
     }
   })
+
+  if (isXiraniteOven) {
+    const existingCount = layout.devices.filter((device) => device.typeId === 'item_port_xiranite_oven_1').length
+    if (existingCount >= 4) {
+      showToast(t('toast.rule.xiraniteOvenOver4Wuling'), { variant: 'warning' })
+    }
+  }
 
   return true
 }

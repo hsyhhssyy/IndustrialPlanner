@@ -23,6 +23,8 @@ type RightPanelProps = {
   totalPowerDemandKw: number
   powerMode: PowerMode
   setPowerMode: (mode: PowerMode) => void
+  initialBatteryPercent: number
+  setInitialBatteryPercent: (value: number) => void
   setActiveBaseId: (id: BaseId) => void
   setSelection: (updater: string[] | ((current: string[]) => string[])) => void
   selectedDevice: DeviceInstance | null
@@ -117,6 +119,8 @@ export function RightPanel({
   totalPowerDemandKw,
   powerMode,
   setPowerMode,
+  initialBatteryPercent,
+  setInitialBatteryPercent,
   setActiveBaseId,
   setSelection,
   selectedDevice,
@@ -252,6 +256,26 @@ export function RightPanel({
           </select>
         </span>
       </div>
+      {powerMode === 'real' && (
+        <div className="kv">
+          <span>{t('right.initialBatteryPercent')}</span>
+          <span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              value={initialBatteryPercent}
+              disabled={simIsRunning}
+              onChange={(event) => {
+                const parsed = Number.parseInt(event.target.value, 10)
+                const normalized = Number.isFinite(parsed) ? Math.min(100, Math.max(0, parsed)) : 0
+                setInitialBatteryPercent(normalized)
+              }}
+            />
+          </span>
+        </div>
+      )}
       <div className="kv">
         <span>{t('right.baseOuterRing')}</span>
         <span>

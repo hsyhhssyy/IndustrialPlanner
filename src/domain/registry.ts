@@ -1445,8 +1445,6 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     powerDemand: 50,
     size: { width: 5, height: 5 },
     shortName: 'XiraniteOven',
-    maxPlacementCount: 2,
-    placementLimitToastKey: 'toast.rule.xiraniteOvenMax2',
     inputBufferSlots: 2,
     inputBufferSlotCapacities: [50, 50],
     tags: ['武陵'],

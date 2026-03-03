@@ -8,10 +8,11 @@ type UseSimulationControlDomainParams = {
   t: (key: string, params?: Record<string, string | number>) => string
   layout: LayoutState
   powerMode: PowerMode
+  initialBatteryPercent: number
   updateSim: (updater: (current: SimState) => SimState) => SimState
 }
 
-export function useSimulationControlDomain({ unknownDevicesCount, t, layout, powerMode, updateSim }: UseSimulationControlDomainParams) {
+export function useSimulationControlDomain({ unknownDevicesCount, t, layout, powerMode, initialBatteryPercent, updateSim }: UseSimulationControlDomainParams) {
   const handleStartSimulation = useCallback(() => {
     if (unknownDevicesCount > 0) {
       dialogAlertNonBlocking(t('dialog.legacyUnknownTypesStartBlocked'), {
@@ -21,8 +22,8 @@ export function useSimulationControlDomain({ unknownDevicesCount, t, layout, pow
       })
       return
     }
-    updateSim((current) => startSimulation(layout, current, powerMode))
-  }, [layout, powerMode, t, unknownDevicesCount, updateSim])
+    updateSim((current) => startSimulation(layout, current, powerMode, initialBatteryPercent))
+  }, [initialBatteryPercent, layout, powerMode, t, unknownDevicesCount, updateSim])
 
   return {
     handleStartSimulation,

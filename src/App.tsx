@@ -125,6 +125,7 @@ function App() {
   const [leftPanelWidth, setLeftPanelWidth] = usePersistentState<number>('stage1-left-panel-width', 340)
   const [rightPanelWidth, setRightPanelWidth] = usePersistentState<number>('stage1-right-panel-width', 340)
   const [powerMode, setPowerMode] = usePersistentState<PowerMode>('stage3-power-mode', 'infinite')
+  const [initialBatteryPercent, setInitialBatteryPercent] = usePersistentState<number>('stage3-initial-battery-percent', 100)
 
   const gridRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -282,6 +283,13 @@ function App() {
   useEffect(() => {
     setRightPanelWidth((current) => clamp(Number.isFinite(current) ? current : 340, RIGHT_PANEL_MIN_WIDTH, PANEL_MAX_WIDTH))
   }, [setRightPanelWidth])
+
+  useEffect(() => {
+    setInitialBatteryPercent((current) => {
+      if (!Number.isFinite(current)) return 100
+      return Math.min(100, Math.max(0, Math.floor(current)))
+    })
+  }, [setInitialBatteryPercent])
 
   useEffect(() => {
     const onMouseMove = (event: MouseEvent) => {
@@ -588,6 +596,7 @@ function App() {
     t,
     layout,
     powerMode,
+    initialBatteryPercent,
     updateSim,
   })
 
@@ -772,6 +781,8 @@ function App() {
           totalPowerDemandKw={totalPowerDemandKw}
           powerMode={powerMode}
           setPowerMode={setPowerMode}
+          initialBatteryPercent={initialBatteryPercent}
+          setInitialBatteryPercent={setInitialBatteryPercent}
           setActiveBaseId={setActiveBaseId}
           setSelection={setSelection}
           selectedDevice={selectedDevice}

@@ -182,7 +182,6 @@ export function PlannerPanel({ language, t, onClose }: PlannerPanelProps) {
   const BLUE_IRON_POWDER_ID: ItemId = 'item_iron_powder'
   const BLUE_IRON_CONVERSION_RECIPE_IDS = new Set<string>([
     'r_furnace_iron_nugget_from_iron_powder_basic',
-    'r_crusher_iron_powder_from_iron_nugget_basic',
   ])
 
   const wulingItemIdSet = useMemo(() => {

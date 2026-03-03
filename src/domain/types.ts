@@ -301,6 +301,7 @@ export interface SimState {
     totalSupplyKw: number
     totalDemandKw: number
     batteryPercent: number
+    batteryStoredJ: number
   }
 }
 

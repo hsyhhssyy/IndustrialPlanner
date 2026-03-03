@@ -50,6 +50,7 @@ const PROTOCOL_HUB_TYPE_ID: DeviceInstance['typeId'] = 'item_port_sp_hub_1'
 const LOADER_TYPE_ID: DeviceInstance['typeId'] = 'item_port_loader_1'
 const THERMAL_POOL_TYPE_ID: DeviceInstance['typeId'] = 'item_port_power_sta_1'
 const PROTOCOL_HUB_SUPPLY_KW = 200
+const GLOBAL_BATTERY_CAPACITY_J = 100_000_000
 const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
 const PROTOCOL_HUB_OUTPUT_PORT_IDS = ['out_w_2', 'out_w_5', 'out_w_8', 'out_e_2', 'out_e_5', 'out_e_8'] as const
 const PROTOCOL_HUB_WAREHOUSE_INPUT_PORT_IDS = new Set([
@@ -318,6 +319,7 @@ function buildPowerAvailabilityByDeviceId(
   poles: DeviceInstance[],
   tickRateHz: number,
   processorDelta: Partial<Record<ItemId, number>>,
+  batteryStoredJ: number,
 ) {
   const unpoweredById = new Set<string>()
   const outOfRangeById = new Set<string>()
@@ -338,7 +340,14 @@ function buildPowerAvailabilityByDeviceId(
     powerCandidates.push({ instanceId: device.instanceId, demandKw })
   }
 
-  let remainingSupplyKw = totalSupplyKw
+  const totalDemandInRangeKw = powerCandidates.reduce((sum, candidate) => sum + candidate.demandKw, 0)
+  const deficitKw = Math.max(0, totalDemandInRangeKw - totalSupplyKw)
+  const requiredBatteryJ = (deficitKw * 1000) / tickRateHz
+  const batteryUsedJ = Math.min(Math.max(0, batteryStoredJ), requiredBatteryJ)
+  const batteryAssistKw = (batteryUsedJ * tickRateHz) / 1000
+  const nextBatteryStoredJ = Math.max(0, batteryStoredJ - batteryUsedJ)
+
+  let remainingSupplyKw = totalSupplyKw + batteryAssistKw
   for (const candidate of powerCandidates) {
     if (remainingSupplyKw >= candidate.demandKw) {
       remainingSupplyKw -= candidate.demandKw
@@ -347,7 +356,7 @@ function buildPowerAvailabilityByDeviceId(
     unpoweredById.add(candidate.instanceId)
   }
 
-  return { unpoweredById, outOfRangeById, totalSupplyKw }
+  return { unpoweredById, outOfRangeById, totalSupplyKw, nextBatteryStoredJ }
 }
 
 function totalPowerDemandKw(layout: LayoutState) {
@@ -1251,14 +1260,20 @@ export function createInitialSimState(): SimState {
       totalSupplyKw: 0,
       totalDemandKw: 0,
       batteryPercent: 100,
+      batteryStoredJ: GLOBAL_BATTERY_CAPACITY_J,
     },
   }
 }
 
-export function startSimulation(layout: LayoutState, sim: SimState, powerMode: PowerMode): SimState {
+export function startSimulation(layout: LayoutState, sim: SimState, powerMode: PowerMode, initialBatteryPercent: number = 100): SimState {
   const tickRateHz = BASE_TICK_RATE
   const speed = sim.speed === 0 ? 1 : sim.speed
   const minuteWindowCapacity = cycleTicksFromSeconds(60, tickRateHz)
+  const normalizedInitialBatteryPercent = Math.min(100, Math.max(0, Number.isFinite(initialBatteryPercent) ? initialBatteryPercent : 100))
+  const initialBatteryStoredJ =
+    powerMode === 'real'
+      ? Math.round((GLOBAL_BATTERY_CAPACITY_J * normalizedInitialBatteryPercent) / 100)
+      : GLOBAL_BATTERY_CAPACITY_J
   const runtimeById = resetRuntimeByLayout(layout)
   const overlaps = detectOverlaps(layout)
   const poles = layout.devices.filter((device) => device.typeId === 'item_port_power_diffuser_1')
@@ -1309,7 +1324,8 @@ export function startSimulation(layout: LayoutState, sim: SimState, powerMode: P
     powerStats: {
       totalSupplyKw: powerMode === 'infinite' ? Number.POSITIVE_INFINITY : 0,
       totalDemandKw: totalPowerDemandKw(layout),
-      batteryPercent: 100,
+      batteryPercent: powerMode === 'real' ? normalizedInitialBatteryPercent : 100,
+      batteryStoredJ: initialBatteryStoredJ,
     },
   }
 }
@@ -1340,6 +1356,7 @@ export function stopSimulation(sim: SimState): SimState {
       totalSupplyKw: 0,
       totalDemandKw: 0,
       batteryPercent: 100,
+      batteryStoredJ: GLOBAL_BATTERY_CAPACITY_J,
     },
   }
 }
@@ -1511,6 +1528,9 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   const processorDelta: Partial<Record<ItemId, number>> = {}
   const totalDemandKw = totalPowerDemandKw(layout)
   let totalSupplyKw = sim.powerMode === 'infinite' ? Number.POSITIVE_INFINITY : 0
+  let batteryStoredJ = sim.powerMode === 'real'
+    ? Math.min(Math.max(0, sim.powerStats.batteryStoredJ ?? GLOBAL_BATTERY_CAPACITY_J), GLOBAL_BATTERY_CAPACITY_J)
+    : GLOBAL_BATTERY_CAPACITY_J
   let unpoweredById = new Set<string>()
   let outOfRangeById = new Set<string>()
 
@@ -1522,11 +1542,15 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
       poles,
       sim.tickRateHz,
       processorDelta,
+      batteryStoredJ,
     )
     totalSupplyKw = powerAvailability.totalSupplyKw
+    batteryStoredJ = powerAvailability.nextBatteryStoredJ
     unpoweredById = powerAvailability.unpoweredById
     outOfRangeById = powerAvailability.outOfRangeById
   }
+
+  const batteryPercent = Math.round((Math.max(0, batteryStoredJ) / GLOBAL_BATTERY_CAPACITY_J) * 100)
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
@@ -2023,7 +2047,8 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     powerStats: {
       totalSupplyKw,
       totalDemandKw,
-      batteryPercent: 100,
+      batteryPercent,
+      batteryStoredJ,
     },
   }
 }

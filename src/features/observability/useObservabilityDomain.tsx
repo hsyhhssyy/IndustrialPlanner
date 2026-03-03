@@ -116,7 +116,7 @@ export function useObservabilityDomain({
         <span>
           {`${t('right.powerDemand')}/${t('right.powerSupply')} ${formatCompactNumber(sim.powerStats.totalDemandKw)}/${powerMode === 'infinite' ? t('right.infinity') : formatCompactNumber(sim.powerStats.totalSupplyKw)} kW`}
         </span>
-        <span>100%</span>
+        <span>{sim.powerMode === 'infinite' ? '100%' : `${sim.powerStats.batteryPercent}%`}</span>
       </div>
 
       <h3>{t('right.stats')}</h3>
