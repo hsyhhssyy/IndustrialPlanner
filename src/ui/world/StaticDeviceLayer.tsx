@@ -24,10 +24,8 @@ const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>([
 ])
 
 const REACTOR_LIQUID_PORT_TAGS: Record<string, string> = {
-  in_e_1: '1',
-  in_e_3: '2',
-  out_w_1: '3',
-  out_w_3: '4',
+  out_w_1: '1',
+  out_w_3: '2',
 }
 const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
 
@@ -35,10 +33,12 @@ export type StaticDeviceLayerProps = {
   devices: DeviceInstance[]
   selectionSet: ReadonlySet<string>
   invalidSelectionSet: ReadonlySet<string>
+  highlightedSet?: ReadonlySet<string>
   previewOriginsById: ReadonlyMap<string, { x: number; y: number }>
   language: Language
   extraClassName?: string
   showRuntimeItemIcons?: boolean
+  showPreloadSummary?: boolean
   runtimeById?: Readonly<Record<string, DeviceRuntime>>
   simTick?: number
 }
@@ -52,10 +52,12 @@ export const StaticDeviceLayer = memo(
     devices,
     selectionSet,
     invalidSelectionSet,
+    highlightedSet = new Set(),
     previewOriginsById,
     language,
     extraClassName,
     showRuntimeItemIcons = false,
+    showPreloadSummary = false,
     runtimeById = {},
     simTick = 0,
   }: StaticDeviceLayerProps) => {
@@ -149,6 +151,26 @@ export const StaticDeviceLayer = memo(
       return undefined
     }
 
+    function getPreloadSummaryEntries(device: DeviceInstance): Array<{ itemId: ItemId; amount: number }> {
+      const amountByItem = new Map<ItemId, number>()
+      const preloadInputs = device.config.preloadInputs ?? []
+      for (const entry of preloadInputs) {
+        if (!entry || typeof entry.itemId !== 'string') continue
+        const amount = Math.max(0, Math.floor(Number(entry.amount) || 0))
+        if (amount <= 0) continue
+        amountByItem.set(entry.itemId, (amountByItem.get(entry.itemId) ?? 0) + amount)
+      }
+
+      if (amountByItem.size === 0 && device.config.preloadInputItemId) {
+        const fallbackAmount = Math.max(0, Math.floor(Number(device.config.preloadInputAmount) || 0))
+        if (fallbackAmount > 0) {
+          amountByItem.set(device.config.preloadInputItemId, fallbackAmount)
+        }
+      }
+
+      return Array.from(amountByItem.entries()).map(([itemId, amount]) => ({ itemId, amount }))
+    }
+
     function reactorLiquidPortTagStyle(
       port: { x: number; y: number; edge: 'N' | 'S' | 'W' | 'E' },
       origin: { x: number; y: number },
@@ -197,6 +219,7 @@ export const StaticDeviceLayer = memo(
           const pickupItemId = isPickupPort ? pickupOutputEntry?.itemId ?? renderDevice.config.pickupItemId : undefined
           const runtimeIconItemId = getRuntimeIconItemId(renderDevice)
           const displayItemIconId = runtimeIconItemId
+          const preloadSummaryEntries = showPreloadSummary ? getPreloadSummaryEntries(renderDevice) : []
           const configuredPortItemEntries =
             isPickupPort || isProtocolHub
               ? (renderDevice.config.protocolHubOutputs ?? [])
@@ -225,6 +248,9 @@ export const StaticDeviceLayer = memo(
               }
             })
             .filter((entry): entry is { key: string; itemId: ItemId; left: number; top: number } => Boolean(entry))
+          const showDeviceLabel =
+            (isProtocolHub && !HIDDEN_DEVICE_LABEL_TYPES.has(renderDevice.typeId)) ||
+            (!isProtocolHub && !displayItemIconId && configuredPortIcons.length === 0 && !HIDDEN_DEVICE_LABEL_TYPES.has(renderDevice.typeId))
           const beltPorts = isLogisticsTrack ? rotatedPorts : []
           const beltInEdge = isLogisticsTrack ? beltPorts.find((port) => port.direction === 'Input')?.edge ?? 'W' : 'W'
           const beltOutEdge = isLogisticsTrack ? beltPorts.find((port) => port.direction === 'Output')?.edge ?? 'E' : 'E'
@@ -246,7 +272,7 @@ export const StaticDeviceLayer = memo(
           return (
             <div
               key={renderDevice.instanceId}
-              className={`device ${isLogisticsTrack ? 'belt-device' : ''} ${isPipeTrack ? 'pipe-device' : ''} ${selectionSet.has(renderDevice.instanceId) ? 'selected' : ''} ${invalidSelectionSet.has(renderDevice.instanceId) ? 'drag-invalid' : ''} ${extraClassName ?? ''}`.trim()}
+              className={`device ${isLogisticsTrack ? 'belt-device' : ''} ${isPipeTrack ? 'pipe-device' : ''} ${selectionSet.has(renderDevice.instanceId) ? 'selected' : ''} ${invalidSelectionSet.has(renderDevice.instanceId) ? 'drag-invalid' : ''} ${highlightedSet.has(renderDevice.instanceId) ? 'power-range-highlight' : ''} ${extraClassName ?? ''}`.trim()}
               style={{
                 left: renderDevice.origin.x * BASE_CELL_SIZE,
                 top: renderDevice.origin.y * BASE_CELL_SIZE,
@@ -323,11 +349,20 @@ export const StaticDeviceLayer = memo(
                       style={{ left: `${entry.left}px`, top: `${entry.top}px` }}
                     />
                   ))}
-                  {((isProtocolHub && !HIDDEN_DEVICE_LABEL_TYPES.has(renderDevice.typeId)) ||
-                    (!isProtocolHub && !displayItemIconId && configuredPortIcons.length === 0 && !HIDDEN_DEVICE_LABEL_TYPES.has(renderDevice.typeId))) && (
+                  {showDeviceLabel && (
                     <span className={`device-label ${isPickupPort ? 'pickup-label' : ''} ${isPickupPort && isQuarterTurn ? 'pickup-label-vertical' : ''}`}>
                       {getDeviceLabel(language, renderDevice.typeId)}
                     </span>
+                  )}
+                  {showDeviceLabel && preloadSummaryEntries.length > 0 && (
+                    <div className="device-preload-row" aria-hidden="true">
+                      {preloadSummaryEntries.map((entry) => (
+                        <span key={`${renderDevice.instanceId}-preload-${entry.itemId}`} className="device-preload-chip">
+                          <img className="device-preload-icon" src={getItemIconPath(entry.itemId)} alt="" draggable={false} />
+                          <span className="device-preload-amount">x{entry.amount}</span>
+                        </span>
+                      ))}
+                    </div>
                   )}
                   {isPickupPort && !pickupItemId && <em>?</em>}
                   {reactorLiquidPortTags.map((port) => (

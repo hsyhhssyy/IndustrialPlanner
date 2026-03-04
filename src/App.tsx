@@ -95,8 +95,8 @@ function getDeviceMenuIconPath(typeId: DeviceTypeId) {
   return `/device-icons/${typeId}.png`
 }
 
-function formatRecipeSummary(typeId: DeviceTypeId, language: Language) {
-  const recipe = recipeForDevice(typeId)
+function formatRecipeSummary(typeId: DeviceTypeId, language: Language, recipeId?: string) {
+  const recipe = recipeForDevice(typeId, recipeId)
   if (!recipe) return '-'
   const input = recipe.inputs.map((entry) => `${getItemLabel(language, entry.itemId)} x${entry.amount}`).join(' + ')
   const output = recipe.outputs.map((entry) => `${getItemLabel(language, entry.itemId)} x${entry.amount}`).join(' + ')
@@ -120,12 +120,32 @@ const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>([
 ])
 const OUT_OF_LOT_TOAST_KEY = 'toast.outOfLot'
 const FALLBACK_PLACEMENT_TOAST_KEY = 'toast.invalidPlacementFallback'
+const MAX_RECENT_PICKER_ITEMS = 32
+
+function normalizeRecentPickerItemIds(value: ItemId[]) {
+  if (!Array.isArray(value)) return []
+  const unique: ItemId[] = []
+  const seen = new Set<string>()
+  for (const itemId of value) {
+    if (typeof itemId !== 'string' || seen.has(itemId)) continue
+    unique.push(itemId)
+    seen.add(itemId)
+    if (unique.length >= MAX_RECENT_PICKER_ITEMS) break
+  }
+  return unique
+}
+
 function App() {
   const currentYear = new Date().getFullYear()
   const [leftPanelWidth, setLeftPanelWidth] = usePersistentState<number>('stage1-left-panel-width', 340)
   const [rightPanelWidth, setRightPanelWidth] = usePersistentState<number>('stage1-right-panel-width', 340)
   const [powerMode, setPowerMode] = usePersistentState<PowerMode>('stage3-power-mode', 'infinite')
   const [initialBatteryPercent, setInitialBatteryPercent] = usePersistentState<number>('stage3-initial-battery-percent', 100)
+  const [recentPickerItemIds, setRecentPickerItemIds] = usePersistentState<ItemId[]>(
+    'stage3-item-picker-recent-item-ids',
+    [],
+    normalizeRecentPickerItemIds,
+  )
 
   const gridRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -190,7 +210,25 @@ function App() {
     t,
   })
 
-  const { sim, updateSim, measuredTickRate } = useSimulationDomain({ layoutRef })
+  const {
+    sim,
+    updateSim,
+    measuredTickRate,
+    measuredFrameRate,
+    smoothedFrameRate,
+    minFrameRate,
+    maxFrameRate,
+    longFrame50Count,
+    longFrame100Count,
+    maxFrameTimeMs,
+    avgFrameTimeMs,
+    avgTicksPerFrame,
+    maxTicksPerFrameSeen,
+    avgTickWorkMs,
+    maxTickWorkMs,
+    avgUiCommitGapMs,
+    maxUiCommitGapMs,
+  } = useSimulationDomain({ layoutRef })
 
   const occupancyMap = useMemo(() => buildOccupancyMap(layout), [layout])
   const cellDeviceMap = useMemo(() => cellToDeviceId(layout), [layout])
@@ -228,6 +266,8 @@ function App() {
   }, [layout])
   const {
     blueprints,
+    userBlueprints,
+    systemBlueprints,
     selectedBlueprintId,
     selectBlueprint,
     armedBlueprintId,
@@ -473,7 +513,60 @@ function App() {
   })
 
   const selectionSet = useMemo(() => new Set(selection), [selection])
+  const emptyHighlightedSet = useMemo(() => new Set<string>(), [])
   const dragPreviewOriginsById = useMemo(() => new Map(Object.entries(dragPreviewPositions)), [dragPreviewPositions])
+
+  const powerPolePlacementPreview = useMemo(() => {
+    if (mode !== 'place' || placeType !== 'item_port_power_diffuser_1' || !placePreview) {
+      return {
+        previewOutline: null as null | { key: string; left: number; top: number; width: number; height: number; isPreview: true },
+        highlightedDeviceIds: emptyHighlightedSet,
+      }
+    }
+
+    const poleX = placePreview.origin.x
+    const poleY = placePreview.origin.y
+    const minX = poleX - 5
+    const maxX = poleX + 6
+    const minY = poleY - 5
+    const maxY = poleY + 6
+
+    const highlightedDeviceIds = new Set<string>()
+    for (const device of layout.devices) {
+      const type = DEVICE_TYPE_BY_ID[device.typeId]
+      if (!type || !type.requiresPower) continue
+      const footprint = rotatedFootprintSize(type.size, device.rotation)
+      let isInRange = false
+      for (let y = 0; y < footprint.height && !isInRange; y += 1) {
+        for (let x = 0; x < footprint.width; x += 1) {
+          const cellX = device.origin.x + x
+          const cellY = device.origin.y + y
+          if (cellX >= minX && cellX <= maxX && cellY >= minY && cellY <= maxY) {
+            isInRange = true
+            break
+          }
+        }
+      }
+      if (isInRange) highlightedDeviceIds.add(device.instanceId)
+    }
+
+    return {
+      previewOutline: {
+        key: 'power-range-preview',
+        left: minX * BASE_CELL_SIZE,
+        top: minY * BASE_CELL_SIZE,
+        width: 12 * BASE_CELL_SIZE,
+        height: 12 * BASE_CELL_SIZE,
+        isPreview: true as const,
+      },
+      highlightedDeviceIds,
+    }
+  }, [emptyHighlightedSet, layout.devices, mode, placePreview, placeType])
+
+  const worldPowerRangeOutlines = useMemo(() => {
+    if (!powerPolePlacementPreview.previewOutline) return powerRangeOutlines
+    return [...powerRangeOutlines, powerPolePlacementPreview.previewOutline]
+  }, [powerPolePlacementPreview.previewOutline, powerRangeOutlines])
 
   const uiHint = sim.isRunning
     ? t('top.runningHint')
@@ -509,6 +602,20 @@ function App() {
   const { statsAndDebugSection } = useObservabilityDomain({
     sim,
     measuredTickRate,
+    measuredFrameRate,
+    smoothedFrameRate,
+    minFrameRate,
+    maxFrameRate,
+    longFrame50Count,
+    longFrame100Count,
+    maxFrameTimeMs,
+    avgFrameTimeMs,
+    avgTicksPerFrame,
+    maxTicksPerFrameSeen,
+    avgTickWorkMs,
+    maxTickWorkMs,
+    avgUiCommitGapMs,
+    maxUiCommitGapMs,
     ignoredInfiniteItemIds,
     powerMode,
     language,
@@ -536,9 +643,11 @@ function App() {
       devices={layout.devices}
       selectionSet={selectionSet}
       invalidSelectionSet={dragInvalidSelection}
+      highlightedSet={powerPolePlacementPreview.highlightedDeviceIds}
       previewOriginsById={dragPreviewOriginsById}
       language={language}
       showRuntimeItemIcons={false}
+      showPreloadSummary={!sim.isRunning}
       runtimeById={sim.runtimeById}
       simTick={sim.tick}
     />
@@ -550,6 +659,7 @@ function App() {
         devices={logisticsPreviewDevices}
         selectionSet={new Set()}
         invalidSelectionSet={new Set()}
+        highlightedSet={emptyHighlightedSet}
         previewOriginsById={new Map()}
         language={language}
         extraClassName="logistics-preview-device"
@@ -563,6 +673,7 @@ function App() {
         devices={blueprintPlacementPreview.devices}
         selectionSet={new Set()}
         invalidSelectionSet={new Set()}
+        highlightedSet={emptyHighlightedSet}
         previewOriginsById={new Map()}
         language={language}
         extraClassName={`blueprint-preview-device ${blueprintPlacementPreview.isValid ? 'valid' : 'invalid'}`}
@@ -576,7 +687,7 @@ function App() {
       canvasOffsetXPx={canvasOffsetXPx}
       canvasOffsetYPx={canvasOffsetYPx}
       lotSize={layout.lotSize}
-      powerRangeOutlines={powerRangeOutlines}
+      powerRangeOutlines={worldPowerRangeOutlines}
       mainDeviceLayer={mainDeviceLayer}
       logisticsPreviewLayer={logisticsPreviewLayer}
       blueprintPreviewLayer={blueprintPreviewLayer}
@@ -730,6 +841,8 @@ function App() {
             getDeviceMenuIconPath,
             deleteTool,
             blueprints,
+            userBlueprints,
+            systemBlueprints,
             selectedBlueprintId,
             armedBlueprintId,
             statsAndDebugSection,
@@ -829,6 +942,7 @@ function App() {
         <ItemPickerDialog
           itemPickerState={itemPickerState}
           pickerSelectedItemId={pickerSelectedItemId}
+          recentItemIds={recentPickerItemIds}
           pickerDisabledItemIds={pickerDisabledItemIds}
           pickerFilter={pickerFilter}
           pickerAllowsEmpty={pickerAllowsEmpty}
@@ -836,7 +950,14 @@ function App() {
           t={t}
           getItemIconPath={getItemIconPath}
           onClose={() => setItemPickerState(null)}
-          onSelectItem={handleItemPickerSelect}
+          onSelectItem={(itemId) => {
+            handleItemPickerSelect(itemId)
+            if (!itemId) return
+            setRecentPickerItemIds((current) => {
+              const next = [itemId, ...current.filter((existing) => existing !== itemId)]
+              return next.slice(0, MAX_RECENT_PICKER_ITEMS)
+            })
+          }}
         />
       )}
 

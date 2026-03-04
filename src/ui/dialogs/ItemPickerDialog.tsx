@@ -1,22 +1,14 @@
 import { ITEMS } from '../../domain/registry'
 import type { ItemId } from '../../domain/types'
 import { getItemLabel, type Language } from '../../i18n'
+import type { ItemPickerFilter, ItemPickerState } from './itemPicker.types'
 
-type ItemPickerState =
-  | { kind: 'pickup'; deviceInstanceId: string }
-  | { kind: 'protocolHubOutput'; deviceInstanceId: string; portId: string; portIndex: number }
-  | { kind: 'pumpOutput'; deviceInstanceId: string }
-  | { kind: 'preload'; deviceInstanceId: string; slotIndex: number }
-
-type ItemPickerFilter = {
-  allowedTypes?: Array<'solid' | 'liquid'>
-  requiredTags?: string[]
-  allowedItemIds?: ReadonlySet<ItemId>
-}
+const RECENT_ITEMS_SINGLE_ROW_COUNT = 8
 
 type ItemPickerDialogProps = {
   itemPickerState: ItemPickerState
   pickerSelectedItemId: ItemId | undefined
+  recentItemIds: ItemId[]
   pickerDisabledItemIds: ReadonlySet<ItemId>
   pickerFilter?: ItemPickerFilter
   pickerAllowsEmpty?: boolean
@@ -30,6 +22,7 @@ type ItemPickerDialogProps = {
 export function ItemPickerDialog({
   itemPickerState,
   pickerSelectedItemId,
+  recentItemIds,
   pickerDisabledItemIds,
   pickerFilter,
   pickerAllowsEmpty = true,
@@ -53,6 +46,14 @@ export function ItemPickerDialog({
     return true
   })
 
+  const filteredItemById = new Map(filteredItems.map((item) => [item.id, item]))
+  const filteredItemIdSet = new Set(filteredItems.map((item) => item.id))
+  const recentItems = recentItemIds
+    .filter((itemId) => filteredItemIdSet.has(itemId))
+    .map((itemId) => filteredItemById.get(itemId))
+    .filter((item): item is (typeof filteredItems)[number] => Boolean(item))
+    .slice(0, RECENT_ITEMS_SINGLE_ROW_COUNT)
+
   return (
     <div className="global-dialog-backdrop" role="presentation" onClick={onClose}>
       <div
@@ -71,35 +72,61 @@ export function ItemPickerDialog({
               ? t('detail.pumpOutputDialogTitle')
               : t('detail.preloadDialogTitle', { index: itemPickerState.slotIndex + 1 })}
         </div>
-        <div className="pickup-item-list">
-          {pickerAllowsEmpty ? (
-            <button
-              type="button"
-              className={`pickup-item-option ${!pickerSelectedItemId ? 'active' : ''}`}
-              onClick={() => {
-                onSelectItem(null)
-                onClose()
-              }}
-            >
-              <span className="pickup-item-option-icon pickup-item-option-icon--empty">?</span>
-              <span>{t('detail.unselected')}</span>
-            </button>
-          ) : null}
-          {filteredItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`pickup-item-option ${pickerSelectedItemId === item.id ? 'active' : ''}`}
-              disabled={itemPickerState.kind === 'preload' && pickerDisabledItemIds.has(item.id)}
-              onClick={() => {
-                onSelectItem(item.id)
-                onClose()
-              }}
-            >
-              <img className="pickup-item-option-icon" src={getItemIconPath(item.id)} alt="" aria-hidden="true" draggable={false} />
-              <span>{getItemLabel(language, item.id)}</span>
-            </button>
-          ))}
+        <div className="pickup-item-groups">
+          <section className="pickup-item-group">
+            <div className="pickup-item-group-title">{t('detail.itemPickerRecentGroup')}</div>
+            <div className="pickup-item-list pickup-item-list--recent">
+              {recentItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`pickup-item-option ${pickerSelectedItemId === item.id ? 'active' : ''}`}
+                  disabled={itemPickerState.kind === 'preload' && pickerDisabledItemIds.has(item.id)}
+                  onClick={() => {
+                    onSelectItem(item.id)
+                    onClose()
+                  }}
+                >
+                  <img className="pickup-item-option-icon" src={getItemIconPath(item.id)} alt="" aria-hidden="true" draggable={false} />
+                  <span>{getItemLabel(language, item.id)}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="pickup-item-group">
+            <div className="pickup-item-group-title">{t('detail.itemPickerAllGroup')}</div>
+            <div className="pickup-item-list pickup-item-list--all">
+              {pickerAllowsEmpty ? (
+                <button
+                  type="button"
+                  className={`pickup-item-option ${!pickerSelectedItemId ? 'active' : ''}`}
+                  onClick={() => {
+                    onSelectItem(null)
+                    onClose()
+                  }}
+                >
+                  <span className="pickup-item-option-icon pickup-item-option-icon--empty">?</span>
+                  <span>{t('detail.unselected')}</span>
+                </button>
+              ) : null}
+              {filteredItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`pickup-item-option ${pickerSelectedItemId === item.id ? 'active' : ''}`}
+                  disabled={itemPickerState.kind === 'preload' && pickerDisabledItemIds.has(item.id)}
+                  onClick={() => {
+                    onSelectItem(item.id)
+                    onClose()
+                  }}
+                >
+                  <img className="pickup-item-option-icon" src={getItemIconPath(item.id)} alt="" aria-hidden="true" draggable={false} />
+                  <span>{getItemLabel(language, item.id)}</span>
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
         <div className="global-dialog-actions">
           <button className="global-dialog-btn" onClick={onClose}>

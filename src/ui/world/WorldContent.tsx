@@ -7,6 +7,7 @@ type PowerRangeOutline = {
   top: number
   width: number
   height: number
+  isPreview?: boolean
 }
 
 type RuntimeStallOverlay = {
@@ -116,7 +117,7 @@ export function WorldContent({
       {powerRangeOutlines.map((outline) => (
         <div
           key={outline.key}
-          className="power-range-outline"
+          className={`power-range-outline ${outline.isPreview ? 'preview' : ''}`.trim()}
           style={{
             left: outline.left,
             top: outline.top,

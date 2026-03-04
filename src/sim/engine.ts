@@ -1099,6 +1099,7 @@ function buildDevicePreferredSolidInputPortMap(
       const readyItem = peekReadyItemForSourceLink(sourceDevice, sourceRuntime, inLink.from.portId, warehouse)
       if (!readyItem) continue
       if (ITEM_BY_ID[readyItem]?.type !== 'solid') continue
+      if (!canAcceptIntoLane(device, runtime, 'output', inLink.to.portId, readyItem)) continue
       availablePorts.add(inLink.to.portId)
     }
 
@@ -1502,6 +1503,26 @@ function ensureMinuteWindow(sim: SimState, capacity: number) {
     count: 0,
     producedPerMinute: emptyPerMinuteRecord(),
     consumedPerMinute: emptyPerMinuteRecord(),
+  }
+}
+
+function applyMinuteWindowDelta(
+  producedPerMinute: Record<ItemId, number>,
+  consumedPerMinute: Record<ItemId, number>,
+  deltaRecord: Partial<Record<ItemId, number>>,
+  direction: 1 | -1,
+) {
+  for (const [itemIdRaw, deltaRaw] of Object.entries(deltaRecord)) {
+    const itemId = itemIdRaw as ItemId
+    const delta = Number(deltaRaw ?? 0)
+    if (!Number.isFinite(delta) || delta === 0) continue
+
+    if (delta > 0) {
+      producedPerMinute[itemId] = Math.max(0, (producedPerMinute[itemId] ?? 0) + direction * delta)
+    } else {
+      const consumedDelta = Math.abs(delta)
+      consumedPerMinute[itemId] = Math.max(0, (consumedPerMinute[itemId] ?? 0) + direction * consumedDelta)
+    }
   }
 }
 
@@ -1993,23 +2014,20 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   const minuteWindowDeltas = minuteWindow.buffer
   const writeIndex = sim.tick % perMinuteWindowTicks
 
-  const nextDelta = createWindowDelta(processorDelta)
+  const producedPerMinute = { ...minuteWindow.producedPerMinute }
+  const consumedPerMinute = { ...minuteWindow.consumedPerMinute }
+  const shouldEvictPrevious = sim.minuteWindowCount >= perMinuteWindowTicks
+  if (shouldEvictPrevious) {
+    const evictedDelta = minuteWindowDeltas[writeIndex] ?? {}
+    applyMinuteWindowDelta(producedPerMinute, consumedPerMinute, evictedDelta, -1)
+  }
+
+  const nextDelta = { ...processorDelta }
   minuteWindowDeltas[writeIndex] = nextDelta
+  applyMinuteWindowDelta(producedPerMinute, consumedPerMinute, nextDelta, 1)
 
   const nextMinuteWindowCursor = nextTick % perMinuteWindowTicks
-  const nextMinuteWindowCount = Math.min(sim.tick + 1, perMinuteWindowTicks)
-
-  const producedPerMinute = emptyPerMinuteRecord()
-  const consumedPerMinute = emptyPerMinuteRecord()
-  const slotsToSum = nextMinuteWindowCount
-  for (let index = 0; index < slotsToSum; index += 1) {
-    const deltaRecord = minuteWindowDeltas[index] ?? createWindowDelta()
-    for (const itemId of ITEM_IDS) {
-      const delta = deltaRecord[itemId] ?? 0
-      if (delta > 0) producedPerMinute[itemId] += delta
-      else if (delta < 0) consumedPerMinute[itemId] += Math.abs(delta)
-    }
-  }
+  const nextMinuteWindowCount = Math.min(sim.minuteWindowCount + 1, perMinuteWindowTicks)
 
   const nextStats = {
     simSeconds,

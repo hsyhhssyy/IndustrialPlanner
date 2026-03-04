@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { usePersistentState } from '../../core/usePersistentState'
 import { uiEffects } from '../../app/uiEffects'
 import { BASE_BY_ID, DEVICE_TYPE_BY_ID } from '../../domain/registry'
@@ -6,7 +6,24 @@ import { validatePlacementConstraints } from '../../domain/placement'
 import { rotatedFootprintSize } from '../../domain/shared/math'
 import type { BaseId, DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
 import { isDeviceWithinAllowedPlacementArea } from '../../domain/shared/placementArea'
-import { APP_VERSION, migrateDeviceConfigToV1, normalizeBlueprintSnapshotsStorage } from '../../migrations/versioning'
+import {
+  APP_VERSION,
+  ARMED_BLUEPRINT_ID_KEY,
+  CLIPBOARD_BLUEPRINT_KEY,
+  PUBLIC_BLUEPRINT_INDEX_CACHE_KEY,
+  SELECTED_BLUEPRINT_ID_KEY,
+  SYSTEM_BLUEPRINTS_KEY,
+  USER_BLUEPRINTS_KEY,
+  createBlueprintId,
+  migrateDeviceConfigToV1,
+  normalizePublicBlueprintIndexCacheStorage,
+  normalizeSystemBlueprintSnapshotsStorage,
+  normalizeUserBlueprintSnapshotsStorage,
+  runBlueprintStorageMigration,
+  type BlueprintSource,
+  type PublicBlueprintIndexCache,
+  type PublicBlueprintIndexEntry,
+} from '../../migrations/versioning'
 
 type BlueprintDeviceSnapshot = {
   typeId: DeviceTypeId
@@ -17,6 +34,7 @@ type BlueprintDeviceSnapshot = {
 
 export type BlueprintSnapshot = {
   id: string
+  source: BlueprintSource
   name: string
   createdAt: string
   updatedAt?: string
@@ -43,6 +61,7 @@ type BlueprintLocalRect = {
 
 type BlueprintSharePayload = {
   schema: 'industrial-planner-blueprint'
+  id?: string
   version: string
   name: string
   createdAt: string
@@ -119,6 +138,16 @@ function sanitizeName(name: string) {
   return name.replace(/[\\/:*?"<>|]+/g, '_').trim() || 'blueprint'
 }
 
+function sortBlueprintsByCreatedAtDesc(list: BlueprintSnapshot[]) {
+  return [...list].sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+}
+
+function buildPublicBlueprintName(entry: PublicBlueprintIndexEntry, payloadName: string) {
+  const trimmed = payloadName.trim()
+  if (trimmed) return trimmed
+  return entry.name.replace(/\.json$/i, '') || entry.id
+}
+
 function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
   if (!input || typeof input !== 'object') return null
   const candidate = input as BlueprintShareImport
@@ -185,19 +214,33 @@ type UseBlueprintDomainParams = {
 }
 
 export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selection, foundationIdSet, t }: UseBlueprintDomainParams) {
-  const [blueprints, setBlueprints] = usePersistentState<BlueprintSnapshot[]>(
-    'stage1-blueprints',
-    [],
-    normalizeBlueprintSnapshotsStorage,
+  runBlueprintStorageMigration()
+
+  const [userBlueprints, setUserBlueprints] = usePersistentState<BlueprintSnapshot[]>(USER_BLUEPRINTS_KEY, [], (value) =>
+    normalizeUserBlueprintSnapshotsStorage(value) as BlueprintSnapshot[],
   )
-  const [selectedBlueprintId, setSelectedBlueprintId] = usePersistentState<string | null>('stage1-selected-blueprint-id', null)
-  const [armedBlueprintId, setArmedBlueprintId] = usePersistentState<string | null>('stage1-armed-blueprint-id', null)
+  const [systemBlueprints, setSystemBlueprints] = usePersistentState<BlueprintSnapshot[]>(SYSTEM_BLUEPRINTS_KEY, [], (value) =>
+    normalizeSystemBlueprintSnapshotsStorage(value) as BlueprintSnapshot[],
+  )
+  const [, setPublicBlueprintIndexCache] = usePersistentState<PublicBlueprintIndexCache>(
+    PUBLIC_BLUEPRINT_INDEX_CACHE_KEY,
+    { version: 1, generatedAt: '', files: [] },
+    normalizePublicBlueprintIndexCacheStorage,
+  )
+  const [selectedBlueprintId, setSelectedBlueprintId] = usePersistentState<string | null>(SELECTED_BLUEPRINT_ID_KEY, null)
+  const [armedBlueprintId, setArmedBlueprintId] = usePersistentState<string | null>(ARMED_BLUEPRINT_ID_KEY, null)
   const [clipboardBlueprint, setClipboardBlueprint] = usePersistentState<BlueprintSnapshot | null>(
-    'stage1-clipboard-blueprint',
+    CLIPBOARD_BLUEPRINT_KEY,
     null,
-    (value) => normalizeBlueprintSnapshotsStorage(value ? [value] : [])[0] ?? null,
+    (value) => normalizeUserBlueprintSnapshotsStorage(value ? [value] : [])[0] ?? null,
   )
   const [blueprintPlacementRotation, setBlueprintPlacementRotation] = usePersistentState<Rotation>('stage1-blueprint-rotation', 0)
+  const hasSyncedPublicBlueprintsRef = useRef(false)
+
+  const blueprints = useMemo(() => {
+    const merged = [...userBlueprints, ...systemBlueprints]
+    return sortBlueprintsByCreatedAtDesc(merged)
+  }, [systemBlueprints, userBlueprints])
 
   const saveSelectionAsBlueprint = useCallback(async () => {
     const selectedIdSet = new Set(selection)
@@ -225,7 +268,8 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
       return
     }
     const snapshot: BlueprintSnapshot = {
-      id: `bp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: createBlueprintId('user'),
+      source: 'user',
       name,
       createdAt,
       updatedAt: createdAt,
@@ -240,12 +284,12 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
     }
 
     try {
-      setBlueprints((current) => [snapshot, ...current].slice(0, 100))
+      setUserBlueprints((current) => [snapshot, ...current].slice(0, 100))
       uiEffects.toast(t('toast.blueprintSaved', { name, count: snapshot.devices.length }))
     } catch {
       uiEffects.toast(t('toast.blueprintSaveFailed'), { variant: 'error' })
     }
-  }, [activeBaseId, foundationIdSet, layout.devices, selection, setBlueprints, t])
+  }, [activeBaseId, foundationIdSet, layout.devices, selection, setUserBlueprints, t])
 
   const selectedBlueprint = useMemo(() => {
     if (!selectedBlueprintId) return null
@@ -285,7 +329,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
 
   const renameBlueprint = useCallback(
     async (id: string) => {
-      const target = blueprints.find((blueprint) => blueprint.id === id)
+      const target = userBlueprints.find((blueprint) => blueprint.id === id)
       if (!target) return
       const inputName = await uiEffects.prompt(t('dialog.blueprintRenamePrompt'), target.name, {
         title: t('left.blueprintSubMode'),
@@ -300,7 +344,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         return
       }
       const updatedAt = new Date().toISOString()
-      setBlueprints((current) =>
+      setUserBlueprints((current) =>
         current.map((blueprint) =>
           blueprint.id === id
             ? {
@@ -314,7 +358,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
       )
       uiEffects.toast(t('toast.blueprintRenamed', { name: nextName }))
     },
-    [blueprints, setBlueprints, t],
+    [setUserBlueprints, t, userBlueprints],
   )
 
   const getBlueprintShareText = useCallback(
@@ -323,6 +367,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
       if (!target) return null
       const payload: BlueprintSharePayload = {
         schema: 'industrial-planner-blueprint',
+        id: target.id,
         version: target.version || APP_VERSION,
         name: target.name,
         createdAt: target.createdAt,
@@ -399,7 +444,8 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
 
       const createdAt = new Date().toISOString()
       const snapshot: BlueprintSnapshot = {
-        id: `bp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        id: createBlueprintId('user'),
+        source: 'user',
         name: payload.name,
         createdAt,
         updatedAt: createdAt,
@@ -413,12 +459,12 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         })),
       }
 
-      setBlueprints((current) => [snapshot, ...current].slice(0, 100))
+      setUserBlueprints((current) => [snapshot, ...current].slice(0, 100))
       setSelectedBlueprintId(snapshot.id)
       uiEffects.toast(t('toast.blueprintImported', { name: snapshot.name, count: snapshot.devices.length }))
       return true
     },
-    [activeBaseId, setBlueprints, setSelectedBlueprintId, t],
+    [activeBaseId, setSelectedBlueprintId, setUserBlueprints, t],
   )
 
   const importBlueprintFromFile = useCallback(
@@ -434,9 +480,79 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
     [importBlueprintFromText, t],
   )
 
+  const synchronizePublicBlueprints = useCallback(async () => {
+    let remoteIndex: PublicBlueprintIndexCache
+    try {
+      const response = await fetch('/blueprints/index.json', { cache: 'no-store' })
+      if (!response.ok) {
+        throw new Error(`index request failed: ${response.status}`)
+      }
+      const raw = (await response.json()) as unknown
+      remoteIndex = normalizePublicBlueprintIndexCacheStorage(raw)
+    } catch {
+      return
+    }
+
+    const currentById = new Map(systemBlueprints.map((item) => [item.id, item]))
+    const nextById = new Map<string, BlueprintSnapshot>()
+
+    const toFetch = remoteIndex.files.filter((entry) => {
+      const local = currentById.get(entry.id)
+      if (!local) return true
+      if (String(local.version) !== String(entry.version)) return true
+      nextById.set(entry.id, local)
+      return false
+    })
+
+    for (const entry of toFetch) {
+      try {
+        const response = await fetch(entry.path, { cache: 'no-store' })
+        if (!response.ok) continue
+        const raw = (await response.json()) as unknown
+        const payload = normalizeSharePayload(raw)
+        if (!payload) continue
+
+        nextById.set(entry.id, {
+          id: entry.id,
+          source: 'system',
+          name: buildPublicBlueprintName(entry, payload.name),
+          createdAt: payload.createdAt,
+          updatedAt: new Date().toISOString(),
+          version: String(entry.version),
+          baseId: activeBaseId,
+          devices: payload.devices.map((device) => ({
+            typeId: device.typeId,
+            rotation: sanitizeRotation(device.rotation),
+            origin: { ...device.origin },
+            config: cloneDeviceConfig(device.config),
+          })),
+        })
+      } catch {
+        continue
+      }
+    }
+
+    const reconciled = remoteIndex.files
+      .map((entry) => nextById.get(entry.id) ?? null)
+      .filter((entry): entry is BlueprintSnapshot => Boolean(entry))
+
+    setSystemBlueprints(sortBlueprintsByCreatedAtDesc(reconciled).slice(0, 500))
+    setPublicBlueprintIndexCache(remoteIndex)
+  }, [activeBaseId, setPublicBlueprintIndexCache, setSystemBlueprints, systemBlueprints])
+
+  useEffect(() => {
+    if (placeOperation !== 'blueprint') {
+      hasSyncedPublicBlueprintsRef.current = false
+      return
+    }
+    if (hasSyncedPublicBlueprintsRef.current) return
+    hasSyncedPublicBlueprintsRef.current = true
+    void synchronizePublicBlueprints()
+  }, [placeOperation, synchronizePublicBlueprints])
+
   const deleteBlueprint = useCallback(
     async (id: string) => {
-      const target = blueprints.find((blueprint) => blueprint.id === id)
+      const target = userBlueprints.find((blueprint) => blueprint.id === id)
       if (!target) return
       const confirmed = await uiEffects.confirm(t('dialog.blueprintDeleteConfirm', { name: target.name }), {
         title: t('dialog.title.confirm'),
@@ -445,7 +561,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         variant: 'warning',
       })
       if (!confirmed) return
-      setBlueprints((current) => current.filter((blueprint) => blueprint.id !== id))
+      setUserBlueprints((current) => current.filter((blueprint) => blueprint.id !== id))
       if (selectedBlueprintId === id) {
         setSelectedBlueprintId(null)
       }
@@ -455,7 +571,16 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
       }
       uiEffects.toast(t('toast.blueprintDeleted', { name: target.name }))
     },
-    [armedBlueprintId, blueprints, selectedBlueprintId, setArmedBlueprintId, setBlueprintPlacementRotation, setBlueprints, setSelectedBlueprintId, t],
+    [
+      armedBlueprintId,
+      selectedBlueprintId,
+      setArmedBlueprintId,
+      setBlueprintPlacementRotation,
+      setSelectedBlueprintId,
+      setUserBlueprints,
+      t,
+      userBlueprints,
+    ],
   )
 
   const activePlacementBlueprint = useMemo(() => {
@@ -544,7 +669,8 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
 
   return {
     blueprints,
-    setBlueprints,
+    userBlueprints,
+    systemBlueprints,
     selectedBlueprintId,
     setSelectedBlueprintId,
     armedBlueprintId,

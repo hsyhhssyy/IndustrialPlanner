@@ -14,6 +14,7 @@ export type PlaceGroupKey =
 
 type BlueprintSnapshot = {
   id: string
+  source: 'user' | 'system'
   name: string
   devices: Array<unknown>
 }
@@ -33,6 +34,8 @@ export type LeftPanelViewModel = {
   getDeviceMenuIconPath: (typeId: DeviceTypeId) => string
   deleteTool: 'single' | 'wholeBelt' | 'box'
   blueprints: BlueprintSnapshot[]
+  userBlueprints: BlueprintSnapshot[]
+  systemBlueprints: BlueprintSnapshot[]
   selectedBlueprintId: string | null
   armedBlueprintId: string | null
   statsAndDebugSection: ReactNode

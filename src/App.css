@@ -464,6 +464,12 @@ button:disabled {
   z-index: 1;
 }
 
+.power-range-outline.preview {
+  border: 2px dashed rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 1px rgba(73, 109, 165, 0.5) inset;
+  z-index: 6;
+}
+
 .device {
   position: absolute;
   overflow: visible;
@@ -500,7 +506,7 @@ button:disabled {
   pointer-events: none;
 }
 
-.device-surface.textured-surface > span,
+.device-surface.textured-surface > .device-label,
 .device-surface.textured-surface > em,
 .device-surface.textured-surface > .junction-icon {
   position: relative;
@@ -511,6 +517,45 @@ button:disabled {
   text-align: center;
   line-height: 1.2;
   letter-spacing: 0;
+}
+
+.device-preload-row {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 24px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.device-preload-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 22px;
+  line-height: 1;
+  color: #e5ebf3;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(229, 235, 243, 0.22);
+  background: rgba(21, 26, 34, 0.88);
+}
+
+.device-preload-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  image-rendering: auto;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.65));
+}
+
+.device-preload-amount {
+  font-weight: 700;
 }
 
 .device-item-icon {
@@ -564,16 +609,16 @@ button:disabled {
 .reactor-liquid-port-tag {
   position: absolute;
   transform: translate(-50%, -50%);
-  min-width: 16px;
-  height: 16px;
-  padding: 0 3px;
-  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
   border: 1px solid #35516f;
   background: rgba(36, 48, 66, 0.9);
   color: #e5ebf3;
-  font-size: 11px;
+  font-size: 22px;
   font-weight: 700;
-  line-height: 14px;
+  line-height: 28px;
   text-align: center;
   pointer-events: none;
   z-index: 3;
@@ -743,6 +788,23 @@ button:disabled {
 .device.drag-invalid .device-surface {
   border: 3px solid #ff5d5d;
   box-shadow: 0 0 0 1px rgba(86, 10, 10, 0.4) inset;
+}
+
+.device.power-range-highlight .device-surface {
+  border: 3px solid rgba(255, 255, 255, 0.99);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.98) inset,
+    0 0 10px rgba(255, 255, 255, 0.65);
+}
+
+.device.power-range-highlight::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+  z-index: 6;
 }
 
 .belt-device.selected {
@@ -1525,6 +1587,27 @@ button:disabled {
   gap: 8px;
   max-height: 60vh;
   overflow-y: auto;
+  margin-top: 6px;
+}
+
+.pickup-item-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pickup-item-group-title {
+  font-size: 12px;
+  color: #9fb3c9;
+  margin: 0;
+}
+
+.pickup-item-list--recent {
+  max-height: none;
+  overflow: hidden;
+}
+
+.pickup-item-list--all {
   margin-top: 6px;
 }
 

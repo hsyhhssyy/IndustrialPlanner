@@ -6,6 +6,20 @@ import { getItemLabel, type Language } from '../../i18n'
 type UseObservabilityDomainParams = {
   sim: SimState
   measuredTickRate: number
+  measuredFrameRate: number
+  smoothedFrameRate: number
+  minFrameRate: number
+  maxFrameRate: number
+  longFrame50Count: number
+  longFrame100Count: number
+  maxFrameTimeMs: number
+  avgFrameTimeMs: number
+  avgTicksPerFrame: number
+  maxTicksPerFrameSeen: number
+  avgTickWorkMs: number
+  maxTickWorkMs: number
+  avgUiCommitGapMs: number
+  maxUiCommitGapMs: number
   ignoredInfiniteItemIds: ReadonlySet<ItemId>
   powerMode: PowerMode
   language: Language
@@ -18,6 +32,20 @@ type UseObservabilityDomainParams = {
 export function useObservabilityDomain({
   sim,
   measuredTickRate,
+  measuredFrameRate,
+  smoothedFrameRate,
+  minFrameRate,
+  maxFrameRate,
+  longFrame50Count,
+  longFrame100Count,
+  maxFrameTimeMs,
+  avgFrameTimeMs,
+  avgTicksPerFrame,
+  maxTicksPerFrameSeen,
+  avgTickWorkMs,
+  maxTickWorkMs,
+  avgUiCommitGapMs,
+  maxUiCommitGapMs,
   ignoredInfiniteItemIds,
   powerMode,
   language,
@@ -153,6 +181,14 @@ export function useObservabilityDomain({
 
       <h3>{t('right.simDebug')}</h3>
       <div className="kv"><span>{t('debug.measuredTps')}</span><span>{measuredTickRate.toFixed(2)}</span></div>
+      <div className="kv"><span>{t('debug.measuredFps')}</span><span>{measuredFrameRate.toFixed(2)}</span></div>
+      <div className="kv"><span>{t('debug.smoothedFps')}</span><span>{smoothedFrameRate.toFixed(2)}</span></div>
+      <div className="kv"><span>{t('debug.fpsMinMax')}</span><span>{`${minFrameRate.toFixed(2)} / ${maxFrameRate.toFixed(2)}`}</span></div>
+      <div className="kv"><span>{t('debug.frameTimeAvgMaxMs')}</span><span>{`${avgFrameTimeMs.toFixed(2)} / ${maxFrameTimeMs.toFixed(2)}`}</span></div>
+      <div className="kv"><span>{t('debug.longFrames50_100')}</span><span>{`${longFrame50Count} / ${longFrame100Count}`}</span></div>
+      <div className="kv"><span>{t('debug.ticksPerFrameAvgMax')}</span><span>{`${avgTicksPerFrame.toFixed(2)} / ${maxTicksPerFrameSeen}`}</span></div>
+      <div className="kv"><span>{t('debug.tickWorkMsAvgMax')}</span><span>{`${avgTickWorkMs.toFixed(2)} / ${maxTickWorkMs.toFixed(2)}`}</span></div>
+      <div className="kv"><span>{t('debug.uiCommitGapMsAvgMax')}</span><span>{`${avgUiCommitGapMs.toFixed(2)} / ${maxUiCommitGapMs.toFixed(2)}`}</span></div>
       <div className="kv"><span>{t('debug.simTick')}</span><span>{sim.tick}</span></div>
       <div className="kv"><span>{t('debug.simSeconds')}</span><span>{sim.stats.simSeconds.toFixed(2)}</span></div>
     </>

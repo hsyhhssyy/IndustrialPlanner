@@ -21,6 +21,8 @@ export function LeftPanel() {
     getDeviceMenuIconPath,
     deleteTool,
     blueprints,
+    userBlueprints,
+    systemBlueprints,
     selectedBlueprintId,
     armedBlueprintId,
     statsAndDebugSection,
@@ -219,66 +221,124 @@ export function LeftPanel() {
             <div className="place-group-empty">{t('left.blueprintEmpty')}</div>
           ) : (
             <div className="place-groups-scroll">
-              <section className="place-group-section">
-                <div className="blueprint-list">
-                  {blueprints.map((blueprint) => (
-                    <div
-                      key={blueprint.id}
-                      className={`blueprint-card ${selectedBlueprintId === blueprint.id ? 'selected' : ''} ${armedBlueprintId === blueprint.id ? 'armed' : ''}`.trim()}
-                    >
-                      <button
-                        className={`place-device-button blueprint-primary ${selectedBlueprintId === blueprint.id ? 'active' : ''}`}
-                        onClick={() => {
-                          eventBus.emit('left.blueprint.select', blueprint.id)
-                        }}
+              {userBlueprints.length > 0 && (
+                <section className="place-group-section">
+                  <h4 className="place-group-title">{t('left.blueprintUserGroup')}</h4>
+                  <div className="blueprint-list">
+                    {userBlueprints.map((blueprint) => (
+                      <div
+                        key={blueprint.id}
+                        className={`blueprint-card ${selectedBlueprintId === blueprint.id ? 'selected' : ''} ${armedBlueprintId === blueprint.id ? 'armed' : ''}`.trim()}
                       >
-                        <span className="place-device-label">{blueprint.name}</span>
-                        <span className="place-device-label place-device-label-subtle">
-                          {t('left.blueprintCount', { count: blueprint.devices.length })}
-                        </span>
-                      </button>
+                        <button
+                          className={`place-device-button blueprint-primary ${selectedBlueprintId === blueprint.id ? 'active' : ''}`}
+                          onClick={() => {
+                            eventBus.emit('left.blueprint.select', blueprint.id)
+                          }}
+                        >
+                          <span className="place-device-label">{blueprint.name}</span>
+                          <span className="place-device-label place-device-label-subtle">
+                            {t('left.blueprintCount', { count: blueprint.devices.length })}
+                          </span>
+                        </button>
 
-                      {selectedBlueprintId === blueprint.id && (
-                        <div className="blueprint-action-row">
-                          {armedBlueprintId === blueprint.id ? (
-                            <button
-                              className="blueprint-action-button"
-                              onClick={() => {
-                                eventBus.emit('left.blueprint.disarm', undefined)
-                              }}
-                            >
-                              {t('left.blueprintDisarm')}
+                        {selectedBlueprintId === blueprint.id && (
+                          <div className="blueprint-action-row">
+                            {armedBlueprintId === blueprint.id ? (
+                              <button
+                                className="blueprint-action-button"
+                                onClick={() => {
+                                  eventBus.emit('left.blueprint.disarm', undefined)
+                                }}
+                              >
+                                {t('left.blueprintDisarm')}
+                              </button>
+                            ) : (
+                              <button
+                                className="blueprint-action-button"
+                                onClick={() => {
+                                  eventBus.emit('left.mode.set', 'blueprint')
+                                  eventBus.emit('left.place.operation.set', 'blueprint')
+                                  eventBus.emit('left.blueprint.arm', blueprint.id)
+                                  eventBus.emit('ui.center.focus', undefined)
+                                }}
+                              >
+                                {t('left.blueprintArm')}
+                              </button>
+                            )}
+                            <button className="blueprint-action-button" onClick={() => eventBus.emit('left.blueprint.rename', blueprint.id)}>
+                              {t('left.blueprintRename')}
                             </button>
-                          ) : (
-                            <button
-                              className="blueprint-action-button"
-                              onClick={() => {
-                                eventBus.emit('left.mode.set', 'blueprint')
-                                eventBus.emit('left.place.operation.set', 'blueprint')
-                                eventBus.emit('left.blueprint.arm', blueprint.id)
-                                eventBus.emit('ui.center.focus', undefined)
-                              }}
-                            >
-                              {t('left.blueprintArm')}
+                            <button className="blueprint-action-button" onClick={() => eventBus.emit('left.blueprint.shareClipboard', blueprint.id)}>
+                              {t('left.blueprintShareClipboard')}
                             </button>
-                          )}
-                          <button className="blueprint-action-button" onClick={() => eventBus.emit('left.blueprint.rename', blueprint.id)}>
-                            {t('left.blueprintRename')}
-                          </button>
-                          <button className="blueprint-action-button" onClick={() => eventBus.emit('left.blueprint.shareClipboard', blueprint.id)}>
-                            {t('left.blueprintShareClipboard')}
-                          </button>
-                          <button className="blueprint-action-button" onClick={() => eventBus.emit('left.blueprint.shareFile', blueprint.id)}>
-                            {t('left.blueprintShareFile')}
-                          </button>
-                          <button className="blueprint-action-button danger" onClick={() => eventBus.emit('left.blueprint.delete', blueprint.id)}>
-                            {t('left.blueprintDelete')}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                            <button className="blueprint-action-button" onClick={() => eventBus.emit('left.blueprint.shareFile', blueprint.id)}>
+                              {t('left.blueprintShareFile')}
+                            </button>
+                            <button className="blueprint-action-button danger" onClick={() => eventBus.emit('left.blueprint.delete', blueprint.id)}>
+                              {t('left.blueprintDelete')}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <section className="place-group-section">
+                <h4 className="place-group-title">{t('left.blueprintPublicGroup')}</h4>
+                {systemBlueprints.length === 0 ? (
+                  <div className="place-group-empty">{t('left.blueprintPublicEmpty')}</div>
+                ) : (
+                  <div className="blueprint-list">
+                    {systemBlueprints.map((blueprint) => (
+                      <div
+                        key={blueprint.id}
+                        className={`blueprint-card ${selectedBlueprintId === blueprint.id ? 'selected' : ''} ${armedBlueprintId === blueprint.id ? 'armed' : ''}`.trim()}
+                      >
+                        <button
+                          className={`place-device-button blueprint-primary ${selectedBlueprintId === blueprint.id ? 'active' : ''}`}
+                          onClick={() => {
+                            eventBus.emit('left.blueprint.select', blueprint.id)
+                          }}
+                        >
+                          <span className="place-device-label">{blueprint.name}</span>
+                          <span className="place-device-label place-device-label-subtle">
+                            {t('left.blueprintCount', { count: blueprint.devices.length })}
+                          </span>
+                        </button>
+
+                        {selectedBlueprintId === blueprint.id && (
+                          <div className="blueprint-action-row">
+                            {armedBlueprintId === blueprint.id ? (
+                              <button
+                                className="blueprint-action-button"
+                                onClick={() => {
+                                  eventBus.emit('left.blueprint.disarm', undefined)
+                                }}
+                              >
+                                {t('left.blueprintDisarm')}
+                              </button>
+                            ) : (
+                              <button
+                                className="blueprint-action-button"
+                                onClick={() => {
+                                  eventBus.emit('left.mode.set', 'blueprint')
+                                  eventBus.emit('left.place.operation.set', 'blueprint')
+                                  eventBus.emit('left.blueprint.arm', blueprint.id)
+                                  eventBus.emit('ui.center.focus', undefined)
+                                }}
+                              >
+                                {t('left.blueprintArm')}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
             </div>
           )}

@@ -6,18 +6,7 @@ import type { DeviceRuntime, ItemId, LayoutState } from '../../domain/types'
 import { normalizeReactorPoolConfig } from '../../sim/reactorPool'
 import { useReactorPoolConfigDomain } from './reactorPoolConfigDomain'
 import { useBuildConfigDomain } from './useBuildConfigDomain'
-
-type ItemPickerState =
-  | { kind: 'pickup'; deviceInstanceId: string }
-  | { kind: 'protocolHubOutput'; deviceInstanceId: string; portId: string; portIndex: number }
-  | { kind: 'pumpOutput'; deviceInstanceId: string }
-  | { kind: 'preload'; deviceInstanceId: string; slotIndex: number }
-
-type ItemPickerFilter = {
-  allowedTypes?: Array<'solid' | 'liquid'>
-  requiredTags?: string[]
-  allowedItemIds?: ReadonlySet<ItemId>
-}
+import type { ItemPickerFilter, ItemPickerState } from '../../ui/dialogs/itemPicker.types'
 
 function preloadAllowedTypesBySlot(deviceTypeId: LayoutState['devices'][number]['typeId'], slotIndex: number): Array<'solid' | 'liquid'> {
   if (

@@ -3,6 +3,7 @@ import { BASES, DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import type { BaseDef, BaseId, DeviceInstance, DeviceRuntime, ItemId, LayoutState, PowerMode, SimState, SlotData } from '../../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../../i18n'
 import { isBelt } from '../../domain/geometry'
+import type { ItemPickerState } from '../dialogs/itemPicker.types'
 
 type ProcessorBufferSpec = {
   inputSlots: number
@@ -36,9 +37,9 @@ type RightPanelProps = {
     runtime: DeviceRuntime | undefined,
     t: (key: string, params?: Record<string, string | number>) => string,
   ) => string
-  formatRecipeSummary: (typeId: DeviceInstance['typeId'], language: Language) => string
+  formatRecipeSummary: (typeId: DeviceInstance['typeId'], language: Language, recipeId?: string) => string
   cycleTicksFromSeconds: (cycleSeconds: number, tickRateHz: number) => number
-  recipeForDevice: (typeId: DeviceInstance['typeId']) => { cycleSeconds: number } | undefined
+  recipeForDevice: (typeId: DeviceInstance['typeId'], recipeId?: string) => { cycleSeconds: number } | undefined
   formatInputBufferAmounts: (
     language: Language,
     amounts: Partial<Record<ItemId, number>>,
@@ -79,12 +80,7 @@ type RightPanelProps = {
   }>
   getItemIconPath: (itemId: ItemId) => string
   setItemPickerState: (
-    state:
-      | { kind: 'pickup'; deviceInstanceId: string }
-      | { kind: 'protocolHubOutput'; deviceInstanceId: string; portId: string; portIndex: number }
-      | { kind: 'pumpOutput'; deviceInstanceId: string }
-      | { kind: 'preload'; deviceInstanceId: string; slotIndex: number }
-      | null
+    state: ItemPickerState | null
   ) => void
   updatePickupIgnoreInventory: (deviceInstanceId: string, enabled: boolean) => void
   updateProtocolHubOutputIgnoreInventory: (deviceInstanceId: string, portId: string, enabled: boolean) => void
@@ -367,7 +363,7 @@ export function RightPanel({
                     )
                   }
 
-                  const recipe = recipeForDevice(selectedDevice.typeId)
+                  const recipe = recipeForDevice(selectedDevice.typeId, selectedRuntime.activeRecipeId)
                   const recipeCycleTicks = recipe ? cycleTicksFromSeconds(recipe.cycleSeconds, sim.tickRateHz) : 0
                   const progress = recipe
                     ? `${(selectedRuntime.progress01 * 100).toFixed(1)}% (${selectedRuntime.cycleProgressTicks}/${recipeCycleTicks})`
@@ -379,7 +375,7 @@ export function RightPanel({
                     <>
                       <div className="kv">
                         <span>{t('detail.currentRecipe')}</span>
-                        <span>{formatRecipeSummary(selectedDevice.typeId, language)}</span>
+                        <span>{formatRecipeSummary(selectedDevice.typeId, language, selectedRuntime.activeRecipeId)}</span>
                       </div>
                       <div className="kv">
                         <span>{t('detail.productionProgress')}</span>

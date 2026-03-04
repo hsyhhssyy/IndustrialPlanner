@@ -4,11 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "gen:filled-icons": "node scripts/generate-filled-bottle-icons.mjs"
+    "gen:filled-icons": "node scripts/generate-filled-bottle-icons.mjs",
+    "gen:blueprint-index": "node scripts/generate-blueprint-index.mjs"
   },
   "dependencies": {
     "react": "^19.2.0",

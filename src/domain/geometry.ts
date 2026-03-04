@@ -175,6 +175,7 @@ export function detectOverlaps(layout: LayoutState) {
 
 export function linksFromLayout(layout: LayoutState): PortLink[] {
   const allPorts = layout.devices.flatMap((device) => getRotatedPorts(device))
+  const isTrackLikeById = new Map(layout.devices.map((device) => [device.instanceId, isTrackLike(device.typeId)]))
   const buckets = new Map<string, RotatedPort[]>()
   for (const port of allPorts) {
     const key = boundaryKey(port.x, port.y, port.edge)
@@ -191,6 +192,9 @@ export function linksFromLayout(layout: LayoutState): PortLink[] {
     for (const output of outputs) {
       for (const input of inputs) {
         if (output.instanceId === input.instanceId) continue
+        const outputIsTrackLike = isTrackLikeById.get(output.instanceId) ?? false
+        const inputIsTrackLike = isTrackLikeById.get(input.instanceId) ?? false
+        if (!outputIsTrackLike && !inputIsTrackLike) continue
         if (OPPOSITE_EDGE[output.edge] !== input.edge) continue
         if (!isItemCompatible(output, input)) continue
         links.push({ from: output, to: input })

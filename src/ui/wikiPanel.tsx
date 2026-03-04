@@ -52,7 +52,7 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
             title: '3) 常用快捷键',
             steps: [
               'R：旋转当前放置预览或蓝图预览。',
-              'Ctrl+C：复制当前多选建筑为临时蓝图（需至少选中 2 个）。',
+              'Ctrl+C：复制当前选中建筑为临时蓝图（需至少选中 1 个）。',
               'Esc：退出当前工具或取消当前操作。',
               'Delete：删除当前选中的建筑。',
             ],
@@ -102,7 +102,7 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
             title: '3) Common hotkeys',
             steps: [
               'R: rotate current placement preview or blueprint preview.',
-              'Ctrl+C: copy current multi-selection as a temporary blueprint (needs at least 2 buildings).',
+              'Ctrl+C: copy current selection as a temporary blueprint (needs at least 1 building).',
               'Esc: exit current tool or cancel current action.',
               'Delete: remove selected buildings.',
             ],

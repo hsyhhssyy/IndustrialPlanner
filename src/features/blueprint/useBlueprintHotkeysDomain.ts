@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { showToast } from '../../ui/toast'
 import type { BaseId, DeviceInstance, LayoutState, Rotation } from '../../domain/types'
 import type { BlueprintSnapshot } from './useBlueprintDomain'
-import { APP_VERSION } from '../../migrations/versioning'
+import { APP_VERSION, createBlueprintId } from '../../migrations/versioning'
 
 type UseBlueprintHotkeysDomainParams = {
   simIsRunning: boolean
@@ -42,7 +42,7 @@ export function useBlueprintHotkeysDomain({
       if (isTypingTarget) return
 
       if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'c') {
-        if (selection.length < 2) {
+        if (selection.length < 1) {
           showToast(t('toast.blueprintCopyNeedsMultiSelect'), { variant: 'warning' })
           return
         }
@@ -51,7 +51,7 @@ export function useBlueprintHotkeysDomain({
         const selectedDevices = layout.devices.filter(
           (device) => selectedIdSet.has(device.instanceId) && !foundationIdSet.has(device.instanceId),
         )
-        if (selectedDevices.length < 2) {
+        if (selectedDevices.length < 1) {
           showToast(t('toast.blueprintCopyNeedsMultiSelect'), { variant: 'warning' })
           return
         }
@@ -60,7 +60,8 @@ export function useBlueprintHotkeysDomain({
         const minY = Math.min(...selectedDevices.map((device) => device.origin.y))
         const createdAt = new Date().toISOString()
         const tempSnapshot: BlueprintSnapshot = {
-          id: `clipboard_${Date.now()}`,
+          id: createBlueprintId('user'),
+          source: 'user',
           name: 'clipboard',
           createdAt,
           version: APP_VERSION,
