@@ -624,6 +624,24 @@ button:disabled {
   z-index: 3;
 }
 
+.protocol-hub-output-port-tag {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid #35516f;
+  background: rgba(36, 48, 66, 0.9);
+  color: #e5ebf3;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 3;
+}
+
 .junction-icon {
   position: absolute;
   inset: 0;

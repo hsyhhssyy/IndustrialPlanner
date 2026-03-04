@@ -27,6 +27,14 @@ const REACTOR_LIQUID_PORT_TAGS: Record<string, string> = {
   out_w_1: '1',
   out_w_3: '2',
 }
+const PROTOCOL_HUB_OUTPUT_PORT_TAGS: Record<string, string> = {
+  out_w_2: '1',
+  out_w_5: '2',
+  out_w_8: '3',
+  out_e_2: '4',
+  out_e_5: '5',
+  out_e_8: '6',
+}
 const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
 
 export type StaticDeviceLayerProps = {
@@ -195,6 +203,30 @@ export const StaticDeviceLayer = memo(
       }
     }
 
+    function protocolHubOutputPortTagStyle(
+      port: { x: number; y: number; edge: 'N' | 'S' | 'W' | 'E' },
+      origin: { x: number; y: number },
+    ) {
+      const localX = port.x - origin.x
+      const localY = port.y - origin.y
+      const centerX = (localX + 0.5) * BASE_CELL_SIZE
+      const centerY = (localY + 0.5) * BASE_CELL_SIZE
+      const inwardOffset = BASE_CELL_SIZE
+      const offsetByEdge =
+        port.edge === 'W'
+          ? { dx: inwardOffset, dy: 0 }
+          : port.edge === 'E'
+            ? { dx: -inwardOffset, dy: 0 }
+            : port.edge === 'N'
+              ? { dx: 0, dy: inwardOffset }
+              : { dx: 0, dy: -inwardOffset }
+
+      return {
+        left: `${centerX + offsetByEdge.dx}px`,
+        top: `${centerY + offsetByEdge.dy}px`,
+      }
+    }
+
     return (
       <>
         {devices.map((device) => {
@@ -232,7 +264,10 @@ export const StaticDeviceLayer = memo(
           const isSplitter = renderDevice.typeId === 'item_log_splitter'
           const isMerger = renderDevice.typeId === 'item_log_converger'
           const needsRotatedPorts =
-            isLogisticsTrack || renderDevice.typeId === 'item_port_mix_pool_1' || configuredPortItemEntries.length > 0
+            isLogisticsTrack ||
+            renderDevice.typeId === 'item_port_mix_pool_1' ||
+            isProtocolHub ||
+            configuredPortItemEntries.length > 0
           const rotatedPorts = needsRotatedPorts ? getRotatedPorts(renderDevice) : []
           const configuredPortIcons = configuredPortItemEntries
             .map((entry) => {
@@ -268,6 +303,10 @@ export const StaticDeviceLayer = memo(
           const reactorLiquidPortTags =
             renderDevice.typeId === 'item_port_mix_pool_1' && selectionSet.has(renderDevice.instanceId)
               ? rotatedPorts.filter((port) => REACTOR_LIQUID_PORT_TAGS[port.portId])
+              : []
+          const protocolHubOutputPortTags =
+            isProtocolHub && selectionSet.has(renderDevice.instanceId)
+              ? rotatedPorts.filter((port) => PROTOCOL_HUB_OUTPUT_PORT_TAGS[port.portId])
               : []
           return (
             <div
@@ -372,6 +411,15 @@ export const StaticDeviceLayer = memo(
                       style={reactorLiquidPortTagStyle(port, renderDevice.origin)}
                     >
                       {REACTOR_LIQUID_PORT_TAGS[port.portId]}
+                    </span>
+                  ))}
+                  {protocolHubOutputPortTags.map((port) => (
+                    <span
+                      key={`${renderDevice.instanceId}-protocol-hub-port-tag-${port.portId}`}
+                      className="protocol-hub-output-port-tag"
+                      style={protocolHubOutputPortTagStyle(port, renderDevice.origin)}
+                    >
+                      {PROTOCOL_HUB_OUTPUT_PORT_TAGS[port.portId]}
                     </span>
                   ))}
                 </div>

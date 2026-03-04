@@ -55,6 +55,7 @@ export function useObservabilityDomain({
   statsTopN,
 }: UseObservabilityDomainParams) {
   const [showAllStatsRows, setShowAllStatsRows] = useState(false)
+  const [showDebugDetails, setShowDebugDetails] = useState(false)
   const [statsTableMaxHeight, setStatsTableMaxHeight] = useState<number | null>(null)
   const statsTableRef = useRef<HTMLTableElement | null>(null)
 
@@ -180,17 +181,25 @@ export function useObservabilityDomain({
       </div>
 
       <h3>{t('right.simDebug')}</h3>
-      <div className="kv"><span>{t('debug.measuredTps')}</span><span>{measuredTickRate.toFixed(2)}</span></div>
-      <div className="kv"><span>{t('debug.measuredFps')}</span><span>{measuredFrameRate.toFixed(2)}</span></div>
       <div className="kv"><span>{t('debug.smoothedFps')}</span><span>{smoothedFrameRate.toFixed(2)}</span></div>
-      <div className="kv"><span>{t('debug.fpsMinMax')}</span><span>{`${minFrameRate.toFixed(2)} / ${maxFrameRate.toFixed(2)}`}</span></div>
-      <div className="kv"><span>{t('debug.frameTimeAvgMaxMs')}</span><span>{`${avgFrameTimeMs.toFixed(2)} / ${maxFrameTimeMs.toFixed(2)}`}</span></div>
-      <div className="kv"><span>{t('debug.longFrames50_100')}</span><span>{`${longFrame50Count} / ${longFrame100Count}`}</span></div>
-      <div className="kv"><span>{t('debug.ticksPerFrameAvgMax')}</span><span>{`${avgTicksPerFrame.toFixed(2)} / ${maxTicksPerFrameSeen}`}</span></div>
-      <div className="kv"><span>{t('debug.tickWorkMsAvgMax')}</span><span>{`${avgTickWorkMs.toFixed(2)} / ${maxTickWorkMs.toFixed(2)}`}</span></div>
-      <div className="kv"><span>{t('debug.uiCommitGapMsAvgMax')}</span><span>{`${avgUiCommitGapMs.toFixed(2)} / ${maxUiCommitGapMs.toFixed(2)}`}</span></div>
-      <div className="kv"><span>{t('debug.simTick')}</span><span>{sim.tick}</span></div>
       <div className="kv"><span>{t('debug.simSeconds')}</span><span>{sim.stats.simSeconds.toFixed(2)}</span></div>
+      <div className="kv"><span>{t('debug.avgTicksPerFrame')}</span><span>{avgTicksPerFrame.toFixed(2)}</span></div>
+      <button className="stats-toggle-btn" onClick={() => setShowDebugDetails((current) => !current)}>
+        {showDebugDetails ? t('debug.detailsCollapse') : t('debug.detailsExpand')}
+      </button>
+      {showDebugDetails && (
+        <>
+          <div className="kv"><span>{t('debug.measuredTps')}</span><span>{measuredTickRate.toFixed(2)}</span></div>
+          <div className="kv"><span>{t('debug.measuredFps')}</span><span>{measuredFrameRate.toFixed(2)}</span></div>
+          <div className="kv"><span>{t('debug.fpsMinMax')}</span><span>{`${minFrameRate.toFixed(2)} / ${maxFrameRate.toFixed(2)}`}</span></div>
+          <div className="kv"><span>{t('debug.frameTimeAvgMaxMs')}</span><span>{`${avgFrameTimeMs.toFixed(2)} / ${maxFrameTimeMs.toFixed(2)}`}</span></div>
+          <div className="kv"><span>{t('debug.longFrames50_100')}</span><span>{`${longFrame50Count} / ${longFrame100Count}`}</span></div>
+          <div className="kv"><span>{t('debug.ticksPerFrameAvgMax')}</span><span>{`${avgTicksPerFrame.toFixed(2)} / ${maxTicksPerFrameSeen}`}</span></div>
+          <div className="kv"><span>{t('debug.tickWorkMsAvgMax')}</span><span>{`${avgTickWorkMs.toFixed(2)} / ${maxTickWorkMs.toFixed(2)}`}</span></div>
+          <div className="kv"><span>{t('debug.uiCommitGapMsAvgMax')}</span><span>{`${avgUiCommitGapMs.toFixed(2)} / ${maxUiCommitGapMs.toFixed(2)}`}</span></div>
+          <div className="kv"><span>{t('debug.simTick')}</span><span>{sim.tick}</span></div>
+        </>
+      )}
     </>
   )
 

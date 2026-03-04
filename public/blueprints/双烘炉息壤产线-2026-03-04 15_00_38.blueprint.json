@@ -1,0 +1,1389 @@
+{
+  "schema": "industrial-planner-blueprint",
+  "id": "BluePrint-HSY-c96944de-0608-4abf-901a-8b3d27a476d1",
+  "version": "1.0",
+  "name": "双烘炉息壤产线",
+  "createdAt": "2026-03-04T15:00:38.701Z",
+  "baseId": "wuling_tianwangping_aid",
+  "devices": [
+    {
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 180,
+      "origin": {
+        "x": 27,
+        "y": 23
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_furnance_1",
+      "rotation": 0,
+      "origin": {
+        "x": 26,
+        "y": 20
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_grinder_1",
+      "rotation": 0,
+      "origin": {
+        "x": 25,
+        "y": 16
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_hydro_planter_1",
+      "rotation": 180,
+      "origin": {
+        "x": 21,
+        "y": 19
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_seedcol_1",
+      "rotation": 0,
+      "origin": {
+        "x": 15,
+        "y": 19
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_grass_2",
+            "amount": 50
+          }
+        ]
+      }
+    },
+    {
+      "typeId": "item_port_planter_1",
+      "rotation": 0,
+      "origin": {
+        "x": 10,
+        "y": 19
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_seedcol_1",
+      "rotation": 180,
+      "origin": {
+        "x": 5,
+        "y": 19
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_moss_3",
+            "amount": 50
+          }
+        ]
+      }
+    },
+    {
+      "typeId": "item_port_planter_1",
+      "rotation": 0,
+      "origin": {
+        "x": 0,
+        "y": 19
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 21,
+        "y": 24
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 20,
+        "y": 24
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 19,
+        "y": 24
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 25,
+        "y": 24
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 26,
+        "y": 24
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 26,
+        "y": 23
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 26,
+        "y": 19
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 20,
+        "y": 24
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 20,
+        "y": 23
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 20,
+        "y": 22
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_pipe_splitter",
+      "rotation": 90,
+      "origin": {
+        "x": 20,
+        "y": 21
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 20,
+        "y": 20
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 19,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 20,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 21,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_water_pump_1",
+      "rotation": 270,
+      "origin": {
+        "x": 19,
+        "y": 25
+      },
+      "config": {
+        "pumpOutputItemId": "item_liquid_water"
+      }
+    },
+    {
+      "typeId": "item_port_thickener_1",
+      "rotation": 270,
+      "origin": {
+        "x": 21,
+        "y": 12
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_furnance_1",
+      "rotation": 180,
+      "origin": {
+        "x": 18,
+        "y": 15
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_xiranite_oven_1",
+      "rotation": 0,
+      "origin": {
+        "x": 12,
+        "y": 13
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 18,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 17,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 16,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 20,
+        "y": 19
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 20,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 19,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 18,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 17,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 17,
+        "y": 17
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 17,
+        "y": 16
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 17,
+        "y": 15
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 25,
+        "y": 14
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 26,
+        "y": 15
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_log_connector",
+      "rotation": 0,
+      "origin": {
+        "x": 25,
+        "y": 15
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_grinder_1",
+      "rotation": 0,
+      "origin": {
+        "x": 26,
+        "y": 12
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 28,
+        "y": 19
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 28,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 28,
+        "y": 17
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 28,
+        "y": 16
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 28,
+        "y": 15
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 17,
+        "y": 12
+      },
+      "config": {
+        "submitToWarehouse": true
+      }
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 24
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 10,
+        "y": 24
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 5,
+        "y": 24
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 4,
+        "y": 24
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 10,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 9,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_grinder_1",
+      "rotation": 90,
+      "origin": {
+        "x": 1,
+        "y": 16
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 0,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_thickener_1",
+      "rotation": 90,
+      "origin": {
+        "x": 5,
+        "y": 13
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 4,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_seedcol_1",
+      "rotation": 0,
+      "origin": {
+        "x": 20,
+        "y": 1
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_moss_3",
+            "amount": 50
+          }
+        ]
+      }
+    },
+    {
+      "typeId": "item_port_planter_1",
+      "rotation": 180,
+      "origin": {
+        "x": 25,
+        "y": 1
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 20,
+        "y": 0
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 19,
+        "y": 0
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 24,
+        "y": 0
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 25,
+        "y": 0
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 19,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 20,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_grinder_1",
+      "rotation": 270,
+      "origin": {
+        "x": 26,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 29,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_thickener_1",
+      "rotation": 270,
+      "origin": {
+        "x": 21,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 25,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 1,
+        "y": 0
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_furnance_1",
+      "rotation": 180,
+      "origin": {
+        "x": 1,
+        "y": 2
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_grinder_1",
+      "rotation": 180,
+      "origin": {
+        "x": 2,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_hydro_planter_1",
+      "rotation": 0,
+      "origin": {
+        "x": 4,
+        "y": 1
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_seedcol_1",
+      "rotation": 180,
+      "origin": {
+        "x": 10,
+        "y": 1
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_grass_2",
+            "amount": 50
+          }
+        ]
+      }
+    },
+    {
+      "typeId": "item_port_planter_1",
+      "rotation": 180,
+      "origin": {
+        "x": 15,
+        "y": 1
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 8,
+        "y": 0
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 0
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 10,
+        "y": 0
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 4,
+        "y": 0
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 3,
+        "y": 0
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 3,
+        "y": 1
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 3,
+        "y": 5
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 9,
+        "y": 1
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 9,
+        "y": 2
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_pipe_splitter",
+      "rotation": 270,
+      "origin": {
+        "x": 9,
+        "y": 3
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 9,
+        "y": 4
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 10,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 9,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 8,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_thickener_1",
+      "rotation": 90,
+      "origin": {
+        "x": 5,
+        "y": 7
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_furnance_1",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 7
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_xiranite_oven_1",
+      "rotation": 180,
+      "origin": {
+        "x": 13,
+        "y": 7
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 11,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 12,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 13,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 9,
+        "y": 5
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 10,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 11,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 12,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 12,
+        "y": 7
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 12,
+        "y": 8
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 12,
+        "y": 9
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 4,
+        "y": 10
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 3,
+        "y": 9
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_log_connector",
+      "rotation": 180,
+      "origin": {
+        "x": 4,
+        "y": 9
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_grinder_1",
+      "rotation": 180,
+      "origin": {
+        "x": 1,
+        "y": 10
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 1,
+        "y": 5
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 1,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 1,
+        "y": 7
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 1,
+        "y": 8
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 1,
+        "y": 9
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_storager_1",
+      "rotation": 270,
+      "origin": {
+        "x": 10,
+        "y": 10
+      },
+      "config": {
+        "submitToWarehouse": true
+      }
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 3,
+        "y": 14
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 4,
+        "y": 17
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 4,
+        "y": 16
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 4,
+        "y": 15
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_log_connector",
+      "rotation": 0,
+      "origin": {
+        "x": 4,
+        "y": 14
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 4,
+        "y": 12
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 2,
+        "y": 13
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_log_connector",
+      "rotation": 0,
+      "origin": {
+        "x": 3,
+        "y": 13
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_log_connector",
+      "rotation": 0,
+      "origin": {
+        "x": 4,
+        "y": 13
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 90,
+      "origin": {
+        "x": 1,
+        "y": 14
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_furnance_1",
+      "rotation": 180,
+      "origin": {
+        "x": 9,
+        "y": 15
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 9,
+        "y": 14
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 11,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 12,
+        "y": 18
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 180,
+      "origin": {
+        "x": 10,
+        "y": 13
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 13,
+        "y": 12
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 16,
+        "y": 12
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 9,
+        "y": 10
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 20,
+        "y": 14
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 25,
+        "y": 7
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 25,
+        "y": 8
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 25,
+        "y": 9
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 25,
+        "y": 12
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 26,
+        "y": 10
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_log_connector",
+      "rotation": 0,
+      "origin": {
+        "x": 25,
+        "y": 10
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 27,
+        "y": 11
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_log_connector",
+      "rotation": 0,
+      "origin": {
+        "x": 26,
+        "y": 11
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_log_connector",
+      "rotation": 0,
+      "origin": {
+        "x": 25,
+        "y": 11
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 180,
+      "origin": {
+        "x": 27,
+        "y": 9
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_furnance_1",
+      "rotation": 0,
+      "origin": {
+        "x": 18,
+        "y": 7
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 18,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 17,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 20,
+        "y": 10
+      },
+      "config": {}
+    },
+    {
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 18,
+        "y": 10
+      },
+      "config": {}
+    },
+    {
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 9,
+        "y": 0
+      },
+      "config": {}
+    }
+  ]
+}
