@@ -20,11 +20,14 @@ function normalizeBlueprintPayload(raw) {
   return candidate
 }
 
-function readIdAndVersion(payload) {
+function readIdAndVersions(payload) {
   const id = typeof payload.id === 'string' ? payload.id.trim() : ''
-  const versionValue = payload.version
-  const version = typeof versionValue === 'string' || typeof versionValue === 'number' ? String(versionValue).trim() : ''
-  return { id, version }
+  const blueprintVersionValue = payload.blueprintVersion
+  const blueprintVersion =
+    typeof blueprintVersionValue === 'string' || typeof blueprintVersionValue === 'number'
+      ? String(blueprintVersionValue).trim()
+      : '1'
+  return { id, blueprintVersion }
 }
 
 function normalizeToSystemBlueprintId(id) {
@@ -69,7 +72,7 @@ async function buildIndex() {
       continue
     }
 
-    const { id: rawId, version } = readIdAndVersion(payload)
+    const { id: rawId, blueprintVersion } = readIdAndVersions(payload)
     if (!rawId) {
       errors.push(`${fileName}: missing blueprint id`)
       continue
@@ -81,15 +84,15 @@ async function buildIndex() {
       )
       continue
     }
-    if (!version) {
-      errors.push(`${fileName}: missing blueprint version`)
+    if (!blueprintVersion) {
+      errors.push(`${fileName}: missing blueprintVersion`)
       continue
     }
 
     const stat = await fs.stat(fullPath)
     files.push({
       id,
-      version,
+      blueprintVersion,
       name: fileName,
       path: `/blueprints/${encodeURIComponent(fileName)}`,
       size: stat.size,
@@ -103,7 +106,7 @@ async function buildIndex() {
   files.sort((a, b) => a.id.localeCompare(b.id))
 
   const indexPayload = {
-    version: INDEX_SCHEMA_VERSION,
+    schemaVersion: INDEX_SCHEMA_VERSION,
     generatedAt: new Date().toISOString(),
     files,
   }

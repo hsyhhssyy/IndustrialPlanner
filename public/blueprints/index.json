@@ -1,20 +1,20 @@
 {
-  "version": 1,
-  "generatedAt": "2026-03-04T15:04:59.677Z",
+  "schemaVersion": 1,
+  "generatedAt": "2026-03-05T03:17:40.480Z",
   "files": [
     {
       "id": "PublicBluePrint-HSY-429609a4-61cb-4083-98fa-b8de1268bec4",
-      "version": "1.0",
+      "blueprintVersion": "1",
       "name": "精选荞愈胶囊产线-2026-03-04 09_13_42.blueprint.json",
       "path": "/blueprints/%E7%B2%BE%E9%80%89%E8%8D%9E%E6%84%88%E8%83%B6%E5%9B%8A%E4%BA%A7%E7%BA%BF-2026-03-04%2009_13_42.blueprint.json",
       "size": 37489
     },
     {
       "id": "PublicBluePrint-HSY-c96944de-0608-4abf-901a-8b3d27a476d1",
-      "version": "1.0",
+      "blueprintVersion": "1",
       "name": "双烘炉息壤产线-2026-03-04 15_00_38.blueprint.json",
       "path": "/blueprints/%E5%8F%8C%E7%83%98%E7%82%89%E6%81%AF%E5%A3%A4%E4%BA%A7%E7%BA%BF-2026-03-04%2015_00_38.blueprint.json",
-      "size": 23608
+      "size": 23396
     }
   ]
 }

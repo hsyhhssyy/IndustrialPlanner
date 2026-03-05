@@ -33,6 +33,7 @@ type StoredBlueprintSnapshot = {
   createdAt: string
   updatedAt?: string
   version: string
+  blueprintVersion: string
   baseId: BaseId
   source: BlueprintSource
   devices: Array<{
@@ -45,7 +46,7 @@ type StoredBlueprintSnapshot = {
 
 export type PublicBlueprintIndexEntry = {
   id: string
-  version: string
+  blueprintVersion: string
   name: string
   path: string
   size: number
@@ -187,6 +188,10 @@ export function normalizeBlueprintSnapshotsStorage(rawValue: StoredBlueprintSnap
         name: entry.name,
         createdAt: entry.createdAt,
         version: typeof entry.version === 'string' && entry.version.length > 0 ? entry.version : APP_VERSION,
+        blueprintVersion:
+          typeof entry.blueprintVersion === 'string' || typeof entry.blueprintVersion === 'number'
+            ? String(entry.blueprintVersion)
+            : '1',
         baseId: entry.baseId as BaseId,
         source,
         devices: migratedDevices,
@@ -238,28 +243,42 @@ export function normalizePublicBlueprintIndexCacheStorage(rawValue: unknown): Pu
   if (!rawValue || typeof rawValue !== 'object') return fallback
   const value = rawValue as Partial<PublicBlueprintIndexCache>
   const files = Array.isArray(value.files) ? value.files : []
+  const schemaVersion =
+    typeof (rawValue as { schemaVersion?: unknown }).schemaVersion === 'number' &&
+    Number.isFinite((rawValue as { schemaVersion?: number }).schemaVersion)
+      ? (rawValue as { schemaVersion: number }).schemaVersion
+      : typeof value.version === 'number' && Number.isFinite(value.version)
+        ? value.version
+        : 1
 
   return {
-    version: typeof value.version === 'number' && Number.isFinite(value.version) ? value.version : 1,
+    version: schemaVersion,
     generatedAt: typeof value.generatedAt === 'string' ? value.generatedAt : '',
     files: files
       .map((entry) => {
         if (!entry || typeof entry !== 'object') return null
         const candidate = entry as Partial<PublicBlueprintIndexEntry>
         if (typeof candidate.id !== 'string' || !SYSTEM_BLUEPRINT_ID_PATTERN.test(candidate.id)) return null
-        const version = typeof candidate.version === 'string' || typeof candidate.version === 'number' ? String(candidate.version) : ''
-        if (!version) return null
+        const blueprintVersionRaw =
+          typeof candidate.blueprintVersion === 'string' || typeof candidate.blueprintVersion === 'number'
+            ? candidate.blueprintVersion
+            : typeof (candidate as { version?: unknown }).version === 'string' ||
+                typeof (candidate as { version?: unknown }).version === 'number'
+              ? (candidate as { version: string | number }).version
+              : ''
+        const blueprintVersion = String(blueprintVersionRaw).trim()
+        if (!blueprintVersion) return null
         if (typeof candidate.name !== 'string' || typeof candidate.path !== 'string') return null
         const size = typeof candidate.size === 'number' && Number.isFinite(candidate.size) ? candidate.size : 0
         return {
           id: candidate.id,
-          version,
+          blueprintVersion,
           name: candidate.name,
           path: candidate.path,
           size,
         }
       })
-      .filter((entry): entry is PublicBlueprintIndexEntry => Boolean(entry)),
+      .filter(Boolean) as PublicBlueprintIndexEntry[],
   }
 }
 

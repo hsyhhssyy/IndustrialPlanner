@@ -44,16 +44,18 @@
 
 ## 5. 版本与 ID 的关系
 
-- `id` 标识“蓝图身份”，`version` 标识“蓝图内容版本”。
-- 同一蓝图升级时：`id` 不变，`version` 递增。
+- `id` 标识“蓝图身份”。
+- 公共蓝图内容升级使用 `blueprintVersion`。
+- 蓝图 JSON 内 `version` 表示“创建时游戏版本（app version）”。
+- 同一公共蓝图升级时：`id` 不变，`blueprintVersion` 递增。
 - 禁止通过变更 `id` 来表达内容版本。
 
 ## 6. 与索引/同步流程的关系
 
-1. 索引项最小键：`id + version`。
+1. 索引项最小键：`id + blueprintVersion`。
 2. 同步比较逻辑：
-   - 同 `id` 且同 `version`：不拉取正文。
-   - 同 `id` 但远端 `version` 更高：拉取正文并覆盖本地。
+   - 同 `id` 且同 `blueprintVersion`：不拉取正文。
+   - 同 `id` 但远端 `blueprintVersion` 更高：拉取正文并覆盖本地。
    - 远端不存在该系统蓝图 `id`：本地系统蓝图删除。
 3. 用户蓝图不受系统索引删除逻辑影响。
 

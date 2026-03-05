@@ -25,12 +25,12 @@
 ## 2.1 增量同步规则（2026-03-04 已确认）
 
 1. 每次程序启动时**只读取索引**（不全量读取蓝图正文）。
-2. 索引项至少包含：`id`、`version`。
-3. 若本地已存在同 `id` 且 `version` 一致：
+2. 索引项至少包含：`id`、`blueprintVersion`。
+3. 若本地已存在同 `id` 且 `blueprintVersion` 一致：
   - 不再请求该蓝图正文。
 4. 若出现以下任一情况，才读取蓝图正文并写入本地：
   - 本地不存在该 `id`（新增蓝图）；
-  - 本地存在该 `id` 但 `version` 低于索引版本（蓝图升级）。
+  - 本地存在该 `id` 但 `blueprintVersion` 低于索引版本（蓝图升级）。
 5. 本地写入语义：将公共蓝图副本同步到本地存储（供后续离线/快速启动读取）。
 6. 同步触发时机：进入蓝图模式时异步同步（不阻塞页面首屏交互）。
 7. 本地公共蓝图集合需与远端索引保持一致：
@@ -72,33 +72,37 @@
 
 ```json
 {
-  "version": 1,
+  "schemaVersion": 1,
   "generatedAt": "2026-03-04T00:00:00.000Z",
   "files": [
     {
       "id": "PublicBluePrint-HSY-550e8400-e29b-41d4-a716-446655440000",
-      "version": 3,
+      "blueprintVersion": "3",
       "name": "sample-blueprint.json",
       "path": "/blueprints/sample-blueprint.json",
-      "size": 1234,
-      "hash": "optional"
+      "size": 1234
     }
   ]
 }
 ```
 
 说明：
-- `id` + `version` 为启动增量同步的最小比较键。
+- `schemaVersion` 为索引文件结构版本（仅用于解析兼容，与蓝图内容升级无关）。
+- `id` + `blueprintVersion` 为启动增量同步的最小比较键。
 - `hash` 可选；若首版不做完整性校验，可先省略。
 - 文件白名单仅支持 `.json`。
 - 系统蓝图（公共蓝图）`id` 规范为 `PublicBluePrint-HSY-<UUID>`。
 - 用户蓝图 `id` 规范为 `BluePrint-HSY-<UUID>`。
 - 详细规则见：`12-blueprint-id-specification.md`。
 
+字段口径补充：
+- 公共蓝图是否更新，只看 `blueprintVersion`。
+- 蓝图 JSON 内的 `version` 表示“创建于哪个游戏版本”，不参与公共蓝图增量同步判断。
+
 ## 5. 运行时行为（草案）
 
 1. 用户进入蓝图模式时，异步请求 `/blueprints/index.json`。
-2. 读取索引中的 `id/version/path`，与本地清单进行比对。
+2. 读取索引中的 `id/blueprintVersion/path`，与本地清单进行比对。
 3. 对“新增或升级”的条目，才请求对应蓝图正文（如 `/blueprints/{file}.json`）。
 4. 将新拉取的蓝图正文写入本地存储（按 `id` 覆盖或新增）。
 5. 对“本地已是同版本”的条目，跳过正文请求。
@@ -111,8 +115,8 @@
 
 1. `remoteIndex = fetch(/blueprints/index.json)`
 2. `localIndex = loadLocalBlueprintIndex()`
-3. `toFetch = remoteIndex.items.filter(item => localIndex[item.id]?.version !== item.version)`
-4. `for item in toFetch: fetch(item.path) -> saveLocalBlueprint(item.id, item.version, content)`
+3. `toFetch = remoteIndex.items.filter(item => localIndex[item.id]?.blueprintVersion !== item.blueprintVersion)`
+4. `for item in toFetch: fetch(item.path) -> saveLocalBlueprint(item.id, item.blueprintVersion, content)`
 5. `toDelete = localSystemIds.filter(id => !remoteIndex.items.some(item => item.id === id))`
 6. `deleteLocalSystemBlueprints(toDelete)`
 7. `saveLocalBlueprintIndex(remoteIndex)`
@@ -164,7 +168,7 @@
 - 索引生成命令：`npm run gen:blueprint-index`。
 - 索引脚本：`scripts/generate-blueprint-index.mjs`。
 - 索引输出：`public/blueprints/index.json`。
-- 蓝图同步：进入蓝图模式时异步读取索引，按 `id+version` 增量拉取蓝图正文。
+- 蓝图同步：进入蓝图模式时异步读取索引，按 `id+blueprintVersion` 增量拉取蓝图正文。
 - 强一致删除：本地系统蓝图中不在索引内的条目会删除。
 - 本地分层：用户蓝图与系统蓝图分开存储，并通过迁移入口从 Stage1 旧键迁移。
 - 面板展示：蓝图模式中“我的蓝图”在上，“公共蓝图”在下；公共蓝图分组常驻并支持空文案。

@@ -253,7 +253,7 @@
 - 实现情况（2026-03-04）：
   - 已完成：独立索引命令 `npm run gen:blueprint-index` 与脚本 `scripts/generate-blueprint-index.mjs`。
   - 已完成：索引仅扫描 `.json`，并写出 `public/blueprints/index.json`。
-  - 已完成：蓝图模式进入时异步同步索引；按 `id+version` 增量拉取正文；系统蓝图按索引强一致删除。
+  - 已完成：蓝图模式进入时异步同步索引；按 `id+blueprintVersion` 增量拉取正文；系统蓝图按索引强一致删除。
   - 已完成：本地存储分层为“用户蓝图（user）/系统蓝图（system）”，并提供 Stage1 -> Stage3 迁移入口。
   - 已完成：蓝图面板分组展示“我的蓝图（上）/公共蓝图（下）”，公共蓝图分组常驻并支持空文案。
   - 已完成：ID 规范落地（`BluePrint-HSY-<UUID>` / `PublicBluePrint-HSY-<UUID>`）并接入生成/迁移/同步。

@@ -65,6 +65,7 @@ export function useBlueprintHotkeysDomain({
           name: 'clipboard',
           createdAt,
           version: APP_VERSION,
+          blueprintVersion: '1',
           baseId: activeBaseId,
           devices: selectedDevices.map((device) => ({
             typeId: device.typeId,

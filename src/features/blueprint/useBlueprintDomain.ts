@@ -39,6 +39,7 @@ export type BlueprintSnapshot = {
   createdAt: string
   updatedAt?: string
   version: string
+  blueprintVersion: string
   baseId: BaseId
   devices: BlueprintDeviceSnapshot[]
 }
@@ -63,6 +64,7 @@ type BlueprintSharePayload = {
   schema: 'industrial-planner-blueprint'
   id?: string
   version: string
+  blueprintVersion?: string
   name: string
   createdAt: string
   baseId: string
@@ -156,6 +158,7 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
 
   const schema = (payload as Record<string, unknown>).schema
   const versionRaw = (payload as Record<string, unknown>).version
+  const blueprintVersionRaw = (payload as Record<string, unknown>).blueprintVersion
   const name = (payload as Record<string, unknown>).name
   const createdAt = (payload as Record<string, unknown>).createdAt
   const baseId = (payload as Record<string, unknown>).baseId
@@ -168,7 +171,14 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
       : typeof versionRaw === 'number'
         ? String(versionRaw)
         : APP_VERSION
+  const blueprintVersion =
+    typeof blueprintVersionRaw === 'string'
+      ? blueprintVersionRaw
+      : typeof blueprintVersionRaw === 'number'
+        ? String(blueprintVersionRaw)
+        : '1'
   if (!version) return null
+  if (!blueprintVersion) return null
   if (typeof name !== 'string' || !name.trim()) return null
   if (typeof createdAt !== 'string' || !createdAt) return null
   if (typeof baseId !== 'string' || !baseId) return null
@@ -197,6 +207,7 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
   return {
     schema: 'industrial-planner-blueprint',
     version,
+    blueprintVersion,
     name: name.trim(),
     createdAt,
     baseId,
@@ -274,6 +285,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
       createdAt,
       updatedAt: createdAt,
       version: APP_VERSION,
+      blueprintVersion: '1',
       baseId: activeBaseId,
       devices: selectedDevices.map((device) => ({
         typeId: device.typeId,
@@ -352,6 +364,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
                 name: nextName,
                 updatedAt,
                 version: blueprint.version || APP_VERSION,
+                blueprintVersion: blueprint.blueprintVersion || '1',
               }
             : blueprint,
         ),
@@ -369,6 +382,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         schema: 'industrial-planner-blueprint',
         id: target.id,
         version: target.version || APP_VERSION,
+        blueprintVersion: target.blueprintVersion || '1',
         name: target.name,
         createdAt: target.createdAt,
         baseId: target.baseId,
@@ -450,6 +464,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         createdAt,
         updatedAt: createdAt,
         version: payload.version,
+        blueprintVersion: payload.blueprintVersion ?? '1',
         baseId: activeBaseId,
         devices: payload.devices.map((device) => ({
           typeId: device.typeId,
@@ -499,7 +514,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
     const toFetch = remoteIndex.files.filter((entry) => {
       const local = currentById.get(entry.id)
       if (!local) return true
-      if (String(local.version) !== String(entry.version)) return true
+      if (String(local.blueprintVersion ?? '1') !== String(entry.blueprintVersion)) return true
       nextById.set(entry.id, local)
       return false
     })
@@ -518,7 +533,8 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
           name: buildPublicBlueprintName(entry, payload.name),
           createdAt: payload.createdAt,
           updatedAt: new Date().toISOString(),
-          version: String(entry.version),
+          version: payload.version || APP_VERSION,
+          blueprintVersion: String(entry.blueprintVersion),
           baseId: activeBaseId,
           devices: payload.devices.map((device) => ({
             typeId: device.typeId,
