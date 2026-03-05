@@ -43,7 +43,8 @@
 13. `12-protocol-storage-box-inventory-design.md`
 14. `13-item-aware-receive-plan-design.md`
 15. `14-unified-buffer-group-and-slot-rule-design.md`
-16. `16-stage4-conversation-notes-arbitration-and-buffer-rules.md`
+16. `15-s4-rq-004-execution-contract-and-risk-mitigation.md`
+17. `16-stage4-conversation-notes-arbitration-and-buffer-rules.md`
 
 ## 口径优先级
 
