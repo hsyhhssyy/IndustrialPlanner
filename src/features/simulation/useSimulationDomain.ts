@@ -234,33 +234,6 @@ export function useSimulationDomain({ layoutRef }: UseSimulationDomainParams) {
     }
   }, [layoutRef, sim.isRunning, sim.speed, sim.tickRateHz])
 
-  useEffect(() => {
-    const autoPauseSimulation = () => {
-      updateSim((current) => {
-        if (!current.isRunning || current.speed === 0) return current
-        return { ...current, speed: 0 }
-      })
-    }
-
-    const onVisibilityChange = () => {
-      if (document.hidden) {
-        autoPauseSimulation()
-      }
-    }
-
-    const onWindowBlur = () => {
-      autoPauseSimulation()
-    }
-
-    document.addEventListener('visibilitychange', onVisibilityChange)
-    window.addEventListener('blur', onWindowBlur)
-
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibilityChange)
-      window.removeEventListener('blur', onWindowBlur)
-    }
-  }, [updateSim])
-
   return {
     sim,
     updateSim,

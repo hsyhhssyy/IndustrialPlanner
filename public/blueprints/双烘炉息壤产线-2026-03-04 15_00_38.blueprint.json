@@ -230,17 +230,6 @@
       "config": {}
     },
     {
-      "typeId": "item_port_water_pump_1",
-      "rotation": 270,
-      "origin": {
-        "x": 19,
-        "y": 25
-      },
-      "config": {
-        "pumpOutputItemId": "item_liquid_water"
-      }
-    },
-    {
       "typeId": "item_port_thickener_1",
       "rotation": 270,
       "origin": {

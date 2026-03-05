@@ -1526,6 +1526,21 @@ function applyMinuteWindowDelta(
   }
 }
 
+function recomputePerMinuteTotalsFromWindow(
+  minuteWindowDeltas: Array<Partial<Record<ItemId, number>>>,
+  minuteWindowCount: number,
+  minuteWindowCapacity: number,
+) {
+  const producedPerMinute = emptyPerMinuteRecord()
+  const consumedPerMinute = emptyPerMinuteRecord()
+  const slotsToScan = Math.min(Math.max(0, minuteWindowCount), minuteWindowCapacity)
+  for (let index = 0; index < slotsToScan; index += 1) {
+    const deltaRecord = minuteWindowDeltas[index] ?? {}
+    applyMinuteWindowDelta(producedPerMinute, consumedPerMinute, deltaRecord, 1)
+  }
+  return { producedPerMinute, consumedPerMinute }
+}
+
 export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   if (!sim.isRunning) return sim
 
@@ -1544,6 +1559,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   const lanesClearingThisTick = new Set<string>()
   const lanesAdvancedThisTick = new Set<string>()
   const lanesReachedHalfThisTick = new Set<string>()
+  const completedCycleDeviceIdsThisTick = new Set<string>()
 
   const warehouse = { ...sim.warehouse }
   const processorDelta: Partial<Record<ItemId, number>> = {}
@@ -1672,6 +1688,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
               mark(processorDelta, output.itemId, output.amount)
             }
             laneProgress[laneIndex] = 0
+            completedCycleDeviceIdsThisTick.add(device.instanceId)
           }
         }
 
@@ -1730,6 +1747,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
               runtime.cycleProgressTicks = 0
               runtime.progress01 = 0
               runtime.activeRecipeId = undefined
+              completedCycleDeviceIdsThisTick.add(device.instanceId)
             }
           }
         } else {
@@ -2001,9 +2019,20 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     }
   }
 
+  // NOTE: This end-of-tick start pass is intentional.
+  // Reason:
+  // - During the transfer phase above, downstream devices can receive new inputs within the same tick.
+  // - Without this pass, those devices must wait one extra tick before starting a cycle, which lowers throughput
+  //   and introduces avoidable 1-tick latency in stable lines.
+  // Guardrail:
+  // - Devices that already completed a cycle in this tick are excluded via
+  //   `completedCycleDeviceIdsThisTick` to prevent same-tick restart cycle compression
+  //   (e.g. a 40-tick recipe being effectively shortened and over-reporting /min).
+  // Please do not remove this pass unless the tick lifecycle is redesigned and equivalent semantics are preserved.
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
     if (!runtime || isHardBlockedStall(runtime.stallReason)) continue
+    if (completedCycleDeviceIdsThisTick.has(device.instanceId)) continue
     tryStartReactorLanesOnTick(device, runtime, sim.tickRateHz, processorDelta)
     tryStartProcessorCycleOnTick(device, runtime, sim.tickRateHz, processorDelta)
   }
@@ -2012,22 +2041,18 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   const simSeconds = nextTick / sim.tickRateHz
   const minuteWindow = ensureMinuteWindow(sim, perMinuteWindowTicks)
   const minuteWindowDeltas = minuteWindow.buffer
-  const writeIndex = sim.tick % perMinuteWindowTicks
-
-  const producedPerMinute = { ...minuteWindow.producedPerMinute }
-  const consumedPerMinute = { ...minuteWindow.consumedPerMinute }
-  const shouldEvictPrevious = sim.minuteWindowCount >= perMinuteWindowTicks
-  if (shouldEvictPrevious) {
-    const evictedDelta = minuteWindowDeltas[writeIndex] ?? {}
-    applyMinuteWindowDelta(producedPerMinute, consumedPerMinute, evictedDelta, -1)
-  }
+  const writeIndex = minuteWindow.cursor
 
   const nextDelta = { ...processorDelta }
   minuteWindowDeltas[writeIndex] = nextDelta
-  applyMinuteWindowDelta(producedPerMinute, consumedPerMinute, nextDelta, 1)
 
-  const nextMinuteWindowCursor = nextTick % perMinuteWindowTicks
-  const nextMinuteWindowCount = Math.min(sim.minuteWindowCount + 1, perMinuteWindowTicks)
+  const nextMinuteWindowCursor = (writeIndex + 1) % perMinuteWindowTicks
+  const nextMinuteWindowCount = Math.min(minuteWindow.count + 1, perMinuteWindowTicks)
+  const { producedPerMinute, consumedPerMinute } = recomputePerMinuteTotalsFromWindow(
+    minuteWindowDeltas,
+    nextMinuteWindowCount,
+    perMinuteWindowTicks,
+  )
 
   const nextStats = {
     simSeconds,

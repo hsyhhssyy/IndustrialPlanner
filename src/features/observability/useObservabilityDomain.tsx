@@ -59,9 +59,15 @@ export function useObservabilityDomain({
   const [statsTableMaxHeight, setStatsTableMaxHeight] = useState<number | null>(null)
   const statsTableRef = useRef<HTMLTableElement | null>(null)
 
+  const formatRateValue = (value: number) => {
+    if (!Number.isFinite(value)) return '0'
+    return `${Math.max(0, Math.round(value))}`
+  }
+
   const statsRows = useMemo(() => {
     const rows = ITEMS.map((item) => ({
       itemId: item.id,
+      itemLabel: getItemLabel(language, item.id),
       producedPerMinute: sim.stats.producedPerMinute[item.id],
       consumedPerMinute: sim.stats.consumedPerMinute[item.id],
       stock: ignoredInfiniteItemIds.has(item.id) ? Number.POSITIVE_INFINITY : sim.warehouse[item.id],
@@ -78,23 +84,14 @@ export function useObservabilityDomain({
       return hasProduced || hasConsumed || hasStock
     })
 
-    const hasPriorityStock = (row: (typeof rows)[number]) => {
-      if (Number.isFinite(row.stock)) return row.stock > 0
-      return row.consumedPerMinute > 0
-    }
-
     rows.sort((a, b) => {
-      const priorityDiff = Number(hasPriorityStock(b)) - Number(hasPriorityStock(a))
-      if (priorityDiff !== 0) return priorityDiff
-
-      const producedDiff = b.producedPerMinute - a.producedPerMinute
-      if (producedDiff !== 0) return producedDiff
-
+      const labelDiff = a.itemLabel.localeCompare(b.itemLabel, language)
+      if (labelDiff !== 0) return labelDiff
       return a.itemId.localeCompare(b.itemId)
     })
 
     return rows
-  }, [ignoredInfiniteItemIds, sim.stats.consumedPerMinute, sim.stats.producedPerMinute, sim.warehouse, sim.stats.everConsumed, sim.stats.everProduced, sim.stats.everStockPositive])
+  }, [ignoredInfiniteItemIds, language, sim.stats.consumedPerMinute, sim.stats.producedPerMinute, sim.warehouse, sim.stats.everConsumed, sim.stats.everProduced, sim.stats.everStockPositive])
 
   const hasMoreStatsRows = statsRows.length > statsTopN
   const visibleStatsRows = hasMoreStatsRows && !showAllStatsRows ? statsRows.slice(0, statsTopN) : statsRows
@@ -171,8 +168,8 @@ export function useObservabilityDomain({
             {visibleStatsRows.map((row) => (
               <tr key={row.itemId}>
                 <td>{getItemLabel(language, row.itemId)}</td>
-                <td>{formatCompactNumber(row.producedPerMinute)}</td>
-                <td>{formatCompactNumber(row.consumedPerMinute)}</td>
+                <td>{formatRateValue(row.producedPerMinute)}</td>
+                <td>{formatRateValue(row.consumedPerMinute)}</td>
                 <td>{formatCompactStock(row.stock)}</td>
               </tr>
             ))}
