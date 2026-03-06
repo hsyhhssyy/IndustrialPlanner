@@ -85,6 +85,7 @@ type RightPanelProps = {
   updatePickupIgnoreInventory: (deviceInstanceId: string, enabled: boolean) => void
   updateProtocolHubOutputIgnoreInventory: (deviceInstanceId: string, portId: string, enabled: boolean) => void
   setLayout: (updater: LayoutState | ((current: LayoutState) => LayoutState)) => void
+  openStorageSlotConfigDialog: (deviceInstanceId: string) => void
   updateProcessorPreloadSlot: (deviceInstanceId: string, slotIndex: number, patch: { itemId?: ItemId | null; amount?: number }) => void
   reactorRecipeCandidates: Array<{
     id: string
@@ -144,6 +145,7 @@ export function RightPanel({
   updatePickupIgnoreInventory,
   updateProtocolHubOutputIgnoreInventory,
   setLayout,
+  openStorageSlotConfigDialog,
   updateProcessorPreloadSlot,
   reactorRecipeCandidates,
   selectedReactorPoolConfig,
@@ -155,6 +157,12 @@ export function RightPanel({
   updateReactorLiquidOutputItemB,
   simIsRunning,
 }: RightPanelProps) {
+  const slotConfigSupportedTypeIds = new Set<DeviceInstance['typeId']>([
+    'item_port_storager_1',
+    'item_port_sp_hub_1',
+    'item_port_mix_pool_1',
+  ])
+
   const getPreloadSlotLabel = (deviceTypeId: DeviceInstance['typeId'], slotIndex: number) => {
     if (deviceTypeId === 'item_port_xiranite_oven_1') {
       if (slotIndex === 0) return t('detail.preloadSlotSolidInput')
@@ -288,6 +296,7 @@ export function RightPanel({
           )}
           <div className="kv"><span>{t('detail.instanceId')}</span><span>{selectedDevice.instanceId}</span></div>
           <div className="kv"><span>{t('detail.deviceType')}</span><span>{getDeviceLabel(language, selectedDevice.typeId)}</span></div>
+          <div className="kv"><span>{t('detail.devicePowerDemand')}</span><span>{DEVICE_TYPE_BY_ID[selectedDevice.typeId].powerDemand} kW</span></div>
           <div className="kv"><span>{t('detail.rotation')}</span><span>{selectedDevice.rotation}</span></div>
           <div className="kv"><span>{t('detail.position')}</span><span>{selectedDevice.origin.x},{selectedDevice.origin.y}</span></div>
           <div className="kv"><span>{t('detail.currentStatus')}</span><span>{getRuntimeStatusText(selectedRuntime, t)}</span></div>
@@ -295,6 +304,20 @@ export function RightPanel({
             <span>{t('detail.internalStatus')}</span>
             <span>{getInternalStatusText(selectedDevice, selectedRuntime, t)}</span>
           </div>
+          {slotConfigSupportedTypeIds.has(selectedDevice.typeId) && (
+            <div className="kv">
+              <span>{t('detail.storageSlotConfig')}</span>
+              <span>
+                <button
+                  type="button"
+                  disabled={simIsRunning}
+                  onClick={() => openStorageSlotConfigDialog(selectedDevice.instanceId)}
+                >
+                  {t('detail.storageSlotConfig')}
+                </button>
+              </span>
+            </div>
+          )}
           {isBelt(selectedDevice.typeId) && selectedRuntime && 'slot' in selectedRuntime && (
             <>
               <div className="kv">
@@ -449,6 +472,24 @@ export function RightPanel({
                   <span>{t('detail.cacheInventory')}</span>
                   <span>{formatInventoryAmounts(language, selectedRuntime.inventory, t)}</span>
                 </div>
+              )}
+              {'inventory' in selectedRuntime && Array.isArray(selectedRuntime.bufferGroups) && selectedRuntime.bufferGroups.length > 0 &&
+                (selectedDevice.typeId === 'item_port_sp_hub_1' || selectedDevice.typeId === 'item_port_storager_1') && (
+                <>
+                  {selectedRuntime.bufferGroups[0].slots
+                    .slice()
+                    .sort((left, right) => left.slotIndex - right.slotIndex)
+                    .map((slot) => (
+                      <div key={`storage-runtime-slot-${slot.slotIndex}`} className="kv">
+                        <span>{t('detail.preloadSlot', { index: slot.slotIndex + 1 })}</span>
+                        <span>
+                          {slot.currentItemId && slot.amount > 0
+                            ? `${getItemLabel(language, slot.currentItemId)} x${slot.amount}`
+                            : `${t('detail.empty')}${slot.mode === 'pinned' && !slot.pinnedItemId ? ' (pinned)' : ''}`}
+                        </span>
+                      </div>
+                    ))}
+                </>
               )}
               {'slot' in selectedRuntime && (
                 <div className="kv">
@@ -624,32 +665,34 @@ export function RightPanel({
             </>
           )}
           {selectedDevice.typeId === 'item_port_storager_1' && (
-            <div className="kv kv-switch">
-              <span>{t('detail.submitWarehouse')}</span>
-              <span className="kv-switch-value">
-                <label className="switch-toggle" aria-label={t('detail.submitWarehouse')}>
-                  <input
-                    type="checkbox"
-                    checked={selectedDevice.config.submitToWarehouse ?? true}
-                    disabled={simIsRunning}
-                    onChange={(event) => {
-                      const checked = event.target.checked
-                      setLayout((current) => ({
-                        ...current,
-                        devices: current.devices.map((device) =>
-                          device.instanceId === selectedDevice.instanceId
-                            ? { ...device, config: { ...device.config, submitToWarehouse: checked } }
-                            : device,
-                        ),
-                      }))
-                    }}
-                  />
-                  <span className="switch-track" aria-hidden="true">
-                    <span className="switch-thumb" />
-                  </span>
-                </label>
-              </span>
-            </div>
+            <>
+              <div className="kv kv-switch">
+                <span>{t('detail.submitWarehouse')}</span>
+                <span className="kv-switch-value">
+                  <label className="switch-toggle" aria-label={t('detail.submitWarehouse')}>
+                    <input
+                      type="checkbox"
+                      checked={selectedDevice.config.submitToWarehouse ?? true}
+                      disabled={simIsRunning}
+                      onChange={(event) => {
+                        const checked = event.target.checked
+                        setLayout((current) => ({
+                          ...current,
+                          devices: current.devices.map((device) =>
+                            device.instanceId === selectedDevice.instanceId
+                              ? { ...device, config: { ...device.config, submitToWarehouse: checked } }
+                              : device,
+                          ),
+                        }))
+                      }}
+                    />
+                    <span className="switch-track" aria-hidden="true">
+                      <span className="switch-thumb" />
+                    </span>
+                  </label>
+                </span>
+              </div>
+            </>
           )}
           {selectedDevice.typeId === 'item_port_mix_pool_1' && !simIsRunning && selectedReactorPoolConfig && (
             <div className="picker">

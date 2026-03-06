@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { DEVICE_TYPE_BY_ID, PLACEABLE_TYPES } from './domain/registry'
 import {
@@ -28,6 +28,7 @@ import type {
   DeviceTypeId,
   ItemId,
   PowerMode,
+  StorageSlotConfigEntry,
 } from './domain/types'
 import { usePersistentState } from './core/usePersistentState'
 import { createTranslator, getItemLabel, type Language } from './i18n'
@@ -41,6 +42,7 @@ import { RightPanel } from './ui/panels/RightPanel'
 import { TopBar } from './ui/TopBar'
 import { SiteInfoBar } from './ui/SiteInfoBar'
 import { ItemPickerDialog } from './ui/dialogs/ItemPickerDialog'
+import { StorageSlotConfigDialog } from './ui/dialogs/StorageSlotConfigDialog'
 import { WorldContent } from './ui/world/WorldContent'
 import { StaticDeviceLayer } from './ui/world/StaticDeviceLayer'
 import { useBaseLayoutDomain } from './features/base/useBaseLayoutDomain'
@@ -121,6 +123,11 @@ const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>([
 const OUT_OF_LOT_TOAST_KEY = 'toast.outOfLot'
 const FALLBACK_PLACEMENT_TOAST_KEY = 'toast.invalidPlacementFallback'
 const MAX_RECENT_PICKER_ITEMS = 32
+const SLOT_CONFIG_SUPPORTED_TYPE_IDS = new Set<DeviceTypeId>([
+  'item_port_storager_1',
+  'item_port_sp_hub_1',
+  'item_port_mix_pool_1',
+])
 
 function normalizeRecentPickerItemIds(value: ItemId[]) {
   if (!Array.isArray(value)) return []
@@ -146,6 +153,7 @@ function App() {
     [],
     normalizeRecentPickerItemIds,
   )
+  const [storageSlotConfigDeviceId, setStorageSlotConfigDeviceId] = useState<string | null>(null)
 
   const gridRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -440,6 +448,13 @@ function App() {
     setLayout,
     isOreItemId,
   })
+
+  const storageSlotConfigDevice = useMemo(() => {
+    if (!storageSlotConfigDeviceId) return null
+    const target = layout.devices.find((device) => device.instanceId === storageSlotConfigDeviceId)
+    if (!target || !SLOT_CONFIG_SUPPORTED_TYPE_IDS.has(target.typeId)) return null
+    return target
+  }, [layout.devices, storageSlotConfigDeviceId])
 
   const { toPlaceOrigin, logisticsPreview, logisticsPreviewDevices, logisticsEndpointHighlights, portChevrons, placePreview } = useBuildPreviewDomain({
     layout,
@@ -808,6 +823,14 @@ function App() {
     shareBlueprintToFile,
   ])
 
+  useEffect(() => {
+    if (!storageSlotConfigDeviceId) return
+    const exists = layout.devices.some(
+      (device) => device.instanceId === storageSlotConfigDeviceId && SLOT_CONFIG_SUPPORTED_TYPE_IDS.has(device.typeId),
+    )
+    if (!exists) setStorageSlotConfigDeviceId(null)
+  }, [layout.devices, storageSlotConfigDeviceId])
+
   return (
     <div className="app-shell">
       <TopBar
@@ -923,6 +946,7 @@ function App() {
           updatePickupIgnoreInventory={updatePickupIgnoreInventory}
           updateProtocolHubOutputIgnoreInventory={updateProtocolHubOutputIgnoreInventory}
           setLayout={setLayout}
+          openStorageSlotConfigDialog={(deviceInstanceId) => setStorageSlotConfigDeviceId(deviceInstanceId)}
           updateProcessorPreloadSlot={updateProcessorPreloadSlot}
           reactorRecipeCandidates={reactorRecipeCandidates}
           selectedReactorPoolConfig={selectedReactorPoolConfig}
@@ -957,6 +981,49 @@ function App() {
               const next = [itemId, ...current.filter((existing) => existing !== itemId)]
               return next.slice(0, MAX_RECENT_PICKER_ITEMS)
             })
+          }}
+        />
+      )}
+
+      {storageSlotConfigDevice && (
+        <StorageSlotConfigDialog
+          key={storageSlotConfigDevice.instanceId}
+          device={storageSlotConfigDevice}
+          language={language}
+          t={t}
+          getItemIconPath={getItemIconPath}
+          onClose={() => setStorageSlotConfigDeviceId(null)}
+          onSave={(slots: StorageSlotConfigEntry[]) => {
+            setLayout((current) => ({
+              ...current,
+              devices: current.devices.map((device) => {
+                if (device.instanceId !== storageSlotConfigDevice.instanceId || !SLOT_CONFIG_SUPPORTED_TYPE_IDS.has(device.typeId)) return device
+                const nextConfig = { ...device.config }
+                if (slots.length > 0) {
+                  nextConfig.storageSlots = slots
+                } else {
+                  delete nextConfig.storageSlots
+                }
+
+                const legacyPreloads = slots
+                  .filter((slot) => Boolean(slot.preloadItemId) && (slot.preloadAmount ?? 0) > 0)
+                  .map((slot) => ({
+                    slotIndex: slot.slotIndex,
+                    itemId: slot.preloadItemId as ItemId,
+                    amount: Math.max(0, Math.floor(slot.preloadAmount ?? 0)),
+                  }))
+
+                if (device.typeId === 'item_port_storager_1' || device.typeId === 'item_port_sp_hub_1') {
+                  if (legacyPreloads.length > 0) {
+                    nextConfig.storagePreloadInputs = legacyPreloads
+                  } else {
+                    delete nextConfig.storagePreloadInputs
+                  }
+                }
+
+                return { ...device, config: nextConfig }
+              }),
+            }))
           }}
         />
       )}

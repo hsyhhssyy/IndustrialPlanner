@@ -10,7 +10,12 @@ import {
   reactorPeekOutputForPort,
   reactorSelectedRecipeIds,
 } from './reactorPool'
+import { buildTransferPlans } from './flow/plan'
+import { commitTransferPlans } from './flow/commit'
+import type { PortLink as FlowPortLink, ReceiveState, TransferPlan } from './flow/types'
 import type {
+  BufferGroupRuntime,
+  BufferSlotRuntime,
   DeviceInstance,
   DeviceRuntime,
   ItemId,
@@ -20,6 +25,7 @@ import type {
   RecipeDef,
   SimState,
   SlotData,
+  StorageSlotConfigEntry,
   StallReason,
 } from '../domain/types'
 
@@ -47,6 +53,13 @@ const BUS_SOURCE_TYPE_ID: DeviceInstance['typeId'] = 'item_port_log_hongs_bus_so
 const BUS_SEGMENT_TYPE_ID: DeviceInstance['typeId'] = 'item_port_log_hongs_bus'
 const PICKUP_TYPE_ID: DeviceInstance['typeId'] = 'item_port_unloader_1'
 const PROTOCOL_HUB_TYPE_ID: DeviceInstance['typeId'] = 'item_port_sp_hub_1'
+const STORAGE_BOX_TYPE_ID: DeviceInstance['typeId'] = 'item_port_storager_1'
+const PROTOCOL_HUB_STORAGE_GROUP_ID = 'protocol-hub-storage-group-1'
+const STORAGE_BOX_GROUP_ID = 'storage-box-group-1'
+const REACTOR_SOLID_GROUP_ID = 'reactor-solid-group-1'
+const REACTOR_LIQUID_GROUP_ID = 'reactor-liquid-group-1'
+const STORAGE_SLOT_COUNT = 6
+const STORAGE_SLOT_CAPACITY = 50
 const LOADER_TYPE_ID: DeviceInstance['typeId'] = 'item_port_loader_1'
 const THERMAL_POOL_TYPE_ID: DeviceInstance['typeId'] = 'item_port_power_sta_1'
 const PROTOCOL_HUB_SUPPLY_KW = 200
@@ -103,16 +116,6 @@ function transportSpeedPerTick(typeId: DeviceInstance['typeId'], tickRateHz: num
   return 1 / Math.max(1, secondsPerCell * tickRateHz)
 }
 
-type TransferPlan = {
-  fromId: string
-  fromPortId: string
-  fromLane: 'slot' | 'ns' | 'we' | 'output'
-  toId: string
-  toPortId: string
-  itemId: ItemId
-  lane: 'slot' | 'ns' | 'we' | 'output'
-}
-
 type ProcessorBufferKind = 'input' | 'output'
 
 type NeighborGraph = ReturnType<typeof neighborsFromLinks>
@@ -152,8 +155,7 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
       outputBuffer: {},
       inputSlotItems: Array.from({ length: inputSpec.slots }, () => null),
       outputSlotItems: Array.from({ length: outputSpec.slots }, () => null),
-      solidInputRrIndex: solidInputPortOrder(device.typeId).length > 1 ? 0 : undefined,
-      solidOutputRrIndex: solidOutputPortOrder(device.typeId).length > 1 ? 0 : undefined,
+      bufferGroups: isReactor ? createReactorBufferGroups() : undefined,
       cycleProgressTicks: 0,
       reactorCycleProgressTicks: isReactor ? [0, 0] : undefined,
       producedItemsTotal: 0,
@@ -165,12 +167,17 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
     }
   }
   if (def.runtimeKind === 'storage') {
+    const bufferGroups =
+      device.typeId === PROTOCOL_HUB_TYPE_ID
+        ? [createProtocolStorageBufferGroup(device)]
+        : device.typeId === STORAGE_BOX_TYPE_ID
+          ? [createStorageBoxBufferGroup(device)]
+          : undefined
     return {
       ...baseRuntime(),
       inventory: {},
       submitAccumulatorTicks: 0,
-      solidInputRrIndex: solidInputPortOrder(device.typeId).length > 1 ? 0 : undefined,
-      solidOutputRrIndex: solidOutputPortOrder(device.typeId).length > 1 ? 0 : undefined,
+      bufferGroups,
     }
   }
   if (def.runtimeKind === 'conveyor') {
@@ -675,10 +682,43 @@ function tryAddProcessorInput(runtime: DeviceRuntime, deviceTypeId: DeviceInstan
   return tryAddProcessorBufferAmount(runtime, deviceTypeId, 'input', itemId, amount)
 }
 
+function syncReactorGroupSlotsFromRuntime(runtime: ProcessorRuntime, group: BufferGroupRuntime) {
+  for (const slot of group.slots) {
+    const boundItemId = runtime.inputSlotItems[slot.slotIndex]
+    const amount = boundItemId ? (runtime.inputBuffer[boundItemId] ?? 0) : 0
+    slot.currentItemId = boundItemId ?? null
+    slot.amount = Math.max(0, Math.min(slot.capacity, amount))
+  }
+}
+
+function isReactorProcessorRuntime(runtime: DeviceRuntime): runtime is ProcessorRuntime {
+  return 'inputBuffer' in runtime && 'outputBuffer' in runtime && Array.isArray(runtime.reactorCycleProgressTicks)
+}
+
+function reactorPortCanAcceptItem(toPortId: string, itemId: ItemId) {
+  const itemType = ITEM_BY_ID[itemId]?.type
+  if (toPortId === 'in_e_1' || toPortId === 'in_e_3') return itemType === 'liquid'
+  if (toPortId === 'in_s_1' || toPortId === 'in_s_3') return itemType === 'solid'
+  return false
+}
+
 function tryAddReactorInput(runtime: DeviceRuntime, toPortId: string, itemId: ItemId, amount: number) {
   if (!('inputBuffer' in runtime) || !('outputBuffer' in runtime)) return false
+  if (!reactorPortCanAcceptItem(toPortId, itemId)) return false
+
+  const processorRuntime = runtime as ProcessorRuntime
   const inputSpec = processorBufferSpec('item_port_mix_pool_1', 'input')
-  return reactorAcceptInputFromPort(runtime as ProcessorRuntime, toPortId, itemId, amount, inputSpec.slotCapacities)
+  const mappedGroup = getBufferGroupForInputPort(processorRuntime, toPortId)
+  if (mappedGroup) {
+    syncReactorGroupSlotsFromRuntime(processorRuntime, mappedGroup)
+    const targetSlot = findStorageAcceptSlot(mappedGroup, itemId)
+    if (!targetSlot) return false
+    const slotCapacity = inputSpec.slotCapacities[targetSlot.slotIndex] ?? DEFAULT_PROCESSOR_BUFFER_CAPACITY
+    if ((processorRuntime.inputBuffer[itemId] ?? 0) + amount > slotCapacity) return false
+    return tryAddProcessorInputAtSlot(processorRuntime, 'item_port_mix_pool_1', targetSlot.slotIndex, itemId, amount)
+  }
+
+  return reactorAcceptInputFromPort(processorRuntime, toPortId, itemId, amount, inputSpec.slotCapacities)
 }
 
 function canAcceptProcessorInput(runtime: DeviceRuntime, deviceTypeId: DeviceInstance['typeId'], itemId: ItemId, amount: number) {
@@ -721,12 +761,319 @@ function commitProcessorOutputBatch(
   return producedCount
 }
 
-function addToStorage(runtime: DeviceRuntime, itemId: ItemId, amount: number) {
-  if ('inventory' in runtime) {
+function collectSolidInputPortIds(typeId: DeviceInstance['typeId']) {
+  return DEVICE_TYPE_BY_ID[typeId].ports0
+    .filter((port) => port.direction === 'Input' && allowsSolidInputType(port.allowedTypes))
+    .map((port) => port.id)
+}
+
+function collectSolidOutputPortIds(typeId: DeviceInstance['typeId']) {
+  return DEVICE_TYPE_BY_ID[typeId].ports0
+    .filter((port) => port.direction === 'Output' && allowsSolidInputType(port.allowedTypes))
+    .map((port) => port.id)
+}
+
+function createProtocolStorageBufferGroup(device: DeviceInstance): BufferGroupRuntime {
+  const slots: BufferSlotRuntime[] = Array.from({ length: STORAGE_SLOT_COUNT }, (_, slotIndex) => ({
+    slotIndex,
+    mode: 'free',
+    currentItemId: null,
+    amount: 0,
+    capacity: STORAGE_SLOT_CAPACITY,
+  }))
+
+  return {
+    id: PROTOCOL_HUB_STORAGE_GROUP_ID,
+    inPortIds: collectSolidInputPortIds(device.typeId),
+    outPortIds: collectSolidOutputPortIds(device.typeId),
+    inCursor: 0,
+    outCursor: 0,
+    slots,
+  }
+}
+
+function createStorageBoxBufferGroup(device: DeviceInstance): BufferGroupRuntime {
+  const slots: BufferSlotRuntime[] = Array.from({ length: STORAGE_SLOT_COUNT }, (_, slotIndex) => ({
+    slotIndex,
+    mode: 'free',
+    currentItemId: null,
+    amount: 0,
+    capacity: STORAGE_SLOT_CAPACITY,
+  }))
+
+  return {
+    id: STORAGE_BOX_GROUP_ID,
+    inPortIds: collectSolidInputPortIds(device.typeId),
+    outPortIds: collectSolidOutputPortIds(device.typeId),
+    inCursor: 0,
+    outCursor: 0,
+    slots,
+  }
+}
+
+function createReactorBufferGroups(): BufferGroupRuntime[] {
+  const sharedSlotCapacities = processorBufferSpec('item_port_mix_pool_1', 'input').slotCapacities
+  const createSlots = () =>
+    Array.from({ length: sharedSlotCapacities.length }, (_, slotIndex) => ({
+      slotIndex,
+      mode: 'free' as const,
+      currentItemId: null,
+      amount: 0,
+      capacity: sharedSlotCapacities[slotIndex] ?? STORAGE_SLOT_CAPACITY,
+    }))
+
+  return [
+    {
+      id: REACTOR_SOLID_GROUP_ID,
+      inPortIds: ['in_s_1', 'in_s_3'],
+      outPortIds: ['out_n_1', 'out_n_3'],
+      inCursor: 0,
+      outCursor: 0,
+      slots: createSlots(),
+    },
+    {
+      id: REACTOR_LIQUID_GROUP_ID,
+      inPortIds: ['in_e_1', 'in_e_3'],
+      outPortIds: ['out_w_1', 'out_w_3'],
+      inCursor: 0,
+      outCursor: 0,
+      slots: createSlots(),
+    },
+  ]
+}
+
+function applyStorageSlotConfigToRuntime(runtime: DeviceRuntime, storageSlots: StorageSlotConfigEntry[] | undefined) {
+  const groups = getBufferGroups(runtime)
+  if (groups.length === 0 || !Array.isArray(storageSlots) || storageSlots.length === 0) return
+
+  for (const group of groups) {
+    const slotByIndex = new Map(group.slots.map((slot) => [slot.slotIndex, slot]))
+    for (const configSlot of storageSlots) {
+      const targetSlot = slotByIndex.get(configSlot.slotIndex)
+      if (!targetSlot) continue
+      targetSlot.mode = configSlot.mode === 'pinned' ? 'pinned' : 'free'
+      targetSlot.pinnedItemId = targetSlot.mode === 'pinned' ? configSlot.pinnedItemId : undefined
+    }
+  }
+}
+
+function getPrimaryBufferGroup(runtime: DeviceRuntime): BufferGroupRuntime | null {
+  if (!('bufferGroups' in runtime) || !Array.isArray(runtime.bufferGroups) || runtime.bufferGroups.length === 0) return null
+  return runtime.bufferGroups[0] ?? null
+}
+
+function getBufferGroups(runtime: DeviceRuntime): BufferGroupRuntime[] {
+  if (!('bufferGroups' in runtime) || !Array.isArray(runtime.bufferGroups) || runtime.bufferGroups.length === 0) return []
+  return runtime.bufferGroups
+}
+
+function getBufferGroupForInputPort(runtime: DeviceRuntime, portId: string): BufferGroupRuntime | null {
+  for (const group of getBufferGroups(runtime)) {
+    if (group.inPortIds.includes(portId)) return group
+  }
+  return null
+}
+
+function getBufferGroupForOutputPort(runtime: DeviceRuntime, portId: string): BufferGroupRuntime | null {
+  for (const group of getBufferGroups(runtime)) {
+    if (group.outPortIds.includes(portId)) return group
+  }
+  return null
+}
+
+function rotatedPortOrder(portOrder: string[], cursor: number) {
+  if (portOrder.length <= 1) return portOrder
+  const offset = ((cursor % portOrder.length) + portOrder.length) % portOrder.length
+  return [...portOrder.slice(offset), ...portOrder.slice(0, offset)]
+}
+
+function advanceBufferGroupInputCursor(runtime: DeviceRuntime, pickedPortId: string) {
+  const group = getBufferGroupForInputPort(runtime, pickedPortId)
+  if (!group || group.inPortIds.length <= 1) return false
+  const index = group.inPortIds.findIndex((portId) => portId === pickedPortId)
+  if (index < 0) return false
+  group.inCursor = (index + 1) % group.inPortIds.length
+  return true
+}
+
+function advanceBufferGroupOutputCursor(runtime: DeviceRuntime, pickedPortId: string) {
+  const group = getBufferGroupForOutputPort(runtime, pickedPortId)
+  if (!group || group.outPortIds.length <= 1) return false
+  const index = group.outPortIds.findIndex((portId) => portId === pickedPortId)
+  if (index < 0) return false
+  group.outCursor = (index + 1) % group.outPortIds.length
+  return true
+}
+
+function isStorageWithBufferGroups(runtime: DeviceRuntime) {
+  if (getBufferGroups(runtime).length === 0) return false
+  if ('inventory' in runtime) return true
+  return isReactorProcessorRuntime(runtime)
+}
+
+function canStorageSlotAcceptItem(slot: BufferSlotRuntime, itemId: ItemId) {
+  if (slot.amount >= slot.capacity) return false
+  if (slot.mode === 'pinned') {
+    if (!slot.pinnedItemId) return false
+    if (itemId !== slot.pinnedItemId) return false
+  }
+
+  if (!slot.currentItemId) return true
+  return slot.currentItemId === itemId
+}
+
+function findStorageAcceptSlot(group: BufferGroupRuntime, itemId: ItemId) {
+  const ordered = [...group.slots].sort((left, right) => left.slotIndex - right.slotIndex)
+  return ordered.find((slot) => canStorageSlotAcceptItem(slot, itemId)) ?? null
+}
+
+function rebuildStorageInventoryFromGroups(runtime: DeviceRuntime) {
+  if (!('inventory' in runtime)) return
+  const groups = getBufferGroups(runtime)
+  if (groups.length === 0) return
+
+  const nextInventory: Partial<Record<ItemId, number>> = {}
+  for (const group of groups) {
+    for (const slot of group.slots) {
+      if (!slot.currentItemId || slot.amount <= 0) continue
+      nextInventory[slot.currentItemId] = (nextInventory[slot.currentItemId] ?? 0) + slot.amount
+    }
+  }
+  runtime.inventory = nextInventory
+}
+
+function canAddToStorage(runtime: DeviceRuntime, itemId: ItemId, amount: number, toPortId?: string) {
+  if (!('inventory' in runtime)) return false
+  if (amount <= 0) return true
+  const groups = toPortId
+    ? (() => {
+        const mapped = getBufferGroupForInputPort(runtime, toPortId)
+        return mapped ? [mapped] : []
+      })()
+    : getBufferGroups(runtime)
+  if (groups.length === 0) return true
+
+  let groupSnapshot = groups.map((group) => ({ ...group, slots: group.slots.map((slot) => ({ ...slot })) }))
+  let remaining = amount
+  while (remaining > 0) {
+    const targetGroup = groupSnapshot.find((group) => findStorageAcceptSlot(group, itemId))
+    if (!targetGroup) return false
+    const targetSlot = findStorageAcceptSlot(targetGroup, itemId)
+    if (!targetSlot) return false
+    const writable = Math.min(remaining, targetSlot.capacity - targetSlot.amount)
+    targetSlot.currentItemId = targetSlot.currentItemId ?? itemId
+    targetSlot.amount += writable
+    remaining -= writable
+  }
+  return true
+}
+
+function addToStorage(runtime: DeviceRuntime, itemId: ItemId, amount: number, toPortId?: string) {
+  if (!('inventory' in runtime)) return false
+  if (amount <= 0) return true
+
+  const groups = toPortId
+    ? (() => {
+        const mapped = getBufferGroupForInputPort(runtime, toPortId)
+        return mapped ? [mapped] : []
+      })()
+    : getBufferGroups(runtime)
+
+  if (groups.length === 0) {
     runtime.inventory[itemId] = (runtime.inventory[itemId] ?? 0) + amount
     return true
   }
-  return false
+
+  let remaining = amount
+  while (remaining > 0) {
+    const targetGroup = groups.find((group) => findStorageAcceptSlot(group, itemId))
+    if (!targetGroup) return false
+    const targetSlot = findStorageAcceptSlot(targetGroup, itemId)
+    if (!targetSlot) return false
+    const writable = Math.min(remaining, targetSlot.capacity - targetSlot.amount)
+    targetSlot.currentItemId = targetSlot.currentItemId ?? itemId
+    targetSlot.amount += writable
+    remaining -= writable
+  }
+
+  rebuildStorageInventoryFromGroups(runtime)
+  return true
+}
+
+function addToStorageAtSlot(runtime: DeviceRuntime, slotIndex: number, itemId: ItemId, amount: number) {
+  if (!('inventory' in runtime)) return false
+  const group = getPrimaryBufferGroup(runtime)
+  if (!group) return addToStorage(runtime, itemId, amount)
+  const slot = group.slots.find((entry) => entry.slotIndex === slotIndex)
+  if (!slot || amount <= 0) return false
+  if (!canStorageSlotAcceptItem(slot, itemId)) return false
+  const writable = Math.min(amount, slot.capacity - slot.amount)
+  if (writable <= 0) return false
+  slot.currentItemId = slot.currentItemId ?? itemId
+  slot.amount += writable
+  rebuildStorageInventoryFromGroups(runtime)
+  return true
+}
+
+function consumeStorageFromSlot(runtime: DeviceRuntime, slotIndex: number | undefined, itemId: ItemId, amount: number) {
+  if (!('inventory' in runtime)) return
+  const group = getPrimaryBufferGroup(runtime)
+  if (!group) {
+    runtime.inventory[itemId] = Math.max(0, (runtime.inventory[itemId] ?? 0) - amount)
+    return
+  }
+
+  const orderedSlots = [...group.slots].sort((left, right) => left.slotIndex - right.slotIndex)
+  const target = typeof slotIndex === 'number'
+    ? orderedSlots.find((slot) => slot.slotIndex === slotIndex)
+    : orderedSlots.find((slot) => slot.currentItemId === itemId && slot.amount > 0)
+  if (!target || !target.currentItemId) return
+
+  target.amount = Math.max(0, target.amount - amount)
+  if (target.amount <= 0) {
+    target.amount = 0
+    target.currentItemId = null
+  }
+  rebuildStorageInventoryFromGroups(runtime)
+}
+
+function orderedStorageSlotIndicesForOutput(runtime: DeviceRuntime, outPortId?: string) {
+  const group = outPortId ? getBufferGroupForOutputPort(runtime, outPortId) : getPrimaryBufferGroup(runtime)
+  if (!group) return []
+  if (isReactorProcessorRuntime(runtime)) {
+    syncReactorGroupSlotsFromRuntime(runtime, group)
+  }
+  return [...group.slots].sort((left, right) => left.slotIndex - right.slotIndex).map((slot) => slot.slotIndex)
+}
+
+function getStorageSlotItemId(runtime: DeviceRuntime, slotIndex: number, outPortId?: string): ItemId | null {
+  const group = outPortId ? getBufferGroupForOutputPort(runtime, outPortId) : getPrimaryBufferGroup(runtime)
+  if (!group) return null
+  if (isReactorProcessorRuntime(runtime)) {
+    syncReactorGroupSlotsFromRuntime(runtime, group)
+  }
+  const slot = group.slots.find((entry) => entry.slotIndex === slotIndex)
+  if (!slot || slot.amount <= 0 || !slot.currentItemId) return null
+  return slot.currentItemId
+}
+
+function canStorageSlotOutputToPort(device: DeviceInstance, runtime: DeviceRuntime, slotIndex: number, portId: string, itemId: ItemId) {
+  const group = getBufferGroupForOutputPort(runtime, portId)
+  if (!group) return false
+  if (isReactorProcessorRuntime(runtime)) {
+    syncReactorGroupSlotsFromRuntime(runtime, group)
+  }
+  const slot = group.slots.find((entry) => entry.slotIndex === slotIndex)
+  if (!slot || slot.amount <= 0 || !slot.currentItemId) return false
+  if (slot.currentItemId !== itemId) return false
+  if (!(group.outPortIds.length === 0 || group.outPortIds.includes(portId))) return false
+
+  if (isReactorProcessorRuntime(runtime) && device.typeId === 'item_port_mix_pool_1') {
+    const configuredItemId = reactorPeekOutputForPort(runtime, device.config, portId)
+    return configuredItemId === itemId
+  }
+
+  return true
 }
 
 function getSlotRef(runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we'): SlotData | null {
@@ -769,20 +1116,6 @@ function allowsSolidInputType(allowedTypes: { mode: 'solid' | 'liquid' | 'whitel
   return allowedTypes.whitelist.includes('solid')
 }
 
-function solidInputPortOrder(typeId: DeviceInstance['typeId']) {
-  const def = DEVICE_TYPE_BY_ID[typeId]
-  return def.ports0
-    .filter((port) => port.direction === 'Input' && allowsSolidInputType(port.allowedTypes))
-    .map((port) => port.id)
-}
-
-function solidOutputPortOrder(typeId: DeviceInstance['typeId']) {
-  const def = DEVICE_TYPE_BY_ID[typeId]
-  return def.ports0
-    .filter((port) => port.direction === 'Output' && allowsSolidInputType(port.allowedTypes))
-    .map((port) => port.id)
-}
-
 function setSlotRef(runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we', value: SlotData | null) {
   if (lane === 'slot' && 'slot' in runtime) runtime.slot = value
   if (lane === 'ns' && 'nsSlot' in runtime) runtime.nsSlot = value
@@ -799,7 +1132,6 @@ function canReceiveOnPort(device: DeviceInstance, runtime: DeviceRuntime, toPort
 }
 
 type ReceiveLane = 'slot' | 'ns' | 'we' | 'output'
-type ReceiveState = { lane: ReceiveLane | null; canTry: boolean; canAccept: boolean }
 
 function canReceiveOnPortWithPlan(
   device: DeviceInstance,
@@ -807,6 +1139,7 @@ function canReceiveOnPortWithPlan(
   toPortId: string,
   reservedReceivers: Set<string>,
   lanesClearingThisTick: Set<string>,
+  itemId: ItemId,
 ): ReceiveState {
   const lane = canReceiveOnPort(device, runtime, toPortId)
   if (!lane) return { lane: null, canTry: false, canAccept: false }
@@ -814,7 +1147,10 @@ function canReceiveOnPortWithPlan(
   const reserveKey = `${device.instanceId}:${lane}`
   if (reservedReceivers.has(reserveKey)) return { lane, canTry: false, canAccept: false }
 
-  if (lane === 'output') return { lane, canTry: true, canAccept: true }
+  if (lane === 'output') {
+    const canAccept = canAcceptIntoLane(device, runtime, lane, toPortId, itemId)
+    return { lane, canTry: true, canAccept }
+  }
   const slot = getSlotRef(runtime, lane)
   if (!slot) return { lane, canTry: true, canAccept: true }
 
@@ -837,6 +1173,9 @@ function canAcceptIntoLane(device: DeviceInstance, runtime: DeviceRuntime, lane:
     }
     return canAcceptProcessorInput(runtime, device.typeId, itemId, 1)
   }
+  if ('inventory' in runtime) {
+    return canAddToStorage(runtime, itemId, 1, toPortId)
+  }
   return true
 }
 
@@ -853,7 +1192,7 @@ function tryReceiveToLane(
       if (isReactorPoolType(device.typeId)) return tryAddReactorInput(runtime, toPortId, itemId, 1)
       return tryAddProcessorInput(runtime, device.typeId, itemId, 1)
     }
-    return addToStorage(runtime, itemId, 1)
+    return addToStorage(runtime, itemId, 1, toPortId)
   }
   const incomingEdge = toPortId.slice(-1).toUpperCase() as keyof typeof OPPOSITE_EDGE
   setSlotRef(runtime, lane, {
@@ -898,6 +1237,15 @@ function peekOutputItem(
   }
 
   if ('inventory' in runtime) {
+    const slotIndices = orderedStorageSlotIndicesForOutput(runtime)
+    if (slotIndices.length > 0) {
+      for (const slotIndex of slotIndices) {
+        const slotItemId = getStorageSlotItemId(runtime, slotIndex)
+        if (slotItemId) return slotItemId
+      }
+      return null
+    }
+
     for (const itemId of ITEM_IDS) {
       if ((runtime.inventory[itemId] ?? 0) > 0) return itemId
     }
@@ -936,6 +1284,75 @@ function peekReadyItemForLane(
   const slot = getSlotRef(runtime, lane)
   if (!slot || slot.progress01 < 1) return null
   return slot.itemId
+}
+
+function prepareSourceLaneItem(
+  device: DeviceInstance,
+  runtime: DeviceRuntime,
+  fromLane: 'slot' | 'ns' | 'we' | 'output',
+  fromPortId: string,
+  lanesReachedHalfThisTick: ReadonlySet<string>,
+  lanesAdvancedThisTick: Set<string>,
+  tickRateHz: number,
+  warehouse: Record<ItemId, number>,
+) {
+  if (fromLane === 'output' && isReactorPoolType(device.typeId) && 'inputBuffer' in runtime && 'outputBuffer' in runtime) {
+    const itemId = reactorPeekOutputForPort(runtime as ProcessorRuntime, device.config, fromPortId)
+    return { itemId, laneProgressAdvanced: false }
+  }
+
+  const laneAdvanceKey = `${device.instanceId}:${fromLane}`
+  if (lanesReachedHalfThisTick.has(laneAdvanceKey)) {
+    return { itemId: null, laneProgressAdvanced: false }
+  }
+
+  let laneProgressAdvanced = false
+  if (!lanesAdvancedThisTick.has(laneAdvanceKey)) {
+    const transportSpeed = transportSpeedPerTick(device.typeId, tickRateHz)
+    const beforeSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
+    const beforeProgress = beforeSlot?.progress01 ?? null
+    readyItemForLane(device, runtime, fromLane, transportSpeed, warehouse, fromPortId)
+    lanesAdvancedThisTick.add(laneAdvanceKey)
+    const afterSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
+    const afterProgress = afterSlot?.progress01 ?? null
+    laneProgressAdvanced = beforeProgress !== null && afterProgress !== null && afterProgress > beforeProgress
+  }
+
+  const itemId = peekReadyItemForLane(device, runtime, fromLane, warehouse, fromPortId)
+  return { itemId, laneProgressAdvanced }
+}
+
+function consumeSourceByPlan(
+  plan: TransferPlan,
+  fromRuntime: DeviceRuntime,
+  fromDevice: DeviceInstance,
+  tick: number,
+) {
+  if (plan.fromLane === 'output') {
+    if (isReactorPoolType(fromDevice.typeId) && 'inputBuffer' in fromRuntime && 'outputBuffer' in fromRuntime) {
+      reactorConsumeItemFromSharedSlotPool(fromRuntime as ProcessorRuntime, plan.itemId, 1)
+    } else if ('outputBuffer' in fromRuntime) {
+      fromRuntime.outputBuffer[plan.itemId] = Math.max(0, (fromRuntime.outputBuffer[plan.itemId] ?? 0) - 1)
+      clearSlotBindingIfEmpty(fromRuntime.outputBuffer, fromRuntime.outputSlotItems, plan.itemId)
+    } else if ('inventory' in fromRuntime) {
+      consumeStorageFromSlot(fromRuntime, plan.fromOutputSlotIndex, plan.itemId, 1)
+    }
+    return
+  }
+
+  if (
+    isBelt(fromDevice.typeId) &&
+    plan.fromLane === 'slot' &&
+    'slot' in fromRuntime &&
+    fromRuntime.slot &&
+    'transportTotalTicks' in fromRuntime &&
+    'transportSamples' in fromRuntime
+  ) {
+    const transitTicks = Math.max(1, tick - fromRuntime.slot.enteredTick)
+    fromRuntime.transportTotalTicks += transitTicks
+    fromRuntime.transportSamples += 1
+  }
+  setSlotRef(fromRuntime, plan.fromLane, null)
 }
 
 function hasReadyOutput(device: DeviceInstance, runtime: DeviceRuntime, warehouse: Record<ItemId, number>) {
@@ -994,22 +1411,32 @@ function orderedOutLinks(device: DeviceInstance, runtime: DeviceRuntime, outLink
     orderedLinks = [...outLinks.slice(offset), ...outLinks.slice(0, offset)]
   }
 
-  if (('outputBuffer' in runtime || 'inventory' in runtime) && typeof runtime.solidOutputRrIndex === 'number') {
-    const outputPortOrder = solidOutputPortOrder(device.typeId)
-    if (outputPortOrder.length > 1) {
-      const offset = runtime.solidOutputRrIndex % outputPortOrder.length
-      const rotatedPortOrder = [...outputPortOrder.slice(offset), ...outputPortOrder.slice(0, offset)]
-      const portPriority = new Map(rotatedPortOrder.map((portId, index) => [portId, index]))
+  const groups = getBufferGroups(runtime)
+  if (groups.length > 0) {
+    const groupIndexById = new Map(groups.map((group, index) => [group.id, index]))
+    const priorityByPort = new Map<string, { groupIndex: number; portPriority: number }>()
 
-      orderedLinks = [...orderedLinks].sort((left, right) => {
-        const leftPriority = portPriority.get(left.from.portId)
-        const rightPriority = portPriority.get(right.from.portId)
-        if (leftPriority === undefined && rightPriority === undefined) return 0
-        if (leftPriority === undefined) return 1
-        if (rightPriority === undefined) return -1
-        return leftPriority - rightPriority
-      })
+    for (const group of groups) {
+      const rotated = rotatedPortOrder(group.outPortIds, group.outCursor)
+      for (let index = 0; index < rotated.length; index += 1) {
+        priorityByPort.set(rotated[index], {
+          groupIndex: groupIndexById.get(group.id) ?? Number.MAX_SAFE_INTEGER,
+          portPriority: index,
+        })
+      }
     }
+
+    orderedLinks = [...orderedLinks].sort((left, right) => {
+      const leftPriority = priorityByPort.get(left.from.portId)
+      const rightPriority = priorityByPort.get(right.from.portId)
+      if (!leftPriority && !rightPriority) return 0
+      if (!leftPriority) return 1
+      if (!rightPriority) return -1
+      if (leftPriority.groupIndex !== rightPriority.groupIndex) {
+        return leftPriority.groupIndex - rightPriority.groupIndex
+      }
+      return leftPriority.portPriority - rightPriority.portPriority
+    })
   }
 
   return orderedLinks
@@ -1043,7 +1470,8 @@ function buildConvergerPreferredInputPortMap(
     if (!runtime || !('rrIndex' in runtime)) continue
 
     const inLinks = links.inMap.get(device.instanceId) ?? []
-    const availablePorts = new Set<string>()
+    const splitterSourcePorts = new Set<string>()
+    const nonSplitterSourcePorts = new Set<string>()
 
     for (const inLink of inLinks) {
       const sourceRuntime = runtimeById[inLink.from.instanceId]
@@ -1052,16 +1480,21 @@ function buildConvergerPreferredInputPortMap(
       if (isHardBlockedStall(sourceRuntime.stallReason)) continue
       const readyItem = peekReadyItemForSourceLink(sourceDevice, sourceRuntime, inLink.from.portId, warehouse)
       if (!readyItem) continue
-      availablePorts.add(inLink.to.portId)
+      if (isSplitterType(sourceDevice.typeId)) {
+        splitterSourcePorts.add(inLink.to.portId)
+      } else {
+        nonSplitterSourcePorts.add(inLink.to.portId)
+      }
     }
 
-    if (availablePorts.size === 0) continue
+    const preferredSourcePorts = splitterSourcePorts.size > 0 ? splitterSourcePorts : nonSplitterSourcePorts
+    if (preferredSourcePorts.size === 0) continue
 
     const baseOffset = runtime.rrIndex % CONVERGER_INPUT_PORT_ORDER.length
     for (let step = 0; step < CONVERGER_INPUT_PORT_ORDER.length; step += 1) {
       const probeIndex = (baseOffset + step) % CONVERGER_INPUT_PORT_ORDER.length
       const probePort = CONVERGER_INPUT_PORT_ORDER[probeIndex]
-      if (!availablePorts.has(probePort)) continue
+      if (!preferredSourcePorts.has(probePort)) continue
       preferredPortByConvergerId.set(device.instanceId, probePort)
       break
     }
@@ -1077,45 +1510,54 @@ function buildDevicePreferredSolidInputPortMap(
   deviceById: Map<string, DeviceInstance>,
   warehouse: Record<ItemId, number>,
 ) {
-  const preferredPortByDeviceId = new Map<string, string>()
+  const preferredPortsByDeviceId = new Map<string, Set<string>>()
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
     if (!runtime || (!('inputBuffer' in runtime) && !('inventory' in runtime))) continue
-    if (typeof runtime.solidInputRrIndex !== 'number') continue
-
-    const inputPortOrder = solidInputPortOrder(device.typeId)
-    if (inputPortOrder.length <= 1) continue
 
     const inLinks = links.inMap.get(device.instanceId) ?? []
-    const availablePorts = new Set<string>()
+    const groups = getBufferGroups(runtime)
+    if (groups.length === 0) continue
 
-    for (const inLink of inLinks) {
-      if (!inputPortOrder.includes(inLink.to.portId)) continue
-      const sourceRuntime = runtimeById[inLink.from.instanceId]
-      const sourceDevice = deviceById.get(inLink.from.instanceId)
-      if (!sourceRuntime || !sourceDevice) continue
-      if (isHardBlockedStall(sourceRuntime.stallReason)) continue
-      const readyItem = peekReadyItemForSourceLink(sourceDevice, sourceRuntime, inLink.from.portId, warehouse)
-      if (!readyItem) continue
-      if (ITEM_BY_ID[readyItem]?.type !== 'solid') continue
-      if (!canAcceptIntoLane(device, runtime, 'output', inLink.to.portId, readyItem)) continue
-      availablePorts.add(inLink.to.portId)
+    const preferredPorts = new Set<string>()
+
+    for (const group of groups) {
+      const inputPortOrder = group.inPortIds
+      if (inputPortOrder.length <= 1) continue
+      const availablePorts = new Set<string>()
+
+      for (const inLink of inLinks) {
+        if (!inputPortOrder.includes(inLink.to.portId)) continue
+        const sourceRuntime = runtimeById[inLink.from.instanceId]
+        const sourceDevice = deviceById.get(inLink.from.instanceId)
+        if (!sourceRuntime || !sourceDevice) continue
+        if (isHardBlockedStall(sourceRuntime.stallReason)) continue
+        const readyItem = peekReadyItemForSourceLink(sourceDevice, sourceRuntime, inLink.from.portId, warehouse)
+        if (!readyItem) continue
+        if (ITEM_BY_ID[readyItem]?.type !== 'solid') continue
+        if (!canAcceptIntoLane(device, runtime, 'output', inLink.to.portId, readyItem)) continue
+        availablePorts.add(inLink.to.portId)
+      }
+
+      if (availablePorts.size === 0) continue
+
+      const baseOffset = (((group.inCursor % inputPortOrder.length) + inputPortOrder.length) % inputPortOrder.length)
+      for (let step = 0; step < inputPortOrder.length; step += 1) {
+        const probeIndex = (baseOffset + step) % inputPortOrder.length
+        const probePort = inputPortOrder[probeIndex]
+        if (!availablePorts.has(probePort)) continue
+        preferredPorts.add(probePort)
+        break
+      }
     }
 
-    if (availablePorts.size === 0) continue
-
-    const baseOffset = runtime.solidInputRrIndex % inputPortOrder.length
-    for (let step = 0; step < inputPortOrder.length; step += 1) {
-      const probeIndex = (baseOffset + step) % inputPortOrder.length
-      const probePort = inputPortOrder[probeIndex]
-      if (!availablePorts.has(probePort)) continue
-      preferredPortByDeviceId.set(device.instanceId, probePort)
-      break
+    if (preferredPorts.size > 0) {
+      preferredPortsByDeviceId.set(device.instanceId, preferredPorts)
     }
   }
 
-  return preferredPortByDeviceId
+  return preferredPortsByDeviceId
 }
 
 function inPowerRange(target: DeviceInstance, poles: DeviceInstance[]) {
@@ -1208,6 +1650,14 @@ function cloneRuntime(runtime: DeviceRuntime): DeviceRuntime {
       outputBuffer: { ...runtime.outputBuffer },
       inputSlotItems: [...runtime.inputSlotItems],
       outputSlotItems: [...runtime.outputSlotItems],
+      bufferGroups: runtime.bufferGroups
+        ? runtime.bufferGroups.map((group) => ({
+            ...group,
+            inPortIds: [...group.inPortIds],
+            outPortIds: [...group.outPortIds],
+            slots: group.slots.map((slot) => ({ ...slot })),
+          }))
+        : undefined,
       reactorCycleProgressTicks: runtime.reactorCycleProgressTicks ? [...runtime.reactorCycleProgressTicks] as [number, number] : undefined,
       reactorActiveRecipeIds: runtime.reactorActiveRecipeIds ? [...runtime.reactorActiveRecipeIds] as [string | undefined, string | undefined] : undefined,
     }
@@ -1217,6 +1667,14 @@ function cloneRuntime(runtime: DeviceRuntime): DeviceRuntime {
     return {
       ...runtime,
       inventory: { ...runtime.inventory },
+      bufferGroups: runtime.bufferGroups
+        ? runtime.bufferGroups.map((group) => ({
+            ...group,
+            inPortIds: [...group.inPortIds],
+            outPortIds: [...group.outPortIds],
+            slots: group.slots.map((slot) => ({ ...slot })),
+          }))
+        : undefined,
     }
   }
 
@@ -1284,6 +1742,10 @@ export function startSimulation(layout: LayoutState, sim: SimState, powerMode: P
     const runtime = runtimeById[device.instanceId]
     const deviceDef = DEVICE_TYPE_BY_ID[device.typeId]
     if ('inputBuffer' in runtime) {
+      if (isReactorPoolType(device.typeId) && getBufferGroups(runtime).length > 0) {
+        applyStorageSlotConfigToRuntime(runtime, device.config.storageSlots)
+      }
+
       const inputSpec = processorBufferSpec(device.typeId, 'input')
       for (const preload of preloadEntriesForDevice(device)) {
         const preloadAmount = Math.max(0, Math.floor(preload.amount ?? 0))
@@ -1291,6 +1753,37 @@ export function startSimulation(layout: LayoutState, sim: SimState, powerMode: P
         const slotCapacity = inputSpec.slotCapacities[preload.slotIndex] ?? DEFAULT_PROCESSOR_BUFFER_CAPACITY
         tryAddProcessorInputAtSlot(runtime, device.typeId, preload.slotIndex, preload.itemId, Math.min(preloadAmount, slotCapacity))
       }
+    }
+    if ('inventory' in runtime && isStorageWithBufferGroups(runtime)) {
+      applyStorageSlotConfigToRuntime(runtime, device.config.storageSlots)
+
+      const configuredStorageSlots = Array.isArray(device.config.storageSlots) ? device.config.storageSlots : []
+      const hasStorageSlotConfig = configuredStorageSlots.length > 0
+      const storagePreloads = hasStorageSlotConfig
+        ? []
+        : Array.isArray(device.config.storagePreloadInputs) && device.config.storagePreloadInputs.length > 0
+          ? [...device.config.storagePreloadInputs]
+          : Array.isArray(device.config.preloadInputs)
+            ? [...device.config.preloadInputs]
+            : []
+
+      if (hasStorageSlotConfig) {
+        for (const slot of configuredStorageSlots) {
+          const preloadItemId = slot.preloadItemId
+          const preloadAmount = Math.max(0, Math.floor(slot.preloadAmount ?? 0))
+          if (!preloadItemId || preloadAmount <= 0) continue
+          const targetSlotIndex = Math.max(0, Math.floor(slot.slotIndex ?? 0))
+          addToStorageAtSlot(runtime, targetSlotIndex, preloadItemId, preloadAmount)
+        }
+      }
+
+      const sortedPreloads = storagePreloads.sort((left, right) => left.slotIndex - right.slotIndex)
+      for (const preload of sortedPreloads) {
+        const amount = Math.max(0, Math.floor(preload.amount ?? 0))
+        if (!preload.itemId || amount <= 0) continue
+        addToStorageAtSlot(runtime, Math.max(0, Math.floor(preload.slotIndex ?? 0)), preload.itemId, amount)
+      }
+      rebuildStorageInventoryFromGroups(runtime)
     }
     let stall: StallReason = 'NONE'
     if (overlaps.has(device.instanceId)) stall = 'OVERLAP'
@@ -1554,10 +2047,6 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   }
   const links = getNeighbors(layout)
   const deviceById = getDeviceByIdMap(layout)
-  const transferPlans: TransferPlan[] = []
-  const reservedReceivers = new Set<string>()
-  const lanesClearingThisTick = new Set<string>()
-  const lanesAdvancedThisTick = new Set<string>()
   const lanesReachedHalfThisTick = new Set<string>()
   const completedCycleDeviceIdsThisTick = new Set<string>()
 
@@ -1811,119 +2300,31 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     }
   }
 
-  const plannedSenders = new Set<string>()
-  let changed = true
-  while (changed) {
-    changed = false
-    const convergerPreferredInputPortById = buildConvergerPreferredInputPortMap(layout, runtimeById, links, deviceById, warehouse)
-    const devicePreferredSolidInputPortById = buildDevicePreferredSolidInputPortMap(layout, runtimeById, links, deviceById, warehouse)
+  const planResult = buildTransferPlans({
+    tick: sim.tick,
+    layoutDevices: layout.devices,
+    runtimeById,
+    deviceById,
+    outMap: links.outMap as Map<string, FlowPortLink[]>,
+    lanesReachedHalfThisTick,
+    helpers: {
+      isHardBlockedStall,
+      orderedOutLinks: (device, runtime, outLinks) => orderedOutLinks(device, runtime, outLinks as ReturnType<typeof neighborsFromLinks>['links']) as FlowPortLink[],
+      buildConvergerPreferredInputPortMap: () => buildConvergerPreferredInputPortMap(layout, runtimeById, links, deviceById, warehouse),
+      buildDevicePreferredSolidInputPortMap: () => buildDevicePreferredSolidInputPortMap(layout, runtimeById, links, deviceById, warehouse),
+      isConvergerType,
+      sourceSlotLane,
+      prepareSourceLaneItem: (device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced) =>
+        prepareSourceLaneItem(device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced, sim.tickRateHz, warehouse),
+      canReceiveOnPortWithPlan,
+      isStorageWithBufferGroups,
+      orderedStorageSlotIndicesForOutput,
+      getStorageSlotItemId,
+      canStorageSlotOutputToPort,
+    },
+  })
 
-    for (const device of layout.devices) {
-      const runtime = runtimeById[device.instanceId]
-      if (!runtime || isHardBlockedStall(runtime.stallReason) || plannedSenders.has(device.instanceId)) continue
-      const rawOutLinks = links.outMap.get(device.instanceId) ?? []
-      const outLinks = orderedOutLinks(device, runtime, rawOutLinks)
-
-      for (const link of outLinks) {
-        const toRuntime = runtimeById[link.to.instanceId]
-        const toDevice = deviceById.get(link.to.instanceId)
-        if (!toRuntime || !toDevice) continue
-
-        const recvState = canReceiveOnPortWithPlan(toDevice, toRuntime, link.to.portId, reservedReceivers, lanesClearingThisTick)
-        if (!recvState.lane || !recvState.canTry) continue
-
-        if (isConvergerType(toDevice.typeId)) {
-          const preferredPort = convergerPreferredInputPortById.get(toDevice.instanceId)
-          if (preferredPort && preferredPort !== link.to.portId) continue
-        }
-
-        const preferredSolidInputPort = devicePreferredSolidInputPortById.get(toDevice.instanceId)
-        if (preferredSolidInputPort && preferredSolidInputPort !== link.to.portId) continue
-
-        const fromLane = sourceSlotLane(device, runtime, link.from.portId)
-        let itemId: ItemId | null = null
-
-        if (fromLane === 'output' && isReactorPoolType(device.typeId) && 'inputBuffer' in runtime && 'outputBuffer' in runtime) {
-          itemId = reactorPeekOutputForPort(runtime as ProcessorRuntime, device.config, link.from.portId)
-        } else {
-          const laneAdvanceKey = `${device.instanceId}:${fromLane}`
-          if (lanesReachedHalfThisTick.has(laneAdvanceKey)) continue
-          if (!lanesAdvancedThisTick.has(laneAdvanceKey)) {
-            const transportSpeed = transportSpeedPerTick(device.typeId, sim.tickRateHz)
-            const beforeSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
-            const beforeProgress = beforeSlot?.progress01 ?? null
-            readyItemForLane(device, runtime, fromLane, transportSpeed, warehouse, link.from.portId)
-            lanesAdvancedThisTick.add(laneAdvanceKey)
-            const afterSlot = fromLane === 'output' ? null : getSlotRef(runtime, fromLane)
-            const afterProgress = afterSlot?.progress01 ?? null
-            if (beforeProgress !== null && afterProgress !== null && afterProgress > beforeProgress) {
-              changed = true
-            }
-          }
-
-          itemId = peekReadyItemForLane(device, runtime, fromLane, warehouse, link.from.portId)
-        }
-
-        if (!itemId) continue
-        if (!recvState.canAccept) continue
-        if (!canAcceptIntoLane(toDevice, toRuntime, recvState.lane, link.to.portId, itemId)) continue
-
-        transferPlans.push({
-          fromId: device.instanceId,
-          fromPortId: link.from.portId,
-          fromLane,
-          toId: toDevice.instanceId,
-          toPortId: link.to.portId,
-          itemId,
-          lane: recvState.lane,
-        })
-
-        plannedSenders.add(device.instanceId)
-        reservedReceivers.add(`${toDevice.instanceId}:${recvState.lane}`)
-        lanesClearingThisTick.add(`${device.instanceId}:${fromLane}`)
-
-        if (isRoundRobinJunctionType(device.typeId) && 'rrIndex' in runtime && outLinks.length > 0) {
-          if (isSplitterType(device.typeId)) {
-            const pickedOutLinkIndex = outLinks.findIndex((outLink) => outLink === link)
-            const safePickedIndex = pickedOutLinkIndex >= 0 ? pickedOutLinkIndex : 0
-            runtime.rrIndex = (runtime.rrIndex + safePickedIndex + 1) % outLinks.length
-          } else {
-            runtime.rrIndex = (runtime.rrIndex + 1) % outLinks.length
-          }
-        }
-
-        if (isConvergerType(toDevice.typeId) && 'rrIndex' in toRuntime) {
-          const pickedInputOrderIndex = indexInConvergerInputOrder(link.to.portId)
-          if (pickedInputOrderIndex >= 0) {
-            toRuntime.rrIndex = (pickedInputOrderIndex + 1) % CONVERGER_INPUT_PORT_ORDER.length
-          }
-        }
-
-        if (('inputBuffer' in toRuntime || 'inventory' in toRuntime) && typeof toRuntime.solidInputRrIndex === 'number') {
-          const inputPortOrder = solidInputPortOrder(toDevice.typeId)
-          if (inputPortOrder.length > 1) {
-            const pickedInputOrderIndex = inputPortOrder.findIndex((portId) => portId === link.to.portId)
-            if (pickedInputOrderIndex >= 0) {
-              toRuntime.solidInputRrIndex = (pickedInputOrderIndex + 1) % inputPortOrder.length
-            }
-          }
-        }
-
-        if (('outputBuffer' in runtime || 'inventory' in runtime) && typeof runtime.solidOutputRrIndex === 'number') {
-          const outputPortOrder = solidOutputPortOrder(device.typeId)
-          if (outputPortOrder.length > 1 && ITEM_BY_ID[itemId]?.type === 'solid') {
-            const pickedOutputOrderIndex = outputPortOrder.findIndex((portId) => portId === link.from.portId)
-            if (pickedOutputOrderIndex >= 0) {
-              runtime.solidOutputRrIndex = (pickedOutputOrderIndex + 1) % outputPortOrder.length
-            }
-          }
-        }
-
-        changed = true
-        break
-      }
-    }
-  }
+  const { transferPlans, plannedSenders, lanesAdvancedThisTick } = planResult
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
@@ -1968,56 +2369,26 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     }
   }
 
-  for (const plan of transferPlans) {
-    const fromRuntime = runtimeById[plan.fromId]
-    const toRuntime = runtimeById[plan.toId]
-    const fromDevice = deviceById.get(plan.fromId)
-    if (!fromRuntime || !toRuntime || !fromDevice) continue
-
-    const toDevice = deviceById.get(plan.toId)
-    if (!toDevice) continue
-
-    const received = tryReceiveToLane(toDevice, toRuntime, plan.lane, plan.toPortId, plan.itemId, sim.tick)
-    if (!received) continue
-
-    if (isWarehouseSubmitPort(toDevice, plan.toPortId) && 'inventory' in toRuntime) {
-      toRuntime.inventory[plan.itemId] = Math.max(0, (toRuntime.inventory[plan.itemId] ?? 0) - 1)
-      if (Number.isFinite(warehouse[plan.itemId])) {
-        warehouse[plan.itemId] += 1
-      }
-    }
-
-    if (fromDevice.typeId === PICKUP_TYPE_ID || fromDevice.typeId === PROTOCOL_HUB_TYPE_ID) {
-      if (!shouldIgnoreConfiguredOutputInventory(fromDevice, plan.fromPortId, plan.itemId) && Number.isFinite(warehouse[plan.itemId])) {
-        warehouse[plan.itemId] = Math.max(0, warehouse[plan.itemId] - 1)
-      }
-    } else {
-      if (plan.fromLane === 'output') {
-        if (isReactorPoolType(fromDevice.typeId) && 'inputBuffer' in fromRuntime && 'outputBuffer' in fromRuntime) {
-          reactorConsumeItemFromSharedSlotPool(fromRuntime as ProcessorRuntime, plan.itemId, 1)
-        } else if ('outputBuffer' in fromRuntime) {
-          fromRuntime.outputBuffer[plan.itemId] = Math.max(0, (fromRuntime.outputBuffer[plan.itemId] ?? 0) - 1)
-          clearSlotBindingIfEmpty(fromRuntime.outputBuffer, fromRuntime.outputSlotItems, plan.itemId)
-        } else if ('inventory' in fromRuntime) {
-          fromRuntime.inventory[plan.itemId] = Math.max(0, (fromRuntime.inventory[plan.itemId] ?? 0) - 1)
-        }
-      } else {
-        if (
-          isBelt(fromDevice.typeId) &&
-          plan.fromLane === 'slot' &&
-          'slot' in fromRuntime &&
-          fromRuntime.slot &&
-          'transportTotalTicks' in fromRuntime &&
-          'transportSamples' in fromRuntime
-        ) {
-          const transitTicks = Math.max(1, sim.tick - fromRuntime.slot.enteredTick)
-          fromRuntime.transportTotalTicks += transitTicks
-          fromRuntime.transportSamples += 1
-        }
-        setSlotRef(fromRuntime, plan.fromLane, null)
-      }
-    }
-  }
+  commitTransferPlans({
+    tick: sim.tick,
+    runtimeById,
+    deviceById,
+    outMap: links.outMap as Map<string, FlowPortLink[]>,
+    warehouse,
+    transferPlans,
+    helpers: {
+      tryReceiveToLane,
+      isWarehouseSubmitPort,
+      consumeSourceByPlan,
+      shouldIgnoreConfiguredOutputInventory,
+      isRoundRobinJunctionType,
+      isSplitterType,
+      isConvergerType,
+      indexInConvergerInputOrder,
+      advanceBufferGroupInputCursor,
+      advanceBufferGroupOutputCursor,
+    },
+  })
 
   // NOTE: This end-of-tick start pass is intentional.
   // Reason:

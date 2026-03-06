@@ -1276,6 +1276,11 @@ button:disabled {
   max-width: min(88vw, 860px);
 }
 
+.storage-slot-config-dialog {
+  min-width: min(92vw, 880px);
+  max-width: min(92vw, 980px);
+}
+
 .wiki-dialog {
   width: 80vw;
   height: 80vh;
@@ -1659,6 +1664,65 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.storage-slot-config-list {
+  max-height: 62vh;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.storage-slot-config-row {
+  border: 1px solid #2f3a4a;
+  border-radius: 8px;
+  background: #1b222d;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.storage-slot-config-row .preload-slot-label {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+}
+
+.storage-slot-config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.storage-slot-config-field > span {
+  font-size: 12px;
+  color: #9fb3c9;
+}
+
+.storage-slot-config-field select,
+.storage-slot-config-field input[type='number'],
+.storage-slot-config-field .picker-open-btn {
+  width: 100%;
+  box-sizing: border-box;
+  height: 38px;
+  margin: 0;
+  background: #243042;
+  color: #e5ebf3;
+  border: 1px solid #35516f;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.storage-slot-config-hint {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: #ffd166;
+}
+
+@media (max-width: 1100px) {
+  .storage-slot-config-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .preload-slot-row {

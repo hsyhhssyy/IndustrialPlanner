@@ -137,10 +137,38 @@ export interface PreloadInputConfigEntry {
   amount: number
 }
 
+export type BufferSlotMode = 'free' | 'pinned'
+
+export interface BufferSlotRuntime {
+  slotIndex: number
+  mode: BufferSlotMode
+  pinnedItemId?: ItemId
+  currentItemId: ItemId | null
+  amount: number
+  capacity: number
+}
+
+export interface BufferGroupRuntime {
+  id: string
+  inPortIds: string[]
+  outPortIds: string[]
+  inCursor: number
+  outCursor: number
+  slots: BufferSlotRuntime[]
+}
+
 export interface ProtocolHubOutputConfigEntry {
   portId: string
   itemId?: ItemId
   ignoreInventory?: boolean
+}
+
+export interface StorageSlotConfigEntry {
+  slotIndex: number
+  mode: BufferSlotMode
+  pinnedItemId?: ItemId
+  preloadItemId?: ItemId
+  preloadAmount?: number
 }
 
 export interface DeviceConfig {
@@ -150,6 +178,8 @@ export interface DeviceConfig {
   pumpOutputItemId?: ItemId
   submitToWarehouse?: boolean
   preloadInputs?: PreloadInputConfigEntry[]
+  storagePreloadInputs?: PreloadInputConfigEntry[]
+  storageSlots?: StorageSlotConfigEntry[]
   preloadInputItemId?: ItemId
   preloadInputAmount?: number
   reactorPool?: {
@@ -239,8 +269,6 @@ export interface ProcessorRuntime extends BaseRuntime {
   outputBuffer: Partial<Record<ItemId, number>>
   inputSlotItems: Array<ItemId | null>
   outputSlotItems: Array<ItemId | null>
-  solidInputRrIndex?: number
-  solidOutputRrIndex?: number
   cycleProgressTicks: number
   reactorCycleProgressTicks?: [number, number]
   producedItemsTotal: number
@@ -251,13 +279,13 @@ export interface ProcessorRuntime extends BaseRuntime {
   reactorActiveRecipeIds?: [string | undefined, string | undefined]
   thermalPowerTicksRemaining?: number
   thermalPowerKw?: number
+  bufferGroups?: BufferGroupRuntime[]
 }
 
 export interface StorageRuntime extends BaseRuntime {
   inventory: Partial<Record<ItemId, number>>
   submitAccumulatorTicks: number
-  solidInputRrIndex?: number
-  solidOutputRrIndex?: number
+  bufferGroups?: BufferGroupRuntime[]
 }
 
 export interface SlotData {

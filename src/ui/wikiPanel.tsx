@@ -356,6 +356,11 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
 
               <section className="wiki-content-pane">
                 <h4>{t('wiki.device.recipeTitle', { name: getDeviceLabel(language, selectedDeviceId) })}</h4>
+                <div className="wiki-section-subtitle">
+                  {t('wiki.devicePowerDemand', {
+                    power: DEVICE_TYPES.find((device) => device.id === selectedDeviceId)?.powerDemand ?? 0,
+                  })}
+                </div>
                 {selectedDeviceRecipes.length === 0 ? (
                   <p className="wiki-empty-text">{t('wiki.empty.noRecipeForDevice')}</p>
                 ) : (
