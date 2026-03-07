@@ -1161,7 +1161,7 @@ function canAcceptBeltInput(runtime: BeltRuntime) {
   const inputItemId = beltBufferedItemId(runtime, 'input')
   const outputItemId = beltBufferedItemId(runtime, 'output')
   const inTransit = Boolean(runtime.slot && runtime.slot.progress01 < 1)
-  return !inputItemId && (!outputItemId || inTransit)
+  return !inputItemId && !outputItemId && !inTransit
 }
 
 function startBeltTransport(device: DeviceInstance, runtime: BeltRuntime, tick: number) {
@@ -1257,7 +1257,7 @@ function canReceiveLaneForItem(
     const hasBufferedInput = Boolean(beltBufferedItemId(runtime, 'input'))
     const hasBufferedOutput = Boolean(beltBufferedItemId(runtime, 'output'))
     const hasInTransit = Boolean(runtime.slot && runtime.slot.progress01 < 1)
-    if (!hasBufferedInput && (!hasBufferedOutput || hasInTransit)) return lane
+    if (!hasBufferedInput && !hasBufferedOutput && !hasInTransit) return lane
 
     return null
   }
@@ -2455,32 +2455,69 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     }
   }
 
-  const planResult = solvePullTransferMatches({
-    tick: sim.tick,
-    layoutDevices: layout.devices,
-    runtimeById,
-    deviceById,
-    inMap: links.inMap as Map<string, FlowPortLink[]>,
-    outMap: links.outMap as Map<string, FlowPortLink[]>,
-    lanesReachedHalfThisTick,
-    helpers: {
-      isHardBlockedStall,
-      orderedOutLinks: (device, runtime, outLinks) => orderedOutLinks(device, runtime, outLinks as ReturnType<typeof neighborsFromLinks>['links']) as FlowPortLink[],
-      buildConvergerPullInputPortOrderMap: () => buildConvergerPullInputPortOrderMap(layout, runtimeById, links, deviceById, warehouse),
-      buildDevicePullInputPortOrderMap: () => buildDevicePullInputPortOrderMap(layout, runtimeById, links, deviceById, warehouse),
-      isConvergerType,
-      sourceSlotLane,
-      prepareSourceLaneItem: (device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced) =>
-        prepareSourceLaneItem(device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced, sim.tickRateHz, warehouse),
-      canReceiveLaneForItem,
-      isStorageWithBufferGroups,
-      orderedStorageSlotIndicesForOutput,
-      getStorageSlotItemId,
-      canStorageSlotOutputToPort,
-    },
-  })
+  const committedSenders = new Set<string>()
+  const lanesAdvancedThisTick = new Set<string>()
+  const maxTransferRounds = Math.max(8, layout.devices.length)
 
-  const { transferMatches, plannedSenders, lanesAdvancedThisTick } = planResult
+  for (let transferRound = 0; transferRound < maxTransferRounds; transferRound += 1) {
+    const planResult = solvePullTransferMatches({
+      tick: sim.tick,
+      layoutDevices: layout.devices,
+      runtimeById,
+      deviceById,
+      inMap: links.inMap as Map<string, FlowPortLink[]>,
+      outMap: links.outMap as Map<string, FlowPortLink[]>,
+      lanesReachedHalfThisTick,
+      helpers: {
+        isHardBlockedStall,
+        orderedOutLinks: (device, runtime, outLinks) => orderedOutLinks(device, runtime, outLinks as ReturnType<typeof neighborsFromLinks>['links']) as FlowPortLink[],
+        buildConvergerPullInputPortOrderMap: () => buildConvergerPullInputPortOrderMap(layout, runtimeById, links, deviceById, warehouse),
+        buildDevicePullInputPortOrderMap: () => buildDevicePullInputPortOrderMap(layout, runtimeById, links, deviceById, warehouse),
+        isConvergerType,
+        sourceSlotLane,
+        prepareSourceLaneItem: (device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced) =>
+          prepareSourceLaneItem(device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced, sim.tickRateHz, warehouse),
+        canReceiveLaneForItem,
+        isStorageWithBufferGroups,
+        orderedStorageSlotIndicesForOutput,
+        getStorageSlotItemId,
+        canStorageSlotOutputToPort,
+      },
+    })
+
+    for (const laneKey of planResult.lanesAdvancedThisTick) {
+      lanesAdvancedThisTick.add(laneKey)
+    }
+
+    if (planResult.transferMatches.length === 0) break
+
+    const commitResult = commitTransferMatches({
+      tick: sim.tick,
+      runtimeById,
+      deviceById,
+      outMap: links.outMap as Map<string, FlowPortLink[]>,
+      warehouse,
+      transferMatches: planResult.transferMatches,
+      helpers: {
+        tryReceiveToLane,
+        isWarehouseSubmitPort,
+        consumeSourceByPlan,
+        shouldIgnoreConfiguredOutputInventory,
+        isRoundRobinJunctionType,
+        isSplitterType,
+        isConvergerType,
+        indexInConvergerInputOrder,
+        advanceBufferGroupInputCursor,
+        advanceBufferGroupOutputCursor,
+      },
+    })
+
+    for (const senderId of commitResult.committedSenders) {
+      committedSenders.add(senderId)
+    }
+
+    if (commitResult.committedCount === 0) break
+  }
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
@@ -2493,7 +2530,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         continue
       }
 
-      if (plannedSenders.has(device.instanceId)) {
+      if (committedSenders.has(device.instanceId)) {
         runtime.submitAccumulatorTicks = 0
         continue
       }
@@ -2507,7 +2544,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
     if (
       outLinks.length > 0 &&
-      !plannedSenders.has(device.instanceId) &&
+      !committedSenders.has(device.instanceId) &&
       hasInternalBuffer(runtime) &&
       hasReadyOutput(device, runtime, warehouse)
     ) {
@@ -2517,34 +2554,13 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
     if (
       outLinks.length > 0 &&
-      !plannedSenders.has(device.instanceId) &&
+      !committedSenders.has(device.instanceId) &&
       !hasInternalBuffer(runtime) &&
       shouldMarkDownstreamBlockedNoBuffer(device, runtime, lanesAdvancedThisTick)
     ) {
       normalizeRuntimeState(runtime, 'DOWNSTREAM_BLOCKED')
     }
   }
-
-  commitTransferMatches({
-    tick: sim.tick,
-    runtimeById,
-    deviceById,
-    outMap: links.outMap as Map<string, FlowPortLink[]>,
-    warehouse,
-    transferMatches,
-    helpers: {
-      tryReceiveToLane,
-      isWarehouseSubmitPort,
-      consumeSourceByPlan,
-      shouldIgnoreConfiguredOutputInventory,
-      isRoundRobinJunctionType,
-      isSplitterType,
-      isConvergerType,
-      indexInConvergerInputOrder,
-      advanceBufferGroupInputCursor,
-      advanceBufferGroupOutputCursor,
-    },
-  })
 
   // NOTE: This end-of-tick start pass is intentional.
   // Reason:

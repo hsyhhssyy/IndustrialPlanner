@@ -30,6 +30,9 @@ type CommitContext = {
 }
 
 export function commitTransferMatches(context: CommitContext) {
+  const committedSenders = new Set<string>()
+  let committedCount = 0
+
   for (const match of context.transferMatches) {
     const fromRuntime = context.runtimeById[match.fromId]
     const toRuntime = context.runtimeById[match.toId]
@@ -41,6 +44,9 @@ export function commitTransferMatches(context: CommitContext) {
     if (!received) {
       continue
     }
+
+    committedCount += 1
+    committedSenders.add(match.fromId)
 
     if (context.helpers.isWarehouseSubmitPort(toDevice, match.toPortId) && 'inventory' in toRuntime) {
       toRuntime.inventory[match.itemId] = Math.max(0, (toRuntime.inventory[match.itemId] ?? 0) - 1)
@@ -75,5 +81,10 @@ export function commitTransferMatches(context: CommitContext) {
     context.helpers.advanceBufferGroupInputCursor(toRuntime, match.toPortId)
 
     context.helpers.advanceBufferGroupOutputCursor(fromRuntime, match.fromPortId)
+  }
+
+  return {
+    committedCount,
+    committedSenders,
   }
 }
