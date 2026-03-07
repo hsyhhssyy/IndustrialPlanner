@@ -26,25 +26,9 @@ export function getBeltItemPosition(inEdge: Edge, outEdge: Edge, progress01: num
   const t = clamp(progress01, 0, 1)
   const start = EDGE_ANCHOR[inEdge]
   const end = EDGE_ANCHOR[outEdge]
-  if (OPPOSITE_EDGE[inEdge] === outEdge) {
-    return {
-      x: lerp(start.x, end.x, t),
-      y: lerp(start.y, end.y, t),
-    }
-  }
-
-  if (t < 0.5) {
-    const local = t / 0.5
-    return {
-      x: lerp(start.x, 32, local),
-      y: lerp(start.y, 32, local),
-    }
-  }
-
-  const local = (t - 0.5) / 0.5
   return {
-    x: lerp(32, end.x, local),
-    y: lerp(32, end.y, local),
+    x: lerp(start.x, end.x, t),
+    y: lerp(start.y, end.y, t),
   }
 }
 

@@ -301,6 +301,25 @@ export interface ConveyorRuntime extends BaseRuntime {
   transportSamples: number
 }
 
+export interface BeltRuntime extends BaseRuntime {
+  slot: SlotData | null
+  transportTotalTicks: number
+  transportSamples: number
+  inputBuffer: Partial<Record<ItemId, number>>
+  outputBuffer: Partial<Record<ItemId, number>>
+  inputSlotItems: Array<ItemId | null>
+  outputSlotItems: Array<ItemId | null>
+  cycleProgressTicks: number
+  producedItemsTotal: number
+  lastCompletedCycleTicks: number
+  lastCompletionTick: number | null
+  lastCompletionIntervalTicks: number
+  bufferGroups?: BufferGroupRuntime[]
+  reactorCycleProgressTicks?: [number, number]
+  reactorActiveRecipeIds?: [string | undefined, string | undefined]
+  activeRecipeId?: string
+}
+
 export interface JunctionRuntime extends BaseRuntime {
   slot: SlotData | null
   nsSlot: SlotData | null
@@ -308,7 +327,7 @@ export interface JunctionRuntime extends BaseRuntime {
   rrIndex: number
 }
 
-export type DeviceRuntime = ProcessorRuntime | StorageRuntime | ConveyorRuntime | JunctionRuntime
+export type DeviceRuntime = ProcessorRuntime | StorageRuntime | ConveyorRuntime | BeltRuntime | JunctionRuntime
 
 export type PowerMode = 'real' | 'infinite'
 

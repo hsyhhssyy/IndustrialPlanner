@@ -1,5 +1,5 @@
 import { BASE_BY_ID, DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
-import { detectOverlaps, getFootprintCells, isBelt, isPipeLike, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
+import { detectOverlaps, getFootprintCells, getRotatedPorts, isBelt, isPipeLike, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
 import { cycleTicksFromSeconds } from '../domain/shared/simulation'
 import {
   isReactorPoolType,
@@ -16,6 +16,7 @@ import type { PortLink as FlowPortLink, ReceiveState, TransferPlan } from './flo
 import type {
   BufferGroupRuntime,
   BufferSlotRuntime,
+  BeltRuntime,
   DeviceInstance,
   DeviceRuntime,
   ItemId,
@@ -181,6 +182,24 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
     }
   }
   if (def.runtimeKind === 'conveyor') {
+    if (isBelt(device.typeId)) {
+      return {
+        ...baseRuntime(),
+        slot: null,
+        transportTotalTicks: 0,
+        transportSamples: 0,
+        inputBuffer: {},
+        outputBuffer: {},
+        inputSlotItems: [null],
+        outputSlotItems: [null],
+        cycleProgressTicks: 0,
+        producedItemsTotal: 0,
+        lastCompletedCycleTicks: 0,
+        lastCompletionTick: null,
+        lastCompletionIntervalTicks: 0,
+        activeRecipeId: undefined,
+      }
+    }
     return {
       ...baseRuntime(),
       slot: null,
@@ -289,7 +308,7 @@ function updateThermalPoolPowerAndGetSupplyKw(
   for (const device of layout.devices) {
     if (device.typeId !== THERMAL_POOL_TYPE_ID) continue
     const runtime = runtimeById[device.instanceId]
-    if (!runtime || !('inputBuffer' in runtime)) continue
+    if (!runtime || !isRecipeProcessorRuntime(runtime)) continue
 
     if (runtime.cycleProgressTicks <= 0 || !runtime.activeRecipeId) {
       runtime.thermalPowerTicksRemaining = 0
@@ -953,7 +972,7 @@ function canAddToStorage(runtime: DeviceRuntime, itemId: ItemId, amount: number,
     : getBufferGroups(runtime)
   if (groups.length === 0) return true
 
-  let groupSnapshot = groups.map((group) => ({ ...group, slots: group.slots.map((slot) => ({ ...slot })) }))
+  const groupSnapshot = groups.map((group) => ({ ...group, slots: group.slots.map((slot) => ({ ...slot })) }))
   let remaining = amount
   while (remaining > 0) {
     const targetGroup = groupSnapshot.find((group) => findStorageAcceptSlot(group, itemId))
@@ -1110,6 +1129,92 @@ function indexInConvergerInputOrder(portId: string) {
   return CONVERGER_INPUT_PORT_ORDER.findIndex((entry) => entry === portId)
 }
 
+function isBufferedBeltRuntime(runtime: DeviceRuntime): runtime is BeltRuntime {
+  return (
+    'slot' in runtime &&
+    'inputBuffer' in runtime &&
+    'outputBuffer' in runtime &&
+    'inputSlotItems' in runtime &&
+    'outputSlotItems' in runtime &&
+    'transportSamples' in runtime
+  )
+}
+
+function isRecipeProcessorRuntime(runtime: DeviceRuntime): runtime is ProcessorRuntime {
+  return 'inputBuffer' in runtime && 'outputBuffer' in runtime && !('transportSamples' in runtime)
+}
+
+function beltBufferedItemId(runtime: BeltRuntime, bufferKind: 'input' | 'output') {
+  const slotItems = bufferKind === 'input' ? runtime.inputSlotItems : runtime.outputSlotItems
+  const buffer = bufferKind === 'input' ? runtime.inputBuffer : runtime.outputBuffer
+  for (const itemId of slotItems) {
+    if (itemId && (buffer[itemId] ?? 0) > 0) return itemId
+  }
+  return null
+}
+
+function beltInputEdge(device: DeviceInstance) {
+  return getRotatedPorts(device).find((port) => port.direction === 'Input')?.edge ?? 'W'
+}
+
+function canAcceptBeltInput(runtime: BeltRuntime) {
+  const inputItemId = beltBufferedItemId(runtime, 'input')
+  const outputItemId = beltBufferedItemId(runtime, 'output')
+  const inTransit = Boolean(runtime.slot && runtime.slot.progress01 < 1)
+  return !inputItemId && !outputItemId && !inTransit
+}
+
+function startBeltTransport(device: DeviceInstance, runtime: BeltRuntime, tick: number) {
+  if (runtime.slot) return false
+  if (beltBufferedItemId(runtime, 'output')) return false
+  const itemId = beltBufferedItemId(runtime, 'input')
+  if (!itemId) return false
+  runtime.inputBuffer[itemId] = Math.max(0, (runtime.inputBuffer[itemId] ?? 0) - 1)
+  clearSlotBindingIfEmpty(runtime.inputBuffer, runtime.inputSlotItems, itemId)
+  runtime.slot = {
+    itemId,
+    progress01: 0,
+    enteredFrom: beltInputEdge(device),
+    enteredTick: tick,
+  }
+  runtime.cycleProgressTicks = 0
+  runtime.progress01 = 0
+  return true
+}
+
+function advanceBeltRuntimeOnTick(device: DeviceInstance, runtime: BeltRuntime, tickRateHz: number, tick: number) {
+  if (!runtime.slot && !beltBufferedItemId(runtime, 'output')) {
+    startBeltTransport(device, runtime, tick)
+  }
+
+  if (!runtime.slot) {
+    runtime.cycleProgressTicks = 0
+    runtime.progress01 = beltBufferedItemId(runtime, 'output') ? 1 : 0
+    return
+  }
+
+  if (beltBufferedItemId(runtime, 'output')) {
+    runtime.slot.progress01 = 1
+    runtime.progress01 = 1
+    return
+  }
+
+  const transportSpeed = transportSpeedPerTick(device.typeId, tickRateHz)
+  runtime.slot.progress01 = Math.min(1, runtime.slot.progress01 + transportSpeed)
+  runtime.cycleProgressTicks += 1
+  runtime.progress01 = runtime.slot.progress01
+
+  if (runtime.slot.progress01 >= 1) {
+    tryAddProcessorBufferAmount(runtime, device.typeId, 'output', runtime.slot.itemId, 1)
+    runtime.progress01 = 1
+  }
+}
+
+function tryStartBeltTransportOnTick(device: DeviceInstance, runtime: BeltRuntime, tickRateHz: number, tick: number) {
+  if (runtime.slot || beltBufferedItemId(runtime, 'output') || !beltBufferedItemId(runtime, 'input')) return
+  advanceBeltRuntimeOnTick(device, runtime, tickRateHz, tick)
+}
+
 function allowsSolidInputType(allowedTypes: { mode: 'solid' | 'liquid' | 'whitelist'; whitelist: Array<'solid' | 'liquid'> }) {
   if (allowedTypes.mode === 'solid') return true
   if (allowedTypes.mode === 'liquid') return false
@@ -1123,6 +1228,9 @@ function setSlotRef(runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we', value: S
 }
 
 function canReceiveOnPort(device: DeviceInstance, runtime: DeviceRuntime, toPortId: string) {
+  if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
+    return 'output'
+  }
   if (isBridgeConnectorType(device.typeId)) {
     if (toPortId.endsWith('_n') || toPortId.endsWith('_s')) return 'ns'
     return 'we'
@@ -1147,6 +1255,23 @@ function canReceiveOnPortWithPlan(
   const reserveKey = `${device.instanceId}:${lane}`
   if (reservedReceivers.has(reserveKey)) return { lane, canTry: false, canAccept: false }
 
+  if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
+    const hasBufferedInput = Boolean(beltBufferedItemId(runtime, 'input'))
+    const hasBufferedOutput = Boolean(beltBufferedItemId(runtime, 'output'))
+    const hasInTransit = Boolean(runtime.slot && runtime.slot.progress01 < 1)
+    const clearingThisTick = hasBufferedOutput && lanesClearingThisTick.has(reserveKey)
+
+    if (!hasBufferedInput && !hasBufferedOutput && !hasInTransit) {
+      return { lane, canTry: true, canAccept: true }
+    }
+
+    if (!hasBufferedInput && !hasInTransit && clearingThisTick) {
+      return { lane, canTry: true, canAccept: true }
+    }
+
+    return { lane, canTry: false, canAccept: false }
+  }
+
   if (lane === 'output') {
     const canAccept = canAcceptIntoLane(device, runtime, lane, toPortId, itemId)
     return { lane, canTry: true, canAccept }
@@ -1167,6 +1292,9 @@ function canReceiveOnPortWithPlan(
 
 function canAcceptIntoLane(device: DeviceInstance, runtime: DeviceRuntime, lane: ReceiveLane, toPortId: string, itemId: ItemId) {
   if (lane !== 'output') return true
+  if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
+    return canAcceptBeltInput(runtime)
+  }
   if ('inputBuffer' in runtime) {
     if (isReactorPoolType(device.typeId)) {
       return tryAddReactorInput(cloneRuntime(runtime), toPortId, itemId, 1)
@@ -1188,6 +1316,9 @@ function tryReceiveToLane(
   tick: number,
 ) {
   if (lane === 'output') {
+    if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
+      return tryAddProcessorInput(runtime, device.typeId, itemId, 1)
+    }
     if ('inputBuffer' in runtime) {
       if (isReactorPoolType(device.typeId)) return tryAddReactorInput(runtime, toPortId, itemId, 1)
       return tryAddProcessorInput(runtime, device.typeId, itemId, 1)
@@ -1205,6 +1336,9 @@ function tryReceiveToLane(
 }
 
 function sourceSlotLane(device: DeviceInstance, runtime: DeviceRuntime, fromPortId: string): 'slot' | 'ns' | 'we' | 'output' {
+  if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
+    return 'output'
+  }
   if (isBridgeConnectorType(device.typeId)) {
     if (fromPortId.endsWith('_n') || fromPortId.endsWith('_s')) return 'ns'
     return 'we'
@@ -1329,6 +1463,20 @@ function consumeSourceByPlan(
   tick: number,
 ) {
   if (plan.fromLane === 'output') {
+    if (isBelt(fromDevice.typeId) && isBufferedBeltRuntime(fromRuntime)) {
+      fromRuntime.outputBuffer[plan.itemId] = Math.max(0, (fromRuntime.outputBuffer[plan.itemId] ?? 0) - 1)
+      clearSlotBindingIfEmpty(fromRuntime.outputBuffer, fromRuntime.outputSlotItems, plan.itemId)
+      if (fromRuntime.slot) {
+        const transitTicks = Math.max(1, tick - fromRuntime.slot.enteredTick)
+        fromRuntime.transportTotalTicks += transitTicks
+        fromRuntime.transportSamples += 1
+      }
+      fromRuntime.slot = null
+      fromRuntime.progress01 = 0
+      fromRuntime.cycleProgressTicks = 0
+      return
+    }
+
     if (isReactorPoolType(fromDevice.typeId) && 'inputBuffer' in fromRuntime && 'outputBuffer' in fromRuntime) {
       reactorConsumeItemFromSharedSlotPool(fromRuntime as ProcessorRuntime, plan.itemId, 1)
     } else if ('outputBuffer' in fromRuntime) {
@@ -1644,12 +1792,21 @@ function cloneSlot(slot: SlotData | null): SlotData | null {
 
 function cloneRuntime(runtime: DeviceRuntime): DeviceRuntime {
   if ('inputBuffer' in runtime && 'outputBuffer' in runtime) {
-    return {
+    const clonedSharedBufferRuntime = {
       ...runtime,
       inputBuffer: { ...runtime.inputBuffer },
       outputBuffer: { ...runtime.outputBuffer },
       inputSlotItems: [...runtime.inputSlotItems],
       outputSlotItems: [...runtime.outputSlotItems],
+      slot: 'slot' in runtime ? cloneSlot(runtime.slot) : null,
+    }
+
+    if ('transportSamples' in runtime) {
+      return clonedSharedBufferRuntime
+    }
+
+    return {
+      ...clonedSharedBufferRuntime,
       bufferGroups: runtime.bufferGroups
         ? runtime.bufferGroups.map((group) => ({
             ...group,
@@ -2098,7 +2255,12 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
     normalizeRuntimeState(runtime, 'NONE')
 
-    if ('outputBuffer' in runtime && 'inputBuffer' in runtime) {
+    if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
+      advanceBeltRuntimeOnTick(device, runtime, sim.tickRateHz, sim.tick)
+      continue
+    }
+
+    if (isRecipeProcessorRuntime(runtime)) {
       if (isReactorPoolType(device.typeId)) {
         const selectedRecipes = reactorSelectedRecipeIds(device.config)
           .map((recipeId) => recipeById(recipeId))
@@ -2404,6 +2566,10 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     const runtime = runtimeById[device.instanceId]
     if (!runtime || isHardBlockedStall(runtime.stallReason)) continue
     if (completedCycleDeviceIdsThisTick.has(device.instanceId)) continue
+    if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
+      tryStartBeltTransportOnTick(device, runtime, sim.tickRateHz, sim.tick)
+      continue
+    }
     tryStartReactorLanesOnTick(device, runtime, sim.tickRateHz, processorDelta)
     tryStartProcessorCycleOnTick(device, runtime, sim.tickRateHz, processorDelta)
   }

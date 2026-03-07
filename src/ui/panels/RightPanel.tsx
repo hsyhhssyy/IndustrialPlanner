@@ -320,10 +320,22 @@ export function RightPanel({
           )}
           {isBelt(selectedDevice.typeId) && selectedRuntime && 'slot' in selectedRuntime && (
             <>
-              <div className="kv">
-                <span>{t('detail.currentItem')}</span>
-                <span>{selectedRuntime.slot ? getItemLabel(language, selectedRuntime.slot.itemId) : t('detail.empty')}</span>
-              </div>
+              {(() => {
+                const beltItemId = selectedRuntime.slot?.itemId
+                  ?? ('outputBuffer' in selectedRuntime
+                    ? selectedRuntime.outputSlotItems.find((itemId) => itemId && (selectedRuntime.outputBuffer[itemId] ?? 0) > 0)
+                    : null)
+                  ?? ('inputBuffer' in selectedRuntime
+                    ? selectedRuntime.inputSlotItems.find((itemId) => itemId && (selectedRuntime.inputBuffer[itemId] ?? 0) > 0)
+                    : null)
+
+                return (
+                  <div className="kv">
+                    <span>{t('detail.currentItem')}</span>
+                    <span>{beltItemId ? getItemLabel(language, beltItemId) : t('detail.empty')}</span>
+                  </div>
+                )
+              })()}
               <div className="kv">
                 <span>{t('detail.progress01')}</span>
                 <span>{selectedRuntime.slot ? selectedRuntime.slot.progress01.toFixed(2) : '0.00'}</span>
@@ -340,7 +352,7 @@ export function RightPanel({
           )}
           {selectedRuntime && (
             <>
-              {'inputBuffer' in selectedRuntime && 'outputBuffer' in selectedRuntime && (
+              {!isBelt(selectedDevice.typeId) && 'inputBuffer' in selectedRuntime && 'outputBuffer' in selectedRuntime && (
                 (() => {
                   if (selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning) {
                     const laneRecipeIds = selectedRuntime.reactorActiveRecipeIds ?? [undefined, undefined]
@@ -416,7 +428,7 @@ export function RightPanel({
                   )
                 })()
               )}
-              {'inputBuffer' in selectedRuntime && (
+              {!isBelt(selectedDevice.typeId) && 'inputBuffer' in selectedRuntime && (
                 selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning
                   ? (
                     <>
@@ -451,7 +463,7 @@ export function RightPanel({
                     </div>
                     )
               )}
-              {'outputBuffer' in selectedRuntime && (
+              {!isBelt(selectedDevice.typeId) && 'outputBuffer' in selectedRuntime && (
                 !(selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning) && (
                   <div className="kv">
                     <span>{t('detail.cacheOutputBuffer')}</span>
