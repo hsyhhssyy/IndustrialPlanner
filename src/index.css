@@ -25,7 +25,8 @@ body {
   font-size: 14px;
   text-align: center;
   white-space: pre-line;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 

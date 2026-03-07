@@ -78,6 +78,17 @@ export function ToastProvider({ children }: PropsWithChildren) {
     return () => window.clearTimeout(timer)
   }, [active])
 
+  useEffect(() => {
+    if (!active) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActive(null)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [active])
+
   const value = useMemo<ToastContextValue>(
     () => ({
       show: showToast,
@@ -89,7 +100,12 @@ export function ToastProvider({ children }: PropsWithChildren) {
     <ToastContext.Provider value={value}>
       {children}
       {active && (
-        <div className={`global-toast global-toast--${active.variant}`} role="status" aria-live="polite">
+        <div
+          className={`global-toast global-toast--${active.variant}`}
+          role="status"
+          aria-live="polite"
+          onClick={() => setActive(null)}
+        >
           {active.text}
         </div>
       )}

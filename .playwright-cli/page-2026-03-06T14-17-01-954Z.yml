@@ -1,0 +1,248 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: 终末地工业系统仿真器
+      - generic [ref=e7]:
+        - generic [ref=e8]: 语言
+        - combobox "语言" [ref=e9]:
+          - option "中文" [selected]
+          - option "English"
+      - button "打开合成百科" [ref=e10] [cursor=pointer]
+      - button "打开产线规划器" [ref=e11] [cursor=pointer]
+    - generic [ref=e12]:
+      - generic [ref=e13]: 编辑模式：拖拽移动设备，按住框选，按R旋转，按Ctrl+C复制，按住中键移动视角。
+      - generic [ref=e14]: 缩放：12px
+      - button "开始仿真" [ref=e15] [cursor=pointer]
+      - button "暂停" [ref=e16] [cursor=pointer]
+      - button "0.25x" [ref=e17] [cursor=pointer]
+      - button "1x" [ref=e18] [cursor=pointer]
+      - button "2x" [ref=e19] [cursor=pointer]
+      - button "4x" [ref=e20] [cursor=pointer]
+      - button "16x" [ref=e21] [cursor=pointer]
+  - main [ref=e22]:
+    - complementary [ref=e23]:
+      - heading "模式" [level=3] [ref=e24]
+      - button "放置模式" [ref=e25] [cursor=pointer]
+      - button "蓝图模式" [ref=e26] [cursor=pointer]
+      - button "删除模式" [ref=e27] [cursor=pointer]
+      - heading "操作" [level=3] [ref=e28]
+      - generic [ref=e29]:
+        - button "选择" [ref=e30] [cursor=pointer]:
+          - img [ref=e32]
+          - generic [ref=e34]: 选择
+        - button "铺设传送带" [ref=e35] [cursor=pointer]:
+          - img [ref=e36]
+          - generic [ref=e37]: 铺设传送带
+        - button "铺设管道" [disabled] [ref=e38]:
+          - img [ref=e39]
+          - generic [ref=e40]: 铺设管道
+        - button "保存为蓝图" [ref=e41] [cursor=pointer]:
+          - img [ref=e43]
+          - generic [ref=e45]: 保存为蓝图
+      - heading "设备" [level=3] [ref=e46]
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - heading "物流" [level=4] [ref=e49]
+          - generic [ref=e50]:
+            - button "分流器" [ref=e51] [cursor=pointer]:
+              - img [ref=e52]
+              - generic [ref=e53]: 分流器
+            - button "汇流器" [ref=e54] [cursor=pointer]:
+              - img [ref=e55]
+              - generic [ref=e56]: 汇流器
+            - button "桥接器" [ref=e57] [cursor=pointer]:
+              - img [ref=e58]
+              - generic [ref=e59]: 桥接器
+        - generic [ref=e60]:
+          - heading "仓储存取" [level=4] [ref=e61]
+          - generic [ref=e62]:
+            - button "仓库取货口" [ref=e63] [cursor=pointer]:
+              - img [ref=e64]
+              - generic [ref=e65]: 仓库取货口
+            - button "仓库存货口" [ref=e66] [cursor=pointer]:
+              - img [ref=e67]
+              - generic [ref=e68]: 仓库存货口
+            - button "协议存储箱" [ref=e69] [cursor=pointer]:
+              - img [ref=e70]
+              - generic [ref=e71]: 协议存储箱
+        - generic [ref=e72]:
+          - heading "基础生产" [level=4] [ref=e73]
+          - generic [ref=e74]:
+            - button "粉碎机" [ref=e75] [cursor=pointer]:
+              - img [ref=e76]
+              - generic [ref=e77]: 粉碎机
+            - button "精炼炉" [ref=e78] [cursor=pointer]:
+              - img [ref=e79]
+              - generic [ref=e80]: 精炼炉
+            - button "配件机" [ref=e81] [cursor=pointer]:
+              - img [ref=e82]
+              - generic [ref=e83]: 配件机
+            - button "塑形机" [ref=e84] [cursor=pointer]:
+              - img [ref=e85]
+              - generic [ref=e86]: 塑形机
+            - button "采种机" [ref=e87] [cursor=pointer]:
+              - img [ref=e88]
+              - generic [ref=e89]: 采种机
+            - button "种植机" [ref=e90] [cursor=pointer]:
+              - img [ref=e91]
+              - generic [ref=e92]: 种植机
+        - generic [ref=e93]:
+          - heading "合成制造" [level=4] [ref=e94]
+          - generic [ref=e95]:
+            - button "装备原件机" [ref=e96] [cursor=pointer]:
+              - img [ref=e97]
+              - generic [ref=e98]: 装备原件机
+            - button "灌装机" [ref=e99] [cursor=pointer]:
+              - img [ref=e100]
+              - generic [ref=e101]: 灌装机
+            - button "液体灌装机" [ref=e102] [cursor=pointer]:
+              - img [ref=e103]
+              - generic [ref=e104]: 液体灌装机
+            - button "封装机" [ref=e105] [cursor=pointer]:
+              - img [ref=e106]
+              - generic [ref=e107]: 封装机
+            - button "研磨机" [ref=e108] [cursor=pointer]:
+              - img [ref=e109]
+              - generic [ref=e110]: 研磨机
+        - generic [ref=e111]:
+          - heading "电力" [level=4] [ref=e112]
+          - generic [ref=e113]:
+            - button "热能池" [ref=e114] [cursor=pointer]:
+              - img [ref=e115]
+              - generic [ref=e116]: 热能池
+            - button "供电桩" [ref=e117] [cursor=pointer]:
+              - img [ref=e118]
+              - generic [ref=e119]: 供电桩
+    - separator "Resize left panel" [ref=e120]
+    - generic [ref=e124]:
+      - generic "item_port_sp_hub_1" [ref=e125] [cursor=pointer]:
+        - generic [ref=e126]:
+          - img
+          - generic [ref=e127]: 协议核心
+      - generic "item_port_log_hongs_bus_source" [ref=e128] [cursor=pointer]:
+        - generic [ref=e129]:
+          - img
+          - generic [ref=e130]: 仓库存取线源桩
+      - generic "item_port_log_hongs_bus" [ref=e131] [cursor=pointer]:
+        - generic [ref=e132]:
+          - img
+          - generic [ref=e133]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e134] [cursor=pointer]:
+        - generic [ref=e135]:
+          - img
+          - generic [ref=e136]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e137] [cursor=pointer]:
+        - generic [ref=e138]:
+          - img
+          - generic [ref=e139]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e140] [cursor=pointer]:
+        - generic [ref=e141]:
+          - img
+          - generic [ref=e142]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e143] [cursor=pointer]:
+        - generic [ref=e144]:
+          - img
+          - generic [ref=e145]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e146] [cursor=pointer]:
+        - generic [ref=e147]:
+          - img
+          - generic [ref=e148]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e149] [cursor=pointer]:
+        - generic [ref=e150]:
+          - img
+          - generic [ref=e151]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e152] [cursor=pointer]:
+        - generic [ref=e153]:
+          - img
+          - generic [ref=e154]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e155] [cursor=pointer]:
+        - generic [ref=e156]:
+          - img
+          - generic [ref=e157]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e158] [cursor=pointer]:
+        - generic [ref=e159]:
+          - img
+          - generic [ref=e160]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e161] [cursor=pointer]:
+        - generic [ref=e162]:
+          - img
+          - generic [ref=e163]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e164] [cursor=pointer]:
+        - generic [ref=e165]:
+          - img
+          - generic [ref=e166]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e167] [cursor=pointer]:
+        - generic [ref=e168]:
+          - img
+          - generic [ref=e169]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e170] [cursor=pointer]:
+        - generic [ref=e171]:
+          - img
+          - generic [ref=e172]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e173] [cursor=pointer]:
+        - generic [ref=e174]:
+          - img
+          - generic [ref=e175]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e176] [cursor=pointer]:
+        - generic [ref=e177]:
+          - img
+          - generic [ref=e178]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e179] [cursor=pointer]:
+        - generic [ref=e180]:
+          - img
+          - generic [ref=e181]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e182] [cursor=pointer]:
+        - generic [ref=e183]:
+          - img
+          - generic [ref=e184]: 仓库存取线基段
+    - separator "Resize right panel" [ref=e185]
+    - complementary [ref=e186]:
+      - generic [ref=e187]:
+        - heading "基地" [level=3] [ref=e188]
+        - button "（多基地仿真说明）" [ref=e190] [cursor=pointer]
+      - generic [ref=e191]:
+        - heading "四号谷地" [level=4] [ref=e192]
+        - generic [ref=e193]:
+          - button "协议核心区" [ref=e194] [cursor=pointer]
+          - button "难民暂居处" [ref=e195] [cursor=pointer]
+          - button "基建前站" [ref=e196] [cursor=pointer]
+          - button "重建指挥部" [ref=e197] [cursor=pointer]
+      - generic [ref=e198]:
+        - heading "武陵" [level=4] [ref=e199]
+        - generic [ref=e200]:
+          - button "协议核心区" [ref=e201] [cursor=pointer]
+          - button "天王坪援建点" [ref=e202] [cursor=pointer]
+      - generic [ref=e203]:
+        - generic [ref=e204]: 可放置区域
+        - generic [ref=e205]: 70x70
+      - generic [ref=e206]:
+        - generic [ref=e207]: 总耗电
+        - generic [ref=e208]: 0 kW
+      - generic [ref=e209]:
+        - generic [ref=e210]: 电力模式
+        - combobox [ref=e212]:
+          - option "真实计算"
+          - option "无限电力" [selected]
+      - generic [ref=e213]:
+        - generic [ref=e214]: 外扩尺寸
+        - generic [ref=e215]: T4 R2 B2 L4
+      - generic [ref=e216]:
+        - generic [ref=e217]: 基地标签
+        - generic [ref=e218]: 四号谷地
+      - heading "选中详情" [level=3] [ref=e219]
+      - paragraph [ref=e220]: 未选中对象
+  - contentinfo "© 2026 集成工业仿真" [ref=e221]:
+    - generic [ref=e222]:
+      - generic [ref=e223]: © 2026 集成工业仿真
+      - generic [ref=e224]: "|"
+      - link "京ICP备2022033983号-2" [ref=e225] [cursor=pointer]:
+        - /url: https://beian.miit.gov.cn/
+        - img [ref=e227]
+        - generic [ref=e229]: 京ICP备2022033983号-2
+      - generic [ref=e230]: "|"
+      - link "GitHub 仓库" [ref=e231] [cursor=pointer]:
+        - /url: https://github.com/hsyhhssyy/IndustrialPlanner
+        - img [ref=e233]
+        - generic [ref=e235]: GitHub 仓库
+      - generic [ref=e236]: "|"
+      - generic [ref=e237]: 明日方舟：终末地是鹰角网络的商标。本工具与鹰角网络无关，未获其认可。图片和数据资源来自明日方舟：终末地游戏数据，版权归鹰角网络所有。

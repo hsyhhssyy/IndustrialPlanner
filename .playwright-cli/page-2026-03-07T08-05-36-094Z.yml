@@ -1,0 +1,695 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: 终末地工业系统仿真器
+      - generic [ref=e7]:
+        - generic [ref=e8]: 语言
+        - combobox "语言" [ref=e9]:
+          - option "中文" [selected]
+          - option "English"
+      - button "打开合成百科" [ref=e10] [cursor=pointer]
+      - button "打开产线规划器" [active] [ref=e11] [cursor=pointer]
+    - generic [ref=e12]:
+      - generic [ref=e13]: 编辑模式：拖拽移动设备，按住框选，按R旋转，按Ctrl+C复制，按住中键移动视角。
+      - generic [ref=e14]: 缩放：12px
+      - button "开始仿真" [ref=e15] [cursor=pointer]
+      - button "暂停" [ref=e16] [cursor=pointer]
+      - button "0.25x" [ref=e17] [cursor=pointer]
+      - button "1x" [ref=e18] [cursor=pointer]
+      - button "2x" [ref=e19] [cursor=pointer]
+      - button "4x" [ref=e20] [cursor=pointer]
+      - button "16x" [ref=e21] [cursor=pointer]
+  - main [ref=e22]:
+    - complementary [ref=e23]:
+      - heading "模式" [level=3] [ref=e24]
+      - button "放置模式" [ref=e25] [cursor=pointer]
+      - button "蓝图模式" [ref=e26] [cursor=pointer]
+      - button "删除模式" [ref=e27] [cursor=pointer]
+      - heading "操作" [level=3] [ref=e28]
+      - generic [ref=e29]:
+        - button "选择" [ref=e30] [cursor=pointer]:
+          - img [ref=e32]
+          - generic [ref=e34]: 选择
+        - button "铺设传送带" [ref=e35] [cursor=pointer]:
+          - img [ref=e36]
+          - generic [ref=e37]: 铺设传送带
+        - button "铺设管道" [disabled] [ref=e38]:
+          - img [ref=e39]
+          - generic [ref=e40]: 铺设管道
+        - button "保存为蓝图" [ref=e41] [cursor=pointer]:
+          - img [ref=e43]
+          - generic [ref=e45]: 保存为蓝图
+      - heading "设备" [level=3] [ref=e46]
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - heading "物流" [level=4] [ref=e49]
+          - generic [ref=e50]:
+            - button "分流器" [ref=e51] [cursor=pointer]:
+              - img [ref=e52]
+              - generic [ref=e53]: 分流器
+            - button "汇流器" [ref=e54] [cursor=pointer]:
+              - img [ref=e55]
+              - generic [ref=e56]: 汇流器
+            - button "桥接器" [ref=e57] [cursor=pointer]:
+              - img [ref=e58]
+              - generic [ref=e59]: 桥接器
+        - generic [ref=e60]:
+          - heading "仓储存取" [level=4] [ref=e61]
+          - generic [ref=e62]:
+            - button "仓库取货口" [ref=e63] [cursor=pointer]:
+              - img [ref=e64]
+              - generic [ref=e65]: 仓库取货口
+            - button "仓库存货口" [ref=e66] [cursor=pointer]:
+              - img [ref=e67]
+              - generic [ref=e68]: 仓库存货口
+            - button "协议存储箱" [ref=e69] [cursor=pointer]:
+              - img [ref=e70]
+              - generic [ref=e71]: 协议存储箱
+        - generic [ref=e72]:
+          - heading "基础生产" [level=4] [ref=e73]
+          - generic [ref=e74]:
+            - button "粉碎机" [ref=e75] [cursor=pointer]:
+              - img [ref=e76]
+              - generic [ref=e77]: 粉碎机
+            - button "精炼炉" [ref=e78] [cursor=pointer]:
+              - img [ref=e79]
+              - generic [ref=e80]: 精炼炉
+            - button "配件机" [ref=e81] [cursor=pointer]:
+              - img [ref=e82]
+              - generic [ref=e83]: 配件机
+            - button "塑形机" [ref=e84] [cursor=pointer]:
+              - img [ref=e85]
+              - generic [ref=e86]: 塑形机
+            - button "采种机" [ref=e87] [cursor=pointer]:
+              - img [ref=e88]
+              - generic [ref=e89]: 采种机
+            - button "种植机" [ref=e90] [cursor=pointer]:
+              - img [ref=e91]
+              - generic [ref=e92]: 种植机
+        - generic [ref=e93]:
+          - heading "合成制造" [level=4] [ref=e94]
+          - generic [ref=e95]:
+            - button "装备原件机" [ref=e96] [cursor=pointer]:
+              - img [ref=e97]
+              - generic [ref=e98]: 装备原件机
+            - button "灌装机" [ref=e99] [cursor=pointer]:
+              - img [ref=e100]
+              - generic [ref=e101]: 灌装机
+            - button "液体灌装机" [ref=e102] [cursor=pointer]:
+              - img [ref=e103]
+              - generic [ref=e104]: 液体灌装机
+            - button "封装机" [ref=e105] [cursor=pointer]:
+              - img [ref=e106]
+              - generic [ref=e107]: 封装机
+            - button "研磨机" [ref=e108] [cursor=pointer]:
+              - img [ref=e109]
+              - generic [ref=e110]: 研磨机
+        - generic [ref=e111]:
+          - heading "电力" [level=4] [ref=e112]
+          - generic [ref=e113]:
+            - button "热能池" [ref=e114] [cursor=pointer]:
+              - img [ref=e115]
+              - generic [ref=e116]: 热能池
+            - button "供电桩" [ref=e117] [cursor=pointer]:
+              - img [ref=e118]
+              - generic [ref=e119]: 供电桩
+    - separator "Resize left panel" [ref=e120]
+    - generic [ref=e124]:
+      - generic "item_port_sp_hub_1" [ref=e125] [cursor=pointer]:
+        - generic [ref=e126]:
+          - img
+          - generic [ref=e127]: 协议核心
+          - generic: "1"
+          - generic: "2"
+          - generic: "3"
+          - generic: "4"
+          - generic: "5"
+          - generic: "6"
+      - generic "item_port_log_hongs_bus_source" [ref=e128] [cursor=pointer]:
+        - generic [ref=e129]:
+          - img
+          - generic [ref=e130]: 仓库存取线源桩
+      - generic "item_port_log_hongs_bus" [ref=e131] [cursor=pointer]:
+        - generic [ref=e132]:
+          - img
+          - generic [ref=e133]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e134] [cursor=pointer]:
+        - generic [ref=e135]:
+          - img
+          - generic [ref=e136]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e137] [cursor=pointer]:
+        - generic [ref=e138]:
+          - img
+          - generic [ref=e139]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e140] [cursor=pointer]:
+        - generic [ref=e141]:
+          - img
+          - generic [ref=e142]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e143] [cursor=pointer]:
+        - generic [ref=e144]:
+          - img
+          - generic [ref=e145]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e146] [cursor=pointer]:
+        - generic [ref=e147]:
+          - img
+          - generic [ref=e148]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e149] [cursor=pointer]:
+        - generic [ref=e150]:
+          - img
+          - generic [ref=e151]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e152] [cursor=pointer]:
+        - generic [ref=e153]:
+          - img
+          - generic [ref=e154]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e155] [cursor=pointer]:
+        - generic [ref=e156]:
+          - img
+          - generic [ref=e157]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e158] [cursor=pointer]:
+        - generic [ref=e159]:
+          - img
+          - generic [ref=e160]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e161] [cursor=pointer]:
+        - generic [ref=e162]:
+          - img
+          - generic [ref=e163]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e164] [cursor=pointer]:
+        - generic [ref=e165]:
+          - img
+          - generic [ref=e166]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e167] [cursor=pointer]:
+        - generic [ref=e168]:
+          - img
+          - generic [ref=e169]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e170] [cursor=pointer]:
+        - generic [ref=e171]:
+          - img
+          - generic [ref=e172]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e173] [cursor=pointer]:
+        - generic [ref=e174]:
+          - img
+          - generic [ref=e175]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e176] [cursor=pointer]:
+        - generic [ref=e177]:
+          - img
+          - generic [ref=e178]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e179] [cursor=pointer]:
+        - generic [ref=e180]:
+          - img
+          - generic [ref=e181]: 仓库存取线基段
+      - generic "item_port_log_hongs_bus" [ref=e182] [cursor=pointer]:
+        - generic [ref=e183]:
+          - img
+          - generic [ref=e184]: 仓库存取线基段
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+      - generic:
+        - img
+    - separator "Resize right panel" [ref=e185]
+    - complementary [ref=e186]:
+      - generic [ref=e187]:
+        - heading "基地" [level=3] [ref=e188]
+        - button "（多基地仿真说明）" [ref=e190] [cursor=pointer]
+      - generic [ref=e191]:
+        - heading "四号谷地" [level=4] [ref=e192]
+        - generic [ref=e193]:
+          - button "协议核心区" [ref=e194] [cursor=pointer]
+          - button "难民暂居处" [ref=e195] [cursor=pointer]
+          - button "基建前站" [ref=e196] [cursor=pointer]
+          - button "重建指挥部" [ref=e197] [cursor=pointer]
+      - generic [ref=e198]:
+        - heading "武陵" [level=4] [ref=e199]
+        - generic [ref=e200]:
+          - button "协议核心区" [ref=e201] [cursor=pointer]
+          - button "天王坪援建点" [ref=e202] [cursor=pointer]
+      - generic [ref=e203]:
+        - generic [ref=e204]: 可放置区域
+        - generic [ref=e205]: 70x70
+      - generic [ref=e206]:
+        - generic [ref=e207]: 总耗电
+        - generic [ref=e208]: 0 kW
+      - generic [ref=e209]:
+        - generic [ref=e210]: 电力模式
+        - combobox [ref=e212]:
+          - option "真实计算"
+          - option "无限电力" [selected]
+      - generic [ref=e213]:
+        - generic [ref=e214]: 外扩尺寸
+        - generic [ref=e215]: T4 R2 B2 L4
+      - generic [ref=e216]:
+        - generic [ref=e217]: 基地标签
+        - generic [ref=e218]: 四号谷地
+      - heading "选中详情" [level=3] [ref=e219]
+      - generic [ref=e238]:
+        - generic [ref=e239]: 实例ID
+        - generic [ref=e240]: base_valley4_protocol_hub_1
+      - generic [ref=e241]:
+        - generic [ref=e242]: 建筑类型
+        - generic [ref=e243]: 协议核心
+      - generic [ref=e244]:
+        - generic [ref=e245]: 设备耗电
+        - generic [ref=e246]: 0 kW
+      - generic [ref=e247]:
+        - generic [ref=e248]: 旋转角度
+        - generic [ref=e249]: "0"
+      - generic [ref=e250]:
+        - generic [ref=e251]: 位置
+        - generic [ref=e252]: 61,61
+      - generic [ref=e253]:
+        - generic [ref=e254]: 当前状态
+        - generic [ref=e255]: 空闲
+      - generic [ref=e256]:
+        - generic [ref=e257]: 内部状态
+        - generic [ref=e258]: 未进入仿真
+      - generic [ref=e259]:
+        - generic [ref=e260]: 储存槽位配置
+        - button "储存槽位配置" [ref=e262] [cursor=pointer]
+      - generic [ref=e263]:
+        - generic [ref=e264]: 协议核心出货口
+        - generic [ref=e265]: "6"
+      - generic [ref=e266]:
+        - generic [ref=e267]: 出货口 1
+        - generic [ref=e269]:
+          - button "? 未选择" [ref=e270] [cursor=pointer]:
+            - generic [ref=e271]:
+              - generic [ref=e272]: "?"
+              - generic [ref=e273]: 未选择
+          - generic "无视库存" [ref=e274] [cursor=pointer]:
+            - generic [ref=e275]: 按库存
+            - checkbox "无视库存" [disabled]
+            - generic [ref=e278]: 无视库存
+      - generic [ref=e279]:
+        - generic [ref=e280]: 出货口 2
+        - generic [ref=e282]:
+          - button "? 未选择" [ref=e283] [cursor=pointer]:
+            - generic [ref=e284]:
+              - generic [ref=e285]: "?"
+              - generic [ref=e286]: 未选择
+          - generic "无视库存" [ref=e287] [cursor=pointer]:
+            - generic [ref=e288]: 按库存
+            - checkbox "无视库存" [disabled]
+            - generic [ref=e291]: 无视库存
+      - generic [ref=e292]:
+        - generic [ref=e293]: 出货口 3
+        - generic [ref=e295]:
+          - button "? 未选择" [ref=e296] [cursor=pointer]:
+            - generic [ref=e297]:
+              - generic [ref=e298]: "?"
+              - generic [ref=e299]: 未选择
+          - generic "无视库存" [ref=e300] [cursor=pointer]:
+            - generic [ref=e301]: 按库存
+            - checkbox "无视库存" [disabled]
+            - generic [ref=e304]: 无视库存
+      - generic [ref=e305]:
+        - generic [ref=e306]: 出货口 4
+        - generic [ref=e308]:
+          - button "? 未选择" [ref=e309] [cursor=pointer]:
+            - generic [ref=e310]:
+              - generic [ref=e311]: "?"
+              - generic [ref=e312]: 未选择
+          - generic "无视库存" [ref=e313] [cursor=pointer]:
+            - generic [ref=e314]: 按库存
+            - checkbox "无视库存" [disabled]
+            - generic [ref=e317]: 无视库存
+      - generic [ref=e318]:
+        - generic [ref=e319]: 出货口 5
+        - generic [ref=e321]:
+          - button "? 未选择" [ref=e322] [cursor=pointer]:
+            - generic [ref=e323]:
+              - generic [ref=e324]: "?"
+              - generic [ref=e325]: 未选择
+          - generic "无视库存" [ref=e326] [cursor=pointer]:
+            - generic [ref=e327]: 按库存
+            - checkbox "无视库存" [disabled]
+            - generic [ref=e330]: 无视库存
+      - generic [ref=e331]:
+        - generic [ref=e332]: 出货口 6
+        - generic [ref=e334]:
+          - button "? 未选择" [ref=e335] [cursor=pointer]:
+            - generic [ref=e336]:
+              - generic [ref=e337]: "?"
+              - generic [ref=e338]: 未选择
+          - generic "无视库存" [ref=e339] [cursor=pointer]:
+            - generic [ref=e340]: 按库存
+            - checkbox "无视库存" [disabled]
+            - generic [ref=e343]: 无视库存
+  - contentinfo "© 2026 集成工业仿真" [ref=e221]:
+    - generic [ref=e222]:
+      - generic [ref=e223]: © 2026 集成工业仿真
+      - generic [ref=e224]: "|"
+      - link "京ICP备2022033983号-2" [ref=e225] [cursor=pointer]:
+        - /url: https://beian.miit.gov.cn/
+        - img [ref=e227]
+        - generic [ref=e229]: 京ICP备2022033983号-2
+      - generic [ref=e230]: "|"
+      - link "GitHub 仓库" [ref=e231] [cursor=pointer]:
+        - /url: https://github.com/hsyhhssyy/IndustrialPlanner
+        - img [ref=e233]
+        - generic [ref=e235]: GitHub 仓库
+      - generic [ref=e236]: "|"
+      - generic [ref=e237]: 明日方舟：终末地是鹰角网络的商标。本工具与鹰角网络无关，未获其认可。图片和数据资源来自明日方舟：终末地游戏数据，版权归鹰角网络所有。
+  - dialog "产线规划器" [ref=e344]:
+    - generic [ref=e345]:
+      - generic [ref=e346]: 产线规划器
+      - button "关闭" [ref=e347] [cursor=pointer]
+    - generic [ref=e348]:
+      - complementary [ref=e349]:
+        - generic [ref=e350]:
+          - heading "目标输入" [level=4] [ref=e351]
+          - button "添加目标" [ref=e352]
+        - generic [ref=e353]:
+          - generic [ref=e354]: 地区切换
+          - generic [ref=e355]:
+            - button "四号谷地" [ref=e356]
+            - button "武陵" [ref=e357]
+        - generic [ref=e359]:
+          - generic [ref=e360]: "#1"
+          - generic [ref=e361]:
+            - generic [ref=e362]: 物品
+            - combobox "物品" [ref=e363]:
+              - option "柑实罐头" [selected]
+              - option "优质柑实罐头"
+              - option "精选柑实罐头"
+              - option "锦草软饮"
+              - option "荞愈胶囊"
+              - option "优质荞愈胶囊"
+              - option "精选荞愈胶囊"
+              - option "芽针针剂"
+              - option "稳定碳块"
+              - option "致密碳粉末"
+              - option "碳块"
+              - option "碳粉末"
+              - option "密制晶体"
+              - option "致密晶体粉末"
+              - option "晶体外壳粉末"
+              - option "晶体外壳"
+              - option "紫晶装备原件"
+              - option "蓝铁装备原件"
+              - option "高晶装备原件"
+              - option "息壤装备原件"
+              - option "紫晶质瓶"
+              - option "紫晶质瓶（已盛装清水）"
+              - option "紫晶质瓶（已盛装锦草溶液）"
+              - option "紫晶质瓶（已盛装芽针溶液）"
+              - option "紫晶质瓶（已盛装液化息壤）"
+              - option "紫晶零件"
+              - option "高晶质瓶"
+              - option "高晶质瓶（已盛装清水）"
+              - option "高晶质瓶（已盛装锦草溶液）"
+              - option "高晶质瓶（已盛装芽针溶液）"
+              - option "高晶质瓶（已盛装液化息壤）"
+              - option "高晶零件"
+              - option "蓝铁瓶"
+              - option "蓝铁瓶（已盛装清水）"
+              - option "蓝铁瓶（已盛装锦草溶液）"
+              - option "蓝铁瓶（已盛装芽针溶液）"
+              - option "蓝铁瓶（已盛装液化息壤）"
+              - option "铁制零件"
+              - option "钢块"
+              - option "钢质瓶"
+              - option "钢质瓶（已盛装清水）"
+              - option "钢质瓶（已盛装锦草溶液）"
+              - option "钢质瓶（已盛装芽针溶液）"
+              - option "钢质瓶（已盛装液化息壤）"
+              - option "钢制零件"
+              - option "致密蓝铁粉末"
+              - option "蓝铁块"
+              - option "蓝铁矿"
+              - option "蓝铁粉末"
+              - option "锦草溶液"
+              - option "芽针溶液"
+              - option "清水"
+              - option "液化息壤"
+              - option "驮兽粪便"
+              - option "膨地啪"
+              - option "致密源石粉末"
+              - option "源矿"
+              - option "源石粉末"
+              - option "酮化灌木"
+              - option "酮化灌木粉末"
+              - option "酮化树种"
+              - option "锦草"
+              - option "芽针"
+              - option "锦草粉末"
+              - option "芽针粉末"
+              - option "锦草种子"
+              - option "芽针种子"
+              - option "荞花"
+              - option "柑实"
+              - option "砂叶"
+              - option "细磨荞花粉末"
+              - option "细磨柑实粉末"
+              - option "荞花粉末"
+              - option "柑实粉末"
+              - option "砂叶粉末"
+              - option "荞花种子"
+              - option "柑实种子"
+              - option "砂叶种子"
+              - option "低容谷地电池"
+              - option "中容谷地电池"
+              - option "高容谷地电池"
+              - option "低容武陵电池"
+              - option "工业爆炸物"
+              - option "高晶纤维"
+              - option "高晶粉末"
+              - option "紫晶纤维"
+              - option "紫晶粉末"
+              - option "紫晶矿"
+              - option "息壤"
+          - generic [ref=e364]:
+            - generic [ref=e365]: 目标 /min
+            - spinbutton "目标 /min" [ref=e366]: "60"
+          - button "删除" [disabled] [ref=e367]
+      - generic [ref=e368]:
+        - generic [ref=e369]:
+          - generic [ref=e370]:
+            - heading "计算结果" [level=4] [ref=e371]
+            - tablist "计算结果" [ref=e372]:
+              - tab "列表模式" [selected] [ref=e373]
+              - tab "流程图" [ref=e374]
+          - generic [ref=e376]:
+            - generic [ref=e377]:
+              - generic [ref=e378]: 物品 / 配方
+              - generic [ref=e379]: 需求
+              - generic [ref=e380]: 设备
+              - generic [ref=e381]: 物流
+            - generic [ref=e382]:
+              - generic [ref=e384]: 第 1 级
+              - generic [ref=e385]:
+                - generic [ref=e387]:
+                  - img [ref=e388]
+                  - generic [ref=e389]:
+                    - strong [ref=e390]: 柑实罐头
+                    - generic [ref=e391]:
+                      - generic [ref=e392]: "配方:"
+                      - generic [ref=e393]: 灌装机 · 紫晶质瓶 x5 + 柑实粉末 x5 → 柑实罐头 x1
+                    - generic [ref=e394]:
+                      - generic [ref=e395]: "输入吞吐:"
+                      - generic [ref=e396]: 紫晶质瓶 300.0/min | 柑实粉末 300.0/min
+                - generic [ref=e397]:
+                  - generic [ref=e398]: 需求 /min
+                  - strong [ref=e399]: 60.00/min
+                - generic [ref=e400]:
+                  - generic [ref=e401]: 机器
+                  - generic [ref=e402]: 灌装机 x10
+                - generic [ref=e403]:
+                  - generic [ref=e404]: 物流
+                  - generic [ref=e405]: 传送带x2
+            - generic [ref=e406]:
+              - generic [ref=e408]: 第 2 级
+              - generic [ref=e409]:
+                - generic [ref=e411]:
+                  - img [ref=e412]
+                  - generic [ref=e413]:
+                    - strong [ref=e414]: 紫晶质瓶
+                    - generic [ref=e415]:
+                      - generic [ref=e416]: "配方:"
+                      - generic [ref=e417]: 塑形机 · 紫晶纤维 x2 → 紫晶质瓶 x1
+                    - generic [ref=e418]:
+                      - generic [ref=e419]: "输入吞吐:"
+                      - generic [ref=e420]: 紫晶纤维 600.0/min
+                - generic [ref=e421]:
+                  - generic [ref=e422]: 需求 /min
+                  - strong [ref=e423]: 300.0/min
+                - generic [ref=e424]:
+                  - generic [ref=e425]: 机器
+                  - generic [ref=e426]: 塑形机 x10
+                - generic [ref=e427]:
+                  - generic [ref=e428]: 物流
+                  - generic [ref=e429]: 传送带x10
+            - generic [ref=e430]:
+              - generic [ref=e432]: 第 2 级
+              - generic [ref=e433]:
+                - generic [ref=e435]:
+                  - img [ref=e436]
+                  - generic [ref=e437]:
+                    - strong [ref=e438]: 柑实粉末
+                    - generic [ref=e439]:
+                      - generic [ref=e440]: "配方:"
+                      - generic [ref=e441]: 粉碎机 · 柑实 x1 → 柑实粉末 x2
+                    - generic [ref=e442]:
+                      - generic [ref=e443]: "输入吞吐:"
+                      - generic [ref=e444]: 柑实 150.0/min
+                - generic [ref=e445]:
+                  - generic [ref=e446]: 需求 /min
+                  - strong [ref=e447]: 300.0/min
+                - generic [ref=e448]:
+                  - generic [ref=e449]: 机器
+                  - generic [ref=e450]: 粉碎机 x5
+                - generic [ref=e451]:
+                  - generic [ref=e452]: 物流
+                  - generic [ref=e453]: 传送带x10
+            - generic [ref=e454]:
+              - generic [ref=e456]: 第 3 级
+              - generic [ref=e457]:
+                - generic [ref=e459]:
+                  - img [ref=e460]
+                  - generic [ref=e461]:
+                    - strong [ref=e462]: 柑实
+                    - generic [ref=e463]:
+                      - generic [ref=e464]: "配方:"
+                      - generic [ref=e465]: 种植机 · 柑实种子 x1 → 柑实 x1
+                    - generic [ref=e466]:
+                      - generic [ref=e467]: "输入吞吐:"
+                      - generic [ref=e468]: 柑实种子 300.0/min
+                - generic [ref=e469]:
+                  - generic [ref=e470]: 需求 /min
+                  - strong [ref=e471]: 300.0/min
+                - generic [ref=e472]:
+                  - generic [ref=e473]: 机器
+                  - generic [ref=e474]: 种植机 x10
+                - generic [ref=e475]:
+                  - generic [ref=e476]: 物流
+                  - generic [ref=e477]: 传送带x10
+            - generic [ref=e478]:
+              - generic [ref=e480]: 第 3 级
+              - generic [ref=e481]:
+                - generic [ref=e483]:
+                  - img [ref=e484]
+                  - generic [ref=e485]:
+                    - strong [ref=e486]: 紫晶纤维
+                    - generic [ref=e487]:
+                      - generic [ref=e488]: "配方:"
+                      - combobox [ref=e489]:
+                        - option "精炼炉 · 紫晶矿 x1 → 紫晶纤维 x1" [selected]
+                        - option "精炼炉 · 紫晶粉末 x1 → 紫晶纤维 x1"
+                    - generic [ref=e490]:
+                      - generic [ref=e491]: "输入吞吐:"
+                      - generic [ref=e492]: 紫晶矿 600.0/min
+                - generic [ref=e493]:
+                  - generic [ref=e494]: 需求 /min
+                  - strong [ref=e495]: 600.0/min
+                - generic [ref=e496]:
+                  - generic [ref=e497]: 机器
+                  - generic [ref=e498]: 精炼炉 x20
+                - generic [ref=e499]:
+                  - generic [ref=e500]: 物流
+                  - generic [ref=e501]: 传送带x20
+            - generic [ref=e502]:
+              - generic [ref=e504]: 第 4 级
+              - generic [ref=e505]:
+                - generic [ref=e507]:
+                  - img [ref=e508]
+                  - generic [ref=e509]:
+                    - strong [ref=e510]: 柑实种子
+                    - generic [ref=e511]:
+                      - generic [ref=e512]: "配方:"
+                      - generic [ref=e513]: 采种机 · 柑实 x1 → 柑实种子 x2
+                    - generic [ref=e514]:
+                      - generic [ref=e515]: "输入吞吐:"
+                      - generic [ref=e516]: 柑实 150.0/min
+                - generic [ref=e517]:
+                  - generic [ref=e518]: 需求 /min
+                  - strong [ref=e519]: 300.0/min
+                - generic [ref=e520]:
+                  - generic [ref=e521]: 机器
+                  - generic [ref=e522]: 采种机 x5
+                - generic [ref=e523]:
+                  - generic [ref=e524]: 物流
+                  - generic [ref=e525]: 传送带x10
+            - generic [ref=e526]:
+              - generic [ref=e527]:
+                - generic [ref=e528]: 第 4 级
+                - generic [ref=e529]: 基础供给
+              - generic [ref=e530]:
+                - generic [ref=e532]:
+                  - img [ref=e533]
+                  - generic [ref=e534]:
+                    - strong [ref=e535]: 紫晶矿
+                    - generic [ref=e536]:
+                      - generic [ref=e537]: "配方:"
+                      - strong [ref=e538]: 基础供给
+                - generic [ref=e539]:
+                  - generic [ref=e540]: 需求 /min
+                  - strong [ref=e541]: 600.0/min
+                - generic [ref=e542]:
+                  - generic [ref=e543]: 机器
+                  - generic [ref=e544]: "-"
+                - generic [ref=e545]:
+                  - generic [ref=e546]: 物流
+                  - generic [ref=e547]: 传送带x20
+        - generic [ref=e548]:
+          - heading "机器汇总" [level=4] [ref=e549]
+          - generic [ref=e550]:
+            - generic [ref=e551]:
+              - generic [ref=e552]:
+                - img [ref=e553]
+                - generic [ref=e554]: 塑形机
+                - strong [ref=e555]: x10
+              - generic [ref=e556]:
+                - img [ref=e557]
+                - generic [ref=e558]: 灌装机
+                - strong [ref=e559]: x10
+              - generic [ref=e560]:
+                - img [ref=e561]
+                - generic [ref=e562]: 种植机
+                - strong [ref=e563]: x10
+              - generic [ref=e564]:
+                - img [ref=e565]
+                - generic [ref=e566]: 粉碎机
+                - strong [ref=e567]: x5
+              - generic [ref=e568]:
+                - img [ref=e569]
+                - generic [ref=e570]: 精炼炉
+                - strong [ref=e571]: x20
+              - generic [ref=e572]:
+                - img [ref=e573]
+                - generic [ref=e574]: 采种机
+                - strong [ref=e575]: x5
+            - generic [ref=e576]: 总计 x60
