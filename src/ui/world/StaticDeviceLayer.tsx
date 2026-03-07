@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef } from 'react'
 import { getDeviceSpritePath } from '../../domain/deviceSprites'
-import { EDGE_ANGLE, getRotatedPorts, isBelt, isPipe } from '../../domain/geometry'
-import { buildBeltTrackPath, junctionArrowPoints } from '../../domain/shared/beltVisual'
+import { EDGE_ANGLE, getRotatedPorts, isBelt, isPipe, OPPOSITE_EDGE } from '../../domain/geometry'
+import { buildBeltTrackPath, getBeltItemPosition } from '../../domain/shared/beltVisual'
 import { rotatedFootprintSize } from '../../domain/shared/math'
 import { getDeviceLabel } from '../../i18n'
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../../domain/registry'
@@ -36,8 +36,12 @@ const PROTOCOL_HUB_OUTPUT_PORT_TAGS: Record<string, string> = {
   out_e_8: '6',
 }
 const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
+const SPLITTER_OUTPUT_PORT_ORDER = ['out_w', 'out_n', 'out_s'] as const
+
+export type StaticDeviceRenderPass = 'underlay' | 'transit' | 'overlay' | 'adornment'
 
 export type StaticDeviceLayerProps = {
+  renderPass?: StaticDeviceRenderPass
   devices: DeviceInstance[]
   selectionSet: ReadonlySet<string>
   invalidSelectionSet: ReadonlySet<string>
@@ -57,6 +61,7 @@ function getItemIconPath(itemId: ItemId) {
 
 export const StaticDeviceLayer = memo(
   ({
+    renderPass = 'overlay',
     devices,
     selectionSet,
     invalidSelectionSet,
@@ -99,6 +104,65 @@ export const StaticDeviceLayer = memo(
       if (!colorTag) return DEFAULT_PIPE_FLUID_COLOR
       const colorValue = colorTag.slice(LIQUID_COLOR_TAG_PREFIX.length).trim()
       return colorValue || DEFAULT_PIPE_FLUID_COLOR
+    }
+
+    function slotSolidData(slot: unknown): { itemId: ItemId; progress01: number } | null {
+      if (!slot || typeof slot !== 'object') return null
+      const maybeItemId = (slot as { itemId?: unknown }).itemId
+      const maybeProgress = (slot as { progress01?: unknown }).progress01
+      if (typeof maybeItemId !== 'string') return null
+      if (typeof maybeProgress !== 'number') return null
+      const itemDef = ITEM_BY_ID[maybeItemId]
+      if (!itemDef || itemDef.type !== 'solid') return null
+      const progress01 = Math.min(1, Math.max(0, maybeProgress))
+      if (progress01 <= 0) return null
+      return { itemId: maybeItemId, progress01 }
+    }
+
+    function junctionFlowPath(edgeA: 'N' | 'S' | 'W' | 'E', edgeB: 'N' | 'S' | 'W' | 'E') {
+      const anchors = {
+        N: { x: 50, y: 20 },
+        S: { x: 50, y: 80 },
+        W: { x: 20, y: 50 },
+        E: { x: 80, y: 50 },
+      }
+      const start = anchors[edgeA]
+      const end = anchors[edgeB]
+      if (OPPOSITE_EDGE[edgeA] === edgeB) {
+        return `M ${start.x} ${start.y} L ${end.x} ${end.y}`
+      }
+      return `M ${start.x} ${start.y} L 50 50 L ${end.x} ${end.y}`
+    }
+
+    function junctionInternalTransportPath(
+      device: DeviceInstance,
+      runtime: DeviceRuntime | undefined,
+      rotatedPorts: ReturnType<typeof getRotatedPorts>,
+    ): { path: string; itemId: ItemId; isBlocked: boolean } | null {
+      if (!runtime || !('slot' in runtime)) return null
+      const slot = slotSolidData(runtime.slot)
+      if (!slot) return null
+      const isBlocked = runtime.stallReason === 'DOWNSTREAM_BLOCKED' && Boolean(runtime.slot && runtime.slot.progress01 >= 1)
+
+      if (device.typeId === 'item_log_splitter') {
+        const inputEdge = rotatedPorts.find((port) => port.direction === 'Input')?.edge
+        const outputPorts = SPLITTER_OUTPUT_PORT_ORDER.map((portId) => rotatedPorts.find((port) => port.portId === portId)).filter(
+          (port): port is NonNullable<typeof port> => Boolean(port),
+        )
+        if (!inputEdge || outputPorts.length === 0 || !('rrIndex' in runtime)) return null
+        const pickedOutput = outputPorts[runtime.rrIndex % outputPorts.length]?.edge ?? outputPorts[0]?.edge
+        if (!pickedOutput) return null
+        return { path: junctionFlowPath(inputEdge, pickedOutput), itemId: slot.itemId, isBlocked }
+      }
+
+      if (device.typeId === 'item_log_converger') {
+        const outputEdge = rotatedPorts.find((port) => port.direction === 'Output')?.edge
+        const inputEdge = runtime.slot ? OPPOSITE_EDGE[runtime.slot.enteredFrom] : null
+        if (!outputEdge || !inputEdge) return null
+        return { path: junctionFlowPath(inputEdge, outputEdge), itemId: slot.itemId, isBlocked }
+      }
+
+      return null
     }
 
     function pipeFluidItemNow(device: DeviceInstance): ItemId | null {
@@ -227,6 +291,22 @@ export const StaticDeviceLayer = memo(
       }
     }
 
+    function shouldRenderDevicePass(params: {
+      renderPass: StaticDeviceRenderPass
+      isLogisticsTrack: boolean
+      isBeltTrack: boolean
+      isPipeTrack: boolean
+      hasBeltTransit: boolean
+      hasPipeTransit: boolean
+      hasJunctionTransit: boolean
+    }) {
+      const { renderPass, isLogisticsTrack, isBeltTrack, isPipeTrack, hasBeltTransit, hasPipeTransit, hasJunctionTransit } = params
+      if (renderPass === 'underlay') return isLogisticsTrack
+      if (renderPass === 'transit') return (isBeltTrack && hasBeltTransit) || (isPipeTrack && hasPipeTransit)
+      if (renderPass === 'adornment') return hasJunctionTransit
+      return true
+    }
+
     return (
       <>
         {devices.map((device) => {
@@ -263,12 +343,8 @@ export const StaticDeviceLayer = memo(
           const isLogisticsTrack = isBeltTrack || isPipeTrack
           const isSplitter = renderDevice.typeId === 'item_log_splitter'
           const isMerger = renderDevice.typeId === 'item_log_converger'
-          const needsRotatedPorts =
-            isLogisticsTrack ||
-            renderDevice.typeId === 'item_port_mix_pool_1' ||
-            isProtocolHub ||
-            configuredPortItemEntries.length > 0
-          const rotatedPorts = needsRotatedPorts ? getRotatedPorts(renderDevice) : []
+          const runtime = runtimeById[renderDevice.instanceId]
+          const rotatedPorts = getRotatedPorts(renderDevice)
           const configuredPortIcons = configuredPortItemEntries
             .map((entry) => {
               const port = rotatedPorts.find((candidate) => candidate.portId === entry.portId)
@@ -292,14 +368,12 @@ export const StaticDeviceLayer = memo(
           const beltPath = buildBeltTrackPath(beltInEdge, beltOutEdge)
           const pipeFluidItemId = isPipeTrack ? visiblePipeFluidItem(renderDevice) : null
           const pipeHasWater = Boolean(pipeFluidItemId)
+          const beltTransitSlot = isBeltTrack ? slotSolidData(runtime && 'slot' in runtime ? runtime.slot : null) : null
+          const beltTransitPosition = beltTransitSlot ? getBeltItemPosition(beltInEdge, beltOutEdge, beltTransitSlot.progress01) : null
           const pipeFluidWidth = 16
-          const splitterOutputEdges = isSplitter
-            ? rotatedPorts
-                .filter((port) => port.direction === 'Output')
-                .map((port) => port.edge)
-            : []
-          const mergerOutputEdges = isMerger ? [rotatedPorts.find((port) => port.direction === 'Output')?.edge ?? 'W'] : []
-          const junctionArrowEdges = isSplitter ? splitterOutputEdges : mergerOutputEdges
+          const junctionTransport = isSplitter || isMerger
+            ? junctionInternalTransportPath(renderDevice, runtime, rotatedPorts)
+            : null
           const reactorLiquidPortTags =
             renderDevice.typeId === 'item_port_mix_pool_1' && selectionSet.has(renderDevice.instanceId)
               ? rotatedPorts.filter((port) => REACTOR_LIQUID_PORT_TAGS[port.portId])
@@ -308,19 +382,25 @@ export const StaticDeviceLayer = memo(
             isProtocolHub && selectionSet.has(renderDevice.instanceId)
               ? rotatedPorts.filter((port) => PROTOCOL_HUB_OUTPUT_PORT_TAGS[port.portId])
               : []
+          const hasBeltTransit = Boolean(beltTransitSlot && beltTransitPosition)
+          const hasPipeTransit = Boolean(isPipeTrack && pipeHasWater)
+          const hasJunctionTransit = Boolean((isSplitter || isMerger) && junctionTransport)
+          if (!shouldRenderDevicePass({ renderPass, isLogisticsTrack, isBeltTrack, isPipeTrack, hasBeltTransit, hasPipeTransit, hasJunctionTransit })) {
+            return null
+          }
           return (
             <div
               key={renderDevice.instanceId}
-              className={`device ${isLogisticsTrack ? 'belt-device' : ''} ${isPipeTrack ? 'pipe-device' : ''} ${selectionSet.has(renderDevice.instanceId) ? 'selected' : ''} ${invalidSelectionSet.has(renderDevice.instanceId) ? 'drag-invalid' : ''} ${highlightedSet.has(renderDevice.instanceId) ? 'power-range-highlight' : ''} ${extraClassName ?? ''}`.trim()}
+              className={`device render-pass-${renderPass} ${isLogisticsTrack ? 'belt-device' : ''} ${isPipeTrack ? 'pipe-device' : ''} ${selectionSet.has(renderDevice.instanceId) ? 'selected' : ''} ${invalidSelectionSet.has(renderDevice.instanceId) ? 'drag-invalid' : ''} ${highlightedSet.has(renderDevice.instanceId) ? 'power-range-highlight' : ''} ${extraClassName ?? ''}`.trim()}
               style={{
                 left: renderDevice.origin.x * BASE_CELL_SIZE,
                 top: renderDevice.origin.y * BASE_CELL_SIZE,
                 width: footprintSize.width * BASE_CELL_SIZE,
                 height: footprintSize.height * BASE_CELL_SIZE,
               }}
-              title={renderDevice.typeId}
+              title={renderPass === 'overlay' ? renderDevice.typeId : undefined}
             >
-              {isLogisticsTrack ? (
+              {renderPass === 'underlay' && isLogisticsTrack ? (
                 <div className="belt-track-wrap">
                   <svg className="belt-track-svg" viewBox={`0 0 ${BELT_VIEWBOX_SIZE} ${BELT_VIEWBOX_SIZE}`} preserveAspectRatio="none" aria-hidden="true">
                     {(() => {
@@ -335,9 +415,6 @@ export const StaticDeviceLayer = memo(
                             </mask>
                           </defs>
                           <path d={beltPath} className="belt-track-fill" />
-                          {isPipeTrack && pipeHasWater ? (
-                            <path d={beltPath} className="pipe-fluid-fill" style={{ strokeWidth: pipeFluidWidth, stroke: pipeFluidColor(pipeFluidItemId!) }} />
-                          ) : null}
                           <path d={beltPath} className="belt-track-edge" mask={`url(#${beltEdgeMaskId})`} />
                         </>
                       )
@@ -345,7 +422,39 @@ export const StaticDeviceLayer = memo(
                   </svg>
                   {!isPipeTrack ? <span className="belt-arrow" style={{ transform: `translate(-50%, -50%) rotate(${EDGE_ANGLE[beltOutEdge]}deg)` }} /> : null}
                 </div>
-              ) : (
+              ) : null}
+
+              {renderPass === 'transit' && isPipeTrack && pipeHasWater ? (
+                <div className="belt-track-wrap">
+                  <svg className="belt-track-svg belt-transit-svg" viewBox={`0 0 ${BELT_VIEWBOX_SIZE} ${BELT_VIEWBOX_SIZE}`} preserveAspectRatio="none" aria-hidden="true">
+                    <path d={beltPath} className="pipe-fluid-fill" style={{ strokeWidth: pipeFluidWidth, stroke: pipeFluidColor(pipeFluidItemId!) }} />
+                  </svg>
+                </div>
+              ) : null}
+
+              {renderPass === 'transit' && beltTransitSlot && beltTransitPosition ? (
+                <span
+                  className="belt-item-box belt-item-box-inline"
+                  style={{
+                    left: `${(beltTransitPosition.x / BELT_VIEWBOX_SIZE) * BASE_CELL_SIZE}px`,
+                    top: `${(beltTransitPosition.y / BELT_VIEWBOX_SIZE) * BASE_CELL_SIZE}px`,
+                    width: `${BASE_CELL_SIZE * 0.5}px`,
+                    height: `${BASE_CELL_SIZE * 0.5}px`,
+                  }}
+                >
+                  <img className="belt-item-cover" src={getItemIconPath(beltTransitSlot.itemId)} alt="" draggable={false} />
+                </span>
+              ) : null}
+
+              {renderPass === 'adornment' && hasJunctionTransit ? (
+                <div className="junction-icon junction-transit-icon" aria-hidden="true">
+                  <svg className="junction-icon-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <path className={`junction-item-flow ${junctionTransport!.isBlocked ? 'is-blocked' : ''}`.trim()} d={junctionTransport!.path} />
+                  </svg>
+                </div>
+              ) : null}
+
+              {renderPass === 'overlay' && !isLogisticsTrack ? (
                 <div
                   className={`device-surface ${isPickupPort ? 'pickup-port-surface' : ''} ${isGrinder ? 'grinder-surface' : ''} ${isTexturedDevice ? 'textured-surface' : ''}`}
                 >
@@ -362,17 +471,6 @@ export const StaticDeviceLayer = memo(
                         transform: `translate(-50%, -50%) rotate(${renderDevice.rotation}deg)`,
                       }}
                     />
-                  )}
-                  {(isSplitter || isMerger) && !isTexturedDevice && (
-                    <div className="junction-icon" aria-hidden="true">
-                      <svg className="junction-icon-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <line className="junction-cross-line" x1="20" y1="50" x2="80" y2="50" />
-                        <line className="junction-cross-line" x1="50" y1="20" x2="50" y2="80" />
-                        {junctionArrowEdges.map((edge) => (
-                          <polyline key={`${renderDevice.instanceId}-${edge}`} className="junction-arrow-line" points={junctionArrowPoints(edge)} />
-                        ))}
-                      </svg>
-                    </div>
                   )}
                   {displayItemIconId && (
                     <img className="device-item-icon" src={getItemIconPath(displayItemIconId)} alt="" aria-hidden="true" draggable={false} />
@@ -423,7 +521,7 @@ export const StaticDeviceLayer = memo(
                     </span>
                   ))}
                 </div>
-              )}
+              ) : null}
             </div>
           )
         })}

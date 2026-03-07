@@ -1,6 +1,4 @@
 import type { ReactNode } from 'react'
-import type { ItemId } from '../../domain/types'
-
 type PowerRangeOutline = {
   key: string
   left: number
@@ -17,14 +15,6 @@ type RuntimeStallOverlay = {
   width: number
   height: number
   isBelt: boolean
-}
-
-type TransitItem = {
-  key: string
-  itemId: ItemId
-  progress01: number
-  x: number
-  y: number
 }
 
 type PortChevron = {
@@ -71,13 +61,11 @@ type WorldContentProps = {
   canvasOffsetYPx: number
   lotSize: number
   powerRangeOutlines: PowerRangeOutline[]
-  mainDeviceLayer: ReactNode
-  logisticsPreviewLayer: ReactNode
-  blueprintPreviewLayer: ReactNode
+  underlayLayer: ReactNode
+  transitLayer: ReactNode
+  overlayLayer: ReactNode
+  adornmentLayer: ReactNode
   runtimeStallOverlays: RuntimeStallOverlay[]
-  inTransitItems: TransitItem[]
-  getItemLabelText: (itemId: ItemId) => string
-  getItemIconPath: (itemId: ItemId) => string
   logisticsEndpointHighlights: LogisticsEndpointHighlight[]
   portChevrons: PortChevron[]
   placePreview: PlacePreview | null
@@ -90,13 +78,11 @@ export function WorldContent({
   canvasOffsetYPx,
   lotSize,
   powerRangeOutlines,
-  mainDeviceLayer,
-  logisticsPreviewLayer,
-  blueprintPreviewLayer,
+  underlayLayer,
+  transitLayer,
+  overlayLayer,
+  adornmentLayer,
   runtimeStallOverlays,
-  inTransitItems,
-  getItemLabelText,
-  getItemIconPath,
   logisticsEndpointHighlights,
   portChevrons,
   placePreview,
@@ -127,9 +113,10 @@ export function WorldContent({
         />
       ))}
 
-      {mainDeviceLayer}
-      {logisticsPreviewLayer}
-      {blueprintPreviewLayer}
+      <div className="world-pass-layer world-pass-underlay">{underlayLayer}</div>
+      <div className="world-pass-layer world-pass-transit">{transitLayer}</div>
+      <div className="world-pass-layer world-pass-overlay">{overlayLayer}</div>
+      <div className="world-pass-layer world-pass-adornment">{adornmentLayer}</div>
 
       {logisticsEndpointHighlights.map((highlight) => (
         <div
@@ -156,24 +143,6 @@ export function WorldContent({
           }}
         />
       ))}
-
-      <div className="in-transit-overlay" aria-hidden="true">
-        {inTransitItems.map((item) => (
-          <span
-            key={item.key}
-            className={`belt-item-box item-${item.itemId}`}
-            style={{
-              left: item.x,
-              top: item.y,
-              width: `${baseCellSize * 0.5}px`,
-              height: `${baseCellSize * 0.5}px`,
-            }}
-            title={`${getItemLabelText(item.itemId)} @ ${item.progress01.toFixed(2)}`}
-          >
-            <img className="belt-item-cover" src={getItemIconPath(item.itemId)} alt="" draggable={false} />
-          </span>
-        ))}
-      </div>
 
       {portChevrons.map((chevron) => (
         <div

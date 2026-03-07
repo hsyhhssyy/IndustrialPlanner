@@ -7,7 +7,6 @@ import {
   EDGE_ANGLE,
   isBelt,
 } from './domain/geometry'
-import { getBeltItemPosition } from './domain/shared/beltVisual'
 import {
   formatCompactNumber,
   formatCompactStock,
@@ -108,7 +107,6 @@ function formatRecipeSummary(typeId: DeviceTypeId, language: Language, recipeId?
 }
 
 const BASE_CELL_SIZE = 64
-const BELT_VIEWBOX_SIZE = 64
 const STATS_TOP_N = 20
 const LEFT_PANEL_MIN_WIDTH = 340
 const RIGHT_PANEL_MIN_WIDTH = 260
@@ -519,12 +517,10 @@ function App() {
     },
   }
 
-  const { inTransitItems, runtimeStallOverlays, powerRangeOutlines } = useWorldOverlaysDomain({
+  const { runtimeStallOverlays, powerRangeOutlines } = useWorldOverlaysDomain({
     layout,
     runtimeById: sim.runtimeById,
     baseCellSize: BASE_CELL_SIZE,
-    beltViewboxSize: BELT_VIEWBOX_SIZE,
-    getBeltItemPosition,
     shouldShowRuntimeStallOverlay,
     rotatedFootprintSize,
   })
@@ -655,8 +651,9 @@ function App() {
     }
   }
 
-  const mainDeviceLayer = (
+  const mainDeviceUnderlayLayer = (
     <StaticDeviceLayer
+      renderPass="underlay"
       devices={layout.devices}
       selectionSet={selectionSet}
       invalidSelectionSet={dragInvalidSelection}
@@ -670,9 +667,58 @@ function App() {
     />
   )
 
-  const logisticsPreviewLayer =
+  const mainDeviceTransitLayer = (
+    <StaticDeviceLayer
+      renderPass="transit"
+      devices={layout.devices}
+      selectionSet={selectionSet}
+      invalidSelectionSet={dragInvalidSelection}
+      highlightedSet={powerPolePlacementPreview.highlightedDeviceIds}
+      previewOriginsById={dragPreviewOriginsById}
+      language={language}
+      showRuntimeItemIcons={false}
+      showPreloadSummary={!sim.isRunning}
+      runtimeById={sim.runtimeById}
+      simTick={sim.tick}
+    />
+  )
+
+  const mainDeviceOverlayLayer = (
+    <StaticDeviceLayer
+      renderPass="overlay"
+      devices={layout.devices}
+      selectionSet={selectionSet}
+      invalidSelectionSet={dragInvalidSelection}
+      highlightedSet={powerPolePlacementPreview.highlightedDeviceIds}
+      previewOriginsById={dragPreviewOriginsById}
+      language={language}
+      showRuntimeItemIcons={false}
+      showPreloadSummary={!sim.isRunning}
+      runtimeById={sim.runtimeById}
+      simTick={sim.tick}
+    />
+  )
+
+  const mainDeviceAdornmentLayer = (
+    <StaticDeviceLayer
+      renderPass="adornment"
+      devices={layout.devices}
+      selectionSet={selectionSet}
+      invalidSelectionSet={dragInvalidSelection}
+      highlightedSet={powerPolePlacementPreview.highlightedDeviceIds}
+      previewOriginsById={dragPreviewOriginsById}
+      language={language}
+      showRuntimeItemIcons={false}
+      showPreloadSummary={!sim.isRunning}
+      runtimeById={sim.runtimeById}
+      simTick={sim.tick}
+    />
+  )
+
+  const logisticsPreviewUnderlayLayer =
     mode === 'place' && (placeOperation === 'belt' || placeOperation === 'pipe') && logisticsPreviewDevices.length > 0 ? (
       <StaticDeviceLayer
+        renderPass="underlay"
         devices={logisticsPreviewDevices}
         selectionSet={new Set()}
         invalidSelectionSet={new Set()}
@@ -684,9 +730,40 @@ function App() {
       />
     ) : null
 
-  const blueprintPreviewLayer =
+  const logisticsPreviewOverlayLayer =
+    mode === 'place' && (placeOperation === 'belt' || placeOperation === 'pipe') && logisticsPreviewDevices.length > 0 ? (
+      <StaticDeviceLayer
+        renderPass="overlay"
+        devices={logisticsPreviewDevices}
+        selectionSet={new Set()}
+        invalidSelectionSet={new Set()}
+        highlightedSet={emptyHighlightedSet}
+        previewOriginsById={new Map()}
+        language={language}
+        extraClassName="logistics-preview-device"
+        showRuntimeItemIcons={false}
+      />
+    ) : null
+
+  const blueprintPreviewUnderlayLayer =
     blueprintPlacementPreview && blueprintPlacementPreview.devices.length > 0 ? (
       <StaticDeviceLayer
+        renderPass="underlay"
+        devices={blueprintPlacementPreview.devices}
+        selectionSet={new Set()}
+        invalidSelectionSet={new Set()}
+        highlightedSet={emptyHighlightedSet}
+        previewOriginsById={new Map()}
+        language={language}
+        extraClassName={`blueprint-preview-device ${blueprintPlacementPreview.isValid ? 'valid' : 'invalid'}`}
+        showRuntimeItemIcons={false}
+      />
+    ) : null
+
+  const blueprintPreviewOverlayLayer =
+    blueprintPlacementPreview && blueprintPlacementPreview.devices.length > 0 ? (
+      <StaticDeviceLayer
+        renderPass="overlay"
         devices={blueprintPlacementPreview.devices}
         selectionSet={new Set()}
         invalidSelectionSet={new Set()}
@@ -705,13 +782,23 @@ function App() {
       canvasOffsetYPx={canvasOffsetYPx}
       lotSize={layout.lotSize}
       powerRangeOutlines={worldPowerRangeOutlines}
-      mainDeviceLayer={mainDeviceLayer}
-      logisticsPreviewLayer={logisticsPreviewLayer}
-      blueprintPreviewLayer={blueprintPreviewLayer}
+      underlayLayer={(
+        <>
+          {mainDeviceUnderlayLayer}
+          {logisticsPreviewUnderlayLayer}
+          {blueprintPreviewUnderlayLayer}
+        </>
+      )}
+      transitLayer={<>{mainDeviceTransitLayer}</>}
+      overlayLayer={(
+        <>
+          {mainDeviceOverlayLayer}
+          {logisticsPreviewOverlayLayer}
+          {blueprintPreviewOverlayLayer}
+        </>
+      )}
+      adornmentLayer={<>{mainDeviceAdornmentLayer}</>}
       runtimeStallOverlays={runtimeStallOverlays}
-      inTransitItems={inTransitItems}
-      getItemLabelText={(itemId) => getItemLabel(language, itemId)}
-      getItemIconPath={getItemIconPath}
       logisticsEndpointHighlights={logisticsEndpointHighlights}
       portChevrons={portChevrons}
       placePreview={placePreview}

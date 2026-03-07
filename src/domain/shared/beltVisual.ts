@@ -53,10 +53,3 @@ export function getBeltItemPosition(inEdge: Edge, outEdge: Edge, progress01: num
     y: lerp(corner.y, end.y, local),
   }
 }
-
-export function junctionArrowPoints(edge: Edge) {
-  if (edge === 'E') return '68,44 80,50 68,56'
-  if (edge === 'W') return '32,44 20,50 32,56'
-  if (edge === 'N') return '44,32 50,20 56,32'
-  return '44,68 50,80 56,68'
-}

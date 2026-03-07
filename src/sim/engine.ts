@@ -1792,21 +1792,23 @@ function cloneSlot(slot: SlotData | null): SlotData | null {
 
 function cloneRuntime(runtime: DeviceRuntime): DeviceRuntime {
   if ('inputBuffer' in runtime && 'outputBuffer' in runtime) {
-    const clonedSharedBufferRuntime = {
+    if ('transportSamples' in runtime) {
+      return {
+        ...runtime,
+        inputBuffer: { ...runtime.inputBuffer },
+        outputBuffer: { ...runtime.outputBuffer },
+        inputSlotItems: [...runtime.inputSlotItems],
+        outputSlotItems: [...runtime.outputSlotItems],
+        slot: cloneSlot(runtime.slot),
+      }
+    }
+
+    return {
       ...runtime,
       inputBuffer: { ...runtime.inputBuffer },
       outputBuffer: { ...runtime.outputBuffer },
       inputSlotItems: [...runtime.inputSlotItems],
       outputSlotItems: [...runtime.outputSlotItems],
-      slot: 'slot' in runtime ? cloneSlot(runtime.slot) : null,
-    }
-
-    if ('transportSamples' in runtime) {
-      return clonedSharedBufferRuntime
-    }
-
-    return {
-      ...clonedSharedBufferRuntime,
       bufferGroups: runtime.bufferGroups
         ? runtime.bufferGroups.map((group) => ({
             ...group,

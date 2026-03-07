@@ -433,6 +433,29 @@ button:disabled {
   position: absolute;
 }
 
+.world-pass-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.world-pass-underlay {
+  z-index: 2;
+}
+
+.world-pass-transit {
+  z-index: 3;
+  pointer-events: none;
+}
+
+.world-pass-overlay {
+  z-index: 4;
+}
+
+.world-pass-adornment {
+  z-index: 5;
+  pointer-events: none;
+}
+
 .canvas-viewport {
   width: 100%;
   height: 100%;
@@ -476,6 +499,12 @@ button:disabled {
   cursor: pointer;
   user-select: none;
   z-index: 4;
+}
+
+.device.render-pass-underlay,
+.device.render-pass-transit,
+.device.render-pass-adornment {
+  pointer-events: none;
 }
 
 .device-surface {
@@ -648,33 +677,14 @@ button:disabled {
   pointer-events: none;
 }
 
+.junction-transit-icon {
+  z-index: 1;
+}
+
 .junction-icon-svg {
   width: 100%;
   height: 100%;
   display: block;
-}
-
-.junction-cross-line,
-.junction-arrow-line {
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.junction-cross-line {
-  stroke: rgba(228, 236, 248, 0.82);
-  stroke-width: 3;
-}
-
-.junction-arrow-line {
-  stroke: rgba(228, 236, 248, 0.96);
-  stroke-width: 3;
-}
-
-.belt-device {
-  background: transparent;
-  border: none;
-  z-index: 2;
 }
 
 .belt-track-wrap {
@@ -683,10 +693,17 @@ button:disabled {
 }
 
 .belt-track-svg {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   display: block;
   shape-rendering: geometricPrecision;
+  z-index: 0;
+}
+
+.belt-transit-svg {
+  z-index: 1;
 }
 
 .belt-track-fill,
@@ -704,6 +721,32 @@ button:disabled {
   stroke-linecap: butt;
   stroke-linejoin: round;
   transition: stroke-width 120ms linear;
+}
+
+.junction-item-flow {
+  fill: none;
+  stroke: rgba(255, 184, 77, 0.5);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 14 10;
+  animation: junction-item-flow-scroll 480ms linear infinite;
+}
+
+.junction-item-flow.is-blocked {
+  stroke: rgba(255, 120, 120, 0.78);
+  stroke-dasharray: none;
+  animation: none;
+}
+
+@keyframes junction-item-flow-scroll {
+  from {
+    stroke-dashoffset: 0;
+  }
+
+  to {
+    stroke-dashoffset: -24;
+  }
 }
 
 .belt-device {
@@ -749,13 +792,7 @@ button:disabled {
   background: var(--belt-edge);
   clip-path: polygon(20% 8%, 20% 92%, 92% 50%);
   pointer-events: none;
-}
-
-.in-transit-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 3;
+  z-index: 2;
 }
 
 .belt-item-box {
@@ -771,14 +808,8 @@ button:disabled {
   will-change: left, top, transform;
 }
 
-.belt-item-box.item-item_originium_ore {
-  border-color: #7e8a99;
-  background: #c9d1db;
-}
-
-.belt-item-box.item-item_originium_powder {
-  border-color: #7a5bb8;
-  background: #d7c0ff;
+.belt-item-box-inline {
+  z-index: 1;
 }
 
 .belt-item-cover {
@@ -974,7 +1005,7 @@ button:disabled {
   z-index: 5;
 }
 
-.logistics-preview-device::after {
+.render-pass-overlay.logistics-preview-device::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -983,7 +1014,7 @@ button:disabled {
   pointer-events: none;
 }
 
-.logistics-preview-device .device-surface {
+.render-pass-overlay.logistics-preview-device .device-surface {
   border-color: rgba(255, 255, 255, 0.98);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.86) inset;
 }
@@ -993,7 +1024,7 @@ button:disabled {
   --belt-edge: rgba(255, 255, 255, 0.98);
 }
 
-.logistics-preview-device .belt-arrow {
+.render-pass-underlay.logistics-preview-device .belt-arrow {
   background: rgba(255, 255, 255, 0.98);
 }
 
@@ -1002,11 +1033,11 @@ button:disabled {
   z-index: 5;
 }
 
-.blueprint-preview-device .device-surface {
+.render-pass-overlay.blueprint-preview-device .device-surface {
   border-style: dashed;
 }
 
-.blueprint-preview-device.valid::after {
+.render-pass-overlay.blueprint-preview-device.valid::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -1015,12 +1046,12 @@ button:disabled {
   pointer-events: none;
 }
 
-.blueprint-preview-device.valid .device-surface {
+.render-pass-overlay.blueprint-preview-device.valid .device-surface {
   border-color: rgba(255, 255, 255, 0.98);
   box-shadow: 0 0 0 1px rgba(79, 123, 196, 0.82) inset;
 }
 
-.blueprint-preview-device.invalid::after {
+.render-pass-overlay.blueprint-preview-device.invalid::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -1029,7 +1060,7 @@ button:disabled {
   pointer-events: none;
 }
 
-.blueprint-preview-device.invalid .device-surface {
+.render-pass-overlay.blueprint-preview-device.invalid .device-surface {
   border-color: #ff5d5d;
   box-shadow: 0 0 0 1px rgba(86, 10, 10, 0.45) inset;
   background: rgba(106, 31, 46, 0.34);
