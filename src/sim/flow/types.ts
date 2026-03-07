@@ -3,7 +3,7 @@ import type { DeviceInstance, DeviceRuntime, ItemId } from '../../domain/types'
 export type SendLane = 'slot' | 'ns' | 'we' | 'output'
 export type ReceiveLane = 'slot' | 'ns' | 'we' | 'output'
 
-export type TransferPlan = {
+export type TransferMatch = {
   transferId: string
   fromId: string
   fromPortId: string
@@ -17,18 +17,30 @@ export type TransferPlan = {
   senderPickedOutLinkIndex: number
 }
 
+export type PullIntent = {
+  receiverId: string
+  receiverPortId: string
+  receiverLane: ReceiveLane
+  receiverCandidateRank: number
+  fromId: string
+  fromPortId: string
+  fromLane: SendLane
+  fromOutputSlotIndex?: number
+  itemId: ItemId
+  senderOutLinkCount: number
+  senderPickedOutLinkIndex: number
+}
+
 export type PortLink = {
   from: { instanceId: string; portId: string }
   to: { instanceId: string; portId: string }
 }
 
-export type ReceiveState = { lane: ReceiveLane | null; canTry: boolean; canAccept: boolean }
-
 export type PlanHelpers = {
   isHardBlockedStall: (stallReason: DeviceRuntime['stallReason']) => boolean
   orderedOutLinks: (device: DeviceInstance, runtime: DeviceRuntime, outLinks: PortLink[]) => PortLink[]
-  buildConvergerPreferredInputPortMap: () => Map<string, string>
-  buildDevicePreferredSolidInputPortMap: () => Map<string, Set<string>>
+  buildConvergerPullInputPortOrderMap: () => Map<string, string[]>
+  buildDevicePullInputPortOrderMap: () => Map<string, string[]>
   isConvergerType: (typeId: DeviceInstance['typeId']) => boolean
   sourceSlotLane: (device: DeviceInstance, runtime: DeviceRuntime, fromPortId: string) => SendLane
   prepareSourceLaneItem: (
@@ -39,14 +51,13 @@ export type PlanHelpers = {
     lanesReachedHalfThisTick: ReadonlySet<string>,
     lanesAdvancedThisTick: Set<string>,
   ) => { itemId: ItemId | null; laneProgressAdvanced: boolean }
-  canReceiveOnPortWithPlan: (
+  canReceiveLaneForItem: (
     device: DeviceInstance,
     runtime: DeviceRuntime,
     toPortId: string,
-    reservedReceivers: Set<string>,
     lanesClearingThisTick: Set<string>,
     itemId: ItemId,
-  ) => ReceiveState
+  ) => ReceiveLane | null
   isStorageWithBufferGroups: (runtime: DeviceRuntime) => boolean
   orderedStorageSlotIndicesForOutput: (runtime: DeviceRuntime, outPortId?: string) => number[]
   getStorageSlotItemId: (runtime: DeviceRuntime, slotIndex: number, outPortId?: string) => ItemId | null
@@ -58,15 +69,14 @@ export type PlanContext = {
   layoutDevices: DeviceInstance[]
   runtimeById: Record<string, DeviceRuntime>
   deviceById: Map<string, DeviceInstance>
+  inMap: Map<string, PortLink[]>
   outMap: Map<string, PortLink[]>
   helpers: PlanHelpers
   lanesReachedHalfThisTick: ReadonlySet<string>
 }
 
 export type PlanResult = {
-  transferPlans: TransferPlan[]
+  transferMatches: TransferMatch[]
   plannedSenders: Set<string>
-  reservedReceivers: Set<string>
-  lanesClearingThisTick: Set<string>
   lanesAdvancedThisTick: Set<string>
 }

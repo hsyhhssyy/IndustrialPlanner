@@ -74,7 +74,7 @@ function getInternalStatusText(
   const hasQueuedInput = 'inputBuffer' in runtime && Object.values(runtime.inputBuffer).some((amount) => (amount ?? 0) > 0)
   const hasReadyOutput = 'outputBuffer' in runtime && Object.values(runtime.outputBuffer).some((amount) => (amount ?? 0) > 0)
   const slot = runtime.slot
-  if (!slot) return t(hasQueuedInput ? 'detail.internal.queuedInput' : 'detail.internal.canAccept')
+  if (!slot) return t(hasQueuedInput ? 'detail.internal.queuedInput' : 'detail.internal.readyInput')
   if (slot.progress01 < 1) return t('detail.internal.inTransit', { progress: slot.progress01.toFixed(2) })
   if (hasReadyOutput) return t('detail.internal.readyCommit', { progress: slot.progress01.toFixed(2) })
   return t('detail.internal.readyCommit', { progress: slot.progress01.toFixed(2) })

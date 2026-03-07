@@ -10,9 +10,9 @@ import {
   reactorPeekOutputForPort,
   reactorSelectedRecipeIds,
 } from './reactorPool'
-import { buildTransferPlans } from './flow/plan'
-import { commitTransferPlans } from './flow/commit'
-import type { PortLink as FlowPortLink, ReceiveState, TransferPlan } from './flow/types'
+import { solvePullTransferMatches } from './flow/plan'
+import { commitTransferMatches } from './flow/commit'
+import type { PortLink as FlowPortLink, TransferMatch } from './flow/types'
 import type {
   BufferGroupRuntime,
   BufferSlotRuntime,
@@ -1241,19 +1241,17 @@ function canReceiveOnPort(device: DeviceInstance, runtime: DeviceRuntime, toPort
 
 type ReceiveLane = 'slot' | 'ns' | 'we' | 'output'
 
-function canReceiveOnPortWithPlan(
+function canReceiveLaneForItem(
   device: DeviceInstance,
   runtime: DeviceRuntime,
   toPortId: string,
-  reservedReceivers: Set<string>,
   lanesClearingThisTick: Set<string>,
   itemId: ItemId,
-): ReceiveState {
+): ReceiveLane | null {
   const lane = canReceiveOnPort(device, runtime, toPortId)
-  if (!lane) return { lane: null, canTry: false, canAccept: false }
+  if (!lane) return null
 
   const reserveKey = `${device.instanceId}:${lane}`
-  if (reservedReceivers.has(reserveKey)) return { lane, canTry: false, canAccept: false }
 
   if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
     const hasBufferedInput = Boolean(beltBufferedItemId(runtime, 'input'))
@@ -1261,33 +1259,25 @@ function canReceiveOnPortWithPlan(
     const hasInTransit = Boolean(runtime.slot && runtime.slot.progress01 < 1)
     const clearingThisTick = hasBufferedOutput && lanesClearingThisTick.has(reserveKey)
 
-    if (!hasBufferedInput && !hasBufferedOutput && !hasInTransit) {
-      return { lane, canTry: true, canAccept: true }
-    }
+    if (!hasBufferedInput && !hasBufferedOutput && !hasInTransit) return lane
 
-    if (!hasBufferedInput && !hasInTransit && clearingThisTick) {
-      return { lane, canTry: true, canAccept: true }
-    }
+    if (!hasBufferedInput && !hasInTransit && clearingThisTick) return lane
 
-    return { lane, canTry: false, canAccept: false }
+    return null
   }
 
   if (lane === 'output') {
     const canAccept = canAcceptIntoLane(device, runtime, lane, toPortId, itemId)
-    return { lane, canTry: true, canAccept }
+    return canAccept ? lane : null
   }
   const slot = getSlotRef(runtime, lane)
-  if (!slot) return { lane, canTry: true, canAccept: true }
+  if (!slot) return lane
 
   if (slot.progress01 >= 1 && lanesClearingThisTick.has(reserveKey)) {
-    return { lane, canTry: true, canAccept: true }
+    return lane
   }
 
-  if (slot.progress01 > 0.5 && slot.progress01 < 1) {
-    return { lane, canTry: true, canAccept: false }
-  }
-
-  return { lane, canTry: false, canAccept: false }
+  return null
 }
 
 function canAcceptIntoLane(device: DeviceInstance, runtime: DeviceRuntime, lane: ReceiveLane, toPortId: string, itemId: ItemId) {
@@ -1457,7 +1447,7 @@ function prepareSourceLaneItem(
 }
 
 function consumeSourceByPlan(
-  plan: TransferPlan,
+  plan: TransferMatch,
   fromRuntime: DeviceRuntime,
   fromDevice: DeviceInstance,
   tick: number,
@@ -1603,14 +1593,14 @@ function peekReadyItemForSourceLink(
   return peekReadyItemForLane(fromDevice, fromRuntime, fromLane, warehouse, fromPortId)
 }
 
-function buildConvergerPreferredInputPortMap(
+function buildConvergerPullInputPortOrderMap(
   layout: LayoutState,
   runtimeById: Record<string, DeviceRuntime>,
   links: ReturnType<typeof neighborsFromLinks>,
   deviceById: Map<string, DeviceInstance>,
   warehouse: Record<ItemId, number>,
 ) {
-  const preferredPortByConvergerId = new Map<string, string>()
+  const preferredPortOrderByConvergerId = new Map<string, string[]>()
 
   for (const device of layout.devices) {
     if (!isConvergerType(device.typeId)) continue
@@ -1643,22 +1633,29 @@ function buildConvergerPreferredInputPortMap(
       const probeIndex = (baseOffset + step) % CONVERGER_INPUT_PORT_ORDER.length
       const probePort = CONVERGER_INPUT_PORT_ORDER[probeIndex]
       if (!preferredSourcePorts.has(probePort)) continue
-      preferredPortByConvergerId.set(device.instanceId, probePort)
+      const orderedPorts: string[] = []
+      for (let innerStep = 0; innerStep < CONVERGER_INPUT_PORT_ORDER.length; innerStep += 1) {
+        const innerIndex = (probeIndex + innerStep) % CONVERGER_INPUT_PORT_ORDER.length
+        const candidatePort = CONVERGER_INPUT_PORT_ORDER[innerIndex]
+        if (!preferredSourcePorts.has(candidatePort)) continue
+        orderedPorts.push(candidatePort)
+      }
+      preferredPortOrderByConvergerId.set(device.instanceId, orderedPorts)
       break
     }
   }
 
-  return preferredPortByConvergerId
+  return preferredPortOrderByConvergerId
 }
 
-function buildDevicePreferredSolidInputPortMap(
+function buildDevicePullInputPortOrderMap(
   layout: LayoutState,
   runtimeById: Record<string, DeviceRuntime>,
   links: ReturnType<typeof neighborsFromLinks>,
   deviceById: Map<string, DeviceInstance>,
   warehouse: Record<ItemId, number>,
 ) {
-  const preferredPortsByDeviceId = new Map<string, Set<string>>()
+  const orderedPortsByDeviceId = new Map<string, string[]>()
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
@@ -1668,11 +1665,10 @@ function buildDevicePreferredSolidInputPortMap(
     const groups = getBufferGroups(runtime)
     if (groups.length === 0) continue
 
-    const preferredPorts = new Set<string>()
+    const orderedPorts: string[] = []
 
     for (const group of groups) {
       const inputPortOrder = group.inPortIds
-      if (inputPortOrder.length <= 1) continue
       const availablePorts = new Set<string>()
 
       for (const inLink of inLinks) {
@@ -1695,17 +1691,16 @@ function buildDevicePreferredSolidInputPortMap(
         const probeIndex = (baseOffset + step) % inputPortOrder.length
         const probePort = inputPortOrder[probeIndex]
         if (!availablePorts.has(probePort)) continue
-        preferredPorts.add(probePort)
-        break
+        orderedPorts.push(probePort)
       }
     }
 
-    if (preferredPorts.size > 0) {
-      preferredPortsByDeviceId.set(device.instanceId, preferredPorts)
+    if (orderedPorts.length > 0) {
+      orderedPortsByDeviceId.set(device.instanceId, orderedPorts)
     }
   }
 
-  return preferredPortsByDeviceId
+  return orderedPortsByDeviceId
 }
 
 function inPowerRange(target: DeviceInstance, poles: DeviceInstance[]) {
@@ -2464,23 +2459,24 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     }
   }
 
-  const planResult = buildTransferPlans({
+  const planResult = solvePullTransferMatches({
     tick: sim.tick,
     layoutDevices: layout.devices,
     runtimeById,
     deviceById,
+    inMap: links.inMap as Map<string, FlowPortLink[]>,
     outMap: links.outMap as Map<string, FlowPortLink[]>,
     lanesReachedHalfThisTick,
     helpers: {
       isHardBlockedStall,
       orderedOutLinks: (device, runtime, outLinks) => orderedOutLinks(device, runtime, outLinks as ReturnType<typeof neighborsFromLinks>['links']) as FlowPortLink[],
-      buildConvergerPreferredInputPortMap: () => buildConvergerPreferredInputPortMap(layout, runtimeById, links, deviceById, warehouse),
-      buildDevicePreferredSolidInputPortMap: () => buildDevicePreferredSolidInputPortMap(layout, runtimeById, links, deviceById, warehouse),
+      buildConvergerPullInputPortOrderMap: () => buildConvergerPullInputPortOrderMap(layout, runtimeById, links, deviceById, warehouse),
+      buildDevicePullInputPortOrderMap: () => buildDevicePullInputPortOrderMap(layout, runtimeById, links, deviceById, warehouse),
       isConvergerType,
       sourceSlotLane,
       prepareSourceLaneItem: (device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced) =>
         prepareSourceLaneItem(device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced, sim.tickRateHz, warehouse),
-      canReceiveOnPortWithPlan,
+      canReceiveLaneForItem,
       isStorageWithBufferGroups,
       orderedStorageSlotIndicesForOutput,
       getStorageSlotItemId,
@@ -2488,7 +2484,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     },
   })
 
-  const { transferPlans, plannedSenders, lanesAdvancedThisTick } = planResult
+  const { transferMatches, plannedSenders, lanesAdvancedThisTick } = planResult
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
@@ -2533,13 +2529,13 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     }
   }
 
-  commitTransferPlans({
+  commitTransferMatches({
     tick: sim.tick,
     runtimeById,
     deviceById,
     outMap: links.outMap as Map<string, FlowPortLink[]>,
     warehouse,
-    transferPlans,
+    transferMatches,
     helpers: {
       tryReceiveToLane,
       isWarehouseSubmitPort,
