@@ -760,16 +760,15 @@ button:disabled {
 
 .belt-item-box {
   position: absolute;
+  overflow: hidden;
   transform: translate(-50%, -50%);
   border-radius: 3px;
   box-sizing: border-box;
   border: 1px solid rgba(120, 136, 160, 0.9);
   background: rgba(32, 42, 58, 0.92);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   pointer-events: none;
+  will-change: left, top, transform;
 }
 
 .belt-item-box.item-item_originium_ore {
@@ -783,11 +782,17 @@ button:disabled {
 }
 
 .belt-item-cover {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   width: 88%;
   height: 88%;
+  display: block;
   object-fit: contain;
   image-rendering: auto;
-  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.35));
+  transform: translate(-50%, -50%) translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
 }
 
 .device.selected {

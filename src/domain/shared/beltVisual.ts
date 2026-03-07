@@ -26,9 +26,31 @@ export function getBeltItemPosition(inEdge: Edge, outEdge: Edge, progress01: num
   const t = clamp(progress01, 0, 1)
   const start = EDGE_ANCHOR[inEdge]
   const end = EDGE_ANCHOR[outEdge]
+  if (OPPOSITE_EDGE[inEdge] === outEdge) {
+    return {
+      x: lerp(start.x, end.x, t),
+      y: lerp(start.y, end.y, t),
+    }
+  }
+
+  const corner = { x: 32, y: 32 }
+  const firstSegmentLength = Math.hypot(corner.x - start.x, corner.y - start.y)
+  const secondSegmentLength = Math.hypot(end.x - corner.x, end.y - corner.y)
+  const totalLength = Math.max(1e-6, firstSegmentLength + secondSegmentLength)
+  const firstSegmentRatio = firstSegmentLength / totalLength
+
+  if (t <= firstSegmentRatio) {
+    const local = firstSegmentRatio <= 0 ? 0 : t / firstSegmentRatio
+    return {
+      x: lerp(start.x, corner.x, local),
+      y: lerp(start.y, corner.y, local),
+    }
+  }
+
+  const local = secondSegmentLength <= 0 ? 1 : (t - firstSegmentRatio) / (1 - firstSegmentRatio)
   return {
-    x: lerp(start.x, end.x, t),
-    y: lerp(start.y, end.y, t),
+    x: lerp(corner.x, end.x, local),
+    y: lerp(corner.y, end.y, local),
   }
 }
 
