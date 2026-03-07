@@ -1,0 +1,59 @@
+# ============================================
+# TypeScript Project Configuration Template
+# ============================================
+# For: React, Vue, Next.js, Angular, Node.js and other TypeScript/JavaScript projects
+
+# Project name (will be auto-filled by Claude Code based on conversation)
+project_name: ""
+
+# Language server configuration
+# TypeScript LSP supports both TypeScript and JavaScript
+languages:
+  - typescript
+  - markdown
+
+# File encoding
+encoding: "utf-8"
+
+# Git ignore files configuration
+ignore_all_files_in_gitignore: true
+
+# Additional paths to ignore (in addition to .gitignore)
+ignored_paths:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/.next/**"
+  - "**/coverage/**"
+  - "**/.turbo/**"
+
+# Read-only mode (set to true to disable all editing tools)
+read_only: false
+
+# Excluded tools (usually no need to exclude any tools)
+excluded_tools: []
+
+# Base modes (always active)
+base_modes:
+  - editing
+  - interactive
+
+# Default modes (combined with base_modes)
+default_modes: []
+
+# Project initialization prompt
+initial_prompt: |
+  Welcome to {PROJECT_NAME}!
+
+  This is a TypeScript project. I've configured:
+  - TypeScript language server (supports .ts, .tsx, .js, .jsx files)
+  - Editing mode - code can be modified
+  - Interactive mode - will confirm actions with you
+
+  Common tasks:
+  - "Analyze code structure" - Understand project architecture
+  - "Add new feature" - Develop new features
+  - "Fix bug" - Debug and fix issues
+  - "Refactor code" - Optimize code structure
+
+  Let me know what you need help with!

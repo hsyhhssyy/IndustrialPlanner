@@ -1159,7 +1159,9 @@ function beltInputEdge(device: DeviceInstance) {
 
 function canAcceptBeltInput(runtime: BeltRuntime) {
   const inputItemId = beltBufferedItemId(runtime, 'input')
-  return !inputItemId
+  const outputItemId = beltBufferedItemId(runtime, 'output')
+  const inTransit = Boolean(runtime.slot && runtime.slot.progress01 < 1)
+  return !inputItemId && (inTransit || !outputItemId)
 }
 
 function startBeltTransport(device: DeviceInstance, runtime: BeltRuntime, tick: number) {
@@ -1253,7 +1255,10 @@ function canReceiveLaneForItem(
 
   if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
     const hasBufferedInput = Boolean(beltBufferedItemId(runtime, 'input'))
-    if (!hasBufferedInput) return lane
+    const hasBufferedOutput = Boolean(beltBufferedItemId(runtime, 'output'))
+    const hasInTransit = Boolean(runtime.slot && runtime.slot.progress01 < 1)
+    const outputClearingThisTick = lanesClearingThisTick.has(reserveKey)
+    if (!hasBufferedInput && (hasInTransit || !hasBufferedOutput || outputClearingThisTick)) return lane
 
     return null
   }

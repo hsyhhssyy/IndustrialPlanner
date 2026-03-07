@@ -1,0 +1,58 @@
+# ============================================
+# Default Configuration Template
+# ============================================
+# Universal configuration for most projects. Claude Code will automatically adjust language servers based on project type.
+
+# Project name (will be auto-filled by Claude Code based on conversation)
+project_name: ""
+
+# Language server configuration
+# Claude Code will auto-detect and add appropriate language servers based on project files
+languages:
+  - markdown
+
+# File encoding
+encoding: "utf-8"
+
+# Git ignore files configuration
+ignore_all_files_in_gitignore: true
+
+# Additional paths to ignore
+ignored_paths:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/__pycache__/**"
+  - "**/venv/**"
+  - "**/.venv/**"
+  - "**/coverage/**"
+  - "**/.git/**"
+
+# Read-only mode
+read_only: false
+
+# Excluded tools
+excluded_tools: []
+
+# Base modes
+base_modes:
+  - editing
+  - interactive
+
+# Default modes
+default_modes: []
+
+# Project initialization prompt
+initial_prompt: |
+  Welcome to {PROJECT_NAME}!
+
+  I've configured basic settings for you.
+  If you need more specialized configuration (such as TypeScript, Python, etc.), please let me know the project type.
+
+  Available commands:
+  - "Configure as TypeScript project" - Enable TypeScript support
+  - "Configure as Python project" - Enable Python support
+  - "Analyze project structure" - Understand code organization
+  - "Get to work" - Start with your task directly
+
+  Let me know what you need help with!
