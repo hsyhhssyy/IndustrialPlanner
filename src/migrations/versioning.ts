@@ -1,4 +1,5 @@
 import type { BaseId, DeviceConfig, DeviceInstance, LayoutState } from '../domain/types'
+import { normalizePortPriorityGroups } from '../domain/shared/portPriority'
 
 export const APP_VERSION = '1.0'
 const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
@@ -113,6 +114,13 @@ export function migrateDeviceConfigToV1(config: DeviceConfig): DeviceConfig {
     nextConfig.protocolHubOutputs = outputs
   } else {
     delete nextConfig.protocolHubOutputs
+  }
+
+  const normalizedPortPriorityGroups = normalizePortPriorityGroups(nextConfig.portPriorityGroups)
+  if (normalizedPortPriorityGroups) {
+    nextConfig.portPriorityGroups = normalizedPortPriorityGroups
+  } else {
+    delete nextConfig.portPriorityGroups
   }
 
   return nextConfig

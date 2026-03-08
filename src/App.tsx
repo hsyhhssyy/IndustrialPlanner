@@ -21,6 +21,7 @@ import { recipeForDevice } from './domain/shared/recipes'
 import { getRuntimeStatusText, shouldShowRuntimeStallOverlay } from './domain/shared/runtime'
 import { cycleTicksFromSeconds } from './domain/shared/simulation'
 import { clampViewportOffset, getMaxCellSizeForViewport, getZoomStep } from './domain/shared/viewport'
+import { buildPortPriorityGroupConfig } from './domain/shared/portPriority'
 import type {
   DeviceInstance,
   DeviceRuntime,
@@ -41,6 +42,7 @@ import { RightPanel } from './ui/panels/RightPanel'
 import { TopBar } from './ui/TopBar'
 import { SiteInfoBar } from './ui/SiteInfoBar'
 import { ItemPickerDialog } from './ui/dialogs/ItemPickerDialog'
+import { PortPriorityConfigDialog } from './ui/dialogs/PortPriorityConfigDialog'
 import { StorageSlotConfigDialog } from './ui/dialogs/StorageSlotConfigDialog'
 import { WorldContent } from './ui/world/WorldContent'
 import { StaticDeviceLayer } from './ui/world/StaticDeviceLayer'
@@ -154,6 +156,7 @@ function App() {
     normalizeRecentPickerItemIds,
   )
   const [storageSlotConfigDeviceId, setStorageSlotConfigDeviceId] = useState<string | null>(null)
+  const [portPriorityConfigDeviceId, setPortPriorityConfigDeviceId] = useState<string | null>(null)
 
   const gridRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -455,6 +458,11 @@ function App() {
     if (!target || !SLOT_CONFIG_SUPPORTED_TYPE_IDS.has(target.typeId)) return null
     return target
   }, [layout.devices, storageSlotConfigDeviceId])
+
+  const portPriorityConfigDevice = useMemo(() => {
+    if (!portPriorityConfigDeviceId) return null
+    return layout.devices.find((device) => device.instanceId === portPriorityConfigDeviceId) ?? null
+  }, [layout.devices, portPriorityConfigDeviceId])
 
   const { toPlaceOrigin, logisticsPreview, logisticsPreviewDevices, logisticsEndpointHighlights, portChevrons, placePreview } = useBuildPreviewDomain({
     layout,
@@ -912,14 +920,6 @@ function App() {
     shareBlueprintToFile,
   ])
 
-  useEffect(() => {
-    if (!storageSlotConfigDeviceId) return
-    const exists = layout.devices.some(
-      (device) => device.instanceId === storageSlotConfigDeviceId && SLOT_CONFIG_SUPPORTED_TYPE_IDS.has(device.typeId),
-    )
-    if (!exists) setStorageSlotConfigDeviceId(null)
-  }, [layout.devices, storageSlotConfigDeviceId])
-
   return (
     <div className="app-shell">
       <TopBar
@@ -1037,6 +1037,7 @@ function App() {
           updateProtocolHubOutputIgnoreInventory={updateProtocolHubOutputIgnoreInventory}
           setLayout={setLayout}
           openStorageSlotConfigDialog={(deviceInstanceId) => setStorageSlotConfigDeviceId(deviceInstanceId)}
+          openPortPriorityConfigDialog={(deviceInstanceId) => setPortPriorityConfigDeviceId(deviceInstanceId)}
           updateProcessorPreloadSlot={updateProcessorPreloadSlot}
           reactorRecipeCandidates={reactorRecipeCandidates}
           selectedReactorPoolConfig={selectedReactorPoolConfig}
@@ -1111,6 +1112,32 @@ function App() {
                   }
                 }
 
+                return { ...device, config: nextConfig }
+              }),
+            }))
+          }}
+        />
+      )}
+
+      {portPriorityConfigDevice && (
+        <PortPriorityConfigDialog
+          key={portPriorityConfigDevice.instanceId}
+          device={portPriorityConfigDevice}
+          language={language}
+          t={t}
+          onClose={() => setPortPriorityConfigDeviceId(null)}
+          onSave={(groupsByPort) => {
+            setLayout((current) => ({
+              ...current,
+              devices: current.devices.map((device) => {
+                if (device.instanceId !== portPriorityConfigDevice.instanceId) return device
+                const nextConfig = { ...device.config }
+                const normalizedGroups = buildPortPriorityGroupConfig(Object.entries(groupsByPort))
+                if (normalizedGroups) {
+                  nextConfig.portPriorityGroups = normalizedGroups
+                } else {
+                  delete nextConfig.portPriorityGroups
+                }
                 return { ...device, config: nextConfig }
               }),
             }))

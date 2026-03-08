@@ -1,11 +1,11 @@
 import type { DeviceInstance, DeviceRuntime, ItemId } from '../../domain/types'
-import type { PortLink, TransferMatch } from './types'
+import { PORT_PRIORITY_GROUP_MIN, normalizePriorityCursorArray } from '../../domain/shared/portPriority'
+import type { TransferMatch } from './types'
 
 type CommitContext = {
   tick: number
   runtimeById: Record<string, DeviceRuntime>
   deviceById: Map<string, DeviceInstance>
-  outMap: Map<string, PortLink[]>
   warehouse: Record<ItemId, number>
   transferMatches: TransferMatch[]
   helpers: {
@@ -20,7 +20,6 @@ type CommitContext = {
     isWarehouseSubmitPort: (device: DeviceInstance, toPortId: string) => boolean
     consumeSourceByPlan: (plan: TransferMatch, runtime: DeviceRuntime, device: DeviceInstance, tick: number) => void
     shouldIgnoreConfiguredOutputInventory: (device: DeviceInstance, fromPortId: string, itemId: ItemId) => boolean
-    isRoundRobinJunctionType: (typeId: DeviceInstance['typeId']) => boolean
     isSplitterType: (typeId: DeviceInstance['typeId']) => boolean
   }
 }
@@ -59,32 +58,33 @@ export function commitTransferMatches(context: CommitContext) {
       context.helpers.consumeSourceByPlan(match, fromRuntime, fromDevice, context.tick)
     }
 
-    if (
-      context.helpers.isRoundRobinJunctionType(fromDevice.typeId)
-      && context.helpers.isSplitterType(fromDevice.typeId)
-      && 'rrIndex' in fromRuntime
-      && match.senderOutLinkCount > 0
-    ) {
-      fromRuntime.rrIndex = (fromRuntime.rrIndex + match.senderPickedOutLinkIndex + 1) % match.senderOutLinkCount
+    if (context.helpers.isSplitterType(fromDevice.typeId) && 'lastSplitterOutputPortId' in fromRuntime) {
+      fromRuntime.lastSplitterOutputPortId = match.fromPortId
     }
 
     if (toRuntime.inputPriorityGroupCursorByLane) {
       const laneKey = `${match.toId}:${match.toLane}`
-      const current = toRuntime.inputPriorityGroupCursorByLane[laneKey] ?? [0, 0]
-      const next = [...current] as [number, number]
+      const current = normalizePriorityCursorArray(toRuntime.inputPriorityGroupCursorByLane[laneKey])
+      const next = [...current]
       if (match.receiverPriorityPortCount > 0) {
-        next[match.receiverPriorityTier] = (match.receiverPriorityPortIndex + 1) % match.receiverPriorityPortCount
+        const groupIndex = match.receiverPriorityGroup - PORT_PRIORITY_GROUP_MIN
+        if (groupIndex >= 0 && groupIndex < next.length) {
+          next[groupIndex] = (match.receiverPriorityPortIndex + 1) % match.receiverPriorityPortCount
+        }
       }
       toRuntime.inputPriorityGroupCursorByLane[laneKey] = next
     }
 
     if (fromRuntime.outputPriorityGroupCursorByGroup && match.senderPriorityGroupKey) {
-      const current = fromRuntime.outputPriorityGroupCursorByGroup[match.senderPriorityGroupKey] ?? [0, 0]
-        const next = [...current] as [number, number]
-        if (match.senderPriorityPortCount > 0) {
-          next[match.senderPriorityTier] = (match.senderPriorityPortIndex + 1) % match.senderPriorityPortCount
+      const current = normalizePriorityCursorArray(fromRuntime.outputPriorityGroupCursorByGroup[match.senderPriorityGroupKey])
+      const next = [...current]
+      if (match.senderPriorityPortCount > 0) {
+        const groupIndex = match.senderPriorityGroup - PORT_PRIORITY_GROUP_MIN
+        if (groupIndex >= 0 && groupIndex < next.length) {
+          next[groupIndex] = (match.senderPriorityPortIndex + 1) % match.senderPriorityPortCount
         }
-        fromRuntime.outputPriorityGroupCursorByGroup[match.senderPriorityGroupKey] = next
+      }
+      fromRuntime.outputPriorityGroupCursorByGroup[match.senderPriorityGroupKey] = next
     }
   }
 

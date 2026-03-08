@@ -1,11 +1,11 @@
-import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import type { ItemId } from '../../domain/types'
+import { getDirectionalPortIds, getPortPriorityGroup, orderPortsByPriorityGroup } from '../../domain/shared/portPriority'
 import type { PlanContext, PlanResult, PortLink, PullIntent, ReceiveLane, TransferMatch } from './types'
 
 type CandidateLink = PortLink & {
   receiverPortId: string
   receiverPortRank: number
-  receiverPriorityTier: number
+  receiverPriorityGroup: number
   receiverPriorityPortIndex: number
   receiverPriorityPortCount: number
 }
@@ -46,44 +46,15 @@ function pickStorageOutputSlotForPort(context: PlanContext, senderDeviceId: stri
   return undefined
 }
 
-const CONVERGER_INPUT_PORT_ORDER = ['in_n', 'in_e', 'in_s'] as const
-
 function compareCandidateLinks(left: PortLink, right: PortLink) {
   const fromCmp = left.from.instanceId.localeCompare(right.from.instanceId)
   if (fromCmp !== 0) return fromCmp
   return left.from.portId.localeCompare(right.from.portId)
 }
 
-function isHighPriorityDeviceType(typeId: string) {
-  return typeId !== 'item_port_logistics' && typeId !== 'item_port_logistics_belt'
-}
-
-function allowsSolidType(allowedTypes: { mode: 'solid' | 'liquid' | 'whitelist'; whitelist: Array<'solid' | 'liquid'> }) {
-  if (allowedTypes.mode === 'solid') return true
-  if (allowedTypes.mode === 'liquid') return false
-  return allowedTypes.whitelist.includes('solid')
-}
-
-function solidOutputPortIds(typeId: string) {
-  return DEVICE_TYPE_BY_ID[typeId]?.ports0
-    .filter((port) => port.direction === 'Output' && allowsSolidType(port.allowedTypes))
-    .map((port) => port.id) ?? []
-}
-
-function sourcePriorityTier(context: PlanContext, link: PortLink) {
-  const sourceDevice = context.deviceById.get(link.from.instanceId)
-  return sourceDevice && isHighPriorityDeviceType(sourceDevice.typeId) ? 0 : 1
-}
-
-function getPriorityGroupCursor(runtime: PlanContext['runtimeById'][string], laneKey: string, tier: number) {
+function getPriorityGroupCursor(runtime: PlanContext['runtimeById'][string], laneKey: string, priorityGroup: number) {
   const cursors = runtime.inputPriorityGroupCursorByLane?.[laneKey]
-  return cursors?.[tier] ?? 0
-}
-
-function rotatePorts(portOrder: string[], cursor: number) {
-  if (portOrder.length <= 1) return portOrder
-  const offset = ((cursor % portOrder.length) + portOrder.length) % portOrder.length
-  return [...portOrder.slice(offset), ...portOrder.slice(0, offset)]
+  return cursors?.[priorityGroup - 1] ?? 0
 }
 
 function liveOrderedInputPorts(
@@ -98,10 +69,6 @@ function liveOrderedInputPorts(
 
   const linkedPorts = [...new Set(inLinks.map((link) => link.to.portId))]
   if (linkedPorts.length === 0) return []
-
-  if (context.helpers.isConvergerType(device.typeId)) {
-    return CONVERGER_INPUT_PORT_ORDER.filter((portId) => linkedPorts.includes(portId))
-  }
 
   const preferredPortOrder = devicePullInputPortOrderById.get(deviceId) ?? []
   const ordered = preferredPortOrder.filter((portId) => linkedPorts.includes(portId))
@@ -156,7 +123,7 @@ function buildReceiverStates(
           ...link,
           receiverPortId,
           receiverPortRank: -1,
-          receiverPriorityTier: 1,
+          receiverPriorityGroup: getPortPriorityGroup(device.config, receiverPortId),
           receiverPriorityPortIndex: 0,
           receiverPriorityPortCount: 0,
         })),
@@ -165,11 +132,11 @@ function buildReceiverStates(
 
     for (const stateKey of stateOrder) {
       const laneCandidates = candidateLinksByLane.get(stateKey) ?? []
-      const orderedByTier = [0, 1]
-        .flatMap((tier) => {
-          const tierCandidates = laneCandidates.filter((link) => sourcePriorityTier(context, link) === tier)
+      const orderedByPriorityGroup = Array.from({ length: 10 }, (_, index) => index + 1)
+        .flatMap((priorityGroup) => {
+          const groupedCandidates = laneCandidates.filter((link) => link.receiverPriorityGroup === priorityGroup)
           const groupedByPort = new Map<string, CandidateLink[]>()
-          for (const candidate of tierCandidates) {
+          for (const candidate of groupedCandidates) {
             const existing = groupedByPort.get(candidate.receiverPortId)
             if (existing) {
               existing.push(candidate)
@@ -178,30 +145,35 @@ function buildReceiverStates(
             }
           }
 
-          const orderedTierCandidates: CandidateLink[] = []
-          const canonicalTierPortOrder = portOrder.filter((receiverPortId) => groupedByPort.has(receiverPortId))
-          const canonicalPortIndexById = new Map(canonicalTierPortOrder.map((receiverPortId, index) => [receiverPortId, index]))
-          const tierPortOrder = rotatePorts(
-            canonicalTierPortOrder,
-            getPriorityGroupCursor(runtime, stateKey, tier),
+          const orderedGroupCandidates: CandidateLink[] = []
+          const canonicalGroupPortOrder = portOrder.filter((receiverPortId) => groupedByPort.has(receiverPortId))
+          const canonicalPortIndexById = new Map(canonicalGroupPortOrder.map((receiverPortId, index) => [receiverPortId, index]))
+          const groupPortOrder = orderPortsByPriorityGroup(
+            canonicalGroupPortOrder,
+            () => priorityGroup,
+            (() => {
+              const cursors = Array.from({ length: 10 }, () => 0)
+              cursors[priorityGroup - 1] = getPriorityGroupCursor(runtime, stateKey, priorityGroup)
+              return cursors
+            })(),
           )
-          for (const receiverPortId of tierPortOrder) {
+          for (const receiverPortId of groupPortOrder) {
             const portCandidates = groupedByPort.get(receiverPortId)
             if (!portCandidates || portCandidates.length === 0) continue
             portCandidates.sort(compareCandidateLinks)
-            orderedTierCandidates.push(
+            orderedGroupCandidates.push(
               ...portCandidates.map((candidate) => ({
                 ...candidate,
-                receiverPriorityTier: tier,
+                receiverPriorityGroup: priorityGroup,
                 receiverPriorityPortIndex: canonicalPortIndexById.get(receiverPortId) ?? 0,
-                receiverPriorityPortCount: canonicalTierPortOrder.length,
+                receiverPriorityPortCount: canonicalGroupPortOrder.length,
               })),
             )
           }
-          return orderedTierCandidates
+          return orderedGroupCandidates
         })
 
-      const candidateLinks = orderedByTier.map((candidate, index) => ({
+      const candidateLinks = orderedByPriorityGroup.map((candidate, index) => ({
         ...candidate,
         receiverPortRank: index,
       }))
@@ -278,7 +250,7 @@ function pickIntentForReceiverState(
     if (pickedOutLinkIndex < 0) continue
 
     let senderPriorityGroupKey: string | null = null
-    let senderPriorityTier = 1
+    let senderPriorityGroup = 5
     let senderPriorityPortIndex = 0
     let senderPriorityPortCount = 0
     const allSenderOutLinks = context.outMap.get(senderDevice.instanceId) ?? []
@@ -286,25 +258,18 @@ function pickIntentForReceiverState(
       && 'bufferGroups' in senderRuntime
       && Array.isArray(senderRuntime.bufferGroups)
       ? senderRuntime.bufferGroups.find((group) => group.outPortIds.includes(link.from.portId))?.outPortIds
-      : solidOutputPortIds(senderDevice.typeId)
+      : getDirectionalPortIds(senderDevice.typeId, 'Output')
     if (outputGroupPortIds && outputGroupPortIds.length > 0) {
       senderPriorityGroupKey = context.helpers.isStorageWithBufferGroups(senderRuntime)
         && 'bufferGroups' in senderRuntime
         && Array.isArray(senderRuntime.bufferGroups)
         ? (senderRuntime.bufferGroups.find((group) => group.outPortIds.includes(link.from.portId))?.id ?? null)
         : '__default__'
-      const highTierPortIds = outputGroupPortIds.filter((portId) => {
-        const portLinks = allSenderOutLinks.filter((outLink) => outLink.from.portId === portId)
-        return portLinks.some((outLink) => {
-          const targetDevice = context.deviceById.get(outLink.to.instanceId)
-          return targetDevice ? isHighPriorityDeviceType(targetDevice.typeId) : false
-        })
-      })
-      const lowTierPortIds = outputGroupPortIds.filter((portId) => !highTierPortIds.includes(portId) && allSenderOutLinks.some((outLink) => outLink.from.portId === portId))
-      senderPriorityTier = highTierPortIds.includes(link.from.portId) ? 0 : 1
-      const tierPortIds = senderPriorityTier === 0 ? highTierPortIds : lowTierPortIds
-      senderPriorityPortIndex = Math.max(0, tierPortIds.findIndex((portId) => portId === link.from.portId))
-      senderPriorityPortCount = tierPortIds.length
+      const livePortIds = outputGroupPortIds.filter((portId) => allSenderOutLinks.some((outLink) => outLink.from.portId === portId))
+      senderPriorityGroup = getPortPriorityGroup(senderDevice.config, link.from.portId)
+      const groupPortIds = livePortIds.filter((portId) => getPortPriorityGroup(senderDevice.config, portId) === senderPriorityGroup)
+      senderPriorityPortIndex = Math.max(0, groupPortIds.findIndex((portId) => portId === link.from.portId))
+      senderPriorityPortCount = groupPortIds.length
     }
 
     const slotIndex = pickStorageOutputSlotForPort(context, senderDevice.instanceId, link.from.portId, prepared.itemId)
@@ -324,10 +289,10 @@ function pickIntentForReceiverState(
         senderOutLinkCount: orderedOutLinks.length,
         senderPickedOutLinkIndex: pickedOutLinkIndex,
         senderPriorityGroupKey,
-        senderPriorityTier,
+        senderPriorityGroup,
         senderPriorityPortIndex,
         senderPriorityPortCount,
-        receiverPriorityTier: link.receiverPriorityTier,
+        receiverPriorityGroup: link.receiverPriorityGroup,
         receiverPriorityPortIndex: link.receiverPriorityPortIndex,
         receiverPriorityPortCount: link.receiverPriorityPortCount,
         receiverLaneKey,
@@ -468,10 +433,10 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
         senderOutLinkCount: winner.senderOutLinkCount,
         senderPickedOutLinkIndex: winner.senderPickedOutLinkIndex,
         senderPriorityGroupKey: winner.senderPriorityGroupKey,
-        senderPriorityTier: winner.senderPriorityTier,
+        senderPriorityGroup: winner.senderPriorityGroup,
         senderPriorityPortIndex: winner.senderPriorityPortIndex,
         senderPriorityPortCount: winner.senderPriorityPortCount,
-        receiverPriorityTier: winner.receiverPriorityTier,
+        receiverPriorityGroup: winner.receiverPriorityGroup,
         receiverPriorityPortIndex: winner.receiverPriorityPortIndex,
         receiverPriorityPortCount: winner.receiverPriorityPortCount,
       })

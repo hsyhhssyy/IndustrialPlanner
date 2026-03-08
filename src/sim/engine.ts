@@ -1,5 +1,12 @@
 import { BASE_BY_ID, DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
 import { detectOverlaps, getFootprintCells, getRotatedPorts, isBelt, isPipeLike, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
+import {
+  createEmptyPortPriorityCursors,
+  getDirectionalPortIds,
+  getPortPriorityGroup,
+  normalizePriorityCursorArray,
+  orderPortsByPriorityGroup,
+} from '../domain/shared/portPriority'
 import { cycleTicksFromSeconds } from '../domain/shared/simulation'
 import {
   isReactorPoolType,
@@ -218,7 +225,7 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
     slot: null,
     nsSlot: null,
     weSlot: null,
-    rrIndex: 0,
+    lastSplitterOutputPortId: undefined,
   }
 }
 
@@ -811,8 +818,6 @@ function createProtocolStorageBufferGroup(device: DeviceInstance): BufferGroupRu
     id: PROTOCOL_HUB_STORAGE_GROUP_ID,
     inPortIds: collectSolidInputPortIds(device.typeId),
     outPortIds: collectSolidOutputPortIds(device.typeId),
-    inCursor: 0,
-    outCursor: 0,
     slots,
   }
 }
@@ -830,8 +835,6 @@ function createStorageBoxBufferGroup(device: DeviceInstance): BufferGroupRuntime
     id: STORAGE_BOX_GROUP_ID,
     inPortIds: collectSolidInputPortIds(device.typeId),
     outPortIds: collectSolidOutputPortIds(device.typeId),
-    inCursor: 0,
-    outCursor: 0,
     slots,
   }
 }
@@ -852,16 +855,12 @@ function createReactorBufferGroups(): BufferGroupRuntime[] {
       id: REACTOR_SOLID_GROUP_ID,
       inPortIds: ['in_s_1', 'in_s_3'],
       outPortIds: ['out_n_1', 'out_n_3'],
-      inCursor: 0,
-      outCursor: 0,
       slots: createSlots(),
     },
     {
       id: REACTOR_LIQUID_GROUP_ID,
       inPortIds: ['in_e_1', 'in_e_3'],
       outPortIds: ['out_w_1', 'out_w_3'],
-      inCursor: 0,
-      outCursor: 0,
       slots: createSlots(),
     },
   ]
@@ -904,12 +903,6 @@ function getBufferGroupForOutputPort(runtime: DeviceRuntime, portId: string): Bu
     if (group.outPortIds.includes(portId)) return group
   }
   return null
-}
-
-function rotatedPortOrder(portOrder: string[], cursor: number) {
-  if (portOrder.length <= 1) return portOrder
-  const offset = ((cursor % portOrder.length) + portOrder.length) % portOrder.length
-  return [...portOrder.slice(offset), ...portOrder.slice(0, offset)]
 }
 
 function isStorageWithBufferGroups(runtime: DeviceRuntime) {
@@ -1092,19 +1085,6 @@ function getSlotRef(runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we'): SlotDat
 
 function isBridgeConnectorType(typeId: DeviceInstance['typeId']) {
   return typeId === 'item_log_connector' || typeId === 'item_pipe_connector'
-}
-
-function isRoundRobinJunctionType(typeId: DeviceInstance['typeId']) {
-  return (
-    typeId === 'item_log_splitter' ||
-    typeId === 'item_log_converger' ||
-    typeId === 'item_pipe_splitter' ||
-    typeId === 'item_pipe_converger'
-  )
-}
-
-function isConvergerType(typeId: DeviceInstance['typeId']) {
-  return typeId === 'item_log_converger' || typeId === 'item_pipe_converger'
 }
 
 function isSplitterType(typeId: DeviceInstance['typeId']) {
@@ -1296,11 +1276,12 @@ function tryReceiveToLane(
   if (getSlotRef(runtime, lane)) {
     return false
   }
-  const incomingEdge = toPortId.slice(-1).toUpperCase() as keyof typeof OPPOSITE_EDGE
+  const incomingEdge = getRotatedPorts(device).find((port) => port.portId === toPortId)?.edge
+    ?? OPPOSITE_EDGE[toPortId.slice(-1).toUpperCase() as keyof typeof OPPOSITE_EDGE]
   setSlotRef(runtime, lane, {
     itemId,
     progress01: 0,
-    enteredFrom: OPPOSITE_EDGE[incomingEdge],
+    enteredFrom: incomingEdge,
     enteredTick: tick,
   })
   return true
@@ -1526,19 +1507,13 @@ function orderedOutLinks(
   device: DeviceInstance,
   runtime: DeviceRuntime,
   outLinks: ReturnType<typeof neighborsFromLinks>['links'],
-  deviceById?: Map<string, DeviceInstance>,
 ) {
   let orderedLinks = outLinks
-
-  if (isRoundRobinJunctionType(device.typeId) && outLinks.length > 1 && 'rrIndex' in runtime) {
-    const offset = runtime.rrIndex % outLinks.length
-    orderedLinks = [...outLinks.slice(offset), ...outLinks.slice(0, offset)]
-  }
 
   const groups = getBufferGroups(runtime)
   if (groups.length > 0) {
     const groupIndexById = new Map(groups.map((group, index) => [group.id, index]))
-    const priorityByPort = new Map<string, { groupIndex: number; portPriority: number }>()
+    const priorityByPort = new Map<string, { groupIndex: number; priorityGroup: number; portPriority: number }>()
     const outputPriorityCursors = runtime.outputPriorityGroupCursorByGroup ?? {}
 
     for (const group of groups) {
@@ -1550,21 +1525,18 @@ function orderedOutLinks(
         else linksByPort.set(link.from.portId, [link])
       }
 
-      const cursorPair = outputPriorityCursors[group.id] ?? [0, 0]
-      const highTierPorts = group.outPortIds.filter((portId) =>
-        (linksByPort.get(portId) ?? []).some((link) => {
-          const targetDevice = deviceById?.get(link.to.instanceId)
-          return targetDevice ? !isBelt(targetDevice.typeId) : false
-        }),
+      const cursorArray = normalizePriorityCursorArray(outputPriorityCursors[group.id])
+      const livePortIds = group.outPortIds.filter((portId) => linksByPort.has(portId))
+      const rotated = orderPortsByPriorityGroup(
+        livePortIds,
+        (portId) => getPortPriorityGroup(device.config, portId),
+        cursorArray,
       )
-      const lowTierPorts = group.outPortIds.filter((portId) => !highTierPorts.includes(portId) && linksByPort.has(portId))
-      const rotated = [
-        ...rotatedPortOrder(highTierPorts, cursorPair[0]),
-        ...rotatedPortOrder(lowTierPorts, cursorPair[1]),
-      ]
       for (let index = 0; index < rotated.length; index += 1) {
+        const portId = rotated[index]
         priorityByPort.set(rotated[index], {
           groupIndex: groupIndexById.get(group.id) ?? Number.MAX_SAFE_INTEGER,
+          priorityGroup: getPortPriorityGroup(device.config, portId),
           portPriority: index,
         })
       }
@@ -1579,22 +1551,22 @@ function orderedOutLinks(
       if (leftPriority.groupIndex !== rightPriority.groupIndex) {
         return leftPriority.groupIndex - rightPriority.groupIndex
       }
+      if (leftPriority.priorityGroup !== rightPriority.priorityGroup) {
+        return leftPriority.priorityGroup - rightPriority.priorityGroup
+      }
       return leftPriority.portPriority - rightPriority.portPriority
     })
   } else if (outLinks.length > 1) {
-    const outputPortOrder = collectSolidOutputPortIds(device.typeId).filter((portId) => outLinks.some((link) => link.from.portId === portId))
+    const outputPortOrder = getDirectionalPortIds(device.typeId, 'Output').filter((portId) => outLinks.some((link) => link.from.portId === portId))
     if (outputPortOrder.length > 0) {
-      const cursorPair = runtime.outputPriorityGroupCursorByGroup?.__default__ ?? [0, 0]
-      const highTierPorts = outputPortOrder.filter((portId) =>
-        outLinks.some((link) => {
-          if (link.from.portId !== portId) return false
-          const targetDevice = deviceById?.get(link.to.instanceId)
-          return targetDevice ? !isBelt(targetDevice.typeId) : false
-        }),
+      const cursorArray = normalizePriorityCursorArray(runtime.outputPriorityGroupCursorByGroup?.__default__)
+      const rotatedOutputPortOrder = orderPortsByPriorityGroup(
+        outputPortOrder,
+        (portId) => getPortPriorityGroup(device.config, portId),
+        cursorArray,
       )
-      const lowTierPorts = outputPortOrder.filter((portId) => !highTierPorts.includes(portId))
       const portPriority = new Map(
-        [...rotatedPortOrder(highTierPorts, cursorPair[0]), ...rotatedPortOrder(lowTierPorts, cursorPair[1])].map((portId, index) => [portId, index]),
+        rotatedOutputPortOrder.map((portId, index) => [portId, index]),
       )
       orderedLinks = [...orderedLinks].sort((left, right) => {
         const leftPriority = portPriority.get(left.from.portId) ?? Number.MAX_SAFE_INTEGER
@@ -1638,7 +1610,7 @@ function buildDevicePullInputPortOrderMap(
     const groups = getBufferGroups(runtime)
     const orderedPorts: string[] = []
 
-    const inputPortGroups = groups.length > 0 ? groups.map((group) => group.inPortIds) : [collectSolidInputPortIds(device.typeId)]
+    const inputPortGroups = groups.length > 0 ? groups.map((group) => group.inPortIds) : [getDirectionalPortIds(device.typeId, 'Input')]
     for (const inputPortOrder of inputPortGroups) {
       if (inputPortOrder.length === 0) continue
       const availablePorts = new Set<string>()
@@ -1658,7 +1630,13 @@ function buildDevicePullInputPortOrderMap(
 
       if (availablePorts.size === 0) continue
 
-      for (const probePort of inputPortOrder) {
+      const orderedGroupPorts = orderPortsByPriorityGroup(
+        inputPortOrder.filter((portId) => availablePorts.has(portId)),
+        (portId) => getPortPriorityGroup(device.config, portId),
+        createEmptyPortPriorityCursors(),
+      )
+
+      for (const probePort of orderedGroupPorts) {
         if (!availablePorts.has(probePort)) continue
         orderedPorts.push(probePort)
       }
@@ -1757,14 +1735,14 @@ function cloneSlot(slot: SlotData | null): SlotData | null {
 function cloneInputPriorityGroupCursorByLane(cursorByLane: DeviceRuntime['inputPriorityGroupCursorByLane']) {
   if (!cursorByLane) return undefined
   return Object.fromEntries(
-    Object.entries(cursorByLane).map(([lane, cursors]) => [lane, cursors ? [...cursors] as [number, number] : [0, 0] as [number, number]]),
+    Object.entries(cursorByLane).map(([lane, cursors]) => [lane, normalizePriorityCursorArray(cursors)]),
   )
 }
 
 function cloneOutputPriorityGroupCursorByGroup(cursorByGroup: DeviceRuntime['outputPriorityGroupCursorByGroup']) {
   if (!cursorByGroup) return undefined
   return Object.fromEntries(
-    Object.entries(cursorByGroup).map(([groupId, cursors]) => [groupId, cursors ? [...cursors] as [number, number] : [0, 0] as [number, number]]),
+    Object.entries(cursorByGroup).map(([groupId, cursors]) => [groupId, normalizePriorityCursorArray(cursors)]),
   )
 }
 
@@ -2468,9 +2446,8 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
       helpers: {
         isHardBlockedStall,
         orderedOutLinks: (device, runtime, outLinks) =>
-          orderedOutLinks(device, runtime, outLinks as ReturnType<typeof neighborsFromLinks>['links'], deviceById) as FlowPortLink[],
+          orderedOutLinks(device, runtime, outLinks as ReturnType<typeof neighborsFromLinks>['links']) as FlowPortLink[],
         buildDevicePullInputPortOrderMap: () => buildDevicePullInputPortOrderMap(layout, runtimeById, links, deviceById, warehouse),
-        isConvergerType,
         isSplitterType,
         receiveLaneForPort: (device, runtime, toPortId) => canReceiveOnPort(device, runtime, toPortId),
         sourceSlotLane,
@@ -2494,7 +2471,6 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
       tick: sim.tick,
       runtimeById,
       deviceById,
-      outMap: links.outMap as Map<string, FlowPortLink[]>,
       warehouse,
       transferMatches: planResult.transferMatches,
       helpers: {
@@ -2502,7 +2478,6 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         isWarehouseSubmitPort,
         consumeSourceByPlan,
         shouldIgnoreConfiguredOutputInventory,
-        isRoundRobinJunctionType,
         isSplitterType,
       },
     })

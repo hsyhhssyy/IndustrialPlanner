@@ -837,6 +837,32 @@ button:disabled {
 .device.selected .device-surface {
   border-color: #f7d06a;
   box-shadow: 0 0 0 1px #f7d06a inset;
+  z-index: 6;
+}
+
+.device.render-pass-overlay.port-priority-customized .device-surface {
+  border: 3px solid rgba(150, 239, 183, 0.96);
+  box-shadow:
+    0 0 0 1px rgba(150, 239, 183, 0.92) inset,
+    0 0 10px rgba(150, 239, 183, 0.35);
+}
+
+.device.render-pass-overlay.port-priority-customized::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid rgba(150, 239, 183, 0.9);
+  box-shadow: 0 0 10px rgba(150, 239, 183, 0.28);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.device.render-pass-overlay.port-priority-customized.selected .device-surface {
+  border: 3px solid #f7d06a;
+  box-shadow:
+    0 0 0 1px #f7d06a inset,
+    0 0 10px rgba(247, 208, 106, 0.3);
+  z-index: 6;
 }
 
 .device.drag-invalid .device-surface {
@@ -1315,6 +1341,222 @@ button:disabled {
 .storage-slot-config-dialog {
   min-width: min(92vw, 880px);
   max-width: min(92vw, 980px);
+}
+
+.port-priority-config-dialog {
+  min-width: min(92vw, 960px);
+  max-width: min(96vw, 1120px);
+}
+
+.port-priority-config-subtitle {
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 13px;
+}
+
+.port-priority-config-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.port-priority-config-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.port-priority-config-legend-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.port-priority-config-legend-chip.is-input {
+  background: rgba(73, 150, 255, 0.2);
+  color: #b7d6ff;
+  border: 1px solid rgba(115, 176, 255, 0.45);
+}
+
+.port-priority-config-legend-chip.is-output {
+  background: rgba(255, 171, 73, 0.22);
+  color: #ffd3a0;
+  border: 1px solid rgba(255, 184, 98, 0.45);
+}
+
+.port-priority-config-legend-text {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+}
+
+.port-priority-config-stage {
+  position: relative;
+  margin: 0 auto;
+  max-width: 100%;
+  overflow: auto;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.05), transparent 55%),
+    rgba(17, 22, 34, 0.78);
+}
+
+.port-priority-config-device-surface {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 2px solid rgba(247, 208, 106, 0.42);
+  background: linear-gradient(180deg, rgba(40, 49, 70, 0.96), rgba(20, 26, 40, 0.96));
+  overflow: hidden;
+}
+
+.port-priority-config-device-sprite {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(100% - 10px);
+  height: calc(100% - 10px);
+  object-fit: contain;
+}
+
+.port-priority-config-device-fallback {
+  padding: 8px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13px;
+}
+
+.port-priority-config-port {
+  position: absolute;
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 1;
+}
+
+.port-priority-config-port-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  font-size: 10px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.port-priority-config-port-direction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  max-width: 52px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: help;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.port-priority-config-port.is-input .port-priority-config-port-direction {
+  background: rgba(73, 150, 255, 0.22);
+  color: #b7d6ff;
+}
+
+.port-priority-config-port.is-output .port-priority-config-port-direction {
+  background: rgba(255, 171, 73, 0.25);
+  color: #ffd4a4;
+}
+
+.port-priority-picker {
+  position: relative;
+  width: 100%;
+  max-width: 52px;
+}
+
+.port-priority-picker-trigger {
+  width: 100%;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 4px 0 6px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(19, 26, 39, 0.96);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 11px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.port-priority-picker-trigger.is-open {
+  border-color: rgba(150, 239, 183, 0.45);
+  box-shadow: 0 0 0 1px rgba(150, 239, 183, 0.2) inset;
+}
+
+.port-priority-picker-trigger-value {
+  min-width: 0;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+.port-priority-picker-trigger-chevron {
+  flex: 0 0 auto;
+  font-size: 9px;
+  opacity: 0.86;
+}
+
+.port-priority-picker-menu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  gap: 2px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 20, 31, 0.98);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.34);
+  z-index: 20;
+}
+
+.port-priority-picker-option {
+  width: 100%;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  line-height: 24px;
+  cursor: pointer;
+}
+
+.port-priority-picker-option:hover,
+.port-priority-picker-option.is-selected {
+  background: rgba(150, 239, 183, 0.16);
+  color: #d9ffe7;
 }
 
 .wiki-dialog {

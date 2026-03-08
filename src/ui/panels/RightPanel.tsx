@@ -3,6 +3,13 @@ import { BASES, DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import type { BaseDef, BaseId, DeviceInstance, DeviceRuntime, ItemId, LayoutState, PowerMode, SimState, SlotData } from '../../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../../i18n'
 import { isBelt, neighborsFromLinks } from '../../domain/geometry'
+import {
+  getPortPriorityGroup,
+  hasCustomPortPriorityGroups,
+  normalizePriorityCursorArray,
+  orderPortsByPriorityGroup,
+  shouldShowPortPriorityConfigButton,
+} from '../../domain/shared/portPriority'
 import type { ItemPickerState } from '../dialogs/itemPicker.types'
 
 type ProcessorBufferSpec = {
@@ -87,6 +94,7 @@ type RightPanelProps = {
   updateProtocolHubOutputIgnoreInventory: (deviceInstanceId: string, portId: string, enabled: boolean) => void
   setLayout: (updater: LayoutState | ((current: LayoutState) => LayoutState)) => void
   openStorageSlotConfigDialog: (deviceInstanceId: string) => void
+  openPortPriorityConfigDialog: (deviceInstanceId: string) => void
   updateProcessorPreloadSlot: (deviceInstanceId: string, slotIndex: number, patch: { itemId?: ItemId | null; amount?: number }) => void
   reactorRecipeCandidates: Array<{
     id: string
@@ -148,6 +156,7 @@ export function RightPanel({
   updateProtocolHubOutputIgnoreInventory,
   setLayout,
   openStorageSlotConfigDialog,
+  openPortPriorityConfigDialog,
   updateProcessorPreloadSlot,
   reactorRecipeCandidates,
   selectedReactorPoolConfig,
@@ -192,8 +201,6 @@ export function RightPanel({
   const inputSourceDebugEntries = useMemo(() => {
     if (!selectedDevice || !selectedRuntime) return [] as Array<{ title: string; cursor: string; items: string[] }>
 
-    const isHighPriorityType = (typeId: DeviceInstance['typeId']) => !isBelt(typeId)
-    const isConvergerType = (typeId: DeviceInstance['typeId']) => typeId === 'item_log_converger' || typeId === 'item_pipe_converger'
     const isBridgeConnectorType = (typeId: DeviceInstance['typeId']) => typeId === 'item_log_connector' || typeId === 'item_pipe_connector'
     const receiveLaneForPort = (device: DeviceInstance, runtime: DeviceRuntime, toPortId: string) => {
       if (isBelt(device.typeId) && 'slot' in runtime) return 'output'
@@ -204,12 +211,7 @@ export function RightPanel({
       if ('slot' in runtime) return 'slot'
       return 'output'
     }
-    const rotate = (ports: string[], cursor: number) => {
-      if (ports.length <= 1) return ports
-      const offset = ((cursor % ports.length) + ports.length) % ports.length
-      return [...ports.slice(offset), ...ports.slice(0, offset)]
-    }
-    const lanePriorityCursors = (lane: string) => selectedRuntime.inputPriorityGroupCursorByLane?.[`${selectedDevice.instanceId}:${lane}`] ?? [0, 0]
+    const lanePriorityCursors = (lane: string) => normalizePriorityCursorArray(selectedRuntime.inputPriorityGroupCursorByLane?.[`${selectedDevice.instanceId}:${lane}`])
     const sourceLabel = (instanceId: string) => {
       const sourceDevice = layout.devices.find((device) => device.instanceId === instanceId)
       return sourceDevice?.typeId ?? instanceId
@@ -232,59 +234,22 @@ export function RightPanel({
     const entries: Array<{ title: string; cursor: string; items: string[] }> = []
     const pushEntry = (title: string, cursor: string, lane: string, portOrder: string[]) => {
       const items: string[] = []
-      const tieredPorts = [0, 1].flatMap((tier) => {
-        const tierPorts = portOrder.filter((portId) => {
-          const portLinks = linksByPort.get(portId) ?? []
-          return portLinks.some((link) => {
-            const sourceTypeId = layout.devices.find((d) => d.instanceId === link.from.instanceId)?.typeId
-            const sourceTier = sourceTypeId && isHighPriorityType(sourceTypeId) ? 0 : 1
-            return sourceTier === tier
-          })
-        })
-        return rotate(tierPorts, lanePriorityCursors(lane)[tier] ?? 0)
-      })
+      const orderedPorts = orderPortsByPriorityGroup(portOrder, (portId) => getPortPriorityGroup(selectedDevice.config, portId), lanePriorityCursors(lane))
 
-      for (const portId of tieredPorts) {
+      for (const portId of orderedPorts) {
         const orderedLinks = [...(linksByPort.get(portId) ?? [])].sort((left, right) => {
-          const leftTier = isHighPriorityType(layout.devices.find((d) => d.instanceId === left.from.instanceId)?.typeId ?? selectedDevice.typeId) ? 0 : 1
-          const rightTier = isHighPriorityType(layout.devices.find((d) => d.instanceId === right.from.instanceId)?.typeId ?? selectedDevice.typeId) ? 0 : 1
-          if (leftTier !== rightTier) return leftTier - rightTier
           const fromCmp = left.from.instanceId.localeCompare(right.from.instanceId)
           if (fromCmp !== 0) return fromCmp
           return left.from.portId.localeCompare(right.from.portId)
         })
+        const priorityGroup = getPortPriorityGroup(selectedDevice.config, portId)
         for (const link of orderedLinks) {
-          const sourceDevice = layout.devices.find((device) => device.instanceId === link.from.instanceId)
-          const priorityLabel = sourceDevice && isHighPriorityType(sourceDevice.typeId)
-            ? t('detail.inputSourceOrderPriorityHigh')
-            : t('detail.inputSourceOrderPriorityNormal')
-          items.push(`${portId} ← ${sourceLabel(link.from.instanceId)}:${link.from.portId} [${priorityLabel}]`)
+          items.push(`${portId} [G${priorityGroup}] ← ${sourceLabel(link.from.instanceId)}:${link.from.portId}`)
         }
       }
       if (items.length > 0) {
         entries.push({ title, cursor, items })
       }
-    }
-
-    if (isConvergerType(selectedDevice.typeId)) {
-      const orderedPorts = ['in_n', 'in_e', 'in_s'].filter((portId) => linksByPort.has(portId))
-      const [highCursor, normalCursor] = lanePriorityCursors('slot')
-      pushEntry(t('detail.inputSourceOrderSharedLane', { lane: 'slot' }), `hi=${highCursor} peer=${normalCursor}`, 'slot', orderedPorts)
-      return entries
-    }
-
-    if ('bufferGroups' in selectedRuntime && Array.isArray(selectedRuntime.bufferGroups) && selectedRuntime.bufferGroups.length > 0) {
-      selectedRuntime.bufferGroups.forEach((group, index) => {
-        const orderedPorts = group.inPortIds.filter((portId) => linksByPort.has(portId))
-        const [highCursor, normalCursor] = lanePriorityCursors('output')
-        pushEntry(
-          t('detail.inputSourceOrderGroup', { index: index + 1 }),
-          `hi=${highCursor} peer=${normalCursor}`,
-          'output',
-          orderedPorts,
-        )
-      })
-      return entries
     }
 
     const portsByLane = new Map<string, string[]>()
@@ -297,12 +262,19 @@ export function RightPanel({
     }
 
     for (const [lane, ports] of portsByLane.entries()) {
-      const [highCursor, normalCursor] = lanePriorityCursors(lane)
-      pushEntry(t('detail.inputSourceOrderSharedLane', { lane }), `hi=${highCursor} peer=${normalCursor}`, lane, ports)
+      const activeCursorGroups = lanePriorityCursors(lane)
+        .map((value, index) => ({ value, group: index + 1 }))
+        .filter((entry) => entry.value > 0)
+        .map((entry) => `G${entry.group}=${entry.value}`)
+        .join(' ')
+      pushEntry(t('detail.inputSourceOrderSharedLane', { lane }), activeCursorGroups || '-', lane, ports)
     }
 
     return entries
-  }, [layout, language, selectedDevice, selectedRuntime, sim.tick, t])
+  }, [layout, selectedDevice, selectedRuntime, t])
+
+  const canConfigurePortPriority = Boolean(selectedDevice && shouldShowPortPriorityConfigButton(selectedDevice))
+  const hasCustomPortPriority = Boolean(selectedDevice && hasCustomPortPriorityGroups(selectedDevice.config))
 
   return (
     <aside className="panel right-panel">
@@ -453,6 +425,24 @@ export function RightPanel({
                   onClick={() => openStorageSlotConfigDialog(selectedDevice.instanceId)}
                 >
                   {t('detail.storageSlotConfig')}
+                </button>
+              </span>
+            </div>
+          )}
+          <div className="kv">
+            <span>{t('detail.portPriorityConfigStatus')}</span>
+            <span>{hasCustomPortPriority ? t('detail.portPriorityConfigStatusCustom') : t('detail.portPriorityConfigStatusDefault')}</span>
+          </div>
+          {canConfigurePortPriority && (
+            <div className="kv">
+              <span>{t('detail.portPriorityConfig')}</span>
+              <span>
+                <button
+                  type="button"
+                  disabled={simIsRunning}
+                  onClick={() => openPortPriorityConfigDialog(selectedDevice.instanceId)}
+                >
+                  {t('detail.portPriorityConfig')}
                 </button>
               </span>
             </div>

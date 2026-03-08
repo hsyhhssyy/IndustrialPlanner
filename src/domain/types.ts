@@ -152,8 +152,6 @@ export interface BufferGroupRuntime {
   id: string
   inPortIds: string[]
   outPortIds: string[]
-  inCursor: number
-  outCursor: number
   slots: BufferSlotRuntime[]
 }
 
@@ -175,6 +173,7 @@ export interface DeviceConfig {
   pickupItemId?: ItemId
   pickupIgnoreInventory?: boolean
   protocolHubOutputs?: ProtocolHubOutputConfigEntry[]
+  portPriorityGroups?: Partial<Record<string, number>>
   pumpOutputItemId?: ItemId
   submitToWarehouse?: boolean
   preloadInputs?: PreloadInputConfigEntry[]
@@ -262,8 +261,8 @@ export interface BaseRuntime {
   progress01: number
   stallReason: StallReason
   isStalled: boolean
-  inputPriorityGroupCursorByLane?: Partial<Record<string, [number, number]>>
-  outputPriorityGroupCursorByGroup?: Partial<Record<string, [number, number]>>
+  inputPriorityGroupCursorByLane?: Partial<Record<string, number[]>>
+  outputPriorityGroupCursorByGroup?: Partial<Record<string, number[]>>
 }
 
 export interface ProcessorRuntime extends BaseRuntime {
@@ -326,7 +325,7 @@ export interface JunctionRuntime extends BaseRuntime {
   slot: SlotData | null
   nsSlot: SlotData | null
   weSlot: SlotData | null
-  rrIndex: number
+  lastSplitterOutputPortId?: string
 }
 
 export type DeviceRuntime = ProcessorRuntime | StorageRuntime | ConveyorRuntime | BeltRuntime | JunctionRuntime

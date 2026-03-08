@@ -5,6 +5,7 @@ import { buildBeltTrackPath, getBeltItemPosition } from '../../domain/shared/bel
 import { rotatedFootprintSize } from '../../domain/shared/math'
 import { getDeviceLabel } from '../../i18n'
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../../domain/registry'
+import { hasCustomPortPriorityGroups } from '../../domain/shared/portPriority'
 import type { DeviceInstance, DeviceRuntime, DeviceTypeId, ItemId } from '../../domain/types'
 import type { Language } from '../../i18n'
 
@@ -149,15 +150,15 @@ export const StaticDeviceLayer = memo(
         const outputPorts = SPLITTER_OUTPUT_PORT_ORDER.map((portId) => rotatedPorts.find((port) => port.portId === portId)).filter(
           (port): port is NonNullable<typeof port> => Boolean(port),
         )
-        if (!inputEdge || outputPorts.length === 0 || !('rrIndex' in runtime)) return null
-        const pickedOutput = outputPorts[runtime.rrIndex % outputPorts.length]?.edge ?? outputPorts[0]?.edge
+        if (!inputEdge || outputPorts.length === 0 || !('lastSplitterOutputPortId' in runtime)) return null
+        const pickedOutput = outputPorts.find((port) => port.portId === runtime.lastSplitterOutputPortId)?.edge ?? null
         if (!pickedOutput) return null
         return { path: junctionFlowPath(inputEdge, pickedOutput), itemId: slot.itemId, isBlocked }
       }
 
       if (device.typeId === 'item_log_converger') {
         const outputEdge = rotatedPorts.find((port) => port.direction === 'Output')?.edge
-        const inputEdge = runtime.slot ? OPPOSITE_EDGE[runtime.slot.enteredFrom] : null
+        const inputEdge = runtime.slot ? runtime.slot.enteredFrom : null
         if (!outputEdge || !inputEdge) return null
         return { path: junctionFlowPath(inputEdge, outputEdge), itemId: slot.itemId, isBlocked }
       }
@@ -391,7 +392,7 @@ export const StaticDeviceLayer = memo(
           return (
             <div
               key={renderDevice.instanceId}
-              className={`device render-pass-${renderPass} ${isLogisticsTrack ? 'belt-device' : ''} ${isPipeTrack ? 'pipe-device' : ''} ${selectionSet.has(renderDevice.instanceId) ? 'selected' : ''} ${invalidSelectionSet.has(renderDevice.instanceId) ? 'drag-invalid' : ''} ${highlightedSet.has(renderDevice.instanceId) ? 'power-range-highlight' : ''} ${extraClassName ?? ''}`.trim()}
+              className={`device render-pass-${renderPass} ${isLogisticsTrack ? 'belt-device' : ''} ${isPipeTrack ? 'pipe-device' : ''} ${selectionSet.has(renderDevice.instanceId) ? 'selected' : ''} ${invalidSelectionSet.has(renderDevice.instanceId) ? 'drag-invalid' : ''} ${highlightedSet.has(renderDevice.instanceId) ? 'power-range-highlight' : ''} ${hasCustomPortPriorityGroups(renderDevice.config) ? 'port-priority-customized' : ''} ${extraClassName ?? ''}`.trim()}
               style={{
                 left: renderDevice.origin.x * BASE_CELL_SIZE,
                 top: renderDevice.origin.y * BASE_CELL_SIZE,
