@@ -1339,8 +1339,15 @@ button:disabled {
 }
 
 .storage-slot-config-dialog {
-  min-width: min(92vw, 880px);
-  max-width: min(92vw, 980px);
+  min-width: min(94vw, 1080px);
+  max-width: min(96vw, 1180px);
+}
+
+.storage-slot-config-subtitle {
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .port-priority-config-dialog {
@@ -1944,25 +1951,285 @@ button:disabled {
   gap: 8px;
 }
 
-.storage-slot-config-list {
-  max-height: 62vh;
-  overflow-y: auto;
-  padding-right: 2px;
+.storage-slot-config-shell {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+  gap: 18px;
+  align-items: start;
 }
 
-.storage-slot-config-row {
-  border: 1px solid #2f3a4a;
-  border-radius: 8px;
-  background: #1b222d;
-  padding: 10px;
+.storage-slot-config-stage,
+.storage-slot-editor {
+  min-width: 0;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(41, 58, 85, 0.42), rgba(17, 24, 37, 0.9)),
+    #101721;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.storage-slot-config-stage {
+  padding: 16px;
+}
+
+.storage-slot-config-summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.storage-slot-summary-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(19, 28, 43, 0.82);
+  border: 1px solid rgba(92, 129, 184, 0.22);
+}
+
+.storage-slot-summary-chip strong {
+  font-size: 20px;
+  color: #f3f7fc;
+}
+
+.storage-slot-summary-chip span {
+  font-size: 12px;
+  color: #a7bbd4;
+}
+
+.storage-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.storage-slot-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 146px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(104, 132, 173, 0.28);
+  background:
+    linear-gradient(180deg, rgba(41, 55, 79, 0.7), rgba(16, 23, 35, 0.92)),
+    #151c28;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
+  outline: none;
+}
+
+.storage-slot-card:hover,
+.storage-slot-card:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(111, 162, 255, 0.52);
+  box-shadow: 0 10px 24px rgba(5, 9, 18, 0.28);
+}
+
+.storage-slot-card.is-selected {
+  border-color: rgba(126, 182, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(126, 182, 255, 0.28), 0 14px 26px rgba(8, 13, 24, 0.34);
+}
+
+.storage-slot-card.is-pinned {
+  background:
+    linear-gradient(180deg, rgba(88, 67, 24, 0.6), rgba(27, 22, 14, 0.94)),
+    #17120d;
+  border-color: rgba(210, 173, 82, 0.36);
+}
+
+.storage-slot-card.is-warning {
+  border-color: rgba(255, 194, 92, 0.66);
+}
+
+.storage-slot-card-header,
+.storage-slot-editor-header,
+.storage-slot-editor-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.storage-slot-card-title {
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: #a7bbd4;
+}
+
+.storage-slot-lock-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(111, 142, 189, 0.35);
+  background: rgba(10, 15, 24, 0.48);
+  cursor: pointer;
+}
+
+.storage-slot-lock-btn.is-active {
+  border-color: rgba(229, 187, 87, 0.6);
+  background: rgba(86, 64, 20, 0.42);
+}
+
+.storage-slot-card-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.storage-slot-card-icon,
+.storage-slot-editor-preview-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: rgba(7, 12, 19, 0.76);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.storage-slot-card-icon--empty,
+.storage-slot-editor-preview-icon--empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffd166;
+  font-size: 22px;
+  border: 1px dashed rgba(113, 150, 205, 0.42);
+}
+
+.storage-slot-card-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.storage-slot-card-amount {
+  font-size: 12px;
+  color: #c8d5e6;
+}
+
+.storage-slot-card-bar {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.storage-slot-card-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #72b4ff, #80ffd8);
+}
+
+.storage-slot-editor-note.is-warning {
+  font-size: 11px;
+  line-height: 1.45;
+  color: #ffd27d;
+}
+
+.storage-slot-stage-actions,
+.storage-slot-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.storage-slot-config-row .preload-slot-label {
-  grid-column: 1 / -1;
-  margin-bottom: 2px;
+.storage-slot-stage-actions {
+  margin-top: 14px;
+}
+
+.storage-slot-editor {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.storage-slot-editor-kicker {
+  font-size: 12px;
+  color: #a7bbd4;
+  margin-bottom: 4px;
+}
+
+.storage-slot-editor-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f3f7fc;
+  line-height: 1.2;
+}
+
+.storage-slot-editor-preview {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(14, 22, 34, 0.72);
+  border: 1px solid rgba(100, 130, 178, 0.22);
+  justify-content: flex-start;
+}
+
+.storage-slot-editor-preview-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.storage-slot-editor-preview-meta > div {
+  font-size: 15px;
+  font-weight: 600;
+  color: #f0f5fb;
+}
+
+.storage-slot-editor-preview-meta > small,
+.storage-slot-editor-note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #9fb3c9;
+}
+
+.storage-slot-mode-toggle {
+  display: flex;
+}
+
+.storage-slot-mode-btn,
+.storage-slot-step-btn {
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid #35516f;
+  background: #243042;
+  color: #e5ebf3;
+  cursor: pointer;
+}
+
+.storage-slot-mode-btn.is-active {
+  border-color: #5c90de;
+  background: #35598e;
+}
+
+.storage-slot-mode-btn {
+  width: 100%;
+}
+
+.storage-slot-editor-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .storage-slot-config-field {
@@ -1977,29 +2244,67 @@ button:disabled {
   color: #9fb3c9;
 }
 
-.storage-slot-config-field select,
 .storage-slot-config-field input[type='number'],
 .storage-slot-config-field .picker-open-btn {
   width: 100%;
   box-sizing: border-box;
-  height: 38px;
+  min-height: 42px;
   margin: 0;
   background: #243042;
   color: #e5ebf3;
   border: 1px solid #35516f;
-  border-radius: 6px;
-  padding: 6px 8px;
+  border-radius: 10px;
+  padding: 8px 10px;
 }
 
-.storage-slot-config-hint {
-  grid-column: 1 / -1;
-  font-size: 12px;
-  color: #ffd166;
+.storage-slot-picker-btn .pickup-picker-current {
+  width: 100%;
+  min-width: 0;
 }
 
-@media (max-width: 1100px) {
-  .storage-slot-config-row {
+.storage-slot-picker-btn .pickup-picker-current > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.storage-slot-amount-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  gap: 8px;
+}
+
+.storage-slot-amount-row input[type='number'] {
+  text-align: center;
+}
+
+.storage-slot-amount-slider {
+  width: 100%;
+  margin: 4px 0 0;
+  accent-color: #78b4ff;
+}
+
+@media (max-width: 980px) {
+  .storage-slot-config-shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .storage-slot-config-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .storage-slot-config-summary,
+  .storage-slot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .storage-slot-card {
+    min-height: 136px;
   }
 }
 

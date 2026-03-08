@@ -70,6 +70,10 @@ export function ItemPickerDialog({
               ? t('detail.protocolHubOutputDialogTitle', { index: itemPickerState.portIndex + 1 })
             : itemPickerState.kind === 'pumpOutput'
               ? t('detail.pumpOutputDialogTitle')
+            : itemPickerState.kind === 'storageSlotPinned'
+              ? t('detail.storageSlotPinnedDialogTitle', { index: itemPickerState.slotIndex + 1 })
+            : itemPickerState.kind === 'storageSlotPreload'
+              ? t('detail.storageSlotPreloadDialogTitle', { index: itemPickerState.slotIndex + 1 })
               : t('detail.preloadDialogTitle', { index: itemPickerState.slotIndex + 1 })}
         </div>
         <div className="pickup-item-groups">

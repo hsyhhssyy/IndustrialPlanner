@@ -141,6 +141,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
 
   const pickerTargetDevice = useMemo(() => {
     if (!itemPickerState) return null
+    if (itemPickerState.kind === 'storageSlotPinned' || itemPickerState.kind === 'storageSlotPreload') return null
     return getDeviceById(layout, itemPickerState.deviceInstanceId)
   }, [itemPickerState, layout])
 
@@ -207,6 +208,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       return
     }
     if (!itemPickerState) return
+    if (itemPickerState.kind === 'storageSlotPinned' || itemPickerState.kind === 'storageSlotPreload') return
     const target = getDeviceById(layout, itemPickerState.deviceInstanceId)
     if (!target) {
       setItemPickerState(null)
