@@ -1,14 +1,15 @@
 
 
-1.1.0 超时空版本更新。
+1.1.0 Beta 超时空版本更新！
 
 1、超时空配方。
 
 现在系统里存在一系列超时空配方，这些是1.1的新物品，新建筑，新配方。在界面左上角选择“启用超时空配方” 即可
 
 ![alt text](images/skland.v1.1/image-4.png)
-![alt text](images/skland.v1.1/image-5.png)
-![alt text](images/skland.v1.1/image-7.png)
+![alt text](images/skland.v1.1/image-9.png)
+![alt text](images/skland.v1.1/image-10.png)
+![alt text](images/skland.v1.1/image-11.png)
 
 他们没有图标，配方是根据PV视频猜的，大家可以试着用他们来提前布置产线。
 
@@ -39,7 +40,3 @@
 可以点击格子右上角的锁头标记锁定该格，这样这一格就只会接受这个物品。
 
 ![alt text](images/skland.v1.1/image-3.png)
-
-bug
-
-设备因为无法输出产物而堵塞时，物体会持续进入设备然后消失。

@@ -37,6 +37,7 @@ type PlannerBuildInput = {
   targets: PlannerTargetInput[]
   recipes: RecipeDef[]
   recipeSelectionByItem: Record<ItemId, string>
+  forcedRawItemIds?: ItemId[]
   maxLevels?: number
 }
 
@@ -52,8 +53,9 @@ function computeFlowPerMinute(amount: number, cycleSeconds: number) {
   return (amount / cycleSeconds) * 60
 }
 
-export function buildProductionPlan({ targets, recipes, recipeSelectionByItem, maxLevels = 20 }: PlannerBuildInput): PlannerBuildResult {
+export function buildProductionPlan({ targets, recipes, recipeSelectionByItem, forcedRawItemIds = [], maxLevels = 20 }: PlannerBuildInput): PlannerBuildResult {
   const producersByItem = new Map<ItemId, RecipeDef[]>()
+  const forcedRawItemIdSet = new Set<ItemId>(forcedRawItemIds)
 
   for (const recipe of recipes) {
     for (const output of recipe.outputs) {
@@ -69,7 +71,7 @@ export function buildProductionPlan({ targets, recipes, recipeSelectionByItem, m
   let nodeCounter = 0
 
   function buildTreeNode(itemId: ItemId, demandPerMinute: number, depth: number, pathItems: Set<ItemId>): PlannerTreeNode {
-    const options = producersByItem.get(itemId) ?? []
+    const options = forcedRawItemIdSet.has(itemId) ? [] : (producersByItem.get(itemId) ?? [])
     const selectedRecipe = options.find((recipe) => recipe.id === recipeSelectionByItem[itemId]) ?? options[0]
 
     const isCycle = pathItems.has(itemId)

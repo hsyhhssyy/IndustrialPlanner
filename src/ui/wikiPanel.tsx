@@ -18,6 +18,7 @@ const HIDDEN_DEVICE_IDS_IN_WIKI = new Set([
   'pipe_straight_1x1',
   'pipe_turn_cw_1x1',
   'pipe_turn_ccw_1x1',
+  'item_port_sp_hub_1',
 ])
 
 export function WikiPanel({ language, superRecipeEnabled, t, onClose }: WikiPanelProps) {

@@ -3114,6 +3114,7 @@ button:disabled {
   flex-direction: column;
   justify-content: space-between;
   gap: 8px;
+  overflow: hidden;
 }
 
 .planner-flow-node-layer {
@@ -3142,6 +3143,9 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-right: 42px;
 }
 
 .planner-flow-product-row {
@@ -3169,8 +3173,9 @@ button:disabled {
   overflow: hidden;
 }
 
-.planner-flow-node.is-dual .planner-flow-products {
+.planner-flow-node.is-multi .planner-flow-products {
   padding-left: 6px;
+  padding-bottom: 4px;
 }
 
 .planner-flow-dual-link {
@@ -3178,7 +3183,7 @@ button:disabled {
   left: 2px;
   top: 20px;
   width: 2px;
-  height: 34px;
+  bottom: 24px;
   background: #8cb8f3;
   border-radius: 999px;
 }
@@ -3186,6 +3191,8 @@ button:disabled {
 .planner-flow-node-meta {
   border-top: 1px solid #2f3a4a;
   padding-top: 6px;
+  flex: 0 0 auto;
+  min-height: 20px;
   font-size: 12px;
   color: #b8c9e1;
   white-space: nowrap;

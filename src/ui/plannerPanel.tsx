@@ -41,6 +41,8 @@ type DragState = {
 }
 
 type PlannerFlatCard = {
+  cardKey: string
+  cardKind: 'production' | 'disposal'
   itemId: ItemId
   level: number
   demandPerMinute: number
@@ -101,6 +103,13 @@ type FlowPanState = {
   startPointerY: number
   startOffsetX: number
   startOffsetY: number
+}
+
+const EPSILON = 1e-9
+
+function addFlow(target: Map<ItemId, number>, itemId: ItemId, amount: number) {
+  if (amount <= EPSILON) return
+  target.set(itemId, (target.get(itemId) ?? 0) + amount)
 }
 
 function createTargetId() {
@@ -199,6 +208,28 @@ function formatFlowList(language: Language, flows: Array<{ itemId: ItemId; perMi
   return flows.map((flow) => `${getItemLabel(language, flow.itemId)} ${formatRate(flow.perMinute)}/min`).join(' | ')
 }
 
+function getPlannerFlowNodeHeight(displayItemCount: number) {
+  return 96 + Math.max(0, displayItemCount - 1) * 48
+}
+
+function computeRecipeFlowPerMinute(amount: number, cycleSeconds: number) {
+  if (cycleSeconds <= 0) return 0
+  return (amount / cycleSeconds) * 60
+}
+
+function computeRecipeFlows(recipe: (typeof RECIPES)[number], machineCount: number) {
+  return {
+    inputFlows: recipe.inputs.map((input) => ({
+      itemId: input.itemId,
+      perMinute: machineCount * computeRecipeFlowPerMinute(input.amount, recipe.cycleSeconds),
+    })),
+    outputFlows: recipe.outputs.map((output) => ({
+      itemId: output.itemId,
+      perMinute: machineCount * computeRecipeFlowPerMinute(output.amount, recipe.cycleSeconds),
+    })),
+  }
+}
+
 function walkTree(node: PlannerTreeNode, visit: (node: PlannerTreeNode) => void) {
   visit(node)
   for (const child of node.children) {
@@ -261,8 +292,13 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
   const BELT_THROUGHPUT_PER_MINUTE = 30
 
   const WULING_TAG = '武陵'
+  const FORCED_RAW_ITEM_IDS: ItemId[] = ['item_liquid_water']
   const BLUE_IRON_NUGGET_ID: ItemId = 'item_iron_nugget'
   const BLUE_IRON_POWDER_ID: ItemId = 'item_iron_powder'
+  const INERT_XIRANITE_WASTE_LIQUID_ID: ItemId = 'chrono_item_inert_xiranite_waste_liquid'
+  const HARD_DISPOSAL_RECIPE_BY_ITEM: Partial<Record<ItemId, string>> = {
+    chrono_item_inert_xiranite_waste_liquid: 'r_chrono_wastewater_treatment_void_inert_xiranite_waste_liquid_basic',
+  }
   const BLUE_IRON_CONVERSION_RECIPE_IDS = new Set<string>([
     'r_furnace_iron_nugget_from_iron_powder_basic',
   ])
@@ -487,6 +523,7 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
         targets: targetInputs,
         recipes: recipesWithoutBlueIronConversion,
         recipeSelectionByItem: plannerState.recipeSelectionByItem,
+        forcedRawItemIds: FORCED_RAW_ITEM_IDS,
         maxLevels: 20,
       }),
     [plannerState.recipeSelectionByItem, targetInputs, recipesWithoutBlueIronConversion],
@@ -512,6 +549,7 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
       targets: targetInputs,
       recipes: recipesWithoutPlantLoops,
       recipeSelectionByItem: plannerState.recipeSelectionByItem,
+      forcedRawItemIds: FORCED_RAW_ITEM_IDS,
       maxLevels: 20,
     })
     return collectDemandByItem(baseResult.roots)
@@ -523,6 +561,7 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
         targets: targetInputs,
         recipes: recipesForPlanning,
         recipeSelectionByItem: plannerState.recipeSelectionByItem,
+        forcedRawItemIds: FORCED_RAW_ITEM_IDS,
         maxLevels: 20,
       }),
     [plannerState.recipeSelectionByItem, targetInputs, recipesForPlanning],
@@ -549,12 +588,30 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
     return map
   }, [recipesForPlanning])
 
+  const sinkRecipeIdsByInputItem = useMemo(() => {
+    const map = new Map<ItemId, string[]>()
+    for (const recipe of recipesForPlanning) {
+      if (recipe.outputs.length > 0 || recipe.inputs.length === 0) continue
+      for (const input of recipe.inputs) {
+        if (input.amount <= 0) continue
+        const list = map.get(input.itemId) ?? []
+        list.push(recipe.id)
+        map.set(input.itemId, list)
+      }
+    }
+    return map
+  }, [recipesForPlanning])
+
   const formatRecipeLabel = (recipeId: string | null) => {
     if (!recipeId) return '-'
     const recipe = recipeById.get(recipeId)
     if (!recipe) return '-'
-    const inputs = recipe.inputs.map((entry) => `${getItemLabel(language, entry.itemId)} x${entry.amount}`).join(' + ')
-    const outputs = recipe.outputs.map((entry) => `${getItemLabel(language, entry.itemId)} x${entry.amount}`).join(' + ')
+    const inputs = recipe.inputs.length > 0
+      ? recipe.inputs.map((entry) => `${getItemLabel(language, entry.itemId)} x${entry.amount}`).join(' + ')
+      : '∅'
+    const outputs = recipe.outputs.length > 0
+      ? recipe.outputs.map((entry) => `${getItemLabel(language, entry.itemId)} x${entry.amount}`).join(' + ')
+      : '∅'
     return `${getDeviceLabel(language, recipe.machineType)} · ${inputs} → ${outputs}`
   }
 
@@ -645,7 +702,7 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
       }
     }
 
-    const cards: PlannerFlatCard[] = []
+    const productionCards: PlannerFlatCard[] = []
 
     for (const aggregate of aggregateMap.values()) {
       const correctedDemand = correctedDemandByItem.get(aggregate.itemId)
@@ -656,7 +713,9 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
       const selectedRecipe = selectedRecipeId ? recipeById.get(selectedRecipeId) : undefined
 
       if (!selectedRecipe) {
-        cards.push({
+        productionCards.push({
+          cardKey: `produce|${aggregate.itemId}`,
+          cardKind: 'production',
           itemId: aggregate.itemId,
           level: aggregate.level,
           demandPerMinute: effectiveDemandPerMinute,
@@ -674,18 +733,13 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
       }
 
       const targetOutput = selectedRecipe.outputs.find((output) => output.itemId === aggregate.itemId)
-      const outputPerMinute = targetOutput ? (targetOutput.amount / selectedRecipe.cycleSeconds) * 60 : 0
+      const outputPerMinute = targetOutput ? computeRecipeFlowPerMinute(targetOutput.amount, selectedRecipe.cycleSeconds) : 0
       const machineCount = outputPerMinute > 0 ? effectiveDemandPerMinute / outputPerMinute : 0
-      const inputFlows = selectedRecipe.inputs.map((input) => ({
-        itemId: input.itemId,
-        perMinute: machineCount * (input.amount / selectedRecipe.cycleSeconds) * 60,
-      }))
-      const outputFlows = selectedRecipe.outputs.map((output) => ({
-        itemId: output.itemId,
-        perMinute: machineCount * (output.amount / selectedRecipe.cycleSeconds) * 60,
-      }))
+      const { inputFlows, outputFlows } = computeRecipeFlows(selectedRecipe, machineCount)
 
-      cards.push({
+      productionCards.push({
+        cardKey: `produce|${aggregate.itemId}`,
+        cardKind: 'production',
         itemId: aggregate.itemId,
         level: aggregate.level,
         demandPerMinute: effectiveDemandPerMinute,
@@ -701,71 +755,205 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
       })
     }
 
-    return cards.sort((a, b) => {
-      if (a.level !== b.level) return a.level - b.level
-      return a.itemId.localeCompare(b.itemId)
-    })
-  }, [baseDemandByItem, planResult.roots, plannerState.recipeSelectionByItem, recipeById, recipeIdsByOutputItem])
+    const rawCardByItem = new Map<ItemId, PlannerFlatCard>()
+    for (const card of productionCards) {
+      if (!card.isRawDemand) continue
+      rawCardByItem.set(card.itemId, card)
+    }
 
-  const flowGraph = useMemo(() => {
-    const nodeByKey = new Map<string, FlowGraphNode>()
+    const targetDemandByItem = new Map<ItemId, number>()
+    for (const target of targetInputs) {
+      targetDemandByItem.set(target.itemId, (targetDemandByItem.get(target.itemId) ?? 0) + target.perMinute)
+    }
 
-    const ensureNode = (card: PlannerFlatCard) => {
-      const nodeKey = card.isRawDemand || !card.machineType || !card.recipeId ? `raw|${card.itemId}` : `${card.machineType}|${card.recipeId}`
-      const existing = nodeByKey.get(nodeKey)
-      if (existing) {
-        existing.level = Math.min(existing.level, card.level)
-        existing.machineCount += card.machineCount
-        for (const flow of card.inputFlows) {
-          const current = existing.inputFlows.find((entry) => entry.itemId === flow.itemId)
-          if (current) {
-            current.perMinute += flow.perMinute
-          } else {
-            existing.inputFlows.push({ ...flow })
-          }
-        }
-        const outputFlows =
-          card.isRawDemand || !card.recipeId
-            ? [{ itemId: card.itemId, perMinute: card.demandPerMinute }]
-            : card.outputFlows
-        for (const flow of outputFlows) {
-          const current = existing.outputFlows.find((entry) => entry.itemId === flow.itemId)
-          if (current) {
-            current.perMinute += flow.perMinute
-          } else {
-            existing.outputFlows.push({ ...flow })
-          }
-        }
-        if (!existing.displayItemIds.includes(card.itemId)) {
-          existing.displayItemIds.push(card.itemId)
-        }
-        return
+    const producedByItem = new Map<ItemId, number>()
+    const consumedByItem = new Map<ItemId, number>()
+    const producerLevelByItem = new Map<ItemId, number>()
+    const aggregatedRecipeMachineCount = new Map<string, number>()
+
+    for (const card of productionCards) {
+      if (card.isRawDemand || !card.machineType || !card.recipeId) continue
+      const nodeKey = `${card.machineType}|${card.recipeId}`
+      aggregatedRecipeMachineCount.set(nodeKey, Math.max(aggregatedRecipeMachineCount.get(nodeKey) ?? 0, card.machineCount))
+    }
+
+    for (const [nodeKey, machineCount] of aggregatedRecipeMachineCount.entries()) {
+      const recipeId = nodeKey.split('|')[1]
+      const recipe = recipeById.get(recipeId)
+      if (!recipe || machineCount <= EPSILON) continue
+      for (const input of recipe.inputs) {
+        addFlow(consumedByItem, input.itemId, machineCount * computeRecipeFlowPerMinute(input.amount, recipe.cycleSeconds))
       }
+      for (const output of recipe.outputs) {
+        addFlow(producedByItem, output.itemId, machineCount * computeRecipeFlowPerMinute(output.amount, recipe.cycleSeconds))
+      }
+    }
 
-      const displayItemIds =
-        card.isRawDemand || !card.recipeId
-          ? [card.itemId]
-          : (recipeById.get(card.recipeId)?.outputs.map((entry) => entry.itemId) ?? [card.itemId])
+    for (const itemId of FORCED_RAW_ITEM_IDS) {
+      const rawCard = rawCardByItem.get(itemId)
+      if (!rawCard) continue
+      const byproductProductionPerMinute = producedByItem.get(itemId) ?? 0
+      const netRawDemandPerMinute = Math.max(0, rawCard.demandPerMinute - byproductProductionPerMinute)
+      rawCard.demandPerMinute = netRawDemandPerMinute
+      rawCard.outputFlows = netRawDemandPerMinute > EPSILON ? [{ itemId, perMinute: netRawDemandPerMinute }] : []
+    }
 
-      nodeByKey.set(nodeKey, {
-        id: nodeKey,
-        key: nodeKey,
-        machineType: card.machineType,
-        machineCount: card.machineCount,
-        recipeId: card.recipeId,
-        isRaw: card.isRawDemand || !card.machineType,
-        level: card.level,
-        displayItemIds: displayItemIds.slice(0, 2),
-        inputFlows: card.inputFlows.map((entry) => ({ ...entry })),
-        outputFlows:
-          card.isRawDemand || !card.recipeId
-            ? [{ itemId: card.itemId, perMinute: card.demandPerMinute }]
-            : card.outputFlows.map((entry) => ({ ...entry })),
+    for (const card of productionCards) {
+      if (card.isRawDemand) continue
+      for (const output of card.outputFlows) {
+        const currentLevel = producerLevelByItem.get(output.itemId)
+        producerLevelByItem.set(output.itemId, currentLevel === undefined ? card.level : Math.max(currentLevel, card.level))
+      }
+    }
+
+    const disposalCards: PlannerFlatCard[] = []
+    for (const [itemId, recipeIds] of sinkRecipeIdsByInputItem.entries()) {
+      const selectedRecipeId = HARD_DISPOSAL_RECIPE_BY_ITEM[itemId] ?? recipeIds[0] ?? null
+      if (!selectedRecipeId) continue
+      const selectedRecipe = recipeById.get(selectedRecipeId)
+      if (!selectedRecipe) continue
+
+      const producedPerMinute = producedByItem.get(itemId) ?? 0
+      if (producedPerMinute <= EPSILON) continue
+
+      const consumedPerMinute = consumedByItem.get(itemId) ?? 0
+      const targetDemandPerMinute = targetDemandByItem.get(itemId) ?? 0
+      const disposalDemandPerMinute = itemId === INERT_XIRANITE_WASTE_LIQUID_ID
+        ? Math.max(0, producedPerMinute - targetDemandPerMinute)
+        : Math.max(0, producedPerMinute - consumedPerMinute - targetDemandPerMinute)
+
+      if (disposalDemandPerMinute <= EPSILON) continue
+
+      const sinkInput = selectedRecipe.inputs.find((input) => input.itemId === itemId)
+      const sinkInputPerMinute = sinkInput ? computeRecipeFlowPerMinute(sinkInput.amount, selectedRecipe.cycleSeconds) : 0
+      const machineCount = sinkInputPerMinute > EPSILON ? disposalDemandPerMinute / sinkInputPerMinute : 0
+      const { inputFlows, outputFlows } = computeRecipeFlows(selectedRecipe, machineCount)
+
+      disposalCards.push({
+        cardKey: `dispose|${itemId}|${selectedRecipe.id}`,
+        cardKind: 'disposal',
+        itemId,
+        level: (producerLevelByItem.get(itemId) ?? 0) + 1,
+        demandPerMinute: disposalDemandPerMinute,
+        isRawDemand: false,
+        isCycle: false,
+        isDepthLimited: false,
+        recipeId: selectedRecipe.id,
+        recipeOptions: [selectedRecipe.id],
+        machineType: selectedRecipe.machineType,
+        machineCount,
+        inputFlows,
+        outputFlows,
       })
     }
 
+    const cards = [...productionCards.filter((card) => !card.isRawDemand || card.demandPerMinute > EPSILON), ...disposalCards]
+
+    return cards.sort((a, b) => {
+      if (a.level !== b.level) return a.level - b.level
+      if (a.itemId !== b.itemId) return a.itemId.localeCompare(b.itemId)
+      if (a.cardKind !== b.cardKind) return a.cardKind === 'production' ? -1 : 1
+      return a.itemId.localeCompare(b.itemId)
+    })
+  }, [
+    baseDemandByItem,
+    planResult.roots,
+    plannerState.recipeSelectionByItem,
+    recipeById,
+    recipeIdsByOutputItem,
+    sinkRecipeIdsByInputItem,
+    targetInputs,
+  ])
+
+  const flowGraph = useMemo(() => {
+    const nodeByKey = new Map<string, FlowGraphNode>()
+    const rawDemandByItem = new Map<ItemId, { level: number; perMinute: number }>()
+    const recipeNodeMeta = new Map<string, { level: number; machineType: DeviceTypeId; recipeId: string; machineCount: number; displayItemIds: Set<ItemId> }>()
+
     for (const card of flatCards) {
-      ensureNode(card)
+      if (card.isRawDemand || !card.machineType || !card.recipeId) {
+        const existing = rawDemandByItem.get(card.itemId)
+        if (existing) {
+          existing.level = Math.min(existing.level, card.level)
+          existing.perMinute += card.demandPerMinute
+        } else {
+          rawDemandByItem.set(card.itemId, {
+            level: card.level,
+            perMinute: card.demandPerMinute,
+          })
+        }
+        continue
+      }
+
+      const nodeKey = `${card.machineType}|${card.recipeId}`
+      const existing = recipeNodeMeta.get(nodeKey)
+      if (existing) {
+        existing.level = Math.min(existing.level, card.level)
+        existing.machineCount = Math.max(existing.machineCount, card.machineCount)
+        if (card.cardKind === 'disposal' || card.outputFlows.length === 0) {
+          existing.displayItemIds.add(card.itemId)
+        } else {
+          const recipe = recipeById.get(card.recipeId)
+          for (const output of recipe?.outputs ?? []) {
+            existing.displayItemIds.add(output.itemId)
+          }
+        }
+      } else {
+        const displayItemIds = new Set<ItemId>()
+        if (card.cardKind === 'disposal' || card.outputFlows.length === 0) {
+          displayItemIds.add(card.itemId)
+        } else {
+          const recipe = recipeById.get(card.recipeId)
+          for (const output of recipe?.outputs ?? []) {
+            displayItemIds.add(output.itemId)
+          }
+          if (displayItemIds.size === 0) {
+            displayItemIds.add(card.itemId)
+          }
+        }
+
+        recipeNodeMeta.set(nodeKey, {
+          level: card.level,
+          machineType: card.machineType,
+          recipeId: card.recipeId,
+          machineCount: card.machineCount,
+          displayItemIds,
+        })
+      }
+    }
+
+    for (const [itemId, raw] of rawDemandByItem.entries()) {
+      const nodeKey = `raw|${itemId}`
+      nodeByKey.set(nodeKey, {
+        id: nodeKey,
+        key: nodeKey,
+        machineType: null,
+        machineCount: 0,
+        recipeId: null,
+        isRaw: true,
+        level: raw.level,
+        displayItemIds: [itemId],
+        inputFlows: [],
+        outputFlows: [{ itemId, perMinute: raw.perMinute }],
+      })
+    }
+
+    for (const [nodeKey, meta] of recipeNodeMeta.entries()) {
+      const recipe = recipeById.get(meta.recipeId)
+      if (!recipe) continue
+      const { inputFlows, outputFlows } = computeRecipeFlows(recipe, meta.machineCount)
+      nodeByKey.set(nodeKey, {
+        id: nodeKey,
+        key: nodeKey,
+        machineType: meta.machineType,
+        machineCount: meta.machineCount,
+        recipeId: meta.recipeId,
+        isRaw: false,
+        level: meta.level,
+        displayItemIds: [...meta.displayItemIds],
+        inputFlows,
+        outputFlows,
+      })
     }
 
     const nodes = [...nodeByKey.values()].sort((a, b) => a.level - b.level || a.id.localeCompare(b.id))
@@ -823,7 +1011,7 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
 
   const autoFlowLayout = useMemo<FlowAutoLayoutResult>(() => {
     const spacingX = 340
-    const spacingY = 150
+    const rowGap = 28
     const nodes = flowGraph.nodes
     const edges = flowGraph.edges
     if (nodes.length === 0) {
@@ -1165,10 +1353,26 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
 
     const nextPositions: Record<string, FlowNodePosition> = {}
     const nextLayerByNode: Record<string, number> = {}
+    const rowByNode = new Map<string, number>()
+    const rowTopByIndex: number[] = []
+    let nextRowTop = 40
 
     for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
       const rowMap = rows[rowIndex]
-      const rowY = 40 + rowIndex * spacingY
+      let rowHeight = 96
+      for (const cell of rowMap.values()) {
+        if (cell.kind !== 'node') continue
+        const node = nodeById.get(cell.nodeId)
+        if (!node) continue
+        rowHeight = Math.max(rowHeight, getPlannerFlowNodeHeight(node.displayItemIds.length))
+      }
+      rowTopByIndex[rowIndex] = nextRowTop
+      nextRowTop += rowHeight + rowGap
+    }
+
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+      const rowMap = rows[rowIndex]
+      const rowY = rowTopByIndex[rowIndex] ?? 40
       for (const [layer, cell] of [...rowMap.entries()].sort((a, b) => a[0] - b[0])) {
         if (cell.kind !== 'node') continue
         nextLayerByNode[cell.nodeId] = layer
@@ -1176,6 +1380,7 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
           x: 60 + layer * spacingX,
           y: rowY,
         }
+        rowByNode.set(cell.nodeId, rowIndex)
       }
     }
 
@@ -1186,16 +1391,9 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
       nextLayerByNode[node.id] = layer
       nextPositions[node.id] = {
         x: 60 + layer * spacingX,
-        y: 40 + fallbackRow * spacingY,
+        y: nextRowTop,
       }
-    }
-
-    const rowByNode = new Map<string, number>()
-    for (const node of nodes) {
-      const position = nextPositions[node.id]
-      if (!position) continue
-      const row = Math.max(0, Math.round((position.y - 40) / spacingY))
-      rowByNode.set(node.id, row)
+      rowByNode.set(node.id, fallbackRow)
     }
 
     const buildOccupancy = () => {
@@ -1304,13 +1502,26 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
       movedSeedSet.add(pair.seedId)
     }
 
+    const maxAssignedRow = [...rowByNode.values()].reduce((max, row) => Math.max(max, row), -1)
+    const finalRowTopByIndex: number[] = []
+    let finalNextRowTop = 40
+    for (let rowIndex = 0; rowIndex <= maxAssignedRow; rowIndex += 1) {
+      let rowHeight = 96
+      for (const node of nodes) {
+        if ((rowByNode.get(node.id) ?? -1) !== rowIndex) continue
+        rowHeight = Math.max(rowHeight, getPlannerFlowNodeHeight(node.displayItemIds.length))
+      }
+      finalRowTopByIndex[rowIndex] = finalNextRowTop
+      finalNextRowTop += rowHeight + rowGap
+    }
+
     for (const node of nodes) {
       const nodeId = node.id
       const row = rowByNode.get(nodeId)
       if (row === undefined) continue
       nextPositions[nodeId] = {
         ...nextPositions[nodeId],
-        y: 40 + row * spacingY,
+        y: finalRowTopByIndex[row] ?? 40,
       }
     }
 
@@ -1332,11 +1543,11 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
   const machineSummary = useMemo(() => {
     const countByMachine = new Map<DeviceTypeId, number>()
 
-    for (const card of flatCards) {
-      if (card.isRawDemand || !card.machineType) continue
-      const roundedCount = Math.max(0, Math.ceil(card.machineCount - 1e-9))
+    for (const node of flowGraph.nodes) {
+      if (node.isRaw || !node.machineType) continue
+      const roundedCount = Math.max(0, Math.ceil(node.machineCount - 1e-9))
       if (roundedCount <= 0) continue
-      countByMachine.set(card.machineType, (countByMachine.get(card.machineType) ?? 0) + roundedCount)
+      countByMachine.set(node.machineType, (countByMachine.get(node.machineType) ?? 0) + roundedCount)
     }
 
     const entries = [...countByMachine.entries()]
@@ -1353,11 +1564,11 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
       entries,
       total,
     }
-  }, [flatCards, language])
+  }, [flowGraph.nodes, language])
 
   const FLOW_NODE_WIDTH = 220
 
-  const getFlowNodeHeight = (node: FlowGraphNode) => (node.displayItemIds.length > 1 ? 128 : 96)
+  const getFlowNodeHeight = (node: FlowGraphNode) => getPlannerFlowNodeHeight(node.displayItemIds.length)
 
   const getFlowNodeCenter = (nodeId: string) => {
     const node = flowGraph.nodes.find((entry) => entry.id === nodeId)
@@ -1618,7 +1829,7 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
 
                     {flatCards.map((card) => (
                       <div
-                        key={card.itemId}
+                        key={card.cardKey}
                         className={`planner-item-card ${card.isCycle && !isBenignPlantCycle(card) ? 'is-cycle' : ''} ${card.isDepthLimited ? 'is-depth-limited' : ''}`.trim()}
                       >
                         <div className="planner-item-card-tags">
@@ -1739,7 +1950,7 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
                         return (
                           <div
                             key={node.id}
-                            className={`planner-flow-node ${node.displayItemIds.length > 1 ? 'is-dual' : ''}`.trim()}
+                            className={`planner-flow-node ${node.displayItemIds.length > 1 ? 'is-multi' : ''}`.trim()}
                             style={{
                               width: `${FLOW_NODE_WIDTH}px`,
                               height: `${nodeHeight}px`,
@@ -1752,7 +1963,7 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
                               {(flowNodeLayers[node.id] ?? 0) + 1}
                             </span>
                             <div className="planner-flow-products">
-                              {node.displayItemIds.slice(0, 2).map((itemId) => (
+                              {node.displayItemIds.map((itemId) => (
                                 <div key={`${node.id}-${itemId}`} className="planner-flow-product-row">
                                   <img src={getItemIconPath(itemId)} alt="" aria-hidden="true" draggable={false} />
                                   <span>{formatFlowNodeItemName(language, getItemLabel(language, itemId))}</span>
