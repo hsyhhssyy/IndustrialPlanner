@@ -53,6 +53,8 @@
 15. `14-unified-buffer-group-and-slot-rule-design.md`
 16. `15-s4-rq-004-execution-contract-and-risk-mitigation.md`
 17. `16-stage4-conversation-notes-arbitration-and-buffer-rules.md`
+18. `17-pull-driven-simulation-refactor-spec.md`
+19. `18-pull-driven-followup-belt-and-scheduling-notes.md`
 
 ## 口径优先级
 

@@ -1311,6 +1311,9 @@ function tryReceiveToLane(
     }
     return addToStorage(runtime, itemId, 1, toPortId)
   }
+  if (getSlotRef(runtime, lane)) {
+    return false
+  }
   const incomingEdge = toPortId.slice(-1).toUpperCase() as keyof typeof OPPOSITE_EDGE
   setSlotRef(runtime, lane, {
     itemId,
