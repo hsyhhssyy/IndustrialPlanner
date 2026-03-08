@@ -57,6 +57,7 @@ export function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
   if (
     typeId === 'item_port_grinder_1' ||
     typeId === 'item_port_furnance_1' ||
+    typeId === 'item_port_liquid_furnance_1' ||
     typeId === 'item_port_cmpt_mc_1' ||
     typeId === 'item_port_shaper_1' ||
     typeId === 'item_port_seedcol_1' ||

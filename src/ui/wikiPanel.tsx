@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react'
-import { DEVICE_TYPES, ITEMS, RECIPES } from '../domain/registry'
+import { useEffect, useMemo, useState } from 'react'
+import { DEVICE_TYPE_BY_ID, DEVICE_TYPES, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
+import { isSuperRecipeDevice, isSuperRecipeItem, isSuperRecipeRecipe, shouldShowSuperRecipeContent } from '../domain/shared/superRecipeVisibility'
+import type { DeviceTypeId } from '../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../i18n'
 
 type WikiPanelProps = {
   language: Language
+  superRecipeEnabled: boolean
   t: (key: string, params?: Record<string, string | number>) => string
   onClose: () => void
 }
@@ -17,14 +20,55 @@ const HIDDEN_DEVICE_IDS_IN_WIKI = new Set([
   'pipe_turn_ccw_1x1',
 ])
 
-export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
+export function WikiPanel({ language, superRecipeEnabled, t, onClose }: WikiPanelProps) {
   const wikiDeviceTypes = useMemo(
-    () => DEVICE_TYPES.filter((device) => !HIDDEN_DEVICE_IDS_IN_WIKI.has(device.id)),
-    [],
+    () =>
+      DEVICE_TYPES.filter(
+        (device) =>
+          !HIDDEN_DEVICE_IDS_IN_WIKI.has(device.id)
+          && shouldShowSuperRecipeContent(superRecipeEnabled, isSuperRecipeDevice(device)),
+      ),
+    [superRecipeEnabled],
+  )
+  const wikiItems = useMemo(
+    () => ITEMS.filter((item) => shouldShowSuperRecipeContent(superRecipeEnabled, isSuperRecipeItem(item))),
+    [superRecipeEnabled],
+  )
+  const wikiRecipes = useMemo(
+    () =>
+      RECIPES.filter(
+        (recipe) =>
+          shouldShowSuperRecipeContent(
+            superRecipeEnabled,
+            isSuperRecipeRecipe(recipe, {
+              getItemById: (itemId) => ITEM_BY_ID[itemId],
+              getDeviceById: (deviceId) => DEVICE_TYPE_BY_ID[deviceId],
+            }),
+          ),
+      ),
+    [superRecipeEnabled],
   )
   const [activeTab, setActiveTab] = useState<'guide' | 'advanced' | 'device' | 'item'>('guide')
-  const [selectedDeviceId, setSelectedDeviceId] = useState(wikiDeviceTypes[0]?.id ?? '')
-  const [selectedItemId, setSelectedItemId] = useState(ITEMS[0]?.id ?? '')
+  const [selectedDeviceId, setSelectedDeviceId] = useState<DeviceTypeId | ''>(wikiDeviceTypes[0]?.id ?? '')
+  const [selectedItemId, setSelectedItemId] = useState<string>(wikiItems[0]?.id ?? '')
+
+  useEffect(() => {
+    if (wikiDeviceTypes.length === 0) {
+      if (selectedDeviceId) setSelectedDeviceId('')
+      return
+    }
+    if (wikiDeviceTypes.some((device) => device.id === selectedDeviceId)) return
+    setSelectedDeviceId(wikiDeviceTypes[0].id)
+  }, [selectedDeviceId, wikiDeviceTypes])
+
+  useEffect(() => {
+    if (wikiItems.length === 0) {
+      if (selectedItemId) setSelectedItemId('')
+      return
+    }
+    if (wikiItems.some((item) => item.id === selectedItemId)) return
+    setSelectedItemId(wikiItems[0].id)
+  }, [selectedItemId, wikiItems])
 
   const beginnerHelpSections: Array<{ title: string; steps: string[] }> =
     language === 'zh-CN'
@@ -177,18 +221,18 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
         ]
 
   const selectedDeviceRecipes = useMemo(
-    () => RECIPES.filter((recipe) => recipe.machineType === selectedDeviceId),
-    [selectedDeviceId],
+    () => wikiRecipes.filter((recipe) => recipe.machineType === selectedDeviceId),
+    [selectedDeviceId, wikiRecipes],
   )
 
   const selectedItemProducedByRecipes = useMemo(
-    () => RECIPES.filter((recipe) => recipe.outputs.some((entry) => entry.itemId === selectedItemId)),
-    [selectedItemId],
+    () => wikiRecipes.filter((recipe) => recipe.outputs.some((entry) => entry.itemId === selectedItemId)),
+    [selectedItemId, wikiRecipes],
   )
 
   const selectedItemRequiredByRecipes = useMemo(
-    () => RECIPES.filter((recipe) => recipe.inputs.some((entry) => entry.itemId === selectedItemId)),
-    [selectedItemId],
+    () => wikiRecipes.filter((recipe) => recipe.inputs.some((entry) => entry.itemId === selectedItemId)),
+    [selectedItemId, wikiRecipes],
   )
 
   const getItemIconPath = (itemId: string) => `/itemicon/${itemId}.png`
@@ -355,7 +399,7 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
               </aside>
 
               <section className="wiki-content-pane">
-                <h4>{t('wiki.device.recipeTitle', { name: getDeviceLabel(language, selectedDeviceId) })}</h4>
+                <h4>{t('wiki.device.recipeTitle', { name: selectedDeviceId ? getDeviceLabel(language, selectedDeviceId) : '-' })}</h4>
                 <div className="wiki-section-subtitle">
                   {t('wiki.devicePowerDemand', {
                     power: DEVICE_TYPES.find((device) => device.id === selectedDeviceId)?.powerDemand ?? 0,
@@ -377,7 +421,7 @@ export function WikiPanel({ language, t, onClose }: WikiPanelProps) {
               <aside className="wiki-list-pane">
                 <h4>{t('wiki.item.listTitle')}</h4>
                 <div className="wiki-entry-list">
-                  {ITEMS.map((item) => (
+                  {wikiItems.map((item) => (
                     <button
                       key={item.id}
                       type="button"

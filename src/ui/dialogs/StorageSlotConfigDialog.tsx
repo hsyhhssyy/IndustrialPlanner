@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useAppContext } from '../../app/AppContext'
 import { ITEMS } from '../../domain/registry'
 import type { DeviceInstance, ItemId, StorageSlotConfigEntry } from '../../domain/types'
 import { getItemLabel, type Language } from '../../i18n'
@@ -84,6 +85,9 @@ function hasConfiguredContent(slot: EditableStorageSlot) {
 }
 
 export function StorageSlotConfigDialog({ device, language, t, getItemIconPath, onClose, onSave }: StorageSlotConfigDialogProps) {
+  const {
+    state: { superRecipeEnabled },
+  } = useAppContext()
   const slotCount = slotCountForDeviceType(device.typeId)
   const [slots, setSlots] = useState<EditableStorageSlot[]>(() => buildEditableSlots(device, slotCount))
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(0)
@@ -219,13 +223,12 @@ export function StorageSlotConfigDialog({ device, language, t, getItemIconPath, 
                   const effectiveItemId = getEffectiveItemId(slot)
                   const isSelected = slot.slotIndex === selectedSlot.slotIndex
                   const isPinned = slot.mode === 'pinned'
-                  const pinnedUnavailable = isPinned && !slot.pinnedItemId
                   const fillPercent = Math.max(0, Math.min(100, (clampAmount(slot.preloadAmount) / SLOT_CAPACITY) * 100))
 
                   return (
                     <div
                       key={`storage-slot-config-${slot.slotIndex}`}
-                      className={`storage-slot-card${isSelected ? ' is-selected' : ''}${isPinned ? ' is-pinned' : ' is-free'}${pinnedUnavailable ? ' is-warning' : ''}`}
+                      className={`storage-slot-card${isSelected ? ' is-selected' : ''}${isPinned ? ' is-pinned' : ' is-free'}`}
                       role="button"
                       tabIndex={0}
                       onClick={() => setSelectedSlotIndex(slot.slotIndex)}
@@ -322,39 +325,30 @@ export function StorageSlotConfigDialog({ device, language, t, getItemIconPath, 
                 </div>
               </div>
 
-              <div className="storage-slot-mode-toggle" role="group" aria-label={t('detail.storageSlotMode')}>
-                <button
-                  type="button"
-                  className={`storage-slot-mode-btn ${selectedSlot.mode === 'pinned' ? 'is-active' : ''}`}
-                  onClick={() => setSlotMode(selectedSlot.slotIndex, selectedSlot.mode === 'pinned' ? 'free' : 'pinned')}
-                >
-                  {t(selectedSlot.mode === 'pinned' ? 'detail.storageSlotUnlock' : 'detail.storageSlotLock')}
-                </button>
-              </div>
+              <button
+                type="button"
+                className={`storage-slot-lock-toggle ${selectedSlot.mode === 'pinned' ? 'is-active' : ''}`}
+                onClick={() => setSlotMode(selectedSlot.slotIndex, selectedSlot.mode === 'pinned' ? 'free' : 'pinned')}
+              >
+                <span className="storage-slot-lock-toggle-icon" aria-hidden="true">{selectedSlot.mode === 'pinned' ? '🔒' : '🔓'}</span>
+                <span>{t(selectedSlot.mode === 'pinned' ? 'detail.storageSlotUnlock' : 'detail.storageSlotLock')}</span>
+              </button>
 
               <div className="storage-slot-editor-fields">
                 <label className="storage-slot-config-field">
-                  <span>{t('detail.storageSlotPinnedItem')}</span>
+                  <span>{t('detail.storageSlotItem')}</span>
                   <button
                     type="button"
                     className="picker-open-btn storage-slot-picker-btn"
-                    disabled={selectedSlot.mode !== 'pinned'}
-                    onClick={() => setPickerState({ kind: 'storageSlotPinned', slotIndex: selectedSlot.slotIndex })}
-                  >
-                    {renderPickerValue(selectedSlot.pinnedItemId, t('detail.storageSlotSelectPinnedItem'))}
-                  </button>
-                </label>
-
-                <label className="storage-slot-config-field">
-                  <span>{t('detail.storageSlotPreloadItem')}</span>
-                  <button
-                    type="button"
-                    className="picker-open-btn storage-slot-picker-btn"
-                    disabled={selectedSlot.mode === 'pinned'}
-                    onClick={() => setPickerState({ kind: 'storageSlotPreload', slotIndex: selectedSlot.slotIndex })}
+                    onClick={() =>
+                      setPickerState({
+                        kind: selectedSlot.mode === 'pinned' ? 'storageSlotPinned' : 'storageSlotPreload',
+                        slotIndex: selectedSlot.slotIndex,
+                      })
+                    }
                   >
                     {selectedSlot.mode === 'pinned'
-                      ? renderPickerValue(selectedSlot.pinnedItemId, t('detail.storageSlotPinnedUsesBoundItem'))
+                      ? renderPickerValue(selectedSlot.pinnedItemId, t('detail.storageSlotSelectPinnedItem'))
                       : renderPickerValue(selectedSlot.preloadItemId, t('detail.storageSlotSelectPreloadItem'))}
                   </button>
                 </label>
@@ -466,6 +460,7 @@ export function StorageSlotConfigDialog({ device, language, t, getItemIconPath, 
           pickerDisabledItemIds={pickerDisabledItemIds}
           pickerFilter={{ allowedTypes: ['solid'], allowedItemIds: solidItemIds }}
           pickerAllowsEmpty={true}
+          superRecipeEnabled={superRecipeEnabled}
           language={language}
           t={t}
           getItemIconPath={getItemIconPath}

@@ -21,6 +21,7 @@ export type DeviceTypeId =
   | 'item_port_loader_1'
   | 'item_port_grinder_1'
   | 'item_port_furnance_1'
+  | 'item_port_liquid_furnance_1'
   | 'item_port_cmpt_mc_1'
   | 'item_port_shaper_1'
   | 'item_port_seedcol_1'
@@ -39,6 +40,7 @@ export type DeviceTypeId =
   | 'item_port_log_hongs_bus'
   | 'item_port_sp_hub_1'
   | 'item_port_water_pump_1'
+  | 'item_port_wastewater_treatment_1'
   | 'item_port_liquid_storager_1'
   | 'item_port_power_diffuser_1'
   | 'item_port_storager_1'
@@ -129,6 +131,7 @@ export interface RecipeDef {
   cycleSeconds: number
   inputs: Array<{ itemId: ItemId; amount: number }>
   outputs: Array<{ itemId: ItemId; amount: number }>
+  tags?: string[]
 }
 
 export interface PreloadInputConfigEntry {

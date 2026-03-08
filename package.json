@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "gen:filled-icons": "node scripts/generate-filled-bottle-icons.mjs",
+    "gen:chrono-icons": "node scripts/generate-chrono-item-icons.mjs",
     "gen:blueprint-index": "node scripts/generate-blueprint-index.mjs"
   },
   "dependencies": {

@@ -1299,6 +1299,33 @@ function sourceSlotLane(device: DeviceInstance, runtime: DeviceRuntime, fromPort
   return 'output'
 }
 
+function outputPortAllowsItem(device: DeviceInstance, fromPortId: string, itemId: ItemId) {
+  const itemType = ITEM_BY_ID[itemId]?.type
+  if (!itemType) return false
+
+  const port = DEVICE_TYPE_BY_ID[device.typeId].ports0.find((entry) => entry.id === fromPortId && entry.direction === 'Output')
+  if (!port) return false
+
+  const typeAllowed =
+    port.allowedTypes.mode === 'solid'
+      ? itemType === 'solid'
+      : port.allowedTypes.mode === 'liquid'
+        ? itemType === 'liquid'
+        : port.allowedTypes.whitelist.includes(itemType)
+
+  if (!typeAllowed) return false
+
+  if (port.allowedItems.mode === 'whitelist') {
+    return port.allowedItems.whitelist.includes(itemId)
+  }
+
+  if (port.allowedItems.mode === 'recipe_inputs') {
+    return false
+  }
+
+  return true
+}
+
 function peekOutputItem(
   device: DeviceInstance,
   runtime: DeviceRuntime,
@@ -1316,6 +1343,14 @@ function peekOutputItem(
   }
 
   if ('outputBuffer' in runtime) {
+    if (fromPortId) {
+      for (const itemId of ITEM_IDS) {
+        if ((runtime.outputBuffer[itemId] ?? 0) <= 0) continue
+        if (outputPortAllowsItem(device, fromPortId, itemId)) return itemId
+      }
+      return null
+    }
+
     for (const itemId of ITEM_IDS) {
       if ((runtime.outputBuffer[itemId] ?? 0) > 0) return itemId
     }

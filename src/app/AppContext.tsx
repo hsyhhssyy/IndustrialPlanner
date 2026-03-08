@@ -1,8 +1,13 @@
-import { createContext, useContext, useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import { usePersistentState } from '../core/usePersistentState'
 import type { DeviceTypeId, EditMode } from '../domain/types'
 import type { Language } from '../i18n'
 import { TypedEventBus } from './eventBus'
+import {
+  normalizeSuperRecipeEnabledPreference,
+  SUPER_RECIPE_CONTROL_MODE,
+  type SuperRecipeControlMode,
+} from '../config/superRecipePolicy'
 
 export type SimSpeed = 0 | 0.25 | 1 | 2 | 4 | 16
 export type PlaceOperation = 'default' | 'belt' | 'pipe' | 'blueprint'
@@ -43,6 +48,8 @@ type AppContextState = {
   isWikiOpen: boolean
   isPlannerOpen: boolean
   language: Language
+  superRecipeEnabled: boolean
+  superRecipeControlMode: SuperRecipeControlMode
 }
 
 type EditorState = {
@@ -97,6 +104,7 @@ type AppContextActions = {
   openPlanner: () => void
   closePlanner: () => void
   setLanguage: (language: Language) => void
+  setSuperRecipeEnabled: (enabled: boolean) => void
 }
 
 type AppContextValue = {
@@ -118,6 +126,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [placeRotation, setPlaceRotation] = usePersistentState<0 | 90 | 180 | 270>('stage1-place-rotation', 0)
   const [deleteTool, setDeleteTool] = usePersistentState<'single' | 'wholeBelt' | 'box'>('stage1-delete-tool', 'single')
   const [cellSize, setCellSize] = usePersistentState<number>('stage1-cell-size', 64)
+  const [superRecipeEnabledPreference, setSuperRecipeEnabledPreference] = usePersistentState<boolean>(
+    'stage4-super-recipe-enabled',
+    false,
+    normalizeSuperRecipeEnabledPreference,
+  )
   const [placeOperation, setPlaceOperation] = useState<PlaceOperation>('default')
   const [viewOffset, setViewOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [selection, setSelection] = useState<string[]>([])
@@ -136,6 +149,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isWikiOpen, setIsWikiOpen] = useState(false)
   const [isPlannerOpen, setIsPlannerOpen] = useState(false)
   const eventBus = useMemo(() => new TypedEventBus<AppEventMap>(), [])
+  const superRecipeEnabled = SUPER_RECIPE_CONTROL_MODE === 'forced-off' ? false : superRecipeEnabledPreference
+
+  const setSuperRecipeEnabled = useCallback(
+    (enabled: boolean) => {
+      if (SUPER_RECIPE_CONTROL_MODE === 'forced-off') {
+        setSuperRecipeEnabledPreference(false)
+        return
+      }
+      setSuperRecipeEnabledPreference(Boolean(enabled))
+    },
+    [setSuperRecipeEnabledPreference],
+  )
 
   useEffect(() => {
     const unsubscribeOpenWiki = eventBus.on('ui.wiki.open', () => setIsWikiOpen(true))
@@ -189,6 +214,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isWikiOpen,
         isPlannerOpen,
         language,
+        superRecipeEnabled,
+        superRecipeControlMode: SUPER_RECIPE_CONTROL_MODE,
       },
       actions: {
         openWiki: () => setIsWikiOpen(true),
@@ -196,6 +223,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         openPlanner: () => setIsPlannerOpen(true),
         closePlanner: () => setIsPlannerOpen(false),
         setLanguage,
+        setSuperRecipeEnabled,
       },
       editor: {
         state: {
@@ -274,6 +302,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setMode,
       setPlaceRotation,
       setPlaceType,
+      setSuperRecipeEnabled,
+      superRecipeEnabled,
       viewOffset,
     ],
   )

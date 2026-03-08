@@ -44,6 +44,14 @@
   padding: 4px 6px;
 }
 
+.topbar-super-recipe {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #b2bfd2;
+  font-size: 14px;
+}
+
 .topbar-controls {
   display: flex;
   align-items: center;
@@ -1954,14 +1962,16 @@ button:disabled {
 .storage-slot-config-shell {
   margin-top: 18px;
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
-  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
   align-items: start;
 }
 
 .storage-slot-config-stage,
 .storage-slot-editor {
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background:
@@ -1972,13 +1982,27 @@ button:disabled {
 
 .storage-slot-config-stage {
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.storage-slot-config-stage {
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.storage-slot-editor {
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .storage-slot-config-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 14px;
 }
 
 .storage-slot-summary-chip {
@@ -2004,15 +2028,15 @@ button:disabled {
 .storage-slot-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .storage-slot-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  min-height: 146px;
-  padding: 12px;
+  gap: 8px;
+  min-height: 132px;
+  padding: 10px;
   border-radius: 16px;
   border: 1px solid rgba(104, 132, 173, 0.28);
   background:
@@ -2060,7 +2084,7 @@ button:disabled {
 }
 
 .storage-slot-card-title {
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.03em;
   color: #a7bbd4;
 }
@@ -2069,8 +2093,8 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   border: 1px solid rgba(111, 142, 189, 0.35);
   background: rgba(10, 15, 24, 0.48);
@@ -2085,17 +2109,15 @@ button:disabled {
 .storage-slot-card-body {
   display: flex;
   flex: 1 1 auto;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  text-align: center;
 }
 
 .storage-slot-card-icon,
 .storage-slot-editor-preview-icon {
-  width: 56px;
-  height: 56px;
+  width: 50px;
+  height: 50px;
   border-radius: 12px;
   object-fit: cover;
   background: rgba(7, 12, 19, 0.76);
@@ -2115,11 +2137,11 @@ button:disabled {
 .storage-slot-card-footer {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .storage-slot-card-amount {
-  font-size: 12px;
+  font-size: 11px;
   color: #c8d5e6;
 }
 
@@ -2149,10 +2171,6 @@ button:disabled {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.storage-slot-stage-actions {
-  margin-top: 14px;
 }
 
 .storage-slot-editor {
@@ -2203,11 +2221,7 @@ button:disabled {
   color: #9fb3c9;
 }
 
-.storage-slot-mode-toggle {
-  display: flex;
-}
-
-.storage-slot-mode-btn,
+.storage-slot-lock-toggle,
 .storage-slot-step-btn {
   height: 38px;
   border-radius: 10px;
@@ -2217,13 +2231,21 @@ button:disabled {
   cursor: pointer;
 }
 
-.storage-slot-mode-btn.is-active {
-  border-color: #5c90de;
-  background: #35598e;
+.storage-slot-lock-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-.storage-slot-mode-btn {
-  width: 100%;
+.storage-slot-lock-toggle.is-active {
+  border-color: rgba(225, 182, 83, 0.55);
+  background: rgba(86, 64, 20, 0.42);
+}
+
+.storage-slot-lock-toggle-icon {
+  font-size: 16px;
+  line-height: 1;
 }
 
 .storage-slot-editor-fields {
@@ -2304,7 +2326,7 @@ button:disabled {
   }
 
   .storage-slot-card {
-    min-height: 136px;
+    min-height: 128px;
   }
 }
 

@@ -1,4 +1,5 @@
 import { ITEMS } from '../../domain/registry'
+import { isSuperRecipeItem, shouldShowSuperRecipeContent } from '../../domain/shared/superRecipeVisibility'
 import type { ItemId } from '../../domain/types'
 import { getItemLabel, type Language } from '../../i18n'
 import type { ItemPickerFilter, ItemPickerState } from './itemPicker.types'
@@ -12,6 +13,7 @@ type ItemPickerDialogProps = {
   pickerDisabledItemIds: ReadonlySet<ItemId>
   pickerFilter?: ItemPickerFilter
   pickerAllowsEmpty?: boolean
+  superRecipeEnabled: boolean
   language: Language
   t: (key: string, params?: Record<string, string | number>) => string
   getItemIconPath: (itemId: ItemId) => string
@@ -26,6 +28,7 @@ export function ItemPickerDialog({
   pickerDisabledItemIds,
   pickerFilter,
   pickerAllowsEmpty = true,
+  superRecipeEnabled,
   language,
   t,
   getItemIconPath,
@@ -33,6 +36,9 @@ export function ItemPickerDialog({
   onSelectItem,
 }: ItemPickerDialogProps) {
   const filteredItems = ITEMS.filter((item) => {
+    if (!shouldShowSuperRecipeContent(superRecipeEnabled, isSuperRecipeItem(item))) {
+      return false
+    }
     if (pickerFilter?.allowedTypes && pickerFilter.allowedTypes.length > 0 && !pickerFilter.allowedTypes.includes(item.type)) {
       return false
     }

@@ -18,7 +18,8 @@ export function TopBar({
 }: TopBarProps) {
   const {
     eventBus,
-    state: { language },
+    state: { language, superRecipeEnabled, superRecipeControlMode },
+    actions: { setSuperRecipeEnabled },
   } = useAppContext()
 
   return (
@@ -37,6 +38,20 @@ export function TopBar({
         </label>
         <button onClick={() => eventBus.emit('ui.wiki.open', undefined)}>{t('top.wiki')}</button>
         <button onClick={() => eventBus.emit('ui.planner.open', undefined)}>{t('top.planner')}</button>
+        <div className="topbar-super-recipe">
+          <span>{t('top.superRecipe')}</span>
+          <label className="switch-toggle" aria-label={t('top.superRecipe')}>
+            <input
+              type="checkbox"
+              checked={superRecipeEnabled}
+              disabled={superRecipeControlMode === 'forced-off'}
+              onChange={(event) => setSuperRecipeEnabled(event.target.checked)}
+            />
+            <span className="switch-track" aria-hidden="true">
+              <span className="switch-thumb" />
+            </span>
+          </label>
+        </div>
       </div>
       <div className="topbar-controls">
         <span className="hint hint-dynamic">{uiHint}</span>

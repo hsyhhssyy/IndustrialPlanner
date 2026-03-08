@@ -22,6 +22,7 @@ import { getRuntimeStatusText, shouldShowRuntimeStallOverlay } from './domain/sh
 import { cycleTicksFromSeconds } from './domain/shared/simulation'
 import { clampViewportOffset, getMaxCellSizeForViewport, getZoomStep } from './domain/shared/viewport'
 import { buildPortPriorityGroupConfig } from './domain/shared/portPriority'
+import { isSuperRecipeDevice, shouldShowSuperRecipeContent } from './domain/shared/superRecipeVisibility'
 import type {
   DeviceInstance,
   DeviceRuntime,
@@ -87,6 +88,14 @@ function getItemIconPath(itemId: ItemId) {
 }
 
 function getDeviceMenuIconPath(typeId: DeviceTypeId) {
+  if (DEVICE_TYPE_BY_ID[typeId]?.tags?.includes('超时空')) {
+    const svg = [
+      '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">',
+      '<rect x="3" y="3" width="58" height="58" rx="8" fill="#243042" stroke="#7b8aa0" stroke-width="2"/>',
+      '</svg>',
+    ].join('')
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+  }
   if (typeId === 'item_log_splitter') return '/device-icons/item_log_splitter.png'
   if (typeId === 'item_log_converger') return '/device-icons/item_log_converger.png'
   if (typeId === 'item_log_connector') return '/device-icons/item_log_connector.png'
@@ -163,7 +172,7 @@ function App() {
   const resizeStateRef = useRef<null | { side: 'left' | 'right'; startX: number; startWidth: number }>(null)
 
   const {
-    state: { isWikiOpen, isPlannerOpen, language },
+    state: { isWikiOpen, isPlannerOpen, language, superRecipeEnabled },
     actions: { closeWiki, closePlanner },
     editor: {
       state: {
@@ -244,8 +253,13 @@ function App() {
   const occupancyMap = useMemo(() => buildOccupancyMap(layout), [layout])
   const cellDeviceMap = useMemo(() => cellToDeviceId(layout), [layout])
   const visiblePlaceableTypes = useMemo(
-    () => PLACEABLE_TYPES.filter((deviceType) => !deviceType.tags?.includes('武陵') || currentBase.tags.includes('武陵')),
-    [currentBase],
+    () =>
+      PLACEABLE_TYPES.filter((deviceType) => {
+        const matchesBase = !deviceType.tags?.includes('武陵') || currentBase.tags.includes('武陵')
+        if (!matchesBase) return false
+        return shouldShowSuperRecipeContent(superRecipeEnabled, isSuperRecipeDevice(deviceType))
+      }),
+    [currentBase, superRecipeEnabled],
   )
   const { handleDeleteAll, handleDeleteAllBelts, handleClearLot } = useBuildDomainActions({
     simIsRunning: sim.isRunning,
@@ -1061,6 +1075,7 @@ function App() {
           pickerDisabledItemIds={pickerDisabledItemIds}
           pickerFilter={pickerFilter}
           pickerAllowsEmpty={pickerAllowsEmpty}
+          superRecipeEnabled={superRecipeEnabled}
           language={language}
           t={t}
           getItemIconPath={getItemIconPath}
@@ -1145,8 +1160,8 @@ function App() {
         />
       )}
 
-      {isWikiOpen && <WikiPanel language={language} t={t} onClose={closeWiki} />}
-      {isPlannerOpen && <PlannerPanel language={language} t={t} onClose={closePlanner} />}
+      {isWikiOpen && <WikiPanel language={language} t={t} superRecipeEnabled={superRecipeEnabled} onClose={closeWiki} />}
+      {isPlannerOpen && <PlannerPanel language={language} t={t} superRecipeEnabled={superRecipeEnabled} onClose={closePlanner} />}
     </div>
   )
 }

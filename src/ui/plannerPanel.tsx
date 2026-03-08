@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
-import { ITEMS, RECIPES } from '../domain/registry'
+import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
 import { buildProductionPlan, type PlannerTargetInput, type PlannerTreeNode } from '../domain/planner'
+import { isSuperRecipeItem, isSuperRecipeRecipe, shouldShowSuperRecipeContent } from '../domain/shared/superRecipeVisibility'
 import type { DeviceTypeId, ItemId } from '../domain/types'
 import { usePersistentState } from '../core/usePersistentState'
 import { getDeviceLabel, getItemLabel, type Language } from '../i18n'
 
 type PlannerPanelProps = {
   language: Language
+  superRecipeEnabled: boolean
   t: (key: string, params?: Record<string, string | number>) => string
   onClose: () => void
 }
@@ -235,7 +237,7 @@ function collectDemandByItem(roots: PlannerTreeNode[]) {
   return demandByItem
 }
 
-export function PlannerPanel({ language, t, onClose }: PlannerPanelProps) {
+export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: PlannerPanelProps) {
   const [plannerState, setPlannerState] = usePersistentState<PlannerPersistedState>(
     'stage2-planner-state',
     {
@@ -270,19 +272,31 @@ export function PlannerPanel({ language, t, onClose }: PlannerPanelProps) {
   }, [])
 
   const availableItems = useMemo(() => {
-    if (plannerState.region === 'wuling') return ITEMS
-    return ITEMS.filter((item) => !item.tags?.includes(WULING_TAG))
-  }, [plannerState.region])
+    const baseItems = plannerState.region === 'wuling'
+      ? ITEMS
+      : ITEMS.filter((item) => !item.tags?.includes(WULING_TAG))
+    return baseItems.filter((item) => shouldShowSuperRecipeContent(superRecipeEnabled, isSuperRecipeItem(item)))
+  }, [plannerState.region, superRecipeEnabled])
 
   const firstAvailableItemId = availableItems[0]?.id ?? ITEMS[0]?.id ?? ''
 
   const availableRecipes = useMemo(() => {
-    if (plannerState.region === 'wuling') return RECIPES
-    return RECIPES.filter((recipe) => {
-      const involvesWulingItem = [...recipe.inputs, ...recipe.outputs].some((entry) => wulingItemIdSet.has(entry.itemId))
-      return !involvesWulingItem
-    })
-  }, [plannerState.region, wulingItemIdSet])
+    const baseRecipes = plannerState.region === 'wuling'
+      ? RECIPES
+      : RECIPES.filter((recipe) => {
+          const involvesWulingItem = [...recipe.inputs, ...recipe.outputs].some((entry) => wulingItemIdSet.has(entry.itemId))
+          return !involvesWulingItem
+        })
+    return baseRecipes.filter((recipe) =>
+      shouldShowSuperRecipeContent(
+        superRecipeEnabled,
+        isSuperRecipeRecipe(recipe, {
+          getItemById: (itemId) => ITEM_BY_ID[itemId],
+          getDeviceById: (deviceId) => DEVICE_TYPE_BY_ID[deviceId],
+        }),
+      ),
+    )
+  }, [plannerState.region, superRecipeEnabled, wulingItemIdSet])
 
   const setTargets = (updater: PlannerTargetRow[] | ((current: PlannerTargetRow[]) => PlannerTargetRow[])) => {
     setPlannerState((current) => ({

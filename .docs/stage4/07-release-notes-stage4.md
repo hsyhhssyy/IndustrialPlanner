@@ -12,11 +12,12 @@
 2. 发电设备在详情中显示 `powerDemand=0`。
 3. 协议储存箱支持仿真开始时置入初始物品。
 4. 协议储存箱采用 6 格库存模型（每格容量 50），并按第 1 格到第 6 格顺序处理输入与输出。
-5. 下游接收前置判定支持 item-aware（`canReceiveOnPortWithPlan` 可透传并判定当前物品）。
-6. 物流仿真已统一到缓冲组/RR/槽位顺序机制，协议储存箱与反应池复用同一组规则。
-7. 传送带改为 0→1 缓冲运输语义：上游/下游判定与处理器式输入输出缓冲对齐。
-8. world 渲染已升级为 underlay / transit / overlay / adornment 四层，支持 belt 小盒子、pipe 流体、splitter/converger 内部运输动画的全局分层。
-9. splitter / converger 增加内部运输动画，并在阻塞时提供卡住态视觉反馈。
+5. 协议储存箱槽位配置对话框已重构为图形化六格编辑器：左侧 2×3 槽位总览，右侧当前槽位编辑，并统一复用通用物品选择器。
+6. 下游接收前置判定支持 item-aware（`canReceiveOnPortWithPlan` 可透传并判定当前物品）。
+7. 物流仿真已统一到缓冲组/RR/槽位顺序机制，协议储存箱与反应池复用同一组规则。
+8. 传送带改为 0→1 缓冲运输语义：上游/下游判定与处理器式输入输出缓冲对齐。
+9. world 渲染已升级为 underlay / transit / overlay / adornment 四层，支持 belt 小盒子、pipe 流体、splitter/converger 内部运输动画的全局分层。
+10. splitter / converger 增加内部运输动画，并在阻塞时提供卡住态视觉反馈。
 
 ## 升级注意事项
 
