@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import opentype from 'opentype.js'
 import sharp from 'sharp'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -9,8 +10,13 @@ const __dirname = path.dirname(__filename)
 const projectRoot = path.resolve(__dirname, '..')
 const registryPath = path.join(projectRoot, 'src', 'domain', 'registry.ts')
 const iconDir = path.join(projectRoot, 'public', 'itemicon')
+const notoSansScRoot = path.join(projectRoot, 'node_modules', '@fontsource', 'noto-sans-sc')
+const notoSansScCssPath = path.join(notoSansScRoot, '700.css')
 
 const ICON_SIZE = 128
+const GLYPH_TARGET_BOX_WIDTH = ICON_SIZE * 0.8
+const GLYPH_TARGET_BOX_HEIGHT = ICON_SIZE * 0.8
+const GLYPH_VERTICAL_OFFSET = ICON_SIZE * 0.03
 const FORCE_WRITE = process.argv.includes('--force')
 const GLYPH_BY_ITEM_ID = {
   chrono_item_copper_ore: '铜',
@@ -22,6 +28,8 @@ const GLYPH_BY_ITEM_ID = {
   chrono_item_xiranite_waste_slag: '壤',
   chrono_item_medium_wuling_battery: '电',
 }
+const fontSubsetIndexPromise = loadFontSubsetIndex()
+const fontCache = new Map()
 
 function escapeXml(value) {
   return value
@@ -58,8 +66,86 @@ function pickGlyphFromItemId(itemId) {
   return alphaNumMatch[0].toUpperCase()
 }
 
-function buildIconSvg(glyph) {
-  const safeGlyph = escapeXml(glyph)
+function parseFontSubsetIndex(cssSource) {
+  const entries = []
+  const facePattern = /@font-face\s*\{([\s\S]*?)\}/g
+  let match = facePattern.exec(cssSource)
+  while (match) {
+    const block = match[1]
+    const woffMatch = block.match(/url\(\.\/files\/([^)]*?\.woff)\)\s*format\('woff'\)/)
+    const unicodeRangeMatch = block.match(/unicode-range:\s*([^;]+);/)
+    if (!woffMatch || !unicodeRangeMatch) {
+      match = facePattern.exec(cssSource)
+      continue
+    }
+    entries.push({
+      fileName: woffMatch[1],
+      unicodeRange: unicodeRangeMatch[1].trim(),
+    })
+    match = facePattern.exec(cssSource)
+  }
+  return entries
+}
+
+function rangeIncludesCodePoint(rangeSpec, codePoint) {
+  if (!rangeSpec.startsWith('U+')) return false
+  const hex = rangeSpec.slice(2).trim()
+  if (!hex) return false
+  if (hex.includes('-')) {
+    const [startHex, endHex] = hex.split('-')
+    const start = Number.parseInt(startHex, 16)
+    const end = Number.parseInt(endHex, 16)
+    return codePoint >= start && codePoint <= end
+  }
+  const value = Number.parseInt(hex, 16)
+  return codePoint === value
+}
+
+function unicodeRangeIncludesGlyph(unicodeRange, glyph) {
+  const codePoint = glyph.codePointAt(0)
+  if (codePoint == null) return false
+  return unicodeRange
+    .split(',')
+    .map((entry) => entry.trim())
+    .some((entry) => rangeIncludesCodePoint(entry, codePoint))
+}
+
+async function loadFontSubsetIndex() {
+  const cssSource = await fs.readFile(notoSansScCssPath, 'utf8')
+  const entries = parseFontSubsetIndex(cssSource)
+  if (entries.length === 0) {
+    throw new Error(`未能从 ${notoSansScCssPath} 解析到 Noto Sans SC 字体子集。`)
+  }
+  return entries
+}
+
+async function loadFontForGlyph(glyph) {
+  const subsetIndex = await fontSubsetIndexPromise
+  const subset = subsetIndex.find((entry) => unicodeRangeIncludesGlyph(entry.unicodeRange, glyph))
+  if (!subset) {
+    throw new Error(`未找到可渲染字形“${glyph}”的 Noto Sans SC 子集字体。`)
+  }
+
+  const fontPath = path.join(notoSansScRoot, 'files', subset.fileName)
+  const cached = fontCache.get(fontPath)
+  if (cached) return cached
+
+  const font = await opentype.load(fontPath)
+  fontCache.set(fontPath, font)
+  return font
+}
+
+async function buildIconSvg(glyph) {
+  const font = await loadFontForGlyph(glyph)
+  const glyphPath = font.getPath(glyph, 0, 0, 1)
+  const bbox = glyphPath.getBoundingBox()
+  const glyphWidth = Math.max(bbox.x2 - bbox.x1, 1e-6)
+  const glyphHeight = Math.max(bbox.y2 - bbox.y1, 1e-6)
+  const glyphCenterX = (bbox.x1 + bbox.x2) / 2
+  const glyphCenterY = (bbox.y1 + bbox.y2) / 2
+  const scale = Math.min(GLYPH_TARGET_BOX_WIDTH / glyphWidth, GLYPH_TARGET_BOX_HEIGHT / glyphHeight)
+  const pathData = escapeXml(glyphPath.toPathData(3))
+
   return `
 <svg width="${ICON_SIZE}" height="${ICON_SIZE}" viewBox="0 0 ${ICON_SIZE} ${ICON_SIZE}" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -70,16 +156,17 @@ function buildIconSvg(glyph) {
   </defs>
   <rect x="0" y="0" width="${ICON_SIZE}" height="${ICON_SIZE}" rx="18" fill="url(#chrono-bg)" />
   <rect x="6" y="6" width="${ICON_SIZE - 12}" height="${ICON_SIZE - 12}" rx="14" fill="none" stroke="#8ea2ff" stroke-opacity="0.65" stroke-width="2" />
-  <text
-    x="50%"
-    y="50%"
-    fill="#f7f9ff"
-    font-size="72"
-    font-family="'Noto Sans CJK SC','Microsoft YaHei','PingFang SC',Arial,sans-serif"
-    font-weight="700"
-    text-anchor="middle"
-    dominant-baseline="central"
-  >${safeGlyph}</text>
+  <g transform="translate(${ICON_SIZE / 2} ${ICON_SIZE / 2 + GLYPH_VERTICAL_OFFSET}) scale(${scale}) translate(${-glyphCenterX} ${-glyphCenterY})">
+    <path
+      d="${pathData}"
+      fill="#f7f9ff"
+      stroke="#d8e0ff"
+      stroke-opacity="0.16"
+      stroke-width="0.035"
+      stroke-linejoin="round"
+      paint-order="stroke fill"
+    />
+  </g>
 </svg>`.trim()
 }
 
@@ -113,7 +200,7 @@ async function main() {
     }
 
     const glyph = pickGlyphFromItemId(itemId)
-    const svg = buildIconSvg(glyph)
+    const svg = await buildIconSvg(glyph)
     await sharp(Buffer.from(svg)).png().toFile(outputPath)
     generated.push({ itemId, glyph })
   }
