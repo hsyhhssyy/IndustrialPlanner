@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { BASES, DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import type { BaseDef, BaseId, DeviceInstance, DeviceRuntime, ItemId, LayoutState, PowerMode, SimState, SlotData } from '../../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../../i18n'
-import { isBelt } from '../../domain/geometry'
+import { isBelt, neighborsFromLinks } from '../../domain/geometry'
 import type { ItemPickerState } from '../dialogs/itemPicker.types'
 
 type ProcessorBufferSpec = {
@@ -19,6 +19,7 @@ type ProcessorPreloadSlot = { itemId: ItemId | null; amount: number }
 type RightPanelProps = {
   t: (key: string, params?: Record<string, string | number>) => string
   language: Language
+  layout: LayoutState
   currentBaseId: BaseId
   currentBase: BaseDef
   totalPowerDemandKw: number
@@ -111,6 +112,7 @@ type RightPanelProps = {
 export function RightPanel({
   t,
   language,
+  layout,
   currentBaseId,
   currentBase,
   totalPowerDemandKw,
@@ -186,6 +188,121 @@ export function RightPanel({
     { key: 'wuling', titleKey: 'right.baseGroup.wuling', tag: '武陵' },
   ] as const
   const [showMultiBaseTooltip, setShowMultiBaseTooltip] = useState(false)
+
+  const inputSourceDebugEntries = useMemo(() => {
+    if (!selectedDevice || !selectedRuntime) return [] as Array<{ title: string; cursor: string; items: string[] }>
+
+    const isHighPriorityType = (typeId: DeviceInstance['typeId']) => !isBelt(typeId)
+    const isConvergerType = (typeId: DeviceInstance['typeId']) => typeId === 'item_log_converger' || typeId === 'item_pipe_converger'
+    const isBridgeConnectorType = (typeId: DeviceInstance['typeId']) => typeId === 'item_log_connector' || typeId === 'item_pipe_connector'
+    const receiveLaneForPort = (device: DeviceInstance, runtime: DeviceRuntime, toPortId: string) => {
+      if (isBelt(device.typeId) && 'slot' in runtime) return 'output'
+      if (isBridgeConnectorType(device.typeId)) {
+        if (toPortId.endsWith('_n') || toPortId.endsWith('_s')) return 'ns'
+        return 'we'
+      }
+      if ('slot' in runtime) return 'slot'
+      return 'output'
+    }
+    const rotate = (ports: string[], cursor: number) => {
+      if (ports.length <= 1) return ports
+      const offset = ((cursor % ports.length) + ports.length) % ports.length
+      return [...ports.slice(offset), ...ports.slice(0, offset)]
+    }
+    const lanePriorityCursors = (lane: string) => selectedRuntime.inputPriorityGroupCursorByLane?.[`${selectedDevice.instanceId}:${lane}`] ?? [0, 0]
+    const sourceLabel = (instanceId: string) => {
+      const sourceDevice = layout.devices.find((device) => device.instanceId === instanceId)
+      return sourceDevice?.typeId ?? instanceId
+    }
+
+    const links = neighborsFromLinks(layout)
+    const inLinks = links.inMap.get(selectedDevice.instanceId) ?? []
+    if (inLinks.length === 0) return []
+
+    const linksByPort = new Map<string, typeof inLinks>()
+    for (const link of inLinks) {
+      const existing = linksByPort.get(link.to.portId)
+      if (existing) {
+        existing.push(link)
+      } else {
+        linksByPort.set(link.to.portId, [link])
+      }
+    }
+
+    const entries: Array<{ title: string; cursor: string; items: string[] }> = []
+    const pushEntry = (title: string, cursor: string, lane: string, portOrder: string[]) => {
+      const items: string[] = []
+      const tieredPorts = [0, 1].flatMap((tier) => {
+        const tierPorts = portOrder.filter((portId) => {
+          const portLinks = linksByPort.get(portId) ?? []
+          return portLinks.some((link) => {
+            const sourceTypeId = layout.devices.find((d) => d.instanceId === link.from.instanceId)?.typeId
+            const sourceTier = sourceTypeId && isHighPriorityType(sourceTypeId) ? 0 : 1
+            return sourceTier === tier
+          })
+        })
+        return rotate(tierPorts, lanePriorityCursors(lane)[tier] ?? 0)
+      })
+
+      for (const portId of tieredPorts) {
+        const orderedLinks = [...(linksByPort.get(portId) ?? [])].sort((left, right) => {
+          const leftTier = isHighPriorityType(layout.devices.find((d) => d.instanceId === left.from.instanceId)?.typeId ?? selectedDevice.typeId) ? 0 : 1
+          const rightTier = isHighPriorityType(layout.devices.find((d) => d.instanceId === right.from.instanceId)?.typeId ?? selectedDevice.typeId) ? 0 : 1
+          if (leftTier !== rightTier) return leftTier - rightTier
+          const fromCmp = left.from.instanceId.localeCompare(right.from.instanceId)
+          if (fromCmp !== 0) return fromCmp
+          return left.from.portId.localeCompare(right.from.portId)
+        })
+        for (const link of orderedLinks) {
+          const sourceDevice = layout.devices.find((device) => device.instanceId === link.from.instanceId)
+          const priorityLabel = sourceDevice && isHighPriorityType(sourceDevice.typeId)
+            ? t('detail.inputSourceOrderPriorityHigh')
+            : t('detail.inputSourceOrderPriorityNormal')
+          items.push(`${portId} ← ${sourceLabel(link.from.instanceId)}:${link.from.portId} [${priorityLabel}]`)
+        }
+      }
+      if (items.length > 0) {
+        entries.push({ title, cursor, items })
+      }
+    }
+
+    if (isConvergerType(selectedDevice.typeId)) {
+      const orderedPorts = ['in_n', 'in_e', 'in_s'].filter((portId) => linksByPort.has(portId))
+      const [highCursor, normalCursor] = lanePriorityCursors('slot')
+      pushEntry(t('detail.inputSourceOrderSharedLane', { lane: 'slot' }), `hi=${highCursor} peer=${normalCursor}`, 'slot', orderedPorts)
+      return entries
+    }
+
+    if ('bufferGroups' in selectedRuntime && Array.isArray(selectedRuntime.bufferGroups) && selectedRuntime.bufferGroups.length > 0) {
+      selectedRuntime.bufferGroups.forEach((group, index) => {
+        const orderedPorts = group.inPortIds.filter((portId) => linksByPort.has(portId))
+        const [highCursor, normalCursor] = lanePriorityCursors('output')
+        pushEntry(
+          t('detail.inputSourceOrderGroup', { index: index + 1 }),
+          `hi=${highCursor} peer=${normalCursor}`,
+          'output',
+          orderedPorts,
+        )
+      })
+      return entries
+    }
+
+    const portsByLane = new Map<string, string[]>()
+    for (const portId of [...linksByPort.keys()]) {
+      const lane = receiveLaneForPort(selectedDevice, selectedRuntime, portId)
+      const key = lane ?? 'unknown'
+      const existing = portsByLane.get(key)
+      if (existing) existing.push(portId)
+      else portsByLane.set(key, [portId])
+    }
+
+    for (const [lane, ports] of portsByLane.entries()) {
+      const [highCursor, normalCursor] = lanePriorityCursors(lane)
+      pushEntry(t('detail.inputSourceOrderSharedLane', { lane }), `hi=${highCursor} peer=${normalCursor}`, lane, ports)
+    }
+
+    return entries
+  }, [layout, language, selectedDevice, selectedRuntime, sim.tick, t])
 
   return (
     <aside className="panel right-panel">
@@ -304,6 +421,28 @@ export function RightPanel({
             <span>{t('detail.internalStatus')}</span>
             <span>{getInternalStatusText(selectedDevice, selectedRuntime, t)}</span>
           </div>
+          {selectedRuntime && (
+            <>
+              <div className="kv">
+                <span>{t('detail.inputSourceOrder')}</span>
+                <span>{inputSourceDebugEntries.length > 0 ? t('detail.inputSourceOrderVisible') : t('detail.inputSourceOrderEmpty')}</span>
+              </div>
+              {inputSourceDebugEntries.map((entry, entryIndex) => (
+                <div key={`input-source-order-${entryIndex}`}>
+                  <div className="kv">
+                    <span>{entry.title}</span>
+                    <span>{entry.cursor}</span>
+                  </div>
+                  {entry.items.map((item, itemIndex) => (
+                    <div key={`input-source-order-${entryIndex}-${itemIndex}`} className="kv">
+                      <span>{t('detail.inputSourceOrderRank', { index: itemIndex + 1 })}</span>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </>
+          )}
           {slotConfigSupportedTypeIds.has(selectedDevice.typeId) && (
             <div className="kv">
               <span>{t('detail.storageSlotConfig')}</span>
@@ -509,13 +648,13 @@ export function RightPanel({
                   <span>{formatSlotValue(selectedRuntime.slot, language, t)}</span>
                 </div>
               )}
-              {'nsSlot' in selectedRuntime && (
+              {(selectedDevice.typeId === 'item_log_connector' || selectedDevice.typeId === 'item_pipe_connector') && 'nsSlot' in selectedRuntime && (
                 <div className="kv">
                   <span>{t('detail.cacheNsSlot')}</span>
                   <span>{formatSlotValue(selectedRuntime.nsSlot, language, t)}</span>
                 </div>
               )}
-              {'weSlot' in selectedRuntime && (
+              {(selectedDevice.typeId === 'item_log_connector' || selectedDevice.typeId === 'item_pipe_connector') && 'weSlot' in selectedRuntime && (
                 <div className="kv">
                   <span>{t('detail.cacheWeSlot')}</span>
                   <span>{formatSlotValue(selectedRuntime.weSlot, language, t)}</span>

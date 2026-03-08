@@ -15,6 +15,13 @@ export type TransferMatch = {
   itemId: ItemId
   senderOutLinkCount: number
   senderPickedOutLinkIndex: number
+  senderPriorityGroupKey: string | null
+  senderPriorityTier: number
+  senderPriorityPortIndex: number
+  senderPriorityPortCount: number
+  receiverPriorityTier: number
+  receiverPriorityPortIndex: number
+  receiverPriorityPortCount: number
 }
 
 export type PullIntent = {
@@ -29,6 +36,13 @@ export type PullIntent = {
   itemId: ItemId
   senderOutLinkCount: number
   senderPickedOutLinkIndex: number
+  senderPriorityGroupKey: string | null
+  senderPriorityTier: number
+  senderPriorityPortIndex: number
+  senderPriorityPortCount: number
+  receiverPriorityTier: number
+  receiverPriorityPortIndex: number
+  receiverPriorityPortCount: number
 }
 
 export type PortLink = {
@@ -39,9 +53,10 @@ export type PortLink = {
 export type PlanHelpers = {
   isHardBlockedStall: (stallReason: DeviceRuntime['stallReason']) => boolean
   orderedOutLinks: (device: DeviceInstance, runtime: DeviceRuntime, outLinks: PortLink[]) => PortLink[]
-  buildConvergerPullInputPortOrderMap: () => Map<string, string[]>
   buildDevicePullInputPortOrderMap: () => Map<string, string[]>
   isConvergerType: (typeId: DeviceInstance['typeId']) => boolean
+  isSplitterType: (typeId: DeviceInstance['typeId']) => boolean
+  receiveLaneForPort: (device: DeviceInstance, runtime: DeviceRuntime, toPortId: string) => ReceiveLane | null
   sourceSlotLane: (device: DeviceInstance, runtime: DeviceRuntime, fromPortId: string) => SendLane
   prepareSourceLaneItem: (
     device: DeviceInstance,

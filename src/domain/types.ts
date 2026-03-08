@@ -262,6 +262,8 @@ export interface BaseRuntime {
   progress01: number
   stallReason: StallReason
   isStalled: boolean
+  inputPriorityGroupCursorByLane?: Partial<Record<string, [number, number]>>
+  outputPriorityGroupCursorByGroup?: Partial<Record<string, [number, number]>>
 }
 
 export interface ProcessorRuntime extends BaseRuntime {

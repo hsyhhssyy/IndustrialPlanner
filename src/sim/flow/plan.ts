@@ -1,12 +1,19 @@
+import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import type { ItemId } from '../../domain/types'
 import type { PlanContext, PlanResult, PortLink, PullIntent, ReceiveLane, TransferMatch } from './types'
+
+type CandidateLink = PortLink & {
+  receiverPortId: string
+  receiverPortRank: number
+  receiverPriorityTier: number
+  receiverPriorityPortIndex: number
+  receiverPriorityPortCount: number
+}
 
 type ReceiverState = {
   key: string
   receiverId: string
-  receiverPortId: string
-  receiverPortRank: number
-  candidateLinks: PortLink[]
+  candidateLinks: CandidateLink[]
 }
 
 type ActiveIntent = PullIntent & {
@@ -39,9 +46,75 @@ function pickStorageOutputSlotForPort(context: PlanContext, senderDeviceId: stri
   return undefined
 }
 
+const CONVERGER_INPUT_PORT_ORDER = ['in_n', 'in_e', 'in_s'] as const
+
+function compareCandidateLinks(left: PortLink, right: PortLink) {
+  const fromCmp = left.from.instanceId.localeCompare(right.from.instanceId)
+  if (fromCmp !== 0) return fromCmp
+  return left.from.portId.localeCompare(right.from.portId)
+}
+
+function isHighPriorityDeviceType(typeId: string) {
+  return typeId !== 'item_port_logistics' && typeId !== 'item_port_logistics_belt'
+}
+
+function allowsSolidType(allowedTypes: { mode: 'solid' | 'liquid' | 'whitelist'; whitelist: Array<'solid' | 'liquid'> }) {
+  if (allowedTypes.mode === 'solid') return true
+  if (allowedTypes.mode === 'liquid') return false
+  return allowedTypes.whitelist.includes('solid')
+}
+
+function solidOutputPortIds(typeId: string) {
+  return DEVICE_TYPE_BY_ID[typeId]?.ports0
+    .filter((port) => port.direction === 'Output' && allowsSolidType(port.allowedTypes))
+    .map((port) => port.id) ?? []
+}
+
+function sourcePriorityTier(context: PlanContext, link: PortLink) {
+  const sourceDevice = context.deviceById.get(link.from.instanceId)
+  return sourceDevice && isHighPriorityDeviceType(sourceDevice.typeId) ? 0 : 1
+}
+
+function getPriorityGroupCursor(runtime: PlanContext['runtimeById'][string], laneKey: string, tier: number) {
+  const cursors = runtime.inputPriorityGroupCursorByLane?.[laneKey]
+  return cursors?.[tier] ?? 0
+}
+
+function rotatePorts(portOrder: string[], cursor: number) {
+  if (portOrder.length <= 1) return portOrder
+  const offset = ((cursor % portOrder.length) + portOrder.length) % portOrder.length
+  return [...portOrder.slice(offset), ...portOrder.slice(0, offset)]
+}
+
+function liveOrderedInputPorts(
+  context: PlanContext,
+  deviceId: string,
+  inLinks: PortLink[],
+  devicePullInputPortOrderById: Map<string, string[]>,
+) {
+  const runtime = context.runtimeById[deviceId]
+  const device = context.deviceById.get(deviceId)
+  if (!runtime || !device) return [] as string[]
+
+  const linkedPorts = [...new Set(inLinks.map((link) => link.to.portId))]
+  if (linkedPorts.length === 0) return []
+
+  if (context.helpers.isConvergerType(device.typeId)) {
+    return CONVERGER_INPUT_PORT_ORDER.filter((portId) => linkedPorts.includes(portId))
+  }
+
+  const preferredPortOrder = devicePullInputPortOrderById.get(deviceId) ?? []
+  const ordered = preferredPortOrder.filter((portId) => linkedPorts.includes(portId))
+  for (const portId of linkedPorts) {
+    if (!ordered.includes(portId)) {
+      ordered.push(portId)
+    }
+  }
+  return ordered
+}
+
 function buildReceiverStates(
   context: PlanContext,
-  convergerPullInputPortOrderById: Map<string, string[]>,
   devicePullInputPortOrderById: Map<string, string[]>,
 ) {
   const states: ReceiverState[] = []
@@ -53,38 +126,89 @@ function buildReceiverStates(
     const inLinks = context.inMap.get(device.instanceId) ?? []
     if (inLinks.length === 0) continue
 
-    const preferredPortOrder = context.helpers.isConvergerType(device.typeId)
-      ? (convergerPullInputPortOrderById.get(device.instanceId) ?? [])
-      : (devicePullInputPortOrderById.get(device.instanceId) ?? [])
-
     const linksByPort = new Map<string, PortLink[]>()
-    const discoveredPortOrder: string[] = []
     for (const link of inLinks) {
       const existing = linksByPort.get(link.to.portId)
       if (existing) {
         existing.push(link)
       } else {
         linksByPort.set(link.to.portId, [link])
-        discoveredPortOrder.push(link.to.portId)
       }
     }
 
-    const portOrder = preferredPortOrder.filter((portId) => linksByPort.has(portId))
-    for (const portId of discoveredPortOrder) {
-      if (!portOrder.includes(portId)) {
-        portOrder.push(portId)
+    const portOrder = liveOrderedInputPorts(context, device.instanceId, inLinks, devicePullInputPortOrderById)
+    const candidateLinksByLane = new Map<string, CandidateLink[]>()
+    const stateOrder: string[] = []
+
+    for (const receiverPortId of portOrder) {
+      const receiverLane = context.helpers.receiveLaneForPort(device, runtime, receiverPortId)
+      if (!receiverLane) continue
+      const stateKey = `${device.instanceId}:${receiverLane}`
+      let laneCandidates = candidateLinksByLane.get(stateKey)
+      if (!laneCandidates) {
+        laneCandidates = []
+        candidateLinksByLane.set(stateKey, laneCandidates)
+        stateOrder.push(stateKey)
       }
+
+      laneCandidates.push(
+        ...(linksByPort.get(receiverPortId) ?? []).map((link) => ({
+          ...link,
+          receiverPortId,
+          receiverPortRank: -1,
+          receiverPriorityTier: 1,
+          receiverPriorityPortIndex: 0,
+          receiverPriorityPortCount: 0,
+        })),
+      )
     }
 
-    for (let rank = 0; rank < portOrder.length; rank += 1) {
-      const receiverPortId = portOrder[rank]
-      const candidateLinks = linksByPort.get(receiverPortId) ?? []
+    for (const stateKey of stateOrder) {
+      const laneCandidates = candidateLinksByLane.get(stateKey) ?? []
+      const orderedByTier = [0, 1]
+        .flatMap((tier) => {
+          const tierCandidates = laneCandidates.filter((link) => sourcePriorityTier(context, link) === tier)
+          const groupedByPort = new Map<string, CandidateLink[]>()
+          for (const candidate of tierCandidates) {
+            const existing = groupedByPort.get(candidate.receiverPortId)
+            if (existing) {
+              existing.push(candidate)
+            } else {
+              groupedByPort.set(candidate.receiverPortId, [candidate])
+            }
+          }
+
+          const orderedTierCandidates: CandidateLink[] = []
+          const canonicalTierPortOrder = portOrder.filter((receiverPortId) => groupedByPort.has(receiverPortId))
+          const canonicalPortIndexById = new Map(canonicalTierPortOrder.map((receiverPortId, index) => [receiverPortId, index]))
+          const tierPortOrder = rotatePorts(
+            canonicalTierPortOrder,
+            getPriorityGroupCursor(runtime, stateKey, tier),
+          )
+          for (const receiverPortId of tierPortOrder) {
+            const portCandidates = groupedByPort.get(receiverPortId)
+            if (!portCandidates || portCandidates.length === 0) continue
+            portCandidates.sort(compareCandidateLinks)
+            orderedTierCandidates.push(
+              ...portCandidates.map((candidate) => ({
+                ...candidate,
+                receiverPriorityTier: tier,
+                receiverPriorityPortIndex: canonicalPortIndexById.get(receiverPortId) ?? 0,
+                receiverPriorityPortCount: canonicalTierPortOrder.length,
+              })),
+            )
+          }
+          return orderedTierCandidates
+        })
+
+      const candidateLinks = orderedByTier.map((candidate, index) => ({
+        ...candidate,
+        receiverPortRank: index,
+      }))
       if (candidateLinks.length === 0) continue
       states.push({
-        key: `${device.instanceId}:${receiverPortId}`,
+        key: stateKey,
         receiverId: device.instanceId,
-        receiverPortId,
-        receiverPortRank: rank,
         candidateLinks,
       })
     }
@@ -134,7 +258,7 @@ function pickIntentForReceiverState(
     const receiverLane = context.helpers.canReceiveLaneForItem(
       receiverDevice,
       receiverRuntime,
-      state.receiverPortId,
+      link.receiverPortId,
       lanesClearingThisTick,
       prepared.itemId,
     )
@@ -153,15 +277,45 @@ function pickIntentForReceiverState(
     )
     if (pickedOutLinkIndex < 0) continue
 
+    let senderPriorityGroupKey: string | null = null
+    let senderPriorityTier = 1
+    let senderPriorityPortIndex = 0
+    let senderPriorityPortCount = 0
+    const allSenderOutLinks = context.outMap.get(senderDevice.instanceId) ?? []
+    const outputGroupPortIds = context.helpers.isStorageWithBufferGroups(senderRuntime)
+      && 'bufferGroups' in senderRuntime
+      && Array.isArray(senderRuntime.bufferGroups)
+      ? senderRuntime.bufferGroups.find((group) => group.outPortIds.includes(link.from.portId))?.outPortIds
+      : solidOutputPortIds(senderDevice.typeId)
+    if (outputGroupPortIds && outputGroupPortIds.length > 0) {
+      senderPriorityGroupKey = context.helpers.isStorageWithBufferGroups(senderRuntime)
+        && 'bufferGroups' in senderRuntime
+        && Array.isArray(senderRuntime.bufferGroups)
+        ? (senderRuntime.bufferGroups.find((group) => group.outPortIds.includes(link.from.portId))?.id ?? null)
+        : '__default__'
+      const highTierPortIds = outputGroupPortIds.filter((portId) => {
+        const portLinks = allSenderOutLinks.filter((outLink) => outLink.from.portId === portId)
+        return portLinks.some((outLink) => {
+          const targetDevice = context.deviceById.get(outLink.to.instanceId)
+          return targetDevice ? isHighPriorityDeviceType(targetDevice.typeId) : false
+        })
+      })
+      const lowTierPortIds = outputGroupPortIds.filter((portId) => !highTierPortIds.includes(portId) && allSenderOutLinks.some((outLink) => outLink.from.portId === portId))
+      senderPriorityTier = highTierPortIds.includes(link.from.portId) ? 0 : 1
+      const tierPortIds = senderPriorityTier === 0 ? highTierPortIds : lowTierPortIds
+      senderPriorityPortIndex = Math.max(0, tierPortIds.findIndex((portId) => portId === link.from.portId))
+      senderPriorityPortCount = tierPortIds.length
+    }
+
     const slotIndex = pickStorageOutputSlotForPort(context, senderDevice.instanceId, link.from.portId, prepared.itemId)
     if (context.helpers.isStorageWithBufferGroups(senderRuntime) && typeof slotIndex !== 'number') continue
 
     return {
       intent: {
         receiverId: state.receiverId,
-        receiverPortId: state.receiverPortId,
+        receiverPortId: link.receiverPortId,
         receiverLane,
-        receiverCandidateRank: state.receiverPortRank * 1000 + index,
+        receiverCandidateRank: link.receiverPortRank,
         fromId: link.from.instanceId,
         fromPortId: link.from.portId,
         fromLane,
@@ -169,6 +323,13 @@ function pickIntentForReceiverState(
         itemId: prepared.itemId,
         senderOutLinkCount: orderedOutLinks.length,
         senderPickedOutLinkIndex: pickedOutLinkIndex,
+        senderPriorityGroupKey,
+        senderPriorityTier,
+        senderPriorityPortIndex,
+        senderPriorityPortCount,
+        receiverPriorityTier: link.receiverPriorityTier,
+        receiverPriorityPortIndex: link.receiverPriorityPortIndex,
+        receiverPriorityPortCount: link.receiverPriorityPortCount,
         receiverLaneKey,
         receiverStateKey: state.key,
         selectedCandidateIndex: index,
@@ -201,6 +362,20 @@ function compareIntents(left: ActiveIntent, right: ActiveIntent) {
   return left.receiverPortId.localeCompare(right.receiverPortId)
 }
 
+function compareReceiverLaneIntents(left: ActiveIntent, right: ActiveIntent) {
+  if (left.receiverCandidateRank !== right.receiverCandidateRank) {
+    return left.receiverCandidateRank - right.receiverCandidateRank
+  }
+
+  const senderCmp = left.fromId.localeCompare(right.fromId)
+  if (senderCmp !== 0) return senderCmp
+
+  const portCmp = left.fromPortId.localeCompare(right.fromPortId)
+  if (portCmp !== 0) return portCmp
+
+  return compareIntents(left, right)
+}
+
 export function solvePullTransferMatches(context: PlanContext): PlanResult {
   const transferMatches: TransferMatch[] = []
   const plannedSenders = new Set<string>()
@@ -208,9 +383,8 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
   const lanesClearingThisTick = new Set<string>()
   const lanesAdvancedThisTick = new Set<string>()
 
-  const convergerPullInputPortOrderById = context.helpers.buildConvergerPullInputPortOrderMap()
   const devicePullInputPortOrderById = context.helpers.buildDevicePullInputPortOrderMap()
-  const receiverStates = buildReceiverStates(context, convergerPullInputPortOrderById, devicePullInputPortOrderById)
+  const receiverStates = buildReceiverStates(context, devicePullInputPortOrderById)
   const receiverCursorByState = new Map(receiverStates.map((state) => [state.key, 0]))
 
   const totalLinks = receiverStates.reduce((sum, state) => sum + state.candidateLinks.length, 0)
@@ -240,8 +414,18 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
       continue
     }
 
-    const groupedBySender = new Map<string, ActiveIntent[]>()
+    const selectedIntentByReceiverLane = new Map<string, ActiveIntent>()
     for (const intent of activeIntents) {
+      const existing = selectedIntentByReceiverLane.get(intent.receiverLaneKey)
+      if (!existing || compareReceiverLaneIntents(intent, existing) < 0) {
+        selectedIntentByReceiverLane.set(intent.receiverLaneKey, intent)
+      }
+    }
+
+    const receiverSelectedIntents = [...selectedIntentByReceiverLane.values()]
+
+    const groupedBySender = new Map<string, ActiveIntent[]>()
+    for (const intent of receiverSelectedIntents) {
       const grouped = groupedBySender.get(intent.fromId)
       if (grouped) {
         grouped.push(intent)
@@ -263,7 +447,9 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
     }
 
     const winnerSet = new Set(winners)
+    const receiverSelectedIntentSet = new Set(receiverSelectedIntents)
     for (const intent of activeIntents) {
+      if (!receiverSelectedIntentSet.has(intent)) continue
       if (winnerSet.has(intent)) continue
       receiverCursorByState.set(intent.receiverStateKey, intent.selectedCandidateIndex + 1)
     }
@@ -281,6 +467,13 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
         itemId: winner.itemId,
         senderOutLinkCount: winner.senderOutLinkCount,
         senderPickedOutLinkIndex: winner.senderPickedOutLinkIndex,
+        senderPriorityGroupKey: winner.senderPriorityGroupKey,
+        senderPriorityTier: winner.senderPriorityTier,
+        senderPriorityPortIndex: winner.senderPriorityPortIndex,
+        senderPriorityPortCount: winner.senderPriorityPortCount,
+        receiverPriorityTier: winner.receiverPriorityTier,
+        receiverPriorityPortIndex: winner.receiverPriorityPortIndex,
+        receiverPriorityPortCount: winner.receiverPriorityPortCount,
       })
       transferSequence += 1
       plannedSenders.add(winner.fromId)

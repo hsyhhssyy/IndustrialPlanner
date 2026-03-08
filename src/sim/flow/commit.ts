@@ -22,90 +22,14 @@ type CommitContext = {
     shouldIgnoreConfiguredOutputInventory: (device: DeviceInstance, fromPortId: string, itemId: ItemId) => boolean
     isRoundRobinJunctionType: (typeId: DeviceInstance['typeId']) => boolean
     isSplitterType: (typeId: DeviceInstance['typeId']) => boolean
-    isConvergerType: (typeId: DeviceInstance['typeId']) => boolean
-    indexInConvergerInputOrder: (portId: string) => number
-    advanceBufferGroupInputCursor: (runtime: DeviceRuntime, pickedPortId: string) => boolean
-    advanceBufferGroupOutputCursor: (runtime: DeviceRuntime, pickedPortId: string) => boolean
   }
-}
-
-function addCommitDependency(
-  edges: Map<number, Set<number>>,
-  inDegree: number[],
-  beforeIndex: number,
-  afterIndex: number,
-) {
-  if (beforeIndex === afterIndex) return
-  let next = edges.get(beforeIndex)
-  if (!next) {
-    next = new Set<number>()
-    edges.set(beforeIndex, next)
-  }
-  if (next.has(afterIndex)) return
-  next.add(afterIndex)
-  inDegree[afterIndex] += 1
-}
-
-function sortTransferMatchesForCommit(transferMatches: TransferMatch[]) {
-  const edges = new Map<number, Set<number>>()
-  const inDegree = Array.from({ length: transferMatches.length }, () => 0)
-
-  for (let leftIndex = 0; leftIndex < transferMatches.length; leftIndex += 1) {
-    const left = transferMatches[leftIndex]
-    for (let rightIndex = leftIndex + 1; rightIndex < transferMatches.length; rightIndex += 1) {
-      const right = transferMatches[rightIndex]
-
-      if (left.fromId === right.toId && left.fromLane === right.toLane) {
-        addCommitDependency(edges, inDegree, leftIndex, rightIndex)
-      }
-      if (right.fromId === left.toId && right.fromLane === left.toLane) {
-        addCommitDependency(edges, inDegree, rightIndex, leftIndex)
-      }
-    }
-  }
-
-  const ready: number[] = []
-  for (let index = 0; index < inDegree.length; index += 1) {
-    if (inDegree[index] === 0) ready.push(index)
-  }
-
-  const ordered: TransferMatch[] = []
-  const visited = new Set<number>()
-
-  while (ready.length > 0) {
-    const index = ready.shift()
-    if (typeof index !== 'number' || visited.has(index)) continue
-    visited.add(index)
-    ordered.push(transferMatches[index])
-
-    const next = edges.get(index)
-    if (!next) continue
-    for (const dependentIndex of next) {
-      inDegree[dependentIndex] -= 1
-      if (inDegree[dependentIndex] === 0) {
-        ready.push(dependentIndex)
-      }
-    }
-  }
-
-  if (ordered.length === transferMatches.length) {
-    return ordered
-  }
-
-  for (let index = 0; index < transferMatches.length; index += 1) {
-    if (!visited.has(index)) {
-      ordered.push(transferMatches[index])
-    }
-  }
-
-  return ordered
 }
 
 export function commitTransferMatches(context: CommitContext) {
   const committedSenders = new Set<string>()
   let committedCount = 0
 
-  for (const match of sortTransferMatchesForCommit(context.transferMatches)) {
+  for (const match of context.transferMatches) {
     const fromRuntime = context.runtimeById[match.fromId]
     const toRuntime = context.runtimeById[match.toId]
     const fromDevice = context.deviceById.get(match.fromId)
@@ -135,24 +59,33 @@ export function commitTransferMatches(context: CommitContext) {
       context.helpers.consumeSourceByPlan(match, fromRuntime, fromDevice, context.tick)
     }
 
-    if (context.helpers.isRoundRobinJunctionType(fromDevice.typeId) && 'rrIndex' in fromRuntime && match.senderOutLinkCount > 0) {
-      if (context.helpers.isSplitterType(fromDevice.typeId)) {
-        fromRuntime.rrIndex = (fromRuntime.rrIndex + match.senderPickedOutLinkIndex + 1) % match.senderOutLinkCount
-      } else {
-        fromRuntime.rrIndex = (fromRuntime.rrIndex + 1) % match.senderOutLinkCount
-      }
+    if (
+      context.helpers.isRoundRobinJunctionType(fromDevice.typeId)
+      && context.helpers.isSplitterType(fromDevice.typeId)
+      && 'rrIndex' in fromRuntime
+      && match.senderOutLinkCount > 0
+    ) {
+      fromRuntime.rrIndex = (fromRuntime.rrIndex + match.senderPickedOutLinkIndex + 1) % match.senderOutLinkCount
     }
 
-    if (context.helpers.isConvergerType(toDevice.typeId) && 'rrIndex' in toRuntime) {
-      const pickedInputOrderIndex = context.helpers.indexInConvergerInputOrder(match.toPortId)
-      if (pickedInputOrderIndex >= 0) {
-        toRuntime.rrIndex = (pickedInputOrderIndex + 1) % 3
+    if (toRuntime.inputPriorityGroupCursorByLane) {
+      const laneKey = `${match.toId}:${match.toLane}`
+      const current = toRuntime.inputPriorityGroupCursorByLane[laneKey] ?? [0, 0]
+      const next = [...current] as [number, number]
+      if (match.receiverPriorityPortCount > 0) {
+        next[match.receiverPriorityTier] = (match.receiverPriorityPortIndex + 1) % match.receiverPriorityPortCount
       }
+      toRuntime.inputPriorityGroupCursorByLane[laneKey] = next
     }
 
-    context.helpers.advanceBufferGroupInputCursor(toRuntime, match.toPortId)
-
-    context.helpers.advanceBufferGroupOutputCursor(fromRuntime, match.fromPortId)
+    if (fromRuntime.outputPriorityGroupCursorByGroup && match.senderPriorityGroupKey) {
+      const current = fromRuntime.outputPriorityGroupCursorByGroup[match.senderPriorityGroupKey] ?? [0, 0]
+        const next = [...current] as [number, number]
+        if (match.senderPriorityPortCount > 0) {
+          next[match.senderPriorityTier] = (match.senderPriorityPortIndex + 1) % match.senderPriorityPortCount
+        }
+        fromRuntime.outputPriorityGroupCursorByGroup[match.senderPriorityGroupKey] = next
+    }
   }
 
   return {

@@ -1001,6 +1001,7 @@ function App() {
         <RightPanel
           t={t}
           language={language}
+          layout={layout}
           currentBaseId={currentBaseId}
           currentBase={currentBase}
           totalPowerDemandKw={totalPowerDemandKw}

@@ -140,8 +140,14 @@ function getDeviceByIdMap(layout: LayoutState) {
   return built
 }
 
-function baseRuntime(): Pick<DeviceRuntime, 'progress01' | 'stallReason' | 'isStalled'> {
-  return { progress01: 0, stallReason: 'NONE', isStalled: false }
+function baseRuntime(): Pick<DeviceRuntime, 'progress01' | 'stallReason' | 'isStalled' | 'inputPriorityGroupCursorByLane' | 'outputPriorityGroupCursorByGroup'> {
+  return {
+    progress01: 0,
+    stallReason: 'NONE',
+    isStalled: false,
+    inputPriorityGroupCursorByLane: {},
+    outputPriorityGroupCursorByGroup: {},
+  }
 }
 
 function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
@@ -906,24 +912,6 @@ function rotatedPortOrder(portOrder: string[], cursor: number) {
   return [...portOrder.slice(offset), ...portOrder.slice(0, offset)]
 }
 
-function advanceBufferGroupInputCursor(runtime: DeviceRuntime, pickedPortId: string) {
-  const group = getBufferGroupForInputPort(runtime, pickedPortId)
-  if (!group || group.inPortIds.length <= 1) return false
-  const index = group.inPortIds.findIndex((portId) => portId === pickedPortId)
-  if (index < 0) return false
-  group.inCursor = (index + 1) % group.inPortIds.length
-  return true
-}
-
-function advanceBufferGroupOutputCursor(runtime: DeviceRuntime, pickedPortId: string) {
-  const group = getBufferGroupForOutputPort(runtime, pickedPortId)
-  if (!group || group.outPortIds.length <= 1) return false
-  const index = group.outPortIds.findIndex((portId) => portId === pickedPortId)
-  if (index < 0) return false
-  group.outCursor = (index + 1) % group.outPortIds.length
-  return true
-}
-
 function isStorageWithBufferGroups(runtime: DeviceRuntime) {
   if (getBufferGroups(runtime).length === 0) return false
   if ('inventory' in runtime) return true
@@ -1121,12 +1109,6 @@ function isConvergerType(typeId: DeviceInstance['typeId']) {
 
 function isSplitterType(typeId: DeviceInstance['typeId']) {
   return typeId === 'item_log_splitter' || typeId === 'item_pipe_splitter'
-}
-
-const CONVERGER_INPUT_PORT_ORDER = ['in_n', 'in_e', 'in_s'] as const
-
-function indexInConvergerInputOrder(portId: string) {
-  return CONVERGER_INPUT_PORT_ORDER.findIndex((entry) => entry === portId)
 }
 
 function isBufferedBeltRuntime(runtime: DeviceRuntime): runtime is BeltRuntime {
@@ -1540,7 +1522,12 @@ function shouldMarkDownstreamBlockedNoBuffer(
   return false
 }
 
-function orderedOutLinks(device: DeviceInstance, runtime: DeviceRuntime, outLinks: ReturnType<typeof neighborsFromLinks>['links']) {
+function orderedOutLinks(
+  device: DeviceInstance,
+  runtime: DeviceRuntime,
+  outLinks: ReturnType<typeof neighborsFromLinks>['links'],
+  deviceById?: Map<string, DeviceInstance>,
+) {
   let orderedLinks = outLinks
 
   if (isRoundRobinJunctionType(device.typeId) && outLinks.length > 1 && 'rrIndex' in runtime) {
@@ -1552,9 +1539,29 @@ function orderedOutLinks(device: DeviceInstance, runtime: DeviceRuntime, outLink
   if (groups.length > 0) {
     const groupIndexById = new Map(groups.map((group, index) => [group.id, index]))
     const priorityByPort = new Map<string, { groupIndex: number; portPriority: number }>()
+    const outputPriorityCursors = runtime.outputPriorityGroupCursorByGroup ?? {}
 
     for (const group of groups) {
-      const rotated = rotatedPortOrder(group.outPortIds, group.outCursor)
+      const linksByPort = new Map<string, typeof outLinks>()
+      for (const link of outLinks) {
+        if (!group.outPortIds.includes(link.from.portId)) continue
+        const existing = linksByPort.get(link.from.portId)
+        if (existing) existing.push(link)
+        else linksByPort.set(link.from.portId, [link])
+      }
+
+      const cursorPair = outputPriorityCursors[group.id] ?? [0, 0]
+      const highTierPorts = group.outPortIds.filter((portId) =>
+        (linksByPort.get(portId) ?? []).some((link) => {
+          const targetDevice = deviceById?.get(link.to.instanceId)
+          return targetDevice ? !isBelt(targetDevice.typeId) : false
+        }),
+      )
+      const lowTierPorts = group.outPortIds.filter((portId) => !highTierPorts.includes(portId) && linksByPort.has(portId))
+      const rotated = [
+        ...rotatedPortOrder(highTierPorts, cursorPair[0]),
+        ...rotatedPortOrder(lowTierPorts, cursorPair[1]),
+      ]
       for (let index = 0; index < rotated.length; index += 1) {
         priorityByPort.set(rotated[index], {
           groupIndex: groupIndexById.get(group.id) ?? Number.MAX_SAFE_INTEGER,
@@ -1574,6 +1581,28 @@ function orderedOutLinks(device: DeviceInstance, runtime: DeviceRuntime, outLink
       }
       return leftPriority.portPriority - rightPriority.portPriority
     })
+  } else if (outLinks.length > 1) {
+    const outputPortOrder = collectSolidOutputPortIds(device.typeId).filter((portId) => outLinks.some((link) => link.from.portId === portId))
+    if (outputPortOrder.length > 0) {
+      const cursorPair = runtime.outputPriorityGroupCursorByGroup?.__default__ ?? [0, 0]
+      const highTierPorts = outputPortOrder.filter((portId) =>
+        outLinks.some((link) => {
+          if (link.from.portId !== portId) return false
+          const targetDevice = deviceById?.get(link.to.instanceId)
+          return targetDevice ? !isBelt(targetDevice.typeId) : false
+        }),
+      )
+      const lowTierPorts = outputPortOrder.filter((portId) => !highTierPorts.includes(portId))
+      const portPriority = new Map(
+        [...rotatedPortOrder(highTierPorts, cursorPair[0]), ...rotatedPortOrder(lowTierPorts, cursorPair[1])].map((portId, index) => [portId, index]),
+      )
+      orderedLinks = [...orderedLinks].sort((left, right) => {
+        const leftPriority = portPriority.get(left.from.portId) ?? Number.MAX_SAFE_INTEGER
+        const rightPriority = portPriority.get(right.from.portId) ?? Number.MAX_SAFE_INTEGER
+        if (leftPriority !== rightPriority) return leftPriority - rightPriority
+        return 0
+      })
+    }
   }
 
   return orderedLinks
@@ -1592,61 +1621,6 @@ function peekReadyItemForSourceLink(
   return peekReadyItemForLane(fromDevice, fromRuntime, fromLane, warehouse, fromPortId)
 }
 
-function buildConvergerPullInputPortOrderMap(
-  layout: LayoutState,
-  runtimeById: Record<string, DeviceRuntime>,
-  links: ReturnType<typeof neighborsFromLinks>,
-  deviceById: Map<string, DeviceInstance>,
-  warehouse: Record<ItemId, number>,
-) {
-  const preferredPortOrderByConvergerId = new Map<string, string[]>()
-
-  for (const device of layout.devices) {
-    if (!isConvergerType(device.typeId)) continue
-    const runtime = runtimeById[device.instanceId]
-    if (!runtime || !('rrIndex' in runtime)) continue
-
-    const inLinks = links.inMap.get(device.instanceId) ?? []
-    const splitterSourcePorts = new Set<string>()
-    const nonSplitterSourcePorts = new Set<string>()
-
-    for (const inLink of inLinks) {
-      const sourceRuntime = runtimeById[inLink.from.instanceId]
-      const sourceDevice = deviceById.get(inLink.from.instanceId)
-      if (!sourceRuntime || !sourceDevice) continue
-      if (isHardBlockedStall(sourceRuntime.stallReason)) continue
-      const readyItem = peekReadyItemForSourceLink(sourceDevice, sourceRuntime, inLink.from.portId, warehouse)
-      if (!readyItem) continue
-      if (isSplitterType(sourceDevice.typeId)) {
-        splitterSourcePorts.add(inLink.to.portId)
-      } else {
-        nonSplitterSourcePorts.add(inLink.to.portId)
-      }
-    }
-
-    const preferredSourcePorts = splitterSourcePorts.size > 0 ? splitterSourcePorts : nonSplitterSourcePorts
-    if (preferredSourcePorts.size === 0) continue
-
-    const baseOffset = runtime.rrIndex % CONVERGER_INPUT_PORT_ORDER.length
-    for (let step = 0; step < CONVERGER_INPUT_PORT_ORDER.length; step += 1) {
-      const probeIndex = (baseOffset + step) % CONVERGER_INPUT_PORT_ORDER.length
-      const probePort = CONVERGER_INPUT_PORT_ORDER[probeIndex]
-      if (!preferredSourcePorts.has(probePort)) continue
-      const orderedPorts: string[] = []
-      for (let innerStep = 0; innerStep < CONVERGER_INPUT_PORT_ORDER.length; innerStep += 1) {
-        const innerIndex = (probeIndex + innerStep) % CONVERGER_INPUT_PORT_ORDER.length
-        const candidatePort = CONVERGER_INPUT_PORT_ORDER[innerIndex]
-        if (!preferredSourcePorts.has(candidatePort)) continue
-        orderedPorts.push(candidatePort)
-      }
-      preferredPortOrderByConvergerId.set(device.instanceId, orderedPorts)
-      break
-    }
-  }
-
-  return preferredPortOrderByConvergerId
-}
-
 function buildDevicePullInputPortOrderMap(
   layout: LayoutState,
   runtimeById: Record<string, DeviceRuntime>,
@@ -1658,16 +1632,15 @@ function buildDevicePullInputPortOrderMap(
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
-    if (!runtime || (!('inputBuffer' in runtime) && !('inventory' in runtime))) continue
+    if (!runtime) continue
 
     const inLinks = links.inMap.get(device.instanceId) ?? []
     const groups = getBufferGroups(runtime)
-    if (groups.length === 0) continue
-
     const orderedPorts: string[] = []
 
-    for (const group of groups) {
-      const inputPortOrder = group.inPortIds
+    const inputPortGroups = groups.length > 0 ? groups.map((group) => group.inPortIds) : [collectSolidInputPortIds(device.typeId)]
+    for (const inputPortOrder of inputPortGroups) {
+      if (inputPortOrder.length === 0) continue
       const availablePorts = new Set<string>()
 
       for (const inLink of inLinks) {
@@ -1685,10 +1658,7 @@ function buildDevicePullInputPortOrderMap(
 
       if (availablePorts.size === 0) continue
 
-      const baseOffset = (((group.inCursor % inputPortOrder.length) + inputPortOrder.length) % inputPortOrder.length)
-      for (let step = 0; step < inputPortOrder.length; step += 1) {
-        const probeIndex = (baseOffset + step) % inputPortOrder.length
-        const probePort = inputPortOrder[probeIndex]
+      for (const probePort of inputPortOrder) {
         if (!availablePorts.has(probePort)) continue
         orderedPorts.push(probePort)
       }
@@ -1784,11 +1754,27 @@ function cloneSlot(slot: SlotData | null): SlotData | null {
   return { ...slot }
 }
 
+function cloneInputPriorityGroupCursorByLane(cursorByLane: DeviceRuntime['inputPriorityGroupCursorByLane']) {
+  if (!cursorByLane) return undefined
+  return Object.fromEntries(
+    Object.entries(cursorByLane).map(([lane, cursors]) => [lane, cursors ? [...cursors] as [number, number] : [0, 0] as [number, number]]),
+  )
+}
+
+function cloneOutputPriorityGroupCursorByGroup(cursorByGroup: DeviceRuntime['outputPriorityGroupCursorByGroup']) {
+  if (!cursorByGroup) return undefined
+  return Object.fromEntries(
+    Object.entries(cursorByGroup).map(([groupId, cursors]) => [groupId, cursors ? [...cursors] as [number, number] : [0, 0] as [number, number]]),
+  )
+}
+
 function cloneRuntime(runtime: DeviceRuntime): DeviceRuntime {
   if ('inputBuffer' in runtime && 'outputBuffer' in runtime) {
     if ('transportSamples' in runtime) {
       return {
         ...runtime,
+        inputPriorityGroupCursorByLane: cloneInputPriorityGroupCursorByLane(runtime.inputPriorityGroupCursorByLane),
+        outputPriorityGroupCursorByGroup: cloneOutputPriorityGroupCursorByGroup(runtime.outputPriorityGroupCursorByGroup),
         inputBuffer: { ...runtime.inputBuffer },
         outputBuffer: { ...runtime.outputBuffer },
         inputSlotItems: [...runtime.inputSlotItems],
@@ -1799,6 +1785,8 @@ function cloneRuntime(runtime: DeviceRuntime): DeviceRuntime {
 
     return {
       ...runtime,
+      inputPriorityGroupCursorByLane: cloneInputPriorityGroupCursorByLane(runtime.inputPriorityGroupCursorByLane),
+      outputPriorityGroupCursorByGroup: cloneOutputPriorityGroupCursorByGroup(runtime.outputPriorityGroupCursorByGroup),
       inputBuffer: { ...runtime.inputBuffer },
       outputBuffer: { ...runtime.outputBuffer },
       inputSlotItems: [...runtime.inputSlotItems],
@@ -1819,6 +1807,8 @@ function cloneRuntime(runtime: DeviceRuntime): DeviceRuntime {
   if ('inventory' in runtime) {
     return {
       ...runtime,
+      inputPriorityGroupCursorByLane: cloneInputPriorityGroupCursorByLane(runtime.inputPriorityGroupCursorByLane),
+      outputPriorityGroupCursorByGroup: cloneOutputPriorityGroupCursorByGroup(runtime.outputPriorityGroupCursorByGroup),
       inventory: { ...runtime.inventory },
       bufferGroups: runtime.bufferGroups
         ? runtime.bufferGroups.map((group) => ({
@@ -1834,6 +1824,8 @@ function cloneRuntime(runtime: DeviceRuntime): DeviceRuntime {
   if ('nsSlot' in runtime && 'weSlot' in runtime) {
     return {
       ...runtime,
+      inputPriorityGroupCursorByLane: cloneInputPriorityGroupCursorByLane(runtime.inputPriorityGroupCursorByLane),
+      outputPriorityGroupCursorByGroup: cloneOutputPriorityGroupCursorByGroup(runtime.outputPriorityGroupCursorByGroup),
       slot: cloneSlot(runtime.slot),
       nsSlot: cloneSlot(runtime.nsSlot),
       weSlot: cloneSlot(runtime.weSlot),
@@ -1842,6 +1834,8 @@ function cloneRuntime(runtime: DeviceRuntime): DeviceRuntime {
 
   return {
     ...runtime,
+    inputPriorityGroupCursorByLane: cloneInputPriorityGroupCursorByLane(runtime.inputPriorityGroupCursorByLane),
+    outputPriorityGroupCursorByGroup: cloneOutputPriorityGroupCursorByGroup(runtime.outputPriorityGroupCursorByGroup),
     slot: cloneSlot(runtime.slot),
   }
 }
@@ -2473,10 +2467,12 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
       lanesReachedHalfThisTick,
       helpers: {
         isHardBlockedStall,
-        orderedOutLinks: (device, runtime, outLinks) => orderedOutLinks(device, runtime, outLinks as ReturnType<typeof neighborsFromLinks>['links']) as FlowPortLink[],
-        buildConvergerPullInputPortOrderMap: () => buildConvergerPullInputPortOrderMap(layout, runtimeById, links, deviceById, warehouse),
+        orderedOutLinks: (device, runtime, outLinks) =>
+          orderedOutLinks(device, runtime, outLinks as ReturnType<typeof neighborsFromLinks>['links'], deviceById) as FlowPortLink[],
         buildDevicePullInputPortOrderMap: () => buildDevicePullInputPortOrderMap(layout, runtimeById, links, deviceById, warehouse),
         isConvergerType,
+        isSplitterType,
+        receiveLaneForPort: (device, runtime, toPortId) => canReceiveOnPort(device, runtime, toPortId),
         sourceSlotLane,
         prepareSourceLaneItem: (device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced) =>
           prepareSourceLaneItem(device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced, sim.tickRateHz, warehouse),
@@ -2508,10 +2504,6 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         shouldIgnoreConfiguredOutputInventory,
         isRoundRobinJunctionType,
         isSplitterType,
-        isConvergerType,
-        indexInConvergerInputOrder,
-        advanceBufferGroupInputCursor,
-        advanceBufferGroupOutputCursor,
       },
     })
 
