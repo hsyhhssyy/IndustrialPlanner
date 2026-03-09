@@ -1,4 +1,4 @@
-# 【浏览器里的集成工业】v1.1.0 Beta 未来配方更新
+# 【浏览器里的集成工业】来自未来的超时空配方更新 v1.1.0 Beta 
 
 仿真工具网页链接：  
 https://endfield.anonymous-test.top/
