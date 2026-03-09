@@ -1178,9 +1178,9 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
       })),
       {
         id: 'in_e_1',
-        localCellX: 2,
-        localCellY: 1,
-        edge: 'E',
+        localCellX: 0,
+        localCellY: 2,
+        edge: 'W',
         direction: 'Input',
         allowedItems: { mode: 'recipe_inputs', whitelist: [] },
         allowedTypes: liquidAllowance,
@@ -1188,7 +1188,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
       {
         id: 'out_w_1',
         localCellX: 0,
-        localCellY: 1,
+        localCellY: 0,
         edge: 'W',
         direction: 'Output',
         allowedItems: { mode: 'recipe_outputs', whitelist: [] },

@@ -79,6 +79,12 @@
   text-overflow: ellipsis;
 }
 
+@media (max-width: 1439px) {
+  .hint-dynamic {
+    display: none;
+  }
+}
+
 .main-grid {
   flex: 1;
   display: grid;

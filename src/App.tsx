@@ -120,7 +120,7 @@ function formatRecipeSummary(typeId: DeviceTypeId, language: Language, recipeId?
 const BASE_CELL_SIZE = 64
 const STATS_TOP_N = 20
 const LEFT_PANEL_MIN_WIDTH = 340
-const RIGHT_PANEL_MIN_WIDTH = 260
+const RIGHT_PANEL_MIN_WIDTH = LEFT_PANEL_MIN_WIDTH
 const PANEL_MAX_WIDTH = 560
 
 const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>([
