@@ -212,6 +212,14 @@ function getPlannerFlowNodeHeight(displayItemCount: number) {
   return 96 + Math.max(0, displayItemCount - 1) * 48
 }
 
+function getPlannerFlowSideAnchorY(top: number, height: number, index: number, total: number) {
+  const innerTop = top + 14
+  const innerBottom = top + height - 14
+  if (total <= 1) return top + height / 2
+  const span = Math.max(0, innerBottom - innerTop)
+  return innerTop + (span * index) / (total - 1)
+}
+
 function computeRecipeFlowPerMinute(amount: number, cycleSeconds: number) {
   if (cycleSeconds <= 0) return 0
   return (amount / cycleSeconds) * 60
@@ -1586,6 +1594,48 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
   }
 
   const flowEdgesWithGeometry = useMemo(() => {
+    const edgeIndexBySourceSide = new Map<string, { index: number; total: number }>()
+    const edgeIndexByTargetSide = new Map<string, { index: number; total: number }>()
+
+    const outgoingBySide = new Map<string, typeof flowGraph.edges>()
+    const incomingBySide = new Map<string, typeof flowGraph.edges>()
+
+    for (const edge of flowGraph.edges) {
+      const sourceNode = flowGraph.nodes.find((node) => node.id === edge.sourceId)
+      const targetNode = flowGraph.nodes.find((node) => node.id === edge.targetId)
+      if (!sourceNode || !targetNode) continue
+
+      const sourceSide = isSeedCollectorMachine(sourceNode.machineType) ? 'left' : 'right'
+      const targetSide = isSeedCollectorMachine(targetNode.machineType) ? 'right' : 'left'
+
+      const sourceKey = `${edge.sourceId}|${sourceSide}`
+      const targetKey = `${edge.targetId}|${targetSide}`
+
+      const outgoingList = outgoingBySide.get(sourceKey) ?? []
+      outgoingList.push(edge)
+      outgoingBySide.set(sourceKey, outgoingList)
+
+      const incomingList = incomingBySide.get(targetKey) ?? []
+      incomingList.push(edge)
+      incomingBySide.set(targetKey, incomingList)
+    }
+
+    for (const edges of outgoingBySide.values()) {
+      edges
+        .sort((a, b) => a.targetId.localeCompare(b.targetId) || a.itemId.localeCompare(b.itemId) || a.id.localeCompare(b.id))
+        .forEach((edge, index) => {
+          edgeIndexBySourceSide.set(edge.id, { index, total: edges.length })
+        })
+    }
+
+    for (const edges of incomingBySide.values()) {
+      edges
+        .sort((a, b) => a.sourceId.localeCompare(b.sourceId) || a.itemId.localeCompare(b.itemId) || a.id.localeCompare(b.id))
+        .forEach((edge, index) => {
+          edgeIndexByTargetSide.set(edge.id, { index, total: edges.length })
+        })
+    }
+
     return flowGraph.edges
       .map((edge) => {
         const sourceNode = flowGraph.nodes.find((node) => node.id === edge.sourceId)
@@ -1596,17 +1646,21 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
 
         const sourceOutToLeft = isSeedCollectorMachine(sourceNode.machineType)
         const targetInFromRight = isSeedCollectorMachine(targetNode.machineType)
+        const sourceSlot = edgeIndexBySourceSide.get(edge.id) ?? { index: 0, total: 1 }
+        const targetSlot = edgeIndexByTargetSide.get(edge.id) ?? { index: 0, total: 1 }
+        const sourceHeight = getFlowNodeHeight(sourceNode)
+        const targetHeight = getFlowNodeHeight(targetNode)
 
         const sourceX = sourceOutToLeft ? sourceCenter.left : sourceCenter.right
-        const sourceY = sourceCenter.centerY
+        const sourceY = getPlannerFlowSideAnchorY(sourceCenter.centerY - sourceHeight / 2, sourceHeight, sourceSlot.index, sourceSlot.total)
         const targetX = targetInFromRight ? targetCenter.right : targetCenter.left
-        const targetY = targetCenter.centerY
-        const c1x = sourceX + (sourceOutToLeft ? -56 : 56)
+        const targetY = getPlannerFlowSideAnchorY(targetCenter.centerY - targetHeight / 2, targetHeight, targetSlot.index, targetSlot.total)
+        const c1x = sourceX + (sourceOutToLeft ? -72 : 72)
         const c1y = sourceY
-        const c2x = targetX + (targetInFromRight ? 56 : -56)
+        const c2x = targetX + (targetInFromRight ? 72 : -72)
         const c2y = targetY
-        const labelX = (sourceX + targetX) / 2
-        const labelY = (sourceY + targetY) / 2
+        const labelX = (sourceX + targetX + c1x + c2x) / 4
+        const labelY = (sourceY + targetY + c1y + c2y) / 4
 
         return {
           ...edge,
