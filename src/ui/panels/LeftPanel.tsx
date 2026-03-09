@@ -4,7 +4,11 @@ import { uiEffects } from '../../app/uiEffects'
 import { useWorkbenchContext } from '../../app/WorkbenchContext'
 import { getDeviceLabel, getModeLabel } from '../../i18n'
 
-export function LeftPanel() {
+type LeftPanelProps = {
+  onCollapse: () => void
+}
+
+export function LeftPanel({ onCollapse }: LeftPanelProps) {
   const { eventBus } = useAppContext()
   const {
     simIsRunning,
@@ -33,7 +37,18 @@ export function LeftPanel() {
     <aside className="panel left-panel">
       {!simIsRunning && (
         <>
-          <h3>{t('left.mode')}</h3>
+          <div className="panel-heading-row">
+            <h3>{t('left.mode')}</h3>
+            <button
+              type="button"
+              className="panel-heading-toggle"
+              aria-label={t('panel.leftCollapse')}
+              title={t('panel.leftCollapse')}
+              onClick={() => onCollapse()}
+            >
+              {t('panel.collapseButton')}
+            </button>
+          </div>
           {(['place', 'blueprint', 'delete'] as const).map((entry) => (
             <button
               key={entry}

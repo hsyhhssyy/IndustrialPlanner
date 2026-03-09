@@ -90,7 +90,9 @@
   display: grid;
   --left-panel-width: 340px;
   --right-panel-width: 340px;
-  grid-template-columns: var(--left-panel-width) 8px 1fr 8px var(--right-panel-width);
+  --left-panel-rail-width: 8px;
+  --right-panel-rail-width: 8px;
+  grid-template-columns: var(--left-panel-width) var(--left-panel-rail-width) 1fr var(--right-panel-rail-width) var(--right-panel-width);
   min-height: 0;
 }
 
@@ -175,7 +177,14 @@
   overflow: auto;
 }
 
+.panel-slot {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .panel-resizer {
+  position: relative;
   background: #1b222d;
   border-right: 1px solid #2f3a4a;
   border-left: 1px solid #2f3a4a;
@@ -183,8 +192,76 @@
   user-select: none;
 }
 
+.panel-resizer.is-collapsed {
+  cursor: default;
+}
+
 .panel-resizer:hover {
   background: #243042;
+}
+
+.panel-drawer-toggle {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-height: 100%;
+  padding: 12px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 0;
+  background: linear-gradient(180deg, #243042 0%, #1e2937 100%);
+  color: #e5ebf3;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.panel-drawer-toggle:hover {
+  background: linear-gradient(180deg, #2d3d55 0%, #243042 100%);
+}
+
+.panel-drawer-toggle:focus-visible {
+  outline: 2px solid #6aa6ff;
+  outline-offset: 2px;
+}
+
+.panel-drawer-toggle-arrow {
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.panel-drawer-toggle-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+
+.panel-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panel-heading-toggle {
+  width: auto !important;
+  min-width: 88px;
+  margin: 0 0 0 auto !important;
+  padding: 4px 10px !important;
+  line-height: 1.2;
+  font-size: 12px !important;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.panel-heading-toggle-right {
+  margin-left: auto !important;
 }
 
 .left-panel {
@@ -218,10 +295,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.right-lot-heading > h3 {
-  margin: 0;
 }
 
 .right-lot-tooltip-wrap {

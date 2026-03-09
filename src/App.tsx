@@ -157,6 +157,8 @@ function App() {
   const currentYear = new Date().getFullYear()
   const [leftPanelWidth, setLeftPanelWidth] = usePersistentState<number>('stage1-left-panel-width', 340)
   const [rightPanelWidth, setRightPanelWidth] = usePersistentState<number>('stage1-right-panel-width', 340)
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = usePersistentState<boolean>('stage4-left-panel-collapsed', false)
+  const [rightPanelCollapsed, setRightPanelCollapsed] = usePersistentState<boolean>('stage4-right-panel-collapsed', false)
   const [powerMode, setPowerMode] = usePersistentState<PowerMode>('stage3-power-mode', 'infinite')
   const [initialBatteryPercent, setInitialBatteryPercent] = usePersistentState<number>('stage3-initial-battery-percent', 100)
   const [recentPickerItemIds, setRecentPickerItemIds] = usePersistentState<ItemId[]>(
@@ -611,6 +613,11 @@ function App() {
         ? t('top.deleteHint')
         : t('top.editHint')
 
+  const effectiveLeftPanelWidth = leftPanelCollapsed ? 0 : leftPanelWidth
+  const effectiveRightPanelWidth = rightPanelCollapsed ? 0 : rightPanelWidth
+  const leftPanelRailWidth = leftPanelCollapsed ? 28 : 8
+  const rightPanelRailWidth = rightPanelCollapsed ? 28 : 8
+
   const ignoredInfiniteItemIds = useMemo(() => {
     const itemIds = new Set<ItemId>()
     for (const device of layout.devices) {
@@ -947,46 +954,74 @@ function App() {
       <main
         className="main-grid"
         style={{
-          ['--left-panel-width' as string]: `${leftPanelWidth}px`,
-          ['--right-panel-width' as string]: `${rightPanelWidth}px`,
+          ['--left-panel-width' as string]: `${effectiveLeftPanelWidth}px`,
+          ['--right-panel-width' as string]: `${effectiveRightPanelWidth}px`,
+          ['--left-panel-rail-width' as string]: `${leftPanelRailWidth}px`,
+          ['--right-panel-rail-width' as string]: `${rightPanelRailWidth}px`,
         }}
       >
-        <WorkbenchProvider
-          value={{
-            simIsRunning: sim.isRunning,
-            mode,
-            language,
-            t,
-            canUsePipePlacement: currentBase.tags.includes('武陵'),
-            placeOperation,
-            placeType,
-            visiblePlaceableTypes,
-            placeGroupOrder: PLACE_GROUP_ORDER,
-            placeGroupLabelKey: PLACE_GROUP_LABEL_KEY,
-            getPlaceGroup,
-            getDeviceMenuIconPath,
-            deleteTool,
-            blueprints,
-            userBlueprints,
-            systemBlueprints,
-            selectedBlueprintId,
-            armedBlueprintId,
-            statsAndDebugSection,
-          }}
-        >
-          <LeftPanel />
-        </WorkbenchProvider>
+        <div className={`panel-slot panel-slot-left${leftPanelCollapsed ? ' is-collapsed' : ''}`} aria-hidden={leftPanelCollapsed}>
+          {!leftPanelCollapsed && (
+            <WorkbenchProvider
+              value={{
+                simIsRunning: sim.isRunning,
+                mode,
+                language,
+                t,
+                canUsePipePlacement: currentBase.tags.includes('武陵'),
+                placeOperation,
+                placeType,
+                visiblePlaceableTypes,
+                placeGroupOrder: PLACE_GROUP_ORDER,
+                placeGroupLabelKey: PLACE_GROUP_LABEL_KEY,
+                getPlaceGroup,
+                getDeviceMenuIconPath,
+                deleteTool,
+                blueprints,
+                userBlueprints,
+                systemBlueprints,
+                selectedBlueprintId,
+                armedBlueprintId,
+                statsAndDebugSection,
+              }}
+            >
+              <LeftPanel onCollapse={() => setLeftPanelCollapsed(true)} />
+            </WorkbenchProvider>
+          )}
+        </div>
 
         <div
-          className="panel-resizer panel-resizer-left"
+          className={`panel-resizer panel-resizer-left${leftPanelCollapsed ? ' is-collapsed' : ''}`}
           onMouseDown={(event) => {
+            if (leftPanelCollapsed) return
             event.preventDefault()
             beginPanelResize('left', event.clientX)
           }}
           role="separator"
           aria-orientation="vertical"
           aria-label="Resize left panel"
-        />
+        >
+          {leftPanelCollapsed && (
+            <button
+              type="button"
+              className="panel-drawer-toggle panel-drawer-toggle-left"
+              aria-label={t('panel.leftExpand')}
+              title={t('panel.leftExpand')}
+              onMouseDown={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+              }}
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                setLeftPanelCollapsed(false)
+              }}
+            >
+              <span className="panel-drawer-toggle-arrow" aria-hidden="true">›</span>
+              <span className="panel-drawer-toggle-label">{t('panel.leftDrawer')}</span>
+            </button>
+          )}
+        </div>
 
         <CenterPanel
           viewportRef={viewportRef}
@@ -1002,67 +1037,94 @@ function App() {
         />
 
         <div
-          className="panel-resizer panel-resizer-right"
+          className={`panel-resizer panel-resizer-right${rightPanelCollapsed ? ' is-collapsed' : ''}`}
           onMouseDown={(event) => {
+            if (rightPanelCollapsed) return
             event.preventDefault()
             beginPanelResize('right', event.clientX)
           }}
           role="separator"
           aria-orientation="vertical"
           aria-label="Resize right panel"
-        />
+        >
+          {rightPanelCollapsed && (
+            <button
+              type="button"
+              className="panel-drawer-toggle panel-drawer-toggle-right"
+              aria-label={t('panel.rightExpand')}
+              title={t('panel.rightExpand')}
+              onMouseDown={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+              }}
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                setRightPanelCollapsed(false)
+              }}
+            >
+              <span className="panel-drawer-toggle-arrow" aria-hidden="true">‹</span>
+              <span className="panel-drawer-toggle-label">{t('panel.rightDrawer')}</span>
+            </button>
+          )}
+        </div>
 
-        <RightPanel
-          t={t}
-          language={language}
-          layout={layout}
-          currentBaseId={currentBaseId}
-          currentBase={currentBase}
-          totalPowerDemandKw={totalPowerDemandKw}
-          powerMode={powerMode}
-          setPowerMode={setPowerMode}
-          initialBatteryPercent={initialBatteryPercent}
-          setInitialBatteryPercent={setInitialBatteryPercent}
-          setActiveBaseId={setActiveBaseId}
-          setSelection={setSelection}
-          selectedDevice={selectedDevice}
-          selectedRuntime={selectedRuntime}
-          sim={sim}
-          getRuntimeStatusText={getRuntimeStatusText}
-          getInternalStatusText={getInternalStatusText}
-          formatRecipeSummary={formatRecipeSummary}
-          cycleTicksFromSeconds={cycleTicksFromSeconds}
-          recipeForDevice={recipeForDevice}
-          formatInputBufferAmounts={formatInputBufferAmounts}
-          formatOutputBufferAmounts={formatOutputBufferAmounts}
-          formatInventoryAmounts={formatInventoryAmounts}
-          formatSlotValue={formatSlotValue}
-          selectedProcessorBufferSpec={selectedProcessorBufferSpec}
-          selectedPreloadSlots={selectedPreloadSlots}
-          selectedPreloadTotal={selectedPreloadTotal}
-          selectedPickupItemId={selectedPickupItemId}
-          selectedPumpOutputItemId={selectedPumpOutputItemId}
-          selectedPickupItemIsOre={selectedPickupItemIsOre}
-          selectedPickupIgnoreInventory={selectedPickupIgnoreInventory}
-          selectedProtocolHubOutputs={selectedProtocolHubOutputs}
-          getItemIconPath={getItemIconPath}
-          setItemPickerState={setItemPickerState}
-          updatePickupIgnoreInventory={updatePickupIgnoreInventory}
-          updateProtocolHubOutputIgnoreInventory={updateProtocolHubOutputIgnoreInventory}
-          setLayout={setLayout}
-          openStorageSlotConfigDialog={(deviceInstanceId) => setStorageSlotConfigDeviceId(deviceInstanceId)}
-          openPortPriorityConfigDialog={(deviceInstanceId) => setPortPriorityConfigDeviceId(deviceInstanceId)}
-          updateProcessorPreloadSlot={updateProcessorPreloadSlot}
-          reactorRecipeCandidates={reactorRecipeCandidates}
-          selectedReactorPoolConfig={selectedReactorPoolConfig}
-          reactorSolidOutputItemCandidates={reactorSolidOutputItemCandidates}
-          reactorLiquidOutputItemCandidates={reactorLiquidOutputItemCandidates}
-          updateReactorSelectedRecipe={updateReactorSelectedRecipe}
-          updateReactorSolidOutputItem={updateReactorSolidOutputItem}
-          updateReactorLiquidOutputItemA={updateReactorLiquidOutputItemA}
-          updateReactorLiquidOutputItemB={updateReactorLiquidOutputItemB}
-          simIsRunning={sim.isRunning}
-        />
+        <div className={`panel-slot panel-slot-right${rightPanelCollapsed ? ' is-collapsed' : ''}`} aria-hidden={rightPanelCollapsed}>
+          {!rightPanelCollapsed && (
+            <RightPanel
+              t={t}
+              language={language}
+              layout={layout}
+              currentBaseId={currentBaseId}
+              currentBase={currentBase}
+              totalPowerDemandKw={totalPowerDemandKw}
+              powerMode={powerMode}
+              setPowerMode={setPowerMode}
+              initialBatteryPercent={initialBatteryPercent}
+              setInitialBatteryPercent={setInitialBatteryPercent}
+              setActiveBaseId={setActiveBaseId}
+              setSelection={setSelection}
+              selectedDevice={selectedDevice}
+              selectedRuntime={selectedRuntime}
+              sim={sim}
+              getRuntimeStatusText={getRuntimeStatusText}
+              getInternalStatusText={getInternalStatusText}
+              formatRecipeSummary={formatRecipeSummary}
+              cycleTicksFromSeconds={cycleTicksFromSeconds}
+              recipeForDevice={recipeForDevice}
+              formatInputBufferAmounts={formatInputBufferAmounts}
+              formatOutputBufferAmounts={formatOutputBufferAmounts}
+              formatInventoryAmounts={formatInventoryAmounts}
+              formatSlotValue={formatSlotValue}
+              selectedProcessorBufferSpec={selectedProcessorBufferSpec}
+              selectedPreloadSlots={selectedPreloadSlots}
+              selectedPreloadTotal={selectedPreloadTotal}
+              selectedPickupItemId={selectedPickupItemId}
+              selectedPumpOutputItemId={selectedPumpOutputItemId}
+              selectedPickupItemIsOre={selectedPickupItemIsOre}
+              selectedPickupIgnoreInventory={selectedPickupIgnoreInventory}
+              selectedProtocolHubOutputs={selectedProtocolHubOutputs}
+              getItemIconPath={getItemIconPath}
+              setItemPickerState={setItemPickerState}
+              updatePickupIgnoreInventory={updatePickupIgnoreInventory}
+              updateProtocolHubOutputIgnoreInventory={updateProtocolHubOutputIgnoreInventory}
+              setLayout={setLayout}
+              openStorageSlotConfigDialog={(deviceInstanceId) => setStorageSlotConfigDeviceId(deviceInstanceId)}
+              openPortPriorityConfigDialog={(deviceInstanceId) => setPortPriorityConfigDeviceId(deviceInstanceId)}
+              updateProcessorPreloadSlot={updateProcessorPreloadSlot}
+              reactorRecipeCandidates={reactorRecipeCandidates}
+              selectedReactorPoolConfig={selectedReactorPoolConfig}
+              reactorSolidOutputItemCandidates={reactorSolidOutputItemCandidates}
+              reactorLiquidOutputItemCandidates={reactorLiquidOutputItemCandidates}
+              updateReactorSelectedRecipe={updateReactorSelectedRecipe}
+              updateReactorSolidOutputItem={updateReactorSolidOutputItem}
+              updateReactorLiquidOutputItemA={updateReactorLiquidOutputItemA}
+              updateReactorLiquidOutputItemB={updateReactorLiquidOutputItemB}
+              simIsRunning={sim.isRunning}
+              onCollapse={() => setRightPanelCollapsed(true)}
+            />
+          )}
+        </div>
       </main>
 
       <SiteInfoBar currentYear={currentYear} t={t} />

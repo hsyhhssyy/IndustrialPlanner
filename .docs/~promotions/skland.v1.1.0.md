@@ -5,10 +5,10 @@
 
 现在系统里存在一系列超时空配方，这些是1.1的新物品，新建筑，新配方。在界面左上角选择“启用超时空配方” 即可
 
-![alt text](images/skland.v1.1/image-4.png)
-![alt text](images/skland.v1.1/image-9.png)
-![alt text](images/skland.v1.1/image-10.png)
-![alt text](images/skland.v1.1/image-11.png)
+![alt text](images/skland.v1.1.0/image-4.png)
+![alt text](images/skland.v1.1.0/image-9.png)
+![alt text](images/skland.v1.1.0/image-12.png)
+![alt text](images/skland.v1.1.0/image-11.png)
 
 他们没有图标，配方是根据PV视频猜的，大家可以试着用他们来提前布置产线。
 
@@ -18,7 +18,7 @@
 
 2、自定义物流顺序
 
-![alt text](images/skland.v1.1/image-2.png)
+![alt text](images/skland.v1.1.0/image-2.png)
 
 现在所有的设备，包括分流器，汇流器，协议存储箱，以及任何输入输出设备，都可以完全自定义他们的输入输出优先级了。
 操作方式是，为每一个端口制定端口优先级组。如果两个端口优先级组相同，则他们会轮流输入输出。如果端口优先级组不同，更小的组会优先输入输出。
@@ -36,9 +36,13 @@
 此外我还给协议存储箱提供了一个游戏内没有的“锁定”功能。
 可以点击格子右上角的锁头标记锁定该格，这样这一格就只会接受这个物品。
 
-![alt text](images/skland.v1.1/image-3.png)
+![alt text](images/skland.v1.1.0/image-3.png)
 
 上述两个功能是为起死回生机或者类似的设备做准备。
+
+4. 调整了非宽屏显示器上的显示效果。现在两侧面板改为可以收起的抽屉，布置产线时可以方便一点了。
+
+![alt text](images/skland.v1.1.0/image-13.png)
 
 已知问题：
 

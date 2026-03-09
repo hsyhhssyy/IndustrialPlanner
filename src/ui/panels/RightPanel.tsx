@@ -115,6 +115,7 @@ type RightPanelProps = {
   updateReactorLiquidOutputItemA: (deviceInstanceId: string, itemId: ItemId | null) => void
   updateReactorLiquidOutputItemB: (deviceInstanceId: string, itemId: ItemId | null) => void
   simIsRunning: boolean
+  onCollapse: () => void
 }
 
 export function RightPanel({
@@ -167,6 +168,7 @@ export function RightPanel({
   updateReactorLiquidOutputItemA,
   updateReactorLiquidOutputItemB,
   simIsRunning,
+  onCollapse,
 }: RightPanelProps) {
   const slotConfigSupportedTypeIds = new Set<DeviceInstance['typeId']>([
     'item_port_storager_1',
@@ -300,6 +302,15 @@ export function RightPanel({
             </span>
           )}
         </span>
+        <button
+          type="button"
+          className="panel-heading-toggle panel-heading-toggle-right"
+          aria-label={t('panel.rightCollapse')}
+          title={t('panel.rightCollapse')}
+          onClick={() => onCollapse()}
+        >
+          {t('panel.collapseButton')}
+        </button>
       </div>
       {simIsRunning ? (
         <section className="base-group-section">
