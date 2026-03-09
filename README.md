@@ -8,6 +8,8 @@ https://endfield.anonymous-test.top/
 
 > 目前主要面向电脑端使用。小屏幕设备暂未做完整适配。
 
+![产线布置预览](.docs/~promotions/images/skland.v0.0.9/image.png)
+
 ---
 
 ## 这是什么？
@@ -21,6 +23,26 @@ https://endfield.anonymous-test.top/
 - 调试起死回生机、震荡发电等复杂设施
 - 快速查物品 / 建筑 / 配方
 - 保存蓝图、复用布局、分享思路
+
+---
+
+## 界面预览
+
+### 产线布置
+
+![产线布置](.docs/~promotions/images/skland.v0.0.9/image.png)
+
+### 电力仿真
+
+![电力仿真](.docs/~promotions/images/skland.v1.0.5/image-2.png)
+
+### 流程图规划
+
+![流程图规划](.docs/~promotions/images/skland.v1.0.5/image-3.png)
+
+### 物流优先级配置
+
+![物流优先级配置](.docs/~promotions/images/skland.v1.1.0/image-2.png)
 
 ---
 
