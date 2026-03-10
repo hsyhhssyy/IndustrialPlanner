@@ -1,14 +1,31 @@
-import { useRef } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { useAppContext } from '../../app/AppContext'
 import { uiEffects } from '../../app/uiEffects'
 import { useWorkbenchContext } from '../../app/WorkbenchContext'
 import { getDeviceLabel, getModeLabel } from '../../i18n'
 
-type LeftPanelProps = {
-  onCollapse: () => void
+type LeftPanelSectionProps = {
+  title: string
+  defaultOpen?: boolean
+  className?: string
+  children: ReactNode
 }
 
-export function LeftPanel({ onCollapse }: LeftPanelProps) {
+function LeftPanelSection({ title, defaultOpen = true, className, children }: LeftPanelSectionProps) {
+  const [open, setOpen] = useState(defaultOpen)
+
+  return (
+    <section className={`workbench-section ${open ? 'is-open' : 'is-collapsed'} ${className ?? ''}`.trim()}>
+      <button type="button" className="workbench-section-header" onClick={() => setOpen((current) => !current)}>
+        <span>{title}</span>
+        <span className="workbench-section-chevron" aria-hidden="true">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && <div className="workbench-section-body">{children}</div>}
+    </section>
+  )
+}
+
+export function LeftPanel() {
   const { eventBus } = useAppContext()
   const {
     simIsRunning,
@@ -34,211 +51,182 @@ export function LeftPanel({ onCollapse }: LeftPanelProps) {
   const blueprintFileInputRef = useRef<HTMLInputElement | null>(null)
 
   return (
-    <aside className="panel left-panel">
-      {!simIsRunning && (
-        <>
-          <div className="panel-heading-row">
-            <h3>{t('left.mode')}</h3>
-            <button
-              type="button"
-              className="panel-heading-toggle"
-              aria-label={t('panel.leftCollapse')}
-              title={t('panel.leftCollapse')}
-              onClick={() => onCollapse()}
-            >
-              {t('panel.collapseButton')}
-            </button>
-          </div>
-          {(['place', 'blueprint', 'delete'] as const).map((entry) => (
-            <button
-              key={entry}
-              className={mode === entry ? 'active' : ''}
-              onClick={() => {
-                if (simIsRunning && entry === 'place') return
-                if (entry === 'place') {
-                  eventBus.emit('left.place.operation.set', 'default')
-                  eventBus.emit('left.place.trace.reset', undefined)
-                  eventBus.emit('left.place.type.set', '')
-                }
-                if (entry === 'blueprint') {
-                  eventBus.emit('left.place.operation.set', 'blueprint')
-                }
-                eventBus.emit('left.mode.set', entry)
-                eventBus.emit('ui.center.focus', undefined)
-              }}
-            >
-              {getModeLabel(language, entry)}
-            </button>
-          ))}
-        </>
-      )}
+    <aside className="panel left-panel workbench-sidebar-panel">
+      <div className="panel-view-header">
+        <div className="panel-view-header-caption">{t('left.mode')}</div>
+        <h3>{simIsRunning ? t('right.simDebug') : getModeLabel(language, mode)}</h3>
+      </div>
 
       {!simIsRunning && mode === 'place' && (
         <>
-          <h3>{t('left.operation')}</h3>
-          <div className="place-device-grid">
-            <button
-              className={`place-device-button ${placeOperation === 'default' && !placeType ? 'active' : ''}`}
-              onClick={() => {
-                eventBus.emit('left.place.operation.set', 'default')
-                eventBus.emit('left.place.type.set', '')
-                eventBus.emit('left.place.trace.reset', undefined)
-                eventBus.emit('ui.center.focus', undefined)
-              }}
-            >
-              <span className="operation-pointer-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                  <path d="M5 3L5 18L9.5 13.5L13 21L16.2 19.6L12.8 12.1L18.8 12.1L5 3Z" />
-                </svg>
-              </span>
-              <span className="place-device-label">{t('left.operationSelect')}</span>
-            </button>
+          <LeftPanelSection title={t('left.operation')}>
+            <div className="place-device-grid">
+              <button
+                className={`place-device-button ${placeOperation === 'default' && !placeType ? 'active' : ''}`}
+                onClick={() => {
+                  eventBus.emit('left.place.operation.set', 'default')
+                  eventBus.emit('left.place.type.set', '')
+                  eventBus.emit('left.place.trace.reset', undefined)
+                  eventBus.emit('ui.center.focus', undefined)
+                }}
+              >
+                <span className="operation-pointer-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M5 3L5 18L9.5 13.5L13 21L16.2 19.6L12.8 12.1L18.8 12.1L5 3Z" />
+                  </svg>
+                </span>
+                <span className="place-device-label">{t('left.operationSelect')}</span>
+              </button>
 
-            <button
-              className={`place-device-button ${placeOperation === 'belt' ? 'active' : ''}`}
-              onClick={() => {
-                eventBus.emit('left.place.operation.set', 'belt')
-                eventBus.emit('left.place.type.set', '')
-                eventBus.emit('left.place.trace.reset', undefined)
-                eventBus.emit('ui.center.focus', undefined)
-              }}
-            >
-              <img className="place-device-icon" src="/device-icons/item_log_belt_01.png" alt="" aria-hidden="true" draggable={false} />
-              <span className="place-device-label">{t('left.placeBelt')}</span>
-            </button>
+              <button
+                className={`place-device-button ${placeOperation === 'belt' ? 'active' : ''}`}
+                onClick={() => {
+                  eventBus.emit('left.place.operation.set', 'belt')
+                  eventBus.emit('left.place.type.set', '')
+                  eventBus.emit('left.place.trace.reset', undefined)
+                  eventBus.emit('ui.center.focus', undefined)
+                }}
+              >
+                <img className="place-device-icon" src="/device-icons/item_log_belt_01.png" alt="" aria-hidden="true" draggable={false} />
+                <span className="place-device-label">{t('left.placeBelt')}</span>
+              </button>
 
-            <button
-              className={`place-device-button ${placeOperation === 'pipe' ? 'active' : ''}`}
-              disabled={!canUsePipePlacement}
-              onClick={() => {
-                eventBus.emit('left.place.operation.set', 'pipe')
-                eventBus.emit('left.place.type.set', '')
-                eventBus.emit('left.place.trace.reset', undefined)
-                eventBus.emit('ui.center.focus', undefined)
-              }}
-            >
-              <img className="place-device-icon" src="/device-icons/item_log_pipe_01.png" alt="" aria-hidden="true" draggable={false} />
-              <span className="place-device-label">{t('left.placePipe')}</span>
-            </button>
+              <button
+                className={`place-device-button ${placeOperation === 'pipe' ? 'active' : ''}`}
+                disabled={!canUsePipePlacement}
+                onClick={() => {
+                  eventBus.emit('left.place.operation.set', 'pipe')
+                  eventBus.emit('left.place.type.set', '')
+                  eventBus.emit('left.place.trace.reset', undefined)
+                  eventBus.emit('ui.center.focus', undefined)
+                }}
+              >
+                <img className="place-device-icon" src="/device-icons/item_log_pipe_01.png" alt="" aria-hidden="true" draggable={false} />
+                <span className="place-device-label">{t('left.placePipe')}</span>
+              </button>
 
-            <button className="place-device-button" onClick={() => eventBus.emit('left.blueprint.saveSelection', undefined)}>
-              <span className="operation-pointer-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                  <path d="M6 3H16L20 7V21H6V3ZM8 5V19H18V8H15V5H8ZM10 13H16V17H10V13Z" />
-                </svg>
-              </span>
-              <span className="place-device-label">{t('left.saveBlueprint')}</span>
-            </button>
-          </div>
+              <button className="place-device-button" onClick={() => eventBus.emit('left.blueprint.saveSelection', undefined)}>
+                <span className="operation-pointer-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M6 3H16L20 7V21H6V3ZM8 5V19H18V8H15V5H8ZM10 13H16V17H10V13Z" />
+                  </svg>
+                </span>
+                <span className="place-device-label">{t('left.saveBlueprint')}</span>
+              </button>
+            </div>
+          </LeftPanelSection>
 
-          <h3>{t('left.device')}</h3>
-          <div className="place-groups-scroll">
-            {placeGroupOrder.map((groupKey) => {
-              const devices = visiblePlaceableTypes.filter((deviceType) => getPlaceGroup(deviceType.id) === groupKey)
-              if (devices.length === 0) return null
-              return (
-                <section key={groupKey} className="place-group-section">
-                  <h4 className="place-group-title">{t(placeGroupLabelKey[groupKey])}</h4>
-                  <div className="place-device-grid">
-                    {devices.map((deviceType) => (
-                      <button
-                        key={deviceType.id}
-                        className={`place-device-button ${placeType === deviceType.id ? 'active' : ''}`}
-                        onClick={() => {
-                          eventBus.emit('left.place.operation.set', 'default')
-                          eventBus.emit('left.place.type.set', deviceType.id)
-                          eventBus.emit('ui.center.focus', undefined)
-                        }}
-                      >
-                        <img
-                          className="place-device-icon"
-                          src={getDeviceMenuIconPath(deviceType.id)}
-                          alt=""
-                          aria-hidden="true"
-                          draggable={false}
-                        />
-                        <span className="place-device-label">{getDeviceLabel(language, deviceType.id)}</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              )
-            })}
-          </div>
+          <LeftPanelSection title={t('left.device')} className="left-panel-section-fill">
+            <div className="place-groups-scroll">
+              {placeGroupOrder.map((groupKey) => {
+                const devices = visiblePlaceableTypes.filter((deviceType) => getPlaceGroup(deviceType.id) === groupKey)
+                if (devices.length === 0) return null
+                return (
+                  <section key={groupKey} className="place-group-section">
+                    <h4 className="place-group-title">{t(placeGroupLabelKey[groupKey])}</h4>
+                    <div className="place-device-grid">
+                      {devices.map((deviceType) => (
+                        <button
+                          key={deviceType.id}
+                          className={`place-device-button ${placeType === deviceType.id ? 'active' : ''}`}
+                          onClick={() => {
+                            eventBus.emit('left.place.operation.set', 'default')
+                            eventBus.emit('left.place.type.set', deviceType.id)
+                            eventBus.emit('ui.center.focus', undefined)
+                          }}
+                        >
+                          <img
+                            className="place-device-icon"
+                            src={getDeviceMenuIconPath(deviceType.id)}
+                            alt=""
+                            aria-hidden="true"
+                            draggable={false}
+                          />
+                          <span className="place-device-label">{getDeviceLabel(language, deviceType.id)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                )
+              })}
+            </div>
+          </LeftPanelSection>
         </>
       )}
 
       {!simIsRunning && mode === 'delete' && (
         <>
-          <h3>{t('left.deleteModeGroup')}</h3>
-          <div className="delete-belt-mode-row">
-            <span className="delete-belt-mode-label">{t('left.beltDeleteMode')}</span>
-            <label className="switch-toggle switch-toggle-inline" aria-label={t('left.beltDeleteMode')}>
-              <span className={`switch-side-label ${deleteTool !== 'wholeBelt' ? 'active' : ''}`}>{t('left.deleteSingle')}</span>
-              <input
-                type="checkbox"
-                checked={deleteTool === 'wholeBelt'}
-                onChange={(event) => {
-                  eventBus.emit('left.delete.tool.set', event.target.checked ? 'wholeBelt' : 'single')
-                }}
-              />
-              <span className="switch-track" aria-hidden="true">
-                <span className="switch-thumb" />
-              </span>
-              <span className={`switch-side-label ${deleteTool === 'wholeBelt' ? 'active' : ''}`}>{t('left.deleteWhole')}</span>
-            </label>
-          </div>
+          <LeftPanelSection title={t('left.deleteModeGroup')}>
+            <div className="delete-belt-mode-row">
+              <span className="delete-belt-mode-label">{t('left.beltDeleteMode')}</span>
+              <label className="switch-toggle switch-toggle-inline" aria-label={t('left.beltDeleteMode')}>
+                <span className={`switch-side-label ${deleteTool !== 'wholeBelt' ? 'active' : ''}`}>{t('left.deleteSingle')}</span>
+                <input
+                  type="checkbox"
+                  checked={deleteTool === 'wholeBelt'}
+                  onChange={(event) => {
+                    eventBus.emit('left.delete.tool.set', event.target.checked ? 'wholeBelt' : 'single')
+                  }}
+                />
+                <span className="switch-track" aria-hidden="true">
+                  <span className="switch-thumb" />
+                </span>
+                <span className={`switch-side-label ${deleteTool === 'wholeBelt' ? 'active' : ''}`}>{t('left.deleteWhole')}</span>
+              </label>
+            </div>
+          </LeftPanelSection>
 
-          <h3>{t('left.deleteOpsGroup')}</h3>
-          <button onClick={() => eventBus.emit('left.delete.all', undefined)}>{t('left.deleteAll')}</button>
-          <button onClick={() => eventBus.emit('left.delete.allBelts', undefined)}>{t('left.deleteAllBelts')}</button>
-          <button onClick={() => eventBus.emit('left.clearLot', undefined)}>{t('left.clearLot')}</button>
+          <LeftPanelSection title={t('left.deleteOpsGroup')}>
+            <button onClick={() => eventBus.emit('left.delete.all', undefined)}>{t('left.deleteAll')}</button>
+            <button onClick={() => eventBus.emit('left.delete.allBelts', undefined)}>{t('left.deleteAllBelts')}</button>
+            <button onClick={() => eventBus.emit('left.clearLot', undefined)}>{t('left.clearLot')}</button>
+          </LeftPanelSection>
         </>
       )}
 
       {!simIsRunning && mode === 'blueprint' && (
         <>
-          <h3>{t('left.blueprintSubMode')}</h3>
-          <div className="blueprint-top-actions">
-            <button
-              className="blueprint-action-button"
-              onClick={async () => {
-                const input = await uiEffects.prompt(t('dialog.blueprintImportPrompt'), '', {
-                  title: t('left.blueprintSubMode'),
-                  confirmText: t('dialog.ok'),
-                  cancelText: t('dialog.cancel'),
-                  variant: 'info',
-                })
-                if (input === null) return
-                eventBus.emit('left.blueprint.importText', input)
-              }}
-            >
-              {t('left.blueprintImportText')}
-            </button>
-            <button className="blueprint-action-button" onClick={() => blueprintFileInputRef.current?.click()}>
-              {t('left.blueprintImportFile')}
-            </button>
-            <input
-              ref={blueprintFileInputRef}
-              type="file"
-              accept=".json,application/json"
-              className="blueprint-file-input"
-              onChange={(event) => {
-                const input = event.currentTarget
-                const file = input.files?.item(0) ?? null
-                input.value = ''
-                if (!file) return
-                eventBus.emit('left.blueprint.importFile', file)
-              }}
-            />
-          </div>
+          <LeftPanelSection title={t('left.blueprintSubMode')}>
+            <div className="blueprint-top-actions">
+              <button
+                className="blueprint-action-button"
+                onClick={async () => {
+                  const input = await uiEffects.prompt(t('dialog.blueprintImportPrompt'), '', {
+                    title: t('left.blueprintSubMode'),
+                    confirmText: t('dialog.ok'),
+                    cancelText: t('dialog.cancel'),
+                    variant: 'info',
+                  })
+                  if (input === null) return
+                  eventBus.emit('left.blueprint.importText', input)
+                }}
+              >
+                {t('left.blueprintImportText')}
+              </button>
+              <button className="blueprint-action-button" onClick={() => blueprintFileInputRef.current?.click()}>
+                {t('left.blueprintImportFile')}
+              </button>
+              <input
+                ref={blueprintFileInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="blueprint-file-input"
+                onChange={(event) => {
+                  const input = event.currentTarget
+                  const file = input.files?.item(0) ?? null
+                  input.value = ''
+                  if (!file) return
+                  eventBus.emit('left.blueprint.importFile', file)
+                }}
+              />
+            </div>
+          </LeftPanelSection>
           {blueprints.length === 0 ? (
             <div className="place-group-empty">{t('left.blueprintEmpty')}</div>
           ) : (
             <div className="place-groups-scroll">
               {userBlueprints.length > 0 && (
-                <section className="place-group-section">
-                  <h4 className="place-group-title">{t('left.blueprintUserGroup')}</h4>
+                <LeftPanelSection title={t('left.blueprintUserGroup')} className="left-panel-section-fill">
                   <div className="blueprint-list">
                     {userBlueprints.map((blueprint) => (
                       <div
@@ -298,11 +286,10 @@ export function LeftPanel({ onCollapse }: LeftPanelProps) {
                       </div>
                     ))}
                   </div>
-                </section>
+                </LeftPanelSection>
               )}
 
-              <section className="place-group-section">
-                <h4 className="place-group-title">{t('left.blueprintPublicGroup')}</h4>
+              <LeftPanelSection title={t('left.blueprintPublicGroup')} className="left-panel-section-fill">
                 {systemBlueprints.length === 0 ? (
                   <div className="place-group-empty">{t('left.blueprintPublicEmpty')}</div>
                 ) : (
@@ -354,7 +341,7 @@ export function LeftPanel({ onCollapse }: LeftPanelProps) {
                     ))}
                   </div>
                 )}
-              </section>
+              </LeftPanelSection>
             </div>
           )}
         </>

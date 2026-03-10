@@ -33,17 +33,19 @@ import type {
 } from './domain/types'
 import { usePersistentState } from './core/usePersistentState'
 import { createTranslator, getItemLabel, type Language } from './i18n'
-import { WikiPanel } from './ui/wikiPanel.tsx'
-import { PlannerPanel } from './ui/plannerPanel.tsx'
 import { useAppContext } from './app/AppContext'
 import { WorkbenchProvider } from './app/WorkbenchContext'
+import { ActivityBar } from './ui/panels/ActivityBar'
 import { LeftPanel } from './ui/panels/LeftPanel'
 import { CenterPanel } from './ui/panels/CenterPanel'
 import { RightPanel } from './ui/panels/RightPanel'
 import { TopBar } from './ui/TopBar'
 import { SiteInfoBar } from './ui/SiteInfoBar'
+import { ToolDialog } from './ui/dialogs/ToolDialog'
+import { HelpDialog } from './ui/dialogs/HelpDialog'
 import { ItemPickerDialog } from './ui/dialogs/ItemPickerDialog'
 import { PortPriorityConfigDialog } from './ui/dialogs/PortPriorityConfigDialog'
+import { SettingsDialog } from './ui/dialogs/SettingsDialog'
 import { StorageSlotConfigDialog } from './ui/dialogs/StorageSlotConfigDialog'
 import { WorldContent } from './ui/world/WorldContent'
 import { StaticDeviceLayer } from './ui/world/StaticDeviceLayer'
@@ -163,10 +165,6 @@ function normalizePowerDemandOverrideKw(value: number | null | undefined) {
 
 function App() {
   const currentYear = new Date().getFullYear()
-  const [leftPanelWidth, setLeftPanelWidth] = usePersistentState<number>('stage1-left-panel-width', 340)
-  const [rightPanelWidth, setRightPanelWidth] = usePersistentState<number>('stage1-right-panel-width', 340)
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = usePersistentState<boolean>('stage4-left-panel-collapsed', false)
-  const [rightPanelCollapsed, setRightPanelCollapsed] = usePersistentState<boolean>('stage4-right-panel-collapsed', false)
   const [powerMode, setPowerMode] = usePersistentState<PowerMode>('stage3-power-mode', 'infinite')
   const [initialBatteryPercent, setInitialBatteryPercent] = usePersistentState<number>('stage3-initial-battery-percent', 100)
   const [configuredPowerDemandOverrideKw, setConfiguredPowerDemandOverrideKw] = usePersistentState<number | null>(
@@ -187,8 +185,27 @@ function App() {
   const resizeStateRef = useRef<null | { side: 'left' | 'right'; startX: number; startWidth: number }>(null)
 
   const {
-    state: { isWikiOpen, isPlannerOpen, language, superRecipeEnabled },
-    actions: { closeWiki, closePlanner },
+    state: {
+      isToolOpen,
+      isHelpOpen,
+      isSettingsOpen,
+      language,
+      superRecipeEnabled,
+      uiTheme,
+      leftPanelWidth,
+      rightPanelWidth,
+      leftPanelCollapsed,
+      rightPanelCollapsed,
+    },
+    actions: {
+      closeTool,
+      closeHelp,
+      closeSettings,
+      setLeftPanelWidth,
+      setRightPanelWidth,
+      setLeftPanelCollapsed,
+      setRightPanelCollapsed,
+    },
     editor: {
       state: {
         mode,
@@ -626,17 +643,17 @@ function App() {
   }, [powerPolePlacementPreview.previewOutline, powerRangeOutlines])
 
   const uiHint = sim.isRunning
-    ? t('top.runningHint')
+    ? t('status.running')
     : mode === 'blueprint'
-      ? t('top.blueprintHint')
+      ? t('status.mode.blueprint')
       : mode === 'delete'
-        ? t('top.deleteHint')
-        : t('top.editHint')
+        ? t('status.mode.delete')
+        : t('status.mode.place')
 
   const effectiveLeftPanelWidth = leftPanelCollapsed ? 0 : leftPanelWidth
   const effectiveRightPanelWidth = rightPanelCollapsed ? 0 : rightPanelWidth
-  const leftPanelRailWidth = leftPanelCollapsed ? 28 : 8
-  const rightPanelRailWidth = rightPanelCollapsed ? 28 : 8
+  const leftPanelRailWidth = leftPanelCollapsed ? 0 : 6
+  const rightPanelRailWidth = rightPanelCollapsed ? 0 : 6
 
   const ignoredInfiniteItemIds = useMemo(() => {
     const itemIds = new Set<ItemId>()
@@ -980,12 +997,15 @@ function App() {
   ])
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-theme={uiTheme}>
       <TopBar
-        uiHint={uiHint}
         isRunning={sim.isRunning}
         speed={sim.speed}
         cellSize={cellSize}
+        leftPanelCollapsed={leftPanelCollapsed}
+        rightPanelCollapsed={rightPanelCollapsed}
+        onToggleLeftPanel={() => setLeftPanelCollapsed((current) => !current)}
+        onToggleRightPanel={() => setRightPanelCollapsed((current) => !current)}
         t={t}
       />
 
@@ -998,6 +1018,8 @@ function App() {
           ['--right-panel-rail-width' as string]: `${rightPanelRailWidth}px`,
         }}
       >
+        <ActivityBar simIsRunning={sim.isRunning} />
+
         <div className={`panel-slot panel-slot-left${leftPanelCollapsed ? ' is-collapsed' : ''}`} aria-hidden={leftPanelCollapsed}>
           {!leftPanelCollapsed && (
             <WorkbenchProvider
@@ -1023,7 +1045,7 @@ function App() {
                 statsAndDebugSection,
               }}
             >
-              <LeftPanel onCollapse={() => setLeftPanelCollapsed(true)} />
+              <LeftPanel />
             </WorkbenchProvider>
           )}
         </div>
@@ -1038,28 +1060,7 @@ function App() {
           role="separator"
           aria-orientation="vertical"
           aria-label="Resize left panel"
-        >
-          {leftPanelCollapsed && (
-            <button
-              type="button"
-              className="panel-drawer-toggle panel-drawer-toggle-left"
-              aria-label={t('panel.leftExpand')}
-              title={t('panel.leftExpand')}
-              onMouseDown={(event) => {
-                event.preventDefault()
-                event.stopPropagation()
-              }}
-              onClick={(event) => {
-                event.preventDefault()
-                event.stopPropagation()
-                setLeftPanelCollapsed(false)
-              }}
-            >
-              <span className="panel-drawer-toggle-arrow" aria-hidden="true">›</span>
-              <span className="panel-drawer-toggle-label">{t('panel.leftDrawer')}</span>
-            </button>
-          )}
-        </div>
+        />
 
         <CenterPanel
           viewportRef={viewportRef}
@@ -1084,28 +1085,7 @@ function App() {
           role="separator"
           aria-orientation="vertical"
           aria-label="Resize right panel"
-        >
-          {rightPanelCollapsed && (
-            <button
-              type="button"
-              className="panel-drawer-toggle panel-drawer-toggle-right"
-              aria-label={t('panel.rightExpand')}
-              title={t('panel.rightExpand')}
-              onMouseDown={(event) => {
-                event.preventDefault()
-                event.stopPropagation()
-              }}
-              onClick={(event) => {
-                event.preventDefault()
-                event.stopPropagation()
-                setRightPanelCollapsed(false)
-              }}
-            >
-              <span className="panel-drawer-toggle-arrow" aria-hidden="true">‹</span>
-              <span className="panel-drawer-toggle-label">{t('panel.rightDrawer')}</span>
-            </button>
-          )}
-        </div>
+        />
 
         <div className={`panel-slot panel-slot-right${rightPanelCollapsed ? ' is-collapsed' : ''}`} aria-hidden={rightPanelCollapsed}>
           {!rightPanelCollapsed && (
@@ -1164,13 +1144,12 @@ function App() {
               updateReactorLiquidOutputItemA={updateReactorLiquidOutputItemA}
               updateReactorLiquidOutputItemB={updateReactorLiquidOutputItemB}
               simIsRunning={sim.isRunning}
-              onCollapse={() => setRightPanelCollapsed(true)}
             />
           )}
         </div>
       </main>
 
-      <SiteInfoBar currentYear={currentYear} t={t} />
+      <SiteInfoBar currentYear={currentYear} uiHint={uiHint} uiTheme={uiTheme} t={t} />
 
       {itemPickerState && pickerTargetDevice && (
         <ItemPickerDialog
@@ -1265,8 +1244,9 @@ function App() {
         />
       )}
 
-      {isWikiOpen && <WikiPanel language={language} t={t} superRecipeEnabled={superRecipeEnabled} onClose={closeWiki} />}
-      {isPlannerOpen && <PlannerPanel language={language} t={t} superRecipeEnabled={superRecipeEnabled} onClose={closePlanner} />}
+      {isToolOpen && <ToolDialog language={language} t={t} superRecipeEnabled={superRecipeEnabled} onClose={closeTool} />}
+      {isHelpOpen && <HelpDialog language={language} t={t} onClose={closeHelp} />}
+      {isSettingsOpen && <SettingsDialog t={t} onClose={closeSettings} />}
     </div>
   )
 }

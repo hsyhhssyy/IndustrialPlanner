@@ -1,60 +1,63 @@
-import { LANGUAGE_OPTIONS, type Language } from '../i18n'
 import { useAppContext } from '../app/AppContext'
 
 type TopBarProps = {
-  uiHint: string
   isRunning: boolean
   speed: 0 | 0.25 | 1 | 2 | 4 | 16
   cellSize: number
+  leftPanelCollapsed: boolean
+  rightPanelCollapsed: boolean
+  onToggleLeftPanel: () => void
+  onToggleRightPanel: () => void
   t: (key: string, params?: Record<string, string | number>) => string
 }
 
 export function TopBar({
-  uiHint,
   isRunning,
   speed,
   cellSize,
+  leftPanelCollapsed,
+  rightPanelCollapsed,
+  onToggleLeftPanel,
+  onToggleRightPanel,
   t,
 }: TopBarProps) {
-  const {
-    eventBus,
-    state: { language, superRecipeEnabled, superRecipeControlMode },
-    actions: { setSuperRecipeEnabled },
-  } = useAppContext()
+  const { eventBus } = useAppContext()
 
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <div className="topbar-title">{t('app.title')}</div>
-        <label className="language-switch">
-          <span>{t('app.language')}</span>
-          <select value={language} onChange={(event) => eventBus.emit('app.language.set', event.target.value as Language)}>
-            {LANGUAGE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button onClick={() => eventBus.emit('ui.wiki.open', undefined)}>{t('top.wiki')}</button>
-        <button onClick={() => eventBus.emit('ui.planner.open', undefined)}>{t('top.planner')}</button>
-        <div className="topbar-super-recipe">
-          <span>{t('top.superRecipe')}</span>
-          <label className="switch-toggle" aria-label={t('top.superRecipe')}>
-            <input
-              type="checkbox"
-              checked={superRecipeEnabled}
-              disabled={superRecipeControlMode === 'forced-off'}
-              onChange={(event) => setSuperRecipeEnabled(event.target.checked)}
-            />
-            <span className="switch-track" aria-hidden="true">
-              <span className="switch-thumb" />
+        <div className="topbar-panel-toggles" role="group" aria-label={t('top.panelToggles')}>
+          <button
+            type="button"
+            className={`topbar-toggle-btn ${!leftPanelCollapsed ? 'active' : ''}`.trim()}
+            onClick={onToggleLeftPanel}
+            aria-pressed={!leftPanelCollapsed}
+            title={t('top.toggleLeftPanel')}
+          >
+            <span className="topbar-toggle-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M4 5H20V19H4V5ZM6 7V17H10V7H6ZM12 7V17H18V7H12Z" />
+              </svg>
             </span>
-          </label>
+          </button>
+          <button
+            type="button"
+            className={`topbar-toggle-btn ${!rightPanelCollapsed ? 'active' : ''}`.trim()}
+            onClick={onToggleRightPanel}
+            aria-pressed={!rightPanelCollapsed}
+            title={t('top.toggleRightPanel')}
+          >
+            <span className="topbar-toggle-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M4 5H20V19H4V5ZM6 7V17H12V7H6ZM14 7V17H18V7H14Z" />
+              </svg>
+            </span>
+          </button>
         </div>
+        <div className="topbar-title">{t('app.title')}</div>
       </div>
+
       <div className="topbar-controls">
-        <span className="hint hint-dynamic">{uiHint}</span>
         {isRunning && speed === 0 && <span className="hint hint-paused">{t('top.pausedIndicator')}</span>}
         <span className="hint">{t('top.zoomHint', { size: cellSize })}</span>
         {!isRunning ? (

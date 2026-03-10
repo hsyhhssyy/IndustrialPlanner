@@ -13,6 +13,10 @@ type PlannerPanelProps = {
   onClose: () => void
 }
 
+type PlannerPanelContentProps = PlannerPanelProps & {
+  embedded?: boolean
+}
+
 type PlannerTargetRow = {
   id: string
   itemId: ItemId
@@ -276,7 +280,7 @@ function collectDemandByItem(roots: PlannerTreeNode[]) {
   return demandByItem
 }
 
-export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: PlannerPanelProps) {
+export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, embedded = false }: PlannerPanelContentProps) {
   const [plannerState, setPlannerState] = usePersistentState<PlannerPersistedState>(
     'stage2-planner-state',
     {
@@ -1729,28 +1733,8 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
     event.preventDefault()
   }
 
-  return (
-    <div className="global-dialog-backdrop" role="presentation" onClick={onClose}>
-      <div
-        ref={dialogRef}
-        className="global-dialog planner-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('planner.title')}
-        style={{
-          left: `${plannerState.position?.x ?? Math.round(window.innerWidth * 0.1)}px`,
-          top: `${plannerState.position?.y ?? Math.round(window.innerHeight * 0.1)}px`,
-        }}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="planner-dialog-header" onMouseDown={onHeaderMouseDown}>
-          <div className="global-dialog-title planner-title">{t('planner.title')}</div>
-          <button className="global-dialog-btn" onClick={onClose}>
-            {t('planner.close')}
-          </button>
-        </div>
-
-        <div className="planner-dialog-body">
+  const body = (
+    <div className={`planner-dialog-body ${embedded ? 'planner-dialog-body--embedded' : ''}`.trim()}>
           <aside className="planner-target-pane">
             <div className="planner-pane-head">
               <h4>{t('planner.targets')}</h4>
@@ -2065,7 +2049,39 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
             </section>
           </div>
         </div>
+  )
+
+  if (embedded) {
+    return <div className="planner-embedded-surface">{body}</div>
+  }
+
+  return (
+    <div className="global-dialog-backdrop" role="presentation" onClick={onClose}>
+      <div
+        ref={dialogRef}
+        className="global-dialog planner-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('planner.title')}
+        style={{
+          left: `${plannerState.position?.x ?? Math.round(window.innerWidth * 0.1)}px`,
+          top: `${plannerState.position?.y ?? Math.round(window.innerHeight * 0.1)}px`,
+        }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="planner-dialog-header" onMouseDown={onHeaderMouseDown}>
+          <div className="global-dialog-title planner-title">{t('planner.title')}</div>
+          <button className="global-dialog-btn" onClick={onClose}>
+            {t('planner.close')}
+          </button>
+        </div>
+
+        {body}
       </div>
     </div>
   )
+}
+
+export function PlannerPanel(props: PlannerPanelProps) {
+  return <PlannerPanelContent {...props} />
 }

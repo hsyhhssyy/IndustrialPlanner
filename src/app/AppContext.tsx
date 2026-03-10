@@ -3,6 +3,7 @@ import { usePersistentState } from '../core/usePersistentState'
 import type { DeviceTypeId, EditMode } from '../domain/types'
 import type { Language } from '../i18n'
 import { TypedEventBus } from './eventBus'
+import { normalizeAppSettings, readAppSettings, writeAppSettings, type UiTheme } from './settings'
 import {
   normalizeSuperRecipeEnabledPreference,
   SUPER_RECIPE_CONTROL_MODE,
@@ -15,10 +16,6 @@ type Cell = { x: number; y: number }
 type DragRect = { x1: number; y1: number; x2: number; y2: number }
 
 export type AppEventMap = {
-  'ui.wiki.open': undefined
-  'ui.wiki.close': undefined
-  'ui.planner.open': undefined
-  'ui.planner.close': undefined
   'app.language.set': Language
   'sim.control.start': undefined
   'sim.control.stop': undefined
@@ -45,11 +42,17 @@ export type AppEventMap = {
 }
 
 type AppContextState = {
-  isWikiOpen: boolean
-  isPlannerOpen: boolean
+  isToolOpen: boolean
+  isHelpOpen: boolean
+  isSettingsOpen: boolean
   language: Language
   superRecipeEnabled: boolean
   superRecipeControlMode: SuperRecipeControlMode
+  uiTheme: UiTheme
+  leftPanelWidth: number
+  rightPanelWidth: number
+  leftPanelCollapsed: boolean
+  rightPanelCollapsed: boolean
 }
 
 type EditorState = {
@@ -99,12 +102,19 @@ type EditorActions = {
 }
 
 type AppContextActions = {
-  openWiki: () => void
-  closeWiki: () => void
-  openPlanner: () => void
-  closePlanner: () => void
+  openTool: () => void
+  closeTool: () => void
+  openHelp: () => void
+  closeHelp: () => void
+  openSettings: () => void
+  closeSettings: () => void
   setLanguage: (language: Language) => void
   setSuperRecipeEnabled: (enabled: boolean) => void
+  setUiTheme: (theme: UiTheme) => void
+  setLeftPanelWidth: Dispatch<SetStateAction<number>>
+  setRightPanelWidth: Dispatch<SetStateAction<number>>
+  setLeftPanelCollapsed: Dispatch<SetStateAction<boolean>>
+  setRightPanelCollapsed: Dispatch<SetStateAction<boolean>>
 }
 
 type AppContextValue = {
@@ -120,17 +130,12 @@ type AppContextValue = {
 const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = usePersistentState<Language>('stage1-language', 'zh-CN')
   const [mode, setMode] = usePersistentState<EditMode>('stage1-mode', 'place')
   const [placeType, setPlaceType] = usePersistentState<DeviceTypeId | ''>('stage1-place-type', '')
   const [placeRotation, setPlaceRotation] = usePersistentState<0 | 90 | 180 | 270>('stage1-place-rotation', 0)
   const [deleteTool, setDeleteTool] = usePersistentState<'single' | 'wholeBelt' | 'box'>('stage1-delete-tool', 'single')
   const [cellSize, setCellSize] = usePersistentState<number>('stage1-cell-size', 64)
-  const [superRecipeEnabledPreference, setSuperRecipeEnabledPreference] = usePersistentState<boolean>(
-    'stage4-super-recipe-enabled',
-    false,
-    normalizeSuperRecipeEnabledPreference,
-  )
+  const [settings, setSettings] = useState(() => normalizeAppSettings(readAppSettings()))
   const [placeOperation, setPlaceOperation] = useState<PlaceOperation>('default')
   const [viewOffset, setViewOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [selection, setSelection] = useState<string[]>([])
@@ -146,27 +151,63 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [dragStartCell, setDragStartCell] = useState<Cell | null>(null)
   const [dragRect, setDragRect] = useState<DragRect | null>(null)
   const [dragOrigin, setDragOrigin] = useState<Cell | null>(null)
-  const [isWikiOpen, setIsWikiOpen] = useState(false)
-  const [isPlannerOpen, setIsPlannerOpen] = useState(false)
+  const [activeDialog, setActiveDialog] = useState<'tool' | 'help' | 'settings' | null>(null)
   const eventBus = useMemo(() => new TypedEventBus<AppEventMap>(), [])
-  const superRecipeEnabled = SUPER_RECIPE_CONTROL_MODE === 'forced-off' ? false : superRecipeEnabledPreference
+  const superRecipeEnabled = SUPER_RECIPE_CONTROL_MODE === 'forced-off' ? false : normalizeSuperRecipeEnabledPreference(settings.superRecipeEnabled)
+  const { language, uiTheme, leftPanelWidth, rightPanelWidth, leftPanelCollapsed, rightPanelCollapsed } = settings
+
+  useEffect(() => {
+    writeAppSettings(settings)
+  }, [settings])
+
+  const setLanguage = useCallback((language: Language) => {
+    setSettings((current) => ({ ...current, language }))
+  }, [])
+
+  const setUiTheme = useCallback((uiTheme: UiTheme) => {
+    setSettings((current) => ({ ...current, uiTheme }))
+  }, [])
+
+  const setLeftPanelWidth = useCallback<Dispatch<SetStateAction<number>>>((value) => {
+    setSettings((current) => ({
+      ...current,
+      leftPanelWidth: normalizeAppSettings({ ...current, leftPanelWidth: typeof value === 'function' ? value(current.leftPanelWidth) : value }).leftPanelWidth,
+    }))
+  }, [])
+
+  const setRightPanelWidth = useCallback<Dispatch<SetStateAction<number>>>((value) => {
+    setSettings((current) => ({
+      ...current,
+      rightPanelWidth: normalizeAppSettings({ ...current, rightPanelWidth: typeof value === 'function' ? value(current.rightPanelWidth) : value }).rightPanelWidth,
+    }))
+  }, [])
+
+  const setLeftPanelCollapsed = useCallback<Dispatch<SetStateAction<boolean>>>((value) => {
+    setSettings((current) => ({
+      ...current,
+      leftPanelCollapsed: typeof value === 'function' ? value(current.leftPanelCollapsed) : value,
+    }))
+  }, [])
+
+  const setRightPanelCollapsed = useCallback<Dispatch<SetStateAction<boolean>>>((value) => {
+    setSettings((current) => ({
+      ...current,
+      rightPanelCollapsed: typeof value === 'function' ? value(current.rightPanelCollapsed) : value,
+    }))
+  }, [])
 
   const setSuperRecipeEnabled = useCallback(
     (enabled: boolean) => {
       if (SUPER_RECIPE_CONTROL_MODE === 'forced-off') {
-        setSuperRecipeEnabledPreference(false)
+        setSettings((current) => ({ ...current, superRecipeEnabled: false }))
         return
       }
-      setSuperRecipeEnabledPreference(Boolean(enabled))
+      setSettings((current) => ({ ...current, superRecipeEnabled: Boolean(enabled) }))
     },
-    [setSuperRecipeEnabledPreference],
+    [],
   )
 
   useEffect(() => {
-    const unsubscribeOpenWiki = eventBus.on('ui.wiki.open', () => setIsWikiOpen(true))
-    const unsubscribeCloseWiki = eventBus.on('ui.wiki.close', () => setIsWikiOpen(false))
-    const unsubscribeOpenPlanner = eventBus.on('ui.planner.open', () => setIsPlannerOpen(true))
-    const unsubscribeClosePlanner = eventBus.on('ui.planner.close', () => setIsPlannerOpen(false))
     const unsubscribeSetLanguage = eventBus.on('app.language.set', (nextLanguage) => setLanguage(nextLanguage))
     const unsubscribeSetMode = eventBus.on('left.mode.set', (nextMode) => setMode(nextMode))
     const unsubscribeSetPlaceOperation = eventBus.on('left.place.operation.set', (nextOperation) => setPlaceOperation(nextOperation))
@@ -178,10 +219,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
     const unsubscribeSetDeleteTool = eventBus.on('left.delete.tool.set', (nextTool) => setDeleteTool(nextTool))
     return () => {
-      unsubscribeOpenWiki()
-      unsubscribeCloseWiki()
-      unsubscribeOpenPlanner()
-      unsubscribeClosePlanner()
       unsubscribeSetLanguage()
       unsubscribeSetMode()
       unsubscribeSetPlaceOperation()
@@ -198,32 +235,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [mode, setMode])
 
   useEffect(() => {
-    if (!isWikiOpen && !isPlannerOpen) return
+    if (!activeDialog) return
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
-      setIsWikiOpen(false)
-      setIsPlannerOpen(false)
+      setActiveDialog(null)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [isPlannerOpen, isWikiOpen])
+  }, [activeDialog])
 
   const value = useMemo<AppContextValue>(
     () => ({
       state: {
-        isWikiOpen,
-        isPlannerOpen,
+        isToolOpen: activeDialog === 'tool',
+        isHelpOpen: activeDialog === 'help',
+        isSettingsOpen: activeDialog === 'settings',
         language,
         superRecipeEnabled,
         superRecipeControlMode: SUPER_RECIPE_CONTROL_MODE,
+        uiTheme,
+        leftPanelWidth,
+        rightPanelWidth,
+        leftPanelCollapsed,
+        rightPanelCollapsed,
       },
       actions: {
-        openWiki: () => setIsWikiOpen(true),
-        closeWiki: () => setIsWikiOpen(false),
-        openPlanner: () => setIsPlannerOpen(true),
-        closePlanner: () => setIsPlannerOpen(false),
+        openTool: () => setActiveDialog('tool'),
+        closeTool: () => setActiveDialog((current) => (current === 'tool' ? null : current)),
+        openHelp: () => setActiveDialog('help'),
+        closeHelp: () => setActiveDialog((current) => (current === 'help' ? null : current)),
+        openSettings: () => setActiveDialog('settings'),
+        closeSettings: () => setActiveDialog((current) => (current === 'settings' ? null : current)),
         setLanguage,
         setSuperRecipeEnabled,
+        setUiTheme,
+        setLeftPanelWidth,
+        setRightPanelWidth,
+        setLeftPanelCollapsed,
+        setRightPanelCollapsed,
       },
       editor: {
         state: {
@@ -286,9 +335,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dragStartCell,
       eventBus,
       hoverCell,
-      isPlannerOpen,
-      isWikiOpen,
+      activeDialog,
       language,
+      leftPanelCollapsed,
+      leftPanelWidth,
       logCurrent,
       logStart,
       logTrace,
@@ -296,14 +346,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
       placeOperation,
       placeRotation,
       placeType,
+      rightPanelCollapsed,
+      rightPanelWidth,
       selection,
       setDeleteTool,
       setLanguage,
+      setLeftPanelCollapsed,
+      setLeftPanelWidth,
       setMode,
       setPlaceRotation,
       setPlaceType,
+      setRightPanelCollapsed,
+      setRightPanelWidth,
       setSuperRecipeEnabled,
+      setUiTheme,
       superRecipeEnabled,
+      uiTheme,
       viewOffset,
     ],
   )

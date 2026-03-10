@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { BASES, DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import type { BaseDef, BaseId, DeviceInstance, DeviceRuntime, ItemId, LayoutState, PowerMode, SimState, SlotData } from '../../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../../i18n'
@@ -120,7 +120,27 @@ type RightPanelProps = {
   updateReactorLiquidOutputItemA: (deviceInstanceId: string, itemId: ItemId | null) => void
   updateReactorLiquidOutputItemB: (deviceInstanceId: string, itemId: ItemId | null) => void
   simIsRunning: boolean
-  onCollapse: () => void
+}
+
+type RightPanelSectionProps = {
+  title: string
+  defaultOpen?: boolean
+  className?: string
+  children: ReactNode
+}
+
+function RightPanelSection({ title, defaultOpen = true, className, children }: RightPanelSectionProps) {
+  const [open, setOpen] = useState(defaultOpen)
+
+  return (
+    <section className={`workbench-section right-workbench-section ${open ? 'is-open' : 'is-collapsed'} ${className ?? ''}`.trim()}>
+      <button type="button" className="workbench-section-header" onClick={() => setOpen((current) => !current)}>
+        <span>{title}</span>
+        <span className="workbench-section-chevron" aria-hidden="true">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && <div className="workbench-section-body">{children}</div>}
+    </section>
+  )
 }
 
 export function RightPanel({
@@ -178,7 +198,6 @@ export function RightPanel({
   updateReactorLiquidOutputItemA,
   updateReactorLiquidOutputItemB,
   simIsRunning,
-  onCollapse,
 }: RightPanelProps) {
   const slotConfigSupportedTypeIds = new Set<DeviceInstance['typeId']>([
     'item_port_storager_1',
@@ -292,140 +311,135 @@ export function RightPanel({
   const effectivePowerDemandKw = sim.isRunning ? sim.powerStats.totalDemandKw : (powerDemandOverrideKw ?? totalPowerDemandKw)
 
   return (
-    <aside className="panel right-panel">
-      <div className="right-lot-heading">
-        <h3>{t('right.lot')}</h3>
-        <span
-          className="right-lot-tooltip-wrap"
-          onMouseEnter={() => setShowMultiBaseTooltip(true)}
-          onMouseLeave={() => setShowMultiBaseTooltip(false)}
-        >
-          <button
-            type="button"
-            className="right-lot-tooltip-trigger"
-            aria-label={t('right.multiBaseHintLabel')}
-            onClick={() => setShowMultiBaseTooltip((current) => !current)}
-            onBlur={() => setShowMultiBaseTooltip(false)}
+    <aside className="panel right-panel workbench-sidebar-panel">
+      <RightPanelSection title={t('right.lot')} className="right-panel-section-base">
+        <div className="right-lot-heading">
+          <span
+            className="right-lot-tooltip-wrap"
+            onMouseEnter={() => setShowMultiBaseTooltip(true)}
+            onMouseLeave={() => setShowMultiBaseTooltip(false)}
           >
-            {t('right.multiBaseHintLabel')}
-          </button>
-          {showMultiBaseTooltip && (
-            <span className="right-lot-tooltip-bubble" role="tooltip">
-              {t('right.multiBaseHintContent')}
-            </span>
-          )}
-        </span>
-        <button
-          type="button"
-          className="panel-heading-toggle panel-heading-toggle-right"
-          aria-label={t('panel.rightCollapse')}
-          title={t('panel.rightCollapse')}
-          onClick={() => onCollapse()}
-        >
-          {t('panel.collapseButton')}
-        </button>
-      </div>
-      {simIsRunning ? (
-        <section className="base-group-section">
-          <p className="base-group-title">{currentBase.name}</p>
-        </section>
-      ) : (
-        baseGroups.map((group) => {
-          const groupedBases = BASES.filter((base) => base.tags.includes(group.tag))
-          return (
-            <section key={group.key} className="base-group-section">
-              <h4 className="base-group-title">{t(group.titleKey)}</h4>
-              <div className="row">
-                {groupedBases.length > 0 ? (
-                  groupedBases.map((base) => (
-                    <button
-                      key={base.id}
-                      className={currentBaseId === base.id ? 'active' : ''}
-                      onClick={() => {
-                        if (simIsRunning) return
-                        setActiveBaseId(base.id)
-                        setSelection([])
-                      }}
-                    >
-                      {base.name}
-                    </button>
-                  ))
-                ) : (
-                  <p className="base-group-empty">{t('right.baseGroup.empty')}</p>
-                )}
-              </div>
-            </section>
-          )
-        })
-      )}
-      <div className="kv"><span>{t('right.basePlaceableSize')}</span><span>{currentBase.placeableSize}x{currentBase.placeableSize}</span></div>
-      <div className="kv"><span>{t('right.totalPowerDemand')}</span><span>{totalPowerDemandKw} kW</span></div>
-      <div className="kv">
-        <span>{t('right.powerDemandOverride')}</span>
-        <span>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={powerDemandOverrideKw ?? ''}
-            placeholder={t('right.followRealDemand')}
-            onChange={(event) => {
-              const rawValue = event.target.value.trim()
-              if (rawValue.length === 0) {
-                setPowerDemandOverrideKw(null)
-                return
-              }
-              const parsed = Number.parseInt(rawValue, 10)
-              setPowerDemandOverrideKw(Number.isFinite(parsed) ? parsed : null)
-            }}
-          />
-        </span>
-      </div>
-      <div className="kv"><span>{t('right.powerDemandEffective')}</span><span>{effectivePowerDemandKw} kW</span></div>
-      <div className="kv">
-        <span>{t('right.powerMode')}</span>
-        <span>
-          <select
-            value={powerMode}
-            disabled={simIsRunning}
-            onChange={(event) => setPowerMode(event.target.value as PowerMode)}
-          >
-            <option value="real">{t('right.powerMode.real')}</option>
-            <option value="infinite">{t('right.powerMode.infinite')}</option>
-          </select>
-        </span>
-      </div>
-      {powerMode === 'real' && (
+            <button
+              type="button"
+              className="right-lot-tooltip-trigger"
+              aria-label={t('right.multiBaseHintLabel')}
+              onClick={() => setShowMultiBaseTooltip((current) => !current)}
+              onBlur={() => setShowMultiBaseTooltip(false)}
+            >
+              {t('right.multiBaseHintLabel')}
+            </button>
+            {showMultiBaseTooltip && (
+              <span className="right-lot-tooltip-bubble" role="tooltip">
+                {t('right.multiBaseHintContent')}
+              </span>
+            )}
+          </span>
+        </div>
+        {simIsRunning ? (
+          <section className="base-group-section">
+            <p className="base-group-title">{currentBase.name}</p>
+          </section>
+        ) : (
+          baseGroups.map((group) => {
+            const groupedBases = BASES.filter((base) => base.tags.includes(group.tag))
+            return (
+              <section key={group.key} className="base-group-section">
+                <h4 className="base-group-title">{t(group.titleKey)}</h4>
+                <div className="row">
+                  {groupedBases.length > 0 ? (
+                    groupedBases.map((base) => (
+                      <button
+                        key={base.id}
+                        className={currentBaseId === base.id ? 'active' : ''}
+                        onClick={() => {
+                          if (simIsRunning) return
+                          setActiveBaseId(base.id)
+                          setSelection([])
+                        }}
+                      >
+                        {base.name}
+                      </button>
+                    ))
+                  ) : (
+                    <p className="base-group-empty">{t('right.baseGroup.empty')}</p>
+                  )}
+                </div>
+              </section>
+            )
+          })
+        )}
+        <div className="kv"><span>{t('right.basePlaceableSize')}</span><span>{currentBase.placeableSize}x{currentBase.placeableSize}</span></div>
         <div className="kv">
-          <span>{t('right.initialBatteryPercent')}</span>
+          <span>{t('right.baseOuterRing')}</span>
+          <span>
+            T{currentBase.outerRing.top} R{currentBase.outerRing.right} B{currentBase.outerRing.bottom} L{currentBase.outerRing.left}
+          </span>
+        </div>
+        <div className="kv"><span>{t('right.baseTags')}</span><span>{currentBase.tags.join(', ') || '-'}</span></div>
+      </RightPanelSection>
+
+      <RightPanelSection title={t('right.powerSection')} className="right-panel-section-power">
+        <div className="kv"><span>{t('right.totalPowerDemand')}</span><span>{totalPowerDemandKw} kW</span></div>
+        <div className="kv">
+          <span>{t('right.powerDemandOverride')}</span>
           <span>
             <input
               type="number"
               min={0}
-              max={100}
               step={1}
-              value={initialBatteryPercent}
-              disabled={simIsRunning}
+              value={powerDemandOverrideKw ?? ''}
+              placeholder={t('right.followRealDemand')}
               onChange={(event) => {
-                const parsed = Number.parseInt(event.target.value, 10)
-                const normalized = Number.isFinite(parsed) ? Math.min(100, Math.max(0, parsed)) : 0
-                setInitialBatteryPercent(normalized)
+                const rawValue = event.target.value.trim()
+                if (rawValue.length === 0) {
+                  setPowerDemandOverrideKw(null)
+                  return
+                }
+                const parsed = Number.parseInt(rawValue, 10)
+                setPowerDemandOverrideKw(Number.isFinite(parsed) ? parsed : null)
               }}
             />
           </span>
         </div>
-      )}
-      <div className="kv">
-        <span>{t('right.baseOuterRing')}</span>
-        <span>
-          T{currentBase.outerRing.top} R{currentBase.outerRing.right} B{currentBase.outerRing.bottom} L{currentBase.outerRing.left}
-        </span>
-      </div>
-      <div className="kv"><span>{t('right.baseTags')}</span><span>{currentBase.tags.join(', ') || '-'}</span></div>
+        <div className="kv"><span>{t('right.powerDemandEffective')}</span><span>{effectivePowerDemandKw} kW</span></div>
+        <div className="kv">
+          <span>{t('right.powerMode')}</span>
+          <span>
+            <select
+              value={powerMode}
+              disabled={simIsRunning}
+              onChange={(event) => setPowerMode(event.target.value as PowerMode)}
+            >
+              <option value="real">{t('right.powerMode.real')}</option>
+              <option value="infinite">{t('right.powerMode.infinite')}</option>
+            </select>
+          </span>
+        </div>
+        {powerMode === 'real' && (
+          <div className="kv">
+            <span>{t('right.initialBatteryPercent')}</span>
+            <span>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                value={initialBatteryPercent}
+                disabled={simIsRunning}
+                onChange={(event) => {
+                  const parsed = Number.parseInt(event.target.value, 10)
+                  const normalized = Number.isFinite(parsed) ? Math.min(100, Math.max(0, parsed)) : 0
+                  setInitialBatteryPercent(normalized)
+                }}
+              />
+            </span>
+          </div>
+        )}
+      </RightPanelSection>
 
-      <h3>{t('right.selected')}</h3>
-      {selectedDevice ? (
-        <>
+      <RightPanelSection title={t('right.currentSelection')} className="right-panel-section-selection" defaultOpen>
+        {selectedDevice ? (
+          <>
           {!showCompactAdmissionRuntimeView && DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags && DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags!.length > 0 && (
             <div className="kv"><span>{t('detail.tags')}</span><span>{DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags!.join(', ')}</span></div>
           )}
@@ -1105,9 +1119,10 @@ export function RightPanel({
             </div>
           )}
         </>
-      ) : (
-        <p>{t('right.noneSelected')}</p>
-      )}
+        ) : (
+          <p>{t('right.noneSelected')}</p>
+        )}
+      </RightPanelSection>
     </aside>
   )
 }
