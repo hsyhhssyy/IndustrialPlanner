@@ -556,6 +556,7 @@ button:disabled {
   overflow: hidden;
   position: relative;
   cursor: default;
+  touch-action: none;
 }
 
 .canvas-viewport.panning {
@@ -3424,7 +3425,6 @@ button:disabled {
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  touch-action: manipulation;
 }
 
 .topbar-toggle-btn:hover,
@@ -3541,7 +3541,6 @@ button:disabled {
   justify-content: center;
   gap: 4px;
   color: var(--text-secondary) !important;
-  touch-action: manipulation;
 }
 
 .activity-bar-item:hover,

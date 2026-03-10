@@ -171,6 +171,17 @@ function isMobilePageViewport() {
   return viewportWidth < viewportHeight * 0.75
 }
 
+function getTouchDistance(touchA: Touch, touchB: Touch) {
+  return Math.hypot(touchA.clientX - touchB.clientX, touchA.clientY - touchB.clientY)
+}
+
+function getTouchMidpoint(touchA: Touch, touchB: Touch) {
+  return {
+    clientX: (touchA.clientX + touchB.clientX) / 2,
+    clientY: (touchA.clientY + touchB.clientY) / 2,
+  }
+}
+
 function App() {
   const currentYear = new Date().getFullYear()
   const [powerMode, setPowerMode] = usePersistentState<PowerMode>('stage3-power-mode', 'infinite')
@@ -192,6 +203,7 @@ function App() {
   const gridRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const resizeStateRef = useRef<null | { side: 'left' | 'right'; startX: number; startWidth: number }>(null)
+  const pinchZoomStateRef = useRef<null | { startDistance: number; startCellSize: number }>(null)
 
   const {
     state: {
@@ -238,6 +250,7 @@ function App() {
         setPlaceType,
         setPlaceRotation,
         setPlaceOperation,
+        setCellSize,
         setViewOffset,
         setSelection,
         setLogStart,
@@ -471,6 +484,91 @@ function App() {
       ),
     )
   }, [canvasHeightPx, canvasWidthPx, zoomScale])
+
+  const applyViewportZoom = useCallback(
+    (nextCellSize: number, anchorClientX: number, anchorClientY: number) => {
+      const viewport = viewportRef.current
+      if (!viewport) return
+
+      const maxCellSize = getMaxCellSizeForViewport(viewport)
+      const next = clamp(Math.round(nextCellSize), 12, maxCellSize)
+      if (next === cellSize) return
+
+      const viewportRect = viewport.getBoundingClientRect()
+      const anchorX = anchorClientX - viewportRect.left
+      const anchorY = anchorClientY - viewportRect.top
+      const scaledCellSize = BASE_CELL_SIZE * zoomScale
+      const worldX = (anchorX - viewOffset.x) / scaledCellSize
+      const worldY = (anchorY - viewOffset.y) / scaledCellSize
+      const nextZoomScale = next / BASE_CELL_SIZE
+      const nextOffset = {
+        x: anchorX - worldX * BASE_CELL_SIZE * nextZoomScale,
+        y: anchorY - worldY * BASE_CELL_SIZE * nextZoomScale,
+      }
+      const clampedOffset = clampViewportOffset(
+        nextOffset,
+        { width: viewport.clientWidth, height: viewport.clientHeight },
+        { width: canvasWidthPx * nextZoomScale, height: canvasHeightPx * nextZoomScale },
+      )
+
+      setViewOffset(clampedOffset)
+      setCellSize(next)
+    },
+    [canvasHeightPx, canvasWidthPx, cellSize, clampViewportOffset, getMaxCellSizeForViewport, setCellSize, setViewOffset, viewOffset.x, viewOffset.y, viewportRef, zoomScale],
+  )
+
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (!viewport) return
+
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 2) {
+        pinchZoomStateRef.current = null
+        return
+      }
+
+      const [touchA, touchB] = [event.touches[0], event.touches[1]]
+      pinchZoomStateRef.current = {
+        startDistance: getTouchDistance(touchA, touchB),
+        startCellSize: cellSize,
+      }
+    }
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (event.touches.length !== 2) {
+        pinchZoomStateRef.current = null
+        return
+      }
+
+      const pinchState = pinchZoomStateRef.current
+      if (!pinchState || pinchState.startDistance <= 0) return
+
+      event.preventDefault()
+      const [touchA, touchB] = [event.touches[0], event.touches[1]]
+      const midpoint = getTouchMidpoint(touchA, touchB)
+      const nextDistance = getTouchDistance(touchA, touchB)
+      const scaleRatio = nextDistance / pinchState.startDistance
+      if (!Number.isFinite(scaleRatio) || scaleRatio <= 0) return
+
+      applyViewportZoom(pinchState.startCellSize * scaleRatio, midpoint.clientX, midpoint.clientY)
+    }
+
+    const handleTouchEnd = () => {
+      pinchZoomStateRef.current = null
+    }
+
+    viewport.addEventListener('touchstart', handleTouchStart, { passive: true })
+    viewport.addEventListener('touchmove', handleTouchMove, { passive: false })
+    viewport.addEventListener('touchend', handleTouchEnd)
+    viewport.addEventListener('touchcancel', handleTouchEnd)
+
+    return () => {
+      viewport.removeEventListener('touchstart', handleTouchStart)
+      viewport.removeEventListener('touchmove', handleTouchMove)
+      viewport.removeEventListener('touchend', handleTouchEnd)
+      viewport.removeEventListener('touchcancel', handleTouchEnd)
+    }
+  }, [applyViewportZoom, cellSize])
 
   const {
     itemPickerState,

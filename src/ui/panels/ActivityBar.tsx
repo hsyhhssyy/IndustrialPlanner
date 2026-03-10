@@ -1,4 +1,3 @@
-import type { PointerEvent as ReactPointerEvent } from 'react'
 import { useAppContext } from '../../app/AppContext'
 import { getModeLabel } from '../../i18n'
 
@@ -54,25 +53,13 @@ function WorkbenchIcon({ kind }: { kind: 'place' | 'delete' | 'blueprint' | 'too
 export function ActivityBar({ simIsRunning }: ActivityBarProps) {
   const {
     eventBus,
-    state: { isToolOpen, isHelpOpen, isSettingsOpen, language, leftPanelCollapsed },
+    state: { isToolOpen, isHelpOpen, isSettingsOpen, language },
     editor: { state: { mode } },
-    actions: { openTool, openHelp, openSettings, setLeftPanelCollapsed },
+    actions: { openTool, openHelp, openSettings },
   } = useAppContext()
 
   const activateMode = (nextMode: ActivityMode) => {
     if (simIsRunning) return
-    if (leftPanelCollapsed) {
-      setLeftPanelCollapsed(false)
-      if (mode === nextMode) {
-        eventBus.emit('ui.center.focus', undefined)
-        return
-      }
-    } else if (mode === nextMode) {
-      setLeftPanelCollapsed(true)
-      eventBus.emit('ui.center.focus', undefined)
-      return
-    }
-
     if (nextMode === 'place') {
       eventBus.emit('left.place.operation.set', 'default')
       eventBus.emit('left.place.trace.reset', undefined)
@@ -97,15 +84,6 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
     return language === 'zh-CN' ? '设置' : 'Settings'
   }
 
-  const buildTouchFriendlyButtonProps = (action: () => void) => ({
-    onClick: action,
-    onPointerUp: (event: ReactPointerEvent<HTMLButtonElement>) => {
-      if (event.pointerType === 'mouse') return
-      event.preventDefault()
-      action()
-    },
-  })
-
   return (
     <aside className="activity-bar" aria-label="Workbench views">
       <div className="activity-bar-group">
@@ -114,10 +92,10 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
             key={entry.key}
             type="button"
             className={`activity-bar-item ${mode === entry.key ? 'active' : ''}`.trim()}
+            onClick={() => activateMode(entry.key)}
             disabled={simIsRunning}
             title={getModeLabel(language, entry.key)}
             aria-pressed={mode === entry.key}
-            {...buildTouchFriendlyButtonProps(() => activateMode(entry.key))}
           >
             <span className="activity-bar-item-icon"><WorkbenchIcon kind={entry.icon} /></span>
             <span className="activity-bar-item-label">{getModeLabel(language, entry.key)}</span>
@@ -129,8 +107,8 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
         <button
           type="button"
           className={`activity-bar-item ${isToolOpen ? 'active' : ''}`.trim()}
+          onClick={openTool}
           aria-pressed={isToolOpen}
-          {...buildTouchFriendlyButtonProps(openTool)}
         >
           <span className="activity-bar-item-icon"><WorkbenchIcon kind="tool" /></span>
           <span className="activity-bar-item-label">{getActivityLabel('tool')}</span>
@@ -138,8 +116,8 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
         <button
           type="button"
           className={`activity-bar-item ${isHelpOpen ? 'active' : ''}`.trim()}
+          onClick={openHelp}
           aria-pressed={isHelpOpen}
-          {...buildTouchFriendlyButtonProps(openHelp)}
         >
           <span className="activity-bar-item-icon"><WorkbenchIcon kind="help" /></span>
           <span className="activity-bar-item-label">{getActivityLabel('help')}</span>
@@ -147,8 +125,8 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
         <button
           type="button"
           className={`activity-bar-item ${isSettingsOpen ? 'active' : ''}`.trim()}
+          onClick={openSettings}
           aria-pressed={isSettingsOpen}
-          {...buildTouchFriendlyButtonProps(openSettings)}
         >
           <span className="activity-bar-item-icon"><WorkbenchIcon kind="settings" /></span>
           <span className="activity-bar-item-label">{getActivityLabel('settings')}</span>
