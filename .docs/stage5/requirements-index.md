@@ -57,7 +57,7 @@
 | S5-RQ-006 | 起死回生机公共蓝图 | P1 | todo | M2 | [REQ-006](requirements/REQ-006-public-blueprint-revival.md) |
 | S5-RQ-007 | 电力 / 电池折线图 | P1 | todo | M2 | [REQ-007](requirements/REQ-007-power-battery-chart.md) |
 | S5-RQ-008 | Playwright CLI 自动化测试流程 | P0 | todo | M3 | [REQ-008](requirements/REQ-008-playwright-automation.md) |
-| S5-RQ-009 | 界面完全重构 | P2 | todo | M3 | [REQ-009](requirements/REQ-009-ui-full-refactor.md) |
+| S5-RQ-009 | 界面完全重构 | P2 | in-progress | M3 | [REQ-009](requirements/REQ-009-ui-full-refactor.md) |
 
 ## 当前阶段观察
 
@@ -77,7 +77,10 @@
 1. `S5-RQ-005` 已完成物品准入口交付、资源收敛、数量语义确认与 `junction` 结构重构，当前状态为 `done`。
 2. `S5-RQ-001` 已录入并关闭首批 3 个缺陷，详见 [bugs.md](bugs.md)。
 3. `S5-RQ-004` 已进入 `in-progress`，当前口径为“右侧顶部全局总耗电覆盖值”，首版代码链路已接通，待补运行态回归。
-4. `S5-RQ-009` 已登记为新需求，当前待明确重构范围、分期落地方式与视觉基线。
+4. `S5-RQ-009` 已进入 `in-progress`：工作台骨架、顶栏左右 toggle、左侧 Activity Bar、右侧折叠面板、工具箱 / 帮助 / 设置入口、统一 `settings` 存储均已落地。
+5. `S5-RQ-009` 已新增并接受两个文档建档后形成的新口径：语言设置迁入设置面板，以及右侧面板增加“电力 / 运行设置”区域。
+6. `S5-RQ-009` 中“设备分类二级折叠”建议已被明确拒绝；右侧面板当前状态已被确认满意，暂不再作为主动改造目标。
+7. `S5-RQ-009` 已补充移动页面状态检测、左侧 Activity Bar 与左侧面板的 VSCode 式联动，以及移动端顶栏左右 panel toggle 的触屏兼容修复。
 
 ### 全局 bug 入口
 
@@ -91,3 +94,5 @@
 - 2026-03-10：将 `S5-RQ-005` 状态更新为 `done`，并补充交付完成摘要。
 - 2026-03-10：将 `S5-RQ-004` 状态更新为 `in-progress`，并补充首版实现口径。
 - 2026-03-10：新增 `S5-RQ-009`，将“界面完全重构”纳入 Stage5 需求总表。
+- 2026-03-10：将 `S5-RQ-009` 状态更新为 `in-progress`，并补充已落地工作台能力、后续新增口径与已否决项。
+- 2026-03-10：补充 `S5-RQ-009` 近期新增的交互改动摘要，包括移动页面检测、左侧 Activity Bar 联动与移动端触屏 toggle 兼容修复。

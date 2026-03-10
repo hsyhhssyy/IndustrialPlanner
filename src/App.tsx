@@ -163,6 +163,14 @@ function normalizePowerDemandOverrideKw(value: number | null | undefined) {
   return clamp(Math.round(value), 0, 999_999_999)
 }
 
+function isMobilePageViewport() {
+  if (typeof window === 'undefined') return false
+  const viewportWidth = window.visualViewport?.width ?? window.innerWidth
+  const viewportHeight = window.visualViewport?.height ?? window.innerHeight
+  if (!Number.isFinite(viewportWidth) || !Number.isFinite(viewportHeight) || viewportHeight <= 0) return false
+  return viewportWidth < viewportHeight * 0.75
+}
+
 function App() {
   const currentYear = new Date().getFullYear()
   const [powerMode, setPowerMode] = usePersistentState<PowerMode>('stage3-power-mode', 'infinite')
@@ -177,6 +185,7 @@ function App() {
     [],
     normalizeRecentPickerItemIds,
   )
+  const [mobilePageDetected, setMobilePageDetected] = useState(() => isMobilePageViewport())
   const [storageSlotConfigDeviceId, setStorageSlotConfigDeviceId] = useState<string | null>(null)
   const [portPriorityConfigDeviceId, setPortPriorityConfigDeviceId] = useState<string | null>(null)
 
@@ -641,6 +650,21 @@ function App() {
     if (!powerPolePlacementPreview.previewOutline) return powerRangeOutlines
     return [...powerRangeOutlines, powerPolePlacementPreview.previewOutline]
   }, [powerPolePlacementPreview.previewOutline, powerRangeOutlines])
+
+  useEffect(() => {
+    const updateMobilePageDetected = () => {
+      setMobilePageDetected(isMobilePageViewport())
+    }
+
+    updateMobilePageDetected()
+    window.addEventListener('resize', updateMobilePageDetected)
+    window.visualViewport?.addEventListener('resize', updateMobilePageDetected)
+
+    return () => {
+      window.removeEventListener('resize', updateMobilePageDetected)
+      window.visualViewport?.removeEventListener('resize', updateMobilePageDetected)
+    }
+  }, [])
 
   const uiHint = sim.isRunning
     ? t('status.running')
@@ -1149,7 +1173,13 @@ function App() {
         </div>
       </main>
 
-      <SiteInfoBar currentYear={currentYear} uiHint={uiHint} uiTheme={uiTheme} t={t} />
+      <SiteInfoBar
+        currentYear={currentYear}
+        uiHint={uiHint}
+        mobilePageLabel={mobilePageDetected ? t('status.mobilePage') : null}
+        uiTheme={uiTheme}
+        t={t}
+      />
 
       {itemPickerState && pickerTargetDevice && (
         <ItemPickerDialog

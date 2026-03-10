@@ -1,3 +1,4 @@
+import type { PointerEvent as ReactPointerEvent } from 'react'
 import { useAppContext } from '../app/AppContext'
 
 type TopBarProps = {
@@ -23,6 +24,15 @@ export function TopBar({
 }: TopBarProps) {
   const { eventBus } = useAppContext()
 
+  const buildTouchFriendlyButtonProps = (action: () => void) => ({
+    onClick: action,
+    onPointerUp: (event: ReactPointerEvent<HTMLButtonElement>) => {
+      if (event.pointerType === 'mouse') return
+      event.preventDefault()
+      action()
+    },
+  })
+
   return (
     <header className="topbar">
       <div className="topbar-left">
@@ -30,9 +40,9 @@ export function TopBar({
           <button
             type="button"
             className={`topbar-toggle-btn ${!leftPanelCollapsed ? 'active' : ''}`.trim()}
-            onClick={onToggleLeftPanel}
             aria-pressed={!leftPanelCollapsed}
             title={t('top.toggleLeftPanel')}
+            {...buildTouchFriendlyButtonProps(onToggleLeftPanel)}
           >
             <span className="topbar-toggle-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" focusable="false">
@@ -43,9 +53,9 @@ export function TopBar({
           <button
             type="button"
             className={`topbar-toggle-btn ${!rightPanelCollapsed ? 'active' : ''}`.trim()}
-            onClick={onToggleRightPanel}
             aria-pressed={!rightPanelCollapsed}
             title={t('top.toggleRightPanel')}
+            {...buildTouchFriendlyButtonProps(onToggleRightPanel)}
           >
             <span className="topbar-toggle-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" focusable="false">
