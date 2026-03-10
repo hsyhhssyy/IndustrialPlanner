@@ -241,8 +241,16 @@ export function isBelt(typeId: string) {
   return typeId === 'belt_straight_1x1' || typeId === 'belt_turn_cw_1x1' || typeId === 'belt_turn_ccw_1x1'
 }
 
+export function isBeltAdmissionDevice(typeId: string) {
+  return typeId === 'item_log_admission'
+}
+
+export function isBufferedBeltTransportDevice(typeId: string) {
+  return isBelt(typeId)
+}
+
 export function isBeltJunction(typeId: string) {
-  return typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector'
+  return typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector' || typeId === 'item_log_admission'
 }
 
 export function isBeltLike(typeId: string) {

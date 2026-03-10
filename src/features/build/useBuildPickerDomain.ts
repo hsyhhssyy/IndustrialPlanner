@@ -43,6 +43,8 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
   const [itemPickerState, setItemPickerState] = useState<ItemPickerState | null>(null)
 
   const {
+    updateAdmissionItem,
+    updateAdmissionAmount,
     updatePickupItem,
     updatePickupIgnoreInventory,
     updateProtocolHubOutputItem,
@@ -75,6 +77,12 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       ? (selectedDevice.config.protocolHubOutputs ?? []).find((entry) => entry.portId === PICKUP_OUTPUT_PORT_ID)?.itemId ??
         selectedDevice.config.pickupItemId
       : undefined
+  const selectedAdmissionItemId = selectedDevice?.typeId === 'item_log_admission' ? selectedDevice.config.admissionItemId : undefined
+  const selectedAdmissionAmount = selectedDevice?.typeId === 'item_log_admission'
+    ? (typeof selectedDevice.config.admissionAmount === 'number' && selectedDevice.config.admissionAmount > 0
+      ? Math.floor(selectedDevice.config.admissionAmount)
+      : undefined)
+    : undefined
   const selectedPickupItemIsOre = isOreItemId(selectedPickupItemId)
   const selectedPickupIgnoreInventory =
     selectedDevice?.typeId === 'item_port_unloader_1' && selectedPickupItemId
@@ -157,6 +165,9 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       return (pickerTargetDevice.config.protocolHubOutputs ?? []).find((entry) => entry.portId === PICKUP_OUTPUT_PORT_ID)?.itemId ??
         pickerTargetDevice.config.pickupItemId
     }
+    if (itemPickerState.kind === 'admission') {
+      return pickerTargetDevice.config.admissionItemId
+    }
     if (itemPickerState.kind === 'protocolHubOutput') {
       const entry = (pickerTargetDevice.config.protocolHubOutputs ?? []).find((item) => item.portId === itemPickerState.portId)
       return entry?.itemId
@@ -171,6 +182,9 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
   const pickerFilter = useMemo<ItemPickerFilter | undefined>(() => {
     if (!itemPickerState) return undefined
     if (itemPickerState.kind === 'pickup') {
+      return { allowedTypes: ['solid'] }
+    }
+    if (itemPickerState.kind === 'admission') {
       return { allowedTypes: ['solid'] }
     }
     if (itemPickerState.kind === 'protocolHubOutput') {
@@ -218,6 +232,10 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       setItemPickerState(null)
       return
     }
+    if (itemPickerState.kind === 'admission' && target.typeId !== 'item_log_admission') {
+      setItemPickerState(null)
+      return
+    }
     if (itemPickerState.kind === 'protocolHubOutput' && target.typeId !== 'item_port_sp_hub_1') {
       setItemPickerState(null)
       return
@@ -246,6 +264,8 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       if (!itemPickerState || !pickerTargetDevice) return
       if (itemPickerState.kind === 'pickup') {
         updatePickupItem(pickerTargetDevice.instanceId, itemId ?? undefined)
+      } else if (itemPickerState.kind === 'admission') {
+        updateAdmissionItem(pickerTargetDevice.instanceId, itemId ?? undefined)
       } else if (itemPickerState.kind === 'protocolHubOutput') {
         updateProtocolHubOutputItem(pickerTargetDevice.instanceId, itemPickerState.portId, itemId ?? undefined)
       } else if (itemPickerState.kind === 'pumpOutput') {
@@ -258,6 +278,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     [
       itemPickerState,
       pickerTargetDevice,
+      updateAdmissionItem,
       updatePickupItem,
       updateProtocolHubOutputItem,
       updatePumpOutputItem,
@@ -270,6 +291,8 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     setItemPickerState,
     selectedDevice,
     selectedRuntime,
+    selectedAdmissionItemId,
+    selectedAdmissionAmount,
     selectedPickupItemId,
     selectedPumpOutputItemId,
     selectedPickupItemIsOre,
@@ -284,6 +307,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     pickerAllowsEmpty,
     pickerDisabledItemIds,
     handleItemPickerSelect,
+    updateAdmissionAmount,
     updatePickupIgnoreInventory,
     updateProtocolHubOutputIgnoreInventory,
     updateProcessorPreloadSlot,

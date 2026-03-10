@@ -1,5 +1,5 @@
 import { BASE_BY_ID, DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
-import { detectOverlaps, getFootprintCells, getRotatedPorts, isBelt, isPipeLike, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
+import { detectOverlaps, getFootprintCells, getRotatedPorts, isBufferedBeltTransportDevice, isPipeLike, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
 import {
   createEmptyPortPriorityCursors,
   getDirectionalPortIds,
@@ -27,6 +27,7 @@ import type {
   DeviceInstance,
   DeviceRuntime,
   ItemId,
+  JunctionRuntime,
   LayoutState,
   PowerMode,
   ProcessorRuntime,
@@ -195,7 +196,7 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
     }
   }
   if (def.runtimeKind === 'conveyor') {
-    if (isBelt(device.typeId)) {
+    if (isBufferedBeltTransportDevice(device.typeId)) {
       return {
         ...baseRuntime(),
         slot: null,
@@ -225,6 +226,7 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
     slot: null,
     nsSlot: null,
     weSlot: null,
+    producedItemsTotal: 0,
     lastSplitterOutputPortId: undefined,
   }
 }
@@ -359,10 +361,12 @@ function buildPowerAvailabilityByDeviceId(
   tickRateHz: number,
   processorDelta: Partial<Record<ItemId, number>>,
   batteryStoredJ: number,
+  powerDemandOverrideKw: number | null,
 ) {
   const unpoweredById = new Set<string>()
   const outOfRangeById = new Set<string>()
   const powerCandidates: Array<{ instanceId: string; demandKw: number }> = []
+  const effectivePowerDemandByDeviceId = buildEffectivePowerDemandByDeviceId(layout, powerDemandOverrideKw)
 
   const totalSupplyKw = updateThermalPoolPowerAndGetSupplyKw(layout, runtimeById, tickRateHz, processorDelta)
 
@@ -374,7 +378,7 @@ function buildPowerAvailabilityByDeviceId(
       continue
     }
 
-    const demandKw = Math.max(0, deviceDef.powerDemand ?? 0)
+    const demandKw = Math.max(0, effectivePowerDemandByDeviceId.get(device.instanceId) ?? 0)
     if (demandKw <= 0) continue
     powerCandidates.push({ instanceId: device.instanceId, demandKw })
   }
@@ -398,8 +402,47 @@ function buildPowerAvailabilityByDeviceId(
   return { unpoweredById, outOfRangeById, totalSupplyKw, nextBatteryStoredJ }
 }
 
-function totalPowerDemandKw(layout: LayoutState) {
-  return layout.devices.reduce((sum, device) => sum + Math.max(0, DEVICE_TYPE_BY_ID[device.typeId]?.powerDemand ?? 0), 0)
+function normalizePowerDemandOverrideKw(value: number | null | undefined) {
+  if (value === null || value === undefined) return null
+  if (!Number.isFinite(value)) return null
+  return Math.max(0, Math.round(value))
+}
+
+function baseDevicePowerDemandKw(device: DeviceInstance) {
+  return Math.max(0, DEVICE_TYPE_BY_ID[device.typeId]?.powerDemand ?? 0)
+}
+
+function buildEffectivePowerDemandByDeviceId(layout: LayoutState, powerDemandOverrideKw: number | null | undefined) {
+  const normalizedOverrideKw = normalizePowerDemandOverrideKw(powerDemandOverrideKw)
+  const poweredDevices = layout.devices
+    .map((device) => ({ instanceId: device.instanceId, demandKw: baseDevicePowerDemandKw(device) }))
+    .filter((entry) => entry.demandKw > 0)
+
+  const byDeviceId = new Map<string, number>()
+  const baseTotalDemandKw = poweredDevices.reduce((sum, entry) => sum + entry.demandKw, 0)
+
+  if (normalizedOverrideKw === null) {
+    for (const entry of poweredDevices) {
+      byDeviceId.set(entry.instanceId, entry.demandKw)
+    }
+    return byDeviceId
+  }
+
+  if (baseTotalDemandKw <= 0) {
+    return byDeviceId
+  }
+
+  const scale = normalizedOverrideKw / baseTotalDemandKw
+  for (const entry of poweredDevices) {
+    byDeviceId.set(entry.instanceId, entry.demandKw * scale)
+  }
+  return byDeviceId
+}
+
+function totalPowerDemandKw(layout: LayoutState, powerDemandOverrideKw: number | null | undefined = null) {
+  const normalizedOverrideKw = normalizePowerDemandOverrideKw(powerDemandOverrideKw)
+  if (normalizedOverrideKw !== null) return normalizedOverrideKw
+  return layout.devices.reduce((sum, device) => sum + baseDevicePowerDemandKw(device), 0)
 }
 
 function neighborCellKeys(x: number, y: number) {
@@ -1126,6 +1169,41 @@ function canAcceptBeltInput(runtime: BeltRuntime) {
   return !inputItemId && !outputItemId && !inTransit
 }
 
+function configuredAdmissionItemId(device: DeviceInstance) {
+  const configured = device.config.admissionItemId
+  return configured && ITEM_BY_ID[configured]?.type === 'solid' ? configured : undefined
+}
+
+function configuredAdmissionAmount(device: DeviceInstance) {
+  if (device.typeId !== 'item_log_admission') return undefined
+  const configured = Number(device.config.admissionAmount)
+  if (!Number.isFinite(configured)) return undefined
+  const normalized = Math.floor(configured)
+  return normalized > 0 ? Math.min(999, normalized) : undefined
+}
+
+function admissionRemainingQuota(device: DeviceInstance, runtime: Pick<JunctionRuntime, 'producedItemsTotal'>) {
+  const limit = configuredAdmissionAmount(device)
+  if (limit === undefined) return Number.POSITIVE_INFINITY
+  return Math.max(0, limit - runtime.producedItemsTotal)
+}
+
+function canAcceptBufferedBeltInput(device: DeviceInstance, runtime: BeltRuntime, itemId: ItemId) {
+  const configuredItemId = configuredAdmissionItemId(device)
+  if (configuredItemId && configuredItemId !== itemId) return false
+  if (device.typeId !== 'item_log_admission') {
+    return canAcceptBeltInput(runtime)
+  }
+  return admissionRemainingQuota(device, runtime) > 0 && tryAddProcessorInput(cloneRuntime(runtime), device.typeId, itemId, 1)
+}
+
+function canAcceptAdmissionSlotInput(device: DeviceInstance, runtime: DeviceRuntime, itemId: ItemId) {
+  if (device.typeId !== 'item_log_admission' || !('producedItemsTotal' in runtime)) return true
+  const configuredItemId = configuredAdmissionItemId(device)
+  if (configuredItemId && configuredItemId !== itemId) return false
+  return admissionRemainingQuota(device, runtime) > 0
+}
+
 function startBeltTransport(device: DeviceInstance, runtime: BeltRuntime, tick: number) {
   if (runtime.slot) return false
   if (beltBufferedItemId(runtime, 'output')) return false
@@ -1190,7 +1268,7 @@ function setSlotRef(runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we', value: S
 }
 
 function canReceiveOnPort(device: DeviceInstance, runtime: DeviceRuntime, toPortId: string) {
-  if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
+  if (isBufferedBeltTransportDevice(device.typeId) && isBufferedBeltRuntime(runtime)) {
     return 'output'
   }
   if (isBridgeConnectorType(device.typeId)) {
@@ -1215,18 +1293,16 @@ function canReceiveLaneForItem(
 
   const reserveKey = `${device.instanceId}:${lane}`
 
-  if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
-    const hasBufferedInput = Boolean(beltBufferedItemId(runtime, 'input'))
-    const hasBufferedOutput = Boolean(beltBufferedItemId(runtime, 'output'))
-    const hasInTransit = Boolean(runtime.slot && runtime.slot.progress01 < 1)
-    if (!hasBufferedInput && !hasBufferedOutput && !hasInTransit) return lane
-
-    return null
+  if (isBufferedBeltTransportDevice(device.typeId) && isBufferedBeltRuntime(runtime)) {
+    return canAcceptBufferedBeltInput(device, runtime, itemId) ? lane : null
   }
 
   if (lane === 'output') {
     const canAccept = canAcceptIntoLane(device, runtime, lane, toPortId, itemId)
     return canAccept ? lane : null
+  }
+  if (device.typeId === 'item_log_admission' && !canAcceptAdmissionSlotInput(device, runtime, itemId)) {
+    return null
   }
   const slot = getSlotRef(runtime, lane)
   if (!slot) return lane
@@ -1240,8 +1316,8 @@ function canReceiveLaneForItem(
 
 function canAcceptIntoLane(device: DeviceInstance, runtime: DeviceRuntime, lane: ReceiveLane, toPortId: string, itemId: ItemId) {
   if (lane !== 'output') return true
-  if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
-    return canAcceptBeltInput(runtime)
+  if (isBufferedBeltTransportDevice(device.typeId) && isBufferedBeltRuntime(runtime)) {
+    return canAcceptBufferedBeltInput(device, runtime, itemId)
   }
   if ('inputBuffer' in runtime) {
     if (isReactorPoolType(device.typeId)) {
@@ -1264,7 +1340,7 @@ function tryReceiveToLane(
   tick: number,
 ) {
   if (lane === 'output') {
-    if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
+    if (isBufferedBeltTransportDevice(device.typeId) && isBufferedBeltRuntime(runtime)) {
       return tryAddProcessorInput(runtime, device.typeId, itemId, 1)
     }
     if ('inputBuffer' in runtime) {
@@ -1288,7 +1364,7 @@ function tryReceiveToLane(
 }
 
 function sourceSlotLane(device: DeviceInstance, runtime: DeviceRuntime, fromPortId: string): 'slot' | 'ns' | 'we' | 'output' {
-  if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
+  if (isBufferedBeltTransportDevice(device.typeId) && isBufferedBeltRuntime(runtime)) {
     return 'output'
   }
   if (isBridgeConnectorType(device.typeId)) {
@@ -1450,7 +1526,7 @@ function consumeSourceByPlan(
   tick: number,
 ) {
   if (plan.fromLane === 'output') {
-    if (isBelt(fromDevice.typeId) && isBufferedBeltRuntime(fromRuntime)) {
+    if (isBufferedBeltTransportDevice(fromDevice.typeId) && isBufferedBeltRuntime(fromRuntime)) {
       fromRuntime.outputBuffer[plan.itemId] = Math.max(0, (fromRuntime.outputBuffer[plan.itemId] ?? 0) - 1)
       clearSlotBindingIfEmpty(fromRuntime.outputBuffer, fromRuntime.outputSlotItems, plan.itemId)
       if (fromRuntime.slot) {
@@ -1458,6 +1534,7 @@ function consumeSourceByPlan(
         fromRuntime.transportTotalTicks += transitTicks
         fromRuntime.transportSamples += 1
       }
+      fromRuntime.producedItemsTotal += 1
       fromRuntime.slot = null
       fromRuntime.progress01 = 0
       fromRuntime.cycleProgressTicks = 0
@@ -1476,7 +1553,7 @@ function consumeSourceByPlan(
   }
 
   if (
-    isBelt(fromDevice.typeId) &&
+    isBufferedBeltTransportDevice(fromDevice.typeId) &&
     plan.fromLane === 'slot' &&
     'slot' in fromRuntime &&
     fromRuntime.slot &&
@@ -1486,6 +1563,9 @@ function consumeSourceByPlan(
     const transitTicks = Math.max(1, tick - fromRuntime.slot.enteredTick)
     fromRuntime.transportTotalTicks += transitTicks
     fromRuntime.transportSamples += 1
+  }
+  if (fromDevice.typeId === 'item_log_admission' && plan.fromLane === 'slot' && 'producedItemsTotal' in fromRuntime) {
+    fromRuntime.producedItemsTotal += 1
   }
   setSlotRef(fromRuntime, plan.fromLane, null)
 }
@@ -1858,6 +1938,7 @@ export function createInitialSimState(): SimState {
   return {
     isRunning: false,
     powerMode: 'infinite',
+    powerDemandOverrideKw: null,
     speed: 1,
     tick: 0,
     tickRateHz: BASE_TICK_RATE,
@@ -1884,11 +1965,18 @@ export function createInitialSimState(): SimState {
   }
 }
 
-export function startSimulation(layout: LayoutState, sim: SimState, powerMode: PowerMode, initialBatteryPercent: number = 100): SimState {
+export function startSimulation(
+  layout: LayoutState,
+  sim: SimState,
+  powerMode: PowerMode,
+  initialBatteryPercent: number = 100,
+  powerDemandOverrideKw: number | null = null,
+): SimState {
   const tickRateHz = BASE_TICK_RATE
   const speed = sim.speed === 0 ? 1 : sim.speed
   const minuteWindowCapacity = cycleTicksFromSeconds(60, tickRateHz)
   const normalizedInitialBatteryPercent = Math.min(100, Math.max(0, Number.isFinite(initialBatteryPercent) ? initialBatteryPercent : 100))
+  const normalizedPowerDemandOverrideKw = normalizePowerDemandOverrideKw(powerDemandOverrideKw)
   const initialBatteryStoredJ =
     powerMode === 'real'
       ? Math.round((GLOBAL_BATTERY_CAPACITY_J * normalizedInitialBatteryPercent) / 100)
@@ -1950,7 +2038,7 @@ export function startSimulation(layout: LayoutState, sim: SimState, powerMode: P
     else if (disconnectedBusSegmentIds.has(device.instanceId)) stall = 'BUS_NOT_CONNECTED'
     else if (busEdgePortBlockedByDisconnectedBusIds.has(device.instanceId)) stall = 'PICKUP_BUS_NOT_CONNECTED'
     else if (!pickupHasConfig(device)) stall = 'CONFIG_ERROR'
-    else if (powerMode === 'real' && deviceDef.requiresPower && !inPowerRange(device, poles)) stall = 'OUT_OF_POWER_RANGE'
+    else if (deviceDef.requiresPower && !inPowerRange(device, poles)) stall = 'OUT_OF_POWER_RANGE'
     normalizeRuntimeState(runtime, stall)
   }
 
@@ -1958,6 +2046,7 @@ export function startSimulation(layout: LayoutState, sim: SimState, powerMode: P
     ...sim,
     isRunning: true,
     powerMode,
+    powerDemandOverrideKw: normalizedPowerDemandOverrideKw,
     speed,
     tick: 0,
     tickRateHz,
@@ -1977,7 +2066,7 @@ export function startSimulation(layout: LayoutState, sim: SimState, powerMode: P
     minuteWindowCapacity,
     powerStats: {
       totalSupplyKw: powerMode === 'infinite' ? Number.POSITIVE_INFINITY : 0,
-      totalDemandKw: totalPowerDemandKw(layout),
+      totalDemandKw: totalPowerDemandKw(layout, normalizedPowerDemandOverrideKw),
       batteryPercent: powerMode === 'real' ? normalizedInitialBatteryPercent : 100,
       batteryStoredJ: initialBatteryStoredJ,
     },
@@ -1990,6 +2079,7 @@ export function stopSimulation(sim: SimState): SimState {
   return {
     ...sim,
     isRunning: false,
+    powerDemandOverrideKw: null,
     tick: 0,
     tickRateHz,
     runtimeById: {},
@@ -2212,7 +2302,8 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
   const warehouse = { ...sim.warehouse }
   const processorDelta: Partial<Record<ItemId, number>> = {}
-  const totalDemandKw = totalPowerDemandKw(layout)
+  const totalDemandKw = totalPowerDemandKw(layout, sim.powerDemandOverrideKw)
+  const poles = layout.devices.filter((device) => device.typeId === 'item_port_power_diffuser_1')
   let totalSupplyKw = sim.powerMode === 'infinite' ? Number.POSITIVE_INFINITY : 0
   let batteryStoredJ = sim.powerMode === 'real'
     ? Math.min(Math.max(0, sim.powerStats.batteryStoredJ ?? GLOBAL_BATTERY_CAPACITY_J), GLOBAL_BATTERY_CAPACITY_J)
@@ -2221,7 +2312,6 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   let outOfRangeById = new Set<string>()
 
   if (sim.powerMode === 'real') {
-    const poles = layout.devices.filter((device) => device.typeId === 'item_port_power_diffuser_1')
     const powerAvailability = buildPowerAvailabilityByDeviceId(
       layout,
       runtimeById,
@@ -2229,14 +2319,21 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
       sim.tickRateHz,
       processorDelta,
       batteryStoredJ,
+      sim.powerDemandOverrideKw,
     )
     totalSupplyKw = powerAvailability.totalSupplyKw
     batteryStoredJ = powerAvailability.nextBatteryStoredJ
     unpoweredById = powerAvailability.unpoweredById
     outOfRangeById = powerAvailability.outOfRangeById
+  } else {
+    outOfRangeById = new Set(
+      layout.devices
+        .filter((device) => DEVICE_TYPE_BY_ID[device.typeId].requiresPower && !inPowerRange(device, poles))
+        .map((device) => device.instanceId),
+    )
   }
 
-  const batteryPercent = Math.round((Math.max(0, batteryStoredJ) / GLOBAL_BATTERY_CAPACITY_J) * 100)
+  const batteryPercent = Math.round((Math.max(0, batteryStoredJ) / GLOBAL_BATTERY_CAPACITY_J) * 1000) / 10
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
@@ -2258,7 +2355,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
     normalizeRuntimeState(runtime, 'NONE')
 
-    if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
+    if (isBufferedBeltTransportDevice(device.typeId) && isBufferedBeltRuntime(runtime)) {
       advanceBeltRuntimeOnTick(device, runtime, sim.tickRateHz, sim.tick)
       continue
     }
@@ -2412,9 +2509,12 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     }
 
     if (device.typeId === 'item_port_storager_1' && 'inventory' in runtime) {
-      runtime.submitAccumulatorTicks += 1
       const enabled = device.config.submitToWarehouse ?? true
-      if (enabled && runtime.submitAccumulatorTicks >= storageSubmitTicks) {
+      const canSubmitToWarehouse = enabled && inPowerRange(device, poles)
+      if (canSubmitToWarehouse) {
+        runtime.submitAccumulatorTicks += 1
+      }
+      if (canSubmitToWarehouse && runtime.submitAccumulatorTicks >= storageSubmitTicks) {
         runtime.submitAccumulatorTicks = 0
         for (const itemId of ITEM_IDS) {
           const amount = runtime.inventory[itemId] ?? 0
@@ -2581,7 +2681,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     const runtime = runtimeById[device.instanceId]
     if (!runtime || isHardBlockedStall(runtime.stallReason)) continue
     if (completedCycleDeviceIdsThisTick.has(device.instanceId)) continue
-    if (isBelt(device.typeId) && isBufferedBeltRuntime(runtime)) {
+    if (isBufferedBeltTransportDevice(device.typeId) && isBufferedBeltRuntime(runtime)) {
       tryStartBeltTransportOnTick(device, runtime, sim.tickRateHz, sim.tick)
       continue
     }

@@ -146,7 +146,7 @@ function connectorJunctionTypeByFamily(family: LogisticsFamily) {
 }
 
 function isBeltFamilyJunction(typeId: string) {
-  return typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector'
+  return typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector' || typeId === 'item_log_admission'
 }
 
 function isPipeFamilyJunction(typeId: string) {

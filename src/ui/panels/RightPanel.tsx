@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { BASES, DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import type { BaseDef, BaseId, DeviceInstance, DeviceRuntime, ItemId, LayoutState, PowerMode, SimState, SlotData } from '../../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../../i18n'
-import { isBelt, neighborsFromLinks } from '../../domain/geometry'
+import { isBufferedBeltTransportDevice, neighborsFromLinks } from '../../domain/geometry'
 import {
   getPortPriorityGroup,
   hasCustomPortPriorityGroups,
@@ -34,6 +34,8 @@ type RightPanelProps = {
   setPowerMode: (mode: PowerMode) => void
   initialBatteryPercent: number
   setInitialBatteryPercent: (value: number) => void
+  powerDemandOverrideKw: number | null
+  setPowerDemandOverrideKw: (value: number | null) => void
   setActiveBaseId: (id: BaseId) => void
   setSelection: (updater: string[] | ((current: string[]) => string[])) => void
   selectedDevice: DeviceInstance | null
@@ -75,6 +77,8 @@ type RightPanelProps = {
   selectedProcessorBufferSpec: ProcessorBufferSpec | null
   selectedPreloadSlots: ProcessorPreloadSlot[]
   selectedPreloadTotal: number
+  selectedAdmissionItemId: ItemId | undefined
+  selectedAdmissionAmount: number | undefined
   selectedPickupItemId: ItemId | undefined
   selectedPumpOutputItemId: ItemId | undefined
   selectedPickupItemIsOre: boolean
@@ -90,6 +94,7 @@ type RightPanelProps = {
   setItemPickerState: (
     state: ItemPickerState | null
   ) => void
+  updateAdmissionAmount: (deviceInstanceId: string, admissionAmount: number | undefined) => void
   updatePickupIgnoreInventory: (deviceInstanceId: string, enabled: boolean) => void
   updateProtocolHubOutputIgnoreInventory: (deviceInstanceId: string, portId: string, enabled: boolean) => void
   setLayout: (updater: LayoutState | ((current: LayoutState) => LayoutState)) => void
@@ -129,6 +134,8 @@ export function RightPanel({
   setPowerMode,
   initialBatteryPercent,
   setInitialBatteryPercent,
+  powerDemandOverrideKw,
+  setPowerDemandOverrideKw,
   setActiveBaseId,
   setSelection,
   selectedDevice,
@@ -146,6 +153,8 @@ export function RightPanel({
   selectedProcessorBufferSpec,
   selectedPreloadSlots,
   selectedPreloadTotal,
+  selectedAdmissionItemId,
+  selectedAdmissionAmount,
   selectedPickupItemId,
   selectedPumpOutputItemId,
   selectedPickupItemIsOre,
@@ -153,6 +162,7 @@ export function RightPanel({
   selectedProtocolHubOutputs,
   getItemIconPath,
   setItemPickerState,
+  updateAdmissionAmount,
   updatePickupIgnoreInventory,
   updateProtocolHubOutputIgnoreInventory,
   setLayout,
@@ -205,7 +215,7 @@ export function RightPanel({
 
     const isBridgeConnectorType = (typeId: DeviceInstance['typeId']) => typeId === 'item_log_connector' || typeId === 'item_pipe_connector'
     const receiveLaneForPort = (device: DeviceInstance, runtime: DeviceRuntime, toPortId: string) => {
-      if (isBelt(device.typeId) && 'slot' in runtime) return 'output'
+      if (isBufferedBeltTransportDevice(device.typeId) && 'slot' in runtime) return 'output'
       if (isBridgeConnectorType(device.typeId)) {
         if (toPortId.endsWith('_n') || toPortId.endsWith('_s')) return 'ns'
         return 'we'
@@ -277,6 +287,9 @@ export function RightPanel({
 
   const canConfigurePortPriority = Boolean(selectedDevice && shouldShowPortPriorityConfigButton(selectedDevice))
   const hasCustomPortPriority = Boolean(selectedDevice && hasCustomPortPriorityGroups(selectedDevice.config))
+  const isAdmissionDevice = selectedDevice?.typeId === 'item_log_admission'
+  const showCompactAdmissionRuntimeView = Boolean(isAdmissionDevice && simIsRunning)
+  const effectivePowerDemandKw = sim.isRunning ? sim.powerStats.totalDemandKw : (powerDemandOverrideKw ?? totalPowerDemandKw)
 
   return (
     <aside className="panel right-panel">
@@ -348,6 +361,28 @@ export function RightPanel({
       <div className="kv"><span>{t('right.basePlaceableSize')}</span><span>{currentBase.placeableSize}x{currentBase.placeableSize}</span></div>
       <div className="kv"><span>{t('right.totalPowerDemand')}</span><span>{totalPowerDemandKw} kW</span></div>
       <div className="kv">
+        <span>{t('right.powerDemandOverride')}</span>
+        <span>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={powerDemandOverrideKw ?? ''}
+            placeholder={t('right.followRealDemand')}
+            onChange={(event) => {
+              const rawValue = event.target.value.trim()
+              if (rawValue.length === 0) {
+                setPowerDemandOverrideKw(null)
+                return
+              }
+              const parsed = Number.parseInt(rawValue, 10)
+              setPowerDemandOverrideKw(Number.isFinite(parsed) ? parsed : null)
+            }}
+          />
+        </span>
+      </div>
+      <div className="kv"><span>{t('right.powerDemandEffective')}</span><span>{effectivePowerDemandKw} kW</span></div>
+      <div className="kv">
         <span>{t('right.powerMode')}</span>
         <span>
           <select
@@ -391,20 +426,20 @@ export function RightPanel({
       <h3>{t('right.selected')}</h3>
       {selectedDevice ? (
         <>
-          {DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags && DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags!.length > 0 && (
+          {!showCompactAdmissionRuntimeView && DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags && DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags!.length > 0 && (
             <div className="kv"><span>{t('detail.tags')}</span><span>{DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags!.join(', ')}</span></div>
           )}
-          <div className="kv"><span>{t('detail.instanceId')}</span><span>{selectedDevice.instanceId}</span></div>
+          {!showCompactAdmissionRuntimeView && <div className="kv"><span>{t('detail.instanceId')}</span><span>{selectedDevice.instanceId}</span></div>}
           <div className="kv"><span>{t('detail.deviceType')}</span><span>{getDeviceLabel(language, selectedDevice.typeId)}</span></div>
-          <div className="kv"><span>{t('detail.devicePowerDemand')}</span><span>{DEVICE_TYPE_BY_ID[selectedDevice.typeId].powerDemand} kW</span></div>
-          <div className="kv"><span>{t('detail.rotation')}</span><span>{selectedDevice.rotation}</span></div>
-          <div className="kv"><span>{t('detail.position')}</span><span>{selectedDevice.origin.x},{selectedDevice.origin.y}</span></div>
+          {!showCompactAdmissionRuntimeView && <div className="kv"><span>{t('detail.devicePowerDemand')}</span><span>{DEVICE_TYPE_BY_ID[selectedDevice.typeId].powerDemand} kW</span></div>}
+          {!showCompactAdmissionRuntimeView && <div className="kv"><span>{t('detail.rotation')}</span><span>{selectedDevice.rotation}</span></div>}
+          {!showCompactAdmissionRuntimeView && <div className="kv"><span>{t('detail.position')}</span><span>{selectedDevice.origin.x},{selectedDevice.origin.y}</span></div>}
           <div className="kv"><span>{t('detail.currentStatus')}</span><span>{getRuntimeStatusText(selectedRuntime, t)}</span></div>
           <div className="kv">
             <span>{t('detail.internalStatus')}</span>
             <span>{getInternalStatusText(selectedDevice, selectedRuntime, t)}</span>
           </div>
-          {selectedRuntime && (
+          {selectedRuntime && !showCompactAdmissionRuntimeView && (
             <>
               <div className="kv">
                 <span>{t('detail.inputSourceOrder')}</span>
@@ -426,7 +461,7 @@ export function RightPanel({
               ))}
             </>
           )}
-          {slotConfigSupportedTypeIds.has(selectedDevice.typeId) && (
+          {!showCompactAdmissionRuntimeView && slotConfigSupportedTypeIds.has(selectedDevice.typeId) && (
             <div className="kv">
               <span>{t('detail.storageSlotConfig')}</span>
               <span>
@@ -440,11 +475,13 @@ export function RightPanel({
               </span>
             </div>
           )}
-          <div className="kv">
-            <span>{t('detail.portPriorityConfigStatus')}</span>
-            <span>{hasCustomPortPriority ? t('detail.portPriorityConfigStatusCustom') : t('detail.portPriorityConfigStatusDefault')}</span>
-          </div>
-          {canConfigurePortPriority && (
+          {!showCompactAdmissionRuntimeView && (
+            <div className="kv">
+              <span>{t('detail.portPriorityConfigStatus')}</span>
+              <span>{hasCustomPortPriority ? t('detail.portPriorityConfigStatusCustom') : t('detail.portPriorityConfigStatusDefault')}</span>
+            </div>
+          )}
+          {!showCompactAdmissionRuntimeView && canConfigurePortPriority && (
             <div className="kv">
               <span>{t('detail.portPriorityConfig')}</span>
               <span>
@@ -458,7 +495,7 @@ export function RightPanel({
               </span>
             </div>
           )}
-          {isBelt(selectedDevice.typeId) && selectedRuntime && 'slot' in selectedRuntime && (
+          {isBufferedBeltTransportDevice(selectedDevice.typeId) && selectedRuntime && 'slot' in selectedRuntime && (
             <>
               {(() => {
                 const beltItemId = selectedRuntime.slot?.itemId
@@ -492,7 +529,7 @@ export function RightPanel({
           )}
           {selectedRuntime && (
             <>
-              {!isBelt(selectedDevice.typeId) && 'inputBuffer' in selectedRuntime && 'outputBuffer' in selectedRuntime && (
+              {!isBufferedBeltTransportDevice(selectedDevice.typeId) && 'inputBuffer' in selectedRuntime && 'outputBuffer' in selectedRuntime && (
                 (() => {
                   if (selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning) {
                     const laneRecipeIds = selectedRuntime.reactorActiveRecipeIds ?? [undefined, undefined]
@@ -568,7 +605,7 @@ export function RightPanel({
                   )
                 })()
               )}
-              {!isBelt(selectedDevice.typeId) && 'inputBuffer' in selectedRuntime && (
+              {!isBufferedBeltTransportDevice(selectedDevice.typeId) && 'inputBuffer' in selectedRuntime && (
                 selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning
                   ? (
                     <>
@@ -603,7 +640,7 @@ export function RightPanel({
                     </div>
                     )
               )}
-              {!isBelt(selectedDevice.typeId) && 'outputBuffer' in selectedRuntime && (
+              {!isBufferedBeltTransportDevice(selectedDevice.typeId) && 'outputBuffer' in selectedRuntime && (
                 !(selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning) && (
                   <div className="kv">
                     <span>{t('detail.cacheOutputBuffer')}</span>
@@ -716,6 +753,80 @@ export function RightPanel({
                   </span>
                 </span>
               </div>
+            </>
+          )}
+          {selectedDevice.typeId === 'item_log_admission' && (
+            <>
+              {simIsRunning ? (
+                <>
+                  <div className="kv">
+                    <span>{t('detail.admissionItem')}</span>
+                    <span>{selectedAdmissionItemId ? getItemLabel(language, selectedAdmissionItemId) : t('detail.unselected')}</span>
+                  </div>
+                  <div className="kv">
+                    <span>{t('detail.admissionAmount')}</span>
+                    <span>{selectedAdmissionAmount ?? '-'}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="kv kv-no-border kv-pickup-inline">
+                    <span>{t('detail.admissionItem')}</span>
+                    <span className="kv-pickup-inline-value">
+                      <button
+                        type="button"
+                        className="picker-open-btn picker-open-btn-inline"
+                        disabled={simIsRunning}
+                        onClick={() => setItemPickerState({ kind: 'admission', deviceInstanceId: selectedDevice.instanceId })}
+                      >
+                        <span className="pickup-picker-current">
+                          {selectedAdmissionItemId ? (
+                            <img
+                              className="pickup-picker-current-icon"
+                              src={getItemIconPath(selectedAdmissionItemId)}
+                              alt=""
+                              aria-hidden="true"
+                              draggable={false}
+                            />
+                          ) : (
+                            <span className="pickup-picker-current-icon pickup-picker-current-icon--empty">?</span>
+                          )}
+                          <span>{selectedAdmissionItemId ? getItemLabel(language, selectedAdmissionItemId) : t('detail.unselected')}</span>
+                        </span>
+                      </button>
+                    </span>
+                  </div>
+                  <div className="kv">
+                    <span>{t('detail.admissionAmount')}</span>
+                    <span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={999}
+                        step={1}
+                        disabled={simIsRunning || !selectedAdmissionItemId}
+                        value={selectedAdmissionAmount ?? ''}
+                        placeholder={t('detail.unselected')}
+                        onChange={(event) => {
+                          const rawValue = event.target.value.trim()
+                          if (rawValue.length === 0) {
+                            updateAdmissionAmount(selectedDevice.instanceId, undefined)
+                            return
+                          }
+                          const parsed = Number.parseInt(rawValue, 10)
+                          updateAdmissionAmount(selectedDevice.instanceId, Number.isFinite(parsed) ? parsed : undefined)
+                        }}
+                      />
+                    </span>
+                  </div>
+                </>
+              )}
+              {selectedRuntime && 'producedItemsTotal' in selectedRuntime && (
+                <div className="kv">
+                  <span>{t('detail.admissionPassedCount')}</span>
+                  <span>{selectedRuntime.producedItemsTotal}</span>
+                </div>
+              )}
             </>
           )}
           {selectedDevice.typeId === 'item_port_water_pump_1' && (

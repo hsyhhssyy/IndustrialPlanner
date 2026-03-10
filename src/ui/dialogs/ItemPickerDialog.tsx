@@ -72,6 +72,8 @@ export function ItemPickerDialog({
         <div className="global-dialog-title">
           {itemPickerState.kind === 'pickup'
             ? t('detail.pickupDialogTitle')
+            : itemPickerState.kind === 'admission'
+              ? t('detail.admissionDialogTitle')
             : itemPickerState.kind === 'protocolHubOutput'
               ? t('detail.protocolHubOutputDialogTitle', { index: itemPickerState.portIndex + 1 })
             : itemPickerState.kind === 'pumpOutput'

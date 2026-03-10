@@ -27,6 +27,54 @@ export function useBuildConfigDomain({
     return itemId && ITEM_BY_ID[itemId]?.type === 'solid' ? itemId : undefined
   }, [])
 
+  const normalizeAdmissionItemId = useCallback((itemId: ItemId | undefined) => {
+    return itemId && ITEM_BY_ID[itemId]?.type === 'solid' ? itemId : undefined
+  }, [])
+
+  const normalizeAdmissionAmount = useCallback((amount: number | undefined) => {
+    if (!Number.isFinite(amount)) return undefined
+    const normalized = Math.floor(amount as number)
+    return normalized > 0 ? clamp(normalized, 1, 999) : undefined
+  }, [])
+
+  const updateAdmissionItem = useCallback(
+    (deviceInstanceId: string, admissionItemId: ItemId | undefined) => {
+      const normalizedAdmissionItemId = normalizeAdmissionItemId(admissionItemId)
+      setLayout((current) => ({
+        ...current,
+        devices: current.devices.map((device) => {
+          if (device.instanceId !== deviceInstanceId || device.typeId !== 'item_log_admission') return device
+          const nextConfig = { ...device.config, admissionItemId: normalizedAdmissionItemId }
+          if (!normalizedAdmissionItemId) {
+            delete nextConfig.admissionAmount
+          }
+          return { ...device, config: nextConfig }
+        }),
+      }))
+    },
+    [normalizeAdmissionItemId, setLayout],
+  )
+
+  const updateAdmissionAmount = useCallback(
+    (deviceInstanceId: string, admissionAmount: number | undefined) => {
+      const normalizedAdmissionAmount = normalizeAdmissionAmount(admissionAmount)
+      setLayout((current) => ({
+        ...current,
+        devices: current.devices.map((device) => {
+          if (device.instanceId !== deviceInstanceId || device.typeId !== 'item_log_admission') return device
+          const nextConfig = { ...device.config }
+          if (!nextConfig.admissionItemId || normalizedAdmissionAmount === undefined) {
+            delete nextConfig.admissionAmount
+          } else {
+            nextConfig.admissionAmount = normalizedAdmissionAmount
+          }
+          return { ...device, config: nextConfig }
+        }),
+      }))
+    },
+    [normalizeAdmissionAmount, setLayout],
+  )
+
   const updatePickupItem = useCallback(
     (deviceInstanceId: string, pickupItemId: ItemId | undefined) => {
       const normalizedPickupItemId =
@@ -256,6 +304,8 @@ export function useBuildConfigDomain({
   )
 
   return {
+    updateAdmissionItem,
+    updateAdmissionAmount,
     updatePickupItem,
     updatePickupIgnoreInventory,
     updateProtocolHubOutputItem,

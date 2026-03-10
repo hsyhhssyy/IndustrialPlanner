@@ -629,6 +629,7 @@ export function PlannerPanel({ language, superRecipeEnabled, t, onClose }: Plann
     if (deviceId === 'item_log_splitter') return '/device-icons/item_log_splitter.png'
     if (deviceId === 'item_log_converger') return '/device-icons/item_log_converger.png'
     if (deviceId === 'item_log_connector') return '/device-icons/item_log_connector.png'
+    if (deviceId === 'item_log_admission') return '/device-icons/item_log_admission.png'
     if (deviceId === 'item_port_hydro_planter_1') return '/device-icons/item_port_planter_1.png'
     if (deviceId === 'item_port_liquid_filling_pd_mc_1') return '/device-icons/item_port_filling_pd_mc_1.png'
     return `/device-icons/${deviceId}.png`

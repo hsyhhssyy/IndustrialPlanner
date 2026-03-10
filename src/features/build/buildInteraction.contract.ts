@@ -23,13 +23,14 @@ export const MANUAL_LOGISTICS_JUNCTION_TYPES = new Set<DeviceTypeId>([
   'item_log_splitter',
   'item_log_converger',
   'item_log_connector',
+  'item_log_admission',
   'item_pipe_splitter',
   'item_pipe_converger',
   'item_pipe_connector',
 ])
 
 export function isManualBeltJunctionType(typeId: DeviceTypeId) {
-  return typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector'
+  return typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector' || typeId === 'item_log_admission'
 }
 
 export function isManualPipeJunctionType(typeId: DeviceTypeId) {

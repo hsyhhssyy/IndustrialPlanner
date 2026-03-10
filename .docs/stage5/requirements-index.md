@@ -49,14 +49,15 @@
 
 | 编号 | 名称 | 优先级 | 状态 | 当前阶段 | 需求文档 |
 | --- | --- | --- | --- | --- | --- |
-| S5-RQ-001 | 缺陷修复与稳定性收敛 | P0 | todo | M1 | [REQ-001](requirements/REQ-001-bug-and-stability.md) |
+| S5-RQ-001 | 缺陷修复与稳定性收敛 | P0 | in-progress | M1 | [REQ-001](requirements/REQ-001-bug-and-stability.md) |
 | S5-RQ-002 | 真实 1.1 配方与正式图标替换 | P0 | todo | M1 | [REQ-002](requirements/REQ-002-real-1-1-data-and-icons.md) |
 | S5-RQ-003 | 可维护性清理与模块拆分 | P2 | todo | M3 | [REQ-003](requirements/REQ-003-maintainability-cleanup.md) |
-| S5-RQ-004 | 仿真运行时动态调整能耗 | P1 | todo | M2 | [REQ-004](requirements/REQ-004-runtime-power-adjustment.md) |
-| S5-RQ-005 | 物品准入口 | P1 | todo | M2 | [REQ-005](requirements/REQ-005-item-admission.md) |
+| S5-RQ-004 | 仿真运行时动态调整能耗 | P1 | in-progress | M2 | [REQ-004](requirements/REQ-004-runtime-power-adjustment.md) |
+| S5-RQ-005 | 物品准入口 | P1 | done | M2 | [REQ-005](requirements/REQ-005-item-admission.md) |
 | S5-RQ-006 | 起死回生机公共蓝图 | P1 | todo | M2 | [REQ-006](requirements/REQ-006-public-blueprint-revival.md) |
 | S5-RQ-007 | 电力 / 电池折线图 | P1 | todo | M2 | [REQ-007](requirements/REQ-007-power-battery-chart.md) |
 | S5-RQ-008 | Playwright CLI 自动化测试流程 | P0 | todo | M3 | [REQ-008](requirements/REQ-008-playwright-automation.md) |
+| S5-RQ-009 | 界面完全重构 | P2 | todo | M3 | [REQ-009](requirements/REQ-009-ui-full-refactor.md) |
 
 ## 当前阶段观察
 
@@ -64,11 +65,19 @@
 
 1. 优先完成 P0：S5-RQ-001、S5-RQ-002、S5-RQ-008。
 2. 然后推进 P1：S5-RQ-004、S5-RQ-005、S5-RQ-006、S5-RQ-007。
-3. S5-RQ-003 以“服务当前主线”为前提推进，不单独膨胀为全面重构。
+3. 再推进 P2：S5-RQ-003、S5-RQ-009。
+4. `S5-RQ-003` 仍以“服务当前主线”为前提推进，不单独膨胀为全面重构；界面完全重构独立由 `S5-RQ-009` 承载。
 
 ### 当前阻塞
 
 - 暂无已登记 `blocked` 项；后续若出现阻塞，必须在对应需求文档补充原因、影响与解除条件。
+
+### 当前进展补充
+
+1. `S5-RQ-005` 已完成物品准入口交付、资源收敛、数量语义确认与 `junction` 结构重构，当前状态为 `done`。
+2. `S5-RQ-001` 已录入并关闭首批 3 个缺陷，详见 [bugs.md](bugs.md)。
+3. `S5-RQ-004` 已进入 `in-progress`，当前口径为“右侧顶部全局总耗电覆盖值”，首版代码链路已接通，待补运行态回归。
+4. `S5-RQ-009` 已登记为新需求，当前待明确重构范围、分期落地方式与视觉基线。
 
 ### 全局 bug 入口
 
@@ -78,3 +87,7 @@
 
 - 2026-03-09：Stage5 文档体系改造完成，建立需求索引总表。
 - 2026-03-09：补充全局 bug 文档入口，并明确需求索引不承担 bug 流水记录。
+- 2026-03-09：将 `S5-RQ-001`、`S5-RQ-005` 状态更新为 `in-progress`，并补充本轮开发进展摘要。
+- 2026-03-10：将 `S5-RQ-005` 状态更新为 `done`，并补充交付完成摘要。
+- 2026-03-10：将 `S5-RQ-004` 状态更新为 `in-progress`，并补充首版实现口径。
+- 2026-03-10：新增 `S5-RQ-009`，将“界面完全重构”纳入 Stage5 需求总表。

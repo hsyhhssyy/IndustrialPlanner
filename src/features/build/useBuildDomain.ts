@@ -40,6 +40,7 @@ export function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
     typeId === 'item_log_splitter' ||
     typeId === 'item_log_converger' ||
     typeId === 'item_log_connector' ||
+    typeId === 'item_log_admission' ||
     typeId === 'item_pipe_splitter' ||
     typeId === 'item_pipe_converger' ||
     typeId === 'item_pipe_connector'
@@ -122,9 +123,7 @@ export function useBuildDomainActions({
     if (!confirmed) return
     setLayout((current) => ({
       ...current,
-      devices: current.devices.filter(
-        (device) => !isBeltLike(device.typeId) && !isPipeLike(device.typeId),
-      ),
+      devices: current.devices.filter((device) => !isBeltLike(device.typeId) && !isPipeLike(device.typeId)),
     }))
     setSelection([])
   }, [setLayout, setSelection, simIsRunning, t])

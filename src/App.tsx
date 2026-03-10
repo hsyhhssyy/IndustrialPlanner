@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { DEVICE_TYPE_BY_ID, PLACEABLE_TYPES } from './domain/registry'
 import {
   buildOccupancyMap,
   cellToDeviceId,
   EDGE_ANGLE,
-  isBelt,
+  isBufferedBeltTransportDevice,
 } from './domain/geometry'
 import {
   formatCompactNumber,
@@ -70,7 +70,7 @@ function getInternalStatusText(
 ) {
   if (!runtime) return t('detail.internal.noRuntime')
 
-  if (!isBelt(selectedDevice.typeId) || !('slot' in runtime)) {
+  if (!isBufferedBeltTransportDevice(selectedDevice.typeId) || !('slot' in runtime)) {
     return getRuntimeStatusText(runtime, t)
   }
 
@@ -99,6 +99,7 @@ function getDeviceMenuIconPath(typeId: DeviceTypeId) {
   if (typeId === 'item_log_splitter') return '/device-icons/item_log_splitter.png'
   if (typeId === 'item_log_converger') return '/device-icons/item_log_converger.png'
   if (typeId === 'item_log_connector') return '/device-icons/item_log_connector.png'
+  if (typeId === 'item_log_admission') return '/device-icons/item_log_admission.png'
   if (typeId === 'item_pipe_splitter') return '/device-icons/item_pipe_splitter.png'
   if (typeId === 'item_pipe_converger') return '/device-icons/item_pipe_converger.png'
   if (typeId === 'item_pipe_connector') return '/device-icons/item_pipe_connector.png'
@@ -127,6 +128,7 @@ const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>([
   'item_log_splitter',
   'item_log_converger',
   'item_log_connector',
+  'item_log_admission',
   'item_pipe_splitter',
   'item_pipe_converger',
   'item_pipe_connector',
@@ -153,6 +155,12 @@ function normalizeRecentPickerItemIds(value: ItemId[]) {
   return unique
 }
 
+function normalizePowerDemandOverrideKw(value: number | null | undefined) {
+  if (value === null || value === undefined) return null
+  if (!Number.isFinite(value)) return null
+  return clamp(Math.round(value), 0, 999_999_999)
+}
+
 function App() {
   const currentYear = new Date().getFullYear()
   const [leftPanelWidth, setLeftPanelWidth] = usePersistentState<number>('stage1-left-panel-width', 340)
@@ -161,6 +169,11 @@ function App() {
   const [rightPanelCollapsed, setRightPanelCollapsed] = usePersistentState<boolean>('stage4-right-panel-collapsed', false)
   const [powerMode, setPowerMode] = usePersistentState<PowerMode>('stage3-power-mode', 'infinite')
   const [initialBatteryPercent, setInitialBatteryPercent] = usePersistentState<number>('stage3-initial-battery-percent', 100)
+  const [configuredPowerDemandOverrideKw, setConfiguredPowerDemandOverrideKw] = usePersistentState<number | null>(
+    'stage5-power-demand-override-kw',
+    null,
+    normalizePowerDemandOverrideKw,
+  )
   const [recentPickerItemIds, setRecentPickerItemIds] = usePersistentState<ItemId[]>(
     'stage3-item-picker-recent-item-ids',
     [],
@@ -359,6 +372,10 @@ function App() {
   }, [setInitialBatteryPercent])
 
   useEffect(() => {
+    setConfiguredPowerDemandOverrideKw((current) => normalizePowerDemandOverrideKw(current))
+  }, [setConfiguredPowerDemandOverrideKw])
+
+  useEffect(() => {
     const onMouseMove = (event: MouseEvent) => {
       const state = resizeStateRef.current
       if (!state) return
@@ -434,6 +451,8 @@ function App() {
     setItemPickerState,
     selectedDevice,
     selectedRuntime,
+    selectedAdmissionItemId,
+    selectedAdmissionAmount,
     selectedPickupItemId,
     selectedPumpOutputItemId,
     selectedPickupItemIsOre,
@@ -448,6 +467,7 @@ function App() {
     pickerAllowsEmpty,
     pickerDisabledItemIds,
     handleItemPickerSelect,
+    updateAdmissionAmount,
     updatePickupIgnoreInventory,
     updateProtocolHubOutputIgnoreInventory,
     updateProcessorPreloadSlot,
@@ -672,6 +692,23 @@ function App() {
     [layout.devices],
   )
 
+  const activePowerDemandOverrideKw = sim.isRunning ? sim.powerDemandOverrideKw : configuredPowerDemandOverrideKw
+
+  const setActivePowerDemandOverrideKw = useCallback(
+    (value: number | null) => {
+      const normalized = normalizePowerDemandOverrideKw(value)
+      if (sim.isRunning) {
+        updateSim((current) => ({
+          ...current,
+          powerDemandOverrideKw: normalized,
+        }))
+        return
+      }
+      setConfiguredPowerDemandOverrideKw(normalized)
+    },
+    [setConfiguredPowerDemandOverrideKw, sim.isRunning, updateSim],
+  )
+
   const beginPanelResize = (side: 'left' | 'right', startX: number) => {
     resizeStateRef.current = {
       side,
@@ -841,6 +878,7 @@ function App() {
     layout,
     powerMode,
     initialBatteryPercent,
+    powerDemandOverrideKw: configuredPowerDemandOverrideKw,
     updateSim,
   })
 
@@ -1082,6 +1120,8 @@ function App() {
               setPowerMode={setPowerMode}
               initialBatteryPercent={initialBatteryPercent}
               setInitialBatteryPercent={setInitialBatteryPercent}
+              powerDemandOverrideKw={activePowerDemandOverrideKw}
+              setPowerDemandOverrideKw={setActivePowerDemandOverrideKw}
               setActiveBaseId={setActiveBaseId}
               setSelection={setSelection}
               selectedDevice={selectedDevice}
@@ -1099,6 +1139,8 @@ function App() {
               selectedProcessorBufferSpec={selectedProcessorBufferSpec}
               selectedPreloadSlots={selectedPreloadSlots}
               selectedPreloadTotal={selectedPreloadTotal}
+              selectedAdmissionItemId={selectedAdmissionItemId}
+              selectedAdmissionAmount={selectedAdmissionAmount}
               selectedPickupItemId={selectedPickupItemId}
               selectedPumpOutputItemId={selectedPumpOutputItemId}
               selectedPickupItemIsOre={selectedPickupItemIsOre}
@@ -1106,6 +1148,7 @@ function App() {
               selectedProtocolHubOutputs={selectedProtocolHubOutputs}
               getItemIconPath={getItemIconPath}
               setItemPickerState={setItemPickerState}
+              updateAdmissionAmount={updateAdmissionAmount}
               updatePickupIgnoreInventory={updatePickupIgnoreInventory}
               updateProtocolHubOutputIgnoreInventory={updateProtocolHubOutputIgnoreInventory}
               setLayout={setLayout}

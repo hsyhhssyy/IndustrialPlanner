@@ -64,6 +64,19 @@ export function useObservabilityDomain({
     return `${Math.max(0, Math.round(value))}`
   }
 
+  const formatBatteryStored = (valueJ: number) => {
+    if (!Number.isFinite(valueJ) || valueJ <= 0) return '0J'
+
+    const formatUnit = (value: number, unit: 'MJ' | 'KJ') => {
+      const rounded = Math.round(value * 10) / 10
+      return `${rounded.toFixed(1)}${unit}`
+    }
+
+    if (valueJ >= 1_000_000) return formatUnit(valueJ / 1_000_000, 'MJ')
+    if (valueJ >= 1_000) return formatUnit(valueJ / 1_000, 'KJ')
+    return `${Math.round(valueJ)}J`
+  }
+
   const statsRows = useMemo(() => {
     const rows = ITEMS.map((item) => ({
       itemId: item.id,
@@ -142,7 +155,7 @@ export function useObservabilityDomain({
         <span>
           {`${t('right.powerDemand')}/${t('right.powerSupply')} ${formatCompactNumber(sim.powerStats.totalDemandKw)}/${powerMode === 'infinite' ? t('right.infinity') : formatCompactNumber(sim.powerStats.totalSupplyKw)} kW`}
         </span>
-        <span>{sim.powerMode === 'infinite' ? '100%' : `${sim.powerStats.batteryPercent}%`}</span>
+        <span>{sim.powerMode === 'infinite' ? `${t('right.infinity')}/100.0%` : `${formatBatteryStored(sim.powerStats.batteryStoredJ)}/${sim.powerStats.batteryPercent.toFixed(1)}%`}</span>
       </div>
 
       <h3>{t('right.stats')}</h3>

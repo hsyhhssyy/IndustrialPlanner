@@ -53,6 +53,7 @@ export type DeviceTypeId =
   | 'item_log_splitter'
   | 'item_log_converger'
   | 'item_log_connector'
+  | 'item_log_admission'
   | 'item_pipe_splitter'
   | 'item_pipe_converger'
   | 'item_pipe_connector'
@@ -175,6 +176,8 @@ export interface StorageSlotConfigEntry {
 export interface DeviceConfig {
   pickupItemId?: ItemId
   pickupIgnoreInventory?: boolean
+  admissionItemId?: ItemId
+  admissionAmount?: number
   protocolHubOutputs?: ProtocolHubOutputConfigEntry[]
   portPriorityGroups?: Partial<Record<string, number>>
   pumpOutputItemId?: ItemId
@@ -328,6 +331,7 @@ export interface JunctionRuntime extends BaseRuntime {
   slot: SlotData | null
   nsSlot: SlotData | null
   weSlot: SlotData | null
+  producedItemsTotal: number
   lastSplitterOutputPortId?: string
 }
 
@@ -338,6 +342,7 @@ export type PowerMode = 'real' | 'infinite'
 export interface SimState {
   isRunning: boolean
   powerMode: PowerMode
+  powerDemandOverrideKw: number | null
   speed: 0 | 0.25 | 1 | 2 | 4 | 16
   tick: number
   tickRateHz: number
