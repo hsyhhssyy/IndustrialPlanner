@@ -226,6 +226,14 @@ export const StaticDeviceLayer = memo(
       return undefined
     }
 
+    function getConfiguredAdmissionIconItemId(device: DeviceInstance): ItemId | undefined {
+      if (device.typeId !== 'item_log_admission' && device.typeId !== 'item_pipe_admission') return undefined
+      const configuredItemId = device.config.admissionItemId
+      if (!configuredItemId) return undefined
+      const expectedType = device.typeId === 'item_log_admission' ? 'solid' : 'liquid'
+      return ITEM_BY_ID[configuredItemId]?.type === expectedType ? configuredItemId : undefined
+    }
+
     function getPreloadSummaryEntries(device: DeviceInstance): Array<{ itemId: ItemId; amount: number }> {
       const amountByItem = new Map<ItemId, number>()
       const preloadInputs = device.config.preloadInputs ?? []
@@ -333,7 +341,7 @@ export const StaticDeviceLayer = memo(
             : undefined
           const pickupItemId = isPickupPort ? pickupOutputEntry?.itemId ?? renderDevice.config.pickupItemId : undefined
           const runtimeIconItemId = getRuntimeIconItemId(renderDevice)
-          const displayItemIconId = runtimeIconItemId
+          const displayItemIconId = runtimeIconItemId ?? getConfiguredAdmissionIconItemId(renderDevice)
           const preloadSummaryEntries = showPreloadSummary ? getPreloadSummaryEntries(renderDevice) : []
           const configuredPortItemEntries =
             isPickupPort || isProtocolHub
