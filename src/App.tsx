@@ -104,6 +104,7 @@ function getDeviceMenuIconPath(typeId: DeviceTypeId) {
   if (typeId === 'item_log_admission') return '/device-icons/item_log_admission.png'
   if (typeId === 'item_pipe_splitter') return '/device-icons/item_pipe_splitter.png'
   if (typeId === 'item_pipe_converger') return '/device-icons/item_pipe_converger.png'
+  if (typeId === 'item_pipe_admission') return '/device-icons/item_pipe_admission.png'
   if (typeId === 'item_pipe_connector') return '/device-icons/item_pipe_connector.png'
   if (typeId === 'item_port_water_pump_1') return '/device-icons/item_port_pump_1.png'
   if (typeId === 'item_port_liquid_storager_1') return '/device-icons/item_port_liquid_storager_1.png'
@@ -133,6 +134,7 @@ const HIDDEN_DEVICE_LABEL_TYPES = new Set<DeviceTypeId>([
   'item_log_admission',
   'item_pipe_splitter',
   'item_pipe_converger',
+  'item_pipe_admission',
   'item_pipe_connector',
 ])
 const OUT_OF_LOT_TOAST_KEY = 'toast.outOfLot'

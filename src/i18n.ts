@@ -880,6 +880,7 @@ const DEVICE_MESSAGES: Record<Language, Record<DeviceTypeId, string>> = {
     item_log_admission: '物品准入口',
     item_pipe_splitter: '管道分流器',
     item_pipe_converger: '管道汇流器',
+    item_pipe_admission: '管道准入口',
     item_pipe_connector: '管道桥接器',
   },
   'en-US': {
@@ -922,6 +923,7 @@ const DEVICE_MESSAGES: Record<Language, Record<DeviceTypeId, string>> = {
     item_log_admission: 'Item Admission',
     item_pipe_splitter: 'Pipe Splitter',
     item_pipe_converger: 'Pipe Converger',
+    item_pipe_admission: 'Pipe Admission',
     item_pipe_connector: 'Pipe Connector',
   },
 }

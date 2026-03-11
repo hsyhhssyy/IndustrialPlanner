@@ -26,6 +26,7 @@ export const MANUAL_LOGISTICS_JUNCTION_TYPES = new Set<DeviceTypeId>([
   'item_log_admission',
   'item_pipe_splitter',
   'item_pipe_converger',
+  'item_pipe_admission',
   'item_pipe_connector',
 ])
 
@@ -34,7 +35,7 @@ export function isManualBeltJunctionType(typeId: DeviceTypeId) {
 }
 
 export function isManualPipeJunctionType(typeId: DeviceTypeId) {
-  return typeId === 'item_pipe_splitter' || typeId === 'item_pipe_converger' || typeId === 'item_pipe_connector'
+  return typeId === 'item_pipe_splitter' || typeId === 'item_pipe_converger' || typeId === 'item_pipe_admission' || typeId === 'item_pipe_connector'
 }
 
 export function allowsOuterRingPlacementForType(typeId: DeviceTypeId) {

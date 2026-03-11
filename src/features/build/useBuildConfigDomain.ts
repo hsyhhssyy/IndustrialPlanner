@@ -27,8 +27,14 @@ export function useBuildConfigDomain({
     return itemId && ITEM_BY_ID[itemId]?.type === 'solid' ? itemId : undefined
   }, [])
 
-  const normalizeAdmissionItemId = useCallback((itemId: ItemId | undefined) => {
-    return itemId && ITEM_BY_ID[itemId]?.type === 'solid' ? itemId : undefined
+  const normalizeAdmissionItemId = useCallback((deviceTypeId: DeviceInstance['typeId'], itemId: ItemId | undefined) => {
+    const expectedType = deviceTypeId === 'item_log_admission'
+      ? 'solid'
+      : deviceTypeId === 'item_pipe_admission'
+        ? 'liquid'
+        : null
+    if (!expectedType) return undefined
+    return itemId && ITEM_BY_ID[itemId]?.type === expectedType ? itemId : undefined
   }, [])
 
   const normalizeAdmissionAmount = useCallback((amount: number | undefined) => {
@@ -39,11 +45,12 @@ export function useBuildConfigDomain({
 
   const updateAdmissionItem = useCallback(
     (deviceInstanceId: string, admissionItemId: ItemId | undefined) => {
-      const normalizedAdmissionItemId = normalizeAdmissionItemId(admissionItemId)
       setLayout((current) => ({
         ...current,
         devices: current.devices.map((device) => {
-          if (device.instanceId !== deviceInstanceId || device.typeId !== 'item_log_admission') return device
+          if (device.instanceId !== deviceInstanceId) return device
+          if (device.typeId !== 'item_log_admission' && device.typeId !== 'item_pipe_admission') return device
+          const normalizedAdmissionItemId = normalizeAdmissionItemId(device.typeId, admissionItemId)
           const nextConfig = { ...device.config, admissionItemId: normalizedAdmissionItemId }
           if (!normalizedAdmissionItemId) {
             delete nextConfig.admissionAmount
@@ -61,7 +68,8 @@ export function useBuildConfigDomain({
       setLayout((current) => ({
         ...current,
         devices: current.devices.map((device) => {
-          if (device.instanceId !== deviceInstanceId || device.typeId !== 'item_log_admission') return device
+          if (device.instanceId !== deviceInstanceId) return device
+          if (device.typeId !== 'item_log_admission' && device.typeId !== 'item_pipe_admission') return device
           const nextConfig = { ...device.config }
           if (!nextConfig.admissionItemId || normalizedAdmissionAmount === undefined) {
             delete nextConfig.admissionAmount

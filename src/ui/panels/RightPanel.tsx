@@ -306,7 +306,7 @@ export function RightPanel({
 
   const canConfigurePortPriority = Boolean(selectedDevice && shouldShowPortPriorityConfigButton(selectedDevice))
   const hasCustomPortPriority = Boolean(selectedDevice && hasCustomPortPriorityGroups(selectedDevice.config))
-  const isAdmissionDevice = selectedDevice?.typeId === 'item_log_admission'
+  const isAdmissionDevice = selectedDevice?.typeId === 'item_log_admission' || selectedDevice?.typeId === 'item_pipe_admission'
   const showCompactAdmissionRuntimeView = Boolean(isAdmissionDevice && simIsRunning)
   const effectivePowerDemandKw = sim.isRunning ? sim.powerStats.totalDemandKw : (powerDemandOverrideKw ?? totalPowerDemandKw)
 
@@ -769,7 +769,7 @@ export function RightPanel({
               </div>
             </>
           )}
-          {selectedDevice.typeId === 'item_log_admission' && (
+          {(selectedDevice.typeId === 'item_log_admission' || selectedDevice.typeId === 'item_pipe_admission') && (
             <>
               {simIsRunning ? (
                 <>

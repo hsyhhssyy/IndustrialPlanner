@@ -56,6 +56,7 @@ export type DeviceTypeId =
   | 'item_log_admission'
   | 'item_pipe_splitter'
   | 'item_pipe_converger'
+  | 'item_pipe_admission'
   | 'item_pipe_connector'
 
 export type BaseId =

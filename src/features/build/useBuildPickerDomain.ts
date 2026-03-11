@@ -30,6 +30,10 @@ const PUMP_SELECTABLE_LIQUID_IDS = new Set<ItemId>([
 const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
 const PROTOCOL_HUB_OUTPUT_PORT_IDS = ['out_w_2', 'out_w_5', 'out_w_8', 'out_e_2', 'out_e_5', 'out_e_8'] as const
 
+function isAdmissionDeviceType(typeId: LayoutState['devices'][number]['typeId'] | undefined) {
+  return typeId === 'item_log_admission' || typeId === 'item_pipe_admission'
+}
+
 type UseBuildPickerDomainParams = {
   layout: LayoutState
   selection: string[]
@@ -77,8 +81,8 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       ? (selectedDevice.config.protocolHubOutputs ?? []).find((entry) => entry.portId === PICKUP_OUTPUT_PORT_ID)?.itemId ??
         selectedDevice.config.pickupItemId
       : undefined
-  const selectedAdmissionItemId = selectedDevice?.typeId === 'item_log_admission' ? selectedDevice.config.admissionItemId : undefined
-  const selectedAdmissionAmount = selectedDevice?.typeId === 'item_log_admission'
+  const selectedAdmissionItemId = isAdmissionDeviceType(selectedDevice?.typeId) ? selectedDevice?.config.admissionItemId : undefined
+  const selectedAdmissionAmount = isAdmissionDeviceType(selectedDevice?.typeId)
     ? (typeof selectedDevice.config.admissionAmount === 'number' && selectedDevice.config.admissionAmount > 0
       ? Math.floor(selectedDevice.config.admissionAmount)
       : undefined)
@@ -185,7 +189,9 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       return { allowedTypes: ['solid'] }
     }
     if (itemPickerState.kind === 'admission') {
-      return { allowedTypes: ['solid'] }
+      return {
+        allowedTypes: pickerTargetDevice?.typeId === 'item_pipe_admission' ? ['liquid'] : ['solid'],
+      }
     }
     if (itemPickerState.kind === 'protocolHubOutput') {
       return { allowedTypes: ['solid'] }
@@ -232,7 +238,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       setItemPickerState(null)
       return
     }
-    if (itemPickerState.kind === 'admission' && target.typeId !== 'item_log_admission') {
+    if (itemPickerState.kind === 'admission' && !isAdmissionDeviceType(target.typeId)) {
       setItemPickerState(null)
       return
     }

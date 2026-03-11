@@ -2182,6 +2182,35 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     ],
   },
   {
+    id: 'item_pipe_admission',
+    runtimeKind: 'junction',
+    requiresPower: false,
+    powerDemand: 0,
+    size: { width: 1, height: 1 },
+    shortName: 'PipeAdmission',
+    tags: ['武陵', 'PipeFamily', 'OuterRingAllowed'],
+    ports0: [
+      {
+        id: 'in_w',
+        localCellX: 0,
+        localCellY: 0,
+        edge: 'W',
+        direction: 'Input',
+        allowedItems: recipeItemsAllowance,
+        allowedTypes: liquidAllowance,
+      },
+      {
+        id: 'out_e',
+        localCellX: 0,
+        localCellY: 0,
+        edge: 'E',
+        direction: 'Output',
+        allowedItems: recipeItemsAllowance,
+        allowedTypes: liquidAllowance,
+      },
+    ],
+  },
+  {
     id: 'item_pipe_splitter',
     runtimeKind: 'junction',
     requiresPower: false,
@@ -2281,7 +2310,7 @@ export const ITEM_BY_ID: Record<string, ItemDef> = Object.fromEntries(ITEMS.map(
 export const BELT_TYPES = new Set(['belt_straight_1x1', 'belt_turn_cw_1x1', 'belt_turn_ccw_1x1'])
 export const PIPE_TYPES = new Set(['pipe_straight_1x1', 'pipe_turn_cw_1x1', 'pipe_turn_ccw_1x1'])
 export const JUNCTION_TYPES = new Set(['item_log_splitter', 'item_log_converger', 'item_log_connector', 'item_log_admission'])
-export const PIPE_JUNCTION_TYPES = new Set(['item_pipe_splitter', 'item_pipe_converger', 'item_pipe_connector'])
+export const PIPE_JUNCTION_TYPES = new Set(['item_pipe_splitter', 'item_pipe_converger', 'item_pipe_admission', 'item_pipe_connector'])
 export const HIDDEN_PLACEABLE_TYPE_IDS = new Set(['item_port_sp_hub_1'])
 
 export const PLACEABLE_TYPES = DEVICE_TYPES.filter(

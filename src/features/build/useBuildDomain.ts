@@ -43,6 +43,7 @@ export function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
     typeId === 'item_log_admission' ||
     typeId === 'item_pipe_splitter' ||
     typeId === 'item_pipe_converger' ||
+    typeId === 'item_pipe_admission' ||
     typeId === 'item_pipe_connector'
   )
     return 'logistics'

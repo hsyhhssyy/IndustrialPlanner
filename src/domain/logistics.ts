@@ -150,7 +150,7 @@ function isBeltFamilyJunction(typeId: string) {
 }
 
 function isPipeFamilyJunction(typeId: string) {
-  return typeId === 'item_pipe_splitter' || typeId === 'item_pipe_converger' || typeId === 'item_pipe_connector'
+  return typeId === 'item_pipe_splitter' || typeId === 'item_pipe_converger' || typeId === 'item_pipe_admission' || typeId === 'item_pipe_connector'
 }
 
 function isLogisticsLikeByFamily(typeId: string, family: LogisticsFamily) {

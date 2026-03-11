@@ -1170,12 +1170,18 @@ function canAcceptBeltInput(runtime: BeltRuntime) {
 }
 
 function configuredAdmissionItemId(device: DeviceInstance) {
+  const expectedType = device.typeId === 'item_log_admission'
+    ? 'solid'
+    : device.typeId === 'item_pipe_admission'
+      ? 'liquid'
+      : null
+  if (!expectedType) return undefined
   const configured = device.config.admissionItemId
-  return configured && ITEM_BY_ID[configured]?.type === 'solid' ? configured : undefined
+  return configured && ITEM_BY_ID[configured]?.type === expectedType ? configured : undefined
 }
 
 function configuredAdmissionAmount(device: DeviceInstance) {
-  if (device.typeId !== 'item_log_admission') return undefined
+  if (device.typeId !== 'item_log_admission' && device.typeId !== 'item_pipe_admission') return undefined
   const configured = Number(device.config.admissionAmount)
   if (!Number.isFinite(configured)) return undefined
   const normalized = Math.floor(configured)
@@ -1198,7 +1204,7 @@ function canAcceptBufferedBeltInput(device: DeviceInstance, runtime: BeltRuntime
 }
 
 function canAcceptAdmissionSlotInput(device: DeviceInstance, runtime: DeviceRuntime, itemId: ItemId) {
-  if (device.typeId !== 'item_log_admission' || !('producedItemsTotal' in runtime)) return true
+  if ((device.typeId !== 'item_log_admission' && device.typeId !== 'item_pipe_admission') || !('producedItemsTotal' in runtime)) return true
   const configuredItemId = configuredAdmissionItemId(device)
   if (configuredItemId && configuredItemId !== itemId) return false
   return admissionRemainingQuota(device, runtime) > 0
@@ -1301,7 +1307,7 @@ function canReceiveLaneForItem(
     const canAccept = canAcceptIntoLane(device, runtime, lane, toPortId, itemId)
     return canAccept ? lane : null
   }
-  if (device.typeId === 'item_log_admission' && !canAcceptAdmissionSlotInput(device, runtime, itemId)) {
+  if ((device.typeId === 'item_log_admission' || device.typeId === 'item_pipe_admission') && !canAcceptAdmissionSlotInput(device, runtime, itemId)) {
     return null
   }
   const slot = getSlotRef(runtime, lane)
@@ -1564,7 +1570,7 @@ function consumeSourceByPlan(
     fromRuntime.transportTotalTicks += transitTicks
     fromRuntime.transportSamples += 1
   }
-  if (fromDevice.typeId === 'item_log_admission' && plan.fromLane === 'slot' && 'producedItemsTotal' in fromRuntime) {
+  if ((fromDevice.typeId === 'item_log_admission' || fromDevice.typeId === 'item_pipe_admission') && plan.fromLane === 'slot' && 'producedItemsTotal' in fromRuntime) {
     fromRuntime.producedItemsTotal += 1
   }
   setSlotRef(fromRuntime, plan.fromLane, null)
