@@ -487,11 +487,14 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
   }, [flowNodeDragState, flowPanState, flowScale])
 
   useEffect(() => {
+    if (activeResultTab !== 'flowByDevice') return
+
     const viewport = flowViewportRef.current
     if (!viewport) return
 
     const onWheel = (event: WheelEvent) => {
       event.preventDefault()
+      event.stopPropagation()
       const rect = viewport.getBoundingClientRect()
       const pointerX = event.clientX - rect.left
       const pointerY = event.clientY - rect.top
@@ -511,7 +514,7 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
 
     viewport.addEventListener('wheel', onWheel, { passive: false })
     return () => viewport.removeEventListener('wheel', onWheel)
-  }, [flowOffset.x, flowOffset.y, flowScale])
+  }, [activeResultTab, flowOffset.x, flowOffset.y, flowScale])
 
   const targetInputs = useMemo<PlannerTargetInput[]>(
     () =>

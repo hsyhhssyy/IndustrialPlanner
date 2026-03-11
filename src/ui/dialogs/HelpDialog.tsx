@@ -30,6 +30,13 @@ type GuideQa = {
   answer: string
 }
 
+type GuideAreaCard = {
+  icon: HelpIconKind
+  title: string
+  description: string
+  bullets: string[]
+}
+
 type AdvancedSection = {
   title: string
   points: string[]
@@ -149,6 +156,20 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
           '这套帮助页按“说明书”写法整理。建议先看“操作指南”，跟着做出第一条产线；遇到看不懂的状态，再看“进阶说明”。',
         workspaceTitle: '先认识主界面',
         workspaceSummary: '把界面理解成 4 个区域：左边选功能，中间搭产线，右边看详情，上面控制仿真。',
+        areaCards: [
+          {
+            icon: 'place',
+            title: '左侧工具条是“功能入口”',
+            description: '左边这一列按钮决定你现在是在放置、删除、蓝图还是打开工具功能。先点这里，再去面板里做细节操作。',
+            bullets: ['上半部分是主模式：放置 / 删除 / 蓝图。', '下半部分是辅助入口：工具箱 / 帮助 / 设置。'],
+          },
+          {
+            icon: 'panel',
+            title: '面板是“详细操作区”',
+            description: '切换完工具后，具体的设备列表、删除选项、蓝图列表和设备详情都会出现在面板里。',
+            bullets: ['左侧面板更偏“我要做什么”。', '右侧面板更偏“我当前选中的对象是什么状态”。'],
+          },
+        ] satisfies GuideAreaCard[],
         modeCards: [
           { icon: 'place', title: '放置模式', description: '选择设备、传送带或管道，然后在画布上落点建造。' },
           { icon: 'delete', title: '删除模式', description: '删除单个建筑、整条物流线，或框选一片区域清理。' },
@@ -209,6 +230,20 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
         'This page is written like a product manual. Start with “Guide” to build a first line, then use “Advanced” only when you need deeper simulation details.',
       workspaceTitle: 'Know the main screen first',
       workspaceSummary: 'Think of the UI as 4 areas: choose tools on the left, build in the center, inspect on the right, and control simulation at the top.',
+      areaCards: [
+        {
+          icon: 'place',
+          title: 'The left activity bar is the tool switcher',
+          description: 'That vertical button rail decides whether you are placing, deleting, working with blueprints, or opening utility tools. Click there first, then work in the panel.',
+          bullets: ['The upper part is for main modes: Place / Delete / Blueprint.', 'The lower part is for utility entry points: Toolbox / Help / Settings.'],
+        },
+        {
+          icon: 'panel',
+          title: 'Panels are the detailed work area',
+          description: 'After changing tools, the detailed options appear in panels: device lists, delete options, blueprint lists, and selection details.',
+          bullets: ['The left panel is usually “what do I want to do”.', 'The right panel is usually “what is this selected object doing now”.'],
+        },
+      ] satisfies GuideAreaCard[],
       modeCards: [
         { icon: 'place', title: 'Place Mode', description: 'Choose a machine, belt, or pipe, then place it on the canvas.' },
         { icon: 'delete', title: 'Delete Mode', description: 'Remove one building, a whole logistics line, or a boxed area.' },
@@ -470,6 +505,20 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
                   <div className="help-map-panel">{guideContent.shotPanel}</div>
                 </div>
               </div>
+            </div>
+
+            <div className="help-area-grid">
+              {guideContent.areaCards.map((card) => (
+                <article key={card.title} className="help-area-card">
+                  <IconChip icon={card.icon} label={card.title} />
+                  <p>{card.description}</p>
+                  <ul className="help-area-list">
+                    {card.bullets.map((bullet) => (
+                      <li key={bullet}>{bullet}</li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
             </div>
 
             <div className="help-mode-grid">
