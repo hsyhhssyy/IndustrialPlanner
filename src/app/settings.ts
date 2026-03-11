@@ -5,6 +5,7 @@ export type UiTheme = 'ayu-dark' | 'ayu-light'
 export type AppSettings = {
   language: Language
   superRecipeEnabled: boolean
+  debugMode: boolean
   uiTheme: UiTheme
   leftPanelWidth: number
   rightPanelWidth: number
@@ -31,6 +32,7 @@ function detectBrowserLanguage(): Language {
 const DEFAULT_SETTINGS: AppSettings = {
   language: detectBrowserLanguage(),
   superRecipeEnabled: false,
+  debugMode: false,
   uiTheme: 'ayu-dark',
   leftPanelWidth: 340,
   rightPanelWidth: 340,
@@ -73,6 +75,7 @@ export function normalizeAppSettings(value: Partial<AppSettings> | null | undefi
   return {
     language: normalizeLanguage(next.language, DEFAULT_SETTINGS.language),
     superRecipeEnabled: normalizeBoolean(next.superRecipeEnabled, DEFAULT_SETTINGS.superRecipeEnabled),
+    debugMode: normalizeBoolean(next.debugMode, DEFAULT_SETTINGS.debugMode),
     uiTheme: normalizeTheme(next.uiTheme, DEFAULT_SETTINGS.uiTheme),
     leftPanelWidth: normalizePanelWidth(next.leftPanelWidth, DEFAULT_SETTINGS.leftPanelWidth),
     rightPanelWidth: normalizePanelWidth(next.rightPanelWidth, DEFAULT_SETTINGS.rightPanelWidth),
@@ -94,6 +97,7 @@ export function readAppSettings(): AppSettings {
   return normalizeAppSettings({
     language: readLegacyValue<Language>('stage1-language', DEFAULT_SETTINGS.language),
     superRecipeEnabled: readLegacyValue<boolean>('stage4-super-recipe-enabled', DEFAULT_SETTINGS.superRecipeEnabled),
+    debugMode: readLegacyValue<boolean>('stage5-debug-mode', DEFAULT_SETTINGS.debugMode),
     leftPanelWidth: readLegacyValue<number>('stage1-left-panel-width', DEFAULT_SETTINGS.leftPanelWidth),
     rightPanelWidth: readLegacyValue<number>('stage1-right-panel-width', DEFAULT_SETTINGS.rightPanelWidth),
     leftPanelCollapsed: readLegacyValue<boolean>('stage4-left-panel-collapsed', DEFAULT_SETTINGS.leftPanelCollapsed),

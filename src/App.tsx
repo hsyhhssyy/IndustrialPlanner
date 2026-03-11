@@ -163,14 +163,6 @@ function normalizePowerDemandOverrideKw(value: number | null | undefined) {
   return clamp(Math.round(value), 0, 999_999_999)
 }
 
-function isMobilePageViewport() {
-  if (typeof window === 'undefined') return false
-  const viewportWidth = window.visualViewport?.width ?? window.innerWidth
-  const viewportHeight = window.visualViewport?.height ?? window.innerHeight
-  if (!Number.isFinite(viewportWidth) || !Number.isFinite(viewportHeight) || viewportHeight <= 0) return false
-  return viewportWidth < viewportHeight * 0.75
-}
-
 function getTouchDistance(touchA: Touch, touchB: Touch) {
   return Math.hypot(touchA.clientX - touchB.clientX, touchA.clientY - touchB.clientY)
 }
@@ -196,14 +188,18 @@ function App() {
     [],
     normalizeRecentPickerItemIds,
   )
-  const [mobilePageDetected, setMobilePageDetected] = useState(() => isMobilePageViewport())
   const [storageSlotConfigDeviceId, setStorageSlotConfigDeviceId] = useState<string | null>(null)
   const [portPriorityConfigDeviceId, setPortPriorityConfigDeviceId] = useState<string | null>(null)
 
   const gridRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const resizeStateRef = useRef<null | { side: 'left' | 'right'; startX: number; startWidth: number }>(null)
-  const pinchZoomStateRef = useRef<null | { startDistance: number; startCellSize: number }>(null)
+  const pinchZoomStateRef = useRef<null | {
+    startDistance: number
+    startCellSize: number
+    startMidpoint: { clientX: number; clientY: number }
+    startViewOffset: { x: number; y: number }
+  }>(null)
 
   const {
     state: {
@@ -222,6 +218,7 @@ function App() {
       closeTool,
       closeHelp,
       closeSettings,
+      appendDebugLog,
       setLeftPanelWidth,
       setRightPanelWidth,
       setLeftPanelCollapsed,
@@ -485,25 +482,35 @@ function App() {
     )
   }, [canvasHeightPx, canvasWidthPx, zoomScale])
 
-  const applyViewportZoom = useCallback(
-    (nextCellSize: number, anchorClientX: number, anchorClientY: number) => {
+  const applyViewportPinchTransform = useCallback(
+    (
+      startCellSize: number,
+      startViewOffset: { x: number; y: number },
+      startMidpointClientX: number,
+      startMidpointClientY: number,
+      nextCellSize: number,
+      nextMidpointClientX: number,
+      nextMidpointClientY: number,
+    ) => {
       const viewport = viewportRef.current
       if (!viewport) return
 
       const maxCellSize = getMaxCellSizeForViewport(viewport)
       const next = clamp(Math.round(nextCellSize), 12, maxCellSize)
-      if (next === cellSize) return
-
       const viewportRect = viewport.getBoundingClientRect()
-      const anchorX = anchorClientX - viewportRect.left
-      const anchorY = anchorClientY - viewportRect.top
-      const scaledCellSize = BASE_CELL_SIZE * zoomScale
-      const worldX = (anchorX - viewOffset.x) / scaledCellSize
-      const worldY = (anchorY - viewOffset.y) / scaledCellSize
+      const startAnchorX = startMidpointClientX - viewportRect.left
+      const startAnchorY = startMidpointClientY - viewportRect.top
+      const nextAnchorX = nextMidpointClientX - viewportRect.left
+      const nextAnchorY = nextMidpointClientY - viewportRect.top
+      const startZoomScale = startCellSize / BASE_CELL_SIZE
       const nextZoomScale = next / BASE_CELL_SIZE
+      const startScaledCellSize = BASE_CELL_SIZE * startZoomScale
+
+      const worldX = (startAnchorX - startViewOffset.x) / startScaledCellSize
+      const worldY = (startAnchorY - startViewOffset.y) / startScaledCellSize
       const nextOffset = {
-        x: anchorX - worldX * BASE_CELL_SIZE * nextZoomScale,
-        y: anchorY - worldY * BASE_CELL_SIZE * nextZoomScale,
+        x: nextAnchorX - worldX * BASE_CELL_SIZE * nextZoomScale,
+        y: nextAnchorY - worldY * BASE_CELL_SIZE * nextZoomScale,
       }
       const clampedOffset = clampViewportOffset(
         nextOffset,
@@ -511,10 +518,17 @@ function App() {
         { width: canvasWidthPx * nextZoomScale, height: canvasHeightPx * nextZoomScale },
       )
 
+      appendDebugLog(
+        'pinch',
+        `Pinch transform: ${startCellSize}px -> ${next}px, midpoint=(${Math.round(nextMidpointClientX)}, ${Math.round(nextMidpointClientY)}), viewport=${viewport.clientWidth}x${viewport.clientHeight}`,
+      )
+
       setViewOffset(clampedOffset)
-      setCellSize(next)
+      if (next !== cellSize) {
+        setCellSize(next)
+      }
     },
-    [canvasHeightPx, canvasWidthPx, cellSize, clampViewportOffset, getMaxCellSizeForViewport, setCellSize, setViewOffset, viewOffset.x, viewOffset.y, viewportRef, zoomScale],
+    [appendDebugLog, canvasHeightPx, canvasWidthPx, cellSize, clampViewportOffset, getMaxCellSizeForViewport, setCellSize, setViewOffset],
   )
 
   useEffect(() => {
@@ -528,10 +542,18 @@ function App() {
       }
 
       const [touchA, touchB] = [event.touches[0], event.touches[1]]
+      const startDistance = getTouchDistance(touchA, touchB)
+      const startMidpoint = getTouchMidpoint(touchA, touchB)
       pinchZoomStateRef.current = {
-        startDistance: getTouchDistance(touchA, touchB),
+        startDistance,
         startCellSize: cellSize,
+        startMidpoint,
+        startViewOffset: viewOffset,
       }
+      appendDebugLog(
+        'pinch',
+        `Touch start: distance=${startDistance.toFixed(1)}, cellSize=${cellSize}px, midpoint=(${Math.round(startMidpoint.clientX)}, ${Math.round(startMidpoint.clientY)})`,
+      )
     }
 
     const handleTouchMove = (event: TouchEvent) => {
@@ -550,10 +572,19 @@ function App() {
       const scaleRatio = nextDistance / pinchState.startDistance
       if (!Number.isFinite(scaleRatio) || scaleRatio <= 0) return
 
-      applyViewportZoom(pinchState.startCellSize * scaleRatio, midpoint.clientX, midpoint.clientY)
+      applyViewportPinchTransform(
+        pinchState.startCellSize,
+        pinchState.startViewOffset,
+        pinchState.startMidpoint.clientX,
+        pinchState.startMidpoint.clientY,
+        pinchState.startCellSize * scaleRatio,
+        midpoint.clientX,
+        midpoint.clientY,
+      )
     }
 
     const handleTouchEnd = () => {
+      appendDebugLog('pinch', 'Touch end')
       pinchZoomStateRef.current = null
     }
 
@@ -568,7 +599,7 @@ function App() {
       viewport.removeEventListener('touchend', handleTouchEnd)
       viewport.removeEventListener('touchcancel', handleTouchEnd)
     }
-  }, [applyViewportZoom, cellSize])
+  }, [appendDebugLog, applyViewportPinchTransform, cellSize, viewOffset])
 
   const {
     itemPickerState,
@@ -749,20 +780,15 @@ function App() {
     return [...powerRangeOutlines, powerPolePlacementPreview.previewOutline]
   }, [powerPolePlacementPreview.previewOutline, powerRangeOutlines])
 
-  useEffect(() => {
-    const updateMobilePageDetected = () => {
-      setMobilePageDetected(isMobilePageViewport())
-    }
+  const handleToggleLeftPanel = useCallback(() => {
+    appendDebugLog('panel', `Toggle left panel requested: currentCollapsed=${leftPanelCollapsed}`)
+    setLeftPanelCollapsed((current) => !current)
+  }, [appendDebugLog, leftPanelCollapsed, setLeftPanelCollapsed])
 
-    updateMobilePageDetected()
-    window.addEventListener('resize', updateMobilePageDetected)
-    window.visualViewport?.addEventListener('resize', updateMobilePageDetected)
-
-    return () => {
-      window.removeEventListener('resize', updateMobilePageDetected)
-      window.visualViewport?.removeEventListener('resize', updateMobilePageDetected)
-    }
-  }, [])
+  const handleToggleRightPanel = useCallback(() => {
+    appendDebugLog('panel', `Toggle right panel requested: currentCollapsed=${rightPanelCollapsed}`)
+    setRightPanelCollapsed((current) => !current)
+  }, [appendDebugLog, rightPanelCollapsed, setRightPanelCollapsed])
 
   const uiHint = sim.isRunning
     ? t('status.running')
@@ -776,6 +802,14 @@ function App() {
   const effectiveRightPanelWidth = rightPanelCollapsed ? 0 : rightPanelWidth
   const leftPanelRailWidth = leftPanelCollapsed ? 0 : 6
   const rightPanelRailWidth = rightPanelCollapsed ? 0 : 6
+
+  useEffect(() => {
+    appendDebugLog('panel', `Left panel state changed: collapsed=${leftPanelCollapsed}, width=${effectiveLeftPanelWidth}`)
+  }, [appendDebugLog, effectiveLeftPanelWidth, leftPanelCollapsed])
+
+  useEffect(() => {
+    appendDebugLog('panel', `Right panel state changed: collapsed=${rightPanelCollapsed}, width=${effectiveRightPanelWidth}`)
+  }, [appendDebugLog, effectiveRightPanelWidth, rightPanelCollapsed])
 
   const ignoredInfiniteItemIds = useMemo(() => {
     const itemIds = new Set<ItemId>()
@@ -1126,8 +1160,8 @@ function App() {
         cellSize={cellSize}
         leftPanelCollapsed={leftPanelCollapsed}
         rightPanelCollapsed={rightPanelCollapsed}
-        onToggleLeftPanel={() => setLeftPanelCollapsed((current) => !current)}
-        onToggleRightPanel={() => setRightPanelCollapsed((current) => !current)}
+        onToggleLeftPanel={handleToggleLeftPanel}
+        onToggleRightPanel={handleToggleRightPanel}
         t={t}
       />
 
@@ -1274,7 +1308,6 @@ function App() {
       <SiteInfoBar
         currentYear={currentYear}
         uiHint={uiHint}
-        mobilePageLabel={mobilePageDetected ? t('status.mobilePage') : null}
         uiTheme={uiTheme}
         t={t}
       />

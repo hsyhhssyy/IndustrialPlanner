@@ -1,7 +1,11 @@
+
 .app-shell {
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   color: #e5ebf3;
   background: #151a22;
   font-size: 16px;
@@ -10,6 +14,7 @@
 
 .topbar {
   height: 56px;
+  box-sizing: border-box;
   border-bottom: 1px solid #2f3a4a;
   display: flex;
   align-items: center;
@@ -22,6 +27,7 @@
   font-size: 16px;
   font-weight: 600;
 }
+
 .topbar-left {
   display: flex;
   align-items: center;
@@ -79,12 +85,6 @@
   text-overflow: ellipsis;
 }
 
-@media (max-width: 1439px) {
-  .hint-dynamic {
-    display: none;
-  }
-}
-
 .main-grid {
   flex: 1;
   display: grid;
@@ -93,11 +93,14 @@
   --left-panel-rail-width: 8px;
   --right-panel-rail-width: 8px;
   grid-template-columns: var(--left-panel-width) var(--left-panel-rail-width) 1fr var(--right-panel-rail-width) var(--right-panel-width);
+  min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .site-info-bar {
   height: 32px;
+  box-sizing: border-box;
   border-top: 1px solid #2f3a4a;
   background: #1b222d;
   color: #a7b0bf;
@@ -506,17 +509,17 @@ button:disabled {
   justify-content: center;
   align-items: center;
   padding: 8px;
-  background: #161c27;
+  background: var(--canvas-bg);
   overflow: hidden;
 }
 
 .grid-canvas {
   background-image:
-    linear-gradient(to right, #2c3340 1px, transparent 1px),
-    linear-gradient(to bottom, #2c3340 1px, transparent 1px);
+    linear-gradient(to right, var(--canvas-grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--canvas-grid-line) 1px, transparent 1px);
   background-size: 18px 18px;
   background-position: -0.5px -0.5px;
-  border: 1px solid #2f3a4a;
+  border: 1px solid var(--canvas-grid-border);
   flex: 0 0 auto;
   position: absolute;
   top: 0;
@@ -995,14 +998,14 @@ button:disabled {
 .place-ghost {
   position: absolute;
   pointer-events: none;
-  border: 3px solid rgba(255, 255, 255, 0.96);
+  border: 3px solid var(--place-ghost-border);
   box-sizing: border-box;
-  background: rgba(79, 123, 196, 0.22);
+  background: var(--place-ghost-fill);
   z-index: 5;
 }
 
 .place-ghost.valid {
-  box-shadow: 0 0 0 1px rgba(79, 123, 196, 0.8) inset;
+  box-shadow: 0 0 0 1px var(--place-ghost-valid-inset) inset;
 }
 
 .place-ghost.invalid {
@@ -1130,23 +1133,23 @@ button:disabled {
   content: '';
   position: absolute;
   inset: 0;
-  border: 2px solid rgba(255, 255, 255, 0.98);
+  border: 2px solid var(--preview-outline);
   box-sizing: border-box;
   pointer-events: none;
 }
 
 .render-pass-overlay.logistics-preview-device .device-surface {
-  border-color: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.86) inset;
+  border-color: var(--preview-outline);
+  box-shadow: 0 0 0 1px var(--preview-outline-soft) inset;
 }
 
 .logistics-preview-device.belt-device {
-  --belt-fill: rgba(255, 255, 255, 0.2);
-  --belt-edge: rgba(255, 255, 255, 0.98);
+  --belt-fill: var(--preview-belt-fill);
+  --belt-edge: var(--preview-belt-edge);
 }
 
 .render-pass-underlay.logistics-preview-device .belt-arrow {
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--preview-belt-arrow);
 }
 
 .blueprint-preview-device {
@@ -1941,26 +1944,6 @@ button:disabled {
   font-size: 13px;
 }
 
-@media (max-width: 860px) {
-  .wiki-split-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(180px, 36%) 1fr;
-  }
-}
-
-@media (min-width: 1500px) {
-  .wiki-recipe-list {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    align-items: flex-start;
-  }
-
-  .wiki-recipe-card {
-    max-width: calc(50% - 4px);
-  }
-}
-
 .wiki-section {
   border: 1px solid #2f3a4a;
   border-radius: 8px;
@@ -2392,29 +2375,6 @@ button:disabled {
   width: 100%;
   margin: 4px 0 0;
   accent-color: #78b4ff;
-}
-
-@media (max-width: 980px) {
-  .storage-slot-config-shell {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 760px) {
-  .storage-slot-config-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 560px) {
-  .storage-slot-config-summary,
-  .storage-slot-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .storage-slot-card {
-    min-height: 128px;
-  }
 }
 
 .preload-slot-row {
@@ -3057,30 +3017,6 @@ button:disabled {
   color: #e8eef8;
 }
 
-@media (max-width: 1080px) {
-  .planner-dialog-body {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(220px, 0.9fr) minmax(0, 1fr);
-  }
-
-  .planner-right-pane {
-    grid-template-rows: minmax(0, 1fr) auto;
-  }
-
-  .planner-card-table-head {
-    display: none;
-  }
-
-  .planner-item-card-table {
-    grid-template-columns: 1fr;
-  }
-
-  .planner-item-card-col + .planner-item-card-col {
-    border-left: none;
-    border-top: 1px solid #2f3a4a;
-  }
-}
-
 .planner-level-block {
   border: 1px solid #2f3a4a;
   border-radius: 6px;
@@ -3308,6 +3244,17 @@ button:disabled {
   --scrollbar-track: #11161d;
   --scrollbar-thumb: #334155;
   --scrollbar-thumb-hover: #46586f;
+  --canvas-bg: #161c27;
+  --canvas-grid-line: #2c3340;
+  --canvas-grid-border: #2f3a4a;
+  --place-ghost-border: rgba(255, 255, 255, 0.96);
+  --place-ghost-fill: rgba(79, 123, 196, 0.22);
+  --place-ghost-valid-inset: rgba(79, 123, 196, 0.8);
+  --preview-outline: rgba(255, 255, 255, 0.98);
+  --preview-outline-soft: rgba(255, 255, 255, 0.86);
+  --preview-belt-fill: rgba(255, 255, 255, 0.2);
+  --preview-belt-edge: rgba(255, 255, 255, 0.98);
+  --preview-belt-arrow: rgba(255, 255, 255, 0.98);
 }
 
 .app-shell[data-theme='ayu-light'] {
@@ -3327,6 +3274,17 @@ button:disabled {
   --scrollbar-track: #e8edf3;
   --scrollbar-thumb: #b8c4d3;
   --scrollbar-thumb-hover: #96a8bf;
+  --canvas-bg: #161c27;
+  --canvas-grid-line: rgba(88, 102, 120, 0.42);
+  --canvas-grid-border: #475669;
+  --place-ghost-border: rgba(49, 60, 77, 0.94);
+  --place-ghost-fill: rgba(76, 104, 148, 0.18);
+  --place-ghost-valid-inset: rgba(58, 85, 124, 0.58);
+  --preview-outline: rgba(49, 60, 77, 0.94);
+  --preview-outline-soft: rgba(49, 60, 77, 0.74);
+  --preview-belt-fill: rgba(49, 60, 77, 0.16);
+  --preview-belt-edge: rgba(49, 60, 77, 0.94);
+  --preview-belt-arrow: rgba(49, 60, 77, 0.94);
 }
 
 .app-shell {
@@ -3529,9 +3487,9 @@ button:disabled {
 
 .activity-bar-item {
   width: 100%;
-  min-height: 58px;
+  min-height: 68px;
   margin: 0 !important;
-  padding: 8px 6px !important;
+  padding: 10px 6px !important;
   border-radius: 10px !important;
   border: 1px solid transparent !important;
   background: transparent !important;
@@ -3551,8 +3509,8 @@ button:disabled {
 }
 
 .activity-bar-item-icon {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
 }
 
@@ -3563,7 +3521,7 @@ button:disabled {
 }
 
 .activity-bar-item-label {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.15;
   text-align: center;
 }
@@ -3816,41 +3774,32 @@ button:disabled {
   background: linear-gradient(135deg, #ffffff, #e6ebf2);
 }
 
-@media (max-width: 1200px) {
-  .app-shell .main-grid {
-    grid-template-columns: var(--activity-bar-width) minmax(280px, var(--left-panel-width)) var(--left-panel-rail-width) 1fr;
-  }
-
-  .panel-slot-right,
-  .panel-resizer-right {
-    display: none;
-  }
+.settings-debug-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-@media (max-width: 900px) {
-  .app-shell .topbar {
-    height: auto;
-    padding: 8px 10px;
-    flex-wrap: wrap;
-  }
+.settings-debug-toolbar,
+.settings-debug-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
 
-  .app-shell .topbar-controls {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
+.settings-debug-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
 
-  .app-shell .main-grid {
-    grid-template-columns: var(--activity-bar-width) 1fr;
-  }
-
-  .panel-slot-left,
-  .panel-resizer-left,
-  .panel-slot-right,
-  .panel-resizer-right {
-    display: none;
-  }
-
-  .settings-theme-grid {
-    grid-template-columns: 1fr;
-  }
+.settings-debug-log {
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  white-space: pre;
 }

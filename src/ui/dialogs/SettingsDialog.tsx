@@ -1,5 +1,6 @@
 import { LANGUAGE_OPTIONS, type Language } from '../../i18n'
 import { useAppContext } from '../../app/AppContext'
+import { showToast } from '../toast'
 
 type SettingsDialogProps = {
   t: (key: string, params?: Record<string, string | number>) => string
@@ -8,9 +9,27 @@ type SettingsDialogProps = {
 
 export function SettingsDialog({ t, onClose }: SettingsDialogProps) {
   const {
-    state: { language, superRecipeEnabled, superRecipeControlMode, uiTheme },
-    actions: { setLanguage, setSuperRecipeEnabled, setUiTheme },
+    state: { language, superRecipeEnabled, superRecipeControlMode, debugMode, debugLogs, uiTheme },
+    actions: { setLanguage, setSuperRecipeEnabled, setDebugMode, clearDebugLogs, setUiTheme },
   } = useAppContext()
+
+  const handleCopyDebugLogs = async () => {
+    const text = debugLogs.map((entry) => `[${entry.timestamp}] [${entry.category}] ${entry.message}`).join('\n')
+    if (!text) {
+      showToast(t('settings.debug.copyEmpty'), { variant: 'warning' })
+      return
+    }
+    if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+      showToast(t('settings.debug.copyUnsupported'), { variant: 'warning' })
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+      showToast(t('settings.debug.copySuccess', { count: debugLogs.length }), { variant: 'success' })
+    } catch {
+      showToast(t('settings.debug.copyFailed'), { variant: 'error' })
+    }
+  }
 
   return (
     <div className="global-dialog-backdrop" role="presentation" onClick={onClose}>
@@ -77,6 +96,49 @@ export function SettingsDialog({ t, onClose }: SettingsDialogProps) {
                 </button>
               </div>
             </div>
+          </section>
+
+          <section className="settings-card">
+            <div className="settings-card-title">{t('settings.section.debug')}</div>
+            <div className="settings-row">
+              <div>
+                <div className="settings-label">{t('settings.debugMode')}</div>
+                <div className="settings-description">{t('settings.debugModeDesc')}</div>
+              </div>
+              <label className="switch-toggle" aria-label={t('settings.debugMode')}>
+                <input
+                  type="checkbox"
+                  checked={debugMode}
+                  onChange={(event) => setDebugMode(event.target.checked)}
+                />
+                <span className="switch-track" aria-hidden="true">
+                  <span className="switch-thumb" />
+                </span>
+              </label>
+            </div>
+            {debugMode && (
+              <div className="settings-debug-panel">
+                <div className="settings-debug-toolbar">
+                  <div className="settings-description">
+                    {t('settings.debugLogCount', { count: debugLogs.length })}
+                  </div>
+                  <div className="settings-debug-actions">
+                    <button type="button" className="global-dialog-btn" onClick={() => void handleCopyDebugLogs()}>
+                      {t('settings.debug.copy')}
+                    </button>
+                    <button type="button" className="global-dialog-btn" onClick={clearDebugLogs}>
+                      {t('settings.debug.clear')}
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  className="settings-debug-log"
+                  readOnly
+                  value={debugLogs.map((entry) => `[${entry.timestamp}] [${entry.category}] ${entry.message}`).join('\n')}
+                  placeholder={t('settings.debug.empty')}
+                />
+              </div>
+            )}
           </section>
 
           <div className="settings-storage-hint">{t('settings.storageHint')}</div>

@@ -1,12 +1,15 @@
+html,
 body {
+  height: 100%;
   margin: 0;
-  min-width: 320px;
+  overflow: hidden;
   font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   background: #151a22;
 }
 
 #root {
-  height: 100vh;
+  height: 100%;
+  overflow: hidden;
 }
 
 .global-toast {

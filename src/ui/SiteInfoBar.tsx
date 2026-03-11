@@ -1,19 +1,17 @@
 type SiteInfoBarProps = {
   currentYear: number
   uiHint: string
-  mobilePageLabel: string | null
   uiTheme: 'ayu-dark' | 'ayu-light'
   t: (key: string, params?: Record<string, string | number>) => string
 }
 
-export function SiteInfoBar({ currentYear, uiHint, mobilePageLabel, uiTheme, t }: SiteInfoBarProps) {
+export function SiteInfoBar({ currentYear, uiHint, uiTheme, t }: SiteInfoBarProps) {
   const themeLabel = uiTheme === 'ayu-light' ? 'Ayu Light' : 'Ayu Dark'
 
   return (
     <div className="site-info-bar" role="contentinfo" aria-label={t('app.info.copyright', { year: currentYear })}>
       <div className="site-info-line">
         <span className="site-info-status-chip">{uiHint}</span>
-        {mobilePageLabel && <span className="site-info-status-chip">{mobilePageLabel}</span>}
         <span className="site-info-sep">|</span>
         <span>{t('app.info.theme', { theme: themeLabel })}</span>
         <span className="site-info-sep">|</span>

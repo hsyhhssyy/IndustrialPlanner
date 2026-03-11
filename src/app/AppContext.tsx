@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import { usePersistentState } from '../core/usePersistentState'
 import type { DeviceTypeId, EditMode } from '../domain/types'
 import type { Language } from '../i18n'
@@ -14,6 +14,14 @@ export type SimSpeed = 0 | 0.25 | 1 | 2 | 4 | 16
 export type PlaceOperation = 'default' | 'belt' | 'pipe' | 'blueprint'
 type Cell = { x: number; y: number }
 type DragRect = { x1: number; y1: number; x2: number; y2: number }
+export type DebugLogEntry = {
+  id: number
+  timestamp: string
+  category: string
+  message: string
+}
+
+const MAX_DEBUG_LOG_ENTRIES = 200
 
 export type AppEventMap = {
   'app.language.set': Language
@@ -48,6 +56,8 @@ type AppContextState = {
   language: Language
   superRecipeEnabled: boolean
   superRecipeControlMode: SuperRecipeControlMode
+  debugMode: boolean
+  debugLogs: DebugLogEntry[]
   uiTheme: UiTheme
   leftPanelWidth: number
   rightPanelWidth: number
@@ -110,6 +120,9 @@ type AppContextActions = {
   closeSettings: () => void
   setLanguage: (language: Language) => void
   setSuperRecipeEnabled: (enabled: boolean) => void
+  setDebugMode: (enabled: boolean) => void
+  appendDebugLog: (category: string, message: string) => void
+  clearDebugLogs: () => void
   setUiTheme: (theme: UiTheme) => void
   setLeftPanelWidth: Dispatch<SetStateAction<number>>
   setRightPanelWidth: Dispatch<SetStateAction<number>>
@@ -152,9 +165,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [dragRect, setDragRect] = useState<DragRect | null>(null)
   const [dragOrigin, setDragOrigin] = useState<Cell | null>(null)
   const [activeDialog, setActiveDialog] = useState<'tool' | 'help' | 'settings' | null>(null)
+  const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([])
+  const debugLogSeqRef = useRef(0)
   const eventBus = useMemo(() => new TypedEventBus<AppEventMap>(), [])
   const superRecipeEnabled = SUPER_RECIPE_CONTROL_MODE === 'forced-off' ? false : normalizeSuperRecipeEnabledPreference(settings.superRecipeEnabled)
-  const { language, uiTheme, leftPanelWidth, rightPanelWidth, leftPanelCollapsed, rightPanelCollapsed } = settings
+  const { language, uiTheme, leftPanelWidth, rightPanelWidth, leftPanelCollapsed, rightPanelCollapsed, debugMode } = settings
 
   useEffect(() => {
     writeAppSettings(settings)
@@ -166,6 +181,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setUiTheme = useCallback((uiTheme: UiTheme) => {
     setSettings((current) => ({ ...current, uiTheme }))
+  }, [])
+
+  const setDebugMode = useCallback((debugMode: boolean) => {
+    setSettings((current) => ({ ...current, debugMode }))
   }, [])
 
   const setLeftPanelWidth = useCallback<Dispatch<SetStateAction<number>>>((value) => {
@@ -206,6 +225,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [],
   )
+
+  const appendDebugLog = useCallback(
+    (category: string, message: string) => {
+      if (!debugMode) return
+      const timestamp = new Date().toISOString()
+      console.log(`[debug:${category}] ${message}`)
+      debugLogSeqRef.current += 1
+      const nextEntry = { id: debugLogSeqRef.current, timestamp, category, message }
+      setDebugLogs((current) => [...current, nextEntry].slice(-MAX_DEBUG_LOG_ENTRIES))
+    },
+    [debugMode],
+  )
+
+  const clearDebugLogs = useCallback(() => {
+    setDebugLogs([])
+  }, [])
+
+  useEffect(() => {
+    if (debugMode) {
+      const timestamp = new Date().toISOString()
+      console.log('[debug:settings] Debug mode enabled')
+      debugLogSeqRef.current += 1
+      setDebugLogs((current) => [...current, { id: debugLogSeqRef.current, timestamp, category: 'settings', message: 'Debug mode enabled' }].slice(-MAX_DEBUG_LOG_ENTRIES))
+      return
+    }
+    debugLogSeqRef.current = 0
+    setDebugLogs([])
+  }, [debugMode])
 
   useEffect(() => {
     const unsubscribeSetLanguage = eventBus.on('app.language.set', (nextLanguage) => setLanguage(nextLanguage))
@@ -253,6 +300,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         language,
         superRecipeEnabled,
         superRecipeControlMode: SUPER_RECIPE_CONTROL_MODE,
+        debugMode,
+        debugLogs,
         uiTheme,
         leftPanelWidth,
         rightPanelWidth,
@@ -268,6 +317,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         closeSettings: () => setActiveDialog((current) => (current === 'settings' ? null : current)),
         setLanguage,
         setSuperRecipeEnabled,
+        setDebugMode,
+        appendDebugLog,
+        clearDebugLogs,
         setUiTheme,
         setLeftPanelWidth,
         setRightPanelWidth,
@@ -336,9 +388,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       eventBus,
       hoverCell,
       activeDialog,
+      appendDebugLog,
       language,
       leftPanelCollapsed,
       leftPanelWidth,
+      debugLogs,
+      debugMode,
       logCurrent,
       logStart,
       logTrace,
@@ -350,6 +405,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       rightPanelWidth,
       selection,
       setDeleteTool,
+      setDebugMode,
       setLanguage,
       setLeftPanelCollapsed,
       setLeftPanelWidth,
@@ -360,6 +416,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setRightPanelWidth,
       setSuperRecipeEnabled,
       setUiTheme,
+      clearDebugLogs,
       superRecipeEnabled,
       uiTheme,
       viewOffset,

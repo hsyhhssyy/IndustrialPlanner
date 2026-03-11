@@ -53,13 +53,31 @@ function WorkbenchIcon({ kind }: { kind: 'place' | 'delete' | 'blueprint' | 'too
 export function ActivityBar({ simIsRunning }: ActivityBarProps) {
   const {
     eventBus,
-    state: { isToolOpen, isHelpOpen, isSettingsOpen, language },
+    state: { isToolOpen, isHelpOpen, isSettingsOpen, language, leftPanelCollapsed },
     editor: { state: { mode } },
-    actions: { openTool, openHelp, openSettings },
+    actions: { appendDebugLog, openTool, openHelp, openSettings, setLeftPanelCollapsed },
   } = useAppContext()
 
   const activateMode = (nextMode: ActivityMode) => {
     if (simIsRunning) return
+    const isSameMode = mode === nextMode
+    const shouldCollapseCurrentView = !leftPanelCollapsed && mode === nextMode
+    appendDebugLog(
+      'activity-bar',
+      `Mode button tapped: current=${mode}, next=${nextMode}, simRunning=${simIsRunning}, leftPanelCollapsed=${leftPanelCollapsed}, shouldCollapseCurrentView=${shouldCollapseCurrentView}, isSameMode=${isSameMode}`,
+    )
+    if (shouldCollapseCurrentView) {
+      setLeftPanelCollapsed(true)
+      eventBus.emit('ui.center.focus', undefined)
+      return
+    }
+    if (leftPanelCollapsed) {
+      setLeftPanelCollapsed(false)
+    }
+    if (leftPanelCollapsed && isSameMode) {
+      eventBus.emit('ui.center.focus', undefined)
+      return
+    }
     if (nextMode === 'place') {
       eventBus.emit('left.place.operation.set', 'default')
       eventBus.emit('left.place.trace.reset', undefined)
@@ -107,7 +125,10 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
         <button
           type="button"
           className={`activity-bar-item ${isToolOpen ? 'active' : ''}`.trim()}
-          onClick={openTool}
+          onClick={() => {
+            appendDebugLog('activity-bar', `Tool dialog button tapped: active=${isToolOpen}`)
+            openTool()
+          }}
           aria-pressed={isToolOpen}
         >
           <span className="activity-bar-item-icon"><WorkbenchIcon kind="tool" /></span>
@@ -116,7 +137,10 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
         <button
           type="button"
           className={`activity-bar-item ${isHelpOpen ? 'active' : ''}`.trim()}
-          onClick={openHelp}
+          onClick={() => {
+            appendDebugLog('activity-bar', `Help dialog button tapped: active=${isHelpOpen}`)
+            openHelp()
+          }}
           aria-pressed={isHelpOpen}
         >
           <span className="activity-bar-item-icon"><WorkbenchIcon kind="help" /></span>
@@ -125,7 +149,10 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
         <button
           type="button"
           className={`activity-bar-item ${isSettingsOpen ? 'active' : ''}`.trim()}
-          onClick={openSettings}
+          onClick={() => {
+            appendDebugLog('activity-bar', `Settings dialog button tapped: active=${isSettingsOpen}`)
+            openSettings()
+          }}
           aria-pressed={isSettingsOpen}
         >
           <span className="activity-bar-item-icon"><WorkbenchIcon kind="settings" /></span>

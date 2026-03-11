@@ -21,7 +21,7 @@ export function TopBar({
   onToggleRightPanel,
   t,
 }: TopBarProps) {
-  const { eventBus } = useAppContext()
+  const { eventBus, actions: { appendDebugLog } } = useAppContext()
 
   return (
     <header className="topbar">
@@ -30,7 +30,10 @@ export function TopBar({
           <button
             type="button"
             className={`topbar-toggle-btn ${!leftPanelCollapsed ? 'active' : ''}`.trim()}
-            onClick={onToggleLeftPanel}
+            onClick={() => {
+              appendDebugLog('topbar', `Left panel toggle tapped: collapsed=${leftPanelCollapsed}`)
+              onToggleLeftPanel()
+            }}
             aria-pressed={!leftPanelCollapsed}
             title={t('top.toggleLeftPanel')}
           >
@@ -43,7 +46,10 @@ export function TopBar({
           <button
             type="button"
             className={`topbar-toggle-btn ${!rightPanelCollapsed ? 'active' : ''}`.trim()}
-            onClick={onToggleRightPanel}
+            onClick={() => {
+              appendDebugLog('topbar', `Right panel toggle tapped: collapsed=${rightPanelCollapsed}`)
+              onToggleRightPanel()
+            }}
             aria-pressed={!rightPanelCollapsed}
             title={t('top.toggleRightPanel')}
           >
