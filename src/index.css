@@ -5,6 +5,30 @@ body {
   overflow: hidden;
   font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   background: #151a22;
+  --global-dialog-backdrop: rgba(8, 11, 17, 0.55);
+  --global-dialog-surface: rgba(27, 34, 45, 0.98);
+  --global-dialog-border: #4f7bc4;
+  --global-dialog-text: #e5ebf3;
+  --global-dialog-input-bg: #1b222d;
+  --global-dialog-input-border: #35516f;
+  --global-dialog-button-bg: #223247;
+  --global-dialog-button-bg-primary: #395c93;
+  --global-dialog-button-text: #e5ebf3;
+  --global-dialog-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
+}
+
+body[data-ui-theme='ayu-light'] {
+  background: #f8f9fb;
+  --global-dialog-backdrop: rgba(73, 88, 110, 0.22);
+  --global-dialog-surface: rgba(255, 255, 255, 0.98);
+  --global-dialog-border: #d5dce7;
+  --global-dialog-text: #26313d;
+  --global-dialog-input-bg: #f4f6f8;
+  --global-dialog-input-border: #c7d1de;
+  --global-dialog-button-bg: #eef2f6;
+  --global-dialog-button-bg-primary: #dce9f8;
+  --global-dialog-button-text: #26313d;
+  --global-dialog-shadow: 0 14px 34px rgba(80, 97, 124, 0.18);
 }
 
 #root {
@@ -48,7 +72,7 @@ body {
 .global-dialog-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(8, 11, 17, 0.55);
+  background: var(--global-dialog-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -69,12 +93,12 @@ body {
 .global-dialog {
   min-width: 320px;
   max-width: min(78vw, 680px);
-  background: rgba(27, 34, 45, 0.98);
-  border: 1px solid #4f7bc4;
+  background: var(--global-dialog-surface);
+  border: 1px solid var(--global-dialog-border);
   border-radius: 10px;
   padding: 14px 16px;
-  color: #e5ebf3;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
+  color: var(--global-dialog-text);
+  box-shadow: var(--global-dialog-shadow);
 }
 
 .global-dialog.floating {
@@ -116,10 +140,10 @@ body {
   width: 100%;
   margin-top: 10px;
   box-sizing: border-box;
-  border: 1px solid #35516f;
+  border: 1px solid var(--global-dialog-input-border);
   border-radius: 6px;
-  background: #1b222d;
-  color: #e5ebf3;
+  background: var(--global-dialog-input-bg);
+  color: var(--global-dialog-text);
   padding: 8px 10px;
   font-size: 14px;
   outline: none;
@@ -132,15 +156,15 @@ body {
 
 .global-dialog-btn {
   min-width: 76px;
-  border: 1px solid #35516f;
+  border: 1px solid var(--global-dialog-input-border);
   border-radius: 6px;
-  background: #223247;
-  color: #e5ebf3;
+  background: var(--global-dialog-button-bg);
+  color: var(--global-dialog-button-text);
   padding: 6px 12px;
   cursor: pointer;
 }
 
 .global-dialog-btn.primary {
-  border-color: #4f7bc4;
-  background: #395c93;
+  border-color: var(--global-dialog-border);
+  background: var(--global-dialog-button-bg-primary);
 }

@@ -47,6 +47,7 @@ export function useWorldOverlaysDomain({
         top: (device.origin.y - 5) * baseCellSize,
         width: 12 * baseCellSize,
         height: 12 * baseCellSize,
+        isPreview: false as const,
       }))
   }, [baseCellSize, layout.devices])
 

@@ -8,6 +8,15 @@ type PowerRangeOutline = {
   isPreview?: boolean
 }
 
+type PowerRangeCell = {
+  key: string
+  left: number
+  top: number
+  width: number
+  height: number
+  isPreview?: boolean
+}
+
 type RuntimeStallOverlay = {
   key: string
   left: number
@@ -61,6 +70,7 @@ type WorldContentProps = {
   canvasOffsetYPx: number
   lotSize: number
   powerRangeOutlines: PowerRangeOutline[]
+  powerRangeCells: PowerRangeCell[]
   underlayLayer: ReactNode
   transitLayer: ReactNode
   overlayLayer: ReactNode
@@ -78,6 +88,7 @@ export function WorldContent({
   canvasOffsetYPx,
   lotSize,
   powerRangeOutlines,
+  powerRangeCells,
   underlayLayer,
   transitLayer,
   overlayLayer,
@@ -99,6 +110,19 @@ export function WorldContent({
       }}
     >
       <div className="lot-border" />
+
+      {powerRangeCells.map((cell) => (
+        <div
+          key={cell.key}
+          className={`power-range-cell ${cell.isPreview ? 'preview' : ''}`.trim()}
+          style={{
+            left: cell.left,
+            top: cell.top,
+            width: cell.width,
+            height: cell.height,
+          }}
+        />
+      ))}
 
       {powerRangeOutlines.map((outline) => (
         <div

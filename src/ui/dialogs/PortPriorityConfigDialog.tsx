@@ -19,6 +19,9 @@ type PortPriorityConfigDialogProps = {
 const CELL_PX = 56
 const OUTER_PADDING_PX = 120
 const SELECT_WIDTH_PX = 64
+const PRIORITY_PAD_WIDTH_PX = 176
+const PRIORITY_PAD_HEIGHT_PX = 176
+const PRIORITY_PAD_GAP_PX = 8
 
 type PriorityGroupPickerProps = {
   portId: string
@@ -45,7 +48,7 @@ function selectorStyleForPort(centerX: number, centerY: number, edge: 'N' | 'S' 
 
 function PriorityGroupPicker({ portId, value, isOpen, t, onToggle, onSelect }: PriorityGroupPickerProps) {
   const anchorRef = useRef<HTMLDivElement | null>(null)
-  const [menuPosition, setMenuPosition] = useState<{ left: number; top: number; width: number } | null>(null)
+  const [padPosition, setPadPosition] = useState<{ left: number; top: number } | null>(null)
 
   useEffect(() => {
     if (!isOpen) return
@@ -53,10 +56,19 @@ function PriorityGroupPicker({ portId, value, isOpen, t, onToggle, onSelect }: P
     const updatePosition = () => {
       const rect = anchorRef.current?.getBoundingClientRect()
       if (!rect) return
-      setMenuPosition({
-        left: rect.left,
-        top: rect.bottom + 4,
-        width: Math.max(rect.width, SELECT_WIDTH_PX),
+      const viewportPadding = 12
+      const centeredLeft = rect.left + rect.width / 2 - PRIORITY_PAD_WIDTH_PX / 2
+      const fallbackTop = rect.top - PRIORITY_PAD_HEIGHT_PX - PRIORITY_PAD_GAP_PX
+      const preferredTop = rect.bottom + PRIORITY_PAD_GAP_PX
+      setPadPosition({
+        left: Math.min(
+          Math.max(centeredLeft, viewportPadding),
+          window.innerWidth - PRIORITY_PAD_WIDTH_PX - viewportPadding,
+        ),
+        top:
+          preferredTop + PRIORITY_PAD_HEIGHT_PX + viewportPadding <= window.innerHeight
+            ? preferredTop
+            : Math.max(fallbackTop, viewportPadding),
       })
     }
 
@@ -82,36 +94,39 @@ function PriorityGroupPicker({ portId, value, isOpen, t, onToggle, onSelect }: P
           onToggle()
         }}
       >
-        <span className="port-priority-picker-trigger-value">{t('detail.portPriorityGroupOption', { group: value })}</span>
+        <span className="port-priority-picker-trigger-value">{value}</span>
         <span className="port-priority-picker-trigger-chevron" aria-hidden="true">▾</span>
       </button>
-      {isOpen && menuPosition
+      {isOpen && padPosition
         ? createPortal(
             <div
-              className="port-priority-picker-menu"
-              role="listbox"
+              className="port-priority-pad"
+              role="dialog"
+              aria-modal="false"
               aria-label={`${t('detail.portPriorityConfig')} ${portId}`}
-              style={{ left: `${menuPosition.left}px`, top: `${menuPosition.top}px`, width: `${menuPosition.width}px` }}
+              style={{ left: `${padPosition.left}px`, top: `${padPosition.top}px` }}
               onClick={(event) => event.stopPropagation()}
             >
-              {Array.from({ length: PORT_PRIORITY_GROUP_MAX - PORT_PRIORITY_GROUP_MIN + 1 }, (_, index) => {
-                const optionValue = PORT_PRIORITY_GROUP_MIN + index
-                return (
-                  <button
-                    key={`port-priority-${portId}-${optionValue}`}
-                    type="button"
-                    role="option"
-                    className={`port-priority-picker-option ${optionValue === value ? 'is-selected' : ''}`}
-                    aria-selected={optionValue === value}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      onSelect(optionValue)
-                    }}
-                  >
-                    {t('detail.portPriorityGroupOption', { group: optionValue })}
-                  </button>
-                )
-              })}
+              <div className="port-priority-pad-grid" role="grid" aria-label={`${t('detail.portPriorityConfig')} ${portId}`}>
+                {Array.from({ length: PORT_PRIORITY_GROUP_MAX - PORT_PRIORITY_GROUP_MIN + 1 }, (_, index) => {
+                  const optionValue = PORT_PRIORITY_GROUP_MIN + index
+                  return (
+                    <button
+                      key={`port-priority-${portId}-${optionValue}`}
+                      type="button"
+                      role="gridcell"
+                      className={`port-priority-pad-option ${optionValue === value ? 'is-selected' : ''}`}
+                      aria-pressed={optionValue === value}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onSelect(optionValue)
+                      }}
+                    >
+                      {optionValue}
+                    </button>
+                  )
+                })}
+              </div>
             </div>,
             document.body,
           )

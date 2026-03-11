@@ -469,6 +469,14 @@ function App() {
   })
 
   useEffect(() => {
+    if (typeof document === 'undefined') return
+    document.body.dataset.uiTheme = uiTheme
+    return () => {
+      delete document.body.dataset.uiTheme
+    }
+  }, [uiTheme])
+
+  useEffect(() => {
     const viewport = viewportRef.current
     if (!viewport) return
     const canvasWidth = canvasWidthPx * zoomScale
@@ -780,6 +788,33 @@ function App() {
     return [...powerRangeOutlines, powerPolePlacementPreview.previewOutline]
   }, [powerPolePlacementPreview.previewOutline, powerRangeOutlines])
 
+  const worldPowerRangeCells = useMemo(() => {
+    const cells = new Map<string, { key: string; left: number; top: number; width: number; height: number; isPreview?: boolean }>()
+    for (const outline of worldPowerRangeOutlines) {
+      const startX = Math.round(outline.left / BASE_CELL_SIZE)
+      const startY = Math.round(outline.top / BASE_CELL_SIZE)
+      const cellWidth = Math.round(outline.width / BASE_CELL_SIZE)
+      const cellHeight = Math.round(outline.height / BASE_CELL_SIZE)
+      for (let y = 0; y < cellHeight; y += 1) {
+        for (let x = 0; x < cellWidth; x += 1) {
+          const cellX = startX + x
+          const cellY = startY + y
+          const key = `${cellX},${cellY}`
+          if (cells.has(key)) continue
+          cells.set(key, {
+            key: `power-range-cell-${key}`,
+            left: cellX * BASE_CELL_SIZE,
+            top: cellY * BASE_CELL_SIZE,
+            width: BASE_CELL_SIZE,
+            height: BASE_CELL_SIZE,
+            isPreview: outline.isPreview,
+          })
+        }
+      }
+    }
+    return [...cells.values()]
+  }, [worldPowerRangeOutlines])
+
   const handleToggleLeftPanel = useCallback(() => {
     appendDebugLog('panel', `Toggle left panel requested: currentCollapsed=${leftPanelCollapsed}`)
     setLeftPanelCollapsed((current) => !current)
@@ -1021,6 +1056,7 @@ function App() {
       canvasOffsetYPx={canvasOffsetYPx}
       lotSize={layout.lotSize}
       powerRangeOutlines={worldPowerRangeOutlines}
+      powerRangeCells={worldPowerRangeCells}
       underlayLayer={(
         <>
           {mainDeviceUnderlayLayer}

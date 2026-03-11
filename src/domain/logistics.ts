@@ -194,10 +194,10 @@ export function deleteConnectedBelts(layout: LayoutState, x: number, y: number):
   const start = getDeviceById(layout, startId)
   if (!start) return layout
 
-  const family: LogisticsFamily | null = isBeltLike(start.typeId) ? 'belt' : isPipeLike(start.typeId) ? 'pipe' : null
+  const family: LogisticsFamily | null = isBelt(start.typeId) ? 'belt' : isPipe(start.typeId) ? 'pipe' : null
   if (!family) return layout
 
-  const isFamilyTrack = (typeId: string) => isTrackLikeByFamily(typeId, family)
+  const isFamilyTrack = (typeId: string) => isTrackByFamily(typeId, family)
 
   const beltAdjacency = new Map<string, Set<string>>()
   for (const link of linksFromLayout(layout)) {

@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { applyLogisticsPath, deleteConnectedBelts, nextId } from '../../domain/logistics'
-import { getDeviceById, isBeltLike, isPipeLike } from '../../domain/geometry'
+import { getDeviceById, isBelt, isPipe } from '../../domain/geometry'
 import { validatePlacementConstraints } from '../../domain/placement'
 import { isDeviceWithinAllowedPlacementArea } from '../../domain/shared/placementArea'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
@@ -560,7 +560,7 @@ export function useBuildInteractionDomain({
               if (deleteTool === 'wholeBelt') {
                 setLayout((current) => {
                   const target = getDeviceById(current, id)
-                  if (target && (isBeltLike(target.typeId) || isPipeLike(target.typeId))) {
+                  if (target && (isBelt(target.typeId) || isPipe(target.typeId))) {
                     return deleteConnectedBelts(current, xMin, yMin)
                   }
                   return {

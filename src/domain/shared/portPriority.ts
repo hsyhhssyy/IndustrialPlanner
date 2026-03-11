@@ -2,7 +2,7 @@ import { DEVICE_TYPE_BY_ID } from '../registry'
 import type { DeviceConfig, DeviceInstance, DeviceTypeId, Direction } from '../types'
 
 export const PORT_PRIORITY_GROUP_MIN = 1
-export const PORT_PRIORITY_GROUP_MAX = 10
+export const PORT_PRIORITY_GROUP_MAX = 9
 export const PORT_PRIORITY_GROUP_COUNT = PORT_PRIORITY_GROUP_MAX - PORT_PRIORITY_GROUP_MIN + 1
 export const DEFAULT_PORT_PRIORITY_GROUP = 5
 

@@ -159,20 +159,24 @@ export function LeftPanel() {
           <LeftPanelSection title={t('left.deleteModeGroup')}>
             <div className="delete-belt-mode-row">
               <span className="delete-belt-mode-label">{t('left.beltDeleteMode')}</span>
-              <label className="switch-toggle switch-toggle-inline" aria-label={t('left.beltDeleteMode')}>
-                <span className={`switch-side-label ${deleteTool !== 'wholeBelt' ? 'active' : ''}`}>{t('left.deleteSingle')}</span>
-                <input
-                  type="checkbox"
-                  checked={deleteTool === 'wholeBelt'}
-                  onChange={(event) => {
-                    eventBus.emit('left.delete.tool.set', event.target.checked ? 'wholeBelt' : 'single')
-                  }}
-                />
-                <span className="switch-track" aria-hidden="true">
-                  <span className="switch-thumb" />
-                </span>
-                <span className={`switch-side-label ${deleteTool === 'wholeBelt' ? 'active' : ''}`}>{t('left.deleteWhole')}</span>
-              </label>
+              <div className="delete-mode-segmented" role="group" aria-label={t('left.beltDeleteMode')}>
+                <button
+                  type="button"
+                  className={`delete-mode-segment ${deleteTool !== 'wholeBelt' ? 'active' : ''}`.trim()}
+                  aria-pressed={deleteTool !== 'wholeBelt'}
+                  onClick={() => eventBus.emit('left.delete.tool.set', 'single')}
+                >
+                  {t('left.deleteSingle')}
+                </button>
+                <button
+                  type="button"
+                  className={`delete-mode-segment ${deleteTool === 'wholeBelt' ? 'active' : ''}`.trim()}
+                  aria-pressed={deleteTool === 'wholeBelt'}
+                  onClick={() => eventBus.emit('left.delete.tool.set', 'wholeBelt')}
+                >
+                  {t('left.deleteWhole')}
+                </button>
+              </div>
             </div>
           </LeftPanelSection>
 
