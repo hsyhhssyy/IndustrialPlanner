@@ -20,6 +20,9 @@ type UseObservabilityDomainParams = {
   maxTickWorkMs: number
   avgUiCommitGapMs: number
   maxUiCommitGapMs: number
+  avgPowerSupply1hKw: number
+  avgPowerSupply30mKw: number
+  avgPowerSupply10mKw: number
   ignoredInfiniteItemIds: ReadonlySet<ItemId>
   powerMode: PowerMode
   language: Language
@@ -46,6 +49,9 @@ export function useObservabilityDomain({
   maxTickWorkMs,
   avgUiCommitGapMs,
   maxUiCommitGapMs,
+  avgPowerSupply1hKw,
+  avgPowerSupply30mKw,
+  avgPowerSupply10mKw,
   ignoredInfiniteItemIds,
   powerMode,
   language,
@@ -56,6 +62,7 @@ export function useObservabilityDomain({
 }: UseObservabilityDomainParams) {
   const [showAllStatsRows, setShowAllStatsRows] = useState(false)
   const [showDebugDetails, setShowDebugDetails] = useState(false)
+  const [showAveragePowerDetails, setShowAveragePowerDetails] = useState(false)
   const [statsTableMaxHeight, setStatsTableMaxHeight] = useState<number | null>(null)
   const statsTableRef = useRef<HTMLTableElement | null>(null)
 
@@ -75,6 +82,11 @@ export function useObservabilityDomain({
     if (valueJ >= 1_000_000) return formatUnit(valueJ / 1_000_000, 'MJ')
     if (valueJ >= 1_000) return formatUnit(valueJ / 1_000, 'KJ')
     return `${Math.round(valueJ)}J`
+  }
+
+  const formatPowerValue = (valueKw: number) => {
+    if (!Number.isFinite(valueKw) || powerMode === 'infinite') return t('right.infinity')
+    return `${formatCompactNumber(Math.max(0, valueKw))} kW`
   }
 
   const statsRows = useMemo(() => {
@@ -157,6 +169,16 @@ export function useObservabilityDomain({
         </span>
         <span>{sim.powerMode === 'infinite' ? `${t('right.infinity')}/100.0%` : `${formatBatteryStored(sim.powerStats.batteryStoredJ)}/${sim.powerStats.batteryPercent.toFixed(1)}%`}</span>
       </div>
+      <button className="stats-toggle-btn" onClick={() => setShowAveragePowerDetails((current) => !current)}>
+        {showAveragePowerDetails ? t('debug.avgPowerCollapse') : t('debug.avgPowerExpand')}
+      </button>
+      {showAveragePowerDetails && (
+        <>
+          <div className="kv"><span>{t('debug.avgPower1h')}</span><span>{formatPowerValue(avgPowerSupply1hKw)}</span></div>
+          <div className="kv"><span>{t('debug.avgPower30m')}</span><span>{formatPowerValue(avgPowerSupply30mKw)}</span></div>
+          <div className="kv"><span>{t('debug.avgPower10m')}</span><span>{formatPowerValue(avgPowerSupply10mKw)}</span></div>
+        </>
+      )}
 
       <h3>{t('right.stats')}</h3>
       <div className="stats-meta-row">

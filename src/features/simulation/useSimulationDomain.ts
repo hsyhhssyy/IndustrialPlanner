@@ -10,6 +10,9 @@ type UseSimulationDomainParams = {
 type TimedSample = { ms: number; value: number }
 
 const PROBE_WINDOW_MS = 60_000
+const POWER_AVERAGE_WINDOW_1H_SECONDS = 60 * 60
+const POWER_AVERAGE_WINDOW_30M_SECONDS = 30 * 60
+const POWER_AVERAGE_WINDOW_10M_SECONDS = 10 * 60
 
 function pushTimedSample(queue: TimedSample[], ms: number, value: number) {
   queue.push({ ms, value })
@@ -49,6 +52,29 @@ function countTimedSamplesAtLeast(queue: TimedSample[], threshold: number) {
   return count
 }
 
+function pushBoundedNumber(queue: number[], value: number, maxSize: number) {
+  queue.push(value)
+  while (queue.length > maxSize) {
+    queue.shift()
+  }
+}
+
+function averageRecentNumbers(queue: number[], sampleCount: number) {
+  const actualCount = Math.min(queue.length, sampleCount)
+  if (actualCount <= 0) return 0
+
+  let sum = 0
+  const startIndex = queue.length - actualCount
+  for (let index = startIndex; index < queue.length; index += 1) {
+    const value = queue[index] ?? 0
+    if (value === Number.POSITIVE_INFINITY) return Number.POSITIVE_INFINITY
+    if (!Number.isFinite(value)) continue
+    sum += value
+  }
+
+  return sum / actualCount
+}
+
 export function useSimulationDomain({ layoutRef, maxTicksPerFrame }: UseSimulationDomainParams) {
   const [sim, setSim] = useState<SimState>(() => createInitialSimState())
   const [measuredTickRate, setMeasuredTickRate] = useState(0)
@@ -66,6 +92,9 @@ export function useSimulationDomain({ layoutRef, maxTicksPerFrame }: UseSimulati
   const [maxTickWorkMs, setMaxTickWorkMs] = useState(0)
   const [avgUiCommitGapMs, setAvgUiCommitGapMs] = useState(0)
   const [maxUiCommitGapMs, setMaxUiCommitGapMs] = useState(0)
+  const [avgPowerSupply1hKw, setAvgPowerSupply1hKw] = useState(0)
+  const [avgPowerSupply30mKw, setAvgPowerSupply30mKw] = useState(0)
+  const [avgPowerSupply10mKw, setAvgPowerSupply10mKw] = useState(0)
 
   const simStateRef = useRef(sim)
   const simRafRef = useRef<number | null>(null)
@@ -80,6 +109,7 @@ export function useSimulationDomain({ layoutRef, maxTicksPerFrame }: UseSimulati
   const ticksPerFrameSamplesRef = useRef<TimedSample[]>([])
   const tickWorkSamplesRef = useRef<TimedSample[]>([])
   const uiCommitGapSamplesRef = useRef<TimedSample[]>([])
+  const powerSupplySamplesRef = useRef<number[]>([])
   const simTickRef = useRef(0)
 
   const updateSim = useCallback((updater: (current: SimState) => SimState) => {
@@ -112,6 +142,7 @@ export function useSimulationDomain({ layoutRef, maxTicksPerFrame }: UseSimulati
     ticksPerFrameSamplesRef.current = []
     tickWorkSamplesRef.current = []
     uiCommitGapSamplesRef.current = []
+    powerSupplySamplesRef.current = []
     setMeasuredTickRate(0)
     setMeasuredFrameRate(0)
     setSmoothedFrameRate(0)
@@ -127,10 +158,17 @@ export function useSimulationDomain({ layoutRef, maxTicksPerFrame }: UseSimulati
     setMaxTickWorkMs(0)
     setAvgUiCommitGapMs(0)
     setMaxUiCommitGapMs(0)
+    setAvgPowerSupply1hKw(0)
+    setAvgPowerSupply30mKw(0)
+    setAvgPowerSupply10mKw(0)
     if (!sim.isRunning) return
 
     const stepMs = 1000 / (sim.tickRateHz * sim.speed)
     const effectiveTickRate = sim.tickRateHz * sim.speed
+    const powerAverageWindow1hTicks = sim.tickRateHz * POWER_AVERAGE_WINDOW_1H_SECONDS
+    const powerAverageWindow30mTicks = sim.tickRateHz * POWER_AVERAGE_WINDOW_30M_SECONDS
+    const powerAverageWindow10mTicks = sim.tickRateHz * POWER_AVERAGE_WINDOW_10M_SECONDS
+    const maxPowerAverageWindowTicks = powerAverageWindow1hTicks
     const targetUiFps = Math.max(5, Math.min(30, effectiveTickRate))
     const uiCommitIntervalMs = 1000 / targetUiFps
     const emaAlpha = 2 / (30 + 1)
@@ -168,6 +206,7 @@ export function useSimulationDomain({ layoutRef, maxTicksPerFrame }: UseSimulati
         if (!layout) return
         for (let i = 0; i < ticksToRun; i += 1) {
           next = tickSimulation(layout, next)
+          pushBoundedNumber(powerSupplySamplesRef.current, next.powerStats.totalSupplyKw, maxPowerAverageWindowTicks)
         }
         const tickWorkMs = performance.now() - tickWorkStartMs
         pushTimedSample(tickWorkSamplesRef.current, nowMs, tickWorkMs)
@@ -211,6 +250,9 @@ export function useSimulationDomain({ layoutRef, maxTicksPerFrame }: UseSimulati
           setMaxTickWorkMs(tickWorkSummary.max)
           setAvgUiCommitGapMs(uiCommitGapSummary.avg)
           setMaxUiCommitGapMs(uiCommitGapSummary.max)
+          setAvgPowerSupply1hKw(averageRecentNumbers(powerSupplySamplesRef.current, powerAverageWindow1hTicks))
+          setAvgPowerSupply30mKw(averageRecentNumbers(powerSupplySamplesRef.current, powerAverageWindow30mTicks))
+          setAvgPowerSupply10mKw(averageRecentNumbers(powerSupplySamplesRef.current, powerAverageWindow10mTicks))
 
           simUiLastCommitMsRef.current = nowMs
           setSim(next)
@@ -252,6 +294,9 @@ export function useSimulationDomain({ layoutRef, maxTicksPerFrame }: UseSimulati
     maxTickWorkMs,
     avgUiCommitGapMs,
     maxUiCommitGapMs,
+    avgPowerSupply1hKw,
+    avgPowerSupply30mKw,
+    avgPowerSupply10mKw,
     simStateRef,
     simTickRef,
   }

@@ -302,6 +302,9 @@ function App() {
     maxTickWorkMs,
     avgUiCommitGapMs,
     maxUiCommitGapMs,
+    avgPowerSupply1hKw,
+    avgPowerSupply30mKw,
+    avgPowerSupply10mKw,
   } = useSimulationDomain({ layoutRef, maxTicksPerFrame })
 
   const occupancyMap = useMemo(() => buildOccupancyMap(layout), [layout])
@@ -889,6 +892,9 @@ function App() {
     maxTickWorkMs,
     avgUiCommitGapMs,
     maxUiCommitGapMs,
+    avgPowerSupply1hKw,
+    avgPowerSupply30mKw,
+    avgPowerSupply10mKw,
     ignoredInfiniteItemIds,
     powerMode,
     language,
