@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { DEVICE_TYPE_BY_ID, DEVICE_TYPES, ITEM_BY_ID, ITEMS, RECIPES } from '../../domain/registry'
 import { isSuperRecipeDevice, isSuperRecipeItem, isSuperRecipeRecipe, shouldShowSuperRecipeContent } from '../../domain/shared/superRecipeVisibility'
 import type { DeviceTypeId } from '../../domain/types'
@@ -108,43 +108,40 @@ export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDia
 
   const formatCycleText = (seconds: number) => (language === 'zh-CN' ? `${seconds}秒` : `${seconds}s`)
 
-  const renderRecipeCard = (recipe: (typeof RECIPES)[number], key: string) => (
-    <article key={key} className="wiki-recipe-card">
-      <div className="wiki-recipe-flow">
-        <div className="wiki-recipe-group">
-          {recipe.inputs.map((entry) => (
-            <span key={`${key}-in-${entry.itemId}`} className="wiki-recipe-chip-wrap">
-              <span className="wiki-item-main">
-                <img className="wiki-entry-icon wiki-item-icon" src={getItemIconPath(entry.itemId)} alt="" aria-hidden="true" draggable={false} />
-                <span className="wiki-item-name">{limitItemLabel(getItemLabel(language, entry.itemId))}</span>
-              </span>
-              <span className="wiki-item-qty">x{entry.amount}</span>
-            </span>
-          ))}
-        </div>
-        <span className="wiki-recipe-arrow">
-          <span className="wiki-recipe-arrow-line" />
-          <span className="wiki-recipe-arrow-meta">
-            <img className="wiki-entry-icon" src={getDeviceIconPath(recipe.machineType)} alt="" aria-hidden="true" draggable={false} />
-            <span>{getDeviceLabel(language, recipe.machineType)}</span>
-            <span>·</span>
-            <span>{formatCycleText(recipe.cycleSeconds)}</span>
+  const renderRecipeEntries = (entries: Array<{ itemId: string; amount: number }>, key: string, side: 'in' | 'out') => (
+    entries.map((entry, index) => (
+      <Fragment key={`${key}-${side}-${entry.itemId}-${index}`}>
+        {index > 0 && <span className="toolbox-recipe-joiner" aria-hidden="true">+</span>}
+        <span className="toolbox-recipe-node">
+          <span className="wiki-item-main toolbox-recipe-item">
+            <img className="wiki-entry-icon wiki-item-icon toolbox-recipe-item-icon" src={getItemIconPath(entry.itemId)} alt="" aria-hidden="true" draggable={false} />
+            <span className="toolbox-recipe-qty-badge">x{entry.amount}</span>
+            <span className="wiki-item-name toolbox-recipe-item-name">{limitItemLabel(getItemLabel(language, entry.itemId))}</span>
           </span>
-          <svg className="wiki-recipe-arrow-drawn" viewBox="0 0 24 8" aria-hidden="true" focusable="false">
+        </span>
+      </Fragment>
+    ))
+  )
+
+  const renderRecipeCard = (recipe: (typeof RECIPES)[number], key: string) => (
+    <article key={key} className="wiki-recipe-card toolbox-recipe-card">
+      <div className="wiki-recipe-flow toolbox-recipe-flow">
+        <div className="wiki-recipe-group toolbox-recipe-group">
+          {renderRecipeEntries(recipe.inputs, key, 'in')}
+        </div>
+        <span className="wiki-recipe-arrow toolbox-recipe-arrow">
+          <span className="toolbox-recipe-machine-time">{formatCycleText(recipe.cycleSeconds)}</span>
+          <span className="wiki-recipe-arrow-meta toolbox-recipe-machine">
+            <img className="wiki-entry-icon toolbox-recipe-machine-icon" src={getDeviceIconPath(recipe.machineType)} alt="" aria-hidden="true" draggable={false} />
+            <span className="toolbox-recipe-machine-name">{getDeviceLabel(language, recipe.machineType)}</span>
+          </span>
+          <svg className="wiki-recipe-arrow-drawn toolbox-recipe-arrow-icon" viewBox="0 0 24 8" aria-hidden="true" focusable="false">
             <line x1="0" y1="4" x2="18" y2="4" />
             <path d="M18 1 L23 4 L18 7 Z" />
           </svg>
         </span>
-        <div className="wiki-recipe-group">
-          {recipe.outputs.map((entry) => (
-            <span key={`${key}-out-${entry.itemId}`} className="wiki-recipe-chip-wrap">
-              <span className="wiki-item-main">
-                <img className="wiki-entry-icon wiki-item-icon" src={getItemIconPath(entry.itemId)} alt="" aria-hidden="true" draggable={false} />
-                <span className="wiki-item-name">{limitItemLabel(getItemLabel(language, entry.itemId))}</span>
-              </span>
-              <span className="wiki-item-qty">x{entry.amount}</span>
-            </span>
-          ))}
+        <div className="wiki-recipe-group toolbox-recipe-group">
+          {renderRecipeEntries(recipe.outputs, key, 'out')}
         </div>
       </div>
     </article>
@@ -199,7 +196,7 @@ export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDia
                 {selectedDeviceRecipes.length === 0 ? (
                   <p className="wiki-empty-text">{t('wiki.empty.noRecipeForDevice')}</p>
                 ) : (
-                  <div className="wiki-recipe-list">
+                  <div className="wiki-recipe-list toolbox-recipe-list">
                     {selectedDeviceRecipes.map((recipe) => renderRecipeCard(recipe, recipe.id))}
                   </div>
                 )}
@@ -230,7 +227,7 @@ export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDia
                 {selectedItemProducedByRecipes.length === 0 ? (
                   <p className="wiki-empty-text">{t('wiki.empty.noProducedRecipe')}</p>
                 ) : (
-                  <div className="wiki-recipe-list">
+                  <div className="wiki-recipe-list toolbox-recipe-list">
                     {selectedItemProducedByRecipes.map((recipe) => renderRecipeCard(recipe, `out-${recipe.id}`))}
                   </div>
                 )}
@@ -239,7 +236,7 @@ export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDia
                 {selectedItemRequiredByRecipes.length === 0 ? (
                   <p className="wiki-empty-text">{t('wiki.empty.noRequiredRecipe')}</p>
                 ) : (
-                  <div className="wiki-recipe-list">
+                  <div className="wiki-recipe-list toolbox-recipe-list">
                     {selectedItemRequiredByRecipes.map((recipe) => renderRecipeCard(recipe, `in-${recipe.id}`))}
                   </div>
                 )}

@@ -372,7 +372,7 @@
   font-size: 14px;
   font-weight: 600;
   margin: 0 0 6px;
-  color: #b2bfd2;
+  color: var(--text-secondary);
 }
 
 .place-device-grid {
@@ -387,7 +387,7 @@
 
 .place-group-empty {
   font-size: 12px;
-  color: #8391a8;
+  color: var(--text-secondary);
   padding: 2px 0 4px;
 }
 
@@ -1343,7 +1343,7 @@ button:disabled {
 
 .delete-belt-mode-label {
   font-size: 14px;
-  color: #b2bfd2;
+  color: var(--text-secondary);
 }
 
 .delete-mode-segmented {
@@ -1976,6 +1976,149 @@ button:disabled {
   color: #e5ebf3;
   font-size: 14px;
   white-space: nowrap;
+}
+
+.tool-dialog .toolbox-recipe-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.tool-dialog .toolbox-recipe-card {
+  display: inline-flex;
+  width: auto;
+  max-width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.tool-dialog .toolbox-recipe-flow {
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
+.tool-dialog .toolbox-recipe-group {
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.tool-dialog .toolbox-recipe-node {
+  display: inline-flex;
+}
+
+.tool-dialog .toolbox-recipe-joiner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 10px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tool-dialog .toolbox-recipe-item {
+  position: relative;
+  width: 4.5em;
+  gap: 3px;
+  padding: 5px 5px 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(83, 110, 144, 0.35);
+  background: rgba(21, 34, 48, 0.18);
+}
+
+.tool-dialog .toolbox-recipe-item-name {
+  font-size: 13px;
+  line-height: 1.15;
+  font-weight: 500;
+}
+
+.tool-dialog .toolbox-recipe-item-icon {
+  width: 34px;
+  height: 34px;
+  flex-basis: 34px;
+}
+
+.tool-dialog .toolbox-recipe-qty-badge {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(9, 14, 22, 0.84);
+  color: #edf3fb;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+
+.tool-dialog .toolbox-recipe-arrow {
+  gap: 4px;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.tool-dialog .toolbox-recipe-machine-time {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tool-dialog .toolbox-recipe-machine {
+  gap: 5px;
+  max-width: 140px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.tool-dialog .toolbox-recipe-machine-icon {
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
+}
+
+.tool-dialog .toolbox-recipe-machine-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tool-dialog .toolbox-recipe-machine-cycle {
+  line-height: 1.2;
+}
+
+.tool-dialog .toolbox-recipe-arrow-icon {
+  width: 16px;
+  height: 7px;
+}
+
+.app-shell[data-theme='ayu-light'] .tool-dialog .toolbox-recipe-card {
+  border-color: #d5dce7;
+  background: #f4f6f8;
+}
+
+.app-shell[data-theme='ayu-light'] .tool-dialog .toolbox-recipe-item {
+  background: rgba(215, 225, 237, 0.4);
+  border-color: rgba(151, 170, 198, 0.34);
+}
+
+.app-shell[data-theme='ayu-light'] .tool-dialog .toolbox-recipe-qty-badge {
+  background: rgba(73, 85, 102, 0.84);
+  color: #ffffff;
+}
+
+.app-shell[data-theme='ayu-light'] .tool-dialog .toolbox-recipe-machine {
+  background: rgba(238, 243, 249, 0.96);
 }
 
 .wiki-section-subtitle {
