@@ -59,6 +59,7 @@
 | S5-BUG-002 | 无限电力模式错误绕过供电范围 | 2026-03-09 | closed | cross-requirement | S5-RQ-001, S5-RQ-005 |
 | S5-BUG-003 | 协议存储箱在供电范围外仍执行自动提交 | 2026-03-09 | closed | cross-requirement | S5-RQ-001, S5-RQ-005 |
 | S5-BUG-004 | 选中详情面板失去滚动能力，导致下方内容不可见 | 2026-03-10 | fixed | cross-requirement | S5-RQ-001, S5-RQ-005 |
+| S5-BUG-005 | 电力恢复后多余发电量未回充蓄电池 | 2026-03-11 | fixed | cross-requirement | S5-RQ-001, S5-RQ-004 |
 
 ## 条目明细
 
@@ -118,6 +119,20 @@
 - `回归情况`：代码已修复，待用户实际滚动确认
 - `备注 / 回链`：详见 [requirements/REQ-001-bug-and-stability.md](requirements/REQ-001-bug-and-stability.md)
 
+### `S5-BUG-005`
+
+- `BUG-ID`：`S5-BUG-005`
+- `标题`：电力恢复后多余发电量未回充蓄电池
+- `发现时间`：2026-03-11
+- `发现来源`：Stage5 仿真联调时，由用户反馈
+- `当前状态`：`fixed`
+- `归属类型`：`cross-requirement`
+- `关联需求`：`S5-RQ-001`、`S5-RQ-004`
+- `现象 / 影响`：电力不足时仿真会消耗蓄电池，但当发电恢复并出现富余功率后，蓄电池电量不会回升，导致电池只能放电不能充电
+- `处理结果`：补齐供电结算中的回充逻辑；在满足当前供电需求后，将当前 tick 的剩余发电功率换算为焦耳并回充进蓄电池，同时受电池容量上限限制
+- `回归情况`：代码已修复并通过构建，待用户联调确认
+- `备注 / 回链`：详见 [requirements/REQ-001-bug-and-stability.md](requirements/REQ-001-bug-and-stability.md) 与 [requirements/REQ-004-runtime-power-adjustment.md](requirements/REQ-004-runtime-power-adjustment.md)
+
 ### bug 条目模板
 
 - `BUG-ID`：`S5-BUG-XXX`
@@ -137,3 +152,4 @@
 - 2026-03-09：建立 Stage5 全局 bug / 中断记录文档。
 - 2026-03-09：补录首批 3 个跨需求 bug，均在实现 `S5-RQ-005` 联调过程中发现并已关闭。
 - 2026-03-10：新增并修复 `S5-BUG-004`，恢复右侧选中详情面板滚动能力。
+- 2026-03-11：新增并修复 `S5-BUG-005`，恢复富余发电量对蓄电池的回充能力。

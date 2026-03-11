@@ -11,6 +11,7 @@ type UseSimulationControlDomainParams = {
   initialBatteryPercent: number
   powerDemandOverrideKw: number | null
   updateSim: (updater: (current: SimState) => SimState) => SimState
+  onStarted?: () => void
 }
 
 export function useSimulationControlDomain({
@@ -21,6 +22,7 @@ export function useSimulationControlDomain({
   initialBatteryPercent,
   powerDemandOverrideKw,
   updateSim,
+  onStarted,
 }: UseSimulationControlDomainParams) {
   const handleStartSimulation = useCallback(() => {
     if (unknownDevicesCount > 0) {
@@ -32,7 +34,8 @@ export function useSimulationControlDomain({
       return
     }
     updateSim((current) => startSimulation(layout, current, powerMode, initialBatteryPercent, powerDemandOverrideKw))
-  }, [initialBatteryPercent, layout, powerDemandOverrideKw, powerMode, t, unknownDevicesCount, updateSim])
+    onStarted?.()
+  }, [initialBatteryPercent, layout, onStarted, powerDemandOverrideKw, powerMode, t, unknownDevicesCount, updateSim])
 
   return {
     handleStartSimulation,

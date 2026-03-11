@@ -4,6 +4,7 @@ import { createInitialSimState, tickSimulation } from '../../sim/engine'
 
 type UseSimulationDomainParams = {
   layoutRef: RefObject<LayoutState>
+  maxTicksPerFrame: number
 }
 
 type TimedSample = { ms: number; value: number }
@@ -48,7 +49,7 @@ function countTimedSamplesAtLeast(queue: TimedSample[], threshold: number) {
   return count
 }
 
-export function useSimulationDomain({ layoutRef }: UseSimulationDomainParams) {
+export function useSimulationDomain({ layoutRef, maxTicksPerFrame }: UseSimulationDomainParams) {
   const [sim, setSim] = useState<SimState>(() => createInitialSimState())
   const [measuredTickRate, setMeasuredTickRate] = useState(0)
   const [measuredFrameRate, setMeasuredFrameRate] = useState(0)
@@ -128,7 +129,6 @@ export function useSimulationDomain({ layoutRef }: UseSimulationDomainParams) {
     setMaxUiCommitGapMs(0)
     if (!sim.isRunning) return
 
-    const maxTicksPerFrame = 8
     const stepMs = 1000 / (sim.tickRateHz * sim.speed)
     const effectiveTickRate = sim.tickRateHz * sim.speed
     const targetUiFps = Math.max(5, Math.min(30, effectiveTickRate))
@@ -232,7 +232,7 @@ export function useSimulationDomain({ layoutRef }: UseSimulationDomainParams) {
       simUiLastCommitMsRef.current = 0
       metricsSampleRef.current = null
     }
-  }, [layoutRef, sim.isRunning, sim.speed, sim.tickRateHz])
+  }, [layoutRef, maxTicksPerFrame, sim.isRunning, sim.speed, sim.tickRateHz])
 
   return {
     sim,

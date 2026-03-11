@@ -4563,13 +4563,21 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 .settings-dialog {
   width: 640px;
   max-width: min(92vw, 640px);
+  max-height: min(88vh, 920px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .settings-dialog-body {
   margin-top: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .settings-card {
@@ -4616,6 +4624,24 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 .settings-select-wrap select {
   width: 100%;
   min-height: 38px;
+}
+
+.settings-slider-block {
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.settings-range-wrap input {
+  width: 100%;
+}
+
+.settings-range-scale {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .settings-theme-grid {

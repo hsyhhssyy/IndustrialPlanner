@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-03-05T03:17:40.480Z",
+  "generatedAt": "2026-03-11T13:37:16.787Z",
   "files": [
     {
       "id": "PublicBluePrint-HSY-429609a4-61cb-4083-98fa-b8de1268bec4",
@@ -15,6 +15,13 @@
       "name": "双烘炉息壤产线-2026-03-04 15_00_38.blueprint.json",
       "path": "/blueprints/%E5%8F%8C%E7%83%98%E7%82%89%E6%81%AF%E5%A3%A4%E4%BA%A7%E7%BA%BF-2026-03-04%2015_00_38.blueprint.json",
       "size": 23396
+    },
+    {
+      "id": "PublicBluePrint-HSY-f00abb80-6b5e-45ab-ae01-32bd1e3e1771",
+      "blueprintVersion": "2",
+      "name": "一键去世机7.1-2026-03-11 21_09_00.blueprint.json",
+      "path": "/blueprints/%E4%B8%80%E9%94%AE%E5%8E%BB%E4%B8%96%E6%9C%BA7.1-2026-03-11%2021_09_00.blueprint.json",
+      "size": 29725
     }
   ]
 }

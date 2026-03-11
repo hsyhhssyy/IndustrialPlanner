@@ -57,6 +57,7 @@ type AppContextState = {
   superRecipeEnabled: boolean
   superRecipeControlMode: SuperRecipeControlMode
   debugMode: boolean
+  maxTicksPerFrame: number
   debugLogs: DebugLogEntry[]
   uiTheme: UiTheme
   leftPanelWidth: number
@@ -121,6 +122,7 @@ type AppContextActions = {
   setLanguage: (language: Language) => void
   setSuperRecipeEnabled: (enabled: boolean) => void
   setDebugMode: (enabled: boolean) => void
+  setMaxTicksPerFrame: Dispatch<SetStateAction<number>>
   appendDebugLog: (category: string, message: string) => void
   clearDebugLogs: () => void
   setUiTheme: (theme: UiTheme) => void
@@ -169,7 +171,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const debugLogSeqRef = useRef(0)
   const eventBus = useMemo(() => new TypedEventBus<AppEventMap>(), [])
   const superRecipeEnabled = SUPER_RECIPE_CONTROL_MODE === 'forced-off' ? false : normalizeSuperRecipeEnabledPreference(settings.superRecipeEnabled)
-  const { language, uiTheme, leftPanelWidth, rightPanelWidth, leftPanelCollapsed, rightPanelCollapsed, debugMode } = settings
+  const { language, uiTheme, leftPanelWidth, rightPanelWidth, leftPanelCollapsed, rightPanelCollapsed, debugMode, maxTicksPerFrame } = settings
 
   useEffect(() => {
     writeAppSettings(settings)
@@ -185,6 +187,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setDebugMode = useCallback((debugMode: boolean) => {
     setSettings((current) => ({ ...current, debugMode }))
+  }, [])
+
+  const setMaxTicksPerFrame = useCallback<Dispatch<SetStateAction<number>>>((value) => {
+    setSettings((current) => ({
+      ...current,
+      maxTicksPerFrame: normalizeAppSettings({ ...current, maxTicksPerFrame: typeof value === 'function' ? value(current.maxTicksPerFrame) : value }).maxTicksPerFrame,
+    }))
   }, [])
 
   const setLeftPanelWidth = useCallback<Dispatch<SetStateAction<number>>>((value) => {
@@ -301,6 +310,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         superRecipeEnabled,
         superRecipeControlMode: SUPER_RECIPE_CONTROL_MODE,
         debugMode,
+        maxTicksPerFrame,
         debugLogs,
         uiTheme,
         leftPanelWidth,
@@ -318,6 +328,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setLanguage,
         setSuperRecipeEnabled,
         setDebugMode,
+        setMaxTicksPerFrame,
         appendDebugLog,
         clearDebugLogs,
         setUiTheme,
@@ -394,6 +405,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       leftPanelWidth,
       debugLogs,
       debugMode,
+      maxTicksPerFrame,
       logCurrent,
       logStart,
       logTrace,
@@ -409,6 +421,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setLanguage,
       setLeftPanelCollapsed,
       setLeftPanelWidth,
+      setMaxTicksPerFrame,
       setMode,
       setPlaceRotation,
       setPlaceType,

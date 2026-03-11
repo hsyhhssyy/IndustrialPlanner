@@ -2083,7 +2083,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
         allowedItems: recipeItemsAllowance,
         allowedTypes: solidAllowance,
       },
-      ...(['N', 'W', 'S'] as const).map((edge) => ({
+      ...(['N', 'S', 'W'] as const).map((edge) => ({
         id: `out_${edge.toLowerCase()}`,
         localCellX: 0,
         localCellY: 0,
@@ -2228,7 +2228,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
         allowedItems: recipeItemsAllowance,
         allowedTypes: liquidAllowance,
       },
-      ...(['N', 'W', 'S'] as const).map((edge) => ({
+      ...(['N', 'S', 'W'] as const).map((edge) => ({
         id: `out_${edge.toLowerCase()}`,
         localCellX: 0,
         localCellY: 0,

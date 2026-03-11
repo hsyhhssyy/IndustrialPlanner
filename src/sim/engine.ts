@@ -17,6 +17,7 @@ import {
   reactorPeekOutputForPort,
   reactorSelectedRecipeIds,
 } from './reactorPool'
+import { applySimulationInitializationSpecialRules } from './initializationSpecialRules'
 import { solvePullTransferMatches } from './flow/plan'
 import { commitTransferMatches } from './flow/commit'
 import type { PortLink as FlowPortLink, TransferMatch } from './flow/types'
@@ -388,7 +389,11 @@ function buildPowerAvailabilityByDeviceId(
   const requiredBatteryJ = (deficitKw * 1000) / tickRateHz
   const batteryUsedJ = Math.min(Math.max(0, batteryStoredJ), requiredBatteryJ)
   const batteryAssistKw = (batteryUsedJ * tickRateHz) / 1000
-  const nextBatteryStoredJ = Math.max(0, batteryStoredJ - batteryUsedJ)
+  const batteryStoredAfterDischargeJ = Math.max(0, batteryStoredJ - batteryUsedJ)
+  const surplusKw = Math.max(0, totalSupplyKw - totalDemandInRangeKw)
+  const batteryChargeCapacityJ = Math.max(0, GLOBAL_BATTERY_CAPACITY_J - batteryStoredAfterDischargeJ)
+  const chargeBatteryJ = Math.min(batteryChargeCapacityJ, (surplusKw * 1000) / tickRateHz)
+  const nextBatteryStoredJ = Math.min(GLOBAL_BATTERY_CAPACITY_J, batteryStoredAfterDischargeJ + chargeBatteryJ)
 
   let remainingSupplyKw = totalSupplyKw + batteryAssistKw
   for (const candidate of powerCandidates) {
@@ -2047,6 +2052,8 @@ export function startSimulation(
     else if (deviceDef.requiresPower && !inPowerRange(device, poles)) stall = 'OUT_OF_POWER_RANGE'
     normalizeRuntimeState(runtime, stall)
   }
+
+  applySimulationInitializationSpecialRules(layout, runtimeById)
 
   return {
     ...sim,

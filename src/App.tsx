@@ -210,6 +210,7 @@ function App() {
       isSettingsOpen,
       language,
       superRecipeEnabled,
+      maxTicksPerFrame,
       uiTheme,
       leftPanelWidth,
       rightPanelWidth,
@@ -301,7 +302,7 @@ function App() {
     maxTickWorkMs,
     avgUiCommitGapMs,
     maxUiCommitGapMs,
-  } = useSimulationDomain({ layoutRef })
+  } = useSimulationDomain({ layoutRef, maxTicksPerFrame })
 
   const occupancyMap = useMemo(() => buildOccupancyMap(layout), [layout])
   const cellDeviceMap = useMemo(() => cellToDeviceId(layout), [layout])
@@ -1091,6 +1092,14 @@ function App() {
     initialBatteryPercent,
     powerDemandOverrideKw: configuredPowerDemandOverrideKw,
     updateSim,
+    onStarted: () => {
+      setMode('place')
+      setPlaceOperation('default')
+      setPlaceType('')
+      setLogStart(null)
+      setLogCurrent(null)
+      setLogTrace([])
+    },
   })
 
   useEffect(() => {

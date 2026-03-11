@@ -1,5 +1,6 @@
 import { LANGUAGE_OPTIONS, type Language } from '../../i18n'
 import { useAppContext } from '../../app/AppContext'
+import { SIM_MAX_TICKS_PER_FRAME_DEFAULT, SIM_MAX_TICKS_PER_FRAME_MAX, SIM_MAX_TICKS_PER_FRAME_MIN } from '../../app/settings'
 import { showToast } from '../toast'
 
 type SettingsDialogProps = {
@@ -9,8 +10,8 @@ type SettingsDialogProps = {
 
 export function SettingsDialog({ t, onClose }: SettingsDialogProps) {
   const {
-    state: { language, superRecipeEnabled, superRecipeControlMode, debugMode, debugLogs, uiTheme },
-    actions: { setLanguage, setSuperRecipeEnabled, setDebugMode, clearDebugLogs, setUiTheme },
+    state: { language, superRecipeEnabled, superRecipeControlMode, debugMode, debugLogs, uiTheme, maxTicksPerFrame },
+    actions: { setLanguage, setSuperRecipeEnabled, setDebugMode, setMaxTicksPerFrame, clearDebugLogs, setUiTheme },
   } = useAppContext()
 
   const handleCopyDebugLogs = async () => {
@@ -75,6 +76,30 @@ export function SettingsDialog({ t, onClose }: SettingsDialogProps) {
                   <span className="switch-thumb" />
                 </span>
               </label>
+            </div>
+            <div className="settings-stack settings-slider-block">
+              <div>
+                <div className="settings-label">{t('settings.performanceValue')}</div>
+                <div className="settings-description">{t('settings.performanceValueDesc')}</div>
+              </div>
+              <label className="settings-range-wrap">
+                <input
+                  type="range"
+                  min={SIM_MAX_TICKS_PER_FRAME_MIN}
+                  max={SIM_MAX_TICKS_PER_FRAME_MAX}
+                  step={1}
+                  value={maxTicksPerFrame}
+                  aria-label={t('settings.performanceValue')}
+                  onChange={(event) => setMaxTicksPerFrame(Number(event.target.value))}
+                />
+              </label>
+              <div className="settings-range-scale" aria-hidden="true">
+                <span>{SIM_MAX_TICKS_PER_FRAME_MIN}</span>
+                <span>{t('settings.performanceDefault', { value: SIM_MAX_TICKS_PER_FRAME_DEFAULT })}</span>
+                <span>{SIM_MAX_TICKS_PER_FRAME_MAX}</span>
+              </div>
+              <div className="settings-description">{t('settings.performanceHint')}</div>
+              <div className="settings-description">{t('settings.performanceFpsWarning')}</div>
             </div>
           </section>
 
