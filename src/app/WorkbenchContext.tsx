@@ -16,6 +16,7 @@ type BlueprintSnapshot = {
   id: string
   source: 'user' | 'system'
   name: string
+  description?: string
   devices: Array<unknown>
 }
 

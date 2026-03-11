@@ -2,9 +2,10 @@
   "schema": "industrial-planner-blueprint",
   "id": "BluePrint-HSY-f00abb80-6b5e-45ab-ae01-32bd1e3e1771",
   "version": "1.0",
-  "blueprintVersion": "2",
+  "blueprintVersion": "3",
   "name": "一键去世机7.1",
   "createdAt": "2026-03-11T12:35:01.999Z",
+  "description": "摆下去就能自动生效的震荡发电和动态调节蓝图，最大发电量是对应电池的1.1倍，来自B站大佬 乾震_QzzZ（https://www.bilibili.com/video/BV1v7P4z8EH2）",
   "baseId": "valley4_protocol_core",
   "devices": [
     {

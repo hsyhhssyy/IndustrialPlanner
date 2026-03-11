@@ -427,6 +427,14 @@
   margin-bottom: 0 !important;
 }
 
+.blueprint-description {
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
 .blueprint-action-row {
   margin-top: 6px;
   display: grid;

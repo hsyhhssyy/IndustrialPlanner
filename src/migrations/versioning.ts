@@ -31,6 +31,7 @@ type LayoutsByBaseStorage = {
 type StoredBlueprintSnapshot = {
   id: string
   name: string
+  description?: string
   createdAt: string
   updatedAt?: string
   version: string
@@ -203,6 +204,9 @@ export function normalizeBlueprintSnapshotsStorage(rawValue: StoredBlueprintSnap
         baseId: entry.baseId as BaseId,
         source,
         devices: migratedDevices,
+      }
+      if (typeof entry.description === 'string' && entry.description.trim()) {
+        normalized.description = entry.description.trim()
       }
       if (typeof entry.updatedAt === 'string') {
         normalized.updatedAt = entry.updatedAt

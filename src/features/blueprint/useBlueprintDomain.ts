@@ -36,6 +36,7 @@ export type BlueprintSnapshot = {
   id: string
   source: BlueprintSource
   name: string
+  description?: string
   createdAt: string
   updatedAt?: string
   version: string
@@ -66,6 +67,7 @@ type BlueprintSharePayload = {
   version: string
   blueprintVersion?: string
   name: string
+  description?: string
   createdAt: string
   baseId: string
   devices: BlueprintDeviceSnapshot[]
@@ -160,6 +162,7 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
   const versionRaw = (payload as Record<string, unknown>).version
   const blueprintVersionRaw = (payload as Record<string, unknown>).blueprintVersion
   const name = (payload as Record<string, unknown>).name
+  const descriptionRaw = (payload as Record<string, unknown>).description
   const createdAt = (payload as Record<string, unknown>).createdAt
   const baseId = (payload as Record<string, unknown>).baseId
   const devices = (payload as Record<string, unknown>).devices
@@ -180,6 +183,7 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
   if (!version) return null
   if (!blueprintVersion) return null
   if (typeof name !== 'string' || !name.trim()) return null
+  const description = typeof descriptionRaw === 'string' && descriptionRaw.trim() ? descriptionRaw.trim() : undefined
   if (typeof createdAt !== 'string' || !createdAt) return null
   if (typeof baseId !== 'string' || !baseId) return null
   if (!Array.isArray(devices) || devices.length === 0) return null
@@ -209,6 +213,7 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
     version,
     blueprintVersion,
     name: name.trim(),
+    description,
     createdAt,
     baseId,
     devices: parsedDevices,
@@ -384,6 +389,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         version: target.version || APP_VERSION,
         blueprintVersion: target.blueprintVersion || '1',
         name: target.name,
+        description: target.description,
         createdAt: target.createdAt,
         baseId: target.baseId,
         devices: target.devices,
@@ -461,6 +467,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         id: createBlueprintId('user'),
         source: 'user',
         name: payload.name,
+        description: payload.description,
         createdAt,
         updatedAt: createdAt,
         version: payload.version,
@@ -531,6 +538,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
           id: entry.id,
           source: 'system',
           name: buildPublicBlueprintName(entry, payload.name),
+          description: payload.description,
           createdAt: payload.createdAt,
           updatedAt: new Date().toISOString(),
           version: payload.version || APP_VERSION,

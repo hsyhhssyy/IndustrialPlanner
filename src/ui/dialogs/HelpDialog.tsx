@@ -341,6 +341,15 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
             '如果仍然异常，再查端口优先级、预置输入、准入规则和蓝图方向。',
           ],
         },
+        {
+          title: '为什么流水线会闪动、跳动、突然加速',
+          points: [
+            '这是浏览器本身的限制，不一定是产线逻辑出错。',
+            '当页面不是当前活动页面，或者被其他窗口遮挡时，浏览器会强行降低这个页面的计算频率，严重时甚至会暂停执行。',
+            '当你重新激活窗口后，浏览器可能会补偿性地让页面短时间跑得更快，试图追上原本预定的时间点。',
+            '因此你会看到流水线突然加速，或者出现跳动、闪动一类的现象。调试时尽量保持页面处于前台活动状态。',
+          ],
+        },
       ]
     }
 
@@ -384,6 +393,15 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
           'Then verify input arrival.',
           'Then inspect blocked output.',
           'If the issue remains, inspect priority, preload, admission rules, and blueprint orientation.',
+        ],
+      },
+      {
+        title: 'Why belts may flicker, jump, or suddenly speed up',
+        points: [
+          'This is usually a browser scheduling limitation rather than a factory logic bug.',
+          'When the page is not the active tab, or when it is covered by other windows, the browser can heavily throttle this page and may even pause it completely.',
+          'After the window becomes active again, the browser may let the page run faster for a short time to catch up with the scheduled timeline.',
+          'That catch-up behavior can make belts appear to jump, flicker, or suddenly accelerate. For stable debugging, keep the page active in the foreground.',
         ],
       },
     ]

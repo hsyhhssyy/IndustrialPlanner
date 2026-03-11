@@ -316,30 +316,33 @@ export function LeftPanel() {
                         </button>
 
                         {selectedBlueprintId === blueprint.id && (
-                          <div className="blueprint-action-row">
-                            {armedBlueprintId === blueprint.id ? (
-                              <button
-                                className="blueprint-action-button"
-                                onClick={() => {
-                                  eventBus.emit('left.blueprint.disarm', undefined)
-                                }}
-                              >
-                                {t('left.blueprintDisarm')}
-                              </button>
-                            ) : (
-                              <button
-                                className="blueprint-action-button"
-                                onClick={() => {
-                                  eventBus.emit('left.mode.set', 'blueprint')
-                                  eventBus.emit('left.place.operation.set', 'blueprint')
-                                  eventBus.emit('left.blueprint.arm', blueprint.id)
-                                  eventBus.emit('ui.center.focus', undefined)
-                                }}
-                              >
-                                {t('left.blueprintArm')}
-                              </button>
-                            )}
-                          </div>
+                          <>
+                            {blueprint.source === 'system' && blueprint.description ? <div className="blueprint-description">{blueprint.description}</div> : null}
+                            <div className="blueprint-action-row">
+                              {armedBlueprintId === blueprint.id ? (
+                                <button
+                                  className="blueprint-action-button"
+                                  onClick={() => {
+                                    eventBus.emit('left.blueprint.disarm', undefined)
+                                  }}
+                                >
+                                  {t('left.blueprintDisarm')}
+                                </button>
+                              ) : (
+                                <button
+                                  className="blueprint-action-button"
+                                  onClick={() => {
+                                    eventBus.emit('left.mode.set', 'blueprint')
+                                    eventBus.emit('left.place.operation.set', 'blueprint')
+                                    eventBus.emit('left.blueprint.arm', blueprint.id)
+                                    eventBus.emit('ui.center.focus', undefined)
+                                  }}
+                                >
+                                  {t('left.blueprintArm')}
+                                </button>
+                              )}
+                            </div>
+                          </>
                         )}
                       </div>
                     ))}
