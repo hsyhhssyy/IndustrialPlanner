@@ -34,17 +34,21 @@ function detectBrowserLanguage(): Language {
   return 'zh-CN'
 }
 
-const DEFAULT_SETTINGS: AppSettings = {
-  language: detectBrowserLanguage(),
-  superRecipeEnabled: false,
-  debugMode: false,
-  maxTicksPerFrame: SIM_MAX_TICKS_PER_FRAME_DEFAULT,
-  uiTheme: 'ayu-dark',
-  leftPanelWidth: 340,
-  rightPanelWidth: 340,
-  leftPanelCollapsed: false,
-  rightPanelCollapsed: false,
+export function createDefaultAppSettings(): AppSettings {
+  return {
+    language: detectBrowserLanguage(),
+    superRecipeEnabled: false,
+    debugMode: false,
+    maxTicksPerFrame: SIM_MAX_TICKS_PER_FRAME_DEFAULT,
+    uiTheme: 'ayu-dark',
+    leftPanelWidth: 340,
+    rightPanelWidth: 340,
+    leftPanelCollapsed: false,
+    rightPanelCollapsed: false,
+  }
 }
+
+const DEFAULT_SETTINGS: AppSettings = createDefaultAppSettings()
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))

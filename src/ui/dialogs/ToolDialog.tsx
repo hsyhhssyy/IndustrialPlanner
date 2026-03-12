@@ -151,25 +151,26 @@ export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDia
     <div className="global-dialog-backdrop" role="presentation" onClick={onClose}>
       <div className="global-dialog wiki-dialog tool-dialog" role="dialog" aria-modal="true" aria-label={t('tool.title')} onClick={(event) => event.stopPropagation()}>
         <div className="wiki-dialog-header">
-          <div className="global-dialog-title">{t('tool.title')}</div>
+          <div className="tool-dialog-header-main">
+            <div className="global-dialog-title">{t('tool.title')}</div>
+            <div className="wiki-tabs wiki-primary-tabs tool-dialog-tabs" role="tablist" aria-label={t('tool.tabs.ariaLabel')}>
+              <button type="button" className={`wiki-tab-btn ${activeTab === 'device' ? 'active' : ''}`.trim()} role="tab" aria-selected={activeTab === 'device'} onClick={() => setActiveTab('device')}>
+                {t('tool.tab.device')}
+              </button>
+              <button type="button" className={`wiki-tab-btn ${activeTab === 'item' ? 'active' : ''}`.trim()} role="tab" aria-selected={activeTab === 'item'} onClick={() => setActiveTab('item')}>
+                {t('tool.tab.item')}
+              </button>
+              <button type="button" className={`wiki-tab-btn ${activeTab === 'planner' ? 'active' : ''}`.trim()} role="tab" aria-selected={activeTab === 'planner'} onClick={() => setActiveTab('planner')}>
+                {t('tool.tab.planner')}
+              </button>
+            </div>
+          </div>
           <button className="global-dialog-btn" onClick={onClose}>
             {t('tool.close')}
           </button>
         </div>
 
         <div className={`wiki-dialog-body ${activeTab === 'planner' ? 'tool-dialog-body-planner' : 'is-split'}`}>
-          <div className="wiki-tabs wiki-primary-tabs" role="tablist" aria-label={t('tool.tabs.ariaLabel')}>
-            <button type="button" className={`wiki-tab-btn ${activeTab === 'device' ? 'active' : ''}`.trim()} role="tab" aria-selected={activeTab === 'device'} onClick={() => setActiveTab('device')}>
-              {t('tool.tab.device')}
-            </button>
-            <button type="button" className={`wiki-tab-btn ${activeTab === 'item' ? 'active' : ''}`.trim()} role="tab" aria-selected={activeTab === 'item'} onClick={() => setActiveTab('item')}>
-              {t('tool.tab.item')}
-            </button>
-            <button type="button" className={`wiki-tab-btn ${activeTab === 'planner' ? 'active' : ''}`.trim()} role="tab" aria-selected={activeTab === 'planner'} onClick={() => setActiveTab('planner')}>
-              {t('tool.tab.planner')}
-            </button>
-          </div>
-
           {activeTab === 'device' && (
             <div className="wiki-split-layout">
               <aside className="wiki-list-pane">

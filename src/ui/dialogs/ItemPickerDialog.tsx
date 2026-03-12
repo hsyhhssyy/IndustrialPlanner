@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { ITEMS } from '../../domain/registry'
 import { isSuperRecipeItem, shouldShowSuperRecipeContent } from '../../domain/shared/superRecipeVisibility'
 import type { ItemId } from '../../domain/types'
@@ -21,6 +22,10 @@ type ItemPickerDialogProps = {
   onSelectItem: (itemId: ItemId | null) => void
 }
 
+function isBottledLiquidItem(itemId: ItemId) {
+  return itemId.includes('_bottle_filled_')
+}
+
 export function ItemPickerDialog({
   itemPickerState,
   pickerSelectedItemId,
@@ -35,6 +40,13 @@ export function ItemPickerDialog({
   onClose,
   onSelectItem,
 }: ItemPickerDialogProps) {
+  const [hideBottledLiquids, setHideBottledLiquids] = useState(false)
+
+  const labelCollator = new Intl.Collator(language === 'zh-CN' ? 'zh-Hans-CN-u-co-pinyin' : language, {
+    numeric: true,
+    sensitivity: 'base',
+  })
+
   const filteredItems = ITEMS.filter((item) => {
     if (!shouldShowSuperRecipeContent(superRecipeEnabled, isSuperRecipeItem(item))) {
       return false
@@ -49,7 +61,14 @@ export function ItemPickerDialog({
     if (pickerFilter?.allowedItemIds && !pickerFilter.allowedItemIds.has(item.id)) {
       return false
     }
+    if (hideBottledLiquids && isBottledLiquidItem(item.id)) {
+      return false
+    }
     return true
+  }).sort((a, b) => {
+    const byLabel = labelCollator.compare(getItemLabel(language, a.id), getItemLabel(language, b.id))
+    if (byLabel !== 0) return byLabel
+    return a.id.localeCompare(b.id)
   })
 
   const filteredItemById = new Map(filteredItems.map((item) => [item.id, item]))
@@ -69,20 +88,31 @@ export function ItemPickerDialog({
         aria-label={t('detail.itemPickerTitle')}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="global-dialog-title">
-          {itemPickerState.kind === 'pickup'
-            ? t('detail.pickupDialogTitle')
-            : itemPickerState.kind === 'admission'
-              ? t('detail.admissionDialogTitle')
-            : itemPickerState.kind === 'protocolHubOutput'
-              ? t('detail.protocolHubOutputDialogTitle', { index: itemPickerState.portIndex + 1 })
-            : itemPickerState.kind === 'pumpOutput'
-              ? t('detail.pumpOutputDialogTitle')
-            : itemPickerState.kind === 'storageSlotPinned'
-              ? t('detail.storageSlotPinnedDialogTitle', { index: itemPickerState.slotIndex + 1 })
-            : itemPickerState.kind === 'storageSlotPreload'
-              ? t('detail.storageSlotPreloadDialogTitle', { index: itemPickerState.slotIndex + 1 })
-              : t('detail.preloadDialogTitle', { index: itemPickerState.slotIndex + 1 })}
+        <div className="global-dialog-title pickup-item-dialog-title-row">
+          <span>
+            {itemPickerState.kind === 'pickup'
+              ? t('detail.pickupDialogTitle')
+              : itemPickerState.kind === 'admission'
+                ? t('detail.admissionDialogTitle')
+              : itemPickerState.kind === 'plannerTarget'
+                ? t('detail.itemPickerTitle')
+              : itemPickerState.kind === 'protocolHubOutput'
+                ? t('detail.protocolHubOutputDialogTitle', { index: itemPickerState.portIndex + 1 })
+              : itemPickerState.kind === 'pumpOutput'
+                ? t('detail.pumpOutputDialogTitle')
+              : itemPickerState.kind === 'storageSlotPinned'
+                ? t('detail.storageSlotPinnedDialogTitle', { index: itemPickerState.slotIndex + 1 })
+              : itemPickerState.kind === 'storageSlotPreload'
+                ? t('detail.storageSlotPreloadDialogTitle', { index: itemPickerState.slotIndex + 1 })
+                : t('detail.preloadDialogTitle', { index: itemPickerState.slotIndex + 1 })}
+          </span>
+          <label className="switch-toggle switch-toggle-inline pickup-item-dialog-switch" aria-label={t('detail.itemPickerHideBottledLiquids')}>
+            <span className="pickup-item-dialog-switch-label">{t('detail.itemPickerHideBottledLiquids')}</span>
+            <input type="checkbox" checked={hideBottledLiquids} onChange={(event) => setHideBottledLiquids(event.target.checked)} />
+            <span className="switch-track" aria-hidden="true">
+              <span className="switch-thumb" />
+            </span>
+          </label>
         </div>
         <div className="pickup-item-groups">
           <section className="pickup-item-group">

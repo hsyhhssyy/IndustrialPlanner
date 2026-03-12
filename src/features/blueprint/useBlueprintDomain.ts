@@ -16,6 +16,7 @@ import {
   USER_BLUEPRINTS_KEY,
   createBlueprintId,
   migrateDeviceConfigToV1,
+  normalizeKnownDeviceTypeId,
   normalizePublicBlueprintIndexCacheStorage,
   normalizeSystemBlueprintSnapshotsStorage,
   normalizeUserBlueprintSnapshotsStorage,
@@ -195,16 +196,20 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
     const rotation = (entry as Record<string, unknown>).rotation
     const origin = (entry as Record<string, unknown>).origin
     const config = (entry as Record<string, unknown>).config
-    if (typeof typeId !== 'string' || !(typeId in DEVICE_TYPE_BY_ID)) return null
+    const normalizedTypeId = normalizeKnownDeviceTypeId(typeId)
+    if (!normalizedTypeId || !(normalizedTypeId in DEVICE_TYPE_BY_ID)) return null
     if (!origin || typeof origin !== 'object') return null
     const x = (origin as Record<string, unknown>).x
     const y = (origin as Record<string, unknown>).y
     if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) return null
     parsedDevices.push({
-      typeId: typeId as DeviceTypeId,
+      typeId: normalizedTypeId as DeviceTypeId,
       rotation: sanitizeRotation(rotation),
       origin: { x: Math.round(x), y: Math.round(y) },
-      config: migrateDeviceConfigToV1(cloneDeviceConfig((config ?? {}) as DeviceInstance['config'])),
+      config: migrateDeviceConfigToV1(
+        cloneDeviceConfig((config ?? {}) as DeviceInstance['config']),
+        normalizedTypeId as DeviceTypeId,
+      ),
     })
   }
 

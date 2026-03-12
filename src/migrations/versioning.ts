@@ -1,4 +1,5 @@
-import type { BaseId, DeviceConfig, DeviceInstance, LayoutState } from '../domain/types'
+import { DEVICE_TYPE_BY_ID, ITEM_BY_ID } from '../domain/registry'
+import type { BaseId, DeviceConfig, DeviceInstance, ItemId, LayoutState } from '../domain/types'
 import { normalizePortPriorityGroups } from '../domain/shared/portPriority'
 
 export const APP_VERSION = '1.0'
@@ -96,7 +97,177 @@ function isValidBlueprintId(id: string, source: BlueprintSource) {
   return source === 'user' ? USER_BLUEPRINT_ID_PATTERN.test(id) : SYSTEM_BLUEPRINT_ID_PATTERN.test(id)
 }
 
-export function migrateDeviceConfigToV1(config: DeviceConfig): DeviceConfig {
+export function normalizeKnownDeviceTypeId(typeId: unknown): DeviceInstance['typeId'] | null {
+  if (typeof typeId !== 'string') return null
+  return typeId in DEVICE_TYPE_BY_ID ? (typeId as DeviceInstance['typeId']) : null
+}
+
+function normalizeKnownItemId(itemId: unknown): ItemId | undefined {
+  return typeof itemId === 'string' && itemId in ITEM_BY_ID ? (itemId as ItemId) : undefined
+}
+
+function normalizeKnownSolidItemId(itemId: unknown): ItemId | undefined {
+  const normalized = normalizeKnownItemId(itemId)
+  return normalized && ITEM_BY_ID[normalized]?.type === 'solid' ? normalized : undefined
+}
+
+function normalizeKnownLiquidItemId(itemId: unknown): ItemId | undefined {
+  const normalized = normalizeKnownItemId(itemId)
+  return normalized && ITEM_BY_ID[normalized]?.type === 'liquid' ? normalized : undefined
+}
+
+function normalizeSlotIndex(value: unknown) {
+  if (!Number.isFinite(value)) return null
+  const normalized = Math.floor(Number(value))
+  return normalized >= 0 ? normalized : null
+}
+
+function normalizePositiveAmount(value: unknown) {
+  if (!Number.isFinite(value)) return undefined
+  const normalized = Math.max(0, Math.floor(Number(value)))
+  return normalized > 0 ? normalized : undefined
+}
+
+function sanitizePreloadEntries(entries: DeviceConfig['preloadInputs'] | DeviceConfig['storagePreloadInputs']) {
+  if (!Array.isArray(entries)) return []
+  return entries
+    .map((entry) => {
+      const slotIndex = normalizeSlotIndex(entry?.slotIndex)
+      const itemId = normalizeKnownItemId(entry?.itemId)
+      const amount = normalizePositiveAmount(entry?.amount)
+      if (slotIndex === null || !itemId || amount === undefined) return null
+      return { slotIndex, itemId, amount }
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+}
+
+function sanitizeProtocolHubOutputs(outputs: DeviceConfig['protocolHubOutputs']) {
+  if (!Array.isArray(outputs)) return []
+  return outputs
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object' || typeof entry.portId !== 'string') return null
+      const itemId = normalizeKnownSolidItemId(entry.itemId)
+      if (!itemId) return null
+      return {
+        portId: entry.portId,
+        itemId,
+        ignoreInventory: Boolean(entry.ignoreInventory),
+      }
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+}
+
+function sanitizeStorageSlots(storageSlots: DeviceConfig['storageSlots']) {
+  if (!Array.isArray(storageSlots)) return []
+  return storageSlots
+    .map((entry) => {
+      const slotIndex = normalizeSlotIndex(entry?.slotIndex)
+      if (slotIndex === null) return null
+
+      const mode = entry?.mode === 'pinned' ? 'pinned' : 'free'
+      const pinnedItemId = normalizeKnownItemId(entry?.pinnedItemId)
+      const preloadItemId = normalizeKnownItemId(entry?.preloadItemId)
+      const preloadAmount = preloadItemId ? normalizePositiveAmount(entry?.preloadAmount) : undefined
+      const normalizedMode = mode === 'pinned' && pinnedItemId ? 'pinned' : 'free'
+
+      if (normalizedMode === 'free' && !preloadItemId) return null
+
+      const normalizedEntry: NonNullable<DeviceConfig['storageSlots']>[number] = {
+        slotIndex,
+        mode: normalizedMode,
+      }
+      if (normalizedMode === 'pinned' && pinnedItemId) {
+        normalizedEntry.pinnedItemId = pinnedItemId
+      }
+      if (preloadItemId && preloadAmount !== undefined) {
+        normalizedEntry.preloadItemId = preloadItemId
+        normalizedEntry.preloadAmount = preloadAmount
+      }
+      return normalizedEntry
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+}
+
+function sanitizeReactorPoolConfig(reactorPool: DeviceConfig['reactorPool']) {
+  if (!reactorPool || typeof reactorPool !== 'object') return undefined
+
+  const selectedRecipeIds = Array.isArray(reactorPool.selectedRecipeIds)
+    ? reactorPool.selectedRecipeIds.filter((recipeId): recipeId is string => typeof recipeId === 'string' && recipeId.trim().length > 0)
+    : []
+  const solidOutputItemId = normalizeKnownSolidItemId(reactorPool.solidOutputItemId)
+  const liquidOutputItemId = normalizeKnownLiquidItemId(reactorPool.liquidOutputItemId)
+  const liquidOutputItemIdA = normalizeKnownLiquidItemId(reactorPool.liquidOutputItemIdA)
+  const liquidOutputItemIdB = normalizeKnownLiquidItemId(reactorPool.liquidOutputItemIdB)
+
+  const next: NonNullable<DeviceConfig['reactorPool']> = {}
+  if (selectedRecipeIds.length > 0) next.selectedRecipeIds = selectedRecipeIds
+  if (solidOutputItemId) next.solidOutputItemId = solidOutputItemId
+  if (liquidOutputItemId) next.liquidOutputItemId = liquidOutputItemId
+  if (liquidOutputItemIdA) next.liquidOutputItemIdA = liquidOutputItemIdA
+  if (liquidOutputItemIdB) next.liquidOutputItemIdB = liquidOutputItemIdB
+  return Object.keys(next).length > 0 ? next : undefined
+}
+
+function sanitizeDeviceConfigUnknownItems(config: DeviceConfig, deviceTypeId: DeviceInstance['typeId'] | undefined): DeviceConfig {
+  const nextConfig: DeviceConfig = { ...config }
+
+  const protocolHubOutputs = sanitizeProtocolHubOutputs(nextConfig.protocolHubOutputs)
+  if (protocolHubOutputs.length > 0) nextConfig.protocolHubOutputs = protocolHubOutputs
+  else delete nextConfig.protocolHubOutputs
+
+  const pickupItemId = normalizeKnownSolidItemId(nextConfig.pickupItemId)
+  if (pickupItemId) nextConfig.pickupItemId = pickupItemId
+  else delete nextConfig.pickupItemId
+
+  const admissionItemId =
+    deviceTypeId === 'item_log_admission'
+      ? normalizeKnownSolidItemId(nextConfig.admissionItemId)
+      : deviceTypeId === 'item_pipe_admission'
+        ? normalizeKnownLiquidItemId(nextConfig.admissionItemId)
+        : undefined
+  if (admissionItemId) nextConfig.admissionItemId = admissionItemId
+  else delete nextConfig.admissionItemId
+  if (!admissionItemId) delete nextConfig.admissionAmount
+
+  const pumpOutputItemId = normalizeKnownLiquidItemId(nextConfig.pumpOutputItemId)
+  if (pumpOutputItemId) nextConfig.pumpOutputItemId = pumpOutputItemId
+  else delete nextConfig.pumpOutputItemId
+
+  const preloadInputs = sanitizePreloadEntries(nextConfig.preloadInputs)
+  if (preloadInputs.length > 0) nextConfig.preloadInputs = preloadInputs
+  else delete nextConfig.preloadInputs
+
+  const preloadInputItemId = normalizeKnownItemId(nextConfig.preloadInputItemId)
+  const preloadInputAmount = preloadInputItemId ? normalizePositiveAmount(nextConfig.preloadInputAmount) : undefined
+  if (preloadInputItemId && preloadInputAmount !== undefined) {
+    nextConfig.preloadInputItemId = preloadInputItemId
+    nextConfig.preloadInputAmount = preloadInputAmount
+  } else {
+    delete nextConfig.preloadInputItemId
+    delete nextConfig.preloadInputAmount
+  }
+
+  const storageSlots = sanitizeStorageSlots(nextConfig.storageSlots)
+  if (storageSlots.length > 0) nextConfig.storageSlots = storageSlots
+  else delete nextConfig.storageSlots
+
+  const storagePreloadInputs = sanitizePreloadEntries(nextConfig.storagePreloadInputs)
+  if (storagePreloadInputs.length > 0) nextConfig.storagePreloadInputs = storagePreloadInputs
+  else delete nextConfig.storagePreloadInputs
+
+  const reactorPool = sanitizeReactorPoolConfig(nextConfig.reactorPool)
+  if (reactorPool) nextConfig.reactorPool = reactorPool
+  else delete nextConfig.reactorPool
+
+  const hasPickupOutputConfig = Boolean(nextConfig.protocolHubOutputs?.some((entry) => entry.portId === PICKUP_OUTPUT_PORT_ID))
+  if (!pickupItemId && !hasPickupOutputConfig) {
+    delete nextConfig.pickupIgnoreInventory
+  }
+
+  return nextConfig
+}
+
+export function migrateDeviceConfigToV1(config: DeviceConfig, deviceTypeId?: DeviceInstance['typeId']): DeviceConfig {
   const nextConfig: DeviceConfig = { ...config }
   const outputs = Array.isArray(nextConfig.protocolHubOutputs) ? [...nextConfig.protocolHubOutputs] : []
 
@@ -124,16 +295,23 @@ export function migrateDeviceConfigToV1(config: DeviceConfig): DeviceConfig {
     delete nextConfig.portPriorityGroups
   }
 
-  return nextConfig
+  return sanitizeDeviceConfigUnknownItems(nextConfig, deviceTypeId)
 }
 
 function migrateLayoutToV1(layout: LayoutState): LayoutState {
   return {
     ...layout,
-    devices: layout.devices.map((device) => ({
-      ...device,
-      config: migrateDeviceConfigToV1(device.config ?? {}),
-    })),
+    devices: layout.devices.flatMap((device) => {
+      const normalizedTypeId = normalizeKnownDeviceTypeId(device.typeId)
+      if (!normalizedTypeId) return []
+      return [
+        {
+          ...device,
+          typeId: normalizedTypeId,
+          config: migrateDeviceConfigToV1(device.config ?? {}, normalizedTypeId),
+        },
+      ]
+    }),
   }
 }
 
@@ -177,16 +355,17 @@ export function normalizeBlueprintSnapshotsStorage(rawValue: StoredBlueprintSnap
       const migratedDevices = entry.devices
         .map((device) => {
           if (!device || typeof device !== 'object') return null
-          if (typeof device.typeId !== 'string') return null
+          const normalizedTypeId = normalizeKnownDeviceTypeId(device.typeId)
+          if (!normalizedTypeId) return null
           if (typeof device.rotation !== 'number') return null
           if (!device.origin || typeof device.origin !== 'object') return null
           if (typeof device.origin.x !== 'number' || typeof device.origin.y !== 'number') return null
 
           return {
-            typeId: device.typeId,
+            typeId: normalizedTypeId,
             rotation: device.rotation,
             origin: { x: device.origin.x, y: device.origin.y },
-            config: migrateDeviceConfigToV1((device.config ?? {}) as DeviceConfig),
+            config: migrateDeviceConfigToV1((device.config ?? {}) as DeviceConfig, normalizedTypeId),
           }
         })
         .filter((device): device is NonNullable<typeof device> => Boolean(device))

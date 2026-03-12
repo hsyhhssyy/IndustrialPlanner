@@ -3,7 +3,7 @@ import { usePersistentState } from '../core/usePersistentState'
 import type { DeviceTypeId, EditMode } from '../domain/types'
 import type { Language } from '../i18n'
 import { TypedEventBus } from './eventBus'
-import { normalizeAppSettings, readAppSettings, writeAppSettings, type UiTheme } from './settings'
+import { createDefaultAppSettings, normalizeAppSettings, readAppSettings, writeAppSettings, type UiTheme } from './settings'
 import {
   normalizeSuperRecipeEnabledPreference,
   SUPER_RECIPE_CONTROL_MODE,
@@ -126,6 +126,7 @@ type AppContextActions = {
   appendDebugLog: (category: string, message: string) => void
   clearDebugLogs: () => void
   setUiTheme: (theme: UiTheme) => void
+  resetUiSettings: () => void
   setLeftPanelWidth: Dispatch<SetStateAction<number>>
   setRightPanelWidth: Dispatch<SetStateAction<number>>
   setLeftPanelCollapsed: Dispatch<SetStateAction<boolean>>
@@ -183,6 +184,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setUiTheme = useCallback((uiTheme: UiTheme) => {
     setSettings((current) => ({ ...current, uiTheme }))
+  }, [])
+
+  const resetUiSettings = useCallback(() => {
+    setSettings(createDefaultAppSettings())
   }, [])
 
   const setDebugMode = useCallback((debugMode: boolean) => {
@@ -332,6 +337,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         appendDebugLog,
         clearDebugLogs,
         setUiTheme,
+        resetUiSettings,
         setLeftPanelWidth,
         setRightPanelWidth,
         setLeftPanelCollapsed,

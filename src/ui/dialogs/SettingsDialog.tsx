@@ -11,7 +11,7 @@ type SettingsDialogProps = {
 export function SettingsDialog({ t, onClose }: SettingsDialogProps) {
   const {
     state: { language, superRecipeEnabled, superRecipeControlMode, debugMode, debugLogs, uiTheme, maxTicksPerFrame },
-    actions: { setLanguage, setSuperRecipeEnabled, setDebugMode, setMaxTicksPerFrame, clearDebugLogs, setUiTheme },
+    actions: { setLanguage, setSuperRecipeEnabled, setDebugMode, setMaxTicksPerFrame, clearDebugLogs, setUiTheme, resetUiSettings },
   } = useAppContext()
 
   const handleCopyDebugLogs = async () => {
@@ -30,6 +30,11 @@ export function SettingsDialog({ t, onClose }: SettingsDialogProps) {
     } catch {
       showToast(t('settings.debug.copyFailed'), { variant: 'error' })
     }
+  }
+
+  const handleResetUiSettings = () => {
+    resetUiSettings()
+    showToast(t('settings.reset.success'), { variant: 'success' })
   }
 
   return (
@@ -118,6 +123,17 @@ export function SettingsDialog({ t, onClose }: SettingsDialogProps) {
                 <button type="button" className={`settings-theme-option ${uiTheme === 'ayu-light' ? 'active' : ''}`.trim()} onClick={() => setUiTheme('ayu-light')}>
                   <span className="settings-theme-swatch settings-theme-swatch-light" aria-hidden="true" />
                   <span>{t('settings.theme.ayuLight')}</span>
+                </button>
+              </div>
+            </div>
+            <div className="settings-row">
+              <div>
+                <div className="settings-label">{t('settings.reset.title')}</div>
+                <div className="settings-description">{t('settings.reset.desc')}</div>
+              </div>
+              <div className="settings-card-actions">
+                <button type="button" className="global-dialog-btn" onClick={handleResetUiSettings}>
+                  {t('settings.reset.action')}
                 </button>
               </div>
             </div>

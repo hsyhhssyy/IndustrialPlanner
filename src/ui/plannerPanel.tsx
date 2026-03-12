@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
 import { buildProductionPlan, type PlannerTargetInput, type PlannerTreeNode } from '../domain/planner'
+import { isKnownItemId } from '../domain/shared/predicates'
 import { isSuperRecipeItem, isSuperRecipeRecipe, shouldShowSuperRecipeContent } from '../domain/shared/superRecipeVisibility'
 import type { DeviceTypeId, ItemId } from '../domain/types'
 import { usePersistentState } from '../core/usePersistentState'
 import { getDeviceLabel, getItemLabel, type Language } from '../i18n'
+import { ItemPickerDialog } from './dialogs/ItemPickerDialog'
+import type { ItemPickerState } from './dialogs/itemPicker.types'
 
 type PlannerPanelProps = {
   language: Language
@@ -61,7 +64,7 @@ type PlannerFlatCard = {
   outputFlows: Array<{ itemId: ItemId; perMinute: number }>
 }
 
-type PlannerResultTab = 'list' | 'flowByDevice'
+type PlannerResultTab = 'list' | 'flowByDevice' | 'machineSummary'
 
 type FlowGraphNode = {
   id: string
@@ -110,6 +113,14 @@ type FlowPanState = {
 }
 
 const EPSILON = 1e-9
+const INFINITE_SUPPLY_ITEM_TAG = '矿石'
+const EXTRA_INFINITE_SUPPLY_ITEM_IDS: ItemId[] = ['item_liquid_water']
+const FORCED_RAW_ITEM_IDS: ItemId[] = Array.from(
+  new Set<ItemId>([
+    ...ITEMS.filter((item) => item.tags?.includes(INFINITE_SUPPLY_ITEM_TAG)).map((item) => item.id),
+    ...EXTRA_INFINITE_SUPPLY_ITEM_IDS,
+  ]),
+)
 
 function addFlow(target: Map<ItemId, number>, itemId: ItemId, amount: number) {
   if (amount <= EPSILON) return
@@ -136,13 +147,26 @@ function createTargetRow(itemId: ItemId): PlannerTargetRow {
   }
 }
 
+function normalizeRecentPlannerPickerItemIds(value: ItemId[]) {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<ItemId>()
+  const normalized: ItemId[] = []
+  for (const itemId of value) {
+    if (!isKnownItemId(itemId) || seen.has(itemId)) continue
+    seen.add(itemId)
+    normalized.push(itemId)
+    if (normalized.length >= 16) break
+  }
+  return normalized
+}
+
 function normalizePlannerState(value: PlannerPersistedState): PlannerPersistedState {
   const region: PlannerRegion = value.region === 'wuling' ? 'wuling' : 'valley4'
   const rawTargets = Array.isArray(value.targets) ? value.targets : []
   const targets = rawTargets
     .map((target) => ({
       id: typeof target.id === 'string' && target.id ? target.id : createTargetId(),
-      itemId: typeof target.itemId === 'string' ? target.itemId : ITEMS[0]?.id ?? '',
+      itemId: isKnownItemId(target.itemId) ? target.itemId : '',
       perMinute: Number.isFinite(target.perMinute) ? Math.max(0, target.perMinute) : 0,
     }))
     .filter((target) => target.itemId)
@@ -150,7 +174,7 @@ function normalizePlannerState(value: PlannerPersistedState): PlannerPersistedSt
   const recipeSelectionByItem: Record<ItemId, string> = {}
   if (value.recipeSelectionByItem && typeof value.recipeSelectionByItem === 'object') {
     for (const [itemId, recipeId] of Object.entries(value.recipeSelectionByItem)) {
-      if (typeof itemId !== 'string' || typeof recipeId !== 'string') continue
+      if (!isKnownItemId(itemId) || typeof recipeId !== 'string') continue
       recipeSelectionByItem[itemId] = recipeId
     }
   }
@@ -299,17 +323,22 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
   const [flowNodeLayers, setFlowNodeLayers] = useState<Record<string, number>>({})
   const [flowNodeDragState, setFlowNodeDragState] = useState<FlowNodeDragState | null>(null)
   const [flowPanState, setFlowPanState] = useState<FlowPanState | null>(null)
+  const [itemPickerState, setItemPickerState] = useState<ItemPickerState | null>(null)
+  const [recentPickerItemIds, setRecentPickerItemIds] = usePersistentState<ItemId[]>(
+    'stage5-planner-recent-picker-items',
+    [],
+    normalizeRecentPlannerPickerItemIds,
+  )
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const flowViewportRef = useRef<HTMLDivElement | null>(null)
   const BELT_THROUGHPUT_PER_MINUTE = 30
 
   const WULING_TAG = '武陵'
-  const FORCED_RAW_ITEM_IDS: ItemId[] = ['item_liquid_water']
   const BLUE_IRON_NUGGET_ID: ItemId = 'item_iron_nugget'
   const BLUE_IRON_POWDER_ID: ItemId = 'item_iron_powder'
-  const INERT_XIRANITE_WASTE_LIQUID_ID: ItemId = 'chrono_item_inert_xiranite_waste_liquid'
+  const INERT_XIRANITE_WASTE_LIQUID_ID: ItemId = 'item_liquid_xiranite_lowpoly'
   const HARD_DISPOSAL_RECIPE_BY_ITEM: Partial<Record<ItemId, string>> = {
-    chrono_item_inert_xiranite_waste_liquid: 'r_chrono_wastewater_treatment_void_inert_xiranite_waste_liquid_basic',
+    item_liquid_xiranite_lowpoly: 'r_chrono_wastewater_treatment_void_inert_xiranite_waste_liquid_basic',
   }
   const BLUE_IRON_CONVERSION_RECIPE_IDS = new Set<string>([
     'r_furnace_iron_nugget_from_iron_powder_basic',
@@ -327,6 +356,12 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
   }, [plannerState.region, superRecipeEnabled])
 
   const firstAvailableItemId = availableItems[0]?.id ?? ITEMS[0]?.id ?? ''
+  const availableItemIdSet = useMemo(() => new Set<ItemId>(availableItems.map((item) => item.id)), [availableItems])
+  const pickerDisabledItemIds = useMemo(() => new Set<ItemId>(), [])
+  const pickerSelectedItemId = useMemo(() => {
+    if (!itemPickerState || itemPickerState.kind !== 'plannerTarget') return undefined
+    return plannerState.targets.find((target) => target.id === itemPickerState.targetId)?.itemId
+  }, [itemPickerState, plannerState.targets])
 
   const availableRecipes = useMemo(() => {
     const baseRecipes = plannerState.region === 'wuling'
@@ -649,6 +684,7 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
         itemId: ItemId
         level: number
         demandPerMinute: number
+        isRawDemand: boolean
         isCycle: boolean
         isDepthLimited: boolean
       }
@@ -662,6 +698,7 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
             itemId: node.itemId,
             level: node.depth,
             demandPerMinute: node.demandPerMinute,
+            isRawDemand: node.isRawDemand,
             isCycle: node.isCycle,
             isDepthLimited: node.isDepthLimited,
           })
@@ -670,6 +707,7 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
 
         existing.level = Math.min(existing.level, node.depth)
         existing.demandPerMinute += node.demandPerMinute
+        existing.isRawDemand = existing.isRawDemand || node.isRawDemand
         existing.isCycle = existing.isCycle || node.isCycle
         existing.isDepthLimited = existing.isDepthLimited || node.isDepthLimited
       })
@@ -724,6 +762,27 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
       const correctedDemand = correctedDemandByItem.get(aggregate.itemId)
       const effectiveDemandPerMinute = correctedDemand ?? aggregate.demandPerMinute
       const recipeOptions = recipeIdsByOutputItem.get(aggregate.itemId) ?? []
+
+      if (aggregate.isRawDemand) {
+        productionCards.push({
+          cardKey: `produce|${aggregate.itemId}`,
+          cardKind: 'production',
+          itemId: aggregate.itemId,
+          level: aggregate.level,
+          demandPerMinute: effectiveDemandPerMinute,
+          isRawDemand: true,
+          isCycle: aggregate.isCycle,
+          isDepthLimited: aggregate.isDepthLimited,
+          recipeId: null,
+          recipeOptions: [],
+          machineType: null,
+          machineCount: 0,
+          inputFlows: [],
+          outputFlows: [],
+        })
+        continue
+      }
+
       const selectedRecipeId =
         recipeOptions.find((recipeId) => recipeId === plannerState.recipeSelectionByItem[aggregate.itemId]) ?? recipeOptions[0] ?? null
       const selectedRecipe = selectedRecipeId ? recipeById.get(selectedRecipeId) : undefined
@@ -1778,21 +1837,31 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
                   <div className="planner-target-index">#{index + 1}</div>
                   <label className="planner-target-field">
                     <span>{t('planner.item')}</span>
-                    <select
-                      value={target.itemId}
-                      onChange={(event) => {
-                        const itemId = event.target.value
-                        setTargets((current) =>
-                          current.map((entry) => (entry.id === target.id ? { ...entry, itemId } : entry)),
-                        )
-                      }}
+                    <button
+                      type="button"
+                      className="picker-open-btn planner-target-picker-btn"
+                      onClick={() =>
+                        setItemPickerState({
+                          kind: 'plannerTarget',
+                          targetId: target.id,
+                        })
+                      }
                     >
-                      {availableItems.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {getItemLabel(language, item.id)}
-                        </option>
-                      ))}
-                    </select>
+                      <span className="pickup-picker-current">
+                        {target.itemId ? (
+                          <img
+                            className="pickup-picker-current-icon"
+                            src={getItemIconPath(target.itemId)}
+                            alt=""
+                            aria-hidden="true"
+                            draggable={false}
+                          />
+                        ) : (
+                          <span className="pickup-picker-current-icon pickup-picker-current-icon--empty">?</span>
+                        )}
+                        <span>{target.itemId ? getItemLabel(language, target.itemId) : t('detail.unselected')}</span>
+                      </span>
+                    </button>
                   </label>
 
                   <label className="planner-target-field">
@@ -1853,6 +1922,15 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
                     onClick={() => setActiveResultTab('flowByDevice')}
                   >
                     {t('planner.tab.flowByDevice')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`planner-tab-btn ${activeResultTab === 'machineSummary' ? 'active' : ''}`.trim()}
+                    role="tab"
+                    aria-selected={activeResultTab === 'machineSummary'}
+                    onClick={() => setActiveResultTab('machineSummary')}
+                  >
+                    {t('planner.tab.machineSummary')}
                   </button>
                 </div>
               </div>
@@ -1944,7 +2022,7 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
                   {hasNonBenignCycle && <p className="planner-cycle-warning">{t('planner.cycleWarning')}</p>}
                   {planResult.depthLimited && <p className="planner-cycle-warning">{t('planner.depthWarning')}</p>}
                 </div>
-              ) : (
+              ) : activeResultTab === 'flowByDevice' ? (
                 <div
                   ref={flowViewportRef}
                   className={`planner-flow-canvas ${flowPanState ? 'is-panning' : ''}`.trim()}
@@ -2022,40 +2100,70 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
                     </div>
                   )}
                 </div>
-              )}
-            </section>
-
-            <section className="planner-summary-pane">
-              <h4>{t('planner.machineSummaryTitle')}</h4>
-              <div className="planner-machine-summary">
-                {machineSummary.entries.length > 0 ? (
-                  <div className="planner-machine-summary-cards">
-                    {machineSummary.entries.map((entry) => (
-                      <div key={entry.machineType} className="planner-machine-summary-card">
-                        <img
-                          className="planner-machine-summary-icon"
-                          src={getDeviceIconPath(entry.machineType)}
-                          alt=""
-                          aria-hidden="true"
-                          draggable={false}
-                        />
-                        <span className="planner-machine-summary-name">{entry.label}</span>
-                        <strong className="planner-machine-summary-count">x{entry.count}</strong>
+              ) : (
+                <div className="planner-summary-pane planner-summary-pane--tab">
+                  <div className="planner-machine-summary">
+                    {machineSummary.entries.length > 0 ? (
+                      <div className="planner-machine-summary-cards">
+                        {machineSummary.entries.map((entry) => (
+                          <div key={entry.machineType} className="planner-machine-summary-card">
+                            <img
+                              className="planner-machine-summary-icon"
+                              src={getDeviceIconPath(entry.machineType)}
+                              alt=""
+                              aria-hidden="true"
+                              draggable={false}
+                            />
+                            <span className="planner-machine-summary-name">{entry.label}</span>
+                            <strong className="planner-machine-summary-count">x{entry.count}</strong>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    ) : (
+                      <div className="planner-machine-summary-empty">{t('planner.machineSummaryEmpty')}</div>
+                    )}
+                    <div className="planner-machine-summary-total">{t('planner.machineSummaryTotal', { count: machineSummary.total })}</div>
                   </div>
-                ) : (
-                  <div className="planner-machine-summary-empty">{t('planner.machineSummaryEmpty')}</div>
-                )}
-                <div className="planner-machine-summary-total">{t('planner.machineSummaryTotal', { count: machineSummary.total })}</div>
-              </div>
+                </div>
+              )}
             </section>
           </div>
         </div>
   )
 
+  const pickerDialog = itemPickerState && itemPickerState.kind === 'plannerTarget' ? (
+    <ItemPickerDialog
+      itemPickerState={itemPickerState}
+      pickerSelectedItemId={pickerSelectedItemId}
+      recentItemIds={recentPickerItemIds}
+      pickerDisabledItemIds={pickerDisabledItemIds}
+      pickerFilter={{ allowedItemIds: availableItemIdSet }}
+      pickerAllowsEmpty={false}
+      superRecipeEnabled={superRecipeEnabled}
+      language={language}
+      t={t}
+      getItemIconPath={getItemIconPath}
+      onClose={() => setItemPickerState(null)}
+      onSelectItem={(itemId) => {
+        if (!itemId || itemPickerState.kind !== 'plannerTarget') return
+        setTargets((current) =>
+          current.map((entry) => (entry.id === itemPickerState.targetId ? { ...entry, itemId } : entry)),
+        )
+        setRecentPickerItemIds((current) => {
+          const next = [itemId, ...current.filter((existing) => existing !== itemId)]
+          return next.slice(0, 16)
+        })
+      }}
+    />
+  ) : null
+
   if (embedded) {
-    return <div className="planner-embedded-surface">{body}</div>
+    return (
+      <>
+        <div className="planner-embedded-surface">{body}</div>
+        {pickerDialog}
+      </>
+    )
   }
 
   return (
@@ -2081,6 +2189,7 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
 
         {body}
       </div>
+      {pickerDialog}
     </div>
   )
 }

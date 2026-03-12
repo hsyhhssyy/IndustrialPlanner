@@ -153,7 +153,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
 
   const pickerTargetDevice = useMemo(() => {
     if (!itemPickerState) return null
-    if (itemPickerState.kind === 'storageSlotPinned' || itemPickerState.kind === 'storageSlotPreload') return null
+    if (itemPickerState.kind === 'storageSlotPinned' || itemPickerState.kind === 'storageSlotPreload' || itemPickerState.kind === 'plannerTarget') return null
     return getDeviceById(layout, itemPickerState.deviceInstanceId)
   }, [itemPickerState, layout])
 
@@ -180,7 +180,10 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       const configured = pickerTargetDevice.config.pumpOutputItemId ?? DEFAULT_PUMP_OUTPUT_ITEM_ID
       return PUMP_SELECTABLE_LIQUID_IDS.has(configured) ? configured : DEFAULT_PUMP_OUTPUT_ITEM_ID
     }
-    return pickerPreloadSlots[itemPickerState.slotIndex]?.itemId ?? undefined
+    if (itemPickerState.kind === 'preload') {
+      return pickerPreloadSlots[itemPickerState.slotIndex]?.itemId ?? undefined
+    }
+    return undefined
   }, [itemPickerState, pickerPreloadSlots, pickerTargetDevice])
 
   const pickerFilter = useMemo<ItemPickerFilter | undefined>(() => {
@@ -228,7 +231,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       return
     }
     if (!itemPickerState) return
-    if (itemPickerState.kind === 'storageSlotPinned' || itemPickerState.kind === 'storageSlotPreload') return
+    if (itemPickerState.kind === 'storageSlotPinned' || itemPickerState.kind === 'storageSlotPreload' || itemPickerState.kind === 'plannerTarget') return
     const target = getDeviceById(layout, itemPickerState.deviceInstanceId)
     if (!target) {
       setItemPickerState(null)
@@ -277,7 +280,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       } else if (itemPickerState.kind === 'pumpOutput') {
         const nextItemId = itemId && PUMP_SELECTABLE_LIQUID_IDS.has(itemId) ? itemId : DEFAULT_PUMP_OUTPUT_ITEM_ID
         updatePumpOutputItem(pickerTargetDevice.instanceId, nextItemId)
-      } else {
+      } else if (itemPickerState.kind === 'preload') {
         updateProcessorPreloadSlot(pickerTargetDevice.instanceId, itemPickerState.slotIndex, { itemId })
       }
     },

@@ -1737,6 +1737,23 @@ button:disabled {
   gap: 12px;
 }
 
+.tool-dialog-header-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.tool-dialog-tabs {
+  min-width: 0;
+  flex-wrap: wrap;
+  margin-bottom: 0;
+  padding: 0;
+  background: transparent;
+  position: static;
+}
+
 .wiki-dialog-body {
   margin-top: 8px;
   flex: 1;
@@ -2548,6 +2565,23 @@ button:disabled {
   gap: 10px;
 }
 
+.pickup-item-dialog-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pickup-item-dialog-switch {
+  flex: 0 0 auto;
+}
+
+.pickup-item-dialog-switch-label {
+  font-size: 12px;
+  color: #9fb3c9;
+  white-space: nowrap;
+}
+
 .pickup-item-group-title {
   font-size: 12px;
   color: #9fb3c9;
@@ -3129,9 +3163,8 @@ button:disabled {
 
 .planner-right-pane {
   min-height: 0;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
 }
 
 .planner-target-pane,
@@ -3258,12 +3291,14 @@ button:disabled {
 .planner-result-pane {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
 }
 
 .planner-result-head {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: flex-start;
   gap: 10px;
@@ -3295,6 +3330,16 @@ button:disabled {
   flex-direction: column;
   min-height: 0;
   align-self: start;
+}
+
+.planner-summary-pane--tab {
+  margin-top: 8px;
+  flex: 1 1 0;
+  align-self: stretch;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .planner-levels-wrap {
@@ -3363,6 +3408,24 @@ button:disabled {
   color: #b2bfd2;
 }
 
+.app-shell[data-theme='ayu-light'] .planner-node-tag {
+  border-color: #8fb9e6;
+  background: rgba(76, 128, 189, 0.08);
+  color: #2f649f;
+}
+
+.app-shell[data-theme='ayu-light'] .planner-node-tag.cycle {
+  border-color: rgba(217, 160, 74, 0.62);
+  background: rgba(217, 160, 74, 0.1);
+  color: #8b5a13;
+}
+
+.app-shell[data-theme='ayu-light'] .planner-node-tag.depth {
+  border-color: rgba(214, 130, 79, 0.56);
+  background: rgba(214, 130, 79, 0.1);
+  color: #98511b;
+}
+
 .planner-tree-node-meta-row {
   display: flex;
   align-items: center;
@@ -3405,6 +3468,9 @@ button:disabled {
   grid-template-columns: minmax(320px, 2.4fr) minmax(110px, 0.8fr) minmax(180px, 1fr) minmax(110px, 0.8fr);
   font-size: 12px;
   color: #9fb0c7;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .planner-card-table-head > span {
@@ -3528,9 +3594,11 @@ button:disabled {
   padding: 8px;
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 6px;
   min-height: 0;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .planner-machine-summary-title {
@@ -3543,8 +3611,9 @@ button:disabled {
   flex-wrap: wrap;
   gap: 8px;
   align-content: flex-start;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  max-height: calc(40px * 2 + 8px);
   padding-right: 2px;
 }
 
@@ -3579,6 +3648,11 @@ button:disabled {
 }
 
 .planner-machine-summary-empty {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 12px;
   color: #9fb0c7;
 }
@@ -3665,6 +3739,10 @@ button:disabled {
   top: 0;
   width: 100%;
   height: 100%;
+}
+
+.planner-target-picker-btn {
+  padding: 6px 8px;
 }
 
 .planner-flow-svg {
@@ -3940,13 +4018,16 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 .app-shell .wiki-primary-tabs,
 .app-shell .planner-dialog-body,
 .app-shell .planner-flow-canvas,
-.app-shell .planner-flow-viewport,
 .app-shell .wiki-list-pane,
 .app-shell .wiki-content-pane,
 .app-shell .settings-card {
   background: var(--surface-1);
   color: var(--text-primary);
   border-color: var(--border-color);
+}
+
+.app-shell .planner-flow-viewport {
+  background: transparent;
 }
 
 .app-shell .topbar {
@@ -4148,11 +4229,35 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
   border-color: #d5dce7;
 }
 
+.app-shell[data-theme='ayu-light'] .planner-card-table-head {
+  background: #e7edf4;
+  color: #5a6d83;
+  box-shadow: 0 1px 0 rgba(213, 220, 231, 0.95);
+}
+
 .app-shell[data-theme='ayu-light'] .planner-item-card,
 .app-shell[data-theme='ayu-light'] .planner-machine-summary-card,
 .app-shell[data-theme='ayu-light'] .planner-flow-node {
   background: #f4f6f8;
   border-color: #d5dce7;
+}
+
+.app-shell[data-theme='ayu-light'] .planner-item-name,
+.app-shell[data-theme='ayu-light'] .planner-item-recipe-row,
+.app-shell[data-theme='ayu-light'] .planner-item-input-inline,
+.app-shell[data-theme='ayu-light'] .planner-machine-count-inline {
+  color: #26313d;
+}
+
+.app-shell[data-theme='ayu-light'] .planner-tree-node-demand,
+.app-shell[data-theme='ayu-light'] .planner-item-recipe-row .planner-cell-label,
+.app-shell[data-theme='ayu-light'] .planner-item-input-inline .planner-cell-label,
+.app-shell[data-theme='ayu-light'] .planner-machine-count-inline {
+  color: #5f7185;
+}
+
+.app-shell[data-theme='ayu-light'] .planner-item-main-icon {
+  background: #e9eef4;
 }
 
 .app-shell[data-theme='ayu-light'] .planner-flow-canvas {
@@ -4586,6 +4691,8 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
   gap: 12px;
   overflow: auto;
   padding-right: 4px;
+  padding-bottom: 4px;
+  overscroll-behavior: contain;
 }
 
 .settings-card {
@@ -4617,6 +4724,13 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.settings-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
 }
 
 .settings-label {

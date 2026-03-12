@@ -31,6 +31,7 @@
 
 - Stage 模板目录： [stage-template](stage-template)
 - 模板总入口： [stage-template/README.md](stage-template/README.md)
+- 通用迁移设计指南： [common/migration-process-design.md](common/migration-process-design.md)
 
 ## 阶段进度明细
 
@@ -66,6 +67,7 @@
 - 相关文档目录：`./stage5/`
 - 作为新的活跃阶段承接后续需求与实现工作。
 - 当前主线：修复 bug、切换真实 1.1 配方与正式图标、移除“超时空模式”、增强可维护性、补齐新增功能并建立 Playwright CLI 自动化测试流程。
+- 当前跨需求迁移规则入口： [common/migration-process-design.md](common/migration-process-design.md)
 
 ## 无安排需求
 
@@ -82,3 +84,4 @@
 - 新阶段启动时，必须先从 [stage-template](stage-template) 复制出新 Stage 文档，再在本文件追加阶段条目并更新状态。
 - 阶段验收完成后，请同步更新“当前状态”与“阶段进度明细”。
 - 若模板规则需要演化，先更新 [stage-template](stage-template)，再将变更带入后续 Stage。
+- 若形成跨需求复用的迁移默认规则，优先回写 [common/migration-process-design.md](common/migration-process-design.md)，再在相关 Stage 文档中补充摘要入口。

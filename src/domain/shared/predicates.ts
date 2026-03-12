@@ -1,4 +1,4 @@
-import { DEVICE_TYPE_BY_ID, ITEMS } from '../registry'
+import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS } from '../registry'
 import type { DeviceTypeId, ItemId } from '../types'
 
 const ORE_ITEM_TAG = '矿石'
@@ -6,6 +6,10 @@ const ORE_ITEM_ID_SET = new Set<ItemId>(ITEMS.filter((item) => item.tags?.includ
 
 export function isOreItemId(itemId: ItemId | undefined) {
   return Boolean(itemId && ORE_ITEM_ID_SET.has(itemId))
+}
+
+export function isKnownItemId(itemId: unknown): itemId is ItemId {
+  return typeof itemId === 'string' && itemId in ITEM_BY_ID
 }
 
 export function isKnownDeviceTypeId(typeId: unknown): typeId is DeviceTypeId {

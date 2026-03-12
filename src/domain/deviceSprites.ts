@@ -10,6 +10,7 @@ export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
   { typeId: 'item_port_loader_1', fileName: 'item_port_loader_1.png' },
   { typeId: 'item_port_grinder_1', fileName: 'item_port_grinder_1.png' },
   { typeId: 'item_port_furnance_1', fileName: 'item_port_furnance_1.png' },
+  { typeId: 'item_port_liquid_furnance_1', fileName: 'item_port_liquid_furnance_1.png' },
   { typeId: 'item_port_cmpt_mc_1', fileName: 'item_port_cmpt_mc_1.png' },
   { typeId: 'item_port_shaper_1', fileName: 'item_port_shaper_1.png' },
   { typeId: 'item_port_seedcol_1', fileName: 'item_port_seedcol_1.png' },
