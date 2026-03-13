@@ -2565,27 +2565,34 @@ button:disabled {
   gap: 10px;
 }
 
-.pickup-item-dialog-title-row {
+.pickup-item-group-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .pickup-item-dialog-switch {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+  justify-content: flex-end;
 }
 
 .pickup-item-dialog-switch-label {
   font-size: 12px;
   color: #9fb3c9;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: right;
+  line-height: 1.2;
 }
 
 .pickup-item-group-title {
   font-size: 12px;
   color: #9fb3c9;
   margin: 0;
+  flex: 1 1 auto;
 }
 
 .pickup-item-list--recent {

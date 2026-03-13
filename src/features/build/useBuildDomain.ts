@@ -52,7 +52,8 @@ export function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
     typeId === 'item_port_storager_1' ||
     typeId === 'item_port_log_hongs_bus_source' ||
     typeId === 'item_port_log_hongs_bus' ||
-    typeId === 'item_port_liquid_storager_1'
+    typeId === 'item_port_liquid_storager_1' ||
+    typeId === 'item_port_udpipe_unloader_1'
   )
     return 'storage'
   if (typeId === 'item_port_water_pump_1') return 'resource'
@@ -60,6 +61,7 @@ export function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
     typeId === 'item_port_grinder_1' ||
     typeId === 'item_port_furnance_1' ||
     typeId === 'item_port_liquid_furnance_1' ||
+    typeId === 'item_liquid_cleaner_1' ||
     typeId === 'item_port_cmpt_mc_1' ||
     typeId === 'item_port_shaper_1' ||
     typeId === 'item_port_seedcol_1' ||

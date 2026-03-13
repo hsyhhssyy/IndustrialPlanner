@@ -34,6 +34,10 @@ function isAdmissionDeviceType(typeId: LayoutState['devices'][number]['typeId'] 
   return typeId === 'item_log_admission' || typeId === 'item_pipe_admission'
 }
 
+function isPumpOutputDeviceType(typeId: LayoutState['devices'][number]['typeId'] | undefined) {
+  return typeId === 'item_port_water_pump_1' || typeId === 'item_port_udpipe_unloader_1'
+}
+
 type UseBuildPickerDomainParams = {
   layout: LayoutState
   selection: string[]
@@ -97,7 +101,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
         )
       : false
   const selectedPumpOutputItemId =
-    selectedDevice?.typeId === 'item_port_water_pump_1'
+    isPumpOutputDeviceType(selectedDevice?.typeId)
       ? PUMP_SELECTABLE_LIQUID_IDS.has(selectedDevice.config.pumpOutputItemId ?? DEFAULT_PUMP_OUTPUT_ITEM_ID)
         ? (selectedDevice.config.pumpOutputItemId ?? DEFAULT_PUMP_OUTPUT_ITEM_ID)
         : DEFAULT_PUMP_OUTPUT_ITEM_ID
@@ -249,7 +253,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       setItemPickerState(null)
       return
     }
-    if (itemPickerState.kind === 'pumpOutput' && target.typeId !== 'item_port_water_pump_1') {
+    if (itemPickerState.kind === 'pumpOutput' && !isPumpOutputDeviceType(target.typeId)) {
       setItemPickerState(null)
       return
     }

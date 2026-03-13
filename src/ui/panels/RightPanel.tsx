@@ -843,7 +843,7 @@ export function RightPanel({
               )}
             </>
           )}
-          {selectedDevice.typeId === 'item_port_water_pump_1' && (
+          {(selectedDevice.typeId === 'item_port_water_pump_1' || selectedDevice.typeId === 'item_port_udpipe_unloader_1') && (
             <>
               <div className="kv kv-no-border kv-pickup-inline">
                 <span>{t('detail.pumpOutputLiquid')}</span>

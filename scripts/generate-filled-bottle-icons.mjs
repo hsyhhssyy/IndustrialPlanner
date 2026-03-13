@@ -8,8 +8,16 @@ const __dirname = path.dirname(__filename)
 const projectRoot = path.resolve(__dirname, '..')
 const itemIconDir = path.join(projectRoot, 'public', 'itemicon')
 
-const bottleItemIds = ['item_iron_bottle', 'item_glass_bottle', 'item_glass_enr_bottle', 'item_iron_enr_bottle']
-const liquidItemIds = ['item_liquid_water', 'item_liquid_plant_grass_1', 'item_liquid_plant_grass_2', 'item_liquid_xiranite']
+const bottleItemIds = ['item_iron_bottle', 'item_glass_bottle', 'item_glass_enr_bottle', 'item_iron_enr_bottle', 'item_copper_bottle']
+const liquidItemIds = [
+  'item_liquid_water',
+  'item_liquid_plant_grass_1',
+  'item_liquid_plant_grass_2',
+  'item_liquid_xiranite',
+  'item_liquid_sewage',
+  'item_liquid_xiranite_poly',
+  'item_liquid_xiranite_lowpoly',
+]
 
 function outputIdFor(bottleId, liquidId) {
   const liquidSuffix = liquidId === 'item_liquid_water' ? 'water' : liquidId.replace(/^item_/, '')

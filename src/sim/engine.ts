@@ -76,6 +76,11 @@ const PROTOCOL_HUB_SUPPLY_KW = 200
 const GLOBAL_BATTERY_CAPACITY_J = 100_000_000
 const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
 const PROTOCOL_HUB_OUTPUT_PORT_IDS = ['out_w_2', 'out_w_5', 'out_w_8', 'out_e_2', 'out_e_5', 'out_e_8'] as const
+
+function isPumpOutputDeviceType(typeId: DeviceInstance['typeId']) {
+  return typeId === 'item_port_water_pump_1' || typeId === 'item_port_udpipe_unloader_1'
+}
+
 const PROTOCOL_HUB_WAREHOUSE_INPUT_PORT_IDS = new Set([
   'in_n_2',
   'in_n_3',
@@ -2538,7 +2543,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
       }
     }
 
-    if (device.typeId === 'item_port_water_pump_1' && 'inventory' in runtime) {
+    if (isPumpOutputDeviceType(device.typeId) && 'inventory' in runtime) {
       const selectedItemId = waterPumpOutputItemId(device)
       for (const itemId of WATER_PUMP_SELECTABLE_ITEM_IDS) {
         runtime.inventory[itemId] = itemId === selectedItemId ? Number.POSITIVE_INFINITY : 0
@@ -2763,7 +2768,9 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
 export function initialStorageConfig(deviceTypeId: string) {
   if (deviceTypeId === 'item_port_storager_1') return { submitToWarehouse: true }
-  if (deviceTypeId === 'item_port_water_pump_1') return { pumpOutputItemId: DEFAULT_WATER_PUMP_ITEM_ID }
+  if (deviceTypeId === 'item_port_water_pump_1' || deviceTypeId === 'item_port_udpipe_unloader_1') {
+    return { pumpOutputItemId: DEFAULT_WATER_PUMP_ITEM_ID }
+  }
   return {}
 }
 

@@ -4,8 +4,10 @@ import { isSuperRecipeItem, shouldShowSuperRecipeContent } from '../../domain/sh
 import type { ItemId } from '../../domain/types'
 import { getItemLabel, type Language } from '../../i18n'
 import type { ItemPickerFilter, ItemPickerState } from './itemPicker.types'
+import type { ItemDef } from '../../domain/types'
 
 const RECENT_ITEMS_SINGLE_ROW_COUNT = 8
+const BOTTLED_LIQUID_TAG = '瓶装液体'
 
 type ItemPickerDialogProps = {
   itemPickerState: ItemPickerState
@@ -22,8 +24,8 @@ type ItemPickerDialogProps = {
   onSelectItem: (itemId: ItemId | null) => void
 }
 
-function isBottledLiquidItem(itemId: ItemId) {
-  return itemId.includes('_bottle_filled_')
+function isBottledLiquidItem(item: ItemDef) {
+  return Boolean(item.tags?.includes(BOTTLED_LIQUID_TAG))
 }
 
 export function ItemPickerDialog({
@@ -61,7 +63,7 @@ export function ItemPickerDialog({
     if (pickerFilter?.allowedItemIds && !pickerFilter.allowedItemIds.has(item.id)) {
       return false
     }
-    if (hideBottledLiquids && isBottledLiquidItem(item.id)) {
+    if (hideBottledLiquids && isBottledLiquidItem(item)) {
       return false
     }
     return true
@@ -88,31 +90,22 @@ export function ItemPickerDialog({
         aria-label={t('detail.itemPickerTitle')}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="global-dialog-title pickup-item-dialog-title-row">
-          <span>
-            {itemPickerState.kind === 'pickup'
-              ? t('detail.pickupDialogTitle')
-              : itemPickerState.kind === 'admission'
-                ? t('detail.admissionDialogTitle')
-              : itemPickerState.kind === 'plannerTarget'
-                ? t('detail.itemPickerTitle')
-              : itemPickerState.kind === 'protocolHubOutput'
-                ? t('detail.protocolHubOutputDialogTitle', { index: itemPickerState.portIndex + 1 })
-              : itemPickerState.kind === 'pumpOutput'
-                ? t('detail.pumpOutputDialogTitle')
-              : itemPickerState.kind === 'storageSlotPinned'
-                ? t('detail.storageSlotPinnedDialogTitle', { index: itemPickerState.slotIndex + 1 })
-              : itemPickerState.kind === 'storageSlotPreload'
-                ? t('detail.storageSlotPreloadDialogTitle', { index: itemPickerState.slotIndex + 1 })
-                : t('detail.preloadDialogTitle', { index: itemPickerState.slotIndex + 1 })}
-          </span>
-          <label className="switch-toggle switch-toggle-inline pickup-item-dialog-switch" aria-label={t('detail.itemPickerHideBottledLiquids')}>
-            <span className="pickup-item-dialog-switch-label">{t('detail.itemPickerHideBottledLiquids')}</span>
-            <input type="checkbox" checked={hideBottledLiquids} onChange={(event) => setHideBottledLiquids(event.target.checked)} />
-            <span className="switch-track" aria-hidden="true">
-              <span className="switch-thumb" />
-            </span>
-          </label>
+        <div className="global-dialog-title">
+          {itemPickerState.kind === 'pickup'
+            ? t('detail.pickupDialogTitle')
+            : itemPickerState.kind === 'admission'
+              ? t('detail.admissionDialogTitle')
+            : itemPickerState.kind === 'plannerTarget'
+              ? t('detail.itemPickerTitle')
+            : itemPickerState.kind === 'protocolHubOutput'
+              ? t('detail.protocolHubOutputDialogTitle', { index: itemPickerState.portIndex + 1 })
+            : itemPickerState.kind === 'pumpOutput'
+              ? t('detail.pumpOutputDialogTitle')
+            : itemPickerState.kind === 'storageSlotPinned'
+              ? t('detail.storageSlotPinnedDialogTitle', { index: itemPickerState.slotIndex + 1 })
+            : itemPickerState.kind === 'storageSlotPreload'
+              ? t('detail.storageSlotPreloadDialogTitle', { index: itemPickerState.slotIndex + 1 })
+              : t('detail.preloadDialogTitle', { index: itemPickerState.slotIndex + 1 })}
         </div>
         <div className="pickup-item-groups">
           <section className="pickup-item-group">
@@ -137,7 +130,16 @@ export function ItemPickerDialog({
           </section>
 
           <section className="pickup-item-group">
-            <div className="pickup-item-group-title">{t('detail.itemPickerAllGroup')}</div>
+            <div className="pickup-item-group-header">
+              <div className="pickup-item-group-title">{t('detail.itemPickerAllGroup')}</div>
+              <label className="switch-toggle switch-toggle-inline pickup-item-dialog-switch" aria-label={t('detail.itemPickerHideBottledLiquids')}>
+                <span className="pickup-item-dialog-switch-label">{t('detail.itemPickerHideBottledLiquids')}</span>
+                <input type="checkbox" checked={hideBottledLiquids} onChange={(event) => setHideBottledLiquids(event.target.checked)} />
+                <span className="switch-track" aria-hidden="true">
+                  <span className="switch-thumb" />
+                </span>
+              </label>
+            </div>
             <div className="pickup-item-list pickup-item-list--all">
               {pickerAllowsEmpty ? (
                 <button

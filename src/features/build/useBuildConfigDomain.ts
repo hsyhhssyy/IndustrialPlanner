@@ -23,6 +23,11 @@ export function useBuildConfigDomain({
   buildProcessorPreloadSlots,
   serializeProcessorPreloadSlots,
 }: UseBuildConfigDomainParams) {
+  const isPumpOutputDeviceType = useCallback(
+    (typeId: DeviceInstance['typeId']) => typeId === 'item_port_water_pump_1' || typeId === 'item_port_udpipe_unloader_1',
+    [],
+  )
+
   const normalizeProtocolHubOutputItemId = useCallback((itemId: ItemId | undefined) => {
     return itemId && ITEM_BY_ID[itemId]?.type === 'solid' ? itemId : undefined
   }, [])
@@ -176,13 +181,13 @@ export function useBuildConfigDomain({
       setLayout((current) => ({
         ...current,
         devices: current.devices.map((device) =>
-          device.instanceId === deviceInstanceId && device.typeId === 'item_port_water_pump_1'
+          device.instanceId === deviceInstanceId && isPumpOutputDeviceType(device.typeId)
             ? { ...device, config: { ...device.config, pumpOutputItemId } }
             : device,
         ),
       }))
     },
-    [setLayout],
+    [isPumpOutputDeviceType, setLayout],
   )
 
   const updateProtocolHubOutputItem = useCallback(
