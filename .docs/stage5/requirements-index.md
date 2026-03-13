@@ -56,7 +56,7 @@
 | S5-RQ-005 | 物品准入口 | P1 | done | M2 | [REQ-005](requirements/REQ-005-item-admission.md) |
 | S5-RQ-006 | 起死回生机公共蓝图 | P1 | done | M2 | [REQ-006](requirements/REQ-006-public-blueprint-revival.md) |
 | S5-RQ-007 | 电力 / 电池折线图 | P1 | done | M2 | [REQ-007](requirements/REQ-007-power-battery-chart.md) |
-| S5-RQ-008 | Playwright CLI 自动化测试流程 | P0 | blocked | Next | [REQ-008](requirements/REQ-008-playwright-automation.md) |
+| S5-RQ-008 | Playwright CLI 自动化测试流程 | P0 | blocked | Stage6 | [REQ-008](requirements/REQ-008-playwright-automation.md) |
 | S5-RQ-009 | 界面完全重构 | P2 | done | M3 | [REQ-009](requirements/REQ-009-ui-full-refactor.md) |
 | S5-RQ-010 | 帮助系统与用户引导重构 | P2 | done | M3 | [REQ-010](requirements/REQ-010-help-and-onboarding.md) |
 
@@ -69,11 +69,11 @@ Stage5 已发版封版，当前不再维护阶段内排序。
 发版后的总判断是：
 
 1. 已交付需求统一按 `done` 归档。
-2. `S5-RQ-008` 明确移交下一阶段，当前状态记为 `blocked`，仅表示“不在 Stage5 继续推进”，不表示当前版本存在发布阻塞。
+2. `S5-RQ-008` 明确移交 Stage6，当前状态记为 `blocked`，仅表示“不在 Stage5 继续推进”，不表示当前版本存在发布阻塞。
 
 ### 当前阻塞
 
-- `S5-RQ-008` 已确认顺延到下一阶段，不纳入 Stage5 发版闭环。
+- `S5-RQ-008` 已确认顺延到 Stage6，不纳入 Stage5 发版闭环。
 
 ### 当前进展补充
 
@@ -111,4 +111,4 @@ Stage5 已发版封版，当前不再维护阶段内排序。
 - 2026-03-11：将 `S5-RQ-007` 状态更新为 `done`；独立折线图方案已明确放弃，当前平均功率统计面板即为最终交付目标。
 - 2026-03-13：补充 `S5-RQ-002` 近期非物品收口：正式设备分类 / 图标 / 精灵 / 行为同步规则已落地；流体精炼炉液体口位已调整；物品选择器“隐藏瓶装液体”开关位置与布局已修正；暗管出口精灵已改为按 alpha 阈值裁切。
 - 2026-03-13：将 `S5-RQ-002` 状态同步修正为 `in-progress`，并补充正式图标归一化新口径：运行时统一使用独立小 `webp` 文件，不采用 atlas。
-- 2026-03-13：按 Stage5 实际发版口径完成总表收口：`S5-RQ-001`、`S5-RQ-002`、`S5-RQ-003`、`S5-RQ-004`、`S5-RQ-006`、`S5-RQ-009` 更新为 `done`；`S5-RQ-008` 移交下一阶段并更新为 `blocked`。
+- 2026-03-13：按 Stage5 实际发版口径完成总表收口：`S5-RQ-001`、`S5-RQ-002`、`S5-RQ-003`、`S5-RQ-004`、`S5-RQ-006`、`S5-RQ-009` 更新为 `done`；`S5-RQ-008` 移交 Stage6 并更新为 `blocked`。
