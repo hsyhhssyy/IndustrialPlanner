@@ -49,47 +49,44 @@
 
 | 编号 | 名称 | 优先级 | 状态 | 当前阶段 | 需求文档 |
 | --- | --- | --- | --- | --- | --- |
-| S5-RQ-001 | 缺陷修复与稳定性收敛 | P0 | in-progress | M1 | [REQ-001](requirements/REQ-001-bug-and-stability.md) |
-| S5-RQ-002 | 真实 1.1 配方与正式图标替换 | P0 | in-progress | M1 | [REQ-002](requirements/REQ-002-real-1-1-data-and-icons.md) |
-| S5-RQ-003 | 可维护性清理与模块拆分 | P2 | todo | M3 | [REQ-003](requirements/REQ-003-maintainability-cleanup.md) |
-| S5-RQ-004 | 仿真运行时动态调整能耗 | P1 | in-progress | M2 | [REQ-004](requirements/REQ-004-runtime-power-adjustment.md) |
+| S5-RQ-001 | 缺陷修复与稳定性收敛 | P0 | done | M1 | [REQ-001](requirements/REQ-001-bug-and-stability.md) |
+| S5-RQ-002 | 真实 1.1 配方与正式图标替换 | P0 | done | M1 | [REQ-002](requirements/REQ-002-real-1-1-data-and-icons.md) |
+| S5-RQ-003 | 可维护性清理与模块拆分 | P2 | done | M3 | [REQ-003](requirements/REQ-003-maintainability-cleanup.md) |
+| S5-RQ-004 | 仿真运行时动态调整能耗 | P1 | done | M2 | [REQ-004](requirements/REQ-004-runtime-power-adjustment.md) |
 | S5-RQ-005 | 物品准入口 | P1 | done | M2 | [REQ-005](requirements/REQ-005-item-admission.md) |
-| S5-RQ-006 | 起死回生机公共蓝图 | P1 | todo | M2 | [REQ-006](requirements/REQ-006-public-blueprint-revival.md) |
+| S5-RQ-006 | 起死回生机公共蓝图 | P1 | done | M2 | [REQ-006](requirements/REQ-006-public-blueprint-revival.md) |
 | S5-RQ-007 | 电力 / 电池折线图 | P1 | done | M2 | [REQ-007](requirements/REQ-007-power-battery-chart.md) |
-| S5-RQ-008 | Playwright CLI 自动化测试流程 | P0 | todo | M3 | [REQ-008](requirements/REQ-008-playwright-automation.md) |
-| S5-RQ-009 | 界面完全重构 | P2 | in-progress | M3 | [REQ-009](requirements/REQ-009-ui-full-refactor.md) |
+| S5-RQ-008 | Playwright CLI 自动化测试流程 | P0 | blocked | Next | [REQ-008](requirements/REQ-008-playwright-automation.md) |
+| S5-RQ-009 | 界面完全重构 | P2 | done | M3 | [REQ-009](requirements/REQ-009-ui-full-refactor.md) |
 | S5-RQ-010 | 帮助系统与用户引导重构 | P2 | done | M3 | [REQ-010](requirements/REQ-010-help-and-onboarding.md) |
 
 ## 当前阶段观察
 
 ### 当前排序
 
-1. 优先完成 P0：S5-RQ-001、S5-RQ-002、S5-RQ-008。
-2. 然后推进 P1：S5-RQ-004、S5-RQ-006。
-3. 再推进 P2：S5-RQ-003、S5-RQ-009、S5-RQ-010。
-4. `S5-RQ-003` 仍以“服务当前主线”为前提推进，不单独膨胀为全面重构；界面完全重构独立由 `S5-RQ-009` 承载。
-5. 帮助系统与用户引导重构独立由 `S5-RQ-010` 承载；`S5-RQ-009` 只保留帮助入口、dialog 容器与工作台主题一致性职责。
+Stage5 已发版封版，当前不再维护阶段内排序。
+
+发版后的总判断是：
+
+1. 已交付需求统一按 `done` 归档。
+2. `S5-RQ-008` 明确移交下一阶段，当前状态记为 `blocked`，仅表示“不在 Stage5 继续推进”，不表示当前版本存在发布阻塞。
 
 ### 当前阻塞
 
-- 暂无已登记 `blocked` 项；后续若出现阻塞，必须在对应需求文档补充原因、影响与解除条件。
+- `S5-RQ-008` 已确认顺延到下一阶段，不纳入 Stage5 发版闭环。
 
 ### 当前进展补充
 
 1. `S5-RQ-005` 已完成物品准入口交付、资源收敛、数量语义确认与 `junction` 结构重构，当前状态为 `done`。
 2. `S5-RQ-007` 已按当前阶段的轻量目标完成：独立折线图方案已明确放弃，改为左侧仿真调试区域中的平均功率详情区，并以 `1 小时 / 30 分钟 / 10 分钟` 的总发电功率滑动平均值作为最终交付。
-3. `S5-RQ-001` 已录入并关闭首批 3 个缺陷，详见 [bugs.md](bugs.md)。
-4. `S5-RQ-004` 已进入 `in-progress`，当前口径为“右侧顶部全局总耗电覆盖值”，首版代码链路已接通，待补运行态回归。
-5. `S5-RQ-009` 已进入 `in-progress`：工作台骨架、顶栏左右 toggle、左侧 Activity Bar、右侧折叠面板、工具箱 / 帮助 / 设置入口、统一 `settings` 存储均已落地。
-6. `S5-RQ-009` 已新增并接受两个文档建档后形成的新口径：语言设置迁入设置面板，以及右侧面板增加“电力 / 运行设置”区域。
-7. `S5-RQ-009` 中“设备分类二级折叠”建议已被明确拒绝；右侧面板当前状态已被确认满意，暂不再作为主动改造目标。
-8. `S5-RQ-009` 已确认历史响应式特例是移动端左侧空白区域与右侧面板无法打开的根因，相关断点与特判代码已移除，当前统一回到桌面工作台布局。
-9. `S5-RQ-009` 保留移动端画布双指缩放，并新增左侧主工具条的 VSCode 式交互口径：展开时点击当前工具收起，收起时点击任意工具展开并切换。
-10. `S5-RQ-009` 已继续推进主题与交互收口：高频 dialog 浅色主题已补齐，端口优先级已改为 `1-9` 数字 Pad，删除模式切换已改为分段按钮，供电范围格子新增浅蓝底色，整条删除已收紧为只对真正的传送带 / 管道生效。
-11. `S5-RQ-009` 已继续收口工具箱视觉密度：工具箱“设备一览 / 物品一览”的配方卡片已进一步改为不占满整行的紧凑资料卡布局；右侧物品名称再比左侧列表小一档，并加入数量 badge、小型机器胶囊和更紧凑的换行规则，且已覆盖深浅色主题。
-12. `S5-RQ-010` 已完成当前轮次交付：帮助页已重写为用户向说明书结构，完成浅色主题适配、图标化说明、游戏式快捷键页，以及左侧工具条 / 左右面板用途说明补充；当前状态更新为 `done`。
-13. `S5-RQ-002` 已继续收口近期非物品改动：流体精炼炉液体口位调整为“右中进 / 左中出”；`item_liquid_cleaner_1` 已归入基础生产；“暗管出口”正式 ID 收口为 `item_port_udpipe_unloader_1` 并接入抽水泵同类配置 / 运行时逻辑；物品选择器“隐藏瓶装液体”开关位置与布局已修正；暗管出口精灵已改为按 alpha 阈值裁切，避免残留透明边框。
-14. `S5-RQ-002` 已补充图片资源归一化机制：原始资源统一归档到 `public/original/`，运行时物品图标输出为 `public/itemicon/*.webp`，设备图标输出为 `public/device-icons/*.webp`，设备精灵输出为 `public/sprites/*.webp`；当前明确不采用 atlas 方案。
+3. `S5-RQ-001` 已完成本阶段稳定性收敛与已知高优先级缺陷闭环，详见 [bugs.md](bugs.md)。
+4. `S5-RQ-004` 已按 Stage5 实际目标交付：全局总耗电覆盖值链路、运行态即时生效以及平均功率观测区均已落地。
+5. `S5-RQ-006` 已在公共蓝图库中接入可浏览、可加载、可放置的公共蓝图，并支持描述字段展示。
+6. `S5-RQ-009` 已按 Stage5 实际发版范围完成：工作台骨架、顶栏左右 toggle、左侧 Activity Bar、右侧折叠面板、工具箱 / 帮助 / 设置入口、统一 `settings` 存储均已落地。
+7. `S5-RQ-009` 已接受并落地语言设置迁入设置面板、右侧面板增加“电力 / 运行设置”区域、移动端画布双指缩放、浅色主题适配、紧凑资料卡等最终口径。
+8. `S5-RQ-010` 已完成帮助页重写、浅色主题适配、图标化说明、游戏式快捷键页，以及左侧工具条 / 左右面板用途说明补充。
+9. `S5-RQ-002` 已完成正式 1.1 资源收口、未知物品清空、未知设备删除、正式图标归一化等迁移目标；当前修正后的最终口径是不强制移除超时空开关，而是保留为未来阶段可继续使用的能力。
+10. `S5-RQ-003` 在 Stage5 内未单独膨胀为大型独立重构，而是以支撑主线交付的代码清理形式随各需求一并完成，本阶段不再继续扩张。
 
 ### 全局 bug 入口
 
@@ -114,3 +111,4 @@
 - 2026-03-11：将 `S5-RQ-007` 状态更新为 `done`；独立折线图方案已明确放弃，当前平均功率统计面板即为最终交付目标。
 - 2026-03-13：补充 `S5-RQ-002` 近期非物品收口：正式设备分类 / 图标 / 精灵 / 行为同步规则已落地；流体精炼炉液体口位已调整；物品选择器“隐藏瓶装液体”开关位置与布局已修正；暗管出口精灵已改为按 alpha 阈值裁切。
 - 2026-03-13：将 `S5-RQ-002` 状态同步修正为 `in-progress`，并补充正式图标归一化新口径：运行时统一使用独立小 `webp` 文件，不采用 atlas。
+- 2026-03-13：按 Stage5 实际发版口径完成总表收口：`S5-RQ-001`、`S5-RQ-002`、`S5-RQ-003`、`S5-RQ-004`、`S5-RQ-006`、`S5-RQ-009` 更新为 `done`；`S5-RQ-008` 移交下一阶段并更新为 `blocked`。
