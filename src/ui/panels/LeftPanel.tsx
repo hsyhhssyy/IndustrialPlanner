@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { useAppContext } from '../../app/AppContext'
 import { uiEffects } from '../../app/uiEffects'
+import { getDeviceIconPath } from '../../assets/iconPaths'
 import { useWorkbenchContext } from '../../app/WorkbenchContext'
 import { getDeviceLabel, getModeLabel } from '../../i18n'
 
@@ -87,7 +88,7 @@ export function LeftPanel() {
                   eventBus.emit('ui.center.focus', undefined)
                 }}
               >
-                <img className="place-device-icon" src="/device-icons/item_log_belt_01.png" alt="" aria-hidden="true" draggable={false} />
+                <img className="place-device-icon" src={getDeviceIconPath('item_log_belt_01')} alt="" aria-hidden="true" draggable={false} />
                 <span className="place-device-label">{t('left.placeBelt')}</span>
               </button>
 
@@ -101,7 +102,7 @@ export function LeftPanel() {
                   eventBus.emit('ui.center.focus', undefined)
                 }}
               >
-                <img className="place-device-icon" src="/device-icons/item_log_pipe_01.png" alt="" aria-hidden="true" draggable={false} />
+                <img className="place-device-icon" src={getDeviceIconPath('item_log_pipe_01')} alt="" aria-hidden="true" draggable={false} />
                 <span className="place-device-label">{t('left.placePipe')}</span>
               </button>
 

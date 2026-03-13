@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const projectRoot = path.resolve(__dirname, '..')
 const registryPath = path.join(projectRoot, 'src', 'domain', 'registry.ts')
-const iconDir = path.join(projectRoot, 'public', 'itemicon')
+const iconDir = path.join(projectRoot, 'public', 'original', 'itemicon')
 const notoSansScRoot = path.join(projectRoot, 'node_modules', '@fontsource', 'noto-sans-sc')
 const notoSansScCssPath = path.join(notoSansScRoot, '700.css')
 

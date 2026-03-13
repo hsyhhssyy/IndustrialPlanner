@@ -6,7 +6,7 @@ import sharp from 'sharp'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const projectRoot = path.resolve(__dirname, '..')
-const itemIconDir = path.join(projectRoot, 'public', 'itemicon')
+const itemIconDir = path.join(projectRoot, 'public', 'original', 'itemicon')
 
 const bottleItemIds = ['item_iron_bottle', 'item_glass_bottle', 'item_glass_enr_bottle', 'item_iron_enr_bottle', 'item_copper_bottle']
 const liquidItemIds = [

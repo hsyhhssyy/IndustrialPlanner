@@ -86,11 +86,12 @@
 
 ### 5.3 资源路径规则
 
-1. 物品图标：`public/itemicon/<itemId>.png`
-2. 设备图标：`public/device-icons/<deviceTypeId>.png`
-3. 设备精灵：`public/sprites/<deviceTypeId>.png`
+1. 原始物品图标放在 `public/original/itemicon/`，运行时输出到 `public/itemicon/<itemId>.webp`。
+2. 原始设备图标放在 `public/original/device-icons/`，运行时输出到 `public/device-icons/<deviceTypeId>.webp`。
+3. 原始设备精灵放在 `public/original/sprites/`，运行时输出到 `public/sprites/<deviceTypeId>.webp`。
 4. 设备不使用 `itemicon`。
-5. 如果设备源图四周存在低透明度像素，不能只依赖默认 `trim()`；应按合适的 alpha 阈值裁切后再落盘，避免世界层精灵看起来仍带大面积透明边框。
+5. 物品图标归一化到 `40px x 40px`，设备图标归一化到 `30px x 30px`。
+6. 如果设备源图四周存在低透明度像素，不能只依赖默认 `trim()`；应按合适的 alpha 阈值裁切后再落盘，避免世界层精灵看起来仍带大面积透明边框。
 
 ### 5.4 当前已登记的 UI 辅助过滤
 

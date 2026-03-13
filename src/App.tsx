@@ -23,6 +23,7 @@ import { cycleTicksFromSeconds } from './domain/shared/simulation'
 import { clampViewportOffset, getMaxCellSizeForViewport, getZoomStep } from './domain/shared/viewport'
 import { buildPortPriorityGroupConfig } from './domain/shared/portPriority'
 import { isSuperRecipeDevice, shouldShowSuperRecipeContent } from './domain/shared/superRecipeVisibility'
+import { getDeviceMenuIconPath, getItemIconPath } from './assets/iconPaths'
 import type {
   DeviceInstance,
   DeviceRuntime,
@@ -83,34 +84,6 @@ function getInternalStatusText(
   if (slot.progress01 < 1) return t('detail.internal.inTransit', { progress: slot.progress01.toFixed(2) })
   if (hasReadyOutput) return t('detail.internal.readyCommit', { progress: slot.progress01.toFixed(2) })
   return t('detail.internal.readyCommit', { progress: slot.progress01.toFixed(2) })
-}
-
-function getItemIconPath(itemId: ItemId) {
-  return `/itemicon/${itemId}.png`
-}
-
-function getDeviceMenuIconPath(typeId: DeviceTypeId) {
-  if (DEVICE_TYPE_BY_ID[typeId]?.tags?.includes('超时空')) {
-    const svg = [
-      '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">',
-      '<rect x="3" y="3" width="58" height="58" rx="8" fill="#243042" stroke="#7b8aa0" stroke-width="2"/>',
-      '</svg>',
-    ].join('')
-    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
-  }
-  if (typeId === 'item_log_splitter') return '/device-icons/item_log_splitter.png'
-  if (typeId === 'item_log_converger') return '/device-icons/item_log_converger.png'
-  if (typeId === 'item_log_connector') return '/device-icons/item_log_connector.png'
-  if (typeId === 'item_log_admission') return '/device-icons/item_log_admission.png'
-  if (typeId === 'item_pipe_splitter') return '/device-icons/item_pipe_splitter.png'
-  if (typeId === 'item_pipe_converger') return '/device-icons/item_pipe_converger.png'
-  if (typeId === 'item_pipe_admission') return '/device-icons/item_pipe_admission.png'
-  if (typeId === 'item_pipe_connector') return '/device-icons/item_pipe_connector.png'
-  if (typeId === 'item_port_water_pump_1') return '/device-icons/item_port_pump_1.png'
-  if (typeId === 'item_port_liquid_storager_1') return '/device-icons/item_port_liquid_storager_1.png'
-  if (typeId === 'item_port_hydro_planter_1') return '/device-icons/item_port_planter_1.png'
-  if (typeId === 'item_port_liquid_filling_pd_mc_1') return '/device-icons/item_port_filling_pd_mc_1.png'
-  return `/device-icons/${typeId}.png`
 }
 
 function formatRecipeSummary(typeId: DeviceTypeId, language: Language, recipeId?: string) {

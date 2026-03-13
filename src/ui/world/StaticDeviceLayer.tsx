@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef } from 'react'
+import { getItemIconPath } from '../../assets/iconPaths'
 import { getDeviceSpritePath } from '../../domain/deviceSprites'
 import { EDGE_ANGLE, getRotatedPorts, isBelt, isPipe, OPPOSITE_EDGE } from '../../domain/geometry'
 import { buildBeltTrackPath, getBeltItemPosition } from '../../domain/shared/beltVisual'
@@ -56,10 +57,6 @@ export type StaticDeviceLayerProps = {
   showPreloadSummary?: boolean
   runtimeById?: Readonly<Record<string, DeviceRuntime>>
   simTick?: number
-}
-
-function getItemIconPath(itemId: ItemId) {
-  return `/itemicon/${itemId}.png`
 }
 
 export const StaticDeviceLayer = memo(

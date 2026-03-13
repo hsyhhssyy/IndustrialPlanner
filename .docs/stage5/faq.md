@@ -110,7 +110,7 @@
 ### S5-FAQ-008：正式资源替换时，设备和物品的图标路径怎么区分？
 
 - `问题`：做正式资源替换时，设备图和物品图是否都放到 `itemicon`？
-- `默认答案`：不可以混用。物品图标使用 `public/itemicon/<itemId>.png`；设备图标使用 `public/device-icons/<deviceTypeId>.png`；设备世界层精灵使用 `public/sprites/<deviceTypeId>.png`。设备不使用 `itemicon`。
+- `默认答案`：不可以混用。原始物品图标放在 `public/original/itemicon/`，运行时输出为 `public/itemicon/<itemId>.webp`；原始设备图标放在 `public/original/device-icons/`，运行时输出为 `public/device-icons/<deviceTypeId>.webp`；设备世界层精灵原图放在 `public/original/sprites/`，运行时输出为 `public/sprites/<deviceTypeId>.webp`。设备不使用 `itemicon`。
 - `适用范围`：`S5-RQ-002` 以及后续所有涉及资源替换的需求
 - `何时改写`：资源目录约定整体调整时。
 
@@ -151,3 +151,4 @@
 - 2026-03-09：建立 Stage5 FAQ 文档并补充首批 AI 协作规则。
 - 2026-03-12：补充资源替换与迁移默认规则：设备不使用 `itemicon`；未知物品清空，未知设备删除，且默认不做旧 ID 到新 ID 的兼容迁移。
 - 2026-03-13：补充正式设备收口规则：独立设备 ID 需要同步更新定义、分类、资源与运行时逻辑；设备精灵若存在低透明度边缘，应按 alpha 阈值裁切，不直接依赖默认 `trim()`。
+- 2026-03-13：补充图片归一化新口径：保留 `public/original/` 原图归档，运行时统一使用独立小 `webp` 文件，不再使用 atlas。

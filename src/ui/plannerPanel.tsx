@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
+import { getDeviceIconPath, getItemIconPath } from '../assets/iconPaths'
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
 import { buildProductionPlan, type PlannerTargetInput, type PlannerTreeNode } from '../domain/planner'
 import { isKnownItemId } from '../domain/shared/predicates'
@@ -663,18 +664,6 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
       ? recipe.outputs.map((entry) => `${getItemLabel(language, entry.itemId)} x${entry.amount}`).join(' + ')
       : '∅'
     return `${getDeviceLabel(language, recipe.machineType)} · ${inputs} → ${outputs}`
-  }
-
-  const getItemIconPath = (itemId: string) => `/itemicon/${itemId}.png`
-
-  const getDeviceIconPath = (deviceId: string) => {
-    if (deviceId === 'item_log_splitter') return '/device-icons/item_log_splitter.png'
-    if (deviceId === 'item_log_converger') return '/device-icons/item_log_converger.png'
-    if (deviceId === 'item_log_connector') return '/device-icons/item_log_connector.png'
-    if (deviceId === 'item_log_admission') return '/device-icons/item_log_admission.png'
-    if (deviceId === 'item_port_hydro_planter_1') return '/device-icons/item_port_planter_1.png'
-    if (deviceId === 'item_port_liquid_filling_pd_mc_1') return '/device-icons/item_port_filling_pd_mc_1.png'
-    return `/device-icons/${deviceId}.png`
   }
 
   const flatCards = useMemo<PlannerFlatCard[]>(() => {

@@ -50,7 +50,7 @@
 | 编号 | 名称 | 优先级 | 状态 | 当前阶段 | 需求文档 |
 | --- | --- | --- | --- | --- | --- |
 | S5-RQ-001 | 缺陷修复与稳定性收敛 | P0 | in-progress | M1 | [REQ-001](requirements/REQ-001-bug-and-stability.md) |
-| S5-RQ-002 | 真实 1.1 配方与正式图标替换 | P0 | todo | M1 | [REQ-002](requirements/REQ-002-real-1-1-data-and-icons.md) |
+| S5-RQ-002 | 真实 1.1 配方与正式图标替换 | P0 | in-progress | M1 | [REQ-002](requirements/REQ-002-real-1-1-data-and-icons.md) |
 | S5-RQ-003 | 可维护性清理与模块拆分 | P2 | todo | M3 | [REQ-003](requirements/REQ-003-maintainability-cleanup.md) |
 | S5-RQ-004 | 仿真运行时动态调整能耗 | P1 | in-progress | M2 | [REQ-004](requirements/REQ-004-runtime-power-adjustment.md) |
 | S5-RQ-005 | 物品准入口 | P1 | done | M2 | [REQ-005](requirements/REQ-005-item-admission.md) |
@@ -89,6 +89,7 @@
 11. `S5-RQ-009` 已继续收口工具箱视觉密度：工具箱“设备一览 / 物品一览”的配方卡片已进一步改为不占满整行的紧凑资料卡布局；右侧物品名称再比左侧列表小一档，并加入数量 badge、小型机器胶囊和更紧凑的换行规则，且已覆盖深浅色主题。
 12. `S5-RQ-010` 已完成当前轮次交付：帮助页已重写为用户向说明书结构，完成浅色主题适配、图标化说明、游戏式快捷键页，以及左侧工具条 / 左右面板用途说明补充；当前状态更新为 `done`。
 13. `S5-RQ-002` 已继续收口近期非物品改动：流体精炼炉液体口位调整为“右中进 / 左中出”；`item_liquid_cleaner_1` 已归入基础生产；“暗管出口”正式 ID 收口为 `item_port_udpipe_unloader_1` 并接入抽水泵同类配置 / 运行时逻辑；物品选择器“隐藏瓶装液体”开关位置与布局已修正；暗管出口精灵已改为按 alpha 阈值裁切，避免残留透明边框。
+14. `S5-RQ-002` 已补充图片资源归一化机制：原始资源统一归档到 `public/original/`，运行时物品图标输出为 `public/itemicon/*.webp`，设备图标输出为 `public/device-icons/*.webp`，设备精灵输出为 `public/sprites/*.webp`；当前明确不采用 atlas 方案。
 
 ### 全局 bug 入口
 
@@ -112,3 +113,4 @@
 - 2026-03-11：将 `S5-RQ-010` 状态更新为 `done`；当前帮助页重构、浅色主题适配、游戏式快捷键页，以及左侧工具条 / 面板说明补充均已完成归档。
 - 2026-03-11：将 `S5-RQ-007` 状态更新为 `done`；独立折线图方案已明确放弃，当前平均功率统计面板即为最终交付目标。
 - 2026-03-13：补充 `S5-RQ-002` 近期非物品收口：正式设备分类 / 图标 / 精灵 / 行为同步规则已落地；流体精炼炉液体口位已调整；物品选择器“隐藏瓶装液体”开关位置与布局已修正；暗管出口精灵已改为按 alpha 阈值裁切。
+- 2026-03-13：将 `S5-RQ-002` 状态同步修正为 `in-progress`，并补充正式图标归一化新口径：运行时统一使用独立小 `webp` 文件，不采用 atlas。

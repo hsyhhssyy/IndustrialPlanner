@@ -45,7 +45,7 @@ export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
 ]
 
 export const DEVICE_SPRITE_BY_TYPE: Partial<Record<DeviceTypeId, string>> = Object.fromEntries(
-  DEVICE_SPRITE_REGISTRATIONS.map((entry) => [entry.typeId, `/sprites/${entry.fileName}`]),
+  DEVICE_SPRITE_REGISTRATIONS.map((entry) => [entry.typeId, `/sprites/${entry.fileName.replace(/\.[^.]+$/, '.webp')}`]),
 )
 
 export function getDeviceSpritePath(typeId: DeviceTypeId) {

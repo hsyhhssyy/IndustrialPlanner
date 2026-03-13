@@ -32,6 +32,7 @@
 - Stage 模板目录： [stage-template](stage-template)
 - 模板总入口： [stage-template/README.md](stage-template/README.md)
 - 通用迁移设计指南： [common/migration-process-design.md](common/migration-process-design.md)
+- 图片资源归一化流程： [common/image-asset-pipeline.md](common/image-asset-pipeline.md)
 
 ## 阶段进度明细
 
