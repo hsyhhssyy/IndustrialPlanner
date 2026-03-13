@@ -12,6 +12,7 @@ import {
   isBeltLike,
   isPipe,
   isPipeLike,
+  isWarehouseBusPassThroughType,
   linksFromLayout,
 } from './geometry'
 import { BASE_BY_ID } from './registry'
@@ -246,6 +247,10 @@ function canCrossStraight(existingType: string) {
   return existingType === 'belt_straight_1x1' || existingType === 'pipe_straight_1x1'
 }
 
+function isPipePassThroughOverlay(typeId: string, family: LogisticsFamily) {
+  return family === 'pipe' && isWarehouseBusPassThroughType(typeId)
+}
+
 function rotationFromEdge(baseEdge: Edge, targetEdge: Edge): Rotation {
   const delta = (EDGE_ANGLE[targetEdge] - EDGE_ANGLE[baseEdge] + 360) % 360
   return delta as Rotation
@@ -315,6 +320,11 @@ function endpointAllowed(
       continue
     }
 
+    if (isPipePassThroughOverlay(device.typeId, family)) {
+      hasPassThroughOverlay = true
+      continue
+    }
+
     if (isLogisticsLikeByFamily(device.typeId, family)) {
       if (hasMatchingPortAtCell(device, cell, requiredDirection, requiredEdge)) return true
       hasBlockingEntity = true
@@ -349,6 +359,8 @@ function endpointAnchoredByExistingDevice(
     if (!device) continue
 
     if (isTrackByFamily(device.typeId, family)) continue
+
+    if (isPipePassThroughOverlay(device.typeId, family)) continue
 
     if (isLogisticsLikeByFamily(device.typeId, family)) {
       if (hasMatchingPortAtCell(device, cell, requiredDirection, requiredEdge)) return true
@@ -517,7 +529,12 @@ function isValidLogisticsPathPrefix(layout: LayoutState, path: Array<{ x: number
     })
     const hasBlockingNonLogistics = entries.some((entry) => {
       const device = getDeviceById(layout, entry.instanceId)
-      return device !== null && !isLogisticsLikeByFamily(device.typeId, family) && !isCrossFamilyLogistics(device.typeId, family)
+      return (
+        device !== null &&
+        !isLogisticsLikeByFamily(device.typeId, family) &&
+        !isCrossFamilyLogistics(device.typeId, family) &&
+        !isPipePassThroughOverlay(device.typeId, family)
+      )
     })
 
     if (pathCrossCells.has(key)) {
@@ -659,7 +676,12 @@ export function applyLogisticsPath(
       .find((device) => isLogisticsLikeByFamily(device.typeId, family) && !isTrackLikeByFamily(device.typeId, family))
     const hasBlockingNonLogistics = entries.some((entry) => {
       const device = getDeviceById(layout, entry.instanceId)
-      return device !== null && !isLogisticsLikeByFamily(device.typeId, family) && !isCrossFamilyLogistics(device.typeId, family)
+      return (
+        device !== null &&
+        !isLogisticsLikeByFamily(device.typeId, family) &&
+        !isCrossFamilyLogistics(device.typeId, family) &&
+        !isPipePassThroughOverlay(device.typeId, family)
+      )
     })
 
     if (pathCrossSet.has(currentKey)) {

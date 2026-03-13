@@ -1930,8 +1930,6 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     powerDemand: 0,
     size: { width: 4, height: 8 },
     shortName: 'BusSegment',
-    maxPlacementCount: 8,
-    placementLimitToastKey: 'toast.rule.busSegmentMax8',
     tags: ['武陵', 'bus'],
     ports0: [],
   },

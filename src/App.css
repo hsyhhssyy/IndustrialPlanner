@@ -953,8 +953,9 @@ button:disabled {
 }
 
 .device.selected .device-surface {
+  border-width: 2px;
   border-color: #f7d06a;
-  box-shadow: 0 0 0 1px #f7d06a inset;
+  box-shadow: 0 0 0 2px #f7d06a inset;
   z-index: 6;
 }
 
@@ -1110,7 +1111,7 @@ button:disabled {
 
 .selection-rect {
   position: absolute;
-  border: 1px dashed #ffd166;
+  border: 2px dashed #ffd166;
   background: rgba(255, 209, 102, 0.2);
   z-index: 5;
 }

@@ -1,7 +1,7 @@
-import { memo, useEffect, useRef } from 'react'
+import { memo, useEffect, useMemo, useRef } from 'react'
 import { getItemIconPath } from '../../assets/iconPaths'
 import { getDeviceSpritePath } from '../../domain/deviceSprites'
-import { EDGE_ANGLE, getRotatedPorts, isBelt, isPipe, OPPOSITE_EDGE } from '../../domain/geometry'
+import { EDGE_ANGLE, getFootprintCells, getRotatedPorts, isBelt, isPipe, isWarehouseBusPassThroughType, OPPOSITE_EDGE } from '../../domain/geometry'
 import { buildBeltTrackPath, getBeltItemPosition } from '../../domain/shared/beltVisual'
 import { rotatedFootprintSize } from '../../domain/shared/math'
 import { getDeviceLabel } from '../../i18n'
@@ -75,6 +75,40 @@ export const StaticDeviceLayer = memo(
     simTick = 0,
   }: StaticDeviceLayerProps) => {
     const pipeLastFluidStateRef = useRef<Map<string, { tick: number; itemId: ItemId }>>(new Map())
+
+    const pipeAboveWarehouseBusSet = useMemo(() => {
+      const overlapSet = new Set<string>()
+      const deviceById = new Map(devices.map((device) => [device.instanceId, device]))
+      const occupancyMap = new Map<string, Array<{ instanceId: string }>>()
+
+      for (const device of devices) {
+        for (const cell of getFootprintCells(device)) {
+          const key = `${cell.x},${cell.y}`
+          const bucket = occupancyMap.get(key)
+          const entry = { instanceId: device.instanceId }
+          if (bucket) bucket.push(entry)
+          else occupancyMap.set(key, [entry])
+        }
+      }
+
+      for (const entries of occupancyMap.values()) {
+        let pipeDeviceId: string | null = null
+        let hasWarehouseBus = false
+
+        for (const entry of entries) {
+          const device = deviceById.get(entry.instanceId)
+          if (!device) continue
+          if (isPipe(device.typeId)) pipeDeviceId = device.instanceId
+          if (isWarehouseBusPassThroughType(device.typeId)) hasWarehouseBus = true
+        }
+
+        if (pipeDeviceId && hasWarehouseBus) {
+          overlapSet.add(pipeDeviceId)
+        }
+      }
+
+      return overlapSet
+    }, [devices])
 
     useEffect(() => {
       const liveIds = new Set(devices.map((device) => device.instanceId))
@@ -307,11 +341,13 @@ export const StaticDeviceLayer = memo(
       hasBeltTransit: boolean
       hasPipeTransit: boolean
       hasJunctionTransit: boolean
+      promotePipeToOverlay: boolean
     }) {
-      const { renderPass, isLogisticsTrack, isBeltTrack, isPipeTrack, hasBeltTransit, hasPipeTransit, hasJunctionTransit } = params
-      if (renderPass === 'underlay') return isLogisticsTrack
-      if (renderPass === 'transit') return (isBeltTrack && hasBeltTransit) || (isPipeTrack && hasPipeTransit)
+      const { renderPass, isLogisticsTrack, isBeltTrack, isPipeTrack, hasBeltTransit, hasPipeTransit, hasJunctionTransit, promotePipeToOverlay } = params
+      if (renderPass === 'underlay') return isLogisticsTrack && !promotePipeToOverlay
+      if (renderPass === 'transit') return (isBeltTrack && hasBeltTransit) || (isPipeTrack && hasPipeTransit && !promotePipeToOverlay)
       if (renderPass === 'adornment') return hasJunctionTransit
+      if (renderPass === 'overlay') return !isLogisticsTrack || promotePipeToOverlay
       return true
     }
 
@@ -393,7 +429,8 @@ export const StaticDeviceLayer = memo(
           const hasBeltTransit = Boolean(beltTransitSlot && beltTransitPosition)
           const hasPipeTransit = Boolean(isPipeTrack && pipeHasWater)
           const hasJunctionTransit = Boolean((isSplitter || isMerger) && junctionTransport)
-          if (!shouldRenderDevicePass({ renderPass, isLogisticsTrack, isBeltTrack, isPipeTrack, hasBeltTransit, hasPipeTransit, hasJunctionTransit })) {
+          const promotePipeToOverlay = isPipeTrack && pipeAboveWarehouseBusSet.has(renderDevice.instanceId)
+          if (!shouldRenderDevicePass({ renderPass, isLogisticsTrack, isBeltTrack, isPipeTrack, hasBeltTransit, hasPipeTransit, hasJunctionTransit, promotePipeToOverlay })) {
             return null
           }
           return (
@@ -432,7 +469,38 @@ export const StaticDeviceLayer = memo(
                 </div>
               ) : null}
 
+              {renderPass === 'overlay' && promotePipeToOverlay ? (
+                <div className="belt-track-wrap">
+                  <svg className="belt-track-svg" viewBox={`0 0 ${BELT_VIEWBOX_SIZE} ${BELT_VIEWBOX_SIZE}`} preserveAspectRatio="none" aria-hidden="true">
+                    {(() => {
+                      const beltEdgeMaskId = `belt-edge-mask-overlay-${renderDevice.instanceId}`
+                      return (
+                        <>
+                          <defs>
+                            <mask id={beltEdgeMaskId} maskUnits="userSpaceOnUse">
+                              <rect x="0" y="0" width={BELT_VIEWBOX_SIZE} height={BELT_VIEWBOX_SIZE} fill="black" />
+                              <path d={beltPath} className="belt-edge-mask-outer" />
+                              <path d={beltPath} className="belt-edge-mask-inner" />
+                            </mask>
+                          </defs>
+                          <path d={beltPath} className="belt-track-fill" />
+                          <path d={beltPath} className="belt-track-edge" mask={`url(#${beltEdgeMaskId})`} />
+                        </>
+                      )
+                    })()}
+                  </svg>
+                </div>
+              ) : null}
+
               {renderPass === 'transit' && isPipeTrack && pipeHasWater ? (
+                <div className="belt-track-wrap">
+                  <svg className="belt-track-svg belt-transit-svg" viewBox={`0 0 ${BELT_VIEWBOX_SIZE} ${BELT_VIEWBOX_SIZE}`} preserveAspectRatio="none" aria-hidden="true">
+                    <path d={beltPath} className="pipe-fluid-fill" style={{ strokeWidth: pipeFluidWidth, stroke: pipeFluidColor(pipeFluidItemId!) }} />
+                  </svg>
+                </div>
+              ) : null}
+
+              {renderPass === 'overlay' && promotePipeToOverlay && pipeHasWater ? (
                 <div className="belt-track-wrap">
                   <svg className="belt-track-svg belt-transit-svg" viewBox={`0 0 ${BELT_VIEWBOX_SIZE} ${BELT_VIEWBOX_SIZE}`} preserveAspectRatio="none" aria-hidden="true">
                     <path d={beltPath} className="pipe-fluid-fill" style={{ strokeWidth: pipeFluidWidth, stroke: pipeFluidColor(pipeFluidItemId!) }} />

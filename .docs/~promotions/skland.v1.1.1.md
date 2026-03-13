@@ -19,6 +19,11 @@ https://endfield.anonymous-test.top/
 本次更新，正式将1.1版本的新物品，新配方加入工具。
 原先临时添加的配方已经移除。现在可以快乐的生产废水了。
 
+![alt text](images/skland.v1.1.1/image-4.png)
+
+蓝图来自B站Up主 @逗比寒MillerRHan 完美新红装备产线，拿去不谢
+EF011I93u5I92U734O7
+
 ## 震荡发电
 
 起死回生机的最后一块拼图：物品准入口，已经加入仿真系统。

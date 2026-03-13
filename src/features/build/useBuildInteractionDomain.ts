@@ -295,6 +295,17 @@ export function useBuildInteractionDomain({
 
       const clickedId = cellDeviceMap.get(`${cell.x},${cell.y}`)
       if (clickedId) {
+        const shouldToggleSelection = mode === 'place' && !placeType && !simIsRunning && (event.ctrlKey || event.metaKey || event.shiftKey)
+        if (shouldToggleSelection) {
+          if (canMoveDevice(clickedId)) {
+            setSelection((current) =>
+              current.includes(clickedId) ? current.filter((id) => id !== clickedId) : [...current, clickedId],
+            )
+          }
+          resetDragState()
+          return
+        }
+
         const activeSelection = (selection.includes(clickedId) ? selection : [clickedId]).filter((id) => canMoveDevice(id))
         if (!selection.includes(clickedId)) setSelection(activeSelection)
         if (activeSelection.length === 0) {

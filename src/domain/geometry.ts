@@ -146,6 +146,7 @@ export function detectOverlaps(layout: LayoutState) {
 
     let beltFamilyCount = 0
     let pipeFamilyCount = 0
+    let warehouseBusPassThroughCount = 0
     let hasOtherType = false
 
     for (const entry of entries) {
@@ -162,11 +163,20 @@ export function detectOverlaps(layout: LayoutState) {
         pipeFamilyCount += 1
         continue
       }
+      if (isWarehouseBusPassThroughType(device.typeId)) {
+        warehouseBusPassThroughCount += 1
+        continue
+      }
       hasOtherType = true
     }
 
     const allowBeltPipeCoexist = !hasOtherType && beltFamilyCount <= 1 && pipeFamilyCount <= 1
-    if (allowBeltPipeCoexist) continue
+    const allowPipeWarehouseBusCoexist =
+      !hasOtherType &&
+      beltFamilyCount === 0 &&
+      pipeFamilyCount <= 1 &&
+      warehouseBusPassThroughCount >= 1
+    if (allowBeltPipeCoexist || allowPipeWarehouseBusCoexist) continue
 
     for (const entry of entries) overlapIds.add(entry.instanceId)
   }
@@ -271,6 +281,10 @@ export function isPipe(typeId: string) {
 
 export function isPipeJunction(typeId: string) {
   return typeId === 'item_pipe_splitter' || typeId === 'item_pipe_converger' || typeId === 'item_pipe_admission' || typeId === 'item_pipe_connector'
+}
+
+export function isWarehouseBusPassThroughType(typeId: string) {
+  return typeId === 'item_port_log_hongs_bus_source' || typeId === 'item_port_log_hongs_bus'
 }
 
 export function isTrackLike(typeId: string) {
