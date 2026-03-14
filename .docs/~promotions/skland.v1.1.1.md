@@ -11,6 +11,7 @@ https://endfield.anonymous-test.top/
 - 新增 **物品准入口**
 - 支持 **仿真运行中直接调整总耗电**
 - 主界面整体重做，操作更顺手
+- 支持 **撤销** 和 **重做**
 
 ---
 
@@ -32,6 +33,16 @@ EF011I93u5I92U734O7
 新版本公共蓝图中新增一张起死回生机7.1蓝图，来自B站大佬 乾震_QzzZ（https://www.bilibili.com/video/BV1v7P4z8EH2），可以在发电量0~1210之间动态调节。
 
 ![alt text](images/skland.v1.1.1/image.png)
+
+## 支持 撤销 和 重做
+
+为系统增添了操作历史功能。
+
+可以在任意界面按 CTRL+Z 和 CTRL+Y 来撤销和重做
+
+或者在操作历史Tab手动选择历史。
+
+![alt text](images/skland.v1.1.1/image-5.png)
 
 ## 重做的界面
 

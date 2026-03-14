@@ -37,6 +37,14 @@ type GuideAreaCard = {
   bullets: string[]
 }
 
+type GuideLessonCard = {
+  title: string
+  description: string
+  imageSrc: string
+  imageAlt: string
+  bullets: string[]
+}
+
 type AdvancedSection = {
   title: string
   points: string[]
@@ -215,6 +223,17 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
           { question: '为什么物流线看起来连上了却不通？', answer: '多半是方向不对、跨层逻辑不符合预期，或者中间被别的设备/线占住。' },
           { question: '什么时候该用蓝图？', answer: '当一组建筑会反复出现时就适合。先手动搭一份，验证能跑，再保存成蓝图复用。' },
         ] satisfies GuideQa[],
+        pumpLesson: {
+          title: '抽水泵必须放在工业区域黄线外',
+          description: '抽水泵不能压在线内，也不能摆进工业区域。正确做法是把抽水泵放在黄线外，再用管道把液体接回区内。',
+          imageSrc: '/help/water-pump-outside-guide.svg',
+          imageAlt: '抽水泵放在工业区域黄线外，并通过管道把液体引入工业区域内部的放置示意图',
+          bullets: [
+            '黄线框起来的是工业区域，抽水泵要放在黄线外侧。',
+            '如果产线主体在区内，用管道出口在区内接出液体。',
+            '看到禁止提示时，不要贴线硬放，直接把抽水泵外移一格以上更稳。',
+          ],
+        } satisfies GuideLessonCard,
         shotTitle: '操作示意',
         shotSummary: '下面这张简图相当于“看图识界面”：',
         shotTopbar: '顶部栏：语言 / 仿真 / 倍率',
@@ -289,6 +308,17 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
         { question: 'Why does a route look connected but still not work?', answer: 'It is usually a direction issue, a blocked middle segment, or a routing rule mismatch.' },
         { question: 'When should I use blueprints?', answer: 'Use them after one version of the block already works and you want to repeat it quickly.' },
       ] satisfies GuideQa[],
+      pumpLesson: {
+        title: 'Place water pumps outside the industrial boundary',
+        description: 'A water pump cannot sit on or inside the yellow industrial boundary. Put the pump outside, then bring the fluid back in through a  pipe.',
+        imageSrc: '/help/water-pump-outside-guide.svg',
+        imageAlt: 'Water pump placed outside the industrial area yellow boundary with a pipe routing fluid back inside',
+        bullets: [
+          'The yellow rectangle marks the industrial area. Keep the water pump outside it.',
+          'If the rest of the line is inside, use a pipe as the handoff point inside the zone.',
+          'If placement is rejected, move the pump farther away from the boundary instead of forcing it on the line.',
+        ],
+      } satisfies GuideLessonCard,
       shotTitle: 'Visual orientation',
       shotSummary: 'Use the mini map below as a quick “what goes where” reference:',
       shotTopbar: 'Top bar: language / simulation / speed',
@@ -572,6 +602,21 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
                   </ul>
                 </article>
               ))}
+            </div>
+          </section>
+
+          <section className="help-section-card">
+            <div className="help-section-head">
+              <h4>{guideContent.pumpLesson.title}</h4>
+              <p>{guideContent.pumpLesson.description}</p>
+            </div>
+            <div className="help-lesson-card">
+              <img className="help-lesson-image" src={guideContent.pumpLesson.imageSrc} alt={guideContent.pumpLesson.imageAlt} draggable={false} />
+              <ul className="help-lesson-list">
+                {guideContent.pumpLesson.bullets.map((bullet) => (
+                  <li key={bullet}>{bullet}</li>
+                ))}
+              </ul>
             </div>
           </section>
 
