@@ -1,0 +1,59 @@
+<svg width="880" height="640" viewBox="0 0 880 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="880" height="640" rx="24" fill="#121B28"/>
+  <rect x="34" y="34" width="812" height="68" rx="18" fill="#1B2839"/>
+  <rect x="58" y="58" width="176" height="20" rx="10" fill="#EAF3FF" fill-opacity="0.14"/>
+  <rect x="648" y="52" width="164" height="30" rx="15" fill="#24364C"/>
+
+  <rect x="40" y="124" width="800" height="470" rx="20" fill="#162231"/>
+  <g opacity="0.72">
+    <path d="M82 176H798" stroke="#233246" stroke-width="2"/>
+    <path d="M82 236H798" stroke="#233246" stroke-width="2"/>
+    <path d="M82 296H798" stroke="#233246" stroke-width="2"/>
+    <path d="M82 356H798" stroke="#233246" stroke-width="2"/>
+    <path d="M82 416H798" stroke="#233246" stroke-width="2"/>
+    <path d="M82 476H798" stroke="#233246" stroke-width="2"/>
+    <path d="M82 536H798" stroke="#233246" stroke-width="2"/>
+    <path d="M142 146V564" stroke="#233246" stroke-width="2"/>
+    <path d="M222 146V564" stroke="#233246" stroke-width="2"/>
+    <path d="M302 146V564" stroke="#233246" stroke-width="2"/>
+    <path d="M382 146V564" stroke="#233246" stroke-width="2"/>
+    <path d="M462 146V564" stroke="#233246" stroke-width="2"/>
+    <path d="M542 146V564" stroke="#233246" stroke-width="2"/>
+    <path d="M622 146V564" stroke="#233246" stroke-width="2"/>
+    <path d="M702 146V564" stroke="#233246" stroke-width="2"/>
+  </g>
+
+  <rect x="116" y="168" width="182" height="150" rx="18" fill="#102132" stroke="#24405E"/>
+  <circle cx="154" cy="214" r="18" fill="#4CC9F0"/>
+  <rect x="184" y="198" width="88" height="12" rx="6" fill="#E8F0FA" fill-opacity="0.9"/>
+  <rect x="184" y="224" width="70" height="10" rx="5" fill="#9EB4CA" fill-opacity="0.8"/>
+  <path d="M132 274C132 248.49 152.49 228 178 228H236C261.51 228 282 248.49 282 274V286H132V274Z" fill="#1E3C58"/>
+  <text x="206" y="302" fill="#CFE4FF" font-family="sans-serif" font-size="20" text-anchor="middle">暗管出口</text>
+
+  <rect x="342" y="168" width="190" height="150" rx="18" fill="#102132" stroke="#24405E"/>
+  <circle cx="382" cy="214" r="18" fill="#FF8A3D"/>
+  <rect x="414" y="198" width="84" height="12" rx="6" fill="#E8F0FA" fill-opacity="0.9"/>
+  <rect x="414" y="224" width="66" height="10" rx="5" fill="#9EB4CA" fill-opacity="0.8"/>
+  <path d="M364 276H510" stroke="#FF8A3D" stroke-width="12" stroke-linecap="round"/>
+  <path d="M486 254L522 276L486 298" stroke="#FF8A3D" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="437" y="302" fill="#CFE4FF" font-family="sans-serif" font-size="20" text-anchor="middle">出货口</text>
+
+  <rect x="576" y="168" width="188" height="150" rx="18" fill="#102132" stroke="#24405E"/>
+  <circle cx="618" cy="214" r="18" fill="#2C8F7A"/>
+  <rect x="650" y="198" width="80" height="12" rx="6" fill="#E8F0FA" fill-opacity="0.9"/>
+  <rect x="650" y="224" width="60" height="10" rx="5" fill="#9EB4CA" fill-opacity="0.8"/>
+  <path d="M612 268C612 245.909 629.909 228 652 228H682C704.091 228 722 245.909 722 268V286H612V268Z" fill="#1D5F53"/>
+  <text x="670" y="302" fill="#CFE4FF" font-family="sans-serif" font-size="20" text-anchor="middle">抽水泵</text>
+
+  <path d="M208 360H208C208 336.804 226.804 318 250 318H626C649.196 318 668 336.804 668 360H668" stroke="#3B546F" stroke-width="4" stroke-dasharray="10 10"/>
+
+  <rect x="98" y="378" width="684" height="172" rx="18" fill="#102132" stroke="#24405E"/>
+  <rect x="126" y="408" width="176" height="38" rx="12" fill="#24405E"/>
+  <text x="214" y="433" fill="#DDEBFA" font-family="sans-serif" font-size="20" text-anchor="middle">无中生有模拟</text>
+  <rect x="126" y="468" width="206" height="12" rx="6" fill="#4CC9F0" fill-opacity="0.95"/>
+  <rect x="126" y="500" width="206" height="12" rx="6" fill="#FF8A3D" fill-opacity="0.95"/>
+  <rect x="126" y="532" width="206" height="12" rx="6" fill="#2C8F7A" fill-opacity="0.95"/>
+  <text x="356" y="478" fill="#CFE4FF" font-family="sans-serif" font-size="18">暗管出口可直接造出液体输入</text>
+  <text x="356" y="510" fill="#CFE4FF" font-family="sans-serif" font-size="18">出货口可无视库存持续出货</text>
+  <text x="356" y="542" fill="#CFE4FF" font-family="sans-serif" font-size="18">抽水泵可切成任意流体输出</text>
+</svg>

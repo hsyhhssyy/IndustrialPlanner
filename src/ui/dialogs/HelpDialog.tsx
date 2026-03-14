@@ -223,17 +223,32 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
           { question: '为什么物流线看起来连上了却不通？', answer: '多半是方向不对、跨层逻辑不符合预期，或者中间被别的设备/线占住。' },
           { question: '什么时候该用蓝图？', answer: '当一组建筑会反复出现时就适合。先手动搭一份，验证能跑，再保存成蓝图复用。' },
         ] satisfies GuideQa[],
-        pumpLesson: {
-          title: '抽水泵必须放在工业区域黄线外',
-          description: '抽水泵不能压在线内，也不能摆进工业区域。正确做法是把抽水泵放在黄线外，再用管道把液体接回区内。',
-          imageSrc: '/help/water-pump-outside-guide.svg',
-          imageAlt: '抽水泵放在工业区域黄线外，并通过管道把液体引入工业区域内部的放置示意图',
-          bullets: [
-            '黄线框起来的是工业区域，抽水泵要放在黄线外侧。',
-            '如果产线主体在区内，用管道出口在区内接出液体。',
-            '看到禁止提示时，不要贴线硬放，直接把抽水泵外移一格以上更稳。',
-          ],
-        } satisfies GuideLessonCard,
+        lessonSectionTitle: '抽水泵与外部物流模拟',
+        lessonSectionSummary: '左边是正规摆法，右边是当前版本可用于教学、规划和测试的“无中生有”模拟手法。',
+        lessonCards: [
+          {
+            title: '抽水泵必须放在工业区域黄线外',
+            description: '抽水泵不能压在线内，也不能摆进工业区域。正确做法是把抽水泵放在黄线外，再用地下暗管把液体接回区内。',
+            imageSrc: '/help/water-pump-outside-guide.svg',
+            imageAlt: '抽水泵放在工业区域黄线外，并通过地下暗管把液体引入工业区域内部的放置示意图',
+            bullets: [
+              '黄线框起来的是工业区域，抽水泵要放在黄线外侧。',
+              '如果产线主体在区内，用地下暗管出口在区内接出液体。',
+              '看到禁止提示时，不要贴线硬放，直接把抽水泵外移一格以上更稳。',
+            ],
+          },
+          {
+            title: '这些设备可以无中生有模拟外部物流',
+            description: '当前版本里，暗管出口可以无中生有地模拟“区域外水泵已经把液体接进来”；出货口可以无视库存持续出货；抽水泵也可以切换成任意流体输出。',
+            imageSrc: '/help/liquid-spawn-simulator-guide.svg',
+            imageAlt: '暗管出口、出货口和抽水泵用于无中生有模拟外部液体输入和外部出货需求的示意图',
+            bullets: [
+              '暗管出口：可直接当作区外液体已经接入的入口。',
+              '出货口：可直接当作无限外部需求端，用来测试你的产线是否能持续供货。',
+              '抽水泵：可输出任意流体，因此也能充当任意外部液体来源。',
+            ],
+          },
+        ] satisfies GuideLessonCard[],
         shotTitle: '操作示意',
         shotSummary: '下面这张简图相当于“看图识界面”：',
         shotTopbar: '顶部栏：语言 / 仿真 / 倍率',
@@ -308,17 +323,32 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
         { question: 'Why does a route look connected but still not work?', answer: 'It is usually a direction issue, a blocked middle segment, or a routing rule mismatch.' },
         { question: 'When should I use blueprints?', answer: 'Use them after one version of the block already works and you want to repeat it quickly.' },
       ] satisfies GuideQa[],
-      pumpLesson: {
-        title: 'Place water pumps outside the industrial boundary',
-        description: 'A water pump cannot sit on or inside the yellow industrial boundary. Put the pump outside, then bring the fluid back in through a  pipe.',
-        imageSrc: '/help/water-pump-outside-guide.svg',
-        imageAlt: 'Water pump placed outside the industrial area yellow boundary with a pipe routing fluid back inside',
-        bullets: [
-          'The yellow rectangle marks the industrial area. Keep the water pump outside it.',
-          'If the rest of the line is inside, use a pipe as the handoff point inside the zone.',
-          'If placement is rejected, move the pump farther away from the boundary instead of forcing it on the line.',
-        ],
-      } satisfies GuideLessonCard,
+      lessonSectionTitle: 'Water pumps and external logistics simulation',
+      lessonSectionSummary: 'The left card shows the correct placement rule. The right card explains the current “spawn from nothing” simulation tricks available for tutorials and planning.',
+      lessonCards: [
+        {
+          title: 'Place water pumps outside the industrial boundary',
+          description: 'A water pump cannot sit on or inside the yellow industrial boundary. Put the pump outside, then bring the fluid back in through a dark pipe outlet.',
+          imageSrc: '/help/water-pump-outside-guide.svg',
+          imageAlt: 'Water pump placed outside the industrial area yellow boundary with a dark pipe outlet routing fluid back inside',
+          bullets: [
+            'The yellow rectangle marks the industrial area. Keep the water pump outside it.',
+            'If the rest of the line is inside, use a dark pipe outlet as the handoff point inside the zone.',
+            'If placement is rejected, move the pump farther away from the boundary instead of forcing it on the line.',
+          ],
+        },
+        {
+          title: 'These devices can simulate external logistics from nothing',
+          description: 'In the current version, a dark pipe outlet can simulate fluid that has already been pumped in from outside; an output port can keep shipping regardless of stock; and a water pump can be switched to output any fluid.',
+          imageSrc: '/help/liquid-spawn-simulator-guide.svg',
+          imageAlt: 'Dark pipe outlet, output port, and water pump being used to simulate external fluid input and infinite output from nothing',
+          bullets: [
+            'Dark pipe outlet: use it as if outside fluid has already entered the area.',
+            'Output port: use it as an infinite external demand sink for throughput testing.',
+            'Water pump: since it can output any fluid, it can stand in for any external liquid source.',
+          ],
+        },
+      ] satisfies GuideLessonCard[],
       shotTitle: 'Visual orientation',
       shotSummary: 'Use the mini map below as a quick “what goes where” reference:',
       shotTopbar: 'Top bar: language / simulation / speed',
@@ -607,16 +637,22 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
 
           <section className="help-section-card">
             <div className="help-section-head">
-              <h4>{guideContent.pumpLesson.title}</h4>
-              <p>{guideContent.pumpLesson.description}</p>
+              <h4>{guideContent.lessonSectionTitle}</h4>
+              <p>{guideContent.lessonSectionSummary}</p>
             </div>
-            <div className="help-lesson-card">
-              <img className="help-lesson-image" src={guideContent.pumpLesson.imageSrc} alt={guideContent.pumpLesson.imageAlt} draggable={false} />
-              <ul className="help-lesson-list">
-                {guideContent.pumpLesson.bullets.map((bullet) => (
-                  <li key={bullet}>{bullet}</li>
-                ))}
-              </ul>
+            <div className="help-lesson-grid">
+              {guideContent.lessonCards.map((lesson) => (
+                <article key={lesson.title} className="help-lesson-card">
+                  <div className="help-visual-title">{lesson.title}</div>
+                  <p className="help-lesson-description">{lesson.description}</p>
+                  <img className="help-lesson-image" src={lesson.imageSrc} alt={lesson.imageAlt} draggable={false} />
+                  <ul className="help-lesson-list">
+                    {lesson.bullets.map((bullet) => (
+                      <li key={bullet}>{bullet}</li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
             </div>
           </section>
 
