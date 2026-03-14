@@ -2,12 +2,15 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import crypto from 'node:crypto'
 import sharp from 'sharp'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const projectRoot = path.resolve(__dirname, '..')
 const publicDir = path.join(projectRoot, 'public')
+const generatedDir = path.join(projectRoot, 'src', 'generated')
+const assetVersionFilePath = path.join(generatedDir, 'assetVersion.ts')
 const originalDir = path.join(publicDir, 'original')
 const atlasDir = path.join(publicDir, 'atlases')
 
@@ -156,6 +159,45 @@ async function removeLegacyAtlases() {
   return true
 }
 
+async function listWebpFiles(dirPath) {
+  if (!(await pathExists(dirPath))) return []
+  const entries = await fs.readdir(dirPath, { withFileTypes: true })
+  return entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => entry.name)
+    .filter((fileName) => path.extname(fileName).toLowerCase() === '.webp')
+    .sort((left, right) => left.localeCompare(right, 'en'))
+}
+
+async function computeAssetVersionToken() {
+  const hasher = crypto.createHash('sha1')
+  const directories = [ACTIVE_ITEM_DIR, ACTIVE_DEVICE_DIR, ACTIVE_SPRITE_DIR]
+
+  for (const dirPath of directories) {
+    const webpFiles = await listWebpFiles(dirPath)
+    hasher.update(`${path.basename(dirPath)}:${webpFiles.length}\n`)
+
+    for (const fileName of webpFiles) {
+      const filePath = path.join(dirPath, fileName)
+      const content = await fs.readFile(filePath)
+      hasher.update(fileName)
+      hasher.update(content)
+    }
+  }
+
+  return hasher.digest('hex').slice(0, 12)
+}
+
+async function writeAssetVersionToken(versionToken) {
+  await ensureDirectory(generatedDir)
+  const source = [
+    '// 由 scripts/normalize-assets.mjs 自动生成，请勿手改。',
+    `export const ASSET_CACHE_VERSION = '${versionToken}'`,
+    '',
+  ].join('\n')
+  await fs.writeFile(assetVersionFilePath, source, 'utf8')
+}
+
 async function main() {
   const archivedItems = await archiveActiveSources(ACTIVE_ITEM_DIR, ORIGINAL_ITEM_DIR)
   const archivedDevices = await archiveActiveSources(ACTIVE_DEVICE_DIR, ORIGINAL_DEVICE_DIR)
@@ -176,6 +218,8 @@ async function main() {
     outputDir: ACTIVE_SPRITE_DIR,
   })
   const removedAtlases = await removeLegacyAtlases()
+  const assetVersionToken = await computeAssetVersionToken()
+  await writeAssetVersionToken(assetVersionToken)
 
   console.log('资源归一化完成。')
   console.log(`- 归档 item 图标: ${archivedItems.length}`)
@@ -188,6 +232,7 @@ async function main() {
   if (deviceResult.removed.length > 0) console.log(`- 已删除 ${deviceResult.removed.length} 个过期 device webp 输出`)
   if (spriteResult.removed.length > 0) console.log(`- 已删除 ${spriteResult.removed.length} 个过期 sprite webp 输出`)
   if (removedAtlases) console.log('- 已清理旧 atlas 输出目录 public/atlases')
+  console.log(`- 资源缓存版本: ${assetVersionToken}`)
 }
 
 main().catch((error) => {

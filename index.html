@@ -10,7 +10,11 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      if (location.hostname === 'anonymous-test.top' || location.hostname === 'endfield.anonymous-test.top') {
+      if (
+        location.hostname === 'anonymous-test.top' ||
+        location.hostname === 'endfield.anonymous-test.top' ||
+        location.hostname === 'endfield.amiyabot.com'
+      ) {
         const script = document.createElement('script')
         script.defer = true
         script.src = 'https://static.cloudflareinsights.com/beacon.min.js'

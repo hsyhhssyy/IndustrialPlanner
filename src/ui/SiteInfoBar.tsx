@@ -7,6 +7,8 @@ type SiteInfoBarProps = {
 
 export function SiteInfoBar({ currentYear, uiHint, uiTheme, t }: SiteInfoBarProps) {
   const themeLabel = uiTheme === 'ayu-light' ? 'Ayu Light' : 'Ayu Dark'
+  const currentHostname = typeof window === 'undefined' ? '' : window.location.hostname
+  const icpLabel = currentHostname === 'endfield.amiyabot.com' ? '粤ICP备2021107697号-1' : t('app.info.icp')
 
   return (
     <div className="site-info-bar" role="contentinfo" aria-label={t('app.info.copyright', { year: currentYear })}>
@@ -22,14 +24,14 @@ export function SiteInfoBar({ currentYear, uiHint, uiTheme, t }: SiteInfoBarProp
           href="https://beian.miit.gov.cn/"
           target="_blank"
           rel="noreferrer"
-          aria-label={t('app.info.icp')}
+          aria-label={icpLabel}
         >
           <span className="site-info-shield" aria-hidden="true">
             <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
               <path d="M12 2L4 5V11C4 16.2 7.4 21 12 22C16.6 21 20 16.2 20 11V5L12 2ZM10.8 15.8L7.2 12.2L8.6 10.8L10.8 13L15.4 8.4L16.8 9.8L10.8 15.8Z" />
             </svg>
           </span>
-          <span>{t('app.info.icp')}</span>
+          <span>{icpLabel}</span>
         </a>
         <span className="site-info-sep">|</span>
         <a

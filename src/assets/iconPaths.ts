@@ -1,5 +1,6 @@
 import { DEVICE_TYPE_BY_ID } from '../domain/registry'
 import type { DeviceTypeId, ItemId } from '../domain/types'
+import { withAssetVersion } from './assetVersion'
 
 const DEVICE_ICON_ALIAS_BY_TYPE_ID: Partial<Record<DeviceTypeId, string>> = {
   item_port_water_pump_1: 'item_port_pump_1',
@@ -8,12 +9,12 @@ const DEVICE_ICON_ALIAS_BY_TYPE_ID: Partial<Record<DeviceTypeId, string>> = {
 }
 
 export function getItemIconPath(itemId: ItemId | string) {
-  return `/itemicon/${itemId}.webp`
+  return withAssetVersion(`/itemicon/${itemId}.webp`)
 }
 
 export function getDeviceIconPath(typeId: DeviceTypeId | string) {
   const iconId = DEVICE_ICON_ALIAS_BY_TYPE_ID[typeId as DeviceTypeId] ?? typeId
-  return `/device-icons/${iconId}.webp`
+  return withAssetVersion(`/device-icons/${iconId}.webp`)
 }
 
 export function getDeviceMenuIconPath(typeId: DeviceTypeId) {

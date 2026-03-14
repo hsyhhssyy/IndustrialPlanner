@@ -1,4 +1,5 @@
 import type { DeviceTypeId } from './types'
+import { withAssetVersion } from '../assets/assetVersion'
 
 type DeviceSpriteRegistration = {
   typeId: DeviceTypeId
@@ -45,7 +46,7 @@ export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
 ]
 
 export const DEVICE_SPRITE_BY_TYPE: Partial<Record<DeviceTypeId, string>> = Object.fromEntries(
-  DEVICE_SPRITE_REGISTRATIONS.map((entry) => [entry.typeId, `/sprites/${entry.fileName.replace(/\.[^.]+$/, '.webp')}`]),
+  DEVICE_SPRITE_REGISTRATIONS.map((entry) => [entry.typeId, withAssetVersion(`/sprites/${entry.fileName.replace(/\.[^.]+$/, '.webp')}`)]),
 )
 
 export function getDeviceSpritePath(typeId: DeviceTypeId) {
