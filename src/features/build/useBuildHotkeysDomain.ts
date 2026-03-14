@@ -20,6 +20,8 @@ type UseBuildHotkeysDomainParams = {
   foundationMovableIdSet: ReadonlySet<string>
   currentBaseOuterRing: OuterRing
   setLayout: (updater: LayoutState) => void
+  undoLayout: () => boolean
+  redoLayout: () => boolean
   outOfLotToastKey: string
   fallbackPlacementToastKey: string
   t: (key: string, params?: Record<string, string | number>) => string
@@ -36,6 +38,8 @@ export function useBuildHotkeysDomain({
   foundationMovableIdSet,
   currentBaseOuterRing,
   setLayout,
+  undoLayout,
+  redoLayout,
   outOfLotToastKey,
   fallbackPlacementToastKey,
   t,
@@ -51,7 +55,24 @@ export function useBuildHotkeysDomain({
         Boolean(target?.isContentEditable)
       if (isTypingTarget) return
 
-      if (event.key.toLowerCase() !== 'r') return
+      const lowerKey = event.key.toLowerCase()
+      const wantsUndo = (event.ctrlKey || event.metaKey) && !event.altKey && lowerKey === 'z' && !event.shiftKey
+      const wantsRedo =
+        (event.ctrlKey || event.metaKey) && !event.altKey && ((lowerKey === 'z' && event.shiftKey) || lowerKey === 'y')
+
+      if (wantsUndo) {
+        event.preventDefault()
+        undoLayout()
+        return
+      }
+
+      if (wantsRedo) {
+        event.preventDefault()
+        redoLayout()
+        return
+      }
+
+      if (lowerKey !== 'r') return
       event.preventDefault()
 
       if (mode === 'place' && placeType) {
@@ -145,7 +166,9 @@ export function useBuildHotkeysDomain({
     selection,
     setLayout,
     setPlaceRotation,
+    redoLayout,
     simIsRunning,
     t,
+    undoLayout,
   ])
 }

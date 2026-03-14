@@ -189,6 +189,7 @@ function App() {
       rightPanelWidth,
       leftPanelCollapsed,
       rightPanelCollapsed,
+      activeWorkbenchView,
     },
     actions: {
       closeTool,
@@ -249,10 +250,17 @@ function App() {
     canvasWidthPx,
     canvasHeightPx,
     layoutRef,
+    canUndo,
+    canRedo,
+    undoLayout,
+    redoLayout,
+    historyEntries,
+    jumpToHistory,
     unknownDevicesCount,
   } = useBaseLayoutDomain({
     cellSize,
     baseCellSize: BASE_CELL_SIZE,
+    language,
     setSelection,
     t,
   })
@@ -442,6 +450,8 @@ function App() {
     foundationMovableIdSet,
     currentBaseOuterRing: currentBase.outerRing,
     setLayout,
+    undoLayout,
+    redoLayout,
     outOfLotToastKey: OUT_OF_LOT_TOAST_KEY,
     fallbackPlacementToastKey: FALLBACK_PLACEMENT_TOAST_KEY,
     t,
@@ -454,6 +464,18 @@ function App() {
       delete document.body.dataset.uiTheme
     }
   }, [uiTheme])
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return
+      if (event.key.toLowerCase() !== 's') return
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  }, [])
 
   useEffect(() => {
     const viewport = viewportRef.current
@@ -751,11 +773,11 @@ function App() {
 
     return {
       previewOutline: {
-        key: 'power-range-preview',
+        key: 'preview-power-diffuser-range',
         left: minX * BASE_CELL_SIZE,
         top: minY * BASE_CELL_SIZE,
-        width: 12 * BASE_CELL_SIZE,
-        height: 12 * BASE_CELL_SIZE,
+        width: (maxX - minX + 1) * BASE_CELL_SIZE,
+        height: (maxY - minY + 1) * BASE_CELL_SIZE,
         isPreview: true as const,
       },
       highlightedDeviceIds,
@@ -1208,6 +1230,7 @@ function App() {
               value={{
                 simIsRunning: sim.isRunning,
                 mode,
+                activeWorkbenchView,
                 language,
                 t,
                 canUsePipePlacement: currentBase.tags.includes('武陵'),
@@ -1224,6 +1247,12 @@ function App() {
                 systemBlueprints,
                 selectedBlueprintId,
                 armedBlueprintId,
+                canUndo,
+                canRedo,
+                undoLayout,
+                redoLayout,
+                historyEntries,
+                jumpToHistory,
                 statsAndDebugSection,
               }}
             >

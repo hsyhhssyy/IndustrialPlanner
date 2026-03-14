@@ -4,15 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/webp" href="/device-icons/item_log_belt_01.webp" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script
-      defer
-      src="https://static.cloudflareinsights.com/beacon.min.js"
-      data-cf-beacon='{"token": "19c349feefc344acab603c33ddee4b39"}'
-    ></script>
     <title>集成工业仿真</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if (location.hostname === 'anonymous-test.top' || location.hostname === 'endfield.anonymous-test.top') {
+        const script = document.createElement('script')
+        script.defer = true
+        script.src = 'https://static.cloudflareinsights.com/beacon.min.js'
+        script.setAttribute('data-cf-beacon', '{"token":"19c349feefc344acab603c33ddee4b39"}')
+        document.head.appendChild(script)
+      }
+    </script>
   </body>
 </html>

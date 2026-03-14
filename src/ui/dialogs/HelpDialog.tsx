@@ -411,7 +411,6 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
     if (language === 'zh-CN') {
       return {
         title: '按键操作总览',
-        summary: '这一页只列操作，不做配置。阅读方式与游戏快捷键页类似：看模式、看按键、看功能。',
         headers: {
           mode: '模式',
           action: '功能',
@@ -425,6 +424,9 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
               { mode: '通用', icon: 'mouse', action: '平移画布', keys: ['中键拖拽'] },
               { mode: '通用', icon: 'canvas', action: '缩放画布', keys: ['滚轮'] },
               { mode: '通用', icon: 'help', action: '取消当前放置 / 预览 / 关闭对话框', keys: ['右键', 'Esc'] },
+              { mode: '通用', icon: 'help', action: '撤销上一步布局或配置修改', keys: ['Ctrl/Cmd', 'Z'] },
+              { mode: '通用', icon: 'help', action: '重做下一步布局或配置修改', keys: ['Ctrl+Shift/Cmd+Shift', 'Z', '或 Ctrl', 'Y'] },
+              { mode: '通用', icon: 'help', action: '拦截浏览器保存快捷键，不执行任何操作', keys: ['Ctrl/Cmd', 'S'] },
             ],
           },
           {
@@ -449,7 +451,6 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
 
     return {
       title: 'Hotkey overview',
-      summary: 'This page is a read-only hotkey sheet, similar to a game controls screen: mode, action, then key.',
       headers: {
         mode: 'Mode',
         action: 'Action',
@@ -463,6 +464,9 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
             { mode: 'General', icon: 'mouse', action: 'Pan the canvas', keys: ['Middle Drag'] },
             { mode: 'General', icon: 'canvas', action: 'Zoom the canvas', keys: ['Wheel'] },
             { mode: 'General', icon: 'help', action: 'Cancel current placement/preview or close dialog', keys: ['Right Click', 'Esc'] },
+            { mode: 'General', icon: 'help', action: 'Undo the last layout or config change', keys: ['Ctrl/Cmd', 'Z'] },
+            { mode: 'General', icon: 'help', action: 'Redo the next layout or config change', keys: ['Ctrl+Shift/Cmd+Shift', 'Z', 'or Ctrl', 'Y'] },
+            { mode: 'General', icon: 'help', action: 'Intercept the browser save shortcut and do nothing', keys: ['Ctrl/Cmd', 'S'] },
           ],
         },
         {
@@ -612,7 +616,6 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
         <section className="help-section-card">
           <div className="help-section-head">
             <h4>{hotkeyContent.title}</h4>
-            <p>{hotkeyContent.summary}</p>
           </div>
           {hotkeyContent.groups.map((group) => (
             <div key={group.title} className="help-hotkey-group">

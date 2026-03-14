@@ -1,6 +1,8 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import type { DeviceTypeDef, DeviceTypeId, EditMode } from '../domain/types'
 import type { Language } from '../i18n'
+import type { LayoutState } from '../domain/types'
+import type { WorkbenchView } from './AppContext'
 
 export type PlaceGroupKey =
   | 'logistics'
@@ -20,9 +22,17 @@ type BlueprintSnapshot = {
   devices: Array<unknown>
 }
 
+export type HistoryEntryViewModel = {
+  index: number
+  isCurrent: boolean
+  layout: LayoutState
+  summary: string
+}
+
 export type LeftPanelViewModel = {
   simIsRunning: boolean
   mode: EditMode
+  activeWorkbenchView: WorkbenchView
   language: Language
   t: (key: string, params?: Record<string, string | number>) => string
   canUsePipePlacement: boolean
@@ -39,6 +49,12 @@ export type LeftPanelViewModel = {
   systemBlueprints: BlueprintSnapshot[]
   selectedBlueprintId: string | null
   armedBlueprintId: string | null
+  canUndo: boolean
+  canRedo: boolean
+  undoLayout: () => boolean
+  redoLayout: () => boolean
+  historyEntries: HistoryEntryViewModel[]
+  jumpToHistory: (index: number) => boolean
   statsAndDebugSection: ReactNode
 }
 

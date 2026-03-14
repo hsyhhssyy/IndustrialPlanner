@@ -1,5 +1,4 @@
 import { useCallback } from 'react'
-import { uiEffects } from '../../app/uiEffects'
 import type { DeviceTypeId, LayoutState } from '../../domain/types'
 import { isBeltLike, isPipeLike } from '../../domain/geometry'
 
@@ -94,58 +93,36 @@ type UseBuildDomainActionsParams = {
 
 export function useBuildDomainActions({
   simIsRunning,
-  t,
   foundationIdSet,
   setLayout,
   setSelection,
 }: UseBuildDomainActionsParams) {
-  const handleDeleteAll = useCallback(async () => {
+  const handleDeleteAll = useCallback(() => {
     if (simIsRunning) return
-    const confirmed = await uiEffects.confirm(t('left.deleteAllConfirm'), {
-      title: t('dialog.title.confirm'),
-      confirmText: t('dialog.ok'),
-      cancelText: t('dialog.cancel'),
-      variant: 'warning',
-    })
-    if (!confirmed) return
     setLayout((current) => ({
       ...current,
       devices: current.devices.filter((device) => foundationIdSet.has(device.instanceId)),
     }))
     setSelection([])
-  }, [foundationIdSet, setLayout, setSelection, simIsRunning, t])
+  }, [foundationIdSet, setLayout, setSelection, simIsRunning])
 
-  const handleDeleteAllBelts = useCallback(async () => {
+  const handleDeleteAllBelts = useCallback(() => {
     if (simIsRunning) return
-    const confirmed = await uiEffects.confirm(t('left.deleteAllBeltsConfirm'), {
-      title: t('dialog.title.confirm'),
-      confirmText: t('dialog.ok'),
-      cancelText: t('dialog.cancel'),
-      variant: 'warning',
-    })
-    if (!confirmed) return
     setLayout((current) => ({
       ...current,
       devices: current.devices.filter((device) => !isBeltLike(device.typeId) && !isPipeLike(device.typeId)),
     }))
     setSelection([])
-  }, [setLayout, setSelection, simIsRunning, t])
+  }, [setLayout, setSelection, simIsRunning])
 
-  const handleClearLot = useCallback(async () => {
+  const handleClearLot = useCallback(() => {
     if (simIsRunning) return
-    const confirmed = await uiEffects.confirm(t('left.clearLotConfirm'), {
-      title: t('dialog.title.confirm'),
-      confirmText: t('dialog.ok'),
-      cancelText: t('dialog.cancel'),
-      variant: 'warning',
-    })
-    if (!confirmed) return
     setLayout((current) => ({
       ...current,
       devices: current.devices.filter((device) => foundationIdSet.has(device.instanceId)),
     }))
     setSelection([])
-  }, [foundationIdSet, setLayout, setSelection, simIsRunning, t])
+  }, [foundationIdSet, setLayout, setSelection, simIsRunning])
 
   return {
     handleDeleteAll,

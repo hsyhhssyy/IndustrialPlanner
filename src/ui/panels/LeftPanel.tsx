@@ -31,6 +31,7 @@ export function LeftPanel() {
   const {
     simIsRunning,
     mode,
+    activeWorkbenchView,
     language,
     t,
     canUsePipePlacement,
@@ -47,18 +48,62 @@ export function LeftPanel() {
     systemBlueprints,
     selectedBlueprintId,
     armedBlueprintId,
+    canUndo,
+    canRedo,
+    undoLayout,
+    redoLayout,
+    historyEntries,
+    jumpToHistory,
     statsAndDebugSection,
   } = useWorkbenchContext()
   const blueprintFileInputRef = useRef<HTMLInputElement | null>(null)
 
+  const renderHistoryPanel = () => (
+    <>
+      <LeftPanelSection title={t('history.section.actions')}>
+        <div className="place-device-grid">
+          <button className="place-device-button" disabled={simIsRunning || !canUndo} onClick={() => undoLayout()}>
+            <span className="place-device-label">{t('history.undo')}</span>
+          </button>
+          <button className="place-device-button" disabled={simIsRunning || !canRedo} onClick={() => redoLayout()}>
+            <span className="place-device-label">{t('history.redo')}</span>
+          </button>
+        </div>
+      </LeftPanelSection>
+
+      <LeftPanelSection title={t('history.section.timeline')} className="left-panel-section-fill history-section-fill">
+        <div className="history-list">
+          {[...historyEntries].reverse().map((entry) => (
+            <button
+              key={`${entry.index}-${entry.layout.devices.length}-${entry.isCurrent ? 'current' : 'snapshot'}`}
+              type="button"
+              className={`history-entry ${entry.isCurrent ? 'active' : ''}`.trim()}
+              disabled={simIsRunning || entry.isCurrent}
+              onClick={() => jumpToHistory(entry.index)}
+            >
+              <span className="history-entry-head">
+                <span className="history-entry-title">{t('history.stepLabel', { index: entry.index + 1 })}</span>
+                {entry.isCurrent && <span className="history-entry-badge">{t('history.currentBadge')}</span>}
+              </span>
+              <span className="history-entry-summary">{entry.summary}</span>
+              <span className="history-entry-meta">· {t('history.deviceCount', { count: entry.layout.devices.length })}</span>
+            </button>
+          ))}
+        </div>
+      </LeftPanelSection>
+    </>
+  )
+
   return (
     <aside className="panel left-panel workbench-sidebar-panel">
       <div className="panel-view-header">
-        <div className="panel-view-header-caption">{t('left.mode')}</div>
-        <h3>{simIsRunning ? t('right.simDebug') : getModeLabel(language, mode)}</h3>
+        <div className="panel-view-header-caption">{activeWorkbenchView === 'history' ? t('history.caption') : t('left.mode')}</div>
+        <h3>{activeWorkbenchView === 'history' ? t('history.panelTitle') : simIsRunning ? t('right.simDebug') : getModeLabel(language, mode)}</h3>
       </div>
 
-      {!simIsRunning && mode === 'place' && (
+      {activeWorkbenchView === 'history' && renderHistoryPanel()}
+
+      {activeWorkbenchView !== 'history' && !simIsRunning && mode === 'place' && (
         <>
           <LeftPanelSection title={t('left.operation')}>
             <div className="place-device-grid">
@@ -155,7 +200,7 @@ export function LeftPanel() {
         </>
       )}
 
-      {!simIsRunning && mode === 'delete' && (
+      {activeWorkbenchView !== 'history' && !simIsRunning && mode === 'delete' && (
         <>
           <LeftPanelSection title={t('left.deleteModeGroup')}>
             <div className="delete-belt-mode-row">
@@ -189,7 +234,7 @@ export function LeftPanel() {
         </>
       )}
 
-      {!simIsRunning && mode === 'blueprint' && (
+      {activeWorkbenchView !== 'history' && !simIsRunning && mode === 'blueprint' && (
         <>
           <LeftPanelSection title={t('left.blueprintSubMode')}>
             <div className="blueprint-top-actions">
@@ -355,7 +400,7 @@ export function LeftPanel() {
         </>
       )}
 
-      {simIsRunning && statsAndDebugSection}
+      {activeWorkbenchView !== 'history' && simIsRunning && statsAndDebugSection}
     </aside>
   )
 }

@@ -12,6 +12,7 @@ import {
 
 export type SimSpeed = 0 | 0.25 | 1 | 2 | 4 | 16
 export type PlaceOperation = 'default' | 'belt' | 'pipe' | 'blueprint'
+export type WorkbenchView = EditMode | 'history'
 type Cell = { x: number; y: number }
 type DragRect = { x1: number; y1: number; x2: number; y2: number }
 export type DebugLogEntry = {
@@ -62,6 +63,7 @@ type AppContextState = {
   uiTheme: UiTheme
   leftPanelWidth: number
   rightPanelWidth: number
+  activeWorkbenchView: WorkbenchView
   leftPanelCollapsed: boolean
   rightPanelCollapsed: boolean
 }
@@ -131,6 +133,7 @@ type AppContextActions = {
   setRightPanelWidth: Dispatch<SetStateAction<number>>
   setLeftPanelCollapsed: Dispatch<SetStateAction<boolean>>
   setRightPanelCollapsed: Dispatch<SetStateAction<boolean>>
+  setActiveWorkbenchView: Dispatch<SetStateAction<WorkbenchView>>
 }
 
 type AppContextValue = {
@@ -151,6 +154,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [placeRotation, setPlaceRotation] = usePersistentState<0 | 90 | 180 | 270>('stage1-place-rotation', 0)
   const [deleteTool, setDeleteTool] = usePersistentState<'single' | 'wholeBelt' | 'box'>('stage1-delete-tool', 'single')
   const [cellSize, setCellSize] = usePersistentState<number>('stage1-cell-size', 64)
+  const [activeWorkbenchView, setActiveWorkbenchView] = usePersistentState<WorkbenchView>('stage6-active-workbench-view', 'place')
   const [settings, setSettings] = useState(() => normalizeAppSettings(readAppSettings()))
   const [placeOperation, setPlaceOperation] = useState<PlaceOperation>('default')
   const [viewOffset, setViewOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -270,7 +274,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribeSetLanguage = eventBus.on('app.language.set', (nextLanguage) => setLanguage(nextLanguage))
-    const unsubscribeSetMode = eventBus.on('left.mode.set', (nextMode) => setMode(nextMode))
+    const unsubscribeSetMode = eventBus.on('left.mode.set', (nextMode) => {
+      setMode(nextMode)
+      setActiveWorkbenchView(nextMode)
+    })
     const unsubscribeSetPlaceOperation = eventBus.on('left.place.operation.set', (nextOperation) => setPlaceOperation(nextOperation))
     const unsubscribeSetPlaceType = eventBus.on('left.place.type.set', (nextType) => setPlaceType(nextType))
     const unsubscribeResetTrace = eventBus.on('left.place.trace.reset', () => {
@@ -287,7 +294,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       unsubscribeResetTrace()
       unsubscribeSetDeleteTool()
     }
-  }, [eventBus, setDeleteTool, setLanguage, setMode, setPlaceType])
+  }, [eventBus, setActiveWorkbenchView, setDeleteTool, setLanguage, setMode, setPlaceType])
 
   useEffect(() => {
     if ((mode as unknown as string) === 'select') {
@@ -322,6 +329,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         rightPanelWidth,
         leftPanelCollapsed,
         rightPanelCollapsed,
+        activeWorkbenchView,
       },
       actions: {
         openTool: () => setActiveDialog('tool'),
@@ -342,6 +350,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setRightPanelWidth,
         setLeftPanelCollapsed,
         setRightPanelCollapsed,
+        setActiveWorkbenchView,
       },
       editor: {
         state: {
@@ -405,6 +414,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       eventBus,
       hoverCell,
       activeDialog,
+      activeWorkbenchView,
       appendDebugLog,
       language,
       leftPanelCollapsed,
@@ -425,10 +435,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setDeleteTool,
       setDebugMode,
       setLanguage,
+      setActiveWorkbenchView,
       setLeftPanelCollapsed,
       setLeftPanelWidth,
       setMaxTicksPerFrame,
       setMode,
+      setPlaceOperation,
       setPlaceRotation,
       setPlaceType,
       setRightPanelCollapsed,

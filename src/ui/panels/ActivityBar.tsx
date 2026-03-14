@@ -1,4 +1,5 @@
-import { useAppContext } from '../../app/AppContext'
+import { useEffect } from 'react'
+import { useAppContext, type WorkbenchView } from '../../app/AppContext'
 import { getModeLabel } from '../../i18n'
 
 type ActivityBarProps = {
@@ -7,7 +8,7 @@ type ActivityBarProps = {
 
 type ActivityMode = 'place' | 'delete' | 'blueprint'
 
-function WorkbenchIcon({ kind }: { kind: 'place' | 'delete' | 'blueprint' | 'tool' | 'help' | 'settings' }) {
+function WorkbenchIcon({ kind }: { kind: 'place' | 'delete' | 'blueprint' | 'history' | 'tool' | 'help' | 'settings' }) {
   if (kind === 'place') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -26,6 +27,13 @@ function WorkbenchIcon({ kind }: { kind: 'place' | 'delete' | 'blueprint' | 'too
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path d="M5 3H15L19 7V21H5V3ZM7 5V19H17V8H14V5H7ZM9 11H15V13H9V11ZM9 15H15V17H9V15Z" />
+      </svg>
+    )
+  }
+  if (kind === 'history') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M13 3A9 9 0 1 0 21.9 13H19.9A7 7 0 1 1 13 5C16.1 5 18.8 7 19.7 9.8H17L21 13L25 9.8H21.8C20.8 5.9 17.2 3 13 3ZM12 8V13L16 15.3L17 13.6L14 11.9V8H12Z" />
       </svg>
     )
   }
@@ -53,18 +61,24 @@ function WorkbenchIcon({ kind }: { kind: 'place' | 'delete' | 'blueprint' | 'too
 export function ActivityBar({ simIsRunning }: ActivityBarProps) {
   const {
     eventBus,
-    state: { isToolOpen, isHelpOpen, isSettingsOpen, language, leftPanelCollapsed },
+    state: { isToolOpen, isHelpOpen, isSettingsOpen, language, leftPanelCollapsed, activeWorkbenchView },
     editor: { state: { mode } },
-    actions: { appendDebugLog, openTool, openHelp, openSettings, setLeftPanelCollapsed },
+    actions: { appendDebugLog, openTool, openHelp, openSettings, setLeftPanelCollapsed, setActiveWorkbenchView },
   } = useAppContext()
 
-  const activateMode = (nextMode: ActivityMode) => {
+  useEffect(() => {
+    if (!simIsRunning || activeWorkbenchView !== 'history') return
+    setActiveWorkbenchView(mode)
+  }, [activeWorkbenchView, mode, setActiveWorkbenchView, simIsRunning])
+
+  const activateView = (nextView: WorkbenchView) => {
     if (simIsRunning) return
-    const isSameMode = mode === nextMode
-    const shouldCollapseCurrentView = !leftPanelCollapsed && mode === nextMode
+    const isModeView = nextView === 'place' || nextView === 'delete' || nextView === 'blueprint'
+    const isSameView = activeWorkbenchView === nextView
+    const shouldCollapseCurrentView = !leftPanelCollapsed && isSameView
     appendDebugLog(
       'activity-bar',
-      `Mode button tapped: current=${mode}, next=${nextMode}, simRunning=${simIsRunning}, leftPanelCollapsed=${leftPanelCollapsed}, shouldCollapseCurrentView=${shouldCollapseCurrentView}, isSameMode=${isSameMode}`,
+      `Workbench view tapped: current=${activeWorkbenchView}, next=${nextView}, mode=${mode}, simRunning=${simIsRunning}, leftPanelCollapsed=${leftPanelCollapsed}, shouldCollapseCurrentView=${shouldCollapseCurrentView}`,
     )
     if (shouldCollapseCurrentView) {
       setLeftPanelCollapsed(true)
@@ -74,19 +88,20 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
     if (leftPanelCollapsed) {
       setLeftPanelCollapsed(false)
     }
-    if (leftPanelCollapsed && isSameMode) {
+    if (leftPanelCollapsed && isSameView) {
       eventBus.emit('ui.center.focus', undefined)
       return
     }
-    if (nextMode === 'place') {
+    if (isModeView && nextView === 'place') {
       eventBus.emit('left.place.operation.set', 'default')
       eventBus.emit('left.place.trace.reset', undefined)
       eventBus.emit('left.place.type.set', '')
     }
-    if (nextMode === 'blueprint') {
+    if (isModeView && nextView === 'blueprint') {
       eventBus.emit('left.place.operation.set', 'blueprint')
     }
-    eventBus.emit('left.mode.set', nextMode)
+    setActiveWorkbenchView(nextView)
+    if (isModeView) eventBus.emit('left.mode.set', nextView)
     eventBus.emit('ui.center.focus', undefined)
   }
 
@@ -109,16 +124,27 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
           <button
             key={entry.key}
             type="button"
-            className={`activity-bar-item ${mode === entry.key ? 'active' : ''}`.trim()}
-            onClick={() => activateMode(entry.key)}
+            className={`activity-bar-item ${activeWorkbenchView === entry.key ? 'active' : ''}`.trim()}
+            onClick={() => activateView(entry.key)}
             disabled={simIsRunning}
             title={getModeLabel(language, entry.key)}
-            aria-pressed={mode === entry.key}
+            aria-pressed={activeWorkbenchView === entry.key}
           >
             <span className="activity-bar-item-icon"><WorkbenchIcon kind={entry.icon} /></span>
             <span className="activity-bar-item-label">{getModeLabel(language, entry.key)}</span>
           </button>
         ))}
+        <button
+          type="button"
+          className={`activity-bar-item ${activeWorkbenchView === 'history' ? 'active' : ''}`.trim()}
+          onClick={() => activateView('history')}
+          disabled={simIsRunning}
+          title={language === 'zh-CN' ? '操作历史' : 'History'}
+          aria-pressed={activeWorkbenchView === 'history'}
+        >
+          <span className="activity-bar-item-icon"><WorkbenchIcon kind="history" /></span>
+          <span className="activity-bar-item-label">{language === 'zh-CN' ? '操作历史' : 'History'}</span>
+        </button>
       </div>
 
       <div className="activity-bar-group activity-bar-group-bottom">

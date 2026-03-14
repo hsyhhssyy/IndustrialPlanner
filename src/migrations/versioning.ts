@@ -29,6 +29,16 @@ type LayoutsByBaseStorage = {
   layoutsByBase: Partial<Record<BaseId, LayoutState>>
 }
 
+type LayoutHistoryEntryStorage = {
+  past: LayoutState[]
+  future: LayoutState[]
+}
+
+export type LayoutHistoryByBaseStorage = {
+  version: string
+  historiesByBase: Partial<Record<BaseId, LayoutHistoryEntryStorage>>
+}
+
 type StoredBlueprintSnapshot = {
   id: string
   name: string
@@ -340,6 +350,36 @@ export function normalizeLayoutsByBaseStorage(rawValue: LayoutsByBaseStorage): L
   return {
     version: APP_VERSION,
     layoutsByBase: migratedLayouts,
+  }
+}
+
+export function normalizeLayoutHistoryByBaseStorage(rawValue: LayoutHistoryByBaseStorage): LayoutHistoryByBaseStorage {
+  const candidate = rawValue as unknown as LayoutHistoryByBaseStorage | undefined | null
+
+  if (!candidate || typeof candidate !== 'object') {
+    return { version: APP_VERSION, historiesByBase: {} }
+  }
+
+  if (candidate.version !== APP_VERSION) {
+    return { version: APP_VERSION, historiesByBase: {} }
+  }
+
+  if (!candidate.historiesByBase || typeof candidate.historiesByBase !== 'object') {
+    return { version: APP_VERSION, historiesByBase: {} }
+  }
+
+  const normalizedHistories: Partial<Record<BaseId, LayoutHistoryEntryStorage>> = {}
+  for (const [baseId, entry] of Object.entries(candidate.historiesByBase)) {
+    if (!entry || typeof entry !== 'object') continue
+    normalizedHistories[baseId as BaseId] = {
+      past: Array.isArray(entry.past) ? entry.past.map((layout) => migrateLayoutToV1(layout)) : [],
+      future: Array.isArray(entry.future) ? entry.future.map((layout) => migrateLayoutToV1(layout)) : [],
+    }
+  }
+
+  return {
+    version: APP_VERSION,
+    historiesByBase: normalizedHistories,
   }
 }
 

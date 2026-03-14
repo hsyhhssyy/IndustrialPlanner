@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { applyLogisticsPath, deleteConnectedBelts, nextId } from '../../domain/logistics'
 import { getDeviceById, isBelt, isPipe } from '../../domain/geometry'
 import { validatePlacementConstraints } from '../../domain/placement'
@@ -98,8 +98,6 @@ export function useBuildInteractionDomain({
       },
     },
   } = useAppContext()
-
-  const deleteBoxConfirmingRef = useRef(false)
 
   const {
     activePlacementBlueprint,
@@ -544,9 +542,6 @@ export function useBuildInteractionDomain({
       }
 
       if (mode === 'delete' && dragRect && dragOrigin && !simIsRunning) {
-        if (deleteBoxConfirmingRef.current) return
-        deleteBoxConfirmingRef.current = true
-
         const xMin = Math.min(dragRect.x1, dragRect.x2)
         const xMax = Math.max(dragRect.x1, dragRect.x2)
         const yMin = Math.min(dragRect.y1, dragRect.y2)
@@ -565,27 +560,23 @@ export function useBuildInteractionDomain({
         const isSingleCellRect = xMin === xMax && yMin === yMax
 
         if (isSingleCellRect) {
-          try {
-            const id = cellDeviceMap.get(`${xMin},${yMin}`)
-            if (id && !foundationIdSet.has(id)) {
-              if (deleteTool === 'wholeBelt') {
-                setLayout((current) => {
-                  const target = getDeviceById(current, id)
-                  if (target && (isBelt(target.typeId) || isPipe(target.typeId))) {
-                    return deleteConnectedBelts(current, xMin, yMin)
-                  }
-                  return {
-                    ...current,
-                    devices: current.devices.filter((device) => device.instanceId !== id),
-                  }
-                })
-              } else {
-                setLayout((current) => ({ ...current, devices: current.devices.filter((device) => device.instanceId !== id) }))
-              }
-              setSelection((current) => current.filter((currentId) => currentId !== id))
+          const id = cellDeviceMap.get(`${xMin},${yMin}`)
+          if (id && !foundationIdSet.has(id)) {
+            if (deleteTool === 'wholeBelt') {
+              setLayout((current) => {
+                const target = getDeviceById(current, id)
+                if (target && (isBelt(target.typeId) || isPipe(target.typeId))) {
+                  return deleteConnectedBelts(current, xMin, yMin)
+                }
+                return {
+                  ...current,
+                  devices: current.devices.filter((device) => device.instanceId !== id),
+                }
+              })
+            } else {
+              setLayout((current) => ({ ...current, devices: current.devices.filter((device) => device.instanceId !== id) }))
             }
-          } finally {
-            deleteBoxConfirmingRef.current = false
+            setSelection((current) => current.filter((currentId) => currentId !== id))
           }
           return
         }
@@ -599,25 +590,13 @@ export function useBuildInteractionDomain({
           }
         }
 
-        try {
-          if (idsInRect.size > 0) {
-            const confirmed = await uiEffects.confirm(t('left.deleteBoxConfirm', { count: idsInRect.size }), {
-              title: t('dialog.title.confirm'),
-              confirmText: t('dialog.ok'),
-              cancelText: t('dialog.cancel'),
-              variant: 'warning',
-            })
-            if (confirmed) {
-              setLayout((current) => ({
-                ...current,
-                devices: current.devices.filter((device) => !idsInRect.has(device.instanceId)),
-              }))
-              setSelection((current) => current.filter((id) => !idsInRect.has(id)))
-            }
+        if (idsInRect.size > 0) {
+          setLayout((current) => ({
+            ...current,
+            devices: current.devices.filter((device) => !idsInRect.has(device.instanceId)),
+          }))
+          setSelection((current) => current.filter((id) => !idsInRect.has(id)))
           }
-        } finally {
-          deleteBoxConfirmingRef.current = false
-        }
         return
       }
 
@@ -680,7 +659,6 @@ export function useBuildInteractionDomain({
     },
     [
       cellDeviceMap,
-      deleteBoxConfirmingRef,
       deleteTool,
       dragBasePositions,
       dragInvalidMessage,
