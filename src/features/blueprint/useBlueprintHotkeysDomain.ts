@@ -12,6 +12,8 @@ type UseBlueprintHotkeysDomainParams = {
   activeBaseId: BaseId
   cloneDeviceConfig: (config: DeviceInstance['config']) => DeviceInstance['config']
   setClipboardBlueprint: (value: BlueprintSnapshot) => void
+  lastClipboardBlueprint: BlueprintSnapshot | null
+  setLastClipboardBlueprint: (value: BlueprintSnapshot) => void
   setBlueprintPlacementRotation: (updater: Rotation | ((current: Rotation) => Rotation)) => void
   setArmedBlueprintId: (updater: string | null | ((current: string | null) => string | null)) => void
   activePlacementBlueprint: BlueprintSnapshot | null
@@ -26,6 +28,8 @@ export function useBlueprintHotkeysDomain({
   activeBaseId,
   cloneDeviceConfig,
   setClipboardBlueprint,
+  lastClipboardBlueprint,
+  setLastClipboardBlueprint,
   setBlueprintPlacementRotation,
   setArmedBlueprintId,
   activePlacementBlueprint,
@@ -49,7 +53,8 @@ export function useBlueprintHotkeysDomain({
         event.preventDefault()
         const selectedIdSet = new Set(selection)
         const selectedDevices = layout.devices.filter(
-          (device) => selectedIdSet.has(device.instanceId) && !foundationIdSet.has(device.instanceId),
+          (device) =>
+            selectedIdSet.has(device.instanceId) && (!foundationIdSet.has(device.instanceId) || device.typeId === 'item_port_sp_hub_1'),
         )
         if (selectedDevices.length < 1) {
           showToast(t('toast.blueprintCopyNeedsMultiSelect'), { variant: 'warning' })
@@ -75,8 +80,20 @@ export function useBlueprintHotkeysDomain({
           })),
         }
         setClipboardBlueprint(tempSnapshot)
+        setLastClipboardBlueprint(tempSnapshot)
+        setArmedBlueprintId(null)
         setBlueprintPlacementRotation(0)
         showToast(t('toast.blueprintClipboardReady', { count: tempSnapshot.devices.length }))
+        return
+      }
+
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'v') {
+        if (!lastClipboardBlueprint) return
+        event.preventDefault()
+        setClipboardBlueprint(lastClipboardBlueprint)
+        setArmedBlueprintId(null)
+        setBlueprintPlacementRotation(0)
+        showToast(t('toast.blueprintClipboardRestored', { count: lastClipboardBlueprint.devices.length }))
         return
       }
 
@@ -102,10 +119,12 @@ export function useBlueprintHotkeysDomain({
     cloneDeviceConfig,
     foundationIdSet,
     layout,
+    lastClipboardBlueprint,
     selection,
     setArmedBlueprintId,
     setBlueprintPlacementRotation,
     setClipboardBlueprint,
+    setLastClipboardBlueprint,
     simIsRunning,
     t,
   ])

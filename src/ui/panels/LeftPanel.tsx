@@ -310,8 +310,6 @@ export function LeftPanel() {
                               <button
                                 className="blueprint-action-button"
                                 onClick={() => {
-                                  eventBus.emit('left.mode.set', 'blueprint')
-                                  eventBus.emit('left.place.operation.set', 'blueprint')
                                   eventBus.emit('left.blueprint.arm', blueprint.id)
                                   eventBus.emit('ui.center.focus', undefined)
                                 }}
@@ -378,8 +376,6 @@ export function LeftPanel() {
                                 <button
                                   className="blueprint-action-button"
                                   onClick={() => {
-                                    eventBus.emit('left.mode.set', 'blueprint')
-                                    eventBus.emit('left.place.operation.set', 'blueprint')
                                     eventBus.emit('left.blueprint.arm', blueprint.id)
                                     eventBus.emit('ui.center.focus', undefined)
                                   }}

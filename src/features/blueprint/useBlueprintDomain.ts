@@ -10,6 +10,7 @@ import {
   APP_VERSION,
   ARMED_BLUEPRINT_ID_KEY,
   CLIPBOARD_BLUEPRINT_KEY,
+  LAST_CLIPBOARD_BLUEPRINT_KEY,
   PUBLIC_BLUEPRINT_INDEX_CACHE_KEY,
   SELECTED_BLUEPRINT_ID_KEY,
   SYSTEM_BLUEPRINTS_KEY,
@@ -54,6 +55,7 @@ type BlueprintPlacementPreview = {
   devices: DeviceInstance[]
   isValid: boolean
   invalidMessageKey: string | null
+  replacementInstanceIds: string[]
 }
 
 type BlueprintLocalRect = {
@@ -260,6 +262,12 @@ type UseBlueprintDomainParams = {
   t: (key: string, params?: Record<string, string | number>) => string
 }
 
+const PROTOCOL_HUB_TYPE_ID: DeviceTypeId = 'item_port_sp_hub_1'
+
+function isProtocolHubDevice(device: Pick<DeviceInstance, 'typeId'> | Pick<BlueprintDeviceSnapshot, 'typeId'>) {
+  return device.typeId === PROTOCOL_HUB_TYPE_ID
+}
+
 export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selection, foundationIdSet, t }: UseBlueprintDomainParams) {
   runBlueprintStorageMigration()
 
@@ -281,8 +289,20 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
     null,
     (value) => normalizeUserBlueprintSnapshotsStorage(value ? [value] : [])[0] ?? null,
   )
+  const [lastClipboardBlueprint, setLastClipboardBlueprint] = usePersistentState<BlueprintSnapshot | null>(
+    LAST_CLIPBOARD_BLUEPRINT_KEY,
+    null,
+    (value) => normalizeUserBlueprintSnapshotsStorage(value ? [value] : [])[0] ?? null,
+  )
   const [blueprintPlacementRotation, setBlueprintPlacementRotation] = usePersistentState<Rotation>('stage1-blueprint-rotation', 0)
   const hasSyncedPublicBlueprintsRef = useRef(false)
+  const activeBase = BASE_BY_ID[activeBaseId]
+  const activeBaseOuterRing = activeBase.outerRing
+  const activeBaseProtocolHub = activeBase.foundationBuildings.find((building) => building.typeId === PROTOCOL_HUB_TYPE_ID) ?? null
+  const protocolHubFoundationIdSet = useMemo(() => {
+    if (!activeBaseProtocolHub) return new Set<string>()
+    return new Set([activeBaseProtocolHub.instanceId])
+  }, [activeBaseProtocolHub])
 
   const blueprints = useMemo(() => {
     const merged = [...userBlueprints, ...systemBlueprints]
@@ -291,10 +311,22 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
 
   const saveSelectionAsBlueprint = useCallback(async () => {
     const selectedIdSet = new Set(selection)
-    const selectedDevices = layout.devices.filter((device) => selectedIdSet.has(device.instanceId) && !foundationIdSet.has(device.instanceId))
+    const exportableSelection = layout.devices.filter(
+      (device) =>
+        selectedIdSet.has(device.instanceId) && (!foundationIdSet.has(device.instanceId) || protocolHubFoundationIdSet.has(device.instanceId)),
+    )
+
+    if (exportableSelection.length === 0) {
+      uiEffects.toast(t('toast.blueprintNoSelection'), { variant: 'warning' })
+      return
+    }
+
+    const selectedDevices = exportableSelection.filter((device) =>
+      isDeviceWithinAllowedPlacementArea(device, layout.lotSize, activeBaseOuterRing),
+    )
 
     if (selectedDevices.length === 0) {
-      uiEffects.toast(t('toast.blueprintNoSelection'), { variant: 'warning' })
+      uiEffects.toast(t('toast.blueprintNoSavableSelection'), { variant: 'warning' })
       return
     }
 
@@ -302,7 +334,11 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
     const minY = Math.min(...selectedDevices.map((device) => device.origin.y))
     const createdAt = new Date().toISOString()
     const defaultName = `BP-${createdAt.slice(0, 19).replace('T', ' ')}`
-    const inputName = await uiEffects.prompt(t('dialog.blueprintNamePrompt'), defaultName, {
+    const promptMessage =
+      selectedDevices.length !== exportableSelection.length
+        ? `${t('dialog.blueprintOutOfBoundsTrimmed')}\n\n${t('dialog.blueprintNamePrompt')}`
+        : t('dialog.blueprintNamePrompt')
+    const inputName = await uiEffects.prompt(promptMessage, defaultName, {
       title: t('left.blueprintSubMode'),
       confirmText: t('dialog.ok'),
       cancelText: t('dialog.cancel'),
@@ -341,7 +377,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
     } catch {
       uiEffects.toast(t('toast.blueprintSaveFailed'), { variant: 'error' })
     }
-  }, [activeBaseId, foundationIdSet, layout.devices, selection, setUserBlueprints, t])
+  }, [activeBaseId, activeBaseOuterRing, foundationIdSet, layout.devices, layout.lotSize, protocolHubFoundationIdSet, selection, setUserBlueprints, t])
 
   const selectedBlueprint = useMemo(() => {
     if (!selectedBlueprintId) return null
@@ -364,14 +400,24 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
   )
 
   const armBlueprint = useCallback(
-    (id: string) => {
+    async (id: string) => {
       const target = blueprints.find((blueprint) => blueprint.id === id)
-      if (!target) return
+      if (!target) return false
+      if (target.devices.some((device) => isProtocolHubDevice(device))) {
+        const confirmed = await uiEffects.confirm(t('dialog.blueprintProtocolHubPlaceConfirm'), {
+          title: t('dialog.title.confirm'),
+          confirmText: t('dialog.ok'),
+          cancelText: t('dialog.cancel'),
+          variant: 'warning',
+        })
+        if (!confirmed) return false
+      }
       setSelectedBlueprintId(id)
       setArmedBlueprintId(id)
       setBlueprintPlacementRotation(0)
+      return true
     },
-    [blueprints, setArmedBlueprintId, setBlueprintPlacementRotation, setSelectedBlueprintId],
+    [blueprints, setArmedBlueprintId, setBlueprintPlacementRotation, setSelectedBlueprintId, t],
   )
 
   const disarmBlueprint = useCallback(() => {
@@ -693,7 +739,10 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
       const topLeftY = Math.round(anchorCell.y + 0.5 - blueprintHeight / 2)
 
       const previewDevices: DeviceInstance[] = rotatedRects.map((entry, index) => ({
-        instanceId: `blueprint-preview-${index}`,
+        instanceId:
+          isProtocolHubDevice(entry) && activeBaseProtocolHub
+            ? activeBaseProtocolHub.instanceId
+            : `blueprint-preview-${index}`,
         typeId: entry.typeId,
         origin: {
           x: topLeftX + entry.x,
@@ -702,20 +751,26 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         rotation: entry.rotation,
         config: cloneDeviceConfig(entry.config),
       }))
+      const replacementInstanceIds = previewDevices
+        .filter((device) => layout.devices.some((existing) => existing.instanceId === device.instanceId))
+        .map((device) => device.instanceId)
+      const replacementInstanceIdSet = new Set(replacementInstanceIds)
 
-      const baseOuterRing = BASE_BY_ID[activeBaseId].outerRing
-      const invalidOutOfLot = previewDevices.some((device) => !isDeviceWithinAllowedPlacementArea(device, layout.lotSize, baseOuterRing))
+      const invalidOutOfLot = previewDevices.some(
+        (device) => !isDeviceWithinAllowedPlacementArea(device, layout.lotSize, activeBaseOuterRing),
+      )
       if (invalidOutOfLot) {
         return {
           devices: previewDevices,
           isValid: false,
           invalidMessageKey: 'toast.outOfLot',
+          replacementInstanceIds,
         }
       }
 
       const previewLayout: LayoutState = {
         ...layout,
-        devices: [...layout.devices, ...previewDevices],
+        devices: [...layout.devices.filter((device) => !replacementInstanceIdSet.has(device.instanceId)), ...previewDevices],
       }
       const invalidConstraint = previewDevices
         .map((device) => validatePlacementConstraints(previewLayout, device))
@@ -726,6 +781,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
           devices: previewDevices,
           isValid: false,
           invalidMessageKey: invalidConstraint.messageKey ?? 'toast.invalidPlacementFallback',
+          replacementInstanceIds,
         }
       }
 
@@ -733,9 +789,10 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         devices: previewDevices,
         isValid: true,
         invalidMessageKey: null,
+        replacementInstanceIds,
       }
     },
-    [activeBaseId, layout],
+    [activeBaseOuterRing, activeBaseProtocolHub, layout],
   )
 
   return {
@@ -748,6 +805,8 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
     setArmedBlueprintId,
     clipboardBlueprint,
     setClipboardBlueprint,
+    lastClipboardBlueprint,
+    setLastClipboardBlueprint,
     blueprintPlacementRotation,
     setBlueprintPlacementRotation,
     selectedBlueprint,

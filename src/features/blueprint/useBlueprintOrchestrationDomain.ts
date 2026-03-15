@@ -16,7 +16,7 @@ type UseBlueprintOrchestrationDomainParams = {
     snapshot: BlueprintSnapshot | null,
     anchorCell: { x: number; y: number },
     placementRotation: Rotation,
-  ) => { devices: DeviceInstance[]; isValid: boolean; invalidMessageKey: string | null } | null
+  ) => { devices: DeviceInstance[]; isValid: boolean; invalidMessageKey: string | null; replacementInstanceIds: string[] } | null
 }
 
 export function useBlueprintOrchestrationDomain({

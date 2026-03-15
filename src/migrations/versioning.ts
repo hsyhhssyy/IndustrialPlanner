@@ -15,6 +15,7 @@ export const SYSTEM_BLUEPRINTS_KEY = 'stage3-blueprints-system'
 export const SELECTED_BLUEPRINT_ID_KEY = 'stage3-selected-blueprint-id'
 export const ARMED_BLUEPRINT_ID_KEY = 'stage3-armed-blueprint-id'
 export const CLIPBOARD_BLUEPRINT_KEY = 'stage3-clipboard-blueprint'
+export const LAST_CLIPBOARD_BLUEPRINT_KEY = 'stage3-blueprint-last-clipboard'
 export const PUBLIC_BLUEPRINT_INDEX_CACHE_KEY = 'stage3-public-blueprint-index'
 
 export type BlueprintSource = 'user' | 'system'

@@ -337,6 +337,8 @@ function App() {
     setArmedBlueprintId,
     clipboardBlueprint,
     setClipboardBlueprint,
+    lastClipboardBlueprint,
+    setLastClipboardBlueprint,
     blueprintPlacementRotation,
     setBlueprintPlacementRotation,
     armBlueprint,
@@ -434,6 +436,8 @@ function App() {
     foundationIdSet,
     cloneDeviceConfig,
     setClipboardBlueprint,
+    lastClipboardBlueprint,
+    setLastClipboardBlueprint,
     setBlueprintPlacementRotation,
     setArmedBlueprintId,
     t,
@@ -1138,9 +1142,12 @@ function App() {
       selectBlueprint(id)
     })
     const unsubscribeArmBlueprint = eventBus.on('left.blueprint.arm', (id) => {
-      setMode('blueprint')
-      setPlaceOperation('blueprint')
-      armBlueprint(id)
+      void (async () => {
+        const armed = await armBlueprint(id)
+        if (!armed) return
+        setMode('blueprint')
+        setPlaceOperation('blueprint')
+      })()
     })
     const unsubscribeDisarmBlueprint = eventBus.on('left.blueprint.disarm', () => {
       setMode('blueprint')

@@ -267,11 +267,15 @@ export function useBuildInteractionDomain({
         setLayout((current) => ({
           ...current,
           devices: [
-            ...current.devices,
-            ...preview.devices.map((device) => ({
-              ...device,
-              instanceId: nextId(device.typeId),
-            })),
+            ...current.devices.filter((device) => !preview.replacementInstanceIds.includes(device.instanceId)),
+            ...preview.devices.map((device) =>
+              preview.replacementInstanceIds.includes(device.instanceId)
+                ? device
+                : {
+                    ...device,
+                    instanceId: nextId(device.typeId),
+                  },
+            ),
           ],
         }))
         return

@@ -95,7 +95,7 @@ export type BuildInteractionBlueprintParams = {
     snapshot: BlueprintSnapshot | null,
     anchorCell: Cell,
     placementRotation: Rotation,
-  ) => { devices: DeviceInstance[]; isValid: boolean; invalidMessageKey: string | null } | null
+  ) => { devices: DeviceInstance[]; isValid: boolean; invalidMessageKey: string | null; replacementInstanceIds: string[] } | null
   blueprintPlacementRotation: Rotation
   setBlueprintPlacementRotation: Dispatch<SetStateAction<Rotation>>
   setClipboardBlueprint: Dispatch<SetStateAction<BlueprintSnapshot | null>>
