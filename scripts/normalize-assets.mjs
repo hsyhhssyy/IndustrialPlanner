@@ -93,64 +93,79 @@ async function archiveActiveSources(activeDir, archiveDir) {
   return moved
 }
 
-async function removeStaleGeneratedWebp(outputDir, expectedBaseNames) {
+async function removeStaleHashedWebp(outputDir, expectedFileNames) {
   if (!(await pathExists(outputDir))) return []
   const entries = await fs.readdir(outputDir, { withFileTypes: true })
   const removed = []
   for (const entry of entries) {
     if (!entry.isFile()) continue
     if (path.extname(entry.name).toLowerCase() !== '.webp') continue
-    const baseName = path.basename(entry.name, '.webp')
-    if (expectedBaseNames.has(baseName)) continue
+    if (expectedFileNames.has(entry.name)) continue
     await fs.rm(path.join(outputDir, entry.name))
     removed.push(entry.name)
   }
   return removed
 }
 
-async function generateWebpIcons({ sourceDir, outputDir, outputSize }) {
+async function generateWebpIcons({ sourceDir, outputDir, outputSize, urlPrefix }) {
   const sourceFiles = await listSourceFiles(sourceDir)
   await ensureDirectory(outputDir)
-  const expectedBaseNames = new Set(sourceFiles.map((fileName) => path.basename(fileName, path.extname(fileName))))
-  const removed = await removeStaleGeneratedWebp(outputDir, expectedBaseNames)
+  const expectedFileNames = new Set()
+  const fileMap = {}
   const written = []
 
   for (const fileName of sourceFiles) {
     const sourcePath = path.join(sourceDir, fileName)
     const baseName = path.basename(fileName, path.extname(fileName))
-    const outputPath = path.join(outputDir, `${baseName}.webp`)
-    await sharp(sourcePath)
-      .resize(outputSize, outputSize, {
-        fit: 'contain',
-        background: { r: 0, g: 0, b: 0, alpha: 0 },
-        kernel: sharp.kernel.lanczos3,
-      })
-      .webp({ quality: 90, alphaQuality: 100, effort: 6 })
-      .toFile(outputPath)
-    written.push(path.basename(outputPath))
+    const sourceContent = await fs.readFile(sourcePath)
+    const hash = crypto.createHash('sha1').update(sourceContent).digest('hex').slice(0, 8)
+    const hashedFileName = `${baseName}.${hash}.webp`
+    const outputPath = path.join(outputDir, hashedFileName)
+    expectedFileNames.add(hashedFileName)
+    fileMap[`${urlPrefix}/${baseName}.webp`] = `${urlPrefix}/${hashedFileName}`
+    if (!(await pathExists(outputPath))) {
+      await sharp(sourcePath)
+        .resize(outputSize, outputSize, {
+          fit: 'contain',
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+          kernel: sharp.kernel.lanczos3,
+        })
+        .webp({ quality: 90, alphaQuality: 100, effort: 6 })
+        .toFile(outputPath)
+      written.push(hashedFileName)
+    }
   }
 
-  return { written, removed, count: sourceFiles.length }
+  const removed = await removeStaleHashedWebp(outputDir, expectedFileNames)
+  return { written, removed, count: sourceFiles.length, fileMap }
 }
 
 async function convertSprites({ sourceDir, outputDir }) {
   const sourceFiles = await listSourceFiles(sourceDir)
   await ensureDirectory(outputDir)
-  const expectedBaseNames = new Set(sourceFiles.map((fileName) => path.basename(fileName, path.extname(fileName))))
-  const removed = await removeStaleGeneratedWebp(outputDir, expectedBaseNames)
+  const expectedFileNames = new Set()
+  const fileMap = {}
   const written = []
 
   for (const fileName of sourceFiles) {
     const sourcePath = path.join(sourceDir, fileName)
     const baseName = path.basename(fileName, path.extname(fileName))
-    const outputPath = path.join(outputDir, `${baseName}.webp`)
-    await sharp(sourcePath)
-      .webp({ quality: 92, alphaQuality: 100, effort: 6 })
-      .toFile(outputPath)
-    written.push(path.basename(outputPath))
+    const sourceContent = await fs.readFile(sourcePath)
+    const hash = crypto.createHash('sha1').update(sourceContent).digest('hex').slice(0, 8)
+    const hashedFileName = `${baseName}.${hash}.webp`
+    const outputPath = path.join(outputDir, hashedFileName)
+    expectedFileNames.add(hashedFileName)
+    fileMap[`/sprites/${baseName}.webp`] = `/sprites/${hashedFileName}`
+    if (!(await pathExists(outputPath))) {
+      await sharp(sourcePath)
+        .webp({ quality: 92, alphaQuality: 100, effort: 6 })
+        .toFile(outputPath)
+      written.push(hashedFileName)
+    }
   }
 
-  return { written, removed, count: sourceFiles.length }
+  const removed = await removeStaleHashedWebp(outputDir, expectedFileNames)
+  return { written, removed, count: sourceFiles.length, fileMap }
 }
 
 async function removeLegacyAtlases() {
@@ -159,40 +174,17 @@ async function removeLegacyAtlases() {
   return true
 }
 
-async function listWebpFiles(dirPath) {
-  if (!(await pathExists(dirPath))) return []
-  const entries = await fs.readdir(dirPath, { withFileTypes: true })
-  return entries
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name)
-    .filter((fileName) => path.extname(fileName).toLowerCase() === '.webp')
-    .sort((left, right) => left.localeCompare(right, 'en'))
-}
-
-async function computeAssetVersionToken() {
-  const hasher = crypto.createHash('sha1')
-  const directories = [ACTIVE_ITEM_DIR, ACTIVE_DEVICE_DIR, ACTIVE_SPRITE_DIR]
-
-  for (const dirPath of directories) {
-    const webpFiles = await listWebpFiles(dirPath)
-    hasher.update(`${path.basename(dirPath)}:${webpFiles.length}\n`)
-
-    for (const fileName of webpFiles) {
-      const filePath = path.join(dirPath, fileName)
-      const content = await fs.readFile(filePath)
-      hasher.update(fileName)
-      hasher.update(content)
-    }
-  }
-
-  return hasher.digest('hex').slice(0, 12)
-}
-
-async function writeAssetVersionToken(versionToken) {
+async function writeAssetFileMap(fileMap) {
   await ensureDirectory(generatedDir)
+  const entries = Object.entries(fileMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `  ${JSON.stringify(key)}: ${JSON.stringify(value)},`)
+    .join('\n')
   const source = [
     '// 由 scripts/normalize-assets.mjs 自动生成，请勿手改。',
-    `export const ASSET_CACHE_VERSION = '${versionToken}'`,
+    'export const ASSET_FILE_MAP: Record<string, string> = {',
+    entries,
+    '}',
     '',
   ].join('\n')
   await fs.writeFile(assetVersionFilePath, source, 'utf8')
@@ -207,19 +199,21 @@ async function main() {
     sourceDir: ORIGINAL_ITEM_DIR,
     outputDir: ACTIVE_ITEM_DIR,
     outputSize: ITEM_ICON_SIZE,
+    urlPrefix: '/itemicon',
   })
   const deviceResult = await generateWebpIcons({
     sourceDir: ORIGINAL_DEVICE_DIR,
     outputDir: ACTIVE_DEVICE_DIR,
     outputSize: DEVICE_ICON_SIZE,
+    urlPrefix: '/device-icons',
   })
   const spriteResult = await convertSprites({
     sourceDir: ORIGINAL_SPRITE_DIR,
     outputDir: ACTIVE_SPRITE_DIR,
   })
   const removedAtlases = await removeLegacyAtlases()
-  const assetVersionToken = await computeAssetVersionToken()
-  await writeAssetVersionToken(assetVersionToken)
+  const allFileMap = { ...itemResult.fileMap, ...deviceResult.fileMap, ...spriteResult.fileMap }
+  await writeAssetFileMap(allFileMap)
 
   console.log('资源归一化完成。')
   console.log(`- 归档 item 图标: ${archivedItems.length}`)
@@ -232,7 +226,7 @@ async function main() {
   if (deviceResult.removed.length > 0) console.log(`- 已删除 ${deviceResult.removed.length} 个过期 device webp 输出`)
   if (spriteResult.removed.length > 0) console.log(`- 已删除 ${spriteResult.removed.length} 个过期 sprite webp 输出`)
   if (removedAtlases) console.log('- 已清理旧 atlas 输出目录 public/atlases')
-  console.log(`- 资源缓存版本: ${assetVersionToken}`)
+  console.log(`- 已写入资源哈希映射，共 ${Object.keys(allFileMap).length} 项`)
 }
 
 main().catch((error) => {
