@@ -8,7 +8,7 @@ https://endfield.anonymous-test.top/
 
 > 目前主要面向电脑端使用。小屏幕设备暂未做完整适配。
 
-![产线布置预览](.docs/~promotions/images/skland.v0.0.9/image.png)
+![产线布置预览](.github/readme-assets/layout-preview.png)
 
 ---
 
@@ -30,19 +30,19 @@ https://endfield.anonymous-test.top/
 
 ### 产线布置
 
-![产线布置](.docs/~promotions/images/skland.v0.0.9/image.png)
+![产线布置](.github/readme-assets/layout-preview.png)
 
 ### 电力仿真
 
-![电力仿真](.docs/~promotions/images/skland.v1.0.5/image-2.png)
+![电力仿真](.github/readme-assets/power-sim.png)
 
 ### 流程图规划
 
-![流程图规划](.docs/~promotions/images/skland.v1.0.5/image-3.png)
+![流程图规划](.github/readme-assets/flow-planner.png)
 
 ### 物流优先级配置
 
-![物流优先级配置](.docs/~promotions/images/skland.v1.1.0/image-2.png)
+![物流优先级配置](.github/readme-assets/logistics-priority.png)
 
 ---
 
@@ -223,7 +223,7 @@ npm run build && gh release create v1.2.0 --target v2 --title "v1.2.0" --notes "
 ## 目录结构
 
 ```text
-.docs/               文档、需求、设计记录、宣传文案
+.docs/               私有文档子模块（需求、设计记录、宣传文案）
 public/              静态资源与公开蓝图
 scripts/             资源生成与索引脚本
 src/app/             应用级上下文与全局状态
