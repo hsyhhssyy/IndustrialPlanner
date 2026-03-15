@@ -31,6 +31,10 @@ type BlueprintDeviceSnapshot = {
   rotation: Rotation
   origin: { x: number; y: number }
   config: DeviceInstance['config']
+  placementRecord?: {
+    baseId: BaseId
+    baseOrigin: { x: number; y: number }
+  }
 }
 
 export type BlueprintSnapshot = {
@@ -196,13 +200,14 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
     const rotation = (entry as Record<string, unknown>).rotation
     const origin = (entry as Record<string, unknown>).origin
     const config = (entry as Record<string, unknown>).config
+    const placementRecordRaw = (entry as Record<string, unknown>).placementRecord
     const normalizedTypeId = normalizeKnownDeviceTypeId(typeId)
     if (!normalizedTypeId || !(normalizedTypeId in DEVICE_TYPE_BY_ID)) return null
     if (!origin || typeof origin !== 'object') return null
     const x = (origin as Record<string, unknown>).x
     const y = (origin as Record<string, unknown>).y
     if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) return null
-    parsedDevices.push({
+    const parsedDevice: BlueprintDeviceSnapshot = {
       typeId: normalizedTypeId as DeviceTypeId,
       rotation: sanitizeRotation(rotation),
       origin: { x: Math.round(x), y: Math.round(y) },
@@ -210,7 +215,28 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
         cloneDeviceConfig((config ?? {}) as DeviceInstance['config']),
         normalizedTypeId as DeviceTypeId,
       ),
-    })
+    }
+
+    if (placementRecordRaw && typeof placementRecordRaw === 'object') {
+      const recordBaseId = (placementRecordRaw as Record<string, unknown>).baseId
+      const recordBaseOrigin = (placementRecordRaw as Record<string, unknown>).baseOrigin
+      const recordX = recordBaseOrigin && typeof recordBaseOrigin === 'object' ? (recordBaseOrigin as Record<string, unknown>).x : null
+      const recordY = recordBaseOrigin && typeof recordBaseOrigin === 'object' ? (recordBaseOrigin as Record<string, unknown>).y : null
+      if (
+        typeof recordBaseId === 'string' &&
+        typeof recordX === 'number' &&
+        typeof recordY === 'number' &&
+        Number.isFinite(recordX) &&
+        Number.isFinite(recordY)
+      ) {
+        parsedDevice.placementRecord = {
+          baseId: recordBaseId as BaseId,
+          baseOrigin: { x: Math.round(recordX), y: Math.round(recordY) },
+        }
+      }
+    }
+
+    parsedDevices.push(parsedDevice)
   }
 
   return {
@@ -302,6 +328,10 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         rotation: device.rotation,
         origin: { x: device.origin.x - minX, y: device.origin.y - minY },
         config: cloneDeviceConfig(device.config),
+        placementRecord: {
+          baseId: activeBaseId,
+          baseOrigin: { x: device.origin.x, y: device.origin.y },
+        },
       })),
     }
 
@@ -483,6 +513,12 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
           rotation: sanitizeRotation(device.rotation),
           origin: { ...device.origin },
           config: cloneDeviceConfig(device.config),
+          placementRecord: device.placementRecord
+            ? {
+                baseId: device.placementRecord.baseId,
+                baseOrigin: { ...device.placementRecord.baseOrigin },
+              }
+            : undefined,
         })),
       }
 
@@ -554,6 +590,12 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
             rotation: sanitizeRotation(device.rotation),
             origin: { ...device.origin },
             config: cloneDeviceConfig(device.config),
+            placementRecord: device.placementRecord
+              ? {
+                  baseId: device.placementRecord.baseId,
+                  baseOrigin: { ...device.placementRecord.baseOrigin },
+                }
+              : undefined,
           })),
         })
       } catch {

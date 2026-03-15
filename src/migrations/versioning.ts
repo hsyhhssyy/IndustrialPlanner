@@ -54,6 +54,10 @@ type StoredBlueprintSnapshot = {
     rotation: DeviceInstance['rotation']
     origin: { x: number; y: number }
     config: DeviceConfig
+    placementRecord?: {
+      baseId: BaseId
+      baseOrigin: { x: number; y: number }
+    }
   }>
 }
 
@@ -401,12 +405,39 @@ export function normalizeBlueprintSnapshotsStorage(rawValue: StoredBlueprintSnap
           if (!device.origin || typeof device.origin !== 'object') return null
           if (typeof device.origin.x !== 'number' || typeof device.origin.y !== 'number') return null
 
-          return {
+          let placementRecord: { baseId: BaseId; baseOrigin: { x: number; y: number } } | undefined
+          if (device.placementRecord && typeof device.placementRecord === 'object') {
+            const recordBaseId = (device.placementRecord as { baseId?: unknown }).baseId
+            const recordBaseOrigin = (device.placementRecord as { baseOrigin?: unknown }).baseOrigin
+            const recordX = recordBaseOrigin && typeof recordBaseOrigin === 'object' ? (recordBaseOrigin as { x?: unknown }).x : null
+            const recordY = recordBaseOrigin && typeof recordBaseOrigin === 'object' ? (recordBaseOrigin as { y?: unknown }).y : null
+            if (
+              typeof recordBaseId === 'string' &&
+              typeof recordX === 'number' &&
+              typeof recordY === 'number' &&
+              Number.isFinite(recordX) &&
+              Number.isFinite(recordY)
+            ) {
+              placementRecord = {
+                baseId: recordBaseId as BaseId,
+                baseOrigin: { x: recordX, y: recordY },
+              }
+            }
+          }
+
+          const normalizedDevice = {
             typeId: normalizedTypeId,
             rotation: device.rotation,
             origin: { x: device.origin.x, y: device.origin.y },
             config: migrateDeviceConfigToV1((device.config ?? {}) as DeviceConfig, normalizedTypeId),
           }
+          if (placementRecord) {
+            return {
+              ...normalizedDevice,
+              placementRecord,
+            }
+          }
+          return normalizedDevice
         })
         .filter((device): device is NonNullable<typeof device> => Boolean(device))
 
