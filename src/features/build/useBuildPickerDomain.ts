@@ -1,41 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getDeviceById } from '../../domain/geometry'
-import { DEVICE_TYPE_BY_ID, ITEMS, RECIPES } from '../../domain/registry'
+import { DEVICE_TYPE_BY_ID, LIQUID_ITEM_IDS, RECIPES, SOLID_ITEM_IDS } from '../../domain/registry'
 import { buildProcessorPreloadSlots, processorBufferSpec, serializeProcessorPreloadSlots } from '../../domain/shared/deviceConfig'
+import {
+  inputBufferAllowedTypesForSlot,
+  isExternalLiquidSourceDeviceType,
+  normalizeExternalLiquidSourceItemId,
+} from '../../domain/shared/itemPickerRules'
 import type { DeviceRuntime, ItemId, LayoutState } from '../../domain/types'
 import { normalizeReactorPoolConfig } from '../../sim/reactorPool'
 import { useReactorPoolConfigDomain } from './reactorPoolConfigDomain'
 import { useBuildConfigDomain } from './useBuildConfigDomain'
 import type { ItemPickerFilter, ItemPickerState } from '../../ui/dialogs/itemPicker.types'
-
-function preloadAllowedTypesBySlot(deviceTypeId: LayoutState['devices'][number]['typeId'], slotIndex: number): Array<'solid' | 'liquid'> {
-  if (
-    deviceTypeId === 'item_port_xiranite_oven_1' ||
-    deviceTypeId === 'item_port_liquid_filling_pd_mc_1' ||
-    deviceTypeId === 'item_port_hydro_planter_1'
-  ) {
-    if (slotIndex === 1) return ['liquid']
-    return ['solid']
-  }
-  return ['solid']
-}
-
-const DEFAULT_PUMP_OUTPUT_ITEM_ID: ItemId = 'item_liquid_water'
-const PUMP_SELECTABLE_LIQUID_IDS = new Set<ItemId>([
-  'item_liquid_water',
-  'item_liquid_plant_grass_1',
-  'item_liquid_plant_grass_2',
-  'item_liquid_xiranite',
-])
 const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
 const PROTOCOL_HUB_OUTPUT_PORT_IDS = ['out_w_2', 'out_w_5', 'out_w_8', 'out_e_2', 'out_e_5', 'out_e_8'] as const
 
 function isAdmissionDeviceType(typeId: LayoutState['devices'][number]['typeId'] | undefined) {
   return typeId === 'item_log_admission' || typeId === 'item_pipe_admission'
-}
-
-function isPumpOutputDeviceType(typeId: LayoutState['devices'][number]['typeId'] | undefined) {
-  return typeId === 'item_port_water_pump_1' || typeId === 'item_port_udpipe_unloader_1'
 }
 
 type UseBuildPickerDomainParams = {
@@ -101,10 +82,8 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
         )
       : false
   const selectedPumpOutputItemId =
-    isPumpOutputDeviceType(selectedDevice?.typeId)
-      ? PUMP_SELECTABLE_LIQUID_IDS.has(selectedDevice.config.pumpOutputItemId ?? DEFAULT_PUMP_OUTPUT_ITEM_ID)
-        ? (selectedDevice.config.pumpOutputItemId ?? DEFAULT_PUMP_OUTPUT_ITEM_ID)
-        : DEFAULT_PUMP_OUTPUT_ITEM_ID
+    selectedDevice && isExternalLiquidSourceDeviceType(selectedDevice.typeId)
+      ? normalizeExternalLiquidSourceItemId(selectedDevice.config.pumpOutputItemId)
       : undefined
   const selectedProtocolHubOutputs = useMemo(() => {
     if (selectedDevice?.typeId !== 'item_port_sp_hub_1') return []
@@ -146,12 +125,12 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
   }, [selectedDevice])
 
   const reactorSolidOutputItemCandidates = useMemo(
-    () => ITEMS.filter((item) => item.type === 'solid').map((item) => item.id),
+    () => SOLID_ITEM_IDS,
     [],
   )
 
   const reactorLiquidOutputItemCandidates = useMemo(
-    () => ITEMS.filter((item) => item.type === 'liquid').map((item) => item.id),
+    () => LIQUID_ITEM_IDS,
     [],
   )
 
@@ -181,8 +160,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       return entry?.itemId
     }
     if (itemPickerState.kind === 'pumpOutput') {
-      const configured = pickerTargetDevice.config.pumpOutputItemId ?? DEFAULT_PUMP_OUTPUT_ITEM_ID
-      return PUMP_SELECTABLE_LIQUID_IDS.has(configured) ? configured : DEFAULT_PUMP_OUTPUT_ITEM_ID
+      return normalizeExternalLiquidSourceItemId(pickerTargetDevice.config.pumpOutputItemId)
     }
     if (itemPickerState.kind === 'preload') {
       return pickerPreloadSlots[itemPickerState.slotIndex]?.itemId ?? undefined
@@ -206,13 +184,12 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     if (itemPickerState.kind === 'pumpOutput') {
       return {
         allowedTypes: ['liquid'],
-        allowedItemIds: PUMP_SELECTABLE_LIQUID_IDS,
       }
     }
     if (itemPickerState.kind === 'preload') {
       if (!pickerTargetDevice) return { allowedTypes: ['solid'] }
       return {
-        allowedTypes: preloadAllowedTypesBySlot(pickerTargetDevice.typeId, itemPickerState.slotIndex),
+        allowedTypes: inputBufferAllowedTypesForSlot(pickerTargetDevice.typeId, itemPickerState.slotIndex),
       }
     }
     return undefined
@@ -253,7 +230,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       setItemPickerState(null)
       return
     }
-    if (itemPickerState.kind === 'pumpOutput' && !isPumpOutputDeviceType(target.typeId)) {
+    if (itemPickerState.kind === 'pumpOutput' && !isExternalLiquidSourceDeviceType(target.typeId)) {
       setItemPickerState(null)
       return
     }
@@ -282,7 +259,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       } else if (itemPickerState.kind === 'protocolHubOutput') {
         updateProtocolHubOutputItem(pickerTargetDevice.instanceId, itemPickerState.portId, itemId ?? undefined)
       } else if (itemPickerState.kind === 'pumpOutput') {
-        const nextItemId = itemId && PUMP_SELECTABLE_LIQUID_IDS.has(itemId) ? itemId : DEFAULT_PUMP_OUTPUT_ITEM_ID
+        const nextItemId = normalizeExternalLiquidSourceItemId(itemId ?? undefined)
         updatePumpOutputItem(pickerTargetDevice.instanceId, nextItemId)
       } else if (itemPickerState.kind === 'preload') {
         updateProcessorPreloadSlot(pickerTargetDevice.instanceId, itemPickerState.slotIndex, { itemId })

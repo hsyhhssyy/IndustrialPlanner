@@ -123,6 +123,7 @@ export interface DeviceTypeDef {
   inputBufferSlots?: number
   outputBufferSlots?: number
   inputBufferSlotCapacities?: number[]
+  inputBufferAllowedTypesBySlot?: Array<Array<'solid' | 'liquid'>>
   outputBufferSlotCapacities?: number[]
   placementConstraints?: PlacementConstraint[]
   ports0: PortDef[]

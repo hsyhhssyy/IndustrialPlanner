@@ -1,4 +1,5 @@
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID } from '../domain/registry'
+import { inputBufferAllowedTypesForSlot } from '../domain/shared/itemPickerRules'
 import type { BaseId, DeviceConfig, DeviceInstance, ItemId, LayoutState } from '../domain/types'
 import { normalizePortPriorityGroups } from '../domain/shared/portPriority'
 
@@ -143,7 +144,10 @@ function normalizePositiveAmount(value: unknown) {
   return normalized > 0 ? normalized : undefined
 }
 
-function sanitizePreloadEntries(entries: DeviceConfig['preloadInputs'] | DeviceConfig['storagePreloadInputs']) {
+function sanitizePreloadEntries(
+  entries: DeviceConfig['preloadInputs'] | DeviceConfig['storagePreloadInputs'],
+  allowedTypesForSlot?: (slotIndex: number) => Array<'solid' | 'liquid'>,
+) {
   if (!Array.isArray(entries)) return []
   return entries
     .map((entry) => {
@@ -151,6 +155,7 @@ function sanitizePreloadEntries(entries: DeviceConfig['preloadInputs'] | DeviceC
       const itemId = normalizeKnownItemId(entry?.itemId)
       const amount = normalizePositiveAmount(entry?.amount)
       if (slotIndex === null || !itemId || amount === undefined) return null
+      if (allowedTypesForSlot && !allowedTypesForSlot(slotIndex).includes(ITEM_BY_ID[itemId].type)) return null
       return { slotIndex, itemId, amount }
     })
     .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
@@ -180,8 +185,8 @@ function sanitizeStorageSlots(storageSlots: DeviceConfig['storageSlots']) {
       if (slotIndex === null) return null
 
       const mode = entry?.mode === 'pinned' ? 'pinned' : 'free'
-      const pinnedItemId = normalizeKnownItemId(entry?.pinnedItemId)
-      const preloadItemId = normalizeKnownItemId(entry?.preloadItemId)
+      const pinnedItemId = normalizeKnownSolidItemId(entry?.pinnedItemId)
+      const preloadItemId = normalizeKnownSolidItemId(entry?.preloadItemId)
       const preloadAmount = preloadItemId ? normalizePositiveAmount(entry?.preloadAmount) : undefined
       const normalizedMode = mode === 'pinned' && pinnedItemId ? 'pinned' : 'free'
 
@@ -248,11 +253,21 @@ function sanitizeDeviceConfigUnknownItems(config: DeviceConfig, deviceTypeId: De
   if (pumpOutputItemId) nextConfig.pumpOutputItemId = pumpOutputItemId
   else delete nextConfig.pumpOutputItemId
 
-  const preloadInputs = sanitizePreloadEntries(nextConfig.preloadInputs)
+  const preloadInputs = sanitizePreloadEntries(
+    nextConfig.preloadInputs,
+    deviceTypeId && DEVICE_TYPE_BY_ID[deviceTypeId]?.runtimeKind === 'processor'
+      ? (slotIndex) => inputBufferAllowedTypesForSlot(deviceTypeId, slotIndex)
+      : undefined,
+  )
   if (preloadInputs.length > 0) nextConfig.preloadInputs = preloadInputs
   else delete nextConfig.preloadInputs
 
-  const preloadInputItemId = normalizeKnownItemId(nextConfig.preloadInputItemId)
+  const preloadInputItemId = (() => {
+    const normalized = normalizeKnownItemId(nextConfig.preloadInputItemId)
+    if (!normalized) return undefined
+    if (!deviceTypeId || DEVICE_TYPE_BY_ID[deviceTypeId]?.runtimeKind !== 'processor') return normalized
+    return inputBufferAllowedTypesForSlot(deviceTypeId, 0).includes(ITEM_BY_ID[normalized].type) ? normalized : undefined
+  })()
   const preloadInputAmount = preloadInputItemId ? normalizePositiveAmount(nextConfig.preloadInputAmount) : undefined
   if (preloadInputItemId && preloadInputAmount !== undefined) {
     nextConfig.preloadInputItemId = preloadInputItemId
@@ -266,7 +281,7 @@ function sanitizeDeviceConfigUnknownItems(config: DeviceConfig, deviceTypeId: De
   if (storageSlots.length > 0) nextConfig.storageSlots = storageSlots
   else delete nextConfig.storageSlots
 
-  const storagePreloadInputs = sanitizePreloadEntries(nextConfig.storagePreloadInputs)
+  const storagePreloadInputs = sanitizePreloadEntries(nextConfig.storagePreloadInputs, () => ['solid'])
   if (storagePreloadInputs.length > 0) nextConfig.storagePreloadInputs = storagePreloadInputs
   else delete nextConfig.storagePreloadInputs
 

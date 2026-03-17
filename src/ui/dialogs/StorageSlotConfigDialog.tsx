@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useAppContext } from '../../app/AppContext'
-import { ITEMS } from '../../domain/registry'
+import { selectableItemIdsForType } from '../../domain/shared/itemPickerRules'
 import type { DeviceInstance, ItemId, StorageSlotConfigEntry } from '../../domain/types'
 import { getItemLabel, type Language } from '../../i18n'
 import { ItemPickerDialog } from './ItemPickerDialog'
@@ -95,7 +95,7 @@ export function StorageSlotConfigDialog({ device, language, t, getItemIconPath, 
   const [recentItemIds, setRecentItemIds] = useState<ItemId[]>([])
 
   const pickerDisabledItemIds = useMemo<ReadonlySet<ItemId>>(() => new Set<ItemId>(), [])
-  const solidItemIds = useMemo(() => new Set(ITEMS.filter((item) => item.type === 'solid').map((item) => item.id)), [])
+  const solidItemIds = useMemo(() => selectableItemIdsForType('solid'), [])
   const selectedSlot = slots[selectedSlotIndex] ?? slots[0]
   const pinnedCount = useMemo(() => slots.filter((slot) => slot.mode === 'pinned').length, [slots])
   const configuredCount = useMemo(() => slots.filter((slot) => hasConfiguredContent(slot)).length, [slots])

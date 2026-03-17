@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID } from '../../domain/registry'
+import { inputBufferAllowedTypesForSlot, isExternalLiquidSourceDeviceType, normalizeItemIdByAllowedTypes } from '../../domain/shared/itemPickerRules'
 import { clamp } from '../../domain/shared/math'
 import type { DeviceInstance, ItemId, LayoutState, PreloadInputConfigEntry } from '../../domain/types'
 
@@ -23,11 +24,6 @@ export function useBuildConfigDomain({
   buildProcessorPreloadSlots,
   serializeProcessorPreloadSlots,
 }: UseBuildConfigDomainParams) {
-  const isPumpOutputDeviceType = useCallback(
-    (typeId: DeviceInstance['typeId']) => typeId === 'item_port_water_pump_1' || typeId === 'item_port_udpipe_unloader_1',
-    [],
-  )
-
   const normalizeProtocolHubOutputItemId = useCallback((itemId: ItemId | undefined) => {
     return itemId && ITEM_BY_ID[itemId]?.type === 'solid' ? itemId : undefined
   }, [])
@@ -181,13 +177,13 @@ export function useBuildConfigDomain({
       setLayout((current) => ({
         ...current,
         devices: current.devices.map((device) =>
-          device.instanceId === deviceInstanceId && isPumpOutputDeviceType(device.typeId)
+          device.instanceId === deviceInstanceId && isExternalLiquidSourceDeviceType(device.typeId)
             ? { ...device, config: { ...device.config, pumpOutputItemId } }
             : device,
         ),
       }))
     },
-    [isPumpOutputDeviceType, setLayout],
+    [setLayout],
   )
 
   const updateProtocolHubOutputItem = useCallback(
@@ -284,7 +280,8 @@ export function useBuildConfigDomain({
 
           const currentSlot = slots[slotIndex]
           const hasItemPatch = patch.itemId !== undefined
-          const nextItemId = hasItemPatch ? (patch.itemId ?? null) : currentSlot.itemId
+          const allowedTypes = inputBufferAllowedTypesForSlot(device.typeId, slotIndex)
+          const nextItemId = hasItemPatch ? (normalizeItemIdByAllowedTypes(patch.itemId ?? undefined, allowedTypes) ?? null) : currentSlot.itemId
           let requestedAmount = patch.amount !== undefined ? patch.amount : currentSlot.amount
           if (hasItemPatch && nextItemId && patch.amount === undefined) {
             const normalizedCurrent = Math.floor(Number.isFinite(currentSlot.amount) ? currentSlot.amount : 0)

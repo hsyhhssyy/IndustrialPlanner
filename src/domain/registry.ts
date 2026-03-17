@@ -4,6 +4,10 @@ const solidAllowance = { mode: 'solid' as const, whitelist: [] }
 const liquidAllowance = { mode: 'liquid' as const, whitelist: [] }
 const recipeItemsAllowance = { mode: 'recipe_items' as const, whitelist: [] }
 const bottledLiquidTags = ['瓶装液体']
+const SINGLE_SOLID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid']]
+const DOUBLE_SOLID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid'], ['solid']]
+const SOLID_LIQUID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid'], ['liquid']]
+const FIVE_MIXED_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = Array.from({ length: 5 }, () => ['solid', 'liquid'])
 
 export const ITEMS: ItemDef[] = [
   { id: 'item_bottled_food_1', displayName: '柑实罐头', type: 'solid' },
@@ -130,6 +134,53 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_quartz_sand', displayName: '紫晶矿', type: 'solid', tags: ['矿石'] },
   { id: 'item_xiranite_powder', displayName: '息壤', type: 'solid' },
 ]
+
+const LIQUID_BOTTLE_DISMANTLE_RECIPES: RecipeDef[] = [
+  { id: 'r_liquid_dismantling_iron_bottle_water_default', bottleItemId: 'item_iron_bottle', liquidItemId: 'item_liquid_water', filledBottleItemId: 'item_iron_bottle_filled_water' },
+  { id: 'r_liquid_dismantling_iron_bottle_grass_1_default', bottleItemId: 'item_iron_bottle', liquidItemId: 'item_liquid_plant_grass_1', filledBottleItemId: 'item_iron_bottle_filled_liquid_plant_grass_1' },
+  { id: 'r_liquid_dismantling_iron_bottle_grass_2_default', bottleItemId: 'item_iron_bottle', liquidItemId: 'item_liquid_plant_grass_2', filledBottleItemId: 'item_iron_bottle_filled_liquid_plant_grass_2' },
+  { id: 'r_liquid_dismantling_iron_bottle_xiranite_default', bottleItemId: 'item_iron_bottle', liquidItemId: 'item_liquid_xiranite', filledBottleItemId: 'item_iron_bottle_filled_liquid_xiranite' },
+  { id: 'r_liquid_dismantling_glass_bottle_water_hidden', bottleItemId: 'item_glass_bottle', liquidItemId: 'item_liquid_water', filledBottleItemId: 'item_glass_bottle_filled_water' },
+  { id: 'r_liquid_dismantling_glass_bottle_grass_1_hidden', bottleItemId: 'item_glass_bottle', liquidItemId: 'item_liquid_plant_grass_1', filledBottleItemId: 'item_glass_bottle_filled_liquid_plant_grass_1' },
+  { id: 'r_liquid_dismantling_glass_bottle_grass_2_hidden', bottleItemId: 'item_glass_bottle', liquidItemId: 'item_liquid_plant_grass_2', filledBottleItemId: 'item_glass_bottle_filled_liquid_plant_grass_2' },
+  { id: 'r_liquid_dismantling_glass_bottle_xiranite_hidden', bottleItemId: 'item_glass_bottle', liquidItemId: 'item_liquid_xiranite', filledBottleItemId: 'item_glass_bottle_filled_liquid_xiranite' },
+  { id: 'r_liquid_dismantling_glass_enr_bottle_water_hidden', bottleItemId: 'item_glass_enr_bottle', liquidItemId: 'item_liquid_water', filledBottleItemId: 'item_glass_enr_bottle_filled_water' },
+  { id: 'r_liquid_dismantling_glass_enr_bottle_grass_1_hidden', bottleItemId: 'item_glass_enr_bottle', liquidItemId: 'item_liquid_plant_grass_1', filledBottleItemId: 'item_glass_enr_bottle_filled_liquid_plant_grass_1' },
+  { id: 'r_liquid_dismantling_glass_enr_bottle_grass_2_hidden', bottleItemId: 'item_glass_enr_bottle', liquidItemId: 'item_liquid_plant_grass_2', filledBottleItemId: 'item_glass_enr_bottle_filled_liquid_plant_grass_2' },
+  { id: 'r_liquid_dismantling_glass_enr_bottle_xiranite_hidden', bottleItemId: 'item_glass_enr_bottle', liquidItemId: 'item_liquid_xiranite', filledBottleItemId: 'item_glass_enr_bottle_filled_liquid_xiranite' },
+  { id: 'r_liquid_dismantling_iron_enr_bottle_water_hidden', bottleItemId: 'item_iron_enr_bottle', liquidItemId: 'item_liquid_water', filledBottleItemId: 'item_iron_enr_bottle_filled_water' },
+  { id: 'r_liquid_dismantling_iron_enr_bottle_grass_1_hidden', bottleItemId: 'item_iron_enr_bottle', liquidItemId: 'item_liquid_plant_grass_1', filledBottleItemId: 'item_iron_enr_bottle_filled_liquid_plant_grass_1' },
+  { id: 'r_liquid_dismantling_iron_enr_bottle_grass_2_hidden', bottleItemId: 'item_iron_enr_bottle', liquidItemId: 'item_liquid_plant_grass_2', filledBottleItemId: 'item_iron_enr_bottle_filled_liquid_plant_grass_2' },
+  { id: 'r_liquid_dismantling_iron_enr_bottle_xiranite_hidden', bottleItemId: 'item_iron_enr_bottle', liquidItemId: 'item_liquid_xiranite', filledBottleItemId: 'item_iron_enr_bottle_filled_liquid_xiranite' },
+  { id: 'r_liquid_dismantling_iron_bottle_sewage_hidden', bottleItemId: 'item_iron_bottle', liquidItemId: 'item_liquid_sewage', filledBottleItemId: 'item_iron_bottle_filled_liquid_sewage' },
+  { id: 'r_liquid_dismantling_iron_bottle_xiranite_poly_hidden', bottleItemId: 'item_iron_bottle', liquidItemId: 'item_liquid_xiranite_poly', filledBottleItemId: 'item_iron_bottle_filled_liquid_xiranite_poly' },
+  { id: 'r_liquid_dismantling_iron_bottle_xiranite_lowpoly_hidden', bottleItemId: 'item_iron_bottle', liquidItemId: 'item_liquid_xiranite_lowpoly', filledBottleItemId: 'item_iron_bottle_filled_liquid_xiranite_lowpoly' },
+  { id: 'r_liquid_dismantling_glass_bottle_sewage_hidden', bottleItemId: 'item_glass_bottle', liquidItemId: 'item_liquid_sewage', filledBottleItemId: 'item_glass_bottle_filled_liquid_sewage' },
+  { id: 'r_liquid_dismantling_glass_bottle_xiranite_poly_hidden', bottleItemId: 'item_glass_bottle', liquidItemId: 'item_liquid_xiranite_poly', filledBottleItemId: 'item_glass_bottle_filled_liquid_xiranite_poly' },
+  { id: 'r_liquid_dismantling_glass_bottle_xiranite_lowpoly_hidden', bottleItemId: 'item_glass_bottle', liquidItemId: 'item_liquid_xiranite_lowpoly', filledBottleItemId: 'item_glass_bottle_filled_liquid_xiranite_lowpoly' },
+  { id: 'r_liquid_dismantling_glass_enr_bottle_sewage_hidden', bottleItemId: 'item_glass_enr_bottle', liquidItemId: 'item_liquid_sewage', filledBottleItemId: 'item_glass_enr_bottle_filled_liquid_sewage' },
+  { id: 'r_liquid_dismantling_glass_enr_bottle_xiranite_poly_hidden', bottleItemId: 'item_glass_enr_bottle', liquidItemId: 'item_liquid_xiranite_poly', filledBottleItemId: 'item_glass_enr_bottle_filled_liquid_xiranite_poly' },
+  { id: 'r_liquid_dismantling_glass_enr_bottle_xiranite_lowpoly_hidden', bottleItemId: 'item_glass_enr_bottle', liquidItemId: 'item_liquid_xiranite_lowpoly', filledBottleItemId: 'item_glass_enr_bottle_filled_liquid_xiranite_lowpoly' },
+  { id: 'r_liquid_dismantling_iron_enr_bottle_sewage_hidden', bottleItemId: 'item_iron_enr_bottle', liquidItemId: 'item_liquid_sewage', filledBottleItemId: 'item_iron_enr_bottle_filled_liquid_sewage' },
+  { id: 'r_liquid_dismantling_iron_enr_bottle_xiranite_poly_hidden', bottleItemId: 'item_iron_enr_bottle', liquidItemId: 'item_liquid_xiranite_poly', filledBottleItemId: 'item_iron_enr_bottle_filled_liquid_xiranite_poly' },
+  { id: 'r_liquid_dismantling_iron_enr_bottle_xiranite_lowpoly_hidden', bottleItemId: 'item_iron_enr_bottle', liquidItemId: 'item_liquid_xiranite_lowpoly', filledBottleItemId: 'item_iron_enr_bottle_filled_liquid_xiranite_lowpoly' },
+  { id: 'r_liquid_dismantling_copper_bottle_water_hidden', bottleItemId: 'item_copper_bottle', liquidItemId: 'item_liquid_water', filledBottleItemId: 'item_copper_bottle_filled_water' },
+  { id: 'r_liquid_dismantling_copper_bottle_grass_1_hidden', bottleItemId: 'item_copper_bottle', liquidItemId: 'item_liquid_plant_grass_1', filledBottleItemId: 'item_copper_bottle_filled_liquid_plant_grass_1' },
+  { id: 'r_liquid_dismantling_copper_bottle_grass_2_hidden', bottleItemId: 'item_copper_bottle', liquidItemId: 'item_liquid_plant_grass_2', filledBottleItemId: 'item_copper_bottle_filled_liquid_plant_grass_2' },
+  { id: 'r_liquid_dismantling_copper_bottle_xiranite_hidden', bottleItemId: 'item_copper_bottle', liquidItemId: 'item_liquid_xiranite', filledBottleItemId: 'item_copper_bottle_filled_liquid_xiranite' },
+  { id: 'r_liquid_dismantling_copper_bottle_sewage_hidden', bottleItemId: 'item_copper_bottle', liquidItemId: 'item_liquid_sewage', filledBottleItemId: 'item_copper_bottle_filled_liquid_sewage' },
+  { id: 'r_liquid_dismantling_copper_bottle_xiranite_poly_hidden', bottleItemId: 'item_copper_bottle', liquidItemId: 'item_liquid_xiranite_poly', filledBottleItemId: 'item_copper_bottle_filled_liquid_xiranite_poly' },
+  { id: 'r_liquid_dismantling_copper_bottle_xiranite_lowpoly_hidden', bottleItemId: 'item_copper_bottle', liquidItemId: 'item_liquid_xiranite_lowpoly', filledBottleItemId: 'item_copper_bottle_filled_liquid_xiranite_lowpoly' },
+].map((recipe) => ({
+  id: recipe.id,
+  machineType: 'item_port_dismantler_1',
+  cycleSeconds: 2,
+  inputs: [{ itemId: recipe.filledBottleItemId, amount: 1 }],
+  outputs: [
+    { itemId: recipe.bottleItemId, amount: 1 },
+    { itemId: recipe.liquidItemId, amount: 1 },
+  ],
+}))
 
 export const RECIPES: RecipeDef[] = [
   {
@@ -1179,6 +1230,7 @@ export const RECIPES: RecipeDef[] = [
     ],
     outputs: [{ itemId: 'item_copper_bottle_filled_liquid_xiranite_lowpoly', amount: 1 }],
   },
+  ...LIQUID_BOTTLE_DISMANTLE_RECIPES,
   {
     id: 'r_shaper_iron_bottle_from_iron_nugget_basic',
     machineType: 'item_port_shaper_1',
@@ -1352,6 +1404,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     powerDemand: 5,
     size: { width: 3, height: 3 },
     shortName: 'Crusher',
+    inputBufferAllowedTypesBySlot: SINGLE_SOLID_INPUT_SLOT_TYPES,
     ports0: [
       ...[0, 1, 2].map((x) => ({
         id: `in_s_${x}`,
@@ -1380,6 +1433,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     powerDemand: 5,
     size: { width: 3, height: 3 },
     shortName: 'Furnace',
+    inputBufferAllowedTypesBySlot: SINGLE_SOLID_INPUT_SLOT_TYPES,
     ports0: [
       ...[0, 1, 2].map((x) => ({
         id: `in_s_${x}`,
@@ -1411,6 +1465,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     tags: ['武陵'],
     inputBufferSlots: 2,
     inputBufferSlotCapacities: [50, 50],
+    inputBufferAllowedTypesBySlot: SOLID_LIQUID_INPUT_SLOT_TYPES,
     outputBufferSlots: 2,
     outputBufferSlotCapacities: [50, 50],
     ports0: [
@@ -1459,6 +1514,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     powerDemand: 20,
     size: { width: 3, height: 3 },
     shortName: 'Component',
+    inputBufferAllowedTypesBySlot: SINGLE_SOLID_INPUT_SLOT_TYPES,
     ports0: [
       ...[0, 1, 2].map((x) => ({
         id: `in_s_${x}`,
@@ -1487,6 +1543,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     powerDemand: 10,
     size: { width: 3, height: 3 },
     shortName: 'Shaper',
+    inputBufferAllowedTypesBySlot: SINGLE_SOLID_INPUT_SLOT_TYPES,
     ports0: [
       ...[0, 1, 2].map((x) => ({
         id: `in_s_${x}`,
@@ -1515,6 +1572,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     powerDemand: 10,
     size: { width: 5, height: 5 },
     shortName: 'SeedCol',
+    inputBufferAllowedTypesBySlot: SINGLE_SOLID_INPUT_SLOT_TYPES,
     ports0: [
       ...[0, 1, 2, 3, 4].map((x) => ({
         id: `in_s_${x}`,
@@ -1543,6 +1601,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     powerDemand: 20,
     size: { width: 5, height: 5 },
     shortName: 'Planter',
+    inputBufferAllowedTypesBySlot: SINGLE_SOLID_INPUT_SLOT_TYPES,
     ports0: [
       ...[0, 1, 2, 3, 4].map((x) => ({
         id: `in_s_${x}`,
@@ -1574,6 +1633,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     tags: ['武陵'],
     inputBufferSlots: 2,
     inputBufferSlotCapacities: [50, 50],
+    inputBufferAllowedTypesBySlot: SOLID_LIQUID_INPUT_SLOT_TYPES,
     ports0: [
       ...[0, 1, 2, 3, 4].map((x) => ({
         id: `in_s_${x}`,
@@ -1613,6 +1673,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     shortName: 'Winder',
     inputBufferSlots: 2,
     inputBufferSlotCapacities: [50, 50],
+    inputBufferAllowedTypesBySlot: DOUBLE_SOLID_INPUT_SLOT_TYPES,
     ports0: [
       ...[0, 1, 2, 3, 4, 5].map((x) => ({
         id: `in_s_${x}`,
@@ -1643,6 +1704,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     shortName: 'Filling',
     inputBufferSlots: 2,
     inputBufferSlotCapacities: [50, 50],
+    inputBufferAllowedTypesBySlot: DOUBLE_SOLID_INPUT_SLOT_TYPES,
     ports0: [
       ...[0, 1, 2, 3, 4, 5].map((x) => ({
         id: `in_s_${x}`,
@@ -1673,6 +1735,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     shortName: 'LiquidFilling',
     inputBufferSlots: 2,
     inputBufferSlotCapacities: [50, 50],
+    inputBufferAllowedTypesBySlot: SOLID_LIQUID_INPUT_SLOT_TYPES,
     ports0: [
       ...[0, 1, 2, 3, 4, 5].map((x) => ({
         id: `in_s_${x}`,
@@ -1712,6 +1775,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     shortName: 'Pack',
     inputBufferSlots: 2,
     inputBufferSlotCapacities: [50, 50],
+    inputBufferAllowedTypesBySlot: DOUBLE_SOLID_INPUT_SLOT_TYPES,
     ports0: [
       ...[0, 1, 2, 3, 4, 5].map((x) => ({
         id: `in_s_${x}`,
@@ -1742,6 +1806,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     shortName: 'Thicken',
     inputBufferSlots: 2,
     inputBufferSlotCapacities: [50, 50],
+    inputBufferAllowedTypesBySlot: DOUBLE_SOLID_INPUT_SLOT_TYPES,
     ports0: [
       ...[0, 1, 2, 3, 4, 5].map((x) => ({
         id: `in_s_${x}`,
@@ -1770,6 +1835,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     powerDemand: 0,
     size: { width: 2, height: 2 },
     shortName: 'HeatPool',
+    inputBufferAllowedTypesBySlot: SINGLE_SOLID_INPUT_SLOT_TYPES,
     ports0: [
       ...[0, 1].map((x) => ({
         id: `in_s_${x}`,
@@ -1792,6 +1858,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     inputBufferSlots: 5,
     outputBufferSlots: 1,
     inputBufferSlotCapacities: [50, 50, 50, 50, 50],
+    inputBufferAllowedTypesBySlot: FIVE_MIXED_INPUT_SLOT_TYPES,
     outputBufferSlotCapacities: [1],
     tags: ['武陵'],
     ports0: [
@@ -1842,6 +1909,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     shortName: 'XiraniteOven',
     inputBufferSlots: 2,
     inputBufferSlotCapacities: [50, 50],
+    inputBufferAllowedTypesBySlot: SOLID_LIQUID_INPUT_SLOT_TYPES,
     tags: ['武陵'],
     ports0: [
       ...[0, 1, 2, 3, 4].map((x) => ({
@@ -1881,6 +1949,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     size: { width: 6, height: 4 },
     shortName: 'Dismantler',
     tags: ['武陵'],
+    inputBufferAllowedTypesBySlot: SINGLE_SOLID_INPUT_SLOT_TYPES,
     ports0: [
       ...[0, 1, 2, 3, 4, 5].map((x) => ({
         id: `out_n_${x}`,
@@ -2030,10 +2099,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
         localCellY: 1,
         edge: 'E',
         direction: 'Output',
-        allowedItems: {
-          mode: 'whitelist',
-          whitelist: ['item_liquid_water', 'item_liquid_plant_grass_1', 'item_liquid_plant_grass_2', 'item_liquid_xiranite'],
-        },
+        allowedItems: { mode: 'any', whitelist: [] },
         allowedTypes: liquidAllowance,
       },
     ],
@@ -2053,10 +2119,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
         localCellY: 1,
         edge: 'E',
         direction: 'Output',
-        allowedItems: {
-          mode: 'whitelist',
-          whitelist: ['item_liquid_water', 'item_liquid_plant_grass_1', 'item_liquid_plant_grass_2', 'item_liquid_xiranite'],
-        },
+        allowedItems: { mode: 'any', whitelist: [] },
         allowedTypes: liquidAllowance,
       },
     ],
@@ -2574,6 +2637,8 @@ export const DEVICE_TYPE_BY_ID: Record<string, DeviceTypeDef> = Object.fromEntri
 )
 
 export const ITEM_BY_ID: Record<string, ItemDef> = Object.fromEntries(ITEMS.map((item) => [item.id, item]))
+export const SOLID_ITEM_IDS = ITEMS.filter((item) => item.type === 'solid').map((item) => item.id)
+export const LIQUID_ITEM_IDS = ITEMS.filter((item) => item.type === 'liquid').map((item) => item.id)
 
 export const BELT_TYPES = new Set(['belt_straight_1x1', 'belt_turn_cw_1x1', 'belt_turn_ccw_1x1'])
 export const PIPE_TYPES = new Set(['pipe_straight_1x1', 'pipe_turn_cw_1x1', 'pipe_turn_ccw_1x1'])

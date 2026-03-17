@@ -1,5 +1,10 @@
-import { BASE_BY_ID, DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
+import { BASE_BY_ID, DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, LIQUID_ITEM_IDS, RECIPES } from '../domain/registry'
 import { detectOverlaps, getFootprintCells, getRotatedPorts, isBufferedBeltTransportDevice, isPipeLike, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
+import {
+  DEFAULT_EXTERNAL_LIQUID_SOURCE_ITEM_ID,
+  isExternalLiquidSourceDeviceType,
+  normalizeExternalLiquidSourceItemId,
+} from '../domain/shared/itemPickerRules'
 import {
   createEmptyPortPriorityCursors,
   getDirectionalPortIds,
@@ -44,14 +49,8 @@ const BELT_SECONDS_PER_CELL = 2
 const PIPE_SECONDS_PER_CELL = 0.5
 const PICKUP_BLOCK_WINDOW_SECONDS = BELT_SECONDS_PER_CELL
 const STORAGE_SUBMIT_INTERVAL_SECONDS = 10
-const DEFAULT_WATER_PUMP_ITEM_ID: ItemId = 'item_liquid_water'
-const WATER_PUMP_SELECTABLE_ITEM_IDS: ItemId[] = [
-  'item_liquid_water',
-  'item_liquid_plant_grass_1',
-  'item_liquid_plant_grass_2',
-  'item_liquid_xiranite',
-]
-const WATER_PUMP_SELECTABLE_ITEM_SET = new Set<ItemId>(WATER_PUMP_SELECTABLE_ITEM_IDS)
+const EXTERNAL_LIQUID_SOURCE_ITEM_IDS: ItemId[] = LIQUID_ITEM_IDS
+const EXTERNAL_LIQUID_SOURCE_ITEM_SET = new Set<ItemId>(EXTERNAL_LIQUID_SOURCE_ITEM_IDS)
 const DEFAULT_PROCESSOR_BUFFER_CAPACITY = 50
 const DEFAULT_PROCESSOR_BUFFER_SLOTS = 1
 const ITEM_IDS: ItemId[] = ITEMS.map((item) => item.id)
@@ -76,10 +75,6 @@ const PROTOCOL_HUB_SUPPLY_KW = 200
 const GLOBAL_BATTERY_CAPACITY_J = 100_000_000
 const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
 const PROTOCOL_HUB_OUTPUT_PORT_IDS = ['out_w_2', 'out_w_5', 'out_w_8', 'out_e_2', 'out_e_5', 'out_e_8'] as const
-
-function isPumpOutputDeviceType(typeId: DeviceInstance['typeId']) {
-  return typeId === 'item_port_water_pump_1' || typeId === 'item_port_udpipe_unloader_1'
-}
 
 const PROTOCOL_HUB_WAREHOUSE_INPUT_PORT_IDS = new Set([
   'in_n_2',
@@ -570,10 +565,10 @@ function analyzeWarehouseBusConnectivity(layout: LayoutState) {
   }
 }
 
-function waterPumpOutputItemId(device: DeviceInstance): ItemId {
-  const configured = device.config.pumpOutputItemId
-  if (configured && WATER_PUMP_SELECTABLE_ITEM_SET.has(configured)) return configured
-  return DEFAULT_WATER_PUMP_ITEM_ID
+function externalLiquidSourceItemId(device: DeviceInstance): ItemId {
+  const configured = normalizeExternalLiquidSourceItemId(device.config.pumpOutputItemId)
+  if (EXTERNAL_LIQUID_SOURCE_ITEM_SET.has(configured)) return configured
+  return DEFAULT_EXTERNAL_LIQUID_SOURCE_ITEM_ID
 }
 
 function mark(output: Partial<Record<ItemId, number>>, itemId: ItemId, delta: number) {
@@ -2543,9 +2538,9 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
       }
     }
 
-    if (isPumpOutputDeviceType(device.typeId) && 'inventory' in runtime) {
-      const selectedItemId = waterPumpOutputItemId(device)
-      for (const itemId of WATER_PUMP_SELECTABLE_ITEM_IDS) {
+    if (isExternalLiquidSourceDeviceType(device.typeId) && 'inventory' in runtime) {
+      const selectedItemId = externalLiquidSourceItemId(device)
+      for (const itemId of EXTERNAL_LIQUID_SOURCE_ITEM_IDS) {
         runtime.inventory[itemId] = itemId === selectedItemId ? Number.POSITIVE_INFINITY : 0
       }
     }
@@ -2769,7 +2764,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 export function initialStorageConfig(deviceTypeId: string) {
   if (deviceTypeId === 'item_port_storager_1') return { submitToWarehouse: true }
   if (deviceTypeId === 'item_port_water_pump_1' || deviceTypeId === 'item_port_udpipe_unloader_1') {
-    return { pumpOutputItemId: DEFAULT_WATER_PUMP_ITEM_ID }
+    return { pumpOutputItemId: DEFAULT_EXTERNAL_LIQUID_SOURCE_ITEM_ID }
   }
   return {}
 }
