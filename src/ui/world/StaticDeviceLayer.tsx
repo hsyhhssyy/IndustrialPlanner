@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef } from 'react'
 import { getItemIconPath } from '../../assets/iconPaths'
-import { getDeviceSpritePath } from '../../domain/deviceSprites'
+import { getDeviceSpritePath, getDeviceSpriteRenderMetrics } from '../../domain/deviceSprites'
 import { EDGE_ANGLE, getFootprintCells, getRotatedPorts, isBelt, isPipe, isWarehouseBusPassThroughType, OPPOSITE_EDGE } from '../../domain/geometry'
 import { buildBeltTrackPath, getBeltItemPosition } from '../../domain/shared/beltVisual'
 import { rotatedFootprintSize } from '../../domain/shared/math'
@@ -359,11 +359,13 @@ export const StaticDeviceLayer = memo(
           const type = DEVICE_TYPE_BY_ID[renderDevice.typeId]
           if (!type) return null
           const footprintSize = rotatedFootprintSize(type.size, renderDevice.rotation)
-          const surfaceContentWidthPx = footprintSize.width * BASE_CELL_SIZE - 6
-          const surfaceContentHeightPx = footprintSize.height * BASE_CELL_SIZE - 6
           const isQuarterTurn = renderDevice.rotation === 90 || renderDevice.rotation === 270
-          const textureWidthPx = isQuarterTurn ? surfaceContentHeightPx : surfaceContentWidthPx
-          const textureHeightPx = isQuarterTurn ? surfaceContentWidthPx : surfaceContentHeightPx
+          const { textureWidthPx, textureHeightPx, centerOffsetXPx, centerOffsetYPx } = getDeviceSpriteRenderMetrics({
+            typeId: renderDevice.typeId,
+            rotation: renderDevice.rotation,
+            baseCellSize: BASE_CELL_SIZE,
+            fallbackFootprintSize: footprintSize,
+          })
           const isPickupPort = renderDevice.typeId === 'item_port_unloader_1'
           const isProtocolHub = renderDevice.typeId === 'item_port_sp_hub_1'
           const isGrinder = renderDevice.typeId === 'item_port_grinder_1'
@@ -542,6 +544,8 @@ export const StaticDeviceLayer = memo(
                       aria-hidden="true"
                       draggable={false}
                       style={{
+                        left: `calc(50% + ${centerOffsetXPx}px)`,
+                        top: `calc(50% + ${centerOffsetYPx}px)`,
                         width: `${textureWidthPx}px`,
                         height: `${textureHeightPx}px`,
                         transform: `translate(-50%, -50%) rotate(${renderDevice.rotation}deg)`,

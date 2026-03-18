@@ -641,6 +641,7 @@ button:disabled {
 
 .device-surface.textured-surface {
   background: transparent;
+  overflow: visible;
 }
 
 .device-texture {
@@ -1038,7 +1039,7 @@ button:disabled {
 .place-ghost-surface {
   position: absolute;
   inset: 2px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .place-ghost-texture {

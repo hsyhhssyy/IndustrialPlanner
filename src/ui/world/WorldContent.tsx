@@ -58,6 +58,8 @@ type PlacePreview = {
   textureSrc: string | null
   textureWidthPx: number
   textureHeightPx: number
+  centerOffsetXPx: number
+  centerOffsetYPx: number
   chevrons: PlacePreviewChevron[]
   isValid: boolean
 }
@@ -206,6 +208,8 @@ export function WorldContent({
                 aria-hidden="true"
                 draggable={false}
                 style={{
+                  left: `calc(50% + ${placePreview.centerOffsetXPx}px)`,
+                  top: `calc(50% + ${placePreview.centerOffsetYPx}px)`,
                   width: `${placePreview.textureWidthPx}px`,
                   height: `${placePreview.textureHeightPx}px`,
                   transform: `translate(-50%, -50%) rotate(${placePreview.rotation}deg)`,

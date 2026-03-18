@@ -1,9 +1,16 @@
-import type { DeviceTypeId } from './types'
+import type { DeviceTypeId, Rotation } from './types'
 import { withAssetVersion } from '../assets/assetVersion'
+
+type DeviceSpriteRenderBounds = {
+  widthCells: number
+  heightCells: number
+  offsetCells?: { x: number; y: number }
+}
 
 type DeviceSpriteRegistration = {
   typeId: DeviceTypeId
   fileName: string
+  renderBounds?: DeviceSpriteRenderBounds
 }
 
 export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
@@ -29,10 +36,18 @@ export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
   { typeId: 'item_port_log_hongs_bus_source', fileName: 'item_port_log_hongs_bus_source.png' },
   { typeId: 'item_port_log_hongs_bus', fileName: 'item_port_log_hongs_bus.png' },
   { typeId: 'item_port_sp_hub_1', fileName: 'item_port_sp_hub_1.png' },
-  { typeId: 'item_port_water_pump_1', fileName: 'liquid_placeholder_structure.svg' },
+  {
+    typeId: 'item_port_water_pump_1',
+    fileName: 'item_port_water_pump_1.png',
+    renderBounds: {
+      widthCells: 5,
+      heightCells: 3,
+      offsetCells: { x: -1, y: 0 },
+    },
+  },
   { typeId: 'item_port_udpipe_unloader_1', fileName: 'item_port_udpipe_unloader_1.png' },
   { typeId: 'item_liquid_cleaner_1', fileName: 'item_liquid_cleaner_1.png' },
-  { typeId: 'item_port_liquid_storager_1', fileName: 'liquid_placeholder_structure.png' },
+  { typeId: 'item_port_liquid_storager_1', fileName: 'item_port_liquid_storager_1.png' },
   { typeId: 'item_port_power_diffuser_1', fileName: 'item_port_power_diffuser_1.png' },
   { typeId: 'item_port_storager_1', fileName: 'item_port_storager_1.png' },
   { typeId: 'item_log_splitter', fileName: 'item_log_splitter.png' },
@@ -48,6 +63,48 @@ export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
 export const DEVICE_SPRITE_BY_TYPE: Partial<Record<DeviceTypeId, string>> = Object.fromEntries(
   DEVICE_SPRITE_REGISTRATIONS.map((entry) => [entry.typeId, withAssetVersion(`/sprites/${entry.fileName.replace(/\.[^.]+$/, '.webp')}`)]),
 )
+
+const DEVICE_SPRITE_RENDER_BOUNDS_BY_TYPE: Partial<Record<DeviceTypeId, DeviceSpriteRenderBounds>> = Object.fromEntries(
+  DEVICE_SPRITE_REGISTRATIONS.filter((entry) => entry.renderBounds).map((entry) => [entry.typeId, entry.renderBounds as DeviceSpriteRenderBounds]),
+)
+
+function rotateOffset(offset: { x: number; y: number }, rotation: Rotation) {
+  switch (rotation) {
+    case 90:
+      return { x: -offset.y, y: offset.x }
+    case 180:
+      return { x: -offset.x, y: -offset.y }
+    case 270:
+      return { x: offset.y, y: -offset.x }
+    default:
+      return offset
+  }
+}
+
+export function getDeviceSpriteRenderMetrics({
+  typeId,
+  rotation,
+  baseCellSize,
+  fallbackFootprintSize,
+}: {
+  typeId: DeviceTypeId
+  rotation: Rotation
+  baseCellSize: number
+  fallbackFootprintSize: { width: number; height: number }
+}) {
+  const renderBounds = DEVICE_SPRITE_RENDER_BOUNDS_BY_TYPE[typeId]
+  const renderSize = renderBounds
+    ? { width: renderBounds.widthCells, height: renderBounds.heightCells }
+    : fallbackFootprintSize
+  const offsetCells = renderBounds?.offsetCells ? rotateOffset(renderBounds.offsetCells, rotation) : { x: 0, y: 0 }
+
+  return {
+    textureWidthPx: renderSize.width * baseCellSize - 6,
+    textureHeightPx: renderSize.height * baseCellSize - 6,
+    centerOffsetXPx: offsetCells.x * baseCellSize,
+    centerOffsetYPx: offsetCells.y * baseCellSize,
+  }
+}
 
 export function getDeviceSpritePath(typeId: DeviceTypeId) {
   return DEVICE_SPRITE_BY_TYPE[typeId] ?? null

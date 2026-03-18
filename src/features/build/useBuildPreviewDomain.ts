@@ -3,7 +3,7 @@ import { applyLogisticsPath, longestValidLogisticsPrefix, pathFromTrace } from '
 import { cellToDeviceId, getDeviceById, getRotatedPorts, isBelt, isBeltLike, isPipe, isPipeLike, linksFromLayout, OPPOSITE_EDGE, shouldHidePortChevron } from '../../domain/geometry'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { validatePlacementConstraints } from '../../domain/placement'
-import { getDeviceSpritePath } from '../../domain/deviceSprites'
+import { getDeviceSpritePath, getDeviceSpriteRenderMetrics } from '../../domain/deviceSprites'
 import { isDeviceWithinAllowedPlacementArea } from '../../domain/shared/placementArea'
 import { rotatedFootprintSize } from '../../domain/shared/math'
 import type { DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
@@ -218,11 +218,12 @@ export function useBuildPreviewDomain({
     const type = DEVICE_TYPE_BY_ID[placeType]
     const footprintSize = rotatedFootprintSize(type.size, placeRotation)
     const textureSrc = getDeviceSpritePath(placeType)
-    const surfaceContentWidthPx = footprintSize.width * baseCellSize - 6
-    const surfaceContentHeightPx = footprintSize.height * baseCellSize - 6
-    const isQuarterTurn = placeRotation === 90 || placeRotation === 270
-    const textureWidthPx = isQuarterTurn ? surfaceContentHeightPx : surfaceContentWidthPx
-    const textureHeightPx = isQuarterTurn ? surfaceContentWidthPx : surfaceContentHeightPx
+    const { textureWidthPx, textureHeightPx, centerOffsetXPx, centerOffsetYPx } = getDeviceSpriteRenderMetrics({
+      typeId: placeType,
+      rotation: placeRotation,
+      baseCellSize,
+      fallbackFootprintSize: footprintSize,
+    })
     const chevronLength = baseCellSize * (1 / 6)
     const chevronThickness = baseCellSize * (2 / 5)
     const chevronGap = baseCellSize * (1 / 12)
@@ -252,6 +253,8 @@ export function useBuildPreviewDomain({
       textureSrc,
       textureWidthPx,
       textureHeightPx,
+      centerOffsetXPx,
+      centerOffsetYPx,
       footprintSize,
       chevrons,
       isValid:

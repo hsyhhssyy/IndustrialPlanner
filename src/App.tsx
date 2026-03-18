@@ -200,6 +200,7 @@ function App() {
       setRightPanelWidth,
       setLeftPanelCollapsed,
       setRightPanelCollapsed,
+      setActiveWorkbenchView,
     },
     editor: {
       state: {
@@ -235,6 +236,13 @@ function App() {
     eventBus,
   } = useAppContext()
   const t = useMemo(() => createTranslator(language), [language])
+  const setWorkbenchMode = useCallback(
+    (nextMode: 'place' | 'delete' | 'blueprint') => {
+      setMode(nextMode)
+      setActiveWorkbenchView(nextMode)
+    },
+    [setActiveWorkbenchView, setMode],
+  )
   const {
     activeBaseId,
     setActiveBaseId,
@@ -1098,7 +1106,7 @@ function App() {
     powerDemandOverrideKw: configuredPowerDemandOverrideKw,
     updateSim,
     onStarted: () => {
-      setMode('place')
+      setWorkbenchMode('place')
       setPlaceOperation('default')
       setPlaceType('')
       setLogStart(null)
@@ -1145,12 +1153,12 @@ function App() {
       void (async () => {
         const armed = await armBlueprint(id)
         if (!armed) return
-        setMode('blueprint')
+        setWorkbenchMode('blueprint')
         setPlaceOperation('blueprint')
       })()
     })
     const unsubscribeDisarmBlueprint = eventBus.on('left.blueprint.disarm', () => {
-      setMode('blueprint')
+      setWorkbenchMode('blueprint')
       setPlaceOperation('blueprint')
       disarmBlueprint()
     })
@@ -1201,7 +1209,7 @@ function App() {
     renameBlueprint,
     saveSelectionAsBlueprint,
     selectBlueprint,
-    setMode,
+    setWorkbenchMode,
     setPlaceOperation,
     shareBlueprintToClipboard,
     shareBlueprintToFile,
