@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useAppContext } from '../../app/AppContext'
 import { useBuildInteractionDomain } from '../../features/build/useBuildInteractionDomain'
 import type { BuildInteractionParams } from '../../features/build/buildInteraction.contract'
+import { GridlineCanvas } from '../world/GridlineCanvas'
 
 type CenterPanelProps = {
   viewportRef: RefObject<HTMLDivElement | null>
@@ -11,9 +12,12 @@ type CenterPanelProps = {
   mode: string
   canvasWidthPx: number
   canvasHeightPx: number
+  canvasOffsetXPx: number
+  canvasOffsetYPx: number
   baseCellSize: number
   viewOffset: { x: number; y: number }
   zoomScale: number
+  uiTheme: string
   worldContent: ReactNode
 }
 
@@ -24,9 +28,12 @@ export function CenterPanel({
   mode,
   canvasWidthPx,
   canvasHeightPx,
+  canvasOffsetXPx,
+  canvasOffsetYPx,
   baseCellSize,
   viewOffset,
   zoomScale,
+  uiTheme,
   worldContent,
 }: CenterPanelProps) {
   const { eventBus } = useAppContext()
@@ -67,6 +74,15 @@ export function CenterPanel({
             transform: `translate(${viewOffset.x}px, ${viewOffset.y}px) scale(${zoomScale})`,
           }}
         >
+          <GridlineCanvas
+            width={canvasWidthPx}
+            height={canvasHeightPx}
+            cellSize={baseCellSize}
+            zoomScale={zoomScale}
+            originCellX={Math.round(canvasOffsetXPx / baseCellSize)}
+            originCellY={Math.round(canvasOffsetYPx / baseCellSize)}
+            themeKey={uiTheme}
+          />
           {worldContent}
         </div>
       </div>

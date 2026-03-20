@@ -522,11 +522,7 @@ button:disabled {
 }
 
 .grid-canvas {
-  background-image:
-    linear-gradient(to right, var(--canvas-grid-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--canvas-grid-line) 1px, transparent 1px);
-  background-size: 18px 18px;
-  background-position: -0.5px -0.5px;
+  background: var(--canvas-bg);
   border: 1px solid var(--canvas-grid-border);
   flex: 0 0 auto;
   position: absolute;
@@ -534,8 +530,16 @@ button:disabled {
   left: 0;
 }
 
+.gridline-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .world-layer {
   position: absolute;
+  z-index: 1;
 }
 
 .world-pass-layer {
@@ -4068,7 +4072,8 @@ button:disabled {
   --scrollbar-thumb: #334155;
   --scrollbar-thumb-hover: #46586f;
   --canvas-bg: #161c27;
-  --canvas-grid-line: #2c3340;
+  --canvas-grid-line-minor: rgba(149, 163, 184, 0.18);
+  --canvas-grid-line-major: rgba(149, 163, 184, 0.36);
   --canvas-grid-border: #2f3a4a;
   --place-ghost-border: rgba(255, 255, 255, 0.96);
   --place-ghost-fill: rgba(79, 123, 196, 0.22);
@@ -4100,7 +4105,8 @@ button:disabled {
   --scrollbar-thumb: #b8c4d3;
   --scrollbar-thumb-hover: #96a8bf;
   --canvas-bg: var(--surface-1);
-  --canvas-grid-line: rgba(88, 102, 120, 0.42);
+  --canvas-grid-line-minor: rgba(38, 49, 61, 0.14);
+  --canvas-grid-line-major: rgba(38, 49, 61, 0.28);
   --canvas-grid-border: #475669;
   --place-ghost-border: rgba(49, 60, 77, 0.94);
   --place-ghost-fill: rgba(76, 104, 148, 0.18);

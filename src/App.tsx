@@ -1374,9 +1374,12 @@ function App() {
           mode={mode}
           canvasWidthPx={canvasWidthPx}
           canvasHeightPx={canvasHeightPx}
+          canvasOffsetXPx={canvasOffsetXPx}
+          canvasOffsetYPx={canvasOffsetYPx}
           baseCellSize={BASE_CELL_SIZE}
           viewOffset={viewOffset}
           zoomScale={zoomScale}
+          uiTheme={uiTheme}
           worldContent={worldContent}
         />
 
