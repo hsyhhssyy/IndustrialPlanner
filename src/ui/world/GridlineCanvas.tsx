@@ -11,10 +11,18 @@ type GridlineCanvasProps = {
 }
 
 const MAJOR_GRID_INTERVAL = 5
+const MINOR_GRID_FADE_START_PX = 16
+const MINOR_GRID_HIDE_PX = 10
 
 function isMajorLine(index: number, originCell: number) {
   const relativeIndex = index - originCell
   return relativeIndex % MAJOR_GRID_INTERVAL === 0
+}
+
+function getMinorGridOpacity(screenCellSize: number) {
+  if (screenCellSize <= MINOR_GRID_HIDE_PX) return 0
+  if (screenCellSize >= MINOR_GRID_FADE_START_PX) return 1
+  return (screenCellSize - MINOR_GRID_HIDE_PX) / (MINOR_GRID_FADE_START_PX - MINOR_GRID_HIDE_PX)
 }
 
 export function GridlineCanvas({ width, height, cellSize, zoomScale, originCellX, originCellY, themeKey }: GridlineCanvasProps) {
@@ -41,15 +49,20 @@ export function GridlineCanvas({ width, height, cellSize, zoomScale, originCellX
     const majorStroke = styles.getPropertyValue('--canvas-grid-line-major').trim() || 'rgba(255, 255, 255, 0.4)'
     const minorLineWidth = 1 / zoomScale
     const majorLineWidth = 2 / zoomScale
+    const screenCellSize = cellSize * zoomScale
+    const minorGridOpacity = getMinorGridOpacity(screenCellSize)
     const columnCount = Math.round(width / cellSize)
     const rowCount = Math.round(height / cellSize)
 
     context.lineCap = 'butt'
 
     const drawLines = (axis: 'vertical' | 'horizontal', major: boolean) => {
+      if (!major && minorGridOpacity <= 0) return
+
       context.beginPath()
       context.strokeStyle = major ? majorStroke : minorStroke
       context.lineWidth = major ? majorLineWidth : minorLineWidth
+      context.globalAlpha = major ? 1 : minorGridOpacity
 
       const maxIndex = axis === 'vertical' ? columnCount : rowCount
       const originCell = axis === 'vertical' ? originCellX : originCellY
@@ -71,6 +84,7 @@ export function GridlineCanvas({ width, height, cellSize, zoomScale, originCellX
       }
 
       context.stroke()
+      context.globalAlpha = 1
     }
 
     drawLines('vertical', false)
