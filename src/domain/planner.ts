@@ -1,3 +1,4 @@
+import { prioritizeNonBottleDismantleRecipes } from './shared/recipePriority'
 import type { DeviceTypeId, ItemId, RecipeDef } from './types'
 
 export type PlannerTargetInput = {
@@ -71,7 +72,7 @@ export function buildProductionPlan({ targets, recipes, recipeSelectionByItem, f
   let nodeCounter = 0
 
   function buildTreeNode(itemId: ItemId, demandPerMinute: number, depth: number, pathItems: Set<ItemId>): PlannerTreeNode {
-    const options = forcedRawItemIdSet.has(itemId) ? [] : (producersByItem.get(itemId) ?? [])
+    const options = forcedRawItemIdSet.has(itemId) ? [] : prioritizeNonBottleDismantleRecipes(producersByItem.get(itemId) ?? [])
     const selectedRecipe = options.find((recipe) => recipe.id === recipeSelectionByItem[itemId]) ?? options[0]
 
     const isCycle = pathItems.has(itemId)

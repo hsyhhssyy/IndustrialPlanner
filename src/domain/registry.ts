@@ -1,3 +1,4 @@
+import { LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG } from './shared/recipePriority'
 import type { BaseDef, DeviceTypeDef, ItemDef, RecipeDef } from './types'
 
 const solidAllowance = { mode: 'solid' as const, whitelist: [] }
@@ -175,6 +176,7 @@ const LIQUID_BOTTLE_DISMANTLE_RECIPES: RecipeDef[] = [
   id: recipe.id,
   machineType: 'item_port_dismantler_1',
   cycleSeconds: 2,
+  tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
   inputs: [{ itemId: recipe.filledBottleItemId, amount: 1 }],
   outputs: [
     { itemId: recipe.bottleItemId, amount: 1 },

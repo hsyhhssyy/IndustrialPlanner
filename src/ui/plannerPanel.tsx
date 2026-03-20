@@ -3,6 +3,7 @@ import { getDeviceIconPath, getItemIconPath } from '../assets/iconPaths'
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
 import { buildProductionPlan, type PlannerTargetInput, type PlannerTreeNode } from '../domain/planner'
 import { isKnownItemId } from '../domain/shared/predicates'
+import { prioritizeNonBottleDismantleRecipes } from '../domain/shared/recipePriority'
 import { isSuperRecipeItem, isSuperRecipeRecipe, shouldShowSuperRecipeContent } from '../domain/shared/superRecipeVisibility'
 import type { DeviceTypeId, ItemId } from '../domain/types'
 import { usePersistentState } from '../core/usePersistentState'
@@ -636,8 +637,18 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
         map.set(output.itemId, list)
       }
     }
+    for (const [itemId, recipeIds] of map.entries()) {
+      const orderedRecipeIds = prioritizeNonBottleDismantleRecipes(
+        recipeIds.reduce<(typeof RECIPES)[number][]>((list, recipeId) => {
+          const recipe = recipeById.get(recipeId)
+          if (recipe) list.push(recipe)
+          return list
+        }, []),
+      ).map((recipe) => recipe.id)
+      map.set(itemId, orderedRecipeIds)
+    }
     return map
-  }, [recipesForPlanning])
+  }, [recipeById, recipesForPlanning])
 
   const sinkRecipeIdsByInputItem = useMemo(() => {
     const map = new Map<ItemId, string[]>()
