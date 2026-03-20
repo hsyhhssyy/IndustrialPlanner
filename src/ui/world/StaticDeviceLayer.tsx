@@ -364,7 +364,7 @@ export const StaticDeviceLayer = memo(
             typeId: renderDevice.typeId,
             rotation: renderDevice.rotation,
             baseCellSize: BASE_CELL_SIZE,
-            fallbackFootprintSize: footprintSize,
+            fallbackTextureSize: type.size,
           })
           const isPickupPort = renderDevice.typeId === 'item_port_unloader_1'
           const isProtocolHub = renderDevice.typeId === 'item_port_sp_hub_1'

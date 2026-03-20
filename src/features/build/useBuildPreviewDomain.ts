@@ -222,7 +222,7 @@ export function useBuildPreviewDomain({
       typeId: placeType,
       rotation: placeRotation,
       baseCellSize,
-      fallbackFootprintSize: footprintSize,
+      fallbackTextureSize: type.size,
     })
     const chevronLength = baseCellSize * (1 / 6)
     const chevronThickness = baseCellSize * (2 / 5)

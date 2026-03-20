@@ -85,17 +85,17 @@ export function getDeviceSpriteRenderMetrics({
   typeId,
   rotation,
   baseCellSize,
-  fallbackFootprintSize,
+  fallbackTextureSize,
 }: {
   typeId: DeviceTypeId
   rotation: Rotation
   baseCellSize: number
-  fallbackFootprintSize: { width: number; height: number }
+  fallbackTextureSize: { width: number; height: number }
 }) {
   const renderBounds = DEVICE_SPRITE_RENDER_BOUNDS_BY_TYPE[typeId]
   const renderSize = renderBounds
     ? { width: renderBounds.widthCells, height: renderBounds.heightCells }
-    : fallbackFootprintSize
+    : fallbackTextureSize
   const offsetCells = renderBounds?.offsetCells ? rotateOffset(renderBounds.offsetCells, rotation) : { x: 0, y: 0 }
 
   return {
