@@ -4,6 +4,7 @@ import type { DeviceTypeId, EditMode } from '../domain/types'
 import type { Language } from '../i18n'
 import { TypedEventBus } from './eventBus'
 import { createDefaultAppSettings, normalizeAppSettings, readAppSettings, writeAppSettings, type UiTheme } from './settings'
+import { APP_VERSION } from '../migrations/versioning'
 import {
   normalizeSuperRecipeEnabledPreference,
   SUPER_RECIPE_CONTROL_MODE,
@@ -23,6 +24,81 @@ export type DebugLogEntry = {
 }
 
 const MAX_DEBUG_LOG_ENTRIES = 200
+const VIEWPORT_STATE_STORAGE_KEY = 'stage6-global-viewport-state'
+const LEGACY_CELL_SIZE_STORAGE_KEY = 'stage1-cell-size'
+const DEFAULT_CELL_SIZE = 64
+const VIEWPORT_PERSIST_DEBOUNCE_MS = 160
+
+type PersistedViewportState = {
+  version: string
+  cellSize: number
+  viewOffset: { x: number; y: number }
+}
+
+function normalizePersistedCellSize(value: unknown) {
+  if (!Number.isFinite(value)) return DEFAULT_CELL_SIZE
+  return Math.max(12, Math.round(Number(value)))
+}
+
+function normalizePersistedViewOffset(value: unknown) {
+  if (!value || typeof value !== 'object') {
+    return { x: 0, y: 0 }
+  }
+
+  const candidate = value as { x?: unknown; y?: unknown }
+  return {
+    x: Number.isFinite(candidate.x) ? Math.round(Number(candidate.x)) : 0,
+    y: Number.isFinite(candidate.y) ? Math.round(Number(candidate.y)) : 0,
+  }
+}
+
+function defaultViewportState(): PersistedViewportState {
+  return {
+    version: APP_VERSION,
+    cellSize: DEFAULT_CELL_SIZE,
+    viewOffset: { x: 0, y: 0 },
+  }
+}
+
+function readLegacyCellSize() {
+  try {
+    const raw = localStorage.getItem(LEGACY_CELL_SIZE_STORAGE_KEY)
+    if (!raw) return null
+    return normalizePersistedCellSize(JSON.parse(raw))
+  } catch {
+    return null
+  }
+}
+
+function readPersistedViewportState(): PersistedViewportState {
+  if (typeof window === 'undefined') {
+    return defaultViewportState()
+  }
+
+  try {
+    const raw = localStorage.getItem(VIEWPORT_STATE_STORAGE_KEY)
+    if (!raw) {
+      const legacyCellSize = readLegacyCellSize()
+      return {
+        ...defaultViewportState(),
+        cellSize: legacyCellSize ?? DEFAULT_CELL_SIZE,
+      }
+    }
+
+    const candidate = JSON.parse(raw) as Partial<PersistedViewportState> | null
+    if (!candidate || candidate.version !== APP_VERSION) {
+      return defaultViewportState()
+    }
+
+    return {
+      version: APP_VERSION,
+      cellSize: normalizePersistedCellSize(candidate.cellSize),
+      viewOffset: normalizePersistedViewOffset(candidate.viewOffset),
+    }
+  } catch {
+    return defaultViewportState()
+  }
+}
 
 export type AppEventMap = {
   'app.language.set': Language
@@ -155,12 +231,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [placeType, setPlaceType] = usePersistentState<DeviceTypeId | ''>('stage1-place-type', '')
   const [placeRotation, setPlaceRotation] = usePersistentState<0 | 90 | 180 | 270>('stage1-place-rotation', 0)
   const [deleteTool, setDeleteTool] = usePersistentState<'single' | 'wholeBelt' | 'box'>('stage1-delete-tool', 'single')
-  const [cellSize, setCellSize] = usePersistentState<number>('stage1-cell-size', 64)
   const [activeWorkbenchView, setActiveWorkbenchView] = usePersistentState<WorkbenchView>('stage6-active-workbench-view', 'place')
   const [settings, setSettings] = useState(() => normalizeAppSettings(readAppSettings()))
+  const [persistedViewportState, setPersistedViewportState] = useState<PersistedViewportState>(() => readPersistedViewportState())
   const [placeOperation, setPlaceOperation] = useState<PlaceOperation>('default')
   const [linkDraftSourceId, setLinkDraftSourceId] = useState<string | null>(null)
-  const [viewOffset, setViewOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [selection, setSelection] = useState<string[]>([])
   const [logStart, setLogStart] = useState<Cell | null>(null)
   const [logCurrent, setLogCurrent] = useState<Cell | null>(null)
@@ -177,13 +252,57 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeDialog, setActiveDialog] = useState<'tool' | 'help' | 'settings' | null>(null)
   const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([])
   const debugLogSeqRef = useRef(0)
+  const viewportPersistTimeoutRef = useRef<number | null>(null)
   const eventBus = useMemo(() => new TypedEventBus<AppEventMap>(), [])
   const superRecipeEnabled = SUPER_RECIPE_CONTROL_MODE === 'forced-off' ? false : normalizeSuperRecipeEnabledPreference(settings.superRecipeEnabled)
   const { language, uiTheme, leftPanelWidth, rightPanelWidth, leftPanelCollapsed, rightPanelCollapsed, debugMode, maxTicksPerFrame } = settings
+  const cellSize = persistedViewportState.cellSize
+  const viewOffset = persistedViewportState.viewOffset
+
+  const setCellSize = useCallback<Dispatch<SetStateAction<number>>>((value) => {
+    setPersistedViewportState((current) => ({
+      ...current,
+      cellSize: normalizePersistedCellSize(typeof value === 'function' ? value(current.cellSize) : value),
+    }))
+  }, [])
+
+  const setViewOffset = useCallback<Dispatch<SetStateAction<{ x: number; y: number }>>>((value) => {
+    setPersistedViewportState((current) => ({
+      ...current,
+      viewOffset: normalizePersistedViewOffset(typeof value === 'function' ? value(current.viewOffset) : value),
+    }))
+  }, [])
 
   useEffect(() => {
     writeAppSettings(settings)
   }, [settings])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    if (viewportPersistTimeoutRef.current !== null) {
+      window.clearTimeout(viewportPersistTimeoutRef.current)
+    }
+
+    viewportPersistTimeoutRef.current = window.setTimeout(() => {
+      localStorage.setItem(
+        VIEWPORT_STATE_STORAGE_KEY,
+        JSON.stringify({
+          version: APP_VERSION,
+          cellSize,
+          viewOffset,
+        } satisfies PersistedViewportState),
+      )
+      viewportPersistTimeoutRef.current = null
+    }, VIEWPORT_PERSIST_DEBOUNCE_MS)
+
+    return () => {
+      if (viewportPersistTimeoutRef.current !== null) {
+        window.clearTimeout(viewportPersistTimeoutRef.current)
+        viewportPersistTimeoutRef.current = null
+      }
+    }
+  }, [cellSize, viewOffset])
 
   const setLanguage = useCallback((language: Language) => {
     setSettings((current) => ({ ...current, language }))
