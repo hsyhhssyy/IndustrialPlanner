@@ -1,6 +1,7 @@
+import { sanitizeBlueprintLinks, sanitizeLayoutLinks } from '../domain/deviceLinks'
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID } from '../domain/registry'
 import { inputBufferAllowedTypesForSlot } from '../domain/shared/itemPickerRules'
-import type { BaseId, DeviceConfig, DeviceInstance, ItemId, LayoutState } from '../domain/types'
+import type { BaseId, BlueprintDeviceLink, DeviceConfig, DeviceInstance, ItemId, LayoutState } from '../domain/types'
 import { normalizePortPriorityGroups } from '../domain/shared/portPriority'
 
 export const APP_VERSION = '1.0'
@@ -52,6 +53,7 @@ type StoredBlueprintSnapshot = {
   baseId: BaseId
   source: BlueprintSource
   devices: Array<{
+    blueprintInstanceId: string
     typeId: DeviceInstance['typeId']
     rotation: DeviceInstance['rotation']
     origin: { x: number; y: number }
@@ -61,6 +63,7 @@ type StoredBlueprintSnapshot = {
       baseOrigin: { x: number; y: number }
     }
   }>
+  links: BlueprintDeviceLink[]
 }
 
 export type PublicBlueprintIndexEntry = {
@@ -253,6 +256,18 @@ function sanitizeDeviceConfigUnknownItems(config: DeviceConfig, deviceTypeId: De
   if (pumpOutputItemId) nextConfig.pumpOutputItemId = pumpOutputItemId
   else delete nextConfig.pumpOutputItemId
 
+  if (deviceTypeId === 'item_port_udpipe_loader_1') {
+    nextConfig.darkPipeInletMode = nextConfig.darkPipeInletMode === 'link' ? 'link' : 'destroy'
+  } else {
+    delete nextConfig.darkPipeInletMode
+  }
+
+  if (deviceTypeId === 'item_port_udpipe_unloader_1') {
+    nextConfig.darkPipeOutletMode = nextConfig.darkPipeOutletMode === 'link' ? 'link' : 'generate'
+  } else {
+    delete nextConfig.darkPipeOutletMode
+  }
+
   const preloadInputs = sanitizePreloadEntries(
     nextConfig.preloadInputs,
     deviceTypeId && DEVICE_TYPE_BY_ID[deviceTypeId]?.runtimeKind === 'processor'
@@ -329,20 +344,28 @@ export function migrateDeviceConfigToV1(config: DeviceConfig, deviceTypeId?: Dev
 }
 
 function migrateLayoutToV1(layout: LayoutState): LayoutState {
+  const devices = layout.devices.flatMap((device) => {
+    const normalizedTypeId = normalizeKnownDeviceTypeId(device.typeId)
+    if (!normalizedTypeId) return []
+    return [
+      {
+        ...device,
+        typeId: normalizedTypeId,
+        config: migrateDeviceConfigToV1(device.config ?? {}, normalizedTypeId),
+      },
+    ]
+  })
+
   return {
     ...layout,
-    devices: layout.devices.flatMap((device) => {
-      const normalizedTypeId = normalizeKnownDeviceTypeId(device.typeId)
-      if (!normalizedTypeId) return []
-      return [
-        {
-          ...device,
-          typeId: normalizedTypeId,
-          config: migrateDeviceConfigToV1(device.config ?? {}, normalizedTypeId),
-        },
-      ]
-    }),
+    devices,
+    links: sanitizeLayoutLinks((layout as LayoutState & { links?: unknown }).links, devices),
   }
+}
+
+function sanitizeBlueprintDeviceInstanceId(value: unknown, fallbackIndex: number) {
+  if (typeof value === 'string' && value.trim().length > 0) return value
+  return `bp-device-${fallbackIndex}`
 }
 
 export function normalizeLayoutsByBaseStorage(rawValue: LayoutsByBaseStorage): LayoutsByBaseStorage {
@@ -413,7 +436,7 @@ export function normalizeBlueprintSnapshotsStorage(rawValue: StoredBlueprintSnap
       if (typeof entry.baseId !== 'string' || !Array.isArray(entry.devices)) return null
 
       const migratedDevices = entry.devices
-        .map((device) => {
+        .map((device, index) => {
           if (!device || typeof device !== 'object') return null
           const normalizedTypeId = normalizeKnownDeviceTypeId(device.typeId)
           if (!normalizedTypeId) return null
@@ -442,6 +465,7 @@ export function normalizeBlueprintSnapshotsStorage(rawValue: StoredBlueprintSnap
           }
 
           const normalizedDevice = {
+            blueprintInstanceId: sanitizeBlueprintDeviceInstanceId((device as { blueprintInstanceId?: unknown }).blueprintInstanceId, index),
             typeId: normalizedTypeId,
             rotation: device.rotation,
             origin: { x: device.origin.x, y: device.origin.y },
@@ -470,6 +494,7 @@ export function normalizeBlueprintSnapshotsStorage(rawValue: StoredBlueprintSnap
         baseId: entry.baseId as BaseId,
         source,
         devices: migratedDevices,
+        links: sanitizeBlueprintLinks((entry as StoredBlueprintSnapshot & { links?: unknown }).links, migratedDevices),
       }
       if (typeof entry.description === 'string' && entry.description.trim()) {
         normalized.description = entry.description.trim()

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { isDarkPipeInletType, isDarkPipeOutletType, upsertDarkPipeLink } from '../../domain/deviceLinks'
 import { applyLogisticsPath, deleteConnectedBelts, nextId } from '../../domain/logistics'
 import { getDeviceById, isBelt, isPipe } from '../../domain/geometry'
 import { validatePlacementConstraints } from '../../domain/placement'
@@ -63,6 +64,7 @@ export function useBuildInteractionDomain({
       state: {
         mode,
         placeOperation,
+        linkDraftSourceId,
         placeType,
         deleteTool,
         selection,
@@ -81,6 +83,7 @@ export function useBuildInteractionDomain({
         setViewOffset,
         setCellSize,
         setPlaceOperation,
+        setLinkDraftSourceId,
         setPlaceType,
         setSelection,
         setLogStart,
@@ -208,6 +211,10 @@ export function useBuildInteractionDomain({
 
       if (event.button === 2) {
         event.preventDefault()
+        if (!simIsRunning && linkDraftSourceId) {
+          setLinkDraftSourceId(null)
+          return
+        }
         if (!simIsRunning && clipboardBlueprint) {
           setClipboardBlueprint(null)
           setBlueprintPlacementRotation(0)
@@ -234,6 +241,41 @@ export function useBuildInteractionDomain({
 
       const cell = toCell(event.clientX, event.clientY)
       if (!cell) return
+
+      if (!simIsRunning && linkDraftSourceId) {
+        const clickedId = cellDeviceMap.get(`${cell.x},${cell.y}`)
+        if (!clickedId || clickedId === linkDraftSourceId) return
+        setLayout((current) => {
+          const sourceDevice = getDeviceById(current, linkDraftSourceId)
+          const clickedDevice = getDeviceById(current, clickedId)
+          if (!sourceDevice || !clickedDevice) return current
+          const sourceIsInlet = isDarkPipeInletType(sourceDevice.typeId)
+          const sourceIsOutlet = isDarkPipeOutletType(sourceDevice.typeId)
+          const clickedIsInlet = isDarkPipeInletType(clickedDevice.typeId)
+          const clickedIsOutlet = isDarkPipeOutletType(clickedDevice.typeId)
+          if ((!sourceIsInlet && !sourceIsOutlet) || (!clickedIsInlet && !clickedIsOutlet)) return current
+          if ((sourceIsInlet && clickedIsInlet) || (sourceIsOutlet && clickedIsOutlet)) return current
+
+          const inletId = sourceIsInlet ? sourceDevice.instanceId : clickedDevice.instanceId
+          const outletId = sourceIsOutlet ? sourceDevice.instanceId : clickedDevice.instanceId
+          const linked = upsertDarkPipeLink(current, inletId, outletId)
+          return {
+            ...linked,
+            devices: linked.devices.map((device) => {
+              if (device.instanceId === inletId) {
+                return { ...device, config: { ...device.config, darkPipeInletMode: 'link' } }
+              }
+              if (device.instanceId === outletId) {
+                return { ...device, config: { ...device.config, darkPipeOutletMode: 'link' } }
+              }
+              return device
+            }),
+          }
+        })
+        setSelection([clickedId])
+        setLinkDraftSourceId(null)
+        return
+      }
 
       if (mode === 'place' && (placeOperation === 'belt' || placeOperation === 'pipe')) {
         if (simIsRunning) return
@@ -264,20 +306,40 @@ export function useBuildInteractionDomain({
           return
         }
 
-        setLayout((current) => ({
-          ...current,
-          devices: [
-            ...current.devices.filter((device) => !preview.replacementInstanceIds.includes(device.instanceId)),
-            ...preview.devices.map((device) =>
-              preview.replacementInstanceIds.includes(device.instanceId)
-                ? device
-                : {
-                    ...device,
-                    instanceId: nextId(device.typeId),
-                  },
-            ),
-          ],
-        }))
+        setLayout((current) => {
+          const preservedDevices = current.devices.filter((device) => !preview.replacementInstanceIds.includes(device.instanceId))
+          const blueprintIdToPlacedId = new Map<string, string>()
+          const placedDevices = preview.devices.map((device, index) => {
+            const instanceId = preview.replacementInstanceIds.includes(device.instanceId) ? device.instanceId : nextId(device.typeId)
+            const blueprintInstanceId = activePlacementBlueprint?.devices[index]?.blueprintInstanceId
+            if (blueprintInstanceId) blueprintIdToPlacedId.set(blueprintInstanceId, instanceId)
+            return instanceId === device.instanceId ? device : { ...device, instanceId }
+          })
+          const mappedLinks = preview.links.flatMap((link) => {
+            const sourceInstanceId = blueprintIdToPlacedId.get(link.sourceBlueprintInstanceId)
+            const targetInstanceId = blueprintIdToPlacedId.get(link.targetBlueprintInstanceId)
+            if (!sourceInstanceId || !targetInstanceId) return []
+            return [{
+              linkId: nextId('device_link'),
+              kind: link.kind,
+              sourceInstanceId,
+              targetInstanceId,
+            }]
+          })
+
+          return {
+            ...current,
+            devices: [...preservedDevices, ...placedDevices],
+            links: [
+              ...current.links.filter(
+                (link) =>
+                  !preview.replacementInstanceIds.includes(link.sourceInstanceId) &&
+                  !preview.replacementInstanceIds.includes(link.targetInstanceId),
+              ),
+              ...mappedLinks,
+            ],
+          }
+        })
         return
       }
 
@@ -418,6 +480,8 @@ export function useBuildInteractionDomain({
         : null
       setHoverCell(cell)
 
+      if (linkDraftSourceId) return
+
       if (mode === 'place' && (placeOperation === 'belt' || placeOperation === 'pipe') && logStart) {
         if (!cell) return
         const last = logTrace[logTrace.length - 1]
@@ -532,6 +596,8 @@ export function useBuildInteractionDomain({
         setPanStart(null)
         return
       }
+
+      if (linkDraftSourceId) return
 
       if (mode === 'place' && (placeOperation === 'belt' || placeOperation === 'pipe') && logStart && logCurrent && !simIsRunning) {
         const path = logisticsPreview

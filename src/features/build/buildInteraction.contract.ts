@@ -6,7 +6,7 @@ import type {
   WheelEvent as ReactWheelEvent,
 } from 'react'
 import type { BlueprintSnapshot } from '../blueprint/useBlueprintDomain'
-import type { DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
+import type { BlueprintDeviceLink, DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import {
   allowsOuterRingPlacement,
@@ -95,7 +95,13 @@ export type BuildInteractionBlueprintParams = {
     snapshot: BlueprintSnapshot | null,
     anchorCell: Cell,
     placementRotation: Rotation,
-  ) => { devices: DeviceInstance[]; isValid: boolean; invalidMessageKey: string | null; replacementInstanceIds: string[] } | null
+  ) => {
+    devices: DeviceInstance[]
+    links: BlueprintDeviceLink[]
+    isValid: boolean
+    invalidMessageKey: string | null
+    replacementInstanceIds: string[]
+  } | null
   blueprintPlacementRotation: Rotation
   setBlueprintPlacementRotation: Dispatch<SetStateAction<Rotation>>
   setClipboardBlueprint: Dispatch<SetStateAction<BlueprintSnapshot | null>>

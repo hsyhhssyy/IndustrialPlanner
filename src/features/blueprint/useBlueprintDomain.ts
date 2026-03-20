@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { usePersistentState } from '../../core/usePersistentState'
 import { uiEffects } from '../../app/uiEffects'
+import { sanitizeBlueprintLinks } from '../../domain/deviceLinks'
 import { BASE_BY_ID, DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { validatePlacementConstraints } from '../../domain/placement'
 import { rotatedFootprintSize } from '../../domain/shared/math'
-import type { BaseId, DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
+import type { BaseId, BlueprintDeviceLink, DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
 import { isDeviceWithinAllowedPlacementArea } from '../../domain/shared/placementArea'
 import {
   APP_VERSION,
@@ -28,6 +29,7 @@ import {
 } from '../../migrations/versioning'
 
 type BlueprintDeviceSnapshot = {
+  blueprintInstanceId: string
   typeId: DeviceTypeId
   rotation: Rotation
   origin: { x: number; y: number }
@@ -49,10 +51,12 @@ export type BlueprintSnapshot = {
   blueprintVersion: string
   baseId: BaseId
   devices: BlueprintDeviceSnapshot[]
+  links: BlueprintDeviceLink[]
 }
 
 type BlueprintPlacementPreview = {
   devices: DeviceInstance[]
+  links: BlueprintDeviceLink[]
   isValid: boolean
   invalidMessageKey: string | null
   replacementInstanceIds: string[]
@@ -78,12 +82,17 @@ type BlueprintSharePayload = {
   createdAt: string
   baseId: string
   devices: BlueprintDeviceSnapshot[]
+  links?: BlueprintDeviceLink[]
 }
 
 type BlueprintShareImport = BlueprintSharePayload | { blueprint: BlueprintSharePayload }
 
 function cloneDeviceConfig(config: DeviceInstance['config']): DeviceInstance['config'] {
   return JSON.parse(JSON.stringify(config ?? {})) as DeviceInstance['config']
+}
+
+function buildBlueprintLocalInstanceId(index: number) {
+  return `bp-device-${index}`
 }
 
 function rotateBlueprintRects(rects: BlueprintLocalRect[], rotation: Rotation) {
@@ -173,6 +182,7 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
   const createdAt = (payload as Record<string, unknown>).createdAt
   const baseId = (payload as Record<string, unknown>).baseId
   const devices = (payload as Record<string, unknown>).devices
+  const links = (payload as Record<string, unknown>).links
 
   if (schema !== 'industrial-planner-blueprint') return null
   const version =
@@ -196,7 +206,7 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
   if (!Array.isArray(devices) || devices.length === 0) return null
 
   const parsedDevices: BlueprintDeviceSnapshot[] = []
-  for (const entry of devices) {
+  for (const [index, entry] of devices.entries()) {
     if (!entry || typeof entry !== 'object') return null
     const typeId = (entry as Record<string, unknown>).typeId
     const rotation = (entry as Record<string, unknown>).rotation
@@ -210,6 +220,11 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
     const y = (origin as Record<string, unknown>).y
     if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) return null
     const parsedDevice: BlueprintDeviceSnapshot = {
+      blueprintInstanceId:
+        typeof (entry as Record<string, unknown>).blueprintInstanceId === 'string' &&
+        ((entry as Record<string, unknown>).blueprintInstanceId as string).trim().length > 0
+          ? ((entry as Record<string, unknown>).blueprintInstanceId as string)
+          : buildBlueprintLocalInstanceId(index),
       typeId: normalizedTypeId as DeviceTypeId,
       rotation: sanitizeRotation(rotation),
       origin: { x: Math.round(x), y: Math.round(y) },
@@ -241,6 +256,8 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
     parsedDevices.push(parsedDevice)
   }
 
+  const parsedLinks = sanitizeBlueprintLinks(links, parsedDevices)
+
   return {
     schema: 'industrial-planner-blueprint',
     version,
@@ -250,6 +267,7 @@ function normalizeSharePayload(input: unknown): BlueprintSharePayload | null {
     createdAt,
     baseId,
     devices: parsedDevices,
+    links: parsedLinks,
   }
 }
 
@@ -359,7 +377,8 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
       version: APP_VERSION,
       blueprintVersion: '1',
       baseId: activeBaseId,
-      devices: selectedDevices.map((device) => ({
+      devices: selectedDevices.map((device, index) => ({
+        blueprintInstanceId: device.instanceId || buildBlueprintLocalInstanceId(index),
         typeId: device.typeId,
         rotation: device.rotation,
         origin: { x: device.origin.x - minX, y: device.origin.y - minY },
@@ -369,6 +388,19 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
           baseOrigin: { x: device.origin.x, y: device.origin.y },
         },
       })),
+      links: sanitizeBlueprintLinks(
+        layout.links
+          .filter((link) => selectedDevices.some((device) => device.instanceId === link.sourceInstanceId) && selectedDevices.some((device) => device.instanceId === link.targetInstanceId))
+          .map((link) => ({
+            kind: link.kind,
+            sourceBlueprintInstanceId: link.sourceInstanceId,
+            targetBlueprintInstanceId: link.targetInstanceId,
+          })),
+        selectedDevices.map((device, index) => ({
+          blueprintInstanceId: device.instanceId || buildBlueprintLocalInstanceId(index),
+          typeId: device.typeId,
+        })),
+      ),
     }
 
     try {
@@ -377,7 +409,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
     } catch {
       uiEffects.toast(t('toast.blueprintSaveFailed'), { variant: 'error' })
     }
-  }, [activeBaseId, activeBaseOuterRing, foundationIdSet, layout.devices, layout.lotSize, protocolHubFoundationIdSet, selection, setUserBlueprints, t])
+  }, [activeBaseId, activeBaseOuterRing, foundationIdSet, layout.devices, layout.links, layout.lotSize, protocolHubFoundationIdSet, selection, setUserBlueprints, t])
 
   const selectedBlueprint = useMemo(() => {
     if (!selectedBlueprintId) return null
@@ -474,6 +506,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         createdAt: target.createdAt,
         baseId: target.baseId,
         devices: target.devices,
+        links: target.links,
       }
       return JSON.stringify(payload, null, 2)
     },
@@ -555,6 +588,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         blueprintVersion: payload.blueprintVersion ?? '1',
         baseId: activeBaseId,
         devices: payload.devices.map((device) => ({
+          blueprintInstanceId: device.blueprintInstanceId,
           typeId: device.typeId,
           rotation: sanitizeRotation(device.rotation),
           origin: { ...device.origin },
@@ -566,6 +600,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
               }
             : undefined,
         })),
+        links: sanitizeBlueprintLinks(payload.links, payload.devices),
       }
 
       setUserBlueprints((current) => [snapshot, ...current].slice(0, 100))
@@ -632,6 +667,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
           blueprintVersion: String(entry.blueprintVersion),
           baseId: activeBaseId,
           devices: payload.devices.map((device) => ({
+            blueprintInstanceId: device.blueprintInstanceId,
             typeId: device.typeId,
             rotation: sanitizeRotation(device.rotation),
             origin: { ...device.origin },
@@ -643,6 +679,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
                 }
               : undefined,
           })),
+          links: sanitizeBlueprintLinks(payload.links, payload.devices),
         })
       } catch {
         continue
@@ -751,6 +788,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
         rotation: entry.rotation,
         config: cloneDeviceConfig(entry.config),
       }))
+      const previewLinks = sanitizeBlueprintLinks(snapshot.links, snapshot.devices)
       const replacementInstanceIds = previewDevices
         .filter((device) => layout.devices.some((existing) => existing.instanceId === device.instanceId))
         .map((device) => device.instanceId)
@@ -762,6 +800,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
       if (invalidOutOfLot) {
         return {
           devices: previewDevices,
+          links: previewLinks,
           isValid: false,
           invalidMessageKey: 'toast.outOfLot',
           replacementInstanceIds,
@@ -779,6 +818,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
       if (invalidConstraint && !invalidConstraint.isValid) {
         return {
           devices: previewDevices,
+          links: previewLinks,
           isValid: false,
           invalidMessageKey: invalidConstraint.messageKey ?? 'toast.invalidPlacementFallback',
           replacementInstanceIds,
@@ -787,6 +827,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
 
       return {
         devices: previewDevices,
+        links: previewLinks,
         isValid: true,
         invalidMessageKey: null,
         replacementInstanceIds,

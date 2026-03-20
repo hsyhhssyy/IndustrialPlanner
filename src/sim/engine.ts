@@ -1,8 +1,8 @@
 import { BASE_BY_ID, DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, LIQUID_ITEM_IDS, RECIPES } from '../domain/registry'
+import { getLinkedSourceId, getLinkedTargetId } from '../domain/deviceLinks'
 import { detectOverlaps, getFootprintCells, getRotatedPorts, isBufferedBeltTransportDevice, isPipeLike, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
 import {
   DEFAULT_EXTERNAL_LIQUID_SOURCE_ITEM_ID,
-  isExternalLiquidSourceDeviceType,
   normalizeExternalLiquidSourceItemId,
 } from '../domain/shared/itemPickerRules'
 import {
@@ -569,6 +569,38 @@ function externalLiquidSourceItemId(device: DeviceInstance): ItemId {
   const configured = normalizeExternalLiquidSourceItemId(device.config.pumpOutputItemId)
   if (EXTERNAL_LIQUID_SOURCE_ITEM_SET.has(configured)) return configured
   return DEFAULT_EXTERNAL_LIQUID_SOURCE_ITEM_ID
+}
+
+function shouldGenerateExternalLiquid(device: DeviceInstance) {
+  if (device.typeId === 'item_port_water_pump_1') return true
+  if (device.typeId === 'item_port_udpipe_unloader_1') return false
+  return false
+}
+
+function flushDarkPipeInletInventory(layout: LayoutState, runtimeById: Record<string, DeviceRuntime>) {
+  for (const device of layout.devices) {
+    if (device.typeId !== 'item_port_udpipe_loader_1') continue
+    const runtime = runtimeById[device.instanceId]
+    if (!runtime || !('inventory' in runtime)) continue
+
+    const entries = Object.entries(runtime.inventory).filter(([, amount]) => (amount ?? 0) > 0)
+    if (entries.length === 0) continue
+
+    const linkedTargetId = getLinkedTargetId(layout, device.instanceId)
+    const targetDevice = linkedTargetId ? layout.devices.find((entry) => entry.instanceId === linkedTargetId) ?? null : null
+    const targetRuntime = targetDevice ? runtimeById[targetDevice.instanceId] : undefined
+    const canForward =
+      targetDevice?.typeId === 'item_port_udpipe_unloader_1' &&
+      targetRuntime &&
+      'inventory' in targetRuntime
+
+    for (const [itemId, amount] of entries) {
+      if (canForward && targetRuntime && 'inventory' in targetRuntime) {
+        addToStorage(targetRuntime, itemId, Number(amount ?? 0))
+      }
+      runtime.inventory[itemId] = 0
+    }
+  }
 }
 
 function mark(output: Partial<Record<ItemId, number>>, itemId: ItemId, delta: number) {
@@ -2538,7 +2570,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
       }
     }
 
-    if (isExternalLiquidSourceDeviceType(device.typeId) && 'inventory' in runtime) {
+    if ((shouldGenerateExternalLiquid(device) || (device.typeId === 'item_port_udpipe_unloader_1' && !getLinkedSourceId(layout, device.instanceId))) && 'inventory' in runtime) {
       const selectedItemId = externalLiquidSourceItemId(device)
       for (const itemId of EXTERNAL_LIQUID_SOURCE_ITEM_IDS) {
         runtime.inventory[itemId] = itemId === selectedItemId ? Number.POSITIVE_INFINITY : 0
@@ -2636,6 +2668,8 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
     if (commitResult.committedCount === 0) break
   }
+
+  flushDarkPipeInletInventory(layout, runtimeById)
 
   for (const device of layout.devices) {
     const runtime = runtimeById[device.instanceId]
@@ -2761,10 +2795,16 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   }
 }
 
-export function initialStorageConfig(deviceTypeId: string) {
+export function initialStorageConfig(deviceTypeId: string): DeviceInstance['config'] {
   if (deviceTypeId === 'item_port_storager_1') return { submitToWarehouse: true }
-  if (deviceTypeId === 'item_port_water_pump_1' || deviceTypeId === 'item_port_udpipe_unloader_1') {
+  if (deviceTypeId === 'item_port_water_pump_1') {
     return { pumpOutputItemId: DEFAULT_EXTERNAL_LIQUID_SOURCE_ITEM_ID }
+  }
+  if (deviceTypeId === 'item_port_udpipe_unloader_1') {
+    return { pumpOutputItemId: DEFAULT_EXTERNAL_LIQUID_SOURCE_ITEM_ID, darkPipeOutletMode: 'generate' }
+  }
+  if (deviceTypeId === 'item_port_udpipe_loader_1') {
+    return { darkPipeInletMode: 'destroy' }
   }
   return {}
 }

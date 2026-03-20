@@ -77,6 +77,7 @@ type WorldContentProps = {
   transitLayer: ReactNode
   overlayLayer: ReactNode
   adornmentLayer: ReactNode
+  topLayer: ReactNode
   runtimeStallOverlays: RuntimeStallOverlay[]
   logisticsEndpointHighlights: LogisticsEndpointHighlight[]
   portChevrons: PortChevron[]
@@ -95,6 +96,7 @@ export function WorldContent({
   transitLayer,
   overlayLayer,
   adornmentLayer,
+  topLayer,
   runtimeStallOverlays,
   logisticsEndpointHighlights,
   portChevrons,
@@ -143,6 +145,7 @@ export function WorldContent({
       <div className="world-pass-layer world-pass-transit">{transitLayer}</div>
       <div className="world-pass-layer world-pass-overlay">{overlayLayer}</div>
       <div className="world-pass-layer world-pass-adornment">{adornmentLayer}</div>
+      <div className="world-pass-layer world-pass-top">{topLayer}</div>
 
       {logisticsEndpointHighlights.map((highlight) => (
         <div

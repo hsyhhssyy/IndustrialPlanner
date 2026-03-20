@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { showToast } from '../../ui/toast'
+import { sanitizeBlueprintLinks } from '../../domain/deviceLinks'
 import type { BaseId, DeviceInstance, LayoutState, Rotation } from '../../domain/types'
 import type { BlueprintSnapshot } from './useBlueprintDomain'
 import { APP_VERSION, createBlueprintId } from '../../migrations/versioning'
@@ -73,11 +74,22 @@ export function useBlueprintHotkeysDomain({
           blueprintVersion: '1',
           baseId: activeBaseId,
           devices: selectedDevices.map((device) => ({
+            blueprintInstanceId: device.instanceId,
             typeId: device.typeId,
             rotation: device.rotation,
             origin: { x: device.origin.x - minX, y: device.origin.y - minY },
             config: cloneDeviceConfig(device.config),
           })),
+          links: sanitizeBlueprintLinks(
+            layout.links
+              .filter((link) => selectedDevices.some((device) => device.instanceId === link.sourceInstanceId) && selectedDevices.some((device) => device.instanceId === link.targetInstanceId))
+              .map((link) => ({
+                kind: link.kind,
+                sourceBlueprintInstanceId: link.sourceInstanceId,
+                targetBlueprintInstanceId: link.targetInstanceId,
+              })),
+            selectedDevices.map((device) => ({ blueprintInstanceId: device.instanceId, typeId: device.typeId })),
+          ),
         }
         setClipboardBlueprint(tempSnapshot)
         setLastClipboardBlueprint(tempSnapshot)

@@ -81,6 +81,10 @@ type RightPanelProps = {
   selectedAdmissionAmount: number | undefined
   selectedPickupItemId: ItemId | undefined
   selectedPumpOutputItemId: ItemId | undefined
+  linkDraftSourceId: string | null
+  selectedDarkPipeInletMode: 'destroy' | 'link' | null
+  selectedDarkPipeOutletMode: 'generate' | 'link' | null
+  selectedDeviceLinks: Array<{ linkId: string; otherDeviceLabel: string }>
   selectedPickupItemIsOre: boolean
   selectedPickupIgnoreInventory: boolean
   selectedProtocolHubOutputs: Array<{
@@ -97,6 +101,9 @@ type RightPanelProps = {
   updateAdmissionAmount: (deviceInstanceId: string, admissionAmount: number | undefined) => void
   updatePickupIgnoreInventory: (deviceInstanceId: string, enabled: boolean) => void
   updateProtocolHubOutputIgnoreInventory: (deviceInstanceId: string, portId: string, enabled: boolean) => void
+  startDeviceLinking: (deviceInstanceId: string) => void
+  cancelDeviceLinking: () => void
+  removeSelectedDeviceLink: (linkId: string) => void
   setLayout: (updater: LayoutState | ((current: LayoutState) => LayoutState)) => void
   openStorageSlotConfigDialog: (deviceInstanceId: string) => void
   openPortPriorityConfigDialog: (deviceInstanceId: string) => void
@@ -177,6 +184,10 @@ export function RightPanel({
   selectedAdmissionAmount,
   selectedPickupItemId,
   selectedPumpOutputItemId,
+  linkDraftSourceId,
+  selectedDarkPipeInletMode,
+  selectedDarkPipeOutletMode,
+  selectedDeviceLinks,
   selectedPickupItemIsOre,
   selectedPickupIgnoreInventory,
   selectedProtocolHubOutputs,
@@ -185,6 +196,9 @@ export function RightPanel({
   updateAdmissionAmount,
   updatePickupIgnoreInventory,
   updateProtocolHubOutputIgnoreInventory,
+  startDeviceLinking,
+  cancelDeviceLinking,
+  removeSelectedDeviceLink,
   setLayout,
   openStorageSlotConfigDialog,
   openPortPriorityConfigDialog,
@@ -228,6 +242,12 @@ export function RightPanel({
     { key: 'wuling', titleKey: 'right.baseGroup.wuling', tag: '武陵' },
   ] as const
   const [showMultiBaseTooltip, setShowMultiBaseTooltip] = useState(false)
+
+  const selectedDarkPipeModeLabel = selectedDevice?.typeId === 'item_port_udpipe_loader_1'
+    ? t(`detail.darkPipeInletMode.${selectedDarkPipeInletMode ?? 'destroy'}`)
+    : selectedDevice?.typeId === 'item_port_udpipe_unloader_1'
+      ? t(`detail.darkPipeOutletMode.${selectedDarkPipeOutletMode ?? 'generate'}`)
+      : null
 
   const inputSourceDebugEntries = useMemo(() => {
     if (!selectedDevice || !selectedRuntime) return [] as Array<{ title: string; cursor: string; items: string[] }>
@@ -843,7 +863,7 @@ export function RightPanel({
               )}
             </>
           )}
-          {(selectedDevice.typeId === 'item_port_water_pump_1' || selectedDevice.typeId === 'item_port_udpipe_unloader_1') && (
+          {(selectedDevice.typeId === 'item_port_water_pump_1' || (selectedDevice.typeId === 'item_port_udpipe_unloader_1' && selectedDarkPipeOutletMode !== 'link')) && (
             <>
               <div className="kv kv-no-border kv-pickup-inline">
                 <span>{t('detail.pumpOutputLiquid')}</span>
@@ -874,6 +894,44 @@ export function RightPanel({
                     </span>
                   </button>
                 </span>
+              </div>
+            </>
+          )}
+          {(selectedDevice.typeId === 'item_port_udpipe_loader_1' || selectedDevice.typeId === 'item_port_udpipe_unloader_1') && (
+            <>
+              <div className="kv">
+                <span>{t('detail.darkPipeCurrentMode')}</span>
+                <span>{selectedDarkPipeModeLabel}</span>
+              </div>
+              {!simIsRunning && (
+                <div className="device-link-mode-actions">
+                  {linkDraftSourceId === selectedDevice.instanceId ? (
+                    <button type="button" className="secondary-action-btn active" onClick={() => cancelDeviceLinking()}>
+                      {t('detail.deviceLinkCancel')}
+                    </button>
+                  ) : (
+                    <button type="button" className="secondary-action-btn" onClick={() => startDeviceLinking(selectedDevice.instanceId)}>
+                      {selectedDeviceLinks.length > 0 ? t('detail.deviceLinkRelink') : t('detail.deviceLinkStart')}
+                    </button>
+                  )}
+                </div>
+              )}
+              <div className="device-link-list">
+                <div className="device-link-list-title">{t('detail.deviceLinkList')}</div>
+                {selectedDeviceLinks.length === 0 ? (
+                  <div className="device-link-list-empty">{t('detail.deviceLinkListEmpty')}</div>
+                ) : (
+                  selectedDeviceLinks.map((entry) => (
+                    <div key={entry.linkId} className="device-link-list-row">
+                      <span>{entry.otherDeviceLabel}</span>
+                      {!simIsRunning && (
+                        <button type="button" className="secondary-action-btn" onClick={() => removeSelectedDeviceLink(entry.linkId)}>
+                          {t('detail.deviceLinkDisconnect')}
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </>
           )}

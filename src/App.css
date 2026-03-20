@@ -561,6 +561,11 @@ button:disabled {
   pointer-events: none;
 }
 
+.world-pass-top {
+  z-index: 6;
+  pointer-events: none;
+}
+
 .canvas-viewport {
   width: 100%;
   height: 100%;
@@ -1117,6 +1122,50 @@ button:disabled {
   z-index: 5;
 }
 
+.device-link-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 12, 18, 0.42);
+}
+
+.device-link-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.device-link-line {
+  stroke: rgba(196, 239, 255, 0.8);
+  stroke-width: 3;
+  stroke-dasharray: 10 8;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgba(173, 227, 255, 0.38));
+}
+
+.device-link-highlight {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 10px;
+}
+
+.device-link-highlight.is-source {
+  border: 3px solid rgba(255, 225, 128, 0.96);
+  box-shadow:
+    0 0 0 2px rgba(255, 225, 128, 0.45) inset,
+    0 0 14px rgba(255, 225, 128, 0.42);
+  background: rgba(255, 225, 128, 0.08);
+}
+
+.device-link-highlight.is-target {
+  border: 3px solid rgba(157, 240, 205, 0.98);
+  box-shadow:
+    0 0 0 2px rgba(157, 240, 205, 0.4) inset,
+    0 0 14px rgba(157, 240, 205, 0.4);
+  background: rgba(157, 240, 205, 0.08);
+}
+
 .port-chevron {
   position: absolute;
   pointer-events: none;
@@ -1481,6 +1530,71 @@ button:disabled {
   justify-content: center;
   border: 1px solid #4f7bc4;
   color: #ffd166;
+}
+
+.device-link-mode-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.secondary-action-btn {
+  border: 1px solid rgba(115, 150, 201, 0.45);
+  background: rgba(26, 35, 49, 0.92);
+  color: #dfe8f5;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.secondary-action-btn.active {
+  border-color: rgba(255, 225, 128, 0.82);
+  box-shadow: 0 0 0 1px rgba(255, 225, 128, 0.35) inset;
+  color: #fff2c2;
+}
+
+.device-link-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.device-link-list-title {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9fb6d8;
+}
+
+.device-link-list-empty {
+  color: #8fa0b8;
+}
+
+.device-link-list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.device-link-list-row > span {
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+.device-link-list-row > .secondary-action-btn {
+  width: auto;
+  min-width: 72px;
+  padding: 6px 12px;
+  justify-self: end;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .pickup-item-dialog {

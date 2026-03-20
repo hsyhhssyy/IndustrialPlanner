@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
+import { DeviceLinkLayer } from './ui/world/DeviceLinkLayer'
+import {
+  getDeviceLinksForInstance,
+  isDarkPipeInletType,
+  isDarkPipeOutletType,
+  removeDeviceLink,
+} from './domain/deviceLinks'
 import { DEVICE_TYPE_BY_ID, PLACEABLE_TYPES } from './domain/registry'
 import {
   buildOccupancyMap,
@@ -33,7 +40,7 @@ import type {
   StorageSlotConfigEntry,
 } from './domain/types'
 import { usePersistentState } from './core/usePersistentState'
-import { createTranslator, getItemLabel, type Language } from './i18n'
+import { createTranslator, getDeviceLabel, getItemLabel, type Language } from './i18n'
 import { useAppContext } from './app/AppContext'
 import { WorkbenchProvider } from './app/WorkbenchContext'
 import { ActivityBar } from './ui/panels/ActivityBar'
@@ -208,6 +215,7 @@ function App() {
         placeType,
         placeRotation,
         placeOperation,
+        linkDraftSourceId,
         deleteTool,
         cellSize,
         viewOffset,
@@ -225,6 +233,7 @@ function App() {
         setPlaceType,
         setPlaceRotation,
         setPlaceOperation,
+        setLinkDraftSourceId,
         setCellSize,
         setViewOffset,
         setSelection,
@@ -941,6 +950,58 @@ function App() {
     }
   }
 
+  const draftLinkSourceDevice = useMemo(
+    () => (linkDraftSourceId ? layout.devices.find((device) => device.instanceId === linkDraftSourceId) ?? null : null),
+    [layout.devices, linkDraftSourceId],
+  )
+
+  const draftLinkTargetIds = useMemo(() => {
+    if (!draftLinkSourceDevice) return new Set<string>()
+    if (isDarkPipeInletType(draftLinkSourceDevice.typeId)) {
+      return new Set(
+        layout.devices
+          .filter((device) => isDarkPipeOutletType(device.typeId) && device.instanceId !== draftLinkSourceDevice.instanceId)
+          .map((device) => device.instanceId),
+      )
+    }
+    if (isDarkPipeOutletType(draftLinkSourceDevice.typeId)) {
+      return new Set(
+        layout.devices
+          .filter((device) => isDarkPipeInletType(device.typeId) && device.instanceId !== draftLinkSourceDevice.instanceId)
+          .map((device) => device.instanceId),
+      )
+    }
+    return new Set<string>()
+  }, [draftLinkSourceDevice, layout.devices])
+
+  const selectedDeviceLinks = useMemo(() => {
+    if (!selectedDevice) return []
+    return getDeviceLinksForInstance(layout, selectedDevice.instanceId)
+      .map((link) => {
+        const otherId = link.sourceInstanceId === selectedDevice.instanceId ? link.targetInstanceId : link.sourceInstanceId
+        const otherDevice = layout.devices.find((device) => device.instanceId === otherId)
+        if (!otherDevice) return null
+        return {
+          linkId: link.linkId,
+          otherDeviceLabel: getDeviceLabel(language, otherDevice.typeId),
+        }
+      })
+      .filter((entry): entry is { linkId: string; otherDeviceLabel: string } => Boolean(entry))
+  }, [language, layout, selectedDevice])
+
+  const selectedDarkPipeInletMode = selectedDevice?.typeId === 'item_port_udpipe_loader_1'
+    ? (selectedDeviceLinks.length > 0 ? 'link' : 'destroy')
+    : null
+  const selectedDarkPipeOutletMode = selectedDevice?.typeId === 'item_port_udpipe_unloader_1'
+    ? (selectedDeviceLinks.length > 0 ? 'link' : 'generate')
+    : null
+
+  useEffect(() => {
+    if (!linkDraftSourceId) return
+    if (layout.devices.some((device) => device.instanceId === linkDraftSourceId)) return
+    setLinkDraftSourceId(null)
+  }, [layout.devices, linkDraftSourceId, setLinkDraftSourceId])
+
   const mainDeviceUnderlayLayer = (
     <StaticDeviceLayer
       renderPass="underlay"
@@ -1089,6 +1150,15 @@ function App() {
         </>
       )}
       adornmentLayer={<>{mainDeviceAdornmentLayer}</>}
+      topLayer={(
+        <DeviceLinkLayer
+          baseCellSize={BASE_CELL_SIZE}
+          devices={layout.devices}
+          links={layout.links}
+          draftSourceId={linkDraftSourceId}
+          draftTargetIds={draftLinkTargetIds}
+        />
+      )}
       runtimeStallOverlays={runtimeStallOverlays}
       logisticsEndpointHighlights={logisticsEndpointHighlights}
       portChevrons={portChevrons}
@@ -1349,6 +1419,10 @@ function App() {
               selectedAdmissionAmount={selectedAdmissionAmount}
               selectedPickupItemId={selectedPickupItemId}
               selectedPumpOutputItemId={selectedPumpOutputItemId}
+              linkDraftSourceId={linkDraftSourceId}
+              selectedDarkPipeInletMode={selectedDarkPipeInletMode}
+              selectedDarkPipeOutletMode={selectedDarkPipeOutletMode}
+              selectedDeviceLinks={selectedDeviceLinks}
               selectedPickupItemIsOre={selectedPickupItemIsOre}
               selectedPickupIgnoreInventory={selectedPickupIgnoreInventory}
               selectedProtocolHubOutputs={selectedProtocolHubOutputs}
@@ -1357,6 +1431,14 @@ function App() {
               updateAdmissionAmount={updateAdmissionAmount}
               updatePickupIgnoreInventory={updatePickupIgnoreInventory}
               updateProtocolHubOutputIgnoreInventory={updateProtocolHubOutputIgnoreInventory}
+              startDeviceLinking={(deviceInstanceId) => {
+                setLinkDraftSourceId(deviceInstanceId)
+                setSelection([deviceInstanceId])
+                setPlaceType('')
+                setPlaceOperation('default')
+              }}
+              cancelDeviceLinking={() => setLinkDraftSourceId(null)}
+              removeSelectedDeviceLink={(linkId) => setLayout((current) => removeDeviceLink(current, linkId))}
               setLayout={setLayout}
               openStorageSlotConfigDialog={(deviceInstanceId) => setStorageSlotConfigDeviceId(deviceInstanceId)}
               openPortPriorityConfigDialog={(deviceInstanceId) => setPortPriorityConfigDeviceId(deviceInstanceId)}

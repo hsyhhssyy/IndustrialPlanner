@@ -2107,6 +2107,26 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     ],
   },
   {
+    id: 'item_port_udpipe_loader_1',
+    runtimeKind: 'storage',
+    requiresPower: false,
+    powerDemand: 10,
+    size: { width: 3, height: 3 },
+    shortName: 'DarkPipeInlet',
+    tags: ['武陵', 'OuterRingAllowed'],
+    ports0: [
+      {
+        id: 'in_w_1',
+        localCellX: 0,
+        localCellY: 1,
+        edge: 'W',
+        direction: 'Input',
+        allowedItems: { mode: 'any', whitelist: [] },
+        allowedTypes: liquidAllowance,
+      },
+    ],
+  },
+  {
     id: 'item_port_udpipe_unloader_1',
     runtimeKind: 'storage',
     requiresPower: false,

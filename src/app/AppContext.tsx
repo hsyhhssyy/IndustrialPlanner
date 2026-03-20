@@ -73,6 +73,7 @@ type EditorState = {
   placeType: DeviceTypeId | ''
   placeRotation: 0 | 90 | 180 | 270
   placeOperation: PlaceOperation
+  linkDraftSourceId: string | null
   deleteTool: 'single' | 'wholeBelt' | 'box'
   cellSize: number
   viewOffset: { x: number; y: number }
@@ -96,6 +97,7 @@ type EditorActions = {
   setPlaceType: Dispatch<SetStateAction<DeviceTypeId | ''>>
   setPlaceRotation: Dispatch<SetStateAction<0 | 90 | 180 | 270>>
   setPlaceOperation: Dispatch<SetStateAction<PlaceOperation>>
+  setLinkDraftSourceId: Dispatch<SetStateAction<string | null>>
   setDeleteTool: Dispatch<SetStateAction<'single' | 'wholeBelt' | 'box'>>
   setCellSize: Dispatch<SetStateAction<number>>
   setViewOffset: Dispatch<SetStateAction<{ x: number; y: number }>>
@@ -157,6 +159,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeWorkbenchView, setActiveWorkbenchView] = usePersistentState<WorkbenchView>('stage6-active-workbench-view', 'place')
   const [settings, setSettings] = useState(() => normalizeAppSettings(readAppSettings()))
   const [placeOperation, setPlaceOperation] = useState<PlaceOperation>('default')
+  const [linkDraftSourceId, setLinkDraftSourceId] = useState<string | null>(null)
   const [viewOffset, setViewOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [selection, setSelection] = useState<string[]>([])
   const [logStart, setLogStart] = useState<Cell | null>(null)
@@ -358,6 +361,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           placeType,
           placeRotation,
           placeOperation,
+          linkDraftSourceId,
           deleteTool,
           cellSize,
           viewOffset,
@@ -380,6 +384,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setPlaceType,
           setPlaceRotation,
           setPlaceOperation,
+          setLinkDraftSourceId,
           setDeleteTool,
           setCellSize,
           setViewOffset,
@@ -427,6 +432,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       logTrace,
       mode,
       placeOperation,
+      linkDraftSourceId,
       placeRotation,
       placeType,
       rightPanelCollapsed,
@@ -441,6 +447,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setMaxTicksPerFrame,
       setMode,
       setPlaceOperation,
+      setLinkDraftSourceId,
       setPlaceRotation,
       setPlaceType,
       setRightPanelCollapsed,

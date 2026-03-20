@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, type Dispatch, type SetStateAction } from 'react'
 import { isBeltLike, isPipeLike } from '../../domain/geometry'
+import { sanitizeLayoutLinks } from '../../domain/deviceLinks'
 import { BASE_BY_ID } from '../../domain/registry'
 import { isKnownDeviceTypeId } from '../../domain/shared/predicates'
 import { isDeviceWithinAllowedPlacementArea } from '../../domain/shared/placementArea'
@@ -51,6 +52,7 @@ function createLayoutForBase(baseId: BaseId): LayoutState {
       ...building,
       config: building.config ?? initialStorageConfig(building.typeId),
     })),
+    links: [],
   }
 }
 
@@ -75,6 +77,7 @@ function normalizeLayoutForBase(rawLayout: LayoutState | undefined, baseId: Base
     baseId,
     lotSize: base.placeableSize,
     devices: [...foundationDevices, ...cleanedWithoutFoundation],
+    links: sanitizeLayoutLinks((rawLayout as LayoutState & { links?: unknown }).links, [...foundationDevices, ...cleanedWithoutFoundation]),
   }
 }
 
@@ -203,6 +206,10 @@ function summarizeLayoutChange(previous: LayoutState | null, next: LayoutState, 
     }
 
     return language === 'zh-CN' ? `调整 ${formatDeviceCount(language, changed.length)}` : `Adjusted ${formatDeviceCount(language, changed.length)}`
+  }
+
+  if (added.length === 0 && removed.length === 0 && changed.length === 0) {
+    return language === 'zh-CN' ? '调整链接' : 'Adjusted links'
   }
 
   const fragments = [

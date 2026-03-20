@@ -45,6 +45,7 @@ export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
       offsetCells: { x: -1, y: 0 },
     },
   },
+  { typeId: 'item_port_udpipe_loader_1', fileName: 'item_port_udpipe_loader_1.png' },
   { typeId: 'item_port_udpipe_unloader_1', fileName: 'item_port_udpipe_unloader_1.png' },
   { typeId: 'item_liquid_cleaner_1', fileName: 'item_liquid_cleaner_1.png' },
   { typeId: 'item_port_liquid_storager_1', fileName: 'item_port_liquid_storager_1.png' },
