@@ -35,11 +35,18 @@ type PlannerPosition = {
   y: number
 }
 
+type PlannerFlowViewportState = {
+  scale: number
+  offset: FlowNodePosition
+}
+
 type PlannerPersistedState = {
   region: PlannerRegion
   targets: PlannerTargetRow[]
   recipeSelectionByItem: Record<ItemId, string>
   position: PlannerPosition | null
+  activeResultTab: PlannerResultTab
+  flowViewport: PlannerFlowViewportState
 }
 
 type DragState = {
@@ -189,11 +196,29 @@ function normalizePlannerState(value: PlannerPersistedState): PlannerPersistedSt
         }
       : null
 
+  const activeResultTab: PlannerResultTab =
+    value.activeResultTab === 'flowByDevice' || value.activeResultTab === 'machineSummary' ? value.activeResultTab : 'list'
+
+  const flowViewport: PlannerFlowViewportState = {
+    scale: Number.isFinite(value.flowViewport?.scale) ? clamp(value.flowViewport.scale, 0.4, 2) : 1,
+    offset:
+      value.flowViewport?.offset &&
+      Number.isFinite(value.flowViewport.offset.x) &&
+      Number.isFinite(value.flowViewport.offset.y)
+        ? {
+            x: value.flowViewport.offset.x,
+            y: value.flowViewport.offset.y,
+          }
+        : { x: 40, y: 40 },
+  }
+
   return {
     region,
     targets: targets.length > 0 ? targets : [createDefaultTarget()],
     recipeSelectionByItem,
     position,
+    activeResultTab,
+    flowViewport,
   }
 }
 
@@ -314,13 +339,18 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
       targets: [createDefaultTarget()],
       recipeSelectionByItem: {},
       position: null,
+      activeResultTab: 'list',
+      flowViewport: {
+        scale: 1,
+        offset: { x: 40, y: 40 },
+      },
     },
     normalizePlannerState,
   )
   const [dragState, setDragState] = useState<DragState | null>(null)
-  const [activeResultTab, setActiveResultTab] = useState<PlannerResultTab>('list')
-  const [flowScale, setFlowScale] = useState(1)
-  const [flowOffset, setFlowOffset] = useState<FlowNodePosition>({ x: 40, y: 40 })
+  const activeResultTab = plannerState.activeResultTab
+  const flowScale = plannerState.flowViewport.scale
+  const flowOffset = plannerState.flowViewport.offset
   const [flowNodePositions, setFlowNodePositions] = useState<Record<string, FlowNodePosition>>({})
   const [flowNodeLayers, setFlowNodeLayers] = useState<Record<string, number>>({})
   const [flowNodeDragState, setFlowNodeDragState] = useState<FlowNodeDragState | null>(null)
@@ -412,6 +442,46 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
     setPlannerState((current) => ({
       ...current,
       position: typeof updater === 'function' ? (updater as (current: PlannerPosition | null) => PlannerPosition)(current.position) : updater,
+    }))
+  }
+
+  const setActiveResultTab = (updater: PlannerResultTab | ((current: PlannerResultTab) => PlannerResultTab)) => {
+    setPlannerState((current) => ({
+      ...current,
+      activeResultTab:
+        typeof updater === 'function'
+          ? (updater as (current: PlannerResultTab) => PlannerResultTab)(current.activeResultTab)
+          : updater,
+    }))
+  }
+
+  const setFlowViewport = (
+    updater:
+      | PlannerFlowViewportState
+      | ((current: PlannerFlowViewportState) => PlannerFlowViewportState),
+  ) => {
+    setPlannerState((current) => ({
+      ...current,
+      flowViewport:
+        typeof updater === 'function'
+          ? (updater as (current: PlannerFlowViewportState) => PlannerFlowViewportState)(current.flowViewport)
+          : updater,
+    }))
+  }
+
+  const setFlowScale = (updater: number | ((current: number) => number)) => {
+    setFlowViewport((current) => ({
+      ...current,
+      scale: clamp(typeof updater === 'function' ? (updater as (current: number) => number)(current.scale) : updater, 0.4, 2),
+    }))
+  }
+
+  const setFlowOffset = (
+    updater: FlowNodePosition | ((current: FlowNodePosition) => FlowNodePosition),
+  ) => {
+    setFlowViewport((current) => ({
+      ...current,
+      offset: typeof updater === 'function' ? (updater as (current: FlowNodePosition) => FlowNodePosition)(current.offset) : updater,
     }))
   }
 
@@ -543,10 +613,10 @@ export function PlannerPanelContent({ language, superRecipeEnabled, t, onClose, 
       const worldY = (pointerY - flowOffset.y) / flowScale
 
       setFlowScale(nextScale)
-      setFlowOffset({
+      setFlowOffset(() => ({
         x: pointerX - worldX * nextScale,
         y: pointerY - worldY * nextScale,
-      })
+      }))
     }
 
     viewport.addEventListener('wheel', onWheel, { passive: false })
