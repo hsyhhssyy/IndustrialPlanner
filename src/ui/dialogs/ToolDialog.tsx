@@ -1,8 +1,9 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef } from 'react'
 import { getDeviceIconPath, getItemIconPath } from '../../assets/iconPaths'
 import { DEVICE_TYPE_BY_ID, DEVICE_TYPES, ITEM_BY_ID, ITEMS, RECIPES } from '../../domain/registry'
 import { isSuperRecipeDevice, isSuperRecipeItem, isSuperRecipeRecipe, shouldShowSuperRecipeContent } from '../../domain/shared/superRecipeVisibility'
 import type { DeviceTypeId } from '../../domain/types'
+import { usePersistentState } from '../../core/usePersistentState'
 import { getDeviceLabel, getItemLabel, type Language } from '../../i18n'
 import { PlannerPanelContent } from '../plannerPanel'
 
@@ -22,6 +23,38 @@ const HIDDEN_DEVICE_IDS_IN_TOOLBOX = new Set([
   'pipe_turn_ccw_1x1',
   'item_port_sp_hub_1',
 ])
+
+type ToolDialogTab = 'device' | 'item' | 'planner'
+
+type ToolDialogPersistedState = {
+  activeTab: ToolDialogTab
+  selectedDeviceId: DeviceTypeId | ''
+  selectedItemId: string
+  deviceListScrollTop: number
+  deviceContentScrollTop: number
+  itemListScrollTop: number
+  itemContentScrollTop: number
+}
+
+const TOOL_DIALOG_STATE_KEY = 'stage6-tool-dialog-state'
+
+function normalizeToolDialogState(value: ToolDialogPersistedState): ToolDialogPersistedState {
+  const candidate = value && typeof value === 'object' ? value : ({} as ToolDialogPersistedState)
+  const normalizeScrollTop = (raw: unknown) => {
+    const next = typeof raw === 'number' && Number.isFinite(raw) ? raw : 0
+    return Math.max(0, next)
+  }
+  const activeTab = candidate.activeTab === 'item' || candidate.activeTab === 'planner' ? candidate.activeTab : 'device'
+  return {
+    activeTab,
+    selectedDeviceId: typeof candidate.selectedDeviceId === 'string' ? (candidate.selectedDeviceId as DeviceTypeId | '') : '',
+    selectedItemId: typeof candidate.selectedItemId === 'string' ? candidate.selectedItemId : '',
+    deviceListScrollTop: normalizeScrollTop(candidate.deviceListScrollTop),
+    deviceContentScrollTop: normalizeScrollTop(candidate.deviceContentScrollTop),
+    itemListScrollTop: normalizeScrollTop(candidate.itemListScrollTop),
+    itemContentScrollTop: normalizeScrollTop(candidate.itemContentScrollTop),
+  }
+}
 
 export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDialogProps) {
   const toolDeviceTypes = useMemo(
@@ -51,27 +84,70 @@ export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDia
       ),
     [superRecipeEnabled],
   )
-  const [activeTab, setActiveTab] = useState<'device' | 'item' | 'planner'>('device')
-  const [selectedDeviceId, setSelectedDeviceId] = useState<DeviceTypeId | ''>(toolDeviceTypes[0]?.id ?? '')
-  const [selectedItemId, setSelectedItemId] = useState<string>(toolItems[0]?.id ?? '')
+  const [toolDialogState, setToolDialogState] = usePersistentState<ToolDialogPersistedState>(
+    TOOL_DIALOG_STATE_KEY,
+    {
+      activeTab: 'device',
+      selectedDeviceId: toolDeviceTypes[0]?.id ?? '',
+      selectedItemId: toolItems[0]?.id ?? '',
+      deviceListScrollTop: 0,
+      deviceContentScrollTop: 0,
+      itemListScrollTop: 0,
+      itemContentScrollTop: 0,
+    },
+    normalizeToolDialogState,
+  )
+  const { activeTab, selectedDeviceId, selectedItemId } = toolDialogState
+  const deviceListPaneRef = useRef<HTMLDivElement | null>(null)
+  const deviceContentPaneRef = useRef<HTMLElement | null>(null)
+  const itemListPaneRef = useRef<HTMLDivElement | null>(null)
+  const itemContentPaneRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     if (toolDeviceTypes.length === 0) {
-      if (selectedDeviceId) setSelectedDeviceId('')
+      if (selectedDeviceId) {
+        setToolDialogState((current) => ({
+          ...current,
+          selectedDeviceId: '',
+        }))
+      }
       return
     }
     if (toolDeviceTypes.some((device) => device.id === selectedDeviceId)) return
-    setSelectedDeviceId(toolDeviceTypes[0].id)
-  }, [selectedDeviceId, toolDeviceTypes])
+    setToolDialogState((current) => ({
+      ...current,
+      selectedDeviceId: toolDeviceTypes[0].id,
+    }))
+  }, [selectedDeviceId, setToolDialogState, toolDeviceTypes])
 
   useEffect(() => {
     if (toolItems.length === 0) {
-      if (selectedItemId) setSelectedItemId('')
+      if (selectedItemId) {
+        setToolDialogState((current) => ({
+          ...current,
+          selectedItemId: '',
+        }))
+      }
       return
     }
     if (toolItems.some((item) => item.id === selectedItemId)) return
-    setSelectedItemId(toolItems[0].id)
-  }, [selectedItemId, toolItems])
+    setToolDialogState((current) => ({
+      ...current,
+      selectedItemId: toolItems[0].id,
+    }))
+  }, [selectedItemId, setToolDialogState, toolItems])
+
+  useEffect(() => {
+    if (activeTab !== 'device') return
+    if (deviceListPaneRef.current) deviceListPaneRef.current.scrollTop = toolDialogState.deviceListScrollTop
+    if (deviceContentPaneRef.current) deviceContentPaneRef.current.scrollTop = toolDialogState.deviceContentScrollTop
+  }, [activeTab, selectedDeviceId, toolDialogState.deviceContentScrollTop, toolDialogState.deviceListScrollTop])
+
+  useEffect(() => {
+    if (activeTab !== 'item') return
+    if (itemListPaneRef.current) itemListPaneRef.current.scrollTop = toolDialogState.itemListScrollTop
+    if (itemContentPaneRef.current) itemContentPaneRef.current.scrollTop = toolDialogState.itemContentScrollTop
+  }, [activeTab, selectedItemId, toolDialogState.itemContentScrollTop, toolDialogState.itemListScrollTop])
 
   const selectedDeviceRecipes = useMemo(
     () => toolRecipes.filter((recipe) => recipe.machineType === selectedDeviceId),
@@ -142,13 +218,31 @@ export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDia
           <div className="tool-dialog-header-main">
             <div className="global-dialog-title">{t('tool.title')}</div>
             <div className="wiki-tabs wiki-primary-tabs tool-dialog-tabs" role="tablist" aria-label={t('tool.tabs.ariaLabel')}>
-              <button type="button" className={`wiki-tab-btn ${activeTab === 'device' ? 'active' : ''}`.trim()} role="tab" aria-selected={activeTab === 'device'} onClick={() => setActiveTab('device')}>
+              <button
+                type="button"
+                className={`wiki-tab-btn ${activeTab === 'device' ? 'active' : ''}`.trim()}
+                role="tab"
+                aria-selected={activeTab === 'device'}
+                onClick={() => setToolDialogState((current) => ({ ...current, activeTab: 'device' }))}
+              >
                 {t('tool.tab.device')}
               </button>
-              <button type="button" className={`wiki-tab-btn ${activeTab === 'item' ? 'active' : ''}`.trim()} role="tab" aria-selected={activeTab === 'item'} onClick={() => setActiveTab('item')}>
+              <button
+                type="button"
+                className={`wiki-tab-btn ${activeTab === 'item' ? 'active' : ''}`.trim()}
+                role="tab"
+                aria-selected={activeTab === 'item'}
+                onClick={() => setToolDialogState((current) => ({ ...current, activeTab: 'item' }))}
+              >
                 {t('tool.tab.item')}
               </button>
-              <button type="button" className={`wiki-tab-btn ${activeTab === 'planner' ? 'active' : ''}`.trim()} role="tab" aria-selected={activeTab === 'planner'} onClick={() => setActiveTab('planner')}>
+              <button
+                type="button"
+                className={`wiki-tab-btn ${activeTab === 'planner' ? 'active' : ''}`.trim()}
+                role="tab"
+                aria-selected={activeTab === 'planner'}
+                onClick={() => setToolDialogState((current) => ({ ...current, activeTab: 'planner' }))}
+              >
                 {t('tool.tab.planner')}
               </button>
             </div>
@@ -161,11 +255,32 @@ export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDia
         <div className={`wiki-dialog-body ${activeTab === 'planner' ? 'tool-dialog-body-planner' : 'is-split'}`}>
           {activeTab === 'device' && (
             <div className="wiki-split-layout">
-              <aside className="wiki-list-pane">
+              <aside
+                ref={deviceListPaneRef}
+                className="wiki-list-pane"
+                onScroll={(event) => {
+                  const nextScrollTop = event.currentTarget.scrollTop
+                  setToolDialogState((current) =>
+                    current.deviceListScrollTop === nextScrollTop
+                      ? current
+                      : { ...current, deviceListScrollTop: nextScrollTop },
+                  )
+                }}
+              >
                 <h4>{t('wiki.device.listTitle')}</h4>
                 <div className="wiki-entry-list">
                   {toolDeviceTypes.map((device) => (
-                    <button key={device.id} type="button" className={`wiki-entry-btn ${selectedDeviceId === device.id ? 'active' : ''}`.trim()} onClick={() => setSelectedDeviceId(device.id)}>
+                    <button
+                      key={device.id}
+                      type="button"
+                      className={`wiki-entry-btn ${selectedDeviceId === device.id ? 'active' : ''}`.trim()}
+                      onClick={() =>
+                        setToolDialogState((current) => ({
+                          ...current,
+                          selectedDeviceId: device.id,
+                        }))
+                      }
+                    >
                       <span className="wiki-entry-main">
                         <img className="wiki-entry-icon" src={getDeviceIconPath(device.id)} alt="" aria-hidden="true" draggable={false} />
                         <span>{getDeviceLabel(language, device.id)}</span>
@@ -175,7 +290,18 @@ export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDia
                 </div>
               </aside>
 
-              <section className="wiki-content-pane">
+              <section
+                ref={deviceContentPaneRef}
+                className="wiki-content-pane"
+                onScroll={(event) => {
+                  const nextScrollTop = event.currentTarget.scrollTop
+                  setToolDialogState((current) =>
+                    current.deviceContentScrollTop === nextScrollTop
+                      ? current
+                      : { ...current, deviceContentScrollTop: nextScrollTop },
+                  )
+                }}
+              >
                 <h4>{t('wiki.device.recipeTitle', { name: selectedDeviceId ? getDeviceLabel(language, selectedDeviceId) : '-' })}</h4>
                 <div className="wiki-section-subtitle">
                   {t('wiki.devicePowerDemand', {
@@ -195,11 +321,32 @@ export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDia
 
           {activeTab === 'item' && (
             <div className="wiki-split-layout">
-              <aside className="wiki-list-pane">
+              <aside
+                ref={itemListPaneRef}
+                className="wiki-list-pane"
+                onScroll={(event) => {
+                  const nextScrollTop = event.currentTarget.scrollTop
+                  setToolDialogState((current) =>
+                    current.itemListScrollTop === nextScrollTop
+                      ? current
+                      : { ...current, itemListScrollTop: nextScrollTop },
+                  )
+                }}
+              >
                 <h4>{t('wiki.item.listTitle')}</h4>
                 <div className="wiki-entry-list">
                   {toolItems.map((item) => (
-                    <button key={item.id} type="button" className={`wiki-entry-btn ${selectedItemId === item.id ? 'active' : ''}`.trim()} onClick={() => setSelectedItemId(item.id)}>
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`wiki-entry-btn ${selectedItemId === item.id ? 'active' : ''}`.trim()}
+                      onClick={() =>
+                        setToolDialogState((current) => ({
+                          ...current,
+                          selectedItemId: item.id,
+                        }))
+                      }
+                    >
                       <span className="wiki-entry-main">
                         <img className="wiki-entry-icon" src={getItemIconPath(item.id)} alt="" aria-hidden="true" draggable={false} />
                         <span>{limitItemLabel(getItemLabel(language, item.id))}</span>
@@ -209,7 +356,18 @@ export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDia
                 </div>
               </aside>
 
-              <section className="wiki-content-pane">
+              <section
+                ref={itemContentPaneRef}
+                className="wiki-content-pane"
+                onScroll={(event) => {
+                  const nextScrollTop = event.currentTarget.scrollTop
+                  setToolDialogState((current) =>
+                    current.itemContentScrollTop === nextScrollTop
+                      ? current
+                      : { ...current, itemContentScrollTop: nextScrollTop },
+                  )
+                }}
+              >
                 <h4>{t('wiki.item.recipeTitle', { name: getItemLabel(language, selectedItemId) })}</h4>
 
                 <div className="wiki-section-subtitle">{t('wiki.item.groupProducedBy')}</div>
