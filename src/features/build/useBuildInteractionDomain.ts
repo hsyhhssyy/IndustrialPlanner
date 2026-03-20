@@ -148,7 +148,15 @@ export function useBuildInteractionDomain({
       const y = rawY - currentBaseOuterRing.top
       return { x, y }
     },
-    [baseCellSize, currentBaseOuterRing.left, currentBaseOuterRing.top, viewOffset.x, viewOffset.y, viewportRef, zoomScale],
+    [
+      baseCellSize,
+      currentBaseOuterRing.left,
+      currentBaseOuterRing.top,
+      viewOffset.x,
+      viewOffset.y,
+      viewportRef,
+      zoomScale,
+    ],
   )
 
   const toCell = useCallback(

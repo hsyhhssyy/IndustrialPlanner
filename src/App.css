@@ -4099,7 +4099,7 @@ button:disabled {
   --scrollbar-track: #e8edf3;
   --scrollbar-thumb: #b8c4d3;
   --scrollbar-thumb-hover: #96a8bf;
-  --canvas-bg: #161c27;
+  --canvas-bg: var(--surface-1);
   --canvas-grid-line: rgba(88, 102, 120, 0.42);
   --canvas-grid-border: #475669;
   --place-ghost-border: rgba(49, 60, 77, 0.94);

@@ -510,7 +510,7 @@ function App() {
         { width: canvasWidth, height: canvasHeight },
       ),
     )
-  }, [canvasHeightPx, canvasWidthPx, zoomScale])
+  }, [canvasHeightPx, canvasWidthPx, clampViewportOffset, setViewOffset, zoomScale])
 
   const applyViewportPinchTransform = useCallback(
     (
@@ -558,7 +558,16 @@ function App() {
         setCellSize(next)
       }
     },
-    [appendDebugLog, canvasHeightPx, canvasWidthPx, cellSize, clampViewportOffset, getMaxCellSizeForViewport, setCellSize, setViewOffset],
+    [
+      appendDebugLog,
+      cellSize,
+      clampViewportOffset,
+      getMaxCellSizeForViewport,
+      setCellSize,
+      setViewOffset,
+      canvasHeightPx,
+      canvasWidthPx,
+    ],
   )
 
   useEffect(() => {
