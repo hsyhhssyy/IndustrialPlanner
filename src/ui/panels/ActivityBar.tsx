@@ -7,8 +7,9 @@ type ActivityBarProps = {
 }
 
 type ActivityMode = 'place' | 'delete' | 'blueprint'
+const FEEDBACK_ISSUE_URL = 'https://github.com/hsyhhssyy/IndustrialPlanner/issues/new'
 
-function WorkbenchIcon({ kind }: { kind: 'place' | 'delete' | 'blueprint' | 'history' | 'tool' | 'help' | 'settings' }) {
+function WorkbenchIcon({ kind }: { kind: 'place' | 'delete' | 'blueprint' | 'history' | 'tool' | 'feedback' | 'help' | 'settings' }) {
   if (kind === 'place') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -40,7 +41,14 @@ function WorkbenchIcon({ kind }: { kind: 'place' | 'delete' | 'blueprint' | 'his
   if (kind === 'tool') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M14 3L21 10L18.5 12.5L11.5 5.5L14 3ZM10.8 6.2L17.8 13.2L9 22H2V15L10.8 6.2ZM5 16V19H8L16.4 10.6L13.4 7.6L5 16Z" />
+        <path d="M9 4V6H15V4H18C19.1 4 20 4.9 20 6V9H4V6C4 4.9 4.9 4 6 4H9ZM4 11H10V12.5C10 13.3 10.7 14 11.5 14H12.5C13.3 14 14 13.3 14 12.5V11H20V18C20 19.1 19.1 20 18 20H6C4.9 20 4 19.1 4 18V11ZM12 11C11.4 11 11 11.4 11 12V12H13V12C13 11.4 12.6 11 12 11Z" />
+      </svg>
+    )
+  }
+  if (kind === 'feedback') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4 17.2V20H6.8L16.1 10.7L13.3 7.9L4 17.2ZM18.2 8.6C18.5 8.3 18.5 7.8 18.2 7.5L16.5 5.8C16.2 5.5 15.7 5.5 15.4 5.8L14.1 7.1L16.9 9.9L18.2 8.6ZM19 20H11V18H19V20Z" />
       </svg>
     )
   }
@@ -109,10 +117,17 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
     { key: 'blueprint', icon: 'blueprint' },
   ]
 
-  const getActivityLabel = (key: 'tool' | 'help' | 'settings') => {
+  const getActivityLabel = (key: 'feedback' | 'tool' | 'help' | 'settings') => {
+    if (key === 'feedback') return language === 'zh-CN' ? '问题反馈' : 'Feedback'
     if (key === 'tool') return language === 'zh-CN' ? '工具箱' : 'Toolbox'
     if (key === 'help') return language === 'zh-CN' ? '帮助' : 'Help'
     return language === 'zh-CN' ? '设置' : 'Settings'
+  }
+
+  const openFeedback = () => {
+    appendDebugLog('activity-bar', 'Feedback button tapped: opening GitHub issue page')
+    if (typeof window === 'undefined') return
+    window.open(FEEDBACK_ISSUE_URL, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -146,6 +161,16 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
       </div>
 
       <div className="activity-bar-group activity-bar-group-bottom">
+        <button
+          type="button"
+          className="activity-bar-item"
+          onClick={openFeedback}
+          title={getActivityLabel('feedback')}
+          aria-label={getActivityLabel('feedback')}
+        >
+          <span className="activity-bar-item-icon"><WorkbenchIcon kind="feedback" /></span>
+          <span className="activity-bar-item-label">{getActivityLabel('feedback')}</span>
+        </button>
         <button
           type="button"
           className={`activity-bar-item ${isToolOpen ? 'active' : ''}`.trim()}

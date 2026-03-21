@@ -1,18 +1,32 @@
 import { LANGUAGE_OPTIONS, type Language } from '../../i18n'
 import { useAppContext } from '../../app/AppContext'
-import { SIM_MAX_TICKS_PER_FRAME_DEFAULT, SIM_MAX_TICKS_PER_FRAME_MAX, SIM_MAX_TICKS_PER_FRAME_MIN } from '../../app/settings'
+import {
+  LAYOUT_HISTORY_LIMIT_DEFAULT,
+  LAYOUT_HISTORY_LIMIT_INFINITE,
+  LAYOUT_HISTORY_LIMIT_MAX,
+  LAYOUT_HISTORY_LIMIT_MIN,
+  SIM_MAX_TICKS_PER_FRAME_DEFAULT,
+  SIM_MAX_TICKS_PER_FRAME_MAX,
+  SIM_MAX_TICKS_PER_FRAME_MIN,
+} from '../../app/settings'
+import { dialogConfirm } from '../dialog'
 import { showToast } from '../toast'
 
 type SettingsDialogProps = {
   t: (key: string, params?: Record<string, string | number>) => string
   onClose: () => void
+  onClearAllHistory: () => number
 }
 
-export function SettingsDialog({ t, onClose }: SettingsDialogProps) {
+export function SettingsDialog({ t, onClose, onClearAllHistory }: SettingsDialogProps) {
   const {
-    state: { language, superRecipeEnabled, superRecipeControlMode, debugMode, debugLogs, uiTheme, maxTicksPerFrame },
-    actions: { setLanguage, setSuperRecipeEnabled, setDebugMode, setMaxTicksPerFrame, clearDebugLogs, setUiTheme, resetUiSettings },
+    state: { language, superRecipeEnabled, superRecipeControlMode, debugMode, debugLogs, uiTheme, maxTicksPerFrame, layoutHistoryLimit },
+    actions: { setLanguage, setSuperRecipeEnabled, setDebugMode, setMaxTicksPerFrame, setLayoutHistoryLimit, clearDebugLogs, setUiTheme, resetUiSettings },
   } = useAppContext()
+
+  const historyLimitSliderMax = LAYOUT_HISTORY_LIMIT_MAX + 1
+  const historyLimitSliderValue = layoutHistoryLimit === LAYOUT_HISTORY_LIMIT_INFINITE ? historyLimitSliderMax : layoutHistoryLimit
+  const historyLimitLabel = layoutHistoryLimit === LAYOUT_HISTORY_LIMIT_INFINITE ? t('settings.historyLimitInfinite') : String(layoutHistoryLimit)
 
   const handleCopyDebugLogs = async () => {
     const text = debugLogs.map((entry) => `[${entry.timestamp}] [${entry.category}] ${entry.message}`).join('\n')
@@ -35,6 +49,24 @@ export function SettingsDialog({ t, onClose }: SettingsDialogProps) {
   const handleResetUiSettings = () => {
     resetUiSettings()
     showToast(t('settings.reset.success'), { variant: 'success' })
+  }
+
+  const handleClearAllHistory = async () => {
+    const confirmed = await dialogConfirm(t('settings.historyClear.confirm'), {
+      title: t('dialog.title.warning'),
+      confirmText: t('settings.historyClear.action'),
+      cancelText: t('dialog.cancel'),
+      variant: 'warning',
+    })
+    if (!confirmed) return
+
+    const clearedBaseCount = onClearAllHistory()
+    if (clearedBaseCount === 0) {
+      showToast(t('settings.historyClear.empty'), { variant: 'warning' })
+      return
+    }
+
+    showToast(t('settings.historyClear.success', { count: clearedBaseCount }), { variant: 'success' })
   }
 
   return (
@@ -105,6 +137,44 @@ export function SettingsDialog({ t, onClose }: SettingsDialogProps) {
               </div>
               <div className="settings-description">{t('settings.performanceHint')}</div>
               <div className="settings-description">{t('settings.performanceFpsWarning')}</div>
+            </div>
+            <div className="settings-stack settings-slider-block">
+              <div>
+                <div className="settings-label">{t('settings.historyLimitValue', { value: historyLimitLabel })}</div>
+                <div className="settings-description">{t('settings.historyLimitDesc')}</div>
+              </div>
+              <label className="settings-range-wrap">
+                <input
+                  type="range"
+                  min={LAYOUT_HISTORY_LIMIT_MIN}
+                  max={historyLimitSliderMax}
+                  step={1}
+                  value={historyLimitSliderValue}
+                  aria-label={t('settings.historyLimit')}
+                  onChange={(event) => {
+                    const nextValue = Number(event.target.value)
+                    setLayoutHistoryLimit(nextValue > LAYOUT_HISTORY_LIMIT_MAX ? LAYOUT_HISTORY_LIMIT_INFINITE : nextValue)
+                  }}
+                />
+              </label>
+              <div className="settings-range-scale" aria-hidden="true">
+                <span>{LAYOUT_HISTORY_LIMIT_MIN}</span>
+                <span>{t('settings.performanceDefault', { value: LAYOUT_HISTORY_LIMIT_DEFAULT })}</span>
+                <span>{LAYOUT_HISTORY_LIMIT_MAX}</span>
+                <span>{t('settings.historyLimitInfinite')}</span>
+              </div>
+              <div className="settings-description">{t('settings.historyLimitHint')}</div>
+            </div>
+            <div className="settings-row">
+              <div>
+                <div className="settings-label">{t('settings.historyClear.title')}</div>
+                <div className="settings-description">{t('settings.historyClear.desc')}</div>
+              </div>
+              <div className="settings-card-actions">
+                <button type="button" className="global-dialog-btn" onClick={() => void handleClearAllHistory()}>
+                  {t('settings.historyClear.action')}
+                </button>
+              </div>
             </div>
           </section>
 

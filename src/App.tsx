@@ -192,6 +192,7 @@ function App() {
       language,
       superRecipeEnabled,
       maxTicksPerFrame,
+      layoutHistoryLimit,
       uiTheme,
       leftPanelWidth,
       rightPanelWidth,
@@ -286,11 +287,13 @@ function App() {
     redoLayout,
     historyEntries,
     jumpToHistory,
+    clearAllHistory,
     unknownDevicesCount,
   } = useBaseLayoutDomain({
     cellSize,
     baseCellSize: BASE_CELL_SIZE,
     language,
+    layoutHistoryLimit,
     setSelection,
     t,
   })
@@ -1615,7 +1618,7 @@ function App() {
 
       {isToolOpen && <ToolDialog language={language} t={t} superRecipeEnabled={superRecipeEnabled} onClose={closeTool} />}
       {isHelpOpen && <HelpDialog language={language} t={t} onClose={closeHelp} />}
-      {isSettingsOpen && <SettingsDialog t={t} onClose={closeSettings} />}
+      {isSettingsOpen && <SettingsDialog t={t} onClose={closeSettings} onClearAllHistory={clearAllHistory} />}
     </div>
   )
 }

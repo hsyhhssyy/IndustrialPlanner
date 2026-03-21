@@ -5,7 +5,14 @@ import { BASE_BY_ID } from '../../domain/registry'
 import { isKnownDeviceTypeId } from '../../domain/shared/predicates'
 import { isDeviceWithinAllowedPlacementArea } from '../../domain/shared/placementArea'
 import type { BaseId, DeviceInstance, LayoutState } from '../../domain/types'
+import {
+  compactLayoutHistoryStorage,
+  LAYOUT_HISTORY_STORAGE_KEY,
+  reduceHistoryStorageOnPersistError,
+  trimLayoutHistoryEntry,
+} from '../../core/localStorageRecovery'
 import { usePersistentState } from '../../core/usePersistentState'
+import { LAYOUT_HISTORY_LIMIT_INFINITE } from '../../app/settings'
 import { dialogConfirm } from '../../ui/dialog'
 import { getDeviceLabel, type Language } from '../../i18n'
 import { initialStorageConfig } from '../../sim/engine'
@@ -15,6 +22,7 @@ type UseBaseLayoutDomainParams = {
   cellSize: number
   baseCellSize: number
   language: Language
+  layoutHistoryLimit: number
   setSelection: Dispatch<SetStateAction<string[]>>
   t: (key: string, params?: Record<string, string | number>) => string
 }
@@ -35,9 +43,6 @@ type LayoutHistoryViewEntry = {
   layout: LayoutState
   summary: string
 }
-
-const MAX_LAYOUT_HISTORY_ENTRIES = 100
-const LAYOUT_HISTORY_STORAGE_KEY = 'stage6-layout-history-by-base'
 
 function isKnownBaseId(baseId: unknown): baseId is BaseId {
   return typeof baseId === 'string' && baseId in BASE_BY_ID
@@ -232,7 +237,8 @@ function buildHistoryViewEntries(history: LayoutHistoryEntry | undefined, curren
   }))
 }
 
-export function useBaseLayoutDomain({ cellSize, baseCellSize, language, setSelection, t }: UseBaseLayoutDomainParams) {
+export function useBaseLayoutDomain({ cellSize, baseCellSize, language, layoutHistoryLimit, setSelection, t }: UseBaseLayoutDomainParams) {
+  const historyEntryLimit = layoutHistoryLimit === LAYOUT_HISTORY_LIMIT_INFINITE ? null : layoutHistoryLimit
   const [activeBaseId, setActiveBaseId] = usePersistentState<BaseId>('stage1-active-base', 'valley4_protocol_core')
   const [layoutsStorage, setLayoutsStorage] = usePersistentState<LayoutsByBaseStorage>(
     'stage1-layouts-by-base',
@@ -242,7 +248,11 @@ export function useBaseLayoutDomain({ cellSize, baseCellSize, language, setSelec
   const [layoutHistoryStorage, setLayoutHistoryStorage] = usePersistentState<LayoutHistoryByBaseStorage>(
     LAYOUT_HISTORY_STORAGE_KEY,
     { version: APP_VERSION, historiesByBase: {} },
-    normalizeLayoutHistoryByBaseStorage,
+    {
+      normalize: normalizeLayoutHistoryByBaseStorage,
+      quotaRecoveryHistoryLimit: historyEntryLimit,
+      onPersistError: (value) => reduceHistoryStorageOnPersistError(value, historyEntryLimit),
+    },
   )
 
   const layoutsByBase = layoutsStorage.layoutsByBase
@@ -276,15 +286,17 @@ export function useBaseLayoutDomain({ cellSize, baseCellSize, language, setSelec
 
   const writeHistoryForActiveBase = useCallback(
     (nextHistory: LayoutHistoryEntry) => {
-      setLayoutHistoryStorage((currentStorage) => ({
-        version: APP_VERSION,
-        historiesByBase: {
-          ...currentStorage.historiesByBase,
-          [activeBaseId]: nextHistory,
-        },
-      }))
+      setLayoutHistoryStorage((currentStorage) =>
+        compactLayoutHistoryStorage({
+          version: APP_VERSION,
+          historiesByBase: {
+            ...currentStorage.historiesByBase,
+            [activeBaseId]: trimLayoutHistoryEntry(nextHistory, historyEntryLimit),
+          },
+        }, historyEntryLimit),
+      )
     },
-    [activeBaseId, setLayoutHistoryStorage],
+    [activeBaseId, historyEntryLimit, setLayoutHistoryStorage],
   )
 
   const writeLayoutForActiveBase = useCallback(
@@ -308,13 +320,13 @@ export function useBaseLayoutDomain({ cellSize, baseCellSize, language, setSelec
       if (areLayoutsEqual(currentLayout, normalizedNext)) return
 
       writeHistoryForActiveBase({
-        past: [...currentHistory.past, cloneLayoutState(currentLayout)].slice(-MAX_LAYOUT_HISTORY_ENTRIES),
+        past: trimLayoutHistoryEntry({ past: [...currentHistory.past, cloneLayoutState(currentLayout)], future: [] }, historyEntryLimit).past,
         future: [],
       })
       layoutRef.current = normalizedNext
       writeLayoutForActiveBase(normalizedNext)
     },
-    [activeBaseId, currentHistory, writeHistoryForActiveBase, writeLayoutForActiveBase],
+    [activeBaseId, currentHistory, historyEntryLimit, writeHistoryForActiveBase, writeLayoutForActiveBase],
   )
 
   const undoLayout = useCallback(() => {
@@ -324,12 +336,12 @@ export function useBaseLayoutDomain({ cellSize, baseCellSize, language, setSelec
     const previousLayout = normalizeLayoutForBase(currentHistory.past[currentHistory.past.length - 1], activeBaseId)
     writeHistoryForActiveBase({
       past: currentHistory.past.slice(0, -1),
-      future: [cloneLayoutState(currentLayout), ...currentHistory.future].slice(0, MAX_LAYOUT_HISTORY_ENTRIES),
+      future: trimLayoutHistoryEntry({ past: [], future: [cloneLayoutState(currentLayout), ...currentHistory.future] }, historyEntryLimit).future,
     })
     layoutRef.current = previousLayout
     writeLayoutForActiveBase(previousLayout)
     return true
-  }, [activeBaseId, currentHistory, writeHistoryForActiveBase, writeLayoutForActiveBase])
+  }, [activeBaseId, currentHistory, historyEntryLimit, writeHistoryForActiveBase, writeLayoutForActiveBase])
 
   const redoLayout = useCallback(() => {
     if (!currentHistory || currentHistory.future.length === 0) return false
@@ -338,13 +350,13 @@ export function useBaseLayoutDomain({ cellSize, baseCellSize, language, setSelec
     const [nextLayoutSnapshot, ...remainingFuture] = currentHistory.future
     const nextLayout = normalizeLayoutForBase(nextLayoutSnapshot, activeBaseId)
     writeHistoryForActiveBase({
-      past: [...currentHistory.past, cloneLayoutState(currentLayout)].slice(-MAX_LAYOUT_HISTORY_ENTRIES),
+      past: trimLayoutHistoryEntry({ past: [...currentHistory.past, cloneLayoutState(currentLayout)], future: [] }, historyEntryLimit).past,
       future: remainingFuture,
     })
     layoutRef.current = nextLayout
     writeLayoutForActiveBase(nextLayout)
     return true
-  }, [activeBaseId, currentHistory, writeHistoryForActiveBase, writeLayoutForActiveBase])
+  }, [activeBaseId, currentHistory, historyEntryLimit, writeHistoryForActiveBase, writeLayoutForActiveBase])
 
   const jumpToHistory = useCallback(
     (index: number) => {
@@ -356,15 +368,34 @@ export function useBaseLayoutDomain({ cellSize, baseCellSize, language, setSelec
 
       const nextLayout = normalizeLayoutForBase(combined[index], activeBaseId)
       writeHistoryForActiveBase({
-        past: combined.slice(0, index).map((entry) => cloneLayoutState(normalizeLayoutForBase(entry, activeBaseId))).slice(-MAX_LAYOUT_HISTORY_ENTRIES),
-        future: combined.slice(index + 1).map((entry) => cloneLayoutState(normalizeLayoutForBase(entry, activeBaseId))).slice(0, MAX_LAYOUT_HISTORY_ENTRIES),
+        past: trimLayoutHistoryEntry({
+          past: combined.slice(0, index).map((entry) => cloneLayoutState(normalizeLayoutForBase(entry, activeBaseId))),
+          future: [],
+        }, historyEntryLimit).past,
+        future: trimLayoutHistoryEntry({
+          past: [],
+          future: combined.slice(index + 1).map((entry) => cloneLayoutState(normalizeLayoutForBase(entry, activeBaseId))),
+        }, historyEntryLimit).future,
       })
       layoutRef.current = nextLayout
       writeLayoutForActiveBase(nextLayout)
       return true
     },
-    [activeBaseId, currentHistory, writeHistoryForActiveBase, writeLayoutForActiveBase],
+    [activeBaseId, currentHistory, historyEntryLimit, writeHistoryForActiveBase, writeLayoutForActiveBase],
   )
+
+  const clearAllHistory = useCallback(() => {
+    const clearedBaseCount = Object.values(layoutHistoryStorage.historiesByBase).filter(
+      (entry) => entry.past.length > 0 || entry.future.length > 0,
+    ).length
+    if (clearedBaseCount === 0) return 0
+
+    setLayoutHistoryStorage({
+      version: APP_VERSION,
+      historiesByBase: {},
+    })
+    return clearedBaseCount
+  }, [layoutHistoryStorage.historiesByBase, setLayoutHistoryStorage])
 
   const canUndo = currentHistory.past.length > 0
   const canRedo = currentHistory.future.length > 0
@@ -451,6 +482,7 @@ export function useBaseLayoutDomain({ cellSize, baseCellSize, language, setSelec
     redoLayout,
     historyEntries,
     jumpToHistory,
+    clearAllHistory,
     unknownDevicesCount: unknownDevices.length,
   }
 }

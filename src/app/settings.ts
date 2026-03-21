@@ -1,16 +1,22 @@
 import type { Language } from '../i18n'
+import { trySetLocalStorageItemWithRecovery } from '../core/localStorageRecovery'
 
 export type UiTheme = 'ayu-dark' | 'ayu-light'
 
 export const SIM_MAX_TICKS_PER_FRAME_MIN = 4
 export const SIM_MAX_TICKS_PER_FRAME_DEFAULT = 8
 export const SIM_MAX_TICKS_PER_FRAME_MAX = 24
+export const LAYOUT_HISTORY_LIMIT_MIN = 5
+export const LAYOUT_HISTORY_LIMIT_DEFAULT = 10
+export const LAYOUT_HISTORY_LIMIT_MAX = 100
+export const LAYOUT_HISTORY_LIMIT_INFINITE = -1
 
 export type AppSettings = {
   language: Language
   superRecipeEnabled: boolean
   debugMode: boolean
   maxTicksPerFrame: number
+  layoutHistoryLimit: number
   uiTheme: UiTheme
   leftPanelWidth: number
   rightPanelWidth: number
@@ -40,6 +46,7 @@ export function createDefaultAppSettings(): AppSettings {
     superRecipeEnabled: false,
     debugMode: false,
     maxTicksPerFrame: SIM_MAX_TICKS_PER_FRAME_DEFAULT,
+    layoutHistoryLimit: LAYOUT_HISTORY_LIMIT_DEFAULT,
     uiTheme: 'ayu-dark',
     leftPanelWidth: 340,
     rightPanelWidth: 340,
@@ -76,6 +83,15 @@ function normalizeMaxTicksPerFrame(value: unknown, fallback: number) {
   return clamp(Math.round(Number(value)), SIM_MAX_TICKS_PER_FRAME_MIN, SIM_MAX_TICKS_PER_FRAME_MAX)
 }
 
+function normalizeLayoutHistoryLimit(value: unknown, fallback: number) {
+  if (!Number.isFinite(value)) return fallback
+  const normalized = Math.round(Number(value))
+  if (normalized === LAYOUT_HISTORY_LIMIT_INFINITE) {
+    return LAYOUT_HISTORY_LIMIT_INFINITE
+  }
+  return clamp(normalized, LAYOUT_HISTORY_LIMIT_MIN, LAYOUT_HISTORY_LIMIT_MAX)
+}
+
 function readLegacyValue<T>(key: string, fallback: T) {
   try {
     const raw = localStorage.getItem(key)
@@ -92,6 +108,7 @@ export function normalizeAppSettings(value: Partial<AppSettings> | null | undefi
     superRecipeEnabled: normalizeBoolean(next.superRecipeEnabled, DEFAULT_SETTINGS.superRecipeEnabled),
     debugMode: normalizeBoolean(next.debugMode, DEFAULT_SETTINGS.debugMode),
     maxTicksPerFrame: normalizeMaxTicksPerFrame(next.maxTicksPerFrame, DEFAULT_SETTINGS.maxTicksPerFrame),
+    layoutHistoryLimit: normalizeLayoutHistoryLimit(next.layoutHistoryLimit, DEFAULT_SETTINGS.layoutHistoryLimit),
     uiTheme: normalizeTheme(next.uiTheme, DEFAULT_SETTINGS.uiTheme),
     leftPanelWidth: normalizePanelWidth(next.leftPanelWidth, DEFAULT_SETTINGS.leftPanelWidth),
     rightPanelWidth: normalizePanelWidth(next.rightPanelWidth, DEFAULT_SETTINGS.rightPanelWidth),
@@ -122,5 +139,13 @@ export function readAppSettings(): AppSettings {
 }
 
 export function writeAppSettings(settings: AppSettings) {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(normalizeAppSettings(settings)))
+  try {
+    trySetLocalStorageItemWithRecovery(
+      SETTINGS_KEY,
+      JSON.stringify(normalizeAppSettings(settings)),
+      settings.layoutHistoryLimit === LAYOUT_HISTORY_LIMIT_INFINITE ? null : settings.layoutHistoryLimit,
+    )
+  } catch (error) {
+    console.warn(`Failed to persist localStorage key: ${SETTINGS_KEY}`, error)
+  }
 }

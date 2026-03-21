@@ -1,4 +1,5 @@
 import { sanitizeBlueprintLinks, sanitizeLayoutLinks } from '../domain/deviceLinks'
+import { trySetLocalStorageItemWithRecovery } from '../core/localStorageRecovery'
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID } from '../domain/registry'
 import { inputBufferAllowedTypesForSlot } from '../domain/shared/itemPickerRules'
 import type { BaseId, BlueprintDeviceLink, DeviceConfig, DeviceInstance, ItemId, LayoutState } from '../domain/types'
@@ -597,7 +598,7 @@ function safeReadJson(key: string): unknown {
 
 function safeWriteJson(key: string, value: unknown) {
   try {
-    localStorage.setItem(key, JSON.stringify(value))
+    trySetLocalStorageItemWithRecovery(key, JSON.stringify(value))
   } catch {
     return
   }
@@ -625,7 +626,7 @@ export function runBlueprintStorageMigration() {
       const parsed = safeReadJson(LEGACY_SELECTED_BLUEPRINT_ID_KEY)
       if (typeof parsed === 'string') {
         const mapped = idMap.get(parsed)
-        if (mapped) localStorage.setItem(SELECTED_BLUEPRINT_ID_KEY, JSON.stringify(mapped))
+        if (mapped) safeWriteJson(SELECTED_BLUEPRINT_ID_KEY, mapped)
       }
     }
 
@@ -633,7 +634,7 @@ export function runBlueprintStorageMigration() {
       const parsed = safeReadJson(LEGACY_ARMED_BLUEPRINT_ID_KEY)
       if (typeof parsed === 'string') {
         const mapped = idMap.get(parsed)
-        if (mapped) localStorage.setItem(ARMED_BLUEPRINT_ID_KEY, JSON.stringify(mapped))
+        if (mapped) safeWriteJson(ARMED_BLUEPRINT_ID_KEY, mapped)
       }
     }
 

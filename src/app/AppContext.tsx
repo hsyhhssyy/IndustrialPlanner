@@ -4,6 +4,7 @@ import type { DeviceTypeId, EditMode } from '../domain/types'
 import type { Language } from '../i18n'
 import { TypedEventBus } from './eventBus'
 import { createDefaultAppSettings, normalizeAppSettings, readAppSettings, writeAppSettings, type UiTheme } from './settings'
+import { trySetLocalStorageItemWithRecovery } from '../core/localStorageRecovery'
 import { APP_VERSION } from '../migrations/versioning'
 import {
   normalizeSuperRecipeEnabledPreference,
@@ -135,6 +136,7 @@ type AppContextState = {
   superRecipeControlMode: SuperRecipeControlMode
   debugMode: boolean
   maxTicksPerFrame: number
+  layoutHistoryLimit: number
   debugLogs: DebugLogEntry[]
   uiTheme: UiTheme
   leftPanelWidth: number
@@ -203,6 +205,7 @@ type AppContextActions = {
   setSuperRecipeEnabled: (enabled: boolean) => void
   setDebugMode: (enabled: boolean) => void
   setMaxTicksPerFrame: Dispatch<SetStateAction<number>>
+  setLayoutHistoryLimit: Dispatch<SetStateAction<number>>
   appendDebugLog: (category: string, message: string) => void
   clearDebugLogs: () => void
   setUiTheme: (theme: UiTheme) => void
@@ -255,7 +258,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const viewportPersistTimeoutRef = useRef<number | null>(null)
   const eventBus = useMemo(() => new TypedEventBus<AppEventMap>(), [])
   const superRecipeEnabled = SUPER_RECIPE_CONTROL_MODE === 'forced-off' ? false : normalizeSuperRecipeEnabledPreference(settings.superRecipeEnabled)
-  const { language, uiTheme, leftPanelWidth, rightPanelWidth, leftPanelCollapsed, rightPanelCollapsed, debugMode, maxTicksPerFrame } = settings
+  const { language, uiTheme, leftPanelWidth, rightPanelWidth, leftPanelCollapsed, rightPanelCollapsed, debugMode, maxTicksPerFrame, layoutHistoryLimit } = settings
   const cellSize = persistedViewportState.cellSize
   const viewOffset = persistedViewportState.viewOffset
 
@@ -285,14 +288,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     viewportPersistTimeoutRef.current = window.setTimeout(() => {
-      localStorage.setItem(
-        VIEWPORT_STATE_STORAGE_KEY,
-        JSON.stringify({
-          version: APP_VERSION,
-          cellSize,
-          viewOffset,
-        } satisfies PersistedViewportState),
-      )
+      try {
+        trySetLocalStorageItemWithRecovery(
+          VIEWPORT_STATE_STORAGE_KEY,
+          JSON.stringify({
+            version: APP_VERSION,
+            cellSize,
+            viewOffset,
+          } satisfies PersistedViewportState),
+          layoutHistoryLimit,
+        )
+      } catch (error) {
+        console.warn(`Failed to persist localStorage key: ${VIEWPORT_STATE_STORAGE_KEY}`, error)
+      }
       viewportPersistTimeoutRef.current = null
     }, VIEWPORT_PERSIST_DEBOUNCE_MS)
 
@@ -302,7 +310,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         viewportPersistTimeoutRef.current = null
       }
     }
-  }, [cellSize, viewOffset])
+  }, [cellSize, layoutHistoryLimit, viewOffset])
 
   const setLanguage = useCallback((language: Language) => {
     setSettings((current) => ({ ...current, language }))
@@ -324,6 +332,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSettings((current) => ({
       ...current,
       maxTicksPerFrame: normalizeAppSettings({ ...current, maxTicksPerFrame: typeof value === 'function' ? value(current.maxTicksPerFrame) : value }).maxTicksPerFrame,
+    }))
+  }, [])
+
+  const setLayoutHistoryLimit = useCallback<Dispatch<SetStateAction<number>>>((value) => {
+    setSettings((current) => ({
+      ...current,
+      layoutHistoryLimit: normalizeAppSettings({
+        ...current,
+        layoutHistoryLimit: typeof value === 'function' ? value(current.layoutHistoryLimit) : value,
+      }).layoutHistoryLimit,
     }))
   }, [])
 
@@ -439,6 +457,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         superRecipeControlMode: SUPER_RECIPE_CONTROL_MODE,
         debugMode,
         maxTicksPerFrame,
+        layoutHistoryLimit,
         debugLogs,
         uiTheme,
         leftPanelWidth,
@@ -458,6 +477,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSuperRecipeEnabled,
         setDebugMode,
         setMaxTicksPerFrame,
+        setLayoutHistoryLimit,
         appendDebugLog,
         clearDebugLogs,
         setUiTheme,
@@ -539,6 +559,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       leftPanelWidth,
       debugLogs,
       debugMode,
+      layoutHistoryLimit,
       maxTicksPerFrame,
       logCurrent,
       logStart,
@@ -555,6 +576,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setDebugMode,
       setLanguage,
       setActiveWorkbenchView,
+      setLayoutHistoryLimit,
       setLeftPanelCollapsed,
       setLeftPanelWidth,
       setMaxTicksPerFrame,
