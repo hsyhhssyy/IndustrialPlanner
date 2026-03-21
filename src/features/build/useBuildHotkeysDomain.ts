@@ -43,6 +43,7 @@ type UseBuildHotkeysDomainParams = {
   foundationMovableIdSet: ReadonlySet<string>
   currentBaseOuterRing: OuterRing
   setLayout: (updater: LayoutState | ((current: LayoutState) => LayoutState)) => void
+  returnToIdle: () => void
   resetPlacementTrace: () => void
   highlightedPlaceGroup: PlaceGroupKey | null
   setHighlightedPlaceGroup: Dispatch<SetStateAction<PlaceGroupKey | null>>
@@ -93,6 +94,7 @@ export function useBuildHotkeysDomain({
   foundationMovableIdSet,
   currentBaseOuterRing,
   setLayout,
+  returnToIdle,
   resetPlacementTrace,
   highlightedPlaceGroup,
   setHighlightedPlaceGroup,
@@ -153,12 +155,6 @@ export function useBuildHotkeysDomain({
     const ensurePanLoop = () => {
       if (panFrameId !== null || pressedPanKeys.size === 0) return
       panFrameId = window.requestAnimationFrame(stepPanLoop)
-    }
-
-    const resetToDefaultPlaceMode = () => {
-      setPlaceOperation('default')
-      setPlaceType('')
-      resetPlacementTrace()
     }
 
     const deleteSelectedDevices = () => {
@@ -230,12 +226,10 @@ export function useBuildHotkeysDomain({
         if (targetOperation === 'pipe' && !canUsePipePlacement) return
         event.preventDefault()
         if (placeOperation === targetOperation && !placeType) {
-          resetToDefaultPlaceMode()
-          setHighlightedPlaceGroup(null)
+          returnToIdle()
           return
         }
-        resetPlacementTrace()
-        setPlaceType('')
+        returnToIdle()
         setPlaceOperation(targetOperation)
         setHighlightedPlaceGroup(targetGroup)
         return
@@ -243,7 +237,7 @@ export function useBuildHotkeysDomain({
 
       if (!event.ctrlKey && !event.metaKey && !event.altKey && mode === 'place' && QUICK_PLACE_GROUP_BY_KEY[lowerKey]) {
         event.preventDefault()
-        resetToDefaultPlaceMode()
+        returnToIdle()
         setHighlightedPlaceGroup(QUICK_PLACE_GROUP_BY_KEY[lowerKey] ?? null)
         return
       }
@@ -256,10 +250,8 @@ export function useBuildHotkeysDomain({
           const targetDevice = targetGroup?.devices[digitIndex]
           if (targetDevice) {
             event.preventDefault()
-            resetPlacementTrace()
-            setPlaceOperation('default')
+            returnToIdle()
             setPlaceType(targetDevice.id)
-            setHighlightedPlaceGroup(null)
           }
           return
         }
@@ -385,6 +377,7 @@ export function useBuildHotkeysDomain({
     placeType,
     redoLayout,
     resetPlacementTrace,
+    returnToIdle,
     selection,
     setHighlightedPlaceGroup,
     setLayout,

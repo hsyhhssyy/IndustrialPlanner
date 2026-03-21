@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { isDarkPipeInletType, isDarkPipeOutletType, upsertDarkPipeLink } from '../../domain/deviceLinks'
 import { applyLogisticsPath, deleteConnectedBelts, nextId } from '../../domain/logistics'
 import { getDeviceById, isBelt, isPipe } from '../../domain/geometry'
@@ -44,6 +44,7 @@ export function useBuildInteractionDomain({
   const {
     layout,
     setLayout,
+    returnToIdle,
     placeRotation,
     toPlaceOrigin,
     simIsRunning,
@@ -60,6 +61,7 @@ export function useBuildInteractionDomain({
   )
 
   const {
+    state: { activeWorkbenchView },
     editor: {
       state: {
         mode,
@@ -116,6 +118,9 @@ export function useBuildInteractionDomain({
 
   const [isPanning, setIsPanning] = useState(false)
   const [panStart, setPanStart] = useState<PanStart | null>(null)
+  const canUseCanvasEditing = activeWorkbenchView !== 'history'
+  const canUseDeleteDragRect = canUseCanvasEditing && mode === 'delete'
+  const canUsePlaceSelectionRect = canUseCanvasEditing && mode === 'place' && placeOperation === 'default' && !placeType
 
   const resetDragState = useCallback(() => {
     setDragStartCell(null)
@@ -136,6 +141,12 @@ export function useBuildInteractionDomain({
     setDragRect,
     setDragStartCell,
   ])
+
+  // 历史视图和蓝图浏览态都不应该残留任何框选/拖拽框状态。
+  useEffect(() => {
+    if (canUseDeleteDragRect || canUsePlaceSelectionRect) return
+    resetDragState()
+  }, [canUseDeleteDragRect, canUsePlaceSelectionRect, resetDragState])
 
   const toRawCell = useCallback(
     (clientX: number, clientY: number) => {
@@ -219,6 +230,10 @@ export function useBuildInteractionDomain({
 
       if (event.button === 2) {
         event.preventDefault()
+        if (!canUseCanvasEditing) {
+          resetDragState()
+          return
+        }
         if (!simIsRunning && linkDraftSourceId) {
           setLinkDraftSourceId(null)
           return
@@ -238,30 +253,28 @@ export function useBuildInteractionDomain({
         }
         if (!simIsRunning && mode === 'place') {
           if (placeType || placeOperation === 'belt' || placeOperation === 'pipe') {
-            setPlaceOperation('default')
-            setLogStart(null)
-            setLogCurrent(null)
-            setLogTrace([])
-            setPlaceType('')
+            returnToIdle()
             return
           }
         }
         if (!simIsRunning && selection.length > 0) {
+          returnToIdle()
           setSelection([])
           resetDragState()
           return
         }
         if (!simIsRunning && mode === 'place') {
-          setPlaceOperation('default')
-          setLogStart(null)
-          setLogCurrent(null)
-          setLogTrace([])
-          setPlaceType('')
+          returnToIdle()
         }
         return
       }
 
       if (event.button !== 0) return
+
+      if (!canUseCanvasEditing) {
+        resetDragState()
+        return
+      }
 
       const cell = toCell(event.clientX, event.clientY)
       if (!cell) return
@@ -364,7 +377,12 @@ export function useBuildInteractionDomain({
         return
       }
 
-      if (mode === 'delete') {
+      if (mode === 'blueprint') {
+        resetDragState()
+        return
+      }
+
+      if (canUseDeleteDragRect) {
         if (simIsRunning) return
         setSelection([])
         setDragStartCell(null)
@@ -380,7 +398,7 @@ export function useBuildInteractionDomain({
 
       const clickedId = cellDeviceMap.get(`${cell.x},${cell.y}`)
       if (clickedId) {
-        const shouldToggleSelection = mode === 'place' && !placeType && !simIsRunning && (event.ctrlKey || event.metaKey || event.shiftKey)
+        const shouldToggleSelection = canUsePlaceSelectionRect && !simIsRunning && (event.ctrlKey || event.metaKey || event.shiftKey)
         if (shouldToggleSelection) {
           if (canMoveDevice(clickedId)) {
             setSelection((current) =>
@@ -414,6 +432,11 @@ export function useBuildInteractionDomain({
         }
       }
 
+      if (!canUsePlaceSelectionRect) {
+        resetDragState()
+        return
+      }
+
       setSelection([])
       setDragBasePositions(null)
       setDragPreviewPositions({})
@@ -432,6 +455,9 @@ export function useBuildInteractionDomain({
       fallbackPlacementToastKey,
       foundationIdSet,
       foundationMovableIdSet,
+      canUseCanvasEditing,
+      canUseDeleteDragRect,
+      canUsePlaceSelectionRect,
       canMoveDevice,
       layout,
       mode,
@@ -460,6 +486,7 @@ export function useBuildInteractionDomain({
       simIsRunning,
       t,
       toCell,
+      returnToIdle,
       resetDragState,
       viewOffset.x,
       viewOffset.y,
@@ -493,7 +520,7 @@ export function useBuildInteractionDomain({
         return
       }
       const allowOuterRingInCurrentContext =
-        mode === 'delete' ||
+        canUseDeleteDragRect ||
         (mode === 'place' &&
           (placeOperation === 'pipe' ||
             !placeType ||
@@ -561,17 +588,17 @@ export function useBuildInteractionDomain({
 
       if (!cell) return
 
-      if (mode === 'delete' && dragOrigin && dragRect) {
+      if (canUseDeleteDragRect && dragOrigin && dragRect) {
         setDragRect({ ...dragRect, x2: cell.x, y2: cell.y })
         return
       }
 
-      if (mode === 'place' && !placeType && dragOrigin && dragRect) {
+      if (canUsePlaceSelectionRect && dragOrigin && dragRect) {
         setDragRect({ ...dragRect, x2: cell.x, y2: cell.y })
         return
       }
 
-      if (mode === 'place' && !placeType && dragStartCell) {
+      if (canUsePlaceSelectionRect && dragStartCell) {
         setDragStartCell(cell)
       }
     },
@@ -584,6 +611,8 @@ export function useBuildInteractionDomain({
       dragRect,
       dragStartCell,
       fallbackPlacementToastKey,
+      canUseDeleteDragRect,
+      canUsePlaceSelectionRect,
       currentBaseOuterRing,
       layout,
       logStart,
@@ -620,6 +649,11 @@ export function useBuildInteractionDomain({
         return
       }
 
+      if (!canUseCanvasEditing) {
+        resetDragState()
+        return
+      }
+
       if (linkDraftSourceId) return
 
       if (mode === 'place' && (placeOperation === 'belt' || placeOperation === 'pipe') && logStart && logCurrent && !simIsRunning) {
@@ -634,7 +668,7 @@ export function useBuildInteractionDomain({
         return
       }
 
-      if (mode === 'delete' && dragRect && dragOrigin && !simIsRunning) {
+      if (canUseDeleteDragRect && dragRect && dragOrigin && !simIsRunning) {
         const xMin = Math.min(dragRect.x1, dragRect.x2)
         const xMax = Math.max(dragRect.x1, dragRect.x2)
         const yMin = Math.min(dragRect.y1, dragRect.y2)
@@ -693,7 +727,7 @@ export function useBuildInteractionDomain({
         return
       }
 
-      if (mode === 'place' && !placeType && dragRect && dragOrigin) {
+      if (canUsePlaceSelectionRect && dragRect && dragOrigin) {
         const xMin = Math.min(dragRect.x1, dragRect.x2)
         const xMax = Math.max(dragRect.x1, dragRect.x2)
         const yMin = Math.min(dragRect.y1, dragRect.y2)
@@ -721,7 +755,7 @@ export function useBuildInteractionDomain({
         return
       }
 
-      if (mode === 'place' && !placeType && dragStartCell && dragOrigin && dragBasePositions && selection.length > 0 && !simIsRunning) {
+      if (canUsePlaceSelectionRect && dragStartCell && dragOrigin && dragBasePositions && selection.length > 0 && !simIsRunning) {
         if (dragPreviewValid) {
           setLayout((current) => ({
             ...current,
@@ -762,6 +796,9 @@ export function useBuildInteractionDomain({
       dragStartCell,
       foundationIdSet,
       foundationMovableIdSet,
+      canUseCanvasEditing,
+      canUseDeleteDragRect,
+      canUsePlaceSelectionRect,
       canMoveDevice,
       isPanning,
       layout.devices,

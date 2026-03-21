@@ -32,7 +32,7 @@ export type LeftPanelViewModel = {
   visiblePlaceableTypes: DeviceTypeDef[]
   placeGroups: PlaceGroupEntry[]
   highlightedPlaceGroup: PlaceGroupKey | null
-  clearHighlightedPlaceGroup: () => void
+  returnToIdle: () => void
   getDeviceMenuIconPath: (typeId: DeviceTypeId) => string
   deleteTool: 'single' | 'wholeBelt' | 'box'
   blueprints: BlueprintSnapshot[]

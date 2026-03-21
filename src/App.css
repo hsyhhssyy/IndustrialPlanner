@@ -349,11 +349,13 @@
 }
 
 .place-device-button {
+  position: relative;
   display: flex !important;
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
   text-align: left;
+  overflow: visible;
 }
 
 .place-groups-scroll {
@@ -566,10 +568,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 28px;
-  min-width: 28px;
-  height: 22px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 24px;
+  height: 20px;
   padding: 0 6px;
+  transform: translate(28%, -28%);
   border-radius: 999px;
   border: 1px solid rgba(102, 126, 163, 0.46);
   background: rgba(37, 47, 63, 0.9);
@@ -579,10 +584,12 @@
   line-height: 1;
   letter-spacing: 0.04em;
   box-sizing: border-box;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .place-device-hotkey.is-hidden {
-  visibility: hidden;
+  opacity: 0;
 }
 
 .place-group-section.is-hotkey-highlighted .place-device-hotkey.is-visible,

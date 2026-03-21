@@ -253,6 +253,18 @@ function App() {
     },
     [setActiveWorkbenchView, setMode],
   )
+  const resetPlacementTrace = useCallback(() => {
+    setLogStart(null)
+    setLogCurrent(null)
+    setLogTrace([])
+  }, [setLogCurrent, setLogStart, setLogTrace])
+  const returnToIdle = useCallback(() => {
+    setPlaceOperation('default')
+    setPlaceType('')
+    setLinkDraftSourceId(null)
+    resetPlacementTrace()
+    setHighlightedPlaceGroup(null)
+  }, [resetPlacementTrace, setLinkDraftSourceId, setPlaceOperation, setPlaceType])
   const {
     activeBaseId,
     setActiveBaseId,
@@ -330,18 +342,15 @@ function App() {
     if (!placeType) return
     const stillVisible = visiblePlaceableTypes.some((deviceType) => deviceType.id === placeType)
     if (!stillVisible) {
-      setPlaceType('')
+      returnToIdle()
     }
-  }, [placeType, setPlaceType, visiblePlaceableTypes])
+  }, [placeType, returnToIdle, visiblePlaceableTypes])
 
   useEffect(() => {
     if (placeOperation !== 'pipe') return
     if (currentBase.tags.includes('武陵')) return
-    setPlaceOperation('default')
-    setLogStart(null)
-    setLogCurrent(null)
-    setLogTrace([])
-  }, [currentBase.tags, placeOperation, setLogCurrent, setLogStart, setLogTrace, setPlaceOperation])
+    returnToIdle()
+  }, [currentBase.tags, placeOperation, returnToIdle])
 
   useEffect(() => {
     if (mode === 'place') return
@@ -492,10 +501,9 @@ function App() {
     foundationMovableIdSet,
     currentBaseOuterRing: currentBase.outerRing,
     setLayout,
+    returnToIdle,
     resetPlacementTrace: () => {
-      setLogStart(null)
-      setLogCurrent(null)
-      setLogTrace([])
+      resetPlacementTrace()
     },
     highlightedPlaceGroup,
     setHighlightedPlaceGroup,
@@ -518,13 +526,30 @@ function App() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!(event.ctrlKey || event.metaKey) || event.altKey) return
       if (event.key.toLowerCase() !== 's') return
+      const target = event.target as HTMLElement | null
+      const isTypingTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        Boolean(target?.isContentEditable)
       event.preventDefault()
       event.stopPropagation()
+      if (sim.isRunning || isTypingTarget) return
+      eventBus.emit('left.blueprint.saveSelection', undefined)
     }
 
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
-  }, [])
+  }, [eventBus, sim.isRunning])
+
+  useEffect(() => {
+    const unsubscribeReturnIdle = eventBus.on('left.place.returnIdle', () => {
+      returnToIdle()
+    })
+
+    return () => {
+      unsubscribeReturnIdle()
+    }
+  }, [eventBus, returnToIdle])
 
   useEffect(() => {
     const viewport = viewportRef.current
@@ -758,6 +783,7 @@ function App() {
     build: {
       layout,
       setLayout,
+      returnToIdle,
       placeRotation,
       toPlaceOrigin,
       simIsRunning: sim.isRunning,
@@ -1207,11 +1233,7 @@ function App() {
     updateSim,
     onStarted: () => {
       setWorkbenchMode('place')
-      setPlaceOperation('default')
-      setPlaceType('')
-      setLogStart(null)
-      setLogCurrent(null)
-      setLogTrace([])
+      returnToIdle()
     },
   })
 
@@ -1354,7 +1376,7 @@ function App() {
                 visiblePlaceableTypes,
                 placeGroups,
                 highlightedPlaceGroup,
-                clearHighlightedPlaceGroup: () => setHighlightedPlaceGroup(null),
+                returnToIdle,
                 getDeviceMenuIconPath,
                 deleteTool,
                 blueprints,
@@ -1467,10 +1489,9 @@ function App() {
               startDeviceLinking={(deviceInstanceId) => {
                 const device = layout.devices.find((entry) => entry.instanceId === deviceInstanceId)
                 if (!device || !isDarkPipeInletType(device.typeId)) return
+                returnToIdle()
                 setLinkDraftSourceId(deviceInstanceId)
                 setSelection([deviceInstanceId])
-                setPlaceType('')
-                setPlaceOperation('default')
               }}
               cancelDeviceLinking={() => setLinkDraftSourceId(null)}
               removeSelectedDeviceLink={(linkId) => setLayout((current) => removeDeviceLink(current, linkId))}

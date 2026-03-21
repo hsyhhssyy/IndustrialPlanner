@@ -50,7 +50,7 @@ export function LeftPanel() {
     placeType,
     placeGroups,
     highlightedPlaceGroup,
-    clearHighlightedPlaceGroup,
+    returnToIdle,
     getDeviceMenuIconPath,
     deleteTool,
     blueprints,
@@ -127,11 +127,8 @@ export function LeftPanel() {
               <button
                 className={`place-device-button ${placeOperation === 'default' && !placeType ? 'active' : ''}`}
                 onClick={() => {
-                  eventBus.emit('left.place.operation.set', 'default')
-                  eventBus.emit('left.place.type.set', '')
-                  eventBus.emit('left.place.trace.reset', undefined)
+                  returnToIdle()
                   eventBus.emit('ui.center.focus', undefined)
-                  clearHighlightedPlaceGroup()
                 }}
               >
                 <span className="operation-pointer-icon" aria-hidden="true">
@@ -145,11 +142,9 @@ export function LeftPanel() {
               <button
                 className={`place-device-button ${placeOperation === 'belt' ? 'active' : ''}`}
                 onClick={() => {
+                  returnToIdle()
                   eventBus.emit('left.place.operation.set', 'belt')
-                  eventBus.emit('left.place.type.set', '')
-                  eventBus.emit('left.place.trace.reset', undefined)
                   eventBus.emit('ui.center.focus', undefined)
-                  clearHighlightedPlaceGroup()
                 }}
               >
                 <img className="place-device-icon" src={getDeviceIconPath('item_log_belt_01')} alt="" aria-hidden="true" draggable={false} />
@@ -161,11 +156,9 @@ export function LeftPanel() {
                 className={`place-device-button ${placeOperation === 'pipe' ? 'active' : ''}`}
                 disabled={!canUsePipePlacement}
                 onClick={() => {
+                  returnToIdle()
                   eventBus.emit('left.place.operation.set', 'pipe')
-                  eventBus.emit('left.place.type.set', '')
-                  eventBus.emit('left.place.trace.reset', undefined)
                   eventBus.emit('ui.center.focus', undefined)
-                  clearHighlightedPlaceGroup()
                 }}
               >
                 <img className="place-device-icon" src={getDeviceIconPath('item_log_pipe_01')} alt="" aria-hidden="true" draggable={false} />
@@ -208,10 +201,9 @@ export function LeftPanel() {
                           key={deviceType.id}
                           className={`place-device-button ${placeType === deviceType.id ? 'active' : ''}`}
                           onClick={() => {
-                            eventBus.emit('left.place.operation.set', 'default')
+                            returnToIdle()
                             eventBus.emit('left.place.type.set', deviceType.id)
                             eventBus.emit('ui.center.focus', undefined)
-                            clearHighlightedPlaceGroup()
                           }}
                         >
                           <img

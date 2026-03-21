@@ -78,6 +78,7 @@ export type BuildInteractionViewportParams = {
 export type BuildInteractionBuildParams = {
   layout: LayoutState
   setLayout: (updater: LayoutUpdater) => void
+  returnToIdle: () => void
   placeRotation: Rotation
   toPlaceOrigin: (cell: Cell, typeId: DeviceTypeId, rotation: Rotation) => Cell
   simIsRunning: boolean

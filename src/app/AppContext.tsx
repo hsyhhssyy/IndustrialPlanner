@@ -107,9 +107,9 @@ export type AppEventMap = {
   'sim.control.setSpeed': SimSpeed
   'ui.center.focus': undefined
   'left.mode.set': EditMode
+  'left.place.returnIdle': undefined
   'left.place.operation.set': PlaceOperation
   'left.place.type.set': DeviceTypeId | ''
-  'left.place.trace.reset': undefined
   'left.delete.tool.set': 'single' | 'wholeBelt' | 'box'
   'left.delete.all': undefined
   'left.delete.allBelts': undefined
@@ -402,18 +402,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
     const unsubscribeSetPlaceOperation = eventBus.on('left.place.operation.set', (nextOperation) => setPlaceOperation(nextOperation))
     const unsubscribeSetPlaceType = eventBus.on('left.place.type.set', (nextType) => setPlaceType(nextType))
-    const unsubscribeResetTrace = eventBus.on('left.place.trace.reset', () => {
-      setLogStart(null)
-      setLogCurrent(null)
-      setLogTrace([])
-    })
     const unsubscribeSetDeleteTool = eventBus.on('left.delete.tool.set', (nextTool) => setDeleteTool(nextTool))
     return () => {
       unsubscribeSetLanguage()
       unsubscribeSetMode()
       unsubscribeSetPlaceOperation()
       unsubscribeSetPlaceType()
-      unsubscribeResetTrace()
       unsubscribeSetDeleteTool()
     }
   }, [eventBus, setActiveWorkbenchView, setDeleteTool, setLanguage, setMode, setPlaceType])

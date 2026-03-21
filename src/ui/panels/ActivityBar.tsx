@@ -93,9 +93,7 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
       return
     }
     if (isModeView && nextView === 'place') {
-      eventBus.emit('left.place.operation.set', 'default')
-      eventBus.emit('left.place.trace.reset', undefined)
-      eventBus.emit('left.place.type.set', '')
+      eventBus.emit('left.place.returnIdle', undefined)
     }
     if (isModeView && nextView === 'blueprint') {
       eventBus.emit('left.place.operation.set', 'blueprint')
