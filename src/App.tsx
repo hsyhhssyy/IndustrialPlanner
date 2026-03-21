@@ -62,7 +62,7 @@ import { useSimulationDomain } from './features/simulation/useSimulationDomain'
 import { useSimulationControlDomain } from './features/simulation/useSimulationControlDomain'
 import { useObservabilityDomain } from './features/observability/useObservabilityDomain'
 import { useWorldOverlaysDomain } from './features/observability/useWorldOverlaysDomain'
-import { PLACE_GROUP_LABEL_KEY, PLACE_GROUP_ORDER, getPlaceGroup, useBuildDomainActions } from './features/build/useBuildDomain'
+import { buildPlaceGroups, type PlaceGroupKey, useBuildDomainActions } from './features/build/useBuildDomain'
 import { useBuildPreviewDomain } from './features/build/useBuildPreviewDomain'
 import { useBuildHotkeysDomain } from './features/build/useBuildHotkeysDomain'
 import { useBuildPickerDomain } from './features/build/useBuildPickerDomain'
@@ -172,6 +172,7 @@ function App() {
   )
   const [storageSlotConfigDeviceId, setStorageSlotConfigDeviceId] = useState<string | null>(null)
   const [portPriorityConfigDeviceId, setPortPriorityConfigDeviceId] = useState<string | null>(null)
+  const [highlightedPlaceGroup, setHighlightedPlaceGroup] = useState<PlaceGroupKey | null>(null)
 
   const gridRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -316,6 +317,7 @@ function App() {
       }),
     [currentBase, superRecipeEnabled],
   )
+  const placeGroups = useMemo(() => buildPlaceGroups(visiblePlaceableTypes, language), [language, visiblePlaceableTypes])
   const { handleDeleteAll, handleDeleteAllBelts, handleClearLot } = useBuildDomainActions({
     simIsRunning: sim.isRunning,
     t,
@@ -340,6 +342,11 @@ function App() {
     setLogCurrent(null)
     setLogTrace([])
   }, [currentBase.tags, placeOperation, setLogCurrent, setLogStart, setLogTrace, setPlaceOperation])
+
+  useEffect(() => {
+    if (mode === 'place') return
+    setHighlightedPlaceGroup(null)
+  }, [mode])
 
   useEffect(() => {
     layoutRef.current = layout
@@ -463,14 +470,35 @@ function App() {
   useBuildHotkeysDomain({
     simIsRunning: sim.isRunning,
     mode,
+    language,
+    canUsePipePlacement: currentBase.tags.includes('武陵'),
+    placeOperation,
     placeType,
+    visiblePlaceableTypes,
     setPlaceRotation,
+    setPlaceOperation,
+    setPlaceType,
+    setViewOffset,
+    clampViewportOffset,
+    viewportRef,
+    zoomScale,
+    canvasWidthPx,
+    canvasHeightPx,
+    cellSize,
     selection,
+    setSelection,
     layout,
     foundationIdSet,
     foundationMovableIdSet,
     currentBaseOuterRing: currentBase.outerRing,
     setLayout,
+    resetPlacementTrace: () => {
+      setLogStart(null)
+      setLogCurrent(null)
+      setLogTrace([])
+    },
+    highlightedPlaceGroup,
+    setHighlightedPlaceGroup,
     undoLayout,
     redoLayout,
     outOfLotToastKey: OUT_OF_LOT_TOAST_KEY,
@@ -973,13 +1001,6 @@ function App() {
           .map((device) => device.instanceId),
       )
     }
-    if (isDarkPipeOutletType(draftLinkSourceDevice.typeId)) {
-      return new Set(
-        layout.devices
-          .filter((device) => isDarkPipeInletType(device.typeId) && device.instanceId !== draftLinkSourceDevice.instanceId)
-          .map((device) => device.instanceId),
-      )
-    }
     return new Set<string>()
   }, [draftLinkSourceDevice, layout.devices])
 
@@ -1331,9 +1352,9 @@ function App() {
                 placeOperation,
                 placeType,
                 visiblePlaceableTypes,
-                placeGroupOrder: PLACE_GROUP_ORDER,
-                placeGroupLabelKey: PLACE_GROUP_LABEL_KEY,
-                getPlaceGroup,
+                placeGroups,
+                highlightedPlaceGroup,
+                clearHighlightedPlaceGroup: () => setHighlightedPlaceGroup(null),
                 getDeviceMenuIconPath,
                 deleteTool,
                 blueprints,
@@ -1444,6 +1465,8 @@ function App() {
               updatePickupIgnoreInventory={updatePickupIgnoreInventory}
               updateProtocolHubOutputIgnoreInventory={updateProtocolHubOutputIgnoreInventory}
               startDeviceLinking={(deviceInstanceId) => {
+                const device = layout.devices.find((entry) => entry.instanceId === deviceInstanceId)
+                if (!device || !isDarkPipeInletType(device.typeId)) return
                 setLinkDraftSourceId(deviceInstanceId)
                 setSelection([deviceInstanceId])
                 setPlaceType('')

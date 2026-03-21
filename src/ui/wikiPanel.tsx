@@ -141,19 +141,24 @@ export function WikiPanel({ language, superRecipeEnabled, t, onClose }: WikiPane
           {
             title: '2) Mouse controls',
             steps: [
-              'Left click: select or place.',
-              'Left drag: route belts/pipes, box-select buildings, or move the current selection (depends on context).',
+              'Left click: select/place, or start box-select when the pointer is not on the current selection.',
+              'Left drag: route belts/pipes, box-select buildings, or move the current selection when dragging from the current selection.',
               'Ctrl/Cmd/Shift + left click: add or remove a building from the current multi-selection.',
               'Mouse wheel: zoom the canvas.',
               'Middle mouse drag: pan the canvas.',
               'Two-finger pinch on touch devices: zoom the canvas.',
-              'Right click: cancel current placement, temporary blueprint, or link preview.',
+              'Right click: cancel the current preview first; if nothing is armed, clear the current selection.',
             ],
           },
           {
             title: '3) Common hotkeys',
             steps: [
               'R: rotate the current placement preview, blueprint preview, or selected buildings.',
+              'Delete: delete the current selected buildings.',
+              'Q / E: toggle pipe or conveyor logistics routing; press the same key again to return to the default place state.',
+              'W / A / S / D: pan the viewport while held.',
+              'X / C / V / B: arm Resources & Power / Storage & IO / Basic Production / Advanced Manufacturing for digit quick-place.',
+              '1-9, 0 and numpad 1-9/0: choose the building at that slot in the currently armed category by visual order.',
               'Ctrl+C: copy current selection as a temporary blueprint (needs at least 1 building).',
               'Ctrl+V: restore the last temporary blueprint.',
               'Shift + Left Click: keep the current building armed after placing it.',

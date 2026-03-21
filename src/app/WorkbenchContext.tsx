@@ -3,16 +3,7 @@ import type { DeviceTypeDef, DeviceTypeId, EditMode } from '../domain/types'
 import type { Language } from '../i18n'
 import type { LayoutState } from '../domain/types'
 import type { WorkbenchView } from './AppContext'
-
-export type PlaceGroupKey =
-  | 'logistics'
-  | 'resource'
-  | 'storage'
-  | 'basic_production'
-  | 'advanced_manufacturing'
-  | 'power'
-  | 'functional'
-  | 'combat_support'
+import type { PlaceGroupEntry, PlaceGroupKey } from '../features/build/useBuildDomain'
 
 type BlueprintSnapshot = {
   id: string
@@ -39,9 +30,9 @@ export type LeftPanelViewModel = {
   placeOperation: 'default' | 'belt' | 'pipe' | 'blueprint'
   placeType: DeviceTypeId | ''
   visiblePlaceableTypes: DeviceTypeDef[]
-  placeGroupOrder: PlaceGroupKey[]
-  placeGroupLabelKey: Record<PlaceGroupKey, string>
-  getPlaceGroup: (typeId: DeviceTypeId) => PlaceGroupKey
+  placeGroups: PlaceGroupEntry[]
+  highlightedPlaceGroup: PlaceGroupKey | null
+  clearHighlightedPlaceGroup: () => void
   getDeviceMenuIconPath: (typeId: DeviceTypeId) => string
   deleteTool: 'single' | 'wholeBelt' | 'box'
   blueprints: BlueprintSnapshot[]

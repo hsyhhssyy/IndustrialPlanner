@@ -228,19 +228,35 @@ export function useBuildInteractionDomain({
           setBlueprintPlacementRotation(0)
           return
         }
-        if (!simIsRunning && mode === 'place') {
-          setPlaceOperation('default')
-          setLogStart(null)
-          setLogCurrent(null)
-          setLogTrace([])
-          setPlaceType('')
-        }
         if (!simIsRunning && (mode === 'blueprint' || (mode === 'place' && placeOperation === 'blueprint'))) {
           setArmedBlueprintId(null)
           setBlueprintPlacementRotation(0)
           if (mode === 'blueprint') {
             setPlaceOperation('blueprint')
           }
+          return
+        }
+        if (!simIsRunning && mode === 'place') {
+          if (placeType || placeOperation === 'belt' || placeOperation === 'pipe') {
+            setPlaceOperation('default')
+            setLogStart(null)
+            setLogCurrent(null)
+            setLogTrace([])
+            setPlaceType('')
+            return
+          }
+        }
+        if (!simIsRunning && selection.length > 0) {
+          setSelection([])
+          resetDragState()
+          return
+        }
+        if (!simIsRunning && mode === 'place') {
+          setPlaceOperation('default')
+          setLogStart(null)
+          setLogCurrent(null)
+          setLogTrace([])
+          setPlaceType('')
         }
         return
       }
@@ -258,14 +274,11 @@ export function useBuildInteractionDomain({
           const clickedDevice = getDeviceById(current, clickedId)
           if (!sourceDevice || !clickedDevice) return current
           const sourceIsInlet = isDarkPipeInletType(sourceDevice.typeId)
-          const sourceIsOutlet = isDarkPipeOutletType(sourceDevice.typeId)
-          const clickedIsInlet = isDarkPipeInletType(clickedDevice.typeId)
           const clickedIsOutlet = isDarkPipeOutletType(clickedDevice.typeId)
-          if ((!sourceIsInlet && !sourceIsOutlet) || (!clickedIsInlet && !clickedIsOutlet)) return current
-          if ((sourceIsInlet && clickedIsInlet) || (sourceIsOutlet && clickedIsOutlet)) return current
+          if (!sourceIsInlet || !clickedIsOutlet) return current
 
-          const inletId = sourceIsInlet ? sourceDevice.instanceId : clickedDevice.instanceId
-          const outletId = sourceIsOutlet ? sourceDevice.instanceId : clickedDevice.instanceId
+          const inletId = sourceDevice.instanceId
+          const outletId = clickedDevice.instanceId
           const linked = upsertDarkPipeLink(current, inletId, outletId)
           return {
             ...linked,
@@ -378,26 +391,27 @@ export function useBuildInteractionDomain({
           return
         }
 
-        const activeSelection = (selection.includes(clickedId) ? selection : [clickedId]).filter((id) => canMoveDevice(id))
-        if (!selection.includes(clickedId)) setSelection(activeSelection)
-        if (activeSelection.length === 0) {
-          resetDragState()
+        if (selection.includes(clickedId)) {
+          const activeSelection = selection.filter((id) => canMoveDevice(id))
+          if (activeSelection.length === 0) {
+            resetDragState()
+            return
+          }
+          const base: Record<string, Cell> = {}
+          for (const id of activeSelection) {
+            const device = getDeviceById(layout, id)
+            if (device) base[id] = { ...device.origin }
+          }
+          setDragBasePositions(base)
+          setDragPreviewPositions(base)
+          setDragPreviewValid(true)
+          setDragInvalidMessage(null)
+          setDragInvalidSelection(new Set())
+          setDragStartCell(cell)
+          setDragOrigin(cell)
+          setDragRect(null)
           return
         }
-        const base: Record<string, Cell> = {}
-        for (const id of activeSelection) {
-          const device = getDeviceById(layout, id)
-          if (device) base[id] = { ...device.origin }
-        }
-        setDragBasePositions(base)
-        setDragPreviewPositions(base)
-        setDragPreviewValid(true)
-        setDragInvalidMessage(null)
-        setDragInvalidSelection(new Set())
-        setDragStartCell(cell)
-        setDragOrigin(cell)
-        setDragRect(null)
-        return
       }
 
       setSelection([])
@@ -446,6 +460,7 @@ export function useBuildInteractionDomain({
       simIsRunning,
       t,
       toCell,
+      resetDragState,
       viewOffset.x,
       viewOffset.y,
     ],

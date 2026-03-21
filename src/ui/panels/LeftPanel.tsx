@@ -37,10 +37,9 @@ export function LeftPanel() {
     canUsePipePlacement,
     placeOperation,
     placeType,
-    visiblePlaceableTypes,
-    placeGroupOrder,
-    placeGroupLabelKey,
-    getPlaceGroup,
+    placeGroups,
+    highlightedPlaceGroup,
+    clearHighlightedPlaceGroup,
     getDeviceMenuIconPath,
     deleteTool,
     blueprints,
@@ -57,6 +56,7 @@ export function LeftPanel() {
     statsAndDebugSection,
   } = useWorkbenchContext()
   const blueprintFileInputRef = useRef<HTMLInputElement | null>(null)
+  const activeHighlightedGroup = highlightedPlaceGroup ?? (placeOperation === 'belt' ? 'conveyor_logistics' : placeOperation === 'pipe' ? 'pipe_logistics' : null)
 
   const renderHistoryPanel = () => (
     <>
@@ -114,6 +114,7 @@ export function LeftPanel() {
                   eventBus.emit('left.place.type.set', '')
                   eventBus.emit('left.place.trace.reset', undefined)
                   eventBus.emit('ui.center.focus', undefined)
+                  clearHighlightedPlaceGroup()
                 }}
               >
                 <span className="operation-pointer-icon" aria-hidden="true">
@@ -131,6 +132,7 @@ export function LeftPanel() {
                   eventBus.emit('left.place.type.set', '')
                   eventBus.emit('left.place.trace.reset', undefined)
                   eventBus.emit('ui.center.focus', undefined)
+                  clearHighlightedPlaceGroup()
                 }}
               >
                 <img className="place-device-icon" src={getDeviceIconPath('item_log_belt_01')} alt="" aria-hidden="true" draggable={false} />
@@ -145,6 +147,7 @@ export function LeftPanel() {
                   eventBus.emit('left.place.type.set', '')
                   eventBus.emit('left.place.trace.reset', undefined)
                   eventBus.emit('ui.center.focus', undefined)
+                  clearHighlightedPlaceGroup()
                 }}
               >
                 <img className="place-device-icon" src={getDeviceIconPath('item_log_pipe_01')} alt="" aria-hidden="true" draggable={false} />
@@ -164,12 +167,14 @@ export function LeftPanel() {
 
           <LeftPanelSection title={t('left.device')} className="left-panel-section-fill">
             <div className="place-groups-scroll">
-              {placeGroupOrder.map((groupKey) => {
-                const devices = visiblePlaceableTypes.filter((deviceType) => getPlaceGroup(deviceType.id) === groupKey)
-                if (devices.length === 0) return null
+              {placeGroups.map((group) => {
+                const devices = group.devices
                 return (
-                  <section key={groupKey} className="place-group-section">
-                    <h4 className="place-group-title">{t(placeGroupLabelKey[groupKey])}</h4>
+                  <section
+                    key={group.key}
+                    className={`place-group-section ${activeHighlightedGroup === group.key ? 'is-hotkey-highlighted' : ''}`.trim()}
+                  >
+                    <h4 className="place-group-title">{t(group.labelKey)}</h4>
                     <div className="place-device-grid">
                       {devices.map((deviceType) => (
                         <button
@@ -179,6 +184,7 @@ export function LeftPanel() {
                             eventBus.emit('left.place.operation.set', 'default')
                             eventBus.emit('left.place.type.set', deviceType.id)
                             eventBus.emit('ui.center.focus', undefined)
+                            clearHighlightedPlaceGroup()
                           }}
                         >
                           <img

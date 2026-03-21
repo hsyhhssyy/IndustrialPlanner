@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { BASES, DEVICE_TYPE_BY_ID } from '../../domain/registry'
+import { isDarkPipeInletType } from '../../domain/deviceLinks'
 import type { BaseDef, BaseId, DeviceInstance, DeviceRuntime, ItemId, LayoutState, PowerMode, SimState, SlotData } from '../../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../../i18n'
 import { isBufferedBeltTransportDevice, neighborsFromLinks } from '../../domain/geometry'
@@ -248,6 +249,7 @@ export function RightPanel({
     : selectedDevice?.typeId === 'item_port_udpipe_unloader_1'
       ? t(`detail.darkPipeOutletMode.${selectedDarkPipeOutletMode ?? 'generate'}`)
       : null
+  const canStartSelectedDeviceLinking = Boolean(selectedDevice && isDarkPipeInletType(selectedDevice.typeId))
 
   const inputSourceDebugEntries = useMemo(() => {
     if (!selectedDevice || !selectedRuntime) return [] as Array<{ title: string; cursor: string; items: string[] }>
@@ -903,7 +905,7 @@ export function RightPanel({
                 <span>{t('detail.darkPipeCurrentMode')}</span>
                 <span>{selectedDarkPipeModeLabel}</span>
               </div>
-              {!simIsRunning && (
+              {!simIsRunning && canStartSelectedDeviceLinking && (
                 <div className="device-link-mode-actions">
                   {linkDraftSourceId === selectedDevice.instanceId ? (
                     <button type="button" className="secondary-action-btn active" onClick={() => cancelDeviceLinking()}>
