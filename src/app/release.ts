@@ -1,5 +1,5 @@
 import { APP_VERSION } from '../migrations/versioning'
-import { formatDocumentTitle } from './documentTitle'
+import { formatDocumentTitle, formatTopBarTitle } from './documentTitle'
 
 function normalizeReleaseTag(tag: string | undefined) {
   if (!tag) return APP_VERSION
@@ -11,4 +11,8 @@ export const RELEASE_TAG = normalizeReleaseTag(import.meta.env.VITE_RELEASE_TAG)
 
 export function formatCurrentDocumentTitle(appTitle: string) {
   return formatDocumentTitle(appTitle, RELEASE_TAG)
+}
+
+export function formatCurrentTopBarTitle(appTitle: string) {
+  return formatTopBarTitle(appTitle, RELEASE_TAG)
 }

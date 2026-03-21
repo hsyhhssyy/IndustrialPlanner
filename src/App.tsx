@@ -43,7 +43,7 @@ import { usePersistentState } from './core/usePersistentState'
 import { createTranslator, getDeviceLabel, getItemLabel, type Language } from './i18n'
 import { useAppContext } from './app/AppContext'
 import { WorkbenchProvider } from './app/WorkbenchContext'
-import { formatCurrentDocumentTitle } from './app/release'
+import { formatCurrentDocumentTitle, formatCurrentTopBarTitle } from './app/release'
 import { ActivityBar } from './ui/panels/ActivityBar'
 import { LeftPanel } from './ui/panels/LeftPanel'
 import { CenterPanel } from './ui/panels/CenterPanel'
@@ -250,6 +250,10 @@ function App() {
   const t = useMemo(() => createTranslator(language), [language])
   const releaseTitle = useMemo(
     () => formatCurrentDocumentTitle(t('app.title')),
+    [t],
+  )
+  const topBarTitle = useMemo(
+    () => formatCurrentTopBarTitle(t('app.title')),
     [t],
   )
 
@@ -1353,6 +1357,7 @@ function App() {
   return (
     <div className="app-shell" data-theme={uiTheme}>
       <TopBar
+        title={topBarTitle}
         isRunning={sim.isRunning}
         speed={sim.speed}
         cellSize={cellSize}

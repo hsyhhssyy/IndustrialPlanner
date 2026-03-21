@@ -1,6 +1,7 @@
 import { useAppContext } from '../app/AppContext'
 
 type TopBarProps = {
+  title: string
   isRunning: boolean
   speed: 0 | 0.25 | 1 | 2 | 4 | 16
   cellSize: number
@@ -12,6 +13,7 @@ type TopBarProps = {
 }
 
 export function TopBar({
+  title,
   isRunning,
   speed,
   cellSize,
@@ -60,7 +62,7 @@ export function TopBar({
             </span>
           </button>
         </div>
-        <div className="topbar-title">{t('app.title')}</div>
+        <div className="topbar-title">{title}</div>
       </div>
 
       <div className="topbar-controls">
