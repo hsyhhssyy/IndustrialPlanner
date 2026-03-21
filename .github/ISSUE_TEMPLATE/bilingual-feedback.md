@@ -1,5 +1,5 @@
 ---
-name: BIssue / 问题反馈
+name: Issues / 问题反馈
 about: Report a bug or suggest an improvement. / 反馈问题或建议。
 title: "[Feedback] "
 labels: []
