@@ -1,6 +1,6 @@
 ---
-name: Bilingual Issue / 双语问题反馈
-about: Report a bug or suggest an improvement in Chinese or English. / 使用中文或英文反馈问题或建议。
+name: BIssue / 问题反馈
+about: Report a bug or suggest an improvement. / 反馈问题或建议。
 title: "[Feedback] "
 labels: []
 assignees: []
@@ -8,9 +8,9 @@ assignees: []
 
 ## Summary / 概要
 
-Please describe the problem or request in Chinese or English.
+Please describe the problem or request.
 
-请用中文或英文简要描述你遇到的问题或你的建议。
+请简要描述你遇到的问题或你的建议。
 
 ## Type / 类型
 
@@ -26,17 +26,6 @@ Please describe the problem or request in Chinese or English.
 2.
 3.
 
-## Expected Result / 期望结果
-
-What should happen?
-
-你期望发生什么？
-
-## Actual Result / 实际结果
-
-What actually happened?
-
-实际发生了什么？
 
 ## Environment / 环境信息
 
