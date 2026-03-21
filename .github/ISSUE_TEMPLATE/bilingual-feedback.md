@@ -29,9 +29,9 @@ Please describe the problem or request.
 
 ## Environment / 环境信息
 
-- OS:
-- Browser:
-- App version / 提交号:
+- OS / 操作系统:
+- Browser / 浏览器:
+- Time / 出现问题的时间:
 
 ## Screenshots or Videos / 截图或录像
 
