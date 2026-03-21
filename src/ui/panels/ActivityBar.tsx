@@ -7,7 +7,7 @@ type ActivityBarProps = {
 }
 
 type ActivityMode = 'place' | 'delete' | 'blueprint'
-const FEEDBACK_ISSUE_URL = 'https://github.com/hsyhhssyy/IndustrialPlanner/issues/new'
+const FEEDBACK_ISSUE_URL = 'https://github.com/hsyhhssyy/IndustrialPlanner/issues/new?template=bilingual-feedback.md'
 
 function WorkbenchIcon({ kind }: { kind: 'place' | 'delete' | 'blueprint' | 'history' | 'tool' | 'feedback' | 'help' | 'settings' }) {
   if (kind === 'place') {
