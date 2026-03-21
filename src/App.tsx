@@ -43,6 +43,7 @@ import { usePersistentState } from './core/usePersistentState'
 import { createTranslator, getDeviceLabel, getItemLabel, type Language } from './i18n'
 import { useAppContext } from './app/AppContext'
 import { WorkbenchProvider } from './app/WorkbenchContext'
+import { formatCurrentDocumentTitle } from './app/release'
 import { ActivityBar } from './ui/panels/ActivityBar'
 import { LeftPanel } from './ui/panels/LeftPanel'
 import { CenterPanel } from './ui/panels/CenterPanel'
@@ -247,6 +248,15 @@ function App() {
     eventBus,
   } = useAppContext()
   const t = useMemo(() => createTranslator(language), [language])
+  const releaseTitle = useMemo(
+    () => formatCurrentDocumentTitle(t('app.title')),
+    [t],
+  )
+
+  useEffect(() => {
+    document.title = releaseTitle
+  }, [releaseTitle])
+
   const setWorkbenchMode = useCallback(
     (nextMode: 'place' | 'delete' | 'blueprint') => {
       setMode(nextMode)
