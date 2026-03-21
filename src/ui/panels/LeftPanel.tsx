@@ -5,6 +5,17 @@ import { getDeviceIconPath } from '../../assets/iconPaths'
 import { useWorkbenchContext } from '../../app/WorkbenchContext'
 import { getDeviceLabel, getModeLabel } from '../../i18n'
 
+const GROUP_HOTKEY_LABEL: Partial<Record<string, string>> = {
+  conveyor_logistics: 'E',
+  pipe_logistics: 'Q',
+  resource_power: 'X',
+  storage: 'C',
+  basic_production: 'V',
+  advanced_manufacturing: 'B',
+}
+
+const DIGIT_HOTKEY_LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+
 type LeftPanelSectionProps = {
   title: string
   defaultOpen?: boolean
@@ -57,6 +68,12 @@ export function LeftPanel() {
   } = useWorkbenchContext()
   const blueprintFileInputRef = useRef<HTMLInputElement | null>(null)
   const activeHighlightedGroup = highlightedPlaceGroup ?? (placeOperation === 'belt' ? 'conveyor_logistics' : placeOperation === 'pipe' ? 'pipe_logistics' : null)
+
+  const renderHotkeyBadge = (label: string | null | undefined, className?: string) => (
+    <span className={`place-device-hotkey ${label ? 'is-visible' : 'is-hidden'} ${className ?? ''}`.trim()} aria-hidden="true">
+      {label ?? ''}
+    </span>
+  )
 
   const renderHistoryPanel = () => (
     <>
@@ -137,6 +154,7 @@ export function LeftPanel() {
               >
                 <img className="place-device-icon" src={getDeviceIconPath('item_log_belt_01')} alt="" aria-hidden="true" draggable={false} />
                 <span className="place-device-label">{t('left.placeBelt')}</span>
+                {renderHotkeyBadge('E')}
               </button>
 
               <button
@@ -152,6 +170,7 @@ export function LeftPanel() {
               >
                 <img className="place-device-icon" src={getDeviceIconPath('item_log_pipe_01')} alt="" aria-hidden="true" draggable={false} />
                 <span className="place-device-label">{t('left.placePipe')}</span>
+                {renderHotkeyBadge('Q')}
               </button>
 
               <button className="place-device-button" onClick={() => eventBus.emit('left.blueprint.saveSelection', undefined)}>
@@ -169,14 +188,22 @@ export function LeftPanel() {
             <div className="place-groups-scroll">
               {placeGroups.map((group) => {
                 const devices = group.devices
+                const isHighlighted = activeHighlightedGroup === group.key
+                const groupHotkey = GROUP_HOTKEY_LABEL[group.key]
                 return (
                   <section
                     key={group.key}
-                    className={`place-group-section ${activeHighlightedGroup === group.key ? 'is-hotkey-highlighted' : ''}`.trim()}
+                    className={`place-group-section ${isHighlighted ? 'is-hotkey-highlighted' : ''}`.trim()}
                   >
-                    <h4 className="place-group-title">{t(group.labelKey)}</h4>
+                    <div className="place-group-heading">
+                      <h4 className="place-group-title">{t(group.labelKey)}</h4>
+                      <div className="place-group-hotkeys" aria-hidden="true">
+                        {groupHotkey ? <span className="place-group-hotkey-chip">{groupHotkey}</span> : null}
+                        {isHighlighted ? <span className="place-group-hotkey-chip is-active">1-9 0</span> : null}
+                      </div>
+                    </div>
                     <div className="place-device-grid">
-                      {devices.map((deviceType) => (
+                      {devices.map((deviceType, index) => (
                         <button
                           key={deviceType.id}
                           className={`place-device-button ${placeType === deviceType.id ? 'active' : ''}`}
@@ -195,6 +222,7 @@ export function LeftPanel() {
                             draggable={false}
                           />
                           <span className="place-device-label">{getDeviceLabel(language, deviceType.id)}</span>
+                          {renderHotkeyBadge(isHighlighted ? (DIGIT_HOTKEY_LABELS[index] ?? null) : null)}
                         </button>
                       ))}
                     </div>
