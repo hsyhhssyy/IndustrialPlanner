@@ -1,5 +1,5 @@
 import type { Language } from '../i18n'
-import { trySetLocalStorageItemWithRecovery } from '../core/localStorageRecovery'
+import { readLocalStorageJson, writeLocalStorageJsonWithRecovery } from '../core/persistentStorage'
 
 export type UiTheme = 'ayu-dark' | 'ayu-light'
 
@@ -93,12 +93,8 @@ function normalizeLayoutHistoryLimit(value: unknown, fallback: number) {
 }
 
 function readLegacyValue<T>(key: string, fallback: T) {
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? (JSON.parse(raw) as T) : fallback
-  } catch {
-    return fallback
-  }
+  const parsed = readLocalStorageJson<T>(key)
+  return parsed ?? fallback
 }
 
 export function normalizeAppSettings(value: Partial<AppSettings> | null | undefined): AppSettings {
@@ -118,13 +114,9 @@ export function normalizeAppSettings(value: Partial<AppSettings> | null | undefi
 }
 
 export function readAppSettings(): AppSettings {
-  try {
-    const raw = localStorage.getItem(SETTINGS_KEY)
-    if (raw) {
-      return normalizeAppSettings(JSON.parse(raw) as Partial<AppSettings>)
-    }
-  } catch {
-    // fall through to legacy keys
+  const persistedSettings = readLocalStorageJson<Partial<AppSettings>>(SETTINGS_KEY)
+  if (persistedSettings) {
+    return normalizeAppSettings(persistedSettings)
   }
 
   return normalizeAppSettings({
@@ -140,9 +132,9 @@ export function readAppSettings(): AppSettings {
 
 export function writeAppSettings(settings: AppSettings) {
   try {
-    trySetLocalStorageItemWithRecovery(
+    writeLocalStorageJsonWithRecovery(
       SETTINGS_KEY,
-      JSON.stringify(normalizeAppSettings(settings)),
+      normalizeAppSettings(settings),
       settings.layoutHistoryLimit === LAYOUT_HISTORY_LIMIT_INFINITE ? null : settings.layoutHistoryLimit,
     )
   } catch (error) {

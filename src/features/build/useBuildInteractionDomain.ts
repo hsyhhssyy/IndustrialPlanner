@@ -21,6 +21,8 @@ import {
 
 // 输入：五组参数（viewport/build/interaction/blueprint/i18n），分别承载坐标、业务状态、交互状态、蓝图状态与文案。
 // 输出：稳定的画布事件处理器集合与平移状态，供 App 直接绑定到画布组件。
+const PLACE_SELECTION_DRAG_THRESHOLD_CELLS = 1 / 5
+
 export function useBuildInteractionDomain({
   viewport,
   build,
@@ -118,11 +120,18 @@ export function useBuildInteractionDomain({
 
   const [isPanning, setIsPanning] = useState(false)
   const [panStart, setPanStart] = useState<PanStart | null>(null)
+  const [pendingPlaceSelectionStart, setPendingPlaceSelectionStart] = useState<null | {
+    clientX: number
+    clientY: number
+    cell: Cell
+    clickedId: string | null
+  }>(null)
   const canUseCanvasEditing = activeWorkbenchView !== 'history'
   const canUseDeleteDragRect = canUseCanvasEditing && mode === 'delete'
   const canUsePlaceSelectionRect = canUseCanvasEditing && mode === 'place' && placeOperation === 'default' && !placeType
 
   const resetDragState = useCallback(() => {
+    setPendingPlaceSelectionStart(null)
     setDragStartCell(null)
     setDragOrigin(null)
     setDragRect(null)
@@ -136,6 +145,7 @@ export function useBuildInteractionDomain({
     setDragInvalidMessage,
     setDragInvalidSelection,
     setDragOrigin,
+    setPendingPlaceSelectionStart,
     setDragPreviewPositions,
     setDragPreviewValid,
     setDragRect,
@@ -443,8 +453,12 @@ export function useBuildInteractionDomain({
       setDragPreviewValid(true)
       setDragInvalidMessage(null)
       setDragInvalidSelection(new Set())
-      setDragOrigin(cell)
-      setDragRect({ x1: cell.x, y1: cell.y, x2: cell.x, y2: cell.y })
+      setPendingPlaceSelectionStart({
+        clientX: event.clientX,
+        clientY: event.clientY,
+        cell,
+        clickedId: clickedId ?? null,
+      })
     },
     [
       activePlacementBlueprint,
@@ -472,6 +486,7 @@ export function useBuildInteractionDomain({
       setDragInvalidMessage,
       setDragInvalidSelection,
       setDragOrigin,
+      setPendingPlaceSelectionStart,
       setDragPreviewPositions,
       setDragPreviewValid,
       setDragRect,
@@ -531,6 +546,30 @@ export function useBuildInteractionDomain({
       setHoverCell(cell)
 
       if (linkDraftSourceId) return
+
+      if (canUsePlaceSelectionRect && pendingPlaceSelectionStart && !dragRect && !dragBasePositions) {
+        const thresholdPx = baseCellSize * zoomScale * PLACE_SELECTION_DRAG_THRESHOLD_CELLS
+        const dragDistance = Math.hypot(
+          event.clientX - pendingPlaceSelectionStart.clientX,
+          event.clientY - pendingPlaceSelectionStart.clientY,
+        )
+        if (dragDistance >= thresholdPx) {
+          setSelection([])
+          setDragBasePositions(null)
+          setDragPreviewPositions({})
+          setDragPreviewValid(true)
+          setDragInvalidMessage(null)
+          setDragInvalidSelection(new Set())
+          setDragOrigin(pendingPlaceSelectionStart.cell)
+          setDragRect({
+            x1: pendingPlaceSelectionStart.cell.x,
+            y1: pendingPlaceSelectionStart.cell.y,
+            x2: pendingPlaceSelectionStart.cell.x,
+            y2: pendingPlaceSelectionStart.cell.y,
+          })
+          setPendingPlaceSelectionStart(null)
+        }
+      }
 
       if (mode === 'place' && (placeOperation === 'belt' || placeOperation === 'pipe') && logStart) {
         if (!cell) return
@@ -605,9 +644,11 @@ export function useBuildInteractionDomain({
     [
       canvasHeightPx,
       canvasWidthPx,
+      baseCellSize,
       clampViewportOffset,
       dragBasePositions,
       dragOrigin,
+      pendingPlaceSelectionStart,
       dragRect,
       dragStartCell,
       fallbackPlacementToastKey,
@@ -632,6 +673,7 @@ export function useBuildInteractionDomain({
       setHoverCell,
       setLogCurrent,
       setLogTrace,
+      setPendingPlaceSelectionStart,
       setViewOffset,
       simIsRunning,
       toRawCell,
@@ -782,6 +824,16 @@ export function useBuildInteractionDomain({
         return
       }
 
+      if (canUsePlaceSelectionRect && pendingPlaceSelectionStart && !simIsRunning) {
+        if (pendingPlaceSelectionStart.clickedId && canMoveDevice(pendingPlaceSelectionStart.clickedId)) {
+          setSelection([pendingPlaceSelectionStart.clickedId])
+        } else {
+          setSelection([])
+        }
+        setPendingPlaceSelectionStart(null)
+        return
+      }
+
       resetDragState()
     },
     [
@@ -790,6 +842,7 @@ export function useBuildInteractionDomain({
       dragBasePositions,
       dragInvalidMessage,
       dragOrigin,
+      pendingPlaceSelectionStart,
       dragPreviewPositions,
       dragPreviewValid,
       dragRect,
@@ -824,6 +877,7 @@ export function useBuildInteractionDomain({
       setLogCurrent,
       setLogStart,
       setLogTrace,
+      setPendingPlaceSelectionStart,
       setSelection,
       simIsRunning,
       t,

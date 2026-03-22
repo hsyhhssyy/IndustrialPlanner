@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { trySetLocalStorageItemWithRecovery } from './localStorageRecovery'
+import { readLocalStorageJsonWithFallback, writeLocalStorageJsonWithRecovery } from './persistentStorage'
 
 type PersistentStateOptions<T> = {
   normalize?: (value: T) => T
@@ -17,18 +17,12 @@ export function usePersistentState<T>(key: string, initial: T, normalizeOrOption
   const normalize = options.normalize
 
   const [state, setState] = useState<T>(() => {
-    try {
-      const raw = localStorage.getItem(key)
-      const parsed = raw ? (JSON.parse(raw) as T) : initial
-      return normalize ? normalize(parsed) : parsed
-    } catch {
-      return normalize ? normalize(initial) : initial
-    }
+    return readLocalStorageJsonWithFallback(key, initial, normalize)
   })
 
   useEffect(() => {
     try {
-      trySetLocalStorageItemWithRecovery(key, JSON.stringify(state), options.quotaRecoveryHistoryLimit)
+      writeLocalStorageJsonWithRecovery(key, state, options.quotaRecoveryHistoryLimit)
     } catch (error) {
       // 持久化失败时不能让整个应用崩溃，尤其是历史快照这类大对象达到浏览器配额时。
       console.warn(`Failed to persist localStorage key: ${key}`, error)

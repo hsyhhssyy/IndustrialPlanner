@@ -480,8 +480,8 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
           {
             title: '通用操作',
             rows: [
-              { mode: '通用', icon: 'canvas', action: '选择或确认当前动作；若没有点中当前已选建筑，则从左键按下开始进入框选', keys: ['左键'] },
-              { mode: '通用', icon: 'canvas', action: '框选区域，或在已点中当前选中建筑时拖动整组选中设备', keys: ['左键拖拽'] },
+              { mode: '通用', icon: 'canvas', action: '选择或确认当前动作；单击未选中建筑按点击处理，不会立刻生成 1 格框选', keys: ['左键'] },
+              { mode: '通用', icon: 'canvas', action: '拖动超过约 1/5 格后进入框选；若已点中当前选中建筑，则拖动整组选中设备', keys: ['左键拖拽'] },
               { mode: '通用', icon: 'canvas', action: '按住修饰键点选建筑，加入或移出当前多选', keys: ['Ctrl/Cmd/Shift', '左键'] },
               { mode: '通用', icon: 'mouse', action: '平移画布', keys: ['中键拖拽'] },
               { mode: '通用', icon: 'canvas', action: '缩放画布', keys: ['滚轮'] },

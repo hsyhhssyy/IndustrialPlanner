@@ -4,13 +4,18 @@ import type { DeviceTypeId, EditMode } from '../domain/types'
 import type { Language } from '../i18n'
 import { TypedEventBus } from './eventBus'
 import { createDefaultAppSettings, normalizeAppSettings, readAppSettings, writeAppSettings, type UiTheme } from './settings'
-import { trySetLocalStorageItemWithRecovery } from '../core/localStorageRecovery'
-import { APP_VERSION } from '../migrations/versioning'
 import {
   normalizeSuperRecipeEnabledPreference,
   SUPER_RECIPE_CONTROL_MODE,
   type SuperRecipeControlMode,
 } from '../config/superRecipePolicy'
+import {
+  normalizePersistedCellSize,
+  normalizePersistedViewOffset,
+  readPersistedViewportState,
+  writePersistedViewportState,
+  type PersistedViewportState,
+} from './viewportStorage'
 
 export type SimSpeed = 0 | 0.25 | 1 | 2 | 4 | 16
 export type PlaceOperation = 'default' | 'belt' | 'pipe' | 'blueprint'
@@ -25,81 +30,7 @@ export type DebugLogEntry = {
 }
 
 const MAX_DEBUG_LOG_ENTRIES = 200
-const VIEWPORT_STATE_STORAGE_KEY = 'stage6-global-viewport-state'
-const LEGACY_CELL_SIZE_STORAGE_KEY = 'stage1-cell-size'
-const DEFAULT_CELL_SIZE = 64
 const VIEWPORT_PERSIST_DEBOUNCE_MS = 160
-
-type PersistedViewportState = {
-  version: string
-  cellSize: number
-  viewOffset: { x: number; y: number }
-}
-
-function normalizePersistedCellSize(value: unknown) {
-  if (!Number.isFinite(value)) return DEFAULT_CELL_SIZE
-  return Math.max(12, Math.round(Number(value)))
-}
-
-function normalizePersistedViewOffset(value: unknown) {
-  if (!value || typeof value !== 'object') {
-    return { x: 0, y: 0 }
-  }
-
-  const candidate = value as { x?: unknown; y?: unknown }
-  return {
-    x: Number.isFinite(candidate.x) ? Math.round(Number(candidate.x)) : 0,
-    y: Number.isFinite(candidate.y) ? Math.round(Number(candidate.y)) : 0,
-  }
-}
-
-function defaultViewportState(): PersistedViewportState {
-  return {
-    version: APP_VERSION,
-    cellSize: DEFAULT_CELL_SIZE,
-    viewOffset: { x: 0, y: 0 },
-  }
-}
-
-function readLegacyCellSize() {
-  try {
-    const raw = localStorage.getItem(LEGACY_CELL_SIZE_STORAGE_KEY)
-    if (!raw) return null
-    return normalizePersistedCellSize(JSON.parse(raw))
-  } catch {
-    return null
-  }
-}
-
-function readPersistedViewportState(): PersistedViewportState {
-  if (typeof window === 'undefined') {
-    return defaultViewportState()
-  }
-
-  try {
-    const raw = localStorage.getItem(VIEWPORT_STATE_STORAGE_KEY)
-    if (!raw) {
-      const legacyCellSize = readLegacyCellSize()
-      return {
-        ...defaultViewportState(),
-        cellSize: legacyCellSize ?? DEFAULT_CELL_SIZE,
-      }
-    }
-
-    const candidate = JSON.parse(raw) as Partial<PersistedViewportState> | null
-    if (!candidate || candidate.version !== APP_VERSION) {
-      return defaultViewportState()
-    }
-
-    return {
-      version: APP_VERSION,
-      cellSize: normalizePersistedCellSize(candidate.cellSize),
-      viewOffset: normalizePersistedViewOffset(candidate.viewOffset),
-    }
-  } catch {
-    return defaultViewportState()
-  }
-}
 
 export type AppEventMap = {
   'app.language.set': Language
@@ -289,17 +220,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     viewportPersistTimeoutRef.current = window.setTimeout(() => {
       try {
-        trySetLocalStorageItemWithRecovery(
-          VIEWPORT_STATE_STORAGE_KEY,
-          JSON.stringify({
-            version: APP_VERSION,
+        writePersistedViewportState(
+          {
+            version: persistedViewportState.version,
             cellSize,
             viewOffset,
-          } satisfies PersistedViewportState),
+          } satisfies PersistedViewportState,
           layoutHistoryLimit,
         )
       } catch (error) {
-        console.warn(`Failed to persist localStorage key: ${VIEWPORT_STATE_STORAGE_KEY}`, error)
+        console.warn('Failed to persist viewport state', error)
       }
       viewportPersistTimeoutRef.current = null
     }, VIEWPORT_PERSIST_DEBOUNCE_MS)
