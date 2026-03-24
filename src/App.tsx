@@ -123,7 +123,6 @@ const FALLBACK_PLACEMENT_TOAST_KEY = 'toast.invalidPlacementFallback'
 const MAX_RECENT_PICKER_ITEMS = 32
 const SLOT_CONFIG_SUPPORTED_TYPE_IDS = new Set<DeviceTypeId>([
   'item_port_storager_1',
-  'item_port_sp_hub_1',
   'item_port_mix_pool_1',
 ])
 
@@ -1590,7 +1589,7 @@ function App() {
                     amount: Math.max(0, Math.floor(slot.preloadAmount ?? 0)),
                   }))
 
-                if (device.typeId === 'item_port_storager_1' || device.typeId === 'item_port_sp_hub_1') {
+                if (device.typeId === 'item_port_storager_1') {
                   if (legacyPreloads.length > 0) {
                     nextConfig.storagePreloadInputs = legacyPreloads
                   } else {

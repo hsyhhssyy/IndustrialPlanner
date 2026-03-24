@@ -212,6 +212,14 @@ function sanitizeStorageSlots(storageSlots: DeviceConfig['storageSlots']) {
     .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
 }
 
+function supportsStorageSlotConfig(deviceTypeId: DeviceInstance['typeId'] | undefined) {
+  return deviceTypeId === 'item_port_storager_1' || deviceTypeId === 'item_port_mix_pool_1'
+}
+
+function supportsLegacyStoragePreloads(deviceTypeId: DeviceInstance['typeId'] | undefined) {
+  return deviceTypeId === 'item_port_storager_1'
+}
+
 function sanitizeReactorPoolConfig(reactorPool: DeviceConfig['reactorPool']) {
   if (!reactorPool || typeof reactorPool !== 'object') return undefined
 
@@ -293,11 +301,13 @@ function sanitizeDeviceConfigUnknownItems(config: DeviceConfig, deviceTypeId: De
     delete nextConfig.preloadInputAmount
   }
 
-  const storageSlots = sanitizeStorageSlots(nextConfig.storageSlots)
+  const storageSlots = supportsStorageSlotConfig(deviceTypeId) ? sanitizeStorageSlots(nextConfig.storageSlots) : []
   if (storageSlots.length > 0) nextConfig.storageSlots = storageSlots
   else delete nextConfig.storageSlots
 
-  const storagePreloadInputs = sanitizePreloadEntries(nextConfig.storagePreloadInputs, () => ['solid'])
+  const storagePreloadInputs = supportsLegacyStoragePreloads(deviceTypeId)
+    ? sanitizePreloadEntries(nextConfig.storagePreloadInputs, () => ['solid'])
+    : []
   if (storagePreloadInputs.length > 0) nextConfig.storagePreloadInputs = storagePreloadInputs
   else delete nextConfig.storagePreloadInputs
 

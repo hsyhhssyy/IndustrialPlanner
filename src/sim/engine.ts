@@ -63,7 +63,6 @@ const BUS_SEGMENT_TYPE_ID: DeviceInstance['typeId'] = 'item_port_log_hongs_bus'
 const PICKUP_TYPE_ID: DeviceInstance['typeId'] = 'item_port_unloader_1'
 const PROTOCOL_HUB_TYPE_ID: DeviceInstance['typeId'] = 'item_port_sp_hub_1'
 const STORAGE_BOX_TYPE_ID: DeviceInstance['typeId'] = 'item_port_storager_1'
-const PROTOCOL_HUB_STORAGE_GROUP_ID = 'protocol-hub-storage-group-1'
 const STORAGE_BOX_GROUP_ID = 'storage-box-group-1'
 const REACTOR_SOLID_GROUP_ID = 'reactor-solid-group-1'
 const REACTOR_LIQUID_GROUP_ID = 'reactor-liquid-group-1'
@@ -260,12 +259,7 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
     }
   }
   if (def.runtimeKind === 'storage') {
-    const bufferGroups =
-      device.typeId === PROTOCOL_HUB_TYPE_ID
-        ? [createProtocolStorageBufferGroup(device)]
-        : device.typeId === STORAGE_BOX_TYPE_ID
-          ? [createStorageBoxBufferGroup(device)]
-          : undefined
+    const bufferGroups = device.typeId === STORAGE_BOX_TYPE_ID ? [createStorageBoxBufferGroup(device)] : undefined
     return {
       ...baseRuntime(),
       inventory: {},
@@ -960,23 +954,6 @@ function collectSolidOutputPortIds(typeId: DeviceInstance['typeId']) {
   return DEVICE_TYPE_BY_ID[typeId].ports0
     .filter((port) => port.direction === 'Output' && allowsSolidInputType(port.allowedTypes))
     .map((port) => port.id)
-}
-
-function createProtocolStorageBufferGroup(device: DeviceInstance): BufferGroupRuntime {
-  const slots: BufferSlotRuntime[] = Array.from({ length: STORAGE_SLOT_COUNT }, (_, slotIndex) => ({
-    slotIndex,
-    mode: 'free',
-    currentItemId: null,
-    amount: 0,
-    capacity: STORAGE_SLOT_CAPACITY,
-  }))
-
-  return {
-    id: PROTOCOL_HUB_STORAGE_GROUP_ID,
-    inPortIds: collectSolidInputPortIds(device.typeId),
-    outPortIds: collectSolidOutputPortIds(device.typeId),
-    slots,
-  }
 }
 
 function createStorageBoxBufferGroup(device: DeviceInstance): BufferGroupRuntime {

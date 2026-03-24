@@ -216,7 +216,6 @@ export function RightPanel({
 }: RightPanelProps) {
   const slotConfigSupportedTypeIds = new Set<DeviceInstance['typeId']>([
     'item_port_storager_1',
-    'item_port_sp_hub_1',
     'item_port_mix_pool_1',
   ])
 
@@ -692,14 +691,14 @@ export function RightPanel({
                   </div>
                 )
               )}
-              {'inventory' in selectedRuntime && (
+              {'inventory' in selectedRuntime && selectedDevice.typeId !== 'item_port_sp_hub_1' && (
                 <div className="kv">
                   <span>{t('detail.cacheInventory')}</span>
                   <span>{formatInventoryAmounts(language, selectedRuntime.inventory, t)}</span>
                 </div>
               )}
               {'inventory' in selectedRuntime && Array.isArray(selectedRuntime.bufferGroups) && selectedRuntime.bufferGroups.length > 0 &&
-                (selectedDevice.typeId === 'item_port_sp_hub_1' || selectedDevice.typeId === 'item_port_storager_1') && (
+                selectedDevice.typeId === 'item_port_storager_1' && (
                 <>
                   {selectedRuntime.bufferGroups[0].slots
                     .slice()
