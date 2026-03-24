@@ -2,6 +2,8 @@ import type { ItemId } from '../../domain/types'
 import { getDirectionalPortIds, getPortPriorityGroup, orderPortsByPriorityGroup } from '../../domain/shared/portPriority'
 import type { PlanContext, PlanResult, PortLink, PullIntent, ReceiveLane, TransferMatch } from './types'
 
+const SLOTLESS_STORAGE_OUTPUT_TYPE_IDS = new Set(['item_port_sp_hub_1'])
+
 type CandidateLink = PortLink & {
   receiverPortId: string
   receiverPortRank: number
@@ -34,6 +36,7 @@ function pickStorageOutputSlotForPort(context: PlanContext, senderDeviceId: stri
   const senderRuntime = context.runtimeById[senderDeviceId]
   const senderDevice = context.deviceById.get(senderDeviceId)
   if (!senderRuntime || !senderDevice || !context.helpers.isStorageWithBufferGroups(senderRuntime)) return undefined
+  if (SLOTLESS_STORAGE_OUTPUT_TYPE_IDS.has(senderDevice.typeId)) return undefined
 
   const slotIndices = context.helpers.orderedStorageSlotIndicesForOutput(senderRuntime, senderPortId)
   for (const slotIndex of slotIndices) {
@@ -273,7 +276,13 @@ function pickIntentForReceiverState(
     }
 
     const slotIndex = pickStorageOutputSlotForPort(context, senderDevice.instanceId, link.from.portId, prepared.itemId)
-    if (context.helpers.isStorageWithBufferGroups(senderRuntime) && typeof slotIndex !== 'number') continue
+    if (
+      context.helpers.isStorageWithBufferGroups(senderRuntime)
+      && !SLOTLESS_STORAGE_OUTPUT_TYPE_IDS.has(senderDevice.typeId)
+      && typeof slotIndex !== 'number'
+    ) {
+      continue
+    }
 
     return {
       intent: {
