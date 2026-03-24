@@ -220,6 +220,22 @@ export function useBuildHotkeysDomain({
         return
       }
 
+      if (!event.ctrlKey && !event.metaKey && !event.altKey && lowerKey === 'h') {
+        const viewport = viewportRef.current
+        if (!viewport) return
+        event.preventDefault()
+        const centeredOffset = clampViewportOffset(
+          {
+            x: viewport.clientWidth / 2 - (currentBaseOuterRing.left + layout.lotSize / 2) * cellSize,
+            y: viewport.clientHeight / 2 - (currentBaseOuterRing.top + layout.lotSize / 2) * cellSize,
+          },
+          { width: viewport.clientWidth, height: viewport.clientHeight },
+          { width: canvasWidthPx * zoomScale, height: canvasHeightPx * zoomScale },
+        )
+        setViewOffset(centeredOffset)
+        return
+      }
+
       if (!event.ctrlKey && !event.metaKey && !event.altKey && mode === 'place' && (lowerKey === 'q' || lowerKey === 'e')) {
         const targetOperation = lowerKey === 'q' ? 'pipe' : 'belt'
         const targetGroup = lowerKey === 'q' ? 'pipe_logistics' : 'conveyor_logistics'

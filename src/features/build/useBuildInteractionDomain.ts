@@ -9,6 +9,7 @@ import { clamp } from '../../domain/shared/math'
 import type { LayoutState } from '../../domain/types'
 import { uiEffects } from '../../app/uiEffects'
 import { useAppContext } from '../../app/AppContext'
+import { createDebugLogger } from '../../app/debugLogger'
 import { tryPlaceDevice } from './interactionCommands'
 import {
   allowsOuterRingPlacementForType,
@@ -22,6 +23,7 @@ import {
 // 输入：五组参数（viewport/build/interaction/blueprint/i18n），分别承载坐标、业务状态、交互状态、蓝图状态与文案。
 // 输出：稳定的画布事件处理器集合与平移状态，供 App 直接绑定到画布组件。
 const PLACE_SELECTION_DRAG_THRESHOLD_CELLS = 1 / 5
+const blueprintPlacementLogger = createDebugLogger('blueprint-placement')
 
 export function useBuildInteractionDomain({
   viewport,
@@ -340,15 +342,41 @@ export function useBuildInteractionDomain({
 
       if (activePlacementBlueprint) {
         if (simIsRunning) return
+        blueprintPlacementLogger.info('canvas-mousedown', {
+          cell,
+          blueprintPlacementRotation,
+          blueprintDeviceCount: activePlacementBlueprint.devices.length,
+          clipboardActive: Boolean(clipboardBlueprint),
+        })
         const preview = buildBlueprintPlacementPreview(activePlacementBlueprint, cell, blueprintPlacementRotation)
         if (!preview) {
+          blueprintPlacementLogger.warn('preview-missing', {
+            cell,
+            blueprintPlacementRotation,
+            blueprintDeviceCount: activePlacementBlueprint.devices.length,
+          })
           uiEffects.toast(t('toast.blueprintNoSelection'), { variant: 'warning' })
           return
         }
         if (!preview.isValid) {
+          blueprintPlacementLogger.warn('preview-invalid', {
+            cell,
+            blueprintPlacementRotation,
+            invalidMessageKey: preview.invalidMessageKey ?? fallbackPlacementToastKey,
+            previewDeviceCount: preview.devices.length,
+            replacementInstanceCount: preview.replacementInstanceIds.length,
+          })
           uiEffects.toast(t(preview.invalidMessageKey ?? fallbackPlacementToastKey), { variant: 'warning' })
           return
         }
+
+        blueprintPlacementLogger.info('apply-preview', {
+          cell,
+          blueprintPlacementRotation,
+          previewDeviceCount: preview.devices.length,
+          replacementInstanceCount: preview.replacementInstanceIds.length,
+          existingDeviceCount: layout.devices.length,
+        })
 
         setLayout((current) => {
           const preservedDevices = current.devices.filter((device) => !preview.replacementInstanceIds.includes(device.instanceId))

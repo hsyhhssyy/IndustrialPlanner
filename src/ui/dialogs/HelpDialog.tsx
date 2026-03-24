@@ -491,6 +491,7 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
               { mode: '通用', icon: 'help', action: '重做下一步布局或配置修改', keys: ['Ctrl+Shift/Cmd+Shift', 'Z', '或 Ctrl', 'Y'] },
               { mode: '通用', icon: 'delete', action: '删除当前选中的建筑', keys: ['Delete'] },
               { mode: '通用', icon: 'canvas', action: '按住连续移动视口', keys: ['W', 'A', 'S', 'D'] },
+              { mode: '通用', icon: 'canvas', action: '将基地中心点对齐到当前可见区域中心', keys: ['H'] },
             ],
           },
           {
@@ -543,6 +544,7 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
             { mode: 'General', icon: 'help', action: 'Redo the next layout or config change', keys: ['Ctrl+Shift/Cmd+Shift', 'Z', 'or Ctrl', 'Y'] },
             { mode: 'General', icon: 'delete', action: 'Delete the current selected buildings', keys: ['Delete'] },
             { mode: 'General', icon: 'canvas', action: 'Pan the viewport continuously while held', keys: ['W', 'A', 'S', 'D'] },
+            { mode: 'General', icon: 'canvas', action: 'Center the base in the current visible viewport', keys: ['H'] },
           ],
         },
         {

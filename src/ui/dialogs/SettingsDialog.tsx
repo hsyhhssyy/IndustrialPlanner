@@ -1,5 +1,6 @@
 import { LANGUAGE_OPTIONS, type Language } from '../../i18n'
 import { useAppContext } from '../../app/AppContext'
+import { formatDebugLogEntry } from '../../app/debugLogger'
 import {
   LAYOUT_HISTORY_LIMIT_DEFAULT,
   LAYOUT_HISTORY_LIMIT_INFINITE,
@@ -29,7 +30,7 @@ export function SettingsDialog({ t, onClose, onClearAllHistory }: SettingsDialog
   const historyLimitLabel = layoutHistoryLimit === LAYOUT_HISTORY_LIMIT_INFINITE ? t('settings.historyLimitInfinite') : String(layoutHistoryLimit)
 
   const handleCopyDebugLogs = async () => {
-    const text = debugLogs.map((entry) => `[${entry.timestamp}] [${entry.category}] ${entry.message}`).join('\n')
+    const text = debugLogs.map(formatDebugLogEntry).join('\n')
     if (!text) {
       showToast(t('settings.debug.copyEmpty'), { variant: 'warning' })
       return
@@ -245,7 +246,7 @@ export function SettingsDialog({ t, onClose, onClearAllHistory }: SettingsDialog
                 <textarea
                   className="settings-debug-log"
                   readOnly
-                  value={debugLogs.map((entry) => `[${entry.timestamp}] [${entry.category}] ${entry.message}`).join('\n')}
+                  value={debugLogs.map(formatDebugLogEntry).join('\n')}
                   placeholder={t('settings.debug.empty')}
                 />
               </div>

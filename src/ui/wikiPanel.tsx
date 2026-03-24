@@ -100,6 +100,7 @@ export function WikiPanel({ language, superRecipeEnabled, t, onClose }: WikiPane
             title: '3) 常用快捷键',
             steps: [
               'R：旋转当前放置预览、蓝图预览，或当前选中的建筑。',
+              'H：将基地中心点放到当前可见画布中心。',
               'Ctrl+C：复制当前选中建筑为临时蓝图（需至少选中 1 个）。',
               'Ctrl+V：恢复上次复制的临时蓝图。',
               'Shift + 左键：放置后保持当前建筑继续放置。',
@@ -154,6 +155,7 @@ export function WikiPanel({ language, superRecipeEnabled, t, onClose }: WikiPane
             title: '3) Common hotkeys',
             steps: [
               'R: rotate the current placement preview, blueprint preview, or selected buildings.',
+              'H: center the base in the visible viewport.',
               'Delete: delete the current selected buildings.',
               'Q / E: toggle pipe or conveyor logistics routing; press the same key again to return to the default place state.',
               'W / A / S / D: pan the viewport while held.',

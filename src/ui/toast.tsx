@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react'
+import { createDebugLogger } from '../app/debugLogger'
 
 export type ToastVariant = 'info' | 'success' | 'warning' | 'error'
 
@@ -19,6 +20,7 @@ type ToastListener = (message: ToastMessage) => void
 const DEFAULT_DURATION_MS = 2000
 const listeners = new Set<ToastListener>()
 let toastSeq = 0
+const toastLogger = createDebugLogger('toast')
 
 function emitToast(message: ToastMessage) {
   for (const listener of listeners) listener(message)
@@ -27,6 +29,7 @@ function emitToast(message: ToastMessage) {
 export function showToast(text: string, options: ToastOptions = {}) {
   const durationMs = Math.max(200, options.durationMs ?? DEFAULT_DURATION_MS)
   const variant = options.variant ?? 'info'
+  toastLogger.info('emit', { text, durationMs, variant })
   emitToast({
     id: ++toastSeq,
     text,
@@ -73,6 +76,7 @@ export function ToastProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (!active) return
     const timer = window.setTimeout(() => {
+      toastLogger.debug('dismiss-timeout', { id: active.id, text: active.text, variant: active.variant })
       setActive(null)
     }, active.durationMs)
     return () => window.clearTimeout(timer)
@@ -82,6 +86,7 @@ export function ToastProvider({ children }: PropsWithChildren) {
     if (!active) return
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        toastLogger.debug('dismiss-escape', { id: active.id, text: active.text, variant: active.variant })
         setActive(null)
       }
     }
@@ -104,7 +109,10 @@ export function ToastProvider({ children }: PropsWithChildren) {
           className={`global-toast global-toast--${active.variant}`}
           role="status"
           aria-live="polite"
-          onClick={() => setActive(null)}
+          onClick={() => {
+            toastLogger.debug('dismiss-click', { id: active.id, text: active.text, variant: active.variant })
+            setActive(null)
+          }}
         >
           {active.text}
         </div>

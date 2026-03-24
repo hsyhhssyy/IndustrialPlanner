@@ -5,6 +5,14 @@ import type { Language } from '../i18n'
 import { TypedEventBus } from './eventBus'
 import { createDefaultAppSettings, normalizeAppSettings, readAppSettings, writeAppSettings, type UiTheme } from './settings'
 import {
+  clearDebugLogs as clearStructuredDebugLogs,
+  createDebugLogger,
+  getDebugLogsSnapshot,
+  setDebugLoggingEnabled,
+  subscribeDebugLogs,
+  type DebugLogEntry,
+} from './debugLogger'
+import {
   normalizeSuperRecipeEnabledPreference,
   SUPER_RECIPE_CONTROL_MODE,
   type SuperRecipeControlMode,
@@ -22,14 +30,7 @@ export type PlaceOperation = 'default' | 'belt' | 'pipe' | 'blueprint'
 export type WorkbenchView = EditMode | 'history'
 type Cell = { x: number; y: number }
 type DragRect = { x1: number; y1: number; x2: number; y2: number }
-export type DebugLogEntry = {
-  id: number
-  timestamp: string
-  category: string
-  message: string
-}
 
-const MAX_DEBUG_LOG_ENTRIES = 200
 const VIEWPORT_PERSIST_DEBOUNCE_MS = 160
 
 export type AppEventMap = {
@@ -161,6 +162,7 @@ type AppContextValue = {
 const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const settingsLogger = useMemo(() => createDebugLogger('settings'), [])
   const [mode, setMode] = usePersistentState<EditMode>('stage1-mode', 'place')
   const [placeType, setPlaceType] = usePersistentState<DeviceTypeId | ''>('stage1-place-type', '')
   const [placeRotation, setPlaceRotation] = usePersistentState<0 | 90 | 180 | 270>('stage1-place-rotation', 0)
@@ -184,8 +186,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [dragRect, setDragRect] = useState<DragRect | null>(null)
   const [dragOrigin, setDragOrigin] = useState<Cell | null>(null)
   const [activeDialog, setActiveDialog] = useState<'tool' | 'help' | 'settings' | null>(null)
-  const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([])
-  const debugLogSeqRef = useRef(0)
+  const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>(() => getDebugLogsSnapshot())
   const viewportPersistTimeoutRef = useRef<number | null>(null)
   const eventBus = useMemo(() => new TypedEventBus<AppEventMap>(), [])
   const superRecipeEnabled = SUPER_RECIPE_CONTROL_MODE === 'forced-off' ? false : normalizeSuperRecipeEnabledPreference(settings.superRecipeEnabled)
@@ -317,30 +318,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const appendDebugLog = useCallback(
     (category: string, message: string) => {
       if (!debugMode) return
-      const timestamp = new Date().toISOString()
-      console.log(`[debug:${category}] ${message}`)
-      debugLogSeqRef.current += 1
-      const nextEntry = { id: debugLogSeqRef.current, timestamp, category, message }
-      setDebugLogs((current) => [...current, nextEntry].slice(-MAX_DEBUG_LOG_ENTRIES))
+      createDebugLogger(category).info('message', undefined, message)
     },
     [debugMode],
   )
 
   const clearDebugLogs = useCallback(() => {
-    setDebugLogs([])
+    clearStructuredDebugLogs()
   }, [])
+
+  useEffect(() => subscribeDebugLogs(setDebugLogs), [])
 
   useEffect(() => {
     if (debugMode) {
-      const timestamp = new Date().toISOString()
-      console.log('[debug:settings] Debug mode enabled')
-      debugLogSeqRef.current += 1
-      setDebugLogs((current) => [...current, { id: debugLogSeqRef.current, timestamp, category: 'settings', message: 'Debug mode enabled' }].slice(-MAX_DEBUG_LOG_ENTRIES))
+      setDebugLoggingEnabled(true)
+      settingsLogger.info('debug-mode-enabled')
       return
     }
-    debugLogSeqRef.current = 0
-    setDebugLogs([])
-  }, [debugMode])
+    setDebugLoggingEnabled(false)
+    clearStructuredDebugLogs()
+  }, [debugMode, settingsLogger])
 
   useEffect(() => {
     const unsubscribeSetLanguage = eventBus.on('app.language.set', (nextLanguage) => setLanguage(nextLanguage))
