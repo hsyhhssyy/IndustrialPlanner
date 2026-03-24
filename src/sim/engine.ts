@@ -1,6 +1,6 @@
 import { BASE_BY_ID, DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, LIQUID_ITEM_IDS, RECIPES } from '../domain/registry'
 import { getLinkedSourceId, getLinkedTargetId } from '../domain/deviceLinks'
-import { detectOverlaps, getFootprintCells, getRotatedPorts, isBufferedBeltTransportDevice, isPipeLike, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
+import { detectOverlaps, getFootprintCells, getRotatedPorts, isBufferedBeltTransportDevice, isPipe, isPipeLike, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
 import {
   DEFAULT_EXTERNAL_LIQUID_SOURCE_ITEM_ID,
   normalizeExternalLiquidSourceItemId,
@@ -132,6 +132,7 @@ type NeighborGraph = ReturnType<typeof neighborsFromLinks>
 
 const layoutNeighborCache = new WeakMap<LayoutState, NeighborGraph>()
 const layoutDeviceByIdCache = new WeakMap<LayoutState, Map<string, DeviceInstance>>()
+const layoutPurePipeSegmentCache = new WeakMap<LayoutState, Map<string, readonly string[]>>()
 
 function getNeighbors(layout: LayoutState) {
   const cached = layoutNeighborCache.get(layout)
@@ -147,6 +148,82 @@ function getDeviceByIdMap(layout: LayoutState) {
   const built = new Map(layout.devices.map((device) => [device.instanceId, device]))
   layoutDeviceByIdCache.set(layout, built)
   return built
+}
+
+function getPurePipeSegmentMembersById(layout: LayoutState) {
+  const cached = layoutPurePipeSegmentCache.get(layout)
+  if (cached) return cached
+
+  const purePipeIds = new Set(layout.devices.filter((device) => isPipe(device.typeId)).map((device) => device.instanceId))
+  const adjacency = new Map<string, Set<string>>()
+
+  for (const pipeId of purePipeIds) {
+    adjacency.set(pipeId, new Set())
+  }
+
+  for (const link of getNeighbors(layout).links) {
+    if (!purePipeIds.has(link.from.instanceId) || !purePipeIds.has(link.to.instanceId)) continue
+    adjacency.get(link.from.instanceId)?.add(link.to.instanceId)
+    adjacency.get(link.to.instanceId)?.add(link.from.instanceId)
+  }
+
+  const segmentMembersById = new Map<string, readonly string[]>()
+  const visited = new Set<string>()
+
+  for (const pipeId of purePipeIds) {
+    if (visited.has(pipeId)) continue
+
+    const stack = [pipeId]
+    const members: string[] = []
+    visited.add(pipeId)
+
+    while (stack.length > 0) {
+      const currentId = stack.pop()
+      if (!currentId) continue
+      members.push(currentId)
+
+      for (const neighborId of adjacency.get(currentId) ?? []) {
+        if (visited.has(neighborId)) continue
+        visited.add(neighborId)
+        stack.push(neighborId)
+      }
+    }
+
+    const frozenMembers = Object.freeze([...members])
+    for (const memberId of members) {
+      segmentMembersById.set(memberId, frozenMembers)
+    }
+  }
+
+  layoutPurePipeSegmentCache.set(layout, segmentMembersById)
+  return segmentMembersById
+}
+
+function slotLiquidItemId(slot: SlotData | null) {
+  if (!slot) return null
+  return ITEM_BY_ID[slot.itemId]?.type === 'liquid' ? slot.itemId : null
+}
+
+function purePipeSegmentBlocksIncomingLiquid(
+  device: DeviceInstance,
+  itemId: ItemId,
+  runtimeById: Record<string, DeviceRuntime>,
+  purePipeSegmentMembersById: Map<string, readonly string[]>,
+  lanesClearingThisTick: ReadonlySet<string>,
+) {
+  if (!isPipe(device.typeId) || ITEM_BY_ID[itemId]?.type !== 'liquid') return false
+
+  const segmentMembers = purePipeSegmentMembersById.get(device.instanceId) ?? [device.instanceId]
+  for (const memberId of segmentMembers) {
+    if (lanesClearingThisTick.has(`${memberId}:slot`)) continue
+    const memberRuntime = runtimeById[memberId]
+    if (!memberRuntime || !('slot' in memberRuntime)) continue
+    const occupiedItemId = slotLiquidItemId(memberRuntime.slot)
+    if (!occupiedItemId) continue
+    if (occupiedItemId !== itemId) return true
+  }
+
+  return false
 }
 
 function baseRuntime(): Pick<DeviceRuntime, 'progress01' | 'stallReason' | 'isStalled' | 'inputPriorityGroupCursorByLane' | 'outputPriorityGroupCursorByGroup'> {
@@ -1330,9 +1407,15 @@ function canReceiveLaneForItem(
   toPortId: string,
   lanesClearingThisTick: Set<string>,
   itemId: ItemId,
+  runtimeById: Record<string, DeviceRuntime>,
+  purePipeSegmentMembersById: Map<string, readonly string[]>,
 ): ReceiveLane | null {
   const lane = canReceiveOnPort(device, runtime, toPortId)
   if (!lane) return null
+
+  if (lane !== 'output' && purePipeSegmentBlocksIncomingLiquid(device, itemId, runtimeById, purePipeSegmentMembersById, lanesClearingThisTick)) {
+    return null
+  }
 
   const reserveKey = `${device.instanceId}:${lane}`
 
@@ -2342,6 +2425,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   }
   const links = getNeighbors(layout)
   const deviceById = getDeviceByIdMap(layout)
+  const purePipeSegmentMembersById = getPurePipeSegmentMembersById(layout)
   const lanesReachedHalfThisTick = new Set<string>()
   const completedCycleDeviceIdsThisTick = new Set<string>()
 
@@ -2633,7 +2717,8 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         sourceSlotLane,
         prepareSourceLaneItem: (device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced) =>
           prepareSourceLaneItem(device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced, sim.tickRateHz, warehouse),
-        canReceiveLaneForItem,
+        canReceiveLaneForItem: (device, runtime, toPortId, lanesClearingThisTick, itemId) =>
+          canReceiveLaneForItem(device, runtime, toPortId, lanesClearingThisTick, itemId, runtimeById, purePipeSegmentMembersById),
         isStorageWithBufferGroups,
         orderedStorageSlotIndicesForOutput,
         getStorageSlotItemId,
