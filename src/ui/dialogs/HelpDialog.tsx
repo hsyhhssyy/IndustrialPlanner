@@ -480,9 +480,9 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
           {
             title: '通用操作',
             rows: [
-              { mode: '通用', icon: 'canvas', action: '选择或确认当前动作；单击未选中建筑按点击处理，不会立刻生成 1 格框选', keys: ['左键'] },
-              { mode: '通用', icon: 'canvas', action: '拖动超过约 1/5 格后进入框选；若已点中当前选中建筑，则拖动整组选中设备', keys: ['左键拖拽'] },
-              { mode: '通用', icon: 'canvas', action: '按住修饰键点选建筑，加入或移出当前多选', keys: ['Ctrl/Cmd/Shift', '左键'] },
+              { mode: '通用', icon: 'canvas', action: '选择或确认当前动作；仿真中也可单击点选建筑，不会立刻生成 1 格框选', keys: ['左键'] },
+              { mode: '通用', icon: 'canvas', action: '仅在非仿真模式下，拖动超过约 1/5 格后进入框选；若已点中当前选中建筑，则拖动整组选中设备', keys: ['左键拖拽'] },
+              { mode: '通用', icon: 'canvas', action: '仅在非仿真模式下，按住修饰键点选建筑，加入或移出当前多选', keys: ['Ctrl/Cmd/Shift', '左键'] },
               { mode: '通用', icon: 'mouse', action: '平移画布', keys: ['中键拖拽'] },
               { mode: '通用', icon: 'canvas', action: '缩放画布', keys: ['滚轮'] },
               { mode: '通用', icon: 'canvas', action: '触控设备双指缩放画布', keys: ['双指捏合'] },
@@ -533,9 +533,9 @@ export function HelpDialog({ language, t, onClose }: HelpDialogProps) {
         {
           title: 'General',
           rows: [
-            { mode: 'General', icon: 'canvas', action: 'Select/confirm, or start box-select when the pointer is not on the current selection', keys: ['Left Click'] },
-            { mode: 'General', icon: 'canvas', action: 'Box-select an area, or drag the current selected buildings when dragging from the selection', keys: ['Left Drag'] },
-            { mode: 'General', icon: 'canvas', action: 'Add or remove a building from the current multi-selection', keys: ['Ctrl/Cmd/Shift', 'Left Click'] },
+            { mode: 'General', icon: 'canvas', action: 'Select or confirm the current action; simulation still allows single-click selection and does not immediately create a 1-cell box select', keys: ['Left Click'] },
+            { mode: 'General', icon: 'canvas', action: 'Only outside simulation, drag beyond about 1/5 of a cell to box-select; if you start from the current selection, drag the whole selected group', keys: ['Left Drag'] },
+            { mode: 'General', icon: 'canvas', action: 'Only outside simulation, add or remove a building from the current multi-selection', keys: ['Ctrl/Cmd/Shift', 'Left Click'] },
             { mode: 'General', icon: 'mouse', action: 'Pan the canvas', keys: ['Middle Drag'] },
             { mode: 'General', icon: 'canvas', action: 'Zoom the canvas', keys: ['Wheel'] },
             { mode: 'General', icon: 'canvas', action: 'Pinch to zoom on touch devices', keys: ['Two-Finger Pinch'] },

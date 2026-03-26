@@ -130,7 +130,8 @@ export function useBuildInteractionDomain({
   }>(null)
   const canUseCanvasEditing = activeWorkbenchView !== 'history'
   const canUseDeleteDragRect = canUseCanvasEditing && mode === 'delete'
-  const canUsePlaceSelectionRect = canUseCanvasEditing && mode === 'place' && placeOperation === 'default' && !placeType
+  const canUseSingleSelect = canUseCanvasEditing && mode === 'place' && placeOperation === 'default' && !placeType
+  const canUseMultiSelect = canUseSingleSelect && !simIsRunning
 
   const resetDragState = useCallback(() => {
     setPendingPlaceSelectionStart(null)
@@ -156,9 +157,9 @@ export function useBuildInteractionDomain({
 
   // 历史视图和蓝图浏览态都不应该残留任何框选/拖拽框状态。
   useEffect(() => {
-    if (canUseDeleteDragRect || canUsePlaceSelectionRect) return
+    if (canUseDeleteDragRect || canUseSingleSelect) return
     resetDragState()
-  }, [canUseDeleteDragRect, canUsePlaceSelectionRect, resetDragState])
+  }, [canUseDeleteDragRect, canUseSingleSelect, resetDragState])
 
   const toRawCell = useCallback(
     (clientX: number, clientY: number) => {
@@ -436,7 +437,7 @@ export function useBuildInteractionDomain({
 
       const clickedId = cellDeviceMap.get(`${cell.x},${cell.y}`)
       if (clickedId) {
-        const shouldToggleSelection = canUsePlaceSelectionRect && !simIsRunning && (event.ctrlKey || event.metaKey || event.shiftKey)
+        const shouldToggleSelection = canUseMultiSelect && (event.ctrlKey || event.metaKey || event.shiftKey)
         if (shouldToggleSelection) {
           if (canMoveDevice(clickedId)) {
             setSelection((current) =>
@@ -447,7 +448,7 @@ export function useBuildInteractionDomain({
           return
         }
 
-        if (selection.includes(clickedId)) {
+        if (selection.includes(clickedId) && canUseMultiSelect) {
           const activeSelection = selection.filter((id) => canMoveDevice(id))
           if (activeSelection.length === 0) {
             resetDragState()
@@ -470,7 +471,7 @@ export function useBuildInteractionDomain({
         }
       }
 
-      if (!canUsePlaceSelectionRect) {
+      if (!canUseSingleSelect) {
         resetDragState()
         return
       }
@@ -499,7 +500,8 @@ export function useBuildInteractionDomain({
       foundationMovableIdSet,
       canUseCanvasEditing,
       canUseDeleteDragRect,
-      canUsePlaceSelectionRect,
+      canUseSingleSelect,
+      canUseMultiSelect,
       canMoveDevice,
       layout,
       mode,
@@ -575,7 +577,7 @@ export function useBuildInteractionDomain({
 
       if (linkDraftSourceId) return
 
-      if (canUsePlaceSelectionRect && pendingPlaceSelectionStart && !dragRect && !dragBasePositions) {
+      if (canUseMultiSelect && pendingPlaceSelectionStart && !dragRect && !dragBasePositions) {
         const thresholdPx = baseCellSize * zoomScale * PLACE_SELECTION_DRAG_THRESHOLD_CELLS
         const dragDistance = Math.hypot(
           event.clientX - pendingPlaceSelectionStart.clientX,
@@ -660,12 +662,12 @@ export function useBuildInteractionDomain({
         return
       }
 
-      if (canUsePlaceSelectionRect && dragOrigin && dragRect) {
+      if (canUseMultiSelect && dragOrigin && dragRect) {
         setDragRect({ ...dragRect, x2: cell.x, y2: cell.y })
         return
       }
 
-      if (canUsePlaceSelectionRect && dragStartCell) {
+      if (canUseMultiSelect && dragStartCell) {
         setDragStartCell(cell)
       }
     },
@@ -681,7 +683,7 @@ export function useBuildInteractionDomain({
       dragStartCell,
       fallbackPlacementToastKey,
       canUseDeleteDragRect,
-      canUsePlaceSelectionRect,
+      canUseMultiSelect,
       currentBaseOuterRing,
       layout,
       logStart,
@@ -797,7 +799,7 @@ export function useBuildInteractionDomain({
         return
       }
 
-      if (canUsePlaceSelectionRect && dragRect && dragOrigin) {
+      if (canUseMultiSelect && dragRect && dragOrigin) {
         const xMin = Math.min(dragRect.x1, dragRect.x2)
         const xMax = Math.max(dragRect.x1, dragRect.x2)
         const yMin = Math.min(dragRect.y1, dragRect.y2)
@@ -825,7 +827,7 @@ export function useBuildInteractionDomain({
         return
       }
 
-      if (canUsePlaceSelectionRect && dragStartCell && dragOrigin && dragBasePositions && selection.length > 0 && !simIsRunning) {
+      if (canUseMultiSelect && dragStartCell && dragOrigin && dragBasePositions && selection.length > 0) {
         if (dragPreviewValid) {
           setLayout((current) => ({
             ...current,
@@ -852,7 +854,7 @@ export function useBuildInteractionDomain({
         return
       }
 
-      if (canUsePlaceSelectionRect && pendingPlaceSelectionStart && !simIsRunning) {
+      if (canUseSingleSelect && pendingPlaceSelectionStart) {
         if (pendingPlaceSelectionStart.clickedId && canMoveDevice(pendingPlaceSelectionStart.clickedId)) {
           setSelection([pendingPlaceSelectionStart.clickedId])
         } else {
@@ -879,7 +881,8 @@ export function useBuildInteractionDomain({
       foundationMovableIdSet,
       canUseCanvasEditing,
       canUseDeleteDragRect,
-      canUsePlaceSelectionRect,
+      canUseSingleSelect,
+      canUseMultiSelect,
       canMoveDevice,
       isPanning,
       layout.devices,
