@@ -23,6 +23,8 @@ type ProcessorBufferSpec = {
 }
 
 type ProcessorPreloadSlot = { itemId: ItemId | null; amount: number }
+const LIQUID_STORAGE_TANK_TYPE_ID: DeviceInstance['typeId'] = 'item_port_liquid_storager_1'
+const LIQUID_STORAGE_TANK_CAPACITY = 500
 
 type RightPanelProps = {
   t: (key: string, params?: Record<string, string | number>) => string
@@ -78,6 +80,8 @@ type RightPanelProps = {
   selectedProcessorBufferSpec: ProcessorBufferSpec | null
   selectedPreloadSlots: ProcessorPreloadSlot[]
   selectedPreloadTotal: number
+  selectedDevicePreloadItemId: ItemId | undefined
+  selectedDevicePreloadAmount: number
   selectedAdmissionItemId: ItemId | undefined
   selectedAdmissionAmount: number | undefined
   selectedPickupItemId: ItemId | undefined
@@ -109,6 +113,7 @@ type RightPanelProps = {
   openStorageSlotConfigDialog: (deviceInstanceId: string) => void
   openPortPriorityConfigDialog: (deviceInstanceId: string) => void
   updateProcessorPreloadSlot: (deviceInstanceId: string, slotIndex: number, patch: { itemId?: ItemId | null; amount?: number }) => void
+  updateDevicePreloadInput: (deviceInstanceId: string, patch: { itemId?: ItemId | null; amount?: number }) => void
   reactorRecipeCandidates: Array<{
     id: string
     cycleSeconds: number
@@ -181,6 +186,8 @@ export function RightPanel({
   selectedProcessorBufferSpec,
   selectedPreloadSlots,
   selectedPreloadTotal,
+  selectedDevicePreloadItemId,
+  selectedDevicePreloadAmount,
   selectedAdmissionItemId,
   selectedAdmissionAmount,
   selectedPickupItemId,
@@ -204,6 +211,7 @@ export function RightPanel({
   openStorageSlotConfigDialog,
   openPortPriorityConfigDialog,
   updateProcessorPreloadSlot,
+  updateDevicePreloadInput,
   reactorRecipeCandidates,
   selectedReactorPoolConfig,
   reactorSolidOutputItemCandidates,
@@ -1173,6 +1181,68 @@ export function RightPanel({
                 {t('detail.preloadInputTotal', {
                   total: selectedPreloadTotal,
                   cap: selectedProcessorBufferSpec?.inputTotalCapacity ?? 50,
+                })}
+              </small>
+            </div>
+          )}
+          {selectedDevice.typeId === LIQUID_STORAGE_TANK_TYPE_ID && !simIsRunning && (
+            <div className="picker">
+              <label>{t('detail.preloadInput')}</label>
+              <div className="preload-slot-list">
+                <div className="preload-slot-row">
+                  <span className="preload-slot-label">{t('detail.preloadSlotLiquidInput')}</span>
+                  <button
+                    type="button"
+                    className="picker-open-btn"
+                    disabled={simIsRunning}
+                    onClick={() =>
+                      setItemPickerState({
+                        kind: 'preload',
+                        deviceInstanceId: selectedDevice.instanceId,
+                        slotIndex: 0,
+                      })
+                    }
+                  >
+                    <span className="pickup-picker-current">
+                      {selectedDevicePreloadItemId ? (
+                        <img
+                          className="pickup-picker-current-icon"
+                          src={getItemIconPath(selectedDevicePreloadItemId)}
+                          alt=""
+                          aria-hidden="true"
+                          draggable={false}
+                        />
+                      ) : (
+                        <span className="pickup-picker-current-icon pickup-picker-current-icon--empty">?</span>
+                      )}
+                      <span>{selectedDevicePreloadItemId ? getItemLabel(language, selectedDevicePreloadItemId) : t('detail.unselected')}</span>
+                    </span>
+                  </button>
+                  <input
+                    type="number"
+                    min={0}
+                    max={LIQUID_STORAGE_TANK_CAPACITY}
+                    step={1}
+                    disabled={simIsRunning || !selectedDevicePreloadItemId}
+                    value={selectedDevicePreloadAmount}
+                    onChange={(event) => {
+                      const parsed = Number.parseInt(event.target.value, 10)
+                      const nextAmount = Number.isFinite(parsed) ? parsed : 0
+                      updateDevicePreloadInput(selectedDevice.instanceId, { amount: nextAmount })
+                    }}
+                  />
+                </div>
+              </div>
+              <small>
+                {t('detail.preloadInputHint', {
+                  cap: LIQUID_STORAGE_TANK_CAPACITY,
+                  slots: 1,
+                })}
+              </small>
+              <small>
+                {t('detail.preloadInputTotal', {
+                  total: selectedDevicePreloadAmount,
+                  cap: LIQUID_STORAGE_TANK_CAPACITY,
                 })}
               </small>
             </div>

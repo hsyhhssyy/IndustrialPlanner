@@ -63,11 +63,14 @@ const BUS_SEGMENT_TYPE_ID: DeviceInstance['typeId'] = 'item_port_log_hongs_bus'
 const PICKUP_TYPE_ID: DeviceInstance['typeId'] = 'item_port_unloader_1'
 const PROTOCOL_HUB_TYPE_ID: DeviceInstance['typeId'] = 'item_port_sp_hub_1'
 const STORAGE_BOX_TYPE_ID: DeviceInstance['typeId'] = 'item_port_storager_1'
+const LIQUID_STORAGE_TANK_TYPE_ID: DeviceInstance['typeId'] = 'item_port_liquid_storager_1'
 const STORAGE_BOX_GROUP_ID = 'storage-box-group-1'
+const LIQUID_STORAGE_TANK_GROUP_ID = 'liquid-storage-tank-group-1'
 const REACTOR_SOLID_GROUP_ID = 'reactor-solid-group-1'
 const REACTOR_LIQUID_GROUP_ID = 'reactor-liquid-group-1'
 const STORAGE_SLOT_COUNT = 6
 const STORAGE_SLOT_CAPACITY = 50
+const LIQUID_STORAGE_TANK_CAPACITY = 500
 const LOADER_TYPE_ID: DeviceInstance['typeId'] = 'item_port_loader_1'
 const THERMAL_POOL_TYPE_ID: DeviceInstance['typeId'] = 'item_port_power_sta_1'
 const PROTOCOL_HUB_SUPPLY_KW = 200
@@ -259,7 +262,12 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
     }
   }
   if (def.runtimeKind === 'storage') {
-    const bufferGroups = device.typeId === STORAGE_BOX_TYPE_ID ? [createStorageBoxBufferGroup(device)] : undefined
+    const bufferGroups =
+      device.typeId === STORAGE_BOX_TYPE_ID
+        ? [createStorageBoxBufferGroup(device)]
+        : device.typeId === LIQUID_STORAGE_TANK_TYPE_ID
+          ? [createLiquidStorageTankBufferGroup(device)]
+          : undefined
     return {
       ...baseRuntime(),
       inventory: {},
@@ -956,6 +964,18 @@ function collectSolidOutputPortIds(typeId: DeviceInstance['typeId']) {
     .map((port) => port.id)
 }
 
+function collectLiquidInputPortIds(typeId: DeviceInstance['typeId']) {
+  return DEVICE_TYPE_BY_ID[typeId].ports0
+    .filter((port) => port.direction === 'Input' && allowsLiquidInputType(port.allowedTypes))
+    .map((port) => port.id)
+}
+
+function collectLiquidOutputPortIds(typeId: DeviceInstance['typeId']) {
+  return DEVICE_TYPE_BY_ID[typeId].ports0
+    .filter((port) => port.direction === 'Output' && allowsLiquidInputType(port.allowedTypes))
+    .map((port) => port.id)
+}
+
 function createStorageBoxBufferGroup(device: DeviceInstance): BufferGroupRuntime {
   const slots: BufferSlotRuntime[] = Array.from({ length: STORAGE_SLOT_COUNT }, (_, slotIndex) => ({
     slotIndex,
@@ -970,6 +990,23 @@ function createStorageBoxBufferGroup(device: DeviceInstance): BufferGroupRuntime
     inPortIds: collectSolidInputPortIds(device.typeId),
     outPortIds: collectSolidOutputPortIds(device.typeId),
     slots,
+  }
+}
+
+function createLiquidStorageTankBufferGroup(device: DeviceInstance): BufferGroupRuntime {
+  return {
+    id: LIQUID_STORAGE_TANK_GROUP_ID,
+    inPortIds: collectLiquidInputPortIds(device.typeId),
+    outPortIds: collectLiquidOutputPortIds(device.typeId),
+    slots: [
+      {
+        slotIndex: 0,
+        mode: 'free',
+        currentItemId: null,
+        amount: 0,
+        capacity: LIQUID_STORAGE_TANK_CAPACITY,
+      },
+    ],
   }
 }
 
@@ -1356,6 +1393,12 @@ function allowsSolidInputType(allowedTypes: { mode: 'solid' | 'liquid' | 'whitel
   if (allowedTypes.mode === 'solid') return true
   if (allowedTypes.mode === 'liquid') return false
   return allowedTypes.whitelist.includes('solid')
+}
+
+function allowsLiquidInputType(allowedTypes: { mode: 'solid' | 'liquid' | 'whitelist'; whitelist: Array<'solid' | 'liquid'> }) {
+  if (allowedTypes.mode === 'liquid') return true
+  if (allowedTypes.mode === 'solid') return false
+  return allowedTypes.whitelist.includes('liquid')
 }
 
 function setSlotRef(runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we', value: SlotData | null) {
@@ -2114,9 +2157,7 @@ export function startSimulation(
         ? []
         : Array.isArray(device.config.storagePreloadInputs) && device.config.storagePreloadInputs.length > 0
           ? [...device.config.storagePreloadInputs]
-          : Array.isArray(device.config.preloadInputs)
-            ? [...device.config.preloadInputs]
-            : []
+          : preloadEntriesForDevice(device)
 
       if (hasStorageSlotConfig) {
         for (const slot of configuredStorageSlots) {

@@ -724,6 +724,8 @@ function App() {
     selectedProcessorBufferSpec,
     selectedPreloadSlots,
     selectedPreloadTotal,
+    selectedDevicePreloadItemId,
+    selectedDevicePreloadAmount,
     pickerTargetDevice,
     pickerSelectedItemId,
     pickerFilter,
@@ -734,6 +736,7 @@ function App() {
     updatePickupIgnoreInventory,
     updateProtocolHubOutputIgnoreInventory,
     updateProcessorPreloadSlot,
+    updateDevicePreloadInput,
     reactorRecipeCandidates,
     selectedReactorPoolConfig,
     reactorSolidOutputItemCandidates,
@@ -1487,6 +1490,8 @@ function App() {
               selectedProcessorBufferSpec={selectedProcessorBufferSpec}
               selectedPreloadSlots={selectedPreloadSlots}
               selectedPreloadTotal={selectedPreloadTotal}
+              selectedDevicePreloadItemId={selectedDevicePreloadItemId}
+              selectedDevicePreloadAmount={selectedDevicePreloadAmount}
               selectedAdmissionItemId={selectedAdmissionItemId}
               selectedAdmissionAmount={selectedAdmissionAmount}
               selectedPickupItemId={selectedPickupItemId}
@@ -1516,6 +1521,7 @@ function App() {
               openStorageSlotConfigDialog={(deviceInstanceId) => setStorageSlotConfigDeviceId(deviceInstanceId)}
               openPortPriorityConfigDialog={(deviceInstanceId) => setPortPriorityConfigDeviceId(deviceInstanceId)}
               updateProcessorPreloadSlot={updateProcessorPreloadSlot}
+              updateDevicePreloadInput={updateDevicePreloadInput}
               reactorRecipeCandidates={reactorRecipeCandidates}
               selectedReactorPoolConfig={selectedReactorPoolConfig}
               reactorSolidOutputItemCandidates={reactorSolidOutputItemCandidates}

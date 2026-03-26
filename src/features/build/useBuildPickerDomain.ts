@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getDeviceById } from '../../domain/geometry'
-import { DEVICE_TYPE_BY_ID, LIQUID_ITEM_IDS, RECIPES, SOLID_ITEM_IDS } from '../../domain/registry'
+import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, LIQUID_ITEM_IDS, RECIPES, SOLID_ITEM_IDS } from '../../domain/registry'
 import { buildProcessorPreloadSlots, processorBufferSpec, serializeProcessorPreloadSlots } from '../../domain/shared/deviceConfig'
 import {
   inputBufferAllowedTypesForSlot,
@@ -14,6 +14,7 @@ import { useBuildConfigDomain } from './useBuildConfigDomain'
 import type { ItemPickerFilter, ItemPickerState } from '../../ui/dialogs/itemPicker.types'
 const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
 const PROTOCOL_HUB_OUTPUT_PORT_IDS = ['out_w_2', 'out_w_5', 'out_w_8', 'out_e_2', 'out_e_5', 'out_e_8'] as const
+const LIQUID_STORAGE_TANK_TYPE_ID: LayoutState['devices'][number]['typeId'] = 'item_port_liquid_storager_1'
 
 function isAdmissionDeviceType(typeId: LayoutState['devices'][number]['typeId'] | undefined) {
   return typeId === 'item_log_admission' || typeId === 'item_pipe_admission'
@@ -40,6 +41,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     updateProtocolHubOutputIgnoreInventory,
     updatePumpOutputItem,
     updateProcessorPreloadSlot,
+    updateDevicePreloadInput,
   } = useBuildConfigDomain({
     setLayout,
     isOreItemId,
@@ -113,6 +115,14 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     () => selectedPreloadSlots.reduce((sum, slot) => sum + Math.max(0, slot.amount), 0),
     [selectedPreloadSlots],
   )
+  const selectedDevicePreloadItemId =
+    selectedDevice?.typeId === LIQUID_STORAGE_TANK_TYPE_ID && ITEM_BY_ID[selectedDevice.config.preloadInputItemId ?? '']?.type === 'liquid'
+      ? selectedDevice.config.preloadInputItemId
+      : undefined
+  const selectedDevicePreloadAmount =
+    selectedDevice?.typeId === LIQUID_STORAGE_TANK_TYPE_ID
+      ? Math.max(0, Math.floor(Number(selectedDevice.config.preloadInputAmount) || 0))
+      : 0
 
   const reactorRecipeCandidates = useMemo(
     () => RECIPES.filter((recipe) => recipe.machineType === 'item_port_mix_pool_1'),
@@ -163,6 +173,11 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       return normalizeExternalLiquidSourceItemId(pickerTargetDevice.config.pumpOutputItemId)
     }
     if (itemPickerState.kind === 'preload') {
+      if (pickerTargetDevice.typeId === LIQUID_STORAGE_TANK_TYPE_ID) {
+        return ITEM_BY_ID[pickerTargetDevice.config.preloadInputItemId ?? '']?.type === 'liquid'
+          ? pickerTargetDevice.config.preloadInputItemId
+          : undefined
+      }
       return pickerPreloadSlots[itemPickerState.slotIndex]?.itemId ?? undefined
     }
     return undefined
@@ -188,6 +203,9 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     }
     if (itemPickerState.kind === 'preload') {
       if (!pickerTargetDevice) return { allowedTypes: ['solid'] }
+      if (pickerTargetDevice.typeId === LIQUID_STORAGE_TANK_TYPE_ID) {
+        return { allowedTypes: ['liquid'] }
+      }
       return {
         allowedTypes: inputBufferAllowedTypesForSlot(pickerTargetDevice.typeId, itemPickerState.slotIndex),
       }
@@ -235,7 +253,9 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       return
     }
     if (itemPickerState.kind === 'preload' && DEVICE_TYPE_BY_ID[target.typeId].runtimeKind !== 'processor') {
-      setItemPickerState(null)
+      if (target.typeId !== LIQUID_STORAGE_TANK_TYPE_ID) {
+        setItemPickerState(null)
+      }
     }
   }, [itemPickerState, layout, simIsRunning])
 
@@ -262,7 +282,11 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
         const nextItemId = normalizeExternalLiquidSourceItemId(itemId ?? undefined)
         updatePumpOutputItem(pickerTargetDevice.instanceId, nextItemId)
       } else if (itemPickerState.kind === 'preload') {
-        updateProcessorPreloadSlot(pickerTargetDevice.instanceId, itemPickerState.slotIndex, { itemId })
+        if (pickerTargetDevice.typeId === LIQUID_STORAGE_TANK_TYPE_ID) {
+          updateDevicePreloadInput(pickerTargetDevice.instanceId, { itemId })
+        } else {
+          updateProcessorPreloadSlot(pickerTargetDevice.instanceId, itemPickerState.slotIndex, { itemId })
+        }
       }
     },
     [
@@ -272,6 +296,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       updatePickupItem,
       updateProtocolHubOutputItem,
       updatePumpOutputItem,
+      updateDevicePreloadInput,
       updateProcessorPreloadSlot,
     ],
   )
@@ -291,6 +316,8 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     selectedProcessorBufferSpec,
     selectedPreloadSlots,
     selectedPreloadTotal,
+    selectedDevicePreloadItemId,
+    selectedDevicePreloadAmount,
     pickerTargetDevice,
     pickerSelectedItemId,
     pickerFilter,
@@ -301,6 +328,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     updatePickupIgnoreInventory,
     updateProtocolHubOutputIgnoreInventory,
     updateProcessorPreloadSlot,
+    updateDevicePreloadInput,
     reactorRecipeCandidates,
     selectedReactorPoolConfig,
     reactorSolidOutputItemCandidates,

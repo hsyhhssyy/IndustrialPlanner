@@ -6,6 +6,8 @@ import type { DeviceInstance, ItemId, LayoutState, PreloadInputConfigEntry } fro
 
 const PROTOCOL_HUB_OUTPUT_PORT_IDS = ['out_w_2', 'out_w_5', 'out_w_8', 'out_e_2', 'out_e_5', 'out_e_8'] as const
 const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
+const LIQUID_STORAGE_TANK_TYPE_ID: DeviceInstance['typeId'] = 'item_port_liquid_storager_1'
+const LIQUID_STORAGE_TANK_CAPACITY = 500
 
 type ProcessorPreloadSlot = { itemId: ItemId | null; amount: number }
 
@@ -313,6 +315,54 @@ export function useBuildConfigDomain({
     [buildProcessorPreloadSlots, processorBufferSpec, serializeProcessorPreloadSlots, setLayout],
   )
 
+  const updateDevicePreloadInput = useCallback(
+    (deviceInstanceId: string, patch: { itemId?: ItemId | null; amount?: number }) => {
+      setLayout((current) => ({
+        ...current,
+        devices: current.devices.map((device) => {
+          if (device.instanceId !== deviceInstanceId || device.typeId !== LIQUID_STORAGE_TANK_TYPE_ID) return device
+
+          const hasItemPatch = patch.itemId !== undefined
+          const nextItemId = hasItemPatch
+            ? patch.itemId && ITEM_BY_ID[patch.itemId]?.type === 'liquid'
+              ? patch.itemId
+              : undefined
+            : device.config.preloadInputItemId && ITEM_BY_ID[device.config.preloadInputItemId]?.type === 'liquid'
+              ? device.config.preloadInputItemId
+              : undefined
+
+          let requestedAmount = patch.amount !== undefined ? patch.amount : device.config.preloadInputAmount ?? 0
+          if (hasItemPatch && nextItemId && patch.amount === undefined) {
+            const currentAmountValue = device.config.preloadInputAmount
+            const currentAmount = Math.floor(
+              Number.isFinite(currentAmountValue ?? Number.NaN) ? currentAmountValue ?? 0 : 0,
+            )
+            if (currentAmount <= 0) requestedAmount = 1
+          }
+
+          const normalizedAmount = nextItemId
+            ? clamp(Math.floor(Number.isFinite(requestedAmount) ? requestedAmount : 0), 0, LIQUID_STORAGE_TANK_CAPACITY)
+            : 0
+
+          const nextConfig = { ...device.config }
+          delete nextConfig.preloadInputs
+          delete nextConfig.storagePreloadInputs
+
+          if (nextItemId && normalizedAmount > 0) {
+            nextConfig.preloadInputItemId = nextItemId
+            nextConfig.preloadInputAmount = normalizedAmount
+          } else {
+            delete nextConfig.preloadInputItemId
+            delete nextConfig.preloadInputAmount
+          }
+
+          return { ...device, config: nextConfig }
+        }),
+      }))
+    },
+    [setLayout],
+  )
+
   return {
     updateAdmissionItem,
     updateAdmissionAmount,
@@ -322,5 +372,6 @@ export function useBuildConfigDomain({
     updateProtocolHubOutputIgnoreInventory,
     updatePumpOutputItem,
     updateProcessorPreloadSlot,
+    updateDevicePreloadInput,
   }
 }

@@ -21,6 +21,9 @@ export const CLIPBOARD_BLUEPRINT_KEY = 'stage3-clipboard-blueprint'
 export const LAST_CLIPBOARD_BLUEPRINT_KEY = 'stage3-blueprint-last-clipboard'
 export const PUBLIC_BLUEPRINT_INDEX_CACHE_KEY = 'stage3-public-blueprint-index'
 
+const LIQUID_STORAGE_TANK_TYPE_ID: DeviceInstance['typeId'] = 'item_port_liquid_storager_1'
+const LIQUID_STORAGE_TANK_CAPACITY = 500
+
 export type BlueprintSource = 'user' | 'system'
 
 const USER_BLUEPRINT_ID_PATTERN = /^BluePrint-HSY-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
@@ -148,6 +151,22 @@ function normalizePositiveAmount(value: unknown) {
   return normalized > 0 ? normalized : undefined
 }
 
+function normalizeDevicePreloadAmount(deviceTypeId: DeviceInstance['typeId'] | undefined, value: unknown) {
+  const normalized = normalizePositiveAmount(value)
+  if (normalized === undefined) return undefined
+  if (deviceTypeId === LIQUID_STORAGE_TANK_TYPE_ID) {
+    return Math.min(LIQUID_STORAGE_TANK_CAPACITY, normalized)
+  }
+  return normalized
+}
+
+function normalizeSinglePreloadItemId(deviceTypeId: DeviceInstance['typeId'] | undefined, itemId: unknown) {
+  if (deviceTypeId === LIQUID_STORAGE_TANK_TYPE_ID) {
+    return normalizeKnownLiquidItemId(itemId)
+  }
+  return normalizeKnownItemId(itemId)
+}
+
 function sanitizePreloadEntries(
   entries: DeviceConfig['preloadInputs'] | DeviceConfig['storagePreloadInputs'],
   allowedTypesForSlot?: (slotIndex: number) => Array<'solid' | 'liquid'>,
@@ -217,7 +236,7 @@ function supportsStorageSlotConfig(deviceTypeId: DeviceInstance['typeId'] | unde
 }
 
 function supportsLegacyStoragePreloads(deviceTypeId: DeviceInstance['typeId'] | undefined) {
-  return deviceTypeId === 'item_port_storager_1'
+  return deviceTypeId === 'item_port_storager_1' || deviceTypeId === LIQUID_STORAGE_TANK_TYPE_ID
 }
 
 function sanitizeReactorPoolConfig(reactorPool: DeviceConfig['reactorPool']) {
@@ -281,18 +300,26 @@ function sanitizeDeviceConfigUnknownItems(config: DeviceConfig, deviceTypeId: De
     nextConfig.preloadInputs,
     deviceTypeId && DEVICE_TYPE_BY_ID[deviceTypeId]?.runtimeKind === 'processor'
       ? (slotIndex) => inputBufferAllowedTypesForSlot(deviceTypeId, slotIndex)
+      : deviceTypeId === LIQUID_STORAGE_TANK_TYPE_ID
+        ? () => ['liquid']
       : undefined,
   )
-  if (preloadInputs.length > 0) nextConfig.preloadInputs = preloadInputs
+  const normalizedPreloadInputs = deviceTypeId === LIQUID_STORAGE_TANK_TYPE_ID ? [] : preloadInputs
+  if (normalizedPreloadInputs.length > 0) nextConfig.preloadInputs = normalizedPreloadInputs
   else delete nextConfig.preloadInputs
 
-  const preloadInputItemId = (() => {
-    const normalized = normalizeKnownItemId(nextConfig.preloadInputItemId)
+  let preloadInputItemId = (() => {
+    const normalized = normalizeSinglePreloadItemId(deviceTypeId, nextConfig.preloadInputItemId)
     if (!normalized) return undefined
     if (!deviceTypeId || DEVICE_TYPE_BY_ID[deviceTypeId]?.runtimeKind !== 'processor') return normalized
     return inputBufferAllowedTypesForSlot(deviceTypeId, 0).includes(ITEM_BY_ID[normalized].type) ? normalized : undefined
   })()
-  const preloadInputAmount = preloadInputItemId ? normalizePositiveAmount(nextConfig.preloadInputAmount) : undefined
+  let preloadInputAmount = preloadInputItemId ? normalizeDevicePreloadAmount(deviceTypeId, nextConfig.preloadInputAmount) : undefined
+  if (deviceTypeId === LIQUID_STORAGE_TANK_TYPE_ID && !preloadInputItemId && preloadInputs.length > 0) {
+    const firstPreload = [...preloadInputs].sort((left, right) => left.slotIndex - right.slotIndex)[0]
+    preloadInputItemId = firstPreload?.itemId
+    preloadInputAmount = normalizeDevicePreloadAmount(deviceTypeId, firstPreload?.amount)
+  }
   if (preloadInputItemId && preloadInputAmount !== undefined) {
     nextConfig.preloadInputItemId = preloadInputItemId
     nextConfig.preloadInputAmount = preloadInputAmount
@@ -306,10 +333,24 @@ function sanitizeDeviceConfigUnknownItems(config: DeviceConfig, deviceTypeId: De
   else delete nextConfig.storageSlots
 
   const storagePreloadInputs = supportsLegacyStoragePreloads(deviceTypeId)
-    ? sanitizePreloadEntries(nextConfig.storagePreloadInputs, () => ['solid'])
+    ? sanitizePreloadEntries(nextConfig.storagePreloadInputs, () => (deviceTypeId === LIQUID_STORAGE_TANK_TYPE_ID ? ['liquid'] : ['solid']))
     : []
-  if (storagePreloadInputs.length > 0) nextConfig.storagePreloadInputs = storagePreloadInputs
-  else delete nextConfig.storagePreloadInputs
+  if (deviceTypeId === LIQUID_STORAGE_TANK_TYPE_ID) {
+    if (!nextConfig.preloadInputItemId && storagePreloadInputs.length > 0) {
+      const firstPreload = [...storagePreloadInputs].sort((left, right) => left.slotIndex - right.slotIndex)[0]
+      const legacyItemId = firstPreload?.itemId
+      const legacyAmount = normalizeDevicePreloadAmount(deviceTypeId, firstPreload?.amount)
+      if (legacyItemId && legacyAmount !== undefined) {
+        nextConfig.preloadInputItemId = legacyItemId
+        nextConfig.preloadInputAmount = legacyAmount
+      }
+    }
+    delete nextConfig.storagePreloadInputs
+  } else if (storagePreloadInputs.length > 0) {
+    nextConfig.storagePreloadInputs = storagePreloadInputs
+  } else {
+    delete nextConfig.storagePreloadInputs
+  }
 
   const reactorPool = sanitizeReactorPoolConfig(nextConfig.reactorPool)
   if (reactorPool) nextConfig.reactorPool = reactorPool
