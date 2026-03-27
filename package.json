@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
+    "test-preview": "tsc -b && vite build --emptyOutDir --outDir .temp/test-dist && vite preview --host 0.0.0.0 --strictPort --port 8000 --outDir .temp/test-dist",
     "lint": "eslint .",
     "preview": "vite preview",
     "assets:normalize": "node scripts/normalize-assets.mjs",
