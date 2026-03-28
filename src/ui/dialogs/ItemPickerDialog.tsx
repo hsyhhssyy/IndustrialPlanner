@@ -95,6 +95,8 @@ export function ItemPickerDialog({
             ? t('detail.pickupDialogTitle')
             : itemPickerState.kind === 'admission'
               ? t('detail.admissionDialogTitle')
+            : itemPickerState.kind === 'admissionConfig'
+              ? t('detail.admissionDialogTitle')
             : itemPickerState.kind === 'plannerTarget'
               ? t('detail.itemPickerTitle')
             : itemPickerState.kind === 'protocolHubOutput'

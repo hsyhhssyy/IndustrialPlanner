@@ -1313,7 +1313,7 @@ function configuredAdmissionAmount(device: DeviceInstance) {
   const configured = Number(device.config.admissionAmount)
   if (!Number.isFinite(configured)) return undefined
   const normalized = Math.floor(configured)
-  return normalized > 0 ? Math.min(999, normalized) : undefined
+  return normalized >= 0 ? normalized : undefined
 }
 
 function admissionRemainingQuota(device: DeviceInstance, runtime: Pick<JunctionRuntime, 'producedItemsTotal'>) {

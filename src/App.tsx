@@ -53,6 +53,7 @@ import { SiteInfoBar } from './ui/SiteInfoBar'
 import { ToolDialog } from './ui/dialogs/ToolDialog'
 import { HelpDialog } from './ui/dialogs/HelpDialog'
 import { ItemPickerDialog } from './ui/dialogs/ItemPickerDialog'
+import { AdmissionConfigDialog } from './ui/dialogs/AdmissionConfigDialog'
 import { PortPriorityConfigDialog } from './ui/dialogs/PortPriorityConfigDialog'
 import { SettingsDialog } from './ui/dialogs/SettingsDialog'
 import { StorageSlotConfigDialog } from './ui/dialogs/StorageSlotConfigDialog'
@@ -172,6 +173,7 @@ function App() {
   )
   const [storageSlotConfigDeviceId, setStorageSlotConfigDeviceId] = useState<string | null>(null)
   const [portPriorityConfigDeviceId, setPortPriorityConfigDeviceId] = useState<string | null>(null)
+  const [admissionConfigDeviceId, setAdmissionConfigDeviceId] = useState<string | null>(null)
   const [highlightedPlaceGroup, setHighlightedPlaceGroup] = useState<PlaceGroupKey | null>(null)
 
   const gridRef = useRef<HTMLDivElement | null>(null)
@@ -732,6 +734,7 @@ function App() {
     pickerAllowsEmpty,
     pickerDisabledItemIds,
     handleItemPickerSelect,
+    updateAdmissionItem,
     updateAdmissionAmount,
     updatePickupIgnoreInventory,
     updateProtocolHubOutputIgnoreInventory,
@@ -765,6 +768,27 @@ function App() {
     if (!portPriorityConfigDeviceId) return null
     return layout.devices.find((device) => device.instanceId === portPriorityConfigDeviceId) ?? null
   }, [layout.devices, portPriorityConfigDeviceId])
+
+  const admissionConfigDevice = useMemo(() => {
+    if (!admissionConfigDeviceId) return null
+    const target = layout.devices.find((device) => device.instanceId === admissionConfigDeviceId) ?? null
+    if (!target || (target.typeId !== 'item_log_admission' && target.typeId !== 'item_pipe_admission')) return null
+    return target
+  }, [admissionConfigDeviceId, layout.devices])
+
+  const admissionConfigRuntime = useMemo(() => {
+    if (!admissionConfigDevice) return null
+    const runtime = sim.runtimeById[admissionConfigDevice.instanceId]
+    if (!runtime || !('producedItemsTotal' in runtime)) return null
+    return runtime
+  }, [admissionConfigDevice, sim.runtimeById])
+
+  useEffect(() => {
+    if (!admissionConfigDeviceId) return
+    if (!sim.isRunning || !admissionConfigDevice) {
+      setAdmissionConfigDeviceId(null)
+    }
+  }, [admissionConfigDevice, admissionConfigDeviceId, sim.isRunning])
 
   const { toPlaceOrigin, logisticsPreview, logisticsPreviewDevices, logisticsEndpointHighlights, portChevrons, placePreview } = useBuildPreviewDomain({
     layout,
@@ -1506,6 +1530,10 @@ function App() {
               getItemIconPath={getItemIconPath}
               setItemPickerState={setItemPickerState}
               updateAdmissionAmount={updateAdmissionAmount}
+              openAdmissionConfigDialog={(deviceInstanceId) => {
+                eventBus.emit('sim.control.setSpeed', 0)
+                setAdmissionConfigDeviceId(deviceInstanceId)
+              }}
               updatePickupIgnoreInventory={updatePickupIgnoreInventory}
               updateProtocolHubOutputIgnoreInventory={updateProtocolHubOutputIgnoreInventory}
               startDeviceLinking={(deviceInstanceId) => {
@@ -1606,6 +1634,48 @@ function App() {
                 return { ...device, config: nextConfig }
               }),
             }))
+          }}
+        />
+      )}
+
+      {admissionConfigDevice && admissionConfigRuntime && (
+        <AdmissionConfigDialog
+          key={admissionConfigDevice.instanceId}
+          device={admissionConfigDevice}
+          language={language}
+          t={t}
+          admissionItemId={admissionConfigDevice.config.admissionItemId}
+          admissionAmount={typeof admissionConfigDevice.config.admissionAmount === 'number' ? Math.floor(admissionConfigDevice.config.admissionAmount) : undefined}
+          passedCount={admissionConfigRuntime.producedItemsTotal}
+          recentItemIds={recentPickerItemIds}
+          superRecipeEnabled={superRecipeEnabled}
+          getItemIconPath={getItemIconPath}
+          onRememberItem={(itemId) => {
+            setRecentPickerItemIds((current) => {
+              const next = [itemId, ...current.filter((existing) => existing !== itemId)]
+              return next.slice(0, MAX_RECENT_PICKER_ITEMS)
+            })
+          }}
+          onClose={() => setAdmissionConfigDeviceId(null)}
+          onSave={(nextItemId, nextAmount) => {
+            updateAdmissionItem(admissionConfigDevice.instanceId, nextItemId)
+            updateAdmissionAmount(admissionConfigDevice.instanceId, nextAmount)
+          }}
+          onResetCount={() => {
+            updateSim((current) => {
+              const runtime = current.runtimeById[admissionConfigDevice.instanceId]
+              if (!runtime || !('producedItemsTotal' in runtime)) return current
+              return {
+                ...current,
+                runtimeById: {
+                  ...current.runtimeById,
+                  [admissionConfigDevice.instanceId]: {
+                    ...runtime,
+                    producedItemsTotal: 0,
+                  },
+                },
+              }
+            })
           }}
         />
       )}

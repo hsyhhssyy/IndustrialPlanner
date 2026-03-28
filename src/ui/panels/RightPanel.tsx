@@ -104,6 +104,7 @@ type RightPanelProps = {
     state: ItemPickerState | null
   ) => void
   updateAdmissionAmount: (deviceInstanceId: string, admissionAmount: number | undefined) => void
+  openAdmissionConfigDialog: (deviceInstanceId: string) => void
   updatePickupIgnoreInventory: (deviceInstanceId: string, enabled: boolean) => void
   updateProtocolHubOutputIgnoreInventory: (deviceInstanceId: string, portId: string, enabled: boolean) => void
   startDeviceLinking: (deviceInstanceId: string) => void
@@ -202,6 +203,7 @@ export function RightPanel({
   getItemIconPath,
   setItemPickerState,
   updateAdmissionAmount,
+  openAdmissionConfigDialog,
   updatePickupIgnoreInventory,
   updateProtocolHubOutputIgnoreInventory,
   startDeviceLinking,
@@ -810,6 +812,18 @@ export function RightPanel({
                     <span>{t('detail.admissionAmount')}</span>
                     <span>{selectedAdmissionAmount ?? '-'}</span>
                   </div>
+                  <div className="kv">
+                    <span>{t('detail.admissionEditDuringSim')}</span>
+                    <span>
+                      <button
+                        type="button"
+                        className="secondary-action-btn"
+                        onClick={() => openAdmissionConfigDialog(selectedDevice.instanceId)}
+                      >
+                        {t('detail.admissionEditDuringSim')}
+                      </button>
+                    </span>
+                  </div>
                 </>
               ) : (
                 <>
@@ -844,8 +858,7 @@ export function RightPanel({
                     <span>
                       <input
                         type="number"
-                        min={1}
-                        max={999}
+                        min={0}
                         step={1}
                         disabled={simIsRunning || !selectedAdmissionItemId}
                         value={selectedAdmissionAmount ?? ''}

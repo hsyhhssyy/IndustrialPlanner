@@ -1713,6 +1713,90 @@ button:disabled {
   max-width: min(96vw, 1180px);
 }
 
+.admission-config-dialog {
+  width: min(92vw, 460px);
+  max-width: 460px;
+  border-radius: 18px;
+}
+
+.admission-config-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.admission-config-panel {
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-2);
+  border-radius: 14px;
+}
+
+.admission-config-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.admission-config-panel-header > span {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.admission-config-picker-btn {
+  min-height: 46px;
+  border-radius: 12px;
+}
+
+.admission-config-panel--limit input {
+  min-height: 40px;
+  border-radius: 10px;
+}
+
+.admission-config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admission-config-field > small {
+  color: var(--text-secondary);
+}
+
+.admission-config-runtime-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admission-config-counter {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admission-config-counter > span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.admission-config-counter > strong {
+  font-size: 28px;
+  line-height: 1;
+}
+
+@media (max-width: 720px) {
+  .admission-config-panel-header,
+  .admission-config-runtime-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 .storage-slot-config-subtitle {
   margin-top: 8px;
   color: rgba(255, 255, 255, 0.76);

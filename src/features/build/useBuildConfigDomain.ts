@@ -43,7 +43,7 @@ export function useBuildConfigDomain({
   const normalizeAdmissionAmount = useCallback((amount: number | undefined) => {
     if (!Number.isFinite(amount)) return undefined
     const normalized = Math.floor(amount as number)
-    return normalized > 0 ? clamp(normalized, 1, 999) : undefined
+    return normalized >= 0 ? normalized : undefined
   }, [])
 
   const updateAdmissionItem = useCallback(

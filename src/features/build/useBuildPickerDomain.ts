@@ -70,7 +70,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       : undefined
   const selectedAdmissionItemId = isAdmissionDeviceType(selectedDevice?.typeId) ? selectedDevice?.config.admissionItemId : undefined
   const selectedAdmissionAmount = isAdmissionDeviceType(selectedDevice?.typeId)
-    ? (typeof selectedDevice.config.admissionAmount === 'number' && selectedDevice.config.admissionAmount > 0
+    ? (typeof selectedDevice.config.admissionAmount === 'number' && selectedDevice.config.admissionAmount >= 0
       ? Math.floor(selectedDevice.config.admissionAmount)
       : undefined)
     : undefined
@@ -146,7 +146,12 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
 
   const pickerTargetDevice = useMemo(() => {
     if (!itemPickerState) return null
-    if (itemPickerState.kind === 'storageSlotPinned' || itemPickerState.kind === 'storageSlotPreload' || itemPickerState.kind === 'plannerTarget') return null
+    if (
+      itemPickerState.kind === 'storageSlotPinned' ||
+      itemPickerState.kind === 'storageSlotPreload' ||
+      itemPickerState.kind === 'plannerTarget' ||
+      itemPickerState.kind === 'admissionConfig'
+    ) return null
     return getDeviceById(layout, itemPickerState.deviceInstanceId)
   }, [itemPickerState, layout])
 
@@ -230,7 +235,12 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       return
     }
     if (!itemPickerState) return
-    if (itemPickerState.kind === 'storageSlotPinned' || itemPickerState.kind === 'storageSlotPreload' || itemPickerState.kind === 'plannerTarget') return
+    if (
+      itemPickerState.kind === 'storageSlotPinned' ||
+      itemPickerState.kind === 'storageSlotPreload' ||
+      itemPickerState.kind === 'plannerTarget' ||
+      itemPickerState.kind === 'admissionConfig'
+    ) return
     const target = getDeviceById(layout, itemPickerState.deviceInstanceId)
     if (!target) {
       setItemPickerState(null)
@@ -324,6 +334,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     pickerAllowsEmpty,
     pickerDisabledItemIds,
     handleItemPickerSelect,
+    updateAdmissionItem,
     updateAdmissionAmount,
     updatePickupIgnoreInventory,
     updateProtocolHubOutputIgnoreInventory,
