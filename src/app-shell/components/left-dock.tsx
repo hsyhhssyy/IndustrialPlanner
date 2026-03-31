@@ -3,6 +3,9 @@ import type {
   WorkbenchSnapshot,
 } from "@/app-shell/controller/workbench-controller";
 import {
+  WorkbenchIcon,
+} from "@/app-shell/components/workbench-icons";
+import {
   LEFT_PANEL_CONTENT,
   LEFT_RAIL_PRIMARY_ITEMS,
   localizeText,
@@ -23,6 +26,41 @@ const TOOL_LABEL_KEYS: Record<EditorTool, MessageKey> = {
   link: "tool.link",
   inspect: "tool.inspect",
 };
+
+const DEVICE_ICON_PATH_BY_KEY: Record<string, string> = {
+  "belt-draw": "/device-icons/item_log_belt_01.webp",
+  "pipe-draw": "/device-icons/item_log_pipe_01.webp",
+  item_log_splitter: "/device-icons/item_log_splitter.webp",
+  item_log_converger: "/device-icons/item_log_converger.webp",
+  item_log_connector: "/device-icons/item_log_connector.webp",
+  item_pipe_splitter: "/device-icons/item_pipe_splitter.webp",
+  item_pipe_converger: "/device-icons/item_pipe_converger.webp",
+  item_pipe_connector: "/device-icons/item_pipe_connector.webp",
+  item_port_udpipe_unloader_1: "/device-icons/item_port_udpipe_unloader_1.webp",
+  item_port_udpipe_loader_1: "/device-icons/item_port_udpipe_loader_1.webp",
+  item_port_storager_1: "/device-icons/item_port_storager_1.webp",
+  item_port_unloader_1: "/device-icons/item_port_unloader_1.webp",
+  item_port_log_hongs_bus: "/device-icons/item_port_log_hongs_bus.webp",
+  item_port_log_hongs_bus_source: "/device-icons/item_port_log_hongs_bus_source.webp",
+  item_port_mix_pool_1: "/device-icons/item_port_mix_pool_1.webp",
+  item_port_grinder_1: "/device-icons/item_port_grinder_1.webp",
+  item_port_liquid_filling_pd_mc_1: "/device-icons/item_port_filling_pd_mc_1.webp",
+};
+
+function getWorkbenchButtonIconPath(
+  buttonId: string,
+  definitionId?: string,
+): string | null {
+  if (buttonId in DEVICE_ICON_PATH_BY_KEY) {
+    return DEVICE_ICON_PATH_BY_KEY[buttonId] ?? null;
+  }
+
+  if (definitionId && definitionId in DEVICE_ICON_PATH_BY_KEY) {
+    return DEVICE_ICON_PATH_BY_KEY[definitionId] ?? null;
+  }
+
+  return null;
+}
 
 export interface LeftDockProps {
   controller: WorkbenchController;
@@ -131,6 +169,16 @@ export function LeftDock({ controller, snapshot }: LeftDockProps) {
                 </div>
                 <div className="placeholder-button-grid">
                   {section.buttons.map((button) => {
+                    const iconPath = getWorkbenchButtonIconPath(
+                      button.id,
+                      button.definitionId,
+                    );
+                    const glyphIcon =
+                      button.id === "select"
+                        ? "pointer"
+                        : button.id === "save-blueprint"
+                          ? "blueprint"
+                          : null;
                     const isActive = button.definitionId
                       ? button.definitionId ===
                           snapshot.session.placementDefinitionId &&
@@ -185,6 +233,20 @@ export function LeftDock({ controller, snapshot }: LeftDockProps) {
                         }}
                         type="button"
                       >
+                        {iconPath ? (
+                          <img
+                            alt=""
+                            aria-hidden="true"
+                            className="button-icon button-icon-image"
+                            draggable={false}
+                            src={iconPath}
+                          />
+                        ) : null}
+                        {glyphIcon ? (
+                          <span className="button-icon button-icon-glyph" aria-hidden="true">
+                            <WorkbenchIcon kind={glyphIcon} />
+                          </span>
+                        ) : null}
                         <span>{localizeText(snapshot.ui.locale, button.label)}</span>
                       </button>
                     );

@@ -5,6 +5,7 @@ export type MessageKey =
   | "mode.edit"
   | "mode.simulate"
   | "action.start"
+  | "action.stop"
   | "action.pause"
   | "action.step"
   | "action.undo"
@@ -94,6 +95,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "mode.edit": "放置模式",
     "mode.simulate": "仿真模式",
     "action.start": "开始仿真",
+    "action.stop": "停止仿真",
     "action.pause": "暂停",
     "action.step": "单步",
     "action.undo": "撤销",
@@ -182,6 +184,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "mode.edit": "Edit",
     "mode.simulate": "Simulate",
     "action.start": "Start",
+    "action.stop": "Stop",
     "action.pause": "Pause",
     "action.step": "Step",
     "action.undo": "Undo",

@@ -4,9 +4,9 @@ import type {
 } from "@/app-shell/controller/workbench-controller";
 import { SIMULATION_SPEED_PRESETS } from "@/app-shell/workbench-placeholders";
 import {
-  SUPPORTED_LOCALES,
   createTranslator,
 } from "@/i18n/messages";
+import { WorkbenchIcon } from "@/app-shell/components/workbench-icons";
 
 export interface TopBarProps {
   controller: WorkbenchController;
@@ -15,27 +15,41 @@ export interface TopBarProps {
 
 export function TopBar({ controller, snapshot }: TopBarProps) {
   const t = createTranslator(snapshot.ui.locale);
+  const cellSizeLabel = `${Math.round(
+    snapshot.renderScene.gridSize * snapshot.session.viewport.zoom,
+  )}px`;
+  const simulationRunning = snapshot.runtimeSnapshot.status === "running";
 
   return (
     <header className="top-bar">
       <div className="toolbar-group top-bar-layout-controls">
         <button
+          aria-label={t("topBar.leftPanel")}
           className={snapshot.ui.leftDock.open ? "is-active" : undefined}
           onClick={() =>
             controller.setDockOpen("left", !snapshot.ui.leftDock.open)
           }
+          title={t("topBar.leftPanel")}
           type="button"
         >
-          {t("topBar.leftPanel")}
+          <span className="top-bar-toggle-icon">
+            <WorkbenchIcon kind="panel-left" />
+          </span>
+          <span className="sr-only">{t("topBar.leftPanel")}</span>
         </button>
         <button
+          aria-label={t("topBar.rightPanel")}
           className={snapshot.ui.rightDock.open ? "is-active" : undefined}
           onClick={() =>
             controller.setDockOpen("right", !snapshot.ui.rightDock.open)
           }
+          title={t("topBar.rightPanel")}
           type="button"
         >
-          {t("topBar.rightPanel")}
+          <span className="top-bar-toggle-icon">
+            <WorkbenchIcon kind="panel-right" />
+          </span>
+          <span className="sr-only">{t("topBar.rightPanel")}</span>
         </button>
       </div>
       <div className="top-bar-title-block">
@@ -44,45 +58,14 @@ export function TopBar({ controller, snapshot }: TopBarProps) {
       </div>
       <div className="toolbar-group top-bar-controls">
         <button
-          className={snapshot.ui.mode === "edit" ? "is-active" : undefined}
-          onClick={() => controller.setMode("edit")}
+          onClick={() =>
+            simulationRunning
+              ? controller.pauseSimulation()
+              : controller.startSimulation()
+          }
           type="button"
         >
-          {t("mode.edit")}
-        </button>
-        <button
-          className={snapshot.ui.mode === "simulate" ? "is-active" : undefined}
-          onClick={() => controller.setMode("simulate")}
-          type="button"
-        >
-          {t("mode.simulate")}
-        </button>
-        <button
-          disabled={!snapshot.history.canUndo}
-          onClick={() => {
-            void controller.undo();
-          }}
-          type="button"
-        >
-          {t("action.undo")}
-        </button>
-        <button
-          disabled={!snapshot.history.canRedo}
-          onClick={() => {
-            void controller.redo();
-          }}
-          type="button"
-        >
-          {t("action.redo")}
-        </button>
-        <button onClick={() => controller.startSimulation()} type="button">
-          {t("action.start")}
-        </button>
-        <button onClick={() => controller.pauseSimulation()} type="button">
-          {t("action.pause")}
-        </button>
-        <button onClick={() => controller.stepSimulation()} type="button">
-          {t("action.step")}
+          {t(simulationRunning ? "action.stop" : "action.start")}
         </button>
       </div>
       <div className="toolbar-group top-bar-speed-controls">
@@ -98,30 +81,10 @@ export function TopBar({ controller, snapshot }: TopBarProps) {
           </button>
         ))}
       </div>
-      <div className="toolbar-group top-bar-locale">
+      <div className="toolbar-group top-bar-meta-group">
         <span className="top-bar-metric">
-          {t("topBar.zoom")}: {(snapshot.session.viewport.zoom * 100).toFixed(0)}
-          %
+          {t("topBar.zoom")}: {cellSizeLabel}
         </span>
-        <button onClick={() => controller.zoomOut()} type="button">
-          -
-        </button>
-        <button onClick={() => controller.zoomIn()} type="button">
-          +
-        </button>
-        {SUPPORTED_LOCALES.map((locale) => (
-          <button
-            className={snapshot.ui.locale === locale ? "is-active" : undefined}
-            key={locale}
-            onClick={() => controller.setLocale(locale)}
-            type="button"
-          >
-            {t(`locale.${locale}`)}
-          </button>
-        ))}
-        <button onClick={() => undefined} type="button">
-          {t("topBar.settings")}
-        </button>
       </div>
     </header>
   );
