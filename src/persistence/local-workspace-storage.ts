@@ -28,9 +28,35 @@ export function createWorkspaceStorageGateway(): WorkspaceStorageGateway {
       }
 
       try {
+        const initialState = createInitialWorkbenchUiState();
+        const parsed = JSON.parse(raw) as Partial<
+          WorkbenchUiState & {
+            leftDockOpen?: boolean;
+            rightDockOpen?: boolean;
+            bottomDockOpen?: boolean;
+            statusMessage?: string;
+          }
+        >;
+
         return {
-          ...createInitialWorkbenchUiState(),
-          ...(JSON.parse(raw) as Partial<WorkbenchUiState>),
+          ...initialState,
+          ...parsed,
+          leftDock: {
+            ...initialState.leftDock,
+            ...parsed.leftDock,
+            open: parsed.leftDock?.open ?? parsed.leftDockOpen ?? initialState.leftDock.open,
+          },
+          rightDock: {
+            ...initialState.rightDock,
+            ...parsed.rightDock,
+            open:
+              parsed.rightDock?.open ?? parsed.rightDockOpen ?? initialState.rightDock.open,
+          },
+          leftPanelMode: parsed.leftPanelMode ?? initialState.leftPanelMode,
+          simulationSpeed:
+            parsed.simulationSpeed ?? initialState.simulationSpeed,
+          statusMessageKey:
+            parsed.statusMessageKey ?? initialState.statusMessageKey,
         };
       } catch {
         return createInitialWorkbenchUiState();

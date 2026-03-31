@@ -23,4 +23,32 @@ describe("WorkbenchController scaffold", () => {
 
     controller.dispose();
   });
+
+  it("exposes dock layout state and renderer scene through the snapshot", async () => {
+    const controller = createWorkbenchController();
+
+    controller.setDockOpen("left", false);
+    controller.toggleDockCollapsed("right");
+    controller.setLocale("en-US");
+    controller.setDiagnosticsVisible(false);
+    controller.setLeftPanelMode("blueprint");
+    controller.setSimulationSpeedPreset("4x");
+    await controller.selectEntity("filler-1");
+
+    const snapshot = controller.getSnapshot();
+    const fillerSprite = snapshot.renderScene.entities.find(
+      (entity) => entity.entityId === "filler-1",
+    );
+
+    expect(snapshot.ui.leftDock.open).toBe(true);
+    expect(snapshot.ui.rightDock.collapsed).toBe(true);
+    expect(snapshot.ui.locale).toBe("en-US");
+    expect(snapshot.ui.diagnosticsVisible).toBe(false);
+    expect(snapshot.ui.leftPanelMode).toBe("blueprint");
+    expect(snapshot.ui.simulationSpeed).toBe("4x");
+    expect(fillerSprite?.selected).toBe(true);
+    expect(snapshot.renderScene.entities.length).toBeGreaterThan(0);
+
+    controller.dispose();
+  });
 });

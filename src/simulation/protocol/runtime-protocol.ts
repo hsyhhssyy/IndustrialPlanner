@@ -1,6 +1,6 @@
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import type { Stage1Registry } from "@/domain/registry/stage1-registry";
-import type { WorldDocument } from "@/document-model/world-document";
+import type { WorldDocument } from "@/domain/document/world-document";
 
 export type SimulationStatus = "idle" | "running" | "paused";
 

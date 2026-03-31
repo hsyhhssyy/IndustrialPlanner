@@ -1,4 +1,4 @@
-import type { WorldDocument } from "@/document-model/world-document";
+import type { WorldDocument } from "@/domain/document/world-document";
 import type { EditorSession, EditorTool } from "@/editor/core/editor-session";
 
 export interface EditorCoreSnapshot {

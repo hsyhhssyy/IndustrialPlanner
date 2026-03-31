@@ -1,4 +1,4 @@
-import type { GridPoint } from "@/document-model/world-document";
+import type { GridPoint } from "@/domain/document/world-document";
 
 export type EditorTool =
   | "select"

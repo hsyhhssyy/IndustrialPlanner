@@ -1,108 +1,124 @@
 import {
+  setDiagnosticsVisible,
+  type DockId,
+  type LeftPanelMode,
+  type SimulationSpeedPreset,
+  setLocale as setWorkbenchLocale,
+  setDockOpen,
+  setLeftPanelMode as setWorkbenchLeftPanelMode,
+  setSimulationSpeed as setWorkbenchSimulationSpeed,
+  toggleDockCollapsed,
   type WorkbenchMode,
   type WorkbenchUiState,
 } from "@/app-shell/state/workbench-ui-state";
 import {
   compileStage1World,
-} from "@/domain-compiler/compiler";
-import type { CompiledTopology } from "@/domain-compiler/compiled-topology";
+} from "@/domain/compiler/stage1-compiler";
+import {
+  createStage1Registry,
+  type Stage1Registry,
+} from "@/domain/registry/stage1-registry";
+import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import {
   createStage1SeedWorldDocument,
   type WorldDocument,
-} from "@/editor-core/document/world-document";
+} from "@/domain/document/world-document";
 import {
   createInitialEditorSession,
-  type EditorSession,
   type EditorTool,
-} from "@/editor-core/session/editor-session";
+} from "@/editor/core/editor-session";
 import {
-  createStage1Registry,
-  getStage1EntityDefinition,
-  type Stage1Registry,
-} from "@/industrial-domain/registry/stage1-registry";
+  createEditorHost,
+  type EditorHost,
+} from "@/editor/host/editor-host";
 import {
   createWorkspaceStorageGateway,
   type WorkspaceStorageGateway,
 } from "@/persistence/local-workspace-storage";
+import { buildRenderScene } from "@/renderer/scene/build-render-scene";
+import type { RenderSceneModel } from "@/renderer/scene/types";
 import {
-  createMockSimulationHost,
-  type RuntimeInspectorDetails,
-  type RuntimeRenderSnapshot,
-  type RuntimeTelemetrySummary,
+  createSimulationHost,
   type SimulationHost,
 } from "@/simulation/host/simulation-host";
+import type {
+  RuntimeInspectorDetails,
+  RuntimeRenderSnapshot,
+  RuntimeTelemetrySummary,
+} from "@/simulation/protocol/runtime-protocol";
 import {
-  createExternalStore,
-  type ExternalStore,
-} from "@/shared/store/external-store";
+  createSnapshotStore,
+  type SnapshotStore,
+} from "@/shared/snapshot-store/snapshot-store";
+import type { AppLocale } from "@/i18n/messages";
 
 export interface WorkbenchSnapshot {
   ui: WorkbenchUiState;
   document: WorldDocument;
-  session: EditorSession;
+  session: ReturnType<EditorHost["getSnapshot"]>["session"];
   topology: CompiledTopology;
   runtimeSnapshot: RuntimeRenderSnapshot;
   telemetry: RuntimeTelemetrySummary;
   inspectorDetails: RuntimeInspectorDetails | null;
   registry: Stage1Registry;
+  renderScene: RenderSceneModel;
 }
 
 export interface WorkbenchController {
-  subscribe: ExternalStore<WorkbenchSnapshot>["subscribe"];
-  getSnapshot: ExternalStore<WorkbenchSnapshot>["getSnapshot"];
+  subscribe: SnapshotStore<WorkbenchSnapshot>["subscribe"];
+  getSnapshot: SnapshotStore<WorkbenchSnapshot>["getSnapshot"];
   setMode: (mode: WorkbenchMode) => void;
   setActiveTool: (tool: EditorTool) => void;
   selectEntity: (entityId: string) => Promise<void>;
   zoomIn: () => void;
   zoomOut: () => void;
+  setLeftPanelMode: (mode: LeftPanelMode) => void;
+  setSimulationSpeedPreset: (preset: SimulationSpeedPreset) => void;
+  setLocale: (locale: AppLocale) => void;
+  setDiagnosticsVisible: (visible: boolean) => void;
+  setDockOpen: (dockId: DockId, open: boolean) => void;
+  toggleDockCollapsed: (dockId: DockId) => void;
   startSimulation: () => void;
   pauseSimulation: () => void;
   stepSimulation: () => void;
   dispose: () => void;
 }
 
-function createInitialRuntimeSnapshot(): RuntimeRenderSnapshot {
-  return {
+class WorkbenchControllerImpl implements WorkbenchController {
+  private readonly registry: Stage1Registry;
+  private readonly storage: WorkspaceStorageGateway;
+  private readonly store: SnapshotStore<WorkbenchSnapshot>;
+  private readonly editorHost: EditorHost;
+  private readonly simulationHost: SimulationHost;
+
+  private ui: WorkbenchUiState;
+  private topology: CompiledTopology;
+  private runtimeSnapshot: RuntimeRenderSnapshot = {
     tick: 0,
     status: "idle",
     entityViews: {},
   };
-}
-
-function createInitialTelemetrySummary(): RuntimeTelemetrySummary {
-  return {
+  private telemetry: RuntimeTelemetrySummary = {
     tick: 0,
     simulatedHertz: 0,
     entityCount: 0,
   };
-}
-
-class WorkbenchControllerImpl implements WorkbenchController {
-  private readonly registry: Stage1Registry;
-  private readonly storage: WorkspaceStorageGateway;
-  private readonly store: ExternalStore<WorkbenchSnapshot>;
-  private readonly simulationHost: SimulationHost;
-
-  private ui: WorkbenchUiState;
-  private document: WorldDocument;
-  private session: EditorSession;
-  private topology: CompiledTopology;
-  private runtimeSnapshot = createInitialRuntimeSnapshot();
-  private telemetry = createInitialTelemetrySummary();
   private inspectorDetails: RuntimeInspectorDetails | null = null;
 
   constructor() {
     this.registry = createStage1Registry();
     this.storage = createWorkspaceStorageGateway();
     this.ui = this.storage.loadUiState();
-    this.document = createStage1SeedWorldDocument();
-    this.session = {
-      ...createInitialEditorSession(),
-      mode: this.ui.mode,
-    };
-    this.topology = compileStage1World(this.document, this.registry);
-    this.store = createExternalStore(this.buildSnapshot());
-    this.simulationHost = createMockSimulationHost({
+    this.editorHost = createEditorHost({
+      document: createStage1SeedWorldDocument(),
+      session: createInitialEditorSession(),
+    });
+    this.topology = compileStage1World(
+      this.editorHost.getSnapshot().document,
+      this.registry,
+    );
+    this.store = createSnapshotStore(this.buildSnapshot());
+    this.simulationHost = createSimulationHost({
       onRenderSnapshot: (runtimeSnapshot) => {
         this.runtimeSnapshot = runtimeSnapshot;
         this.sync();
@@ -125,7 +141,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
 
     this.simulationHost.load({
-      document: this.document,
+      document: this.editorHost.getSnapshot().document,
       topology: this.topology,
       registry: this.registry,
     });
@@ -139,14 +155,8 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.ui = {
       ...this.ui,
       mode,
-      statusMessage:
-        mode === "edit"
-          ? "Edit mode focuses on document and compiled topology."
-          : "Simulation mode consumes runtime snapshots.",
-    };
-    this.session = {
-      ...this.session,
-      mode,
+      statusMessageKey:
+        mode === "edit" ? "status.edit" : "status.simulate",
     };
 
     if (mode === "edit") {
@@ -157,42 +167,55 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   setActiveTool(tool: EditorTool): void {
-    this.session = {
-      ...this.session,
-      activeTool: tool,
-    };
+    this.editorHost.setActiveTool(tool);
     this.sync();
   }
 
   async selectEntity(entityId: string): Promise<void> {
-    this.session = {
-      ...this.session,
-      selection: [entityId],
-    };
+    this.editorHost.selectEntity(entityId);
     this.sync();
 
     await this.simulationHost.queryInspector(entityId);
   }
 
   zoomIn(): void {
-    this.session = {
-      ...this.session,
-      viewport: {
-        ...this.session.viewport,
-        zoom: Math.min(2.5, this.session.viewport.zoom + 0.1),
-      },
-    };
+    this.editorHost.zoomIn();
     this.sync();
   }
 
   zoomOut(): void {
-    this.session = {
-      ...this.session,
-      viewport: {
-        ...this.session.viewport,
-        zoom: Math.max(0.5, this.session.viewport.zoom - 0.1),
-      },
-    };
+    this.editorHost.zoomOut();
+    this.sync();
+  }
+
+  setLeftPanelMode(mode: LeftPanelMode): void {
+    this.ui = setWorkbenchLeftPanelMode(this.ui, mode);
+    this.ui = setDockOpen(this.ui, "left", true);
+    this.sync();
+  }
+
+  setSimulationSpeedPreset(preset: SimulationSpeedPreset): void {
+    this.ui = setWorkbenchSimulationSpeed(this.ui, preset);
+    this.sync();
+  }
+
+  setLocale(locale: AppLocale): void {
+    this.ui = setWorkbenchLocale(this.ui, locale);
+    this.sync();
+  }
+
+  setDiagnosticsVisible(visible: boolean): void {
+    this.ui = setDiagnosticsVisible(this.ui, visible);
+    this.sync();
+  }
+
+  setDockOpen(dockId: DockId, open: boolean): void {
+    this.ui = setDockOpen(this.ui, dockId, open);
+    this.sync();
+  }
+
+  toggleDockCollapsed(dockId: DockId): void {
+    this.ui = toggleDockCollapsed(this.ui, dockId);
     this.sync();
   }
 
@@ -216,15 +239,23 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   private buildSnapshot(): WorkbenchSnapshot {
+    const editorSnapshot = this.editorHost.getSnapshot();
+
     return {
       ui: this.ui,
-      document: this.document,
-      session: this.session,
+      document: editorSnapshot.document,
+      session: editorSnapshot.session,
       topology: this.topology,
       runtimeSnapshot: this.runtimeSnapshot,
       telemetry: this.telemetry,
       inspectorDetails: this.inspectorDetails,
       registry: this.registry,
+      renderScene: buildRenderScene({
+        document: editorSnapshot.document,
+        topology: this.topology,
+        session: editorSnapshot.session,
+        runtimeSnapshot: this.runtimeSnapshot,
+      }),
     };
   }
 
@@ -236,24 +267,4 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
 export function createWorkbenchController(): WorkbenchController {
   return new WorkbenchControllerImpl();
-}
-
-export function getSelectedEntityDefinitionName(
-  snapshot: WorkbenchSnapshot,
-): string | null {
-  const selectedEntityId = snapshot.session.selection[0];
-
-  if (!selectedEntityId) {
-    return null;
-  }
-
-  const entity = snapshot.document.entities[selectedEntityId];
-
-  if (!entity) {
-    return null;
-  }
-
-  return (
-    getStage1EntityDefinition(snapshot.registry, entity.definitionId)?.name ?? null
-  );
 }

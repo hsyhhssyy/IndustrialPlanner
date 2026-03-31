@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from "react";
-import type { ExternalStore } from "@/shared/store/external-store";
+import type { SnapshotStore } from "@/shared/snapshot-store/snapshot-store";
 
 export function useExternalStore<TSnapshot>(
-  store: Pick<ExternalStore<TSnapshot>, "getSnapshot" | "subscribe">,
+  store: Pick<SnapshotStore<TSnapshot>, "getSnapshot" | "subscribe">,
 ): TSnapshot {
   return useSyncExternalStore(
     store.subscribe,

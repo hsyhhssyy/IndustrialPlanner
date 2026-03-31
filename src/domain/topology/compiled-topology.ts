@@ -1,4 +1,4 @@
-import type { GridPoint, WorldDocument } from "@/document-model/world-document";
+import type { GridPoint, WorldDocument } from "@/domain/document/world-document";
 import type {
   Stage1EntityDefinition,
   Stage1Registry,

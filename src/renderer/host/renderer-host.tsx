@@ -111,6 +111,10 @@ function hitTestEntity(
   for (let index = scene.entities.length - 1; index >= 0; index -= 1) {
     const entity = scene.entities[index];
 
+    if (!entity) {
+      continue;
+    }
+
     if (
       worldX >= entity.x &&
       worldX <= entity.x + entity.width &&
@@ -136,7 +140,7 @@ export function RendererHost({
     }
   });
 
-  const handleCanvasClick = useEffectEvent((event: MouseEvent<HTMLCanvasElement>) => {
+  const handleCanvasClick = (event: MouseEvent<HTMLCanvasElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
     const x = event.clientX - bounds.left;
     const y = event.clientY - bounds.top;
@@ -145,11 +149,11 @@ export function RendererHost({
     if (entityId) {
       onEntitySelect?.(entityId);
     }
-  });
+  };
 
   useEffect(() => {
     redraw();
-  }, [redraw, scene]);
+  }, [scene]);
 
   return (
     <div className="renderer-host">

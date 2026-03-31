@@ -10,7 +10,7 @@ import {
 import type {
   WorldDocument,
   WorldEntity,
-} from "@/document-model/world-document";
+} from "@/domain/document/world-document";
 
 function toCellKey(x: number, y: number): string {
   return `${x},${y}`;

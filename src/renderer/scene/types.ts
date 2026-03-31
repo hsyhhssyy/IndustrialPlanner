@@ -1,7 +1,7 @@
-import type { CompiledTopology } from "@/domain-compiler/compiled-topology";
-import type { WorldDocument } from "@/editor-core/document/world-document";
-import type { EditorSession } from "@/editor-core/session/editor-session";
-import type { RuntimeRenderSnapshot } from "@/simulation/host/simulation-host";
+import type { CompiledTopology, TopologyDiagnostic } from "@/domain/topology/compiled-topology";
+import type { WorldDocument } from "@/domain/document/world-document";
+import type { EditorSession } from "@/editor/core/editor-session";
+import type { RuntimeRenderSnapshot } from "@/simulation/protocol/runtime-protocol";
 
 export interface RenderSceneInput {
   document: WorldDocument;
@@ -13,6 +13,29 @@ export interface RenderSceneInput {
 export interface RenderLayerDescriptor {
   id: string;
   label: string;
+}
+
+export interface RenderEntitySprite {
+  entityId: string;
+  label: string;
+  subtitle: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fill: string;
+  status: "idle" | "running" | "blocked";
+  progress: number;
+  selected: boolean;
+}
+
+export interface RenderSceneModel {
+  zoom: number;
+  gridSize: number;
+  worldWidth: number;
+  worldHeight: number;
+  entities: RenderEntitySprite[];
+  diagnostics: TopologyDiagnostic[];
 }
 
 export const DEFAULT_RENDER_LAYERS: RenderLayerDescriptor[] = [

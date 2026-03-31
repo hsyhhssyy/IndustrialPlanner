@@ -4,7 +4,7 @@ import {
   type EditorCoreSnapshot,
 } from "@/editor/core/editor-core";
 import type { EditorSession, EditorTool } from "@/editor/core/editor-session";
-import type { WorldDocument } from "@/document-model/world-document";
+import type { WorldDocument } from "@/domain/document/world-document";
 
 export interface EditorHost {
   getSnapshot: () => EditorCoreSnapshot;
