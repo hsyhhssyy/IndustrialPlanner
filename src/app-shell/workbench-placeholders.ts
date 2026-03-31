@@ -15,6 +15,8 @@ export interface PlaceholderButtonDescriptor {
   label: LocalizedText;
   hotkey?: string;
   tool?: EditorTool;
+  definitionId?: string;
+  actionId?: PlaceholderActionId;
 }
 
 export interface PlaceholderSectionDescriptor {
@@ -61,6 +63,13 @@ export interface PowerSummaryFieldDescriptor {
   label: LocalizedText;
   value: LocalizedText;
 }
+
+export type PlaceholderActionId =
+  | "selection.clear"
+  | "selection.remove"
+  | "selection.links.remove"
+  | "history.undo"
+  | "history.redo";
 
 export const LEFT_RAIL_PRIMARY_ITEMS: LeftRailDescriptor[] = [
   {
@@ -125,11 +134,23 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
             id: "belt-draw",
             label: { "zh-CN": "铺设传送带", "en-US": "Lay Belt" },
             tool: "belt",
+            definitionId: "belt_straight_1x1",
           },
           {
             id: "pipe-draw",
             label: { "zh-CN": "铺设管道", "en-US": "Lay Pipe" },
             tool: "pipe",
+            definitionId: "pipe_straight_1x1",
+          },
+          {
+            id: "link",
+            label: { "zh-CN": "暗管链接", "en-US": "Link Dark Pipe" },
+            tool: "link",
+          },
+          {
+            id: "inspect",
+            label: { "zh-CN": "观察", "en-US": "Inspect" },
+            tool: "inspect",
           },
           {
             id: "save-blueprint",
@@ -145,14 +166,20 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "belt-splitter",
             label: { "zh-CN": "分流器", "en-US": "Splitter" },
+            tool: "belt",
+            definitionId: "item_log_splitter",
           },
           {
             id: "belt-converger",
             label: { "zh-CN": "汇流器", "en-US": "Converger" },
+            tool: "belt",
+            definitionId: "item_log_converger",
           },
           {
             id: "belt-bridge",
             label: { "zh-CN": "桥接器", "en-US": "Bridge" },
+            tool: "belt",
+            definitionId: "item_log_connector",
           },
           {
             id: "item-inlet",
@@ -168,14 +195,20 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "pipe-splitter",
             label: { "zh-CN": "管道分流器", "en-US": "Pipe Splitter" },
+            tool: "pipe",
+            definitionId: "item_pipe_splitter",
           },
           {
             id: "pipe-converger",
             label: { "zh-CN": "管道汇流器", "en-US": "Pipe Converger" },
+            tool: "pipe",
+            definitionId: "item_pipe_converger",
           },
           {
             id: "pipe-bridge",
             label: { "zh-CN": "管道桥接器", "en-US": "Pipe Bridge" },
+            tool: "pipe",
+            definitionId: "item_pipe_connector",
           },
           {
             id: "pipe-inlet",
@@ -210,18 +243,26 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "dark-outlet",
             label: { "zh-CN": "暗管出口", "en-US": "Dark Pipe Outlet" },
+            tool: "place",
+            definitionId: "item_port_udpipe_unloader_1",
           },
           {
             id: "dark-inlet",
             label: { "zh-CN": "暗管入口", "en-US": "Dark Pipe Inlet" },
+            tool: "place",
+            definitionId: "item_port_udpipe_loader_1",
           },
           {
             id: "warehouse-storage-port",
             label: { "zh-CN": "仓库存货口", "en-US": "Warehouse Store Port" },
+            tool: "place",
+            definitionId: "item_port_storager_1",
           },
           {
             id: "warehouse-pickup-port",
             label: { "zh-CN": "仓库取货口", "en-US": "Warehouse Pickup Port" },
+            tool: "place",
+            definitionId: "item_port_unloader_1",
           },
           {
             id: "liquid-tank",
@@ -230,14 +271,20 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "warehouse-bus-segment",
             label: { "zh-CN": "存取线基段", "en-US": "Bus Segment" },
+            tool: "place",
+            definitionId: "item_port_log_hongs_bus",
           },
           {
             id: "warehouse-bus-source",
             label: { "zh-CN": "存取线源桩", "en-US": "Bus Source" },
+            tool: "place",
+            definitionId: "item_port_log_hongs_bus_source",
           },
           {
             id: "protocol-storage",
             label: { "zh-CN": "协议存储箱", "en-US": "Protocol Storage" },
+            tool: "place",
+            definitionId: "item_port_storager_1",
           },
         ],
       },
@@ -249,14 +296,20 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "reactor-pool",
             label: { "zh-CN": "反应池", "en-US": "Reactor Pool" },
+            tool: "place",
+            definitionId: "item_port_mix_pool_1",
           },
           {
             id: "grinder",
             label: { "zh-CN": "粉碎机", "en-US": "Grinder" },
+            tool: "place",
+            definitionId: "item_port_grinder_1",
           },
           {
             id: "filling-machine",
             label: { "zh-CN": "流体灌装机", "en-US": "Filling Machine" },
+            tool: "place",
+            definitionId: "item_port_liquid_filling_pd_mc_1",
           },
         ],
       },
@@ -272,6 +325,7 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "single-delete",
             label: { "zh-CN": "单点删除", "en-US": "Single Delete" },
+            actionId: "selection.remove",
           },
           {
             id: "box-delete",
@@ -280,10 +334,12 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "remove-links",
             label: { "zh-CN": "删除链接", "en-US": "Remove Links" },
+            actionId: "selection.links.remove",
           },
           {
             id: "clear-selection",
             label: { "zh-CN": "清除选中", "en-US": "Clear Selection" },
+            actionId: "selection.clear",
           },
         ],
       },
@@ -294,6 +350,7 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "undo-delete",
             label: { "zh-CN": "撤销删除", "en-US": "Undo Delete" },
+            actionId: "history.undo",
           },
           {
             id: "restore-last",
@@ -362,10 +419,12 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "undo",
             label: { "zh-CN": "撤销", "en-US": "Undo" },
+            actionId: "history.undo",
           },
           {
             id: "redo",
             label: { "zh-CN": "重做", "en-US": "Redo" },
+            actionId: "history.redo",
           },
           {
             id: "clear-history",

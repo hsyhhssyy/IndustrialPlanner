@@ -1,3 +1,5 @@
+import type { DocumentCommand } from "@/editor/core/command-types";
+
 export type GridRotation = 0 | 90 | 180 | 270;
 
 export interface GridPoint {
@@ -39,6 +41,257 @@ export interface WorldDocument {
 }
 
 const STAGE1_BOOTSTRAP_TIMESTAMP = "2026-03-30T00:00:00.000Z";
+
+function touchWorldDocument(
+  document: WorldDocument,
+  patch: Omit<WorldDocument, "meta"> & {
+    meta?: Partial<WorldDocument["meta"]>;
+  },
+): WorldDocument {
+  return {
+    ...document,
+    ...patch,
+    meta: {
+      ...document.meta,
+      ...patch.meta,
+      updatedAt: new Date().toISOString(),
+    },
+  };
+}
+
+function toIdPrefix(definitionId: string): string {
+  return definitionId
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+}
+
+export function createWorldEntityId(
+  document: WorldDocument,
+  definitionId: string,
+): string {
+  const prefix = toIdPrefix(definitionId);
+  let index = 1;
+
+  while (document.entities[`${prefix}-${index}`]) {
+    index += 1;
+  }
+
+  return `${prefix}-${index}`;
+}
+
+export function createExplicitLinkId(
+  document: WorldDocument,
+  kind: ExplicitLink["kind"],
+): string {
+  const prefix = `${kind}-link`;
+  let index = 1;
+
+  while (document.explicitLinks.some((link) => link.id === `${prefix}-${index}`)) {
+    index += 1;
+  }
+
+  return `${prefix}-${index}`;
+}
+
+export function getEntityLinks(
+  document: WorldDocument,
+  entityId: string,
+): ExplicitLink[] {
+  return document.explicitLinks.filter(
+    (link) =>
+      link.sourceEntityId === entityId || link.targetEntityId === entityId,
+  );
+}
+
+export function getExplicitLinkBetween(
+  document: WorldDocument,
+  sourceEntityId: string,
+  targetEntityId: string,
+): ExplicitLink | null {
+  return (
+    document.explicitLinks.find(
+      (link) =>
+        link.sourceEntityId === sourceEntityId &&
+        link.targetEntityId === targetEntityId,
+    ) ?? null
+  );
+}
+
+export function applyWorldDocumentCommand(
+  document: WorldDocument,
+  command: DocumentCommand,
+): WorldDocument {
+  switch (command.type) {
+    case "entity.place": {
+      const { entityId, definitionId, position, rotation, config, tags } =
+        command.payload;
+
+      if (document.entities[entityId]) {
+        return document;
+      }
+
+      return touchWorldDocument(document, {
+        entities: {
+          ...document.entities,
+          [entityId]: {
+            id: entityId,
+            definitionId,
+            position,
+            rotation,
+            config: { ...config },
+            tags: [...tags],
+          },
+        },
+        entityOrder: [...document.entityOrder, entityId],
+        explicitLinks: document.explicitLinks,
+        documentSettings: document.documentSettings,
+        schemaVersion: document.schemaVersion,
+      });
+    }
+    case "entity.remove": {
+      const { entityId } = command.payload;
+
+      if (!document.entities[entityId]) {
+        return document;
+      }
+
+      const nextEntities = { ...document.entities };
+      delete nextEntities[entityId];
+
+      return touchWorldDocument(document, {
+        entities: nextEntities,
+        entityOrder: document.entityOrder.filter((id) => id !== entityId),
+        explicitLinks: document.explicitLinks.filter(
+          (link) =>
+            link.sourceEntityId !== entityId && link.targetEntityId !== entityId,
+        ),
+        documentSettings: document.documentSettings,
+        schemaVersion: document.schemaVersion,
+      });
+    }
+    case "entity.move": {
+      const { entityId, position } = command.payload;
+      const entity = document.entities[entityId];
+
+      if (!entity) {
+        return document;
+      }
+
+      return touchWorldDocument(document, {
+        entities: {
+          ...document.entities,
+          [entityId]: {
+            ...entity,
+            position,
+          },
+        },
+        entityOrder: document.entityOrder,
+        explicitLinks: document.explicitLinks,
+        documentSettings: document.documentSettings,
+        schemaVersion: document.schemaVersion,
+      });
+    }
+    case "entity.rotate": {
+      const { entityId, rotation } = command.payload;
+      const entity = document.entities[entityId];
+
+      if (!entity) {
+        return document;
+      }
+
+      return touchWorldDocument(document, {
+        entities: {
+          ...document.entities,
+          [entityId]: {
+            ...entity,
+            rotation,
+          },
+        },
+        entityOrder: document.entityOrder,
+        explicitLinks: document.explicitLinks,
+        documentSettings: document.documentSettings,
+        schemaVersion: document.schemaVersion,
+      });
+    }
+    case "entity.config.patch": {
+      const { entityId, patch } = command.payload;
+      const entity = document.entities[entityId];
+
+      if (!entity) {
+        return document;
+      }
+
+      return touchWorldDocument(document, {
+        entities: {
+          ...document.entities,
+          [entityId]: {
+            ...entity,
+            config: {
+              ...entity.config,
+              ...patch,
+            },
+          },
+        },
+        entityOrder: document.entityOrder,
+        explicitLinks: document.explicitLinks,
+        documentSettings: document.documentSettings,
+        schemaVersion: document.schemaVersion,
+      });
+    }
+    case "link.create": {
+      const { linkId, kind, sourceEntityId, targetEntityId } = command.payload;
+
+      if (
+        sourceEntityId === targetEntityId ||
+        !document.entities[sourceEntityId] ||
+        !document.entities[targetEntityId] ||
+        document.explicitLinks.some(
+          (link) =>
+            link.sourceEntityId === sourceEntityId &&
+            link.targetEntityId === targetEntityId &&
+            link.kind === kind,
+        )
+      ) {
+        return document;
+      }
+
+      return touchWorldDocument(document, {
+        entities: document.entities,
+        entityOrder: document.entityOrder,
+        explicitLinks: [
+          ...document.explicitLinks,
+          {
+            id: linkId,
+            kind,
+            sourceEntityId,
+            targetEntityId,
+          },
+        ],
+        documentSettings: document.documentSettings,
+        schemaVersion: document.schemaVersion,
+      });
+    }
+    case "link.remove": {
+      const { linkId } = command.payload;
+
+      if (!document.explicitLinks.some((link) => link.id === linkId)) {
+        return document;
+      }
+
+      return touchWorldDocument(document, {
+        entities: document.entities,
+        entityOrder: document.entityOrder,
+        explicitLinks: document.explicitLinks.filter((link) => link.id !== linkId),
+        documentSettings: document.documentSettings,
+        schemaVersion: document.schemaVersion,
+      });
+    }
+    default: {
+      return document;
+    }
+  }
+}
 
 export function createStage1SeedWorldDocument(): WorldDocument {
   const entities: Record<string, WorldEntity> = {

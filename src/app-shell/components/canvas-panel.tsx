@@ -21,8 +21,8 @@ export function CanvasPanel({ controller, snapshot }: CanvasPanelProps) {
           }
         >
           <RendererHost
-            onEntitySelect={(entityId) => {
-              void controller.selectEntity(entityId);
+            onSceneClick={(interaction) => {
+              void controller.handleSceneClick(interaction);
             }}
             scene={snapshot.renderScene}
           />

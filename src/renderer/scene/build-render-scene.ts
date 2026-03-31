@@ -1,5 +1,6 @@
 import type { Stage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import type {
+  RenderExplicitLink,
   RenderEntitySprite,
   RenderSceneInput,
   RenderSceneModel,
@@ -50,13 +51,50 @@ function buildEntitySprite(input: RenderSceneInput, entityId: string): RenderEnt
     status: input.runtimeSnapshot.entityViews[entityId]?.status ?? "idle",
     progress: input.runtimeSnapshot.entityViews[entityId]?.progress ?? 0,
     selected: input.session.selection.includes(entityId),
+    pendingLinkSource: input.session.pendingLinkSourceEntityId === entityId,
   };
+}
+
+function buildExplicitLinkSprites(
+  input: RenderSceneInput,
+): RenderExplicitLink[] {
+  return input.topology.explicitLinkViews
+    .map((link) => {
+      const sourceView = input.topology.entityViews[link.sourceEntityId];
+      const targetView = input.topology.entityViews[link.targetEntityId];
+
+      if (!sourceView || !targetView) {
+        return null;
+      }
+
+      return {
+        id: link.id,
+        kind: link.kind,
+        x1:
+          (sourceView.position.x + sourceView.definition.footprint.width / 2) *
+          input.document.documentSettings.gridSize,
+        y1:
+          (sourceView.position.y + sourceView.definition.footprint.height / 2) *
+          input.document.documentSettings.gridSize,
+        x2:
+          (targetView.position.x + targetView.definition.footprint.width / 2) *
+          input.document.documentSettings.gridSize,
+        y2:
+          (targetView.position.y + targetView.definition.footprint.height / 2) *
+          input.document.documentSettings.gridSize,
+        selected:
+          input.session.selection.includes(link.sourceEntityId) ||
+          input.session.selection.includes(link.targetEntityId),
+      };
+    })
+    .filter((link): link is RenderExplicitLink => link !== null);
 }
 
 export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
   const entities = input.document.entityOrder
     .map((entityId) => buildEntitySprite(input, entityId))
     .filter((entity): entity is RenderEntitySprite => entity !== null);
+  const explicitLinks = buildExplicitLinkSprites(input);
 
   const maxWorldWidth = Math.max(
     1200,
@@ -73,6 +111,7 @@ export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
     worldWidth: maxWorldWidth,
     worldHeight: maxWorldHeight,
     entities,
+    explicitLinks,
     diagnostics: input.topology.diagnostics,
   };
 }

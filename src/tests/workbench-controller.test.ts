@@ -51,4 +51,96 @@ describe("WorkbenchController scaffold", () => {
 
     controller.dispose();
   });
+
+  it("places an entity through the renderer interaction loop and recompiles topology", async () => {
+    const controller = createWorkbenchController();
+    const before = controller.getSnapshot();
+
+    controller.armPlacement("belt_straight_1x1", "belt");
+    await controller.handleSceneClick({
+      entityId: null,
+      worldPoint: { x: 0, y: 0 },
+      gridPoint: { x: 24, y: 12 },
+    });
+
+    const after = controller.getSnapshot();
+    const placedEntityId = after.document.entityOrder.at(-1);
+    const placedEntity = placedEntityId
+      ? after.document.entities[placedEntityId]
+      : null;
+
+    expect(after.document.entityOrder).toHaveLength(
+      before.document.entityOrder.length + 1,
+    );
+    expect(placedEntity?.definitionId).toBe("belt_straight_1x1");
+    expect(placedEntity?.position).toEqual({ x: 24, y: 12 });
+    expect(after.topology.compileVersion).not.toBe(before.topology.compileVersion);
+    expect(
+      after.renderScene.entities.some((entity) => entity.entityId === placedEntityId),
+    ).toBe(true);
+
+    controller.dispose();
+  });
+
+  it("creates and removes a dark pipe link through the minimal edit loop", async () => {
+    const controller = createWorkbenchController();
+
+    controller.armPlacement("item_port_udpipe_loader_1", "place");
+    await controller.handleSceneClick({
+      entityId: null,
+      worldPoint: { x: 0, y: 0 },
+      gridPoint: { x: 22, y: 2 },
+    });
+
+    const placedInletId = controller.getSnapshot().document.entityOrder.at(-1);
+    expect(placedInletId).toBeTruthy();
+
+    controller.setActiveTool("link");
+    await controller.handleSceneClick({
+      entityId: placedInletId ?? null,
+      worldPoint: { x: 0, y: 0 },
+      gridPoint: { x: 22, y: 2 },
+    });
+    await controller.handleSceneClick({
+      entityId: "dark-outlet-1",
+      worldPoint: { x: 0, y: 0 },
+      gridPoint: { x: 12, y: 2 },
+    });
+
+    const linkedSnapshot = controller.getSnapshot();
+    expect(linkedSnapshot.document.explicitLinks).toHaveLength(1);
+    expect(linkedSnapshot.renderScene.explicitLinks).toHaveLength(1);
+
+    await controller.removeSelectionLinks();
+
+    const unlinkedSnapshot = controller.getSnapshot();
+    expect(unlinkedSnapshot.document.explicitLinks).toHaveLength(0);
+    expect(unlinkedSnapshot.renderScene.explicitLinks).toHaveLength(0);
+
+    controller.dispose();
+  });
+
+  it("undoes and redoes document commands without losing the workbench snapshot", async () => {
+    const controller = createWorkbenchController();
+    const initialCount = controller.getSnapshot().document.entityOrder.length;
+
+    controller.armPlacement("pipe_straight_1x1", "pipe");
+    await controller.handleSceneClick({
+      entityId: null,
+      worldPoint: { x: 0, y: 0 },
+      gridPoint: { x: 26, y: 4 },
+    });
+
+    expect(controller.getSnapshot().document.entityOrder).toHaveLength(initialCount + 1);
+    expect(controller.getSnapshot().history.canUndo).toBe(true);
+
+    await controller.undo();
+    expect(controller.getSnapshot().document.entityOrder).toHaveLength(initialCount);
+    expect(controller.getSnapshot().history.canRedo).toBe(true);
+
+    await controller.redo();
+    expect(controller.getSnapshot().document.entityOrder).toHaveLength(initialCount + 1);
+
+    controller.dispose();
+  });
 });

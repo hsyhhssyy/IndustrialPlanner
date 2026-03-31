@@ -20,6 +20,22 @@ export interface RightDockProps {
   snapshot: WorkbenchSnapshot;
 }
 
+function formatConfigValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map((entry) => String(entry)).join(", ");
+  }
+
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
+}
+
 export function RightDock({ controller, snapshot }: RightDockProps) {
   if (!snapshot.ui.rightDock.open) {
     return null;
@@ -37,6 +53,13 @@ export function RightDock({ controller, snapshot }: RightDockProps) {
   const selectedEntityRuntime = selectedEntityId
     ? snapshot.runtimeSnapshot.entityViews[selectedEntityId]
     : null;
+  const selectedLinks = selectedEntityId
+    ? snapshot.document.explicitLinks.filter(
+        (link) =>
+          link.sourceEntityId === selectedEntityId ||
+          link.targetEntityId === selectedEntityId,
+      )
+    : [];
 
   return (
     <aside className="dock dock-right panel-surface">
@@ -144,7 +167,80 @@ export function RightDock({ controller, snapshot }: RightDockProps) {
                       <dt>{t("label.runtime")}</dt>
                       <dd>{selectedEntityRuntime?.status ?? "idle"}</dd>
                     </div>
+                    <div className="kv">
+                      <dt>{t("label.position")}</dt>
+                      <dd>
+                        {selectedEntity.position.x}, {selectedEntity.position.y}
+                      </dd>
+                    </div>
+                    <div className="kv">
+                      <dt>{t("label.rotation")}</dt>
+                      <dd>{selectedEntity.rotation}°</dd>
+                    </div>
+                    <div className="kv">
+                      <dt>{t("label.links")}</dt>
+                      <dd>{selectedLinks.length}</dd>
+                    </div>
                   </dl>
+                  <div className="cluster">
+                    <div className="card-header card-subheader">
+                      <h4>{t("section.quickActions")}</h4>
+                    </div>
+                    <div className="inspector-option-grid">
+                      <button
+                        onClick={() => {
+                          void controller.removeSelection();
+                        }}
+                        type="button"
+                      >
+                        {t("action.deleteSelection")}
+                      </button>
+                      <button
+                        disabled={selectedLinks.length === 0}
+                        onClick={() => {
+                          void controller.removeSelectionLinks();
+                        }}
+                        type="button"
+                      >
+                        {t("action.removeLinks")}
+                      </button>
+                      <button
+                        onClick={() => controller.setActiveTool("link")}
+                        type="button"
+                      >
+                        {t("tool.link")}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="cluster">
+                    <div className="card-header card-subheader">
+                      <h4>{t("section.connections")}</h4>
+                    </div>
+                    <div className="definition-list">
+                      {selectedLinks.length === 0 ? (
+                        <article className="definition-card">
+                          <p>{t("label.noConnections")}</p>
+                        </article>
+                      ) : (
+                        selectedLinks.map((link) => (
+                          <article className="definition-card" key={link.id}>
+                            <h4>{link.id}</h4>
+                            <p>
+                              {link.sourceEntityId} → {link.targetEntityId}
+                            </p>
+                            <button
+                              onClick={() => {
+                                void controller.removeLink(link.id);
+                              }}
+                              type="button"
+                            >
+                              {t("action.removeLink")}
+                            </button>
+                          </article>
+                        ))
+                      )}
+                    </div>
+                  </div>
                   <div className="cluster">
                     <div className="card-header card-subheader">
                       <h4>{t("section.configFields")}</h4>
@@ -168,6 +264,9 @@ export function RightDock({ controller, snapshot }: RightDockProps) {
                                 snapshot.ui.locale,
                                 field.mutability,
                               )}
+                            </p>
+                            <p>
+                              {formatConfigValue(selectedEntity.config[field.key])}
                             </p>
                           </article>
                         ))

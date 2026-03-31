@@ -1,5 +1,11 @@
-import type { CompiledTopology, TopologyDiagnostic } from "@/domain/topology/compiled-topology";
-import type { WorldDocument } from "@/domain/document/world-document";
+import type {
+  GridPoint,
+  WorldDocument,
+} from "@/domain/document/world-document";
+import type {
+  CompiledTopology,
+  TopologyDiagnostic,
+} from "@/domain/topology/compiled-topology";
 import type { EditorSession } from "@/editor/core/editor-session";
 import type { RuntimeRenderSnapshot } from "@/simulation/protocol/runtime-protocol";
 
@@ -15,6 +21,15 @@ export interface RenderLayerDescriptor {
   label: string;
 }
 
+export interface RenderSceneInteraction {
+  entityId: string | null;
+  worldPoint: {
+    x: number;
+    y: number;
+  };
+  gridPoint: GridPoint;
+}
+
 export interface RenderEntitySprite {
   entityId: string;
   label: string;
@@ -27,6 +42,17 @@ export interface RenderEntitySprite {
   status: "idle" | "running" | "blocked";
   progress: number;
   selected: boolean;
+  pendingLinkSource: boolean;
+}
+
+export interface RenderExplicitLink {
+  id: string;
+  kind: "dark-pipe";
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  selected: boolean;
 }
 
 export interface RenderSceneModel {
@@ -35,6 +61,7 @@ export interface RenderSceneModel {
   worldWidth: number;
   worldHeight: number;
   entities: RenderEntitySprite[];
+  explicitLinks: RenderExplicitLink[];
   diagnostics: TopologyDiagnostic[];
 }
 

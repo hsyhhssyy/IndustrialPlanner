@@ -6,7 +6,9 @@ import {
   LEFT_PANEL_CONTENT,
   LEFT_RAIL_PRIMARY_ITEMS,
   localizeText,
+  type PlaceholderActionId,
 } from "@/app-shell/workbench-placeholders";
+import { getLocalizedStage1EntityName } from "@/domain/registry/stage1-registry-i18n";
 import type { EditorTool } from "@/editor/core/editor-session";
 import {
   createTranslator,
@@ -27,6 +29,24 @@ export interface LeftDockProps {
   snapshot: WorkbenchSnapshot;
 }
 
+function isActionDisabled(
+  actionId: PlaceholderActionId | undefined,
+  snapshot: WorkbenchSnapshot,
+): boolean {
+  switch (actionId) {
+    case "selection.clear":
+    case "selection.remove":
+    case "selection.links.remove":
+      return snapshot.session.selection.length === 0;
+    case "history.undo":
+      return !snapshot.history.canUndo;
+    case "history.redo":
+      return !snapshot.history.canRedo;
+    default:
+      return false;
+  }
+}
+
 export function LeftDock({ controller, snapshot }: LeftDockProps) {
   if (!snapshot.ui.leftDock.open) {
     return null;
@@ -37,6 +57,11 @@ export function LeftDock({ controller, snapshot }: LeftDockProps) {
   const activeRailItem = LEFT_RAIL_PRIMARY_ITEMS.find(
     (item) => item.id === snapshot.ui.leftPanelMode,
   );
+  const armedPlacementDefinition = snapshot.session.placementDefinitionId
+    ? snapshot.registry.entityDefinitions.find(
+        (definition) => definition.id === snapshot.session.placementDefinitionId,
+      ) ?? null
+    : null;
 
   return (
     <aside className="dock dock-left panel-surface">
@@ -84,6 +109,15 @@ export function LeftDock({ controller, snapshot }: LeftDockProps) {
                 <span className="pill">
                   {snapshot.registry.itemDefinitions.length} {t("label.items")}
                 </span>
+                {armedPlacementDefinition ? (
+                  <span className="pill">
+                    {t("label.definition")}:{" "}
+                    {getLocalizedStage1EntityName(
+                      snapshot.ui.locale,
+                      armedPlacementDefinition,
+                    )}
+                  </span>
+                ) : null}
               </div>
               <p className="mono-line">{t(snapshot.ui.statusMessageKey)}</p>
             </div>
@@ -96,20 +130,65 @@ export function LeftDock({ controller, snapshot }: LeftDockProps) {
                   ) : null}
                 </div>
                 <div className="placeholder-button-grid">
-                  {section.buttons.map((button) => (
-                    <button
-                      className={button.tool === snapshot.session.activeTool ? "is-active" : undefined}
-                      key={button.id}
-                      onClick={() => {
-                        if (button.tool) {
-                          controller.setActiveTool(button.tool);
-                        }
-                      }}
-                      type="button"
-                    >
-                      <span>{localizeText(snapshot.ui.locale, button.label)}</span>
-                    </button>
-                  ))}
+                  {section.buttons.map((button) => {
+                    const isActive = button.definitionId
+                      ? button.definitionId ===
+                          snapshot.session.placementDefinitionId &&
+                        button.tool === snapshot.session.activeTool
+                      : button.tool === snapshot.session.activeTool;
+                    const isDisabled =
+                      (!button.tool && !button.definitionId && !button.actionId) ||
+                      isActionDisabled(button.actionId, snapshot);
+
+                    return (
+                      <button
+                        className={isActive ? "is-active" : undefined}
+                        disabled={isDisabled}
+                        key={button.id}
+                        onClick={() => {
+                          if (button.actionId === "selection.clear") {
+                            void controller.clearSelection();
+                            return;
+                          }
+
+                          if (button.actionId === "selection.remove") {
+                            void controller.removeSelection();
+                            return;
+                          }
+
+                          if (button.actionId === "selection.links.remove") {
+                            void controller.removeSelectionLinks();
+                            return;
+                          }
+
+                          if (button.actionId === "history.undo") {
+                            void controller.undo();
+                            return;
+                          }
+
+                          if (button.actionId === "history.redo") {
+                            void controller.redo();
+                            return;
+                          }
+
+                          if (button.definitionId) {
+                            controller.armPlacement(
+                              button.definitionId,
+                              button.tool ?? "place",
+                            );
+                            return;
+                          }
+
+                          if (button.tool) {
+                            controller.setActiveTool(button.tool);
+                          }
+                        }}
+                        type="button"
+                      >
+                        <span>{localizeText(snapshot.ui.locale, button.label)}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </section>
             ))}

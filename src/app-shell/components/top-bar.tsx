@@ -57,6 +57,24 @@ export function TopBar({ controller, snapshot }: TopBarProps) {
         >
           {t("mode.simulate")}
         </button>
+        <button
+          disabled={!snapshot.history.canUndo}
+          onClick={() => {
+            void controller.undo();
+          }}
+          type="button"
+        >
+          {t("action.undo")}
+        </button>
+        <button
+          disabled={!snapshot.history.canRedo}
+          onClick={() => {
+            void controller.redo();
+          }}
+          type="button"
+        >
+          {t("action.redo")}
+        </button>
         <button onClick={() => controller.startSimulation()} type="button">
           {t("action.start")}
         </button>

@@ -1,5 +1,6 @@
 import type {
   CompiledEntityView,
+  CompiledExplicitLinkView,
   CompiledTopology,
   TopologyDiagnostic,
 } from "@/domain/topology/compiled-topology";
@@ -38,6 +39,7 @@ export function compileStage1World(
   const diagnostics: TopologyDiagnostic[] = [];
   const occupancyIndex: Record<string, string[]> = {};
   const entityViews: Record<string, CompiledEntityView> = {};
+  const explicitLinkViews: CompiledExplicitLinkView[] = [];
 
   let solidTransportNodes = 0;
   let liquidTransportNodes = 0;
@@ -108,6 +110,43 @@ export function compileStage1World(
     }
   }
 
+  for (const explicitLink of document.explicitLinks) {
+    const sourceView = entityViews[explicitLink.sourceEntityId];
+    const targetView = entityViews[explicitLink.targetEntityId];
+
+    if (!sourceView || !targetView) {
+      diagnostics.push({
+        id: `explicit-link-missing-endpoint:${explicitLink.id}`,
+        severity: "error",
+        entityIds: [
+          explicitLink.sourceEntityId,
+          explicitLink.targetEntityId,
+        ].filter(Boolean),
+        message: `Explicit link "${explicitLink.id}" references a missing endpoint.`,
+      });
+      continue;
+    }
+
+    if (
+      !sourceView.definition.capabilityIds.includes("device-link-source") ||
+      !targetView.definition.capabilityIds.includes("device-link-target")
+    ) {
+      diagnostics.push({
+        id: `explicit-link-invalid-capability:${explicitLink.id}`,
+        severity: "warning",
+        entityIds: [explicitLink.sourceEntityId, explicitLink.targetEntityId],
+        message: `Explicit link "${explicitLink.id}" is not attached to a valid inlet/outlet pair.`,
+      });
+    }
+
+    explicitLinkViews.push({
+      id: explicitLink.id,
+      kind: explicitLink.kind,
+      sourceEntityId: explicitLink.sourceEntityId,
+      targetEntityId: explicitLink.targetEntityId,
+    });
+  }
+
   if (document.explicitLinks.length === 0) {
     diagnostics.push({
       id: "stage1-scaffold:missing-dark-links",
@@ -121,6 +160,7 @@ export function compileStage1World(
   return {
     compileVersion: `${document.schemaVersion}:${document.entityOrder.length}:${document.explicitLinks.length}`,
     entityViews,
+    explicitLinkViews,
     occupancyIndex,
     graphSummary: {
       solidTransportNodes,

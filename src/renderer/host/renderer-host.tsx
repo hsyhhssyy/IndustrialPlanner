@@ -4,11 +4,15 @@ import {
   useRef,
   type MouseEvent,
 } from "react";
-import type { RenderEntitySprite, RenderSceneModel } from "@/renderer/scene/types";
+import type {
+  RenderEntitySprite,
+  RenderSceneInteraction,
+  RenderSceneModel,
+} from "@/renderer/scene/types";
 
 export interface RendererHostProps {
   scene: RenderSceneModel;
-  onEntitySelect?: (entityId: string) => void;
+  onSceneClick?: (interaction: RenderSceneInteraction) => void;
 }
 
 function getStatusStroke(status: RenderEntitySprite["status"]): string {
@@ -69,6 +73,20 @@ function drawScene(
   context.font = '12px "IBM Plex Sans", sans-serif';
   context.textBaseline = "top";
 
+  for (const explicitLink of scene.explicitLinks) {
+    context.save();
+    context.strokeStyle = explicitLink.selected
+      ? "rgba(127, 224, 176, 0.92)"
+      : "rgba(99, 180, 218, 0.78)";
+    context.lineWidth = explicitLink.selected ? 3 : 2;
+    context.setLineDash([10, 7]);
+    context.beginPath();
+    context.moveTo(explicitLink.x1 * scene.zoom, explicitLink.y1 * scene.zoom);
+    context.lineTo(explicitLink.x2 * scene.zoom, explicitLink.y2 * scene.zoom);
+    context.stroke();
+    context.restore();
+  }
+
   for (const entity of scene.entities) {
     const x = entity.x * scene.zoom;
     const y = entity.y * scene.zoom;
@@ -81,6 +99,15 @@ function drawScene(
     context.lineWidth = entity.selected ? 3 : 1.5;
     context.strokeStyle = entity.selected ? "#7fe0b0" : getStatusStroke(entity.status);
     context.strokeRect(x, y, entityWidth, entityHeight);
+
+    if (entity.pendingLinkSource) {
+      context.save();
+      context.strokeStyle = "#63b4da";
+      context.lineWidth = 2;
+      context.setLineDash([6, 5]);
+      context.strokeRect(x + 4, y + 4, entityWidth - 8, entityHeight - 8);
+      context.restore();
+    }
 
     context.fillStyle = "#f3f6fb";
     context.fillText(entity.label, x + 12, y + 10);
@@ -128,9 +155,30 @@ function hitTestEntity(
   return null;
 }
 
+function createSceneInteraction(
+  scene: RenderSceneModel,
+  x: number,
+  y: number,
+): RenderSceneInteraction {
+  const worldX = x / scene.zoom;
+  const worldY = y / scene.zoom;
+
+  return {
+    entityId: hitTestEntity(scene, x, y),
+    worldPoint: {
+      x: worldX,
+      y: worldY,
+    },
+    gridPoint: {
+      x: Math.max(0, Math.floor(worldX / scene.gridSize)),
+      y: Math.max(0, Math.floor(worldY / scene.gridSize)),
+    },
+  };
+}
+
 export function RendererHost({
   scene,
-  onEntitySelect,
+  onSceneClick,
 }: RendererHostProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -144,11 +192,7 @@ export function RendererHost({
     const bounds = event.currentTarget.getBoundingClientRect();
     const x = event.clientX - bounds.left;
     const y = event.clientY - bounds.top;
-    const entityId = hitTestEntity(scene, x, y);
-
-    if (entityId) {
-      onEntitySelect?.(entityId);
-    }
+    onSceneClick?.(createSceneInteraction(scene, x, y));
   };
 
   useEffect(() => {

@@ -18,6 +18,8 @@ export interface EditorSession {
   selection: string[];
   hoveredEntityId: string | null;
   dragPreviewEntityId: string | null;
+  placementDefinitionId: string | null;
+  pendingLinkSourceEntityId: string | null;
   viewport: EditorViewport;
 }
 
@@ -27,9 +29,15 @@ export function createInitialEditorSession(): EditorSession {
     selection: ["reactor-1"],
     hoveredEntityId: null,
     dragPreviewEntityId: null,
+    placementDefinitionId: null,
+    pendingLinkSourceEntityId: null,
     viewport: {
       offset: { x: 0, y: 0 },
       zoom: 1,
     },
   };
+}
+
+export function isPlacementTool(tool: EditorTool): boolean {
+  return tool === "place" || tool === "belt" || tool === "pipe";
 }

@@ -7,12 +7,17 @@ export type MessageKey =
   | "action.start"
   | "action.pause"
   | "action.step"
+  | "action.undo"
+  | "action.redo"
   | "action.zoomIn"
   | "action.zoomOut"
   | "action.open"
   | "action.close"
   | "action.expand"
   | "action.collapse"
+  | "action.deleteSelection"
+  | "action.removeLinks"
+  | "action.removeLink"
   | "toolbar.tools"
   | "toolbar.views"
   | "tool.select"
@@ -36,15 +41,21 @@ export type MessageKey =
   | "section.configFields"
   | "section.runtimeDetails"
   | "section.diagnostics"
+  | "section.quickActions"
+  | "section.connections"
   | "label.definition"
   | "label.entityId"
   | "label.mode"
   | "label.runtime"
+  | "label.position"
+  | "label.rotation"
+  | "label.links"
   | "label.items"
   | "label.recipes"
   | "label.definitions"
   | "label.noSelection"
   | "label.noConfigFields"
+  | "label.noConnections"
   | "label.runtimeDetailPlaceholder"
   | "label.noDiagnostics"
   | "status.ready"
@@ -54,7 +65,11 @@ export type MessageKey =
   | "statusBar.view"
   | "statusBar.locale"
   | "statusBar.theme"
+  | "statusBar.tool"
   | "statusBar.speed"
+  | "statusBar.entities"
+  | "statusBar.links"
+  | "statusBar.compile"
   | "statusBar.diagnostics"
   | "statusBar.tick"
   | "statusBar.simHz"
@@ -81,12 +96,17 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.start": "开始仿真",
     "action.pause": "暂停",
     "action.step": "单步",
+    "action.undo": "撤销",
+    "action.redo": "重做",
     "action.zoomIn": "放大",
     "action.zoomOut": "缩小",
     "action.open": "打开",
     "action.close": "关闭",
     "action.expand": "展开",
     "action.collapse": "折叠",
+    "action.deleteSelection": "删除选中",
+    "action.removeLinks": "删除链接",
+    "action.removeLink": "移除链接",
     "toolbar.tools": "工具",
     "toolbar.views": "视图",
     "tool.select": "选择",
@@ -110,15 +130,21 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "section.configFields": "配置字段",
     "section.runtimeDetails": "运行态细节",
     "section.diagnostics": "诊断",
+    "section.quickActions": "快捷操作",
+    "section.connections": "连接",
     "label.definition": "定义",
     "label.entityId": "实体 ID",
     "label.mode": "模式",
     "label.runtime": "运行态",
+    "label.position": "位置",
+    "label.rotation": "朝向",
+    "label.links": "链接",
     "label.items": "物品",
     "label.recipes": "配方",
     "label.definitions": "定义",
     "label.noSelection": "未选中对象",
     "label.noConfigFields": "当前脚手架还没有可配置字段。",
+    "label.noConnections": "当前对象没有显式链接。",
     "label.runtimeDetailPlaceholder": "运行态 query lane 会在这里显示更细的按需读取结果。",
     "label.noDiagnostics": "当前没有诊断信息。",
     "status.ready": "Stage1 工作台脚手架已就绪。",
@@ -128,7 +154,11 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "statusBar.view": "当前视图",
     "statusBar.locale": "语言",
     "statusBar.theme": "主题",
+    "statusBar.tool": "工具",
     "statusBar.speed": "速率",
+    "statusBar.entities": "实体",
+    "statusBar.links": "链接",
+    "statusBar.compile": "编译版本",
     "statusBar.diagnostics": "诊断",
     "statusBar.tick": "Tick",
     "statusBar.simHz": "仿真频率",
@@ -154,12 +184,17 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.start": "Start",
     "action.pause": "Pause",
     "action.step": "Step",
+    "action.undo": "Undo",
+    "action.redo": "Redo",
     "action.zoomIn": "Zoom In",
     "action.zoomOut": "Zoom Out",
     "action.open": "Open",
     "action.close": "Close",
     "action.expand": "Expand",
     "action.collapse": "Collapse",
+    "action.deleteSelection": "Delete Selection",
+    "action.removeLinks": "Remove Links",
+    "action.removeLink": "Remove Link",
     "toolbar.tools": "Tools",
     "toolbar.views": "Views",
     "tool.select": "Select",
@@ -183,15 +218,21 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "section.configFields": "Config Fields",
     "section.runtimeDetails": "Runtime Details",
     "section.diagnostics": "Diagnostics",
+    "section.quickActions": "Quick Actions",
+    "section.connections": "Connections",
     "label.definition": "Definition",
     "label.entityId": "Entity ID",
     "label.mode": "Mode",
     "label.runtime": "Runtime",
+    "label.position": "Position",
+    "label.rotation": "Rotation",
+    "label.links": "Links",
     "label.items": "Items",
     "label.recipes": "Recipes",
     "label.definitions": "Definitions",
     "label.noSelection": "No Selection",
     "label.noConfigFields": "No configurable fields in the scaffold yet.",
+    "label.noConnections": "No explicit links on the current selection.",
     "label.runtimeDetailPlaceholder": "The runtime query lane will populate richer on-demand details here.",
     "label.noDiagnostics": "No diagnostics at the moment.",
     "status.ready": "Stage1 workbench scaffold is ready.",
@@ -201,7 +242,11 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "statusBar.view": "View",
     "statusBar.locale": "Locale",
     "statusBar.theme": "Theme",
+    "statusBar.tool": "Tool",
     "statusBar.speed": "Speed",
+    "statusBar.entities": "Entities",
+    "statusBar.links": "Links",
+    "statusBar.compile": "Compile",
     "statusBar.diagnostics": "Diagnostics",
     "statusBar.tick": "Tick",
     "statusBar.simHz": "Sim Hz",

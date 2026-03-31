@@ -6,11 +6,23 @@ import {
 import {
   getLocalizedStage1EntityName,
 } from "@/domain/registry/stage1-registry-i18n";
-import { createTranslator } from "@/i18n/messages";
+import {
+  createTranslator,
+  type MessageKey,
+} from "@/i18n/messages";
 
 export interface BottomStatusBarProps {
   snapshot: WorkbenchSnapshot;
 }
+
+const TOOL_LABEL_KEYS: Record<WorkbenchSnapshot["session"]["activeTool"], MessageKey> = {
+  select: "tool.select",
+  place: "tool.place",
+  belt: "tool.belt",
+  pipe: "tool.pipe",
+  link: "tool.link",
+  inspect: "tool.inspect",
+};
 
 export function BottomStatusBar({ snapshot }: BottomStatusBarProps) {
   const t = createTranslator(snapshot.ui.locale);
@@ -39,6 +51,10 @@ export function BottomStatusBar({ snapshot }: BottomStatusBarProps) {
           {t(snapshot.ui.mode === "edit" ? "mode.edit" : "mode.simulate")}
         </span>
         <span className="status-chip">
+          {t("statusBar.tool")}:{" "}
+          {t(TOOL_LABEL_KEYS[snapshot.session.activeTool])}
+        </span>
+        <span className="status-chip">
           {t("statusBar.locale")}: {t(`locale.${snapshot.ui.locale}`)}
         </span>
         <span className="status-chip">
@@ -50,7 +66,16 @@ export function BottomStatusBar({ snapshot }: BottomStatusBarProps) {
           {t("statusBar.selection")}: {selectionLabel}
         </span>
         <span className="status-chip">
+          {t("statusBar.entities")}: {snapshot.document.entityOrder.length}
+        </span>
+        <span className="status-chip">
+          {t("statusBar.links")}: {snapshot.document.explicitLinks.length}
+        </span>
+        <span className="status-chip">
           {t("statusBar.diagnostics")}: {snapshot.topology.diagnostics.length}
+        </span>
+        <span className="status-chip">
+          {t("statusBar.compile")}: {snapshot.topology.compileVersion}
         </span>
         <span className="status-chip">
           {t("statusBar.tick")}: {snapshot.telemetry.tick}

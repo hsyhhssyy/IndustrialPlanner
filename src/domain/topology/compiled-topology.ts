@@ -1,4 +1,8 @@
-import type { GridPoint, WorldDocument } from "@/domain/document/world-document";
+import type {
+  ExplicitLink,
+  GridPoint,
+  WorldDocument,
+} from "@/domain/document/world-document";
 import type {
   Stage1EntityDefinition,
   Stage1Registry,
@@ -17,9 +21,17 @@ export interface CompiledEntityView {
   position: GridPoint;
 }
 
+export interface CompiledExplicitLinkView {
+  id: string;
+  kind: ExplicitLink["kind"];
+  sourceEntityId: string;
+  targetEntityId: string;
+}
+
 export interface CompiledTopology {
   compileVersion: string;
   entityViews: Record<string, CompiledEntityView>;
+  explicitLinkViews: CompiledExplicitLinkView[];
   occupancyIndex: Record<string, string[]>;
   graphSummary: {
     solidTransportNodes: number;
