@@ -1,11 +1,11 @@
 import {
-  applyWorldDocumentCommand,
   createExplicitLinkId,
   createWorldEntityId,
   getEntityLinks,
   type GridPoint,
   type WorldDocument,
 } from "@/domain/document/world-document";
+import { applyWorldDocumentCommand } from "@/domain/document/document-command-applier";
 import type { DocumentCommand } from "@/domain/document/document-command";
 import type { EditorSession, EditorTool } from "@/editor/core/editor-session";
 

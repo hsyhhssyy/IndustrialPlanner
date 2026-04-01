@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { applyWorldDocumentCommand } from "@/domain/document/document-command-applier";
 import type { DocumentCommand } from "@/domain/document/document-command";
-import {
-  applyWorldDocumentCommand,
-  createStage1SeedWorldDocument,
-} from "@/domain/document/world-document";
+import { createStage1SeedWorldDocument } from "@/domain/document/world-document";
 
-describe("WorldDocument command application", () => {
+describe("Document command applier", () => {
   it("applies document-owned commands without depending on editor state", () => {
     const document = createStage1SeedWorldDocument();
     const placeCommand: DocumentCommand = {
