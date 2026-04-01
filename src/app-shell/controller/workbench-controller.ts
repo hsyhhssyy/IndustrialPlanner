@@ -19,9 +19,7 @@ import {
 import { createEditCanvasBackend } from "@/canvas/edit-canvas-backend";
 import { createSimulationCanvasBackend } from "@/canvas/simulation-canvas-backend";
 import { compileStage1World } from "@/domain/compiler/stage1-compiler";
-import {
-  type WorldDocument,
-} from "@/domain/document/world-document";
+import { type WorldDocument } from "@/domain/document/world-document";
 import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";
 import {
   createStage1Registry,
@@ -45,13 +43,9 @@ import { buildRenderScene } from "@/renderer/scene/build-render-scene";
 import type { RenderSceneModel } from "@/renderer/scene/types";
 import {
   createSimulationHost,
+  type SimulationHostSnapshot,
   type SimulationHost,
 } from "@/simulation/host/simulation-host";
-import type {
-  RuntimeInspectorDetails,
-  RuntimeRenderSnapshot,
-  RuntimeTelemetrySummary,
-} from "@/simulation/protocol/runtime-protocol";
 import {
   createSnapshotStore,
   type SnapshotStore,
@@ -71,9 +65,9 @@ export interface WorkbenchSnapshot {
   canvas: ReturnType<CanvasHost["getSnapshot"]>;
   activeCanvas: ReturnType<CanvasHost["getActiveBackendSnapshot"]>;
   topology: CompiledTopology;
-  runtimeSnapshot: RuntimeRenderSnapshot;
-  telemetry: RuntimeTelemetrySummary;
-  inspectorDetails: RuntimeInspectorDetails | null;
+  runtimeSnapshot: SimulationHostSnapshot["runtimeSnapshot"];
+  telemetry: SimulationHostSnapshot["telemetry"];
+  inspectorDetails: SimulationHostSnapshot["inspectorDetails"];
   registry: Stage1Registry;
   renderScene: RenderSceneModel;
 }
@@ -113,20 +107,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
   private readonly editorHost: EditorHost;
   private readonly canvasHost: CanvasHost;
   private readonly simulationHost: SimulationHost;
+  private readonly unsubscribeSimulationHost: () => void;
 
   private ui: WorkbenchUiState;
   private topology: CompiledTopology;
-  private runtimeSnapshot: RuntimeRenderSnapshot = {
-    tick: 0,
-    status: "idle",
-    entityViews: {},
-  };
-  private telemetry: RuntimeTelemetrySummary = {
-    tick: 0,
-    simulatedHertz: 0,
-    entityCount: 0,
-  };
-  private inspectorDetails: RuntimeInspectorDetails | null = null;
 
   constructor() {
     this.registry = createStage1Registry();
@@ -151,27 +135,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
       }),
       initialBackend: this.ui.mode === "simulate" ? "simulation" : "edit",
     });
+    this.simulationHost = createSimulationHost();
     this.store = createSnapshotStore(this.buildSnapshot());
-    this.simulationHost = createSimulationHost({
-      onRenderSnapshot: (runtimeSnapshot) => {
-        this.runtimeSnapshot = runtimeSnapshot;
-        this.sync();
-      },
-      onTelemetry: (telemetry) => {
-        this.telemetry = telemetry;
-        this.sync();
-      },
-      onStatusChange: (status) => {
-        this.runtimeSnapshot = {
-          ...this.runtimeSnapshot,
-          status,
-        };
-        this.sync();
-      },
-      onInspectorDetails: (details) => {
-        this.inspectorDetails = details;
-        this.sync();
-      },
+    this.unsubscribeSimulationHost = this.simulationHost.subscribe(() => {
+      this.sync();
     });
 
     this.loadSimulationWorld();
@@ -324,6 +291,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   dispose(): void {
+    this.unsubscribeSimulationHost();
     this.simulationHost.dispose();
   }
 
@@ -331,6 +299,12 @@ class WorkbenchControllerImpl implements WorkbenchController {
     const editorSnapshot = this.editorHost.getSnapshot();
     const canvasSnapshot = this.canvasHost.getSnapshot();
     const activeCanvas = this.canvasHost.getActiveBackendSnapshot();
+    const simulationSnapshot = this.simulationHost.getSnapshot();
+    const selectedEntityId = activeCanvas.selectedEntityIds[0] ?? null;
+    const inspectorDetails =
+      simulationSnapshot.inspectorDetails?.entityId === selectedEntityId
+        ? simulationSnapshot.inspectorDetails
+        : null;
 
     return {
       ui: this.ui,
@@ -340,16 +314,16 @@ class WorkbenchControllerImpl implements WorkbenchController {
       canvas: canvasSnapshot,
       activeCanvas,
       topology: this.topology,
-      runtimeSnapshot: this.runtimeSnapshot,
-      telemetry: this.telemetry,
-      inspectorDetails: this.inspectorDetails,
+      runtimeSnapshot: simulationSnapshot.runtimeSnapshot,
+      telemetry: simulationSnapshot.telemetry,
+      inspectorDetails,
       registry: this.registry,
       renderScene: buildRenderScene({
         document: editorSnapshot.document,
         topology: this.topology,
         canvas: canvasSnapshot,
         activeCanvas,
-        runtimeSnapshot: this.runtimeSnapshot,
+        runtimeSnapshot: simulationSnapshot.runtimeSnapshot,
       }),
     };
   }
@@ -384,7 +358,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
     if (documentChanged) {
       this.topology = compileStage1World(afterEditorSnapshot.document, this.registry);
       this.canvasHost.handleWorldChanged();
-      this.inspectorDetails = null;
       this.loadSimulationWorld();
     }
 
@@ -394,10 +367,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
     const selectionChanged = before.selectionId !== afterSelectionId;
     const pendingLinkChanged =
       before.pendingLinkSourceEntityId !== afterPendingLinkSourceEntityId;
-
-    if (!afterSelectionId) {
-      this.inspectorDetails = null;
-    }
 
     this.sync();
 
@@ -419,7 +388,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
     const selectedEntityId = this.getActiveSelectionId();
 
     if (!selectedEntityId) {
-      this.inspectorDetails = null;
       this.sync();
       return;
     }

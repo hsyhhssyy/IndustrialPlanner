@@ -2,22 +2,26 @@ import {
   createMockSimulationKernel,
   type SimulationKernel,
 } from "@/simulation/kernel/simulation-kernel";
+import {
+  createSnapshotStore,
+  type SnapshotStore,
+} from "@/shared/snapshot-store/snapshot-store";
 import type {
   LoadedSimulationWorld,
   RuntimeInspectorDetails,
   RuntimeRenderSnapshot,
   RuntimeTelemetrySummary,
-  SimulationStatus,
 } from "@/simulation/protocol/runtime-protocol";
 
-export interface SimulationHostCallbacks {
-  onRenderSnapshot: (snapshot: RuntimeRenderSnapshot) => void;
-  onTelemetry: (summary: RuntimeTelemetrySummary) => void;
-  onStatusChange: (status: SimulationStatus) => void;
-  onInspectorDetails: (details: RuntimeInspectorDetails) => void;
+export interface SimulationHostSnapshot {
+  runtimeSnapshot: RuntimeRenderSnapshot;
+  telemetry: RuntimeTelemetrySummary;
+  inspectorDetails: RuntimeInspectorDetails | null;
 }
 
 export interface SimulationHost {
+  subscribe: SnapshotStore<SimulationHostSnapshot>["subscribe"];
+  getSnapshot: SnapshotStore<SimulationHostSnapshot>["getSnapshot"];
   load: (world: LoadedSimulationWorld) => void;
   start: () => void;
   pause: () => void;
@@ -27,24 +31,43 @@ export interface SimulationHost {
 }
 
 interface CreateSimulationHostOptions {
-  callbacks: SimulationHostCallbacks;
   kernel?: SimulationKernel;
 }
 
+function createInitialSimulationHostSnapshot(): SimulationHostSnapshot {
+  return {
+    runtimeSnapshot: {
+      tick: 0,
+      status: "idle",
+      entityViews: {},
+    },
+    telemetry: {
+      tick: 0,
+      simulatedHertz: 0,
+      entityCount: 0,
+    },
+    inspectorDetails: null,
+  };
+}
+
 class SimulationHostImpl implements SimulationHost {
-  private readonly callbacks: SimulationHostCallbacks;
   private readonly kernel: SimulationKernel;
+  private readonly store: SnapshotStore<SimulationHostSnapshot>;
   private timerId: ReturnType<typeof setInterval> | null = null;
 
   constructor(options: CreateSimulationHostOptions) {
-    this.callbacks = options.callbacks;
     this.kernel = options.kernel ?? createMockSimulationKernel();
+    this.store = createSnapshotStore(createInitialSimulationHostSnapshot());
   }
+
+  subscribe = (listener: () => void) => this.store.subscribe(listener);
+
+  getSnapshot = () => this.store.getSnapshot();
 
   load(world: LoadedSimulationWorld): void {
     this.stopTimer();
     this.kernel.load(world);
-    this.emitRuntime();
+    this.emitRuntime(null);
   }
 
   start(): void {
@@ -75,22 +98,26 @@ class SimulationHostImpl implements SimulationHost {
 
   async queryInspector(entityId: string): Promise<void> {
     const details = this.kernel.queryInspector(entityId);
-
-    if (details) {
-      this.callbacks.onInspectorDetails(details);
-    }
+    this.store.update((snapshot) => ({
+      ...snapshot,
+      inspectorDetails: details,
+    }));
   }
 
   dispose(): void {
     this.stopTimer();
     this.kernel.dispose();
-    this.emitRuntime();
+    this.emitRuntime(null);
   }
 
-  private emitRuntime(): void {
-    this.callbacks.onStatusChange(this.kernel.getStatus());
-    this.callbacks.onRenderSnapshot(this.kernel.getRenderSnapshot());
-    this.callbacks.onTelemetry(this.kernel.getTelemetrySummary());
+  private emitRuntime(
+    inspectorDetails: RuntimeInspectorDetails | null = this.store.getSnapshot().inspectorDetails,
+  ): void {
+    this.store.setSnapshot({
+      runtimeSnapshot: this.kernel.getRenderSnapshot(),
+      telemetry: this.kernel.getTelemetrySummary(),
+      inspectorDetails,
+    });
   }
 
   private stopTimer(): void {
@@ -102,7 +129,7 @@ class SimulationHostImpl implements SimulationHost {
 }
 
 export function createSimulationHost(
-  callbacks: SimulationHostCallbacks,
+  options: CreateSimulationHostOptions = {},
 ): SimulationHost {
-  return new SimulationHostImpl({ callbacks });
+  return new SimulationHostImpl(options);
 }
