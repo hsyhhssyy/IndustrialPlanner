@@ -2,6 +2,9 @@ import type {
   WorkbenchController,
   WorkbenchSnapshot,
 } from "@/app-shell/controller/workbench-controller";
+import { EditSelectionInspector } from "@/app-shell/components/inspector/edit-selection-inspector";
+import type { SelectionInspectorContext } from "@/app-shell/components/inspector/selection-inspector-model";
+import { SimulationSelectionInspector } from "@/app-shell/components/inspector/simulation-selection-inspector";
 import {
   RIGHT_BASE_GROUPS,
   RIGHT_BASE_SUMMARY,
@@ -9,8 +12,6 @@ import {
   localizeText,
 } from "@/app-shell/workbench-placeholders";
 import {
-  getLocalizedMutabilityLabel,
-  getLocalizedStage1ConfigFieldLabel,
   getLocalizedStage1EntityName,
 } from "@/domain/registry/stage1-registry-i18n";
 import { createTranslator } from "@/i18n/messages";
@@ -18,22 +19,6 @@ import { createTranslator } from "@/i18n/messages";
 export interface RightDockProps {
   controller: WorkbenchController;
   snapshot: WorkbenchSnapshot;
-}
-
-function formatConfigValue(value: unknown): string {
-  if (Array.isArray(value)) {
-    return value.map((entry) => String(entry)).join(", ");
-  }
-
-  if (value === null || value === undefined) {
-    return "—";
-  }
-
-  if (typeof value === "object") {
-    return JSON.stringify(value);
-  }
-
-  return String(value);
 }
 
 export function RightDock({ controller, snapshot }: RightDockProps) {
@@ -60,7 +45,18 @@ export function RightDock({ controller, snapshot }: RightDockProps) {
           link.targetEntityId === selectedEntityId,
       )
     : [];
-  const editCommandsDisabled = snapshot.ui.mode === "simulate";
+  const selectionContext: SelectionInspectorContext | null =
+    selectedEntityId &&
+    selectedEntity &&
+    selectedDefinition
+      ? {
+          selectedEntityId,
+          selectedEntity,
+          selectedDefinition,
+          selectedEntityRuntime: selectedEntityRuntime ?? undefined,
+          selectedLinks,
+        }
+      : null;
 
   return (
     <aside className="dock dock-right panel-surface">
@@ -138,166 +134,18 @@ export function RightDock({ controller, snapshot }: RightDockProps) {
               <div className="card-header">
                 <h3>{t("rightDock.selection")}</h3>
               </div>
-              {selectedEntity && selectedDefinition ? (
-                <div className="stack">
-                  <dl className="kv-grid">
-                    <div className="kv">
-                      <dt>{t("label.definition")}</dt>
-                      <dd>
-                        {getLocalizedStage1EntityName(
-                          snapshot.ui.locale,
-                          selectedDefinition,
-                        )}
-                      </dd>
-                    </div>
-                    <div className="kv">
-                      <dt>{t("label.entityId")}</dt>
-                      <dd>{selectedEntity.id}</dd>
-                    </div>
-                    <div className="kv">
-                      <dt>{t("label.mode")}</dt>
-                      <dd>
-                        {t(
-                          snapshot.ui.mode === "edit"
-                            ? "mode.edit"
-                            : "mode.simulate",
-                        )}
-                      </dd>
-                    </div>
-                    <div className="kv">
-                      <dt>{t("label.runtime")}</dt>
-                      <dd>{selectedEntityRuntime?.status ?? "idle"}</dd>
-                    </div>
-                    <div className="kv">
-                      <dt>{t("label.position")}</dt>
-                      <dd>
-                        {selectedEntity.position.x}, {selectedEntity.position.y}
-                      </dd>
-                    </div>
-                    <div className="kv">
-                      <dt>{t("label.rotation")}</dt>
-                      <dd>{selectedEntity.rotation}°</dd>
-                    </div>
-                    <div className="kv">
-                      <dt>{t("label.links")}</dt>
-                      <dd>{selectedLinks.length}</dd>
-                    </div>
-                  </dl>
-                  <div className="cluster">
-                    <div className="card-header card-subheader">
-                      <h4>{t("section.quickActions")}</h4>
-                    </div>
-                    <div className="inspector-option-grid">
-                      <button
-                        disabled={editCommandsDisabled}
-                        onClick={() => {
-                          void controller.removeSelection();
-                        }}
-                        type="button"
-                      >
-                        {t("action.deleteSelection")}
-                      </button>
-                      <button
-                        disabled={editCommandsDisabled || selectedLinks.length === 0}
-                        onClick={() => {
-                          void controller.removeSelectionLinks();
-                        }}
-                        type="button"
-                      >
-                        {t("action.removeLinks")}
-                      </button>
-                      <button
-                        disabled={editCommandsDisabled}
-                        onClick={() => controller.setActiveTool("link")}
-                        type="button"
-                      >
-                        {t("tool.link")}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="cluster">
-                    <div className="card-header card-subheader">
-                      <h4>{t("section.connections")}</h4>
-                    </div>
-                    <div className="definition-list">
-                      {selectedLinks.length === 0 ? (
-                        <article className="definition-card">
-                          <p>{t("label.noConnections")}</p>
-                        </article>
-                      ) : (
-                        selectedLinks.map((link) => (
-                          <article className="definition-card" key={link.id}>
-                            <h4>{link.id}</h4>
-                            <p>
-                              {link.sourceEntityId} → {link.targetEntityId}
-                            </p>
-                            <button
-                              disabled={editCommandsDisabled}
-                              onClick={() => {
-                                void controller.removeLink(link.id);
-                              }}
-                              type="button"
-                            >
-                              {t("action.removeLink")}
-                            </button>
-                          </article>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                  <div className="cluster">
-                    <div className="card-header card-subheader">
-                      <h4>{t("section.configFields")}</h4>
-                    </div>
-                    <div className="definition-list">
-                      {selectedDefinition.configFields.length === 0 ? (
-                        <article className="definition-card">
-                          <p>{t("label.noConfigFields")}</p>
-                        </article>
-                      ) : (
-                        selectedDefinition.configFields.map((field) => (
-                          <article className="definition-card" key={field.key}>
-                            <h4>
-                              {getLocalizedStage1ConfigFieldLabel(
-                                snapshot.ui.locale,
-                                field,
-                              )}
-                            </h4>
-                            <p>
-                              {getLocalizedMutabilityLabel(
-                                snapshot.ui.locale,
-                                field.mutability,
-                              )}
-                            </p>
-                            <p>
-                              {formatConfigValue(selectedEntity.config[field.key])}
-                            </p>
-                          </article>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                  <div className="cluster">
-                    <div className="card-header card-subheader">
-                      <h4>{t("section.runtimeDetails")}</h4>
-                    </div>
-                    <div className="definition-list">
-                      {(snapshot.inspectorDetails?.entityId === selectedEntity.id
-                        ? snapshot.inspectorDetails.lines
-                        : [t("label.runtimeDetailPlaceholder")]
-                      ).map((line) => (
-                        <article className="definition-card" key={line}>
-                          <p>{line}</p>
-                        </article>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+              {snapshot.ui.mode === "edit" ? (
+                <EditSelectionInspector
+                  context={selectionContext}
+                  controller={controller}
+                  snapshot={snapshot}
+                />
               ) : (
-                <article className="definition-card">
-                  <h4>{t("label.noSelection")}</h4>
-                  <p>{t("label.runtimeDetailPlaceholder")}</p>
-                </article>
+                <SimulationSelectionInspector
+                  context={selectionContext}
+                  controller={controller}
+                  snapshot={snapshot}
+                />
               )}
             </article>
             {snapshot.ui.diagnosticsVisible ? (
