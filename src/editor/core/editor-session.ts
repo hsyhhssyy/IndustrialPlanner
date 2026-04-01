@@ -1,5 +1,3 @@
-import type { GridPoint } from "@/domain/document/world-document";
-
 export type EditorTool =
   | "select"
   | "place"
@@ -8,11 +6,6 @@ export type EditorTool =
   | "link"
   | "inspect";
 
-export interface EditorViewport {
-  offset: GridPoint;
-  zoom: number;
-}
-
 export interface EditorSession {
   activeTool: EditorTool;
   selection: string[];
@@ -20,7 +13,6 @@ export interface EditorSession {
   dragPreviewEntityId: string | null;
   placementDefinitionId: string | null;
   pendingLinkSourceEntityId: string | null;
-  viewport: EditorViewport;
 }
 
 export function createInitialEditorSession(): EditorSession {
@@ -31,10 +23,6 @@ export function createInitialEditorSession(): EditorSession {
     dragPreviewEntityId: null,
     placementDefinitionId: null,
     pendingLinkSourceEntityId: null,
-    viewport: {
-      offset: { x: 0, y: 0 },
-      zoom: 1,
-    },
   };
 }
 

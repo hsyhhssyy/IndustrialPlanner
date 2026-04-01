@@ -11,20 +11,25 @@ import {
   type WorkbenchMode,
   type WorkbenchUiState,
 } from "@/app-shell/state/workbench-ui-state";
+import {
+  createCanvasHost,
+  type CanvasHost,
+  type CanvasPoint,
+} from "@/canvas/canvas-host";
+import { createEditCanvasBackend } from "@/canvas/edit-canvas-backend";
+import { createSimulationCanvasBackend } from "@/canvas/simulation-canvas-backend";
 import { compileStage1World } from "@/domain/compiler/stage1-compiler";
+import {
+  createStage1SeedWorldDocument,
+  type WorldDocument,
+} from "@/domain/document/world-document";
 import {
   createStage1Registry,
   type Stage1Registry,
 } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import {
-  createStage1SeedWorldDocument,
-  getExplicitLinkBetween,
-  type WorldDocument,
-} from "@/domain/document/world-document";
-import {
   createInitialEditorSession,
-  isPlacementTool,
   type EditorTool,
 } from "@/editor/core/editor-session";
 import {
@@ -37,10 +42,7 @@ import {
   type WorkspaceStorageGateway,
 } from "@/persistence/local-workspace-storage";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
-import type {
-  RenderSceneInteraction,
-  RenderSceneModel,
-} from "@/renderer/scene/types";
+import type { RenderSceneModel } from "@/renderer/scene/types";
 import {
   createSimulationHost,
   type SimulationHost,
@@ -55,11 +57,19 @@ import {
   type SnapshotStore,
 } from "@/shared/snapshot-store/snapshot-store";
 
+interface MutationState {
+  document: WorldDocument;
+  selectionId: string | null;
+  pendingLinkSourceEntityId: string | null;
+}
+
 export interface WorkbenchSnapshot {
   ui: WorkbenchUiState;
   document: WorldDocument;
   session: ReturnType<EditorHost["getSnapshot"]>["session"];
   history: ReturnType<EditorHost["getSnapshot"]>["history"];
+  canvas: ReturnType<CanvasHost["getSnapshot"]>;
+  activeCanvas: ReturnType<CanvasHost["getActiveBackendSnapshot"]>;
   topology: CompiledTopology;
   runtimeSnapshot: RuntimeRenderSnapshot;
   telemetry: RuntimeTelemetrySummary;
@@ -76,7 +86,7 @@ export interface WorkbenchController {
   armPlacement: (definitionId: string, tool?: EditorTool) => void;
   selectEntity: (entityId: string) => Promise<void>;
   clearSelection: () => Promise<void>;
-  handleSceneClick: (interaction: RenderSceneInteraction) => Promise<void>;
+  handleCanvasClick: (screenPoint: CanvasPoint) => Promise<void>;
   removeSelection: () => Promise<void>;
   removeSelectionLinks: () => Promise<void>;
   removeLink: (linkId: string) => Promise<void>;
@@ -101,6 +111,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   private readonly storage: WorkspaceStorageGateway;
   private readonly store: SnapshotStore<WorkbenchSnapshot>;
   private readonly editorHost: EditorHost;
+  private readonly canvasHost: CanvasHost;
   private readonly simulationHost: SimulationHost;
 
   private ui: WorkbenchUiState;
@@ -129,6 +140,17 @@ class WorkbenchControllerImpl implements WorkbenchController {
       this.editorHost.getSnapshot().document,
       this.registry,
     );
+    this.canvasHost = createCanvasHost({
+      editBackend: createEditCanvasBackend({
+        editorHost: this.editorHost,
+        getTopology: () => this.topology,
+      }),
+      simulationBackend: createSimulationCanvasBackend({
+        getDocument: () => this.editorHost.getSnapshot().document,
+        getTopology: () => this.topology,
+      }),
+      initialBackend: this.ui.mode === "simulate" ? "simulation" : "edit",
+    });
     this.store = createSnapshotStore(this.buildSnapshot());
     this.simulationHost = createSimulationHost({
       onRenderSnapshot: (runtimeSnapshot) => {
@@ -164,15 +186,16 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.ui = {
       ...this.ui,
       mode,
-      statusMessageKey:
-        mode === "edit" ? "status.edit" : "status.simulate",
+      statusMessageKey: mode === "edit" ? "status.edit" : "status.simulate",
     };
+    this.canvasHost.setActiveBackend(mode === "edit" ? "edit" : "simulation");
 
     if (mode === "edit") {
       this.simulationHost.pause();
     }
 
     this.sync();
+    void this.refreshInspectorForSelection();
   }
 
   setActiveTool(tool: EditorTool): void {
@@ -201,84 +224,15 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
   }
 
-  async handleSceneClick(interaction: RenderSceneInteraction): Promise<void> {
-    const editorSnapshot = this.editorHost.getSnapshot();
-    const { activeTool, placementDefinitionId, pendingLinkSourceEntityId } =
-      editorSnapshot.session;
+  async handleCanvasClick(screenPoint: CanvasPoint): Promise<void> {
+    const before = this.captureMutationState();
 
-    if (activeTool === "link") {
-      if (!interaction.entityId) {
-        await this.clearSelection();
-        return;
-      }
+    await this.canvasHost.handlePrimaryClick({
+      screenPoint,
+      gridSize: this.editorHost.getSnapshot().document.documentSettings.gridSize,
+    });
 
-      if (!pendingLinkSourceEntityId) {
-        await this.applyEditorMutation(() => {
-          this.editorHost.selectEntity(interaction.entityId);
-          this.editorHost.setPendingLinkSource(interaction.entityId);
-        });
-        return;
-      }
-
-      if (pendingLinkSourceEntityId === interaction.entityId) {
-        await this.applyEditorMutation(() => {
-          this.editorHost.selectEntity(interaction.entityId);
-          this.editorHost.setPendingLinkSource(null);
-        });
-        return;
-      }
-
-      const resolvedPair = this.resolveDarkPipePair(
-        pendingLinkSourceEntityId,
-        interaction.entityId,
-      );
-
-      if (!resolvedPair) {
-        await this.applyEditorMutation(() => {
-          this.editorHost.selectEntity(interaction.entityId);
-          this.editorHost.setPendingLinkSource(interaction.entityId);
-        });
-        return;
-      }
-
-      const existingLink = getExplicitLinkBetween(
-        this.editorHost.getSnapshot().document,
-        resolvedPair.sourceEntityId,
-        resolvedPair.targetEntityId,
-      );
-
-      await this.applyEditorMutation(() => {
-        if (existingLink) {
-          this.editorHost.removeLink(existingLink.id);
-          this.editorHost.selectEntity(interaction.entityId);
-        } else {
-          this.editorHost.createLink(
-            resolvedPair.sourceEntityId,
-            resolvedPair.targetEntityId,
-          );
-        }
-
-        this.editorHost.setPendingLinkSource(null);
-      });
-      return;
-    }
-
-    if (interaction.entityId) {
-      await this.selectEntity(interaction.entityId);
-      return;
-    }
-
-    if (isPlacementTool(activeTool) && placementDefinitionId) {
-      await this.applyEditorMutation(() => {
-        this.editorHost.placeEntity(
-          placementDefinitionId,
-          interaction.gridPoint,
-        );
-      });
-      return;
-    }
-
-    await this.clearSelection();
+    await this.reconcileMutation(before);
   }
 
   async removeSelection(): Promise<void> {
@@ -314,12 +268,12 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   zoomIn(): void {
-    this.editorHost.zoomIn();
+    this.canvasHost.zoomBy(0.1);
     this.sync();
   }
 
   zoomOut(): void {
-    this.editorHost.zoomOut();
+    this.canvasHost.zoomBy(-0.1);
     this.sync();
   }
 
@@ -375,12 +329,16 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   private buildSnapshot(): WorkbenchSnapshot {
     const editorSnapshot = this.editorHost.getSnapshot();
+    const canvasSnapshot = this.canvasHost.getSnapshot();
+    const activeCanvas = this.canvasHost.getActiveBackendSnapshot();
 
     return {
       ui: this.ui,
       document: editorSnapshot.document,
       session: editorSnapshot.session,
       history: editorSnapshot.history,
+      canvas: canvasSnapshot,
+      activeCanvas,
       topology: this.topology,
       runtimeSnapshot: this.runtimeSnapshot,
       telemetry: this.telemetry,
@@ -389,7 +347,8 @@ class WorkbenchControllerImpl implements WorkbenchController {
       renderScene: buildRenderScene({
         document: editorSnapshot.document,
         topology: this.topology,
-        session: editorSnapshot.session,
+        canvas: canvasSnapshot,
+        activeCanvas,
         runtimeSnapshot: this.runtimeSnapshot,
       }),
     };
@@ -403,25 +362,40 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
   }
 
+  private captureMutationState(): MutationState {
+    return {
+      document: this.editorHost.getSnapshot().document,
+      selectionId: this.getActiveSelectionId(),
+      pendingLinkSourceEntityId:
+        this.canvasHost.getActiveBackendSnapshot().pendingLinkSourceEntityId,
+    };
+  }
+
   private async applyEditorMutation(mutator: () => void): Promise<void> {
-    const before = this.editorHost.getSnapshot();
-    const beforeSelectionId = before.session.selection[0] ?? null;
-
+    const before = this.captureMutationState();
     mutator();
+    await this.reconcileMutation(before);
+  }
 
-    const after = this.editorHost.getSnapshot();
-    const afterSelectionId = after.session.selection[0] ?? null;
-    const documentChanged = after.document !== before.document;
-    const selectionChanged = beforeSelectionId !== afterSelectionId;
-    const pendingLinkChanged =
-      before.session.pendingLinkSourceEntityId !==
-      after.session.pendingLinkSourceEntityId;
+  private async reconcileMutation(before: MutationState): Promise<void> {
+    const afterEditorSnapshot = this.editorHost.getSnapshot();
+    const documentChanged = afterEditorSnapshot.document !== before.document;
 
     if (documentChanged) {
-      this.topology = compileStage1World(after.document, this.registry);
+      this.topology = compileStage1World(afterEditorSnapshot.document, this.registry);
+      this.canvasHost.handleWorldChanged();
       this.inspectorDetails = null;
       this.loadSimulationWorld();
-    } else if (!afterSelectionId) {
+    }
+
+    const afterSelectionId = this.getActiveSelectionId();
+    const afterPendingLinkSourceEntityId =
+      this.canvasHost.getActiveBackendSnapshot().pendingLinkSourceEntityId;
+    const selectionChanged = before.selectionId !== afterSelectionId;
+    const pendingLinkChanged =
+      before.pendingLinkSourceEntityId !== afterPendingLinkSourceEntityId;
+
+    if (!afterSelectionId) {
       this.inspectorDetails = null;
     }
 
@@ -437,9 +411,12 @@ class WorkbenchControllerImpl implements WorkbenchController {
     }
   }
 
+  private getActiveSelectionId(): string | null {
+    return this.canvasHost.getActiveBackendSnapshot().selectedEntityIds[0] ?? null;
+  }
+
   private async refreshInspectorForSelection(): Promise<void> {
-    const selectedEntityId =
-      this.editorHost.getSnapshot().session.selection[0] ?? null;
+    const selectedEntityId = this.getActiveSelectionId();
 
     if (!selectedEntityId) {
       this.inspectorDetails = null;
@@ -448,39 +425,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
     }
 
     await this.simulationHost.queryInspector(selectedEntityId);
-  }
-
-  private resolveDarkPipePair(
-    entityIdA: string,
-    entityIdB: string,
-  ): { sourceEntityId: string; targetEntityId: string } | null {
-    const definitionA = this.topology.entityViews[entityIdA]?.definition;
-    const definitionB = this.topology.entityViews[entityIdB]?.definition;
-
-    if (!definitionA || !definitionB) {
-      return null;
-    }
-
-    const aCanSource = definitionA.capabilityIds.includes("device-link-source");
-    const aCanTarget = definitionA.capabilityIds.includes("device-link-target");
-    const bCanSource = definitionB.capabilityIds.includes("device-link-source");
-    const bCanTarget = definitionB.capabilityIds.includes("device-link-target");
-
-    if (aCanSource && bCanTarget) {
-      return {
-        sourceEntityId: entityIdA,
-        targetEntityId: entityIdB,
-      };
-    }
-
-    if (bCanSource && aCanTarget) {
-      return {
-        sourceEntityId: entityIdB,
-        targetEntityId: entityIdA,
-      };
-    }
-
-    return null;
   }
 
   private sync(): void {

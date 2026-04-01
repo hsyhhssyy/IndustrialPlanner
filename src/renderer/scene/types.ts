@@ -1,33 +1,25 @@
 import type {
-  GridPoint,
-  WorldDocument,
-} from "@/domain/document/world-document";
+  CanvasBackendSnapshot,
+  CanvasSnapshot,
+} from "@/canvas/canvas-host";
+import type { WorldDocument } from "@/domain/document/world-document";
 import type {
   CompiledTopology,
   TopologyDiagnostic,
 } from "@/domain/topology/compiled-topology";
-import type { EditorSession } from "@/editor/core/editor-session";
 import type { RuntimeRenderSnapshot } from "@/simulation/protocol/runtime-protocol";
 
 export interface RenderSceneInput {
   document: WorldDocument;
   topology: CompiledTopology;
-  session: EditorSession;
+  canvas: CanvasSnapshot;
+  activeCanvas: CanvasBackendSnapshot;
   runtimeSnapshot: RuntimeRenderSnapshot;
 }
 
 export interface RenderLayerDescriptor {
   id: string;
   label: string;
-}
-
-export interface RenderSceneInteraction {
-  entityId: string | null;
-  worldPoint: {
-    x: number;
-    y: number;
-  };
-  gridPoint: GridPoint;
 }
 
 export interface RenderEntitySprite {

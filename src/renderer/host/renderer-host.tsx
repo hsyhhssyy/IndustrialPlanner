@@ -2,17 +2,14 @@ import {
   useEffect,
   useEffectEvent,
   useRef,
-  type MouseEvent,
 } from "react";
 import type {
   RenderEntitySprite,
-  RenderSceneInteraction,
   RenderSceneModel,
 } from "@/renderer/scene/types";
 
 export interface RendererHostProps {
   scene: RenderSceneModel;
-  onSceneClick?: (interaction: RenderSceneInteraction) => void;
 }
 
 function getStatusStroke(status: RenderEntitySprite["status"]): string {
@@ -127,58 +124,8 @@ function drawScene(
   }
 }
 
-function hitTestEntity(
-  scene: RenderSceneModel,
-  x: number,
-  y: number,
-): string | null {
-  const worldX = x / scene.zoom;
-  const worldY = y / scene.zoom;
-
-  for (let index = scene.entities.length - 1; index >= 0; index -= 1) {
-    const entity = scene.entities[index];
-
-    if (!entity) {
-      continue;
-    }
-
-    if (
-      worldX >= entity.x &&
-      worldX <= entity.x + entity.width &&
-      worldY >= entity.y &&
-      worldY <= entity.y + entity.height
-    ) {
-      return entity.entityId;
-    }
-  }
-
-  return null;
-}
-
-function createSceneInteraction(
-  scene: RenderSceneModel,
-  x: number,
-  y: number,
-): RenderSceneInteraction {
-  const worldX = x / scene.zoom;
-  const worldY = y / scene.zoom;
-
-  return {
-    entityId: hitTestEntity(scene, x, y),
-    worldPoint: {
-      x: worldX,
-      y: worldY,
-    },
-    gridPoint: {
-      x: Math.max(0, Math.floor(worldX / scene.gridSize)),
-      y: Math.max(0, Math.floor(worldY / scene.gridSize)),
-    },
-  };
-}
-
 export function RendererHost({
   scene,
-  onSceneClick,
 }: RendererHostProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -188,24 +135,13 @@ export function RendererHost({
     }
   });
 
-  const handleCanvasClick = (event: MouseEvent<HTMLCanvasElement>) => {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX - bounds.left;
-    const y = event.clientY - bounds.top;
-    onSceneClick?.(createSceneInteraction(scene, x, y));
-  };
-
   useEffect(() => {
     redraw();
   }, [scene]);
 
   return (
     <div className="renderer-host">
-      <canvas
-        className="renderer-canvas"
-        onClick={handleCanvasClick}
-        ref={canvasRef}
-      />
+      <canvas className="renderer-canvas" ref={canvasRef} />
     </div>
   );
 }

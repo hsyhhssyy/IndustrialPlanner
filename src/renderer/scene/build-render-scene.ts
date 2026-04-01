@@ -50,8 +50,9 @@ function buildEntitySprite(input: RenderSceneInput, entityId: string): RenderEnt
     fill: getEntityFill(definition),
     status: input.runtimeSnapshot.entityViews[entityId]?.status ?? "idle",
     progress: input.runtimeSnapshot.entityViews[entityId]?.progress ?? 0,
-    selected: input.session.selection.includes(entityId),
-    pendingLinkSource: input.session.pendingLinkSourceEntityId === entityId,
+    selected: input.activeCanvas.selectedEntityIds.includes(entityId),
+    pendingLinkSource:
+      input.activeCanvas.pendingLinkSourceEntityId === entityId,
   };
 }
 
@@ -83,8 +84,8 @@ function buildExplicitLinkSprites(
           (targetView.position.y + targetView.definition.footprint.height / 2) *
           input.document.documentSettings.gridSize,
         selected:
-          input.session.selection.includes(link.sourceEntityId) ||
-          input.session.selection.includes(link.targetEntityId),
+          input.activeCanvas.selectedEntityIds.includes(link.sourceEntityId) ||
+          input.activeCanvas.selectedEntityIds.includes(link.targetEntityId),
       };
     })
     .filter((link): link is RenderExplicitLink => link !== null);
@@ -106,7 +107,7 @@ export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
   );
 
   return {
-    zoom: input.session.viewport.zoom,
+    zoom: input.canvas.viewport.zoom,
     gridSize: input.document.documentSettings.gridSize,
     worldWidth: maxWorldWidth,
     worldHeight: maxWorldHeight,

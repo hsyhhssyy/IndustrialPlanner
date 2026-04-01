@@ -1,7 +1,44 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { createWorkbenchController } from "@/app-shell/controller/workbench-controller";
 
+function toScreenPointForGrid(
+  controller: ReturnType<typeof createWorkbenchController>,
+  gridPoint: { x: number; y: number },
+) {
+  const snapshot = controller.getSnapshot();
+  const scaledGridSize =
+    snapshot.document.documentSettings.gridSize * snapshot.canvas.viewport.zoom;
+
+  return {
+    x: gridPoint.x * scaledGridSize + 1,
+    y: gridPoint.y * scaledGridSize + 1,
+  };
+}
+
+function toScreenPointForEntity(
+  controller: ReturnType<typeof createWorkbenchController>,
+  entityId: string,
+) {
+  const snapshot = controller.getSnapshot();
+  const entity = snapshot.renderScene.entities.find(
+    (candidate) => candidate.entityId === entityId,
+  );
+
+  if (!entity) {
+    throw new Error(`Missing render entity ${entityId}`);
+  }
+
+  return {
+    x: (entity.x + 1) * snapshot.canvas.viewport.zoom,
+    y: (entity.y + 1) * snapshot.canvas.viewport.zoom,
+  };
+}
+
 describe("WorkbenchController scaffold", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it("boots with a stage1 seed world and compiled topology", () => {
     const controller = createWorkbenchController();
     const snapshot = controller.getSnapshot();
@@ -20,6 +57,7 @@ describe("WorkbenchController scaffold", () => {
 
     expect(controller.getSnapshot().runtimeSnapshot.tick).toBe(1);
     expect(controller.getSnapshot().ui.mode).toBe("simulate");
+    expect(controller.getSnapshot().canvas.activeBackend).toBe("simulation");
 
     controller.dispose();
   });
@@ -33,6 +71,7 @@ describe("WorkbenchController scaffold", () => {
     controller.setDiagnosticsVisible(false);
     controller.setLeftPanelMode("blueprint");
     controller.setSimulationSpeedPreset("4x");
+    controller.zoomIn();
     await controller.selectEntity("filler-1");
 
     const snapshot = controller.getSnapshot();
@@ -46,22 +85,22 @@ describe("WorkbenchController scaffold", () => {
     expect(snapshot.ui.diagnosticsVisible).toBe(false);
     expect(snapshot.ui.leftPanelMode).toBe("blueprint");
     expect(snapshot.ui.simulationSpeed).toBe("4x");
+    expect(snapshot.canvas.viewport.zoom).toBeGreaterThan(1);
+    expect(snapshot.renderScene.zoom).toBe(snapshot.canvas.viewport.zoom);
     expect(fillerSprite?.selected).toBe(true);
     expect(snapshot.renderScene.entities.length).toBeGreaterThan(0);
 
     controller.dispose();
   });
 
-  it("places an entity through the renderer interaction loop and recompiles topology", async () => {
+  it("places an entity through the canvas host interaction loop and recompiles topology", async () => {
     const controller = createWorkbenchController();
     const before = controller.getSnapshot();
 
     controller.armPlacement("belt_straight_1x1", "belt");
-    await controller.handleSceneClick({
-      entityId: null,
-      worldPoint: { x: 0, y: 0 },
-      gridPoint: { x: 24, y: 12 },
-    });
+    await controller.handleCanvasClick(
+      toScreenPointForGrid(controller, { x: 24, y: 12 }),
+    );
 
     const after = controller.getSnapshot();
     const placedEntityId = after.document.entityOrder.at(-1);
@@ -82,30 +121,24 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("creates and removes a dark pipe link through the minimal edit loop", async () => {
+  it("creates and removes a dark pipe link through the edit canvas backend", async () => {
     const controller = createWorkbenchController();
 
     controller.armPlacement("item_port_udpipe_loader_1", "place");
-    await controller.handleSceneClick({
-      entityId: null,
-      worldPoint: { x: 0, y: 0 },
-      gridPoint: { x: 22, y: 2 },
-    });
+    await controller.handleCanvasClick(
+      toScreenPointForGrid(controller, { x: 22, y: 2 }),
+    );
 
     const placedInletId = controller.getSnapshot().document.entityOrder.at(-1);
     expect(placedInletId).toBeTruthy();
 
     controller.setActiveTool("link");
-    await controller.handleSceneClick({
-      entityId: placedInletId ?? null,
-      worldPoint: { x: 0, y: 0 },
-      gridPoint: { x: 22, y: 2 },
-    });
-    await controller.handleSceneClick({
-      entityId: "dark-outlet-1",
-      worldPoint: { x: 0, y: 0 },
-      gridPoint: { x: 12, y: 2 },
-    });
+    await controller.handleCanvasClick(
+      toScreenPointForEntity(controller, placedInletId ?? ""),
+    );
+    await controller.handleCanvasClick(
+      toScreenPointForEntity(controller, "dark-outlet-1"),
+    );
 
     const linkedSnapshot = controller.getSnapshot();
     expect(linkedSnapshot.document.explicitLinks).toHaveLength(1);
@@ -125,11 +158,9 @@ describe("WorkbenchController scaffold", () => {
     const initialCount = controller.getSnapshot().document.entityOrder.length;
 
     controller.armPlacement("pipe_straight_1x1", "pipe");
-    await controller.handleSceneClick({
-      entityId: null,
-      worldPoint: { x: 0, y: 0 },
-      gridPoint: { x: 26, y: 4 },
-    });
+    await controller.handleCanvasClick(
+      toScreenPointForGrid(controller, { x: 26, y: 4 }),
+    );
 
     expect(controller.getSnapshot().document.entityOrder).toHaveLength(initialCount + 1);
     expect(controller.getSnapshot().history.canUndo).toBe(true);
@@ -140,6 +171,24 @@ describe("WorkbenchController scaffold", () => {
 
     await controller.redo();
     expect(controller.getSnapshot().document.entityOrder).toHaveLength(initialCount + 1);
+
+    controller.dispose();
+  });
+
+  it("keeps simulation selection separate from edit session selection", async () => {
+    const controller = createWorkbenchController();
+
+    await controller.selectEntity("filler-1");
+    controller.setMode("simulate");
+    await controller.handleCanvasClick(
+      toScreenPointForEntity(controller, "dark-outlet-1"),
+    );
+
+    const snapshot = controller.getSnapshot();
+
+    expect(snapshot.canvas.activeBackend).toBe("simulation");
+    expect(snapshot.activeCanvas.selectedEntityIds).toEqual(["dark-outlet-1"]);
+    expect(snapshot.session.selection).toEqual(["filler-1"]);
 
     controller.dispose();
   });

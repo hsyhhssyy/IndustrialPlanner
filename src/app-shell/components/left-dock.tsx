@@ -71,15 +71,17 @@ function isActionDisabled(
   actionId: PlaceholderActionId | undefined,
   snapshot: WorkbenchSnapshot,
 ): boolean {
+  const editCommandsDisabled = snapshot.ui.mode === "simulate";
+
   switch (actionId) {
     case "selection.clear":
     case "selection.remove":
     case "selection.links.remove":
-      return snapshot.session.selection.length === 0;
+      return editCommandsDisabled || snapshot.session.selection.length === 0;
     case "history.undo":
-      return !snapshot.history.canUndo;
+      return editCommandsDisabled || !snapshot.history.canUndo;
     case "history.redo":
-      return !snapshot.history.canRedo;
+      return editCommandsDisabled || !snapshot.history.canRedo;
     default:
       return false;
   }

@@ -19,8 +19,6 @@ export interface EditorHost {
   removeSelectedLinks: () => void;
   undo: () => void;
   redo: () => void;
-  zoomIn: () => void;
-  zoomOut: () => void;
 }
 
 interface CreateEditorHostOptions {
@@ -87,14 +85,6 @@ class EditorHostImpl implements EditorHost {
 
   redo(): void {
     this.core.redo();
-  }
-
-  zoomIn(): void {
-    this.core.zoomBy(0.1);
-  }
-
-  zoomOut(): void {
-    this.core.zoomBy(-0.1);
   }
 }
 

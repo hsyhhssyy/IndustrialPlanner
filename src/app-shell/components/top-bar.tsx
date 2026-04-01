@@ -16,7 +16,7 @@ export interface TopBarProps {
 export function TopBar({ controller, snapshot }: TopBarProps) {
   const t = createTranslator(snapshot.ui.locale);
   const cellSizeLabel = `${Math.round(
-    snapshot.renderScene.gridSize * snapshot.session.viewport.zoom,
+    snapshot.renderScene.gridSize * snapshot.canvas.viewport.zoom,
   )}px`;
   const simulationRunning = snapshot.runtimeSnapshot.status === "running";
 

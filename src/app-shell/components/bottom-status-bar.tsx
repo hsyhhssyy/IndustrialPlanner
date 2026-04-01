@@ -26,7 +26,7 @@ const TOOL_LABEL_KEYS: Record<WorkbenchSnapshot["session"]["activeTool"], Messag
 
 export function BottomStatusBar({ snapshot }: BottomStatusBarProps) {
   const t = createTranslator(snapshot.ui.locale);
-  const selectedEntityId = snapshot.session.selection[0] ?? null;
+  const selectedEntityId = snapshot.activeCanvas.selectedEntityIds[0] ?? null;
   const selectedDefinition = selectedEntityId
     ? snapshot.topology.entityViews[selectedEntityId]?.definition ?? null
     : null;

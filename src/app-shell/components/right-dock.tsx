@@ -43,7 +43,7 @@ export function RightDock({ controller, snapshot }: RightDockProps) {
 
   const t = createTranslator(snapshot.ui.locale);
 
-  const selectedEntityId = snapshot.session.selection[0] ?? null;
+  const selectedEntityId = snapshot.activeCanvas.selectedEntityIds[0] ?? null;
   const selectedEntity = selectedEntityId
     ? snapshot.document.entities[selectedEntityId]
     : null;
@@ -60,6 +60,7 @@ export function RightDock({ controller, snapshot }: RightDockProps) {
           link.targetEntityId === selectedEntityId,
       )
     : [];
+  const editCommandsDisabled = snapshot.ui.mode === "simulate";
 
   return (
     <aside className="dock dock-right panel-surface">
@@ -188,6 +189,7 @@ export function RightDock({ controller, snapshot }: RightDockProps) {
                     </div>
                     <div className="inspector-option-grid">
                       <button
+                        disabled={editCommandsDisabled}
                         onClick={() => {
                           void controller.removeSelection();
                         }}
@@ -196,7 +198,7 @@ export function RightDock({ controller, snapshot }: RightDockProps) {
                         {t("action.deleteSelection")}
                       </button>
                       <button
-                        disabled={selectedLinks.length === 0}
+                        disabled={editCommandsDisabled || selectedLinks.length === 0}
                         onClick={() => {
                           void controller.removeSelectionLinks();
                         }}
@@ -205,6 +207,7 @@ export function RightDock({ controller, snapshot }: RightDockProps) {
                         {t("action.removeLinks")}
                       </button>
                       <button
+                        disabled={editCommandsDisabled}
                         onClick={() => controller.setActiveTool("link")}
                         type="button"
                       >
@@ -229,6 +232,7 @@ export function RightDock({ controller, snapshot }: RightDockProps) {
                               {link.sourceEntityId} → {link.targetEntityId}
                             </p>
                             <button
+                              disabled={editCommandsDisabled}
                               onClick={() => {
                                 void controller.removeLink(link.id);
                               }}

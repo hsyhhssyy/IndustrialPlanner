@@ -41,7 +41,6 @@ export interface EditorCore {
   removeSelectedLinks: () => void;
   undo: () => void;
   redo: () => void;
-  zoomBy: (delta: number) => void;
 }
 
 interface CreateEditorCoreOptions {
@@ -217,16 +216,6 @@ class EditorCoreImpl implements EditorCore {
     this.document = entry.after;
     this.undoStack.push(entry);
     this.sanitizeSession();
-  }
-
-  zoomBy(delta: number): void {
-    this.session = {
-      ...this.session,
-      viewport: {
-        ...this.session.viewport,
-        zoom: Math.min(2.5, Math.max(0.5, this.session.viewport.zoom + delta)),
-      },
-    };
   }
 
   private applyCommand(command: DocumentCommand): boolean {
