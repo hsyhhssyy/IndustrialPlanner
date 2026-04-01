@@ -1,4 +1,4 @@
-import type { DocumentCommand } from "@/editor/core/command-types";
+import type { DocumentCommand } from "@/domain/document/document-command";
 
 export type GridRotation = 0 | 90 | 180 | 270;
 

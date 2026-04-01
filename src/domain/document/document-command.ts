@@ -4,11 +4,6 @@ import type {
   GridRotation,
 } from "@/domain/document/world-document";
 
-export type ConfigMutability =
-  | "document-only"
-  | "runtime-mutable"
-  | "recompile-required";
-
 export interface PlaceEntityCommand {
   type: "entity.place";
   payload: {
@@ -77,27 +72,3 @@ export type DocumentCommand =
   | PatchEntityConfigCommand
   | CreateLinkCommand
   | RemoveLinkCommand;
-
-export interface SessionAction {
-  type:
-    | "session.select"
-    | "session.hover"
-    | "session.tool.set";
-  payload: Record<string, unknown>;
-}
-
-export interface CanvasAction {
-  type: "canvas.viewport.pan" | "canvas.viewport.zoom";
-  payload: Record<string, unknown>;
-}
-
-export interface RuntimeControl {
-  type:
-    | "runtime.start"
-    | "runtime.pause"
-    | "runtime.step"
-    | "runtime.speed.set"
-    | "runtime.patch"
-    | "runtime.query.inspect";
-  payload: Record<string, unknown>;
-}

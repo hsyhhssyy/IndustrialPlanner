@@ -1,9 +1,9 @@
 import type { AppLocale } from "@/i18n/messages";
+import type { ConfigMutability } from "@/domain/document/config-mutability";
 import type {
   Stage1ConfigField,
   Stage1EntityDefinition,
 } from "@/domain/registry/stage1-registry";
-import type { ConfigMutability } from "@/editor/core/command-types";
 
 const ENTITY_NAME_MAP: Record<AppLocale, Record<string, string>> = {
   "zh-CN": {

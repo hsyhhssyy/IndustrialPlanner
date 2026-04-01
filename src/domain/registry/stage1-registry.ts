@@ -1,4 +1,4 @@
-import type { ConfigMutability } from "@/editor/core/command-types";
+import type { ConfigMutability } from "@/domain/document/config-mutability";
 
 export type Stage1Medium = "solid" | "liquid";
 

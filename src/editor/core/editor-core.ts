@@ -6,7 +6,7 @@ import {
   type GridPoint,
   type WorldDocument,
 } from "@/domain/document/world-document";
-import type { DocumentCommand } from "@/editor/core/command-types";
+import type { DocumentCommand } from "@/domain/document/document-command";
 import type { EditorSession, EditorTool } from "@/editor/core/editor-session";
 
 interface DocumentHistoryEntry {
