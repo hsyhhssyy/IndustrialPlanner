@@ -1,27 +1,29 @@
 import type {
   WorkbenchController,
-  WorkbenchSnapshot,
-} from "@/app-shell/controller/workbench-controller";
-import {
-  getLocalizedStage1EntityName,
-} from "@/domain/registry/stage1-registry-i18n";
+} from "@/app-shell/contracts/workbench-facade";
 import type {
   ExplicitLink,
 } from "@/domain/document/world-document";
 import type { AppLocale } from "@/i18n/messages";
 import { createTranslator } from "@/i18n/messages";
+import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import type {
   SelectionInspectorContext,
+  SelectionInspectorState,
+} from "@/app-shell/components/inspector/selection-inspector-model";
+import {
+  parseConfigInputValue,
+  serializeConfigValueForInput,
 } from "@/app-shell/components/inspector/selection-inspector-model";
 
 export function SelectionInspectorSummary({
-  snapshot,
+  state,
   context,
 }: {
-  snapshot: WorkbenchSnapshot;
+  state: SelectionInspectorState;
   context: SelectionInspectorContext;
 }) {
-  const t = createTranslator(snapshot.ui.locale);
+  const t = createTranslator(state.locale);
 
   return (
     <dl className="kv-grid">
@@ -29,7 +31,7 @@ export function SelectionInspectorSummary({
         <dt>{t("label.definition")}</dt>
         <dd>
           {getLocalizedStage1EntityName(
-            snapshot.ui.locale,
+            state.locale,
             context.selectedDefinition,
           )}
         </dd>
@@ -40,9 +42,7 @@ export function SelectionInspectorSummary({
       </div>
       <div className="kv">
         <dt>{t("label.mode")}</dt>
-        <dd>
-          {t(snapshot.ui.mode === "edit" ? "mode.edit" : "mode.simulate")}
-        </dd>
+        <dd>{t(state.mode === "edit" ? "mode.edit" : "mode.simulate")}</dd>
       </div>
       <div className="kv">
         <dt>{t("label.runtime")}</dt>
@@ -109,16 +109,16 @@ export function ConnectionList({
 }
 
 export function RuntimeDetailList({
-  snapshot,
+  state,
   context,
 }: {
-  snapshot: WorkbenchSnapshot;
+  state: SelectionInspectorState;
   context: SelectionInspectorContext;
 }) {
-  const t = createTranslator(snapshot.ui.locale);
+  const t = createTranslator(state.locale);
   const lines =
-    snapshot.inspectorDetails?.entityId === context.selectedEntity.id
-      ? snapshot.inspectorDetails.lines
+    state.inspectorDetails?.entityId === context.selectedEntity.id
+      ? state.inspectorDetails.lines
       : [t("label.runtimeDetailPlaceholder")];
 
   return (
@@ -140,5 +140,86 @@ export function NoSelectionState({ locale }: { locale: AppLocale }) {
       <h4>{t("label.noSelection")}</h4>
       <p>{t("label.runtimeDetailPlaceholder")}</p>
     </article>
+  );
+}
+
+export function ConfigFieldMutationControl({
+  currentValue,
+  locale,
+  submitLabel,
+  toggleLabel,
+  clearLabel,
+  disabled = false,
+  onApply,
+  onClear,
+}: {
+  currentValue: unknown;
+  locale: AppLocale;
+  submitLabel: string;
+  toggleLabel: string;
+  clearLabel?: string;
+  disabled?: boolean;
+  onApply: (value: unknown) => Promise<void> | void;
+  onClear?: () => Promise<void> | void;
+}) {
+  const t = createTranslator(locale);
+
+  if (typeof currentValue === "boolean") {
+    return (
+      <div className="inspector-option-grid">
+        <button
+          disabled={disabled}
+          onClick={() => {
+            void onApply(!currentValue);
+          }}
+          type="button"
+        >
+          {toggleLabel}: {currentValue ? t("action.close") : t("action.open")}
+        </button>
+        {onClear ? (
+          <button
+            disabled={disabled}
+            onClick={() => {
+              void onClear();
+            }}
+            type="button"
+          >
+            {clearLabel}
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <form
+      className="cluster"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const rawValue = String(formData.get("nextValue") ?? "");
+        void onApply(parseConfigInputValue(rawValue, currentValue));
+      }}
+    >
+      <input
+        defaultValue={serializeConfigValueForInput(currentValue)}
+        disabled={disabled}
+        name="nextValue"
+      />
+      <button disabled={disabled} type="submit">
+        {submitLabel}
+      </button>
+      {onClear ? (
+        <button
+          disabled={disabled}
+          onClick={() => {
+            void onClear();
+          }}
+          type="button"
+        >
+          {clearLabel}
+        </button>
+      ) : null}
+    </form>
   );
 }

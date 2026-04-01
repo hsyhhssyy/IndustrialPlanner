@@ -1,9 +1,7 @@
-export type GridRotation = 0 | 90 | 180 | 270;
-
-export interface GridPoint {
-  x: number;
-  y: number;
-}
+import type {
+  GridPoint,
+  GridRotation,
+} from "@/shared/geometry/grid";
 
 export interface WorldEntity {
   id: string;

@@ -1,13 +1,15 @@
-import type { WorkbenchController, WorkbenchSnapshot } from "@/app-shell/controller/workbench-controller";
+import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
+import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { RendererHost } from "@/renderer/host/renderer-host";
 import type { CSSProperties, MouseEvent } from "react";
 
 export interface CanvasPanelProps {
   controller: WorkbenchController;
-  snapshot: WorkbenchSnapshot;
 }
 
-export function CanvasPanel({ controller, snapshot }: CanvasPanelProps) {
+export function CanvasPanel({ controller }: CanvasPanelProps) {
+  const renderScene = useExternalStore(controller.renderSceneStore);
+
   const handleCanvasClick = (event: MouseEvent<HTMLDivElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
 
@@ -25,12 +27,12 @@ export function CanvasPanel({ controller, snapshot }: CanvasPanelProps) {
           className="canvas-scroll-surface"
           style={
             {
-              "--renderer-width": `${Math.floor(snapshot.renderScene.worldWidth * snapshot.renderScene.zoom)}px`,
-              "--renderer-height": `${Math.floor(snapshot.renderScene.worldHeight * snapshot.renderScene.zoom)}px`,
+              "--renderer-width": `${Math.floor(renderScene.worldWidth * renderScene.zoom)}px`,
+              "--renderer-height": `${Math.floor(renderScene.worldHeight * renderScene.zoom)}px`,
             } as CSSProperties
           }
         >
-          <RendererHost scene={snapshot.renderScene} />
+          <RendererHost scene={renderScene} />
         </div>
       </div>
     </main>

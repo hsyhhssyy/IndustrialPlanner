@@ -3,8 +3,12 @@ import {
   type EditorCore,
   type EditorCoreSnapshot,
 } from "@/editor/core/editor-core";
-import type { EditorSession, EditorTool } from "@/editor/core/editor-session";
-import type { GridPoint, WorldDocument } from "@/domain/document/world-document";
+import type {
+  EditorSession,
+  EditorTool,
+} from "@/editor/contracts/editor-session";
+import type { WorldDocument } from "@/domain/document/world-document";
+import type { GridPoint } from "@/shared/geometry/grid";
 
 export interface EditorHost {
   getSnapshot: () => EditorCoreSnapshot;
@@ -13,6 +17,7 @@ export interface EditorHost {
   selectEntity: (entityId: string | null) => void;
   setPendingLinkSource: (entityId: string | null) => void;
   placeEntity: (definitionId: string, position: GridPoint) => void;
+  patchEntityConfig: (entityId: string, patch: Record<string, unknown>) => void;
   createLink: (sourceEntityId: string, targetEntityId: string) => void;
   removeLink: (linkId: string) => void;
   removeSelectedEntities: () => void;
@@ -61,6 +66,10 @@ class EditorHostImpl implements EditorHost {
 
   placeEntity(definitionId: string, position: GridPoint): void {
     this.core.placeEntity(definitionId, position);
+  }
+
+  patchEntityConfig(entityId: string, patch: Record<string, unknown>): void {
+    this.core.patchEntityConfig(entityId, patch);
   }
 
   createLink(sourceEntityId: string, targetEntityId: string): void {

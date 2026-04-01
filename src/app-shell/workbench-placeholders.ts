@@ -1,18 +1,17 @@
 import type {
   LeftPanelMode,
   SimulationSpeedPreset,
-} from "@/app-shell/state/workbench-ui-state";
-import type { EditorTool } from "@/editor/core/editor-session";
-import type { AppLocale } from "@/i18n/messages";
+} from "@/app-shell/contracts/workbench-ui";
+import type { EditorTool } from "@/editor/contracts/editor-session";
 
-export interface LocalizedText {
-  "zh-CN": string;
-  "en-US": string;
+export interface WorkbenchTextDescriptor {
+  messageKey: string;
+  fallback: string;
 }
 
 export interface PlaceholderButtonDescriptor {
   id: string;
-  label: LocalizedText;
+  label: WorkbenchTextDescriptor;
   hotkey?: string;
   tool?: EditorTool;
   definitionId?: string;
@@ -21,47 +20,47 @@ export interface PlaceholderButtonDescriptor {
 
 export interface PlaceholderSectionDescriptor {
   id: string;
-  title: LocalizedText;
+  title: WorkbenchTextDescriptor;
   hotkey?: string;
   buttons: PlaceholderButtonDescriptor[];
 }
 
 export interface LeftPanelDescriptor {
-  title: LocalizedText;
+  title: WorkbenchTextDescriptor;
   sections: PlaceholderSectionDescriptor[];
 }
 
 export interface LeftRailDescriptor {
   id: LeftPanelMode;
-  label: LocalizedText;
+  label: WorkbenchTextDescriptor;
   shortLabel: string;
 }
 
 export interface UtilityRailDescriptor {
   id: "feedback" | "toolbox" | "help" | "settings";
-  label: LocalizedText;
+  label: WorkbenchTextDescriptor;
   shortLabel: string;
 }
 
 export interface BaseGroupDescriptor {
-  title: LocalizedText;
+  title: WorkbenchTextDescriptor;
   options: Array<{
     id: string;
-    label: LocalizedText;
+    label: WorkbenchTextDescriptor;
     active?: boolean;
   }>;
 }
 
 export interface BaseSummaryFieldDescriptor {
   id: string;
-  label: LocalizedText;
-  value: LocalizedText;
+  label: WorkbenchTextDescriptor;
+  value: WorkbenchTextDescriptor;
 }
 
 export interface PowerSummaryFieldDescriptor {
   id: string;
-  label: LocalizedText;
-  value: LocalizedText;
+  label: WorkbenchTextDescriptor;
+  value: WorkbenchTextDescriptor;
 }
 
 export type PlaceholderActionId =
@@ -71,25 +70,33 @@ export type PlaceholderActionId =
   | "history.undo"
   | "history.redo";
 
+const text = (
+  messageKey: string,
+  fallback: string,
+): WorkbenchTextDescriptor => ({
+  messageKey,
+  fallback,
+});
+
 export const LEFT_RAIL_PRIMARY_ITEMS: LeftRailDescriptor[] = [
   {
     id: "placement",
-    label: { "zh-CN": "放置模式", "en-US": "Placement" },
+    label: text("workbench.leftRail.placement", "Placement"),
     shortLabel: "P",
   },
   {
     id: "delete",
-    label: { "zh-CN": "删除模式", "en-US": "Delete" },
+    label: text("workbench.leftRail.delete", "Delete"),
     shortLabel: "D",
   },
   {
     id: "blueprint",
-    label: { "zh-CN": "蓝图模式", "en-US": "Blueprint" },
+    label: text("workbench.leftRail.blueprint", "Blueprint"),
     shortLabel: "B",
   },
   {
     id: "history",
-    label: { "zh-CN": "操作历史", "en-US": "History" },
+    label: text("workbench.leftRail.history", "History"),
     shortLabel: "H",
   },
 ];
@@ -97,192 +104,192 @@ export const LEFT_RAIL_PRIMARY_ITEMS: LeftRailDescriptor[] = [
 export const LEFT_RAIL_UTILITY_ITEMS: UtilityRailDescriptor[] = [
   {
     id: "feedback",
-    label: { "zh-CN": "问题反馈", "en-US": "Feedback" },
+    label: text("workbench.utility.feedback", "Feedback"),
     shortLabel: "F",
   },
   {
     id: "toolbox",
-    label: { "zh-CN": "工具箱", "en-US": "Toolbox" },
+    label: text("workbench.utility.toolbox", "Toolbox"),
     shortLabel: "T",
   },
   {
     id: "help",
-    label: { "zh-CN": "帮助", "en-US": "Help" },
+    label: text("workbench.utility.help", "Help"),
     shortLabel: "?",
   },
   {
     id: "settings",
-    label: { "zh-CN": "设置", "en-US": "Settings" },
+    label: text("workbench.utility.settings", "Settings"),
     shortLabel: "S",
   },
 ];
 
 export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
   placement: {
-    title: { "zh-CN": "放置模式", "en-US": "Placement Mode" },
+    title: text("workbench.panel.placement.title", "Placement Mode"),
     sections: [
       {
         id: "operation",
-        title: { "zh-CN": "操作", "en-US": "Operation" },
+        title: text("workbench.section.operation", "Operation"),
         buttons: [
           {
             id: "select",
-            label: { "zh-CN": "选择", "en-US": "Select" },
+            label: text("workbench.button.select", "Select"),
             tool: "select",
           },
           {
             id: "belt-draw",
-            label: { "zh-CN": "铺设传送带", "en-US": "Lay Belt" },
+            label: text("workbench.button.beltDraw", "Lay Belt"),
             tool: "belt",
             definitionId: "belt_straight_1x1",
           },
           {
             id: "pipe-draw",
-            label: { "zh-CN": "铺设管道", "en-US": "Lay Pipe" },
+            label: text("workbench.button.pipeDraw", "Lay Pipe"),
             tool: "pipe",
             definitionId: "pipe_straight_1x1",
           },
           {
             id: "link",
-            label: { "zh-CN": "暗管链接", "en-US": "Link Dark Pipe" },
+            label: text("workbench.button.linkDarkPipe", "Link Dark Pipe"),
             tool: "link",
           },
           {
             id: "inspect",
-            label: { "zh-CN": "观察", "en-US": "Inspect" },
+            label: text("workbench.button.inspect", "Inspect"),
             tool: "inspect",
           },
           {
             id: "save-blueprint",
-            label: { "zh-CN": "保存为蓝图", "en-US": "Save As Blueprint" },
+            label: text("workbench.button.saveAsBlueprint", "Save As Blueprint"),
           },
         ],
       },
       {
         id: "belt-logistics",
-        title: { "zh-CN": "传送带物流", "en-US": "Belt Logistics" },
+        title: text("workbench.section.beltLogistics", "Belt Logistics"),
         hotkey: "E",
         buttons: [
           {
             id: "belt-splitter",
-            label: { "zh-CN": "分流器", "en-US": "Splitter" },
+            label: text("workbench.button.beltSplitter", "Splitter"),
             tool: "belt",
             definitionId: "item_log_splitter",
           },
           {
             id: "belt-converger",
-            label: { "zh-CN": "汇流器", "en-US": "Converger" },
+            label: text("workbench.button.beltConverger", "Converger"),
             tool: "belt",
             definitionId: "item_log_converger",
           },
           {
             id: "belt-bridge",
-            label: { "zh-CN": "桥接器", "en-US": "Bridge" },
+            label: text("workbench.button.beltBridge", "Bridge"),
             tool: "belt",
             definitionId: "item_log_connector",
           },
           {
             id: "item-inlet",
-            label: { "zh-CN": "物品进入口", "en-US": "Item Inlet" },
+            label: text("workbench.button.itemInlet", "Item Inlet"),
           },
         ],
       },
       {
         id: "pipe-logistics",
-        title: { "zh-CN": "管道物流", "en-US": "Pipe Logistics" },
+        title: text("workbench.section.pipeLogistics", "Pipe Logistics"),
         hotkey: "Q",
         buttons: [
           {
             id: "pipe-splitter",
-            label: { "zh-CN": "管道分流器", "en-US": "Pipe Splitter" },
+            label: text("workbench.button.pipeSplitter", "Pipe Splitter"),
             tool: "pipe",
             definitionId: "item_pipe_splitter",
           },
           {
             id: "pipe-converger",
-            label: { "zh-CN": "管道汇流器", "en-US": "Pipe Converger" },
+            label: text("workbench.button.pipeConverger", "Pipe Converger"),
             tool: "pipe",
             definitionId: "item_pipe_converger",
           },
           {
             id: "pipe-bridge",
-            label: { "zh-CN": "管道桥接器", "en-US": "Pipe Bridge" },
+            label: text("workbench.button.pipeBridge", "Pipe Bridge"),
             tool: "pipe",
             definitionId: "item_pipe_connector",
           },
           {
             id: "pipe-inlet",
-            label: { "zh-CN": "管道进入口", "en-US": "Pipe Inlet" },
+            label: text("workbench.button.pipeInlet", "Pipe Inlet"),
           },
         ],
       },
       {
         id: "resource-power",
-        title: { "zh-CN": "资源与电力", "en-US": "Resource And Power" },
+        title: text("workbench.section.resourcePower", "Resource And Power"),
         hotkey: "X",
         buttons: [
           {
             id: "water-pump",
-            label: { "zh-CN": "抽水泵", "en-US": "Water Pump" },
+            label: text("workbench.button.waterPump", "Water Pump"),
           },
           {
             id: "power-post",
-            label: { "zh-CN": "供电桩", "en-US": "Power Post" },
+            label: text("workbench.button.powerPost", "Power Post"),
           },
           {
             id: "thermal-pool",
-            label: { "zh-CN": "热能池", "en-US": "Thermal Pool" },
+            label: text("workbench.button.thermalPool", "Thermal Pool"),
           },
         ],
       },
       {
         id: "warehouse",
-        title: { "zh-CN": "仓库存取", "en-US": "Warehouse" },
+        title: text("workbench.section.warehouse", "Warehouse"),
         hotkey: "C",
         buttons: [
           {
             id: "dark-outlet",
-            label: { "zh-CN": "暗管出口", "en-US": "Dark Pipe Outlet" },
+            label: text("workbench.button.darkOutlet", "Dark Pipe Outlet"),
             tool: "place",
             definitionId: "item_port_udpipe_unloader_1",
           },
           {
             id: "dark-inlet",
-            label: { "zh-CN": "暗管入口", "en-US": "Dark Pipe Inlet" },
+            label: text("workbench.button.darkInlet", "Dark Pipe Inlet"),
             tool: "place",
             definitionId: "item_port_udpipe_loader_1",
           },
           {
             id: "warehouse-storage-port",
-            label: { "zh-CN": "仓库存货口", "en-US": "Warehouse Store Port" },
+            label: text("workbench.button.warehouseStoragePort", "Warehouse Store Port"),
             tool: "place",
             definitionId: "item_port_storager_1",
           },
           {
             id: "warehouse-pickup-port",
-            label: { "zh-CN": "仓库取货口", "en-US": "Warehouse Pickup Port" },
+            label: text("workbench.button.warehousePickupPort", "Warehouse Pickup Port"),
             tool: "place",
             definitionId: "item_port_unloader_1",
           },
           {
             id: "liquid-tank",
-            label: { "zh-CN": "储液罐", "en-US": "Liquid Tank" },
+            label: text("workbench.button.liquidTank", "Liquid Tank"),
           },
           {
             id: "warehouse-bus-segment",
-            label: { "zh-CN": "存取线基段", "en-US": "Bus Segment" },
+            label: text("workbench.button.warehouseBusSegment", "Bus Segment"),
             tool: "place",
             definitionId: "item_port_log_hongs_bus",
           },
           {
             id: "warehouse-bus-source",
-            label: { "zh-CN": "存取线源桩", "en-US": "Bus Source" },
+            label: text("workbench.button.warehouseBusSource", "Bus Source"),
             tool: "place",
             definitionId: "item_port_log_hongs_bus_source",
           },
           {
             id: "protocol-storage",
-            label: { "zh-CN": "协议存储箱", "en-US": "Protocol Storage" },
+            label: text("workbench.button.protocolStorage", "Protocol Storage"),
             tool: "place",
             definitionId: "item_port_storager_1",
           },
@@ -290,24 +297,24 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
       },
       {
         id: "production",
-        title: { "zh-CN": "基础生产", "en-US": "Production" },
+        title: text("workbench.section.production", "Production"),
         hotkey: "V",
         buttons: [
           {
             id: "reactor-pool",
-            label: { "zh-CN": "反应池", "en-US": "Reactor Pool" },
+            label: text("workbench.button.reactorPool", "Reactor Pool"),
             tool: "place",
             definitionId: "item_port_mix_pool_1",
           },
           {
             id: "grinder",
-            label: { "zh-CN": "粉碎机", "en-US": "Grinder" },
+            label: text("workbench.button.grinder", "Grinder"),
             tool: "place",
             definitionId: "item_port_grinder_1",
           },
           {
             id: "filling-machine",
-            label: { "zh-CN": "流体灌装机", "en-US": "Filling Machine" },
+            label: text("workbench.button.fillingMachine", "Filling Machine"),
             tool: "place",
             definitionId: "item_port_liquid_filling_pd_mc_1",
           },
@@ -316,137 +323,137 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
     ],
   },
   delete: {
-    title: { "zh-CN": "删除模式", "en-US": "Delete Mode" },
+    title: text("workbench.panel.delete.title", "Delete Mode"),
     sections: [
       {
         id: "delete-actions",
-        title: { "zh-CN": "删除动作", "en-US": "Delete Actions" },
+        title: text("workbench.section.deleteActions", "Delete Actions"),
         buttons: [
           {
             id: "single-delete",
-            label: { "zh-CN": "单点删除", "en-US": "Single Delete" },
+            label: text("workbench.button.singleDelete", "Single Delete"),
             actionId: "selection.remove",
           },
           {
             id: "box-delete",
-            label: { "zh-CN": "框选删除", "en-US": "Box Delete" },
+            label: text("workbench.button.boxDelete", "Box Delete"),
           },
           {
             id: "remove-links",
-            label: { "zh-CN": "删除链接", "en-US": "Remove Links" },
+            label: text("workbench.button.removeLinks", "Remove Links"),
             actionId: "selection.links.remove",
           },
           {
             id: "clear-selection",
-            label: { "zh-CN": "清除选中", "en-US": "Clear Selection" },
+            label: text("workbench.button.clearSelection", "Clear Selection"),
             actionId: "selection.clear",
           },
         ],
       },
       {
         id: "delete-guard",
-        title: { "zh-CN": "回收与保护", "en-US": "Recovery" },
+        title: text("workbench.section.deleteGuard", "Recovery"),
         buttons: [
           {
             id: "undo-delete",
-            label: { "zh-CN": "撤销删除", "en-US": "Undo Delete" },
+            label: text("workbench.button.undoDelete", "Undo Delete"),
             actionId: "history.undo",
           },
           {
             id: "restore-last",
-            label: { "zh-CN": "恢复最近", "en-US": "Restore Last" },
+            label: text("workbench.button.restoreLast", "Restore Last"),
           },
           {
             id: "lock-selection",
-            label: { "zh-CN": "锁定选中", "en-US": "Lock Selection" },
+            label: text("workbench.button.lockSelection", "Lock Selection"),
           },
         ],
       },
     ],
   },
   blueprint: {
-    title: { "zh-CN": "蓝图模式", "en-US": "Blueprint Mode" },
+    title: text("workbench.panel.blueprint.title", "Blueprint Mode"),
     sections: [
       {
         id: "blueprint-actions",
-        title: { "zh-CN": "蓝图操作", "en-US": "Blueprint Actions" },
+        title: text("workbench.section.blueprintActions", "Blueprint Actions"),
         buttons: [
           {
             id: "save-blueprint",
-            label: { "zh-CN": "保存蓝图", "en-US": "Save Blueprint" },
+            label: text("workbench.button.saveBlueprint", "Save Blueprint"),
           },
           {
             id: "import-blueprint",
-            label: { "zh-CN": "导入蓝图", "en-US": "Import Blueprint" },
+            label: text("workbench.button.importBlueprint", "Import Blueprint"),
           },
           {
             id: "export-blueprint",
-            label: { "zh-CN": "导出蓝图", "en-US": "Export Blueprint" },
+            label: text("workbench.button.exportBlueprint", "Export Blueprint"),
           },
           {
             id: "apply-blueprint",
-            label: { "zh-CN": "应用蓝图", "en-US": "Apply Blueprint" },
+            label: text("workbench.button.applyBlueprint", "Apply Blueprint"),
           },
         ],
       },
       {
         id: "blueprint-library",
-        title: { "zh-CN": "蓝图库", "en-US": "Blueprint Library" },
+        title: text("workbench.section.blueprintLibrary", "Blueprint Library"),
         buttons: [
           {
             id: "sample-bus",
-            label: { "zh-CN": "仓库总线样例", "en-US": "Warehouse Bus Sample" },
+            label: text("workbench.button.sampleBus", "Warehouse Bus Sample"),
           },
           {
             id: "sample-dark-pipe",
-            label: { "zh-CN": "暗管补给样例", "en-US": "Dark Pipe Sample" },
+            label: text("workbench.button.sampleDarkPipe", "Dark Pipe Sample"),
           },
           {
             id: "sample-reactor",
-            label: { "zh-CN": "反应池样例", "en-US": "Reactor Sample" },
+            label: text("workbench.button.sampleReactor", "Reactor Sample"),
           },
         ],
       },
     ],
   },
   history: {
-    title: { "zh-CN": "操作历史", "en-US": "History" },
+    title: text("workbench.panel.history.title", "History"),
     sections: [
       {
         id: "history-actions",
-        title: { "zh-CN": "历史操作", "en-US": "History Actions" },
+        title: text("workbench.section.historyActions", "History Actions"),
         buttons: [
           {
             id: "undo",
-            label: { "zh-CN": "撤销", "en-US": "Undo" },
+            label: text("workbench.button.undo", "Undo"),
             actionId: "history.undo",
           },
           {
             id: "redo",
-            label: { "zh-CN": "重做", "en-US": "Redo" },
+            label: text("workbench.button.redo", "Redo"),
             actionId: "history.redo",
           },
           {
             id: "clear-history",
-            label: { "zh-CN": "清空历史", "en-US": "Clear History" },
+            label: text("workbench.button.clearHistory", "Clear History"),
           },
         ],
       },
       {
         id: "history-lane",
-        title: { "zh-CN": "记录占位", "en-US": "Timeline Placeholder" },
+        title: text("workbench.section.historyLane", "Timeline Placeholder"),
         buttons: [
           {
             id: "document-commands",
-            label: { "zh-CN": "文档命令流", "en-US": "Document Commands" },
+            label: text("workbench.button.documentCommands", "Document Commands"),
           },
           {
             id: "runtime-controls",
-            label: { "zh-CN": "运行控制流", "en-US": "Runtime Controls" },
+            label: text("workbench.button.runtimeControls", "Runtime Controls"),
           },
           {
             id: "session-actions",
-            label: { "zh-CN": "会话动作流", "en-US": "Session Actions" },
+            label: text("workbench.button.sessionActions", "Session Actions"),
           },
         ],
       },
@@ -456,37 +463,37 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
 
 export const RIGHT_BASE_GROUPS: BaseGroupDescriptor[] = [
   {
-    title: { "zh-CN": "四号谷地", "en-US": "Valley 4" },
+    title: text("workbench.base.valley4", "Valley 4"),
     options: [
       {
         id: "protocol-core-valley",
-        label: { "zh-CN": "协议核心区", "en-US": "Protocol Core" },
+        label: text("workbench.base.protocolCore", "Protocol Core"),
       },
       {
         id: "refugee-outpost",
-        label: { "zh-CN": "难民前哨处", "en-US": "Refugee Outpost" },
+        label: text("workbench.base.refugeeOutpost", "Refugee Outpost"),
       },
       {
         id: "infra-forward",
-        label: { "zh-CN": "基建前站", "en-US": "Infra Forward" },
+        label: text("workbench.base.infraForward", "Infra Forward"),
       },
       {
         id: "rebuild-hq",
-        label: { "zh-CN": "重建指挥部", "en-US": "Rebuild HQ" },
+        label: text("workbench.base.rebuildHQ", "Rebuild HQ"),
       },
     ],
   },
   {
-    title: { "zh-CN": "武陵", "en-US": "Wuling" },
+    title: text("workbench.base.wuling", "Wuling"),
     options: [
       {
         id: "protocol-core-wuling",
-        label: { "zh-CN": "协议核心区", "en-US": "Protocol Core" },
+        label: text("workbench.base.protocolCore", "Protocol Core"),
         active: true,
       },
       {
         id: "tiangongping-aid",
-        label: { "zh-CN": "天工坪援建点", "en-US": "Tiangongping Aid Site" },
+        label: text("workbench.base.tiangongpingAid", "Tiangongping Aid Site"),
       },
     ],
   },
@@ -495,41 +502,41 @@ export const RIGHT_BASE_GROUPS: BaseGroupDescriptor[] = [
 export const RIGHT_BASE_SUMMARY: BaseSummaryFieldDescriptor[] = [
   {
     id: "buildable-area",
-    label: { "zh-CN": "可放置区域", "en-US": "Buildable Area" },
-    value: { "zh-CN": "80x80", "en-US": "80x80" },
+    label: text("workbench.summary.buildableArea", "Buildable Area"),
+    value: text("workbench.summaryValue.buildableArea", "80x80"),
   },
   {
     id: "expansion",
-    label: { "zh-CN": "外扩尺寸", "en-US": "Expansion" },
-    value: { "zh-CN": "T4 R4 B4 L4", "en-US": "T4 R4 B4 L4" },
+    label: text("workbench.summary.expansion", "Expansion"),
+    value: text("workbench.summaryValue.expansion", "T4 R4 B4 L4"),
   },
   {
     id: "base-tag",
-    label: { "zh-CN": "基地标签", "en-US": "Base Tag" },
-    value: { "zh-CN": "武陵", "en-US": "Wuling" },
+    label: text("workbench.summary.baseTag", "Base Tag"),
+    value: text("workbench.summaryValue.baseTag", "Wuling"),
   },
 ];
 
 export const RIGHT_POWER_SUMMARY: PowerSummaryFieldDescriptor[] = [
   {
     id: "total-power",
-    label: { "zh-CN": "总耗电", "en-US": "Total Power" },
-    value: { "zh-CN": "20 kW", "en-US": "20 kW" },
+    label: text("workbench.power.total", "Total Power"),
+    value: text("workbench.powerValue.total", "20 kW"),
   },
   {
     id: "covered-consumption",
-    label: { "zh-CN": "覆盖总耗电", "en-US": "Covered Power" },
-    value: { "zh-CN": "留空-按真实值", "en-US": "Placeholder - Real Value Later" },
+    label: text("workbench.power.covered", "Covered Power"),
+    value: text("workbench.powerValue.covered", "Placeholder - Real Value Later"),
   },
   {
     id: "current-consumption",
-    label: { "zh-CN": "当前生效耗电", "en-US": "Current Effective Power" },
-    value: { "zh-CN": "20 kW", "en-US": "20 kW" },
+    label: text("workbench.power.current", "Current Effective Power"),
+    value: text("workbench.powerValue.current", "20 kW"),
   },
   {
     id: "power-mode",
-    label: { "zh-CN": "电力模式", "en-US": "Power Mode" },
-    value: { "zh-CN": "无限电力", "en-US": "Infinite Power" },
+    label: text("workbench.power.mode", "Power Mode"),
+    value: text("workbench.powerValue.mode", "Infinite Power"),
   },
 ];
 
@@ -540,10 +547,3 @@ export const SIMULATION_SPEED_PRESETS: SimulationSpeedPreset[] = [
   "4x",
   "16x",
 ];
-
-export function localizeText(
-  locale: AppLocale,
-  text: LocalizedText,
-): string {
-  return text[locale];
-}

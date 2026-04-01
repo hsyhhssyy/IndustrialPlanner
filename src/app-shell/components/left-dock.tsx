@@ -1,22 +1,20 @@
-import type {
-  WorkbenchController,
-  WorkbenchSnapshot,
-} from "@/app-shell/controller/workbench-controller";
+import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
 import {
   WorkbenchIcon,
 } from "@/app-shell/components/workbench-icons";
+import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import {
   LEFT_PANEL_CONTENT,
   LEFT_RAIL_PRIMARY_ITEMS,
-  localizeText,
   type PlaceholderActionId,
 } from "@/app-shell/workbench-placeholders";
-import { getLocalizedStage1EntityName } from "@/domain/registry/stage1-registry-i18n";
-import type { EditorTool } from "@/editor/core/editor-session";
+import type { EditorTool } from "@/editor/contracts/editor-session";
+import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import {
   createTranslator,
   type MessageKey,
 } from "@/i18n/messages";
+import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
 
 const TOOL_LABEL_KEYS: Record<EditorTool, MessageKey> = {
   select: "tool.select",
@@ -64,42 +62,50 @@ function getWorkbenchButtonIconPath(
 
 export interface LeftDockProps {
   controller: WorkbenchController;
-  snapshot: WorkbenchSnapshot;
 }
 
 function isActionDisabled(
   actionId: PlaceholderActionId | undefined,
-  snapshot: WorkbenchSnapshot,
+  options: {
+    mode: "edit" | "simulate";
+    selection: string[];
+    canUndo: boolean;
+    canRedo: boolean;
+  },
 ): boolean {
-  const editCommandsDisabled = snapshot.ui.mode === "simulate";
+  const editCommandsDisabled = options.mode === "simulate";
 
   switch (actionId) {
     case "selection.clear":
     case "selection.remove":
     case "selection.links.remove":
-      return editCommandsDisabled || snapshot.session.selection.length === 0;
+      return editCommandsDisabled || options.selection.length === 0;
     case "history.undo":
-      return editCommandsDisabled || !snapshot.history.canUndo;
+      return editCommandsDisabled || !options.canUndo;
     case "history.redo":
-      return editCommandsDisabled || !snapshot.history.canRedo;
+      return editCommandsDisabled || !options.canRedo;
     default:
       return false;
   }
 }
 
-export function LeftDock({ controller, snapshot }: LeftDockProps) {
-  if (!snapshot.ui.leftDock.open) {
+export function LeftDock({ controller }: LeftDockProps) {
+  const ui = useExternalStore(controller.uiStore);
+  const editor = useExternalStore(controller.editorStore);
+  const registry = controller.registry;
+
+  if (!ui.leftDock.open) {
     return null;
   }
 
-  const t = createTranslator(snapshot.ui.locale);
-  const panel = LEFT_PANEL_CONTENT[snapshot.ui.leftPanelMode];
+  const t = createTranslator(ui.locale);
+  const panel = LEFT_PANEL_CONTENT[ui.leftPanelMode];
   const activeRailItem = LEFT_RAIL_PRIMARY_ITEMS.find(
-    (item) => item.id === snapshot.ui.leftPanelMode,
+    (item) => item.id === ui.leftPanelMode,
   );
-  const armedPlacementDefinition = snapshot.session.placementDefinitionId
-    ? snapshot.registry.entityDefinitions.find(
-        (definition) => definition.id === snapshot.session.placementDefinitionId,
+  const armedPlacementDefinition = editor.session.placementDefinitionId
+    ? registry.entityDefinitions.find(
+        (definition) => definition.id === editor.session.placementDefinitionId,
       ) ?? null
     : null;
 
@@ -110,61 +116,57 @@ export function LeftDock({ controller, snapshot }: LeftDockProps) {
           <div className="section-header-copy">
             <p className="section-kicker">
               {activeRailItem
-                ? localizeText(snapshot.ui.locale, activeRailItem.label)
+                ? localizeWorkbenchText(ui.locale, activeRailItem.label)
                 : t("leftDock.title")}
             </p>
-            <h2>{localizeText(snapshot.ui.locale, panel.title)}</h2>
+            <h2>{localizeWorkbenchText(ui.locale, panel.title)}</h2>
           </div>
           <div className="header-actions">
             <span className="pill">
               {t("leftDock.activeTool")}:{" "}
-              {t(TOOL_LABEL_KEYS[snapshot.session.activeTool])}
+              {t(TOOL_LABEL_KEYS[editor.session.activeTool])}
             </span>
             <button
               onClick={() => controller.toggleDockCollapsed("left")}
               type="button"
             >
-              {t(
-                snapshot.ui.leftDock.collapsed
-                  ? "action.expand"
-                  : "action.collapse",
-              )}
+              {t(ui.leftDock.collapsed ? "action.expand" : "action.collapse")}
             </button>
           </div>
         </div>
-        {!snapshot.ui.leftDock.collapsed ? (
+        {!ui.leftDock.collapsed ? (
           <div className="section-body stack">
             <div className="cluster">
               <div className="pill-row">
                 <span className="pill">
                   {t("leftDock.currentMode")}:{" "}
                   {activeRailItem
-                    ? localizeText(snapshot.ui.locale, activeRailItem.label)
+                    ? localizeWorkbenchText(ui.locale, activeRailItem.label)
                     : t("leftDock.title")}
                 </span>
                 <span className="pill">
-                  {snapshot.registry.entityDefinitions.length}{" "}
+                  {registry.entityDefinitions.length}{" "}
                   {t("label.definitions")}
                 </span>
                 <span className="pill">
-                  {snapshot.registry.itemDefinitions.length} {t("label.items")}
+                  {registry.itemDefinitions.length} {t("label.items")}
                 </span>
                 {armedPlacementDefinition ? (
                   <span className="pill">
                     {t("label.definition")}:{" "}
                     {getLocalizedStage1EntityName(
-                      snapshot.ui.locale,
+                      ui.locale,
                       armedPlacementDefinition,
                     )}
                   </span>
                 ) : null}
               </div>
-              <p className="mono-line">{t(snapshot.ui.statusMessageKey)}</p>
+              <p className="mono-line">{t(ui.statusMessageKey)}</p>
             </div>
             {panel.sections.map((section) => (
               <section className="placeholder-section" key={section.id}>
                 <div className="placeholder-section-header">
-                  <h3>{localizeText(snapshot.ui.locale, section.title)}</h3>
+                  <h3>{localizeWorkbenchText(ui.locale, section.title)}</h3>
                   {section.hotkey ? (
                     <span className="pill">{section.hotkey}</span>
                   ) : null}
@@ -183,12 +185,17 @@ export function LeftDock({ controller, snapshot }: LeftDockProps) {
                           : null;
                     const isActive = button.definitionId
                       ? button.definitionId ===
-                          snapshot.session.placementDefinitionId &&
-                        button.tool === snapshot.session.activeTool
-                      : button.tool === snapshot.session.activeTool;
+                          editor.session.placementDefinitionId &&
+                        button.tool === editor.session.activeTool
+                      : button.tool === editor.session.activeTool;
                     const isDisabled =
                       (!button.tool && !button.definitionId && !button.actionId) ||
-                      isActionDisabled(button.actionId, snapshot);
+                      isActionDisabled(button.actionId, {
+                        mode: ui.mode,
+                        selection: editor.session.selection,
+                        canUndo: editor.history.canUndo,
+                        canRedo: editor.history.canRedo,
+                      });
 
                     return (
                       <button
@@ -249,7 +256,7 @@ export function LeftDock({ controller, snapshot }: LeftDockProps) {
                             <WorkbenchIcon kind={glyphIcon} />
                           </span>
                         ) : null}
-                        <span>{localizeText(snapshot.ui.locale, button.label)}</span>
+                        <span>{localizeWorkbenchText(ui.locale, button.label)}</span>
                       </button>
                     );
                   })}
@@ -259,7 +266,7 @@ export function LeftDock({ controller, snapshot }: LeftDockProps) {
           </div>
         ) : (
           <div className="dock-collapsed-body">
-            {localizeText(snapshot.ui.locale, panel.title)}
+            {localizeWorkbenchText(ui.locale, panel.title)}
           </div>
         )}
       </section>

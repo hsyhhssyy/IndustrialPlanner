@@ -19,6 +19,9 @@ export type MessageKey =
   | "action.deleteSelection"
   | "action.removeLinks"
   | "action.removeLink"
+  | "action.applyValue"
+  | "action.toggleValue"
+  | "action.clearPatch"
   | "toolbar.tools"
   | "toolbar.views"
   | "tool.select"
@@ -41,6 +44,7 @@ export type MessageKey =
   | "rightDock.selection"
   | "section.configFields"
   | "section.runtimeDetails"
+  | "section.runtimePatch"
   | "section.diagnostics"
   | "section.quickActions"
   | "section.connections"
@@ -59,6 +63,12 @@ export type MessageKey =
   | "label.noConnections"
   | "label.runtimeDetailPlaceholder"
   | "label.noDiagnostics"
+  | "label.documentValue"
+  | "label.effectiveValue"
+  | "label.runtimePatch"
+  | "label.runtimePatchNone"
+  | "label.runtimePatchDisabled"
+  | "label.runtimePatchClearsOnExit"
   | "status.ready"
   | "status.edit"
   | "status.simulate"
@@ -109,6 +119,9 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.deleteSelection": "删除选中",
     "action.removeLinks": "删除链接",
     "action.removeLink": "移除链接",
+    "action.applyValue": "应用",
+    "action.toggleValue": "切换",
+    "action.clearPatch": "清除覆盖",
     "toolbar.tools": "工具",
     "toolbar.views": "视图",
     "tool.select": "选择",
@@ -131,6 +144,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "rightDock.selection": "当前选中",
     "section.configFields": "配置字段",
     "section.runtimeDetails": "运行态细节",
+    "section.runtimePatch": "运行态覆盖",
     "section.diagnostics": "诊断",
     "section.quickActions": "快捷操作",
     "section.connections": "连接",
@@ -149,6 +163,12 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "label.noConnections": "当前对象没有显式链接。",
     "label.runtimeDetailPlaceholder": "运行态 query lane 会在这里显示更细的按需读取结果。",
     "label.noDiagnostics": "当前没有诊断信息。",
+    "label.documentValue": "文档基线",
+    "label.effectiveValue": "当前生效值",
+    "label.runtimePatch": "运行态覆盖",
+    "label.runtimePatchNone": "无",
+    "label.runtimePatchDisabled": "该字段不能在仿真态做临时覆盖。",
+    "label.runtimePatchClearsOnExit": "退出仿真会清空全部运行态覆盖，不会写回文档。",
     "status.ready": "Stage1 工作台脚手架已就绪。",
     "status.edit": "编辑态聚焦文档事实与编译产物。",
     "status.simulate": "仿真态消费运行快照与遥测摘要。",
@@ -198,6 +218,9 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.deleteSelection": "Delete Selection",
     "action.removeLinks": "Remove Links",
     "action.removeLink": "Remove Link",
+    "action.applyValue": "Apply",
+    "action.toggleValue": "Toggle",
+    "action.clearPatch": "Clear Patch",
     "toolbar.tools": "Tools",
     "toolbar.views": "Views",
     "tool.select": "Select",
@@ -220,6 +243,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "rightDock.selection": "Selection",
     "section.configFields": "Config Fields",
     "section.runtimeDetails": "Runtime Details",
+    "section.runtimePatch": "Runtime Patch",
     "section.diagnostics": "Diagnostics",
     "section.quickActions": "Quick Actions",
     "section.connections": "Connections",
@@ -238,6 +262,12 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "label.noConnections": "No explicit links on the current selection.",
     "label.runtimeDetailPlaceholder": "The runtime query lane will populate richer on-demand details here.",
     "label.noDiagnostics": "No diagnostics at the moment.",
+    "label.documentValue": "Document Baseline",
+    "label.effectiveValue": "Effective Value",
+    "label.runtimePatch": "Runtime Patch",
+    "label.runtimePatchNone": "None",
+    "label.runtimePatchDisabled": "This field cannot be overridden during simulation.",
+    "label.runtimePatchClearsOnExit": "Leaving simulation clears runtime patches and keeps the document unchanged.",
     "status.ready": "Stage1 workbench scaffold is ready.",
     "status.edit": "Edit mode focuses on document facts and compiled topology.",
     "status.simulate": "Simulation mode consumes runtime snapshots and telemetry.",

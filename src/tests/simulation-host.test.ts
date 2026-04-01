@@ -27,4 +27,39 @@ describe("SimulationHost", () => {
     unsubscribe();
     host.dispose();
   });
+
+  it("tracks runtime patch overlays separately from the loaded document", async () => {
+    const host = createSimulationHost();
+    const registry = createStage1Registry();
+    const document = createStage1SeedWorldDocument();
+    const topology = compileStage1World(document, registry);
+
+    host.load({ document, topology, registry });
+    await host.applyEntityConfigPatch("dark-outlet-1", {
+      selectedLiquidItemId: "item_liquid_plant_grass_2",
+    });
+    await host.queryInspector("dark-outlet-1");
+
+    const patchedSnapshot = host.getSnapshot();
+
+    expect(
+      patchedSnapshot.patchSet.entityConfigByEntityId["dark-outlet-1"]
+        ?.selectedLiquidItemId,
+    ).toBe("item_liquid_plant_grass_2");
+    expect(patchedSnapshot.runtimeSnapshot.patchedEntityIds).toContain(
+      "dark-outlet-1",
+    );
+    expect(patchedSnapshot.inspectorDetails?.effectiveConfig.selectedLiquidItemId).toBe(
+      "item_liquid_plant_grass_2",
+    );
+
+    host.clearPatches();
+
+    const clearedSnapshot = host.getSnapshot();
+
+    expect(clearedSnapshot.patchSet.entityConfigByEntityId["dark-outlet-1"]).toBeUndefined();
+    expect(clearedSnapshot.runtimeSnapshot.patchedEntityIds).toEqual([]);
+
+    host.dispose();
+  });
 });

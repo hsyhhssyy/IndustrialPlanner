@@ -35,6 +35,7 @@ export interface RenderEntitySprite {
   progress: number;
   selected: boolean;
   pendingLinkSource: boolean;
+  patched: boolean;
 }
 
 export interface RenderExplicitLink {

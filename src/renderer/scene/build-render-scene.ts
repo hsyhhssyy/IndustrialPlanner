@@ -53,6 +53,7 @@ function buildEntitySprite(input: RenderSceneInput, entityId: string): RenderEnt
     selected: input.activeCanvas.selectedEntityIds.includes(entityId),
     pendingLinkSource:
       input.activeCanvas.pendingLinkSourceEntityId === entityId,
+    patched: input.runtimeSnapshot.patchedEntityIds.includes(entityId),
   };
 }
 

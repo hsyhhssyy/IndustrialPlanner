@@ -106,6 +106,15 @@ function drawScene(
       context.restore();
     }
 
+    if (entity.patched) {
+      context.save();
+      context.strokeStyle = "rgba(255, 200, 106, 0.88)";
+      context.lineWidth = 2;
+      context.setLineDash([4, 4]);
+      context.strokeRect(x + 8, y + 8, entityWidth - 16, entityHeight - 16);
+      context.restore();
+    }
+
     context.fillStyle = "#f3f6fb";
     context.fillText(entity.label, x + 12, y + 10);
 

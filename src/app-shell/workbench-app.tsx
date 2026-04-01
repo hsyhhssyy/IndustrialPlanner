@@ -1,4 +1,4 @@
-import type { WorkbenchController } from "@/app-shell/controller/workbench-controller";
+import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
 import { BottomStatusBar } from "@/app-shell/components/bottom-status-bar";
 import { CanvasPanel } from "@/app-shell/components/canvas-panel";
 import { LeftDock } from "@/app-shell/components/left-dock";
@@ -13,15 +13,15 @@ export interface WorkbenchAppProps {
 }
 
 export function WorkbenchApp({ controller }: WorkbenchAppProps) {
-  const snapshot = useExternalStore(controller);
+  const ui = useExternalStore(controller.uiStore);
   const layoutStyle = {
-    "--left-dock-width": snapshot.ui.leftDock.open
-      ? snapshot.ui.leftDock.collapsed
+    "--left-dock-width": ui.leftDock.open
+      ? ui.leftDock.collapsed
         ? "92px"
         : "360px"
       : "0px",
-    "--right-dock-width": snapshot.ui.rightDock.open
-      ? snapshot.ui.rightDock.collapsed
+    "--right-dock-width": ui.rightDock.open
+      ? ui.rightDock.collapsed
         ? "92px"
         : "340px"
       : "0px",
@@ -29,12 +29,12 @@ export function WorkbenchApp({ controller }: WorkbenchAppProps) {
 
   return (
     <div className="workbench" style={layoutStyle}>
-      <TopBar controller={controller} snapshot={snapshot} />
-      <LeftToolbar controller={controller} snapshot={snapshot} />
-      <LeftDock controller={controller} snapshot={snapshot} />
-      <CanvasPanel controller={controller} snapshot={snapshot} />
-      <RightDock controller={controller} snapshot={snapshot} />
-      <BottomStatusBar snapshot={snapshot} />
+      <TopBar controller={controller} />
+      <LeftToolbar controller={controller} />
+      <LeftDock controller={controller} />
+      <CanvasPanel controller={controller} />
+      <RightDock controller={controller} />
+      <BottomStatusBar controller={controller} />
     </div>
   );
 }

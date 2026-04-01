@@ -1,34 +1,28 @@
-import type {
-  WorkbenchController,
-  WorkbenchSnapshot,
-} from "@/app-shell/controller/workbench-controller";
-import { SIMULATION_SPEED_PRESETS } from "@/app-shell/workbench-placeholders";
-import {
-  createTranslator,
-} from "@/i18n/messages";
+import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
 import { WorkbenchIcon } from "@/app-shell/components/workbench-icons";
+import { useExternalStore } from "@/app-shell/hooks/use-external-store";
+import { SIMULATION_SPEED_PRESETS } from "@/app-shell/workbench-placeholders";
+import { createTranslator } from "@/i18n/messages";
 
 export interface TopBarProps {
   controller: WorkbenchController;
-  snapshot: WorkbenchSnapshot;
 }
 
-export function TopBar({ controller, snapshot }: TopBarProps) {
-  const t = createTranslator(snapshot.ui.locale);
-  const cellSizeLabel = `${Math.round(
-    snapshot.renderScene.gridSize * snapshot.canvas.viewport.zoom,
-  )}px`;
-  const simulationRunning = snapshot.runtimeSnapshot.status === "running";
+export function TopBar({ controller }: TopBarProps) {
+  const ui = useExternalStore(controller.uiStore);
+  const simulation = useExternalStore(controller.simulationStore);
+  const renderScene = useExternalStore(controller.renderSceneStore);
+  const t = createTranslator(ui.locale);
+  const cellSizeLabel = `${Math.round(renderScene.gridSize * renderScene.zoom)}px`;
+  const simulationRunning = simulation.runtimeSnapshot.status === "running";
 
   return (
     <header className="top-bar">
       <div className="toolbar-group top-bar-layout-controls">
         <button
           aria-label={t("topBar.leftPanel")}
-          className={snapshot.ui.leftDock.open ? "is-active" : undefined}
-          onClick={() =>
-            controller.setDockOpen("left", !snapshot.ui.leftDock.open)
-          }
+          className={ui.leftDock.open ? "is-active" : undefined}
+          onClick={() => controller.setDockOpen("left", !ui.leftDock.open)}
           title={t("topBar.leftPanel")}
           type="button"
         >
@@ -39,10 +33,8 @@ export function TopBar({ controller, snapshot }: TopBarProps) {
         </button>
         <button
           aria-label={t("topBar.rightPanel")}
-          className={snapshot.ui.rightDock.open ? "is-active" : undefined}
-          onClick={() =>
-            controller.setDockOpen("right", !snapshot.ui.rightDock.open)
-          }
+          className={ui.rightDock.open ? "is-active" : undefined}
+          onClick={() => controller.setDockOpen("right", !ui.rightDock.open)}
           title={t("topBar.rightPanel")}
           type="button"
         >
@@ -54,7 +46,7 @@ export function TopBar({ controller, snapshot }: TopBarProps) {
       </div>
       <div className="top-bar-title-block">
         <div className="top-bar-title">{t("app.title")}</div>
-        <div className="top-bar-subtitle">{t(snapshot.ui.statusMessageKey)}</div>
+        <div className="top-bar-subtitle">{t(ui.statusMessageKey)}</div>
       </div>
       <div className="toolbar-group top-bar-controls">
         <button
@@ -72,7 +64,7 @@ export function TopBar({ controller, snapshot }: TopBarProps) {
         <span className="top-bar-metric">{t("topBar.speed")}</span>
         {SIMULATION_SPEED_PRESETS.map((preset) => (
           <button
-            className={snapshot.ui.simulationSpeed === preset ? "is-active" : undefined}
+            className={ui.simulationSpeed === preset ? "is-active" : undefined}
             key={preset}
             onClick={() => controller.setSimulationSpeedPreset(preset)}
             type="button"

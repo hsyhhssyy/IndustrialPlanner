@@ -1,4 +1,4 @@
-import type { GridPoint } from "@/domain/document/world-document";
+import type { GridPoint } from "@/shared/geometry/grid";
 
 export type CanvasBackendKind = "edit" | "simulation";
 

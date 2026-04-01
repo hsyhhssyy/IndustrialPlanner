@@ -1,8 +1,10 @@
 import type {
   ExplicitLink,
+} from "@/domain/document/world-document";
+import type {
   GridPoint,
   GridRotation,
-} from "@/domain/document/world-document";
+} from "@/shared/geometry/grid";
 
 export interface PlaceEntityCommand {
   type: "entity.place";

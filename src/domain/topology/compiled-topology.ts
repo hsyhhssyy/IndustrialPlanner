@@ -1,12 +1,8 @@
-import type {
-  ExplicitLink,
-  GridPoint,
-  WorldDocument,
-} from "@/domain/document/world-document";
+import type { ExplicitLink } from "@/domain/document/world-document";
 import type {
   Stage1EntityDefinition,
-  Stage1Registry,
 } from "@/domain/registry/stage1-registry";
+import type { GridPoint } from "@/shared/geometry/grid";
 
 export interface TopologyDiagnostic {
   id: string;
@@ -40,9 +36,4 @@ export interface CompiledTopology {
     explicitLinks: number;
   };
   diagnostics: TopologyDiagnostic[];
-}
-
-export interface CompilerInput {
-  document: WorldDocument;
-  registry: Stage1Registry;
 }

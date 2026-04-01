@@ -2,12 +2,15 @@ import {
   createExplicitLinkId,
   createWorldEntityId,
   getEntityLinks,
-  type GridPoint,
   type WorldDocument,
 } from "@/domain/document/world-document";
-import { applyWorldDocumentCommand } from "@/domain/document/document-command-applier";
-import type { DocumentCommand } from "@/domain/document/document-command";
-import type { EditorSession, EditorTool } from "@/editor/core/editor-session";
+import { applyWorldDocumentCommand } from "@/editor/core/commands/document-command-applier";
+import type { DocumentCommand } from "@/editor/core/commands/document-command";
+import type {
+  EditorSession,
+  EditorTool,
+} from "@/editor/contracts/editor-session";
+import type { GridPoint } from "@/shared/geometry/grid";
 
 interface DocumentHistoryEntry {
   command: DocumentCommand;
@@ -35,6 +38,7 @@ export interface EditorCore {
   selectEntity: (entityId: string | null) => void;
   setPendingLinkSource: (entityId: string | null) => void;
   placeEntity: (definitionId: string, position: GridPoint) => void;
+  patchEntityConfig: (entityId: string, patch: Record<string, unknown>) => void;
   createLink: (sourceEntityId: string, targetEntityId: string) => void;
   removeLink: (linkId: string) => void;
   removeSelectedEntities: () => void;
@@ -126,6 +130,16 @@ class EditorCoreImpl implements EditorCore {
         pendingLinkSourceEntityId: null,
       };
     }
+  }
+
+  patchEntityConfig(entityId: string, patch: Record<string, unknown>): void {
+    this.applyCommand({
+      type: "entity.config.patch",
+      payload: {
+        entityId,
+        patch,
+      },
+    });
   }
 
   createLink(sourceEntityId: string, targetEntityId: string): void {

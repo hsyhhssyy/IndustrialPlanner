@@ -1,23 +1,21 @@
-import type {
-  WorkbenchController,
-  WorkbenchSnapshot,
-} from "@/app-shell/controller/workbench-controller";
+import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
+import { WorkbenchIcon } from "@/app-shell/components/workbench-icons";
+import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import {
   LEFT_RAIL_PRIMARY_ITEMS,
   LEFT_RAIL_UTILITY_ITEMS,
-  localizeText,
 } from "@/app-shell/workbench-placeholders";
-import { WorkbenchIcon } from "@/app-shell/components/workbench-icons";
+import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
 
 export interface LeftToolbarProps {
   controller: WorkbenchController;
-  snapshot: WorkbenchSnapshot;
 }
 
-export function LeftToolbar({ controller, snapshot }: LeftToolbarProps) {
-  const locale = snapshot.ui.locale;
-  const activeLeftPanelMode = snapshot.ui.leftPanelMode;
-  const leftDockOpen = snapshot.ui.leftDock.open;
+export function LeftToolbar({ controller }: LeftToolbarProps) {
+  const ui = useExternalStore(controller.uiStore);
+  const locale = ui.locale;
+  const activeLeftPanelMode = ui.leftPanelMode;
+  const leftDockOpen = ui.leftDock.open;
   const iconByItemId = {
     placement: "placement",
     delete: "delete",
@@ -54,7 +52,7 @@ export function LeftToolbar({ controller, snapshot }: LeftToolbarProps) {
                 <WorkbenchIcon kind={iconByItemId[item.id] ?? "settings"} />
               </span>
               <span className="rail-button-label">
-                {localizeText(locale, item.label)}
+                {localizeWorkbenchText(locale, item.label)}
               </span>
             </button>
           );
@@ -72,7 +70,7 @@ export function LeftToolbar({ controller, snapshot }: LeftToolbarProps) {
               <WorkbenchIcon kind={iconByItemId[item.id] ?? "settings"} />
             </span>
             <span className="rail-button-label">
-              {localizeText(locale, item.label)}
+              {localizeWorkbenchText(locale, item.label)}
             </span>
           </button>
         ))}

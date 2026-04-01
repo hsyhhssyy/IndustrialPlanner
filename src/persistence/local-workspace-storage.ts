@@ -1,73 +1,88 @@
-import {
-  createInitialWorkbenchUiState,
-  type WorkbenchUiState,
-} from "@/app-shell/state/workbench-ui-state";
+import type {
+  DockState,
+  WorkbenchUiSnapshot,
+  WorkbenchUiSnapshotInput,
+} from "@/app-shell/contracts/workbench-ui";
 
 const UI_STATE_KEY = "industrial-planner:workbench-ui-state";
 
 export interface WorkspaceStorageGateway {
-  loadUiState: () => WorkbenchUiState;
-  saveUiState: (uiState: WorkbenchUiState) => void;
+  loadUiSnapshot: () => WorkbenchUiSnapshotInput;
+  saveUiSnapshot: (uiSnapshot: WorkbenchUiSnapshot) => void;
 }
 
 function canUseStorage(): boolean {
   return typeof localStorage !== "undefined";
 }
 
+type PersistedWorkbenchUiSnapshot = WorkbenchUiSnapshotInput & {
+  leftDockOpen?: boolean;
+  rightDockOpen?: boolean;
+  bottomDockOpen?: boolean;
+  statusMessage?: string;
+};
+
+function toDockSnapshot(
+  dockState: Partial<DockState> | undefined,
+  legacyOpen: boolean | undefined,
+): Partial<DockState> | undefined {
+  const nextDockSnapshot: Partial<DockState> = {};
+
+  if (dockState?.open !== undefined) {
+    nextDockSnapshot.open = dockState.open;
+  } else if (legacyOpen !== undefined) {
+    nextDockSnapshot.open = legacyOpen;
+  }
+
+  if (dockState?.collapsed !== undefined) {
+    nextDockSnapshot.collapsed = dockState.collapsed;
+  }
+
+  return Object.keys(nextDockSnapshot).length > 0 ? nextDockSnapshot : undefined;
+}
+
+function coercePersistedWorkbenchUiSnapshot(
+  parsed: PersistedWorkbenchUiSnapshot,
+): WorkbenchUiSnapshotInput {
+  return {
+    mode: parsed.mode,
+    locale: parsed.locale,
+    leftPanelMode: parsed.leftPanelMode,
+    simulationSpeed: parsed.simulationSpeed,
+    diagnosticsVisible: parsed.diagnosticsVisible,
+    statusMessageKey: parsed.statusMessageKey,
+    leftDock: toDockSnapshot(parsed.leftDock, parsed.leftDockOpen),
+    rightDock: toDockSnapshot(parsed.rightDock, parsed.rightDockOpen),
+  };
+}
+
 export function createWorkspaceStorageGateway(): WorkspaceStorageGateway {
   return {
-    loadUiState: () => {
+    loadUiSnapshot: () => {
       if (!canUseStorage()) {
-        return createInitialWorkbenchUiState();
+        return {};
       }
 
       const raw = localStorage.getItem(UI_STATE_KEY);
 
       if (!raw) {
-        return createInitialWorkbenchUiState();
+        return {};
       }
 
       try {
-        const initialState = createInitialWorkbenchUiState();
-        const parsed = JSON.parse(raw) as Partial<
-          WorkbenchUiState & {
-            leftDockOpen?: boolean;
-            rightDockOpen?: boolean;
-            bottomDockOpen?: boolean;
-            statusMessage?: string;
-          }
-        >;
+        const parsed = JSON.parse(raw) as PersistedWorkbenchUiSnapshot;
 
-        return {
-          ...initialState,
-          ...parsed,
-          leftDock: {
-            ...initialState.leftDock,
-            ...parsed.leftDock,
-            open: parsed.leftDock?.open ?? parsed.leftDockOpen ?? initialState.leftDock.open,
-          },
-          rightDock: {
-            ...initialState.rightDock,
-            ...parsed.rightDock,
-            open:
-              parsed.rightDock?.open ?? parsed.rightDockOpen ?? initialState.rightDock.open,
-          },
-          leftPanelMode: parsed.leftPanelMode ?? initialState.leftPanelMode,
-          simulationSpeed:
-            parsed.simulationSpeed ?? initialState.simulationSpeed,
-          statusMessageKey:
-            parsed.statusMessageKey ?? initialState.statusMessageKey,
-        };
+        return coercePersistedWorkbenchUiSnapshot(parsed);
       } catch {
-        return createInitialWorkbenchUiState();
+        return {};
       }
     },
-    saveUiState: (uiState) => {
+    saveUiSnapshot: (uiSnapshot) => {
       if (!canUseStorage()) {
         return;
       }
 
-      localStorage.setItem(UI_STATE_KEY, JSON.stringify(uiState));
+      localStorage.setItem(UI_STATE_KEY, JSON.stringify(uiSnapshot));
     },
   };
 }

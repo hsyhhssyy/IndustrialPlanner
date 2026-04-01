@@ -1,4 +1,4 @@
-import type { DocumentCommand } from "@/domain/document/document-command";
+import type { DocumentCommand } from "@/editor/core/commands/document-command";
 import type {
   WorldDocument,
   WorldEntity,

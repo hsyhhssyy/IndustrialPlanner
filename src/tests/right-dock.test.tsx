@@ -7,7 +7,12 @@ function toScreenPointForEntity(
   controller: ReturnType<typeof createWorkbenchController>,
   entityId: string,
 ) {
-  const snapshot = controller.getSnapshot();
+  const canvas = controller.canvasStore.getSnapshot();
+  const renderScene = controller.renderSceneStore.getSnapshot();
+  const snapshot = {
+    canvas: canvas.canvas,
+    renderScene,
+  };
   const entity = snapshot.renderScene.entities.find(
     (candidate) => candidate.entityId === entityId,
   );
@@ -33,7 +38,7 @@ describe("RightDock inspector split", () => {
     controller.setLocale("en-US");
     await controller.selectEntity("reactor-1");
     const editMarkup = renderToStaticMarkup(
-      <RightDock controller={controller} snapshot={controller.getSnapshot()} />,
+      <RightDock controller={controller} />,
     );
 
     controller.setMode("simulate");
@@ -41,12 +46,13 @@ describe("RightDock inspector split", () => {
       toScreenPointForEntity(controller, "dark-outlet-1"),
     );
     const simulationMarkup = renderToStaticMarkup(
-      <RightDock controller={controller} snapshot={controller.getSnapshot()} />,
+      <RightDock controller={controller} />,
     );
 
     expect(editMarkup).toContain("Quick Actions");
     expect(editMarkup).toContain("Config Fields");
     expect(simulationMarkup).toContain("Runtime Details");
+    expect(simulationMarkup).toContain("Runtime Patch");
     expect(simulationMarkup).not.toContain("Quick Actions");
     expect(simulationMarkup).not.toContain("Config Fields");
 

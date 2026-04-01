@@ -1,33 +1,34 @@
 import { createTranslator } from "@/i18n/messages";
 import {
-  getLocalizedMutabilityLabel,
-  getLocalizedStage1ConfigFieldLabel,
-} from "@/domain/registry/stage1-registry-i18n";
-import {
   formatConfigValue,
   type SelectionInspectorPanelProps,
 } from "@/app-shell/components/inspector/selection-inspector-model";
 import {
+  ConfigFieldMutationControl,
   ConnectionList,
   NoSelectionState,
   RuntimeDetailList,
   SelectionInspectorSummary,
 } from "@/app-shell/components/inspector/selection-inspector-shared";
+import {
+  getLocalizedMutabilityLabel,
+  getLocalizedStage1ConfigFieldLabel,
+} from "@/i18n/stage1-registry";
 
 export function EditSelectionInspector({
   controller,
-  snapshot,
+  state,
   context,
 }: SelectionInspectorPanelProps) {
-  const t = createTranslator(snapshot.ui.locale);
+  const t = createTranslator(state.locale);
 
   if (!context) {
-    return <NoSelectionState locale={snapshot.ui.locale} />;
+    return <NoSelectionState locale={state.locale} />;
   }
 
   return (
     <div className="stack">
-      <SelectionInspectorSummary context={context} snapshot={snapshot} />
+      <SelectionInspectorSummary context={context} state={state} />
       <div className="cluster">
         <div className="card-header card-subheader">
           <h4>{t("section.quickActions")}</h4>
@@ -62,7 +63,7 @@ export function EditSelectionInspector({
         <ConnectionList
           controller={controller}
           links={context.selectedLinks}
-          locale={snapshot.ui.locale}
+          locale={state.locale}
           removeDisabled={false}
         />
       </div>
@@ -79,17 +80,29 @@ export function EditSelectionInspector({
             context.selectedDefinition.configFields.map((field) => (
               <article className="definition-card" key={field.key}>
                 <h4>
-                  {getLocalizedStage1ConfigFieldLabel(snapshot.ui.locale, field)}
+                  {getLocalizedStage1ConfigFieldLabel(state.locale, field)}
                 </h4>
                 <p>
                   {getLocalizedMutabilityLabel(
-                    snapshot.ui.locale,
+                    state.locale,
                     field.mutability,
                   )}
                 </p>
                 <p>
                   {formatConfigValue(context.selectedEntity.config[field.key])}
                 </p>
+                <ConfigFieldMutationControl
+                  clearLabel={t("action.clearPatch")}
+                  currentValue={context.selectedEntity.config[field.key]}
+                  locale={state.locale}
+                  onApply={(value) =>
+                    controller.patchEntityConfig(context.selectedEntity.id, {
+                      [field.key]: value,
+                    })
+                  }
+                  submitLabel={t("action.applyValue")}
+                  toggleLabel={t("action.toggleValue")}
+                />
               </article>
             ))
           )}
@@ -99,7 +112,7 @@ export function EditSelectionInspector({
         <div className="card-header card-subheader">
           <h4>{t("section.runtimeDetails")}</h4>
         </div>
-        <RuntimeDetailList context={context} snapshot={snapshot} />
+        <RuntimeDetailList context={context} state={state} />
       </div>
     </div>
   );

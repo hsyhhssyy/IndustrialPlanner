@@ -1,10 +1,32 @@
-export interface RuntimeControl {
-  type:
-    | "runtime.start"
-    | "runtime.pause"
-    | "runtime.step"
-    | "runtime.speed.set"
-    | "runtime.patch"
-    | "runtime.query.inspect";
-  payload: Record<string, unknown>;
-}
+export type RuntimeControl =
+  | {
+      type: "runtime.start";
+      payload: Record<string, never>;
+    }
+  | {
+      type: "runtime.pause";
+      payload: Record<string, never>;
+    }
+  | {
+      type: "runtime.step";
+      payload: Record<string, never>;
+    }
+  | {
+      type: "runtime.speed.set";
+      payload: {
+        preset: string;
+      };
+    }
+  | {
+      type: "runtime.patch";
+      payload: {
+        entityId: string;
+        patch: Record<string, unknown>;
+      };
+    }
+  | {
+      type: "runtime.query.inspect";
+      payload: {
+        entityId: string;
+      };
+    };
