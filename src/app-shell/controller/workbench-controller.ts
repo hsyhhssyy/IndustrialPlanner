@@ -20,9 +20,9 @@ import { createEditCanvasBackend } from "@/canvas/edit-canvas-backend";
 import { createSimulationCanvasBackend } from "@/canvas/simulation-canvas-backend";
 import { compileStage1World } from "@/domain/compiler/stage1-compiler";
 import {
-  createStage1SeedWorldDocument,
   type WorldDocument,
 } from "@/domain/document/world-document";
+import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";
 import {
   createStage1Registry,
   type Stage1Registry,
