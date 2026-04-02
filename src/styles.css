@@ -648,19 +648,34 @@ button.is-active {
 .canvas-stage {
   min-height: 0;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
   padding: 8px;
   background: var(--canvas-bg);
+  outline: none;
 }
 
-.canvas-scroll-surface {
-  width: var(--renderer-width);
-  height: var(--renderer-height);
+.canvas-stage:focus-visible {
+  box-shadow: inset 0 0 0 1px rgb(89 194 255 / 0.45);
 }
 
+.canvas-viewport-surface,
 .renderer-host,
 .renderer-canvas {
   display: block;
+}
+
+.canvas-viewport-surface,
+.renderer-host {
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-viewport-surface {
+  cursor: grab;
+}
+
+.canvas-viewport-surface.is-panning {
+  cursor: grabbing;
 }
 
 .renderer-canvas {

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createWorkbenchUiStore } from "@/app-shell/state/workbench-ui-store";
-import { createWorkspaceStorageGateway } from "@/persistence/local-workspace-storage";
+import { createInitialCanvasSnapshot } from "@/canvas/canvas-host";
+import { createWorkspaceStorageGateway } from "@/shared/workspace-storage/local-workspace-storage";
 
 const UI_STATE_KEY = "industrial-planner:workbench-ui-state";
 
@@ -23,21 +24,28 @@ describe("WorkspaceStorageGateway", () => {
     );
 
     const storage = createWorkspaceStorageGateway();
-    const hydrated = storage.loadUiSnapshot();
+    const hydrated = storage.loadWorkspaceSnapshot();
 
-    expect(hydrated).toEqual({});
+    expect(hydrated).toEqual({ ui: {} });
     expect(localStorage.getItem(UI_STATE_KEY)).toBeNull();
   });
 
-  it("saves the full UI snapshot without depending on state helpers", () => {
+  it("saves the full UI snapshot with canvas viewport state", () => {
     const storage = createWorkspaceStorageGateway();
     const uiStore = createWorkbenchUiStore({
       locale: "en-US",
     });
+    const canvasViewport = createInitialCanvasSnapshot().viewport;
 
     uiStore.setMode("simulate");
     uiStore.setDockOpen("left", false);
-    storage.saveUiSnapshot(uiStore.getSnapshot());
+    storage.saveWorkspaceSnapshot({
+      ui: uiStore.getSnapshot(),
+      canvasViewport: {
+        ...canvasViewport,
+        offset: { x: 24, y: 40 },
+      },
+    });
 
     expect(JSON.parse(localStorage.getItem(UI_STATE_KEY) ?? "null")).toMatchObject({
       mode: "simulate",
@@ -46,7 +54,36 @@ describe("WorkspaceStorageGateway", () => {
         open: false,
         collapsed: false,
       },
+      canvasViewport: {
+        offset: { x: 24, y: 40 },
+        zoom: 1,
+      },
       statusMessageKey: "status.simulate",
+    });
+  });
+
+  it("hydrates canvas viewport when the persisted shape is valid", () => {
+    localStorage.setItem(
+      UI_STATE_KEY,
+      JSON.stringify({
+        locale: "en-US",
+        canvasViewport: {
+          offset: { x: 12, y: 18 },
+          zoom: 1.2,
+        },
+      }),
+    );
+
+    const storage = createWorkspaceStorageGateway();
+
+    expect(storage.loadWorkspaceSnapshot()).toEqual({
+      ui: {
+        locale: "en-US",
+      },
+      canvasViewport: {
+        offset: { x: 12, y: 18 },
+        zoom: 1.2,
+      },
     });
   });
 });

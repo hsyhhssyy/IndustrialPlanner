@@ -38,8 +38,9 @@ import {
 import type { AppLocale } from "@/i18n/messages";
 import {
   createWorkspaceStorageGateway,
+  type WorkspacePersistenceSnapshot,
   type WorkspaceStorageGateway,
-} from "@/persistence/local-workspace-storage";
+} from "@/shared/workspace-storage/local-workspace-storage";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
 import type { RenderSceneModel } from "@/renderer/scene/types";
 import {
@@ -78,8 +79,8 @@ class WorkbenchControllerImpl implements WorkbenchController {
   constructor() {
     this.registry = createStage1Registry();
     this.storage = createWorkspaceStorageGateway();
-    this.uiStore = createWorkbenchUiStore(this.storage.loadUiSnapshot());
-    this.storage.saveUiSnapshot(this.uiStore.getSnapshot());
+    const workspaceSnapshot = this.storage.loadWorkspaceSnapshot();
+    this.uiStore = createWorkbenchUiStore(workspaceSnapshot.ui);
     this.editorHost = createEditorHost({
       document: createStage1SeedWorldDocument(),
       session: createInitialEditorSession(),
@@ -103,6 +104,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
         this.uiStore.getSnapshot().mode === "simulate"
           ? "simulation"
           : "edit",
+      initialViewport: workspaceSnapshot.canvasViewport,
     });
     this.simulationHost = createSimulationHost();
     this.editorStore = createSnapshotStore(this.editorHost.getSnapshot());
@@ -119,6 +121,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
 
     this.loadSimulationWorld();
+    this.sync();
     void this.refreshInspectorForSelection();
   }
 
@@ -231,6 +234,16 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   zoomOut(): void {
     this.canvasHost.zoomBy(-0.1);
+    this.sync();
+  }
+
+  panCanvasBy(screenDelta: CanvasPoint): void {
+    this.canvasHost.panBy(screenDelta);
+    this.sync();
+  }
+
+  setCanvasViewportSize(size: CanvasPoint): void {
+    this.canvasHost.setViewportSize(size);
     this.sync();
   }
 
@@ -348,14 +361,34 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   private syncFromUiStore(): void {
-    this.storage.saveUiSnapshot(this.uiStore.getSnapshot());
+    this.saveWorkspaceSnapshot();
   }
 
   private sync(): void {
     this.editorStore.setSnapshot(this.editorHost.getSnapshot());
-    this.canvasStore.setSnapshot(this.buildCanvasSnapshot());
     this.topologyStore.setSnapshot(this.topology);
+    const renderScene = this.buildRenderSceneSnapshot();
+
+    this.canvasHost.setWorldSize({
+      x: renderScene.worldWidth,
+      y: renderScene.worldHeight,
+    });
+
+    this.canvasStore.setSnapshot(this.buildCanvasSnapshot());
     this.renderSceneStore.setSnapshot(this.buildRenderSceneSnapshot());
+    this.saveWorkspaceSnapshot();
+  }
+
+  private saveWorkspaceSnapshot(): void {
+    const canvasViewport = this.canvasHost.getSnapshot().viewport;
+
+    this.storage.saveWorkspaceSnapshot({
+      ui: this.uiStore.getSnapshot(),
+      canvasViewport: {
+        offset: canvasViewport.offset,
+        zoom: canvasViewport.zoom,
+      },
+    } satisfies WorkspacePersistenceSnapshot);
   }
 
   private buildCanvasSnapshot(): WorkbenchCanvasSnapshot {

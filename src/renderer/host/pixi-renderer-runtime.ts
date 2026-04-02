@@ -82,6 +82,7 @@ const PIXI_DISPLAY_OBJECT_DESTROY_OPTIONS: DestroyOptions = {
 };
 
 interface PixiSceneLayers {
+  camera: Container;
   grid: Container;
   links: Container;
   entities: Container;
@@ -170,15 +171,18 @@ function clearContainer(container: Container): void {
 }
 
 function createSceneLayers(stage: Container): PixiSceneLayers {
+  const camera = new Container();
   const grid = new Container();
   const links = new Container();
   const entities = new Container();
 
-  stage.addChild(grid);
-  stage.addChild(links);
-  stage.addChild(entities);
+  camera.addChild(grid);
+  camera.addChild(links);
+  camera.addChild(entities);
+  stage.addChild(camera);
 
   return {
+    camera,
     grid,
     links,
     entities,
@@ -575,6 +579,9 @@ export function createPixiRendererRuntime(
   let destroyed = false;
   let initialized = false;
   let latestScene: RenderSceneModel | null = null;
+  const resizeObserver = new ResizeObserver(() => {
+    renderLatestScene();
+  });
 
   function unloadManagedTextures(): void {
     const loadedTexturePaths = Array.from(textureCache.keys());
@@ -600,8 +607,14 @@ export function createPixiRendererRuntime(
       return;
     }
 
-    const { width, height, resolution } = getSceneScreenSize(latestScene);
+    const { resolution } = getSceneScreenSize(latestScene);
+    const width = Math.max(1, Math.floor(hostElement.clientWidth));
+    const height = Math.max(1, Math.floor(hostElement.clientHeight));
     app.renderer.resize(width, height, resolution);
+    layers.camera.position.set(
+      -latestScene.viewportOffset.x * latestScene.zoom,
+      -latestScene.viewportOffset.y * latestScene.zoom,
+    );
     renderSceneToLayers(layers, latestScene, textureCache);
     app.render();
   }
@@ -659,6 +672,7 @@ export function createPixiRendererRuntime(
 
       app.canvas.className = "renderer-canvas";
       hostElement.appendChild(app.canvas);
+      resizeObserver.observe(hostElement);
       initialized = true;
       renderLatestScene();
     })
@@ -680,6 +694,7 @@ export function createPixiRendererRuntime(
     },
     destroy() {
       destroyed = true;
+      resizeObserver.disconnect();
 
       if (initialized) {
         app.destroy(

@@ -10,6 +10,7 @@ export interface CanvasPoint {
 export interface CanvasViewport {
   offset: CanvasPoint;
   zoom: number;
+  size: CanvasPoint;
 }
 
 export interface CanvasSnapshot {
@@ -45,6 +46,9 @@ export interface CanvasHost {
   getActiveBackendSnapshot: () => CanvasBackendSnapshot;
   setActiveBackend: (backend: CanvasBackendKind) => void;
   zoomBy: (delta: number) => void;
+  panBy: (screenDelta: CanvasPoint) => void;
+  setViewportSize: (size: CanvasPoint) => void;
+  setWorldSize: (size: CanvasPoint) => void;
   handlePrimaryClick: (input: CanvasScreenInput) => Promise<void>;
   handleWorldChanged: () => void;
 }
@@ -53,6 +57,7 @@ interface CreateCanvasHostOptions {
   editBackend: CanvasBackend;
   simulationBackend: CanvasBackend;
   initialBackend?: CanvasBackendKind;
+  initialViewport?: Partial<CanvasViewport>;
 }
 
 const MIN_CANVAS_ZOOM = 0.5;
@@ -60,13 +65,30 @@ const MAX_CANVAS_ZOOM = 2.5;
 
 export function createInitialCanvasSnapshot(
   activeBackend: CanvasBackendKind = "edit",
+  initialViewport: Partial<CanvasViewport> = {},
 ): CanvasSnapshot {
   return {
     viewport: {
-      offset: { x: 0, y: 0 },
-      zoom: 1,
+      offset: initialViewport.offset ?? { x: 0, y: 0 },
+      zoom: initialViewport.zoom ?? 1,
+      size: initialViewport.size ?? { x: 0, y: 0 },
     },
     activeBackend,
+  };
+}
+
+function clampViewportOffset(
+  offset: CanvasPoint,
+  zoom: number,
+  viewportSize: CanvasPoint,
+  worldSize: CanvasPoint,
+): CanvasPoint {
+  const maxOffsetX = Math.max(0, worldSize.x - viewportSize.x / zoom);
+  const maxOffsetY = Math.max(0, worldSize.y - viewportSize.y / zoom);
+
+  return {
+    x: Math.min(Math.max(0, offset.x), maxOffsetX),
+    y: Math.min(Math.max(0, offset.y), maxOffsetY),
   };
 }
 
@@ -93,6 +115,7 @@ export function worldToGridPoint(
 class CanvasHostImpl implements CanvasHost {
   private readonly backends: Record<CanvasBackendKind, CanvasBackend>;
   private snapshot: CanvasSnapshot;
+  private worldSize: CanvasPoint;
 
   constructor(options: CreateCanvasHostOptions) {
     this.backends = {
@@ -101,7 +124,9 @@ class CanvasHostImpl implements CanvasHost {
     };
     this.snapshot = createInitialCanvasSnapshot(
       options.initialBackend ?? "edit",
+      options.initialViewport,
     );
+    this.worldSize = { x: 0, y: 0 };
   }
 
   getSnapshot(): CanvasSnapshot {
@@ -120,13 +145,90 @@ class CanvasHostImpl implements CanvasHost {
   }
 
   zoomBy(delta: number): void {
+    const nextZoom = Math.min(
+      MAX_CANVAS_ZOOM,
+      Math.max(MIN_CANVAS_ZOOM, this.snapshot.viewport.zoom + delta),
+    );
+
     this.snapshot = {
       ...this.snapshot,
       viewport: {
         ...this.snapshot.viewport,
-        zoom: Math.min(
-          MAX_CANVAS_ZOOM,
-          Math.max(MIN_CANVAS_ZOOM, this.snapshot.viewport.zoom + delta),
+        zoom: nextZoom,
+        offset: clampViewportOffset(
+          this.snapshot.viewport.offset,
+          nextZoom,
+          this.snapshot.viewport.size,
+          this.worldSize,
+        ),
+      },
+    };
+  }
+
+  panBy(screenDelta: CanvasPoint): void {
+    const nextOffset = clampViewportOffset(
+      {
+        x: this.snapshot.viewport.offset.x - screenDelta.x / this.snapshot.viewport.zoom,
+        y: this.snapshot.viewport.offset.y - screenDelta.y / this.snapshot.viewport.zoom,
+      },
+      this.snapshot.viewport.zoom,
+      this.snapshot.viewport.size,
+      this.worldSize,
+    );
+
+    if (
+      nextOffset.x === this.snapshot.viewport.offset.x &&
+      nextOffset.y === this.snapshot.viewport.offset.y
+    ) {
+      return;
+    }
+
+    this.snapshot = {
+      ...this.snapshot,
+      viewport: {
+        ...this.snapshot.viewport,
+        offset: nextOffset,
+      },
+    };
+  }
+
+  setViewportSize(size: CanvasPoint): void {
+    const nextSize = {
+      x: Math.max(0, size.x),
+      y: Math.max(0, size.y),
+    };
+    const nextOffset = clampViewportOffset(
+      this.snapshot.viewport.offset,
+      this.snapshot.viewport.zoom,
+      nextSize,
+      this.worldSize,
+    );
+
+    this.snapshot = {
+      ...this.snapshot,
+      viewport: {
+        ...this.snapshot.viewport,
+        size: nextSize,
+        offset: nextOffset,
+      },
+    };
+  }
+
+  setWorldSize(size: CanvasPoint): void {
+    this.worldSize = {
+      x: Math.max(0, size.x),
+      y: Math.max(0, size.y),
+    };
+
+    this.snapshot = {
+      ...this.snapshot,
+      viewport: {
+        ...this.snapshot.viewport,
+        offset: clampViewportOffset(
+          this.snapshot.viewport.offset,
+          this.snapshot.viewport.zoom,
+          this.snapshot.viewport.size,
+          this.worldSize,
         ),
       },
     };

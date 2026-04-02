@@ -146,6 +146,7 @@ export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
 
   return {
     zoom: input.canvas.viewport.zoom,
+    viewportOffset: input.canvas.viewport.offset,
     gridSize: input.document.documentSettings.gridSize,
     worldWidth: maxWorldWidth,
     worldHeight: maxWorldHeight,

@@ -37,7 +37,7 @@ describe("CanvasHost", () => {
     expect(
       screenToWorldPoint(
         { x: 30, y: 18 },
-        { offset: { x: 8, y: 4 }, zoom: 2 },
+        { offset: { x: 8, y: 4 }, zoom: 2, size: { x: 0, y: 0 } },
       ),
     ).toEqual({ x: 23, y: 13 });
     expect(worldToGridPoint({ x: 95, y: 47 }, 16)).toEqual({ x: 5, y: 2 });
@@ -76,5 +76,28 @@ describe("CanvasHost", () => {
     expect(host.getActiveBackendSnapshot().selectedEntityIds).toEqual([
       "simulation-selected",
     ]);
+  });
+
+  it("clamps panning and zooming against viewport and world bounds", () => {
+    const host = createCanvasHost({
+      editBackend: createMockBackend("edit"),
+      simulationBackend: createMockBackend("simulation"),
+    });
+
+    host.setWorldSize({ x: 1280, y: 960 });
+    host.setViewportSize({ x: 320, y: 160 });
+    host.panBy({ x: -400, y: -200 });
+
+    expect(host.getSnapshot().viewport.offset).toEqual({ x: 400, y: 200 });
+
+    host.panBy({ x: -1000, y: -1000 });
+
+    expect(host.getSnapshot().viewport.offset).toEqual({ x: 960, y: 800 });
+
+    host.zoomBy(1.5);
+    expect(host.getSnapshot().viewport.zoom).toBe(2.5);
+
+    host.panBy({ x: 4000, y: 4000 });
+    expect(host.getSnapshot().viewport.offset).toEqual({ x: 0, y: 0 });
   });
 });

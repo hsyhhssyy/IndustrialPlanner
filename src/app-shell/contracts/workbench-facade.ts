@@ -52,6 +52,8 @@ export interface WorkbenchController {
   redo: () => Promise<void>;
   zoomIn: () => void;
   zoomOut: () => void;
+  panCanvasBy: (screenDelta: CanvasPoint) => void;
+  setCanvasViewportSize: (size: CanvasPoint) => void;
   setLeftPanelMode: (mode: LeftPanelMode) => void;
   setSimulationSpeedPreset: (preset: SimulationSpeedPreset) => void;
   setLocale: (locale: AppLocale) => void;

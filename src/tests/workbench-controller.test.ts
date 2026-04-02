@@ -185,6 +185,39 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("hydrates and persists the canvas viewport from local storage", () => {
+    localStorage.setItem(
+      "industrial-planner:workbench-ui-state",
+      JSON.stringify({
+        locale: "en-US",
+        canvasViewport: {
+          offset: { x: 48, y: 64 },
+          zoom: 1.4,
+        },
+      }),
+    );
+
+    const controller = createWorkbenchController();
+
+    expect(controller.canvasStore.getSnapshot().canvas.viewport.offset).toEqual({
+      x: 48,
+      y: 64,
+    });
+    expect(controller.canvasStore.getSnapshot().canvas.viewport.zoom).toBe(1.4);
+
+    controller.panCanvasBy({ x: -20, y: -10 });
+
+    expect(
+      JSON.parse(localStorage.getItem("industrial-planner:workbench-ui-state") ?? "null"),
+    ).toMatchObject({
+      canvasViewport: {
+        zoom: 1.4,
+      },
+    });
+
+    controller.dispose();
+  });
+
   it("places an entity through the canvas host interaction loop and recompiles topology", async () => {
     const controller = createWorkbenchController();
     const before = readWorkbenchState(controller);

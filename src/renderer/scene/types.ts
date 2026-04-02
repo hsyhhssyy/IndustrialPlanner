@@ -61,6 +61,10 @@ export interface RenderExplicitLink {
 
 export interface RenderSceneModel {
   zoom: number;
+  viewportOffset: {
+    x: number;
+    y: number;
+  };
   gridSize: number;
   worldWidth: number;
   worldHeight: number;
