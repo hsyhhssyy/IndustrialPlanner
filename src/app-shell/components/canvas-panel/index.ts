@@ -1,0 +1,1 @@
+export { CanvasPanel, type CanvasPanelProps } from "./canvas-panel";

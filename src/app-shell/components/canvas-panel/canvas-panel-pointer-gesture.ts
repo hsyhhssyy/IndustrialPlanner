@@ -2,7 +2,7 @@ import type { CanvasPoint } from "@/canvas/canvas-host";
 
 export const VIEWPORT_PAN_START_DISTANCE_PX = 4;
 
-export type CanvasPanelGestureState =
+export type CanvasPanelPointerGestureState =
   | {
       phase: "idle";
     }
@@ -19,21 +19,21 @@ export type CanvasPanelGestureState =
       last: CanvasPoint;
     };
 
-export interface CanvasPanelGestureAdvanceResult {
-  nextState: CanvasPanelGestureState;
+export interface CanvasPanelPointerGestureAdvanceResult {
+  nextState: CanvasPanelPointerGestureState;
   screenDelta: CanvasPoint | null;
 }
 
-export function createIdleCanvasPanelGestureState(): CanvasPanelGestureState {
+export function createIdleCanvasPanelPointerGestureState(): CanvasPanelPointerGestureState {
   return {
     phase: "idle",
   };
 }
 
-export function beginCanvasViewportPanGesture(
+export function beginCanvasPointerPanGesture(
   pointerId: number,
   point: CanvasPoint,
-): CanvasPanelGestureState {
+): CanvasPanelPointerGestureState {
   return {
     phase: "pan-pressed",
     pointerId,
@@ -42,21 +42,21 @@ export function beginCanvasViewportPanGesture(
   };
 }
 
-export function cancelCanvasPanelGesture(): CanvasPanelGestureState {
-  return createIdleCanvasPanelGestureState();
+export function cancelCanvasPanelPointerGesture(): CanvasPanelPointerGestureState {
+  return createIdleCanvasPanelPointerGestureState();
 }
 
-export function isCanvasViewportPanning(
-  state: CanvasPanelGestureState,
+export function isCanvasPointerPanning(
+  state: CanvasPanelPointerGestureState,
 ): boolean {
   return state.phase === "panning";
 }
 
-export function advanceCanvasViewportPanGesture(
-  state: CanvasPanelGestureState,
+export function advanceCanvasPointerPanGesture(
+  state: CanvasPanelPointerGestureState,
   pointerId: number,
   nextPoint: CanvasPoint,
-): CanvasPanelGestureAdvanceResult {
+): CanvasPanelPointerGestureAdvanceResult {
   if (state.phase === "idle" || state.pointerId !== pointerId) {
     return {
       nextState: state,
