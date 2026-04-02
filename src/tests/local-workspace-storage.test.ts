@@ -9,7 +9,7 @@ describe("WorkspaceStorageGateway", () => {
     localStorage.clear();
   });
 
-  it("loads a contract-shaped UI snapshot from legacy dock fields", () => {
+  it("clears incompatible persisted UI data instead of hydrating legacy fields", () => {
     localStorage.setItem(
       UI_STATE_KEY,
       JSON.stringify({
@@ -23,18 +23,10 @@ describe("WorkspaceStorageGateway", () => {
     );
 
     const storage = createWorkspaceStorageGateway();
-    const hydrated = createWorkbenchUiStore(storage.loadUiSnapshot()).getSnapshot();
+    const hydrated = storage.loadUiSnapshot();
 
-    expect(hydrated.locale).toBe("en-US");
-    expect(hydrated.leftDock).toEqual({
-      open: false,
-      collapsed: false,
-    });
-    expect(hydrated.rightDock).toEqual({
-      open: true,
-      collapsed: true,
-    });
-    expect(hydrated.simulationSpeed).toBe("4x");
+    expect(hydrated).toEqual({});
+    expect(localStorage.getItem(UI_STATE_KEY)).toBeNull();
   });
 
   it("saves the full UI snapshot without depending on state helpers", () => {

@@ -88,6 +88,39 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("overwrites incompatible persisted UI data with the current snapshot on boot", () => {
+    localStorage.setItem(
+      "industrial-planner:workbench-ui-state",
+      JSON.stringify({
+        leftDockOpen: false,
+        statusMessage: "legacy",
+      }),
+    );
+
+    const controller = createWorkbenchController();
+    const persisted = JSON.parse(
+      localStorage.getItem("industrial-planner:workbench-ui-state") ?? "null",
+    );
+
+    expect(persisted).toMatchObject({
+      mode: "edit",
+      locale: "zh-CN",
+      leftDock: {
+        open: true,
+        collapsed: false,
+      },
+      rightDock: {
+        open: true,
+        collapsed: false,
+      },
+      statusMessageKey: "status.ready",
+    });
+    expect("leftDockOpen" in persisted).toBe(false);
+    expect("statusMessage" in persisted).toBe(false);
+
+    controller.dispose();
+  });
+
   it("steps simulation without requiring a worker host yet", () => {
     const controller = createWorkbenchController();
 

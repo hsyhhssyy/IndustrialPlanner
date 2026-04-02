@@ -15,45 +15,112 @@ function canUseStorage(): boolean {
   return typeof localStorage !== "undefined";
 }
 
-type PersistedWorkbenchUiSnapshot = WorkbenchUiSnapshotInput & {
-  leftDockOpen?: boolean;
-  rightDockOpen?: boolean;
-  bottomDockOpen?: boolean;
-  statusMessage?: string;
-};
+const WORKBENCH_UI_SNAPSHOT_KEYS = new Set<keyof WorkbenchUiSnapshotInput>([
+  "mode",
+  "locale",
+  "leftPanelMode",
+  "simulationSpeed",
+  "diagnosticsVisible",
+  "statusMessageKey",
+  "leftDock",
+  "rightDock",
+]);
 
-function toDockSnapshot(
-  dockState: Partial<DockState> | undefined,
-  legacyOpen: boolean | undefined,
-): Partial<DockState> | undefined {
-  const nextDockSnapshot: Partial<DockState> = {};
+const DOCK_STATE_KEYS = new Set<keyof DockState>(["open", "collapsed"]);
 
-  if (dockState?.open !== undefined) {
-    nextDockSnapshot.open = dockState.open;
-  } else if (legacyOpen !== undefined) {
-    nextDockSnapshot.open = legacyOpen;
-  }
-
-  if (dockState?.collapsed !== undefined) {
-    nextDockSnapshot.collapsed = dockState.collapsed;
-  }
-
-  return Object.keys(nextDockSnapshot).length > 0 ? nextDockSnapshot : undefined;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function coercePersistedWorkbenchUiSnapshot(
-  parsed: PersistedWorkbenchUiSnapshot,
-): WorkbenchUiSnapshotInput {
-  return {
-    mode: parsed.mode,
-    locale: parsed.locale,
-    leftPanelMode: parsed.leftPanelMode,
-    simulationSpeed: parsed.simulationSpeed,
-    diagnosticsVisible: parsed.diagnosticsVisible,
-    statusMessageKey: parsed.statusMessageKey,
-    leftDock: toDockSnapshot(parsed.leftDock, parsed.leftDockOpen),
-    rightDock: toDockSnapshot(parsed.rightDock, parsed.rightDockOpen),
-  };
+function hasOnlyAllowedKeys(
+  value: Record<string, unknown>,
+  allowedKeys: ReadonlySet<string>,
+): boolean {
+  return Object.keys(value).every((key) => allowedKeys.has(key));
+}
+
+function isDockStateInput(value: unknown): value is Partial<DockState> {
+  if (!isRecord(value) || !hasOnlyAllowedKeys(value, DOCK_STATE_KEYS)) {
+    return false;
+  }
+
+  if (value.open !== undefined && typeof value.open !== "boolean") {
+    return false;
+  }
+
+  if (value.collapsed !== undefined && typeof value.collapsed !== "boolean") {
+    return false;
+  }
+
+  return true;
+}
+
+function isWorkbenchUiSnapshotInput(
+  value: unknown,
+): value is WorkbenchUiSnapshotInput {
+  if (
+    !isRecord(value) ||
+    !hasOnlyAllowedKeys(value, WORKBENCH_UI_SNAPSHOT_KEYS)
+  ) {
+    return false;
+  }
+
+  if (value.mode !== undefined && value.mode !== "edit" && value.mode !== "simulate") {
+    return false;
+  }
+
+  if (
+    value.locale !== undefined &&
+    value.locale !== "zh-CN" &&
+    value.locale !== "en-US"
+  ) {
+    return false;
+  }
+
+  if (
+    value.leftPanelMode !== undefined &&
+    value.leftPanelMode !== "placement" &&
+    value.leftPanelMode !== "delete" &&
+    value.leftPanelMode !== "blueprint" &&
+    value.leftPanelMode !== "history"
+  ) {
+    return false;
+  }
+
+  if (
+    value.simulationSpeed !== undefined &&
+    value.simulationSpeed !== "0.25x" &&
+    value.simulationSpeed !== "1x" &&
+    value.simulationSpeed !== "2x" &&
+    value.simulationSpeed !== "4x" &&
+    value.simulationSpeed !== "16x"
+  ) {
+    return false;
+  }
+
+  if (
+    value.diagnosticsVisible !== undefined &&
+    typeof value.diagnosticsVisible !== "boolean"
+  ) {
+    return false;
+  }
+
+  if (
+    value.statusMessageKey !== undefined &&
+    typeof value.statusMessageKey !== "string"
+  ) {
+    return false;
+  }
+
+  if (value.leftDock !== undefined && !isDockStateInput(value.leftDock)) {
+    return false;
+  }
+
+  if (value.rightDock !== undefined && !isDockStateInput(value.rightDock)) {
+    return false;
+  }
+
+  return true;
 }
 
 export function createWorkspaceStorageGateway(): WorkspaceStorageGateway {
@@ -70,10 +137,16 @@ export function createWorkspaceStorageGateway(): WorkspaceStorageGateway {
       }
 
       try {
-        const parsed = JSON.parse(raw) as PersistedWorkbenchUiSnapshot;
+        const parsed = JSON.parse(raw) as unknown;
 
-        return coercePersistedWorkbenchUiSnapshot(parsed);
+        if (!isWorkbenchUiSnapshotInput(parsed)) {
+          localStorage.removeItem(UI_STATE_KEY);
+          return {};
+        }
+
+        return parsed;
       } catch {
+        localStorage.removeItem(UI_STATE_KEY);
         return {};
       }
     },

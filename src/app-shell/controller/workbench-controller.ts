@@ -78,6 +78,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.registry = createStage1Registry();
     this.storage = createWorkspaceStorageGateway();
     this.uiStore = createWorkbenchUiStore(this.storage.loadUiSnapshot());
+    this.storage.saveUiSnapshot(this.uiStore.getSnapshot());
     this.editorHost = createEditorHost({
       document: createStage1SeedWorldDocument(),
       session: createInitialEditorSession(),
