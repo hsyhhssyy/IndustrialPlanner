@@ -1,8 +1,11 @@
 import {
   Application,
+  Assets,
   Container,
   Graphics,
+  Sprite,
   Text,
+  Texture,
 } from "pixi.js";
 import type {
   DestroyOptions,
@@ -24,21 +27,13 @@ const GRID_STROKE_STYLE: StrokeInput = {
 };
 const LABEL_TEXT_STYLE: TextStyleOptions = {
   fill: 0xf3f6fb,
-  fontFamily: '"IBM Plex Sans", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+  fontFamily:
+    '"IBM Plex Sans", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
   fontSize: 12,
   fontWeight: "600",
-};
-const SUBTITLE_TEXT_STYLE: TextStyleOptions = {
-  fill: "rgba(243, 246, 251, 0.7)",
-  fontFamily: '"IBM Plex Sans", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
-  fontSize: 12,
-};
-const PROGRESS_TRACK_FILL: FillInput = {
-  color: 0xffffff,
-  alpha: 0.12,
-};
-const PROGRESS_FILL: FillInput = {
-  color: 0x7fe0b0,
+  align: "center",
+  wordWrap: true,
+  wordWrapWidth: 108,
 };
 const PENDING_LINK_STROKE_STYLE: StrokeInput = {
   width: 2,
@@ -49,12 +44,41 @@ const PATCHED_STROKE_STYLE: StrokeInput = {
   color: 0xffc86a,
   alpha: 0.88,
 };
-const PIXI_DESTROY_OPTIONS: DestroyOptions = {
+const SPRITE_SURFACE_FILL: FillInput = {
+  color: 0x111822,
+  alpha: 0.42,
+};
+const BELT_TRACK_OUTER_FILL: FillInput = {
+  color: 0x1a232d,
+  alpha: 0.94,
+};
+const BELT_TRACK_INNER_FILL: FillInput = {
+  color: 0x6d7b8c,
+  alpha: 0.92,
+};
+const PIPE_TRACK_OUTER_FILL: FillInput = {
+  color: 0x172430,
+  alpha: 0.96,
+};
+const PIPE_TRACK_INNER_FILL: FillInput = {
+  color: 0x2f6d86,
+  alpha: 0.92,
+};
+const PIPE_TRACK_CORE_FILL: FillInput = {
+  color: 0x9de6ff,
+  alpha: 0.86,
+};
+const SELECTION_STROKE_STYLE: StrokeInput = {
+  width: 2,
+  color: 0xf7d06a,
+  alpha: 0.98,
+};
+const PIXI_DISPLAY_OBJECT_DESTROY_OPTIONS: DestroyOptions = {
   children: true,
   context: true,
   style: true,
-  texture: true,
-  textureSource: true,
+  texture: false,
+  textureSource: false,
 };
 
 interface PixiSceneLayers {
@@ -70,39 +94,78 @@ export interface PixiRendererRuntime {
 
 function getStatusStrokeStyle(
   status: RenderEntitySprite["status"],
-  selected: boolean,
 ): StrokeInput {
-  if (selected) {
-    return {
-      width: 3,
-      color: 0x7fe0b0,
-    };
-  }
-
   switch (status) {
     case "running":
       return {
         width: 1.5,
         color: 0x7fe0b0,
+        alpha: 0.82,
       };
     case "blocked":
       return {
         width: 1.5,
         color: 0xffc86a,
+        alpha: 0.82,
       };
     default:
       return {
         width: 1.5,
         color: 0x8ea0b7,
+        alpha: 0.44,
       };
   }
+}
+
+function getInsetBounds(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  inset: number,
+): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
+  return {
+    x: x + inset,
+    y: y + inset,
+    width: Math.max(0, width - inset * 2),
+    height: Math.max(0, height - inset * 2),
+  };
+}
+
+function addEntitySelectionOutline(
+  container: Container,
+  entity: RenderEntitySprite,
+  x: number,
+  y: number,
+  entityWidth: number,
+  entityHeight: number,
+): void {
+  if (!entity.selected) {
+    return;
+  }
+
+  const selectionBounds = getInsetBounds(x, y, entityWidth, entityHeight, 2);
+  const selectionOutline = new Graphics()
+    .rect(
+      selectionBounds.x,
+      selectionBounds.y,
+      selectionBounds.width,
+      selectionBounds.height,
+    )
+    .stroke(SELECTION_STROKE_STYLE);
+  container.addChild(selectionOutline);
 }
 
 function clearContainer(container: Container): void {
   const children = container.removeChildren();
 
   for (const child of children) {
-    child.destroy(PIXI_DESTROY_OPTIONS);
+    child.destroy(PIXI_DISPLAY_OBJECT_DESTROY_OPTIONS);
   }
 }
 
@@ -213,15 +276,15 @@ function drawExplicitLinkSprite(
   const graphics = new Graphics();
   const strokeStyle: StrokeInput = explicitLink.selected
     ? {
-      width: 3,
-      color: 0x7fe0b0,
-      alpha: 0.92,
-    }
+        width: 3,
+        color: 0x7fe0b0,
+        alpha: 0.92,
+      }
     : {
-      width: 2,
-      color: 0x63b4da,
-      alpha: 0.78,
-    };
+        width: 2,
+        color: 0x63b4da,
+        alpha: 0.78,
+      };
 
   drawDashedLine(
     graphics,
@@ -237,24 +300,14 @@ function drawExplicitLinkSprite(
   return graphics;
 }
 
-function drawEntitySprite(
-  scene: RenderSceneModel,
+function addEntityDecorators(
+  container: Container,
   entity: RenderEntitySprite,
-): Container {
-  const container = new Container();
-  const x = entity.x * scene.zoom;
-  const y = entity.y * scene.zoom;
-  const entityWidth = entity.width * scene.zoom;
-  const entityHeight = entity.height * scene.zoom;
-  const progressTrackWidth = Math.max(0, entityWidth - 24);
-
-  const baseShape = new Graphics()
-    .rect(x, y, entityWidth, entityHeight)
-    .fill({ color: entity.fill })
-    .stroke(getStatusStrokeStyle(entity.status, entity.selected));
-
-  container.addChild(baseShape);
-
+  x: number,
+  y: number,
+  entityWidth: number,
+  entityHeight: number,
+): void {
   if (entity.pendingLinkSource) {
     const pendingLinkShape = new Graphics();
     drawDashedRect(
@@ -284,44 +337,195 @@ function drawEntitySprite(
     patchedShape.stroke(PATCHED_STROKE_STYLE);
     container.addChild(patchedShape);
   }
+}
+
+function drawEntityTrack(
+  scene: RenderSceneModel,
+  entity: RenderEntitySprite,
+): Container {
+  const container = new Container();
+  const x = entity.x * scene.zoom;
+  const y = entity.y * scene.zoom;
+  const entityWidth = entity.width * scene.zoom;
+  const entityHeight = entity.height * scene.zoom;
+  const vertical = entity.rotation === 90 || entity.rotation === 270;
+  const laneLength = vertical ? entityHeight * 0.84 : entityWidth * 0.84;
+  const laneThickness = Math.max(
+    10,
+    Math.min(entityWidth, entityHeight) *
+      (entity.renderKind === "belt-track" ? 0.34 : 0.26),
+  );
+  const laneX = vertical ? x + (entityWidth - laneThickness) / 2 : x + entityWidth * 0.08;
+  const laneY = vertical ? y + entityHeight * 0.08 : y + (entityHeight - laneThickness) / 2;
+  const laneWidth = vertical ? laneThickness : laneLength;
+  const laneHeight = vertical ? laneLength : laneThickness;
+  const innerInset = entity.renderKind === "belt-track" ? 4 : 3;
+  const frameBounds = getInsetBounds(x, y, entityWidth, entityHeight, 2);
+
+  const cellFrame = new Graphics()
+    .rect(
+      frameBounds.x,
+      frameBounds.y,
+      frameBounds.width,
+      frameBounds.height,
+    )
+    .fill({ color: 0x111821, alpha: 0.18 })
+    .stroke(getStatusStrokeStyle(entity.status));
+  container.addChild(cellFrame);
+
+  const outerLane = new Graphics()
+    .roundRect(laneX, laneY, laneWidth, laneHeight, laneThickness / 2)
+    .fill(
+      entity.renderKind === "belt-track"
+        ? BELT_TRACK_OUTER_FILL
+        : PIPE_TRACK_OUTER_FILL,
+    );
+  container.addChild(outerLane);
+
+  const innerLane = new Graphics()
+    .roundRect(
+      laneX + innerInset,
+      laneY + innerInset,
+      Math.max(0, laneWidth - innerInset * 2),
+      Math.max(0, laneHeight - innerInset * 2),
+      Math.max(2, laneThickness / 2 - innerInset),
+    )
+    .fill(
+      entity.renderKind === "belt-track"
+        ? BELT_TRACK_INNER_FILL
+        : PIPE_TRACK_INNER_FILL,
+    );
+  container.addChild(innerLane);
+
+  if (entity.renderKind === "pipe-track") {
+    const coreInset = innerInset + 4;
+    const coreLane = new Graphics()
+      .roundRect(
+        laneX + coreInset,
+        laneY + coreInset,
+        Math.max(0, laneWidth - coreInset * 2),
+        Math.max(0, laneHeight - coreInset * 2),
+        Math.max(2, laneThickness / 2 - coreInset),
+      )
+      .fill(PIPE_TRACK_CORE_FILL);
+    container.addChild(coreLane);
+  }
+
+  addEntitySelectionOutline(container, entity, x, y, entityWidth, entityHeight);
+  addEntityDecorators(container, entity, x, y, entityWidth, entityHeight);
+  return container;
+}
+
+function drawEntityTexture(
+  container: Container,
+  scene: RenderSceneModel,
+  entity: RenderEntitySprite,
+  textureCache: Map<string, Texture>,
+  x: number,
+  y: number,
+  entityWidth: number,
+  entityHeight: number,
+): void {
+  if (!entity.textureSrc) {
+    return;
+  }
+
+  const texture = textureCache.get(entity.textureSrc);
+
+  if (!texture) {
+    return;
+  }
+
+  const sprite = new Sprite(texture);
+  sprite.anchor.set(0.5);
+  sprite.x =
+    x + entityWidth / 2 + entity.textureCenterOffsetX * scene.zoom;
+  sprite.y =
+    y + entityHeight / 2 + entity.textureCenterOffsetY * scene.zoom;
+  sprite.width = entity.textureWidth * scene.zoom;
+  sprite.height = entity.textureHeight * scene.zoom;
+  sprite.rotation = (entity.rotation * Math.PI) / 180;
+  sprite.alpha = 0.98;
+  container.addChild(sprite);
+}
+
+function addEntityLabel(
+  container: Container,
+  entity: RenderEntitySprite,
+  x: number,
+  y: number,
+  entityWidth: number,
+  entityHeight: number,
+): void {
+  if (!entity.showLabel) {
+    return;
+  }
 
   const label = new Text({
     text: entity.label,
     style: LABEL_TEXT_STYLE,
   });
-  label.x = x + 12;
-  label.y = y + 10;
+  label.anchor.set(0.5);
+  label.x = x + entityWidth / 2;
+  label.y = y + entityHeight / 2;
+  label.style.wordWrapWidth = Math.max(28, entityWidth - 12);
   container.addChild(label);
+}
 
-  const subtitle = new Text({
-    text: entity.subtitle,
-    style: SUBTITLE_TEXT_STYLE,
-  });
-  subtitle.x = x + 12;
-  subtitle.y = y + 28;
-  container.addChild(subtitle);
+function drawSpriteEntity(
+  scene: RenderSceneModel,
+  entity: RenderEntitySprite,
+  textureCache: Map<string, Texture>,
+): Container {
+  const container = new Container();
+  const x = entity.x * scene.zoom;
+  const y = entity.y * scene.zoom;
+  const entityWidth = entity.width * scene.zoom;
+  const entityHeight = entity.height * scene.zoom;
+  const surfaceBounds = getInsetBounds(x, y, entityWidth, entityHeight, 2);
 
-  const progressTrack = new Graphics()
-    .rect(x + 12, y + entityHeight - 18, progressTrackWidth, 6)
-    .fill(PROGRESS_TRACK_FILL);
-  container.addChild(progressTrack);
-
-  const progressFill = new Graphics()
+  const baseShape = new Graphics()
     .rect(
-      x + 12,
-      y + entityHeight - 18,
-      Math.max(0, progressTrackWidth * entity.progress),
-      6,
+      surfaceBounds.x,
+      surfaceBounds.y,
+      surfaceBounds.width,
+      surfaceBounds.height,
     )
-    .fill(PROGRESS_FILL);
-  container.addChild(progressFill);
+    .fill(entity.textureSrc ? SPRITE_SURFACE_FILL : { color: entity.fill })
+    .stroke(getStatusStrokeStyle(entity.status));
+  container.addChild(baseShape);
 
+  drawEntityTexture(container, scene, entity, textureCache, x, y, entityWidth, entityHeight);
+
+  if (!entity.textureSrc) {
+    const fallbackTexture = new Graphics()
+      .rect(x + 6, y + 6, Math.max(12, entityWidth - 12), Math.max(12, entityHeight - 12))
+      .fill({ color: entity.fill, alpha: 0.9 });
+    container.addChild(fallbackTexture);
+  }
+
+  addEntitySelectionOutline(container, entity, x, y, entityWidth, entityHeight);
+  addEntityLabel(container, entity, x, y, entityWidth, entityHeight);
+  addEntityDecorators(container, entity, x, y, entityWidth, entityHeight);
   return container;
+}
+
+function drawEntitySprite(
+  scene: RenderSceneModel,
+  entity: RenderEntitySprite,
+  textureCache: Map<string, Texture>,
+): Container {
+  if (entity.renderKind === "belt-track" || entity.renderKind === "pipe-track") {
+    return drawEntityTrack(scene, entity);
+  }
+
+  return drawSpriteEntity(scene, entity, textureCache);
 }
 
 function renderSceneToLayers(
   layers: PixiSceneLayers,
   scene: RenderSceneModel,
+  textureCache: Map<string, Texture>,
 ): void {
   clearContainer(layers.grid);
   clearContainer(layers.links);
@@ -334,7 +538,7 @@ function renderSceneToLayers(
   }
 
   for (const entity of scene.entities) {
-    layers.entities.addChild(drawEntitySprite(scene, entity));
+    layers.entities.addChild(drawEntitySprite(scene, entity, textureCache));
   }
 }
 
@@ -350,46 +554,119 @@ function getSceneScreenSize(scene: RenderSceneModel): {
   };
 }
 
+function collectSceneTexturePaths(scene: RenderSceneModel): string[] {
+  return Array.from(
+    new Set(
+      scene.entities
+        .map((entity) => entity.textureSrc)
+        .filter((path): path is string => Boolean(path)),
+    ),
+  );
+}
+
 export function createPixiRendererRuntime(
   hostElement: HTMLDivElement,
 ): PixiRendererRuntime {
   const app = new Application();
   const layers = createSceneLayers(app.stage);
+  const textureCache = new Map<string, Texture>();
+  const pendingTexturePaths = new Set<string>();
 
   let destroyed = false;
   let initialized = false;
   let latestScene: RenderSceneModel | null = null;
 
-  void app.init({
-    autoDensity: true,
-    autoStart: false,
-    antialias: true,
-    backgroundColor: RENDERER_BACKGROUND_COLOR,
-    height: 1,
-    preference: "webgl",
-    resolution: window.devicePixelRatio || 1,
-    width: 1,
-  }).then(() => {
-    if (destroyed) {
-      app.destroy({ removeView: true }, PIXI_DESTROY_OPTIONS);
+  function unloadManagedTextures(): void {
+    const loadedTexturePaths = Array.from(textureCache.keys());
+    textureCache.clear();
+
+    if (loadedTexturePaths.length === 0) {
       return;
     }
 
-    app.canvas.className = "renderer-canvas";
-    hostElement.appendChild(app.canvas);
-    initialized = true;
+    void Promise.all(
+      loadedTexturePaths.map(async (path) => {
+        try {
+          await Assets.unload(path);
+        } catch {
+          // Ignore unload errors during renderer teardown.
+        }
+      }),
+    );
+  }
 
-    if (latestScene) {
-      const { width, height, resolution } = getSceneScreenSize(latestScene);
-      app.renderer.resize(width, height, resolution);
-      renderSceneToLayers(layers, latestScene);
-      app.render();
+  function renderLatestScene(): void {
+    if (!initialized || destroyed || !latestScene) {
+      return;
     }
-  }).catch((error: unknown) => {
-    if (!destroyed) {
-      console.error("Failed to initialize Pixi renderer host.", error);
+
+    const { width, height, resolution } = getSceneScreenSize(latestScene);
+    app.renderer.resize(width, height, resolution);
+    renderSceneToLayers(layers, latestScene, textureCache);
+    app.render();
+  }
+
+  function ensureTexture(path: string): void {
+    if (textureCache.has(path) || pendingTexturePaths.has(path)) {
+      return;
     }
-  });
+
+    pendingTexturePaths.add(path);
+
+    void Assets.load<Texture>(path)
+      .then((texture) => {
+        pendingTexturePaths.delete(path);
+
+        if (destroyed) {
+          return;
+        }
+
+        textureCache.set(path, texture);
+        renderLatestScene();
+      })
+      .catch((error: unknown) => {
+        pendingTexturePaths.delete(path);
+
+        if (!destroyed) {
+          console.error(`Failed to load renderer sprite "${path}".`, error);
+        }
+      });
+  }
+
+  function ensureSceneAssets(scene: RenderSceneModel): void {
+    for (const texturePath of collectSceneTexturePaths(scene)) {
+      ensureTexture(texturePath);
+    }
+  }
+
+  void app
+    .init({
+      autoDensity: true,
+      autoStart: false,
+      antialias: true,
+      backgroundColor: RENDERER_BACKGROUND_COLOR,
+      height: 1,
+      preference: "webgl",
+      resolution: window.devicePixelRatio || 1,
+      width: 1,
+    })
+    .then(() => {
+      if (destroyed) {
+        app.destroy({ removeView: true }, PIXI_DISPLAY_OBJECT_DESTROY_OPTIONS);
+        unloadManagedTextures();
+        return;
+      }
+
+      app.canvas.className = "renderer-canvas";
+      hostElement.appendChild(app.canvas);
+      initialized = true;
+      renderLatestScene();
+    })
+    .catch((error: unknown) => {
+      if (!destroyed) {
+        console.error("Failed to initialize Pixi renderer host.", error);
+      }
+    });
 
   return {
     syncScene(scene) {
@@ -398,23 +675,20 @@ export function createPixiRendererRuntime(
       }
 
       latestScene = scene;
-
-      if (!initialized) {
-        return;
-      }
-
-      const { width, height, resolution } = getSceneScreenSize(scene);
-
-      app.renderer.resize(width, height, resolution);
-      renderSceneToLayers(layers, scene);
-      app.render();
+      ensureSceneAssets(scene);
+      renderLatestScene();
     },
     destroy() {
       destroyed = true;
 
       if (initialized) {
-        app.destroy({ removeView: true }, PIXI_DESTROY_OPTIONS);
+        app.destroy(
+          { removeView: true },
+          PIXI_DISPLAY_OBJECT_DESTROY_OPTIONS,
+        );
       }
+
+      unloadManagedTextures();
     },
   };
 }

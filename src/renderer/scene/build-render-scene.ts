@@ -1,10 +1,17 @@
 import type { Stage1EntityDefinition } from "@/domain/registry/stage1-registry";
+import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import type {
   RenderExplicitLink,
   RenderEntitySprite,
   RenderSceneInput,
   RenderSceneModel,
 } from "@/renderer/scene/types";
+import {
+  getStage1EntityRenderKind,
+  getStage1EntitySpritePath,
+  getStage1EntityTextureMetrics,
+  shouldShowStage1EntityLabel,
+} from "@/renderer/scene/stage1-device-rendering";
 
 function getEntityFill(definition: Stage1EntityDefinition): string {
   switch (definition.category) {
@@ -25,6 +32,18 @@ function getEntityFill(definition: Stage1EntityDefinition): string {
   }
 }
 
+function getEntityFootprintSize(
+  definition: Stage1EntityDefinition,
+): {
+  width: number;
+  height: number;
+} {
+  return {
+    width: definition.footprint.width,
+    height: definition.footprint.height,
+  };
+}
+
 function buildEntitySprite(input: RenderSceneInput, entityId: string): RenderEntitySprite | null {
   const entity = input.document.entities[entityId];
 
@@ -39,17 +58,32 @@ function buildEntitySprite(input: RenderSceneInput, entityId: string): RenderEnt
     return null;
   }
 
+  const footprint = getEntityFootprintSize(definition);
+  const renderKind = getStage1EntityRenderKind(entity.definitionId);
+  const textureMetrics = getStage1EntityTextureMetrics({
+    definition,
+    gridSize: input.document.documentSettings.gridSize,
+    rotation: entity.rotation,
+  });
+
   return {
     entityId,
-    label: definition.name,
-    subtitle: entity.id,
+    definitionId: entity.definitionId,
+    label: getLocalizedStage1EntityName(input.locale, definition),
     x: entity.position.x * input.document.documentSettings.gridSize,
     y: entity.position.y * input.document.documentSettings.gridSize,
-    width: definition.footprint.width * input.document.documentSettings.gridSize,
-    height: definition.footprint.height * input.document.documentSettings.gridSize,
+    width: footprint.width * input.document.documentSettings.gridSize,
+    height: footprint.height * input.document.documentSettings.gridSize,
+    rotation: entity.rotation,
+    renderKind,
     fill: getEntityFill(definition),
+    textureSrc: getStage1EntitySpritePath(entity.definitionId),
+    textureWidth: textureMetrics.textureWidthPx,
+    textureHeight: textureMetrics.textureHeightPx,
+    textureCenterOffsetX: textureMetrics.centerOffsetXPx,
+    textureCenterOffsetY: textureMetrics.centerOffsetYPx,
+    showLabel: shouldShowStage1EntityLabel(definition, renderKind),
     status: input.runtimeSnapshot.entityViews[entityId]?.status ?? "idle",
-    progress: input.runtimeSnapshot.entityViews[entityId]?.progress ?? 0,
     selected: input.activeCanvas.selectedEntityIds.includes(entityId),
     pendingLinkSource:
       input.activeCanvas.pendingLinkSourceEntityId === entityId,

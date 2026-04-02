@@ -7,9 +7,13 @@ import type {
   CompiledTopology,
   TopologyDiagnostic,
 } from "@/domain/topology/compiled-topology";
+import type { RenderEntityKind } from "@/renderer/scene/stage1-device-rendering";
 import type { RuntimeRenderSnapshot } from "@/simulation/protocol/runtime-protocol";
+import type { GridRotation } from "@/shared/geometry/grid";
+import type { AppLocale } from "@/i18n/messages";
 
 export interface RenderSceneInput {
+  locale: AppLocale;
   document: WorldDocument;
   topology: CompiledTopology;
   canvas: CanvasSnapshot;
@@ -24,15 +28,22 @@ export interface RenderLayerDescriptor {
 
 export interface RenderEntitySprite {
   entityId: string;
+  definitionId: string;
   label: string;
-  subtitle: string;
   x: number;
   y: number;
   width: number;
   height: number;
+  rotation: GridRotation;
+  renderKind: RenderEntityKind;
   fill: string;
+  textureSrc: string | null;
+  textureWidth: number;
+  textureHeight: number;
+  textureCenterOffsetX: number;
+  textureCenterOffsetY: number;
+  showLabel: boolean;
   status: "idle" | "running" | "blocked";
-  progress: number;
   selected: boolean;
   pendingLinkSource: boolean;
   patched: boolean;

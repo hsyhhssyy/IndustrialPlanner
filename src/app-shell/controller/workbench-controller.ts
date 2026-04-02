@@ -242,6 +242,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   setLocale(locale: AppLocale): void {
     this.uiStore.setLocale(locale);
+    this.sync();
   }
 
   setDiagnosticsVisible(visible: boolean): void {
@@ -366,6 +367,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     const canvasSnapshot = this.canvasHost.getSnapshot();
 
     return buildRenderScene({
+      locale: this.uiStore.getSnapshot().locale,
       document: editorSnapshot.document,
       topology: this.topology,
       canvas: canvasSnapshot,
