@@ -6,7 +6,19 @@ import {
   isCanvasViewportPanning,
   type CanvasPanelGestureState,
 } from "@/app-shell/components/canvas-panel-gesture-state";
+import {
+  advanceCanvasTouchPanGesture,
+  advanceCanvasTouchPinchGesture,
+  beginCanvasTouchGesture,
+  beginCanvasTouchPinchGesture,
+  cancelCanvasTouchGesture,
+  createIdleCanvasPanelTouchGestureState,
+  isCanvasTouchPanning,
+  removePointerFromCanvasTouchGesture,
+  type CanvasPanelTouchGestureState,
+} from "@/app-shell/components/canvas-panel-touch-gesture";
 import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
+import type { CanvasPoint } from "@/canvas/canvas-host";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { RendererHost } from "@/renderer/host/renderer-host";
 import {
@@ -43,14 +55,51 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const keyStateRef = useRef({ up: false, down: false, left: false, right: false });
   const frameRef = useRef<number | null>(null);
+  const touchPointsRef = useRef<Map<number, CanvasPoint>>(new Map());
+  const suppressNextClickRef = useRef(false);
   const [gestureState, setGestureState] = useState<CanvasPanelGestureState>(
     createIdleCanvasPanelGestureState,
   );
+  const [touchGestureState, setTouchGestureState] = useState<CanvasPanelTouchGestureState>(
+    createIdleCanvasPanelTouchGestureState,
+  );
   const gestureStateRef = useRef<CanvasPanelGestureState>(gestureState);
+  const touchGestureStateRef = useRef<CanvasPanelTouchGestureState>(touchGestureState);
 
   const updateGestureState = (nextState: CanvasPanelGestureState) => {
     gestureStateRef.current = nextState;
     setGestureState(nextState);
+  };
+
+  const updateTouchGestureState = (nextState: CanvasPanelTouchGestureState) => {
+    touchGestureStateRef.current = nextState;
+    setTouchGestureState(nextState);
+  };
+
+  const resetTouchGestureState = () => {
+    const viewportElement = viewportRef.current;
+
+    for (const pointerId of touchPointsRef.current.keys()) {
+      if (viewportElement?.hasPointerCapture(pointerId)) {
+        viewportElement.releasePointerCapture(pointerId);
+      }
+    }
+
+    touchPointsRef.current.clear();
+    updateTouchGestureState(cancelCanvasTouchGesture());
+  };
+
+  const toViewportPoint = (clientX: number, clientY: number): CanvasPoint => {
+    const bounds = viewportRef.current?.getBoundingClientRect();
+
+    if (!bounds) {
+      return { x: 0, y: 0 };
+    }
+
+    return {
+      x: clientX - bounds.left,
+      y: clientY - bounds.top,
+    };
   };
 
   const resetGestureState = () => {
@@ -141,6 +190,16 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
 
       gestureStateRef.current = cancelCanvasPanelGesture();
       setGestureState(gestureStateRef.current);
+
+      for (const pointerId of touchPointsRef.current.keys()) {
+        if (viewportElement?.hasPointerCapture(pointerId)) {
+          viewportElement.releasePointerCapture(pointerId);
+        }
+      }
+
+      touchPointsRef.current.clear();
+      touchGestureStateRef.current = cancelCanvasTouchGesture();
+      setTouchGestureState(touchGestureStateRef.current);
       stopKeyboardPanLoop();
     };
 
@@ -160,6 +219,11 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
   }, []);
 
   const handleCanvasClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (suppressNextClickRef.current) {
+      suppressNextClickRef.current = false;
+      return;
+    }
+
     if (gestureStateRef.current.phase !== "idle") {
       return;
     }
@@ -181,6 +245,40 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
   const handleViewportPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     stageRef.current?.focus();
 
+    if (event.pointerType === "touch") {
+      const point = toViewportPoint(event.clientX, event.clientY);
+      touchPointsRef.current.set(event.pointerId, point);
+      event.currentTarget.setPointerCapture(event.pointerId);
+
+      if (touchPointsRef.current.size >= 2) {
+        const [firstPointer, secondPointer] = Array.from(
+          touchPointsRef.current.entries(),
+        );
+
+        if (firstPointer && secondPointer) {
+          suppressNextClickRef.current = true;
+          updateTouchGestureState(
+            beginCanvasTouchPinchGesture(
+              firstPointer[0],
+              firstPointer[1],
+              secondPointer[0],
+              secondPointer[1],
+            ),
+          );
+        }
+      } else {
+        updateTouchGestureState(
+          beginCanvasTouchGesture(
+            event.pointerId,
+            point,
+            controller.getCanvasInteractionTarget(point),
+          ),
+        );
+      }
+
+      return;
+    }
+
     if (event.button !== 1) {
       return;
     }
@@ -196,6 +294,56 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
   };
 
   const handleViewportPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch") {
+      const point = toViewportPoint(event.clientX, event.clientY);
+      touchPointsRef.current.set(event.pointerId, point);
+
+      if (touchGestureStateRef.current.phase === "touch-pinching") {
+        const result = advanceCanvasTouchPinchGesture(
+          touchGestureStateRef.current,
+          event.pointerId,
+          point,
+        );
+
+        if (result.nextState !== touchGestureStateRef.current) {
+          updateTouchGestureState(result.nextState);
+        }
+
+        if (result.scaleFactor && result.zoomAnchor) {
+          suppressNextClickRef.current = true;
+          controller.zoomCanvasAt(result.zoomAnchor, result.scaleFactor);
+        }
+
+        if (result.midpointDelta) {
+          const distance = Math.hypot(result.midpointDelta.x, result.midpointDelta.y);
+
+          if (distance > 0) {
+            suppressNextClickRef.current = true;
+            controller.panCanvasBy(result.midpointDelta);
+          }
+        }
+
+        return;
+      }
+
+      const result = advanceCanvasTouchPanGesture(
+        touchGestureStateRef.current,
+        event.pointerId,
+        point,
+      );
+
+      if (result.nextState !== touchGestureStateRef.current) {
+        updateTouchGestureState(result.nextState);
+      }
+
+      if (result.screenDelta) {
+        suppressNextClickRef.current = true;
+        controller.panCanvasBy(result.screenDelta);
+      }
+
+      return;
+    }
+
     const result = advanceCanvasViewportPanGesture(
       gestureStateRef.current,
       event.pointerId,
@@ -215,6 +363,17 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
   };
 
   const handleViewportPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch") {
+      touchPointsRef.current.delete(event.pointerId);
+      updateTouchGestureState(
+        removePointerFromCanvasTouchGesture(
+          touchGestureStateRef.current,
+          event.pointerId,
+        ),
+      );
+      return;
+    }
+
     if (
       gestureStateRef.current.phase !== "idle" &&
       gestureStateRef.current.pointerId === event.pointerId
@@ -225,6 +384,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
 
   const handleViewportPointerCancel = () => {
     resetGestureState();
+    resetTouchGestureState();
   };
 
   const handleViewportWheel = (event: WheelEvent<HTMLDivElement>) => {
@@ -302,6 +462,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
         className="canvas-stage"
         onBlur={() => {
           resetGestureState();
+          resetTouchGestureState();
           stopKeyboardPanLoop();
         }}
         onKeyDown={handleKeyDown}
@@ -310,7 +471,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
         tabIndex={0}
       >
         <div
-          className={isCanvasViewportPanning(gestureState)
+          className={isCanvasViewportPanning(gestureState) || isCanvasTouchPanning(touchGestureState)
             ? "canvas-viewport-surface is-panning"
             : "canvas-viewport-surface"}
           onAuxClick={(event) => {

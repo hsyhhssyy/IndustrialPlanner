@@ -663,6 +663,7 @@ button.is-active {
 
 .canvas-viewport-surface {
   cursor: default;
+  touch-action: none;
 }
 
 .canvas-viewport-surface.is-panning {

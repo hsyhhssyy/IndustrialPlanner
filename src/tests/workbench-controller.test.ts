@@ -247,6 +247,26 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("resolves canvas interaction targets for blank space and entities", async () => {
+    const controller = createWorkbenchController();
+
+    expect(
+      controller.getCanvasInteractionTarget(toScreenPointForGrid(controller, { x: 79, y: 79 })),
+    ).toEqual({ kind: "blank" });
+
+    await controller.selectEntity("filler-1");
+
+    expect(
+      controller.getCanvasInteractionTarget(toScreenPointForEntity(controller, "filler-1")),
+    ).toEqual({
+      kind: "entity",
+      entityId: "filler-1",
+      selected: true,
+    });
+
+    controller.dispose();
+  });
+
   it("places an entity through the canvas host interaction loop and recompiles topology", async () => {
     const controller = createWorkbenchController();
     const before = readWorkbenchState(controller);

@@ -20,6 +20,16 @@ export interface WorkbenchCanvasSnapshot {
   activeCanvas: ReturnType<CanvasHost["getActiveBackendSnapshot"]>;
 }
 
+export type CanvasInteractionTarget =
+  | {
+      kind: "blank";
+    }
+  | {
+      kind: "entity";
+      entityId: string;
+      selected: boolean;
+    };
+
 export interface WorkbenchController {
   uiStore: WorkbenchUiStore;
   editorStore: Pick<SnapshotStore<EditorCoreSnapshot>, "getSnapshot" | "subscribe">;
@@ -44,6 +54,7 @@ export interface WorkbenchController {
     entityId: string,
     patch: Record<string, unknown>,
   ) => Promise<void>;
+  getCanvasInteractionTarget: (screenPoint: CanvasPoint) => CanvasInteractionTarget;
   handleCanvasClick: (screenPoint: CanvasPoint) => Promise<void>;
   removeSelection: () => Promise<void>;
   removeSelectionLinks: () => Promise<void>;

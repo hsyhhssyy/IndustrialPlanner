@@ -1,4 +1,5 @@
 import type {
+  CanvasInteractionTarget,
   WorkbenchCanvasSnapshot,
   WorkbenchController,
 } from "@/app-shell/contracts/workbench-facade";
@@ -14,10 +15,12 @@ import {
 } from "@/app-shell/state/workbench-ui-store";
 import {
   createCanvasHost,
+  screenToWorldPoint,
   type CanvasHost,
   type CanvasPoint,
 } from "@/canvas/canvas-host";
 import { createEditCanvasBackend } from "@/canvas/edit-canvas-backend";
+import { hitTestWorldEntity } from "@/canvas/hit-test";
 import { createSimulationCanvasBackend } from "@/canvas/simulation-canvas-backend";
 import { compileStage1World } from "@/domain/compiler/stage1-compiler";
 import type { WorldDocument } from "@/domain/document/world-document";
@@ -184,6 +187,31 @@ class WorkbenchControllerImpl implements WorkbenchController {
     patch: Record<string, unknown>,
   ): Promise<void> {
     await this.simulationHost.applyEntityConfigPatch(entityId, patch);
+  }
+
+  getCanvasInteractionTarget(screenPoint: CanvasPoint): CanvasInteractionTarget {
+    const editorSnapshot = this.editorHost.getSnapshot();
+    const worldPoint = screenToWorldPoint(
+      screenPoint,
+      this.canvasHost.getSnapshot().viewport,
+    );
+    const hitEntityId = hitTestWorldEntity({
+      document: editorSnapshot.document,
+      topology: this.topology,
+      worldPoint,
+    });
+
+    if (!hitEntityId) {
+      return {
+        kind: "blank",
+      };
+    }
+
+    return {
+      kind: "entity",
+      entityId: hitEntityId,
+      selected: editorSnapshot.session.selection.includes(hitEntityId),
+    };
   }
 
   async handleCanvasClick(screenPoint: CanvasPoint): Promise<void> {
