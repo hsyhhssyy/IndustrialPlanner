@@ -671,7 +671,7 @@ button.is-active {
 }
 
 .canvas-viewport-surface {
-  cursor: grab;
+  cursor: default;
 }
 
 .canvas-viewport-surface.is-panning {

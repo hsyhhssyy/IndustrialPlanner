@@ -1,11 +1,21 @@
+import {
+  advanceCanvasViewportPanGesture,
+  beginCanvasViewportPanGesture,
+  cancelCanvasPanelGesture,
+  createIdleCanvasPanelGestureState,
+  isCanvasViewportPanning,
+  type CanvasPanelGestureState,
+} from "@/app-shell/components/canvas-panel-gesture-state";
 import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { RendererHost } from "@/renderer/host/renderer-host";
 import {
   useEffect,
   useRef,
+  useState,
   type KeyboardEvent,
   type MouseEvent,
+  type PointerEvent,
 } from "react";
 
 export interface CanvasPanelProps {
@@ -15,9 +25,32 @@ export interface CanvasPanelProps {
 export function CanvasPanel({ controller }: CanvasPanelProps) {
   const renderScene = useExternalStore(controller.renderSceneStore);
   const stageRef = useRef<HTMLDivElement | null>(null);
-  const dragStateRef = useRef<{ x: number; y: number } | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
   const keyStateRef = useRef({ up: false, down: false, left: false, right: false });
   const frameRef = useRef<number | null>(null);
+  const [gestureState, setGestureState] = useState<CanvasPanelGestureState>(
+    createIdleCanvasPanelGestureState,
+  );
+  const gestureStateRef = useRef<CanvasPanelGestureState>(gestureState);
+
+  const updateGestureState = (nextState: CanvasPanelGestureState) => {
+    gestureStateRef.current = nextState;
+    setGestureState(nextState);
+  };
+
+  const resetGestureState = () => {
+    const currentState = gestureStateRef.current;
+    const viewportElement = viewportRef.current;
+
+    if (
+      currentState.phase !== "idle" &&
+      viewportElement?.hasPointerCapture(currentState.pointerId)
+    ) {
+      viewportElement.releasePointerCapture(currentState.pointerId);
+    }
+
+    updateGestureState(cancelCanvasPanelGesture());
+  };
 
   useEffect(() => {
     const stageElement = stageRef.current;
@@ -45,45 +78,6 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
       resizeObserver.disconnect();
     };
   }, [controller]);
-
-  useEffect(() => {
-    const handleMouseMove = (event: globalThis.MouseEvent) => {
-      const dragState = dragStateRef.current;
-
-      if (!dragState) {
-        return;
-      }
-
-      const nextPointer = { x: event.clientX, y: event.clientY };
-
-      controller.panCanvasBy({
-        x: nextPointer.x - dragState.x,
-        y: nextPointer.y - dragState.y,
-      });
-
-      dragStateRef.current = nextPointer;
-    };
-
-    const stopDragging = () => {
-      dragStateRef.current = null;
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", stopDragging);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", stopDragging);
-    };
-  }, [controller]);
-
-  useEffect(() => {
-    return () => {
-      if (frameRef.current !== null) {
-        window.cancelAnimationFrame(frameRef.current);
-      }
-    };
-  }, []);
 
   const startKeyboardPanLoop = () => {
     if (frameRef.current !== null) {
@@ -118,7 +112,43 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     }
   };
 
+  useEffect(() => {
+    const handleWindowBlur = () => {
+      const currentState = gestureStateRef.current;
+      const viewportElement = viewportRef.current;
+
+      if (
+        currentState.phase !== "idle" &&
+        viewportElement?.hasPointerCapture(currentState.pointerId)
+      ) {
+        viewportElement.releasePointerCapture(currentState.pointerId);
+      }
+
+      gestureStateRef.current = cancelCanvasPanelGesture();
+      setGestureState(gestureStateRef.current);
+      stopKeyboardPanLoop();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        handleWindowBlur();
+      }
+    };
+
+    window.addEventListener("blur", handleWindowBlur);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("blur", handleWindowBlur);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   const handleCanvasClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (gestureStateRef.current.phase !== "idle") {
+      return;
+    }
+
     if (event.button !== 0) {
       return;
     }
@@ -133,7 +163,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     });
   };
 
-  const handleMouseDown = (event: MouseEvent<HTMLDivElement>) => {
+  const handleViewportPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     stageRef.current?.focus();
 
     if (event.button !== 1) {
@@ -141,7 +171,45 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     }
 
     event.preventDefault();
-    dragStateRef.current = { x: event.clientX, y: event.clientY };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    updateGestureState(
+      beginCanvasViewportPanGesture(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      }),
+    );
+  };
+
+  const handleViewportPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const result = advanceCanvasViewportPanGesture(
+      gestureStateRef.current,
+      event.pointerId,
+      {
+        x: event.clientX,
+        y: event.clientY,
+      },
+    );
+
+    if (result.nextState !== gestureStateRef.current) {
+      updateGestureState(result.nextState);
+    }
+
+    if (result.screenDelta) {
+      controller.panCanvasBy(result.screenDelta);
+    }
+  };
+
+  const handleViewportPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (
+      gestureStateRef.current.phase !== "idle" &&
+      gestureStateRef.current.pointerId === event.pointerId
+    ) {
+      resetGestureState();
+    }
+  };
+
+  const handleViewportPointerCancel = () => {
+    resetGestureState();
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -191,18 +259,31 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     <main className="canvas-panel panel-surface">
       <div
         className="canvas-stage"
-        onBlur={stopKeyboardPanLoop}
-        onClick={handleCanvasClick}
+        onBlur={() => {
+          resetGestureState();
+          stopKeyboardPanLoop();
+        }}
         onKeyDown={handleKeyDown}
         onKeyUp={handleKeyUp}
-        onMouseDown={handleMouseDown}
         ref={stageRef}
         tabIndex={0}
       >
         <div
-          className="canvas-viewport-surface"
+          className={isCanvasViewportPanning(gestureState)
+            ? "canvas-viewport-surface is-panning"
+            : "canvas-viewport-surface"}
+          onAuxClick={(event) => {
+            if (event.button === 1) {
+              event.preventDefault();
+            }
+          }}
           onClick={handleCanvasClick}
-          onMouseDown={handleMouseDown}
+          onLostPointerCapture={handleViewportPointerCancel}
+          onPointerCancel={handleViewportPointerCancel}
+          onPointerDown={handleViewportPointerDown}
+          onPointerMove={handleViewportPointerMove}
+          onPointerUp={handleViewportPointerUp}
+          ref={viewportRef}
         >
           <RendererHost scene={renderScene} />
         </div>
