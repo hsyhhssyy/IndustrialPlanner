@@ -4,10 +4,15 @@ import type { SelectionInspectorContext } from "@/app-shell/components/inspector
 import { SimulationSelectionInspector } from "@/app-shell/components/inspector/simulation-selection-inspector";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import {
-  RIGHT_BASE_GROUPS,
-  RIGHT_BASE_SUMMARY,
   RIGHT_POWER_SUMMARY,
 } from "@/app-shell/workbench-placeholders";
+import {
+  STAGE1_BASE_DEFINITIONS,
+  formatStage1BaseArea,
+  formatStage1BaseExpansion,
+  getStage1BaseDefinition,
+  getStage1BaseGroupOrder,
+} from "@/domain/base/stage1-bases";
 import { createTranslator } from "@/i18n/messages";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
@@ -64,6 +69,18 @@ export function RightDock({ controller }: RightDockProps) {
     inspectorDetails: simulation.inspectorDetails,
     simulationPatchSet: simulation.patchSet,
   } as const;
+  const activeBase = getStage1BaseDefinition(editor.document.baseId);
+  const baseGroups = getStage1BaseGroupOrder().map((groupId) => {
+    const groupBases = STAGE1_BASE_DEFINITIONS.filter(
+      (base) => base.groupId === groupId,
+    );
+
+    return {
+      id: groupId,
+      title: groupBases[0]?.groupLabel[ui.locale] ?? groupId,
+      options: groupBases,
+    };
+  });
 
   return (
     <aside className="dock dock-right panel-surface">
@@ -91,32 +108,38 @@ export function RightDock({ controller }: RightDockProps) {
                 <h3>{t("rightDock.base")}</h3>
               </div>
               <div className="stack">
-                {RIGHT_BASE_GROUPS.map((group) => (
-                  <div className="cluster" key={localizeWorkbenchText(ui.locale, group.title)}>
+                {baseGroups.map((group) => (
+                  <div className="cluster" key={group.id}>
                     <h4 className="inspector-group-title">
-                      {localizeWorkbenchText(ui.locale, group.title)}
+                      {group.title}
                     </h4>
                     <div className="inspector-option-grid">
                       {group.options.map((option) => (
                         <button
-                          className={option.active ? "is-active" : undefined}
+                          className={option.id === editor.document.baseId ? "is-active" : undefined}
                           key={option.id}
                           onClick={() => undefined}
                           type="button"
                         >
-                          {localizeWorkbenchText(ui.locale, option.label)}
+                          {option.name[ui.locale]}
                         </button>
                       ))}
                     </div>
                   </div>
                 ))}
                 <dl className="inspector-summary-list">
-                  {RIGHT_BASE_SUMMARY.map((field) => (
-                    <div className="inspector-summary-row" key={field.id}>
-                      <dt>{localizeWorkbenchText(ui.locale, field.label)}</dt>
-                      <dd>{localizeWorkbenchText(ui.locale, field.value)}</dd>
-                    </div>
-                  ))}
+                  <div className="inspector-summary-row">
+                    <dt>{localizeWorkbenchText(ui.locale, { messageKey: "workbench.summary.buildableArea", fallback: "Buildable Area" })}</dt>
+                    <dd>{formatStage1BaseArea(activeBase)}</dd>
+                  </div>
+                  <div className="inspector-summary-row">
+                    <dt>{localizeWorkbenchText(ui.locale, { messageKey: "workbench.summary.expansion", fallback: "Expansion" })}</dt>
+                    <dd>{formatStage1BaseExpansion(activeBase)}</dd>
+                  </div>
+                  <div className="inspector-summary-row">
+                    <dt>{localizeWorkbenchText(ui.locale, { messageKey: "workbench.summary.baseTag", fallback: "Base Tag" })}</dt>
+                    <dd>{activeBase.groupLabel[ui.locale]}</dd>
+                  </div>
                 </dl>
               </div>
             </article>

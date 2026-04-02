@@ -6,7 +6,7 @@ import type {
 
 function touchWorldDocument(
   document: WorldDocument,
-  patch: Omit<WorldDocument, "meta"> & {
+  patch: Partial<Omit<WorldDocument, "meta">> & {
     meta?: Partial<WorldDocument["meta"]>;
   },
 ): WorldDocument {
@@ -40,10 +40,6 @@ function patchWorldEntity(
         ...patch,
       },
     },
-    entityOrder: document.entityOrder,
-    explicitLinks: document.explicitLinks,
-    documentSettings: document.documentSettings,
-    schemaVersion: document.schemaVersion,
   });
 }
 
@@ -73,9 +69,6 @@ export function applyWorldDocumentCommand(
           },
         },
         entityOrder: [...document.entityOrder, entityId],
-        explicitLinks: document.explicitLinks,
-        documentSettings: document.documentSettings,
-        schemaVersion: document.schemaVersion,
       });
     }
     case "entity.remove": {
@@ -95,8 +88,6 @@ export function applyWorldDocumentCommand(
           (link) =>
             link.sourceEntityId !== entityId && link.targetEntityId !== entityId,
         ),
-        documentSettings: document.documentSettings,
-        schemaVersion: document.schemaVersion,
       });
     }
     case "entity.move": {
@@ -141,8 +132,6 @@ export function applyWorldDocumentCommand(
       }
 
       return touchWorldDocument(document, {
-        entities: document.entities,
-        entityOrder: document.entityOrder,
         explicitLinks: [
           ...document.explicitLinks,
           {
@@ -152,8 +141,6 @@ export function applyWorldDocumentCommand(
             targetEntityId,
           },
         ],
-        documentSettings: document.documentSettings,
-        schemaVersion: document.schemaVersion,
       });
     }
     case "link.remove": {
@@ -164,11 +151,7 @@ export function applyWorldDocumentCommand(
       }
 
       return touchWorldDocument(document, {
-        entities: document.entities,
-        entityOrder: document.entityOrder,
         explicitLinks: document.explicitLinks.filter((link) => link.id !== linkId),
-        documentSettings: document.documentSettings,
-        schemaVersion: document.schemaVersion,
       });
     }
     default: {

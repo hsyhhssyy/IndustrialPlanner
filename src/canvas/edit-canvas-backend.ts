@@ -9,7 +9,12 @@ import type {
 import {
   getExplicitLinkBetween,
 } from "@/domain/document/world-document";
+import {
+  getStage1BaseDefinition,
+  isStage1FootprintWithinBase,
+} from "@/domain/base/stage1-bases";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
+import type { Stage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import {
   isPlacementTool,
 } from "@/editor/core/editor-session";
@@ -18,6 +23,7 @@ import type { EditorHost } from "@/editor/host/editor-host";
 interface CreateEditCanvasBackendOptions {
   editorHost: EditorHost;
   getTopology: () => CompiledTopology;
+  getDefinition: (definitionId: string) => Stage1EntityDefinition | undefined;
 }
 
 class EditCanvasBackendImpl implements CanvasBackend {
@@ -25,10 +31,12 @@ class EditCanvasBackendImpl implements CanvasBackend {
 
   private readonly editorHost: EditorHost;
   private readonly getTopology: () => CompiledTopology;
+  private readonly getDefinition: (definitionId: string) => Stage1EntityDefinition | undefined;
 
   constructor(options: CreateEditCanvasBackendOptions) {
     this.editorHost = options.editorHost;
     this.getTopology = options.getTopology;
+    this.getDefinition = options.getDefinition;
   }
 
   getSnapshot(): CanvasBackendSnapshot {
@@ -62,6 +70,21 @@ class EditCanvasBackendImpl implements CanvasBackend {
     }
 
     if (isPlacementTool(session.activeTool) && session.placementDefinitionId) {
+      const definition = this.getDefinition(session.placementDefinitionId);
+      const base = getStage1BaseDefinition(document.baseId);
+
+      if (
+        !definition ||
+        !isStage1FootprintWithinBase({
+          base,
+          position: input.gridPoint,
+          footprint: definition.footprint,
+        })
+      ) {
+        this.editorHost.setPendingLinkSource(null);
+        return;
+      }
+
       this.editorHost.placeEntity(
         session.placementDefinitionId,
         input.gridPoint,

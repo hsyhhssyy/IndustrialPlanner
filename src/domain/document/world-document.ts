@@ -2,6 +2,7 @@ import type {
   GridPoint,
   GridRotation,
 } from "@/shared/geometry/grid";
+import type { Stage1BaseId } from "@/domain/base/stage1-bases";
 
 export interface WorldEntity {
   id: string;
@@ -21,6 +22,7 @@ export interface ExplicitLink {
 
 export interface WorldDocument {
   schemaVersion: number;
+  baseId: Stage1BaseId;
   meta: {
     id: string;
     name: string;

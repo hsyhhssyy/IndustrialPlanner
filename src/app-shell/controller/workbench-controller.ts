@@ -24,6 +24,7 @@ import type { WorldDocument } from "@/domain/document/world-document";
 import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";
 import {
   createStage1Registry,
+  getStage1EntityDefinition,
   type Stage1Registry,
 } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
@@ -91,6 +92,8 @@ class WorkbenchControllerImpl implements WorkbenchController {
       editBackend: createEditCanvasBackend({
         editorHost: this.editorHost,
         getTopology: () => this.topology,
+        getDefinition: (definitionId) =>
+          getStage1EntityDefinition(this.registry, definitionId),
       }),
       simulationBackend: createSimulationCanvasBackend({
         getDocument: () => this.editorHost.getSnapshot().document,

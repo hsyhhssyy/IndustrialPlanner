@@ -1,4 +1,5 @@
 import type { Stage1EntityDefinition } from "@/domain/registry/stage1-registry";
+import { getStage1BaseDefinition } from "@/domain/base/stage1-bases";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import type {
   RenderExplicitLink,
@@ -131,13 +132,15 @@ export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
     .map((entityId) => buildEntitySprite(input, entityId))
     .filter((entity): entity is RenderEntitySprite => entity !== null);
   const explicitLinks = buildExplicitLinkSprites(input);
+  const base = getStage1BaseDefinition(input.document.baseId);
+  const baseWorldSize = base.placeableSize * input.document.documentSettings.gridSize;
 
   const maxWorldWidth = Math.max(
-    1200,
+    baseWorldSize,
     ...entities.map((entity) => entity.x + entity.width + input.document.documentSettings.gridSize * 3),
   );
   const maxWorldHeight = Math.max(
-    720,
+    baseWorldSize,
     ...entities.map((entity) => entity.y + entity.height + input.document.documentSettings.gridSize * 3),
   );
 

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { DEFAULT_STAGE1_BASE_ID } from "@/domain/base/stage1-bases";
 import { createWorkbenchController } from "@/app-shell/controller/workbench-controller";
 
 function readWorkbenchState(
@@ -80,6 +81,7 @@ describe("WorkbenchController scaffold", () => {
     const snapshot = readWorkbenchState(controller);
 
     expect(snapshot.document.entityOrder.length).toBeGreaterThan(0);
+    expect(snapshot.document.baseId).toBe(DEFAULT_STAGE1_BASE_ID);
     expect(snapshot.registry.entityDefinitions.length).toBeGreaterThan(0);
     expect(snapshot.topology.compileVersion).toContain(":");
     expect(snapshot.ui.locale).toBe("en-US");
@@ -158,8 +160,27 @@ describe("WorkbenchController scaffold", () => {
     expect(snapshot.ui.simulationSpeed).toBe("4x");
     expect(snapshot.canvas.viewport.zoom).toBeGreaterThan(1);
     expect(snapshot.renderScene.zoom).toBe(snapshot.canvas.viewport.zoom);
+    expect(snapshot.renderScene.worldWidth).toBe(
+      snapshot.document.documentSettings.gridSize * 80,
+    );
     expect(fillerSprite?.selected).toBe(true);
     expect(snapshot.renderScene.entities.length).toBeGreaterThan(0);
+
+    controller.dispose();
+  });
+
+  it("blocks placement outside the active base bounds", async () => {
+    const controller = createWorkbenchController();
+    const before = readWorkbenchState(controller);
+
+    controller.armPlacement("belt_straight_1x1", "belt");
+    await controller.handleCanvasClick(
+      toScreenPointForGrid(controller, { x: 80, y: 12 }),
+    );
+
+    const after = readWorkbenchState(controller);
+
+    expect(after.document.entityOrder).toHaveLength(before.document.entityOrder.length);
 
     controller.dispose();
   });

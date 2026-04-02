@@ -12,6 +12,10 @@ import type {
   WorldDocument,
   WorldEntity,
 } from "@/domain/document/world-document";
+import {
+  getStage1BaseDefinition,
+  isStage1FootprintWithinBase,
+} from "@/domain/base/stage1-bases";
 
 function toCellKey(x: number, y: number): string {
   return `${x},${y}`;
@@ -44,6 +48,7 @@ export function compileStage1World(
   let solidTransportNodes = 0;
   let liquidTransportNodes = 0;
   let warehouseBusNodes = 0;
+  const base = getStage1BaseDefinition(document.baseId);
 
   for (const entityId of document.entityOrder) {
     const entity = document.entities[entityId];
@@ -75,6 +80,21 @@ export function compileStage1World(
       definition,
       position: entity.position,
     };
+
+    if (
+      !isStage1FootprintWithinBase({
+        base,
+        position: entity.position,
+        footprint: definition.footprint,
+      })
+    ) {
+      diagnostics.push({
+        id: `out-of-base:${entity.id}`,
+        severity: "warning",
+        entityIds: [entity.id],
+        message: `Entity "${entity.id}" is outside base bounds ${base.placeableSize}x${base.placeableSize}.`,
+      });
+    }
 
     addFootprintToOccupancy(
       occupancyIndex,

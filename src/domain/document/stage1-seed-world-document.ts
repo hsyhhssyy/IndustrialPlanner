@@ -1,3 +1,4 @@
+import { DEFAULT_STAGE1_BASE_ID } from "@/domain/base/stage1-bases";
 import type {
   WorldDocument,
   WorldEntity,
@@ -58,7 +59,8 @@ export function createStage1SeedWorldDocument(): WorldDocument {
   };
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
+    baseId: DEFAULT_STAGE1_BASE_ID,
     meta: {
       id: "stage1-seed",
       name: "Stage1 Scaffold Seed",

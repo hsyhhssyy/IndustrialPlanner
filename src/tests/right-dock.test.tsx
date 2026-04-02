@@ -51,6 +51,8 @@ describe("RightDock inspector split", () => {
 
     expect(editMarkup).toContain("Quick Actions");
     expect(editMarkup).toContain("Config Fields");
+    expect(editMarkup).toContain("80x80");
+    expect(editMarkup).toContain("Wuling");
     expect(simulationMarkup).toContain("Runtime Details");
     expect(simulationMarkup).toContain("Runtime Patch");
     expect(simulationMarkup).not.toContain("Quick Actions");
