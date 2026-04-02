@@ -226,8 +226,7 @@ button.is-active {
 
 .top-bar-layout-controls,
 .top-bar-controls,
-.top-bar-speed-controls,
-.top-bar-meta-group {
+.top-bar-speed-controls {
   flex-wrap: nowrap;
 }
 
@@ -264,15 +263,10 @@ button.is-active {
 }
 
 .top-bar-controls button,
-.top-bar-speed-controls button,
-.top-bar-meta-group button {
+.top-bar-speed-controls button {
   min-height: 30px;
   padding: 0 10px;
   white-space: nowrap;
-}
-
-.top-bar-meta-group {
-  justify-content: flex-end;
 }
 
 .top-bar-metric {
@@ -772,7 +766,7 @@ button.is-active {
   .top-bar {
     grid-template-columns: auto minmax(180px, 1fr) auto;
     grid-template-areas:
-      "layout title meta"
+      "layout title speed"
       "controls controls speed";
     height: auto;
     padding: 10px 12px;
@@ -793,12 +787,6 @@ button.is-active {
 
   .top-bar-speed-controls {
     grid-area: speed;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-  }
-
-  .top-bar-meta-group {
-    grid-area: meta;
     justify-content: flex-end;
     flex-wrap: wrap;
   }
@@ -823,8 +811,7 @@ button.is-active {
       "title"
       "layout"
       "controls"
-      "speed"
-      "meta";
+      "speed";
   }
 
   .left-toolbar {
@@ -843,8 +830,7 @@ button.is-active {
   }
 
   .toolbar-meta,
-  .top-bar-speed-controls,
-  .top-bar-meta-group {
+  .top-bar-speed-controls {
     justify-content: flex-start;
   }
 

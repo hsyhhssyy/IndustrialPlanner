@@ -49,6 +49,9 @@ export function TopBar({ controller }: TopBarProps) {
         <div className="top-bar-subtitle">{t(ui.statusMessageKey)}</div>
       </div>
       <div className="toolbar-group top-bar-controls">
+        <span className="top-bar-metric">
+          {t("topBar.zoom")}: {cellSizeLabel}
+        </span>
         <button
           onClick={() =>
             simulationRunning
@@ -72,11 +75,6 @@ export function TopBar({ controller }: TopBarProps) {
             {preset}
           </button>
         ))}
-      </div>
-      <div className="toolbar-group top-bar-meta-group">
-        <span className="top-bar-metric">
-          {t("topBar.zoom")}: {cellSizeLabel}
-        </span>
       </div>
     </header>
   );
