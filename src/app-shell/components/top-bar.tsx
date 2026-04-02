@@ -46,7 +46,6 @@ export function TopBar({ controller }: TopBarProps) {
       </div>
       <div className="top-bar-title-block">
         <div className="top-bar-title">{t("app.title")}</div>
-        <div className="top-bar-subtitle">{t(ui.statusMessageKey)}</div>
       </div>
       <div className="toolbar-group top-bar-controls">
         <span className="top-bar-metric">

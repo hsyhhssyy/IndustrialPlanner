@@ -27,3 +27,4 @@ dist-ssr
 # Temporary workspace files
 .temp/
 .playwright-cli/
+.serena

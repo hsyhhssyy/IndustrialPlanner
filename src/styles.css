@@ -181,6 +181,7 @@ button.is-active {
     minmax(220px, 1fr)
     auto
     auto;
+  height: 48px;
   align-items: center;
   gap: 12px;
   padding: 0 12px;
@@ -190,8 +191,8 @@ button.is-active {
 }
 
 .top-bar-title-block {
-  display: grid;
-  gap: 1px;
+  display: flex;
+  align-items: center;
   min-width: 0;
 }
 
@@ -199,14 +200,6 @@ button.is-active {
   font-size: 0.92rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.top-bar-subtitle {
-  color: var(--text-1);
-  font-size: 0.72rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -769,6 +762,7 @@ button.is-active {
       "layout title speed"
       "controls controls speed";
     height: auto;
+    min-height: 48px;
     padding: 10px 12px;
   }
 
