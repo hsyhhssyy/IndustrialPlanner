@@ -46,6 +46,7 @@ export interface CanvasHost {
   getActiveBackendSnapshot: () => CanvasBackendSnapshot;
   setActiveBackend: (backend: CanvasBackendKind) => void;
   zoomBy: (delta: number) => void;
+  scaleZoomAt: (screenPoint: CanvasPoint, scaleFactor: number) => void;
   panBy: (screenDelta: CanvasPoint) => void;
   setViewportSize: (size: CanvasPoint) => void;
   setWorldSize: (size: CanvasPoint) => void;
@@ -62,6 +63,10 @@ interface CreateCanvasHostOptions {
 
 const MIN_CANVAS_ZOOM = 0.5;
 const MAX_CANVAS_ZOOM = 2.5;
+
+function clampCanvasZoom(zoom: number): number {
+  return Math.min(MAX_CANVAS_ZOOM, Math.max(MIN_CANVAS_ZOOM, zoom));
+}
 
 export function createInitialCanvasSnapshot(
   activeBackend: CanvasBackendKind = "edit",
@@ -145,10 +150,7 @@ class CanvasHostImpl implements CanvasHost {
   }
 
   zoomBy(delta: number): void {
-    const nextZoom = Math.min(
-      MAX_CANVAS_ZOOM,
-      Math.max(MIN_CANVAS_ZOOM, this.snapshot.viewport.zoom + delta),
-    );
+    const nextZoom = clampCanvasZoom(this.snapshot.viewport.zoom + delta);
 
     this.snapshot = {
       ...this.snapshot,
@@ -161,6 +163,39 @@ class CanvasHostImpl implements CanvasHost {
           this.snapshot.viewport.size,
           this.worldSize,
         ),
+      },
+    };
+  }
+
+  scaleZoomAt(screenPoint: CanvasPoint, scaleFactor: number): void {
+    if (!Number.isFinite(scaleFactor) || scaleFactor <= 0) {
+      return;
+    }
+
+    const currentViewport = this.snapshot.viewport;
+    const nextZoom = clampCanvasZoom(currentViewport.zoom * scaleFactor);
+
+    if (nextZoom === currentViewport.zoom) {
+      return;
+    }
+
+    const anchorWorldPoint = screenToWorldPoint(screenPoint, currentViewport);
+    const nextOffset = clampViewportOffset(
+      {
+        x: anchorWorldPoint.x - screenPoint.x / nextZoom,
+        y: anchorWorldPoint.y - screenPoint.y / nextZoom,
+      },
+      nextZoom,
+      currentViewport.size,
+      this.worldSize,
+    );
+
+    this.snapshot = {
+      ...this.snapshot,
+      viewport: {
+        ...currentViewport,
+        zoom: nextZoom,
+        offset: nextOffset,
       },
     };
   }

@@ -218,6 +218,35 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("applies anchored non-linear zoom and persists the updated viewport", () => {
+    const controller = createWorkbenchController();
+    controller.setCanvasViewportSize({ x: 640, y: 360 });
+
+    const before = controller.canvasStore.getSnapshot().canvas.viewport;
+    controller.zoomCanvasAt({ x: 160, y: 120 }, 1.25);
+
+    const after = controller.canvasStore.getSnapshot().canvas.viewport;
+    const persisted = JSON.parse(
+      localStorage.getItem("industrial-planner:workbench-ui-state") ?? "null",
+    );
+
+    expect(after.zoom).toBeCloseTo(before.zoom * 1.25, 6);
+    expect(after.offset.x).toBeCloseTo(32, 6);
+    expect(after.offset.y).toBeCloseTo(24, 6);
+    expect(controller.renderSceneStore.getSnapshot().zoom).toBe(after.zoom);
+    expect(persisted).toMatchObject({
+      canvasViewport: {
+        offset: {
+          x: after.offset.x,
+          y: after.offset.y,
+        },
+        zoom: after.zoom,
+      },
+    });
+
+    controller.dispose();
+  });
+
   it("places an entity through the canvas host interaction loop and recompiles topology", async () => {
     const controller = createWorkbenchController();
     const before = readWorkbenchState(controller);

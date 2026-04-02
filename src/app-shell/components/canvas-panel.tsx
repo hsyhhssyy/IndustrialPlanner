@@ -16,7 +16,22 @@ import {
   type KeyboardEvent,
   type MouseEvent,
   type PointerEvent,
+  type WheelEvent,
 } from "react";
+
+const PIXELS_PER_WHEEL_LINE = 16;
+const WHEEL_ZOOM_SENSITIVITY = 0.0015;
+
+function normalizeWheelDelta(event: WheelEvent<HTMLDivElement>): number {
+  switch (event.deltaMode) {
+    case WheelEvent.DOM_DELTA_LINE:
+      return event.deltaY * PIXELS_PER_WHEEL_LINE;
+    case WheelEvent.DOM_DELTA_PAGE:
+      return event.deltaY * window.innerHeight;
+    default:
+      return event.deltaY;
+  }
+}
 
 export interface CanvasPanelProps {
   controller: WorkbenchController;
@@ -212,6 +227,32 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     resetGestureState();
   };
 
+  const handleViewportWheel = (event: WheelEvent<HTMLDivElement>) => {
+    if (gestureStateRef.current.phase !== "idle") {
+      return;
+    }
+
+    const deltaY = normalizeWheelDelta(event);
+    const scaleFactor = Math.exp(-deltaY * WHEEL_ZOOM_SENSITIVITY);
+
+    if (!Number.isFinite(scaleFactor) || Math.abs(scaleFactor - 1) < 0.001) {
+      return;
+    }
+
+    event.preventDefault();
+    stageRef.current?.focus();
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+
+    controller.zoomCanvasAt(
+      {
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
+      },
+      scaleFactor,
+    );
+  };
+
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     switch (event.key.toLowerCase()) {
       case "w":
@@ -283,6 +324,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
           onPointerDown={handleViewportPointerDown}
           onPointerMove={handleViewportPointerMove}
           onPointerUp={handleViewportPointerUp}
+          onWheel={handleViewportWheel}
           ref={viewportRef}
         >
           <RendererHost scene={renderScene} />

@@ -76,6 +76,8 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   private topology: CompiledTopology;
 
+  private static readonly BUTTON_ZOOM_FACTOR = 1.2;
+
   constructor() {
     this.registry = createStage1Registry();
     this.storage = createWorkspaceStorageGateway();
@@ -228,12 +230,18 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   zoomIn(): void {
-    this.canvasHost.zoomBy(0.1);
-    this.sync();
+    this.zoomCanvasAt(this.getViewportCenterScreenPoint(), WorkbenchControllerImpl.BUTTON_ZOOM_FACTOR);
   }
 
   zoomOut(): void {
-    this.canvasHost.zoomBy(-0.1);
+    this.zoomCanvasAt(
+      this.getViewportCenterScreenPoint(),
+      1 / WorkbenchControllerImpl.BUTTON_ZOOM_FACTOR,
+    );
+  }
+
+  zoomCanvasAt(screenPoint: CanvasPoint, scaleFactor: number): void {
+    this.canvasHost.scaleZoomAt(screenPoint, scaleFactor);
     this.sync();
   }
 
@@ -362,6 +370,15 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   private syncFromUiStore(): void {
     this.saveWorkspaceSnapshot();
+  }
+
+  private getViewportCenterScreenPoint(): CanvasPoint {
+    const viewport = this.canvasHost.getSnapshot().viewport;
+
+    return {
+      x: viewport.size.x / 2,
+      y: viewport.size.y / 2,
+    };
   }
 
   private sync(): void {

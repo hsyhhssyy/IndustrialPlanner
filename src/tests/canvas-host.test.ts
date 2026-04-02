@@ -100,4 +100,30 @@ describe("CanvasHost", () => {
     host.panBy({ x: 4000, y: 4000 });
     expect(host.getSnapshot().viewport.offset).toEqual({ x: 0, y: 0 });
   });
+
+  it("keeps the wheel anchor stable when scaling zoom", () => {
+    const host = createCanvasHost({
+      editBackend: createMockBackend("edit"),
+      simulationBackend: createMockBackend("simulation"),
+      initialViewport: {
+        offset: { x: 40, y: 24 },
+        zoom: 1,
+        size: { x: 320, y: 160 },
+      },
+    });
+
+    host.setWorldSize({ x: 1600, y: 1200 });
+
+    const anchor = { x: 96, y: 48 };
+    const worldPointBefore = screenToWorldPoint(anchor, host.getSnapshot().viewport);
+
+    host.scaleZoomAt(anchor, 1.5);
+
+    const snapshot = host.getSnapshot().viewport;
+    const worldPointAfter = screenToWorldPoint(anchor, snapshot);
+
+    expect(snapshot.zoom).toBe(1.5);
+    expect(worldPointAfter.x).toBeCloseTo(worldPointBefore.x, 6);
+    expect(worldPointAfter.y).toBeCloseTo(worldPointBefore.y, 6);
+  });
 });
