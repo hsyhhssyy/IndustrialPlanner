@@ -159,8 +159,9 @@ button.is-active {
     "tools left canvas right"
     "bottom bottom bottom bottom";
   height: 100%;
-  gap: 8px;
-  padding: 12px;
+  row-gap: 0;
+  column-gap: 8px;
+  padding: 0 12px 12px;
   background: var(--shell-bg);
 }
 
@@ -181,12 +182,15 @@ button.is-active {
     minmax(220px, 1fr)
     auto
     auto;
+  box-sizing: border-box;
   height: 48px;
   align-items: center;
   gap: 12px;
+  margin: 0 -12px;
   padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
   background: var(--surface-1);
 }
 
@@ -763,6 +767,7 @@ button.is-active {
       "controls controls speed";
     height: auto;
     min-height: 48px;
+    margin: 0 -12px;
     padding: 10px 12px;
   }
 
