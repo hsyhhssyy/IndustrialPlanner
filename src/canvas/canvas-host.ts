@@ -1,4 +1,5 @@
 import type { GridPoint } from "@/shared/geometry/grid";
+import type { PlacementPreviewState } from "@/editor/contracts/placement-preview";
 
 export type CanvasBackendKind = "edit" | "simulation";
 
@@ -21,6 +22,7 @@ export interface CanvasSnapshot {
 export interface CanvasBackendSnapshot {
   selectedEntityIds: string[];
   hoveredEntityId: string | null;
+  placementPreview: PlacementPreviewState | null;
   pendingLinkSourceEntityId: string | null;
 }
 
@@ -44,6 +46,7 @@ export interface CanvasBackend {
 export interface CanvasHost {
   getSnapshot: () => CanvasSnapshot;
   getActiveBackendSnapshot: () => CanvasBackendSnapshot;
+  resolveScreenInput: (input: CanvasScreenInput) => CanvasWorldInput;
   setActiveBackend: (backend: CanvasBackendKind) => void;
   zoomBy: (delta: number) => void;
   scaleZoomAt: (screenPoint: CanvasPoint, scaleFactor: number) => void;
@@ -140,6 +143,18 @@ class CanvasHostImpl implements CanvasHost {
 
   getActiveBackendSnapshot(): CanvasBackendSnapshot {
     return this.backends[this.snapshot.activeBackend].getSnapshot();
+  }
+
+  resolveScreenInput(input: CanvasScreenInput): CanvasWorldInput {
+    const worldPoint = screenToWorldPoint(
+      input.screenPoint,
+      this.snapshot.viewport,
+    );
+
+    return {
+      worldPoint,
+      gridPoint: worldToGridPoint(worldPoint, input.gridSize),
+    };
   }
 
   setActiveBackend(backend: CanvasBackendKind): void {
@@ -270,16 +285,9 @@ class CanvasHostImpl implements CanvasHost {
   }
 
   async handlePrimaryClick(input: CanvasScreenInput): Promise<void> {
-    const worldPoint = screenToWorldPoint(
-      input.screenPoint,
-      this.snapshot.viewport,
+    await this.backends[this.snapshot.activeBackend].handlePrimaryClick(
+      this.resolveScreenInput(input),
     );
-    const gridPoint = worldToGridPoint(worldPoint, input.gridSize);
-
-    await this.backends[this.snapshot.activeBackend].handlePrimaryClick({
-      worldPoint,
-      gridPoint,
-    });
   }
 
   handleWorldChanged(): void {

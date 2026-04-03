@@ -20,6 +20,7 @@ function createBaseRenderScene() {
     activeCanvas: {
       selectedEntityIds: ["reactor-1"],
       hoveredEntityId: null,
+      placementPreview: null,
       pendingLinkSourceEntityId: null,
     },
     runtimeSnapshot: {
@@ -57,6 +58,7 @@ describe("Render scene model", () => {
       activeCanvas: {
         selectedEntityIds: [],
         hoveredEntityId: null,
+        placementPreview: null,
         pendingLinkSourceEntityId: null,
       },
       runtimeSnapshot: {
@@ -111,6 +113,7 @@ describe("Render scene model", () => {
       activeCanvas: {
         selectedEntityIds: [],
         hoveredEntityId: null,
+        placementPreview: null,
         pendingLinkSourceEntityId: null,
       },
       runtimeSnapshot: {

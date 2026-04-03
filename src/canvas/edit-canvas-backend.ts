@@ -15,6 +15,7 @@ import {
 } from "@/domain/base/stage1-bases";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import type { Stage1EntityDefinition } from "@/domain/registry/stage1-registry";
+import type { PlacementPreviewState } from "@/editor/contracts/placement-preview";
 import {
   isPlacementTool,
 } from "@/editor/core/editor-session";
@@ -24,6 +25,11 @@ interface CreateEditCanvasBackendOptions {
   editorHost: EditorHost;
   getTopology: () => CompiledTopology;
   getDefinition: (definitionId: string) => Stage1EntityDefinition | undefined;
+}
+
+export interface EditCanvasBackend extends CanvasBackend {
+  updatePlacementPreview: (input: CanvasWorldInput) => void;
+  clearPlacementPreview: () => void;
 }
 
 class EditCanvasBackendImpl implements CanvasBackend {
@@ -45,8 +51,17 @@ class EditCanvasBackendImpl implements CanvasBackend {
     return {
       selectedEntityIds: [...session.selection],
       hoveredEntityId: session.hoveredEntityId,
+      placementPreview: session.placementPreview,
       pendingLinkSourceEntityId: session.pendingLinkSourceEntityId,
     };
+  }
+
+  updatePlacementPreview(input: CanvasWorldInput): void {
+    this.editorHost.setPlacementPreview(this.resolvePlacementPreview(input));
+  }
+
+  clearPlacementPreview(): void {
+    this.editorHost.setPlacementPreview(null);
   }
 
   handlePrimaryClick(input: CanvasWorldInput): void {
@@ -70,24 +85,16 @@ class EditCanvasBackendImpl implements CanvasBackend {
     }
 
     if (isPlacementTool(session.activeTool) && session.placementDefinitionId) {
-      const definition = this.getDefinition(session.placementDefinitionId);
-      const base = getStage1BaseDefinition(document.baseId);
+      const preview = this.resolvePlacementPreview(input);
 
-      if (
-        !definition ||
-        !isStage1FootprintWithinBase({
-          base,
-          position: input.gridPoint,
-          footprint: definition.footprint,
-        })
-      ) {
+      if (!preview?.valid) {
         this.editorHost.setPendingLinkSource(null);
         return;
       }
 
       this.editorHost.placeEntity(
         session.placementDefinitionId,
-        input.gridPoint,
+        preview.gridPoint,
       );
       return;
     }
@@ -98,6 +105,46 @@ class EditCanvasBackendImpl implements CanvasBackend {
 
   handleWorldChanged(): void {
     // Editor selection sanitization is owned by Editor Core after document mutations.
+  }
+
+  private resolvePlacementPreview(
+    input: CanvasWorldInput,
+  ): PlacementPreviewState | null {
+    const {
+      document,
+      session,
+    } = this.editorHost.getSnapshot();
+
+    if (!isPlacementTool(session.activeTool) || !session.placementDefinitionId) {
+      return null;
+    }
+
+    const definition = this.getDefinition(session.placementDefinitionId);
+
+    if (!definition) {
+      return null;
+    }
+
+    const base = getStage1BaseDefinition(document.baseId);
+    const hitEntityId = hitTestWorldEntity({
+      document,
+      topology: this.getTopology(),
+      worldPoint: input.worldPoint,
+    });
+
+    return {
+      definitionId: session.placementDefinitionId,
+      strategy: session.placementStrategy ?? "pointer-follow",
+      gridPoint: input.gridPoint,
+      rotation: 0,
+      valid:
+        hitEntityId === null &&
+        isStage1FootprintWithinBase({
+          base,
+          position: input.gridPoint,
+          footprint: definition.footprint,
+        }),
+    };
   }
 
   private handleLinkToolClick(hitEntityId: string | null): void {
@@ -191,6 +238,6 @@ class EditCanvasBackendImpl implements CanvasBackend {
 
 export function createEditCanvasBackend(
   options: CreateEditCanvasBackendOptions,
-): CanvasBackend {
+): EditCanvasBackend {
   return new EditCanvasBackendImpl(options);
 }

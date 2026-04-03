@@ -1,3 +1,8 @@
+import type {
+  PlacementPreviewState,
+  PlacementPreviewStrategy,
+} from "@/editor/contracts/placement-preview";
+
 export type EditorTool =
   | "select"
   | "place"
@@ -12,5 +17,7 @@ export interface EditorSession {
   hoveredEntityId: string | null;
   dragPreviewEntityId: string | null;
   placementDefinitionId: string | null;
+  placementStrategy: PlacementPreviewStrategy | null;
+  placementPreview: PlacementPreviewState | null;
   pendingLinkSourceEntityId: string | null;
 }

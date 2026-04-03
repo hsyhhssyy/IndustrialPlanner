@@ -22,6 +22,7 @@ class SimulationCanvasBackendImpl implements CanvasBackend {
   private snapshot: CanvasBackendSnapshot = {
     selectedEntityIds: [],
     hoveredEntityId: null,
+    placementPreview: null,
     pendingLinkSourceEntityId: null,
   };
 

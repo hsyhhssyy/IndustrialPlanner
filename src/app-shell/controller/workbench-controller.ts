@@ -19,7 +19,10 @@ import {
   type CanvasHost,
   type CanvasPoint,
 } from "@/canvas/canvas-host";
-import { createEditCanvasBackend } from "@/canvas/edit-canvas-backend";
+import {
+  createEditCanvasBackend,
+  type EditCanvasBackend,
+} from "@/canvas/edit-canvas-backend";
 import { hitTestWorldEntity } from "@/canvas/hit-test";
 import { createSimulationCanvasBackend } from "@/canvas/simulation-canvas-backend";
 import { compileStage1World } from "@/domain/compiler/stage1-compiler";
@@ -34,6 +37,7 @@ import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import type { EditorCoreSnapshot } from "@/editor/core/editor-core";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
 import type { EditorTool } from "@/editor/contracts/editor-session";
+import type { PlacementPreviewStrategy } from "@/editor/contracts/placement-preview";
 import {
   createEditorHost,
   type EditorHost,
@@ -73,6 +77,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   private readonly storage: WorkspaceStorageGateway;
   private readonly editorHost: EditorHost;
   private readonly canvasHost: CanvasHost;
+  private readonly editCanvasBackend: EditCanvasBackend;
   private readonly simulationHost: SimulationHost;
   private readonly unsubscribeUiStore: () => void;
   private readonly unsubscribeSimulationHost: () => void;
@@ -94,13 +99,14 @@ class WorkbenchControllerImpl implements WorkbenchController {
       this.editorHost.getSnapshot().document,
       this.registry,
     );
+    this.editCanvasBackend = createEditCanvasBackend({
+      editorHost: this.editorHost,
+      getTopology: () => this.topology,
+      getDefinition: (definitionId) =>
+        getStage1EntityDefinition(this.registry, definitionId),
+    });
     this.canvasHost = createCanvasHost({
-      editBackend: createEditCanvasBackend({
-        editorHost: this.editorHost,
-        getTopology: () => this.topology,
-        getDefinition: (definitionId) =>
-          getStage1EntityDefinition(this.registry, definitionId),
-      }),
+      editBackend: this.editCanvasBackend,
       simulationBackend: createSimulationCanvasBackend({
         getDocument: () => this.editorHost.getSnapshot().document,
         getTopology: () => this.topology,
@@ -152,10 +158,31 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.sync();
   }
 
-  armPlacement(definitionId: string, tool: EditorTool = "place"): void {
-    this.editorHost.setPlacementDefinition(definitionId, tool);
+  armPlacement(
+    definitionId: string,
+    tool: EditorTool = "place",
+    strategy: PlacementPreviewStrategy = "pointer-follow",
+  ): void {
+    this.editorHost.setPlacementDefinition(definitionId, tool, strategy);
     this.uiStore.setLeftPanelMode("placement");
     this.uiStore.setDockOpen("left", true);
+    this.sync();
+  }
+
+  updatePlacementPreviewFromScreenPoint(screenPoint: CanvasPoint): void {
+    const document = this.editorHost.getSnapshot().document;
+
+    this.editCanvasBackend.updatePlacementPreview(
+      this.canvasHost.resolveScreenInput({
+        screenPoint,
+        gridSize: document.documentSettings.gridSize,
+      }),
+    );
+    this.sync();
+  }
+
+  clearPlacementPreview(): void {
+    this.editCanvasBackend.clearPlacementPreview();
     this.sync();
   }
 

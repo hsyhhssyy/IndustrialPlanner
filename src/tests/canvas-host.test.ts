@@ -15,6 +15,7 @@ function createMockBackend(
   let snapshot: CanvasBackendSnapshot = {
     selectedEntityIds: [],
     hoveredEntityId: null,
+    placementPreview: null,
     pendingLinkSourceEntityId: null,
   };
 
@@ -76,6 +77,27 @@ describe("CanvasHost", () => {
     expect(host.getActiveBackendSnapshot().selectedEntityIds).toEqual([
       "simulation-selected",
     ]);
+  });
+
+  it("exposes normalized world and grid coordinates for non-click input flows", () => {
+    const host = createCanvasHost({
+      editBackend: createMockBackend("edit"),
+      simulationBackend: createMockBackend("simulation"),
+      initialViewport: {
+        offset: { x: 40, y: 24 },
+        zoom: 1.5,
+      },
+    });
+
+    expect(
+      host.resolveScreenInput({
+        screenPoint: { x: 90, y: 45 },
+        gridSize: 16,
+      }),
+    ).toEqual({
+      worldPoint: { x: 100, y: 54 },
+      gridPoint: { x: 6, y: 3 },
+    });
   });
 
   it("clamps panning and zooming against viewport and world bounds", () => {

@@ -10,6 +10,7 @@ import type { Stage1Registry } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import type { EditorCoreSnapshot } from "@/editor/core/editor-core";
 import type { EditorTool } from "@/editor/contracts/editor-session";
+import type { PlacementPreviewStrategy } from "@/editor/contracts/placement-preview";
 import type { AppLocale } from "@/i18n/messages";
 import type { RenderSceneModel } from "@/renderer/scene/types";
 import type { SimulationHostSnapshot } from "@/simulation/host/simulation-host";
@@ -43,7 +44,13 @@ export interface WorkbenchController {
   registry: Stage1Registry;
   setMode: (mode: WorkbenchMode) => void;
   setActiveTool: (tool: EditorTool) => void;
-  armPlacement: (definitionId: string, tool?: EditorTool) => void;
+  armPlacement: (
+    definitionId: string,
+    tool?: EditorTool,
+    strategy?: PlacementPreviewStrategy,
+  ) => void;
+  updatePlacementPreviewFromScreenPoint: (screenPoint: CanvasPoint) => void;
+  clearPlacementPreview: () => void;
   selectEntity: (entityId: string) => Promise<void>;
   clearSelection: () => Promise<void>;
   patchEntityConfig: (

@@ -10,6 +10,11 @@ import type {
   EditorSession,
   EditorTool,
 } from "@/editor/contracts/editor-session";
+import type {
+  PlacementPreviewState,
+  PlacementPreviewStrategy,
+} from "@/editor/contracts/placement-preview";
+import { isPlacementTool } from "@/editor/core/editor-session";
 import type { GridPoint } from "@/shared/geometry/grid";
 
 interface DocumentHistoryEntry {
@@ -34,7 +39,12 @@ export interface EditorCoreSnapshot {
 export interface EditorCore {
   getSnapshot: () => EditorCoreSnapshot;
   setActiveTool: (tool: EditorTool) => void;
-  setPlacementDefinition: (definitionId: string, tool?: EditorTool) => void;
+  setPlacementDefinition: (
+    definitionId: string,
+    tool?: EditorTool,
+    strategy?: PlacementPreviewStrategy,
+  ) => void;
+  setPlacementPreview: (preview: PlacementPreviewState | null) => void;
   selectEntity: (entityId: string | null) => void;
   setPendingLinkSource: (entityId: string | null) => void;
   placeEntity: (definitionId: string, position: GridPoint) => void;
@@ -80,17 +90,39 @@ class EditorCoreImpl implements EditorCore {
     this.session = {
       ...this.session,
       activeTool: tool,
+      placementDefinitionId: isPlacementTool(tool)
+        ? this.session.placementDefinitionId
+        : null,
+      placementStrategy: isPlacementTool(tool)
+        ? this.session.placementStrategy
+        : null,
+      placementPreview: isPlacementTool(tool)
+        ? this.session.placementPreview
+        : null,
       pendingLinkSourceEntityId:
         tool === "link" ? this.session.pendingLinkSourceEntityId : null,
     };
   }
 
-  setPlacementDefinition(definitionId: string, tool: EditorTool = "place"): void {
+  setPlacementDefinition(
+    definitionId: string,
+    tool: EditorTool = "place",
+    strategy: PlacementPreviewStrategy = "pointer-follow",
+  ): void {
     this.session = {
       ...this.session,
       activeTool: tool,
       placementDefinitionId: definitionId,
+      placementStrategy: strategy,
+      placementPreview: null,
       pendingLinkSourceEntityId: null,
+    };
+  }
+
+  setPlacementPreview(preview: PlacementPreviewState | null): void {
+    this.session = {
+      ...this.session,
+      placementPreview: preview,
     };
   }
 
@@ -127,6 +159,8 @@ class EditorCoreImpl implements EditorCore {
         ...this.session,
         selection: [entityId],
         placementDefinitionId: definitionId,
+        placementStrategy: this.session.placementStrategy,
+        placementPreview: this.session.placementPreview,
         pendingLinkSourceEntityId: null,
       };
     }
@@ -276,6 +310,10 @@ class EditorCoreImpl implements EditorCore {
       hoveredEntityId,
       dragPreviewEntityId,
       pendingLinkSourceEntityId,
+      placementPreview:
+        this.session.placementDefinitionId && isPlacementTool(this.session.activeTool)
+          ? this.session.placementPreview
+          : null,
     };
   }
 }

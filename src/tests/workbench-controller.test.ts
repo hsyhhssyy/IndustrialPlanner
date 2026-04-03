@@ -267,6 +267,40 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("updates placement preview from screen coordinates through the shared canvas normalization path", () => {
+    const controller = createWorkbenchController();
+
+    controller.armPlacement("belt_straight_1x1", "belt");
+    controller.updatePlacementPreviewFromScreenPoint(
+      toScreenPointForGrid(controller, { x: 24, y: 12 }),
+    );
+
+    expect(readWorkbenchState(controller).activeCanvas.placementPreview).toEqual({
+      definitionId: "belt_straight_1x1",
+      strategy: "pointer-follow",
+      gridPoint: { x: 24, y: 12 },
+      rotation: 0,
+      valid: true,
+    });
+
+    controller.dispose();
+  });
+
+  it("marks placement preview invalid when the pointer is over an existing entity", () => {
+    const controller = createWorkbenchController();
+
+    controller.armPlacement("belt_straight_1x1", "belt");
+    controller.updatePlacementPreviewFromScreenPoint(
+      toScreenPointForEntity(controller, "reactor-1"),
+    );
+
+    expect(readWorkbenchState(controller).activeCanvas.placementPreview?.valid).toBe(
+      false,
+    );
+
+    controller.dispose();
+  });
+
   it("places an entity through the canvas host interaction loop and recompiles topology", async () => {
     const controller = createWorkbenchController();
     const before = readWorkbenchState(controller);
