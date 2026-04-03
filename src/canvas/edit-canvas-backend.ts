@@ -20,6 +20,7 @@ import {
   isPlacementTool,
 } from "@/editor/core/editor-session";
 import type { EditorHost } from "@/editor/host/editor-host";
+import type { CanvasPoint } from "@/canvas/canvas-host";
 
 interface CreateEditCanvasBackendOptions {
   editorHost: EditorHost;
@@ -30,6 +31,23 @@ interface CreateEditCanvasBackendOptions {
 export interface EditCanvasBackend extends CanvasBackend {
   updatePlacementPreview: (input: CanvasWorldInput) => void;
   clearPlacementPreview: () => void;
+}
+
+function resolveCenteredPlacementGridPoint(options: {
+  worldPoint: CanvasPoint;
+  gridSize: number;
+  footprint: {
+    width: number;
+    height: number;
+  };
+}) {
+  const centerXCells = options.worldPoint.x / options.gridSize;
+  const centerYCells = options.worldPoint.y / options.gridSize;
+
+  return {
+    x: Math.max(0, Math.round(centerXCells - options.footprint.width / 2)),
+    y: Math.max(0, Math.round(centerYCells - options.footprint.height / 2)),
+  };
 }
 
 class EditCanvasBackendImpl implements CanvasBackend {
@@ -126,6 +144,11 @@ class EditCanvasBackendImpl implements CanvasBackend {
     }
 
     const base = getStage1BaseDefinition(document.baseId);
+    const previewGridPoint = resolveCenteredPlacementGridPoint({
+      worldPoint: input.worldPoint,
+      gridSize: document.documentSettings.gridSize,
+      footprint: definition.footprint,
+    });
     const hitEntityId = hitTestWorldEntity({
       document,
       topology: this.getTopology(),
@@ -135,13 +158,13 @@ class EditCanvasBackendImpl implements CanvasBackend {
     return {
       definitionId: session.placementDefinitionId,
       strategy: session.placementStrategy ?? "pointer-follow",
-      gridPoint: input.gridPoint,
+      gridPoint: previewGridPoint,
       rotation: 0,
       valid:
         hitEntityId === null &&
         isStage1FootprintWithinBase({
           base,
-          position: input.gridPoint,
+          position: previewGridPoint,
           footprint: definition.footprint,
         }),
     };

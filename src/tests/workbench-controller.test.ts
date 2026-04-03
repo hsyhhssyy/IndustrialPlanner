@@ -43,6 +43,31 @@ function toScreenPointForGrid(
   };
 }
 
+function toScreenPointForPlacementCenter(
+  controller: ReturnType<typeof createWorkbenchController>,
+  definitionId: string,
+  gridPoint: { x: number; y: number },
+) {
+  const snapshot = readWorkbenchState(controller);
+  const definition = snapshot.registry.entityDefinitions.find(
+    (entityDefinition) => entityDefinition.id === definitionId,
+  );
+
+  if (!definition) {
+    throw new Error(`Missing definition ${definitionId}`);
+  }
+
+  const scaledGridSize =
+    snapshot.document.documentSettings.gridSize * snapshot.canvas.viewport.zoom;
+
+  return {
+    x:
+      (gridPoint.x + definition.footprint.width / 2) * scaledGridSize,
+    y:
+      (gridPoint.y + definition.footprint.height / 2) * scaledGridSize,
+  };
+}
+
 function toScreenPointForEntity(
   controller: ReturnType<typeof createWorkbenchController>,
   entityId: string,
@@ -293,6 +318,28 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("anchors large device placement preview to the device center instead of the top-left corner", () => {
+    const controller = createWorkbenchController();
+
+    controller.armPlacement("item_port_mix_pool_1", "place");
+    controller.updatePlacementPreviewFromScreenPoint(
+      toScreenPointForPlacementCenter(controller, "item_port_mix_pool_1", {
+        x: 24,
+        y: 12,
+      }),
+    );
+
+    expect(readWorkbenchState(controller).activeCanvas.placementPreview).toEqual({
+      definitionId: "item_port_mix_pool_1",
+      strategy: "pointer-follow",
+      gridPoint: { x: 24, y: 12 },
+      rotation: 0,
+      valid: true,
+    });
+
+    controller.dispose();
+  });
+
   it("marks placement preview invalid when the pointer is over an existing entity", () => {
     const controller = createWorkbenchController();
 
@@ -332,6 +379,33 @@ describe("WorkbenchController scaffold", () => {
     expect(
       after.renderScene.entities.some((entity) => entity.entityId === placedEntityId),
     ).toBe(true);
+
+    controller.dispose();
+  });
+
+  it("places large devices from a center-anchored pointer position", async () => {
+    const controller = createWorkbenchController();
+    const before = readWorkbenchState(controller);
+
+    controller.armPlacement("item_port_mix_pool_1", "place");
+    await controller.handleCanvasClick(
+      toScreenPointForPlacementCenter(controller, "item_port_mix_pool_1", {
+        x: 24,
+        y: 12,
+      }),
+    );
+
+    const after = readWorkbenchState(controller);
+    const placedEntityId = after.document.entityOrder.at(-1);
+    const placedEntity = placedEntityId
+      ? after.document.entities[placedEntityId]
+      : null;
+
+    expect(after.document.entityOrder).toHaveLength(
+      before.document.entityOrder.length + 1,
+    );
+    expect(placedEntity?.definitionId).toBe("item_port_mix_pool_1");
+    expect(placedEntity?.position).toEqual({ x: 24, y: 12 });
 
     controller.dispose();
   });
