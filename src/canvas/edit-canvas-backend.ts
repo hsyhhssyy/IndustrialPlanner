@@ -29,6 +29,7 @@ interface CreateEditCanvasBackendOptions {
 }
 
 export interface EditCanvasBackend extends CanvasBackend {
+  confirmPlacement: () => boolean;
   updatePlacementPreview: (input: CanvasWorldInput) => void;
   clearPlacementPreview: () => void;
 }
@@ -72,6 +73,24 @@ class EditCanvasBackendImpl implements CanvasBackend {
       placementPreview: session.placementPreview,
       pendingLinkSourceEntityId: session.pendingLinkSourceEntityId,
     };
+  }
+
+  confirmPlacement(): boolean {
+    const { session } = this.editorHost.getSnapshot();
+    const preview = session.placementPreview;
+
+    if (
+      !isPlacementTool(session.activeTool) ||
+      !session.placementDefinitionId ||
+      !preview ||
+      !preview.valid ||
+      preview.definitionId !== session.placementDefinitionId
+    ) {
+      return false;
+    }
+
+    this.editorHost.placeEntity(session.placementDefinitionId, preview.gridPoint);
+    return true;
   }
 
   updatePlacementPreview(input: CanvasWorldInput): void {

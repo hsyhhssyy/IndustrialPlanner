@@ -170,7 +170,27 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.editorHost.setPlacementDefinition(definitionId, tool, strategy);
     this.uiStore.setLeftPanelMode("placement");
     this.uiStore.setDockOpen("left", true);
+
+    if (
+      strategy === "anchored-confirm" &&
+      this.canvasHost.getSnapshot().viewport.size.x > 0 &&
+      this.canvasHost.getSnapshot().viewport.size.y > 0
+    ) {
+      this.centerPlacementPreview();
+      return;
+    }
+
     this.sync();
+  }
+
+  centerPlacementPreview(): void {
+    const viewport = this.canvasHost.getSnapshot().viewport;
+
+    if (viewport.size.x <= 0 || viewport.size.y <= 0) {
+      return;
+    }
+
+    this.updatePlacementPreviewFromScreenPoint(this.getViewportCenterScreenPoint());
   }
 
   updatePlacementPreviewFromScreenPoint(screenPoint: CanvasPoint): void {
@@ -183,6 +203,21 @@ class WorkbenchControllerImpl implements WorkbenchController {
       }),
     );
     this.sync();
+  }
+
+  async confirmPlacementPreview(): Promise<void> {
+    const before = this.captureMutationState();
+    const didPlace = this.editCanvasBackend.confirmPlacement();
+
+    await this.reconcileMutation(before);
+
+    if (
+      didPlace &&
+      this.editorHost.getSnapshot().session.placementStrategy === "anchored-confirm" &&
+      this.canvasHost.getSnapshot().activeBackend === "edit"
+    ) {
+      this.centerPlacementPreview();
+    }
   }
 
   clearPlacementPreview(): void {

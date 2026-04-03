@@ -20,11 +20,13 @@ import {
 import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import type { CanvasPoint } from "@/canvas/canvas-host";
+import { createTranslator } from "@/i18n/messages";
 import { RendererHost } from "@/renderer/host/renderer-host";
 import {
   useEffect,
   useRef,
   useState,
+  type FocusEvent,
   type KeyboardEvent,
   type MouseEvent,
   type PointerEvent,
@@ -45,17 +47,29 @@ function normalizeWheelDelta(event: WheelEvent<HTMLDivElement>): number {
   }
 }
 
+function clampToRange(value: number, min: number, max: number): number {
+  if (max <= min) {
+    return min;
+  }
+
+  return Math.min(Math.max(value, min), max);
+}
+
 export interface CanvasPanelProps {
   controller: WorkbenchController;
 }
 
 export function CanvasPanel({ controller }: CanvasPanelProps) {
+  const ui = useExternalStore(controller.uiStore);
+  const editor = useExternalStore(controller.editorStore);
+  const canvasSnapshot = useExternalStore(controller.canvasStore);
   const renderScene = useExternalStore(controller.renderSceneStore);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const keyStateRef = useRef({ up: false, down: false, left: false, right: false });
   const frameRef = useRef<number | null>(null);
   const touchPointsRef = useRef<Map<number, CanvasPoint>>(new Map());
+  const touchPlacementPointerIdRef = useRef<number | null>(null);
   const suppressNextClickRef = useRef(false);
   const [pointerGestureState, setPointerGestureState] = useState<CanvasPanelPointerGestureState>(
     createIdleCanvasPanelPointerGestureState,
@@ -65,6 +79,53 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
   );
   const pointerGestureStateRef = useRef<CanvasPanelPointerGestureState>(pointerGestureState);
   const touchGestureStateRef = useRef<CanvasPanelTouchGestureState>(touchGestureState);
+  const t = createTranslator(ui.locale);
+  const anchoredPlacementActive =
+    editor.session.placementDefinitionId !== null &&
+    editor.session.placementStrategy === "anchored-confirm";
+  const anchoredPlacementPreview =
+    renderScene.placementPreview?.strategy === "anchored-confirm"
+      ? renderScene.placementPreview
+      : null;
+  const viewport = canvasSnapshot.canvas.viewport;
+  const anchoredPlacementScreenBox = anchoredPlacementPreview
+    ? {
+        left:
+          (anchoredPlacementPreview.x - renderScene.viewportOffset.x) * renderScene.zoom,
+        top:
+          (anchoredPlacementPreview.y - renderScene.viewportOffset.y) * renderScene.zoom,
+        width: anchoredPlacementPreview.width * renderScene.zoom,
+        height: anchoredPlacementPreview.height * renderScene.zoom,
+      }
+    : null;
+  const anchoredPlacementHintStyle = anchoredPlacementScreenBox
+    ? {
+        left: `${clampToRange(
+          anchoredPlacementScreenBox.left,
+          12,
+          viewport.size.x - 240,
+        )}px`,
+        top: `${clampToRange(
+          anchoredPlacementScreenBox.top - 40,
+          12,
+          viewport.size.y - 76,
+        )}px`,
+      }
+    : null;
+  const anchoredPlacementConfirmStyle = anchoredPlacementScreenBox
+    ? {
+        left: `${clampToRange(
+          anchoredPlacementScreenBox.left + anchoredPlacementScreenBox.width - 120,
+          12,
+          viewport.size.x - 132,
+        )}px`,
+        top: `${clampToRange(
+          anchoredPlacementScreenBox.top + anchoredPlacementScreenBox.height + 10,
+          12,
+          viewport.size.y - 52,
+        )}px`,
+      }
+    : null;
 
   const updatePointerGestureState = (nextState: CanvasPanelPointerGestureState) => {
     pointerGestureStateRef.current = nextState;
@@ -86,6 +147,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     }
 
     touchPointsRef.current.clear();
+    touchPlacementPointerIdRef.current = null;
     updateTouchGestureState(cancelCanvasTouchGesture());
     controller.clearPlacementPreview();
   };
@@ -117,6 +179,25 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     updatePointerGestureState(cancelCanvasPanelPointerGesture());
     controller.clearPlacementPreview();
   };
+
+  useEffect(() => {
+    if (
+      !anchoredPlacementActive ||
+      renderScene.placementPreview !== null ||
+      viewport.size.x <= 0 ||
+      viewport.size.y <= 0
+    ) {
+      return;
+    }
+
+    controller.centerPlacementPreview();
+  }, [
+    anchoredPlacementActive,
+    controller,
+    renderScene.placementPreview,
+    viewport.size.x,
+    viewport.size.y,
+  ]);
 
   useEffect(() => {
     const stageElement = stageRef.current;
@@ -200,6 +281,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
       }
 
       touchPointsRef.current.clear();
+      touchPlacementPointerIdRef.current = null;
       touchGestureStateRef.current = cancelCanvasTouchGesture();
       setTouchGestureState(touchGestureStateRef.current);
       stopKeyboardPanLoop();
@@ -254,6 +336,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
       event.currentTarget.setPointerCapture(event.pointerId);
 
       if (touchPointsRef.current.size >= 2) {
+        touchPlacementPointerIdRef.current = null;
         const [firstPointer, secondPointer] = Array.from(
           touchPointsRef.current.entries(),
         );
@@ -270,6 +353,14 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
           );
         }
       } else {
+        if (anchoredPlacementActive) {
+          suppressNextClickRef.current = true;
+          touchPlacementPointerIdRef.current = event.pointerId;
+          controller.updatePlacementPreviewFromScreenPoint(point);
+          updateTouchGestureState(createIdleCanvasPanelTouchGestureState());
+          return;
+        }
+
         updateTouchGestureState(
           beginCanvasTouchGesture(
             event.pointerId,
@@ -328,6 +419,15 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
           }
         }
 
+        return;
+      }
+
+      if (
+        touchPlacementPointerIdRef.current === event.pointerId &&
+        touchPointsRef.current.size === 1
+      ) {
+        suppressNextClickRef.current = true;
+        controller.updatePlacementPreviewFromScreenPoint(point);
         return;
       }
 
@@ -408,6 +508,11 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
   const handleViewportPointerUp = (event: PointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "touch") {
       touchPointsRef.current.delete(event.pointerId);
+
+      if (touchPlacementPointerIdRef.current === event.pointerId) {
+        touchPlacementPointerIdRef.current = null;
+      }
+
       updateTouchGestureState(
         removePointerFromCanvasTouchGesture(
           touchGestureStateRef.current,
@@ -503,7 +608,11 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     <main className="canvas-panel panel-surface">
       <div
         className="canvas-stage"
-        onBlur={() => {
+        onBlur={(event: FocusEvent<HTMLDivElement>) => {
+          if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+            return;
+          }
+
           resetPointerGestureState();
           resetTouchGestureState();
           stopKeyboardPanLoop();
@@ -529,7 +638,9 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
           onPointerCancel={handleViewportPointerCancel}
           onPointerDown={handleViewportPointerDown}
           onPointerLeave={() => {
-            controller.clearPlacementPreview();
+            if (!anchoredPlacementActive) {
+              controller.clearPlacementPreview();
+            }
           }}
           onPointerMove={handleViewportPointerMove}
           onPointerUp={handleViewportPointerUp}
@@ -537,6 +648,27 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
           ref={viewportRef}
         >
           <RendererHost scene={renderScene} />
+          {anchoredPlacementHintStyle ? (
+            <div className="placement-affordance-hint" style={anchoredPlacementHintStyle}>
+              {t("label.touchPlacementHint")}
+            </div>
+          ) : null}
+          {anchoredPlacementConfirmStyle ? (
+            <button
+              className="placement-confirm-button"
+              disabled={!anchoredPlacementPreview?.valid}
+              onClick={() => {
+                void controller.confirmPlacementPreview();
+              }}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+              }}
+              style={anchoredPlacementConfirmStyle}
+              type="button"
+            >
+              {t("action.confirmPlacement")}
+            </button>
+          ) : null}
         </div>
       </div>
     </main>

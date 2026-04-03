@@ -662,12 +662,44 @@ button.is-active {
 }
 
 .canvas-viewport-surface {
+  position: relative;
   cursor: default;
   touch-action: none;
 }
 
 .canvas-viewport-surface.is-panning {
   cursor: grabbing;
+}
+
+.placement-affordance-hint,
+.placement-confirm-button {
+  position: absolute;
+  z-index: 2;
+}
+
+.placement-affordance-hint {
+  max-width: min(228px, calc(100% - 24px));
+  padding: 6px 10px;
+  border: 1px solid rgb(57 186 230 / 0.3);
+  border-radius: 999px;
+  background: rgb(11 16 21 / 0.9);
+  color: var(--text-0);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.placement-confirm-button {
+  min-width: 120px;
+  padding-inline: 14px;
+  border-color: rgb(57 186 230 / 0.42);
+  background: rgb(21 26 31 / 0.94);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.22);
+}
+
+.placement-confirm-button:not(:disabled):hover {
+  border-color: var(--accent-strong);
+  background: rgb(32 39 52 / 0.96);
 }
 
 .renderer-canvas {

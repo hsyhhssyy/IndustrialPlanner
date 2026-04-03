@@ -20,6 +20,7 @@ export type MessageKey =
   | "action.removeLinks"
   | "action.removeLink"
   | "action.applyValue"
+  | "action.confirmPlacement"
   | "action.toggleValue"
   | "action.clearPatch"
   | "toolbar.tools"
@@ -69,6 +70,7 @@ export type MessageKey =
   | "label.runtimePatchNone"
   | "label.runtimePatchDisabled"
   | "label.runtimePatchClearsOnExit"
+  | "label.touchPlacementHint"
   | "status.ready"
   | "status.edit"
   | "status.simulate"
@@ -120,6 +122,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.removeLinks": "删除链接",
     "action.removeLink": "移除链接",
     "action.applyValue": "应用",
+    "action.confirmPlacement": "确认放置",
     "action.toggleValue": "切换",
     "action.clearPatch": "清除覆盖",
     "toolbar.tools": "工具",
@@ -169,6 +172,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "label.runtimePatchNone": "无",
     "label.runtimePatchDisabled": "该字段不能在仿真态做临时覆盖。",
     "label.runtimePatchClearsOnExit": "退出仿真会清空全部运行态覆盖，不会写回文档。",
+    "label.touchPlacementHint": "拖动虚影后点击确认完成放置。",
     "status.ready": "Stage1 工作台脚手架已就绪。",
     "status.edit": "编辑态聚焦文档事实与编译产物。",
     "status.simulate": "仿真态消费运行快照与遥测摘要。",
@@ -219,6 +223,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.removeLinks": "Remove Links",
     "action.removeLink": "Remove Link",
     "action.applyValue": "Apply",
+    "action.confirmPlacement": "Confirm Placement",
     "action.toggleValue": "Toggle",
     "action.clearPatch": "Clear Patch",
     "toolbar.tools": "Tools",
@@ -268,6 +273,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "label.runtimePatchNone": "None",
     "label.runtimePatchDisabled": "This field cannot be overridden during simulation.",
     "label.runtimePatchClearsOnExit": "Leaving simulation clears runtime patches and keeps the document unchanged.",
+    "label.touchPlacementHint": "Drag the ghost, then tap confirm to place it.",
     "status.ready": "Stage1 workbench scaffold is ready.",
     "status.edit": "Edit mode focuses on document facts and compiled topology.",
     "status.simulate": "Simulation mode consumes runtime snapshots and telemetry.",

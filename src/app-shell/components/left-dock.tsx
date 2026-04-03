@@ -9,12 +9,14 @@ import {
   type PlaceholderActionId,
 } from "@/app-shell/workbench-placeholders";
 import type { EditorTool } from "@/editor/contracts/editor-session";
+import type { PlacementPreviewStrategy } from "@/editor/contracts/placement-preview";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import {
   createTranslator,
   type MessageKey,
 } from "@/i18n/messages";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
+import { useRef } from "react";
 
 const TOOL_LABEL_KEYS: Record<EditorTool, MessageKey> = {
   select: "tool.select",
@@ -93,6 +95,10 @@ export function LeftDock({ controller }: LeftDockProps) {
   const ui = useExternalStore(controller.uiStore);
   const editor = useExternalStore(controller.editorStore);
   const registry = controller.registry;
+  const pendingPlacementStrategyRef = useRef<{
+    buttonId: string;
+    strategy: PlacementPreviewStrategy;
+  } | null>(null);
 
   if (!ui.leftDock.open) {
     return null;
@@ -202,6 +208,20 @@ export function LeftDock({ controller }: LeftDockProps) {
                         className={isActive ? "is-active" : undefined}
                         disabled={isDisabled}
                         key={button.id}
+                        onPointerDown={(event) => {
+                          if (!button.definitionId) {
+                            pendingPlacementStrategyRef.current = null;
+                            return;
+                          }
+
+                          pendingPlacementStrategyRef.current = {
+                            buttonId: button.id,
+                            strategy:
+                              event.pointerType === "touch"
+                                ? "anchored-confirm"
+                                : "pointer-follow",
+                          };
+                        }}
                         onClick={() => {
                           if (button.actionId === "selection.clear") {
                             void controller.clearSelection();
@@ -229,12 +249,21 @@ export function LeftDock({ controller }: LeftDockProps) {
                           }
 
                           if (button.definitionId) {
+                            const strategy =
+                              pendingPlacementStrategyRef.current?.buttonId === button.id
+                                ? pendingPlacementStrategyRef.current.strategy
+                                : "pointer-follow";
+
+                            pendingPlacementStrategyRef.current = null;
                             controller.armPlacement(
                               button.definitionId,
                               button.tool ?? "place",
+                              strategy,
                             );
                             return;
                           }
+
+                          pendingPlacementStrategyRef.current = null;
 
                           if (button.tool) {
                             controller.setActiveTool(button.tool);

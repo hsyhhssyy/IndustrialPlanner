@@ -49,7 +49,9 @@ export interface WorkbenchController {
     tool?: EditorTool,
     strategy?: PlacementPreviewStrategy,
   ) => void;
+  centerPlacementPreview: () => void;
   updatePlacementPreviewFromScreenPoint: (screenPoint: CanvasPoint) => void;
+  confirmPlacementPreview: () => Promise<void>;
   clearPlacementPreview: () => void;
   selectEntity: (entityId: string) => Promise<void>;
   clearSelection: () => Promise<void>;

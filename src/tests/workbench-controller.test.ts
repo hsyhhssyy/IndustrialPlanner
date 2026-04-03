@@ -340,6 +340,41 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("seeds anchored-confirm placement at the viewport center and confirms placement from the preview", async () => {
+    const controller = createWorkbenchController();
+    controller.setCanvasViewportSize({ x: 640, y: 360 });
+
+    controller.armPlacement("belt_straight_1x1", "belt", "anchored-confirm");
+
+    const previewBeforeConfirm = readWorkbenchState(controller).activeCanvas.placementPreview;
+    const entityCountBeforeConfirm = readWorkbenchState(controller).document.entityOrder.length;
+
+    expect(previewBeforeConfirm).toMatchObject({
+      definitionId: "belt_straight_1x1",
+      strategy: "anchored-confirm",
+      rotation: 0,
+      valid: true,
+    });
+
+    await controller.confirmPlacementPreview();
+
+    const afterConfirm = readWorkbenchState(controller);
+    const placedEntityId = afterConfirm.document.entityOrder.at(-1);
+    const placedEntity = placedEntityId
+      ? afterConfirm.document.entities[placedEntityId]
+      : null;
+
+    expect(afterConfirm.document.entityOrder).toHaveLength(entityCountBeforeConfirm + 1);
+    expect(placedEntity?.definitionId).toBe("belt_straight_1x1");
+    expect(placedEntity?.position).toEqual(previewBeforeConfirm?.gridPoint);
+    expect(afterConfirm.activeCanvas.placementPreview).toMatchObject({
+      definitionId: "belt_straight_1x1",
+      strategy: "anchored-confirm",
+    });
+
+    controller.dispose();
+  });
+
   it("marks placement preview invalid when the pointer is over an existing entity", () => {
     const controller = createWorkbenchController();
 
