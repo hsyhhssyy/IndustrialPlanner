@@ -579,6 +579,11 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.logger.info("Started simulation playback.");
   }
 
+  stopSimulation(): void {
+    this.setMode("edit");
+    this.logger.info("Stopped simulation playback and returned to edit mode.");
+  }
+
   pauseSimulation(): void {
     this.simulationHost.pause();
     this.logger.info("Paused simulation playback.");

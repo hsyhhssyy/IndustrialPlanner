@@ -167,6 +167,22 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("stops simulation by returning to edit mode", () => {
+    const controller = createWorkbenchController();
+
+    controller.startSimulation();
+    expect(readWorkbenchState(controller).ui.mode).toBe("simulate");
+
+    controller.stopSimulation();
+
+    const snapshot = readWorkbenchState(controller);
+
+    expect(snapshot.ui.mode).toBe("edit");
+    expect(snapshot.runtimeSnapshot.status).toBe("paused");
+
+    controller.dispose();
+  });
+
   it("exposes dock layout state and renderer scene through the snapshot", async () => {
     const controller = createWorkbenchController();
 
@@ -601,6 +617,31 @@ describe("WorkbenchController scaffold", () => {
       clearedSnapshot.document.entities["dark-outlet-1"]?.config
         .selectedLiquidItemId,
     ).toBe(baselineValue);
+
+    controller.dispose();
+  });
+
+  it("clears runtime patches when stopping simulation through the top-level control semantics", async () => {
+    const controller = createWorkbenchController();
+
+    controller.startSimulation();
+    await controller.patchSimulationEntityConfig("dark-outlet-1", {
+      selectedLiquidItemId: "item_liquid_plant_grass_2",
+    });
+
+    expect(
+      readWorkbenchState(controller).simulationPatchSet.entityConfigByEntityId["dark-outlet-1"]
+        ?.selectedLiquidItemId,
+    ).toBe("item_liquid_plant_grass_2");
+
+    controller.stopSimulation();
+
+    const snapshot = readWorkbenchState(controller);
+
+    expect(snapshot.ui.mode).toBe("edit");
+    expect(
+      snapshot.simulationPatchSet.entityConfigByEntityId["dark-outlet-1"],
+    ).toBeUndefined();
 
     controller.dispose();
   });

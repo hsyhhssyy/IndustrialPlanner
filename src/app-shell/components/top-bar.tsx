@@ -10,11 +10,10 @@ export interface TopBarProps {
 
 export function TopBar({ controller }: TopBarProps) {
   const ui = useExternalStore(controller.uiStore);
-  const simulation = useExternalStore(controller.simulationStore);
   const renderScene = useExternalStore(controller.renderSceneStore);
   const t = createTranslator(ui.locale);
   const cellSizeLabel = `${Math.round(renderScene.gridSize * renderScene.zoom)}px`;
-  const simulationRunning = simulation.runtimeSnapshot.status === "running";
+  const simulationActive = ui.mode === "simulate";
 
   return (
     <header className="top-bar">
@@ -53,13 +52,13 @@ export function TopBar({ controller }: TopBarProps) {
         </span>
         <button
           onClick={() =>
-            simulationRunning
-              ? controller.pauseSimulation()
+            simulationActive
+              ? controller.stopSimulation()
               : controller.startSimulation()
           }
           type="button"
         >
-          {t(simulationRunning ? "action.stop" : "action.start")}
+          {t(simulationActive ? "action.stop" : "action.start")}
         </button>
       </div>
       <div className="toolbar-group top-bar-speed-controls">

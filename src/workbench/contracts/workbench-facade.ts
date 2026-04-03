@@ -84,6 +84,7 @@ export interface WorkbenchController {
   setDockOpen: (dockId: DockId, open: boolean) => void;
   toggleDockCollapsed: (dockId: DockId) => void;
   startSimulation: () => void;
+  stopSimulation: () => void;
   pauseSimulation: () => void;
   stepSimulation: () => void;
   dispose: () => void;
