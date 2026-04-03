@@ -19,6 +19,7 @@ import type {
   RenderPlacementPreview,
   RenderSceneModel,
 } from "@/renderer/scene/types";
+import { createLogger } from "@/shared/logging/logger";
 
 const RENDERER_BACKGROUND_COLOR = 0x0d1218;
 const GRID_STROKE_STYLE: StrokeInput = {
@@ -91,6 +92,7 @@ const PIXI_DISPLAY_OBJECT_DESTROY_OPTIONS: DestroyOptions = {
   texture: false,
   textureSource: false,
 };
+const logger = createLogger("renderer.pixi");
 
 interface PixiSceneLayers {
   camera: Container;
@@ -720,7 +722,7 @@ export function createPixiRendererRuntime(
         pendingTexturePaths.delete(path);
 
         if (!destroyed) {
-          console.error(`Failed to load renderer sprite "${path}".`, error);
+          logger.error(`Failed to load renderer sprite "${path}".`, error);
         }
       });
   }
@@ -757,7 +759,7 @@ export function createPixiRendererRuntime(
     })
     .catch((error: unknown) => {
       if (!destroyed) {
-        console.error("Failed to initialize Pixi renderer host.", error);
+        logger.error("Failed to initialize Pixi renderer host.", error);
       }
     });
 

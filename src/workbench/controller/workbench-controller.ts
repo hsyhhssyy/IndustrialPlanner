@@ -66,6 +66,11 @@ import {
   createSnapshotStore,
   type SnapshotStore,
 } from "@/shared/snapshot-store/snapshot-store";
+import {
+  createLogger,
+  setLogLevel as setGlobalLogLevel,
+  type LogLevel,
+} from "@/shared/logging/logger";
 
 interface MutationState {
   document: WorldDocument;
@@ -83,6 +88,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   readonly simulationStore;
   readonly renderSceneStore: SnapshotStore<RenderSceneModel>;
 
+  private readonly logger = createLogger("workbench.controller");
   private readonly storage: WorkspaceStorage;
   private readonly workspaceStore: WorkspaceStore;
   private readonly editorHost: EditorHost;
@@ -104,6 +110,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     const initialCanvasView = createInitialCanvasViewState(
       persistedState.canvasView,
     );
+    setGlobalLogLevel(initialUiState.logLevel);
 
     this.editorHost = createEditorHost({
       document: createStage1SeedWorldDocument(),
@@ -436,6 +443,30 @@ class WorkbenchControllerImpl implements WorkbenchController {
     }
   }
 
+  getLogLevel(): LogLevel {
+    return this.uiStore.getSnapshot().logLevel;
+  }
+
+  setLogLevel(level: LogLevel): void {
+    const didChange = this.updateUiState((ui) => {
+      if (ui.logLevel === level) {
+        return ui;
+      }
+
+      return {
+        ...ui,
+        logLevel: level,
+      };
+    });
+
+    if (!didChange) {
+      return;
+    }
+
+    setGlobalLogLevel(level, { announce: true });
+    this.sync();
+  }
+
   setDiagnosticsVisible(visible: boolean): void {
     const didChange = this.updateUiState((ui) => {
       if (ui.diagnosticsVisible === visible) {
@@ -511,16 +542,19 @@ class WorkbenchControllerImpl implements WorkbenchController {
   startSimulation(): void {
     this.setMode("simulate");
     this.simulationHost.start();
+    this.logger.info("Started simulation playback.");
   }
 
   pauseSimulation(): void {
     this.simulationHost.pause();
+    this.logger.info("Paused simulation playback.");
     this.sync();
   }
 
   stepSimulation(): void {
     this.setMode("simulate");
     this.simulationHost.step();
+    this.logger.debug("Stepped simulation by one tick.");
   }
 
   dispose(): void {
@@ -558,6 +592,9 @@ class WorkbenchControllerImpl implements WorkbenchController {
     if (documentChanged) {
       this.topology = compileStage1World(this.editorHost.getDocument(), this.registry);
       this.loadSimulationWorld();
+      this.logger.debug("Recompiled topology after document mutation.", {
+        compileVersion: this.topology.compileVersion,
+      });
     }
 
     const afterSelectionId = this.getActiveSelectionId();

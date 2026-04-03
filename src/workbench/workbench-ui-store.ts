@@ -12,6 +12,10 @@ import {
   createSnapshotStore,
   type SnapshotStore,
 } from "@/shared/snapshot-store/snapshot-store";
+import {
+  DEFAULT_WORKBENCH_LOG_LEVEL,
+  type LogLevel,
+} from "@/shared/logging/logger";
 
 const DOCK_STATE_KEYS = {
   left: "leftDock",
@@ -57,6 +61,7 @@ export function createInitialWorkbenchUiState(): WorkbenchUiState {
   return {
     mode: "edit",
     locale: DEFAULT_LOCALE,
+    logLevel: DEFAULT_WORKBENCH_LOG_LEVEL,
     leftPanelMode: "placement",
     simulationSpeed: "1x",
     leftDock: {
@@ -96,6 +101,7 @@ export interface WorkbenchUiStore
   extends Pick<SnapshotStore<WorkbenchUiState>, "getSnapshot" | "subscribe"> {
   setMode: (mode: WorkbenchMode) => void;
   setLocale: (locale: AppLocale) => void;
+  setLogLevel: (level: LogLevel) => void;
   setDiagnosticsVisible: (visible: boolean) => void;
   setLeftPanelMode: (mode: LeftPanelMode) => void;
   setSimulationSpeedPreset: (preset: SimulationSpeedPreset) => void;
@@ -140,6 +146,19 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
       return {
         ...state,
         locale,
+      };
+    });
+  }
+
+  setLogLevel(level: LogLevel): void {
+    this.updateState((state) => {
+      if (state.logLevel === level) {
+        return state;
+      }
+
+      return {
+        ...state,
+        logLevel: level,
       };
     });
   }

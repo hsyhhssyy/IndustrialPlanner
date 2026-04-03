@@ -3,8 +3,13 @@ import type {
   CanvasPoint,
   CanvasViewState,
 } from "@/workbench/workspace-state";
+import {
+  createLogger,
+  isLogLevel,
+} from "@/shared/logging/logger";
 
 const UI_STATE_KEY = "industrial-planner:workbench-ui-state";
+const logger = createLogger("workbench.storage");
 
 export interface WorkspacePersistenceState {
   ui: WorkbenchUiStateInput;
@@ -23,6 +28,7 @@ function canUseStorage(): boolean {
 const WORKBENCH_UI_STATE_KEYS = new Set<keyof WorkbenchUiStateInput>([
   "mode",
   "locale",
+  "logLevel",
   "leftPanelMode",
   "simulationSpeed",
   "diagnosticsVisible",
@@ -114,6 +120,10 @@ function isWorkbenchUiStateInput(
     return false;
   }
 
+  if (value.logLevel !== undefined && !isLogLevel(value.logLevel)) {
+    return false;
+  }
+
   if (
     value.leftPanelMode !== undefined &&
     value.leftPanelMode !== "placement" &&
@@ -177,6 +187,9 @@ export function createWorkspaceStorage(): WorkspaceStorage {
         const parsed = JSON.parse(raw) as unknown;
 
         if (!isWorkspacePersistenceInput(parsed)) {
+          logger.warn(
+            "Discarded incompatible persisted workspace snapshot because the root shape is invalid.",
+          );
           localStorage.removeItem(UI_STATE_KEY);
           return { ui: {} };
         }
@@ -185,11 +198,17 @@ export function createWorkspaceStorage(): WorkspaceStorage {
         const persistedCanvasView = canvasView ?? canvasViewport;
 
         if (!isWorkbenchUiStateInput(uiCandidate)) {
+          logger.warn(
+            "Discarded incompatible persisted workspace snapshot because the UI state is invalid.",
+          );
           localStorage.removeItem(UI_STATE_KEY);
           return { ui: {} };
         }
 
         if (persistedCanvasView !== undefined && !isCanvasViewInput(persistedCanvasView)) {
+          logger.warn(
+            "Discarded incompatible persisted workspace snapshot because the canvas view is invalid.",
+          );
           localStorage.removeItem(UI_STATE_KEY);
           return { ui: {} };
         }
@@ -198,7 +217,11 @@ export function createWorkspaceStorage(): WorkspaceStorage {
           ui: uiCandidate,
           canvasView: persistedCanvasView,
         };
-      } catch {
+      } catch (error) {
+        logger.warn(
+          "Failed to parse persisted workspace snapshot. Clearing the stored snapshot.",
+          error,
+        );
         localStorage.removeItem(UI_STATE_KEY);
         return { ui: {} };
       }

@@ -1,4 +1,5 @@
 import type { AppLocale, MessageKey } from "@/i18n/messages";
+import type { LogLevel } from "@/shared/logging/logger";
 
 export type WorkbenchMode = "edit" | "simulate";
 export type LeftPanelMode = "placement" | "delete" | "blueprint" | "history";
@@ -14,6 +15,7 @@ export interface DockState {
 export interface WorkbenchUiState {
   mode: WorkbenchMode;
   locale: AppLocale;
+  logLevel: LogLevel;
   leftPanelMode: LeftPanelMode;
   simulationSpeed: SimulationSpeedPreset;
   leftDock: DockState;

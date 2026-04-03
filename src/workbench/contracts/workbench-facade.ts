@@ -13,6 +13,7 @@ import type { AppLocale } from "@/i18n/messages";
 import type { RenderSceneModel } from "@/renderer/scene/types";
 import type { SimulationState } from "@/simulation/host/simulation-host";
 import type { SnapshotStore } from "@/shared/snapshot-store/snapshot-store";
+import type { LogLevel } from "@/shared/logging/logger";
 import type {
   CanvasPoint,
   CanvasViewState,
@@ -77,6 +78,8 @@ export interface WorkbenchController {
   setLeftPanelMode: (mode: LeftPanelMode) => void;
   setSimulationSpeedPreset: (preset: SimulationSpeedPreset) => void;
   setLocale: (locale: AppLocale) => void;
+  getLogLevel: () => LogLevel;
+  setLogLevel: (level: LogLevel) => void;
   setDiagnosticsVisible: (visible: boolean) => void;
   setDockOpen: (dockId: DockId, open: boolean) => void;
   toggleDockCollapsed: (dockId: DockId) => void;

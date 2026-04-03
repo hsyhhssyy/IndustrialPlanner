@@ -102,6 +102,7 @@ describe("WorkbenchController scaffold", () => {
       "industrial-planner:workbench-ui-state",
       JSON.stringify({
         locale: "en-US",
+        logLevel: "debug",
         rightDock: {
           collapsed: true,
         },
@@ -115,6 +116,7 @@ describe("WorkbenchController scaffold", () => {
     expect(snapshot.registry.entityDefinitions.length).toBeGreaterThan(0);
     expect(snapshot.topology.compileVersion).toContain(":");
     expect(snapshot.ui.locale).toBe("en-US");
+    expect(snapshot.ui.logLevel).toBe("debug");
     expect(snapshot.ui.rightDock.collapsed).toBe(true);
 
     controller.dispose();
@@ -137,6 +139,7 @@ describe("WorkbenchController scaffold", () => {
     expect(persisted).toMatchObject({
       mode: "edit",
       locale: "zh-CN",
+      logLevel: "warn",
       leftDock: {
         open: true,
         collapsed: false,
@@ -170,6 +173,7 @@ describe("WorkbenchController scaffold", () => {
     controller.setDockOpen("left", false);
     controller.toggleDockCollapsed("right");
     controller.setLocale("en-US");
+    controller.setLogLevel("info");
     controller.setDiagnosticsVisible(false);
     controller.setLeftPanelMode("blueprint");
     controller.setSimulationSpeedPreset("4x");
@@ -184,6 +188,7 @@ describe("WorkbenchController scaffold", () => {
     expect(snapshot.ui.leftDock.open).toBe(true);
     expect(snapshot.ui.rightDock.collapsed).toBe(true);
     expect(snapshot.ui.locale).toBe("en-US");
+    expect(snapshot.ui.logLevel).toBe("info");
     expect(snapshot.ui.diagnosticsVisible).toBe(false);
     expect(snapshot.ui.leftPanelMode).toBe("blueprint");
     expect(snapshot.ui.simulationSpeed).toBe("4x");
@@ -219,6 +224,7 @@ describe("WorkbenchController scaffold", () => {
       "industrial-planner:workbench-ui-state",
       JSON.stringify({
         locale: "en-US",
+        logLevel: "debug",
         canvasViewport: {
           offset: { x: 48, y: 64 },
           zoom: 1.4,
@@ -233,6 +239,7 @@ describe("WorkbenchController scaffold", () => {
       y: 64,
     });
     expect(controller.canvasViewStore.getSnapshot().zoom).toBe(1.4);
+    expect(controller.getLogLevel()).toBe("debug");
 
     controller.panCanvasBy({ x: -20, y: -10 });
 
@@ -242,6 +249,21 @@ describe("WorkbenchController scaffold", () => {
       canvasViewport: {
         zoom: 1.4,
       },
+    });
+
+    controller.dispose();
+  });
+
+  it("persists log level changes through the workspace snapshot", () => {
+    const controller = createWorkbenchController();
+
+    controller.setLogLevel("debug");
+
+    expect(controller.getLogLevel()).toBe("debug");
+    expect(
+      JSON.parse(localStorage.getItem("industrial-planner:workbench-ui-state") ?? "null"),
+    ).toMatchObject({
+      logLevel: "debug",
     });
 
     controller.dispose();
