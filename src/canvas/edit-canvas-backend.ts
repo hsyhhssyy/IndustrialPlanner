@@ -30,8 +30,10 @@ interface CreateEditCanvasBackendOptions {
 
 export interface EditCanvasBackend extends CanvasBackend {
   confirmPlacement: () => boolean;
+  commitPlacement: (input: CanvasWorldInput) => boolean;
   updatePlacementPreview: (input: CanvasWorldInput) => void;
   clearPlacementPreview: () => void;
+  activateLinkTarget: (entityId: string | null) => void;
 }
 
 function resolveCenteredPlacementGridPoint(options: {
@@ -51,7 +53,7 @@ function resolveCenteredPlacementGridPoint(options: {
   };
 }
 
-class EditCanvasBackendImpl implements CanvasBackend {
+class EditCanvasBackendImpl implements EditCanvasBackend {
   readonly kind = "edit" as const;
 
   private readonly editorHost: EditorHost;
@@ -101,48 +103,33 @@ class EditCanvasBackendImpl implements CanvasBackend {
     this.editorHost.setPlacementPreview(null);
   }
 
-  handlePrimaryClick(input: CanvasWorldInput): void {
-    const editorSnapshot = this.editorHost.getSnapshot();
-    const { document, session } = editorSnapshot;
-    const hitEntityId = hitTestWorldEntity({
-      document,
-      topology: this.getTopology(),
-      worldPoint: input.worldPoint,
-    });
+  commitPlacement(input: CanvasWorldInput): boolean {
+    const { session } = this.editorHost.getSnapshot();
 
-    if (session.activeTool === "link") {
-      this.handleLinkToolClick(hitEntityId);
-      return;
+    if (
+      !isPlacementTool(session.activeTool) ||
+      !session.placementDefinitionId ||
+      session.placementStrategy !== "pointer-follow"
+    ) {
+      return false;
     }
 
-    if (hitEntityId) {
-      this.editorHost.selectEntity(hitEntityId);
+    const preview = this.resolvePlacementPreview(input);
+
+    if (!preview?.valid) {
       this.editorHost.setPendingLinkSource(null);
-      return;
+      return false;
     }
 
-    if (isPlacementTool(session.activeTool) && session.placementDefinitionId) {
-      if (session.placementStrategy === "anchored-confirm") {
-        this.editorHost.setPendingLinkSource(null);
-        return;
-      }
+    this.editorHost.placeEntity(
+      session.placementDefinitionId,
+      preview.gridPoint,
+    );
+    return true;
+  }
 
-      const preview = this.resolvePlacementPreview(input);
-
-      if (!preview?.valid) {
-        this.editorHost.setPendingLinkSource(null);
-        return;
-      }
-
-      this.editorHost.placeEntity(
-        session.placementDefinitionId,
-        preview.gridPoint,
-      );
-      return;
-    }
-
-    this.editorHost.selectEntity(null);
-    this.editorHost.setPendingLinkSource(null);
+  activateLinkTarget(entityId: string | null): void {
+    this.handleLinkToolClick(entityId);
   }
 
   handleWorldChanged(): void {

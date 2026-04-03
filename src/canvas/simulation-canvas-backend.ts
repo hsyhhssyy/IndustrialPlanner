@@ -1,24 +1,21 @@
-import {
-  hitTestWorldEntity,
-} from "@/canvas/hit-test";
 import type {
   CanvasBackend,
   CanvasBackendSnapshot,
-  CanvasWorldInput,
 } from "@/canvas/canvas-host";
 import type { WorldDocument } from "@/domain/document/world-document";
-import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 
 interface CreateSimulationCanvasBackendOptions {
   getDocument: () => WorldDocument;
-  getTopology: () => CompiledTopology;
 }
 
-class SimulationCanvasBackendImpl implements CanvasBackend {
+export interface SimulationCanvasBackend extends CanvasBackend {
+  selectEntity: (entityId: string | null) => void;
+}
+
+class SimulationCanvasBackendImpl implements SimulationCanvasBackend {
   readonly kind = "simulation" as const;
 
   private readonly getDocument: () => WorldDocument;
-  private readonly getTopology: () => CompiledTopology;
   private snapshot: CanvasBackendSnapshot = {
     selectedEntityIds: [],
     hoveredEntityId: null,
@@ -28,23 +25,16 @@ class SimulationCanvasBackendImpl implements CanvasBackend {
 
   constructor(options: CreateSimulationCanvasBackendOptions) {
     this.getDocument = options.getDocument;
-    this.getTopology = options.getTopology;
   }
 
   getSnapshot(): CanvasBackendSnapshot {
     return this.snapshot;
   }
 
-  handlePrimaryClick(input: CanvasWorldInput): void {
-    const hitEntityId = hitTestWorldEntity({
-      document: this.getDocument(),
-      topology: this.getTopology(),
-      worldPoint: input.worldPoint,
-    });
-
+  selectEntity(entityId: string | null): void {
     this.snapshot = {
       ...this.snapshot,
-      selectedEntityIds: hitEntityId ? [hitEntityId] : [],
+      selectedEntityIds: entityId ? [entityId] : [],
     };
   }
 
@@ -62,6 +52,6 @@ class SimulationCanvasBackendImpl implements CanvasBackend {
 
 export function createSimulationCanvasBackend(
   options: CreateSimulationCanvasBackendOptions,
-): CanvasBackend {
+): SimulationCanvasBackend {
   return new SimulationCanvasBackendImpl(options);
 }

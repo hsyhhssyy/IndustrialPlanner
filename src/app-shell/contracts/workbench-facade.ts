@@ -64,7 +64,9 @@ export interface WorkbenchController {
     patch: Record<string, unknown>,
   ) => Promise<void>;
   getCanvasInteractionTarget: (screenPoint: CanvasPoint) => CanvasInteractionTarget;
-  handleCanvasClick: (screenPoint: CanvasPoint) => Promise<void>;
+  commitPlacementAtScreenPoint: (screenPoint: CanvasPoint) => Promise<void>;
+  activateLinkTarget: (entityId: string | null) => Promise<void>;
+  selectSimulationEntity: (entityId: string | null) => Promise<void>;
   removeSelection: () => Promise<void>;
   removeSelectionLinks: () => Promise<void>;
   removeLink: (linkId: string) => Promise<void>;

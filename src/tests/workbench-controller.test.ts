@@ -199,7 +199,7 @@ describe("WorkbenchController scaffold", () => {
     const before = readWorkbenchState(controller);
 
     controller.armPlacement("belt_straight_1x1", "belt");
-    await controller.handleCanvasClick(
+    await controller.commitPlacementAtScreenPoint(
       toScreenPointForGrid(controller, { x: 80, y: 12 }),
     );
 
@@ -375,32 +375,6 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("ignores primary canvas click placement while anchored-confirm is active", async () => {
-    const controller = createWorkbenchController();
-    controller.setCanvasViewportSize({ x: 640, y: 360 });
-    controller.armPlacement("belt_straight_1x1", "belt", "anchored-confirm");
-    controller.updatePlacementPreviewFromScreenPoint(
-      toScreenPointForGrid(controller, { x: 30, y: 14 }),
-    );
-
-    const before = readWorkbenchState(controller);
-
-    await controller.handleCanvasClick(
-      toScreenPointForGrid(controller, { x: 33, y: 17 }),
-    );
-
-    const after = readWorkbenchState(controller);
-
-    expect(after.document.entityOrder).toHaveLength(before.document.entityOrder.length);
-    expect(after.activeCanvas.placementPreview).toMatchObject({
-      definitionId: "belt_straight_1x1",
-      strategy: "anchored-confirm",
-      gridPoint: { x: 30, y: 14 },
-    });
-
-    controller.dispose();
-  });
-
   it("marks placement preview invalid when the pointer is over an existing entity", () => {
     const controller = createWorkbenchController();
 
@@ -416,12 +390,12 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("places an entity through the canvas host interaction loop and recompiles topology", async () => {
+  it("commits pointer-follow placement from screen coordinates and recompiles topology", async () => {
     const controller = createWorkbenchController();
     const before = readWorkbenchState(controller);
 
     controller.armPlacement("belt_straight_1x1", "belt");
-    await controller.handleCanvasClick(
+    await controller.commitPlacementAtScreenPoint(
       toScreenPointForGrid(controller, { x: 24, y: 12 }),
     );
 
@@ -449,7 +423,7 @@ describe("WorkbenchController scaffold", () => {
     const before = readWorkbenchState(controller);
 
     controller.armPlacement("item_port_mix_pool_1", "place");
-    await controller.handleCanvasClick(
+    await controller.commitPlacementAtScreenPoint(
       toScreenPointForPlacementCenter(controller, "item_port_mix_pool_1", {
         x: 24,
         y: 12,
@@ -475,7 +449,7 @@ describe("WorkbenchController scaffold", () => {
     const controller = createWorkbenchController();
 
     controller.armPlacement("item_port_udpipe_loader_1", "place");
-    await controller.handleCanvasClick(
+    await controller.commitPlacementAtScreenPoint(
       toScreenPointForGrid(controller, { x: 22, y: 2 }),
     );
 
@@ -483,12 +457,8 @@ describe("WorkbenchController scaffold", () => {
     expect(placedInletId).toBeTruthy();
 
     controller.setActiveTool("link");
-    await controller.handleCanvasClick(
-      toScreenPointForEntity(controller, placedInletId ?? ""),
-    );
-    await controller.handleCanvasClick(
-      toScreenPointForEntity(controller, "dark-outlet-1"),
-    );
+    await controller.activateLinkTarget(placedInletId ?? null);
+    await controller.activateLinkTarget("dark-outlet-1");
 
     const linkedSnapshot = readWorkbenchState(controller);
     expect(linkedSnapshot.document.explicitLinks).toHaveLength(1);
@@ -508,7 +478,7 @@ describe("WorkbenchController scaffold", () => {
     const initialCount = readWorkbenchState(controller).document.entityOrder.length;
 
     controller.armPlacement("pipe_straight_1x1", "pipe");
-    await controller.handleCanvasClick(
+    await controller.commitPlacementAtScreenPoint(
       toScreenPointForGrid(controller, { x: 26, y: 4 }),
     );
 
@@ -530,9 +500,7 @@ describe("WorkbenchController scaffold", () => {
 
     await controller.selectEntity("filler-1");
     controller.setMode("simulate");
-    await controller.handleCanvasClick(
-      toScreenPointForEntity(controller, "dark-outlet-1"),
-    );
+    await controller.selectSimulationEntity("dark-outlet-1");
 
     const snapshot = readWorkbenchState(controller);
 

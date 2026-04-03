@@ -3,30 +3,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { RightDock } from "@/app-shell/components/right-dock";
 import { createWorkbenchController } from "@/app-shell/controller/workbench-controller";
 
-function toScreenPointForEntity(
-  controller: ReturnType<typeof createWorkbenchController>,
-  entityId: string,
-) {
-  const canvas = controller.canvasStore.getSnapshot();
-  const renderScene = controller.renderSceneStore.getSnapshot();
-  const snapshot = {
-    canvas: canvas.canvas,
-    renderScene,
-  };
-  const entity = snapshot.renderScene.entities.find(
-    (candidate) => candidate.entityId === entityId,
-  );
-
-  if (!entity) {
-    throw new Error(`Missing render entity ${entityId}`);
-  }
-
-  return {
-    x: (entity.x + 1) * snapshot.canvas.viewport.zoom,
-    y: (entity.y + 1) * snapshot.canvas.viewport.zoom,
-  };
-}
-
 describe("RightDock inspector split", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -42,9 +18,7 @@ describe("RightDock inspector split", () => {
     );
 
     controller.setMode("simulate");
-    await controller.handleCanvasClick(
-      toScreenPointForEntity(controller, "dark-outlet-1"),
-    );
+    await controller.selectSimulationEntity("dark-outlet-1");
     const simulationMarkup = renderToStaticMarkup(
       <RightDock controller={controller} />,
     );

@@ -18,13 +18,17 @@ import {
   screenToWorldPoint,
   type CanvasHost,
   type CanvasPoint,
+  type CanvasWorldInput,
 } from "@/canvas/canvas-host";
 import {
   createEditCanvasBackend,
   type EditCanvasBackend,
 } from "@/canvas/edit-canvas-backend";
 import { hitTestWorldEntity } from "@/canvas/hit-test";
-import { createSimulationCanvasBackend } from "@/canvas/simulation-canvas-backend";
+import {
+  createSimulationCanvasBackend,
+  type SimulationCanvasBackend,
+} from "@/canvas/simulation-canvas-backend";
 import { compileStage1World } from "@/domain/compiler/stage1-compiler";
 import type { WorldDocument } from "@/domain/document/world-document";
 import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";
@@ -78,6 +82,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   private readonly editorHost: EditorHost;
   private readonly canvasHost: CanvasHost;
   private readonly editCanvasBackend: EditCanvasBackend;
+  private readonly simulationCanvasBackend: SimulationCanvasBackend;
   private readonly simulationHost: SimulationHost;
   private readonly unsubscribeUiStore: () => void;
   private readonly unsubscribeSimulationHost: () => void;
@@ -105,12 +110,12 @@ class WorkbenchControllerImpl implements WorkbenchController {
       getDefinition: (definitionId) =>
         getStage1EntityDefinition(this.registry, definitionId),
     });
+    this.simulationCanvasBackend = createSimulationCanvasBackend({
+      getDocument: () => this.editorHost.getSnapshot().document,
+    });
     this.canvasHost = createCanvasHost({
       editBackend: this.editCanvasBackend,
-      simulationBackend: createSimulationCanvasBackend({
-        getDocument: () => this.editorHost.getSnapshot().document,
-        getTopology: () => this.topology,
-      }),
+      simulationBackend: this.simulationCanvasBackend,
       initialBackend:
         this.uiStore.getSnapshot().mode === "simulate"
           ? "simulation"
@@ -194,14 +199,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   updatePlacementPreviewFromScreenPoint(screenPoint: CanvasPoint): void {
-    const document = this.editorHost.getSnapshot().document;
-
-    this.editCanvasBackend.updatePlacementPreview(
-      this.canvasHost.resolveScreenInput({
-        screenPoint,
-        gridSize: document.documentSettings.gridSize,
-      }),
-    );
+    this.editCanvasBackend.updatePlacementPreview(this.resolveWorldInput(screenPoint));
     this.sync();
   }
 
@@ -280,15 +278,26 @@ class WorkbenchControllerImpl implements WorkbenchController {
     };
   }
 
-  async handleCanvasClick(screenPoint: CanvasPoint): Promise<void> {
+  async commitPlacementAtScreenPoint(screenPoint: CanvasPoint): Promise<void> {
     const before = this.captureMutationState();
-
-    await this.canvasHost.handlePrimaryClick({
-      screenPoint,
-      gridSize: this.editorHost.getSnapshot().document.documentSettings.gridSize,
-    });
+    this.editCanvasBackend.commitPlacement(this.resolveWorldInput(screenPoint));
 
     await this.reconcileMutation(before);
+  }
+
+  async activateLinkTarget(entityId: string | null): Promise<void> {
+    await this.applyEditorMutation(() => {
+      this.editCanvasBackend.activateLinkTarget(entityId);
+    });
+  }
+
+  async selectSimulationEntity(entityId: string | null): Promise<void> {
+    this.simulationCanvasBackend.selectEntity(entityId);
+    this.sync();
+
+    if (entityId) {
+      await this.refreshInspectorForSelection();
+    }
   }
 
   async removeSelection(): Promise<void> {
@@ -473,6 +482,13 @@ class WorkbenchControllerImpl implements WorkbenchController {
       x: viewport.size.x / 2,
       y: viewport.size.y / 2,
     };
+  }
+
+  private resolveWorldInput(screenPoint: CanvasPoint): CanvasWorldInput {
+    return this.canvasHost.resolveScreenInput({
+      screenPoint,
+      gridSize: this.editorHost.getSnapshot().document.documentSettings.gridSize,
+    });
   }
 
   private sync(): void {

@@ -39,7 +39,6 @@ export interface CanvasWorldInput {
 export interface CanvasBackend {
   readonly kind: CanvasBackendKind;
   getSnapshot: () => CanvasBackendSnapshot;
-  handlePrimaryClick: (input: CanvasWorldInput) => Promise<void> | void;
   handleWorldChanged: () => void;
 }
 
@@ -53,7 +52,6 @@ export interface CanvasHost {
   panBy: (screenDelta: CanvasPoint) => void;
   setViewportSize: (size: CanvasPoint) => void;
   setWorldSize: (size: CanvasPoint) => void;
-  handlePrimaryClick: (input: CanvasScreenInput) => Promise<void>;
   handleWorldChanged: () => void;
 }
 
@@ -283,13 +281,6 @@ class CanvasHostImpl implements CanvasHost {
       },
     };
   }
-
-  async handlePrimaryClick(input: CanvasScreenInput): Promise<void> {
-    await this.backends[this.snapshot.activeBackend].handlePrimaryClick(
-      this.resolveScreenInput(input),
-    );
-  }
-
   handleWorldChanged(): void {
     for (const backend of Object.values(this.backends)) {
       backend.handleWorldChanged();

@@ -5,30 +5,21 @@ import {
   worldToGridPoint,
   type CanvasBackend,
   type CanvasBackendSnapshot,
-  type CanvasWorldInput,
 } from "@/canvas/canvas-host";
 
 function createMockBackend(
   kind: CanvasBackend["kind"],
-  onClick: (input: CanvasWorldInput) => void = () => undefined,
+  snapshot: Partial<CanvasBackendSnapshot> = {},
 ): CanvasBackend {
-  let snapshot: CanvasBackendSnapshot = {
-    selectedEntityIds: [],
-    hoveredEntityId: null,
-    placementPreview: null,
-    pendingLinkSourceEntityId: null,
-  };
-
   return {
     kind,
-    getSnapshot: () => snapshot,
-    handlePrimaryClick: (input) => {
-      onClick(input);
-      snapshot = {
-        ...snapshot,
-        selectedEntityIds: [`${kind}-selected`],
-      };
-    },
+    getSnapshot: () => ({
+      selectedEntityIds: [],
+      hoveredEntityId: null,
+      placementPreview: null,
+      pendingLinkSourceEntityId: null,
+      ...snapshot,
+    }),
     handleWorldChanged: vi.fn(),
   };
 }
@@ -44,36 +35,22 @@ describe("CanvasHost", () => {
     expect(worldToGridPoint({ x: 95, y: 47 }, 16)).toEqual({ x: 5, y: 2 });
   });
 
-  it("routes normalized input to the active backend", async () => {
-    const editClick = vi.fn();
-    const simulationClick = vi.fn();
+  it("switches between backend snapshots without owning input semantics", () => {
     const host = createCanvasHost({
-      editBackend: createMockBackend("edit", editClick),
-      simulationBackend: createMockBackend("simulation", simulationClick),
+      editBackend: createMockBackend("edit", {
+        selectedEntityIds: ["edit-selected"],
+      }),
+      simulationBackend: createMockBackend("simulation", {
+        selectedEntityIds: ["simulation-selected"],
+      }),
     });
 
-    host.zoomBy(1);
-    await host.handlePrimaryClick({
-      screenPoint: { x: 64, y: 32 },
-      gridSize: 16,
-    });
-
-    expect(editClick).toHaveBeenCalledWith({
-      worldPoint: { x: 32, y: 16 },
-      gridPoint: { x: 2, y: 1 },
-    });
-    expect(simulationClick).not.toHaveBeenCalled();
+    expect(host.getActiveBackendSnapshot().selectedEntityIds).toEqual([
+      "edit-selected",
+    ]);
 
     host.setActiveBackend("simulation");
-    await host.handlePrimaryClick({
-      screenPoint: { x: 96, y: 48 },
-      gridSize: 16,
-    });
 
-    expect(simulationClick).toHaveBeenCalledWith({
-      worldPoint: { x: 48, y: 24 },
-      gridPoint: { x: 3, y: 1 },
-    });
     expect(host.getActiveBackendSnapshot().selectedEntityIds).toEqual([
       "simulation-selected",
     ]);
