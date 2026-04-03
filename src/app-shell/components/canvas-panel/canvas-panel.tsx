@@ -530,6 +530,29 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     }
   };
 
+  const handleViewportLostPointerCapture = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch") {
+      touchPointsRef.current.delete(event.pointerId);
+
+      if (touchPlacementPointerIdRef.current === event.pointerId) {
+        touchPlacementPointerIdRef.current = null;
+      }
+
+      const nextTouchState = removePointerFromCanvasTouchGesture(
+        touchGestureStateRef.current,
+        event.pointerId,
+      );
+
+      if (nextTouchState !== touchGestureStateRef.current) {
+        updateTouchGestureState(nextTouchState);
+      }
+
+      return;
+    }
+
+    resetPointerGestureState();
+  };
+
   const handleViewportPointerCancel = () => {
     resetPointerGestureState();
     resetTouchGestureState();
@@ -632,7 +655,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
             }
           }}
           onClick={handleCanvasClick}
-          onLostPointerCapture={handleViewportPointerCancel}
+          onLostPointerCapture={handleViewportLostPointerCapture}
           onMouseEnter={handleViewportMouseEnter}
           onMouseMove={handleViewportMouseMove}
           onPointerCancel={handleViewportPointerCancel}
@@ -657,7 +680,8 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
             <button
               className="placement-confirm-button"
               disabled={!anchoredPlacementPreview?.valid}
-              onClick={() => {
+              onClick={(event) => {
+                event.stopPropagation();
                 void controller.confirmPlacementPreview();
               }}
               onPointerDown={(event) => {

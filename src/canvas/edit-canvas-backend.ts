@@ -122,6 +122,11 @@ class EditCanvasBackendImpl implements CanvasBackend {
     }
 
     if (isPlacementTool(session.activeTool) && session.placementDefinitionId) {
+      if (session.placementStrategy === "anchored-confirm") {
+        this.editorHost.setPendingLinkSource(null);
+        return;
+      }
+
       const preview = this.resolvePlacementPreview(input);
 
       if (!preview?.valid) {

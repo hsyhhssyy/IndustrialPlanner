@@ -375,6 +375,32 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("ignores primary canvas click placement while anchored-confirm is active", async () => {
+    const controller = createWorkbenchController();
+    controller.setCanvasViewportSize({ x: 640, y: 360 });
+    controller.armPlacement("belt_straight_1x1", "belt", "anchored-confirm");
+    controller.updatePlacementPreviewFromScreenPoint(
+      toScreenPointForGrid(controller, { x: 30, y: 14 }),
+    );
+
+    const before = readWorkbenchState(controller);
+
+    await controller.handleCanvasClick(
+      toScreenPointForGrid(controller, { x: 33, y: 17 }),
+    );
+
+    const after = readWorkbenchState(controller);
+
+    expect(after.document.entityOrder).toHaveLength(before.document.entityOrder.length);
+    expect(after.activeCanvas.placementPreview).toMatchObject({
+      definitionId: "belt_straight_1x1",
+      strategy: "anchored-confirm",
+      gridPoint: { x: 30, y: 14 },
+    });
+
+    controller.dispose();
+  });
+
   it("marks placement preview invalid when the pointer is over an existing entity", () => {
     const controller = createWorkbenchController();
 
