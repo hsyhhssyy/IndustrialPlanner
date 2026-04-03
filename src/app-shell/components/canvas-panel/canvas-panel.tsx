@@ -377,6 +377,34 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     }
   };
 
+  const handleViewportMouseMove = (event: MouseEvent<HTMLDivElement>) => {
+    if (pointerGestureStateRef.current.phase !== "idle") {
+      return;
+    }
+
+    if (event.buttons !== 0) {
+      return;
+    }
+
+    controller.updatePlacementPreviewFromScreenPoint(
+      toViewportPoint(event.clientX, event.clientY),
+    );
+  };
+
+  const handleViewportMouseEnter = (event: MouseEvent<HTMLDivElement>) => {
+    if (pointerGestureStateRef.current.phase !== "idle") {
+      return;
+    }
+
+    if (event.buttons !== 0) {
+      return;
+    }
+
+    controller.updatePlacementPreviewFromScreenPoint(
+      toViewportPoint(event.clientX, event.clientY),
+    );
+  };
+
   const handleViewportPointerUp = (event: PointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "touch") {
       touchPointsRef.current.delete(event.pointerId);
@@ -496,6 +524,8 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
           }}
           onClick={handleCanvasClick}
           onLostPointerCapture={handleViewportPointerCancel}
+          onMouseEnter={handleViewportMouseEnter}
+          onMouseMove={handleViewportMouseMove}
           onPointerCancel={handleViewportPointerCancel}
           onPointerDown={handleViewportPointerDown}
           onPointerLeave={() => {
