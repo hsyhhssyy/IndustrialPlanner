@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { RightDock } from "@/app-shell/components/right-dock";
-import { createWorkbenchController } from "@/app-shell/controller/workbench-controller";
+import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 
 describe("RightDock inspector split", () => {
   beforeEach(() => {

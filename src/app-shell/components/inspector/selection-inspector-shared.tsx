@@ -1,6 +1,6 @@
 import type {
   WorkbenchController,
-} from "@/app-shell/contracts/workbench-facade";
+} from "@/workbench/contracts/workbench-facade";
 import type {
   ExplicitLink,
 } from "@/domain/document/world-document";

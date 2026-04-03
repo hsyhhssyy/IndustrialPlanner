@@ -1,4 +1,4 @@
-import type { CanvasPoint } from "@/canvas/canvas-host";
+import type { CanvasPoint } from "@/workbench/workspace-state";
 
 export const POINTER_TAP_CANCEL_DISTANCE_PX = 4;
 

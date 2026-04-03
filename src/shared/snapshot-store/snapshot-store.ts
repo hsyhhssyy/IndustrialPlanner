@@ -28,11 +28,21 @@ export function createSnapshotStore<TSnapshot>(
       };
     },
     setSnapshot: (snapshot) => {
+      if (Object.is(currentSnapshot, snapshot)) {
+        return;
+      }
+
       currentSnapshot = snapshot;
       emit();
     },
     update: (updater) => {
-      currentSnapshot = updater(currentSnapshot);
+      const nextSnapshot = updater(currentSnapshot);
+
+      if (Object.is(currentSnapshot, nextSnapshot)) {
+        return;
+      }
+
+      currentSnapshot = nextSnapshot;
       emit();
     },
   };

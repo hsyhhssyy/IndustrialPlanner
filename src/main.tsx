@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { WorkbenchApp } from "@/app-shell/workbench-app";
-import { createWorkbenchController } from "@/app-shell/controller/workbench-controller";
+import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 import "@/styles.css";
 
 const controller = createWorkbenchController();

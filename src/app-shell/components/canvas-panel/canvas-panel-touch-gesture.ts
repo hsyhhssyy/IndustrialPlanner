@@ -1,5 +1,5 @@
-import type { CanvasInteractionTarget } from "@/app-shell/contracts/workbench-facade";
-import type { CanvasPoint } from "@/canvas/canvas-host";
+import type { CanvasInteractionTarget } from "@/workbench/contracts/workbench-facade";
+import type { CanvasPoint } from "@/workbench/workspace-state";
 
 export const TOUCH_PAN_START_DISTANCE_PX = 6;
 

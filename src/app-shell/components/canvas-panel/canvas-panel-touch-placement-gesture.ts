@@ -1,4 +1,4 @@
-import type { CanvasPoint } from "@/canvas/canvas-host";
+import type { CanvasPoint } from "@/workbench/workspace-state";
 import type { CanvasPanelTouchGestureState } from "./canvas-panel-touch-gesture";
 
 export const TOUCH_PLACEMENT_DRAG_START_DISTANCE_PX = 6;

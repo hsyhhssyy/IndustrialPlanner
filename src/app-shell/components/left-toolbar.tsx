@@ -1,4 +1,3 @@
-import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
 import { WorkbenchIcon } from "@/app-shell/components/workbench-icons";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import {
@@ -6,6 +5,7 @@ import {
   LEFT_RAIL_UTILITY_ITEMS,
 } from "@/app-shell/workbench-placeholders";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
+import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 
 export interface LeftToolbarProps {
   controller: WorkbenchController;

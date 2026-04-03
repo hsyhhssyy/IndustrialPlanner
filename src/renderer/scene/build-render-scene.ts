@@ -89,9 +89,9 @@ function buildEntitySprite(input: RenderSceneInput, entityId: string): RenderEnt
     textureCenterOffsetY: textureMetrics.centerOffsetYPx,
     showLabel: shouldShowStage1EntityLabel(definition, renderKind),
     status: input.runtimeSnapshot.entityViews[entityId]?.status ?? "idle",
-    selected: input.activeCanvas.selectedEntityIds.includes(entityId),
+    selected: input.interaction.selectedEntityIds.includes(entityId),
     pendingLinkSource:
-      input.activeCanvas.pendingLinkSourceEntityId === entityId,
+      input.interaction.pendingLinkSourceEntityId === entityId,
     patched: input.runtimeSnapshot.patchedEntityIds.includes(entityId),
   };
 }
@@ -124,8 +124,8 @@ function buildExplicitLinkSprites(
           (targetView.position.y + targetView.definition.footprint.height / 2) *
           input.document.documentSettings.gridSize,
         selected:
-          input.activeCanvas.selectedEntityIds.includes(link.sourceEntityId) ||
-          input.activeCanvas.selectedEntityIds.includes(link.targetEntityId),
+          input.interaction.selectedEntityIds.includes(link.sourceEntityId) ||
+          input.interaction.selectedEntityIds.includes(link.targetEntityId),
       };
     })
     .filter((link): link is RenderExplicitLink => link !== null);
@@ -134,7 +134,7 @@ function buildExplicitLinkSprites(
 function buildPlacementPreview(
   input: RenderSceneInput,
 ): RenderPlacementPreview | null {
-  const preview = input.activeCanvas.placementPreview;
+  const preview = input.interaction.placementPreview;
 
   if (!preview) {
     return null;
@@ -203,8 +203,8 @@ export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
   );
 
   return {
-    zoom: input.canvas.viewport.zoom,
-    viewportOffset: input.canvas.viewport.offset,
+    zoom: input.canvasView.zoom,
+    viewportOffset: input.canvasView.offset,
     gridSize: input.document.documentSettings.gridSize,
     worldWidth: maxWorldWidth,
     worldHeight: maxWorldHeight,

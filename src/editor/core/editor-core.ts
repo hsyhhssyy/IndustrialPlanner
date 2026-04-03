@@ -23,17 +23,19 @@ interface DocumentHistoryEntry {
   after: WorldDocument;
 }
 
-export interface EditorHistorySnapshot {
+export interface EditorHistoryState {
   canUndo: boolean;
   canRedo: boolean;
   undoDepth: number;
   redoDepth: number;
 }
 
+export type EditorHistorySnapshot = EditorHistoryState;
+
 export interface EditorCoreSnapshot {
   document: WorldDocument;
   session: EditorSession;
-  history: EditorHistorySnapshot;
+  history: EditorHistoryState;
 }
 
 export interface EditorCore {
@@ -67,22 +69,19 @@ class EditorCoreImpl implements EditorCore {
   private session: EditorSession;
   private undoStack: DocumentHistoryEntry[] = [];
   private redoStack: DocumentHistoryEntry[] = [];
+  private historyState: EditorHistoryState;
 
   constructor(options: CreateEditorCoreOptions) {
     this.document = options.document;
     this.session = options.session;
+    this.historyState = this.createHistoryState();
   }
 
   getSnapshot(): EditorCoreSnapshot {
     return {
       document: this.document,
       session: this.session,
-      history: {
-        canUndo: this.undoStack.length > 0,
-        canRedo: this.redoStack.length > 0,
-        undoDepth: this.undoStack.length,
-        redoDepth: this.redoStack.length,
-      },
+      history: this.historyState,
     };
   }
 
@@ -251,6 +250,7 @@ class EditorCoreImpl implements EditorCore {
 
     this.document = entry.before;
     this.redoStack.push(entry);
+    this.historyState = this.createHistoryState();
     this.sanitizeSession();
   }
 
@@ -263,6 +263,7 @@ class EditorCoreImpl implements EditorCore {
 
     this.document = entry.after;
     this.undoStack.push(entry);
+    this.historyState = this.createHistoryState();
     this.sanitizeSession();
   }
 
@@ -280,8 +281,18 @@ class EditorCoreImpl implements EditorCore {
     });
     this.redoStack = [];
     this.document = nextDocument;
+    this.historyState = this.createHistoryState();
     this.sanitizeSession();
     return true;
+  }
+
+  private createHistoryState(): EditorHistoryState {
+    return {
+      canUndo: this.undoStack.length > 0,
+      canRedo: this.redoStack.length > 0,
+      undoDepth: this.undoStack.length,
+      redoDepth: this.redoStack.length,
+    };
   }
 
   private sanitizeSession(): void {

@@ -1,4 +1,3 @@
-import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
 import {
   WorkbenchIcon,
 } from "@/app-shell/components/workbench-icons";
@@ -16,6 +15,7 @@ import {
   type MessageKey,
 } from "@/i18n/messages";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
+import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 import { useRef } from "react";
 
 const TOOL_LABEL_KEYS: Record<EditorTool, MessageKey> = {

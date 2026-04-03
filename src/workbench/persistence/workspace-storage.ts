@@ -1,23 +1,26 @@
-import type { WorkbenchUiSnapshotInput } from "@/app-shell/contracts/workbench-ui";
-import type { CanvasPoint, CanvasViewport } from "@/canvas/canvas-host";
+import type { WorkbenchUiStateInput } from "@/workbench/workbench-ui-state";
+import type {
+  CanvasPoint,
+  CanvasViewState,
+} from "@/workbench/workspace-state";
 
 const UI_STATE_KEY = "industrial-planner:workbench-ui-state";
 
-export interface WorkspacePersistenceSnapshot {
-  ui: WorkbenchUiSnapshotInput;
-  canvasViewport?: Partial<CanvasViewport>;
+export interface WorkspacePersistenceState {
+  ui: WorkbenchUiStateInput;
+  canvasView?: Partial<CanvasViewState>;
 }
 
-export interface WorkspaceStorageGateway {
-  loadWorkspaceSnapshot: () => WorkspacePersistenceSnapshot;
-  saveWorkspaceSnapshot: (snapshot: WorkspacePersistenceSnapshot) => void;
+export interface WorkspaceStorage {
+  loadWorkspaceState: () => WorkspacePersistenceState;
+  saveWorkspaceState: (state: WorkspacePersistenceState) => void;
 }
 
 function canUseStorage(): boolean {
   return typeof localStorage !== "undefined";
 }
 
-const WORKBENCH_UI_SNAPSHOT_KEYS = new Set<keyof WorkbenchUiSnapshotInput>([
+const WORKBENCH_UI_STATE_KEYS = new Set<keyof WorkbenchUiStateInput>([
   "mode",
   "locale",
   "leftPanelMode",
@@ -29,12 +32,13 @@ const WORKBENCH_UI_SNAPSHOT_KEYS = new Set<keyof WorkbenchUiSnapshotInput>([
 ]);
 
 const WORKSPACE_PERSISTENCE_KEYS = new Set([
+  "canvasView",
   "canvasViewport",
-  ...WORKBENCH_UI_SNAPSHOT_KEYS,
+  ...WORKBENCH_UI_STATE_KEYS,
 ]);
 const DOCK_STATE_KEYS = new Set(["open", "collapsed"]);
 const CANVAS_POINT_KEYS = new Set(["x", "y"]);
-const CANVAS_VIEWPORT_KEYS = new Set(["offset", "zoom", "size"]);
+const CANVAS_VIEW_KEYS = new Set(["offset", "zoom"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -79,16 +83,12 @@ function isCanvasPointInput(value: unknown): value is Partial<CanvasPoint> {
   return true;
 }
 
-function isCanvasViewportInput(value: unknown): value is Partial<CanvasViewport> {
-  if (!isRecord(value) || !hasOnlyAllowedKeys(value, CANVAS_VIEWPORT_KEYS)) {
+function isCanvasViewInput(value: unknown): value is Partial<CanvasViewState> {
+  if (!isRecord(value) || !hasOnlyAllowedKeys(value, CANVAS_VIEW_KEYS)) {
     return false;
   }
 
   if (value.offset !== undefined && !isCanvasPointInput(value.offset)) {
-    return false;
-  }
-
-  if (value.size !== undefined && !isCanvasPointInput(value.size)) {
     return false;
   }
 
@@ -99,10 +99,10 @@ function isCanvasViewportInput(value: unknown): value is Partial<CanvasViewport>
   return true;
 }
 
-function isWorkbenchUiSnapshotInput(
+function isWorkbenchUiStateInput(
   value: unknown,
-): value is WorkbenchUiSnapshotInput {
-  if (!isRecord(value) || !hasOnlyAllowedKeys(value, WORKBENCH_UI_SNAPSHOT_KEYS)) {
+): value is WorkbenchUiStateInput {
+  if (!isRecord(value) || !hasOnlyAllowedKeys(value, WORKBENCH_UI_STATE_KEYS)) {
     return false;
   }
 
@@ -160,9 +160,9 @@ function isWorkspacePersistenceInput(
   return isRecord(value) && hasOnlyAllowedKeys(value, WORKSPACE_PERSISTENCE_KEYS);
 }
 
-export function createWorkspaceStorageGateway(): WorkspaceStorageGateway {
+export function createWorkspaceStorage(): WorkspaceStorage {
   return {
-    loadWorkspaceSnapshot: () => {
+    loadWorkspaceState: () => {
       if (!canUseStorage()) {
         return { ui: {} };
       }
@@ -181,28 +181,29 @@ export function createWorkspaceStorageGateway(): WorkspaceStorageGateway {
           return { ui: {} };
         }
 
-        const { canvasViewport, ...uiCandidate } = parsed;
+        const { canvasView, canvasViewport, ...uiCandidate } = parsed;
+        const persistedCanvasView = canvasView ?? canvasViewport;
 
-        if (!isWorkbenchUiSnapshotInput(uiCandidate)) {
+        if (!isWorkbenchUiStateInput(uiCandidate)) {
           localStorage.removeItem(UI_STATE_KEY);
           return { ui: {} };
         }
 
-        if (canvasViewport !== undefined && !isCanvasViewportInput(canvasViewport)) {
+        if (persistedCanvasView !== undefined && !isCanvasViewInput(persistedCanvasView)) {
           localStorage.removeItem(UI_STATE_KEY);
           return { ui: {} };
         }
 
         return {
           ui: uiCandidate,
-          canvasViewport,
+          canvasView: persistedCanvasView,
         };
       } catch {
         localStorage.removeItem(UI_STATE_KEY);
         return { ui: {} };
       }
     },
-    saveWorkspaceSnapshot: (snapshot) => {
+    saveWorkspaceState: (state) => {
       if (!canUseStorage()) {
         return;
       }
@@ -210,10 +211,14 @@ export function createWorkspaceStorageGateway(): WorkspaceStorageGateway {
       localStorage.setItem(
         UI_STATE_KEY,
         JSON.stringify({
-          ...snapshot.ui,
-          canvasViewport: snapshot.canvasViewport,
+          ...state.ui,
+          canvasViewport: state.canvasView,
         }),
       );
     },
   };
 }
+
+export type WorkspacePersistenceSnapshot = WorkspacePersistenceState;
+export type WorkspaceStorageGateway = WorkspaceStorage;
+export const createWorkspaceStorageGateway = createWorkspaceStorage;

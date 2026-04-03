@@ -1,4 +1,3 @@
-import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import {
   LEFT_RAIL_PRIMARY_ITEMS,
@@ -10,6 +9,7 @@ import {
 } from "@/i18n/messages";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
+import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 
 export interface BottomStatusBarProps {
   controller: WorkbenchController;
@@ -26,12 +26,15 @@ const TOOL_LABEL_KEYS: Record<EditorTool, MessageKey> = {
 
 export function BottomStatusBar({ controller }: BottomStatusBarProps) {
   const ui = useExternalStore(controller.uiStore);
+  const document = useExternalStore(controller.documentStore);
   const editor = useExternalStore(controller.editorStore);
-  const canvas = useExternalStore(controller.canvasStore);
   const topology = useExternalStore(controller.topologyStore);
   const simulation = useExternalStore(controller.simulationStore);
   const t = createTranslator(ui.locale);
-  const selectedEntityId = canvas.activeCanvas.selectedEntityIds[0] ?? null;
+  const selectedEntityId =
+    ui.mode === "simulate"
+      ? simulation.selection[0] ?? null
+      : editor.session.selection[0] ?? null;
   const selectedDefinition = selectedEntityId
     ? topology.entityViews[selectedEntityId]?.definition ?? null
     : null;
@@ -71,10 +74,10 @@ export function BottomStatusBar({ controller }: BottomStatusBarProps) {
           {t("statusBar.selection")}: {selectionLabel}
         </span>
         <span className="status-chip">
-          {t("statusBar.entities")}: {editor.document.entityOrder.length}
+          {t("statusBar.entities")}: {document.entityOrder.length}
         </span>
         <span className="status-chip">
-          {t("statusBar.links")}: {editor.document.explicitLinks.length}
+          {t("statusBar.links")}: {document.explicitLinks.length}
         </span>
         <span className="status-chip">
           {t("statusBar.diagnostics")}: {topology.diagnostics.length}

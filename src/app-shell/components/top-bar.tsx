@@ -1,8 +1,8 @@
-import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
 import { WorkbenchIcon } from "@/app-shell/components/workbench-icons";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { SIMULATION_SPEED_PRESETS } from "@/app-shell/workbench-placeholders";
 import { createTranslator } from "@/i18n/messages";
+import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 
 export interface TopBarProps {
   controller: WorkbenchController;

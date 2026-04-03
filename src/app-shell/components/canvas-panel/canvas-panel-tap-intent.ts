@@ -1,8 +1,8 @@
-import type { CanvasInteractionTarget } from "@/app-shell/contracts/workbench-facade";
-import type { WorkbenchMode } from "@/app-shell/contracts/workbench-ui";
 import type { PlacementPreviewStrategy } from "@/editor/contracts/placement-preview";
 import type { EditorTool } from "@/editor/contracts/editor-session";
 import { isPlacementTool } from "@/editor/core/editor-session";
+import type { CanvasInteractionTarget } from "@/workbench/contracts/workbench-facade";
+import type { WorkbenchMode } from "@/workbench/workbench-ui-state";
 
 export type CanvasPanelTapIntent =
   | {

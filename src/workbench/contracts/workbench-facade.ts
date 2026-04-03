@@ -3,23 +3,22 @@ import type {
   LeftPanelMode,
   SimulationSpeedPreset,
   WorkbenchMode,
-} from "@/app-shell/contracts/workbench-ui";
-import type { WorkbenchUiStore } from "@/app-shell/state/workbench-ui-store";
-import type { CanvasHost, CanvasPoint } from "@/canvas/canvas-host";
+} from "@/workbench/workbench-ui-state";
 import type { Stage1Registry } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
-import type { EditorCoreSnapshot } from "@/editor/core/editor-core";
+import type { WorldDocument } from "@/domain/document/world-document";
 import type { EditorTool } from "@/editor/contracts/editor-session";
 import type { PlacementPreviewStrategy } from "@/editor/contracts/placement-preview";
 import type { AppLocale } from "@/i18n/messages";
 import type { RenderSceneModel } from "@/renderer/scene/types";
-import type { SimulationHostSnapshot } from "@/simulation/host/simulation-host";
+import type { SimulationState } from "@/simulation/host/simulation-host";
 import type { SnapshotStore } from "@/shared/snapshot-store/snapshot-store";
-
-export interface WorkbenchCanvasSnapshot {
-  canvas: ReturnType<CanvasHost["getSnapshot"]>;
-  activeCanvas: ReturnType<CanvasHost["getActiveBackendSnapshot"]>;
-}
+import type {
+  CanvasPoint,
+  CanvasViewState,
+  WorkspaceState,
+} from "@/workbench/workspace-state";
+import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
 
 export type CanvasInteractionTarget =
   | {
@@ -32,14 +31,12 @@ export type CanvasInteractionTarget =
     };
 
 export interface WorkbenchController {
-  uiStore: WorkbenchUiStore;
-  editorStore: Pick<SnapshotStore<EditorCoreSnapshot>, "getSnapshot" | "subscribe">;
-  canvasStore: Pick<SnapshotStore<WorkbenchCanvasSnapshot>, "getSnapshot" | "subscribe">;
+  uiStore: ReadonlySnapshotStore<WorkspaceState["ui"]>;
+  documentStore: ReadonlySnapshotStore<WorldDocument>;
+  editorStore: ReadonlySnapshotStore<WorkspaceState["editor"]>;
+  canvasViewStore: ReadonlySnapshotStore<CanvasViewState>;
   topologyStore: Pick<SnapshotStore<CompiledTopology>, "getSnapshot" | "subscribe">;
-  simulationStore: Pick<
-    SnapshotStore<SimulationHostSnapshot>,
-    "getSnapshot" | "subscribe"
-  >;
+  simulationStore: ReadonlySnapshotStore<SimulationState>;
   renderSceneStore: Pick<SnapshotStore<RenderSceneModel>, "getSnapshot" | "subscribe">;
   registry: Stage1Registry;
   setMode: (mode: WorkbenchMode) => void;

@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { DEFAULT_STAGE1_BASE_ID } from "@/domain/base/stage1-bases";
-import { createWorkbenchController } from "@/app-shell/controller/workbench-controller";
+import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 
 function readWorkbenchState(
   controller: ReturnType<typeof createWorkbenchController>,
 ) {
   const ui = controller.uiStore.getSnapshot();
+  const document = controller.documentStore.getSnapshot();
   const editor = controller.editorStore.getSnapshot();
-  const canvas = controller.canvasStore.getSnapshot();
+  const canvasView = controller.canvasViewStore.getSnapshot();
   const topology = controller.topologyStore.getSnapshot();
   const simulation = controller.simulationStore.getSnapshot();
   const renderScene = controller.renderSceneStore.getSnapshot();
@@ -15,16 +16,22 @@ function readWorkbenchState(
   return {
     ui,
     registry: controller.registry,
-    document: editor.document,
+    document,
     session: editor.session,
     history: editor.history,
-    canvas: canvas.canvas,
-    activeCanvas: canvas.activeCanvas,
+    canvasView,
+    activeSelection:
+      ui.mode === "simulate" ? simulation.selection : editor.session.selection,
+    activePlacementPreview:
+      ui.mode === "edit" ? editor.session.placementPreview : null,
+    activePendingLinkSourceEntityId:
+      ui.mode === "edit" ? editor.session.pendingLinkSourceEntityId : null,
     topology,
     runtimeSnapshot: simulation.runtimeSnapshot,
     telemetry: simulation.telemetry,
     inspectorDetails: simulation.inspectorDetails,
     simulationPatchSet: simulation.patchSet,
+    simulationSelection: simulation.selection,
     renderScene,
   };
 }
@@ -35,7 +42,7 @@ function toScreenPointForGrid(
 ) {
   const snapshot = readWorkbenchState(controller);
   const scaledGridSize =
-    snapshot.document.documentSettings.gridSize * snapshot.canvas.viewport.zoom;
+    snapshot.document.documentSettings.gridSize * snapshot.canvasView.zoom;
 
   return {
     x: gridPoint.x * scaledGridSize + 1,
@@ -58,13 +65,11 @@ function toScreenPointForPlacementCenter(
   }
 
   const scaledGridSize =
-    snapshot.document.documentSettings.gridSize * snapshot.canvas.viewport.zoom;
+    snapshot.document.documentSettings.gridSize * snapshot.canvasView.zoom;
 
   return {
-    x:
-      (gridPoint.x + definition.footprint.width / 2) * scaledGridSize,
-    y:
-      (gridPoint.y + definition.footprint.height / 2) * scaledGridSize,
+    x: (gridPoint.x + definition.footprint.width / 2) * scaledGridSize,
+    y: (gridPoint.y + definition.footprint.height / 2) * scaledGridSize,
   };
 }
 
@@ -82,8 +87,8 @@ function toScreenPointForEntity(
   }
 
   return {
-    x: (entity.x + 1) * snapshot.canvas.viewport.zoom,
-    y: (entity.y + 1) * snapshot.canvas.viewport.zoom,
+    x: (entity.x + 1) * snapshot.canvasView.zoom,
+    y: (entity.y + 1) * snapshot.canvasView.zoom,
   };
 }
 
@@ -155,7 +160,6 @@ describe("WorkbenchController scaffold", () => {
 
     expect(readWorkbenchState(controller).runtimeSnapshot.tick).toBe(1);
     expect(readWorkbenchState(controller).ui.mode).toBe("simulate");
-    expect(readWorkbenchState(controller).canvas.activeBackend).toBe("simulation");
 
     controller.dispose();
   });
@@ -183,8 +187,8 @@ describe("WorkbenchController scaffold", () => {
     expect(snapshot.ui.diagnosticsVisible).toBe(false);
     expect(snapshot.ui.leftPanelMode).toBe("blueprint");
     expect(snapshot.ui.simulationSpeed).toBe("4x");
-    expect(snapshot.canvas.viewport.zoom).toBeGreaterThan(1);
-    expect(snapshot.renderScene.zoom).toBe(snapshot.canvas.viewport.zoom);
+    expect(snapshot.canvasView.zoom).toBeGreaterThan(1);
+    expect(snapshot.renderScene.zoom).toBe(snapshot.canvasView.zoom);
     expect(snapshot.renderScene.worldWidth).toBe(
       snapshot.document.documentSettings.gridSize * 80,
     );
@@ -224,11 +228,11 @@ describe("WorkbenchController scaffold", () => {
 
     const controller = createWorkbenchController();
 
-    expect(controller.canvasStore.getSnapshot().canvas.viewport.offset).toEqual({
+    expect(controller.canvasViewStore.getSnapshot().offset).toEqual({
       x: 48,
       y: 64,
     });
-    expect(controller.canvasStore.getSnapshot().canvas.viewport.zoom).toBe(1.4);
+    expect(controller.canvasViewStore.getSnapshot().zoom).toBe(1.4);
 
     controller.panCanvasBy({ x: -20, y: -10 });
 
@@ -247,10 +251,10 @@ describe("WorkbenchController scaffold", () => {
     const controller = createWorkbenchController();
     controller.setCanvasViewportSize({ x: 640, y: 360 });
 
-    const before = controller.canvasStore.getSnapshot().canvas.viewport;
+    const before = controller.canvasViewStore.getSnapshot();
     controller.zoomCanvasAt({ x: 160, y: 120 }, 1.25);
 
-    const after = controller.canvasStore.getSnapshot().canvas.viewport;
+    const after = controller.canvasViewStore.getSnapshot();
     const persisted = JSON.parse(
       localStorage.getItem("industrial-planner:workbench-ui-state") ?? "null",
     );
@@ -300,7 +304,7 @@ describe("WorkbenchController scaffold", () => {
       toScreenPointForGrid(controller, { x: 24, y: 12 }),
     );
 
-    expect(readWorkbenchState(controller).activeCanvas.placementPreview).toEqual({
+    expect(readWorkbenchState(controller).activePlacementPreview).toEqual({
       definitionId: "belt_straight_1x1",
       strategy: "pointer-follow",
       gridPoint: { x: 24, y: 12 },
@@ -329,7 +333,7 @@ describe("WorkbenchController scaffold", () => {
       }),
     );
 
-    expect(readWorkbenchState(controller).activeCanvas.placementPreview).toEqual({
+    expect(readWorkbenchState(controller).activePlacementPreview).toEqual({
       definitionId: "item_port_mix_pool_1",
       strategy: "pointer-follow",
       gridPoint: { x: 24, y: 12 },
@@ -346,7 +350,7 @@ describe("WorkbenchController scaffold", () => {
 
     controller.armPlacement("belt_straight_1x1", "belt", "anchored-confirm");
 
-    const previewBeforeConfirm = readWorkbenchState(controller).activeCanvas.placementPreview;
+    const previewBeforeConfirm = readWorkbenchState(controller).activePlacementPreview;
     const entityCountBeforeConfirm = readWorkbenchState(controller).document.entityOrder.length;
 
     expect(previewBeforeConfirm).toMatchObject({
@@ -367,7 +371,7 @@ describe("WorkbenchController scaffold", () => {
     expect(afterConfirm.document.entityOrder).toHaveLength(entityCountBeforeConfirm + 1);
     expect(placedEntity?.definitionId).toBe("belt_straight_1x1");
     expect(placedEntity?.position).toEqual(previewBeforeConfirm?.gridPoint);
-    expect(afterConfirm.activeCanvas.placementPreview).toMatchObject({
+    expect(afterConfirm.activePlacementPreview).toMatchObject({
       definitionId: "belt_straight_1x1",
       strategy: "anchored-confirm",
     });
@@ -383,9 +387,7 @@ describe("WorkbenchController scaffold", () => {
       toScreenPointForEntity(controller, "reactor-1"),
     );
 
-    expect(readWorkbenchState(controller).activeCanvas.placementPreview?.valid).toBe(
-      false,
-    );
+    expect(readWorkbenchState(controller).activePlacementPreview?.valid).toBe(false);
 
     controller.dispose();
   });
@@ -445,7 +447,7 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("creates and removes a dark pipe link through the edit canvas backend", async () => {
+  it("creates and removes a dark pipe link through the editor interaction host", async () => {
     const controller = createWorkbenchController();
 
     controller.armPlacement("item_port_udpipe_loader_1", "place");
@@ -504,8 +506,8 @@ describe("WorkbenchController scaffold", () => {
 
     const snapshot = readWorkbenchState(controller);
 
-    expect(snapshot.canvas.activeBackend).toBe("simulation");
-    expect(snapshot.activeCanvas.selectedEntityIds).toEqual(["dark-outlet-1"]);
+    expect(snapshot.ui.mode).toBe("simulate");
+    expect(snapshot.simulationSelection).toEqual(["dark-outlet-1"]);
     expect(snapshot.session.selection).toEqual(["filler-1"]);
 
     controller.dispose();

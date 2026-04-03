@@ -35,11 +35,11 @@ import {
   type CanvasPanelTouchGestureState,
 } from "./canvas-panel-touch-gesture";
 import { resolveCanvasPanelTapIntent } from "./canvas-panel-tap-intent";
-import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
-import type { CanvasPoint } from "@/canvas/canvas-host";
 import { createTranslator } from "@/i18n/messages";
 import { RendererHost } from "@/renderer/host/renderer-host";
+import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
+import type { CanvasPoint } from "@/workbench/workspace-state";
 import {
   useEffect,
   useRef,
@@ -79,7 +79,6 @@ export interface CanvasPanelProps {
 export function CanvasPanel({ controller }: CanvasPanelProps) {
   const ui = useExternalStore(controller.uiStore);
   const editor = useExternalStore(controller.editorStore);
-  const canvasSnapshot = useExternalStore(controller.canvasStore);
   const renderScene = useExternalStore(controller.renderSceneStore);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -99,6 +98,10 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
   const [touchGestureState, setTouchGestureState] = useState<CanvasPanelTouchGestureState>(
     createIdleCanvasPanelTouchGestureState,
   );
+  const [viewportSize, setViewportSize] = useState<CanvasPoint>({
+    x: 0,
+    y: 0,
+  });
   const pointerGestureStateRef = useRef<CanvasPanelPointerGestureState>(pointerGestureState);
   const touchGestureStateRef = useRef<CanvasPanelTouchGestureState>(touchGestureState);
   const t = createTranslator(ui.locale);
@@ -109,7 +112,6 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     renderScene.placementPreview?.strategy === "anchored-confirm"
       ? renderScene.placementPreview
       : null;
-  const viewport = canvasSnapshot.canvas.viewport;
   const anchoredPlacementScreenBox = anchoredPlacementPreview
     ? {
         left:
@@ -125,12 +127,12 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
         left: `${clampToRange(
           anchoredPlacementScreenBox.left,
           12,
-          viewport.size.x - 240,
+          viewportSize.x - 240,
         )}px`,
         top: `${clampToRange(
           anchoredPlacementScreenBox.top - 40,
           12,
-          viewport.size.y - 76,
+          viewportSize.y - 76,
         )}px`,
       }
     : null;
@@ -139,12 +141,12 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
         left: `${clampToRange(
           anchoredPlacementScreenBox.left + anchoredPlacementScreenBox.width - 120,
           12,
-          viewport.size.x - 132,
+          viewportSize.x - 132,
         )}px`,
         top: `${clampToRange(
           anchoredPlacementScreenBox.top + anchoredPlacementScreenBox.height + 10,
           12,
-          viewport.size.y - 52,
+          viewportSize.y - 52,
         )}px`,
       }
     : null;
@@ -208,8 +210,8 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     if (
       !anchoredPlacementActive ||
       renderScene.placementPreview !== null ||
-      viewport.size.x <= 0 ||
-      viewport.size.y <= 0
+      viewportSize.x <= 0 ||
+      viewportSize.y <= 0
     ) {
       return;
     }
@@ -219,8 +221,8 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     anchoredPlacementActive,
     controller,
     renderScene.placementPreview,
-    viewport.size.x,
-    viewport.size.y,
+    viewportSize.x,
+    viewportSize.y,
   ]);
 
   useEffect(() => {
@@ -237,6 +239,10 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
         return;
       }
 
+      setViewportSize({
+        x: entry.contentRect.width,
+        y: entry.contentRect.height,
+      });
       controller.setCanvasViewportSize({
         x: entry.contentRect.width,
         y: entry.contentRect.height,

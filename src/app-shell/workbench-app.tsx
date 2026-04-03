@@ -1,4 +1,3 @@
-import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
 import { BottomStatusBar } from "@/app-shell/components/bottom-status-bar";
 import { CanvasPanel } from "@/app-shell/components/canvas-panel";
 import { LeftDock } from "@/app-shell/components/left-dock";
@@ -6,6 +5,7 @@ import { LeftToolbar } from "@/app-shell/components/left-toolbar";
 import { RightDock } from "@/app-shell/components/right-dock";
 import { TopBar } from "@/app-shell/components/top-bar";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
+import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 import type { CSSProperties } from "react";
 
 export interface WorkbenchAppProps {

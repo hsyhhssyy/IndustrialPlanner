@@ -4,21 +4,21 @@ import type {
   LeftPanelMode,
   SimulationSpeedPreset,
   WorkbenchMode,
-  WorkbenchUiSnapshot,
-  WorkbenchUiSnapshotInput,
-} from "@/app-shell/contracts/workbench-ui";
+  WorkbenchUiState,
+  WorkbenchUiStateInput,
+} from "@/workbench/workbench-ui-state";
 import { DEFAULT_LOCALE, type AppLocale, type MessageKey } from "@/i18n/messages";
 import {
   createSnapshotStore,
   type SnapshotStore,
 } from "@/shared/snapshot-store/snapshot-store";
 
-const DOCK_SNAPSHOT_KEYS = {
+const DOCK_STATE_KEYS = {
   left: "leftDock",
   right: "rightDock",
 } as const;
 
-function mergeDockSnapshot(
+function mergeDockState(
   defaultDock: DockState,
   dockInput?: Partial<DockState>,
 ): DockState {
@@ -28,26 +28,23 @@ function mergeDockSnapshot(
   };
 }
 
-function updateDockSnapshot(
-  snapshot: WorkbenchUiSnapshot,
+function updateDockState(
+  state: WorkbenchUiState,
   dockId: DockId,
   updater: (dock: DockState) => DockState,
-): WorkbenchUiSnapshot {
-  const dockSnapshotKey = DOCK_SNAPSHOT_KEYS[dockId];
-  const currentDock = snapshot[dockSnapshotKey];
+): WorkbenchUiState {
+  const dockStateKey = DOCK_STATE_KEYS[dockId];
+  const currentDock = state[dockStateKey];
   const nextDock = updater(currentDock);
 
-  if (
-    currentDock.open === nextDock.open &&
-    currentDock.collapsed === nextDock.collapsed
-  ) {
-    return snapshot;
+  if (currentDock.open === nextDock.open && currentDock.collapsed === nextDock.collapsed) {
+    return state;
   }
 
   return {
-    ...snapshot,
-    [dockSnapshotKey]: nextDock,
-  } as WorkbenchUiSnapshot;
+    ...state,
+    [dockStateKey]: nextDock,
+  } as WorkbenchUiState;
 }
 
 export function getWorkbenchStatusMessageKeyForMode(
@@ -56,7 +53,7 @@ export function getWorkbenchStatusMessageKeyForMode(
   return mode === "edit" ? "status.edit" : "status.simulate";
 }
 
-export function createInitialWorkbenchUiSnapshot(): WorkbenchUiSnapshot {
+export function createInitialWorkbenchUiState(): WorkbenchUiState {
   return {
     mode: "edit",
     locale: DEFAULT_LOCALE,
@@ -75,28 +72,28 @@ export function createInitialWorkbenchUiSnapshot(): WorkbenchUiSnapshot {
   };
 }
 
-export function createWorkbenchUiSnapshot(
-  snapshotInput: WorkbenchUiSnapshotInput = {},
-): WorkbenchUiSnapshot {
-  const initialSnapshot = createInitialWorkbenchUiSnapshot();
-  const mode = snapshotInput.mode ?? initialSnapshot.mode;
+export function createWorkbenchUiState(
+  stateInput: WorkbenchUiStateInput = {},
+): WorkbenchUiState {
+  const initialState = createInitialWorkbenchUiState();
+  const mode = stateInput.mode ?? initialState.mode;
 
   return {
-    ...initialSnapshot,
-    ...snapshotInput,
+    ...initialState,
+    ...stateInput,
     mode,
-    leftDock: mergeDockSnapshot(initialSnapshot.leftDock, snapshotInput.leftDock),
-    rightDock: mergeDockSnapshot(initialSnapshot.rightDock, snapshotInput.rightDock),
+    leftDock: mergeDockState(initialState.leftDock, stateInput.leftDock),
+    rightDock: mergeDockState(initialState.rightDock, stateInput.rightDock),
     statusMessageKey:
-      snapshotInput.statusMessageKey ??
-      (snapshotInput.mode
+      stateInput.statusMessageKey ??
+      (stateInput.mode
         ? getWorkbenchStatusMessageKeyForMode(mode)
-        : initialSnapshot.statusMessageKey),
+        : initialState.statusMessageKey),
   };
 }
 
 export interface WorkbenchUiStore
-  extends Pick<SnapshotStore<WorkbenchUiSnapshot>, "getSnapshot" | "subscribe"> {
+  extends Pick<SnapshotStore<WorkbenchUiState>, "getSnapshot" | "subscribe"> {
   setMode: (mode: WorkbenchMode) => void;
   setLocale: (locale: AppLocale) => void;
   setDiagnosticsVisible: (visible: boolean) => void;
@@ -108,10 +105,10 @@ export interface WorkbenchUiStore
 }
 
 class WorkbenchUiStoreImpl implements WorkbenchUiStore {
-  private readonly store: SnapshotStore<WorkbenchUiSnapshot>;
+  private readonly store: SnapshotStore<WorkbenchUiState>;
 
-  constructor(initialSnapshot: WorkbenchUiSnapshotInput = {}) {
-    this.store = createSnapshotStore(createWorkbenchUiSnapshot(initialSnapshot));
+  constructor(initialState: WorkbenchUiStateInput = {}) {
+    this.store = createSnapshotStore(createWorkbenchUiState(initialState));
   }
 
   getSnapshot = () => this.store.getSnapshot();
@@ -121,16 +118,13 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
   setMode(mode: WorkbenchMode): void {
     const statusMessageKey = getWorkbenchStatusMessageKeyForMode(mode);
 
-    this.updateSnapshot((snapshot) => {
-      if (
-        snapshot.mode === mode &&
-        snapshot.statusMessageKey === statusMessageKey
-      ) {
-        return snapshot;
+    this.updateState((state) => {
+      if (state.mode === mode && state.statusMessageKey === statusMessageKey) {
+        return state;
       }
 
       return {
-        ...snapshot,
+        ...state,
         mode,
         statusMessageKey,
       };
@@ -138,60 +132,60 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
   }
 
   setLocale(locale: AppLocale): void {
-    this.updateSnapshot((snapshot) => {
-      if (snapshot.locale === locale) {
-        return snapshot;
+    this.updateState((state) => {
+      if (state.locale === locale) {
+        return state;
       }
 
       return {
-        ...snapshot,
+        ...state,
         locale,
       };
     });
   }
 
   setDiagnosticsVisible(visible: boolean): void {
-    this.updateSnapshot((snapshot) => {
-      if (snapshot.diagnosticsVisible === visible) {
-        return snapshot;
+    this.updateState((state) => {
+      if (state.diagnosticsVisible === visible) {
+        return state;
       }
 
       return {
-        ...snapshot,
+        ...state,
         diagnosticsVisible: visible,
       };
     });
   }
 
   setLeftPanelMode(mode: LeftPanelMode): void {
-    this.updateSnapshot((snapshot) => {
-      if (snapshot.leftPanelMode === mode) {
-        return snapshot;
+    this.updateState((state) => {
+      if (state.leftPanelMode === mode) {
+        return state;
       }
 
       return {
-        ...snapshot,
+        ...state,
         leftPanelMode: mode,
       };
     });
   }
 
   setSimulationSpeedPreset(preset: SimulationSpeedPreset): void {
-    this.updateSnapshot((snapshot) => {
-      if (snapshot.simulationSpeed === preset) {
-        return snapshot;
+    this.updateState((state) => {
+      if (state.simulationSpeed === preset) {
+        return state;
       }
 
       return {
-        ...snapshot,
+        ...state,
         simulationSpeed: preset,
       };
     });
   }
 
   setDockOpen(dockId: DockId, open: boolean): void {
-    this.updateSnapshot((snapshot) =>
-      updateDockSnapshot(snapshot, dockId, (dock) => ({
+    this.updateState((state) =>
+      updateDockState(state, dockId, (dock) => ({
         ...dock,
         open,
         collapsed: open ? dock.collapsed : false,
@@ -200,8 +194,8 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
   }
 
   toggleDockCollapsed(dockId: DockId): void {
-    this.updateSnapshot((snapshot) =>
-      updateDockSnapshot(snapshot, dockId, (dock) => ({
+    this.updateState((state) =>
+      updateDockState(state, dockId, (dock) => ({
         open: true,
         collapsed: !dock.collapsed,
       })),
@@ -209,34 +203,30 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
   }
 
   setStatusMessageKey(messageKey: MessageKey): void {
-    this.updateSnapshot((snapshot) => {
-      if (snapshot.statusMessageKey === messageKey) {
-        return snapshot;
+    this.updateState((state) => {
+      if (state.statusMessageKey === messageKey) {
+        return state;
       }
 
       return {
-        ...snapshot,
+        ...state,
         statusMessageKey: messageKey,
       };
     });
   }
 
-  private updateSnapshot(
-    updater: (snapshot: WorkbenchUiSnapshot) => WorkbenchUiSnapshot,
+  private updateState(
+    updater: (state: WorkbenchUiState) => WorkbenchUiState,
   ): void {
-    const currentSnapshot = this.store.getSnapshot();
-    const nextSnapshot = updater(currentSnapshot);
-
-    if (nextSnapshot === currentSnapshot) {
-      return;
-    }
-
-    this.store.setSnapshot(nextSnapshot);
+    this.store.update(updater);
   }
 }
 
 export function createWorkbenchUiStore(
-  initialSnapshot: WorkbenchUiSnapshotInput = {},
+  initialState: WorkbenchUiStateInput = {},
 ): WorkbenchUiStore {
-  return new WorkbenchUiStoreImpl(initialSnapshot);
+  return new WorkbenchUiStoreImpl(initialState);
 }
+
+export const createInitialWorkbenchUiSnapshot = createInitialWorkbenchUiState;
+export const createWorkbenchUiSnapshot = createWorkbenchUiState;

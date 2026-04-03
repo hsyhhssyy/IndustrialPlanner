@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createInitialCanvasSnapshot } from "@/canvas/canvas-host";
 import { compileStage1World } from "@/domain/compiler/stage1-compiler";
 import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";
 import { createStage1Registry } from "@/domain/registry/stage1-registry";
 import { applyWorldDocumentCommand } from "@/editor/core/commands/document-command-applier";
 import type { DocumentCommand } from "@/editor/core/commands/document-command";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
+import { createInitialCanvasViewState } from "@/workbench/workspace-state";
 
 function createBaseRenderScene() {
   const document = createStage1SeedWorldDocument();
@@ -17,10 +17,9 @@ function createBaseRenderScene() {
     document,
     topology,
     registry,
-    canvas: createInitialCanvasSnapshot(),
-    activeCanvas: {
+    canvasView: createInitialCanvasViewState(),
+    interaction: {
       selectedEntityIds: ["reactor-1"],
-      hoveredEntityId: null,
       placementPreview: null,
       pendingLinkSourceEntityId: null,
     },
@@ -56,10 +55,9 @@ describe("Render scene model", () => {
       document,
       topology,
       registry,
-      canvas: createInitialCanvasSnapshot(),
-      activeCanvas: {
+      canvasView: createInitialCanvasViewState(),
+      interaction: {
         selectedEntityIds: [],
-        hoveredEntityId: null,
         placementPreview: null,
         pendingLinkSourceEntityId: null,
       },
@@ -112,10 +110,9 @@ describe("Render scene model", () => {
       document: withTracks,
       topology,
       registry,
-      canvas: createInitialCanvasSnapshot(),
-      activeCanvas: {
+      canvasView: createInitialCanvasViewState(),
+      interaction: {
         selectedEntityIds: [],
-        hoveredEntityId: null,
         placementPreview: null,
         pendingLinkSourceEntityId: null,
       },
@@ -150,10 +147,9 @@ describe("Render scene model", () => {
       document,
       topology,
       registry,
-      canvas: createInitialCanvasSnapshot(),
-      activeCanvas: {
+      canvasView: createInitialCanvasViewState(),
+      interaction: {
         selectedEntityIds: [],
-        hoveredEntityId: null,
         placementPreview: {
           definitionId: "item_port_mix_pool_1",
           strategy: "pointer-follow",

@@ -1,7 +1,7 @@
 import type {
   LeftPanelMode,
   SimulationSpeedPreset,
-} from "@/app-shell/contracts/workbench-ui";
+} from "@/workbench/workbench-ui-state";
 import type { EditorTool } from "@/editor/contracts/editor-session";
 
 export interface WorkbenchTextDescriptor {

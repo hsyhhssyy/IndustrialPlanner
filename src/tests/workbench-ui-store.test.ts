@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createWorkbenchUiStore } from "@/app-shell/state/workbench-ui-store";
+import { createWorkbenchUiStore } from "@/workbench/workbench-ui-store";
 
 describe("WorkbenchUiStore", () => {
   it("hydrates defaults from a partial snapshot and owns UI updates", () => {

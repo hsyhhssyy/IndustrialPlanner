@@ -1,7 +1,3 @@
-import type {
-  CanvasBackendSnapshot,
-  CanvasSnapshot,
-} from "@/canvas/canvas-host";
 import type { WorldDocument } from "@/domain/document/world-document";
 import type { Stage1Registry } from "@/domain/registry/stage1-registry";
 import type {
@@ -12,14 +8,22 @@ import type { RenderEntityKind } from "@/renderer/scene/stage1-device-rendering"
 import type { RuntimeRenderSnapshot } from "@/simulation/protocol/runtime-protocol";
 import type { GridRotation } from "@/shared/geometry/grid";
 import type { AppLocale } from "@/i18n/messages";
+import type { PlacementPreviewState } from "@/editor/contracts/placement-preview";
+import type { CanvasViewState } from "@/workbench/workspace-state";
+
+export interface RenderSceneInteractionState {
+  selectedEntityIds: string[];
+  placementPreview: PlacementPreviewState | null;
+  pendingLinkSourceEntityId: string | null;
+}
 
 export interface RenderSceneInput {
   locale: AppLocale;
   document: WorldDocument;
   topology: CompiledTopology;
   registry: Stage1Registry;
-  canvas: CanvasSnapshot;
-  activeCanvas: CanvasBackendSnapshot;
+  canvasView: CanvasViewState;
+  interaction: RenderSceneInteractionState;
   runtimeSnapshot: RuntimeRenderSnapshot;
 }
 

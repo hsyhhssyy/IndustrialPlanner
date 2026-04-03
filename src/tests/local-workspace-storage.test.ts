@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { createWorkbenchUiStore } from "@/app-shell/state/workbench-ui-store";
-import { createInitialCanvasSnapshot } from "@/canvas/canvas-host";
-import { createWorkspaceStorageGateway } from "@/shared/workspace-storage/local-workspace-storage";
+import { createWorkspaceStorageGateway } from "@/workbench/persistence/workspace-storage";
+import { createWorkbenchUiStore } from "@/workbench/workbench-ui-store";
+import { createInitialCanvasViewState } from "@/workbench/workspace-state";
 
 const UI_STATE_KEY = "industrial-planner:workbench-ui-state";
 
@@ -24,7 +24,7 @@ describe("WorkspaceStorageGateway", () => {
     );
 
     const storage = createWorkspaceStorageGateway();
-    const hydrated = storage.loadWorkspaceSnapshot();
+    const hydrated = storage.loadWorkspaceState();
 
     expect(hydrated).toEqual({ ui: {} });
     expect(localStorage.getItem(UI_STATE_KEY)).toBeNull();
@@ -35,14 +35,14 @@ describe("WorkspaceStorageGateway", () => {
     const uiStore = createWorkbenchUiStore({
       locale: "en-US",
     });
-    const canvasViewport = createInitialCanvasSnapshot().viewport;
+    const canvasView = createInitialCanvasViewState();
 
     uiStore.setMode("simulate");
     uiStore.setDockOpen("left", false);
-    storage.saveWorkspaceSnapshot({
+    storage.saveWorkspaceState({
       ui: uiStore.getSnapshot(),
-      canvasViewport: {
-        ...canvasViewport,
+      canvasView: {
+        ...canvasView,
         offset: { x: 24, y: 40 },
       },
     });
@@ -76,11 +76,11 @@ describe("WorkspaceStorageGateway", () => {
 
     const storage = createWorkspaceStorageGateway();
 
-    expect(storage.loadWorkspaceSnapshot()).toEqual({
+    expect(storage.loadWorkspaceState()).toEqual({
       ui: {
         locale: "en-US",
       },
-      canvasViewport: {
+      canvasView: {
         offset: { x: 12, y: 18 },
         zoom: 1.2,
       },

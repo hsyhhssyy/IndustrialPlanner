@@ -11,7 +11,7 @@ export interface DockState {
   collapsed: boolean;
 }
 
-export interface WorkbenchUiSnapshot {
+export interface WorkbenchUiState {
   mode: WorkbenchMode;
   locale: AppLocale;
   leftPanelMode: LeftPanelMode;
@@ -22,9 +22,12 @@ export interface WorkbenchUiSnapshot {
   statusMessageKey: MessageKey;
 }
 
-export type WorkbenchUiSnapshotInput = Partial<
-  Omit<WorkbenchUiSnapshot, "leftDock" | "rightDock">
+export type WorkbenchUiStateInput = Partial<
+  Omit<WorkbenchUiState, "leftDock" | "rightDock">
 > & {
   leftDock?: Partial<DockState>;
   rightDock?: Partial<DockState>;
 };
+
+export type WorkbenchUiSnapshot = WorkbenchUiState;
+export type WorkbenchUiSnapshotInput = WorkbenchUiStateInput;

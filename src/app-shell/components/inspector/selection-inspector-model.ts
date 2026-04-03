@@ -1,7 +1,7 @@
 import type {
   WorkbenchController,
-} from "@/app-shell/contracts/workbench-facade";
-import type { WorkbenchMode } from "@/app-shell/contracts/workbench-ui";
+} from "@/workbench/contracts/workbench-facade";
+import type { WorkbenchMode } from "@/workbench/workbench-ui-state";
 import type {
   Stage1EntityDefinition,
 } from "@/domain/registry/stage1-registry";

@@ -1,4 +1,3 @@
-import type { WorkbenchController } from "@/app-shell/contracts/workbench-facade";
 import { EditSelectionInspector } from "@/app-shell/components/inspector/edit-selection-inspector";
 import type { SelectionInspectorContext } from "@/app-shell/components/inspector/selection-inspector-model";
 import { SimulationSelectionInspector } from "@/app-shell/components/inspector/simulation-selection-inspector";
@@ -16,6 +15,7 @@ import {
 import { createTranslator } from "@/i18n/messages";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
+import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 
 export interface RightDockProps {
   controller: WorkbenchController;
@@ -23,8 +23,8 @@ export interface RightDockProps {
 
 export function RightDock({ controller }: RightDockProps) {
   const ui = useExternalStore(controller.uiStore);
+  const document = useExternalStore(controller.documentStore);
   const editor = useExternalStore(controller.editorStore);
-  const canvas = useExternalStore(controller.canvasStore);
   const topology = useExternalStore(controller.topologyStore);
   const simulation = useExternalStore(controller.simulationStore);
 
@@ -34,9 +34,12 @@ export function RightDock({ controller }: RightDockProps) {
 
   const t = createTranslator(ui.locale);
 
-  const selectedEntityId = canvas.activeCanvas.selectedEntityIds[0] ?? null;
+  const selectedEntityId =
+    ui.mode === "simulate"
+      ? simulation.selection[0] ?? null
+      : editor.session.selection[0] ?? null;
   const selectedEntity = selectedEntityId
-    ? editor.document.entities[selectedEntityId]
+    ? document.entities[selectedEntityId]
     : null;
   const selectedDefinition = selectedEntityId
     ? topology.entityViews[selectedEntityId]?.definition ?? null
@@ -45,7 +48,7 @@ export function RightDock({ controller }: RightDockProps) {
     ? simulation.runtimeSnapshot.entityViews[selectedEntityId]
     : null;
   const selectedLinks = selectedEntityId
-    ? editor.document.explicitLinks.filter(
+    ? document.explicitLinks.filter(
         (link) =>
           link.sourceEntityId === selectedEntityId ||
           link.targetEntityId === selectedEntityId,
@@ -69,7 +72,7 @@ export function RightDock({ controller }: RightDockProps) {
     inspectorDetails: simulation.inspectorDetails,
     simulationPatchSet: simulation.patchSet,
   } as const;
-  const activeBase = getStage1BaseDefinition(editor.document.baseId);
+  const activeBase = getStage1BaseDefinition(document.baseId);
   const baseGroups = getStage1BaseGroupOrder().map((groupId) => {
     const groupBases = STAGE1_BASE_DEFINITIONS.filter(
       (base) => base.groupId === groupId,
@@ -116,7 +119,7 @@ export function RightDock({ controller }: RightDockProps) {
                     <div className="inspector-option-grid">
                       {group.options.map((option) => (
                         <button
-                          className={option.id === editor.document.baseId ? "is-active" : undefined}
+                          className={option.id === document.baseId ? "is-active" : undefined}
                           key={option.id}
                           onClick={() => undefined}
                           type="button"
