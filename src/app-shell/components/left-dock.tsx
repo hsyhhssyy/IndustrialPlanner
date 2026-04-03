@@ -15,6 +15,7 @@ import {
   type MessageKey,
 } from "@/i18n/messages";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
+import { createLogger } from "@/shared/logging/logger";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 import { useRef } from "react";
 
@@ -66,6 +67,8 @@ export interface LeftDockProps {
   controller: WorkbenchController;
 }
 
+const logger = createLogger("app.left-dock");
+
 function isActionDisabled(
   actionId: PlaceholderActionId | undefined,
   options: {
@@ -98,6 +101,7 @@ export function LeftDock({ controller }: LeftDockProps) {
   const pendingPlacementStrategyRef = useRef<{
     buttonId: string;
     strategy: PlacementPreviewStrategy;
+    pointerType: string;
   } | null>(null);
 
   if (!ui.leftDock.open) {
@@ -220,6 +224,7 @@ export function LeftDock({ controller }: LeftDockProps) {
                               event.pointerType === "touch"
                                 ? "anchored-confirm"
                                 : "pointer-follow",
+                            pointerType: event.pointerType,
                           };
                         }}
                         onClick={() => {
@@ -249,12 +254,25 @@ export function LeftDock({ controller }: LeftDockProps) {
                           }
 
                           if (button.definitionId) {
+                            const pendingPlacementStrategy =
+                              pendingPlacementStrategyRef.current;
                             const strategy =
-                              pendingPlacementStrategyRef.current?.buttonId === button.id
-                                ? pendingPlacementStrategyRef.current.strategy
+                              pendingPlacementStrategy?.buttonId === button.id
+                                ? pendingPlacementStrategy.strategy
                                 : "pointer-follow";
+                            const pointerType =
+                              pendingPlacementStrategy?.buttonId === button.id
+                                ? pendingPlacementStrategy.pointerType
+                                : "unknown";
 
                             pendingPlacementStrategyRef.current = null;
+                            logger.debug("Requested placement from left dock.", {
+                              buttonId: button.id,
+                              definitionId: button.definitionId,
+                              tool: button.tool ?? "place",
+                              strategy,
+                              pointerType,
+                            });
                             controller.armPlacement(
                               button.definitionId,
                               button.tool ?? "place",

@@ -194,6 +194,13 @@ class WorkbenchControllerImpl implements WorkbenchController {
     strategy: PlacementPreviewStrategy = "pointer-follow",
   ): void {
     this.editorHost.setPlacementDefinition(definitionId, tool, strategy);
+    this.logger.debug("Armed placement through workbench controller.", {
+      definitionId,
+      tool,
+      strategy,
+      viewportSize: this.viewportSize,
+      mode: this.uiStore.getSnapshot().mode,
+    });
     this.updateUiState((ui) => ({
       ...ui,
       leftPanelMode: "placement",
@@ -290,8 +297,26 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   async commitPlacementAtScreenPoint(screenPoint: CanvasPoint): Promise<void> {
+    const worldInput = this.resolveWorldInput(screenPoint);
+    const session = this.editorStore.getSnapshot().session;
+    this.logger.debug("Attempting placement commit from screen point.", {
+      screenPoint,
+      worldPoint: worldInput.worldPoint,
+      gridPoint: worldInput.gridPoint,
+      activeTool: session.activeTool,
+      placementDefinitionId: session.placementDefinitionId,
+      placementStrategy: session.placementStrategy,
+    });
     const before = this.captureMutationState();
-    this.editorHost.commitPlacement(this.resolveWorldInput(screenPoint));
+    const didPlace = this.editorHost.commitPlacement(worldInput);
+
+    if (!didPlace) {
+      this.logger.debug("Placement commit did not mutate the document.", {
+        screenPoint,
+        worldPoint: worldInput.worldPoint,
+        gridPoint: worldInput.gridPoint,
+      });
+    }
 
     await this.reconcileMutation(before);
   }

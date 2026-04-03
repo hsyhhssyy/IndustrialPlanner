@@ -38,6 +38,7 @@ import { resolveCanvasPanelTapIntent } from "./canvas-panel-tap-intent";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { createTranslator } from "@/i18n/messages";
 import { RendererHost } from "@/renderer/host/renderer-host";
+import { createLogger } from "@/shared/logging/logger";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 import type { CanvasPoint } from "@/workbench/workspace-state";
 import {
@@ -52,6 +53,7 @@ import {
 
 const PIXELS_PER_WHEEL_LINE = 16;
 const WHEEL_ZOOM_SENSITIVITY = 0.0015;
+const logger = createLogger("app.canvas-panel");
 
 function normalizeWheelDelta(event: WheelEvent<HTMLDivElement>): number {
   switch (event.deltaMode) {
@@ -336,12 +338,23 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
   }, [controller]);
 
   const dispatchCanvasTap = async (screenPoint: CanvasPoint) => {
+    const target = controller.getCanvasInteractionTarget(screenPoint);
     const intent = resolveCanvasPanelTapIntent({
       mode: ui.mode,
       activeTool: editor.session.activeTool,
       placementDefinitionId: editor.session.placementDefinitionId,
       placementStrategy: editor.session.placementStrategy,
-      target: controller.getCanvasInteractionTarget(screenPoint),
+      target,
+    });
+
+    logger.debug("Resolved canvas tap intent.", {
+      screenPoint,
+      mode: ui.mode,
+      activeTool: editor.session.activeTool,
+      placementDefinitionId: editor.session.placementDefinitionId,
+      placementStrategy: editor.session.placementStrategy,
+      target,
+      intent,
     });
 
     switch (intent.kind) {
@@ -609,8 +622,25 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     }
 
     if (event.button === 0) {
-      if (shouldDispatchCanvasPointerTap(pointerTapGestureStateRef.current, event.pointerId)) {
+      const shouldDispatchTap = shouldDispatchCanvasPointerTap(
+        pointerTapGestureStateRef.current,
+        event.pointerId,
+      );
+
+      if (shouldDispatchTap) {
         void dispatchCanvasTap(toViewportPoint(event.clientX, event.clientY));
+      } else if (
+        editor.session.placementDefinitionId &&
+        editor.session.placementStrategy === "pointer-follow"
+      ) {
+        logger.debug("Suppressed precise-pointer tap before placement dispatch.", {
+          pointerId: event.pointerId,
+          pointerType: event.pointerType,
+          activeTool: editor.session.activeTool,
+          placementDefinitionId: editor.session.placementDefinitionId,
+          placementStrategy: editor.session.placementStrategy,
+          tapGestureState: pointerTapGestureStateRef.current,
+        });
       }
 
       pointerTapGestureStateRef.current = removePointerFromCanvasPointerTapGesture(

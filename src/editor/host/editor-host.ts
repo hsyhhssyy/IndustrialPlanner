@@ -24,6 +24,7 @@ import {
 } from "@/domain/base/stage1-bases";
 import { isPlacementTool } from "@/editor/core/editor-session";
 import type { GridPoint } from "@/shared/geometry/grid";
+import { createLogger } from "@/shared/logging/logger";
 import type { CanvasPoint } from "@/workbench/workspace-state";
 
 export interface EditorInteractionTarget {
@@ -143,10 +144,45 @@ interface CreateEditorHostOptions {
   core?: EditorCore;
 }
 
+type PlacementPreviewInvalidReason =
+  | "inactive-tool"
+  | "missing-definition"
+  | "entity-collision"
+  | "out-of-base";
+
+interface PlacementPreviewResolution {
+  preview: PlacementPreviewState | null;
+  invalidReason: PlacementPreviewInvalidReason | null;
+  hitEntityId: string | null;
+}
+
+function isSamePlacementPreview(
+  left: PlacementPreviewState | null,
+  right: PlacementPreviewState | null,
+): boolean {
+  if (left === right) {
+    return true;
+  }
+
+  if (!left || !right) {
+    return false;
+  }
+
+  return (
+    left.definitionId === right.definitionId &&
+    left.strategy === right.strategy &&
+    left.rotation === right.rotation &&
+    left.valid === right.valid &&
+    left.gridPoint.x === right.gridPoint.x &&
+    left.gridPoint.y === right.gridPoint.y
+  );
+}
+
 class EditorHostImpl implements EditorHost {
   private readonly core: EditorCore;
   private readonly getTopology: () => CompiledTopology;
   private readonly getDefinition: (definitionId: string) => Stage1EntityDefinition | undefined;
+  private readonly logger = createLogger("editor.host");
 
   constructor(options: CreateEditorHostOptions) {
     this.getTopology = options.getTopology;
@@ -207,10 +243,28 @@ class EditorHostImpl implements EditorHost {
     strategy?: PlacementPreviewStrategy,
   ): void {
     this.core.setPlacementDefinition(definitionId, tool, strategy);
+    this.logger.debug("Armed placement definition.", {
+      definitionId,
+      tool: tool ?? "place",
+      strategy: strategy ?? "pointer-follow",
+    });
   }
 
   updatePlacementPreview(input: CanvasWorldInput): void {
-    this.core.setPlacementPreview(this.resolvePlacementPreview(input));
+    const previousPreview = this.core.getSnapshot().session.placementPreview;
+    const resolution = this.resolvePlacementPreview(input);
+
+    this.core.setPlacementPreview(resolution.preview);
+
+    if (!isSamePlacementPreview(previousPreview, resolution.preview)) {
+      this.logger.debug("Updated placement preview.", {
+        worldPoint: input.worldPoint,
+        gridPoint: input.gridPoint,
+        preview: resolution.preview,
+        invalidReason: resolution.invalidReason,
+        hitEntityId: resolution.hitEntityId,
+      });
+    }
   }
 
   confirmPlacement(): boolean {
@@ -224,9 +278,20 @@ class EditorHostImpl implements EditorHost {
       !preview.valid ||
       preview.definitionId !== session.placementDefinitionId
     ) {
+      this.logger.debug("Skipped placement confirmation.", {
+        activeTool: session.activeTool,
+        placementDefinitionId: session.placementDefinitionId,
+        placementStrategy: session.placementStrategy,
+        preview,
+      });
       return false;
     }
 
+    this.logger.debug("Confirmed placement from preview.", {
+      definitionId: session.placementDefinitionId,
+      gridPoint: preview.gridPoint,
+      strategy: preview.strategy,
+    });
     this.core.placeEntity(session.placementDefinitionId, preview.gridPoint);
     return true;
   }
@@ -239,16 +304,36 @@ class EditorHostImpl implements EditorHost {
       !session.placementDefinitionId ||
       session.placementStrategy !== "pointer-follow"
     ) {
+      this.logger.debug("Skipped pointer-follow placement commit before preview resolution.", {
+        activeTool: session.activeTool,
+        placementDefinitionId: session.placementDefinitionId,
+        placementStrategy: session.placementStrategy,
+      });
       return false;
     }
 
-    const preview = this.resolvePlacementPreview(input);
+    const resolution = this.resolvePlacementPreview(input);
+    const preview = resolution.preview;
 
     if (!preview?.valid) {
       this.core.setPendingLinkSource(null);
+      this.logger.debug("Blocked pointer-follow placement commit.", {
+        definitionId: session.placementDefinitionId,
+        worldPoint: input.worldPoint,
+        gridPoint: input.gridPoint,
+        preview,
+        invalidReason: resolution.invalidReason,
+        hitEntityId: resolution.hitEntityId,
+      });
       return false;
     }
 
+    this.logger.debug("Committed pointer-follow placement.", {
+      definitionId: session.placementDefinitionId,
+      worldPoint: input.worldPoint,
+      gridPoint: input.gridPoint,
+      preview,
+    });
     this.core.placeEntity(session.placementDefinitionId, preview.gridPoint);
     return true;
   }
@@ -307,17 +392,25 @@ class EditorHostImpl implements EditorHost {
 
   private resolvePlacementPreview(
     input: CanvasWorldInput,
-  ): PlacementPreviewState | null {
+  ): PlacementPreviewResolution {
     const { document, session } = this.core.getSnapshot();
 
     if (!isPlacementTool(session.activeTool) || !session.placementDefinitionId) {
-      return null;
+      return {
+        preview: null,
+        invalidReason: "inactive-tool",
+        hitEntityId: null,
+      };
     }
 
     const definition = this.getDefinition(session.placementDefinitionId);
 
     if (!definition) {
-      return null;
+      return {
+        preview: null,
+        invalidReason: "missing-definition",
+        hitEntityId: null,
+      };
     }
 
     const base = getStage1BaseDefinition(document.baseId);
@@ -331,19 +424,28 @@ class EditorHostImpl implements EditorHost {
       this.getTopology(),
       input.worldPoint,
     );
+    const withinBase = isStage1FootprintWithinBase({
+      base,
+      position: previewGridPoint,
+      footprint: definition.footprint,
+    });
+    const invalidReason =
+      hitEntityId !== null
+        ? "entity-collision"
+        : withinBase
+          ? null
+          : "out-of-base";
 
     return {
-      definitionId: session.placementDefinitionId,
-      strategy: session.placementStrategy ?? "pointer-follow",
-      gridPoint: previewGridPoint,
-      rotation: 0,
-      valid:
-        hitEntityId === null &&
-        isStage1FootprintWithinBase({
-          base,
-          position: previewGridPoint,
-          footprint: definition.footprint,
-        }),
+      preview: {
+        definitionId: session.placementDefinitionId,
+        strategy: session.placementStrategy ?? "pointer-follow",
+        gridPoint: previewGridPoint,
+        rotation: 0,
+        valid: invalidReason === null,
+      },
+      invalidReason,
+      hitEntityId,
     };
   }
 
