@@ -758,6 +758,9 @@ button.is-active {
 
 @media (max-width: 1280px) {
   .workbench {
+    --left-dock-width: 300px;
+    --right-dock-width: 280px;
+    column-gap: 6px;
     grid-template-rows: auto minmax(0, 1fr) 28px;
   }
 
@@ -794,6 +797,42 @@ button.is-active {
 
 @media (max-width: 1080px) {
   .workbench {
+    --left-dock-width: 260px;
+    --right-dock-width: 240px;
+  }
+
+  .section-header {
+    flex-wrap: wrap;
+  }
+
+  .section-header-copy h2 {
+    font-size: 1rem;
+  }
+
+  .placeholder-button-grid,
+  .inspector-option-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar-meta,
+  .top-bar-speed-controls {
+    justify-content: flex-start;
+  }
+
+  .status-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 6px 10px;
+  }
+
+  .status-bar-group {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 860px) {
+  .workbench {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto auto minmax(0, 1fr) auto 28px;
     grid-template-areas:
@@ -822,27 +861,6 @@ button.is-active {
   .toolbar-rail-utility {
     padding-top: 0;
     border-top: 0;
-  }
-
-  .placeholder-button-grid,
-  .inspector-option-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .toolbar-meta,
-  .top-bar-speed-controls {
-    justify-content: flex-start;
-  }
-
-  .status-bar {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 6px 10px;
-  }
-
-  .status-bar-group {
-    flex-wrap: wrap;
-    white-space: normal;
   }
 
   .dock-collapsed-body {
