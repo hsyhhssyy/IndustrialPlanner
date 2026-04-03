@@ -87,6 +87,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
 
     touchPointsRef.current.clear();
     updateTouchGestureState(cancelCanvasTouchGesture());
+    controller.clearPlacementPreview();
   };
 
   const toViewportPoint = (clientX: number, clientY: number): CanvasPoint => {
@@ -114,6 +115,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     }
 
     updatePointerGestureState(cancelCanvasPanelPointerGesture());
+    controller.clearPlacementPreview();
   };
 
   useEffect(() => {
@@ -201,6 +203,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
       touchGestureStateRef.current = cancelCanvasTouchGesture();
       setTouchGestureState(touchGestureStateRef.current);
       stopKeyboardPanLoop();
+      controller.clearPlacementPreview();
     };
 
     const handleVisibilityChange = () => {
@@ -216,7 +219,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
       window.removeEventListener("blur", handleWindowBlur);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [controller]);
 
   const handleCanvasClick = (event: MouseEvent<HTMLDivElement>) => {
     if (suppressNextClickRef.current) {
@@ -276,6 +279,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
         );
       }
 
+      controller.clearPlacementPreview();
       return;
     }
 
@@ -285,6 +289,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
 
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
+    controller.clearPlacementPreview();
     updatePointerGestureState(
       beginCanvasPointerPanGesture(event.pointerId, {
         x: event.clientX,
@@ -341,6 +346,16 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
         controller.panCanvasBy(result.screenDelta);
       }
 
+      return;
+    }
+
+    if (
+      pointerGestureStateRef.current.phase === "idle" &&
+      event.buttons === 0
+    ) {
+      controller.updatePlacementPreviewFromScreenPoint(
+        toViewportPoint(event.clientX, event.clientY),
+      );
       return;
     }
 
@@ -483,6 +498,9 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
           onLostPointerCapture={handleViewportPointerCancel}
           onPointerCancel={handleViewportPointerCancel}
           onPointerDown={handleViewportPointerDown}
+          onPointerLeave={() => {
+            controller.clearPlacementPreview();
+          }}
           onPointerMove={handleViewportPointerMove}
           onPointerUp={handleViewportPointerUp}
           onWheel={handleViewportWheel}

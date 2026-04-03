@@ -1,9 +1,13 @@
-import type { Stage1EntityDefinition } from "@/domain/registry/stage1-registry";
+import {
+  getStage1EntityDefinition,
+  type Stage1EntityDefinition,
+} from "@/domain/registry/stage1-registry";
 import { getStage1BaseDefinition } from "@/domain/base/stage1-bases";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import type {
   RenderExplicitLink,
   RenderEntitySprite,
+  RenderPlacementPreview,
   RenderSceneInput,
   RenderSceneModel,
 } from "@/renderer/scene/types";
@@ -127,20 +131,74 @@ function buildExplicitLinkSprites(
     .filter((link): link is RenderExplicitLink => link !== null);
 }
 
+function buildPlacementPreview(
+  input: RenderSceneInput,
+): RenderPlacementPreview | null {
+  const preview = input.activeCanvas.placementPreview;
+
+  if (!preview) {
+    return null;
+  }
+
+  const definition = getStage1EntityDefinition(
+    input.registry,
+    preview.definitionId,
+  );
+
+  if (!definition) {
+    return null;
+  }
+
+  const renderKind = getStage1EntityRenderKind(preview.definitionId);
+  const textureMetrics = getStage1EntityTextureMetrics({
+    definition,
+    gridSize: input.document.documentSettings.gridSize,
+    rotation: preview.rotation,
+  });
+
+  return {
+    definitionId: preview.definitionId,
+    strategy: preview.strategy,
+    label: getLocalizedStage1EntityName(input.locale, definition),
+    x: preview.gridPoint.x * input.document.documentSettings.gridSize,
+    y: preview.gridPoint.y * input.document.documentSettings.gridSize,
+    width: definition.footprint.width * input.document.documentSettings.gridSize,
+    height: definition.footprint.height * input.document.documentSettings.gridSize,
+    rotation: preview.rotation,
+    renderKind,
+    fill: getEntityFill(definition),
+    textureSrc: getStage1EntitySpritePath(preview.definitionId),
+    textureWidth: textureMetrics.textureWidthPx,
+    textureHeight: textureMetrics.textureHeightPx,
+    textureCenterOffsetX: textureMetrics.centerOffsetXPx,
+    textureCenterOffsetY: textureMetrics.centerOffsetYPx,
+    valid: preview.valid,
+  };
+}
+
 export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
   const entities = input.document.entityOrder
     .map((entityId) => buildEntitySprite(input, entityId))
     .filter((entity): entity is RenderEntitySprite => entity !== null);
+  const placementPreview = buildPlacementPreview(input);
   const explicitLinks = buildExplicitLinkSprites(input);
   const base = getStage1BaseDefinition(input.document.baseId);
   const baseWorldSize = base.placeableSize * input.document.documentSettings.gridSize;
+  const previewMaxX = placementPreview
+    ? placementPreview.x + placementPreview.width + input.document.documentSettings.gridSize * 3
+    : baseWorldSize;
+  const previewMaxY = placementPreview
+    ? placementPreview.y + placementPreview.height + input.document.documentSettings.gridSize * 3
+    : baseWorldSize;
 
   const maxWorldWidth = Math.max(
     baseWorldSize,
+    previewMaxX,
     ...entities.map((entity) => entity.x + entity.width + input.document.documentSettings.gridSize * 3),
   );
   const maxWorldHeight = Math.max(
     baseWorldSize,
+    previewMaxY,
     ...entities.map((entity) => entity.y + entity.height + input.document.documentSettings.gridSize * 3),
   );
 
@@ -151,6 +209,7 @@ export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
     worldWidth: maxWorldWidth,
     worldHeight: maxWorldHeight,
     entities,
+    placementPreview,
     explicitLinks,
     diagnostics: input.topology.diagnostics,
   };

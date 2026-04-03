@@ -3,6 +3,7 @@ import type {
   CanvasSnapshot,
 } from "@/canvas/canvas-host";
 import type { WorldDocument } from "@/domain/document/world-document";
+import type { Stage1Registry } from "@/domain/registry/stage1-registry";
 import type {
   CompiledTopology,
   TopologyDiagnostic,
@@ -16,6 +17,7 @@ export interface RenderSceneInput {
   locale: AppLocale;
   document: WorldDocument;
   topology: CompiledTopology;
+  registry: Stage1Registry;
   canvas: CanvasSnapshot;
   activeCanvas: CanvasBackendSnapshot;
   runtimeSnapshot: RuntimeRenderSnapshot;
@@ -59,6 +61,25 @@ export interface RenderExplicitLink {
   selected: boolean;
 }
 
+export interface RenderPlacementPreview {
+  definitionId: string;
+  strategy: "pointer-follow" | "anchored-confirm";
+  label: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: GridRotation;
+  renderKind: RenderEntityKind;
+  fill: string;
+  textureSrc: string | null;
+  textureWidth: number;
+  textureHeight: number;
+  textureCenterOffsetX: number;
+  textureCenterOffsetY: number;
+  valid: boolean;
+}
+
 export interface RenderSceneModel {
   zoom: number;
   viewportOffset: {
@@ -69,6 +90,7 @@ export interface RenderSceneModel {
   worldWidth: number;
   worldHeight: number;
   entities: RenderEntitySprite[];
+  placementPreview: RenderPlacementPreview | null;
   explicitLinks: RenderExplicitLink[];
   diagnostics: TopologyDiagnostic[];
 }

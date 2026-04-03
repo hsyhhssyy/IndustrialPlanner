@@ -140,6 +140,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
     const previousMode = this.uiStore.getSnapshot().mode;
     this.canvasHost.setActiveBackend(mode === "edit" ? "edit" : "simulation");
 
+    if (mode === "simulate") {
+      this.editCanvasBackend.clearPlacementPreview();
+    }
+
     if (previousMode === "simulate" && mode === "edit") {
       this.simulationHost.clearPatches();
     }
@@ -478,6 +482,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       locale: this.uiStore.getSnapshot().locale,
       document: editorSnapshot.document,
       topology: this.topology,
+      registry: this.registry,
       canvas: canvasSnapshot,
       activeCanvas: this.canvasHost.getActiveBackendSnapshot(),
       runtimeSnapshot: this.simulationHost.getSnapshot().runtimeSnapshot,

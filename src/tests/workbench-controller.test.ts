@@ -282,6 +282,13 @@ describe("WorkbenchController scaffold", () => {
       rotation: 0,
       valid: true,
     });
+    expect(readWorkbenchState(controller).renderScene.placementPreview).toMatchObject({
+      definitionId: "belt_straight_1x1",
+      strategy: "pointer-follow",
+      x: 24 * readWorkbenchState(controller).document.documentSettings.gridSize,
+      y: 12 * readWorkbenchState(controller).document.documentSettings.gridSize,
+      valid: true,
+    });
 
     controller.dispose();
   });

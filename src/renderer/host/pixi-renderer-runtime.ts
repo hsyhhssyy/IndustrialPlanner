@@ -16,6 +16,7 @@ import type {
 import type {
   RenderEntitySprite,
   RenderExplicitLink,
+  RenderPlacementPreview,
   RenderSceneModel,
 } from "@/renderer/scene/types";
 
@@ -73,6 +74,16 @@ const SELECTION_STROKE_STYLE: StrokeInput = {
   color: 0xf7d06a,
   alpha: 0.98,
 };
+const PLACEMENT_PREVIEW_VALID_STROKE_STYLE: StrokeInput = {
+  width: 2,
+  color: 0x7fe0b0,
+  alpha: 0.92,
+};
+const PLACEMENT_PREVIEW_INVALID_STROKE_STYLE: StrokeInput = {
+  width: 2,
+  color: 0xff866f,
+  alpha: 0.94,
+};
 const PIXI_DISPLAY_OBJECT_DESTROY_OPTIONS: DestroyOptions = {
   children: true,
   context: true,
@@ -86,6 +97,7 @@ interface PixiSceneLayers {
   grid: Container;
   links: Container;
   entities: Container;
+  preview: Container;
 }
 
 export interface PixiRendererRuntime {
@@ -175,10 +187,12 @@ function createSceneLayers(stage: Container): PixiSceneLayers {
   const grid = new Container();
   const links = new Container();
   const entities = new Container();
+  const preview = new Container();
 
   camera.addChild(grid);
   camera.addChild(links);
   camera.addChild(entities);
+  camera.addChild(preview);
   stage.addChild(camera);
 
   return {
@@ -186,6 +200,7 @@ function createSceneLayers(stage: Container): PixiSceneLayers {
     grid,
     links,
     entities,
+    preview,
   };
 }
 
@@ -526,6 +541,62 @@ function drawEntitySprite(
   return drawSpriteEntity(scene, entity, textureCache);
 }
 
+function drawPlacementPreview(
+  scene: RenderSceneModel,
+  preview: RenderPlacementPreview,
+  textureCache: Map<string, Texture>,
+): Container {
+  const entityLike: RenderEntitySprite = {
+    entityId: `placement-preview:${preview.definitionId}`,
+    definitionId: preview.definitionId,
+    label: preview.label,
+    x: preview.x,
+    y: preview.y,
+    width: preview.width,
+    height: preview.height,
+    rotation: preview.rotation,
+    renderKind: preview.renderKind,
+    fill: preview.fill,
+    textureSrc: preview.textureSrc,
+    textureWidth: preview.textureWidth,
+    textureHeight: preview.textureHeight,
+    textureCenterOffsetX: preview.textureCenterOffsetX,
+    textureCenterOffsetY: preview.textureCenterOffsetY,
+    showLabel: false,
+    status: preview.valid ? "idle" : "blocked",
+    selected: false,
+    pendingLinkSource: false,
+    patched: false,
+  };
+  const container = drawEntitySprite(scene, entityLike, textureCache);
+  container.alpha = preview.valid ? 0.58 : 0.34;
+
+  const x = preview.x * scene.zoom;
+  const y = preview.y * scene.zoom;
+  const width = preview.width * scene.zoom;
+  const height = preview.height * scene.zoom;
+  const outlineBounds = getInsetBounds(x, y, width, height, 1.5);
+  const outline = new Graphics();
+
+  drawDashedRect(
+    outline,
+    outlineBounds.x,
+    outlineBounds.y,
+    outlineBounds.width,
+    outlineBounds.height,
+    8,
+    5,
+  );
+  outline.stroke(
+    preview.valid
+      ? PLACEMENT_PREVIEW_VALID_STROKE_STYLE
+      : PLACEMENT_PREVIEW_INVALID_STROKE_STYLE,
+  );
+  container.addChild(outline);
+
+  return container;
+}
+
 function renderSceneToLayers(
   layers: PixiSceneLayers,
   scene: RenderSceneModel,
@@ -534,6 +605,7 @@ function renderSceneToLayers(
   clearContainer(layers.grid);
   clearContainer(layers.links);
   clearContainer(layers.entities);
+  clearContainer(layers.preview);
 
   layers.grid.addChild(drawGridLayer(scene));
 
@@ -543,6 +615,12 @@ function renderSceneToLayers(
 
   for (const entity of scene.entities) {
     layers.entities.addChild(drawEntitySprite(scene, entity, textureCache));
+  }
+
+  if (scene.placementPreview) {
+    layers.preview.addChild(
+      drawPlacementPreview(scene, scene.placementPreview, textureCache),
+    );
   }
 }
 
@@ -563,6 +641,7 @@ function collectSceneTexturePaths(scene: RenderSceneModel): string[] {
     new Set(
       scene.entities
         .map((entity) => entity.textureSrc)
+        .concat(scene.placementPreview?.textureSrc ?? [])
         .filter((path): path is string => Boolean(path)),
     ),
   );

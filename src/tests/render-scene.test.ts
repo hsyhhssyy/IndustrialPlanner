@@ -16,6 +16,7 @@ function createBaseRenderScene() {
     locale: "zh-CN",
     document,
     topology,
+    registry,
     canvas: createInitialCanvasSnapshot(),
     activeCanvas: {
       selectedEntityIds: ["reactor-1"],
@@ -54,6 +55,7 @@ describe("Render scene model", () => {
       locale: "en-US",
       document,
       topology,
+      registry,
       canvas: createInitialCanvasSnapshot(),
       activeCanvas: {
         selectedEntityIds: [],
@@ -109,6 +111,7 @@ describe("Render scene model", () => {
       locale: "zh-CN",
       document: withTracks,
       topology,
+      registry,
       canvas: createInitialCanvasSnapshot(),
       activeCanvas: {
         selectedEntityIds: [],
@@ -133,5 +136,53 @@ describe("Render scene model", () => {
     expect(pipe?.renderKind).toBe("pipe-track");
     expect(pipe?.textureSrc).toBeNull();
     expect(pipe?.showLabel).toBe(false);
+  });
+
+  it("builds a placement preview with sprite metadata and validity state", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const definition = registry.entityDefinitions.find(
+      (entityDefinition) => entityDefinition.id === "item_port_mix_pool_1",
+    );
+    const scene = buildRenderScene({
+      locale: "zh-CN",
+      document,
+      topology,
+      registry,
+      canvas: createInitialCanvasSnapshot(),
+      activeCanvas: {
+        selectedEntityIds: [],
+        hoveredEntityId: null,
+        placementPreview: {
+          definitionId: "item_port_mix_pool_1",
+          strategy: "pointer-follow",
+          gridPoint: { x: 24, y: 12 },
+          rotation: 0,
+          valid: true,
+        },
+        pendingLinkSourceEntityId: null,
+      },
+      runtimeSnapshot: {
+        tick: 0,
+        status: "idle",
+        entityViews: {},
+        patchedEntityIds: [],
+      },
+    });
+
+    expect(definition).toBeTruthy();
+    expect(scene.placementPreview).toMatchObject({
+      definitionId: "item_port_mix_pool_1",
+      strategy: "pointer-follow",
+      x: 24 * document.documentSettings.gridSize,
+      y: 12 * document.documentSettings.gridSize,
+      width:
+        (definition?.footprint.width ?? 0) * document.documentSettings.gridSize,
+      height:
+        (definition?.footprint.height ?? 0) * document.documentSettings.gridSize,
+      valid: true,
+      textureSrc: "/sprites/item_port_mix_pool_1.webp",
+    });
   });
 });
