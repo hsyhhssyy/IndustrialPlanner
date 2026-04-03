@@ -218,12 +218,20 @@ export function LeftDock({ controller }: LeftDockProps) {
                             return;
                           }
 
+                          const strategy =
+                            event.pointerType === "touch"
+                              ? "anchored-confirm"
+                              : "pointer-follow";
+                          logger.info("Observed placement button pointer down.", {
+                            buttonId: button.id,
+                            definitionId: button.definitionId,
+                            tool: button.tool ?? "place",
+                            pointerType: event.pointerType,
+                            strategy,
+                          });
                           pendingPlacementStrategyRef.current = {
                             buttonId: button.id,
-                            strategy:
-                              event.pointerType === "touch"
-                                ? "anchored-confirm"
-                                : "pointer-follow",
+                            strategy,
                             pointerType: event.pointerType,
                           };
                         }}
@@ -266,7 +274,7 @@ export function LeftDock({ controller }: LeftDockProps) {
                                 : "unknown";
 
                             pendingPlacementStrategyRef.current = null;
-                            logger.debug("Requested placement from left dock.", {
+                            logger.info("Requested placement from left dock.", {
                               buttonId: button.id,
                               definitionId: button.definitionId,
                               tool: button.tool ?? "place",

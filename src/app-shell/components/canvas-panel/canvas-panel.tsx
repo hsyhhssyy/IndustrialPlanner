@@ -347,15 +347,17 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
       target,
     });
 
-    logger.debug("Resolved canvas tap intent.", {
-      screenPoint,
-      mode: ui.mode,
-      activeTool: editor.session.activeTool,
-      placementDefinitionId: editor.session.placementDefinitionId,
-      placementStrategy: editor.session.placementStrategy,
-      target,
-      intent,
-    });
+    if (editor.session.placementDefinitionId) {
+      logger.info("Resolved canvas tap intent during placement.", {
+        screenPoint,
+        mode: ui.mode,
+        activeTool: editor.session.activeTool,
+        placementDefinitionId: editor.session.placementDefinitionId,
+        placementStrategy: editor.session.placementStrategy,
+        target,
+        intent,
+      });
+    }
 
     switch (intent.kind) {
       case "select-edit-entity":
@@ -633,7 +635,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
         editor.session.placementDefinitionId &&
         editor.session.placementStrategy === "pointer-follow"
       ) {
-        logger.debug("Suppressed precise-pointer tap before placement dispatch.", {
+        logger.info("Suppressed precise-pointer tap before placement dispatch.", {
           pointerId: event.pointerId,
           pointerType: event.pointerType,
           activeTool: editor.session.activeTool,

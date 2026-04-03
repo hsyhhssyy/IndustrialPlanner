@@ -243,7 +243,7 @@ class EditorHostImpl implements EditorHost {
     strategy?: PlacementPreviewStrategy,
   ): void {
     this.core.setPlacementDefinition(definitionId, tool, strategy);
-    this.logger.debug("Armed placement definition.", {
+    this.logger.info("Armed placement definition.", {
       definitionId,
       tool: tool ?? "place",
       strategy: strategy ?? "pointer-follow",
@@ -278,7 +278,7 @@ class EditorHostImpl implements EditorHost {
       !preview.valid ||
       preview.definitionId !== session.placementDefinitionId
     ) {
-      this.logger.debug("Skipped placement confirmation.", {
+      this.logger.info("Skipped placement confirmation.", {
         activeTool: session.activeTool,
         placementDefinitionId: session.placementDefinitionId,
         placementStrategy: session.placementStrategy,
@@ -287,7 +287,7 @@ class EditorHostImpl implements EditorHost {
       return false;
     }
 
-    this.logger.debug("Confirmed placement from preview.", {
+    this.logger.info("Confirmed placement from preview.", {
       definitionId: session.placementDefinitionId,
       gridPoint: preview.gridPoint,
       strategy: preview.strategy,
@@ -304,7 +304,7 @@ class EditorHostImpl implements EditorHost {
       !session.placementDefinitionId ||
       session.placementStrategy !== "pointer-follow"
     ) {
-      this.logger.debug("Skipped pointer-follow placement commit before preview resolution.", {
+      this.logger.info("Skipped pointer-follow placement commit before preview resolution.", {
         activeTool: session.activeTool,
         placementDefinitionId: session.placementDefinitionId,
         placementStrategy: session.placementStrategy,
@@ -317,7 +317,7 @@ class EditorHostImpl implements EditorHost {
 
     if (!preview?.valid) {
       this.core.setPendingLinkSource(null);
-      this.logger.debug("Blocked pointer-follow placement commit.", {
+      this.logger.info("Blocked pointer-follow placement commit.", {
         definitionId: session.placementDefinitionId,
         worldPoint: input.worldPoint,
         gridPoint: input.gridPoint,
@@ -328,7 +328,7 @@ class EditorHostImpl implements EditorHost {
       return false;
     }
 
-    this.logger.debug("Committed pointer-follow placement.", {
+    this.logger.info("Committed pointer-follow placement.", {
       definitionId: session.placementDefinitionId,
       worldPoint: input.worldPoint,
       gridPoint: input.gridPoint,
