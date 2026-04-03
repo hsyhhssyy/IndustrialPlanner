@@ -193,6 +193,15 @@ class WorkbenchControllerImpl implements WorkbenchController {
     tool: EditorTool = "place",
     strategy: PlacementPreviewStrategy = "pointer-follow",
   ): void {
+    if (this.uiStore.getSnapshot().mode === "simulate") {
+      this.logger.warn("Ignored placement request while simulate mode is active.", {
+        definitionId,
+        tool,
+        strategy,
+      });
+      return;
+    }
+
     this.editorHost.setPlacementDefinition(definitionId, tool, strategy);
     this.logger.info("Armed placement through workbench controller.", {
       definitionId,

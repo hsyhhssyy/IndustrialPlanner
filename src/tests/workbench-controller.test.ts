@@ -318,6 +318,24 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("ignores placement arming while simulate mode is active", () => {
+    const controller = createWorkbenchController();
+    const before = readWorkbenchState(controller);
+
+    controller.setMode("simulate");
+    controller.armPlacement("belt_straight_1x1", "belt");
+
+    const after = readWorkbenchState(controller);
+
+    expect(after.ui.mode).toBe("simulate");
+    expect(after.session.activeTool).toBe(before.session.activeTool);
+    expect(after.session.placementDefinitionId).toBe(before.session.placementDefinitionId);
+    expect(after.session.placementStrategy).toBe(before.session.placementStrategy);
+    expect(after.ui.leftPanelMode).toBe(before.ui.leftPanelMode);
+
+    controller.dispose();
+  });
+
   it("updates placement preview from screen coordinates through the shared canvas normalization path", () => {
     const controller = createWorkbenchController();
 

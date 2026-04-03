@@ -198,8 +198,11 @@ export function LeftDock({ controller }: LeftDockProps) {
                           editor.session.placementDefinitionId &&
                         button.tool === editor.session.activeTool
                       : button.tool === editor.session.activeTool;
+                    const placementDisabledInSimulate =
+                      ui.mode === "simulate" && Boolean(button.definitionId);
                     const isDisabled =
                       (!button.tool && !button.definitionId && !button.actionId) ||
+                      placementDisabledInSimulate ||
                       isActionDisabled(button.actionId, {
                         mode: ui.mode,
                         selection: editor.session.selection,
