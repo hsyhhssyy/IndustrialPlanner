@@ -35,6 +35,7 @@ import {
   type CanvasPanelTouchGestureState,
 } from "./canvas-panel-touch-gesture";
 import { resolveCanvasPanelTapIntent } from "./canvas-panel-tap-intent";
+import { createCanvasPreviewRawInputScheduler } from "./canvas-preview-raw-input-scheduler";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { createTranslator } from "@/i18n/messages";
 import { RendererHost } from "@/renderer/host/renderer-host";
@@ -47,6 +48,7 @@ import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
 import type { CanvasPoint } from "@/workbench/workspace-state";
 import {
   useEffect,
+  useEffectEvent,
   useRef,
   useState,
   type FocusEvent,
@@ -116,6 +118,9 @@ export const CanvasPanel = observer(function CanvasPanel({
   });
   const pointerGestureStateRef = useRef<CanvasPanelPointerGestureState>(pointerGestureState);
   const touchGestureStateRef = useRef<CanvasPanelTouchGestureState>(touchGestureState);
+  const previewInputSchedulerRef = useRef<ReturnType<
+    typeof createCanvasPreviewRawInputScheduler
+  > | null>(null);
   const t = createTranslator(ui.locale);
   const anchoredPlacementActive =
     editor.session.placementDefinitionId !== null &&
@@ -154,6 +159,32 @@ export const CanvasPanel = observer(function CanvasPanel({
       }
     : null;
 
+  const dispatchPlacementPreviewFromScreenPoint = useEffectEvent(
+    (screenPoint: CanvasPoint) => {
+      if (placementPreviewProfiler) {
+        placementPreviewProfiler.measureStage("canvas.pointerMoveDispatch", () => {
+          controller.updatePlacementPreviewFromScreenPoint(screenPoint);
+        });
+        return;
+      }
+
+      controller.updatePlacementPreviewFromScreenPoint(screenPoint);
+    },
+  );
+
+  const schedulePlacementPreviewFromScreenPoint = (screenPoint: CanvasPoint) => {
+    if (!previewInputSchedulerRef.current) {
+      dispatchPlacementPreviewFromScreenPoint(screenPoint);
+      return;
+    }
+
+    previewInputSchedulerRef.current.schedule(screenPoint);
+  };
+
+  const cancelScheduledPlacementPreview = () => {
+    previewInputSchedulerRef.current?.cancel();
+  };
+
   const updatePointerGestureState = (nextState: CanvasPanelPointerGestureState) => {
     pointerGestureStateRef.current = nextState;
     setPointerGestureState(nextState);
@@ -177,6 +208,7 @@ export const CanvasPanel = observer(function CanvasPanel({
     touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
     touchTapSuppressedRef.current = false;
     updateTouchGestureState(cancelCanvasTouchGesture());
+    cancelScheduledPlacementPreview();
     controller.clearPlacementPreview();
   };
 
@@ -206,8 +238,20 @@ export const CanvasPanel = observer(function CanvasPanel({
 
     updatePointerGestureState(cancelCanvasPanelPointerGesture());
     pointerTapGestureStateRef.current = createIdleCanvasPanelPointerTapGestureState();
+    cancelScheduledPlacementPreview();
     controller.clearPlacementPreview();
   };
+
+  useEffect(() => {
+    previewInputSchedulerRef.current = createCanvasPreviewRawInputScheduler({
+      dispatch: dispatchPlacementPreviewFromScreenPoint,
+    });
+
+    return () => {
+      previewInputSchedulerRef.current?.dispose();
+      previewInputSchedulerRef.current = null;
+    };
+  }, [controller, placementPreviewProfiler]);
 
   useEffect(() => {
     if (
@@ -478,7 +522,7 @@ export const CanvasPanel = observer(function CanvasPanel({
 
         if (result.previewPoint) {
           touchTapSuppressedRef.current = true;
-          controller.updatePlacementPreviewFromScreenPoint(result.previewPoint);
+          schedulePlacementPreviewFromScreenPoint(result.previewPoint);
         }
 
         return;
@@ -540,16 +584,9 @@ export const CanvasPanel = observer(function CanvasPanel({
       pointerGestureStateRef.current.phase === "idle" &&
       event.buttons === 0
     ) {
-      const screenPoint = toViewportPoint(event.clientX, event.clientY);
-
-      if (placementPreviewProfiler) {
-        placementPreviewProfiler.measureStage("canvas.pointerMoveDispatch", () => {
-          controller.updatePlacementPreviewFromScreenPoint(screenPoint);
-        });
-      } else {
-        controller.updatePlacementPreviewFromScreenPoint(screenPoint);
-      }
-
+      schedulePlacementPreviewFromScreenPoint(
+        toViewportPoint(event.clientX, event.clientY),
+      );
       return;
     }
 
@@ -580,7 +617,7 @@ export const CanvasPanel = observer(function CanvasPanel({
       return;
     }
 
-    controller.updatePlacementPreviewFromScreenPoint(
+    schedulePlacementPreviewFromScreenPoint(
       toViewportPoint(event.clientX, event.clientY),
     );
   };
@@ -594,6 +631,7 @@ export const CanvasPanel = observer(function CanvasPanel({
     }
 
     if (!anchoredPlacementActive) {
+      cancelScheduledPlacementPreview();
       controller.clearPlacementPreview();
     }
   };
