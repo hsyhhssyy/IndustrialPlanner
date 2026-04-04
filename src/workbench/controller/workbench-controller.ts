@@ -89,6 +89,7 @@ interface SyncMetrics {
   storageSaveDurationMs: number;
   totalDurationMs: number;
   persistedWorkspaceChanged: boolean;
+  reusedPreliminaryRenderScene: boolean;
 }
 
 interface PlacementPreviewDiagnosticWindow {
@@ -165,6 +166,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     slowestSyncDurationMs: 0,
     latest: null,
   };
+  private lastSavedWorkspacePersistence: WorkspacePersistenceState | null = null;
 
   private topology: CompiledTopology;
   private viewportSize: CanvasPoint = { x: 0, y: 0 };
@@ -845,33 +847,51 @@ class WorkbenchControllerImpl implements WorkbenchController {
       ...nextState,
       canvasView: clampedCanvasView,
     });
-    const finalRenderSceneStartedAt = getDiagnosticTimeMs();
-    const finalRenderScene = this.buildRenderSceneSnapshot(finalState);
-    const finalRenderSceneDurationMs =
-      getDiagnosticTimeMs() - finalRenderSceneStartedAt;
+    const reusedPreliminaryRenderScene = clampedCanvasView === nextState.canvasView;
+    let finalRenderScene = preliminaryRenderScene;
+    let finalRenderSceneDurationMs = 0;
+
+    if (!reusedPreliminaryRenderScene) {
+      const finalRenderSceneStartedAt = getDiagnosticTimeMs();
+      finalRenderScene = this.buildRenderSceneSnapshot(finalState);
+      finalRenderSceneDurationMs =
+        getDiagnosticTimeMs() - finalRenderSceneStartedAt;
+    }
+
     const persistedWorkspaceChanged =
-      currentState.ui !== finalState.ui || currentState.canvasView !== finalState.canvasView;
+      this.lastSavedWorkspacePersistence === null ||
+      this.lastSavedWorkspacePersistence.ui !== finalState.ui ||
+      this.lastSavedWorkspacePersistence.canvasView !== finalState.canvasView;
 
     this.workspaceStore.rootStore.setSnapshot(finalState);
     this.topologyStore.setSnapshot(this.topology);
     this.renderSceneStore.setSnapshot(finalRenderScene);
-    const storageSaveStartedAt = getDiagnosticTimeMs();
-    this.saveWorkspaceState(finalState);
+    let storageSaveDurationMs = 0;
+
+    if (persistedWorkspaceChanged) {
+      const storageSaveStartedAt = getDiagnosticTimeMs();
+      this.saveWorkspaceState(finalState);
+      storageSaveDurationMs = getDiagnosticTimeMs() - storageSaveStartedAt;
+    }
 
     return {
       preliminaryRenderSceneDurationMs,
       finalRenderSceneDurationMs,
-      storageSaveDurationMs: getDiagnosticTimeMs() - storageSaveStartedAt,
+      storageSaveDurationMs,
       totalDurationMs: getDiagnosticTimeMs() - startedAt,
       persistedWorkspaceChanged,
+      reusedPreliminaryRenderScene,
     };
   }
 
   private saveWorkspaceState(workspaceState: WorkspaceState): void {
-    this.storage.saveWorkspaceState({
+    const persistenceState = {
       ui: workspaceState.ui,
       canvasView: workspaceState.canvasView,
-    } satisfies WorkspacePersistenceState);
+    } satisfies WorkspacePersistenceState;
+
+    this.storage.saveWorkspaceState(persistenceState);
+    this.lastSavedWorkspacePersistence = persistenceState;
   }
 
   private buildRenderSceneSnapshot(workspaceState: WorkspaceState): RenderSceneModel {
@@ -1031,6 +1051,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
             options.syncMetrics.storageSaveDurationMs.toFixed(2),
           ),
           persistedWorkspaceChanged: options.syncMetrics.persistedWorkspaceChanged,
+          reusedPreliminaryRenderScene: options.syncMetrics.reusedPreliminaryRenderScene,
           previewChanged: !isSamePlacementPreviewState(
             options.previousPreview,
             options.nextPreview,

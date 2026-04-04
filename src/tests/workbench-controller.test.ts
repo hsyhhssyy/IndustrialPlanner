@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_STAGE1_BASE_ID } from "@/domain/base/stage1-bases";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 
@@ -95,6 +95,10 @@ function toScreenPointForEntity(
 describe("WorkbenchController scaffold", () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("boots with a stage1 seed world and compiled topology", () => {
@@ -374,6 +378,30 @@ describe("WorkbenchController scaffold", () => {
       y: 12 * readWorkbenchState(controller).document.documentSettings.gridSize,
       valid: true,
     });
+
+    controller.dispose();
+  });
+
+  it("does not persist workspace state for preview-only placement updates", () => {
+    const controller = createWorkbenchController();
+    controller.setCanvasViewportSize({ x: 640, y: 360 });
+
+    controller.armPlacement("belt_straight_1x1", "belt");
+
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+
+    controller.updatePlacementPreviewFromScreenPoint(
+      toScreenPointForGrid(controller, { x: 24, y: 12 }),
+    );
+    controller.updatePlacementPreviewFromScreenPoint(
+      toScreenPointForGrid(controller, { x: 30, y: 18 }),
+    );
+
+    expect(setItemSpy).not.toHaveBeenCalled();
+
+    controller.panCanvasBy({ x: -16, y: 0 });
+
+    expect(setItemSpy).toHaveBeenCalled();
 
     controller.dispose();
   });

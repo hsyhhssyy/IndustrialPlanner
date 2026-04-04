@@ -19,6 +19,7 @@ import type {
   RenderPlacementPreview,
   RenderSceneModel,
 } from "@/renderer/scene/types";
+import { getRenderSceneSyncPlan } from "@/renderer/host/render-scene-sync-plan";
 import { createLogger } from "@/shared/logging/logger";
 
 const RENDERER_BACKGROUND_COLOR = 0x0d1218;
@@ -644,7 +645,7 @@ function drawPlacementPreview(
   return container;
 }
 
-function renderSceneToLayers(
+function renderStaticSceneToLayers(
   layers: PixiSceneLayers,
   scene: RenderSceneModel,
   textureCache: Map<string, Texture>,
@@ -652,7 +653,6 @@ function renderSceneToLayers(
   clearContainer(layers.grid);
   clearContainer(layers.links);
   clearContainer(layers.entities);
-  clearContainer(layers.preview);
 
   layers.grid.addChild(drawGridLayer(scene));
 
@@ -663,6 +663,14 @@ function renderSceneToLayers(
   for (const entity of scene.entities) {
     layers.entities.addChild(drawEntitySprite(scene, entity, textureCache));
   }
+}
+
+function renderPlacementPreviewLayer(
+  layers: PixiSceneLayers,
+  scene: RenderSceneModel,
+  textureCache: Map<string, Texture>,
+): void {
+  clearContainer(layers.preview);
 
   if (scene.placementPreview) {
     layers.preview.addChild(
@@ -707,6 +715,7 @@ export function createPixiRendererRuntime(
   let destroyed = false;
   let initialized = false;
   let latestScene: RenderSceneModel | null = null;
+  let renderedScene: RenderSceneModel | null = null;
   const resizeObserver = new ResizeObserver(() => {
     renderLatestScene();
   });
@@ -730,12 +739,20 @@ export function createPixiRendererRuntime(
     );
   }
 
-  function renderLatestScene(): void {
+  function renderLatestScene(options: {
+    forceStaticLayers?: boolean;
+  } = {}): void {
     if (!initialized || destroyed || !latestScene) {
       return;
     }
 
     const renderStartedAt = getDiagnosticTimeMs();
+    const syncPlan = options.forceStaticLayers
+      ? {
+          redrawStaticLayers: true,
+          redrawPreviewLayer: true,
+        }
+      : getRenderSceneSyncPlan(renderedScene, latestScene);
     const { resolution } = getSceneScreenSize(latestScene);
     const width = Math.max(1, Math.floor(hostElement.clientWidth));
     const height = Math.max(1, Math.floor(hostElement.clientHeight));
@@ -744,8 +761,17 @@ export function createPixiRendererRuntime(
       -latestScene.viewportOffset.x * latestScene.zoom,
       -latestScene.viewportOffset.y * latestScene.zoom,
     );
-    renderSceneToLayers(layers, latestScene, textureCache);
+
+    if (syncPlan.redrawStaticLayers) {
+      renderStaticSceneToLayers(layers, latestScene, textureCache);
+    }
+
+    if (syncPlan.redrawPreviewLayer) {
+      renderPlacementPreviewLayer(layers, latestScene, textureCache);
+    }
+
     app.render();
+    renderedScene = latestScene;
 
     const renderDurationMs = getDiagnosticTimeMs() - renderStartedAt;
 
@@ -848,7 +874,7 @@ export function createPixiRendererRuntime(
         }
 
         textureCache.set(path, texture);
-        renderLatestScene();
+        renderLatestScene({ forceStaticLayers: true });
       })
       .catch((error: unknown) => {
         pendingTexturePaths.delete(path);
