@@ -14,7 +14,6 @@ import type {
   PlacementPreviewState,
   PlacementPreviewStrategy,
 } from "@/editor/contracts/placement-preview";
-import { isSamePlacementPreviewState } from "@/editor/contracts/placement-preview";
 import { isPlacementTool } from "@/editor/core/editor-session";
 import type { GridPoint } from "@/shared/geometry/grid";
 
@@ -120,10 +119,6 @@ class EditorCoreImpl implements EditorCore {
   }
 
   setPlacementPreview(preview: PlacementPreviewState | null): void {
-    if (isSamePlacementPreviewState(this.session.placementPreview, preview)) {
-      return;
-    }
-
     this.session = {
       ...this.session,
       placementPreview: preview,

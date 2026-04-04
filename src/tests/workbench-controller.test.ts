@@ -417,28 +417,6 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("does not emit editor store updates when placement preview stays in the same cell", () => {
-    const controller = createWorkbenchController();
-
-    controller.armPlacement("belt_straight_1x1", "belt");
-    controller.updatePlacementPreviewFromScreenPoint(
-      toScreenPointForGrid(controller, { x: 24, y: 12 }),
-    );
-
-    const listener = vi.fn();
-    const unsubscribe = controller.editorStore.subscribe(listener);
-
-    controller.updatePlacementPreviewFromScreenPoint({
-      x: toScreenPointForGrid(controller, { x: 24, y: 12 }).x + 8,
-      y: toScreenPointForGrid(controller, { x: 24, y: 12 }).y + 8,
-    });
-
-    expect(listener).not.toHaveBeenCalled();
-
-    unsubscribe();
-    controller.dispose();
-  });
-
   it("does not persist workspace state for preview-only placement updates", () => {
     const controller = createWorkbenchController();
     controller.setCanvasViewportSize({ x: 640, y: 360 });
