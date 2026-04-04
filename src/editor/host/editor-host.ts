@@ -26,7 +26,14 @@ import {
   isStage1FootprintWithinBase,
 } from "@/domain/base/stage1-bases";
 import { isPlacementTool } from "@/editor/core/editor-session";
-import type { GridPoint } from "@/shared/geometry/grid";
+import {
+  getGridFootprintCenterCells,
+  getRotatedGridFootprint,
+  resolveCenteredGridPoint,
+  rotateGridRotationClockwise,
+  type GridPoint,
+  type GridRotation,
+} from "@/shared/geometry/grid";
 import { createLogger } from "@/shared/logging/logger";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 import type { CanvasPoint } from "@/workbench/workspace-state";
@@ -86,10 +93,15 @@ function hitTestWorldEntity(
       continue;
     }
 
+    const footprint = getRotatedGridFootprint(
+      definition.footprint,
+      entity.rotation,
+    );
+
     const x = entity.position.x * gridSize;
     const y = entity.position.y * gridSize;
-    const width = definition.footprint.width * gridSize;
-    const height = definition.footprint.height * gridSize;
+    const width = footprint.width * gridSize;
+    const height = footprint.height * gridSize;
 
     if (
       worldPoint.x >= x &&
@@ -115,10 +127,13 @@ function resolveCenteredPlacementGridPoint(options: {
   const centerXCells = options.worldPoint.x / options.gridSize;
   const centerYCells = options.worldPoint.y / options.gridSize;
 
-  return {
-    x: Math.max(0, Math.round(centerXCells - options.footprint.width / 2)),
-    y: Math.max(0, Math.round(centerYCells - options.footprint.height / 2)),
-  };
+  return resolveCenteredGridPoint(
+    {
+      x: centerXCells,
+      y: centerYCells,
+    },
+    options.footprint,
+  );
 }
 
 export interface EditorHost {
@@ -137,6 +152,7 @@ export interface EditorHost {
     tool?: EditorTool,
     strategy?: PlacementPreviewStrategy,
   ) => void;
+  rotatePlacementClockwise: () => boolean;
   queryPlacementAtWorldInput: (input: CanvasWorldInput) => PlacementQueryResult;
   queryPlacementPreview: (
     preview: PlacementPreviewState,
@@ -149,7 +165,11 @@ export interface EditorHost {
   setPlacementPreview: (preview: PlacementPreviewState | null) => void;
   selectEntity: (entityId: string | null) => void;
   setPendingLinkSource: (entityId: string | null) => void;
-  placeEntity: (definitionId: string, position: GridPoint) => void;
+  placeEntity: (
+    definitionId: string,
+    position: GridPoint,
+    rotation?: GridRotation,
+  ) => void;
   patchEntityConfig: (entityId: string, patch: Record<string, unknown>) => void;
   createLink: (sourceEntityId: string, targetEntityId: string) => void;
   removeLink: (linkId: string) => void;
@@ -251,6 +271,71 @@ class EditorHostImpl implements EditorHost {
       tool: tool ?? "place",
       strategy: strategy ?? "pointer-follow",
     });
+  }
+
+  rotatePlacementClockwise(): boolean {
+    const { session } = this.core.getSnapshot();
+
+    if (!isPlacementTool(session.activeTool) || !session.placementDefinitionId) {
+      return false;
+    }
+
+    const definition = this.getDefinition(session.placementDefinitionId);
+
+    if (!definition) {
+      return false;
+    }
+
+    const currentRotation = session.placementRotation ?? 0;
+    const nextRotation = rotateGridRotationClockwise(currentRotation);
+    this.core.setPlacementRotation(nextRotation);
+
+    if (!session.placementPreview) {
+      this.logger.info("Rotated armed placement before preview existed.", {
+        definitionId: session.placementDefinitionId,
+        previousRotation: currentRotation,
+        nextRotation,
+      });
+      return true;
+    }
+
+    const currentFootprint = getRotatedGridFootprint(
+      definition.footprint,
+      session.placementPreview.rotation,
+    );
+    const nextFootprint = getRotatedGridFootprint(
+      definition.footprint,
+      nextRotation,
+    );
+    const centerCells = getGridFootprintCenterCells(
+      session.placementPreview.gridPoint,
+      currentFootprint,
+    );
+    const rotatedPreview = {
+      ...session.placementPreview,
+      rotation: nextRotation,
+      gridPoint: resolveCenteredGridPoint(centerCells, nextFootprint),
+    } satisfies PlacementPreviewState;
+    const resolution = this.queryPlacementPreview(rotatedPreview);
+
+    if (
+      !isSamePlacementPreviewState(
+        session.placementPreview,
+        resolution.preview,
+      )
+    ) {
+      this.core.setPlacementPreview(resolution.preview);
+    }
+
+    this.logger.info("Rotated armed placement preview.", {
+      definitionId: session.placementDefinitionId,
+      previousRotation: currentRotation,
+      nextRotation,
+      previousGridPoint: session.placementPreview.gridPoint,
+      nextGridPoint: resolution.preview?.gridPoint ?? null,
+      invalidReason: resolution.invalidReason,
+    });
+    return true;
   }
 
   updatePlacementPreview(input: CanvasWorldInput): PlacementPreviewUpdateResult {
@@ -410,10 +495,15 @@ class EditorHostImpl implements EditorHost {
     this.logger.info("Confirmed placement from preview.", {
       definitionId: session.placementDefinitionId,
       gridPoint: resolution.preview.gridPoint,
+      rotation: resolution.preview.rotation,
       strategy: resolution.preview.strategy,
       overlappingEntityIds: resolution.overlappingEntityIds,
     });
-    this.core.placeEntity(session.placementDefinitionId, resolution.preview.gridPoint);
+    this.core.placeEntity(
+      session.placementDefinitionId,
+      resolution.preview.gridPoint,
+      resolution.preview.rotation,
+    );
     return true;
   }
 
@@ -457,7 +547,11 @@ class EditorHostImpl implements EditorHost {
       preview,
       overlappingEntityIds: resolution.overlappingEntityIds,
     });
-    this.core.placeEntity(session.placementDefinitionId, preview.gridPoint);
+    this.core.placeEntity(
+      session.placementDefinitionId,
+      preview.gridPoint,
+      preview.rotation,
+    );
     return true;
   }
 
@@ -481,8 +575,12 @@ class EditorHostImpl implements EditorHost {
     this.core.setPendingLinkSource(entityId);
   }
 
-  placeEntity(definitionId: string, position: GridPoint): void {
-    this.core.placeEntity(definitionId, position);
+  placeEntity(
+    definitionId: string,
+    position: GridPoint,
+    rotation?: GridRotation,
+  ): void {
+    this.core.placeEntity(definitionId, position, rotation);
   }
 
   patchEntityConfig(entityId: string, patch: Record<string, unknown>): void {
@@ -519,17 +617,19 @@ class EditorHostImpl implements EditorHost {
     definition: Stage1EntityDefinition,
     input: CanvasWorldInput,
   ): PlacementPreviewState {
+    const rotation = session.placementRotation ?? 0;
+    const footprint = getRotatedGridFootprint(definition.footprint, rotation);
     const previewGridPoint = resolveCenteredPlacementGridPoint({
       worldPoint: input.worldPoint,
       gridSize: document.documentSettings.gridSize,
-      footprint: definition.footprint,
+      footprint,
     });
 
     return {
       definitionId: session.placementDefinitionId ?? definition.id,
       strategy: session.placementStrategy ?? "pointer-follow",
       gridPoint: previewGridPoint,
-      rotation: 0,
+      rotation,
       valid: true,
     };
   }
@@ -541,15 +641,19 @@ class EditorHostImpl implements EditorHost {
     const { document } = this.core.getSnapshot();
     const topology = this.getTopology();
     const base = getStage1BaseDefinition(document.baseId);
+    const footprint = getRotatedGridFootprint(
+      definition.footprint,
+      preview.rotation,
+    );
     const overlappingEntityIds = this.collectOverlappingEntityIds(
       topology,
       preview.gridPoint,
-      definition.footprint,
+      footprint,
     );
     const withinBase = isStage1FootprintWithinBase({
       base,
       position: preview.gridPoint,
-      footprint: definition.footprint,
+      footprint,
     });
 
     return {

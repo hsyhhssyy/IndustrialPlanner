@@ -181,4 +181,42 @@ describe("Render scene model", () => {
       textureSrc: "/sprites/item_port_mix_pool_1.webp",
     });
   });
+
+  it("swaps non-square placement preview bounds when rotated", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const scene = buildRenderScene({
+      locale: "zh-CN",
+      document,
+      topology,
+      registry,
+      canvasView: createInitialCanvasViewState(),
+      interaction: {
+        selectedEntityIds: [],
+        placementPreview: {
+          definitionId: "item_port_unloader_1",
+          strategy: "anchored-confirm",
+          gridPoint: { x: 24, y: 12 },
+          rotation: 90,
+          valid: true,
+        },
+        pendingLinkSourceEntityId: null,
+      },
+      runtimeSnapshot: {
+        tick: 0,
+        status: "idle",
+        entityViews: {},
+        patchedEntityIds: [],
+      },
+    });
+
+    expect(scene.placementPreview).toMatchObject({
+      definitionId: "item_port_unloader_1",
+      strategy: "anchored-confirm",
+      width: document.documentSettings.gridSize,
+      height: document.documentSettings.gridSize * 3,
+      rotation: 90,
+    });
+  });
 });

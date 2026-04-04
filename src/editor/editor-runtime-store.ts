@@ -39,6 +39,7 @@ export function isSameEditorSession(
     left.dragPreviewEntityId === right.dragPreviewEntityId &&
     left.placementDefinitionId === right.placementDefinitionId &&
     left.placementStrategy === right.placementStrategy &&
+    left.placementRotation === right.placementRotation &&
     isSamePlacementPreviewState(left.placementPreview, right.placementPreview) &&
     left.pendingLinkSourceEntityId === right.pendingLinkSourceEntityId
   );
@@ -64,6 +65,7 @@ function cloneEditorSession(session: EditorSession): EditorSession {
     dragPreviewEntityId: session.dragPreviewEntityId,
     placementDefinitionId: session.placementDefinitionId,
     placementStrategy: session.placementStrategy,
+    placementRotation: session.placementRotation,
     placementPreview: session.placementPreview
       ? {
           ...session.placementPreview,
@@ -171,6 +173,10 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
 
     if (this.session.placementStrategy !== session.placementStrategy) {
       this.session.placementStrategy = session.placementStrategy;
+    }
+
+    if (this.session.placementRotation !== session.placementRotation) {
+      this.session.placementRotation = session.placementRotation;
     }
 
     if (

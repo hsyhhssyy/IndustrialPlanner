@@ -16,6 +16,7 @@ import {
   getStage1BaseDefinition,
   isStage1FootprintWithinBase,
 } from "@/domain/base/stage1-bases";
+import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
 function toCellKey(x: number, y: number): string {
   return `${x},${y}`;
@@ -75,6 +76,11 @@ export function compileStage1World(
       continue;
     }
 
+    const footprint = getRotatedGridFootprint(
+      definition.footprint,
+      entity.rotation,
+    );
+
     entityViews[entity.id] = {
       entityId: entity.id,
       definition,
@@ -85,7 +91,7 @@ export function compileStage1World(
       !isStage1FootprintWithinBase({
         base,
         position: entity.position,
-        footprint: definition.footprint,
+        footprint,
       })
     ) {
       diagnostics.push({
@@ -99,8 +105,8 @@ export function compileStage1World(
     addFootprintToOccupancy(
       occupancyIndex,
       entity,
-      definition.footprint.width,
-      definition.footprint.height,
+      footprint.width,
+      footprint.height,
     );
 
     if (definition.capabilityIds.includes("conveyor-track")) {

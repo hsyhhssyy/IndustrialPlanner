@@ -136,6 +136,67 @@ describe("WorkspaceDerivedStore", () => {
     });
   });
 
+  it("keeps anchored-confirm screen boxes rotation-aware for non-square footprints", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const workspaceState = {
+      document,
+      editor: {
+        session: {
+          ...createInitialEditorSession(),
+          placementPreview: {
+            definitionId: "item_port_unloader_1",
+            strategy: "anchored-confirm" as const,
+            gridPoint: { x: 2, y: 3 },
+            rotation: 90 as const,
+            valid: true,
+          },
+        },
+        history: {
+          canUndo: false,
+          canRedo: false,
+          undoDepth: 0,
+          redoDepth: 0,
+        },
+      },
+      ui: createInitialWorkbenchUiState(),
+      canvasView: {
+        offset: { x: 10, y: 20 },
+        zoom: 2,
+      },
+      simulation: {
+        runtimeSnapshot: {
+          tick: 0,
+          status: "idle" as const,
+          entityViews: {},
+          patchedEntityIds: [],
+        },
+        telemetry: {
+          tick: 0,
+          simulatedHertz: 0,
+          entityCount: 0,
+        },
+        inspectorDetails: null,
+        patchSet: createEmptySimulationPatchSet(),
+        selection: [],
+      },
+    };
+
+    expect(
+      deriveRenderDerivedState({
+        workspaceState,
+        topology,
+        registry,
+      }).anchoredPlacementScreenBox,
+    ).toEqual({
+      left: 204,
+      top: 296,
+      width: 112,
+      height: 336,
+    });
+  });
+
   it("does not notify render subscribers when only unused simulation state changes", () => {
     const document = createStage1SeedWorldDocument();
     const registry = createStage1Registry();

@@ -6,6 +6,7 @@ import {
 } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import type { PlacementPreviewState } from "@/editor/contracts/placement-preview";
+import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
 export interface RenderWorldBoundsPx {
   width: number;
@@ -40,15 +41,19 @@ function getPlacementPreviewBoundsPx(
   }
 
   const { gridSize } = options.document.documentSettings;
+  const footprint = getRotatedGridFootprint(
+    definition.footprint,
+    preview.rotation,
+  );
 
   return {
     width:
       preview.gridPoint.x * gridSize +
-      definition.footprint.width * gridSize +
+      footprint.width * gridSize +
       gridSize * RENDER_WORLD_PADDING_CELLS,
     height:
       preview.gridPoint.y * gridSize +
-      definition.footprint.height * gridSize +
+      footprint.height * gridSize +
       gridSize * RENDER_WORLD_PADDING_CELLS,
   };
 }
@@ -76,16 +81,21 @@ export function deriveRenderWorldBoundsPx(
       continue;
     }
 
+    const footprint = getRotatedGridFootprint(
+      definition.footprint,
+      entity.rotation,
+    );
+
     width = Math.max(
       width,
       entity.position.x * gridSize +
-        definition.footprint.width * gridSize +
+        footprint.width * gridSize +
         gridSize * RENDER_WORLD_PADDING_CELLS,
     );
     height = Math.max(
       height,
       entity.position.y * gridSize +
-        definition.footprint.height * gridSize +
+        footprint.height * gridSize +
         gridSize * RENDER_WORLD_PADDING_CELLS,
     );
   }

@@ -11,6 +11,7 @@ export function createInitialEditorSession(): EditorSession {
     dragPreviewEntityId: null,
     placementDefinitionId: null,
     placementStrategy: null,
+    placementRotation: null,
     placementPreview: null,
     pendingLinkSourceEntityId: null,
   };

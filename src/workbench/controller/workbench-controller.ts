@@ -45,6 +45,7 @@ import {
 } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
+import { isPlacementTool } from "@/editor/core/editor-session";
 import type { EditorTool } from "@/editor/contracts/editor-session";
 import {
   isSamePlacementPreviewState,
@@ -301,6 +302,36 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.sync();
   }
 
+  rotatePlacementClockwise(): void {
+    const didRotate = this.editorHost.rotatePlacementClockwise();
+
+    if (!didRotate) {
+      return;
+    }
+
+    this.sync();
+  }
+
+  cancelPlacement(): void {
+    const session = this.editorHost.getState().session;
+
+    if (
+      !isPlacementTool(session.activeTool) ||
+      !session.placementDefinitionId
+    ) {
+      return;
+    }
+
+    this.editorHost.setActiveTool("select");
+    this.logger.info("Canceled armed placement and returned to select tool.", {
+      previousTool: session.activeTool,
+      placementDefinitionId: session.placementDefinitionId,
+      placementStrategy: session.placementStrategy,
+      placementRotation: session.placementRotation,
+    });
+    this.sync();
+  }
+
   centerPlacementPreview(): void {
     if (this.viewportSize.x <= 0 || this.viewportSize.y <= 0) {
       return;
@@ -422,6 +453,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       activeTool: session.activeTool,
       placementDefinitionId: session.placementDefinitionId,
       placementStrategy: session.placementStrategy,
+      placementRotation: session.placementRotation,
     });
     const before = this.captureMutationState();
     const didPlace = this.editorHost.commitPlacement(worldInput);

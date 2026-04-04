@@ -15,7 +15,7 @@ import type {
   PlacementPreviewStrategy,
 } from "@/editor/contracts/placement-preview";
 import { isPlacementTool } from "@/editor/core/editor-session";
-import type { GridPoint } from "@/shared/geometry/grid";
+import type { GridPoint, GridRotation } from "@/shared/geometry/grid";
 
 interface DocumentHistoryEntry {
   command: DocumentCommand;
@@ -46,10 +46,15 @@ export interface EditorCore {
     tool?: EditorTool,
     strategy?: PlacementPreviewStrategy,
   ) => void;
+  setPlacementRotation: (rotation: GridRotation | null) => void;
   setPlacementPreview: (preview: PlacementPreviewState | null) => void;
   selectEntity: (entityId: string | null) => void;
   setPendingLinkSource: (entityId: string | null) => void;
-  placeEntity: (definitionId: string, position: GridPoint) => void;
+  placeEntity: (
+    definitionId: string,
+    position: GridPoint,
+    rotation?: GridRotation,
+  ) => void;
   patchEntityConfig: (entityId: string, patch: Record<string, unknown>) => void;
   createLink: (sourceEntityId: string, targetEntityId: string) => void;
   removeLink: (linkId: string) => void;
@@ -95,6 +100,9 @@ class EditorCoreImpl implements EditorCore {
       placementStrategy: isPlacementTool(tool)
         ? this.session.placementStrategy
         : null,
+      placementRotation: isPlacementTool(tool)
+        ? this.session.placementRotation
+        : null,
       placementPreview: isPlacementTool(tool)
         ? this.session.placementPreview
         : null,
@@ -113,8 +121,16 @@ class EditorCoreImpl implements EditorCore {
       activeTool: tool,
       placementDefinitionId: definitionId,
       placementStrategy: strategy,
+      placementRotation: 0,
       placementPreview: null,
       pendingLinkSourceEntityId: null,
+    };
+  }
+
+  setPlacementRotation(rotation: GridRotation | null): void {
+    this.session = {
+      ...this.session,
+      placementRotation: rotation,
     };
   }
 
@@ -139,7 +155,11 @@ class EditorCoreImpl implements EditorCore {
     };
   }
 
-  placeEntity(definitionId: string, position: GridPoint): void {
+  placeEntity(
+    definitionId: string,
+    position: GridPoint,
+    rotation: GridRotation = 0,
+  ): void {
     const entityId = createWorldEntityId(this.document, definitionId);
     const nextCommand: DocumentCommand = {
       type: "entity.place",
@@ -147,7 +167,7 @@ class EditorCoreImpl implements EditorCore {
         entityId,
         definitionId,
         position,
-        rotation: 0,
+        rotation,
         config: {},
         tags: ["user-placed"],
       },
@@ -159,6 +179,7 @@ class EditorCoreImpl implements EditorCore {
         selection: [entityId],
         placementDefinitionId: definitionId,
         placementStrategy: this.session.placementStrategy,
+        placementRotation: this.session.placementRotation,
         placementPreview: this.session.placementPreview,
         pendingLinkSourceEntityId: null,
       };
@@ -320,6 +341,10 @@ class EditorCoreImpl implements EditorCore {
       selection,
       hoveredEntityId,
       dragPreviewEntityId,
+      placementRotation:
+        this.session.placementDefinitionId && isPlacementTool(this.session.activeTool)
+          ? this.session.placementRotation
+          : null,
       pendingLinkSourceEntityId,
       placementPreview:
         this.session.placementDefinitionId && isPlacementTool(this.session.activeTool)

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_STAGE1_BASE_ID } from "@/domain/base/stage1-bases";
 import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
+import { getRotatedGridFootprint, type GridRotation } from "@/shared/geometry/grid";
 import { createPlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 
@@ -77,6 +78,7 @@ function toScreenPointForPlacementCenter(
   controller: ReturnType<typeof createWorkbenchController>,
   definitionId: string,
   gridPoint: { x: number; y: number },
+  rotation: GridRotation = 0,
 ) {
   const snapshot = readWorkbenchState(controller);
   const definition = snapshot.registry.entityDefinitions.find(
@@ -87,12 +89,13 @@ function toScreenPointForPlacementCenter(
     throw new Error(`Missing definition ${definitionId}`);
   }
 
+  const footprint = getRotatedGridFootprint(definition.footprint, rotation);
   const scaledGridSize =
     snapshot.document.documentSettings.gridSize * snapshot.canvasView.zoom;
 
   return {
-    x: (gridPoint.x + definition.footprint.width / 2) * scaledGridSize,
-    y: (gridPoint.y + definition.footprint.height / 2) * scaledGridSize,
+    x: (gridPoint.x + footprint.width / 2) * scaledGridSize,
+    y: (gridPoint.y + footprint.height / 2) * scaledGridSize,
   };
 }
 
@@ -414,6 +417,80 @@ describe("WorkbenchController scaffold", () => {
       y: 12 * readWorkbenchState(controller).document.documentSettings.gridSize,
       valid: true,
     });
+
+    controller.dispose();
+  });
+
+  it("rotates armed placement around its center and commits the rotated entity footprint", async () => {
+    const controller = createWorkbenchController();
+
+    controller.armPlacement("item_port_unloader_1", "place");
+    controller.updatePlacementPreviewFromScreenPoint(
+      toScreenPointForPlacementCenter(
+        controller,
+        "item_port_unloader_1",
+        { x: 24, y: 12 },
+      ),
+    );
+    controller.rotatePlacementClockwise();
+
+    expect(readWorkbenchState(controller).activePlacementPreview).toEqual({
+      definitionId: "item_port_unloader_1",
+      strategy: "pointer-follow",
+      gridPoint: { x: 25, y: 11 },
+      rotation: 90,
+      valid: true,
+    });
+
+    await controller.commitPlacementAtScreenPoint(
+      toScreenPointForPlacementCenter(
+        controller,
+        "item_port_unloader_1",
+        { x: 25, y: 11 },
+        90,
+      ),
+    );
+
+    const after = readWorkbenchState(controller);
+    const placedEntityId = after.document.entityOrder.at(-1);
+    const placedEntity = placedEntityId
+      ? after.document.entities[placedEntityId]
+      : null;
+
+    expect(placedEntity?.definitionId).toBe("item_port_unloader_1");
+    expect(placedEntity?.position).toEqual({ x: 25, y: 11 });
+    expect(placedEntity?.rotation).toBe(90);
+    expect(after.topology.occupancyIndex["25,13"]).toContain(placedEntityId);
+    expect(after.topology.occupancyIndex["27,11"] ?? []).not.toContain(
+      placedEntityId,
+    );
+    expect(
+      after.renderScene.entities.find((entity) => entity.entityId === placedEntityId),
+    ).toMatchObject({
+      width: after.document.documentSettings.gridSize,
+      height: after.document.documentSettings.gridSize * 3,
+      rotation: 90,
+    });
+
+    controller.dispose();
+  });
+
+  it("cancels armed placement by returning to the select tool", () => {
+    const controller = createWorkbenchController();
+    const previousSelection = readWorkbenchState(controller).session.selection;
+
+    controller.armPlacement("belt_straight_1x1", "belt");
+    controller.rotatePlacementClockwise();
+    controller.cancelPlacement();
+
+    const after = readWorkbenchState(controller);
+
+    expect(after.session.activeTool).toBe("select");
+    expect(after.session.selection).toEqual(previousSelection);
+    expect(after.session.placementDefinitionId).toBeNull();
+    expect(after.session.placementStrategy).toBeNull();
+    expect(after.session.placementRotation).toBeNull();
+    expect(after.activePlacementPreview).toBeNull();
 
     controller.dispose();
   });

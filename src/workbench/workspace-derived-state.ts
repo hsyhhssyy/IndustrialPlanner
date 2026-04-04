@@ -4,6 +4,7 @@ import {
 } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import { deriveRenderWorldBoundsPx } from "@/renderer/scene/render-world-bounds";
+import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import type { CanvasPoint, WorkspaceState } from "@/workbench/workspace-state";
 
 export interface RenderDerivedScreenBox {
@@ -58,12 +59,16 @@ function deriveAnchoredPlacementScreenBox(
   }
 
   const { gridSize } = document.documentSettings;
+  const footprint = getRotatedGridFootprint(
+    definition.footprint,
+    preview.rotation,
+  );
 
   return {
     left: (preview.gridPoint.x * gridSize - canvasView.offset.x) * canvasView.zoom,
     top: (preview.gridPoint.y * gridSize - canvasView.offset.y) * canvasView.zoom,
-    width: definition.footprint.width * gridSize * canvasView.zoom,
-    height: definition.footprint.height * gridSize * canvasView.zoom,
+    width: footprint.width * gridSize * canvasView.zoom,
+    height: footprint.height * gridSize * canvasView.zoom,
   };
 }
 

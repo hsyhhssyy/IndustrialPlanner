@@ -17,6 +17,8 @@ import {
   shouldShowStage1EntityLabel,
 } from "@/renderer/scene/stage1-device-rendering";
 import { deriveRenderWorldBoundsPx } from "@/renderer/scene/render-world-bounds";
+import type { GridRotation } from "@/shared/geometry/grid";
+import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
 function getEntityFill(definition: Stage1EntityDefinition): string {
   switch (definition.category) {
@@ -39,14 +41,12 @@ function getEntityFill(definition: Stage1EntityDefinition): string {
 
 function getEntityFootprintSize(
   definition: Stage1EntityDefinition,
+  rotation: GridRotation,
 ): {
   width: number;
   height: number;
 } {
-  return {
-    width: definition.footprint.width,
-    height: definition.footprint.height,
-  };
+  return getRotatedGridFootprint(definition.footprint, rotation);
 }
 
 function buildEntitySprite(input: RenderSceneInput, entityId: string): RenderEntitySprite | null {
@@ -63,7 +63,7 @@ function buildEntitySprite(input: RenderSceneInput, entityId: string): RenderEnt
     return null;
   }
 
-  const footprint = getEntityFootprintSize(definition);
+  const footprint = getEntityFootprintSize(definition, entity.rotation);
   const renderKind = getStage1EntityRenderKind(entity.definitionId);
   const textureMetrics = getStage1EntityTextureMetrics({
     definition,
@@ -103,25 +103,36 @@ function buildExplicitLinkSprites(
     .map((link) => {
       const sourceView = input.topology.entityViews[link.sourceEntityId];
       const targetView = input.topology.entityViews[link.targetEntityId];
+      const sourceEntity = input.document.entities[link.sourceEntityId];
+      const targetEntity = input.document.entities[link.targetEntityId];
 
-      if (!sourceView || !targetView) {
+      if (!sourceView || !targetView || !sourceEntity || !targetEntity) {
         return null;
       }
+
+      const sourceFootprint = getEntityFootprintSize(
+        sourceView.definition,
+        sourceEntity.rotation,
+      );
+      const targetFootprint = getEntityFootprintSize(
+        targetView.definition,
+        targetEntity.rotation,
+      );
 
       return {
         id: link.id,
         kind: link.kind,
         x1:
-          (sourceView.position.x + sourceView.definition.footprint.width / 2) *
+          (sourceView.position.x + sourceFootprint.width / 2) *
           input.document.documentSettings.gridSize,
         y1:
-          (sourceView.position.y + sourceView.definition.footprint.height / 2) *
+          (sourceView.position.y + sourceFootprint.height / 2) *
           input.document.documentSettings.gridSize,
         x2:
-          (targetView.position.x + targetView.definition.footprint.width / 2) *
+          (targetView.position.x + targetFootprint.width / 2) *
           input.document.documentSettings.gridSize,
         y2:
-          (targetView.position.y + targetView.definition.footprint.height / 2) *
+          (targetView.position.y + targetFootprint.height / 2) *
           input.document.documentSettings.gridSize,
         selected:
           input.interaction.selectedEntityIds.includes(link.sourceEntityId) ||
@@ -150,6 +161,7 @@ function buildPlacementPreview(
   }
 
   const renderKind = getStage1EntityRenderKind(preview.definitionId);
+  const footprint = getEntityFootprintSize(definition, preview.rotation);
   const textureMetrics = getStage1EntityTextureMetrics({
     definition,
     gridSize: input.document.documentSettings.gridSize,
@@ -162,8 +174,8 @@ function buildPlacementPreview(
     label: getLocalizedStage1EntityName(input.locale, definition),
     x: preview.gridPoint.x * input.document.documentSettings.gridSize,
     y: preview.gridPoint.y * input.document.documentSettings.gridSize,
-    width: definition.footprint.width * input.document.documentSettings.gridSize,
-    height: definition.footprint.height * input.document.documentSettings.gridSize,
+    width: footprint.width * input.document.documentSettings.gridSize,
+    height: footprint.height * input.document.documentSettings.gridSize,
     rotation: preview.rotation,
     renderKind,
     fill: getEntityFill(definition),

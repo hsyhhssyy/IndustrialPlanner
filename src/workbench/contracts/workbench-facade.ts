@@ -46,6 +46,8 @@ export interface WorkbenchController {
     tool?: EditorTool,
     strategy?: PlacementPreviewStrategy,
   ) => void;
+  rotatePlacementClockwise: () => void;
+  cancelPlacement: () => void;
   centerPlacementPreview: () => void;
   updatePlacementPreviewFromScreenPoint: (screenPoint: CanvasPoint) => void;
   confirmPlacementPreview: () => Promise<void>;
