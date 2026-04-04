@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_STAGE1_BASE_ID } from "@/domain/base/stage1-bases";
 import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
+import { createPlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 
 function readWorkbenchState(
@@ -412,6 +413,46 @@ describe("WorkbenchController scaffold", () => {
       x: 24 * readWorkbenchState(controller).document.documentSettings.gridSize,
       y: 12 * readWorkbenchState(controller).document.documentSettings.gridSize,
       valid: true,
+    });
+
+    controller.dispose();
+  });
+
+  it("collects placement preview profiling stats for changed and unchanged preview updates", () => {
+    const placementPreviewProfiler = createPlacementPreviewProfiler();
+    placementPreviewProfiler.setEnabled(true);
+    const controller = createWorkbenchController({
+      placementPreviewProfiler,
+    });
+
+    controller.armPlacement("belt_straight_1x1", "belt");
+    placementPreviewProfiler.reset();
+
+    const placementPoint = toScreenPointForPlacementCenter(
+      controller,
+      "belt_straight_1x1",
+      {
+        x: 8,
+        y: 3,
+      },
+    );
+
+    controller.updatePlacementPreviewFromScreenPoint(placementPoint);
+    controller.updatePlacementPreviewFromScreenPoint(placementPoint);
+
+    const snapshot = placementPreviewProfiler.getSnapshot();
+
+    expect(snapshot.counts.updateCalls).toBe(2);
+    expect(snapshot.counts.previewChangedCalls).toBe(1);
+    expect(snapshot.counts.previewUnchangedCalls).toBe(1);
+    expect(snapshot.stages["controller.total"].count).toBe(2);
+    expect(snapshot.stages["editor.hitTest"].count).toBe(2);
+    expect(snapshot.stages["controller.sync.total"].count).toBe(2);
+    expect(snapshot.latest).toMatchObject({
+      changed: false,
+      nextPreview: {
+        definitionId: "belt_straight_1x1",
+      },
     });
 
     controller.dispose();

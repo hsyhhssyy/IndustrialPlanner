@@ -72,6 +72,7 @@ import {
   setLogLevel as setGlobalLogLevel,
   type LogLevel,
 } from "@/shared/logging/logger";
+import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 
 interface MutationState {
   document: WorldDocument;
@@ -134,6 +135,10 @@ function clonePlacementPreview(
   };
 }
 
+interface CreateWorkbenchControllerOptions {
+  placementPreviewProfiler?: PlacementPreviewProfiler;
+}
+
 class WorkbenchControllerImpl implements WorkbenchController {
   readonly registry: Stage1Registry;
   readonly uiStore;
@@ -144,6 +149,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   readonly simulationStore;
 
   private readonly logger = createLogger("workbench.controller");
+  private readonly placementPreviewProfiler?: PlacementPreviewProfiler;
   private readonly storage: WorkspaceStorage;
   private readonly workspaceStore: WorkspaceStore;
   private readonly editorHost: EditorHost;
@@ -167,7 +173,8 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   private static readonly BUTTON_ZOOM_FACTOR = 1.2;
 
-  constructor() {
+  constructor(options: CreateWorkbenchControllerOptions = {}) {
+    this.placementPreviewProfiler = options.placementPreviewProfiler;
     this.registry = createStage1Registry();
     this.storage = createWorkspaceStorage();
 
@@ -184,6 +191,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       getTopology: () => this.topology,
       getDefinition: (definitionId) =>
         getStage1EntityDefinition(this.registry, definitionId),
+      placementPreviewProfiler: this.placementPreviewProfiler,
     });
     this.topology = compileStage1World(this.editorHost.getDocument(), this.registry);
     this.simulationHost = createSimulationHost();
@@ -303,27 +311,44 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   updatePlacementPreviewFromScreenPoint(screenPoint: CanvasPoint): void {
-    const sessionBefore = this.editorStore.getSnapshot().session;
-    const previousPreview = clonePlacementPreview(sessionBefore.placementPreview);
-    const worldInput = this.resolveWorldInput(screenPoint);
-    const updateResult = this.editorHost.updatePlacementPreview(worldInput);
-    const nextPreview = clonePlacementPreview(
-      this.editorStore.getSnapshot().session.placementPreview,
-    );
-    const syncMetrics = this.sync();
+    this.measureProfilerStage("controller.total", () => {
+      const sessionBefore = this.editorStore.getSnapshot().session;
+      const previousPreview = clonePlacementPreview(sessionBefore.placementPreview);
+      const worldInput = this.measureProfilerStage(
+        "controller.resolveWorldInput",
+        () => this.resolveWorldInput(screenPoint),
+      );
+      const updateResult = this.editorHost.updatePlacementPreview(worldInput);
+      const nextPreview = clonePlacementPreview(
+        this.editorStore.getSnapshot().session.placementPreview,
+      );
 
-    if (sessionBefore.placementDefinitionId && sessionBefore.placementStrategy) {
-      this.recordPlacementPreviewDiagnostic({
-        definitionId: sessionBefore.placementDefinitionId,
-        strategy: sessionBefore.placementStrategy,
-        screenPoint,
-        worldInput,
+      this.placementPreviewProfiler?.recordUpdateResult({
+        changed: updateResult.changed,
         previousPreview,
         nextPreview,
-        updateResult,
-        syncMetrics,
       });
-    }
+
+      const syncMetrics = this.sync();
+
+      if (sessionBefore.placementDefinitionId && sessionBefore.placementStrategy) {
+        const definitionId = sessionBefore.placementDefinitionId;
+        const strategy = sessionBefore.placementStrategy;
+
+        this.measureProfilerStage("controller.diagnostics", () => {
+          this.recordPlacementPreviewDiagnostic({
+            definitionId,
+            strategy,
+            screenPoint,
+            worldInput,
+            previousPreview,
+            nextPreview,
+            updateResult,
+            syncMetrics,
+          });
+        });
+      }
+    });
   }
 
   async confirmPlacementPreview(): Promise<void> {
@@ -810,49 +835,62 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   private sync(): SyncMetrics {
-    const startedAt = getDiagnosticTimeMs();
-    const currentState = this.workspaceStore.rootStore.getSnapshot();
-    const nextState = this.composeWorkspaceState(currentState, {
-      document: this.editorHost.getDocument(),
-      editor: this.editorHost.getState(),
-      ui: currentState.ui,
-      canvasView: currentState.canvasView,
-      simulation: this.simulationHost.getSnapshot(),
+    return this.measureProfilerStage("controller.sync.total", () => {
+      const startedAt = getDiagnosticTimeMs();
+      const currentState = this.workspaceStore.rootStore.getSnapshot();
+      const nextState = this.composeWorkspaceState(currentState, {
+        document: this.editorHost.getDocument(),
+        editor: this.editorHost.getState(),
+        ui: currentState.ui,
+        canvasView: currentState.canvasView,
+        simulation: this.simulationHost.getSnapshot(),
+      });
+      const worldBoundsStartedAt = getDiagnosticTimeMs();
+      const clampedCanvasView = this.measureProfilerStage(
+        "controller.sync.worldBounds",
+        () =>
+          clampCanvasViewState(nextState.canvasView, this.getViewportMetrics(nextState)),
+      );
+      const worldBoundsDurationMs = getDiagnosticTimeMs() - worldBoundsStartedAt;
+      const finalState = this.composeWorkspaceState(nextState, {
+        ...nextState,
+        canvasView: clampedCanvasView,
+      });
+      const canvasViewClamped = clampedCanvasView !== nextState.canvasView;
+
+      const persistedWorkspaceChanged =
+        this.lastSavedWorkspacePersistence === null ||
+        this.lastSavedWorkspacePersistence.ui !== finalState.ui ||
+        this.lastSavedWorkspacePersistence.canvasView !== finalState.canvasView;
+
+      const rootStoreSetStartedAt = getDiagnosticTimeMs();
+      this.workspaceStore.rootStore.setSnapshot(finalState);
+      this.recordProfilerStageDuration(
+        "controller.sync.rootStoreSet",
+        getDiagnosticTimeMs() - rootStoreSetStartedAt,
+      );
+      const topologyStoreSetStartedAt = getDiagnosticTimeMs();
+      this.topologyStore.setSnapshot(this.topology);
+      this.recordProfilerStageDuration(
+        "controller.sync.topologyStoreSet",
+        getDiagnosticTimeMs() - topologyStoreSetStartedAt,
+      );
+      let storageSaveDurationMs = 0;
+
+      if (persistedWorkspaceChanged) {
+        const storageSaveStartedAt = getDiagnosticTimeMs();
+        this.saveWorkspaceState(finalState);
+        storageSaveDurationMs = getDiagnosticTimeMs() - storageSaveStartedAt;
+      }
+
+      return {
+        worldBoundsDurationMs,
+        storageSaveDurationMs,
+        totalDurationMs: getDiagnosticTimeMs() - startedAt,
+        persistedWorkspaceChanged,
+        canvasViewClamped,
+      };
     });
-    const worldBoundsStartedAt = getDiagnosticTimeMs();
-    const clampedCanvasView = clampCanvasViewState(
-      nextState.canvasView,
-      this.getViewportMetrics(nextState),
-    );
-    const worldBoundsDurationMs = getDiagnosticTimeMs() - worldBoundsStartedAt;
-    const finalState = this.composeWorkspaceState(nextState, {
-      ...nextState,
-      canvasView: clampedCanvasView,
-    });
-    const canvasViewClamped = clampedCanvasView !== nextState.canvasView;
-
-    const persistedWorkspaceChanged =
-      this.lastSavedWorkspacePersistence === null ||
-      this.lastSavedWorkspacePersistence.ui !== finalState.ui ||
-      this.lastSavedWorkspacePersistence.canvasView !== finalState.canvasView;
-
-    this.workspaceStore.rootStore.setSnapshot(finalState);
-    this.topologyStore.setSnapshot(this.topology);
-    let storageSaveDurationMs = 0;
-
-    if (persistedWorkspaceChanged) {
-      const storageSaveStartedAt = getDiagnosticTimeMs();
-      this.saveWorkspaceState(finalState);
-      storageSaveDurationMs = getDiagnosticTimeMs() - storageSaveStartedAt;
-    }
-
-    return {
-      worldBoundsDurationMs,
-      storageSaveDurationMs,
-      totalDurationMs: getDiagnosticTimeMs() - startedAt,
-      persistedWorkspaceChanged,
-      canvasViewClamped,
-    };
   }
 
   private saveWorkspaceState(workspaceState: WorkspaceState): void {
@@ -1030,8 +1068,35 @@ class WorkbenchControllerImpl implements WorkbenchController {
       diagnostics.latest = null;
     }
   }
+
+  private measureProfilerStage<T>(
+    stageId:
+      | "controller.total"
+      | "controller.resolveWorldInput"
+      | "controller.sync.total"
+      | "controller.sync.worldBounds"
+      | "controller.diagnostics",
+    callback: () => T,
+  ): T {
+    if (this.placementPreviewProfiler) {
+      return this.placementPreviewProfiler.measureStage(stageId, callback);
+    }
+
+    return callback();
+  }
+
+  private recordProfilerStageDuration(
+    stageId:
+      | "controller.sync.rootStoreSet"
+      | "controller.sync.topologyStoreSet",
+    durationMs: number,
+  ): void {
+    this.placementPreviewProfiler?.recordStageDuration(stageId, durationMs);
+  }
 }
 
-export function createWorkbenchController(): WorkbenchController {
-  return new WorkbenchControllerImpl();
+export function createWorkbenchController(
+  options: CreateWorkbenchControllerOptions = {},
+): WorkbenchController {
+  return new WorkbenchControllerImpl(options);
 }

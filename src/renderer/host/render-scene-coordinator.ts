@@ -14,6 +14,7 @@ import type {
 } from "@/workbench/workspace-state";
 import type { WorkbenchUiState } from "@/workbench/workbench-ui-state";
 import type { AppLocale } from "@/i18n/messages";
+import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 
 export interface RenderSceneCoordinatorSource {
   documentStore: ReadonlySnapshotStore<WorldDocument>;
@@ -43,6 +44,7 @@ export interface CreateRenderSceneCoordinatorOptions {
   presentScene: (scene: RenderSceneModel) => void;
   requestFrame?: (callback: FrameRequestCallback) => number;
   cancelFrame?: (handle: number) => void;
+  placementPreviewProfiler?: PlacementPreviewProfiler;
 }
 
 function buildRenderInteractionState(
@@ -127,17 +129,31 @@ export function createRenderSceneCoordinator(
     }
 
     dirty = false;
-    options.presentScene(
-      buildRenderScene({
-        locale: currentInput.locale,
-        document: currentInput.document,
-        topology: currentInput.topology,
-        registry: options.source.registry,
-        canvasView: currentInput.canvasView,
-        interaction: currentInput.interaction,
-        runtimeSnapshot: currentInput.runtimeSnapshot,
-      }),
-    );
+    const scene = options.placementPreviewProfiler
+      ? options.placementPreviewProfiler.measureStage(
+          "render.coordinator.buildScene",
+          () =>
+            buildRenderScene({
+              locale: currentInput.locale,
+              document: currentInput.document,
+              topology: currentInput.topology,
+              registry: options.source.registry,
+              canvasView: currentInput.canvasView,
+              interaction: currentInput.interaction,
+              runtimeSnapshot: currentInput.runtimeSnapshot,
+            }),
+        )
+      : buildRenderScene({
+          locale: currentInput.locale,
+          document: currentInput.document,
+          topology: currentInput.topology,
+          registry: options.source.registry,
+          canvasView: currentInput.canvasView,
+          interaction: currentInput.interaction,
+          runtimeSnapshot: currentInput.runtimeSnapshot,
+        });
+
+    options.presentScene(scene);
   };
 
   const schedule = () => {
@@ -157,7 +173,12 @@ export function createRenderSceneCoordinator(
   };
 
   const handleStoreChange = () => {
-    const nextInput = collectRenderSceneCoordinatorInput(options.source);
+    const nextInput = options.placementPreviewProfiler
+      ? options.placementPreviewProfiler.measureStage(
+          "render.coordinator.collectInput",
+          () => collectRenderSceneCoordinatorInput(options.source),
+        )
+      : collectRenderSceneCoordinatorInput(options.source);
 
     if (isSameRenderSceneCoordinatorInput(currentInput, nextInput)) {
       return;

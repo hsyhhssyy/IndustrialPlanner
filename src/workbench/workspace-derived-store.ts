@@ -17,6 +17,7 @@ import {
   type RenderDerivedState,
 } from "@/workbench/workspace-derived-state";
 import type { SimulationState } from "@/simulation/host/simulation-host";
+import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 
 export interface WorkspaceDerivedStore {
   rootStore: SnapshotStore<WorkspaceDerivedState>;
@@ -32,6 +33,7 @@ export interface CreateWorkspaceDerivedStoreOptions {
   simulationStore: ReadonlySnapshotStore<SimulationState>;
   topologyStore: ReadonlySnapshotStore<CompiledTopology>;
   registry: Stage1Registry;
+  placementPreviewProfiler?: PlacementPreviewProfiler;
 }
 
 function isSameScreenBox(
@@ -105,7 +107,7 @@ export function createWorkspaceDerivedStore(
   );
   const renderStore = createSnapshotStore(rootStore.getSnapshot().render);
 
-  const recompute = () => {
+  const recomputeWorkspaceDerivedState = () => {
     const nextState = deriveWorkspaceDerivedState({
       workspaceState: createDerivedWorkspaceState(options),
       topology: options.topologyStore.getSnapshot(),
@@ -122,6 +124,18 @@ export function createWorkspaceDerivedStore(
         ? currentRenderState
         : nextState.render,
     );
+  };
+
+  const recompute = () => {
+    if (options.placementPreviewProfiler) {
+      options.placementPreviewProfiler.measureStage(
+        "workspaceDerived.recompute",
+        recomputeWorkspaceDerivedState,
+      );
+      return;
+    }
+
+    recomputeWorkspaceDerivedState();
   };
 
   const unsubscribers = [

@@ -6,14 +6,53 @@ import { RightDock } from "@/app-shell/components/right-dock";
 import { TopBar } from "@/app-shell/components/top-bar";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import type { WorkbenchShell } from "@/app-shell/workbench-shell";
-import type { CSSProperties } from "react";
+import type {
+  PlacementPreviewProfiler,
+  PlacementPreviewReactSurfaceId,
+} from "@/workbench/diagnostics/placement-preview-profiler";
+import {
+  Profiler,
+  type CSSProperties,
+  type PropsWithChildren,
+} from "react";
+
+interface PlacementPreviewProfiledSectionProps
+  extends PropsWithChildren {
+  placementPreviewProfiler?: PlacementPreviewProfiler;
+  surfaceId: PlacementPreviewReactSurfaceId;
+}
+
+function PlacementPreviewProfiledSection({
+  children,
+  placementPreviewProfiler,
+  surfaceId,
+}: PlacementPreviewProfiledSectionProps) {
+  if (!placementPreviewProfiler) {
+    return children;
+  }
+
+  return (
+    <Profiler
+      id={surfaceId}
+      onRender={(_, __, actualDuration, baseDuration) => {
+        placementPreviewProfiler.recordReactCommit(
+          surfaceId,
+          actualDuration,
+          baseDuration,
+        );
+      }}
+    >
+      {children}
+    </Profiler>
+  );
+}
 
 export interface WorkbenchAppProps {
   shell: WorkbenchShell;
 }
 
 export function WorkbenchApp({ shell }: WorkbenchAppProps) {
-  const { controller, workspaceDerivedStore } = shell;
+  const { controller, placementPreviewProfiler, workspaceDerivedStore } = shell;
   const ui = useExternalStore(controller.uiStore);
   const layoutStyle = {
     "--left-dock-width": ui.leftDock.open
@@ -35,13 +74,34 @@ export function WorkbenchApp({ shell }: WorkbenchAppProps) {
         renderDerivedStore={workspaceDerivedStore.renderStore}
       />
       <LeftToolbar controller={controller} />
-      <LeftDock controller={controller} />
-      <CanvasPanel
-        controller={controller}
-        renderDerivedStore={workspaceDerivedStore.renderStore}
-      />
-      <RightDock controller={controller} />
-      <BottomStatusBar controller={controller} />
+      <PlacementPreviewProfiledSection
+        placementPreviewProfiler={placementPreviewProfiler}
+        surfaceId="LeftDock"
+      >
+        <LeftDock controller={controller} />
+      </PlacementPreviewProfiledSection>
+      <PlacementPreviewProfiledSection
+        placementPreviewProfiler={placementPreviewProfiler}
+        surfaceId="CanvasPanel"
+      >
+        <CanvasPanel
+          controller={controller}
+          placementPreviewProfiler={placementPreviewProfiler}
+          renderDerivedStore={workspaceDerivedStore.renderStore}
+        />
+      </PlacementPreviewProfiledSection>
+      <PlacementPreviewProfiledSection
+        placementPreviewProfiler={placementPreviewProfiler}
+        surfaceId="RightDock"
+      >
+        <RightDock controller={controller} />
+      </PlacementPreviewProfiledSection>
+      <PlacementPreviewProfiledSection
+        placementPreviewProfiler={placementPreviewProfiler}
+        surfaceId="BottomStatusBar"
+      >
+        <BottomStatusBar controller={controller} />
+      </PlacementPreviewProfiledSection>
     </div>
   );
 }

@@ -39,6 +39,7 @@ import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { createTranslator } from "@/i18n/messages";
 import { RendererHost } from "@/renderer/host/renderer-host";
 import { createLogger } from "@/shared/logging/logger";
+import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 import type { RenderDerivedState } from "@/workbench/workspace-derived-state";
 import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
@@ -79,11 +80,13 @@ function clampToRange(value: number, min: number, max: number): number {
 export interface CanvasPanelProps {
   controller: WorkbenchController;
   renderDerivedStore: ReadonlySnapshotStore<RenderDerivedState>;
+  placementPreviewProfiler?: PlacementPreviewProfiler;
 }
 
 export function CanvasPanel({
   controller,
   renderDerivedStore,
+  placementPreviewProfiler,
 }: CanvasPanelProps) {
   const ui = useExternalStore(controller.uiStore);
   const editor = useExternalStore(controller.editorStore);
@@ -536,9 +539,16 @@ export function CanvasPanel({
       pointerGestureStateRef.current.phase === "idle" &&
       event.buttons === 0
     ) {
-      controller.updatePlacementPreviewFromScreenPoint(
-        toViewportPoint(event.clientX, event.clientY),
-      );
+      const screenPoint = toViewportPoint(event.clientX, event.clientY);
+
+      if (placementPreviewProfiler) {
+        placementPreviewProfiler.measureStage("canvas.pointerMoveDispatch", () => {
+          controller.updatePlacementPreviewFromScreenPoint(screenPoint);
+        });
+      } else {
+        controller.updatePlacementPreviewFromScreenPoint(screenPoint);
+      }
+
       return;
     }
 
@@ -794,7 +804,10 @@ export function CanvasPanel({
           onWheel={handleViewportWheel}
           ref={viewportRef}
         >
-          <RendererHost sceneSource={controller} />
+          <RendererHost
+            placementPreviewProfiler={placementPreviewProfiler}
+            sceneSource={controller}
+          />
           {anchoredPlacementHintStyle ? (
             <div className="placement-affordance-hint" style={anchoredPlacementHintStyle}>
               {t("label.touchPlacementHint")}

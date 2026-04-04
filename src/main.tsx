@@ -8,10 +8,19 @@ import {
   isLogLevel,
   type LogLevel,
 } from "@/shared/logging/logger";
+import {
+  createPlacementPreviewProfiler,
+  type PlacementPreviewProfilingSnapshot,
+} from "@/workbench/diagnostics/placement-preview-profiler";
 import "@/styles.css";
 
-const controller = createWorkbenchController();
-const shell = createWorkbenchShell(controller);
+const placementPreviewProfiler = createPlacementPreviewProfiler();
+const controller = createWorkbenchController({
+  placementPreviewProfiler,
+});
+const shell = createWorkbenchShell(controller, {
+  placementPreviewProfiler,
+});
 
 declare global {
   interface Window {
@@ -19,6 +28,12 @@ declare global {
       getLogLevel: () => LogLevel;
       getSupportedLevels: () => readonly LogLevel[];
       setLogLevel: (level: string) => void;
+      placementPreviewProfiler: {
+        getSnapshot: () => PlacementPreviewProfilingSnapshot;
+        isEnabled: () => boolean;
+        reset: () => void;
+        setEnabled: (enabled: boolean) => void;
+      };
     };
   }
 }
@@ -36,6 +51,14 @@ if (typeof window !== "undefined") {
       }
 
       controller.setLogLevel(level);
+    },
+    placementPreviewProfiler: {
+      getSnapshot: () => placementPreviewProfiler.getSnapshot(),
+      isEnabled: () => placementPreviewProfiler.isEnabled(),
+      reset: () => placementPreviewProfiler.reset(),
+      setEnabled: (enabled) => {
+        placementPreviewProfiler.setEnabled(enabled);
+      },
     },
   };
 }

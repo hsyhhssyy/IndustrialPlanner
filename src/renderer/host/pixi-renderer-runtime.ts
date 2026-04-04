@@ -22,6 +22,7 @@ import type {
 import { createRendererDiagnosticsHud } from "@/renderer/host/renderer-diagnostics-hud";
 import { getRenderSceneSyncPlan } from "@/renderer/host/render-scene-sync-plan";
 import { createLogger } from "@/shared/logging/logger";
+import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 
 const RENDERER_BACKGROUND_COLOR = 0x0d1218;
 const GRID_STROKE_STYLE: StrokeInput = {
@@ -110,6 +111,10 @@ interface PixiSceneLayers {
 export interface PixiRendererRuntime {
   syncScene: (scene: RenderSceneModel) => void;
   destroy: () => void;
+}
+
+export interface CreatePixiRendererRuntimeOptions {
+  placementPreviewProfiler?: PlacementPreviewProfiler;
 }
 
 interface PlacementPreviewRenderDiagnosticWindow {
@@ -697,6 +702,7 @@ function collectSceneTexturePaths(scene: RenderSceneModel): string[] {
 
 export function createPixiRendererRuntime(
   hostElement: HTMLDivElement,
+  options: CreatePixiRendererRuntimeOptions = {},
 ): PixiRendererRuntime {
   const app = new Application();
   const layers = createSceneLayers(app.stage);
@@ -717,6 +723,22 @@ export function createPixiRendererRuntime(
   const resizeObserver = new ResizeObserver(() => {
     renderLatestScene();
   });
+  const measureProfilerStage = <T,>(
+    stageId:
+      | "render.runtime.total"
+      | "render.runtime.staticLayers"
+      | "render.runtime.previewLayer"
+      | "render.runtime.diagnosticsHud"
+      | "render.runtime.appRender"
+      | "render.hud.recordFrame",
+    callback: () => T,
+  ): T => {
+    if (options.placementPreviewProfiler) {
+      return options.placementPreviewProfiler.measureStage(stageId, callback);
+    }
+
+    return callback();
+  };
 
   function getViewportMetrics(): {
     width: number;
@@ -767,12 +789,18 @@ export function createPixiRendererRuntime(
         return;
       }
 
-      const didUpdateHud = diagnosticsHud.recordFrame(now)
-        ? syncDiagnosticsHud()
+      const didUpdateHud = measureProfilerStage("render.hud.recordFrame", () =>
+        diagnosticsHud.recordFrame(now),
+      )
+        ? measureProfilerStage("render.runtime.diagnosticsHud", () =>
+            syncDiagnosticsHud(),
+          )
         : false;
 
       if (didUpdateHud && initialized) {
-        app.render();
+        measureProfilerStage("render.runtime.appRender", () => {
+          app.render();
+        });
       }
 
       fpsMonitorFrameHandle = window.requestAnimationFrame(tick);
@@ -800,42 +828,55 @@ export function createPixiRendererRuntime(
     );
   }
 
-  function renderLatestScene(options: {
+  function renderLatestScene(renderOptions: {
     forceStaticLayers?: boolean;
   } = {}): void {
     if (!initialized || destroyed || !latestScene) {
       return;
     }
 
+    const currentScene = latestScene;
     const renderStartedAt = getDiagnosticTimeMs();
-    const syncPlan = options.forceStaticLayers
+    const syncPlan = renderOptions.forceStaticLayers
       ? {
           redrawStaticLayers: true,
           redrawPreviewLayer: true,
         }
-      : getRenderSceneSyncPlan(renderedScene, latestScene);
+      : getRenderSceneSyncPlan(renderedScene, currentScene);
     syncRendererViewport();
     layers.camera.position.set(
-      -latestScene.viewportOffset.x * latestScene.zoom,
-      -latestScene.viewportOffset.y * latestScene.zoom,
+      -currentScene.viewportOffset.x * currentScene.zoom,
+      -currentScene.viewportOffset.y * currentScene.zoom,
     );
 
     if (syncPlan.redrawStaticLayers) {
-      renderStaticSceneToLayers(layers, latestScene, textureCache);
+      measureProfilerStage("render.runtime.staticLayers", () => {
+        renderStaticSceneToLayers(layers, currentScene, textureCache);
+      });
     }
 
     if (syncPlan.redrawPreviewLayer) {
-      renderPlacementPreviewLayer(layers, latestScene, textureCache);
+      measureProfilerStage("render.runtime.previewLayer", () => {
+        renderPlacementPreviewLayer(layers, currentScene, textureCache);
+      });
     }
 
-    syncDiagnosticsHud();
-    app.render();
-    renderedScene = latestScene;
+    measureProfilerStage("render.runtime.diagnosticsHud", () => {
+      syncDiagnosticsHud();
+    });
+    measureProfilerStage("render.runtime.appRender", () => {
+      app.render();
+    });
+    renderedScene = currentScene;
 
     const renderDurationMs = getDiagnosticTimeMs() - renderStartedAt;
+    options.placementPreviewProfiler?.recordStageDuration(
+      "render.runtime.total",
+      renderDurationMs,
+    );
 
-    if (latestScene.placementPreview) {
-      recordPlacementPreviewRenderDiagnostic(latestScene, renderDurationMs);
+    if (currentScene.placementPreview) {
+      recordPlacementPreviewRenderDiagnostic(currentScene, renderDurationMs);
     }
   }
 

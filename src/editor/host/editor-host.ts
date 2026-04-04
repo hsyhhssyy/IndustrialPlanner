@@ -28,6 +28,7 @@ import {
 import { isPlacementTool } from "@/editor/core/editor-session";
 import type { GridPoint } from "@/shared/geometry/grid";
 import { createLogger } from "@/shared/logging/logger";
+import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 import type { CanvasPoint } from "@/workbench/workspace-state";
 
 export interface EditorInteractionTarget {
@@ -152,6 +153,7 @@ interface CreateEditorHostOptions {
   getTopology: () => CompiledTopology;
   getDefinition: (definitionId: string) => Stage1EntityDefinition | undefined;
   core?: EditorCore;
+  placementPreviewProfiler?: PlacementPreviewProfiler;
 }
 
 type PlacementPreviewInvalidReason =
@@ -170,11 +172,13 @@ class EditorHostImpl implements EditorHost {
   private readonly core: EditorCore;
   private readonly getTopology: () => CompiledTopology;
   private readonly getDefinition: (definitionId: string) => Stage1EntityDefinition | undefined;
+  private readonly placementPreviewProfiler?: PlacementPreviewProfiler;
   private readonly logger = createLogger("editor.host");
 
   constructor(options: CreateEditorHostOptions) {
     this.getTopology = options.getTopology;
     this.getDefinition = options.getDefinition;
+    this.placementPreviewProfiler = options.placementPreviewProfiler;
     this.core =
       options.core ??
       createEditorCore({
@@ -239,28 +243,35 @@ class EditorHostImpl implements EditorHost {
   }
 
   updatePlacementPreview(input: CanvasWorldInput): PlacementPreviewUpdateResult {
-    const previousPreview = this.core.getSnapshot().session.placementPreview;
-    const resolution = this.resolvePlacementPreview(input);
-    const changed = !isSamePlacementPreviewState(previousPreview, resolution.preview);
+    return this.measureProfilerStage("editor.total", () => {
+      const previousPreview = this.core.getSnapshot().session.placementPreview;
+      const resolution = this.measureProfilerStage(
+        "editor.resolvePlacementPreview",
+        () => this.resolvePlacementPreview(input),
+      );
+      const changed = !isSamePlacementPreviewState(previousPreview, resolution.preview);
 
-    this.core.setPlacementPreview(resolution.preview);
+      this.measureProfilerStage("editor.writeSession", () => {
+        this.core.setPlacementPreview(resolution.preview);
+      });
 
-    if (changed) {
-      this.logger.debug("Updated placement preview.", {
-        worldPoint: input.worldPoint,
-        gridPoint: input.gridPoint,
+      if (changed) {
+        this.logger.debug("Updated placement preview.", {
+          worldPoint: input.worldPoint,
+          gridPoint: input.gridPoint,
+          preview: resolution.preview,
+          invalidReason: resolution.invalidReason,
+          hitEntityId: resolution.hitEntityId,
+        });
+      }
+
+      return {
         preview: resolution.preview,
         invalidReason: resolution.invalidReason,
         hitEntityId: resolution.hitEntityId,
-      });
-    }
-
-    return {
-      preview: resolution.preview,
-      invalidReason: resolution.invalidReason,
-      hitEntityId: resolution.hitEntityId,
-      changed,
-    };
+        changed,
+      };
+    });
   }
 
   confirmPlacement(): boolean {
@@ -415,10 +426,8 @@ class EditorHostImpl implements EditorHost {
       gridSize: document.documentSettings.gridSize,
       footprint: definition.footprint,
     });
-    const hitEntityId = hitTestWorldEntity(
-      document,
-      this.getTopology(),
-      input.worldPoint,
+    const hitEntityId = this.measureProfilerStage("editor.hitTest", () =>
+      hitTestWorldEntity(document, this.getTopology(), input.worldPoint),
     );
     const withinBase = isStage1FootprintWithinBase({
       base,
@@ -443,6 +452,21 @@ class EditorHostImpl implements EditorHost {
       invalidReason,
       hitEntityId,
     };
+  }
+
+  private measureProfilerStage<T>(
+    stageId:
+      | "editor.total"
+      | "editor.resolvePlacementPreview"
+      | "editor.hitTest"
+      | "editor.writeSession",
+    callback: () => T,
+  ): T {
+    if (this.placementPreviewProfiler) {
+      return this.placementPreviewProfiler.measureStage(stageId, callback);
+    }
+
+    return callback();
   }
 
   private handleLinkToolClick(hitEntityId: string | null): void {

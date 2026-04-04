@@ -6,13 +6,16 @@ import {
   type RenderSceneCoordinator,
   type RenderSceneCoordinatorSource,
 } from "@/renderer/host/render-scene-coordinator";
+import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 
 export interface RendererHostProps {
   sceneSource: RenderSceneCoordinatorSource;
+  placementPreviewProfiler?: PlacementPreviewProfiler;
 }
 
 export function RendererHost({
   sceneSource,
+  placementPreviewProfiler,
 }: RendererHostProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const rendererRuntimeRef = useRef<PixiRendererRuntime | null>(null);
@@ -23,12 +26,15 @@ export function RendererHost({
       return;
     }
 
-    const rendererRuntime = createPixiRendererRuntime(hostRef.current);
+    const rendererRuntime = createPixiRendererRuntime(hostRef.current, {
+      placementPreviewProfiler,
+    });
     const coordinator = createRenderSceneCoordinator({
       source: sceneSource,
       presentScene: (scene) => {
         rendererRuntime.syncScene(scene);
       },
+      placementPreviewProfiler,
     });
 
     rendererRuntimeRef.current = rendererRuntime;
@@ -40,7 +46,7 @@ export function RendererHost({
       rendererRuntimeRef.current = null;
       rendererRuntime.destroy();
     };
-  }, [sceneSource]);
+  }, [placementPreviewProfiler, sceneSource]);
 
   return (
     <div className="renderer-host" ref={hostRef} />
