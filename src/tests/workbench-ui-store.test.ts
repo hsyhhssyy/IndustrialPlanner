@@ -1,5 +1,7 @@
+import { autorun } from "@/shared/mobx";
 import { describe, expect, it } from "vitest";
 import { createWorkbenchUiStore } from "@/workbench/workbench-ui-store";
+import { vi } from "vitest";
 
 describe("WorkbenchUiStore", () => {
   it("hydrates defaults from a partial snapshot and owns UI updates", () => {
@@ -49,5 +51,21 @@ describe("WorkbenchUiStore", () => {
         collapsed: true,
       },
     });
+  });
+
+  it("does not re-run unrelated MobX observers for locale-only changes", () => {
+    const store = createWorkbenchUiStore();
+    const layoutTracker = vi.fn();
+    const stop = autorun(() => {
+      layoutTracker(store.leftDock.open, store.rightDock.collapsed);
+    });
+
+    expect(layoutTracker).toHaveBeenCalledTimes(1);
+
+    store.setLocale("en-US");
+
+    expect(layoutTracker).toHaveBeenCalledTimes(1);
+
+    stop();
   });
 });

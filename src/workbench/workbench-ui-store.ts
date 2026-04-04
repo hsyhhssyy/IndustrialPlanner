@@ -9,13 +9,12 @@ import type {
 } from "@/workbench/workbench-ui-state";
 import { DEFAULT_LOCALE, type AppLocale, type MessageKey } from "@/i18n/messages";
 import {
-  createSnapshotStore,
-  type SnapshotStore,
-} from "@/shared/snapshot-store/snapshot-store";
-import {
   DEFAULT_WORKBENCH_LOG_LEVEL,
   type LogLevel,
 } from "@/shared/logging/logger";
+import { makeAutoObservable } from "@/shared/mobx";
+import { createSnapshotBridge } from "@/shared/mobx/snapshot-bridge";
+import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
 
 const DOCK_STATE_KEYS = {
   left: "leftDock",
@@ -32,23 +31,25 @@ function mergeDockState(
   };
 }
 
-function updateDockState(
-  state: WorkbenchUiState,
-  dockId: DockId,
-  updater: (dock: DockState) => DockState,
-): WorkbenchUiState {
-  const dockStateKey = DOCK_STATE_KEYS[dockId];
-  const currentDock = state[dockStateKey];
-  const nextDock = updater(currentDock);
+function isSameDockState(left: DockState, right: DockState): boolean {
+  return left.open === right.open && left.collapsed === right.collapsed;
+}
 
-  if (currentDock.open === nextDock.open && currentDock.collapsed === nextDock.collapsed) {
-    return state;
-  }
-
-  return {
-    ...state,
-    [dockStateKey]: nextDock,
-  } as WorkbenchUiState;
+export function isSameWorkbenchUiState(
+  left: WorkbenchUiState,
+  right: WorkbenchUiState,
+): boolean {
+  return (
+    left.mode === right.mode &&
+    left.locale === right.locale &&
+    left.logLevel === right.logLevel &&
+    left.leftPanelMode === right.leftPanelMode &&
+    left.simulationSpeed === right.simulationSpeed &&
+    isSameDockState(left.leftDock, right.leftDock) &&
+    isSameDockState(left.rightDock, right.rightDock) &&
+    left.diagnosticsVisible === right.diagnosticsVisible &&
+    left.statusMessageKey === right.statusMessageKey
+  );
 }
 
 export function getWorkbenchStatusMessageKeyForMode(
@@ -98,7 +99,20 @@ export function createWorkbenchUiState(
 }
 
 export interface WorkbenchUiStore
-  extends Pick<SnapshotStore<WorkbenchUiState>, "getSnapshot" | "subscribe"> {
+  extends ReadonlySnapshotStore<WorkbenchUiState> {
+  mode: WorkbenchMode;
+  locale: AppLocale;
+  logLevel: LogLevel;
+  leftPanelMode: LeftPanelMode;
+  simulationSpeed: SimulationSpeedPreset;
+  leftDock: DockState;
+  rightDock: DockState;
+  diagnosticsVisible: boolean;
+  statusMessageKey: MessageKey;
+  setSnapshot: (
+    stateInput: WorkbenchUiStateInput | WorkbenchUiState,
+  ) => boolean;
+  update: (updater: (state: WorkbenchUiState) => WorkbenchUiState) => boolean;
   setMode: (mode: WorkbenchMode) => void;
   setLocale: (locale: AppLocale) => void;
   setLogLevel: (level: LogLevel) => void;
@@ -111,20 +125,79 @@ export interface WorkbenchUiStore
 }
 
 class WorkbenchUiStoreImpl implements WorkbenchUiStore {
-  private readonly store: SnapshotStore<WorkbenchUiState>;
+  mode: WorkbenchMode;
+  locale: AppLocale;
+  logLevel: LogLevel;
+  leftPanelMode: LeftPanelMode;
+  simulationSpeed: SimulationSpeedPreset;
+  leftDock: DockState;
+  rightDock: DockState;
+  diagnosticsVisible: boolean;
+  statusMessageKey: MessageKey;
+
+  readonly #snapshotBridge;
 
   constructor(initialState: WorkbenchUiStateInput = {}) {
-    this.store = createSnapshotStore(createWorkbenchUiState(initialState));
+    const initialSnapshot = createWorkbenchUiState(initialState);
+    this.mode = initialSnapshot.mode;
+    this.locale = initialSnapshot.locale;
+    this.logLevel = initialSnapshot.logLevel;
+    this.leftPanelMode = initialSnapshot.leftPanelMode;
+    this.simulationSpeed = initialSnapshot.simulationSpeed;
+    this.leftDock = { ...initialSnapshot.leftDock };
+    this.rightDock = { ...initialSnapshot.rightDock };
+    this.diagnosticsVisible = initialSnapshot.diagnosticsVisible;
+    this.statusMessageKey = initialSnapshot.statusMessageKey;
+    this.#snapshotBridge = createSnapshotBridge(initialSnapshot);
+
+    makeAutoObservable(
+      this,
+      {
+        getSnapshot: false,
+        subscribe: false,
+      },
+      {
+        autoBind: true,
+      },
+    );
   }
 
-  getSnapshot = () => this.store.getSnapshot();
+  getSnapshot() {
+    return this.#snapshotBridge.getSnapshot();
+  }
 
-  subscribe = (listener: () => void) => this.store.subscribe(listener);
+  subscribe(listener: () => void) {
+    return this.#snapshotBridge.subscribe(listener);
+  }
+
+  setSnapshot(stateInput: WorkbenchUiStateInput | WorkbenchUiState): boolean {
+    const nextState = createWorkbenchUiState(stateInput);
+    const currentState = this.#snapshotBridge.getSnapshot();
+
+    if (isSameWorkbenchUiState(currentState, nextState)) {
+      return false;
+    }
+
+    this.applySnapshot(nextState);
+    this.#snapshotBridge.publish(nextState);
+    return true;
+  }
+
+  update(updater: (state: WorkbenchUiState) => WorkbenchUiState): boolean {
+    const currentState = this.#snapshotBridge.getSnapshot();
+    const nextState = updater(currentState);
+
+    if (nextState === currentState) {
+      return false;
+    }
+
+    return this.setSnapshot(nextState);
+  }
 
   setMode(mode: WorkbenchMode): void {
     const statusMessageKey = getWorkbenchStatusMessageKeyForMode(mode);
 
-    this.updateState((state) => {
+    this.update((state) => {
       if (state.mode === mode && state.statusMessageKey === statusMessageKey) {
         return state;
       }
@@ -138,7 +211,7 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
   }
 
   setLocale(locale: AppLocale): void {
-    this.updateState((state) => {
+    this.update((state) => {
       if (state.locale === locale) {
         return state;
       }
@@ -151,7 +224,7 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
   }
 
   setLogLevel(level: LogLevel): void {
-    this.updateState((state) => {
+    this.update((state) => {
       if (state.logLevel === level) {
         return state;
       }
@@ -164,7 +237,7 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
   }
 
   setDiagnosticsVisible(visible: boolean): void {
-    this.updateState((state) => {
+    this.update((state) => {
       if (state.diagnosticsVisible === visible) {
         return state;
       }
@@ -177,7 +250,7 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
   }
 
   setLeftPanelMode(mode: LeftPanelMode): void {
-    this.updateState((state) => {
+    this.update((state) => {
       if (state.leftPanelMode === mode) {
         return state;
       }
@@ -190,7 +263,7 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
   }
 
   setSimulationSpeedPreset(preset: SimulationSpeedPreset): void {
-    this.updateState((state) => {
+    this.update((state) => {
       if (state.simulationSpeed === preset) {
         return state;
       }
@@ -203,26 +276,48 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
   }
 
   setDockOpen(dockId: DockId, open: boolean): void {
-    this.updateState((state) =>
-      updateDockState(state, dockId, (dock) => ({
-        ...dock,
+    this.update((state) => {
+      const dockStateKey = DOCK_STATE_KEYS[dockId];
+      const currentDock = state[dockStateKey];
+      const nextDock = {
+        ...currentDock,
         open,
-        collapsed: open ? dock.collapsed : false,
-      })),
-    );
+        collapsed: open ? currentDock.collapsed : false,
+      };
+
+      if (isSameDockState(currentDock, nextDock)) {
+        return state;
+      }
+
+      return {
+        ...state,
+        [dockStateKey]: nextDock,
+      } as WorkbenchUiState;
+    });
   }
 
   toggleDockCollapsed(dockId: DockId): void {
-    this.updateState((state) =>
-      updateDockState(state, dockId, (dock) => ({
+    this.update((state) => {
+      const dockStateKey = DOCK_STATE_KEYS[dockId];
+      const currentDock = state[dockStateKey];
+      const nextDock = {
         open: true,
-        collapsed: !dock.collapsed,
-      })),
-    );
+        collapsed: !currentDock.collapsed,
+      };
+
+      if (isSameDockState(currentDock, nextDock)) {
+        return state;
+      }
+
+      return {
+        ...state,
+        [dockStateKey]: nextDock,
+      } as WorkbenchUiState;
+    });
   }
 
   setStatusMessageKey(messageKey: MessageKey): void {
-    this.updateState((state) => {
+    this.update((state) => {
       if (state.statusMessageKey === messageKey) {
         return state;
       }
@@ -234,10 +329,42 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
     });
   }
 
-  private updateState(
-    updater: (state: WorkbenchUiState) => WorkbenchUiState,
-  ): void {
-    this.store.update(updater);
+  private applySnapshot(snapshot: WorkbenchUiState): void {
+    if (this.mode !== snapshot.mode) {
+      this.mode = snapshot.mode;
+    }
+
+    if (this.locale !== snapshot.locale) {
+      this.locale = snapshot.locale;
+    }
+
+    if (this.logLevel !== snapshot.logLevel) {
+      this.logLevel = snapshot.logLevel;
+    }
+
+    if (this.leftPanelMode !== snapshot.leftPanelMode) {
+      this.leftPanelMode = snapshot.leftPanelMode;
+    }
+
+    if (this.simulationSpeed !== snapshot.simulationSpeed) {
+      this.simulationSpeed = snapshot.simulationSpeed;
+    }
+
+    if (!isSameDockState(this.leftDock, snapshot.leftDock)) {
+      this.leftDock = { ...snapshot.leftDock };
+    }
+
+    if (!isSameDockState(this.rightDock, snapshot.rightDock)) {
+      this.rightDock = { ...snapshot.rightDock };
+    }
+
+    if (this.diagnosticsVisible !== snapshot.diagnosticsVisible) {
+      this.diagnosticsVisible = snapshot.diagnosticsVisible;
+    }
+
+    if (this.statusMessageKey !== snapshot.statusMessageKey) {
+      this.statusMessageKey = snapshot.statusMessageKey;
+    }
   }
 }
 

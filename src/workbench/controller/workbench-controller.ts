@@ -9,16 +9,16 @@ import type {
   WorkbenchMode,
 } from "@/workbench/workbench-ui-state";
 import {
-  createWorkbenchUiState,
   getWorkbenchStatusMessageKeyForMode,
+  createWorkbenchUiStore,
 } from "@/workbench/workbench-ui-store";
+import { createCanvasViewStore } from "@/workbench/canvas-view-store";
 import {
   createWorkspaceStorage,
   type WorkspacePersistenceState,
   type WorkspaceStorage,
 } from "@/workbench/persistence/workspace-storage";
 import {
-  createInitialCanvasViewState,
   type CanvasPoint,
   type CanvasViewState,
   type WorkspaceState,
@@ -57,6 +57,9 @@ import {
   type EditorHost,
   type PlacementPreviewUpdateResult,
 } from "@/editor/host/editor-host";
+import {
+  createEditorRuntimeStore,
+} from "@/editor/editor-runtime-store";
 import type { AppLocale } from "@/i18n/messages";
 import { deriveRenderWorldBoundsPx } from "@/renderer/scene/render-world-bounds";
 import {
@@ -179,11 +182,9 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.storage = createWorkspaceStorage();
 
     const persistedState = this.storage.loadWorkspaceState();
-    const initialUiState = createWorkbenchUiState(persistedState.ui);
-    const initialCanvasView = createInitialCanvasViewState(
-      persistedState.canvasView,
-    );
-    setGlobalLogLevel(initialUiState.logLevel);
+    this.uiStore = createWorkbenchUiStore(persistedState.ui);
+    this.canvasViewStore = createCanvasViewStore(persistedState.canvasView);
+    setGlobalLogLevel(this.uiStore.logLevel);
 
     this.editorHost = createEditorHost({
       document: createStage1SeedWorldDocument(),
@@ -194,20 +195,18 @@ class WorkbenchControllerImpl implements WorkbenchController {
       placementPreviewProfiler: this.placementPreviewProfiler,
     });
     this.topology = compileStage1World(this.editorHost.getDocument(), this.registry);
+    this.editorStore = createEditorRuntimeStore(this.editorHost.getState());
     this.simulationHost = createSimulationHost();
     this.loadSimulationWorld();
 
     this.workspaceStore = createWorkspaceStore({
       document: this.editorHost.getDocument(),
-      editor: this.editorHost.getState(),
-      ui: initialUiState,
-      canvasView: initialCanvasView,
+      editor: this.editorStore.getSnapshot(),
+      ui: this.uiStore.getSnapshot(),
+      canvasView: this.canvasViewStore.getSnapshot(),
       simulation: this.simulationHost.getSnapshot(),
     });
     this.documentStore = this.workspaceStore.documentStore;
-    this.editorStore = this.workspaceStore.editorStore;
-    this.uiStore = this.workspaceStore.uiStore;
-    this.canvasViewStore = this.workspaceStore.canvasViewStore;
     this.simulationStore = this.workspaceStore.simulationStore;
     this.topologyStore = createSnapshotStore(this.topology);
 
@@ -312,15 +311,16 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   updatePlacementPreviewFromScreenPoint(screenPoint: CanvasPoint): void {
     this.measureProfilerStage("controller.total", () => {
-      const sessionBefore = this.editorStore.getSnapshot().session;
+      const sessionBefore = this.editorHost.getState().session;
       const previousPreview = clonePlacementPreview(sessionBefore.placementPreview);
       const worldInput = this.measureProfilerStage(
         "controller.resolveWorldInput",
         () => this.resolveWorldInput(screenPoint),
       );
       const updateResult = this.editorHost.updatePlacementPreview(worldInput);
+      const sessionAfter = this.editorHost.getState().session;
       const nextPreview = clonePlacementPreview(
-        this.editorStore.getSnapshot().session.placementPreview,
+        sessionAfter.placementPreview,
       );
 
       this.placementPreviewProfiler?.recordUpdateResult({
@@ -721,8 +721,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     return {
       document: this.documentStore.getSnapshot(),
       selectionId: this.getActiveSelectionId(),
-      pendingLinkSourceEntityId:
-        this.editorStore.getSnapshot().session.pendingLinkSourceEntityId,
+      pendingLinkSourceEntityId: this.editorHost.getState().session.pendingLinkSourceEntityId,
     };
   }
 
@@ -743,9 +742,13 @@ class WorkbenchControllerImpl implements WorkbenchController {
       });
     }
 
-    const afterSelectionId = this.getActiveSelectionId();
+    const afterEditorState = this.editorHost.getState();
+    const afterSelectionId =
+      this.uiStore.getSnapshot().mode === "simulate"
+        ? this.simulationHost.getSnapshot().selection[0] ?? null
+        : afterEditorState.session.selection[0] ?? null;
     const afterPendingLinkSourceEntityId =
-      this.editorStore.getSnapshot().session.pendingLinkSourceEntityId;
+      afterEditorState.session.pendingLinkSourceEntityId;
     const selectionChanged = before.selectionId !== afterSelectionId;
     const pendingLinkChanged =
       before.pendingLinkSourceEntityId !== afterPendingLinkSourceEntityId;
@@ -763,11 +766,9 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   private getActiveSelectionId(): string | null {
-    const workspaceState = this.workspaceStore.rootStore.getSnapshot();
-
-    return workspaceState.ui.mode === "simulate"
-      ? workspaceState.simulation.selection[0] ?? null
-      : workspaceState.editor.session.selection[0] ?? null;
+    return this.uiStore.getSnapshot().mode === "simulate"
+      ? this.simulationHost.getSnapshot().selection[0] ?? null
+      : this.editorHost.getState().session.selection[0] ?? null;
   }
 
   private async refreshInspectorForSelection(): Promise<void> {
@@ -803,46 +804,25 @@ class WorkbenchControllerImpl implements WorkbenchController {
   private updateUiState(
     updater: (ui: WorkspaceState["ui"]) => WorkspaceState["ui"],
   ): boolean {
-    const currentState = this.workspaceStore.rootStore.getSnapshot();
-    const nextUi = updater(currentState.ui);
-
-    if (nextUi === currentState.ui) {
-      return false;
-    }
-
-    this.workspaceStore.rootStore.setSnapshot({
-      ...currentState,
-      ui: nextUi,
-    });
-    return true;
+    return this.uiStore.update(updater);
   }
 
   private updateCanvasView(
     updater: (canvasView: CanvasViewState) => CanvasViewState,
   ): boolean {
-    const currentState = this.workspaceStore.rootStore.getSnapshot();
-    const nextCanvasView = updater(currentState.canvasView);
-
-    if (nextCanvasView === currentState.canvasView) {
-      return false;
-    }
-
-    this.workspaceStore.rootStore.setSnapshot({
-      ...currentState,
-      canvasView: nextCanvasView,
-    });
-    return true;
+    return this.canvasViewStore.update(updater);
   }
 
   private sync(): SyncMetrics {
     return this.measureProfilerStage("controller.sync.total", () => {
       const startedAt = getDiagnosticTimeMs();
+      this.editorStore.setSnapshot(this.editorHost.getState());
       const currentState = this.workspaceStore.rootStore.getSnapshot();
       const nextState = this.composeWorkspaceState(currentState, {
         document: this.editorHost.getDocument(),
-        editor: this.editorHost.getState(),
-        ui: currentState.ui,
-        canvasView: currentState.canvasView,
+        editor: this.editorStore.getSnapshot(),
+        ui: this.uiStore.getSnapshot(),
+        canvasView: this.canvasViewStore.getSnapshot(),
         simulation: this.simulationHost.getSnapshot(),
       });
       const worldBoundsStartedAt = getDiagnosticTimeMs();

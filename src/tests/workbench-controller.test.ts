@@ -458,6 +458,31 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("does not notify editor snapshot subscribers for semantic no-op placement preview updates", () => {
+    const controller = createWorkbenchController();
+
+    controller.armPlacement("belt_straight_1x1", "belt");
+
+    const listener = vi.fn();
+    const unsubscribe = controller.editorStore.subscribe(listener);
+    const placementPoint = toScreenPointForPlacementCenter(
+      controller,
+      "belt_straight_1x1",
+      {
+        x: 10,
+        y: 6,
+      },
+    );
+
+    controller.updatePlacementPreviewFromScreenPoint(placementPoint);
+    controller.updatePlacementPreviewFromScreenPoint(placementPoint);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+    controller.dispose();
+  });
+
   it("does not persist workspace state for preview-only placement updates", () => {
     const controller = createWorkbenchController();
     controller.setCanvasViewportSize({ x: 640, y: 360 });

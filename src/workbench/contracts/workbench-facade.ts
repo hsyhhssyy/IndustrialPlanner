@@ -9,16 +9,17 @@ import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import type { WorldDocument } from "@/domain/document/world-document";
 import type { EditorTool } from "@/editor/contracts/editor-session";
 import type { PlacementPreviewStrategy } from "@/editor/contracts/placement-preview";
+import type { EditorRuntimeStore } from "@/editor/editor-runtime-store";
 import type { AppLocale } from "@/i18n/messages";
 import type { SimulationState } from "@/simulation/host/simulation-host";
 import type { SnapshotStore } from "@/shared/snapshot-store/snapshot-store";
 import type { LogLevel } from "@/shared/logging/logger";
+import type { CanvasViewStore } from "@/workbench/canvas-view-store";
 import type {
   CanvasPoint,
-  CanvasViewState,
-  WorkspaceState,
 } from "@/workbench/workspace-state";
 import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
+import type { WorkbenchUiStore } from "@/workbench/workbench-ui-store";
 
 export type CanvasInteractionTarget =
   | {
@@ -31,10 +32,10 @@ export type CanvasInteractionTarget =
     };
 
 export interface WorkbenchController {
-  uiStore: ReadonlySnapshotStore<WorkspaceState["ui"]>;
+  uiStore: WorkbenchUiStore;
   documentStore: ReadonlySnapshotStore<WorldDocument>;
-  editorStore: ReadonlySnapshotStore<WorkspaceState["editor"]>;
-  canvasViewStore: ReadonlySnapshotStore<CanvasViewState>;
+  editorStore: EditorRuntimeStore;
+  canvasViewStore: CanvasViewStore;
   topologyStore: Pick<SnapshotStore<CompiledTopology>, "getSnapshot" | "subscribe">;
   simulationStore: ReadonlySnapshotStore<SimulationState>;
   registry: Stage1Registry;

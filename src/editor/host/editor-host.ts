@@ -251,9 +251,11 @@ class EditorHostImpl implements EditorHost {
       );
       const changed = !isSamePlacementPreviewState(previousPreview, resolution.preview);
 
-      this.measureProfilerStage("editor.writeSession", () => {
-        this.core.setPlacementPreview(resolution.preview);
-      });
+      if (changed) {
+        this.measureProfilerStage("editor.writeSession", () => {
+          this.core.setPlacementPreview(resolution.preview);
+        });
+      }
 
       if (changed) {
         this.logger.debug("Updated placement preview.", {
