@@ -2,7 +2,6 @@ import {
   getStage1EntityDefinition,
   type Stage1EntityDefinition,
 } from "@/domain/registry/stage1-registry";
-import { getStage1BaseDefinition } from "@/domain/base/stage1-bases";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import type {
   RenderExplicitLink,
@@ -17,6 +16,7 @@ import {
   getStage1EntityTextureMetrics,
   shouldShowStage1EntityLabel,
 } from "@/renderer/scene/stage1-device-rendering";
+import { deriveRenderWorldBoundsPx } from "@/renderer/scene/render-world-bounds";
 
 function getEntityFill(definition: Stage1EntityDefinition): string {
   switch (definition.category) {
@@ -182,32 +182,19 @@ export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
     .filter((entity): entity is RenderEntitySprite => entity !== null);
   const placementPreview = buildPlacementPreview(input);
   const explicitLinks = buildExplicitLinkSprites(input);
-  const base = getStage1BaseDefinition(input.document.baseId);
-  const baseWorldSize = base.placeableSize * input.document.documentSettings.gridSize;
-  const previewMaxX = placementPreview
-    ? placementPreview.x + placementPreview.width + input.document.documentSettings.gridSize * 3
-    : baseWorldSize;
-  const previewMaxY = placementPreview
-    ? placementPreview.y + placementPreview.height + input.document.documentSettings.gridSize * 3
-    : baseWorldSize;
-
-  const maxWorldWidth = Math.max(
-    baseWorldSize,
-    previewMaxX,
-    ...entities.map((entity) => entity.x + entity.width + input.document.documentSettings.gridSize * 3),
-  );
-  const maxWorldHeight = Math.max(
-    baseWorldSize,
-    previewMaxY,
-    ...entities.map((entity) => entity.y + entity.height + input.document.documentSettings.gridSize * 3),
-  );
+  const worldBoundsPx = deriveRenderWorldBoundsPx({
+    document: input.document,
+    topology: input.topology,
+    registry: input.registry,
+    placementPreview: input.interaction.placementPreview,
+  });
 
   return {
     zoom: input.canvasView.zoom,
     viewportOffset: input.canvasView.offset,
     gridSize: input.document.documentSettings.gridSize,
-    worldWidth: maxWorldWidth,
-    worldHeight: maxWorldHeight,
+    worldWidth: worldBoundsPx.width,
+    worldHeight: worldBoundsPx.height,
     entities,
     placementPreview,
     explicitLinks,
