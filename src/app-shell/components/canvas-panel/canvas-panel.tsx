@@ -114,8 +114,13 @@ export function CanvasPanel({
   const touchGestureStateRef = useRef<CanvasPanelTouchGestureState>(touchGestureState);
   const t = createTranslator(ui.locale);
   const anchoredPlacementActive =
+    ui.mode === "edit" &&
     editor.session.placementDefinitionId !== null &&
     editor.session.placementStrategy === "anchored-confirm";
+  const pointerFollowPlacementActive =
+    ui.mode === "edit" &&
+    editor.session.placementDefinitionId !== null &&
+    editor.session.placementStrategy === "pointer-follow";
   const anchoredPlacementPreview =
     editor.session.placementPreview?.strategy === "anchored-confirm"
       ? editor.session.placementPreview
@@ -173,7 +178,10 @@ export function CanvasPanel({
     touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
     touchTapSuppressedRef.current = false;
     updateTouchGestureState(cancelCanvasTouchGesture());
-    controller.clearPlacementPreview();
+
+    if (anchoredPlacementActive) {
+      controller.clearPlacementPreview();
+    }
   };
 
   const toViewportPoint = (clientX: number, clientY: number): CanvasPoint => {
@@ -202,7 +210,10 @@ export function CanvasPanel({
 
     updatePointerGestureState(cancelCanvasPanelPointerGesture());
     pointerTapGestureStateRef.current = createIdleCanvasPanelPointerTapGestureState();
-    controller.clearPlacementPreview();
+
+    if (pointerFollowPlacementActive) {
+      controller.clearPlacementPreview();
+    }
   };
 
   useEffect(() => {
@@ -427,7 +438,9 @@ export function CanvasPanel({
         );
       }
 
-      controller.clearPlacementPreview();
+      if (pointerFollowPlacementActive) {
+        controller.clearPlacementPreview();
+      }
       return;
     }
 
@@ -445,7 +458,9 @@ export function CanvasPanel({
 
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
-    controller.clearPlacementPreview();
+    if (pointerFollowPlacementActive) {
+      controller.clearPlacementPreview();
+    }
     updatePointerGestureState(
       beginCanvasPointerPanGesture(event.pointerId, {
         x: event.clientX,
@@ -536,9 +551,11 @@ export function CanvasPanel({
       pointerGestureStateRef.current.phase === "idle" &&
       event.buttons === 0
     ) {
-      controller.updatePlacementPreviewFromScreenPoint(
-        toViewportPoint(event.clientX, event.clientY),
-      );
+      if (pointerFollowPlacementActive) {
+        controller.updatePlacementPreviewFromScreenPoint(
+          toViewportPoint(event.clientX, event.clientY),
+        );
+      }
       return;
     }
 
@@ -564,7 +581,8 @@ export function CanvasPanel({
     if (
       event.pointerType === "touch" ||
       pointerGestureStateRef.current.phase !== "idle" ||
-      event.buttons !== 0
+      event.buttons !== 0 ||
+      !pointerFollowPlacementActive
     ) {
       return;
     }
@@ -582,7 +600,7 @@ export function CanvasPanel({
       );
     }
 
-    if (!anchoredPlacementActive) {
+    if (pointerFollowPlacementActive) {
       controller.clearPlacementPreview();
     }
   };
