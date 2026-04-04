@@ -9,6 +9,7 @@ import {
 } from "@/i18n/messages";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
+import { observer } from "@/shared/mobx";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 
 export interface BottomStatusBarProps {
@@ -24,10 +25,12 @@ const TOOL_LABEL_KEYS: Record<EditorTool, MessageKey> = {
   inspect: "tool.inspect",
 };
 
-export function BottomStatusBar({ controller }: BottomStatusBarProps) {
-  const ui = useExternalStore(controller.uiStore);
+export const BottomStatusBar = observer(function BottomStatusBar({
+  controller,
+}: BottomStatusBarProps) {
+  const ui = controller.uiStore;
   const document = useExternalStore(controller.documentStore);
-  const editor = useExternalStore(controller.editorStore);
+  const editor = controller.editorStore;
   const topology = useExternalStore(controller.topologyStore);
   const simulation = useExternalStore(controller.simulationStore);
   const t = createTranslator(ui.locale);
@@ -97,4 +100,4 @@ export function BottomStatusBar({ controller }: BottomStatusBarProps) {
       </div>
     </footer>
   );
-}
+});

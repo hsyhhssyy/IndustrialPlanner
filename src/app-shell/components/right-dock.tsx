@@ -15,16 +15,19 @@ import {
 import { createTranslator } from "@/i18n/messages";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
+import { observer } from "@/shared/mobx";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 
 export interface RightDockProps {
   controller: WorkbenchController;
 }
 
-export function RightDock({ controller }: RightDockProps) {
-  const ui = useExternalStore(controller.uiStore);
+export const RightDock = observer(function RightDock({
+  controller,
+}: RightDockProps) {
+  const ui = controller.uiStore;
   const document = useExternalStore(controller.documentStore);
-  const editor = useExternalStore(controller.editorStore);
+  const editor = controller.editorStore;
   const topology = useExternalStore(controller.topologyStore);
   const simulation = useExternalStore(controller.simulationStore);
 
@@ -205,4 +208,4 @@ export function RightDock({ controller }: RightDockProps) {
       </section>
     </aside>
   );
-}
+});

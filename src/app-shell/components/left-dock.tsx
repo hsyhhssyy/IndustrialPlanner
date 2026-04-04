@@ -1,7 +1,6 @@
 import {
   WorkbenchIcon,
 } from "@/app-shell/components/workbench-icons";
-import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import {
   LEFT_PANEL_CONTENT,
   LEFT_RAIL_PRIMARY_ITEMS,
@@ -16,6 +15,7 @@ import {
 } from "@/i18n/messages";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
 import { createLogger } from "@/shared/logging/logger";
+import { observer } from "@/shared/mobx";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 import { useRef } from "react";
 
@@ -94,9 +94,11 @@ function isActionDisabled(
   }
 }
 
-export function LeftDock({ controller }: LeftDockProps) {
-  const ui = useExternalStore(controller.uiStore);
-  const editor = useExternalStore(controller.editorStore);
+export const LeftDock = observer(function LeftDock({
+  controller,
+}: LeftDockProps) {
+  const ui = controller.uiStore;
+  const editor = controller.editorStore;
   const registry = controller.registry;
   const pendingPlacementStrategyRef = useRef<{
     buttonId: string;
@@ -330,4 +332,4 @@ export function LeftDock({ controller }: LeftDockProps) {
       </section>
     </aside>
   );
-}
+});

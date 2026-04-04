@@ -39,6 +39,7 @@ import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { createTranslator } from "@/i18n/messages";
 import { RendererHost } from "@/renderer/host/renderer-host";
 import { createLogger } from "@/shared/logging/logger";
+import { observer } from "@/shared/mobx";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 import type { RenderDerivedState } from "@/workbench/workspace-derived-state";
@@ -83,13 +84,13 @@ export interface CanvasPanelProps {
   placementPreviewProfiler?: PlacementPreviewProfiler;
 }
 
-export function CanvasPanel({
+export const CanvasPanel = observer(function CanvasPanel({
   controller,
   renderDerivedStore,
   placementPreviewProfiler,
 }: CanvasPanelProps) {
-  const ui = useExternalStore(controller.uiStore);
-  const editor = useExternalStore(controller.editorStore);
+  const ui = controller.uiStore;
+  const editor = controller.editorStore;
   const render = useExternalStore(renderDerivedStore);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -834,4 +835,4 @@ export function CanvasPanel({
       </div>
     </main>
   );
-}
+});

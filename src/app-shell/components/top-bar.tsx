@@ -2,6 +2,7 @@ import { WorkbenchIcon } from "@/app-shell/components/workbench-icons";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { SIMULATION_SPEED_PRESETS } from "@/app-shell/workbench-placeholders";
 import { createTranslator } from "@/i18n/messages";
+import { observer } from "@/shared/mobx";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 import type { RenderDerivedState } from "@/workbench/workspace-derived-state";
 import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
@@ -11,11 +12,11 @@ export interface TopBarProps {
   renderDerivedStore: ReadonlySnapshotStore<RenderDerivedState>;
 }
 
-export function TopBar({
+export const TopBar = observer(function TopBar({
   controller,
   renderDerivedStore,
 }: TopBarProps) {
-  const ui = useExternalStore(controller.uiStore);
+  const ui = controller.uiStore;
   const render = useExternalStore(renderDerivedStore);
   const t = createTranslator(ui.locale);
   const cellSizeLabel = `${Math.round(render.cellSizePx)}px`;
@@ -82,4 +83,4 @@ export function TopBar({
       </div>
     </header>
   );
-}
+});
