@@ -40,6 +40,8 @@ import { createTranslator } from "@/i18n/messages";
 import { RendererHost } from "@/renderer/host/renderer-host";
 import { createLogger } from "@/shared/logging/logger";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
+import type { RenderDerivedState } from "@/workbench/workspace-derived-state";
+import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
 import type { CanvasPoint } from "@/workbench/workspace-state";
 import {
   useEffect,
@@ -76,11 +78,16 @@ function clampToRange(value: number, min: number, max: number): number {
 
 export interface CanvasPanelProps {
   controller: WorkbenchController;
+  renderDerivedStore: ReadonlySnapshotStore<RenderDerivedState>;
 }
 
-export function CanvasPanel({ controller }: CanvasPanelProps) {
+export function CanvasPanel({
+  controller,
+  renderDerivedStore,
+}: CanvasPanelProps) {
   const ui = useExternalStore(controller.uiStore);
   const editor = useExternalStore(controller.editorStore);
+  const render = useExternalStore(renderDerivedStore);
   const renderScene = useExternalStore(controller.renderSceneStore);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -111,19 +118,10 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
     editor.session.placementDefinitionId !== null &&
     editor.session.placementStrategy === "anchored-confirm";
   const anchoredPlacementPreview =
-    renderScene.placementPreview?.strategy === "anchored-confirm"
-      ? renderScene.placementPreview
+    editor.session.placementPreview?.strategy === "anchored-confirm"
+      ? editor.session.placementPreview
       : null;
-  const anchoredPlacementScreenBox = anchoredPlacementPreview
-    ? {
-        left:
-          (anchoredPlacementPreview.x - renderScene.viewportOffset.x) * renderScene.zoom,
-        top:
-          (anchoredPlacementPreview.y - renderScene.viewportOffset.y) * renderScene.zoom,
-        width: anchoredPlacementPreview.width * renderScene.zoom,
-        height: anchoredPlacementPreview.height * renderScene.zoom,
-      }
-    : null;
+  const anchoredPlacementScreenBox = render.anchoredPlacementScreenBox;
   const anchoredPlacementHintStyle = anchoredPlacementScreenBox
     ? {
         left: `${clampToRange(
@@ -211,7 +209,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
   useEffect(() => {
     if (
       !anchoredPlacementActive ||
-      renderScene.placementPreview !== null ||
+      editor.session.placementPreview !== null ||
       viewportSize.x <= 0 ||
       viewportSize.y <= 0
     ) {
@@ -222,7 +220,7 @@ export function CanvasPanel({ controller }: CanvasPanelProps) {
   }, [
     anchoredPlacementActive,
     controller,
-    renderScene.placementPreview,
+    editor.session.placementPreview,
     viewportSize.x,
     viewportSize.y,
   ]);

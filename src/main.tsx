@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { WorkbenchApp } from "@/app-shell/workbench-app";
+import { createWorkbenchShell } from "@/app-shell/workbench-shell";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 import {
   LOG_LEVELS,
@@ -10,6 +11,7 @@ import {
 import "@/styles.css";
 
 const controller = createWorkbenchController();
+const shell = createWorkbenchShell(controller);
 
 declare global {
   interface Window {
@@ -40,6 +42,6 @@ if (typeof window !== "undefined") {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <WorkbenchApp controller={controller} />
+    <WorkbenchApp shell={shell} />
   </React.StrictMode>,
 );

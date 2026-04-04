@@ -3,16 +3,22 @@ import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { SIMULATION_SPEED_PRESETS } from "@/app-shell/workbench-placeholders";
 import { createTranslator } from "@/i18n/messages";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
+import type { RenderDerivedState } from "@/workbench/workspace-derived-state";
+import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
 
 export interface TopBarProps {
   controller: WorkbenchController;
+  renderDerivedStore: ReadonlySnapshotStore<RenderDerivedState>;
 }
 
-export function TopBar({ controller }: TopBarProps) {
+export function TopBar({
+  controller,
+  renderDerivedStore,
+}: TopBarProps) {
   const ui = useExternalStore(controller.uiStore);
-  const renderScene = useExternalStore(controller.renderSceneStore);
+  const render = useExternalStore(renderDerivedStore);
   const t = createTranslator(ui.locale);
-  const cellSizeLabel = `${Math.round(renderScene.gridSize * renderScene.zoom)}px`;
+  const cellSizeLabel = `${Math.round(render.cellSizePx)}px`;
   const simulationActive = ui.mode === "simulate";
 
   return (

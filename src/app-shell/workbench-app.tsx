@@ -5,14 +5,15 @@ import { LeftToolbar } from "@/app-shell/components/left-toolbar";
 import { RightDock } from "@/app-shell/components/right-dock";
 import { TopBar } from "@/app-shell/components/top-bar";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
-import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
+import type { WorkbenchShell } from "@/app-shell/workbench-shell";
 import type { CSSProperties } from "react";
 
 export interface WorkbenchAppProps {
-  controller: WorkbenchController;
+  shell: WorkbenchShell;
 }
 
-export function WorkbenchApp({ controller }: WorkbenchAppProps) {
+export function WorkbenchApp({ shell }: WorkbenchAppProps) {
+  const { controller, workspaceDerivedStore } = shell;
   const ui = useExternalStore(controller.uiStore);
   const layoutStyle = {
     "--left-dock-width": ui.leftDock.open
@@ -29,10 +30,16 @@ export function WorkbenchApp({ controller }: WorkbenchAppProps) {
 
   return (
     <div className="workbench" style={layoutStyle}>
-      <TopBar controller={controller} />
+      <TopBar
+        controller={controller}
+        renderDerivedStore={workspaceDerivedStore.renderStore}
+      />
       <LeftToolbar controller={controller} />
       <LeftDock controller={controller} />
-      <CanvasPanel controller={controller} />
+      <CanvasPanel
+        controller={controller}
+        renderDerivedStore={workspaceDerivedStore.renderStore}
+      />
       <RightDock controller={controller} />
       <BottomStatusBar controller={controller} />
     </div>
