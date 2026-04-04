@@ -19,7 +19,7 @@ import type {
   RenderPlacementPreview,
   RenderSceneModel,
 } from "@/renderer/scene/types";
-import { createFpsMeter } from "@/renderer/host/fps-meter";
+import { createRendererDiagnosticsHud } from "@/renderer/host/renderer-diagnostics-hud";
 import { getRenderSceneSyncPlan } from "@/renderer/host/render-scene-sync-plan";
 import { createLogger } from "@/shared/logging/logger";
 
@@ -38,22 +38,6 @@ const LABEL_TEXT_STYLE: TextStyleOptions = {
   align: "center",
   wordWrap: true,
   wordWrapWidth: 108,
-};
-const FPS_HUD_TEXT_STYLE: TextStyleOptions = {
-  fill: 0x7fe0b0,
-  fontFamily:
-    '"IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace',
-  fontSize: 12,
-  fontWeight: "600",
-};
-const FPS_HUD_BACKGROUND_FILL: FillInput = {
-  color: 0x091018,
-  alpha: 0.78,
-};
-const FPS_HUD_BACKGROUND_STROKE: StrokeInput = {
-  width: 1,
-  color: 0x284457,
-  alpha: 0.92,
 };
 const PENDING_LINK_STROKE_STYLE: StrokeInput = {
   width: 2,
@@ -120,7 +104,7 @@ interface PixiSceneLayers {
   links: Container;
   entities: Container;
   preview: Container;
-  hud: Container;
+  diagnostics: Container;
 }
 
 export interface PixiRendererRuntime {
@@ -254,14 +238,14 @@ function createSceneLayers(stage: Container): PixiSceneLayers {
   const links = new Container();
   const entities = new Container();
   const preview = new Container();
-  const hud = new Container();
+  const diagnostics = new Container();
 
   camera.addChild(grid);
   camera.addChild(links);
   camera.addChild(entities);
   camera.addChild(preview);
   stage.addChild(camera);
-  stage.addChild(hud);
+  stage.addChild(diagnostics);
 
   return {
     camera,
@@ -269,39 +253,8 @@ function createSceneLayers(stage: Container): PixiSceneLayers {
     links,
     entities,
     preview,
-    hud,
+    diagnostics,
   };
-}
-
-function renderFpsHudLayer(
-  hudLayer: Container,
-  label: string,
-  viewportWidth: number,
-): void {
-  clearContainer(hudLayer);
-
-  const text = new Text({
-    text: label,
-    style: FPS_HUD_TEXT_STYLE,
-  });
-  const paddingX = 8;
-  const paddingY = 6;
-  const margin = 12;
-  const background = new Graphics();
-  const backgroundWidth = Math.ceil(text.width + paddingX * 2);
-  const backgroundHeight = Math.ceil(text.height + paddingY * 2);
-  const backgroundX = Math.max(margin, viewportWidth - backgroundWidth - margin);
-  const backgroundY = margin;
-
-  background
-    .roundRect(backgroundX, backgroundY, backgroundWidth, backgroundHeight, 8)
-    .fill(FPS_HUD_BACKGROUND_FILL)
-    .stroke(FPS_HUD_BACKGROUND_STROKE);
-  text.x = backgroundX + paddingX;
-  text.y = backgroundY + paddingY;
-
-  hudLayer.addChild(background);
-  hudLayer.addChild(text);
 }
 
 function drawDashedLine(
@@ -747,7 +700,7 @@ export function createPixiRendererRuntime(
 ): PixiRendererRuntime {
   const app = new Application();
   const layers = createSceneLayers(app.stage);
-  const fpsMeter = createFpsMeter();
+  const diagnosticsHud = createRendererDiagnosticsHud();
   const textureCache = new Map<string, Texture>();
   const pendingTexturePaths = new Set<string>();
   const placementPreviewRenderDiagnostics =
@@ -757,7 +710,6 @@ export function createPixiRendererRuntime(
   let initialized = false;
   let latestScene: RenderSceneModel | null = null;
   let renderedScene: RenderSceneModel | null = null;
-  let fpsHudLabel = "";
   let rendererViewportWidth = 0;
   let rendererViewportHeight = 0;
   let rendererResolution = 0;
@@ -800,21 +752,13 @@ export function createPixiRendererRuntime(
     return metrics;
   }
 
-  function syncFpsHud(force = false): boolean {
+  function syncDiagnosticsHud(force = false): boolean {
     if (!initialized || destroyed) {
       return false;
     }
 
     const { width } = syncRendererViewport();
-    const nextLabel = fpsMeter.getLabel();
-
-    if (!force && nextLabel === fpsHudLabel) {
-      return false;
-    }
-
-    renderFpsHudLayer(layers.hud, nextLabel, width);
-    fpsHudLabel = nextLabel;
-    return true;
+    return diagnosticsHud.syncLayer(layers.diagnostics, width, force);
   }
 
   function startFpsMonitor(): void {
@@ -823,7 +767,9 @@ export function createPixiRendererRuntime(
         return;
       }
 
-      const didUpdateHud = syncFpsHud(fpsMeter.recordFrame(now));
+      const didUpdateHud = diagnosticsHud.recordFrame(now)
+        ? syncDiagnosticsHud()
+        : false;
 
       if (didUpdateHud && initialized) {
         app.render();
@@ -882,7 +828,7 @@ export function createPixiRendererRuntime(
       renderPlacementPreviewLayer(layers, latestScene, textureCache);
     }
 
-    syncFpsHud();
+    syncDiagnosticsHud();
     app.render();
     renderedScene = latestScene;
 
@@ -1027,7 +973,7 @@ export function createPixiRendererRuntime(
       resizeObserver.observe(hostElement);
       initialized = true;
       syncRendererViewport(true);
-      syncFpsHud(true);
+      syncDiagnosticsHud(true);
       startFpsMonitor();
       renderLatestScene();
     })
