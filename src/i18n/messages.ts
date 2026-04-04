@@ -20,6 +20,8 @@ export type MessageKey =
   | "action.removeLinks"
   | "action.removeLink"
   | "action.applyValue"
+  | "action.rotatePlacement"
+  | "action.cancelPlacement"
   | "action.confirmPlacement"
   | "action.toggleValue"
   | "action.clearPatch"
@@ -122,6 +124,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.removeLinks": "删除链接",
     "action.removeLink": "移除链接",
     "action.applyValue": "应用",
+    "action.rotatePlacement": "旋转",
+    "action.cancelPlacement": "取消",
     "action.confirmPlacement": "确认放置",
     "action.toggleValue": "切换",
     "action.clearPatch": "清除覆盖",
@@ -223,6 +227,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.removeLinks": "Remove Links",
     "action.removeLink": "Remove Link",
     "action.applyValue": "Apply",
+    "action.rotatePlacement": "Rotate",
+    "action.cancelPlacement": "Cancel",
     "action.confirmPlacement": "Confirm Placement",
     "action.toggleValue": "Toggle",
     "action.clearPatch": "Clear Patch",

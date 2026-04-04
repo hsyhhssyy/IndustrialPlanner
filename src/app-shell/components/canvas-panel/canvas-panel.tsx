@@ -53,12 +53,14 @@ import {
   useState,
   type FocusEvent,
   type KeyboardEvent,
+  type MouseEvent,
   type PointerEvent,
   type WheelEvent,
 } from "react";
 
 const PIXELS_PER_WHEEL_LINE = 16;
 const WHEEL_ZOOM_SENSITIVITY = 0.0015;
+const TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX = 336;
 const logger = createLogger("app.canvas-panel");
 
 function normalizeWheelDelta(event: WheelEvent<HTMLDivElement>): number {
@@ -144,12 +146,14 @@ export const CanvasPanel = observer(function CanvasPanel({
         )}px`,
       }
     : null;
-  const anchoredPlacementConfirmStyle = anchoredPlacementScreenBox
+  const anchoredPlacementToolbarStyle = anchoredPlacementScreenBox
     ? {
         left: `${clampToRange(
-          anchoredPlacementScreenBox.left + anchoredPlacementScreenBox.width - 120,
+          anchoredPlacementScreenBox.left +
+            anchoredPlacementScreenBox.width -
+            TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX,
           12,
-          viewportSize.x - 132,
+          viewportSize.x - TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX - 12,
         )}px`,
         top: `${clampToRange(
           anchoredPlacementScreenBox.top + anchoredPlacementScreenBox.height + 10,
@@ -183,6 +187,11 @@ export const CanvasPanel = observer(function CanvasPanel({
 
   const cancelScheduledPlacementPreview = () => {
     previewInputSchedulerRef.current?.cancel();
+  };
+
+  const cancelPlacement = () => {
+    cancelScheduledPlacementPreview();
+    controller.cancelPlacement();
   };
 
   const updatePointerGestureState = (nextState: CanvasPanelPointerGestureState) => {
@@ -487,6 +496,13 @@ export const CanvasPanel = observer(function CanvasPanel({
       return;
     }
 
+    if (event.button === 2 && editor.session.placementDefinitionId) {
+      event.preventDefault();
+      pointerTapGestureStateRef.current = createIdleCanvasPanelPointerTapGestureState();
+      cancelPlacement();
+      return;
+    }
+
     if (event.button !== 1) {
       return;
     }
@@ -768,6 +784,14 @@ export const CanvasPanel = observer(function CanvasPanel({
     );
   };
 
+  const handleViewportContextMenu = (event: MouseEvent<HTMLDivElement>) => {
+    if (!editor.session.placementDefinitionId) {
+      return;
+    }
+
+    event.preventDefault();
+  };
+
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     switch (event.key.toLowerCase()) {
       case "w":
@@ -782,6 +806,14 @@ export const CanvasPanel = observer(function CanvasPanel({
       case "d":
         keyStateRef.current.right = true;
         break;
+      case "r":
+        if (!editor.session.placementDefinitionId || event.repeat) {
+          return;
+        }
+
+        event.preventDefault();
+        controller.rotatePlacementClockwise();
+        return;
       default:
         return;
     }
@@ -833,6 +865,7 @@ export const CanvasPanel = observer(function CanvasPanel({
           className={isCanvasPointerPanning(pointerGestureState) || isCanvasTouchPanning(touchGestureState)
             ? "canvas-viewport-surface is-panning"
             : "canvas-viewport-surface"}
+          onContextMenu={handleViewportContextMenu}
           onLostPointerCapture={handleViewportLostPointerCapture}
           onPointerCancel={handleViewportPointerCancel}
           onPointerDown={handleViewportPointerDown}
@@ -852,22 +885,46 @@ export const CanvasPanel = observer(function CanvasPanel({
               {t("label.touchPlacementHint")}
             </div>
           ) : null}
-          {anchoredPlacementConfirmStyle ? (
-            <button
-              className="placement-confirm-button"
-              disabled={!anchoredPlacementPreview?.valid}
+          {anchoredPlacementToolbarStyle ? (
+            <div
+              className="placement-action-toolbar"
               onClick={(event) => {
                 event.stopPropagation();
-                void controller.confirmPlacementPreview();
               }}
               onPointerDown={(event) => {
                 event.stopPropagation();
               }}
-              style={anchoredPlacementConfirmStyle}
-              type="button"
+              style={anchoredPlacementToolbarStyle}
             >
-              {t("action.confirmPlacement")}
-            </button>
+              <button
+                className="placement-action-button"
+                onClick={() => {
+                  controller.rotatePlacementClockwise();
+                }}
+                type="button"
+              >
+                {t("action.rotatePlacement")}
+              </button>
+              <button
+                className="placement-action-button"
+                onClick={() => {
+                  cancelPlacement();
+                }}
+                type="button"
+              >
+                {t("action.cancelPlacement")}
+              </button>
+              <button
+                className="placement-action-button placement-confirm-button"
+                disabled={!anchoredPlacementPreview?.valid}
+                onClick={() => {
+                  void controller.confirmPlacementPreview();
+                }}
+                type="button"
+              >
+                {t("action.confirmPlacement")}
+              </button>
+            </div>
           ) : null}
         </div>
       </div>
