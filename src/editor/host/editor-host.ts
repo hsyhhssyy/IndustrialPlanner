@@ -8,6 +8,9 @@ import type {
   EditorSession,
   EditorTool,
 } from "@/editor/contracts/editor-session";
+import {
+  isSamePlacementPreviewState,
+} from "@/editor/contracts/placement-preview";
 import type {
   PlacementPreviewState,
   PlacementPreviewStrategy,
@@ -44,6 +47,13 @@ export type EditorWorldInteractionTarget =
 export interface CanvasWorldInput {
   worldPoint: CanvasPoint;
   gridPoint: GridPoint;
+}
+
+export interface PlacementPreviewUpdateResult {
+  preview: PlacementPreviewState | null;
+  invalidReason: PlacementPreviewInvalidReason | null;
+  hitEntityId: string | null;
+  changed: boolean;
 }
 
 function hitTestWorldEntity(
@@ -118,7 +128,7 @@ export interface EditorHost {
     tool?: EditorTool,
     strategy?: PlacementPreviewStrategy,
   ) => void;
-  updatePlacementPreview: (input: CanvasWorldInput) => void;
+  updatePlacementPreview: (input: CanvasWorldInput) => PlacementPreviewUpdateResult;
   confirmPlacement: () => boolean;
   commitPlacement: (input: CanvasWorldInput) => boolean;
   clearPlacementPreview: () => void;
@@ -154,28 +164,6 @@ interface PlacementPreviewResolution {
   preview: PlacementPreviewState | null;
   invalidReason: PlacementPreviewInvalidReason | null;
   hitEntityId: string | null;
-}
-
-function isSamePlacementPreview(
-  left: PlacementPreviewState | null,
-  right: PlacementPreviewState | null,
-): boolean {
-  if (left === right) {
-    return true;
-  }
-
-  if (!left || !right) {
-    return false;
-  }
-
-  return (
-    left.definitionId === right.definitionId &&
-    left.strategy === right.strategy &&
-    left.rotation === right.rotation &&
-    left.valid === right.valid &&
-    left.gridPoint.x === right.gridPoint.x &&
-    left.gridPoint.y === right.gridPoint.y
-  );
 }
 
 class EditorHostImpl implements EditorHost {
@@ -250,13 +238,14 @@ class EditorHostImpl implements EditorHost {
     });
   }
 
-  updatePlacementPreview(input: CanvasWorldInput): void {
+  updatePlacementPreview(input: CanvasWorldInput): PlacementPreviewUpdateResult {
     const previousPreview = this.core.getSnapshot().session.placementPreview;
     const resolution = this.resolvePlacementPreview(input);
+    const changed = !isSamePlacementPreviewState(previousPreview, resolution.preview);
 
     this.core.setPlacementPreview(resolution.preview);
 
-    if (!isSamePlacementPreview(previousPreview, resolution.preview)) {
+    if (changed) {
       this.logger.debug("Updated placement preview.", {
         worldPoint: input.worldPoint,
         gridPoint: input.gridPoint,
@@ -265,6 +254,13 @@ class EditorHostImpl implements EditorHost {
         hitEntityId: resolution.hitEntityId,
       });
     }
+
+    return {
+      preview: resolution.preview,
+      invalidReason: resolution.invalidReason,
+      hitEntityId: resolution.hitEntityId,
+      changed,
+    };
   }
 
   confirmPlacement(): boolean {

@@ -46,11 +46,16 @@ import {
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
 import type { EditorTool } from "@/editor/contracts/editor-session";
-import type { PlacementPreviewStrategy } from "@/editor/contracts/placement-preview";
+import {
+  isSamePlacementPreviewState,
+  type PlacementPreviewState,
+  type PlacementPreviewStrategy,
+} from "@/editor/contracts/placement-preview";
 import {
   createEditorHost,
   type CanvasWorldInput,
   type EditorHost,
+  type PlacementPreviewUpdateResult,
 } from "@/editor/host/editor-host";
 import type { AppLocale } from "@/i18n/messages";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
@@ -78,6 +83,61 @@ interface MutationState {
   pendingLinkSourceEntityId: string | null;
 }
 
+interface SyncMetrics {
+  preliminaryRenderSceneDurationMs: number;
+  finalRenderSceneDurationMs: number;
+  storageSaveDurationMs: number;
+  totalDurationMs: number;
+  persistedWorkspaceChanged: boolean;
+}
+
+interface PlacementPreviewDiagnosticWindow {
+  startedAt: number;
+  lastFlushedAt: number;
+  updateCalls: number;
+  previewChangedCalls: number;
+  previewUnchangedCalls: number;
+  slowSyncCount: number;
+  totalSyncDurationMs: number;
+  slowestSyncDurationMs: number;
+  latest:
+    | {
+        definitionId: string | null;
+        strategy: PlacementPreviewStrategy | null;
+        screenPoint: CanvasPoint;
+        inputGridPoint: CanvasWorldInput["gridPoint"];
+        preview: PlacementPreviewState | null;
+        invalidReason: PlacementPreviewUpdateResult["invalidReason"];
+        hitEntityId: string | null;
+        persistedWorkspaceChanged: boolean;
+        storageSaveDurationMs: number;
+        finalRenderSceneDurationMs: number;
+      }
+    | null;
+}
+
+const PLACEMENT_PREVIEW_DIAGNOSTIC_WINDOW_MS = 180;
+const SLOW_PLACEMENT_PREVIEW_SYNC_MS = 16;
+
+function getDiagnosticTimeMs(): number {
+  return typeof performance !== "undefined" ? performance.now() : Date.now();
+}
+
+function clonePlacementPreview(
+  preview: PlacementPreviewState | null,
+): PlacementPreviewState | null {
+  if (!preview) {
+    return null;
+  }
+
+  return {
+    ...preview,
+    gridPoint: {
+      ...preview.gridPoint,
+    },
+  };
+}
+
 class WorkbenchControllerImpl implements WorkbenchController {
   readonly registry: Stage1Registry;
   readonly uiStore;
@@ -94,6 +154,17 @@ class WorkbenchControllerImpl implements WorkbenchController {
   private readonly editorHost: EditorHost;
   private readonly simulationHost: SimulationHost;
   private readonly unsubscribeSimulationHost: () => void;
+  private readonly placementPreviewDiagnostics: PlacementPreviewDiagnosticWindow = {
+    startedAt: 0,
+    lastFlushedAt: 0,
+    updateCalls: 0,
+    previewChangedCalls: 0,
+    previewUnchangedCalls: 0,
+    slowSyncCount: 0,
+    totalSyncDurationMs: 0,
+    slowestSyncDurationMs: 0,
+    latest: null,
+  };
 
   private topology: CompiledTopology;
   private viewportSize: CanvasPoint = { x: 0, y: 0 };
@@ -240,8 +311,27 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   updatePlacementPreviewFromScreenPoint(screenPoint: CanvasPoint): void {
-    this.editorHost.updatePlacementPreview(this.resolveWorldInput(screenPoint));
-    this.sync();
+    const sessionBefore = this.editorStore.getSnapshot().session;
+    const previousPreview = clonePlacementPreview(sessionBefore.placementPreview);
+    const worldInput = this.resolveWorldInput(screenPoint);
+    const updateResult = this.editorHost.updatePlacementPreview(worldInput);
+    const nextPreview = clonePlacementPreview(
+      this.editorStore.getSnapshot().session.placementPreview,
+    );
+    const syncMetrics = this.sync();
+
+    if (sessionBefore.placementDefinitionId && sessionBefore.placementStrategy) {
+      this.recordPlacementPreviewDiagnostic({
+        definitionId: sessionBefore.placementDefinitionId,
+        strategy: sessionBefore.placementStrategy,
+        screenPoint,
+        worldInput,
+        previousPreview,
+        nextPreview,
+        updateResult,
+        syncMetrics,
+      });
+    }
   }
 
   async confirmPlacementPreview(): Promise<void> {
@@ -727,7 +817,8 @@ class WorkbenchControllerImpl implements WorkbenchController {
     return true;
   }
 
-  private sync(): void {
+  private sync(): SyncMetrics {
+    const startedAt = getDiagnosticTimeMs();
     const currentState = this.workspaceStore.rootStore.getSnapshot();
     const nextState = this.composeWorkspaceState(currentState, {
       document: this.editorHost.getDocument(),
@@ -736,7 +827,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
       canvasView: currentState.canvasView,
       simulation: this.simulationHost.getSnapshot(),
     });
+    const preliminaryRenderSceneStartedAt = getDiagnosticTimeMs();
     const preliminaryRenderScene = this.buildRenderSceneSnapshot(nextState);
+    const preliminaryRenderSceneDurationMs =
+      getDiagnosticTimeMs() - preliminaryRenderSceneStartedAt;
 
     this.worldSize = {
       x: preliminaryRenderScene.worldWidth,
@@ -751,11 +845,26 @@ class WorkbenchControllerImpl implements WorkbenchController {
       ...nextState,
       canvasView: clampedCanvasView,
     });
+    const finalRenderSceneStartedAt = getDiagnosticTimeMs();
+    const finalRenderScene = this.buildRenderSceneSnapshot(finalState);
+    const finalRenderSceneDurationMs =
+      getDiagnosticTimeMs() - finalRenderSceneStartedAt;
+    const persistedWorkspaceChanged =
+      currentState.ui !== finalState.ui || currentState.canvasView !== finalState.canvasView;
 
     this.workspaceStore.rootStore.setSnapshot(finalState);
     this.topologyStore.setSnapshot(this.topology);
-    this.renderSceneStore.setSnapshot(this.buildRenderSceneSnapshot(finalState));
+    this.renderSceneStore.setSnapshot(finalRenderScene);
+    const storageSaveStartedAt = getDiagnosticTimeMs();
     this.saveWorkspaceState(finalState);
+
+    return {
+      preliminaryRenderSceneDurationMs,
+      finalRenderSceneDurationMs,
+      storageSaveDurationMs: getDiagnosticTimeMs() - storageSaveStartedAt,
+      totalDurationMs: getDiagnosticTimeMs() - startedAt,
+      persistedWorkspaceChanged,
+    };
   }
 
   private saveWorkspaceState(workspaceState: WorkspaceState): void {
@@ -839,6 +948,112 @@ class WorkbenchControllerImpl implements WorkbenchController {
           ? currentState.simulation
           : nextState.simulation,
     };
+  }
+
+  private recordPlacementPreviewDiagnostic(options: {
+    definitionId: string;
+    strategy: PlacementPreviewStrategy;
+    screenPoint: CanvasPoint;
+    worldInput: CanvasWorldInput;
+    previousPreview: PlacementPreviewState | null;
+    nextPreview: PlacementPreviewState | null;
+    updateResult: PlacementPreviewUpdateResult;
+    syncMetrics: SyncMetrics;
+  }): void {
+    const now = getDiagnosticTimeMs();
+    const diagnostics = this.placementPreviewDiagnostics;
+
+    if (diagnostics.startedAt === 0) {
+      diagnostics.startedAt = now;
+      diagnostics.lastFlushedAt = now;
+    }
+
+    diagnostics.updateCalls += 1;
+    diagnostics.totalSyncDurationMs += options.syncMetrics.totalDurationMs;
+
+    if (options.updateResult.changed) {
+      diagnostics.previewChangedCalls += 1;
+    } else {
+      diagnostics.previewUnchangedCalls += 1;
+    }
+
+    if (options.syncMetrics.totalDurationMs >= SLOW_PLACEMENT_PREVIEW_SYNC_MS) {
+      diagnostics.slowSyncCount += 1;
+      diagnostics.slowestSyncDurationMs = Math.max(
+        diagnostics.slowestSyncDurationMs,
+        options.syncMetrics.totalDurationMs,
+      );
+    }
+
+    diagnostics.latest = {
+      definitionId: options.definitionId,
+      strategy: options.strategy,
+      screenPoint: options.screenPoint,
+      inputGridPoint: options.worldInput.gridPoint,
+      preview: clonePlacementPreview(options.nextPreview),
+      invalidReason: options.updateResult.invalidReason,
+      hitEntityId: options.updateResult.hitEntityId,
+      persistedWorkspaceChanged: options.syncMetrics.persistedWorkspaceChanged,
+      storageSaveDurationMs: Number(options.syncMetrics.storageSaveDurationMs.toFixed(2)),
+      finalRenderSceneDurationMs: Number(
+        options.syncMetrics.finalRenderSceneDurationMs.toFixed(2),
+      ),
+    };
+
+    if (
+      options.syncMetrics.totalDurationMs >= SLOW_PLACEMENT_PREVIEW_SYNC_MS ||
+      now - diagnostics.lastFlushedAt >= PLACEMENT_PREVIEW_DIAGNOSTIC_WINDOW_MS
+    ) {
+      const sampleWindowMs = now - diagnostics.startedAt;
+      const averageSyncDurationMs =
+        diagnostics.updateCalls > 0
+          ? diagnostics.totalSyncDurationMs / diagnostics.updateCalls
+          : 0;
+      const context = {
+        sampleWindowMs: Number(sampleWindowMs.toFixed(2)),
+        updateCalls: diagnostics.updateCalls,
+        previewChangedCalls: diagnostics.previewChangedCalls,
+        previewUnchangedCalls: diagnostics.previewUnchangedCalls,
+        averageSyncDurationMs: Number(averageSyncDurationMs.toFixed(2)),
+        slowestSyncDurationMs: Number(diagnostics.slowestSyncDurationMs.toFixed(2)),
+        slowSyncCount: diagnostics.slowSyncCount,
+        previousPreview: clonePlacementPreview(options.previousPreview),
+        latest: diagnostics.latest,
+        latestSync: {
+          totalDurationMs: Number(options.syncMetrics.totalDurationMs.toFixed(2)),
+          preliminaryRenderSceneDurationMs: Number(
+            options.syncMetrics.preliminaryRenderSceneDurationMs.toFixed(2),
+          ),
+          finalRenderSceneDurationMs: Number(
+            options.syncMetrics.finalRenderSceneDurationMs.toFixed(2),
+          ),
+          storageSaveDurationMs: Number(
+            options.syncMetrics.storageSaveDurationMs.toFixed(2),
+          ),
+          persistedWorkspaceChanged: options.syncMetrics.persistedWorkspaceChanged,
+          previewChanged: !isSamePlacementPreviewState(
+            options.previousPreview,
+            options.nextPreview,
+          ),
+        },
+      };
+
+      if (options.syncMetrics.totalDurationMs >= SLOW_PLACEMENT_PREVIEW_SYNC_MS) {
+        this.logger.info("Placement preview pipeline exceeded the frame budget.", context);
+      } else {
+        this.logger.debug("Placement preview pipeline sample.", context);
+      }
+
+      diagnostics.startedAt = now;
+      diagnostics.lastFlushedAt = now;
+      diagnostics.updateCalls = 0;
+      diagnostics.previewChangedCalls = 0;
+      diagnostics.previewUnchangedCalls = 0;
+      diagnostics.slowSyncCount = 0;
+      diagnostics.totalSyncDurationMs = 0;
+      diagnostics.slowestSyncDurationMs = 0;
+      diagnostics.latest = null;
+    }
   }
 }
 

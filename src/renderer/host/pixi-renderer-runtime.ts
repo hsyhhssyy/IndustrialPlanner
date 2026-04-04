@@ -93,6 +93,8 @@ const PIXI_DISPLAY_OBJECT_DESTROY_OPTIONS: DestroyOptions = {
   textureSource: false,
 };
 const logger = createLogger("renderer.pixi");
+const PLACEMENT_PREVIEW_RENDER_DIAGNOSTIC_WINDOW_MS = 180;
+const SLOW_PLACEMENT_PREVIEW_RENDER_MS = 16;
 
 interface PixiSceneLayers {
   camera: Container;
@@ -105,6 +107,49 @@ interface PixiSceneLayers {
 export interface PixiRendererRuntime {
   syncScene: (scene: RenderSceneModel) => void;
   destroy: () => void;
+}
+
+interface PlacementPreviewRenderDiagnosticWindow {
+  startedAt: number;
+  lastFlushedAt: number;
+  renderCount: number;
+  slowRenderCount: number;
+  totalRenderDurationMs: number;
+  slowestRenderDurationMs: number;
+  latest:
+    | {
+        zoom: number;
+        worldWidth: number;
+        worldHeight: number;
+        entityCount: number;
+        explicitLinkCount: number;
+        placementPreview: {
+          definitionId: string;
+          strategy: RenderPlacementPreview["strategy"];
+          valid: boolean;
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+        } | null;
+      }
+    | null;
+}
+
+function getDiagnosticTimeMs(): number {
+  return typeof performance !== "undefined" ? performance.now() : Date.now();
+}
+
+function createEmptyPlacementPreviewRenderDiagnosticWindow(): PlacementPreviewRenderDiagnosticWindow {
+  return {
+    startedAt: 0,
+    lastFlushedAt: 0,
+    renderCount: 0,
+    slowRenderCount: 0,
+    totalRenderDurationMs: 0,
+    slowestRenderDurationMs: 0,
+    latest: null,
+  };
 }
 
 function getStatusStrokeStyle(
@@ -656,6 +701,8 @@ export function createPixiRendererRuntime(
   const layers = createSceneLayers(app.stage);
   const textureCache = new Map<string, Texture>();
   const pendingTexturePaths = new Set<string>();
+  const placementPreviewRenderDiagnostics =
+    createEmptyPlacementPreviewRenderDiagnosticWindow();
 
   let destroyed = false;
   let initialized = false;
@@ -688,6 +735,7 @@ export function createPixiRendererRuntime(
       return;
     }
 
+    const renderStartedAt = getDiagnosticTimeMs();
     const { resolution } = getSceneScreenSize(latestScene);
     const width = Math.max(1, Math.floor(hostElement.clientWidth));
     const height = Math.max(1, Math.floor(hostElement.clientHeight));
@@ -698,6 +746,90 @@ export function createPixiRendererRuntime(
     );
     renderSceneToLayers(layers, latestScene, textureCache);
     app.render();
+
+    const renderDurationMs = getDiagnosticTimeMs() - renderStartedAt;
+
+    if (latestScene.placementPreview) {
+      recordPlacementPreviewRenderDiagnostic(latestScene, renderDurationMs);
+    }
+  }
+
+  function recordPlacementPreviewRenderDiagnostic(
+    scene: RenderSceneModel,
+    renderDurationMs: number,
+  ): void {
+    const now = getDiagnosticTimeMs();
+
+    if (placementPreviewRenderDiagnostics.startedAt === 0) {
+      placementPreviewRenderDiagnostics.startedAt = now;
+      placementPreviewRenderDiagnostics.lastFlushedAt = now;
+    }
+
+    placementPreviewRenderDiagnostics.renderCount += 1;
+    placementPreviewRenderDiagnostics.totalRenderDurationMs += renderDurationMs;
+    placementPreviewRenderDiagnostics.latest = {
+      zoom: scene.zoom,
+      worldWidth: scene.worldWidth,
+      worldHeight: scene.worldHeight,
+      entityCount: scene.entities.length,
+      explicitLinkCount: scene.explicitLinks.length,
+      placementPreview: scene.placementPreview
+        ? {
+            definitionId: scene.placementPreview.definitionId,
+            strategy: scene.placementPreview.strategy,
+            valid: scene.placementPreview.valid,
+            x: scene.placementPreview.x,
+            y: scene.placementPreview.y,
+            width: scene.placementPreview.width,
+            height: scene.placementPreview.height,
+          }
+        : null,
+    };
+
+    if (renderDurationMs >= SLOW_PLACEMENT_PREVIEW_RENDER_MS) {
+      placementPreviewRenderDiagnostics.slowRenderCount += 1;
+      placementPreviewRenderDiagnostics.slowestRenderDurationMs = Math.max(
+        placementPreviewRenderDiagnostics.slowestRenderDurationMs,
+        renderDurationMs,
+      );
+    }
+
+    if (
+      renderDurationMs >= SLOW_PLACEMENT_PREVIEW_RENDER_MS ||
+      now - placementPreviewRenderDiagnostics.lastFlushedAt >=
+        PLACEMENT_PREVIEW_RENDER_DIAGNOSTIC_WINDOW_MS
+    ) {
+      const sampleWindowMs = now - placementPreviewRenderDiagnostics.startedAt;
+      const averageRenderDurationMs =
+        placementPreviewRenderDiagnostics.renderCount > 0
+          ? placementPreviewRenderDiagnostics.totalRenderDurationMs /
+            placementPreviewRenderDiagnostics.renderCount
+          : 0;
+      const context = {
+        sampleWindowMs: Number(sampleWindowMs.toFixed(2)),
+        renderCount: placementPreviewRenderDiagnostics.renderCount,
+        averageRenderDurationMs: Number(averageRenderDurationMs.toFixed(2)),
+        slowestRenderDurationMs: Number(
+          placementPreviewRenderDiagnostics.slowestRenderDurationMs.toFixed(2),
+        ),
+        slowRenderCount: placementPreviewRenderDiagnostics.slowRenderCount,
+        latest: placementPreviewRenderDiagnostics.latest,
+      };
+
+      if (renderDurationMs >= SLOW_PLACEMENT_PREVIEW_RENDER_MS) {
+        logger.info("Placement preview render exceeded the frame budget.", context);
+      } else {
+        logger.debug("Placement preview render sample.", context);
+      }
+
+      placementPreviewRenderDiagnostics.startedAt = now;
+      placementPreviewRenderDiagnostics.lastFlushedAt = now;
+      placementPreviewRenderDiagnostics.renderCount = 0;
+      placementPreviewRenderDiagnostics.slowRenderCount = 0;
+      placementPreviewRenderDiagnostics.totalRenderDurationMs = 0;
+      placementPreviewRenderDiagnostics.slowestRenderDurationMs = 0;
+      placementPreviewRenderDiagnostics.latest = null;
+    }
   }
 
   function ensureTexture(path: string): void {
