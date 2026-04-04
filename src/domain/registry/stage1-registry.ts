@@ -57,7 +57,7 @@ export const STAGE1_ENTITY_DEFINITIONS: Stage1EntityDefinition[] = [
     nameKey: "registry.entity.item_port_storager_1.name",
     name: "Protocol Storage Box",
     category: "storage",
-    footprint: { width: 2, height: 2 },
+    footprint: { width: 3, height: 3 },
     capabilityIds: ["footprint", "inventory-buffer", "warehouse-attachment"],
     configFields: [
       {
@@ -73,7 +73,7 @@ export const STAGE1_ENTITY_DEFINITIONS: Stage1EntityDefinition[] = [
     nameKey: "registry.entity.item_port_log_hongs_bus.name",
     name: "Warehouse Bus Segment",
     category: "bus",
-    footprint: { width: 1, height: 1 },
+    footprint: { width: 4, height: 8 },
     capabilityIds: ["footprint", "warehouse-bus"],
     configFields: [],
   },
@@ -82,7 +82,7 @@ export const STAGE1_ENTITY_DEFINITIONS: Stage1EntityDefinition[] = [
     nameKey: "registry.entity.item_port_log_hongs_bus_source.name",
     name: "Warehouse Bus Source",
     category: "bus",
-    footprint: { width: 1, height: 1 },
+    footprint: { width: 4, height: 4 },
     capabilityIds: ["footprint", "warehouse-bus", "warehouse-source"],
     configFields: [],
   },
@@ -91,7 +91,7 @@ export const STAGE1_ENTITY_DEFINITIONS: Stage1EntityDefinition[] = [
     nameKey: "registry.entity.item_port_unloader_1.name",
     name: "Pickup Port",
     category: "logistics",
-    footprint: { width: 2, height: 2 },
+    footprint: { width: 3, height: 1 },
     capabilityIds: ["footprint", "port-schema", "warehouse-pickup"],
     configFields: [
       {
@@ -150,7 +150,7 @@ export const STAGE1_ENTITY_DEFINITIONS: Stage1EntityDefinition[] = [
     nameKey: "registry.entity.item_port_liquid_filling_pd_mc_1.name",
     name: "Liquid Filling Machine",
     category: "processor",
-    footprint: { width: 3, height: 3 },
+    footprint: { width: 6, height: 4 },
     capabilityIds: [
       "footprint",
       "port-schema",
@@ -236,7 +236,7 @@ export const STAGE1_ENTITY_DEFINITIONS: Stage1EntityDefinition[] = [
     nameKey: "registry.entity.item_port_udpipe_loader_1.name",
     name: "Dark Pipe Inlet",
     category: "dark-pipe",
-    footprint: { width: 2, height: 2 },
+    footprint: { width: 3, height: 3 },
     capabilityIds: [
       "footprint",
       "port-schema",
@@ -257,7 +257,7 @@ export const STAGE1_ENTITY_DEFINITIONS: Stage1EntityDefinition[] = [
     nameKey: "registry.entity.item_port_udpipe_unloader_1.name",
     name: "Dark Pipe Outlet",
     category: "dark-pipe",
-    footprint: { width: 2, height: 2 },
+    footprint: { width: 3, height: 3 },
     capabilityIds: [
       "footprint",
       "port-schema",
