@@ -5,8 +5,8 @@ export function useExternalStore<TSnapshot>(
   store: Pick<SnapshotStore<TSnapshot>, "getSnapshot" | "subscribe">,
 ): TSnapshot {
   return useSyncExternalStore(
-    store.subscribe,
-    store.getSnapshot,
-    store.getSnapshot,
+    (listener) => store.subscribe(listener),
+    () => store.getSnapshot(),
+    () => store.getSnapshot(),
   );
 }

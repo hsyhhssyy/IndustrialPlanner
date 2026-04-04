@@ -2,6 +2,7 @@
 
 import { BottomStatusBar } from "@/app-shell/components/bottom-status-bar";
 import { LeftDock } from "@/app-shell/components/left-dock";
+import { LeftToolbar } from "@/app-shell/components/left-toolbar";
 import { RightDock } from "@/app-shell/components/right-dock";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 import { act, createElement, Fragment, Profiler } from "react";
@@ -29,6 +30,26 @@ describe("workbench surface observer reactivity", () => {
 
   afterEach(() => {
     document.body.innerHTML = "";
+  });
+
+  it("renders external-store shell surfaces without losing store method context", async () => {
+    const controller = createWorkbenchController();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(createElement(LeftToolbar, { controller }));
+    });
+
+    const activeButton = container.querySelector("button[aria-pressed='true']");
+    expect(activeButton).not.toBeNull();
+    expect(container.querySelectorAll("button").length).toBeGreaterThan(0);
+
+    await act(async () => {
+      root.unmount();
+    });
+    controller.dispose();
   });
 
   it("does not re-render non-preview surfaces during placement preview updates", async () => {
