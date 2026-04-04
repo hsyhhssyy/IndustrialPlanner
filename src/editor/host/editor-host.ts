@@ -54,7 +54,15 @@ export interface PlacementPreviewUpdateResult {
   preview: PlacementPreviewState | null;
   invalidReason: PlacementPreviewInvalidReason | null;
   hitEntityId: string | null;
+  overlappingEntityIds: string[];
   changed: boolean;
+}
+
+export interface PlacementQueryResult {
+  preview: PlacementPreviewState | null;
+  invalidReason: PlacementPreviewInvalidReason | null;
+  hitEntityId: string | null;
+  overlappingEntityIds: string[];
 }
 
 function hitTestWorldEntity(
@@ -129,6 +137,10 @@ export interface EditorHost {
     tool?: EditorTool,
     strategy?: PlacementPreviewStrategy,
   ) => void;
+  queryPlacementAtWorldInput: (input: CanvasWorldInput) => PlacementQueryResult;
+  queryPlacementPreview: (
+    preview: PlacementPreviewState,
+  ) => PlacementQueryResult;
   updatePlacementPreview: (input: CanvasWorldInput) => PlacementPreviewUpdateResult;
   confirmPlacement: () => boolean;
   commitPlacement: (input: CanvasWorldInput) => boolean;
@@ -162,10 +174,9 @@ type PlacementPreviewInvalidReason =
   | "entity-collision"
   | "out-of-base";
 
-interface PlacementPreviewResolution {
-  preview: PlacementPreviewState | null;
+interface PlacementCandidateEvaluation {
   invalidReason: PlacementPreviewInvalidReason | null;
-  hitEntityId: string | null;
+  overlappingEntityIds: string[];
 }
 
 class EditorHostImpl implements EditorHost {
@@ -245,10 +256,7 @@ class EditorHostImpl implements EditorHost {
   updatePlacementPreview(input: CanvasWorldInput): PlacementPreviewUpdateResult {
     return this.measureProfilerStage("editor.total", () => {
       const previousPreview = this.core.getSnapshot().session.placementPreview;
-      const resolution = this.measureProfilerStage(
-        "editor.resolvePlacementPreview",
-        () => this.resolvePlacementPreview(input),
-      );
+      const resolution = this.queryPlacementAtWorldInput(input);
       const changed = !isSamePlacementPreviewState(previousPreview, resolution.preview);
 
       if (changed) {
@@ -271,9 +279,97 @@ class EditorHostImpl implements EditorHost {
         preview: resolution.preview,
         invalidReason: resolution.invalidReason,
         hitEntityId: resolution.hitEntityId,
+        overlappingEntityIds: [...resolution.overlappingEntityIds],
         changed,
       };
     });
+  }
+
+  queryPlacementAtWorldInput(input: CanvasWorldInput): PlacementQueryResult {
+    return this.measureProfilerStage("editor.resolvePlacementPreview", () => {
+      const { document, session } = this.core.getSnapshot();
+
+      if (!isPlacementTool(session.activeTool) || !session.placementDefinitionId) {
+        return {
+          preview: null,
+          invalidReason: "inactive-tool",
+          hitEntityId: null,
+          overlappingEntityIds: [],
+        };
+      }
+
+      const definition = this.getDefinition(session.placementDefinitionId);
+
+      if (!definition) {
+        return {
+          preview: null,
+          invalidReason: "missing-definition",
+          hitEntityId: null,
+          overlappingEntityIds: [],
+        };
+      }
+
+      const preview = this.createPlacementPreviewFromWorldInput(
+        document,
+        session,
+        definition,
+        input,
+      );
+      const hitEntityId = this.measureProfilerStage("editor.hitTest", () =>
+        hitTestWorldEntity(document, this.getTopology(), input.worldPoint),
+      );
+      const evaluation = this.evaluatePlacementPreview(preview, definition);
+
+      return {
+        preview: {
+          ...preview,
+          valid: evaluation.invalidReason === null,
+        },
+        invalidReason: evaluation.invalidReason,
+        hitEntityId,
+        overlappingEntityIds: evaluation.overlappingEntityIds,
+      };
+    });
+  }
+
+  queryPlacementPreview(preview: PlacementPreviewState): PlacementQueryResult {
+    const { session } = this.core.getSnapshot();
+
+    if (
+      !isPlacementTool(session.activeTool) ||
+      !session.placementDefinitionId ||
+      preview.definitionId !== session.placementDefinitionId
+    ) {
+      return {
+        preview: null,
+        invalidReason: "inactive-tool",
+        hitEntityId: null,
+        overlappingEntityIds: [],
+      };
+    }
+
+    const definition = this.getDefinition(preview.definitionId);
+
+    if (!definition) {
+      return {
+        preview: null,
+        invalidReason: "missing-definition",
+        hitEntityId: null,
+        overlappingEntityIds: [],
+      };
+    }
+
+    const evaluation = this.evaluatePlacementPreview(preview, definition);
+
+    return {
+      preview: {
+        ...preview,
+        valid: evaluation.invalidReason === null,
+      },
+      invalidReason: evaluation.invalidReason,
+      hitEntityId: null,
+      overlappingEntityIds: evaluation.overlappingEntityIds,
+    };
   }
 
   confirmPlacement(): boolean {
@@ -284,7 +380,6 @@ class EditorHostImpl implements EditorHost {
       !isPlacementTool(session.activeTool) ||
       !session.placementDefinitionId ||
       !preview ||
-      !preview.valid ||
       preview.definitionId !== session.placementDefinitionId
     ) {
       this.logger.info("Skipped placement confirmation.", {
@@ -296,12 +391,29 @@ class EditorHostImpl implements EditorHost {
       return false;
     }
 
+    const resolution = this.queryPlacementPreview(preview);
+
+    if (resolution.preview && !isSamePlacementPreviewState(preview, resolution.preview)) {
+      this.core.setPlacementPreview(resolution.preview);
+    }
+
+    if (!resolution.preview?.valid) {
+      this.logger.info("Blocked placement confirmation.", {
+        definitionId: session.placementDefinitionId,
+        preview,
+        invalidReason: resolution.invalidReason,
+        overlappingEntityIds: resolution.overlappingEntityIds,
+      });
+      return false;
+    }
+
     this.logger.info("Confirmed placement from preview.", {
       definitionId: session.placementDefinitionId,
-      gridPoint: preview.gridPoint,
-      strategy: preview.strategy,
+      gridPoint: resolution.preview.gridPoint,
+      strategy: resolution.preview.strategy,
+      overlappingEntityIds: resolution.overlappingEntityIds,
     });
-    this.core.placeEntity(session.placementDefinitionId, preview.gridPoint);
+    this.core.placeEntity(session.placementDefinitionId, resolution.preview.gridPoint);
     return true;
   }
 
@@ -321,7 +433,7 @@ class EditorHostImpl implements EditorHost {
       return false;
     }
 
-    const resolution = this.resolvePlacementPreview(input);
+    const resolution = this.queryPlacementAtWorldInput(input);
     const preview = resolution.preview;
 
     if (!preview?.valid) {
@@ -333,6 +445,7 @@ class EditorHostImpl implements EditorHost {
         preview,
         invalidReason: resolution.invalidReason,
         hitEntityId: resolution.hitEntityId,
+        overlappingEntityIds: resolution.overlappingEntityIds,
       });
       return false;
     }
@@ -342,6 +455,7 @@ class EditorHostImpl implements EditorHost {
       worldPoint: input.worldPoint,
       gridPoint: input.gridPoint,
       preview,
+      overlappingEntityIds: resolution.overlappingEntityIds,
     });
     this.core.placeEntity(session.placementDefinitionId, preview.gridPoint);
     return true;
@@ -399,61 +513,74 @@ class EditorHostImpl implements EditorHost {
     this.core.redo();
   }
 
-  private resolvePlacementPreview(
+  private createPlacementPreviewFromWorldInput(
+    document: WorldDocument,
+    session: EditorSession,
+    definition: Stage1EntityDefinition,
     input: CanvasWorldInput,
-  ): PlacementPreviewResolution {
-    const { document, session } = this.core.getSnapshot();
-
-    if (!isPlacementTool(session.activeTool) || !session.placementDefinitionId) {
-      return {
-        preview: null,
-        invalidReason: "inactive-tool",
-        hitEntityId: null,
-      };
-    }
-
-    const definition = this.getDefinition(session.placementDefinitionId);
-
-    if (!definition) {
-      return {
-        preview: null,
-        invalidReason: "missing-definition",
-        hitEntityId: null,
-      };
-    }
-
-    const base = getStage1BaseDefinition(document.baseId);
+  ): PlacementPreviewState {
     const previewGridPoint = resolveCenteredPlacementGridPoint({
       worldPoint: input.worldPoint,
       gridSize: document.documentSettings.gridSize,
       footprint: definition.footprint,
     });
-    const hitEntityId = this.measureProfilerStage("editor.hitTest", () =>
-      hitTestWorldEntity(document, this.getTopology(), input.worldPoint),
+
+    return {
+      definitionId: session.placementDefinitionId ?? definition.id,
+      strategy: session.placementStrategy ?? "pointer-follow",
+      gridPoint: previewGridPoint,
+      rotation: 0,
+      valid: true,
+    };
+  }
+
+  private evaluatePlacementPreview(
+    preview: PlacementPreviewState,
+    definition: Stage1EntityDefinition,
+  ): PlacementCandidateEvaluation {
+    const { document } = this.core.getSnapshot();
+    const topology = this.getTopology();
+    const base = getStage1BaseDefinition(document.baseId);
+    const overlappingEntityIds = this.collectOverlappingEntityIds(
+      topology,
+      preview.gridPoint,
+      definition.footprint,
     );
     const withinBase = isStage1FootprintWithinBase({
       base,
-      position: previewGridPoint,
+      position: preview.gridPoint,
       footprint: definition.footprint,
     });
-    const invalidReason =
-      hitEntityId !== null
-        ? "entity-collision"
-        : withinBase
-          ? null
-          : "out-of-base";
 
     return {
-      preview: {
-        definitionId: session.placementDefinitionId,
-        strategy: session.placementStrategy ?? "pointer-follow",
-        gridPoint: previewGridPoint,
-        rotation: 0,
-        valid: invalidReason === null,
-      },
-      invalidReason,
-      hitEntityId,
+      invalidReason: withinBase ? null : "out-of-base",
+      overlappingEntityIds,
     };
+  }
+
+  private collectOverlappingEntityIds(
+    topology: CompiledTopology,
+    position: GridPoint,
+    footprint: Stage1EntityDefinition["footprint"],
+  ): string[] {
+    const entityIds = new Set<string>();
+
+    for (let y = 0; y < footprint.height; y += 1) {
+      for (let x = 0; x < footprint.width; x += 1) {
+        const cellKey = `${position.x + x},${position.y + y}`;
+        const occupants = topology.occupancyIndex[cellKey];
+
+        if (!occupants) {
+          continue;
+        }
+
+        for (const entityId of occupants) {
+          entityIds.add(entityId);
+        }
+      }
+    }
+
+    return Array.from(entityIds);
   }
 
   private measureProfilerStage<T>(

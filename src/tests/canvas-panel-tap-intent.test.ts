@@ -70,7 +70,7 @@ describe("resolveCanvasPanelTapIntent", () => {
     });
   });
 
-  it("commits pointer-follow placement only on blank taps", () => {
+  it("treats pointer-follow placement taps as placement attempts before selection semantics", () => {
     expect(
       resolveCanvasPanelTapIntent({
         mode: "edit",
@@ -98,12 +98,11 @@ describe("resolveCanvasPanelTapIntent", () => {
         },
       }),
     ).toEqual({
-      kind: "select-edit-entity",
-      entityId: "filler-1",
+      kind: "commit-placement",
     });
   });
 
-  it("keeps anchored-confirm blank taps as no-ops", () => {
+  it("keeps anchored-confirm taps as no-ops on both blank space and entities", () => {
     expect(
       resolveCanvasPanelTapIntent({
         mode: "edit",
@@ -112,6 +111,22 @@ describe("resolveCanvasPanelTapIntent", () => {
         placementStrategy: "anchored-confirm",
         target: {
           kind: "blank",
+        },
+      }),
+    ).toEqual({
+      kind: "noop",
+    });
+
+    expect(
+      resolveCanvasPanelTapIntent({
+        mode: "edit",
+        activeTool: "place",
+        placementDefinitionId: "item_port_mix_pool_1",
+        placementStrategy: "anchored-confirm",
+        target: {
+          kind: "entity",
+          entityId: "reactor-1",
+          selected: false,
         },
       }),
     ).toEqual({

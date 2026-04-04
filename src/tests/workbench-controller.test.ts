@@ -564,7 +564,7 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("marks placement preview invalid when the pointer is over an existing entity", () => {
+  it("keeps placement preview valid when the pointer is over an existing entity", () => {
     const controller = createWorkbenchController();
 
     controller.armPlacement("belt_straight_1x1", "belt");
@@ -572,7 +572,43 @@ describe("WorkbenchController scaffold", () => {
       toScreenPointForEntity(controller, "reactor-1"),
     );
 
-    expect(readWorkbenchState(controller).activePlacementPreview?.valid).toBe(false);
+    expect(readWorkbenchState(controller).activePlacementPreview).toMatchObject({
+      definitionId: "belt_straight_1x1",
+      gridPoint: { x: 12, y: 6 },
+      valid: true,
+    });
+
+    controller.dispose();
+  });
+
+  it("commits pointer placement even when the tap lands on an existing entity", async () => {
+    const controller = createWorkbenchController();
+    const before = readWorkbenchState(controller);
+
+    controller.armPlacement("belt_straight_1x1", "belt");
+    await controller.commitPlacementAtScreenPoint(
+      toScreenPointForEntity(controller, "reactor-1"),
+    );
+
+    const after = readWorkbenchState(controller);
+    const placedEntityId = after.document.entityOrder.at(-1);
+    const placedEntity = placedEntityId
+      ? after.document.entities[placedEntityId]
+      : null;
+
+    expect(after.document.entityOrder).toHaveLength(
+      before.document.entityOrder.length + 1,
+    );
+    expect(placedEntity?.definitionId).toBe("belt_straight_1x1");
+    expect(placedEntity?.position).toEqual({ x: 12, y: 6 });
+    expect(
+      after.topology.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.id === "overlap:12,6" &&
+          diagnostic.entityIds.includes("reactor-1") &&
+          diagnostic.entityIds.includes(placedEntityId ?? ""),
+      ),
+    ).toBe(true);
 
     controller.dispose();
   });

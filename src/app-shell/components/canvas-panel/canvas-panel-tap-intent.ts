@@ -55,13 +55,6 @@ export function resolveCanvasPanelTapIntent(
     };
   }
 
-  if (targetEntityId) {
-    return {
-      kind: "select-edit-entity",
-      entityId: targetEntityId,
-    };
-  }
-
   if (
     isPlacementTool(options.activeTool) &&
     options.placementDefinitionId &&
@@ -79,6 +72,13 @@ export function resolveCanvasPanelTapIntent(
   ) {
     return {
       kind: "noop",
+    };
+  }
+
+  if (targetEntityId) {
+    return {
+      kind: "select-edit-entity",
+      entityId: targetEntityId,
     };
   }
 
