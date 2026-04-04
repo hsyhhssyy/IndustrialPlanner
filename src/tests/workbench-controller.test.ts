@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_STAGE1_BASE_ID } from "@/domain/base/stage1-bases";
+import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
+import { buildRenderScene } from "@/renderer/scene/build-render-scene";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 
 function readWorkbenchState(
@@ -11,7 +13,27 @@ function readWorkbenchState(
   const canvasView = controller.canvasViewStore.getSnapshot();
   const topology = controller.topologyStore.getSnapshot();
   const simulation = controller.simulationStore.getSnapshot();
-  const renderScene = controller.renderSceneStore.getSnapshot();
+  const renderScene = buildRenderScene({
+    locale: ui.locale,
+    document,
+    topology,
+    registry: controller.registry,
+    canvasView,
+    interaction:
+      ui.mode === "simulate"
+        ? {
+            selectedEntityIds: simulation.selection,
+            placementPreview: null,
+            pendingLinkSourceEntityId: null,
+          }
+        : {
+            selectedEntityIds: editor.session.selection,
+            placementPreview: editor.session.placementPreview,
+            pendingLinkSourceEntityId:
+              editor.session.pendingLinkSourceEntityId,
+          },
+    runtimeSnapshot: simulation.runtimeSnapshot,
+  });
 
   return {
     ui,
@@ -78,17 +100,30 @@ function toScreenPointForEntity(
   entityId: string,
 ) {
   const snapshot = readWorkbenchState(controller);
-  const entity = snapshot.renderScene.entities.find(
-    (candidate) => candidate.entityId === entityId,
-  );
+  const entity = snapshot.document.entities[entityId];
 
   if (!entity) {
-    throw new Error(`Missing render entity ${entityId}`);
+    throw new Error(`Missing entity ${entityId}`);
   }
 
+  const definition = getStage1EntityDefinition(
+    snapshot.registry,
+    entity.definitionId,
+  );
+
+  if (!definition) {
+    throw new Error(`Missing definition ${entity.definitionId}`);
+  }
+
+  const gridSize = snapshot.document.documentSettings.gridSize;
+
   return {
-    x: (entity.x + 1) * snapshot.canvasView.zoom,
-    y: (entity.y + 1) * snapshot.canvasView.zoom,
+    x:
+      (entity.position.x * gridSize - snapshot.canvasView.offset.x + 1) *
+      snapshot.canvasView.zoom,
+    y:
+      (entity.position.y * gridSize - snapshot.canvasView.offset.y + 1) *
+      snapshot.canvasView.zoom,
   };
 }
 
@@ -187,7 +222,7 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("exposes dock layout state and renderer scene through the snapshot", async () => {
+  it("exposes dock layout state and enough render inputs to rebuild the scene", async () => {
     const controller = createWorkbenchController();
 
     controller.setDockOpen("left", false);
@@ -304,7 +339,7 @@ describe("WorkbenchController scaffold", () => {
     expect(after.zoom).toBeCloseTo(before.zoom * 1.25, 6);
     expect(after.offset.x).toBeCloseTo(32, 6);
     expect(after.offset.y).toBeCloseTo(24, 6);
-    expect(controller.renderSceneStore.getSnapshot().zoom).toBe(after.zoom);
+    expect(readWorkbenchState(controller).renderScene.zoom).toBe(after.zoom);
     expect(persisted).toMatchObject({
       canvasViewport: {
         offset: {

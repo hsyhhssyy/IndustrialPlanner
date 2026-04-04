@@ -58,11 +58,7 @@ import {
   type PlacementPreviewUpdateResult,
 } from "@/editor/host/editor-host";
 import type { AppLocale } from "@/i18n/messages";
-import { buildRenderScene } from "@/renderer/scene/build-render-scene";
-import {
-  type RenderSceneInteractionState,
-  type RenderSceneModel,
-} from "@/renderer/scene/types";
+import { deriveRenderWorldBoundsPx } from "@/renderer/scene/render-world-bounds";
 import {
   createSimulationHost,
   type SimulationHost,
@@ -84,12 +80,11 @@ interface MutationState {
 }
 
 interface SyncMetrics {
-  preliminaryRenderSceneDurationMs: number;
-  finalRenderSceneDurationMs: number;
+  worldBoundsDurationMs: number;
   storageSaveDurationMs: number;
   totalDurationMs: number;
   persistedWorkspaceChanged: boolean;
-  reusedPreliminaryRenderScene: boolean;
+  canvasViewClamped: boolean;
 }
 
 interface PlacementPreviewDiagnosticWindow {
@@ -112,7 +107,7 @@ interface PlacementPreviewDiagnosticWindow {
         hitEntityId: string | null;
         persistedWorkspaceChanged: boolean;
         storageSaveDurationMs: number;
-        finalRenderSceneDurationMs: number;
+        worldBoundsDurationMs: number;
       }
     | null;
 }
@@ -147,7 +142,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
   readonly canvasViewStore;
   readonly topologyStore: SnapshotStore<CompiledTopology>;
   readonly simulationStore;
-  readonly renderSceneStore: SnapshotStore<RenderSceneModel>;
 
   private readonly logger = createLogger("workbench.controller");
   private readonly storage: WorkspaceStorage;
@@ -170,7 +164,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   private topology: CompiledTopology;
   private viewportSize: CanvasPoint = { x: 0, y: 0 };
-  private worldSize: CanvasPoint = { x: 0, y: 0 };
 
   private static readonly BUTTON_ZOOM_FACTOR = 1.2;
 
@@ -209,9 +202,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.canvasViewStore = this.workspaceStore.canvasViewStore;
     this.simulationStore = this.workspaceStore.simulationStore;
     this.topologyStore = createSnapshotStore(this.topology);
-    this.renderSceneStore = createSnapshotStore(
-      this.buildRenderSceneSnapshot(this.workspaceStore.rootStore.getSnapshot()),
-    );
 
     this.unsubscribeSimulationHost = this.simulationHost.subscribe(() => {
       this.sync();
@@ -829,34 +819,17 @@ class WorkbenchControllerImpl implements WorkbenchController {
       canvasView: currentState.canvasView,
       simulation: this.simulationHost.getSnapshot(),
     });
-    const preliminaryRenderSceneStartedAt = getDiagnosticTimeMs();
-    const preliminaryRenderScene = this.buildRenderSceneSnapshot(nextState);
-    const preliminaryRenderSceneDurationMs =
-      getDiagnosticTimeMs() - preliminaryRenderSceneStartedAt;
-
-    this.worldSize = {
-      x: preliminaryRenderScene.worldWidth,
-      y: preliminaryRenderScene.worldHeight,
-    };
-
+    const worldBoundsStartedAt = getDiagnosticTimeMs();
     const clampedCanvasView = clampCanvasViewState(
       nextState.canvasView,
-      this.getViewportMetrics(),
+      this.getViewportMetrics(nextState),
     );
+    const worldBoundsDurationMs = getDiagnosticTimeMs() - worldBoundsStartedAt;
     const finalState = this.composeWorkspaceState(nextState, {
       ...nextState,
       canvasView: clampedCanvasView,
     });
-    const reusedPreliminaryRenderScene = clampedCanvasView === nextState.canvasView;
-    let finalRenderScene = preliminaryRenderScene;
-    let finalRenderSceneDurationMs = 0;
-
-    if (!reusedPreliminaryRenderScene) {
-      const finalRenderSceneStartedAt = getDiagnosticTimeMs();
-      finalRenderScene = this.buildRenderSceneSnapshot(finalState);
-      finalRenderSceneDurationMs =
-        getDiagnosticTimeMs() - finalRenderSceneStartedAt;
-    }
+    const canvasViewClamped = clampedCanvasView !== nextState.canvasView;
 
     const persistedWorkspaceChanged =
       this.lastSavedWorkspacePersistence === null ||
@@ -865,7 +838,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
     this.workspaceStore.rootStore.setSnapshot(finalState);
     this.topologyStore.setSnapshot(this.topology);
-    this.renderSceneStore.setSnapshot(finalRenderScene);
     let storageSaveDurationMs = 0;
 
     if (persistedWorkspaceChanged) {
@@ -875,12 +847,11 @@ class WorkbenchControllerImpl implements WorkbenchController {
     }
 
     return {
-      preliminaryRenderSceneDurationMs,
-      finalRenderSceneDurationMs,
+      worldBoundsDurationMs,
       storageSaveDurationMs,
       totalDurationMs: getDiagnosticTimeMs() - startedAt,
       persistedWorkspaceChanged,
-      reusedPreliminaryRenderScene,
+      canvasViewClamped,
     };
   }
 
@@ -894,41 +865,27 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.lastSavedWorkspacePersistence = persistenceState;
   }
 
-  private buildRenderSceneSnapshot(workspaceState: WorkspaceState): RenderSceneModel {
-    return buildRenderScene({
-      locale: workspaceState.ui.locale,
-      document: workspaceState.document,
-      topology: this.topology,
-      registry: this.registry,
-      canvasView: workspaceState.canvasView,
-      interaction: this.buildRenderInteractionState(workspaceState),
-      runtimeSnapshot: workspaceState.simulation.runtimeSnapshot,
-    });
-  }
-
-  private buildRenderInteractionState(
-    workspaceState: WorkspaceState,
-  ): RenderSceneInteractionState {
-    if (workspaceState.ui.mode === "simulate") {
-      return {
-        selectedEntityIds: workspaceState.simulation.selection,
-        placementPreview: null,
-        pendingLinkSourceEntityId: null,
-      };
-    }
-
+  private getViewportMetrics(workspaceState = this.workspaceStore.rootStore.getSnapshot()) {
     return {
-      selectedEntityIds: workspaceState.editor.session.selection,
-      placementPreview: workspaceState.editor.session.placementPreview,
-      pendingLinkSourceEntityId:
-        workspaceState.editor.session.pendingLinkSourceEntityId,
+      size: this.viewportSize,
+      worldSize: this.getRenderWorldSize(workspaceState),
     };
   }
 
-  private getViewportMetrics() {
+  private getRenderWorldSize(workspaceState: WorkspaceState): CanvasPoint {
+    const worldBoundsPx = deriveRenderWorldBoundsPx({
+      document: workspaceState.document,
+      topology: this.topology,
+      registry: this.registry,
+      placementPreview:
+        workspaceState.ui.mode === "edit"
+          ? workspaceState.editor.session.placementPreview
+          : null,
+    });
+
     return {
-      size: this.viewportSize,
-      worldSize: this.worldSize,
+      x: worldBoundsPx.width,
+      y: worldBoundsPx.height,
     };
   }
 
@@ -1015,8 +972,8 @@ class WorkbenchControllerImpl implements WorkbenchController {
       hitEntityId: options.updateResult.hitEntityId,
       persistedWorkspaceChanged: options.syncMetrics.persistedWorkspaceChanged,
       storageSaveDurationMs: Number(options.syncMetrics.storageSaveDurationMs.toFixed(2)),
-      finalRenderSceneDurationMs: Number(
-        options.syncMetrics.finalRenderSceneDurationMs.toFixed(2),
+      worldBoundsDurationMs: Number(
+        options.syncMetrics.worldBoundsDurationMs.toFixed(2),
       ),
     };
 
@@ -1041,17 +998,14 @@ class WorkbenchControllerImpl implements WorkbenchController {
         latest: diagnostics.latest,
         latestSync: {
           totalDurationMs: Number(options.syncMetrics.totalDurationMs.toFixed(2)),
-          preliminaryRenderSceneDurationMs: Number(
-            options.syncMetrics.preliminaryRenderSceneDurationMs.toFixed(2),
-          ),
-          finalRenderSceneDurationMs: Number(
-            options.syncMetrics.finalRenderSceneDurationMs.toFixed(2),
+          worldBoundsDurationMs: Number(
+            options.syncMetrics.worldBoundsDurationMs.toFixed(2),
           ),
           storageSaveDurationMs: Number(
             options.syncMetrics.storageSaveDurationMs.toFixed(2),
           ),
           persistedWorkspaceChanged: options.syncMetrics.persistedWorkspaceChanged,
-          reusedPreliminaryRenderScene: options.syncMetrics.reusedPreliminaryRenderScene,
+          canvasViewClamped: options.syncMetrics.canvasViewClamped,
           previewChanged: !isSamePlacementPreviewState(
             options.previousPreview,
             options.nextPreview,

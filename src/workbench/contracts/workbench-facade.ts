@@ -10,7 +10,6 @@ import type { WorldDocument } from "@/domain/document/world-document";
 import type { EditorTool } from "@/editor/contracts/editor-session";
 import type { PlacementPreviewStrategy } from "@/editor/contracts/placement-preview";
 import type { AppLocale } from "@/i18n/messages";
-import type { RenderSceneModel } from "@/renderer/scene/types";
 import type { SimulationState } from "@/simulation/host/simulation-host";
 import type { SnapshotStore } from "@/shared/snapshot-store/snapshot-store";
 import type { LogLevel } from "@/shared/logging/logger";
@@ -38,7 +37,6 @@ export interface WorkbenchController {
   canvasViewStore: ReadonlySnapshotStore<CanvasViewState>;
   topologyStore: Pick<SnapshotStore<CompiledTopology>, "getSnapshot" | "subscribe">;
   simulationStore: ReadonlySnapshotStore<SimulationState>;
-  renderSceneStore: Pick<SnapshotStore<RenderSceneModel>, "getSnapshot" | "subscribe">;
   registry: Stage1Registry;
   setMode: (mode: WorkbenchMode) => void;
   setActiveTool: (tool: EditorTool) => void;

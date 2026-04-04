@@ -88,7 +88,6 @@ export function CanvasPanel({
   const ui = useExternalStore(controller.uiStore);
   const editor = useExternalStore(controller.editorStore);
   const render = useExternalStore(renderDerivedStore);
-  const renderScene = useExternalStore(controller.renderSceneStore);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const keyStateRef = useRef({ up: false, down: false, left: false, right: false });
@@ -795,7 +794,7 @@ export function CanvasPanel({
           onWheel={handleViewportWheel}
           ref={viewportRef}
         >
-          <RendererHost scene={renderScene} />
+          <RendererHost sceneSource={controller} />
           {anchoredPlacementHintStyle ? (
             <div className="placement-affordance-hint" style={anchoredPlacementHintStyle}>
               {t("label.touchPlacementHint")}
