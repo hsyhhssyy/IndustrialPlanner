@@ -19,6 +19,7 @@ import type {
   RenderPlacementPreview,
   RenderSceneModel,
 } from "@/renderer/scene/types";
+import { createFpsMeter } from "@/renderer/host/fps-meter";
 import { getRenderSceneSyncPlan } from "@/renderer/host/render-scene-sync-plan";
 import { createLogger } from "@/shared/logging/logger";
 
@@ -37,6 +38,22 @@ const LABEL_TEXT_STYLE: TextStyleOptions = {
   align: "center",
   wordWrap: true,
   wordWrapWidth: 108,
+};
+const FPS_HUD_TEXT_STYLE: TextStyleOptions = {
+  fill: 0x7fe0b0,
+  fontFamily:
+    '"IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace',
+  fontSize: 12,
+  fontWeight: "600",
+};
+const FPS_HUD_BACKGROUND_FILL: FillInput = {
+  color: 0x091018,
+  alpha: 0.78,
+};
+const FPS_HUD_BACKGROUND_STROKE: StrokeInput = {
+  width: 1,
+  color: 0x284457,
+  alpha: 0.92,
 };
 const PENDING_LINK_STROKE_STYLE: StrokeInput = {
   width: 2,
@@ -103,6 +120,7 @@ interface PixiSceneLayers {
   links: Container;
   entities: Container;
   preview: Container;
+  hud: Container;
 }
 
 export interface PixiRendererRuntime {
@@ -236,12 +254,14 @@ function createSceneLayers(stage: Container): PixiSceneLayers {
   const links = new Container();
   const entities = new Container();
   const preview = new Container();
+  const hud = new Container();
 
   camera.addChild(grid);
   camera.addChild(links);
   camera.addChild(entities);
   camera.addChild(preview);
   stage.addChild(camera);
+  stage.addChild(hud);
 
   return {
     camera,
@@ -249,7 +269,39 @@ function createSceneLayers(stage: Container): PixiSceneLayers {
     links,
     entities,
     preview,
+    hud,
   };
+}
+
+function renderFpsHudLayer(
+  hudLayer: Container,
+  label: string,
+  viewportWidth: number,
+): void {
+  clearContainer(hudLayer);
+
+  const text = new Text({
+    text: label,
+    style: FPS_HUD_TEXT_STYLE,
+  });
+  const paddingX = 8;
+  const paddingY = 6;
+  const margin = 12;
+  const background = new Graphics();
+  const backgroundWidth = Math.ceil(text.width + paddingX * 2);
+  const backgroundHeight = Math.ceil(text.height + paddingY * 2);
+  const backgroundX = Math.max(margin, viewportWidth - backgroundWidth - margin);
+  const backgroundY = margin;
+
+  background
+    .roundRect(backgroundX, backgroundY, backgroundWidth, backgroundHeight, 8)
+    .fill(FPS_HUD_BACKGROUND_FILL)
+    .stroke(FPS_HUD_BACKGROUND_STROKE);
+  text.x = backgroundX + paddingX;
+  text.y = backgroundY + paddingY;
+
+  hudLayer.addChild(background);
+  hudLayer.addChild(text);
 }
 
 function drawDashedLine(
@@ -679,18 +731,6 @@ function renderPlacementPreviewLayer(
   }
 }
 
-function getSceneScreenSize(scene: RenderSceneModel): {
-  width: number;
-  height: number;
-  resolution: number;
-} {
-  return {
-    width: Math.max(1, Math.floor(scene.worldWidth * scene.zoom)),
-    height: Math.max(1, Math.floor(scene.worldHeight * scene.zoom)),
-    resolution: window.devicePixelRatio || 1,
-  };
-}
-
 function collectSceneTexturePaths(scene: RenderSceneModel): string[] {
   return Array.from(
     new Set(
@@ -707,6 +747,7 @@ export function createPixiRendererRuntime(
 ): PixiRendererRuntime {
   const app = new Application();
   const layers = createSceneLayers(app.stage);
+  const fpsMeter = createFpsMeter();
   const textureCache = new Map<string, Texture>();
   const pendingTexturePaths = new Set<string>();
   const placementPreviewRenderDiagnostics =
@@ -716,9 +757,83 @@ export function createPixiRendererRuntime(
   let initialized = false;
   let latestScene: RenderSceneModel | null = null;
   let renderedScene: RenderSceneModel | null = null;
+  let fpsHudLabel = "";
+  let rendererViewportWidth = 0;
+  let rendererViewportHeight = 0;
+  let rendererResolution = 0;
+  let fpsMonitorFrameHandle: number | null = null;
   const resizeObserver = new ResizeObserver(() => {
     renderLatestScene();
   });
+
+  function getViewportMetrics(): {
+    width: number;
+    height: number;
+    resolution: number;
+  } {
+    return {
+      width: Math.max(1, Math.floor(hostElement.clientWidth)),
+      height: Math.max(1, Math.floor(hostElement.clientHeight)),
+      resolution: window.devicePixelRatio || 1,
+    };
+  }
+
+  function syncRendererViewport(force = false): {
+    width: number;
+    height: number;
+    resolution: number;
+  } {
+    const metrics = getViewportMetrics();
+
+    if (
+      force ||
+      rendererViewportWidth !== metrics.width ||
+      rendererViewportHeight !== metrics.height ||
+      rendererResolution !== metrics.resolution
+    ) {
+      app.renderer.resize(metrics.width, metrics.height, metrics.resolution);
+      rendererViewportWidth = metrics.width;
+      rendererViewportHeight = metrics.height;
+      rendererResolution = metrics.resolution;
+    }
+
+    return metrics;
+  }
+
+  function syncFpsHud(force = false): boolean {
+    if (!initialized || destroyed) {
+      return false;
+    }
+
+    const { width } = syncRendererViewport();
+    const nextLabel = fpsMeter.getLabel();
+
+    if (!force && nextLabel === fpsHudLabel) {
+      return false;
+    }
+
+    renderFpsHudLayer(layers.hud, nextLabel, width);
+    fpsHudLabel = nextLabel;
+    return true;
+  }
+
+  function startFpsMonitor(): void {
+    const tick = (now: number) => {
+      if (destroyed) {
+        return;
+      }
+
+      const didUpdateHud = syncFpsHud(fpsMeter.recordFrame(now));
+
+      if (didUpdateHud && initialized) {
+        app.render();
+      }
+
+      fpsMonitorFrameHandle = window.requestAnimationFrame(tick);
+    };
+
+    fpsMonitorFrameHandle = window.requestAnimationFrame(tick);
+  }
 
   function unloadManagedTextures(): void {
     const loadedTexturePaths = Array.from(textureCache.keys());
@@ -753,10 +868,7 @@ export function createPixiRendererRuntime(
           redrawPreviewLayer: true,
         }
       : getRenderSceneSyncPlan(renderedScene, latestScene);
-    const { resolution } = getSceneScreenSize(latestScene);
-    const width = Math.max(1, Math.floor(hostElement.clientWidth));
-    const height = Math.max(1, Math.floor(hostElement.clientHeight));
-    app.renderer.resize(width, height, resolution);
+    syncRendererViewport();
     layers.camera.position.set(
       -latestScene.viewportOffset.x * latestScene.zoom,
       -latestScene.viewportOffset.y * latestScene.zoom,
@@ -770,6 +882,7 @@ export function createPixiRendererRuntime(
       renderPlacementPreviewLayer(layers, latestScene, textureCache);
     }
 
+    syncFpsHud();
     app.render();
     renderedScene = latestScene;
 
@@ -913,6 +1026,9 @@ export function createPixiRendererRuntime(
       hostElement.appendChild(app.canvas);
       resizeObserver.observe(hostElement);
       initialized = true;
+      syncRendererViewport(true);
+      syncFpsHud(true);
+      startFpsMonitor();
       renderLatestScene();
     })
     .catch((error: unknown) => {
@@ -934,6 +1050,11 @@ export function createPixiRendererRuntime(
     destroy() {
       destroyed = true;
       resizeObserver.disconnect();
+
+      if (fpsMonitorFrameHandle !== null) {
+        window.cancelAnimationFrame(fpsMonitorFrameHandle);
+        fpsMonitorFrameHandle = null;
+      }
 
       if (initialized) {
         app.destroy(
