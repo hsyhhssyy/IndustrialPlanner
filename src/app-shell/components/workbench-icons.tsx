@@ -9,7 +9,10 @@ type WorkbenchIconKind =
   | "settings"
   | "panel-left"
   | "panel-right"
-  | "pointer";
+  | "pointer"
+  | "cancel"
+  | "confirm"
+  | "rotate";
 
 export interface WorkbenchIconProps {
   kind: WorkbenchIconKind;
@@ -146,6 +149,45 @@ export function WorkbenchIcon({
         viewBox="0 0 24 24"
       >
         <path d="M5 3L5 18L9.5 13.5L13 21L16.2 19.6L12.8 12.1L18.8 12.1L5 3Z" />
+      </svg>
+    );
+  }
+
+  if (kind === "cancel") {
+    return (
+      <svg
+        aria-hidden="true"
+        className={className}
+        focusable="false"
+        viewBox="0 0 24 24"
+      >
+        <path d="M7.41 6L12 10.59L16.59 6L18 7.41L13.41 12L18 16.59L16.59 18L12 13.41L7.41 18L6 16.59L10.59 12L6 7.41L7.41 6Z" />
+      </svg>
+    );
+  }
+
+  if (kind === "confirm") {
+    return (
+      <svg
+        aria-hidden="true"
+        className={className}
+        focusable="false"
+        viewBox="0 0 24 24"
+      >
+        <path d="M9.55 18.2L4.85 13.5L6.25 12.1L9.55 15.39L17.75 7.2L19.15 8.61L9.55 18.2Z" />
+      </svg>
+    );
+  }
+
+  if (kind === "rotate") {
+    return (
+      <svg
+        aria-hidden="true"
+        className={className}
+        focusable="false"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 5C15.87 5 19 8.13 19 12C19 15.87 15.87 19 12 19C8.9 19 6.27 16.98 5.35 14.18L3.44 14.81C4.63 18.42 8.01 21 12 21C16.97 21 21 16.97 21 12C21 7.03 16.97 3 12 3V0L7.5 4.5L12 9V5Z" />
       </svg>
     );
   }

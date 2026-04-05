@@ -36,6 +36,7 @@ import {
 } from "./canvas-panel-touch-gesture";
 import { resolveCanvasPanelTapIntent } from "./canvas-panel-tap-intent";
 import { createCanvasPreviewRawInputScheduler } from "./canvas-preview-raw-input-scheduler";
+import { WorkbenchIcon } from "@/app-shell/components/workbench-icons";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { createTranslator } from "@/i18n/messages";
 import { RendererHost } from "@/renderer/host/renderer-host";
@@ -60,7 +61,9 @@ import {
 
 const PIXELS_PER_WHEEL_LINE = 16;
 const WHEEL_ZOOM_SENSITIVITY = 0.0015;
-const TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX = 336;
+const TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX = 176;
+const TOUCH_PLACEMENT_TOOLBAR_HEIGHT_PX = 56;
+const TOUCH_PLACEMENT_TOOLBAR_GAP_PX = 12;
 const logger = createLogger("app.canvas-panel");
 
 function normalizeWheelDelta(event: WheelEvent<HTMLDivElement>): number {
@@ -132,34 +135,22 @@ export const CanvasPanel = observer(function CanvasPanel({
       ? editor.session.placementPreview
       : null;
   const anchoredPlacementScreenBox = render.anchoredPlacementScreenBox;
-  const anchoredPlacementHintStyle = anchoredPlacementScreenBox
-    ? {
-        left: `${clampToRange(
-          anchoredPlacementScreenBox.left,
-          12,
-          viewportSize.x - 240,
-        )}px`,
-        top: `${clampToRange(
-          anchoredPlacementScreenBox.top - 40,
-          12,
-          viewportSize.y - 76,
-        )}px`,
-      }
-    : null;
   const anchoredPlacementToolbarStyle = anchoredPlacementScreenBox
     ? {
         left: `${clampToRange(
           anchoredPlacementScreenBox.left +
-            anchoredPlacementScreenBox.width -
-            TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX,
-          12,
-          viewportSize.x - TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX - 12,
+            anchoredPlacementScreenBox.width / 2,
+          12 + TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX / 2,
+          viewportSize.x - TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX / 2 - 12,
         )}px`,
         top: `${clampToRange(
-          anchoredPlacementScreenBox.top + anchoredPlacementScreenBox.height + 10,
+          anchoredPlacementScreenBox.top -
+            TOUCH_PLACEMENT_TOOLBAR_HEIGHT_PX -
+            TOUCH_PLACEMENT_TOOLBAR_GAP_PX,
           12,
-          viewportSize.y - 52,
+          viewportSize.y - TOUCH_PLACEMENT_TOOLBAR_HEIGHT_PX - 12,
         )}px`,
+        transform: "translateX(-50%)",
       }
     : null;
 
@@ -880,11 +871,6 @@ export const CanvasPanel = observer(function CanvasPanel({
             placementPreviewProfiler={placementPreviewProfiler}
             sceneSource={controller}
           />
-          {anchoredPlacementHintStyle ? (
-            <div className="placement-affordance-hint" style={anchoredPlacementHintStyle}>
-              {t("label.touchPlacementHint")}
-            </div>
-          ) : null}
           {anchoredPlacementToolbarStyle ? (
             <div
               className="placement-action-toolbar"
@@ -897,32 +883,38 @@ export const CanvasPanel = observer(function CanvasPanel({
               style={anchoredPlacementToolbarStyle}
             >
               <button
-                className="placement-action-button"
-                onClick={() => {
-                  controller.rotatePlacementClockwise();
-                }}
-                type="button"
-              >
-                {t("action.rotatePlacement")}
-              </button>
-              <button
-                className="placement-action-button"
+                aria-label={t("action.cancelPlacement")}
+                className="placement-action-button is-cancel"
                 onClick={() => {
                   cancelPlacement();
                 }}
                 type="button"
               >
-                {t("action.cancelPlacement")}
+                <WorkbenchIcon className="placement-action-icon" kind="cancel" />
+                <span className="sr-only">{t("action.cancelPlacement")}</span>
               </button>
               <button
-                className="placement-action-button placement-confirm-button"
+                aria-label={t("action.rotatePlacement")}
+                className="placement-action-button is-rotate"
+                onClick={() => {
+                  controller.rotatePlacementClockwise();
+                }}
+                type="button"
+              >
+                <WorkbenchIcon className="placement-action-icon" kind="rotate" />
+                <span className="sr-only">{t("action.rotatePlacement")}</span>
+              </button>
+              <button
+                aria-label={t("action.confirmPlacement")}
+                className="placement-action-button is-confirm"
                 disabled={!anchoredPlacementPreview?.valid}
                 onClick={() => {
                   void controller.confirmPlacementPreview();
                 }}
                 type="button"
               >
-                {t("action.confirmPlacement")}
+                <WorkbenchIcon className="placement-action-icon" kind="confirm" />
+                <span className="sr-only">{t("action.confirmPlacement")}</span>
               </button>
             </div>
           ) : null}

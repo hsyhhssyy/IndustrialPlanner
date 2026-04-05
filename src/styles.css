@@ -685,45 +685,56 @@ button.is-active {
   cursor: grabbing;
 }
 
-.placement-affordance-hint,
 .placement-action-toolbar {
   position: absolute;
   z-index: 2;
-}
-
-.placement-affordance-hint {
-  max-width: min(228px, calc(100% - 24px));
-  padding: 6px 10px;
-  border: 1px solid rgb(57 186 230 / 0.3);
-  border-radius: 999px;
-  background: rgb(11 16 21 / 0.9);
-  color: var(--text-0);
-  font-size: 0.76rem;
-  line-height: 1.35;
-  pointer-events: none;
-}
-
-.placement-action-toolbar {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 6px;
+  border: 1px solid rgb(18 22 28 / 0.12);
+  border-radius: 999px;
+  background: rgb(250 251 252 / 0.96);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.18);
+  backdrop-filter: blur(10px);
 }
 
 .placement-action-button {
-  min-width: 96px;
-  padding-inline: 14px;
-  border-color: rgb(57 186 230 / 0.42);
-  background: rgb(21 26 31 / 0.94);
-  box-shadow: 0 8px 20px rgb(0 0 0 / 0.22);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  border-color: rgb(18 22 28 / 0.08);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.96);
+  box-shadow: none;
+  color: rgb(18 22 28);
 }
 
 .placement-action-button:not(:disabled):hover {
-  border-color: var(--accent-strong);
-  background: rgb(32 39 52 / 0.96);
+  border-color: rgb(18 22 28 / 0.18);
+  background: rgb(241 244 247 / 0.98);
 }
 
-.placement-confirm-button {
-  min-width: 120px;
+.placement-action-button.is-cancel {
+  color: rgb(194 58 58);
+}
+
+.placement-action-button.is-rotate {
+  color: rgb(18 22 28);
+}
+
+.placement-action-button.is-confirm {
+  color: rgb(28 146 95);
+}
+
+.placement-action-icon {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
 }
 
 .renderer-canvas {

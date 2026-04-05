@@ -181,17 +181,19 @@ describe("CanvasPanel placement actions", () => {
     controller.setCanvasViewportSize({ x: 640, y: 360 });
     controller.armPlacement("belt_straight_1x1", "belt", "anchored-confirm");
     const { container, root, shell } = await renderCanvasPanel(controller);
-    const buttonLabels = Array.from(
+    const buttons = Array.from(
       container.querySelectorAll<HTMLButtonElement>(".placement-action-button"),
-    ).map((button) => button.textContent);
-    const rotateButton = Array.from(
-      container.querySelectorAll<HTMLButtonElement>(".placement-action-button"),
-    ).find((button) => button.textContent === "旋转");
-    const cancelButton = Array.from(
-      container.querySelectorAll<HTMLButtonElement>(".placement-action-button"),
-    ).find((button) => button.textContent === "取消");
+    );
+    const buttonLabels = buttons.map((button) => button.getAttribute("aria-label"));
+    const cancelButton = buttons.find(
+      (button) => button.getAttribute("aria-label") === "取消",
+    );
+    const rotateButton = buttons.find(
+      (button) => button.getAttribute("aria-label") === "旋转",
+    );
 
-    expect(buttonLabels).toEqual(["旋转", "取消", "确认放置"]);
+    expect(buttonLabels).toEqual(["取消", "旋转", "确认放置"]);
+    expect(container.querySelector(".placement-affordance-hint")).toBeNull();
 
     await act(async () => {
       rotateButton?.click();
