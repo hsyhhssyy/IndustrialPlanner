@@ -24,7 +24,7 @@ describe("viewport math", () => {
 
   it("clamps panning and zooming against viewport and world bounds", () => {
     const metrics = {
-      gridSize: 56,
+      gridSize: 64,
       size: { x: 320, y: 160 },
       worldSize: { x: 1280, y: 960 },
     };
@@ -58,7 +58,7 @@ describe("viewport math", () => {
 
   it("keeps the wheel anchor stable when scaling zoom", () => {
     const metrics = {
-      gridSize: 56,
+      gridSize: 64,
       size: { x: 320, y: 160 },
       worldSize: { x: 1600, y: 1200 },
     };
@@ -78,12 +78,12 @@ describe("viewport math", () => {
 
   it("clamps zooming out to the 12px minimum cell size", () => {
     const metrics = {
-      gridSize: 56,
+      gridSize: 64,
       size: { x: 320, y: 160 },
-      worldSize: { x: 1600, y: 1200 },
+      worldSize: { x: 4000, y: 3000 },
     };
     const initialView = {
-      offset: { x: 400, y: 240 },
+      offset: { x: 520, y: 240 },
       zoom: 1,
     };
     const anchor = { x: 96, y: 48 };

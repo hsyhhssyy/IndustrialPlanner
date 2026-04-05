@@ -121,6 +121,8 @@ describe("WorkspaceDerivedStore", () => {
         selection: [],
       },
     };
+    const scaledGridSize =
+      workspaceState.document.documentSettings.gridSize * workspaceState.canvasView.zoom;
 
     expect(
       deriveRenderDerivedState({
@@ -129,10 +131,18 @@ describe("WorkspaceDerivedStore", () => {
         registry,
       }).anchoredPlacementScreenBox,
     ).toEqual({
-      left: 204,
-      top: 296,
-      width: 112,
-      height: 112,
+      left:
+        (workspaceState.editor.session.placementPreview!.gridPoint.x *
+          workspaceState.document.documentSettings.gridSize -
+          workspaceState.canvasView.offset.x) *
+        workspaceState.canvasView.zoom,
+      top:
+        (workspaceState.editor.session.placementPreview!.gridPoint.y *
+          workspaceState.document.documentSettings.gridSize -
+          workspaceState.canvasView.offset.y) *
+        workspaceState.canvasView.zoom,
+      width: scaledGridSize,
+      height: scaledGridSize,
     });
   });
 
@@ -182,6 +192,8 @@ describe("WorkspaceDerivedStore", () => {
         selection: [],
       },
     };
+    const scaledGridSize =
+      workspaceState.document.documentSettings.gridSize * workspaceState.canvasView.zoom;
 
     expect(
       deriveRenderDerivedState({
@@ -190,10 +202,18 @@ describe("WorkspaceDerivedStore", () => {
         registry,
       }).anchoredPlacementScreenBox,
     ).toEqual({
-      left: 204,
-      top: 296,
-      width: 112,
-      height: 336,
+      left:
+        (workspaceState.editor.session.placementPreview!.gridPoint.x *
+          workspaceState.document.documentSettings.gridSize -
+          workspaceState.canvasView.offset.x) *
+        workspaceState.canvasView.zoom,
+      top:
+        (workspaceState.editor.session.placementPreview!.gridPoint.y *
+          workspaceState.document.documentSettings.gridSize -
+          workspaceState.canvasView.offset.y) *
+        workspaceState.canvasView.zoom,
+      width: scaledGridSize,
+      height: scaledGridSize * 3,
     });
   });
 

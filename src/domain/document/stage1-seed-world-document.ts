@@ -71,7 +71,7 @@ export function createStage1SeedWorldDocument(): WorldDocument {
     entityOrder: Object.keys(entities),
     explicitLinks: [],
     documentSettings: {
-      gridSize: 56,
+      gridSize: 64,
       showDiagnostics: true,
     },
   };
