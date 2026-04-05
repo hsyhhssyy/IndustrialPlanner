@@ -27,6 +27,7 @@ import {
   advanceCanvasTouchPanGesture,
   advanceCanvasTouchPinchGesture,
   beginCanvasTouchGesture,
+  beginCanvasTouchPanGesture,
   beginCanvasTouchPinchGesture,
   cancelCanvasTouchGesture,
   createIdleCanvasPanelTouchGestureState,
@@ -83,6 +84,22 @@ function clampToRange(value: number, min: number, max: number): number {
   }
 
   return Math.min(Math.max(value, min), max);
+}
+
+function isPointInsideScreenBox(
+  point: CanvasPoint,
+  screenBox: RenderDerivedState["anchoredPlacementScreenBox"],
+): boolean {
+  if (!screenBox) {
+    return false;
+  }
+
+  return (
+    point.x >= screenBox.left &&
+    point.x <= screenBox.left + screenBox.width &&
+    point.y >= screenBox.top &&
+    point.y <= screenBox.top + screenBox.height
+  );
 }
 
 export interface CanvasPanelProps {
@@ -436,16 +453,21 @@ export const CanvasPanel = observer(function CanvasPanel({
 
       if (anchoredPlacementActive) {
         if (touchPointsRef.current.size === 1) {
-          touchPlacementGestureStateRef.current = beginCanvasTouchPlacementGesture(
-            event.pointerId,
-            point,
-          );
+          if (isPointInsideScreenBox(point, anchoredPlacementScreenBox)) {
+            touchPlacementGestureStateRef.current = beginCanvasTouchPlacementGesture(
+              event.pointerId,
+              point,
+            );
+            updateTouchGestureState(createIdleCanvasPanelTouchGestureState());
+          } else {
+            touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
+            updateTouchGestureState(beginCanvasTouchPanGesture(event.pointerId, point));
+          }
         } else {
           touchTapSuppressedRef.current = true;
           touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
+          updateTouchGestureState(createIdleCanvasPanelTouchGestureState());
         }
-
-        updateTouchGestureState(createIdleCanvasPanelTouchGestureState());
         return;
       }
 
@@ -514,7 +536,10 @@ export const CanvasPanel = observer(function CanvasPanel({
       const point = toViewportPoint(event.clientX, event.clientY);
       touchPointsRef.current.set(event.pointerId, point);
 
-      if (anchoredPlacementActive) {
+      if (
+        anchoredPlacementActive &&
+        touchPlacementGestureStateRef.current.phase !== "idle"
+      ) {
         if (touchPointsRef.current.size !== 1) {
           return;
         }

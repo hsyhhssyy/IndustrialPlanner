@@ -51,6 +51,11 @@ class MockPointerEvent extends MouseEvent {
 
 const OriginalResizeObserver = globalThis.ResizeObserver;
 const OriginalPointerEvent = globalThis.PointerEvent;
+const OriginalRequestAnimationFrame = globalThis.requestAnimationFrame;
+const OriginalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+const OriginalSetPointerCapture = HTMLElement.prototype.setPointerCapture;
+const OriginalReleasePointerCapture = HTMLElement.prototype.releasePointerCapture;
+const OriginalHasPointerCapture = HTMLElement.prototype.hasPointerCapture;
 
 async function renderCanvasPanel(
   controller: ReturnType<typeof createWorkbenchController>,
@@ -105,6 +110,34 @@ describe("CanvasPanel placement actions", () => {
       value: MockPointerEvent,
       writable: true,
     });
+    Object.defineProperty(globalThis, "requestAnimationFrame", {
+      configurable: true,
+      value: (callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      },
+      writable: true,
+    });
+    Object.defineProperty(globalThis, "cancelAnimationFrame", {
+      configurable: true,
+      value: () => {},
+      writable: true,
+    });
+    Object.defineProperty(HTMLElement.prototype, "setPointerCapture", {
+      configurable: true,
+      value: () => {},
+      writable: true,
+    });
+    Object.defineProperty(HTMLElement.prototype, "releasePointerCapture", {
+      configurable: true,
+      value: () => {},
+      writable: true,
+    });
+    Object.defineProperty(HTMLElement.prototype, "hasPointerCapture", {
+      configurable: true,
+      value: () => false,
+      writable: true,
+    });
   });
 
   afterEach(() => {
@@ -118,6 +151,31 @@ describe("CanvasPanel placement actions", () => {
     Object.defineProperty(globalThis, "PointerEvent", {
       configurable: true,
       value: OriginalPointerEvent,
+      writable: true,
+    });
+    Object.defineProperty(globalThis, "requestAnimationFrame", {
+      configurable: true,
+      value: OriginalRequestAnimationFrame,
+      writable: true,
+    });
+    Object.defineProperty(globalThis, "cancelAnimationFrame", {
+      configurable: true,
+      value: OriginalCancelAnimationFrame,
+      writable: true,
+    });
+    Object.defineProperty(HTMLElement.prototype, "setPointerCapture", {
+      configurable: true,
+      value: OriginalSetPointerCapture,
+      writable: true,
+    });
+    Object.defineProperty(HTMLElement.prototype, "releasePointerCapture", {
+      configurable: true,
+      value: OriginalReleasePointerCapture,
+      writable: true,
+    });
+    Object.defineProperty(HTMLElement.prototype, "hasPointerCapture", {
+      configurable: true,
+      value: OriginalHasPointerCapture,
       writable: true,
     });
   });
@@ -210,6 +268,107 @@ describe("CanvasPanel placement actions", () => {
 
     expect(controller.editorStore.getSnapshot().session.activeTool).toBe("select");
     expect(container.querySelector(".placement-action-toolbar")).toBeNull();
+
+    await disposeCanvasPanel({ root, shell, controller });
+  });
+
+  it("only drags touch placement when the gesture starts on the preview", async () => {
+    const controller = createWorkbenchController();
+    controller.setCanvasViewportSize({ x: 640, y: 360 });
+    controller.armPlacement("belt_straight_1x1", "belt", "touch");
+    const panCanvasBySpy = vi.spyOn(controller, "panCanvasBy");
+    const updatePlacementPreviewSpy = vi.spyOn(
+      controller,
+      "updatePlacementPreviewFromScreenPoint",
+    );
+    const { container, root, shell } = await renderCanvasPanel(controller);
+    const viewport = container.querySelector(".canvas-viewport-surface");
+    const screenBox = shell.workspaceDerivedStore.renderStore.getSnapshot()
+      .anchoredPlacementScreenBox;
+
+    expect(viewport).not.toBeNull();
+    expect(screenBox).not.toBeNull();
+
+    const outsideStartPoint = {
+      x: Math.max(12, (screenBox?.left ?? 0) - 40),
+      y: Math.max(12, (screenBox?.top ?? 0) - 40),
+    };
+    const insideStartPoint = {
+      x: (screenBox?.left ?? 0) + (screenBox?.width ?? 0) / 2,
+      y: (screenBox?.top ?? 0) + (screenBox?.height ?? 0) / 2,
+    };
+
+    await act(async () => {
+      viewport?.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          clientX: outsideStartPoint.x,
+          clientY: outsideStartPoint.y,
+          pointerId: 21,
+          pointerType: "touch",
+        }),
+      );
+      viewport?.dispatchEvent(
+        new PointerEvent("pointermove", {
+          bubbles: true,
+          clientX: outsideStartPoint.x + 48,
+          clientY: outsideStartPoint.y + 30,
+          pointerId: 21,
+          pointerType: "touch",
+        }),
+      );
+      viewport?.dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          clientX: outsideStartPoint.x + 48,
+          clientY: outsideStartPoint.y + 30,
+          pointerId: 21,
+          pointerType: "touch",
+        }),
+      );
+    });
+
+    expect(panCanvasBySpy).toHaveBeenCalledWith({ x: 48, y: 30 });
+    expect(updatePlacementPreviewSpy).not.toHaveBeenCalled();
+
+    panCanvasBySpy.mockClear();
+    updatePlacementPreviewSpy.mockClear();
+
+    await act(async () => {
+      viewport?.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          clientX: insideStartPoint.x,
+          clientY: insideStartPoint.y,
+          pointerId: 22,
+          pointerType: "touch",
+        }),
+      );
+      viewport?.dispatchEvent(
+        new PointerEvent("pointermove", {
+          bubbles: true,
+          clientX: insideStartPoint.x + 84,
+          clientY: insideStartPoint.y,
+          pointerId: 22,
+          pointerType: "touch",
+        }),
+      );
+      viewport?.dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          clientX: insideStartPoint.x + 84,
+          clientY: insideStartPoint.y,
+          pointerId: 22,
+          pointerType: "touch",
+        }),
+      );
+    });
+
+    expect(updatePlacementPreviewSpy).toHaveBeenCalledWith({
+      x: insideStartPoint.x + 84,
+      y: insideStartPoint.y,
+    });
+    expect(panCanvasBySpy).not.toHaveBeenCalled();
 
     await disposeCanvasPanel({ root, shell, controller });
   });

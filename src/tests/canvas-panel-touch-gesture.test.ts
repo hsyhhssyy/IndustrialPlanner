@@ -3,6 +3,7 @@ import {
   advanceCanvasTouchPanGesture,
   advanceCanvasTouchPinchGesture,
   beginCanvasTouchGesture,
+  beginCanvasTouchPanGesture,
   beginCanvasTouchPinchGesture,
   createIdleCanvasPanelTouchGestureState,
   isCanvasTouchPanning,
@@ -17,7 +18,7 @@ describe("canvas panel touch gesture", () => {
       y: 13,
     });
 
-    expect(beforeThreshold.nextState.phase).toBe("touch-pressed-blank");
+    expect(beforeThreshold.nextState.phase).toBe("touch-pan-pressed");
     expect(beforeThreshold.screenDelta).toBeNull();
 
     const afterThreshold = advanceCanvasTouchPanGesture(pressedState, 3, {
@@ -38,6 +39,25 @@ describe("canvas panel touch gesture", () => {
     });
 
     expect(state).toEqual(createIdleCanvasPanelTouchGestureState());
+  });
+
+  it("can start a viewport pan candidate without requiring a blank hit", () => {
+    const pressedState = beginCanvasTouchPanGesture(4, { x: 24, y: 18 });
+    const beforeThreshold = advanceCanvasTouchPanGesture(pressedState, 4, {
+      x: 28,
+      y: 21,
+    });
+
+    expect(beforeThreshold.nextState.phase).toBe("touch-pan-pressed");
+    expect(beforeThreshold.screenDelta).toBeNull();
+
+    const afterThreshold = advanceCanvasTouchPanGesture(pressedState, 4, {
+      x: 40,
+      y: 32,
+    });
+
+    expect(afterThreshold.nextState.phase).toBe("touch-panning");
+    expect(afterThreshold.screenDelta).toEqual({ x: 16, y: 14 });
   });
 
   it("uses the two-finger midpoint for pinch zoom and pan updates", () => {

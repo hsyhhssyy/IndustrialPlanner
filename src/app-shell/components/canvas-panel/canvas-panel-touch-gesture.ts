@@ -8,7 +8,7 @@ export type CanvasPanelTouchGestureState =
       phase: "idle";
     }
   | {
-      phase: "touch-pressed-blank";
+      phase: "touch-pan-pressed";
       pointerId: number;
       origin: CanvasPoint;
       last: CanvasPoint;
@@ -46,6 +46,18 @@ export function createIdleCanvasPanelTouchGestureState(): CanvasPanelTouchGestur
   };
 }
 
+export function beginCanvasTouchPanGesture(
+  pointerId: number,
+  point: CanvasPoint,
+): CanvasPanelTouchGestureState {
+  return {
+    phase: "touch-pan-pressed",
+    pointerId,
+    origin: point,
+    last: point,
+  };
+}
+
 export function beginCanvasTouchGesture(
   pointerId: number,
   point: CanvasPoint,
@@ -55,12 +67,7 @@ export function beginCanvasTouchGesture(
     return createIdleCanvasPanelTouchGestureState();
   }
 
-  return {
-    phase: "touch-pressed-blank",
-    pointerId,
-    origin: point,
-    last: point,
-  };
+  return beginCanvasTouchPanGesture(pointerId, point);
 }
 
 export function isCanvasTouchPanning(
@@ -108,7 +115,7 @@ export function advanceCanvasTouchPanGesture(
     y: point.y - state.last.y,
   };
 
-  if (state.phase === "touch-pressed-blank") {
+  if (state.phase === "touch-pan-pressed") {
     const movedDistance = Math.hypot(point.x - state.origin.x, point.y - state.origin.y);
 
     if (movedDistance < TOUCH_PAN_START_DISTANCE_PX) {
