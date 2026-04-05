@@ -4,7 +4,6 @@ import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
 import {
   getRotatedGridFootprint,
-  rotateGridRotationClockwise,
   type GridRotation,
 } from "@/shared/geometry/grid";
 import { createPlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
@@ -819,23 +818,40 @@ describe("WorkbenchController scaffold", () => {
 
   it("rotates the pointer selection through the shared selection action chain", async () => {
     const controller = createWorkbenchController();
-    const beforeRotation =
-      readWorkbenchState(controller).document.entities["reactor-1"]?.rotation ?? 0;
+    const before = readWorkbenchState(controller).document.entities["filler-1"];
 
-    await controller.selectEntity("reactor-1", "pointer");
+    expect(before).toBeTruthy();
+
+    await controller.selectEntity("filler-1", "pointer");
     await controller.rotateSelectionClockwise();
 
     const after = readWorkbenchState(controller);
+    const rotatedEntity = after.document.entities["filler-1"];
 
-    expect(after.session.selection).toEqual(["reactor-1"]);
+    expect(after.session.selection).toEqual(["filler-1"]);
     expect(after.session.selectionInteractionMode).toBe("pointer");
-    expect(after.document.entities["reactor-1"]?.rotation).toBe(
-      rotateGridRotationClockwise(beforeRotation),
-    );
+    expect(rotatedEntity).toMatchObject({
+      position: { x: 17, y: 7 },
+      rotation: 180,
+    });
     expect(
-      after.renderScene.entities.find((entity) => entity.entityId === "reactor-1")
-        ?.rotation,
-    ).toBe(rotateGridRotationClockwise(beforeRotation));
+      after.renderScene.entities.find((entity) => entity.entityId === "filler-1"),
+    ).toMatchObject({
+      x: 17 * after.document.documentSettings.gridSize,
+      y: 7 * after.document.documentSettings.gridSize,
+      width: 6 * after.document.documentSettings.gridSize,
+      height: 4 * after.document.documentSettings.gridSize,
+      rotation: 180,
+    });
+
+    let current = rotatedEntity;
+
+    for (let step = 0; step < 3; step += 1) {
+      await controller.rotateSelectionClockwise();
+      current = readWorkbenchState(controller).document.entities["filler-1"];
+    }
+
+    expect(current).toEqual(before);
 
     controller.dispose();
   });

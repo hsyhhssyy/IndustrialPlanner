@@ -2,7 +2,6 @@
 
 import { CanvasPanel } from "@/app-shell/components/canvas-panel/canvas-panel";
 import { createWorkbenchShell } from "@/app-shell/workbench-shell";
-import { rotateGridRotationClockwise } from "@/shared/geometry/grid";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -311,7 +310,7 @@ describe("CanvasPanel placement actions", () => {
   it("renders touch placement toolbar rotate/cancel actions next to confirm", async () => {
     const controller = createWorkbenchController();
     controller.setCanvasViewportSize({ x: 640, y: 360 });
-    controller.armPlacement("belt_straight_1x1", "belt", "touch");
+    controller.armPlacement("item_port_unloader_1", "place", "touch");
     const { container, root, shell } = await renderCanvasPanel(controller);
     const buttons = Array.from(
       container.querySelectorAll<HTMLButtonElement>(
@@ -329,12 +328,24 @@ describe("CanvasPanel placement actions", () => {
     expect(buttonLabels).toEqual(["取消", "旋转", "确认放置"]);
     expect(container.querySelector(".placement-affordance-hint")).toBeNull();
 
+    const beforePreview = controller.editorStore.getSnapshot().session.placementPreview;
+
+    expect(beforePreview).toMatchObject({
+      definitionId: "item_port_unloader_1",
+      interactionMode: "touch",
+      rotation: 0,
+    });
+
     await act(async () => {
       rotateButton?.click();
     });
 
     expect(controller.editorStore.getSnapshot().session.placementPreview).toMatchObject({
       interactionMode: "touch",
+      gridPoint: {
+        x: (beforePreview?.gridPoint.x ?? 0) + 1,
+        y: (beforePreview?.gridPoint.y ?? 0) - 1,
+      },
       rotation: 90,
     });
 
@@ -350,22 +361,22 @@ describe("CanvasPanel placement actions", () => {
 
   it("marks pointer selection and supports rotate/delete keyboard actions", async () => {
     const controller = createWorkbenchController();
-    const beforeRotation =
-      controller.documentStore.getSnapshot().entities["reactor-1"]?.rotation ?? 0;
+    const beforeEntity = controller.documentStore.getSnapshot().entities["filler-1"];
     const { container, root, shell } = await renderCanvasPanel(controller);
     const stage = container.querySelector(".canvas-stage");
     const viewport = container.querySelector(".canvas-viewport-surface");
-    const reactorPoint = toScreenPointForEntity(controller, "reactor-1");
+    const fillerPoint = toScreenPointForEntity(controller, "filler-1");
 
     expect(stage).not.toBeNull();
     expect(viewport).not.toBeNull();
+    expect(beforeEntity).toBeTruthy();
 
     await act(async () => {
-      dispatchPointerTap(viewport, reactorPoint, 41);
+      dispatchPointerTap(viewport, fillerPoint, 41);
       await flushCanvasActions();
     });
 
-    expect(controller.editorStore.getSnapshot().session.selection).toEqual(["reactor-1"]);
+    expect(controller.editorStore.getSnapshot().session.selection).toEqual(["filler-1"]);
     expect(controller.editorStore.getSnapshot().session.selectionInteractionMode).toBe(
       "pointer",
     );
@@ -380,9 +391,10 @@ describe("CanvasPanel placement actions", () => {
       await flushCanvasActions();
     });
 
-    expect(controller.documentStore.getSnapshot().entities["reactor-1"]?.rotation).toBe(
-      rotateGridRotationClockwise(beforeRotation),
-    );
+    expect(controller.documentStore.getSnapshot().entities["filler-1"]).toMatchObject({
+      position: { x: 17, y: 7 },
+      rotation: 180,
+    });
 
     await act(async () => {
       stage?.dispatchEvent(
@@ -394,7 +406,7 @@ describe("CanvasPanel placement actions", () => {
       await flushCanvasActions();
     });
 
-    expect(controller.documentStore.getSnapshot().entities["reactor-1"]).toBeUndefined();
+    expect(controller.documentStore.getSnapshot().entities["filler-1"]).toBeUndefined();
     expect(controller.editorStore.getSnapshot().session.selection).toEqual([]);
     expect(controller.editorStore.getSnapshot().session.selectionInteractionMode).toBeNull();
 
@@ -403,21 +415,19 @@ describe("CanvasPanel placement actions", () => {
 
   it("renders touch selection toolbar with shared rotate/delete actions", async () => {
     const controller = createWorkbenchController();
-    const beforeRotation =
-      controller.documentStore.getSnapshot().entities["reactor-1"]?.rotation ?? 0;
     const { container, root, shell } = await renderCanvasPanel(controller);
     const viewport = container.querySelector(".canvas-viewport-surface");
-    const reactorPoint = toScreenPointForEntity(controller, "reactor-1");
+    const fillerPoint = toScreenPointForEntity(controller, "filler-1");
 
     expect(viewport).not.toBeNull();
 
     await act(async () => {
-      dispatchTouchPointerEvent(viewport, "pointerdown", 51, reactorPoint);
-      dispatchTouchPointerEvent(viewport, "pointerup", 51, reactorPoint);
+      dispatchTouchPointerEvent(viewport, "pointerdown", 51, fillerPoint);
+      dispatchTouchPointerEvent(viewport, "pointerup", 51, fillerPoint);
       await flushCanvasActions();
     });
 
-    expect(controller.editorStore.getSnapshot().session.selection).toEqual(["reactor-1"]);
+    expect(controller.editorStore.getSnapshot().session.selection).toEqual(["filler-1"]);
     expect(controller.editorStore.getSnapshot().session.selectionInteractionMode).toBe(
       "touch",
     );
@@ -448,16 +458,17 @@ describe("CanvasPanel placement actions", () => {
       await flushCanvasActions();
     });
 
-    expect(controller.documentStore.getSnapshot().entities["reactor-1"]?.rotation).toBe(
-      rotateGridRotationClockwise(beforeRotation),
-    );
+    expect(controller.documentStore.getSnapshot().entities["filler-1"]).toMatchObject({
+      position: { x: 17, y: 7 },
+      rotation: 180,
+    });
 
     await act(async () => {
       deleteButton?.click();
       await flushCanvasActions();
     });
 
-    expect(controller.documentStore.getSnapshot().entities["reactor-1"]).toBeUndefined();
+    expect(controller.documentStore.getSnapshot().entities["filler-1"]).toBeUndefined();
     expect(container.querySelector(".selection-action-toolbar")).toBeNull();
 
     await disposeCanvasPanel({ root, shell, controller });

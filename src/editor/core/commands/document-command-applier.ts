@@ -97,6 +97,9 @@ export function applyWorldDocumentCommand(
     }
     case "entity.rotate": {
       return patchWorldEntity(document, command.payload.entityId, {
+        ...(command.payload.position
+          ? { position: command.payload.position }
+          : {}),
         rotation: command.payload.rotation,
       });
     }

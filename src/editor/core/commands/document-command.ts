@@ -38,6 +38,7 @@ export interface RotateEntityCommand {
   payload: {
     entityId: string;
     rotation: GridRotation;
+    position?: GridPoint;
   };
 }
 

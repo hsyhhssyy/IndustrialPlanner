@@ -56,7 +56,7 @@ export interface EditorCore {
     entityId: string | null,
     interactionMode?: PlacementInteractionMode | null,
   ) => void;
-  rotateSelectedEntityClockwise: () => boolean;
+  rotateSelectedEntityClockwise: (position?: GridPoint) => boolean;
   setPendingLinkSource: (entityId: string | null) => void;
   placeEntity: (
     definitionId: string,
@@ -162,7 +162,7 @@ class EditorCoreImpl implements EditorCore {
     };
   }
 
-  rotateSelectedEntityClockwise(): boolean {
+  rotateSelectedEntityClockwise(position?: GridPoint): boolean {
     const selectedEntityId = this.session.selection[0];
 
     if (!selectedEntityId) {
@@ -179,6 +179,7 @@ class EditorCoreImpl implements EditorCore {
       type: "entity.rotate",
       payload: {
         entityId: selectedEntityId,
+        position,
         rotation: rotateGridRotationClockwise(entity.rotation),
       },
     });

@@ -27,7 +27,6 @@ import {
 } from "@/domain/base/stage1-bases";
 import { isPlacementTool } from "@/editor/core/editor-session";
 import {
-  getGridFootprintCenterCells,
   getRotatedGridFootprint,
   resolveCenteredGridPoint,
   resolveCenteredRotatedGridPoint,
@@ -596,13 +595,36 @@ class EditorHostImpl implements EditorHost {
       return false;
     }
 
-    const didRotate = this.core.rotateSelectedEntityClockwise();
+    const definition = this.getDefinition(entity.definitionId);
+
+    if (!definition) {
+      return false;
+    }
+
+    const nextRotation = rotateGridRotationClockwise(entity.rotation);
+    const currentFootprint = getRotatedGridFootprint(
+      definition.footprint,
+      entity.rotation,
+    );
+    const nextFootprint = getRotatedGridFootprint(
+      definition.footprint,
+      nextRotation,
+    );
+    const nextPosition = resolveCenteredRotatedGridPoint({
+      gridPoint: entity.position,
+      currentFootprint,
+      nextFootprint,
+    });
+
+    const didRotate = this.core.rotateSelectedEntityClockwise(nextPosition);
 
     if (didRotate) {
       this.logger.info("Rotated selected entity.", {
         entityId: selectedEntityId,
+        previousPosition: entity.position,
+        nextPosition,
         previousRotation: entity.rotation,
-        nextRotation: rotateGridRotationClockwise(entity.rotation),
+        nextRotation,
       });
     }
 
