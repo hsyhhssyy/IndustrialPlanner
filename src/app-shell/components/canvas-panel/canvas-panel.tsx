@@ -202,6 +202,47 @@ export const CanvasPanel = observer(function CanvasPanel({
     controller.cancelPlacement();
   };
 
+  const beginTouchPlacementOrPanGesture = (
+    pointerId: number,
+    point: CanvasPoint,
+  ) => {
+    if (isPointInsideScreenBox(point, anchoredPlacementScreenBox)) {
+      touchPlacementGestureStateRef.current = beginCanvasTouchPlacementGesture(
+        pointerId,
+        point,
+      );
+      updateTouchGestureState(createIdleCanvasPanelTouchGestureState());
+      return;
+    }
+
+    touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
+    updateTouchGestureState(beginCanvasTouchPanGesture(pointerId, point));
+  };
+
+  const beginTouchPinchFromTrackedPoints = () => {
+    const [firstPointer, secondPointer] = Array.from(
+      touchPointsRef.current.entries(),
+    );
+
+    touchTapSuppressedRef.current = true;
+    touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
+    cancelScheduledPlacementPreview();
+
+    if (!firstPointer || !secondPointer) {
+      updateTouchGestureState(createIdleCanvasPanelTouchGestureState());
+      return;
+    }
+
+    updateTouchGestureState(
+      beginCanvasTouchPinchGesture(
+        firstPointer[0],
+        firstPointer[1],
+        secondPointer[0],
+        secondPointer[1],
+      ),
+    );
+  };
+
   const updatePointerGestureState = (nextState: CanvasPanelPointerGestureState) => {
     pointerGestureStateRef.current = nextState;
     setPointerGestureState(nextState);
@@ -451,51 +492,23 @@ export const CanvasPanel = observer(function CanvasPanel({
       touchPointsRef.current.set(event.pointerId, point);
       event.currentTarget.setPointerCapture(event.pointerId);
 
-      if (anchoredPlacementActive) {
-        if (touchPointsRef.current.size === 1) {
-          if (isPointInsideScreenBox(point, anchoredPlacementScreenBox)) {
-            touchPlacementGestureStateRef.current = beginCanvasTouchPlacementGesture(
-              event.pointerId,
-              point,
-            );
-            updateTouchGestureState(createIdleCanvasPanelTouchGestureState());
-          } else {
-            touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
-            updateTouchGestureState(beginCanvasTouchPanGesture(event.pointerId, point));
-          }
-        } else {
-          touchTapSuppressedRef.current = true;
-          touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
-          updateTouchGestureState(createIdleCanvasPanelTouchGestureState());
-        }
+      if (touchPointsRef.current.size >= 2) {
+        beginTouchPinchFromTrackedPoints();
         return;
       }
 
-      if (touchPointsRef.current.size >= 2) {
-        touchTapSuppressedRef.current = true;
-        const [firstPointer, secondPointer] = Array.from(
-          touchPointsRef.current.entries(),
-        );
-
-        if (firstPointer && secondPointer) {
-          updateTouchGestureState(
-            beginCanvasTouchPinchGesture(
-              firstPointer[0],
-              firstPointer[1],
-              secondPointer[0],
-              secondPointer[1],
-            ),
-          );
-        }
-      } else {
-        updateTouchGestureState(
-          beginCanvasTouchGesture(
-            event.pointerId,
-            point,
-            controller.getCanvasInteractionTarget(point),
-          ),
-        );
+      if (anchoredPlacementActive) {
+        beginTouchPlacementOrPanGesture(event.pointerId, point);
+        return;
       }
+
+      updateTouchGestureState(
+        beginCanvasTouchGesture(
+          event.pointerId,
+          point,
+          controller.getCanvasInteractionTarget(point),
+        ),
+      );
 
       controller.clearPlacementPreview();
       return;
