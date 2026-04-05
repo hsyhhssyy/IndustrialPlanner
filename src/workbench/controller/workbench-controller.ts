@@ -405,11 +405,25 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.sync();
   }
 
-  async selectEntity(entityId: string): Promise<void> {
+  async selectEntity(
+    entityId: string,
+    interactionMode: PlacementInteractionMode | null = null,
+  ): Promise<void> {
     await this.applyEditorMutation(() => {
-      this.editorHost.selectEntity(entityId);
+      this.editorHost.selectEntity(entityId, interactionMode);
       this.editorHost.setPendingLinkSource(null);
     });
+  }
+
+  async rotateSelectionClockwise(): Promise<void> {
+    const before = this.captureMutationState();
+    const didRotate = this.editorHost.rotateSelectedEntityClockwise();
+
+    if (!didRotate) {
+      return;
+    }
+
+    await this.reconcileMutation(before);
   }
 
   async clearSelection(): Promise<void> {

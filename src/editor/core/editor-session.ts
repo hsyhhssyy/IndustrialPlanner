@@ -7,6 +7,7 @@ export function createInitialEditorSession(): EditorSession {
   return {
     activeTool: "select",
     selection: ["reactor-1"],
+    selectionInteractionMode: null,
     hoveredEntityId: null,
     dragPreviewEntityId: null,
     placementDefinitionId: null,

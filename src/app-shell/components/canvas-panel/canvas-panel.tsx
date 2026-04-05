@@ -35,9 +35,10 @@ import {
   removePointerFromCanvasTouchGesture,
   type CanvasPanelTouchGestureState,
 } from "./canvas-panel-touch-gesture";
+import { CanvasActionToolbar } from "./canvas-action-toolbar";
 import { resolveCanvasPanelTapIntent } from "./canvas-panel-tap-intent";
 import { createCanvasPreviewRawInputScheduler } from "./canvas-preview-raw-input-scheduler";
-import { WorkbenchIcon } from "@/app-shell/components/workbench-icons";
+import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { createTranslator } from "@/i18n/messages";
 import { RendererHost } from "@/renderer/host/renderer-host";
@@ -45,7 +46,10 @@ import { createLogger } from "@/shared/logging/logger";
 import { observer } from "@/shared/mobx";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
-import type { RenderDerivedState } from "@/workbench/workspace-derived-state";
+import type {
+  RenderDerivedScreenBox,
+  RenderDerivedState,
+} from "@/workbench/workspace-derived-state";
 import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
 import type { CanvasPoint } from "@/workbench/workspace-state";
 import {
@@ -63,8 +67,9 @@ import {
 const PIXELS_PER_WHEEL_LINE = 16;
 const WHEEL_ZOOM_SENSITIVITY = 0.0015;
 const TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX = 176;
-const TOUCH_PLACEMENT_TOOLBAR_HEIGHT_PX = 56;
-const TOUCH_PLACEMENT_TOOLBAR_GAP_PX = 12;
+const TOUCH_SELECTION_TOOLBAR_WIDTH_PX = 120;
+const TOUCH_ACTION_TOOLBAR_HEIGHT_PX = 56;
+const TOUCH_ACTION_TOOLBAR_GAP_PX = 12;
 const logger = createLogger("app.canvas-panel");
 
 function normalizeWheelDelta(event: WheelEvent<HTMLDivElement>): number {
@@ -88,7 +93,7 @@ function clampToRange(value: number, min: number, max: number): number {
 
 function isPointInsideScreenBox(
   point: CanvasPoint,
-  screenBox: RenderDerivedState["anchoredPlacementScreenBox"],
+  screenBox: RenderDerivedScreenBox | null,
 ): boolean {
   if (!screenBox) {
     return false;
@@ -100,6 +105,36 @@ function isPointInsideScreenBox(
     point.y >= screenBox.top &&
     point.y <= screenBox.top + screenBox.height
   );
+}
+
+function resolveAnchoredToolbarStyle(
+  screenBox: RenderDerivedScreenBox | null,
+  viewportSize: CanvasPoint,
+  toolbarWidthPx: number,
+) {
+  if (!screenBox) {
+    return null;
+  }
+
+  return {
+    left: `${clampToRange(
+      screenBox.left + screenBox.width / 2,
+      12 + toolbarWidthPx / 2,
+      viewportSize.x - toolbarWidthPx / 2 - 12,
+    )}px`,
+    top: `${clampToRange(
+      screenBox.top - TOUCH_ACTION_TOOLBAR_HEIGHT_PX - TOUCH_ACTION_TOOLBAR_GAP_PX,
+      12,
+      viewportSize.y - TOUCH_ACTION_TOOLBAR_HEIGHT_PX - 12,
+    )}px`,
+    transform: "translateX(-50%)",
+  };
+}
+
+function resolveInteractionModeFromPointerType(
+  pointerType: string,
+): PlacementInteractionMode {
+  return pointerType === "touch" ? "touch" : "pointer";
 }
 
 export interface CanvasPanelProps {
@@ -147,29 +182,27 @@ export const CanvasPanel = observer(function CanvasPanel({
   const anchoredPlacementActive =
     editor.session.placementDefinitionId !== null &&
     editor.session.placementInteractionMode === "touch";
+  const pointerSelectionQuickActionsActive =
+    ui.mode === "edit" &&
+    editor.session.activeTool === "select" &&
+    editor.session.placementDefinitionId === null &&
+    editor.session.selection.length > 0 &&
+    editor.session.selectionInteractionMode === "pointer";
   const anchoredPlacementPreview =
     editor.session.placementPreview?.interactionMode === "touch"
       ? editor.session.placementPreview
       : null;
   const anchoredPlacementScreenBox = render.anchoredPlacementScreenBox;
-  const anchoredPlacementToolbarStyle = anchoredPlacementScreenBox
-    ? {
-        left: `${clampToRange(
-          anchoredPlacementScreenBox.left +
-            anchoredPlacementScreenBox.width / 2,
-          12 + TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX / 2,
-          viewportSize.x - TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX / 2 - 12,
-        )}px`,
-        top: `${clampToRange(
-          anchoredPlacementScreenBox.top -
-            TOUCH_PLACEMENT_TOOLBAR_HEIGHT_PX -
-            TOUCH_PLACEMENT_TOOLBAR_GAP_PX,
-          12,
-          viewportSize.y - TOUCH_PLACEMENT_TOOLBAR_HEIGHT_PX - 12,
-        )}px`,
-        transform: "translateX(-50%)",
-      }
-    : null;
+  const anchoredPlacementToolbarStyle = resolveAnchoredToolbarStyle(
+    anchoredPlacementScreenBox,
+    viewportSize,
+    TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX,
+  );
+  const anchoredSelectionToolbarStyle = resolveAnchoredToolbarStyle(
+    render.anchoredSelectionScreenBox,
+    viewportSize,
+    TOUCH_SELECTION_TOOLBAR_WIDTH_PX,
+  );
 
   const dispatchPlacementPreviewFromScreenPoint = useEffectEvent(
     (screenPoint: CanvasPoint) => {
@@ -440,7 +473,10 @@ export const CanvasPanel = observer(function CanvasPanel({
     };
   }, [controller]);
 
-  const dispatchCanvasTap = async (screenPoint: CanvasPoint) => {
+  const dispatchCanvasTap = async (
+    screenPoint: CanvasPoint,
+    interactionMode: PlacementInteractionMode,
+  ) => {
     const target = controller.getCanvasInteractionTarget(screenPoint);
     const intent = resolveCanvasPanelTapIntent({
       mode: ui.mode,
@@ -464,7 +500,7 @@ export const CanvasPanel = observer(function CanvasPanel({
 
     switch (intent.kind) {
       case "select-edit-entity":
-        await controller.selectEntity(intent.entityId);
+        await controller.selectEntity(intent.entityId, interactionMode);
         return;
       case "clear-edit-selection":
         await controller.clearSelection();
@@ -692,7 +728,10 @@ export const CanvasPanel = observer(function CanvasPanel({
       });
 
       if (shouldHandleTap) {
-        void dispatchCanvasTap(toViewportPoint(event.clientX, event.clientY));
+        void dispatchCanvasTap(
+          toViewportPoint(event.clientX, event.clientY),
+          resolveInteractionModeFromPointerType(event.pointerType),
+        );
       }
 
       touchPointsRef.current.delete(event.pointerId);
@@ -721,7 +760,10 @@ export const CanvasPanel = observer(function CanvasPanel({
       );
 
       if (shouldDispatchTap) {
-        void dispatchCanvasTap(toViewportPoint(event.clientX, event.clientY));
+        void dispatchCanvasTap(
+          toViewportPoint(event.clientX, event.clientY),
+          resolveInteractionModeFromPointerType(event.pointerType),
+        );
       } else if (
         editor.session.placementDefinitionId &&
         editor.session.placementInteractionMode === "pointer"
@@ -836,12 +878,31 @@ export const CanvasPanel = observer(function CanvasPanel({
         keyStateRef.current.right = true;
         break;
       case "r":
-        if (!editor.session.placementDefinitionId || event.repeat) {
+        if (event.repeat) {
+          return;
+        }
+
+        if (editor.session.placementDefinitionId) {
+          event.preventDefault();
+          controller.rotatePlacementClockwise();
+          return;
+        }
+
+        if (!pointerSelectionQuickActionsActive) {
           return;
         }
 
         event.preventDefault();
-        controller.rotatePlacementClockwise();
+        void controller.rotateSelectionClockwise();
+        return;
+      case "delete":
+      case "f":
+        if (!pointerSelectionQuickActionsActive) {
+          return;
+        }
+
+        event.preventDefault();
+        void controller.removeSelection();
         return;
       default:
         return;
@@ -910,51 +971,64 @@ export const CanvasPanel = observer(function CanvasPanel({
             sceneSource={controller}
           />
           {anchoredPlacementToolbarStyle ? (
-            <div
+            <CanvasActionToolbar
+              actions={[
+                {
+                  id: "cancel-placement",
+                  ariaLabel: t("action.cancelPlacement"),
+                  icon: "cancel",
+                  onClick: cancelPlacement,
+                  tone: "cancel",
+                },
+                {
+                  id: "rotate-placement",
+                  ariaLabel: t("action.rotatePlacement"),
+                  icon: "rotate",
+                  onClick: () => {
+                    controller.rotatePlacementClockwise();
+                  },
+                  tone: "rotate",
+                },
+                {
+                  id: "confirm-placement",
+                  ariaLabel: t("action.confirmPlacement"),
+                  disabled: !anchoredPlacementPreview?.valid,
+                  icon: "confirm",
+                  onClick: () => {
+                    void controller.confirmPlacementPreview();
+                  },
+                  tone: "confirm",
+                },
+              ]}
               className="placement-action-toolbar"
-              onClick={(event) => {
-                event.stopPropagation();
-              }}
-              onPointerDown={(event) => {
-                event.stopPropagation();
-              }}
               style={anchoredPlacementToolbarStyle}
-            >
-              <button
-                aria-label={t("action.cancelPlacement")}
-                className="placement-action-button is-cancel"
-                onClick={() => {
-                  cancelPlacement();
-                }}
-                type="button"
-              >
-                <WorkbenchIcon className="placement-action-icon" kind="cancel" />
-                <span className="sr-only">{t("action.cancelPlacement")}</span>
-              </button>
-              <button
-                aria-label={t("action.rotatePlacement")}
-                className="placement-action-button is-rotate"
-                onClick={() => {
-                  controller.rotatePlacementClockwise();
-                }}
-                type="button"
-              >
-                <WorkbenchIcon className="placement-action-icon" kind="rotate" />
-                <span className="sr-only">{t("action.rotatePlacement")}</span>
-              </button>
-              <button
-                aria-label={t("action.confirmPlacement")}
-                className="placement-action-button is-confirm"
-                disabled={!anchoredPlacementPreview?.valid}
-                onClick={() => {
-                  void controller.confirmPlacementPreview();
-                }}
-                type="button"
-              >
-                <WorkbenchIcon className="placement-action-icon" kind="confirm" />
-                <span className="sr-only">{t("action.confirmPlacement")}</span>
-              </button>
-            </div>
+            />
+          ) : null}
+          {anchoredSelectionToolbarStyle ? (
+            <CanvasActionToolbar
+              actions={[
+                {
+                  id: "rotate-selection",
+                  ariaLabel: t("action.rotateSelection"),
+                  icon: "rotate",
+                  onClick: () => {
+                    void controller.rotateSelectionClockwise();
+                  },
+                  tone: "rotate",
+                },
+                {
+                  id: "delete-selection",
+                  ariaLabel: t("action.deleteSelection"),
+                  icon: "delete",
+                  onClick: () => {
+                    void controller.removeSelection();
+                  },
+                  tone: "delete",
+                },
+              ]}
+              className="selection-action-toolbar"
+              style={anchoredSelectionToolbarStyle}
+            />
           ) : null}
         </div>
       </div>

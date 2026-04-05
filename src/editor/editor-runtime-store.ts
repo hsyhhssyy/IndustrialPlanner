@@ -35,6 +35,7 @@ export function isSameEditorSession(
   return (
     left.activeTool === right.activeTool &&
     areSelectionsEqual(left.selection, right.selection) &&
+    left.selectionInteractionMode === right.selectionInteractionMode &&
     left.hoveredEntityId === right.hoveredEntityId &&
     left.dragPreviewEntityId === right.dragPreviewEntityId &&
     left.placementDefinitionId === right.placementDefinitionId &&
@@ -61,6 +62,7 @@ function cloneEditorSession(session: EditorSession): EditorSession {
   return {
     activeTool: session.activeTool,
     selection: [...session.selection],
+    selectionInteractionMode: session.selectionInteractionMode,
     hoveredEntityId: session.hoveredEntityId,
     dragPreviewEntityId: session.dragPreviewEntityId,
     placementDefinitionId: session.placementDefinitionId,
@@ -157,6 +159,12 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
 
     if (!areSelectionsEqual(this.session.selection, session.selection)) {
       this.session.selection = [...session.selection];
+    }
+
+    if (
+      this.session.selectionInteractionMode !== session.selectionInteractionMode
+    ) {
+      this.session.selectionInteractionMode = session.selectionInteractionMode;
     }
 
     if (this.session.hoveredEntityId !== session.hoveredEntityId) {

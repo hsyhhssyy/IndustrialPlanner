@@ -52,7 +52,11 @@ export interface WorkbenchController {
   updatePlacementPreviewFromScreenPoint: (screenPoint: CanvasPoint) => void;
   confirmPlacementPreview: () => Promise<void>;
   clearPlacementPreview: () => void;
-  selectEntity: (entityId: string) => Promise<void>;
+  selectEntity: (
+    entityId: string,
+    interactionMode?: PlacementInteractionMode | null,
+  ) => Promise<void>;
+  rotateSelectionClockwise: () => Promise<void>;
   clearSelection: () => Promise<void>;
   patchEntityConfig: (
     entityId: string,

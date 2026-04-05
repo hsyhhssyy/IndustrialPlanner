@@ -17,7 +17,30 @@ describe("EditorRuntimeStore", () => {
 
     expect(store.getSnapshot().session.activeTool).toBe("select");
     expect(store.session.selection).toEqual(["reactor-1"]);
+    expect(store.session.selectionInteractionMode).toBeNull();
     expect(store.history.canUndo).toBe(false);
+  });
+
+  it("tracks selection interaction mode in observable runtime state", () => {
+    const store = createEditorRuntimeStore({
+      session: createInitialEditorSession(),
+      history: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
+      },
+    });
+
+    store.setSnapshot({
+      session: {
+        ...store.getSnapshot().session,
+        selectionInteractionMode: "touch",
+      },
+      history: store.getSnapshot().history,
+    });
+
+    expect(store.session.selectionInteractionMode).toBe("touch");
   });
 
   it("does not re-run observers that only read active tool when placement preview changes", () => {

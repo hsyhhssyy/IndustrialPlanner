@@ -3,6 +3,7 @@ import { compileStage1World } from "@/domain/compiler/stage1-compiler";
 import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";
 import { createStage1Registry } from "@/domain/registry/stage1-registry";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
+import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { createSnapshotStore } from "@/shared/snapshot-store/snapshot-store";
 import { createEmptySimulationPatchSet } from "@/simulation/protocol/simulation-patch";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
@@ -214,6 +215,82 @@ describe("WorkspaceDerivedStore", () => {
         workspaceState.canvasView.zoom,
       width: scaledGridSize,
       height: scaledGridSize * 3,
+    });
+  });
+
+  it("projects touch selection into a shared screen box", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const selectedEntityId = "reactor-1";
+    const selectedEntity = document.entities[selectedEntityId]!;
+    const definition = topology.entityViews[selectedEntityId]?.definition;
+    const workspaceState = {
+      document,
+      editor: {
+        session: {
+          ...createInitialEditorSession(),
+          selection: [selectedEntityId],
+          selectionInteractionMode: "touch" as const,
+        },
+        history: {
+          canUndo: false,
+          canRedo: false,
+          undoDepth: 0,
+          redoDepth: 0,
+        },
+      },
+      ui: createInitialWorkbenchUiState(),
+      canvasView: {
+        offset: { x: 10, y: 20 },
+        zoom: 2,
+      },
+      simulation: {
+        runtimeSnapshot: {
+          tick: 0,
+          status: "idle" as const,
+          entityViews: {},
+          patchedEntityIds: [],
+        },
+        telemetry: {
+          tick: 0,
+          simulatedHertz: 0,
+          entityCount: 0,
+        },
+        inspectorDetails: null,
+        patchSet: createEmptySimulationPatchSet(),
+        selection: [],
+      },
+    };
+
+    expect(definition).toBeTruthy();
+
+    const footprint = getRotatedGridFootprint(
+      definition!.footprint,
+      selectedEntity.rotation,
+    );
+
+    expect(
+      deriveRenderDerivedState({
+        workspaceState,
+        topology,
+        registry,
+      }).anchoredSelectionScreenBox,
+    ).toEqual({
+      left:
+        (selectedEntity.position.x * document.documentSettings.gridSize -
+          workspaceState.canvasView.offset.x) * workspaceState.canvasView.zoom,
+      top:
+        (selectedEntity.position.y * document.documentSettings.gridSize -
+          workspaceState.canvasView.offset.y) * workspaceState.canvasView.zoom,
+      width:
+        footprint.width *
+        document.documentSettings.gridSize *
+        workspaceState.canvasView.zoom,
+      height:
+        footprint.height *
+        document.documentSettings.gridSize *
+        workspaceState.canvasView.zoom,
     });
   });
 

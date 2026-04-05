@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_STAGE1_BASE_ID } from "@/domain/base/stage1-bases";
 import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
-import { getRotatedGridFootprint, type GridRotation } from "@/shared/geometry/grid";
+import {
+  getRotatedGridFootprint,
+  rotateGridRotationClockwise,
+  type GridRotation,
+} from "@/shared/geometry/grid";
 import { createPlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 
@@ -809,6 +813,29 @@ describe("WorkbenchController scaffold", () => {
     expect(snapshot.ui.mode).toBe("simulate");
     expect(snapshot.simulationSelection).toEqual(["dark-outlet-1"]);
     expect(snapshot.session.selection).toEqual(["filler-1"]);
+
+    controller.dispose();
+  });
+
+  it("rotates the pointer selection through the shared selection action chain", async () => {
+    const controller = createWorkbenchController();
+    const beforeRotation =
+      readWorkbenchState(controller).document.entities["reactor-1"]?.rotation ?? 0;
+
+    await controller.selectEntity("reactor-1", "pointer");
+    await controller.rotateSelectionClockwise();
+
+    const after = readWorkbenchState(controller);
+
+    expect(after.session.selection).toEqual(["reactor-1"]);
+    expect(after.session.selectionInteractionMode).toBe("pointer");
+    expect(after.document.entities["reactor-1"]?.rotation).toBe(
+      rotateGridRotationClockwise(beforeRotation),
+    );
+    expect(
+      after.renderScene.entities.find((entity) => entity.entityId === "reactor-1")
+        ?.rotation,
+    ).toBe(rotateGridRotationClockwise(beforeRotation));
 
     controller.dispose();
   });

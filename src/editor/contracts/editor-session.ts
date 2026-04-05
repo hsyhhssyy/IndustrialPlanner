@@ -15,6 +15,7 @@ export type EditorTool =
 export interface EditorSession {
   activeTool: EditorTool;
   selection: string[];
+  selectionInteractionMode: PlacementInteractionMode | null;
   hoveredEntityId: string | null;
   dragPreviewEntityId: string | null;
   placementDefinitionId: string | null;

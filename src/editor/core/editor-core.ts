@@ -15,7 +15,11 @@ import type {
   PlacementInteractionMode,
 } from "@/editor/contracts/placement-preview";
 import { isPlacementTool } from "@/editor/core/editor-session";
-import type { GridPoint, GridRotation } from "@/shared/geometry/grid";
+import {
+  rotateGridRotationClockwise,
+  type GridPoint,
+  type GridRotation,
+} from "@/shared/geometry/grid";
 
 interface DocumentHistoryEntry {
   command: DocumentCommand;
@@ -48,7 +52,11 @@ export interface EditorCore {
   ) => void;
   setPlacementRotation: (rotation: GridRotation | null) => void;
   setPlacementPreview: (preview: PlacementPreviewState | null) => void;
-  selectEntity: (entityId: string | null) => void;
+  selectEntity: (
+    entityId: string | null,
+    interactionMode?: PlacementInteractionMode | null,
+  ) => void;
+  rotateSelectedEntityClockwise: () => boolean;
   setPendingLinkSource: (entityId: string | null) => void;
   placeEntity: (
     definitionId: string,
@@ -141,11 +149,39 @@ class EditorCoreImpl implements EditorCore {
     };
   }
 
-  selectEntity(entityId: string | null): void {
+  selectEntity(
+    entityId: string | null,
+    interactionMode: PlacementInteractionMode | null = entityId
+      ? this.session.selectionInteractionMode
+      : null,
+  ): void {
     this.session = {
       ...this.session,
       selection: entityId ? [entityId] : [],
+      selectionInteractionMode: entityId ? interactionMode : null,
     };
+  }
+
+  rotateSelectedEntityClockwise(): boolean {
+    const selectedEntityId = this.session.selection[0];
+
+    if (!selectedEntityId) {
+      return false;
+    }
+
+    const entity = this.document.entities[selectedEntityId];
+
+    if (!entity) {
+      return false;
+    }
+
+    return this.applyCommand({
+      type: "entity.rotate",
+      payload: {
+        entityId: selectedEntityId,
+        rotation: rotateGridRotationClockwise(entity.rotation),
+      },
+    });
   }
 
   setPendingLinkSource(entityId: string | null): void {
@@ -177,6 +213,7 @@ class EditorCoreImpl implements EditorCore {
       this.session = {
         ...this.session,
         selection: [entityId],
+        selectionInteractionMode: this.session.placementInteractionMode,
         placementDefinitionId: definitionId,
         placementInteractionMode: this.session.placementInteractionMode,
         placementRotation: this.session.placementRotation,
@@ -211,6 +248,7 @@ class EditorCoreImpl implements EditorCore {
       this.session = {
         ...this.session,
         selection: [targetEntityId],
+        selectionInteractionMode: null,
         pendingLinkSourceEntityId: null,
       };
     }
@@ -239,6 +277,7 @@ class EditorCoreImpl implements EditorCore {
     this.session = {
       ...this.session,
       selection: [],
+      selectionInteractionMode: null,
       pendingLinkSourceEntityId: null,
     };
   }
@@ -339,6 +378,8 @@ class EditorCoreImpl implements EditorCore {
     this.session = {
       ...this.session,
       selection,
+      selectionInteractionMode:
+        selection.length > 0 ? this.session.selectionInteractionMode : null,
       hoveredEntityId,
       dragPreviewEntityId,
       placementRotation:

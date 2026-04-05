@@ -163,7 +163,11 @@ export interface EditorHost {
   clearPlacementPreview: () => void;
   activateLinkTarget: (entityId: string | null) => void;
   setPlacementPreview: (preview: PlacementPreviewState | null) => void;
-  selectEntity: (entityId: string | null) => void;
+  selectEntity: (
+    entityId: string | null,
+    interactionMode?: PlacementInteractionMode | null,
+  ) => void;
+  rotateSelectedEntityClockwise: () => boolean;
   setPendingLinkSource: (entityId: string | null) => void;
   placeEntity: (
     definitionId: string,
@@ -567,8 +571,41 @@ class EditorHostImpl implements EditorHost {
     this.core.setPlacementPreview(preview);
   }
 
-  selectEntity(entityId: string | null): void {
-    this.core.selectEntity(entityId);
+  selectEntity(
+    entityId: string | null,
+    interactionMode?: PlacementInteractionMode | null,
+  ): void {
+    this.core.selectEntity(entityId, interactionMode);
+  }
+
+  rotateSelectedEntityClockwise(): boolean {
+    const {
+      document,
+      session: { selection },
+    } = this.core.getSnapshot();
+    const selectedEntityId = selection[0];
+
+    if (!selectedEntityId) {
+      return false;
+    }
+
+    const entity = document.entities[selectedEntityId];
+
+    if (!entity) {
+      return false;
+    }
+
+    const didRotate = this.core.rotateSelectedEntityClockwise();
+
+    if (didRotate) {
+      this.logger.info("Rotated selected entity.", {
+        entityId: selectedEntityId,
+        previousRotation: entity.rotation,
+        nextRotation: rotateGridRotationClockwise(entity.rotation),
+      });
+    }
+
+    return didRotate;
   }
 
   setPendingLinkSource(entityId: string | null): void {
@@ -709,19 +746,19 @@ class EditorHostImpl implements EditorHost {
     } = this.core.getSnapshot();
 
     if (!hitEntityId) {
-      this.core.selectEntity(null);
+      this.core.selectEntity(null, null);
       this.core.setPendingLinkSource(null);
       return;
     }
 
     if (!pendingLinkSourceEntityId) {
-      this.core.selectEntity(hitEntityId);
+      this.core.selectEntity(hitEntityId, null);
       this.core.setPendingLinkSource(hitEntityId);
       return;
     }
 
     if (pendingLinkSourceEntityId === hitEntityId) {
-      this.core.selectEntity(hitEntityId);
+      this.core.selectEntity(hitEntityId, null);
       this.core.setPendingLinkSource(null);
       return;
     }
@@ -732,7 +769,7 @@ class EditorHostImpl implements EditorHost {
     );
 
     if (!resolvedPair) {
-      this.core.selectEntity(hitEntityId);
+      this.core.selectEntity(hitEntityId, null);
       this.core.setPendingLinkSource(hitEntityId);
       return;
     }
@@ -745,7 +782,7 @@ class EditorHostImpl implements EditorHost {
 
     if (existingLink) {
       this.core.removeLink(existingLink.id);
-      this.core.selectEntity(hitEntityId);
+      this.core.selectEntity(hitEntityId, null);
       this.core.setPendingLinkSource(null);
       return;
     }

@@ -2,6 +2,7 @@
 
 import { CanvasPanel } from "@/app-shell/components/canvas-panel/canvas-panel";
 import { createWorkbenchShell } from "@/app-shell/workbench-shell";
+import { rotateGridRotationClockwise } from "@/shared/geometry/grid";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -112,6 +113,62 @@ function dispatchTouchPointerEvent(
       pointerType: "touch",
     }),
   );
+}
+
+function dispatchPointerTap(
+  viewport: Element | null,
+  point: { x: number; y: number },
+  pointerId: number,
+) {
+  viewport?.dispatchEvent(
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      button: 0,
+      buttons: 1,
+      clientX: point.x,
+      clientY: point.y,
+      pointerId,
+      pointerType: "mouse",
+    }),
+  );
+  viewport?.dispatchEvent(
+    new PointerEvent("pointerup", {
+      bubbles: true,
+      button: 0,
+      buttons: 0,
+      clientX: point.x,
+      clientY: point.y,
+      pointerId,
+      pointerType: "mouse",
+    }),
+  );
+}
+
+function toScreenPointForEntity(
+  controller: ReturnType<typeof createWorkbenchController>,
+  entityId: string,
+) {
+  const document = controller.documentStore.getSnapshot();
+  const canvasView = controller.canvasViewStore.getSnapshot();
+  const entity = document.entities[entityId];
+
+  if (!entity) {
+    throw new Error(`Missing entity ${entityId}`);
+  }
+
+  return {
+    x:
+      (entity.position.x * document.documentSettings.gridSize - canvasView.offset.x + 1) *
+      canvasView.zoom,
+    y:
+      (entity.position.y * document.documentSettings.gridSize - canvasView.offset.y + 1) *
+      canvasView.zoom,
+  };
+}
+
+async function flushCanvasActions() {
+  await Promise.resolve();
+  await Promise.resolve();
 }
 
 describe("CanvasPanel placement actions", () => {
@@ -257,7 +314,9 @@ describe("CanvasPanel placement actions", () => {
     controller.armPlacement("belt_straight_1x1", "belt", "touch");
     const { container, root, shell } = await renderCanvasPanel(controller);
     const buttons = Array.from(
-      container.querySelectorAll<HTMLButtonElement>(".placement-action-button"),
+      container.querySelectorAll<HTMLButtonElement>(
+        ".placement-action-toolbar .canvas-action-button",
+      ),
     );
     const buttonLabels = buttons.map((button) => button.getAttribute("aria-label"));
     const cancelButton = buttons.find(
@@ -285,6 +344,121 @@ describe("CanvasPanel placement actions", () => {
 
     expect(controller.editorStore.getSnapshot().session.activeTool).toBe("select");
     expect(container.querySelector(".placement-action-toolbar")).toBeNull();
+
+    await disposeCanvasPanel({ root, shell, controller });
+  });
+
+  it("marks pointer selection and supports rotate/delete keyboard actions", async () => {
+    const controller = createWorkbenchController();
+    const beforeRotation =
+      controller.documentStore.getSnapshot().entities["reactor-1"]?.rotation ?? 0;
+    const { container, root, shell } = await renderCanvasPanel(controller);
+    const stage = container.querySelector(".canvas-stage");
+    const viewport = container.querySelector(".canvas-viewport-surface");
+    const reactorPoint = toScreenPointForEntity(controller, "reactor-1");
+
+    expect(stage).not.toBeNull();
+    expect(viewport).not.toBeNull();
+
+    await act(async () => {
+      dispatchPointerTap(viewport, reactorPoint, 41);
+      await flushCanvasActions();
+    });
+
+    expect(controller.editorStore.getSnapshot().session.selection).toEqual(["reactor-1"]);
+    expect(controller.editorStore.getSnapshot().session.selectionInteractionMode).toBe(
+      "pointer",
+    );
+
+    await act(async () => {
+      stage?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          bubbles: true,
+          key: "r",
+        }),
+      );
+      await flushCanvasActions();
+    });
+
+    expect(controller.documentStore.getSnapshot().entities["reactor-1"]?.rotation).toBe(
+      rotateGridRotationClockwise(beforeRotation),
+    );
+
+    await act(async () => {
+      stage?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          bubbles: true,
+          key: "Delete",
+        }),
+      );
+      await flushCanvasActions();
+    });
+
+    expect(controller.documentStore.getSnapshot().entities["reactor-1"]).toBeUndefined();
+    expect(controller.editorStore.getSnapshot().session.selection).toEqual([]);
+    expect(controller.editorStore.getSnapshot().session.selectionInteractionMode).toBeNull();
+
+    await disposeCanvasPanel({ root, shell, controller });
+  });
+
+  it("renders touch selection toolbar with shared rotate/delete actions", async () => {
+    const controller = createWorkbenchController();
+    const beforeRotation =
+      controller.documentStore.getSnapshot().entities["reactor-1"]?.rotation ?? 0;
+    const { container, root, shell } = await renderCanvasPanel(controller);
+    const viewport = container.querySelector(".canvas-viewport-surface");
+    const reactorPoint = toScreenPointForEntity(controller, "reactor-1");
+
+    expect(viewport).not.toBeNull();
+
+    await act(async () => {
+      dispatchTouchPointerEvent(viewport, "pointerdown", 51, reactorPoint);
+      dispatchTouchPointerEvent(viewport, "pointerup", 51, reactorPoint);
+      await flushCanvasActions();
+    });
+
+    expect(controller.editorStore.getSnapshot().session.selection).toEqual(["reactor-1"]);
+    expect(controller.editorStore.getSnapshot().session.selectionInteractionMode).toBe(
+      "touch",
+    );
+
+    const toolbar = container.querySelector(
+      ".selection-action-toolbar.canvas-action-toolbar",
+    );
+    const buttons = Array.from(
+      container.querySelectorAll<HTMLButtonElement>(
+        ".selection-action-toolbar .canvas-action-button",
+      ),
+    );
+    const rotateButton = buttons.find(
+      (button) => button.getAttribute("aria-label") === "旋转",
+    );
+    const deleteButton = buttons.find(
+      (button) => button.getAttribute("aria-label") === "删除选中",
+    );
+
+    expect(toolbar).not.toBeNull();
+    expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "旋转",
+      "删除选中",
+    ]);
+
+    await act(async () => {
+      rotateButton?.click();
+      await flushCanvasActions();
+    });
+
+    expect(controller.documentStore.getSnapshot().entities["reactor-1"]?.rotation).toBe(
+      rotateGridRotationClockwise(beforeRotation),
+    );
+
+    await act(async () => {
+      deleteButton?.click();
+      await flushCanvasActions();
+    });
+
+    expect(controller.documentStore.getSnapshot().entities["reactor-1"]).toBeUndefined();
+    expect(container.querySelector(".selection-action-toolbar")).toBeNull();
 
     await disposeCanvasPanel({ root, shell, controller });
   });

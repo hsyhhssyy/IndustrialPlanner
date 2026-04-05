@@ -27,6 +27,7 @@ export interface RenderDerivedState {
   };
   cameraTransform: RenderDerivedCameraTransform;
   anchoredPlacementScreenBox: RenderDerivedScreenBox | null;
+  anchoredSelectionScreenBox: RenderDerivedScreenBox | null;
 }
 
 export interface WorkspaceDerivedState {
@@ -37,6 +38,30 @@ interface DeriveRenderDerivedStateOptions {
   workspaceState: WorkspaceState;
   topology: CompiledTopology;
   registry: Stage1Registry;
+}
+
+function projectGridFootprintScreenBox(options: {
+  canvasView: WorkspaceState["canvasView"];
+  gridSize: number;
+  position: {
+    x: number;
+    y: number;
+  };
+  footprint: {
+    width: number;
+    height: number;
+  };
+}): RenderDerivedScreenBox {
+  return {
+    left:
+      (options.position.x * options.gridSize - options.canvasView.offset.x) *
+      options.canvasView.zoom,
+    top:
+      (options.position.y * options.gridSize - options.canvasView.offset.y) *
+      options.canvasView.zoom,
+    width: options.footprint.width * options.gridSize * options.canvasView.zoom,
+    height: options.footprint.height * options.gridSize * options.canvasView.zoom,
+  };
 }
 
 function deriveAnchoredPlacementScreenBox(
@@ -64,12 +89,54 @@ function deriveAnchoredPlacementScreenBox(
     preview.rotation,
   );
 
-  return {
-    left: (preview.gridPoint.x * gridSize - canvasView.offset.x) * canvasView.zoom,
-    top: (preview.gridPoint.y * gridSize - canvasView.offset.y) * canvasView.zoom,
-    width: footprint.width * gridSize * canvasView.zoom,
-    height: footprint.height * gridSize * canvasView.zoom,
-  };
+  return projectGridFootprintScreenBox({
+    canvasView,
+    gridSize,
+    position: preview.gridPoint,
+    footprint,
+  });
+}
+
+function deriveAnchoredSelectionScreenBox(
+  options: DeriveRenderDerivedStateOptions,
+): RenderDerivedScreenBox | null {
+  const {
+    workspaceState: { canvasView, document, editor, ui },
+    topology,
+  } = options;
+
+  if (
+    ui.mode !== "edit" ||
+    editor.session.activeTool !== "select" ||
+    editor.session.placementDefinitionId !== null ||
+    editor.session.selectionInteractionMode !== "touch" ||
+    editor.session.selection.length !== 1
+  ) {
+    return null;
+  }
+
+  const selectedEntityId = editor.session.selection[0];
+
+  if (!selectedEntityId) {
+    return null;
+  }
+
+  const selectedEntity = document.entities[selectedEntityId];
+  const definition = topology.entityViews[selectedEntityId]?.definition;
+
+  if (!selectedEntity || !definition) {
+    return null;
+  }
+
+  return projectGridFootprintScreenBox({
+    canvasView,
+    gridSize: document.documentSettings.gridSize,
+    position: selectedEntity.position,
+    footprint: getRotatedGridFootprint(
+      definition.footprint,
+      selectedEntity.rotation,
+    ),
+  });
 }
 
 export function deriveRenderDerivedState(
@@ -95,6 +162,7 @@ export function deriveRenderDerivedState(
       viewportOffset: canvasView.offset,
     },
     anchoredPlacementScreenBox: deriveAnchoredPlacementScreenBox(options),
+    anchoredSelectionScreenBox: deriveAnchoredSelectionScreenBox(options),
   };
 }
 

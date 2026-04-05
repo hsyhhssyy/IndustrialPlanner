@@ -685,7 +685,7 @@ button.is-active {
   cursor: grabbing;
 }
 
-.placement-action-toolbar {
+.canvas-action-toolbar {
   position: absolute;
   z-index: 2;
   display: flex;
@@ -699,7 +699,7 @@ button.is-active {
   backdrop-filter: blur(10px);
 }
 
-.placement-action-button {
+.canvas-action-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -714,24 +714,25 @@ button.is-active {
   color: rgb(18 22 28);
 }
 
-.placement-action-button:not(:disabled):hover {
+.canvas-action-button:not(:disabled):hover {
   border-color: rgb(18 22 28 / 0.18);
   background: rgb(241 244 247 / 0.98);
 }
 
-.placement-action-button.is-cancel {
+.canvas-action-button.is-cancel,
+.canvas-action-button.is-delete {
   color: rgb(194 58 58);
 }
 
-.placement-action-button.is-rotate {
+.canvas-action-button.is-rotate {
   color: rgb(18 22 28);
 }
 
-.placement-action-button.is-confirm {
+.canvas-action-button.is-confirm {
   color: rgb(28 146 95);
 }
 
-.placement-action-icon {
+.canvas-action-icon {
   width: 22px;
   height: 22px;
   fill: currentColor;
