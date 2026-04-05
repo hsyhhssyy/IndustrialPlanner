@@ -52,7 +52,7 @@ describe("workbench surface observer reactivity", () => {
     controller.dispose();
   });
 
-  it("does not re-render non-preview surfaces during placement preview updates", async () => {
+  it("keeps non-preview surfaces stable during burst placement preview updates", async () => {
     const controller = createWorkbenchController();
     controller.armPlacement("belt_straight_1x1", "belt");
 
@@ -110,14 +110,42 @@ describe("workbench surface observer reactivity", () => {
       bottomStatusBar: 1,
     });
 
+    const previewBurstGridPoints = [
+      { x: 12, y: 8 },
+      { x: 13, y: 8 },
+      { x: 14, y: 8 },
+      { x: 15, y: 8 },
+      { x: 12, y: 9 },
+      { x: 13, y: 9 },
+      { x: 14, y: 9 },
+      { x: 15, y: 9 },
+      { x: 12, y: 10 },
+      { x: 13, y: 10 },
+      { x: 14, y: 10 },
+      { x: 15, y: 10 },
+    ];
+    const lastGridPoint =
+      previewBurstGridPoints[previewBurstGridPoints.length - 1]!;
+
     await act(async () => {
+      for (const gridPoint of previewBurstGridPoints) {
+        controller.updatePlacementPreviewFromScreenPoint(
+          toScreenPointForPlacementCenter(controller, gridPoint),
+        );
+      }
+
       controller.updatePlacementPreviewFromScreenPoint(
-        toScreenPointForPlacementCenter(controller, { x: 12, y: 8 }),
-      );
-      controller.updatePlacementPreviewFromScreenPoint(
-        toScreenPointForPlacementCenter(controller, { x: 13, y: 8 }),
+        toScreenPointForPlacementCenter(controller, lastGridPoint),
       );
     });
+
+    expect(controller.editorStore.getSnapshot().session.placementPreview).toMatchObject(
+      {
+        definitionId: "belt_straight_1x1",
+        interactionMode: "pointer",
+        gridPoint: lastGridPoint,
+      },
+    );
 
     expect(renderCounts).toEqual({
       leftDock: 1,
