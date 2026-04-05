@@ -1,10 +1,10 @@
 import type { GridPoint, GridRotation } from "@/shared/geometry/grid";
 
-export type PlacementPreviewStrategy = "pointer-follow" | "anchored-confirm";
+export type PlacementInteractionMode = "pointer" | "touch";
 
 export interface PlacementPreviewState {
   definitionId: string;
-  strategy: PlacementPreviewStrategy;
+  interactionMode: PlacementInteractionMode;
   gridPoint: GridPoint;
   rotation: GridRotation;
   valid: boolean;
@@ -24,7 +24,7 @@ export function isSamePlacementPreviewState(
 
   return (
     left.definitionId === right.definitionId &&
-    left.strategy === right.strategy &&
+    left.interactionMode === right.interactionMode &&
     left.rotation === right.rotation &&
     left.valid === right.valid &&
     left.gridPoint.x === right.gridPoint.x &&

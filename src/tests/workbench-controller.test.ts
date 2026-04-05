@@ -389,7 +389,9 @@ describe("WorkbenchController scaffold", () => {
     expect(after.ui.mode).toBe("simulate");
     expect(after.session.activeTool).toBe(before.session.activeTool);
     expect(after.session.placementDefinitionId).toBe(before.session.placementDefinitionId);
-    expect(after.session.placementStrategy).toBe(before.session.placementStrategy);
+    expect(after.session.placementInteractionMode).toBe(
+      before.session.placementInteractionMode,
+    );
     expect(after.ui.leftPanelMode).toBe(before.ui.leftPanelMode);
 
     controller.dispose();
@@ -405,14 +407,14 @@ describe("WorkbenchController scaffold", () => {
 
     expect(readWorkbenchState(controller).activePlacementPreview).toEqual({
       definitionId: "belt_straight_1x1",
-      strategy: "pointer-follow",
+      interactionMode: "pointer",
       gridPoint: { x: 24, y: 12 },
       rotation: 0,
       valid: true,
     });
     expect(readWorkbenchState(controller).renderScene.placementPreview).toMatchObject({
       definitionId: "belt_straight_1x1",
-      strategy: "pointer-follow",
+      interactionMode: "pointer",
       x: 24 * readWorkbenchState(controller).document.documentSettings.gridSize,
       y: 12 * readWorkbenchState(controller).document.documentSettings.gridSize,
       valid: true,
@@ -436,7 +438,7 @@ describe("WorkbenchController scaffold", () => {
 
     expect(readWorkbenchState(controller).activePlacementPreview).toEqual({
       definitionId: "item_port_unloader_1",
-      strategy: "pointer-follow",
+      interactionMode: "pointer",
       gridPoint: { x: 25, y: 11 },
       rotation: 90,
       valid: true,
@@ -488,7 +490,7 @@ describe("WorkbenchController scaffold", () => {
     expect(after.session.activeTool).toBe("select");
     expect(after.session.selection).toEqual(previousSelection);
     expect(after.session.placementDefinitionId).toBeNull();
-    expect(after.session.placementStrategy).toBeNull();
+    expect(after.session.placementInteractionMode).toBeNull();
     expect(after.session.placementRotation).toBeNull();
     expect(after.activePlacementPreview).toBeNull();
 
@@ -597,7 +599,7 @@ describe("WorkbenchController scaffold", () => {
 
     expect(readWorkbenchState(controller).activePlacementPreview).toEqual({
       definitionId: "item_port_mix_pool_1",
-      strategy: "pointer-follow",
+      interactionMode: "pointer",
       gridPoint: { x: 24, y: 12 },
       rotation: 0,
       valid: true,
@@ -606,18 +608,18 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("seeds anchored-confirm placement at the viewport center and confirms placement from the preview", async () => {
+  it("seeds touch placement at the viewport center and confirms placement from the preview", async () => {
     const controller = createWorkbenchController();
     controller.setCanvasViewportSize({ x: 640, y: 360 });
 
-    controller.armPlacement("belt_straight_1x1", "belt", "anchored-confirm");
+    controller.armPlacement("belt_straight_1x1", "belt", "touch");
 
     const previewBeforeConfirm = readWorkbenchState(controller).activePlacementPreview;
     const entityCountBeforeConfirm = readWorkbenchState(controller).document.entityOrder.length;
 
     expect(previewBeforeConfirm).toMatchObject({
       definitionId: "belt_straight_1x1",
-      strategy: "anchored-confirm",
+      interactionMode: "touch",
       rotation: 0,
       valid: true,
     });
@@ -635,7 +637,7 @@ describe("WorkbenchController scaffold", () => {
     expect(placedEntity?.position).toEqual(previewBeforeConfirm?.gridPoint);
     expect(afterConfirm.activePlacementPreview).toMatchObject({
       definitionId: "belt_straight_1x1",
-      strategy: "anchored-confirm",
+      interactionMode: "touch",
     });
 
     controller.dispose();
@@ -690,7 +692,7 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("commits pointer-follow placement from screen coordinates and recompiles topology", async () => {
+  it("commits pointer placement from screen coordinates and recompiles topology", async () => {
     const controller = createWorkbenchController();
     const before = readWorkbenchState(controller);
 

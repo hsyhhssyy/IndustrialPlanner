@@ -50,7 +50,7 @@ import type { EditorTool } from "@/editor/contracts/editor-session";
 import {
   isSamePlacementPreviewState,
   type PlacementPreviewState,
-  type PlacementPreviewStrategy,
+  type PlacementInteractionMode,
 } from "@/editor/contracts/placement-preview";
 import {
   createEditorHost,
@@ -104,7 +104,7 @@ interface PlacementPreviewDiagnosticWindow {
   latest:
     | {
         definitionId: string | null;
-        strategy: PlacementPreviewStrategy | null;
+        interactionMode: PlacementInteractionMode | null;
         screenPoint: CanvasPoint;
         inputGridPoint: CanvasWorldInput["gridPoint"];
         preview: PlacementPreviewState | null;
@@ -262,22 +262,22 @@ class WorkbenchControllerImpl implements WorkbenchController {
   armPlacement(
     definitionId: string,
     tool: EditorTool = "place",
-    strategy: PlacementPreviewStrategy = "pointer-follow",
+    interactionMode: PlacementInteractionMode = "pointer",
   ): void {
     if (this.uiStore.getSnapshot().mode === "simulate") {
       this.logger.warn("Ignored placement request while simulate mode is active.", {
         definitionId,
         tool,
-        strategy,
+        interactionMode,
       });
       return;
     }
 
-    this.editorHost.setPlacementDefinition(definitionId, tool, strategy);
+    this.editorHost.setPlacementDefinition(definitionId, tool, interactionMode);
     this.logger.info("Armed placement through workbench controller.", {
       definitionId,
       tool,
-      strategy,
+      interactionMode,
       viewportSize: this.viewportSize,
       mode: this.uiStore.getSnapshot().mode,
     });
@@ -291,7 +291,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     }));
 
     if (
-      strategy === "anchored-confirm" &&
+      interactionMode === "touch" &&
       this.viewportSize.x > 0 &&
       this.viewportSize.y > 0
     ) {
@@ -326,7 +326,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.logger.info("Canceled armed placement and returned to select tool.", {
       previousTool: session.activeTool,
       placementDefinitionId: session.placementDefinitionId,
-      placementStrategy: session.placementStrategy,
+      placementInteractionMode: session.placementInteractionMode,
       placementRotation: session.placementRotation,
     });
     this.sync();
@@ -362,14 +362,17 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
       const syncMetrics = this.sync();
 
-      if (sessionBefore.placementDefinitionId && sessionBefore.placementStrategy) {
+      if (
+        sessionBefore.placementDefinitionId &&
+        sessionBefore.placementInteractionMode
+      ) {
         const definitionId = sessionBefore.placementDefinitionId;
-        const strategy = sessionBefore.placementStrategy;
+        const interactionMode = sessionBefore.placementInteractionMode;
 
         this.measureProfilerStage("controller.diagnostics", () => {
           this.recordPlacementPreviewDiagnostic({
             definitionId,
-            strategy,
+            interactionMode,
             screenPoint,
             worldInput,
             previousPreview,
@@ -390,7 +393,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
     if (
       didPlace &&
-      this.editorStore.getSnapshot().session.placementStrategy === "anchored-confirm" &&
+      this.editorStore.getSnapshot().session.placementInteractionMode === "touch" &&
       this.uiStore.getSnapshot().mode === "edit"
     ) {
       this.centerPlacementPreview();
@@ -452,7 +455,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       gridPoint: worldInput.gridPoint,
       activeTool: session.activeTool,
       placementDefinitionId: session.placementDefinitionId,
-      placementStrategy: session.placementStrategy,
+      placementInteractionMode: session.placementInteractionMode,
       placementRotation: session.placementRotation,
     });
     const before = this.captureMutationState();
@@ -979,7 +982,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   private recordPlacementPreviewDiagnostic(options: {
     definitionId: string;
-    strategy: PlacementPreviewStrategy;
+    interactionMode: PlacementInteractionMode;
     screenPoint: CanvasPoint;
     worldInput: CanvasWorldInput;
     previousPreview: PlacementPreviewState | null;
@@ -1014,7 +1017,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
     diagnostics.latest = {
       definitionId: options.definitionId,
-      strategy: options.strategy,
+      interactionMode: options.interactionMode,
       screenPoint: options.screenPoint,
       inputGridPoint: options.worldInput.gridPoint,
       preview: clonePlacementPreview(options.nextPreview),

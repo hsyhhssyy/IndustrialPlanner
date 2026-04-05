@@ -1,4 +1,4 @@
-import type { PlacementPreviewStrategy } from "@/editor/contracts/placement-preview";
+import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
 import type { EditorTool } from "@/editor/contracts/editor-session";
 import { isPlacementTool } from "@/editor/core/editor-session";
 import type { CanvasInteractionTarget } from "@/workbench/contracts/workbench-facade";
@@ -31,7 +31,7 @@ export interface ResolveCanvasPanelTapIntentOptions {
   mode: WorkbenchMode;
   activeTool: EditorTool;
   placementDefinitionId: string | null;
-  placementStrategy: PlacementPreviewStrategy | null;
+  placementInteractionMode: PlacementInteractionMode | null;
   target: CanvasInteractionTarget;
 }
 
@@ -58,7 +58,7 @@ export function resolveCanvasPanelTapIntent(
   if (
     isPlacementTool(options.activeTool) &&
     options.placementDefinitionId &&
-    options.placementStrategy === "pointer-follow"
+    options.placementInteractionMode === "pointer"
   ) {
     return {
       kind: "commit-placement",
@@ -68,7 +68,7 @@ export function resolveCanvasPanelTapIntent(
   if (
     isPlacementTool(options.activeTool) &&
     options.placementDefinitionId &&
-    options.placementStrategy === "anchored-confirm"
+    options.placementInteractionMode === "touch"
   ) {
     return {
       kind: "noop",

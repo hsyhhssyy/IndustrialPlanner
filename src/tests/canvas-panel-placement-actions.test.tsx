@@ -179,7 +179,7 @@ describe("CanvasPanel placement actions", () => {
   it("renders touch placement toolbar rotate/cancel actions next to confirm", async () => {
     const controller = createWorkbenchController();
     controller.setCanvasViewportSize({ x: 640, y: 360 });
-    controller.armPlacement("belt_straight_1x1", "belt", "anchored-confirm");
+    controller.armPlacement("belt_straight_1x1", "belt", "touch");
     const { container, root, shell } = await renderCanvasPanel(controller);
     const buttons = Array.from(
       container.querySelectorAll<HTMLButtonElement>(".placement-action-button"),
@@ -200,7 +200,7 @@ describe("CanvasPanel placement actions", () => {
     });
 
     expect(controller.editorStore.getSnapshot().session.placementPreview).toMatchObject({
-      strategy: "anchored-confirm",
+      interactionMode: "touch",
       rotation: 90,
     });
 

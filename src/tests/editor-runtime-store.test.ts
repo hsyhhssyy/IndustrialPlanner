@@ -42,7 +42,7 @@ describe("EditorRuntimeStore", () => {
         ...store.getSnapshot().session,
         placementPreview: {
           definitionId: "belt_straight_1x1",
-          strategy: "pointer-follow",
+          interactionMode: "pointer",
           gridPoint: { x: 4, y: 5 },
           rotation: 0,
           valid: true,

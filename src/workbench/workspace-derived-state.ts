@@ -48,7 +48,7 @@ function deriveAnchoredPlacementScreenBox(
   } = options;
   const preview = editor.session.placementPreview;
 
-  if (ui.mode !== "edit" || !preview || preview.strategy !== "anchored-confirm") {
+  if (ui.mode !== "edit" || !preview || preview.interactionMode !== "touch") {
     return null;
   }
 

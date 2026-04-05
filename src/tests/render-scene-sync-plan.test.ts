@@ -38,7 +38,7 @@ describe("render scene sync plan", () => {
       ...scene,
       placementPreview: {
         definitionId: "belt_straight_1x1",
-        strategy: "pointer-follow" as const,
+        interactionMode: "pointer" as const,
         label: "传送带",
         x: 24 * scene.gridSize,
         y: 12 * scene.gridSize,

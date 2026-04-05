@@ -152,7 +152,7 @@ describe("Render scene model", () => {
         selectedEntityIds: [],
         placementPreview: {
           definitionId: "item_port_mix_pool_1",
-          strategy: "pointer-follow",
+          interactionMode: "pointer",
           gridPoint: { x: 24, y: 12 },
           rotation: 0,
           valid: true,
@@ -170,7 +170,7 @@ describe("Render scene model", () => {
     expect(definition).toBeTruthy();
     expect(scene.placementPreview).toMatchObject({
       definitionId: "item_port_mix_pool_1",
-      strategy: "pointer-follow",
+      interactionMode: "pointer",
       x: 24 * document.documentSettings.gridSize,
       y: 12 * document.documentSettings.gridSize,
       width:
@@ -196,7 +196,7 @@ describe("Render scene model", () => {
         selectedEntityIds: [],
         placementPreview: {
           definitionId: "item_port_unloader_1",
-          strategy: "anchored-confirm",
+          interactionMode: "touch",
           gridPoint: { x: 24, y: 12 },
           rotation: 90,
           valid: true,
@@ -213,7 +213,7 @@ describe("Render scene model", () => {
 
     expect(scene.placementPreview).toMatchObject({
       definitionId: "item_port_unloader_1",
-      strategy: "anchored-confirm",
+      interactionMode: "touch",
       width: document.documentSettings.gridSize,
       height: document.documentSettings.gridSize * 3,
       rotation: 90,

@@ -129,9 +129,9 @@ export const CanvasPanel = observer(function CanvasPanel({
   const t = createTranslator(ui.locale);
   const anchoredPlacementActive =
     editor.session.placementDefinitionId !== null &&
-    editor.session.placementStrategy === "anchored-confirm";
+    editor.session.placementInteractionMode === "touch";
   const anchoredPlacementPreview =
-    editor.session.placementPreview?.strategy === "anchored-confirm"
+    editor.session.placementPreview?.interactionMode === "touch"
       ? editor.session.placementPreview
       : null;
   const anchoredPlacementScreenBox = render.anchoredPlacementScreenBox;
@@ -388,7 +388,7 @@ export const CanvasPanel = observer(function CanvasPanel({
       mode: ui.mode,
       activeTool: editor.session.activeTool,
       placementDefinitionId: editor.session.placementDefinitionId,
-      placementStrategy: editor.session.placementStrategy,
+      placementInteractionMode: editor.session.placementInteractionMode,
       target,
     });
 
@@ -398,7 +398,7 @@ export const CanvasPanel = observer(function CanvasPanel({
         mode: ui.mode,
         activeTool: editor.session.activeTool,
         placementDefinitionId: editor.session.placementDefinitionId,
-        placementStrategy: editor.session.placementStrategy,
+        placementInteractionMode: editor.session.placementInteractionMode,
         target,
         intent,
       });
@@ -686,14 +686,14 @@ export const CanvasPanel = observer(function CanvasPanel({
         void dispatchCanvasTap(toViewportPoint(event.clientX, event.clientY));
       } else if (
         editor.session.placementDefinitionId &&
-        editor.session.placementStrategy === "pointer-follow"
+        editor.session.placementInteractionMode === "pointer"
       ) {
         logger.info("Suppressed precise-pointer tap before placement dispatch.", {
           pointerId: event.pointerId,
           pointerType: event.pointerType,
           activeTool: editor.session.activeTool,
           placementDefinitionId: editor.session.placementDefinitionId,
-          placementStrategy: editor.session.placementStrategy,
+          placementInteractionMode: editor.session.placementInteractionMode,
           tapGestureState: pointerTapGestureStateRef.current,
         });
       }

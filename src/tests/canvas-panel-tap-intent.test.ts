@@ -8,7 +8,7 @@ describe("resolveCanvasPanelTapIntent", () => {
         mode: "simulate",
         activeTool: "select",
         placementDefinitionId: null,
-        placementStrategy: null,
+        placementInteractionMode: null,
         target: {
           kind: "entity",
           entityId: "reactor-1",
@@ -25,7 +25,7 @@ describe("resolveCanvasPanelTapIntent", () => {
         mode: "simulate",
         activeTool: "select",
         placementDefinitionId: null,
-        placementStrategy: null,
+        placementInteractionMode: null,
         target: {
           kind: "blank",
         },
@@ -42,7 +42,7 @@ describe("resolveCanvasPanelTapIntent", () => {
         mode: "edit",
         activeTool: "link",
         placementDefinitionId: null,
-        placementStrategy: null,
+        placementInteractionMode: null,
         target: {
           kind: "entity",
           entityId: "dark-outlet-1",
@@ -59,7 +59,7 @@ describe("resolveCanvasPanelTapIntent", () => {
         mode: "edit",
         activeTool: "link",
         placementDefinitionId: null,
-        placementStrategy: null,
+        placementInteractionMode: null,
         target: {
           kind: "blank",
         },
@@ -70,13 +70,13 @@ describe("resolveCanvasPanelTapIntent", () => {
     });
   });
 
-  it("treats pointer-follow placement taps as placement attempts before selection semantics", () => {
+  it("treats pointer placement taps as placement attempts before selection semantics", () => {
     expect(
       resolveCanvasPanelTapIntent({
         mode: "edit",
         activeTool: "belt",
         placementDefinitionId: "belt_straight_1x1",
-        placementStrategy: "pointer-follow",
+        placementInteractionMode: "pointer",
         target: {
           kind: "blank",
         },
@@ -90,7 +90,7 @@ describe("resolveCanvasPanelTapIntent", () => {
         mode: "edit",
         activeTool: "belt",
         placementDefinitionId: "belt_straight_1x1",
-        placementStrategy: "pointer-follow",
+        placementInteractionMode: "pointer",
         target: {
           kind: "entity",
           entityId: "filler-1",
@@ -102,13 +102,13 @@ describe("resolveCanvasPanelTapIntent", () => {
     });
   });
 
-  it("keeps anchored-confirm taps as no-ops on both blank space and entities", () => {
+  it("keeps touch placement taps as no-ops on both blank space and entities", () => {
     expect(
       resolveCanvasPanelTapIntent({
         mode: "edit",
         activeTool: "place",
         placementDefinitionId: "item_port_mix_pool_1",
-        placementStrategy: "anchored-confirm",
+        placementInteractionMode: "touch",
         target: {
           kind: "blank",
         },
@@ -122,7 +122,7 @@ describe("resolveCanvasPanelTapIntent", () => {
         mode: "edit",
         activeTool: "place",
         placementDefinitionId: "item_port_mix_pool_1",
-        placementStrategy: "anchored-confirm",
+        placementInteractionMode: "touch",
         target: {
           kind: "entity",
           entityId: "reactor-1",
@@ -140,7 +140,7 @@ describe("resolveCanvasPanelTapIntent", () => {
         mode: "edit",
         activeTool: "select",
         placementDefinitionId: null,
-        placementStrategy: null,
+        placementInteractionMode: null,
         target: {
           kind: "entity",
           entityId: "storage-1",
@@ -157,7 +157,7 @@ describe("resolveCanvasPanelTapIntent", () => {
         mode: "edit",
         activeTool: "select",
         placementDefinitionId: null,
-        placementStrategy: null,
+        placementInteractionMode: null,
         target: {
           kind: "blank",
         },

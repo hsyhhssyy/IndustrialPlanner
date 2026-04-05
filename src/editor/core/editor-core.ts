@@ -12,7 +12,7 @@ import type {
 } from "@/editor/contracts/editor-session";
 import type {
   PlacementPreviewState,
-  PlacementPreviewStrategy,
+  PlacementInteractionMode,
 } from "@/editor/contracts/placement-preview";
 import { isPlacementTool } from "@/editor/core/editor-session";
 import type { GridPoint, GridRotation } from "@/shared/geometry/grid";
@@ -44,7 +44,7 @@ export interface EditorCore {
   setPlacementDefinition: (
     definitionId: string,
     tool?: EditorTool,
-    strategy?: PlacementPreviewStrategy,
+    interactionMode?: PlacementInteractionMode,
   ) => void;
   setPlacementRotation: (rotation: GridRotation | null) => void;
   setPlacementPreview: (preview: PlacementPreviewState | null) => void;
@@ -97,8 +97,8 @@ class EditorCoreImpl implements EditorCore {
       placementDefinitionId: isPlacementTool(tool)
         ? this.session.placementDefinitionId
         : null,
-      placementStrategy: isPlacementTool(tool)
-        ? this.session.placementStrategy
+      placementInteractionMode: isPlacementTool(tool)
+        ? this.session.placementInteractionMode
         : null,
       placementRotation: isPlacementTool(tool)
         ? this.session.placementRotation
@@ -114,13 +114,13 @@ class EditorCoreImpl implements EditorCore {
   setPlacementDefinition(
     definitionId: string,
     tool: EditorTool = "place",
-    strategy: PlacementPreviewStrategy = "pointer-follow",
+    interactionMode: PlacementInteractionMode = "pointer",
   ): void {
     this.session = {
       ...this.session,
       activeTool: tool,
       placementDefinitionId: definitionId,
-      placementStrategy: strategy,
+      placementInteractionMode: interactionMode,
       placementRotation: 0,
       placementPreview: null,
       pendingLinkSourceEntityId: null,
@@ -178,7 +178,7 @@ class EditorCoreImpl implements EditorCore {
         ...this.session,
         selection: [entityId],
         placementDefinitionId: definitionId,
-        placementStrategy: this.session.placementStrategy,
+        placementInteractionMode: this.session.placementInteractionMode,
         placementRotation: this.session.placementRotation,
         placementPreview: this.session.placementPreview,
         pendingLinkSourceEntityId: null,

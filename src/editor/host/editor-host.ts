@@ -13,7 +13,7 @@ import {
 } from "@/editor/contracts/placement-preview";
 import type {
   PlacementPreviewState,
-  PlacementPreviewStrategy,
+  PlacementInteractionMode,
 } from "@/editor/contracts/placement-preview";
 import {
   getExplicitLinkBetween,
@@ -150,7 +150,7 @@ export interface EditorHost {
   setPlacementDefinition: (
     definitionId: string,
     tool?: EditorTool,
-    strategy?: PlacementPreviewStrategy,
+    interactionMode?: PlacementInteractionMode,
   ) => void;
   rotatePlacementClockwise: () => boolean;
   queryPlacementAtWorldInput: (input: CanvasWorldInput) => PlacementQueryResult;
@@ -263,13 +263,13 @@ class EditorHostImpl implements EditorHost {
   setPlacementDefinition(
     definitionId: string,
     tool?: EditorTool,
-    strategy?: PlacementPreviewStrategy,
+    interactionMode?: PlacementInteractionMode,
   ): void {
-    this.core.setPlacementDefinition(definitionId, tool, strategy);
+    this.core.setPlacementDefinition(definitionId, tool, interactionMode);
     this.logger.info("Armed placement definition.", {
       definitionId,
       tool: tool ?? "place",
-      strategy: strategy ?? "pointer-follow",
+      interactionMode: interactionMode ?? "pointer",
     });
   }
 
@@ -470,7 +470,7 @@ class EditorHostImpl implements EditorHost {
       this.logger.info("Skipped placement confirmation.", {
         activeTool: session.activeTool,
         placementDefinitionId: session.placementDefinitionId,
-        placementStrategy: session.placementStrategy,
+        placementInteractionMode: session.placementInteractionMode,
         preview,
       });
       return false;
@@ -492,11 +492,11 @@ class EditorHostImpl implements EditorHost {
       return false;
     }
 
-    this.logger.info("Confirmed placement from preview.", {
+      this.logger.info("Confirmed placement from preview.", {
       definitionId: session.placementDefinitionId,
       gridPoint: resolution.preview.gridPoint,
       rotation: resolution.preview.rotation,
-      strategy: resolution.preview.strategy,
+      interactionMode: resolution.preview.interactionMode,
       overlappingEntityIds: resolution.overlappingEntityIds,
     });
     this.core.placeEntity(
@@ -513,12 +513,12 @@ class EditorHostImpl implements EditorHost {
     if (
       !isPlacementTool(session.activeTool) ||
       !session.placementDefinitionId ||
-      session.placementStrategy !== "pointer-follow"
+      session.placementInteractionMode !== "pointer"
     ) {
-      this.logger.info("Skipped pointer-follow placement commit before preview resolution.", {
+      this.logger.info("Skipped pointer placement commit before preview resolution.", {
         activeTool: session.activeTool,
         placementDefinitionId: session.placementDefinitionId,
-        placementStrategy: session.placementStrategy,
+        placementInteractionMode: session.placementInteractionMode,
       });
       return false;
     }
@@ -528,7 +528,7 @@ class EditorHostImpl implements EditorHost {
 
     if (!preview?.valid) {
       this.core.setPendingLinkSource(null);
-      this.logger.info("Blocked pointer-follow placement commit.", {
+    this.logger.info("Blocked pointer placement commit.", {
         definitionId: session.placementDefinitionId,
         worldPoint: input.worldPoint,
         gridPoint: input.gridPoint,
@@ -540,7 +540,7 @@ class EditorHostImpl implements EditorHost {
       return false;
     }
 
-    this.logger.info("Committed pointer-follow placement.", {
+    this.logger.info("Committed pointer placement.", {
       definitionId: session.placementDefinitionId,
       worldPoint: input.worldPoint,
       gridPoint: input.gridPoint,
@@ -627,7 +627,7 @@ class EditorHostImpl implements EditorHost {
 
     return {
       definitionId: session.placementDefinitionId ?? definition.id,
-      strategy: session.placementStrategy ?? "pointer-follow",
+      interactionMode: session.placementInteractionMode ?? "pointer",
       gridPoint: previewGridPoint,
       rotation,
       valid: true,

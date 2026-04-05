@@ -67,7 +67,7 @@ export interface RenderExplicitLink {
 
 export interface RenderPlacementPreview {
   definitionId: string;
-  strategy: "pointer-follow" | "anchored-confirm";
+  interactionMode: "pointer" | "touch";
   label: string;
   x: number;
   y: number;

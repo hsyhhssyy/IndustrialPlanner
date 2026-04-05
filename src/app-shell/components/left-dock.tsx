@@ -7,7 +7,7 @@ import {
   type PlaceholderActionId,
 } from "@/app-shell/workbench-placeholders";
 import type { EditorTool } from "@/editor/contracts/editor-session";
-import type { PlacementPreviewStrategy } from "@/editor/contracts/placement-preview";
+import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import {
   createTranslator,
@@ -100,9 +100,9 @@ export const LeftDock = observer(function LeftDock({
   const ui = controller.uiStore;
   const editor = controller.editorStore;
   const registry = controller.registry;
-  const pendingPlacementStrategyRef = useRef<{
+  const pendingPlacementInteractionModeRef = useRef<{
     buttonId: string;
-    strategy: PlacementPreviewStrategy;
+    interactionMode: PlacementInteractionMode;
     pointerType: string;
   } | null>(null);
 
@@ -219,24 +219,22 @@ export const LeftDock = observer(function LeftDock({
                         key={button.id}
                         onPointerDown={(event) => {
                           if (!button.definitionId) {
-                            pendingPlacementStrategyRef.current = null;
+                            pendingPlacementInteractionModeRef.current = null;
                             return;
                           }
 
-                          const strategy =
-                            event.pointerType === "touch"
-                              ? "anchored-confirm"
-                              : "pointer-follow";
+                          const interactionMode =
+                            event.pointerType === "touch" ? "touch" : "pointer";
                           logger.info("Observed placement button pointer down.", {
                             buttonId: button.id,
                             definitionId: button.definitionId,
                             tool: button.tool ?? "place",
                             pointerType: event.pointerType,
-                            strategy,
+                            interactionMode,
                           });
-                          pendingPlacementStrategyRef.current = {
+                          pendingPlacementInteractionModeRef.current = {
                             buttonId: button.id,
-                            strategy,
+                            interactionMode,
                             pointerType: event.pointerType,
                           };
                         }}
@@ -267,34 +265,34 @@ export const LeftDock = observer(function LeftDock({
                           }
 
                           if (button.definitionId) {
-                            const pendingPlacementStrategy =
-                              pendingPlacementStrategyRef.current;
-                            const strategy =
-                              pendingPlacementStrategy?.buttonId === button.id
-                                ? pendingPlacementStrategy.strategy
-                                : "pointer-follow";
+                            const pendingPlacementInteractionMode =
+                              pendingPlacementInteractionModeRef.current;
+                            const interactionMode =
+                              pendingPlacementInteractionMode?.buttonId === button.id
+                                ? pendingPlacementInteractionMode.interactionMode
+                                : "pointer";
                             const pointerType =
-                              pendingPlacementStrategy?.buttonId === button.id
-                                ? pendingPlacementStrategy.pointerType
+                              pendingPlacementInteractionMode?.buttonId === button.id
+                                ? pendingPlacementInteractionMode.pointerType
                                 : "unknown";
 
-                            pendingPlacementStrategyRef.current = null;
+                            pendingPlacementInteractionModeRef.current = null;
                             logger.info("Requested placement from left dock.", {
                               buttonId: button.id,
                               definitionId: button.definitionId,
                               tool: button.tool ?? "place",
-                              strategy,
+                              interactionMode,
                               pointerType,
                             });
                             controller.armPlacement(
                               button.definitionId,
                               button.tool ?? "place",
-                              strategy,
+                              interactionMode,
                             );
                             return;
                           }
 
-                          pendingPlacementStrategyRef.current = null;
+                          pendingPlacementInteractionModeRef.current = null;
 
                           if (button.tool) {
                             controller.setActiveTool(button.tool);

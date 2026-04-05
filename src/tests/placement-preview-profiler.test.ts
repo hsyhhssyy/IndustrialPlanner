@@ -12,14 +12,14 @@ describe("PlacementPreviewProfiler", () => {
       changed: false,
       previousPreview: {
         definitionId: "belt_straight_1x1",
-        strategy: "pointer-follow",
+        interactionMode: "pointer",
         gridPoint: { x: 3, y: 4 },
         rotation: 0,
         valid: true,
       },
       nextPreview: {
         definitionId: "belt_straight_1x1",
-        strategy: "pointer-follow",
+        interactionMode: "pointer",
         gridPoint: { x: 3, y: 4 },
         rotation: 0,
         valid: true,

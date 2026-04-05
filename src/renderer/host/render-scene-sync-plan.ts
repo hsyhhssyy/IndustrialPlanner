@@ -97,7 +97,7 @@ function isSameRenderPlacementPreview(
 
   return (
     left.definitionId === right.definitionId &&
-    left.strategy === right.strategy &&
+    left.interactionMode === right.interactionMode &&
     left.label === right.label &&
     left.x === right.x &&
     left.y === right.y &&

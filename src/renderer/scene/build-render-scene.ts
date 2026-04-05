@@ -170,7 +170,7 @@ function buildPlacementPreview(
 
   return {
     definitionId: preview.definitionId,
-    strategy: preview.strategy,
+    interactionMode: preview.interactionMode,
     label: getLocalizedStage1EntityName(input.locale, definition),
     x: preview.gridPoint.x * input.document.documentSettings.gridSize,
     y: preview.gridPoint.y * input.document.documentSettings.gridSize,

@@ -75,7 +75,7 @@ describe("WorkspaceDerivedStore", () => {
     });
   });
 
-  it("projects anchored-confirm placement preview into a shared screen box", () => {
+  it("projects touch placement preview into a shared screen box", () => {
     const document = createStage1SeedWorldDocument();
     const registry = createStage1Registry();
     const topology = compileStage1World(document, registry);
@@ -86,7 +86,7 @@ describe("WorkspaceDerivedStore", () => {
           ...createInitialEditorSession(),
           placementPreview: {
             definitionId: "belt_straight_1x1",
-            strategy: "anchored-confirm" as const,
+            interactionMode: "touch" as const,
             gridPoint: { x: 2, y: 3 },
             rotation: 0 as const,
             valid: true,
@@ -136,7 +136,7 @@ describe("WorkspaceDerivedStore", () => {
     });
   });
 
-  it("keeps anchored-confirm screen boxes rotation-aware for non-square footprints", () => {
+  it("keeps touch placement screen boxes rotation-aware for non-square footprints", () => {
     const document = createStage1SeedWorldDocument();
     const registry = createStage1Registry();
     const topology = compileStage1World(document, registry);
@@ -147,7 +147,7 @@ describe("WorkspaceDerivedStore", () => {
           ...createInitialEditorSession(),
           placementPreview: {
             definitionId: "item_port_unloader_1",
-            strategy: "anchored-confirm" as const,
+            interactionMode: "touch" as const,
             gridPoint: { x: 2, y: 3 },
             rotation: 90 as const,
             valid: true,

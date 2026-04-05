@@ -133,7 +133,7 @@ interface PlacementPreviewRenderDiagnosticWindow {
         explicitLinkCount: number;
         placementPreview: {
           definitionId: string;
-          strategy: RenderPlacementPreview["strategy"];
+          interactionMode: RenderPlacementPreview["interactionMode"];
           valid: boolean;
           x: number;
           y: number;
@@ -902,7 +902,7 @@ export function createPixiRendererRuntime(
       placementPreview: scene.placementPreview
         ? {
             definitionId: scene.placementPreview.definitionId,
-            strategy: scene.placementPreview.strategy,
+            interactionMode: scene.placementPreview.interactionMode,
             valid: scene.placementPreview.valid,
             x: scene.placementPreview.x,
             y: scene.placementPreview.y,

@@ -8,7 +8,7 @@ import type { Stage1Registry } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import type { WorldDocument } from "@/domain/document/world-document";
 import type { EditorTool } from "@/editor/contracts/editor-session";
-import type { PlacementPreviewStrategy } from "@/editor/contracts/placement-preview";
+import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
 import type { EditorRuntimeStore } from "@/editor/editor-runtime-store";
 import type { AppLocale } from "@/i18n/messages";
 import type { SimulationState } from "@/simulation/host/simulation-host";
@@ -44,7 +44,7 @@ export interface WorkbenchController {
   armPlacement: (
     definitionId: string,
     tool?: EditorTool,
-    strategy?: PlacementPreviewStrategy,
+    interactionMode?: PlacementInteractionMode,
   ) => void;
   rotatePlacementClockwise: () => void;
   cancelPlacement: () => void;

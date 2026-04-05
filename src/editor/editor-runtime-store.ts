@@ -38,7 +38,7 @@ export function isSameEditorSession(
     left.hoveredEntityId === right.hoveredEntityId &&
     left.dragPreviewEntityId === right.dragPreviewEntityId &&
     left.placementDefinitionId === right.placementDefinitionId &&
-    left.placementStrategy === right.placementStrategy &&
+    left.placementInteractionMode === right.placementInteractionMode &&
     left.placementRotation === right.placementRotation &&
     isSamePlacementPreviewState(left.placementPreview, right.placementPreview) &&
     left.pendingLinkSourceEntityId === right.pendingLinkSourceEntityId
@@ -64,7 +64,7 @@ function cloneEditorSession(session: EditorSession): EditorSession {
     hoveredEntityId: session.hoveredEntityId,
     dragPreviewEntityId: session.dragPreviewEntityId,
     placementDefinitionId: session.placementDefinitionId,
-    placementStrategy: session.placementStrategy,
+    placementInteractionMode: session.placementInteractionMode,
     placementRotation: session.placementRotation,
     placementPreview: session.placementPreview
       ? {
@@ -171,8 +171,8 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
       this.session.placementDefinitionId = session.placementDefinitionId;
     }
 
-    if (this.session.placementStrategy !== session.placementStrategy) {
-      this.session.placementStrategy = session.placementStrategy;
+    if (this.session.placementInteractionMode !== session.placementInteractionMode) {
+      this.session.placementInteractionMode = session.placementInteractionMode;
     }
 
     if (this.session.placementRotation !== session.placementRotation) {

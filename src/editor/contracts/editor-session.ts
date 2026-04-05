@@ -1,6 +1,6 @@
 import type {
   PlacementPreviewState,
-  PlacementPreviewStrategy,
+  PlacementInteractionMode,
 } from "@/editor/contracts/placement-preview";
 import type { GridRotation } from "@/shared/geometry/grid";
 
@@ -18,7 +18,7 @@ export interface EditorSession {
   hoveredEntityId: string | null;
   dragPreviewEntityId: string | null;
   placementDefinitionId: string | null;
-  placementStrategy: PlacementPreviewStrategy | null;
+  placementInteractionMode: PlacementInteractionMode | null;
   placementRotation: GridRotation | null;
   placementPreview: PlacementPreviewState | null;
   pendingLinkSourceEntityId: string | null;

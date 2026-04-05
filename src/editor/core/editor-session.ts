@@ -10,7 +10,7 @@ export function createInitialEditorSession(): EditorSession {
     hoveredEntityId: null,
     dragPreviewEntityId: null,
     placementDefinitionId: null,
-    placementStrategy: null,
+    placementInteractionMode: null,
     placementRotation: null,
     placementPreview: null,
     pendingLinkSourceEntityId: null,
