@@ -5,15 +5,27 @@ import type {
 } from "@/workbench/workspace-state";
 
 export interface CanvasViewportMetrics {
+  gridSize: number;
   size: CanvasPoint;
   worldSize: CanvasPoint;
 }
 
-const MIN_CANVAS_ZOOM = 0.5;
-const MAX_CANVAS_ZOOM = 2.5;
+const MIN_CANVAS_CELL_SIZE_PX = 12;
+const MAX_CANVAS_CELL_SIZE_PX = 96;
 
-export function clampCanvasZoom(zoom: number): number {
-  return Math.min(MAX_CANVAS_ZOOM, Math.max(MIN_CANVAS_ZOOM, zoom));
+function getCanvasZoomBounds(gridSize: number) {
+  const safeGridSize = gridSize > 0 ? gridSize : 1;
+
+  return {
+    minZoom: MIN_CANVAS_CELL_SIZE_PX / safeGridSize,
+    maxZoom: MAX_CANVAS_CELL_SIZE_PX / safeGridSize,
+  };
+}
+
+export function clampCanvasZoom(zoom: number, metrics: CanvasViewportMetrics): number {
+  const { minZoom, maxZoom } = getCanvasZoomBounds(metrics.gridSize);
+
+  return Math.min(maxZoom, Math.max(minZoom, zoom));
 }
 
 export function clampCanvasViewportSize(size: CanvasPoint): CanvasPoint {
@@ -42,7 +54,7 @@ export function clampCanvasViewState(
   state: CanvasViewState,
   metrics: CanvasViewportMetrics,
 ): CanvasViewState {
-  const zoom = clampCanvasZoom(state.zoom);
+  const zoom = clampCanvasZoom(state.zoom, metrics);
   const offset = clampCanvasOffset(state.offset, zoom, metrics);
 
   if (
@@ -113,7 +125,7 @@ export function scaleCanvasViewAt(
     return state;
   }
 
-  const nextZoom = clampCanvasZoom(state.zoom * scaleFactor);
+  const nextZoom = clampCanvasZoom(state.zoom * scaleFactor, metrics);
 
   if (nextZoom === state.zoom) {
     return state;

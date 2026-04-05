@@ -920,6 +920,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   private getViewportMetrics(workspaceState = this.workspaceStore.rootStore.getSnapshot()) {
     return {
+      gridSize: workspaceState.document.documentSettings.gridSize,
       size: this.viewportSize,
       worldSize: this.getRenderWorldSize(workspaceState),
     };

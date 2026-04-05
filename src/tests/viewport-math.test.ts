@@ -24,6 +24,7 @@ describe("viewport math", () => {
 
   it("clamps panning and zooming against viewport and world bounds", () => {
     const metrics = {
+      gridSize: 56,
       size: { x: 320, y: 160 },
       worldSize: { x: 1280, y: 960 },
     };
@@ -41,14 +42,23 @@ describe("viewport math", () => {
     );
     const farPanned = panCanvasView(panned, { x: -1000, y: -1000 }, metrics);
 
-    expect(clamped.zoom).toBe(2.5);
-    expect(clamped.offset).toEqual({ x: 1152, y: 896 });
+    expect(clamped.zoom).toBeCloseTo(96 / metrics.gridSize, 6);
+    expect(clamped.zoom * metrics.gridSize).toBeCloseTo(96, 6);
+    expect(clamped.offset.x).toBeCloseTo(
+      metrics.worldSize.x - metrics.size.x / clamped.zoom,
+      6,
+    );
+    expect(clamped.offset.y).toBeCloseTo(
+      metrics.worldSize.y - metrics.size.y / clamped.zoom,
+      6,
+    );
     expect(panned.offset).toEqual({ x: 400, y: 200 });
     expect(farPanned.offset).toEqual({ x: 960, y: 800 });
   });
 
   it("keeps the wheel anchor stable when scaling zoom", () => {
     const metrics = {
+      gridSize: 56,
       size: { x: 320, y: 160 },
       worldSize: { x: 1600, y: 1200 },
     };
@@ -62,6 +72,27 @@ describe("viewport math", () => {
     const worldPointAfter = screenToWorldPoint(anchor, nextView);
 
     expect(nextView.zoom).toBe(1.5);
+    expect(worldPointAfter.x).toBeCloseTo(worldPointBefore.x, 6);
+    expect(worldPointAfter.y).toBeCloseTo(worldPointBefore.y, 6);
+  });
+
+  it("clamps zooming out to the 12px minimum cell size", () => {
+    const metrics = {
+      gridSize: 56,
+      size: { x: 320, y: 160 },
+      worldSize: { x: 1600, y: 1200 },
+    };
+    const initialView = {
+      offset: { x: 400, y: 240 },
+      zoom: 1,
+    };
+    const anchor = { x: 96, y: 48 };
+    const worldPointBefore = screenToWorldPoint(anchor, initialView);
+    const nextView = scaleCanvasViewAt(initialView, anchor, 0.05, metrics);
+    const worldPointAfter = screenToWorldPoint(anchor, nextView);
+
+    expect(nextView.zoom).toBeCloseTo(12 / metrics.gridSize, 6);
+    expect(nextView.zoom * metrics.gridSize).toBeCloseTo(12, 6);
     expect(worldPointAfter.x).toBeCloseTo(worldPointBefore.x, 6);
     expect(worldPointAfter.y).toBeCloseTo(worldPointBefore.y, 6);
   });
