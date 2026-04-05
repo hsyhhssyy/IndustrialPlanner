@@ -13,6 +13,7 @@ import type {
 import {
   Profiler,
   type CSSProperties,
+  type MouseEvent,
   type PropsWithChildren,
 } from "react";
 
@@ -53,6 +54,11 @@ export interface WorkbenchAppProps {
 
 export function WorkbenchApp({ shell }: WorkbenchAppProps) {
   const { controller, placementPreviewProfiler, workspaceDerivedStore } = shell;
+
+  const handleWorkbenchContextMenu = (event: MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+  };
+
   return (
     <Observer>
       {() => {
@@ -71,7 +77,11 @@ export function WorkbenchApp({ shell }: WorkbenchAppProps) {
         } as CSSProperties;
 
         return (
-          <div className="workbench" style={layoutStyle}>
+          <div
+            className="workbench"
+            onContextMenu={handleWorkbenchContextMenu}
+            style={layoutStyle}
+          >
             <TopBar
               controller={controller}
               renderDerivedStore={workspaceDerivedStore.renderStore}
