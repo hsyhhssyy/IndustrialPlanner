@@ -68,3 +68,14 @@ export function resolveCenteredGridPoint(
     y: Math.max(0, Math.round(centerCells.y - footprint.height / 2)),
   };
 }
+
+export function resolveCenteredRotatedGridPoint(options: {
+  gridPoint: GridPoint;
+  currentFootprint: GridFootprint;
+  nextFootprint: GridFootprint;
+}): GridPoint {
+  return resolveCenteredGridPoint(
+    getGridFootprintCenterCells(options.gridPoint, options.currentFootprint),
+    options.nextFootprint,
+  );
+}

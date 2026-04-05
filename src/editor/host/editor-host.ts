@@ -30,6 +30,7 @@ import {
   getGridFootprintCenterCells,
   getRotatedGridFootprint,
   resolveCenteredGridPoint,
+  resolveCenteredRotatedGridPoint,
   rotateGridRotationClockwise,
   type GridPoint,
   type GridRotation,
@@ -311,14 +312,14 @@ class EditorHostImpl implements EditorHost {
       definition.footprint,
       nextRotation,
     );
-    const centerCells = getGridFootprintCenterCells(
-      session.placementPreview.gridPoint,
-      currentFootprint,
-    );
     const rotatedPreview = {
       ...session.placementPreview,
       rotation: nextRotation,
-      gridPoint: resolveCenteredGridPoint(centerCells, nextFootprint),
+      gridPoint: resolveCenteredRotatedGridPoint({
+        gridPoint: session.placementPreview.gridPoint,
+        currentFootprint,
+        nextFootprint,
+      }),
     } satisfies PlacementPreviewState;
     const resolution = this.queryPlacementPreview(rotatedPreview);
 
