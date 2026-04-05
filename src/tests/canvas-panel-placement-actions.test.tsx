@@ -97,6 +97,23 @@ async function disposeCanvasPanel(options: {
   options.controller.dispose();
 }
 
+function dispatchTouchPointerEvent(
+  viewport: Element | null,
+  type: string,
+  pointerId: number,
+  point: { x: number; y: number },
+) {
+  viewport?.dispatchEvent(
+    new PointerEvent(type, {
+      bubbles: true,
+      clientX: point.x,
+      clientY: point.y,
+      pointerId,
+      pointerType: "touch",
+    }),
+  );
+}
+
 describe("CanvasPanel placement actions", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -369,6 +386,68 @@ describe("CanvasPanel placement actions", () => {
       y: insideStartPoint.y,
     });
     expect(panCanvasBySpy).not.toHaveBeenCalled();
+
+    await disposeCanvasPanel({ root, shell, controller });
+  });
+
+  it("uses shared pinch and pan when a second touch enters touch placement", async () => {
+    const controller = createWorkbenchController();
+    controller.setCanvasViewportSize({ x: 640, y: 360 });
+    controller.armPlacement("belt_straight_1x1", "belt", "touch");
+    const panCanvasBySpy = vi.spyOn(controller, "panCanvasBy");
+    const zoomCanvasAtSpy = vi.spyOn(controller, "zoomCanvasAt");
+    const updatePlacementPreviewSpy = vi.spyOn(
+      controller,
+      "updatePlacementPreviewFromScreenPoint",
+    );
+    const { container, root, shell } = await renderCanvasPanel(controller);
+    const viewport = container.querySelector(".canvas-viewport-surface");
+    const screenBox = shell.workspaceDerivedStore.renderStore.getSnapshot()
+      .anchoredPlacementScreenBox;
+
+    expect(viewport).not.toBeNull();
+    expect(screenBox).not.toBeNull();
+
+    const firstTouchPoint = {
+      x: (screenBox?.left ?? 0) + (screenBox?.width ?? 0) / 2,
+      y: (screenBox?.top ?? 0) + (screenBox?.height ?? 0) / 2,
+    };
+    const secondTouchStartPoint = {
+      x: firstTouchPoint.x + 60,
+      y: firstTouchPoint.y,
+    };
+    const secondTouchMovePoint = {
+      x: firstTouchPoint.x + 100,
+      y: firstTouchPoint.y + 20,
+    };
+
+    panCanvasBySpy.mockClear();
+    zoomCanvasAtSpy.mockClear();
+    updatePlacementPreviewSpy.mockClear();
+
+    await act(async () => {
+      dispatchTouchPointerEvent(viewport, "pointerdown", 31, firstTouchPoint);
+      dispatchTouchPointerEvent(viewport, "pointerdown", 32, secondTouchStartPoint);
+      dispatchTouchPointerEvent(viewport, "pointermove", 32, secondTouchMovePoint);
+      dispatchTouchPointerEvent(viewport, "pointerup", 32, secondTouchMovePoint);
+      dispatchTouchPointerEvent(viewport, "pointerup", 31, firstTouchPoint);
+    });
+
+    expect(updatePlacementPreviewSpy).not.toHaveBeenCalled();
+    expect(zoomCanvasAtSpy).toHaveBeenCalledWith(
+      {
+        x: firstTouchPoint.x + 30,
+        y: firstTouchPoint.y,
+      },
+      Math.hypot(100, 20) / 60,
+    );
+    expect(panCanvasBySpy).toHaveBeenCalledWith({ x: 20, y: 10 });
+    expect(controller.editorStore.getSnapshot().session.placementDefinitionId).toBe(
+      "belt_straight_1x1",
+    );
+    expect(controller.editorStore.getSnapshot().session.placementInteractionMode).toBe(
+      "touch",
+    );
 
     await disposeCanvasPanel({ root, shell, controller });
   });
