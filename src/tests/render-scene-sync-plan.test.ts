@@ -20,6 +20,8 @@ function createBaseRenderScene() {
     interaction: {
       selectedEntityIds: [],
       placementPreview: null,
+      movePreview: null,
+      dragPreviewEntityId: null,
       pendingLinkSourceEntityId: null,
     },
     runtimeSnapshot: {

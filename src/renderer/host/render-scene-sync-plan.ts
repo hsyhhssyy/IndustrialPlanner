@@ -1,6 +1,7 @@
 import type {
   RenderExplicitLink,
   RenderEntitySprite,
+  RenderMovePreview,
   RenderPlacementPreview,
   RenderSceneModel,
 } from "@/renderer/scene/types";
@@ -33,6 +34,7 @@ function isSameRenderEntitySprite(
     left.showLabel === right.showLabel &&
     left.status === right.status &&
     left.selected === right.selected &&
+    left.ghosted === right.ghosted &&
     left.pendingLinkSource === right.pendingLinkSource &&
     left.patched === right.patched
   );
@@ -115,6 +117,13 @@ function isSameRenderPlacementPreview(
   );
 }
 
+function isSameRenderMovePreview(
+  left: RenderMovePreview | null,
+  right: RenderMovePreview | null,
+): boolean {
+  return left?.entityId === right?.entityId && isSameRenderPlacementPreview(left, right);
+}
+
 export function getRenderSceneSyncPlan(
   previousScene: RenderSceneModel | null,
   nextScene: RenderSceneModel,
@@ -141,6 +150,7 @@ export function getRenderSceneSyncPlan(
       !isSameRenderPlacementPreview(
         previousScene.placementPreview,
         nextScene.placementPreview,
-      ),
+      ) ||
+      !isSameRenderMovePreview(previousScene.movePreview, nextScene.movePreview),
   };
 }

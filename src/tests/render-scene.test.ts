@@ -21,6 +21,8 @@ function createBaseRenderScene() {
     interaction: {
       selectedEntityIds: ["reactor-1"],
       placementPreview: null,
+      movePreview: null,
+      dragPreviewEntityId: null,
       pendingLinkSourceEntityId: null,
     },
     runtimeSnapshot: {
@@ -59,6 +61,8 @@ describe("Render scene model", () => {
       interaction: {
         selectedEntityIds: [],
         placementPreview: null,
+        movePreview: null,
+        dragPreviewEntityId: null,
         pendingLinkSourceEntityId: null,
       },
       runtimeSnapshot: {
@@ -114,6 +118,8 @@ describe("Render scene model", () => {
       interaction: {
         selectedEntityIds: [],
         placementPreview: null,
+        movePreview: null,
+        dragPreviewEntityId: null,
         pendingLinkSourceEntityId: null,
       },
       runtimeSnapshot: {
@@ -157,6 +163,8 @@ describe("Render scene model", () => {
           rotation: 0,
           valid: true,
         },
+        movePreview: null,
+        dragPreviewEntityId: null,
         pendingLinkSourceEntityId: null,
       },
       runtimeSnapshot: {
@@ -201,6 +209,8 @@ describe("Render scene model", () => {
           rotation: 90,
           valid: true,
         },
+        movePreview: null,
+        dragPreviewEntityId: null,
         pendingLinkSourceEntityId: null,
       },
       runtimeSnapshot: {

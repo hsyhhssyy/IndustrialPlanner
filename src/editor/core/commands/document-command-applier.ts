@@ -32,13 +32,26 @@ function patchWorldEntity(
     return document;
   }
 
+  const nextEntity = {
+    ...entity,
+    ...patch,
+  };
+
+  if (
+    (!("position" in patch) ||
+      (nextEntity.position.x === entity.position.x &&
+        nextEntity.position.y === entity.position.y)) &&
+    (!("rotation" in patch) || nextEntity.rotation === entity.rotation) &&
+    (!("config" in patch) || nextEntity.config === entity.config) &&
+    (!("tags" in patch) || nextEntity.tags === entity.tags)
+  ) {
+    return document;
+  }
+
   return touchWorldDocument(document, {
     entities: {
       ...document.entities,
-      [entityId]: {
-        ...entity,
-        ...patch,
-      },
+      [entityId]: nextEntity,
     },
   });
 }
@@ -93,6 +106,9 @@ export function applyWorldDocumentCommand(
     case "entity.move": {
       return patchWorldEntity(document, command.payload.entityId, {
         position: command.payload.position,
+        ...(command.payload.rotation !== undefined
+          ? { rotation: command.payload.rotation }
+          : {}),
       });
     }
     case "entity.rotate": {

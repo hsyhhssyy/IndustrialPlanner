@@ -50,7 +50,7 @@ describe("canvas panel touch placement gesture", () => {
     expect(
       shouldDispatchCanvasTouchTap({
         activeTouchCount: 1,
-        anchoredPlacementActive: false,
+        anchoredPreviewActive: false,
         placementGestureState: idlePlacementGesture,
         tapSuppressed: false,
         touchGestureState: idleTouchGesture,
@@ -60,7 +60,7 @@ describe("canvas panel touch placement gesture", () => {
     expect(
       shouldDispatchCanvasTouchTap({
         activeTouchCount: 1,
-        anchoredPlacementActive: true,
+        anchoredPreviewActive: true,
         placementGestureState: idlePlacementGesture,
         tapSuppressed: false,
         touchGestureState: idleTouchGesture,
@@ -70,7 +70,7 @@ describe("canvas panel touch placement gesture", () => {
     expect(
       shouldDispatchCanvasTouchTap({
         activeTouchCount: 2,
-        anchoredPlacementActive: false,
+        anchoredPreviewActive: false,
         placementGestureState: idlePlacementGesture,
         tapSuppressed: true,
         touchGestureState: idleTouchGesture,
@@ -80,17 +80,17 @@ describe("canvas panel touch placement gesture", () => {
     expect(
       shouldDispatchCanvasTouchTap({
         activeTouchCount: 1,
-        anchoredPlacementActive: false,
+        anchoredPreviewActive: false,
         placementGestureState: beginCanvasTouchPlacementGesture(9, { x: 0, y: 0 }),
         tapSuppressed: false,
         touchGestureState: idleTouchGesture,
       }),
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       shouldDispatchCanvasTouchTap({
         activeTouchCount: 1,
-        anchoredPlacementActive: false,
+        anchoredPreviewActive: false,
         placementGestureState: idlePlacementGesture,
         tapSuppressed: false,
         touchGestureState: {

@@ -2,6 +2,8 @@
 
 import { CanvasPanel } from "@/app-shell/components/canvas-panel/canvas-panel";
 import { createWorkbenchShell } from "@/app-shell/workbench-shell";
+import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
+import { rotateGridRotationClockwise } from "@/shared/geometry/grid";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -162,6 +164,42 @@ function toScreenPointForEntity(
     y:
       (entity.position.y * document.documentSettings.gridSize - canvasView.offset.y + 1) *
       canvasView.zoom,
+  };
+}
+
+function toScreenPointForEntityCenter(
+  controller: ReturnType<typeof createWorkbenchController>,
+  entityId: string,
+  gridPoint: { x: number; y: number },
+  rotation?: number,
+) {
+  const document = controller.documentStore.getSnapshot();
+  const canvasView = controller.canvasViewStore.getSnapshot();
+  const entity = document.entities[entityId];
+
+  if (!entity) {
+    throw new Error(`Missing entity ${entityId}`);
+  }
+
+  const definition = getStage1EntityDefinition(controller.registry, entity.definitionId);
+
+  if (!definition) {
+    throw new Error(`Missing definition ${entity.definitionId}`);
+  }
+
+  const nextRotation = rotation ?? entity.rotation;
+  const footprint =
+    nextRotation === 90 || nextRotation === 270
+      ? {
+          width: definition.footprint.height,
+          height: definition.footprint.width,
+        }
+      : definition.footprint;
+  const scaledGridSize = document.documentSettings.gridSize * canvasView.zoom;
+
+  return {
+    x: (gridPoint.x + footprint.width / 2) * scaledGridSize,
+    y: (gridPoint.y + footprint.height / 2) * scaledGridSize,
   };
 }
 
@@ -470,6 +508,155 @@ describe("CanvasPanel placement actions", () => {
 
     expect(controller.documentStore.getSnapshot().entities["filler-1"]).toBeUndefined();
     expect(container.querySelector(".selection-action-toolbar")).toBeNull();
+
+    await disposeCanvasPanel({ root, shell, controller });
+  });
+
+  it("drags pointer selection into hidden move mode and commits on pointerup", async () => {
+    const controller = createWorkbenchController();
+    await controller.selectEntity("filler-1", "pointer");
+    const before = controller.documentStore.getSnapshot().entities["filler-1"];
+    const { container, root, shell } = await renderCanvasPanel(controller);
+    const stage = container.querySelector(".canvas-stage");
+    const viewport = container.querySelector(".canvas-viewport-surface");
+
+    expect(viewport).not.toBeNull();
+    expect(stage).not.toBeNull();
+    expect(before).toBeTruthy();
+
+    const startPoint = toScreenPointForEntity(controller, "filler-1");
+    const nextRotation = rotateGridRotationClockwise(before!.rotation);
+    const dropPoint = toScreenPointForEntityCenter(
+      controller,
+      "filler-1",
+      { x: 24, y: 12 },
+      nextRotation,
+    );
+
+    await act(async () => {
+      viewport?.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          button: 0,
+          buttons: 1,
+          clientX: startPoint.x,
+          clientY: startPoint.y,
+          pointerId: 61,
+          pointerType: "mouse",
+        }),
+      );
+      viewport?.dispatchEvent(
+        new PointerEvent("pointermove", {
+          bubbles: true,
+          button: 0,
+          buttons: 1,
+          clientX: startPoint.x + 12,
+          clientY: startPoint.y + 8,
+          pointerId: 61,
+          pointerType: "mouse",
+        }),
+      );
+      stage?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          bubbles: true,
+          key: "r",
+        }),
+      );
+      viewport?.dispatchEvent(
+        new PointerEvent("pointermove", {
+          bubbles: true,
+          button: 0,
+          buttons: 1,
+          clientX: dropPoint.x,
+          clientY: dropPoint.y,
+          pointerId: 61,
+          pointerType: "mouse",
+        }),
+      );
+      viewport?.dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          button: 0,
+          buttons: 0,
+          clientX: dropPoint.x,
+          clientY: dropPoint.y,
+          pointerId: 61,
+          pointerType: "mouse",
+        }),
+      );
+      await flushCanvasActions();
+    });
+
+    expect(controller.documentStore.getSnapshot().entities["filler-1"]).toMatchObject({
+      position: { x: 24, y: 12 },
+      rotation: nextRotation,
+    });
+    expect(controller.editorStore.getSnapshot().session.movePreview).toBeNull();
+    expect(container.querySelector(".move-action-toolbar")).toBeNull();
+
+    await disposeCanvasPanel({ root, shell, controller });
+  });
+
+  it("drags touch selection into hidden move mode and cancels back to origin", async () => {
+    const controller = createWorkbenchController();
+    await controller.selectEntity("filler-1", "touch");
+    const before = controller.documentStore.getSnapshot().entities["filler-1"];
+    const { container, root, shell } = await renderCanvasPanel(controller);
+    const viewport = container.querySelector(".canvas-viewport-surface");
+
+    expect(viewport).not.toBeNull();
+    expect(before).toBeTruthy();
+
+    const startPoint = toScreenPointForEntity(controller, "filler-1");
+    const dropPoint = toScreenPointForEntityCenter(
+      controller,
+      "filler-1",
+      { x: 24, y: 12 },
+    );
+
+    await act(async () => {
+      dispatchTouchPointerEvent(viewport, "pointerdown", 71, startPoint);
+      dispatchTouchPointerEvent(viewport, "pointermove", 71, {
+        x: startPoint.x + 10,
+        y: startPoint.y + 8,
+      });
+      dispatchTouchPointerEvent(viewport, "pointermove", 71, dropPoint);
+      dispatchTouchPointerEvent(viewport, "pointerup", 71, dropPoint);
+      await flushCanvasActions();
+    });
+
+    const moveToolbar = container.querySelector(
+      ".move-action-toolbar.canvas-action-toolbar",
+    );
+    const buttons = Array.from(
+      container.querySelectorAll<HTMLButtonElement>(
+        ".move-action-toolbar .canvas-action-button",
+      ),
+    );
+    const cancelButton = buttons.find(
+      (button) => button.getAttribute("aria-label") === "取消",
+    );
+
+    expect(moveToolbar).not.toBeNull();
+    expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "取消",
+      "旋转",
+      "确认移动",
+    ]);
+    expect(controller.editorStore.getSnapshot().session.movePreview).toMatchObject({
+      entityId: "filler-1",
+      interactionMode: "touch",
+      valid: true,
+    });
+
+    await act(async () => {
+      cancelButton?.click();
+      await flushCanvasActions();
+    });
+
+    expect(controller.documentStore.getSnapshot().entities["filler-1"]).toEqual(before);
+    expect(controller.editorStore.getSnapshot().session.movePreview).toBeNull();
+    expect(container.querySelector(".move-action-toolbar")).toBeNull();
 
     await disposeCanvasPanel({ root, shell, controller });
   });

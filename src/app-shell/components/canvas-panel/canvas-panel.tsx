@@ -10,6 +10,7 @@ import {
   advanceCanvasPointerTapGesture,
   beginCanvasPointerTapGesture,
   createIdleCanvasPanelPointerTapGestureState,
+  POINTER_TAP_CANCEL_DISTANCE_PX,
   removePointerFromCanvasPointerTapGesture,
   shouldDispatchCanvasPointerTap,
   type CanvasPanelPointerTapGestureState,
@@ -71,6 +72,105 @@ const TOUCH_SELECTION_TOOLBAR_WIDTH_PX = 120;
 const TOUCH_ACTION_TOOLBAR_HEIGHT_PX = 56;
 const TOUCH_ACTION_TOOLBAR_GAP_PX = 12;
 const logger = createLogger("app.canvas-panel");
+
+type CanvasPanelPointerMoveGestureState =
+  | {
+      phase: "idle";
+    }
+  | {
+      phase: "pointer-move-pressed";
+      pointerId: number;
+      origin: CanvasPoint;
+      last: CanvasPoint;
+    }
+  | {
+      phase: "pointer-move-dragging";
+      pointerId: number;
+      last: CanvasPoint;
+    };
+
+interface CanvasPanelPointerMoveAdvanceResult {
+  nextState: CanvasPanelPointerMoveGestureState;
+  previewPoint: CanvasPoint | null;
+}
+
+function createIdleCanvasPanelPointerMoveGestureState(): CanvasPanelPointerMoveGestureState {
+  return {
+    phase: "idle",
+  };
+}
+
+function beginCanvasPointerMoveGesture(
+  pointerId: number,
+  point: CanvasPoint,
+): CanvasPanelPointerMoveGestureState {
+  return {
+    phase: "pointer-move-pressed",
+    pointerId,
+    origin: point,
+    last: point,
+  };
+}
+
+function advanceCanvasPointerMoveGesture(
+  state: CanvasPanelPointerMoveGestureState,
+  pointerId: number,
+  point: CanvasPoint,
+): CanvasPanelPointerMoveAdvanceResult {
+  if (state.phase === "idle" || state.pointerId !== pointerId) {
+    return {
+      nextState: state,
+      previewPoint: null,
+    };
+  }
+
+  if (state.phase === "pointer-move-pressed") {
+    const movedDistance = Math.hypot(
+      point.x - state.origin.x,
+      point.y - state.origin.y,
+    );
+
+    if (movedDistance < POINTER_TAP_CANCEL_DISTANCE_PX) {
+      return {
+        nextState: {
+          ...state,
+          last: point,
+        },
+        previewPoint: null,
+      };
+    }
+
+    return {
+      nextState: {
+        phase: "pointer-move-dragging",
+        pointerId: state.pointerId,
+        last: point,
+      },
+      previewPoint: point,
+    };
+  }
+
+  return {
+    nextState: {
+      ...state,
+      last: point,
+    },
+    previewPoint: point,
+  };
+}
+
+function removePointerFromCanvasPointerMoveGesture(
+  state: CanvasPanelPointerMoveGestureState,
+  pointerId: number,
+): CanvasPanelPointerMoveGestureState {
+  if (state.phase === "idle") {
+    return state;
+  }
+
+  return state.pointerId === pointerId
+    ? createIdleCanvasPanelPointerMoveGestureState()
+    : state;
+}
 
 function normalizeWheelDelta(event: WheelEvent<HTMLDivElement>): number {
   switch (event.deltaMode) {
@@ -156,6 +256,9 @@ export const CanvasPanel = observer(function CanvasPanel({
   const keyStateRef = useRef({ up: false, down: false, left: false, right: false });
   const frameRef = useRef<number | null>(null);
   const touchPointsRef = useRef<Map<number, CanvasPoint>>(new Map());
+  const pointerMoveGestureStateRef = useRef<CanvasPanelPointerMoveGestureState>(
+    createIdleCanvasPanelPointerMoveGestureState(),
+  );
   const touchPlacementGestureStateRef = useRef<CanvasPanelTouchPlacementGestureState>(
     createIdleCanvasPanelTouchPlacementGestureState(),
   );
@@ -179,13 +282,21 @@ export const CanvasPanel = observer(function CanvasPanel({
     typeof createCanvasPreviewRawInputScheduler
   > | null>(null);
   const t = createTranslator(ui.locale);
+  const getEditorSession = () => controller.editorStore.getSnapshot().session;
   const anchoredPlacementActive =
     editor.session.placementDefinitionId !== null &&
     editor.session.placementInteractionMode === "touch";
+  const anchoredMovePreview =
+    editor.session.movePreview?.interactionMode === "touch"
+      ? editor.session.movePreview
+      : null;
+  const anchoredMoveActive = anchoredMovePreview !== null;
+  const anchoredPreviewActive = anchoredPlacementActive || anchoredMoveActive;
   const pointerSelectionQuickActionsActive =
     ui.mode === "edit" &&
     editor.session.activeTool === "select" &&
     editor.session.placementDefinitionId === null &&
+    editor.session.movePreview === null &&
     editor.session.selection.length > 0 &&
     editor.session.selectionInteractionMode === "pointer";
   const anchoredPlacementPreview =
@@ -193,8 +304,14 @@ export const CanvasPanel = observer(function CanvasPanel({
       ? editor.session.placementPreview
       : null;
   const anchoredPlacementScreenBox = render.anchoredPlacementScreenBox;
+  const anchoredMoveScreenBox = render.anchoredMoveScreenBox;
   const anchoredPlacementToolbarStyle = resolveAnchoredToolbarStyle(
     anchoredPlacementScreenBox,
+    viewportSize,
+    TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX,
+  );
+  const anchoredMoveToolbarStyle = resolveAnchoredToolbarStyle(
+    anchoredMoveScreenBox,
     viewportSize,
     TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX,
   );
@@ -204,8 +321,19 @@ export const CanvasPanel = observer(function CanvasPanel({
     TOUCH_SELECTION_TOOLBAR_WIDTH_PX,
   );
 
-  const dispatchPlacementPreviewFromScreenPoint = useEffectEvent(
+  const dispatchPreviewFromScreenPoint = useEffectEvent(
     (screenPoint: CanvasPoint) => {
+      const session = getEditorSession();
+
+      if (session.movePreview) {
+        controller.updateMovePreviewFromScreenPoint(screenPoint);
+        return;
+      }
+
+      if (!session.placementDefinitionId) {
+        return;
+      }
+
       if (placementPreviewProfiler) {
         placementPreviewProfiler.measureStage("canvas.pointerMoveDispatch", () => {
           controller.updatePlacementPreviewFromScreenPoint(screenPoint);
@@ -217,29 +345,47 @@ export const CanvasPanel = observer(function CanvasPanel({
     },
   );
 
-  const schedulePlacementPreviewFromScreenPoint = (screenPoint: CanvasPoint) => {
+  const schedulePreviewFromScreenPoint = (screenPoint: CanvasPoint) => {
     if (!previewInputSchedulerRef.current) {
-      dispatchPlacementPreviewFromScreenPoint(screenPoint);
+      dispatchPreviewFromScreenPoint(screenPoint);
       return;
     }
 
     previewInputSchedulerRef.current.schedule(screenPoint);
   };
 
-  const cancelScheduledPlacementPreview = () => {
+  const cancelScheduledPreview = () => {
     previewInputSchedulerRef.current?.cancel();
   };
 
   const cancelPlacement = () => {
-    cancelScheduledPlacementPreview();
+    cancelScheduledPreview();
     controller.cancelPlacement();
   };
 
-  const beginTouchPlacementOrPanGesture = (
+  const cancelMove = () => {
+    cancelScheduledPreview();
+    controller.cancelMove();
+  };
+
+  const clearTransientPreview = useEffectEvent(() => {
+    if (getEditorSession().movePreview) {
+      controller.cancelMove();
+      return;
+    }
+
+    controller.clearPlacementPreview();
+  });
+
+  const beginTouchAnchoredPreviewOrPanGesture = (
     pointerId: number,
     point: CanvasPoint,
   ) => {
-    if (isPointInsideScreenBox(point, anchoredPlacementScreenBox)) {
+    const activeScreenBox = anchoredMoveActive
+      ? anchoredMoveScreenBox
+      : anchoredPlacementScreenBox;
+
+    if (isPointInsideScreenBox(point, activeScreenBox)) {
       touchPlacementGestureStateRef.current = beginCanvasTouchPlacementGesture(
         pointerId,
         point,
@@ -259,7 +405,7 @@ export const CanvasPanel = observer(function CanvasPanel({
 
     touchTapSuppressedRef.current = true;
     touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
-    cancelScheduledPlacementPreview();
+    cancelScheduledPreview();
 
     if (!firstPointer || !secondPointer) {
       updateTouchGestureState(createIdleCanvasPanelTouchGestureState());
@@ -299,8 +445,8 @@ export const CanvasPanel = observer(function CanvasPanel({
     touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
     touchTapSuppressedRef.current = false;
     updateTouchGestureState(cancelCanvasTouchGesture());
-    cancelScheduledPlacementPreview();
-    controller.clearPlacementPreview();
+    cancelScheduledPreview();
+    clearTransientPreview();
   };
 
   const toViewportPoint = (clientX: number, clientY: number): CanvasPoint => {
@@ -327,15 +473,25 @@ export const CanvasPanel = observer(function CanvasPanel({
       viewportElement.releasePointerCapture(currentState.pointerId);
     }
 
+    const pointerMoveState = pointerMoveGestureStateRef.current;
+
+    if (
+      pointerMoveState.phase !== "idle" &&
+      viewportElement?.hasPointerCapture(pointerMoveState.pointerId)
+    ) {
+      viewportElement.releasePointerCapture(pointerMoveState.pointerId);
+    }
+
     updatePointerGestureState(cancelCanvasPanelPointerGesture());
+    pointerMoveGestureStateRef.current = createIdleCanvasPanelPointerMoveGestureState();
     pointerTapGestureStateRef.current = createIdleCanvasPanelPointerTapGestureState();
-    cancelScheduledPlacementPreview();
-    controller.clearPlacementPreview();
+    cancelScheduledPreview();
+    clearTransientPreview();
   };
 
   useEffect(() => {
     previewInputSchedulerRef.current = createCanvasPreviewRawInputScheduler({
-      dispatch: dispatchPlacementPreviewFromScreenPoint,
+      dispatch: dispatchPreviewFromScreenPoint,
     });
 
     return () => {
@@ -440,6 +596,7 @@ export const CanvasPanel = observer(function CanvasPanel({
       }
 
       pointerGestureStateRef.current = cancelCanvasPanelPointerGesture();
+      pointerMoveGestureStateRef.current = createIdleCanvasPanelPointerMoveGestureState();
       setPointerGestureState(pointerGestureStateRef.current);
       pointerTapGestureStateRef.current = createIdleCanvasPanelPointerTapGestureState();
 
@@ -455,7 +612,7 @@ export const CanvasPanel = observer(function CanvasPanel({
       touchGestureStateRef.current = cancelCanvasTouchGesture();
       setTouchGestureState(touchGestureStateRef.current);
       stopKeyboardPanLoop();
-      controller.clearPlacementPreview();
+      clearTransientPreview();
     };
 
     const handleVisibilityChange = () => {
@@ -477,6 +634,10 @@ export const CanvasPanel = observer(function CanvasPanel({
     screenPoint: CanvasPoint,
     interactionMode: PlacementInteractionMode,
   ) => {
+    if (getEditorSession().movePreview) {
+      return;
+    }
+
     const target = controller.getCanvasInteractionTarget(screenPoint);
     const intent = resolveCanvasPanelTapIntent({
       mode: ui.mode,
@@ -525,6 +686,7 @@ export const CanvasPanel = observer(function CanvasPanel({
     if (event.pointerType === "touch") {
       event.preventDefault();
       const point = toViewportPoint(event.clientX, event.clientY);
+      const target = controller.getCanvasInteractionTarget(point);
       touchPointsRef.current.set(event.pointerId, point);
       event.currentTarget.setPointerCapture(event.pointerId);
 
@@ -533,8 +695,25 @@ export const CanvasPanel = observer(function CanvasPanel({
         return;
       }
 
-      if (anchoredPlacementActive) {
-        beginTouchPlacementOrPanGesture(event.pointerId, point);
+      if (anchoredPreviewActive) {
+        beginTouchAnchoredPreviewOrPanGesture(event.pointerId, point);
+        return;
+      }
+
+      if (
+        ui.mode === "edit" &&
+        editor.session.activeTool === "select" &&
+        editor.session.placementDefinitionId === null &&
+        editor.session.movePreview === null &&
+        editor.session.selection.length === 1 &&
+        target.kind === "entity" &&
+        target.selected
+      ) {
+        touchPlacementGestureStateRef.current = beginCanvasTouchPlacementGesture(
+          event.pointerId,
+          point,
+        );
+        updateTouchGestureState(createIdleCanvasPanelTouchGestureState());
         return;
       }
 
@@ -542,7 +721,7 @@ export const CanvasPanel = observer(function CanvasPanel({
         beginCanvasTouchGesture(
           event.pointerId,
           point,
-          controller.getCanvasInteractionTarget(point),
+          target,
         ),
       );
 
@@ -551,17 +730,46 @@ export const CanvasPanel = observer(function CanvasPanel({
     }
 
     if (event.button === 0) {
+      const point = toViewportPoint(event.clientX, event.clientY);
+      const target = controller.getCanvasInteractionTarget(point);
+
       pointerTapGestureStateRef.current = beginCanvasPointerTapGesture(
         event.pointerId,
-        toViewportPoint(event.clientX, event.clientY),
+        point,
       );
+
+      if (
+        ui.mode === "edit" &&
+        editor.session.activeTool === "select" &&
+        editor.session.placementDefinitionId === null &&
+        editor.session.movePreview === null &&
+        editor.session.selection.length === 1 &&
+        target.kind === "entity" &&
+        target.selected
+      ) {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        pointerMoveGestureStateRef.current = beginCanvasPointerMoveGesture(
+          event.pointerId,
+          point,
+        );
+      }
+
       return;
     }
 
-    if (event.button === 2 && editor.session.placementDefinitionId) {
+    if (
+      event.button === 2 &&
+      (editor.session.placementDefinitionId || editor.session.movePreview)
+    ) {
       event.preventDefault();
       pointerTapGestureStateRef.current = createIdleCanvasPanelPointerTapGestureState();
-      cancelPlacement();
+      pointerMoveGestureStateRef.current = createIdleCanvasPanelPointerMoveGestureState();
+
+      if (editor.session.movePreview) {
+        cancelMove();
+      } else {
+        cancelPlacement();
+      }
       return;
     }
 
@@ -586,7 +794,6 @@ export const CanvasPanel = observer(function CanvasPanel({
       touchPointsRef.current.set(event.pointerId, point);
 
       if (
-        anchoredPlacementActive &&
         touchPlacementGestureStateRef.current.phase !== "idle"
       ) {
         if (touchPointsRef.current.size !== 1) {
@@ -603,7 +810,20 @@ export const CanvasPanel = observer(function CanvasPanel({
 
         if (result.previewPoint) {
           touchTapSuppressedRef.current = true;
-          schedulePlacementPreviewFromScreenPoint(result.previewPoint);
+
+          if (
+            !getEditorSession().movePreview &&
+            getEditorSession().placementDefinitionId === null
+          ) {
+            const didBeginMove = controller.beginMoveSelection("touch");
+
+            if (!didBeginMove) {
+              touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
+              return;
+            }
+          }
+
+          schedulePreviewFromScreenPoint(result.previewPoint);
         }
 
         return;
@@ -661,13 +881,45 @@ export const CanvasPanel = observer(function CanvasPanel({
       toViewportPoint(event.clientX, event.clientY),
     );
 
+    if (pointerMoveGestureStateRef.current.phase !== "idle") {
+      const result = advanceCanvasPointerMoveGesture(
+        pointerMoveGestureStateRef.current,
+        event.pointerId,
+        toViewportPoint(event.clientX, event.clientY),
+      );
+
+      pointerMoveGestureStateRef.current = result.nextState;
+
+      if (result.previewPoint) {
+        pointerTapGestureStateRef.current =
+          createIdleCanvasPanelPointerTapGestureState();
+
+        if (!getEditorSession().movePreview) {
+          const didBeginMove = controller.beginMoveSelection("pointer");
+
+          if (!didBeginMove) {
+            pointerMoveGestureStateRef.current =
+              createIdleCanvasPanelPointerMoveGestureState();
+            return;
+          }
+        }
+
+        controller.updateMovePreviewFromScreenPoint(result.previewPoint);
+      }
+
+      return;
+    }
+
     if (
       pointerGestureStateRef.current.phase === "idle" &&
       event.buttons === 0
     ) {
-      schedulePlacementPreviewFromScreenPoint(
-        toViewportPoint(event.clientX, event.clientY),
-      );
+      if (
+        editor.session.placementDefinitionId &&
+        editor.session.placementInteractionMode === "pointer"
+      ) {
+        schedulePreviewFromScreenPoint(toViewportPoint(event.clientX, event.clientY));
+      }
       return;
     }
 
@@ -698,9 +950,12 @@ export const CanvasPanel = observer(function CanvasPanel({
       return;
     }
 
-    schedulePlacementPreviewFromScreenPoint(
-      toViewportPoint(event.clientX, event.clientY),
-    );
+    if (
+      editor.session.placementDefinitionId &&
+      editor.session.placementInteractionMode === "pointer"
+    ) {
+      schedulePreviewFromScreenPoint(toViewportPoint(event.clientX, event.clientY));
+    }
   };
 
   const handleViewportPointerLeave = (event: PointerEvent<HTMLDivElement>) => {
@@ -711,8 +966,12 @@ export const CanvasPanel = observer(function CanvasPanel({
       );
     }
 
-    if (!anchoredPlacementActive) {
-      cancelScheduledPlacementPreview();
+    if (
+      !anchoredPreviewActive &&
+      editor.session.placementDefinitionId &&
+      editor.session.placementInteractionMode === "pointer"
+    ) {
+      cancelScheduledPreview();
       controller.clearPlacementPreview();
     }
   };
@@ -721,7 +980,7 @@ export const CanvasPanel = observer(function CanvasPanel({
     if (event.pointerType === "touch") {
       const shouldHandleTap = shouldDispatchCanvasTouchTap({
         activeTouchCount: touchPointsRef.current.size,
-        anchoredPlacementActive,
+        anchoredPreviewActive,
         placementGestureState: touchPlacementGestureStateRef.current,
         tapSuppressed: touchTapSuppressedRef.current,
         touchGestureState: touchGestureStateRef.current,
@@ -754,6 +1013,17 @@ export const CanvasPanel = observer(function CanvasPanel({
     }
 
     if (event.button === 0) {
+      if (pointerMoveGestureStateRef.current.phase === "pointer-move-dragging") {
+        pointerMoveGestureStateRef.current = removePointerFromCanvasPointerMoveGesture(
+          pointerMoveGestureStateRef.current,
+          event.pointerId,
+        );
+        void controller.commitMoveAtScreenPoint(
+          toViewportPoint(event.clientX, event.clientY),
+        );
+        return;
+      }
+
       const shouldDispatchTap = shouldDispatchCanvasPointerTap(
         pointerTapGestureStateRef.current,
         event.pointerId,
@@ -780,6 +1050,10 @@ export const CanvasPanel = observer(function CanvasPanel({
 
       pointerTapGestureStateRef.current = removePointerFromCanvasPointerTapGesture(
         pointerTapGestureStateRef.current,
+        event.pointerId,
+      );
+      pointerMoveGestureStateRef.current = removePointerFromCanvasPointerMoveGesture(
+        pointerMoveGestureStateRef.current,
         event.pointerId,
       );
       return;
@@ -821,6 +1095,10 @@ export const CanvasPanel = observer(function CanvasPanel({
       pointerTapGestureStateRef.current,
       event.pointerId,
     );
+    pointerMoveGestureStateRef.current = removePointerFromCanvasPointerMoveGesture(
+      pointerMoveGestureStateRef.current,
+      event.pointerId,
+    );
     resetPointerGestureState();
   };
 
@@ -856,7 +1134,7 @@ export const CanvasPanel = observer(function CanvasPanel({
   };
 
   const handleViewportContextMenu = (event: MouseEvent<HTMLDivElement>) => {
-    if (!editor.session.placementDefinitionId) {
+    if (!editor.session.placementDefinitionId && !editor.session.movePreview) {
       return;
     }
 
@@ -879,6 +1157,12 @@ export const CanvasPanel = observer(function CanvasPanel({
         break;
       case "r":
         if (event.repeat) {
+          return;
+        }
+
+        if (editor.session.movePreview) {
+          event.preventDefault();
+          controller.rotateMoveClockwise();
           return;
         }
 
@@ -970,6 +1254,40 @@ export const CanvasPanel = observer(function CanvasPanel({
             placementPreviewProfiler={placementPreviewProfiler}
             sceneSource={controller}
           />
+          {anchoredMoveToolbarStyle ? (
+            <CanvasActionToolbar
+              actions={[
+                {
+                  id: "cancel-move",
+                  ariaLabel: t("action.cancelPlacement"),
+                  icon: "cancel",
+                  onClick: cancelMove,
+                  tone: "cancel",
+                },
+                {
+                  id: "rotate-move",
+                  ariaLabel: t("action.rotatePlacement"),
+                  icon: "rotate",
+                  onClick: () => {
+                    controller.rotateMoveClockwise();
+                  },
+                  tone: "rotate",
+                },
+                {
+                  id: "confirm-move",
+                  ariaLabel: t("action.confirmMove"),
+                  disabled: !anchoredMovePreview?.valid,
+                  icon: "confirm",
+                  onClick: () => {
+                    void controller.confirmMovePreview();
+                  },
+                  tone: "confirm",
+                },
+              ]}
+              className="move-action-toolbar"
+              style={anchoredMoveToolbarStyle}
+            />
+          ) : null}
           {anchoredPlacementToolbarStyle ? (
             <CanvasActionToolbar
               actions={[

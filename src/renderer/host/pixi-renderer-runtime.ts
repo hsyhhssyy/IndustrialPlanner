@@ -16,6 +16,7 @@ import type {
 import type {
   RenderEntitySprite,
   RenderExplicitLink,
+  RenderMovePreview,
   RenderPlacementPreview,
   RenderSceneModel,
 } from "@/renderer/scene/types";
@@ -490,6 +491,7 @@ function drawEntityTrack(
 
   addEntitySelectionOutline(container, entity, x, y, entityWidth, entityHeight);
   addEntityDecorators(container, entity, x, y, entityWidth, entityHeight);
+  container.alpha = entity.ghosted ? 0.22 : 1;
   return container;
 }
 
@@ -584,6 +586,7 @@ function drawSpriteEntity(
   addEntitySelectionOutline(container, entity, x, y, entityWidth, entityHeight);
   addEntityLabel(container, entity, x, y, entityWidth, entityHeight);
   addEntityDecorators(container, entity, x, y, entityWidth, entityHeight);
+  container.alpha = entity.ghosted ? 0.24 : 1;
   return container;
 }
 
@@ -599,13 +602,16 @@ function drawEntitySprite(
   return drawSpriteEntity(scene, entity, textureCache);
 }
 
-function drawPlacementPreview(
+function drawDraftPreview(
   scene: RenderSceneModel,
-  preview: RenderPlacementPreview,
+  preview: RenderPlacementPreview | RenderMovePreview,
   textureCache: Map<string, Texture>,
 ): Container {
   const entityLike: RenderEntitySprite = {
-    entityId: `placement-preview:${preview.definitionId}`,
+    entityId:
+      "entityId" in preview
+        ? `move-preview:${preview.entityId}`
+        : `placement-preview:${preview.definitionId}`,
     definitionId: preview.definitionId,
     label: preview.label,
     x: preview.x,
@@ -623,6 +629,7 @@ function drawPlacementPreview(
     showLabel: false,
     status: preview.valid ? "idle" : "blocked",
     selected: false,
+    ghosted: false,
     pendingLinkSource: false,
     patched: false,
   };
@@ -684,7 +691,13 @@ function renderPlacementPreviewLayer(
 
   if (scene.placementPreview) {
     layers.preview.addChild(
-      drawPlacementPreview(scene, scene.placementPreview, textureCache),
+      drawDraftPreview(scene, scene.placementPreview, textureCache),
+    );
+  }
+
+  if (scene.movePreview) {
+    layers.preview.addChild(
+      drawDraftPreview(scene, scene.movePreview, textureCache),
     );
   }
 }
@@ -695,6 +708,7 @@ function collectSceneTexturePaths(scene: RenderSceneModel): string[] {
       scene.entities
         .map((entity) => entity.textureSrc)
         .concat(scene.placementPreview?.textureSrc ?? [])
+        .concat(scene.movePreview?.textureSrc ?? [])
         .filter((path): path is string => Boolean(path)),
     ),
   );

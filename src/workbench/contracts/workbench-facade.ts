@@ -52,6 +52,12 @@ export interface WorkbenchController {
   updatePlacementPreviewFromScreenPoint: (screenPoint: CanvasPoint) => void;
   confirmPlacementPreview: () => Promise<void>;
   clearPlacementPreview: () => void;
+  beginMoveSelection: (interactionMode: PlacementInteractionMode) => boolean;
+  rotateMoveClockwise: () => void;
+  cancelMove: () => void;
+  updateMovePreviewFromScreenPoint: (screenPoint: CanvasPoint) => void;
+  confirmMovePreview: () => Promise<void>;
+  commitMoveAtScreenPoint: (screenPoint: CanvasPoint) => Promise<void>;
   selectEntity: (
     entityId: string,
     interactionMode?: PlacementInteractionMode | null,

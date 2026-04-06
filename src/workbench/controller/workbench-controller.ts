@@ -223,6 +223,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     const previousMode = this.uiStore.getSnapshot().mode;
 
     if (mode === "simulate") {
+      this.editorHost.cancelMove();
       this.editorHost.clearPlacementPreview();
     }
 
@@ -403,6 +404,60 @@ class WorkbenchControllerImpl implements WorkbenchController {
   clearPlacementPreview(): void {
     this.editorHost.clearPlacementPreview();
     this.sync();
+  }
+
+  beginMoveSelection(interactionMode: PlacementInteractionMode): boolean {
+    if (this.uiStore.getSnapshot().mode === "simulate") {
+      return false;
+    }
+
+    const didBegin = this.editorHost.beginMoveSelection(interactionMode);
+
+    if (!didBegin) {
+      return false;
+    }
+
+    this.sync();
+    return true;
+  }
+
+  rotateMoveClockwise(): void {
+    const didRotate = this.editorHost.rotateMoveClockwise();
+
+    if (!didRotate) {
+      return;
+    }
+
+    this.sync();
+  }
+
+  cancelMove(): void {
+    const didCancel = this.editorHost.cancelMove();
+
+    if (!didCancel) {
+      return;
+    }
+
+    this.sync();
+  }
+
+  updateMovePreviewFromScreenPoint(screenPoint: CanvasPoint): void {
+    const worldInput = this.resolveWorldInput(screenPoint);
+    this.editorHost.updateMovePreview(worldInput);
+    this.sync();
+  }
+
+  async confirmMovePreview(): Promise<void> {
+    const before = this.captureMutationState();
+    this.editorHost.confirmMove();
+    await this.reconcileMutation(before);
+  }
+
+  async commitMoveAtScreenPoint(screenPoint: CanvasPoint): Promise<void> {
+    const before = this.captureMutationState();
+    const worldInput = this.resolveWorldInput(screenPoint);
+    this.editorHost.commitMove(worldInput);
+    await this.reconcileMutation(before);
   }
 
   async selectEntity(
@@ -948,6 +1003,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
       placementPreview:
         workspaceState.ui.mode === "edit"
           ? workspaceState.editor.session.placementPreview
+          : null,
+      movePreview:
+        workspaceState.ui.mode === "edit"
+          ? workspaceState.editor.session.movePreview
           : null,
     });
 

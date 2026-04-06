@@ -4,6 +4,7 @@ import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
 import {
   getRotatedGridFootprint,
+  rotateGridRotationClockwise,
   type GridRotation,
 } from "@/shared/geometry/grid";
 import { createPlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
@@ -29,11 +30,15 @@ function readWorkbenchState(
         ? {
             selectedEntityIds: simulation.selection,
             placementPreview: null,
+            movePreview: null,
+            dragPreviewEntityId: null,
             pendingLinkSourceEntityId: null,
           }
         : {
             selectedEntityIds: editor.session.selection,
             placementPreview: editor.session.placementPreview,
+            movePreview: editor.session.movePreview,
+            dragPreviewEntityId: editor.session.dragPreviewEntityId,
             pendingLinkSourceEntityId:
               editor.session.pendingLinkSourceEntityId,
           },
@@ -132,6 +137,27 @@ function toScreenPointForEntity(
       (entity.position.y * gridSize - snapshot.canvasView.offset.y + 1) *
       snapshot.canvasView.zoom,
   };
+}
+
+function toScreenPointForEntityCenter(
+  controller: ReturnType<typeof createWorkbenchController>,
+  entityId: string,
+  gridPoint: { x: number; y: number },
+  rotation?: GridRotation,
+) {
+  const snapshot = readWorkbenchState(controller);
+  const entity = snapshot.document.entities[entityId];
+
+  if (!entity) {
+    throw new Error(`Missing entity ${entityId}`);
+  }
+
+  return toScreenPointForPlacementCenter(
+    controller,
+    entity.definitionId,
+    gridPoint,
+    rotation ?? entity.rotation,
+  );
 }
 
 describe("WorkbenchController scaffold", () => {
@@ -852,6 +878,43 @@ describe("WorkbenchController scaffold", () => {
     }
 
     expect(current).toEqual(before);
+
+    controller.dispose();
+  });
+
+  it("moves the selected entity through hidden move mode and commits a single move command", async () => {
+    const controller = createWorkbenchController();
+    const before = readWorkbenchState(controller).document.entities["filler-1"];
+
+    expect(before).toBeTruthy();
+
+    await controller.selectEntity("filler-1", "pointer");
+    expect(controller.beginMoveSelection("pointer")).toBe(true);
+
+    const nextRotation = rotateGridRotationClockwise(before!.rotation);
+
+    controller.rotateMoveClockwise();
+    controller.updateMovePreviewFromScreenPoint(
+      toScreenPointForEntityCenter(
+        controller,
+        "filler-1",
+        { x: 24, y: 12 },
+        nextRotation,
+      ),
+    );
+
+    await controller.confirmMovePreview();
+
+    const after = readWorkbenchState(controller);
+
+    expect(after.document.entities["filler-1"]).toMatchObject({
+      position: { x: 24, y: 12 },
+      rotation: nextRotation,
+    });
+    expect(after.session.movePreview).toBeNull();
+    expect(after.session.dragPreviewEntityId).toBeNull();
+    expect(after.session.activeTool).toBe("select");
+    expect(after.history.undoDepth).toBeGreaterThan(0);
 
     controller.dispose();
   });

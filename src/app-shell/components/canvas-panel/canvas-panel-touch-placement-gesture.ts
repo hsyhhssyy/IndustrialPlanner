@@ -26,7 +26,7 @@ export interface CanvasPanelTouchPlacementAdvanceResult {
 
 export interface ShouldDispatchCanvasTouchTapOptions {
   activeTouchCount: number;
-  anchoredPlacementActive: boolean;
+  anchoredPreviewActive: boolean;
   placementGestureState: CanvasPanelTouchPlacementGestureState;
   tapSuppressed: boolean;
   touchGestureState: CanvasPanelTouchGestureState;
@@ -118,10 +118,10 @@ export function shouldDispatchCanvasTouchTap(
   options: ShouldDispatchCanvasTouchTapOptions,
 ): boolean {
   if (
-    options.anchoredPlacementActive ||
+    options.anchoredPreviewActive ||
     options.tapSuppressed ||
     options.activeTouchCount !== 1 ||
-    options.placementGestureState.phase !== "idle"
+    options.placementGestureState.phase === "touch-placement-dragging"
   ) {
     return false;
   }

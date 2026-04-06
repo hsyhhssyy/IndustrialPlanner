@@ -1,6 +1,10 @@
-import { isSamePlacementPreviewState } from "@/editor/contracts/placement-preview";
+import {
+  isSameMovePreviewState,
+  isSamePlacementPreviewState,
+} from "@/editor/contracts/placement-preview";
 import type { EditorSession } from "@/editor/contracts/editor-session";
 import type { EditorHistoryState } from "@/editor/core/editor-core";
+import { cloneEditorMode } from "@/editor/core/editor-session";
 import { makeAutoObservable } from "@/shared/mobx";
 import { createSnapshotBridge } from "@/shared/mobx/snapshot-bridge";
 import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
@@ -33,11 +37,13 @@ export function isSameEditorSession(
   right: EditorSession,
 ): boolean {
   return (
+    left.mode.key === right.mode.key &&
     left.activeTool === right.activeTool &&
     areSelectionsEqual(left.selection, right.selection) &&
     left.selectionInteractionMode === right.selectionInteractionMode &&
     left.hoveredEntityId === right.hoveredEntityId &&
     left.dragPreviewEntityId === right.dragPreviewEntityId &&
+    isSameMovePreviewState(left.movePreview, right.movePreview) &&
     left.placementDefinitionId === right.placementDefinitionId &&
     left.placementInteractionMode === right.placementInteractionMode &&
     left.placementRotation === right.placementRotation &&
@@ -60,11 +66,20 @@ function isSameEditorHistoryState(
 
 function cloneEditorSession(session: EditorSession): EditorSession {
   return {
+    mode: cloneEditorMode(session.mode),
     activeTool: session.activeTool,
     selection: [...session.selection],
     selectionInteractionMode: session.selectionInteractionMode,
     hoveredEntityId: session.hoveredEntityId,
     dragPreviewEntityId: session.dragPreviewEntityId,
+    movePreview: session.movePreview
+      ? {
+          ...session.movePreview,
+          gridPoint: {
+            ...session.movePreview.gridPoint,
+          },
+        }
+      : null,
     placementDefinitionId: session.placementDefinitionId,
     placementInteractionMode: session.placementInteractionMode,
     placementRotation: session.placementRotation,
@@ -153,6 +168,12 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
   }
 
   private applySessionSnapshot(session: EditorSession): void {
+    if (this.session.mode.key !== session.mode.key) {
+      this.session.mode = cloneEditorMode(session.mode);
+    } else {
+      this.session.mode = cloneEditorMode(session.mode);
+    }
+
     if (this.session.activeTool !== session.activeTool) {
       this.session.activeTool = session.activeTool;
     }
@@ -173,6 +194,17 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
 
     if (this.session.dragPreviewEntityId !== session.dragPreviewEntityId) {
       this.session.dragPreviewEntityId = session.dragPreviewEntityId;
+    }
+
+    if (!isSameMovePreviewState(this.session.movePreview, session.movePreview)) {
+      this.session.movePreview = session.movePreview
+        ? {
+            ...session.movePreview,
+            gridPoint: {
+              ...session.movePreview.gridPoint,
+            },
+          }
+        : null;
     }
 
     if (this.session.placementDefinitionId !== session.placementDefinitionId) {

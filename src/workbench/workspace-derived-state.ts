@@ -27,6 +27,7 @@ export interface RenderDerivedState {
   };
   cameraTransform: RenderDerivedCameraTransform;
   anchoredPlacementScreenBox: RenderDerivedScreenBox | null;
+  anchoredMoveScreenBox: RenderDerivedScreenBox | null;
   anchoredSelectionScreenBox: RenderDerivedScreenBox | null;
 }
 
@@ -97,6 +98,33 @@ function deriveAnchoredPlacementScreenBox(
   });
 }
 
+function deriveAnchoredMoveScreenBox(
+  options: DeriveRenderDerivedStateOptions,
+): RenderDerivedScreenBox | null {
+  const {
+    workspaceState: { canvasView, document, editor, ui },
+    registry,
+  } = options;
+  const preview = editor.session.movePreview;
+
+  if (ui.mode !== "edit" || !preview || preview.interactionMode !== "touch") {
+    return null;
+  }
+
+  const definition = getStage1EntityDefinition(registry, preview.definitionId);
+
+  if (!definition) {
+    return null;
+  }
+
+  return projectGridFootprintScreenBox({
+    canvasView,
+    gridSize: document.documentSettings.gridSize,
+    position: preview.gridPoint,
+    footprint: getRotatedGridFootprint(definition.footprint, preview.rotation),
+  });
+}
+
 function deriveAnchoredSelectionScreenBox(
   options: DeriveRenderDerivedStateOptions,
 ): RenderDerivedScreenBox | null {
@@ -109,6 +137,7 @@ function deriveAnchoredSelectionScreenBox(
     ui.mode !== "edit" ||
     editor.session.activeTool !== "select" ||
     editor.session.placementDefinitionId !== null ||
+    editor.session.movePreview !== null ||
     editor.session.selectionInteractionMode !== "touch" ||
     editor.session.selection.length !== 1
   ) {
@@ -152,6 +181,7 @@ export function deriveRenderDerivedState(
     topology,
     registry,
     placementPreview: ui.mode === "edit" ? editor.session.placementPreview : null,
+    movePreview: ui.mode === "edit" ? editor.session.movePreview : null,
   });
 
   return {
@@ -162,6 +192,7 @@ export function deriveRenderDerivedState(
       viewportOffset: canvasView.offset,
     },
     anchoredPlacementScreenBox: deriveAnchoredPlacementScreenBox(options),
+    anchoredMoveScreenBox: deriveAnchoredMoveScreenBox(options),
     anchoredSelectionScreenBox: deriveAnchoredSelectionScreenBox(options),
   };
 }

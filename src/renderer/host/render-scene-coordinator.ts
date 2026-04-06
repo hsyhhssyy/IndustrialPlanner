@@ -56,6 +56,8 @@ function buildRenderInteractionState(
     return {
       selectedEntityIds: simulation.selection,
       placementPreview: null,
+      movePreview: null,
+      dragPreviewEntityId: null,
       pendingLinkSourceEntityId: null,
     };
   }
@@ -63,6 +65,8 @@ function buildRenderInteractionState(
   return {
     selectedEntityIds: editor.session.selection,
     placementPreview: editor.session.placementPreview,
+    movePreview: editor.session.movePreview,
+    dragPreviewEntityId: editor.session.dragPreviewEntityId,
     pendingLinkSourceEntityId: editor.session.pendingLinkSourceEntityId,
   };
 }
@@ -91,6 +95,8 @@ function isSameRenderSceneInteractionState(
   return (
     left.selectedEntityIds === right.selectedEntityIds &&
     left.placementPreview === right.placementPreview &&
+    left.movePreview === right.movePreview &&
+    left.dragPreviewEntityId === right.dragPreviewEntityId &&
     left.pendingLinkSourceEntityId === right.pendingLinkSourceEntityId
   );
 }

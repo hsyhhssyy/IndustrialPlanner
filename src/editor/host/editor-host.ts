@@ -9,9 +9,11 @@ import type {
   EditorTool,
 } from "@/editor/contracts/editor-session";
 import {
+  isSameMovePreviewState,
   isSamePlacementPreviewState,
 } from "@/editor/contracts/placement-preview";
 import type {
+  MovePreviewState,
   PlacementPreviewState,
   PlacementInteractionMode,
 } from "@/editor/contracts/placement-preview";
@@ -25,7 +27,10 @@ import {
   getStage1BaseDefinition,
   isStage1FootprintWithinBase,
 } from "@/domain/base/stage1-bases";
-import { isPlacementTool } from "@/editor/core/editor-session";
+import {
+  isMoveMode,
+  isPlacementTool,
+} from "@/editor/core/editor-session";
 import {
   getRotatedGridFootprint,
   resolveCenteredGridPoint,
@@ -70,6 +75,17 @@ export interface PlacementQueryResult {
   invalidReason: PlacementPreviewInvalidReason | null;
   hitEntityId: string | null;
   overlappingEntityIds: string[];
+}
+
+export interface MovePreviewUpdateResult {
+  preview: MovePreviewState | null;
+  invalidReason: MovePreviewInvalidReason | null;
+  changed: boolean;
+}
+
+export interface MoveQueryResult {
+  preview: MovePreviewState | null;
+  invalidReason: MovePreviewInvalidReason | null;
 }
 
 function hitTestWorldEntity(
@@ -161,6 +177,14 @@ export interface EditorHost {
   confirmPlacement: () => boolean;
   commitPlacement: (input: CanvasWorldInput) => boolean;
   clearPlacementPreview: () => void;
+  beginMoveSelection: (interactionMode: PlacementInteractionMode) => boolean;
+  queryMoveAtWorldInput: (input: CanvasWorldInput) => MoveQueryResult;
+  queryMovePreview: (preview: MovePreviewState) => MoveQueryResult;
+  updateMovePreview: (input: CanvasWorldInput) => MovePreviewUpdateResult;
+  rotateMoveClockwise: () => boolean;
+  confirmMove: () => boolean;
+  commitMove: (input: CanvasWorldInput) => boolean;
+  cancelMove: () => boolean;
   activateLinkTarget: (entityId: string | null) => void;
   setPlacementPreview: (preview: PlacementPreviewState | null) => void;
   selectEntity: (
@@ -197,6 +221,8 @@ type PlacementPreviewInvalidReason =
   | "missing-definition"
   | "entity-collision"
   | "out-of-base";
+
+type MovePreviewInvalidReason = "inactive-mode" | "missing-entity" | "out-of-base";
 
 interface PlacementCandidateEvaluation {
   invalidReason: PlacementPreviewInvalidReason | null;
@@ -563,6 +589,201 @@ class EditorHostImpl implements EditorHost {
     this.core.setPlacementPreview(null);
   }
 
+  beginMoveSelection(interactionMode: PlacementInteractionMode): boolean {
+    const didBegin = this.core.beginMoveSelection(interactionMode);
+
+    if (didBegin) {
+      const movePreview = this.core.getSnapshot().session.movePreview;
+
+      this.logger.info("Entered hidden move mode.", {
+        interactionMode,
+        entityId: movePreview?.entityId ?? null,
+        definitionId: movePreview?.definitionId ?? null,
+        originGridPoint: movePreview?.gridPoint ?? null,
+      });
+    }
+
+    return didBegin;
+  }
+
+  queryMoveAtWorldInput(input: CanvasWorldInput): MoveQueryResult {
+    const { document, session } = this.core.getSnapshot();
+
+    if (!isMoveMode(session.mode)) {
+      return {
+        preview: null,
+        invalidReason: "inactive-mode",
+      };
+    }
+
+    const definition = this.getDefinition(session.mode.definitionId);
+
+    if (!definition || !document.entities[session.mode.entityId]) {
+      return {
+        preview: null,
+        invalidReason: "missing-entity",
+      };
+    }
+
+    const footprint = getRotatedGridFootprint(
+      definition.footprint,
+      session.mode.preview.rotation,
+    );
+    const preview: MovePreviewState = {
+      entityId: session.mode.entityId,
+      definitionId: session.mode.definitionId,
+      interactionMode: session.mode.interactionMode,
+      gridPoint: resolveCenteredPlacementGridPoint({
+        worldPoint: input.worldPoint,
+        gridSize: document.documentSettings.gridSize,
+        footprint,
+      }),
+      rotation: session.mode.preview.rotation,
+      valid: true,
+    };
+
+    return this.queryMovePreview(preview);
+  }
+
+  queryMovePreview(preview: MovePreviewState): MoveQueryResult {
+    const { session } = this.core.getSnapshot();
+
+    if (!isMoveMode(session.mode) || session.mode.entityId !== preview.entityId) {
+      return {
+        preview: null,
+        invalidReason: "inactive-mode",
+      };
+    }
+
+    const definition = this.getDefinition(preview.definitionId);
+
+    if (!definition) {
+      return {
+        preview: null,
+        invalidReason: "missing-entity",
+      };
+    }
+
+    const evaluation = this.evaluateFootprintCandidate(
+      preview.gridPoint,
+      preview.rotation,
+      definition,
+    );
+
+    return {
+      preview: {
+        ...preview,
+        valid: evaluation.invalidReason === null,
+      },
+      invalidReason:
+        evaluation.invalidReason === null ? null : "out-of-base",
+    };
+  }
+
+  updateMovePreview(input: CanvasWorldInput): MovePreviewUpdateResult {
+    const previousPreview = this.core.getSnapshot().session.movePreview;
+    const resolution = this.queryMoveAtWorldInput(input);
+    const changed = !isSameMovePreviewState(previousPreview, resolution.preview);
+
+    if (changed) {
+      this.core.setMovePreview(resolution.preview);
+    }
+
+    return {
+      preview: resolution.preview,
+      invalidReason: resolution.invalidReason,
+      changed,
+    };
+  }
+
+  rotateMoveClockwise(): boolean {
+    const { session } = this.core.getSnapshot();
+
+    if (!isMoveMode(session.mode)) {
+      return false;
+    }
+
+    const definition = this.getDefinition(session.mode.definitionId);
+
+    if (!definition) {
+      return false;
+    }
+
+    const currentPreview = session.mode.preview;
+    const nextRotation = rotateGridRotationClockwise(currentPreview.rotation);
+    const currentFootprint = getRotatedGridFootprint(
+      definition.footprint,
+      currentPreview.rotation,
+    );
+    const nextFootprint = getRotatedGridFootprint(definition.footprint, nextRotation);
+    const resolution = this.queryMovePreview({
+      ...currentPreview,
+      rotation: nextRotation,
+      gridPoint: resolveCenteredRotatedGridPoint({
+        gridPoint: currentPreview.gridPoint,
+        currentFootprint,
+        nextFootprint,
+      }),
+    });
+
+    if (resolution.preview) {
+      this.core.setMovePreview(resolution.preview);
+    }
+
+    return true;
+  }
+
+  confirmMove(): boolean {
+    const { session } = this.core.getSnapshot();
+
+    if (!isMoveMode(session.mode)) {
+      return false;
+    }
+
+    const resolution = this.queryMovePreview(session.mode.preview);
+
+    if (resolution.preview && !isSameMovePreviewState(session.mode.preview, resolution.preview)) {
+      this.core.setMovePreview(resolution.preview);
+    }
+
+    if (!resolution.preview?.valid) {
+      return false;
+    }
+
+    return this.core.moveSelectedEntity(
+      resolution.preview.gridPoint,
+      resolution.preview.rotation,
+    );
+  }
+
+  commitMove(input: CanvasWorldInput): boolean {
+    const { session } = this.core.getSnapshot();
+
+    if (!isMoveMode(session.mode) || session.mode.interactionMode !== "pointer") {
+      return false;
+    }
+
+    const resolution = this.queryMoveAtWorldInput(input);
+
+    if (!resolution.preview?.valid) {
+      this.core.cancelMove();
+      return false;
+    }
+
+    if (!isSameMovePreviewState(session.mode.preview, resolution.preview)) {
+      this.core.setMovePreview(resolution.preview);
+    }
+
+    return this.core.moveSelectedEntity(
+      resolution.preview.gridPoint,
+      resolution.preview.rotation,
+    );
+  }
+
+  cancelMove(): boolean {
+    return this.core.cancelMove();
+  }
+
   activateLinkTarget(entityId: string | null): void {
     this.handleLinkToolClick(entityId);
   }
@@ -698,21 +919,30 @@ class EditorHostImpl implements EditorHost {
     preview: PlacementPreviewState,
     definition: Stage1EntityDefinition,
   ): PlacementCandidateEvaluation {
+    return this.evaluateFootprintCandidate(
+      preview.gridPoint,
+      preview.rotation,
+      definition,
+    );
+  }
+
+  private evaluateFootprintCandidate(
+    gridPoint: GridPoint,
+    rotation: GridRotation,
+    definition: Stage1EntityDefinition,
+  ): PlacementCandidateEvaluation {
     const { document } = this.core.getSnapshot();
     const topology = this.getTopology();
     const base = getStage1BaseDefinition(document.baseId);
-    const footprint = getRotatedGridFootprint(
-      definition.footprint,
-      preview.rotation,
-    );
+    const footprint = getRotatedGridFootprint(definition.footprint, rotation);
     const overlappingEntityIds = this.collectOverlappingEntityIds(
       topology,
-      preview.gridPoint,
+      gridPoint,
       footprint,
     );
     const withinBase = isStage1FootprintWithinBase({
       base,
-      position: preview.gridPoint,
+      position: gridPoint,
       footprint,
     });
 

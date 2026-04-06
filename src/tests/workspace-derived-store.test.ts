@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { compileStage1World } from "@/domain/compiler/stage1-compiler";
 import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";
-import { createStage1Registry } from "@/domain/registry/stage1-registry";
+import {
+  createStage1Registry,
+  getStage1EntityDefinition,
+} from "@/domain/registry/stage1-registry";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { createSnapshotStore } from "@/shared/snapshot-store/snapshot-store";
@@ -63,6 +66,8 @@ describe("WorkspaceDerivedStore", () => {
       interaction: {
         selectedEntityIds: workspaceState.editor.session.selection,
         placementPreview: workspaceState.editor.session.placementPreview,
+        movePreview: workspaceState.editor.session.movePreview,
+        dragPreviewEntityId: workspaceState.editor.session.dragPreviewEntityId,
         pendingLinkSourceEntityId:
           workspaceState.editor.session.pendingLinkSourceEntityId,
       },
@@ -292,6 +297,102 @@ describe("WorkspaceDerivedStore", () => {
         document.documentSettings.gridSize *
         workspaceState.canvasView.zoom,
     });
+  });
+
+  it("projects touch move preview into a shared screen box and suppresses touch selection toolbar", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const selectedEntity = document.entities["filler-1"];
+
+    if (!selectedEntity) {
+      throw new Error("Missing filler-1 in stage1 seed document");
+    }
+
+    const definition = getStage1EntityDefinition(registry, selectedEntity.definitionId);
+    const workspaceState = {
+      document,
+      editor: {
+        session: {
+          ...createInitialEditorSession(),
+          selection: ["filler-1"],
+          selectionInteractionMode: "touch" as const,
+          dragPreviewEntityId: "filler-1",
+          movePreview: {
+            entityId: "filler-1",
+            definitionId: selectedEntity.definitionId,
+            interactionMode: "touch" as const,
+            gridPoint: { x: 4, y: 5 },
+            rotation: 90 as const,
+            valid: true,
+          },
+        },
+        history: {
+          canUndo: false,
+          canRedo: false,
+          undoDepth: 0,
+          redoDepth: 0,
+        },
+      },
+      ui: createInitialWorkbenchUiState(),
+      canvasView: {
+        offset: { x: 10, y: 20 },
+        zoom: 2,
+      },
+      simulation: {
+        runtimeSnapshot: {
+          tick: 0,
+          status: "idle" as const,
+          entityViews: {},
+          patchedEntityIds: [],
+        },
+        telemetry: {
+          tick: 0,
+          simulatedHertz: 0,
+          entityCount: 0,
+        },
+        inspectorDetails: null,
+        patchSet: createEmptySimulationPatchSet(),
+        selection: [],
+      },
+    };
+    const footprint = getRotatedGridFootprint(
+      definition!.footprint,
+      workspaceState.editor.session.movePreview!.rotation,
+    );
+
+    expect(definition).toBeTruthy();
+    expect(
+      deriveRenderDerivedState({
+        workspaceState,
+        topology,
+        registry,
+      }).anchoredMoveScreenBox,
+    ).toEqual({
+      left:
+        (workspaceState.editor.session.movePreview!.gridPoint.x *
+          workspaceState.document.documentSettings.gridSize -
+          workspaceState.canvasView.offset.x) * workspaceState.canvasView.zoom,
+      top:
+        (workspaceState.editor.session.movePreview!.gridPoint.y *
+          workspaceState.document.documentSettings.gridSize -
+          workspaceState.canvasView.offset.y) * workspaceState.canvasView.zoom,
+      width:
+        footprint.width *
+        workspaceState.document.documentSettings.gridSize *
+        workspaceState.canvasView.zoom,
+      height:
+        footprint.height *
+        workspaceState.document.documentSettings.gridSize *
+        workspaceState.canvasView.zoom,
+    });
+    expect(
+      deriveRenderDerivedState({
+        workspaceState,
+        topology,
+        registry,
+      }).anchoredSelectionScreenBox,
+    ).toBeNull();
   });
 
   it("does not notify render subscribers when only unused simulation state changes", () => {

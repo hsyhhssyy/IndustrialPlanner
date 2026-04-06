@@ -11,10 +11,22 @@ import type {
   EditorTool,
 } from "@/editor/contracts/editor-session";
 import type {
+  MovePreviewState,
   PlacementPreviewState,
   PlacementInteractionMode,
 } from "@/editor/contracts/placement-preview";
-import { isPlacementTool } from "@/editor/core/editor-session";
+import {
+  applyEditorMode,
+  createInspectEditorMode,
+  createLinkEditorMode,
+  createMoveEditorMode,
+  createPlacementEditorMode,
+  createSelectEditorMode,
+  isLinkMode,
+  isMoveMode,
+  isPlacementMode,
+  resolveEditorModeFallback,
+} from "@/editor/core/editor-session";
 import {
   rotateGridRotationClockwise,
   type GridPoint,
@@ -52,10 +64,17 @@ export interface EditorCore {
   ) => void;
   setPlacementRotation: (rotation: GridRotation | null) => void;
   setPlacementPreview: (preview: PlacementPreviewState | null) => void;
+  beginMoveSelection: (interactionMode: PlacementInteractionMode) => boolean;
+  setMovePreview: (preview: MovePreviewState | null) => void;
+  cancelMove: () => boolean;
   selectEntity: (
     entityId: string | null,
     interactionMode?: PlacementInteractionMode | null,
   ) => void;
+  moveSelectedEntity: (
+    position: GridPoint,
+    rotation?: GridRotation,
+  ) => boolean;
   rotateSelectedEntityClockwise: (position?: GridPoint) => boolean;
   setPendingLinkSource: (entityId: string | null) => void;
   placeEntity: (
@@ -99,24 +118,17 @@ class EditorCoreImpl implements EditorCore {
   }
 
   setActiveTool(tool: EditorTool): void {
-    this.session = {
-      ...this.session,
-      activeTool: tool,
-      placementDefinitionId: isPlacementTool(tool)
-        ? this.session.placementDefinitionId
-        : null,
-      placementInteractionMode: isPlacementTool(tool)
-        ? this.session.placementInteractionMode
-        : null,
-      placementRotation: isPlacementTool(tool)
-        ? this.session.placementRotation
-        : null,
-      placementPreview: isPlacementTool(tool)
-        ? this.session.placementPreview
-        : null,
-      pendingLinkSourceEntityId:
-        tool === "link" ? this.session.pendingLinkSourceEntityId : null,
-    };
+    if (tool === "link") {
+      this.session = applyEditorMode(this.session, createLinkEditorMode());
+      return;
+    }
+
+    if (tool === "inspect") {
+      this.session = applyEditorMode(this.session, createInspectEditorMode());
+      return;
+    }
+
+    this.session = applyEditorMode(this.session, createSelectEditorMode(tool));
   }
 
   setPlacementDefinition(
@@ -124,29 +136,96 @@ class EditorCoreImpl implements EditorCore {
     tool: EditorTool = "place",
     interactionMode: PlacementInteractionMode = "pointer",
   ): void {
-    this.session = {
-      ...this.session,
-      activeTool: tool,
-      placementDefinitionId: definitionId,
-      placementInteractionMode: interactionMode,
-      placementRotation: 0,
-      placementPreview: null,
-      pendingLinkSourceEntityId: null,
-    };
+    this.session = applyEditorMode(
+      this.session,
+      createPlacementEditorMode({
+        definitionId,
+        displayTool: tool,
+        interactionMode,
+      }),
+    );
   }
 
   setPlacementRotation(rotation: GridRotation | null): void {
-    this.session = {
-      ...this.session,
-      placementRotation: rotation,
-    };
+    if (!isPlacementMode(this.session.mode)) {
+      return;
+    }
+
+    this.session = applyEditorMode(this.session, {
+      ...this.session.mode,
+      rotation: rotation ?? 0,
+    });
   }
 
   setPlacementPreview(preview: PlacementPreviewState | null): void {
-    this.session = {
-      ...this.session,
-      placementPreview: preview,
-    };
+    if (!isPlacementMode(this.session.mode)) {
+      return;
+    }
+
+    this.session = applyEditorMode(this.session, {
+      ...this.session.mode,
+      preview,
+    });
+  }
+
+  beginMoveSelection(interactionMode: PlacementInteractionMode): boolean {
+    const selectedEntityId = this.session.selection[0];
+
+    if (!selectedEntityId) {
+      return false;
+    }
+
+    const entity = this.document.entities[selectedEntityId];
+
+    if (!entity) {
+      return false;
+    }
+
+    this.session = applyEditorMode(
+      {
+        ...this.session,
+        selection: [selectedEntityId],
+        selectionInteractionMode: interactionMode,
+      },
+      createMoveEditorMode({
+        entityId: selectedEntityId,
+        definitionId: entity.definitionId,
+        interactionMode,
+        originGridPoint: entity.position,
+        originRotation: entity.rotation,
+        preview: {
+          entityId: selectedEntityId,
+          definitionId: entity.definitionId,
+          interactionMode,
+          gridPoint: {
+            ...entity.position,
+          },
+          rotation: entity.rotation,
+          valid: true,
+        },
+      }),
+    );
+    return true;
+  }
+
+  setMovePreview(preview: MovePreviewState | null): void {
+    if (!isMoveMode(this.session.mode) || !preview) {
+      return;
+    }
+
+    this.session = applyEditorMode(this.session, {
+      ...this.session.mode,
+      preview,
+    });
+  }
+
+  cancelMove(): boolean {
+    if (!isMoveMode(this.session.mode)) {
+      return false;
+    }
+
+    this.session = applyEditorMode(this.session, resolveEditorModeFallback(this.session.mode));
+    return true;
   }
 
   selectEntity(
@@ -155,11 +234,72 @@ class EditorCoreImpl implements EditorCore {
       ? this.session.selectionInteractionMode
       : null,
   ): void {
-    this.session = {
-      ...this.session,
-      selection: entityId ? [entityId] : [],
-      selectionInteractionMode: entityId ? interactionMode : null,
-    };
+    const nextSelection = entityId ? [entityId] : [];
+    const nextMode =
+      isMoveMode(this.session.mode) && this.session.mode.entityId !== entityId
+        ? resolveEditorModeFallback(this.session.mode)
+        : this.session.mode;
+
+    this.session = applyEditorMode(
+      {
+        ...this.session,
+        selection: nextSelection,
+        selectionInteractionMode: entityId ? interactionMode : null,
+      },
+      nextMode,
+    );
+  }
+
+  moveSelectedEntity(
+    position: GridPoint,
+    rotation?: GridRotation,
+  ): boolean {
+    const selectedEntityId = this.session.selection[0];
+
+    if (!selectedEntityId) {
+      return false;
+    }
+
+    const effectiveRotation = rotation ?? this.document.entities[selectedEntityId]?.rotation;
+    const didMove = this.applyCommand({
+      type: "entity.move",
+      payload: {
+        entityId: selectedEntityId,
+        position,
+        ...(effectiveRotation !== undefined ? { rotation: effectiveRotation } : {}),
+      },
+    });
+
+    if (!didMove) {
+      if (isMoveMode(this.session.mode)) {
+        this.session = applyEditorMode(
+          {
+            ...this.session,
+            selection: [selectedEntityId],
+            selectionInteractionMode: this.session.mode.interactionMode,
+          },
+          resolveEditorModeFallback(this.session.mode),
+        );
+      }
+
+      return false;
+    }
+
+    const nextMode = isMoveMode(this.session.mode)
+      ? resolveEditorModeFallback(this.session.mode)
+      : this.session.mode;
+
+    this.session = applyEditorMode(
+      {
+        ...this.session,
+        selection: [selectedEntityId],
+        selectionInteractionMode: isMoveMode(this.session.mode)
+          ? this.session.mode.interactionMode
+          : this.session.selectionInteractionMode,
+      },
+      nextMode,
+    );
+    return true;
   }
 
   rotateSelectedEntityClockwise(position?: GridPoint): boolean {
@@ -186,10 +326,14 @@ class EditorCoreImpl implements EditorCore {
   }
 
   setPendingLinkSource(entityId: string | null): void {
-    this.session = {
-      ...this.session,
-      pendingLinkSourceEntityId: entityId,
-    };
+    if (!isLinkMode(this.session.mode)) {
+      return;
+    }
+
+    this.session = applyEditorMode(this.session, {
+      ...this.session.mode,
+      pendingSourceEntityId: entityId,
+    });
   }
 
   placeEntity(
@@ -211,16 +355,14 @@ class EditorCoreImpl implements EditorCore {
     };
 
     if (this.applyCommand(nextCommand)) {
-      this.session = {
-        ...this.session,
-        selection: [entityId],
-        selectionInteractionMode: this.session.placementInteractionMode,
-        placementDefinitionId: definitionId,
-        placementInteractionMode: this.session.placementInteractionMode,
-        placementRotation: this.session.placementRotation,
-        placementPreview: this.session.placementPreview,
-        pendingLinkSourceEntityId: null,
-      };
+      this.session = applyEditorMode(
+        {
+          ...this.session,
+          selection: [entityId],
+          selectionInteractionMode: this.session.placementInteractionMode,
+        },
+        this.session.mode,
+      );
     }
   }
 
@@ -246,21 +388,34 @@ class EditorCoreImpl implements EditorCore {
     };
 
     if (this.applyCommand(nextCommand)) {
-      this.session = {
-        ...this.session,
-        selection: [targetEntityId],
-        selectionInteractionMode: null,
-        pendingLinkSourceEntityId: null,
-      };
+      const nextMode = isLinkMode(this.session.mode)
+        ? {
+            ...this.session.mode,
+            pendingSourceEntityId: null,
+          }
+        : this.session.mode;
+
+      this.session = applyEditorMode(
+        {
+          ...this.session,
+          selection: [targetEntityId],
+          selectionInteractionMode: null,
+        },
+        nextMode,
+      );
     }
   }
 
   removeLink(linkId: string): void {
     if (this.applyCommand({ type: "link.remove", payload: { linkId } })) {
-      this.session = {
-        ...this.session,
-        pendingLinkSourceEntityId: null,
-      };
+      const nextMode = isLinkMode(this.session.mode)
+        ? {
+            ...this.session.mode,
+            pendingSourceEntityId: null,
+          }
+        : this.session.mode;
+
+      this.session = applyEditorMode(this.session, nextMode);
     }
   }
 
@@ -275,12 +430,14 @@ class EditorCoreImpl implements EditorCore {
     });
 
     this.sanitizeSession();
-    this.session = {
-      ...this.session,
-      selection: [],
-      selectionInteractionMode: null,
-      pendingLinkSourceEntityId: null,
-    };
+    this.session = applyEditorMode(
+      {
+        ...this.session,
+        selection: [],
+        selectionInteractionMode: null,
+      },
+      this.session.mode,
+    );
   }
 
   removeSelectedLinks(): void {
@@ -375,24 +532,38 @@ class EditorCoreImpl implements EditorCore {
       this.document.entities[this.session.pendingLinkSourceEntityId]
         ? this.session.pendingLinkSourceEntityId
         : null;
+    const mode = (() => {
+      if (isLinkMode(this.session.mode)) {
+        return {
+          ...this.session.mode,
+          pendingSourceEntityId: pendingLinkSourceEntityId,
+        };
+      }
 
-    this.session = {
-      ...this.session,
-      selection,
-      selectionInteractionMode:
-        selection.length > 0 ? this.session.selectionInteractionMode : null,
-      hoveredEntityId,
-      dragPreviewEntityId,
-      placementRotation:
-        this.session.placementDefinitionId && isPlacementTool(this.session.activeTool)
-          ? this.session.placementRotation
-          : null,
-      pendingLinkSourceEntityId,
-      placementPreview:
-        this.session.placementDefinitionId && isPlacementTool(this.session.activeTool)
-          ? this.session.placementPreview
-          : null,
-    };
+      if (isMoveMode(this.session.mode)) {
+        if (
+          !this.document.entities[this.session.mode.entityId] ||
+          !selection.includes(this.session.mode.entityId)
+        ) {
+          return resolveEditorModeFallback(this.session.mode);
+        }
+      }
+
+      return this.session.mode;
+    })();
+
+    this.session = applyEditorMode(
+      {
+        ...this.session,
+        selection,
+        selectionInteractionMode:
+          selection.length > 0 ? this.session.selectionInteractionMode : null,
+        hoveredEntityId,
+        dragPreviewEntityId,
+        pendingLinkSourceEntityId,
+      },
+      mode,
+    );
   }
 }
 

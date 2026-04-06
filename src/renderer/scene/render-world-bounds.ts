@@ -5,7 +5,10 @@ import {
   type Stage1Registry,
 } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
-import type { PlacementPreviewState } from "@/editor/contracts/placement-preview";
+import type {
+  MovePreviewState,
+  PlacementPreviewState,
+} from "@/editor/contracts/placement-preview";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
 export interface RenderWorldBoundsPx {
@@ -18,6 +21,7 @@ interface DeriveRenderWorldBoundsPxOptions {
   topology: CompiledTopology;
   registry: Stage1Registry;
   placementPreview: PlacementPreviewState | null;
+  movePreview: MovePreviewState | null;
 }
 
 const RENDER_WORLD_PADDING_CELLS = 3;
@@ -25,7 +29,7 @@ const RENDER_WORLD_PADDING_CELLS = 3;
 function getPlacementPreviewBoundsPx(
   options: DeriveRenderWorldBoundsPxOptions,
 ): RenderWorldBoundsPx | null {
-  const preview = options.placementPreview;
+  const preview = options.movePreview ?? options.placementPreview;
 
   if (!preview) {
     return null;
