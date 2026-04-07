@@ -375,6 +375,15 @@ button.is-active {
   white-space: nowrap;
 }
 
+.status-bar-group-left {
+  flex: 1 1 auto;
+  gap: 12px;
+}
+
+.status-bar-group-right {
+  flex: 0 0 auto;
+}
+
 .status-chip {
   display: inline-flex;
   align-items: center;
@@ -382,22 +391,29 @@ button.is-active {
   font-size: 0.75rem;
 }
 
-.status-chip:not(:last-child)::after {
+.status-bar-group-right .status-chip:not(:last-child)::after {
   content: "|";
   margin: 0 8px;
   color: #586579;
 }
 
-.status-bar-group:first-child .status-chip:first-child {
-  height: 20px;
-  padding: 0 8px;
+.status-chip-primary {
+  flex: 0 0 auto;
+  height: 22px;
+  padding: 0 9px;
   border-radius: 999px;
-  background: var(--accent-soft);
+  border: 1px solid rgba(79, 160, 255, 0.35);
+  background: rgba(79, 160, 255, 0.14);
   color: var(--accent-strong);
+  font-weight: 600;
 }
 
-.status-bar-group:first-child .status-chip:first-child::after {
-  background: transparent;
+.status-bar-copyright {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-1);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
 }
 
 .dock,

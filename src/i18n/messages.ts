@@ -79,6 +79,8 @@ export type MessageKey =
   | "status.simulate"
   | "statusBar.mode"
   | "statusBar.view"
+  | "statusBar.running"
+  | "statusBar.copyright"
   | "statusBar.locale"
   | "statusBar.theme"
   | "statusBar.tool"
@@ -184,6 +186,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "status.simulate": "仿真态消费运行快照与遥测摘要。",
     "statusBar.mode": "当前模式",
     "statusBar.view": "当前视图",
+    "statusBar.running": "仿真运行中",
+    "statusBar.copyright": "集成工业仿真",
     "statusBar.locale": "语言",
     "statusBar.theme": "主题",
     "statusBar.tool": "工具",
@@ -288,6 +292,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "status.simulate": "Simulation mode consumes runtime snapshots and telemetry.",
     "statusBar.mode": "Mode",
     "statusBar.view": "View",
+    "statusBar.running": "Simulation Running",
+    "statusBar.copyright": "Integrated Industry Simulator",
     "statusBar.locale": "Locale",
     "statusBar.theme": "Theme",
     "statusBar.tool": "Tool",
