@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 
 import { WorkbenchApp } from "@/app-shell/workbench-app";
+import { LEFT_PANEL_CONTENT } from "@/app-shell/workbench-placeholders";
 import { createWorkbenchShell } from "@/app-shell/workbench-shell";
 import { isPlacementInteractionMode } from "@/editor/contracts/interaction-mode";
+import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -40,6 +42,9 @@ class MockResizeObserver {
 }
 
 const OriginalResizeObserver = globalThis.ResizeObserver;
+const LEFT_DOCK_BUTTON_DESCRIPTORS = LEFT_PANEL_CONTENT.placement.sections.flatMap(
+  (section) => section.buttons,
+);
 
 async function renderWorkbenchApp() {
   const controller = createWorkbenchController();
@@ -112,39 +117,62 @@ describe("WorkbenchApp context menu policy", () => {
     await disposeWorkbenchApp(app);
   });
 
-  it("moves keyboard focus to the canvas after arming placement from the left dock", async () => {
+  it("hands keyboard focus to the canvas for every left-dock placement button", async () => {
     const app = await renderWorkbenchApp();
     const stage = app.container.querySelector(".canvas-stage");
-    const beltButton = Array.from(
+    const dockButtons = Array.from(
       app.container.querySelectorAll(".placeholder-button-grid button"),
-    ).find((button) => button.textContent?.includes("铺设传送带"));
+    ) as HTMLButtonElement[];
+    const locale = app.controller.uiStore.locale;
 
     expect(stage).not.toBeNull();
-    expect(beltButton).toBeDefined();
+    expect(dockButtons).toHaveLength(LEFT_DOCK_BUTTON_DESCRIPTORS.length);
 
-    (beltButton as HTMLButtonElement | undefined)?.focus();
-    expect(document.activeElement).toBe(beltButton ?? null);
+    for (const [index, descriptor] of LEFT_DOCK_BUTTON_DESCRIPTORS.entries()) {
+      if (!descriptor.definitionId) {
+        continue;
+      }
 
-    await act(async () => {
-      (beltButton as HTMLButtonElement | undefined)?.click();
-    });
+      const button = dockButtons[index];
 
-    expect(document.activeElement).toBe(stage ?? null);
-
-    await act(async () => {
-      stage?.dispatchEvent(
-        new KeyboardEvent("keydown", {
-          bubbles: true,
-          key: "r",
-        }),
+      expect(button).toBeDefined();
+      expect(button?.textContent).toContain(
+        localizeWorkbenchText(locale, descriptor.label),
       );
-    });
 
-    const currentMode = app.controller.editorStore.session.currentMode;
-    expect(isPlacementInteractionMode(currentMode)).toBe(true);
-    expect(
-      isPlacementInteractionMode(currentMode) ? currentMode.rotation : null,
-    ).toBe(90);
+      button?.focus();
+      expect(document.activeElement).toBe(button ?? null);
+
+      await act(async () => {
+        button?.click();
+      });
+
+      expect(document.activeElement).toBe(stage ?? null);
+
+      const armedMode = app.controller.editorStore.session.currentMode;
+      expect(isPlacementInteractionMode(armedMode)).toBe(true);
+      expect(
+        isPlacementInteractionMode(armedMode) ? armedMode.definitionId : null,
+      ).toBe(descriptor.definitionId);
+      expect(
+        isPlacementInteractionMode(armedMode) ? armedMode.rotation : null,
+      ).toBe(0);
+
+      await act(async () => {
+        stage?.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            bubbles: true,
+            key: "r",
+          }),
+        );
+      });
+
+      const rotatedMode = app.controller.editorStore.session.currentMode;
+      expect(isPlacementInteractionMode(rotatedMode)).toBe(true);
+      expect(
+        isPlacementInteractionMode(rotatedMode) ? rotatedMode.rotation : null,
+      ).toBe(90);
+    }
 
     await disposeWorkbenchApp(app);
   });
