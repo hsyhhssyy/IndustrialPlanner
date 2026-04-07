@@ -3,7 +3,7 @@ import type {
   DockState,
   LeftPanelMode,
   SimulationSpeedPreset,
-  WorkbenchMode,
+  WorkbenchPhase,
   WorkbenchUiState,
   WorkbenchUiStateInput,
 } from "@/workbench/workbench-ui-state";
@@ -40,7 +40,7 @@ export function isSameWorkbenchUiState(
   right: WorkbenchUiState,
 ): boolean {
   return (
-    left.mode === right.mode &&
+    left.phase === right.phase &&
     left.locale === right.locale &&
     left.logLevel === right.logLevel &&
     left.leftPanelMode === right.leftPanelMode &&
@@ -53,14 +53,14 @@ export function isSameWorkbenchUiState(
 }
 
 export function getWorkbenchStatusMessageKeyForMode(
-  mode: WorkbenchMode,
+  phase: WorkbenchPhase,
 ): MessageKey {
-  return mode === "edit" ? "status.edit" : "status.simulate";
+  return phase === "edit" ? "status.edit" : "status.simulate";
 }
 
 export function createInitialWorkbenchUiState(): WorkbenchUiState {
   return {
-    mode: "edit",
+    phase: "edit",
     locale: DEFAULT_LOCALE,
     logLevel: DEFAULT_WORKBENCH_LOG_LEVEL,
     leftPanelMode: "placement",
@@ -82,25 +82,25 @@ export function createWorkbenchUiState(
   stateInput: WorkbenchUiStateInput = {},
 ): WorkbenchUiState {
   const initialState = createInitialWorkbenchUiState();
-  const mode = stateInput.mode ?? initialState.mode;
+  const phase = stateInput.phase ?? initialState.phase;
 
   return {
     ...initialState,
     ...stateInput,
-    mode,
+    phase,
     leftDock: mergeDockState(initialState.leftDock, stateInput.leftDock),
     rightDock: mergeDockState(initialState.rightDock, stateInput.rightDock),
     statusMessageKey:
       stateInput.statusMessageKey ??
-      (stateInput.mode
-        ? getWorkbenchStatusMessageKeyForMode(mode)
+      (stateInput.phase
+        ? getWorkbenchStatusMessageKeyForMode(phase)
         : initialState.statusMessageKey),
   };
 }
 
 export interface WorkbenchUiStore
   extends ReadonlySnapshotStore<WorkbenchUiState> {
-  mode: WorkbenchMode;
+  phase: WorkbenchPhase;
   locale: AppLocale;
   logLevel: LogLevel;
   leftPanelMode: LeftPanelMode;
@@ -113,7 +113,7 @@ export interface WorkbenchUiStore
     stateInput: WorkbenchUiStateInput | WorkbenchUiState,
   ) => boolean;
   update: (updater: (state: WorkbenchUiState) => WorkbenchUiState) => boolean;
-  setMode: (mode: WorkbenchMode) => void;
+  setPhase: (phase: WorkbenchPhase) => void;
   setLocale: (locale: AppLocale) => void;
   setLogLevel: (level: LogLevel) => void;
   setDiagnosticsVisible: (visible: boolean) => void;
@@ -125,7 +125,7 @@ export interface WorkbenchUiStore
 }
 
 class WorkbenchUiStoreImpl implements WorkbenchUiStore {
-  mode: WorkbenchMode;
+  phase: WorkbenchPhase;
   locale: AppLocale;
   logLevel: LogLevel;
   leftPanelMode: LeftPanelMode;
@@ -139,7 +139,7 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
 
   constructor(initialState: WorkbenchUiStateInput = {}) {
     const initialSnapshot = createWorkbenchUiState(initialState);
-    this.mode = initialSnapshot.mode;
+    this.phase = initialSnapshot.phase;
     this.locale = initialSnapshot.locale;
     this.logLevel = initialSnapshot.logLevel;
     this.leftPanelMode = initialSnapshot.leftPanelMode;
@@ -194,17 +194,17 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
     return this.setSnapshot(nextState);
   }
 
-  setMode(mode: WorkbenchMode): void {
-    const statusMessageKey = getWorkbenchStatusMessageKeyForMode(mode);
+  setPhase(phase: WorkbenchPhase): void {
+    const statusMessageKey = getWorkbenchStatusMessageKeyForMode(phase);
 
     this.update((state) => {
-      if (state.mode === mode && state.statusMessageKey === statusMessageKey) {
+      if (state.phase === phase && state.statusMessageKey === statusMessageKey) {
         return state;
       }
 
       return {
         ...state,
-        mode,
+        phase,
         statusMessageKey,
       };
     });
@@ -330,8 +330,8 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
   }
 
   private applySnapshot(snapshot: WorkbenchUiState): void {
-    if (this.mode !== snapshot.mode) {
-      this.mode = snapshot.mode;
+    if (this.phase !== snapshot.phase) {
+      this.phase = snapshot.phase;
     }
 
     if (this.locale !== snapshot.locale) {

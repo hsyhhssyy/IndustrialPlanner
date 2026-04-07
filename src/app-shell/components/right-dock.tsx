@@ -38,7 +38,7 @@ export const RightDock = observer(function RightDock({
   const t = createTranslator(ui.locale);
 
   const selectedEntityId =
-    ui.mode === "simulate"
+    ui.phase === "simulate"
       ? simulation.selection[0] ?? null
       : editor.session.selection[0] ?? null;
   const selectedEntity = selectedEntityId
@@ -71,7 +71,7 @@ export const RightDock = observer(function RightDock({
       : null;
   const inspectorState = {
     locale: ui.locale,
-    mode: ui.mode,
+    phase: ui.phase,
     inspectorDetails: simulation.inspectorDetails,
     simulationPatchSet: simulation.patchSet,
   } as const;
@@ -166,7 +166,7 @@ export const RightDock = observer(function RightDock({
               <div className="card-header">
                 <h3>{t("rightDock.selection")}</h3>
               </div>
-              {ui.mode === "edit" ? (
+              {ui.phase === "edit" ? (
                 <EditSelectionInspector
                   context={selectionContext}
                   controller={controller}

@@ -39,6 +39,7 @@ import { CanvasActionToolbar } from "./canvas-action-toolbar";
 import { resolveCanvasPanelTapIntent } from "./canvas-panel-tap-intent";
 import { createCanvasPreviewRawInputScheduler } from "./canvas-preview-raw-input-scheduler";
 import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
+import { isPlacementInteractionMode } from "@/editor/contracts/interaction-mode";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { createTranslator } from "@/i18n/messages";
 import { RendererHost } from "@/renderer/host/renderer-host";
@@ -179,15 +180,16 @@ export const CanvasPanel = observer(function CanvasPanel({
     typeof createCanvasPreviewRawInputScheduler
   > | null>(null);
   const t = createTranslator(ui.locale);
+  const placementMode = isPlacementInteractionMode(editor.session.currentMode)
+    ? editor.session.currentMode
+    : null;
   const anchoredPlacementActive =
-    editor.session.placementDefinitionId !== null &&
-    editor.session.placementInteractionMode === "touch";
+    placementMode !== null && placementMode.inputMode === "touch";
   const pointerSelectionQuickActionsActive =
-    ui.mode === "edit" &&
-    editor.session.activeTool === "select" &&
-    editor.session.placementDefinitionId === null &&
+    ui.phase === "edit" &&
+    editor.session.currentMode.key === "select" &&
     editor.session.selection.length > 0 &&
-    editor.session.selectionInteractionMode === "pointer";
+    editor.session.selectionInputMode === "pointer";
   const anchoredPlacementPreview =
     editor.session.placementPreview?.interactionMode === "touch"
       ? editor.session.placementPreview
@@ -479,20 +481,17 @@ export const CanvasPanel = observer(function CanvasPanel({
   ) => {
     const target = controller.getCanvasInteractionTarget(screenPoint);
     const intent = resolveCanvasPanelTapIntent({
-      mode: ui.mode,
-      activeTool: editor.session.activeTool,
-      placementDefinitionId: editor.session.placementDefinitionId,
-      placementInteractionMode: editor.session.placementInteractionMode,
+      phase: ui.phase,
+      currentMode: editor.session.currentMode,
       target,
     });
 
-    if (editor.session.placementDefinitionId) {
+    if (placementMode) {
       logger.info("Resolved canvas tap intent during placement.", {
         screenPoint,
-        mode: ui.mode,
-        activeTool: editor.session.activeTool,
-        placementDefinitionId: editor.session.placementDefinitionId,
-        placementInteractionMode: editor.session.placementInteractionMode,
+        phase: ui.phase,
+        currentMode: editor.session.currentMode,
+        displayTool: editor.session.displayTool,
         target,
         intent,
       });
@@ -558,7 +557,7 @@ export const CanvasPanel = observer(function CanvasPanel({
       return;
     }
 
-    if (event.button === 2 && editor.session.placementDefinitionId) {
+    if (event.button === 2 && placementMode) {
       event.preventDefault();
       pointerTapGestureStateRef.current = createIdleCanvasPanelPointerTapGestureState();
       cancelPlacement();
@@ -765,15 +764,14 @@ export const CanvasPanel = observer(function CanvasPanel({
           resolveInteractionModeFromPointerType(event.pointerType),
         );
       } else if (
-        editor.session.placementDefinitionId &&
-        editor.session.placementInteractionMode === "pointer"
+        placementMode &&
+        placementMode.inputMode === "pointer"
       ) {
         logger.info("Suppressed precise-pointer tap before placement dispatch.", {
           pointerId: event.pointerId,
           pointerType: event.pointerType,
-          activeTool: editor.session.activeTool,
-          placementDefinitionId: editor.session.placementDefinitionId,
-          placementInteractionMode: editor.session.placementInteractionMode,
+          currentMode: editor.session.currentMode,
+          displayTool: editor.session.displayTool,
           tapGestureState: pointerTapGestureStateRef.current,
         });
       }
@@ -856,7 +854,7 @@ export const CanvasPanel = observer(function CanvasPanel({
   };
 
   const handleViewportContextMenu = (event: MouseEvent<HTMLDivElement>) => {
-    if (!editor.session.placementDefinitionId) {
+    if (!placementMode) {
       return;
     }
 
@@ -882,7 +880,7 @@ export const CanvasPanel = observer(function CanvasPanel({
           return;
         }
 
-        if (editor.session.placementDefinitionId) {
+        if (placementMode) {
           event.preventDefault();
           controller.rotatePlacementClockwise();
           return;

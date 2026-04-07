@@ -4,10 +4,15 @@ import {
 import {
   LEFT_PANEL_CONTENT,
   LEFT_RAIL_PRIMARY_ITEMS,
+  type PlaceholderButtonDescriptor,
   type PlaceholderActionId,
 } from "@/app-shell/workbench-placeholders";
-import type { EditorTool } from "@/editor/contracts/editor-session";
 import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
+import {
+  isPlacementDisplayTool,
+  type DisplayTool,
+  type InteractionModeKey,
+} from "@/editor/contracts/interaction-mode";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import {
   createTranslator,
@@ -19,7 +24,7 @@ import { observer } from "@/shared/mobx";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 import { useRef } from "react";
 
-const TOOL_LABEL_KEYS: Record<EditorTool, MessageKey> = {
+const TOOL_LABEL_KEYS: Record<DisplayTool, MessageKey> = {
   select: "tool.select",
   place: "tool.place",
   belt: "tool.belt",
@@ -27,6 +32,38 @@ const TOOL_LABEL_KEYS: Record<EditorTool, MessageKey> = {
   link: "tool.link",
   inspect: "tool.inspect",
 };
+
+function resolveDirectEntryMode(
+  button: PlaceholderButtonDescriptor,
+): Exclude<InteractionModeKey, "placement"> | null {
+  switch (button.displayTool) {
+    case "select":
+      return "select";
+    case "link":
+      return "link";
+    case "inspect":
+      return "inspect";
+    default:
+      return null;
+  }
+}
+
+function isButtonActive(
+  button: PlaceholderButtonDescriptor,
+  session: LeftDockProps["controller"]["editorStore"]["session"],
+): boolean {
+  if (button.definitionId) {
+    return (
+      session.currentMode.key === "placement" &&
+      session.currentMode.definitionId === button.definitionId &&
+      button.displayTool === session.displayTool
+    );
+  }
+
+  const directEntryMode = resolveDirectEntryMode(button);
+
+  return directEntryMode !== null && session.currentMode.key === directEntryMode;
+}
 
 const DEVICE_ICON_PATH_BY_KEY: Record<string, string> = {
   "belt-draw": "/device-icons/item_log_belt_01.webp",
@@ -72,13 +109,13 @@ const logger = createLogger("app.left-dock");
 function isActionDisabled(
   actionId: PlaceholderActionId | undefined,
   options: {
-    mode: "edit" | "simulate";
+    phase: "edit" | "simulate";
     selection: string[];
     canUndo: boolean;
     canRedo: boolean;
   },
 ): boolean {
-  const editCommandsDisabled = options.mode === "simulate";
+  const editCommandsDisabled = options.phase === "simulate";
 
   switch (actionId) {
     case "selection.clear":
@@ -115,9 +152,13 @@ export const LeftDock = observer(function LeftDock({
   const activeRailItem = LEFT_RAIL_PRIMARY_ITEMS.find(
     (item) => item.id === ui.leftPanelMode,
   );
-  const armedPlacementDefinition = editor.session.placementDefinitionId
+  const placementMode =
+    editor.session.currentMode.key === "placement"
+      ? editor.session.currentMode
+      : null;
+  const armedPlacementDefinition = placementMode
     ? registry.entityDefinitions.find(
-        (definition) => definition.id === editor.session.placementDefinitionId,
+        (definition) => definition.id === placementMode.definitionId,
       ) ?? null
     : null;
 
@@ -136,7 +177,7 @@ export const LeftDock = observer(function LeftDock({
           <div className="header-actions">
             <span className="pill">
               {t("leftDock.activeTool")}:{" "}
-              {t(TOOL_LABEL_KEYS[editor.session.activeTool])}
+              {t(TOOL_LABEL_KEYS[editor.session.displayTool])}
             </span>
             <button
               onClick={() => controller.toggleDockCollapsed("left")}
@@ -195,18 +236,16 @@ export const LeftDock = observer(function LeftDock({
                         : button.id === "save-blueprint"
                           ? "blueprint"
                           : null;
-                    const isActive = button.definitionId
-                      ? button.definitionId ===
-                          editor.session.placementDefinitionId &&
-                        button.tool === editor.session.activeTool
-                      : button.tool === editor.session.activeTool;
+                    const isActive = isButtonActive(button, editor.session);
                     const placementDisabledInSimulate =
-                      ui.mode === "simulate" && Boolean(button.definitionId);
+                      ui.phase === "simulate" &&
+                      button.displayTool !== undefined &&
+                      button.displayTool !== "select";
                     const isDisabled =
-                      (!button.tool && !button.definitionId && !button.actionId) ||
+                      (!button.displayTool && !button.definitionId && !button.actionId) ||
                       placementDisabledInSimulate ||
                       isActionDisabled(button.actionId, {
-                        mode: ui.mode,
+                        phase: ui.phase,
                         selection: editor.session.selection,
                         canUndo: editor.history.canUndo,
                         canRedo: editor.history.canRedo,
@@ -228,7 +267,7 @@ export const LeftDock = observer(function LeftDock({
                           logger.info("Observed placement button pointer down.", {
                             buttonId: button.id,
                             definitionId: button.definitionId,
-                            tool: button.tool ?? "place",
+                              displayTool: button.displayTool ?? "place",
                             pointerType: event.pointerType,
                             interactionMode,
                           });
@@ -280,13 +319,15 @@ export const LeftDock = observer(function LeftDock({
                             logger.info("Requested placement from left dock.", {
                               buttonId: button.id,
                               definitionId: button.definitionId,
-                              tool: button.tool ?? "place",
+                              displayTool: button.displayTool ?? "place",
                               interactionMode,
                               pointerType,
                             });
                             controller.armPlacement(
                               button.definitionId,
-                              button.tool ?? "place",
+                              button.displayTool && isPlacementDisplayTool(button.displayTool)
+                                ? button.displayTool
+                                : "place",
                               interactionMode,
                             );
                             return;
@@ -294,8 +335,10 @@ export const LeftDock = observer(function LeftDock({
 
                           pendingPlacementInteractionModeRef.current = null;
 
-                          if (button.tool) {
-                            controller.setActiveTool(button.tool);
+                          const directEntryMode = resolveDirectEntryMode(button);
+
+                          if (directEntryMode) {
+                            controller.setInteractionMode(directEntryMode);
                           }
                         }}
                         type="button"

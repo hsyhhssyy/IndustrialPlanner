@@ -7,6 +7,7 @@ import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { createSnapshotStore } from "@/shared/snapshot-store/snapshot-store";
 import { createEmptySimulationPatchSet } from "@/simulation/protocol/simulation-patch";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
+import { getPendingLinkSourceEntityId } from "@/editor/contracts/interaction-mode";
 import { createWorkspaceDerivedStore } from "@/workbench/workspace-derived-store";
 import { deriveRenderDerivedState } from "@/workbench/workspace-derived-state";
 import { createInitialCanvasViewState } from "@/workbench/workspace-state";
@@ -63,8 +64,9 @@ describe("WorkspaceDerivedStore", () => {
       interaction: {
         selectedEntityIds: workspaceState.editor.session.selection,
         placementPreview: workspaceState.editor.session.placementPreview,
-        pendingLinkSourceEntityId:
-          workspaceState.editor.session.pendingLinkSourceEntityId,
+        pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
+          workspaceState.editor.session.currentMode,
+        ),
       },
       runtimeSnapshot: workspaceState.simulation.runtimeSnapshot,
     });
@@ -231,7 +233,7 @@ describe("WorkspaceDerivedStore", () => {
         session: {
           ...createInitialEditorSession(),
           selection: [selectedEntityId],
-          selectionInteractionMode: "touch" as const,
+          selectionInputMode: "touch" as const,
         },
         history: {
           canUndo: false,

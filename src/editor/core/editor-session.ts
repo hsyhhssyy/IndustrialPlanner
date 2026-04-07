@@ -1,23 +1,24 @@
 import type {
   EditorSession,
-  EditorTool,
 } from "@/editor/contracts/editor-session";
+import {
+  createSelectInteractionMode,
+  isPlacementDisplayTool,
+  type DisplayTool,
+} from "@/editor/contracts/interaction-mode";
 
 export function createInitialEditorSession(): EditorSession {
   return {
-    activeTool: "select",
+    displayTool: "select",
+    currentMode: createSelectInteractionMode(),
     selection: ["reactor-1"],
-    selectionInteractionMode: null,
+    selectionInputMode: null,
     hoveredEntityId: null,
     dragPreviewEntityId: null,
-    placementDefinitionId: null,
-    placementInteractionMode: null,
-    placementRotation: null,
     placementPreview: null,
-    pendingLinkSourceEntityId: null,
   };
 }
 
-export function isPlacementTool(tool: EditorTool): boolean {
-  return tool === "place" || tool === "belt" || tool === "pipe";
+export function isPlacementTool(tool: DisplayTool): boolean {
+  return isPlacementDisplayTool(tool);
 }

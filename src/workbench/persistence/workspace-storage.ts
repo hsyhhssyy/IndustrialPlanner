@@ -26,7 +26,7 @@ function canUseStorage(): boolean {
 }
 
 const WORKBENCH_UI_STATE_KEYS = new Set<keyof WorkbenchUiStateInput>([
-  "mode",
+  "phase",
   "locale",
   "logLevel",
   "leftPanelMode",
@@ -36,10 +36,12 @@ const WORKBENCH_UI_STATE_KEYS = new Set<keyof WorkbenchUiStateInput>([
   "leftDock",
   "rightDock",
 ]);
+const LEGACY_WORKBENCH_UI_STATE_KEYS = new Set(["mode"]);
 
 const WORKSPACE_PERSISTENCE_KEYS = new Set([
   "canvasView",
   "canvasViewport",
+  ...LEGACY_WORKBENCH_UI_STATE_KEYS,
   ...WORKBENCH_UI_STATE_KEYS,
 ]);
 const DOCK_STATE_KEYS = new Set(["open", "collapsed"]);
@@ -112,7 +114,11 @@ function isWorkbenchUiStateInput(
     return false;
   }
 
-  if (value.mode !== undefined && value.mode !== "edit" && value.mode !== "simulate") {
+  if (
+    value.phase !== undefined &&
+    value.phase !== "edit" &&
+    value.phase !== "simulate"
+  ) {
     return false;
   }
 
@@ -170,6 +176,21 @@ function isWorkspacePersistenceInput(
   return isRecord(value) && hasOnlyAllowedKeys(value, WORKSPACE_PERSISTENCE_KEYS);
 }
 
+function normalizePersistedUiCandidate(
+  value: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!("mode" in value) || "phase" in value) {
+    return value;
+  }
+
+  const { mode, ...rest } = value;
+
+  return {
+    ...rest,
+    phase: mode,
+  };
+}
+
 export function createWorkspaceStorage(): WorkspaceStorage {
   return {
     loadWorkspaceState: () => {
@@ -194,8 +215,9 @@ export function createWorkspaceStorage(): WorkspaceStorage {
           return { ui: {} };
         }
 
-        const { canvasView, canvasViewport, ...uiCandidate } = parsed;
+        const { canvasView, canvasViewport, ...rawUiCandidate } = parsed;
         const persistedCanvasView = canvasView ?? canvasViewport;
+        const uiCandidate = normalizePersistedUiCandidate(rawUiCandidate);
 
         if (!isWorkbenchUiStateInput(uiCandidate)) {
           logger.warn(

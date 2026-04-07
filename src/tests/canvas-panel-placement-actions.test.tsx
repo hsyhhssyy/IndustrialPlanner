@@ -2,6 +2,7 @@
 
 import { CanvasPanel } from "@/app-shell/components/canvas-panel/canvas-panel";
 import { createWorkbenchShell } from "@/app-shell/workbench-shell";
+import { isPlacementInteractionMode } from "@/editor/contracts/interaction-mode";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -170,6 +171,14 @@ async function flushCanvasActions() {
   await Promise.resolve();
 }
 
+function getPlacementMode(
+  controller: ReturnType<typeof createWorkbenchController>,
+) {
+  const currentMode = controller.editorStore.getSnapshot().session.currentMode;
+
+  return isPlacementInteractionMode(currentMode) ? currentMode : null;
+}
+
 describe("CanvasPanel placement actions", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -272,7 +281,7 @@ describe("CanvasPanel placement actions", () => {
       );
     });
 
-    expect(controller.editorStore.getSnapshot().session.placementRotation).toBe(90);
+    expect(getPlacementMode(controller)?.rotation).toBe(90);
 
     const contextMenuEvent = new MouseEvent("contextmenu", {
       bubbles: true,
@@ -299,10 +308,8 @@ describe("CanvasPanel placement actions", () => {
       );
     });
 
-    expect(controller.editorStore.getSnapshot().session.activeTool).toBe("select");
-    expect(
-      controller.editorStore.getSnapshot().session.placementDefinitionId,
-    ).toBeNull();
+    expect(controller.editorStore.getSnapshot().session.displayTool).toBe("select");
+    expect(getPlacementMode(controller)).toBeNull();
 
     await disposeCanvasPanel({ root, shell, controller });
   });
@@ -353,7 +360,7 @@ describe("CanvasPanel placement actions", () => {
       cancelButton?.click();
     });
 
-    expect(controller.editorStore.getSnapshot().session.activeTool).toBe("select");
+    expect(controller.editorStore.getSnapshot().session.displayTool).toBe("select");
     expect(container.querySelector(".placement-action-toolbar")).toBeNull();
 
     await disposeCanvasPanel({ root, shell, controller });
@@ -377,7 +384,7 @@ describe("CanvasPanel placement actions", () => {
     });
 
     expect(controller.editorStore.getSnapshot().session.selection).toEqual(["filler-1"]);
-    expect(controller.editorStore.getSnapshot().session.selectionInteractionMode).toBe(
+    expect(controller.editorStore.getSnapshot().session.selectionInputMode).toBe(
       "pointer",
     );
 
@@ -408,7 +415,7 @@ describe("CanvasPanel placement actions", () => {
 
     expect(controller.documentStore.getSnapshot().entities["filler-1"]).toBeUndefined();
     expect(controller.editorStore.getSnapshot().session.selection).toEqual([]);
-    expect(controller.editorStore.getSnapshot().session.selectionInteractionMode).toBeNull();
+    expect(controller.editorStore.getSnapshot().session.selectionInputMode).toBeNull();
 
     await disposeCanvasPanel({ root, shell, controller });
   });
@@ -428,7 +435,7 @@ describe("CanvasPanel placement actions", () => {
     });
 
     expect(controller.editorStore.getSnapshot().session.selection).toEqual(["filler-1"]);
-    expect(controller.editorStore.getSnapshot().session.selectionInteractionMode).toBe(
+    expect(controller.editorStore.getSnapshot().session.selectionInputMode).toBe(
       "touch",
     );
 
@@ -627,12 +634,8 @@ describe("CanvasPanel placement actions", () => {
       Math.hypot(100, 20) / 60,
     );
     expect(panCanvasBySpy).toHaveBeenCalledWith({ x: 20, y: 10 });
-    expect(controller.editorStore.getSnapshot().session.placementDefinitionId).toBe(
-      "belt_straight_1x1",
-    );
-    expect(controller.editorStore.getSnapshot().session.placementInteractionMode).toBe(
-      "touch",
-    );
+    expect(getPlacementMode(controller)?.definitionId).toBe("belt_straight_1x1");
+    expect(getPlacementMode(controller)?.inputMode).toBe("touch");
 
     await disposeCanvasPanel({ root, shell, controller });
   });

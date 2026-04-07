@@ -1,5 +1,9 @@
 import { isSamePlacementPreviewState } from "@/editor/contracts/placement-preview";
 import type { EditorSession } from "@/editor/contracts/editor-session";
+import {
+  cloneCurrentInteractionMode,
+  isSameCurrentInteractionMode,
+} from "@/editor/contracts/interaction-mode";
 import type { EditorHistoryState } from "@/editor/core/editor-core";
 import { makeAutoObservable } from "@/shared/mobx";
 import { createSnapshotBridge } from "@/shared/mobx/snapshot-bridge";
@@ -33,16 +37,13 @@ export function isSameEditorSession(
   right: EditorSession,
 ): boolean {
   return (
-    left.activeTool === right.activeTool &&
+    left.displayTool === right.displayTool &&
+    isSameCurrentInteractionMode(left.currentMode, right.currentMode) &&
     areSelectionsEqual(left.selection, right.selection) &&
-    left.selectionInteractionMode === right.selectionInteractionMode &&
+    left.selectionInputMode === right.selectionInputMode &&
     left.hoveredEntityId === right.hoveredEntityId &&
     left.dragPreviewEntityId === right.dragPreviewEntityId &&
-    left.placementDefinitionId === right.placementDefinitionId &&
-    left.placementInteractionMode === right.placementInteractionMode &&
-    left.placementRotation === right.placementRotation &&
-    isSamePlacementPreviewState(left.placementPreview, right.placementPreview) &&
-    left.pendingLinkSourceEntityId === right.pendingLinkSourceEntityId
+    isSamePlacementPreviewState(left.placementPreview, right.placementPreview)
   );
 }
 
@@ -60,14 +61,12 @@ function isSameEditorHistoryState(
 
 function cloneEditorSession(session: EditorSession): EditorSession {
   return {
-    activeTool: session.activeTool,
+    displayTool: session.displayTool,
+    currentMode: cloneCurrentInteractionMode(session.currentMode),
     selection: [...session.selection],
-    selectionInteractionMode: session.selectionInteractionMode,
+    selectionInputMode: session.selectionInputMode,
     hoveredEntityId: session.hoveredEntityId,
     dragPreviewEntityId: session.dragPreviewEntityId,
-    placementDefinitionId: session.placementDefinitionId,
-    placementInteractionMode: session.placementInteractionMode,
-    placementRotation: session.placementRotation,
     placementPreview: session.placementPreview
       ? {
           ...session.placementPreview,
@@ -76,7 +75,6 @@ function cloneEditorSession(session: EditorSession): EditorSession {
           },
         }
       : null,
-    pendingLinkSourceEntityId: session.pendingLinkSourceEntityId,
   };
 }
 
@@ -153,18 +151,20 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
   }
 
   private applySessionSnapshot(session: EditorSession): void {
-    if (this.session.activeTool !== session.activeTool) {
-      this.session.activeTool = session.activeTool;
+    if (this.session.displayTool !== session.displayTool) {
+      this.session.displayTool = session.displayTool;
+    }
+
+    if (!isSameCurrentInteractionMode(this.session.currentMode, session.currentMode)) {
+      this.session.currentMode = cloneCurrentInteractionMode(session.currentMode);
     }
 
     if (!areSelectionsEqual(this.session.selection, session.selection)) {
       this.session.selection = [...session.selection];
     }
 
-    if (
-      this.session.selectionInteractionMode !== session.selectionInteractionMode
-    ) {
-      this.session.selectionInteractionMode = session.selectionInteractionMode;
+    if (this.session.selectionInputMode !== session.selectionInputMode) {
+      this.session.selectionInputMode = session.selectionInputMode;
     }
 
     if (this.session.hoveredEntityId !== session.hoveredEntityId) {
@@ -173,18 +173,6 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
 
     if (this.session.dragPreviewEntityId !== session.dragPreviewEntityId) {
       this.session.dragPreviewEntityId = session.dragPreviewEntityId;
-    }
-
-    if (this.session.placementDefinitionId !== session.placementDefinitionId) {
-      this.session.placementDefinitionId = session.placementDefinitionId;
-    }
-
-    if (this.session.placementInteractionMode !== session.placementInteractionMode) {
-      this.session.placementInteractionMode = session.placementInteractionMode;
-    }
-
-    if (this.session.placementRotation !== session.placementRotation) {
-      this.session.placementRotation = session.placementRotation;
     }
 
     if (
@@ -198,12 +186,6 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
             },
           }
         : null;
-    }
-
-    if (
-      this.session.pendingLinkSourceEntityId !== session.pendingLinkSourceEntityId
-    ) {
-      this.session.pendingLinkSourceEntityId = session.pendingLinkSourceEntityId;
     }
   }
 

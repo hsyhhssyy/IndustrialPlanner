@@ -6,7 +6,7 @@ import type {
   DockId,
   LeftPanelMode,
   SimulationSpeedPreset,
-  WorkbenchMode,
+  WorkbenchPhase,
 } from "@/workbench/workbench-ui-state";
 import {
   getWorkbenchStatusMessageKeyForMode,
@@ -45,8 +45,14 @@ import {
 } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
-import { isPlacementTool } from "@/editor/core/editor-session";
-import type { EditorTool } from "@/editor/contracts/editor-session";
+import {
+  getPendingLinkSourceEntityId,
+  isInteractionModeAvailableInPhase,
+  isPlacementInteractionMode,
+  resolveDefaultNextInteractionMode,
+  type InteractionModeKey,
+  type PlacementDisplayTool,
+} from "@/editor/contracts/interaction-mode";
 import {
   isSamePlacementPreviewState,
   type PlacementPreviewState,
@@ -219,34 +225,51 @@ class WorkbenchControllerImpl implements WorkbenchController {
     void this.refreshInspectorForSelection();
   }
 
-  setMode(mode: WorkbenchMode): void {
-    const previousMode = this.uiStore.getSnapshot().mode;
+  private getPlacementMode(session = this.editorHost.getState().session) {
+    return isPlacementInteractionMode(session.currentMode)
+      ? session.currentMode
+      : null;
+  }
 
-    if (mode === "simulate") {
+  setPhase(phase: WorkbenchPhase): void {
+    const previousPhase = this.uiStore.getSnapshot().phase;
+
+    if (phase === "simulate") {
       this.editorHost.clearPlacementPreview();
+
+      const currentMode = this.editorHost.getState().session.currentMode;
+
+      if (!isInteractionModeAvailableInPhase(currentMode, phase)) {
+        this.editorHost.setInteractionMode(
+          resolveDefaultNextInteractionMode(currentMode).key as Exclude<
+            InteractionModeKey,
+            "placement"
+          >,
+        );
+      }
     }
 
-    if (previousMode === "simulate" && mode === "edit") {
+    if (previousPhase === "simulate" && phase === "edit") {
       this.simulationHost.clearPatches();
     }
 
-    if (mode === "edit") {
+    if (phase === "edit") {
       this.simulationHost.pause();
     }
 
     const didChange = this.updateUiState((ui) => {
-      if (ui.mode === mode) {
+      if (ui.phase === phase) {
         return ui;
       }
 
       return {
         ...ui,
-        mode,
-        statusMessageKey: getWorkbenchStatusMessageKeyForMode(mode),
+        phase,
+        statusMessageKey: getWorkbenchStatusMessageKeyForMode(phase),
       };
     });
 
-    if (!didChange && previousMode === mode) {
+    if (!didChange && previousPhase === phase) {
       return;
     }
 
@@ -254,32 +277,34 @@ class WorkbenchControllerImpl implements WorkbenchController {
     void this.refreshInspectorForSelection();
   }
 
-  setActiveTool(tool: EditorTool): void {
-    this.editorHost.setActiveTool(tool);
+  setInteractionMode(
+    modeKey: Exclude<InteractionModeKey, "placement">,
+  ): void {
+    this.editorHost.setInteractionMode(modeKey);
     this.sync();
   }
 
   armPlacement(
     definitionId: string,
-    tool: EditorTool = "place",
-    interactionMode: PlacementInteractionMode = "pointer",
+    displayTool: PlacementDisplayTool = "place",
+    inputMode: PlacementInteractionMode = "pointer",
   ): void {
-    if (this.uiStore.getSnapshot().mode === "simulate") {
+    if (this.uiStore.getSnapshot().phase === "simulate") {
       this.logger.warn("Ignored placement request while simulate mode is active.", {
         definitionId,
-        tool,
-        interactionMode,
+        displayTool,
+        inputMode,
       });
       return;
     }
 
-    this.editorHost.setPlacementDefinition(definitionId, tool, interactionMode);
+    this.editorHost.armPlacement(definitionId, displayTool, inputMode);
     this.logger.info("Armed placement through workbench controller.", {
       definitionId,
-      tool,
-      interactionMode,
+      displayTool,
+      inputMode,
       viewportSize: this.viewportSize,
-      mode: this.uiStore.getSnapshot().mode,
+      phase: this.uiStore.getSnapshot().phase,
     });
     this.updateUiState((ui) => ({
       ...ui,
@@ -291,7 +316,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     }));
 
     if (
-      interactionMode === "touch" &&
+      inputMode === "touch" &&
       this.viewportSize.x > 0 &&
       this.viewportSize.y > 0
     ) {
@@ -314,20 +339,18 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   cancelPlacement(): void {
     const session = this.editorHost.getState().session;
+    const placementMode = this.getPlacementMode(session);
 
-    if (
-      !isPlacementTool(session.activeTool) ||
-      !session.placementDefinitionId
-    ) {
+    if (!placementMode) {
       return;
     }
 
-    this.editorHost.setActiveTool("select");
+    this.editorHost.setInteractionMode("select");
     this.logger.info("Canceled armed placement and returned to select tool.", {
-      previousTool: session.activeTool,
-      placementDefinitionId: session.placementDefinitionId,
-      placementInteractionMode: session.placementInteractionMode,
-      placementRotation: session.placementRotation,
+      previousMode: session.currentMode,
+      placementDefinitionId: placementMode.definitionId,
+      placementInputMode: placementMode.inputMode,
+      placementRotation: placementMode.rotation,
     });
     this.sync();
   }
@@ -361,13 +384,11 @@ class WorkbenchControllerImpl implements WorkbenchController {
       });
 
       const syncMetrics = this.sync();
+      const placementMode = this.getPlacementMode(sessionBefore);
 
-      if (
-        sessionBefore.placementDefinitionId &&
-        sessionBefore.placementInteractionMode
-      ) {
-        const definitionId = sessionBefore.placementDefinitionId;
-        const interactionMode = sessionBefore.placementInteractionMode;
+      if (placementMode) {
+        const definitionId = placementMode.definitionId;
+        const interactionMode = placementMode.inputMode;
 
         this.measureProfilerStage("controller.diagnostics", () => {
           this.recordPlacementPreviewDiagnostic({
@@ -393,8 +414,9 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
     if (
       didPlace &&
-      this.editorStore.getSnapshot().session.placementInteractionMode === "touch" &&
-      this.uiStore.getSnapshot().mode === "edit"
+      this.getPlacementMode(this.editorStore.getSnapshot().session)?.inputMode ===
+        "touch" &&
+      this.uiStore.getSnapshot().phase === "edit"
     ) {
       this.centerPlacementPreview();
     }
@@ -407,11 +429,11 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   async selectEntity(
     entityId: string,
-    interactionMode: PlacementInteractionMode | null = null,
+    inputMode: PlacementInteractionMode | null = null,
   ): Promise<void> {
     await this.applyEditorMutation(() => {
-      this.editorHost.selectEntity(entityId, interactionMode);
-      this.editorHost.setPendingLinkSource(null);
+      this.editorHost.selectEntity(entityId, inputMode);
+      this.editorHost.setLinkSourceEntityId(null);
     });
   }
 
@@ -429,7 +451,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   async clearSelection(): Promise<void> {
     await this.applyEditorMutation(() => {
       this.editorHost.selectEntity(null);
-      this.editorHost.setPendingLinkSource(null);
+      this.editorHost.setLinkSourceEntityId(null);
     });
   }
 
@@ -455,7 +477,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       this.canvasViewStore.getSnapshot(),
     );
 
-    return this.uiStore.getSnapshot().mode === "simulate"
+    return this.uiStore.getSnapshot().phase === "simulate"
       ? this.simulationHost.queryInteractionTarget(worldPoint)
       : this.editorHost.queryInteractionTarget(worldPoint);
   }
@@ -463,14 +485,16 @@ class WorkbenchControllerImpl implements WorkbenchController {
   async commitPlacementAtScreenPoint(screenPoint: CanvasPoint): Promise<void> {
     const worldInput = this.resolveWorldInput(screenPoint);
     const session = this.editorStore.getSnapshot().session;
+    const placementMode = this.getPlacementMode(session);
     this.logger.info("Attempting placement commit from screen point.", {
       screenPoint,
       worldPoint: worldInput.worldPoint,
       gridPoint: worldInput.gridPoint,
-      activeTool: session.activeTool,
-      placementDefinitionId: session.placementDefinitionId,
-      placementInteractionMode: session.placementInteractionMode,
-      placementRotation: session.placementRotation,
+      currentMode: session.currentMode,
+      displayTool: session.displayTool,
+      placementDefinitionId: placementMode?.definitionId ?? null,
+      placementInputMode: placementMode?.inputMode ?? null,
+      placementRotation: placementMode?.rotation ?? null,
     });
     const before = this.captureMutationState();
     const didPlace = this.editorHost.commitPlacement(worldInput);
@@ -517,14 +541,14 @@ class WorkbenchControllerImpl implements WorkbenchController {
   async undo(): Promise<void> {
     await this.applyEditorMutation(() => {
       this.editorHost.undo();
-      this.editorHost.setPendingLinkSource(null);
+      this.editorHost.setLinkSourceEntityId(null);
     });
   }
 
   async redo(): Promise<void> {
     await this.applyEditorMutation(() => {
       this.editorHost.redo();
-      this.editorHost.setPendingLinkSource(null);
+      this.editorHost.setLinkSourceEntityId(null);
     });
   }
 
@@ -730,13 +754,13 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   startSimulation(): void {
-    this.setMode("simulate");
+    this.setPhase("simulate");
     this.simulationHost.start();
     this.logger.info("Started simulation playback.");
   }
 
   stopSimulation(): void {
-    this.setMode("edit");
+    this.setPhase("edit");
     this.logger.info("Stopped simulation playback and returned to edit mode.");
   }
 
@@ -747,7 +771,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   stepSimulation(): void {
-    this.setMode("simulate");
+    this.setPhase("simulate");
     this.simulationHost.step();
     this.logger.debug("Stepped simulation by one tick.");
   }
@@ -770,7 +794,9 @@ class WorkbenchControllerImpl implements WorkbenchController {
     return {
       document: this.documentStore.getSnapshot(),
       selectionId: this.getActiveSelectionId(),
-      pendingLinkSourceEntityId: this.editorHost.getState().session.pendingLinkSourceEntityId,
+      pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
+        this.editorHost.getState().session.currentMode,
+      ),
     };
   }
 
@@ -793,11 +819,12 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
     const afterEditorState = this.editorHost.getState();
     const afterSelectionId =
-      this.uiStore.getSnapshot().mode === "simulate"
+      this.uiStore.getSnapshot().phase === "simulate"
         ? this.simulationHost.getSnapshot().selection[0] ?? null
         : afterEditorState.session.selection[0] ?? null;
-    const afterPendingLinkSourceEntityId =
-      afterEditorState.session.pendingLinkSourceEntityId;
+    const afterPendingLinkSourceEntityId = getPendingLinkSourceEntityId(
+      afterEditorState.session.currentMode,
+    );
     const selectionChanged = before.selectionId !== afterSelectionId;
     const pendingLinkChanged =
       before.pendingLinkSourceEntityId !== afterPendingLinkSourceEntityId;
@@ -815,7 +842,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   private getActiveSelectionId(): string | null {
-    return this.uiStore.getSnapshot().mode === "simulate"
+    return this.uiStore.getSnapshot().phase === "simulate"
       ? this.simulationHost.getSnapshot().selection[0] ?? null
       : this.editorHost.getState().session.selection[0] ?? null;
   }
@@ -946,7 +973,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       topology: this.topology,
       registry: this.registry,
       placementPreview:
-        workspaceState.ui.mode === "edit"
+        workspaceState.ui.phase === "edit"
           ? workspaceState.editor.session.placementPreview
           : null,
     });

@@ -1,8 +1,6 @@
-import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
-import type { EditorTool } from "@/editor/contracts/editor-session";
-import { isPlacementTool } from "@/editor/core/editor-session";
+import type { CurrentInteractionMode } from "@/editor/contracts/interaction-mode";
 import type { CanvasInteractionTarget } from "@/workbench/contracts/workbench-facade";
-import type { WorkbenchMode } from "@/workbench/workbench-ui-state";
+import type { WorkbenchPhase } from "@/workbench/workbench-ui-state";
 
 export type CanvasPanelTapIntent =
   | {
@@ -28,10 +26,8 @@ export type CanvasPanelTapIntent =
     };
 
 export interface ResolveCanvasPanelTapIntentOptions {
-  mode: WorkbenchMode;
-  activeTool: EditorTool;
-  placementDefinitionId: string | null;
-  placementInteractionMode: PlacementInteractionMode | null;
+  phase: WorkbenchPhase;
+  currentMode: CurrentInteractionMode;
   target: CanvasInteractionTarget;
 }
 
@@ -41,38 +37,29 @@ export function resolveCanvasPanelTapIntent(
   const targetEntityId =
     options.target.kind === "entity" ? options.target.entityId : null;
 
-  if (options.mode === "simulate") {
+  if (options.phase === "simulate") {
     return {
       kind: "select-simulation-entity",
       entityId: targetEntityId,
     };
   }
 
-  if (options.activeTool === "link") {
-    return {
-      kind: "activate-link-target",
-      entityId: targetEntityId,
-    };
-  }
-
-  if (
-    isPlacementTool(options.activeTool) &&
-    options.placementDefinitionId &&
-    options.placementInteractionMode === "pointer"
-  ) {
-    return {
-      kind: "commit-placement",
-    };
-  }
-
-  if (
-    isPlacementTool(options.activeTool) &&
-    options.placementDefinitionId &&
-    options.placementInteractionMode === "touch"
-  ) {
-    return {
-      kind: "noop",
-    };
+  switch (options.currentMode.key) {
+    case "link":
+      return {
+        kind: "activate-link-target",
+        entityId: targetEntityId,
+      };
+    case "placement":
+      return options.currentMode.inputMode === "pointer"
+        ? {
+            kind: "commit-placement",
+          }
+        : {
+            kind: "noop",
+          };
+    default:
+      break;
   }
 
   if (targetEntityId) {

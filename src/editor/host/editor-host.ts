@@ -4,10 +4,14 @@ import {
   type EditorHistoryState,
   type EditorCoreSnapshot,
 } from "@/editor/core/editor-core";
-import type {
-  EditorSession,
-  EditorTool,
-} from "@/editor/contracts/editor-session";
+import type { EditorSession } from "@/editor/contracts/editor-session";
+import {
+  getPendingLinkSourceEntityId,
+  isLinkInteractionMode,
+  isPlacementInteractionMode,
+  type InteractionModeKey,
+  type PlacementDisplayTool,
+} from "@/editor/contracts/interaction-mode";
 import {
   isSamePlacementPreviewState,
 } from "@/editor/contracts/placement-preview";
@@ -25,7 +29,6 @@ import {
   getStage1BaseDefinition,
   isStage1FootprintWithinBase,
 } from "@/domain/base/stage1-bases";
-import { isPlacementTool } from "@/editor/core/editor-session";
 import {
   getRotatedGridFootprint,
   resolveCenteredGridPoint,
@@ -146,11 +149,13 @@ export interface EditorHost {
   queryInteractionTarget: (
     worldPoint: CanvasPoint,
   ) => EditorWorldInteractionTarget;
-  setActiveTool: (tool: EditorTool) => void;
-  setPlacementDefinition: (
+  setInteractionMode: (
+    modeKey: Exclude<InteractionModeKey, "placement">,
+  ) => void;
+  armPlacement: (
     definitionId: string,
-    tool?: EditorTool,
-    interactionMode?: PlacementInteractionMode,
+    displayTool?: PlacementDisplayTool,
+    inputMode?: PlacementInteractionMode,
   ) => void;
   rotatePlacementClockwise: () => boolean;
   queryPlacementAtWorldInput: (input: CanvasWorldInput) => PlacementQueryResult;
@@ -165,10 +170,10 @@ export interface EditorHost {
   setPlacementPreview: (preview: PlacementPreviewState | null) => void;
   selectEntity: (
     entityId: string | null,
-    interactionMode?: PlacementInteractionMode | null,
+    inputMode?: PlacementInteractionMode | null,
   ) => void;
   rotateSelectedEntityClockwise: () => boolean;
-  setPendingLinkSource: (entityId: string | null) => void;
+  setLinkSourceEntityId: (entityId: string | null) => void;
   placeEntity: (
     definitionId: string,
     position: GridPoint,
@@ -239,6 +244,18 @@ class EditorHostImpl implements EditorHost {
     };
   }
 
+  private getPlacementMode(session: EditorSession = this.core.getSnapshot().session) {
+    return isPlacementInteractionMode(session.currentMode)
+      ? session.currentMode
+      : null;
+  }
+
+  private getLinkMode(session: EditorSession = this.core.getSnapshot().session) {
+    return isLinkInteractionMode(session.currentMode)
+      ? session.currentMode
+      : null;
+  }
+
   queryInteractionTarget(worldPoint: CanvasPoint): EditorWorldInteractionTarget {
     const snapshot = this.core.getSnapshot();
     const hitEntityId = hitTestWorldEntity(
@@ -260,43 +277,44 @@ class EditorHostImpl implements EditorHost {
     };
   }
 
-  setActiveTool(tool: EditorTool): void {
-    this.core.setActiveTool(tool);
+  setInteractionMode(modeKey: Exclude<InteractionModeKey, "placement">): void {
+    this.core.setInteractionMode(modeKey);
   }
 
-  setPlacementDefinition(
+  armPlacement(
     definitionId: string,
-    tool?: EditorTool,
-    interactionMode?: PlacementInteractionMode,
+    displayTool?: PlacementDisplayTool,
+    inputMode?: PlacementInteractionMode,
   ): void {
-    this.core.setPlacementDefinition(definitionId, tool, interactionMode);
+    this.core.armPlacement(definitionId, displayTool, inputMode);
     this.logger.info("Armed placement definition.", {
       definitionId,
-      tool: tool ?? "place",
-      interactionMode: interactionMode ?? "pointer",
+      displayTool: displayTool ?? "place",
+      inputMode: inputMode ?? "pointer",
     });
   }
 
   rotatePlacementClockwise(): boolean {
     const { session } = this.core.getSnapshot();
+    const placementMode = this.getPlacementMode(session);
 
-    if (!isPlacementTool(session.activeTool) || !session.placementDefinitionId) {
+    if (!placementMode) {
       return false;
     }
 
-    const definition = this.getDefinition(session.placementDefinitionId);
+    const definition = this.getDefinition(placementMode.definitionId);
 
     if (!definition) {
       return false;
     }
 
-    const currentRotation = session.placementRotation ?? 0;
+    const currentRotation = placementMode.rotation;
     const nextRotation = rotateGridRotationClockwise(currentRotation);
     this.core.setPlacementRotation(nextRotation);
 
     if (!session.placementPreview) {
       this.logger.info("Rotated armed placement before preview existed.", {
-        definitionId: session.placementDefinitionId,
+        definitionId: placementMode.definitionId,
         previousRotation: currentRotation,
         nextRotation,
       });
@@ -332,7 +350,7 @@ class EditorHostImpl implements EditorHost {
     }
 
     this.logger.info("Rotated armed placement preview.", {
-      definitionId: session.placementDefinitionId,
+      definitionId: placementMode.definitionId,
       previousRotation: currentRotation,
       nextRotation,
       previousGridPoint: session.placementPreview.gridPoint,
@@ -377,8 +395,9 @@ class EditorHostImpl implements EditorHost {
   queryPlacementAtWorldInput(input: CanvasWorldInput): PlacementQueryResult {
     return this.measureProfilerStage("editor.resolvePlacementPreview", () => {
       const { document, session } = this.core.getSnapshot();
+      const placementMode = this.getPlacementMode(session);
 
-      if (!isPlacementTool(session.activeTool) || !session.placementDefinitionId) {
+      if (!placementMode) {
         return {
           preview: null,
           invalidReason: "inactive-tool",
@@ -387,7 +406,7 @@ class EditorHostImpl implements EditorHost {
         };
       }
 
-      const definition = this.getDefinition(session.placementDefinitionId);
+      const definition = this.getDefinition(placementMode.definitionId);
 
       if (!definition) {
         return {
@@ -423,11 +442,11 @@ class EditorHostImpl implements EditorHost {
 
   queryPlacementPreview(preview: PlacementPreviewState): PlacementQueryResult {
     const { session } = this.core.getSnapshot();
+    const placementMode = this.getPlacementMode(session);
 
     if (
-      !isPlacementTool(session.activeTool) ||
-      !session.placementDefinitionId ||
-      preview.definitionId !== session.placementDefinitionId
+      !placementMode ||
+      preview.definitionId !== placementMode.definitionId
     ) {
       return {
         preview: null,
@@ -464,17 +483,16 @@ class EditorHostImpl implements EditorHost {
   confirmPlacement(): boolean {
     const { session } = this.core.getSnapshot();
     const preview = session.placementPreview;
+    const placementMode = this.getPlacementMode(session);
 
     if (
-      !isPlacementTool(session.activeTool) ||
-      !session.placementDefinitionId ||
+      !placementMode ||
       !preview ||
-      preview.definitionId !== session.placementDefinitionId
+      preview.definitionId !== placementMode.definitionId
     ) {
       this.logger.info("Skipped placement confirmation.", {
-        activeTool: session.activeTool,
-        placementDefinitionId: session.placementDefinitionId,
-        placementInteractionMode: session.placementInteractionMode,
+        currentMode: session.currentMode,
+        displayTool: session.displayTool,
         preview,
       });
       return false;
@@ -488,7 +506,7 @@ class EditorHostImpl implements EditorHost {
 
     if (!resolution.preview?.valid) {
       this.logger.info("Blocked placement confirmation.", {
-        definitionId: session.placementDefinitionId,
+        definitionId: placementMode.definitionId,
         preview,
         invalidReason: resolution.invalidReason,
         overlappingEntityIds: resolution.overlappingEntityIds,
@@ -497,14 +515,14 @@ class EditorHostImpl implements EditorHost {
     }
 
       this.logger.info("Confirmed placement from preview.", {
-      definitionId: session.placementDefinitionId,
+        definitionId: placementMode.definitionId,
       gridPoint: resolution.preview.gridPoint,
       rotation: resolution.preview.rotation,
       interactionMode: resolution.preview.interactionMode,
       overlappingEntityIds: resolution.overlappingEntityIds,
     });
     this.core.placeEntity(
-      session.placementDefinitionId,
+        placementMode.definitionId,
       resolution.preview.gridPoint,
       resolution.preview.rotation,
     );
@@ -513,16 +531,15 @@ class EditorHostImpl implements EditorHost {
 
   commitPlacement(input: CanvasWorldInput): boolean {
     const { session } = this.core.getSnapshot();
+    const placementMode = this.getPlacementMode(session);
 
     if (
-      !isPlacementTool(session.activeTool) ||
-      !session.placementDefinitionId ||
-      session.placementInteractionMode !== "pointer"
+      !placementMode ||
+      placementMode.inputMode !== "pointer"
     ) {
       this.logger.info("Skipped pointer placement commit before preview resolution.", {
-        activeTool: session.activeTool,
-        placementDefinitionId: session.placementDefinitionId,
-        placementInteractionMode: session.placementInteractionMode,
+        currentMode: session.currentMode,
+        displayTool: session.displayTool,
       });
       return false;
     }
@@ -531,9 +548,9 @@ class EditorHostImpl implements EditorHost {
     const preview = resolution.preview;
 
     if (!preview?.valid) {
-      this.core.setPendingLinkSource(null);
+      this.core.setLinkSourceEntityId(null);
     this.logger.info("Blocked pointer placement commit.", {
-        definitionId: session.placementDefinitionId,
+        definitionId: placementMode.definitionId,
         worldPoint: input.worldPoint,
         gridPoint: input.gridPoint,
         preview,
@@ -545,14 +562,14 @@ class EditorHostImpl implements EditorHost {
     }
 
     this.logger.info("Committed pointer placement.", {
-      definitionId: session.placementDefinitionId,
+      definitionId: placementMode.definitionId,
       worldPoint: input.worldPoint,
       gridPoint: input.gridPoint,
       preview,
       overlappingEntityIds: resolution.overlappingEntityIds,
     });
     this.core.placeEntity(
-      session.placementDefinitionId,
+      placementMode.definitionId,
       preview.gridPoint,
       preview.rotation,
     );
@@ -573,9 +590,9 @@ class EditorHostImpl implements EditorHost {
 
   selectEntity(
     entityId: string | null,
-    interactionMode?: PlacementInteractionMode | null,
+    inputMode?: PlacementInteractionMode | null,
   ): void {
-    this.core.selectEntity(entityId, interactionMode);
+    this.core.selectEntity(entityId, inputMode);
   }
 
   rotateSelectedEntityClockwise(): boolean {
@@ -631,8 +648,8 @@ class EditorHostImpl implements EditorHost {
     return didRotate;
   }
 
-  setPendingLinkSource(entityId: string | null): void {
-    this.core.setPendingLinkSource(entityId);
+  setLinkSourceEntityId(entityId: string | null): void {
+    this.core.setLinkSourceEntityId(entityId);
   }
 
   placeEntity(
@@ -677,7 +694,8 @@ class EditorHostImpl implements EditorHost {
     definition: Stage1EntityDefinition,
     input: CanvasWorldInput,
   ): PlacementPreviewState {
-    const rotation = session.placementRotation ?? 0;
+    const placementMode = this.getPlacementMode(session);
+    const rotation = placementMode?.rotation ?? 0;
     const footprint = getRotatedGridFootprint(definition.footprint, rotation);
     const previewGridPoint = resolveCenteredPlacementGridPoint({
       worldPoint: input.worldPoint,
@@ -686,8 +704,8 @@ class EditorHostImpl implements EditorHost {
     });
 
     return {
-      definitionId: session.placementDefinitionId ?? definition.id,
-      interactionMode: session.placementInteractionMode ?? "pointer",
+      definitionId: placementMode?.definitionId ?? definition.id,
+      interactionMode: placementMode?.inputMode ?? "pointer",
       gridPoint: previewGridPoint,
       rotation,
       valid: true,
@@ -763,26 +781,24 @@ class EditorHostImpl implements EditorHost {
   }
 
   private handleLinkToolClick(hitEntityId: string | null): void {
-    const {
-      document,
-      session: { pendingLinkSourceEntityId },
-    } = this.core.getSnapshot();
+    const { document, session } = this.core.getSnapshot();
+    const pendingLinkSourceEntityId = getPendingLinkSourceEntityId(session.currentMode);
 
     if (!hitEntityId) {
       this.core.selectEntity(null, null);
-      this.core.setPendingLinkSource(null);
+      this.core.setLinkSourceEntityId(null);
       return;
     }
 
     if (!pendingLinkSourceEntityId) {
       this.core.selectEntity(hitEntityId, null);
-      this.core.setPendingLinkSource(hitEntityId);
+      this.core.setLinkSourceEntityId(hitEntityId);
       return;
     }
 
     if (pendingLinkSourceEntityId === hitEntityId) {
       this.core.selectEntity(hitEntityId, null);
-      this.core.setPendingLinkSource(null);
+      this.core.setLinkSourceEntityId(null);
       return;
     }
 
@@ -793,7 +809,7 @@ class EditorHostImpl implements EditorHost {
 
     if (!resolvedPair) {
       this.core.selectEntity(hitEntityId, null);
-      this.core.setPendingLinkSource(hitEntityId);
+      this.core.setLinkSourceEntityId(hitEntityId);
       return;
     }
 
@@ -806,7 +822,7 @@ class EditorHostImpl implements EditorHost {
     if (existingLink) {
       this.core.removeLink(existingLink.id);
       this.core.selectEntity(hitEntityId, null);
-      this.core.setPendingLinkSource(null);
+      this.core.setLinkSourceEntityId(null);
       return;
     }
 

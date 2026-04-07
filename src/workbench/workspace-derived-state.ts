@@ -2,6 +2,7 @@ import {
   getStage1EntityDefinition,
   type Stage1Registry,
 } from "@/domain/registry/stage1-registry";
+import { isPlacementInteractionMode } from "@/editor/contracts/interaction-mode";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import { deriveRenderWorldBoundsPx } from "@/renderer/scene/render-world-bounds";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
@@ -73,7 +74,7 @@ function deriveAnchoredPlacementScreenBox(
   } = options;
   const preview = editor.session.placementPreview;
 
-  if (ui.mode !== "edit" || !preview || preview.interactionMode !== "touch") {
+  if (ui.phase !== "edit" || !preview || preview.interactionMode !== "touch") {
     return null;
   }
 
@@ -104,12 +105,13 @@ function deriveAnchoredSelectionScreenBox(
     workspaceState: { canvasView, document, editor, ui },
     topology,
   } = options;
+  const selectionMode = editor.session.currentMode;
 
   if (
-    ui.mode !== "edit" ||
-    editor.session.activeTool !== "select" ||
-    editor.session.placementDefinitionId !== null ||
-    editor.session.selectionInteractionMode !== "touch" ||
+    ui.phase !== "edit" ||
+    selectionMode.key !== "select" ||
+    isPlacementInteractionMode(editor.session.currentMode) ||
+    editor.session.selectionInputMode !== "touch" ||
     editor.session.selection.length !== 1
   ) {
     return null;
@@ -151,7 +153,7 @@ export function deriveRenderDerivedState(
     document,
     topology,
     registry,
-    placementPreview: ui.mode === "edit" ? editor.session.placementPreview : null,
+    placementPreview: ui.phase === "edit" ? editor.session.placementPreview : null,
   });
 
   return {

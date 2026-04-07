@@ -1,7 +1,7 @@
 import type {
   WorkbenchController,
 } from "@/workbench/contracts/workbench-facade";
-import type { WorkbenchMode } from "@/workbench/workbench-ui-state";
+import type { WorkbenchPhase } from "@/workbench/workbench-ui-state";
 import type {
   Stage1EntityDefinition,
 } from "@/domain/registry/stage1-registry";
@@ -26,7 +26,7 @@ export interface SelectionInspectorContext {
 
 export interface SelectionInspectorState {
   locale: AppLocale;
-  mode: WorkbenchMode;
+  phase: WorkbenchPhase;
   inspectorDetails: RuntimeInspectorDetails | null;
   simulationPatchSet: SimulationPatchSet;
 }

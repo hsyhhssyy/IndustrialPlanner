@@ -51,7 +51,7 @@ export function EditSelectionInspector({
           >
             {t("action.removeLinks")}
           </button>
-          <button onClick={() => controller.setActiveTool("link")} type="button">
+          <button onClick={() => controller.setInteractionMode("link")} type="button">
             {t("tool.link")}
           </button>
         </div>

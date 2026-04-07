@@ -42,7 +42,7 @@ export function SelectionInspectorSummary({
       </div>
       <div className="kv">
         <dt>{t("label.mode")}</dt>
-        <dd>{t(state.mode === "edit" ? "mode.edit" : "mode.simulate")}</dd>
+        <dd>{t(state.phase === "edit" ? "mode.edit" : "mode.simulate")}</dd>
       </div>
       <div className="kv">
         <dt>{t("label.runtime")}</dt>

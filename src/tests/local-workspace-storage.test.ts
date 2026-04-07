@@ -38,7 +38,7 @@ describe("WorkspaceStorageGateway", () => {
     });
     const canvasView = createInitialCanvasViewState();
 
-    uiStore.setMode("simulate");
+    uiStore.setPhase("simulate");
     uiStore.setLogLevel("error");
     uiStore.setDockOpen("left", false);
     storage.saveWorkspaceState({
@@ -50,7 +50,7 @@ describe("WorkspaceStorageGateway", () => {
     });
 
     expect(JSON.parse(localStorage.getItem(UI_STATE_KEY) ?? "null")).toMatchObject({
-      mode: "simulate",
+      phase: "simulate",
       locale: "en-US",
       logLevel: "error",
       leftDock: {

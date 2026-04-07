@@ -2,7 +2,7 @@ import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import {
   LEFT_RAIL_PRIMARY_ITEMS,
 } from "@/app-shell/workbench-placeholders";
-import type { EditorTool } from "@/editor/contracts/editor-session";
+import type { DisplayTool } from "@/editor/contracts/interaction-mode";
 import {
   createTranslator,
   type MessageKey,
@@ -16,7 +16,7 @@ export interface BottomStatusBarProps {
   controller: WorkbenchController;
 }
 
-const TOOL_LABEL_KEYS: Record<EditorTool, MessageKey> = {
+const TOOL_LABEL_KEYS: Record<DisplayTool, MessageKey> = {
   select: "tool.select",
   place: "tool.place",
   belt: "tool.belt",
@@ -35,7 +35,7 @@ export const BottomStatusBar = observer(function BottomStatusBar({
   const simulation = useExternalStore(controller.simulationStore);
   const t = createTranslator(ui.locale);
   const selectedEntityId =
-    ui.mode === "simulate"
+    ui.phase === "simulate"
       ? simulation.selection[0] ?? null
       : editor.session.selection[0] ?? null;
   const selectedDefinition = selectedEntityId
@@ -59,11 +59,11 @@ export const BottomStatusBar = observer(function BottomStatusBar({
         </span>
         <span className="status-chip">
           {t("statusBar.mode")}:{" "}
-          {t(ui.mode === "edit" ? "mode.edit" : "mode.simulate")}
+          {t(ui.phase === "edit" ? "mode.edit" : "mode.simulate")}
         </span>
         <span className="status-chip">
           {t("statusBar.tool")}:{" "}
-          {t(TOOL_LABEL_KEYS[editor.session.activeTool])}
+          {t(TOOL_LABEL_KEYS[editor.session.displayTool])}
         </span>
         <span className="status-chip">
           {t("statusBar.locale")}: {t(`locale.${ui.locale}`)}

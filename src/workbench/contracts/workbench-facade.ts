@@ -2,12 +2,15 @@ import type {
   DockId,
   LeftPanelMode,
   SimulationSpeedPreset,
-  WorkbenchMode,
+  WorkbenchPhase,
 } from "@/workbench/workbench-ui-state";
 import type { Stage1Registry } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import type { WorldDocument } from "@/domain/document/world-document";
-import type { EditorTool } from "@/editor/contracts/editor-session";
+import type {
+  InteractionModeKey,
+  PlacementDisplayTool,
+} from "@/editor/contracts/interaction-mode";
 import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
 import type { EditorRuntimeStore } from "@/editor/editor-runtime-store";
 import type { AppLocale } from "@/i18n/messages";
@@ -39,12 +42,14 @@ export interface WorkbenchController {
   topologyStore: Pick<SnapshotStore<CompiledTopology>, "getSnapshot" | "subscribe">;
   simulationStore: ReadonlySnapshotStore<SimulationState>;
   registry: Stage1Registry;
-  setMode: (mode: WorkbenchMode) => void;
-  setActiveTool: (tool: EditorTool) => void;
+  setPhase: (phase: WorkbenchPhase) => void;
+  setInteractionMode: (
+    modeKey: Exclude<InteractionModeKey, "placement">,
+  ) => void;
   armPlacement: (
     definitionId: string,
-    tool?: EditorTool,
-    interactionMode?: PlacementInteractionMode,
+    displayTool?: PlacementDisplayTool,
+    inputMode?: PlacementInteractionMode,
   ) => void;
   rotatePlacementClockwise: () => void;
   cancelPlacement: () => void;
@@ -54,7 +59,7 @@ export interface WorkbenchController {
   clearPlacementPreview: () => void;
   selectEntity: (
     entityId: string,
-    interactionMode?: PlacementInteractionMode | null,
+    inputMode?: PlacementInteractionMode | null,
   ) => Promise<void>;
   rotateSelectionClockwise: () => Promise<void>;
   clearSelection: () => Promise<void>;

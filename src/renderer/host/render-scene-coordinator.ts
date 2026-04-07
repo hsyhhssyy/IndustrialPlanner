@@ -15,6 +15,7 @@ import type {
 import type { WorkbenchUiState } from "@/workbench/workbench-ui-state";
 import type { AppLocale } from "@/i18n/messages";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
+import { getPendingLinkSourceEntityId } from "@/editor/contracts/interaction-mode";
 
 export interface RenderSceneCoordinatorSource {
   documentStore: ReadonlySnapshotStore<WorldDocument>;
@@ -52,7 +53,7 @@ function buildRenderInteractionState(
   ui: WorkbenchUiState,
   simulation: SimulationState,
 ): RenderSceneInteractionState {
-  if (ui.mode === "simulate") {
+  if (ui.phase === "simulate") {
     return {
       selectedEntityIds: simulation.selection,
       placementPreview: null,
@@ -63,7 +64,9 @@ function buildRenderInteractionState(
   return {
     selectedEntityIds: editor.session.selection,
     placementPreview: editor.session.placementPreview,
-    pendingLinkSourceEntityId: editor.session.pendingLinkSourceEntityId,
+    pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
+      editor.session.currentMode,
+    ),
   };
 }
 

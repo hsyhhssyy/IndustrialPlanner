@@ -20,7 +20,7 @@ export const TopBar = observer(function TopBar({
   const render = useExternalStore(renderDerivedStore);
   const t = createTranslator(ui.locale);
   const cellSizeLabel = `${Math.round(render.cellSizePx)}px`;
-  const simulationActive = ui.mode === "simulate";
+  const simulationActive = ui.phase === "simulate";
 
   return (
     <header className="top-bar">

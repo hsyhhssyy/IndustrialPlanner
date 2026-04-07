@@ -15,9 +15,10 @@ describe("EditorRuntimeStore", () => {
       },
     });
 
-    expect(store.getSnapshot().session.activeTool).toBe("select");
+    expect(store.getSnapshot().session.displayTool).toBe("select");
+    expect(store.getSnapshot().session.currentMode).toMatchObject({ key: "select" });
     expect(store.session.selection).toEqual(["reactor-1"]);
-    expect(store.session.selectionInteractionMode).toBeNull();
+    expect(store.session.selectionInputMode).toBeNull();
     expect(store.history.canUndo).toBe(false);
   });
 
@@ -35,15 +36,15 @@ describe("EditorRuntimeStore", () => {
     store.setSnapshot({
       session: {
         ...store.getSnapshot().session,
-        selectionInteractionMode: "touch",
+        selectionInputMode: "touch",
       },
       history: store.getSnapshot().history,
     });
 
-    expect(store.session.selectionInteractionMode).toBe("touch");
+    expect(store.session.selectionInputMode).toBe("touch");
   });
 
-  it("does not re-run observers that only read active tool when placement preview changes", () => {
+  it("does not re-run observers that only read display tool when placement preview changes", () => {
     const store = createEditorRuntimeStore({
       session: createInitialEditorSession(),
       history: {
@@ -53,12 +54,12 @@ describe("EditorRuntimeStore", () => {
         redoDepth: 0,
       },
     });
-    const activeToolTracker = vi.fn();
+    const displayToolTracker = vi.fn();
     const stop = autorun(() => {
-      activeToolTracker(store.session.activeTool);
+      displayToolTracker(store.session.displayTool);
     });
 
-    expect(activeToolTracker).toHaveBeenCalledTimes(1);
+    expect(displayToolTracker).toHaveBeenCalledTimes(1);
 
     store.setSnapshot({
       session: {
@@ -74,7 +75,7 @@ describe("EditorRuntimeStore", () => {
       history: store.getSnapshot().history,
     });
 
-    expect(activeToolTracker).toHaveBeenCalledTimes(1);
+    expect(displayToolTracker).toHaveBeenCalledTimes(1);
 
     stop();
   });

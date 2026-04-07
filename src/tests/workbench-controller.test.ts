@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_STAGE1_BASE_ID } from "@/domain/base/stage1-bases";
 import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
+import {
+  getPendingLinkSourceEntityId,
+  isPlacementInteractionMode,
+} from "@/editor/contracts/interaction-mode";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
 import {
   getRotatedGridFootprint,
@@ -8,6 +12,14 @@ import {
 } from "@/shared/geometry/grid";
 import { createPlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
+
+function getPlacementMode(
+  session: ReturnType<typeof createWorkbenchController>["editorStore"]["session"],
+) {
+  return isPlacementInteractionMode(session.currentMode)
+    ? session.currentMode
+    : null;
+}
 
 function readWorkbenchState(
   controller: ReturnType<typeof createWorkbenchController>,
@@ -25,7 +37,7 @@ function readWorkbenchState(
     registry: controller.registry,
     canvasView,
     interaction:
-      ui.mode === "simulate"
+      ui.phase === "simulate"
         ? {
             selectedEntityIds: simulation.selection,
             placementPreview: null,
@@ -34,8 +46,9 @@ function readWorkbenchState(
         : {
             selectedEntityIds: editor.session.selection,
             placementPreview: editor.session.placementPreview,
-            pendingLinkSourceEntityId:
-              editor.session.pendingLinkSourceEntityId,
+            pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
+              editor.session.currentMode,
+            ),
           },
     runtimeSnapshot: simulation.runtimeSnapshot,
   });
@@ -48,11 +61,13 @@ function readWorkbenchState(
     history: editor.history,
     canvasView,
     activeSelection:
-      ui.mode === "simulate" ? simulation.selection : editor.session.selection,
+      ui.phase === "simulate" ? simulation.selection : editor.session.selection,
     activePlacementPreview:
-      ui.mode === "edit" ? editor.session.placementPreview : null,
+      ui.phase === "edit" ? editor.session.placementPreview : null,
     activePendingLinkSourceEntityId:
-      ui.mode === "edit" ? editor.session.pendingLinkSourceEntityId : null,
+      ui.phase === "edit"
+        ? getPendingLinkSourceEntityId(editor.session.currentMode)
+        : null,
     topology,
     runtimeSnapshot: simulation.runtimeSnapshot,
     telemetry: simulation.telemetry,
@@ -183,7 +198,7 @@ describe("WorkbenchController scaffold", () => {
     );
 
     expect(persisted).toMatchObject({
-      mode: "edit",
+      phase: "edit",
       locale: "zh-CN",
       logLevel: "warn",
       leftDock: {
@@ -208,7 +223,7 @@ describe("WorkbenchController scaffold", () => {
     controller.stepSimulation();
 
     expect(readWorkbenchState(controller).runtimeSnapshot.tick).toBe(1);
-    expect(readWorkbenchState(controller).ui.mode).toBe("simulate");
+    expect(readWorkbenchState(controller).ui.phase).toBe("simulate");
 
     controller.dispose();
   });
@@ -217,13 +232,13 @@ describe("WorkbenchController scaffold", () => {
     const controller = createWorkbenchController();
 
     controller.startSimulation();
-    expect(readWorkbenchState(controller).ui.mode).toBe("simulate");
+    expect(readWorkbenchState(controller).ui.phase).toBe("simulate");
 
     controller.stopSimulation();
 
     const snapshot = readWorkbenchState(controller);
 
-    expect(snapshot.ui.mode).toBe("edit");
+    expect(snapshot.ui.phase).toBe("edit");
     expect(snapshot.runtimeSnapshot.status).toBe("paused");
 
     controller.dispose();
@@ -384,17 +399,14 @@ describe("WorkbenchController scaffold", () => {
     const controller = createWorkbenchController();
     const before = readWorkbenchState(controller);
 
-    controller.setMode("simulate");
+    controller.setPhase("simulate");
     controller.armPlacement("belt_straight_1x1", "belt");
 
     const after = readWorkbenchState(controller);
 
-    expect(after.ui.mode).toBe("simulate");
-    expect(after.session.activeTool).toBe(before.session.activeTool);
-    expect(after.session.placementDefinitionId).toBe(before.session.placementDefinitionId);
-    expect(after.session.placementInteractionMode).toBe(
-      before.session.placementInteractionMode,
-    );
+    expect(after.ui.phase).toBe("simulate");
+    expect(after.session.displayTool).toBe(before.session.displayTool);
+    expect(after.session.currentMode).toEqual(before.session.currentMode);
     expect(after.ui.leftPanelMode).toBe(before.ui.leftPanelMode);
 
     controller.dispose();
@@ -489,12 +501,12 @@ describe("WorkbenchController scaffold", () => {
     controller.cancelPlacement();
 
     const after = readWorkbenchState(controller);
+    const placementMode = getPlacementMode(after.session);
 
-    expect(after.session.activeTool).toBe("select");
+    expect(after.session.displayTool).toBe("select");
+    expect(after.session.currentMode).toMatchObject({ key: "select" });
     expect(after.session.selection).toEqual(previousSelection);
-    expect(after.session.placementDefinitionId).toBeNull();
-    expect(after.session.placementInteractionMode).toBeNull();
-    expect(after.session.placementRotation).toBeNull();
+    expect(placementMode).toBeNull();
     expect(after.activePlacementPreview).toBeNull();
 
     controller.dispose();
@@ -761,7 +773,7 @@ describe("WorkbenchController scaffold", () => {
     const placedInletId = readWorkbenchState(controller).document.entityOrder.at(-1);
     expect(placedInletId).toBeTruthy();
 
-    controller.setActiveTool("link");
+    controller.setInteractionMode("link");
     await controller.activateLinkTarget(placedInletId ?? null);
     await controller.activateLinkTarget("dark-outlet-1");
 
@@ -804,12 +816,12 @@ describe("WorkbenchController scaffold", () => {
     const controller = createWorkbenchController();
 
     await controller.selectEntity("filler-1");
-    controller.setMode("simulate");
+    controller.setPhase("simulate");
     await controller.selectSimulationEntity("dark-outlet-1");
 
     const snapshot = readWorkbenchState(controller);
 
-    expect(snapshot.ui.mode).toBe("simulate");
+    expect(snapshot.ui.phase).toBe("simulate");
     expect(snapshot.simulationSelection).toEqual(["dark-outlet-1"]);
     expect(snapshot.session.selection).toEqual(["filler-1"]);
 
@@ -829,7 +841,7 @@ describe("WorkbenchController scaffold", () => {
     const rotatedEntity = after.document.entities["filler-1"];
 
     expect(after.session.selection).toEqual(["filler-1"]);
-    expect(after.session.selectionInteractionMode).toBe("pointer");
+    expect(after.session.selectionInputMode).toBe("pointer");
     expect(rotatedEntity).toMatchObject({
       position: { x: 17, y: 7 },
       rotation: 180,
@@ -877,7 +889,7 @@ describe("WorkbenchController scaffold", () => {
       readWorkbenchState(controller).document.entities["dark-outlet-1"]?.config
         .selectedLiquidItemId;
 
-    controller.setMode("simulate");
+    controller.setPhase("simulate");
     await controller.patchSimulationEntityConfig("dark-outlet-1", {
       selectedLiquidItemId: "item_liquid_plant_grass_2",
     });
@@ -893,7 +905,7 @@ describe("WorkbenchController scaffold", () => {
         .selectedLiquidItemId,
     ).toBe(baselineValue);
 
-    controller.setMode("edit");
+    controller.setPhase("edit");
 
     const clearedSnapshot = readWorkbenchState(controller);
 
@@ -925,7 +937,7 @@ describe("WorkbenchController scaffold", () => {
 
     const snapshot = readWorkbenchState(controller);
 
-    expect(snapshot.ui.mode).toBe("edit");
+    expect(snapshot.ui.phase).toBe("edit");
     expect(
       snapshot.simulationPatchSet.entityConfigByEntityId["dark-outlet-1"],
     ).toBeUndefined();

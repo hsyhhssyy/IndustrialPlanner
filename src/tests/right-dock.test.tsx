@@ -8,7 +8,7 @@ describe("RightDock inspector split", () => {
     localStorage.clear();
   });
 
-  it("renders edit and simulation inspector bodies from different mode-specific panels", async () => {
+  it("renders edit and simulation inspector bodies from different phase-specific panels", async () => {
     const controller = createWorkbenchController();
 
     controller.setLocale("en-US");
@@ -17,7 +17,7 @@ describe("RightDock inspector split", () => {
       <RightDock controller={controller} />,
     );
 
-    controller.setMode("simulate");
+    controller.setPhase("simulate");
     await controller.selectSimulationEntity("dark-outlet-1");
     const simulationMarkup = renderToStaticMarkup(
       <RightDock controller={controller} />,

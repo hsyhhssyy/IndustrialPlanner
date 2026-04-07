@@ -2,7 +2,7 @@ import type {
   LeftPanelMode,
   SimulationSpeedPreset,
 } from "@/workbench/workbench-ui-state";
-import type { EditorTool } from "@/editor/contracts/editor-session";
+import type { DisplayTool } from "@/editor/contracts/interaction-mode";
 
 export interface WorkbenchTextDescriptor {
   messageKey: string;
@@ -13,7 +13,7 @@ export interface PlaceholderButtonDescriptor {
   id: string;
   label: WorkbenchTextDescriptor;
   hotkey?: string;
-  tool?: EditorTool;
+  displayTool?: DisplayTool;
   definitionId?: string;
   actionId?: PlaceholderActionId;
 }
@@ -135,29 +135,29 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "select",
             label: text("workbench.button.select", "Select"),
-            tool: "select",
+            displayTool: "select",
           },
           {
             id: "belt-draw",
             label: text("workbench.button.beltDraw", "Lay Belt"),
-            tool: "belt",
+            displayTool: "belt",
             definitionId: "belt_straight_1x1",
           },
           {
             id: "pipe-draw",
             label: text("workbench.button.pipeDraw", "Lay Pipe"),
-            tool: "pipe",
+            displayTool: "pipe",
             definitionId: "pipe_straight_1x1",
           },
           {
             id: "link",
             label: text("workbench.button.linkDarkPipe", "Link Dark Pipe"),
-            tool: "link",
+            displayTool: "link",
           },
           {
             id: "inspect",
             label: text("workbench.button.inspect", "Inspect"),
-            tool: "inspect",
+            displayTool: "inspect",
           },
           {
             id: "save-blueprint",
@@ -173,19 +173,19 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "belt-splitter",
             label: text("workbench.button.beltSplitter", "Splitter"),
-            tool: "belt",
+            displayTool: "belt",
             definitionId: "item_log_splitter",
           },
           {
             id: "belt-converger",
             label: text("workbench.button.beltConverger", "Converger"),
-            tool: "belt",
+            displayTool: "belt",
             definitionId: "item_log_converger",
           },
           {
             id: "belt-bridge",
             label: text("workbench.button.beltBridge", "Bridge"),
-            tool: "belt",
+            displayTool: "belt",
             definitionId: "item_log_connector",
           },
           {
@@ -202,19 +202,19 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "pipe-splitter",
             label: text("workbench.button.pipeSplitter", "Pipe Splitter"),
-            tool: "pipe",
+            displayTool: "pipe",
             definitionId: "item_pipe_splitter",
           },
           {
             id: "pipe-converger",
             label: text("workbench.button.pipeConverger", "Pipe Converger"),
-            tool: "pipe",
+            displayTool: "pipe",
             definitionId: "item_pipe_converger",
           },
           {
             id: "pipe-bridge",
             label: text("workbench.button.pipeBridge", "Pipe Bridge"),
-            tool: "pipe",
+            displayTool: "pipe",
             definitionId: "item_pipe_connector",
           },
           {
@@ -250,25 +250,25 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "dark-outlet",
             label: text("workbench.button.darkOutlet", "Dark Pipe Outlet"),
-            tool: "place",
+            displayTool: "place",
             definitionId: "item_port_udpipe_unloader_1",
           },
           {
             id: "dark-inlet",
             label: text("workbench.button.darkInlet", "Dark Pipe Inlet"),
-            tool: "place",
+            displayTool: "place",
             definitionId: "item_port_udpipe_loader_1",
           },
           {
             id: "warehouse-storage-port",
             label: text("workbench.button.warehouseStoragePort", "Warehouse Store Port"),
-            tool: "place",
+            displayTool: "place",
             definitionId: "item_port_storager_1",
           },
           {
             id: "warehouse-pickup-port",
             label: text("workbench.button.warehousePickupPort", "Warehouse Pickup Port"),
-            tool: "place",
+            displayTool: "place",
             definitionId: "item_port_unloader_1",
           },
           {
@@ -278,19 +278,19 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "warehouse-bus-segment",
             label: text("workbench.button.warehouseBusSegment", "Bus Segment"),
-            tool: "place",
+            displayTool: "place",
             definitionId: "item_port_log_hongs_bus",
           },
           {
             id: "warehouse-bus-source",
             label: text("workbench.button.warehouseBusSource", "Bus Source"),
-            tool: "place",
+            displayTool: "place",
             definitionId: "item_port_log_hongs_bus_source",
           },
           {
             id: "protocol-storage",
             label: text("workbench.button.protocolStorage", "Protocol Storage"),
-            tool: "place",
+            displayTool: "place",
             definitionId: "item_port_storager_1",
           },
         ],
@@ -303,19 +303,19 @@ export const LEFT_PANEL_CONTENT: Record<LeftPanelMode, LeftPanelDescriptor> = {
           {
             id: "reactor-pool",
             label: text("workbench.button.reactorPool", "Reactor Pool"),
-            tool: "place",
+            displayTool: "place",
             definitionId: "item_port_mix_pool_1",
           },
           {
             id: "grinder",
             label: text("workbench.button.grinder", "Grinder"),
-            tool: "place",
+            displayTool: "place",
             definitionId: "item_port_grinder_1",
           },
           {
             id: "filling-machine",
             label: text("workbench.button.fillingMachine", "Filling Machine"),
-            tool: "place",
+            displayTool: "place",
             definitionId: "item_port_liquid_filling_pd_mc_1",
           },
         ],

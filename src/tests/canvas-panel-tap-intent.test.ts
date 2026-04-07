@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { resolveCanvasPanelTapIntent } from "@/app-shell/components/canvas-panel/canvas-panel-tap-intent";
+import {
+  createLinkInteractionMode,
+  createPlacementInteractionMode,
+  createSelectInteractionMode,
+} from "@/editor/contracts/interaction-mode";
 
 describe("resolveCanvasPanelTapIntent", () => {
   it("selects simulation entities and clears simulation selection on blank taps", () => {
     expect(
       resolveCanvasPanelTapIntent({
-        mode: "simulate",
-        activeTool: "select",
-        placementDefinitionId: null,
-        placementInteractionMode: null,
+        phase: "simulate",
+        currentMode: createSelectInteractionMode(),
         target: {
           kind: "entity",
           entityId: "reactor-1",
@@ -22,10 +25,8 @@ describe("resolveCanvasPanelTapIntent", () => {
 
     expect(
       resolveCanvasPanelTapIntent({
-        mode: "simulate",
-        activeTool: "select",
-        placementDefinitionId: null,
-        placementInteractionMode: null,
+        phase: "simulate",
+        currentMode: createSelectInteractionMode(),
         target: {
           kind: "blank",
         },
@@ -39,10 +40,8 @@ describe("resolveCanvasPanelTapIntent", () => {
   it("routes link taps through explicit link-target activation", () => {
     expect(
       resolveCanvasPanelTapIntent({
-        mode: "edit",
-        activeTool: "link",
-        placementDefinitionId: null,
-        placementInteractionMode: null,
+        phase: "edit",
+        currentMode: createLinkInteractionMode(),
         target: {
           kind: "entity",
           entityId: "dark-outlet-1",
@@ -56,10 +55,8 @@ describe("resolveCanvasPanelTapIntent", () => {
 
     expect(
       resolveCanvasPanelTapIntent({
-        mode: "edit",
-        activeTool: "link",
-        placementDefinitionId: null,
-        placementInteractionMode: null,
+        phase: "edit",
+        currentMode: createLinkInteractionMode(),
         target: {
           kind: "blank",
         },
@@ -73,10 +70,12 @@ describe("resolveCanvasPanelTapIntent", () => {
   it("treats pointer placement taps as placement attempts before selection semantics", () => {
     expect(
       resolveCanvasPanelTapIntent({
-        mode: "edit",
-        activeTool: "belt",
-        placementDefinitionId: "belt_straight_1x1",
-        placementInteractionMode: "pointer",
+        phase: "edit",
+        currentMode: createPlacementInteractionMode({
+          definitionId: "belt_straight_1x1",
+          displayTool: "belt",
+          inputMode: "pointer",
+        }),
         target: {
           kind: "blank",
         },
@@ -87,10 +86,12 @@ describe("resolveCanvasPanelTapIntent", () => {
 
     expect(
       resolveCanvasPanelTapIntent({
-        mode: "edit",
-        activeTool: "belt",
-        placementDefinitionId: "belt_straight_1x1",
-        placementInteractionMode: "pointer",
+        phase: "edit",
+        currentMode: createPlacementInteractionMode({
+          definitionId: "belt_straight_1x1",
+          displayTool: "belt",
+          inputMode: "pointer",
+        }),
         target: {
           kind: "entity",
           entityId: "filler-1",
@@ -105,10 +106,12 @@ describe("resolveCanvasPanelTapIntent", () => {
   it("keeps touch placement taps as no-ops on both blank space and entities", () => {
     expect(
       resolveCanvasPanelTapIntent({
-        mode: "edit",
-        activeTool: "place",
-        placementDefinitionId: "item_port_mix_pool_1",
-        placementInteractionMode: "touch",
+        phase: "edit",
+        currentMode: createPlacementInteractionMode({
+          definitionId: "item_port_mix_pool_1",
+          displayTool: "place",
+          inputMode: "touch",
+        }),
         target: {
           kind: "blank",
         },
@@ -119,10 +122,12 @@ describe("resolveCanvasPanelTapIntent", () => {
 
     expect(
       resolveCanvasPanelTapIntent({
-        mode: "edit",
-        activeTool: "place",
-        placementDefinitionId: "item_port_mix_pool_1",
-        placementInteractionMode: "touch",
+        phase: "edit",
+        currentMode: createPlacementInteractionMode({
+          definitionId: "item_port_mix_pool_1",
+          displayTool: "place",
+          inputMode: "touch",
+        }),
         target: {
           kind: "entity",
           entityId: "reactor-1",
@@ -137,10 +142,8 @@ describe("resolveCanvasPanelTapIntent", () => {
   it("falls back to edit selection semantics outside placement and link flows", () => {
     expect(
       resolveCanvasPanelTapIntent({
-        mode: "edit",
-        activeTool: "select",
-        placementDefinitionId: null,
-        placementInteractionMode: null,
+        phase: "edit",
+        currentMode: createSelectInteractionMode(),
         target: {
           kind: "entity",
           entityId: "storage-1",
@@ -154,10 +157,8 @@ describe("resolveCanvasPanelTapIntent", () => {
 
     expect(
       resolveCanvasPanelTapIntent({
-        mode: "edit",
-        activeTool: "select",
-        placementDefinitionId: null,
-        placementInteractionMode: null,
+        phase: "edit",
+        currentMode: createSelectInteractionMode(),
         target: {
           kind: "blank",
         },

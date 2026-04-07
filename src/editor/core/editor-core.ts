@@ -6,15 +6,23 @@ import {
 } from "@/domain/document/world-document";
 import { applyWorldDocumentCommand } from "@/editor/core/commands/document-command-applier";
 import type { DocumentCommand } from "@/editor/core/commands/document-command";
+import type { EditorSession } from "@/editor/contracts/editor-session";
+import {
+  createInspectInteractionMode,
+  createLinkInteractionMode,
+  createPlacementInteractionMode,
+  createSelectInteractionMode,
+  getPendingLinkSourceEntityId,
+  isLinkInteractionMode,
+  isPlacementInteractionMode,
+  resolveDisplayToolForMode,
+  type InteractionModeKey,
+  type PlacementDisplayTool,
+} from "@/editor/contracts/interaction-mode";
 import type {
-  EditorSession,
-  EditorTool,
-} from "@/editor/contracts/editor-session";
-import type {
-  PlacementPreviewState,
   PlacementInteractionMode,
+  PlacementPreviewState,
 } from "@/editor/contracts/placement-preview";
-import { isPlacementTool } from "@/editor/core/editor-session";
 import {
   rotateGridRotationClockwise,
   type GridPoint,
@@ -44,20 +52,20 @@ export interface EditorCoreSnapshot {
 
 export interface EditorCore {
   getSnapshot: () => EditorCoreSnapshot;
-  setActiveTool: (tool: EditorTool) => void;
-  setPlacementDefinition: (
+  setInteractionMode: (modeKey: Exclude<InteractionModeKey, "placement">) => void;
+  armPlacement: (
     definitionId: string,
-    tool?: EditorTool,
-    interactionMode?: PlacementInteractionMode,
+    displayTool?: PlacementDisplayTool,
+    inputMode?: PlacementInteractionMode,
   ) => void;
   setPlacementRotation: (rotation: GridRotation | null) => void;
   setPlacementPreview: (preview: PlacementPreviewState | null) => void;
   selectEntity: (
     entityId: string | null,
-    interactionMode?: PlacementInteractionMode | null,
+    inputMode?: PlacementInteractionMode | null,
   ) => void;
   rotateSelectedEntityClockwise: (position?: GridPoint) => boolean;
-  setPendingLinkSource: (entityId: string | null) => void;
+  setLinkSourceEntityId: (entityId: string | null) => void;
   placeEntity: (
     definitionId: string,
     position: GridPoint,
@@ -98,48 +106,55 @@ class EditorCoreImpl implements EditorCore {
     };
   }
 
-  setActiveTool(tool: EditorTool): void {
-    this.session = {
-      ...this.session,
-      activeTool: tool,
-      placementDefinitionId: isPlacementTool(tool)
-        ? this.session.placementDefinitionId
-        : null,
-      placementInteractionMode: isPlacementTool(tool)
-        ? this.session.placementInteractionMode
-        : null,
-      placementRotation: isPlacementTool(tool)
-        ? this.session.placementRotation
-        : null,
-      placementPreview: isPlacementTool(tool)
-        ? this.session.placementPreview
-        : null,
-      pendingLinkSourceEntityId:
-        tool === "link" ? this.session.pendingLinkSourceEntityId : null,
+  setInteractionMode(modeKey: Exclude<InteractionModeKey, "placement">): void {
+    const context = {
+      previousModeKey: this.session.currentMode.key,
+      entryDisplayTool: this.session.displayTool,
     };
+
+    switch (modeKey) {
+      case "select":
+        this.applyInteractionMode(createSelectInteractionMode(context), true);
+        return;
+      case "link":
+        this.applyInteractionMode(createLinkInteractionMode(context), true);
+        return;
+      case "inspect":
+        this.applyInteractionMode(createInspectInteractionMode(context), true);
+        return;
+    }
   }
 
-  setPlacementDefinition(
+  armPlacement(
     definitionId: string,
-    tool: EditorTool = "place",
-    interactionMode: PlacementInteractionMode = "pointer",
+    displayTool: PlacementDisplayTool = "place",
+    inputMode: PlacementInteractionMode = "pointer",
   ): void {
-    this.session = {
-      ...this.session,
-      activeTool: tool,
-      placementDefinitionId: definitionId,
-      placementInteractionMode: interactionMode,
-      placementRotation: 0,
-      placementPreview: null,
-      pendingLinkSourceEntityId: null,
-    };
+    this.applyInteractionMode(
+      createPlacementInteractionMode({
+        definitionId,
+        displayTool,
+        inputMode,
+        rotation: 0,
+        previousModeKey: this.session.currentMode.key,
+        entryDisplayTool: displayTool,
+      }),
+      true,
+    );
   }
 
   setPlacementRotation(rotation: GridRotation | null): void {
-    this.session = {
-      ...this.session,
-      placementRotation: rotation,
-    };
+    if (!isPlacementInteractionMode(this.session.currentMode)) {
+      return;
+    }
+
+    this.applyInteractionMode(
+      {
+        ...this.session.currentMode,
+        rotation: rotation ?? 0,
+      },
+      false,
+    );
   }
 
   setPlacementPreview(preview: PlacementPreviewState | null): void {
@@ -151,14 +166,14 @@ class EditorCoreImpl implements EditorCore {
 
   selectEntity(
     entityId: string | null,
-    interactionMode: PlacementInteractionMode | null = entityId
-      ? this.session.selectionInteractionMode
+    inputMode: PlacementInteractionMode | null = entityId
+      ? this.session.selectionInputMode
       : null,
   ): void {
     this.session = {
       ...this.session,
       selection: entityId ? [entityId] : [],
-      selectionInteractionMode: entityId ? interactionMode : null,
+      selectionInputMode: entityId ? inputMode : null,
     };
   }
 
@@ -185,11 +200,30 @@ class EditorCoreImpl implements EditorCore {
     });
   }
 
-  setPendingLinkSource(entityId: string | null): void {
-    this.session = {
-      ...this.session,
-      pendingLinkSourceEntityId: entityId,
-    };
+  setLinkSourceEntityId(entityId: string | null): void {
+    if (!isLinkInteractionMode(this.session.currentMode)) {
+      if (entityId === null) {
+        return;
+      }
+
+      this.applyInteractionMode(
+        createLinkInteractionMode({
+          sourceEntityId: entityId,
+          previousModeKey: this.session.currentMode.key,
+          entryDisplayTool: this.session.displayTool,
+        }),
+        true,
+      );
+      return;
+    }
+
+    this.applyInteractionMode(
+      {
+        ...this.session.currentMode,
+        sourceEntityId: entityId,
+      },
+      true,
+    );
   }
 
   placeEntity(
@@ -210,18 +244,19 @@ class EditorCoreImpl implements EditorCore {
       },
     };
 
-    if (this.applyCommand(nextCommand)) {
-      this.session = {
-        ...this.session,
-        selection: [entityId],
-        selectionInteractionMode: this.session.placementInteractionMode,
-        placementDefinitionId: definitionId,
-        placementInteractionMode: this.session.placementInteractionMode,
-        placementRotation: this.session.placementRotation,
-        placementPreview: this.session.placementPreview,
-        pendingLinkSourceEntityId: null,
-      };
+    if (!this.applyCommand(nextCommand)) {
+      return;
     }
+
+    const placementMode = isPlacementInteractionMode(this.session.currentMode)
+      ? this.session.currentMode
+      : null;
+
+    this.session = {
+      ...this.session,
+      selection: [entityId],
+      selectionInputMode: placementMode?.inputMode ?? this.session.selectionInputMode,
+    };
   }
 
   patchEntityConfig(entityId: string, patch: Record<string, unknown>): void {
@@ -249,18 +284,15 @@ class EditorCoreImpl implements EditorCore {
       this.session = {
         ...this.session,
         selection: [targetEntityId],
-        selectionInteractionMode: null,
-        pendingLinkSourceEntityId: null,
+        selectionInputMode: null,
       };
+      this.setLinkSourceEntityId(null);
     }
   }
 
   removeLink(linkId: string): void {
     if (this.applyCommand({ type: "link.remove", payload: { linkId } })) {
-      this.session = {
-        ...this.session,
-        pendingLinkSourceEntityId: null,
-      };
+      this.setLinkSourceEntityId(null);
     }
   }
 
@@ -278,9 +310,9 @@ class EditorCoreImpl implements EditorCore {
     this.session = {
       ...this.session,
       selection: [],
-      selectionInteractionMode: null,
-      pendingLinkSourceEntityId: null,
+      selectionInputMode: null,
     };
+    this.setLinkSourceEntityId(null);
   }
 
   removeSelectedLinks(): void {
@@ -328,6 +360,18 @@ class EditorCoreImpl implements EditorCore {
     this.sanitizeSession();
   }
 
+  private applyInteractionMode(
+    nextMode: EditorSession["currentMode"],
+    clearPlacementPreview: boolean,
+  ): void {
+    this.session = {
+      ...this.session,
+      currentMode: nextMode,
+      displayTool: resolveDisplayToolForMode(nextMode),
+      placementPreview: clearPlacementPreview ? null : this.session.placementPreview,
+    };
+  }
+
   private applyCommand(command: DocumentCommand): boolean {
     const nextDocument = applyWorldDocumentCommand(this.document, command);
 
@@ -371,27 +415,29 @@ class EditorCoreImpl implements EditorCore {
         ? this.session.dragPreviewEntityId
         : null;
     const pendingLinkSourceEntityId =
-      this.session.pendingLinkSourceEntityId &&
-      this.document.entities[this.session.pendingLinkSourceEntityId]
-        ? this.session.pendingLinkSourceEntityId
+      getPendingLinkSourceEntityId(this.session.currentMode) &&
+      this.document.entities[getPendingLinkSourceEntityId(this.session.currentMode) ?? ""]
+        ? getPendingLinkSourceEntityId(this.session.currentMode)
         : null;
+    const nextMode = isLinkInteractionMode(this.session.currentMode)
+      ? {
+          ...this.session.currentMode,
+          sourceEntityId: pendingLinkSourceEntityId,
+        }
+      : this.session.currentMode;
 
     this.session = {
       ...this.session,
+      currentMode: nextMode,
+      displayTool: resolveDisplayToolForMode(nextMode),
       selection,
-      selectionInteractionMode:
-        selection.length > 0 ? this.session.selectionInteractionMode : null,
+      selectionInputMode:
+        selection.length > 0 ? this.session.selectionInputMode : null,
       hoveredEntityId,
       dragPreviewEntityId,
-      placementRotation:
-        this.session.placementDefinitionId && isPlacementTool(this.session.activeTool)
-          ? this.session.placementRotation
-          : null,
-      pendingLinkSourceEntityId,
-      placementPreview:
-        this.session.placementDefinitionId && isPlacementTool(this.session.activeTool)
-          ? this.session.placementPreview
-          : null,
+      placementPreview: isPlacementInteractionMode(nextMode)
+        ? this.session.placementPreview
+        : null,
     };
   }
 }

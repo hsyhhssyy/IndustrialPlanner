@@ -2,25 +2,17 @@ import type {
   PlacementPreviewState,
   PlacementInteractionMode,
 } from "@/editor/contracts/placement-preview";
-import type { GridRotation } from "@/shared/geometry/grid";
-
-export type EditorTool =
-  | "select"
-  | "place"
-  | "belt"
-  | "pipe"
-  | "link"
-  | "inspect";
+import type {
+  CurrentInteractionMode,
+  DisplayTool,
+} from "@/editor/contracts/interaction-mode";
 
 export interface EditorSession {
-  activeTool: EditorTool;
+  displayTool: DisplayTool;
+  currentMode: CurrentInteractionMode;
   selection: string[];
-  selectionInteractionMode: PlacementInteractionMode | null;
+  selectionInputMode: PlacementInteractionMode | null;
   hoveredEntityId: string | null;
   dragPreviewEntityId: string | null;
-  placementDefinitionId: string | null;
-  placementInteractionMode: PlacementInteractionMode | null;
-  placementRotation: GridRotation | null;
   placementPreview: PlacementPreviewState | null;
-  pendingLinkSourceEntityId: string | null;
 }
