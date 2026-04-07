@@ -330,6 +330,7 @@ export const LeftDock = observer(function LeftDock({
                                 : "place",
                               interactionMode,
                             );
+                            controller.requestCanvasKeyboardFocus();
                             return;
                           }
 

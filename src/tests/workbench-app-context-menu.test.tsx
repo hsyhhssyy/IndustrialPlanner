@@ -2,6 +2,7 @@
 
 import { WorkbenchApp } from "@/app-shell/workbench-app";
 import { createWorkbenchShell } from "@/app-shell/workbench-shell";
+import { isPlacementInteractionMode } from "@/editor/contracts/interaction-mode";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -107,6 +108,43 @@ describe("WorkbenchApp context menu policy", () => {
     });
 
     expect(contextMenuEvent.defaultPrevented).toBe(true);
+
+    await disposeWorkbenchApp(app);
+  });
+
+  it("moves keyboard focus to the canvas after arming placement from the left dock", async () => {
+    const app = await renderWorkbenchApp();
+    const stage = app.container.querySelector(".canvas-stage");
+    const beltButton = Array.from(
+      app.container.querySelectorAll(".placeholder-button-grid button"),
+    ).find((button) => button.textContent?.includes("铺设传送带"));
+
+    expect(stage).not.toBeNull();
+    expect(beltButton).toBeDefined();
+
+    (beltButton as HTMLButtonElement | undefined)?.focus();
+    expect(document.activeElement).toBe(beltButton ?? null);
+
+    await act(async () => {
+      (beltButton as HTMLButtonElement | undefined)?.click();
+    });
+
+    expect(document.activeElement).toBe(stage ?? null);
+
+    await act(async () => {
+      stage?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          bubbles: true,
+          key: "r",
+        }),
+      );
+    });
+
+    const currentMode = app.controller.editorStore.session.currentMode;
+    expect(isPlacementInteractionMode(currentMode)).toBe(true);
+    expect(
+      isPlacementInteractionMode(currentMode) ? currentMode.rotation : null,
+    ).toBe(90);
 
     await disposeWorkbenchApp(app);
   });

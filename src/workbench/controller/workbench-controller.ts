@@ -160,6 +160,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   private readonly logger = createLogger("workbench.controller");
   private readonly placementPreviewProfiler?: PlacementPreviewProfiler;
+  private readonly canvasKeyboardFocusListeners = new Set<() => void>();
   private readonly storage: WorkspaceStorage;
   private readonly workspaceStore: WorkspaceStore;
   private readonly editorHost: EditorHost;
@@ -282,6 +283,20 @@ class WorkbenchControllerImpl implements WorkbenchController {
   ): void {
     this.editorHost.setInteractionMode(modeKey);
     this.sync();
+  }
+
+  requestCanvasKeyboardFocus(): void {
+    for (const listener of this.canvasKeyboardFocusListeners) {
+      listener();
+    }
+  }
+
+  subscribeCanvasKeyboardFocusRequests(listener: () => void): () => void {
+    this.canvasKeyboardFocusListeners.add(listener);
+
+    return () => {
+      this.canvasKeyboardFocusListeners.delete(listener);
+    };
   }
 
   armPlacement(
@@ -777,6 +792,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   dispose(): void {
+    this.canvasKeyboardFocusListeners.clear();
     this.unsubscribeSimulationHost();
     this.simulationHost.dispose();
     this.workspaceStore.dispose();

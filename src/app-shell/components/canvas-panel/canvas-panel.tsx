@@ -346,6 +346,10 @@ export const CanvasPanel = observer(function CanvasPanel({
     };
   }, [controller, placementPreviewProfiler]);
 
+  useEffect(() => controller.subscribeCanvasKeyboardFocusRequests(() => {
+    stageRef.current?.focus();
+  }), [controller]);
+
   useEffect(() => {
     if (
       !anchoredPlacementActive ||

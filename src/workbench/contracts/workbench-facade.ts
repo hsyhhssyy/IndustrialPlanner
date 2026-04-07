@@ -46,6 +46,10 @@ export interface WorkbenchController {
   setInteractionMode: (
     modeKey: Exclude<InteractionModeKey, "placement">,
   ) => void;
+  requestCanvasKeyboardFocus: () => void;
+  subscribeCanvasKeyboardFocusRequests: (
+    listener: () => void,
+  ) => () => void;
   armPlacement: (
     definitionId: string,
     displayTool?: PlacementDisplayTool,
