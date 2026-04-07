@@ -1,6 +1,13 @@
 import type { DeviceInstance, DeviceRuntime, ItemId } from '../../domain/types'
 import { PORT_PRIORITY_GROUP_MIN, normalizePriorityCursorArray } from '../../domain/shared/portPriority'
+import { createDebugLogger } from '../../app/debugLogger'
 import type { TransferMatch } from './types'
+
+const simFlowLogger = createDebugLogger('sim-flow')
+
+function isPriorityTraceDevice(typeId: string) {
+  return typeId === 'item_log_splitter' || typeId === 'item_log_converger'
+}
 
 type CommitContext = {
   tick: number
@@ -37,7 +44,38 @@ export function commitTransferMatches(context: CommitContext) {
 
     const received = context.helpers.tryReceiveToLane(toDevice, toRuntime, match.toLane, match.toPortId, match.itemId, context.tick)
     if (!received) {
+      if (isPriorityTraceDevice(fromDevice.typeId) || isPriorityTraceDevice(toDevice.typeId)) {
+        simFlowLogger.debug('commit-blocked', {
+          tick: context.tick,
+          transferId: match.transferId,
+          fromId: match.fromId,
+          fromTypeId: fromDevice.typeId,
+          fromPortId: match.fromPortId,
+          fromLane: match.fromLane,
+          toId: match.toId,
+          toTypeId: toDevice.typeId,
+          toPortId: match.toPortId,
+          toLane: match.toLane,
+          itemId: match.itemId,
+        }, 'planned transfer failed during commit because receiver could not actually accept the item')
+      }
       continue
+    }
+
+    if (isPriorityTraceDevice(fromDevice.typeId) || isPriorityTraceDevice(toDevice.typeId)) {
+      simFlowLogger.debug('commit-applied', {
+        tick: context.tick,
+        transferId: match.transferId,
+        fromId: match.fromId,
+        fromTypeId: fromDevice.typeId,
+        fromPortId: match.fromPortId,
+        fromLane: match.fromLane,
+        toId: match.toId,
+        toTypeId: toDevice.typeId,
+        toPortId: match.toPortId,
+        toLane: match.toLane,
+        itemId: match.itemId,
+      }, 'planned transfer committed successfully for traced splitter/converger path')
     }
 
     committedCount += 1

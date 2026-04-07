@@ -1,8 +1,10 @@
 import type { ItemId } from '../../domain/types'
 import { getDirectionalPortIds, getPortPriorityGroup, orderPortsByPriorityGroup } from '../../domain/shared/portPriority'
+import { createDebugLogger } from '../../app/debugLogger'
 import type { PlanContext, PlanResult, PortLink, PullIntent, ReceiveLane, TransferMatch } from './types'
 
 const SLOTLESS_STORAGE_OUTPUT_TYPE_IDS = new Set(['item_port_sp_hub_1'])
+const simFlowLogger = createDebugLogger('sim-flow')
 
 type CandidateLink = PortLink & {
   receiverPortId: string
@@ -30,6 +32,29 @@ function laneKey(deviceId: string, lane: ReceiveLane) {
 
 function buildTransferId(tick: number, sequence: number) {
   return `${tick}:${sequence}`
+}
+
+function isPriorityTraceDevice(typeId: string) {
+  return typeId === 'item_log_splitter' || typeId === 'item_log_converger'
+}
+
+function getRuntimeLaneSnapshot(runtime: PlanContext['runtimeById'][string], lane: ReceiveLane) {
+  if (lane === 'slot' && 'slot' in runtime) {
+    return runtime.slot
+      ? { occupied: true, itemId: runtime.slot.itemId, progress01: runtime.slot.progress01 }
+      : { occupied: false }
+  }
+  if (lane === 'ns' && 'nsSlot' in runtime) {
+    return runtime.nsSlot
+      ? { occupied: true, itemId: runtime.nsSlot.itemId, progress01: runtime.nsSlot.progress01 }
+      : { occupied: false }
+  }
+  if (lane === 'we' && 'weSlot' in runtime) {
+    return runtime.weSlot
+      ? { occupied: true, itemId: runtime.weSlot.itemId, progress01: runtime.weSlot.progress01 }
+      : { occupied: false }
+  }
+  return null
 }
 
 function pickStorageOutputSlotForPort(context: PlanContext, senderDeviceId: string, senderPortId: string, itemId: ItemId) {
@@ -200,6 +225,7 @@ function pickIntentForReceiverState(
   matchedReceiverLanes: Set<string>,
   lanesClearingThisTick: Set<string>,
   lanesAdvancedThisTick: Set<string>,
+  round: number,
 ) {
   const receiverRuntime = context.runtimeById[state.receiverId]
   const receiverDevice = context.deviceById.get(state.receiverId)
@@ -237,7 +263,49 @@ function pickIntentForReceiverState(
       lanesClearingThisTick,
       prepared.itemId,
     )
-    if (!receiverLane) continue
+    if (!receiverLane) {
+      if (isPriorityTraceDevice(senderDevice.typeId) || isPriorityTraceDevice(receiverDevice.typeId)) {
+        const nominalLane = context.helpers.receiveLaneForPort(receiverDevice, receiverRuntime, link.receiverPortId)
+        const laneSnapshot = nominalLane ? getRuntimeLaneSnapshot(receiverRuntime, nominalLane) : null
+        simFlowLogger.debug('candidate-rejected', {
+          tick: context.tick,
+          round,
+          receiverStateKey: state.key,
+          fromId: senderDevice.instanceId,
+          fromTypeId: senderDevice.typeId,
+          fromPortId: link.from.portId,
+          toId: receiverDevice.instanceId,
+          toTypeId: receiverDevice.typeId,
+          toPortId: link.receiverPortId,
+          nominalLane,
+          laneSnapshot,
+          laneScheduledToClear: nominalLane ? lanesClearingThisTick.has(laneKey(state.receiverId, nominalLane)) : false,
+          preparedItemId: prepared.itemId,
+        }, 'candidate rejected because receiver is not currently available')
+      }
+      continue
+    }
+
+    if (isPriorityTraceDevice(senderDevice.typeId) || isPriorityTraceDevice(receiverDevice.typeId)) {
+      const acceptedByScheduledClear = lanesClearingThisTick.has(laneKey(state.receiverId, receiverLane))
+      const laneSnapshot = getRuntimeLaneSnapshot(receiverRuntime, receiverLane)
+      if (acceptedByScheduledClear && laneSnapshot?.occupied) {
+        simFlowLogger.debug('candidate-accepted-via-scheduled-clear', {
+          tick: context.tick,
+          round,
+          receiverStateKey: state.key,
+          fromId: senderDevice.instanceId,
+          fromTypeId: senderDevice.typeId,
+          fromPortId: link.from.portId,
+          toId: receiverDevice.instanceId,
+          toTypeId: receiverDevice.typeId,
+          toPortId: link.receiverPortId,
+          toLane: receiverLane,
+          laneSnapshot,
+          preparedItemId: prepared.itemId,
+        }, 'candidate accepted because the receiver lane is already scheduled to clear this tick')
+      }
+    }
 
     const receiverLaneKey = laneKey(state.receiverId, receiverLane)
     if (matchedReceiverLanes.has(receiverLaneKey)) continue
@@ -378,6 +446,7 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
         matchedReceiverLanes,
         lanesClearingThisTick,
         lanesAdvancedThisTick,
+        round,
       )
       if (advanced) laneAdvancedThisRound = true
       if (intent) activeIntents.push(intent)
@@ -429,6 +498,39 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
     }
 
     for (const winner of winners) {
+      const senderDevice = context.deviceById.get(winner.fromId)
+      const receiverDevice = context.deviceById.get(winner.receiverId)
+      if (senderDevice && receiverDevice && (isPriorityTraceDevice(senderDevice.typeId) || isPriorityTraceDevice(receiverDevice.typeId))) {
+        simFlowLogger.debug('winner-selected', {
+          tick: context.tick,
+          round,
+          fromId: winner.fromId,
+          fromTypeId: senderDevice.typeId,
+          fromPortId: winner.fromPortId,
+          toId: winner.receiverId,
+          toTypeId: receiverDevice.typeId,
+          toPortId: winner.receiverPortId,
+          toLane: winner.receiverLane,
+          itemId: winner.itemId,
+          senderPickedOutLinkIndex: winner.senderPickedOutLinkIndex,
+          receiverCandidateRank: winner.receiverCandidateRank,
+        }, 'selected transfer winner for traced splitter/converger path')
+      }
+
+      if (senderDevice && isPriorityTraceDevice(senderDevice.typeId)) {
+        simFlowLogger.debug('sender-scheduled-to-clear', {
+          tick: context.tick,
+          round,
+          senderId: winner.fromId,
+          senderTypeId: senderDevice.typeId,
+          senderLane: winner.fromLane,
+          senderPortId: winner.fromPortId,
+          toId: winner.receiverId,
+          toPortId: winner.receiverPortId,
+          itemId: winner.itemId,
+        }, 'sender lane reserved to clear later in this tick')
+      }
+
       transferMatches.push({
         transferId: buildTransferId(context.tick, transferSequence),
         fromId: winner.fromId,
