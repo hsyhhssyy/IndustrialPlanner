@@ -67,6 +67,10 @@ export interface RemoveLinkCommand {
   };
 }
 
+/**
+ * Mutations that produce a new WorldDocument snapshot and participate in
+ * undo/redo.
+ */
 export type DocumentCommand =
   | PlaceEntityCommand
   | RemoveEntityCommand

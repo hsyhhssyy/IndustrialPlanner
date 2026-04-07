@@ -34,6 +34,12 @@ export type CanvasInteractionTarget =
       selected: boolean;
     };
 
+/**
+ * UI-facing workbench action surface.
+ *
+ * React and other UI entry points should call this layer instead of reaching
+ * into EditorHost or EditorCore directly.
+ */
 export interface WorkbenchController {
   uiStore: WorkbenchUiStore;
   documentStore: ReadonlySnapshotStore<WorldDocument>;

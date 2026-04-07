@@ -139,6 +139,12 @@ function resolveCenteredPlacementGridPoint(options: {
   );
 }
 
+/**
+ * Semantic editor facade.
+ *
+ * This layer owns editor-side queries and typed editor actions. Those actions
+ * may stay session-only, or continue into EditorCore document mutations.
+ */
 export interface EditorHost {
   getSnapshot: () => EditorCoreSnapshot;
   getDocument: () => WorldDocument;

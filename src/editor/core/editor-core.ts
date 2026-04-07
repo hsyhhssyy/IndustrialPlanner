@@ -50,6 +50,12 @@ export interface EditorCoreSnapshot {
   history: EditorHistoryState;
 }
 
+/**
+ * Editor write kernel.
+ *
+ * Session-only editor actions and DocumentCommand application both converge
+ * here; this is the current write truth for EditorSession and WorldDocument.
+ */
 export interface EditorCore {
   getSnapshot: () => EditorCoreSnapshot;
   setInteractionMode: (modeKey: Exclude<InteractionModeKey, "placement">) => void;
