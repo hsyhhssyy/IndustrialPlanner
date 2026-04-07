@@ -7,6 +7,12 @@ import type {
   DisplayTool,
 } from "@/editor/contracts/interaction-mode";
 
+/**
+ * Editor runtime session truth.
+ *
+ * Input-origin metadata such as `selectionInputMode`, and draft-level state
+ * such as `placementPreview`, live here rather than in WorldDocument.
+ */
 export interface EditorSession {
   displayTool: DisplayTool;
   currentMode: CurrentInteractionMode;
