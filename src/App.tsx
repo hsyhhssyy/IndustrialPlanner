@@ -50,6 +50,7 @@ import { CenterPanel } from './ui/panels/CenterPanel'
 import { RightPanel } from './ui/panels/RightPanel'
 import { TopBar } from './ui/TopBar'
 import { SiteInfoBar } from './ui/SiteInfoBar'
+import { UnsupportedViewportOverlay } from './ui/UnsupportedViewportOverlay'
 import { ToolDialog } from './ui/dialogs/ToolDialog'
 import { HelpDialog } from './ui/dialogs/HelpDialog'
 import { ItemPickerDialog } from './ui/dialogs/ItemPickerDialog'
@@ -157,6 +158,11 @@ function getTouchMidpoint(touchA: Touch, touchB: Touch) {
   }
 }
 
+function isPortraitViewport() {
+  if (typeof window === 'undefined') return false
+  return window.innerWidth < window.innerHeight
+}
+
 function App() {
   const currentYear = new Date().getFullYear()
   const [powerMode, setPowerMode] = usePersistentState<PowerMode>('stage3-power-mode', 'infinite')
@@ -249,6 +255,7 @@ function App() {
     eventBus,
   } = useAppContext()
   const t = useMemo(() => createTranslator(language), [language])
+  const [isPortraitBlocked, setIsPortraitBlocked] = useState(isPortraitViewport)
   const releaseTitle = useMemo(
     () => formatCurrentDocumentTitle(t('app.title')),
     [t],
@@ -261,6 +268,20 @@ function App() {
   useEffect(() => {
     document.title = releaseTitle
   }, [releaseTitle])
+
+  useEffect(() => {
+    const syncViewportGate = () => {
+      setIsPortraitBlocked(isPortraitViewport())
+    }
+
+    syncViewportGate()
+    window.addEventListener('resize', syncViewportGate)
+    window.addEventListener('orientationchange', syncViewportGate)
+    return () => {
+      window.removeEventListener('resize', syncViewportGate)
+      window.removeEventListener('orientationchange', syncViewportGate)
+    }
+  }, [])
 
   const setWorkbenchMode = useCallback(
     (nextMode: 'place' | 'delete' | 'blueprint') => {
@@ -1709,6 +1730,7 @@ function App() {
       {isToolOpen && <ToolDialog language={language} t={t} superRecipeEnabled={superRecipeEnabled} onClose={closeTool} />}
       {isHelpOpen && <HelpDialog language={language} t={t} onClose={closeHelp} />}
       {isSettingsOpen && <SettingsDialog t={t} onClose={closeSettings} onClearAllHistory={clearAllHistory} />}
+      {isPortraitBlocked && <UnsupportedViewportOverlay t={t} />}
     </div>
   )
 }

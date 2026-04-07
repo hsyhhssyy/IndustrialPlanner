@@ -5,6 +5,7 @@ import { sanitizeBlueprintLinks } from '../../domain/deviceLinks'
 import { BASE_BY_ID, DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { validatePlacementConstraints } from '../../domain/placement'
 import { rotatedFootprintSize } from '../../domain/shared/math'
+import { resolvePublicAssetPath } from '../../assets/assetVersion'
 import type { BaseId, BlueprintDeviceLink, DeviceInstance, DeviceTypeId, LayoutState, Rotation } from '../../domain/types'
 import { isDeviceWithinAllowedPlacementArea } from '../../domain/shared/placementArea'
 import {
@@ -627,7 +628,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
   const synchronizePublicBlueprints = useCallback(async () => {
     let remoteIndex: PublicBlueprintIndexCache
     try {
-      const response = await fetch('/blueprints/index.json', { cache: 'no-store' })
+      const response = await fetch(resolvePublicAssetPath('/blueprints/index.json'), { cache: 'no-store' })
       if (!response.ok) {
         throw new Error(`index request failed: ${response.status}`)
       }
