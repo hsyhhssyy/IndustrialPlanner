@@ -272,7 +272,7 @@ export const RECIPES: RecipeDef[] = [
       { itemId: 'item_iron_powder', amount: 1 },
     ],
     outputs: [
-      { itemId: 'item_liquid_xiranite_lowpoly', amount: 1 },
+      { itemId: 'item_liquid_sewage', amount: 1 },
       { itemId: 'item_xiranite_poly', amount: 1 },
     ],
   },

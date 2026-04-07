@@ -284,7 +284,12 @@ export function isPipeJunction(typeId: string) {
 }
 
 export function isWarehouseBusPassThroughType(typeId: string) {
-  return typeId === 'item_port_log_hongs_bus_source' || typeId === 'item_port_log_hongs_bus'
+  return (
+    typeId === 'item_port_log_hongs_bus_source' ||
+    typeId === 'item_port_log_hongs_bus' ||
+    typeId === 'item_port_unloader_1' ||
+    typeId === 'item_port_loader_1'
+  )
 }
 
 export function isTrackLike(typeId: string) {
