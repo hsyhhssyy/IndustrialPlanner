@@ -20,10 +20,11 @@ type ReceiverState = {
   candidateLinks: CandidateLink[]
 }
 
-type ActiveIntent = PullIntent & {
+type SenderAttempt = PullIntent & {
   receiverLaneKey: string
-  receiverStateKey: string
-  selectedCandidateIndex: number
+  targetKey: string
+  dependencySenderId: string | null
+  isDirect: boolean
 }
 
 function laneKey(deviceId: string, lane: ReceiveLane) {
@@ -78,6 +79,10 @@ function compareCandidateLinks(left: PortLink, right: PortLink) {
   const fromCmp = left.from.instanceId.localeCompare(right.from.instanceId)
   if (fromCmp !== 0) return fromCmp
   return left.from.portId.localeCompare(right.from.portId)
+}
+
+function buildLinkKey(link: Pick<PortLink, 'from' | 'to'>) {
+  return `${link.from.instanceId}:${link.from.portId}->${link.to.instanceId}:${link.to.portId}`
 }
 
 function getPriorityGroupCursor(runtime: PlanContext['runtimeById'][string], laneKey: string, priorityGroup: number) {
@@ -217,29 +222,64 @@ function buildReceiverStates(
   return states
 }
 
-function pickIntentForReceiverState(
+function buildReceiverCandidateMetaMap(receiverStates: ReceiverState[]) {
+  const metaByLinkKey = new Map<string, CandidateLink>()
+  for (const state of receiverStates) {
+    for (const candidate of state.candidateLinks) {
+      metaByLinkKey.set(buildLinkKey(candidate), candidate)
+    }
+  }
+  return metaByLinkKey
+}
+
+function buildSenderCandidateLinks(
   context: PlanContext,
-  state: ReceiverState,
-  receiverCursorByState: Map<string, number>,
-  plannedSenders: Set<string>,
+  receiverCandidateMetaByLinkKey: Map<string, CandidateLink>,
+) {
+  const linksBySender = new Map<string, CandidateLink[]>()
+
+  for (const device of context.layoutDevices) {
+    const runtime = context.runtimeById[device.instanceId]
+    if (!runtime || context.helpers.isHardBlockedStall(runtime.stallReason)) continue
+
+    const orderedLinks = context.helpers.orderedOutLinks(device, runtime, context.outMap.get(device.instanceId) ?? [])
+    if (orderedLinks.length === 0) continue
+
+    const senderLinks: CandidateLink[] = []
+    for (const link of orderedLinks) {
+      const meta = receiverCandidateMetaByLinkKey.get(buildLinkKey(link))
+      if (!meta) continue
+      senderLinks.push(meta)
+    }
+
+    if (senderLinks.length > 0) {
+      linksBySender.set(device.instanceId, senderLinks)
+    }
+  }
+
+  return linksBySender
+}
+
+function pickAttemptForSender(
+  context: PlanContext,
+  senderId: string,
+  senderCandidateLinks: CandidateLink[],
+  failedTargetKeys: ReadonlySet<string>,
   matchedReceiverLanes: Set<string>,
   lanesClearingThisTick: Set<string>,
   lanesAdvancedThisTick: Set<string>,
   round: number,
 ) {
-  const receiverRuntime = context.runtimeById[state.receiverId]
-  const receiverDevice = context.deviceById.get(state.receiverId)
-  if (!receiverRuntime || !receiverDevice) return { intent: null as ActiveIntent | null, advanced: false }
+  const senderRuntime = context.runtimeById[senderId]
+  const senderDevice = context.deviceById.get(senderId)
+  if (!senderRuntime || !senderDevice) return { attempt: null as SenderAttempt | null, advanced: false, exhausted: false }
 
   let advanced = false
-  const startIndex = receiverCursorByState.get(state.key) ?? 0
-  for (let index = startIndex; index < state.candidateLinks.length; index += 1) {
-    const link = state.candidateLinks[index]
-    const senderRuntime = context.runtimeById[link.from.instanceId]
-    const senderDevice = context.deviceById.get(link.from.instanceId)
-    if (!senderRuntime || !senderDevice) continue
-    if (context.helpers.isHardBlockedStall(senderRuntime.stallReason)) continue
-    if (plannedSenders.has(link.from.instanceId)) continue
+  let sawReadyItem = false
+
+  for (const link of senderCandidateLinks) {
+    const targetKey = buildLinkKey(link)
+    if (failedTargetKeys.has(targetKey)) continue
 
     const fromLane = context.helpers.sourceSlotLane(senderDevice, senderRuntime, link.from.portId)
     const laneAdvanceKey = `${senderDevice.instanceId}:${fromLane}`
@@ -255,6 +295,20 @@ function pickIntentForReceiverState(
     )
     if (prepared.laneProgressAdvanced) advanced = true
     if (!prepared.itemId) continue
+    sawReadyItem = true
+
+    const slotIndex = pickStorageOutputSlotForPort(context, senderDevice.instanceId, link.from.portId, prepared.itemId)
+    if (
+      context.helpers.isStorageWithBufferGroups(senderRuntime)
+      && !SLOTLESS_STORAGE_OUTPUT_TYPE_IDS.has(senderDevice.typeId)
+      && typeof slotIndex !== 'number'
+    ) {
+      continue
+    }
+
+    const receiverRuntime = context.runtimeById[link.to.instanceId]
+    const receiverDevice = context.deviceById.get(link.to.instanceId)
+    if (!receiverRuntime || !receiverDevice) continue
 
     const receiverLane = context.helpers.canReceiveLaneForItem(
       receiverDevice,
@@ -270,7 +324,7 @@ function pickIntentForReceiverState(
         simFlowLogger.debug('candidate-rejected', {
           tick: context.tick,
           round,
-          receiverStateKey: state.key,
+          receiverStateKey: nominalLane ? `${link.to.instanceId}:${nominalLane}` : `${link.to.instanceId}:none`,
           fromId: senderDevice.instanceId,
           fromTypeId: senderDevice.typeId,
           fromPortId: link.from.portId,
@@ -279,35 +333,105 @@ function pickIntentForReceiverState(
           toPortId: link.receiverPortId,
           nominalLane,
           laneSnapshot,
-          laneScheduledToClear: nominalLane ? lanesClearingThisTick.has(laneKey(state.receiverId, nominalLane)) : false,
+          laneScheduledToClear: nominalLane ? lanesClearingThisTick.has(laneKey(link.to.instanceId, nominalLane)) : false,
           preparedItemId: prepared.itemId,
         }, 'candidate rejected because receiver is not currently available')
       }
-      continue
     }
 
-    if (isPriorityTraceDevice(senderDevice.typeId) || isPriorityTraceDevice(receiverDevice.typeId)) {
-      const acceptedByScheduledClear = lanesClearingThisTick.has(laneKey(state.receiverId, receiverLane))
-      const laneSnapshot = getRuntimeLaneSnapshot(receiverRuntime, receiverLane)
-      if (acceptedByScheduledClear && laneSnapshot?.occupied) {
-        simFlowLogger.debug('candidate-accepted-via-scheduled-clear', {
-          tick: context.tick,
-          round,
-          receiverStateKey: state.key,
-          fromId: senderDevice.instanceId,
-          fromTypeId: senderDevice.typeId,
+    if (receiverLane) {
+      if (isPriorityTraceDevice(senderDevice.typeId) || isPriorityTraceDevice(receiverDevice.typeId)) {
+        const acceptedByScheduledClear = lanesClearingThisTick.has(laneKey(link.to.instanceId, receiverLane))
+        const laneSnapshot = getRuntimeLaneSnapshot(receiverRuntime, receiverLane)
+        if (acceptedByScheduledClear && laneSnapshot?.occupied) {
+          simFlowLogger.debug('candidate-accepted-via-scheduled-clear', {
+            tick: context.tick,
+            round,
+            fromId: senderDevice.instanceId,
+            fromTypeId: senderDevice.typeId,
+            fromPortId: link.from.portId,
+            toId: receiverDevice.instanceId,
+            toTypeId: receiverDevice.typeId,
+            toPortId: link.receiverPortId,
+            toLane: receiverLane,
+            laneSnapshot,
+            preparedItemId: prepared.itemId,
+          }, 'candidate accepted because the receiver lane is already scheduled to clear this tick')
+        }
+      }
+
+      const receiverLaneKey = laneKey(link.to.instanceId, receiverLane)
+      if (matchedReceiverLanes.has(receiverLaneKey)) continue
+
+      const orderedOutLinks = context.helpers.orderedOutLinks(senderDevice, senderRuntime, context.outMap.get(senderDevice.instanceId) ?? [])
+      const pickedOutLinkIndex = orderedOutLinks.findIndex(
+        (outLink) =>
+          outLink.from.instanceId === link.from.instanceId
+          && outLink.from.portId === link.from.portId
+          && outLink.to.instanceId === link.to.instanceId
+          && outLink.to.portId === link.to.portId,
+      )
+      if (pickedOutLinkIndex < 0) continue
+
+      let senderPriorityGroupKey: string | null = null
+      let senderPriorityGroup = 5
+      let senderPriorityPortIndex = 0
+      let senderPriorityPortCount = 0
+      const allSenderOutLinks = context.outMap.get(senderDevice.instanceId) ?? []
+      const outputGroupPortIds = context.helpers.isStorageWithBufferGroups(senderRuntime)
+        && 'bufferGroups' in senderRuntime
+        && Array.isArray(senderRuntime.bufferGroups)
+        ? senderRuntime.bufferGroups.find((group) => group.outPortIds.includes(link.from.portId))?.outPortIds
+        : getDirectionalPortIds(senderDevice.typeId, 'Output')
+      if (outputGroupPortIds && outputGroupPortIds.length > 0) {
+        senderPriorityGroupKey = context.helpers.isStorageWithBufferGroups(senderRuntime)
+          && 'bufferGroups' in senderRuntime
+          && Array.isArray(senderRuntime.bufferGroups)
+          ? (senderRuntime.bufferGroups.find((group) => group.outPortIds.includes(link.from.portId))?.id ?? null)
+          : '__default__'
+        const livePortIds = outputGroupPortIds.filter((portId) => allSenderOutLinks.some((outLink) => outLink.from.portId === portId))
+        senderPriorityGroup = getPortPriorityGroup(senderDevice.config, link.from.portId)
+        const groupPortIds = livePortIds.filter((portId) => getPortPriorityGroup(senderDevice.config, portId) === senderPriorityGroup)
+        senderPriorityPortIndex = Math.max(0, groupPortIds.findIndex((portId) => portId === link.from.portId))
+        senderPriorityPortCount = groupPortIds.length
+      }
+
+      return {
+        attempt: {
+          receiverId: link.to.instanceId,
+          receiverPortId: link.receiverPortId,
+          receiverLane,
+          receiverCandidateRank: link.receiverPortRank,
+          fromId: link.from.instanceId,
           fromPortId: link.from.portId,
-          toId: receiverDevice.instanceId,
-          toTypeId: receiverDevice.typeId,
-          toPortId: link.receiverPortId,
-          toLane: receiverLane,
-          laneSnapshot,
-          preparedItemId: prepared.itemId,
-        }, 'candidate accepted because the receiver lane is already scheduled to clear this tick')
+          fromLane,
+          fromOutputSlotIndex: slotIndex,
+          itemId: prepared.itemId,
+          senderOutLinkCount: orderedOutLinks.length,
+          senderPickedOutLinkIndex: pickedOutLinkIndex,
+          senderPriorityGroupKey,
+          senderPriorityGroup,
+          senderPriorityPortIndex,
+          senderPriorityPortCount,
+          receiverPriorityGroup: link.receiverPriorityGroup,
+          receiverPriorityPortIndex: link.receiverPriorityPortIndex,
+          receiverPriorityPortCount: link.receiverPriorityPortCount,
+          receiverLaneKey,
+          targetKey,
+          dependencySenderId: null,
+          isDirect: true,
+        },
+        advanced,
+        exhausted: false,
       }
     }
 
-    const receiverLaneKey = laneKey(state.receiverId, receiverLane)
+    const nominalLane = context.helpers.receiveLaneForPort(receiverDevice, receiverRuntime, link.receiverPortId)
+    if (!nominalLane) continue
+    const laneSnapshot = getRuntimeLaneSnapshot(receiverRuntime, nominalLane)
+    if (!laneSnapshot?.occupied) continue
+
+    const receiverLaneKey = laneKey(link.to.instanceId, nominalLane)
     if (matchedReceiverLanes.has(receiverLaneKey)) continue
 
     const orderedOutLinks = context.helpers.orderedOutLinks(senderDevice, senderRuntime, context.outMap.get(senderDevice.instanceId) ?? [])
@@ -343,20 +467,11 @@ function pickIntentForReceiverState(
       senderPriorityPortCount = groupPortIds.length
     }
 
-    const slotIndex = pickStorageOutputSlotForPort(context, senderDevice.instanceId, link.from.portId, prepared.itemId)
-    if (
-      context.helpers.isStorageWithBufferGroups(senderRuntime)
-      && !SLOTLESS_STORAGE_OUTPUT_TYPE_IDS.has(senderDevice.typeId)
-      && typeof slotIndex !== 'number'
-    ) {
-      continue
-    }
-
     return {
-      intent: {
-        receiverId: state.receiverId,
+      attempt: {
+        receiverId: link.to.instanceId,
         receiverPortId: link.receiverPortId,
-        receiverLane,
+        receiverLane: nominalLane,
         receiverCandidateRank: link.receiverPortRank,
         fromId: link.from.instanceId,
         fromPortId: link.from.portId,
@@ -373,18 +488,19 @@ function pickIntentForReceiverState(
         receiverPriorityPortIndex: link.receiverPriorityPortIndex,
         receiverPriorityPortCount: link.receiverPriorityPortCount,
         receiverLaneKey,
-        receiverStateKey: state.key,
-        selectedCandidateIndex: index,
+        targetKey,
+        dependencySenderId: link.to.instanceId,
+        isDirect: false,
       },
       advanced,
+      exhausted: false,
     }
   }
 
-  receiverCursorByState.set(state.key, state.candidateLinks.length)
-  return { intent: null as ActiveIntent | null, advanced }
+  return { attempt: null as SenderAttempt | null, advanced, exhausted: sawReadyItem }
 }
 
-function compareIntents(left: ActiveIntent, right: ActiveIntent) {
+function compareIntents(left: SenderAttempt, right: SenderAttempt) {
   if (left.senderPickedOutLinkIndex !== right.senderPickedOutLinkIndex) {
     return left.senderPickedOutLinkIndex - right.senderPickedOutLinkIndex
   }
@@ -404,7 +520,7 @@ function compareIntents(left: ActiveIntent, right: ActiveIntent) {
   return left.receiverPortId.localeCompare(right.receiverPortId)
 }
 
-function compareReceiverLaneIntents(left: ActiveIntent, right: ActiveIntent) {
+function compareReceiverLaneIntents(left: SenderAttempt, right: SenderAttempt) {
   if (left.receiverCandidateRank !== right.receiverCandidateRank) {
     return left.receiverCandidateRank - right.receiverCandidateRank
   }
@@ -418,143 +534,233 @@ function compareReceiverLaneIntents(left: ActiveIntent, right: ActiveIntent) {
   return compareIntents(left, right)
 }
 
+function addFailedTarget(failedTargetKeysBySender: Map<string, Set<string>>, senderId: string, targetKey: string) {
+  const existing = failedTargetKeysBySender.get(senderId)
+  if (existing) {
+    existing.add(targetKey)
+    return
+  }
+  failedTargetKeysBySender.set(senderId, new Set([targetKey]))
+}
+
+function detectCycleSenders(attemptBySender: Map<string, SenderAttempt>) {
+  const visiting = new Set<string>()
+  const visited = new Set<string>()
+  const cyclic = new Set<string>()
+
+  const visit = (senderId: string, path: string[]) => {
+    if (visited.has(senderId)) return
+    if (visiting.has(senderId)) {
+      const cycleStart = path.indexOf(senderId)
+      for (const cycleNode of path.slice(cycleStart)) {
+        cyclic.add(cycleNode)
+      }
+      return
+    }
+
+    visiting.add(senderId)
+    const attempt = attemptBySender.get(senderId)
+    if (attempt?.dependencySenderId && attemptBySender.has(attempt.dependencySenderId)) {
+      visit(attempt.dependencySenderId, [...path, attempt.dependencySenderId])
+    }
+    visiting.delete(senderId)
+    visited.add(senderId)
+  }
+
+  for (const senderId of attemptBySender.keys()) {
+    visit(senderId, [senderId])
+  }
+
+  return cyclic
+}
+
 export function solvePullTransferMatches(context: PlanContext): PlanResult {
   const transferMatches: TransferMatch[] = []
   const plannedSenders = new Set<string>()
   const matchedReceiverLanes = new Set<string>()
   const lanesClearingThisTick = new Set<string>()
   const lanesAdvancedThisTick = new Set<string>()
+  const blockedSenders = new Set<string>()
+  const failedTargetKeysBySender = new Map<string, Set<string>>()
 
   const devicePullInputPortOrderById = context.helpers.buildDevicePullInputPortOrderMap()
   const receiverStates = buildReceiverStates(context, devicePullInputPortOrderById)
-  const receiverCursorByState = new Map(receiverStates.map((state) => [state.key, 0]))
+  const receiverCandidateMetaByLinkKey = buildReceiverCandidateMetaMap(receiverStates)
+  const senderCandidateLinksBySender = buildSenderCandidateLinks(context, receiverCandidateMetaByLinkKey)
 
   const totalLinks = receiverStates.reduce((sum, state) => sum + state.candidateLinks.length, 0)
   const maxRounds = Math.max(8, totalLinks)
 
   let transferSequence = 0
   for (let round = 0; round < maxRounds; round += 1) {
-    const activeIntents: ActiveIntent[] = []
     let laneAdvancedThisRound = false
+    let changedThisRound = false
 
-    for (const state of receiverStates) {
-      const { intent, advanced } = pickIntentForReceiverState(
+    const attemptBySender = new Map<string, SenderAttempt>()
+    for (const device of context.layoutDevices) {
+      if (plannedSenders.has(device.instanceId) || blockedSenders.has(device.instanceId)) continue
+      const senderCandidateLinks = senderCandidateLinksBySender.get(device.instanceId)
+      if (!senderCandidateLinks || senderCandidateLinks.length === 0) continue
+
+      const { attempt, advanced, exhausted } = pickAttemptForSender(
         context,
-        state,
-        receiverCursorByState,
-        plannedSenders,
+        device.instanceId,
+        senderCandidateLinks,
+        failedTargetKeysBySender.get(device.instanceId) ?? new Set<string>(),
         matchedReceiverLanes,
         lanesClearingThisTick,
         lanesAdvancedThisTick,
         round,
       )
+
       if (advanced) laneAdvancedThisRound = true
-      if (intent) activeIntents.push(intent)
-    }
-
-    if (activeIntents.length === 0) {
-      if (!laneAdvancedThisRound) break
-      continue
-    }
-
-    const selectedIntentByReceiverLane = new Map<string, ActiveIntent>()
-    for (const intent of activeIntents) {
-      const existing = selectedIntentByReceiverLane.get(intent.receiverLaneKey)
-      if (!existing || compareReceiverLaneIntents(intent, existing) < 0) {
-        selectedIntentByReceiverLane.set(intent.receiverLaneKey, intent)
+      if (attempt) {
+        attemptBySender.set(device.instanceId, attempt)
+      } else if (exhausted) {
+        blockedSenders.add(device.instanceId)
+        changedThisRound = true
       }
     }
 
-    const receiverSelectedIntents = [...selectedIntentByReceiverLane.values()]
-
-    const groupedBySender = new Map<string, ActiveIntent[]>()
-    for (const intent of receiverSelectedIntents) {
-      const grouped = groupedBySender.get(intent.fromId)
-      if (grouped) {
-        grouped.push(intent)
-      } else {
-        groupedBySender.set(intent.fromId, [intent])
-      }
-    }
-
-    const winningIntentBySender = new Map<string, ActiveIntent>()
-    for (const [senderId, intents] of groupedBySender.entries()) {
-      intents.sort(compareIntents)
-      winningIntentBySender.set(senderId, intents[0])
-    }
-
-    const winners = [...winningIntentBySender.values()]
-    if (winners.length === 0) {
-      if (!laneAdvancedThisRound) break
+    if (attemptBySender.size === 0) {
+      if (!laneAdvancedThisRound && !changedThisRound) break
       continue
     }
 
-    const winnerSet = new Set(winners)
-    const receiverSelectedIntentSet = new Set(receiverSelectedIntents)
-    for (const intent of activeIntents) {
-      if (!receiverSelectedIntentSet.has(intent)) continue
-      if (winnerSet.has(intent)) continue
-      receiverCursorByState.set(intent.receiverStateKey, intent.selectedCandidateIndex + 1)
+    const failedSenders = new Set<string>()
+    const failCurrentAttempt = (attempt: SenderAttempt | undefined) => {
+      if (!attempt || failedSenders.has(attempt.fromId) || plannedSenders.has(attempt.fromId)) return
+      failedSenders.add(attempt.fromId)
+      addFailedTarget(failedTargetKeysBySender, attempt.fromId, attempt.targetKey)
+      changedThisRound = true
     }
 
-    for (const winner of winners) {
-      const senderDevice = context.deviceById.get(winner.fromId)
-      const receiverDevice = context.deviceById.get(winner.receiverId)
-      if (senderDevice && receiverDevice && (isPriorityTraceDevice(senderDevice.typeId) || isPriorityTraceDevice(receiverDevice.typeId))) {
-        simFlowLogger.debug('winner-selected', {
-          tick: context.tick,
-          round,
+    for (const attempt of attemptBySender.values()) {
+      if (!attempt.dependencySenderId) continue
+      if (blockedSenders.has(attempt.dependencySenderId)) {
+        failCurrentAttempt(attempt)
+        continue
+      }
+      if (!attemptBySender.has(attempt.dependencySenderId) && !plannedSenders.has(attempt.dependencySenderId)) {
+        failCurrentAttempt(attempt)
+      }
+    }
+
+    const cyclicSenders = detectCycleSenders(new Map(
+      [...attemptBySender.entries()].filter(([senderId]) => !failedSenders.has(senderId)),
+    ))
+    for (const senderId of cyclicSenders) {
+      failCurrentAttempt(attemptBySender.get(senderId))
+    }
+
+    const committedThisRound = new Set<string>()
+    const readyBySender = new Map<string, SenderAttempt>()
+    const refreshReadyAttempts = () => {
+      readyBySender.clear()
+      for (const [senderId, attempt] of attemptBySender.entries()) {
+        if (failedSenders.has(senderId) || committedThisRound.has(senderId) || plannedSenders.has(senderId)) continue
+        if (matchedReceiverLanes.has(attempt.receiverLaneKey)) {
+          failCurrentAttempt(attempt)
+          continue
+        }
+        if (attempt.isDirect || plannedSenders.has(attempt.dependencySenderId ?? '') || committedThisRound.has(attempt.dependencySenderId ?? '')) {
+          readyBySender.set(senderId, attempt)
+        }
+      }
+    }
+
+    refreshReadyAttempts()
+
+    while (readyBySender.size > 0) {
+      const selectedByReceiverLane = new Map<string, SenderAttempt>()
+      for (const attempt of readyBySender.values()) {
+        const existing = selectedByReceiverLane.get(attempt.receiverLaneKey)
+        if (!existing || compareReceiverLaneIntents(attempt, existing) < 0) {
+          selectedByReceiverLane.set(attempt.receiverLaneKey, attempt)
+        }
+      }
+
+      const winners = [...selectedByReceiverLane.values()]
+      const winnerIds = new Set(winners.map((attempt) => attempt.fromId))
+      for (const [senderId, attempt] of readyBySender.entries()) {
+        if (!winnerIds.has(senderId)) {
+          failCurrentAttempt(attempt)
+        }
+      }
+
+      if (winners.length === 0) break
+
+      for (const winner of winners) {
+        if (failedSenders.has(winner.fromId) || plannedSenders.has(winner.fromId) || matchedReceiverLanes.has(winner.receiverLaneKey)) {
+          continue
+        }
+
+        const senderDevice = context.deviceById.get(winner.fromId)
+        const receiverDevice = context.deviceById.get(winner.receiverId)
+        if (senderDevice && receiverDevice && (isPriorityTraceDevice(senderDevice.typeId) || isPriorityTraceDevice(receiverDevice.typeId))) {
+          simFlowLogger.debug('winner-selected', {
+            tick: context.tick,
+            round,
+            fromId: winner.fromId,
+            fromTypeId: senderDevice.typeId,
+            fromPortId: winner.fromPortId,
+            toId: winner.receiverId,
+            toTypeId: receiverDevice.typeId,
+            toPortId: winner.receiverPortId,
+            toLane: winner.receiverLane,
+            itemId: winner.itemId,
+            senderPickedOutLinkIndex: winner.senderPickedOutLinkIndex,
+            receiverCandidateRank: winner.receiverCandidateRank,
+          }, 'selected transfer winner for traced splitter/converger path')
+        }
+
+        if (senderDevice && isPriorityTraceDevice(senderDevice.typeId)) {
+          simFlowLogger.debug('sender-scheduled-to-clear', {
+            tick: context.tick,
+            round,
+            senderId: winner.fromId,
+            senderTypeId: senderDevice.typeId,
+            senderLane: winner.fromLane,
+            senderPortId: winner.fromPortId,
+            toId: winner.receiverId,
+            toPortId: winner.receiverPortId,
+            itemId: winner.itemId,
+          }, 'sender lane reserved to clear later in this tick')
+        }
+
+        transferMatches.push({
+          transferId: buildTransferId(context.tick, transferSequence),
           fromId: winner.fromId,
-          fromTypeId: senderDevice.typeId,
           fromPortId: winner.fromPortId,
+          fromLane: winner.fromLane,
+          fromOutputSlotIndex: winner.fromOutputSlotIndex,
           toId: winner.receiverId,
-          toTypeId: receiverDevice.typeId,
           toPortId: winner.receiverPortId,
           toLane: winner.receiverLane,
           itemId: winner.itemId,
+          senderOutLinkCount: winner.senderOutLinkCount,
           senderPickedOutLinkIndex: winner.senderPickedOutLinkIndex,
-          receiverCandidateRank: winner.receiverCandidateRank,
-        }, 'selected transfer winner for traced splitter/converger path')
+          senderPriorityGroupKey: winner.senderPriorityGroupKey,
+          senderPriorityGroup: winner.senderPriorityGroup,
+          senderPriorityPortIndex: winner.senderPriorityPortIndex,
+          senderPriorityPortCount: winner.senderPriorityPortCount,
+          receiverPriorityGroup: winner.receiverPriorityGroup,
+          receiverPriorityPortIndex: winner.receiverPriorityPortIndex,
+          receiverPriorityPortCount: winner.receiverPriorityPortCount,
+        })
+        transferSequence += 1
+        plannedSenders.add(winner.fromId)
+        committedThisRound.add(winner.fromId)
+        matchedReceiverLanes.add(winner.receiverLaneKey)
+        lanesClearingThisTick.add(`${winner.fromId}:${winner.fromLane}`)
+        changedThisRound = true
       }
 
-      if (senderDevice && isPriorityTraceDevice(senderDevice.typeId)) {
-        simFlowLogger.debug('sender-scheduled-to-clear', {
-          tick: context.tick,
-          round,
-          senderId: winner.fromId,
-          senderTypeId: senderDevice.typeId,
-          senderLane: winner.fromLane,
-          senderPortId: winner.fromPortId,
-          toId: winner.receiverId,
-          toPortId: winner.receiverPortId,
-          itemId: winner.itemId,
-        }, 'sender lane reserved to clear later in this tick')
-      }
+      refreshReadyAttempts()
+    }
 
-      transferMatches.push({
-        transferId: buildTransferId(context.tick, transferSequence),
-        fromId: winner.fromId,
-        fromPortId: winner.fromPortId,
-        fromLane: winner.fromLane,
-        fromOutputSlotIndex: winner.fromOutputSlotIndex,
-        toId: winner.receiverId,
-        toPortId: winner.receiverPortId,
-        toLane: winner.receiverLane,
-        itemId: winner.itemId,
-        senderOutLinkCount: winner.senderOutLinkCount,
-        senderPickedOutLinkIndex: winner.senderPickedOutLinkIndex,
-        senderPriorityGroupKey: winner.senderPriorityGroupKey,
-        senderPriorityGroup: winner.senderPriorityGroup,
-        senderPriorityPortIndex: winner.senderPriorityPortIndex,
-        senderPriorityPortCount: winner.senderPriorityPortCount,
-        receiverPriorityGroup: winner.receiverPriorityGroup,
-        receiverPriorityPortIndex: winner.receiverPriorityPortIndex,
-        receiverPriorityPortCount: winner.receiverPriorityPortCount,
-      })
-      transferSequence += 1
-      plannedSenders.add(winner.fromId)
-      matchedReceiverLanes.add(winner.receiverLaneKey)
-      lanesClearingThisTick.add(`${winner.fromId}:${winner.fromLane}`)
+    if (!laneAdvancedThisRound && !changedThisRound) {
+      break
     }
   }
 
