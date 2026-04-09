@@ -1,4 +1,5 @@
 import { isSamePlacementPreviewState } from "@/editor/contracts/placement-preview";
+import { isSameMoveDraftState } from "@/editor/contracts/move-draft";
 import type { EditorSession } from "@/editor/contracts/editor-session";
 import {
   cloneCurrentInteractionMode,
@@ -43,7 +44,8 @@ export function isSameEditorSession(
     left.selectionInputMode === right.selectionInputMode &&
     left.hoveredEntityId === right.hoveredEntityId &&
     left.dragPreviewEntityId === right.dragPreviewEntityId &&
-    isSamePlacementPreviewState(left.placementPreview, right.placementPreview)
+    isSamePlacementPreviewState(left.placementPreview, right.placementPreview) &&
+    isSameMoveDraftState(left.moveDraft, right.moveDraft)
   );
 }
 
@@ -72,6 +74,20 @@ function cloneEditorSession(session: EditorSession): EditorSession {
           ...session.placementPreview,
           gridPoint: {
             ...session.placementPreview.gridPoint,
+          },
+        }
+      : null,
+    moveDraft: session.moveDraft
+      ? {
+          ...session.moveDraft,
+          originGridPoint: {
+            ...session.moveDraft.originGridPoint,
+          },
+          gridPoint: {
+            ...session.moveDraft.gridPoint,
+          },
+          anchorWorldOffset: {
+            ...session.moveDraft.anchorWorldOffset,
           },
         }
       : null,
@@ -183,6 +199,23 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
             ...session.placementPreview,
             gridPoint: {
               ...session.placementPreview.gridPoint,
+            },
+          }
+        : null;
+    }
+
+    if (!isSameMoveDraftState(this.session.moveDraft, session.moveDraft)) {
+      this.session.moveDraft = session.moveDraft
+        ? {
+            ...session.moveDraft,
+            originGridPoint: {
+              ...session.moveDraft.originGridPoint,
+            },
+            gridPoint: {
+              ...session.moveDraft.gridPoint,
+            },
+            anchorWorldOffset: {
+              ...session.moveDraft.anchorWorldOffset,
             },
           }
         : null;

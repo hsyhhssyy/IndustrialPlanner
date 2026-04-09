@@ -2,6 +2,7 @@ import type {
   PlacementPreviewState,
   PlacementInteractionMode,
 } from "@/editor/contracts/placement-preview";
+import type { MoveDraftState } from "@/editor/contracts/move-draft";
 import type {
   CurrentInteractionMode,
   DisplayTool,
@@ -21,4 +22,5 @@ export interface EditorSession {
   hoveredEntityId: string | null;
   dragPreviewEntityId: string | null;
   placementPreview: PlacementPreviewState | null;
+  moveDraft: MoveDraftState | null;
 }

@@ -48,6 +48,7 @@ import { createInitialEditorSession } from "@/editor/core/editor-session";
 import {
   getPendingLinkSourceEntityId,
   isInteractionModeAvailableInPhase,
+  isMoveInteractionMode,
   isPlacementInteractionMode,
   resolveDefaultNextInteractionMode,
   type InteractionModeKey,
@@ -232,6 +233,12 @@ class WorkbenchControllerImpl implements WorkbenchController {
       : null;
   }
 
+  private getMoveMode(session = this.editorHost.getState().session) {
+    return isMoveInteractionMode(session.currentMode)
+      ? session.currentMode
+      : null;
+  }
+
   setPhase(phase: WorkbenchPhase): void {
     const previousPhase = this.uiStore.getSnapshot().phase;
 
@@ -244,7 +251,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
         this.editorHost.setInteractionMode(
           resolveDefaultNextInteractionMode(currentMode).key as Exclude<
             InteractionModeKey,
-            "placement"
+            "placement" | "move"
           >,
         );
       }
@@ -279,7 +286,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   setInteractionMode(
-    modeKey: Exclude<InteractionModeKey, "placement">,
+    modeKey: Exclude<InteractionModeKey, "placement" | "move">,
   ): void {
     this.editorHost.setInteractionMode(modeKey);
     this.sync();
@@ -336,6 +343,55 @@ class WorkbenchControllerImpl implements WorkbenchController {
       this.viewportSize.y > 0
     ) {
       this.centerPlacementPreview();
+      return;
+    }
+
+    this.sync();
+  }
+
+  beginMoveFromScreenPoint(
+    entityId: string,
+    screenPoint: CanvasPoint,
+    inputMode: PlacementInteractionMode,
+  ): void {
+    if (this.uiStore.getSnapshot().phase === "simulate") {
+      return;
+    }
+
+    const didBeginMove = this.editorHost.beginMove(
+      entityId,
+      inputMode,
+      this.resolveWorldInput(screenPoint),
+    );
+
+    if (!didBeginMove) {
+      return;
+    }
+
+    this.sync();
+  }
+
+  updateMoveDraftFromScreenPoint(screenPoint: CanvasPoint): void {
+    const moveMode = this.getMoveMode();
+
+    if (!moveMode) {
+      return;
+    }
+
+    this.editorHost.updateMoveDraft(this.resolveWorldInput(screenPoint));
+    this.sync();
+  }
+
+  async confirmMovePreview(): Promise<void> {
+    await this.applyEditorMutation(() => {
+      this.editorHost.confirmMove();
+    });
+  }
+
+  cancelMove(): void {
+    const didCancel = this.editorHost.cancelMove();
+
+    if (!didCancel) {
       return;
     }
 

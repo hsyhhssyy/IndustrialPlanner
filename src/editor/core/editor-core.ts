@@ -10,15 +10,19 @@ import type { EditorSession } from "@/editor/contracts/editor-session";
 import {
   createInspectInteractionMode,
   createLinkInteractionMode,
+  createMoveInteractionMode,
   createPlacementInteractionMode,
   createSelectInteractionMode,
   getPendingLinkSourceEntityId,
   isLinkInteractionMode,
+  isMoveInteractionMode,
   isPlacementInteractionMode,
+  resolveDefaultNextInteractionMode,
   resolveDisplayToolForMode,
   type InteractionModeKey,
   type PlacementDisplayTool,
 } from "@/editor/contracts/interaction-mode";
+import type { MoveDraftState } from "@/editor/contracts/move-draft";
 import type {
   PlacementInteractionMode,
   PlacementPreviewState,
@@ -58,14 +62,22 @@ export interface EditorCoreSnapshot {
  */
 export interface EditorCore {
   getSnapshot: () => EditorCoreSnapshot;
-  setInteractionMode: (modeKey: Exclude<InteractionModeKey, "placement">) => void;
+  setInteractionMode: (modeKey: Exclude<InteractionModeKey, "placement" | "move">) => void;
   armPlacement: (
     definitionId: string,
     displayTool?: PlacementDisplayTool,
     inputMode?: PlacementInteractionMode,
   ) => void;
+  beginMove: (
+    entityId: string,
+    inputMode: PlacementInteractionMode,
+    draft: MoveDraftState,
+  ) => void;
   setPlacementRotation: (rotation: GridRotation | null) => void;
   setPlacementPreview: (preview: PlacementPreviewState | null) => void;
+  setMoveDraft: (draft: MoveDraftState | null) => void;
+  cancelMove: () => void;
+  confirmMove: () => boolean;
   selectEntity: (
     entityId: string | null,
     inputMode?: PlacementInteractionMode | null,
@@ -77,6 +89,7 @@ export interface EditorCore {
     position: GridPoint,
     rotation?: GridRotation,
   ) => void;
+  moveEntity: (entityId: string, position: GridPoint) => boolean;
   patchEntityConfig: (entityId: string, patch: Record<string, unknown>) => void;
   createLink: (sourceEntityId: string, targetEntityId: string) => void;
   removeLink: (linkId: string) => void;
@@ -112,7 +125,9 @@ class EditorCoreImpl implements EditorCore {
     };
   }
 
-  setInteractionMode(modeKey: Exclude<InteractionModeKey, "placement">): void {
+  setInteractionMode(
+    modeKey: Exclude<InteractionModeKey, "placement" | "move">,
+  ): void {
     const context = {
       previousModeKey: this.session.currentMode.key,
       entryDisplayTool: this.session.displayTool,
@@ -120,13 +135,13 @@ class EditorCoreImpl implements EditorCore {
 
     switch (modeKey) {
       case "select":
-        this.applyInteractionMode(createSelectInteractionMode(context), true);
+        this.applyInteractionMode(createSelectInteractionMode(context), true, true);
         return;
       case "link":
-        this.applyInteractionMode(createLinkInteractionMode(context), true);
+        this.applyInteractionMode(createLinkInteractionMode(context), true, true);
         return;
       case "inspect":
-        this.applyInteractionMode(createInspectInteractionMode(context), true);
+        this.applyInteractionMode(createInspectInteractionMode(context), true, true);
         return;
     }
   }
@@ -146,7 +161,32 @@ class EditorCoreImpl implements EditorCore {
         entryDisplayTool: displayTool,
       }),
       true,
+      true,
     );
+  }
+
+  beginMove(
+    entityId: string,
+    inputMode: PlacementInteractionMode,
+    draft: MoveDraftState,
+  ): void {
+    this.applyInteractionMode(
+      createMoveInteractionMode({
+        entityId,
+        inputMode,
+        previousModeKey: this.session.currentMode.key,
+        entryDisplayTool: this.session.displayTool,
+      }),
+      true,
+      false,
+    );
+
+    this.session = {
+      ...this.session,
+      selection: [entityId],
+      selectionInputMode: inputMode,
+    };
+    this.setMoveDraft(draft);
   }
 
   setPlacementRotation(rotation: GridRotation | null): void {
@@ -160,6 +200,7 @@ class EditorCoreImpl implements EditorCore {
         rotation: rotation ?? 0,
       },
       false,
+      false,
     );
   }
 
@@ -168,6 +209,52 @@ class EditorCoreImpl implements EditorCore {
       ...this.session,
       placementPreview: preview,
     };
+  }
+
+  setMoveDraft(draft: MoveDraftState | null): void {
+    this.session = {
+      ...this.session,
+      moveDraft: draft,
+      dragPreviewEntityId: draft?.entityId ?? null,
+    };
+  }
+
+  cancelMove(): void {
+    if (!isMoveInteractionMode(this.session.currentMode)) {
+      return;
+    }
+
+    this.applyInteractionMode(
+      resolveDefaultNextInteractionMode(this.session.currentMode),
+      true,
+      true,
+    );
+  }
+
+  confirmMove(): boolean {
+    if (!isMoveInteractionMode(this.session.currentMode) || !this.session.moveDraft) {
+      return false;
+    }
+
+    const moveDraft = this.session.moveDraft;
+
+    if (!moveDraft.valid) {
+      return false;
+    }
+
+    if (
+      moveDraft.gridPoint.x !== moveDraft.originGridPoint.x ||
+      moveDraft.gridPoint.y !== moveDraft.originGridPoint.y
+    ) {
+      this.moveEntity(moveDraft.entityId, moveDraft.gridPoint);
+    }
+
+    this.applyInteractionMode(
+      resolveDefaultNextInteractionMode(this.session.currentMode),
+      true,
+      true,
+    );
+    return true;
   }
 
   selectEntity(
@@ -219,6 +306,7 @@ class EditorCoreImpl implements EditorCore {
           entryDisplayTool: this.session.displayTool,
         }),
         true,
+        true,
       );
       return;
     }
@@ -228,6 +316,7 @@ class EditorCoreImpl implements EditorCore {
         ...this.session.currentMode,
         sourceEntityId: entityId,
       },
+      true,
       true,
     );
   }
@@ -263,6 +352,16 @@ class EditorCoreImpl implements EditorCore {
       selection: [entityId],
       selectionInputMode: placementMode?.inputMode ?? this.session.selectionInputMode,
     };
+  }
+
+  moveEntity(entityId: string, position: GridPoint): boolean {
+    return this.applyCommand({
+      type: "entity.move",
+      payload: {
+        entityId,
+        position,
+      },
+    });
   }
 
   patchEntityConfig(entityId: string, patch: Record<string, unknown>): void {
@@ -369,12 +468,15 @@ class EditorCoreImpl implements EditorCore {
   private applyInteractionMode(
     nextMode: EditorSession["currentMode"],
     clearPlacementPreview: boolean,
+    clearMoveDraft: boolean,
   ): void {
     this.session = {
       ...this.session,
       currentMode: nextMode,
       displayTool: resolveDisplayToolForMode(nextMode),
       placementPreview: clearPlacementPreview ? null : this.session.placementPreview,
+      moveDraft: clearMoveDraft ? null : this.session.moveDraft,
+      dragPreviewEntityId: clearMoveDraft ? null : this.session.dragPreviewEntityId,
     };
   }
 
@@ -416,21 +518,34 @@ class EditorCoreImpl implements EditorCore {
         ? this.session.hoveredEntityId
         : null;
     const dragPreviewEntityId =
-      this.session.dragPreviewEntityId &&
-      this.document.entities[this.session.dragPreviewEntityId]
-        ? this.session.dragPreviewEntityId
+      this.session.moveDraft && this.document.entities[this.session.moveDraft.entityId]
+        ? this.session.moveDraft.entityId
+        : null;
+    const moveDraft =
+      this.session.moveDraft &&
+      this.document.entities[this.session.moveDraft.entityId]
+        ? this.session.moveDraft
         : null;
     const pendingLinkSourceEntityId =
       getPendingLinkSourceEntityId(this.session.currentMode) &&
       this.document.entities[getPendingLinkSourceEntityId(this.session.currentMode) ?? ""]
         ? getPendingLinkSourceEntityId(this.session.currentMode)
         : null;
-    const nextMode = isLinkInteractionMode(this.session.currentMode)
-      ? {
-          ...this.session.currentMode,
-          sourceEntityId: pendingLinkSourceEntityId,
-        }
-      : this.session.currentMode;
+    let nextMode = this.session.currentMode;
+
+    if (isLinkInteractionMode(this.session.currentMode)) {
+      nextMode = {
+        ...this.session.currentMode,
+        sourceEntityId: pendingLinkSourceEntityId,
+      };
+    }
+
+    if (
+      isMoveInteractionMode(nextMode) &&
+      (!moveDraft || selection[0] !== nextMode.entityId)
+    ) {
+      nextMode = resolveDefaultNextInteractionMode(nextMode);
+    }
 
     this.session = {
       ...this.session,
@@ -444,6 +559,7 @@ class EditorCoreImpl implements EditorCore {
       placementPreview: isPlacementInteractionMode(nextMode)
         ? this.session.placementPreview
         : null,
+      moveDraft: isMoveInteractionMode(nextMode) ? moveDraft : null,
     };
   }
 }

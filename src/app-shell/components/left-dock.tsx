@@ -35,7 +35,7 @@ const TOOL_LABEL_KEYS: Record<DisplayTool, MessageKey> = {
 
 function resolveDirectEntryMode(
   button: PlaceholderButtonDescriptor,
-): Exclude<InteractionModeKey, "placement"> | null {
+): Exclude<InteractionModeKey, "placement" | "move"> | null {
   switch (button.displayTool) {
     case "select":
       return "select";

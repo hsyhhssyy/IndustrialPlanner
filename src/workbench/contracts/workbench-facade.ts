@@ -50,7 +50,7 @@ export interface WorkbenchController {
   registry: Stage1Registry;
   setPhase: (phase: WorkbenchPhase) => void;
   setInteractionMode: (
-    modeKey: Exclude<InteractionModeKey, "placement">,
+    modeKey: Exclude<InteractionModeKey, "placement" | "move">,
   ) => void;
   requestCanvasKeyboardFocus: () => void;
   subscribeCanvasKeyboardFocusRequests: (
@@ -61,6 +61,14 @@ export interface WorkbenchController {
     displayTool?: PlacementDisplayTool,
     inputMode?: PlacementInteractionMode,
   ) => void;
+  beginMoveFromScreenPoint: (
+    entityId: string,
+    screenPoint: CanvasPoint,
+    inputMode: PlacementInteractionMode,
+  ) => void;
+  updateMoveDraftFromScreenPoint: (screenPoint: CanvasPoint) => void;
+  confirmMovePreview: () => Promise<void>;
+  cancelMove: () => void;
   rotatePlacementClockwise: () => void;
   cancelPlacement: () => void;
   centerPlacementPreview: () => void;

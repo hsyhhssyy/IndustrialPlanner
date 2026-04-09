@@ -8,10 +8,15 @@ import type { EditorSession } from "@/editor/contracts/editor-session";
 import {
   getPendingLinkSourceEntityId,
   isLinkInteractionMode,
+  isMoveInteractionMode,
   isPlacementInteractionMode,
   type InteractionModeKey,
   type PlacementDisplayTool,
 } from "@/editor/contracts/interaction-mode";
+import {
+  isSameMoveDraftState,
+  type MoveDraftState,
+} from "@/editor/contracts/move-draft";
 import {
   isSamePlacementPreviewState,
 } from "@/editor/contracts/placement-preview";
@@ -72,6 +77,19 @@ export interface PlacementQueryResult {
   preview: PlacementPreviewState | null;
   invalidReason: PlacementPreviewInvalidReason | null;
   hitEntityId: string | null;
+  overlappingEntityIds: string[];
+}
+
+export interface MoveDraftUpdateResult {
+  draft: MoveDraftState | null;
+  invalidReason: MoveDraftInvalidReason | null;
+  overlappingEntityIds: string[];
+  changed: boolean;
+}
+
+export interface MoveQueryResult {
+  draft: MoveDraftState | null;
+  invalidReason: MoveDraftInvalidReason | null;
   overlappingEntityIds: string[];
 }
 
@@ -156,13 +174,18 @@ export interface EditorHost {
     worldPoint: CanvasPoint,
   ) => EditorWorldInteractionTarget;
   setInteractionMode: (
-    modeKey: Exclude<InteractionModeKey, "placement">,
+    modeKey: Exclude<InteractionModeKey, "placement" | "move">,
   ) => void;
   armPlacement: (
     definitionId: string,
     displayTool?: PlacementDisplayTool,
     inputMode?: PlacementInteractionMode,
   ) => void;
+  beginMove: (
+    entityId: string,
+    inputMode: PlacementInteractionMode,
+    input: CanvasWorldInput,
+  ) => boolean;
   rotatePlacementClockwise: () => boolean;
   queryPlacementAtWorldInput: (input: CanvasWorldInput) => PlacementQueryResult;
   queryPlacementPreview: (
@@ -172,6 +195,10 @@ export interface EditorHost {
   confirmPlacement: () => boolean;
   commitPlacement: (input: CanvasWorldInput) => boolean;
   clearPlacementPreview: () => void;
+  queryMoveDraftAtWorldInput: (input: CanvasWorldInput) => MoveQueryResult;
+  updateMoveDraft: (input: CanvasWorldInput) => MoveDraftUpdateResult;
+  confirmMove: () => boolean;
+  cancelMove: () => boolean;
   activateLinkTarget: (entityId: string | null) => void;
   setPlacementPreview: (preview: PlacementPreviewState | null) => void;
   selectEntity: (
@@ -209,8 +236,18 @@ type PlacementPreviewInvalidReason =
   | "entity-collision"
   | "out-of-base";
 
+type MoveDraftInvalidReason =
+  | "inactive-move"
+  | "missing-entity"
+  | "out-of-base";
+
 interface PlacementCandidateEvaluation {
   invalidReason: PlacementPreviewInvalidReason | null;
+  overlappingEntityIds: string[];
+}
+
+interface MoveCandidateEvaluation {
+  invalidReason: MoveDraftInvalidReason | null;
   overlappingEntityIds: string[];
 }
 
@@ -262,6 +299,12 @@ class EditorHostImpl implements EditorHost {
       : null;
   }
 
+  private getMoveMode(session: EditorSession = this.core.getSnapshot().session) {
+    return isMoveInteractionMode(session.currentMode)
+      ? session.currentMode
+      : null;
+  }
+
   queryInteractionTarget(worldPoint: CanvasPoint): EditorWorldInteractionTarget {
     const snapshot = this.core.getSnapshot();
     const hitEntityId = hitTestWorldEntity(
@@ -283,7 +326,9 @@ class EditorHostImpl implements EditorHost {
     };
   }
 
-  setInteractionMode(modeKey: Exclude<InteractionModeKey, "placement">): void {
+  setInteractionMode(
+    modeKey: Exclude<InteractionModeKey, "placement" | "move">,
+  ): void {
     this.core.setInteractionMode(modeKey);
   }
 
@@ -298,6 +343,50 @@ class EditorHostImpl implements EditorHost {
       displayTool: displayTool ?? "place",
       inputMode: inputMode ?? "pointer",
     });
+  }
+
+  beginMove(
+    entityId: string,
+    inputMode: PlacementInteractionMode,
+    input: CanvasWorldInput,
+  ): boolean {
+    const { document, session } = this.core.getSnapshot();
+
+    if (
+      session.currentMode.key !== "select" ||
+      session.selection.length !== 1 ||
+      session.selection[0] !== entityId
+    ) {
+      return false;
+    }
+
+    const entity = document.entities[entityId];
+
+    if (!entity) {
+      return false;
+    }
+
+    const draft: MoveDraftState = {
+      entityId,
+      interactionMode: inputMode,
+      originGridPoint: entity.position,
+      gridPoint: entity.position,
+      rotation: entity.rotation,
+      valid: true,
+      anchorWorldOffset: {
+        x: input.worldPoint.x - entity.position.x * document.documentSettings.gridSize,
+        y: input.worldPoint.y - entity.position.y * document.documentSettings.gridSize,
+      },
+    };
+
+    this.core.beginMove(entityId, inputMode, draft);
+    this.logger.info("Began move draft.", {
+      entityId,
+      inputMode,
+      originGridPoint: entity.position,
+      anchorWorldOffset: draft.anchorWorldOffset,
+    });
+    return true;
   }
 
   rotatePlacementClockwise(): boolean {
@@ -586,6 +675,152 @@ class EditorHostImpl implements EditorHost {
     this.core.setPlacementPreview(null);
   }
 
+  queryMoveDraftAtWorldInput(input: CanvasWorldInput): MoveQueryResult {
+    const { document, session } = this.core.getSnapshot();
+    const moveMode = this.getMoveMode(session);
+    const moveDraft = session.moveDraft;
+
+    if (!moveMode || !moveDraft) {
+      return {
+        draft: null,
+        invalidReason: "inactive-move",
+        overlappingEntityIds: [],
+      };
+    }
+
+    const entity = document.entities[moveMode.entityId];
+
+    if (!entity) {
+      return {
+        draft: null,
+        invalidReason: "missing-entity",
+        overlappingEntityIds: [],
+      };
+    }
+
+    const definition =
+      this.getTopology().entityViews[entity.id]?.definition ??
+      this.getDefinition(entity.definitionId);
+
+    if (!definition) {
+      return {
+        draft: null,
+        invalidReason: "missing-entity",
+        overlappingEntityIds: [],
+      };
+    }
+
+    const draft = this.createMoveDraftFromWorldInput(document, moveDraft, input);
+    const evaluation = this.evaluateMoveDraft(draft, definition);
+
+    return {
+      draft: {
+        ...draft,
+        valid: evaluation.invalidReason === null,
+      },
+      invalidReason: evaluation.invalidReason,
+      overlappingEntityIds: evaluation.overlappingEntityIds,
+    };
+  }
+
+  updateMoveDraft(input: CanvasWorldInput): MoveDraftUpdateResult {
+    const previousDraft = this.core.getSnapshot().session.moveDraft;
+    const resolution = this.queryMoveDraftAtWorldInput(input);
+    const changed = !isSameMoveDraftState(previousDraft, resolution.draft);
+
+    if (changed) {
+      this.core.setMoveDraft(resolution.draft);
+      this.logger.debug("Updated move draft.", {
+        worldPoint: input.worldPoint,
+        gridPoint: input.gridPoint,
+        draft: resolution.draft,
+        invalidReason: resolution.invalidReason,
+      });
+    }
+
+    return {
+      draft: resolution.draft,
+      invalidReason: resolution.invalidReason,
+      overlappingEntityIds: [...resolution.overlappingEntityIds],
+      changed,
+    };
+  }
+
+  confirmMove(): boolean {
+    const { document, session } = this.core.getSnapshot();
+    const moveDraft = session.moveDraft;
+    const moveMode = this.getMoveMode(session);
+
+    if (!moveDraft || !moveMode) {
+      return false;
+    }
+
+    const entity = document.entities[moveMode.entityId];
+
+    if (!entity) {
+      return false;
+    }
+
+    const definition =
+      this.getTopology().entityViews[entity.id]?.definition ??
+      this.getDefinition(entity.definitionId);
+
+    if (!definition) {
+      return false;
+    }
+
+    const evaluation = this.evaluateMoveDraft(moveDraft, definition);
+    const resolvedDraft = {
+      ...moveDraft,
+      valid: evaluation.invalidReason === null,
+    } satisfies MoveDraftState;
+
+    if (!isSameMoveDraftState(moveDraft, resolvedDraft)) {
+      this.core.setMoveDraft(resolvedDraft);
+    }
+
+    if (!resolvedDraft.valid) {
+      this.logger.info("Blocked move confirmation.", {
+        draft: moveDraft,
+        invalidReason: evaluation.invalidReason,
+        overlappingEntityIds: evaluation.overlappingEntityIds,
+      });
+      return false;
+    }
+
+    const didConfirm = this.core.confirmMove();
+
+    if (didConfirm) {
+      this.logger.info("Confirmed move draft.", {
+        entityId: moveDraft.entityId,
+        originGridPoint: moveDraft.originGridPoint,
+        nextGridPoint: resolvedDraft.gridPoint,
+        interactionMode: moveDraft.interactionMode,
+      });
+    }
+
+    return didConfirm;
+  }
+
+  cancelMove(): boolean {
+    const { session } = this.core.getSnapshot();
+    const moveDraft = session.moveDraft;
+    const moveMode = this.getMoveMode(session);
+
+    if (!moveDraft || !moveMode) {
+      return false;
+    }
+
+    this.core.cancelMove();
+    this.logger.info("Canceled move draft.", {
+      entityId: moveMode.entityId,
+      originGridPoint: moveDraft.originGridPoint,
+      currentGridPoint: moveDraft.gridPoint,
+      interactionMode: moveMode.inputMode,
+    });
+    return true;
+  }
+
   activateLinkTarget(entityId: string | null): void {
     this.handleLinkToolClick(entityId);
   }
@@ -718,6 +953,24 @@ class EditorHostImpl implements EditorHost {
     };
   }
 
+  private createMoveDraftFromWorldInput(
+    document: WorldDocument,
+    moveDraft: MoveDraftState,
+    input: CanvasWorldInput,
+  ): MoveDraftState {
+    const { gridSize } = document.documentSettings;
+    const draftGridPoint = {
+      x: Math.floor((input.worldPoint.x - moveDraft.anchorWorldOffset.x) / gridSize),
+      y: Math.floor((input.worldPoint.y - moveDraft.anchorWorldOffset.y) / gridSize),
+    } satisfies GridPoint;
+
+    return {
+      ...moveDraft,
+      gridPoint: draftGridPoint,
+      valid: true,
+    };
+  }
+
   private evaluatePlacementPreview(
     preview: PlacementPreviewState,
     definition: Stage1EntityDefinition,
@@ -746,10 +999,40 @@ class EditorHostImpl implements EditorHost {
     };
   }
 
+  private evaluateMoveDraft(
+    draft: MoveDraftState,
+    definition: Stage1EntityDefinition,
+  ): MoveCandidateEvaluation {
+    const { document } = this.core.getSnapshot();
+    const topology = this.getTopology();
+    const base = getStage1BaseDefinition(document.baseId);
+    const footprint = getRotatedGridFootprint(
+      definition.footprint,
+      draft.rotation,
+    );
+    const overlappingEntityIds = this.collectOverlappingEntityIds(
+      topology,
+      draft.gridPoint,
+      footprint,
+      draft.entityId,
+    );
+    const withinBase = isStage1FootprintWithinBase({
+      base,
+      position: draft.gridPoint,
+      footprint,
+    });
+
+    return {
+      invalidReason: withinBase ? null : "out-of-base",
+      overlappingEntityIds,
+    };
+  }
+
   private collectOverlappingEntityIds(
     topology: CompiledTopology,
     position: GridPoint,
     footprint: Stage1EntityDefinition["footprint"],
+    ignoreEntityId: string | null = null,
   ): string[] {
     const entityIds = new Set<string>();
 
@@ -763,6 +1046,10 @@ class EditorHostImpl implements EditorHost {
         }
 
         for (const entityId of occupants) {
+          if (entityId === ignoreEntityId) {
+            continue;
+          }
+
           entityIds.add(entityId);
         }
       }

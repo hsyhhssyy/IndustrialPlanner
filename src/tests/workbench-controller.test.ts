@@ -3,6 +3,7 @@ import { DEFAULT_STAGE1_BASE_ID } from "@/domain/base/stage1-bases";
 import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import {
   getPendingLinkSourceEntityId,
+  isMoveInteractionMode,
   isPlacementInteractionMode,
 } from "@/editor/contracts/interaction-mode";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
@@ -17,6 +18,14 @@ function getPlacementMode(
   session: ReturnType<typeof createWorkbenchController>["editorStore"]["session"],
 ) {
   return isPlacementInteractionMode(session.currentMode)
+    ? session.currentMode
+    : null;
+}
+
+function getMoveMode(
+  session: ReturnType<typeof createWorkbenchController>["editorStore"]["session"],
+) {
+  return isMoveInteractionMode(session.currentMode)
     ? session.currentMode
     : null;
 }
@@ -864,6 +873,97 @@ describe("WorkbenchController scaffold", () => {
     }
 
     expect(current).toEqual(before);
+
+    controller.dispose();
+  });
+
+  it("moves the selected entity through the hidden move mode and confirms a single entity.move command", async () => {
+    const controller = createWorkbenchController();
+    const before = readWorkbenchState(controller).document.entities["reactor-1"];
+
+    expect(before).toBeTruthy();
+
+    await controller.selectEntity("reactor-1", "pointer");
+    controller.beginMoveFromScreenPoint(
+      "reactor-1",
+      toScreenPointForEntity(controller, "reactor-1"),
+      "pointer",
+    );
+    controller.updateMoveDraftFromScreenPoint(
+      toScreenPointForGrid(controller, { x: 20, y: 10 }),
+    );
+
+    const duringMove = readWorkbenchState(controller);
+
+    expect(getMoveMode(duringMove.session)).toMatchObject({
+      entityId: "reactor-1",
+      inputMode: "pointer",
+    });
+    expect(duringMove.session.moveDraft).toMatchObject({
+      entityId: "reactor-1",
+      interactionMode: "pointer",
+      originGridPoint: before?.position,
+      gridPoint: { x: 20, y: 10 },
+      rotation: before?.rotation,
+      valid: true,
+    });
+
+    await controller.confirmMovePreview();
+
+    const after = readWorkbenchState(controller);
+
+    expect(after.document.entities["reactor-1"]).toMatchObject({
+      position: { x: 20, y: 10 },
+      rotation: before?.rotation,
+    });
+    expect(after.session.currentMode).toMatchObject({ key: "select" });
+    expect(after.session.displayTool).toBe("select");
+    expect(after.session.selection).toEqual(["reactor-1"]);
+    expect(after.session.selectionInputMode).toBe("pointer");
+    expect(after.session.moveDraft).toBeNull();
+    expect(after.session.dragPreviewEntityId).toBeNull();
+    expect(
+      after.renderScene.entities.find((entity) => entity.entityId === "reactor-1"),
+    ).toMatchObject({
+      x: 20 * after.document.documentSettings.gridSize,
+      y: 10 * after.document.documentSettings.gridSize,
+      selected: true,
+    });
+
+    controller.dispose();
+  });
+
+  it("cancels touch move drafts without mutating the world document", async () => {
+    const controller = createWorkbenchController();
+    const before = readWorkbenchState(controller).document.entities["reactor-1"];
+
+    expect(before).toBeTruthy();
+
+    await controller.selectEntity("reactor-1", "touch");
+    controller.beginMoveFromScreenPoint(
+      "reactor-1",
+      toScreenPointForEntity(controller, "reactor-1"),
+      "touch",
+    );
+    controller.updateMoveDraftFromScreenPoint(
+      toScreenPointForGrid(controller, { x: 22, y: 11 }),
+    );
+
+    expect(getMoveMode(readWorkbenchState(controller).session)).toMatchObject({
+      entityId: "reactor-1",
+      inputMode: "touch",
+    });
+
+    controller.cancelMove();
+
+    const after = readWorkbenchState(controller);
+
+    expect(after.document.entities["reactor-1"]).toEqual(before);
+    expect(after.session.currentMode).toMatchObject({ key: "select" });
+    expect(after.session.selection).toEqual(["reactor-1"]);
+    expect(after.session.selectionInputMode).toBe("touch");
+    expect(after.session.moveDraft).toBeNull();
+    expect(after.session.dragPreviewEntityId).toBeNull();
 
     controller.dispose();
   });

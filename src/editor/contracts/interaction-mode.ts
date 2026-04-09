@@ -15,7 +15,12 @@ export type PlacementDisplayTool = Extract<
   "place" | "belt" | "pipe"
 >;
 
-export type InteractionModeKey = "select" | "placement" | "link" | "inspect";
+export type InteractionModeKey =
+  | "select"
+  | "placement"
+  | "link"
+  | "inspect"
+  | "move";
 
 interface BaseInteractionModeState<TKey extends InteractionModeKey> {
   key: TKey;
@@ -41,11 +46,18 @@ export interface LinkInteractionModeState
 export interface InspectInteractionModeState
   extends BaseInteractionModeState<"inspect"> {}
 
+export interface MoveInteractionModeState
+  extends BaseInteractionModeState<"move"> {
+  entityId: string;
+  inputMode: PlacementInteractionMode;
+}
+
 export type CurrentInteractionMode =
   | SelectInteractionModeState
   | PlacementInteractionModeState
   | LinkInteractionModeState
-  | InspectInteractionModeState;
+  | InspectInteractionModeState
+  | MoveInteractionModeState;
 
 export interface InteractionModeDefinition<TKey extends InteractionModeKey> {
   key: TKey;
@@ -128,6 +140,21 @@ export function createInspectInteractionMode(
   };
 }
 
+export function createMoveInteractionMode(options: {
+  entityId: string;
+  inputMode?: PlacementInteractionMode;
+  previousModeKey?: InteractionModeKey | null;
+  entryDisplayTool?: DisplayTool | null;
+}): MoveInteractionModeState {
+  return {
+    key: "move",
+    entityId: options.entityId,
+    inputMode: options.inputMode ?? "pointer",
+    previousModeKey: options.previousModeKey ?? null,
+    entryDisplayTool: options.entryDisplayTool ?? "select",
+  };
+}
+
 function createDefaultNextSelectMode(
   mode: CurrentInteractionMode,
 ): SelectInteractionModeState {
@@ -169,6 +196,14 @@ export const INTERACTION_MODE_DEFINITIONS: InteractionModeDefinitionMap = {
     availableInSim: false,
     hidden: false,
     resolveDisplayTool: () => "inspect",
+    resolveDefaultNextMode: (mode) => createDefaultNextSelectMode(mode),
+  },
+  move: {
+    key: "move",
+    availableInEdit: true,
+    availableInSim: false,
+    hidden: true,
+    resolveDisplayTool: () => "select",
     resolveDefaultNextMode: (mode) => createDefaultNextSelectMode(mode),
   },
 };
@@ -218,6 +253,12 @@ export function isLinkInteractionMode(
   return mode.key === "link";
 }
 
+export function isMoveInteractionMode(
+  mode: CurrentInteractionMode,
+): mode is MoveInteractionModeState {
+  return mode.key === "move";
+}
+
 export function getPendingLinkSourceEntityId(
   mode: CurrentInteractionMode,
 ): string | null {
@@ -258,6 +299,12 @@ export function isSameCurrentInteractionMode(
       );
     case "link":
       return right.key === "link" && left.sourceEntityId === right.sourceEntityId;
+    case "move":
+      return (
+        right.key === "move" &&
+        left.entityId === right.entityId &&
+        left.inputMode === right.inputMode
+      );
     case "inspect":
       return right.key === "inspect";
     case "select":
