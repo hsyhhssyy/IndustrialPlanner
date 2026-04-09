@@ -5,6 +5,7 @@ import {
   type Stage1Registry,
 } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
+import type { MoveDraftState } from "@/editor/contracts/move-draft";
 import type { PlacementPreviewState } from "@/editor/contracts/placement-preview";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
@@ -18,6 +19,7 @@ interface DeriveRenderWorldBoundsPxOptions {
   topology: CompiledTopology;
   registry: Stage1Registry;
   placementPreview: PlacementPreviewState | null;
+  moveDraft: MoveDraftState | null;
 }
 
 const RENDER_WORLD_PADDING_CELLS = 3;
@@ -58,6 +60,44 @@ function getPlacementPreviewBoundsPx(
   };
 }
 
+function getMoveDraftBoundsPx(
+  options: DeriveRenderWorldBoundsPxOptions,
+): RenderWorldBoundsPx | null {
+  const draft = options.moveDraft;
+
+  if (!draft) {
+    return null;
+  }
+
+  const entity = options.document.entities[draft.entityId];
+  const definition =
+    options.topology.entityViews[draft.entityId]?.definition ??
+    (entity
+      ? getStage1EntityDefinition(options.registry, entity.definitionId)
+      : undefined);
+
+  if (!entity || !definition) {
+    return null;
+  }
+
+  const { gridSize } = options.document.documentSettings;
+  const footprint = getRotatedGridFootprint(
+    definition.footprint,
+    draft.rotation,
+  );
+
+  return {
+    width:
+      draft.gridPoint.x * gridSize +
+      footprint.width * gridSize +
+      gridSize * RENDER_WORLD_PADDING_CELLS,
+    height:
+      draft.gridPoint.y * gridSize +
+      footprint.height * gridSize +
+      gridSize * RENDER_WORLD_PADDING_CELLS,
+  };
+}
+
 export function deriveRenderWorldBoundsPx(
   options: DeriveRenderWorldBoundsPxOptions,
 ): RenderWorldBoundsPx {
@@ -66,8 +106,17 @@ export function deriveRenderWorldBoundsPx(
   const base = getStage1BaseDefinition(document.baseId);
   const baseWorldSize = base.placeableSize * gridSize;
   const previewBounds = getPlacementPreviewBoundsPx(options);
-  let width = Math.max(baseWorldSize, previewBounds?.width ?? 0);
-  let height = Math.max(baseWorldSize, previewBounds?.height ?? 0);
+  const moveDraftBounds = getMoveDraftBoundsPx(options);
+  let width = Math.max(
+    baseWorldSize,
+    previewBounds?.width ?? 0,
+    moveDraftBounds?.width ?? 0,
+  );
+  let height = Math.max(
+    baseWorldSize,
+    previewBounds?.height ?? 0,
+    moveDraftBounds?.height ?? 0,
+  );
 
   for (const entityId of document.entityOrder) {
     const entity = document.entities[entityId];

@@ -64,6 +64,7 @@ describe("WorkspaceDerivedStore", () => {
       interaction: {
         selectedEntityIds: workspaceState.editor.session.selection,
         placementPreview: workspaceState.editor.session.placementPreview,
+        moveDraft: workspaceState.editor.session.moveDraft,
         pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
           workspaceState.editor.session.currentMode,
         ),
@@ -284,6 +285,89 @@ describe("WorkspaceDerivedStore", () => {
           workspaceState.canvasView.offset.x) * workspaceState.canvasView.zoom,
       top:
         (selectedEntity.position.y * document.documentSettings.gridSize -
+          workspaceState.canvasView.offset.y) * workspaceState.canvasView.zoom,
+      width:
+        footprint.width *
+        document.documentSettings.gridSize *
+        workspaceState.canvasView.zoom,
+      height:
+        footprint.height *
+        document.documentSettings.gridSize *
+        workspaceState.canvasView.zoom,
+    });
+  });
+
+  it("projects touch move drafts into a shared screen box", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const movedEntityId = "reactor-1";
+    const movedEntity = document.entities[movedEntityId]!;
+    const definition = topology.entityViews[movedEntityId]?.definition;
+    const workspaceState = {
+      document,
+      editor: {
+        session: {
+          ...createInitialEditorSession(),
+          moveDraft: {
+            entityId: movedEntityId,
+            interactionMode: "touch" as const,
+            originGridPoint: movedEntity.position,
+            gridPoint: { x: 20, y: 10 },
+            rotation: movedEntity.rotation,
+            valid: true,
+            anchorWorldOffset: { x: 8, y: 8 },
+          },
+        },
+        history: {
+          canUndo: false,
+          canRedo: false,
+          undoDepth: 0,
+          redoDepth: 0,
+        },
+      },
+      ui: createInitialWorkbenchUiState(),
+      canvasView: {
+        offset: { x: 10, y: 20 },
+        zoom: 2,
+      },
+      simulation: {
+        runtimeSnapshot: {
+          tick: 0,
+          status: "idle" as const,
+          entityViews: {},
+          patchedEntityIds: [],
+        },
+        telemetry: {
+          tick: 0,
+          simulatedHertz: 0,
+          entityCount: 0,
+        },
+        inspectorDetails: null,
+        patchSet: createEmptySimulationPatchSet(),
+        selection: [],
+      },
+    };
+
+    expect(definition).toBeTruthy();
+
+    const footprint = getRotatedGridFootprint(
+      definition!.footprint,
+      movedEntity.rotation,
+    );
+
+    expect(
+      deriveRenderDerivedState({
+        workspaceState,
+        topology,
+        registry,
+      }).anchoredMoveScreenBox,
+    ).toEqual({
+      left:
+        (20 * document.documentSettings.gridSize -
+          workspaceState.canvasView.offset.x) * workspaceState.canvasView.zoom,
+      top:
+        (10 * document.documentSettings.gridSize -
           workspaceState.canvasView.offset.y) * workspaceState.canvasView.zoom,
       width:
         footprint.width *

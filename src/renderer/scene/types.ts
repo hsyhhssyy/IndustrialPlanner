@@ -8,12 +8,14 @@ import type { RenderEntityKind } from "@/renderer/scene/stage1-device-rendering"
 import type { RuntimeRenderSnapshot } from "@/simulation/protocol/runtime-protocol";
 import type { GridRotation } from "@/shared/geometry/grid";
 import type { AppLocale } from "@/i18n/messages";
+import type { MoveDraftState } from "@/editor/contracts/move-draft";
 import type { PlacementPreviewState } from "@/editor/contracts/placement-preview";
 import type { CanvasViewState } from "@/workbench/workspace-state";
 
 export interface RenderSceneInteractionState {
   selectedEntityIds: string[];
   placementPreview: PlacementPreviewState | null;
+  moveDraft: MoveDraftState | null;
   pendingLinkSourceEntityId: string | null;
 }
 
@@ -51,6 +53,7 @@ export interface RenderEntitySprite {
   showLabel: boolean;
   status: "idle" | "running" | "blocked";
   selected: boolean;
+  ghosted: boolean;
   pendingLinkSource: boolean;
   patched: boolean;
 }
@@ -84,6 +87,10 @@ export interface RenderPlacementPreview {
   valid: boolean;
 }
 
+export interface RenderMovePreview extends RenderPlacementPreview {
+  entityId: string;
+}
+
 export interface RenderSceneModel {
   zoom: number;
   viewportOffset: {
@@ -95,6 +102,7 @@ export interface RenderSceneModel {
   worldHeight: number;
   entities: RenderEntitySprite[];
   placementPreview: RenderPlacementPreview | null;
+  movePreview: RenderMovePreview | null;
   explicitLinks: RenderExplicitLink[];
   diagnostics: TopologyDiagnostic[];
 }

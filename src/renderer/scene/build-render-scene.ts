@@ -6,6 +6,7 @@ import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import type {
   RenderExplicitLink,
   RenderEntitySprite,
+  RenderMovePreview,
   RenderPlacementPreview,
   RenderSceneInput,
   RenderSceneModel,
@@ -90,6 +91,7 @@ function buildEntitySprite(input: RenderSceneInput, entityId: string): RenderEnt
     showLabel: shouldShowStage1EntityLabel(definition, renderKind),
     status: input.runtimeSnapshot.entityViews[entityId]?.status ?? "idle",
     selected: input.interaction.selectedEntityIds.includes(entityId),
+    ghosted: input.interaction.moveDraft?.entityId === entityId,
     pendingLinkSource:
       input.interaction.pendingLinkSourceEntityId === entityId,
     patched: input.runtimeSnapshot.patchedEntityIds.includes(entityId),
@@ -188,17 +190,68 @@ function buildPlacementPreview(
   };
 }
 
+function buildMovePreview(
+  input: RenderSceneInput,
+): RenderMovePreview | null {
+  const draft = input.interaction.moveDraft;
+
+  if (!draft) {
+    return null;
+  }
+
+  const entity = input.document.entities[draft.entityId];
+  const definition =
+    input.topology.entityViews[draft.entityId]?.definition ??
+    (entity
+      ? getStage1EntityDefinition(input.registry, entity.definitionId)
+      : undefined);
+
+  if (!entity || !definition) {
+    return null;
+  }
+
+  const renderKind = getStage1EntityRenderKind(entity.definitionId);
+  const footprint = getEntityFootprintSize(definition, draft.rotation);
+  const textureMetrics = getStage1EntityTextureMetrics({
+    definition,
+    gridSize: input.document.documentSettings.gridSize,
+    rotation: draft.rotation,
+  });
+
+  return {
+    entityId: draft.entityId,
+    definitionId: entity.definitionId,
+    interactionMode: draft.interactionMode,
+    label: getLocalizedStage1EntityName(input.locale, definition),
+    x: draft.gridPoint.x * input.document.documentSettings.gridSize,
+    y: draft.gridPoint.y * input.document.documentSettings.gridSize,
+    width: footprint.width * input.document.documentSettings.gridSize,
+    height: footprint.height * input.document.documentSettings.gridSize,
+    rotation: draft.rotation,
+    renderKind,
+    fill: getEntityFill(definition),
+    textureSrc: getStage1EntitySpritePath(entity.definitionId),
+    textureWidth: textureMetrics.textureWidthPx,
+    textureHeight: textureMetrics.textureHeightPx,
+    textureCenterOffsetX: textureMetrics.centerOffsetXPx,
+    textureCenterOffsetY: textureMetrics.centerOffsetYPx,
+    valid: draft.valid,
+  };
+}
+
 export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
   const entities = input.document.entityOrder
     .map((entityId) => buildEntitySprite(input, entityId))
     .filter((entity): entity is RenderEntitySprite => entity !== null);
   const placementPreview = buildPlacementPreview(input);
+  const movePreview = buildMovePreview(input);
   const explicitLinks = buildExplicitLinkSprites(input);
   const worldBoundsPx = deriveRenderWorldBoundsPx({
     document: input.document,
     topology: input.topology,
     registry: input.registry,
     placementPreview: input.interaction.placementPreview,
+    moveDraft: input.interaction.moveDraft,
   });
 
   return {
@@ -209,6 +262,7 @@ export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
     worldHeight: worldBoundsPx.height,
     entities,
     placementPreview,
+    movePreview,
     explicitLinks,
     diagnostics: input.topology.diagnostics,
   };

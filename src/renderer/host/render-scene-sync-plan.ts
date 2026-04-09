@@ -1,6 +1,7 @@
 import type {
   RenderExplicitLink,
   RenderEntitySprite,
+  RenderMovePreview,
   RenderPlacementPreview,
   RenderSceneModel,
 } from "@/renderer/scene/types";
@@ -33,6 +34,7 @@ function isSameRenderEntitySprite(
     left.showLabel === right.showLabel &&
     left.status === right.status &&
     left.selected === right.selected &&
+    left.ghosted === right.ghosted &&
     left.pendingLinkSource === right.pendingLinkSource &&
     left.patched === right.patched
   );
@@ -115,6 +117,24 @@ function isSameRenderPlacementPreview(
   );
 }
 
+function isSameRenderMovePreview(
+  left: RenderMovePreview | null,
+  right: RenderMovePreview | null,
+): boolean {
+  if (left === right) {
+    return true;
+  }
+
+  if (!left || !right) {
+    return false;
+  }
+
+  return (
+    left.entityId === right.entityId &&
+    isSameRenderPlacementPreview(left, right)
+  );
+}
+
 export function getRenderSceneSyncPlan(
   previousScene: RenderSceneModel | null,
   nextScene: RenderSceneModel,
@@ -138,6 +158,10 @@ export function getRenderSceneSyncPlan(
     redrawStaticLayers,
     redrawPreviewLayer:
       redrawStaticLayers ||
+      !isSameRenderMovePreview(
+        previousScene.movePreview,
+        nextScene.movePreview,
+      ) ||
       !isSameRenderPlacementPreview(
         previousScene.placementPreview,
         nextScene.placementPreview,

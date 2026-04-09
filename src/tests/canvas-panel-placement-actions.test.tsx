@@ -2,7 +2,10 @@
 
 import { CanvasPanel } from "@/app-shell/components/canvas-panel/canvas-panel";
 import { createWorkbenchShell } from "@/app-shell/workbench-shell";
-import { isPlacementInteractionMode } from "@/editor/contracts/interaction-mode";
+import {
+  isMoveInteractionMode,
+  isPlacementInteractionMode,
+} from "@/editor/contracts/interaction-mode";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -166,6 +169,23 @@ function toScreenPointForEntity(
   };
 }
 
+function toScreenPointForGrid(
+  controller: ReturnType<typeof createWorkbenchController>,
+  gridPoint: { x: number; y: number },
+) {
+  const document = controller.documentStore.getSnapshot();
+  const canvasView = controller.canvasViewStore.getSnapshot();
+
+  return {
+    x:
+      (gridPoint.x * document.documentSettings.gridSize - canvasView.offset.x + 1) *
+      canvasView.zoom,
+    y:
+      (gridPoint.y * document.documentSettings.gridSize - canvasView.offset.y + 1) *
+      canvasView.zoom,
+  };
+}
+
 async function flushCanvasActions() {
   await Promise.resolve();
   await Promise.resolve();
@@ -177,6 +197,14 @@ function getPlacementMode(
   const currentMode = controller.editorStore.getSnapshot().session.currentMode;
 
   return isPlacementInteractionMode(currentMode) ? currentMode : null;
+}
+
+function getMoveMode(
+  controller: ReturnType<typeof createWorkbenchController>,
+) {
+  const currentMode = controller.editorStore.getSnapshot().session.currentMode;
+
+  return isMoveInteractionMode(currentMode) ? currentMode : null;
 }
 
 describe("CanvasPanel placement actions", () => {
@@ -477,6 +505,139 @@ describe("CanvasPanel placement actions", () => {
 
     expect(controller.documentStore.getSnapshot().entities["filler-1"]).toBeUndefined();
     expect(container.querySelector(".selection-action-toolbar")).toBeNull();
+
+    await disposeCanvasPanel({ root, shell, controller });
+  });
+
+  it("auto-confirms pointer move drags from the selected entity", async () => {
+    const controller = createWorkbenchController();
+    const { container, root, shell } = await renderCanvasPanel(controller);
+    const viewport = container.querySelector(".canvas-viewport-surface");
+    const sourcePoint = toScreenPointForEntity(controller, "reactor-1");
+    const destinationPoint = toScreenPointForGrid(controller, { x: 20, y: 10 });
+
+    expect(viewport).not.toBeNull();
+
+    await act(async () => {
+      dispatchPointerTap(viewport, sourcePoint, 61);
+      await flushCanvasActions();
+    });
+
+    expect(controller.editorStore.getSnapshot().session.selection).toEqual([
+      "reactor-1",
+    ]);
+
+    await act(async () => {
+      viewport?.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          button: 0,
+          buttons: 1,
+          clientX: sourcePoint.x,
+          clientY: sourcePoint.y,
+          pointerId: 62,
+          pointerType: "mouse",
+        }),
+      );
+      viewport?.dispatchEvent(
+        new PointerEvent("pointermove", {
+          bubbles: true,
+          button: 0,
+          buttons: 1,
+          clientX: destinationPoint.x,
+          clientY: destinationPoint.y,
+          pointerId: 62,
+          pointerType: "mouse",
+        }),
+      );
+      viewport?.dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          button: 0,
+          buttons: 0,
+          clientX: destinationPoint.x,
+          clientY: destinationPoint.y,
+          pointerId: 62,
+          pointerType: "mouse",
+        }),
+      );
+      await flushCanvasActions();
+    });
+
+    expect(controller.documentStore.getSnapshot().entities["reactor-1"]).toMatchObject({
+      position: { x: 20, y: 10 },
+    });
+    expect(getMoveMode(controller)).toBeNull();
+    expect(container.querySelector(".move-action-toolbar")).toBeNull();
+
+    await disposeCanvasPanel({ root, shell, controller });
+  });
+
+  it("keeps touch move drafts pending for toolbar confirmation", async () => {
+    const controller = createWorkbenchController();
+    const before = controller.documentStore.getSnapshot().entities["reactor-1"];
+    const { container, root, shell } = await renderCanvasPanel(controller);
+    const viewport = container.querySelector(".canvas-viewport-surface");
+    const sourcePoint = toScreenPointForEntity(controller, "reactor-1");
+    const destinationPoint = toScreenPointForGrid(controller, { x: 20, y: 10 });
+
+    expect(viewport).not.toBeNull();
+    expect(before).toBeTruthy();
+
+    await act(async () => {
+      dispatchTouchPointerEvent(viewport, "pointerdown", 71, sourcePoint);
+      dispatchTouchPointerEvent(viewport, "pointerup", 71, sourcePoint);
+      await flushCanvasActions();
+    });
+
+    expect(controller.editorStore.getSnapshot().session.selection).toEqual([
+      "reactor-1",
+    ]);
+    expect(controller.editorStore.getSnapshot().session.selectionInputMode).toBe(
+      "touch",
+    );
+
+    await act(async () => {
+      dispatchTouchPointerEvent(viewport, "pointerdown", 72, sourcePoint);
+      dispatchTouchPointerEvent(viewport, "pointermove", 72, destinationPoint);
+      dispatchTouchPointerEvent(viewport, "pointerup", 72, destinationPoint);
+      await flushCanvasActions();
+    });
+
+    expect(getMoveMode(controller)).toMatchObject({
+      entityId: "reactor-1",
+      inputMode: "touch",
+    });
+    expect(controller.editorStore.getSnapshot().session.moveDraft).toMatchObject({
+      gridPoint: { x: 20, y: 10 },
+      valid: true,
+    });
+    expect(controller.documentStore.getSnapshot().entities["reactor-1"]).toEqual(before);
+
+    const moveButtons = Array.from(
+      container.querySelectorAll<HTMLButtonElement>(
+        ".move-action-toolbar .canvas-action-button",
+      ),
+    );
+    const confirmButton = moveButtons.find(
+      (button) => button.getAttribute("aria-label") === "确认移动",
+    );
+
+    expect(moveButtons.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "取消移动",
+      "确认移动",
+    ]);
+
+    await act(async () => {
+      confirmButton?.click();
+      await flushCanvasActions();
+    });
+
+    expect(controller.documentStore.getSnapshot().entities["reactor-1"]).toMatchObject({
+      position: { x: 20, y: 10 },
+    });
+    expect(getMoveMode(controller)).toBeNull();
+    expect(container.querySelector(".move-action-toolbar")).toBeNull();
 
     await disposeCanvasPanel({ root, shell, controller });
   });

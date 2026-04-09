@@ -74,6 +74,10 @@ function isSameRenderDerivedState(
       right.anchoredPlacementScreenBox,
     ) &&
     isSameScreenBox(
+      left.anchoredMoveScreenBox,
+      right.anchoredMoveScreenBox,
+    ) &&
+    isSameScreenBox(
       left.anchoredSelectionScreenBox,
       right.anchoredSelectionScreenBox,
     )

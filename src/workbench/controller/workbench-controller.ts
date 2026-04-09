@@ -1048,6 +1048,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
         workspaceState.ui.phase === "edit"
           ? workspaceState.editor.session.placementPreview
           : null,
+      moveDraft:
+        workspaceState.ui.phase === "edit"
+          ? workspaceState.editor.session.moveDraft
+          : null,
     });
 
     return {

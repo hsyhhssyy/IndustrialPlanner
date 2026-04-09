@@ -58,6 +58,10 @@ export function resolveCanvasPanelTapIntent(
         : {
             kind: "noop",
           };
+    case "move":
+      return {
+        kind: "noop",
+      };
     default:
       break;
   }

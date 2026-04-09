@@ -28,8 +28,7 @@ interface BaseInteractionModeState<TKey extends InteractionModeKey> {
   entryDisplayTool: DisplayTool | null;
 }
 
-export interface SelectInteractionModeState
-  extends BaseInteractionModeState<"select"> {}
+export type SelectInteractionModeState = BaseInteractionModeState<"select">;
 
 export interface PlacementInteractionModeState
   extends BaseInteractionModeState<"placement"> {
@@ -43,8 +42,7 @@ export interface LinkInteractionModeState
   sourceEntityId: string | null;
 }
 
-export interface InspectInteractionModeState
-  extends BaseInteractionModeState<"inspect"> {}
+export type InspectInteractionModeState = BaseInteractionModeState<"inspect">;
 
 export interface MoveInteractionModeState
   extends BaseInteractionModeState<"move"> {

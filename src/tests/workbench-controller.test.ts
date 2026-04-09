@@ -50,11 +50,13 @@ function readWorkbenchState(
         ? {
             selectedEntityIds: simulation.selection,
             placementPreview: null,
+            moveDraft: null,
             pendingLinkSourceEntityId: null,
           }
         : {
             selectedEntityIds: editor.session.selection,
             placementPreview: editor.session.placementPreview,
+            moveDraft: editor.session.moveDraft,
             pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
               editor.session.currentMode,
             ),

@@ -21,6 +21,7 @@ function createBaseRenderScene() {
     interaction: {
       selectedEntityIds: ["reactor-1"],
       placementPreview: null,
+      moveDraft: null,
       pendingLinkSourceEntityId: null,
     },
     runtimeSnapshot: {
@@ -59,6 +60,7 @@ describe("Render scene model", () => {
       interaction: {
         selectedEntityIds: [],
         placementPreview: null,
+        moveDraft: null,
         pendingLinkSourceEntityId: null,
       },
       runtimeSnapshot: {
@@ -114,6 +116,7 @@ describe("Render scene model", () => {
       interaction: {
         selectedEntityIds: [],
         placementPreview: null,
+        moveDraft: null,
         pendingLinkSourceEntityId: null,
       },
       runtimeSnapshot: {
@@ -157,6 +160,7 @@ describe("Render scene model", () => {
           rotation: 0,
           valid: true,
         },
+        moveDraft: null,
         pendingLinkSourceEntityId: null,
       },
       runtimeSnapshot: {
@@ -201,6 +205,7 @@ describe("Render scene model", () => {
           rotation: 90,
           valid: true,
         },
+        moveDraft: null,
         pendingLinkSourceEntityId: null,
       },
       runtimeSnapshot: {
@@ -217,6 +222,60 @@ describe("Render scene model", () => {
       width: document.documentSettings.gridSize,
       height: document.documentSettings.gridSize * 3,
       rotation: 90,
+    });
+  });
+
+  it("ghosts the source entity and builds a move preview from move draft state", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const sourceEntity = document.entities["reactor-1"];
+
+    expect(sourceEntity).toBeTruthy();
+
+    const scene = buildRenderScene({
+      locale: "zh-CN",
+      document,
+      topology,
+      registry,
+      canvasView: createInitialCanvasViewState(),
+      interaction: {
+        selectedEntityIds: ["reactor-1"],
+        placementPreview: null,
+        moveDraft: {
+          entityId: "reactor-1",
+          interactionMode: "touch",
+          originGridPoint: sourceEntity!.position,
+          gridPoint: { x: 20, y: 10 },
+          rotation: sourceEntity!.rotation,
+          valid: true,
+          anchorWorldOffset: { x: 8, y: 8 },
+        },
+        pendingLinkSourceEntityId: null,
+      },
+      runtimeSnapshot: {
+        tick: 0,
+        status: "idle",
+        entityViews: {},
+        patchedEntityIds: [],
+      },
+    });
+
+    expect(
+      scene.entities.find((entity) => entity.entityId === "reactor-1"),
+    ).toMatchObject({
+      selected: true,
+      ghosted: true,
+      x: sourceEntity!.position.x * document.documentSettings.gridSize,
+      y: sourceEntity!.position.y * document.documentSettings.gridSize,
+    });
+    expect(scene.movePreview).toMatchObject({
+      entityId: "reactor-1",
+      definitionId: sourceEntity!.definitionId,
+      interactionMode: "touch",
+      x: 20 * document.documentSettings.gridSize,
+      y: 10 * document.documentSettings.gridSize,
+      valid: true,
     });
   });
 });

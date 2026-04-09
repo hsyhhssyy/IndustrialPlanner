@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { resolveCanvasPanelTapIntent } from "@/app-shell/components/canvas-panel/canvas-panel-tap-intent";
 import {
   createLinkInteractionMode,
+  createMoveInteractionMode,
   createPlacementInteractionMode,
   createSelectInteractionMode,
 } from "@/editor/contracts/interaction-mode";
@@ -132,6 +133,40 @@ describe("resolveCanvasPanelTapIntent", () => {
           kind: "entity",
           entityId: "reactor-1",
           selected: false,
+        },
+      }),
+    ).toEqual({
+      kind: "noop",
+    });
+  });
+
+  it("keeps hidden move taps as no-ops until the draft resolves", () => {
+    expect(
+      resolveCanvasPanelTapIntent({
+        phase: "edit",
+        currentMode: createMoveInteractionMode({
+          entityId: "reactor-1",
+          inputMode: "pointer",
+        }),
+        target: {
+          kind: "blank",
+        },
+      }),
+    ).toEqual({
+      kind: "noop",
+    });
+
+    expect(
+      resolveCanvasPanelTapIntent({
+        phase: "edit",
+        currentMode: createMoveInteractionMode({
+          entityId: "reactor-1",
+          inputMode: "touch",
+        }),
+        target: {
+          kind: "entity",
+          entityId: "reactor-1",
+          selected: true,
         },
       }),
     ).toEqual({

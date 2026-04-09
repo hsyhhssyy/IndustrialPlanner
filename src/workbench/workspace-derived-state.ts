@@ -28,6 +28,7 @@ export interface RenderDerivedState {
   };
   cameraTransform: RenderDerivedCameraTransform;
   anchoredPlacementScreenBox: RenderDerivedScreenBox | null;
+  anchoredMoveScreenBox: RenderDerivedScreenBox | null;
   anchoredSelectionScreenBox: RenderDerivedScreenBox | null;
 }
 
@@ -141,6 +142,46 @@ function deriveAnchoredSelectionScreenBox(
   });
 }
 
+function deriveAnchoredMoveScreenBox(
+  options: DeriveRenderDerivedStateOptions,
+): RenderDerivedScreenBox | null {
+  const {
+    workspaceState: { canvasView, document, editor, ui },
+    topology,
+    registry,
+  } = options;
+  const moveDraft = editor.session.moveDraft;
+
+  if (
+    ui.phase !== "edit" ||
+    !moveDraft ||
+    moveDraft.interactionMode !== "touch"
+  ) {
+    return null;
+  }
+
+  const entity = document.entities[moveDraft.entityId];
+  const definition =
+    topology.entityViews[moveDraft.entityId]?.definition ??
+    (entity
+      ? getStage1EntityDefinition(registry, entity.definitionId)
+      : undefined);
+
+  if (!entity || !definition) {
+    return null;
+  }
+
+  return projectGridFootprintScreenBox({
+    canvasView,
+    gridSize: document.documentSettings.gridSize,
+    position: moveDraft.gridPoint,
+    footprint: getRotatedGridFootprint(
+      definition.footprint,
+      moveDraft.rotation,
+    ),
+  });
+}
+
 export function deriveRenderDerivedState(
   options: DeriveRenderDerivedStateOptions,
 ): RenderDerivedState {
@@ -154,6 +195,7 @@ export function deriveRenderDerivedState(
     topology,
     registry,
     placementPreview: ui.phase === "edit" ? editor.session.placementPreview : null,
+    moveDraft: ui.phase === "edit" ? editor.session.moveDraft : null,
   });
 
   return {
@@ -164,6 +206,7 @@ export function deriveRenderDerivedState(
       viewportOffset: canvasView.offset,
     },
     anchoredPlacementScreenBox: deriveAnchoredPlacementScreenBox(options),
+    anchoredMoveScreenBox: deriveAnchoredMoveScreenBox(options),
     anchoredSelectionScreenBox: deriveAnchoredSelectionScreenBox(options),
   };
 }
