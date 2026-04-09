@@ -4,9 +4,14 @@ import { createDebugLogger } from '../../app/debugLogger'
 import type { TransferMatch } from './types'
 
 const simFlowLogger = createDebugLogger('sim-flow')
+const FLOW_DEBUG_FOCUS_DEVICE_IDS = new Set([
+  'item_log_converger_mno0wbt3_r',
+  'item_log_splitter_mno0wbt3_2',
+  'item_log_converger_mno0wbt3_q',
+])
 
-function isPriorityTraceDevice(typeId: string) {
-  return typeId === 'item_log_splitter' || typeId === 'item_log_converger'
+function shouldTraceFocusedFlow(fromId: string, toId: string) {
+  return FLOW_DEBUG_FOCUS_DEVICE_IDS.has(fromId) || FLOW_DEBUG_FOCUS_DEVICE_IDS.has(toId)
 }
 
 type CommitContext = {
@@ -44,7 +49,7 @@ export function commitTransferMatches(context: CommitContext) {
 
     const received = context.helpers.tryReceiveToLane(toDevice, toRuntime, match.toLane, match.toPortId, match.itemId, context.tick)
     if (!received) {
-      if (isPriorityTraceDevice(fromDevice.typeId) || isPriorityTraceDevice(toDevice.typeId)) {
+      if (shouldTraceFocusedFlow(match.fromId, match.toId)) {
         simFlowLogger.debug('commit-blocked', {
           tick: context.tick,
           transferId: match.transferId,
@@ -62,7 +67,7 @@ export function commitTransferMatches(context: CommitContext) {
       continue
     }
 
-    if (isPriorityTraceDevice(fromDevice.typeId) || isPriorityTraceDevice(toDevice.typeId)) {
+    if (shouldTraceFocusedFlow(match.fromId, match.toId)) {
       simFlowLogger.debug('commit-applied', {
         tick: context.tick,
         transferId: match.transferId,

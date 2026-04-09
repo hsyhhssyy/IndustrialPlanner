@@ -5,6 +5,15 @@ import type { PlanContext, PlanResult, PortLink, PullIntent, ReceiveLane, Transf
 
 const SLOTLESS_STORAGE_OUTPUT_TYPE_IDS = new Set(['item_port_sp_hub_1'])
 const simFlowLogger = createDebugLogger('sim-flow')
+const FLOW_DEBUG_FOCUS_RECEIVER_ID = 'item_log_converger_mno0wbt3_r'
+const FLOW_DEBUG_FOCUS_PROVIDER_IDS = new Set([
+  'item_log_splitter_mno0wbt3_2',
+  'item_log_converger_mno0wbt3_q',
+])
+const FLOW_DEBUG_FOCUS_DEVICE_IDS = new Set([
+  FLOW_DEBUG_FOCUS_RECEIVER_ID,
+  ...FLOW_DEBUG_FOCUS_PROVIDER_IDS,
+])
 
 type CandidateLink = PortLink & {
   receiverPortId: string
@@ -35,10 +44,6 @@ function buildTransferId(tick: number, sequence: number) {
   return `${tick}:${sequence}`
 }
 
-function isPriorityTraceDevice(typeId: string) {
-  return typeId === 'item_log_splitter' || typeId === 'item_log_converger'
-}
-
 function getRuntimeLaneSnapshot(runtime: PlanContext['runtimeById'][string], lane: ReceiveLane) {
   if (lane === 'slot' && 'slot' in runtime) {
     return runtime.slot
@@ -56,6 +61,60 @@ function getRuntimeLaneSnapshot(runtime: PlanContext['runtimeById'][string], lan
       : { occupied: false }
   }
   return null
+}
+
+function getSourceLaneSnapshot(
+  context: PlanContext,
+  senderId: string,
+  fromPortId: string,
+) {
+  const senderRuntime = context.runtimeById[senderId]
+  const senderDevice = context.deviceById.get(senderId)
+  if (!senderRuntime || !senderDevice) return null
+
+  const senderLane = context.helpers.sourceSlotLane(senderDevice, senderRuntime, fromPortId)
+  if (senderLane === 'output') {
+    return {
+      lane: senderLane,
+      outputBuffer: 'outputBuffer' in senderRuntime ? senderRuntime.outputBuffer : null,
+    }
+  }
+
+  return {
+    lane: senderLane,
+    snapshot: getRuntimeLaneSnapshot(senderRuntime, senderLane),
+  }
+}
+
+function getFocusedProviderDefaultPortId(providerId: string) {
+  if (providerId === 'item_log_splitter_mno0wbt3_2') return 'out_n'
+  if (providerId === 'item_log_converger_mno0wbt3_q') return 'out_w'
+  return null
+}
+
+function buildFocusedProviderTrace(
+  context: PlanContext,
+  attempts: SenderAttempt[],
+  winner: SenderAttempt | null,
+) {
+  return [...FLOW_DEBUG_FOCUS_PROVIDER_IDS].map((providerId) => {
+    const providerAttempt = attempts.find((attempt) => attempt.fromId === providerId) ?? null
+    const providerDevice = context.deviceById.get(providerId)
+    const providerPortId = providerAttempt?.fromPortId ?? getFocusedProviderDefaultPortId(providerId)
+    const sourceState = providerPortId ? getSourceLaneSnapshot(context, providerId, providerPortId) : null
+    const snapshot = sourceState && 'snapshot' in sourceState ? sourceState.snapshot : null
+    return {
+      providerId,
+      providerTypeId: providerDevice?.typeId ?? null,
+      progress01: snapshot?.occupied ? snapshot.progress01 ?? null : null,
+      occupied: snapshot?.occupied ?? false,
+      itemId: snapshot?.occupied ? snapshot.itemId ?? null : null,
+      isCandidateForReceiverThisRound: Boolean(providerAttempt),
+      wonSelection: winner ? winner.fromId === providerId : false,
+      candidatePortId: providerAttempt?.fromPortId ?? null,
+      sourceState,
+    }
+  })
 }
 
 function pickStorageOutputSlotForPort(context: PlanContext, senderDeviceId: string, senderPortId: string, itemId: ItemId) {
@@ -318,7 +377,7 @@ function pickAttemptForSender(
       prepared.itemId,
     )
     if (!receiverLane) {
-      if (isPriorityTraceDevice(senderDevice.typeId) || isPriorityTraceDevice(receiverDevice.typeId)) {
+      if (shouldTraceFocusedFlow(senderDevice.instanceId, receiverDevice.instanceId)) {
         const nominalLane = context.helpers.receiveLaneForPort(receiverDevice, receiverRuntime, link.receiverPortId)
         const laneSnapshot = nominalLane ? getRuntimeLaneSnapshot(receiverRuntime, nominalLane) : null
         simFlowLogger.debug('candidate-rejected', {
@@ -340,7 +399,7 @@ function pickAttemptForSender(
     }
 
     if (receiverLane) {
-      if (isPriorityTraceDevice(senderDevice.typeId) || isPriorityTraceDevice(receiverDevice.typeId)) {
+      if (shouldTraceFocusedFlow(senderDevice.instanceId, receiverDevice.instanceId)) {
         const acceptedByScheduledClear = lanesClearingThisTick.has(laneKey(link.to.instanceId, receiverLane))
         const laneSnapshot = getRuntimeLaneSnapshot(receiverRuntime, receiverLane)
         if (acceptedByScheduledClear && laneSnapshot?.occupied) {
@@ -574,6 +633,14 @@ function detectCycleSenders(attemptBySender: Map<string, SenderAttempt>) {
   return cyclic
 }
 
+function shouldTraceReceiverContention(receiverId: string) {
+  return FLOW_DEBUG_FOCUS_DEVICE_IDS.has(receiverId)
+}
+
+function shouldTraceFocusedFlow(senderId: string, receiverId: string) {
+  return FLOW_DEBUG_FOCUS_DEVICE_IDS.has(senderId) || FLOW_DEBUG_FOCUS_DEVICE_IDS.has(receiverId)
+}
+
 export function solvePullTransferMatches(context: PlanContext): PlanResult {
   const transferMatches: TransferMatch[] = []
   const plannedSenders = new Set<string>()
@@ -672,6 +739,45 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
     refreshReadyAttempts()
 
     while (readyBySender.size > 0) {
+      const attemptsByReceiverLane = new Map<string, SenderAttempt[]>()
+      for (const attempt of readyBySender.values()) {
+        const grouped = attemptsByReceiverLane.get(attempt.receiverLaneKey)
+        if (grouped) {
+          grouped.push(attempt)
+        } else {
+          attemptsByReceiverLane.set(attempt.receiverLaneKey, [attempt])
+        }
+      }
+
+      for (const [receiverLaneKey, attempts] of attemptsByReceiverLane.entries()) {
+        const receiverId = attempts[0]?.receiverId
+        if (!receiverId || !shouldTraceReceiverContention(receiverId)) continue
+        const receiverDevice = context.deviceById.get(receiverId)
+        simFlowLogger.debug('focus-receiver-candidate-set', {
+          tick: context.tick,
+          round,
+          receiverId,
+          receiverTypeId: receiverDevice?.typeId ?? null,
+          receiverLaneKey,
+          candidateCount: attempts.length,
+          candidates: attempts.map((attempt) => ({
+            fromId: attempt.fromId,
+            fromPortId: attempt.fromPortId,
+            toPortId: attempt.receiverPortId,
+            itemId: attempt.itemId,
+            receiverPriorityGroup: attempt.receiverPriorityGroup,
+            receiverPriorityPortIndex: attempt.receiverPriorityPortIndex,
+            receiverPriorityPortCount: attempt.receiverPriorityPortCount,
+            receiverCandidateRank: attempt.receiverCandidateRank,
+            isDirect: attempt.isDirect,
+            dependencySenderId: attempt.dependencySenderId,
+          })),
+          focusedProviderStates: buildFocusedProviderTrace(context, attempts, null),
+        }, attempts.length > 1
+          ? 'focused receiver built multiple upstream candidates in this tick'
+          : 'focused receiver built candidate set in this tick')
+      }
+
       const selectedByReceiverLane = new Map<string, SenderAttempt>()
       for (const attempt of readyBySender.values()) {
         const existing = selectedByReceiverLane.get(attempt.receiverLaneKey)
@@ -682,6 +788,43 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
 
       const winners = [...selectedByReceiverLane.values()]
       const winnerIds = new Set(winners.map((attempt) => attempt.fromId))
+      for (const [receiverLaneKey, attempts] of attemptsByReceiverLane.entries()) {
+        const winner = selectedByReceiverLane.get(receiverLaneKey)
+        const receiverId = winner?.receiverId ?? attempts[0]?.receiverId
+        if (!winner || !receiverId || !shouldTraceReceiverContention(receiverId)) continue
+        const receiverDevice = context.deviceById.get(receiverId)
+        simFlowLogger.debug('focus-receiver-selection', {
+          tick: context.tick,
+          round,
+          receiverId,
+          receiverTypeId: receiverDevice?.typeId ?? null,
+          receiverLaneKey,
+          winner: {
+            fromId: winner.fromId,
+            fromPortId: winner.fromPortId,
+            toPortId: winner.receiverPortId,
+            itemId: winner.itemId,
+            receiverPriorityGroup: winner.receiverPriorityGroup,
+            receiverPriorityPortIndex: winner.receiverPriorityPortIndex,
+            receiverPriorityPortCount: winner.receiverPriorityPortCount,
+            receiverCandidateRank: winner.receiverCandidateRank,
+          },
+          rejected: attempts
+            .filter((attempt) => attempt.fromId !== winner.fromId)
+            .map((attempt) => ({
+              fromId: attempt.fromId,
+              fromPortId: attempt.fromPortId,
+              toPortId: attempt.receiverPortId,
+              itemId: attempt.itemId,
+              receiverPriorityGroup: attempt.receiverPriorityGroup,
+              receiverPriorityPortIndex: attempt.receiverPriorityPortIndex,
+              receiverPriorityPortCount: attempt.receiverPriorityPortCount,
+              receiverCandidateRank: attempt.receiverCandidateRank,
+            })),
+          focusedProviderStates: buildFocusedProviderTrace(context, attempts, winner),
+        }, 'focused receiver resolved upstream selection for this tick')
+      }
+
       for (const [senderId, attempt] of readyBySender.entries()) {
         if (!winnerIds.has(senderId)) {
           failCurrentAttempt(attempt)
@@ -697,7 +840,7 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
 
         const senderDevice = context.deviceById.get(winner.fromId)
         const receiverDevice = context.deviceById.get(winner.receiverId)
-        if (senderDevice && receiverDevice && (isPriorityTraceDevice(senderDevice.typeId) || isPriorityTraceDevice(receiverDevice.typeId))) {
+        if (senderDevice && receiverDevice && shouldTraceFocusedFlow(winner.fromId, winner.receiverId)) {
           simFlowLogger.debug('winner-selected', {
             tick: context.tick,
             round,
@@ -714,7 +857,7 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
           }, 'selected transfer winner for traced splitter/converger path')
         }
 
-        if (senderDevice && isPriorityTraceDevice(senderDevice.typeId)) {
+        if (senderDevice && receiverDevice && shouldTraceFocusedFlow(winner.fromId, winner.receiverId)) {
           simFlowLogger.debug('sender-scheduled-to-clear', {
             tick: context.tick,
             round,
