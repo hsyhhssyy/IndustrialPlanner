@@ -14,7 +14,6 @@ export function createInitialEditorSession(): EditorSession {
     selection: ["reactor-1"],
     selectionInputMode: null,
     hoveredEntityId: null,
-    dragPreviewEntityId: null,
     placementPreview: null,
     moveDraft: null,
   };

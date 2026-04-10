@@ -215,7 +215,6 @@ class EditorCoreImpl implements EditorCore {
     this.session = {
       ...this.session,
       moveDraft: draft,
-      dragPreviewEntityId: draft?.entityId ?? null,
     };
   }
 
@@ -476,7 +475,6 @@ class EditorCoreImpl implements EditorCore {
       displayTool: resolveDisplayToolForMode(nextMode),
       placementPreview: clearPlacementPreview ? null : this.session.placementPreview,
       moveDraft: clearMoveDraft ? null : this.session.moveDraft,
-      dragPreviewEntityId: clearMoveDraft ? null : this.session.dragPreviewEntityId,
     };
   }
 
@@ -517,10 +515,6 @@ class EditorCoreImpl implements EditorCore {
       this.document.entities[this.session.hoveredEntityId]
         ? this.session.hoveredEntityId
         : null;
-    const dragPreviewEntityId =
-      this.session.moveDraft && this.document.entities[this.session.moveDraft.entityId]
-        ? this.session.moveDraft.entityId
-        : null;
     const moveDraft =
       this.session.moveDraft &&
       this.document.entities[this.session.moveDraft.entityId]
@@ -555,7 +549,6 @@ class EditorCoreImpl implements EditorCore {
       selectionInputMode:
         selection.length > 0 ? this.session.selectionInputMode : null,
       hoveredEntityId,
-      dragPreviewEntityId,
       placementPreview: isPlacementInteractionMode(nextMode)
         ? this.session.placementPreview
         : null,

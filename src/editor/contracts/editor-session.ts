@@ -20,7 +20,6 @@ export interface EditorSession {
   selection: string[];
   selectionInputMode: PlacementInteractionMode | null;
   hoveredEntityId: string | null;
-  dragPreviewEntityId: string | null;
   placementPreview: PlacementPreviewState | null;
   moveDraft: MoveDraftState | null;
 }

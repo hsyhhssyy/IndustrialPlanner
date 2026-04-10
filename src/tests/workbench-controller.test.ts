@@ -923,7 +923,6 @@ describe("WorkbenchController scaffold", () => {
     expect(after.session.selection).toEqual(["reactor-1"]);
     expect(after.session.selectionInputMode).toBe("pointer");
     expect(after.session.moveDraft).toBeNull();
-    expect(after.session.dragPreviewEntityId).toBeNull();
     expect(
       after.renderScene.entities.find((entity) => entity.entityId === "reactor-1"),
     ).toMatchObject({
@@ -965,7 +964,6 @@ describe("WorkbenchController scaffold", () => {
     expect(after.session.selection).toEqual(["reactor-1"]);
     expect(after.session.selectionInputMode).toBe("touch");
     expect(after.session.moveDraft).toBeNull();
-    expect(after.session.dragPreviewEntityId).toBeNull();
 
     controller.dispose();
   });

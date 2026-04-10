@@ -43,7 +43,6 @@ export function isSameEditorSession(
     areSelectionsEqual(left.selection, right.selection) &&
     left.selectionInputMode === right.selectionInputMode &&
     left.hoveredEntityId === right.hoveredEntityId &&
-    left.dragPreviewEntityId === right.dragPreviewEntityId &&
     isSamePlacementPreviewState(left.placementPreview, right.placementPreview) &&
     isSameMoveDraftState(left.moveDraft, right.moveDraft)
   );
@@ -68,7 +67,6 @@ function cloneEditorSession(session: EditorSession): EditorSession {
     selection: [...session.selection],
     selectionInputMode: session.selectionInputMode,
     hoveredEntityId: session.hoveredEntityId,
-    dragPreviewEntityId: session.dragPreviewEntityId,
     placementPreview: session.placementPreview
       ? {
           ...session.placementPreview,
@@ -185,10 +183,6 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
 
     if (this.session.hoveredEntityId !== session.hoveredEntityId) {
       this.session.hoveredEntityId = session.hoveredEntityId;
-    }
-
-    if (this.session.dragPreviewEntityId !== session.dragPreviewEntityId) {
-      this.session.dragPreviewEntityId = session.dragPreviewEntityId;
     }
 
     if (
