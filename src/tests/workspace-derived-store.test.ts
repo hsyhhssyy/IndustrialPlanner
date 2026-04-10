@@ -301,7 +301,7 @@ describe("WorkspaceDerivedStore", () => {
     const document = createStage1SeedWorldDocument();
     const registry = createStage1Registry();
     const topology = compileStage1World(document, registry);
-    const movedEntityId = "reactor-1";
+    const movedEntityId = "filler-1";
     const movedEntity = document.entities[movedEntityId]!;
     const definition = topology.entityViews[movedEntityId]?.definition;
     const workspaceState = {
@@ -313,8 +313,8 @@ describe("WorkspaceDerivedStore", () => {
             entityId: movedEntityId,
             interactionMode: "touch" as const,
             originGridPoint: movedEntity.position,
-            gridPoint: { x: 20, y: 10 },
-            rotation: movedEntity.rotation,
+            gridPoint: { x: 19, y: 11 },
+            rotation: 180 as const,
             valid: true,
             anchorWorldOffset: { x: 8, y: 8 },
           },
@@ -353,7 +353,7 @@ describe("WorkspaceDerivedStore", () => {
 
     const footprint = getRotatedGridFootprint(
       definition!.footprint,
-      movedEntity.rotation,
+      180,
     );
 
     expect(
@@ -364,10 +364,10 @@ describe("WorkspaceDerivedStore", () => {
       }).anchoredMoveScreenBox,
     ).toEqual({
       left:
-        (20 * document.documentSettings.gridSize -
+        (19 * document.documentSettings.gridSize -
           workspaceState.canvasView.offset.x) * workspaceState.canvasView.zoom,
       top:
-        (10 * document.documentSettings.gridSize -
+        (11 * document.documentSettings.gridSize -
           workspaceState.canvasView.offset.y) * workspaceState.canvasView.zoom,
       width:
         footprint.width *

@@ -69,6 +69,7 @@ export interface WorkbenchController {
   updateMoveDraftFromScreenPoint: (screenPoint: CanvasPoint) => void;
   confirmMovePreview: () => Promise<void>;
   cancelMove: () => void;
+  rotateMoveClockwise: () => void;
   rotatePlacementClockwise: () => void;
   cancelPlacement: () => void;
   centerPlacementPreview: () => void;

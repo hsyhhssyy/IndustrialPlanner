@@ -87,7 +87,7 @@ import {
 const PIXELS_PER_WHEEL_LINE = 16;
 const WHEEL_ZOOM_SENSITIVITY = 0.0015;
 const TOUCH_PLACEMENT_TOOLBAR_WIDTH_PX = 176;
-const TOUCH_MOVE_TOOLBAR_WIDTH_PX = 120;
+const TOUCH_MOVE_TOOLBAR_WIDTH_PX = 176;
 const TOUCH_SELECTION_TOOLBAR_WIDTH_PX = 120;
 const TOUCH_ACTION_TOOLBAR_HEIGHT_PX = 56;
 const TOUCH_ACTION_TOOLBAR_GAP_PX = 12;
@@ -346,17 +346,7 @@ export const CanvasPanel = observer(function CanvasPanel({
     dragPoint: CanvasPoint,
     didStartDragging: boolean,
   ) => {
-    const currentMoveMode = isMoveInteractionMode(
-      controller.editorStore.getSnapshot().session.currentMode,
-    )
-      ? controller.editorStore.getSnapshot().session.currentMode
-      : null;
-
-    if (
-      didStartDragging &&
-      !currentMoveMode &&
-      previousState.phase !== "idle"
-    ) {
+    if (didStartDragging && previousState.phase !== "idle") {
       const entityId = getSelectedEntityIdForMove();
 
       if (!entityId) {
@@ -1183,6 +1173,12 @@ export const CanvasPanel = observer(function CanvasPanel({
           return;
         }
 
+        if (moveMode) {
+          event.preventDefault();
+          controller.rotateMoveClockwise();
+          return;
+        }
+
         if (placementMode) {
           event.preventDefault();
           controller.rotatePlacementClockwise();
@@ -1314,6 +1310,15 @@ export const CanvasPanel = observer(function CanvasPanel({
                   icon: "cancel",
                   onClick: cancelMove,
                   tone: "cancel",
+                },
+                {
+                  id: "rotate-move",
+                  ariaLabel: t("action.rotateMove"),
+                  icon: "rotate",
+                  onClick: () => {
+                    controller.rotateMoveClockwise();
+                  },
+                  tone: "rotate",
                 },
                 {
                   id: "confirm-move",

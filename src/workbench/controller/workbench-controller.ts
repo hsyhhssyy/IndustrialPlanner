@@ -398,6 +398,16 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.sync();
   }
 
+  rotateMoveClockwise(): void {
+    const didRotate = this.editorHost.rotateMoveClockwise();
+
+    if (!didRotate) {
+      return;
+    }
+
+    this.sync();
+  }
+
   rotatePlacementClockwise(): void {
     const didRotate = this.editorHost.rotatePlacementClockwise();
 

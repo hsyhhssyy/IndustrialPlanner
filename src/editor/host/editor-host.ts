@@ -157,6 +157,25 @@ function resolveCenteredPlacementGridPoint(options: {
   );
 }
 
+function rotateMoveAnchorWorldOffsetClockwise(options: {
+  anchorWorldOffset: {
+    x: number;
+    y: number;
+  };
+  currentFootprint: {
+    width: number;
+    height: number;
+  };
+  gridSize: number;
+}) {
+  const currentHeightPx = options.currentFootprint.height * options.gridSize;
+
+  return {
+    x: currentHeightPx - options.anchorWorldOffset.y,
+    y: options.anchorWorldOffset.x,
+  };
+}
+
 /**
  * Semantic editor facade.
  *
@@ -186,6 +205,7 @@ export interface EditorHost {
     inputMode: PlacementInteractionMode,
     input: CanvasWorldInput,
   ) => boolean;
+  rotateMoveClockwise: () => boolean;
   rotatePlacementClockwise: () => boolean;
   queryPlacementAtWorldInput: (input: CanvasWorldInput) => PlacementQueryResult;
   queryPlacementPreview: (
@@ -351,11 +371,18 @@ class EditorHostImpl implements EditorHost {
     input: CanvasWorldInput,
   ): boolean {
     const { document, session } = this.core.getSnapshot();
+    const moveMode = this.getMoveMode(session);
+    const isSelectedEntity =
+      session.selection.length === 1 &&
+      session.selection[0] === entityId;
+    const existingDraft =
+      moveMode?.entityId === entityId && session.moveDraft
+        ? session.moveDraft
+        : null;
 
     if (
-      session.currentMode.key !== "select" ||
-      session.selection.length !== 1 ||
-      session.selection[0] !== entityId
+      (!isSelectedEntity || session.currentMode.key !== "select") &&
+      !existingDraft
     ) {
       return false;
     }
@@ -366,25 +393,101 @@ class EditorHostImpl implements EditorHost {
       return false;
     }
 
+    const anchorGridPoint = existingDraft?.gridPoint ?? entity.position;
     const draft: MoveDraftState = {
       entityId,
       interactionMode: inputMode,
-      originGridPoint: entity.position,
-      gridPoint: entity.position,
-      rotation: entity.rotation,
-      valid: true,
+      originGridPoint: existingDraft?.originGridPoint ?? entity.position,
+      gridPoint: existingDraft?.gridPoint ?? entity.position,
+      rotation: existingDraft?.rotation ?? entity.rotation,
+      valid: existingDraft?.valid ?? true,
       anchorWorldOffset: {
-        x: input.worldPoint.x - entity.position.x * document.documentSettings.gridSize,
-        y: input.worldPoint.y - entity.position.y * document.documentSettings.gridSize,
+        x:
+          input.worldPoint.x -
+          anchorGridPoint.x * document.documentSettings.gridSize,
+        y:
+          input.worldPoint.y -
+          anchorGridPoint.y * document.documentSettings.gridSize,
       },
     };
 
     this.core.beginMove(entityId, inputMode, draft);
-    this.logger.info("Began move draft.", {
+    this.logger.info(existingDraft ? "Re-anchored move draft." : "Began move draft.", {
       entityId,
       inputMode,
-      originGridPoint: entity.position,
+      originGridPoint: draft.originGridPoint,
+      currentGridPoint: draft.gridPoint,
+      rotation: draft.rotation,
       anchorWorldOffset: draft.anchorWorldOffset,
+    });
+    return true;
+  }
+
+  rotateMoveClockwise(): boolean {
+    const { document, session } = this.core.getSnapshot();
+    const moveMode = this.getMoveMode(session);
+    const moveDraft = session.moveDraft;
+
+    if (!moveMode || !moveDraft) {
+      return false;
+    }
+
+    const entity = document.entities[moveMode.entityId];
+
+    if (!entity) {
+      return false;
+    }
+
+    const definition =
+      this.getTopology().entityViews[entity.id]?.definition ??
+      this.getDefinition(entity.definitionId);
+
+    if (!definition) {
+      return false;
+    }
+
+    const currentRotation = moveDraft.rotation;
+    const nextRotation = rotateGridRotationClockwise(currentRotation);
+    const currentFootprint = getRotatedGridFootprint(
+      definition.footprint,
+      currentRotation,
+    );
+    const nextFootprint = getRotatedGridFootprint(
+      definition.footprint,
+      nextRotation,
+    );
+    const rotatedDraft = {
+      ...moveDraft,
+      gridPoint: resolveCenteredRotatedGridPoint({
+        gridPoint: moveDraft.gridPoint,
+        currentFootprint,
+        nextFootprint,
+      }),
+      rotation: nextRotation,
+      valid: true,
+      anchorWorldOffset: rotateMoveAnchorWorldOffsetClockwise({
+        anchorWorldOffset: moveDraft.anchorWorldOffset,
+        currentFootprint,
+        gridSize: document.documentSettings.gridSize,
+      }),
+    } satisfies MoveDraftState;
+    const evaluation = this.evaluateMoveDraft(rotatedDraft, definition);
+    const resolvedDraft = {
+      ...rotatedDraft,
+      valid: evaluation.invalidReason === null,
+    } satisfies MoveDraftState;
+
+    if (!isSameMoveDraftState(moveDraft, resolvedDraft)) {
+      this.core.setMoveDraft(resolvedDraft);
+    }
+
+    this.logger.info("Rotated move draft.", {
+      entityId: moveDraft.entityId,
+      previousGridPoint: moveDraft.gridPoint,
+      nextGridPoint: resolvedDraft.gridPoint,
+      previousRotation: currentRotation,
+      nextRotation,
+      invalidReason: evaluation.invalidReason,
     });
     return true;
   }
@@ -795,6 +898,7 @@ class EditorHostImpl implements EditorHost {
         entityId: moveDraft.entityId,
         originGridPoint: moveDraft.originGridPoint,
         nextGridPoint: resolvedDraft.gridPoint,
+        nextRotation: resolvedDraft.rotation,
         interactionMode: moveDraft.interactionMode,
       });
     }

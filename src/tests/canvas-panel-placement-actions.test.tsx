@@ -625,6 +625,7 @@ describe("CanvasPanel placement actions", () => {
 
     expect(moveButtons.map((button) => button.getAttribute("aria-label"))).toEqual([
       "取消移动",
+      "旋转",
       "确认移动",
     ]);
 
@@ -638,6 +639,145 @@ describe("CanvasPanel placement actions", () => {
     });
     expect(getMoveMode(controller)).toBeNull();
     expect(container.querySelector(".move-action-toolbar")).toBeNull();
+
+    await disposeCanvasPanel({ root, shell, controller });
+  });
+
+  it("rotates pointer move drafts on R before auto-confirming the move", async () => {
+    const controller = createWorkbenchController();
+    const { container, root, shell } = await renderCanvasPanel(controller);
+    const stage = container.querySelector(".canvas-stage");
+    const viewport = container.querySelector(".canvas-viewport-surface");
+    const fillerPoint = toScreenPointForEntity(controller, "filler-1");
+    const destinationPoint = toScreenPointForGrid(controller, { x: 20, y: 10 });
+
+    expect(stage).not.toBeNull();
+    expect(viewport).not.toBeNull();
+
+    await act(async () => {
+      dispatchPointerTap(viewport, fillerPoint, 81);
+      await flushCanvasActions();
+    });
+
+    await act(async () => {
+      viewport?.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          button: 0,
+          buttons: 1,
+          clientX: fillerPoint.x,
+          clientY: fillerPoint.y,
+          pointerId: 82,
+          pointerType: "mouse",
+        }),
+      );
+      viewport?.dispatchEvent(
+        new PointerEvent("pointermove", {
+          bubbles: true,
+          button: 0,
+          buttons: 1,
+          clientX: destinationPoint.x,
+          clientY: destinationPoint.y,
+          pointerId: 82,
+          pointerType: "mouse",
+        }),
+      );
+      await flushCanvasActions();
+    });
+
+    await act(async () => {
+      stage?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          bubbles: true,
+          key: "r",
+        }),
+      );
+      await flushCanvasActions();
+    });
+
+    await act(async () => {
+      viewport?.dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          button: 0,
+          buttons: 0,
+          clientX: destinationPoint.x,
+          clientY: destinationPoint.y,
+          pointerId: 82,
+          pointerType: "mouse",
+        }),
+      );
+      await flushCanvasActions();
+    });
+
+    expect(controller.documentStore.getSnapshot().entities["filler-1"]).toMatchObject({
+      position: { x: 19, y: 11 },
+      rotation: 180,
+    });
+    expect(getMoveMode(controller)).toBeNull();
+
+    await disposeCanvasPanel({ root, shell, controller });
+  });
+
+  it("rotates touch move drafts from the shared toolbar before confirming", async () => {
+    const controller = createWorkbenchController();
+    const before = controller.documentStore.getSnapshot().entities["filler-1"];
+    const { container, root, shell } = await renderCanvasPanel(controller);
+    const viewport = container.querySelector(".canvas-viewport-surface");
+    const sourcePoint = toScreenPointForEntity(controller, "filler-1");
+    const destinationPoint = toScreenPointForGrid(controller, { x: 20, y: 10 });
+
+    expect(viewport).not.toBeNull();
+    expect(before).toBeTruthy();
+
+    await act(async () => {
+      dispatchTouchPointerEvent(viewport, "pointerdown", 91, sourcePoint);
+      dispatchTouchPointerEvent(viewport, "pointerup", 91, sourcePoint);
+      await flushCanvasActions();
+    });
+
+    await act(async () => {
+      dispatchTouchPointerEvent(viewport, "pointerdown", 92, sourcePoint);
+      dispatchTouchPointerEvent(viewport, "pointermove", 92, destinationPoint);
+      dispatchTouchPointerEvent(viewport, "pointerup", 92, destinationPoint);
+      await flushCanvasActions();
+    });
+
+    const moveButtons = Array.from(
+      container.querySelectorAll<HTMLButtonElement>(
+        ".move-action-toolbar .canvas-action-button",
+      ),
+    );
+    const rotateButton = moveButtons.find(
+      (button) => button.getAttribute("aria-label") === "旋转",
+    );
+    const confirmButton = moveButtons.find(
+      (button) => button.getAttribute("aria-label") === "确认移动",
+    );
+
+    await act(async () => {
+      rotateButton?.click();
+      await flushCanvasActions();
+    });
+
+    expect(controller.editorStore.getSnapshot().session.moveDraft).toMatchObject({
+      entityId: "filler-1",
+      gridPoint: { x: 19, y: 11 },
+      rotation: 180,
+      valid: true,
+    });
+    expect(controller.documentStore.getSnapshot().entities["filler-1"]).toEqual(before);
+
+    await act(async () => {
+      confirmButton?.click();
+      await flushCanvasActions();
+    });
+
+    expect(controller.documentStore.getSnapshot().entities["filler-1"]).toMatchObject({
+      position: { x: 19, y: 11 },
+      rotation: 180,
+    });
+    expect(getMoveMode(controller)).toBeNull();
 
     await disposeCanvasPanel({ root, shell, controller });
   });

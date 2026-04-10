@@ -236,15 +236,27 @@ class EditorCoreImpl implements EditorCore {
     }
 
     const moveDraft = this.session.moveDraft;
+    const entity = this.document.entities[moveDraft.entityId];
 
-    if (!moveDraft.valid) {
+    if (!moveDraft.valid || !entity) {
       return false;
     }
 
-    if (
-      moveDraft.gridPoint.x !== moveDraft.originGridPoint.x ||
-      moveDraft.gridPoint.y !== moveDraft.originGridPoint.y
-    ) {
+    const positionChanged =
+      moveDraft.gridPoint.x !== entity.position.x ||
+      moveDraft.gridPoint.y !== entity.position.y;
+    const rotationChanged = moveDraft.rotation !== entity.rotation;
+
+    if (rotationChanged) {
+      this.applyCommand({
+        type: "entity.rotate",
+        payload: {
+          entityId: moveDraft.entityId,
+          position: positionChanged ? moveDraft.gridPoint : undefined,
+          rotation: moveDraft.rotation,
+        },
+      });
+    } else if (positionChanged) {
       this.moveEntity(moveDraft.entityId, moveDraft.gridPoint);
     }
 

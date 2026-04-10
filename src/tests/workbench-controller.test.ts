@@ -9,6 +9,7 @@ import {
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
 import {
   getRotatedGridFootprint,
+  resolveCenteredRotatedGridPoint,
   type GridRotation,
 } from "@/shared/geometry/grid";
 import { createPlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
@@ -930,6 +931,65 @@ describe("WorkbenchController scaffold", () => {
       y: 10 * after.document.documentSettings.gridSize,
       selected: true,
     });
+
+    controller.dispose();
+  });
+
+  it("rotates move drafts and confirms a single atomic entity.rotate command", async () => {
+    const controller = createWorkbenchController();
+    const before = readWorkbenchState(controller).document.entities["filler-1"];
+
+    expect(before).toBeTruthy();
+
+    const definition = getStage1EntityDefinition(
+      controller.registry,
+      before!.definitionId,
+    );
+
+    expect(definition).toBeTruthy();
+
+    await controller.selectEntity("filler-1", "pointer");
+    controller.beginMoveFromScreenPoint(
+      "filler-1",
+      toScreenPointForEntity(controller, "filler-1"),
+      "pointer",
+    );
+    controller.updateMoveDraftFromScreenPoint(
+      toScreenPointForGrid(controller, { x: 20, y: 10 }),
+    );
+    controller.rotateMoveClockwise();
+
+    const currentFootprint = getRotatedGridFootprint(
+      definition!.footprint,
+      before!.rotation,
+    );
+    const nextFootprint = getRotatedGridFootprint(definition!.footprint, 180);
+    const expectedGridPoint = resolveCenteredRotatedGridPoint({
+      gridPoint: { x: 20, y: 10 },
+      currentFootprint,
+      nextFootprint,
+    });
+    const duringMove = readWorkbenchState(controller);
+
+    expect(duringMove.session.moveDraft).toMatchObject({
+      entityId: "filler-1",
+      gridPoint: expectedGridPoint,
+      rotation: 180,
+      valid: true,
+    });
+
+    await controller.confirmMovePreview();
+
+    const after = readWorkbenchState(controller);
+
+    expect(after.document.entities["filler-1"]).toMatchObject({
+      position: expectedGridPoint,
+      rotation: 180,
+    });
+
+    await controller.undo();
+
+    expect(readWorkbenchState(controller).document.entities["filler-1"]).toEqual(before);
 
     controller.dispose();
   });

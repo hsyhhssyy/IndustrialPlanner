@@ -25,6 +25,7 @@ export type MessageKey =
   | "action.cancelPlacement"
   | "action.confirmPlacement"
   | "action.cancelMove"
+  | "action.rotateMove"
   | "action.confirmMove"
   | "action.toggleValue"
   | "action.clearPatch"
@@ -135,6 +136,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.cancelPlacement": "取消",
     "action.confirmPlacement": "确认放置",
     "action.cancelMove": "取消移动",
+    "action.rotateMove": "旋转",
     "action.confirmMove": "确认移动",
     "action.toggleValue": "切换",
     "action.clearPatch": "清除覆盖",
@@ -244,6 +246,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.cancelPlacement": "Cancel",
     "action.confirmPlacement": "Confirm Placement",
     "action.cancelMove": "Cancel Move",
+    "action.rotateMove": "Rotate",
     "action.confirmMove": "Confirm Move",
     "action.toggleValue": "Toggle",
     "action.clearPatch": "Clear Patch",

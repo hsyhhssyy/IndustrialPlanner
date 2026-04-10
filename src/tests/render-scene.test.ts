@@ -278,4 +278,53 @@ describe("Render scene model", () => {
       valid: true,
     });
   });
+
+  it("uses move draft rotation when building non-square move previews", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const sourceEntity = document.entities["filler-1"];
+
+    expect(sourceEntity).toBeTruthy();
+
+    const scene = buildRenderScene({
+      locale: "zh-CN",
+      document,
+      topology,
+      registry,
+      canvasView: createInitialCanvasViewState(),
+      interaction: {
+        selectedEntityIds: ["filler-1"],
+        placementPreview: null,
+        moveDraft: {
+          entityId: "filler-1",
+          interactionMode: "touch",
+          originGridPoint: sourceEntity!.position,
+          gridPoint: { x: 19, y: 11 },
+          rotation: 180,
+          valid: true,
+          anchorWorldOffset: { x: 8, y: 8 },
+        },
+        pendingLinkSourceEntityId: null,
+      },
+      runtimeSnapshot: {
+        tick: 0,
+        status: "idle",
+        entityViews: {},
+        patchedEntityIds: [],
+      },
+    });
+
+    expect(scene.movePreview).toMatchObject({
+      entityId: "filler-1",
+      definitionId: sourceEntity!.definitionId,
+      interactionMode: "touch",
+      rotation: 180,
+      width: document.documentSettings.gridSize * 6,
+      height: document.documentSettings.gridSize * 4,
+      x: 19 * document.documentSettings.gridSize,
+      y: 11 * document.documentSettings.gridSize,
+      valid: true,
+    });
+  });
 });
