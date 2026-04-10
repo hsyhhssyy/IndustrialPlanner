@@ -1,60 +1,21 @@
-import {
-  advanceCanvasPointerMoveGesture,
-  beginCanvasPointerMoveGesture,
-  cancelCanvasPointerMoveGesture,
-  createIdleCanvasPanelPointerMoveGestureState,
-  removePointerFromCanvasPointerMoveGesture,
-  type CanvasPanelPointerMoveGestureState,
-} from "./canvas-panel-pointer-move-gesture";
-import {
-  advanceCanvasPointerPanGesture,
-  beginCanvasPointerPanGesture,
-  cancelCanvasPanelPointerGesture,
-  createIdleCanvasPanelPointerGestureState,
-  isCanvasPointerPanning,
-  type CanvasPanelPointerGestureState,
-} from "./canvas-panel-pointer-gesture";
-import {
-  advanceCanvasPointerTapGesture,
-  beginCanvasPointerTapGesture,
-  createIdleCanvasPanelPointerTapGestureState,
-  removePointerFromCanvasPointerTapGesture,
-  shouldDispatchCanvasPointerTap,
-  type CanvasPanelPointerTapGestureState,
-} from "./canvas-panel-pointer-tap-gesture";
-import {
-  advanceCanvasTouchDragGesture,
-  beginCanvasTouchDragGesture,
-  cancelCanvasTouchDragGesture,
-  createIdleCanvasPanelTouchDragGestureState,
-  removePointerFromCanvasTouchDragGesture,
-  type CanvasPanelTouchDragGestureState,
-} from "./canvas-panel-touch-drag-gesture";
-import {
-  advanceCanvasTouchPlacementGesture,
-  beginCanvasTouchPlacementGesture,
-  cancelCanvasTouchPlacementGesture,
-  createIdleCanvasPanelTouchPlacementGestureState,
-  removePointerFromCanvasTouchPlacementGesture,
-  shouldDispatchCanvasTouchTap,
-} from "./canvas-panel-touch-placement-gesture";
-import type { CanvasPanelTouchPlacementGestureState } from "./canvas-panel-touch-placement-gesture";
-import {
-  advanceCanvasTouchPanGesture,
-  advanceCanvasTouchPinchGesture,
-  beginCanvasTouchGesture,
-  beginCanvasTouchPanGesture,
-  beginCanvasTouchPinchGesture,
-  cancelCanvasTouchGesture,
-  createIdleCanvasPanelTouchGestureState,
-  isCanvasTouchPanning,
-  removePointerFromCanvasTouchGesture,
-  type CanvasPanelTouchGestureState,
-} from "./canvas-panel-touch-gesture";
 import { CanvasActionToolbar } from "./canvas-action-toolbar";
-import { resolveCanvasPanelTapIntent } from "./canvas-panel-tap-intent";
+import {
+  resolveCanvasPointerDownRoute,
+  resolveCanvasTouchDownRoute,
+  routeCanvasGestureEvent,
+} from "./canvas-panel-interaction-router";
+import {
+  createCanvasGestureSession,
+  type CanvasGestureSessionResult,
+  type CanvasGestureSessionSnapshot,
+} from "./canvas-panel-gesture-session";
+import {
+  isCanvasPointerPanning,
+} from "./canvas-panel-pointer-gesture";
 import { createCanvasPreviewRawInputScheduler } from "./canvas-preview-raw-input-scheduler";
-import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
+import {
+  isCanvasTouchPanning,
+} from "./canvas-panel-touch-gesture";
 import {
   isMoveInteractionMode,
   isPlacementInteractionMode,
@@ -62,7 +23,6 @@ import {
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { createTranslator } from "@/i18n/messages";
 import { RendererHost } from "@/renderer/host/renderer-host";
-import { createLogger } from "@/shared/logging/logger";
 import { observer } from "@/shared/mobx";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
@@ -91,7 +51,6 @@ const TOUCH_MOVE_TOOLBAR_WIDTH_PX = 176;
 const TOUCH_SELECTION_TOOLBAR_WIDTH_PX = 120;
 const TOUCH_ACTION_TOOLBAR_HEIGHT_PX = 56;
 const TOUCH_ACTION_TOOLBAR_GAP_PX = 12;
-const logger = createLogger("app.canvas-panel");
 
 function normalizeWheelDelta(event: WheelEvent<HTMLDivElement>): number {
   switch (event.deltaMode) {
@@ -110,22 +69,6 @@ function clampToRange(value: number, min: number, max: number): number {
   }
 
   return Math.min(Math.max(value, min), max);
-}
-
-function isPointInsideScreenBox(
-  point: CanvasPoint,
-  screenBox: RenderDerivedScreenBox | null,
-): boolean {
-  if (!screenBox) {
-    return false;
-  }
-
-  return (
-    point.x >= screenBox.left &&
-    point.x <= screenBox.left + screenBox.width &&
-    point.y >= screenBox.top &&
-    point.y <= screenBox.top + screenBox.height
-  );
 }
 
 function resolveAnchoredToolbarStyle(
@@ -152,12 +95,6 @@ function resolveAnchoredToolbarStyle(
   };
 }
 
-function resolveInteractionModeFromPointerType(
-  pointerType: string,
-): PlacementInteractionMode {
-  return pointerType === "touch" ? "touch" : "pointer";
-}
-
 export interface CanvasPanelProps {
   controller: WorkbenchController;
   renderDerivedStore: ReadonlySnapshotStore<RenderDerivedState>;
@@ -176,32 +113,21 @@ export const CanvasPanel = observer(function CanvasPanel({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const keyStateRef = useRef({ up: false, down: false, left: false, right: false });
   const frameRef = useRef<number | null>(null);
-  const touchPointsRef = useRef<Map<number, CanvasPoint>>(new Map());
-  const touchMoveGestureStateRef = useRef<CanvasPanelTouchDragGestureState>(
-    createIdleCanvasPanelTouchDragGestureState(),
+  const gestureSessionRef = useRef<ReturnType<typeof createCanvasGestureSession> | null>(
+    null,
   );
-  const touchPlacementGestureStateRef = useRef<CanvasPanelTouchPlacementGestureState>(
-    createIdleCanvasPanelTouchPlacementGestureState(),
-  );
-  const touchTapSuppressedRef = useRef(false);
-  const pointerTapGestureStateRef = useRef<CanvasPanelPointerTapGestureState>(
-    createIdleCanvasPanelPointerTapGestureState(),
-  );
-  const pointerMoveGestureStateRef = useRef<CanvasPanelPointerMoveGestureState>(
-    createIdleCanvasPanelPointerMoveGestureState(),
-  );
-  const [pointerGestureState, setPointerGestureState] = useState<CanvasPanelPointerGestureState>(
-    createIdleCanvasPanelPointerGestureState,
-  );
-  const [touchGestureState, setTouchGestureState] = useState<CanvasPanelTouchGestureState>(
-    createIdleCanvasPanelTouchGestureState,
+
+  if (!gestureSessionRef.current) {
+    gestureSessionRef.current = createCanvasGestureSession();
+  }
+
+  const [gestureSnapshot, setGestureSnapshot] = useState<CanvasGestureSessionSnapshot>(
+    () => gestureSessionRef.current!.getSnapshot(),
   );
   const [viewportSize, setViewportSize] = useState<CanvasPoint>({
     x: 0,
     y: 0,
   });
-  const pointerGestureStateRef = useRef<CanvasPanelPointerGestureState>(pointerGestureState);
-  const touchGestureStateRef = useRef<CanvasPanelTouchGestureState>(touchGestureState);
   const previewInputSchedulerRef = useRef<ReturnType<
     typeof createCanvasPreviewRawInputScheduler
   > | null>(null);
@@ -243,6 +169,37 @@ export const CanvasPanel = observer(function CanvasPanel({
     viewportSize,
     TOUCH_SELECTION_TOOLBAR_WIDTH_PX,
   );
+  const pointerGestureState = gestureSnapshot.pointerGestureState;
+  const touchGestureState = gestureSnapshot.touchGestureState;
+
+  const syncGestureSnapshot = (nextSnapshot: CanvasGestureSessionSnapshot) => {
+    setGestureSnapshot((currentSnapshot) =>
+      currentSnapshot.pointerGestureState === nextSnapshot.pointerGestureState &&
+      currentSnapshot.touchGestureState === nextSnapshot.touchGestureState
+        ? currentSnapshot
+        : nextSnapshot,
+    );
+  };
+
+  const applyPointerCaptureCommands = (
+    result: CanvasGestureSessionResult,
+    target: HTMLDivElement | null,
+  ) => {
+    if (!target) {
+      return;
+    }
+
+    for (const command of result.pointerCaptureCommands) {
+      if (command.kind === "capture") {
+        target.setPointerCapture(command.pointerId);
+        continue;
+      }
+
+      if (target.hasPointerCapture(command.pointerId)) {
+        target.releasePointerCapture(command.pointerId);
+      }
+    }
+  };
 
   const dispatchPlacementPreviewFromScreenPoint = useEffectEvent(
     (screenPoint: CanvasPoint) => {
@@ -279,186 +236,46 @@ export const CanvasPanel = observer(function CanvasPanel({
     controller.cancelMove();
   };
 
-  const getSelectedEntityIdForMove = (): string | null => {
-    const selection = controller.editorStore.getSnapshot().session.selection;
-
-    return selection.length === 1 ? selection[0] ?? null : null;
-  };
-
-  const isSelectedEntityMoveCandidate = (screenPoint: CanvasPoint) => {
-    if (
-      ui.phase !== "edit" ||
-      editor.session.currentMode.key !== "select" ||
-      editor.session.selection.length !== 1
-    ) {
-      return null;
-    }
-
-    const target = controller.getCanvasInteractionTarget(screenPoint);
-
-    return target.kind === "entity" && target.selected
-      ? target.entityId
-      : null;
-  };
-
-  const shouldBeginTouchMoveGesture = (screenPoint: CanvasPoint): boolean => {
-    if (moveMode?.inputMode === "touch") {
-      return isPointInsideScreenBox(screenPoint, render.anchoredMoveScreenBox);
-    }
-
-    return isSelectedEntityMoveCandidate(screenPoint) !== null;
-  };
-
-  const clearPointerMoveGestureState = (pointerId?: number) => {
-    const currentState = pointerMoveGestureStateRef.current;
-    const viewportElement = viewportRef.current;
-
-    if (
-      currentState.phase !== "idle" &&
-      (pointerId === undefined || currentState.pointerId === pointerId) &&
-      viewportElement?.hasPointerCapture(currentState.pointerId)
-    ) {
-      viewportElement.releasePointerCapture(currentState.pointerId);
-    }
-
-    if (pointerId === undefined || currentState.phase === "idle") {
-      pointerMoveGestureStateRef.current = cancelCanvasPointerMoveGesture();
-      return;
-    }
-
-    pointerMoveGestureStateRef.current = removePointerFromCanvasPointerMoveGesture(
-      currentState,
-      pointerId,
-    );
-  };
-
-  const clearTouchMoveGestureState = (pointerId?: number) => {
-    const currentState = touchMoveGestureStateRef.current;
-
-    touchMoveGestureStateRef.current =
-      pointerId === undefined
-        ? cancelCanvasTouchDragGesture()
-        : removePointerFromCanvasTouchDragGesture(currentState, pointerId);
-  };
-
-  const handleTouchMoveDraftAtScreenPoint = (
-    previousState: CanvasPanelTouchDragGestureState,
-    dragPoint: CanvasPoint,
-    didStartDragging: boolean,
-  ) => {
-    if (didStartDragging && previousState.phase !== "idle") {
-      const entityId = getSelectedEntityIdForMove();
-
-      if (!entityId) {
-        return;
+  const routeGestureEvents = useEffectEvent(
+    (events: readonly CanvasGestureSessionResult["events"][number][]) => {
+      for (const event of events) {
+        void routeCanvasGestureEvent({
+          anchoredPlacementActive,
+          cancelMove,
+          cancelPlacement,
+          cancelScheduledPlacementPreview,
+          controller,
+          currentMode: editor.session.currentMode,
+          displayTool: editor.session.displayTool,
+          event,
+          phase: ui.phase,
+          schedulePlacementPreviewFromScreenPoint,
+        });
       }
+    },
+  );
 
-      controller.beginMoveFromScreenPoint(entityId, previousState.origin, "touch");
-    }
-
-    if (
-      isMoveInteractionMode(controller.editorStore.getSnapshot().session.currentMode)
-    ) {
-      controller.updateMoveDraftFromScreenPoint(dragPoint);
-    }
-  };
-
-  const handlePointerMoveDraftAtScreenPoint = (
-    previousState: CanvasPanelPointerMoveGestureState,
-    dragPoint: CanvasPoint,
-    didStartDragging: boolean,
+  const applyGestureSessionResult = (
+    result: CanvasGestureSessionResult,
+    target: HTMLDivElement | null = viewportRef.current,
   ) => {
-    if (
-      didStartDragging &&
-      previousState.phase !== "idle"
-    ) {
-      controller.beginMoveFromScreenPoint(
-        previousState.entityId,
-        previousState.origin,
-        "pointer",
-      );
-    }
-
-    if (
-      isMoveInteractionMode(controller.editorStore.getSnapshot().session.currentMode)
-    ) {
-      controller.updateMoveDraftFromScreenPoint(dragPoint);
-    }
+    applyPointerCaptureCommands(result, target);
+    syncGestureSnapshot({
+      pointerGestureState: result.pointerGestureState,
+      touchGestureState: result.touchGestureState,
+    });
+    routeGestureEvents(result.events);
   };
 
-  const beginTouchPlacementOrPanGesture = (
-    pointerId: number,
-    point: CanvasPoint,
-  ) => {
-    if (isPointInsideScreenBox(point, anchoredPlacementScreenBox)) {
-      touchPlacementGestureStateRef.current = beginCanvasTouchPlacementGesture(
-        pointerId,
-        point,
-      );
-      updateTouchGestureState(createIdleCanvasPanelTouchGestureState());
-      return;
-    }
+  const resetAllGestures = useEffectEvent(() => {
+    const result = gestureSessionRef.current!.resetAll();
 
-    touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
-    updateTouchGestureState(beginCanvasTouchPanGesture(pointerId, point));
-  };
-
-  const beginTouchPinchFromTrackedPoints = () => {
-    const [firstPointer, secondPointer] = Array.from(
-      touchPointsRef.current.entries(),
-    );
-
-    touchTapSuppressedRef.current = true;
-    clearTouchMoveGestureState();
-    touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
-    cancelScheduledPlacementPreview();
-
-    if (!firstPointer || !secondPointer) {
-      updateTouchGestureState(createIdleCanvasPanelTouchGestureState());
-      return;
-    }
-
-    updateTouchGestureState(
-      beginCanvasTouchPinchGesture(
-        firstPointer[0],
-        firstPointer[1],
-        secondPointer[0],
-        secondPointer[1],
-      ),
-    );
-  };
-
-  const updatePointerGestureState = (nextState: CanvasPanelPointerGestureState) => {
-    pointerGestureStateRef.current = nextState;
-    setPointerGestureState(nextState);
-  };
-
-  const updateTouchGestureState = (nextState: CanvasPanelTouchGestureState) => {
-    touchGestureStateRef.current = nextState;
-    setTouchGestureState(nextState);
-  };
-
-  const resetTouchGestureState = () => {
-    const viewportElement = viewportRef.current;
-
-    for (const pointerId of touchPointsRef.current.keys()) {
-      if (viewportElement?.hasPointerCapture(pointerId)) {
-        viewportElement.releasePointerCapture(pointerId);
-      }
-    }
-
-    touchPointsRef.current.clear();
-    clearTouchMoveGestureState();
-    touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
-    touchTapSuppressedRef.current = false;
-    updateTouchGestureState(cancelCanvasTouchGesture());
-    cancelScheduledPlacementPreview();
-    controller.clearPlacementPreview();
+    applyGestureSessionResult(result);
 
     if (isMoveInteractionMode(controller.editorStore.getSnapshot().session.currentMode)) {
       controller.cancelMove();
     }
-  };
+  });
 
   const toViewportPoint = (clientX: number, clientY: number): CanvasPoint => {
     const bounds = viewportRef.current?.getBoundingClientRect();
@@ -473,28 +290,6 @@ export const CanvasPanel = observer(function CanvasPanel({
     };
   };
 
-  const resetPointerGestureState = () => {
-    const currentState = pointerGestureStateRef.current;
-    const viewportElement = viewportRef.current;
-
-    if (
-      currentState.phase !== "idle" &&
-      viewportElement?.hasPointerCapture(currentState.pointerId)
-    ) {
-      viewportElement.releasePointerCapture(currentState.pointerId);
-    }
-
-    clearPointerMoveGestureState();
-    updatePointerGestureState(cancelCanvasPanelPointerGesture());
-    pointerTapGestureStateRef.current = createIdleCanvasPanelPointerTapGestureState();
-    cancelScheduledPlacementPreview();
-    controller.clearPlacementPreview();
-
-    if (isMoveInteractionMode(controller.editorStore.getSnapshot().session.currentMode)) {
-      controller.cancelMove();
-    }
-  };
-
   useEffect(() => {
     previewInputSchedulerRef.current = createCanvasPreviewRawInputScheduler({
       dispatch: dispatchPlacementPreviewFromScreenPoint,
@@ -506,9 +301,13 @@ export const CanvasPanel = observer(function CanvasPanel({
     };
   }, [controller, placementPreviewProfiler]);
 
-  useEffect(() => controller.subscribeCanvasKeyboardFocusRequests(() => {
-    stageRef.current?.focus();
-  }), [controller]);
+  useEffect(
+    () =>
+      controller.subscribeCanvasKeyboardFocusRequests(() => {
+        stageRef.current?.focus();
+      }),
+    [controller],
+  );
 
   useEffect(() => {
     if (
@@ -595,39 +394,8 @@ export const CanvasPanel = observer(function CanvasPanel({
 
   useEffect(() => {
     const handleWindowBlur = () => {
-      const currentState = pointerGestureStateRef.current;
-      const viewportElement = viewportRef.current;
-
-      if (
-        currentState.phase !== "idle" &&
-        viewportElement?.hasPointerCapture(currentState.pointerId)
-      ) {
-        viewportElement.releasePointerCapture(currentState.pointerId);
-      }
-
-      pointerGestureStateRef.current = cancelCanvasPanelPointerGesture();
-      clearPointerMoveGestureState();
-      setPointerGestureState(pointerGestureStateRef.current);
-      pointerTapGestureStateRef.current = createIdleCanvasPanelPointerTapGestureState();
-
-      for (const pointerId of touchPointsRef.current.keys()) {
-        if (viewportElement?.hasPointerCapture(pointerId)) {
-          viewportElement.releasePointerCapture(pointerId);
-        }
-      }
-
-      touchPointsRef.current.clear();
-      clearTouchMoveGestureState();
-      touchPlacementGestureStateRef.current = cancelCanvasTouchPlacementGesture();
-      touchTapSuppressedRef.current = false;
-      touchGestureStateRef.current = cancelCanvasTouchGesture();
-      setTouchGestureState(touchGestureStateRef.current);
+      resetAllGestures();
       stopKeyboardPanLoop();
-      controller.clearPlacementPreview();
-
-      if (isMoveInteractionMode(controller.editorStore.getSnapshot().session.currentMode)) {
-        controller.cancelMove();
-      }
     };
 
     const handleVisibilityChange = () => {
@@ -643,322 +411,95 @@ export const CanvasPanel = observer(function CanvasPanel({
       window.removeEventListener("blur", handleWindowBlur);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [controller]);
-
-  const dispatchCanvasTap = async (
-    screenPoint: CanvasPoint,
-    interactionMode: PlacementInteractionMode,
-  ) => {
-    const target = controller.getCanvasInteractionTarget(screenPoint);
-    const intent = resolveCanvasPanelTapIntent({
-      phase: ui.phase,
-      currentMode: editor.session.currentMode,
-      target,
-    });
-
-    if (placementMode) {
-      logger.info("Resolved canvas tap intent during placement.", {
-        screenPoint,
-        phase: ui.phase,
-        currentMode: editor.session.currentMode,
-        displayTool: editor.session.displayTool,
-        target,
-        intent,
-      });
-    }
-
-    switch (intent.kind) {
-      case "select-edit-entity":
-        await controller.selectEntity(intent.entityId, interactionMode);
-        return;
-      case "clear-edit-selection":
-        await controller.clearSelection();
-        return;
-      case "activate-link-target":
-        await controller.activateLinkTarget(intent.entityId);
-        return;
-      case "commit-placement":
-        await controller.commitPlacementAtScreenPoint(screenPoint);
-        return;
-      case "select-simulation-entity":
-        await controller.selectSimulationEntity(intent.entityId);
-        return;
-      case "noop":
-        return;
-    }
-  };
+  }, []);
 
   const handleViewportPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     stageRef.current?.focus();
 
+    const point = toViewportPoint(event.clientX, event.clientY);
+
     if (event.pointerType === "touch") {
       event.preventDefault();
-      const point = toViewportPoint(event.clientX, event.clientY);
-      touchPointsRef.current.set(event.pointerId, point);
-      event.currentTarget.setPointerCapture(event.pointerId);
 
-      if (touchPointsRef.current.size >= 2) {
-        beginTouchPinchFromTrackedPoints();
-        return;
-      }
-
-      if (anchoredPlacementActive) {
-        beginTouchPlacementOrPanGesture(event.pointerId, point);
-        return;
-      }
-
-      if (shouldBeginTouchMoveGesture(point)) {
-        clearTouchMoveGestureState();
-        touchMoveGestureStateRef.current = beginCanvasTouchDragGesture(
-          event.pointerId,
-          point,
-        );
-        updateTouchGestureState(createIdleCanvasPanelTouchGestureState());
-        controller.clearPlacementPreview();
-        return;
-      }
-
-      updateTouchGestureState(
-        beginCanvasTouchGesture(
-          event.pointerId,
-          point,
-          controller.getCanvasInteractionTarget(point),
-        ),
-      );
-
-      controller.clearPlacementPreview();
-      return;
-    }
-
-    if (event.button === 0) {
-      const point = toViewportPoint(event.clientX, event.clientY);
-      pointerTapGestureStateRef.current = beginCanvasPointerTapGesture(
-        event.pointerId,
+      const touchRoute = resolveCanvasTouchDownRoute({
+        anchoredMoveScreenBox: render.anchoredMoveScreenBox,
+        anchoredPlacementActive,
+        anchoredPlacementScreenBox,
+        currentMode: editor.session.currentMode,
+        phase: ui.phase,
+        screenPoint: point,
+        selection: editor.session.selection,
+        target: controller.getCanvasInteractionTarget(point),
+      });
+      const result = gestureSessionRef.current!.handlePointerDown({
+        button: event.button,
         point,
-      );
+        pointerId: event.pointerId,
+        pointerType: event.pointerType,
+        route: touchRoute,
+      });
 
-      const moveEntityId = isSelectedEntityMoveCandidate(point);
-
-      if (moveEntityId) {
-        event.currentTarget.setPointerCapture(event.pointerId);
-        pointerMoveGestureStateRef.current = beginCanvasPointerMoveGesture(
-          event.pointerId,
-          moveEntityId,
-          point,
-        );
-      } else {
-        clearPointerMoveGestureState();
-      }
-
+      applyGestureSessionResult(result, event.currentTarget);
       return;
     }
 
-    if (event.button === 2 && (placementMode || moveMode)) {
+    const pointerRoute = resolveCanvasPointerDownRoute({
+      button: event.button,
+      currentMode: editor.session.currentMode,
+      phase: ui.phase,
+      screenPoint: point,
+      selection: editor.session.selection,
+      target:
+        event.button === 0
+          ? controller.getCanvasInteractionTarget(point)
+          : { kind: "blank" },
+    });
+
+    if (event.button === 1 || (event.button === 2 && (placementMode || moveMode))) {
       event.preventDefault();
-      pointerTapGestureStateRef.current = createIdleCanvasPanelPointerTapGestureState();
-      clearPointerMoveGestureState();
-
-      if (moveMode) {
-        cancelMove();
-      } else {
-        cancelPlacement();
-      }
-
-      return;
     }
 
-    if (event.button !== 1) {
-      return;
-    }
+    const result = gestureSessionRef.current!.handlePointerDown({
+      button: event.button,
+      point,
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+      route: pointerRoute,
+    });
 
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    controller.clearPlacementPreview();
-    updatePointerGestureState(
-      beginCanvasPointerPanGesture(event.pointerId, {
-        x: event.clientX,
-        y: event.clientY,
-      }),
-    );
+    applyGestureSessionResult(result, event.currentTarget);
   };
 
   const handleViewportPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === "touch") {
-      const point = toViewportPoint(event.clientX, event.clientY);
-      touchPointsRef.current.set(event.pointerId, point);
+    const result = gestureSessionRef.current!.handlePointerMove({
+      buttons: event.buttons,
+      point: toViewportPoint(event.clientX, event.clientY),
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+    });
 
-      if (touchMoveGestureStateRef.current.phase !== "idle") {
-        if (touchPointsRef.current.size !== 1) {
-          return;
-        }
-
-        const previousState = touchMoveGestureStateRef.current;
-        const result = advanceCanvasTouchDragGesture(
-          previousState,
-          event.pointerId,
-          point,
-        );
-
-        touchMoveGestureStateRef.current = result.nextState;
-
-        if (result.dragPoint) {
-          touchTapSuppressedRef.current = true;
-          handleTouchMoveDraftAtScreenPoint(
-            previousState,
-            result.dragPoint,
-            result.didStartDragging,
-          );
-        }
-
-        return;
-      }
-
-      if (
-        anchoredPlacementActive &&
-        touchPlacementGestureStateRef.current.phase !== "idle"
-      ) {
-        if (touchPointsRef.current.size !== 1) {
-          return;
-        }
-
-        const result = advanceCanvasTouchPlacementGesture(
-          touchPlacementGestureStateRef.current,
-          event.pointerId,
-          point,
-        );
-
-        touchPlacementGestureStateRef.current = result.nextState;
-
-        if (result.previewPoint) {
-          touchTapSuppressedRef.current = true;
-          schedulePlacementPreviewFromScreenPoint(result.previewPoint);
-        }
-
-        return;
-      }
-
-      if (touchGestureStateRef.current.phase === "touch-pinching") {
-        const result = advanceCanvasTouchPinchGesture(
-          touchGestureStateRef.current,
-          event.pointerId,
-          point,
-        );
-
-        if (result.nextState !== touchGestureStateRef.current) {
-          updateTouchGestureState(result.nextState);
-        }
-
-        if (result.scaleFactor && result.zoomAnchor) {
-          touchTapSuppressedRef.current = true;
-          controller.zoomCanvasAt(result.zoomAnchor, result.scaleFactor);
-        }
-
-        if (result.midpointDelta) {
-          const distance = Math.hypot(result.midpointDelta.x, result.midpointDelta.y);
-
-          if (distance > 0) {
-            touchTapSuppressedRef.current = true;
-            controller.panCanvasBy(result.midpointDelta);
-          }
-        }
-
-        return;
-      }
-
-      const result = advanceCanvasTouchPanGesture(
-        touchGestureStateRef.current,
-        event.pointerId,
-        point,
-      );
-
-      if (result.nextState !== touchGestureStateRef.current) {
-        updateTouchGestureState(result.nextState);
-      }
-
-      if (result.screenDelta) {
-        touchTapSuppressedRef.current = true;
-        controller.panCanvasBy(result.screenDelta);
-      }
-
-      return;
-    }
-
-    const point = toViewportPoint(event.clientX, event.clientY);
-
-    pointerTapGestureStateRef.current = advanceCanvasPointerTapGesture(
-      pointerTapGestureStateRef.current,
-      event.pointerId,
-      point,
-    );
-
-    if (pointerMoveGestureStateRef.current.phase !== "idle") {
-      const previousState = pointerMoveGestureStateRef.current;
-      const result = advanceCanvasPointerMoveGesture(
-        previousState,
-        event.pointerId,
-        point,
-      );
-
-      pointerMoveGestureStateRef.current = result.nextState;
-
-      if (result.dragPoint) {
-        handlePointerMoveDraftAtScreenPoint(
-          previousState,
-          result.dragPoint,
-          result.didStartDragging,
-        );
-      }
-
-      return;
-    }
-
-    if (
-      pointerGestureStateRef.current.phase === "idle" &&
-      event.buttons === 0
-    ) {
-      schedulePlacementPreviewFromScreenPoint(point);
-      return;
-    }
-
-    const result = advanceCanvasPointerPanGesture(
-      pointerGestureStateRef.current,
-      event.pointerId,
-      {
-        x: event.clientX,
-        y: event.clientY,
-      },
-    );
-
-    if (result.nextState !== pointerGestureStateRef.current) {
-      updatePointerGestureState(result.nextState);
-    }
-
-    if (result.screenDelta) {
-      controller.panCanvasBy(result.screenDelta);
-    }
+    applyGestureSessionResult(result);
   };
 
   const handleViewportPointerEnter = (event: PointerEvent<HTMLDivElement>) => {
-    if (
-      event.pointerType === "touch" ||
-      pointerGestureStateRef.current.phase !== "idle" ||
-      event.buttons !== 0
-    ) {
-      return;
-    }
+    const result = gestureSessionRef.current!.handlePointerEnter({
+      buttons: event.buttons,
+      point: toViewportPoint(event.clientX, event.clientY),
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+    });
 
-    schedulePlacementPreviewFromScreenPoint(
-      toViewportPoint(event.clientX, event.clientY),
-    );
+    applyGestureSessionResult(result);
   };
 
   const handleViewportPointerLeave = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType !== "touch" && event.buttons !== 0) {
-      pointerTapGestureStateRef.current = removePointerFromCanvasPointerTapGesture(
-        pointerTapGestureStateRef.current,
-        event.pointerId,
-      );
-    }
+    const result = gestureSessionRef.current!.handlePointerLeave({
+      buttons: event.buttons,
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+    });
+
+    applyGestureSessionResult(result);
 
     if (!anchoredPlacementActive) {
       cancelScheduledPlacementPreview();
@@ -967,161 +508,45 @@ export const CanvasPanel = observer(function CanvasPanel({
   };
 
   const handleViewportPointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === "touch") {
-      const shouldHandleTap = shouldDispatchCanvasTouchTap({
-        activeTouchCount: touchPointsRef.current.size,
-        anchoredPlacementActive,
-        placementGestureState: touchPlacementGestureStateRef.current,
-        tapSuppressed: touchTapSuppressedRef.current,
-        touchGestureState: touchGestureStateRef.current,
-      });
+    const result = gestureSessionRef.current!.handlePointerUp({
+      anchoredPlacementActive,
+      button: event.button,
+      point: toViewportPoint(event.clientX, event.clientY),
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+    });
 
-      if (shouldHandleTap) {
-        void dispatchCanvasTap(
-          toViewportPoint(event.clientX, event.clientY),
-          resolveInteractionModeFromPointerType(event.pointerType),
-        );
-      }
-
-      touchPointsRef.current.delete(event.pointerId);
-      clearTouchMoveGestureState(event.pointerId);
-      touchPlacementGestureStateRef.current = removePointerFromCanvasTouchPlacementGesture(
-        touchPlacementGestureStateRef.current,
-        event.pointerId,
-      );
-
-      if (touchPointsRef.current.size === 0) {
-        touchTapSuppressedRef.current = false;
-      }
-
-      updateTouchGestureState(
-        removePointerFromCanvasTouchGesture(
-          touchGestureStateRef.current,
-          event.pointerId,
-        ),
-      );
-      return;
-    }
-
-    if (event.button === 0) {
-      const pointerMoveState = pointerMoveGestureStateRef.current;
-      const didDragMove =
-        pointerMoveState.phase === "move-dragging" &&
-        pointerMoveState.pointerId === event.pointerId;
-      clearPointerMoveGestureState(event.pointerId);
-
-      if (didDragMove) {
-        const currentMoveDraft = controller.editorStore.getSnapshot().session.moveDraft;
-
-        if (currentMoveDraft?.valid) {
-          void controller.confirmMovePreview();
-        } else {
-          controller.cancelMove();
-        }
-
-        pointerTapGestureStateRef.current = removePointerFromCanvasPointerTapGesture(
-          pointerTapGestureStateRef.current,
-          event.pointerId,
-        );
-        return;
-      }
-
-      const shouldDispatchTap = shouldDispatchCanvasPointerTap(
-        pointerTapGestureStateRef.current,
-        event.pointerId,
-      );
-
-      if (shouldDispatchTap) {
-        void dispatchCanvasTap(
-          toViewportPoint(event.clientX, event.clientY),
-          resolveInteractionModeFromPointerType(event.pointerType),
-        );
-      } else if (
-        placementMode &&
-        placementMode.inputMode === "pointer"
-      ) {
-        logger.info("Suppressed precise-pointer tap before placement dispatch.", {
-          pointerId: event.pointerId,
-          pointerType: event.pointerType,
-          currentMode: editor.session.currentMode,
-          displayTool: editor.session.displayTool,
-          tapGestureState: pointerTapGestureStateRef.current,
-        });
-      }
-
-      pointerTapGestureStateRef.current = removePointerFromCanvasPointerTapGesture(
-        pointerTapGestureStateRef.current,
-        event.pointerId,
-      );
-      return;
-    }
-
-    if (
-      pointerGestureStateRef.current.phase !== "idle" &&
-      pointerGestureStateRef.current.pointerId === event.pointerId
-    ) {
-      resetPointerGestureState();
-    }
+    applyGestureSessionResult(result, event.currentTarget);
   };
 
   const handleViewportLostPointerCapture = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === "touch") {
-      touchPointsRef.current.delete(event.pointerId);
-      clearTouchMoveGestureState(event.pointerId);
-      touchPlacementGestureStateRef.current = removePointerFromCanvasTouchPlacementGesture(
-        touchPlacementGestureStateRef.current,
-        event.pointerId,
-      );
+    const result = gestureSessionRef.current!.handleLostPointerCapture({
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+    });
 
-      if (touchPointsRef.current.size === 0) {
-        touchTapSuppressedRef.current = false;
-      }
+    applyGestureSessionResult(result);
 
-      const nextTouchState = removePointerFromCanvasTouchGesture(
-        touchGestureStateRef.current,
-        event.pointerId,
-      );
-
-      if (nextTouchState !== touchGestureStateRef.current) {
-        updateTouchGestureState(nextTouchState);
-      }
-
-      return;
-    }
-
-    const hadPointerPan =
-      pointerGestureStateRef.current.phase !== "idle" &&
-      pointerGestureStateRef.current.pointerId === event.pointerId;
-    const pointerMoveState = pointerMoveGestureStateRef.current;
-    const hadPointerMove =
-      pointerMoveState.phase !== "idle" &&
-      pointerMoveState.pointerId === event.pointerId;
-
-    pointerTapGestureStateRef.current = removePointerFromCanvasPointerTapGesture(
-      pointerTapGestureStateRef.current,
-      event.pointerId,
-    );
-    const didLoseDraggingMove = pointerMoveState.phase === "move-dragging";
-    clearPointerMoveGestureState(event.pointerId);
-
-    if (!hadPointerPan && !hadPointerMove) {
-      return;
-    }
-
-    if (didLoseDraggingMove) {
+    if (
+      event.pointerType !== "touch" &&
+      isMoveInteractionMode(controller.editorStore.getSnapshot().session.currentMode) &&
+      result.events.some(
+        (gestureEvent) =>
+          gestureEvent.kind === "drag-end" &&
+          gestureEvent.recognizer === "pointer-move" &&
+          gestureEvent.outcome === "cancel",
+      )
+    ) {
       controller.cancelMove();
     }
-
-    resetPointerGestureState();
   };
 
   const handleViewportPointerCancel = () => {
-    resetPointerGestureState();
-    resetTouchGestureState();
+    resetAllGestures();
   };
 
   const handleViewportWheel = (event: WheelEvent<HTMLDivElement>) => {
-    if (pointerGestureStateRef.current.phase !== "idle") {
+    if (gestureSessionRef.current!.getSnapshot().pointerGestureState.phase !== "idle") {
       return;
     }
 
@@ -1239,8 +664,7 @@ export const CanvasPanel = observer(function CanvasPanel({
             return;
           }
 
-          resetPointerGestureState();
-          resetTouchGestureState();
+          resetAllGestures();
           stopKeyboardPanLoop();
         }}
         onKeyDown={handleKeyDown}
@@ -1249,9 +673,12 @@ export const CanvasPanel = observer(function CanvasPanel({
         tabIndex={0}
       >
         <div
-          className={isCanvasPointerPanning(pointerGestureState) || isCanvasTouchPanning(touchGestureState)
-            ? "canvas-viewport-surface is-panning"
-            : "canvas-viewport-surface"}
+          className={
+            isCanvasPointerPanning(pointerGestureState) ||
+            isCanvasTouchPanning(touchGestureState)
+              ? "canvas-viewport-surface is-panning"
+              : "canvas-viewport-surface"
+          }
           onContextMenu={handleViewportContextMenu}
           onLostPointerCapture={handleViewportLostPointerCapture}
           onPointerCancel={handleViewportPointerCancel}
