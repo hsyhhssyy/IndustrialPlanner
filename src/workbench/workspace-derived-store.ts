@@ -80,7 +80,8 @@ function isSameRenderDerivedState(
     isSameScreenBox(
       left.anchoredSelectionScreenBox,
       right.anchoredSelectionScreenBox,
-    )
+    ) &&
+    isSameScreenBox(left.marqueeScreenBox, right.marqueeScreenBox)
   );
 }
 

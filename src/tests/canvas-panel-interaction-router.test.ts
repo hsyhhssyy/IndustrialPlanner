@@ -78,6 +78,7 @@ describe("canvas panel interaction router", () => {
     ).toEqual({
       kind: "primary",
       moveEntityId: "filler-1",
+      marqueeSelectionMode: null,
     });
 
     expect(
@@ -132,7 +133,44 @@ describe("canvas panel interaction router", () => {
       }),
     ).toEqual({
       kind: "primary",
+      moveEntityId: "filler-1",
+      marqueeSelectionMode: null,
+    });
+
+    expect(
+      resolveCanvasPointerDownRoute({
+        button: 0,
+        currentMode: createSelectInteractionMode(),
+        phase: "edit",
+        selectionModifierActive: false,
+        screenPoint: { x: 10, y: 10 },
+        selection: ["filler-1"],
+        target: {
+          kind: "entity",
+          entityId: "reactor-1",
+          selected: false,
+        },
+      }),
+    ).toEqual({
+      kind: "primary",
       moveEntityId: null,
+      marqueeSelectionMode: "replace",
+    });
+
+    expect(
+      resolveCanvasPointerDownRoute({
+        button: 0,
+        currentMode: createSelectInteractionMode(),
+        phase: "edit",
+        selectionModifierActive: true,
+        screenPoint: { x: 10, y: 10 },
+        selection: ["filler-1"],
+        target: { kind: "blank" },
+      }),
+    ).toEqual({
+      kind: "primary",
+      moveEntityId: null,
+      marqueeSelectionMode: "toggle",
     });
   });
 

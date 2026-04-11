@@ -18,7 +18,14 @@ import {
   type MoveDraftEntityState,
   type MoveDraftState,
 } from "@/editor/contracts/move-draft";
-import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
+import {
+  isSameMarqueeDraftState,
+  type MarqueeDraftState,
+} from "@/editor/contracts/marquee-draft";
+import {
+  resolveNextSelection,
+  type EditorSelectionUpdateMode,
+} from "@/editor/contracts/selection";
 import {
   isSamePlacementPreviewState,
 } from "@/editor/contracts/placement-preview";
@@ -100,6 +107,46 @@ export interface MoveQueryResult {
   draft: MoveDraftState | null;
   invalidReason: MoveDraftInvalidReason | null;
   overlappingEntityIds: string[];
+}
+
+export interface MarqueeDraftUpdateResult {
+  draft: MarqueeDraftState | null;
+  changed: boolean;
+}
+
+function resolveMarqueeBounds(
+  originGridPoint: GridPoint,
+  gridPoint: GridPoint,
+): GridBounds {
+  const left = Math.min(originGridPoint.x, gridPoint.x);
+  const top = Math.min(originGridPoint.y, gridPoint.y);
+  const right = Math.max(originGridPoint.x, gridPoint.x);
+  const bottom = Math.max(originGridPoint.y, gridPoint.y);
+
+  return {
+    left,
+    top,
+    width: right - left + 1,
+    height: bottom - top + 1,
+  };
+}
+
+function resolveMarqueeSelection(
+  baseSelection: readonly string[],
+  entityIds: readonly string[],
+  selectionMode: EditorSelectionUpdateMode,
+): string[] {
+  if (selectionMode === "replace") {
+    return [...entityIds];
+  }
+
+  let nextSelection = [...baseSelection];
+
+  for (const entityId of entityIds) {
+    nextSelection = resolveNextSelection(nextSelection, entityId, "toggle");
+  }
+
+  return nextSelection;
 }
 
 function hitTestWorldEntity(
@@ -228,6 +275,14 @@ export interface EditorHost {
   updateMoveDraft: (input: CanvasWorldInput) => MoveDraftUpdateResult;
   confirmMove: () => boolean;
   cancelMove: () => boolean;
+  beginMarquee: (
+    inputMode: PlacementInteractionMode,
+    selectionMode: EditorSelectionUpdateMode,
+    input: CanvasWorldInput,
+  ) => boolean;
+  updateMarqueeDraft: (input: CanvasWorldInput) => MarqueeDraftUpdateResult;
+  confirmMarqueeSelection: () => boolean;
+  cancelMarquee: () => boolean;
   activateLinkTarget: (entityId: string | null) => void;
   setPlacementPreview: (preview: PlacementPreviewState | null) => void;
   selectEntity: (
@@ -995,6 +1050,139 @@ class EditorHostImpl implements EditorHost {
     return true;
   }
 
+  beginMarquee(
+    inputMode: PlacementInteractionMode,
+    selectionMode: EditorSelectionUpdateMode,
+    input: CanvasWorldInput,
+  ): boolean {
+    const { session } = this.core.getSnapshot();
+
+    if (session.currentMode.key !== "select") {
+      return false;
+    }
+
+    const draft = this.createMarqueeDraft({
+      baseSelection: session.selection,
+      currentGridPoint: input.gridPoint,
+      inputMode,
+      originGridPoint: input.gridPoint,
+      selectionMode,
+    });
+
+    this.core.setMarqueeDraft(draft);
+    this.logger.info("Began marquee draft.", {
+      interactionMode: inputMode,
+      selectionMode,
+      originGridPoint: draft.originGridPoint,
+      bounds: draft.bounds,
+      baseSelection: draft.baseSelection,
+    });
+    return true;
+  }
+
+  updateMarqueeDraft(input: CanvasWorldInput): MarqueeDraftUpdateResult {
+    const { session } = this.core.getSnapshot();
+    const marqueeDraft = session.marqueeDraft;
+
+    if (!marqueeDraft) {
+      return {
+        draft: null,
+        changed: false,
+      };
+    }
+
+    const nextDraft = this.createMarqueeDraft({
+      baseSelection: marqueeDraft.baseSelection,
+      currentGridPoint: input.gridPoint,
+      inputMode: marqueeDraft.interactionMode,
+      originGridPoint: marqueeDraft.originGridPoint,
+      selectionMode: marqueeDraft.selectionMode,
+    });
+    const changed = !isSameMarqueeDraftState(marqueeDraft, nextDraft);
+
+    if (changed) {
+      this.core.setMarqueeDraft(nextDraft);
+      this.logger.debug("Updated marquee draft.", {
+        originGridPoint: nextDraft.originGridPoint,
+        gridPoint: nextDraft.gridPoint,
+        bounds: nextDraft.bounds,
+        entityIds: nextDraft.entityIds,
+        selectionMode: nextDraft.selectionMode,
+      });
+    }
+
+    return {
+      draft: nextDraft,
+      changed,
+    };
+  }
+
+  confirmMarqueeSelection(): boolean {
+    const { session } = this.core.getSnapshot();
+    const marqueeDraft = session.marqueeDraft;
+
+    if (!marqueeDraft) {
+      return false;
+    }
+
+    const nextSelection = resolveMarqueeSelection(
+      marqueeDraft.baseSelection,
+      marqueeDraft.entityIds,
+      marqueeDraft.selectionMode,
+    );
+
+    if (marqueeDraft.selectionMode === "replace") {
+      const [firstEntityId, ...restEntityIds] = marqueeDraft.entityIds;
+
+      if (!firstEntityId) {
+        this.core.selectEntity(null, null);
+      } else {
+        this.core.selectEntity(
+          firstEntityId,
+          marqueeDraft.interactionMode,
+          "replace",
+        );
+
+        for (const entityId of restEntityIds) {
+          this.core.selectEntity(entityId, marqueeDraft.interactionMode, "toggle");
+        }
+      }
+    } else {
+      for (const entityId of marqueeDraft.entityIds) {
+        this.core.selectEntity(entityId, marqueeDraft.interactionMode, "toggle");
+      }
+    }
+
+    this.core.setMarqueeDraft(null);
+    this.logger.info("Confirmed marquee draft.", {
+      interactionMode: marqueeDraft.interactionMode,
+      selectionMode: marqueeDraft.selectionMode,
+      bounds: marqueeDraft.bounds,
+      entityIds: marqueeDraft.entityIds,
+      previousSelection: marqueeDraft.baseSelection,
+      nextSelection,
+    });
+    return true;
+  }
+
+  cancelMarquee(): boolean {
+    const { session } = this.core.getSnapshot();
+    const marqueeDraft = session.marqueeDraft;
+
+    if (!marqueeDraft) {
+      return false;
+    }
+
+    this.core.setMarqueeDraft(null);
+    this.logger.info("Canceled marquee draft.", {
+      interactionMode: marqueeDraft.interactionMode,
+      selectionMode: marqueeDraft.selectionMode,
+      bounds: marqueeDraft.bounds,
+      entityIds: marqueeDraft.entityIds,
+    });
+    return true;
+  }
+
   activateLinkTarget(entityId: string | null): void {
     this.handleLinkToolClick(entityId);
   }
@@ -1338,6 +1526,54 @@ class EditorHostImpl implements EditorHost {
     }
 
     return Array.from(entityIds);
+  }
+
+  private collectMarqueeEntityIds(
+    document: WorldDocument,
+    topology: CompiledTopology,
+    bounds: GridBounds,
+  ): string[] {
+    const entityIds = new Set<string>();
+
+    for (let y = bounds.top; y < bounds.top + bounds.height; y += 1) {
+      for (let x = bounds.left; x < bounds.left + bounds.width; x += 1) {
+        const occupants = topology.occupancyIndex[`${x},${y}`];
+
+        if (!occupants) {
+          continue;
+        }
+
+        for (const entityId of occupants) {
+          entityIds.add(entityId);
+        }
+      }
+    }
+
+    return document.entityOrder.filter((entityId) => entityIds.has(entityId));
+  }
+
+  private createMarqueeDraft(options: {
+    baseSelection: readonly string[];
+    currentGridPoint: GridPoint;
+    inputMode: PlacementInteractionMode;
+    originGridPoint: GridPoint;
+    selectionMode: EditorSelectionUpdateMode;
+  }): MarqueeDraftState {
+    const document = this.core.getSnapshot().document;
+    const bounds = resolveMarqueeBounds(
+      options.originGridPoint,
+      options.currentGridPoint,
+    );
+
+    return {
+      interactionMode: options.inputMode,
+      selectionMode: options.selectionMode,
+      originGridPoint: options.originGridPoint,
+      gridPoint: options.currentGridPoint,
+      bounds,
+      entityIds: this.collectMarqueeEntityIds(document, this.getTopology(), bounds),
+      baseSelection: [...options.baseSelection],
+    };
   }
 
   private measureProfilerStage<T>(

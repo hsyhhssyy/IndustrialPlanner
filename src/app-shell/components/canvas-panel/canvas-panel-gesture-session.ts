@@ -7,6 +7,14 @@ import {
   type CanvasPanelPointerMoveGestureState,
 } from "./canvas-panel-pointer-move-gesture";
 import {
+  advanceCanvasPointerMarqueeGesture,
+  beginCanvasPointerMarqueeGesture,
+  cancelCanvasPointerMarqueeGesture,
+  createIdleCanvasPanelPointerMarqueeGestureState,
+  removePointerFromCanvasPointerMarqueeGesture,
+  type CanvasPanelPointerMarqueeGestureState,
+} from "./canvas-panel-pointer-marquee-gesture";
+import {
   advanceCanvasPointerPanGesture,
   beginCanvasPointerPanGesture,
   cancelCanvasPanelPointerGesture,
@@ -49,12 +57,14 @@ import {
   removePointerFromCanvasTouchGesture,
   type CanvasPanelTouchGestureState,
 } from "./canvas-panel-touch-gesture";
+import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
 import type { CanvasInteractionTarget } from "@/workbench/contracts/workbench-facade";
 import type { CanvasPoint } from "@/workbench/workspace-state";
 
 export type CanvasGestureDragRecognizer =
   | "pointer-move"
+  | "pointer-marquee"
   | "touch-move"
   | "touch-placement";
 
@@ -80,6 +90,7 @@ export type CanvasGestureEvent =
       origin: CanvasPoint;
       screenPoint: CanvasPoint;
       entityId?: string;
+      selectionMode?: EditorSelectionUpdateMode;
     }
   | {
       kind: "drag";
@@ -89,6 +100,7 @@ export type CanvasGestureEvent =
       origin: CanvasPoint;
       screenPoint: CanvasPoint;
       entityId?: string;
+      selectionMode?: EditorSelectionUpdateMode;
     }
   | {
       kind: "drag-end";
@@ -98,6 +110,7 @@ export type CanvasGestureEvent =
       didDrag: boolean;
       outcome: "release" | "cancel";
       entityId?: string;
+      selectionMode?: EditorSelectionUpdateMode;
     }
   | {
       kind: "pan-start";
@@ -145,6 +158,7 @@ export type CanvasPointerDownRoute =
   | {
       kind: "primary";
       moveEntityId: string | null;
+      marqueeSelectionMode?: EditorSelectionUpdateMode | null;
     }
   | {
       kind: "secondary";
@@ -288,6 +302,8 @@ export function createCanvasGestureSession(): CanvasGestureSession {
     createIdleCanvasPanelPointerTapGestureState();
   let pointerMoveGestureState: CanvasPanelPointerMoveGestureState =
     createIdleCanvasPanelPointerMoveGestureState();
+  let pointerMarqueeGestureState: CanvasPanelPointerMarqueeGestureState =
+    createIdleCanvasPanelPointerMarqueeGestureState();
   let pointerGestureState: CanvasPanelPointerGestureState =
     createIdleCanvasPanelPointerGestureState();
   let touchGestureState: CanvasPanelTouchGestureState =
@@ -307,6 +323,10 @@ export function createCanvasGestureSession(): CanvasGestureSession {
 
     if (pointerMoveGestureState.phase !== "idle") {
       pointerIds.add(pointerMoveGestureState.pointerId);
+    }
+
+    if (pointerMarqueeGestureState.phase !== "idle") {
+      pointerIds.add(pointerMarqueeGestureState.pointerId);
     }
 
     return Array.from(pointerIds);
@@ -430,7 +450,25 @@ export function createCanvasGestureSession(): CanvasGestureSession {
           );
         }
 
+        if (route.marqueeSelectionMode) {
+          pointerMarqueeGestureState = beginCanvasPointerMarqueeGesture(
+            input.pointerId,
+            input.point,
+            route.marqueeSelectionMode,
+          );
+
+          return createResult(
+            {
+              pointerGestureState,
+              touchGestureState,
+            },
+            [],
+            [{ kind: "capture", pointerId: input.pointerId }],
+          );
+        }
+
         pointerMoveGestureState = cancelCanvasPointerMoveGesture();
+        pointerMarqueeGestureState = cancelCanvasPointerMarqueeGesture();
         return createResult({
           pointerGestureState,
           touchGestureState,
@@ -709,6 +747,52 @@ export function createCanvasGestureSession(): CanvasGestureSession {
       );
     }
 
+    if (pointerMarqueeGestureState.phase !== "idle") {
+      const previousState = pointerMarqueeGestureState;
+      const result = advanceCanvasPointerMarqueeGesture(
+        previousState,
+        input.pointerId,
+        input.point,
+      );
+
+      pointerMarqueeGestureState = result.nextState;
+
+      if (!result.dragPoint) {
+        return createResult({
+          pointerGestureState,
+          touchGestureState,
+        });
+      }
+
+      return createResult(
+        {
+          pointerGestureState,
+          touchGestureState,
+        },
+        [
+          result.didStartDragging
+            ? {
+                kind: "drag-start",
+                source: "pointer",
+                recognizer: "pointer-marquee",
+                pointerId: input.pointerId,
+                origin: previousState.origin,
+                screenPoint: result.dragPoint,
+                selectionMode: previousState.selectionMode,
+              }
+            : {
+                kind: "drag",
+                source: "pointer",
+                recognizer: "pointer-marquee",
+                pointerId: input.pointerId,
+                origin: previousState.origin,
+                screenPoint: result.dragPoint,
+                selectionMode: previousState.selectionMode,
+              },
+        ],
+      );
+    }
+
     if (pointerGestureState.phase === "idle" && input.buttons === 0) {
       return createResult(
         {
@@ -908,9 +992,13 @@ export function createCanvasGestureSession(): CanvasGestureSession {
 
     if (input.button === 0) {
       const pointerMoveState = pointerMoveGestureState;
+      const pointerMarqueeState = pointerMarqueeGestureState;
       const didDragMove =
         pointerMoveState.phase === "move-dragging" &&
         pointerMoveState.pointerId === input.pointerId;
+      const didDragMarquee =
+        pointerMarqueeState.phase === "marquee-dragging" &&
+        pointerMarqueeState.pointerId === input.pointerId;
 
       if (
         pointerMoveState.phase !== "idle" &&
@@ -920,10 +1008,22 @@ export function createCanvasGestureSession(): CanvasGestureSession {
           kind: "release",
           pointerId: input.pointerId,
         });
+      } else if (
+        pointerMarqueeState.phase !== "idle" &&
+        pointerMarqueeState.pointerId === input.pointerId
+      ) {
+        pointerCaptureCommands.push({
+          kind: "release",
+          pointerId: input.pointerId,
+        });
       }
 
       pointerMoveGestureState = removePointerFromCanvasPointerMoveGesture(
         pointerMoveState,
+        input.pointerId,
+      );
+      pointerMarqueeGestureState = removePointerFromCanvasPointerMarqueeGesture(
+        pointerMarqueeState,
         input.pointerId,
       );
 
@@ -936,6 +1036,16 @@ export function createCanvasGestureSession(): CanvasGestureSession {
           didDrag: true,
           outcome: "release",
           entityId: pointerMoveState.entityId,
+        });
+      } else if (didDragMarquee) {
+        events.push({
+          kind: "drag-end",
+          source: "pointer",
+          recognizer: "pointer-marquee",
+          pointerId: input.pointerId,
+          didDrag: true,
+          outcome: "release",
+          selectionMode: pointerMarqueeState.selectionMode,
         });
       } else if (
         shouldDispatchCanvasPointerTap(pointerTapGestureState, input.pointerId)
@@ -1024,9 +1134,13 @@ export function createCanvasGestureSession(): CanvasGestureSession {
       pointerGestureState.phase !== "idle" &&
       pointerGestureState.pointerId === input.pointerId;
     const pointerMoveState = pointerMoveGestureState;
+    const pointerMarqueeState = pointerMarqueeGestureState;
     const hadPointerMove =
       pointerMoveState.phase !== "idle" &&
       pointerMoveState.pointerId === input.pointerId;
+    const hadPointerMarquee =
+      pointerMarqueeState.phase !== "idle" &&
+      pointerMarqueeState.pointerId === input.pointerId;
     const events: CanvasGestureEvent[] = [];
 
     pointerTapGestureState = removePointerFromCanvasPointerTapGesture(
@@ -1044,6 +1158,16 @@ export function createCanvasGestureSession(): CanvasGestureSession {
       );
     }
 
+    if (
+      pointerMarqueeState.phase !== "idle" &&
+      pointerMarqueeState.pointerId === input.pointerId
+    ) {
+      pointerMarqueeGestureState = removePointerFromCanvasPointerMarqueeGesture(
+        pointerMarqueeState,
+        input.pointerId,
+      );
+    }
+
     if (hadPointerMove && pointerMoveState.phase === "move-dragging") {
       events.push({
         kind: "drag-end",
@@ -1056,7 +1180,19 @@ export function createCanvasGestureSession(): CanvasGestureSession {
       });
     }
 
-    if (hadPointerPan || hadPointerMove) {
+    if (hadPointerMarquee && pointerMarqueeState.phase === "marquee-dragging") {
+      events.push({
+        kind: "drag-end",
+        source: "pointer",
+        recognizer: "pointer-marquee",
+        pointerId: input.pointerId,
+        didDrag: true,
+        outcome: "cancel",
+        selectionMode: pointerMarqueeState.selectionMode,
+      });
+    }
+
+    if (hadPointerPan || hadPointerMove || hadPointerMarquee) {
       if (hadPointerPan) {
         events.push({
           kind: "pan-end",
@@ -1088,6 +1224,7 @@ export function createCanvasGestureSession(): CanvasGestureSession {
 
     pointerGestureState = cancelCanvasPanelPointerGesture();
     pointerMoveGestureState = cancelCanvasPointerMoveGesture();
+    pointerMarqueeGestureState = cancelCanvasPointerMarqueeGesture();
     pointerTapGestureState = createIdleCanvasPanelPointerTapGestureState();
 
     return createResult(
@@ -1145,6 +1282,7 @@ export function createCanvasGestureSession(): CanvasGestureSession {
 
     pointerGestureState = cancelCanvasPanelPointerGesture();
     pointerMoveGestureState = cancelCanvasPointerMoveGesture();
+    pointerMarqueeGestureState = cancelCanvasPointerMarqueeGesture();
     pointerTapGestureState = createIdleCanvasPanelPointerTapGestureState();
     touchPoints = new Map();
     touchMoveGestureState = cancelCanvasTouchDragGesture();

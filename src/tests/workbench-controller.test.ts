@@ -166,6 +166,41 @@ function toScreenPointForEntity(
   };
 }
 
+function resolveEntityBounds(
+  controller: ReturnType<typeof createWorkbenchController>,
+  entityIds: string[],
+) {
+  const snapshot = readWorkbenchState(controller);
+  const areas = entityIds.map((entityId) => {
+    const entity = snapshot.document.entities[entityId];
+
+    if (!entity) {
+      throw new Error(`Missing entity ${entityId}`);
+    }
+
+    const definition = getStage1EntityDefinition(
+      snapshot.registry,
+      entity.definitionId,
+    );
+
+    if (!definition) {
+      throw new Error(`Missing definition ${entity.definitionId}`);
+    }
+
+    return {
+      position: entity.position,
+      footprint: getRotatedGridFootprint(definition.footprint, entity.rotation),
+    };
+  });
+  const bounds = getGridBoundingBox(areas);
+
+  if (!bounds) {
+    throw new Error("Missing marquee bounds");
+  }
+
+  return bounds;
+}
+
 function resolveClockwiseRotatedSelectionState(
   controller: ReturnType<typeof createWorkbenchController>,
   entityIds: string[],
@@ -1275,6 +1310,76 @@ describe("WorkbenchController scaffold", () => {
     expect(after.session.selection).toEqual(["reactor-1"]);
     expect(after.session.selectionInputMode).toBe("touch");
     expect(after.session.moveDraft).toBeNull();
+
+    controller.dispose();
+  });
+
+  it("builds a grid-aligned marquee draft and replaces selection on confirm", async () => {
+    const controller = createWorkbenchController();
+    const marqueeBounds = resolveEntityBounds(controller, ["reactor-1", "filler-1"]);
+
+    controller.beginMarqueeFromScreenPoint(
+      toScreenPointForGrid(controller, {
+        x: marqueeBounds.left,
+        y: marqueeBounds.top,
+      }),
+      "pointer",
+      "replace",
+    );
+    controller.updateMarqueeDraftFromScreenPoint(
+      toScreenPointForGrid(controller, {
+        x: marqueeBounds.left + marqueeBounds.width - 1,
+        y: marqueeBounds.top + marqueeBounds.height - 1,
+      }),
+    );
+
+    const duringMarquee = readWorkbenchState(controller);
+
+    expect(duringMarquee.session.marqueeDraft).toMatchObject({
+      interactionMode: "pointer",
+      selectionMode: "replace",
+      bounds: marqueeBounds,
+      entityIds: ["reactor-1", "filler-1"],
+    });
+
+    await controller.confirmMarqueeSelection();
+
+    const after = readWorkbenchState(controller);
+
+    expect(after.session.selection).toEqual(["reactor-1", "filler-1"]);
+    expect(after.session.selectionInputMode).toBe("pointer");
+    expect(after.session.marqueeDraft).toBeNull();
+
+    controller.dispose();
+  });
+
+  it("toggles marquee hits against the base selection on confirm", async () => {
+    const controller = createWorkbenchController();
+    const marqueeBounds = resolveEntityBounds(controller, ["reactor-1", "filler-1"]);
+
+    await controller.selectEntity("reactor-1", "pointer");
+    controller.beginMarqueeFromScreenPoint(
+      toScreenPointForGrid(controller, {
+        x: marqueeBounds.left,
+        y: marqueeBounds.top,
+      }),
+      "pointer",
+      "toggle",
+    );
+    controller.updateMarqueeDraftFromScreenPoint(
+      toScreenPointForGrid(controller, {
+        x: marqueeBounds.left + marqueeBounds.width - 1,
+        y: marqueeBounds.top + marqueeBounds.height - 1,
+      }),
+    );
+
+    await controller.confirmMarqueeSelection();
+
+    const after = readWorkbenchState(controller);
+
+    expect(after.session.selection).toEqual(["filler-1"]);
+    expect(after.session.selectionInputMode).toBe("pointer");
+    expect(after.session.marqueeDraft).toBeNull();
 
     controller.dispose();
   });

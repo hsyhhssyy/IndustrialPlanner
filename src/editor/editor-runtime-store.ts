@@ -1,3 +1,6 @@
+import {
+  isSameMarqueeDraftState,
+} from "@/editor/contracts/marquee-draft";
 import { isSamePlacementPreviewState } from "@/editor/contracts/placement-preview";
 import { isSameMoveDraftState } from "@/editor/contracts/move-draft";
 import type { EditorSession } from "@/editor/contracts/editor-session";
@@ -44,7 +47,8 @@ export function isSameEditorSession(
     left.selectionInputMode === right.selectionInputMode &&
     left.hoveredEntityId === right.hoveredEntityId &&
     isSamePlacementPreviewState(left.placementPreview, right.placementPreview) &&
-    isSameMoveDraftState(left.moveDraft, right.moveDraft)
+    isSameMoveDraftState(left.moveDraft, right.moveDraft) &&
+    isSameMarqueeDraftState(left.marqueeDraft, right.marqueeDraft)
   );
 }
 
@@ -96,6 +100,22 @@ function cloneEditorSession(session: EditorSession): EditorSession {
               ...entity.gridPoint,
             },
           })),
+        }
+      : null,
+    marqueeDraft: session.marqueeDraft
+      ? {
+          ...session.marqueeDraft,
+          originGridPoint: {
+            ...session.marqueeDraft.originGridPoint,
+          },
+          gridPoint: {
+            ...session.marqueeDraft.gridPoint,
+          },
+          bounds: {
+            ...session.marqueeDraft.bounds,
+          },
+          entityIds: [...session.marqueeDraft.entityIds],
+          baseSelection: [...session.marqueeDraft.baseSelection],
         }
       : null,
   };
@@ -229,6 +249,25 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
                 ...entity.gridPoint,
               },
             })),
+          }
+        : null;
+    }
+
+    if (!isSameMarqueeDraftState(this.session.marqueeDraft, session.marqueeDraft)) {
+      this.session.marqueeDraft = session.marqueeDraft
+        ? {
+            ...session.marqueeDraft,
+            originGridPoint: {
+              ...session.marqueeDraft.originGridPoint,
+            },
+            gridPoint: {
+              ...session.marqueeDraft.gridPoint,
+            },
+            bounds: {
+              ...session.marqueeDraft.bounds,
+            },
+            entityIds: [...session.marqueeDraft.entityIds],
+            baseSelection: [...session.marqueeDraft.baseSelection],
           }
         : null;
     }

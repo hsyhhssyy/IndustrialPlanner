@@ -389,6 +389,88 @@ describe("WorkspaceDerivedStore", () => {
     });
   });
 
+  it("projects marquee drafts into a shared screen box", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const workspaceState = {
+      document,
+      editor: {
+        session: {
+          ...createInitialEditorSession(),
+          marqueeDraft: {
+            interactionMode: "pointer" as const,
+            selectionMode: "replace" as const,
+            originGridPoint: { x: 10, y: 6 },
+            gridPoint: { x: 18, y: 13 },
+            bounds: {
+              left: 10,
+              top: 6,
+              width: 9,
+              height: 8,
+            },
+            entityIds: ["reactor-1", "filler-1"],
+            baseSelection: ["reactor-1"],
+          },
+        },
+        history: {
+          canUndo: false,
+          canRedo: false,
+          undoDepth: 0,
+          redoDepth: 0,
+        },
+      },
+      ui: createInitialWorkbenchUiState(),
+      canvasView: {
+        offset: { x: 10, y: 20 },
+        zoom: 2,
+      },
+      simulation: {
+        runtimeSnapshot: {
+          tick: 0,
+          status: "idle" as const,
+          entityViews: {},
+          patchedEntityIds: [],
+        },
+        telemetry: {
+          tick: 0,
+          simulatedHertz: 0,
+          entityCount: 0,
+        },
+        inspectorDetails: null,
+        patchSet: createEmptySimulationPatchSet(),
+        selection: [],
+      },
+    };
+
+    expect(
+      deriveRenderDerivedState({
+        workspaceState,
+        topology,
+        registry,
+      }).marqueeScreenBox,
+    ).toEqual({
+      left:
+        (workspaceState.editor.session.marqueeDraft!.bounds.left *
+          document.documentSettings.gridSize -
+          workspaceState.canvasView.offset.x) *
+        workspaceState.canvasView.zoom,
+      top:
+        (workspaceState.editor.session.marqueeDraft!.bounds.top *
+          document.documentSettings.gridSize -
+          workspaceState.canvasView.offset.y) *
+        workspaceState.canvasView.zoom,
+      width:
+        workspaceState.editor.session.marqueeDraft!.bounds.width *
+        document.documentSettings.gridSize *
+        workspaceState.canvasView.zoom,
+      height:
+        workspaceState.editor.session.marqueeDraft!.bounds.height *
+        document.documentSettings.gridSize *
+        workspaceState.canvasView.zoom,
+    });
+  });
+
   it("does not notify render subscribers when only unused simulation state changes", () => {
     const document = createStage1SeedWorldDocument();
     const registry = createStage1Registry();

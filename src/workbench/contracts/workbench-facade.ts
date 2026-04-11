@@ -67,9 +67,17 @@ export interface WorkbenchController {
     screenPoint: CanvasPoint,
     inputMode: PlacementInteractionMode,
   ) => void;
+  beginMarqueeFromScreenPoint: (
+    screenPoint: CanvasPoint,
+    inputMode: PlacementInteractionMode,
+    selectionMode: EditorSelectionUpdateMode,
+  ) => void;
   updateMoveDraftFromScreenPoint: (screenPoint: CanvasPoint) => void;
+  updateMarqueeDraftFromScreenPoint: (screenPoint: CanvasPoint) => void;
   confirmMovePreview: () => Promise<void>;
   cancelMove: () => void;
+  confirmMarqueeSelection: () => Promise<void>;
+  cancelMarquee: () => void;
   rotateMoveClockwise: () => void;
   rotatePlacementClockwise: () => void;
   cancelPlacement: () => void;

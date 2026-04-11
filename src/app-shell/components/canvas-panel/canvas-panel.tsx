@@ -243,11 +243,16 @@ export const CanvasPanel = observer(function CanvasPanel({
     controller.cancelMove();
   };
 
+  const cancelMarquee = () => {
+    controller.cancelMarquee();
+  };
+
   const routeGestureEvents = useEffectEvent(
     (events: readonly CanvasGestureSessionResult["events"][number][]) => {
       for (const event of events) {
         void routeCanvasGestureEvent({
           anchoredPlacementActive,
+          cancelMarquee,
           cancelMove,
           cancelPlacement,
           cancelScheduledPlacementPreview,
@@ -281,6 +286,10 @@ export const CanvasPanel = observer(function CanvasPanel({
 
     if (isMoveInteractionMode(controller.editorStore.getSnapshot().session.currentMode)) {
       controller.cancelMove();
+    }
+
+    if (controller.editorStore.getSnapshot().session.marqueeDraft) {
+      controller.cancelMarquee();
     }
   });
 
@@ -551,6 +560,19 @@ export const CanvasPanel = observer(function CanvasPanel({
     ) {
       controller.cancelMove();
     }
+
+    if (
+      event.pointerType !== "touch" &&
+      controller.editorStore.getSnapshot().session.marqueeDraft &&
+      result.events.some(
+        (gestureEvent) =>
+          gestureEvent.kind === "drag-end" &&
+          gestureEvent.recognizer === "pointer-marquee" &&
+          gestureEvent.outcome === "cancel",
+      )
+    ) {
+      controller.cancelMarquee();
+    }
   };
 
   const handleViewportPointerCancel = () => {
@@ -706,6 +728,18 @@ export const CanvasPanel = observer(function CanvasPanel({
             placementPreviewProfiler={placementPreviewProfiler}
             sceneSource={controller}
           />
+          {render.marqueeScreenBox ? (
+            <div
+              aria-hidden="true"
+              className="canvas-marquee-box"
+              style={{
+                left: `${render.marqueeScreenBox.left}px`,
+                top: `${render.marqueeScreenBox.top}px`,
+                width: `${render.marqueeScreenBox.width}px`,
+                height: `${render.marqueeScreenBox.height}px`,
+              }}
+            />
+          ) : null}
           {anchoredPlacementToolbarStyle ? (
             <CanvasActionToolbar
               actions={[

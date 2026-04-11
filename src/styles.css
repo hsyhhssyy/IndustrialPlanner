@@ -697,6 +697,14 @@ button.is-active {
   touch-action: none;
 }
 
+.canvas-marquee-box {
+  position: absolute;
+  pointer-events: none;
+  border: 1px dashed var(--accent-strong);
+  background: rgb(57 186 230 / 0.12);
+  box-shadow: 0 0 0 1px rgb(57 186 230 / 0.08);
+}
+
 .canvas-viewport-surface.is-panning {
   cursor: grabbing;
 }

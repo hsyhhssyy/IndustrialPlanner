@@ -372,6 +372,28 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.sync();
   }
 
+  beginMarqueeFromScreenPoint(
+    screenPoint: CanvasPoint,
+    inputMode: PlacementInteractionMode,
+    selectionMode: EditorSelectionUpdateMode,
+  ): void {
+    if (this.uiStore.getSnapshot().phase === "simulate") {
+      return;
+    }
+
+    const didBeginMarquee = this.editorHost.beginMarquee(
+      inputMode,
+      selectionMode,
+      this.resolveWorldInput(screenPoint),
+    );
+
+    if (!didBeginMarquee) {
+      return;
+    }
+
+    this.sync();
+  }
+
   updateMoveDraftFromScreenPoint(screenPoint: CanvasPoint): void {
     const moveMode = this.getMoveMode();
 
@@ -383,14 +405,35 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.sync();
   }
 
+  updateMarqueeDraftFromScreenPoint(screenPoint: CanvasPoint): void {
+    this.editorHost.updateMarqueeDraft(this.resolveWorldInput(screenPoint));
+    this.sync();
+  }
+
   async confirmMovePreview(): Promise<void> {
     await this.applyEditorMutation(() => {
       this.editorHost.confirmMove();
     });
   }
 
+  async confirmMarqueeSelection(): Promise<void> {
+    await this.applyEditorMutation(() => {
+      this.editorHost.confirmMarqueeSelection();
+    });
+  }
+
   cancelMove(): void {
     const didCancel = this.editorHost.cancelMove();
+
+    if (!didCancel) {
+      return;
+    }
+
+    this.sync();
+  }
+
+  cancelMarquee(): void {
+    const didCancel = this.editorHost.cancelMarquee();
 
     if (!didCancel) {
       return;

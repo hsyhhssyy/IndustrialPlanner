@@ -33,6 +33,7 @@ export interface RenderDerivedState {
   anchoredPlacementScreenBox: RenderDerivedScreenBox | null;
   anchoredMoveScreenBox: RenderDerivedScreenBox | null;
   anchoredSelectionScreenBox: RenderDerivedScreenBox | null;
+  marqueeScreenBox: RenderDerivedScreenBox | null;
 }
 
 export interface WorkspaceDerivedState {
@@ -221,6 +222,25 @@ function deriveAnchoredMoveScreenBox(
   });
 }
 
+function deriveMarqueeScreenBox(
+  options: DeriveRenderDerivedStateOptions,
+): RenderDerivedScreenBox | null {
+  const {
+    workspaceState: { canvasView, document, editor, ui },
+  } = options;
+  const marqueeDraft = editor.session.marqueeDraft;
+
+  if (ui.phase !== "edit" || !marqueeDraft) {
+    return null;
+  }
+
+  return projectGridBoundsScreenBox({
+    canvasView,
+    gridSize: document.documentSettings.gridSize,
+    bounds: marqueeDraft.bounds,
+  });
+}
+
 export function deriveRenderDerivedState(
   options: DeriveRenderDerivedStateOptions,
 ): RenderDerivedState {
@@ -247,6 +267,7 @@ export function deriveRenderDerivedState(
     anchoredPlacementScreenBox: deriveAnchoredPlacementScreenBox(options),
     anchoredMoveScreenBox: deriveAnchoredMoveScreenBox(options),
     anchoredSelectionScreenBox: deriveAnchoredSelectionScreenBox(options),
+    marqueeScreenBox: deriveMarqueeScreenBox(options),
   };
 }
 

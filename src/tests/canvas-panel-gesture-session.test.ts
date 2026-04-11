@@ -13,10 +13,17 @@ describe("canvas panel gesture session", () => {
       route: {
         kind: "primary",
         moveEntityId: null,
+        marqueeSelectionMode: "replace",
       },
     });
 
     expect(down.events).toEqual([]);
+    expect(down.pointerCaptureCommands).toEqual([
+      {
+        kind: "capture",
+        pointerId: 7,
+      },
+    ]);
 
     const up = session.handlePointerUp({
       anchoredPlacementActive: false,
@@ -35,6 +42,12 @@ describe("canvas panel gesture session", () => {
         selectionModifierActive: false,
       },
     ]);
+    expect(up.pointerCaptureCommands).toEqual([
+      {
+        kind: "release",
+        pointerId: 7,
+      },
+    ]);
   });
 
   it("emits the pointer move drag lifecycle from the existing move recognizer", () => {
@@ -48,6 +61,7 @@ describe("canvas panel gesture session", () => {
       route: {
         kind: "primary",
         moveEntityId: "filler-1",
+        marqueeSelectionMode: null,
       },
     });
 
@@ -128,6 +142,102 @@ describe("canvas panel gesture session", () => {
       {
         kind: "release",
         pointerId: 11,
+      },
+    ]);
+  });
+
+  it("emits the pointer marquee drag lifecycle from the marquee recognizer", () => {
+    const session = createCanvasGestureSession();
+
+    const down = session.handlePointerDown({
+      button: 0,
+      point: { x: 10, y: 10 },
+      pointerId: 12,
+      pointerType: "mouse",
+      route: {
+        kind: "primary",
+        moveEntityId: null,
+        marqueeSelectionMode: "toggle",
+      },
+    });
+
+    expect(down.pointerCaptureCommands).toEqual([
+      {
+        kind: "capture",
+        pointerId: 12,
+      },
+    ]);
+
+    const beforeThreshold = session.handlePointerMove({
+      buttons: 1,
+      point: { x: 12, y: 12 },
+      pointerId: 12,
+      pointerType: "mouse",
+    });
+
+    expect(beforeThreshold.events).toEqual([]);
+
+    const startDrag = session.handlePointerMove({
+      buttons: 1,
+      point: { x: 18, y: 15 },
+      pointerId: 12,
+      pointerType: "mouse",
+    });
+
+    expect(startDrag.events).toEqual([
+      {
+        kind: "drag-start",
+        source: "pointer",
+        recognizer: "pointer-marquee",
+        pointerId: 12,
+        origin: { x: 10, y: 10 },
+        screenPoint: { x: 18, y: 15 },
+        selectionMode: "toggle",
+      },
+    ]);
+
+    const continueDrag = session.handlePointerMove({
+      buttons: 1,
+      point: { x: 24, y: 20 },
+      pointerId: 12,
+      pointerType: "mouse",
+    });
+
+    expect(continueDrag.events).toEqual([
+      {
+        kind: "drag",
+        source: "pointer",
+        recognizer: "pointer-marquee",
+        pointerId: 12,
+        origin: { x: 10, y: 10 },
+        screenPoint: { x: 24, y: 20 },
+        selectionMode: "toggle",
+      },
+    ]);
+
+    const up = session.handlePointerUp({
+      anchoredPlacementActive: false,
+      button: 0,
+      point: { x: 24, y: 20 },
+      pointerId: 12,
+      pointerType: "mouse",
+    });
+
+    expect(up.events).toEqual([
+      {
+        kind: "drag-end",
+        source: "pointer",
+        recognizer: "pointer-marquee",
+        pointerId: 12,
+        didDrag: true,
+        outcome: "release",
+        selectionMode: "toggle",
+      },
+    ]);
+    expect(up.pointerCaptureCommands).toEqual([
+      {
+        kind: "release",
+        pointerId: 12,
       },
     ]);
   });

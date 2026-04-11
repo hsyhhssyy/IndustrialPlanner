@@ -16,6 +16,7 @@ export function createInitialEditorSession(): EditorSession {
     hoveredEntityId: null,
     placementPreview: null,
     moveDraft: null,
+    marqueeDraft: null,
   };
 }
 

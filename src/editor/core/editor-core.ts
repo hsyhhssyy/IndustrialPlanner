@@ -26,6 +26,7 @@ import {
   type PlacementDisplayTool,
 } from "@/editor/contracts/interaction-mode";
 import type { MoveDraftState } from "@/editor/contracts/move-draft";
+import type { MarqueeDraftState } from "@/editor/contracts/marquee-draft";
 import {
   resolveNextSelection,
   type EditorSelectionUpdateMode,
@@ -83,6 +84,7 @@ export interface EditorCore {
   setPlacementRotation: (rotation: GridRotation | null) => void;
   setPlacementPreview: (preview: PlacementPreviewState | null) => void;
   setMoveDraft: (draft: MoveDraftState | null) => void;
+  setMarqueeDraft: (draft: MarqueeDraftState | null) => void;
   cancelMove: () => void;
   confirmMove: () => boolean;
   applyDocumentCommand: (command: DocumentCommand) => boolean;
@@ -224,6 +226,13 @@ class EditorCoreImpl implements EditorCore {
     this.session = {
       ...this.session,
       moveDraft: draft,
+    };
+  }
+
+  setMarqueeDraft(draft: MarqueeDraftState | null): void {
+    this.session = {
+      ...this.session,
+      marqueeDraft: draft,
     };
   }
 
@@ -542,6 +551,7 @@ class EditorCoreImpl implements EditorCore {
       displayTool: resolveDisplayToolForMode(nextMode),
       placementPreview: clearPlacementPreview ? null : this.session.placementPreview,
       moveDraft: clearMoveDraft ? null : this.session.moveDraft,
+      marqueeDraft: null,
     };
   }
 
@@ -611,6 +621,19 @@ class EditorCoreImpl implements EditorCore {
       nextMode = resolveDefaultNextInteractionMode(nextMode);
     }
 
+    const marqueeDraft =
+      this.session.marqueeDraft && nextMode.key === "select"
+        ? {
+            ...this.session.marqueeDraft,
+            entityIds: this.session.marqueeDraft.entityIds.filter((entityId) =>
+              Boolean(this.document.entities[entityId]),
+            ),
+            baseSelection: this.session.marqueeDraft.baseSelection.filter((entityId) =>
+              Boolean(this.document.entities[entityId]),
+            ),
+          }
+        : null;
+
     this.session = {
       ...this.session,
       currentMode: nextMode,
@@ -623,6 +646,7 @@ class EditorCoreImpl implements EditorCore {
         ? this.session.placementPreview
         : null,
       moveDraft: isMoveInteractionMode(nextMode) ? moveDraft : null,
+      marqueeDraft: nextMode.key === "select" ? marqueeDraft : null,
     };
   }
 }

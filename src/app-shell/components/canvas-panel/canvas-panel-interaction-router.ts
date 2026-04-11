@@ -4,6 +4,7 @@ import type {
   CanvasTouchDownRoute,
 } from "./canvas-panel-gesture-session";
 import { resolveCanvasPanelTapIntent } from "./canvas-panel-tap-intent";
+import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 import type {
   CurrentInteractionMode,
   DisplayTool,
@@ -47,6 +48,7 @@ export interface ResolveCanvasTouchDownRouteOptions {
 
 export interface RouteCanvasGestureEventOptions {
   anchoredPlacementActive: boolean;
+  cancelMarquee: () => void;
   cancelMove: () => void;
   cancelPlacement: () => void;
   cancelScheduledPlacementPreview: () => void;
@@ -90,7 +92,6 @@ export function resolveSelectedEntityMoveCandidate(options: {
   if (
     options.phase !== "edit" ||
     options.currentMode.key !== "select" ||
-    options.selectionModifierActive === true ||
     options.selection.length === 0
   ) {
     return null;
@@ -105,9 +106,17 @@ export function resolveCanvasPointerDownRoute(
   options: ResolveCanvasPointerDownRouteOptions,
 ): CanvasPointerDownRoute {
   if (options.button === 0) {
+    const moveEntityId = resolveSelectedEntityMoveCandidate(options);
+
     return {
       kind: "primary",
-      moveEntityId: resolveSelectedEntityMoveCandidate(options),
+      moveEntityId,
+      marqueeSelectionMode: resolvePointerMarqueeSelectionMode({
+        currentMode: options.currentMode,
+        moveEntityId,
+        phase: options.phase,
+        selectionModifierActive: options.selectionModifierActive,
+      }),
     };
   }
 
@@ -126,6 +135,23 @@ export function resolveCanvasPointerDownRoute(
   return {
     kind: "ignore",
   };
+}
+
+function resolvePointerMarqueeSelectionMode(options: {
+  currentMode: CurrentInteractionMode;
+  moveEntityId: string | null;
+  phase: WorkbenchPhase;
+  selectionModifierActive: boolean;
+}): EditorSelectionUpdateMode | null {
+  if (
+    options.phase !== "edit" ||
+    options.currentMode.key !== "select" ||
+    options.moveEntityId !== null
+  ) {
+    return null;
+  }
+
+  return options.selectionModifierActive ? "toggle" : "replace";
 }
 
 export function resolveCanvasTouchDownRoute(
@@ -301,11 +327,28 @@ export async function routeCanvasGestureEvent(
             );
           }
           return;
+        case "pointer-marquee":
+          options.controller.beginMarqueeFromScreenPoint(
+            options.event.origin,
+            "pointer",
+            options.event.selectionMode ?? "replace",
+          );
+          options.controller.updateMarqueeDraftFromScreenPoint(
+            options.event.screenPoint,
+          );
+          return;
       }
       return;
     case "drag":
       if (options.event.recognizer === "touch-placement") {
         options.schedulePlacementPreviewFromScreenPoint(options.event.screenPoint);
+        return;
+      }
+
+      if (options.event.recognizer === "pointer-marquee") {
+        options.controller.updateMarqueeDraftFromScreenPoint(
+          options.event.screenPoint,
+        );
         return;
       }
 
@@ -318,19 +361,31 @@ export async function routeCanvasGestureEvent(
       }
       return;
     case "drag-end":
-      if (options.event.recognizer !== "pointer-move" || !options.event.didDrag) {
+      if (!options.event.didDrag) {
         return;
       }
 
-      if (options.event.outcome === "cancel") {
-        options.controller.cancelMove();
+      if (options.event.recognizer === "pointer-move") {
+        if (options.event.outcome === "cancel") {
+          options.controller.cancelMove();
+          return;
+        }
+
+        if (options.controller.editorStore.getSnapshot().session.moveDraft?.valid) {
+          await options.controller.confirmMovePreview();
+        } else {
+          options.controller.cancelMove();
+        }
         return;
       }
 
-      if (options.controller.editorStore.getSnapshot().session.moveDraft?.valid) {
-        await options.controller.confirmMovePreview();
-      } else {
-        options.controller.cancelMove();
+      if (options.event.recognizer === "pointer-marquee") {
+        if (options.event.outcome === "cancel") {
+          options.cancelMarquee();
+          return;
+        }
+
+        await options.controller.confirmMarqueeSelection();
       }
       return;
     case "pan-start":
