@@ -103,6 +103,7 @@ export interface RenderSceneModel {
   entities: RenderEntitySprite[];
   placementPreview: RenderPlacementPreview | null;
   movePreview: RenderMovePreview | null;
+  movePreviews: RenderMovePreview[];
   explicitLinks: RenderExplicitLink[];
   diagnostics: TopologyDiagnostic[];
 }

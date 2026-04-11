@@ -32,6 +32,7 @@ describe("canvas panel gesture session", () => {
         source: "pointer",
         pointerId: 7,
         screenPoint: { x: 20, y: 24 },
+        selectionModifierActive: false,
       },
     ]);
   });

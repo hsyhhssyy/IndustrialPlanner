@@ -91,7 +91,7 @@ export function resolveSelectedEntityMoveCandidate(options: {
     options.phase !== "edit" ||
     options.currentMode.key !== "select" ||
     options.selectionModifierActive === true ||
-    options.selection.length !== 1
+    options.selection.length === 0
   ) {
     return null;
   }
@@ -169,7 +169,7 @@ function getSelectedEntityIdForMove(
 ): string | null {
   const selection = controller.editorStore.getSnapshot().session.selection;
 
-  return selection.length === 1 ? selection[0] ?? null : null;
+  return selection[0] ?? null;
 }
 
 async function dispatchCanvasTap(options: {

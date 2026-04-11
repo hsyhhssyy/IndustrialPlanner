@@ -5,7 +5,10 @@ import {
   type WorldDocument,
 } from "@/domain/document/world-document";
 import { applyWorldDocumentCommand } from "@/editor/core/commands/document-command-applier";
-import type { DocumentCommand } from "@/editor/core/commands/document-command";
+import type {
+  AtomicDocumentCommand,
+  DocumentCommand,
+} from "@/editor/core/commands/document-command";
 import type { EditorSession } from "@/editor/contracts/editor-session";
 import {
   createInspectInteractionMode,
@@ -82,6 +85,7 @@ export interface EditorCore {
   setMoveDraft: (draft: MoveDraftState | null) => void;
   cancelMove: () => void;
   confirmMove: () => boolean;
+  applyDocumentCommand: (command: DocumentCommand) => boolean;
   selectEntity: (
     entityId: string | null,
     inputMode?: PlacementInteractionMode | null,
@@ -188,7 +192,7 @@ class EditorCoreImpl implements EditorCore {
 
     this.session = {
       ...this.session,
-      selection: [entityId],
+      selection: draft.entities.map((entity) => entity.entityId),
       selectionInputMode: inputMode,
     };
     this.setMoveDraft(draft);
@@ -241,28 +245,54 @@ class EditorCoreImpl implements EditorCore {
     }
 
     const moveDraft = this.session.moveDraft;
-    const entity = this.document.entities[moveDraft.entityId];
-
-    if (!moveDraft.valid || !entity) {
+    if (
+      !moveDraft.valid ||
+      moveDraft.entities.some((draftEntity) => !this.document.entities[draftEntity.entityId])
+    ) {
       return false;
     }
 
-    const positionChanged =
-      moveDraft.gridPoint.x !== entity.position.x ||
-      moveDraft.gridPoint.y !== entity.position.y;
-    const rotationChanged = moveDraft.rotation !== entity.rotation;
+    const commands: AtomicDocumentCommand[] = [];
 
-    if (rotationChanged) {
+    for (const draftEntity of moveDraft.entities) {
+      const entity = this.document.entities[draftEntity.entityId];
+
+      if (!entity) {
+        continue;
+      }
+
+      const positionChanged =
+        draftEntity.gridPoint.x !== entity.position.x ||
+        draftEntity.gridPoint.y !== entity.position.y;
+      const rotationChanged = draftEntity.rotation !== entity.rotation;
+
+      if (rotationChanged) {
+        commands.push({
+          type: "entity.rotate",
+          payload: {
+            entityId: draftEntity.entityId,
+            position: positionChanged ? draftEntity.gridPoint : undefined,
+            rotation: draftEntity.rotation,
+          },
+        });
+      } else if (positionChanged) {
+        commands.push({
+          type: "entity.move",
+          payload: {
+            entityId: draftEntity.entityId,
+            position: draftEntity.gridPoint,
+          },
+        });
+      }
+    }
+
+    if (commands.length > 0) {
       this.applyCommand({
-        type: "entity.rotate",
+        type: "batch",
         payload: {
-          entityId: moveDraft.entityId,
-          position: positionChanged ? moveDraft.gridPoint : undefined,
-          rotation: moveDraft.rotation,
+          commands,
         },
       });
-    } else if (positionChanged) {
-      this.moveEntity(moveDraft.entityId, moveDraft.gridPoint);
     }
 
     this.applyInteractionMode(
@@ -271,6 +301,10 @@ class EditorCoreImpl implements EditorCore {
       true,
     );
     return true;
+  }
+
+  applyDocumentCommand(command: DocumentCommand): boolean {
+    return this.applyCommand(command);
   }
 
   selectEntity(
@@ -550,7 +584,10 @@ class EditorCoreImpl implements EditorCore {
         : null;
     const moveDraft =
       this.session.moveDraft &&
-      this.document.entities[this.session.moveDraft.entityId]
+      this.document.entities[this.session.moveDraft.entityId] &&
+      this.session.moveDraft.entities.every(
+        (draftEntity) => Boolean(this.document.entities[draftEntity.entityId]),
+      )
         ? this.session.moveDraft
         : null;
     const pendingLinkSourceEntityId =

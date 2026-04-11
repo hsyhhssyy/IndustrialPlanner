@@ -67,11 +67,7 @@ export interface RemoveLinkCommand {
   };
 }
 
-/**
- * Mutations that produce a new WorldDocument snapshot and participate in
- * undo/redo.
- */
-export type DocumentCommand =
+export type AtomicDocumentCommand =
   | PlaceEntityCommand
   | RemoveEntityCommand
   | MoveEntityCommand
@@ -79,3 +75,16 @@ export type DocumentCommand =
   | PatchEntityConfigCommand
   | CreateLinkCommand
   | RemoveLinkCommand;
+
+export interface BatchDocumentCommand {
+  type: "batch";
+  payload: {
+    commands: AtomicDocumentCommand[];
+  };
+}
+
+/**
+ * Mutations that produce a new WorldDocument snapshot and participate in
+ * undo/redo.
+ */
+export type DocumentCommand = AtomicDocumentCommand | BatchDocumentCommand;

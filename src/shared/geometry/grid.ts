@@ -10,6 +10,18 @@ export interface GridFootprint {
   height: number;
 }
 
+export interface GridBounds {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+export interface GridArea {
+  position: GridPoint;
+  footprint: GridFootprint;
+}
+
 export function rotateGridRotationClockwise(
   rotation: GridRotation,
 ): GridRotation {
@@ -53,6 +65,67 @@ export function getGridFootprintCenterCells(
   return {
     x: gridPoint.x + footprint.width / 2,
     y: gridPoint.y + footprint.height / 2,
+  };
+}
+
+export function getGridBoundsCenterCells(
+  bounds: GridBounds,
+): {
+  x: number;
+  y: number;
+} {
+  return {
+    x: bounds.left + bounds.width / 2,
+    y: bounds.top + bounds.height / 2,
+  };
+}
+
+export function getGridBoundingBox(
+  areas: readonly GridArea[],
+): GridBounds | null {
+  if (areas.length === 0) {
+    return null;
+  }
+
+  let left = Number.POSITIVE_INFINITY;
+  let top = Number.POSITIVE_INFINITY;
+  let right = Number.NEGATIVE_INFINITY;
+  let bottom = Number.NEGATIVE_INFINITY;
+
+  for (const area of areas) {
+    left = Math.min(left, area.position.x);
+    top = Math.min(top, area.position.y);
+    right = Math.max(right, area.position.x + area.footprint.width);
+    bottom = Math.max(bottom, area.position.y + area.footprint.height);
+  }
+
+  return {
+    left,
+    top,
+    width: right - left,
+    height: bottom - top,
+  };
+}
+
+export function rotateGridCenterCellsClockwise(options: {
+  centerCells: {
+    x: number;
+    y: number;
+  };
+  rotationCenterCells: {
+    x: number;
+    y: number;
+  };
+}): {
+  x: number;
+  y: number;
+} {
+  const relativeX = options.centerCells.x - options.rotationCenterCells.x;
+  const relativeY = options.centerCells.y - options.rotationCenterCells.y;
+
+  return {
+    x: options.rotationCenterCells.x - relativeY,
+    y: options.rotationCenterCells.y + relativeX,
   };
 }
 

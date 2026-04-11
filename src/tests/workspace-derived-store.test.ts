@@ -317,6 +317,15 @@ describe("WorkspaceDerivedStore", () => {
             rotation: 180 as const,
             valid: true,
             anchorWorldOffset: { x: 8, y: 8 },
+            entities: [
+              {
+                entityId: movedEntityId,
+                originGridPoint: movedEntity.position,
+                gridPoint: { x: 19, y: 11 },
+                originRotation: movedEntity.rotation,
+                rotation: 180 as const,
+              },
+            ],
           },
         },
         history: {

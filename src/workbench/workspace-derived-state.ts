@@ -5,7 +5,10 @@ import {
 import { isPlacementInteractionMode } from "@/editor/contracts/interaction-mode";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import { deriveRenderWorldBoundsPx } from "@/renderer/scene/render-world-bounds";
-import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+import {
+  getGridBoundingBox,
+  getRotatedGridFootprint,
+} from "@/shared/geometry/grid";
 import type { CanvasPoint, WorkspaceState } from "@/workbench/workspace-state";
 
 export interface RenderDerivedScreenBox {
@@ -63,6 +66,28 @@ function projectGridFootprintScreenBox(options: {
       options.canvasView.zoom,
     width: options.footprint.width * options.gridSize * options.canvasView.zoom,
     height: options.footprint.height * options.gridSize * options.canvasView.zoom,
+  };
+}
+
+function projectGridBoundsScreenBox(options: {
+  canvasView: WorkspaceState["canvasView"];
+  gridSize: number;
+  bounds: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+}): RenderDerivedScreenBox {
+  return {
+    left:
+      (options.bounds.left * options.gridSize - options.canvasView.offset.x) *
+      options.canvasView.zoom,
+    top:
+      (options.bounds.top * options.gridSize - options.canvasView.offset.y) *
+      options.canvasView.zoom,
+    width: options.bounds.width * options.gridSize * options.canvasView.zoom,
+    height: options.bounds.height * options.gridSize * options.canvasView.zoom,
   };
 }
 
@@ -160,25 +185,39 @@ function deriveAnchoredMoveScreenBox(
     return null;
   }
 
-  const entity = document.entities[moveDraft.entityId];
-  const definition =
-    topology.entityViews[moveDraft.entityId]?.definition ??
-    (entity
-      ? getStage1EntityDefinition(registry, entity.definitionId)
-      : undefined);
+  const bounds = getGridBoundingBox(
+    moveDraft.entities
+      .map((draftEntity) => {
+        const entity = document.entities[draftEntity.entityId];
+        const definition =
+          topology.entityViews[draftEntity.entityId]?.definition ??
+          (entity
+            ? getStage1EntityDefinition(registry, entity.definitionId)
+            : undefined);
 
-  if (!entity || !definition) {
+        if (!entity || !definition) {
+          return null;
+        }
+
+        return {
+          position: draftEntity.gridPoint,
+          footprint: getRotatedGridFootprint(
+            definition.footprint,
+            draftEntity.rotation,
+          ),
+        };
+      })
+      .filter((area): area is NonNullable<typeof area> => area !== null),
+  );
+
+  if (!bounds) {
     return null;
   }
 
-  return projectGridFootprintScreenBox({
+  return projectGridBoundsScreenBox({
     canvasView,
     gridSize: document.documentSettings.gridSize,
-    position: moveDraft.gridPoint,
-    footprint: getRotatedGridFootprint(
-      definition.footprint,
-      moveDraft.rotation,
-    ),
+    bounds,
   });
 }
 

@@ -87,6 +87,15 @@ function cloneEditorSession(session: EditorSession): EditorSession {
           anchorWorldOffset: {
             ...session.moveDraft.anchorWorldOffset,
           },
+          entities: session.moveDraft.entities.map((entity) => ({
+            ...entity,
+            originGridPoint: {
+              ...entity.originGridPoint,
+            },
+            gridPoint: {
+              ...entity.gridPoint,
+            },
+          })),
         }
       : null,
   };
@@ -211,6 +220,15 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
             anchorWorldOffset: {
               ...session.moveDraft.anchorWorldOffset,
             },
+            entities: session.moveDraft.entities.map((entity) => ({
+              ...entity,
+              originGridPoint: {
+                ...entity.originGridPoint,
+              },
+              gridPoint: {
+                ...entity.gridPoint,
+              },
+            })),
           }
         : null;
     }

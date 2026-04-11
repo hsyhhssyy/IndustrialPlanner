@@ -250,6 +250,15 @@ describe("Render scene model", () => {
           rotation: sourceEntity!.rotation,
           valid: true,
           anchorWorldOffset: { x: 8, y: 8 },
+          entities: [
+            {
+              entityId: "reactor-1",
+              originGridPoint: sourceEntity!.position,
+              gridPoint: { x: 20, y: 10 },
+              originRotation: sourceEntity!.rotation,
+              rotation: sourceEntity!.rotation,
+            },
+          ],
         },
         pendingLinkSourceEntityId: null,
       },
@@ -277,6 +286,7 @@ describe("Render scene model", () => {
       y: 10 * document.documentSettings.gridSize,
       valid: true,
     });
+    expect(scene.movePreviews).toHaveLength(1);
   });
 
   it("uses move draft rotation when building non-square move previews", () => {
@@ -304,6 +314,15 @@ describe("Render scene model", () => {
           rotation: 180,
           valid: true,
           anchorWorldOffset: { x: 8, y: 8 },
+          entities: [
+            {
+              entityId: "filler-1",
+              originGridPoint: sourceEntity!.position,
+              gridPoint: { x: 19, y: 11 },
+              originRotation: sourceEntity!.rotation,
+              rotation: 180,
+            },
+          ],
         },
         pendingLinkSourceEntityId: null,
       },
@@ -326,5 +345,65 @@ describe("Render scene model", () => {
       y: 11 * document.documentSettings.gridSize,
       valid: true,
     });
+  });
+
+  it("builds one move preview per selected entity while ghosting the whole moving group", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const reactor = document.entities["reactor-1"];
+    const filler = document.entities["filler-1"];
+
+    expect(reactor).toBeTruthy();
+    expect(filler).toBeTruthy();
+
+    const scene = buildRenderScene({
+      locale: "zh-CN",
+      document,
+      topology,
+      registry,
+      canvasView: createInitialCanvasViewState(),
+      interaction: {
+        selectedEntityIds: ["reactor-1", "filler-1"],
+        placementPreview: null,
+        moveDraft: {
+          entityId: "reactor-1",
+          interactionMode: "pointer",
+          originGridPoint: reactor!.position,
+          gridPoint: { x: 20, y: 10 },
+          rotation: reactor!.rotation,
+          valid: true,
+          anchorWorldOffset: { x: 8, y: 8 },
+          entities: [
+            {
+              entityId: "reactor-1",
+              originGridPoint: reactor!.position,
+              gridPoint: { x: 20, y: 10 },
+              originRotation: reactor!.rotation,
+              rotation: reactor!.rotation,
+            },
+            {
+              entityId: "filler-1",
+              originGridPoint: filler!.position,
+              gridPoint: { x: filler!.position.x + 2, y: filler!.position.y + 1 },
+              originRotation: filler!.rotation,
+              rotation: filler!.rotation,
+            },
+          ],
+        },
+        pendingLinkSourceEntityId: null,
+      },
+      runtimeSnapshot: {
+        tick: 0,
+        status: "idle",
+        entityViews: {},
+        patchedEntityIds: [],
+      },
+    });
+
+    expect(scene.movePreviews).toHaveLength(2);
+    expect(
+      scene.entities.filter((entity) => entity.ghosted).map((entity) => entity.entityId),
+    ).toEqual(["reactor-1", "filler-1"]);
   });
 });

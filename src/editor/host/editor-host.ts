@@ -15,6 +15,7 @@ import {
 } from "@/editor/contracts/interaction-mode";
 import {
   isSameMoveDraftState,
+  type MoveDraftEntityState,
   type MoveDraftState,
 } from "@/editor/contracts/move-draft";
 import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
@@ -37,15 +38,22 @@ import {
 } from "@/domain/base/stage1-bases";
 import {
   getRotatedGridFootprint,
+  getGridBoundingBox,
+  getGridBoundsCenterCells,
+  getGridFootprintCenterCells,
   resolveCenteredGridPoint,
   resolveCenteredRotatedGridPoint,
+  rotateGridCenterCellsClockwise,
   rotateGridRotationClockwise,
+  type GridBounds,
+  type GridFootprint,
   type GridPoint,
   type GridRotation,
 } from "@/shared/geometry/grid";
 import { createLogger } from "@/shared/logging/logger";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 import type { CanvasPoint } from "@/workbench/workspace-state";
+import type { AtomicDocumentCommand } from "@/editor/core/commands/document-command";
 
 export interface EditorInteractionTarget {
   kind: "blank";
@@ -273,6 +281,50 @@ interface MoveCandidateEvaluation {
   overlappingEntityIds: string[];
 }
 
+interface ResolvedMoveDraftEntity {
+  entity: MoveDraftEntityState;
+  definition: Stage1EntityDefinition;
+}
+
+function cloneMoveDraftEntity(entity: MoveDraftEntityState): MoveDraftEntityState {
+  return {
+    ...entity,
+    originGridPoint: {
+      ...entity.originGridPoint,
+    },
+    gridPoint: {
+      ...entity.gridPoint,
+    },
+  };
+}
+
+function cloneMoveDraftEntities(
+  entities: readonly MoveDraftEntityState[],
+): MoveDraftEntityState[] {
+  return entities.map((entity) => cloneMoveDraftEntity(entity));
+}
+
+function getMoveDraftEntity(
+  draft: MoveDraftState,
+  entityId: string,
+): MoveDraftEntityState | null {
+  return draft.entities.find((entity) => entity.entityId === entityId) ?? null;
+}
+
+function getMoveDraftBounds(
+  entities: readonly ResolvedMoveDraftEntity[],
+): GridBounds | null {
+  return getGridBoundingBox(
+    entities.map((entity) => ({
+      position: entity.entity.gridPoint,
+      footprint: getRotatedGridFootprint(
+        entity.definition.footprint,
+        entity.entity.rotation,
+      ),
+    })),
+  );
+}
+
 class EditorHostImpl implements EditorHost {
   private readonly core: EditorCore;
   private readonly getTopology: () => CompiledTopology;
@@ -374,13 +426,14 @@ class EditorHostImpl implements EditorHost {
   ): boolean {
     const { document, session } = this.core.getSnapshot();
     const moveMode = this.getMoveMode(session);
-    const isSelectedEntity =
-      session.selection.length === 1 &&
-      session.selection[0] === entityId;
     const existingDraft =
-      moveMode?.entityId === entityId && session.moveDraft
+      session.moveDraft && getMoveDraftEntity(session.moveDraft, entityId)
         ? session.moveDraft
         : null;
+    const isSelectedEntity =
+      session.currentMode.key === "select" &&
+      session.selection.length > 0 &&
+      session.selection.includes(entityId);
 
     if (
       (!isSelectedEntity || session.currentMode.key !== "select") &&
@@ -389,19 +442,53 @@ class EditorHostImpl implements EditorHost {
       return false;
     }
 
-    const entity = document.entities[entityId];
+    const anchorEntity = existingDraft
+      ? getMoveDraftEntity(existingDraft, entityId)
+      : null;
 
-    if (!entity) {
+    if (!anchorEntity && !document.entities[entityId]) {
       return false;
     }
 
-    const anchorGridPoint = existingDraft?.gridPoint ?? entity.position;
+    const entityIds = existingDraft
+      ? existingDraft.entities.map((entity) => entity.entityId)
+      : session.selection;
+    const draftEntities = existingDraft
+      ? cloneMoveDraftEntities(existingDraft.entities)
+      : entityIds
+          .map((selectedEntityId) => document.entities[selectedEntityId])
+          .filter((entity): entity is NonNullable<typeof entity> => Boolean(entity))
+          .map(
+            (entity) =>
+              ({
+                entityId: entity.id,
+                originGridPoint: entity.position,
+                gridPoint: entity.position,
+                originRotation: entity.rotation,
+                rotation: entity.rotation,
+              }) satisfies MoveDraftEntityState,
+          );
+
+    if (draftEntities.length === 0) {
+      return false;
+    }
+
+    const resolvedAnchorEntity =
+      anchorEntity ??
+      draftEntities.find((draftEntity) => draftEntity.entityId === entityId) ??
+      null;
+
+    if (!resolvedAnchorEntity) {
+      return false;
+    }
+
+    const anchorGridPoint = resolvedAnchorEntity.gridPoint;
     const draft: MoveDraftState = {
       entityId,
       interactionMode: inputMode,
-      originGridPoint: existingDraft?.originGridPoint ?? entity.position,
-      gridPoint: existingDraft?.gridPoint ?? entity.position,
-      rotation: existingDraft?.rotation ?? entity.rotation,
+      originGridPoint: resolvedAnchorEntity.originGridPoint,
+      gridPoint: resolvedAnchorEntity.gridPoint,
+      rotation: resolvedAnchorEntity.rotation,
       valid: existingDraft?.valid ?? true,
       anchorWorldOffset: {
         x:
@@ -411,11 +498,13 @@ class EditorHostImpl implements EditorHost {
           input.worldPoint.y -
           anchorGridPoint.y * document.documentSettings.gridSize,
       },
+      entities: draftEntities,
     };
 
     this.core.beginMove(entityId, inputMode, draft);
     this.logger.info(existingDraft ? "Re-anchored move draft." : "Began move draft.", {
       entityId,
+      entityIds: draft.entities.map((entity) => entity.entityId),
       inputMode,
       originGridPoint: draft.originGridPoint,
       currentGridPoint: draft.gridPoint,
@@ -427,53 +516,51 @@ class EditorHostImpl implements EditorHost {
 
   rotateMoveClockwise(): boolean {
     const { document, session } = this.core.getSnapshot();
-    const moveMode = this.getMoveMode(session);
     const moveDraft = session.moveDraft;
 
-    if (!moveMode || !moveDraft) {
+    if (!moveDraft) {
       return false;
     }
 
-    const entity = document.entities[moveMode.entityId];
+    const resolvedEntities = this.resolveMoveDraftEntities(moveDraft);
+    const anchorEntity = getMoveDraftEntity(moveDraft, moveDraft.entityId);
+    const resolvedAnchorEntity = resolvedEntities?.find(
+      (entity) => entity.entity.entityId === moveDraft.entityId,
+    );
 
-    if (!entity) {
+    if (!resolvedEntities || !anchorEntity || !resolvedAnchorEntity) {
       return false;
     }
 
-    const definition =
-      this.getTopology().entityViews[entity.id]?.definition ??
-      this.getDefinition(entity.definitionId);
-
-    if (!definition) {
-      return false;
-    }
-
-    const currentRotation = moveDraft.rotation;
-    const nextRotation = rotateGridRotationClockwise(currentRotation);
+    const currentRotation = anchorEntity.rotation;
     const currentFootprint = getRotatedGridFootprint(
-      definition.footprint,
+      resolvedAnchorEntity.definition.footprint,
       currentRotation,
     );
-    const nextFootprint = getRotatedGridFootprint(
-      definition.footprint,
-      nextRotation,
+    const rotatedEntities = this.rotateMoveDraftEntitiesClockwise(
+      resolvedEntities,
     );
+    const nextAnchorEntity = rotatedEntities.find(
+      (entity) => entity.entityId === moveDraft.entityId,
+    );
+
+    if (!nextAnchorEntity) {
+      return false;
+    }
+
     const rotatedDraft = {
       ...moveDraft,
-      gridPoint: resolveCenteredRotatedGridPoint({
-        gridPoint: moveDraft.gridPoint,
-        currentFootprint,
-        nextFootprint,
-      }),
-      rotation: nextRotation,
+      gridPoint: nextAnchorEntity.gridPoint,
+      rotation: nextAnchorEntity.rotation,
       valid: true,
       anchorWorldOffset: rotateMoveAnchorWorldOffsetClockwise({
         anchorWorldOffset: moveDraft.anchorWorldOffset,
         currentFootprint,
         gridSize: document.documentSettings.gridSize,
       }),
+      entities: rotatedEntities,
     } satisfies MoveDraftState;
-    const evaluation = this.evaluateMoveDraft(rotatedDraft, definition);
+    const evaluation = this.evaluateMoveDraft(rotatedDraft, resolvedEntities);
     const resolvedDraft = {
       ...rotatedDraft,
       valid: evaluation.invalidReason === null,
@@ -484,11 +571,12 @@ class EditorHostImpl implements EditorHost {
     }
 
     this.logger.info("Rotated move draft.", {
-      entityId: moveDraft.entityId,
-      previousGridPoint: moveDraft.gridPoint,
+      entityIds: moveDraft.entities.map((entity) => entity.entityId),
+      anchorEntityId: moveDraft.entityId,
+      previousGridPoint: anchorEntity.gridPoint,
       nextGridPoint: resolvedDraft.gridPoint,
       previousRotation: currentRotation,
-      nextRotation,
+      nextRotation: nextAnchorEntity.rotation,
       invalidReason: evaluation.invalidReason,
     });
     return true;
@@ -782,10 +870,9 @@ class EditorHostImpl implements EditorHost {
 
   queryMoveDraftAtWorldInput(input: CanvasWorldInput): MoveQueryResult {
     const { document, session } = this.core.getSnapshot();
-    const moveMode = this.getMoveMode(session);
     const moveDraft = session.moveDraft;
 
-    if (!moveMode || !moveDraft) {
+    if (!moveDraft) {
       return {
         draft: null,
         invalidReason: "inactive-move",
@@ -793,21 +880,9 @@ class EditorHostImpl implements EditorHost {
       };
     }
 
-    const entity = document.entities[moveMode.entityId];
+    const resolvedEntities = this.resolveMoveDraftEntities(moveDraft);
 
-    if (!entity) {
-      return {
-        draft: null,
-        invalidReason: "missing-entity",
-        overlappingEntityIds: [],
-      };
-    }
-
-    const definition =
-      this.getTopology().entityViews[entity.id]?.definition ??
-      this.getDefinition(entity.definitionId);
-
-    if (!definition) {
+    if (!resolvedEntities) {
       return {
         draft: null,
         invalidReason: "missing-entity",
@@ -816,7 +891,7 @@ class EditorHostImpl implements EditorHost {
     }
 
     const draft = this.createMoveDraftFromWorldInput(document, moveDraft, input);
-    const evaluation = this.evaluateMoveDraft(draft, definition);
+    const evaluation = this.evaluateMoveDraft(draft, resolvedEntities);
 
     return {
       draft: {
@@ -852,29 +927,20 @@ class EditorHostImpl implements EditorHost {
   }
 
   confirmMove(): boolean {
-    const { document, session } = this.core.getSnapshot();
+    const { session } = this.core.getSnapshot();
     const moveDraft = session.moveDraft;
-    const moveMode = this.getMoveMode(session);
 
-    if (!moveDraft || !moveMode) {
+    if (!moveDraft) {
       return false;
     }
 
-    const entity = document.entities[moveMode.entityId];
+    const resolvedEntities = this.resolveMoveDraftEntities(moveDraft);
 
-    if (!entity) {
+    if (!resolvedEntities) {
       return false;
     }
 
-    const definition =
-      this.getTopology().entityViews[entity.id]?.definition ??
-      this.getDefinition(entity.definitionId);
-
-    if (!definition) {
-      return false;
-    }
-
-    const evaluation = this.evaluateMoveDraft(moveDraft, definition);
+    const evaluation = this.evaluateMoveDraft(moveDraft, resolvedEntities);
     const resolvedDraft = {
       ...moveDraft,
       valid: evaluation.invalidReason === null,
@@ -897,7 +963,8 @@ class EditorHostImpl implements EditorHost {
 
     if (didConfirm) {
       this.logger.info("Confirmed move draft.", {
-        entityId: moveDraft.entityId,
+        entityIds: moveDraft.entities.map((entity) => entity.entityId),
+        anchorEntityId: moveDraft.entityId,
         originGridPoint: moveDraft.originGridPoint,
         nextGridPoint: resolvedDraft.gridPoint,
         nextRotation: resolvedDraft.rotation,
@@ -919,7 +986,8 @@ class EditorHostImpl implements EditorHost {
 
     this.core.cancelMove();
     this.logger.info("Canceled move draft.", {
-      entityId: moveMode.entityId,
+      entityIds: moveDraft.entities.map((entity) => entity.entityId),
+      anchorEntityId: moveMode.entityId,
       originGridPoint: moveDraft.originGridPoint,
       currentGridPoint: moveDraft.gridPoint,
       interactionMode: moveMode.inputMode,
@@ -948,48 +1016,67 @@ class EditorHostImpl implements EditorHost {
       document,
       session: { selection },
     } = this.core.getSnapshot();
-    const selectedEntityId = selection[0];
-
-    if (!selectedEntityId) {
+    if (selection.length === 0) {
       return false;
     }
 
-    const entity = document.entities[selectedEntityId];
+    const resolvedEntities = selection
+      .map((entityId) => {
+        const entity = document.entities[entityId];
+        const definition = entity ? this.getDefinition(entity.definitionId) : undefined;
 
-    if (!entity) {
+        if (!entity || !definition) {
+          return null;
+        }
+
+        return {
+          entity: {
+            entityId: entity.id,
+            originGridPoint: entity.position,
+            gridPoint: entity.position,
+            originRotation: entity.rotation,
+            rotation: entity.rotation,
+          } satisfies MoveDraftEntityState,
+          definition,
+        } satisfies ResolvedMoveDraftEntity;
+      })
+      .filter((entity): entity is ResolvedMoveDraftEntity => entity !== null);
+
+    if (resolvedEntities.length !== selection.length) {
       return false;
     }
 
-    const definition = this.getDefinition(entity.definitionId);
-
-    if (!definition) {
-      return false;
-    }
-
-    const nextRotation = rotateGridRotationClockwise(entity.rotation);
-    const currentFootprint = getRotatedGridFootprint(
-      definition.footprint,
-      entity.rotation,
+    const rotatedEntities = this.rotateMoveDraftEntitiesClockwise(
+      resolvedEntities,
     );
-    const nextFootprint = getRotatedGridFootprint(
-      definition.footprint,
-      nextRotation,
-    );
-    const nextPosition = resolveCenteredRotatedGridPoint({
-      gridPoint: entity.position,
-      currentFootprint,
-      nextFootprint,
-    });
+    const commands: AtomicDocumentCommand[] = rotatedEntities.map((entity) => ({
+      type: "entity.rotate",
+      payload: {
+        entityId: entity.entityId,
+        position: entity.gridPoint,
+        rotation: entity.rotation,
+      },
+    }));
 
-    const didRotate = this.core.rotateSelectedEntityClockwise(nextPosition);
+    if (commands.length === 0) {
+      return false;
+    }
+
+    const didRotate = this.core.applyDocumentCommand(
+      commands.length === 1 && commands[0]
+        ? commands[0]
+        : {
+            type: "batch",
+            payload: {
+              commands,
+            },
+          },
+    );
 
     if (didRotate) {
-      this.logger.info("Rotated selected entity.", {
-        entityId: selectedEntityId,
-        previousPosition: entity.position,
-        nextPosition,
-        previousRotation: entity.rotation,
-        nextRotation,
+      this.logger.info("Rotated selected entities.", {
+        entityIds: selection,
+        rotatedEntityStates: rotatedEntities,
       });
     }
 
@@ -1036,6 +1123,66 @@ class EditorHostImpl implements EditorHost {
     this.core.redo();
   }
 
+  private resolveMoveDraftEntities(
+    draft: MoveDraftState,
+  ): ResolvedMoveDraftEntity[] | null {
+    const { document } = this.core.getSnapshot();
+    const topology = this.getTopology();
+    const resolvedEntities = draft.entities
+      .map((draftEntity) => {
+        const entity = document.entities[draftEntity.entityId];
+        const definition =
+          topology.entityViews[draftEntity.entityId]?.definition ??
+          (entity ? this.getDefinition(entity.definitionId) : undefined);
+
+        if (!entity || !definition) {
+          return null;
+        }
+
+        return {
+          entity: cloneMoveDraftEntity(draftEntity),
+          definition,
+        } satisfies ResolvedMoveDraftEntity;
+      })
+      .filter((entity): entity is ResolvedMoveDraftEntity => entity !== null);
+
+    return resolvedEntities.length === draft.entities.length ? resolvedEntities : null;
+  }
+
+  private rotateMoveDraftEntitiesClockwise(
+    entities: readonly ResolvedMoveDraftEntity[],
+  ): MoveDraftEntityState[] {
+    const bounds = getMoveDraftBounds(entities);
+
+    if (!bounds) {
+      return entities.map((entity) => cloneMoveDraftEntity(entity.entity));
+    }
+
+    const rotationCenterCells = getGridBoundsCenterCells(bounds);
+
+    return entities.map(({ entity, definition }) => {
+      const currentFootprint = getRotatedGridFootprint(
+        definition.footprint,
+        entity.rotation,
+      );
+      const nextRotation = rotateGridRotationClockwise(entity.rotation);
+      const nextFootprint = getRotatedGridFootprint(
+        definition.footprint,
+        nextRotation,
+      );
+      const rotatedCenterCells = rotateGridCenterCellsClockwise({
+        centerCells: getGridFootprintCenterCells(entity.gridPoint, currentFootprint),
+        rotationCenterCells,
+      });
+
+      return {
+        ...cloneMoveDraftEntity(entity),
+        gridPoint: resolveCenteredGridPoint(rotatedCenterCells, nextFootprint),
+        rotation: nextRotation,
+      };
+    });
+  }
+
   private createPlacementPreviewFromWorldInput(
     document: WorldDocument,
     session: EditorSession,
@@ -1066,15 +1213,31 @@ class EditorHostImpl implements EditorHost {
     input: CanvasWorldInput,
   ): MoveDraftState {
     const { gridSize } = document.documentSettings;
+    const anchorEntity = getMoveDraftEntity(moveDraft, moveDraft.entityId);
+
+    if (!anchorEntity) {
+      return moveDraft;
+    }
+
     const draftGridPoint = {
       x: Math.floor((input.worldPoint.x - moveDraft.anchorWorldOffset.x) / gridSize),
       y: Math.floor((input.worldPoint.y - moveDraft.anchorWorldOffset.y) / gridSize),
     } satisfies GridPoint;
+    const deltaX = draftGridPoint.x - anchorEntity.gridPoint.x;
+    const deltaY = draftGridPoint.y - anchorEntity.gridPoint.y;
+    const nextEntities = moveDraft.entities.map((entity) => ({
+      ...cloneMoveDraftEntity(entity),
+      gridPoint: {
+        x: entity.gridPoint.x + deltaX,
+        y: entity.gridPoint.y + deltaY,
+      },
+    }));
 
     return {
       ...moveDraft,
       gridPoint: draftGridPoint,
       valid: true,
+      entities: nextEntities,
     };
   }
 
@@ -1108,30 +1271,42 @@ class EditorHostImpl implements EditorHost {
 
   private evaluateMoveDraft(
     draft: MoveDraftState,
-    definition: Stage1EntityDefinition,
+    entities: readonly ResolvedMoveDraftEntity[],
   ): MoveCandidateEvaluation {
     const { document } = this.core.getSnapshot();
     const topology = this.getTopology();
     const base = getStage1BaseDefinition(document.baseId);
-    const footprint = getRotatedGridFootprint(
-      definition.footprint,
-      draft.rotation,
-    );
-    const overlappingEntityIds = this.collectOverlappingEntityIds(
-      topology,
-      draft.gridPoint,
-      footprint,
-      draft.entityId,
-    );
-    const withinBase = isStage1FootprintWithinBase({
-      base,
-      position: draft.gridPoint,
-      footprint,
-    });
+    const ignoredEntityIds = new Set(draft.entities.map((entity) => entity.entityId));
+    const overlappingEntityIds = new Set<string>();
+    let withinBase = true;
+
+    for (const { entity, definition } of entities) {
+      const footprint = getRotatedGridFootprint(
+        definition.footprint,
+        entity.rotation,
+      );
+
+      for (const overlappingEntityId of this.collectOverlappingEntityIds(
+        topology,
+        entity.gridPoint,
+        footprint,
+        ignoredEntityIds,
+      )) {
+        overlappingEntityIds.add(overlappingEntityId);
+      }
+
+      withinBase =
+        withinBase &&
+        isStage1FootprintWithinBase({
+          base,
+          position: entity.gridPoint,
+          footprint,
+        });
+    }
 
     return {
       invalidReason: withinBase ? null : "out-of-base",
-      overlappingEntityIds,
+      overlappingEntityIds: Array.from(overlappingEntityIds),
     };
   }
 
@@ -1139,7 +1314,7 @@ class EditorHostImpl implements EditorHost {
     topology: CompiledTopology,
     position: GridPoint,
     footprint: Stage1EntityDefinition["footprint"],
-    ignoreEntityId: string | null = null,
+    ignoredEntityIds: ReadonlySet<string> | null = null,
   ): string[] {
     const entityIds = new Set<string>();
 
@@ -1153,7 +1328,7 @@ class EditorHostImpl implements EditorHost {
         }
 
         for (const entityId of occupants) {
-          if (entityId === ignoreEntityId) {
+          if (ignoredEntityIds?.has(entityId)) {
             continue;
           }
 

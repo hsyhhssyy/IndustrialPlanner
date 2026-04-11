@@ -7,7 +7,10 @@ import {
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import type { MoveDraftState } from "@/editor/contracts/move-draft";
 import type { PlacementPreviewState } from "@/editor/contracts/placement-preview";
-import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+import {
+  getGridBoundingBox,
+  getRotatedGridFootprint,
+} from "@/shared/geometry/grid";
 
 export interface RenderWorldBoundsPx {
   width: number;
@@ -69,31 +72,43 @@ function getMoveDraftBoundsPx(
     return null;
   }
 
-  const entity = options.document.entities[draft.entityId];
-  const definition =
-    options.topology.entityViews[draft.entityId]?.definition ??
-    (entity
-      ? getStage1EntityDefinition(options.registry, entity.definitionId)
-      : undefined);
+  const bounds = getGridBoundingBox(
+    draft.entities
+      .map((draftEntity) => {
+        const entity = options.document.entities[draftEntity.entityId];
+        const definition =
+          options.topology.entityViews[draftEntity.entityId]?.definition ??
+          (entity
+            ? getStage1EntityDefinition(options.registry, entity.definitionId)
+            : undefined);
 
-  if (!entity || !definition) {
+        if (!entity || !definition) {
+          return null;
+        }
+
+        return {
+          position: draftEntity.gridPoint,
+          footprint: getRotatedGridFootprint(
+            definition.footprint,
+            draftEntity.rotation,
+          ),
+        };
+      })
+      .filter((area): area is NonNullable<typeof area> => area !== null),
+  );
+
+  if (!bounds) {
     return null;
   }
 
   const { gridSize } = options.document.documentSettings;
-  const footprint = getRotatedGridFootprint(
-    definition.footprint,
-    draft.rotation,
-  );
 
   return {
     width:
-      draft.gridPoint.x * gridSize +
-      footprint.width * gridSize +
+      (bounds.left + bounds.width) * gridSize +
       gridSize * RENDER_WORLD_PADDING_CELLS,
     height:
-      draft.gridPoint.y * gridSize +
-      footprint.height * gridSize +
+      (bounds.top + bounds.height) * gridSize +
       gridSize * RENDER_WORLD_PADDING_CELLS,
   };
 }

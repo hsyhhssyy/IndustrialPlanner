@@ -8,8 +8,13 @@ import {
 } from "@/editor/contracts/interaction-mode";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
 import {
+  getGridBoundingBox,
+  getGridBoundsCenterCells,
+  getGridFootprintCenterCells,
   getRotatedGridFootprint,
+  resolveCenteredGridPoint,
   resolveCenteredRotatedGridPoint,
+  rotateGridCenterCellsClockwise,
   type GridRotation,
 } from "@/shared/geometry/grid";
 import { createPlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
@@ -159,6 +164,67 @@ function toScreenPointForEntity(
       (entity.position.y * gridSize - snapshot.canvasView.offset.y + 1) *
       snapshot.canvasView.zoom,
   };
+}
+
+function resolveClockwiseRotatedSelectionState(
+  controller: ReturnType<typeof createWorkbenchController>,
+  entityIds: string[],
+) {
+  const snapshot = readWorkbenchState(controller);
+  const resolvedEntities = entityIds.map((entityId) => {
+    const entity = snapshot.document.entities[entityId];
+
+    if (!entity) {
+      throw new Error(`Missing entity ${entityId}`);
+    }
+
+    const definition = getStage1EntityDefinition(
+      snapshot.registry,
+      entity.definitionId,
+    );
+
+    if (!definition) {
+      throw new Error(`Missing definition ${entity.definitionId}`);
+    }
+
+    return {
+      entityId,
+      position: entity.position,
+      rotation: entity.rotation,
+      footprint: getRotatedGridFootprint(definition.footprint, entity.rotation),
+      baseFootprint: definition.footprint,
+    };
+  });
+  const bounds = getGridBoundingBox(
+    resolvedEntities.map((entity) => ({
+      position: entity.position,
+      footprint: entity.footprint,
+    })),
+  );
+
+  if (!bounds) {
+    throw new Error("Missing selection bounds");
+  }
+
+  const rotationCenterCells = getGridBoundsCenterCells(bounds);
+
+  return resolvedEntities.map((entity) => {
+    const nextRotation = ((entity.rotation + 90) % 360) as GridRotation;
+    const nextFootprint = getRotatedGridFootprint(
+      entity.baseFootprint,
+      nextRotation,
+    );
+    const rotatedCenter = rotateGridCenterCellsClockwise({
+      centerCells: getGridFootprintCenterCells(entity.position, entity.footprint),
+      rotationCenterCells,
+    });
+
+    return {
+      entityId: entity.entityId,
+      position: resolveCenteredGridPoint(rotatedCenter, nextFootprint),
+      rotation: nextRotation,
+    };
+  });
 }
 
 describe("WorkbenchController scaffold", () => {
@@ -899,6 +965,54 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("rotates multiple selected entities around their overall bounding box", async () => {
+    const controller = createWorkbenchController();
+    const entityIds = ["reactor-1", "filler-1"];
+    const before = entityIds.map(
+      (entityId) => readWorkbenchState(controller).document.entities[entityId],
+    );
+    const expectedAfterOneTurn = resolveClockwiseRotatedSelectionState(
+      controller,
+      entityIds,
+    );
+
+    await controller.selectEntity("reactor-1", "pointer");
+    await controller.selectEntity("filler-1", "pointer", "toggle");
+    await controller.rotateSelectionClockwise();
+
+    const afterRotate = readWorkbenchState(controller);
+
+    expect(afterRotate.session.selection).toEqual(entityIds);
+
+    for (const expectedEntity of expectedAfterOneTurn) {
+      expect(afterRotate.document.entities[expectedEntity.entityId]).toMatchObject({
+        position: expectedEntity.position,
+        rotation: expectedEntity.rotation,
+      });
+    }
+
+    await controller.undo();
+
+    for (let index = 0; index < entityIds.length; index += 1) {
+      expect(readWorkbenchState(controller).document.entities[entityIds[index]!]).toEqual(
+        before[index],
+      );
+    }
+
+    await controller.rotateSelectionClockwise();
+    await controller.rotateSelectionClockwise();
+    await controller.rotateSelectionClockwise();
+    await controller.rotateSelectionClockwise();
+
+    for (let index = 0; index < entityIds.length; index += 1) {
+      expect(readWorkbenchState(controller).document.entities[entityIds[index]!]).toEqual(
+        before[index],
+      );
+    }
+
+    controller.dispose();
+  });
+
   it("moves the selected entity through the hidden move mode and confirms a single entity.move command", async () => {
     const controller = createWorkbenchController();
     const before = readWorkbenchState(controller).document.entities["reactor-1"];
@@ -950,6 +1064,72 @@ describe("WorkbenchController scaffold", () => {
       y: 10 * after.document.documentSettings.gridSize,
       selected: true,
     });
+
+    controller.dispose();
+  });
+
+  it("moves multiple selected entities together and confirms them as one undo unit", async () => {
+    const controller = createWorkbenchController();
+    const before = readWorkbenchState(controller).document.entities;
+    const anchorBefore = before["reactor-1"];
+    const followerBefore = before["filler-1"];
+
+    expect(anchorBefore).toBeTruthy();
+    expect(followerBefore).toBeTruthy();
+
+    await controller.selectEntity("reactor-1", "pointer");
+    await controller.selectEntity("filler-1", "pointer", "toggle");
+    controller.beginMoveFromScreenPoint(
+      "reactor-1",
+      toScreenPointForEntity(controller, "reactor-1"),
+      "pointer",
+    );
+    controller.updateMoveDraftFromScreenPoint(
+      toScreenPointForGrid(controller, { x: 20, y: 10 }),
+    );
+
+    const duringMove = readWorkbenchState(controller);
+    const deltaX = 20 - anchorBefore!.position.x;
+    const deltaY = 10 - anchorBefore!.position.y;
+
+    expect(duringMove.session.moveDraft?.entities).toMatchObject([
+      {
+        entityId: "reactor-1",
+        gridPoint: { x: 20, y: 10 },
+      },
+      {
+        entityId: "filler-1",
+        gridPoint: {
+          x: followerBefore!.position.x + deltaX,
+          y: followerBefore!.position.y + deltaY,
+        },
+      },
+    ]);
+
+    await controller.confirmMovePreview();
+
+    const after = readWorkbenchState(controller);
+
+    expect(after.document.entities["reactor-1"]).toMatchObject({
+      position: { x: 20, y: 10 },
+      rotation: anchorBefore!.rotation,
+    });
+    expect(after.document.entities["filler-1"]).toMatchObject({
+      position: {
+        x: followerBefore!.position.x + deltaX,
+        y: followerBefore!.position.y + deltaY,
+      },
+      rotation: followerBefore!.rotation,
+    });
+
+    await controller.undo();
+
+    expect(readWorkbenchState(controller).document.entities["reactor-1"]).toEqual(
+      anchorBefore,
+    );
+    expect(readWorkbenchState(controller).document.entities["filler-1"]).toEqual(
+      followerBefore,
+    );
 
     controller.dispose();
   });
@@ -1009,6 +1189,58 @@ describe("WorkbenchController scaffold", () => {
     await controller.undo();
 
     expect(readWorkbenchState(controller).document.entities["filler-1"]).toEqual(before);
+
+    controller.dispose();
+  });
+
+  it("rotates multi-entity move drafts around the overall selection bounds", async () => {
+    const controller = createWorkbenchController();
+    const entityIds = ["reactor-1", "filler-1"];
+    const before = entityIds.map(
+      (entityId) => readWorkbenchState(controller).document.entities[entityId],
+    );
+    const expectedDraftState = resolveClockwiseRotatedSelectionState(
+      controller,
+      entityIds,
+    );
+
+    await controller.selectEntity("reactor-1", "pointer");
+    await controller.selectEntity("filler-1", "pointer", "toggle");
+    controller.beginMoveFromScreenPoint(
+      "reactor-1",
+      toScreenPointForEntity(controller, "reactor-1"),
+      "pointer",
+    );
+    controller.rotateMoveClockwise();
+
+    const duringMove = readWorkbenchState(controller);
+
+    expect(duringMove.session.moveDraft?.entities).toMatchObject(
+      expectedDraftState.map((entity) => ({
+        entityId: entity.entityId,
+        gridPoint: entity.position,
+        rotation: entity.rotation,
+      })),
+    );
+
+    await controller.confirmMovePreview();
+
+    const after = readWorkbenchState(controller);
+
+    for (const expectedEntity of expectedDraftState) {
+      expect(after.document.entities[expectedEntity.entityId]).toMatchObject({
+        position: expectedEntity.position,
+        rotation: expectedEntity.rotation,
+      });
+    }
+
+    await controller.undo();
+
+    const restored = readWorkbenchState(controller);
+
+    for (let index = 0; index < entityIds.length; index += 1) {
+      expect(restored.document.entities[entityIds[index]!]).toEqual(before[index]);
+    }
 
     controller.dispose();
   });

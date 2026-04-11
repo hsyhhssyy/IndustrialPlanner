@@ -695,9 +695,9 @@ function renderPlacementPreviewLayer(
     );
   }
 
-  if (scene.movePreview) {
+  for (const movePreview of scene.movePreviews) {
     layers.preview.addChild(
-      drawInteractionPreview(scene, scene.movePreview, textureCache),
+      drawInteractionPreview(scene, movePreview, textureCache),
     );
   }
 }
@@ -708,7 +708,7 @@ function collectSceneTexturePaths(scene: RenderSceneModel): string[] {
       scene.entities
         .map((entity) => entity.textureSrc)
         .concat(scene.placementPreview?.textureSrc ?? [])
-        .concat(scene.movePreview?.textureSrc ?? [])
+        .concat(scene.movePreviews.map((preview) => preview.textureSrc))
         .filter((path): path is string => Boolean(path)),
     ),
   );

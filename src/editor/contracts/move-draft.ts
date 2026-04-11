@@ -1,6 +1,14 @@
 import type { GridPoint, GridRotation } from "@/shared/geometry/grid";
 import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
 
+export interface MoveDraftEntityState {
+  entityId: string;
+  originGridPoint: GridPoint;
+  gridPoint: GridPoint;
+  originRotation: GridRotation;
+  rotation: GridRotation;
+}
+
 export interface MoveDraftState {
   entityId: string;
   interactionMode: PlacementInteractionMode;
@@ -12,6 +20,7 @@ export interface MoveDraftState {
     x: number;
     y: number;
   };
+  entities: MoveDraftEntityState[];
 }
 
 export function isSameMoveDraftState(
@@ -36,6 +45,43 @@ export function isSameMoveDraftState(
     left.gridPoint.x === right.gridPoint.x &&
     left.gridPoint.y === right.gridPoint.y &&
     left.anchorWorldOffset.x === right.anchorWorldOffset.x &&
-    left.anchorWorldOffset.y === right.anchorWorldOffset.y
+    left.anchorWorldOffset.y === right.anchorWorldOffset.y &&
+    areMoveDraftEntitiesEqual(left.entities, right.entities)
   );
+}
+
+function areMoveDraftEntitiesEqual(
+  left: readonly MoveDraftEntityState[],
+  right: readonly MoveDraftEntityState[],
+): boolean {
+  if (left === right) {
+    return true;
+  }
+
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    const leftEntity = left[index];
+    const rightEntity = right[index];
+
+    if (!leftEntity || !rightEntity) {
+      return false;
+    }
+
+    if (
+      leftEntity.entityId !== rightEntity.entityId ||
+      leftEntity.originRotation !== rightEntity.originRotation ||
+      leftEntity.rotation !== rightEntity.rotation ||
+      leftEntity.originGridPoint.x !== rightEntity.originGridPoint.x ||
+      leftEntity.originGridPoint.y !== rightEntity.originGridPoint.y ||
+      leftEntity.gridPoint.x !== rightEntity.gridPoint.x ||
+      leftEntity.gridPoint.y !== rightEntity.gridPoint.y
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }

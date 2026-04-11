@@ -91,7 +91,10 @@ function buildEntitySprite(input: RenderSceneInput, entityId: string): RenderEnt
     showLabel: shouldShowStage1EntityLabel(definition, renderKind),
     status: input.runtimeSnapshot.entityViews[entityId]?.status ?? "idle",
     selected: input.interaction.selectedEntityIds.includes(entityId),
-    ghosted: input.interaction.moveDraft?.entityId === entityId,
+    ghosted:
+      input.interaction.moveDraft?.entities.some(
+        (draftEntity) => draftEntity.entityId === entityId,
+      ) ?? false,
     pendingLinkSource:
       input.interaction.pendingLinkSourceEntityId === entityId,
     patched: input.runtimeSnapshot.patchedEntityIds.includes(entityId),
@@ -190,18 +193,13 @@ function buildPlacementPreview(
   };
 }
 
-function buildMovePreview(
+function buildMovePreviewForEntity(
   input: RenderSceneInput,
+  draftEntity: NonNullable<RenderSceneInput["interaction"]["moveDraft"]>["entities"][number],
 ): RenderMovePreview | null {
-  const draft = input.interaction.moveDraft;
-
-  if (!draft) {
-    return null;
-  }
-
-  const entity = input.document.entities[draft.entityId];
+  const entity = input.document.entities[draftEntity.entityId];
   const definition =
-    input.topology.entityViews[draft.entityId]?.definition ??
+    input.topology.entityViews[draftEntity.entityId]?.definition ??
     (entity
       ? getStage1EntityDefinition(input.registry, entity.definitionId)
       : undefined);
@@ -211,23 +209,23 @@ function buildMovePreview(
   }
 
   const renderKind = getStage1EntityRenderKind(entity.definitionId);
-  const footprint = getEntityFootprintSize(definition, draft.rotation);
+  const footprint = getEntityFootprintSize(definition, draftEntity.rotation);
   const textureMetrics = getStage1EntityTextureMetrics({
     definition,
     gridSize: input.document.documentSettings.gridSize,
-    rotation: draft.rotation,
+    rotation: draftEntity.rotation,
   });
 
   return {
-    entityId: draft.entityId,
+    entityId: draftEntity.entityId,
     definitionId: entity.definitionId,
-    interactionMode: draft.interactionMode,
+    interactionMode: input.interaction.moveDraft?.interactionMode ?? "pointer",
     label: getLocalizedStage1EntityName(input.locale, definition),
-    x: draft.gridPoint.x * input.document.documentSettings.gridSize,
-    y: draft.gridPoint.y * input.document.documentSettings.gridSize,
+    x: draftEntity.gridPoint.x * input.document.documentSettings.gridSize,
+    y: draftEntity.gridPoint.y * input.document.documentSettings.gridSize,
     width: footprint.width * input.document.documentSettings.gridSize,
     height: footprint.height * input.document.documentSettings.gridSize,
-    rotation: draft.rotation,
+    rotation: draftEntity.rotation,
     renderKind,
     fill: getEntityFill(definition),
     textureSrc: getStage1EntitySpritePath(entity.definitionId),
@@ -235,8 +233,22 @@ function buildMovePreview(
     textureHeight: textureMetrics.textureHeightPx,
     textureCenterOffsetX: textureMetrics.centerOffsetXPx,
     textureCenterOffsetY: textureMetrics.centerOffsetYPx,
-    valid: draft.valid,
+    valid: input.interaction.moveDraft?.valid ?? true,
   };
+}
+
+function buildMovePreviews(
+  input: RenderSceneInput,
+): RenderMovePreview[] {
+  const draft = input.interaction.moveDraft;
+
+  if (!draft) {
+    return [];
+  }
+
+  return draft.entities
+    .map((draftEntity) => buildMovePreviewForEntity(input, draftEntity))
+    .filter((preview): preview is RenderMovePreview => preview !== null);
 }
 
 export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
@@ -244,7 +256,8 @@ export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
     .map((entityId) => buildEntitySprite(input, entityId))
     .filter((entity): entity is RenderEntitySprite => entity !== null);
   const placementPreview = buildPlacementPreview(input);
-  const movePreview = buildMovePreview(input);
+  const movePreviews = buildMovePreviews(input);
+  const movePreview = movePreviews[0] ?? null;
   const explicitLinks = buildExplicitLinkSprites(input);
   const worldBoundsPx = deriveRenderWorldBoundsPx({
     document: input.document,
@@ -263,6 +276,7 @@ export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
     entities,
     placementPreview,
     movePreview,
+    movePreviews,
     explicitLinks,
     diagnostics: input.topology.diagnostics,
   };

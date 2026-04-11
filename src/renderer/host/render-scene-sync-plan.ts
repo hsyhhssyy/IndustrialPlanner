@@ -135,6 +135,23 @@ function isSameRenderMovePreview(
   );
 }
 
+function isSameRenderMovePreviews(
+  left: RenderMovePreview[],
+  right: RenderMovePreview[],
+): boolean {
+  if (left === right) {
+    return true;
+  }
+
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((preview, index) =>
+    isSameRenderMovePreview(preview, right[index]!),
+  );
+}
+
 export function getRenderSceneSyncPlan(
   previousScene: RenderSceneModel | null,
   nextScene: RenderSceneModel,
@@ -158,9 +175,9 @@ export function getRenderSceneSyncPlan(
     redrawStaticLayers,
     redrawPreviewLayer:
       redrawStaticLayers ||
-      !isSameRenderMovePreview(
-        previousScene.movePreview,
-        nextScene.movePreview,
+      !isSameRenderMovePreviews(
+        previousScene.movePreviews,
+        nextScene.movePreviews,
       ) ||
       !isSameRenderPlacementPreview(
         previousScene.placementPreview,

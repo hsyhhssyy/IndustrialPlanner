@@ -86,6 +86,27 @@ describe("render scene sync plan", () => {
         textureCenterOffsetY: 0,
         valid: true,
       },
+      movePreviews: [
+        {
+          entityId: "reactor-1",
+          definitionId: "item_port_mix_pool_1",
+          interactionMode: "pointer" as const,
+          label: "反应池",
+          x: 20 * scene.gridSize,
+          y: 10 * scene.gridSize,
+          width: 6 * scene.gridSize,
+          height: 4 * scene.gridSize,
+          rotation: 90 as const,
+          renderKind: "sprite-device" as const,
+          fill: "#6b503d",
+          textureSrc: "/sprites/item_port_mix_pool_1.webp",
+          textureWidth: 320,
+          textureHeight: 256,
+          textureCenterOffsetX: 0,
+          textureCenterOffsetY: 0,
+          valid: true,
+        },
+      ],
     };
 
     expect(getRenderSceneSyncPlan(scene, previewScene)).toEqual({

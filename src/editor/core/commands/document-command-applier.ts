@@ -157,6 +157,15 @@ export function applyWorldDocumentCommand(
         explicitLinks: document.explicitLinks.filter((link) => link.id !== linkId),
       });
     }
+    case "batch": {
+      let nextDocument = document;
+
+      for (const nestedCommand of command.payload.commands) {
+        nextDocument = applyWorldDocumentCommand(nextDocument, nestedCommand);
+      }
+
+      return nextDocument;
+    }
     default: {
       return document;
     }

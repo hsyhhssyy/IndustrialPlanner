@@ -17,6 +17,20 @@ describe("canvas panel interaction router", () => {
         currentMode: createSelectInteractionMode(),
         phase: "edit",
         selectionModifierActive: false,
+        selection: ["filler-1", "reactor-1"],
+        target: {
+          kind: "entity",
+          entityId: "filler-1",
+          selected: true,
+        },
+      }),
+    ).toBe("filler-1");
+
+    expect(
+      resolveSelectedEntityMoveCandidate({
+        currentMode: createSelectInteractionMode(),
+        phase: "edit",
+        selectionModifierActive: false,
         selection: ["filler-1"],
         target: {
           kind: "entity",
