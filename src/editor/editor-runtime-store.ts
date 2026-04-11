@@ -88,6 +88,11 @@ function cloneEditorSession(session: EditorSession): EditorSession {
           gridPoint: {
             ...session.moveDraft.gridPoint,
           },
+          rotationCenterCells: session.moveDraft.rotationCenterCells
+            ? {
+                ...session.moveDraft.rotationCenterCells,
+              }
+            : undefined,
           anchorWorldOffset: {
             ...session.moveDraft.anchorWorldOffset,
           },
@@ -99,6 +104,11 @@ function cloneEditorSession(session: EditorSession): EditorSession {
             gridPoint: {
               ...entity.gridPoint,
             },
+            centerCells: entity.centerCells
+              ? {
+                  ...entity.centerCells,
+                }
+              : undefined,
           })),
         }
       : null,
@@ -237,6 +247,11 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
             gridPoint: {
               ...session.moveDraft.gridPoint,
             },
+            rotationCenterCells: session.moveDraft.rotationCenterCells
+              ? {
+                  ...session.moveDraft.rotationCenterCells,
+                }
+              : undefined,
             anchorWorldOffset: {
               ...session.moveDraft.anchorWorldOffset,
             },
@@ -248,6 +263,11 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
               gridPoint: {
                 ...entity.gridPoint,
               },
+              centerCells: entity.centerCells
+                ? {
+                    ...entity.centerCells,
+                  }
+                : undefined,
             })),
           }
         : null;

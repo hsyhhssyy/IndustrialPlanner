@@ -213,27 +213,22 @@ function resolveCenteredPlacementGridPoint(options: {
   );
 }
 
-function resolveRotatedMoveAnchorWorldOffset(options: {
-  anchorGridPoint: GridPoint;
+function rotateMoveAnchorWorldOffsetClockwise(options: {
   anchorWorldOffset: {
     x: number;
     y: number;
   };
-  nextAnchorGridPoint: GridPoint;
+  currentFootprint: {
+    width: number;
+    height: number;
+  };
   gridSize: number;
 }) {
-  const anchorWorldPoint = {
-    x:
-      options.anchorGridPoint.x * options.gridSize +
-      options.anchorWorldOffset.x,
-    y:
-      options.anchorGridPoint.y * options.gridSize +
-      options.anchorWorldOffset.y,
-  };
+  const currentHeightPx = options.currentFootprint.height * options.gridSize;
 
   return {
-    x: anchorWorldPoint.x - options.nextAnchorGridPoint.x * options.gridSize,
-    y: anchorWorldPoint.y - options.nextAnchorGridPoint.y * options.gridSize,
+    x: currentHeightPx - options.anchorWorldOffset.y,
+    y: options.anchorWorldOffset.x,
   };
 }
 
@@ -355,6 +350,11 @@ function cloneMoveDraftEntity(entity: MoveDraftEntityState): MoveDraftEntityStat
     gridPoint: {
       ...entity.gridPoint,
     },
+    centerCells: entity.centerCells
+      ? {
+          ...entity.centerCells,
+        }
+      : undefined,
   };
 }
 
@@ -384,6 +384,11 @@ function getMoveDraftBounds(
     })),
   );
 }
+
+type GridCenterCells = {
+  x: number;
+  y: number;
+};
 
 class EditorHostImpl implements EditorHost {
   private readonly core: EditorCore;
@@ -519,14 +524,23 @@ class EditorHostImpl implements EditorHost {
           .map((selectedEntityId) => document.entities[selectedEntityId])
           .filter((entity): entity is NonNullable<typeof entity> => Boolean(entity))
           .map(
-            (entity) =>
-              ({
+            (entity) => {
+              const definition = this.getDefinition(entity.definitionId);
+              const footprint = definition
+                ? getRotatedGridFootprint(definition.footprint, entity.rotation)
+                : null;
+
+              return {
                 entityId: entity.id,
                 originGridPoint: entity.position,
                 gridPoint: entity.position,
+                centerCells: footprint
+                  ? getGridFootprintCenterCells(entity.position, footprint)
+                  : undefined,
                 originRotation: entity.rotation,
                 rotation: entity.rotation,
-              }) satisfies MoveDraftEntityState,
+              } satisfies MoveDraftEntityState;
+            },
           );
 
     if (draftEntities.length === 0) {
@@ -543,6 +557,9 @@ class EditorHostImpl implements EditorHost {
     }
 
     const anchorGridPoint = resolvedAnchorEntity.gridPoint;
+    const rotationCenterCells =
+      existingDraft?.rotationCenterCells ??
+      this.resolveMoveDraftRotationCenterCells(draftEntities);
     const draft: MoveDraftState = {
       entityId,
       interactionMode: inputMode,
@@ -550,6 +567,7 @@ class EditorHostImpl implements EditorHost {
       gridPoint: resolvedAnchorEntity.gridPoint,
       rotation: resolvedAnchorEntity.rotation,
       valid: existingDraft?.valid ?? true,
+      rotationCenterCells: rotationCenterCells ?? undefined,
       anchorWorldOffset: {
         x:
           input.worldPoint.x -
@@ -593,8 +611,18 @@ class EditorHostImpl implements EditorHost {
     }
 
     const currentRotation = anchorEntity.rotation;
+    const currentFootprint = getRotatedGridFootprint(
+      resolvedAnchorEntity.definition.footprint,
+      currentRotation,
+    );
+    const gridSize = document.documentSettings.gridSize;
+    const currentAnchorWorldPoint = {
+      x: anchorEntity.gridPoint.x * gridSize + moveDraft.anchorWorldOffset.x,
+      y: anchorEntity.gridPoint.y * gridSize + moveDraft.anchorWorldOffset.y,
+    };
     const rotatedEntities = this.rotateMoveDraftEntitiesClockwise(
       resolvedEntities,
+      moveDraft.rotationCenterCells,
     );
     const nextAnchorEntity = rotatedEntities.find(
       (entity) => entity.entityId === moveDraft.entityId,
@@ -609,17 +637,37 @@ class EditorHostImpl implements EditorHost {
       gridPoint: nextAnchorEntity.gridPoint,
       rotation: nextAnchorEntity.rotation,
       valid: true,
-      anchorWorldOffset: resolveRotatedMoveAnchorWorldOffset({
-        anchorGridPoint: anchorEntity.gridPoint,
+      rotationCenterCells: moveDraft.rotationCenterCells,
+      anchorWorldOffset: rotateMoveAnchorWorldOffsetClockwise({
         anchorWorldOffset: moveDraft.anchorWorldOffset,
-        nextAnchorGridPoint: nextAnchorEntity.gridPoint,
-        gridSize: document.documentSettings.gridSize,
+        currentFootprint,
+        gridSize,
       }),
       entities: rotatedEntities,
     } satisfies MoveDraftState;
-    const evaluation = this.evaluateMoveDraft(rotatedDraft, resolvedEntities);
+    const reanchoredDraft = this.createMoveDraftFromWorldInput(
+      document,
+      rotatedDraft,
+      {
+        worldPoint: currentAnchorWorldPoint,
+        gridPoint: {
+          x: Math.floor(currentAnchorWorldPoint.x / gridSize),
+          y: Math.floor(currentAnchorWorldPoint.y / gridSize),
+        },
+      },
+    );
+    const resolvedRotatedEntities = this.resolveMoveDraftEntities(reanchoredDraft);
+
+    if (!resolvedRotatedEntities) {
+      return false;
+    }
+
+    const evaluation = this.evaluateMoveDraft(
+      reanchoredDraft,
+      resolvedRotatedEntities,
+    );
     const resolvedDraft = {
-      ...rotatedDraft,
+      ...reanchoredDraft,
       valid: evaluation.invalidReason === null,
     } satisfies MoveDraftState;
 
@@ -1341,6 +1389,7 @@ class EditorHostImpl implements EditorHost {
 
   private rotateMoveDraftEntitiesClockwise(
     entities: readonly ResolvedMoveDraftEntity[],
+    rotationCenterCells?: GridCenterCells,
   ): MoveDraftEntityState[] {
     const bounds = getMoveDraftBounds(entities);
 
@@ -1348,7 +1397,8 @@ class EditorHostImpl implements EditorHost {
       return entities.map((entity) => cloneMoveDraftEntity(entity.entity));
     }
 
-    const rotationCenterCells = getGridBoundsCenterCells(bounds);
+    const resolvedRotationCenterCells =
+      rotationCenterCells ?? getGridBoundsCenterCells(bounds);
 
     return entities.map(({ entity, definition }) => {
       const currentFootprint = getRotatedGridFootprint(
@@ -1360,13 +1410,17 @@ class EditorHostImpl implements EditorHost {
         definition.footprint,
         nextRotation,
       );
+      const currentCenterCells =
+        entity.centerCells ??
+        getGridFootprintCenterCells(entity.gridPoint, currentFootprint);
       const rotatedCenterCells = rotateGridCenterCellsClockwise({
-        centerCells: getGridFootprintCenterCells(entity.gridPoint, currentFootprint),
-        rotationCenterCells,
+        centerCells: currentCenterCells,
+        rotationCenterCells: resolvedRotationCenterCells,
       });
 
       return {
         ...cloneMoveDraftEntity(entity),
+        centerCells: rotatedCenterCells,
         gridPoint: resolveCenteredGridPoint(rotatedCenterCells, nextFootprint),
         rotation: nextRotation,
       };
@@ -1403,32 +1457,110 @@ class EditorHostImpl implements EditorHost {
     input: CanvasWorldInput,
   ): MoveDraftState {
     const { gridSize } = document.documentSettings;
-    const anchorEntity = getMoveDraftEntity(moveDraft, moveDraft.entityId);
+    const resolvedEntities = this.resolveMoveDraftEntities(moveDraft);
+    const resolvedAnchorEntity = resolvedEntities?.find(
+      (entity) => entity.entity.entityId === moveDraft.entityId,
+    );
 
-    if (!anchorEntity) {
+    if (!resolvedEntities || !resolvedAnchorEntity) {
       return moveDraft;
     }
 
-    const draftGridPoint = {
-      x: Math.floor((input.worldPoint.x - moveDraft.anchorWorldOffset.x) / gridSize),
-      y: Math.floor((input.worldPoint.y - moveDraft.anchorWorldOffset.y) / gridSize),
-    } satisfies GridPoint;
-    const deltaX = draftGridPoint.x - anchorEntity.gridPoint.x;
-    const deltaY = draftGridPoint.y - anchorEntity.gridPoint.y;
-    const nextEntities = moveDraft.entities.map((entity) => ({
-      ...cloneMoveDraftEntity(entity),
-      gridPoint: {
-        x: entity.gridPoint.x + deltaX,
-        y: entity.gridPoint.y + deltaY,
-      },
-    }));
+    const currentFootprint = getRotatedGridFootprint(
+      resolvedAnchorEntity.definition.footprint,
+      resolvedAnchorEntity.entity.rotation,
+    );
+    const currentAnchorCenterCells =
+      resolvedAnchorEntity.entity.centerCells ??
+      getGridFootprintCenterCells(
+        resolvedAnchorEntity.entity.gridPoint,
+        currentFootprint,
+      );
+    const currentAnchorTopLeftCells = {
+      x: currentAnchorCenterCells.x - currentFootprint.width / 2,
+      y: currentAnchorCenterCells.y - currentFootprint.height / 2,
+    };
+    const targetAnchorTopLeftCells = {
+      x: (input.worldPoint.x - moveDraft.anchorWorldOffset.x) / gridSize,
+      y: (input.worldPoint.y - moveDraft.anchorWorldOffset.y) / gridSize,
+    };
+    const deltaX = targetAnchorTopLeftCells.x - currentAnchorTopLeftCells.x;
+    const deltaY = targetAnchorTopLeftCells.y - currentAnchorTopLeftCells.y;
+    const nextEntities = resolvedEntities.map(({ entity, definition }) => {
+      const currentEntityFootprint = getRotatedGridFootprint(
+        definition.footprint,
+        entity.rotation,
+      );
+      const currentCenterCells =
+        entity.centerCells ??
+        getGridFootprintCenterCells(entity.gridPoint, currentEntityFootprint);
+      const nextCenterCells = {
+        x: currentCenterCells.x + deltaX,
+        y: currentCenterCells.y + deltaY,
+      };
+
+      return {
+        ...cloneMoveDraftEntity(entity),
+        centerCells: nextCenterCells,
+        gridPoint: resolveCenteredGridPoint(
+          nextCenterCells,
+          currentEntityFootprint,
+        ),
+      } satisfies MoveDraftEntityState;
+    });
+    const nextAnchorEntity = nextEntities.find(
+      (entity) => entity.entityId === moveDraft.entityId,
+    );
+
+    if (!nextAnchorEntity) {
+      return moveDraft;
+    }
 
     return {
       ...moveDraft,
-      gridPoint: draftGridPoint,
+      gridPoint: nextAnchorEntity.gridPoint,
       valid: true,
+      rotationCenterCells: moveDraft.rotationCenterCells
+        ? {
+            x: moveDraft.rotationCenterCells.x + deltaX,
+            y: moveDraft.rotationCenterCells.y + deltaY,
+          }
+        : undefined,
       entities: nextEntities,
     };
+  }
+
+  private resolveMoveDraftRotationCenterCells(
+    entities: readonly MoveDraftEntityState[],
+  ): GridCenterCells | null {
+    const { document } = this.core.getSnapshot();
+    const topology = this.getTopology();
+    const bounds = getGridBoundingBox(
+      entities
+        .map((entity) => {
+          const documentEntity = document.entities[entity.entityId];
+          const definition =
+            topology.entityViews[entity.entityId]?.definition ??
+            (documentEntity
+              ? this.getDefinition(documentEntity.definitionId)
+              : undefined);
+
+          if (!documentEntity || !definition) {
+            return null;
+          }
+
+          return {
+            position: entity.gridPoint,
+            footprint: getRotatedGridFootprint(
+              definition.footprint,
+              entity.rotation,
+            ),
+          };
+        })
+        .filter((area): area is NonNullable<typeof area> => area !== null),
+    );
+
+    return bounds ? getGridBoundsCenterCells(bounds) : null;
   }
 
   private evaluatePlacementPreview(

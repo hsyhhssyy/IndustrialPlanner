@@ -5,6 +5,10 @@ export interface MoveDraftEntityState {
   entityId: string;
   originGridPoint: GridPoint;
   gridPoint: GridPoint;
+  centerCells?: {
+    x: number;
+    y: number;
+  };
   originRotation: GridRotation;
   rotation: GridRotation;
 }
@@ -16,6 +20,10 @@ export interface MoveDraftState {
   gridPoint: GridPoint;
   rotation: GridRotation;
   valid: boolean;
+  rotationCenterCells?: {
+    x: number;
+    y: number;
+  };
   anchorWorldOffset: {
     x: number;
     y: number;
@@ -44,6 +52,8 @@ export function isSameMoveDraftState(
     left.originGridPoint.y === right.originGridPoint.y &&
     left.gridPoint.x === right.gridPoint.x &&
     left.gridPoint.y === right.gridPoint.y &&
+    left.rotationCenterCells?.x === right.rotationCenterCells?.x &&
+    left.rotationCenterCells?.y === right.rotationCenterCells?.y &&
     left.anchorWorldOffset.x === right.anchorWorldOffset.x &&
     left.anchorWorldOffset.y === right.anchorWorldOffset.y &&
     areMoveDraftEntitiesEqual(left.entities, right.entities)
@@ -77,7 +87,9 @@ function areMoveDraftEntitiesEqual(
       leftEntity.originGridPoint.x !== rightEntity.originGridPoint.x ||
       leftEntity.originGridPoint.y !== rightEntity.originGridPoint.y ||
       leftEntity.gridPoint.x !== rightEntity.gridPoint.x ||
-      leftEntity.gridPoint.y !== rightEntity.gridPoint.y
+      leftEntity.gridPoint.y !== rightEntity.gridPoint.y ||
+      leftEntity.centerCells?.x !== rightEntity.centerCells?.x ||
+      leftEntity.centerCells?.y !== rightEntity.centerCells?.y
     ) {
       return false;
     }

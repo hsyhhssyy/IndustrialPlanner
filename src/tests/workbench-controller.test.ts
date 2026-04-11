@@ -297,6 +297,52 @@ function resolveClockwiseRotatedSelectionState(
   });
 }
 
+function expectEntitiesToMatchTranslatedRotation(
+  actualEntities: ReadonlyArray<{
+    entityId: string;
+    gridPoint: { x: number; y: number };
+    rotation: GridRotation;
+  }>,
+  expectedEntities: ReadonlyArray<{
+    entityId: string;
+    position: { x: number; y: number };
+    rotation: GridRotation;
+  }>,
+) {
+  const actualById = new Map(
+    actualEntities.map((entity) => [entity.entityId, entity] as const),
+  );
+  const firstExpected = expectedEntities[0];
+
+  if (!firstExpected) {
+    throw new Error("Missing expected rotated entity state");
+  }
+
+  const firstActual = actualById.get(firstExpected.entityId);
+
+  if (!firstActual) {
+    throw new Error(`Missing actual entity ${firstExpected.entityId}`);
+  }
+
+  const translation = {
+    x: firstActual.gridPoint.x - firstExpected.position.x,
+    y: firstActual.gridPoint.y - firstExpected.position.y,
+  };
+
+  for (const expectedEntity of expectedEntities) {
+    expect(actualById.get(expectedEntity.entityId)).toMatchObject({
+      entityId: expectedEntity.entityId,
+      gridPoint: {
+        x: expectedEntity.position.x + translation.x,
+        y: expectedEntity.position.y + translation.y,
+      },
+      rotation: expectedEntity.rotation,
+    });
+  }
+
+  return translation;
+}
+
 describe("WorkbenchController scaffold", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -1218,42 +1264,37 @@ describe("WorkbenchController scaffold", () => {
     expect(definition).toBeTruthy();
 
     await controller.selectEntity("filler-1", "pointer");
+    const pointerScreenPoint = toScreenPointForGrid(controller, { x: 20, y: 10 });
     controller.beginMoveFromScreenPoint(
       "filler-1",
       toScreenPointForEntity(controller, "filler-1"),
       "pointer",
     );
-    controller.updateMoveDraftFromScreenPoint(
-      toScreenPointForGrid(controller, { x: 20, y: 10 }),
-    );
+    controller.updateMoveDraftFromScreenPoint(pointerScreenPoint);
     controller.rotateMoveClockwise();
-
-    const currentFootprint = getRotatedGridFootprint(
-      definition!.footprint,
-      before!.rotation,
-    );
-    const nextFootprint = getRotatedGridFootprint(definition!.footprint, 180);
-    const expectedGridPoint = resolveCenteredRotatedGridPoint({
-      gridPoint: { x: 20, y: 10 },
-      currentFootprint,
-      nextFootprint,
-    });
     const duringMove = readWorkbenchState(controller);
 
     expect(duringMove.session.moveDraft).toMatchObject({
       entityId: "filler-1",
-      gridPoint: expectedGridPoint,
       rotation: 180,
       valid: true,
     });
+
+    const rotatedDraft = duringMove.session.moveDraft;
+
+    expect(rotatedDraft).toBeTruthy();
+
+    controller.updateMoveDraftFromScreenPoint(pointerScreenPoint);
+
+    expect(readWorkbenchState(controller).session.moveDraft).toMatchObject(rotatedDraft!);
 
     await controller.confirmMovePreview();
 
     const after = readWorkbenchState(controller);
 
     expect(after.document.entities["filler-1"]).toMatchObject({
-      position: expectedGridPoint,
-      rotation: 180,
+      position: rotatedDraft!.gridPoint,
+      rotation: rotatedDraft!.rotation,
     });
 
     await controller.undo();
@@ -1285,22 +1326,23 @@ describe("WorkbenchController scaffold", () => {
 
     const duringMove = readWorkbenchState(controller);
 
-    expect(duringMove.session.moveDraft?.entities).toMatchObject(
-      expectedDraftState.map((entity) => ({
-        entityId: entity.entityId,
-        gridPoint: entity.position,
-        rotation: entity.rotation,
-      })),
+    const rotatedEntities = duringMove.session.moveDraft?.entities;
+
+    expect(rotatedEntities).toBeTruthy();
+
+    expectEntitiesToMatchTranslatedRotation(
+      rotatedEntities!,
+      expectedDraftState,
     );
 
     await controller.confirmMovePreview();
 
     const after = readWorkbenchState(controller);
 
-    for (const expectedEntity of expectedDraftState) {
-      expect(after.document.entities[expectedEntity.entityId]).toMatchObject({
-        position: expectedEntity.position,
-        rotation: expectedEntity.rotation,
+    for (const draftEntity of rotatedEntities!) {
+      expect(after.document.entities[draftEntity.entityId]).toMatchObject({
+        position: draftEntity.gridPoint,
+        rotation: draftEntity.rotation,
       });
     }
 
@@ -1337,18 +1379,21 @@ describe("WorkbenchController scaffold", () => {
     const expectedAfterOneTurn = resolveClockwiseRotatedSelectionState(
       controller,
       entityIds,
-    ).map((entity) => ({
-      entityId: entity.entityId,
-      gridPoint: entity.position,
-      rotation: entity.rotation,
-    }));
+    );
 
     controller.rotateMoveClockwise();
+
+    const afterRotate = readWorkbenchState(controller).session.moveDraft;
+
+    expect(afterRotate?.entities).toBeTruthy();
+
+    expectEntitiesToMatchTranslatedRotation(afterRotate!.entities, expectedAfterOneTurn);
+
     controller.updateMoveDraftFromScreenPoint(pointerScreenPoint);
 
     const afterOneTurn = readWorkbenchState(controller).session.moveDraft;
 
-    expect(afterOneTurn?.entities).toMatchObject(expectedAfterOneTurn);
+    expect(afterOneTurn).toMatchObject(afterRotate!);
 
     controller.rotateMoveClockwise();
     controller.updateMoveDraftFromScreenPoint(pointerScreenPoint);
@@ -1367,6 +1412,85 @@ describe("WorkbenchController scaffold", () => {
       })),
     );
     expect(afterFourTurns?.anchorWorldOffset).toEqual(initialDraft!.anchorWorldOffset);
+
+    controller.dispose();
+  });
+
+  it("returns multi-entity move drafts to the original state after four rotates without requiring pointer movement", async () => {
+    const controller = createWorkbenchController();
+
+    await controller.selectEntity("reactor-1", "pointer");
+    await controller.selectEntity("filler-1", "pointer", "toggle");
+
+    controller.beginMoveFromScreenPoint(
+      "reactor-1",
+      toScreenPointInsideEntity(controller, "reactor-1"),
+      "pointer",
+    );
+
+    const initialDraft = readWorkbenchState(controller).session.moveDraft;
+
+    expect(initialDraft).toBeTruthy();
+
+    controller.rotateMoveClockwise();
+    controller.rotateMoveClockwise();
+    controller.rotateMoveClockwise();
+    controller.rotateMoveClockwise();
+
+    const afterFourTurns = readWorkbenchState(controller).session.moveDraft;
+
+    expect(afterFourTurns?.entities).toMatchObject(
+      initialDraft!.entities.map((entity) => ({
+        entityId: entity.entityId,
+        gridPoint: entity.gridPoint,
+        rotation: entity.rotation,
+      })),
+    );
+    expect(afterFourTurns?.anchorWorldOffset).toEqual(initialDraft!.anchorWorldOffset);
+
+    controller.dispose();
+  });
+
+  it("returns an asymmetric multi-entity move draft to the original state after four rotates", async () => {
+    const controller = createWorkbenchController();
+    const entityIds = [
+      "storage-1",
+      "bus-source-1",
+      "reactor-1",
+      "filler-1",
+      "dark-outlet-1",
+    ] as const;
+
+    await controller.selectEntity(entityIds[0], "pointer");
+
+    for (const entityId of entityIds.slice(1)) {
+      await controller.selectEntity(entityId, "pointer", "toggle");
+    }
+
+    controller.beginMoveFromScreenPoint(
+      "reactor-1",
+      toScreenPointInsideEntity(controller, "reactor-1"),
+      "pointer",
+    );
+
+    const initialDraft = readWorkbenchState(controller).session.moveDraft;
+
+    expect(initialDraft).toBeTruthy();
+
+    controller.rotateMoveClockwise();
+    controller.rotateMoveClockwise();
+    controller.rotateMoveClockwise();
+    controller.rotateMoveClockwise();
+
+    const afterFourTurns = readWorkbenchState(controller).session.moveDraft;
+
+    expect(afterFourTurns?.entities).toMatchObject(
+      initialDraft!.entities.map((entity) => ({
+        entityId: entity.entityId,
+        gridPoint: entity.gridPoint,
+        rotation: entity.rotation,
+      })),
+    );
 
     controller.dispose();
   });
