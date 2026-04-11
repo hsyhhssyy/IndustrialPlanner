@@ -166,6 +166,41 @@ function toScreenPointForEntity(
   };
 }
 
+function toScreenPointInsideEntity(
+  controller: ReturnType<typeof createWorkbenchController>,
+  entityId: string,
+) {
+  const snapshot = readWorkbenchState(controller);
+  const entity = snapshot.document.entities[entityId];
+
+  if (!entity) {
+    throw new Error(`Missing entity ${entityId}`);
+  }
+
+  const definition = getStage1EntityDefinition(
+    snapshot.registry,
+    entity.definitionId,
+  );
+
+  if (!definition) {
+    throw new Error(`Missing definition ${entity.definitionId}`);
+  }
+
+  const gridSize = snapshot.document.documentSettings.gridSize;
+  const footprint = getRotatedGridFootprint(definition.footprint, entity.rotation);
+  const localOffsetX = Math.max(1, Math.floor((footprint.width * gridSize) / 3));
+  const localOffsetY = Math.max(1, Math.floor((footprint.height * gridSize) / 2));
+
+  return {
+    x:
+      (entity.position.x * gridSize + localOffsetX - snapshot.canvasView.offset.x) *
+      snapshot.canvasView.zoom,
+    y:
+      (entity.position.y * gridSize + localOffsetY - snapshot.canvasView.offset.y) *
+      snapshot.canvasView.zoom,
+  };
+}
+
 function resolveEntityBounds(
   controller: ReturnType<typeof createWorkbenchController>,
   entityIds: string[],
@@ -1276,6 +1311,62 @@ describe("WorkbenchController scaffold", () => {
     for (let index = 0; index < entityIds.length; index += 1) {
       expect(restored.document.entities[entityIds[index]!]).toEqual(before[index]);
     }
+
+    controller.dispose();
+  });
+
+  it("keeps multi-entity move drafts anchored to the pointer across rotate and returns after four turns", async () => {
+    const controller = createWorkbenchController();
+    const entityIds = ["reactor-1", "filler-1"];
+
+    await controller.selectEntity("reactor-1", "pointer");
+    await controller.selectEntity("filler-1", "pointer", "toggle");
+
+    const pointerScreenPoint = toScreenPointInsideEntity(controller, "reactor-1");
+
+    controller.beginMoveFromScreenPoint(
+      "reactor-1",
+      pointerScreenPoint,
+      "pointer",
+    );
+
+    const initialDraft = readWorkbenchState(controller).session.moveDraft;
+
+    expect(initialDraft).toBeTruthy();
+
+    const expectedAfterOneTurn = resolveClockwiseRotatedSelectionState(
+      controller,
+      entityIds,
+    ).map((entity) => ({
+      entityId: entity.entityId,
+      gridPoint: entity.position,
+      rotation: entity.rotation,
+    }));
+
+    controller.rotateMoveClockwise();
+    controller.updateMoveDraftFromScreenPoint(pointerScreenPoint);
+
+    const afterOneTurn = readWorkbenchState(controller).session.moveDraft;
+
+    expect(afterOneTurn?.entities).toMatchObject(expectedAfterOneTurn);
+
+    controller.rotateMoveClockwise();
+    controller.updateMoveDraftFromScreenPoint(pointerScreenPoint);
+    controller.rotateMoveClockwise();
+    controller.updateMoveDraftFromScreenPoint(pointerScreenPoint);
+    controller.rotateMoveClockwise();
+    controller.updateMoveDraftFromScreenPoint(pointerScreenPoint);
+
+    const afterFourTurns = readWorkbenchState(controller).session.moveDraft;
+
+    expect(afterFourTurns?.entities).toMatchObject(
+      initialDraft!.entities.map((entity) => ({
+        entityId: entity.entityId,
+        gridPoint: entity.gridPoint,
+        rotation: entity.rotation,
+      })),
+    );
+    expect(afterFourTurns?.anchorWorldOffset).toEqual(initialDraft!.anchorWorldOffset);
 
     controller.dispose();
   });

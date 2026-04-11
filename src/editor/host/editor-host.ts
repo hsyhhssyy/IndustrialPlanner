@@ -213,22 +213,27 @@ function resolveCenteredPlacementGridPoint(options: {
   );
 }
 
-function rotateMoveAnchorWorldOffsetClockwise(options: {
+function resolveRotatedMoveAnchorWorldOffset(options: {
+  anchorGridPoint: GridPoint;
   anchorWorldOffset: {
     x: number;
     y: number;
   };
-  currentFootprint: {
-    width: number;
-    height: number;
-  };
+  nextAnchorGridPoint: GridPoint;
   gridSize: number;
 }) {
-  const currentHeightPx = options.currentFootprint.height * options.gridSize;
+  const anchorWorldPoint = {
+    x:
+      options.anchorGridPoint.x * options.gridSize +
+      options.anchorWorldOffset.x,
+    y:
+      options.anchorGridPoint.y * options.gridSize +
+      options.anchorWorldOffset.y,
+  };
 
   return {
-    x: currentHeightPx - options.anchorWorldOffset.y,
-    y: options.anchorWorldOffset.x,
+    x: anchorWorldPoint.x - options.nextAnchorGridPoint.x * options.gridSize,
+    y: anchorWorldPoint.y - options.nextAnchorGridPoint.y * options.gridSize,
   };
 }
 
@@ -588,10 +593,6 @@ class EditorHostImpl implements EditorHost {
     }
 
     const currentRotation = anchorEntity.rotation;
-    const currentFootprint = getRotatedGridFootprint(
-      resolvedAnchorEntity.definition.footprint,
-      currentRotation,
-    );
     const rotatedEntities = this.rotateMoveDraftEntitiesClockwise(
       resolvedEntities,
     );
@@ -608,9 +609,10 @@ class EditorHostImpl implements EditorHost {
       gridPoint: nextAnchorEntity.gridPoint,
       rotation: nextAnchorEntity.rotation,
       valid: true,
-      anchorWorldOffset: rotateMoveAnchorWorldOffsetClockwise({
+      anchorWorldOffset: resolveRotatedMoveAnchorWorldOffset({
+        anchorGridPoint: anchorEntity.gridPoint,
         anchorWorldOffset: moveDraft.anchorWorldOffset,
-        currentFootprint,
+        nextAnchorGridPoint: nextAnchorEntity.gridPoint,
         gridSize: document.documentSettings.gridSize,
       }),
       entities: rotatedEntities,
