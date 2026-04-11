@@ -840,6 +840,25 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("toggles desktop edit selection through the shared selection action chain", async () => {
+    const controller = createWorkbenchController();
+
+    await controller.selectEntity("filler-1", "pointer");
+    await controller.selectEntity("reactor-1", "pointer", "toggle");
+    await controller.selectEntity("filler-1", "pointer", "toggle");
+
+    expect(readWorkbenchState(controller).session.selection).toEqual(["reactor-1"]);
+
+    await controller.selectEntity("dark-outlet-1", "pointer", "toggle");
+
+    const snapshot = readWorkbenchState(controller);
+
+    expect(snapshot.session.selection).toEqual(["reactor-1", "dark-outlet-1"]);
+    expect(snapshot.session.selectionInputMode).toBe("pointer");
+
+    controller.dispose();
+  });
+
   it("rotates the pointer selection through the shared selection action chain", async () => {
     const controller = createWorkbenchController();
     const before = readWorkbenchState(controller).document.entities["filler-1"];

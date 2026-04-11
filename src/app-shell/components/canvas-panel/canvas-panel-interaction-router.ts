@@ -28,6 +28,7 @@ export interface ResolveCanvasPointerDownRouteOptions {
   button: number;
   currentMode: CurrentInteractionMode;
   phase: WorkbenchPhase;
+  selectionModifierActive: boolean;
   screenPoint: CanvasPoint;
   selection: readonly string[];
   target: CanvasInteractionTarget;
@@ -82,12 +83,14 @@ export function isPointInsideScreenBox(
 export function resolveSelectedEntityMoveCandidate(options: {
   currentMode: CurrentInteractionMode;
   phase: WorkbenchPhase;
+  selectionModifierActive?: boolean;
   selection: readonly string[];
   target: CanvasInteractionTarget;
 }): string | null {
   if (
     options.phase !== "edit" ||
     options.currentMode.key !== "select" ||
+    options.selectionModifierActive === true ||
     options.selection.length !== 1
   ) {
     return null;
@@ -176,11 +179,13 @@ async function dispatchCanvasTap(options: {
   interactionMode: PlacementInteractionMode;
   phase: WorkbenchPhase;
   screenPoint: CanvasPoint;
+  selectionModifierActive: boolean;
 }): Promise<void> {
   const target = options.controller.getCanvasInteractionTarget(options.screenPoint);
   const intent = resolveCanvasPanelTapIntent({
     phase: options.phase,
     currentMode: options.currentMode,
+    selectionModifierActive: options.selectionModifierActive,
     target,
   });
   const placementMode = isPlacementInteractionMode(options.currentMode)
@@ -201,6 +206,13 @@ async function dispatchCanvasTap(options: {
   switch (intent.kind) {
     case "select-edit-entity":
       await options.controller.selectEntity(intent.entityId, options.interactionMode);
+      return;
+    case "toggle-edit-entity":
+      await options.controller.selectEntity(
+        intent.entityId,
+        options.interactionMode,
+        "toggle",
+      );
       return;
     case "clear-edit-selection":
       await options.controller.clearSelection();
@@ -233,6 +245,7 @@ export async function routeCanvasGestureEvent(
         ),
         phase: options.phase,
         screenPoint: options.event.screenPoint,
+        selectionModifierActive: options.event.selectionModifierActive,
       });
       return;
     case "hover":

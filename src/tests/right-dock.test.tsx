@@ -34,4 +34,19 @@ describe("RightDock inspector split", () => {
 
     controller.dispose();
   });
+
+  it("renders a dedicated summary instead of single-entity details for multi-selection", async () => {
+    const controller = createWorkbenchController();
+
+    controller.setLocale("en-US");
+    await controller.selectEntity("reactor-1", "pointer");
+    await controller.selectEntity("filler-1", "pointer", "toggle");
+    const markup = renderToStaticMarkup(<RightDock controller={controller} />);
+
+    expect(markup).toContain("2 selected");
+    expect(markup).toContain("Multiple selection currently shows shared actions only");
+    expect(markup).not.toContain("Config Fields");
+
+    controller.dispose();
+  });
 });

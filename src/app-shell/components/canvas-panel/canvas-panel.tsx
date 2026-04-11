@@ -52,6 +52,13 @@ const TOUCH_SELECTION_TOOLBAR_WIDTH_PX = 120;
 const TOUCH_ACTION_TOOLBAR_HEIGHT_PX = 56;
 const TOUCH_ACTION_TOOLBAR_GAP_PX = 12;
 
+function isSelectionModifierActive(event: {
+  ctrlKey: boolean;
+  metaKey: boolean;
+}): boolean {
+  return event.ctrlKey || event.metaKey;
+}
+
 function normalizeWheelDelta(event: WheelEvent<HTMLDivElement>): number {
   switch (event.deltaMode) {
     case WheelEvent.DOM_DELTA_LINE:
@@ -433,6 +440,7 @@ export const CanvasPanel = observer(function CanvasPanel({
       });
       const result = gestureSessionRef.current!.handlePointerDown({
         button: event.button,
+        selectionModifierActive: false,
         point,
         pointerId: event.pointerId,
         pointerType: event.pointerType,
@@ -447,6 +455,7 @@ export const CanvasPanel = observer(function CanvasPanel({
       button: event.button,
       currentMode: editor.session.currentMode,
       phase: ui.phase,
+      selectionModifierActive: isSelectionModifierActive(event),
       screenPoint: point,
       selection: editor.session.selection,
       target:
@@ -461,6 +470,7 @@ export const CanvasPanel = observer(function CanvasPanel({
 
     const result = gestureSessionRef.current!.handlePointerDown({
       button: event.button,
+      selectionModifierActive: isSelectionModifierActive(event),
       point,
       pointerId: event.pointerId,
       pointerType: event.pointerType,
@@ -511,6 +521,8 @@ export const CanvasPanel = observer(function CanvasPanel({
     const result = gestureSessionRef.current!.handlePointerUp({
       anchoredPlacementActive,
       button: event.button,
+      selectionModifierActive:
+        event.pointerType === "touch" ? false : isSelectionModifierActive(event),
       point: toViewportPoint(event.clientX, event.clientY),
       pointerId: event.pointerId,
       pointerType: event.pointerType,

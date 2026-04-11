@@ -64,6 +64,7 @@ export type CanvasGestureEvent =
       source: PlacementInteractionMode;
       pointerId: number;
       screenPoint: CanvasPoint;
+      selectionModifierActive: boolean;
     }
   | {
       kind: "hover";
@@ -192,6 +193,7 @@ export interface CanvasGestureSessionSnapshot {
 
 export interface CanvasGestureSessionPointerDownInput {
   button: number;
+  selectionModifierActive?: boolean;
   point: CanvasPoint;
   pointerId: number;
   pointerType: string;
@@ -221,6 +223,7 @@ export interface CanvasGestureSessionPointerLeaveInput {
 export interface CanvasGestureSessionPointerUpInput {
   anchoredPlacementActive: boolean;
   button: number;
+  selectionModifierActive?: boolean;
   point: CanvasPoint;
   pointerId: number;
   pointerType: string;
@@ -871,6 +874,7 @@ export function createCanvasGestureSession(): CanvasGestureSession {
           source: "touch",
           pointerId: input.pointerId,
           screenPoint: input.point,
+          selectionModifierActive: false,
         });
       }
 
@@ -941,6 +945,7 @@ export function createCanvasGestureSession(): CanvasGestureSession {
           source: "pointer",
           pointerId: input.pointerId,
           screenPoint: input.point,
+          selectionModifierActive: input.selectionModifierActive ?? false,
         });
       }
 

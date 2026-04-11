@@ -22,6 +22,10 @@ export interface RightDockProps {
   controller: WorkbenchController;
 }
 
+function formatMultiSelectionLabel(locale: "zh-CN" | "en-US", count: number): string {
+  return locale === "zh-CN" ? `已选中 ${count} 个对象` : `${count} selected`;
+}
+
 export const RightDock = observer(function RightDock({
   controller,
 }: RightDockProps) {
@@ -36,11 +40,13 @@ export const RightDock = observer(function RightDock({
   }
 
   const t = createTranslator(ui.locale);
+  const activeSelection =
+    ui.phase === "simulate" ? simulation.selection : editor.session.selection;
+  const hasSingleSelection = activeSelection.length === 1;
+  const hasMultiSelection = activeSelection.length > 1;
 
   const selectedEntityId =
-    ui.phase === "simulate"
-      ? simulation.selection[0] ?? null
-      : editor.session.selection[0] ?? null;
+    hasSingleSelection ? activeSelection[0] ?? null : null;
   const selectedEntity = selectedEntityId
     ? document.entities[selectedEntityId]
     : null;
@@ -166,7 +172,39 @@ export const RightDock = observer(function RightDock({
               <div className="card-header">
                 <h3>{t("rightDock.selection")}</h3>
               </div>
-              {ui.phase === "edit" ? (
+              {hasMultiSelection ? (
+                <div className="stack">
+                  <article className="definition-card">
+                    <h4>{formatMultiSelectionLabel(ui.locale, activeSelection.length)}</h4>
+                    <p>{t("label.multiSelectionSummary")}</p>
+                  </article>
+                  {ui.phase === "edit" ? (
+                    <div className="cluster">
+                      <div className="card-header card-subheader">
+                        <h4>{t("section.quickActions")}</h4>
+                      </div>
+                      <div className="inspector-option-grid">
+                        <button
+                          onClick={() => {
+                            void controller.removeSelection();
+                          }}
+                          type="button"
+                        >
+                          {t("action.deleteSelection")}
+                        </button>
+                        <button
+                          onClick={() => {
+                            void controller.removeSelectionLinks();
+                          }}
+                          type="button"
+                        >
+                          {t("action.removeLinks")}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : ui.phase === "edit" ? (
                 <EditSelectionInspector
                   context={selectionContext}
                   controller={controller}

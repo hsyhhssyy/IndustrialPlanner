@@ -23,6 +23,10 @@ import {
   type PlacementDisplayTool,
 } from "@/editor/contracts/interaction-mode";
 import type { MoveDraftState } from "@/editor/contracts/move-draft";
+import {
+  resolveNextSelection,
+  type EditorSelectionUpdateMode,
+} from "@/editor/contracts/selection";
 import type {
   PlacementInteractionMode,
   PlacementPreviewState,
@@ -81,6 +85,7 @@ export interface EditorCore {
   selectEntity: (
     entityId: string | null,
     inputMode?: PlacementInteractionMode | null,
+    selectionMode?: EditorSelectionUpdateMode,
   ) => void;
   rotateSelectedEntityClockwise: (position?: GridPoint) => boolean;
   setLinkSourceEntityId: (entityId: string | null) => void;
@@ -273,11 +278,27 @@ class EditorCoreImpl implements EditorCore {
     inputMode: PlacementInteractionMode | null = entityId
       ? this.session.selectionInputMode
       : null,
+    selectionMode: EditorSelectionUpdateMode = "replace",
   ): void {
+    if (!entityId) {
+      this.session = {
+        ...this.session,
+        selection: [],
+        selectionInputMode: null,
+      };
+      return;
+    }
+
+    const nextSelection = resolveNextSelection(
+      this.session.selection,
+      entityId,
+      selectionMode,
+    );
+
     this.session = {
       ...this.session,
-      selection: entityId ? [entityId] : [],
-      selectionInputMode: entityId ? inputMode : null,
+      selection: nextSelection,
+      selectionInputMode: nextSelection.length > 0 ? inputMode : null,
     };
   }
 

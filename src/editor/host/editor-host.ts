@@ -17,6 +17,7 @@ import {
   isSameMoveDraftState,
   type MoveDraftState,
 } from "@/editor/contracts/move-draft";
+import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 import {
   isSamePlacementPreviewState,
 } from "@/editor/contracts/placement-preview";
@@ -224,6 +225,7 @@ export interface EditorHost {
   selectEntity: (
     entityId: string | null,
     inputMode?: PlacementInteractionMode | null,
+    selectionMode?: EditorSelectionUpdateMode,
   ) => void;
   rotateSelectedEntityClockwise: () => boolean;
   setLinkSourceEntityId: (entityId: string | null) => void;
@@ -936,8 +938,9 @@ class EditorHostImpl implements EditorHost {
   selectEntity(
     entityId: string | null,
     inputMode?: PlacementInteractionMode | null,
+    selectionMode: EditorSelectionUpdateMode = "replace",
   ): void {
-    this.core.selectEntity(entityId, inputMode);
+    this.core.selectEntity(entityId, inputMode, selectionMode);
   }
 
   rotateSelectedEntityClockwise(): boolean {

@@ -11,6 +11,7 @@ import type {
   InteractionModeKey,
   PlacementDisplayTool,
 } from "@/editor/contracts/interaction-mode";
+import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
 import type { EditorRuntimeStore } from "@/editor/editor-runtime-store";
 import type { AppLocale } from "@/i18n/messages";
@@ -79,6 +80,7 @@ export interface WorkbenchController {
   selectEntity: (
     entityId: string,
     inputMode?: PlacementInteractionMode | null,
+    selectionMode?: EditorSelectionUpdateMode,
   ) => Promise<void>;
   rotateSelectionClockwise: () => Promise<void>;
   clearSelection: () => Promise<void>;

@@ -13,6 +13,7 @@ describe("resolveCanvasPanelTapIntent", () => {
       resolveCanvasPanelTapIntent({
         phase: "simulate",
         currentMode: createSelectInteractionMode(),
+        selectionModifierActive: false,
         target: {
           kind: "entity",
           entityId: "reactor-1",
@@ -28,6 +29,7 @@ describe("resolveCanvasPanelTapIntent", () => {
       resolveCanvasPanelTapIntent({
         phase: "simulate",
         currentMode: createSelectInteractionMode(),
+        selectionModifierActive: false,
         target: {
           kind: "blank",
         },
@@ -43,6 +45,7 @@ describe("resolveCanvasPanelTapIntent", () => {
       resolveCanvasPanelTapIntent({
         phase: "edit",
         currentMode: createLinkInteractionMode(),
+        selectionModifierActive: false,
         target: {
           kind: "entity",
           entityId: "dark-outlet-1",
@@ -58,6 +61,7 @@ describe("resolveCanvasPanelTapIntent", () => {
       resolveCanvasPanelTapIntent({
         phase: "edit",
         currentMode: createLinkInteractionMode(),
+        selectionModifierActive: false,
         target: {
           kind: "blank",
         },
@@ -77,6 +81,7 @@ describe("resolveCanvasPanelTapIntent", () => {
           displayTool: "belt",
           inputMode: "pointer",
         }),
+        selectionModifierActive: false,
         target: {
           kind: "blank",
         },
@@ -93,6 +98,7 @@ describe("resolveCanvasPanelTapIntent", () => {
           displayTool: "belt",
           inputMode: "pointer",
         }),
+        selectionModifierActive: false,
         target: {
           kind: "entity",
           entityId: "filler-1",
@@ -113,6 +119,7 @@ describe("resolveCanvasPanelTapIntent", () => {
           displayTool: "place",
           inputMode: "touch",
         }),
+        selectionModifierActive: false,
         target: {
           kind: "blank",
         },
@@ -129,6 +136,7 @@ describe("resolveCanvasPanelTapIntent", () => {
           displayTool: "place",
           inputMode: "touch",
         }),
+        selectionModifierActive: false,
         target: {
           kind: "entity",
           entityId: "reactor-1",
@@ -148,6 +156,7 @@ describe("resolveCanvasPanelTapIntent", () => {
           entityId: "reactor-1",
           inputMode: "pointer",
         }),
+        selectionModifierActive: false,
         target: {
           kind: "blank",
         },
@@ -163,6 +172,7 @@ describe("resolveCanvasPanelTapIntent", () => {
           entityId: "reactor-1",
           inputMode: "touch",
         }),
+        selectionModifierActive: false,
         target: {
           kind: "entity",
           entityId: "reactor-1",
@@ -179,6 +189,7 @@ describe("resolveCanvasPanelTapIntent", () => {
       resolveCanvasPanelTapIntent({
         phase: "edit",
         currentMode: createSelectInteractionMode(),
+        selectionModifierActive: false,
         target: {
           kind: "entity",
           entityId: "storage-1",
@@ -194,12 +205,42 @@ describe("resolveCanvasPanelTapIntent", () => {
       resolveCanvasPanelTapIntent({
         phase: "edit",
         currentMode: createSelectInteractionMode(),
+        selectionModifierActive: false,
         target: {
           kind: "blank",
         },
       }),
     ).toEqual({
       kind: "clear-edit-selection",
+    });
+
+    expect(
+      resolveCanvasPanelTapIntent({
+        phase: "edit",
+        currentMode: createSelectInteractionMode(),
+        selectionModifierActive: true,
+        target: {
+          kind: "entity",
+          entityId: "storage-1",
+          selected: false,
+        },
+      }),
+    ).toEqual({
+      kind: "toggle-edit-entity",
+      entityId: "storage-1",
+    });
+
+    expect(
+      resolveCanvasPanelTapIntent({
+        phase: "edit",
+        currentMode: createSelectInteractionMode(),
+        selectionModifierActive: true,
+        target: {
+          kind: "blank",
+        },
+      }),
+    ).toEqual({
+      kind: "noop",
     });
   });
 });

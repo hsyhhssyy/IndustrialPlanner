@@ -16,6 +16,7 @@ describe("canvas panel interaction router", () => {
       resolveSelectedEntityMoveCandidate({
         currentMode: createSelectInteractionMode(),
         phase: "edit",
+        selectionModifierActive: false,
         selection: ["filler-1"],
         target: {
           kind: "entity",
@@ -34,6 +35,7 @@ describe("canvas panel interaction router", () => {
           rotation: 0,
         }),
         phase: "edit",
+        selectionModifierActive: false,
         selection: ["filler-1"],
         target: {
           kind: "entity",
@@ -50,6 +52,7 @@ describe("canvas panel interaction router", () => {
         button: 0,
         currentMode: createSelectInteractionMode(),
         phase: "edit",
+        selectionModifierActive: false,
         screenPoint: { x: 10, y: 10 },
         selection: ["filler-1"],
         target: {
@@ -68,6 +71,7 @@ describe("canvas panel interaction router", () => {
         button: 2,
         currentMode: createSelectInteractionMode(),
         phase: "edit",
+        selectionModifierActive: false,
         screenPoint: { x: 10, y: 10 },
         selection: [],
         target: { kind: "blank" },
@@ -79,6 +83,7 @@ describe("canvas panel interaction router", () => {
         button: 1,
         currentMode: createSelectInteractionMode(),
         phase: "edit",
+        selectionModifierActive: false,
         screenPoint: { x: 10, y: 10 },
         selection: [],
         target: { kind: "blank" },
@@ -90,11 +95,31 @@ describe("canvas panel interaction router", () => {
         button: 4,
         currentMode: createSelectInteractionMode(),
         phase: "edit",
+        selectionModifierActive: false,
         screenPoint: { x: 10, y: 10 },
         selection: [],
         target: { kind: "blank" },
       }),
     ).toEqual({ kind: "ignore" });
+
+    expect(
+      resolveCanvasPointerDownRoute({
+        button: 0,
+        currentMode: createSelectInteractionMode(),
+        phase: "edit",
+        selectionModifierActive: true,
+        screenPoint: { x: 10, y: 10 },
+        selection: ["filler-1"],
+        target: {
+          kind: "entity",
+          entityId: "filler-1",
+          selected: true,
+        },
+      }),
+    ).toEqual({
+      kind: "primary",
+      moveEntityId: null,
+    });
   });
 
   it("routes touch down to placement, move, or gesture based on current affordance", () => {

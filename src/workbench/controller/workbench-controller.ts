@@ -59,6 +59,7 @@ import {
   type PlacementPreviewState,
   type PlacementInteractionMode,
 } from "@/editor/contracts/placement-preview";
+import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 import {
   createEditorHost,
   type CanvasWorldInput,
@@ -511,9 +512,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
   async selectEntity(
     entityId: string,
     inputMode: PlacementInteractionMode | null = null,
+    selectionMode: EditorSelectionUpdateMode = "replace",
   ): Promise<void> {
     await this.applyEditorMutation(() => {
-      this.editorHost.selectEntity(entityId, inputMode);
+      this.editorHost.selectEntity(entityId, inputMode, selectionMode);
       this.editorHost.setLinkSourceEntityId(null);
     });
   }

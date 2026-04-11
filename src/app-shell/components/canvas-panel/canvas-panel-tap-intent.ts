@@ -11,6 +11,10 @@ export type CanvasPanelTapIntent =
       entityId: string;
     }
   | {
+      kind: "toggle-edit-entity";
+      entityId: string;
+    }
+  | {
       kind: "clear-edit-selection";
     }
   | {
@@ -28,6 +32,7 @@ export type CanvasPanelTapIntent =
 export interface ResolveCanvasPanelTapIntentOptions {
   phase: WorkbenchPhase;
   currentMode: CurrentInteractionMode;
+  selectionModifierActive: boolean;
   target: CanvasInteractionTarget;
 }
 
@@ -68,8 +73,16 @@ export function resolveCanvasPanelTapIntent(
 
   if (targetEntityId) {
     return {
-      kind: "select-edit-entity",
+      kind: options.selectionModifierActive
+        ? "toggle-edit-entity"
+        : "select-edit-entity",
       entityId: targetEntityId,
+    };
+  }
+
+  if (options.selectionModifierActive) {
+    return {
+      kind: "noop",
     };
   }
 

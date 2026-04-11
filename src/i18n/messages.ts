@@ -67,6 +67,7 @@ export type MessageKey =
   | "label.recipes"
   | "label.definitions"
   | "label.noSelection"
+  | "label.multiSelectionSummary"
   | "label.noConfigFields"
   | "label.noConnections"
   | "label.runtimeDetailPlaceholder"
@@ -178,6 +179,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "label.recipes": "配方",
     "label.definitions": "定义",
     "label.noSelection": "未选中对象",
+    "label.multiSelectionSummary": "多选当前只显示共享操作；单对象详情会在缩成单选后显示。",
     "label.noConfigFields": "当前脚手架还没有可配置字段。",
     "label.noConnections": "当前对象没有显式链接。",
     "label.runtimeDetailPlaceholder": "运行态 query lane 会在这里显示更细的按需读取结果。",
@@ -288,6 +290,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "label.recipes": "Recipes",
     "label.definitions": "Definitions",
     "label.noSelection": "No Selection",
+    "label.multiSelectionSummary": "Multiple selection currently shows shared actions only; narrow it to one entity for detailed fields.",
     "label.noConfigFields": "No configurable fields in the scaffold yet.",
     "label.noConnections": "No explicit links on the current selection.",
     "label.runtimeDetailPlaceholder": "The runtime query lane will populate richer on-demand details here.",
