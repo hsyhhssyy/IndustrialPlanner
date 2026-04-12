@@ -237,6 +237,7 @@ describe("canvas panel interaction router", () => {
     ).toEqual({
       kind: "gesture",
       interactionTarget: { kind: "blank" },
+      longPressMarqueeSelectionMode: "replace",
     });
   });
 });

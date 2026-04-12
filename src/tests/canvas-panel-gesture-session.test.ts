@@ -335,4 +335,114 @@ describe("canvas panel gesture session", () => {
       },
     ]);
   });
+
+  it("emits the touch marquee lifecycle once a blank hold is promoted into marquee mode", () => {
+    const session = createCanvasGestureSession();
+
+    session.handlePointerDown({
+      button: 0,
+      point: { x: 12, y: 14 },
+      pointerId: 41,
+      pointerType: "touch",
+      route: {
+        kind: "gesture",
+        interactionTarget: { kind: "blank" },
+        longPressMarqueeSelectionMode: "replace",
+      },
+    });
+
+    const activated = session.handleTouchLongPress({ pointerId: 41 });
+
+    expect(activated.events).toEqual([
+      {
+        kind: "drag-start",
+        source: "touch",
+        recognizer: "touch-marquee",
+        pointerId: 41,
+        origin: { x: 12, y: 14 },
+        screenPoint: { x: 12, y: 14 },
+        selectionMode: "replace",
+      },
+    ]);
+
+    const drag = session.handlePointerMove({
+      buttons: 0,
+      point: { x: 32, y: 30 },
+      pointerId: 41,
+      pointerType: "touch",
+    });
+
+    expect(drag.events).toEqual([
+      {
+        kind: "drag",
+        source: "touch",
+        recognizer: "touch-marquee",
+        pointerId: 41,
+        origin: { x: 12, y: 14 },
+        screenPoint: { x: 32, y: 30 },
+        selectionMode: "replace",
+      },
+    ]);
+
+    const up = session.handlePointerUp({
+      anchoredPlacementActive: false,
+      button: 0,
+      point: { x: 32, y: 30 },
+      pointerId: 41,
+      pointerType: "touch",
+    });
+
+    expect(up.events).toEqual([
+      {
+        kind: "drag-end",
+        source: "touch",
+        recognizer: "touch-marquee",
+        pointerId: 41,
+        didDrag: true,
+        outcome: "release",
+        selectionMode: "replace",
+      },
+    ]);
+  });
+
+  it("cancels an active touch marquee when a second touch turns into pinch", () => {
+    const session = createCanvasGestureSession();
+
+    session.handlePointerDown({
+      button: 0,
+      point: { x: 12, y: 14 },
+      pointerId: 51,
+      pointerType: "touch",
+      route: {
+        kind: "gesture",
+        interactionTarget: { kind: "blank" },
+        longPressMarqueeSelectionMode: "replace",
+      },
+    });
+    session.handleTouchLongPress({ pointerId: 51 });
+
+    const secondTouch = session.handlePointerDown({
+      button: 0,
+      point: { x: 24, y: 14 },
+      pointerId: 52,
+      pointerType: "touch",
+      route: {
+        kind: "gesture",
+        interactionTarget: { kind: "blank" },
+      },
+    });
+
+    expect(secondTouch.events).toEqual([
+      {
+        kind: "drag-end",
+        source: "touch",
+        recognizer: "touch-marquee",
+        pointerId: 51,
+        didDrag: true,
+        outcome: "cancel",
+        selectionMode: "replace",
+      },
+    ]);
+    expect(secondTouch.touchGestureState.phase).toBe("touch-pinching");
+  });
 });

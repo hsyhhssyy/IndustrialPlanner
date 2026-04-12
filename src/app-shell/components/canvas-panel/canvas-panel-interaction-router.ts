@@ -187,7 +187,24 @@ export function resolveCanvasTouchDownRoute(
   return {
     kind: "gesture",
     interactionTarget: options.target,
+    longPressMarqueeSelectionMode: resolveTouchLongPressMarqueeSelectionMode(
+      options,
+    ),
   };
+}
+
+function resolveTouchLongPressMarqueeSelectionMode(
+  options: ResolveCanvasTouchDownRouteOptions,
+): EditorSelectionUpdateMode | null {
+  if (
+    options.phase !== "edit" ||
+    options.currentMode.key !== "select" ||
+    options.target.kind !== "blank"
+  ) {
+    return null;
+  }
+
+  return "replace";
 }
 
 function getSelectedEntityIdForMove(
@@ -279,6 +296,13 @@ export async function routeCanvasGestureEvent(
       return;
     case "drag-start":
       switch (options.event.recognizer) {
+        case "touch-marquee":
+          options.controller.beginMarqueeFromScreenPoint(
+            options.event.origin,
+            "touch",
+            options.event.selectionMode ?? "replace",
+          );
+          return;
         case "touch-placement":
           options.schedulePlacementPreviewFromScreenPoint(options.event.screenPoint);
           return;
@@ -345,6 +369,13 @@ export async function routeCanvasGestureEvent(
         return;
       }
 
+      if (options.event.recognizer === "touch-marquee") {
+        options.controller.updateMarqueeDraftFromScreenPoint(
+          options.event.screenPoint,
+        );
+        return;
+      }
+
       if (options.event.recognizer === "pointer-marquee") {
         options.controller.updateMarqueeDraftFromScreenPoint(
           options.event.screenPoint,
@@ -380,6 +411,16 @@ export async function routeCanvasGestureEvent(
       }
 
       if (options.event.recognizer === "pointer-marquee") {
+        if (options.event.outcome === "cancel") {
+          options.cancelMarquee();
+          return;
+        }
+
+        await options.controller.confirmMarqueeSelection();
+        return;
+      }
+
+      if (options.event.recognizer === "touch-marquee") {
         if (options.event.outcome === "cancel") {
           options.cancelMarquee();
           return;

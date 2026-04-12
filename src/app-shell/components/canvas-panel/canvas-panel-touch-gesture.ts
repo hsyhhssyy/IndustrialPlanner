@@ -1,5 +1,6 @@
 import type { CanvasInteractionTarget } from "@/workbench/contracts/workbench-facade";
 import type { CanvasPoint } from "@/workbench/workspace-state";
+import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 
 export const TOUCH_PAN_START_DISTANCE_PX = 6;
 
@@ -12,6 +13,7 @@ export type CanvasPanelTouchGestureState =
       pointerId: number;
       origin: CanvasPoint;
       last: CanvasPoint;
+      longPressMarqueeSelectionMode: EditorSelectionUpdateMode | null;
     }
   | {
       phase: "touch-panning";
@@ -49,12 +51,14 @@ export function createIdleCanvasPanelTouchGestureState(): CanvasPanelTouchGestur
 export function beginCanvasTouchPanGesture(
   pointerId: number,
   point: CanvasPoint,
+  longPressMarqueeSelectionMode: EditorSelectionUpdateMode | null = null,
 ): CanvasPanelTouchGestureState {
   return {
     phase: "touch-pan-pressed",
     pointerId,
     origin: point,
     last: point,
+    longPressMarqueeSelectionMode,
   };
 }
 
@@ -62,12 +66,17 @@ export function beginCanvasTouchGesture(
   pointerId: number,
   point: CanvasPoint,
   target: CanvasInteractionTarget,
+  longPressMarqueeSelectionMode: EditorSelectionUpdateMode | null = null,
 ): CanvasPanelTouchGestureState {
   if (target.kind !== "blank") {
     return createIdleCanvasPanelTouchGestureState();
   }
 
-  return beginCanvasTouchPanGesture(pointerId, point);
+  return beginCanvasTouchPanGesture(
+    pointerId,
+    point,
+    longPressMarqueeSelectionMode,
+  );
 }
 
 export function isCanvasTouchPanning(

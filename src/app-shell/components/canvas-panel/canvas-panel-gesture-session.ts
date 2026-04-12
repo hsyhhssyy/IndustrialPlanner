@@ -38,6 +38,14 @@ import {
   type CanvasPanelTouchDragGestureState,
 } from "./canvas-panel-touch-drag-gesture";
 import {
+  advanceCanvasTouchMarqueeGesture,
+  beginCanvasTouchMarqueeGesture,
+  cancelCanvasTouchMarqueeGesture,
+  createIdleCanvasPanelTouchMarqueeGestureState,
+  removePointerFromCanvasTouchMarqueeGesture,
+  type CanvasPanelTouchMarqueeGestureState,
+} from "./canvas-panel-touch-marquee-gesture";
+import {
   advanceCanvasTouchPlacementGesture,
   beginCanvasTouchPlacementGesture,
   cancelCanvasTouchPlacementGesture,
@@ -65,6 +73,7 @@ import type { CanvasPoint } from "@/workbench/workspace-state";
 export type CanvasGestureDragRecognizer =
   | "pointer-move"
   | "pointer-marquee"
+  | "touch-marquee"
   | "touch-move"
   | "touch-placement";
 
@@ -181,6 +190,7 @@ export type CanvasTouchDownRoute =
   | {
       kind: "gesture";
       interactionTarget: CanvasInteractionTarget;
+      longPressMarqueeSelectionMode?: EditorSelectionUpdateMode | null;
     };
 
 export type CanvasGesturePointerCaptureCommand =
@@ -258,6 +268,7 @@ export interface CanvasGestureSession {
   handlePointerMove: (
     input: CanvasGestureSessionPointerMoveInput,
   ) => CanvasGestureSessionResult;
+  handleTouchLongPress: (input: { pointerId: number }) => CanvasGestureSessionResult;
   handlePointerEnter: (
     input: CanvasGestureSessionPointerEnterInput,
   ) => CanvasGestureSessionResult;
@@ -295,6 +306,8 @@ export function createCanvasGestureSession(): CanvasGestureSession {
   let touchPoints = new Map<number, CanvasPoint>();
   let touchMoveGestureState: CanvasPanelTouchDragGestureState =
     createIdleCanvasPanelTouchDragGestureState();
+  let touchMarqueeGestureState: CanvasPanelTouchMarqueeGestureState =
+    createIdleCanvasPanelTouchMarqueeGestureState();
   let touchPlacementGestureState: CanvasPanelTouchPlacementGestureState =
     createIdleCanvasPanelTouchPlacementGestureState();
   let touchTapSuppressed = false;
@@ -335,16 +348,29 @@ export function createCanvasGestureSession(): CanvasGestureSession {
   const getTouchCapturePointerIds = (): readonly number[] =>
     Array.from(touchPoints.keys());
 
-  const beginTouchPinchFromTrackedPoints = () => {
+  const beginTouchPinchFromTrackedPoints = (): readonly CanvasGestureEvent[] => {
     const [firstPointer, secondPointer] = Array.from(touchPoints.entries());
+    const events: CanvasGestureEvent[] = [];
 
     touchTapSuppressed = true;
     touchMoveGestureState = cancelCanvasTouchDragGesture();
+    if (touchMarqueeGestureState.phase === "touch-marquee-selecting") {
+      events.push({
+        kind: "drag-end",
+        source: "touch",
+        recognizer: "touch-marquee",
+        pointerId: touchMarqueeGestureState.pointerId,
+        didDrag: true,
+        outcome: "cancel",
+        selectionMode: touchMarqueeGestureState.selectionMode,
+      });
+    }
+    touchMarqueeGestureState = cancelCanvasTouchMarqueeGesture();
     touchPlacementGestureState = cancelCanvasTouchPlacementGesture();
 
     if (!firstPointer || !secondPointer) {
       touchGestureState = createIdleCanvasPanelTouchGestureState();
-      return;
+      return events;
     }
 
     touchGestureState = beginCanvasTouchPinchGesture(
@@ -353,6 +379,7 @@ export function createCanvasGestureSession(): CanvasGestureSession {
       secondPointer[0],
       secondPointer[1],
     );
+    return events;
   };
 
   const handlePointerDown = (
@@ -362,11 +389,16 @@ export function createCanvasGestureSession(): CanvasGestureSession {
       touchPoints.set(input.pointerId, input.point);
 
       if (touchPoints.size >= 2) {
-        beginTouchPinchFromTrackedPoints();
-        return createResult({
-          pointerGestureState,
-          touchGestureState,
-        }, [], [{ kind: "capture", pointerId: input.pointerId }]);
+        const events = beginTouchPinchFromTrackedPoints();
+
+        return createResult(
+          {
+            pointerGestureState,
+            touchGestureState,
+          },
+          events,
+          [{ kind: "capture", pointerId: input.pointerId }],
+        );
       }
 
       const route = input.route as CanvasTouchDownRoute;
@@ -405,6 +437,7 @@ export function createCanvasGestureSession(): CanvasGestureSession {
             input.pointerId,
             input.point,
             route.interactionTarget,
+            route.longPressMarqueeSelectionMode ?? null,
           );
           events.push({
             kind: "clear-preview",
@@ -569,6 +602,49 @@ export function createCanvasGestureSession(): CanvasGestureSession {
                   origin: previousState.origin,
                   screenPoint: result.dragPoint,
                 },
+          ],
+        );
+      }
+
+      if (touchMarqueeGestureState.phase !== "idle") {
+        if (touchPoints.size !== 1) {
+          return createResult({
+            pointerGestureState,
+            touchGestureState,
+          });
+        }
+
+        const previousState = touchMarqueeGestureState;
+        const result = advanceCanvasTouchMarqueeGesture(
+          previousState,
+          input.pointerId,
+          input.point,
+        );
+
+        touchMarqueeGestureState = result.nextState;
+
+        if (!result.dragPoint) {
+          return createResult({
+            pointerGestureState,
+            touchGestureState,
+          });
+        }
+
+        return createResult(
+          {
+            pointerGestureState,
+            touchGestureState,
+          },
+          [
+            {
+              kind: "drag",
+              source: "touch",
+              recognizer: "touch-marquee",
+              pointerId: input.pointerId,
+              origin: previousState.origin,
+              screenPoint: result.dragPoint,
+              selectionMode: previousState.selectionMode,
+            },
           ],
         );
       }
@@ -879,6 +955,59 @@ export function createCanvasGestureSession(): CanvasGestureSession {
     );
   };
 
+  const handleTouchLongPress = (
+    input: { pointerId: number },
+  ): CanvasGestureSessionResult => {
+    if (
+      touchPoints.size !== 1 ||
+      touchGestureState.phase !== "touch-pan-pressed" ||
+      touchGestureState.pointerId !== input.pointerId ||
+      touchGestureState.longPressMarqueeSelectionMode === null
+    ) {
+      return createResult({
+        pointerGestureState,
+        touchGestureState,
+      });
+    }
+
+    const pendingHoldState = touchGestureState;
+    const selectionMode = pendingHoldState.longPressMarqueeSelectionMode;
+
+    if (selectionMode === null) {
+      return createResult({
+        pointerGestureState,
+        touchGestureState,
+      });
+    }
+
+    touchTapSuppressed = true;
+    const activeTouchMarquee = beginCanvasTouchMarqueeGesture(
+      input.pointerId,
+      pendingHoldState.origin,
+      selectionMode,
+    );
+    touchMarqueeGestureState = activeTouchMarquee;
+    touchGestureState = createIdleCanvasPanelTouchGestureState();
+
+    return createResult(
+      {
+        pointerGestureState,
+        touchGestureState,
+      },
+      [
+        {
+          kind: "drag-start",
+          source: "touch",
+          recognizer: "touch-marquee",
+          pointerId: input.pointerId,
+          origin: activeTouchMarquee.origin,
+          screenPoint: activeTouchMarquee.origin,
+          selectionMode: activeTouchMarquee.selectionMode,
+        },
+      ],
+    );
+  };
+
   const handlePointerLeave = (
     input: CanvasGestureSessionPointerLeaveInput,
   ): CanvasGestureSessionResult => {
@@ -910,6 +1039,21 @@ export function createCanvasGestureSession(): CanvasGestureSession {
         tapSuppressed: touchTapSuppressed,
         touchGestureState,
       });
+
+      if (
+        touchMarqueeGestureState.phase === "touch-marquee-selecting" &&
+        touchMarqueeGestureState.pointerId === input.pointerId
+      ) {
+        events.push({
+          kind: "drag-end",
+          source: "touch",
+          recognizer: "touch-marquee",
+          pointerId: input.pointerId,
+          didDrag: true,
+          outcome: "release",
+          selectionMode: touchMarqueeGestureState.selectionMode,
+        });
+      }
 
       if (
         touchMoveState.phase === "touch-dragging" &&
@@ -965,6 +1109,10 @@ export function createCanvasGestureSession(): CanvasGestureSession {
       touchPoints.delete(input.pointerId);
       touchMoveGestureState = removePointerFromCanvasTouchDragGesture(
         touchMoveGestureState,
+        input.pointerId,
+      );
+      touchMarqueeGestureState = removePointerFromCanvasTouchMarqueeGesture(
+        touchMarqueeGestureState,
         input.pointerId,
       );
       touchPlacementGestureState = removePointerFromCanvasTouchPlacementGesture(
@@ -1105,9 +1253,30 @@ export function createCanvasGestureSession(): CanvasGestureSession {
     input: CanvasGestureSessionLostPointerCaptureInput,
   ): CanvasGestureSessionResult => {
     if (input.pointerType === "touch") {
+      const touchMarqueeState = touchMarqueeGestureState;
+      const events: CanvasGestureEvent[] = [];
+
       touchPoints.delete(input.pointerId);
       touchMoveGestureState = removePointerFromCanvasTouchDragGesture(
         touchMoveGestureState,
+        input.pointerId,
+      );
+      if (
+        touchMarqueeState.phase === "touch-marquee-selecting" &&
+        touchMarqueeState.pointerId === input.pointerId
+      ) {
+        events.push({
+          kind: "drag-end",
+          source: "touch",
+          recognizer: "touch-marquee",
+          pointerId: input.pointerId,
+          didDrag: true,
+          outcome: "cancel",
+          selectionMode: touchMarqueeState.selectionMode,
+        });
+      }
+      touchMarqueeGestureState = removePointerFromCanvasTouchMarqueeGesture(
+        touchMarqueeGestureState,
         input.pointerId,
       );
       touchPlacementGestureState = removePointerFromCanvasTouchPlacementGesture(
@@ -1124,10 +1293,13 @@ export function createCanvasGestureSession(): CanvasGestureSession {
         input.pointerId,
       );
 
-      return createResult({
-        pointerGestureState,
-        touchGestureState,
-      });
+      return createResult(
+        {
+          pointerGestureState,
+          touchGestureState,
+        },
+        events,
+      );
     }
 
     const hadPointerPan =
@@ -1251,6 +1423,7 @@ export function createCanvasGestureSession(): CanvasGestureSession {
 
     touchPoints = new Map();
     touchMoveGestureState = cancelCanvasTouchDragGesture();
+    touchMarqueeGestureState = cancelCanvasTouchMarqueeGesture();
     touchPlacementGestureState = cancelCanvasTouchPlacementGesture();
     touchTapSuppressed = false;
     touchGestureState = cancelCanvasTouchGesture();
@@ -1312,6 +1485,7 @@ export function createCanvasGestureSession(): CanvasGestureSession {
     getTouchCapturePointerIds,
     handlePointerDown,
     handlePointerMove,
+    handleTouchLongPress,
     handlePointerEnter,
     handlePointerLeave,
     handlePointerUp,

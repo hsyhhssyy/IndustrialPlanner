@@ -41,6 +41,34 @@ describe("canvas panel touch gesture", () => {
     expect(state).toEqual(createIdleCanvasPanelTouchGestureState());
   });
 
+  it("keeps the long-press marquee intent on a blank touch candidate until pan begins", () => {
+    const state = beginCanvasTouchGesture(
+      5,
+      { x: 16, y: 18 },
+      { kind: "blank" },
+      "replace",
+    );
+
+    expect(state).toEqual({
+      phase: "touch-pan-pressed",
+      pointerId: 5,
+      origin: { x: 16, y: 18 },
+      last: { x: 16, y: 18 },
+      longPressMarqueeSelectionMode: "replace",
+    });
+
+    const afterThreshold = advanceCanvasTouchPanGesture(state, 5, {
+      x: 26,
+      y: 18,
+    });
+
+    expect(afterThreshold.nextState).toEqual({
+      phase: "touch-panning",
+      pointerId: 5,
+      last: { x: 26, y: 18 },
+    });
+  });
+
   it("can start a viewport pan candidate without requiring a blank hit", () => {
     const pressedState = beginCanvasTouchPanGesture(4, { x: 24, y: 18 });
     const beforeThreshold = advanceCanvasTouchPanGesture(pressedState, 4, {
