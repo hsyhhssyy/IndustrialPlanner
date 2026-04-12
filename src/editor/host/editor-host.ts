@@ -738,6 +738,10 @@ class EditorHostImpl implements EditorHost {
   rotatePlacementClockwise(): boolean {
     const { session } = this.core.getSnapshot();
     const placementMode = this.getPlacementMode(session);
+    const previewDraftId = session.draftEntities?.ids[0] ?? null;
+    const previewDraft = previewDraftId
+      ? session.drafts.entities[previewDraftId]
+      : null;
 
     if (!placementMode) {
       return false;
@@ -753,7 +757,11 @@ class EditorHostImpl implements EditorHost {
     const nextRotation = rotateGridRotationClockwise(currentRotation);
     this.core.setPlacementRotation(nextRotation);
 
-    if (!session.placementPreview) {
+    if (
+      !previewDraft ||
+      previewDraft.sourceEntityId !== null ||
+      previewDraft.definitionId !== placementMode.definitionId
+    ) {
       this.logger.info("Rotated armed placement before preview existed.", {
         definitionId: placementMode.definitionId,
         previousRotation: currentRotation,
@@ -765,11 +773,11 @@ class EditorHostImpl implements EditorHost {
     const rotatedPreviewEntity = rotateResolvedDraftEntitiesClockwise([
       {
         entity: {
-          entityId: session.placementPreview.definitionId,
-          originGridPoint: session.placementPreview.gridPoint,
-          gridPoint: session.placementPreview.gridPoint,
-          originRotation: session.placementPreview.rotation,
-          rotation: session.placementPreview.rotation,
+          entityId: previewDraft.id,
+          originGridPoint: previewDraft.position,
+          gridPoint: previewDraft.position,
+          originRotation: previewDraft.rotation,
+          rotation: previewDraft.rotation,
         },
         definition,
       } satisfies ResolvedMoveDraftEntity,
@@ -780,9 +788,11 @@ class EditorHostImpl implements EditorHost {
     }
 
     const rotatedPreview = {
-      ...session.placementPreview,
+      definitionId: previewDraft.definitionId,
+      interactionMode: placementMode.inputMode,
       rotation: rotatedPreviewEntity.rotation,
       gridPoint: rotatedPreviewEntity.gridPoint,
+      valid: previewDraft.valid,
     } satisfies PlacementPreviewState;
     const resolution = this.queryPlacementPreview(rotatedPreview);
 
@@ -799,7 +809,7 @@ class EditorHostImpl implements EditorHost {
       definitionId: placementMode.definitionId,
       previousRotation: currentRotation,
       nextRotation,
-      previousGridPoint: session.placementPreview.gridPoint,
+      previousGridPoint: previewDraft.position,
       nextGridPoint: resolution.preview?.gridPoint ?? null,
       invalidReason: resolution.invalidReason,
     });
