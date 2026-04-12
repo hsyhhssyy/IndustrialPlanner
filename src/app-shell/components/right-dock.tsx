@@ -26,6 +26,23 @@ function formatMultiSelectionLabel(locale: "zh-CN" | "en-US", count: number): st
   return locale === "zh-CN" ? `已选中 ${count} 个对象` : `${count} selected`;
 }
 
+function resolveEditInspectorSelectionIds(
+  selection: RightDockProps["controller"]["editorStore"]["session"],
+): string[] {
+  const projectedIds = selection.draftEntities?.ids ?? null;
+  const baselineIds = selection.selectedEntities?.ids ?? selection.selection;
+
+  if (!projectedIds || projectedIds.length === 0) {
+    return baselineIds;
+  }
+
+  if (selection.marqueeRange || projectedIds.length > 1) {
+    return projectedIds;
+  }
+
+  return baselineIds;
+}
+
 export const RightDock = observer(function RightDock({
   controller,
 }: RightDockProps) {
@@ -41,7 +58,9 @@ export const RightDock = observer(function RightDock({
 
   const t = createTranslator(ui.locale);
   const activeSelection =
-    ui.phase === "simulate" ? simulation.selection : editor.session.selection;
+    ui.phase === "simulate"
+      ? simulation.selection
+      : resolveEditInspectorSelectionIds(editor.session);
   const hasSingleSelection = activeSelection.length === 1;
   const hasMultiSelection = activeSelection.length > 1;
 
