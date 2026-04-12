@@ -141,4 +141,55 @@ describe("EditorCore entity collections", () => {
     expect(core.getSnapshot().session.selectionInputMode).toBe("touch");
     expect(core.getSnapshot().session.marqueeDraft).toBeNull();
   });
+
+  it("confirms move from managed draft entities", () => {
+    const registry = createStage1Registry();
+    const core = createEditorCore({
+      document: createStage1SeedWorldDocument(),
+      session: createInitialEditorSession(),
+      getDefinition: (definitionId) =>
+        getStage1EntityDefinition(registry, definitionId),
+    });
+
+    core.beginMove("reactor-1", "pointer", {
+      entityId: "reactor-1",
+      interactionMode: "pointer",
+      originGridPoint: { x: 12, y: 6 },
+      gridPoint: { x: 20, y: 10 },
+      rotation: 90,
+      valid: true,
+      rotationCenterCells: { x: 14, y: 8 },
+      anchorWorldOffset: { x: 0, y: 0 },
+      entities: [
+        {
+          entityId: "reactor-1",
+          originGridPoint: { x: 12, y: 6 },
+          gridPoint: { x: 20, y: 10 },
+          centerCells: { x: 22, y: 12 },
+          originRotation: 0,
+          rotation: 90,
+        },
+      ],
+    });
+
+    expect(core.getSnapshot().session.draftEntities?.ids).toEqual([
+      "draft:move:reactor-1",
+    ]);
+    expect(
+      core.getSnapshot().session.drafts.entities["draft:move:reactor-1"],
+    ).toMatchObject({
+      sourceEntityId: "reactor-1",
+      position: { x: 20, y: 10 },
+      rotation: 90,
+      valid: true,
+    });
+
+    expect(core.confirmMove()).toBe(true);
+    expect(core.getSnapshot().document.entities["reactor-1"]).toMatchObject({
+      position: { x: 20, y: 10 },
+      rotation: 90,
+    });
+    expect(core.getSnapshot().session.moveDraft).toBeNull();
+    expect(core.getSnapshot().session.currentMode).toMatchObject({ key: "select" });
+  });
 });

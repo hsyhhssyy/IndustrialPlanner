@@ -322,38 +322,51 @@ class EditorCoreImpl implements EditorCore {
   }
 
   confirmMove(): boolean {
-    if (!isMoveInteractionMode(this.session.currentMode) || !this.session.moveDraft) {
+    if (!isMoveInteractionMode(this.session.currentMode) || !this.session.draftEntities) {
       return false;
     }
 
-    const moveDraft = this.session.moveDraft;
+    const moveDraftEntities = this.session.draftEntities.ids
+      .map((id) => this.session.drafts.entities[id])
+      .filter(
+        (draftEntity): draftEntity is DraftEntityState =>
+          Boolean(draftEntity?.sourceEntityId),
+      );
+
     if (
-      !moveDraft.valid ||
-      moveDraft.entities.some((draftEntity) => !this.document.entities[draftEntity.entityId])
+      moveDraftEntities.length === 0 ||
+      moveDraftEntities.some(
+        (draftEntity) =>
+          !draftEntity.valid ||
+          !draftEntity.sourceEntityId ||
+          !this.document.entities[draftEntity.sourceEntityId],
+      )
     ) {
       return false;
     }
 
     const commands: AtomicDocumentCommand[] = [];
 
-    for (const draftEntity of moveDraft.entities) {
-      const entity = this.document.entities[draftEntity.entityId];
+    for (const draftEntity of moveDraftEntities) {
+      const entity = draftEntity.sourceEntityId
+        ? this.document.entities[draftEntity.sourceEntityId]
+        : null;
 
       if (!entity) {
         continue;
       }
 
       const positionChanged =
-        draftEntity.gridPoint.x !== entity.position.x ||
-        draftEntity.gridPoint.y !== entity.position.y;
+        draftEntity.position.x !== entity.position.x ||
+        draftEntity.position.y !== entity.position.y;
       const rotationChanged = draftEntity.rotation !== entity.rotation;
 
       if (rotationChanged) {
         commands.push({
           type: "entity.rotate",
           payload: {
-            entityId: draftEntity.entityId,
-            position: positionChanged ? draftEntity.gridPoint : undefined,
+            entityId: entity.id,
+            position: positionChanged ? draftEntity.position : undefined,
             rotation: draftEntity.rotation,
           },
         });
@@ -361,8 +374,8 @@ class EditorCoreImpl implements EditorCore {
         commands.push({
           type: "entity.move",
           payload: {
-            entityId: draftEntity.entityId,
-            position: draftEntity.gridPoint,
+            entityId: entity.id,
+            position: draftEntity.position,
           },
         });
       }
