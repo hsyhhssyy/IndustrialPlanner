@@ -1,6 +1,7 @@
+import type { EditorSemanticInputMode } from "@/editor/contracts/editor-semantic-input";
 import type { GridPoint, GridRotation } from "@/shared/geometry/grid";
 
-export type PlacementInteractionMode = "pointer" | "touch";
+export type PlacementInteractionMode = EditorSemanticInputMode;
 
 export interface PlacementPreviewState {
   definitionId: string;
