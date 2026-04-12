@@ -648,16 +648,18 @@ class EditorHostImpl implements EditorHost {
       return false;
     }
 
-    const resolvedEntities = this.resolveMoveDraftEntities(moveDraft);
-    const anchorEntity = getMoveDraftEntity(moveDraft, moveDraft.entityId);
+    const resolvedEntities = this.resolveMoveDraftEntities(moveDraft, {
+      preferManagedDrafts: true,
+    });
     const resolvedAnchorEntity = resolvedEntities?.find(
       (entity) => entity.entity.entityId === moveDraft.entityId,
     );
 
-    if (!resolvedEntities || !anchorEntity || !resolvedAnchorEntity) {
+    if (!resolvedEntities || !resolvedAnchorEntity) {
       return false;
     }
 
+    const anchorEntity = resolvedAnchorEntity.entity;
     const currentRotation = anchorEntity.rotation;
     const currentFootprint = getRotatedGridFootprint(
       resolvedAnchorEntity.definition.footprint,
@@ -1428,9 +1430,66 @@ class EditorHostImpl implements EditorHost {
 
   private resolveMoveDraftEntities(
     draft: MoveDraftState,
+    options: {
+      preferManagedDrafts?: boolean;
+    } = {},
   ): ResolvedMoveDraftEntity[] | null {
-    const { document } = this.core.getSnapshot();
+    const { document, session } = this.core.getSnapshot();
     const topology = this.getTopology();
+
+    if (options.preferManagedDrafts && session.draftEntities) {
+      const draftEntityBySourceId = new Map(
+        draft.entities.map((entity) => [entity.entityId, entity] as const),
+      );
+      const resolvedManagedEntities: ResolvedMoveDraftEntity[] = [];
+
+      for (const draftId of session.draftEntities.ids) {
+        const managedDraft = session.drafts.entities[draftId];
+
+        if (!managedDraft?.sourceEntityId) {
+          continue;
+        }
+
+        const sourceEntity = document.entities[managedDraft.sourceEntityId];
+        const definition =
+          topology.entityViews[managedDraft.sourceEntityId]?.definition ??
+          (sourceEntity
+            ? this.getDefinition(sourceEntity.definitionId)
+            : undefined);
+        const previousEntity = draftEntityBySourceId.get(managedDraft.sourceEntityId);
+
+        if (!sourceEntity || !definition) {
+          continue;
+        }
+
+        const currentFootprint = getRotatedGridFootprint(
+          definition.footprint,
+          managedDraft.rotation,
+        );
+
+        resolvedManagedEntities.push({
+          entity: {
+            entityId: managedDraft.sourceEntityId,
+            originGridPoint: previousEntity?.originGridPoint ?? sourceEntity.position,
+            gridPoint: managedDraft.position,
+            centerCells:
+              previousEntity?.centerCells ??
+              getGridFootprintCenterCells(
+                managedDraft.position,
+                currentFootprint,
+              ),
+            originRotation: previousEntity?.originRotation ?? sourceEntity.rotation,
+            rotation: managedDraft.rotation,
+          },
+          definition,
+        });
+      }
+
+      if (resolvedManagedEntities.length === session.draftEntities.ids.length) {
+        return resolvedManagedEntities;
+      }
+    }
+
     const resolvedEntities = draft.entities
       .map((draftEntity) => {
         const entity = document.entities[draftEntity.entityId];
