@@ -2,6 +2,7 @@ import {
   getStage1EntityDefinition,
   type Stage1EntityDefinition,
 } from "@/domain/registry/stage1-registry";
+import type { DraftEntityState } from "@/editor/contracts/entity-collection";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import type {
   RenderExplicitLink,
@@ -28,9 +29,43 @@ function getSelectedWorldEntityIds(input: RenderSceneInput): string[] {
   );
 }
 
+function getManagedDraftEntities(input: RenderSceneInput): DraftEntityState[] {
+  const drafts = input.interaction.drafts?.entities;
+  const ids = input.interaction.draftEntities?.ids ?? [];
+
+  if (!drafts || ids.length === 0) {
+    return [];
+  }
+
+  return ids
+    .map((id) => drafts[id])
+    .filter((draft): draft is DraftEntityState => Boolean(draft));
+}
+
+function getManagedPlacementDraft(input: RenderSceneInput): DraftEntityState | null {
+  return (
+    getManagedDraftEntities(input).find(
+      (draftEntity) => draftEntity.sourceEntityId === null,
+    ) ?? null
+  );
+}
+
+function getManagedMoveDrafts(input: RenderSceneInput): DraftEntityState[] {
+  return getManagedDraftEntities(input).filter(
+    (draftEntity) => draftEntity.sourceEntityId !== null,
+  );
+}
+
 function getGhostedWorldEntityIds(input: RenderSceneInput): string[] {
+  const managedGhostedWorldEntityIds = getManagedMoveDrafts(input)
+    .map((draftEntity) => draftEntity.sourceEntityId)
+    .filter((entityId): entityId is string => Boolean(entityId));
+
   return (
     input.interaction.selectionPresentation?.ghostedWorldEntityIds ??
+    (managedGhostedWorldEntityIds.length > 0
+      ? managedGhostedWorldEntityIds
+      : null) ??
     input.interaction.moveDraft?.entities.map((draftEntity) => draftEntity.entityId) ??
     []
   );
@@ -162,7 +197,16 @@ function buildExplicitLinkSprites(
 function buildPlacementPreview(
   input: RenderSceneInput,
 ): RenderPlacementPreview | null {
-  const preview = input.interaction.placementPreview;
+  const managedPreviewDraft = getManagedPlacementDraft(input);
+  const preview = managedPreviewDraft
+    ? {
+        definitionId: managedPreviewDraft.definitionId,
+        interactionMode: input.interaction.draftInteractionMode ?? "pointer",
+        gridPoint: managedPreviewDraft.position,
+        rotation: managedPreviewDraft.rotation,
+        valid: managedPreviewDraft.valid,
+      }
+    : input.interaction.placementPreview;
 
   if (!preview) {
     return null;
@@ -249,9 +293,63 @@ function buildMovePreviewForEntity(
   };
 }
 
+function buildMovePreviewForManagedDraft(
+  input: RenderSceneInput,
+  draftEntity: DraftEntityState,
+): RenderMovePreview | null {
+  if (!draftEntity.sourceEntityId) {
+    return null;
+  }
+
+  const definition = getStage1EntityDefinition(
+    input.registry,
+    draftEntity.definitionId,
+  );
+
+  if (!definition) {
+    return null;
+  }
+
+  const renderKind = getStage1EntityRenderKind(draftEntity.definitionId);
+  const footprint = getEntityFootprintSize(definition, draftEntity.rotation);
+  const textureMetrics = getStage1EntityTextureMetrics({
+    definition,
+    gridSize: input.document.documentSettings.gridSize,
+    rotation: draftEntity.rotation,
+  });
+
+  return {
+    entityId: draftEntity.sourceEntityId,
+    definitionId: draftEntity.definitionId,
+    interactionMode: input.interaction.draftInteractionMode ?? "pointer",
+    label: getLocalizedStage1EntityName(input.locale, definition),
+    x: draftEntity.position.x * input.document.documentSettings.gridSize,
+    y: draftEntity.position.y * input.document.documentSettings.gridSize,
+    width: footprint.width * input.document.documentSettings.gridSize,
+    height: footprint.height * input.document.documentSettings.gridSize,
+    rotation: draftEntity.rotation,
+    renderKind,
+    fill: getEntityFill(definition),
+    textureSrc: getStage1EntitySpritePath(draftEntity.definitionId),
+    textureWidth: textureMetrics.textureWidthPx,
+    textureHeight: textureMetrics.textureHeightPx,
+    textureCenterOffsetX: textureMetrics.centerOffsetXPx,
+    textureCenterOffsetY: textureMetrics.centerOffsetYPx,
+    valid: draftEntity.valid,
+  };
+}
+
 function buildMovePreviews(
   input: RenderSceneInput,
 ): RenderMovePreview[] {
+  const managedDrafts = getManagedMoveDrafts(input);
+
+  if (managedDrafts.length > 0) {
+    return managedDrafts
+      .map((draftEntity) => buildMovePreviewForManagedDraft(input, draftEntity))
+      .filter((preview): preview is RenderMovePreview => preview !== null);
+  }
+
   const draft = input.interaction.moveDraft;
 
   if (!draft) {

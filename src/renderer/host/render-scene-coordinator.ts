@@ -15,7 +15,11 @@ import type {
 import type { WorkbenchUiState } from "@/workbench/workbench-ui-state";
 import type { AppLocale } from "@/i18n/messages";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
-import { getPendingLinkSourceEntityId } from "@/editor/contracts/interaction-mode";
+import {
+  getPendingLinkSourceEntityId,
+  isMoveInteractionMode,
+  isPlacementInteractionMode,
+} from "@/editor/contracts/interaction-mode";
 import {
   deriveSelectionPresentation,
   isSameSelectionPresentationState,
@@ -69,7 +73,13 @@ function buildRenderInteractionState(
   return {
     selectedEntityIds: editor.session.selection,
     selectionPresentation: deriveSelectionPresentation(editor.session),
+    drafts: editor.session.drafts,
     draftEntities: editor.session.draftEntities,
+    draftInteractionMode:
+      isPlacementInteractionMode(editor.session.currentMode) ||
+      isMoveInteractionMode(editor.session.currentMode)
+        ? editor.session.currentMode.inputMode
+        : null,
     placementPreview: editor.session.placementPreview,
     moveDraft: editor.session.moveDraft,
     pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
@@ -105,7 +115,9 @@ function isSameRenderSceneInteractionState(
       left.selectionPresentation,
       right.selectionPresentation,
     ) &&
+    left.drafts === right.drafts &&
     left.draftEntities === right.draftEntities &&
+    left.draftInteractionMode === right.draftInteractionMode &&
     left.placementPreview === right.placementPreview &&
     left.moveDraft === right.moveDraft &&
     left.pendingLinkSourceEntityId === right.pendingLinkSourceEntityId

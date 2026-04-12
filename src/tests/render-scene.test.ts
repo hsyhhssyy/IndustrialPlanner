@@ -226,6 +226,67 @@ describe("Render scene model", () => {
     });
   });
 
+  it("builds a placement preview from managed preview drafts when legacy preview state is unavailable", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const definition = registry.entityDefinitions.find(
+      (entityDefinition) => entityDefinition.id === "item_port_unloader_1",
+    );
+    const scene = buildRenderScene({
+      locale: "zh-CN",
+      document,
+      topology,
+      registry,
+      canvasView: createInitialCanvasViewState(),
+      interaction: {
+        selectedEntityIds: [],
+        drafts: {
+          entities: {
+            "draft:placement-preview": {
+              id: "draft:placement-preview",
+              definitionId: "item_port_unloader_1",
+              position: { x: 24, y: 12 },
+              rotation: 90,
+              config: {},
+              tags: [],
+              sourceEntityId: null,
+              valid: true,
+              invalidReason: null,
+            },
+          },
+        },
+        draftEntities: {
+          ids: ["draft:placement-preview"],
+          boundsDerived: null,
+          geometricCenterCellsDerived: null,
+        },
+        draftInteractionMode: "touch",
+        placementPreview: null,
+        moveDraft: null,
+        pendingLinkSourceEntityId: null,
+      },
+      runtimeSnapshot: {
+        tick: 0,
+        status: "idle",
+        entityViews: {},
+        patchedEntityIds: [],
+      },
+    });
+
+    expect(definition).toBeTruthy();
+    expect(scene.placementPreview).toMatchObject({
+      definitionId: "item_port_unloader_1",
+      interactionMode: "touch",
+      x: 24 * document.documentSettings.gridSize,
+      y: 12 * document.documentSettings.gridSize,
+      width: document.documentSettings.gridSize,
+      height: document.documentSettings.gridSize * 3,
+      rotation: 90,
+      valid: true,
+    });
+  });
+
   it("ghosts the source entity and builds a move preview from move draft state", () => {
     const document = createStage1SeedWorldDocument();
     const registry = createStage1Registry();
@@ -406,6 +467,70 @@ describe("Render scene model", () => {
     expect(
       scene.entities.filter((entity) => entity.ghosted).map((entity) => entity.entityId),
     ).toEqual(["reactor-1", "filler-1"]);
+  });
+
+  it("builds move previews from managed draft entities when legacy move draft state is unavailable", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const scene = buildRenderScene({
+      locale: "zh-CN",
+      document,
+      topology,
+      registry,
+      canvasView: createInitialCanvasViewState(),
+      interaction: {
+        selectedEntityIds: ["filler-1"],
+        drafts: {
+          entities: {
+            "draft:move:filler-1": {
+              id: "draft:move:filler-1",
+              definitionId: document.entities["filler-1"]!.definitionId,
+              position: { x: 19, y: 11 },
+              rotation: 180,
+              config: { ...document.entities["filler-1"]!.config },
+              tags: [...document.entities["filler-1"]!.tags],
+              sourceEntityId: "filler-1",
+              valid: true,
+              invalidReason: null,
+            },
+          },
+        },
+        draftEntities: {
+          ids: ["draft:move:filler-1"],
+          boundsDerived: null,
+          geometricCenterCellsDerived: null,
+        },
+        draftInteractionMode: "touch",
+        placementPreview: null,
+        moveDraft: null,
+        pendingLinkSourceEntityId: null,
+      },
+      runtimeSnapshot: {
+        tick: 0,
+        status: "idle",
+        entityViews: {},
+        patchedEntityIds: [],
+      },
+    });
+
+    expect(scene.movePreview).toMatchObject({
+      entityId: "filler-1",
+      definitionId: document.entities["filler-1"]!.definitionId,
+      interactionMode: "touch",
+      rotation: 180,
+      width: document.documentSettings.gridSize * 6,
+      height: document.documentSettings.gridSize * 4,
+      x: 19 * document.documentSettings.gridSize,
+      y: 11 * document.documentSettings.gridSize,
+      valid: true,
+    });
+    expect(scene.movePreviews).toHaveLength(1);
+    expect(
+      scene.entities.find((entity) => entity.entityId === "filler-1"),
+    ).toMatchObject({
+      ghosted: true,
+    });
   });
 
   it("prefers selectionPresentation for selected and ghosted world entities", () => {
