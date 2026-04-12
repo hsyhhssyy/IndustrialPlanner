@@ -1226,28 +1226,7 @@ class EditorHostImpl implements EditorHost {
       marqueeDraft.selectionMode,
     );
 
-    if (marqueeDraft.selectionMode === "replace") {
-      const [firstEntityId, ...restEntityIds] = marqueeDraft.entityIds;
-
-      if (!firstEntityId) {
-        this.core.selectEntity(null, null);
-      } else {
-        this.core.selectEntity(
-          firstEntityId,
-          marqueeDraft.interactionMode,
-          "replace",
-        );
-
-        for (const entityId of restEntityIds) {
-          this.core.selectEntity(entityId, marqueeDraft.interactionMode, "toggle");
-        }
-      }
-    } else {
-      for (const entityId of marqueeDraft.entityIds) {
-        this.core.selectEntity(entityId, marqueeDraft.interactionMode, "toggle");
-      }
-    }
-
+    this.core.setSelection(nextSelection, marqueeDraft.interactionMode);
     this.core.setMarqueeDraft(null);
     this.logger.info("Confirmed marquee draft.", {
       interactionMode: marqueeDraft.interactionMode,

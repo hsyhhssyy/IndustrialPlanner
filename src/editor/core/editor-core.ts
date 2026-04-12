@@ -88,6 +88,10 @@ export interface EditorCore {
   cancelMove: () => void;
   confirmMove: () => boolean;
   applyDocumentCommand: (command: DocumentCommand) => boolean;
+  setSelection: (
+    selection: readonly string[],
+    inputMode?: PlacementInteractionMode | null,
+  ) => void;
   selectEntity: (
     entityId: string | null,
     inputMode?: PlacementInteractionMode | null,
@@ -316,6 +320,29 @@ class EditorCoreImpl implements EditorCore {
     return this.applyCommand(command);
   }
 
+  setSelection(
+    selection: readonly string[],
+    inputMode: PlacementInteractionMode | null = null,
+  ): void {
+    const nextSelection: string[] = [];
+    const seen = new Set<string>();
+
+    for (const entityId of selection) {
+      if (!this.document.entities[entityId] || seen.has(entityId)) {
+        continue;
+      }
+
+      seen.add(entityId);
+      nextSelection.push(entityId);
+    }
+
+    this.session = {
+      ...this.session,
+      selection: nextSelection,
+      selectionInputMode: nextSelection.length > 0 ? inputMode : null,
+    };
+  }
+
   selectEntity(
     entityId: string | null,
     inputMode: PlacementInteractionMode | null = entityId
@@ -324,11 +351,7 @@ class EditorCoreImpl implements EditorCore {
     selectionMode: EditorSelectionUpdateMode = "replace",
   ): void {
     if (!entityId) {
-      this.session = {
-        ...this.session,
-        selection: [],
-        selectionInputMode: null,
-      };
+      this.setSelection([], null);
       return;
     }
 
@@ -338,11 +361,7 @@ class EditorCoreImpl implements EditorCore {
       selectionMode,
     );
 
-    this.session = {
-      ...this.session,
-      selection: nextSelection,
-      selectionInputMode: nextSelection.length > 0 ? inputMode : null,
-    };
+    this.setSelection(nextSelection, inputMode);
   }
 
   rotateSelectedEntityClockwise(position?: GridPoint): boolean {
