@@ -105,6 +105,14 @@ function deriveAnchoredPlacementScreenBox(
     return null;
   }
 
+  if (editor.session.draftEntities?.boundsDerived) {
+    return projectGridBoundsScreenBox({
+      canvasView,
+      gridSize: document.documentSettings.gridSize,
+      bounds: editor.session.draftEntities.boundsDerived,
+    });
+  }
+
   const definition = getStage1EntityDefinition(registry, preview.definitionId);
 
   if (!definition) {
@@ -139,10 +147,17 @@ function deriveAnchoredSelectionScreenBox(
     ui.phase !== "edit" ||
     selectionMode.key !== "select" ||
     isPlacementInteractionMode(editor.session.currentMode) ||
-    editor.session.selectionInputMode !== "touch" ||
-    editor.session.selection.length === 0
+    editor.session.selectionInputMode !== "touch"
   ) {
     return null;
+  }
+
+  if (editor.session.selectedEntities?.boundsDerived) {
+    return projectGridBoundsScreenBox({
+      canvasView,
+      gridSize: document.documentSettings.gridSize,
+      bounds: editor.session.selectedEntities.boundsDerived,
+    });
   }
 
   const bounds = getGridBoundingBox(
@@ -199,6 +214,14 @@ function deriveAnchoredMoveScreenBox(
     return null;
   }
 
+  if (editor.session.draftEntities?.boundsDerived) {
+    return projectGridBoundsScreenBox({
+      canvasView,
+      gridSize: document.documentSettings.gridSize,
+      bounds: editor.session.draftEntities.boundsDerived,
+    });
+  }
+
   const bounds = getGridBoundingBox(
     moveDraft.entities
       .map((draftEntity) => {
@@ -241,16 +264,17 @@ function deriveMarqueeScreenBox(
   const {
     workspaceState: { canvasView, document, editor, ui },
   } = options;
-  const marqueeDraft = editor.session.marqueeDraft;
+  const marqueeBounds =
+    editor.session.marqueeRange?.bounds ?? editor.session.marqueeDraft?.bounds;
 
-  if (ui.phase !== "edit" || !marqueeDraft) {
+  if (ui.phase !== "edit" || !marqueeBounds) {
     return null;
   }
 
   return projectGridBoundsScreenBox({
     canvasView,
     gridSize: document.documentSettings.gridSize,
-    bounds: marqueeDraft.bounds,
+    bounds: marqueeBounds,
   });
 }
 

@@ -227,6 +227,83 @@ describe("WorkspaceDerivedStore", () => {
     });
   });
 
+  it("prefers draftEntities bounds for touch placement when the legacy preview path cannot resolve a definition", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const workspaceState = {
+      document,
+      editor: {
+        session: {
+          ...createInitialEditorSession(),
+          draftEntities: {
+            ids: ["draft:placement-preview"],
+            boundsDerived: {
+              left: 4,
+              top: 6,
+              width: 2,
+              height: 3,
+            },
+            geometricCenterCellsDerived: { x: 5, y: 7.5 },
+          },
+          placementPreview: {
+            definitionId: "missing_definition",
+            interactionMode: "touch" as const,
+            gridPoint: { x: 999, y: 999 },
+            rotation: 0 as const,
+            valid: true,
+          },
+        },
+        history: {
+          canUndo: false,
+          canRedo: false,
+          undoDepth: 0,
+          redoDepth: 0,
+        },
+      },
+      ui: createInitialWorkbenchUiState(),
+      canvasView: {
+        offset: { x: 10, y: 20 },
+        zoom: 2,
+      },
+      simulation: {
+        runtimeSnapshot: {
+          tick: 0,
+          status: "idle" as const,
+          entityViews: {},
+          patchedEntityIds: [],
+        },
+        telemetry: {
+          tick: 0,
+          simulatedHertz: 0,
+          entityCount: 0,
+        },
+        inspectorDetails: null,
+        patchSet: createEmptySimulationPatchSet(),
+        selection: [],
+      },
+    };
+
+    expect(
+      deriveRenderDerivedState({
+        workspaceState,
+        topology,
+        registry,
+      }).anchoredPlacementScreenBox,
+    ).toEqual({
+      left:
+        (4 * document.documentSettings.gridSize - workspaceState.canvasView.offset.x) *
+        workspaceState.canvasView.zoom,
+      top:
+        (6 * document.documentSettings.gridSize - workspaceState.canvasView.offset.y) *
+        workspaceState.canvasView.zoom,
+      width:
+        2 * document.documentSettings.gridSize * workspaceState.canvasView.zoom,
+      height:
+        3 * document.documentSettings.gridSize * workspaceState.canvasView.zoom,
+    });
+  });
+
   it("projects touch selection into a shared screen box", () => {
     const document = createStage1SeedWorldDocument();
     const registry = createStage1Registry();
@@ -392,6 +469,78 @@ describe("WorkspaceDerivedStore", () => {
         bounds!.height *
         document.documentSettings.gridSize *
         workspaceState.canvasView.zoom,
+    });
+  });
+
+  it("prefers selectedEntities bounds for touch selection when legacy selection ids are absent", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const workspaceState = {
+      document,
+      editor: {
+        session: {
+          ...createInitialEditorSession(),
+          selectedEntities: {
+            ids: ["reactor-1"],
+            boundsDerived: {
+              left: 5,
+              top: 4,
+              width: 3,
+              height: 2,
+            },
+            geometricCenterCellsDerived: { x: 6.5, y: 5 },
+          },
+          selection: [],
+          selectionInputMode: "touch" as const,
+        },
+        history: {
+          canUndo: false,
+          canRedo: false,
+          undoDepth: 0,
+          redoDepth: 0,
+        },
+      },
+      ui: createInitialWorkbenchUiState(),
+      canvasView: {
+        offset: { x: 10, y: 20 },
+        zoom: 2,
+      },
+      simulation: {
+        runtimeSnapshot: {
+          tick: 0,
+          status: "idle" as const,
+          entityViews: {},
+          patchedEntityIds: [],
+        },
+        telemetry: {
+          tick: 0,
+          simulatedHertz: 0,
+          entityCount: 0,
+        },
+        inspectorDetails: null,
+        patchSet: createEmptySimulationPatchSet(),
+        selection: [],
+      },
+    };
+
+    expect(
+      deriveRenderDerivedState({
+        workspaceState,
+        topology,
+        registry,
+      }).anchoredSelectionScreenBox,
+    ).toEqual({
+      left:
+        (5 * document.documentSettings.gridSize - workspaceState.canvasView.offset.x) *
+        workspaceState.canvasView.zoom,
+      top:
+        (4 * document.documentSettings.gridSize - workspaceState.canvasView.offset.y) *
+        workspaceState.canvasView.zoom,
+      width:
+        3 * document.documentSettings.gridSize * workspaceState.canvasView.zoom,
+      height:
+        2 * document.documentSettings.gridSize * workspaceState.canvasView.zoom,
     });
   });
 
@@ -566,6 +715,78 @@ describe("WorkspaceDerivedStore", () => {
         workspaceState.editor.session.marqueeDraft!.bounds.height *
         document.documentSettings.gridSize *
         workspaceState.canvasView.zoom,
+    });
+  });
+
+  it("prefers marqueeRange bounds when legacy marqueeDraft is absent", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const workspaceState = {
+      document,
+      editor: {
+        session: {
+          ...createInitialEditorSession(),
+          marqueeRange: {
+            selectionMode: "replace" as const,
+            originGridPoint: { x: 10, y: 6 },
+            gridPoint: { x: 18, y: 13 },
+            bounds: {
+              left: 10,
+              top: 6,
+              width: 9,
+              height: 8,
+            },
+          },
+          marqueeDraft: null,
+        },
+        history: {
+          canUndo: false,
+          canRedo: false,
+          undoDepth: 0,
+          redoDepth: 0,
+        },
+      },
+      ui: createInitialWorkbenchUiState(),
+      canvasView: {
+        offset: { x: 10, y: 20 },
+        zoom: 2,
+      },
+      simulation: {
+        runtimeSnapshot: {
+          tick: 0,
+          status: "idle" as const,
+          entityViews: {},
+          patchedEntityIds: [],
+        },
+        telemetry: {
+          tick: 0,
+          simulatedHertz: 0,
+          entityCount: 0,
+        },
+        inspectorDetails: null,
+        patchSet: createEmptySimulationPatchSet(),
+        selection: [],
+      },
+    };
+
+    expect(
+      deriveRenderDerivedState({
+        workspaceState,
+        topology,
+        registry,
+      }).marqueeScreenBox,
+    ).toEqual({
+      left:
+        (10 * document.documentSettings.gridSize - workspaceState.canvasView.offset.x) *
+        workspaceState.canvasView.zoom,
+      top:
+        (6 * document.documentSettings.gridSize - workspaceState.canvasView.offset.y) *
+        workspaceState.canvasView.zoom,
+      width:
+        9 * document.documentSettings.gridSize * workspaceState.canvasView.zoom,
+      height:
+        8 * document.documentSettings.gridSize * workspaceState.canvasView.zoom,
     });
   });
 
