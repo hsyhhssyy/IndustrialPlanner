@@ -492,6 +492,45 @@ class EditorHostImpl implements EditorHost {
       : null;
   }
 
+  private getManagedPlacementPreview(
+    session: EditorSession = this.core.getSnapshot().session,
+  ): PlacementPreviewState | null {
+    const placementMode = this.getPlacementMode(session);
+
+    if (!placementMode) {
+      return null;
+    }
+
+    const previewDraftId = session.draftEntities?.ids[0] ?? null;
+    const previewDraft = previewDraftId
+      ? session.drafts.entities[previewDraftId]
+      : null;
+
+    if (
+      !previewDraft ||
+      previewDraft.sourceEntityId !== null ||
+      previewDraft.definitionId !== placementMode.definitionId
+    ) {
+      return null;
+    }
+
+    return {
+      definitionId: previewDraft.definitionId,
+      interactionMode: placementMode.inputMode,
+      gridPoint: {
+        ...previewDraft.position,
+      },
+      rotation: previewDraft.rotation,
+      valid: previewDraft.valid,
+    };
+  }
+
+  private getActivePlacementPreview(
+    session: EditorSession = this.core.getSnapshot().session,
+  ): PlacementPreviewState | null {
+    return this.getManagedPlacementPreview(session) ?? session.placementPreview;
+  }
+
   queryInteractionTarget(worldPoint: CanvasPoint): EditorWorldInteractionTarget {
     const snapshot = this.core.getSnapshot();
     const hitEntityId = hitTestWorldEntity(
@@ -746,10 +785,7 @@ class EditorHostImpl implements EditorHost {
   rotatePlacementClockwise(): boolean {
     const { session } = this.core.getSnapshot();
     const placementMode = this.getPlacementMode(session);
-    const previewDraftId = session.draftEntities?.ids[0] ?? null;
-    const previewDraft = previewDraftId
-      ? session.drafts.entities[previewDraftId]
-      : null;
+    const preview = this.getActivePlacementPreview(session);
 
     if (!placementMode) {
       return false;
@@ -765,11 +801,7 @@ class EditorHostImpl implements EditorHost {
     const nextRotation = rotateGridRotationClockwise(currentRotation);
     this.core.setPlacementRotation(nextRotation);
 
-    if (
-      !previewDraft ||
-      previewDraft.sourceEntityId !== null ||
-      previewDraft.definitionId !== placementMode.definitionId
-    ) {
+    if (!preview) {
       this.logger.info("Rotated armed placement before preview existed.", {
         definitionId: placementMode.definitionId,
         previousRotation: currentRotation,
@@ -781,11 +813,11 @@ class EditorHostImpl implements EditorHost {
     const rotatedPreviewEntity = rotateResolvedDraftEntitiesClockwise([
       {
         entity: {
-          entityId: previewDraft.id,
-          originGridPoint: previewDraft.position,
-          gridPoint: previewDraft.position,
-          originRotation: previewDraft.rotation,
-          rotation: previewDraft.rotation,
+          entityId: preview.definitionId,
+          originGridPoint: preview.gridPoint,
+          gridPoint: preview.gridPoint,
+          originRotation: preview.rotation,
+          rotation: preview.rotation,
         },
         definition,
       } satisfies ResolvedMoveDraftEntity,
@@ -796,17 +828,17 @@ class EditorHostImpl implements EditorHost {
     }
 
     const rotatedPreview = {
-      definitionId: previewDraft.definitionId,
-      interactionMode: placementMode.inputMode,
+      definitionId: preview.definitionId,
+      interactionMode: preview.interactionMode,
       rotation: rotatedPreviewEntity.rotation,
       gridPoint: rotatedPreviewEntity.gridPoint,
-      valid: previewDraft.valid,
+      valid: preview.valid,
     } satisfies PlacementPreviewState;
     const resolution = this.queryPlacementPreview(rotatedPreview);
 
     if (
       !isSamePlacementPreviewState(
-        session.placementPreview,
+        preview,
         resolution.preview,
       )
     ) {
@@ -817,7 +849,7 @@ class EditorHostImpl implements EditorHost {
       definitionId: placementMode.definitionId,
       previousRotation: currentRotation,
       nextRotation,
-      previousGridPoint: previewDraft.position,
+      previousGridPoint: preview.gridPoint,
       nextGridPoint: resolution.preview?.gridPoint ?? null,
       invalidReason: resolution.invalidReason,
     });
@@ -826,7 +858,7 @@ class EditorHostImpl implements EditorHost {
 
   updatePlacementPreview(input: CanvasWorldInput): PlacementPreviewUpdateResult {
     return this.measureProfilerStage("editor.total", () => {
-      const previousPreview = this.core.getSnapshot().session.placementPreview;
+      const previousPreview = this.getActivePlacementPreview();
       const resolution = this.queryPlacementAtWorldInput(input);
       const changed = !isSamePlacementPreviewState(previousPreview, resolution.preview);
 
@@ -947,23 +979,7 @@ class EditorHostImpl implements EditorHost {
   confirmPlacement(): boolean {
     const { session } = this.core.getSnapshot();
     const placementMode = this.getPlacementMode(session);
-    const previewDraftId = session.draftEntities?.ids[0] ?? null;
-    const previewDraft = previewDraftId
-      ? session.drafts.entities[previewDraftId]
-      : null;
-    const preview =
-      placementMode &&
-      previewDraft &&
-      previewDraft.sourceEntityId === null &&
-      previewDraft.definitionId === placementMode.definitionId
-        ? {
-            definitionId: previewDraft.definitionId,
-            interactionMode: placementMode.inputMode,
-            gridPoint: previewDraft.position,
-            rotation: previewDraft.rotation,
-            valid: previewDraft.valid,
-          }
-        : null;
+    const preview = this.getActivePlacementPreview(session);
 
     if (
       !placementMode ||

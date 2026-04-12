@@ -7,7 +7,10 @@ import {
 } from "@/domain/registry/stage1-registry";
 import type { EditorCore } from "@/editor/core/editor-core";
 import type { EditorSession } from "@/editor/contracts/editor-session";
-import { createMoveInteractionMode } from "@/editor/contracts/interaction-mode";
+import {
+  createMoveInteractionMode,
+  createPlacementInteractionMode,
+} from "@/editor/contracts/interaction-mode";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
 import { createEditorHost } from "@/editor/host/editor-host";
 
@@ -281,5 +284,93 @@ describe("EditorHost merged entity lookup", () => {
       rotation: 90,
       anchorWorldOffset: { x: 0, y: 0 },
     });
+  });
+
+  it("treats managed placement drafts as the active preview during update", () => {
+    const registry = createStage1Registry();
+    const document = createStage1SeedWorldDocument();
+    const topology = compileStage1World(document, registry);
+    let setPlacementPreviewCalls = 0;
+    const snapshot: {
+      document: typeof document;
+      session: EditorSession;
+      history: {
+        canUndo: boolean;
+        canRedo: boolean;
+        undoDepth: number;
+        redoDepth: number;
+      };
+    } = {
+      document,
+      session: {
+        ...createInitialEditorSession(),
+        currentMode: createPlacementInteractionMode({
+          definitionId: "belt_straight_1x1",
+          displayTool: "belt",
+          inputMode: "pointer",
+          rotation: 0,
+          previousModeKey: "select",
+          entryDisplayTool: "belt",
+        }),
+        placementPreview: null,
+        drafts: {
+          entities: {
+            "draft:placement-preview": {
+              id: "draft:placement-preview",
+              definitionId: "belt_straight_1x1",
+              position: { x: 8, y: 3 },
+              rotation: 0,
+              config: {},
+              tags: [],
+              sourceEntityId: null,
+              valid: true,
+              invalidReason: null,
+            },
+          },
+        },
+        draftEntities: {
+          ids: ["draft:placement-preview"],
+          boundsDerived: null,
+          geometricCenterCellsDerived: null,
+        },
+      },
+      history: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
+      },
+    };
+    const core = {
+      getSnapshot: () => snapshot,
+      setPlacementPreview: () => {
+        setPlacementPreviewCalls += 1;
+      },
+    } as unknown as EditorCore;
+    const host = createEditorHost({
+      document,
+      session: snapshot.session,
+      core,
+      getTopology: () => topology,
+      getDefinition: (definitionId) =>
+        getStage1EntityDefinition(registry, definitionId),
+    });
+
+    const result = host.updatePlacementPreview({
+      worldPoint: {
+        x: 8.5 * document.documentSettings.gridSize,
+        y: 3.5 * document.documentSettings.gridSize,
+      },
+      gridPoint: { x: 8, y: 3 },
+    });
+
+    expect(result.changed).toBe(false);
+    expect(result.preview).toMatchObject({
+      definitionId: "belt_straight_1x1",
+      gridPoint: { x: 8, y: 3 },
+      rotation: 0,
+      valid: true,
+    });
+    expect(setPlacementPreviewCalls).toBe(0);
   });
 });

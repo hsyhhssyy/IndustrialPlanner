@@ -147,6 +147,41 @@ function clonePlacementPreview(
   };
 }
 
+function resolveManagedPlacementPreview(
+  session: WorkspaceState["editor"]["session"],
+): PlacementPreviewState | null {
+  const placementMode = isPlacementInteractionMode(session.currentMode)
+    ? session.currentMode
+    : null;
+
+  if (!placementMode) {
+    return null;
+  }
+
+  const previewDraftId = session.draftEntities?.ids[0] ?? null;
+  const previewDraft = previewDraftId
+    ? session.drafts.entities[previewDraftId]
+    : null;
+
+  if (
+    !previewDraft ||
+    previewDraft.sourceEntityId !== null ||
+    previewDraft.definitionId !== placementMode.definitionId
+  ) {
+    return null;
+  }
+
+  return {
+    definitionId: previewDraft.definitionId,
+    interactionMode: placementMode.inputMode,
+    gridPoint: {
+      ...previewDraft.position,
+    },
+    rotation: previewDraft.rotation,
+    valid: previewDraft.valid,
+  };
+}
+
 interface CreateWorkbenchControllerOptions {
   placementPreviewProfiler?: PlacementPreviewProfiler;
 }
@@ -495,7 +530,9 @@ class WorkbenchControllerImpl implements WorkbenchController {
   updatePlacementPreviewFromScreenPoint(screenPoint: CanvasPoint): void {
     this.measureProfilerStage("controller.total", () => {
       const sessionBefore = this.editorHost.getState().session;
-      const previousPreview = clonePlacementPreview(sessionBefore.placementPreview);
+      const previousPreview = clonePlacementPreview(
+        resolveManagedPlacementPreview(sessionBefore) ?? sessionBefore.placementPreview,
+      );
       const worldInput = this.measureProfilerStage(
         "controller.resolveWorldInput",
         () => this.resolveWorldInput(screenPoint),
@@ -503,7 +540,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       const updateResult = this.editorHost.updatePlacementPreview(worldInput);
       const sessionAfter = this.editorHost.getState().session;
       const nextPreview = clonePlacementPreview(
-        sessionAfter.placementPreview,
+        resolveManagedPlacementPreview(sessionAfter) ?? sessionAfter.placementPreview,
       );
 
       this.placementPreviewProfiler?.recordUpdateResult({
