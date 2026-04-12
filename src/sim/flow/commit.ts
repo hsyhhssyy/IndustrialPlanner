@@ -21,14 +21,7 @@ type CommitContext = {
   warehouse: Record<ItemId, number>
   transferMatches: TransferMatch[]
   helpers: {
-    tryReceiveToLane: (
-      device: DeviceInstance,
-      runtime: DeviceRuntime,
-      lane: 'slot' | 'ns' | 'we' | 'output',
-      toPortId: string,
-      itemId: ItemId,
-      tick: number,
-    ) => boolean
+    applyPlannedReceive: (plan: TransferMatch, runtime: DeviceRuntime, device: DeviceInstance, tick: number) => boolean
     isWarehouseSubmitPort: (device: DeviceInstance, toPortId: string) => boolean
     consumeSourceByPlan: (plan: TransferMatch, runtime: DeviceRuntime, device: DeviceInstance, tick: number) => void
     shouldIgnoreConfiguredOutputInventory: (device: DeviceInstance, fromPortId: string, itemId: ItemId) => boolean
@@ -38,7 +31,15 @@ type CommitContext = {
 
 export function commitTransferMatches(context: CommitContext) {
   const committedSenders = new Set<string>()
+  const interactedDeviceIds = new Set<string>()
   let committedCount = 0
+
+  for (const match of context.transferMatches) {
+    const fromRuntime = context.runtimeById[match.fromId]
+    const fromDevice = context.deviceById.get(match.fromId)
+    if (!fromRuntime || !fromDevice) continue
+    context.helpers.consumeSourceByPlan(match, fromRuntime, fromDevice, context.tick)
+  }
 
   for (const match of context.transferMatches) {
     const fromRuntime = context.runtimeById[match.fromId]
@@ -47,7 +48,7 @@ export function commitTransferMatches(context: CommitContext) {
     const toDevice = context.deviceById.get(match.toId)
     if (!fromRuntime || !toRuntime || !fromDevice || !toDevice) continue
 
-    const received = context.helpers.tryReceiveToLane(toDevice, toRuntime, match.toLane, match.toPortId, match.itemId, context.tick)
+    const received = context.helpers.applyPlannedReceive(match, toRuntime, toDevice, context.tick)
     if (!received) {
       if (shouldTraceFocusedFlow(match.fromId, match.toId)) {
         simFlowLogger.debug('commit-blocked', {
@@ -85,6 +86,8 @@ export function commitTransferMatches(context: CommitContext) {
 
     committedCount += 1
     committedSenders.add(match.fromId)
+    interactedDeviceIds.add(match.fromId)
+    interactedDeviceIds.add(match.toId)
 
     if (context.helpers.isWarehouseSubmitPort(toDevice, match.toPortId) && 'inventory' in toRuntime) {
       toRuntime.inventory[match.itemId] = Math.max(0, (toRuntime.inventory[match.itemId] ?? 0) - 1)
@@ -97,8 +100,6 @@ export function commitTransferMatches(context: CommitContext) {
       if (!context.helpers.shouldIgnoreConfiguredOutputInventory(fromDevice, match.fromPortId, match.itemId) && Number.isFinite(context.warehouse[match.itemId])) {
         context.warehouse[match.itemId] = Math.max(0, context.warehouse[match.itemId] - 1)
       }
-    } else {
-      context.helpers.consumeSourceByPlan(match, fromRuntime, fromDevice, context.tick)
     }
 
     if (context.helpers.isSplitterType(fromDevice.typeId) && 'lastSplitterOutputPortId' in fromRuntime) {
@@ -134,5 +135,6 @@ export function commitTransferMatches(context: CommitContext) {
   return {
     committedCount,
     committedSenders,
+    interactedDeviceIds,
   }
 }

@@ -68,6 +68,7 @@ const STORAGE_BOX_GROUP_ID = 'storage-box-group-1'
 const LIQUID_STORAGE_TANK_GROUP_ID = 'liquid-storage-tank-group-1'
 const REACTOR_SOLID_GROUP_ID = 'reactor-solid-group-1'
 const REACTOR_LIQUID_GROUP_ID = 'reactor-liquid-group-1'
+const SLOTLESS_STORAGE_OUTPUT_TYPE_IDS = new Set(['item_port_sp_hub_1'])
 const STORAGE_SLOT_COUNT = 6
 const STORAGE_SLOT_CAPACITY = 50
 const LIQUID_STORAGE_TANK_CAPACITY = 500
@@ -916,6 +917,53 @@ function canAcceptProcessorInput(runtime: DeviceRuntime, deviceTypeId: DeviceIns
   return canAcceptProcessorBufferAmount(runtime, deviceTypeId, 'input', itemId, amount)
 }
 
+function processorInputSlotCapacity(deviceTypeId: DeviceInstance['typeId'], slotIndex: number) {
+  const spec = processorBufferSpec(deviceTypeId, 'input')
+  return spec.slotCapacities[slotIndex] ?? DEFAULT_PROCESSOR_BUFFER_CAPACITY
+}
+
+function canAcceptProcessorInputAtSlot(
+  device: DeviceInstance,
+  runtime: DeviceRuntime,
+  toPortId: string,
+  slotIndex: number,
+  itemId: ItemId,
+  amount: number,
+) {
+  if (!('inputBuffer' in runtime) || !('outputBuffer' in runtime)) return false
+  if (isReactorPoolType(device.typeId) && !reactorPortCanAcceptItem(toPortId, itemId)) return false
+  const shadowRuntime = cloneRuntime(runtime)
+  return tryAddProcessorInputAtSlot(shadowRuntime, device.typeId, slotIndex, itemId, amount)
+}
+
+function receiveProcessorInputAtSlot(
+  device: DeviceInstance,
+  runtime: DeviceRuntime,
+  toPortId: string,
+  slotIndex: number,
+  itemId: ItemId,
+  amount: number,
+) {
+  if (!('inputBuffer' in runtime) || !('outputBuffer' in runtime)) return false
+  if (isReactorPoolType(device.typeId) && !reactorPortCanAcceptItem(toPortId, itemId)) return false
+  return tryAddProcessorInputAtSlot(runtime, device.typeId, slotIndex, itemId, amount)
+}
+
+function canOutputItemToPort(
+  device: DeviceInstance,
+  runtime: DeviceRuntime,
+  fromPortId: string,
+  itemId: ItemId,
+) {
+  if ('inventory' in runtime && isStorageWithBufferGroups(runtime) && !SLOTLESS_STORAGE_OUTPUT_TYPE_IDS.has(device.typeId)) {
+    const slotIndices = orderedStorageSlotIndicesForOutput(runtime, fromPortId)
+    return slotIndices.some(
+      (slotIndex) => getStorageSlotItemId(runtime, slotIndex, fromPortId) === itemId && canStorageSlotOutputToPort(device, runtime, slotIndex, fromPortId, itemId),
+    )
+  }
+  return outputPortAllowsItem(device, fromPortId, itemId)
+}
+
 function canAcceptProcessorOutputBatch(
   runtime: DeviceRuntime,
   deviceTypeId: DeviceInstance['typeId'],
@@ -1693,7 +1741,7 @@ function consumeSourceByPlan(
       fromRuntime.outputBuffer[plan.itemId] = Math.max(0, (fromRuntime.outputBuffer[plan.itemId] ?? 0) - 1)
       clearSlotBindingIfEmpty(fromRuntime.outputBuffer, fromRuntime.outputSlotItems, plan.itemId)
     } else if ('inventory' in fromRuntime) {
-      consumeStorageFromSlot(fromRuntime, plan.fromOutputSlotIndex, plan.itemId, 1)
+      consumeStorageFromSlot(fromRuntime, plan.fromStorageSlotIndex, plan.itemId, 1)
     }
     return
   }
@@ -1714,6 +1762,26 @@ function consumeSourceByPlan(
     fromRuntime.producedItemsTotal += 1
   }
   setSlotRef(fromRuntime, plan.fromLane, null)
+}
+
+function applyPlannedReceive(
+  plan: TransferMatch,
+  toRuntime: DeviceRuntime,
+  toDevice: DeviceInstance,
+  tick: number,
+) {
+  if (plan.toNodeKind === 'processor-input' && typeof plan.toInputSlotIndex === 'number') {
+    return receiveProcessorInputAtSlot(toDevice, toRuntime, plan.toPortId, plan.toInputSlotIndex, plan.itemId, 1)
+  }
+
+  if (plan.toNodeKind === 'storage') {
+    if (typeof plan.toStorageSlotIndex === 'number') {
+      return addToStorageAtSlot(toRuntime, plan.toStorageSlotIndex, plan.itemId, 1)
+    }
+    return addToStorage(toRuntime, plan.itemId, 1, plan.toPortId)
+  }
+
+  return tryReceiveToLane(toDevice, toRuntime, plan.toLane, plan.toPortId, plan.itemId, tick)
 }
 
 function hasReadyOutput(device: DeviceInstance, runtime: DeviceRuntime, warehouse: Record<ItemId, number>) {
@@ -2712,65 +2780,53 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     }
   }
 
-  const committedSenders = new Set<string>()
-  const lanesAdvancedThisTick = new Set<string>()
-  const maxTransferRounds = Math.max(8, layout.devices.length)
+  const planResult = solvePullTransferMatches({
+    tick: sim.tick,
+    layoutDevices: layout.devices,
+    runtimeById,
+    deviceById,
+    inMap: links.inMap as Map<string, FlowPortLink[]>,
+    outMap: links.outMap as Map<string, FlowPortLink[]>,
+    lanesReachedHalfThisTick,
+    helpers: {
+      isHardBlockedStall,
+      orderedOutLinks: (device, runtime, outLinks) =>
+        orderedOutLinks(device, runtime, outLinks as ReturnType<typeof neighborsFromLinks>['links']) as FlowPortLink[],
+      buildDevicePullInputPortOrderMap: () => buildDevicePullInputPortOrderMap(layout, runtimeById, links, deviceById, warehouse),
+      isBridgeType: isBridgeConnectorType,
+      receiveLaneForPort: (device, runtime, toPortId) => canReceiveOnPort(device, runtime, toPortId),
+      sourceSlotLane,
+      prepareSourceLaneItem: (device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced) =>
+        prepareSourceLaneItem(device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced, sim.tickRateHz, warehouse),
+      canReceiveLaneForItem: (device, runtime, toPortId, lanesClearingThisTick, itemId) =>
+        canReceiveLaneForItem(device, runtime, toPortId, lanesClearingThisTick, itemId, runtimeById, purePipeSegmentMembersById),
+      getProcessorInputSlotCapacity: (device, _runtime, slotIndex) => processorInputSlotCapacity(device.typeId, slotIndex),
+      canAcceptProcessorInputAtSlot,
+      canOutputItemToPort,
+      orderedStorageSlotIndicesForOutput,
+      getStorageSlotItemId,
+      canStorageSlotOutputToPort,
+    },
+  })
 
-  for (let transferRound = 0; transferRound < maxTransferRounds; transferRound += 1) {
-    const planResult = solvePullTransferMatches({
-      tick: sim.tick,
-      layoutDevices: layout.devices,
-      runtimeById,
-      deviceById,
-      inMap: links.inMap as Map<string, FlowPortLink[]>,
-      outMap: links.outMap as Map<string, FlowPortLink[]>,
-      lanesReachedHalfThisTick,
-      helpers: {
-        isHardBlockedStall,
-        orderedOutLinks: (device, runtime, outLinks) =>
-          orderedOutLinks(device, runtime, outLinks as ReturnType<typeof neighborsFromLinks>['links']) as FlowPortLink[],
-        buildDevicePullInputPortOrderMap: () => buildDevicePullInputPortOrderMap(layout, runtimeById, links, deviceById, warehouse),
-        isSplitterType,
-        receiveLaneForPort: (device, runtime, toPortId) => canReceiveOnPort(device, runtime, toPortId),
-        sourceSlotLane,
-        prepareSourceLaneItem: (device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced) =>
-          prepareSourceLaneItem(device, runtime, fromLane, fromPortId, reachedHalf, lanesAdvanced, sim.tickRateHz, warehouse),
-        canReceiveLaneForItem: (device, runtime, toPortId, lanesClearingThisTick, itemId) =>
-          canReceiveLaneForItem(device, runtime, toPortId, lanesClearingThisTick, itemId, runtimeById, purePipeSegmentMembersById),
-        isStorageWithBufferGroups,
-        orderedStorageSlotIndicesForOutput,
-        getStorageSlotItemId,
-        canStorageSlotOutputToPort,
-      },
-    })
+  const lanesAdvancedThisTick = new Set(planResult.lanesAdvancedThisTick)
 
-    for (const laneKey of planResult.lanesAdvancedThisTick) {
-      lanesAdvancedThisTick.add(laneKey)
-    }
+  const commitResult = commitTransferMatches({
+    tick: sim.tick,
+    runtimeById,
+    deviceById,
+    warehouse,
+    transferMatches: planResult.transferMatches,
+    helpers: {
+      applyPlannedReceive,
+      isWarehouseSubmitPort,
+      consumeSourceByPlan,
+      shouldIgnoreConfiguredOutputInventory,
+      isSplitterType,
+    },
+  })
 
-    if (planResult.transferMatches.length === 0) break
-
-    const commitResult = commitTransferMatches({
-      tick: sim.tick,
-      runtimeById,
-      deviceById,
-      warehouse,
-      transferMatches: planResult.transferMatches,
-      helpers: {
-        tryReceiveToLane,
-        isWarehouseSubmitPort,
-        consumeSourceByPlan,
-        shouldIgnoreConfiguredOutputInventory,
-        isSplitterType,
-      },
-    })
-
-    for (const senderId of commitResult.committedSenders) {
-      committedSenders.add(senderId)
-    }
-
-    if (commitResult.committedCount === 0) break
-  }
+  const interactedDeviceIds = commitResult.interactedDeviceIds
 
   flushDarkPipeInletInventory(layout, runtimeById)
 
@@ -2785,7 +2841,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
         continue
       }
 
-      if (committedSenders.has(device.instanceId)) {
+      if (interactedDeviceIds.has(device.instanceId)) {
         runtime.submitAccumulatorTicks = 0
         continue
       }
@@ -2799,9 +2855,10 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
     if (
       outLinks.length > 0 &&
-      !committedSenders.has(device.instanceId) &&
+      !interactedDeviceIds.has(device.instanceId) &&
       hasInternalBuffer(runtime) &&
-      hasReadyOutput(device, runtime, warehouse)
+      hasReadyOutput(device, runtime, warehouse) &&
+      !isRecipeProcessorRuntime(runtime)
     ) {
       normalizeRuntimeState(runtime, 'DOWNSTREAM_BLOCKED')
       continue
@@ -2809,7 +2866,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
     if (
       outLinks.length > 0 &&
-      !committedSenders.has(device.instanceId) &&
+      !interactedDeviceIds.has(device.instanceId) &&
       !hasInternalBuffer(runtime) &&
       shouldMarkDownstreamBlockedNoBuffer(device, runtime, lanesAdvancedThisTick)
     ) {

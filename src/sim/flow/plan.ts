@@ -1,915 +1,1134 @@
-import type { ItemId } from '../../domain/types'
-import { getDirectionalPortIds, getPortPriorityGroup, orderPortsByPriorityGroup } from '../../domain/shared/portPriority'
-import { createDebugLogger } from '../../app/debugLogger'
-import type { PlanContext, PlanResult, PortLink, PullIntent, ReceiveLane, TransferMatch } from './types'
+import { OPPOSITE_EDGE } from '../../domain/geometry'
+import { getDirectionalPortIds, getPortPriorityGroup } from '../../domain/shared/portPriority'
+import type {
+  BufferGroupRuntime,
+  BufferSlotRuntime,
+  DeviceInstance,
+  DeviceRuntime,
+  Edge,
+  ItemId,
+  ProcessorRuntime,
+  StorageRuntime,
+} from '../../domain/types'
+import type {
+  FlowEdgeSnapshot,
+  FlowNodeBaseState,
+  FlowNodeKind,
+  FlowNodeSnapshot,
+  PlanContext,
+  PlanResult,
+  PortLink,
+  TransferMatch,
+} from './types'
 
-const SLOTLESS_STORAGE_OUTPUT_TYPE_IDS = new Set(['item_port_sp_hub_1'])
-const simFlowLogger = createDebugLogger('sim-flow')
-const FLOW_DEBUG_FOCUS_RECEIVER_ID = 'item_log_converger_mno0wbt3_r'
-const FLOW_DEBUG_FOCUS_PROVIDER_IDS = new Set([
-  'item_log_splitter_mno0wbt3_2',
-  'item_log_converger_mno0wbt3_q',
-])
-const FLOW_DEBUG_FOCUS_DEVICE_IDS = new Set([
-  FLOW_DEBUG_FOCUS_RECEIVER_ID,
-  ...FLOW_DEBUG_FOCUS_PROVIDER_IDS,
-])
-
-type CandidateLink = PortLink & {
-  receiverPortId: string
-  receiverPortRank: number
-  receiverPriorityGroup: number
-  receiverPriorityPortIndex: number
-  receiverPriorityPortCount: number
+type InternalNode = FlowNodeSnapshot & {
+  device: DeviceInstance
+  runtime: DeviceRuntime
+  deviceIndex: number
+  localOrder: number
 }
 
-type ReceiverState = {
-  key: string
-  receiverId: string
-  candidateLinks: CandidateLink[]
+type InternalEdge = FlowEdgeSnapshot & {
+  fromNode: InternalNode
+  toNode: InternalNode
 }
 
-type SenderAttempt = PullIntent & {
-  receiverLaneKey: string
-  targetKey: string
-  dependencySenderId: string | null
-  isDirect: boolean
+type SourceCandidate = {
+  itemId: ItemId
+  fromStorageSlotIndex?: number
 }
 
-function laneKey(deviceId: string, lane: ReceiveLane) {
-  return `${deviceId}:${lane}`
+type StorageVirtualSlot = {
+  slotIndex: number
+  mode: BufferSlotRuntime['mode']
+  pinnedItemId?: ItemId
+  currentItemId: ItemId | null
+  amount: number
+  capacity: number
+}
+
+type StorageVirtualGroup = {
+  inPortIds: string[]
+  outPortIds: string[]
+  slotIndices: number[]
+}
+
+type StorageVirtualState = {
+  slotted: boolean
+  slots: StorageVirtualSlot[]
+  groups: StorageVirtualGroup[]
+}
+
+type ProcessorInputVirtualSlot = {
+  slotIndex: number
+  currentItemId: ItemId | null
+  lockedItem: ItemId | null
+  amount: number
+  capacity: number
 }
 
 function buildTransferId(tick: number, sequence: number) {
   return `${tick}:${sequence}`
 }
 
-function getRuntimeLaneSnapshot(runtime: PlanContext['runtimeById'][string], lane: ReceiveLane) {
-  if (lane === 'slot' && 'slot' in runtime) {
-    return runtime.slot
-      ? { occupied: true, itemId: runtime.slot.itemId, progress01: runtime.slot.progress01 }
-      : { occupied: false }
-  }
-  if (lane === 'ns' && 'nsSlot' in runtime) {
-    return runtime.nsSlot
-      ? { occupied: true, itemId: runtime.nsSlot.itemId, progress01: runtime.nsSlot.progress01 }
-      : { occupied: false }
-  }
-  if (lane === 'we' && 'weSlot' in runtime) {
-    return runtime.weSlot
-      ? { occupied: true, itemId: runtime.weSlot.itemId, progress01: runtime.weSlot.progress01 }
-      : { occupied: false }
-  }
-  return null
-}
-
-function getSourceLaneSnapshot(
-  context: PlanContext,
-  senderId: string,
-  fromPortId: string,
-) {
-  const senderRuntime = context.runtimeById[senderId]
-  const senderDevice = context.deviceById.get(senderId)
-  if (!senderRuntime || !senderDevice) return null
-
-  const senderLane = context.helpers.sourceSlotLane(senderDevice, senderRuntime, fromPortId)
-  if (senderLane === 'output') {
-    return {
-      lane: senderLane,
-      outputBuffer: 'outputBuffer' in senderRuntime ? senderRuntime.outputBuffer : null,
-    }
-  }
-
-  return {
-    lane: senderLane,
-    snapshot: getRuntimeLaneSnapshot(senderRuntime, senderLane),
-  }
-}
-
-function getFocusedProviderDefaultPortId(providerId: string) {
-  if (providerId === 'item_log_splitter_mno0wbt3_2') return 'out_n'
-  if (providerId === 'item_log_converger_mno0wbt3_q') return 'out_w'
-  return null
-}
-
-function buildFocusedProviderTrace(
-  context: PlanContext,
-  attempts: SenderAttempt[],
-  winner: SenderAttempt | null,
-) {
-  return [...FLOW_DEBUG_FOCUS_PROVIDER_IDS].map((providerId) => {
-    const providerAttempt = attempts.find((attempt) => attempt.fromId === providerId) ?? null
-    const providerDevice = context.deviceById.get(providerId)
-    const providerPortId = providerAttempt?.fromPortId ?? getFocusedProviderDefaultPortId(providerId)
-    const sourceState = providerPortId ? getSourceLaneSnapshot(context, providerId, providerPortId) : null
-    const snapshot = sourceState && 'snapshot' in sourceState ? sourceState.snapshot : null
-    return {
-      providerId,
-      providerTypeId: providerDevice?.typeId ?? null,
-      progress01: snapshot?.occupied ? snapshot.progress01 ?? null : null,
-      occupied: snapshot?.occupied ?? false,
-      itemId: snapshot?.occupied ? snapshot.itemId ?? null : null,
-      isCandidateForReceiverThisRound: Boolean(providerAttempt),
-      wonSelection: winner ? winner.fromId === providerId : false,
-      candidatePortId: providerAttempt?.fromPortId ?? null,
-      sourceState,
-    }
-  })
-}
-
-function pickStorageOutputSlotForPort(context: PlanContext, senderDeviceId: string, senderPortId: string, itemId: ItemId) {
-  const senderRuntime = context.runtimeById[senderDeviceId]
-  const senderDevice = context.deviceById.get(senderDeviceId)
-  if (!senderRuntime || !senderDevice || !context.helpers.isStorageWithBufferGroups(senderRuntime)) return undefined
-  if (SLOTLESS_STORAGE_OUTPUT_TYPE_IDS.has(senderDevice.typeId)) return undefined
-
-  const slotIndices = context.helpers.orderedStorageSlotIndicesForOutput(senderRuntime, senderPortId)
-  for (const slotIndex of slotIndices) {
-    const slotItemId = context.helpers.getStorageSlotItemId(senderRuntime, slotIndex, senderPortId)
-    if (!slotItemId || slotItemId !== itemId) continue
-    if (!context.helpers.canStorageSlotOutputToPort(senderDevice, senderRuntime, slotIndex, senderPortId, itemId)) continue
-    return slotIndex
-  }
-
-  return undefined
-}
-
-function compareCandidateLinks(left: PortLink, right: PortLink) {
-  const fromCmp = left.from.instanceId.localeCompare(right.from.instanceId)
-  if (fromCmp !== 0) return fromCmp
-  return left.from.portId.localeCompare(right.from.portId)
-}
-
-function buildLinkKey(link: Pick<PortLink, 'from' | 'to'>) {
+function buildPortLinkKey(link: Pick<PortLink, 'from' | 'to'>) {
   return `${link.from.instanceId}:${link.from.portId}->${link.to.instanceId}:${link.to.portId}`
 }
 
-function getPriorityGroupCursor(runtime: PlanContext['runtimeById'][string], laneKey: string, priorityGroup: number) {
-  const cursors = runtime.inputPriorityGroupCursorByLane?.[laneKey]
-  return cursors?.[priorityGroup - 1] ?? 0
+function isStorageRuntime(runtime: DeviceRuntime): runtime is StorageRuntime {
+  return 'inventory' in runtime
 }
 
-function liveOrderedInputPorts(
-  context: PlanContext,
-  deviceId: string,
-  inLinks: PortLink[],
-  devicePullInputPortOrderById: Map<string, string[]>,
-) {
-  const runtime = context.runtimeById[deviceId]
-  const device = context.deviceById.get(deviceId)
-  if (!runtime || !device) return [] as string[]
+function isProcessorRuntime(runtime: DeviceRuntime): runtime is ProcessorRuntime {
+  return 'inputBuffer' in runtime && 'outputBuffer' in runtime && !('transportSamples' in runtime)
+}
 
-  const linkedPorts = [...new Set(inLinks.map((link) => link.to.portId))]
-  if (linkedPorts.length === 0) return []
+function isTransportBufferRuntime(runtime: DeviceRuntime) {
+  return 'inputBuffer' in runtime && 'outputBuffer' in runtime && 'transportSamples' in runtime
+}
 
-  const preferredPortOrder = devicePullInputPortOrderById.get(deviceId) ?? []
-  const ordered = preferredPortOrder.filter((portId) => linkedPorts.includes(portId))
-  for (const portId of linkedPorts) {
-    if (!ordered.includes(portId)) {
-      ordered.push(portId)
+function getBufferGroups(runtime: DeviceRuntime): BufferGroupRuntime[] {
+  if (!('bufferGroups' in runtime) || !Array.isArray(runtime.bufferGroups) || runtime.bufferGroups.length === 0) return []
+  return runtime.bufferGroups
+}
+
+function sumFiniteAmounts(values: number[]) {
+  let total = 0
+  for (const value of values) {
+    if (!Number.isFinite(value)) return Number.POSITIVE_INFINITY
+    total += value
+  }
+  return total
+}
+
+function compareNodeOrder(left: InternalNode, right: InternalNode) {
+  if (left.deviceIndex !== right.deviceIndex) return right.deviceIndex - left.deviceIndex
+  if (left.localOrder !== right.localOrder) return left.localOrder - right.localOrder
+  return left.nodeId.localeCompare(right.nodeId)
+}
+
+function compareEdgeKey(left: InternalEdge, right: InternalEdge) {
+  if (left.senderPickedOutLinkIndex !== right.senderPickedOutLinkIndex) {
+    return left.senderPickedOutLinkIndex - right.senderPickedOutLinkIndex
+  }
+  if (left.receiverPriorityGroup !== right.receiverPriorityGroup) {
+    return left.receiverPriorityGroup - right.receiverPriorityGroup
+  }
+  if (left.receiverPriorityPortIndex !== right.receiverPriorityPortIndex) {
+    return left.receiverPriorityPortIndex - right.receiverPriorityPortIndex
+  }
+  const nodeCmp = compareNodeOrder(left.toNode, right.toNode)
+  if (nodeCmp !== 0) return nodeCmp
+  return left.edgeId.localeCompare(right.edgeId)
+}
+
+function compareReceiverEdge(left: InternalEdge, right: InternalEdge) {
+  if (left.receiverPriorityGroup !== right.receiverPriorityGroup) {
+    return left.receiverPriorityGroup - right.receiverPriorityGroup
+  }
+  if (left.receiverPriorityPortIndex !== right.receiverPriorityPortIndex) {
+    return left.receiverPriorityPortIndex - right.receiverPriorityPortIndex
+  }
+  const fromCmp = compareNodeOrder(left.fromNode, right.fromNode)
+  if (fromCmp !== 0) return fromCmp
+  return left.edgeId.localeCompare(right.edgeId)
+}
+
+function laneKey(deviceId: string, lane: string | undefined) {
+  return `${deviceId}:${lane ?? 'none'}`
+}
+
+function storageStateFromRuntime(runtime: StorageRuntime) {
+  const groups = getBufferGroups(runtime)
+  if (groups.length === 0) {
+    return {
+      slotted: false,
+      slots: [],
+      groups: [],
+    } satisfies StorageVirtualState
+  }
+
+  return {
+    slotted: true,
+    slots: groups.flatMap((group) =>
+      group.slots.map((slot) => ({
+        slotIndex: slot.slotIndex,
+        mode: slot.mode,
+        pinnedItemId: slot.pinnedItemId,
+        currentItemId: slot.currentItemId ?? null,
+        amount: slot.amount,
+        capacity: slot.capacity,
+      })),
+    ),
+    groups: groups.map((group) => ({
+      inPortIds: [...group.inPortIds],
+      outPortIds: [...group.outPortIds],
+      slotIndices: group.slots.map((slot) => slot.slotIndex),
+    })),
+  } satisfies StorageVirtualState
+}
+
+function storageSlotIndicesForInput(state: StorageVirtualState, toPortId: string) {
+  const group = state.groups.find((entry) => entry.inPortIds.includes(toPortId))
+  if (!group) return state.slots.map((slot) => slot.slotIndex).sort((left, right) => left - right)
+  return [...group.slotIndices].sort((left, right) => left - right)
+}
+
+function storageSlotIndicesForOutput(state: StorageVirtualState, fromPortId: string) {
+  const group = state.groups.find((entry) => entry.outPortIds.includes(fromPortId))
+  if (!group) return state.slots.map((slot) => slot.slotIndex).sort((left, right) => left - right)
+  return [...group.slotIndices].sort((left, right) => left - right)
+}
+
+function canStorageSlotAcceptItem(slot: StorageVirtualSlot, itemId: ItemId) {
+  if (slot.amount >= slot.capacity) return false
+  if (slot.mode === 'pinned') {
+    if (!slot.pinnedItemId) return false
+    if (slot.pinnedItemId !== itemId) return false
+  }
+  if (!slot.currentItemId) return true
+  return slot.currentItemId === itemId
+}
+
+function reserveStorageInputSlot(state: StorageVirtualState, toPortId: string, itemId: ItemId) {
+  const slotIndices = storageSlotIndicesForInput(state, toPortId)
+  for (const slotIndex of slotIndices) {
+    const slot = state.slots.find((entry) => entry.slotIndex === slotIndex)
+    if (!slot || !canStorageSlotAcceptItem(slot, itemId)) continue
+    slot.currentItemId = slot.currentItemId ?? itemId
+    slot.amount += 1
+    return slot.slotIndex
+  }
+  return null
+}
+
+function canStorageSlotOutput(state: StorageVirtualState, fromPortId: string, slotIndex: number, itemId: ItemId) {
+  const allowedSlotIndices = storageSlotIndicesForOutput(state, fromPortId)
+  if (!allowedSlotIndices.includes(slotIndex)) return false
+  const slot = state.slots.find((entry) => entry.slotIndex === slotIndex)
+  if (!slot || slot.amount <= 0 || !slot.currentItemId) return false
+  return slot.currentItemId === itemId
+}
+
+function consumeStorageOutputSlot(state: StorageVirtualState, slotIndex: number) {
+  const slot = state.slots.find((entry) => entry.slotIndex === slotIndex)
+  if (!slot || slot.amount <= 0) return
+  slot.amount = Math.max(0, slot.amount - 1)
+  if (slot.amount === 0) slot.currentItemId = null
+}
+
+function createProcessorInputVirtualState(node: InternalNode, context: PlanContext): ProcessorInputVirtualSlot {
+  const runtime = node.runtime as ProcessorRuntime
+  const slotIndex = node.slotIndex ?? 0
+  const itemId = runtime.inputSlotItems[slotIndex] ?? null
+  const amount = itemId ? (runtime.inputBuffer[itemId] ?? 0) : 0
+  return {
+    slotIndex,
+    currentItemId: itemId,
+    lockedItem: itemId,
+    amount,
+    capacity: context.helpers.getProcessorInputSlotCapacity(node.device, node.runtime, slotIndex),
+  }
+}
+
+function deleteNode(node: InternalNode, edgeById: Map<string, InternalEdge>) {
+  if (node.deleted) return false
+  node.deleted = true
+  if (node.result === 'uncertain') node.result = 'solved-block'
+  for (const edge of edgeById.values()) {
+    if (edge.fromNode.nodeId === node.nodeId || edge.toNode.nodeId === node.nodeId) {
+      edge.deleted = true
     }
   }
-  return ordered
+  return true
 }
 
-function buildReceiverStates(
-  context: PlanContext,
-  devicePullInputPortOrderById: Map<string, string[]>,
-) {
-  const states: ReceiverState[] = []
+function deleteEdge(edge: InternalEdge) {
+  if (edge.deleted) return false
+  edge.deleted = true
+  return true
+}
+
+function activeIncomingEdges(node: InternalNode, edgeById: Map<string, InternalEdge>) {
+  return [...edgeById.values()].filter((edge) => !edge.deleted && edge.toNode.nodeId === node.nodeId && !edge.fromNode.deleted)
+}
+
+function activeOutgoingEdges(node: InternalNode, edgeById: Map<string, InternalEdge>) {
+  return [...edgeById.values()].filter((edge) => !edge.deleted && edge.fromNode.nodeId === node.nodeId && !edge.toNode.deleted)
+}
+
+function trimProviderAndFreeEdges(nodes: InternalNode[], edgeById: Map<string, InternalEdge>) {
+  for (const node of nodes) {
+    if (node.deleted) continue
+    if (node.baseState === 'provider') {
+      for (const edge of activeIncomingEdges(node, edgeById)) {
+        deleteEdge(edge)
+      }
+    }
+    if ((node.kind === 'transport' || node.kind === 'bridge') && node.baseState === 'free') {
+      for (const edge of activeOutgoingEdges(node, edgeById)) {
+        deleteEdge(edge)
+      }
+    }
+  }
+}
+
+function computeSccs(nodes: InternalNode[], edgeById: Map<string, InternalEdge>) {
+  const activeNodes = nodes.filter((node) => !node.deleted)
+  const adjacency = new Map<string, string[]>()
+  const reverse = new Map<string, string[]>()
+
+  for (const node of activeNodes) {
+    adjacency.set(node.nodeId, [])
+    reverse.set(node.nodeId, [])
+  }
+
+  for (const edge of edgeById.values()) {
+    if (edge.deleted || edge.fromNode.deleted || edge.toNode.deleted) continue
+    adjacency.get(edge.fromNode.nodeId)?.push(edge.toNode.nodeId)
+    reverse.get(edge.toNode.nodeId)?.push(edge.fromNode.nodeId)
+  }
+
+  const visited = new Set<string>()
+  const order: string[] = []
+  const dfsOrder = (nodeId: string) => {
+    if (visited.has(nodeId)) return
+    visited.add(nodeId)
+    for (const nextId of adjacency.get(nodeId) ?? []) dfsOrder(nextId)
+    order.push(nodeId)
+  }
+  for (const node of activeNodes) dfsOrder(node.nodeId)
+
+  visited.clear()
+  const sccs: string[][] = []
+  const dfsCollect = (nodeId: string, bucket: string[]) => {
+    if (visited.has(nodeId)) return
+    visited.add(nodeId)
+    bucket.push(nodeId)
+    for (const nextId of reverse.get(nodeId) ?? []) dfsCollect(nextId, bucket)
+  }
+
+  for (let index = order.length - 1; index >= 0; index -= 1) {
+    const nodeId = order[index]
+    if (visited.has(nodeId)) continue
+    const bucket: string[] = []
+    dfsCollect(nodeId, bucket)
+    sccs.push(bucket)
+  }
+
+  return sccs
+}
+
+function eliminateCycles(nodes: InternalNode[], edgeById: Map<string, InternalEdge>) {
+  let changed = false
+
+  const deleteInternalEdgesWithExternalExit = () => {
+    let localChanged = false
+    const sccs = computeSccs(nodes, edgeById)
+    for (const scc of sccs) {
+      const memberSet = new Set(scc)
+      const hasCycle = scc.length > 1 || [...edgeById.values()].some((edge) => !edge.deleted && edge.fromNode.nodeId === edge.toNode.nodeId && memberSet.has(edge.fromNode.nodeId))
+      if (!hasCycle) continue
+      for (const nodeId of scc) {
+        const node = nodes.find((entry) => entry.nodeId === nodeId)
+        if (!node || node.deleted) continue
+        const outgoing = activeOutgoingEdges(node, edgeById)
+        const internal = outgoing.filter((edge) => memberSet.has(edge.toNode.nodeId))
+        const external = outgoing.filter((edge) => !memberSet.has(edge.toNode.nodeId))
+        if (internal.length === 0 || external.length === 0) continue
+        for (const edge of internal) {
+          localChanged = deleteEdge(edge) || localChanged
+        }
+      }
+    }
+    return localChanged
+  }
+
+  changed = deleteInternalEdgesWithExternalExit() || changed
+  const remaining = computeSccs(nodes, edgeById)
+  for (const scc of remaining) {
+    const memberSet = new Set(scc)
+    const hasCycle = scc.length > 1 || [...edgeById.values()].some((edge) => !edge.deleted && edge.fromNode.nodeId === edge.toNode.nodeId && memberSet.has(edge.fromNode.nodeId))
+    if (!hasCycle) continue
+    for (const edge of edgeById.values()) {
+      if (edge.deleted) continue
+      if (memberSet.has(edge.fromNode.nodeId) && memberSet.has(edge.toNode.nodeId)) {
+        changed = deleteEdge(edge) || changed
+      }
+    }
+  }
+
+  return changed
+}
+
+function pruneGraph(nodes: InternalNode[], edgeById: Map<string, InternalEdge>) {
+  let changed = true
+  while (changed) {
+    changed = false
+    trimProviderAndFreeEdges(nodes, edgeById)
+
+    for (const node of nodes) {
+      if (node.deleted) continue
+      const incoming = activeIncomingEdges(node, edgeById)
+      const outgoing = activeOutgoingEdges(node, edgeById)
+
+      if (incoming.length === 0 && outgoing.length === 0) {
+        changed = deleteNode(node, edgeById) || changed
+        continue
+      }
+      if (node.baseState === 'free' && incoming.length === 0) {
+        changed = deleteNode(node, edgeById) || changed
+        continue
+      }
+      if (node.baseState === 'free' && incoming.length > 0 && incoming.every((edge) => edge.fromNode.baseState === 'free' || edge.fromNode.deleted)) {
+        changed = deleteNode(node, edgeById) || changed
+        continue
+      }
+      if ((node.baseState === 'shadow-pending' || node.baseState === 'provider') && outgoing.length === 0) {
+        changed = deleteNode(node, edgeById) || changed
+      }
+    }
+  }
+}
+
+function buildDevicePriorityMeta(context: PlanContext) {
+  const receiverOrderByDevice = context.helpers.buildDevicePullInputPortOrderMap()
+  const senderOutLinksByDevice = new Map<string, PortLink[]>()
+  const senderMetaByLinkKey = new Map<string, Pick<InternalEdge, 'senderOutLinkCount' | 'senderPickedOutLinkIndex' | 'senderPriorityGroupKey' | 'senderPriorityGroup' | 'senderPriorityPortIndex' | 'senderPriorityPortCount'>>()
+  const receiverMetaByDevicePort = new Map<string, Pick<InternalEdge, 'receiverPriorityGroup' | 'receiverPriorityPortIndex' | 'receiverPriorityPortCount'>>()
 
   for (const device of context.layoutDevices) {
     const runtime = context.runtimeById[device.instanceId]
-    if (!runtime || context.helpers.isHardBlockedStall(runtime.stallReason)) continue
+    if (!runtime) continue
 
-    const inLinks = context.inMap.get(device.instanceId) ?? []
-    if (inLinks.length === 0) continue
+    const orderedOutLinks = context.helpers.orderedOutLinks(device, runtime, context.outMap.get(device.instanceId) ?? [])
+    senderOutLinksByDevice.set(device.instanceId, orderedOutLinks)
+    const allLiveOutLinks = context.outMap.get(device.instanceId) ?? []
 
-    const linksByPort = new Map<string, PortLink[]>()
-    for (const link of inLinks) {
-      const existing = linksByPort.get(link.to.portId)
-      if (existing) {
-        existing.push(link)
-      } else {
-        linksByPort.set(link.to.portId, [link])
-      }
+    for (const link of orderedOutLinks) {
+      const priorityGroup = getPortPriorityGroup(device.config, link.from.portId)
+      const outputGroups = getBufferGroups(runtime)
+      const outputGroup = outputGroups.find((group) => group.outPortIds.includes(link.from.portId))
+      const outputPortIds = outputGroup?.outPortIds ?? getDirectionalPortIds(device.typeId, 'Output')
+      const livePortIds = outputPortIds.filter((portId) => allLiveOutLinks.some((outLink) => outLink.from.portId === portId))
+      const sameGroupPortIds = livePortIds.filter((portId) => getPortPriorityGroup(device.config, portId) === priorityGroup)
+      senderMetaByLinkKey.set(buildPortLinkKey(link), {
+        senderOutLinkCount: orderedOutLinks.length,
+        senderPickedOutLinkIndex: orderedOutLinks.findIndex((entry) => buildPortLinkKey(entry) === buildPortLinkKey(link)),
+        senderPriorityGroupKey: outputGroup?.id ?? (outputPortIds.length > 0 ? '__default__' : null),
+        senderPriorityGroup: priorityGroup,
+        senderPriorityPortIndex: Math.max(0, sameGroupPortIds.findIndex((portId) => portId === link.from.portId)),
+        senderPriorityPortCount: sameGroupPortIds.length,
+      })
     }
 
-    const portOrder = liveOrderedInputPorts(context, device.instanceId, inLinks, devicePullInputPortOrderById)
-    const candidateLinksByLane = new Map<string, CandidateLink[]>()
-    const stateOrder: string[] = []
-
-    for (const receiverPortId of portOrder) {
-      const receiverLane = context.helpers.receiveLaneForPort(device, runtime, receiverPortId)
-      if (!receiverLane) continue
-      const stateKey = `${device.instanceId}:${receiverLane}`
-      let laneCandidates = candidateLinksByLane.get(stateKey)
-      if (!laneCandidates) {
-        laneCandidates = []
-        candidateLinksByLane.set(stateKey, laneCandidates)
-        stateOrder.push(stateKey)
-      }
-
-      laneCandidates.push(
-        ...(linksByPort.get(receiverPortId) ?? []).map((link) => ({
-          ...link,
-          receiverPortId,
-          receiverPortRank: -1,
-          receiverPriorityGroup: getPortPriorityGroup(device.config, receiverPortId),
-          receiverPriorityPortIndex: 0,
-          receiverPriorityPortCount: 0,
-        })),
-      )
+    const liveInputPorts = [...new Set((context.inMap.get(device.instanceId) ?? []).map((link) => link.to.portId))]
+    const preferred = receiverOrderByDevice.get(device.instanceId) ?? []
+    const orderedPorts = [...preferred.filter((portId) => liveInputPorts.includes(portId))]
+    for (const portId of liveInputPorts) {
+      if (!orderedPorts.includes(portId)) orderedPorts.push(portId)
     }
 
-    for (const stateKey of stateOrder) {
-      const laneCandidates = candidateLinksByLane.get(stateKey) ?? []
-      const orderedByPriorityGroup = Array.from({ length: 10 }, (_, index) => index + 1)
-        .flatMap((priorityGroup) => {
-          const groupedCandidates = laneCandidates.filter((link) => link.receiverPriorityGroup === priorityGroup)
-          const groupedByPort = new Map<string, CandidateLink[]>()
-          for (const candidate of groupedCandidates) {
-            const existing = groupedByPort.get(candidate.receiverPortId)
-            if (existing) {
-              existing.push(candidate)
-            } else {
-              groupedByPort.set(candidate.receiverPortId, [candidate])
-            }
-          }
-
-          const orderedGroupCandidates: CandidateLink[] = []
-          const canonicalGroupPortOrder = portOrder.filter((receiverPortId) => groupedByPort.has(receiverPortId))
-          const canonicalPortIndexById = new Map(canonicalGroupPortOrder.map((receiverPortId, index) => [receiverPortId, index]))
-          const groupPortOrder = orderPortsByPriorityGroup(
-            canonicalGroupPortOrder,
-            () => priorityGroup,
-            (() => {
-              const cursors = Array.from({ length: 10 }, () => 0)
-              cursors[priorityGroup - 1] = getPriorityGroupCursor(runtime, stateKey, priorityGroup)
-              return cursors
-            })(),
-          )
-          for (const receiverPortId of groupPortOrder) {
-            const portCandidates = groupedByPort.get(receiverPortId)
-            if (!portCandidates || portCandidates.length === 0) continue
-            portCandidates.sort(compareCandidateLinks)
-            orderedGroupCandidates.push(
-              ...portCandidates.map((candidate) => ({
-                ...candidate,
-                receiverPriorityGroup: priorityGroup,
-                receiverPriorityPortIndex: canonicalPortIndexById.get(receiverPortId) ?? 0,
-                receiverPriorityPortCount: canonicalGroupPortOrder.length,
-              })),
-            )
-          }
-          return orderedGroupCandidates
-        })
-
-      const candidateLinks = orderedByPriorityGroup.map((candidate, index) => ({
-        ...candidate,
-        receiverPortRank: index,
-      }))
-      if (candidateLinks.length === 0) continue
-      states.push({
-        key: stateKey,
-        receiverId: device.instanceId,
-        candidateLinks,
+    for (const portId of orderedPorts) {
+      const priorityGroup = getPortPriorityGroup(device.config, portId)
+      const sameGroupPortIds = orderedPorts.filter((candidatePortId) => getPortPriorityGroup(device.config, candidatePortId) === priorityGroup)
+      receiverMetaByDevicePort.set(`${device.instanceId}:${portId}`, {
+        receiverPriorityGroup: priorityGroup,
+        receiverPriorityPortIndex: Math.max(0, sameGroupPortIds.findIndex((candidatePortId) => candidatePortId === portId)),
+        receiverPriorityPortCount: sameGroupPortIds.length,
       })
     }
   }
 
-  return states
-}
-
-function buildReceiverCandidateMetaMap(receiverStates: ReceiverState[]) {
-  const metaByLinkKey = new Map<string, CandidateLink>()
-  for (const state of receiverStates) {
-    for (const candidate of state.candidateLinks) {
-      metaByLinkKey.set(buildLinkKey(candidate), candidate)
-    }
+  return {
+    senderMetaByLinkKey,
+    receiverMetaByDevicePort,
   }
-  return metaByLinkKey
 }
 
-function buildSenderCandidateLinks(
-  context: PlanContext,
-  receiverCandidateMetaByLinkKey: Map<string, CandidateLink>,
-) {
-  const linksBySender = new Map<string, CandidateLink[]>()
+function buildNodes(context: PlanContext) {
+  const nodes: InternalNode[] = []
+
+  const createNode = (
+    device: DeviceInstance,
+    runtime: DeviceRuntime,
+    localOrder: number,
+    baseState: FlowNodeBaseState,
+    kind: FlowNodeKind,
+    options: Partial<FlowNodeSnapshot> = {},
+  ) => {
+    const node: InternalNode = {
+      nodeId: options.nodeId ?? `${device.instanceId}:${kind}:${localOrder}`,
+      deviceId: device.instanceId,
+      kind,
+      baseState,
+      result: options.result ?? 'uncertain',
+      deleted: options.deleted ?? false,
+      lane: options.lane,
+      slotIndex: options.slotIndex,
+      maxInteractItems: options.maxInteractItems ?? 1,
+      itemId: options.itemId ?? null,
+      amount: options.amount ?? 0,
+      capacity: options.capacity ?? null,
+      device,
+      runtime,
+      deviceIndex: context.layoutDevices.findIndex((entry) => entry.instanceId === device.instanceId),
+      localOrder,
+    }
+    nodes.push(node)
+    return node
+  }
 
   for (const device of context.layoutDevices) {
     const runtime = context.runtimeById[device.instanceId]
     if (!runtime || context.helpers.isHardBlockedStall(runtime.stallReason)) continue
 
-    const orderedLinks = context.helpers.orderedOutLinks(device, runtime, context.outMap.get(device.instanceId) ?? [])
-    if (orderedLinks.length === 0) continue
+    if (isStorageRuntime(runtime)) {
+      const storageState = storageStateFromRuntime(runtime)
+      const hasOutputPorts = getDirectionalPortIds(device.typeId, 'Output').length > 0
+      const hasInputPorts = getDirectionalPortIds(device.typeId, 'Input').length > 0
+      const slottedAmounts = storageState.slots.map((slot) => slot.amount)
+      const totalAmount = storageState.slotted
+        ? sumFiniteAmounts(slottedAmounts)
+        : sumFiniteAmounts(Object.values(runtime.inventory ?? {}).map((amount) => amount ?? 0))
 
-    const senderLinks: CandidateLink[] = []
-    for (const link of orderedLinks) {
-      const meta = receiverCandidateMetaByLinkKey.get(buildLinkKey(link))
-      if (!meta) continue
-      senderLinks.push(meta)
-    }
-
-    if (senderLinks.length > 0) {
-      linksBySender.set(device.instanceId, senderLinks)
-    }
-  }
-
-  return linksBySender
-}
-
-function pickAttemptForSender(
-  context: PlanContext,
-  senderId: string,
-  senderCandidateLinks: CandidateLink[],
-  failedTargetKeys: ReadonlySet<string>,
-  matchedReceiverLanes: Set<string>,
-  lanesClearingThisTick: Set<string>,
-  lanesAdvancedThisTick: Set<string>,
-  round: number,
-) {
-  const senderRuntime = context.runtimeById[senderId]
-  const senderDevice = context.deviceById.get(senderId)
-  if (!senderRuntime || !senderDevice) return { attempt: null as SenderAttempt | null, advanced: false, exhausted: false }
-
-  let advanced = false
-  let sawReadyItem = false
-
-  for (const link of senderCandidateLinks) {
-    const targetKey = buildLinkKey(link)
-    if (failedTargetKeys.has(targetKey)) continue
-
-    const fromLane = context.helpers.sourceSlotLane(senderDevice, senderRuntime, link.from.portId)
-    const laneAdvanceKey = `${senderDevice.instanceId}:${fromLane}`
-    if (context.lanesReachedHalfThisTick.has(laneAdvanceKey)) continue
-
-    const prepared = context.helpers.prepareSourceLaneItem(
-      senderDevice,
-      senderRuntime,
-      fromLane,
-      link.from.portId,
-      context.lanesReachedHalfThisTick,
-      lanesAdvancedThisTick,
-    )
-    if (prepared.laneProgressAdvanced) advanced = true
-    if (!prepared.itemId) continue
-    sawReadyItem = true
-
-    const slotIndex = pickStorageOutputSlotForPort(context, senderDevice.instanceId, link.from.portId, prepared.itemId)
-    if (
-      context.helpers.isStorageWithBufferGroups(senderRuntime)
-      && !SLOTLESS_STORAGE_OUTPUT_TYPE_IDS.has(senderDevice.typeId)
-      && typeof slotIndex !== 'number'
-    ) {
-      continue
-    }
-
-    const receiverRuntime = context.runtimeById[link.to.instanceId]
-    const receiverDevice = context.deviceById.get(link.to.instanceId)
-    if (!receiverRuntime || !receiverDevice) continue
-
-    const receiverLane = context.helpers.canReceiveLaneForItem(
-      receiverDevice,
-      receiverRuntime,
-      link.receiverPortId,
-      lanesClearingThisTick,
-      prepared.itemId,
-    )
-    if (!receiverLane) {
-      if (shouldTraceFocusedFlow(senderDevice.instanceId, receiverDevice.instanceId)) {
-        const nominalLane = context.helpers.receiveLaneForPort(receiverDevice, receiverRuntime, link.receiverPortId)
-        const laneSnapshot = nominalLane ? getRuntimeLaneSnapshot(receiverRuntime, nominalLane) : null
-        simFlowLogger.debug('candidate-rejected', {
-          tick: context.tick,
-          round,
-          receiverStateKey: nominalLane ? `${link.to.instanceId}:${nominalLane}` : `${link.to.instanceId}:none`,
-          fromId: senderDevice.instanceId,
-          fromTypeId: senderDevice.typeId,
-          fromPortId: link.from.portId,
-          toId: receiverDevice.instanceId,
-          toTypeId: receiverDevice.typeId,
-          toPortId: link.receiverPortId,
-          nominalLane,
-          laneSnapshot,
-          laneScheduledToClear: nominalLane ? lanesClearingThisTick.has(laneKey(link.to.instanceId, nominalLane)) : false,
-          preparedItemId: prepared.itemId,
-        }, 'candidate rejected because receiver is not currently available')
-      }
-    }
-
-    if (receiverLane) {
-      if (shouldTraceFocusedFlow(senderDevice.instanceId, receiverDevice.instanceId)) {
-        const acceptedByScheduledClear = lanesClearingThisTick.has(laneKey(link.to.instanceId, receiverLane))
-        const laneSnapshot = getRuntimeLaneSnapshot(receiverRuntime, receiverLane)
-        if (acceptedByScheduledClear && laneSnapshot?.occupied) {
-          simFlowLogger.debug('candidate-accepted-via-scheduled-clear', {
-            tick: context.tick,
-            round,
-            fromId: senderDevice.instanceId,
-            fromTypeId: senderDevice.typeId,
-            fromPortId: link.from.portId,
-            toId: receiverDevice.instanceId,
-            toTypeId: receiverDevice.typeId,
-            toPortId: link.receiverPortId,
-            toLane: receiverLane,
-            laneSnapshot,
-            preparedItemId: prepared.itemId,
-          }, 'candidate accepted because the receiver lane is already scheduled to clear this tick')
+      let canProvide = false
+      if (storageState.slotted) {
+        canProvide = storageState.slots.some((slot) => slot.amount > 0 && slot.currentItemId)
+      } else if (hasOutputPorts) {
+        for (const portId of getDirectionalPortIds(device.typeId, 'Output')) {
+          const prepared = context.helpers.prepareSourceLaneItem(
+            device,
+            runtime,
+            'output',
+            portId,
+            context.lanesReachedHalfThisTick,
+            new Set<string>(),
+          )
+          if (prepared.itemId) {
+            canProvide = true
+            break
+          }
         }
       }
 
-      const receiverLaneKey = laneKey(link.to.instanceId, receiverLane)
-      if (matchedReceiverLanes.has(receiverLaneKey)) continue
+      const canReceive = storageState.slotted
+        ? storageState.slots.some((slot) => slot.amount < slot.capacity)
+        : hasInputPorts
 
-      const orderedOutLinks = context.helpers.orderedOutLinks(senderDevice, senderRuntime, context.outMap.get(senderDevice.instanceId) ?? [])
-      const pickedOutLinkIndex = orderedOutLinks.findIndex(
-        (outLink) =>
-          outLink.from.instanceId === link.from.instanceId
-          && outLink.from.portId === link.from.portId
-          && outLink.to.instanceId === link.to.instanceId
-          && outLink.to.portId === link.to.portId,
-      )
-      if (pickedOutLinkIndex < 0) continue
+      const baseState: FlowNodeBaseState = canProvide
+        ? (canReceive ? 'shadow-pending' : 'provider')
+        : 'free'
 
-      let senderPriorityGroupKey: string | null = null
-      let senderPriorityGroup = 5
-      let senderPriorityPortIndex = 0
-      let senderPriorityPortCount = 0
-      const allSenderOutLinks = context.outMap.get(senderDevice.instanceId) ?? []
-      const outputGroupPortIds = context.helpers.isStorageWithBufferGroups(senderRuntime)
-        && 'bufferGroups' in senderRuntime
-        && Array.isArray(senderRuntime.bufferGroups)
-        ? senderRuntime.bufferGroups.find((group) => group.outPortIds.includes(link.from.portId))?.outPortIds
-        : getDirectionalPortIds(senderDevice.typeId, 'Output')
-      if (outputGroupPortIds && outputGroupPortIds.length > 0) {
-        senderPriorityGroupKey = context.helpers.isStorageWithBufferGroups(senderRuntime)
-          && 'bufferGroups' in senderRuntime
-          && Array.isArray(senderRuntime.bufferGroups)
-          ? (senderRuntime.bufferGroups.find((group) => group.outPortIds.includes(link.from.portId))?.id ?? null)
-          : '__default__'
-        const livePortIds = outputGroupPortIds.filter((portId) => allSenderOutLinks.some((outLink) => outLink.from.portId === portId))
-        senderPriorityGroup = getPortPriorityGroup(senderDevice.config, link.from.portId)
-        const groupPortIds = livePortIds.filter((portId) => getPortPriorityGroup(senderDevice.config, portId) === senderPriorityGroup)
-        senderPriorityPortIndex = Math.max(0, groupPortIds.findIndex((portId) => portId === link.from.portId))
-        senderPriorityPortCount = groupPortIds.length
+      createNode(device, runtime, 1, baseState, 'storage', {
+        nodeId: `${device.instanceId}:storage`,
+        amount: totalAmount,
+        capacity: storageState.slotted ? sumFiniteAmounts(storageState.slots.map((slot) => slot.capacity)) : null,
+        maxInteractItems: null,
+      })
+      continue
+    }
+
+    if (isProcessorRuntime(runtime)) {
+      for (let slotIndex = 0; slotIndex < runtime.outputSlotItems.length; slotIndex += 1) {
+        const itemId = runtime.outputSlotItems[slotIndex]
+        const amount = itemId ? (runtime.outputBuffer[itemId] ?? 0) : 0
+        createNode(device, runtime, slotIndex, 'provider', 'processor-output', {
+          nodeId: `${device.instanceId}:processor-output:${slotIndex}`,
+          slotIndex,
+          itemId: itemId ?? null,
+          amount,
+          capacity: amount,
+          maxInteractItems: amount,
+          deleted: !itemId || amount <= 0,
+          result: !itemId || amount <= 0 ? 'solved-block' : 'uncertain',
+        })
       }
 
-      return {
-        attempt: {
-          receiverId: link.to.instanceId,
-          receiverPortId: link.receiverPortId,
-          receiverLane,
-          receiverCandidateRank: link.receiverPortRank,
-          fromId: link.from.instanceId,
-          fromPortId: link.from.portId,
-          fromLane,
-          fromOutputSlotIndex: slotIndex,
-          itemId: prepared.itemId,
-          senderOutLinkCount: orderedOutLinks.length,
-          senderPickedOutLinkIndex: pickedOutLinkIndex,
-          senderPriorityGroupKey,
-          senderPriorityGroup,
-          senderPriorityPortIndex,
-          senderPriorityPortCount,
-          receiverPriorityGroup: link.receiverPriorityGroup,
-          receiverPriorityPortIndex: link.receiverPriorityPortIndex,
-          receiverPriorityPortCount: link.receiverPriorityPortCount,
-          receiverLaneKey,
-          targetKey,
-          dependencySenderId: null,
-          isDirect: true,
-        },
-        advanced,
-        exhausted: false,
+      for (let slotIndex = 0; slotIndex < runtime.inputSlotItems.length; slotIndex += 1) {
+        const itemId = runtime.inputSlotItems[slotIndex] ?? null
+        const amount = itemId ? (runtime.inputBuffer[itemId] ?? 0) : 0
+        const capacity = context.helpers.getProcessorInputSlotCapacity(device, runtime, slotIndex)
+        const remaining = Math.max(0, capacity - amount)
+        createNode(device, runtime, 100 + slotIndex, 'free', 'processor-input', {
+          nodeId: `${device.instanceId}:processor-input:${slotIndex}`,
+          slotIndex,
+          itemId,
+          amount,
+          capacity,
+          maxInteractItems: remaining,
+          deleted: remaining <= 0,
+          result: remaining <= 0 ? 'solved-block' : 'uncertain',
+        })
+      }
+      continue
+    }
+
+    if (context.helpers.isBridgeType(device.typeId)) {
+      for (const lane of ['ns', 'we'] as const) {
+        const slot = lane === 'ns' && 'nsSlot' in runtime
+          ? runtime.nsSlot
+          : lane === 'we' && 'weSlot' in runtime
+            ? runtime.weSlot
+            : null
+        const baseState: FlowNodeBaseState = slot ? 'shadow-pending' : 'free'
+        const deleted = Boolean(slot && slot.progress01 < 0.5)
+        createNode(device, runtime, lane === 'ns' ? 1 : 2, baseState, 'bridge', {
+          nodeId: `${device.instanceId}:${lane}`,
+          lane,
+          itemId: slot?.itemId ?? null,
+          amount: slot ? 1 : 0,
+          capacity: 1,
+          maxInteractItems: 1,
+          deleted,
+          result: deleted ? 'solved-block' : 'uncertain',
+        })
+      }
+      continue
+    }
+
+    if (isTransportBufferRuntime(runtime)) {
+      const itemId = runtime.outputSlotItems.find((candidateItemId) => candidateItemId && (runtime.outputBuffer[candidateItemId] ?? 0) > 0) ?? null
+      const hasReadyOutput = Boolean(itemId)
+      const inProgress = Boolean(runtime.slot && runtime.slot.progress01 < 1 && !hasReadyOutput)
+      createNode(device, runtime, 1, hasReadyOutput ? 'shadow-pending' : 'free', 'transport', {
+        nodeId: `${device.instanceId}:transport`,
+        lane: 'output',
+        itemId,
+        amount: hasReadyOutput ? 1 : 0,
+        capacity: 1,
+        maxInteractItems: 1,
+        deleted: inProgress,
+        result: inProgress ? 'solved-block' : 'uncertain',
+      })
+      continue
+    }
+
+    const slot = 'slot' in runtime ? runtime.slot : null
+    const baseState: FlowNodeBaseState = slot ? 'shadow-pending' : 'free'
+    const deleted = Boolean(slot && slot.progress01 < 0.5)
+    createNode(device, runtime, 1, baseState, 'transport', {
+      nodeId: `${device.instanceId}:transport`,
+      lane: 'slot',
+      itemId: slot?.itemId ?? null,
+      amount: slot ? 1 : 0,
+      capacity: 1,
+      maxInteractItems: 1,
+      deleted,
+      result: deleted ? 'solved-block' : 'uncertain',
+    })
+  }
+
+  return nodes.sort(compareNodeOrder)
+}
+
+function buildEdges(context: PlanContext, nodes: InternalNode[]) {
+  const nodeByTransportLane = new Map<string, InternalNode>()
+  const nodeByStorage = new Map<string, InternalNode>()
+  const processorOutputNodesByDevice = new Map<string, InternalNode[]>()
+  const processorInputNodesByDevice = new Map<string, InternalNode[]>()
+
+  for (const node of nodes) {
+    if ((node.kind === 'transport' || node.kind === 'bridge') && node.lane) {
+      nodeByTransportLane.set(laneKey(node.deviceId, node.lane), node)
+    }
+    if (node.kind === 'storage') {
+      nodeByStorage.set(node.deviceId, node)
+    }
+    if (node.kind === 'processor-output') {
+      const existing = processorOutputNodesByDevice.get(node.deviceId)
+      if (existing) existing.push(node)
+      else processorOutputNodesByDevice.set(node.deviceId, [node])
+    }
+    if (node.kind === 'processor-input') {
+      const existing = processorInputNodesByDevice.get(node.deviceId)
+      if (existing) existing.push(node)
+      else processorInputNodesByDevice.set(node.deviceId, [node])
+    }
+  }
+
+  const { senderMetaByLinkKey, receiverMetaByDevicePort } = buildDevicePriorityMeta(context)
+  const edges: InternalEdge[] = []
+
+  for (const sourceDevice of context.layoutDevices) {
+    const sourceRuntime = context.runtimeById[sourceDevice.instanceId]
+    if (!sourceRuntime || context.helpers.isHardBlockedStall(sourceRuntime.stallReason)) continue
+    const outLinks = context.outMap.get(sourceDevice.instanceId) ?? []
+    for (const link of outLinks) {
+      const linkKey = buildPortLinkKey(link)
+      const senderMeta = senderMetaByLinkKey.get(linkKey)
+      const receiverMeta = receiverMetaByDevicePort.get(`${link.to.instanceId}:${link.to.portId}`)
+      if (!senderMeta || !receiverMeta) continue
+
+      const fromNodes: InternalNode[] = []
+      const toNodes: InternalNode[] = []
+
+      const sourceStorage = nodeByStorage.get(link.from.instanceId)
+      if (sourceStorage) {
+        fromNodes.push(sourceStorage)
+      } else {
+        const sourceProcessorOutputs = processorOutputNodesByDevice.get(link.from.instanceId) ?? []
+        if (sourceProcessorOutputs.length > 0) {
+          fromNodes.push(...sourceProcessorOutputs)
+        } else {
+          const sourceLane = context.helpers.sourceSlotLane(sourceDevice, sourceRuntime, link.from.portId)
+          const transportNode = nodeByTransportLane.get(laneKey(link.from.instanceId, sourceLane))
+          if (transportNode) fromNodes.push(transportNode)
+        }
+      }
+
+      const targetDevice = context.deviceById.get(link.to.instanceId)
+      const targetRuntime = context.runtimeById[link.to.instanceId]
+      if (!targetDevice || !targetRuntime) continue
+
+      const targetStorage = nodeByStorage.get(link.to.instanceId)
+      if (targetStorage) {
+        toNodes.push(targetStorage)
+      } else {
+        const targetProcessorInputs = processorInputNodesByDevice.get(link.to.instanceId) ?? []
+        if (targetProcessorInputs.length > 0) {
+          toNodes.push(...targetProcessorInputs)
+        } else {
+          const receiveLane = context.helpers.receiveLaneForPort(targetDevice, targetRuntime, link.to.portId)
+          const transportNode = receiveLane ? nodeByTransportLane.get(laneKey(link.to.instanceId, receiveLane)) : null
+          if (transportNode) toNodes.push(transportNode)
+        }
+      }
+
+      for (const fromNode of fromNodes) {
+        for (const toNode of toNodes) {
+          const edgeId = `${linkKey}:${fromNode.nodeId}->${toNode.nodeId}`
+          edges.push({
+            edgeId,
+            portLinkKey: linkKey,
+            fromNodeId: fromNode.nodeId,
+            toNodeId: toNode.nodeId,
+            fromId: link.from.instanceId,
+            fromPortId: link.from.portId,
+            fromLane: fromNode.lane ?? 'output',
+            toId: link.to.instanceId,
+            toPortId: link.to.portId,
+            toLane: toNode.lane ?? 'output',
+            shadowPull: 'uncertain',
+            shadowPush: 'uncertain',
+            deleted: fromNode.deleted || toNode.deleted,
+            plannedItemId: null,
+            fromOutputSlotIndex: fromNode.kind === 'processor-output' ? fromNode.slotIndex : undefined,
+            fromStorageSlotIndex: undefined,
+            toInputSlotIndex: toNode.kind === 'processor-input' ? toNode.slotIndex : undefined,
+            toStorageSlotIndex: undefined,
+            senderOutLinkCount: senderMeta.senderOutLinkCount,
+            senderPickedOutLinkIndex: senderMeta.senderPickedOutLinkIndex,
+            senderPriorityGroupKey: senderMeta.senderPriorityGroupKey,
+            senderPriorityGroup: senderMeta.senderPriorityGroup,
+            senderPriorityPortIndex: senderMeta.senderPriorityPortIndex,
+            senderPriorityPortCount: senderMeta.senderPriorityPortCount,
+            receiverPriorityGroup: receiverMeta.receiverPriorityGroup,
+            receiverPriorityPortIndex: receiverMeta.receiverPriorityPortIndex,
+            receiverPriorityPortCount: receiverMeta.receiverPriorityPortCount,
+            fromNode,
+            toNode,
+          })
+        }
       }
     }
-
-    const nominalLane = context.helpers.receiveLaneForPort(receiverDevice, receiverRuntime, link.receiverPortId)
-    if (!nominalLane) continue
-    const laneSnapshot = getRuntimeLaneSnapshot(receiverRuntime, nominalLane)
-    if (!laneSnapshot?.occupied) continue
-
-    const receiverLaneKey = laneKey(link.to.instanceId, nominalLane)
-    if (matchedReceiverLanes.has(receiverLaneKey)) continue
-
-    const orderedOutLinks = context.helpers.orderedOutLinks(senderDevice, senderRuntime, context.outMap.get(senderDevice.instanceId) ?? [])
-    const pickedOutLinkIndex = orderedOutLinks.findIndex(
-      (outLink) =>
-        outLink.from.instanceId === link.from.instanceId
-        && outLink.from.portId === link.from.portId
-        && outLink.to.instanceId === link.to.instanceId
-        && outLink.to.portId === link.to.portId,
-    )
-    if (pickedOutLinkIndex < 0) continue
-
-    let senderPriorityGroupKey: string | null = null
-    let senderPriorityGroup = 5
-    let senderPriorityPortIndex = 0
-    let senderPriorityPortCount = 0
-    const allSenderOutLinks = context.outMap.get(senderDevice.instanceId) ?? []
-    const outputGroupPortIds = context.helpers.isStorageWithBufferGroups(senderRuntime)
-      && 'bufferGroups' in senderRuntime
-      && Array.isArray(senderRuntime.bufferGroups)
-      ? senderRuntime.bufferGroups.find((group) => group.outPortIds.includes(link.from.portId))?.outPortIds
-      : getDirectionalPortIds(senderDevice.typeId, 'Output')
-    if (outputGroupPortIds && outputGroupPortIds.length > 0) {
-      senderPriorityGroupKey = context.helpers.isStorageWithBufferGroups(senderRuntime)
-        && 'bufferGroups' in senderRuntime
-        && Array.isArray(senderRuntime.bufferGroups)
-        ? (senderRuntime.bufferGroups.find((group) => group.outPortIds.includes(link.from.portId))?.id ?? null)
-        : '__default__'
-      const livePortIds = outputGroupPortIds.filter((portId) => allSenderOutLinks.some((outLink) => outLink.from.portId === portId))
-      senderPriorityGroup = getPortPriorityGroup(senderDevice.config, link.from.portId)
-      const groupPortIds = livePortIds.filter((portId) => getPortPriorityGroup(senderDevice.config, portId) === senderPriorityGroup)
-      senderPriorityPortIndex = Math.max(0, groupPortIds.findIndex((portId) => portId === link.from.portId))
-      senderPriorityPortCount = groupPortIds.length
-    }
-
-    return {
-      attempt: {
-        receiverId: link.to.instanceId,
-        receiverPortId: link.receiverPortId,
-        receiverLane: nominalLane,
-        receiverCandidateRank: link.receiverPortRank,
-        fromId: link.from.instanceId,
-        fromPortId: link.from.portId,
-        fromLane,
-        fromOutputSlotIndex: slotIndex,
-        itemId: prepared.itemId,
-        senderOutLinkCount: orderedOutLinks.length,
-        senderPickedOutLinkIndex: pickedOutLinkIndex,
-        senderPriorityGroupKey,
-        senderPriorityGroup,
-        senderPriorityPortIndex,
-        senderPriorityPortCount,
-        receiverPriorityGroup: link.receiverPriorityGroup,
-        receiverPriorityPortIndex: link.receiverPriorityPortIndex,
-        receiverPriorityPortCount: link.receiverPriorityPortCount,
-        receiverLaneKey,
-        targetKey,
-        dependencySenderId: link.to.instanceId,
-        isDirect: false,
-      },
-      advanced,
-      exhausted: false,
-    }
   }
 
-  return { attempt: null as SenderAttempt | null, advanced, exhausted: sawReadyItem }
+  return new Map(edges.map((edge) => [edge.edgeId, edge]))
 }
 
-function compareIntents(left: SenderAttempt, right: SenderAttempt) {
-  if (left.senderPickedOutLinkIndex !== right.senderPickedOutLinkIndex) {
-    return left.senderPickedOutLinkIndex - right.senderPickedOutLinkIndex
+function buildStorageStates(nodes: InternalNode[]) {
+  const stateByNodeId = new Map<string, StorageVirtualState>()
+  for (const node of nodes) {
+    if (node.kind !== 'storage') continue
+    stateByNodeId.set(node.nodeId, storageStateFromRuntime(node.runtime as StorageRuntime))
   }
-
-  const leftSlot = typeof left.fromOutputSlotIndex === 'number' ? left.fromOutputSlotIndex : Number.MAX_SAFE_INTEGER
-  const rightSlot = typeof right.fromOutputSlotIndex === 'number' ? right.fromOutputSlotIndex : Number.MAX_SAFE_INTEGER
-  if (leftSlot !== rightSlot) {
-    return leftSlot - rightSlot
-  }
-
-  if (left.receiverCandidateRank !== right.receiverCandidateRank) {
-    return left.receiverCandidateRank - right.receiverCandidateRank
-  }
-
-  const receiverCmp = left.receiverId.localeCompare(right.receiverId)
-  if (receiverCmp !== 0) return receiverCmp
-  return left.receiverPortId.localeCompare(right.receiverPortId)
+  return stateByNodeId
 }
 
-function compareReceiverLaneIntents(left: SenderAttempt, right: SenderAttempt) {
-  if (left.receiverCandidateRank !== right.receiverCandidateRank) {
-    return left.receiverCandidateRank - right.receiverCandidateRank
+function buildProcessorInputStates(nodes: InternalNode[], context: PlanContext) {
+  const stateByDeviceId = new Map<string, ProcessorInputVirtualSlot[]>()
+  for (const node of nodes) {
+    if (node.kind !== 'processor-input') continue
+    const existing = stateByDeviceId.get(node.deviceId)
+    const slotState = createProcessorInputVirtualState(node, context)
+    if (existing) existing.push(slotState)
+    else stateByDeviceId.set(node.deviceId, [slotState])
   }
-
-  const senderCmp = left.fromId.localeCompare(right.fromId)
-  if (senderCmp !== 0) return senderCmp
-
-  const portCmp = left.fromPortId.localeCompare(right.fromPortId)
-  if (portCmp !== 0) return portCmp
-
-  return compareIntents(left, right)
+  for (const slotStates of stateByDeviceId.values()) {
+    slotStates.sort((left, right) => left.slotIndex - right.slotIndex)
+  }
+  return stateByDeviceId
 }
 
-function addFailedTarget(failedTargetKeysBySender: Map<string, Set<string>>, senderId: string, targetKey: string) {
-  const existing = failedTargetKeysBySender.get(senderId)
-  if (existing) {
-    existing.add(targetKey)
-    return
+function sourceCandidatesForEdge(
+  context: PlanContext,
+  edge: InternalEdge,
+  lanesAdvancedThisTick: Set<string>,
+  storageStates: Map<string, StorageVirtualState>,
+) {
+  const fromNode = edge.fromNode
+  if (fromNode.deleted) return [] as SourceCandidate[]
+
+  if (fromNode.kind === 'bridge') {
+    const slot = edge.fromLane === 'ns'
+      ? ('nsSlot' in fromNode.runtime ? fromNode.runtime.nsSlot : null)
+      : edge.fromLane === 'we'
+        ? ('weSlot' in fromNode.runtime ? fromNode.runtime.weSlot : null)
+        : null
+    if (!slot) return []
+    const requiredOutputEdge = OPPOSITE_EDGE[slot.enteredFrom]
+    const outputEdge = edge.fromPortId.slice(-1).toUpperCase() as Edge
+    if (requiredOutputEdge !== outputEdge) return []
   }
-  failedTargetKeysBySender.set(senderId, new Set([targetKey]))
-}
 
-function detectCycleSenders(attemptBySender: Map<string, SenderAttempt>) {
-  const visiting = new Set<string>()
-  const visited = new Set<string>()
-  const cyclic = new Set<string>()
-
-  const visit = (senderId: string, path: string[]) => {
-    if (visited.has(senderId)) return
-    if (visiting.has(senderId)) {
-      const cycleStart = path.indexOf(senderId)
-      for (const cycleNode of path.slice(cycleStart)) {
-        cyclic.add(cycleNode)
+  if (fromNode.kind === 'storage') {
+    const storageState = storageStates.get(fromNode.nodeId)
+    if (storageState?.slotted) {
+      const candidates: SourceCandidate[] = []
+      for (const slotIndex of storageSlotIndicesForOutput(storageState, edge.fromPortId)) {
+        const slot = storageState.slots.find((entry) => entry.slotIndex === slotIndex)
+        if (!slot || !slot.currentItemId || slot.amount <= 0) continue
+        if (!canStorageSlotOutput(storageState, edge.fromPortId, slotIndex, slot.currentItemId)) continue
+        candidates.push({ itemId: slot.currentItemId, fromStorageSlotIndex: slot.slotIndex })
       }
-      return
+      return candidates
     }
-
-    visiting.add(senderId)
-    const attempt = attemptBySender.get(senderId)
-    if (attempt?.dependencySenderId && attemptBySender.has(attempt.dependencySenderId)) {
-      visit(attempt.dependencySenderId, [...path, attempt.dependencySenderId])
-    }
-    visiting.delete(senderId)
-    visited.add(senderId)
   }
 
-  for (const senderId of attemptBySender.keys()) {
-    visit(senderId, [senderId])
+  if (fromNode.kind === 'processor-output') {
+    if (!fromNode.itemId) return []
+    if (!context.helpers.canOutputItemToPort(fromNode.device, fromNode.runtime, edge.fromPortId, fromNode.itemId)) return []
+    return [{ itemId: fromNode.itemId }]
   }
 
-  return cyclic
+  const prepared = context.helpers.prepareSourceLaneItem(
+    fromNode.device,
+    fromNode.runtime,
+    edge.fromLane,
+    edge.fromPortId,
+    context.lanesReachedHalfThisTick,
+    lanesAdvancedThisTick,
+  )
+  if (!prepared.itemId) return []
+  return [{ itemId: prepared.itemId }]
 }
 
-function shouldTraceReceiverContention(receiverId: string) {
-  return FLOW_DEBUG_FOCUS_DEVICE_IDS.has(receiverId)
+function canTransportReceiverAccept(
+  context: PlanContext,
+  edge: InternalEdge,
+  itemId: ItemId,
+  receivableShadowNodes: ReadonlySet<string>,
+) {
+  const clearSet = new Set<string>()
+  if (edge.toNode.baseState === 'shadow-pending' && receivableShadowNodes.has(edge.toNode.nodeId) && edge.toNode.lane) {
+    clearSet.add(`${edge.toNode.deviceId}:${edge.toNode.lane}`)
+  }
+  return context.helpers.canReceiveLaneForItem(edge.toNode.device, edge.toNode.runtime, edge.toPortId, clearSet, itemId) === edge.toLane
 }
 
-function shouldTraceFocusedFlow(senderId: string, receiverId: string) {
-  return FLOW_DEBUG_FOCUS_DEVICE_IDS.has(senderId) || FLOW_DEBUG_FOCUS_DEVICE_IDS.has(receiverId)
+function canProcessorInputReceive(
+  context: PlanContext,
+  edge: InternalEdge,
+  itemId: ItemId,
+  processorStates: Map<string, ProcessorInputVirtualSlot[]>,
+) {
+  const slotIndex = edge.toNode.slotIndex
+  if (typeof slotIndex !== 'number') return false
+  const deviceSlots = processorStates.get(edge.toNode.deviceId) ?? []
+  const targetSlot = deviceSlots.find((slot) => slot.slotIndex === slotIndex)
+  if (!targetSlot) return false
+  if (!context.helpers.canAcceptProcessorInputAtSlot(edge.toNode.device, edge.toNode.runtime, edge.toPortId, slotIndex, itemId, 1)) return false
+
+  const lockedItem = targetSlot.lockedItem ?? targetSlot.currentItemId
+  if (lockedItem && lockedItem !== itemId) return false
+  if (!lockedItem && deviceSlots.some((slot) => slot.slotIndex !== slotIndex && (slot.lockedItem ?? slot.currentItemId) === itemId)) {
+    return false
+  }
+  return targetSlot.amount + 1 <= targetSlot.capacity
+}
+
+function reserveProcessorInput(
+  deviceId: string,
+  slotIndex: number,
+  itemId: ItemId,
+  processorStates: Map<string, ProcessorInputVirtualSlot[]>,
+) {
+  const deviceSlots = processorStates.get(deviceId) ?? []
+  const targetSlot = deviceSlots.find((slot) => slot.slotIndex === slotIndex)
+  if (!targetSlot) return
+  targetSlot.lockedItem = targetSlot.lockedItem ?? itemId
+  targetSlot.currentItemId = targetSlot.currentItemId ?? itemId
+  targetSlot.amount += 1
+}
+
+function nodeReceivesDuringPull(node: InternalNode, receivableShadowNodes: ReadonlySet<string>) {
+  if (node.deleted) return false
+  if (node.kind === 'storage') {
+    return node.baseState === 'free' || node.baseState === 'shadow-pending'
+  }
+  if (node.kind === 'processor-input') return node.baseState === 'free'
+  if (node.baseState === 'free') return true
+  if ((node.kind === 'transport' || node.kind === 'bridge') && node.baseState === 'shadow-pending') {
+    return receivableShadowNodes.has(node.nodeId)
+  }
+  return false
+}
+
+function resetDynamicState(nodes: InternalNode[], edgeById: Map<string, InternalEdge>) {
+  for (const node of nodes) {
+    if (!node.deleted) node.result = 'uncertain'
+  }
+  for (const edge of edgeById.values()) {
+    if (edge.deleted) continue
+    edge.shadowPull = 'uncertain'
+    edge.shadowPush = 'uncertain'
+    edge.plannedItemId = null
+    edge.fromStorageSlotIndex = undefined
+    edge.toStorageSlotIndex = undefined
+  }
+}
+
+function selectShadowPull(
+  context: PlanContext,
+  nodes: InternalNode[],
+  edgeById: Map<string, InternalEdge>,
+  receivableShadowNodes: ReadonlySet<string>,
+  lanesAdvancedThisTick: Set<string>,
+  storageStates: Map<string, StorageVirtualState>,
+) {
+  const orderedNodes = [...nodes].sort(compareNodeOrder)
+
+  for (const node of orderedNodes) {
+    if (!nodeReceivesDuringPull(node, receivableShadowNodes)) continue
+    const incoming = activeIncomingEdges(node, edgeById).sort(compareReceiverEdge)
+    if (incoming.length === 0) continue
+
+    if (node.kind === 'storage') {
+      const storageState = storageStates.get(node.nodeId)
+      if (!storageState) continue
+      if (!storageState.slotted) {
+        for (const edge of incoming) {
+          if (edge.deleted) continue
+          const sourceCandidates = sourceCandidatesForEdge(context, edge, lanesAdvancedThisTick, storageStates)
+          if (sourceCandidates.length === 0) continue
+          edge.shadowPull = 'accept'
+        }
+        continue
+      }
+
+      for (const edge of incoming) {
+        if (edge.deleted) continue
+        const sourceCandidates = sourceCandidatesForEdge(context, edge, lanesAdvancedThisTick, storageStates)
+        if (sourceCandidates.length === 0) continue
+        const candidate = sourceCandidates.find((entry) => reserveStorageInputSlot(storageState, edge.toPortId, entry.itemId) !== null)
+        if (!candidate) continue
+        const reservedSlotIndex = reserveStorageInputSlot(storageState, edge.toPortId, candidate.itemId)
+        if (reservedSlotIndex === null) continue
+        edge.shadowPull = 'accept'
+        edge.plannedItemId = candidate.itemId
+        edge.toStorageSlotIndex = reservedSlotIndex
+      }
+        continue
+    }
+
+    const capacity = Math.max(0, node.maxInteractItems ?? 0)
+    if (capacity <= 0) continue
+    let acceptedCount = 0
+    for (const edge of incoming) {
+      if (acceptedCount >= capacity) break
+      const sourceCandidates = sourceCandidatesForEdge(context, edge, lanesAdvancedThisTick, storageStates)
+      if (sourceCandidates.length === 0) continue
+      const accepted = sourceCandidates.some((candidate) => {
+        if (node.kind === 'processor-input') {
+          return context.helpers.canAcceptProcessorInputAtSlot(node.device, node.runtime, edge.toPortId, node.slotIndex ?? 0, candidate.itemId, 1)
+        }
+        return canTransportReceiverAccept(context, edge, candidate.itemId, receivableShadowNodes)
+      })
+      if (!accepted) continue
+      edge.shadowPull = 'accept'
+      acceptedCount += 1
+    }
+  }
+}
+
+function selectShadowPush(
+  context: PlanContext,
+  nodes: InternalNode[],
+  edgeById: Map<string, InternalEdge>,
+  receivableShadowNodes: Set<string>,
+  lanesAdvancedThisTick: Set<string>,
+  storageStates: Map<string, StorageVirtualState>,
+  processorStates: Map<string, ProcessorInputVirtualSlot[]>,
+) {
+  const orderedNodes = [...nodes].sort(compareNodeOrder)
+
+  for (const node of orderedNodes) {
+    if (node.deleted || node.baseState === 'free') continue
+    const outgoing = activeOutgoingEdges(node, edgeById)
+      .filter((edge) => edge.shadowPull === 'accept')
+      .sort(compareEdgeKey)
+
+    if (outgoing.length === 0) {
+      node.result = 'solved-block'
+      continue
+    }
+
+    let acceptedCount = 0
+    const capacity = node.kind === 'storage'
+      ? Number.POSITIVE_INFINITY
+      : Math.max(0, node.maxInteractItems ?? 0)
+
+    for (const edge of outgoing) {
+      if (acceptedCount >= capacity) break
+      const sourceCandidates = sourceCandidatesForEdge(context, edge, lanesAdvancedThisTick, storageStates)
+      if (sourceCandidates.length === 0) continue
+
+      const selectedCandidate = sourceCandidates.find((candidate) => {
+        if (edge.toNode.kind === 'storage') {
+          if (edge.toStorageSlotIndex === undefined && storageStates.get(edge.toNode.nodeId)?.slotted) return false
+          if (edge.toStorageSlotIndex !== undefined && edge.plannedItemId && edge.plannedItemId !== candidate.itemId) return false
+          return true
+        }
+        if (edge.toNode.kind === 'processor-input') {
+          return canProcessorInputReceive(context, edge, candidate.itemId, processorStates)
+        }
+        return canTransportReceiverAccept(context, edge, candidate.itemId, receivableShadowNodes)
+      })
+      if (!selectedCandidate) continue
+
+      edge.shadowPush = 'accept'
+      edge.plannedItemId = selectedCandidate.itemId
+      if (selectedCandidate.fromStorageSlotIndex !== undefined) {
+        edge.fromStorageSlotIndex = selectedCandidate.fromStorageSlotIndex
+      }
+
+      if (node.kind === 'storage') {
+        const storageState = storageStates.get(node.nodeId)
+        if (storageState?.slotted && selectedCandidate.fromStorageSlotIndex !== undefined) {
+          consumeStorageOutputSlot(storageState, selectedCandidate.fromStorageSlotIndex)
+        }
+      }
+
+      if (edge.toNode.kind === 'processor-input' && typeof edge.toNode.slotIndex === 'number') {
+        reserveProcessorInput(edge.toNode.deviceId, edge.toNode.slotIndex, selectedCandidate.itemId, processorStates)
+      }
+
+      acceptedCount += 1
+    }
+
+    if (acceptedCount > 0) {
+      node.result = 'solved-run'
+      if ((node.kind === 'transport' || node.kind === 'bridge') && node.baseState === 'shadow-pending') {
+        receivableShadowNodes.add(node.nodeId)
+      }
+    } else {
+      node.result = 'solved-block'
+    }
+  }
+
+  for (const node of nodes) {
+    if (node.deleted || node.result !== 'uncertain') continue
+    const hasAcceptedIncoming = activeIncomingEdges(node, edgeById).some((edge) => edge.shadowPull === 'accept' && edge.shadowPush === 'accept')
+    if (hasAcceptedIncoming) {
+      node.result = 'solved-run'
+    }
+  }
+}
+
+function signatureForState(edgeById: Map<string, InternalEdge>, receivableShadowNodes: ReadonlySet<string>) {
+  const acceptedPulls = [...edgeById.values()].filter((edge) => !edge.deleted && edge.shadowPull === 'accept').map((edge) => edge.edgeId).sort()
+  const acceptedPushes = [...edgeById.values()].filter((edge) => !edge.deleted && edge.shadowPush === 'accept').map((edge) => edge.edgeId).sort()
+  const receivable = [...receivableShadowNodes].sort()
+  return JSON.stringify({ acceptedPulls, acceptedPushes, receivable })
+}
+
+function finalizeNodeResults(nodes: InternalNode[]) {
+  for (const node of nodes) {
+    if (node.deleted) {
+      node.result = 'solved-block'
+      continue
+    }
+    if (node.result === 'uncertain') node.result = 'solved-block'
+  }
+}
+
+function buildTransferMatches(tick: number, edgeById: Map<string, InternalEdge>) {
+  const transferMatches: TransferMatch[] = []
+  let sequence = 0
+
+  for (const edge of [...edgeById.values()].sort(compareEdgeKey)) {
+    if (edge.deleted || edge.shadowPull !== 'accept' || edge.shadowPush !== 'accept' || !edge.plannedItemId) continue
+    transferMatches.push({
+      transferId: buildTransferId(tick, sequence),
+      edgeId: edge.edgeId,
+      portLinkKey: edge.portLinkKey,
+      fromNodeId: edge.fromNodeId,
+      fromNodeKind: edge.fromNode.kind,
+      fromId: edge.fromId,
+      fromPortId: edge.fromPortId,
+      fromLane: edge.fromLane,
+      fromOutputSlotIndex: edge.fromNode.kind === 'processor-output' ? edge.fromNode.slotIndex : edge.fromOutputSlotIndex,
+      fromStorageSlotIndex: edge.fromStorageSlotIndex,
+      toNodeId: edge.toNodeId,
+      toNodeKind: edge.toNode.kind,
+      toId: edge.toId,
+      toPortId: edge.toPortId,
+      toLane: edge.toLane,
+      toInputSlotIndex: edge.toNode.kind === 'processor-input' ? edge.toNode.slotIndex : edge.toInputSlotIndex,
+      toStorageSlotIndex: edge.toStorageSlotIndex,
+      receiverCursorKey: `${edge.toId}:${edge.toLane}`,
+      itemId: edge.plannedItemId,
+      senderOutLinkCount: edge.senderOutLinkCount,
+      senderPickedOutLinkIndex: edge.senderPickedOutLinkIndex,
+      senderPriorityGroupKey: edge.senderPriorityGroupKey,
+      senderPriorityGroup: edge.senderPriorityGroup,
+      senderPriorityPortIndex: edge.senderPriorityPortIndex,
+      senderPriorityPortCount: edge.senderPriorityPortCount,
+      receiverPriorityGroup: edge.receiverPriorityGroup,
+      receiverPriorityPortIndex: edge.receiverPriorityPortIndex,
+      receiverPriorityPortCount: edge.receiverPriorityPortCount,
+    })
+    sequence += 1
+  }
+
+  return transferMatches
 }
 
 export function solvePullTransferMatches(context: PlanContext): PlanResult {
-  const transferMatches: TransferMatch[] = []
-  const plannedSenders = new Set<string>()
-  const matchedReceiverLanes = new Set<string>()
-  const lanesClearingThisTick = new Set<string>()
+  const nodes = buildNodes(context)
+  const edgeById = buildEdges(context, nodes)
+
+  trimProviderAndFreeEdges(nodes, edgeById)
+  eliminateCycles(nodes, edgeById)
+  pruneGraph(nodes, edgeById)
+
   const lanesAdvancedThisTick = new Set<string>()
-  const blockedSenders = new Set<string>()
-  const failedTargetKeysBySender = new Map<string, Set<string>>()
+  const receivableShadowNodes = new Set<string>()
+  let previousSignature = ''
+  const maxIterations = Math.max(8, nodes.length + edgeById.size)
 
-  const devicePullInputPortOrderById = context.helpers.buildDevicePullInputPortOrderMap()
-  const receiverStates = buildReceiverStates(context, devicePullInputPortOrderById)
-  const receiverCandidateMetaByLinkKey = buildReceiverCandidateMetaMap(receiverStates)
-  const senderCandidateLinksBySender = buildSenderCandidateLinks(context, receiverCandidateMetaByLinkKey)
+  for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+    resetDynamicState(nodes, edgeById)
+    const storageStates = buildStorageStates(nodes)
+    selectShadowPull(context, nodes, edgeById, receivableShadowNodes, lanesAdvancedThisTick, storageStates)
+    const processorStates = buildProcessorInputStates(nodes, context)
+    selectShadowPush(context, nodes, edgeById, receivableShadowNodes, lanesAdvancedThisTick, storageStates, processorStates)
+    finalizeNodeResults(nodes)
 
-  const totalLinks = receiverStates.reduce((sum, state) => sum + state.candidateLinks.length, 0)
-  const maxRounds = Math.max(8, totalLinks)
-
-  let transferSequence = 0
-  for (let round = 0; round < maxRounds; round += 1) {
-    let laneAdvancedThisRound = false
-    let changedThisRound = false
-
-    const attemptBySender = new Map<string, SenderAttempt>()
-    for (const device of context.layoutDevices) {
-      if (plannedSenders.has(device.instanceId) || blockedSenders.has(device.instanceId)) continue
-      const senderCandidateLinks = senderCandidateLinksBySender.get(device.instanceId)
-      if (!senderCandidateLinks || senderCandidateLinks.length === 0) continue
-
-      const { attempt, advanced, exhausted } = pickAttemptForSender(
-        context,
-        device.instanceId,
-        senderCandidateLinks,
-        failedTargetKeysBySender.get(device.instanceId) ?? new Set<string>(),
-        matchedReceiverLanes,
-        lanesClearingThisTick,
-        lanesAdvancedThisTick,
-        round,
-      )
-
-      if (advanced) laneAdvancedThisRound = true
-      if (attempt) {
-        attemptBySender.set(device.instanceId, attempt)
-      } else if (exhausted) {
-        blockedSenders.add(device.instanceId)
-        changedThisRound = true
-      }
-    }
-
-    if (attemptBySender.size === 0) {
-      if (!laneAdvancedThisRound && !changedThisRound) break
-      continue
-    }
-
-    const failedSenders = new Set<string>()
-    const failCurrentAttempt = (attempt: SenderAttempt | undefined) => {
-      if (!attempt || failedSenders.has(attempt.fromId) || plannedSenders.has(attempt.fromId)) return
-      failedSenders.add(attempt.fromId)
-      addFailedTarget(failedTargetKeysBySender, attempt.fromId, attempt.targetKey)
-      changedThisRound = true
-    }
-
-    for (const attempt of attemptBySender.values()) {
-      if (!attempt.dependencySenderId) continue
-      if (blockedSenders.has(attempt.dependencySenderId)) {
-        failCurrentAttempt(attempt)
-        continue
-      }
-      if (!attemptBySender.has(attempt.dependencySenderId) && !plannedSenders.has(attempt.dependencySenderId)) {
-        failCurrentAttempt(attempt)
-      }
-    }
-
-    const cyclicSenders = detectCycleSenders(new Map(
-      [...attemptBySender.entries()].filter(([senderId]) => !failedSenders.has(senderId)),
-    ))
-    for (const senderId of cyclicSenders) {
-      failCurrentAttempt(attemptBySender.get(senderId))
-    }
-
-    const committedThisRound = new Set<string>()
-    const readyBySender = new Map<string, SenderAttempt>()
-    const refreshReadyAttempts = () => {
-      readyBySender.clear()
-      for (const [senderId, attempt] of attemptBySender.entries()) {
-        if (failedSenders.has(senderId) || committedThisRound.has(senderId) || plannedSenders.has(senderId)) continue
-        if (matchedReceiverLanes.has(attempt.receiverLaneKey)) {
-          failCurrentAttempt(attempt)
-          continue
-        }
-        if (attempt.isDirect || plannedSenders.has(attempt.dependencySenderId ?? '') || committedThisRound.has(attempt.dependencySenderId ?? '')) {
-          readyBySender.set(senderId, attempt)
-        }
-      }
-    }
-
-    refreshReadyAttempts()
-
-    while (readyBySender.size > 0) {
-      const attemptsByReceiverLane = new Map<string, SenderAttempt[]>()
-      for (const attempt of readyBySender.values()) {
-        const grouped = attemptsByReceiverLane.get(attempt.receiverLaneKey)
-        if (grouped) {
-          grouped.push(attempt)
-        } else {
-          attemptsByReceiverLane.set(attempt.receiverLaneKey, [attempt])
-        }
-      }
-
-      for (const [receiverLaneKey, attempts] of attemptsByReceiverLane.entries()) {
-        const receiverId = attempts[0]?.receiverId
-        if (!receiverId || !shouldTraceReceiverContention(receiverId)) continue
-        const receiverDevice = context.deviceById.get(receiverId)
-        simFlowLogger.debug('focus-receiver-candidate-set', {
-          tick: context.tick,
-          round,
-          receiverId,
-          receiverTypeId: receiverDevice?.typeId ?? null,
-          receiverLaneKey,
-          candidateCount: attempts.length,
-          candidates: attempts.map((attempt) => ({
-            fromId: attempt.fromId,
-            fromPortId: attempt.fromPortId,
-            toPortId: attempt.receiverPortId,
-            itemId: attempt.itemId,
-            receiverPriorityGroup: attempt.receiverPriorityGroup,
-            receiverPriorityPortIndex: attempt.receiverPriorityPortIndex,
-            receiverPriorityPortCount: attempt.receiverPriorityPortCount,
-            receiverCandidateRank: attempt.receiverCandidateRank,
-            isDirect: attempt.isDirect,
-            dependencySenderId: attempt.dependencySenderId,
-          })),
-          focusedProviderStates: buildFocusedProviderTrace(context, attempts, null),
-        }, attempts.length > 1
-          ? 'focused receiver built multiple upstream candidates in this tick'
-          : 'focused receiver built candidate set in this tick')
-      }
-
-      const selectedByReceiverLane = new Map<string, SenderAttempt>()
-      for (const attempt of readyBySender.values()) {
-        const existing = selectedByReceiverLane.get(attempt.receiverLaneKey)
-        if (!existing || compareReceiverLaneIntents(attempt, existing) < 0) {
-          selectedByReceiverLane.set(attempt.receiverLaneKey, attempt)
-        }
-      }
-
-      const winners = [...selectedByReceiverLane.values()]
-      const winnerIds = new Set(winners.map((attempt) => attempt.fromId))
-      for (const [receiverLaneKey, attempts] of attemptsByReceiverLane.entries()) {
-        const winner = selectedByReceiverLane.get(receiverLaneKey)
-        const receiverId = winner?.receiverId ?? attempts[0]?.receiverId
-        if (!winner || !receiverId || !shouldTraceReceiverContention(receiverId)) continue
-        const receiverDevice = context.deviceById.get(receiverId)
-        simFlowLogger.debug('focus-receiver-selection', {
-          tick: context.tick,
-          round,
-          receiverId,
-          receiverTypeId: receiverDevice?.typeId ?? null,
-          receiverLaneKey,
-          winner: {
-            fromId: winner.fromId,
-            fromPortId: winner.fromPortId,
-            toPortId: winner.receiverPortId,
-            itemId: winner.itemId,
-            receiverPriorityGroup: winner.receiverPriorityGroup,
-            receiverPriorityPortIndex: winner.receiverPriorityPortIndex,
-            receiverPriorityPortCount: winner.receiverPriorityPortCount,
-            receiverCandidateRank: winner.receiverCandidateRank,
-          },
-          rejected: attempts
-            .filter((attempt) => attempt.fromId !== winner.fromId)
-            .map((attempt) => ({
-              fromId: attempt.fromId,
-              fromPortId: attempt.fromPortId,
-              toPortId: attempt.receiverPortId,
-              itemId: attempt.itemId,
-              receiverPriorityGroup: attempt.receiverPriorityGroup,
-              receiverPriorityPortIndex: attempt.receiverPriorityPortIndex,
-              receiverPriorityPortCount: attempt.receiverPriorityPortCount,
-              receiverCandidateRank: attempt.receiverCandidateRank,
-            })),
-          focusedProviderStates: buildFocusedProviderTrace(context, attempts, winner),
-        }, 'focused receiver resolved upstream selection for this tick')
-      }
-
-      for (const [senderId, attempt] of readyBySender.entries()) {
-        if (!winnerIds.has(senderId)) {
-          failCurrentAttempt(attempt)
-        }
-      }
-
-      if (winners.length === 0) break
-
-      for (const winner of winners) {
-        if (failedSenders.has(winner.fromId) || plannedSenders.has(winner.fromId) || matchedReceiverLanes.has(winner.receiverLaneKey)) {
-          continue
-        }
-
-        const senderDevice = context.deviceById.get(winner.fromId)
-        const receiverDevice = context.deviceById.get(winner.receiverId)
-        if (senderDevice && receiverDevice && shouldTraceFocusedFlow(winner.fromId, winner.receiverId)) {
-          simFlowLogger.debug('winner-selected', {
-            tick: context.tick,
-            round,
-            fromId: winner.fromId,
-            fromTypeId: senderDevice.typeId,
-            fromPortId: winner.fromPortId,
-            toId: winner.receiverId,
-            toTypeId: receiverDevice.typeId,
-            toPortId: winner.receiverPortId,
-            toLane: winner.receiverLane,
-            itemId: winner.itemId,
-            senderPickedOutLinkIndex: winner.senderPickedOutLinkIndex,
-            receiverCandidateRank: winner.receiverCandidateRank,
-          }, 'selected transfer winner for traced splitter/converger path')
-        }
-
-        if (senderDevice && receiverDevice && shouldTraceFocusedFlow(winner.fromId, winner.receiverId)) {
-          simFlowLogger.debug('sender-scheduled-to-clear', {
-            tick: context.tick,
-            round,
-            senderId: winner.fromId,
-            senderTypeId: senderDevice.typeId,
-            senderLane: winner.fromLane,
-            senderPortId: winner.fromPortId,
-            toId: winner.receiverId,
-            toPortId: winner.receiverPortId,
-            itemId: winner.itemId,
-          }, 'sender lane reserved to clear later in this tick')
-        }
-
-        transferMatches.push({
-          transferId: buildTransferId(context.tick, transferSequence),
-          fromId: winner.fromId,
-          fromPortId: winner.fromPortId,
-          fromLane: winner.fromLane,
-          fromOutputSlotIndex: winner.fromOutputSlotIndex,
-          toId: winner.receiverId,
-          toPortId: winner.receiverPortId,
-          toLane: winner.receiverLane,
-          itemId: winner.itemId,
-          senderOutLinkCount: winner.senderOutLinkCount,
-          senderPickedOutLinkIndex: winner.senderPickedOutLinkIndex,
-          senderPriorityGroupKey: winner.senderPriorityGroupKey,
-          senderPriorityGroup: winner.senderPriorityGroup,
-          senderPriorityPortIndex: winner.senderPriorityPortIndex,
-          senderPriorityPortCount: winner.senderPriorityPortCount,
-          receiverPriorityGroup: winner.receiverPriorityGroup,
-          receiverPriorityPortIndex: winner.receiverPriorityPortIndex,
-          receiverPriorityPortCount: winner.receiverPriorityPortCount,
-        })
-        transferSequence += 1
-        plannedSenders.add(winner.fromId)
-        committedThisRound.add(winner.fromId)
-        matchedReceiverLanes.add(winner.receiverLaneKey)
-        lanesClearingThisTick.add(`${winner.fromId}:${winner.fromLane}`)
-        changedThisRound = true
-      }
-
-      refreshReadyAttempts()
-    }
-
-    if (!laneAdvancedThisRound && !changedThisRound) {
-      break
-    }
+    const signature = signatureForState(edgeById, receivableShadowNodes)
+    if (signature === previousSignature) break
+    previousSignature = signature
   }
+
+  finalizeNodeResults(nodes)
+  const transferMatches = buildTransferMatches(context.tick, edgeById)
 
   return {
     transferMatches,
-    plannedSenders,
+    plannedSenders: new Set(transferMatches.map((match) => match.fromId)),
     lanesAdvancedThisTick,
+    nodeStates: nodes.map(({ device, runtime, deviceIndex, localOrder, ...node }) => node),
+    edgeStates: [...edgeById.values()].map(({ fromNode, toNode, ...edge }) => edge),
   }
 }

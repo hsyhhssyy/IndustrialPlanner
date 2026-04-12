@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
+    "validate:flow": "esbuild scripts/validate-flow-refactor.ts --bundle --platform=node --format=esm --outfile=.temp/validate-flow-refactor.mjs && node .temp/validate-flow-refactor.mjs",
     "test-preview": "tsc -b && vite build --emptyOutDir --outDir .temp/test-dist && vite preview --host 0.0.0.0 --strictPort --port 8000 --outDir .temp/test-dist",
     "lint": "eslint .",
     "preview": "vite preview",
