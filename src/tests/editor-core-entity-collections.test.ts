@@ -7,6 +7,11 @@ import {
 import { createEditorCore } from "@/editor/core/editor-core";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
 import {
+  getManagedMarqueeDraft,
+  getManagedMoveDraft,
+  getSelectedEntityIds,
+} from "@/editor/contracts/editor-session-helpers";
+import {
   getGridBoundingBox,
   getGridBoundsCenterCells,
   getRotatedGridFootprint,
@@ -136,10 +141,10 @@ describe("EditorCore entity collections", () => {
 
     expect(core.getSnapshot().session.draftEntities?.ids).toEqual(["filler-1"]);
     expect(core.confirmMarqueeSelection()).toBe(true);
-    expect(core.getSnapshot().session.selection).toEqual(["filler-1"]);
+    expect(getSelectedEntityIds(core.getSnapshot().session)).toEqual(["filler-1"]);
     expect(core.getSnapshot().session.selectedEntities?.ids).toEqual(["filler-1"]);
     expect(core.getSnapshot().session.selectionInputMode).toBe("touch");
-    expect(core.getSnapshot().session.marqueeDraft).toBeNull();
+    expect(getManagedMarqueeDraft(core.getSnapshot().session)).toBeNull();
   });
 
   it("confirms move from managed draft entities", () => {
@@ -189,7 +194,12 @@ describe("EditorCore entity collections", () => {
       position: { x: 20, y: 10 },
       rotation: 90,
     });
-    expect(core.getSnapshot().session.moveDraft).toBeNull();
+    expect(
+      getManagedMoveDraft(
+        core.getSnapshot().session,
+        core.getSnapshot().document,
+      ),
+    ).toBeNull();
     expect(core.getSnapshot().session.currentMode).toMatchObject({ key: "select" });
   });
 });

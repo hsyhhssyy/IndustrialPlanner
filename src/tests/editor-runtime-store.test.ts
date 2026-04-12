@@ -1,4 +1,9 @@
 import { createInitialEditorSession } from "@/editor/core/editor-session";
+import {
+  getManagedPlacementPreview,
+  getSelectedEntityIds,
+} from "@/editor/contracts/editor-session-helpers";
+import { createPlacementInteractionMode } from "@/editor/contracts/interaction-mode";
 import { createEditorRuntimeStore } from "@/editor/editor-runtime-store";
 import { autorun } from "@/shared/mobx";
 import { describe, expect, it, vi } from "vitest";
@@ -17,7 +22,7 @@ describe("EditorRuntimeStore", () => {
 
     expect(store.getSnapshot().session.displayTool).toBe("select");
     expect(store.getSnapshot().session.currentMode).toMatchObject({ key: "select" });
-    expect(store.session.selection).toEqual(["reactor-1"]);
+    expect(getSelectedEntityIds(store.session)).toEqual(["reactor-1"]);
     expect(store.session.selectionInputMode).toBeNull();
     expect(store.history.canUndo).toBe(false);
   });
@@ -104,15 +109,39 @@ describe("EditorRuntimeStore", () => {
     store.setSnapshot({
       session: {
         ...store.getSnapshot().session,
-        placementPreview: {
+        currentMode: createPlacementInteractionMode({
           definitionId: "belt_straight_1x1",
-          interactionMode: "pointer",
-          gridPoint: { x: 4, y: 5 },
-          rotation: 0,
-          valid: true,
+          inputMode: "pointer",
+        }),
+        drafts: {
+          entities: {
+            "draft:placement-preview": {
+              id: "draft:placement-preview",
+              definitionId: "belt_straight_1x1",
+              position: { x: 4, y: 5 },
+              rotation: 0,
+              config: {},
+              tags: [],
+              sourceEntityId: null,
+              valid: true,
+              invalidReason: null,
+            },
+          },
+        },
+        draftEntities: {
+          ids: ["draft:placement-preview"],
+          boundsDerived: null,
+          geometricCenterCellsDerived: null,
         },
       },
       history: store.getSnapshot().history,
+    });
+
+    expect(getManagedPlacementPreview(store.session)).toMatchObject({
+      definitionId: "belt_straight_1x1",
+      gridPoint: { x: 4, y: 5 },
+      rotation: 0,
+      valid: true,
     });
 
     expect(displayToolTracker).toHaveBeenCalledTimes(1);

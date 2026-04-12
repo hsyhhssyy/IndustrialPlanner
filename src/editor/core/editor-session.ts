@@ -14,7 +14,11 @@ export function createInitialEditorSession(): EditorSession {
     drafts: {
       entities: {},
     },
-    selectedEntities: null,
+    selectedEntities: {
+      ids: ["reactor-1"],
+      boundsDerived: null,
+      geometricCenterCellsDerived: null,
+    },
     draftEntities: null,
     marqueeRange: null,
     selectionInputMode: null,

@@ -46,6 +46,11 @@ import {
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
 import {
+  getManagedMoveDraft,
+  getManagedPlacementPreview,
+  getSelectedEntityIds,
+} from "@/editor/contracts/editor-session-helpers";
+import {
   getPendingLinkSourceEntityId,
   isInteractionModeAvailableInPhase,
   isMoveInteractionMode,
@@ -150,36 +155,7 @@ function clonePlacementPreview(
 function resolveManagedPlacementPreview(
   session: WorkspaceState["editor"]["session"],
 ): PlacementPreviewState | null {
-  const placementMode = isPlacementInteractionMode(session.currentMode)
-    ? session.currentMode
-    : null;
-
-  if (!placementMode) {
-    return null;
-  }
-
-  const previewDraftId = session.draftEntities?.ids[0] ?? null;
-  const previewDraft = previewDraftId
-    ? session.drafts.entities[previewDraftId]
-    : null;
-
-  if (
-    !previewDraft ||
-    previewDraft.sourceEntityId !== null ||
-    previewDraft.definitionId !== placementMode.definitionId
-  ) {
-    return null;
-  }
-
-  return {
-    definitionId: previewDraft.definitionId,
-    interactionMode: placementMode.inputMode,
-    gridPoint: {
-      ...previewDraft.position,
-    },
-    rotation: previewDraft.rotation,
-    valid: previewDraft.valid,
-  };
+  return getManagedPlacementPreview(session);
 }
 
 interface CreateWorkbenchControllerOptions {
@@ -531,7 +507,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.measureProfilerStage("controller.total", () => {
       const sessionBefore = this.editorHost.getState().session;
       const previousPreview = clonePlacementPreview(
-        resolveManagedPlacementPreview(sessionBefore) ?? sessionBefore.placementPreview,
+        resolveManagedPlacementPreview(sessionBefore),
       );
       const worldInput = this.measureProfilerStage(
         "controller.resolveWorldInput",
@@ -540,7 +516,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       const updateResult = this.editorHost.updatePlacementPreview(worldInput);
       const sessionAfter = this.editorHost.getState().session;
       const nextPreview = clonePlacementPreview(
-        resolveManagedPlacementPreview(sessionAfter) ?? sessionAfter.placementPreview,
+        resolveManagedPlacementPreview(sessionAfter),
       );
 
       this.placementPreviewProfiler?.recordUpdateResult({
@@ -989,7 +965,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     const afterSelectionId =
       this.uiStore.getSnapshot().phase === "simulate"
         ? this.simulationHost.getSnapshot().selection[0] ?? null
-        : afterEditorState.session.selection[0] ?? null;
+        : getSelectedEntityIds(afterEditorState.session)[0] ?? null;
     const afterPendingLinkSourceEntityId = getPendingLinkSourceEntityId(
       afterEditorState.session.currentMode,
     );
@@ -1012,7 +988,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   private getActiveSelectionId(): string | null {
     return this.uiStore.getSnapshot().phase === "simulate"
       ? this.simulationHost.getSnapshot().selection[0] ?? null
-      : this.editorHost.getState().session.selection[0] ?? null;
+      : getSelectedEntityIds(this.editorHost.getState().session)[0] ?? null;
   }
 
   private async refreshInspectorForSelection(): Promise<void> {
@@ -1142,11 +1118,14 @@ class WorkbenchControllerImpl implements WorkbenchController {
       registry: this.registry,
       placementPreview:
         workspaceState.ui.phase === "edit"
-          ? workspaceState.editor.session.placementPreview
+          ? getManagedPlacementPreview(workspaceState.editor.session)
           : null,
       moveDraft:
         workspaceState.ui.phase === "edit"
-          ? workspaceState.editor.session.moveDraft
+          ? getManagedMoveDraft(
+              workspaceState.editor.session,
+              workspaceState.document,
+            )
           : null,
     });
 

@@ -2,6 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_STAGE1_BASE_ID } from "@/domain/base/stage1-bases";
 import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import {
+  getManagedMarqueeDraft,
+  getManagedMoveDraft,
+  getManagedPlacementPreview,
+  getSelectedEntityIds,
+} from "@/editor/contracts/editor-session-helpers";
+import {
   getPendingLinkSourceEntityId,
   isMarqueeInteractionMode,
   isMoveInteractionMode,
@@ -58,6 +64,13 @@ function readWorkbenchState(
   const canvasView = controller.canvasViewStore.getSnapshot();
   const topology = controller.topologyStore.getSnapshot();
   const simulation = controller.simulationStore.getSnapshot();
+  const activeSelection = getSelectedEntityIds(editor.session);
+  const activePlacementPreview =
+    ui.phase === "edit" ? getManagedPlacementPreview(editor.session) : null;
+  const activeMoveDraft =
+    ui.phase === "edit" ? getManagedMoveDraft(editor.session, document) : null;
+  const activeMarqueeDraft =
+    ui.phase === "edit" ? getManagedMarqueeDraft(editor.session) : null;
   const renderScene = buildRenderScene({
     locale: ui.locale,
     document,
@@ -73,9 +86,9 @@ function readWorkbenchState(
             pendingLinkSourceEntityId: null,
           }
         : {
-            selectedEntityIds: editor.session.selection,
-            placementPreview: editor.session.placementPreview,
-            moveDraft: editor.session.moveDraft,
+            selectedEntityIds: activeSelection,
+            placementPreview: activePlacementPreview,
+            moveDraft: activeMoveDraft,
             pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
               editor.session.currentMode,
             ),
@@ -90,10 +103,10 @@ function readWorkbenchState(
     session: editor.session,
     history: editor.history,
     canvasView,
-    activeSelection:
-      ui.phase === "simulate" ? simulation.selection : editor.session.selection,
-    activePlacementPreview:
-      ui.phase === "edit" ? editor.session.placementPreview : null,
+    activeSelection,
+    activePlacementPreview,
+    activeMoveDraft,
+    activeMarqueeDraft,
     activePendingLinkSourceEntityId:
       ui.phase === "edit"
         ? getPendingLinkSourceEntityId(editor.session.currentMode)
@@ -726,7 +739,7 @@ describe("WorkbenchController scaffold", () => {
 
   it("cancels armed placement by returning to the select tool", () => {
     const controller = createWorkbenchController();
-    const previousSelection = readWorkbenchState(controller).session.selection;
+    const previousSelection = readWorkbenchState(controller).activeSelection;
 
     controller.armPlacement("belt_straight_1x1", "belt");
     controller.rotatePlacementClockwise();
@@ -737,7 +750,7 @@ describe("WorkbenchController scaffold", () => {
 
     expect(after.session.displayTool).toBe("select");
     expect(after.session.currentMode).toMatchObject({ key: "select" });
-    expect(after.session.selection).toEqual(previousSelection);
+    expect(after.activeSelection).toEqual(previousSelection);
     expect(placementMode).toBeNull();
     expect(after.activePlacementPreview).toBeNull();
 
@@ -1055,7 +1068,7 @@ describe("WorkbenchController scaffold", () => {
 
     expect(snapshot.ui.phase).toBe("simulate");
     expect(snapshot.simulationSelection).toEqual(["dark-outlet-1"]);
-    expect(snapshot.session.selection).toEqual(["filler-1"]);
+    expect(snapshot.activeSelection).toEqual(["filler-1"]);
 
     controller.dispose();
   });
@@ -1067,13 +1080,13 @@ describe("WorkbenchController scaffold", () => {
     await controller.selectEntity("reactor-1", "pointer", "toggle");
     await controller.selectEntity("filler-1", "pointer", "toggle");
 
-    expect(readWorkbenchState(controller).session.selection).toEqual(["reactor-1"]);
+    expect(readWorkbenchState(controller).activeSelection).toEqual(["reactor-1"]);
 
     await controller.selectEntity("dark-outlet-1", "pointer", "toggle");
 
     const snapshot = readWorkbenchState(controller);
 
-    expect(snapshot.session.selection).toEqual(["reactor-1", "dark-outlet-1"]);
+    expect(snapshot.activeSelection).toEqual(["reactor-1", "dark-outlet-1"]);
     expect(snapshot.session.selectionInputMode).toBe("pointer");
 
     controller.dispose();
@@ -1091,7 +1104,7 @@ describe("WorkbenchController scaffold", () => {
     const after = readWorkbenchState(controller);
     const rotatedEntity = after.document.entities["filler-1"];
 
-    expect(after.session.selection).toEqual(["filler-1"]);
+    expect(after.activeSelection).toEqual(["filler-1"]);
     expect(after.session.selectionInputMode).toBe("pointer");
     expect(rotatedEntity).toMatchObject({
       position: { x: 17, y: 7 },
@@ -1136,7 +1149,7 @@ describe("WorkbenchController scaffold", () => {
 
     const afterRotate = readWorkbenchState(controller);
 
-    expect(afterRotate.session.selection).toEqual(entityIds);
+    expect(afterRotate.activeSelection).toEqual(entityIds);
 
     for (const expectedEntity of expectedAfterOneTurn) {
       expect(afterRotate.document.entities[expectedEntity.entityId]).toMatchObject({
@@ -1189,7 +1202,7 @@ describe("WorkbenchController scaffold", () => {
       entityId: "reactor-1",
       inputMode: "pointer",
     });
-    expect(duringMove.session.moveDraft).toMatchObject({
+    expect(duringMove.activeMoveDraft).toMatchObject({
       entityId: "reactor-1",
       interactionMode: "pointer",
       originGridPoint: before?.position,
@@ -1208,9 +1221,9 @@ describe("WorkbenchController scaffold", () => {
     });
     expect(after.session.currentMode).toMatchObject({ key: "select" });
     expect(after.session.displayTool).toBe("select");
-    expect(after.session.selection).toEqual(["reactor-1"]);
+    expect(after.activeSelection).toEqual(["reactor-1"]);
     expect(after.session.selectionInputMode).toBe("pointer");
-    expect(after.session.moveDraft).toBeNull();
+    expect(after.activeMoveDraft).toBeNull();
     expect(
       after.renderScene.entities.find((entity) => entity.entityId === "reactor-1"),
     ).toMatchObject({
@@ -1246,7 +1259,7 @@ describe("WorkbenchController scaffold", () => {
     const deltaX = 20 - anchorBefore!.position.x;
     const deltaY = 10 - anchorBefore!.position.y;
 
-    expect(duringMove.session.moveDraft?.entities).toMatchObject([
+    expect(duringMove.activeMoveDraft?.entities).toMatchObject([
       {
         entityId: "reactor-1",
         gridPoint: { x: 20, y: 10 },
@@ -1312,19 +1325,19 @@ describe("WorkbenchController scaffold", () => {
     controller.rotateMoveClockwise();
     const duringMove = readWorkbenchState(controller);
 
-    expect(duringMove.session.moveDraft).toMatchObject({
+    expect(duringMove.activeMoveDraft).toMatchObject({
       entityId: "filler-1",
       rotation: 180,
       valid: true,
     });
 
-    const rotatedDraft = duringMove.session.moveDraft;
+    const rotatedDraft = duringMove.activeMoveDraft;
 
     expect(rotatedDraft).toBeTruthy();
 
     controller.updateMoveDraftFromScreenPoint(pointerScreenPoint);
 
-    expect(readWorkbenchState(controller).session.moveDraft).toMatchObject(rotatedDraft!);
+    expect(readWorkbenchState(controller).activeMoveDraft).toMatchObject(rotatedDraft!);
 
     await controller.confirmMovePreview();
 
@@ -1364,7 +1377,7 @@ describe("WorkbenchController scaffold", () => {
 
     const duringMove = readWorkbenchState(controller);
 
-    const rotatedEntities = duringMove.session.moveDraft?.entities;
+    const rotatedEntities = duringMove.activeMoveDraft?.entities;
 
     expect(rotatedEntities).toBeTruthy();
 
@@ -1410,7 +1423,7 @@ describe("WorkbenchController scaffold", () => {
       "pointer",
     );
 
-    const initialDraft = readWorkbenchState(controller).session.moveDraft;
+    const initialDraft = readWorkbenchState(controller).activeMoveDraft;
 
     expect(initialDraft).toBeTruthy();
 
@@ -1421,7 +1434,7 @@ describe("WorkbenchController scaffold", () => {
 
     controller.rotateMoveClockwise();
 
-    const afterRotate = readWorkbenchState(controller).session.moveDraft;
+    const afterRotate = readWorkbenchState(controller).activeMoveDraft;
 
     expect(afterRotate?.entities).toBeTruthy();
 
@@ -1429,7 +1442,7 @@ describe("WorkbenchController scaffold", () => {
 
     controller.updateMoveDraftFromScreenPoint(pointerScreenPoint);
 
-    const afterOneTurn = readWorkbenchState(controller).session.moveDraft;
+    const afterOneTurn = readWorkbenchState(controller).activeMoveDraft;
 
     expect(afterOneTurn).toMatchObject(afterRotate!);
 
@@ -1440,7 +1453,7 @@ describe("WorkbenchController scaffold", () => {
     controller.rotateMoveClockwise();
     controller.updateMoveDraftFromScreenPoint(pointerScreenPoint);
 
-    const afterFourTurns = readWorkbenchState(controller).session.moveDraft;
+    const afterFourTurns = readWorkbenchState(controller).activeMoveDraft;
 
     expect(afterFourTurns?.entities).toMatchObject(
       initialDraft!.entities.map((entity) => ({
@@ -1466,7 +1479,7 @@ describe("WorkbenchController scaffold", () => {
       "pointer",
     );
 
-    const initialDraft = readWorkbenchState(controller).session.moveDraft;
+    const initialDraft = readWorkbenchState(controller).activeMoveDraft;
 
     expect(initialDraft).toBeTruthy();
 
@@ -1475,7 +1488,7 @@ describe("WorkbenchController scaffold", () => {
     controller.rotateMoveClockwise();
     controller.rotateMoveClockwise();
 
-    const afterFourTurns = readWorkbenchState(controller).session.moveDraft;
+    const afterFourTurns = readWorkbenchState(controller).activeMoveDraft;
 
     expect(afterFourTurns?.entities).toMatchObject(
       initialDraft!.entities.map((entity) => ({
@@ -1511,7 +1524,7 @@ describe("WorkbenchController scaffold", () => {
       "pointer",
     );
 
-    const initialDraft = readWorkbenchState(controller).session.moveDraft;
+    const initialDraft = readWorkbenchState(controller).activeMoveDraft;
 
     expect(initialDraft).toBeTruthy();
 
@@ -1520,7 +1533,7 @@ describe("WorkbenchController scaffold", () => {
     controller.rotateMoveClockwise();
     controller.rotateMoveClockwise();
 
-    const afterFourTurns = readWorkbenchState(controller).session.moveDraft;
+    const afterFourTurns = readWorkbenchState(controller).activeMoveDraft;
 
     expect(afterFourTurns?.entities).toMatchObject(
       initialDraft!.entities.map((entity) => ({
@@ -1560,9 +1573,9 @@ describe("WorkbenchController scaffold", () => {
 
     expect(after.document.entities["reactor-1"]).toEqual(before);
     expect(after.session.currentMode).toMatchObject({ key: "select" });
-    expect(after.session.selection).toEqual(["reactor-1"]);
+    expect(after.activeSelection).toEqual(["reactor-1"]);
     expect(after.session.selectionInputMode).toBe("touch");
-    expect(after.session.moveDraft).toBeNull();
+    expect(after.activeMoveDraft).toBeNull();
 
     controller.dispose();
   });
@@ -1592,7 +1605,7 @@ describe("WorkbenchController scaffold", () => {
       inputMode: "pointer",
       selectionMode: "replace",
     });
-    expect(duringMarquee.session.marqueeDraft).toMatchObject({
+    expect(duringMarquee.activeMarqueeDraft).toMatchObject({
       interactionMode: "pointer",
       selectionMode: "replace",
       bounds: marqueeBounds,
@@ -1604,9 +1617,9 @@ describe("WorkbenchController scaffold", () => {
     const after = readWorkbenchState(controller);
 
     expect(after.session.currentMode).toMatchObject({ key: "select" });
-    expect(after.session.selection).toEqual(["reactor-1", "filler-1"]);
+    expect(after.activeSelection).toEqual(["reactor-1", "filler-1"]);
     expect(after.session.selectionInputMode).toBe("pointer");
-    expect(after.session.marqueeDraft).toBeNull();
+    expect(after.activeMarqueeDraft).toBeNull();
 
     controller.dispose();
   });
@@ -1641,9 +1654,9 @@ describe("WorkbenchController scaffold", () => {
     const after = readWorkbenchState(controller);
 
     expect(after.session.currentMode).toMatchObject({ key: "select" });
-    expect(after.session.selection).toEqual(["filler-1"]);
+    expect(after.activeSelection).toEqual(["filler-1"]);
     expect(after.session.selectionInputMode).toBe("pointer");
-    expect(after.session.marqueeDraft).toBeNull();
+    expect(after.activeMarqueeDraft).toBeNull();
 
     controller.dispose();
   });
@@ -1677,8 +1690,8 @@ describe("WorkbenchController scaffold", () => {
     const after = readWorkbenchState(controller);
 
     expect(after.session.currentMode).toMatchObject({ key: "select" });
-    expect(after.session.selection).toEqual(["reactor-1"]);
-    expect(after.session.marqueeDraft).toBeNull();
+    expect(after.activeSelection).toEqual(["reactor-1"]);
+    expect(after.activeMarqueeDraft).toBeNull();
 
     controller.dispose();
   });
@@ -1708,7 +1721,7 @@ describe("WorkbenchController scaffold", () => {
       inputMode: "touch",
       selectionMode: "replace",
     });
-    expect(duringMarquee.session.marqueeDraft).toMatchObject({
+    expect(duringMarquee.activeMarqueeDraft).toMatchObject({
       interactionMode: "touch",
       selectionMode: "replace",
     });
@@ -1718,9 +1731,9 @@ describe("WorkbenchController scaffold", () => {
     const after = readWorkbenchState(controller);
 
     expect(after.session.currentMode).toMatchObject({ key: "select" });
-    expect(after.session.selection).toEqual(["reactor-1", "filler-1"]);
+    expect(after.activeSelection).toEqual(["reactor-1", "filler-1"]);
     expect(after.session.selectionInputMode).toBe("touch");
-    expect(after.session.marqueeDraft).toBeNull();
+    expect(after.activeMarqueeDraft).toBeNull();
 
     controller.dispose();
   });

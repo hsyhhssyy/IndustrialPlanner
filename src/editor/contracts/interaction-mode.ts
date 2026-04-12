@@ -54,6 +54,58 @@ export interface MoveInteractionModeState
     x: number;
     y: number;
   };
+  rotationCenterCells: {
+    x: number;
+    y: number;
+  } | null;
+  draftEntityCenterCells: Record<
+    string,
+    {
+      x: number;
+      y: number;
+    }
+  >;
+}
+
+function cloneDraftEntityCenterCells(
+  centers: MoveInteractionModeState["draftEntityCenterCells"],
+): MoveInteractionModeState["draftEntityCenterCells"] {
+  return Object.fromEntries(
+    Object.entries(centers).map(([entityId, centerCells]) => [
+      entityId,
+      {
+        ...centerCells,
+      },
+    ]),
+  );
+}
+
+function areDraftEntityCenterCellsEqual(
+  left: MoveInteractionModeState["draftEntityCenterCells"],
+  right: MoveInteractionModeState["draftEntityCenterCells"],
+): boolean {
+  const leftEntityIds = Object.keys(left);
+  const rightEntityIds = Object.keys(right);
+
+  if (leftEntityIds.length !== rightEntityIds.length) {
+    return false;
+  }
+
+  for (const entityId of leftEntityIds) {
+    const leftCenterCells = left[entityId];
+    const rightCenterCells = right[entityId];
+
+    if (
+      !leftCenterCells ||
+      !rightCenterCells ||
+      leftCenterCells.x !== rightCenterCells.x ||
+      leftCenterCells.y !== rightCenterCells.y
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export interface MarqueeInteractionModeState
@@ -158,6 +210,11 @@ export function createMoveInteractionMode(options: {
     x: number;
     y: number;
   };
+  rotationCenterCells?: {
+    x: number;
+    y: number;
+  } | null;
+  draftEntityCenterCells?: MoveInteractionModeState["draftEntityCenterCells"];
   previousModeKey?: InteractionModeKey | null;
   entryDisplayTool?: DisplayTool | null;
 }): MoveInteractionModeState {
@@ -173,6 +230,14 @@ export function createMoveInteractionMode(options: {
           x: 0,
           y: 0,
         },
+    rotationCenterCells: options.rotationCenterCells
+      ? {
+          ...options.rotationCenterCells,
+        }
+      : null,
+    draftEntityCenterCells: options.draftEntityCenterCells
+      ? cloneDraftEntityCenterCells(options.draftEntityCenterCells)
+      : {},
     previousModeKey: options.previousModeKey ?? null,
     entryDisplayTool: options.entryDisplayTool ?? "select",
   };
@@ -326,6 +391,14 @@ export function cloneCurrentInteractionMode(
       anchorWorldOffset: {
         ...mode.anchorWorldOffset,
       },
+      rotationCenterCells: mode.rotationCenterCells
+        ? {
+            ...mode.rotationCenterCells,
+          }
+        : null,
+      draftEntityCenterCells: cloneDraftEntityCenterCells(
+        mode.draftEntityCenterCells,
+      ),
     };
   }
 
@@ -366,7 +439,13 @@ export function isSameCurrentInteractionMode(
         left.entityId === right.entityId &&
         left.inputMode === right.inputMode &&
         left.anchorWorldOffset.x === right.anchorWorldOffset.x &&
-        left.anchorWorldOffset.y === right.anchorWorldOffset.y
+        left.anchorWorldOffset.y === right.anchorWorldOffset.y &&
+        left.rotationCenterCells?.x === right.rotationCenterCells?.x &&
+        left.rotationCenterCells?.y === right.rotationCenterCells?.y &&
+        areDraftEntityCenterCellsEqual(
+          left.draftEntityCenterCells,
+          right.draftEntityCenterCells,
+        )
       );
     case "marquee":
       return (

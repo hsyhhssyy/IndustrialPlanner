@@ -6,6 +6,11 @@ import { isPlacementInteractionMode } from "@/editor/contracts/interaction-mode"
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import { deriveRenderWorldBoundsPx } from "@/renderer/scene/render-world-bounds";
 import {
+  getManagedMoveDraft,
+  getManagedPlacementPreview,
+  getSelectedEntityIds,
+} from "@/editor/contracts/editor-session-helpers";
+import {
   getGridBoundingBox,
   getRotatedGridFootprint,
 } from "@/shared/geometry/grid";
@@ -99,7 +104,7 @@ function deriveAnchoredPlacementScreenBox(
     workspaceState: { canvasView, document, editor, ui },
     registry,
   } = options;
-  const preview = editor.session.placementPreview;
+  const preview = getManagedPlacementPreview(editor.session);
 
   if (ui.phase !== "edit" || !preview || preview.interactionMode !== "touch") {
     return null;
@@ -161,7 +166,7 @@ function deriveAnchoredSelectionScreenBox(
   }
 
   const bounds = getGridBoundingBox(
-    editor.session.selection
+    getSelectedEntityIds(editor.session)
       .map((entityId) => {
         const selectedEntity = document.entities[entityId];
         const definition =
@@ -204,7 +209,7 @@ function deriveAnchoredMoveScreenBox(
     topology,
     registry,
   } = options;
-  const moveDraft = editor.session.moveDraft;
+  const moveDraft = getManagedMoveDraft(editor.session, document);
 
   if (
     ui.phase !== "edit" ||
@@ -264,8 +269,7 @@ function deriveMarqueeScreenBox(
   const {
     workspaceState: { canvasView, document, editor, ui },
   } = options;
-  const marqueeBounds =
-    editor.session.marqueeRange?.bounds ?? editor.session.marqueeDraft?.bounds;
+  const marqueeBounds = editor.session.marqueeRange?.bounds ?? null;
 
   if (ui.phase !== "edit" || !marqueeBounds) {
     return null;
@@ -291,8 +295,9 @@ export function deriveRenderDerivedState(
     topology,
     registry,
     draftEntities: ui.phase === "edit" ? editor.session.draftEntities : null,
-    placementPreview: ui.phase === "edit" ? editor.session.placementPreview : null,
-    moveDraft: ui.phase === "edit" ? editor.session.moveDraft : null,
+    placementPreview:
+      ui.phase === "edit" ? getManagedPlacementPreview(editor.session) : null,
+    moveDraft: ui.phase === "edit" ? getManagedMoveDraft(editor.session, document) : null,
   });
 
   return {

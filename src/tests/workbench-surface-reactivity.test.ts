@@ -4,6 +4,7 @@ import { BottomStatusBar } from "@/app-shell/components/bottom-status-bar";
 import { LeftDock } from "@/app-shell/components/left-dock";
 import { LeftToolbar } from "@/app-shell/components/left-toolbar";
 import { RightDock } from "@/app-shell/components/right-dock";
+import { getManagedPlacementPreview } from "@/editor/contracts/editor-session-helpers";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 import { act, createElement, Fragment, Profiler } from "react";
 import { createRoot } from "react-dom/client";
@@ -139,7 +140,7 @@ describe("workbench surface observer reactivity", () => {
       );
     });
 
-    expect(controller.editorStore.getSnapshot().session.placementPreview).toMatchObject(
+    expect(getManagedPlacementPreview(controller.editorStore.getSnapshot().session)).toMatchObject(
       {
         definitionId: "belt_straight_1x1",
         interactionMode: "pointer",

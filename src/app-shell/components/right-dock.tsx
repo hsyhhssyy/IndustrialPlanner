@@ -16,6 +16,7 @@ import { createTranslator } from "@/i18n/messages";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
 import { observer } from "@/shared/mobx";
+import { getSelectedEntityIds } from "@/editor/contracts/editor-session-helpers";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 
 export interface RightDockProps {
@@ -29,14 +30,19 @@ function formatMultiSelectionLabel(locale: "zh-CN" | "en-US", count: number): st
 function resolveEditInspectorSelectionIds(
   selection: RightDockProps["controller"]["editorStore"]["session"],
 ): string[] {
+  const baselineIds = getSelectedEntityIds(selection);
+
+  if (!selection.marqueeRange) {
+    return baselineIds;
+  }
+
   const projectedIds = selection.draftEntities?.ids ?? null;
-  const baselineIds = selection.selectedEntities?.ids ?? selection.selection;
 
   if (!projectedIds || projectedIds.length === 0) {
     return baselineIds;
   }
 
-  if (selection.marqueeRange || projectedIds.length > 1) {
+  if (projectedIds.length > 1) {
     return projectedIds;
   }
 

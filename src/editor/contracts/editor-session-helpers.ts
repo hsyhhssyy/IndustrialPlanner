@@ -66,6 +66,9 @@ export function getManagedMoveDraft(
       const sourceEntity = draftEntity?.sourceEntityId
         ? document.entities[draftEntity.sourceEntityId]
         : null;
+      const centerCells = draftEntity?.sourceEntityId
+        ? moveMode.draftEntityCenterCells[draftEntity.sourceEntityId]
+        : undefined;
 
       if (!draftEntity || !draftEntity.sourceEntityId || !sourceEntity) {
         return null;
@@ -79,6 +82,12 @@ export function getManagedMoveDraft(
         gridPoint: {
           ...draftEntity.position,
         },
+        centerCells: centerCells
+          ? {
+              x: centerCells.x,
+              y: centerCells.y,
+            }
+          : undefined,
         originRotation: sourceEntity.rotation,
         rotation: draftEntity.rotation,
       };
@@ -107,9 +116,9 @@ export function getManagedMoveDraft(
       const draftId = createMoveDraftId(entity.entityId);
       return session.drafts.entities[draftId]?.valid ?? false;
     }),
-    rotationCenterCells: session.draftEntities.geometricCenterCellsDerived
+    rotationCenterCells: moveMode.rotationCenterCells
       ? {
-          ...session.draftEntities.geometricCenterCellsDerived,
+          ...moveMode.rotationCenterCells,
         }
       : undefined,
     anchorWorldOffset: {

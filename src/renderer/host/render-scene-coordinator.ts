@@ -16,6 +16,11 @@ import type { WorkbenchUiState } from "@/workbench/workbench-ui-state";
 import type { AppLocale } from "@/i18n/messages";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 import {
+  getManagedMoveDraft,
+  getManagedPlacementPreview,
+  getSelectedEntityIds,
+} from "@/editor/contracts/editor-session-helpers";
+import {
   getPendingLinkSourceEntityId,
   isMoveInteractionMode,
   isPlacementInteractionMode,
@@ -57,6 +62,7 @@ export interface CreateRenderSceneCoordinatorOptions {
 }
 
 function buildRenderInteractionState(
+  document: WorldDocument,
   editor: WorkspaceState["editor"],
   ui: WorkbenchUiState,
   simulation: SimulationState,
@@ -71,7 +77,7 @@ function buildRenderInteractionState(
   }
 
   return {
-    selectedEntityIds: editor.session.selection,
+    selectedEntityIds: getSelectedEntityIds(editor.session),
     selectionPresentation: deriveSelectionPresentation(editor.session),
     drafts: editor.session.drafts,
     draftEntities: editor.session.draftEntities,
@@ -80,8 +86,8 @@ function buildRenderInteractionState(
       isMoveInteractionMode(editor.session.currentMode)
         ? editor.session.currentMode.inputMode
         : null,
-    placementPreview: editor.session.placementPreview,
-    moveDraft: editor.session.moveDraft,
+    placementPreview: getManagedPlacementPreview(editor.session),
+    moveDraft: getManagedMoveDraft(editor.session, document),
     pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
       editor.session.currentMode,
     ),
@@ -94,13 +100,14 @@ function collectRenderSceneCoordinatorInput(
   const ui = source.uiStore.getSnapshot();
   const editor = source.editorStore.getSnapshot();
   const simulation = source.simulationStore.getSnapshot();
+  const document = source.documentStore.getSnapshot();
 
   return {
     locale: ui.locale,
-    document: source.documentStore.getSnapshot(),
+    document,
     topology: source.topologyStore.getSnapshot(),
     canvasView: source.canvasViewStore.getSnapshot(),
-    interaction: buildRenderInteractionState(editor, ui, simulation),
+    interaction: buildRenderInteractionState(document, editor, ui, simulation),
     runtimeSnapshot: simulation.runtimeSnapshot,
   };
 }

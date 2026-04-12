@@ -149,6 +149,30 @@ export interface EditorCore {
   redo: () => void;
 }
 
+function buildMoveDraftEntityCenterCells(
+  draft: MoveDraftState,
+): Record<string, { x: number; y: number }> {
+  return Object.fromEntries(
+    draft.entities
+      .filter(
+        (
+          entity,
+        ): entity is typeof entity & {
+          centerCells: {
+            x: number;
+            y: number;
+          };
+        } => Boolean(entity.centerCells),
+      )
+      .map((entity) => [
+        entity.entityId,
+        {
+          ...entity.centerCells,
+        },
+      ]),
+  );
+}
+
 interface CreateEditorCoreOptions {
   document: WorldDocument;
   session: EditorSession;
@@ -228,6 +252,8 @@ class EditorCoreImpl implements EditorCore {
         entityId,
         inputMode,
         anchorWorldOffset: draft.anchorWorldOffset,
+        rotationCenterCells: draft.rotationCenterCells ?? null,
+        draftEntityCenterCells: buildMoveDraftEntityCenterCells(draft),
         previousModeKey: this.session.currentMode.key,
         entryDisplayTool: this.session.displayTool,
       }),
@@ -926,6 +952,12 @@ class EditorCoreImpl implements EditorCore {
               anchorWorldOffset: {
                 ...draft.anchorWorldOffset,
               },
+              rotationCenterCells: draft.rotationCenterCells
+                ? {
+                    ...draft.rotationCenterCells,
+                  }
+                : null,
+              draftEntityCenterCells: buildMoveDraftEntityCenterCells(draft),
             }
           : session.currentMode,
       drafts: nextDrafts,

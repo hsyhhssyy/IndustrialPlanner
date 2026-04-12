@@ -1,4 +1,5 @@
 import type { EditorSession } from "@/editor/contracts/editor-session";
+import { getSelectedEntityIds } from "@/editor/contracts/editor-session-helpers";
 
 /**
  * Projected selection is derived state.
@@ -66,7 +67,7 @@ function splitProjectedSelection(
 export function deriveSelectionPresentation(
   session: EditorSession,
 ): SelectionPresentationState {
-  const baselineIds = session.selectedEntities?.ids ?? session.selection;
+  const baselineIds = getSelectedEntityIds(session);
   const projectedIds = session.draftEntities?.ids ?? [];
   const inspectorSource: SelectionInspectorSource = session.marqueeRange
     ? "projected"
@@ -77,9 +78,9 @@ export function deriveSelectionPresentation(
       inspectorSource === "projected"
         ? splitProjectedSelection(projectedIds, session)
         : splitProjectedSelection(baselineIds, session),
-    ghostedWorldEntityIds: session.moveDraft
-      ? session.moveDraft.entities.map((entity) => entity.entityId)
-      : [],
+    ghostedWorldEntityIds: projectedIds
+      .map((id) => session.drafts.entities[id]?.sourceEntityId)
+      .filter((entityId): entityId is string => Boolean(entityId)),
     inspectorSource,
     drawMovePreviewSelectionOutline: false,
   };

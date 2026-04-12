@@ -20,6 +20,12 @@ import {
   TOUCH_MARQUEE_LONG_PRESS_DURATION_MS,
 } from "./canvas-panel-touch-marquee-gesture";
 import {
+  getManagedMarqueeDraft,
+  getManagedMoveDraft,
+  getManagedPlacementPreview,
+  getSelectedEntityIds,
+} from "@/editor/contracts/editor-session-helpers";
+import {
   isMoveInteractionMode,
   isPlacementInteractionMode,
 } from "@/editor/contracts/interaction-mode";
@@ -118,6 +124,7 @@ export const CanvasPanel = observer(function CanvasPanel({
   placementPreviewProfiler,
 }: CanvasPanelProps) {
   const ui = controller.uiStore;
+  const worldDocument = useExternalStore(controller.documentStore);
   const editor = controller.editorStore;
   const render = useExternalStore(renderDerivedStore);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -153,20 +160,23 @@ export const CanvasPanel = observer(function CanvasPanel({
   const moveMode = isMoveInteractionMode(editor.session.currentMode)
     ? editor.session.currentMode
     : null;
+  const selectedEntityIds = getSelectedEntityIds(editor.session);
+  const activePlacementPreview = getManagedPlacementPreview(editor.session);
+  const activeMoveDraft = getManagedMoveDraft(editor.session, worldDocument);
   const anchoredPlacementActive =
     placementMode !== null && placementMode.inputMode === "touch";
   const pointerSelectionQuickActionsActive =
     ui.phase === "edit" &&
     editor.session.currentMode.key === "select" &&
-    editor.session.selection.length > 0 &&
+    selectedEntityIds.length > 0 &&
     editor.session.selectionInputMode === "pointer";
   const anchoredPlacementPreview =
-    editor.session.placementPreview?.interactionMode === "touch"
-      ? editor.session.placementPreview
+    activePlacementPreview?.interactionMode === "touch"
+      ? activePlacementPreview
       : null;
   const anchoredMoveDraft =
-    editor.session.moveDraft?.interactionMode === "touch"
-      ? editor.session.moveDraft
+    activeMoveDraft?.interactionMode === "touch"
+      ? activeMoveDraft
       : null;
   const anchoredPlacementScreenBox = render.anchoredPlacementScreenBox;
   const anchoredMoveToolbarStyle = resolveAnchoredToolbarStyle(
@@ -314,7 +324,7 @@ export const CanvasPanel = observer(function CanvasPanel({
       controller.cancelMove();
     }
 
-    if (controller.editorStore.getSnapshot().session.marqueeDraft) {
+    if (getManagedMarqueeDraft(controller.editorStore.getSnapshot().session)) {
       controller.cancelMarquee();
     }
   });
@@ -383,7 +393,7 @@ export const CanvasPanel = observer(function CanvasPanel({
   useEffect(() => {
     if (
       !anchoredPlacementActive ||
-      editor.session.placementPreview !== null ||
+      activePlacementPreview !== null ||
       viewportSize.x <= 0 ||
       viewportSize.y <= 0
     ) {
@@ -394,7 +404,7 @@ export const CanvasPanel = observer(function CanvasPanel({
   }, [
     anchoredPlacementActive,
     controller,
-    editor.session.placementPreview,
+    activePlacementPreview,
     viewportSize.x,
     viewportSize.y,
   ]);
@@ -499,7 +509,7 @@ export const CanvasPanel = observer(function CanvasPanel({
         currentMode: editor.session.currentMode,
         phase: ui.phase,
         screenPoint: point,
-        selection: editor.session.selection,
+        selection: selectedEntityIds,
         target: controller.getCanvasInteractionTarget(point),
       });
       const result = gestureSessionRef.current!.handlePointerDown({
@@ -521,7 +531,7 @@ export const CanvasPanel = observer(function CanvasPanel({
       phase: ui.phase,
       selectionModifierActive: isSelectionModifierActive(event),
       screenPoint: point,
-      selection: editor.session.selection,
+      selection: selectedEntityIds,
       target:
         event.button === 0
           ? controller.getCanvasInteractionTarget(point)
@@ -618,7 +628,7 @@ export const CanvasPanel = observer(function CanvasPanel({
 
     if (
       event.pointerType !== "touch" &&
-      controller.editorStore.getSnapshot().session.marqueeDraft &&
+      getManagedMarqueeDraft(controller.editorStore.getSnapshot().session) &&
       result.events.some(
         (gestureEvent) =>
           gestureEvent.kind === "drag-end" &&

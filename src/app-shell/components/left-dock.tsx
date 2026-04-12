@@ -8,6 +8,7 @@ import {
   type PlaceholderActionId,
 } from "@/app-shell/workbench-placeholders";
 import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
+import { getSelectedEntityIds } from "@/editor/contracts/editor-session-helpers";
 import {
   isPlacementDisplayTool,
   type DisplayTool,
@@ -246,7 +247,7 @@ export const LeftDock = observer(function LeftDock({
                       placementDisabledInSimulate ||
                       isActionDisabled(button.actionId, {
                         phase: ui.phase,
-                        selection: editor.session.selection,
+                        selection: getSelectedEntityIds(editor.session),
                         canUndo: editor.history.canUndo,
                         canRedo: editor.history.canRedo,
                       });

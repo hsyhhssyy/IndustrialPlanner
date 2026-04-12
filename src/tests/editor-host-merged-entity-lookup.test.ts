@@ -8,11 +8,78 @@ import {
 import type { EditorCore } from "@/editor/core/editor-core";
 import type { EditorSession } from "@/editor/contracts/editor-session";
 import {
+  createMoveDraftId,
+  getManagedMoveDraft,
+} from "@/editor/contracts/editor-session-helpers";
+import {
   createMoveInteractionMode,
   createPlacementInteractionMode,
 } from "@/editor/contracts/interaction-mode";
+import type { MoveDraftState } from "@/editor/contracts/move-draft";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
 import { createEditorHost } from "@/editor/host/editor-host";
+
+function createSelectionCollection(ids: string[]) {
+  return {
+    ids,
+    boundsDerived: null,
+    geometricCenterCellsDerived: null,
+  };
+}
+
+function applyManagedMoveDraft(
+  session: EditorSession,
+  document: ReturnType<typeof createStage1SeedWorldDocument>,
+  draft: MoveDraftState | null,
+): EditorSession {
+  if (!draft) {
+    return {
+      ...session,
+      draftEntities: null,
+      drafts: {
+        entities: {},
+      },
+    };
+  }
+
+  return {
+    ...session,
+    currentMode: createMoveInteractionMode({
+      entityId: draft.entityId,
+      inputMode: draft.interactionMode,
+      anchorWorldOffset: draft.anchorWorldOffset,
+      previousModeKey: "select",
+      entryDisplayTool: "select",
+    }),
+    selectedEntities: createSelectionCollection(
+      draft.entities.map((entity) => entity.entityId),
+    ),
+    drafts: {
+      entities: Object.fromEntries(
+        draft.entities.map((entity) => {
+          const sourceEntity = document.entities[entity.entityId]!;
+          return [
+            createMoveDraftId(entity.entityId),
+            {
+              ...sourceEntity,
+              id: createMoveDraftId(entity.entityId),
+              position: entity.gridPoint,
+              rotation: entity.rotation,
+              config: { ...sourceEntity.config },
+              tags: [...sourceEntity.tags],
+              sourceEntityId: entity.entityId,
+              valid: draft.valid,
+              invalidReason: draft.valid ? null : "move-draft-invalid",
+            },
+          ];
+        }),
+      ),
+    },
+    draftEntities: createSelectionCollection(
+      draft.entities.map((entity) => createMoveDraftId(entity.entityId)),
+    ),
+  };
+}
 
 describe("EditorHost merged entity lookup", () => {
   it("resolves world and draft entities from the shared lookup surface", () => {
@@ -78,19 +145,12 @@ describe("EditorHost merged entity lookup", () => {
       document,
       session: {
         ...createInitialEditorSession(),
-        currentMode: createMoveInteractionMode({
-          entityId: "reactor-1",
-          inputMode: "pointer",
-          previousModeKey: "select",
-          entryDisplayTool: "select",
-        }),
-        selection: ["reactor-1"],
-        moveDraft: {
+        ...applyManagedMoveDraft(createInitialEditorSession(), document, {
           entityId: "reactor-1",
           interactionMode: "pointer",
           originGridPoint: { x: 12, y: 6 },
           gridPoint: { x: 12, y: 6 },
-          rotation: 0,
+          rotation: 90,
           valid: true,
           rotationCenterCells: { x: 14, y: 8 },
           anchorWorldOffset: { x: 0, y: 0 },
@@ -101,30 +161,10 @@ describe("EditorHost merged entity lookup", () => {
               gridPoint: { x: 12, y: 6 },
               centerCells: { x: 14, y: 8 },
               originRotation: 0,
-              rotation: 0,
+              rotation: 90,
             },
           ],
-        },
-        drafts: {
-          entities: {
-            "draft:move:reactor-1": {
-              id: "draft:move:reactor-1",
-              definitionId: document.entities["reactor-1"]!.definitionId,
-              position: { x: 20, y: 10 },
-              rotation: 90,
-              config: { ...document.entities["reactor-1"]!.config },
-              tags: [...document.entities["reactor-1"]!.tags],
-              sourceEntityId: "reactor-1",
-              valid: true,
-              invalidReason: null,
-            },
-          },
-        },
-        draftEntities: {
-          ids: ["draft:move:reactor-1"],
-          boundsDerived: null,
-          geometricCenterCellsDerived: null,
-        },
+        }),
       } satisfies EditorSession,
       history: {
         canUndo: false,
@@ -135,12 +175,11 @@ describe("EditorHost merged entity lookup", () => {
     };
     const core = {
       getSnapshot: () => snapshot,
-      setMoveDraft: (draft: EditorSession["moveDraft"]) => {
+      setMoveDraft: (draft: MoveDraftState | null) => {
         snapshot = {
           ...snapshot,
           session: {
-            ...snapshot.session,
-            moveDraft: draft,
+            ...applyManagedMoveDraft(snapshot.session, document, draft),
           },
         };
       },
@@ -155,13 +194,13 @@ describe("EditorHost merged entity lookup", () => {
     });
 
     expect(host.rotateMoveClockwise()).toBe(true);
-    expect(snapshot.session.moveDraft).toMatchObject({
+    expect(getManagedMoveDraft(snapshot.session, snapshot.document)).toMatchObject({
       entityId: "reactor-1",
       rotation: 180,
       valid: true,
     });
-    expect(snapshot.session.moveDraft?.gridPoint).not.toEqual({ x: 12, y: 6 });
-    expect(snapshot.session.moveDraft?.entities).toMatchObject([
+    expect(getManagedMoveDraft(snapshot.session, snapshot.document)?.gridPoint).not.toEqual({ x: 12, y: 6 });
+    expect(getManagedMoveDraft(snapshot.session, snapshot.document)?.entities).toMatchObject([
       {
         entityId: "reactor-1",
         rotation: 180,
@@ -186,53 +225,26 @@ describe("EditorHost merged entity lookup", () => {
       document,
       session: {
         ...createInitialEditorSession(),
-        currentMode: createMoveInteractionMode({
-          entityId: "reactor-1",
-          inputMode: "pointer",
-          previousModeKey: "select",
-          entryDisplayTool: "select",
-        }),
-        selection: ["reactor-1"],
-        moveDraft: {
+        ...applyManagedMoveDraft(createInitialEditorSession(), document, {
           entityId: "reactor-1",
           interactionMode: "pointer",
           originGridPoint: { x: 12, y: 6 },
-          gridPoint: { x: 12, y: 6 },
-          rotation: 0,
+          gridPoint: { x: 20, y: 10 },
+          rotation: 90,
           valid: true,
-          rotationCenterCells: { x: 14, y: 8 },
+          rotationCenterCells: { x: 22, y: 12 },
           anchorWorldOffset: { x: 0, y: 0 },
           entities: [
             {
               entityId: "reactor-1",
               originGridPoint: { x: 12, y: 6 },
-              gridPoint: { x: 12, y: 6 },
-              centerCells: { x: 14, y: 8 },
+              gridPoint: { x: 20, y: 10 },
+              centerCells: { x: 22, y: 12 },
               originRotation: 0,
-              rotation: 0,
+              rotation: 90,
             },
           ],
-        },
-        drafts: {
-          entities: {
-            "draft:move:reactor-1": {
-              id: "draft:move:reactor-1",
-              definitionId: document.entities["reactor-1"]!.definitionId,
-              position: { x: 20, y: 10 },
-              rotation: 90,
-              config: { ...document.entities["reactor-1"]!.config },
-              tags: [...document.entities["reactor-1"]!.tags],
-              sourceEntityId: "reactor-1",
-              valid: true,
-              invalidReason: null,
-            },
-          },
-        },
-        draftEntities: {
-          ids: ["draft:move:reactor-1"],
-          boundsDerived: null,
-          geometricCenterCellsDerived: null,
-        },
+        }),
       } satisfies EditorSession,
       history: {
         canUndo: false,
@@ -246,19 +258,16 @@ describe("EditorHost merged entity lookup", () => {
       beginMove: (
         nextEntityId: string,
         nextInputMode: "pointer" | "touch",
-        draft: NonNullable<EditorSession["moveDraft"]>,
+        draft: MoveDraftState,
       ) => {
         snapshot = {
           ...snapshot,
           session: {
-            ...snapshot.session,
-            currentMode: createMoveInteractionMode({
+            ...applyManagedMoveDraft(snapshot.session, document, {
+              ...draft,
               entityId: nextEntityId,
-              inputMode: nextInputMode,
-              previousModeKey: "select",
-              entryDisplayTool: "select",
+              interactionMode: nextInputMode,
             }),
-            moveDraft: draft,
           },
         };
       },
@@ -278,7 +287,7 @@ describe("EditorHost merged entity lookup", () => {
         gridPoint: { x: 20, y: 10 },
       }),
     ).toBe(true);
-    expect(snapshot.session.moveDraft).toMatchObject({
+    expect(getManagedMoveDraft(snapshot.session, snapshot.document)).toMatchObject({
       entityId: "reactor-1",
       gridPoint: { x: 20, y: 10 },
       rotation: 90,
@@ -312,7 +321,6 @@ describe("EditorHost merged entity lookup", () => {
           previousModeKey: "select",
           entryDisplayTool: "belt",
         }),
-        placementPreview: null,
         drafts: {
           entities: {
             "draft:placement-preview": {

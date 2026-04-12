@@ -10,6 +10,10 @@ import type {
   DisplayTool,
 } from "@/editor/contracts/interaction-mode";
 import {
+  getManagedMoveDraft,
+  getSelectedEntityIds,
+} from "@/editor/contracts/editor-session-helpers";
+import {
   isMoveInteractionMode,
   isPlacementInteractionMode,
 } from "@/editor/contracts/interaction-mode";
@@ -210,7 +214,7 @@ function resolveTouchLongPressMarqueeSelectionMode(
 function getSelectedEntityIdForMove(
   controller: WorkbenchController,
 ): string | null {
-  const selection = controller.editorStore.getSnapshot().session.selection;
+  const selection = getSelectedEntityIds(controller.editorStore.getSnapshot().session);
 
   return selection[0] ?? null;
 }
@@ -402,7 +406,12 @@ export async function routeCanvasGestureEvent(
           return;
         }
 
-        if (options.controller.editorStore.getSnapshot().session.moveDraft?.valid) {
+        const moveDraft = getManagedMoveDraft(
+          options.controller.editorStore.getSnapshot().session,
+          options.controller.documentStore.getSnapshot(),
+        );
+
+        if (moveDraft?.valid) {
           await options.controller.confirmMovePreview();
         } else {
           options.controller.cancelMove();

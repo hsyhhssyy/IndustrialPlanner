@@ -14,12 +14,107 @@ import {
 import { createSnapshotStore } from "@/shared/snapshot-store/snapshot-store";
 import { createEmptySimulationPatchSet } from "@/simulation/protocol/simulation-patch";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
-import { getPendingLinkSourceEntityId } from "@/editor/contracts/interaction-mode";
+import {
+  createMoveInteractionMode,
+  createPlacementInteractionMode,
+  getPendingLinkSourceEntityId,
+} from "@/editor/contracts/interaction-mode";
+import {
+  createMoveDraftId,
+  getManagedMoveDraft,
+  getManagedPlacementPreview,
+  getSelectedEntityIds,
+} from "@/editor/contracts/editor-session-helpers";
 import { createWorkspaceDerivedStore } from "@/workbench/workspace-derived-store";
 import { deriveRenderDerivedState } from "@/workbench/workspace-derived-state";
 import { createInitialCanvasViewState } from "@/workbench/workspace-state";
 import { createInitialWorkbenchUiState } from "@/workbench/workbench-ui-store";
 import { createWorkspaceStore } from "@/workbench/workspace-store";
+
+function createCollection(ids: string[]) {
+  return {
+    ids,
+    boundsDerived: null,
+    geometricCenterCellsDerived: null,
+  };
+}
+
+function withPlacementPreview(
+  session: ReturnType<typeof createInitialEditorSession>,
+  preview: {
+    definitionId: string;
+    interactionMode: "pointer" | "touch";
+    gridPoint: { x: number; y: number };
+    rotation: 0 | 90 | 180 | 270;
+    valid: boolean;
+  },
+) {
+  return {
+    ...session,
+    currentMode: createPlacementInteractionMode({
+      definitionId: preview.definitionId,
+      inputMode: preview.interactionMode,
+      rotation: preview.rotation,
+    }),
+    drafts: {
+      entities: {
+        "draft:placement-preview": {
+          id: "draft:placement-preview",
+          definitionId: preview.definitionId,
+          position: preview.gridPoint,
+          rotation: preview.rotation,
+          config: {},
+          tags: [],
+          sourceEntityId: null,
+          valid: preview.valid,
+          invalidReason: preview.valid ? null : "placement-preview-invalid",
+        },
+      },
+    },
+    draftEntities: createCollection(["draft:placement-preview"]),
+  };
+}
+
+function withMoveDraft(
+  session: ReturnType<typeof createInitialEditorSession>,
+  document: ReturnType<typeof createStage1SeedWorldDocument>,
+  draft: {
+    entityId: string;
+    interactionMode: "pointer" | "touch";
+    gridPoint: { x: number; y: number };
+    rotation: 0 | 90 | 180 | 270;
+    valid: boolean;
+    anchorWorldOffset: { x: number; y: number };
+  },
+) {
+  const sourceEntity = document.entities[draft.entityId]!;
+
+  return {
+    ...session,
+    currentMode: createMoveInteractionMode({
+      entityId: draft.entityId,
+      inputMode: draft.interactionMode,
+      anchorWorldOffset: draft.anchorWorldOffset,
+    }),
+    selectedEntities: createCollection([draft.entityId]),
+    drafts: {
+      entities: {
+        [createMoveDraftId(draft.entityId)]: {
+          ...sourceEntity,
+          id: createMoveDraftId(draft.entityId),
+          position: draft.gridPoint,
+          rotation: draft.rotation,
+          config: { ...sourceEntity.config },
+          tags: [...sourceEntity.tags],
+          sourceEntityId: draft.entityId,
+          valid: draft.valid,
+          invalidReason: draft.valid ? null : "move-draft-invalid",
+        },
+      },
+    },
+    draftEntities: createCollection([createMoveDraftId(draft.entityId)]),
+  };
+}
 
 describe("WorkspaceDerivedStore", () => {
   it("derives render bounds from the same shared logic as buildRenderScene", () => {
@@ -69,9 +164,12 @@ describe("WorkspaceDerivedStore", () => {
       registry,
       canvasView: workspaceState.canvasView,
       interaction: {
-        selectedEntityIds: workspaceState.editor.session.selection,
-        placementPreview: workspaceState.editor.session.placementPreview,
-        moveDraft: workspaceState.editor.session.moveDraft,
+        selectedEntityIds: getSelectedEntityIds(workspaceState.editor.session),
+        placementPreview: getManagedPlacementPreview(workspaceState.editor.session),
+        moveDraft: getManagedMoveDraft(
+          workspaceState.editor.session,
+          workspaceState.document,
+        ),
         pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
           workspaceState.editor.session.currentMode,
         ),
@@ -94,14 +192,13 @@ describe("WorkspaceDerivedStore", () => {
       document,
       editor: {
         session: {
-          ...createInitialEditorSession(),
-          placementPreview: {
+          ...withPlacementPreview(createInitialEditorSession(), {
             definitionId: "belt_straight_1x1",
             interactionMode: "touch" as const,
             gridPoint: { x: 2, y: 3 },
             rotation: 0 as const,
             valid: true,
-          },
+          }),
         },
         history: {
           canUndo: false,
@@ -135,6 +232,8 @@ describe("WorkspaceDerivedStore", () => {
     const scaledGridSize =
       workspaceState.document.documentSettings.gridSize * workspaceState.canvasView.zoom;
 
+    const preview = getManagedPlacementPreview(workspaceState.editor.session)!;
+
     expect(
       deriveRenderDerivedState({
         workspaceState,
@@ -143,12 +242,12 @@ describe("WorkspaceDerivedStore", () => {
       }).anchoredPlacementScreenBox,
     ).toEqual({
       left:
-        (workspaceState.editor.session.placementPreview!.gridPoint.x *
+        (preview.gridPoint.x *
           workspaceState.document.documentSettings.gridSize -
           workspaceState.canvasView.offset.x) *
         workspaceState.canvasView.zoom,
       top:
-        (workspaceState.editor.session.placementPreview!.gridPoint.y *
+        (preview.gridPoint.y *
           workspaceState.document.documentSettings.gridSize -
           workspaceState.canvasView.offset.y) *
         workspaceState.canvasView.zoom,
@@ -165,14 +264,13 @@ describe("WorkspaceDerivedStore", () => {
       document,
       editor: {
         session: {
-          ...createInitialEditorSession(),
-          placementPreview: {
+          ...withPlacementPreview(createInitialEditorSession(), {
             definitionId: "item_port_unloader_1",
             interactionMode: "touch" as const,
             gridPoint: { x: 2, y: 3 },
             rotation: 90 as const,
             valid: true,
-          },
+          }),
         },
         history: {
           canUndo: false,
@@ -206,6 +304,8 @@ describe("WorkspaceDerivedStore", () => {
     const scaledGridSize =
       workspaceState.document.documentSettings.gridSize * workspaceState.canvasView.zoom;
 
+    const rotatedPreview = getManagedPlacementPreview(workspaceState.editor.session)!;
+
     expect(
       deriveRenderDerivedState({
         workspaceState,
@@ -214,12 +314,12 @@ describe("WorkspaceDerivedStore", () => {
       }).anchoredPlacementScreenBox,
     ).toEqual({
       left:
-        (workspaceState.editor.session.placementPreview!.gridPoint.x *
+        (rotatedPreview.gridPoint.x *
           workspaceState.document.documentSettings.gridSize -
           workspaceState.canvasView.offset.x) *
         workspaceState.canvasView.zoom,
       top:
-        (workspaceState.editor.session.placementPreview!.gridPoint.y *
+        (rotatedPreview.gridPoint.y *
           workspaceState.document.documentSettings.gridSize -
           workspaceState.canvasView.offset.y) *
         workspaceState.canvasView.zoom,
@@ -236,7 +336,13 @@ describe("WorkspaceDerivedStore", () => {
       document,
       editor: {
         session: {
-          ...createInitialEditorSession(),
+          ...withPlacementPreview(createInitialEditorSession(), {
+            definitionId: "missing_definition",
+            interactionMode: "touch" as const,
+            gridPoint: { x: 999, y: 999 },
+            rotation: 0 as const,
+            valid: true,
+          }),
           draftEntities: {
             ids: ["draft:placement-preview"],
             boundsDerived: {
@@ -246,13 +352,6 @@ describe("WorkspaceDerivedStore", () => {
               height: 3,
             },
             geometricCenterCellsDerived: { x: 5, y: 7.5 },
-          },
-          placementPreview: {
-            definitionId: "missing_definition",
-            interactionMode: "touch" as const,
-            gridPoint: { x: 999, y: 999 },
-            rotation: 0 as const,
-            valid: true,
           },
         },
         history: {
@@ -317,7 +416,7 @@ describe("WorkspaceDerivedStore", () => {
       editor: {
         session: {
           ...createInitialEditorSession(),
-          selection: [selectedEntityId],
+          selectedEntities: createCollection([selectedEntityId]),
           selectionInputMode: "touch" as const,
         },
         history: {
@@ -391,7 +490,7 @@ describe("WorkspaceDerivedStore", () => {
       editor: {
         session: {
           ...createInitialEditorSession(),
-          selection,
+          selectedEntities: createCollection(selection),
           selectionInputMode: "touch" as const,
         },
         history: {
@@ -556,25 +655,14 @@ describe("WorkspaceDerivedStore", () => {
       document,
       editor: {
         session: {
-          ...createInitialEditorSession(),
-          moveDraft: {
+          ...withMoveDraft(createInitialEditorSession(), document, {
             entityId: movedEntityId,
             interactionMode: "touch" as const,
-            originGridPoint: movedEntity.position,
             gridPoint: { x: 19, y: 11 },
             rotation: 180 as const,
             valid: true,
             anchorWorldOffset: { x: 8, y: 8 },
-            entities: [
-              {
-                entityId: movedEntityId,
-                originGridPoint: movedEntity.position,
-                gridPoint: { x: 19, y: 11 },
-                originRotation: movedEntity.rotation,
-                rotation: 180 as const,
-              },
-            ],
-          },
+          }),
         },
         history: {
           canUndo: false,
@@ -646,9 +734,7 @@ describe("WorkspaceDerivedStore", () => {
       editor: {
         session: {
           ...createInitialEditorSession(),
-          marqueeDraft: {
-            interactionMode: "pointer" as const,
-            selectionMode: "replace" as const,
+          marqueeRange: {
             originGridPoint: { x: 10, y: 6 },
             gridPoint: { x: 18, y: 13 },
             bounds: {
@@ -657,8 +743,7 @@ describe("WorkspaceDerivedStore", () => {
               width: 9,
               height: 8,
             },
-            entityIds: ["reactor-1", "filler-1"],
-            baseSelection: ["reactor-1"],
+            selectionMode: "replace" as const,
           },
         },
         history: {
@@ -699,21 +784,21 @@ describe("WorkspaceDerivedStore", () => {
       }).marqueeScreenBox,
     ).toEqual({
       left:
-        (workspaceState.editor.session.marqueeDraft!.bounds.left *
+        (workspaceState.editor.session.marqueeRange!.bounds.left *
           document.documentSettings.gridSize -
           workspaceState.canvasView.offset.x) *
         workspaceState.canvasView.zoom,
       top:
-        (workspaceState.editor.session.marqueeDraft!.bounds.top *
+        (workspaceState.editor.session.marqueeRange!.bounds.top *
           document.documentSettings.gridSize -
           workspaceState.canvasView.offset.y) *
         workspaceState.canvasView.zoom,
       width:
-        workspaceState.editor.session.marqueeDraft!.bounds.width *
+        workspaceState.editor.session.marqueeRange!.bounds.width *
         document.documentSettings.gridSize *
         workspaceState.canvasView.zoom,
       height:
-        workspaceState.editor.session.marqueeDraft!.bounds.height *
+        workspaceState.editor.session.marqueeRange!.bounds.height *
         document.documentSettings.gridSize *
         workspaceState.canvasView.zoom,
     });
@@ -739,7 +824,6 @@ describe("WorkspaceDerivedStore", () => {
               height: 8,
             },
           },
-          marqueeDraft: null,
         },
         history: {
           canUndo: false,
@@ -889,8 +973,6 @@ describe("WorkspaceDerivedStore", () => {
             },
             geometricCenterCellsDerived: { x: 102.5, y: 72 },
           },
-          placementPreview: null,
-          moveDraft: null,
         },
         history: {
           canUndo: false,

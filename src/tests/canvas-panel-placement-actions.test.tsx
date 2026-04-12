@@ -5,6 +5,12 @@ import { TOUCH_MARQUEE_LONG_PRESS_DURATION_MS } from "@/app-shell/components/can
 import { createWorkbenchShell } from "@/app-shell/workbench-shell";
 import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import {
+  getManagedMarqueeDraft,
+  getManagedMoveDraft,
+  getManagedPlacementPreview,
+  getSelectedEntityIds,
+} from "@/editor/contracts/editor-session-helpers";
+import {
   isMoveInteractionMode,
   isPlacementInteractionMode,
 } from "@/editor/contracts/interaction-mode";
@@ -253,6 +259,33 @@ function getMoveMode(
   return isMoveInteractionMode(currentMode) ? currentMode : null;
 }
 
+function getSelection(
+  controller: ReturnType<typeof createWorkbenchController>,
+) {
+  return getSelectedEntityIds(controller.editorStore.getSnapshot().session);
+}
+
+function getPlacementPreview(
+  controller: ReturnType<typeof createWorkbenchController>,
+) {
+  return getManagedPlacementPreview(controller.editorStore.getSnapshot().session);
+}
+
+function getMoveDraft(
+  controller: ReturnType<typeof createWorkbenchController>,
+) {
+  return getManagedMoveDraft(
+    controller.editorStore.getSnapshot().session,
+    controller.documentStore.getSnapshot(),
+  );
+}
+
+function getMarqueeDraft(
+  controller: ReturnType<typeof createWorkbenchController>,
+) {
+  return getManagedMarqueeDraft(controller.editorStore.getSnapshot().session);
+}
+
 describe("CanvasPanel placement actions", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -410,7 +443,7 @@ describe("CanvasPanel placement actions", () => {
     expect(buttonLabels).toEqual(["取消", "旋转", "确认放置"]);
     expect(container.querySelector(".placement-affordance-hint")).toBeNull();
 
-    const beforePreview = controller.editorStore.getSnapshot().session.placementPreview;
+    const beforePreview = getPlacementPreview(controller);
 
     expect(beforePreview).toMatchObject({
       definitionId: "item_port_unloader_1",
@@ -422,7 +455,7 @@ describe("CanvasPanel placement actions", () => {
       rotateButton?.click();
     });
 
-    expect(controller.editorStore.getSnapshot().session.placementPreview).toMatchObject({
+    expect(getPlacementPreview(controller)).toMatchObject({
       interactionMode: "touch",
       gridPoint: {
         x: (beforePreview?.gridPoint.x ?? 0) + 1,
@@ -458,7 +491,7 @@ describe("CanvasPanel placement actions", () => {
       await flushCanvasActions();
     });
 
-    expect(controller.editorStore.getSnapshot().session.selection).toEqual(["filler-1"]);
+    expect(getSelection(controller)).toEqual(["filler-1"]);
     expect(controller.editorStore.getSnapshot().session.selectionInputMode).toBe(
       "pointer",
     );
@@ -489,7 +522,7 @@ describe("CanvasPanel placement actions", () => {
     });
 
     expect(controller.documentStore.getSnapshot().entities["filler-1"]).toBeUndefined();
-    expect(controller.editorStore.getSnapshot().session.selection).toEqual([]);
+    expect(getSelection(controller)).toEqual([]);
     expect(controller.editorStore.getSnapshot().session.selectionInputMode).toBeNull();
 
     await disposeCanvasPanel({ root, shell, controller });
@@ -509,7 +542,7 @@ describe("CanvasPanel placement actions", () => {
       await flushCanvasActions();
     });
 
-    expect(controller.editorStore.getSnapshot().session.selection).toEqual(["filler-1"]);
+    expect(getSelection(controller)).toEqual(["filler-1"]);
     expect(controller.editorStore.getSnapshot().session.selectionInputMode).toBe(
       "touch",
     );
@@ -586,7 +619,7 @@ describe("CanvasPanel placement actions", () => {
     });
 
     expect(container.querySelector(".canvas-touch-hold-indicator")).toBeNull();
-    expect(controller.editorStore.getSnapshot().session.marqueeDraft).toMatchObject({
+    expect(getMarqueeDraft(controller)).toMatchObject({
       interactionMode: "touch",
       selectionMode: "replace",
     });
@@ -597,7 +630,7 @@ describe("CanvasPanel placement actions", () => {
       await flushCanvasActions();
     });
 
-    expect(controller.editorStore.getSnapshot().session.selection).toEqual([
+    expect(getSelection(controller)).toEqual([
       "reactor-1",
       "filler-1",
     ]);
@@ -623,7 +656,7 @@ describe("CanvasPanel placement actions", () => {
       await flushCanvasActions();
     });
 
-    expect(controller.editorStore.getSnapshot().session.selection).toEqual([
+    expect(getSelection(controller)).toEqual([
       "reactor-1",
     ]);
 
@@ -690,7 +723,7 @@ describe("CanvasPanel placement actions", () => {
       await flushCanvasActions();
     });
 
-    expect(controller.editorStore.getSnapshot().session.selection).toEqual([
+    expect(getSelection(controller)).toEqual([
       "reactor-1",
     ]);
     expect(controller.editorStore.getSnapshot().session.selectionInputMode).toBe(
@@ -708,7 +741,7 @@ describe("CanvasPanel placement actions", () => {
       entityId: "reactor-1",
       inputMode: "touch",
     });
-    expect(controller.editorStore.getSnapshot().session.moveDraft).toMatchObject({
+    expect(getMoveDraft(controller)).toMatchObject({
       gridPoint: { x: 20, y: 10 },
       valid: true,
     });
@@ -795,7 +828,7 @@ describe("CanvasPanel placement actions", () => {
       await flushCanvasActions();
     });
 
-    const rotatedPointerDraft = controller.editorStore.getSnapshot().session.moveDraft;
+    const rotatedPointerDraft = getMoveDraft(controller);
 
     expect(rotatedPointerDraft).toMatchObject({
       entityId: "filler-1",
@@ -863,7 +896,7 @@ describe("CanvasPanel placement actions", () => {
       await flushCanvasActions();
     });
 
-    const rotatedTouchDraft = controller.editorStore.getSnapshot().session.moveDraft;
+    const rotatedTouchDraft = getMoveDraft(controller);
 
     expect(rotatedTouchDraft).toMatchObject({
       entityId: "filler-1",
