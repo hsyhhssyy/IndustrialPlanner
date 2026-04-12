@@ -19,6 +19,7 @@ export interface SelectedEntitiesState extends EditorEntityCollectionState {}
 export interface DraftEntityState extends WorldEntity {
   sourceEntityId: string | null;
   valid: boolean;
+  invalidReason: string | null;
 }
 
 export interface DraftsState {
