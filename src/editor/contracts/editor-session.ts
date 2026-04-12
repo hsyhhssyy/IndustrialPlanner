@@ -1,3 +1,4 @@
+import type { DraftsState } from "@/editor/contracts/entity-collection";
 import type {
   PlacementPreviewState,
   PlacementInteractionMode,
@@ -18,6 +19,7 @@ import type {
 export interface EditorSession {
   displayTool: DisplayTool;
   currentMode: CurrentInteractionMode;
+  drafts: DraftsState;
   selection: string[];
   selectionInputMode: PlacementInteractionMode | null;
   hoveredEntityId: string | null;

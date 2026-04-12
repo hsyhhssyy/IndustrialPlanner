@@ -5,6 +5,7 @@ import {
   type EditorCoreSnapshot,
 } from "@/editor/core/editor-core";
 import type { EditorSession } from "@/editor/contracts/editor-session";
+import type { EditorMergedEntityLookup } from "@/editor/contracts/merged-entity-lookup";
 import {
   getPendingLinkSourceEntityId,
   isLinkInteractionMode,
@@ -227,6 +228,7 @@ export interface EditorHost {
     session: EditorSession;
     history: EditorHistoryState;
   };
+  getEntityById: EditorMergedEntityLookup["getEntityById"];
   queryInteractionTarget: (
     worldPoint: CanvasPoint,
   ) => EditorWorldInteractionTarget;
@@ -445,6 +447,29 @@ class EditorHostImpl implements EditorHost {
     return {
       session: snapshot.session,
       history: snapshot.history,
+    };
+  }
+
+  getEntityById(id: string) {
+    const snapshot = this.core.getSnapshot();
+    const draftEntity = snapshot.session.drafts.entities[id];
+
+    if (draftEntity) {
+      return {
+        kind: "draft" as const,
+        entity: draftEntity,
+      };
+    }
+
+    const worldEntity = snapshot.document.entities[id];
+
+    if (!worldEntity) {
+      return null;
+    }
+
+    return {
+      kind: "world" as const,
+      entity: worldEntity,
     };
   }
 

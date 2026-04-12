@@ -1,4 +1,8 @@
 import {
+  cloneDraftsState,
+  isSameDraftsState,
+} from "@/editor/contracts/entity-collection";
+import {
   isSameMarqueeDraftState,
 } from "@/editor/contracts/marquee-draft";
 import { isSamePlacementPreviewState } from "@/editor/contracts/placement-preview";
@@ -43,6 +47,7 @@ export function isSameEditorSession(
   return (
     left.displayTool === right.displayTool &&
     isSameCurrentInteractionMode(left.currentMode, right.currentMode) &&
+    isSameDraftsState(left.drafts, right.drafts) &&
     areSelectionsEqual(left.selection, right.selection) &&
     left.selectionInputMode === right.selectionInputMode &&
     left.hoveredEntityId === right.hoveredEntityId &&
@@ -68,6 +73,7 @@ function cloneEditorSession(session: EditorSession): EditorSession {
   return {
     displayTool: session.displayTool,
     currentMode: cloneCurrentInteractionMode(session.currentMode),
+    drafts: cloneDraftsState(session.drafts),
     selection: [...session.selection],
     selectionInputMode: session.selectionInputMode,
     hoveredEntityId: session.hoveredEntityId,
@@ -210,6 +216,10 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
 
     if (!isSameCurrentInteractionMode(this.session.currentMode, session.currentMode)) {
       this.session.currentMode = cloneCurrentInteractionMode(session.currentMode);
+    }
+
+    if (!isSameDraftsState(this.session.drafts, session.drafts)) {
+      this.session.drafts = cloneDraftsState(session.drafts);
     }
 
     if (!areSelectionsEqual(this.session.selection, session.selection)) {

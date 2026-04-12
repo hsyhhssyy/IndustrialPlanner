@@ -44,6 +44,46 @@ describe("EditorRuntimeStore", () => {
     expect(store.session.selectionInputMode).toBe("touch");
   });
 
+  it("hydrates draft entities into observable runtime state", () => {
+    const store = createEditorRuntimeStore({
+      session: createInitialEditorSession(),
+      history: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
+      },
+    });
+
+    store.setSnapshot({
+      session: {
+        ...store.getSnapshot().session,
+        drafts: {
+          entities: {
+            "draft:placement-preview": {
+              id: "draft:placement-preview",
+              definitionId: "belt_straight_1x1",
+              position: { x: 8, y: 5 },
+              rotation: 0,
+              config: {},
+              tags: [],
+              sourceEntityId: null,
+              valid: true,
+              invalidReason: null,
+            },
+          },
+        },
+      },
+      history: store.getSnapshot().history,
+    });
+
+    expect(store.session.drafts.entities["draft:placement-preview"]).toMatchObject({
+      definitionId: "belt_straight_1x1",
+      position: { x: 8, y: 5 },
+      valid: true,
+    });
+  });
+
   it("does not re-run observers that only read display tool when placement preview changes", () => {
     const store = createEditorRuntimeStore({
       session: createInitialEditorSession(),

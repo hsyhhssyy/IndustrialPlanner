@@ -11,6 +11,9 @@ export function createInitialEditorSession(): EditorSession {
   return {
     displayTool: "select",
     currentMode: createSelectInteractionMode(),
+    drafts: {
+      entities: {},
+    },
     selection: ["reactor-1"],
     selectionInputMode: null,
     hoveredEntityId: null,
