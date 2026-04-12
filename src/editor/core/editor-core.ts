@@ -11,6 +11,17 @@ import type {
   DocumentCommand,
 } from "@/editor/core/commands/document-command";
 import type { EditorSession } from "@/editor/contracts/editor-session";
+import {
+  PLACEMENT_PREVIEW_DRAFT_ID,
+  createMoveDraftId,
+  getManagedMarqueeDraft,
+  getManagedMoveDraft,
+  getSelectedEntityIds,
+  isManagedDraftId,
+} from "@/editor/contracts/editor-session-helpers";
+import {
+  cloneDraftsState,
+} from "@/editor/contracts/entity-collection";
 import type {
   DraftEntitiesState,
   DraftEntityState,
@@ -55,16 +66,6 @@ import {
   type GridPoint,
   type GridRotation,
 } from "@/shared/geometry/grid";
-
-const PLACEMENT_PREVIEW_DRAFT_ID = "draft:placement-preview";
-
-function createMoveDraftId(entityId: string): string {
-  return `draft:move:${entityId}`;
-}
-
-function isManagedDraftId(id: string): boolean {
-  return id === PLACEMENT_PREVIEW_DRAFT_ID || id.startsWith("draft:move:");
-}
 
 interface DocumentHistoryEntry {
   command: DocumentCommand;
@@ -226,6 +227,7 @@ class EditorCoreImpl implements EditorCore {
       createMoveInteractionMode({
         entityId,
         inputMode,
+        anchorWorldOffset: draft.anchorWorldOffset,
         previousModeKey: this.session.currentMode.key,
         entryDisplayTool: this.session.displayTool,
       }),
@@ -233,11 +235,10 @@ class EditorCoreImpl implements EditorCore {
       false,
     );
 
-    this.setSession({
-      ...this.session,
-      selection: draft.entities.map((entity) => entity.entityId),
-      selectionInputMode: inputMode,
-    });
+    this.setSelection(
+      draft.entities.map((entity) => entity.entityId),
+      inputMode,
+    );
     this.setMoveDraft(draft);
   }
 
@@ -276,24 +277,15 @@ class EditorCoreImpl implements EditorCore {
   }
 
   setPlacementPreview(preview: PlacementPreviewState | null): void {
-    this.setSession({
-      ...this.session,
-      placementPreview: preview,
-    });
+    this.setSession(this.patchPlacementPreview(this.session, preview));
   }
 
   setMoveDraft(draft: MoveDraftState | null): void {
-    this.setSession({
-      ...this.session,
-      moveDraft: draft,
-    });
+    this.setSession(this.patchMoveDraft(this.session, draft));
   }
 
   setMarqueeDraft(draft: MarqueeDraftState | null): void {
-    this.setSession({
-      ...this.session,
-      marqueeDraft: draft,
-    });
+    this.setSession(this.patchMarqueeDraft(this.session, draft));
   }
 
   cancelMove(): void {
@@ -401,7 +393,7 @@ class EditorCoreImpl implements EditorCore {
   confirmMarqueeSelection(): boolean {
     if (
       !isMarqueeInteractionMode(this.session.currentMode) ||
-      !this.session.marqueeDraft
+      !this.session.marqueeRange
     ) {
       return false;
     }
@@ -426,23 +418,7 @@ class EditorCoreImpl implements EditorCore {
     selection: readonly string[],
     inputMode: PlacementInteractionMode | null = null,
   ): void {
-    const nextSelection: string[] = [];
-    const seen = new Set<string>();
-
-    for (const entityId of selection) {
-      if (!this.document.entities[entityId] || seen.has(entityId)) {
-        continue;
-      }
-
-      seen.add(entityId);
-      nextSelection.push(entityId);
-    }
-
-    this.setSession({
-      ...this.session,
-      selection: nextSelection,
-      selectionInputMode: nextSelection.length > 0 ? inputMode : null,
-    });
+    this.setSession(this.patchSelectedEntities(this.session, selection, inputMode));
   }
 
   selectEntity(
@@ -458,7 +434,7 @@ class EditorCoreImpl implements EditorCore {
     }
 
     const nextSelection = resolveNextSelection(
-      this.session.selection,
+      getSelectedEntityIds(this.session),
       entityId,
       selectionMode,
     );
@@ -467,7 +443,7 @@ class EditorCoreImpl implements EditorCore {
   }
 
   rotateSelectedEntityClockwise(position?: GridPoint): boolean {
-    const selectedEntityId = this.session.selection[0];
+    const selectedEntityId = getSelectedEntityIds(this.session)[0];
 
     if (!selectedEntityId) {
       return false;
@@ -543,11 +519,10 @@ class EditorCoreImpl implements EditorCore {
       ? this.session.currentMode
       : null;
 
-    this.setSession({
-      ...this.session,
-      selection: [entityId],
-      selectionInputMode: placementMode?.inputMode ?? this.session.selectionInputMode,
-    });
+    this.setSelection(
+      [entityId],
+      placementMode?.inputMode ?? this.session.selectionInputMode,
+    );
   }
 
   moveEntity(entityId: string, position: GridPoint): boolean {
@@ -582,11 +557,7 @@ class EditorCoreImpl implements EditorCore {
     };
 
     if (this.applyCommand(nextCommand)) {
-      this.setSession({
-        ...this.session,
-        selection: [targetEntityId],
-        selectionInputMode: null,
-      });
+      this.setSelection([targetEntityId], null);
       this.setLinkSourceEntityId(null);
     }
   }
@@ -598,7 +569,7 @@ class EditorCoreImpl implements EditorCore {
   }
 
   removeSelectedEntities(): void {
-    const selectedIds = [...this.session.selection];
+    const selectedIds = [...getSelectedEntityIds(this.session)];
 
     selectedIds.forEach((entityId) => {
       this.applyCommand({
@@ -608,18 +579,14 @@ class EditorCoreImpl implements EditorCore {
     });
 
     this.sanitizeSession();
-    this.setSession({
-      ...this.session,
-      selection: [],
-      selectionInputMode: null,
-    });
+    this.setSelection([], null);
     this.setLinkSourceEntityId(null);
   }
 
   removeSelectedLinks(): void {
     const linkIds = Array.from(
       new Set(
-        this.session.selection.flatMap((entityId) =>
+        getSelectedEntityIds(this.session).flatMap((entityId) =>
           getEntityLinks(this.document, entityId).map((link) => link.id),
         ),
       ),
@@ -666,14 +633,22 @@ class EditorCoreImpl implements EditorCore {
     clearPlacementPreview: boolean,
     clearMoveDraft: boolean,
   ): void {
-    this.setSession({
+    let nextSession: EditorSession = {
       ...this.session,
       currentMode: nextMode,
       displayTool: resolveDisplayToolForMode(nextMode),
-      placementPreview: clearPlacementPreview ? null : this.session.placementPreview,
-      moveDraft: clearMoveDraft ? null : this.session.moveDraft,
-      marqueeDraft: null,
-    });
+    };
+
+    if (clearPlacementPreview) {
+      nextSession = this.patchPlacementPreview(nextSession, null);
+    }
+
+    if (clearMoveDraft) {
+      nextSession = this.patchMoveDraft(nextSession, null);
+    }
+
+    nextSession = this.patchMarqueeDraft(nextSession, null);
+    this.setSession(nextSession);
   }
 
   private applyCommand(command: DocumentCommand): boolean {
@@ -705,21 +680,13 @@ class EditorCoreImpl implements EditorCore {
   }
 
   private sanitizeSession(): void {
-    const selection = this.session.selection.filter(
-      (entityId) => Boolean(this.document.entities[entityId]),
+    const selection = getSelectedEntityIds(this.session).filter((entityId) =>
+      Boolean(this.document.entities[entityId]),
     );
     const hoveredEntityId =
       this.session.hoveredEntityId &&
       this.document.entities[this.session.hoveredEntityId]
         ? this.session.hoveredEntityId
-        : null;
-    const moveDraft =
-      this.session.moveDraft &&
-      this.document.entities[this.session.moveDraft.entityId] &&
-      this.session.moveDraft.entities.every(
-        (draftEntity) => Boolean(this.document.entities[draftEntity.entityId]),
-      )
-        ? this.session.moveDraft
         : null;
     const pendingLinkSourceEntityId =
       getPendingLinkSourceEntityId(this.session.currentMode) &&
@@ -727,6 +694,16 @@ class EditorCoreImpl implements EditorCore {
         ? getPendingLinkSourceEntityId(this.session.currentMode)
         : null;
     let nextMode = this.session.currentMode;
+    let nextSession = this.patchSelectedEntities(
+      this.session,
+      selection,
+      selection.length > 0 ? this.session.selectionInputMode : null,
+    );
+
+    nextSession = {
+      ...nextSession,
+      hoveredEntityId,
+    };
 
     if (isLinkInteractionMode(this.session.currentMode)) {
       nextMode = {
@@ -735,48 +712,48 @@ class EditorCoreImpl implements EditorCore {
       };
     }
 
-    if (
-      isMoveInteractionMode(nextMode) &&
-      (!moveDraft || selection[0] !== nextMode.entityId)
-    ) {
-      nextMode = resolveDefaultNextInteractionMode(nextMode);
-    }
-
-    const marqueeDraft =
-      this.session.marqueeDraft &&
-      (nextMode.key === "select" || nextMode.key === "marquee")
-        ? {
-            ...this.session.marqueeDraft,
-            entityIds: this.session.marqueeDraft.entityIds.filter((entityId) =>
-              Boolean(this.document.entities[entityId]),
-            ),
-            baseSelection: this.session.marqueeDraft.baseSelection.filter((entityId) =>
-              Boolean(this.document.entities[entityId]),
-            ),
-          }
-        : null;
-
-    if (isMarqueeInteractionMode(nextMode) && !marqueeDraft) {
-      nextMode = resolveDefaultNextInteractionMode(nextMode);
-    }
-
-    this.setSession({
-      ...this.session,
+    nextSession = {
+      ...nextSession,
       currentMode: nextMode,
       displayTool: resolveDisplayToolForMode(nextMode),
-      selection,
-      selectionInputMode:
-        selection.length > 0 ? this.session.selectionInputMode : null,
-      hoveredEntityId,
-      placementPreview: isPlacementInteractionMode(nextMode)
-        ? this.session.placementPreview
-        : null,
-      moveDraft: isMoveInteractionMode(nextMode) ? moveDraft : null,
-      marqueeDraft:
-        nextMode.key === "select" || nextMode.key === "marquee"
-          ? marqueeDraft
-          : null,
-    });
+    };
+
+    const moveDraft = getManagedMoveDraft(nextSession, this.document);
+
+    if (
+      isMoveInteractionMode(nextMode) &&
+      (!moveDraft || !selection.includes(nextMode.entityId))
+    ) {
+      nextMode = resolveDefaultNextInteractionMode(nextMode);
+      nextSession = {
+        ...nextSession,
+        currentMode: nextMode,
+        displayTool: resolveDisplayToolForMode(nextMode),
+      };
+    }
+
+    if (!isMoveInteractionMode(nextMode)) {
+      nextSession = this.patchMoveDraft(nextSession, null);
+    }
+
+    if (!isPlacementInteractionMode(nextMode)) {
+      nextSession = this.patchPlacementPreview(nextSession, null);
+    }
+
+    if (isMarqueeInteractionMode(nextMode) && !getManagedMarqueeDraft(nextSession)) {
+      nextMode = resolveDefaultNextInteractionMode(nextMode);
+      nextSession = {
+        ...nextSession,
+        currentMode: nextMode,
+        displayTool: resolveDisplayToolForMode(nextMode),
+      };
+    }
+
+    if (!isMarqueeInteractionMode(nextMode)) {
+      nextSession = this.patchMarqueeDraft(nextSession, null);
+    }
+
+    this.setSession(nextSession);
   }
 
   private setSession(nextSession: EditorSession): void {
@@ -791,42 +768,130 @@ class EditorCoreImpl implements EditorCore {
       drafts,
       selectedEntities: this.buildSelectedEntities(session, drafts),
       draftEntities: this.buildDraftEntities(session, drafts),
-      marqueeRange: this.buildMarqueeRange(session.marqueeDraft),
+      marqueeRange: this.buildMarqueeRange(session.marqueeRange),
     };
   }
 
   private buildDraftsState(session: EditorSession): DraftsState {
-    const nextEntities: Record<string, DraftEntityState> = Object.fromEntries(
-      Object.entries(session.drafts.entities).filter(([id]) => !isManagedDraftId(id)),
-    );
+    return cloneDraftsState(session.drafts);
+  }
 
-    if (session.placementPreview) {
-      nextEntities[PLACEMENT_PREVIEW_DRAFT_ID] = {
+  private buildSelectedEntities(
+    session: EditorSession,
+    drafts: DraftsState,
+  ): SelectedEntitiesState | null {
+    return this.buildEntityCollection(getSelectedEntityIds(session), drafts);
+  }
+
+  private buildDraftEntities(
+    session: EditorSession,
+    drafts: DraftsState,
+  ): DraftEntitiesState | null {
+    return this.buildEntityCollection(session.draftEntities?.ids ?? [], drafts);
+  }
+
+  private buildMarqueeRange(
+    range: MarqueeRangeState | null,
+  ): MarqueeRangeState | null {
+    if (!range) {
+      return null;
+    }
+
+    return {
+      selectionMode: range.selectionMode,
+      originGridPoint: {
+        ...range.originGridPoint,
+      },
+      gridPoint: {
+        ...range.gridPoint,
+      },
+      bounds: {
+        ...range.bounds,
+      },
+    };
+  }
+
+  private patchSelectedEntities(
+    session: EditorSession,
+    selection: readonly string[],
+    inputMode: PlacementInteractionMode | null,
+  ): EditorSession {
+    const nextSelection: string[] = [];
+    const seen = new Set<string>();
+
+    for (const entityId of selection) {
+      if (!this.document.entities[entityId] || seen.has(entityId)) {
+        continue;
+      }
+
+      seen.add(entityId);
+      nextSelection.push(entityId);
+    }
+
+    return {
+      ...session,
+      selectedEntities: this.buildEntityCollection(nextSelection, session.drafts),
+      selectionInputMode: nextSelection.length > 0 ? inputMode : null,
+    };
+  }
+
+  private patchPlacementPreview(
+    session: EditorSession,
+    preview: PlacementPreviewState | null,
+  ): EditorSession {
+    const nextDrafts = cloneDraftsState(session.drafts);
+    delete nextDrafts.entities[PLACEMENT_PREVIEW_DRAFT_ID];
+
+    if (preview) {
+      nextDrafts.entities[PLACEMENT_PREVIEW_DRAFT_ID] = {
         id: PLACEMENT_PREVIEW_DRAFT_ID,
-        definitionId: session.placementPreview.definitionId,
+        definitionId: preview.definitionId,
         position: {
-          ...session.placementPreview.gridPoint,
+          ...preview.gridPoint,
         },
-        rotation: session.placementPreview.rotation,
+        rotation: preview.rotation,
         config: {},
         tags: [],
         sourceEntityId: null,
-        valid: session.placementPreview.valid,
-        invalidReason: session.placementPreview.valid
-          ? null
-          : "placement-preview-invalid",
+        valid: preview.valid,
+        invalidReason: preview.valid ? null : "placement-preview-invalid",
       };
     }
 
-    if (session.moveDraft) {
-      for (const draftEntity of session.moveDraft.entities) {
+    const nextDraftEntityIds = preview
+      ? [PLACEMENT_PREVIEW_DRAFT_ID]
+      : (session.draftEntities?.ids ?? []).filter(
+          (id) => id !== PLACEMENT_PREVIEW_DRAFT_ID,
+        );
+
+    return {
+      ...session,
+      drafts: nextDrafts,
+      draftEntities: this.buildEntityCollection(nextDraftEntityIds, nextDrafts),
+    };
+  }
+
+  private patchMoveDraft(
+    session: EditorSession,
+    draft: MoveDraftState | null,
+  ): EditorSession {
+    const nextDrafts = cloneDraftsState(session.drafts);
+
+    for (const id of Object.keys(nextDrafts.entities)) {
+      if (id.startsWith("draft:move:")) {
+        delete nextDrafts.entities[id];
+      }
+    }
+
+    if (draft) {
+      for (const draftEntity of draft.entities) {
         const sourceEntity = this.document.entities[draftEntity.entityId];
 
         if (!sourceEntity) {
           continue;
         }
 
-        nextEntities[createMoveDraftId(draftEntity.entityId)] = {
+        nextDrafts.entities[createMoveDraftId(draftEntity.entityId)] = {
           ...sourceEntity,
           id: createMoveDraftId(draftEntity.entityId),
           position: {
@@ -838,71 +903,65 @@ class EditorCoreImpl implements EditorCore {
           },
           tags: [...sourceEntity.tags],
           sourceEntityId: sourceEntity.id,
-          valid: session.moveDraft.valid,
-          invalidReason: session.moveDraft.valid ? null : "move-draft-invalid",
+          valid: draft.valid,
+          invalidReason: draft.valid ? null : "move-draft-invalid",
         };
       }
     }
 
+    const nextDraftEntityIds = draft
+      ? draft.entities.map((entity) => createMoveDraftId(entity.entityId))
+      : (session.draftEntities?.ids ?? []).filter(
+          (id) => !id.startsWith("draft:move:"),
+        );
+
     return {
-      entities: nextEntities,
+      ...session,
+      currentMode:
+        draft && isMoveInteractionMode(session.currentMode)
+          ? {
+              ...session.currentMode,
+              entityId: draft.entityId,
+              inputMode: draft.interactionMode,
+              anchorWorldOffset: {
+                ...draft.anchorWorldOffset,
+              },
+            }
+          : session.currentMode,
+      drafts: nextDrafts,
+      draftEntities: this.buildEntityCollection(nextDraftEntityIds, nextDrafts),
     };
   }
 
-  private buildSelectedEntities(
+  private patchMarqueeDraft(
     session: EditorSession,
-    drafts: DraftsState,
-  ): SelectedEntitiesState | null {
-    return this.buildEntityCollection(session.selection, drafts);
-  }
-
-  private buildDraftEntities(
-    session: EditorSession,
-    drafts: DraftsState,
-  ): DraftEntitiesState | null {
-    if (session.moveDraft) {
-      return this.buildEntityCollection(
-        session.moveDraft.entities.map((entity) => createMoveDraftId(entity.entityId)),
-        drafts,
-      );
-    }
-
-    if (session.placementPreview) {
-      return this.buildEntityCollection([PLACEMENT_PREVIEW_DRAFT_ID], drafts);
-    }
-
-    if (session.marqueeDraft) {
-      return this.buildEntityCollection(
-        resolveMarqueeSelection(
-          session.marqueeDraft.baseSelection,
-          session.marqueeDraft.entityIds,
-          session.marqueeDraft.selectionMode,
-        ),
-        drafts,
-      );
-    }
-
-    return null;
-  }
-
-  private buildMarqueeRange(
     draft: MarqueeDraftState | null,
-  ): MarqueeRangeState | null {
-    if (!draft) {
-      return null;
-    }
+  ): EditorSession {
+    const nextDraftEntityIds = draft
+      ? resolveMarqueeSelection(
+          draft.baseSelection,
+          draft.entityIds,
+          draft.selectionMode,
+        )
+      : (session.draftEntities?.ids ?? []).filter((id) => isManagedDraftId(id));
 
     return {
-      selectionMode: draft.selectionMode,
-      originGridPoint: {
-        ...draft.originGridPoint,
-      },
-      gridPoint: {
-        ...draft.gridPoint,
-      },
-      bounds: {
-        ...draft.bounds,
-      },
+      ...session,
+      draftEntities: this.buildEntityCollection(nextDraftEntityIds, session.drafts),
+      marqueeRange: draft
+        ? {
+            selectionMode: draft.selectionMode,
+            originGridPoint: {
+              ...draft.originGridPoint,
+            },
+            gridPoint: {
+              ...draft.gridPoint,
+            },
+            bounds: {
+              ...draft.bounds,
+            },
+          }
+        : null,
     };
   }
 

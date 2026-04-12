@@ -5,6 +5,12 @@ import {
   type EditorCoreSnapshot,
 } from "@/editor/core/editor-core";
 import type { EditorSession } from "@/editor/contracts/editor-session";
+import {
+  getManagedMarqueeDraft,
+  getManagedMoveDraft,
+  getManagedPlacementPreview as resolveManagedPlacementPreview,
+  getSelectedEntityIds,
+} from "@/editor/contracts/editor-session-helpers";
 import type { EditorMergedEntityLookup } from "@/editor/contracts/merged-entity-lookup";
 import {
   getPendingLinkSourceEntityId,
@@ -495,40 +501,26 @@ class EditorHostImpl implements EditorHost {
   private getManagedPlacementPreview(
     session: EditorSession = this.core.getSnapshot().session,
   ): PlacementPreviewState | null {
-    const placementMode = this.getPlacementMode(session);
-
-    if (!placementMode) {
-      return null;
-    }
-
-    const previewDraftId = session.draftEntities?.ids[0] ?? null;
-    const previewDraft = previewDraftId
-      ? session.drafts.entities[previewDraftId]
-      : null;
-
-    if (
-      !previewDraft ||
-      previewDraft.sourceEntityId !== null ||
-      previewDraft.definitionId !== placementMode.definitionId
-    ) {
-      return null;
-    }
-
-    return {
-      definitionId: previewDraft.definitionId,
-      interactionMode: placementMode.inputMode,
-      gridPoint: {
-        ...previewDraft.position,
-      },
-      rotation: previewDraft.rotation,
-      valid: previewDraft.valid,
-    };
+    return resolveManagedPlacementPreview(session);
   }
 
   private getActivePlacementPreview(
     session: EditorSession = this.core.getSnapshot().session,
   ): PlacementPreviewState | null {
-    return this.getManagedPlacementPreview(session) ?? session.placementPreview;
+    return this.getManagedPlacementPreview(session);
+  }
+
+  private getActiveMoveDraft(
+    session: EditorSession = this.core.getSnapshot().session,
+    document: WorldDocument = this.core.getSnapshot().document,
+  ): MoveDraftState | null {
+    return getManagedMoveDraft(session, document);
+  }
+
+  private getActiveMarqueeDraft(
+    session: EditorSession = this.core.getSnapshot().session,
+  ): MarqueeDraftState | null {
+    return getManagedMarqueeDraft(session);
   }
 
   queryInteractionTarget(worldPoint: CanvasPoint): EditorWorldInteractionTarget {
@@ -548,7 +540,7 @@ class EditorHostImpl implements EditorHost {
     return {
       kind: "entity",
       entityId: hitEntityId,
-      selected: snapshot.session.selection.includes(hitEntityId),
+      selected: getSelectedEntityIds(snapshot.session).includes(hitEntityId),
     };
   }
 
@@ -577,20 +569,21 @@ class EditorHostImpl implements EditorHost {
     input: CanvasWorldInput,
   ): boolean {
     const { document, session } = this.core.getSnapshot();
-    const moveMode = this.getMoveMode(session);
+    const existingMoveDraft = this.getActiveMoveDraft(session, document);
     const existingDraft =
-      session.moveDraft && getMoveDraftEntity(session.moveDraft, entityId)
-        ? session.moveDraft
+      existingMoveDraft && getMoveDraftEntity(existingMoveDraft, entityId)
+        ? existingMoveDraft
         : null;
     const existingResolvedEntities = existingDraft
       ? this.resolveMoveDraftEntities(existingDraft, {
           preferManagedDrafts: true,
         })
       : null;
+    const selectedEntityIds = getSelectedEntityIds(session);
     const isSelectedEntity =
       session.currentMode.key === "select" &&
-      session.selection.length > 0 &&
-      session.selection.includes(entityId);
+      selectedEntityIds.length > 0 &&
+      selectedEntityIds.includes(entityId);
 
     if (
       (!isSelectedEntity || session.currentMode.key !== "select") &&
@@ -610,7 +603,7 @@ class EditorHostImpl implements EditorHost {
 
     const entityIds = existingDraft
       ? existingResolvedEntities?.map((entity) => entity.entity.entityId) ?? []
-      : session.selection;
+      : selectedEntityIds;
     const draftEntities = existingDraft
       ? existingResolvedEntities?.map((entity) => cloneMoveDraftEntity(entity.entity)) ?? []
       : entityIds
@@ -687,7 +680,7 @@ class EditorHostImpl implements EditorHost {
 
   rotateMoveClockwise(): boolean {
     const { document, session } = this.core.getSnapshot();
-    const moveDraft = session.moveDraft;
+    const moveDraft = this.getActiveMoveDraft(session, document);
 
     if (!moveDraft) {
       return false;
@@ -1078,7 +1071,7 @@ class EditorHostImpl implements EditorHost {
 
   queryMoveDraftAtWorldInput(input: CanvasWorldInput): MoveQueryResult {
     const { document, session } = this.core.getSnapshot();
-    const moveDraft = session.moveDraft;
+    const moveDraft = this.getActiveMoveDraft(session, document);
 
     if (!moveDraft) {
       return {
@@ -1114,7 +1107,8 @@ class EditorHostImpl implements EditorHost {
   }
 
   updateMoveDraft(input: CanvasWorldInput): MoveDraftUpdateResult {
-    const previousDraft = this.core.getSnapshot().session.moveDraft;
+    const snapshot = this.core.getSnapshot();
+    const previousDraft = this.getActiveMoveDraft(snapshot.session, snapshot.document);
     const resolution = this.queryMoveDraftAtWorldInput(input);
     const changed = !isSameMoveDraftState(previousDraft, resolution.draft);
 
@@ -1137,8 +1131,8 @@ class EditorHostImpl implements EditorHost {
   }
 
   confirmMove(): boolean {
-    const { session } = this.core.getSnapshot();
-    const moveDraft = session.moveDraft;
+    const { document, session } = this.core.getSnapshot();
+    const moveDraft = this.getActiveMoveDraft(session, document);
 
     if (!moveDraft) {
       return false;
@@ -1186,8 +1180,8 @@ class EditorHostImpl implements EditorHost {
   }
 
   cancelMove(): boolean {
-    const { session } = this.core.getSnapshot();
-    const moveDraft = session.moveDraft;
+    const { document, session } = this.core.getSnapshot();
+    const moveDraft = this.getActiveMoveDraft(session, document);
     const moveMode = this.getMoveMode(session);
 
     if (!moveDraft || !moveMode) {
@@ -1217,7 +1211,7 @@ class EditorHostImpl implements EditorHost {
     }
 
     const draft = this.createMarqueeDraft({
-      baseSelection: session.selection,
+      baseSelection: getSelectedEntityIds(session),
       currentGridPoint: input.gridPoint,
       inputMode,
       originGridPoint: input.gridPoint,
@@ -1237,7 +1231,7 @@ class EditorHostImpl implements EditorHost {
 
   updateMarqueeDraft(input: CanvasWorldInput): MarqueeDraftUpdateResult {
     const { session } = this.core.getSnapshot();
-    const marqueeDraft = session.marqueeDraft;
+    const marqueeDraft = this.getActiveMarqueeDraft(session);
 
     if (!marqueeDraft) {
       return {
@@ -1274,7 +1268,7 @@ class EditorHostImpl implements EditorHost {
 
   confirmMarqueeSelection(): boolean {
     const { session } = this.core.getSnapshot();
-    const marqueeDraft = session.marqueeDraft;
+    const marqueeDraft = this.getActiveMarqueeDraft(session);
 
     if (!marqueeDraft) {
       return false;
@@ -1305,7 +1299,7 @@ class EditorHostImpl implements EditorHost {
 
   cancelMarquee(): boolean {
     const { session } = this.core.getSnapshot();
-    const marqueeDraft = session.marqueeDraft;
+    const marqueeDraft = this.getActiveMarqueeDraft(session);
 
     if (!marqueeDraft) {
       return false;
@@ -1343,10 +1337,10 @@ class EditorHostImpl implements EditorHost {
   }
 
   rotateSelectedEntityClockwise(): boolean {
-    const {
-      document,
-      session: { selection },
-    } = this.core.getSnapshot();
+    const snapshot = this.core.getSnapshot();
+    const document = snapshot.document;
+    const selection = getSelectedEntityIds(snapshot.session);
+
     if (selection.length === 0) {
       return false;
     }
@@ -1565,9 +1559,11 @@ class EditorHostImpl implements EditorHost {
     input: CanvasWorldInput,
   ): MoveDraftState {
     const { gridSize } = document.documentSettings;
-    const activeMoveDraft = this.core.getSnapshot().session.moveDraft;
+    const snapshot = this.core.getSnapshot();
+    const activeMoveDraft = this.getActiveMoveDraft(snapshot.session, snapshot.document);
     const resolvedEntities = this.resolveMoveDraftEntities(moveDraft, {
-      preferManagedDrafts: moveDraft === activeMoveDraft,
+      preferManagedDrafts:
+        activeMoveDraft !== null && isSameMoveDraftState(moveDraft, activeMoveDraft),
     });
     const resolvedAnchorEntity = resolvedEntities?.find(
       (entity) => entity.entity.entityId === moveDraft.entityId,

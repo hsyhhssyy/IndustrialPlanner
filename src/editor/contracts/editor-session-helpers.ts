@@ -53,7 +53,9 @@ export function getManagedMoveDraft(
   session: EditorSession,
   document: WorldDocument,
 ): MoveDraftState | null {
-  if (!isMoveInteractionMode(session.currentMode) || !session.draftEntities) {
+  const moveMode = session.currentMode;
+
+  if (!isMoveInteractionMode(moveMode) || !session.draftEntities) {
     return null;
   }
 
@@ -84,7 +86,7 @@ export function getManagedMoveDraft(
     .filter((entity): entity is NonNullable<typeof entity> => entity !== null);
 
   const anchorEntity = entities.find(
-    (entity) => entity.entityId === session.currentMode.entityId,
+    (entity) => entity.entityId === moveMode.entityId,
   );
 
   if (entities.length === 0 || entities.length !== session.draftEntities.ids.length || !anchorEntity) {
@@ -92,8 +94,8 @@ export function getManagedMoveDraft(
   }
 
   return {
-    entityId: session.currentMode.entityId,
-    interactionMode: session.currentMode.inputMode,
+    entityId: moveMode.entityId,
+    interactionMode: moveMode.inputMode,
     originGridPoint: {
       ...anchorEntity.originGridPoint,
     },
@@ -111,7 +113,7 @@ export function getManagedMoveDraft(
         }
       : undefined,
     anchorWorldOffset: {
-      ...session.currentMode.anchorWorldOffset,
+      ...moveMode.anchorWorldOffset,
     },
     entities,
   };
