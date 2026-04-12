@@ -3,7 +3,7 @@ import { BASES, DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { isDarkPipeInletType } from '../../domain/deviceLinks'
 import type { BaseDef, BaseId, DeviceInstance, DeviceRuntime, ItemId, LayoutState, PowerMode, SimState, SlotData } from '../../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../../i18n'
-import { isBufferedBeltTransportDevice, neighborsFromLinks } from '../../domain/geometry'
+import { isBelt, neighborsFromLinks } from '../../domain/geometry'
 import {
   getPortPriorityGroup,
   hasCustomPortPriorityGroups,
@@ -265,7 +265,6 @@ export function RightPanel({
 
     const isBridgeConnectorType = (typeId: DeviceInstance['typeId']) => typeId === 'item_log_connector' || typeId === 'item_pipe_connector'
     const receiveLaneForPort = (device: DeviceInstance, runtime: DeviceRuntime, toPortId: string) => {
-      if (isBufferedBeltTransportDevice(device.typeId) && 'slot' in runtime) return 'output'
       if (isBridgeConnectorType(device.typeId)) {
         if (toPortId.endsWith('_n') || toPortId.endsWith('_s')) return 'ns'
         return 'we'
@@ -540,24 +539,12 @@ export function RightPanel({
               </span>
             </div>
           )}
-          {isBufferedBeltTransportDevice(selectedDevice.typeId) && selectedRuntime && 'slot' in selectedRuntime && (
+          {isBelt(selectedDevice.typeId) && selectedRuntime && 'slot' in selectedRuntime && (
             <>
-              {(() => {
-                const beltItemId = selectedRuntime.slot?.itemId
-                  ?? ('outputBuffer' in selectedRuntime
-                    ? selectedRuntime.outputSlotItems.find((itemId) => itemId && (selectedRuntime.outputBuffer[itemId] ?? 0) > 0)
-                    : null)
-                  ?? ('inputBuffer' in selectedRuntime
-                    ? selectedRuntime.inputSlotItems.find((itemId) => itemId && (selectedRuntime.inputBuffer[itemId] ?? 0) > 0)
-                    : null)
-
-                return (
-                  <div className="kv">
-                    <span>{t('detail.currentItem')}</span>
-                    <span>{beltItemId ? getItemLabel(language, beltItemId) : t('detail.empty')}</span>
-                  </div>
-                )
-              })()}
+              <div className="kv">
+                <span>{t('detail.currentItem')}</span>
+                <span>{selectedRuntime.slot?.itemId ? getItemLabel(language, selectedRuntime.slot.itemId) : t('detail.empty')}</span>
+              </div>
               <div className="kv">
                 <span>{t('detail.progress01')}</span>
                 <span>{selectedRuntime.slot ? selectedRuntime.slot.progress01.toFixed(2) : '0.00'}</span>
@@ -574,7 +561,7 @@ export function RightPanel({
           )}
           {selectedRuntime && (
             <>
-              {!isBufferedBeltTransportDevice(selectedDevice.typeId) && 'inputBuffer' in selectedRuntime && 'outputBuffer' in selectedRuntime && (
+              {!isBelt(selectedDevice.typeId) && 'inputBuffer' in selectedRuntime && 'outputBuffer' in selectedRuntime && (
                 (() => {
                   if (selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning) {
                     const laneRecipeIds = selectedRuntime.reactorActiveRecipeIds ?? [undefined, undefined]
@@ -650,7 +637,7 @@ export function RightPanel({
                   )
                 })()
               )}
-              {!isBufferedBeltTransportDevice(selectedDevice.typeId) && 'inputBuffer' in selectedRuntime && (
+              {!isBelt(selectedDevice.typeId) && 'inputBuffer' in selectedRuntime && (
                 selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning
                   ? (
                     <>
@@ -685,7 +672,7 @@ export function RightPanel({
                     </div>
                     )
               )}
-              {!isBufferedBeltTransportDevice(selectedDevice.typeId) && 'outputBuffer' in selectedRuntime && (
+              {!isBelt(selectedDevice.typeId) && 'outputBuffer' in selectedRuntime && (
                 !(selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning) && (
                   <div className="kv">
                     <span>{t('detail.cacheOutputBuffer')}</span>

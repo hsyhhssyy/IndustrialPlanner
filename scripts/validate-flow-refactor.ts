@@ -156,6 +156,22 @@ function simulate(layout: LayoutState, ticks: number) {
   return sim
 }
 
+function firstArrivalTick(layout: LayoutState, deviceId: string, itemId: ItemId, maxTicks: number) {
+  let sim = startSimulation(layout, createInitialSimState(), 'infinite')
+  let previousAmount = storageAmount(sim, deviceId, itemId)
+
+  for (let index = 0; index < maxTicks; index += 1) {
+    sim = tickSimulation(layout, sim)
+    const nextAmount = storageAmount(sim, deviceId, itemId)
+    if (nextAmount > previousAmount) {
+      return sim.tick
+    }
+    previousAmount = nextAmount
+  }
+
+  return null
+}
+
 function storageAmount(sim: SimState, deviceId: string, itemId: ItemId) {
   const runtime = sim.runtimeById[deviceId]
   if (!runtime || !('inventory' in runtime)) return 0
@@ -202,14 +218,17 @@ function runDirectScenario(): ScenarioResult {
   const sink = buildSinkStorageAgainst(belt, 'out_e')
   const layout = buildLayout([source, belt, sink])
   const links = ensureConnected(layout, 2, 'direct')
+  const firstTick = firstArrivalTick(layout, sink.instanceId, ORE_ITEM_ID, 80)
   const sim = simulate(layout, 240)
   ensureNoHardBlock(sim, layout.devices.map((device) => device.instanceId), 'direct')
   const sinkOre = storageAmount(sim, sink.instanceId, ORE_ITEM_ID)
+  assert(firstTick === 41, `direct 首包到达 tick 异常，expected=41 actual=${String(firstTick)}`)
   assert(sinkOre > 0, 'direct 场景没有把物品送到终点存储')
   return {
     name: 'direct',
     summary: {
       links,
+      firstTick: firstTick ?? 'missing',
       sinkOre,
     },
   }
@@ -265,17 +284,20 @@ function runBridgeScenario(): ScenarioResult {
   const layout = buildLayout([leftSource, leftBelt, bridge, rightBelt, rightSink, topSource, topBelt, bottomBelt, bottomSink])
   const links = ensureConnected(layout, 8, 'bridge')
   const bridgeLinks = deviceLinkSummary(layout, bridge.instanceId)
+  const firstRightTick = firstArrivalTick(layout, rightSink.instanceId, ORE_ITEM_ID, 160)
   const sim = simulate(layout, 520)
   ensureNoHardBlock(sim, layout.devices.map((device) => device.instanceId), 'bridge')
   const rightOre = storageAmount(sim, rightSink.instanceId, ORE_ITEM_ID)
   const bottomAlt = storageAmount(sim, bottomSink.instanceId, ALT_ITEM_ID)
   const bridgeState = bridgeLaneState(sim, bridge.instanceId)
+  assert(firstRightTick === 121, `bridge 首包到达 tick 异常，expected=121 actual=${String(firstRightTick)}, bridge=${bridgeState}, links=${bridgeLinks}`)
   assert(rightOre > 0, `bridge 水平通道没有到货，right=${rightOre}, bottom=${bottomAlt}, bridge=${bridgeState}, links=${bridgeLinks}`)
   assert(bottomAlt > 0, `bridge 垂直通道没有到货，right=${rightOre}, bottom=${bottomAlt}, bridge=${bridgeState}, links=${bridgeLinks}`)
   return {
     name: 'bridge',
     summary: {
       links,
+      firstRightTick: firstRightTick ?? 'missing',
       rightOre,
       bottomAlt,
       bridgeState,
@@ -293,18 +315,20 @@ function runStorageScenario(): ScenarioResult {
   const sink = buildSinkStorageAgainst(beltOut, 'out_e')
   const layout = buildLayout([source, beltIn, middle, beltOut, sink])
   const links = ensureConnected(layout, 4, 'storage')
-  const midSim = simulate(layout, 260)
-  ensureNoHardBlock(midSim, layout.devices.map((device) => device.instanceId), 'storage-mid')
-  const middleOreAtMid = storageAmount(midSim, middle.instanceId, ORE_ITEM_ID)
-  assert(middleOreAtMid > 0, 'storage 场景中间存储没有收到入货')
+  const middleFirstTick = firstArrivalTick(layout, middle.instanceId, ORE_ITEM_ID, 120)
+  const sinkFirstTick = firstArrivalTick(layout, sink.instanceId, ORE_ITEM_ID, 200)
   const finalSim = simulate(layout, 520)
+  ensureNoHardBlock(finalSim, layout.devices.map((device) => device.instanceId), 'storage-final')
   const sinkOre = storageAmount(finalSim, sink.instanceId, ORE_ITEM_ID)
+  assert(middleFirstTick === 41, `storage 场景中间存储首包到达 tick 异常，expected=41 actual=${String(middleFirstTick)}`)
+  assert(sinkFirstTick === 82, `storage 场景终点存储首包到达 tick 异常，expected=82 actual=${String(sinkFirstTick)}`)
   assert(sinkOre > 0, 'storage 场景中间存储没有成功继续出货')
   return {
     name: 'storage',
     summary: {
       links,
-      middleOreAtMid,
+      middleFirstTick: middleFirstTick ?? 'missing',
+      sinkFirstTick: sinkFirstTick ?? 'missing',
       sinkOre,
     },
   }

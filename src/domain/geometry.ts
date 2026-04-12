@@ -259,10 +259,6 @@ export function isPipeAdmissionDevice(typeId: string) {
   return typeId === 'item_pipe_admission'
 }
 
-export function isBufferedBeltTransportDevice(typeId: string) {
-  return isBelt(typeId)
-}
-
 export function isBeltJunction(typeId: string) {
   return typeId === 'item_log_splitter' || typeId === 'item_log_converger' || typeId === 'item_log_connector' || typeId === 'item_log_admission'
 }

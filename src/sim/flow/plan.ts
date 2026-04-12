@@ -83,10 +83,6 @@ function isProcessorRuntime(runtime: DeviceRuntime): runtime is ProcessorRuntime
   return 'inputBuffer' in runtime && 'outputBuffer' in runtime && !('transportSamples' in runtime)
 }
 
-function isTransportBufferRuntime(runtime: DeviceRuntime) {
-  return 'inputBuffer' in runtime && 'outputBuffer' in runtime && 'transportSamples' in runtime
-}
-
 function getBufferGroups(runtime: DeviceRuntime): BufferGroupRuntime[] {
   if (!('bufferGroups' in runtime) || !Array.isArray(runtime.bufferGroups) || runtime.bufferGroups.length === 0) return []
   return runtime.bufferGroups
@@ -516,14 +512,30 @@ function buildNodes(context: PlanContext) {
         ? storageState.slots.some((slot) => slot.amount < slot.capacity)
         : hasInputPorts
 
-      const baseState: FlowNodeBaseState = canProvide
-        ? (canReceive ? 'shadow-pending' : 'provider')
-        : 'free'
+      const storageCapacity = storageState.slotted ? sumFiniteAmounts(storageState.slots.map((slot) => slot.capacity)) : null
 
-      createNode(device, runtime, 1, baseState, 'storage', {
-        nodeId: `${device.instanceId}:storage`,
+      if (canProvide && canReceive) {
+        createNode(device, runtime, 1, 'provider', 'storage', {
+          nodeId: `${device.instanceId}:storage:provider`,
+          amount: totalAmount,
+          capacity: storageCapacity,
+          maxInteractItems: null,
+        })
+        createNode(device, runtime, 101, 'free', 'storage', {
+          nodeId: `${device.instanceId}:storage:free`,
+          amount: totalAmount,
+          capacity: storageCapacity,
+          maxInteractItems: null,
+        })
+        continue
+      }
+
+      const baseState: FlowNodeBaseState = canProvide ? 'provider' : 'free'
+
+      createNode(device, runtime, canProvide ? 1 : 101, baseState, 'storage', {
+        nodeId: `${device.instanceId}:storage:${baseState}`,
         amount: totalAmount,
-        capacity: storageState.slotted ? sumFiniteAmounts(storageState.slots.map((slot) => slot.capacity)) : null,
+        capacity: storageCapacity,
         maxInteractItems: null,
       })
       continue
@@ -572,7 +584,7 @@ function buildNodes(context: PlanContext) {
             ? runtime.weSlot
             : null
         const baseState: FlowNodeBaseState = slot ? 'shadow-pending' : 'free'
-        const deleted = Boolean(slot && slot.progress01 < 0.5)
+        const deleted = Boolean(slot && slot.progress01 < 1)
         createNode(device, runtime, lane === 'ns' ? 1 : 2, baseState, 'bridge', {
           nodeId: `${device.instanceId}:${lane}`,
           lane,
@@ -587,26 +599,9 @@ function buildNodes(context: PlanContext) {
       continue
     }
 
-    if (isTransportBufferRuntime(runtime)) {
-      const itemId = runtime.outputSlotItems.find((candidateItemId) => candidateItemId && (runtime.outputBuffer[candidateItemId] ?? 0) > 0) ?? null
-      const hasReadyOutput = Boolean(itemId)
-      const inProgress = Boolean(runtime.slot && runtime.slot.progress01 < 1 && !hasReadyOutput)
-      createNode(device, runtime, 1, hasReadyOutput ? 'shadow-pending' : 'free', 'transport', {
-        nodeId: `${device.instanceId}:transport`,
-        lane: 'output',
-        itemId,
-        amount: hasReadyOutput ? 1 : 0,
-        capacity: 1,
-        maxInteractItems: 1,
-        deleted: inProgress,
-        result: inProgress ? 'solved-block' : 'uncertain',
-      })
-      continue
-    }
-
     const slot = 'slot' in runtime ? runtime.slot : null
     const baseState: FlowNodeBaseState = slot ? 'shadow-pending' : 'free'
-    const deleted = Boolean(slot && slot.progress01 < 0.5)
+    const deleted = Boolean(slot && slot.progress01 < 1)
     createNode(device, runtime, 1, baseState, 'transport', {
       nodeId: `${device.instanceId}:transport`,
       lane: 'slot',
@@ -624,7 +619,8 @@ function buildNodes(context: PlanContext) {
 
 function buildEdges(context: PlanContext, nodes: InternalNode[]) {
   const nodeByTransportLane = new Map<string, InternalNode>()
-  const nodeByStorage = new Map<string, InternalNode>()
+  const storageProviderNodeByDevice = new Map<string, InternalNode>()
+  const storageReceiverNodeByDevice = new Map<string, InternalNode>()
   const processorOutputNodesByDevice = new Map<string, InternalNode[]>()
   const processorInputNodesByDevice = new Map<string, InternalNode[]>()
 
@@ -633,7 +629,12 @@ function buildEdges(context: PlanContext, nodes: InternalNode[]) {
       nodeByTransportLane.set(laneKey(node.deviceId, node.lane), node)
     }
     if (node.kind === 'storage') {
-      nodeByStorage.set(node.deviceId, node)
+      if (node.baseState !== 'free' && !storageProviderNodeByDevice.has(node.deviceId)) {
+        storageProviderNodeByDevice.set(node.deviceId, node)
+      }
+      if (node.baseState !== 'provider' && !storageReceiverNodeByDevice.has(node.deviceId)) {
+        storageReceiverNodeByDevice.set(node.deviceId, node)
+      }
     }
     if (node.kind === 'processor-output') {
       const existing = processorOutputNodesByDevice.get(node.deviceId)
@@ -663,7 +664,7 @@ function buildEdges(context: PlanContext, nodes: InternalNode[]) {
       const fromNodes: InternalNode[] = []
       const toNodes: InternalNode[] = []
 
-      const sourceStorage = nodeByStorage.get(link.from.instanceId)
+      const sourceStorage = storageProviderNodeByDevice.get(link.from.instanceId)
       if (sourceStorage) {
         fromNodes.push(sourceStorage)
       } else {
@@ -681,7 +682,7 @@ function buildEdges(context: PlanContext, nodes: InternalNode[]) {
       const targetRuntime = context.runtimeById[link.to.instanceId]
       if (!targetDevice || !targetRuntime) continue
 
-      const targetStorage = nodeByStorage.get(link.to.instanceId)
+      const targetStorage = storageReceiverNodeByDevice.get(link.to.instanceId)
       if (targetStorage) {
         toNodes.push(targetStorage)
       } else {
@@ -738,12 +739,14 @@ function buildEdges(context: PlanContext, nodes: InternalNode[]) {
 }
 
 function buildStorageStates(nodes: InternalNode[]) {
-  const stateByNodeId = new Map<string, StorageVirtualState>()
+  const stateByDeviceId = new Map<string, StorageVirtualState>()
   for (const node of nodes) {
     if (node.kind !== 'storage') continue
-    stateByNodeId.set(node.nodeId, storageStateFromRuntime(node.runtime as StorageRuntime))
+    if (!stateByDeviceId.has(node.deviceId)) {
+      stateByDeviceId.set(node.deviceId, storageStateFromRuntime(node.runtime as StorageRuntime))
+    }
   }
-  return stateByNodeId
+  return stateByDeviceId
 }
 
 function buildProcessorInputStates(nodes: InternalNode[], context: PlanContext) {
@@ -783,7 +786,7 @@ function sourceCandidatesForEdge(
   }
 
   if (fromNode.kind === 'storage') {
-    const storageState = storageStates.get(fromNode.nodeId)
+    const storageState = storageStates.get(fromNode.deviceId)
     if (storageState?.slotted) {
       const candidates: SourceCandidate[] = []
       for (const slotIndex of storageSlotIndicesForOutput(storageState, edge.fromPortId)) {
@@ -905,7 +908,7 @@ function selectShadowPull(
     if (incoming.length === 0) continue
 
     if (node.kind === 'storage') {
-      const storageState = storageStates.get(node.nodeId)
+      const storageState = storageStates.get(node.deviceId)
       if (!storageState) continue
       if (!storageState.slotted) {
         for (const edge of incoming) {
@@ -921,12 +924,18 @@ function selectShadowPull(
         if (edge.deleted) continue
         const sourceCandidates = sourceCandidatesForEdge(context, edge, lanesAdvancedThisTick, storageStates)
         if (sourceCandidates.length === 0) continue
-        const candidate = sourceCandidates.find((entry) => reserveStorageInputSlot(storageState, edge.toPortId, entry.itemId) !== null)
-        if (!candidate) continue
-        const reservedSlotIndex = reserveStorageInputSlot(storageState, edge.toPortId, candidate.itemId)
-        if (reservedSlotIndex === null) continue
+        let reservedSlotIndex: number | null = null
+        let plannedItemId: ItemId | null = null
+        for (const candidate of sourceCandidates) {
+          const slotIndex = reserveStorageInputSlot(storageState, edge.toPortId, candidate.itemId)
+          if (slotIndex === null) continue
+          reservedSlotIndex = slotIndex
+          plannedItemId = candidate.itemId
+          break
+        }
+        if (reservedSlotIndex === null || !plannedItemId) continue
         edge.shadowPull = 'accept'
-        edge.plannedItemId = candidate.itemId
+        edge.plannedItemId = plannedItemId
         edge.toStorageSlotIndex = reservedSlotIndex
       }
         continue
@@ -986,7 +995,7 @@ function selectShadowPush(
 
       const selectedCandidate = sourceCandidates.find((candidate) => {
         if (edge.toNode.kind === 'storage') {
-          if (edge.toStorageSlotIndex === undefined && storageStates.get(edge.toNode.nodeId)?.slotted) return false
+          if (edge.toStorageSlotIndex === undefined && storageStates.get(edge.toNode.deviceId)?.slotted) return false
           if (edge.toStorageSlotIndex !== undefined && edge.plannedItemId && edge.plannedItemId !== candidate.itemId) return false
           return true
         }
@@ -1004,7 +1013,7 @@ function selectShadowPush(
       }
 
       if (node.kind === 'storage') {
-        const storageState = storageStates.get(node.nodeId)
+        const storageState = storageStates.get(node.deviceId)
         if (storageState?.slotted && selectedCandidate.fromStorageSlotIndex !== undefined) {
           consumeStorageOutputSlot(storageState, selectedCandidate.fromStorageSlotIndex)
         }
