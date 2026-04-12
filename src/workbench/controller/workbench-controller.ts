@@ -410,6 +410,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.sync();
   }
 
+  queryWorldInputFromScreenPoint(screenPoint: CanvasPoint): CanvasWorldInput {
+    return this.resolveWorldInput(screenPoint);
+  }
+
   async confirmMovePreview(): Promise<void> {
     await this.applyEditorMutation(() => {
       this.editorHost.confirmMove();

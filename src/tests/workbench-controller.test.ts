@@ -20,6 +20,10 @@ import {
 } from "@/shared/geometry/grid";
 import { createPlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
+import {
+  screenToWorldPoint,
+  worldToGridPoint,
+} from "@/workbench/viewport-math";
 
 function getPlacementMode(
   session: ReturnType<typeof createWorkbenchController>["editorStore"]["session"],
@@ -530,6 +534,31 @@ describe("WorkbenchController scaffold", () => {
         zoom: 1.4,
       },
     });
+
+    controller.dispose();
+  });
+
+  it("exposes a facade query that resolves screen points into world and grid input", () => {
+    const controller = createWorkbenchController();
+    const screenPoint = { x: 151, y: 91 };
+
+    controller.setCanvasViewportSize({ x: 640, y: 360 });
+    controller.zoomCanvasAt({ x: 0, y: 0 }, 1.5);
+    controller.panCanvasBy({ x: 48, y: 24 });
+
+    const resolved = controller.queryWorldInputFromScreenPoint(screenPoint);
+    const snapshot = readWorkbenchState(controller);
+    const expectedWorldPoint = screenToWorldPoint(
+      screenPoint,
+      snapshot.canvasView,
+    );
+    const expectedGridPoint = worldToGridPoint(
+      expectedWorldPoint,
+      snapshot.document.documentSettings.gridSize,
+    );
+
+    expect(resolved.worldPoint).toEqual(expectedWorldPoint);
+    expect(resolved.gridPoint).toEqual(expectedGridPoint);
 
     controller.dispose();
   });

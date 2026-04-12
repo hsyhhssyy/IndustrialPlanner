@@ -13,6 +13,7 @@ import type {
 } from "@/editor/contracts/interaction-mode";
 import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
+import type { CanvasWorldInput } from "@/editor/host/editor-host";
 import type { EditorRuntimeStore } from "@/editor/editor-runtime-store";
 import type { AppLocale } from "@/i18n/messages";
 import type { SimulationState } from "@/simulation/host/simulation-host";
@@ -74,6 +75,7 @@ export interface WorkbenchController {
   ) => void;
   updateMoveDraftFromScreenPoint: (screenPoint: CanvasPoint) => void;
   updateMarqueeDraftFromScreenPoint: (screenPoint: CanvasPoint) => void;
+  queryWorldInputFromScreenPoint: (screenPoint: CanvasPoint) => CanvasWorldInput;
   confirmMovePreview: () => Promise<void>;
   cancelMove: () => void;
   confirmMarqueeSelection: () => Promise<void>;
