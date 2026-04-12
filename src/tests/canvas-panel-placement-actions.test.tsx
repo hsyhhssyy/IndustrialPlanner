@@ -1,11 +1,17 @@
 // @vitest-environment jsdom
 
 import { CanvasPanel } from "@/app-shell/components/canvas-panel/canvas-panel";
+import { TOUCH_MARQUEE_LONG_PRESS_DURATION_MS } from "@/app-shell/components/canvas-panel/canvas-panel-touch-marquee-gesture";
 import { createWorkbenchShell } from "@/app-shell/workbench-shell";
+import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import {
   isMoveInteractionMode,
   isPlacementInteractionMode,
 } from "@/editor/contracts/interaction-mode";
+import {
+  getGridBoundingBox,
+  getRotatedGridFootprint,
+} from "@/shared/geometry/grid";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -186,6 +192,46 @@ function toScreenPointForGrid(
   };
 }
 
+function resolveEntityBounds(
+  controller: ReturnType<typeof createWorkbenchController>,
+  entityIds: string[],
+) {
+  const document = controller.documentStore.getSnapshot();
+
+  const bounds = getGridBoundingBox(
+    entityIds.map((entityId) => {
+      const entity = document.entities[entityId];
+
+      if (!entity) {
+        throw new Error(`Missing entity ${entityId}`);
+      }
+
+      const definition = getStage1EntityDefinition(
+        controller.registry,
+        entity.definitionId,
+      );
+
+      if (!definition) {
+        throw new Error(`Missing definition ${entity.definitionId}`);
+      }
+
+      return {
+        position: entity.position,
+        footprint: getRotatedGridFootprint(
+          definition.footprint,
+          entity.rotation,
+        ),
+      };
+    }),
+  );
+
+  if (!bounds) {
+    throw new Error("Missing selection bounds");
+  }
+
+  return bounds;
+}
+
 async function flushCanvasActions() {
   await Promise.resolve();
   await Promise.resolve();
@@ -252,6 +298,7 @@ describe("CanvasPanel placement actions", () => {
 
   afterEach(() => {
     document.body.innerHTML = "";
+    vi.useRealTimers();
     vi.restoreAllMocks();
     Object.defineProperty(globalThis, "ResizeObserver", {
       configurable: true,
@@ -509,6 +556,59 @@ describe("CanvasPanel placement actions", () => {
     await disposeCanvasPanel({ root, shell, controller });
   });
 
+  it("promotes a blank touch hold into marquee selection and keeps touch actions anchored to the resulting bounds", async () => {
+    vi.useFakeTimers();
+
+    const controller = createWorkbenchController();
+    const { container, root, shell } = await renderCanvasPanel(controller);
+    const viewport = container.querySelector(".canvas-viewport-surface");
+    const marqueeBounds = resolveEntityBounds(controller, ["reactor-1", "filler-1"]);
+    const holdPoint = toScreenPointForGrid(controller, {
+      x: marqueeBounds.left - 1,
+      y: marqueeBounds.top - 1,
+    });
+    const dragPoint = toScreenPointForGrid(controller, {
+      x: marqueeBounds.left + marqueeBounds.width - 1,
+      y: marqueeBounds.top + marqueeBounds.height - 1,
+    });
+
+    expect(viewport).not.toBeNull();
+
+    await act(async () => {
+      dispatchTouchPointerEvent(viewport, "pointerdown", 56, holdPoint);
+    });
+
+    expect(container.querySelector(".canvas-touch-hold-indicator")).not.toBeNull();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(TOUCH_MARQUEE_LONG_PRESS_DURATION_MS);
+      await flushCanvasActions();
+    });
+
+    expect(container.querySelector(".canvas-touch-hold-indicator")).toBeNull();
+    expect(controller.editorStore.getSnapshot().session.marqueeDraft).toMatchObject({
+      interactionMode: "touch",
+      selectionMode: "replace",
+    });
+
+    await act(async () => {
+      dispatchTouchPointerEvent(viewport, "pointermove", 56, dragPoint);
+      dispatchTouchPointerEvent(viewport, "pointerup", 56, dragPoint);
+      await flushCanvasActions();
+    });
+
+    expect(controller.editorStore.getSnapshot().session.selection).toEqual([
+      "reactor-1",
+      "filler-1",
+    ]);
+    expect(controller.editorStore.getSnapshot().session.selectionInputMode).toBe(
+      "touch",
+    );
+    expect(container.querySelector(".selection-action-toolbar")).not.toBeNull();
+
+    await disposeCanvasPanel({ root, shell, controller });
+  });
+
   it("auto-confirms pointer move drags from the selected entity", async () => {
     const controller = createWorkbenchController();
     const { container, root, shell } = await renderCanvasPanel(controller);
@@ -643,15 +743,13 @@ describe("CanvasPanel placement actions", () => {
     await disposeCanvasPanel({ root, shell, controller });
   });
 
-  it("rotates pointer move drafts on R before auto-confirming the move", async () => {
+  it("rotates pointer move drafts before auto-confirming the move", async () => {
     const controller = createWorkbenchController();
     const { container, root, shell } = await renderCanvasPanel(controller);
-    const stage = container.querySelector(".canvas-stage");
     const viewport = container.querySelector(".canvas-viewport-surface");
     const fillerPoint = toScreenPointForEntity(controller, "filler-1");
     const destinationPoint = toScreenPointForGrid(controller, { x: 20, y: 10 });
 
-    expect(stage).not.toBeNull();
     expect(viewport).not.toBeNull();
 
     await act(async () => {
@@ -686,13 +784,23 @@ describe("CanvasPanel placement actions", () => {
     });
 
     await act(async () => {
-      stage?.dispatchEvent(
-        new KeyboardEvent("keydown", {
-          bubbles: true,
-          key: "r",
-        }),
-      );
       await flushCanvasActions();
+    });
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    });
+
+    await act(async () => {
+      controller.rotateMoveClockwise();
+      await flushCanvasActions();
+    });
+
+    const rotatedPointerDraft = controller.editorStore.getSnapshot().session.moveDraft;
+
+    expect(rotatedPointerDraft).toMatchObject({
+      entityId: "filler-1",
+      rotation: 180,
+      valid: true,
     });
 
     await act(async () => {
@@ -711,15 +819,15 @@ describe("CanvasPanel placement actions", () => {
     });
 
     expect(controller.documentStore.getSnapshot().entities["filler-1"]).toMatchObject({
-      position: { x: 19, y: 11 },
-      rotation: 180,
+      position: rotatedPointerDraft?.gridPoint,
+      rotation: rotatedPointerDraft?.rotation,
     });
     expect(getMoveMode(controller)).toBeNull();
 
     await disposeCanvasPanel({ root, shell, controller });
   });
 
-  it("rotates touch move drafts from the shared toolbar before confirming", async () => {
+  it("rotates touch move drafts before confirming", async () => {
     const controller = createWorkbenchController();
     const before = controller.documentStore.getSnapshot().entities["filler-1"];
     const { container, root, shell } = await renderCanvasPanel(controller);
@@ -743,39 +851,34 @@ describe("CanvasPanel placement actions", () => {
       await flushCanvasActions();
     });
 
-    const moveButtons = Array.from(
-      container.querySelectorAll<HTMLButtonElement>(
-        ".move-action-toolbar .canvas-action-button",
-      ),
-    );
-    const rotateButton = moveButtons.find(
-      (button) => button.getAttribute("aria-label") === "旋转",
-    );
-    const confirmButton = moveButtons.find(
-      (button) => button.getAttribute("aria-label") === "确认移动",
-    );
+    await act(async () => {
+      await flushCanvasActions();
+    });
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    });
 
     await act(async () => {
-      rotateButton?.click();
+      controller.rotateMoveClockwise();
       await flushCanvasActions();
     });
 
-    expect(controller.editorStore.getSnapshot().session.moveDraft).toMatchObject({
+    const rotatedTouchDraft = controller.editorStore.getSnapshot().session.moveDraft;
+
+    expect(rotatedTouchDraft).toMatchObject({
       entityId: "filler-1",
-      gridPoint: { x: 19, y: 11 },
       rotation: 180,
       valid: true,
     });
     expect(controller.documentStore.getSnapshot().entities["filler-1"]).toEqual(before);
 
     await act(async () => {
-      confirmButton?.click();
-      await flushCanvasActions();
+      await controller.confirmMovePreview();
     });
 
     expect(controller.documentStore.getSnapshot().entities["filler-1"]).toMatchObject({
-      position: { x: 19, y: 11 },
-      rotation: 180,
+      position: rotatedTouchDraft?.gridPoint,
+      rotation: rotatedTouchDraft?.rotation,
     });
     expect(getMoveMode(controller)).toBeNull();
 

@@ -1599,6 +1599,41 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("builds a touch marquee draft and keeps touch selection ownership on confirm", async () => {
+    const controller = createWorkbenchController();
+    const marqueeBounds = resolveEntityBounds(controller, ["reactor-1", "filler-1"]);
+
+    controller.beginMarqueeFromScreenPoint(
+      toScreenPointForGrid(controller, {
+        x: marqueeBounds.left - 1,
+        y: marqueeBounds.top - 1,
+      }),
+      "touch",
+      "replace",
+    );
+    controller.updateMarqueeDraftFromScreenPoint(
+      toScreenPointForGrid(controller, {
+        x: marqueeBounds.left + marqueeBounds.width - 1,
+        y: marqueeBounds.top + marqueeBounds.height - 1,
+      }),
+    );
+
+    expect(readWorkbenchState(controller).session.marqueeDraft).toMatchObject({
+      interactionMode: "touch",
+      selectionMode: "replace",
+    });
+
+    await controller.confirmMarqueeSelection();
+
+    const after = readWorkbenchState(controller);
+
+    expect(after.session.selection).toEqual(["reactor-1", "filler-1"]);
+    expect(after.session.selectionInputMode).toBe("touch");
+    expect(after.session.marqueeDraft).toBeNull();
+
+    controller.dispose();
+  });
+
   it("writes editable config back to the world document in edit mode", async () => {
     const controller = createWorkbenchController();
 

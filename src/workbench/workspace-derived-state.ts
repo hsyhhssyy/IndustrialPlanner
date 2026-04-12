@@ -131,6 +131,7 @@ function deriveAnchoredSelectionScreenBox(
   const {
     workspaceState: { canvasView, document, editor, ui },
     topology,
+    registry,
   } = options;
   const selectionMode = editor.session.currentMode;
 
@@ -139,32 +140,44 @@ function deriveAnchoredSelectionScreenBox(
     selectionMode.key !== "select" ||
     isPlacementInteractionMode(editor.session.currentMode) ||
     editor.session.selectionInputMode !== "touch" ||
-    editor.session.selection.length !== 1
+    editor.session.selection.length === 0
   ) {
     return null;
   }
 
-  const selectedEntityId = editor.session.selection[0];
+  const bounds = getGridBoundingBox(
+    editor.session.selection
+      .map((entityId) => {
+        const selectedEntity = document.entities[entityId];
+        const definition =
+          topology.entityViews[entityId]?.definition ??
+          (selectedEntity
+            ? getStage1EntityDefinition(registry, selectedEntity.definitionId)
+            : undefined);
 
-  if (!selectedEntityId) {
+        if (!selectedEntity || !definition) {
+          return null;
+        }
+
+        return {
+          position: selectedEntity.position,
+          footprint: getRotatedGridFootprint(
+            definition.footprint,
+            selectedEntity.rotation,
+          ),
+        };
+      })
+      .filter((area): area is NonNullable<typeof area> => area !== null),
+  );
+
+  if (!bounds) {
     return null;
   }
 
-  const selectedEntity = document.entities[selectedEntityId];
-  const definition = topology.entityViews[selectedEntityId]?.definition;
-
-  if (!selectedEntity || !definition) {
-    return null;
-  }
-
-  return projectGridFootprintScreenBox({
+  return projectGridBoundsScreenBox({
     canvasView,
     gridSize: document.documentSettings.gridSize,
-    position: selectedEntity.position,
-    footprint: getRotatedGridFootprint(
-      definition.footprint,
-      selectedEntity.rotation,
-    ),
+    bounds,
   });
 }
 

@@ -17,6 +17,9 @@ import {
   isCanvasTouchPanning,
 } from "./canvas-panel-touch-gesture";
 import {
+  TOUCH_MARQUEE_LONG_PRESS_DURATION_MS,
+} from "./canvas-panel-touch-marquee-gesture";
+import {
   isMoveInteractionMode,
   isPlacementInteractionMode,
 } from "@/editor/contracts/interaction-mode";
@@ -51,6 +54,7 @@ const TOUCH_MOVE_TOOLBAR_WIDTH_PX = 176;
 const TOUCH_SELECTION_TOOLBAR_WIDTH_PX = 120;
 const TOUCH_ACTION_TOOLBAR_HEIGHT_PX = 56;
 const TOUCH_ACTION_TOOLBAR_GAP_PX = 12;
+const TOUCH_HOLD_INDICATOR_CIRCUMFERENCE = 100.53;
 
 function isSelectionModifierActive(event: {
   ctrlKey: boolean;
@@ -120,6 +124,8 @@ export const CanvasPanel = observer(function CanvasPanel({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const keyStateRef = useRef({ up: false, down: false, left: false, right: false });
   const frameRef = useRef<number | null>(null);
+  const touchMarqueeHoldKeyRef = useRef<string | null>(null);
+  const touchMarqueeHoldTimerRef = useRef<number | null>(null);
   const gestureSessionRef = useRef<ReturnType<typeof createCanvasGestureSession> | null>(
     null,
   );
@@ -135,6 +141,8 @@ export const CanvasPanel = observer(function CanvasPanel({
     x: 0,
     y: 0,
   });
+  const [touchMarqueeHoldIndicator, setTouchMarqueeHoldIndicator] =
+    useState<CanvasPoint | null>(null);
   const previewInputSchedulerRef = useRef<ReturnType<
     typeof createCanvasPreviewRawInputScheduler
   > | null>(null);
@@ -279,7 +287,25 @@ export const CanvasPanel = observer(function CanvasPanel({
     routeGestureEvents(result.events);
   };
 
+  const clearTouchMarqueeHold = useEffectEvent(() => {
+    if (touchMarqueeHoldTimerRef.current !== null) {
+      window.clearTimeout(touchMarqueeHoldTimerRef.current);
+      touchMarqueeHoldTimerRef.current = null;
+    }
+
+    touchMarqueeHoldKeyRef.current = null;
+    setTouchMarqueeHoldIndicator(null);
+  });
+
+  const activateTouchMarqueeHold = useEffectEvent((pointerId: number) => {
+    clearTouchMarqueeHold();
+    applyGestureSessionResult(
+      gestureSessionRef.current!.handleTouchLongPress({ pointerId }),
+    );
+  });
+
   const resetAllGestures = useEffectEvent(() => {
+    clearTouchMarqueeHold();
     const result = gestureSessionRef.current!.resetAll();
 
     applyGestureSessionResult(result);
@@ -292,6 +318,35 @@ export const CanvasPanel = observer(function CanvasPanel({
       controller.cancelMarquee();
     }
   });
+
+  useEffect(() => {
+    const touchCandidate =
+      touchGestureState.phase === "touch-pan-pressed" &&
+      touchGestureState.longPressMarqueeSelectionMode !== null
+        ? touchGestureState
+        : null;
+    const nextKey = touchCandidate
+      ? `${touchCandidate.pointerId}:${touchCandidate.origin.x}:${touchCandidate.origin.y}`
+      : null;
+
+    if (nextKey === touchMarqueeHoldKeyRef.current) {
+      return;
+    }
+
+    clearTouchMarqueeHold();
+
+    if (!touchCandidate) {
+      return;
+    }
+
+    touchMarqueeHoldKeyRef.current = nextKey;
+    setTouchMarqueeHoldIndicator(touchCandidate.origin);
+    touchMarqueeHoldTimerRef.current = window.setTimeout(() => {
+      activateTouchMarqueeHold(touchCandidate.pointerId);
+    }, TOUCH_MARQUEE_LONG_PRESS_DURATION_MS);
+  }, [activateTouchMarqueeHold, clearTouchMarqueeHold, touchGestureState]);
+
+  useEffect(() => () => clearTouchMarqueeHold(), [clearTouchMarqueeHold]);
 
   const toViewportPoint = (clientX: number, clientY: number): CanvasPoint => {
     const bounds = viewportRef.current?.getBoundingClientRect();
@@ -739,6 +794,40 @@ export const CanvasPanel = observer(function CanvasPanel({
                 height: `${render.marqueeScreenBox.height}px`,
               }}
             />
+          ) : null}
+          {touchMarqueeHoldIndicator ? (
+            <div
+              aria-hidden="true"
+              className="canvas-touch-hold-indicator"
+              style={{
+                left: `${touchMarqueeHoldIndicator.x}px`,
+                top: `${touchMarqueeHoldIndicator.y}px`,
+              }}
+            >
+              <svg
+                className="canvas-touch-hold-indicator-ring"
+                viewBox="0 0 40 40"
+              >
+                <circle
+                  className="canvas-touch-hold-indicator-track"
+                  cx="20"
+                  cy="20"
+                  r="16"
+                />
+                <circle
+                  className="canvas-touch-hold-indicator-progress"
+                  cx="20"
+                  cy="20"
+                  r="16"
+                  style={{
+                    animationDuration: `${TOUCH_MARQUEE_LONG_PRESS_DURATION_MS}ms`,
+                    strokeDasharray: `${TOUCH_HOLD_INDICATOR_CIRCUMFERENCE}`,
+                    strokeDashoffset: `${TOUCH_HOLD_INDICATOR_CIRCUMFERENCE}`,
+                  }}
+                />
+              </svg>
+              <div className="canvas-touch-hold-indicator-core" />
+            </div>
           ) : null}
           {anchoredPlacementToolbarStyle ? (
             <CanvasActionToolbar

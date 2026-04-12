@@ -1,6 +1,8 @@
 import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 import type { CanvasPoint } from "@/workbench/workspace-state";
 
+export const TOUCH_MARQUEE_LONG_PRESS_DURATION_MS = 420;
+
 export type CanvasPanelTouchMarqueeGestureState =
   | {
       phase: "idle";
