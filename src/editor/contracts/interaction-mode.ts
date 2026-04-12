@@ -1,4 +1,5 @@
 import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
+import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 import type { GridRotation } from "@/shared/geometry/grid";
 import type { WorkbenchPhase } from "@/workbench/workbench-ui-state";
 
@@ -20,7 +21,8 @@ export type InteractionModeKey =
   | "placement"
   | "link"
   | "inspect"
-  | "move";
+  | "move"
+  | "marquee";
 
 interface BaseInteractionModeState<TKey extends InteractionModeKey> {
   key: TKey;
@@ -50,12 +52,19 @@ export interface MoveInteractionModeState
   inputMode: PlacementInteractionMode;
 }
 
+export interface MarqueeInteractionModeState
+  extends BaseInteractionModeState<"marquee"> {
+  inputMode: PlacementInteractionMode;
+  selectionMode: EditorSelectionUpdateMode;
+}
+
 export type CurrentInteractionMode =
   | SelectInteractionModeState
   | PlacementInteractionModeState
   | LinkInteractionModeState
   | InspectInteractionModeState
-  | MoveInteractionModeState;
+  | MoveInteractionModeState
+  | MarqueeInteractionModeState;
 
 export interface InteractionModeDefinition<TKey extends InteractionModeKey> {
   key: TKey;
@@ -153,6 +162,21 @@ export function createMoveInteractionMode(options: {
   };
 }
 
+export function createMarqueeInteractionMode(options: {
+  inputMode?: PlacementInteractionMode;
+  selectionMode?: EditorSelectionUpdateMode;
+  previousModeKey?: InteractionModeKey | null;
+  entryDisplayTool?: DisplayTool | null;
+}): MarqueeInteractionModeState {
+  return {
+    key: "marquee",
+    inputMode: options.inputMode ?? "pointer",
+    selectionMode: options.selectionMode ?? "replace",
+    previousModeKey: options.previousModeKey ?? null,
+    entryDisplayTool: options.entryDisplayTool ?? "select",
+  };
+}
+
 function createDefaultNextSelectMode(
   mode: CurrentInteractionMode,
 ): SelectInteractionModeState {
@@ -198,6 +222,14 @@ export const INTERACTION_MODE_DEFINITIONS: InteractionModeDefinitionMap = {
   },
   move: {
     key: "move",
+    availableInEdit: true,
+    availableInSim: false,
+    hidden: true,
+    resolveDisplayTool: () => "select",
+    resolveDefaultNextMode: (mode) => createDefaultNextSelectMode(mode),
+  },
+  marquee: {
+    key: "marquee",
     availableInEdit: true,
     availableInSim: false,
     hidden: true,
@@ -257,6 +289,12 @@ export function isMoveInteractionMode(
   return mode.key === "move";
 }
 
+export function isMarqueeInteractionMode(
+  mode: CurrentInteractionMode,
+): mode is MarqueeInteractionModeState {
+  return mode.key === "marquee";
+}
+
 export function getPendingLinkSourceEntityId(
   mode: CurrentInteractionMode,
 ): string | null {
@@ -302,6 +340,12 @@ export function isSameCurrentInteractionMode(
         right.key === "move" &&
         left.entityId === right.entityId &&
         left.inputMode === right.inputMode
+      );
+    case "marquee":
+      return (
+        right.key === "marquee" &&
+        left.inputMode === right.inputMode &&
+        left.selectionMode === right.selectionMode
       );
     case "inspect":
       return right.key === "inspect";

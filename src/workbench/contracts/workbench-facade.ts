@@ -51,7 +51,7 @@ export interface WorkbenchController {
   registry: Stage1Registry;
   setPhase: (phase: WorkbenchPhase) => void;
   setInteractionMode: (
-    modeKey: Exclude<InteractionModeKey, "placement" | "move">,
+    modeKey: Exclude<InteractionModeKey, "placement" | "move" | "marquee">,
   ) => void;
   requestCanvasKeyboardFocus: () => void;
   subscribeCanvasKeyboardFocusRequests: (

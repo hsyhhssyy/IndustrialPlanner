@@ -249,7 +249,7 @@ export interface EditorHost {
     worldPoint: CanvasPoint,
   ) => EditorWorldInteractionTarget;
   setInteractionMode: (
-    modeKey: Exclude<InteractionModeKey, "placement" | "move">,
+    modeKey: Exclude<InteractionModeKey, "placement" | "move" | "marquee">,
   ) => void;
   armPlacement: (
     definitionId: string,
@@ -506,7 +506,7 @@ class EditorHostImpl implements EditorHost {
   }
 
   setInteractionMode(
-    modeKey: Exclude<InteractionModeKey, "placement" | "move">,
+    modeKey: Exclude<InteractionModeKey, "placement" | "move" | "marquee">,
   ): void {
     this.core.setInteractionMode(modeKey);
   }

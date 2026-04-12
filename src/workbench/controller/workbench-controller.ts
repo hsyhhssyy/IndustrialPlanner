@@ -252,7 +252,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
         this.editorHost.setInteractionMode(
           resolveDefaultNextInteractionMode(currentMode).key as Exclude<
             InteractionModeKey,
-            "placement" | "move"
+            "placement" | "move" | "marquee"
           >,
         );
       }
@@ -287,7 +287,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   setInteractionMode(
-    modeKey: Exclude<InteractionModeKey, "placement" | "move">,
+    modeKey: Exclude<InteractionModeKey, "placement" | "move" | "marquee">,
   ): void {
     this.editorHost.setInteractionMode(modeKey);
     this.sync();

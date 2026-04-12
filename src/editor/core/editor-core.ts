@@ -70,7 +70,9 @@ export interface EditorCoreSnapshot {
  */
 export interface EditorCore {
   getSnapshot: () => EditorCoreSnapshot;
-  setInteractionMode: (modeKey: Exclude<InteractionModeKey, "placement" | "move">) => void;
+  setInteractionMode: (
+    modeKey: Exclude<InteractionModeKey, "placement" | "move" | "marquee">,
+  ) => void;
   armPlacement: (
     definitionId: string,
     displayTool?: PlacementDisplayTool,
@@ -141,7 +143,7 @@ class EditorCoreImpl implements EditorCore {
   }
 
   setInteractionMode(
-    modeKey: Exclude<InteractionModeKey, "placement" | "move">,
+    modeKey: Exclude<InteractionModeKey, "placement" | "move" | "marquee">,
   ): void {
     const context = {
       previousModeKey: this.session.currentMode.key,
@@ -641,7 +643,8 @@ class EditorCoreImpl implements EditorCore {
     }
 
     const marqueeDraft =
-      this.session.marqueeDraft && nextMode.key === "select"
+      this.session.marqueeDraft &&
+      (nextMode.key === "select" || nextMode.key === "marquee")
         ? {
             ...this.session.marqueeDraft,
             entityIds: this.session.marqueeDraft.entityIds.filter((entityId) =>
@@ -665,7 +668,10 @@ class EditorCoreImpl implements EditorCore {
         ? this.session.placementPreview
         : null,
       moveDraft: isMoveInteractionMode(nextMode) ? moveDraft : null,
-      marqueeDraft: nextMode.key === "select" ? marqueeDraft : null,
+      marqueeDraft:
+        nextMode.key === "select" || nextMode.key === "marquee"
+          ? marqueeDraft
+          : null,
     };
   }
 }

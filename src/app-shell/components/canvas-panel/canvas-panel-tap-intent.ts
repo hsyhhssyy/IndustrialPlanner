@@ -64,6 +64,7 @@ export function resolveCanvasPanelTapIntent(
             kind: "noop",
           };
     case "move":
+    case "marquee":
       return {
         kind: "noop",
       };

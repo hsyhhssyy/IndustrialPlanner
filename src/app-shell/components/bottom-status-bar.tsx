@@ -32,6 +32,7 @@ const MODE_LABEL_KEYS: Record<InteractionModeKey, MessageKey> = {
   link: "tool.link",
   inspect: "tool.inspect",
   move: "tool.move",
+  marquee: "tool.marquee",
 };
 
 function truncateWorkbenchViewLabel(label: string): string {

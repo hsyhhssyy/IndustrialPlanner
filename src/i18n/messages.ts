@@ -38,6 +38,7 @@ export type MessageKey =
   | "tool.link"
   | "tool.inspect"
   | "tool.move"
+  | "tool.marquee"
   | "view.library"
   | "view.inspector"
   | "view.diagnostics"
@@ -150,6 +151,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "tool.link": "链接",
     "tool.inspect": "观察",
     "tool.move": "移动",
+    "tool.marquee": "框选",
     "view.library": "左侧面板",
     "view.inspector": "右侧面板",
     "view.diagnostics": "诊断",
@@ -261,6 +263,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "tool.link": "Link",
     "tool.inspect": "Inspect",
     "tool.move": "Move",
+    "tool.marquee": "Marquee",
     "view.library": "Left Panel",
     "view.inspector": "Right Panel",
     "view.diagnostics": "Diagnostics",
