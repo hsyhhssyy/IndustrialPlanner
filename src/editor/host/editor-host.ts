@@ -543,6 +543,11 @@ class EditorHostImpl implements EditorHost {
       session.moveDraft && getMoveDraftEntity(session.moveDraft, entityId)
         ? session.moveDraft
         : null;
+    const existingResolvedEntities = existingDraft
+      ? this.resolveMoveDraftEntities(existingDraft, {
+          preferManagedDrafts: true,
+        })
+      : null;
     const isSelectedEntity =
       session.currentMode.key === "select" &&
       session.selection.length > 0 &&
@@ -555,19 +560,20 @@ class EditorHostImpl implements EditorHost {
       return false;
     }
 
-    const anchorEntity = existingDraft
-      ? getMoveDraftEntity(existingDraft, entityId)
-      : null;
+    const anchorEntity =
+      existingResolvedEntities?.find((entity) => entity.entity.entityId === entityId)
+        ?.entity ??
+      (existingDraft ? getMoveDraftEntity(existingDraft, entityId) : null);
 
     if (!anchorEntity && !document.entities[entityId]) {
       return false;
     }
 
     const entityIds = existingDraft
-      ? existingDraft.entities.map((entity) => entity.entityId)
+      ? existingResolvedEntities?.map((entity) => entity.entity.entityId) ?? []
       : session.selection;
     const draftEntities = existingDraft
-      ? cloneMoveDraftEntities(existingDraft.entities)
+      ? existingResolvedEntities?.map((entity) => cloneMoveDraftEntity(entity.entity)) ?? []
       : entityIds
           .map((selectedEntityId) => document.entities[selectedEntityId])
           .filter((entity): entity is NonNullable<typeof entity> => Boolean(entity))
@@ -1066,7 +1072,9 @@ class EditorHostImpl implements EditorHost {
       };
     }
 
-    const resolvedEntities = this.resolveMoveDraftEntities(moveDraft);
+    const resolvedEntities = this.resolveMoveDraftEntities(moveDraft, {
+      preferManagedDrafts: true,
+    });
 
     if (!resolvedEntities) {
       return {
@@ -1541,7 +1549,10 @@ class EditorHostImpl implements EditorHost {
     input: CanvasWorldInput,
   ): MoveDraftState {
     const { gridSize } = document.documentSettings;
-    const resolvedEntities = this.resolveMoveDraftEntities(moveDraft);
+    const activeMoveDraft = this.core.getSnapshot().session.moveDraft;
+    const resolvedEntities = this.resolveMoveDraftEntities(moveDraft, {
+      preferManagedDrafts: moveDraft === activeMoveDraft,
+    });
     const resolvedAnchorEntity = resolvedEntities?.find(
       (entity) => entity.entity.entityId === moveDraft.entityId,
     );
