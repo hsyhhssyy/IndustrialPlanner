@@ -928,8 +928,24 @@ class EditorHostImpl implements EditorHost {
 
   confirmPlacement(): boolean {
     const { session } = this.core.getSnapshot();
-    const preview = session.placementPreview;
     const placementMode = this.getPlacementMode(session);
+    const previewDraftId = session.draftEntities?.ids[0] ?? null;
+    const previewDraft = previewDraftId
+      ? session.drafts.entities[previewDraftId]
+      : null;
+    const preview =
+      placementMode &&
+      previewDraft &&
+      previewDraft.sourceEntityId === null &&
+      previewDraft.definitionId === placementMode.definitionId
+        ? {
+            definitionId: previewDraft.definitionId,
+            interactionMode: placementMode.inputMode,
+            gridPoint: previewDraft.position,
+            rotation: previewDraft.rotation,
+            valid: previewDraft.valid,
+          }
+        : null;
 
     if (
       !placementMode ||
