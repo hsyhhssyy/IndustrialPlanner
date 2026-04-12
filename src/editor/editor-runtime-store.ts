@@ -1,10 +1,13 @@
 import {
+  cloneEditorEntityCollectionState,
   cloneDraftsState,
+  isSameEditorEntityCollectionState,
   isSameDraftsState,
 } from "@/editor/contracts/entity-collection";
 import {
   isSameMarqueeDraftState,
 } from "@/editor/contracts/marquee-draft";
+import { isSameMarqueeRangeState } from "@/editor/contracts/marquee-range";
 import { isSamePlacementPreviewState } from "@/editor/contracts/placement-preview";
 import { isSameMoveDraftState } from "@/editor/contracts/move-draft";
 import type { EditorSession } from "@/editor/contracts/editor-session";
@@ -48,6 +51,9 @@ export function isSameEditorSession(
     left.displayTool === right.displayTool &&
     isSameCurrentInteractionMode(left.currentMode, right.currentMode) &&
     isSameDraftsState(left.drafts, right.drafts) &&
+    isSameEditorEntityCollectionState(left.selectedEntities, right.selectedEntities) &&
+    isSameEditorEntityCollectionState(left.draftEntities, right.draftEntities) &&
+    isSameMarqueeRangeState(left.marqueeRange, right.marqueeRange) &&
     areSelectionsEqual(left.selection, right.selection) &&
     left.selectionInputMode === right.selectionInputMode &&
     left.hoveredEntityId === right.hoveredEntityId &&
@@ -74,6 +80,16 @@ function cloneEditorSession(session: EditorSession): EditorSession {
     displayTool: session.displayTool,
     currentMode: cloneCurrentInteractionMode(session.currentMode),
     drafts: cloneDraftsState(session.drafts),
+    selectedEntities: cloneEditorEntityCollectionState(session.selectedEntities),
+    draftEntities: cloneEditorEntityCollectionState(session.draftEntities),
+    marqueeRange: session.marqueeRange
+      ? {
+          ...session.marqueeRange,
+          originGridPoint: { ...session.marqueeRange.originGridPoint },
+          gridPoint: { ...session.marqueeRange.gridPoint },
+          bounds: { ...session.marqueeRange.bounds },
+        }
+      : null,
     selection: [...session.selection],
     selectionInputMode: session.selectionInputMode,
     hoveredEntityId: session.hoveredEntityId,
@@ -220,6 +236,39 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
 
     if (!isSameDraftsState(this.session.drafts, session.drafts)) {
       this.session.drafts = cloneDraftsState(session.drafts);
+    }
+
+    if (
+      !isSameEditorEntityCollectionState(
+        this.session.selectedEntities,
+        session.selectedEntities,
+      )
+    ) {
+      this.session.selectedEntities = cloneEditorEntityCollectionState(
+        session.selectedEntities,
+      );
+    }
+
+    if (
+      !isSameEditorEntityCollectionState(
+        this.session.draftEntities,
+        session.draftEntities,
+      )
+    ) {
+      this.session.draftEntities = cloneEditorEntityCollectionState(
+        session.draftEntities,
+      );
+    }
+
+    if (!isSameMarqueeRangeState(this.session.marqueeRange, session.marqueeRange)) {
+      this.session.marqueeRange = session.marqueeRange
+        ? {
+            ...session.marqueeRange,
+            originGridPoint: { ...session.marqueeRange.originGridPoint },
+            gridPoint: { ...session.marqueeRange.gridPoint },
+            bounds: { ...session.marqueeRange.bounds },
+          }
+        : null;
     }
 
     if (!areSelectionsEqual(this.session.selection, session.selection)) {

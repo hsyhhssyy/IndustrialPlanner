@@ -18,8 +18,8 @@ describe("EditorHost merged entity lookup", () => {
       ...createInitialEditorSession(),
       drafts: {
         entities: {
-          "draft:placement-preview": {
-            id: "draft:placement-preview",
+          "draft:manual-preview": {
+            id: "draft:manual-preview",
             definitionId: "belt_straight_1x1",
             position: { x: 12, y: 6 },
             rotation: 0,
@@ -46,10 +46,10 @@ describe("EditorHost merged entity lookup", () => {
         id: "reactor-1",
       },
     });
-    expect(host.getEntityById("draft:placement-preview")).toMatchObject({
+    expect(host.getEntityById("draft:manual-preview")).toMatchObject({
       kind: "draft",
       entity: {
-        id: "draft:placement-preview",
+        id: "draft:manual-preview",
         definitionId: "belt_straight_1x1",
       },
     });

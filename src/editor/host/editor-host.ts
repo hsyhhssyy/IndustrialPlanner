@@ -430,6 +430,7 @@ class EditorHostImpl implements EditorHost {
       createEditorCore({
         document: options.document,
         session: options.session,
+        getDefinition: options.getDefinition,
       });
   }
 

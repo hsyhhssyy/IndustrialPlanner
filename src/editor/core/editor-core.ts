@@ -4,12 +4,20 @@ import {
   getEntityLinks,
   type WorldDocument,
 } from "@/domain/document/world-document";
+import type { Stage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import { applyWorldDocumentCommand } from "@/editor/core/commands/document-command-applier";
 import type {
   AtomicDocumentCommand,
   DocumentCommand,
 } from "@/editor/core/commands/document-command";
 import type { EditorSession } from "@/editor/contracts/editor-session";
+import type {
+  DraftEntitiesState,
+  DraftEntityState,
+  DraftsState,
+  EditorEntityCollectionState,
+  SelectedEntitiesState,
+} from "@/editor/contracts/entity-collection";
 import {
   createMarqueeInteractionMode,
   createInspectInteractionMode,
@@ -29,6 +37,7 @@ import {
 } from "@/editor/contracts/interaction-mode";
 import type { MoveDraftState } from "@/editor/contracts/move-draft";
 import type { MarqueeDraftState } from "@/editor/contracts/marquee-draft";
+import type { MarqueeRangeState } from "@/editor/contracts/marquee-range";
 import {
   resolveMarqueeSelection,
   resolveNextSelection,
@@ -39,10 +48,23 @@ import type {
   PlacementPreviewState,
 } from "@/editor/contracts/placement-preview";
 import {
+  getGridBoundingBox,
+  getGridBoundsCenterCells,
+  getRotatedGridFootprint,
   rotateGridRotationClockwise,
   type GridPoint,
   type GridRotation,
 } from "@/shared/geometry/grid";
+
+const PLACEMENT_PREVIEW_DRAFT_ID = "draft:placement-preview";
+
+function createMoveDraftId(entityId: string): string {
+  return `draft:move:${entityId}`;
+}
+
+function isManagedDraftId(id: string): boolean {
+  return id === PLACEMENT_PREVIEW_DRAFT_ID || id.startsWith("draft:move:");
+}
 
 interface DocumentHistoryEntry {
   command: DocumentCommand;
@@ -129,6 +151,7 @@ export interface EditorCore {
 interface CreateEditorCoreOptions {
   document: WorldDocument;
   session: EditorSession;
+  getDefinition: (definitionId: string) => Stage1EntityDefinition | undefined;
 }
 
 class EditorCoreImpl implements EditorCore {
@@ -137,10 +160,12 @@ class EditorCoreImpl implements EditorCore {
   private undoStack: DocumentHistoryEntry[] = [];
   private redoStack: DocumentHistoryEntry[] = [];
   private historyState: EditorHistoryState;
+  private readonly getDefinition: CreateEditorCoreOptions["getDefinition"];
 
   constructor(options: CreateEditorCoreOptions) {
     this.document = options.document;
-    this.session = options.session;
+    this.getDefinition = options.getDefinition;
+    this.session = this.resolveSessionCollections(options.session);
     this.historyState = this.createHistoryState();
   }
 
@@ -208,11 +233,11 @@ class EditorCoreImpl implements EditorCore {
       false,
     );
 
-    this.session = {
+    this.setSession({
       ...this.session,
       selection: draft.entities.map((entity) => entity.entityId),
       selectionInputMode: inputMode,
-    };
+    });
     this.setMoveDraft(draft);
   }
 
@@ -251,24 +276,24 @@ class EditorCoreImpl implements EditorCore {
   }
 
   setPlacementPreview(preview: PlacementPreviewState | null): void {
-    this.session = {
+    this.setSession({
       ...this.session,
       placementPreview: preview,
-    };
+    });
   }
 
   setMoveDraft(draft: MoveDraftState | null): void {
-    this.session = {
+    this.setSession({
       ...this.session,
       moveDraft: draft,
-    };
+    });
   }
 
   setMarqueeDraft(draft: MarqueeDraftState | null): void {
-    this.session = {
+    this.setSession({
       ...this.session,
       marqueeDraft: draft,
-    };
+    });
   }
 
   cancelMove(): void {
@@ -404,11 +429,11 @@ class EditorCoreImpl implements EditorCore {
       nextSelection.push(entityId);
     }
 
-    this.session = {
+    this.setSession({
       ...this.session,
       selection: nextSelection,
       selectionInputMode: nextSelection.length > 0 ? inputMode : null,
-    };
+    });
   }
 
   selectEntity(
@@ -509,11 +534,11 @@ class EditorCoreImpl implements EditorCore {
       ? this.session.currentMode
       : null;
 
-    this.session = {
+    this.setSession({
       ...this.session,
       selection: [entityId],
       selectionInputMode: placementMode?.inputMode ?? this.session.selectionInputMode,
-    };
+    });
   }
 
   moveEntity(entityId: string, position: GridPoint): boolean {
@@ -548,11 +573,11 @@ class EditorCoreImpl implements EditorCore {
     };
 
     if (this.applyCommand(nextCommand)) {
-      this.session = {
+      this.setSession({
         ...this.session,
         selection: [targetEntityId],
         selectionInputMode: null,
-      };
+      });
       this.setLinkSourceEntityId(null);
     }
   }
@@ -574,11 +599,11 @@ class EditorCoreImpl implements EditorCore {
     });
 
     this.sanitizeSession();
-    this.session = {
+    this.setSession({
       ...this.session,
       selection: [],
       selectionInputMode: null,
-    };
+    });
     this.setLinkSourceEntityId(null);
   }
 
@@ -632,14 +657,14 @@ class EditorCoreImpl implements EditorCore {
     clearPlacementPreview: boolean,
     clearMoveDraft: boolean,
   ): void {
-    this.session = {
+    this.setSession({
       ...this.session,
       currentMode: nextMode,
       displayTool: resolveDisplayToolForMode(nextMode),
       placementPreview: clearPlacementPreview ? null : this.session.placementPreview,
       moveDraft: clearMoveDraft ? null : this.session.moveDraft,
       marqueeDraft: null,
-    };
+    });
   }
 
   private applyCommand(command: DocumentCommand): boolean {
@@ -726,7 +751,7 @@ class EditorCoreImpl implements EditorCore {
       nextMode = resolveDefaultNextInteractionMode(nextMode);
     }
 
-    this.session = {
+    this.setSession({
       ...this.session,
       currentMode: nextMode,
       displayTool: resolveDisplayToolForMode(nextMode),
@@ -742,6 +767,182 @@ class EditorCoreImpl implements EditorCore {
         nextMode.key === "select" || nextMode.key === "marquee"
           ? marqueeDraft
           : null,
+    });
+  }
+
+  private setSession(nextSession: EditorSession): void {
+    this.session = this.resolveSessionCollections(nextSession);
+  }
+
+  private resolveSessionCollections(session: EditorSession): EditorSession {
+    const drafts = this.buildDraftsState(session);
+
+    return {
+      ...session,
+      drafts,
+      selectedEntities: this.buildSelectedEntities(session, drafts),
+      draftEntities: this.buildDraftEntities(session, drafts),
+      marqueeRange: this.buildMarqueeRange(session.marqueeDraft),
+    };
+  }
+
+  private buildDraftsState(session: EditorSession): DraftsState {
+    const nextEntities: Record<string, DraftEntityState> = Object.fromEntries(
+      Object.entries(session.drafts.entities).filter(([id]) => !isManagedDraftId(id)),
+    );
+
+    if (session.placementPreview) {
+      nextEntities[PLACEMENT_PREVIEW_DRAFT_ID] = {
+        id: PLACEMENT_PREVIEW_DRAFT_ID,
+        definitionId: session.placementPreview.definitionId,
+        position: {
+          ...session.placementPreview.gridPoint,
+        },
+        rotation: session.placementPreview.rotation,
+        config: {},
+        tags: [],
+        sourceEntityId: null,
+        valid: session.placementPreview.valid,
+        invalidReason: session.placementPreview.valid
+          ? null
+          : "placement-preview-invalid",
+      };
+    }
+
+    if (session.moveDraft) {
+      for (const draftEntity of session.moveDraft.entities) {
+        const sourceEntity = this.document.entities[draftEntity.entityId];
+
+        if (!sourceEntity) {
+          continue;
+        }
+
+        nextEntities[createMoveDraftId(draftEntity.entityId)] = {
+          ...sourceEntity,
+          id: createMoveDraftId(draftEntity.entityId),
+          position: {
+            ...draftEntity.gridPoint,
+          },
+          rotation: draftEntity.rotation,
+          config: {
+            ...sourceEntity.config,
+          },
+          tags: [...sourceEntity.tags],
+          sourceEntityId: sourceEntity.id,
+          valid: session.moveDraft.valid,
+          invalidReason: session.moveDraft.valid ? null : "move-draft-invalid",
+        };
+      }
+    }
+
+    return {
+      entities: nextEntities,
+    };
+  }
+
+  private buildSelectedEntities(
+    session: EditorSession,
+    drafts: DraftsState,
+  ): SelectedEntitiesState | null {
+    return this.buildEntityCollection(session.selection, drafts);
+  }
+
+  private buildDraftEntities(
+    session: EditorSession,
+    drafts: DraftsState,
+  ): DraftEntitiesState | null {
+    if (session.moveDraft) {
+      return this.buildEntityCollection(
+        session.moveDraft.entities.map((entity) => createMoveDraftId(entity.entityId)),
+        drafts,
+      );
+    }
+
+    if (session.placementPreview) {
+      return this.buildEntityCollection([PLACEMENT_PREVIEW_DRAFT_ID], drafts);
+    }
+
+    if (session.marqueeDraft) {
+      return this.buildEntityCollection(
+        resolveMarqueeSelection(
+          session.marqueeDraft.baseSelection,
+          session.marqueeDraft.entityIds,
+          session.marqueeDraft.selectionMode,
+        ),
+        drafts,
+      );
+    }
+
+    return null;
+  }
+
+  private buildMarqueeRange(
+    draft: MarqueeDraftState | null,
+  ): MarqueeRangeState | null {
+    if (!draft) {
+      return null;
+    }
+
+    return {
+      selectionMode: draft.selectionMode,
+      originGridPoint: {
+        ...draft.originGridPoint,
+      },
+      gridPoint: {
+        ...draft.gridPoint,
+      },
+      bounds: {
+        ...draft.bounds,
+      },
+    };
+  }
+
+  private buildEntityCollection(
+    ids: readonly string[],
+    drafts: DraftsState,
+  ): EditorEntityCollectionState | null {
+    const uniqueIds: string[] = [];
+    const areas: Array<{
+      position: GridPoint;
+      footprint: Stage1EntityDefinition["footprint"];
+    }> = [];
+    const seen = new Set<string>();
+
+    for (const id of ids) {
+      if (seen.has(id)) {
+        continue;
+      }
+
+      const entity = drafts.entities[id] ?? this.document.entities[id];
+
+      if (!entity) {
+        continue;
+      }
+
+      const definition = this.getDefinition(entity.definitionId);
+
+      if (!definition) {
+        continue;
+      }
+
+      seen.add(id);
+      uniqueIds.push(id);
+      areas.push({
+        position: entity.position,
+        footprint: getRotatedGridFootprint(definition.footprint, entity.rotation),
+      });
+    }
+
+    if (areas.length === 0) {
+      return null;
+    }
+
+    const bounds = getGridBoundingBox(areas);
+
+    return {
+      ids: uniqueIds,
+      boundsDerived: bounds,
+      geometricCenterCellsDerived: bounds ? getGridBoundsCenterCells(bounds) : null,
     };
   }
 }

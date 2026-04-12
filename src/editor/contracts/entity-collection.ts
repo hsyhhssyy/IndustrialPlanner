@@ -28,6 +28,52 @@ export interface DraftsState {
 
 export interface DraftEntitiesState extends EditorEntityCollectionState {}
 
+export function isSameEditorEntityCollectionState(
+  left: EditorEntityCollectionState | null,
+  right: EditorEntityCollectionState | null,
+): boolean {
+  if (left === right) {
+    return true;
+  }
+
+  if (!left || !right) {
+    return false;
+  }
+
+  return (
+    areStringArraysEqual(left.ids, right.ids) &&
+    left.boundsDerived?.left === right.boundsDerived?.left &&
+    left.boundsDerived?.top === right.boundsDerived?.top &&
+    left.boundsDerived?.width === right.boundsDerived?.width &&
+    left.boundsDerived?.height === right.boundsDerived?.height &&
+    left.geometricCenterCellsDerived?.x === right.geometricCenterCellsDerived?.x &&
+    left.geometricCenterCellsDerived?.y === right.geometricCenterCellsDerived?.y
+  );
+}
+
+export function cloneEditorEntityCollectionState<T extends EditorEntityCollectionState>(
+  collection: T | null,
+): T | null {
+  if (!collection) {
+    return null;
+  }
+
+  return {
+    ...collection,
+    ids: [...collection.ids],
+    boundsDerived: collection.boundsDerived
+      ? {
+          ...collection.boundsDerived,
+        }
+      : null,
+    geometricCenterCellsDerived: collection.geometricCenterCellsDerived
+      ? {
+          ...collection.geometricCenterCellsDerived,
+        }
+      : null,
+  };
+}
+
 function areStringArraysEqual(
   left: readonly string[],
   right: readonly string[],

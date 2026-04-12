@@ -1,4 +1,9 @@
-import type { DraftsState } from "@/editor/contracts/entity-collection";
+import type {
+  DraftEntitiesState,
+  DraftsState,
+  SelectedEntitiesState,
+} from "@/editor/contracts/entity-collection";
+import type { MarqueeRangeState } from "@/editor/contracts/marquee-range";
 import type {
   PlacementPreviewState,
   PlacementInteractionMode,
@@ -20,6 +25,9 @@ export interface EditorSession {
   displayTool: DisplayTool;
   currentMode: CurrentInteractionMode;
   drafts: DraftsState;
+  selectedEntities: SelectedEntitiesState | null;
+  draftEntities: DraftEntitiesState | null;
+  marqueeRange: MarqueeRangeState | null;
   selection: string[];
   selectionInputMode: PlacementInteractionMode | null;
   hoveredEntityId: string | null;

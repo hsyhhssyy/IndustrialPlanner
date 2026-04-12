@@ -14,6 +14,9 @@ export function createInitialEditorSession(): EditorSession {
     drafts: {
       entities: {},
     },
+    selectedEntities: null,
+    draftEntities: null,
+    marqueeRange: null,
     selection: ["reactor-1"],
     selectionInputMode: null,
     hoveredEntityId: null,
