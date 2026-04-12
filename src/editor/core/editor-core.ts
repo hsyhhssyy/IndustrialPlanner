@@ -393,14 +393,10 @@ class EditorCoreImpl implements EditorCore {
       return false;
     }
 
-    const marqueeDraft = this.session.marqueeDraft;
-    const nextSelection = resolveMarqueeSelection(
-      marqueeDraft.baseSelection,
-      marqueeDraft.entityIds,
-      marqueeDraft.selectionMode,
+    this.setSelection(
+      this.session.draftEntities?.ids ?? [],
+      this.session.currentMode.inputMode,
     );
-
-    this.setSelection(nextSelection, marqueeDraft.interactionMode);
     this.applyInteractionMode(
       resolveDefaultNextInteractionMode(this.session.currentMode),
       true,
