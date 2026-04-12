@@ -4,12 +4,7 @@ import {
   isSameEditorEntityCollectionState,
   isSameDraftsState,
 } from "@/editor/contracts/entity-collection";
-import {
-  isSameMarqueeDraftState,
-} from "@/editor/contracts/marquee-draft";
 import { isSameMarqueeRangeState } from "@/editor/contracts/marquee-range";
-import { isSamePlacementPreviewState } from "@/editor/contracts/placement-preview";
-import { isSameMoveDraftState } from "@/editor/contracts/move-draft";
 import type { EditorSession } from "@/editor/contracts/editor-session";
 import {
   cloneCurrentInteractionMode,
@@ -25,24 +20,6 @@ export interface EditorRuntimeState {
   history: EditorHistoryState;
 }
 
-function areSelectionsEqual(left: string[], right: string[]): boolean {
-  if (left === right) {
-    return true;
-  }
-
-  if (left.length !== right.length) {
-    return false;
-  }
-
-  for (let index = 0; index < left.length; index += 1) {
-    if (left[index] !== right[index]) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
 export function isSameEditorSession(
   left: EditorSession,
   right: EditorSession,
@@ -54,12 +31,8 @@ export function isSameEditorSession(
     isSameEditorEntityCollectionState(left.selectedEntities, right.selectedEntities) &&
     isSameEditorEntityCollectionState(left.draftEntities, right.draftEntities) &&
     isSameMarqueeRangeState(left.marqueeRange, right.marqueeRange) &&
-    areSelectionsEqual(left.selection, right.selection) &&
     left.selectionInputMode === right.selectionInputMode &&
-    left.hoveredEntityId === right.hoveredEntityId &&
-    isSamePlacementPreviewState(left.placementPreview, right.placementPreview) &&
-    isSameMoveDraftState(left.moveDraft, right.moveDraft) &&
-    isSameMarqueeDraftState(left.marqueeDraft, right.marqueeDraft)
+    left.hoveredEntityId === right.hoveredEntityId
   );
 }
 
@@ -90,66 +63,8 @@ function cloneEditorSession(session: EditorSession): EditorSession {
           bounds: { ...session.marqueeRange.bounds },
         }
       : null,
-    selection: [...session.selection],
     selectionInputMode: session.selectionInputMode,
     hoveredEntityId: session.hoveredEntityId,
-    placementPreview: session.placementPreview
-      ? {
-          ...session.placementPreview,
-          gridPoint: {
-            ...session.placementPreview.gridPoint,
-          },
-        }
-      : null,
-    moveDraft: session.moveDraft
-      ? {
-          ...session.moveDraft,
-          originGridPoint: {
-            ...session.moveDraft.originGridPoint,
-          },
-          gridPoint: {
-            ...session.moveDraft.gridPoint,
-          },
-          rotationCenterCells: session.moveDraft.rotationCenterCells
-            ? {
-                ...session.moveDraft.rotationCenterCells,
-              }
-            : undefined,
-          anchorWorldOffset: {
-            ...session.moveDraft.anchorWorldOffset,
-          },
-          entities: session.moveDraft.entities.map((entity) => ({
-            ...entity,
-            originGridPoint: {
-              ...entity.originGridPoint,
-            },
-            gridPoint: {
-              ...entity.gridPoint,
-            },
-            centerCells: entity.centerCells
-              ? {
-                  ...entity.centerCells,
-                }
-              : undefined,
-          })),
-        }
-      : null,
-    marqueeDraft: session.marqueeDraft
-      ? {
-          ...session.marqueeDraft,
-          originGridPoint: {
-            ...session.marqueeDraft.originGridPoint,
-          },
-          gridPoint: {
-            ...session.marqueeDraft.gridPoint,
-          },
-          bounds: {
-            ...session.marqueeDraft.bounds,
-          },
-          entityIds: [...session.marqueeDraft.entityIds],
-          baseSelection: [...session.marqueeDraft.baseSelection],
-        }
-      : null,
   };
 }
 
@@ -271,84 +186,12 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
         : null;
     }
 
-    if (!areSelectionsEqual(this.session.selection, session.selection)) {
-      this.session.selection = [...session.selection];
-    }
-
     if (this.session.selectionInputMode !== session.selectionInputMode) {
       this.session.selectionInputMode = session.selectionInputMode;
     }
 
     if (this.session.hoveredEntityId !== session.hoveredEntityId) {
       this.session.hoveredEntityId = session.hoveredEntityId;
-    }
-
-    if (
-      !isSamePlacementPreviewState(this.session.placementPreview, session.placementPreview)
-    ) {
-      this.session.placementPreview = session.placementPreview
-        ? {
-            ...session.placementPreview,
-            gridPoint: {
-              ...session.placementPreview.gridPoint,
-            },
-          }
-        : null;
-    }
-
-    if (!isSameMoveDraftState(this.session.moveDraft, session.moveDraft)) {
-      this.session.moveDraft = session.moveDraft
-        ? {
-            ...session.moveDraft,
-            originGridPoint: {
-              ...session.moveDraft.originGridPoint,
-            },
-            gridPoint: {
-              ...session.moveDraft.gridPoint,
-            },
-            rotationCenterCells: session.moveDraft.rotationCenterCells
-              ? {
-                  ...session.moveDraft.rotationCenterCells,
-                }
-              : undefined,
-            anchorWorldOffset: {
-              ...session.moveDraft.anchorWorldOffset,
-            },
-            entities: session.moveDraft.entities.map((entity) => ({
-              ...entity,
-              originGridPoint: {
-                ...entity.originGridPoint,
-              },
-              gridPoint: {
-                ...entity.gridPoint,
-              },
-              centerCells: entity.centerCells
-                ? {
-                    ...entity.centerCells,
-                  }
-                : undefined,
-            })),
-          }
-        : null;
-    }
-
-    if (!isSameMarqueeDraftState(this.session.marqueeDraft, session.marqueeDraft)) {
-      this.session.marqueeDraft = session.marqueeDraft
-        ? {
-            ...session.marqueeDraft,
-            originGridPoint: {
-              ...session.marqueeDraft.originGridPoint,
-            },
-            gridPoint: {
-              ...session.marqueeDraft.gridPoint,
-            },
-            bounds: {
-              ...session.marqueeDraft.bounds,
-            },
-            entityIds: [...session.marqueeDraft.entityIds],
-            baseSelection: [...session.marqueeDraft.baseSelection],
-          }
-        : null;
     }
   }
 

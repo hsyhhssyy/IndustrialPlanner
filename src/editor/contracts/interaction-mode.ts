@@ -50,6 +50,10 @@ export interface MoveInteractionModeState
   extends BaseInteractionModeState<"move"> {
   entityId: string;
   inputMode: PlacementInteractionMode;
+  anchorWorldOffset: {
+    x: number;
+    y: number;
+  };
 }
 
 export interface MarqueeInteractionModeState
@@ -150,6 +154,10 @@ export function createInspectInteractionMode(
 export function createMoveInteractionMode(options: {
   entityId: string;
   inputMode?: PlacementInteractionMode;
+  anchorWorldOffset?: {
+    x: number;
+    y: number;
+  };
   previousModeKey?: InteractionModeKey | null;
   entryDisplayTool?: DisplayTool | null;
 }): MoveInteractionModeState {
@@ -157,6 +165,14 @@ export function createMoveInteractionMode(options: {
     key: "move",
     entityId: options.entityId,
     inputMode: options.inputMode ?? "pointer",
+    anchorWorldOffset: options.anchorWorldOffset
+      ? {
+          ...options.anchorWorldOffset,
+        }
+      : {
+          x: 0,
+          y: 0,
+        },
     previousModeKey: options.previousModeKey ?? null,
     entryDisplayTool: options.entryDisplayTool ?? "select",
   };
@@ -304,6 +320,15 @@ export function getPendingLinkSourceEntityId(
 export function cloneCurrentInteractionMode(
   mode: CurrentInteractionMode,
 ): CurrentInteractionMode {
+  if (mode.key === "move") {
+    return {
+      ...mode,
+      anchorWorldOffset: {
+        ...mode.anchorWorldOffset,
+      },
+    };
+  }
+
   return {
     ...mode,
   };
@@ -339,7 +364,9 @@ export function isSameCurrentInteractionMode(
       return (
         right.key === "move" &&
         left.entityId === right.entityId &&
-        left.inputMode === right.inputMode
+        left.inputMode === right.inputMode &&
+        left.anchorWorldOffset.x === right.anchorWorldOffset.x &&
+        left.anchorWorldOffset.y === right.anchorWorldOffset.y
       );
     case "marquee":
       return (

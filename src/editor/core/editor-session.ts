@@ -17,12 +17,8 @@ export function createInitialEditorSession(): EditorSession {
     selectedEntities: null,
     draftEntities: null,
     marqueeRange: null,
-    selection: ["reactor-1"],
     selectionInputMode: null,
     hoveredEntityId: null,
-    placementPreview: null,
-    moveDraft: null,
-    marqueeDraft: null,
   };
 }
 

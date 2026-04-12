@@ -4,12 +4,7 @@ import type {
   SelectedEntitiesState,
 } from "@/editor/contracts/entity-collection";
 import type { MarqueeRangeState } from "@/editor/contracts/marquee-range";
-import type {
-  PlacementPreviewState,
-  PlacementInteractionMode,
-} from "@/editor/contracts/placement-preview";
-import type { MarqueeDraftState } from "@/editor/contracts/marquee-draft";
-import type { MoveDraftState } from "@/editor/contracts/move-draft";
+import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
 import type {
   CurrentInteractionMode,
   DisplayTool,
@@ -28,10 +23,6 @@ export interface EditorSession {
   selectedEntities: SelectedEntitiesState | null;
   draftEntities: DraftEntitiesState | null;
   marqueeRange: MarqueeRangeState | null;
-  selection: string[];
   selectionInputMode: PlacementInteractionMode | null;
   hoveredEntityId: string | null;
-  placementPreview: PlacementPreviewState | null;
-  moveDraft: MoveDraftState | null;
-  marqueeDraft: MarqueeDraftState | null;
 }
