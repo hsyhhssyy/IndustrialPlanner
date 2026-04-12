@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getStage1BaseDefinition } from "@/domain/base/stage1-bases";
 import { compileStage1World } from "@/domain/compiler/stage1-compiler";
 import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";
 import { createStage1Registry } from "@/domain/registry/stage1-registry";
@@ -452,5 +453,50 @@ describe("Render scene model", () => {
       selected: true,
       ghosted: false,
     });
+  });
+
+  it("keeps world bounds expandable from draftEntities when legacy preview state is unavailable", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const base = getStage1BaseDefinition(document.baseId);
+    const scene = buildRenderScene({
+      locale: "zh-CN",
+      document,
+      topology,
+      registry,
+      canvasView: createInitialCanvasViewState(),
+      interaction: {
+        selectedEntityIds: [],
+        selectionPresentation: null,
+        draftEntities: {
+          ids: ["draft:placement-preview"],
+          boundsDerived: {
+            left: 100,
+            top: 70,
+            width: 5,
+            height: 4,
+          },
+          geometricCenterCellsDerived: { x: 102.5, y: 72 },
+        },
+        placementPreview: null,
+        moveDraft: null,
+        pendingLinkSourceEntityId: null,
+      },
+      runtimeSnapshot: {
+        tick: 0,
+        status: "idle",
+        entityViews: {},
+        patchedEntityIds: [],
+      },
+    });
+
+    expect(scene.worldWidth).toBe(
+      (100 + 5) * document.documentSettings.gridSize +
+        document.documentSettings.gridSize * 3,
+    );
+    expect(scene.worldHeight).toBe(
+      base.placeableSize * document.documentSettings.gridSize,
+    );
   });
 });

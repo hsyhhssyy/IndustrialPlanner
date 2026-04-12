@@ -5,6 +5,7 @@ import {
   type Stage1Registry,
 } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
+import type { DraftEntitiesState } from "@/editor/contracts/entity-collection";
 import type { MoveDraftState } from "@/editor/contracts/move-draft";
 import type { PlacementPreviewState } from "@/editor/contracts/placement-preview";
 import {
@@ -21,6 +22,7 @@ interface DeriveRenderWorldBoundsPxOptions {
   document: WorldDocument;
   topology: CompiledTopology;
   registry: Stage1Registry;
+  draftEntities?: DraftEntitiesState | null;
   placementPreview: PlacementPreviewState | null;
   moveDraft: MoveDraftState | null;
 }
@@ -113,6 +115,27 @@ function getMoveDraftBoundsPx(
   };
 }
 
+function getDraftEntityCollectionBoundsPx(
+  options: DeriveRenderWorldBoundsPxOptions,
+): RenderWorldBoundsPx | null {
+  const bounds = options.draftEntities?.boundsDerived;
+
+  if (!bounds) {
+    return null;
+  }
+
+  const { gridSize } = options.document.documentSettings;
+
+  return {
+    width:
+      (bounds.left + bounds.width) * gridSize +
+      gridSize * RENDER_WORLD_PADDING_CELLS,
+    height:
+      (bounds.top + bounds.height) * gridSize +
+      gridSize * RENDER_WORLD_PADDING_CELLS,
+  };
+}
+
 export function deriveRenderWorldBoundsPx(
   options: DeriveRenderWorldBoundsPxOptions,
 ): RenderWorldBoundsPx {
@@ -120,15 +143,18 @@ export function deriveRenderWorldBoundsPx(
   const { gridSize } = document.documentSettings;
   const base = getStage1BaseDefinition(document.baseId);
   const baseWorldSize = base.placeableSize * gridSize;
+  const draftEntityBounds = getDraftEntityCollectionBoundsPx(options);
   const previewBounds = getPlacementPreviewBoundsPx(options);
   const moveDraftBounds = getMoveDraftBoundsPx(options);
   let width = Math.max(
     baseWorldSize,
+    draftEntityBounds?.width ?? 0,
     previewBounds?.width ?? 0,
     moveDraftBounds?.width ?? 0,
   );
   let height = Math.max(
     baseWorldSize,
+    draftEntityBounds?.height ?? 0,
     previewBounds?.height ?? 0,
     moveDraftBounds?.height ?? 0,
   );

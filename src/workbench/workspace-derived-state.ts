@@ -290,6 +290,7 @@ export function deriveRenderDerivedState(
     document,
     topology,
     registry,
+    draftEntities: ui.phase === "edit" ? editor.session.draftEntities : null,
     placementPreview: ui.phase === "edit" ? editor.session.placementPreview : null,
     moveDraft: ui.phase === "edit" ? editor.session.moveDraft : null,
   });

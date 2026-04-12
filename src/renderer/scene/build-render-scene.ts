@@ -275,6 +275,7 @@ export function buildRenderScene(input: RenderSceneInput): RenderSceneModel {
     document: input.document,
     topology: input.topology,
     registry: input.registry,
+    draftEntities: input.interaction.draftEntities,
     placementPreview: input.interaction.placementPreview,
     moveDraft: input.interaction.moveDraft,
   });

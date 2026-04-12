@@ -69,6 +69,7 @@ function buildRenderInteractionState(
   return {
     selectedEntityIds: editor.session.selection,
     selectionPresentation: deriveSelectionPresentation(editor.session),
+    draftEntities: editor.session.draftEntities,
     placementPreview: editor.session.placementPreview,
     moveDraft: editor.session.moveDraft,
     pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
@@ -104,6 +105,7 @@ function isSameRenderSceneInteractionState(
       left.selectionPresentation,
       right.selectionPresentation,
     ) &&
+    left.draftEntities === right.draftEntities &&
     left.placementPreview === right.placementPreview &&
     left.moveDraft === right.moveDraft &&
     left.pendingLinkSourceEntityId === right.pendingLinkSourceEntityId

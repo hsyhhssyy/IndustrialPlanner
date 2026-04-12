@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { getStage1BaseDefinition } from "@/domain/base/stage1-bases";
 import { compileStage1World } from "@/domain/compiler/stage1-compiler";
 import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";
 import {
@@ -866,5 +867,69 @@ describe("WorkspaceDerivedStore", () => {
 
     derivedStore.dispose();
     workspaceStore.dispose();
+  });
+
+  it("expands render world bounds from draftEntities when legacy preview state is absent", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const base = getStage1BaseDefinition(document.baseId);
+    const workspaceState = {
+      document,
+      editor: {
+        session: {
+          ...createInitialEditorSession(),
+          draftEntities: {
+            ids: ["draft:placement-preview"],
+            boundsDerived: {
+              left: 100,
+              top: 70,
+              width: 5,
+              height: 4,
+            },
+            geometricCenterCellsDerived: { x: 102.5, y: 72 },
+          },
+          placementPreview: null,
+          moveDraft: null,
+        },
+        history: {
+          canUndo: false,
+          canRedo: false,
+          undoDepth: 0,
+          redoDepth: 0,
+        },
+      },
+      ui: createInitialWorkbenchUiState(),
+      canvasView: createInitialCanvasViewState(),
+      simulation: {
+        runtimeSnapshot: {
+          tick: 0,
+          status: "idle" as const,
+          entityViews: {},
+          patchedEntityIds: [],
+        },
+        telemetry: {
+          tick: 0,
+          simulatedHertz: 0,
+          entityCount: 0,
+        },
+        inspectorDetails: null,
+        patchSet: createEmptySimulationPatchSet(),
+        selection: [],
+      },
+    };
+
+    expect(
+      deriveRenderDerivedState({
+        workspaceState,
+        topology,
+        registry,
+      }).worldBoundsPx,
+    ).toEqual({
+      width:
+        (100 + 5) * document.documentSettings.gridSize +
+        document.documentSettings.gridSize * 3,
+      height: base.placeableSize * document.documentSettings.gridSize,
+    });
   });
 });
