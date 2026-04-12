@@ -10,10 +10,12 @@ import type { GridRotation } from "@/shared/geometry/grid";
 import type { AppLocale } from "@/i18n/messages";
 import type { MoveDraftState } from "@/editor/contracts/move-draft";
 import type { PlacementPreviewState } from "@/editor/contracts/placement-preview";
+import type { SelectionPresentationState } from "@/editor/contracts/selection-presentation";
 import type { CanvasViewState } from "@/workbench/workspace-state";
 
 export interface RenderSceneInteractionState {
   selectedEntityIds: string[];
+  selectionPresentation?: SelectionPresentationState | null;
   placementPreview: PlacementPreviewState | null;
   moveDraft: MoveDraftState | null;
   pendingLinkSourceEntityId: string | null;

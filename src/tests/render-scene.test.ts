@@ -406,4 +406,51 @@ describe("Render scene model", () => {
       scene.entities.filter((entity) => entity.ghosted).map((entity) => entity.entityId),
     ).toEqual(["reactor-1", "filler-1"]);
   });
+
+  it("prefers selectionPresentation for selected and ghosted world entities", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const scene = buildRenderScene({
+      locale: "zh-CN",
+      document,
+      topology,
+      registry,
+      canvasView: createInitialCanvasViewState(),
+      interaction: {
+        selectedEntityIds: ["reactor-1"],
+        selectionPresentation: {
+          activeSelection: {
+            worldEntityIds: ["filler-1"],
+            draftEntityIds: [],
+          },
+          ghostedWorldEntityIds: ["reactor-1"],
+          inspectorSource: "projected",
+          drawMovePreviewSelectionOutline: false,
+        },
+        placementPreview: null,
+        moveDraft: null,
+        pendingLinkSourceEntityId: null,
+      },
+      runtimeSnapshot: {
+        tick: 0,
+        status: "idle",
+        entityViews: {},
+        patchedEntityIds: [],
+      },
+    });
+
+    expect(
+      scene.entities.find((entity) => entity.entityId === "reactor-1"),
+    ).toMatchObject({
+      selected: false,
+      ghosted: true,
+    });
+    expect(
+      scene.entities.find((entity) => entity.entityId === "filler-1"),
+    ).toMatchObject({
+      selected: true,
+      ghosted: false,
+    });
+  });
 });

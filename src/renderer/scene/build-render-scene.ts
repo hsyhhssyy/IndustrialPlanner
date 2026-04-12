@@ -21,6 +21,21 @@ import { deriveRenderWorldBoundsPx } from "@/renderer/scene/render-world-bounds"
 import type { GridRotation } from "@/shared/geometry/grid";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
+function getSelectedWorldEntityIds(input: RenderSceneInput): string[] {
+  return (
+    input.interaction.selectionPresentation?.activeSelection.worldEntityIds ??
+    input.interaction.selectedEntityIds
+  );
+}
+
+function getGhostedWorldEntityIds(input: RenderSceneInput): string[] {
+  return (
+    input.interaction.selectionPresentation?.ghostedWorldEntityIds ??
+    input.interaction.moveDraft?.entities.map((draftEntity) => draftEntity.entityId) ??
+    []
+  );
+}
+
 function getEntityFill(definition: Stage1EntityDefinition): string {
   switch (definition.category) {
     case "storage":
@@ -90,11 +105,8 @@ function buildEntitySprite(input: RenderSceneInput, entityId: string): RenderEnt
     textureCenterOffsetY: textureMetrics.centerOffsetYPx,
     showLabel: shouldShowStage1EntityLabel(definition, renderKind),
     status: input.runtimeSnapshot.entityViews[entityId]?.status ?? "idle",
-    selected: input.interaction.selectedEntityIds.includes(entityId),
-    ghosted:
-      input.interaction.moveDraft?.entities.some(
-        (draftEntity) => draftEntity.entityId === entityId,
-      ) ?? false,
+    selected: getSelectedWorldEntityIds(input).includes(entityId),
+    ghosted: getGhostedWorldEntityIds(input).includes(entityId),
     pendingLinkSource:
       input.interaction.pendingLinkSourceEntityId === entityId,
     patched: input.runtimeSnapshot.patchedEntityIds.includes(entityId),
@@ -140,8 +152,8 @@ function buildExplicitLinkSprites(
           (targetView.position.y + targetFootprint.height / 2) *
           input.document.documentSettings.gridSize,
         selected:
-          input.interaction.selectedEntityIds.includes(link.sourceEntityId) ||
-          input.interaction.selectedEntityIds.includes(link.targetEntityId),
+          getSelectedWorldEntityIds(input).includes(link.sourceEntityId) ||
+          getSelectedWorldEntityIds(input).includes(link.targetEntityId),
       };
     })
     .filter((link): link is RenderExplicitLink => link !== null);
