@@ -23,7 +23,7 @@ import {
   type MarqueeDraftState,
 } from "@/editor/contracts/marquee-draft";
 import {
-  resolveNextSelection,
+  resolveMarqueeSelection,
   type EditorSelectionUpdateMode,
 } from "@/editor/contracts/selection";
 import {
@@ -129,24 +129,6 @@ function resolveMarqueeBounds(
     width: right - left + 1,
     height: bottom - top + 1,
   };
-}
-
-function resolveMarqueeSelection(
-  baseSelection: readonly string[],
-  entityIds: readonly string[],
-  selectionMode: EditorSelectionUpdateMode,
-): string[] {
-  if (selectionMode === "replace") {
-    return [...entityIds];
-  }
-
-  let nextSelection = [...baseSelection];
-
-  for (const entityId of entityIds) {
-    nextSelection = resolveNextSelection(nextSelection, entityId, "toggle");
-  }
-
-  return nextSelection;
 }
 
 function hitTestWorldEntity(
@@ -1164,7 +1146,7 @@ class EditorHostImpl implements EditorHost {
       selectionMode,
     });
 
-    this.core.setMarqueeDraft(draft);
+    this.core.beginMarquee(inputMode, selectionMode, draft);
     this.logger.info("Began marquee draft.", {
       interactionMode: inputMode,
       selectionMode,
@@ -1226,8 +1208,12 @@ class EditorHostImpl implements EditorHost {
       marqueeDraft.selectionMode,
     );
 
-    this.core.setSelection(nextSelection, marqueeDraft.interactionMode);
-    this.core.setMarqueeDraft(null);
+    const confirmed = this.core.confirmMarqueeSelection();
+
+    if (!confirmed) {
+      return false;
+    }
+
     this.logger.info("Confirmed marquee draft.", {
       interactionMode: marqueeDraft.interactionMode,
       selectionMode: marqueeDraft.selectionMode,
@@ -1247,7 +1233,12 @@ class EditorHostImpl implements EditorHost {
       return false;
     }
 
-    this.core.setMarqueeDraft(null);
+    const canceled = this.core.cancelMarquee();
+
+    if (!canceled) {
+      return false;
+    }
+
     this.logger.info("Canceled marquee draft.", {
       interactionMode: marqueeDraft.interactionMode,
       selectionMode: marqueeDraft.selectionMode,

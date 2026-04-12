@@ -3,6 +3,7 @@ import { DEFAULT_STAGE1_BASE_ID } from "@/domain/base/stage1-bases";
 import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import {
   getPendingLinkSourceEntityId,
+  isMarqueeInteractionMode,
   isMoveInteractionMode,
   isPlacementInteractionMode,
 } from "@/editor/contracts/interaction-mode";
@@ -32,6 +33,14 @@ function getMoveMode(
   session: ReturnType<typeof createWorkbenchController>["editorStore"]["session"],
 ) {
   return isMoveInteractionMode(session.currentMode)
+    ? session.currentMode
+    : null;
+}
+
+function getMarqueeMode(
+  session: ReturnType<typeof createWorkbenchController>["editorStore"]["session"],
+) {
+  return isMarqueeInteractionMode(session.currentMode)
     ? session.currentMode
     : null;
 }
@@ -1550,6 +1559,10 @@ describe("WorkbenchController scaffold", () => {
 
     const duringMarquee = readWorkbenchState(controller);
 
+    expect(getMarqueeMode(duringMarquee.session)).toMatchObject({
+      inputMode: "pointer",
+      selectionMode: "replace",
+    });
     expect(duringMarquee.session.marqueeDraft).toMatchObject({
       interactionMode: "pointer",
       selectionMode: "replace",
@@ -1561,6 +1574,7 @@ describe("WorkbenchController scaffold", () => {
 
     const after = readWorkbenchState(controller);
 
+    expect(after.session.currentMode).toMatchObject({ key: "select" });
     expect(after.session.selection).toEqual(["reactor-1", "filler-1"]);
     expect(after.session.selectionInputMode).toBe("pointer");
     expect(after.session.marqueeDraft).toBeNull();
@@ -1588,12 +1602,53 @@ describe("WorkbenchController scaffold", () => {
       }),
     );
 
+    expect(getMarqueeMode(readWorkbenchState(controller).session)).toMatchObject({
+      inputMode: "pointer",
+      selectionMode: "toggle",
+    });
+
     await controller.confirmMarqueeSelection();
 
     const after = readWorkbenchState(controller);
 
+    expect(after.session.currentMode).toMatchObject({ key: "select" });
     expect(after.session.selection).toEqual(["filler-1"]);
     expect(after.session.selectionInputMode).toBe("pointer");
+    expect(after.session.marqueeDraft).toBeNull();
+
+    controller.dispose();
+  });
+
+  it("cancels marquee and returns to select mode", () => {
+    const controller = createWorkbenchController();
+    const marqueeBounds = resolveEntityBounds(controller, ["reactor-1", "filler-1"]);
+
+    controller.beginMarqueeFromScreenPoint(
+      toScreenPointForGrid(controller, {
+        x: marqueeBounds.left,
+        y: marqueeBounds.top,
+      }),
+      "pointer",
+      "replace",
+    );
+    controller.updateMarqueeDraftFromScreenPoint(
+      toScreenPointForGrid(controller, {
+        x: marqueeBounds.left + marqueeBounds.width - 1,
+        y: marqueeBounds.top + marqueeBounds.height - 1,
+      }),
+    );
+
+    expect(getMarqueeMode(readWorkbenchState(controller).session)).toMatchObject({
+      inputMode: "pointer",
+      selectionMode: "replace",
+    });
+
+    controller.cancelMarquee();
+
+    const after = readWorkbenchState(controller);
+
+    expect(after.session.currentMode).toMatchObject({ key: "select" });
+    expect(after.session.selection).toEqual(["reactor-1"]);
     expect(after.session.marqueeDraft).toBeNull();
 
     controller.dispose();
@@ -1618,7 +1673,13 @@ describe("WorkbenchController scaffold", () => {
       }),
     );
 
-    expect(readWorkbenchState(controller).session.marqueeDraft).toMatchObject({
+    const duringMarquee = readWorkbenchState(controller);
+
+    expect(getMarqueeMode(duringMarquee.session)).toMatchObject({
+      inputMode: "touch",
+      selectionMode: "replace",
+    });
+    expect(duringMarquee.session.marqueeDraft).toMatchObject({
       interactionMode: "touch",
       selectionMode: "replace",
     });
@@ -1627,6 +1688,7 @@ describe("WorkbenchController scaffold", () => {
 
     const after = readWorkbenchState(controller);
 
+    expect(after.session.currentMode).toMatchObject({ key: "select" });
     expect(after.session.selection).toEqual(["reactor-1", "filler-1"]);
     expect(after.session.selectionInputMode).toBe("touch");
     expect(after.session.marqueeDraft).toBeNull();

@@ -15,3 +15,21 @@ export function resolveNextSelection(
 
   return [...currentSelection, entityId];
 }
+
+export function resolveMarqueeSelection(
+  baseSelection: readonly string[],
+  entityIds: readonly string[],
+  selectionMode: EditorSelectionUpdateMode,
+): string[] {
+  if (selectionMode === "replace") {
+    return [...entityIds];
+  }
+
+  let nextSelection = [...baseSelection];
+
+  for (const entityId of entityIds) {
+    nextSelection = resolveNextSelection(nextSelection, entityId, "toggle");
+  }
+
+  return nextSelection;
+}

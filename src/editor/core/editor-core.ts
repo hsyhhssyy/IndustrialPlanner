@@ -11,12 +11,14 @@ import type {
 } from "@/editor/core/commands/document-command";
 import type { EditorSession } from "@/editor/contracts/editor-session";
 import {
+  createMarqueeInteractionMode,
   createInspectInteractionMode,
   createLinkInteractionMode,
   createMoveInteractionMode,
   createPlacementInteractionMode,
   createSelectInteractionMode,
   getPendingLinkSourceEntityId,
+  isMarqueeInteractionMode,
   isLinkInteractionMode,
   isMoveInteractionMode,
   isPlacementInteractionMode,
@@ -28,6 +30,7 @@ import {
 import type { MoveDraftState } from "@/editor/contracts/move-draft";
 import type { MarqueeDraftState } from "@/editor/contracts/marquee-draft";
 import {
+  resolveMarqueeSelection,
   resolveNextSelection,
   type EditorSelectionUpdateMode,
 } from "@/editor/contracts/selection";
@@ -83,12 +86,19 @@ export interface EditorCore {
     inputMode: PlacementInteractionMode,
     draft: MoveDraftState,
   ) => void;
+  beginMarquee: (
+    inputMode: PlacementInteractionMode,
+    selectionMode: EditorSelectionUpdateMode,
+    draft: MarqueeDraftState,
+  ) => void;
   setPlacementRotation: (rotation: GridRotation | null) => void;
   setPlacementPreview: (preview: PlacementPreviewState | null) => void;
   setMoveDraft: (draft: MoveDraftState | null) => void;
   setMarqueeDraft: (draft: MarqueeDraftState | null) => void;
   cancelMove: () => void;
+  cancelMarquee: () => boolean;
   confirmMove: () => boolean;
+  confirmMarqueeSelection: () => boolean;
   applyDocumentCommand: (command: DocumentCommand) => boolean;
   setSelection: (
     selection: readonly string[],
@@ -206,6 +216,25 @@ class EditorCoreImpl implements EditorCore {
     this.setMoveDraft(draft);
   }
 
+  beginMarquee(
+    inputMode: PlacementInteractionMode,
+    selectionMode: EditorSelectionUpdateMode,
+    draft: MarqueeDraftState,
+  ): void {
+    this.applyInteractionMode(
+      createMarqueeInteractionMode({
+        inputMode,
+        selectionMode,
+        previousModeKey: this.session.currentMode.key,
+        entryDisplayTool: this.session.displayTool,
+      }),
+      true,
+      true,
+    );
+
+    this.setMarqueeDraft(draft);
+  }
+
   setPlacementRotation(rotation: GridRotation | null): void {
     if (!isPlacementInteractionMode(this.session.currentMode)) {
       return;
@@ -252,6 +281,19 @@ class EditorCoreImpl implements EditorCore {
       true,
       true,
     );
+  }
+
+  cancelMarquee(): boolean {
+    if (!isMarqueeInteractionMode(this.session.currentMode)) {
+      return false;
+    }
+
+    this.applyInteractionMode(
+      resolveDefaultNextInteractionMode(this.session.currentMode),
+      true,
+      true,
+    );
+    return true;
   }
 
   confirmMove(): boolean {
@@ -310,6 +352,30 @@ class EditorCoreImpl implements EditorCore {
       });
     }
 
+    this.applyInteractionMode(
+      resolveDefaultNextInteractionMode(this.session.currentMode),
+      true,
+      true,
+    );
+    return true;
+  }
+
+  confirmMarqueeSelection(): boolean {
+    if (
+      !isMarqueeInteractionMode(this.session.currentMode) ||
+      !this.session.marqueeDraft
+    ) {
+      return false;
+    }
+
+    const marqueeDraft = this.session.marqueeDraft;
+    const nextSelection = resolveMarqueeSelection(
+      marqueeDraft.baseSelection,
+      marqueeDraft.entityIds,
+      marqueeDraft.selectionMode,
+    );
+
+    this.setSelection(nextSelection, marqueeDraft.interactionMode);
     this.applyInteractionMode(
       resolveDefaultNextInteractionMode(this.session.currentMode),
       true,
@@ -655,6 +721,10 @@ class EditorCoreImpl implements EditorCore {
             ),
           }
         : null;
+
+    if (isMarqueeInteractionMode(nextMode) && !marqueeDraft) {
+      nextMode = resolveDefaultNextInteractionMode(nextMode);
+    }
 
     this.session = {
       ...this.session,
