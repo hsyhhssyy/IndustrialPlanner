@@ -97,6 +97,11 @@ interface SyncMetrics {
   canvasViewClamped: boolean;
 }
 
+interface SyncedWorkspaceStateCandidate {
+  currentState: WorkspaceState;
+  nextState: WorkspaceState;
+}
+
 interface PlacementPreviewDiagnosticWindow {
   startedAt: number;
   lastFlushedAt: number;
@@ -918,18 +923,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
   private sync(): SyncMetrics {
     return this.measureProfilerStage("controller.sync.total", () => {
       const startedAt = getDiagnosticTimeMs();
-      this.editorStore.setSnapshot(this.editorHost.getState());
-      const currentState = this.workspaceStore.rootStore.getSnapshot();
-      const nextState = this.buildSyncedWorkspaceState(currentState);
+      const { nextState } = this.collectSyncedWorkspaceStateCandidate();
       const { finalState, worldBoundsDurationMs, canvasViewClamped } =
         this.clampWorkspaceStateCanvasView(nextState);
-
-      const rootStoreSetStartedAt = getDiagnosticTimeMs();
-      this.workspaceStore.rootStore.setSnapshot(finalState);
-      this.recordProfilerStageDuration(
-        "controller.sync.rootStoreSet",
-        getDiagnosticTimeMs() - rootStoreSetStartedAt,
-      );
+      this.publishWorkspaceState(finalState);
       const { persistedWorkspaceChanged, storageSaveDurationMs } =
         this.persistWorkspaceStateIfNeeded(finalState);
 
@@ -941,6 +938,26 @@ class WorkbenchControllerImpl implements WorkbenchController {
         canvasViewClamped,
       };
     });
+  }
+
+  private collectSyncedWorkspaceStateCandidate(): SyncedWorkspaceStateCandidate {
+    this.editorStore.setSnapshot(this.editorHost.getState());
+
+    const currentState = this.workspaceStore.rootStore.getSnapshot();
+
+    return {
+      currentState,
+      nextState: this.buildSyncedWorkspaceState(currentState),
+    };
+  }
+
+  private publishWorkspaceState(workspaceState: WorkspaceState): void {
+    const rootStoreSetStartedAt = getDiagnosticTimeMs();
+    this.workspaceStore.rootStore.setSnapshot(workspaceState);
+    this.recordProfilerStageDuration(
+      "controller.sync.rootStoreSet",
+      getDiagnosticTimeMs() - rootStoreSetStartedAt,
+    );
   }
 
   private createWorkspacePersistenceState(
