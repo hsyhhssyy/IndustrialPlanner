@@ -1076,24 +1076,14 @@ class WorkbenchControllerImpl implements WorkbenchController {
       });
       const canvasViewClamped = clampedCanvasView !== nextState.canvasView;
 
-      const persistedWorkspaceChanged =
-        this.lastSavedWorkspacePersistence === null ||
-        this.lastSavedWorkspacePersistence.ui !== finalState.ui ||
-        this.lastSavedWorkspacePersistence.canvasView !== finalState.canvasView;
-
       const rootStoreSetStartedAt = getDiagnosticTimeMs();
       this.workspaceStore.rootStore.setSnapshot(finalState);
       this.recordProfilerStageDuration(
         "controller.sync.rootStoreSet",
         getDiagnosticTimeMs() - rootStoreSetStartedAt,
       );
-      let storageSaveDurationMs = 0;
-
-      if (persistedWorkspaceChanged) {
-        const storageSaveStartedAt = getDiagnosticTimeMs();
-        this.saveWorkspaceState(finalState);
-        storageSaveDurationMs = getDiagnosticTimeMs() - storageSaveStartedAt;
-      }
+      const { persistedWorkspaceChanged, storageSaveDurationMs } =
+        this.persistWorkspaceStateIfNeeded(finalState);
 
       return {
         worldBoundsDurationMs,
@@ -1105,14 +1095,40 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
   }
 
-  private saveWorkspaceState(workspaceState: WorkspaceState): void {
-    const persistenceState = {
+  private createWorkspacePersistenceState(
+    workspaceState: WorkspaceState,
+  ): WorkspacePersistenceState {
+    return {
       ui: workspaceState.ui,
       canvasView: workspaceState.canvasView,
     } satisfies WorkspacePersistenceState;
+  }
 
+  private persistWorkspaceStateIfNeeded(workspaceState: WorkspaceState): {
+    persistedWorkspaceChanged: boolean;
+    storageSaveDurationMs: number;
+  } {
+    const persistenceState = this.createWorkspacePersistenceState(workspaceState);
+    const persistedWorkspaceChanged =
+      this.lastSavedWorkspacePersistence === null ||
+      this.lastSavedWorkspacePersistence.ui !== persistenceState.ui ||
+      this.lastSavedWorkspacePersistence.canvasView !== persistenceState.canvasView;
+
+    if (!persistedWorkspaceChanged) {
+      return {
+        persistedWorkspaceChanged,
+        storageSaveDurationMs: 0,
+      };
+    }
+
+    const storageSaveStartedAt = getDiagnosticTimeMs();
     this.storage.saveWorkspaceState(persistenceState);
     this.lastSavedWorkspacePersistence = persistenceState;
+
+    return {
+      persistedWorkspaceChanged,
+      storageSaveDurationMs: getDiagnosticTimeMs() - storageSaveStartedAt,
+    };
   }
 
   private getViewportMetrics(workspaceState = this.workspaceStore.rootStore.getSnapshot()) {

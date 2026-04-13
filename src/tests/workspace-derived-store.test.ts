@@ -518,7 +518,6 @@ describe("WorkspaceDerivedStore", () => {
           },
           geometricCenterCellsDerived: { x: 6.5, y: 5 },
         },
-        selection: [],
         selectionInputMode: "touch" as const,
       },
       editorHistory: {
