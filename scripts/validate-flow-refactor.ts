@@ -20,6 +20,7 @@ const EDGE_DELTA: Record<Edge, { x: number; y: number }> = {
 const BASE_ID = 'wuling_tianwangping_aid'
 const ORE_ITEM_ID = 'item_originium_ore'
 const ALT_ITEM_ID = 'item_plant_grass_2'
+const WATER_ITEM_ID = 'item_liquid_water'
 
 let instanceCounter = 0
 
@@ -156,6 +157,14 @@ function simulate(layout: LayoutState, ticks: number) {
   return sim
 }
 
+function simulateReal(layout: LayoutState, ticks: number, initialBatteryPercent = 0) {
+  let sim = startSimulation(layout, createInitialSimState(), 'real', initialBatteryPercent)
+  for (let index = 0; index < ticks; index += 1) {
+    sim = tickSimulation(layout, sim)
+  }
+  return sim
+}
+
 function firstArrivalTick(layout: LayoutState, deviceId: string, itemId: ItemId, maxTicks: number) {
   let sim = startSimulation(layout, createInitialSimState(), 'infinite')
   let previousAmount = storageAmount(sim, deviceId, itemId)
@@ -262,46 +271,47 @@ function runJunctionScenario(): ScenarioResult {
 }
 
 function runBridgeScenario(): ScenarioResult {
-  resetInstanceCounter()
-  const bridge = createDevice('item_log_connector', 0, { x: 20, y: 20 })
+  const summaries = ROTATIONS.map((rotation) => {
+    resetInstanceCounter()
+    const bridge = createDevice('item_log_connector', rotation, { x: 20, y: 20 })
 
-  const leftBelt = placeSourceBefore(bridge, 'in_w', 'belt_straight_1x1', 'out_e')
-  const leftSource = placeSourceBefore(leftBelt, 'in_w', 'item_port_storager_1', 'out_n_1', {
-    submitToWarehouse: false,
-    storagePreloadInputs: [{ slotIndex: 0, itemId: ORE_ITEM_ID, amount: 10 }],
+    const leftBelt = placeSourceBefore(bridge, 'in_w', 'belt_straight_1x1', 'out_e')
+    const leftSource = placeSourceBefore(leftBelt, 'in_w', 'item_port_storager_1', 'out_n_1', {
+      submitToWarehouse: false,
+      storagePreloadInputs: [{ slotIndex: 0, itemId: ORE_ITEM_ID, amount: 10 }],
+    })
+    const rightBelt = placeTargetAfter(bridge, 'out_e', 'belt_straight_1x1', 'in_w')
+    const rightSink = buildSinkStorageAgainst(rightBelt, 'out_e')
+
+    const topBelt = placeSourceBefore(bridge, 'in_n', 'belt_straight_1x1', 'out_e')
+    const topSource = placeSourceBefore(topBelt, 'in_w', 'item_port_storager_1', 'out_n_1', {
+      submitToWarehouse: false,
+      storagePreloadInputs: [{ slotIndex: 0, itemId: ALT_ITEM_ID, amount: 10 }],
+    })
+    const bottomBelt = placeTargetAfter(bridge, 'out_s', 'belt_straight_1x1', 'in_w')
+    const bottomSink = buildSinkStorageAgainst(bottomBelt, 'out_e')
+
+    const layout = buildLayout([leftSource, leftBelt, bridge, rightBelt, rightSink, topSource, topBelt, bottomBelt, bottomSink])
+    const links = ensureConnected(layout, 8, `bridge-${rotation}`)
+    const bridgeLinks = deviceLinkSummary(layout, bridge.instanceId)
+    const firstRightTick = firstArrivalTick(layout, rightSink.instanceId, ORE_ITEM_ID, 160)
+    const firstBottomTick = firstArrivalTick(layout, bottomSink.instanceId, ALT_ITEM_ID, 160)
+    const sim = simulate(layout, 520)
+    ensureNoHardBlock(sim, layout.devices.map((device) => device.instanceId), `bridge-${rotation}`)
+    const rightOre = storageAmount(sim, rightSink.instanceId, ORE_ITEM_ID)
+    const bottomAlt = storageAmount(sim, bottomSink.instanceId, ALT_ITEM_ID)
+    const bridgeState = bridgeLaneState(sim, bridge.instanceId)
+    assert(firstRightTick === 121, `bridge rotation=${rotation} 水平首包到达 tick 异常，expected=121 actual=${String(firstRightTick)}, bridge=${bridgeState}, links=${bridgeLinks}`)
+    assert(firstBottomTick === 121, `bridge rotation=${rotation} 垂直首包到达 tick 异常，expected=121 actual=${String(firstBottomTick)}, bridge=${bridgeState}, links=${bridgeLinks}`)
+    assert(rightOre > 0, `bridge rotation=${rotation} 水平通道没有到货，right=${rightOre}, bottom=${bottomAlt}, bridge=${bridgeState}, links=${bridgeLinks}`)
+    assert(bottomAlt > 0, `bridge rotation=${rotation} 垂直通道没有到货，right=${rightOre}, bottom=${bottomAlt}, bridge=${bridgeState}, links=${bridgeLinks}`)
+    return { rotation, links, firstRightTick, firstBottomTick, rightOre, bottomAlt }
   })
-  const rightBelt = placeTargetAfter(bridge, 'out_e', 'belt_straight_1x1', 'in_w')
-  const rightSink = buildSinkStorageAgainst(rightBelt, 'out_e')
 
-  const topBelt = placeSourceBefore(bridge, 'in_n', 'belt_straight_1x1', 'out_e')
-  const topSource = placeSourceBefore(topBelt, 'in_w', 'item_port_storager_1', 'out_n_1', {
-    submitToWarehouse: false,
-    storagePreloadInputs: [{ slotIndex: 0, itemId: ALT_ITEM_ID, amount: 10 }],
-  })
-  const bottomBelt = placeTargetAfter(bridge, 'out_s', 'belt_straight_1x1', 'in_w')
-  const bottomSink = buildSinkStorageAgainst(bottomBelt, 'out_e')
-
-  const layout = buildLayout([leftSource, leftBelt, bridge, rightBelt, rightSink, topSource, topBelt, bottomBelt, bottomSink])
-  const links = ensureConnected(layout, 8, 'bridge')
-  const bridgeLinks = deviceLinkSummary(layout, bridge.instanceId)
-  const firstRightTick = firstArrivalTick(layout, rightSink.instanceId, ORE_ITEM_ID, 160)
-  const sim = simulate(layout, 520)
-  ensureNoHardBlock(sim, layout.devices.map((device) => device.instanceId), 'bridge')
-  const rightOre = storageAmount(sim, rightSink.instanceId, ORE_ITEM_ID)
-  const bottomAlt = storageAmount(sim, bottomSink.instanceId, ALT_ITEM_ID)
-  const bridgeState = bridgeLaneState(sim, bridge.instanceId)
-  assert(firstRightTick === 121, `bridge 首包到达 tick 异常，expected=121 actual=${String(firstRightTick)}, bridge=${bridgeState}, links=${bridgeLinks}`)
-  assert(rightOre > 0, `bridge 水平通道没有到货，right=${rightOre}, bottom=${bottomAlt}, bridge=${bridgeState}, links=${bridgeLinks}`)
-  assert(bottomAlt > 0, `bridge 垂直通道没有到货，right=${rightOre}, bottom=${bottomAlt}, bridge=${bridgeState}, links=${bridgeLinks}`)
   return {
     name: 'bridge',
     summary: {
-      links,
-      firstRightTick: firstRightTick ?? 'missing',
-      rightOre,
-      bottomAlt,
-      bridgeState,
-      bridgeLinks,
+      rotations: JSON.stringify(summaries),
     },
   }
 }
@@ -441,6 +451,89 @@ function runBeltChainScenario(): ScenarioResult {
   }
 }
 
+function buildLiquidSource(itemId: ItemId, amount: number, origin = { x: 0, y: 0 }, desiredEdge: Edge = 'E') {
+  const rotation = rotationForPortEdge('item_port_liquid_storager_1', 'out_e_1', desiredEdge)
+  return createDevice(
+    'item_port_liquid_storager_1',
+    rotation,
+    origin,
+    {
+      storagePreloadInputs: [{ slotIndex: 0, itemId, amount }],
+    },
+  )
+}
+
+function buildLiquidSinkAgainst(sourceDevice: DeviceInstance, sourcePortId: string) {
+  return placeTargetAfter(sourceDevice, sourcePortId, 'item_port_liquid_storager_1', 'in_w_1', {})
+}
+
+function runPipeRoundRobinScenario(): ScenarioResult {
+  resetInstanceCounter()
+  const converger = createDevice('item_pipe_converger', 0, { x: 20, y: 20 })
+  const northPipe = placeSourceBefore(converger, 'in_n', 'pipe_straight_1x1', 'out_e')
+  const northSource = placeSourceBefore(northPipe, 'in_w', 'item_port_liquid_storager_1', 'out_e_1', {
+    storagePreloadInputs: [{ slotIndex: 0, itemId: WATER_ITEM_ID, amount: 20 }],
+  })
+  const eastPipe = placeSourceBefore(converger, 'in_e', 'pipe_straight_1x1', 'out_e')
+  const eastSource = placeSourceBefore(eastPipe, 'in_w', 'item_port_liquid_storager_1', 'out_e_1', {
+    storagePreloadInputs: [{ slotIndex: 0, itemId: WATER_ITEM_ID, amount: 20 }],
+  })
+  const outPipe = placeTargetAfter(converger, 'out_w', 'pipe_straight_1x1', 'in_w')
+  const sink = buildLiquidSinkAgainst(outPipe, 'out_e')
+  const layout = buildLayout([northSource, northPipe, eastSource, eastPipe, converger, outPipe, sink])
+  const links = ensureConnected(layout, 6, 'pipe-round-robin')
+  const sim = simulate(layout, 78)
+  const northRemaining = storageAmount(sim, northSource.instanceId, WATER_ITEM_ID)
+  const eastRemaining = storageAmount(sim, eastSource.instanceId, WATER_ITEM_ID)
+  const sinkWater = storageAmount(sim, sink.instanceId, WATER_ITEM_ID)
+  assert(sinkWater > 0, `pipe-round-robin 终点没有收到液体，north=${northRemaining}, east=${eastRemaining}, sink=${sinkWater}`)
+  assert(Math.abs(northRemaining - eastRemaining) <= 1, `pipe-round-robin 同组轮询失效，north=${northRemaining}, east=${eastRemaining}, sink=${sinkWater}`)
+  return {
+    name: 'pipe-round-robin',
+    summary: {
+      links,
+      northRemaining,
+      eastRemaining,
+      sinkWater,
+    },
+  }
+}
+
+function runPowerAllStopScenario(): ScenarioResult {
+  resetInstanceCounter()
+  const heatPool = createDevice('item_port_power_sta_1', 0, { x: 24, y: 20 }, {
+    preloadInputItemId: ORE_ITEM_ID,
+    preloadInputAmount: 1,
+  })
+  const pole = createDevice('item_port_power_diffuser_1', 0, { x: 20, y: 16 })
+  const topMachine = createDevice('item_port_thickener_1', 0, { x: 16, y: 12 })
+  const bottomMachine = createDevice('item_port_thickener_1', 0, { x: 16, y: 18 })
+  const layout = buildLayout([heatPool, pole, topMachine, bottomMachine])
+  const sim = simulateReal(layout, 5, 0)
+  const topRuntime = sim.runtimeById[topMachine.instanceId]
+  const bottomRuntime = sim.runtimeById[bottomMachine.instanceId]
+  const heatRuntime = sim.runtimeById[heatPool.instanceId]
+  assert(topRuntime, 'power-all-stop 缺少 top runtime')
+  assert(bottomRuntime, 'power-all-stop 缺少 bottom runtime')
+  assert(heatRuntime && 'activeRecipeId' in heatRuntime, 'power-all-stop 缺少 heat runtime')
+  assert(sim.powerStats.totalSupplyKw === 50, `power-all-stop 供电异常，expected=50 actual=${sim.powerStats.totalSupplyKw}`)
+  assert(sim.powerStats.totalDemandKw === 100, `power-all-stop 耗电异常，expected=100 actual=${sim.powerStats.totalDemandKw}`)
+  assert(sim.powerStats.batteryStoredJ === 0, `power-all-stop 电池不应有余量，actual=${sim.powerStats.batteryStoredJ}`)
+  assert(topRuntime.stallReason === 'LOW_POWER', `power-all-stop 顶部设备未统一停机，actual=${topRuntime.stallReason}`)
+  assert(bottomRuntime.stallReason === 'LOW_POWER', `power-all-stop 底部设备未统一停机，actual=${bottomRuntime.stallReason}`)
+  assert(heatRuntime.activeRecipeId, 'power-all-stop 发电站没有启动燃料配方')
+  return {
+    name: 'power-all-stop',
+    summary: {
+      totalSupplyKw: sim.powerStats.totalSupplyKw,
+      totalDemandKw: sim.powerStats.totalDemandKw,
+      batteryStoredJ: sim.powerStats.batteryStoredJ,
+      topStall: topRuntime.stallReason,
+      bottomStall: bottomRuntime.stallReason,
+    },
+  }
+}
+
 function main() {
   const scenarioFilter = process.argv[2] ?? 'all'
   const scenarioEntries: Array<[string, () => ScenarioResult]> = [
@@ -450,6 +543,8 @@ function main() {
     ['storage', runStorageScenario],
     ['admission', runAdmissionScenario],
     ['belt-chain', runBeltChainScenario],
+    ['pipe-round-robin', runPipeRoundRobinScenario],
+    ['power-all-stop', runPowerAllStopScenario],
   ]
 
   const results = scenarioEntries

@@ -6,7 +6,6 @@ import {
   normalizeExternalLiquidSourceItemId,
 } from '../domain/shared/itemPickerRules'
 import {
-  createEmptyPortPriorityCursors,
   getDirectionalPortIds,
   getPortPriorityGroup,
   normalizePriorityCursorArray,
@@ -457,13 +456,13 @@ function buildPowerAvailabilityByDeviceId(
   const chargeBatteryJ = Math.min(batteryChargeCapacityJ, (surplusKw * 1000) / tickRateHz)
   const nextBatteryStoredJ = Math.min(GLOBAL_BATTERY_CAPACITY_J, batteryStoredAfterDischargeJ + chargeBatteryJ)
 
-  let remainingSupplyKw = totalSupplyKw + batteryAssistKw
-  for (const candidate of powerCandidates) {
-    if (remainingSupplyKw >= candidate.demandKw) {
-      remainingSupplyKw -= candidate.demandKw
-      continue
+  // 欠供且电池已经在本 tick 用尽时，所有需电设备统一停机。
+  // 这里不再按布局顺序“点亮一部分设备”，避免部分设备继续运行而把系统拖入错误稳态。
+  const totalAvailableKw = totalSupplyKw + batteryAssistKw
+  if (totalAvailableKw < totalDemandInRangeKw) {
+    for (const candidate of powerCandidates) {
+      unpoweredById.add(candidate.instanceId)
     }
-    unpoweredById.add(candidate.instanceId)
   }
 
   return { unpoweredById, outOfRangeById, totalSupplyKw, nextBatteryStoredJ }
@@ -1369,10 +1368,18 @@ function setSlotRef(runtime: DeviceRuntime, lane: 'slot' | 'ns' | 'we', value: S
   if (lane === 'we' && 'weSlot' in runtime) runtime.weSlot = value
 }
 
+function portEdgeOnDevice(device: DeviceInstance, portId: string) {
+  return getRotatedPorts(device).find((port) => port.portId === portId)?.edge ?? null
+}
+
+function bridgeLaneForPort(device: DeviceInstance, portId: string): 'ns' | 'we' {
+  const edge = portEdgeOnDevice(device, portId)
+  return edge === 'N' || edge === 'S' ? 'ns' : 'we'
+}
+
 function canReceiveOnPort(device: DeviceInstance, runtime: DeviceRuntime, toPortId: string) {
   if (isBridgeConnectorType(device.typeId)) {
-    if (toPortId.endsWith('_n') || toPortId.endsWith('_s')) return 'ns'
-    return 'we'
+    return bridgeLaneForPort(device, toPortId)
   }
   if ('slot' in runtime) return 'slot'
   return 'output'
@@ -1447,7 +1454,7 @@ function tryReceiveToLane(
   if (getSlotRef(runtime, lane)) {
     return false
   }
-  const incomingEdge = getRotatedPorts(device).find((port) => port.portId === toPortId)?.edge
+  const incomingEdge = portEdgeOnDevice(device, toPortId)
     ?? OPPOSITE_EDGE[toPortId.slice(-1).toUpperCase() as keyof typeof OPPOSITE_EDGE]
   setSlotRef(runtime, lane, {
     itemId,
@@ -1460,8 +1467,7 @@ function tryReceiveToLane(
 
 function sourceSlotLane(device: DeviceInstance, runtime: DeviceRuntime, fromPortId: string): 'slot' | 'ns' | 'we' | 'output' {
   if (isBridgeConnectorType(device.typeId)) {
-    if (fromPortId.endsWith('_n') || fromPortId.endsWith('_s')) return 'ns'
-    return 'we'
+    return bridgeLaneForPort(device, fromPortId)
   }
   if ('slot' in runtime) return 'slot'
   return 'output'
@@ -1805,22 +1811,32 @@ function buildDevicePullInputPortOrderMap(
         if (isHardBlockedStall(sourceRuntime.stallReason)) continue
         const readyItem = peekReadyItemForSourceLink(sourceDevice, sourceRuntime, inLink.from.portId, warehouse)
         if (!readyItem) continue
-        if (ITEM_BY_ID[readyItem]?.type !== 'solid') continue
         if (!canAcceptIntoLane(device, runtime, 'output', inLink.to.portId, readyItem)) continue
         availablePorts.add(inLink.to.portId)
       }
 
       if (availablePorts.size === 0) continue
 
-      const orderedGroupPorts = orderPortsByPriorityGroup(
-        inputPortOrder.filter((portId) => availablePorts.has(portId)),
-        (portId) => getPortPriorityGroup(device.config, portId),
-        createEmptyPortPriorityCursors(),
-      )
+      const availablePortsByLane = new Map<ReceiveLane, string[]>()
+      for (const portId of inputPortOrder) {
+        if (!availablePorts.has(portId)) continue
+        const lane = canReceiveOnPort(device, runtime, portId)
+        const lanePorts = availablePortsByLane.get(lane) ?? []
+        lanePorts.push(portId)
+        availablePortsByLane.set(lane, lanePorts)
+      }
 
-      for (const probePort of orderedGroupPorts) {
-        if (!availablePorts.has(probePort)) continue
-        orderedPorts.push(probePort)
+      for (const [lane, lanePorts] of availablePortsByLane) {
+        const laneKey = `${device.instanceId}:${lane}`
+        const orderedGroupPorts = orderPortsByPriorityGroup(
+          lanePorts,
+          (portId) => getPortPriorityGroup(device.config, portId),
+          normalizePriorityCursorArray(runtime.inputPriorityGroupCursorByLane?.[laneKey]),
+        )
+
+        for (const probePort of orderedGroupPorts) {
+          orderedPorts.push(probePort)
+        }
       }
     }
 

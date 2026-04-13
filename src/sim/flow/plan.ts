@@ -1,4 +1,4 @@
-import { OPPOSITE_EDGE } from '../../domain/geometry'
+import { getRotatedPorts, OPPOSITE_EDGE } from '../../domain/geometry'
 import { getDirectionalPortIds, getPortPriorityGroup } from '../../domain/shared/portPriority'
 import type {
   BufferGroupRuntime,
@@ -781,7 +781,8 @@ function sourceCandidatesForEdge(
         : null
     if (!slot) return []
     const requiredOutputEdge = OPPOSITE_EDGE[slot.enteredFrom]
-    const outputEdge = edge.fromPortId.slice(-1).toUpperCase() as Edge
+    const outputEdge = getRotatedPorts(fromNode.device).find((port) => port.portId === edge.fromPortId)?.edge
+      ?? (edge.fromPortId.slice(-1).toUpperCase() as Edge)
     if (requiredOutputEdge !== outputEdge) return []
   }
 

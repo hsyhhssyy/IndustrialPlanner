@@ -113,7 +113,8 @@ export function commitTransferMatches(context: CommitContext) {
       if (match.receiverPriorityPortCount > 0) {
         const groupIndex = match.receiverPriorityGroup - PORT_PRIORITY_GROUP_MIN
         if (groupIndex >= 0 && groupIndex < next.length) {
-          next[groupIndex] = (match.receiverPriorityPortIndex + 1) % match.receiverPriorityPortCount
+          next[groupIndex] =
+            (current[groupIndex] + match.receiverPriorityPortIndex + 1) % match.receiverPriorityPortCount
         }
       }
       toRuntime.inputPriorityGroupCursorByLane[laneKey] = next

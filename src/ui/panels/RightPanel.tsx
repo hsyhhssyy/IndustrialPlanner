@@ -3,7 +3,7 @@ import { BASES, DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { isDarkPipeInletType } from '../../domain/deviceLinks'
 import type { BaseDef, BaseId, DeviceInstance, DeviceRuntime, ItemId, LayoutState, PowerMode, SimState, SlotData } from '../../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../../i18n'
-import { isBelt, neighborsFromLinks } from '../../domain/geometry'
+import { getRotatedPorts, isBelt, neighborsFromLinks } from '../../domain/geometry'
 import {
   getPortPriorityGroup,
   hasCustomPortPriorityGroups,
@@ -266,8 +266,8 @@ export function RightPanel({
     const isBridgeConnectorType = (typeId: DeviceInstance['typeId']) => typeId === 'item_log_connector' || typeId === 'item_pipe_connector'
     const receiveLaneForPort = (device: DeviceInstance, runtime: DeviceRuntime, toPortId: string) => {
       if (isBridgeConnectorType(device.typeId)) {
-        if (toPortId.endsWith('_n') || toPortId.endsWith('_s')) return 'ns'
-        return 'we'
+        const edge = getRotatedPorts(device).find((port) => port.portId === toPortId)?.edge
+        return edge === 'N' || edge === 'S' ? 'ns' : 'we'
       }
       if ('slot' in runtime) return 'slot'
       return 'output'
