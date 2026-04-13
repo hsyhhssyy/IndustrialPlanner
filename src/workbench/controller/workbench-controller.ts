@@ -245,8 +245,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       this.sync();
     });
 
-    this.sync();
-    void this.refreshInspectorForSelection();
+    void this.syncAndRefreshInspectorForSelection();
   }
 
   private getPlacementMode(session = this.editorHost.getState().session) {
@@ -303,8 +302,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       return;
     }
 
-    this.sync();
-    void this.refreshInspectorForSelection();
+    void this.syncAndRefreshInspectorForSelection();
   }
 
   setInteractionMode(
@@ -979,11 +977,12 @@ class WorkbenchControllerImpl implements WorkbenchController {
         : getSelectedEntityIds(afterEditorState.session)[0] ?? null;
     const selectionChanged = before.selectionId !== afterSelectionId;
 
-    this.sync();
-
     if (documentChanged || selectionChanged) {
-      await this.refreshInspectorForSelection();
+      await this.syncAndRefreshInspectorForSelection();
+      return;
     }
+
+    this.sync();
   }
 
   private getActiveSelectionId(): string | null {
@@ -1000,6 +999,11 @@ class WorkbenchControllerImpl implements WorkbenchController {
     }
 
     await this.simulationHost.queryInspector(selectedEntityId);
+  }
+
+  private async syncAndRefreshInspectorForSelection(): Promise<void> {
+    this.sync();
+    await this.refreshInspectorForSelection();
   }
 
   private getViewportCenterScreenPoint(): CanvasPoint {
