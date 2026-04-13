@@ -10,7 +10,7 @@ import type { SimulationState } from "@/simulation/host/simulation-host";
 import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
 import type {
   CanvasViewState,
-  WorkspaceState,
+  WorkspaceEditorState,
 } from "@/workbench/workspace-state";
 import type { WorkbenchUiState } from "@/workbench/workbench-ui-state";
 import type { AppLocale } from "@/i18n/messages";
@@ -32,7 +32,7 @@ import {
 
 export interface RenderSceneCoordinatorSource {
   documentStore: ReadonlySnapshotStore<WorldDocument>;
-  editorStore: ReadonlySnapshotStore<WorkspaceState["editor"]>;
+  editorStore: ReadonlySnapshotStore<WorkspaceEditorState>;
   uiStore: ReadonlySnapshotStore<WorkbenchUiState>;
   canvasViewStore: ReadonlySnapshotStore<CanvasViewState>;
   simulationStore: ReadonlySnapshotStore<SimulationState>;
@@ -63,7 +63,7 @@ export interface CreateRenderSceneCoordinatorOptions {
 
 function buildRenderInteractionState(
   document: WorldDocument,
-  editor: WorkspaceState["editor"],
+  editor: WorkspaceEditorState,
   ui: WorkbenchUiState,
   simulation: SimulationState,
 ): RenderSceneInteractionState {

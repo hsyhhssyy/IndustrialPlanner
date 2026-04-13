@@ -123,14 +123,12 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceState = {
       document,
-      editor: {
-        session: createInitialEditorSession(),
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undoDepth: 0,
-          redoDepth: 0,
-        },
+      editorSession: createInitialEditorSession(),
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: createInitialCanvasViewState(),
@@ -164,14 +162,14 @@ describe("WorkspaceDerivedStore", () => {
       registry,
       canvasView: workspaceState.canvasView,
       interaction: {
-        selectedEntityIds: getSelectedEntityIds(workspaceState.editor.session),
-        placementPreview: getManagedPlacementPreview(workspaceState.editor.session),
+        selectedEntityIds: getSelectedEntityIds(workspaceState.editorSession),
+        placementPreview: getManagedPlacementPreview(workspaceState.editorSession),
         moveDraft: getManagedMoveDraft(
-          workspaceState.editor.session,
+          workspaceState.editorSession,
           workspaceState.document,
         ),
         pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
-          workspaceState.editor.session.currentMode,
+          workspaceState.editorSession.currentMode,
         ),
       },
       runtimeSnapshot: workspaceState.simulation.runtimeSnapshot,
@@ -190,22 +188,20 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceState = {
       document,
-      editor: {
-        session: {
-          ...withPlacementPreview(createInitialEditorSession(), {
-            definitionId: "belt_straight_1x1",
-            interactionMode: "touch" as const,
-            gridPoint: { x: 2, y: 3 },
-            rotation: 0 as const,
-            valid: true,
-          }),
-        },
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undoDepth: 0,
-          redoDepth: 0,
-        },
+      editorSession: {
+        ...withPlacementPreview(createInitialEditorSession(), {
+          definitionId: "belt_straight_1x1",
+          interactionMode: "touch" as const,
+          gridPoint: { x: 2, y: 3 },
+          rotation: 0 as const,
+          valid: true,
+        }),
+      },
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: {
@@ -232,7 +228,7 @@ describe("WorkspaceDerivedStore", () => {
     const scaledGridSize =
       workspaceState.document.documentSettings.gridSize * workspaceState.canvasView.zoom;
 
-    const preview = getManagedPlacementPreview(workspaceState.editor.session)!;
+    const preview = getManagedPlacementPreview(workspaceState.editorSession)!;
 
     expect(
       deriveRenderDerivedState({
@@ -262,22 +258,20 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceState = {
       document,
-      editor: {
-        session: {
-          ...withPlacementPreview(createInitialEditorSession(), {
-            definitionId: "item_port_unloader_1",
-            interactionMode: "touch" as const,
-            gridPoint: { x: 2, y: 3 },
-            rotation: 90 as const,
-            valid: true,
-          }),
-        },
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undoDepth: 0,
-          redoDepth: 0,
-        },
+      editorSession: {
+        ...withPlacementPreview(createInitialEditorSession(), {
+          definitionId: "item_port_unloader_1",
+          interactionMode: "touch" as const,
+          gridPoint: { x: 2, y: 3 },
+          rotation: 90 as const,
+          valid: true,
+        }),
+      },
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: {
@@ -304,7 +298,7 @@ describe("WorkspaceDerivedStore", () => {
     const scaledGridSize =
       workspaceState.document.documentSettings.gridSize * workspaceState.canvasView.zoom;
 
-    const rotatedPreview = getManagedPlacementPreview(workspaceState.editor.session)!;
+    const rotatedPreview = getManagedPlacementPreview(workspaceState.editorSession)!;
 
     expect(
       deriveRenderDerivedState({
@@ -334,32 +328,30 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceState = {
       document,
-      editor: {
-        session: {
-          ...withPlacementPreview(createInitialEditorSession(), {
-            definitionId: "missing_definition",
-            interactionMode: "touch" as const,
-            gridPoint: { x: 999, y: 999 },
-            rotation: 0 as const,
-            valid: true,
-          }),
-          draftEntities: {
-            ids: ["draft:placement-preview"],
-            boundsDerived: {
-              left: 4,
-              top: 6,
-              width: 2,
-              height: 3,
-            },
-            geometricCenterCellsDerived: { x: 5, y: 7.5 },
+      editorSession: {
+        ...withPlacementPreview(createInitialEditorSession(), {
+          definitionId: "missing_definition",
+          interactionMode: "touch" as const,
+          gridPoint: { x: 999, y: 999 },
+          rotation: 0 as const,
+          valid: true,
+        }),
+        draftEntities: {
+          ids: ["draft:placement-preview"],
+          boundsDerived: {
+            left: 4,
+            top: 6,
+            width: 2,
+            height: 3,
           },
+          geometricCenterCellsDerived: { x: 5, y: 7.5 },
         },
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undoDepth: 0,
-          redoDepth: 0,
-        },
+      },
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: {
@@ -413,18 +405,16 @@ describe("WorkspaceDerivedStore", () => {
     const definition = topology.entityViews[selectedEntityId]?.definition;
     const workspaceState = {
       document,
-      editor: {
-        session: {
-          ...createInitialEditorSession(),
-          selectedEntities: createCollection([selectedEntityId]),
-          selectionInputMode: "touch" as const,
-        },
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undoDepth: 0,
-          redoDepth: 0,
-        },
+      editorSession: {
+        ...createInitialEditorSession(),
+        selectedEntities: createCollection([selectedEntityId]),
+        selectionInputMode: "touch" as const,
+      },
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: {
@@ -487,18 +477,16 @@ describe("WorkspaceDerivedStore", () => {
     const selection = ["reactor-1", "filler-1"];
     const workspaceState = {
       document,
-      editor: {
-        session: {
-          ...createInitialEditorSession(),
-          selectedEntities: createCollection(selection),
-          selectionInputMode: "touch" as const,
-        },
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undoDepth: 0,
-          redoDepth: 0,
-        },
+      editorSession: {
+        ...createInitialEditorSession(),
+        selectedEntities: createCollection(selection),
+        selectionInputMode: "touch" as const,
+      },
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: {
@@ -578,28 +566,26 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceState = {
       document,
-      editor: {
-        session: {
-          ...createInitialEditorSession(),
-          selectedEntities: {
-            ids: ["reactor-1"],
-            boundsDerived: {
-              left: 5,
-              top: 4,
-              width: 3,
-              height: 2,
-            },
-            geometricCenterCellsDerived: { x: 6.5, y: 5 },
+      editorSession: {
+        ...createInitialEditorSession(),
+        selectedEntities: {
+          ids: ["reactor-1"],
+          boundsDerived: {
+            left: 5,
+            top: 4,
+            width: 3,
+            height: 2,
           },
-          selection: [],
-          selectionInputMode: "touch" as const,
+          geometricCenterCellsDerived: { x: 6.5, y: 5 },
         },
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undoDepth: 0,
-          redoDepth: 0,
-        },
+        selection: [],
+        selectionInputMode: "touch" as const,
+      },
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: {
@@ -653,23 +639,21 @@ describe("WorkspaceDerivedStore", () => {
     const definition = topology.entityViews[movedEntityId]?.definition;
     const workspaceState = {
       document,
-      editor: {
-        session: {
-          ...withMoveDraft(createInitialEditorSession(), document, {
-            entityId: movedEntityId,
-            interactionMode: "touch" as const,
-            gridPoint: { x: 19, y: 11 },
-            rotation: 180 as const,
-            valid: true,
-            anchorWorldOffset: { x: 8, y: 8 },
-          }),
-        },
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undoDepth: 0,
-          redoDepth: 0,
-        },
+      editorSession: {
+        ...withMoveDraft(createInitialEditorSession(), document, {
+          entityId: movedEntityId,
+          interactionMode: "touch" as const,
+          gridPoint: { x: 19, y: 11 },
+          rotation: 180 as const,
+          valid: true,
+          anchorWorldOffset: { x: 8, y: 8 },
+        }),
+      },
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: {
@@ -731,27 +715,25 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceState = {
       document,
-      editor: {
-        session: {
-          ...createInitialEditorSession(),
-          marqueeRange: {
-            originGridPoint: { x: 10, y: 6 },
-            gridPoint: { x: 18, y: 13 },
-            bounds: {
-              left: 10,
-              top: 6,
-              width: 9,
-              height: 8,
-            },
-            selectionMode: "replace" as const,
+      editorSession: {
+        ...createInitialEditorSession(),
+        marqueeRange: {
+          originGridPoint: { x: 10, y: 6 },
+          gridPoint: { x: 18, y: 13 },
+          bounds: {
+            left: 10,
+            top: 6,
+            width: 9,
+            height: 8,
           },
+          selectionMode: "replace" as const,
         },
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undoDepth: 0,
-          redoDepth: 0,
-        },
+      },
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: {
@@ -784,21 +766,21 @@ describe("WorkspaceDerivedStore", () => {
       }).marqueeScreenBox,
     ).toEqual({
       left:
-        (workspaceState.editor.session.marqueeRange!.bounds.left *
+        (workspaceState.editorSession.marqueeRange!.bounds.left *
           document.documentSettings.gridSize -
           workspaceState.canvasView.offset.x) *
         workspaceState.canvasView.zoom,
       top:
-        (workspaceState.editor.session.marqueeRange!.bounds.top *
+        (workspaceState.editorSession.marqueeRange!.bounds.top *
           document.documentSettings.gridSize -
           workspaceState.canvasView.offset.y) *
         workspaceState.canvasView.zoom,
       width:
-        workspaceState.editor.session.marqueeRange!.bounds.width *
+        workspaceState.editorSession.marqueeRange!.bounds.width *
         document.documentSettings.gridSize *
         workspaceState.canvasView.zoom,
       height:
-        workspaceState.editor.session.marqueeRange!.bounds.height *
+        workspaceState.editorSession.marqueeRange!.bounds.height *
         document.documentSettings.gridSize *
         workspaceState.canvasView.zoom,
     });
@@ -810,27 +792,25 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceState = {
       document,
-      editor: {
-        session: {
-          ...createInitialEditorSession(),
-          marqueeRange: {
-            selectionMode: "replace" as const,
-            originGridPoint: { x: 10, y: 6 },
-            gridPoint: { x: 18, y: 13 },
-            bounds: {
-              left: 10,
-              top: 6,
-              width: 9,
-              height: 8,
-            },
+      editorSession: {
+        ...createInitialEditorSession(),
+        marqueeRange: {
+          selectionMode: "replace" as const,
+          originGridPoint: { x: 10, y: 6 },
+          gridPoint: { x: 18, y: 13 },
+          bounds: {
+            left: 10,
+            top: 6,
+            width: 9,
+            height: 8,
           },
         },
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undoDepth: 0,
-          redoDepth: 0,
-        },
+      },
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: {
@@ -881,14 +861,12 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceStore = createWorkspaceStore({
       document,
-      editor: {
-        session: createInitialEditorSession(),
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undoDepth: 0,
-          redoDepth: 0,
-        },
+      editorSession: createInitialEditorSession(),
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: createInitialCanvasViewState(),
@@ -960,26 +938,24 @@ describe("WorkspaceDerivedStore", () => {
     const base = getStage1BaseDefinition(document.baseId);
     const workspaceState = {
       document,
-      editor: {
-        session: {
-          ...createInitialEditorSession(),
-          draftEntities: {
-            ids: ["draft:placement-preview"],
-            boundsDerived: {
-              left: 100,
-              top: 70,
-              width: 5,
-              height: 4,
-            },
-            geometricCenterCellsDerived: { x: 102.5, y: 72 },
+      editorSession: {
+        ...createInitialEditorSession(),
+        draftEntities: {
+          ids: ["draft:placement-preview"],
+          boundsDerived: {
+            left: 100,
+            top: 70,
+            width: 5,
+            height: 4,
           },
+          geometricCenterCellsDerived: { x: 102.5, y: 72 },
         },
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undoDepth: 0,
-          redoDepth: 0,
-        },
+      },
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: createInitialCanvasViewState(),

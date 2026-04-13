@@ -101,20 +101,20 @@ function deriveAnchoredPlacementScreenBox(
   options: DeriveRenderDerivedStateOptions,
 ): RenderDerivedScreenBox | null {
   const {
-    workspaceState: { canvasView, document, editor, ui },
+    workspaceState: { canvasView, document, editorSession, ui },
     registry,
   } = options;
-  const preview = getManagedPlacementPreview(editor.session);
+  const preview = getManagedPlacementPreview(editorSession);
 
   if (ui.phase !== "edit" || !preview || preview.interactionMode !== "touch") {
     return null;
   }
 
-  if (editor.session.draftEntities?.boundsDerived) {
+  if (editorSession.draftEntities?.boundsDerived) {
     return projectGridBoundsScreenBox({
       canvasView,
       gridSize: document.documentSettings.gridSize,
-      bounds: editor.session.draftEntities.boundsDerived,
+      bounds: editorSession.draftEntities.boundsDerived,
     });
   }
 
@@ -142,31 +142,31 @@ function deriveAnchoredSelectionScreenBox(
   options: DeriveRenderDerivedStateOptions,
 ): RenderDerivedScreenBox | null {
   const {
-    workspaceState: { canvasView, document, editor, ui },
+    workspaceState: { canvasView, document, editorSession, ui },
     topology,
     registry,
   } = options;
-  const selectionMode = editor.session.currentMode;
+  const selectionMode = editorSession.currentMode;
 
   if (
     ui.phase !== "edit" ||
     selectionMode.key !== "select" ||
-    isPlacementInteractionMode(editor.session.currentMode) ||
-    editor.session.selectionInputMode !== "touch"
+    isPlacementInteractionMode(editorSession.currentMode) ||
+    editorSession.selectionInputMode !== "touch"
   ) {
     return null;
   }
 
-  if (editor.session.selectedEntities?.boundsDerived) {
+  if (editorSession.selectedEntities?.boundsDerived) {
     return projectGridBoundsScreenBox({
       canvasView,
       gridSize: document.documentSettings.gridSize,
-      bounds: editor.session.selectedEntities.boundsDerived,
+      bounds: editorSession.selectedEntities.boundsDerived,
     });
   }
 
   const bounds = getGridBoundingBox(
-    getSelectedEntityIds(editor.session)
+    getSelectedEntityIds(editorSession)
       .map((entityId) => {
         const selectedEntity = document.entities[entityId];
         const definition =
@@ -205,11 +205,11 @@ function deriveAnchoredMoveScreenBox(
   options: DeriveRenderDerivedStateOptions,
 ): RenderDerivedScreenBox | null {
   const {
-    workspaceState: { canvasView, document, editor, ui },
+    workspaceState: { canvasView, document, editorSession, ui },
     topology,
     registry,
   } = options;
-  const moveDraft = getManagedMoveDraft(editor.session, document);
+  const moveDraft = getManagedMoveDraft(editorSession, document);
 
   if (
     ui.phase !== "edit" ||
@@ -219,11 +219,11 @@ function deriveAnchoredMoveScreenBox(
     return null;
   }
 
-  if (editor.session.draftEntities?.boundsDerived) {
+  if (editorSession.draftEntities?.boundsDerived) {
     return projectGridBoundsScreenBox({
       canvasView,
       gridSize: document.documentSettings.gridSize,
-      bounds: editor.session.draftEntities.boundsDerived,
+      bounds: editorSession.draftEntities.boundsDerived,
     });
   }
 
@@ -267,9 +267,9 @@ function deriveMarqueeScreenBox(
   options: DeriveRenderDerivedStateOptions,
 ): RenderDerivedScreenBox | null {
   const {
-    workspaceState: { canvasView, document, editor, ui },
+    workspaceState: { canvasView, document, editorSession, ui },
   } = options;
-  const marqueeBounds = editor.session.marqueeRange?.bounds ?? null;
+  const marqueeBounds = editorSession.marqueeRange?.bounds ?? null;
 
   if (ui.phase !== "edit" || !marqueeBounds) {
     return null;
@@ -286,7 +286,7 @@ export function deriveRenderDerivedState(
   options: DeriveRenderDerivedStateOptions,
 ): RenderDerivedState {
   const {
-    workspaceState: { canvasView, document, editor, ui },
+    workspaceState: { canvasView, document, editorSession, ui },
     topology,
     registry,
   } = options;
@@ -294,10 +294,10 @@ export function deriveRenderDerivedState(
     document,
     topology,
     registry,
-    draftEntities: ui.phase === "edit" ? editor.session.draftEntities : null,
+    draftEntities: ui.phase === "edit" ? editorSession.draftEntities : null,
     placementPreview:
-      ui.phase === "edit" ? getManagedPlacementPreview(editor.session) : null,
-    moveDraft: ui.phase === "edit" ? getManagedMoveDraft(editor.session, document) : null,
+      ui.phase === "edit" ? getManagedPlacementPreview(editorSession) : null,
+    moveDraft: ui.phase === "edit" ? getManagedMoveDraft(editorSession, document) : null,
   });
 
   return {

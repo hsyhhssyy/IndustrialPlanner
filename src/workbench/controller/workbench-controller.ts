@@ -153,7 +153,7 @@ function clonePlacementPreview(
 }
 
 function resolveManagedPlacementPreview(
-  session: WorkspaceState["editor"]["session"],
+  session: WorkspaceState["editorSession"],
 ): PlacementPreviewState | null {
   return getManagedPlacementPreview(session);
 }
@@ -222,7 +222,8 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
     this.workspaceStore = createWorkspaceStore({
       document: this.editorHost.getDocument(),
-      editor: this.editorStore.getSnapshot(),
+      editorSession: this.editorStore.getSnapshot().session,
+      editorHistory: this.editorStore.getSnapshot().history,
       ui: this.uiStore.getSnapshot(),
       canvasView: this.canvasViewStore.getSnapshot(),
       simulation: this.simulationHost.getSnapshot(),
@@ -1040,7 +1041,8 @@ class WorkbenchControllerImpl implements WorkbenchController {
       const currentState = this.workspaceStore.rootStore.getSnapshot();
       const nextState = this.composeWorkspaceState(currentState, {
         document: this.editorHost.getDocument(),
-        editor: this.editorStore.getSnapshot(),
+        editorSession: this.editorStore.getSnapshot().session,
+        editorHistory: this.editorStore.getSnapshot().history,
         ui: this.uiStore.getSnapshot(),
         canvasView: this.canvasViewStore.getSnapshot(),
         simulation: this.simulationHost.getSnapshot(),
@@ -1118,12 +1120,12 @@ class WorkbenchControllerImpl implements WorkbenchController {
       registry: this.registry,
       placementPreview:
         workspaceState.ui.phase === "edit"
-          ? getManagedPlacementPreview(workspaceState.editor.session)
+          ? getManagedPlacementPreview(workspaceState.editorSession)
           : null,
       moveDraft:
         workspaceState.ui.phase === "edit"
           ? getManagedMoveDraft(
-              workspaceState.editor.session,
+              workspaceState.editorSession,
               workspaceState.document,
             )
           : null,
@@ -1139,15 +1141,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
     currentState: WorkspaceState,
     nextState: WorkspaceState,
   ): WorkspaceState {
-    const editorState =
-      currentState.editor.session === nextState.editor.session &&
-      currentState.editor.history === nextState.editor.history
-        ? currentState.editor
-        : nextState.editor;
-
     if (
       currentState.document === nextState.document &&
-      currentState.editor === editorState &&
+      currentState.editorSession === nextState.editorSession &&
+      currentState.editorHistory === nextState.editorHistory &&
       currentState.ui === nextState.ui &&
       currentState.canvasView === nextState.canvasView &&
       currentState.simulation === nextState.simulation
@@ -1160,7 +1157,14 @@ class WorkbenchControllerImpl implements WorkbenchController {
         currentState.document === nextState.document
           ? currentState.document
           : nextState.document,
-      editor: editorState,
+      editorSession:
+        currentState.editorSession === nextState.editorSession
+          ? currentState.editorSession
+          : nextState.editorSession,
+      editorHistory:
+        currentState.editorHistory === nextState.editorHistory
+          ? currentState.editorHistory
+          : nextState.editorHistory,
       ui: currentState.ui === nextState.ui ? currentState.ui : nextState.ui,
       canvasView:
         currentState.canvasView === nextState.canvasView

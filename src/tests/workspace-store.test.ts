@@ -10,14 +10,12 @@ describe("WorkspaceStore", () => {
   it("fans out slice subscriptions from one root state without notifying untouched slices", () => {
     const store = createWorkspaceStore({
       document: createStage1SeedWorldDocument(),
-      editor: {
-        session: createInitialEditorSession(),
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undoDepth: 0,
-          redoDepth: 0,
-        },
+      editorSession: createInitialEditorSession(),
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: createInitialCanvasViewState(),
@@ -58,17 +56,15 @@ describe("WorkspaceStore", () => {
     store.dispose();
   });
 
-  it("exposes raw document alongside documentStore at the top level", () => {
+  it("exposes top-level editor session/history slices while keeping editorStore compatible", () => {
     const store = createWorkspaceStore({
       document: createStage1SeedWorldDocument(),
-      editor: {
-        session: createInitialEditorSession(),
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undoDepth: 0,
-          redoDepth: 0,
-        },
+      editorSession: createInitialEditorSession(),
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: createInitialCanvasViewState(),
@@ -90,17 +86,39 @@ describe("WorkspaceStore", () => {
       },
     });
 
-    const nextDocument = createStage1SeedWorldDocument();
+    const editorListener = vi.fn();
+    const nextHistory = {
+      ...store.editorHistory,
+      canUndo: true,
+      undoDepth: 1,
+    };
 
-    expect(store.document).toBe(store.documentStore.getSnapshot());
+    store.editorStore.subscribe(editorListener);
+
+    expect(store.editorSession).toBe(store.editorSessionStore.getSnapshot());
+    expect(store.editorHistory).toBe(store.editorHistoryStore.getSnapshot());
+    expect(store.editorStore.getSnapshot().session).toBe(store.editorSession);
+    expect(store.editorStore.getSnapshot().history).toBe(store.editorHistory);
 
     store.rootStore.update((state) => ({
       ...state,
-      document: nextDocument,
+      ui: {
+        ...state.ui,
+        locale: "en-US",
+      },
     }));
 
-    expect(store.document).toBe(nextDocument);
-    expect(store.documentStore.getSnapshot()).toBe(nextDocument);
+    expect(editorListener).not.toHaveBeenCalled();
+
+    store.rootStore.update((state) => ({
+      ...state,
+      editorHistory: nextHistory,
+    }));
+
+    expect(editorListener).toHaveBeenCalledTimes(1);
+    expect(store.editorHistory).toBe(nextHistory);
+    expect(store.editorHistoryStore.getSnapshot()).toBe(nextHistory);
+    expect(store.editorStore.getSnapshot().history).toBe(nextHistory);
 
     store.dispose();
   });

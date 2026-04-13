@@ -17,12 +17,15 @@ export interface CanvasViewState {
 export type EditorSessionState = EditorSession;
 export type EditorHistoryState = EditorHistorySliceState;
 
+export interface WorkspaceEditorState {
+  session: EditorSessionState;
+  history: EditorHistoryState;
+}
+
 export interface WorkspaceState {
   document: WorldDocument;
-  editor: {
-    session: EditorSessionState;
-    history: EditorHistoryState;
-  };
+  editorSession: EditorSessionState;
+  editorHistory: EditorHistoryState;
   ui: WorkbenchUiState;
   canvasView: CanvasViewState;
   simulation: SimulationState;

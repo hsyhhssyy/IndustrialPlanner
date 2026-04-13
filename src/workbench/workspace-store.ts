@@ -6,6 +6,7 @@ import {
 import type { SimulationState } from "@/simulation/host/simulation-host";
 import type {
   CanvasViewState,
+  WorkspaceEditorState,
   WorkspaceState,
 } from "@/workbench/workspace-state";
 import type { WorkbenchUiState } from "@/workbench/workbench-ui-state";
@@ -18,8 +19,12 @@ export type ReadonlySnapshotStore<TSnapshot> = Pick<
 export interface WorkspaceStore {
   rootStore: SnapshotStore<WorkspaceState>;
   readonly document: WorldDocument;
+  readonly editorSession: WorkspaceState["editorSession"];
+  readonly editorHistory: WorkspaceState["editorHistory"];
   documentStore: ReadonlySnapshotStore<WorldDocument>;
-  editorStore: ReadonlySnapshotStore<WorkspaceState["editor"]>;
+  editorSessionStore: ReadonlySnapshotStore<WorkspaceState["editorSession"]>;
+  editorHistoryStore: ReadonlySnapshotStore<WorkspaceState["editorHistory"]>;
+  editorStore: ReadonlySnapshotStore<WorkspaceEditorState>;
   uiStore: ReadonlySnapshotStore<WorkbenchUiState>;
   canvasViewStore: ReadonlySnapshotStore<CanvasViewState>;
   simulationStore: ReadonlySnapshotStore<SimulationState>;
@@ -44,10 +49,48 @@ function createDerivedStore<TState, TSlice>(
   };
 }
 
+function createEditorDerivedStore(
+  rootStore: SnapshotStore<WorkspaceState>,
+): {
+  store: SnapshotStore<WorkspaceEditorState>;
+  dispose: () => void;
+} {
+  let currentEditorState: WorkspaceEditorState = {
+    session: rootStore.getSnapshot().editorSession,
+    history: rootStore.getSnapshot().editorHistory,
+  };
+  const store = createSnapshotStore(currentEditorState);
+  const unsubscribe = rootStore.subscribe(() => {
+    const state = rootStore.getSnapshot();
+    const nextEditorState =
+      currentEditorState.session === state.editorSession &&
+      currentEditorState.history === state.editorHistory
+        ? currentEditorState
+        : {
+            session: state.editorSession,
+            history: state.editorHistory,
+          };
+
+    if (nextEditorState === currentEditorState) {
+      return;
+    }
+
+    currentEditorState = nextEditorState;
+    store.setSnapshot(nextEditorState);
+  });
+
+  return {
+    store,
+    dispose: unsubscribe,
+  };
+}
+
 export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceStore {
   const rootStore = createSnapshotStore(initialState);
   const documentStore = createDerivedStore(rootStore, (state) => state.document);
-  const editorStore = createDerivedStore(rootStore, (state) => state.editor);
+  const editorSessionStore = createDerivedStore(rootStore, (state) => state.editorSession);
+  const editorHistoryStore = createDerivedStore(rootStore, (state) => state.editorHistory);
+  const editorStore = createEditorDerivedStore(rootStore);
   const uiStore = createDerivedStore(rootStore, (state) => state.ui);
   const canvasViewStore = createDerivedStore(rootStore, (state) => state.canvasView);
   const simulationStore = createDerivedStore(rootStore, (state) => state.simulation);
@@ -57,13 +100,23 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
     get document() {
       return rootStore.getSnapshot().document;
     },
+    get editorSession() {
+      return rootStore.getSnapshot().editorSession;
+    },
+    get editorHistory() {
+      return rootStore.getSnapshot().editorHistory;
+    },
     documentStore: documentStore.store,
+    editorSessionStore: editorSessionStore.store,
+    editorHistoryStore: editorHistoryStore.store,
     editorStore: editorStore.store,
     uiStore: uiStore.store,
     canvasViewStore: canvasViewStore.store,
     simulationStore: simulationStore.store,
     dispose: () => {
       documentStore.dispose();
+      editorSessionStore.dispose();
+      editorHistoryStore.dispose();
       editorStore.dispose();
       uiStore.dispose();
       canvasViewStore.dispose();

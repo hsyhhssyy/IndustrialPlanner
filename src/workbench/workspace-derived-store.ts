@@ -8,6 +8,7 @@ import {
 import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
 import type {
   CanvasViewState,
+  WorkspaceEditorState,
   WorkspaceState,
 } from "@/workbench/workspace-state";
 import type { WorkbenchUiState } from "@/workbench/workbench-ui-state";
@@ -27,7 +28,7 @@ export interface WorkspaceDerivedStore {
 
 export interface CreateWorkspaceDerivedStoreOptions {
   documentStore: ReadonlySnapshotStore<WorldDocument>;
-  editorStore: ReadonlySnapshotStore<WorkspaceState["editor"]>;
+  editorStore: ReadonlySnapshotStore<WorkspaceEditorState>;
   uiStore: ReadonlySnapshotStore<WorkbenchUiState>;
   canvasViewStore: ReadonlySnapshotStore<CanvasViewState>;
   simulationStore: ReadonlySnapshotStore<SimulationState>;
@@ -97,7 +98,8 @@ function createDerivedWorkspaceState(
 ): WorkspaceState {
   return {
     document: options.documentStore.getSnapshot(),
-    editor: options.editorStore.getSnapshot(),
+    editorSession: options.editorStore.getSnapshot().session,
+    editorHistory: options.editorStore.getSnapshot().history,
     ui: options.uiStore.getSnapshot(),
     canvasView: options.canvasViewStore.getSnapshot(),
     simulation: options.simulationStore.getSnapshot(),
