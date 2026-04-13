@@ -10,7 +10,6 @@ import type {
   CanvasViewState,
   WorkspaceEditorState,
 } from "@/workbench/workspace-state";
-import type { WorkbenchUiState } from "@/workbench/workbench-ui-state";
 import {
   deriveWorkspaceDerivedState,
   type WorkspaceDerivedState,
@@ -28,7 +27,6 @@ export interface WorkspaceDerivedStore {
 export interface CreateWorkspaceDerivedStoreOptions {
   documentStore: ReadonlySnapshotStore<WorldDocument>;
   editorStore: ReadonlySnapshotStore<WorkspaceEditorState>;
-  uiStore: ReadonlySnapshotStore<WorkbenchUiState>;
   canvasViewStore: ReadonlySnapshotStore<CanvasViewState>;
   topologyStore: ReadonlySnapshotStore<CompiledTopology>;
   registry: Stage1Registry;
@@ -97,7 +95,6 @@ function createDerivedWorkspaceState(
   return {
     document: options.documentStore.getSnapshot(),
     editorSession: options.editorStore.getSnapshot().session,
-    ui: options.uiStore.getSnapshot(),
     canvasView: options.canvasViewStore.getSnapshot(),
   };
 }
@@ -148,7 +145,6 @@ export function createWorkspaceDerivedStore(
   const unsubscribers = [
     options.documentStore.subscribe(recompute),
     options.editorStore.subscribe(recompute),
-    options.uiStore.subscribe(recompute),
     options.canvasViewStore.subscribe(recompute),
     options.topologyStore.subscribe(recompute),
   ];

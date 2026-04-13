@@ -11,6 +11,7 @@ import {
   getGridBoundingBox,
   getRotatedGridFootprint,
 } from "@/shared/geometry/grid";
+import { createSnapshotStore } from "@/shared/snapshot-store/snapshot-store";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
 import {
   createMoveInteractionMode,
@@ -121,6 +122,46 @@ function createIdleSimulationWorkspaceSlices(): Record<string, never> {
 }
 
 describe("WorkspaceDerivedStore", () => {
+  it("recomputes render state from document/editor/canvas/topology inputs without a ui store", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const documentStore = createSnapshotStore(document);
+    const editorStore = createSnapshotStore({
+      session: createInitialEditorSession(),
+      history: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
+      },
+    });
+    const canvasViewStore = createSnapshotStore(createInitialCanvasViewState());
+    const topologyStore = createSnapshotStore(topology);
+    const derivedStore = createWorkspaceDerivedStore({
+      documentStore,
+      editorStore,
+      canvasViewStore,
+      topologyStore,
+      registry,
+    });
+    const renderListener = vi.fn();
+
+    derivedStore.renderStore.subscribe(renderListener);
+
+    canvasViewStore.setSnapshot({
+      offset: { x: 0, y: 0 },
+      zoom: 1.5,
+    });
+
+    expect(renderListener).toHaveBeenCalledTimes(1);
+    expect(derivedStore.renderStore.getSnapshot().cellSizePx).toBe(
+      document.documentSettings.gridSize * 1.5,
+    );
+
+    derivedStore.dispose();
+  });
+
   it("derives render bounds from the same shared logic as buildRenderScene", () => {
     const document = createStage1SeedWorldDocument();
     const registry = createStage1Registry();

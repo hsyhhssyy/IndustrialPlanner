@@ -23,7 +23,6 @@ export function createWorkbenchShell(
   const workspaceDerivedStore = createWorkspaceDerivedStore({
     documentStore: controller.documentStore,
     editorStore: controller.editorStore,
-    uiStore: controller.uiStore,
     canvasViewStore: controller.canvasViewStore,
     topologyStore: controller.topologyStore,
     registry: controller.registry,
