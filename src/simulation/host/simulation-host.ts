@@ -235,10 +235,16 @@ class SimulationHostImpl implements SimulationHost {
       return;
     }
 
-    this.store.update((state) => ({
-      ...state,
-      selection: [resolvedEntityId],
-    }));
+    this.store.update((state) => {
+      if (state.selection.length === 1 && state.selection[0] === resolvedEntityId) {
+        return state;
+      }
+
+      return {
+        ...state,
+        selection: [resolvedEntityId],
+      };
+    });
   }
 
   start(): void {
@@ -274,10 +280,16 @@ class SimulationHostImpl implements SimulationHost {
       ? this.kernel.queryInspector(resolvedEntityId)
       : null;
 
-    this.store.update((snapshot) => ({
-      ...snapshot,
-      inspectorDetails: details,
-    }));
+    this.store.update((snapshot) => {
+      if (details === null && snapshot.inspectorDetails === null) {
+        return snapshot;
+      }
+
+      return {
+        ...snapshot,
+        inspectorDetails: details,
+      };
+    });
   }
 
   dispose(): void {

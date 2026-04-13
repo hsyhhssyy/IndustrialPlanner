@@ -99,4 +99,30 @@ describe("SimulationHost", () => {
 
     host.dispose();
   });
+
+  it("skips no-op selection and inspector clear updates", async () => {
+    const host = createSimulationHost();
+    const registry = createStage1Registry();
+    const document = createStage1SeedWorldDocument();
+    const topology = compileStage1World(document, registry);
+
+    host.load({ document, topology, registry });
+
+    const listener = vi.fn();
+    const unsubscribe = host.subscribe(listener);
+
+    await host.queryInspector(null);
+    expect(listener).not.toHaveBeenCalled();
+
+    await host.selectEntity("reactor-1");
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    listener.mockClear();
+
+    await host.selectEntity("reactor-1");
+    expect(listener).not.toHaveBeenCalled();
+
+    unsubscribe();
+    host.dispose();
+  });
 });
