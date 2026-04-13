@@ -218,7 +218,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.topology = compileStage1World(this.editorHost.getDocument(), this.registry);
     this.editorStore = createEditorRuntimeStore(this.editorHost.getState());
     this.simulationHost = createSimulationHost();
-    this.loadSimulationWorld();
+    this.reloadCompiledWorld();
     const simulationState = this.simulationHost.getSnapshot();
 
     this.workspaceStore = createWorkspaceStore({
@@ -944,6 +944,11 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
   }
 
+  private reloadCompiledWorld(): void {
+    this.topology = compileStage1World(this.editorHost.getDocument(), this.registry);
+    this.loadSimulationWorld();
+  }
+
   private captureMutationState(): MutationState {
     return {
       document: this.documentStore.getSnapshot(),
@@ -961,8 +966,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     const documentChanged = this.editorHost.getDocument() !== before.document;
 
     if (documentChanged) {
-      this.topology = compileStage1World(this.editorHost.getDocument(), this.registry);
-      this.loadSimulationWorld();
+      this.reloadCompiledWorld();
       this.logger.debug("Recompiled topology after document mutation.", {
         compileVersion: this.topology.compileVersion,
       });
