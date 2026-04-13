@@ -27,7 +27,10 @@ import {
 } from "@/editor/contracts/editor-session-helpers";
 import { createWorkspaceDerivedStore } from "@/workbench/workspace-derived-store";
 import { deriveRenderDerivedState } from "@/workbench/workspace-derived-state";
-import { createInitialCanvasViewState } from "@/workbench/workspace-state";
+import {
+  createInitialCanvasViewState,
+  type WorkspaceState,
+} from "@/workbench/workspace-state";
 import { createInitialWorkbenchUiState } from "@/workbench/workbench-ui-store";
 import { createWorkspaceStore } from "@/workbench/workspace-store";
 
@@ -116,6 +119,26 @@ function withMoveDraft(
   };
 }
 
+function createIdleSimulationWorkspaceSlices(): Pick<
+  WorkspaceState,
+  | "runtimeSnapshot"
+  | "simulationSelection"
+  | "simulationInspectorDetails"
+  | "simulationPatchSet"
+> {
+  return {
+    runtimeSnapshot: {
+      tick: 0,
+      status: "idle",
+      entityViews: {},
+      patchedEntityIds: [],
+    },
+    simulationSelection: [],
+    simulationInspectorDetails: null,
+    simulationPatchSet: createEmptySimulationPatchSet(),
+  };
+}
+
 describe("WorkspaceDerivedStore", () => {
   it("derives render bounds from the same shared logic as buildRenderScene", () => {
     const document = createStage1SeedWorldDocument();
@@ -133,23 +156,8 @@ describe("WorkspaceDerivedStore", () => {
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: createInitialCanvasViewState(),
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle" as const,
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
-      },
-    };
+      ...createIdleSimulationWorkspaceSlices(),
+    } satisfies WorkspaceState;
 
     const derived = deriveRenderDerivedState({
       workspaceState,
@@ -173,7 +181,7 @@ describe("WorkspaceDerivedStore", () => {
           workspaceState.editorSession.currentMode,
         ),
       },
-      runtimeSnapshot: workspaceState.simulation.runtimeSnapshot,
+      runtimeSnapshot: workspaceState.runtimeSnapshot,
     });
 
     expect(derived.cellSizePx).toBe(renderScene.gridSize * renderScene.zoom);
@@ -210,23 +218,8 @@ describe("WorkspaceDerivedStore", () => {
         offset: { x: 10, y: 20 },
         zoom: 2,
       },
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle" as const,
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
-      },
-    };
+      ...createIdleSimulationWorkspaceSlices(),
+    } satisfies WorkspaceState;
     const scaledGridSize =
       workspaceState.document.documentSettings.gridSize * workspaceState.canvasView.zoom;
 
@@ -281,23 +274,8 @@ describe("WorkspaceDerivedStore", () => {
         offset: { x: 10, y: 20 },
         zoom: 2,
       },
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle" as const,
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
-      },
-    };
+      ...createIdleSimulationWorkspaceSlices(),
+    } satisfies WorkspaceState;
     const scaledGridSize =
       workspaceState.document.documentSettings.gridSize * workspaceState.canvasView.zoom;
 
@@ -362,23 +340,8 @@ describe("WorkspaceDerivedStore", () => {
         offset: { x: 10, y: 20 },
         zoom: 2,
       },
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle" as const,
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
-      },
-    };
+      ...createIdleSimulationWorkspaceSlices(),
+    } satisfies WorkspaceState;
 
     expect(
       deriveRenderDerivedState({
@@ -426,23 +389,8 @@ describe("WorkspaceDerivedStore", () => {
         offset: { x: 10, y: 20 },
         zoom: 2,
       },
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle" as const,
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
-      },
-    };
+      ...createIdleSimulationWorkspaceSlices(),
+    } satisfies WorkspaceState;
 
     expect(definition).toBeTruthy();
 
@@ -499,23 +447,8 @@ describe("WorkspaceDerivedStore", () => {
         offset: { x: 10, y: 20 },
         zoom: 2,
       },
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle" as const,
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
-      },
-    };
+      ...createIdleSimulationWorkspaceSlices(),
+    } satisfies WorkspaceState;
     const bounds = getGridBoundingBox(
       selection.map((entityId) => {
         const entity = document.entities[entityId];
@@ -599,23 +532,8 @@ describe("WorkspaceDerivedStore", () => {
         offset: { x: 10, y: 20 },
         zoom: 2,
       },
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle" as const,
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
-      },
-    };
+      ...createIdleSimulationWorkspaceSlices(),
+    } satisfies WorkspaceState;
 
     expect(
       deriveRenderDerivedState({
@@ -668,23 +586,8 @@ describe("WorkspaceDerivedStore", () => {
         offset: { x: 10, y: 20 },
         zoom: 2,
       },
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle" as const,
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
-      },
-    };
+      ...createIdleSimulationWorkspaceSlices(),
+    } satisfies WorkspaceState;
 
     expect(definition).toBeTruthy();
 
@@ -749,23 +652,8 @@ describe("WorkspaceDerivedStore", () => {
         offset: { x: 10, y: 20 },
         zoom: 2,
       },
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle" as const,
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
-      },
-    };
+      ...createIdleSimulationWorkspaceSlices(),
+    } satisfies WorkspaceState;
 
     expect(
       deriveRenderDerivedState({
@@ -827,23 +715,8 @@ describe("WorkspaceDerivedStore", () => {
         offset: { x: 10, y: 20 },
         zoom: 2,
       },
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle" as const,
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
-      },
-    };
+      ...createIdleSimulationWorkspaceSlices(),
+    } satisfies WorkspaceState;
 
     expect(
       deriveRenderDerivedState({
@@ -957,23 +830,8 @@ describe("WorkspaceDerivedStore", () => {
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: createInitialCanvasViewState(),
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle" as const,
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
-      },
-    };
+      ...createIdleSimulationWorkspaceSlices(),
+    } satisfies WorkspaceState;
 
     expect(
       deriveRenderDerivedState({
