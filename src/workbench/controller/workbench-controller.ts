@@ -191,6 +191,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     latest: null,
   };
   private lastSavedWorkspacePersistence: WorkspacePersistenceState | null = null;
+  private simulationSyncSuppressionDepth = 0;
 
   private topology: CompiledTopology;
   private viewportSize: CanvasPoint = { x: 0, y: 0 };
@@ -242,6 +243,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.topologyStore = this.workspaceStore.topologyStore;
 
     this.unsubscribeSimulationHost = this.simulationHost.subscribe(() => {
+      if (this.simulationSyncSuppressionDepth > 0) {
+        return;
+      }
+
       this.sync();
     });
 
@@ -668,8 +673,16 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   async selectSimulationEntity(entityId: string | null): Promise<void> {
-    await this.simulationHost.selectEntity(entityId);
-    await this.refreshInspectorForSelection();
+    const previousSimulationState = this.simulationHost.getSnapshot();
+
+    await this.withSuppressedSimulationSync(async () => {
+      await this.simulationHost.selectEntity(entityId);
+      await this.refreshInspectorForSelection();
+    });
+
+    if (this.simulationHost.getSnapshot() !== previousSimulationState) {
+      this.sync();
+    }
   }
 
   async removeSelection(): Promise<void> {
@@ -999,6 +1012,16 @@ class WorkbenchControllerImpl implements WorkbenchController {
   private async syncAndRefreshInspectorForSelection(): Promise<void> {
     this.sync();
     await this.refreshInspectorForSelection();
+  }
+
+  private async withSuppressedSimulationSync<T>(operation: () => Promise<T>): Promise<T> {
+    this.simulationSyncSuppressionDepth += 1;
+
+    try {
+      return await operation();
+    } finally {
+      this.simulationSyncSuppressionDepth -= 1;
+    }
   }
 
   private getViewportCenterScreenPoint(): CanvasPoint {

@@ -1115,6 +1115,41 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("publishes one shared workspace update when edit selection refreshes inspector", async () => {
+    const controller = createWorkbenchController();
+    const syncSpy = vi.spyOn(
+      controller as unknown as {
+        sync: () => void;
+      },
+      "sync",
+    );
+
+    await controller.selectEntity("reactor-1");
+
+    expect(syncSpy).toHaveBeenCalledTimes(1);
+
+    controller.dispose();
+  });
+
+  it("publishes one shared workspace update when simulation selection refreshes inspector", async () => {
+    const controller = createWorkbenchController();
+    const syncSpy = vi.spyOn(
+      controller as unknown as {
+        sync: () => void;
+      },
+      "sync",
+    );
+
+    controller.setPhase("simulate");
+    syncSpy.mockClear();
+
+    await controller.selectSimulationEntity("dark-outlet-1");
+
+    expect(syncSpy).toHaveBeenCalledTimes(1);
+
+    controller.dispose();
+  });
+
   it("toggles desktop edit selection through the shared selection action chain", async () => {
     const controller = createWorkbenchController();
 
