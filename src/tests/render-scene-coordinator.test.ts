@@ -51,7 +51,7 @@ function createCoordinatorHarness() {
 }
 
 describe("RenderSceneCoordinator", () => {
-  it("batches edit-scene store changes into one RAF-presented scene and ignores phase-only churn", () => {
+  it("batches edit-scene store changes into one RAF-presented scene and ignores status-message churn", () => {
     const harness = createCoordinatorHarness();
     const presentScene = vi.fn();
     const frameCallbacks = new Map<number, FrameRequestCallback>();
@@ -101,7 +101,7 @@ describe("RenderSceneCoordinator", () => {
 
     harness.stores.uiStore.setSnapshot({
       ...harness.stores.uiStore.getSnapshot(),
-      phase: "simulate",
+      statusMessageKey: "status.edit",
     });
 
     expect(frameCallbacks.size).toBe(0);

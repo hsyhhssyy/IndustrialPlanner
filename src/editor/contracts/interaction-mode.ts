@@ -1,7 +1,6 @@
 import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
 import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 import type { GridRotation } from "@/shared/geometry/grid";
-import type { WorkbenchPhase } from "@/workbench/workbench-ui-state";
 
 export type DisplayTool =
   | "select"
@@ -339,17 +338,6 @@ export function resolveDefaultNextInteractionMode(
   const definition = getInteractionModeDefinition(mode.key);
 
   return definition.resolveDefaultNextMode(mode as never);
-}
-
-export function isInteractionModeAvailableInPhase(
-  mode: CurrentInteractionMode,
-  phase: WorkbenchPhase,
-): boolean {
-  const definition = getInteractionModeDefinition(mode.key);
-
-  return phase === "edit"
-    ? definition.availableInEdit
-    : definition.availableInSim;
 }
 
 export function isPlacementInteractionMode(

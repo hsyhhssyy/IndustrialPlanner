@@ -24,7 +24,6 @@ import type {
   WorkbenchController,
 } from "@/workbench/contracts/workbench-facade";
 import type { RenderDerivedScreenBox } from "@/workbench/workspace-derived-state";
-import type { WorkbenchPhase } from "@/workbench/workbench-ui-state";
 import type { CanvasPoint } from "@/workbench/workspace-state";
 
 const logger = createLogger("app.canvas-panel");
@@ -32,7 +31,6 @@ const logger = createLogger("app.canvas-panel");
 export interface ResolveCanvasPointerDownRouteOptions {
   button: number;
   currentMode: CurrentInteractionMode;
-  phase: WorkbenchPhase;
   selectionModifierActive: boolean;
   screenPoint: CanvasPoint;
   selection: readonly string[];
@@ -44,7 +42,6 @@ export interface ResolveCanvasTouchDownRouteOptions {
   anchoredPlacementActive: boolean;
   anchoredPlacementScreenBox: RenderDerivedScreenBox | null;
   currentMode: CurrentInteractionMode;
-  phase: WorkbenchPhase;
   screenPoint: CanvasPoint;
   selection: readonly string[];
   target: CanvasInteractionTarget;
@@ -60,7 +57,6 @@ export interface RouteCanvasGestureEventOptions {
   currentMode: CurrentInteractionMode;
   displayTool: DisplayTool;
   event: CanvasGestureEvent;
-  phase: WorkbenchPhase;
   schedulePlacementPreviewFromScreenPoint: (screenPoint: CanvasPoint) => void;
 }
 
@@ -88,13 +84,11 @@ export function isPointInsideScreenBox(
 
 export function resolveSelectedEntityMoveCandidate(options: {
   currentMode: CurrentInteractionMode;
-  phase: WorkbenchPhase;
   selectionModifierActive?: boolean;
   selection: readonly string[];
   target: CanvasInteractionTarget;
 }): string | null {
   if (
-    options.phase !== "edit" ||
     options.currentMode.key !== "select" ||
     options.selection.length === 0
   ) {
@@ -144,11 +138,9 @@ export function resolveCanvasPointerDownRoute(
 function resolvePointerMarqueeSelectionMode(options: {
   currentMode: CurrentInteractionMode;
   moveEntityId: string | null;
-  phase: WorkbenchPhase;
   selectionModifierActive: boolean;
 }): EditorSelectionUpdateMode | null {
   if (
-    options.phase !== "edit" ||
     options.currentMode.key !== "select" ||
     options.moveEntityId !== null
   ) {
@@ -201,7 +193,6 @@ function resolveTouchLongPressMarqueeSelectionMode(
   options: ResolveCanvasTouchDownRouteOptions,
 ): EditorSelectionUpdateMode | null {
   if (
-    options.phase !== "edit" ||
     options.currentMode.key !== "select" ||
     options.target.kind !== "blank"
   ) {
@@ -224,13 +215,11 @@ async function dispatchCanvasTap(options: {
   currentMode: CurrentInteractionMode;
   displayTool: DisplayTool;
   interactionMode: PlacementInteractionMode;
-  phase: WorkbenchPhase;
   screenPoint: CanvasPoint;
   selectionModifierActive: boolean;
 }): Promise<void> {
   const target = options.controller.getCanvasInteractionTarget(options.screenPoint);
   const intent = resolveCanvasPanelTapIntent({
-    phase: options.phase,
     currentMode: options.currentMode,
     selectionModifierActive: options.selectionModifierActive,
     target,
@@ -242,7 +231,6 @@ async function dispatchCanvasTap(options: {
   if (placementMode) {
     logger.info("Resolved canvas tap intent during placement.", {
       screenPoint: options.screenPoint,
-      phase: options.phase,
       currentMode: options.currentMode,
       displayTool: options.displayTool,
       target,
@@ -287,7 +275,6 @@ export async function routeCanvasGestureEvent(
         interactionMode: resolveInteractionModeFromGestureSource(
           options.event.source,
         ),
-        phase: options.phase,
         screenPoint: options.event.screenPoint,
         selectionModifierActive: options.event.selectionModifierActive,
       });

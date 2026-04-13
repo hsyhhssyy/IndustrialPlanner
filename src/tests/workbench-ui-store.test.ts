@@ -16,11 +16,9 @@ describe("WorkbenchUiStore", () => {
     });
 
     expect(store.getSnapshot()).toMatchObject({
-      phase: "edit",
       locale: "en-US",
       logLevel: "warn",
       leftPanelMode: "placement",
-      simulationSpeed: "1x",
       leftDock: {
         open: false,
         collapsed: false,
@@ -33,19 +31,16 @@ describe("WorkbenchUiStore", () => {
       statusMessageKey: "status.ready",
     });
 
-    store.setPhase("simulate");
     store.setLogLevel("debug");
-    store.setSimulationSpeedPreset("4x");
     store.setDockOpen("right", false);
     store.toggleDockCollapsed("right");
     store.setDiagnosticsVisible(false);
+    store.setStatusMessageKey("status.edit");
 
     expect(store.getSnapshot()).toMatchObject({
-      phase: "simulate",
       logLevel: "debug",
-      simulationSpeed: "1x",
       diagnosticsVisible: false,
-      statusMessageKey: "status.simulate",
+      statusMessageKey: "status.edit",
       rightDock: {
         open: true,
         collapsed: true,

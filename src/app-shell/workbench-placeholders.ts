@@ -1,7 +1,4 @@
-import type {
-  LeftPanelMode,
-  SimulationSpeedPreset,
-} from "@/workbench/workbench-ui-state";
+import type { LeftPanelMode } from "@/workbench/workbench-ui-state";
 import type { DisplayTool } from "@/editor/contracts/interaction-mode";
 
 export interface WorkbenchTextDescriptor {
@@ -540,10 +537,3 @@ export const RIGHT_POWER_SUMMARY: PowerSummaryFieldDescriptor[] = [
   },
 ];
 
-export const SIMULATION_SPEED_PRESETS: SimulationSpeedPreset[] = [
-  "0.25x",
-  "1x",
-  "2x",
-  "4x",
-  "16x",
-];

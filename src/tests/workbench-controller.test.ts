@@ -405,7 +405,6 @@ describe("WorkbenchController scaffold", () => {
     );
 
     expect(persisted).toMatchObject({
-      phase: "edit",
       locale: "zh-CN",
       logLevel: "warn",
       leftDock: {
@@ -424,29 +423,6 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("ignores simulate phase requests and keeps authoring mode active", () => {
-    const controller = createWorkbenchController();
-
-    controller.setPhase("simulate");
-
-    expect(readWorkbenchState(controller).ui.phase).toBe("edit");
-
-    controller.dispose();
-  });
-
-  it("keeps edit mode stable when phase is set back to edit", () => {
-    const controller = createWorkbenchController();
-
-    controller.setPhase("simulate");
-    controller.setPhase("edit");
-
-    const snapshot = readWorkbenchState(controller);
-
-    expect(snapshot.ui.phase).toBe("edit");
-
-    controller.dispose();
-  });
-
   it("exposes dock layout state and enough render inputs to rebuild the scene", async () => {
     const controller = createWorkbenchController();
 
@@ -456,7 +432,6 @@ describe("WorkbenchController scaffold", () => {
     controller.setLogLevel("info");
     controller.setDiagnosticsVisible(false);
     controller.setLeftPanelMode("blueprint");
-    controller.setSimulationSpeedPreset("4x");
     controller.zoomIn();
     await controller.selectEntity("filler-1");
 
@@ -471,7 +446,6 @@ describe("WorkbenchController scaffold", () => {
     expect(snapshot.ui.logLevel).toBe("info");
     expect(snapshot.ui.diagnosticsVisible).toBe(false);
     expect(snapshot.ui.leftPanelMode).toBe("blueprint");
-    expect(snapshot.ui.simulationSpeed).toBe("1x");
     expect(snapshot.canvasView.zoom).toBeGreaterThan(1);
     expect(snapshot.renderScene.zoom).toBe(snapshot.canvasView.zoom);
     expect(snapshot.renderScene.worldWidth).toBe(
@@ -623,15 +597,13 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("continues placement arming after simulate phase requests are ignored", () => {
+  it("continues placement arming through authoring-only controller state", () => {
     const controller = createWorkbenchController();
 
-    controller.setPhase("simulate");
     controller.armPlacement("belt_straight_1x1", "belt");
 
     const after = readWorkbenchState(controller);
 
-    expect(after.ui.phase).toBe("edit");
     expect(after.session.displayTool).toBe("belt");
     expect(after.session.currentMode).toMatchObject({
       key: "placement",
@@ -1042,20 +1014,6 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("keeps edit selection stable when simulate phase requests are ignored", async () => {
-    const controller = createWorkbenchController();
-
-    await controller.selectEntity("filler-1");
-    controller.setPhase("simulate");
-
-    const snapshot = readWorkbenchState(controller);
-
-    expect(snapshot.ui.phase).toBe("edit");
-    expect(snapshot.activeSelection).toEqual(["filler-1"]);
-
-    controller.dispose();
-  });
-
   it("publishes one shared workspace update when edit selection changes", async () => {
     const controller = createWorkbenchController();
     const syncSpy = vi.spyOn(
@@ -1068,24 +1026,6 @@ describe("WorkbenchController scaffold", () => {
     await controller.selectEntity("reactor-1");
 
     expect(syncSpy).toHaveBeenCalledTimes(1);
-
-    controller.dispose();
-  });
-
-  it("does not publish shared workspace updates for ignored simulate phase requests", async () => {
-    const controller = createWorkbenchController();
-    const syncSpy = vi.spyOn(
-      controller as unknown as {
-        sync: () => void;
-      },
-      "sync",
-    );
-
-    syncSpy.mockClear();
-
-    controller.setPhase("simulate");
-
-    expect(syncSpy).not.toHaveBeenCalled();
 
     controller.dispose();
   });

@@ -8,10 +8,9 @@ import {
 } from "@/editor/contracts/interaction-mode";
 
 describe("resolveCanvasPanelTapIntent", () => {
-  it("ignores phase input and keeps following edit tap semantics", () => {
+  it("follows edit tap semantics for entity and blank hits", () => {
     expect(
       resolveCanvasPanelTapIntent({
-        phase: "simulate",
         currentMode: createSelectInteractionMode(),
         selectionModifierActive: false,
         target: {
@@ -27,7 +26,6 @@ describe("resolveCanvasPanelTapIntent", () => {
 
     expect(
       resolveCanvasPanelTapIntent({
-        phase: "simulate",
         currentMode: createSelectInteractionMode(),
         selectionModifierActive: false,
         target: {
@@ -42,7 +40,6 @@ describe("resolveCanvasPanelTapIntent", () => {
   it("routes link taps through explicit link-target activation", () => {
     expect(
       resolveCanvasPanelTapIntent({
-        phase: "edit",
         currentMode: createLinkInteractionMode(),
         selectionModifierActive: false,
         target: {
@@ -58,7 +55,6 @@ describe("resolveCanvasPanelTapIntent", () => {
 
     expect(
       resolveCanvasPanelTapIntent({
-        phase: "edit",
         currentMode: createLinkInteractionMode(),
         selectionModifierActive: false,
         target: {
@@ -74,7 +70,6 @@ describe("resolveCanvasPanelTapIntent", () => {
   it("treats pointer placement taps as placement attempts before selection semantics", () => {
     expect(
       resolveCanvasPanelTapIntent({
-        phase: "edit",
         currentMode: createPlacementInteractionMode({
           definitionId: "belt_straight_1x1",
           displayTool: "belt",
@@ -91,7 +86,6 @@ describe("resolveCanvasPanelTapIntent", () => {
 
     expect(
       resolveCanvasPanelTapIntent({
-        phase: "edit",
         currentMode: createPlacementInteractionMode({
           definitionId: "belt_straight_1x1",
           displayTool: "belt",
@@ -112,7 +106,6 @@ describe("resolveCanvasPanelTapIntent", () => {
   it("keeps touch placement taps as no-ops on both blank space and entities", () => {
     expect(
       resolveCanvasPanelTapIntent({
-        phase: "edit",
         currentMode: createPlacementInteractionMode({
           definitionId: "item_port_mix_pool_1",
           displayTool: "place",
@@ -129,7 +122,6 @@ describe("resolveCanvasPanelTapIntent", () => {
 
     expect(
       resolveCanvasPanelTapIntent({
-        phase: "edit",
         currentMode: createPlacementInteractionMode({
           definitionId: "item_port_mix_pool_1",
           displayTool: "place",
@@ -150,7 +142,6 @@ describe("resolveCanvasPanelTapIntent", () => {
   it("keeps hidden move taps as no-ops until the draft resolves", () => {
     expect(
       resolveCanvasPanelTapIntent({
-        phase: "edit",
         currentMode: createMoveInteractionMode({
           entityId: "reactor-1",
           inputMode: "pointer",
@@ -166,7 +157,6 @@ describe("resolveCanvasPanelTapIntent", () => {
 
     expect(
       resolveCanvasPanelTapIntent({
-        phase: "edit",
         currentMode: createMoveInteractionMode({
           entityId: "reactor-1",
           inputMode: "touch",
@@ -186,7 +176,6 @@ describe("resolveCanvasPanelTapIntent", () => {
   it("falls back to edit selection semantics outside placement and link flows", () => {
     expect(
       resolveCanvasPanelTapIntent({
-        phase: "edit",
         currentMode: createSelectInteractionMode(),
         selectionModifierActive: false,
         target: {
@@ -202,7 +191,6 @@ describe("resolveCanvasPanelTapIntent", () => {
 
     expect(
       resolveCanvasPanelTapIntent({
-        phase: "edit",
         currentMode: createSelectInteractionMode(),
         selectionModifierActive: false,
         target: {
@@ -215,7 +203,6 @@ describe("resolveCanvasPanelTapIntent", () => {
 
     expect(
       resolveCanvasPanelTapIntent({
-        phase: "edit",
         currentMode: createSelectInteractionMode(),
         selectionModifierActive: true,
         target: {
@@ -231,7 +218,6 @@ describe("resolveCanvasPanelTapIntent", () => {
 
     expect(
       resolveCanvasPanelTapIntent({
-        phase: "edit",
         currentMode: createSelectInteractionMode(),
         selectionModifierActive: true,
         target: {

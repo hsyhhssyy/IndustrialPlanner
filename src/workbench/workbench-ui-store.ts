@@ -2,8 +2,6 @@ import type {
   DockId,
   DockState,
   LeftPanelMode,
-  SimulationSpeedPreset,
-  WorkbenchPhase,
   WorkbenchUiState,
   WorkbenchUiStateInput,
 } from "@/workbench/workbench-ui-state";
@@ -40,11 +38,9 @@ export function isSameWorkbenchUiState(
   right: WorkbenchUiState,
 ): boolean {
   return (
-    left.phase === right.phase &&
     left.locale === right.locale &&
     left.logLevel === right.logLevel &&
     left.leftPanelMode === right.leftPanelMode &&
-    left.simulationSpeed === right.simulationSpeed &&
     isSameDockState(left.leftDock, right.leftDock) &&
     isSameDockState(left.rightDock, right.rightDock) &&
     left.diagnosticsVisible === right.diagnosticsVisible &&
@@ -52,19 +48,11 @@ export function isSameWorkbenchUiState(
   );
 }
 
-export function getWorkbenchStatusMessageKeyForMode(
-  phase: WorkbenchPhase,
-): MessageKey {
-  return phase === "edit" ? "status.edit" : "status.simulate";
-}
-
 export function createInitialWorkbenchUiState(): WorkbenchUiState {
   return {
-    phase: "edit",
     locale: DEFAULT_LOCALE,
     logLevel: DEFAULT_WORKBENCH_LOG_LEVEL,
     leftPanelMode: "placement",
-    simulationSpeed: "1x",
     leftDock: {
       open: true,
       collapsed: false,
@@ -82,30 +70,21 @@ export function createWorkbenchUiState(
   stateInput: WorkbenchUiStateInput = {},
 ): WorkbenchUiState {
   const initialState = createInitialWorkbenchUiState();
-  const phase = stateInput.phase ?? initialState.phase;
 
   return {
     ...initialState,
     ...stateInput,
-    phase,
-    simulationSpeed: initialState.simulationSpeed,
     leftDock: mergeDockState(initialState.leftDock, stateInput.leftDock),
     rightDock: mergeDockState(initialState.rightDock, stateInput.rightDock),
-    statusMessageKey:
-      stateInput.statusMessageKey ??
-      (stateInput.phase
-        ? getWorkbenchStatusMessageKeyForMode(phase)
-        : initialState.statusMessageKey),
+    statusMessageKey: stateInput.statusMessageKey ?? initialState.statusMessageKey,
   };
 }
 
 export interface WorkbenchUiStore
   extends ReadonlySnapshotStore<WorkbenchUiState> {
-  phase: WorkbenchPhase;
   locale: AppLocale;
   logLevel: LogLevel;
   leftPanelMode: LeftPanelMode;
-  simulationSpeed: SimulationSpeedPreset;
   leftDock: DockState;
   rightDock: DockState;
   diagnosticsVisible: boolean;
@@ -114,23 +93,19 @@ export interface WorkbenchUiStore
     stateInput: WorkbenchUiStateInput | WorkbenchUiState,
   ) => boolean;
   update: (updater: (state: WorkbenchUiState) => WorkbenchUiState) => boolean;
-  setPhase: (phase: WorkbenchPhase) => void;
   setLocale: (locale: AppLocale) => void;
   setLogLevel: (level: LogLevel) => void;
   setDiagnosticsVisible: (visible: boolean) => void;
   setLeftPanelMode: (mode: LeftPanelMode) => void;
-  setSimulationSpeedPreset: (preset: SimulationSpeedPreset) => void;
   setDockOpen: (dockId: DockId, open: boolean) => void;
   toggleDockCollapsed: (dockId: DockId) => void;
   setStatusMessageKey: (messageKey: MessageKey) => void;
 }
 
 class WorkbenchUiStoreImpl implements WorkbenchUiStore {
-  phase: WorkbenchPhase;
   locale: AppLocale;
   logLevel: LogLevel;
   leftPanelMode: LeftPanelMode;
-  simulationSpeed: SimulationSpeedPreset;
   leftDock: DockState;
   rightDock: DockState;
   diagnosticsVisible: boolean;
@@ -140,11 +115,9 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
 
   constructor(initialState: WorkbenchUiStateInput = {}) {
     const initialSnapshot = createWorkbenchUiState(initialState);
-    this.phase = initialSnapshot.phase;
     this.locale = initialSnapshot.locale;
     this.logLevel = initialSnapshot.logLevel;
     this.leftPanelMode = initialSnapshot.leftPanelMode;
-    this.simulationSpeed = initialSnapshot.simulationSpeed;
     this.leftDock = { ...initialSnapshot.leftDock };
     this.rightDock = { ...initialSnapshot.rightDock };
     this.diagnosticsVisible = initialSnapshot.diagnosticsVisible;
@@ -193,22 +166,6 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
     }
 
     return this.setSnapshot(nextState);
-  }
-
-  setPhase(phase: WorkbenchPhase): void {
-    const statusMessageKey = getWorkbenchStatusMessageKeyForMode(phase);
-
-    this.update((state) => {
-      if (state.phase === phase && state.statusMessageKey === statusMessageKey) {
-        return state;
-      }
-
-      return {
-        ...state,
-        phase,
-        statusMessageKey,
-      };
-    });
   }
 
   setLocale(locale: AppLocale): void {
@@ -261,10 +218,6 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
         leftPanelMode: mode,
       };
     });
-  }
-
-  setSimulationSpeedPreset(preset: SimulationSpeedPreset): void {
-    void preset;
   }
 
   setDockOpen(dockId: DockId, open: boolean): void {
@@ -322,10 +275,6 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
   }
 
   private applySnapshot(snapshot: WorkbenchUiState): void {
-    if (this.phase !== snapshot.phase) {
-      this.phase = snapshot.phase;
-    }
-
     if (this.locale !== snapshot.locale) {
       this.locale = snapshot.locale;
     }
@@ -336,10 +285,6 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
 
     if (this.leftPanelMode !== snapshot.leftPanelMode) {
       this.leftPanelMode = snapshot.leftPanelMode;
-    }
-
-    if (this.simulationSpeed !== snapshot.simulationSpeed) {
-      this.simulationSpeed = snapshot.simulationSpeed;
     }
 
     if (!isSameDockState(this.leftDock, snapshot.leftDock)) {

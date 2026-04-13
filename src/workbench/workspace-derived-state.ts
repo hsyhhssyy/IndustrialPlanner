@@ -18,7 +18,7 @@ import type { CanvasPoint, WorkspaceState } from "@/workbench/workspace-state";
 
 export type WorkspaceRenderDerivedInputState = Pick<
   WorkspaceState,
-  "document" | "editorSession" | "ui" | "canvasView"
+  "document" | "editorSession" | "canvasView"
 >;
 
 export interface RenderDerivedScreenBox {
@@ -106,12 +106,12 @@ function deriveAnchoredPlacementScreenBox(
   options: DeriveRenderDerivedStateOptions,
 ): RenderDerivedScreenBox | null {
   const {
-    workspaceState: { canvasView, document, editorSession, ui },
+    workspaceState: { canvasView, document, editorSession },
     registry,
   } = options;
   const preview = getManagedPlacementPreview(editorSession);
 
-  if (ui.phase !== "edit" || !preview || preview.interactionMode !== "touch") {
+  if (!preview || preview.interactionMode !== "touch") {
     return null;
   }
 
@@ -147,14 +147,13 @@ function deriveAnchoredSelectionScreenBox(
   options: DeriveRenderDerivedStateOptions,
 ): RenderDerivedScreenBox | null {
   const {
-    workspaceState: { canvasView, document, editorSession, ui },
+    workspaceState: { canvasView, document, editorSession },
     topology,
     registry,
   } = options;
   const selectionMode = editorSession.currentMode;
 
   if (
-    ui.phase !== "edit" ||
     selectionMode.key !== "select" ||
     isPlacementInteractionMode(editorSession.currentMode) ||
     editorSession.selectionInputMode !== "touch"
@@ -210,17 +209,13 @@ function deriveAnchoredMoveScreenBox(
   options: DeriveRenderDerivedStateOptions,
 ): RenderDerivedScreenBox | null {
   const {
-    workspaceState: { canvasView, document, editorSession, ui },
+    workspaceState: { canvasView, document, editorSession },
     topology,
     registry,
   } = options;
   const moveDraft = getManagedMoveDraft(editorSession, document);
 
-  if (
-    ui.phase !== "edit" ||
-    !moveDraft ||
-    moveDraft.interactionMode !== "touch"
-  ) {
+  if (!moveDraft || moveDraft.interactionMode !== "touch") {
     return null;
   }
 
@@ -272,11 +267,11 @@ function deriveMarqueeScreenBox(
   options: DeriveRenderDerivedStateOptions,
 ): RenderDerivedScreenBox | null {
   const {
-    workspaceState: { canvasView, document, editorSession, ui },
+    workspaceState: { canvasView, document, editorSession },
   } = options;
   const marqueeBounds = editorSession.marqueeRange?.bounds ?? null;
 
-  if (ui.phase !== "edit" || !marqueeBounds) {
+  if (!marqueeBounds) {
     return null;
   }
 
@@ -291,7 +286,7 @@ export function deriveRenderDerivedState(
   options: DeriveRenderDerivedStateOptions,
 ): RenderDerivedState {
   const {
-    workspaceState: { canvasView, document, editorSession, ui },
+    workspaceState: { canvasView, document, editorSession },
     topology,
     registry,
   } = options;
@@ -299,10 +294,9 @@ export function deriveRenderDerivedState(
     document,
     topology,
     registry,
-    draftEntities: ui.phase === "edit" ? editorSession.draftEntities : null,
-    placementPreview:
-      ui.phase === "edit" ? getManagedPlacementPreview(editorSession) : null,
-    moveDraft: ui.phase === "edit" ? getManagedMoveDraft(editorSession, document) : null,
+    draftEntities: editorSession.draftEntities,
+    placementPreview: getManagedPlacementPreview(editorSession),
+    moveDraft: getManagedMoveDraft(editorSession, document),
   });
 
   return {

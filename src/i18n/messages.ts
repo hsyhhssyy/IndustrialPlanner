@@ -3,7 +3,6 @@ export type AppLocale = "zh-CN" | "en-US";
 export type MessageKey =
   | "app.title"
   | "mode.edit"
-  | "mode.simulate"
   | "action.start"
   | "action.stop"
   | "action.pause"
@@ -82,7 +81,6 @@ export type MessageKey =
   | "label.touchPlacementHint"
   | "status.ready"
   | "status.edit"
-  | "status.simulate"
   | "statusBar.mode"
   | "statusBar.view"
   | "statusBar.running"
@@ -116,7 +114,6 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
   "zh-CN": {
     "app.title": "终末地工业系统仿真器 Stage1",
     "mode.edit": "放置模式",
-    "mode.simulate": "仿真模式",
     "action.start": "开始仿真",
     "action.stop": "停止仿真",
     "action.pause": "暂停",
@@ -195,7 +192,6 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "label.touchPlacementHint": "拖动虚影后点击确认完成放置。",
     "status.ready": "Stage1 工作台脚手架已就绪。",
     "status.edit": "编辑态聚焦文档事实与编译产物。",
-    "status.simulate": "仿真态当前只保留外壳，UI 读取的是稳定 stub。",
     "statusBar.mode": "当前模式",
     "statusBar.view": "当前视图",
     "statusBar.running": "仿真占位中",
@@ -228,7 +224,6 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
   "en-US": {
     "app.title": "Industrial Planner Stage1",
     "mode.edit": "Edit",
-    "mode.simulate": "Simulate",
     "action.start": "Start",
     "action.stop": "Stop",
     "action.pause": "Pause",
@@ -307,7 +302,6 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "label.touchPlacementHint": "Drag the ghost, then tap confirm to place it.",
     "status.ready": "Stage1 workbench scaffold is ready.",
     "status.edit": "Edit mode focuses on document facts and compiled topology.",
-    "status.simulate": "Simulation mode currently keeps only the shell while the UI reads a stable stub.",
     "statusBar.mode": "Mode",
     "statusBar.view": "View",
     "statusBar.running": "Simulation Stub",

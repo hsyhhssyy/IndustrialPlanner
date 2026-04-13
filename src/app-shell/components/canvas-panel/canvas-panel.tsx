@@ -166,7 +166,6 @@ export const CanvasPanel = observer(function CanvasPanel({
   const anchoredPlacementActive =
     placementMode !== null && placementMode.inputMode === "touch";
   const pointerSelectionQuickActionsActive =
-    ui.phase === "edit" &&
     editor.session.currentMode.key === "select" &&
     selectedEntityIds.length > 0 &&
     editor.session.selectionInputMode === "pointer";
@@ -278,7 +277,6 @@ export const CanvasPanel = observer(function CanvasPanel({
           currentMode: editor.session.currentMode,
           displayTool: editor.session.displayTool,
           event,
-          phase: ui.phase,
           schedulePlacementPreviewFromScreenPoint,
         });
       }
@@ -507,7 +505,6 @@ export const CanvasPanel = observer(function CanvasPanel({
         anchoredPlacementActive,
         anchoredPlacementScreenBox,
         currentMode: editor.session.currentMode,
-        phase: ui.phase,
         screenPoint: point,
         selection: selectedEntityIds,
         target: controller.getCanvasInteractionTarget(point),
@@ -528,7 +525,6 @@ export const CanvasPanel = observer(function CanvasPanel({
     const pointerRoute = resolveCanvasPointerDownRoute({
       button: event.button,
       currentMode: editor.session.currentMode,
-      phase: ui.phase,
       selectionModifierActive: isSelectionModifierActive(event),
       screenPoint: point,
       selection: selectedEntityIds,

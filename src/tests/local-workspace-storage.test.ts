@@ -38,9 +38,9 @@ describe("WorkspaceStorageGateway", () => {
     });
     const canvasView = createInitialCanvasViewState();
 
-    uiStore.setPhase("simulate");
     uiStore.setLogLevel("error");
     uiStore.setDockOpen("left", false);
+    uiStore.setStatusMessageKey("status.edit");
     storage.saveWorkspaceState({
       ui: uiStore.getSnapshot(),
       canvasView: {
@@ -50,7 +50,6 @@ describe("WorkspaceStorageGateway", () => {
     });
 
     expect(JSON.parse(localStorage.getItem(UI_STATE_KEY) ?? "null")).toMatchObject({
-      phase: "simulate",
       locale: "en-US",
       logLevel: "error",
       leftDock: {
@@ -61,7 +60,7 @@ describe("WorkspaceStorageGateway", () => {
         offset: { x: 24, y: 40 },
         zoom: 1,
       },
-      statusMessageKey: "status.simulate",
+      statusMessageKey: "status.edit",
     });
   });
 

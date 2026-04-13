@@ -5,13 +5,8 @@ import type {
 import type {
   DockId,
   LeftPanelMode,
-  SimulationSpeedPreset,
-  WorkbenchPhase,
 } from "@/workbench/workbench-ui-state";
-import {
-  getWorkbenchStatusMessageKeyForMode,
-  createWorkbenchUiStore,
-} from "@/workbench/workbench-ui-store";
+import { createWorkbenchUiStore } from "@/workbench/workbench-ui-store";
 import { createCanvasViewStore } from "@/workbench/canvas-view-store";
 import {
   createWorkspaceStorage,
@@ -238,34 +233,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
       : null;
   }
 
-  setPhase(phase: WorkbenchPhase): void {
-    if (phase !== "edit") {
-      this.logger.debug(
-        "Ignored phase switch because the workbench now stays in authoring mode.",
-        { requestedPhase: phase },
-      );
-      return;
-    }
-
-    const didChange = this.updateUiState((ui) => {
-      if (ui.phase === phase) {
-        return ui;
-      }
-
-      return {
-        ...ui,
-        phase,
-        statusMessageKey: getWorkbenchStatusMessageKeyForMode(phase),
-      };
-    });
-
-    if (!didChange) {
-      return;
-    }
-
-    this.sync();
-  }
-
   setInteractionMode(
     modeKey: Exclude<InteractionModeKey, "placement" | "move" | "marquee">,
   ): void {
@@ -298,7 +265,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
       displayTool,
       inputMode,
       viewportSize: this.viewportSize,
-      phase: this.uiStore.getSnapshot().phase,
     });
     this.updateUiState((ui) => ({
       ...ui,
@@ -509,8 +475,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     if (
       didPlace &&
       this.getPlacementMode(this.editorStore.getSnapshot().session)?.inputMode ===
-        "touch" &&
-      this.uiStore.getSnapshot().phase === "edit"
+        "touch"
     ) {
       this.centerPlacementPreview();
     }
@@ -703,10 +668,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
     if (didChange) {
       this.sync();
     }
-  }
-
-  setSimulationSpeedPreset(preset: SimulationSpeedPreset): void {
-    void preset;
   }
 
   setLocale(locale: AppLocale): void {

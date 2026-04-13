@@ -1,6 +1,5 @@
 import type { CurrentInteractionMode } from "@/editor/contracts/interaction-mode";
 import type { CanvasInteractionTarget } from "@/workbench/contracts/workbench-facade";
-import type { WorkbenchPhase } from "@/workbench/workbench-ui-state";
 
 export type CanvasPanelTapIntent =
   | {
@@ -26,7 +25,6 @@ export type CanvasPanelTapIntent =
     };
 
 export interface ResolveCanvasPanelTapIntentOptions {
-  phase: WorkbenchPhase;
   currentMode: CurrentInteractionMode;
   selectionModifierActive: boolean;
   target: CanvasInteractionTarget;

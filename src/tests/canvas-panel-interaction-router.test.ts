@@ -15,7 +15,6 @@ describe("canvas panel interaction router", () => {
     expect(
       resolveSelectedEntityMoveCandidate({
         currentMode: createSelectInteractionMode(),
-        phase: "edit",
         selectionModifierActive: false,
         selection: ["filler-1", "reactor-1"],
         target: {
@@ -29,7 +28,6 @@ describe("canvas panel interaction router", () => {
     expect(
       resolveSelectedEntityMoveCandidate({
         currentMode: createSelectInteractionMode(),
-        phase: "edit",
         selectionModifierActive: false,
         selection: ["filler-1"],
         target: {
@@ -48,7 +46,6 @@ describe("canvas panel interaction router", () => {
           inputMode: "pointer",
           rotation: 0,
         }),
-        phase: "edit",
         selectionModifierActive: false,
         selection: ["filler-1"],
         target: {
@@ -65,7 +62,6 @@ describe("canvas panel interaction router", () => {
       resolveCanvasPointerDownRoute({
         button: 0,
         currentMode: createSelectInteractionMode(),
-        phase: "edit",
         selectionModifierActive: false,
         screenPoint: { x: 10, y: 10 },
         selection: ["filler-1"],
@@ -85,7 +81,6 @@ describe("canvas panel interaction router", () => {
       resolveCanvasPointerDownRoute({
         button: 2,
         currentMode: createSelectInteractionMode(),
-        phase: "edit",
         selectionModifierActive: false,
         screenPoint: { x: 10, y: 10 },
         selection: [],
@@ -97,7 +92,6 @@ describe("canvas panel interaction router", () => {
       resolveCanvasPointerDownRoute({
         button: 1,
         currentMode: createSelectInteractionMode(),
-        phase: "edit",
         selectionModifierActive: false,
         screenPoint: { x: 10, y: 10 },
         selection: [],
@@ -109,7 +103,6 @@ describe("canvas panel interaction router", () => {
       resolveCanvasPointerDownRoute({
         button: 4,
         currentMode: createSelectInteractionMode(),
-        phase: "edit",
         selectionModifierActive: false,
         screenPoint: { x: 10, y: 10 },
         selection: [],
@@ -121,7 +114,6 @@ describe("canvas panel interaction router", () => {
       resolveCanvasPointerDownRoute({
         button: 0,
         currentMode: createSelectInteractionMode(),
-        phase: "edit",
         selectionModifierActive: true,
         screenPoint: { x: 10, y: 10 },
         selection: ["filler-1"],
@@ -141,7 +133,6 @@ describe("canvas panel interaction router", () => {
       resolveCanvasPointerDownRoute({
         button: 0,
         currentMode: createSelectInteractionMode(),
-        phase: "edit",
         selectionModifierActive: false,
         screenPoint: { x: 10, y: 10 },
         selection: ["filler-1"],
@@ -161,7 +152,6 @@ describe("canvas panel interaction router", () => {
       resolveCanvasPointerDownRoute({
         button: 0,
         currentMode: createSelectInteractionMode(),
-        phase: "edit",
         selectionModifierActive: true,
         screenPoint: { x: 10, y: 10 },
         selection: ["filler-1"],
@@ -191,7 +181,6 @@ describe("canvas panel interaction router", () => {
           inputMode: "touch",
           rotation: 0,
         }),
-        phase: "edit",
         screenPoint: { x: 30, y: 25 },
         selection: [],
         target: { kind: "blank" },
@@ -216,7 +205,6 @@ describe("canvas panel interaction router", () => {
           inputMode: "touch",
           previousModeKey: "select",
         }),
-        phase: "edit",
         screenPoint: { x: 30, y: 25 },
         selection: ["filler-1"],
         target: { kind: "blank" },
@@ -229,7 +217,6 @@ describe("canvas panel interaction router", () => {
         anchoredPlacementActive: false,
         anchoredPlacementScreenBox: null,
         currentMode: createSelectInteractionMode(),
-        phase: "edit",
         screenPoint: { x: 5, y: 5 },
         selection: [],
         target: { kind: "blank" },

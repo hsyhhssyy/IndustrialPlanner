@@ -91,18 +91,6 @@ describe("BottomStatusBar", () => {
       "工具: 传送带",
     ]);
 
-    await act(async () => {
-      controller.setPhase("simulate");
-    });
-
-    expect(container.querySelector(".status-chip-primary")?.textContent).toBe(
-      "当前视图: 放置",
-    );
-    expect(getRightStatusChipTexts(container)).toEqual([
-      "当前模式: 放置",
-      "工具: 传送带",
-    ]);
-
     await disposeBottomStatusBar({ controller, root });
   });
 });

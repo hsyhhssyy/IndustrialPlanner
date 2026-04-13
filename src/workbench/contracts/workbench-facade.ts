@@ -1,8 +1,6 @@
 import type {
   DockId,
   LeftPanelMode,
-  SimulationSpeedPreset,
-  WorkbenchPhase,
 } from "@/workbench/workbench-ui-state";
 import type { Stage1Registry } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
@@ -48,7 +46,6 @@ export interface WorkbenchController {
   canvasViewStore: CanvasViewStore;
   topologyStore: Pick<SnapshotStore<CompiledTopology>, "getSnapshot" | "subscribe">;
   registry: Stage1Registry;
-  setPhase: (phase: WorkbenchPhase) => void;
   setInteractionMode: (
     modeKey: Exclude<InteractionModeKey, "placement" | "move" | "marquee">,
   ) => void;
@@ -110,7 +107,6 @@ export interface WorkbenchController {
   panCanvasBy: (screenDelta: CanvasPoint) => void;
   setCanvasViewportSize: (size: CanvasPoint) => void;
   setLeftPanelMode: (mode: LeftPanelMode) => void;
-  setSimulationSpeedPreset: (preset: SimulationSpeedPreset) => void;
   setLocale: (locale: AppLocale) => void;
   getLogLevel: () => LogLevel;
   setLogLevel: (level: LogLevel) => void;

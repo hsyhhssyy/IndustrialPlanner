@@ -26,17 +26,19 @@ function canUseStorage(): boolean {
 }
 
 const WORKBENCH_UI_STATE_KEYS = new Set<keyof WorkbenchUiStateInput>([
-  "phase",
   "locale",
   "logLevel",
   "leftPanelMode",
-  "simulationSpeed",
   "diagnosticsVisible",
   "statusMessageKey",
   "leftDock",
   "rightDock",
 ]);
-const LEGACY_WORKBENCH_UI_STATE_KEYS = new Set(["mode"]);
+const LEGACY_WORKBENCH_UI_STATE_KEYS = new Set([
+  "mode",
+  "phase",
+  "simulationSpeed",
+]);
 
 const WORKSPACE_PERSISTENCE_KEYS = new Set([
   "canvasView",
@@ -115,14 +117,10 @@ function isWorkbenchUiStateInput(
   }
 
   if (
-    value.phase !== undefined &&
-    value.phase !== "edit" &&
-    value.phase !== "simulate"
+    value.locale !== undefined &&
+    value.locale !== "zh-CN" &&
+    value.locale !== "en-US"
   ) {
-    return false;
-  }
-
-  if (value.locale !== undefined && value.locale !== "zh-CN" && value.locale !== "en-US") {
     return false;
   }
 
@@ -136,17 +134,6 @@ function isWorkbenchUiStateInput(
     value.leftPanelMode !== "delete" &&
     value.leftPanelMode !== "blueprint" &&
     value.leftPanelMode !== "history"
-  ) {
-    return false;
-  }
-
-  if (
-    value.simulationSpeed !== undefined &&
-    value.simulationSpeed !== "0.25x" &&
-    value.simulationSpeed !== "1x" &&
-    value.simulationSpeed !== "2x" &&
-    value.simulationSpeed !== "4x" &&
-    value.simulationSpeed !== "16x"
   ) {
     return false;
   }
@@ -179,16 +166,21 @@ function isWorkspacePersistenceInput(
 function normalizePersistedUiCandidate(
   value: Record<string, unknown>,
 ): Record<string, unknown> {
-  if (!("mode" in value) || "phase" in value) {
-    return value;
+  const {
+    mode: _legacyMode,
+    phase: _legacyPhase,
+    simulationSpeed: _legacySimulationSpeed,
+    ...rest
+  } = value;
+
+  if (rest.statusMessageKey === "status.simulate") {
+    return {
+      ...rest,
+      statusMessageKey: "status.edit",
+    };
   }
 
-  const { mode, ...rest } = value;
-
-  return {
-    ...rest,
-    phase: mode,
-  };
+  return rest;
 }
 
 export function createWorkspaceStorage(): WorkspaceStorage {

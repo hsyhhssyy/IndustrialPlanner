@@ -65,28 +65,18 @@ describe("RightDock inspector split", () => {
     localStorage.clear();
   });
 
-  it("keeps the edit inspector active when simulation shell requests are ignored", async () => {
+  it("renders the edit inspector for a single selection", async () => {
     const controller = createWorkbenchController();
 
     controller.setLocale("en-US");
     await controller.selectEntity("reactor-1");
-    const editMarkup = renderToStaticMarkup(
-      <RightDock controller={controller} />,
-    );
+    const markup = renderToStaticMarkup(<RightDock controller={controller} />);
 
-    controller.setPhase("simulate");
-    const simulationMarkup = renderToStaticMarkup(
-      <RightDock controller={controller} />,
-    );
-
-    expect(editMarkup).toContain("Quick Actions");
-    expect(editMarkup).toContain("Config Fields");
-    expect(editMarkup).toContain("80x80");
-    expect(editMarkup).toContain("Wuling");
-    expect(simulationMarkup).toContain("Quick Actions");
-    expect(simulationMarkup).toContain("Config Fields");
-    expect(simulationMarkup).toContain("Runtime Details");
-    expect(simulationMarkup).not.toContain("Simulation panel temporarily stubbed");
+    expect(markup).toContain("Quick Actions");
+    expect(markup).toContain("Config Fields");
+    expect(markup).toContain("80x80");
+    expect(markup).toContain("Wuling");
+    expect(markup).toContain("Runtime Details");
 
     controller.dispose();
   });
