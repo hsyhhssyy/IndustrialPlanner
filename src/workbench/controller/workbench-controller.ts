@@ -992,13 +992,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   private async refreshInspectorForSelection(): Promise<void> {
-    const selectedEntityId = this.getActiveSelectionId();
-
-    if (!selectedEntityId) {
-      return;
-    }
-
-    await this.simulationHost.queryInspector(selectedEntityId);
+    await this.simulationHost.queryInspector(this.getActiveSelectionId());
   }
 
   private async syncAndRefreshInspectorForSelection(): Promise<void> {

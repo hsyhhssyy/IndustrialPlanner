@@ -62,4 +62,22 @@ describe("SimulationHost", () => {
 
     host.dispose();
   });
+
+  it("clears inspector details when queryInspector receives no active entity", async () => {
+    const host = createSimulationHost();
+    const registry = createStage1Registry();
+    const document = createStage1SeedWorldDocument();
+    const topology = compileStage1World(document, registry);
+
+    host.load({ document, topology, registry });
+    await host.queryInspector("reactor-1");
+
+    expect(host.getSnapshot().inspectorDetails?.entityId).toBe("reactor-1");
+
+    await host.queryInspector(null);
+
+    expect(host.getSnapshot().inspectorDetails).toBeNull();
+
+    host.dispose();
+  });
 });

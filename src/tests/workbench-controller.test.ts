@@ -1096,6 +1096,25 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("clears inspector details when edit selection is cleared", async () => {
+    const controller = createWorkbenchController();
+
+    await controller.selectEntity("reactor-1");
+
+    expect(readWorkbenchState(controller).inspectorDetails?.entityId).toBe(
+      "reactor-1",
+    );
+
+    await controller.clearSelection();
+
+    const snapshot = readWorkbenchState(controller);
+
+    expect(snapshot.activeSelection).toEqual([]);
+    expect(snapshot.inspectorDetails).toBeNull();
+
+    controller.dispose();
+  });
+
   it("toggles desktop edit selection through the shared selection action chain", async () => {
     const controller = createWorkbenchController();
 

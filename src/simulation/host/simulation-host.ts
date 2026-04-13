@@ -57,7 +57,7 @@ export interface SimulationHost {
   start: () => void;
   pause: () => void;
   step: () => void;
-  queryInspector: (entityId: string) => Promise<void>;
+  queryInspector: (entityId: string | null) => Promise<void>;
   dispose: () => void;
 }
 
@@ -270,8 +270,13 @@ class SimulationHostImpl implements SimulationHost {
     this.emitRuntime();
   }
 
-  async queryInspector(entityId: string): Promise<void> {
-    const details = this.kernel.queryInspector(entityId);
+  async queryInspector(entityId: string | null): Promise<void> {
+    const resolvedEntityId =
+      entityId && this.loadedWorld?.document.entities[entityId] ? entityId : null;
+    const details = resolvedEntityId
+      ? this.kernel.queryInspector(resolvedEntityId)
+      : null;
+
     this.store.update((snapshot) => ({
       ...snapshot,
       inspectorDetails: details,
