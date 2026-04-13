@@ -1063,18 +1063,8 @@ class WorkbenchControllerImpl implements WorkbenchController {
         simulationInspectorDetails: simulationState.inspectorDetails,
         simulationPatchSet: simulationState.patchSet,
       });
-      const worldBoundsStartedAt = getDiagnosticTimeMs();
-      const clampedCanvasView = this.measureProfilerStage(
-        "controller.sync.worldBounds",
-        () =>
-          clampCanvasViewState(nextState.canvasView, this.getViewportMetrics(nextState)),
-      );
-      const worldBoundsDurationMs = getDiagnosticTimeMs() - worldBoundsStartedAt;
-      const finalState = this.composeWorkspaceState(nextState, {
-        ...nextState,
-        canvasView: clampedCanvasView,
-      });
-      const canvasViewClamped = clampedCanvasView !== nextState.canvasView;
+      const { finalState, worldBoundsDurationMs, canvasViewClamped } =
+        this.clampWorkspaceStateCanvasView(nextState);
 
       const rootStoreSetStartedAt = getDiagnosticTimeMs();
       this.workspaceStore.rootStore.setSnapshot(finalState);
@@ -1128,6 +1118,32 @@ class WorkbenchControllerImpl implements WorkbenchController {
     return {
       persistedWorkspaceChanged,
       storageSaveDurationMs: getDiagnosticTimeMs() - storageSaveStartedAt,
+    };
+  }
+
+  private clampWorkspaceStateCanvasView(workspaceState: WorkspaceState): {
+    finalState: WorkspaceState;
+    worldBoundsDurationMs: number;
+    canvasViewClamped: boolean;
+  } {
+    const worldBoundsStartedAt = getDiagnosticTimeMs();
+    const clampedCanvasView = this.measureProfilerStage(
+      "controller.sync.worldBounds",
+      () =>
+        clampCanvasViewState(
+          workspaceState.canvasView,
+          this.getViewportMetrics(workspaceState),
+        ),
+    );
+    const worldBoundsDurationMs = getDiagnosticTimeMs() - worldBoundsStartedAt;
+
+    return {
+      finalState: this.composeWorkspaceState(workspaceState, {
+        ...workspaceState,
+        canvasView: clampedCanvasView,
+      }),
+      worldBoundsDurationMs,
+      canvasViewClamped: clampedCanvasView !== workspaceState.canvasView,
     };
   }
 
