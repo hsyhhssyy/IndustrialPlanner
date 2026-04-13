@@ -98,6 +98,7 @@ function createDerivedWorkspaceState(
 ): WorkspaceState {
   return {
     document: options.documentStore.getSnapshot(),
+    topology: options.topologyStore.getSnapshot(),
     editorSession: options.editorStore.getSnapshot().session,
     editorHistory: options.editorStore.getSnapshot().history,
     ui: options.uiStore.getSnapshot(),

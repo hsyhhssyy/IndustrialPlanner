@@ -81,7 +81,6 @@ import {
   type SimulationHost,
 } from "@/simulation/host/simulation-host";
 import {
-  createSnapshotStore,
   type SnapshotStore,
 } from "@/shared/snapshot-store/snapshot-store";
 import {
@@ -168,7 +167,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   readonly documentStore;
   readonly editorStore;
   readonly canvasViewStore;
-  readonly topologyStore: SnapshotStore<CompiledTopology>;
+  readonly topologyStore: Pick<SnapshotStore<CompiledTopology>, "getSnapshot" | "subscribe">;
   readonly simulationStore;
 
   private readonly logger = createLogger("workbench.controller");
@@ -222,6 +221,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
     this.workspaceStore = createWorkspaceStore({
       document: this.editorHost.getDocument(),
+      topology: this.topology,
       editorSession: this.editorStore.getSnapshot().session,
       editorHistory: this.editorStore.getSnapshot().history,
       ui: this.uiStore.getSnapshot(),
@@ -230,7 +230,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
     this.documentStore = this.workspaceStore.documentStore;
     this.simulationStore = this.workspaceStore.simulationStore;
-    this.topologyStore = createSnapshotStore(this.topology);
+    this.topologyStore = this.workspaceStore.topologyStore;
 
     this.unsubscribeSimulationHost = this.simulationHost.subscribe(() => {
       this.sync();
@@ -1041,6 +1041,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       const currentState = this.workspaceStore.rootStore.getSnapshot();
       const nextState = this.composeWorkspaceState(currentState, {
         document: this.editorHost.getDocument(),
+        topology: this.topology,
         editorSession: this.editorStore.getSnapshot().session,
         editorHistory: this.editorStore.getSnapshot().history,
         ui: this.uiStore.getSnapshot(),
@@ -1070,12 +1071,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
       this.recordProfilerStageDuration(
         "controller.sync.rootStoreSet",
         getDiagnosticTimeMs() - rootStoreSetStartedAt,
-      );
-      const topologyStoreSetStartedAt = getDiagnosticTimeMs();
-      this.topologyStore.setSnapshot(this.topology);
-      this.recordProfilerStageDuration(
-        "controller.sync.topologyStoreSet",
-        getDiagnosticTimeMs() - topologyStoreSetStartedAt,
       );
       let storageSaveDurationMs = 0;
 
@@ -1116,7 +1111,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   private getRenderWorldSize(workspaceState: WorkspaceState): CanvasPoint {
     const worldBoundsPx = deriveRenderWorldBoundsPx({
       document: workspaceState.document,
-      topology: this.topology,
+      topology: workspaceState.topology,
       registry: this.registry,
       placementPreview:
         workspaceState.ui.phase === "edit"
@@ -1143,6 +1138,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   ): WorkspaceState {
     if (
       currentState.document === nextState.document &&
+      currentState.topology === nextState.topology &&
       currentState.editorSession === nextState.editorSession &&
       currentState.editorHistory === nextState.editorHistory &&
       currentState.ui === nextState.ui &&
@@ -1157,6 +1153,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
         currentState.document === nextState.document
           ? currentState.document
           : nextState.document,
+      topology:
+        currentState.topology === nextState.topology
+          ? currentState.topology
+          : nextState.topology,
       editorSession:
         currentState.editorSession === nextState.editorSession
           ? currentState.editorSession
@@ -1299,8 +1299,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   private recordProfilerStageDuration(
     stageId:
-      | "controller.sync.rootStoreSet"
-      | "controller.sync.topologyStoreSet",
+      | "controller.sync.rootStoreSet",
     durationMs: number,
   ): void {
     this.placementPreviewProfiler?.recordStageDuration(stageId, durationMs);

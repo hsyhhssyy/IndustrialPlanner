@@ -123,6 +123,7 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceState = {
       document,
+      topology,
       editorSession: createInitialEditorSession(),
       editorHistory: {
         canUndo: false,
@@ -188,6 +189,7 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceState = {
       document,
+      topology,
       editorSession: {
         ...withPlacementPreview(createInitialEditorSession(), {
           definitionId: "belt_straight_1x1",
@@ -258,6 +260,7 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceState = {
       document,
+      topology,
       editorSession: {
         ...withPlacementPreview(createInitialEditorSession(), {
           definitionId: "item_port_unloader_1",
@@ -328,6 +331,7 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceState = {
       document,
+      topology,
       editorSession: {
         ...withPlacementPreview(createInitialEditorSession(), {
           definitionId: "missing_definition",
@@ -405,6 +409,7 @@ describe("WorkspaceDerivedStore", () => {
     const definition = topology.entityViews[selectedEntityId]?.definition;
     const workspaceState = {
       document,
+      topology,
       editorSession: {
         ...createInitialEditorSession(),
         selectedEntities: createCollection([selectedEntityId]),
@@ -477,6 +482,7 @@ describe("WorkspaceDerivedStore", () => {
     const selection = ["reactor-1", "filler-1"];
     const workspaceState = {
       document,
+      topology,
       editorSession: {
         ...createInitialEditorSession(),
         selectedEntities: createCollection(selection),
@@ -566,6 +572,7 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceState = {
       document,
+      topology,
       editorSession: {
         ...createInitialEditorSession(),
         selectedEntities: {
@@ -639,6 +646,7 @@ describe("WorkspaceDerivedStore", () => {
     const definition = topology.entityViews[movedEntityId]?.definition;
     const workspaceState = {
       document,
+      topology,
       editorSession: {
         ...withMoveDraft(createInitialEditorSession(), document, {
           entityId: movedEntityId,
@@ -715,6 +723,7 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceState = {
       document,
+      topology,
       editorSession: {
         ...createInitialEditorSession(),
         marqueeRange: {
@@ -792,6 +801,7 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceState = {
       document,
+      topology,
       editorSession: {
         ...createInitialEditorSession(),
         marqueeRange: {
@@ -861,6 +871,7 @@ describe("WorkspaceDerivedStore", () => {
     const topology = compileStage1World(document, registry);
     const workspaceStore = createWorkspaceStore({
       document,
+      topology,
       editorSession: createInitialEditorSession(),
       editorHistory: {
         canUndo: false,
@@ -938,6 +949,7 @@ describe("WorkspaceDerivedStore", () => {
     const base = getStage1BaseDefinition(document.baseId);
     const workspaceState = {
       document,
+      topology,
       editorSession: {
         ...createInitialEditorSession(),
         draftEntities: {

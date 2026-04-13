@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { compileStage1World } from "@/domain/compiler/stage1-compiler";
 import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";
+import { createStage1Registry } from "@/domain/registry/stage1-registry";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
 import { createEmptySimulationPatchSet } from "@/simulation/protocol/simulation-patch";
 import { createWorkspaceStore } from "@/workbench/workspace-store";
@@ -8,8 +10,11 @@ import { createInitialWorkbenchUiState } from "@/workbench/workbench-ui-store";
 
 describe("WorkspaceStore", () => {
   it("fans out slice subscriptions from one root state without notifying untouched slices", () => {
+    const document = createStage1SeedWorldDocument();
+    const topology = compileStage1World(document, createStage1Registry());
     const store = createWorkspaceStore({
-      document: createStage1SeedWorldDocument(),
+      document,
+      topology,
       editorSession: createInitialEditorSession(),
       editorHistory: {
         canUndo: false,
@@ -57,8 +62,11 @@ describe("WorkspaceStore", () => {
   });
 
   it("exposes top-level editor session/history slices while keeping editorStore compatible", () => {
+    const document = createStage1SeedWorldDocument();
+    const topology = compileStage1World(document, createStage1Registry());
     const store = createWorkspaceStore({
-      document: createStage1SeedWorldDocument(),
+      document,
+      topology,
       editorSession: createInitialEditorSession(),
       editorHistory: {
         canUndo: false,
@@ -119,6 +127,68 @@ describe("WorkspaceStore", () => {
     expect(store.editorHistory).toBe(nextHistory);
     expect(store.editorHistoryStore.getSnapshot()).toBe(nextHistory);
     expect(store.editorStore.getSnapshot().history).toBe(nextHistory);
+
+    store.dispose();
+  });
+
+  it("exposes topology and runtimeSnapshot alongside compatibility stores", () => {
+    const document = createStage1SeedWorldDocument();
+    const topology = compileStage1World(document, createStage1Registry());
+    const store = createWorkspaceStore({
+      document,
+      topology,
+      editorSession: createInitialEditorSession(),
+      editorHistory: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
+      },
+      ui: createInitialWorkbenchUiState(),
+      canvasView: createInitialCanvasViewState(),
+      simulation: {
+        runtimeSnapshot: {
+          tick: 0,
+          status: "idle",
+          entityViews: {},
+          patchedEntityIds: [],
+        },
+        telemetry: {
+          tick: 0,
+          simulatedHertz: 0,
+          entityCount: 0,
+        },
+        inspectorDetails: null,
+        patchSet: createEmptySimulationPatchSet(),
+        selection: [],
+      },
+    });
+
+    const nextDocument = createStage1SeedWorldDocument();
+    const nextTopology = compileStage1World(nextDocument, createStage1Registry());
+    const nextRuntimeSnapshot = {
+      tick: 1,
+      status: "running" as const,
+      entityViews: {},
+      patchedEntityIds: ["reactor-1"],
+    };
+
+    expect(store.topology).toBe(store.topologyStore.getSnapshot());
+    expect(store.runtimeSnapshot).toBe(store.runtimeSnapshotStore.getSnapshot());
+
+    store.rootStore.update((state) => ({
+      ...state,
+      topology: nextTopology,
+      simulation: {
+        ...state.simulation,
+        runtimeSnapshot: nextRuntimeSnapshot,
+      },
+    }));
+
+    expect(store.topology).toBe(nextTopology);
+    expect(store.topologyStore.getSnapshot()).toBe(nextTopology);
+    expect(store.runtimeSnapshot).toBe(nextRuntimeSnapshot);
+    expect(store.runtimeSnapshotStore.getSnapshot()).toBe(nextRuntimeSnapshot);
 
     store.dispose();
   });

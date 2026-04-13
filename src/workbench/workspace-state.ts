@@ -1,4 +1,5 @@
 import type { WorldDocument } from "@/domain/document/world-document";
+import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import type { EditorSession } from "@/editor/contracts/editor-session";
 import type { EditorHistoryState as EditorHistorySliceState } from "@/editor/core/editor-core";
 import type { SimulationState } from "@/simulation/host/simulation-host";
@@ -24,6 +25,7 @@ export interface WorkspaceEditorState {
 
 export interface WorkspaceState {
   document: WorldDocument;
+  topology: CompiledTopology;
   editorSession: EditorSessionState;
   editorHistory: EditorHistoryState;
   ui: WorkbenchUiState;

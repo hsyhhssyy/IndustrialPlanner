@@ -11,7 +11,6 @@ const PLACEMENT_PREVIEW_PROFILING_STAGE_IDS = [
   "controller.sync.total",
   "controller.sync.worldBounds",
   "controller.sync.rootStoreSet",
-  "controller.sync.topologyStoreSet",
   "controller.diagnostics",
   "workspaceDerived.recompute",
   "render.coordinator.collectInput",
