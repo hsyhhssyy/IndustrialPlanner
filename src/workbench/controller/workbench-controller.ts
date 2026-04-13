@@ -172,7 +172,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
   readonly simulationSelectionStore;
   readonly simulationInspectorDetailsStore;
   readonly simulationPatchSetStore;
-  readonly simulationStore;
 
   private readonly logger = createLogger("workbench.controller");
   private readonly placementPreviewProfiler?: PlacementPreviewProfiler;
@@ -238,7 +237,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.simulationInspectorDetailsStore =
       this.workspaceStore.simulationInspectorDetailsStore;
     this.simulationPatchSetStore = this.workspaceStore.simulationPatchSetStore;
-    this.simulationStore = this.workspaceStore.simulationStore;
     this.topologyStore = this.workspaceStore.topologyStore;
 
     this.unsubscribeSimulationHost = this.simulationHost.subscribe(() => {

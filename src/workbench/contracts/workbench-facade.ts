@@ -54,7 +54,6 @@ export interface WorkbenchController {
     SimulationState["inspectorDetails"]
   >;
   simulationPatchSetStore: ReadonlySnapshotStore<SimulationState["patchSet"]>;
-  simulationStore: ReadonlySnapshotStore<SimulationState>;
   registry: Stage1Registry;
   setPhase: (phase: WorkbenchPhase) => void;
   setInteractionMode: (

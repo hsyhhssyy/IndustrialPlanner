@@ -63,7 +63,6 @@ function readWorkbenchState(
   const editor = controller.editorStore.getSnapshot();
   const canvasView = controller.canvasViewStore.getSnapshot();
   const topology = controller.topologyStore.getSnapshot();
-  const simulation = controller.simulationStore.getSnapshot();
   const runtimeSnapshot = controller.runtimeSnapshotStore.getSnapshot();
   const simulationSelection = controller.simulationSelectionStore.getSnapshot();
   const simulationInspectorDetails =
@@ -118,7 +117,6 @@ function readWorkbenchState(
         : null,
     topology,
     runtimeSnapshot,
-    telemetry: simulation.telemetry,
     inspectorDetails: simulationInspectorDetails,
     simulationPatchSet,
     simulationSelection,

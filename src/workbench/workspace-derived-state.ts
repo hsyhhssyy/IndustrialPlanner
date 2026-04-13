@@ -16,6 +16,11 @@ import {
 } from "@/shared/geometry/grid";
 import type { CanvasPoint, WorkspaceState } from "@/workbench/workspace-state";
 
+export type WorkspaceRenderDerivedInputState = Pick<
+  WorkspaceState,
+  "document" | "editorSession" | "ui" | "canvasView"
+>;
+
 export interface RenderDerivedScreenBox {
   left: number;
   top: number;
@@ -46,7 +51,7 @@ export interface WorkspaceDerivedState {
 }
 
 interface DeriveRenderDerivedStateOptions {
-  workspaceState: WorkspaceState;
+  workspaceState: WorkspaceRenderDerivedInputState;
   topology: CompiledTopology;
   registry: Stage1Registry;
 }

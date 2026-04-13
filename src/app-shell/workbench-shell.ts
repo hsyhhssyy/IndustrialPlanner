@@ -25,7 +25,6 @@ export function createWorkbenchShell(
     editorStore: controller.editorStore,
     uiStore: controller.uiStore,
     canvasViewStore: controller.canvasViewStore,
-    simulationStore: controller.simulationStore,
     topologyStore: controller.topologyStore,
     registry: controller.registry,
     placementPreviewProfiler: options.placementPreviewProfiler,

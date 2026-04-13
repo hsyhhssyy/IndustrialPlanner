@@ -9,15 +9,14 @@ import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
 import type {
   CanvasViewState,
   WorkspaceEditorState,
-  WorkspaceState,
 } from "@/workbench/workspace-state";
 import type { WorkbenchUiState } from "@/workbench/workbench-ui-state";
 import {
   deriveWorkspaceDerivedState,
   type WorkspaceDerivedState,
   type RenderDerivedState,
+  type WorkspaceRenderDerivedInputState,
 } from "@/workbench/workspace-derived-state";
-import type { SimulationState } from "@/simulation/host/simulation-host";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 
 export interface WorkspaceDerivedStore {
@@ -31,7 +30,6 @@ export interface CreateWorkspaceDerivedStoreOptions {
   editorStore: ReadonlySnapshotStore<WorkspaceEditorState>;
   uiStore: ReadonlySnapshotStore<WorkbenchUiState>;
   canvasViewStore: ReadonlySnapshotStore<CanvasViewState>;
-  simulationStore: ReadonlySnapshotStore<SimulationState>;
   topologyStore: ReadonlySnapshotStore<CompiledTopology>;
   registry: Stage1Registry;
   placementPreviewProfiler?: PlacementPreviewProfiler;
@@ -95,15 +93,12 @@ function isSameWorkspaceDerivedState(
 
 function createDerivedWorkspaceState(
   options: CreateWorkspaceDerivedStoreOptions,
-): WorkspaceState {
+): WorkspaceRenderDerivedInputState {
   return {
     document: options.documentStore.getSnapshot(),
-    topology: options.topologyStore.getSnapshot(),
     editorSession: options.editorStore.getSnapshot().session,
-    editorHistory: options.editorStore.getSnapshot().history,
     ui: options.uiStore.getSnapshot(),
     canvasView: options.canvasViewStore.getSnapshot(),
-    simulation: options.simulationStore.getSnapshot(),
   };
 }
 
@@ -155,7 +150,6 @@ export function createWorkspaceDerivedStore(
     options.editorStore.subscribe(recompute),
     options.uiStore.subscribe(recompute),
     options.canvasViewStore.subscribe(recompute),
-    options.simulationStore.subscribe(recompute),
     options.topologyStore.subscribe(recompute),
   ];
 

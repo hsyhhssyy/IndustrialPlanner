@@ -904,7 +904,6 @@ describe("WorkspaceDerivedStore", () => {
       editorStore: workspaceStore.editorStore,
       uiStore: workspaceStore.uiStore,
       canvasViewStore: workspaceStore.canvasViewStore,
-      simulationStore: workspaceStore.simulationStore,
       topologyStore,
       registry,
     });
