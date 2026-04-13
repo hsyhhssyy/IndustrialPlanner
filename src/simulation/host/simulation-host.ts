@@ -235,11 +235,8 @@ class SimulationHostImpl implements SimulationHost {
       return;
     }
 
-    const inspectorDetails = this.kernel.queryInspector(resolvedEntityId);
-
     this.store.update((state) => ({
       ...state,
-      inspectorDetails,
       selection: [resolvedEntityId],
     }));
   }

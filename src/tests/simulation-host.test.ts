@@ -80,4 +80,23 @@ describe("SimulationHost", () => {
 
     host.dispose();
   });
+
+  it("keeps entity selection separate from inspector queries", async () => {
+    const host = createSimulationHost();
+    const registry = createStage1Registry();
+    const document = createStage1SeedWorldDocument();
+    const topology = compileStage1World(document, registry);
+
+    host.load({ document, topology, registry });
+    await host.selectEntity("reactor-1");
+
+    expect(host.getSnapshot().selection).toEqual(["reactor-1"]);
+    expect(host.getSnapshot().inspectorDetails).toBeNull();
+
+    await host.queryInspector("reactor-1");
+
+    expect(host.getSnapshot().inspectorDetails?.entityId).toBe("reactor-1");
+
+    host.dispose();
+  });
 });

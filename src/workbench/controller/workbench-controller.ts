@@ -669,6 +669,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   async selectSimulationEntity(entityId: string | null): Promise<void> {
     await this.simulationHost.selectEntity(entityId);
+    await this.refreshInspectorForSelection();
   }
 
   async removeSelection(): Promise<void> {
