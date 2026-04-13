@@ -221,6 +221,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.editorStore = createEditorRuntimeStore(this.editorHost.getState());
     this.simulationHost = createSimulationHost();
     this.loadSimulationWorld();
+    const simulationState = this.simulationHost.getSnapshot();
 
     this.workspaceStore = createWorkspaceStore({
       document: this.editorHost.getDocument(),
@@ -229,7 +230,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
       editorHistory: this.editorStore.getSnapshot().history,
       ui: this.uiStore.getSnapshot(),
       canvasView: this.canvasViewStore.getSnapshot(),
-      simulation: this.simulationHost.getSnapshot(),
+      runtimeSnapshot: simulationState.runtimeSnapshot,
+      simulationSelection: simulationState.selection,
+      simulationInspectorDetails: simulationState.inspectorDetails,
+      simulationPatchSet: simulationState.patchSet,
     });
     this.documentStore = this.workspaceStore.documentStore;
     this.runtimeSnapshotStore = this.workspaceStore.runtimeSnapshotStore;
@@ -1046,6 +1050,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       const startedAt = getDiagnosticTimeMs();
       this.editorStore.setSnapshot(this.editorHost.getState());
       const currentState = this.workspaceStore.rootStore.getSnapshot();
+      const simulationState = this.simulationHost.getSnapshot();
       const nextState = this.composeWorkspaceState(currentState, {
         document: this.editorHost.getDocument(),
         topology: this.topology,
@@ -1053,7 +1058,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
         editorHistory: this.editorStore.getSnapshot().history,
         ui: this.uiStore.getSnapshot(),
         canvasView: this.canvasViewStore.getSnapshot(),
-        simulation: this.simulationHost.getSnapshot(),
+        runtimeSnapshot: simulationState.runtimeSnapshot,
+        simulationSelection: simulationState.selection,
+        simulationInspectorDetails: simulationState.inspectorDetails,
+        simulationPatchSet: simulationState.patchSet,
       });
       const worldBoundsStartedAt = getDiagnosticTimeMs();
       const clampedCanvasView = this.measureProfilerStage(
@@ -1150,7 +1158,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
       currentState.editorHistory === nextState.editorHistory &&
       currentState.ui === nextState.ui &&
       currentState.canvasView === nextState.canvasView &&
-      currentState.simulation === nextState.simulation
+      currentState.runtimeSnapshot === nextState.runtimeSnapshot &&
+      currentState.simulationSelection === nextState.simulationSelection &&
+      currentState.simulationInspectorDetails === nextState.simulationInspectorDetails &&
+      currentState.simulationPatchSet === nextState.simulationPatchSet
     ) {
       return currentState;
     }
@@ -1177,10 +1188,22 @@ class WorkbenchControllerImpl implements WorkbenchController {
         currentState.canvasView === nextState.canvasView
           ? currentState.canvasView
           : nextState.canvasView,
-      simulation:
-        currentState.simulation === nextState.simulation
-          ? currentState.simulation
-          : nextState.simulation,
+      runtimeSnapshot:
+        currentState.runtimeSnapshot === nextState.runtimeSnapshot
+          ? currentState.runtimeSnapshot
+          : nextState.runtimeSnapshot,
+      simulationSelection:
+        currentState.simulationSelection === nextState.simulationSelection
+          ? currentState.simulationSelection
+          : nextState.simulationSelection,
+      simulationInspectorDetails:
+        currentState.simulationInspectorDetails === nextState.simulationInspectorDetails
+          ? currentState.simulationInspectorDetails
+          : nextState.simulationInspectorDetails,
+      simulationPatchSet:
+        currentState.simulationPatchSet === nextState.simulationPatchSet
+          ? currentState.simulationPatchSet
+          : nextState.simulationPatchSet,
     };
   }
 

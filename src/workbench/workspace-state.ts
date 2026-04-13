@@ -30,7 +30,10 @@ export interface WorkspaceState {
   editorHistory: EditorHistoryState;
   ui: WorkbenchUiState;
   canvasView: CanvasViewState;
-  simulation: SimulationState;
+  runtimeSnapshot: SimulationState["runtimeSnapshot"];
+  simulationSelection: SimulationState["selection"];
+  simulationInspectorDetails: SimulationState["inspectorDetails"];
+  simulationPatchSet: SimulationState["patchSet"];
 }
 
 export function createInitialCanvasViewState(

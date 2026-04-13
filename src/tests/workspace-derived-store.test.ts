@@ -865,7 +865,7 @@ describe("WorkspaceDerivedStore", () => {
     });
   });
 
-  it("does not notify render subscribers when only unused simulation state changes", () => {
+  it("does not notify render subscribers when only unused runtime slices change", () => {
     const document = createStage1SeedWorldDocument();
     const registry = createStage1Registry();
     const topology = compileStage1World(document, registry);
@@ -881,22 +881,15 @@ describe("WorkspaceDerivedStore", () => {
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: createInitialCanvasViewState(),
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle",
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
+      runtimeSnapshot: {
+        tick: 0,
+        status: "idle",
+        entityViews: {},
+        patchedEntityIds: [],
       },
+      simulationSelection: [],
+      simulationInspectorDetails: null,
+      simulationPatchSet: createEmptySimulationPatchSet(),
     });
     const topologyStore = createSnapshotStore(topology);
     const derivedStore = createWorkspaceDerivedStore({
@@ -913,13 +906,7 @@ describe("WorkspaceDerivedStore", () => {
 
     workspaceStore.rootStore.update((state) => ({
       ...state,
-      simulation: {
-        ...state.simulation,
-        telemetry: {
-          ...state.simulation.telemetry,
-          tick: 1,
-        },
-      },
+      simulationSelection: ["reactor-1"],
     }));
 
     expect(renderListener).not.toHaveBeenCalled();

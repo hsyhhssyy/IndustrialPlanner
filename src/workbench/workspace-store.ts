@@ -25,9 +25,9 @@ export interface WorkspaceStore {
   readonly editorSession: WorkspaceState["editorSession"];
   readonly editorHistory: WorkspaceState["editorHistory"];
   readonly runtimeSnapshot: RuntimeRenderSnapshot;
-  readonly simulationSelection: SimulationState["selection"];
-  readonly simulationInspectorDetails: SimulationState["inspectorDetails"];
-  readonly simulationPatchSet: SimulationState["patchSet"];
+  readonly simulationSelection: WorkspaceState["simulationSelection"];
+  readonly simulationInspectorDetails: WorkspaceState["simulationInspectorDetails"];
+  readonly simulationPatchSet: WorkspaceState["simulationPatchSet"];
   documentStore: ReadonlySnapshotStore<WorldDocument>;
   topologyStore: ReadonlySnapshotStore<CompiledTopology>;
   editorSessionStore: ReadonlySnapshotStore<WorkspaceState["editorSession"]>;
@@ -36,12 +36,11 @@ export interface WorkspaceStore {
   uiStore: ReadonlySnapshotStore<WorkbenchUiState>;
   canvasViewStore: ReadonlySnapshotStore<CanvasViewState>;
   runtimeSnapshotStore: ReadonlySnapshotStore<RuntimeRenderSnapshot>;
-  simulationSelectionStore: ReadonlySnapshotStore<SimulationState["selection"]>;
+  simulationSelectionStore: ReadonlySnapshotStore<WorkspaceState["simulationSelection"]>;
   simulationInspectorDetailsStore: ReadonlySnapshotStore<
-    SimulationState["inspectorDetails"]
+    WorkspaceState["simulationInspectorDetails"]
   >;
-  simulationPatchSetStore: ReadonlySnapshotStore<SimulationState["patchSet"]>;
-  simulationStore: ReadonlySnapshotStore<SimulationState>;
+  simulationPatchSetStore: ReadonlySnapshotStore<WorkspaceState["simulationPatchSet"]>;
   dispose: () => void;
 }
 
@@ -110,21 +109,20 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
   const canvasViewStore = createDerivedStore(rootStore, (state) => state.canvasView);
   const runtimeSnapshotStore = createDerivedStore(
     rootStore,
-    (state) => state.simulation.runtimeSnapshot,
+    (state) => state.runtimeSnapshot,
   );
   const simulationSelectionStore = createDerivedStore(
     rootStore,
-    (state) => state.simulation.selection,
+    (state) => state.simulationSelection,
   );
   const simulationInspectorDetailsStore = createDerivedStore(
     rootStore,
-    (state) => state.simulation.inspectorDetails,
+    (state) => state.simulationInspectorDetails,
   );
   const simulationPatchSetStore = createDerivedStore(
     rootStore,
-    (state) => state.simulation.patchSet,
+    (state) => state.simulationPatchSet,
   );
-  const simulationStore = createDerivedStore(rootStore, (state) => state.simulation);
 
   return {
     rootStore,
@@ -141,16 +139,16 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
       return rootStore.getSnapshot().editorHistory;
     },
     get runtimeSnapshot() {
-      return rootStore.getSnapshot().simulation.runtimeSnapshot;
+      return rootStore.getSnapshot().runtimeSnapshot;
     },
     get simulationSelection() {
-      return rootStore.getSnapshot().simulation.selection;
+      return rootStore.getSnapshot().simulationSelection;
     },
     get simulationInspectorDetails() {
-      return rootStore.getSnapshot().simulation.inspectorDetails;
+      return rootStore.getSnapshot().simulationInspectorDetails;
     },
     get simulationPatchSet() {
-      return rootStore.getSnapshot().simulation.patchSet;
+      return rootStore.getSnapshot().simulationPatchSet;
     },
     documentStore: documentStore.store,
     topologyStore: topologyStore.store,
@@ -163,7 +161,6 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
     simulationSelectionStore: simulationSelectionStore.store,
     simulationInspectorDetailsStore: simulationInspectorDetailsStore.store,
     simulationPatchSetStore: simulationPatchSetStore.store,
-    simulationStore: simulationStore.store,
     dispose: () => {
       documentStore.dispose();
       topologyStore.dispose();
@@ -176,7 +173,6 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
       simulationSelectionStore.dispose();
       simulationInspectorDetailsStore.dispose();
       simulationPatchSetStore.dispose();
-      simulationStore.dispose();
     },
   };
 }

@@ -24,22 +24,15 @@ describe("WorkspaceStore", () => {
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: createInitialCanvasViewState(),
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle",
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
+      runtimeSnapshot: {
+        tick: 0,
+        status: "idle",
+        entityViews: {},
+        patchedEntityIds: [],
       },
+      simulationSelection: [],
+      simulationInspectorDetails: null,
+      simulationPatchSet: createEmptySimulationPatchSet(),
     });
     const documentListener = vi.fn();
     const uiListener = vi.fn();
@@ -76,22 +69,15 @@ describe("WorkspaceStore", () => {
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: createInitialCanvasViewState(),
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle",
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
+      runtimeSnapshot: {
+        tick: 0,
+        status: "idle",
+        entityViews: {},
+        patchedEntityIds: [],
       },
+      simulationSelection: [],
+      simulationInspectorDetails: null,
+      simulationPatchSet: createEmptySimulationPatchSet(),
     });
 
     const editorListener = vi.fn();
@@ -131,7 +117,7 @@ describe("WorkspaceStore", () => {
     store.dispose();
   });
 
-  it("exposes simulation shared slices alongside compatibility stores", () => {
+  it("exposes top-level simulation shared slices", () => {
     const document = createStage1SeedWorldDocument();
     const topology = compileStage1World(document, createStage1Registry());
     const store = createWorkspaceStore({
@@ -146,22 +132,15 @@ describe("WorkspaceStore", () => {
       },
       ui: createInitialWorkbenchUiState(),
       canvasView: createInitialCanvasViewState(),
-      simulation: {
-        runtimeSnapshot: {
-          tick: 0,
-          status: "idle",
-          entityViews: {},
-          patchedEntityIds: [],
-        },
-        telemetry: {
-          tick: 0,
-          simulatedHertz: 0,
-          entityCount: 0,
-        },
-        inspectorDetails: null,
-        patchSet: createEmptySimulationPatchSet(),
-        selection: [],
+      runtimeSnapshot: {
+        tick: 0,
+        status: "idle",
+        entityViews: {},
+        patchedEntityIds: [],
       },
+      simulationSelection: [],
+      simulationInspectorDetails: null,
+      simulationPatchSet: createEmptySimulationPatchSet(),
     });
 
     const nextDocument = createStage1SeedWorldDocument();
@@ -200,10 +179,7 @@ describe("WorkspaceStore", () => {
 
     store.rootStore.update((state) => ({
       ...state,
-      simulation: {
-        ...state.simulation,
-        inspectorDetails: nextInspectorDetails,
-      },
+      simulationInspectorDetails: nextInspectorDetails,
     }));
 
     expect(selectionListener).not.toHaveBeenCalled();
@@ -211,13 +187,10 @@ describe("WorkspaceStore", () => {
     store.rootStore.update((state) => ({
       ...state,
       topology: nextTopology,
-      simulation: {
-        ...state.simulation,
-        runtimeSnapshot: nextRuntimeSnapshot,
-        inspectorDetails: nextInspectorDetails,
-        patchSet: nextPatchSet,
-        selection: ["reactor-1"],
-      },
+      runtimeSnapshot: nextRuntimeSnapshot,
+      simulationInspectorDetails: nextInspectorDetails,
+      simulationPatchSet: nextPatchSet,
+      simulationSelection: ["reactor-1"],
     }));
 
     expect(store.topology).toBe(nextTopology);
