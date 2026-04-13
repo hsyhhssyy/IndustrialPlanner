@@ -222,12 +222,13 @@ class SimulationHostImpl implements SimulationHost {
 
     if (!resolvedEntityId) {
       this.store.update((state) => {
-        if (state.selection.length === 0) {
+        if (state.selection.length === 0 && state.inspectorDetails === null) {
           return state;
         }
 
         return {
           ...state,
+          inspectorDetails: null,
           selection: [],
         };
       });

@@ -1076,6 +1076,26 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("clears simulation inspector details when simulation selection is cleared", async () => {
+    const controller = createWorkbenchController();
+
+    controller.setPhase("simulate");
+    await controller.selectSimulationEntity("dark-outlet-1");
+
+    expect(readWorkbenchState(controller).inspectorDetails?.entityId).toBe(
+      "dark-outlet-1",
+    );
+
+    await controller.selectSimulationEntity(null);
+
+    const snapshot = readWorkbenchState(controller);
+
+    expect(snapshot.simulationSelection).toEqual([]);
+    expect(snapshot.inspectorDetails).toBeNull();
+
+    controller.dispose();
+  });
+
   it("toggles desktop edit selection through the shared selection action chain", async () => {
     const controller = createWorkbenchController();
 
