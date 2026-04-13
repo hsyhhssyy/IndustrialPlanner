@@ -57,4 +57,51 @@ describe("WorkspaceStore", () => {
 
     store.dispose();
   });
+
+  it("exposes raw document alongside documentStore at the top level", () => {
+    const store = createWorkspaceStore({
+      document: createStage1SeedWorldDocument(),
+      editor: {
+        session: createInitialEditorSession(),
+        history: {
+          canUndo: false,
+          canRedo: false,
+          undoDepth: 0,
+          redoDepth: 0,
+        },
+      },
+      ui: createInitialWorkbenchUiState(),
+      canvasView: createInitialCanvasViewState(),
+      simulation: {
+        runtimeSnapshot: {
+          tick: 0,
+          status: "idle",
+          entityViews: {},
+          patchedEntityIds: [],
+        },
+        telemetry: {
+          tick: 0,
+          simulatedHertz: 0,
+          entityCount: 0,
+        },
+        inspectorDetails: null,
+        patchSet: createEmptySimulationPatchSet(),
+        selection: [],
+      },
+    });
+
+    const nextDocument = createStage1SeedWorldDocument();
+
+    expect(store.document).toBe(store.documentStore.getSnapshot());
+
+    store.rootStore.update((state) => ({
+      ...state,
+      document: nextDocument,
+    }));
+
+    expect(store.document).toBe(nextDocument);
+    expect(store.documentStore.getSnapshot()).toBe(nextDocument);
+
+    store.dispose();
+  });
 });

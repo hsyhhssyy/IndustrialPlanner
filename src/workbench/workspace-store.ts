@@ -17,6 +17,7 @@ export type ReadonlySnapshotStore<TSnapshot> = Pick<
 
 export interface WorkspaceStore {
   rootStore: SnapshotStore<WorkspaceState>;
+  readonly document: WorldDocument;
   documentStore: ReadonlySnapshotStore<WorldDocument>;
   editorStore: ReadonlySnapshotStore<WorkspaceState["editor"]>;
   uiStore: ReadonlySnapshotStore<WorkbenchUiState>;
@@ -53,6 +54,9 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
 
   return {
     rootStore,
+    get document() {
+      return rootStore.getSnapshot().document;
+    },
     documentStore: documentStore.store,
     editorStore: editorStore.store,
     uiStore: uiStore.store,
