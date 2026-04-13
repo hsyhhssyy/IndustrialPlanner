@@ -42,11 +42,7 @@ export function SelectionInspectorSummary({
       </div>
       <div className="kv">
         <dt>{t("label.mode")}</dt>
-        <dd>{t(state.phase === "edit" ? "mode.edit" : "mode.simulate")}</dd>
-      </div>
-      <div className="kv">
-        <dt>{t("label.runtime")}</dt>
-        <dd>{context.selectedEntityRuntime?.status ?? "idle"}</dd>
+        <dd>{t("mode.edit")}</dd>
       </div>
       <div className="kv">
         <dt>{t("label.position")}</dt>
@@ -110,16 +106,11 @@ export function ConnectionList({
 
 export function RuntimeDetailList({
   state,
-  context,
 }: {
   state: SelectionInspectorState;
-  context: SelectionInspectorContext;
 }) {
   const t = createTranslator(state.locale);
-  const lines =
-    state.inspectorDetails?.entityId === context.selectedEntity.id
-      ? state.inspectorDetails.lines
-      : [t("label.runtimeDetailPlaceholder")];
+  const lines = [t("label.runtimeDetailPlaceholder")];
 
   return (
     <div className="definition-list">

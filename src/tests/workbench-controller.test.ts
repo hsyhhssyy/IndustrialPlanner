@@ -63,41 +63,30 @@ function readWorkbenchState(
   const editor = controller.editorStore.getSnapshot();
   const canvasView = controller.canvasViewStore.getSnapshot();
   const topology = controller.topologyStore.getSnapshot();
-  const runtimeSnapshot = controller.runtimeSnapshotStore.getSnapshot();
-  const simulationSelection = controller.simulationSelectionStore.getSnapshot();
-  const simulationInspectorDetails =
-    controller.simulationInspectorDetailsStore.getSnapshot();
-  const simulationPatchSet = controller.simulationPatchSetStore.getSnapshot();
   const activeSelection = getSelectedEntityIds(editor.session);
-  const activePlacementPreview =
-    ui.phase === "edit" ? getManagedPlacementPreview(editor.session) : null;
-  const activeMoveDraft =
-    ui.phase === "edit" ? getManagedMoveDraft(editor.session, document) : null;
-  const activeMarqueeDraft =
-    ui.phase === "edit" ? getManagedMarqueeDraft(editor.session) : null;
+  const activePlacementPreview = getManagedPlacementPreview(editor.session);
+  const activeMoveDraft = getManagedMoveDraft(editor.session, document);
+  const activeMarqueeDraft = getManagedMarqueeDraft(editor.session);
   const renderScene = buildRenderScene({
     locale: ui.locale,
     document,
     topology,
     registry: controller.registry,
     canvasView,
-    interaction:
-      ui.phase === "simulate"
-        ? {
-            selectedEntityIds: simulationSelection,
-            placementPreview: null,
-            moveDraft: null,
-            pendingLinkSourceEntityId: null,
-          }
-        : {
-            selectedEntityIds: activeSelection,
-            placementPreview: activePlacementPreview,
-            moveDraft: activeMoveDraft,
-            pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
-              editor.session.currentMode,
-            ),
-          },
-            runtimeSnapshot,
+    interaction: {
+      selectedEntityIds: activeSelection,
+      placementPreview: activePlacementPreview,
+      moveDraft: activeMoveDraft,
+      pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
+        editor.session.currentMode,
+      ),
+    },
+    runtimeSnapshot: {
+      tick: 0,
+      status: "idle",
+      entityViews: {},
+      patchedEntityIds: [],
+    },
   });
 
   return {
@@ -111,15 +100,10 @@ function readWorkbenchState(
     activePlacementPreview,
     activeMoveDraft,
     activeMarqueeDraft,
-    activePendingLinkSourceEntityId:
-      ui.phase === "edit"
-        ? getPendingLinkSourceEntityId(editor.session.currentMode)
-        : null,
+    activePendingLinkSourceEntityId: getPendingLinkSourceEntityId(
+      editor.session.currentMode,
+    ),
     topology,
-    runtimeSnapshot,
-    inspectorDetails: simulationInspectorDetails,
-    simulationPatchSet,
-    simulationSelection,
     renderScene,
   };
 }
@@ -440,29 +424,25 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("enters the simulate shell without mutating stub runtime data", () => {
+  it("ignores simulate phase requests and keeps authoring mode active", () => {
     const controller = createWorkbenchController();
 
-    controller.stepSimulation();
+    controller.setPhase("simulate");
 
-    expect(readWorkbenchState(controller).runtimeSnapshot.tick).toBe(0);
-    expect(readWorkbenchState(controller).ui.phase).toBe("simulate");
+    expect(readWorkbenchState(controller).ui.phase).toBe("edit");
 
     controller.dispose();
   });
 
-  it("stops simulation by returning to edit mode", () => {
+  it("keeps edit mode stable when phase is set back to edit", () => {
     const controller = createWorkbenchController();
 
-    controller.startSimulation();
-    expect(readWorkbenchState(controller).ui.phase).toBe("simulate");
-
-    controller.stopSimulation();
+    controller.setPhase("simulate");
+    controller.setPhase("edit");
 
     const snapshot = readWorkbenchState(controller);
 
     expect(snapshot.ui.phase).toBe("edit");
-    expect(snapshot.runtimeSnapshot.status).toBe("idle");
 
     controller.dispose();
   });
@@ -643,19 +623,21 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("ignores placement arming while simulate mode is active", () => {
+  it("continues placement arming after simulate phase requests are ignored", () => {
     const controller = createWorkbenchController();
-    const before = readWorkbenchState(controller);
 
     controller.setPhase("simulate");
     controller.armPlacement("belt_straight_1x1", "belt");
 
     const after = readWorkbenchState(controller);
 
-    expect(after.ui.phase).toBe("simulate");
-    expect(after.session.displayTool).toBe(before.session.displayTool);
-    expect(after.session.currentMode).toEqual(before.session.currentMode);
-    expect(after.ui.leftPanelMode).toBe(before.ui.leftPanelMode);
+    expect(after.ui.phase).toBe("edit");
+    expect(after.session.displayTool).toBe("belt");
+    expect(after.session.currentMode).toMatchObject({
+      key: "placement",
+      definitionId: "belt_straight_1x1",
+    });
+    expect(after.ui.leftPanelMode).toBe("placement");
 
     controller.dispose();
   });
@@ -1060,50 +1042,16 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("keeps simulation selection separate from edit session selection", async () => {
+  it("keeps edit selection stable when simulate phase requests are ignored", async () => {
     const controller = createWorkbenchController();
 
     await controller.selectEntity("filler-1");
     controller.setPhase("simulate");
-    await controller.selectSimulationEntity("dark-outlet-1");
 
     const snapshot = readWorkbenchState(controller);
 
-    expect(snapshot.ui.phase).toBe("simulate");
-    expect(snapshot.simulationSelection).toEqual([]);
+    expect(snapshot.ui.phase).toBe("edit");
     expect(snapshot.activeSelection).toEqual(["filler-1"]);
-
-    controller.dispose();
-  });
-
-  it("keeps simulation selection requests on the stub surface", async () => {
-    const controller = createWorkbenchController();
-
-    controller.setPhase("simulate");
-    await controller.selectSimulationEntity("dark-outlet-1");
-
-    await controller.selectSimulationEntity(null);
-
-    const snapshot = readWorkbenchState(controller);
-
-    expect(snapshot.simulationSelection).toEqual([]);
-    expect(snapshot.inspectorDetails).toBeNull();
-
-    controller.dispose();
-  });
-
-  it("keeps inspector details stubbed during edit selection changes", async () => {
-    const controller = createWorkbenchController();
-
-    await controller.selectEntity("reactor-1");
-    expect(readWorkbenchState(controller).inspectorDetails).toBeNull();
-
-    await controller.clearSelection();
-
-    const snapshot = readWorkbenchState(controller);
-
-    expect(snapshot.activeSelection).toEqual([]);
-    expect(snapshot.inspectorDetails).toBeNull();
 
     controller.dispose();
   });
@@ -1124,7 +1072,7 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("does not publish shared workspace updates for stubbed simulation selection requests", async () => {
+  it("does not publish shared workspace updates for ignored simulate phase requests", async () => {
     const controller = createWorkbenchController();
     const syncSpy = vi.spyOn(
       controller as unknown as {
@@ -1133,30 +1081,11 @@ describe("WorkbenchController scaffold", () => {
       "sync",
     );
 
-    controller.setPhase("simulate");
     syncSpy.mockClear();
 
-    await controller.selectSimulationEntity("dark-outlet-1");
-
-    expect(syncSpy).not.toHaveBeenCalled();
-
-    controller.dispose();
-  });
-
-  it("publishes one shared workspace update when leaving the stubbed simulate shell", async () => {
-    const controller = createWorkbenchController();
-
     controller.setPhase("simulate");
 
-    const syncSpy = vi.spyOn(
-      controller as unknown as {
-        sync: () => void;
-      },
-      "sync",
-    );
-
-    controller.setPhase("edit");
-    expect(syncSpy).toHaveBeenCalledTimes(1);
+    expect(syncSpy).not.toHaveBeenCalled();
 
     controller.dispose();
   });
@@ -1841,65 +1770,4 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
-  it("keeps simulation patch requests on the stub surface and leaves the document unchanged", async () => {
-    const controller = createWorkbenchController();
-    const baselineValue =
-      readWorkbenchState(controller).document.entities["dark-outlet-1"]?.config
-        .selectedLiquidItemId;
-
-    controller.setPhase("simulate");
-    await controller.patchSimulationEntityConfig("dark-outlet-1", {
-      selectedLiquidItemId: "item_liquid_plant_grass_2",
-    });
-
-    const patchedSnapshot = readWorkbenchState(controller);
-
-    expect(
-      patchedSnapshot.simulationPatchSet.entityConfigByEntityId["dark-outlet-1"]
-        ?.selectedLiquidItemId,
-    ).toBeUndefined();
-    expect(
-      patchedSnapshot.document.entities["dark-outlet-1"]?.config
-        .selectedLiquidItemId,
-    ).toBe(baselineValue);
-
-    controller.setPhase("edit");
-
-    const clearedSnapshot = readWorkbenchState(controller);
-
-    expect(
-      clearedSnapshot.simulationPatchSet.entityConfigByEntityId["dark-outlet-1"],
-    ).toBeUndefined();
-    expect(
-      clearedSnapshot.document.entities["dark-outlet-1"]?.config
-        .selectedLiquidItemId,
-    ).toBe(baselineValue);
-
-    controller.dispose();
-  });
-
-  it("keeps runtime patches empty when stopping the stubbed simulation shell", async () => {
-    const controller = createWorkbenchController();
-
-    controller.startSimulation();
-    await controller.patchSimulationEntityConfig("dark-outlet-1", {
-      selectedLiquidItemId: "item_liquid_plant_grass_2",
-    });
-
-    expect(
-      readWorkbenchState(controller).simulationPatchSet.entityConfigByEntityId["dark-outlet-1"]
-        ?.selectedLiquidItemId,
-    ).toBeUndefined();
-
-    controller.stopSimulation();
-
-    const snapshot = readWorkbenchState(controller);
-
-    expect(snapshot.ui.phase).toBe("edit");
-    expect(
-      snapshot.simulationPatchSet.entityConfigByEntityId["dark-outlet-1"],
-    ).toBeUndefined();
-
-    controller.dispose();
-  });
 });

@@ -51,10 +51,8 @@ import {
   getSelectedEntityIds,
 } from "@/editor/contracts/editor-session-helpers";
 import {
-  isInteractionModeAvailableInPhase,
   isMoveInteractionMode,
   isPlacementInteractionMode,
-  resolveDefaultNextInteractionMode,
   type InteractionModeKey,
   type PlacementDisplayTool,
 } from "@/editor/contracts/interaction-mode";
@@ -163,10 +161,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
   readonly editorStore;
   readonly canvasViewStore;
   readonly topologyStore: Pick<SnapshotStore<CompiledTopology>, "getSnapshot" | "subscribe">;
-  readonly runtimeSnapshotStore;
-  readonly simulationSelectionStore;
-  readonly simulationInspectorDetailsStore;
-  readonly simulationPatchSetStore;
 
   private readonly logger = createLogger("workbench.controller");
   private readonly placementPreviewProfiler?: PlacementPreviewProfiler;
@@ -227,11 +221,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
       simulationPatchSet: SIMULATION_STUB_STATE.patchSet,
     });
     this.documentStore = this.workspaceStore.documentStore;
-    this.runtimeSnapshotStore = this.workspaceStore.runtimeSnapshotStore;
-    this.simulationSelectionStore = this.workspaceStore.simulationSelectionStore;
-    this.simulationInspectorDetailsStore =
-      this.workspaceStore.simulationInspectorDetailsStore;
-    this.simulationPatchSetStore = this.workspaceStore.simulationPatchSetStore;
     this.topologyStore = this.workspaceStore.topologyStore;
 
     this.sync();
@@ -250,21 +239,12 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   setPhase(phase: WorkbenchPhase): void {
-    const previousPhase = this.uiStore.getSnapshot().phase;
-
-    if (phase === "simulate") {
-      this.editorHost.clearPlacementPreview();
-
-      const currentMode = this.editorHost.getState().session.currentMode;
-
-      if (!isInteractionModeAvailableInPhase(currentMode, phase)) {
-        this.editorHost.setInteractionMode(
-          resolveDefaultNextInteractionMode(currentMode).key as Exclude<
-            InteractionModeKey,
-            "placement" | "move" | "marquee"
-          >,
-        );
-      }
+    if (phase !== "edit") {
+      this.logger.debug(
+        "Ignored phase switch because the workbench now stays in authoring mode.",
+        { requestedPhase: phase },
+      );
+      return;
     }
 
     const didChange = this.updateUiState((ui) => {
@@ -279,7 +259,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       };
     });
 
-    if (!didChange && previousPhase === phase) {
+    if (!didChange) {
       return;
     }
 
@@ -312,15 +292,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
     displayTool: PlacementDisplayTool = "place",
     inputMode: PlacementInteractionMode = "pointer",
   ): void {
-    if (this.uiStore.getSnapshot().phase === "simulate") {
-      this.logger.warn("Ignored placement request while simulate mode is active.", {
-        definitionId,
-        displayTool,
-        inputMode,
-      });
-      return;
-    }
-
     this.editorHost.armPlacement(definitionId, displayTool, inputMode);
     this.logger.info("Armed placement through workbench controller.", {
       definitionId,
@@ -355,10 +326,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
     screenPoint: CanvasPoint,
     inputMode: PlacementInteractionMode,
   ): void {
-    if (this.uiStore.getSnapshot().phase === "simulate") {
-      return;
-    }
-
     const didBeginMove = this.editorHost.beginMove(
       entityId,
       inputMode,
@@ -377,10 +344,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
     inputMode: PlacementInteractionMode,
     selectionMode: EditorSelectionUpdateMode,
   ): void {
-    if (this.uiStore.getSnapshot().phase === "simulate") {
-      return;
-    }
-
     const didBeginMarquee = this.editorHost.beginMarquee(
       inputMode,
       selectionMode,
@@ -596,24 +559,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
   }
 
-  async patchSimulationEntityConfig(
-    entityId: string,
-    patch: Record<string, unknown>,
-  ): Promise<void> {
-    void entityId;
-    void patch;
-    this.logger.debug(
-      "Ignored simulation patch request because the workbench exposes a stubbed simulation surface.",
-    );
-  }
-
   getCanvasInteractionTarget(screenPoint: CanvasPoint): CanvasInteractionTarget {
-    if (this.uiStore.getSnapshot().phase === "simulate") {
-      return {
-        kind: "blank",
-      };
-    }
-
     const worldPoint = screenToWorldPoint(
       screenPoint,
       this.canvasViewStore.getSnapshot(),
@@ -654,13 +600,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
     await this.applyEditorMutation(() => {
       this.editorHost.activateLinkTarget(entityId);
     });
-  }
-
-  async selectSimulationEntity(entityId: string | null): Promise<void> {
-    void entityId;
-    this.logger.debug(
-      "Ignored simulation selection request because the workbench exposes a stubbed simulation surface.",
-    );
   }
 
   async removeSelection(): Promise<void> {
@@ -896,29 +835,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
     }
   }
 
-  startSimulation(): void {
-    this.setPhase("simulate");
-    this.logger.info("Entered the stubbed simulation shell.");
-  }
-
-  stopSimulation(): void {
-    this.setPhase("edit");
-    this.logger.info("Exited the stubbed simulation shell and returned to edit mode.");
-  }
-
-  pauseSimulation(): void {
-    this.logger.debug(
-      "Ignored simulation pause because the workbench exposes a stubbed simulation surface.",
-    );
-  }
-
-  stepSimulation(): void {
-    this.setPhase("simulate");
-    this.logger.debug(
-      "Ignored simulation step because the workbench exposes a stubbed simulation surface.",
-    );
-  }
-
   dispose(): void {
     this.canvasKeyboardFocusListeners.clear();
     this.workspaceStore.dispose();
@@ -952,10 +868,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     }
 
     const afterEditorState = this.editorHost.getState();
-    const afterSelectionId =
-      this.uiStore.getSnapshot().phase === "simulate"
-        ? null
-        : getSelectedEntityIds(afterEditorState.session)[0] ?? null;
+    const afterSelectionId = getSelectedEntityIds(afterEditorState.session)[0] ?? null;
     const selectionChanged = before.selectionId !== afterSelectionId;
 
     if (documentChanged || selectionChanged) {
@@ -967,9 +880,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   private getActiveSelectionId(): string | null {
-    return this.uiStore.getSnapshot().phase === "simulate"
-      ? null
-      : getSelectedEntityIds(this.editorHost.getState().session)[0] ?? null;
+    return getSelectedEntityIds(this.editorHost.getState().session)[0] ?? null;
   }
 
   private getViewportCenterScreenPoint(): CanvasPoint {
@@ -1124,17 +1035,11 @@ class WorkbenchControllerImpl implements WorkbenchController {
       document: workspaceState.document,
       topology: workspaceState.topology,
       registry: this.registry,
-      placementPreview:
-        workspaceState.ui.phase === "edit"
-          ? getManagedPlacementPreview(workspaceState.editorSession)
-          : null,
-      moveDraft:
-        workspaceState.ui.phase === "edit"
-          ? getManagedMoveDraft(
-              workspaceState.editorSession,
-              workspaceState.document,
-            )
-          : null,
+      placementPreview: getManagedPlacementPreview(workspaceState.editorSession),
+      moveDraft: getManagedMoveDraft(
+        workspaceState.editorSession,
+        workspaceState.document,
+      ),
     });
 
     return {

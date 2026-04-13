@@ -139,12 +139,12 @@ function buildEntitySprite(input: RenderSceneInput, entityId: string): RenderEnt
     textureCenterOffsetX: textureMetrics.centerOffsetXPx,
     textureCenterOffsetY: textureMetrics.centerOffsetYPx,
     showLabel: shouldShowStage1EntityLabel(definition, renderKind),
-    status: input.runtimeSnapshot.entityViews[entityId]?.status ?? "idle",
+    status: "idle",
     selected: getSelectedWorldEntityIds(input).includes(entityId),
     ghosted: getGhostedWorldEntityIds(input).includes(entityId),
     pendingLinkSource:
       input.interaction.pendingLinkSourceEntityId === entityId,
-    patched: input.runtimeSnapshot.patchedEntityIds.includes(entityId),
+    patched: false,
   };
 }
 

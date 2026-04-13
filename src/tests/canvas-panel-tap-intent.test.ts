@@ -8,7 +8,7 @@ import {
 } from "@/editor/contracts/interaction-mode";
 
 describe("resolveCanvasPanelTapIntent", () => {
-  it("treats simulate-phase taps as no-ops while the workbench uses a simulation stub", () => {
+  it("ignores phase input and keeps following edit tap semantics", () => {
     expect(
       resolveCanvasPanelTapIntent({
         phase: "simulate",
@@ -21,7 +21,8 @@ describe("resolveCanvasPanelTapIntent", () => {
         },
       }),
     ).toEqual({
-      kind: "noop",
+      kind: "select-edit-entity",
+      entityId: "reactor-1",
     });
 
     expect(
@@ -34,7 +35,7 @@ describe("resolveCanvasPanelTapIntent", () => {
         },
       }),
     ).toEqual({
-      kind: "noop",
+      kind: "clear-edit-selection",
     });
   });
 

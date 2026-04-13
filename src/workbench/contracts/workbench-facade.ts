@@ -16,7 +16,6 @@ import type { PlacementInteractionMode } from "@/editor/contracts/placement-prev
 import type { CanvasWorldInput } from "@/editor/host/editor-host";
 import type { EditorRuntimeStore } from "@/editor/editor-runtime-store";
 import type { AppLocale } from "@/i18n/messages";
-import type { SimulationState } from "@/simulation/host/simulation-host";
 import type { SnapshotStore } from "@/shared/snapshot-store/snapshot-store";
 import type { LogLevel } from "@/shared/logging/logger";
 import type { CanvasViewStore } from "@/workbench/canvas-view-store";
@@ -48,12 +47,6 @@ export interface WorkbenchController {
   editorStore: EditorRuntimeStore;
   canvasViewStore: CanvasViewStore;
   topologyStore: Pick<SnapshotStore<CompiledTopology>, "getSnapshot" | "subscribe">;
-  runtimeSnapshotStore: ReadonlySnapshotStore<SimulationState["runtimeSnapshot"]>;
-  simulationSelectionStore: ReadonlySnapshotStore<SimulationState["selection"]>;
-  simulationInspectorDetailsStore: ReadonlySnapshotStore<
-    SimulationState["inspectorDetails"]
-  >;
-  simulationPatchSetStore: ReadonlySnapshotStore<SimulationState["patchSet"]>;
   registry: Stage1Registry;
   setPhase: (phase: WorkbenchPhase) => void;
   setInteractionMode: (
@@ -103,14 +96,9 @@ export interface WorkbenchController {
     entityId: string,
     patch: Record<string, unknown>,
   ) => Promise<void>;
-  patchSimulationEntityConfig: (
-    entityId: string,
-    patch: Record<string, unknown>,
-  ) => Promise<void>;
   getCanvasInteractionTarget: (screenPoint: CanvasPoint) => CanvasInteractionTarget;
   commitPlacementAtScreenPoint: (screenPoint: CanvasPoint) => Promise<void>;
   activateLinkTarget: (entityId: string | null) => Promise<void>;
-  selectSimulationEntity: (entityId: string | null) => Promise<void>;
   removeSelection: () => Promise<void>;
   removeSelectionLinks: () => Promise<void>;
   removeLink: (linkId: string) => Promise<void>;
@@ -129,9 +117,5 @@ export interface WorkbenchController {
   setDiagnosticsVisible: (visible: boolean) => void;
   setDockOpen: (dockId: DockId, open: boolean) => void;
   toggleDockCollapsed: (dockId: DockId) => void;
-  startSimulation: () => void;
-  stopSimulation: () => void;
-  pauseSimulation: () => void;
-  stepSimulation: () => void;
   dispose: () => void;
 }

@@ -1,16 +1,10 @@
 import type {
   WorkbenchController,
 } from "@/workbench/contracts/workbench-facade";
-import type { WorkbenchPhase } from "@/workbench/workbench-ui-state";
 import type {
   Stage1EntityDefinition,
 } from "@/domain/registry/stage1-registry";
 import type { AppLocale } from "@/i18n/messages";
-import type {
-  RuntimeEntityView,
-  RuntimeInspectorDetails,
-} from "@/simulation/protocol/runtime-protocol";
-import type { SimulationPatchSet } from "@/simulation/protocol/simulation-patch";
 import type {
   ExplicitLink,
   WorldEntity,
@@ -20,15 +14,11 @@ export interface SelectionInspectorContext {
   selectedEntityId: string;
   selectedEntity: WorldEntity;
   selectedDefinition: Stage1EntityDefinition;
-  selectedEntityRuntime: RuntimeEntityView | undefined;
   selectedLinks: ExplicitLink[];
 }
 
 export interface SelectionInspectorState {
   locale: AppLocale;
-  phase: WorkbenchPhase;
-  inspectorDetails: RuntimeInspectorDetails | null;
-  simulationPatchSet: SimulationPatchSet;
 }
 
 export interface SelectionInspectorPanelProps {

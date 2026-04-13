@@ -38,7 +38,7 @@ export interface RenderSceneInput {
   registry: Stage1Registry;
   canvasView: CanvasViewState;
   interaction: RenderSceneInteractionState;
-  runtimeSnapshot: RuntimeRenderSnapshot;
+  runtimeSnapshot?: RuntimeRenderSnapshot;
 }
 
 export interface RenderLayerDescriptor {

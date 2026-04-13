@@ -52,10 +52,7 @@ export const BottomStatusBar = observer(function BottomStatusBar({
   const activeViewLabel = activeView
     ? localizeWorkbenchText(ui.locale, activeView.label)
     : t("statusBar.none");
-  const primaryStatusLabel =
-    ui.phase === "simulate"
-      ? t("statusBar.running")
-      : `${t("statusBar.view")}: ${truncateWorkbenchViewLabel(activeViewLabel)}`;
+  const primaryStatusLabel = `${t("statusBar.view")}: ${truncateWorkbenchViewLabel(activeViewLabel)}`;
   const modeLabel = t(MODE_LABEL_KEYS[editor.session.currentMode.key]);
   const toolLabel = t(TOOL_LABEL_KEYS[editor.session.displayTool]);
 

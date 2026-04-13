@@ -9,10 +9,8 @@ import {
 } from "@/renderer/host/render-scene-coordinator";
 import type { RenderSceneModel } from "@/renderer/scene/types";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
-import type { SimulationState } from "@/simulation/host/simulation-host";
 import { createInitialCanvasViewState } from "@/workbench/workspace-state";
 import { createInitialWorkbenchUiState } from "@/workbench/workbench-ui-store";
-import { createEmptySimulationPatchSet } from "@/simulation/protocol/simulation-patch";
 
 function createCoordinatorHarness() {
   const document = createStage1SeedWorldDocument();
@@ -30,37 +28,12 @@ function createCoordinatorHarness() {
   });
   const uiStore = createSnapshotStore(createInitialWorkbenchUiState());
   const canvasViewStore = createSnapshotStore(createInitialCanvasViewState());
-  const initialSimulationState: SimulationState = {
-    runtimeSnapshot: {
-      tick: 0,
-      status: "idle" as const,
-      entityViews: {},
-      patchedEntityIds: [],
-    },
-    telemetry: {
-      tick: 0,
-      simulatedHertz: 0,
-      entityCount: 0,
-    },
-    inspectorDetails: null,
-    patchSet: createEmptySimulationPatchSet(),
-    selection: [],
-  };
-  const simulationStore = createSnapshotStore(initialSimulationState);
-  const runtimeSnapshotStore = createSnapshotStore(
-    initialSimulationState.runtimeSnapshot,
-  );
-  const simulationSelectionStore = createSnapshotStore(
-    initialSimulationState.selection,
-  );
   const topologyStore = createSnapshotStore(topology);
   const source: RenderSceneCoordinatorSource = {
     documentStore,
     editorStore,
     uiStore,
     canvasViewStore,
-    runtimeSnapshotStore,
-    simulationSelectionStore,
     topologyStore,
     registry,
   };
@@ -72,16 +45,13 @@ function createCoordinatorHarness() {
       editorStore,
       uiStore,
       canvasViewStore,
-      simulationStore,
-      runtimeSnapshotStore,
-      simulationSelectionStore,
       topologyStore,
     },
   };
 }
 
 describe("RenderSceneCoordinator", () => {
-  it("batches store changes into one RAF-presented scene and ignores unrelated simulation slices", () => {
+  it("batches edit-scene store changes into one RAF-presented scene and ignores phase-only churn", () => {
     const harness = createCoordinatorHarness();
     const presentScene = vi.fn();
     const frameCallbacks = new Map<number, FrameRequestCallback>();
@@ -129,60 +99,45 @@ describe("RenderSceneCoordinator", () => {
       viewportOffset: { x: 12, y: 8 },
     });
 
-    harness.stores.simulationStore.setSnapshot({
-      ...harness.stores.simulationStore.getSnapshot(),
-      inspectorDetails: {
-        entityId: "reactor-1",
-        tick: 1,
-        lines: [],
-        effectiveConfig: {},
-        patchConfig: {},
-      },
-    });
-
-    expect(frameCallbacks.size).toBe(0);
-    expect(presentScene).toHaveBeenCalledTimes(1);
-
     harness.stores.uiStore.setSnapshot({
       ...harness.stores.uiStore.getSnapshot(),
       phase: "simulate",
     });
 
+    expect(frameCallbacks.size).toBe(0);
+    expect(presentScene).toHaveBeenCalledTimes(1);
+
+    harness.stores.documentStore.setSnapshot({
+      ...harness.stores.documentStore.getSnapshot(),
+      entities: {
+        ...harness.stores.documentStore.getSnapshot().entities,
+        "reactor-1": {
+          ...harness.stores.documentStore.getSnapshot().entities["reactor-1"]!,
+          position: { x: 19, y: 12 },
+        },
+      },
+    });
+
     expect(frameCallbacks.size).toBe(1);
 
-    const phaseFrame = frameCallbacks.values().next().value;
+    const documentFrame = frameCallbacks.values().next().value;
 
-    if (!phaseFrame) {
-      throw new Error("Missing queued animation frame for phase change.");
+    if (!documentFrame) {
+      throw new Error("Missing queued animation frame for document change.");
     }
 
     frameCallbacks.clear();
-    phaseFrame(24);
+    documentFrame(24);
 
     expect(presentScene).toHaveBeenCalledTimes(2);
-
-    harness.stores.simulationSelectionStore.setSnapshot(["reactor-1"]);
-
-    expect(frameCallbacks.size).toBe(1);
-
-    const selectionFrame = frameCallbacks.values().next().value;
-
-    if (!selectionFrame) {
-      throw new Error("Missing queued animation frame for selection change.");
-    }
-
-    frameCallbacks.clear();
-    selectionFrame(32);
-
-    expect(presentScene).toHaveBeenCalledTimes(3);
-    const selectionScene = presentScene.mock.calls[2]?.[0] as
+    const updatedScene = presentScene.mock.calls[1]?.[0] as
       | RenderSceneModel
       | undefined;
-    const selectedSprite = selectionScene?.entities.find(
+    const movedSprite = updatedScene?.entities.find(
       (entity) => entity.entityId === "reactor-1",
     );
 
-    expect(selectedSprite?.selected).toBe(true);
+    expect(movedSprite?.x).toBe(19 * harness.stores.documentStore.getSnapshot().documentSettings.gridSize);
 
     coordinator.dispose();
   });

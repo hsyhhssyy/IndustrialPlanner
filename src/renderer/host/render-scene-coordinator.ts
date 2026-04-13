@@ -6,7 +6,6 @@ import type {
   RenderSceneInteractionState,
   RenderSceneModel,
 } from "@/renderer/scene/types";
-import type { SimulationState } from "@/simulation/host/simulation-host";
 import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
 import type {
   CanvasViewState,
@@ -35,8 +34,6 @@ export interface RenderSceneCoordinatorSource {
   editorStore: ReadonlySnapshotStore<WorkspaceEditorState>;
   uiStore: ReadonlySnapshotStore<WorkbenchUiState>;
   canvasViewStore: ReadonlySnapshotStore<CanvasViewState>;
-  runtimeSnapshotStore: ReadonlySnapshotStore<SimulationState["runtimeSnapshot"]>;
-  simulationSelectionStore: ReadonlySnapshotStore<SimulationState["selection"]>;
   topologyStore: ReadonlySnapshotStore<CompiledTopology>;
   registry: Stage1Registry;
 }
@@ -51,7 +48,6 @@ interface RenderSceneCoordinatorInput {
   topology: CompiledTopology;
   canvasView: CanvasViewState;
   interaction: RenderSceneInteractionState;
-  runtimeSnapshot: SimulationState["runtimeSnapshot"];
 }
 
 export interface CreateRenderSceneCoordinatorOptions {
@@ -65,18 +61,7 @@ export interface CreateRenderSceneCoordinatorOptions {
 function buildRenderInteractionState(
   document: WorldDocument,
   editor: WorkspaceEditorState,
-  ui: WorkbenchUiState,
-  simulationSelection: SimulationState["selection"],
 ): RenderSceneInteractionState {
-  if (ui.phase === "simulate") {
-    return {
-      selectedEntityIds: simulationSelection,
-      placementPreview: null,
-      moveDraft: null,
-      pendingLinkSourceEntityId: null,
-    };
-  }
-
   return {
     selectedEntityIds: getSelectedEntityIds(editor.session),
     selectionPresentation: deriveSelectionPresentation(editor.session),
@@ -107,13 +92,7 @@ function collectRenderSceneCoordinatorInput(
     document,
     topology: source.topologyStore.getSnapshot(),
     canvasView: source.canvasViewStore.getSnapshot(),
-    interaction: buildRenderInteractionState(
-      document,
-      editor,
-      ui,
-      source.simulationSelectionStore.getSnapshot(),
-    ),
-    runtimeSnapshot: source.runtimeSnapshotStore.getSnapshot(),
+    interaction: buildRenderInteractionState(document, editor),
   };
 }
 
@@ -145,7 +124,6 @@ function isSameRenderSceneCoordinatorInput(
     left.document === right.document &&
     left.topology === right.topology &&
     left.canvasView === right.canvasView &&
-    left.runtimeSnapshot === right.runtimeSnapshot &&
     isSameRenderSceneInteractionState(left.interaction, right.interaction)
   );
 }
@@ -181,7 +159,6 @@ export function createRenderSceneCoordinator(
               registry: options.source.registry,
               canvasView: currentInput.canvasView,
               interaction: currentInput.interaction,
-              runtimeSnapshot: currentInput.runtimeSnapshot,
             }),
         )
       : buildRenderScene({
@@ -191,7 +168,6 @@ export function createRenderSceneCoordinator(
           registry: options.source.registry,
           canvasView: currentInput.canvasView,
           interaction: currentInput.interaction,
-          runtimeSnapshot: currentInput.runtimeSnapshot,
         });
 
     options.presentScene(scene);
@@ -234,8 +210,6 @@ export function createRenderSceneCoordinator(
     options.source.editorStore.subscribe(handleStoreChange),
     options.source.uiStore.subscribe(handleStoreChange),
     options.source.canvasViewStore.subscribe(handleStoreChange),
-    options.source.runtimeSnapshotStore.subscribe(handleStoreChange),
-    options.source.simulationSelectionStore.subscribe(handleStoreChange),
     options.source.topologyStore.subscribe(handleStoreChange),
   ];
 

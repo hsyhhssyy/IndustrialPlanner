@@ -52,7 +52,7 @@ describe("BottomStatusBar", () => {
     document.body.innerHTML = "";
   });
 
-  it("shows a phase-aware badge, v2 copyright text, and current mode/tool summary", async () => {
+  it("shows an authoring view badge, v2 copyright text, and current mode/tool summary", async () => {
     const controller = createWorkbenchController();
     const { container, root } = await renderBottomStatusBar(controller);
 
@@ -96,11 +96,11 @@ describe("BottomStatusBar", () => {
     });
 
     expect(container.querySelector(".status-chip-primary")?.textContent).toBe(
-      "仿真占位中",
+      "当前视图: 放置",
     );
     expect(getRightStatusChipTexts(container)).toEqual([
-      "当前模式: 选择",
-      "工具: 选择",
+      "当前模式: 放置",
+      "工具: 传送带",
     ]);
 
     await disposeBottomStatusBar({ controller, root });

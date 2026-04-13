@@ -65,7 +65,7 @@ describe("RightDock inspector split", () => {
     localStorage.clear();
   });
 
-  it("renders the edit inspector and a simulation stub panel from different phase-specific panels", async () => {
+  it("keeps the edit inspector active when simulation shell requests are ignored", async () => {
     const controller = createWorkbenchController();
 
     controller.setLocale("en-US");
@@ -75,7 +75,6 @@ describe("RightDock inspector split", () => {
     );
 
     controller.setPhase("simulate");
-    await controller.selectSimulationEntity("dark-outlet-1");
     const simulationMarkup = renderToStaticMarkup(
       <RightDock controller={controller} />,
     );
@@ -84,11 +83,10 @@ describe("RightDock inspector split", () => {
     expect(editMarkup).toContain("Config Fields");
     expect(editMarkup).toContain("80x80");
     expect(editMarkup).toContain("Wuling");
-    expect(simulationMarkup).toContain("Simulation panel temporarily stubbed");
-    expect(simulationMarkup).toContain("stable stub only");
-    expect(simulationMarkup).not.toContain("Quick Actions");
-    expect(simulationMarkup).not.toContain("Config Fields");
-    expect(simulationMarkup).not.toContain("Runtime Details");
+    expect(simulationMarkup).toContain("Quick Actions");
+    expect(simulationMarkup).toContain("Config Fields");
+    expect(simulationMarkup).toContain("Runtime Details");
+    expect(simulationMarkup).not.toContain("Simulation panel temporarily stubbed");
 
     controller.dispose();
   });

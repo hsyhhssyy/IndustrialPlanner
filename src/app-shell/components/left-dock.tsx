@@ -110,23 +110,20 @@ const logger = createLogger("app.left-dock");
 function isActionDisabled(
   actionId: PlaceholderActionId | undefined,
   options: {
-    phase: "edit" | "simulate";
     selection: string[];
     canUndo: boolean;
     canRedo: boolean;
   },
 ): boolean {
-  const editCommandsDisabled = options.phase === "simulate";
-
   switch (actionId) {
     case "selection.clear":
     case "selection.remove":
     case "selection.links.remove":
-      return editCommandsDisabled || options.selection.length === 0;
+      return options.selection.length === 0;
     case "history.undo":
-      return editCommandsDisabled || !options.canUndo;
+      return !options.canUndo;
     case "history.redo":
-      return editCommandsDisabled || !options.canRedo;
+      return !options.canRedo;
     default:
       return false;
   }
@@ -238,15 +235,9 @@ export const LeftDock = observer(function LeftDock({
                           ? "blueprint"
                           : null;
                     const isActive = isButtonActive(button, editor.session);
-                    const placementDisabledInSimulate =
-                      ui.phase === "simulate" &&
-                      button.displayTool !== undefined &&
-                      button.displayTool !== "select";
                     const isDisabled =
                       (!button.displayTool && !button.definitionId && !button.actionId) ||
-                      placementDisabledInSimulate ||
                       isActionDisabled(button.actionId, {
-                        phase: ui.phase,
                         selection: getSelectedEntityIds(editor.session),
                         canUndo: editor.history.canUndo,
                         canRedo: editor.history.canRedo,

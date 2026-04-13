@@ -38,12 +38,6 @@ export function resolveCanvasPanelTapIntent(
   const targetEntityId =
     options.target.kind === "entity" ? options.target.entityId : null;
 
-  if (options.phase === "simulate") {
-    return {
-      kind: "noop",
-    };
-  }
-
   switch (options.currentMode.key) {
     case "link":
       return {

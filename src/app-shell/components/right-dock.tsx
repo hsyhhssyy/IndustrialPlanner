@@ -26,18 +26,6 @@ function formatMultiSelectionLabel(locale: "zh-CN" | "en-US", count: number): st
   return locale === "zh-CN" ? `已选中 ${count} 个对象` : `${count} selected`;
 }
 
-function getSimulationStubCopy(locale: "zh-CN" | "en-US") {
-  return locale === "zh-CN"
-    ? {
-        title: "仿真面板已临时切断",
-        body: "当前 UI 与 workbench controller 只暴露稳定 stub，不再显示或回流真实仿真数据。",
-      }
-    : {
-        title: "Simulation panel temporarily stubbed",
-        body: "The UI and workbench controller now expose a stable stub only, so no live simulation data flows back into the workbench.",
-      };
-}
-
 function resolveEditInspectorSelectionIds(
   selection: RightDockProps["controller"]["editorStore"]["session"],
 ): string[] {
@@ -67,22 +55,13 @@ export const RightDock = observer(function RightDock({
   const document = useExternalStore(controller.documentStore);
   const editor = controller.editorStore;
   const topology = useExternalStore(controller.topologyStore);
-  const runtimeSnapshot = useExternalStore(controller.runtimeSnapshotStore);
-  const simulationSelection = useExternalStore(controller.simulationSelectionStore);
-  const simulationInspectorDetails = useExternalStore(
-    controller.simulationInspectorDetailsStore,
-  );
-  const simulationPatchSet = useExternalStore(controller.simulationPatchSetStore);
 
   if (!ui.rightDock.open) {
     return null;
   }
 
   const t = createTranslator(ui.locale);
-  const activeSelection =
-    ui.phase === "simulate"
-      ? simulationSelection
-      : resolveEditInspectorSelectionIds(editor.session);
+  const activeSelection = resolveEditInspectorSelectionIds(editor.session);
   const hasSingleSelection = activeSelection.length === 1;
   const hasMultiSelection = activeSelection.length > 1;
 
@@ -93,9 +72,6 @@ export const RightDock = observer(function RightDock({
     : null;
   const selectedDefinition = selectedEntityId
     ? topology.entityViews[selectedEntityId]?.definition ?? null
-    : null;
-  const selectedEntityRuntime = selectedEntityId
-    ? runtimeSnapshot.entityViews[selectedEntityId]
     : null;
   const selectedLinks = selectedEntityId
     ? document.explicitLinks.filter(
@@ -112,17 +88,12 @@ export const RightDock = observer(function RightDock({
           selectedEntityId,
           selectedEntity,
           selectedDefinition,
-          selectedEntityRuntime: selectedEntityRuntime ?? undefined,
           selectedLinks,
         }
       : null;
   const inspectorState = {
     locale: ui.locale,
-    phase: ui.phase,
-    inspectorDetails: simulationInspectorDetails,
-    simulationPatchSet,
   } as const;
-  const simulationStubCopy = getSimulationStubCopy(ui.locale);
   const activeBase = getStage1BaseDefinition(document.baseId);
   const baseGroups = getStage1BaseGroupOrder().map((groupId) => {
     const groupBases = STAGE1_BASE_DEFINITIONS.filter(
@@ -164,9 +135,7 @@ export const RightDock = observer(function RightDock({
               <div className="stack">
                 {baseGroups.map((group) => (
                   <div className="cluster" key={group.id}>
-                    <h4 className="inspector-group-title">
-                      {group.title}
-                    </h4>
+                    <h4 className="inspector-group-title">{group.title}</h4>
                     <div className="inspector-option-grid">
                       {group.options.map((option) => (
                         <button
@@ -183,15 +152,30 @@ export const RightDock = observer(function RightDock({
                 ))}
                 <dl className="inspector-summary-list">
                   <div className="inspector-summary-row">
-                    <dt>{localizeWorkbenchText(ui.locale, { messageKey: "workbench.summary.buildableArea", fallback: "Buildable Area" })}</dt>
+                    <dt>
+                      {localizeWorkbenchText(ui.locale, {
+                        messageKey: "workbench.summary.buildableArea",
+                        fallback: "Buildable Area",
+                      })}
+                    </dt>
                     <dd>{formatStage1BaseArea(activeBase)}</dd>
                   </div>
                   <div className="inspector-summary-row">
-                    <dt>{localizeWorkbenchText(ui.locale, { messageKey: "workbench.summary.expansion", fallback: "Expansion" })}</dt>
+                    <dt>
+                      {localizeWorkbenchText(ui.locale, {
+                        messageKey: "workbench.summary.expansion",
+                        fallback: "Expansion",
+                      })}
+                    </dt>
                     <dd>{formatStage1BaseExpansion(activeBase)}</dd>
                   </div>
                   <div className="inspector-summary-row">
-                    <dt>{localizeWorkbenchText(ui.locale, { messageKey: "workbench.summary.baseTag", fallback: "Base Tag" })}</dt>
+                    <dt>
+                      {localizeWorkbenchText(ui.locale, {
+                        messageKey: "workbench.summary.baseTag",
+                        fallback: "Base Tag",
+                      })}
+                    </dt>
                     <dd>{activeBase.groupLabel[ui.locale]}</dd>
                   </div>
                 </dl>
@@ -220,43 +204,36 @@ export const RightDock = observer(function RightDock({
                     <h4>{formatMultiSelectionLabel(ui.locale, activeSelection.length)}</h4>
                     <p>{t("label.multiSelectionSummary")}</p>
                   </article>
-                  {ui.phase === "edit" ? (
-                    <div className="cluster">
-                      <div className="card-header card-subheader">
-                        <h4>{t("section.quickActions")}</h4>
-                      </div>
-                      <div className="inspector-option-grid">
-                        <button
-                          onClick={() => {
-                            void controller.removeSelection();
-                          }}
-                          type="button"
-                        >
-                          {t("action.deleteSelection")}
-                        </button>
-                        <button
-                          onClick={() => {
-                            void controller.removeSelectionLinks();
-                          }}
-                          type="button"
-                        >
-                          {t("action.removeLinks")}
-                        </button>
-                      </div>
+                  <div className="cluster">
+                    <div className="card-header card-subheader">
+                      <h4>{t("section.quickActions")}</h4>
                     </div>
-                  ) : null}
+                    <div className="inspector-option-grid">
+                      <button
+                        onClick={() => {
+                          void controller.removeSelection();
+                        }}
+                        type="button"
+                      >
+                        {t("action.deleteSelection")}
+                      </button>
+                      <button
+                        onClick={() => {
+                          void controller.removeSelectionLinks();
+                        }}
+                        type="button"
+                      >
+                        {t("action.removeLinks")}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              ) : ui.phase === "edit" ? (
+              ) : (
                 <EditSelectionInspector
                   context={selectionContext}
                   controller={controller}
                   state={inspectorState}
                 />
-              ) : (
-                <article className="definition-card">
-                  <h4>{simulationStubCopy.title}</h4>
-                  <p>{simulationStubCopy.body}</p>
-                </article>
               )}
             </article>
             {ui.diagnosticsVisible ? (

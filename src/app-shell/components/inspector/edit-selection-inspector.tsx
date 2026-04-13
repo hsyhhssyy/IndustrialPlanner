@@ -112,7 +112,7 @@ export function EditSelectionInspector({
         <div className="card-header card-subheader">
           <h4>{t("section.runtimeDetails")}</h4>
         </div>
-        <RuntimeDetailList context={context} state={state} />
+        <RuntimeDetailList state={state} />
       </div>
     </div>
   );

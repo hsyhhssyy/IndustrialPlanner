@@ -1,6 +1,5 @@
 import { WorkbenchIcon } from "@/app-shell/components/workbench-icons";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
-import { SIMULATION_SPEED_PRESETS } from "@/app-shell/workbench-placeholders";
 import { createTranslator } from "@/i18n/messages";
 import { observer } from "@/shared/mobx";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
@@ -20,7 +19,6 @@ export const TopBar = observer(function TopBar({
   const render = useExternalStore(renderDerivedStore);
   const t = createTranslator(ui.locale);
   const cellSizeLabel = `${Math.round(render.cellSizePx)}px`;
-  const simulationActive = ui.phase === "simulate";
 
   return (
     <header className="top-bar">
@@ -57,29 +55,6 @@ export const TopBar = observer(function TopBar({
         <span className="top-bar-metric">
           {t("topBar.zoom")}: {cellSizeLabel}
         </span>
-        <button
-          onClick={() =>
-            simulationActive
-              ? controller.stopSimulation()
-              : controller.startSimulation()
-          }
-          type="button"
-        >
-          {t(simulationActive ? "action.stop" : "action.start")}
-        </button>
-      </div>
-      <div className="toolbar-group top-bar-speed-controls">
-        <span className="top-bar-metric">{t("topBar.speed")}</span>
-        {SIMULATION_SPEED_PRESETS.map((preset) => (
-          <button
-            className={ui.simulationSpeed === preset ? "is-active" : undefined}
-            key={preset}
-            onClick={() => controller.setSimulationSpeedPreset(preset)}
-            type="button"
-          >
-            {preset}
-          </button>
-        ))}
       </div>
     </header>
   );
