@@ -1150,6 +1150,30 @@ describe("WorkbenchController scaffold", () => {
     controller.dispose();
   });
 
+  it("publishes one shared workspace update when leaving simulate mode refreshes inspector", async () => {
+    const controller = createWorkbenchController();
+
+    controller.setPhase("simulate");
+    await controller.selectSimulationEntity("dark-outlet-1");
+    await controller.patchSimulationEntityConfig("dark-outlet-1", {
+      selectedLiquidItemId: "item_liquid_plant_grass_2",
+    });
+
+    const syncSpy = vi.spyOn(
+      controller as unknown as {
+        sync: () => void;
+      },
+      "sync",
+    );
+
+    controller.setPhase("edit");
+    await vi.waitFor(() => {
+      expect(syncSpy).toHaveBeenCalledTimes(1);
+    });
+
+    controller.dispose();
+  });
+
   it("toggles desktop edit selection through the shared selection action chain", async () => {
     const controller = createWorkbenchController();
 

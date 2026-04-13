@@ -267,6 +267,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   setPhase(phase: WorkbenchPhase): void {
     const previousPhase = this.uiStore.getSnapshot().phase;
+    const previousSimulationState = this.simulationHost.getSnapshot();
 
     if (phase === "simulate") {
       this.editorHost.clearPlacementPreview();
@@ -283,31 +284,40 @@ class WorkbenchControllerImpl implements WorkbenchController {
       }
     }
 
-    if (previousPhase === "simulate" && phase === "edit") {
-      this.simulationHost.clearPatches();
-    }
-
-    if (phase === "edit") {
-      this.simulationHost.pause();
-    }
-
-    const didChange = this.updateUiState((ui) => {
-      if (ui.phase === phase) {
-        return ui;
+    const shouldSync = this.withSuppressedSimulationSync(() => {
+      if (previousPhase === "simulate" && phase === "edit") {
+        this.simulationHost.clearPatches();
       }
 
-      return {
-        ...ui,
-        phase,
-        statusMessageKey: getWorkbenchStatusMessageKeyForMode(phase),
-      };
+      if (phase === "edit") {
+        this.simulationHost.pause();
+      }
+
+      const didChange = this.updateUiState((ui) => {
+        if (ui.phase === phase) {
+          return ui;
+        }
+
+        return {
+          ...ui,
+          phase,
+          statusMessageKey: getWorkbenchStatusMessageKeyForMode(phase),
+        };
+      });
+      const simulationChanged =
+        this.simulationHost.getSnapshot() !== previousSimulationState;
+
+      if (!didChange && previousPhase === phase && !simulationChanged) {
+        return false;
+      }
+
+      void this.refreshInspectorForSelection();
+      return true;
     });
 
-    if (!didChange && previousPhase === phase) {
-      return;
+    if (shouldSync) {
+      this.sync();
     }
-
-    void this.syncAndRefreshInspectorForSelection();
   }
 
   setInteractionMode(
@@ -675,12 +685,13 @@ class WorkbenchControllerImpl implements WorkbenchController {
   async selectSimulationEntity(entityId: string | null): Promise<void> {
     const previousSimulationState = this.simulationHost.getSnapshot();
 
-    await this.withSuppressedSimulationSync(async () => {
-      await this.simulationHost.selectEntity(entityId);
-      await this.refreshInspectorForSelection();
+    const simulationChanged = this.withSuppressedSimulationSync(() => {
+      void this.simulationHost.selectEntity(entityId);
+      void this.refreshInspectorForSelection();
+      return this.simulationHost.getSnapshot() !== previousSimulationState;
     });
 
-    if (this.simulationHost.getSnapshot() !== previousSimulationState) {
+    if (simulationChanged) {
       this.sync();
     }
   }
@@ -1014,11 +1025,11 @@ class WorkbenchControllerImpl implements WorkbenchController {
     await this.refreshInspectorForSelection();
   }
 
-  private async withSuppressedSimulationSync<T>(operation: () => Promise<T>): Promise<T> {
+  private withSuppressedSimulationSync<T>(operation: () => T): T {
     this.simulationSyncSuppressionDepth += 1;
 
     try {
-      return await operation();
+      return operation();
     } finally {
       this.simulationSyncSuppressionDepth -= 1;
     }
