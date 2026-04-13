@@ -64,6 +64,11 @@ function readWorkbenchState(
   const canvasView = controller.canvasViewStore.getSnapshot();
   const topology = controller.topologyStore.getSnapshot();
   const simulation = controller.simulationStore.getSnapshot();
+  const runtimeSnapshot = controller.runtimeSnapshotStore.getSnapshot();
+  const simulationSelection = controller.simulationSelectionStore.getSnapshot();
+  const simulationInspectorDetails =
+    controller.simulationInspectorDetailsStore.getSnapshot();
+  const simulationPatchSet = controller.simulationPatchSetStore.getSnapshot();
   const activeSelection = getSelectedEntityIds(editor.session);
   const activePlacementPreview =
     ui.phase === "edit" ? getManagedPlacementPreview(editor.session) : null;
@@ -80,7 +85,7 @@ function readWorkbenchState(
     interaction:
       ui.phase === "simulate"
         ? {
-            selectedEntityIds: simulation.selection,
+            selectedEntityIds: simulationSelection,
             placementPreview: null,
             moveDraft: null,
             pendingLinkSourceEntityId: null,
@@ -93,7 +98,7 @@ function readWorkbenchState(
               editor.session.currentMode,
             ),
           },
-    runtimeSnapshot: simulation.runtimeSnapshot,
+            runtimeSnapshot,
   });
 
   return {
@@ -112,11 +117,11 @@ function readWorkbenchState(
         ? getPendingLinkSourceEntityId(editor.session.currentMode)
         : null,
     topology,
-    runtimeSnapshot: simulation.runtimeSnapshot,
+    runtimeSnapshot,
     telemetry: simulation.telemetry,
-    inspectorDetails: simulation.inspectorDetails,
-    simulationPatchSet: simulation.patchSet,
-    simulationSelection: simulation.selection,
+    inspectorDetails: simulationInspectorDetails,
+    simulationPatchSet,
+    simulationSelection,
     renderScene,
   };
 }

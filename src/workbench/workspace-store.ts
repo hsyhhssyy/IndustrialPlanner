@@ -25,6 +25,9 @@ export interface WorkspaceStore {
   readonly editorSession: WorkspaceState["editorSession"];
   readonly editorHistory: WorkspaceState["editorHistory"];
   readonly runtimeSnapshot: RuntimeRenderSnapshot;
+  readonly simulationSelection: SimulationState["selection"];
+  readonly simulationInspectorDetails: SimulationState["inspectorDetails"];
+  readonly simulationPatchSet: SimulationState["patchSet"];
   documentStore: ReadonlySnapshotStore<WorldDocument>;
   topologyStore: ReadonlySnapshotStore<CompiledTopology>;
   editorSessionStore: ReadonlySnapshotStore<WorkspaceState["editorSession"]>;
@@ -33,6 +36,11 @@ export interface WorkspaceStore {
   uiStore: ReadonlySnapshotStore<WorkbenchUiState>;
   canvasViewStore: ReadonlySnapshotStore<CanvasViewState>;
   runtimeSnapshotStore: ReadonlySnapshotStore<RuntimeRenderSnapshot>;
+  simulationSelectionStore: ReadonlySnapshotStore<SimulationState["selection"]>;
+  simulationInspectorDetailsStore: ReadonlySnapshotStore<
+    SimulationState["inspectorDetails"]
+  >;
+  simulationPatchSetStore: ReadonlySnapshotStore<SimulationState["patchSet"]>;
   simulationStore: ReadonlySnapshotStore<SimulationState>;
   dispose: () => void;
 }
@@ -104,6 +112,18 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
     rootStore,
     (state) => state.simulation.runtimeSnapshot,
   );
+  const simulationSelectionStore = createDerivedStore(
+    rootStore,
+    (state) => state.simulation.selection,
+  );
+  const simulationInspectorDetailsStore = createDerivedStore(
+    rootStore,
+    (state) => state.simulation.inspectorDetails,
+  );
+  const simulationPatchSetStore = createDerivedStore(
+    rootStore,
+    (state) => state.simulation.patchSet,
+  );
   const simulationStore = createDerivedStore(rootStore, (state) => state.simulation);
 
   return {
@@ -123,6 +143,15 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
     get runtimeSnapshot() {
       return rootStore.getSnapshot().simulation.runtimeSnapshot;
     },
+    get simulationSelection() {
+      return rootStore.getSnapshot().simulation.selection;
+    },
+    get simulationInspectorDetails() {
+      return rootStore.getSnapshot().simulation.inspectorDetails;
+    },
+    get simulationPatchSet() {
+      return rootStore.getSnapshot().simulation.patchSet;
+    },
     documentStore: documentStore.store,
     topologyStore: topologyStore.store,
     editorSessionStore: editorSessionStore.store,
@@ -131,6 +160,9 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
     uiStore: uiStore.store,
     canvasViewStore: canvasViewStore.store,
     runtimeSnapshotStore: runtimeSnapshotStore.store,
+    simulationSelectionStore: simulationSelectionStore.store,
+    simulationInspectorDetailsStore: simulationInspectorDetailsStore.store,
+    simulationPatchSetStore: simulationPatchSetStore.store,
     simulationStore: simulationStore.store,
     dispose: () => {
       documentStore.dispose();
@@ -141,6 +173,9 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
       uiStore.dispose();
       canvasViewStore.dispose();
       runtimeSnapshotStore.dispose();
+      simulationSelectionStore.dispose();
+      simulationInspectorDetailsStore.dispose();
+      simulationPatchSetStore.dispose();
       simulationStore.dispose();
     },
   };

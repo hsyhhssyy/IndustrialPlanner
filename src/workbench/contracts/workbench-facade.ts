@@ -48,6 +48,12 @@ export interface WorkbenchController {
   editorStore: EditorRuntimeStore;
   canvasViewStore: CanvasViewStore;
   topologyStore: Pick<SnapshotStore<CompiledTopology>, "getSnapshot" | "subscribe">;
+  runtimeSnapshotStore: ReadonlySnapshotStore<SimulationState["runtimeSnapshot"]>;
+  simulationSelectionStore: ReadonlySnapshotStore<SimulationState["selection"]>;
+  simulationInspectorDetailsStore: ReadonlySnapshotStore<
+    SimulationState["inspectorDetails"]
+  >;
+  simulationPatchSetStore: ReadonlySnapshotStore<SimulationState["patchSet"]>;
   simulationStore: ReadonlySnapshotStore<SimulationState>;
   registry: Stage1Registry;
   setPhase: (phase: WorkbenchPhase) => void;

@@ -168,6 +168,10 @@ class WorkbenchControllerImpl implements WorkbenchController {
   readonly editorStore;
   readonly canvasViewStore;
   readonly topologyStore: Pick<SnapshotStore<CompiledTopology>, "getSnapshot" | "subscribe">;
+  readonly runtimeSnapshotStore;
+  readonly simulationSelectionStore;
+  readonly simulationInspectorDetailsStore;
+  readonly simulationPatchSetStore;
   readonly simulationStore;
 
   private readonly logger = createLogger("workbench.controller");
@@ -229,6 +233,11 @@ class WorkbenchControllerImpl implements WorkbenchController {
       simulation: this.simulationHost.getSnapshot(),
     });
     this.documentStore = this.workspaceStore.documentStore;
+    this.runtimeSnapshotStore = this.workspaceStore.runtimeSnapshotStore;
+    this.simulationSelectionStore = this.workspaceStore.simulationSelectionStore;
+    this.simulationInspectorDetailsStore =
+      this.workspaceStore.simulationInspectorDetailsStore;
+    this.simulationPatchSetStore = this.workspaceStore.simulationPatchSetStore;
     this.simulationStore = this.workspaceStore.simulationStore;
     this.topologyStore = this.workspaceStore.topologyStore;
 

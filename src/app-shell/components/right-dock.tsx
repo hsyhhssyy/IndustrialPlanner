@@ -56,7 +56,12 @@ export const RightDock = observer(function RightDock({
   const document = useExternalStore(controller.documentStore);
   const editor = controller.editorStore;
   const topology = useExternalStore(controller.topologyStore);
-  const simulation = useExternalStore(controller.simulationStore);
+  const runtimeSnapshot = useExternalStore(controller.runtimeSnapshotStore);
+  const simulationSelection = useExternalStore(controller.simulationSelectionStore);
+  const simulationInspectorDetails = useExternalStore(
+    controller.simulationInspectorDetailsStore,
+  );
+  const simulationPatchSet = useExternalStore(controller.simulationPatchSetStore);
 
   if (!ui.rightDock.open) {
     return null;
@@ -65,7 +70,7 @@ export const RightDock = observer(function RightDock({
   const t = createTranslator(ui.locale);
   const activeSelection =
     ui.phase === "simulate"
-      ? simulation.selection
+      ? simulationSelection
       : resolveEditInspectorSelectionIds(editor.session);
   const hasSingleSelection = activeSelection.length === 1;
   const hasMultiSelection = activeSelection.length > 1;
@@ -79,7 +84,7 @@ export const RightDock = observer(function RightDock({
     ? topology.entityViews[selectedEntityId]?.definition ?? null
     : null;
   const selectedEntityRuntime = selectedEntityId
-    ? simulation.runtimeSnapshot.entityViews[selectedEntityId]
+    ? runtimeSnapshot.entityViews[selectedEntityId]
     : null;
   const selectedLinks = selectedEntityId
     ? document.explicitLinks.filter(
@@ -103,8 +108,8 @@ export const RightDock = observer(function RightDock({
   const inspectorState = {
     locale: ui.locale,
     phase: ui.phase,
-    inspectorDetails: simulation.inspectorDetails,
-    simulationPatchSet: simulation.patchSet,
+    inspectorDetails: simulationInspectorDetails,
+    simulationPatchSet,
   } as const;
   const activeBase = getStage1BaseDefinition(document.baseId);
   const baseGroups = getStage1BaseGroupOrder().map((groupId) => {

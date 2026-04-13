@@ -35,7 +35,8 @@ export interface RenderSceneCoordinatorSource {
   editorStore: ReadonlySnapshotStore<WorkspaceEditorState>;
   uiStore: ReadonlySnapshotStore<WorkbenchUiState>;
   canvasViewStore: ReadonlySnapshotStore<CanvasViewState>;
-  simulationStore: ReadonlySnapshotStore<SimulationState>;
+  runtimeSnapshotStore: ReadonlySnapshotStore<SimulationState["runtimeSnapshot"]>;
+  simulationSelectionStore: ReadonlySnapshotStore<SimulationState["selection"]>;
   topologyStore: ReadonlySnapshotStore<CompiledTopology>;
   registry: Stage1Registry;
 }
@@ -65,11 +66,11 @@ function buildRenderInteractionState(
   document: WorldDocument,
   editor: WorkspaceEditorState,
   ui: WorkbenchUiState,
-  simulation: SimulationState,
+  simulationSelection: SimulationState["selection"],
 ): RenderSceneInteractionState {
   if (ui.phase === "simulate") {
     return {
-      selectedEntityIds: simulation.selection,
+      selectedEntityIds: simulationSelection,
       placementPreview: null,
       moveDraft: null,
       pendingLinkSourceEntityId: null,
@@ -99,7 +100,6 @@ function collectRenderSceneCoordinatorInput(
 ): RenderSceneCoordinatorInput {
   const ui = source.uiStore.getSnapshot();
   const editor = source.editorStore.getSnapshot();
-  const simulation = source.simulationStore.getSnapshot();
   const document = source.documentStore.getSnapshot();
 
   return {
@@ -107,8 +107,13 @@ function collectRenderSceneCoordinatorInput(
     document,
     topology: source.topologyStore.getSnapshot(),
     canvasView: source.canvasViewStore.getSnapshot(),
-    interaction: buildRenderInteractionState(document, editor, ui, simulation),
-    runtimeSnapshot: simulation.runtimeSnapshot,
+    interaction: buildRenderInteractionState(
+      document,
+      editor,
+      ui,
+      source.simulationSelectionStore.getSnapshot(),
+    ),
+    runtimeSnapshot: source.runtimeSnapshotStore.getSnapshot(),
   };
 }
 
@@ -229,7 +234,8 @@ export function createRenderSceneCoordinator(
     options.source.editorStore.subscribe(handleStoreChange),
     options.source.uiStore.subscribe(handleStoreChange),
     options.source.canvasViewStore.subscribe(handleStoreChange),
-    options.source.simulationStore.subscribe(handleStoreChange),
+    options.source.runtimeSnapshotStore.subscribe(handleStoreChange),
+    options.source.simulationSelectionStore.subscribe(handleStoreChange),
     options.source.topologyStore.subscribe(handleStoreChange),
   ];
 

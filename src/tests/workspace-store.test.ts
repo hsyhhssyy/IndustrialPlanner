@@ -131,7 +131,7 @@ describe("WorkspaceStore", () => {
     store.dispose();
   });
 
-  it("exposes topology and runtimeSnapshot alongside compatibility stores", () => {
+  it("exposes simulation shared slices alongside compatibility stores", () => {
     const document = createStage1SeedWorldDocument();
     const topology = compileStage1World(document, createStage1Registry());
     const store = createWorkspaceStore({
@@ -172,9 +172,41 @@ describe("WorkspaceStore", () => {
       entityViews: {},
       patchedEntityIds: ["reactor-1"],
     };
+    const nextInspectorDetails = {
+      entityId: "reactor-1",
+      tick: 1,
+      lines: [],
+      effectiveConfig: {},
+      patchConfig: {},
+    };
+    const nextPatchSet = {
+      entityConfigByEntityId: {
+        "reactor-1": {
+          targetRate: 12,
+        },
+      },
+    };
+    const selectionListener = vi.fn();
+
+    store.simulationSelectionStore.subscribe(selectionListener);
 
     expect(store.topology).toBe(store.topologyStore.getSnapshot());
     expect(store.runtimeSnapshot).toBe(store.runtimeSnapshotStore.getSnapshot());
+    expect(store.simulationSelection).toBe(store.simulationSelectionStore.getSnapshot());
+    expect(store.simulationInspectorDetails).toBe(
+      store.simulationInspectorDetailsStore.getSnapshot(),
+    );
+    expect(store.simulationPatchSet).toBe(store.simulationPatchSetStore.getSnapshot());
+
+    store.rootStore.update((state) => ({
+      ...state,
+      simulation: {
+        ...state.simulation,
+        inspectorDetails: nextInspectorDetails,
+      },
+    }));
+
+    expect(selectionListener).not.toHaveBeenCalled();
 
     store.rootStore.update((state) => ({
       ...state,
@@ -182,6 +214,9 @@ describe("WorkspaceStore", () => {
       simulation: {
         ...state.simulation,
         runtimeSnapshot: nextRuntimeSnapshot,
+        inspectorDetails: nextInspectorDetails,
+        patchSet: nextPatchSet,
+        selection: ["reactor-1"],
       },
     }));
 
@@ -189,6 +224,13 @@ describe("WorkspaceStore", () => {
     expect(store.topologyStore.getSnapshot()).toBe(nextTopology);
     expect(store.runtimeSnapshot).toBe(nextRuntimeSnapshot);
     expect(store.runtimeSnapshotStore.getSnapshot()).toBe(nextRuntimeSnapshot);
+    expect(selectionListener).toHaveBeenCalledTimes(1);
+    expect(store.simulationSelection).toEqual(["reactor-1"]);
+    expect(store.simulationSelectionStore.getSnapshot()).toEqual(["reactor-1"]);
+    expect(store.simulationInspectorDetails).toBe(nextInspectorDetails);
+    expect(store.simulationInspectorDetailsStore.getSnapshot()).toBe(nextInspectorDetails);
+    expect(store.simulationPatchSet).toBe(nextPatchSet);
+    expect(store.simulationPatchSetStore.getSnapshot()).toBe(nextPatchSet);
 
     store.dispose();
   });

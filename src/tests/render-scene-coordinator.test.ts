@@ -7,6 +7,7 @@ import {
   createRenderSceneCoordinator,
   type RenderSceneCoordinatorSource,
 } from "@/renderer/host/render-scene-coordinator";
+import type { RenderSceneModel } from "@/renderer/scene/types";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
 import type { SimulationState } from "@/simulation/host/simulation-host";
 import { createInitialCanvasViewState } from "@/workbench/workspace-state";
@@ -29,7 +30,7 @@ function createCoordinatorHarness() {
   });
   const uiStore = createSnapshotStore(createInitialWorkbenchUiState());
   const canvasViewStore = createSnapshotStore(createInitialCanvasViewState());
-  const simulationStore = createSnapshotStore<SimulationState>({
+  const initialSimulationState: SimulationState = {
     runtimeSnapshot: {
       tick: 0,
       status: "idle" as const,
@@ -44,14 +45,22 @@ function createCoordinatorHarness() {
     inspectorDetails: null,
     patchSet: createEmptySimulationPatchSet(),
     selection: [],
-  });
+  };
+  const simulationStore = createSnapshotStore(initialSimulationState);
+  const runtimeSnapshotStore = createSnapshotStore(
+    initialSimulationState.runtimeSnapshot,
+  );
+  const simulationSelectionStore = createSnapshotStore(
+    initialSimulationState.selection,
+  );
   const topologyStore = createSnapshotStore(topology);
   const source: RenderSceneCoordinatorSource = {
     documentStore,
     editorStore,
     uiStore,
     canvasViewStore,
-    simulationStore,
+    runtimeSnapshotStore,
+    simulationSelectionStore,
     topologyStore,
     registry,
   };
@@ -64,13 +73,15 @@ function createCoordinatorHarness() {
       uiStore,
       canvasViewStore,
       simulationStore,
+      runtimeSnapshotStore,
+      simulationSelectionStore,
       topologyStore,
     },
   };
 }
 
 describe("RenderSceneCoordinator", () => {
-  it("batches store changes into one RAF-presented scene and ignores irrelevant simulation changes", () => {
+  it("batches store changes into one RAF-presented scene and ignores unrelated simulation slices", () => {
     const harness = createCoordinatorHarness();
     const presentScene = vi.fn();
     const frameCallbacks = new Map<number, FrameRequestCallback>();
@@ -131,6 +142,47 @@ describe("RenderSceneCoordinator", () => {
 
     expect(frameCallbacks.size).toBe(0);
     expect(presentScene).toHaveBeenCalledTimes(1);
+
+    harness.stores.uiStore.setSnapshot({
+      ...harness.stores.uiStore.getSnapshot(),
+      phase: "simulate",
+    });
+
+    expect(frameCallbacks.size).toBe(1);
+
+    const phaseFrame = frameCallbacks.values().next().value;
+
+    if (!phaseFrame) {
+      throw new Error("Missing queued animation frame for phase change.");
+    }
+
+    frameCallbacks.clear();
+    phaseFrame(24);
+
+    expect(presentScene).toHaveBeenCalledTimes(2);
+
+    harness.stores.simulationSelectionStore.setSnapshot(["reactor-1"]);
+
+    expect(frameCallbacks.size).toBe(1);
+
+    const selectionFrame = frameCallbacks.values().next().value;
+
+    if (!selectionFrame) {
+      throw new Error("Missing queued animation frame for selection change.");
+    }
+
+    frameCallbacks.clear();
+    selectionFrame(32);
+
+    expect(presentScene).toHaveBeenCalledTimes(3);
+    const selectionScene = presentScene.mock.calls[2]?.[0] as
+      | RenderSceneModel
+      | undefined;
+    const selectedSprite = selectionScene?.entities.find(
+      (entity) => entity.entityId === "reactor-1",
+    );
+
+    expect(selectedSprite?.selected).toBe(true);
 
     coordinator.dispose();
   });
