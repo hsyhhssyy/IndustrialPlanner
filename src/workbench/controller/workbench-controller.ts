@@ -1050,19 +1050,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       const startedAt = getDiagnosticTimeMs();
       this.editorStore.setSnapshot(this.editorHost.getState());
       const currentState = this.workspaceStore.rootStore.getSnapshot();
-      const simulationState = this.simulationHost.getSnapshot();
-      const nextState = this.composeWorkspaceState(currentState, {
-        document: this.editorHost.getDocument(),
-        topology: this.topology,
-        editorSession: this.editorStore.getSnapshot().session,
-        editorHistory: this.editorStore.getSnapshot().history,
-        ui: this.uiStore.getSnapshot(),
-        canvasView: this.canvasViewStore.getSnapshot(),
-        runtimeSnapshot: simulationState.runtimeSnapshot,
-        simulationSelection: simulationState.selection,
-        simulationInspectorDetails: simulationState.inspectorDetails,
-        simulationPatchSet: simulationState.patchSet,
-      });
+      const nextState = this.buildSyncedWorkspaceState(currentState);
       const { finalState, worldBoundsDurationMs, canvasViewClamped } =
         this.clampWorkspaceStateCanvasView(nextState);
 
@@ -1119,6 +1107,24 @@ class WorkbenchControllerImpl implements WorkbenchController {
       persistedWorkspaceChanged,
       storageSaveDurationMs: getDiagnosticTimeMs() - storageSaveStartedAt,
     };
+  }
+
+  private buildSyncedWorkspaceState(currentState: WorkspaceState): WorkspaceState {
+    const editorState = this.editorStore.getSnapshot();
+    const simulationState = this.simulationHost.getSnapshot();
+
+    return this.composeWorkspaceState(currentState, {
+      document: this.editorHost.getDocument(),
+      topology: this.topology,
+      editorSession: editorState.session,
+      editorHistory: editorState.history,
+      ui: this.uiStore.getSnapshot(),
+      canvasView: this.canvasViewStore.getSnapshot(),
+      runtimeSnapshot: simulationState.runtimeSnapshot,
+      simulationSelection: simulationState.selection,
+      simulationInspectorDetails: simulationState.inspectorDetails,
+      simulationPatchSet: simulationState.patchSet,
+    });
   }
 
   private clampWorkspaceStateCanvasView(workspaceState: WorkspaceState): {
