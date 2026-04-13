@@ -65,7 +65,7 @@ describe("RightDock inspector split", () => {
     localStorage.clear();
   });
 
-  it("renders edit and simulation inspector bodies from different phase-specific panels", async () => {
+  it("renders the edit inspector and a simulation stub panel from different phase-specific panels", async () => {
     const controller = createWorkbenchController();
 
     controller.setLocale("en-US");
@@ -84,10 +84,11 @@ describe("RightDock inspector split", () => {
     expect(editMarkup).toContain("Config Fields");
     expect(editMarkup).toContain("80x80");
     expect(editMarkup).toContain("Wuling");
-    expect(simulationMarkup).toContain("Runtime Details");
-    expect(simulationMarkup).toContain("Runtime Patch");
+    expect(simulationMarkup).toContain("Simulation panel temporarily stubbed");
+    expect(simulationMarkup).toContain("stable stub only");
     expect(simulationMarkup).not.toContain("Quick Actions");
     expect(simulationMarkup).not.toContain("Config Fields");
+    expect(simulationMarkup).not.toContain("Runtime Details");
 
     controller.dispose();
   });

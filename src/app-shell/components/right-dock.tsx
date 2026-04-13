@@ -1,6 +1,5 @@
 import { EditSelectionInspector } from "@/app-shell/components/inspector/edit-selection-inspector";
 import type { SelectionInspectorContext } from "@/app-shell/components/inspector/selection-inspector-model";
-import { SimulationSelectionInspector } from "@/app-shell/components/inspector/simulation-selection-inspector";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import {
   RIGHT_POWER_SUMMARY,
@@ -25,6 +24,18 @@ export interface RightDockProps {
 
 function formatMultiSelectionLabel(locale: "zh-CN" | "en-US", count: number): string {
   return locale === "zh-CN" ? `已选中 ${count} 个对象` : `${count} selected`;
+}
+
+function getSimulationStubCopy(locale: "zh-CN" | "en-US") {
+  return locale === "zh-CN"
+    ? {
+        title: "仿真面板已临时切断",
+        body: "当前 UI 与 workbench controller 只暴露稳定 stub，不再显示或回流真实仿真数据。",
+      }
+    : {
+        title: "Simulation panel temporarily stubbed",
+        body: "The UI and workbench controller now expose a stable stub only, so no live simulation data flows back into the workbench.",
+      };
 }
 
 function resolveEditInspectorSelectionIds(
@@ -111,6 +122,7 @@ export const RightDock = observer(function RightDock({
     inspectorDetails: simulationInspectorDetails,
     simulationPatchSet,
   } as const;
+  const simulationStubCopy = getSimulationStubCopy(ui.locale);
   const activeBase = getStage1BaseDefinition(document.baseId);
   const baseGroups = getStage1BaseGroupOrder().map((groupId) => {
     const groupBases = STAGE1_BASE_DEFINITIONS.filter(
@@ -241,11 +253,10 @@ export const RightDock = observer(function RightDock({
                   state={inspectorState}
                 />
               ) : (
-                <SimulationSelectionInspector
-                  context={selectionContext}
-                  controller={controller}
-                  state={inspectorState}
-                />
+                <article className="definition-card">
+                  <h4>{simulationStubCopy.title}</h4>
+                  <p>{simulationStubCopy.body}</p>
+                </article>
               )}
             </article>
             {ui.diagnosticsVisible ? (

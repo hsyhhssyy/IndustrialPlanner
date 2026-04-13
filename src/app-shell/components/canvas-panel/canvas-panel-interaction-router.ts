@@ -270,9 +270,6 @@ async function dispatchCanvasTap(options: {
     case "commit-placement":
       await options.controller.commitPlacementAtScreenPoint(options.screenPoint);
       return;
-    case "select-simulation-entity":
-      await options.controller.selectSimulationEntity(intent.entityId);
-      return;
     case "noop":
       return;
   }

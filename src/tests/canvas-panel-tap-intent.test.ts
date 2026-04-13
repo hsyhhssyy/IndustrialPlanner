@@ -8,7 +8,7 @@ import {
 } from "@/editor/contracts/interaction-mode";
 
 describe("resolveCanvasPanelTapIntent", () => {
-  it("selects simulation entities and clears simulation selection on blank taps", () => {
+  it("treats simulate-phase taps as no-ops while the workbench uses a simulation stub", () => {
     expect(
       resolveCanvasPanelTapIntent({
         phase: "simulate",
@@ -21,8 +21,7 @@ describe("resolveCanvasPanelTapIntent", () => {
         },
       }),
     ).toEqual({
-      kind: "select-simulation-entity",
-      entityId: "reactor-1",
+      kind: "noop",
     });
 
     expect(
@@ -35,8 +34,7 @@ describe("resolveCanvasPanelTapIntent", () => {
         },
       }),
     ).toEqual({
-      kind: "select-simulation-entity",
-      entityId: null,
+      kind: "noop",
     });
   });
 

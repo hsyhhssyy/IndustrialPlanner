@@ -96,7 +96,7 @@ describe("BottomStatusBar", () => {
     });
 
     expect(container.querySelector(".status-chip-primary")?.textContent).toBe(
-      "仿真运行中",
+      "仿真占位中",
     );
     expect(getRightStatusChipTexts(container)).toEqual([
       "当前模式: 选择",

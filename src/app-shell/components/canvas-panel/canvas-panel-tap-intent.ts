@@ -23,10 +23,6 @@ export type CanvasPanelTapIntent =
     }
   | {
       kind: "commit-placement";
-    }
-  | {
-      kind: "select-simulation-entity";
-      entityId: string | null;
     };
 
 export interface ResolveCanvasPanelTapIntentOptions {
@@ -44,8 +40,7 @@ export function resolveCanvasPanelTapIntent(
 
   if (options.phase === "simulate") {
     return {
-      kind: "select-simulation-entity",
-      entityId: targetEntityId,
+      kind: "noop",
     };
   }
 
