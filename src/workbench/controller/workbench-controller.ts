@@ -51,7 +51,6 @@ import {
   getSelectedEntityIds,
 } from "@/editor/contracts/editor-session-helpers";
 import {
-  getPendingLinkSourceEntityId,
   isInteractionModeAvailableInPhase,
   isMoveInteractionMode,
   isPlacementInteractionMode,
@@ -93,7 +92,6 @@ import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement
 interface MutationState {
   document: WorldDocument;
   selectionId: string | null;
-  pendingLinkSourceEntityId: string | null;
 }
 
 interface SyncMetrics {
@@ -950,9 +948,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
     return {
       document: this.documentStore.getSnapshot(),
       selectionId: this.getActiveSelectionId(),
-      pendingLinkSourceEntityId: getPendingLinkSourceEntityId(
-        this.editorHost.getState().session.currentMode,
-      ),
     };
   }
 
@@ -978,22 +973,12 @@ class WorkbenchControllerImpl implements WorkbenchController {
       this.uiStore.getSnapshot().phase === "simulate"
         ? this.simulationHost.getSnapshot().selection[0] ?? null
         : getSelectedEntityIds(afterEditorState.session)[0] ?? null;
-    const afterPendingLinkSourceEntityId = getPendingLinkSourceEntityId(
-      afterEditorState.session.currentMode,
-    );
     const selectionChanged = before.selectionId !== afterSelectionId;
-    const pendingLinkChanged =
-      before.pendingLinkSourceEntityId !== afterPendingLinkSourceEntityId;
 
     this.sync();
 
     if (documentChanged || selectionChanged) {
       await this.refreshInspectorForSelection();
-      return;
-    }
-
-    if (pendingLinkChanged) {
-      this.sync();
     }
   }
 
