@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { getStage1BaseDefinition } from "@/domain/base/stage1-bases";
 import { compileStage1World } from "@/domain/compiler/stage1-compiler";
 import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";
@@ -11,8 +11,6 @@ import {
   getGridBoundingBox,
   getRotatedGridFootprint,
 } from "@/shared/geometry/grid";
-import { createSnapshotStore } from "@/shared/snapshot-store/snapshot-store";
-import { createEmptySimulationPatchSet } from "@/simulation/protocol/simulation-patch";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
 import {
   createMoveInteractionMode,
@@ -32,7 +30,6 @@ import {
   type WorkspaceState,
 } from "@/workbench/workspace-state";
 import { createInitialWorkbenchUiState } from "@/workbench/workbench-ui-store";
-import { createWorkspaceStore } from "@/workbench/workspace-store";
 
 function createCollection(ids: string[]) {
   return {
@@ -119,24 +116,8 @@ function withMoveDraft(
   };
 }
 
-function createIdleSimulationWorkspaceSlices(): Pick<
-  WorkspaceState,
-  | "runtimeSnapshot"
-  | "simulationSelection"
-  | "simulationInspectorDetails"
-  | "simulationPatchSet"
-> {
-  return {
-    runtimeSnapshot: {
-      tick: 0,
-      status: "idle",
-      entityViews: {},
-      patchedEntityIds: [],
-    },
-    simulationSelection: [],
-    simulationInspectorDetails: null,
-    simulationPatchSet: createEmptySimulationPatchSet(),
-  };
+function createIdleSimulationWorkspaceSlices(): Record<string, never> {
+  return {};
 }
 
 describe("WorkspaceDerivedStore", () => {
@@ -181,7 +162,6 @@ describe("WorkspaceDerivedStore", () => {
           workspaceState.editorSession.currentMode,
         ),
       },
-      runtimeSnapshot: workspaceState.runtimeSnapshot,
     });
 
     expect(derived.cellSizePx).toBe(renderScene.gridSize * renderScene.zoom);
@@ -736,70 +716,6 @@ describe("WorkspaceDerivedStore", () => {
         8 * document.documentSettings.gridSize * workspaceState.canvasView.zoom,
     });
   });
-
-  it("does not notify render subscribers when only unused runtime slices change", () => {
-    const document = createStage1SeedWorldDocument();
-    const registry = createStage1Registry();
-    const topology = compileStage1World(document, registry);
-    const workspaceStore = createWorkspaceStore({
-      document,
-      topology,
-      editorSession: createInitialEditorSession(),
-      editorHistory: {
-        canUndo: false,
-        canRedo: false,
-        undoDepth: 0,
-        redoDepth: 0,
-      },
-      ui: createInitialWorkbenchUiState(),
-      canvasView: createInitialCanvasViewState(),
-      runtimeSnapshot: {
-        tick: 0,
-        status: "idle",
-        entityViews: {},
-        patchedEntityIds: [],
-      },
-      simulationSelection: [],
-      simulationInspectorDetails: null,
-      simulationPatchSet: createEmptySimulationPatchSet(),
-    });
-    const topologyStore = createSnapshotStore(topology);
-    const derivedStore = createWorkspaceDerivedStore({
-      documentStore: workspaceStore.documentStore,
-      editorStore: workspaceStore.editorStore,
-      uiStore: workspaceStore.uiStore,
-      canvasViewStore: workspaceStore.canvasViewStore,
-      topologyStore,
-      registry,
-    });
-    const renderListener = vi.fn();
-
-    derivedStore.renderStore.subscribe(renderListener);
-
-    workspaceStore.rootStore.update((state) => ({
-      ...state,
-      simulationSelection: ["reactor-1"],
-    }));
-
-    expect(renderListener).not.toHaveBeenCalled();
-
-    workspaceStore.rootStore.update((state) => ({
-      ...state,
-      canvasView: {
-        ...state.canvasView,
-        zoom: 1.5,
-      },
-    }));
-
-    expect(renderListener).toHaveBeenCalledTimes(1);
-    expect(derivedStore.renderStore.getSnapshot().cellSizePx).toBe(
-      document.documentSettings.gridSize * 1.5,
-    );
-
-    derivedStore.dispose();
-    workspaceStore.dispose();
-  });
-
   it("expands render world bounds from draftEntities when legacy preview state is absent", () => {
     const document = createStage1SeedWorldDocument();
     const registry = createStage1Registry();

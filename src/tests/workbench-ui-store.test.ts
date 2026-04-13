@@ -43,7 +43,7 @@ describe("WorkbenchUiStore", () => {
     expect(store.getSnapshot()).toMatchObject({
       phase: "simulate",
       logLevel: "debug",
-      simulationSpeed: "4x",
+      simulationSpeed: "1x",
       diagnosticsVisible: false,
       statusMessageKey: "status.simulate",
       rightDock: {

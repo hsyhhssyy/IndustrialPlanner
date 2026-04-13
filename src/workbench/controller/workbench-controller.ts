@@ -82,7 +82,6 @@ import {
   type LogLevel,
 } from "@/shared/logging/logger";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
-import { SIMULATION_STUB_STATE } from "@/workbench/simulation-stub-state";
 
 interface MutationState {
   document: WorldDocument;
@@ -220,10 +219,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
       editorHistory: this.editorStore.getSnapshot().history,
       ui: this.uiStore.getSnapshot(),
       canvasView: this.canvasViewStore.getSnapshot(),
-      runtimeSnapshot: SIMULATION_STUB_STATE.runtimeSnapshot,
-      simulationSelection: SIMULATION_STUB_STATE.selection,
-      simulationInspectorDetails: SIMULATION_STUB_STATE.inspectorDetails,
-      simulationPatchSet: SIMULATION_STUB_STATE.patchSet,
     });
     this.documentStore = this.workspaceStore.documentStore;
     this.topologyStore = this.workspaceStore.topologyStore;
@@ -711,20 +706,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   setSimulationSpeedPreset(preset: SimulationSpeedPreset): void {
-    const didChange = this.updateUiState((ui) => {
-      if (ui.simulationSpeed === preset) {
-        return ui;
-      }
-
-      return {
-        ...ui,
-        simulationSpeed: preset,
-      };
-    });
-
-    if (didChange) {
-      this.sync();
-    }
+    void preset;
   }
 
   setLocale(locale: AppLocale): void {
@@ -1006,10 +988,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
       editorHistory: editorState.history,
       ui: this.uiStore.getSnapshot(),
       canvasView: this.canvasViewStore.getSnapshot(),
-      runtimeSnapshot: SIMULATION_STUB_STATE.runtimeSnapshot,
-      simulationSelection: SIMULATION_STUB_STATE.selection,
-      simulationInspectorDetails: SIMULATION_STUB_STATE.inspectorDetails,
-      simulationPatchSet: SIMULATION_STUB_STATE.patchSet,
     });
   }
 
@@ -1075,11 +1053,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       currentState.editorSession === nextState.editorSession &&
       currentState.editorHistory === nextState.editorHistory &&
       currentState.ui === nextState.ui &&
-      currentState.canvasView === nextState.canvasView &&
-      currentState.runtimeSnapshot === nextState.runtimeSnapshot &&
-      currentState.simulationSelection === nextState.simulationSelection &&
-      currentState.simulationInspectorDetails === nextState.simulationInspectorDetails &&
-      currentState.simulationPatchSet === nextState.simulationPatchSet
+      currentState.canvasView === nextState.canvasView
     ) {
       return currentState;
     }
@@ -1106,22 +1080,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
         currentState.canvasView === nextState.canvasView
           ? currentState.canvasView
           : nextState.canvasView,
-      runtimeSnapshot:
-        currentState.runtimeSnapshot === nextState.runtimeSnapshot
-          ? currentState.runtimeSnapshot
-          : nextState.runtimeSnapshot,
-      simulationSelection:
-        currentState.simulationSelection === nextState.simulationSelection
-          ? currentState.simulationSelection
-          : nextState.simulationSelection,
-      simulationInspectorDetails:
-        currentState.simulationInspectorDetails === nextState.simulationInspectorDetails
-          ? currentState.simulationInspectorDetails
-          : nextState.simulationInspectorDetails,
-      simulationPatchSet:
-        currentState.simulationPatchSet === nextState.simulationPatchSet
-          ? currentState.simulationPatchSet
-          : nextState.simulationPatchSet,
     };
   }
 

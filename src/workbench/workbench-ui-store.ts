@@ -88,6 +88,7 @@ export function createWorkbenchUiState(
     ...initialState,
     ...stateInput,
     phase,
+    simulationSpeed: initialState.simulationSpeed,
     leftDock: mergeDockState(initialState.leftDock, stateInput.leftDock),
     rightDock: mergeDockState(initialState.rightDock, stateInput.rightDock),
     statusMessageKey:
@@ -263,16 +264,7 @@ class WorkbenchUiStoreImpl implements WorkbenchUiStore {
   }
 
   setSimulationSpeedPreset(preset: SimulationSpeedPreset): void {
-    this.update((state) => {
-      if (state.simulationSpeed === preset) {
-        return state;
-      }
-
-      return {
-        ...state,
-        simulationSpeed: preset,
-      };
-    });
+    void preset;
   }
 
   setDockOpen(dockId: DockId, open: boolean): void {

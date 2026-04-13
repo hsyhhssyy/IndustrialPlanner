@@ -4,8 +4,6 @@ import {
   createSnapshotStore,
   type SnapshotStore,
 } from "@/shared/snapshot-store/snapshot-store";
-import type { SimulationState } from "@/simulation/host/simulation-host";
-import type { RuntimeRenderSnapshot } from "@/simulation/protocol/runtime-protocol";
 import type {
   CanvasViewState,
   WorkspaceEditorState,
@@ -24,10 +22,6 @@ export interface WorkspaceStore {
   readonly topology: CompiledTopology;
   readonly editorSession: WorkspaceState["editorSession"];
   readonly editorHistory: WorkspaceState["editorHistory"];
-  readonly runtimeSnapshot: RuntimeRenderSnapshot;
-  readonly simulationSelection: WorkspaceState["simulationSelection"];
-  readonly simulationInspectorDetails: WorkspaceState["simulationInspectorDetails"];
-  readonly simulationPatchSet: WorkspaceState["simulationPatchSet"];
   documentStore: ReadonlySnapshotStore<WorldDocument>;
   topologyStore: ReadonlySnapshotStore<CompiledTopology>;
   editorSessionStore: ReadonlySnapshotStore<WorkspaceState["editorSession"]>;
@@ -35,12 +29,6 @@ export interface WorkspaceStore {
   editorStore: ReadonlySnapshotStore<WorkspaceEditorState>;
   uiStore: ReadonlySnapshotStore<WorkbenchUiState>;
   canvasViewStore: ReadonlySnapshotStore<CanvasViewState>;
-  runtimeSnapshotStore: ReadonlySnapshotStore<RuntimeRenderSnapshot>;
-  simulationSelectionStore: ReadonlySnapshotStore<WorkspaceState["simulationSelection"]>;
-  simulationInspectorDetailsStore: ReadonlySnapshotStore<
-    WorkspaceState["simulationInspectorDetails"]
-  >;
-  simulationPatchSetStore: ReadonlySnapshotStore<WorkspaceState["simulationPatchSet"]>;
   dispose: () => void;
 }
 
@@ -107,22 +95,6 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
   const editorStore = createEditorDerivedStore(rootStore);
   const uiStore = createDerivedStore(rootStore, (state) => state.ui);
   const canvasViewStore = createDerivedStore(rootStore, (state) => state.canvasView);
-  const runtimeSnapshotStore = createDerivedStore(
-    rootStore,
-    (state) => state.runtimeSnapshot,
-  );
-  const simulationSelectionStore = createDerivedStore(
-    rootStore,
-    (state) => state.simulationSelection,
-  );
-  const simulationInspectorDetailsStore = createDerivedStore(
-    rootStore,
-    (state) => state.simulationInspectorDetails,
-  );
-  const simulationPatchSetStore = createDerivedStore(
-    rootStore,
-    (state) => state.simulationPatchSet,
-  );
 
   return {
     rootStore,
@@ -138,18 +110,6 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
     get editorHistory() {
       return rootStore.getSnapshot().editorHistory;
     },
-    get runtimeSnapshot() {
-      return rootStore.getSnapshot().runtimeSnapshot;
-    },
-    get simulationSelection() {
-      return rootStore.getSnapshot().simulationSelection;
-    },
-    get simulationInspectorDetails() {
-      return rootStore.getSnapshot().simulationInspectorDetails;
-    },
-    get simulationPatchSet() {
-      return rootStore.getSnapshot().simulationPatchSet;
-    },
     documentStore: documentStore.store,
     topologyStore: topologyStore.store,
     editorSessionStore: editorSessionStore.store,
@@ -157,10 +117,6 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
     editorStore: editorStore.store,
     uiStore: uiStore.store,
     canvasViewStore: canvasViewStore.store,
-    runtimeSnapshotStore: runtimeSnapshotStore.store,
-    simulationSelectionStore: simulationSelectionStore.store,
-    simulationInspectorDetailsStore: simulationInspectorDetailsStore.store,
-    simulationPatchSetStore: simulationPatchSetStore.store,
     dispose: () => {
       documentStore.dispose();
       topologyStore.dispose();
@@ -169,10 +125,6 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
       editorStore.dispose();
       uiStore.dispose();
       canvasViewStore.dispose();
-      runtimeSnapshotStore.dispose();
-      simulationSelectionStore.dispose();
-      simulationInspectorDetailsStore.dispose();
-      simulationPatchSetStore.dispose();
     },
   };
 }

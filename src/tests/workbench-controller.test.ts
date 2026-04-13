@@ -471,7 +471,7 @@ describe("WorkbenchController scaffold", () => {
     expect(snapshot.ui.logLevel).toBe("info");
     expect(snapshot.ui.diagnosticsVisible).toBe(false);
     expect(snapshot.ui.leftPanelMode).toBe("blueprint");
-    expect(snapshot.ui.simulationSpeed).toBe("4x");
+    expect(snapshot.ui.simulationSpeed).toBe("1x");
     expect(snapshot.canvasView.zoom).toBeGreaterThan(1);
     expect(snapshot.renderScene.zoom).toBe(snapshot.canvasView.zoom);
     expect(snapshot.renderScene.worldWidth).toBe(

@@ -5,7 +5,6 @@ import type {
   TopologyDiagnostic,
 } from "@/domain/topology/compiled-topology";
 import type { RenderEntityKind } from "@/renderer/scene/stage1-device-rendering";
-import type { RuntimeRenderSnapshot } from "@/simulation/protocol/runtime-protocol";
 import type { GridRotation } from "@/shared/geometry/grid";
 import type { AppLocale } from "@/i18n/messages";
 import type { MoveDraftState } from "@/editor/contracts/move-draft";
@@ -38,7 +37,6 @@ export interface RenderSceneInput {
   registry: Stage1Registry;
   canvasView: CanvasViewState;
   interaction: RenderSceneInteractionState;
-  runtimeSnapshot?: RuntimeRenderSnapshot;
 }
 
 export interface RenderLayerDescriptor {

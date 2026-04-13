@@ -2,7 +2,6 @@ import type { WorldDocument } from "@/domain/document/world-document";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import type { EditorSession } from "@/editor/contracts/editor-session";
 import type { EditorHistoryState as EditorHistorySliceState } from "@/editor/core/editor-core";
-import type { SimulationState } from "@/simulation/host/simulation-host";
 import type { WorkbenchUiState } from "@/workbench/workbench-ui-state";
 
 export interface CanvasPoint {
@@ -30,10 +29,6 @@ export interface WorkspaceState {
   editorHistory: EditorHistoryState;
   ui: WorkbenchUiState;
   canvasView: CanvasViewState;
-  runtimeSnapshot: SimulationState["runtimeSnapshot"];
-  simulationSelection: SimulationState["selection"];
-  simulationInspectorDetails: SimulationState["inspectorDetails"];
-  simulationPatchSet: SimulationState["patchSet"];
 }
 
 export function createInitialCanvasViewState(
