@@ -26,18 +26,20 @@ describe("WorkspaceStore", () => {
     });
     const documentListener = vi.fn();
     const uiListener = vi.fn();
+    const currentState = store.getSnapshot();
 
     store.documentStore.subscribe(documentListener);
     store.uiStore.subscribe(uiListener);
 
-    store.rootStore.update((state) => ({
-      ...state,
+    const publishedState = store.publishState({
+      ...currentState,
       ui: {
-        ...state.ui,
+        ...currentState.ui,
         locale: "en-US",
       },
-    }));
+    });
 
+    expect(store.getSnapshot()).toBe(publishedState);
     expect(uiListener).toHaveBeenCalledTimes(1);
     expect(documentListener).not.toHaveBeenCalled();
 
@@ -75,20 +77,20 @@ describe("WorkspaceStore", () => {
     expect(store.editorStore.getSnapshot().session).toBe(store.editorSession);
     expect(store.editorStore.getSnapshot().history).toBe(store.editorHistory);
 
-    store.rootStore.update((state) => ({
-      ...state,
+    store.publishState({
+      ...store.getSnapshot(),
       ui: {
-        ...state.ui,
+        ...store.getSnapshot().ui,
         locale: "en-US",
       },
-    }));
+    });
 
     expect(editorListener).not.toHaveBeenCalled();
 
-    store.rootStore.update((state) => ({
-      ...state,
+    store.publishState({
+      ...store.getSnapshot(),
       editorHistory: nextHistory,
-    }));
+    });
 
     expect(editorListener).toHaveBeenCalledTimes(1);
     expect(store.editorHistory).toBe(nextHistory);

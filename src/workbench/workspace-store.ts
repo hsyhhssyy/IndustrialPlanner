@@ -18,6 +18,8 @@ export type ReadonlySnapshotStore<TSnapshot> = Pick<
 
 export interface WorkspaceStore {
   rootStore: SnapshotStore<WorkspaceState>;
+  getSnapshot: () => WorkspaceState;
+  publishState: (nextState: WorkspaceState) => WorkspaceState;
   readonly document: WorldDocument;
   readonly topology: CompiledTopology;
   readonly editorSession: WorkspaceState["editorSession"];
@@ -86,6 +88,46 @@ function createEditorDerivedStore(
   };
 }
 
+function composeWorkspaceState(
+  currentState: WorkspaceState,
+  nextState: WorkspaceState,
+): WorkspaceState {
+  if (
+    currentState.document === nextState.document &&
+    currentState.topology === nextState.topology &&
+    currentState.editorSession === nextState.editorSession &&
+    currentState.editorHistory === nextState.editorHistory &&
+    currentState.ui === nextState.ui &&
+    currentState.canvasView === nextState.canvasView
+  ) {
+    return currentState;
+  }
+
+  return {
+    document:
+      currentState.document === nextState.document
+        ? currentState.document
+        : nextState.document,
+    topology:
+      currentState.topology === nextState.topology
+        ? currentState.topology
+        : nextState.topology,
+    editorSession:
+      currentState.editorSession === nextState.editorSession
+        ? currentState.editorSession
+        : nextState.editorSession,
+    editorHistory:
+      currentState.editorHistory === nextState.editorHistory
+        ? currentState.editorHistory
+        : nextState.editorHistory,
+    ui: currentState.ui === nextState.ui ? currentState.ui : nextState.ui,
+    canvasView:
+      currentState.canvasView === nextState.canvasView
+        ? currentState.canvasView
+        : nextState.canvasView,
+  };
+}
+
 export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceStore {
   const rootStore = createSnapshotStore(initialState);
   const documentStore = createDerivedStore(rootStore, (state) => state.document);
@@ -98,6 +140,17 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
 
   return {
     rootStore,
+    getSnapshot: () => rootStore.getSnapshot(),
+    publishState: (nextState) => {
+      const publishedState = composeWorkspaceState(
+        rootStore.getSnapshot(),
+        nextState,
+      );
+
+      rootStore.setSnapshot(publishedState);
+
+      return publishedState;
+    },
     get document() {
       return rootStore.getSnapshot().document;
     },

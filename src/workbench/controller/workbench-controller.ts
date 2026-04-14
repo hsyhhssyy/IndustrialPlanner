@@ -91,11 +91,6 @@ interface SyncMetrics {
   canvasViewClamped: boolean;
 }
 
-interface SyncedWorkspaceStateCandidate {
-  currentState: WorkspaceState;
-  nextState: WorkspaceState;
-}
-
 interface PlacementPreviewDiagnosticWindow {
   startedAt: number;
   lastFlushedAt: number;
@@ -866,12 +861,13 @@ class WorkbenchControllerImpl implements WorkbenchController {
   private sync(): SyncMetrics {
     return this.measureProfilerStage("controller.sync.total", () => {
       const startedAt = getDiagnosticTimeMs();
-      const { nextState } = this.collectSyncedWorkspaceStateCandidate();
+      this.editorStore.setSnapshot(this.editorHost.getState());
+      const nextState = this.buildSyncedWorkspaceState();
       const { finalState, worldBoundsDurationMs, canvasViewClamped } =
         this.clampWorkspaceStateCanvasView(nextState);
-      this.publishWorkspaceState(finalState);
+      const publishedState = this.publishWorkspaceState(finalState);
       const { persistedWorkspaceChanged, storageSaveDurationMs } =
-        this.persistWorkspaceStateIfNeeded(finalState);
+        this.persistWorkspaceStateIfNeeded(publishedState);
 
       return {
         worldBoundsDurationMs,
@@ -883,24 +879,15 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
   }
 
-  private collectSyncedWorkspaceStateCandidate(): SyncedWorkspaceStateCandidate {
-    this.editorStore.setSnapshot(this.editorHost.getState());
-
-    const currentState = this.workspaceStore.rootStore.getSnapshot();
-
-    return {
-      currentState,
-      nextState: this.buildSyncedWorkspaceState(currentState),
-    };
-  }
-
-  private publishWorkspaceState(workspaceState: WorkspaceState): void {
+  private publishWorkspaceState(workspaceState: WorkspaceState): WorkspaceState {
     const rootStoreSetStartedAt = getDiagnosticTimeMs();
-    this.workspaceStore.rootStore.setSnapshot(workspaceState);
+    const publishedState = this.workspaceStore.publishState(workspaceState);
     this.recordProfilerStageDuration(
       "controller.sync.rootStoreSet",
       getDiagnosticTimeMs() - rootStoreSetStartedAt,
     );
+
+    return publishedState;
   }
 
   private createWorkspacePersistenceState(
@@ -939,17 +926,17 @@ class WorkbenchControllerImpl implements WorkbenchController {
     };
   }
 
-  private buildSyncedWorkspaceState(currentState: WorkspaceState): WorkspaceState {
+  private buildSyncedWorkspaceState(): WorkspaceState {
     const editorState = this.editorStore.getSnapshot();
 
-    return this.composeWorkspaceState(currentState, {
+    return {
       document: this.editorHost.getDocument(),
       topology: this.topology,
       editorSession: editorState.session,
       editorHistory: editorState.history,
       ui: this.uiStore.getSnapshot(),
       canvasView: this.canvasViewStore.getSnapshot(),
-    });
+    };
   }
 
   private clampWorkspaceStateCanvasView(workspaceState: WorkspaceState): {
@@ -969,16 +956,19 @@ class WorkbenchControllerImpl implements WorkbenchController {
     const worldBoundsDurationMs = getDiagnosticTimeMs() - worldBoundsStartedAt;
 
     return {
-      finalState: this.composeWorkspaceState(workspaceState, {
-        ...workspaceState,
-        canvasView: clampedCanvasView,
-      }),
+      finalState:
+        clampedCanvasView === workspaceState.canvasView
+          ? workspaceState
+          : {
+              ...workspaceState,
+              canvasView: clampedCanvasView,
+            },
       worldBoundsDurationMs,
       canvasViewClamped: clampedCanvasView !== workspaceState.canvasView,
     };
   }
 
-  private getViewportMetrics(workspaceState = this.workspaceStore.rootStore.getSnapshot()) {
+  private getViewportMetrics(workspaceState = this.workspaceStore.getSnapshot()) {
     return {
       gridSize: workspaceState.document.documentSettings.gridSize,
       size: this.viewportSize,
@@ -1001,46 +991,6 @@ class WorkbenchControllerImpl implements WorkbenchController {
     return {
       x: worldBoundsPx.width,
       y: worldBoundsPx.height,
-    };
-  }
-
-  private composeWorkspaceState(
-    currentState: WorkspaceState,
-    nextState: WorkspaceState,
-  ): WorkspaceState {
-    if (
-      currentState.document === nextState.document &&
-      currentState.topology === nextState.topology &&
-      currentState.editorSession === nextState.editorSession &&
-      currentState.editorHistory === nextState.editorHistory &&
-      currentState.ui === nextState.ui &&
-      currentState.canvasView === nextState.canvasView
-    ) {
-      return currentState;
-    }
-
-    return {
-      document:
-        currentState.document === nextState.document
-          ? currentState.document
-          : nextState.document,
-      topology:
-        currentState.topology === nextState.topology
-          ? currentState.topology
-          : nextState.topology,
-      editorSession:
-        currentState.editorSession === nextState.editorSession
-          ? currentState.editorSession
-          : nextState.editorSession,
-      editorHistory:
-        currentState.editorHistory === nextState.editorHistory
-          ? currentState.editorHistory
-          : nextState.editorHistory,
-      ui: currentState.ui === nextState.ui ? currentState.ui : nextState.ui,
-      canvasView:
-        currentState.canvasView === nextState.canvasView
-          ? currentState.canvasView
-          : nextState.canvasView,
     };
   }
 
