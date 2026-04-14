@@ -84,7 +84,7 @@ export function WorkbenchApp({ shell }: WorkbenchAppProps) {
           >
             <TopBar
               controller={controller}
-              renderDerivedStore={workspaceDerivedStore.renderStore}
+              workspaceDerivedStore={workspaceDerivedStore}
             />
             <LeftToolbar controller={controller} />
             <PlacementPreviewProfiledSection
@@ -100,7 +100,7 @@ export function WorkbenchApp({ shell }: WorkbenchAppProps) {
               <CanvasPanel
                 controller={controller}
                 placementPreviewProfiler={placementPreviewProfiler}
-                renderDerivedStore={workspaceDerivedStore.renderStore}
+                workspaceDerivedStore={workspaceDerivedStore}
               />
             </PlacementPreviewProfiledSection>
             <PlacementPreviewProfiledSection

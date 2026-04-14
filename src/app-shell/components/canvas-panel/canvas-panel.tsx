@@ -37,9 +37,8 @@ import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 import type {
   RenderDerivedScreenBox,
-  RenderDerivedState,
 } from "@/workbench/workspace-derived-state";
-import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
+import type { WorkspaceDerivedStore } from "@/workbench/workspace-derived-store";
 import type { CanvasPoint } from "@/workbench/workspace-state";
 import {
   useEffect,
@@ -114,19 +113,19 @@ function resolveAnchoredToolbarStyle(
 
 export interface CanvasPanelProps {
   controller: WorkbenchController;
-  renderDerivedStore: ReadonlySnapshotStore<RenderDerivedState>;
+  workspaceDerivedStore: Pick<WorkspaceDerivedStore, "render">;
   placementPreviewProfiler?: PlacementPreviewProfiler;
 }
 
 export const CanvasPanel = observer(function CanvasPanel({
   controller,
-  renderDerivedStore,
+  workspaceDerivedStore,
   placementPreviewProfiler,
 }: CanvasPanelProps) {
   const ui = controller.uiStore;
   const worldDocument = useExternalStore(controller.documentStore);
   const editor = controller.editorStore;
-  const render = useExternalStore(renderDerivedStore);
+  const render = workspaceDerivedStore.render;
   const stageRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const keyStateRef = useRef({ up: false, down: false, left: false, right: false });

@@ -7,9 +7,7 @@ import {
   computed,
   makeAutoObservable,
   observable,
-  reaction,
 } from "@/shared/mobx";
-import { createSnapshotBridge } from "@/shared/mobx/snapshot-bridge";
 import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
 import type {
   CanvasViewState,
@@ -23,7 +21,7 @@ import {
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 
 export interface WorkspaceDerivedStore {
-  renderStore: ReadonlySnapshotStore<RenderDerivedState>;
+  readonly render: RenderDerivedState;
   dispose: () => void;
 }
 
@@ -98,12 +96,11 @@ function createDerivedWorkspaceState(options: {
 }
 
 class WorkspaceDerivedStoreImpl implements WorkspaceDerivedStore {
-  readonly renderStore;
-
   private documentInput: WorldDocument;
   private editorSessionInput: WorkspaceEditorState["session"];
   private canvasViewInput: CanvasViewState;
   private topologyInput: CompiledTopology;
+  private cachedRender: RenderDerivedState | null = null;
 
   private readonly registry: Stage1Registry;
   private readonly documentStoreSource: ReadonlySnapshotStore<WorldDocument>;
@@ -111,8 +108,6 @@ class WorkspaceDerivedStoreImpl implements WorkspaceDerivedStore {
   private readonly canvasViewStoreSource: ReadonlySnapshotStore<CanvasViewState>;
   private readonly topologyStoreSource: ReadonlySnapshotStore<CompiledTopology>;
   private readonly placementPreviewProfiler?: PlacementPreviewProfiler;
-  private readonly renderSnapshotBridge;
-  private readonly stopRenderReaction: () => void;
   private readonly inputUnsubscribers: Array<() => void>;
 
   constructor(options: CreateWorkspaceDerivedStoreOptions) {
@@ -136,10 +131,8 @@ class WorkspaceDerivedStoreImpl implements WorkspaceDerivedStore {
         topologyStoreSource: false,
         registry: false,
         placementPreviewProfiler: false,
-        renderStore: false,
-        renderSnapshotBridge: false,
-        stopRenderReaction: false,
         inputUnsubscribers: false,
+        cachedRender: false,
         documentInput: observable.ref,
         editorSessionInput: observable.ref,
         canvasViewInput: observable.ref,
@@ -149,18 +142,6 @@ class WorkspaceDerivedStoreImpl implements WorkspaceDerivedStore {
       },
       {
         autoBind: true,
-      },
-    );
-
-    this.renderSnapshotBridge = createSnapshotBridge(this.render);
-    this.renderStore = this.renderSnapshotBridge;
-    this.stopRenderReaction = reaction(
-      () => this.render,
-      (nextRender) => {
-        this.renderSnapshotBridge.publish(nextRender);
-      },
-      {
-        equals: isSameRenderDerivedState,
       },
     );
     this.inputUnsubscribers = [
@@ -184,21 +165,34 @@ class WorkspaceDerivedStoreImpl implements WorkspaceDerivedStore {
       });
 
     if (!this.placementPreviewProfiler) {
-      return derive();
+      return this.cacheRender(derive());
     }
 
-    return this.placementPreviewProfiler.measureStage(
-      "workspaceDerived.recompute",
-      derive,
+    return this.cacheRender(
+      this.placementPreviewProfiler.measureStage(
+        "workspaceDerived.recompute",
+        derive,
+      ),
     );
   }
 
   dispose(): void {
-    this.stopRenderReaction();
-
     for (const unsubscribe of this.inputUnsubscribers) {
       unsubscribe();
     }
+  }
+
+  private cacheRender(nextRender: RenderDerivedState): RenderDerivedState {
+    if (
+      this.cachedRender !== null &&
+      isSameRenderDerivedState(this.cachedRender, nextRender)
+    ) {
+      return this.cachedRender;
+    }
+
+    this.cachedRender = nextRender;
+
+    return nextRender;
   }
 
   private syncDocumentInput(): void {

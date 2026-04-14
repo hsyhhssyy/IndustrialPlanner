@@ -1,3 +1,4 @@
+import { autorun } from "@/shared/mobx";
 import { describe, expect, it } from "vitest";
 import { getStage1BaseDefinition } from "@/domain/base/stage1-bases";
 import { compileStage1World } from "@/domain/compiler/stage1-compiler";
@@ -148,7 +149,11 @@ describe("WorkspaceDerivedStore", () => {
     });
     const renderListener = vi.fn();
 
-    derivedStore.renderStore.subscribe(renderListener);
+    const stopListening = autorun(() => {
+      renderListener(derivedStore.render.cellSizePx);
+    });
+
+    renderListener.mockClear();
     editorStore.setSnapshot({
       session: createInitialEditorSession(),
       history: {
@@ -161,6 +166,7 @@ describe("WorkspaceDerivedStore", () => {
 
     expect(renderListener).not.toHaveBeenCalled();
 
+    stopListening();
     derivedStore.dispose();
   });
 
@@ -189,7 +195,11 @@ describe("WorkspaceDerivedStore", () => {
     });
     const renderListener = vi.fn();
 
-    derivedStore.renderStore.subscribe(renderListener);
+    const stopListening = autorun(() => {
+      renderListener(derivedStore.render.cellSizePx);
+    });
+
+    renderListener.mockClear();
 
     canvasViewStore.setSnapshot({
       offset: { x: 0, y: 0 },
@@ -197,10 +207,11 @@ describe("WorkspaceDerivedStore", () => {
     });
 
     expect(renderListener).toHaveBeenCalledTimes(1);
-    expect(derivedStore.renderStore.getSnapshot().cellSizePx).toBe(
+    expect(derivedStore.render.cellSizePx).toBe(
       document.documentSettings.gridSize * 1.5,
     );
 
+    stopListening();
     derivedStore.dispose();
   });
 

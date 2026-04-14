@@ -89,7 +89,7 @@ async function renderCanvasPanel(
     root.render(
       createElement(CanvasPanel, {
         controller,
-        renderDerivedStore: shell.workspaceDerivedStore.renderStore,
+        workspaceDerivedStore: shell.workspaceDerivedStore,
       }),
     );
   });
@@ -929,8 +929,7 @@ describe("CanvasPanel placement actions", () => {
     );
     const { container, root, shell } = await renderCanvasPanel(controller);
     const viewport = container.querySelector(".canvas-viewport-surface");
-    const screenBox = shell.workspaceDerivedStore.renderStore.getSnapshot()
-      .anchoredPlacementScreenBox;
+    const screenBox = shell.workspaceDerivedStore.render.anchoredPlacementScreenBox;
 
     expect(viewport).not.toBeNull();
     expect(screenBox).not.toBeNull();
@@ -1031,8 +1030,7 @@ describe("CanvasPanel placement actions", () => {
     );
     const { container, root, shell } = await renderCanvasPanel(controller);
     const viewport = container.querySelector(".canvas-viewport-surface");
-    const screenBox = shell.workspaceDerivedStore.renderStore.getSnapshot()
-      .anchoredPlacementScreenBox;
+    const screenBox = shell.workspaceDerivedStore.render.anchoredPlacementScreenBox;
 
     expect(viewport).not.toBeNull();
     expect(screenBox).not.toBeNull();
