@@ -4,7 +4,7 @@ import { LeftDock } from "@/app-shell/components/left-dock";
 import { LeftToolbar } from "@/app-shell/components/left-toolbar";
 import { RightDock } from "@/app-shell/components/right-dock";
 import { TopBar } from "@/app-shell/components/top-bar";
-import type { WorkbenchShell } from "@/app-shell/workbench-shell";
+import type { AppHost } from "@/app/app-host";
 import { Observer } from "@/shared/mobx";
 import type {
   PlacementPreviewProfiler,
@@ -49,11 +49,11 @@ function PlacementPreviewProfiledSection({
 }
 
 export interface WorkbenchAppProps {
-  shell: WorkbenchShell;
+  appHost: AppHost;
 }
 
-export function WorkbenchApp({ shell }: WorkbenchAppProps) {
-  const { controller, placementPreviewProfiler, workspaceDerivedStore } = shell;
+export function WorkbenchApp({ appHost }: WorkbenchAppProps) {
+  const { controller, placementPreviewProfiler, workspaceDerivedStore } = appHost;
 
   const handleWorkbenchContextMenu = (event: MouseEvent<HTMLDivElement>) => {
     event.preventDefault();

@@ -1,23 +1,23 @@
 import type { WorldDocument } from "@/domain/document/world-document";
 import type { Stage1Registry } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
-import { isSameCanvasViewState } from "@/workbench/canvas-view-store";
+import { isSameCanvasViewState } from "@/workbench/state/canvas-view-store";
 import { isSameEditorSession } from "@/editor/editor-runtime-store";
 import {
   computed,
   makeAutoObservable,
   observable,
 } from "@/shared/mobx";
-import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
+import type { ReadonlySnapshotStore } from "@/workbench/state/workspace-store";
 import type {
   CanvasViewState,
   WorkspaceEditorState,
-} from "@/workbench/workspace-state";
+} from "@/workbench/state/workspace-state";
 import {
   type RenderDerivedState,
   type WorkspaceRenderDerivedInputState,
   deriveRenderDerivedState,
-} from "@/workbench/workspace-derived-state";
+} from "@/workbench/derived/workspace-derived-state";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 
 export interface WorkspaceDerivedStore {

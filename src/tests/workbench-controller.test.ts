@@ -29,7 +29,7 @@ import { createWorkbenchController } from "@/workbench/controller/workbench-cont
 import {
   screenToWorldPoint,
   worldToGridPoint,
-} from "@/workbench/viewport-math";
+} from "@/workbench/viewport/viewport-math";
 
 function getPlacementMode(
   session: ReturnType<typeof createWorkbenchController>["editorStore"]["session"],

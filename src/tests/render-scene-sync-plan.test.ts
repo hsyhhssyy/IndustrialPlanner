@@ -4,7 +4,7 @@ import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-wor
 import { createStage1Registry } from "@/domain/registry/stage1-registry";
 import { getRenderSceneSyncPlan } from "@/renderer/host/render-scene-sync-plan";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
-import { createInitialCanvasViewState } from "@/workbench/workspace-state";
+import { createInitialCanvasViewState } from "@/workbench/state/workspace-state";
 
 function createBaseRenderScene() {
   const document = createStage1SeedWorldDocument();

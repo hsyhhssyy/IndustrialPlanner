@@ -3,9 +3,9 @@ import { compileStage1World } from "@/domain/compiler/stage1-compiler";
 import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";
 import { createStage1Registry } from "@/domain/registry/stage1-registry";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
-import { createWorkspaceStore } from "@/workbench/workspace-store";
-import { createInitialCanvasViewState } from "@/workbench/workspace-state";
-import { createInitialWorkbenchUiState } from "@/workbench/workbench-ui-store";
+import { createWorkspaceStore } from "@/workbench/state/workspace-store";
+import { createInitialCanvasViewState } from "@/workbench/state/workspace-state";
+import { createInitialWorkbenchUiState } from "@/workbench/state/workbench-ui-store";
 
 describe("WorkspaceStore", () => {
   it("fans out slice subscriptions from one root state without notifying untouched slices", () => {

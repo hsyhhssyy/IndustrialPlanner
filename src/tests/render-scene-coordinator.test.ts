@@ -9,8 +9,8 @@ import {
 } from "@/renderer/host/render-scene-coordinator";
 import type { RenderSceneModel } from "@/renderer/scene/types";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
-import { createInitialCanvasViewState } from "@/workbench/workspace-state";
-import { createInitialWorkbenchUiState } from "@/workbench/workbench-ui-store";
+import { createInitialCanvasViewState } from "@/workbench/state/workspace-state";
+import { createInitialWorkbenchUiState } from "@/workbench/state/workbench-ui-store";
 
 function createCoordinatorHarness() {
   const document = createStage1SeedWorldDocument();

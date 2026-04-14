@@ -2,7 +2,7 @@
 
 import { CanvasPanel } from "@/app-shell/components/canvas-panel/canvas-panel";
 import { TOUCH_MARQUEE_LONG_PRESS_DURATION_MS } from "@/app-shell/components/canvas-panel/canvas-panel-touch-marquee-gesture";
-import { createWorkbenchShell } from "@/app-shell/workbench-shell";
+import { createAppHost } from "@/app/app-host";
 import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import {
   getManagedMarqueeDraft,
@@ -78,9 +78,9 @@ async function renderCanvasPanel(
 ): Promise<{
   container: HTMLDivElement;
   root: Root;
-  shell: ReturnType<typeof createWorkbenchShell>;
+  appHost: ReturnType<typeof createAppHost>;
 }> {
-  const shell = createWorkbenchShell(controller);
+  const appHost = createAppHost(controller);
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -89,7 +89,7 @@ async function renderCanvasPanel(
     root.render(
       createElement(CanvasPanel, {
         controller,
-        workspaceDerivedStore: shell.workspaceDerivedStore,
+        workspaceDerivedStore: appHost.workspaceDerivedStore,
       }),
     );
   });
@@ -97,19 +97,19 @@ async function renderCanvasPanel(
   return {
     container,
     root,
-    shell,
+    appHost,
   };
 }
 
 async function disposeCanvasPanel(options: {
   root: Root;
-  shell: ReturnType<typeof createWorkbenchShell>;
+  appHost: ReturnType<typeof createAppHost>;
   controller: ReturnType<typeof createWorkbenchController>;
 }) {
   await act(async () => {
     options.root.unmount();
   });
-  options.shell.dispose();
+  options.appHost.dispose();
   options.controller.dispose();
 }
 
@@ -373,7 +373,7 @@ describe("CanvasPanel placement actions", () => {
   it("rotates armed pointer placement on R and cancels it on right click", async () => {
     const controller = createWorkbenchController();
     controller.armPlacement("belt_straight_1x1", "belt");
-    const { container, root, shell } = await renderCanvasPanel(controller);
+    const { container, root, appHost } = await renderCanvasPanel(controller);
     const stage = container.querySelector(".canvas-stage");
     const viewport = container.querySelector(".canvas-viewport-surface");
 
@@ -419,14 +419,14 @@ describe("CanvasPanel placement actions", () => {
     expect(controller.editorStore.getSnapshot().session.displayTool).toBe("select");
     expect(getPlacementMode(controller)).toBeNull();
 
-    await disposeCanvasPanel({ root, shell, controller });
+    await disposeCanvasPanel({ root, appHost, controller });
   });
 
   it("renders touch placement toolbar rotate/cancel actions next to confirm", async () => {
     const controller = createWorkbenchController();
     controller.setCanvasViewportSize({ x: 640, y: 360 });
     controller.armPlacement("item_port_unloader_1", "place", "touch");
-    const { container, root, shell } = await renderCanvasPanel(controller);
+    const { container, root, appHost } = await renderCanvasPanel(controller);
     const buttons = Array.from(
       container.querySelectorAll<HTMLButtonElement>(
         ".placement-action-toolbar .canvas-action-button",
@@ -471,13 +471,13 @@ describe("CanvasPanel placement actions", () => {
     expect(controller.editorStore.getSnapshot().session.displayTool).toBe("select");
     expect(container.querySelector(".placement-action-toolbar")).toBeNull();
 
-    await disposeCanvasPanel({ root, shell, controller });
+    await disposeCanvasPanel({ root, appHost, controller });
   });
 
   it("marks pointer selection and supports rotate/delete keyboard actions", async () => {
     const controller = createWorkbenchController();
     const beforeEntity = controller.documentStore.getSnapshot().entities["filler-1"];
-    const { container, root, shell } = await renderCanvasPanel(controller);
+    const { container, root, appHost } = await renderCanvasPanel(controller);
     const stage = container.querySelector(".canvas-stage");
     const viewport = container.querySelector(".canvas-viewport-surface");
     const fillerPoint = toScreenPointForEntity(controller, "filler-1");
@@ -525,12 +525,12 @@ describe("CanvasPanel placement actions", () => {
     expect(getSelection(controller)).toEqual([]);
     expect(controller.editorStore.getSnapshot().session.selectionInputMode).toBeNull();
 
-    await disposeCanvasPanel({ root, shell, controller });
+    await disposeCanvasPanel({ root, appHost, controller });
   });
 
   it("renders touch selection toolbar with shared rotate/delete actions", async () => {
     const controller = createWorkbenchController();
-    const { container, root, shell } = await renderCanvasPanel(controller);
+    const { container, root, appHost } = await renderCanvasPanel(controller);
     const viewport = container.querySelector(".canvas-viewport-surface");
     const fillerPoint = toScreenPointForEntity(controller, "filler-1");
 
@@ -586,14 +586,14 @@ describe("CanvasPanel placement actions", () => {
     expect(controller.documentStore.getSnapshot().entities["filler-1"]).toBeUndefined();
     expect(container.querySelector(".selection-action-toolbar")).toBeNull();
 
-    await disposeCanvasPanel({ root, shell, controller });
+    await disposeCanvasPanel({ root, appHost, controller });
   });
 
   it("promotes a blank touch hold into marquee selection and keeps touch actions anchored to the resulting bounds", async () => {
     vi.useFakeTimers();
 
     const controller = createWorkbenchController();
-    const { container, root, shell } = await renderCanvasPanel(controller);
+    const { container, root, appHost } = await renderCanvasPanel(controller);
     const viewport = container.querySelector(".canvas-viewport-surface");
     const marqueeBounds = resolveEntityBounds(controller, ["reactor-1", "filler-1"]);
     const holdPoint = toScreenPointForGrid(controller, {
@@ -639,12 +639,12 @@ describe("CanvasPanel placement actions", () => {
     );
     expect(container.querySelector(".selection-action-toolbar")).not.toBeNull();
 
-    await disposeCanvasPanel({ root, shell, controller });
+    await disposeCanvasPanel({ root, appHost, controller });
   });
 
   it("auto-confirms pointer move drags from the selected entity", async () => {
     const controller = createWorkbenchController();
-    const { container, root, shell } = await renderCanvasPanel(controller);
+    const { container, root, appHost } = await renderCanvasPanel(controller);
     const viewport = container.querySelector(".canvas-viewport-surface");
     const sourcePoint = toScreenPointForEntity(controller, "reactor-1");
     const destinationPoint = toScreenPointForGrid(controller, { x: 20, y: 10 });
@@ -703,13 +703,13 @@ describe("CanvasPanel placement actions", () => {
     expect(getMoveMode(controller)).toBeNull();
     expect(container.querySelector(".move-action-toolbar")).toBeNull();
 
-    await disposeCanvasPanel({ root, shell, controller });
+    await disposeCanvasPanel({ root, appHost, controller });
   });
 
   it("keeps touch move drafts pending for toolbar confirmation", async () => {
     const controller = createWorkbenchController();
     const before = controller.documentStore.getSnapshot().entities["reactor-1"];
-    const { container, root, shell } = await renderCanvasPanel(controller);
+    const { container, root, appHost } = await renderCanvasPanel(controller);
     const viewport = container.querySelector(".canvas-viewport-surface");
     const sourcePoint = toScreenPointForEntity(controller, "reactor-1");
     const destinationPoint = toScreenPointForGrid(controller, { x: 20, y: 10 });
@@ -773,12 +773,12 @@ describe("CanvasPanel placement actions", () => {
     expect(getMoveMode(controller)).toBeNull();
     expect(container.querySelector(".move-action-toolbar")).toBeNull();
 
-    await disposeCanvasPanel({ root, shell, controller });
+    await disposeCanvasPanel({ root, appHost, controller });
   });
 
   it("rotates pointer move drafts before auto-confirming the move", async () => {
     const controller = createWorkbenchController();
-    const { container, root, shell } = await renderCanvasPanel(controller);
+    const { container, root, appHost } = await renderCanvasPanel(controller);
     const viewport = container.querySelector(".canvas-viewport-surface");
     const fillerPoint = toScreenPointForEntity(controller, "filler-1");
     const destinationPoint = toScreenPointForGrid(controller, { x: 20, y: 10 });
@@ -857,13 +857,13 @@ describe("CanvasPanel placement actions", () => {
     });
     expect(getMoveMode(controller)).toBeNull();
 
-    await disposeCanvasPanel({ root, shell, controller });
+    await disposeCanvasPanel({ root, appHost, controller });
   });
 
   it("rotates touch move drafts before confirming", async () => {
     const controller = createWorkbenchController();
     const before = controller.documentStore.getSnapshot().entities["filler-1"];
-    const { container, root, shell } = await renderCanvasPanel(controller);
+    const { container, root, appHost } = await renderCanvasPanel(controller);
     const viewport = container.querySelector(".canvas-viewport-surface");
     const sourcePoint = toScreenPointForEntity(controller, "filler-1");
     const destinationPoint = toScreenPointForGrid(controller, { x: 20, y: 10 });
@@ -915,7 +915,7 @@ describe("CanvasPanel placement actions", () => {
     });
     expect(getMoveMode(controller)).toBeNull();
 
-    await disposeCanvasPanel({ root, shell, controller });
+    await disposeCanvasPanel({ root, appHost, controller });
   });
 
   it("only drags touch placement when the gesture starts on the preview", async () => {
@@ -927,9 +927,9 @@ describe("CanvasPanel placement actions", () => {
       controller,
       "updatePlacementPreviewFromScreenPoint",
     );
-    const { container, root, shell } = await renderCanvasPanel(controller);
+    const { container, root, appHost } = await renderCanvasPanel(controller);
     const viewport = container.querySelector(".canvas-viewport-surface");
-    const screenBox = shell.workspaceDerivedStore.render.anchoredPlacementScreenBox;
+    const screenBox = appHost.workspaceDerivedStore.render.anchoredPlacementScreenBox;
 
     expect(viewport).not.toBeNull();
     expect(screenBox).not.toBeNull();
@@ -1015,7 +1015,7 @@ describe("CanvasPanel placement actions", () => {
     });
     expect(panCanvasBySpy).not.toHaveBeenCalled();
 
-    await disposeCanvasPanel({ root, shell, controller });
+    await disposeCanvasPanel({ root, appHost, controller });
   });
 
   it("uses shared pinch and pan when a second touch enters touch placement", async () => {
@@ -1028,9 +1028,9 @@ describe("CanvasPanel placement actions", () => {
       controller,
       "updatePlacementPreviewFromScreenPoint",
     );
-    const { container, root, shell } = await renderCanvasPanel(controller);
+    const { container, root, appHost } = await renderCanvasPanel(controller);
     const viewport = container.querySelector(".canvas-viewport-surface");
-    const screenBox = shell.workspaceDerivedStore.render.anchoredPlacementScreenBox;
+    const screenBox = appHost.workspaceDerivedStore.render.anchoredPlacementScreenBox;
 
     expect(viewport).not.toBeNull();
     expect(screenBox).not.toBeNull();
@@ -1072,6 +1072,6 @@ describe("CanvasPanel placement actions", () => {
     expect(getPlacementMode(controller)?.definitionId).toBe("belt_straight_1x1");
     expect(getPlacementMode(controller)?.inputMode).toBe("touch");
 
-    await disposeCanvasPanel({ root, shell, controller });
+    await disposeCanvasPanel({ root, appHost, controller });
   });
 });

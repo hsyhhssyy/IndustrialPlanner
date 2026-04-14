@@ -68,7 +68,7 @@ import {
 import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
 import type { CanvasInteractionTarget } from "@/workbench/contracts/workbench-facade";
-import type { CanvasPoint } from "@/workbench/workspace-state";
+import type { CanvasPoint } from "@/workbench/state/workspace-state";
 
 export type CanvasGestureDragRecognizer =
   | "pointer-move"

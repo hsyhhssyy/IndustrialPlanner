@@ -2,7 +2,7 @@ import type { WorldDocument } from "@/domain/document/world-document";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import type { EditorSession } from "@/editor/contracts/editor-session";
 import type { EditorHistoryState as EditorHistorySliceState } from "@/editor/core/editor-core";
-import type { WorkbenchUiState } from "@/workbench/workbench-ui-state";
+import type { WorkbenchUiState } from "@/workbench/state/workbench-ui-state";
 
 export interface CanvasPoint {
   x: number;

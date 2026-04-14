@@ -8,8 +8,8 @@ import type {
   CanvasViewState,
   WorkspaceEditorState,
   WorkspaceState,
-} from "@/workbench/workspace-state";
-import type { WorkbenchUiState } from "@/workbench/workbench-ui-state";
+} from "@/workbench/state/workspace-state";
+import type { WorkbenchUiState } from "@/workbench/state/workbench-ui-state";
 
 export type ReadonlySnapshotStore<TSnapshot> = Pick<
   SnapshotStore<TSnapshot>,

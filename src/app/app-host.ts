@@ -2,24 +2,24 @@ import type { WorkbenchController } from "@/workbench/contracts/workbench-facade
 import {
   createWorkspaceDerivedStore,
   type WorkspaceDerivedStore,
-} from "@/workbench/workspace-derived-store";
+} from "@/workbench/derived/workspace-derived-store";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 
-export interface WorkbenchShell {
+export interface AppHost {
   controller: WorkbenchController;
   workspaceDerivedStore: WorkspaceDerivedStore;
   placementPreviewProfiler?: PlacementPreviewProfiler;
   dispose: () => void;
 }
 
-export interface CreateWorkbenchShellOptions {
+export interface CreateAppHostOptions {
   placementPreviewProfiler?: PlacementPreviewProfiler;
 }
 
-export function createWorkbenchShell(
+export function createAppHost(
   controller: WorkbenchController,
-  options: CreateWorkbenchShellOptions = {},
-): WorkbenchShell {
+  options: CreateAppHostOptions = {},
+): AppHost {
   const workspaceDerivedStore = createWorkspaceDerivedStore({
     documentStore: controller.documentStore,
     editorStore: controller.editorStore,

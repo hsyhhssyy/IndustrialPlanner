@@ -1,6 +1,6 @@
 import { autorun } from "@/shared/mobx";
 import { describe, expect, it } from "vitest";
-import { createWorkbenchUiStore } from "@/workbench/workbench-ui-store";
+import { createWorkbenchUiStore } from "@/workbench/state/workbench-ui-store";
 import { vi } from "vitest";
 
 describe("WorkbenchUiStore", () => {

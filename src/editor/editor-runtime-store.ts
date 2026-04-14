@@ -13,7 +13,7 @@ import {
 import type { EditorHistoryState } from "@/editor/core/editor-core";
 import { makeAutoObservable } from "@/shared/mobx";
 import { createSnapshotBridge } from "@/shared/mobx/snapshot-bridge";
-import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
+import type { ReadonlySnapshotStore } from "@/workbench/state/workspace-store";
 
 export interface EditorRuntimeState {
   session: EditorSession;

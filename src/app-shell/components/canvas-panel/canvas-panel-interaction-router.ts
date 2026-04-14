@@ -23,8 +23,8 @@ import type {
   CanvasInteractionTarget,
   WorkbenchController,
 } from "@/workbench/contracts/workbench-facade";
-import type { RenderDerivedScreenBox } from "@/workbench/workspace-derived-state";
-import type { CanvasPoint } from "@/workbench/workspace-state";
+import type { RenderDerivedScreenBox } from "@/workbench/derived/workspace-derived-state";
+import type { CanvasPoint } from "@/workbench/state/workspace-state";
 
 const logger = createLogger("app.canvas-panel");
 

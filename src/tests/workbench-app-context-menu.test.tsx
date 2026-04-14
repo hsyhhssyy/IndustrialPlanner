@@ -2,7 +2,7 @@
 
 import { WorkbenchApp } from "@/app-shell/workbench-app";
 import { LEFT_PANEL_CONTENT } from "@/app-shell/workbench-placeholders";
-import { createWorkbenchShell } from "@/app-shell/workbench-shell";
+import { createAppHost } from "@/app/app-host";
 import { isPlacementInteractionMode } from "@/editor/contracts/interaction-mode";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
@@ -48,7 +48,7 @@ const LEFT_DOCK_BUTTON_DESCRIPTORS = LEFT_PANEL_CONTENT.placement.sections.flatM
 
 async function renderWorkbenchApp() {
   const controller = createWorkbenchController();
-  const shell = createWorkbenchShell(controller);
+  const appHost = createAppHost(controller);
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -56,7 +56,7 @@ async function renderWorkbenchApp() {
   await act(async () => {
     root.render(
       createElement(WorkbenchApp, {
-        shell,
+        appHost,
       }),
     );
   });
@@ -65,19 +65,19 @@ async function renderWorkbenchApp() {
     container,
     controller,
     root,
-    shell,
+    appHost,
   };
 }
 
 async function disposeWorkbenchApp(options: {
   controller: ReturnType<typeof createWorkbenchController>;
   root: Root;
-  shell: ReturnType<typeof createWorkbenchShell>;
+  appHost: ReturnType<typeof createAppHost>;
 }) {
   await act(async () => {
     options.root.unmount();
   });
-  options.shell.dispose();
+  options.appHost.dispose();
   options.controller.dispose();
 }
 

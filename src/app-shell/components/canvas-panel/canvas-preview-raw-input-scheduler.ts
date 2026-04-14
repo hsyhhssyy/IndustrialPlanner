@@ -1,4 +1,4 @@
-import type { CanvasPoint } from "@/workbench/workspace-state";
+import type { CanvasPoint } from "@/workbench/state/workspace-state";
 
 export interface CanvasPreviewRawInputScheduler {
   schedule: (screenPoint: CanvasPoint) => void;

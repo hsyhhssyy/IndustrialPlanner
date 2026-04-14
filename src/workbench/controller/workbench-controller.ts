@@ -5,9 +5,9 @@ import type {
 import type {
   DockId,
   LeftPanelMode,
-} from "@/workbench/workbench-ui-state";
-import { createWorkbenchUiStore } from "@/workbench/workbench-ui-store";
-import { createCanvasViewStore } from "@/workbench/canvas-view-store";
+} from "@/workbench/state/workbench-ui-state";
+import { createWorkbenchUiStore } from "@/workbench/state/workbench-ui-store";
+import { createCanvasViewStore } from "@/workbench/state/canvas-view-store";
 import {
   createWorkspaceStorage,
   type WorkspacePersistenceState,
@@ -17,11 +17,11 @@ import {
   type CanvasPoint,
   type CanvasViewState,
   type WorkspaceState,
-} from "@/workbench/workspace-state";
+} from "@/workbench/state/workspace-state";
 import {
   createWorkspaceStore,
   type WorkspaceStore,
-} from "@/workbench/workspace-store";
+} from "@/workbench/state/workspace-store";
 import {
   clampCanvasViewState,
   clampCanvasViewportSize,
@@ -29,7 +29,7 @@ import {
   scaleCanvasViewAt,
   screenToWorldPoint,
   worldToGridPoint,
-} from "@/workbench/viewport-math";
+} from "@/workbench/viewport/viewport-math";
 import { compileStage1World } from "@/domain/compiler/stage1-compiler";
 import type { WorldDocument } from "@/domain/document/world-document";
 import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";

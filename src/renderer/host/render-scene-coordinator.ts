@@ -6,12 +6,12 @@ import type {
   RenderSceneInteractionState,
   RenderSceneModel,
 } from "@/renderer/scene/types";
-import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
+import type { ReadonlySnapshotStore } from "@/workbench/state/workspace-store";
 import type {
   CanvasViewState,
   WorkspaceEditorState,
-} from "@/workbench/workspace-state";
-import type { WorkbenchUiState } from "@/workbench/workbench-ui-state";
+} from "@/workbench/state/workspace-state";
+import type { WorkbenchUiState } from "@/workbench/state/workbench-ui-state";
 import type { AppLocale } from "@/i18n/messages";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 import {

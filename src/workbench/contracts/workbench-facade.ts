@@ -1,7 +1,7 @@
 import type {
   DockId,
   LeftPanelMode,
-} from "@/workbench/workbench-ui-state";
+} from "@/workbench/state/workbench-ui-state";
 import type { Stage1Registry } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
 import type { WorldDocument } from "@/domain/document/world-document";
@@ -16,12 +16,12 @@ import type { EditorRuntimeStore } from "@/editor/editor-runtime-store";
 import type { AppLocale } from "@/i18n/messages";
 import type { SnapshotStore } from "@/shared/snapshot-store/snapshot-store";
 import type { LogLevel } from "@/shared/logging/logger";
-import type { CanvasViewStore } from "@/workbench/canvas-view-store";
+import type { CanvasViewStore } from "@/workbench/state/canvas-view-store";
 import type {
   CanvasPoint,
-} from "@/workbench/workspace-state";
-import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
-import type { WorkbenchUiStore } from "@/workbench/workbench-ui-store";
+} from "@/workbench/state/workspace-state";
+import type { ReadonlySnapshotStore } from "@/workbench/state/workspace-store";
+import type { WorkbenchUiStore } from "@/workbench/state/workbench-ui-store";
 
 export type CanvasInteractionTarget =
   | {

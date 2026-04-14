@@ -2,7 +2,7 @@ import { WorkbenchIcon } from "@/app-shell/components/workbench-icons";
 import { createTranslator } from "@/i18n/messages";
 import { observer } from "@/shared/mobx";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
-import type { WorkspaceDerivedStore } from "@/workbench/workspace-derived-store";
+import type { WorkspaceDerivedStore } from "@/workbench/derived/workspace-derived-store";
 
 export interface TopBarProps {
   controller: WorkbenchController;

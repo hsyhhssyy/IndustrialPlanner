@@ -1,4 +1,4 @@
-import type { CanvasPoint } from "@/workbench/workspace-state";
+import type { CanvasPoint } from "@/workbench/state/workspace-state";
 
 export const POINTER_MOVE_START_DISTANCE_PX = 4;
 

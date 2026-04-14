@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { WorkbenchApp } from "@/app-shell/workbench-app";
-import { createWorkbenchShell } from "@/app-shell/workbench-shell";
+import { createAppHost } from "@/app/app-host";
 import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
 import {
   LOG_LEVELS,
@@ -18,7 +18,7 @@ const placementPreviewProfiler = createPlacementPreviewProfiler();
 const controller = createWorkbenchController({
   placementPreviewProfiler,
 });
-const shell = createWorkbenchShell(controller, {
+const appHost = createAppHost(controller, {
   placementPreviewProfiler,
 });
 
@@ -65,6 +65,6 @@ if (typeof window !== "undefined") {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <WorkbenchApp shell={shell} />
+    <WorkbenchApp appHost={appHost} />
   </React.StrictMode>,
 );

@@ -1,5 +1,5 @@
 import type { CanvasInteractionTarget } from "@/workbench/contracts/workbench-facade";
-import type { CanvasPoint } from "@/workbench/workspace-state";
+import type { CanvasPoint } from "@/workbench/state/workspace-state";
 import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 
 export const TOUCH_PAN_START_DISTANCE_PX = 6;

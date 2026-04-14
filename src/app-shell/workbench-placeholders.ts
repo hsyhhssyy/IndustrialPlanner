@@ -1,4 +1,4 @@
-import type { LeftPanelMode } from "@/workbench/workbench-ui-state";
+import type { LeftPanelMode } from "@/workbench/state/workbench-ui-state";
 import type { DisplayTool } from "@/editor/contracts/interaction-mode";
 
 export interface WorkbenchTextDescriptor {

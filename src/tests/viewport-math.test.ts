@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { createInitialCanvasViewState } from "@/workbench/workspace-state";
+import { createInitialCanvasViewState } from "@/workbench/state/workspace-state";
 import {
   clampCanvasViewState,
   panCanvasView,
   scaleCanvasViewAt,
   screenToWorldPoint,
   worldToGridPoint,
-} from "@/workbench/viewport-math";
+} from "@/workbench/viewport/viewport-math";
 
 describe("viewport math", () => {
   it("converts screen coordinates into world and grid coordinates", () => {

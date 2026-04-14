@@ -1,5 +1,5 @@
 import { autorun } from "@/shared/mobx";
-import { createCanvasViewStore } from "@/workbench/canvas-view-store";
+import { createCanvasViewStore } from "@/workbench/state/canvas-view-store";
 import { describe, expect, it, vi } from "vitest";
 
 describe("CanvasViewStore", () => {

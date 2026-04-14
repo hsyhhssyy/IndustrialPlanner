@@ -26,13 +26,13 @@ import {
   getManagedPlacementPreview,
   getSelectedEntityIds,
 } from "@/editor/contracts/editor-session-helpers";
-import { createWorkspaceDerivedStore } from "@/workbench/workspace-derived-store";
-import { deriveRenderDerivedState } from "@/workbench/workspace-derived-state";
+import { createWorkspaceDerivedStore } from "@/workbench/derived/workspace-derived-store";
+import { deriveRenderDerivedState } from "@/workbench/derived/workspace-derived-state";
 import {
   createInitialCanvasViewState,
   type WorkspaceState,
-} from "@/workbench/workspace-state";
-import { createInitialWorkbenchUiState } from "@/workbench/workbench-ui-store";
+} from "@/workbench/state/workspace-state";
+import { createInitialWorkbenchUiState } from "@/workbench/state/workbench-ui-store";
 
 function createCollection(ids: string[]) {
   return {

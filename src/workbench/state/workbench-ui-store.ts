@@ -4,7 +4,7 @@ import type {
   LeftPanelMode,
   WorkbenchUiState,
   WorkbenchUiStateInput,
-} from "@/workbench/workbench-ui-state";
+} from "@/workbench/state/workbench-ui-state";
 import { DEFAULT_LOCALE, type AppLocale, type MessageKey } from "@/i18n/messages";
 import {
   DEFAULT_WORKBENCH_LOG_LEVEL,
@@ -12,7 +12,7 @@ import {
 } from "@/shared/logging/logger";
 import { makeAutoObservable } from "@/shared/mobx";
 import { createSnapshotBridge } from "@/shared/mobx/snapshot-bridge";
-import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
+import type { ReadonlySnapshotStore } from "@/workbench/state/workspace-store";
 
 const DOCK_STATE_KEYS = {
   left: "leftDock",

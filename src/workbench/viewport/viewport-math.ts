@@ -2,7 +2,7 @@ import type { GridPoint } from "@/shared/geometry/grid";
 import type {
   CanvasPoint,
   CanvasViewState,
-} from "@/workbench/workspace-state";
+} from "@/workbench/state/workspace-state";
 
 export interface CanvasViewportMetrics {
   gridSize: number;

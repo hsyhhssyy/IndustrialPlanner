@@ -37,9 +37,9 @@ import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 import type {
   RenderDerivedScreenBox,
-} from "@/workbench/workspace-derived-state";
-import type { WorkspaceDerivedStore } from "@/workbench/workspace-derived-store";
-import type { CanvasPoint } from "@/workbench/workspace-state";
+} from "@/workbench/derived/workspace-derived-state";
+import type { WorkspaceDerivedStore } from "@/workbench/derived/workspace-derived-store";
+import type { CanvasPoint } from "@/workbench/state/workspace-state";
 import {
   useEffect,
   useEffectEvent,

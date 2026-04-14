@@ -6,7 +6,7 @@ import { createStage1Registry } from "@/domain/registry/stage1-registry";
 import { applyWorldDocumentCommand } from "@/editor/core/commands/document-command-applier";
 import type { DocumentCommand } from "@/editor/core/commands/document-command";
 import { buildRenderScene } from "@/renderer/scene/build-render-scene";
-import { createInitialCanvasViewState } from "@/workbench/workspace-state";
+import { createInitialCanvasViewState } from "@/workbench/state/workspace-state";
 
 function createBaseRenderScene() {
   const document = createStage1SeedWorldDocument();
