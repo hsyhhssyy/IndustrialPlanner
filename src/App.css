@@ -1267,12 +1267,12 @@ button:disabled {
 
 .switch-side-label {
   font-size: 12px;
-  color: #8ea0b9;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .switch-side-label.active {
-  color: #e5ebf3;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -1303,8 +1303,8 @@ button:disabled {
   width: 42px;
   height: 24px;
   border-radius: 999px;
-  background: #2f3a4a;
-  border: 1px solid #4a5b73;
+  background: var(--surface-4);
+  border: 1px solid var(--border-color);
   position: relative;
   transition: background-color 0.2s ease, border-color 0.2s ease;
   flex: 0 0 auto;
@@ -1317,13 +1317,13 @@ button:disabled {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #e5ebf3;
+  background: var(--surface-1);
   transition: transform 0.2s ease;
 }
 
 .switch-toggle input:checked + .switch-track {
-  background: #395c93;
-  border-color: #4f7bc4;
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface-4));
+  border-color: var(--accent-strong);
 }
 
 .switch-toggle input:checked + .switch-track .switch-thumb {
@@ -1331,7 +1331,7 @@ button:disabled {
 }
 
 .switch-toggle input:focus-visible + .switch-track {
-  box-shadow: 0 0 0 2px rgba(79, 123, 196, 0.45);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .switch-toggle input:disabled + .switch-track {
@@ -2582,7 +2582,7 @@ button:disabled {
 
 .pickup-item-dialog-switch-label {
   font-size: 12px;
-  color: #9fb3c9;
+  color: var(--text-secondary);
   white-space: normal;
   text-align: right;
   line-height: 1.2;
@@ -2902,9 +2902,9 @@ button:disabled {
 .storage-slot-step-btn {
   height: 38px;
   border-radius: 10px;
-  border: 1px solid #35516f;
-  background: #243042;
-  color: #e5ebf3;
+  border: 1px solid var(--border-color);
+  background: var(--surface-2);
+  color: var(--text-primary);
   cursor: pointer;
 }
 
@@ -2916,8 +2916,8 @@ button:disabled {
 }
 
 .storage-slot-lock-toggle.is-active {
-  border-color: rgba(225, 182, 83, 0.55);
-  background: rgba(86, 64, 20, 0.42);
+  border-color: color-mix(in srgb, #d8a337 45%, var(--border-color));
+  background: color-mix(in srgb, #d8a337 18%, var(--surface-2));
 }
 
 .storage-slot-lock-toggle-icon {

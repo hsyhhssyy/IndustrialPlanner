@@ -1,5 +1,6 @@
 import { getRotatedPorts, OPPOSITE_EDGE } from '../../domain/geometry'
 import { getDirectionalPortIds, getPortPriorityGroup } from '../../domain/shared/portPriority'
+import { isReactorPoolType, resolveReactorOutputNodes } from '../reactorPool'
 import type {
   BufferGroupRuntime,
   BufferSlotRuntime,
@@ -26,6 +27,8 @@ type InternalNode = FlowNodeSnapshot & {
   runtime: DeviceRuntime
   deviceIndex: number
   localOrder: number
+  reactorOutputPortIds?: string[]
+  reactorMappedSlotIndex?: number
 }
 
 type InternalEdge = FlowEdgeSnapshot & {
@@ -65,6 +68,12 @@ type ProcessorInputVirtualSlot = {
   lockedItem: ItemId | null
   amount: number
   capacity: number
+}
+
+type ReactorOutputVirtualSlot = {
+  slotIndex: number
+  itemId: ItemId
+  amount: number
 }
 
 function buildTransferId(tick: number, sequence: number) {
@@ -542,19 +551,41 @@ function buildNodes(context: PlanContext) {
     }
 
     if (isProcessorRuntime(runtime)) {
-      for (let slotIndex = 0; slotIndex < runtime.outputSlotItems.length; slotIndex += 1) {
-        const itemId = runtime.outputSlotItems[slotIndex]
-        const amount = itemId ? (runtime.outputBuffer[itemId] ?? 0) : 0
-        createNode(device, runtime, slotIndex, 'provider', 'processor-output', {
-          nodeId: `${device.instanceId}:processor-output:${slotIndex}`,
-          slotIndex,
-          itemId: itemId ?? null,
-          amount,
-          capacity: amount,
-          maxInteractItems: amount,
-          deleted: !itemId || amount <= 0,
-          result: !itemId || amount <= 0 ? 'solved-block' : 'uncertain',
-        })
+      if (isReactorPoolType(device.typeId)) {
+        const reactorOutputs = resolveReactorOutputNodes(runtime, device.config)
+        for (let outputIndex = 0; outputIndex < reactorOutputs.length; outputIndex += 1) {
+          const outputNode = reactorOutputs[outputIndex]
+          const deleted = !outputNode.itemId || outputNode.amount <= 0 || outputNode.mappedSlotIndex === null
+          const node = createNode(device, runtime, outputIndex, 'provider', 'processor-output', {
+            nodeId: `${device.instanceId}:processor-output:${outputNode.nodeId}`,
+            slotIndex: outputNode.mappedSlotIndex ?? undefined,
+            itemId: outputNode.itemId,
+            amount: outputNode.amount,
+            capacity: outputNode.amount,
+            maxInteractItems: outputNode.amount,
+            deleted,
+            result: deleted ? 'solved-block' : 'uncertain',
+          })
+          node.reactorOutputPortIds = [...outputNode.portIds]
+          if (typeof outputNode.mappedSlotIndex === 'number') {
+            node.reactorMappedSlotIndex = outputNode.mappedSlotIndex
+          }
+        }
+      } else {
+        for (let slotIndex = 0; slotIndex < runtime.outputSlotItems.length; slotIndex += 1) {
+          const itemId = runtime.outputSlotItems[slotIndex]
+          const amount = itemId ? (runtime.outputBuffer[itemId] ?? 0) : 0
+          createNode(device, runtime, slotIndex, 'provider', 'processor-output', {
+            nodeId: `${device.instanceId}:processor-output:${slotIndex}`,
+            slotIndex,
+            itemId: itemId ?? null,
+            amount,
+            capacity: amount,
+            maxInteractItems: amount,
+            deleted: !itemId || amount <= 0,
+            result: !itemId || amount <= 0 ? 'solved-block' : 'uncertain',
+          })
+        }
       }
 
       for (let slotIndex = 0; slotIndex < runtime.inputSlotItems.length; slotIndex += 1) {
@@ -668,8 +699,12 @@ function buildEdges(context: PlanContext, nodes: InternalNode[]) {
       if (sourceStorage) {
         fromNodes.push(sourceStorage)
       } else {
-        const sourceProcessorOutputs = processorOutputNodesByDevice.get(link.from.instanceId) ?? []
-        if (sourceProcessorOutputs.length > 0) {
+        const sourceProcessorOutputNodes = processorOutputNodesByDevice.get(link.from.instanceId) ?? []
+        if (sourceProcessorOutputNodes.length > 0) {
+          const sourceProcessorOutputs = sourceProcessorOutputNodes.filter((node) => {
+            if (!node.reactorOutputPortIds) return true
+            return node.reactorOutputPortIds.includes(link.from.portId)
+          })
           fromNodes.push(...sourceProcessorOutputs)
         } else {
           const sourceLane = context.helpers.sourceSlotLane(sourceDevice, sourceRuntime, link.from.portId)
@@ -764,11 +799,33 @@ function buildProcessorInputStates(nodes: InternalNode[], context: PlanContext) 
   return stateByDeviceId
 }
 
+function buildReactorOutputStates(nodes: InternalNode[]) {
+  const stateByDeviceId = new Map<string, ReactorOutputVirtualSlot[]>()
+  for (const node of nodes) {
+    if (node.kind !== 'processor-output') continue
+    if (typeof node.reactorMappedSlotIndex !== 'number' || !node.itemId || node.deleted) continue
+    const existing = stateByDeviceId.get(node.deviceId) ?? []
+    const slot = existing.find((entry) => entry.slotIndex === node.reactorMappedSlotIndex)
+    if (slot) {
+      slot.amount = Math.max(slot.amount, node.amount)
+    } else {
+      existing.push({
+        slotIndex: node.reactorMappedSlotIndex,
+        itemId: node.itemId,
+        amount: node.amount,
+      })
+      stateByDeviceId.set(node.deviceId, existing)
+    }
+  }
+  return stateByDeviceId
+}
+
 function sourceCandidatesForEdge(
   context: PlanContext,
   edge: InternalEdge,
   lanesAdvancedThisTick: Set<string>,
   storageStates: Map<string, StorageVirtualState>,
+  reactorOutputStates: Map<string, ReactorOutputVirtualSlot[]>,
 ) {
   const fromNode = edge.fromNode
   if (fromNode.deleted) return [] as SourceCandidate[]
@@ -802,6 +859,11 @@ function sourceCandidatesForEdge(
 
   if (fromNode.kind === 'processor-output') {
     if (!fromNode.itemId) return []
+    if (typeof fromNode.reactorMappedSlotIndex === 'number') {
+      const deviceSlots = reactorOutputStates.get(fromNode.deviceId) ?? []
+      const slot = deviceSlots.find((entry) => entry.slotIndex === fromNode.reactorMappedSlotIndex)
+      if (!slot || slot.amount <= 0 || slot.itemId !== fromNode.itemId) return []
+    }
     if (!context.helpers.canOutputItemToPort(fromNode.device, fromNode.runtime, edge.fromPortId, fromNode.itemId)) return []
     return [{ itemId: fromNode.itemId }]
   }
@@ -900,6 +962,7 @@ function selectShadowPull(
   receivableShadowNodes: ReadonlySet<string>,
   lanesAdvancedThisTick: Set<string>,
   storageStates: Map<string, StorageVirtualState>,
+  reactorOutputStates: Map<string, ReactorOutputVirtualSlot[]>,
 ) {
   const orderedNodes = [...nodes].sort(compareNodeOrder)
 
@@ -914,7 +977,7 @@ function selectShadowPull(
       if (!storageState.slotted) {
         for (const edge of incoming) {
           if (edge.deleted) continue
-          const sourceCandidates = sourceCandidatesForEdge(context, edge, lanesAdvancedThisTick, storageStates)
+          const sourceCandidates = sourceCandidatesForEdge(context, edge, lanesAdvancedThisTick, storageStates, reactorOutputStates)
           if (sourceCandidates.length === 0) continue
           edge.shadowPull = 'accept'
         }
@@ -923,7 +986,7 @@ function selectShadowPull(
 
       for (const edge of incoming) {
         if (edge.deleted) continue
-        const sourceCandidates = sourceCandidatesForEdge(context, edge, lanesAdvancedThisTick, storageStates)
+        const sourceCandidates = sourceCandidatesForEdge(context, edge, lanesAdvancedThisTick, storageStates, reactorOutputStates)
         if (sourceCandidates.length === 0) continue
         let reservedSlotIndex: number | null = null
         let plannedItemId: ItemId | null = null
@@ -947,7 +1010,7 @@ function selectShadowPull(
     let acceptedCount = 0
     for (const edge of incoming) {
       if (acceptedCount >= capacity) break
-      const sourceCandidates = sourceCandidatesForEdge(context, edge, lanesAdvancedThisTick, storageStates)
+      const sourceCandidates = sourceCandidatesForEdge(context, edge, lanesAdvancedThisTick, storageStates, reactorOutputStates)
       if (sourceCandidates.length === 0) continue
       const accepted = sourceCandidates.some((candidate) => {
         if (node.kind === 'processor-input') {
@@ -969,6 +1032,7 @@ function selectShadowPush(
   receivableShadowNodes: Set<string>,
   lanesAdvancedThisTick: Set<string>,
   storageStates: Map<string, StorageVirtualState>,
+  reactorOutputStates: Map<string, ReactorOutputVirtualSlot[]>,
   processorStates: Map<string, ProcessorInputVirtualSlot[]>,
 ) {
   const orderedNodes = [...nodes].sort(compareNodeOrder)
@@ -991,7 +1055,7 @@ function selectShadowPush(
 
     for (const edge of outgoing) {
       if (acceptedCount >= capacity) break
-      const sourceCandidates = sourceCandidatesForEdge(context, edge, lanesAdvancedThisTick, storageStates)
+      const sourceCandidates = sourceCandidatesForEdge(context, edge, lanesAdvancedThisTick, storageStates, reactorOutputStates)
       if (sourceCandidates.length === 0) continue
 
       const selectedCandidate = sourceCandidates.find((candidate) => {
@@ -1017,6 +1081,14 @@ function selectShadowPush(
         const storageState = storageStates.get(node.deviceId)
         if (storageState?.slotted && selectedCandidate.fromStorageSlotIndex !== undefined) {
           consumeStorageOutputSlot(storageState, selectedCandidate.fromStorageSlotIndex)
+        }
+      }
+
+      if (node.kind === 'processor-output' && typeof node.reactorMappedSlotIndex === 'number') {
+        const reactorSlots = reactorOutputStates.get(node.deviceId) ?? []
+        const reactorSlot = reactorSlots.find((entry) => entry.slotIndex === node.reactorMappedSlotIndex)
+        if (reactorSlot) {
+          reactorSlot.amount = Math.max(0, reactorSlot.amount - 1)
         }
       }
 
@@ -1116,14 +1188,15 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
   const lanesAdvancedThisTick = new Set<string>()
   const receivableShadowNodes = new Set<string>()
   let previousSignature = ''
-  const maxIterations = Math.max(8, nodes.length + edgeById.size)
+  const maxIterations =1
 
   for (let iteration = 0; iteration < maxIterations; iteration += 1) {
     resetDynamicState(nodes, edgeById)
     const storageStates = buildStorageStates(nodes)
-    selectShadowPull(context, nodes, edgeById, receivableShadowNodes, lanesAdvancedThisTick, storageStates)
+    const reactorOutputStates = buildReactorOutputStates(nodes)
+    selectShadowPull(context, nodes, edgeById, receivableShadowNodes, lanesAdvancedThisTick, storageStates, reactorOutputStates)
     const processorStates = buildProcessorInputStates(nodes, context)
-    selectShadowPush(context, nodes, edgeById, receivableShadowNodes, lanesAdvancedThisTick, storageStates, processorStates)
+    selectShadowPush(context, nodes, edgeById, receivableShadowNodes, lanesAdvancedThisTick, storageStates, reactorOutputStates, processorStates)
     finalizeNodeResults(nodes)
 
     const signature = signatureForState(edgeById, receivableShadowNodes)

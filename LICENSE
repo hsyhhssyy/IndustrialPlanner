@@ -1,4 +1,6 @@
-MIT License
+IndustrialPlanner License
+
+Based on MIT, with additional AI-related restrictions.
 
 Copyright (c) 2026 hsyhhssyy
 
@@ -7,10 +9,24 @@ of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+furnished to do so, subject to the following conditions and restrictions:
 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
+
+Without prior written authorization from the copyright holder, you may not:
+
+1. use the Software, in whole or in part, for training, fine-tuning, evaluating,
+	or otherwise developing any artificial intelligence or machine learning model;
+2. place, transmit, submit, embed, paste, or otherwise include any part of the
+	Software or its documentation in prompts, context windows, retrieval sources,
+	grounding data, or other inputs to any artificial intelligence system;
+3. allow the Software or its documentation to be read, ingested, indexed,
+	processed, summarized, analyzed, or otherwise accessed by any AI model,
+	AI agent, or similar automated system.
+
+For the avoidance of doubt, the term "Software" in this license includes the
+project's source code and documentation.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,

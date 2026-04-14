@@ -188,6 +188,12 @@ function storageAmount(sim: SimState, deviceId: string, itemId: ItemId) {
   return Number.isFinite(amount) ? amount : Number.MAX_SAFE_INTEGER
 }
 
+function transportSlotItem(sim: SimState, deviceId: string) {
+  const runtime = sim.runtimeById[deviceId]
+  if (!runtime || !('slot' in runtime)) return null
+  return runtime.slot?.itemId ?? null
+}
+
 function bridgeLaneState(sim: SimState, deviceId: string) {
   const runtime = sim.runtimeById[deviceId]
   if (!runtime || !('nsSlot' in runtime) || !('weSlot' in runtime)) return 'missing'
@@ -499,6 +505,59 @@ function runPipeRoundRobinScenario(): ScenarioResult {
   }
 }
 
+function runReactorOutputMappingScenario(): ScenarioResult {
+  resetInstanceCounter()
+  const reactor = createDevice('item_port_mix_pool_1', 0, { x: 20, y: 20 }, {
+    preloadInputs: [
+      { slotIndex: 0, itemId: ORE_ITEM_ID, amount: 2 },
+      { slotIndex: 1, itemId: WATER_ITEM_ID, amount: 2 },
+    ],
+    reactorPool: {
+      solidOutputItemId: ORE_ITEM_ID,
+      liquidOutputItemIdA: WATER_ITEM_ID,
+      liquidOutputItemIdB: WATER_ITEM_ID,
+    },
+  })
+
+  const solidTurnA = placeTargetAfter(reactor, 'out_n_1', 'belt_turn_cw_1x1', 'in_n')
+  const solidTurnB = placeTargetAfter(reactor, 'out_n_3', 'belt_turn_ccw_1x1', 'in_n')
+  const liquidTurnA = placeTargetAfter(reactor, 'out_w_1', 'pipe_turn_ccw_1x1', 'in_n')
+  const liquidTurnB = placeTargetAfter(reactor, 'out_w_3', 'pipe_turn_cw_1x1', 'in_n')
+
+  const layout = buildLayout([reactor, solidTurnA, solidTurnB, liquidTurnA, liquidTurnB])
+  const links = ensureConnected(layout, 4, 'reactor-output-mapping')
+  const sim = simulate(layout, 1)
+  ensureNoHardBlock(sim, layout.devices.map((device) => device.instanceId), 'reactor-output-mapping')
+
+  const solidAmountA = transportSlotItem(sim, solidTurnA.instanceId)
+  const solidAmountB = transportSlotItem(sim, solidTurnB.instanceId)
+  const liquidAmountA = transportSlotItem(sim, liquidTurnA.instanceId)
+  const liquidAmountB = transportSlotItem(sim, liquidTurnB.instanceId)
+  const reactorRuntime = sim.runtimeById[reactor.instanceId]
+  const remainingOre = reactorRuntime && 'inputBuffer' in reactorRuntime ? (reactorRuntime.inputBuffer[ORE_ITEM_ID] ?? 0) : -1
+  const remainingWater = reactorRuntime && 'inputBuffer' in reactorRuntime ? (reactorRuntime.inputBuffer[WATER_ITEM_ID] ?? 0) : -1
+
+  assert(solidAmountA === ORE_ITEM_ID, `reactor-output-mapping 固体端口 A 没有收到目标物品，a=${String(solidAmountA)}, b=${String(solidAmountB)}`)
+  assert(solidAmountB === ORE_ITEM_ID, `reactor-output-mapping 固体端口 B 没有收到目标物品，a=${String(solidAmountA)}, b=${String(solidAmountB)}`)
+  assert(liquidAmountA === WATER_ITEM_ID, `reactor-output-mapping 液体端口 A 没有收到目标物品，a=${String(liquidAmountA)}, b=${String(liquidAmountB)}`)
+  assert(liquidAmountB === WATER_ITEM_ID, `reactor-output-mapping 液体端口 B 没有收到目标物品，a=${String(liquidAmountA)}, b=${String(liquidAmountB)}`)
+  assert(remainingOre === 0, `reactor-output-mapping 固体没有按两路同时扣减，remainingOre=${remainingOre}`)
+  assert(remainingWater === 0, `reactor-output-mapping 液体没有按两路同时扣减，remainingWater=${remainingWater}`)
+
+  return {
+    name: 'reactor-output-mapping',
+    summary: {
+      links,
+      solidAmountA,
+      solidAmountB,
+      liquidAmountA,
+      liquidAmountB,
+      remainingOre,
+      remainingWater,
+    },
+  }
+}
+
 function runPowerAllStopScenario(): ScenarioResult {
   resetInstanceCounter()
   const heatPool = createDevice('item_port_power_sta_1', 0, { x: 24, y: 20 }, {
@@ -544,6 +603,7 @@ function main() {
     ['admission', runAdmissionScenario],
     ['belt-chain', runBeltChainScenario],
     ['pipe-round-robin', runPipeRoundRobinScenario],
+    ['reactor-output-mapping', runReactorOutputMappingScenario],
     ['power-all-stop', runPowerAllStopScenario],
   ]
 

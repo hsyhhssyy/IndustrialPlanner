@@ -9,7 +9,90 @@ import {
   isReactorSolidInputPort,
   isLiquidItem,
 } from './slotMap'
+import type { ReactorOutputPortId } from './types'
 import { isReactorLiquidOutputPort, isReactorSolidOutputPort } from './types'
+
+export type ReactorOutputNodeId = 'solid-output' | 'liquid-output-a' | 'liquid-output-b'
+
+export type ReactorResolvedOutputNode = {
+  nodeId: ReactorOutputNodeId
+  portIds: ReactorOutputPortId[]
+  configuredItemId: ItemId | null
+  mappedSlotIndex: number | null
+  itemId: ItemId | null
+  amount: number
+}
+
+const REACTOR_OUTPUT_NODE_PORTS: Array<{ nodeId: ReactorOutputNodeId; portIds: ReactorOutputPortId[] }> = [
+  { nodeId: 'solid-output', portIds: ['out_n_1', 'out_n_3'] },
+  { nodeId: 'liquid-output-a', portIds: ['out_w_1'] },
+  { nodeId: 'liquid-output-b', portIds: ['out_w_3'] },
+]
+
+function configuredReactorOutputItemId(deviceConfig: DeviceConfig, fromPortId: ReactorOutputPortId): ItemId | null {
+  const cfg = normalizeReactorPoolConfig(deviceConfig)
+  if (isReactorSolidOutputPort(fromPortId)) {
+    return (cfg.solidOutputItemId as ItemId | undefined) ?? null
+  }
+  if (fromPortId === 'out_w_1') {
+    return (cfg.liquidOutputItemIdA as ItemId | undefined) ?? null
+  }
+  return (cfg.liquidOutputItemIdB as ItemId | undefined) ?? null
+}
+
+function findMappedReactorOutputSlotIndex(runtime: ProcessorRuntime, itemId: ItemId) {
+  if ((runtime.inputBuffer[itemId] ?? 0) <= 0) return null
+  for (let slotIndex = 0; slotIndex < runtime.inputSlotItems.length; slotIndex += 1) {
+    if (runtime.inputSlotItems[slotIndex] === itemId) return slotIndex
+  }
+  return null
+}
+
+export function resolveReactorOutputNodes(runtime: ProcessorRuntime, deviceConfig: DeviceConfig): ReactorResolvedOutputNode[] {
+  return REACTOR_OUTPUT_NODE_PORTS.map(({ nodeId, portIds }) => {
+    const configuredItemId = configuredReactorOutputItemId(deviceConfig, portIds[0])
+    if (!configuredItemId) {
+      return {
+        nodeId,
+        portIds,
+        configuredItemId: null,
+        mappedSlotIndex: null,
+        itemId: null,
+        amount: 0,
+      }
+    }
+
+    const mappedSlotIndex = findMappedReactorOutputSlotIndex(runtime, configuredItemId)
+    if (mappedSlotIndex === null) {
+      return {
+        nodeId,
+        portIds,
+        configuredItemId,
+        mappedSlotIndex: null,
+        itemId: null,
+        amount: 0,
+      }
+    }
+
+    return {
+      nodeId,
+      portIds,
+      configuredItemId,
+      mappedSlotIndex,
+      itemId: configuredItemId,
+      amount: runtime.inputBuffer[configuredItemId] ?? 0,
+    }
+  })
+}
+
+export function resolveReactorOutputNodeForPort(
+  runtime: ProcessorRuntime,
+  deviceConfig: DeviceConfig,
+  fromPortId: string,
+): ReactorResolvedOutputNode | null {
+  if (!isReactorSolidOutputPort(fromPortId) && !isReactorLiquidOutputPort(fromPortId)) return null
+  return resolveReactorOutputNodes(runtime, deviceConfig).find((node) => node.portIds.includes(fromPortId)) ?? null
+}
 
 function clearSlotIfEmpty(buffer: Partial<Record<ItemId, number>>, slotItems: Array<ItemId | null>, itemId: ItemId) {
   if ((buffer[itemId] ?? 0) > 0) return
@@ -68,15 +151,7 @@ export function reactorAcceptInputFromPort(
 }
 
 export function reactorPeekOutputForPort(runtime: ProcessorRuntime, deviceConfig: DeviceConfig, fromPortId: string): ItemId | null {
-  const cfg = normalizeReactorPoolConfig(deviceConfig)
-  const itemId = (() => {
-    if (isReactorSolidOutputPort(fromPortId)) return cfg.solidOutputItemId as ItemId | undefined
-    if (!isReactorLiquidOutputPort(fromPortId)) return undefined
-    if (fromPortId === 'out_w_1') return cfg.liquidOutputItemIdA as ItemId | undefined
-    return cfg.liquidOutputItemIdB as ItemId | undefined
-  })()
-  if (!itemId) return null
-  return (runtime.inputBuffer[itemId] ?? 0) > 0 ? itemId : null
+  return resolveReactorOutputNodeForPort(runtime, deviceConfig, fromPortId)?.itemId ?? null
 }
 
 export function reactorCanAcceptRecipeOutputsInSharedSlotPool(

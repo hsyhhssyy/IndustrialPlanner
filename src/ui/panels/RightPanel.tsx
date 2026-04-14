@@ -259,6 +259,11 @@ export function RightPanel({
       ? t(`detail.darkPipeOutletMode.${selectedDarkPipeOutletMode ?? 'generate'}`)
       : null
   const canStartSelectedDeviceLinking = Boolean(selectedDevice && isDarkPipeInletType(selectedDevice.typeId))
+  const selectedDevicePlacementOrder = useMemo(() => {
+    if (!selectedDevice) return null
+    const index = layout.devices.findIndex((device) => device.instanceId === selectedDevice.instanceId)
+    return index >= 0 ? index + 1 : null
+  }, [layout.devices, selectedDevice])
 
   const inputSourceDebugEntries = useMemo(() => {
     if (!selectedDevice || !selectedRuntime) return [] as Array<{ title: string; cursor: string; items: string[] }>
@@ -474,6 +479,7 @@ export function RightPanel({
             <div className="kv"><span>{t('detail.tags')}</span><span>{DEVICE_TYPE_BY_ID[selectedDevice.typeId].tags!.join(', ')}</span></div>
           )}
           {!showCompactAdmissionRuntimeView && <div className="kv"><span>{t('detail.instanceId')}</span><span>{selectedDevice.instanceId}</span></div>}
+          <div className="kv"><span>{t('detail.placementOrder')}</span><span>{selectedDevicePlacementOrder ?? '-'}</span></div>
           <div className="kv"><span>{t('detail.deviceType')}</span><span>{getDeviceLabel(language, selectedDevice.typeId)}</span></div>
           {!showCompactAdmissionRuntimeView && <div className="kv"><span>{t('detail.devicePowerDemand')}</span><span>{DEVICE_TYPE_BY_ID[selectedDevice.typeId].powerDemand} kW</span></div>}
           {!showCompactAdmissionRuntimeView && <div className="kv"><span>{t('detail.rotation')}</span><span>{selectedDevice.rotation}</span></div>}

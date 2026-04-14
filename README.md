@@ -104,4 +104,4 @@
 
 ## 许可证
 
-本项目采用 MIT License，详见 [LICENSE](LICENSE)。
+本项目采用自定义许可协议，详见 [LICENSE](LICENSE)。该许可基于 MIT 文本，但增加了未经授权不得用于 AI 训练，且不得未经授权将本项目代码或文档投入 AI 提示词或交由任何 AI Agent 读取的限制。

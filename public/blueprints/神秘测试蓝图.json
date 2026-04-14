@@ -1,0 +1,814 @@
+{
+  "schema": "industrial-planner-blueprint",
+  "id": "BluePrint-HSY-1e548067-1b46-4488-b95b-b3d127ad02cd",
+  "version": "1.0",
+  "blueprintVersion": "1",
+  "name": "BP-2026-04-14 07:20:20",
+  "createdAt": "2026-04-14T07:20:20.424Z",
+  "baseId": "valley4_infra_outpost",
+  "devices": [
+    {
+      "blueprintInstanceId": "item_port_unloader_1_mnyafz0w_3",
+      "typeId": "item_port_unloader_1",
+      "rotation": 180,
+      "origin": {
+        "x": 3,
+        "y": 0
+      },
+      "config": {
+        "pickupItemId": "item_copper_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_copper_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 5,
+          "y": 0
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_unloader_1_mnyagvbr_3",
+      "typeId": "item_port_unloader_1",
+      "rotation": 180,
+      "origin": {
+        "x": 9,
+        "y": 0
+      },
+      "config": {
+        "pickupItemId": "item_copper_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_copper_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 11,
+          "y": 0
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_log_splitter_mnyahidy_4",
+      "typeId": "item_log_splitter",
+      "rotation": 270,
+      "origin": {
+        "x": 4,
+        "y": 2
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 6,
+          "y": 2
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_log_splitter_mnyahiun_5",
+      "typeId": "item_log_splitter",
+      "rotation": 270,
+      "origin": {
+        "x": 4,
+        "y": 3
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 6,
+          "y": 3
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_log_splitter_mnyahjza_6",
+      "typeId": "item_log_splitter",
+      "rotation": 270,
+      "origin": {
+        "x": 10,
+        "y": 2
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 12,
+          "y": 2
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_log_converger_mnyahmr9_8",
+      "typeId": "item_log_converger",
+      "rotation": 270,
+      "origin": {
+        "x": 3,
+        "y": 2
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 5,
+          "y": 2
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_log_converger_mnyahn5l_9",
+      "typeId": "item_log_converger",
+      "rotation": 270,
+      "origin": {
+        "x": 3,
+        "y": 3
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 5,
+          "y": 3
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_log_converger_mnyahokn_a",
+      "typeId": "item_log_converger",
+      "rotation": 270,
+      "origin": {
+        "x": 9,
+        "y": 2
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 11,
+          "y": 2
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_log_converger_mnyahov2_b",
+      "typeId": "item_log_converger",
+      "rotation": 270,
+      "origin": {
+        "x": 9,
+        "y": 3
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 11,
+          "y": 3
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyahr13_g",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 10,
+        "y": 1
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 12,
+          "y": 1
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_loader_1_mnyai49i_12",
+      "typeId": "item_port_loader_1",
+      "rotation": 180,
+      "origin": {
+        "x": 0,
+        "y": 0
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 2,
+          "y": 0
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_loader_1_mnyai7oa_13",
+      "typeId": "item_port_loader_1",
+      "rotation": 180,
+      "origin": {
+        "x": 6,
+        "y": 0
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 8,
+          "y": 0
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiely_18",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 4,
+        "y": 1
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 6,
+          "y": 1
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiihy_6b",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 1,
+        "y": 1
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 3,
+          "y": 1
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiihy_6c",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 4,
+        "y": 4
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 6,
+          "y": 4
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiihy_6d",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 4,
+        "y": 5
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 6,
+          "y": 5
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiihy_6e",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 4,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 6,
+          "y": 6
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mnyaiihy_6f",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 4,
+        "y": 7
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 6,
+          "y": 7
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiihy_6h",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 2,
+        "y": 7
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 4,
+          "y": 7
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mnyaiihy_6i",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 1,
+        "y": 7
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 3,
+          "y": 7
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiihy_6j",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 1,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 3,
+          "y": 6
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiihy_6k",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 1,
+        "y": 5
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 3,
+          "y": 5
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiihy_6l",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 1,
+        "y": 4
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 3,
+          "y": 4
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiihy_6m",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 1,
+        "y": 3
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 3,
+          "y": 3
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiihy_6n",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 1,
+        "y": 2
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 3,
+          "y": 2
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_log_converger_mnyaimzk_7m",
+      "typeId": "item_log_converger",
+      "rotation": 0,
+      "origin": {
+        "x": 3,
+        "y": 7
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 5,
+          "y": 7
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaimzk_7n",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 3,
+        "y": 4
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 5,
+          "y": 4
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaimzk_7o",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 3,
+        "y": 5
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 5,
+          "y": 5
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaimzk_7p",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 3,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 5,
+          "y": 6
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiqq8_ei",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 7,
+        "y": 1
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 9,
+          "y": 1
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiqq8_ej",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 10,
+        "y": 4
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 12,
+          "y": 4
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiqq8_ek",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 10,
+        "y": 5
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 12,
+          "y": 5
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiqq8_el",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 10,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 12,
+          "y": 6
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mnyaiqq8_em",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 10,
+        "y": 7
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 12,
+          "y": 7
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiqq8_eo",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 8,
+        "y": 7
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 10,
+          "y": 7
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mnyaiqq8_ep",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 7,
+        "y": 7
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 9,
+          "y": 7
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiqq8_eq",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 7,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 9,
+          "y": 6
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiqq8_er",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 7,
+        "y": 5
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 9,
+          "y": 5
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiqq8_es",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 7,
+        "y": 4
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 9,
+          "y": 4
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiqq8_et",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 7,
+        "y": 3
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 9,
+          "y": 3
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyaiqq8_eu",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 7,
+        "y": 2
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 9,
+          "y": 2
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_log_converger_mnyairyu_ff",
+      "typeId": "item_log_converger",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 7
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 11,
+          "y": 7
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyairyu_fg",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 9,
+        "y": 4
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 11,
+          "y": 4
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyairyu_fh",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 9,
+        "y": 5
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 11,
+          "y": 5
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mnyairyu_fi",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 9,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 11,
+          "y": 6
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_log_splitter_mnyaj5je_fj",
+      "typeId": "item_log_splitter",
+      "rotation": 270,
+      "origin": {
+        "x": 10,
+        "y": 3
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "valley4_infra_outpost",
+        "baseOrigin": {
+          "x": 12,
+          "y": 3
+        }
+      }
+    }
+  ],
+  "links": []
+}
