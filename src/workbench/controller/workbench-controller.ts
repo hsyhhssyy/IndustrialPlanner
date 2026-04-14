@@ -83,6 +83,8 @@ interface MutationState {
   selectionId: string | null;
 }
 
+type SyncSource = "editor" | "surface";
+
 interface SyncMetrics {
   worldBoundsDurationMs: number;
   storageSaveDurationMs: number;
@@ -213,7 +215,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     this.documentStore = this.workspaceStore.documentStore;
     this.topologyStore = this.workspaceStore.topologyStore;
 
-    this.sync();
+    this.sync("editor");
   }
 
   private getPlacementMode(session = this.editorHost.getState().session) {
@@ -232,7 +234,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     modeKey: Exclude<InteractionModeKey, "placement" | "move" | "marquee">,
   ): void {
     this.editorHost.setInteractionMode(modeKey);
-    this.sync();
+    this.sync("editor");
   }
 
   requestCanvasKeyboardFocus(): void {
@@ -279,7 +281,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       return;
     }
 
-    this.sync();
+    this.sync("editor");
   }
 
   beginMoveFromScreenPoint(
@@ -297,7 +299,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       return;
     }
 
-    this.sync();
+    this.sync("editor");
   }
 
   beginMarqueeFromScreenPoint(
@@ -315,7 +317,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       return;
     }
 
-    this.sync();
+    this.sync("editor");
   }
 
   updateMoveDraftFromScreenPoint(screenPoint: CanvasPoint): void {
@@ -326,12 +328,12 @@ class WorkbenchControllerImpl implements WorkbenchController {
     }
 
     this.editorHost.updateMoveDraft(this.resolveWorldInput(screenPoint));
-    this.sync();
+    this.sync("editor");
   }
 
   updateMarqueeDraftFromScreenPoint(screenPoint: CanvasPoint): void {
     this.editorHost.updateMarqueeDraft(this.resolveWorldInput(screenPoint));
-    this.sync();
+    this.sync("editor");
   }
 
   queryWorldInputFromScreenPoint(screenPoint: CanvasPoint): CanvasWorldInput {
@@ -357,7 +359,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       return;
     }
 
-    this.sync();
+    this.sync("editor");
   }
 
   cancelMarquee(): void {
@@ -367,7 +369,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       return;
     }
 
-    this.sync();
+    this.sync("editor");
   }
 
   rotateMoveClockwise(): void {
@@ -377,7 +379,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       return;
     }
 
-    this.sync();
+    this.sync("editor");
   }
 
   rotatePlacementClockwise(): void {
@@ -387,7 +389,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       return;
     }
 
-    this.sync();
+    this.sync("editor");
   }
 
   cancelPlacement(): void {
@@ -405,7 +407,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       placementInputMode: placementMode.inputMode,
       placementRotation: placementMode.rotation,
     });
-    this.sync();
+    this.sync("editor");
   }
 
   centerPlacementPreview(): void {
@@ -438,7 +440,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
         nextPreview,
       });
 
-      const syncMetrics = this.sync();
+      const syncMetrics = this.sync("editor");
       const placementMode = this.getPlacementMode(sessionBefore);
 
       if (placementMode) {
@@ -478,7 +480,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
 
   clearPlacementPreview(): void {
     this.editorHost.clearPlacementPreview();
-    this.sync();
+    this.sync("editor");
   }
 
   async selectEntity(
@@ -619,7 +621,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     );
 
     if (didChange) {
-      this.sync();
+      this.sync("surface");
     }
   }
 
@@ -629,7 +631,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     );
 
     if (didChange) {
-      this.sync();
+      this.sync("surface");
     }
   }
 
@@ -640,7 +642,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     );
 
     if (didChange) {
-      this.sync();
+      this.sync("surface");
     }
   }
 
@@ -661,7 +663,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
 
     if (didChange) {
-      this.sync();
+      this.sync("surface");
     }
   }
 
@@ -678,7 +680,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
 
     if (didChange) {
-      this.sync();
+      this.sync("surface");
     }
   }
 
@@ -703,7 +705,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     }
 
     setGlobalLogLevel(level, { announce: true });
-    this.sync();
+    this.sync("surface");
   }
 
   setDiagnosticsVisible(visible: boolean): void {
@@ -719,7 +721,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
 
     if (didChange) {
-      this.sync();
+      this.sync("surface");
     }
   }
 
@@ -747,7 +749,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
 
     if (didChange) {
-      this.sync();
+      this.sync("surface");
     }
   }
 
@@ -774,7 +776,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
 
     if (didChange) {
-      this.sync();
+      this.sync("surface");
     }
   }
 
@@ -815,11 +817,13 @@ class WorkbenchControllerImpl implements WorkbenchController {
     const selectionChanged = before.selectionId !== afterSelectionId;
 
     if (documentChanged || selectionChanged) {
-      this.sync();
-      return;
+      this.logger.debug("Applied editor mutation with observable selection/document delta.", {
+        documentChanged,
+        selectionChanged,
+      });
     }
 
-    this.sync();
+    this.sync("editor");
   }
 
   private getActiveSelectionId(): string | null {
@@ -858,14 +862,25 @@ class WorkbenchControllerImpl implements WorkbenchController {
     return this.canvasViewStore.update(updater);
   }
 
-  private sync(): SyncMetrics {
+  private sync(source: SyncSource): SyncMetrics {
     return this.measureProfilerStage("controller.sync.total", () => {
       const startedAt = getDiagnosticTimeMs();
-      this.editorStore.setSnapshot(this.editorHost.getState());
-      const nextState = this.buildSyncedWorkspaceState();
-      const { finalState, worldBoundsDurationMs, canvasViewClamped } =
-        this.clampWorkspaceStateCanvasView(nextState);
-      const publishedState = this.publishWorkspaceState(finalState);
+
+      if (source === "editor") {
+        this.editorStore.setSnapshot(this.editorHost.getState());
+      }
+
+      const syncState = this.getSyncWorkspaceState(source);
+      const {
+        clampedCanvasView,
+        worldBoundsDurationMs,
+        canvasViewClamped,
+      } = this.clampWorkspaceStateCanvasView(syncState);
+      const publishedState = this.publishWorkspaceSlices(
+        source,
+        syncState,
+        clampedCanvasView,
+      );
       const { persistedWorkspaceChanged, storageSaveDurationMs } =
         this.persistWorkspaceStateIfNeeded(publishedState);
 
@@ -879,9 +894,56 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
   }
 
-  private publishWorkspaceState(workspaceState: WorkspaceState): WorkspaceState {
+  private getSyncWorkspaceState(source: SyncSource): WorkspaceState {
+    const editorState =
+      source === "editor"
+        ? this.editorStore.getSnapshot()
+        : {
+            session: this.workspaceStore.editorSession,
+            history: this.workspaceStore.editorHistory,
+          };
+
+    return {
+      document:
+        source === "editor" ? this.editorHost.getDocument() : this.workspaceStore.document,
+      topology: source === "editor" ? this.topology : this.workspaceStore.topology,
+      editorSession: editorState.session,
+      editorHistory: editorState.history,
+      ui: this.uiStore.getSnapshot(),
+      canvasView: this.canvasViewStore.getSnapshot(),
+    };
+  }
+
+  private publishWorkspaceSlices(
+    source: SyncSource,
+    workspaceState: WorkspaceState,
+    clampedCanvasView: CanvasViewState,
+  ): WorkspaceState {
     const rootStoreSetStartedAt = getDiagnosticTimeMs();
-    const publishedState = this.workspaceStore.publishState(workspaceState);
+    const nextCanvasView =
+      clampedCanvasView === workspaceState.canvasView
+        ? workspaceState.canvasView
+        : clampedCanvasView;
+
+    if (nextCanvasView !== workspaceState.canvasView) {
+      this.canvasViewStore.setSnapshot(nextCanvasView);
+    }
+
+    const publishedState =
+      source === "editor"
+        ? this.workspaceStore.publishSlices({
+            document: workspaceState.document,
+            topology: workspaceState.topology,
+            editorSession: workspaceState.editorSession,
+            editorHistory: workspaceState.editorHistory,
+            ui: workspaceState.ui,
+            canvasView: nextCanvasView,
+          })
+        : this.workspaceStore.publishSlices({
+            ui: workspaceState.ui,
+            canvasView: nextCanvasView,
+          });
+
     this.recordProfilerStageDuration(
       "controller.sync.rootStoreSet",
       getDiagnosticTimeMs() - rootStoreSetStartedAt,
@@ -926,21 +988,8 @@ class WorkbenchControllerImpl implements WorkbenchController {
     };
   }
 
-  private buildSyncedWorkspaceState(): WorkspaceState {
-    const editorState = this.editorStore.getSnapshot();
-
-    return {
-      document: this.editorHost.getDocument(),
-      topology: this.topology,
-      editorSession: editorState.session,
-      editorHistory: editorState.history,
-      ui: this.uiStore.getSnapshot(),
-      canvasView: this.canvasViewStore.getSnapshot(),
-    };
-  }
-
   private clampWorkspaceStateCanvasView(workspaceState: WorkspaceState): {
-    finalState: WorkspaceState;
+    clampedCanvasView: CanvasViewState;
     worldBoundsDurationMs: number;
     canvasViewClamped: boolean;
   } {
@@ -956,19 +1005,24 @@ class WorkbenchControllerImpl implements WorkbenchController {
     const worldBoundsDurationMs = getDiagnosticTimeMs() - worldBoundsStartedAt;
 
     return {
-      finalState:
-        clampedCanvasView === workspaceState.canvasView
-          ? workspaceState
-          : {
-              ...workspaceState,
-              canvasView: clampedCanvasView,
-            },
+      clampedCanvasView,
       worldBoundsDurationMs,
       canvasViewClamped: clampedCanvasView !== workspaceState.canvasView,
     };
   }
 
-  private getViewportMetrics(workspaceState = this.workspaceStore.getSnapshot()) {
+  private getWorkspaceProjectionState(): WorkspaceState {
+    return {
+      document: this.workspaceStore.document,
+      topology: this.workspaceStore.topology,
+      editorSession: this.workspaceStore.editorSession,
+      editorHistory: this.workspaceStore.editorHistory,
+      ui: this.uiStore.getSnapshot(),
+      canvasView: this.canvasViewStore.getSnapshot(),
+    };
+  }
+
+  private getViewportMetrics(workspaceState = this.getWorkspaceProjectionState()) {
     return {
       gridSize: workspaceState.document.documentSettings.gridSize,
       size: this.viewportSize,

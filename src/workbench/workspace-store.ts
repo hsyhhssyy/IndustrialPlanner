@@ -17,9 +17,9 @@ export type ReadonlySnapshotStore<TSnapshot> = Pick<
 >;
 
 export interface WorkspaceStore {
-  rootStore: SnapshotStore<WorkspaceState>;
   getSnapshot: () => WorkspaceState;
   publishState: (nextState: WorkspaceState) => WorkspaceState;
+  publishSlices: (nextSlices: Partial<WorkspaceState>) => WorkspaceState;
   readonly document: WorldDocument;
   readonly topology: CompiledTopology;
   readonly editorSession: WorkspaceState["editorSession"];
@@ -128,6 +128,20 @@ function composeWorkspaceState(
   };
 }
 
+function mergeWorkspaceStateSlices(
+  currentState: WorkspaceState,
+  nextSlices: Partial<WorkspaceState>,
+): WorkspaceState {
+  if (Object.keys(nextSlices).length === 0) {
+    return currentState;
+  }
+
+  return {
+    ...currentState,
+    ...nextSlices,
+  };
+}
+
 export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceStore {
   const rootStore = createSnapshotStore(initialState);
   const documentStore = createDerivedStore(rootStore, (state) => state.document);
@@ -139,13 +153,20 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
   const canvasViewStore = createDerivedStore(rootStore, (state) => state.canvasView);
 
   return {
-    rootStore,
     getSnapshot: () => rootStore.getSnapshot(),
     publishState: (nextState) => {
       const publishedState = composeWorkspaceState(
         rootStore.getSnapshot(),
         nextState,
       );
+
+      rootStore.setSnapshot(publishedState);
+
+      return publishedState;
+    },
+    publishSlices: (nextSlices) => {
+      const mergedState = mergeWorkspaceStateSlices(rootStore.getSnapshot(), nextSlices);
+      const publishedState = composeWorkspaceState(rootStore.getSnapshot(), mergedState);
 
       rootStore.setSnapshot(publishedState);
 
