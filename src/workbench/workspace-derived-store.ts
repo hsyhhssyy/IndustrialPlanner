@@ -1,25 +1,28 @@
 import type { WorldDocument } from "@/domain/document/world-document";
 import type { Stage1Registry } from "@/domain/registry/stage1-registry";
 import type { CompiledTopology } from "@/domain/topology/compiled-topology";
+import { isSameCanvasViewState } from "@/workbench/canvas-view-store";
+import { isSameEditorSession } from "@/editor/editor-runtime-store";
 import {
-  createSnapshotStore,
-  type SnapshotStore,
-} from "@/shared/snapshot-store/snapshot-store";
+  computed,
+  makeAutoObservable,
+  observable,
+  reaction,
+} from "@/shared/mobx";
+import { createSnapshotBridge } from "@/shared/mobx/snapshot-bridge";
 import type { ReadonlySnapshotStore } from "@/workbench/workspace-store";
 import type {
   CanvasViewState,
   WorkspaceEditorState,
 } from "@/workbench/workspace-state";
 import {
-  deriveWorkspaceDerivedState,
-  type WorkspaceDerivedState,
   type RenderDerivedState,
   type WorkspaceRenderDerivedInputState,
+  deriveRenderDerivedState,
 } from "@/workbench/workspace-derived-state";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
 
 export interface WorkspaceDerivedStore {
-  rootStore: SnapshotStore<WorkspaceDerivedState>;
   renderStore: ReadonlySnapshotStore<RenderDerivedState>;
   dispose: () => void;
 }
@@ -82,80 +85,165 @@ function isSameRenderDerivedState(
   );
 }
 
-function isSameWorkspaceDerivedState(
-  left: WorkspaceDerivedState,
-  right: WorkspaceDerivedState,
-): boolean {
-  return isSameRenderDerivedState(left.render, right.render);
+function createDerivedWorkspaceState(options: {
+  document: WorldDocument;
+  editorSession: WorkspaceEditorState["session"];
+  canvasView: CanvasViewState;
+}): WorkspaceRenderDerivedInputState {
+  return {
+    document: options.document,
+    editorSession: options.editorSession,
+    canvasView: options.canvasView,
+  };
 }
 
-function createDerivedWorkspaceState(
-  options: CreateWorkspaceDerivedStoreOptions,
-): WorkspaceRenderDerivedInputState {
-  return {
-    document: options.documentStore.getSnapshot(),
-    editorSession: options.editorStore.getSnapshot().session,
-    canvasView: options.canvasViewStore.getSnapshot(),
-  };
+class WorkspaceDerivedStoreImpl implements WorkspaceDerivedStore {
+  readonly renderStore;
+
+  private documentInput: WorldDocument;
+  private editorSessionInput: WorkspaceEditorState["session"];
+  private canvasViewInput: CanvasViewState;
+  private topologyInput: CompiledTopology;
+
+  private readonly registry: Stage1Registry;
+  private readonly documentStoreSource: ReadonlySnapshotStore<WorldDocument>;
+  private readonly editorStoreSource: ReadonlySnapshotStore<WorkspaceEditorState>;
+  private readonly canvasViewStoreSource: ReadonlySnapshotStore<CanvasViewState>;
+  private readonly topologyStoreSource: ReadonlySnapshotStore<CompiledTopology>;
+  private readonly placementPreviewProfiler?: PlacementPreviewProfiler;
+  private readonly renderSnapshotBridge;
+  private readonly stopRenderReaction: () => void;
+  private readonly inputUnsubscribers: Array<() => void>;
+
+  constructor(options: CreateWorkspaceDerivedStoreOptions) {
+    this.documentStoreSource = options.documentStore;
+    this.editorStoreSource = options.editorStore;
+    this.canvasViewStoreSource = options.canvasViewStore;
+    this.topologyStoreSource = options.topologyStore;
+    this.registry = options.registry;
+    this.placementPreviewProfiler = options.placementPreviewProfiler;
+    this.documentInput = options.documentStore.getSnapshot();
+    this.editorSessionInput = options.editorStore.getSnapshot().session;
+    this.canvasViewInput = options.canvasViewStore.getSnapshot();
+    this.topologyInput = options.topologyStore.getSnapshot();
+
+    makeAutoObservable(
+      this,
+      {
+        documentStoreSource: false,
+        editorStoreSource: false,
+        canvasViewStoreSource: false,
+        topologyStoreSource: false,
+        registry: false,
+        placementPreviewProfiler: false,
+        renderStore: false,
+        renderSnapshotBridge: false,
+        stopRenderReaction: false,
+        inputUnsubscribers: false,
+        documentInput: observable.ref,
+        editorSessionInput: observable.ref,
+        canvasViewInput: observable.ref,
+        topologyInput: observable.ref,
+        render: computed,
+        dispose: false,
+      },
+      {
+        autoBind: true,
+      },
+    );
+
+    this.renderSnapshotBridge = createSnapshotBridge(this.render);
+    this.renderStore = this.renderSnapshotBridge;
+    this.stopRenderReaction = reaction(
+      () => this.render,
+      (nextRender) => {
+        this.renderSnapshotBridge.publish(nextRender);
+      },
+      {
+        equals: isSameRenderDerivedState,
+      },
+    );
+    this.inputUnsubscribers = [
+      this.documentStoreSource.subscribe(this.syncDocumentInput),
+      this.editorStoreSource.subscribe(this.syncEditorSessionInput),
+      this.canvasViewStoreSource.subscribe(this.syncCanvasViewInput),
+      this.topologyStoreSource.subscribe(this.syncTopologyInput),
+    ];
+  }
+
+  get render(): RenderDerivedState {
+    const derive = () =>
+      deriveRenderDerivedState({
+        workspaceState: createDerivedWorkspaceState({
+          document: this.documentInput,
+          editorSession: this.editorSessionInput,
+          canvasView: this.canvasViewInput,
+        }),
+        topology: this.topologyInput,
+        registry: this.registry,
+      });
+
+    if (!this.placementPreviewProfiler) {
+      return derive();
+    }
+
+    return this.placementPreviewProfiler.measureStage(
+      "workspaceDerived.recompute",
+      derive,
+    );
+  }
+
+  dispose(): void {
+    this.stopRenderReaction();
+
+    for (const unsubscribe of this.inputUnsubscribers) {
+      unsubscribe();
+    }
+  }
+
+  private syncDocumentInput(): void {
+    const nextDocument = this.documentStoreSource.getSnapshot();
+
+    if (this.documentInput === nextDocument) {
+      return;
+    }
+
+    this.documentInput = nextDocument;
+  }
+
+  private syncEditorSessionInput(): void {
+    const nextSession = this.editorStoreSource.getSnapshot().session;
+
+    if (isSameEditorSession(this.editorSessionInput, nextSession)) {
+      return;
+    }
+
+    this.editorSessionInput = nextSession;
+  }
+
+  private syncCanvasViewInput(): void {
+    const nextCanvasView = this.canvasViewStoreSource.getSnapshot();
+
+    if (isSameCanvasViewState(this.canvasViewInput, nextCanvasView)) {
+      return;
+    }
+
+    this.canvasViewInput = nextCanvasView;
+  }
+
+  private syncTopologyInput(): void {
+    const nextTopology = this.topologyStoreSource.getSnapshot();
+
+    if (this.topologyInput === nextTopology) {
+      return;
+    }
+
+    this.topologyInput = nextTopology;
+  }
 }
 
 export function createWorkspaceDerivedStore(
   options: CreateWorkspaceDerivedStoreOptions,
 ): WorkspaceDerivedStore {
-  const rootStore = createSnapshotStore(
-    deriveWorkspaceDerivedState({
-      workspaceState: createDerivedWorkspaceState(options),
-      topology: options.topologyStore.getSnapshot(),
-      registry: options.registry,
-    }),
-  );
-  const renderStore = createSnapshotStore(rootStore.getSnapshot().render);
-
-  const recomputeWorkspaceDerivedState = () => {
-    const nextState = deriveWorkspaceDerivedState({
-      workspaceState: createDerivedWorkspaceState(options),
-      topology: options.topologyStore.getSnapshot(),
-      registry: options.registry,
-    });
-
-    rootStore.update((currentState) =>
-      isSameWorkspaceDerivedState(currentState, nextState)
-        ? currentState
-        : nextState,
-    );
-    renderStore.update((currentRenderState) =>
-      isSameRenderDerivedState(currentRenderState, nextState.render)
-        ? currentRenderState
-        : nextState.render,
-    );
-  };
-
-  const recompute = () => {
-    if (options.placementPreviewProfiler) {
-      options.placementPreviewProfiler.measureStage(
-        "workspaceDerived.recompute",
-        recomputeWorkspaceDerivedState,
-      );
-      return;
-    }
-
-    recomputeWorkspaceDerivedState();
-  };
-
-  const unsubscribers = [
-    options.documentStore.subscribe(recompute),
-    options.editorStore.subscribe(recompute),
-    options.canvasViewStore.subscribe(recompute),
-    options.topologyStore.subscribe(recompute),
-  ];
-
-  return {
-    rootStore,
-    renderStore,
-    dispose: () => {
-      for (const unsubscribe of unsubscribers) {
-        unsubscribe();
-      }
-    },
-  };
+  return new WorkspaceDerivedStoreImpl(options);
 }

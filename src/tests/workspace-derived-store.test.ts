@@ -18,6 +18,7 @@ import {
   createPlacementInteractionMode,
   getPendingLinkSourceEntityId,
 } from "@/editor/contracts/interaction-mode";
+import { createEditorRuntimeStore } from "@/editor/editor-runtime-store";
 import {
   createMoveDraftId,
   getManagedMoveDraft,
@@ -122,6 +123,47 @@ function createIdleSimulationWorkspaceSlices(): Record<string, never> {
 }
 
 describe("WorkspaceDerivedStore", () => {
+  it("does not republish render derived state when editor history changes without a session delta", () => {
+    const document = createStage1SeedWorldDocument();
+    const registry = createStage1Registry();
+    const topology = compileStage1World(document, registry);
+    const documentStore = createSnapshotStore(document);
+    const editorStore = createEditorRuntimeStore({
+      session: createInitialEditorSession(),
+      history: {
+        canUndo: false,
+        canRedo: false,
+        undoDepth: 0,
+        redoDepth: 0,
+      },
+    });
+    const canvasViewStore = createSnapshotStore(createInitialCanvasViewState());
+    const topologyStore = createSnapshotStore(topology);
+    const derivedStore = createWorkspaceDerivedStore({
+      documentStore,
+      editorStore,
+      canvasViewStore,
+      topologyStore,
+      registry,
+    });
+    const renderListener = vi.fn();
+
+    derivedStore.renderStore.subscribe(renderListener);
+    editorStore.setSnapshot({
+      session: createInitialEditorSession(),
+      history: {
+        canUndo: true,
+        canRedo: false,
+        undoDepth: 1,
+        redoDepth: 0,
+      },
+    });
+
+    expect(renderListener).not.toHaveBeenCalled();
+
+    derivedStore.dispose();
+  });
+
   it("recomputes render state from document/editor/canvas/topology inputs without a ui store", () => {
     const document = createStage1SeedWorldDocument();
     const registry = createStage1Registry();
