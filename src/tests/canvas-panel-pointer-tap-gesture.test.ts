@@ -5,7 +5,7 @@ import {
   createIdleCanvasPanelPointerTapGestureState,
   removePointerFromCanvasPointerTapGesture,
   shouldDispatchCanvasPointerTap,
-} from "@/app-shell/components/canvas-panel/canvas-panel-pointer-tap-gesture";
+} from "@/app/app-shell/components/canvas-panel/canvas-panel-pointer-tap-gesture";
 
 describe("canvas panel pointer tap gesture", () => {
   it("keeps a precise-pointer tap candidate alive until movement crosses the threshold", () => {

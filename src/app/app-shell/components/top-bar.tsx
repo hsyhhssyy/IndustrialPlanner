@@ -1,9 +1,11 @@
-import { WorkbenchIcon } from "@/app-shell/components/workbench-icons";
-import { useExternalStore } from "@/app-shell/hooks/use-external-store";
+import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
+import { useExternalStore } from "@/app/app-shell/hooks/use-external-store";
 import { createTranslator } from "@/i18n/messages";
 import { observer } from "@/shared/mobx";
-import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
+import type { WorkbenchController } from "@/workspace/workspace-facade";
 import type { WorkspaceDerivedStore } from "@/workbench/derived/workspace-derived-store";
+
+const noop = () => {};
 
 export interface TopBarProps {
   controller: WorkbenchController;
@@ -25,7 +27,7 @@ export const TopBar = observer(function TopBar({
         <button
           aria-label={t("topBar.leftPanel")}
           className={ui.leftDock.open ? "is-active" : undefined}
-          onClick={() => controller.app.action.setDockOpen("left", !ui.leftDock.open)}
+          onClick={noop}
           title={t("topBar.leftPanel")}
           type="button"
         >
@@ -37,7 +39,7 @@ export const TopBar = observer(function TopBar({
         <button
           aria-label={t("topBar.rightPanel")}
           className={ui.rightDock.open ? "is-active" : undefined}
-          onClick={() => controller.app.action.setDockOpen("right", !ui.rightDock.open)}
+          onClick={noop}
           title={t("topBar.rightPanel")}
           type="button"
         >

@@ -1,4 +1,4 @@
-import type { WorkbenchTextDescriptor } from "@/app-shell/workbench-placeholders";
+import type { WorkbenchTextDescriptor } from "@/app/app-shell/workbench-placeholders";
 import type { AppLocale } from "@/i18n/messages";
 
 const WORKBENCH_PLACEHOLDER_TRANSLATIONS: Record<AppLocale, Record<string, string>> = {

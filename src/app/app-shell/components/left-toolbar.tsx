@@ -1,11 +1,13 @@
-import { WorkbenchIcon } from "@/app-shell/components/workbench-icons";
-import { useExternalStore } from "@/app-shell/hooks/use-external-store";
+import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
+import { useExternalStore } from "@/app/app-shell/hooks/use-external-store";
 import {
   LEFT_RAIL_PRIMARY_ITEMS,
   LEFT_RAIL_UTILITY_ITEMS,
-} from "@/app-shell/workbench-placeholders";
+} from "@/app/app-shell/workbench-placeholders";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
-import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
+import type { WorkbenchController } from "@/workspace/workspace-facade";
+
+const noop = () => {};
 
 export interface LeftToolbarProps {
   controller: WorkbenchController;
@@ -15,7 +17,6 @@ export function LeftToolbar({ controller }: LeftToolbarProps) {
   const ui = useExternalStore(controller.workspaceState.uiStore);
   const locale = ui.locale;
   const activeLeftPanelMode = ui.leftPanelMode;
-  const leftDockOpen = ui.leftDock.open;
   const iconByItemId = {
     placement: "placement",
     delete: "delete",
@@ -38,14 +39,7 @@ export function LeftToolbar({ controller }: LeftToolbarProps) {
               aria-pressed={isActive}
               className={`rail-button ${isActive ? "is-active" : ""}`.trim()}
               key={item.id}
-              onClick={() => {
-                if (isActive && leftDockOpen) {
-                  controller.app.action.setDockOpen("left", false);
-                  return;
-                }
-
-                controller.app.action.setLeftPanelMode(item.id);
-              }}
+              onClick={noop}
               type="button"
             >
               <span className="rail-button-short">
@@ -63,7 +57,7 @@ export function LeftToolbar({ controller }: LeftToolbarProps) {
           <button
             className="rail-button rail-button-utility"
             key={item.id}
-            onClick={() => undefined}
+            onClick={noop}
             type="button"
           >
             <span className="rail-button-short">

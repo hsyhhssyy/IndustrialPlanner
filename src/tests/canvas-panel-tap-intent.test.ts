@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveCanvasPanelTapIntent } from "@/app-shell/components/canvas-panel/canvas-panel-tap-intent";
+import { resolveCanvasPanelTapIntent } from "@/app/app-shell/components/canvas-panel/canvas-panel-tap-intent";
 import {
   createLinkInteractionMode,
   createMoveInteractionMode,

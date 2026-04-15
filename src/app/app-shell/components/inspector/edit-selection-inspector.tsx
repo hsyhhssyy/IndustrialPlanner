@@ -2,21 +2,22 @@ import { createTranslator } from "@/i18n/messages";
 import {
   formatConfigValue,
   type SelectionInspectorPanelProps,
-} from "@/app-shell/components/inspector/selection-inspector-model";
+} from "@/app/app-shell/components/inspector/selection-inspector-model";
 import {
   ConfigFieldMutationControl,
   ConnectionList,
   NoSelectionState,
   RuntimeDetailList,
   SelectionInspectorSummary,
-} from "@/app-shell/components/inspector/selection-inspector-shared";
+} from "@/app/app-shell/components/inspector/selection-inspector-shared";
 import {
   getLocalizedMutabilityLabel,
   getLocalizedStage1ConfigFieldLabel,
 } from "@/i18n/stage1-registry";
 
+const noop = () => {};
+
 export function EditSelectionInspector({
-  controller,
   state,
   context,
 }: SelectionInspectorPanelProps) {
@@ -35,24 +36,20 @@ export function EditSelectionInspector({
         </div>
         <div className="inspector-option-grid">
           <button
-            onClick={() => {
-              void controller.editor.action.removeSelection();
-            }}
+            onClick={noop}
             type="button"
           >
             {t("action.deleteSelection")}
           </button>
           <button
             disabled={context.selectedLinks.length === 0}
-            onClick={() => {
-              void controller.editor.action.removeSelectionLinks();
-            }}
+            onClick={noop}
             type="button"
           >
             {t("action.removeLinks")}
           </button>
           <button
-            onClick={() => controller.editor.action.setInteractionMode("link")}
+            onClick={noop}
             type="button"
           >
             {t("tool.link")}
@@ -64,7 +61,6 @@ export function EditSelectionInspector({
           <h4>{t("section.connections")}</h4>
         </div>
         <ConnectionList
-          controller={controller}
           links={context.selectedLinks}
           locale={state.locale}
           removeDisabled={false}
@@ -98,11 +94,7 @@ export function EditSelectionInspector({
                   clearLabel={t("action.clearPatch")}
                   currentValue={context.selectedEntity.config[field.key]}
                   locale={state.locale}
-                  onApply={(value) =>
-                    controller.editor.action.patchEntityConfig(context.selectedEntity.id, {
-                      [field.key]: value,
-                    })
-                  }
+                  onApply={noop}
                   submitLabel={t("action.applyValue")}
                   toggleLabel={t("action.toggleValue")}
                 />

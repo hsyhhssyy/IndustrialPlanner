@@ -22,7 +22,7 @@ import { createLogger } from "@/shared/logging/logger";
 import type {
   CanvasInteractionTarget,
   WorkbenchController,
-} from "@/workbench/contracts/workbench-facade";
+} from "@/workspace/workspace-facade";
 import type { RenderDerivedScreenBox } from "@/workbench/derived/workspace-derived-state";
 import type { CanvasPoint } from "@/workspace/workspace-state";
 

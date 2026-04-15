@@ -1,4 +1,4 @@
-import type { CanvasInteractionTarget } from "@/workbench/contracts/workbench-facade";
+import type { CanvasInteractionTarget } from "@/workspace/workspace-facade";
 import type { CanvasPoint } from "@/workspace/workspace-state";
 import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 

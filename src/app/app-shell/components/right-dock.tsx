@@ -1,9 +1,9 @@
-import { EditSelectionInspector } from "@/app-shell/components/inspector/edit-selection-inspector";
-import type { SelectionInspectorContext } from "@/app-shell/components/inspector/selection-inspector-model";
-import { useExternalStore } from "@/app-shell/hooks/use-external-store";
+import { EditSelectionInspector } from "@/app/app-shell/components/inspector/edit-selection-inspector";
+import type { SelectionInspectorContext } from "@/app/app-shell/components/inspector/selection-inspector-model";
+import { useExternalStore } from "@/app/app-shell/hooks/use-external-store";
 import {
   RIGHT_POWER_SUMMARY,
-} from "@/app-shell/workbench-placeholders";
+} from "@/app/app-shell/workbench-placeholders";
 import {
   STAGE1_BASE_DEFINITIONS,
   formatStage1BaseArea,
@@ -15,9 +15,10 @@ import { createTranslator } from "@/i18n/messages";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
 import { observer } from "@/shared/mobx";
-import { getSelectedEntityIds } from "@/editor/contracts/editor-session-helpers";
-import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
+import type { WorkbenchController } from "@/workspace/workspace-facade";
 import type { WorkspaceEditorState } from "@/workspace/workspace-state";
+
+const noop = () => {};
 
 export interface RightDockProps {
   controller: WorkbenchController;
@@ -30,7 +31,7 @@ function formatMultiSelectionLabel(locale: "zh-CN" | "en-US", count: number): st
 function resolveEditInspectorSelectionIds(
   selection: WorkspaceEditorState["session"],
 ): string[] {
-  const baselineIds = getSelectedEntityIds(selection);
+  const baselineIds = selection.selectedEntities?.ids ?? [];
 
   if (!selection.marqueeRange) {
     return baselineIds;
@@ -120,7 +121,7 @@ export const RightDock = observer(function RightDock({
                 : t("label.noSelection")}
             </span>
             <button
-              onClick={() => controller.app.action.toggleDockCollapsed("right")}
+              onClick={noop}
               type="button"
             >
               {t(ui.rightDock.collapsed ? "action.expand" : "action.collapse")}
@@ -142,7 +143,7 @@ export const RightDock = observer(function RightDock({
                         <button
                           className={option.id === document.baseId ? "is-active" : undefined}
                           key={option.id}
-                          onClick={() => undefined}
+                          onClick={noop}
                           type="button"
                         >
                           {option.name[ui.locale]}
@@ -211,17 +212,13 @@ export const RightDock = observer(function RightDock({
                     </div>
                     <div className="inspector-option-grid">
                       <button
-                        onClick={() => {
-                          void controller.editor.action.removeSelection();
-                        }}
+                        onClick={noop}
                         type="button"
                       >
                         {t("action.deleteSelection")}
                       </button>
                       <button
-                        onClick={() => {
-                          void controller.editor.action.removeSelectionLinks();
-                        }}
+                        onClick={noop}
                         type="button"
                       >
                         {t("action.removeLinks")}

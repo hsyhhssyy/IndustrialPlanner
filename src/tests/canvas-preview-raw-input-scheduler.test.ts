@@ -1,6 +1,6 @@
 import {
   createCanvasPreviewRawInputScheduler,
-} from "@/app-shell/components/canvas-panel/canvas-preview-raw-input-scheduler";
+} from "@/app/app-shell/components/canvas-panel/canvas-preview-raw-input-scheduler";
 import { describe, expect, it, vi } from "vitest";
 
 describe("CanvasPreviewRawInputScheduler", () => {

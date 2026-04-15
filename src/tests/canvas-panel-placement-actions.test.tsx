@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { CanvasPanel } from "@/app-shell/components/canvas-panel/canvas-panel";
-import { TOUCH_MARQUEE_LONG_PRESS_DURATION_MS } from "@/app-shell/components/canvas-panel/canvas-panel-touch-marquee-gesture";
+import { CanvasPanel } from "@/app/app-shell/components/canvas-panel/canvas-panel";
+import { TOUCH_MARQUEE_LONG_PRESS_DURATION_MS } from "@/app/app-shell/components/canvas-panel/canvas-panel-touch-marquee-gesture";
 import { createAppHost } from "@/app/app-host";
 import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import {
@@ -18,7 +18,7 @@ import {
   getGridBoundingBox,
   getRotatedGridFootprint,
 } from "@/shared/geometry/grid";
-import { createWorkbenchController as createWorkbenchControllerBase } from "@/workbench/controller/workbench-controller";
+import { createWorkbenchController as createWorkbenchControllerBase } from "@/workspace/workspace-controller";
 import { asLegacyWorkbenchController } from "@/tests/helpers/legacy-workbench-controller";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";

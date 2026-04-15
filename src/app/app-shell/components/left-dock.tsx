@@ -1,33 +1,21 @@
-import {
-  WorkbenchIcon,
-} from "@/app-shell/components/workbench-icons";
+import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
+import { useExternalStore } from "@/app/app-shell/hooks/use-external-store";
 import {
   LEFT_PANEL_CONTENT,
   LEFT_RAIL_PRIMARY_ITEMS,
-  type PlaceholderButtonDescriptor,
   type PlaceholderActionId,
-} from "@/app-shell/workbench-placeholders";
-import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
-import { getSelectedEntityIds } from "@/editor/contracts/editor-session-helpers";
-import {
-  isPlacementDisplayTool,
-  type DisplayTool,
-  type InteractionModeKey,
-} from "@/editor/contracts/interaction-mode";
+  type PlaceholderButtonDescriptor,
+} from "@/app/app-shell/workbench-placeholders";
 import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
-import {
-  createTranslator,
-  type MessageKey,
-} from "@/i18n/messages";
+import { createTranslator, type MessageKey } from "@/i18n/messages";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
-import { createLogger } from "@/shared/logging/logger";
 import { observer } from "@/shared/mobx";
-import { useExternalStore } from "@/app-shell/hooks/use-external-store";
-import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
+import type { WorkbenchController } from "@/workspace/workspace-facade";
 import type { WorkspaceEditorState } from "@/workspace/workspace-state";
-import { useRef } from "react";
 
-const TOOL_LABEL_KEYS: Record<DisplayTool, MessageKey> = {
+const noop = () => {};
+
+const TOOL_LABEL_KEYS: Record<string, MessageKey> = {
   select: "tool.select",
   place: "tool.place",
   belt: "tool.belt",
@@ -38,7 +26,7 @@ const TOOL_LABEL_KEYS: Record<DisplayTool, MessageKey> = {
 
 function resolveDirectEntryMode(
   button: PlaceholderButtonDescriptor,
-): Exclude<InteractionModeKey, "placement" | "move" | "marquee"> | null {
+): string | null {
   switch (button.displayTool) {
     case "select":
       return "select";
@@ -107,8 +95,6 @@ export interface LeftDockProps {
   controller: WorkbenchController;
 }
 
-const logger = createLogger("app.left-dock");
-
 function isActionDisabled(
   actionId: PlaceholderActionId | undefined,
   options: {
@@ -137,11 +123,6 @@ export const LeftDock = observer(function LeftDock({
   const ui = useExternalStore(controller.workspaceState.uiStore);
   const editor = useExternalStore(controller.workspaceState.editorStore);
   const registry = controller.registry;
-  const pendingPlacementInteractionModeRef = useRef<{
-    buttonId: string;
-    interactionMode: PlacementInteractionMode;
-    pointerType: string;
-  } | null>(null);
 
   if (!ui.leftDock.open) {
     return null;
@@ -161,6 +142,7 @@ export const LeftDock = observer(function LeftDock({
         (definition) => definition.id === placementMode.definitionId,
       ) ?? null
     : null;
+  const selectedEntityIds = editor.session.selectedEntities?.ids ?? [];
 
   return (
     <aside className="dock dock-left panel-surface">
@@ -176,13 +158,9 @@ export const LeftDock = observer(function LeftDock({
           </div>
           <div className="header-actions">
             <span className="pill">
-              {t("leftDock.activeTool")}:{" "}
-              {t(TOOL_LABEL_KEYS[editor.session.displayTool])}
+              {t("leftDock.activeTool")}: {t(TOOL_LABEL_KEYS[editor.session.displayTool] ?? "tool.select")}
             </span>
-            <button
-              onClick={() => controller.app.action.toggleDockCollapsed("left")}
-              type="button"
-            >
+            <button onClick={noop} type="button">
               {t(ui.leftDock.collapsed ? "action.expand" : "action.collapse")}
             </button>
           </div>
@@ -192,25 +170,19 @@ export const LeftDock = observer(function LeftDock({
             <div className="cluster">
               <div className="pill-row">
                 <span className="pill">
-                  {t("leftDock.currentMode")}:{" "}
-                  {activeRailItem
+                  {t("leftDock.currentMode")}: {activeRailItem
                     ? localizeWorkbenchText(ui.locale, activeRailItem.label)
                     : t("leftDock.title")}
                 </span>
                 <span className="pill">
-                  {registry.entityDefinitions.length}{" "}
-                  {t("label.definitions")}
+                  {registry.entityDefinitions.length} {t("label.definitions")}
                 </span>
                 <span className="pill">
                   {registry.itemDefinitions.length} {t("label.items")}
                 </span>
                 {armedPlacementDefinition ? (
                   <span className="pill">
-                    {t("label.definition")}:{" "}
-                    {getLocalizedStage1EntityName(
-                      ui.locale,
-                      armedPlacementDefinition,
-                    )}
+                    {t("label.definition")}: {getLocalizedStage1EntityName(ui.locale, armedPlacementDefinition)}
                   </span>
                 ) : null}
               </div>
@@ -220,9 +192,7 @@ export const LeftDock = observer(function LeftDock({
               <section className="placeholder-section" key={section.id}>
                 <div className="placeholder-section-header">
                   <h3>{localizeWorkbenchText(ui.locale, section.title)}</h3>
-                  {section.hotkey ? (
-                    <span className="pill">{section.hotkey}</span>
-                  ) : null}
+                  {section.hotkey ? <span className="pill">{section.hotkey}</span> : null}
                 </div>
                 <div className="placeholder-button-grid">
                   {section.buttons.map((button) => {
@@ -240,7 +210,7 @@ export const LeftDock = observer(function LeftDock({
                     const isDisabled =
                       (!button.displayTool && !button.definitionId && !button.actionId) ||
                       isActionDisabled(button.actionId, {
-                        selection: getSelectedEntityIds(editor.session),
+                        selection: selectedEntityIds,
                         canUndo: editor.history.canUndo,
                         canRedo: editor.history.canRedo,
                       });
@@ -250,92 +220,8 @@ export const LeftDock = observer(function LeftDock({
                         className={isActive ? "is-active" : undefined}
                         disabled={isDisabled}
                         key={button.id}
-                        onPointerDown={(event) => {
-                          if (!button.definitionId) {
-                            pendingPlacementInteractionModeRef.current = null;
-                            return;
-                          }
-
-                          const interactionMode =
-                            event.pointerType === "touch" ? "touch" : "pointer";
-                          logger.info("Observed placement button pointer down.", {
-                            buttonId: button.id,
-                            definitionId: button.definitionId,
-                              displayTool: button.displayTool ?? "place",
-                            pointerType: event.pointerType,
-                            interactionMode,
-                          });
-                          pendingPlacementInteractionModeRef.current = {
-                            buttonId: button.id,
-                            interactionMode,
-                            pointerType: event.pointerType,
-                          };
-                        }}
-                        onClick={() => {
-                          if (button.actionId === "selection.clear") {
-                            void controller.editor.action.clearSelection();
-                            return;
-                          }
-
-                          if (button.actionId === "selection.remove") {
-                            void controller.editor.action.removeSelection();
-                            return;
-                          }
-
-                          if (button.actionId === "selection.links.remove") {
-                            void controller.editor.action.removeSelectionLinks();
-                            return;
-                          }
-
-                          if (button.actionId === "history.undo") {
-                            void controller.editor.action.undo();
-                            return;
-                          }
-
-                          if (button.actionId === "history.redo") {
-                            void controller.editor.action.redo();
-                            return;
-                          }
-
-                          if (button.definitionId) {
-                            const pendingPlacementInteractionMode =
-                              pendingPlacementInteractionModeRef.current;
-                            const interactionMode =
-                              pendingPlacementInteractionMode?.buttonId === button.id
-                                ? pendingPlacementInteractionMode.interactionMode
-                                : "pointer";
-                            const pointerType =
-                              pendingPlacementInteractionMode?.buttonId === button.id
-                                ? pendingPlacementInteractionMode.pointerType
-                                : "unknown";
-
-                            pendingPlacementInteractionModeRef.current = null;
-                            logger.info("Requested placement from left dock.", {
-                              buttonId: button.id,
-                              definitionId: button.definitionId,
-                              displayTool: button.displayTool ?? "place",
-                              interactionMode,
-                              pointerType,
-                            });
-                            controller.editor.action.armPlacement(
-                              button.definitionId,
-                              button.displayTool && isPlacementDisplayTool(button.displayTool)
-                                ? button.displayTool
-                                : "place",
-                              interactionMode,
-                            );
-                            controller.requestCanvasKeyboardFocus();
-                            return;
-                          }
-
-                          pendingPlacementInteractionModeRef.current = null;
-
-                          const directEntryMode = resolveDirectEntryMode(button);
-
-                          if (directEntryMode) {
-                            controller.editor.action.setInteractionMode(directEntryMode);
-                          }
-                        }}
+                        onClick={noop}
+                        onPointerDown={noop}
                         type="button"
                       >
                         {iconPath ? (

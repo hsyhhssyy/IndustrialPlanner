@@ -5,7 +5,7 @@ import {
   cancelCanvasPanelPointerGesture,
   createIdleCanvasPanelPointerGestureState,
   isCanvasPointerPanning,
-} from "@/app-shell/components/canvas-panel/canvas-panel-pointer-gesture";
+} from "@/app/app-shell/components/canvas-panel/canvas-panel-pointer-gesture";
 
 describe("canvas panel pointer gesture", () => {
   it("stays pressed until the pan threshold is exceeded", () => {

@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
-import { BottomStatusBar } from "@/app-shell/components/bottom-status-bar";
-import { LeftDock } from "@/app-shell/components/left-dock";
-import { LeftToolbar } from "@/app-shell/components/left-toolbar";
-import { RightDock } from "@/app-shell/components/right-dock";
+import { BottomStatusBar } from "@/app/app-shell/components/bottom-status-bar";
+import { LeftDock } from "@/app/app-shell/components/left-dock";
+import { LeftToolbar } from "@/app/app-shell/components/left-toolbar";
+import { RightDock } from "@/app/app-shell/components/right-dock";
 import { getManagedPlacementPreview } from "@/editor/contracts/editor-session-helpers";
-import { createWorkbenchController as createWorkbenchControllerBase } from "@/workbench/controller/workbench-controller";
+import { createWorkbenchController as createWorkbenchControllerBase } from "@/workspace/workspace-controller";
 import { asLegacyWorkbenchController } from "@/tests/helpers/legacy-workbench-controller";
 import { act, createElement, Fragment, Profiler } from "react";
 import { createRoot } from "react-dom/client";

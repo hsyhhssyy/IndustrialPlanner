@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCanvasGestureSession } from "@/app-shell/components/canvas-panel/canvas-panel-gesture-session";
+import { createCanvasGestureSession } from "@/app/app-shell/components/canvas-panel/canvas-panel-gesture-session";
 
 describe("canvas panel gesture session", () => {
   it("emits pointer tap events without leaking drag state", () => {

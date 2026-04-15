@@ -5,7 +5,7 @@ import {
   cancelCanvasTouchMarqueeGesture,
   createIdleCanvasPanelTouchMarqueeGestureState,
   removePointerFromCanvasTouchMarqueeGesture,
-} from "@/app-shell/components/canvas-panel/canvas-panel-touch-marquee-gesture";
+} from "@/app/app-shell/components/canvas-panel/canvas-panel-touch-marquee-gesture";
 
 describe("canvas panel touch marquee gesture", () => {
   it("keeps an active touch marquee pointer bound to its origin and latest point", () => {

@@ -1,5 +1,12 @@
 import type { LeftPanelMode } from "@/workbench/state/workbench-ui-state";
-import type { DisplayTool } from "@/editor/contracts/interaction-mode";
+
+export type WorkbenchDisplayTool =
+  | "select"
+  | "place"
+  | "belt"
+  | "pipe"
+  | "link"
+  | "inspect";
 
 export interface WorkbenchTextDescriptor {
   messageKey: string;
@@ -10,7 +17,7 @@ export interface PlaceholderButtonDescriptor {
   id: string;
   label: WorkbenchTextDescriptor;
   hotkey?: string;
-  displayTool?: DisplayTool;
+  displayTool?: WorkbenchDisplayTool;
   definitionId?: string;
   actionId?: PlaceholderActionId;
 }

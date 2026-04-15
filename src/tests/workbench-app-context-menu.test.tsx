@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
-import { WorkbenchApp } from "@/app-shell/workbench-app";
-import { LEFT_PANEL_CONTENT } from "@/app-shell/workbench-placeholders";
+import { WorkbenchApp } from "@/app/app-shell/workbench-app";
+import { LEFT_PANEL_CONTENT } from "@/app/app-shell/workbench-placeholders";
 import { createAppHost } from "@/app/app-host";
 import { isPlacementInteractionMode } from "@/editor/contracts/interaction-mode";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
-import { createWorkbenchController as createWorkbenchControllerBase } from "@/workbench/controller/workbench-controller";
+import { createWorkbenchController as createWorkbenchControllerBase } from "@/workspace/workspace-controller";
 import { asLegacyWorkbenchController } from "@/tests/helpers/legacy-workbench-controller";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";

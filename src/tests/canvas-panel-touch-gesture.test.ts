@@ -8,7 +8,7 @@ import {
   createIdleCanvasPanelTouchGestureState,
   isCanvasTouchPanning,
   removePointerFromCanvasTouchGesture,
-} from "@/app-shell/components/canvas-panel/canvas-panel-touch-gesture";
+} from "@/app/app-shell/components/canvas-panel/canvas-panel-touch-gesture";
 
 describe("canvas panel touch gesture", () => {
   it("only turns blank touch drag into viewport pan after the threshold", () => {

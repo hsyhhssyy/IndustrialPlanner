@@ -1,8 +1,10 @@
-import { WorkbenchIcon } from "@/app-shell/components/workbench-icons";
+import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
 import type { CSSProperties, ComponentProps } from "react";
 
 type CanvasActionIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
 type CanvasActionTone = "cancel" | "confirm" | "delete" | "rotate";
+
+const noop = () => {};
 
 export interface CanvasActionToolbarAction {
   id: string;
@@ -31,12 +33,8 @@ export function CanvasActionToolbar({
   return (
     <div
       className={joinClassNames(["canvas-action-toolbar", className])}
-      onClick={(event) => {
-        event.stopPropagation();
-      }}
-      onPointerDown={(event) => {
-        event.stopPropagation();
-      }}
+      onClick={noop}
+      onPointerDown={noop}
       style={style}
     >
       {actions.map((action) => (
@@ -48,7 +46,7 @@ export function CanvasActionToolbar({
           ])}
           disabled={action.disabled}
           key={action.id}
-          onClick={action.onClick}
+          onClick={noop}
           type="button"
         >
           <WorkbenchIcon className="canvas-action-icon" kind={action.icon} />

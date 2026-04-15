@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { BottomStatusBar } from "@/app-shell/components/bottom-status-bar";
-import { createWorkbenchController as createWorkbenchControllerBase } from "@/workbench/controller/workbench-controller";
+import { BottomStatusBar } from "@/app/app-shell/components/bottom-status-bar";
+import { createWorkbenchController as createWorkbenchControllerBase } from "@/workspace/workspace-controller";
 import { asLegacyWorkbenchController } from "@/tests/helpers/legacy-workbench-controller";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";

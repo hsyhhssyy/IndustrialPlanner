@@ -67,7 +67,7 @@ import {
 } from "./canvas-panel-touch-gesture";
 import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
-import type { CanvasInteractionTarget } from "@/workbench/contracts/workbench-facade";
+import type { CanvasInteractionTarget } from "@/workspace/workspace-facade";
 import type { CanvasPoint } from "@/workspace/workspace-state";
 
 export type CanvasGestureDragRecognizer =

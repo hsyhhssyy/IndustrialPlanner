@@ -1,5 +1,5 @@
 import type { CurrentInteractionMode } from "@/editor/contracts/interaction-mode";
-import type { CanvasInteractionTarget } from "@/workbench/contracts/workbench-facade";
+import type { CanvasInteractionTarget } from "@/workspace/workspace-facade";
 
 export type CanvasPanelTapIntent =
   | {

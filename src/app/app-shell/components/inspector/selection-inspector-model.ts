@@ -1,6 +1,6 @@
 import type {
   WorkbenchController,
-} from "@/workbench/contracts/workbench-facade";
+} from "@/workspace/workspace-facade";
 import type {
   Stage1EntityDefinition,
 } from "@/domain/registry/stage1-registry";

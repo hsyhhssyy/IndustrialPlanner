@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { RightDock } from "@/app-shell/components/right-dock";
+import { RightDock } from "@/app/app-shell/components/right-dock";
 import { getStage1EntityDefinition } from "@/domain/registry/stage1-registry";
 import {
   getGridBoundingBox,
   getRotatedGridFootprint,
 } from "@/shared/geometry/grid";
-import { createWorkbenchController as createWorkbenchControllerBase } from "@/workbench/controller/workbench-controller";
+import { createWorkbenchController as createWorkbenchControllerBase } from "@/workspace/workspace-controller";
 import { asLegacyWorkbenchController } from "@/tests/helpers/legacy-workbench-controller";
 
 const createWorkbenchController = (

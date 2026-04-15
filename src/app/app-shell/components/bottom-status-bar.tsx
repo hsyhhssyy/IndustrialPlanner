@@ -1,24 +1,20 @@
 import {
   LEFT_RAIL_PRIMARY_ITEMS,
-} from "@/app-shell/workbench-placeholders";
-import type {
-  DisplayTool,
-  InteractionModeKey,
-} from "@/editor/contracts/interaction-mode";
+} from "@/app/app-shell/workbench-placeholders";
 import {
   createTranslator,
   type MessageKey,
 } from "@/i18n/messages";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
-import { useExternalStore } from "@/app-shell/hooks/use-external-store";
+import { useExternalStore } from "@/app/app-shell/hooks/use-external-store";
 import { observer } from "@/shared/mobx";
-import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
+import type { WorkbenchController } from "@/workspace/workspace-facade";
 
 export interface BottomStatusBarProps {
   controller: WorkbenchController;
 }
 
-const TOOL_LABEL_KEYS: Record<DisplayTool, MessageKey> = {
+const TOOL_LABEL_KEYS: Record<string, MessageKey> = {
   select: "tool.select",
   place: "tool.place",
   belt: "tool.belt",
@@ -27,7 +23,7 @@ const TOOL_LABEL_KEYS: Record<DisplayTool, MessageKey> = {
   inspect: "tool.inspect",
 };
 
-const MODE_LABEL_KEYS: Record<InteractionModeKey, MessageKey> = {
+const MODE_LABEL_KEYS: Record<string, MessageKey> = {
   select: "tool.select",
   placement: "tool.place",
   link: "tool.link",
@@ -54,8 +50,8 @@ export const BottomStatusBar = observer(function BottomStatusBar({
     ? localizeWorkbenchText(ui.locale, activeView.label)
     : t("statusBar.none");
   const primaryStatusLabel = `${t("statusBar.view")}: ${truncateWorkbenchViewLabel(activeViewLabel)}`;
-  const modeLabel = t(MODE_LABEL_KEYS[editor.session.currentMode.key]);
-  const toolLabel = t(TOOL_LABEL_KEYS[editor.session.displayTool]);
+  const modeLabel = t(MODE_LABEL_KEYS[editor.session.currentMode.key] ?? "tool.select");
+  const toolLabel = t(TOOL_LABEL_KEYS[editor.session.displayTool] ?? "tool.select");
 
   return (
     <footer className="status-bar">

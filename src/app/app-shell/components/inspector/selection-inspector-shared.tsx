@@ -1,7 +1,4 @@
 import type {
-  WorkbenchController,
-} from "@/workbench/contracts/workbench-facade";
-import type {
   ExplicitLink,
 } from "@/domain/document/world-document";
 import type { AppLocale } from "@/i18n/messages";
@@ -10,11 +7,12 @@ import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import type {
   SelectionInspectorContext,
   SelectionInspectorState,
-} from "@/app-shell/components/inspector/selection-inspector-model";
+} from "@/app/app-shell/components/inspector/selection-inspector-model";
 import {
-  parseConfigInputValue,
   serializeConfigValueForInput,
-} from "@/app-shell/components/inspector/selection-inspector-model";
+} from "@/app/app-shell/components/inspector/selection-inspector-model";
+
+const noop = () => {};
 
 export function SelectionInspectorSummary({
   state,
@@ -63,12 +61,10 @@ export function SelectionInspectorSummary({
 }
 
 export function ConnectionList({
-  controller,
   locale,
   links,
   removeDisabled,
 }: {
-  controller: WorkbenchController;
   locale: AppLocale;
   links: ExplicitLink[];
   removeDisabled: boolean;
@@ -90,9 +86,7 @@ export function ConnectionList({
             </p>
             <button
               disabled={removeDisabled}
-              onClick={() => {
-                void controller.editor.action.removeLink(link.id);
-              }}
+              onClick={noop}
               type="button"
             >
               {t("action.removeLink")}
@@ -160,9 +154,7 @@ export function ConfigFieldMutationControl({
       <div className="inspector-option-grid">
         <button
           disabled={disabled}
-          onClick={() => {
-            void onApply(!currentValue);
-          }}
+          onClick={noop}
           type="button"
         >
           {toggleLabel}: {currentValue ? t("action.close") : t("action.open")}
@@ -170,9 +162,7 @@ export function ConfigFieldMutationControl({
         {onClear ? (
           <button
             disabled={disabled}
-            onClick={() => {
-              void onClear();
-            }}
+            onClick={noop}
             type="button"
           >
             {clearLabel}
@@ -183,34 +173,24 @@ export function ConfigFieldMutationControl({
   }
 
   return (
-    <form
-      className="cluster"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        const rawValue = String(formData.get("nextValue") ?? "");
-        void onApply(parseConfigInputValue(rawValue, currentValue));
-      }}
-    >
+    <div className="cluster">
       <input
         defaultValue={serializeConfigValueForInput(currentValue)}
         disabled={disabled}
         name="nextValue"
       />
-      <button disabled={disabled} type="submit">
+      <button disabled={disabled} onClick={noop} type="button">
         {submitLabel}
       </button>
       {onClear ? (
         <button
           disabled={disabled}
-          onClick={() => {
-            void onClear();
-          }}
+          onClick={noop}
           type="button"
         >
           {clearLabel}
         </button>
       ) : null}
-    </form>
+    </div>
   );
 }

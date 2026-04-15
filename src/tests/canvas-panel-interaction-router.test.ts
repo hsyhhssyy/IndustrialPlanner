@@ -3,7 +3,7 @@ import {
   resolveCanvasPointerDownRoute,
   resolveCanvasTouchDownRoute,
   resolveSelectedEntityMoveCandidate,
-} from "@/app-shell/components/canvas-panel/canvas-panel-interaction-router";
+} from "@/app/app-shell/components/canvas-panel/canvas-panel-interaction-router";
 import {
   createMoveInteractionMode,
   createPlacementInteractionMode,

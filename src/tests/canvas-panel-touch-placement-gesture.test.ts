@@ -5,8 +5,8 @@ import {
   createIdleCanvasPanelTouchPlacementGestureState,
   removePointerFromCanvasTouchPlacementGesture,
   shouldDispatchCanvasTouchTap,
-} from "@/app-shell/components/canvas-panel/canvas-panel-touch-placement-gesture";
-import { createIdleCanvasPanelTouchGestureState } from "@/app-shell/components/canvas-panel/canvas-panel-touch-gesture";
+} from "@/app/app-shell/components/canvas-panel/canvas-panel-touch-placement-gesture";
+import { createIdleCanvasPanelTouchGestureState } from "@/app/app-shell/components/canvas-panel/canvas-panel-touch-gesture";
 
 describe("canvas panel touch placement gesture", () => {
   it("does not move anchored placement preview until drag crosses the threshold", () => {
