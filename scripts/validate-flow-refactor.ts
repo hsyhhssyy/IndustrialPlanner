@@ -181,6 +181,27 @@ function firstArrivalTick(layout: LayoutState, deviceId: string, itemId: ItemId,
   return null
 }
 
+function arrivalTicks(layout: LayoutState, deviceId: string, itemId: ItemId, maxTicks: number, expectedCount: number) {
+  let sim = startSimulation(layout, createInitialSimState(), 'infinite')
+  let previousAmount = storageAmount(sim, deviceId, itemId)
+  const ticks: number[] = []
+
+  for (let index = 0; index < maxTicks && ticks.length < expectedCount; index += 1) {
+    sim = tickSimulation(layout, sim)
+    const nextAmount = storageAmount(sim, deviceId, itemId)
+    const delta = nextAmount - previousAmount
+    if (delta > 0) {
+      const arrivalsThisTick = Math.min(delta, expectedCount - ticks.length)
+      for (let arrivalIndex = 0; arrivalIndex < arrivalsThisTick; arrivalIndex += 1) {
+        ticks.push(sim.tick)
+      }
+    }
+    previousAmount = nextAmount
+  }
+
+  return ticks
+}
+
 function storageAmount(sim: SimState, deviceId: string, itemId: ItemId) {
   const runtime = sim.runtimeById[deviceId]
   if (!runtime || !('inventory' in runtime)) return 0
@@ -233,17 +254,23 @@ function runDirectScenario(): ScenarioResult {
   const sink = buildSinkStorageAgainst(belt, 'out_e')
   const layout = buildLayout([source, belt, sink])
   const links = ensureConnected(layout, 2, 'direct')
-  const firstTick = firstArrivalTick(layout, sink.instanceId, ORE_ITEM_ID, 80)
+  const observedArrivalTicks = arrivalTicks(layout, sink.instanceId, ORE_ITEM_ID, 200, 4)
+  const firstTick = observedArrivalTicks[0] ?? null
+  const intervals = observedArrivalTicks.slice(1).map((tick, index) => tick - observedArrivalTicks[index])
   const sim = simulate(layout, 240)
   ensureNoHardBlock(sim, layout.devices.map((device) => device.instanceId), 'direct')
   const sinkOre = storageAmount(sim, sink.instanceId, ORE_ITEM_ID)
   assert(firstTick === 41, `direct 首包到达 tick 异常，expected=41 actual=${String(firstTick)}`)
+  assert(observedArrivalTicks.length === 4, `direct 到货样本不足，expected=4 actual=${observedArrivalTicks.length}`)
+  assert(intervals.every((interval) => interval === 40), `direct 稳态到货间隔异常，expected=40 actual=${intervals.join(',')}`)
   assert(sinkOre > 0, 'direct 场景没有把物品送到终点存储')
   return {
     name: 'direct',
     summary: {
       links,
       firstTick: firstTick ?? 'missing',
+      arrivalTicks: observedArrivalTicks.join(','),
+      intervals: intervals.join(','),
       sinkOre,
     },
   }

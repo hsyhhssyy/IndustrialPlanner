@@ -1,7 +1,7 @@
 import type { DeviceInstance, DeviceRuntime, ItemId } from '../../domain/types'
 import { PORT_PRIORITY_GROUP_MIN, normalizePriorityCursorArray } from '../../domain/shared/portPriority'
 import { createDebugLogger } from '../../app/debugLogger'
-import type { TransferMatch } from './types'
+import type { CommittedTransfer, FlowEdgeSnapshot, FlowNodeSnapshot } from './types'
 
 const simFlowLogger = createDebugLogger('sim-flow')
 const FLOW_DEBUG_FOCUS_DEVICE_IDS = new Set([
@@ -19,29 +19,116 @@ type CommitContext = {
   runtimeById: Record<string, DeviceRuntime>
   deviceById: Map<string, DeviceInstance>
   warehouse: Record<ItemId, number>
-  transferMatches: TransferMatch[]
+  nodeStates: FlowNodeSnapshot[]
+  edgeStates: FlowEdgeSnapshot[]
   helpers: {
-    applyPlannedReceive: (plan: TransferMatch, runtime: DeviceRuntime, device: DeviceInstance, tick: number) => boolean
+    applyPlannedReceive: (plan: CommittedTransfer, runtime: DeviceRuntime, device: DeviceInstance, tick: number) => boolean
     isWarehouseSubmitPort: (device: DeviceInstance, toPortId: string) => boolean
-    consumeSourceByPlan: (plan: TransferMatch, runtime: DeviceRuntime, device: DeviceInstance, tick: number) => void
+    consumeSourceByPlan: (plan: CommittedTransfer, runtime: DeviceRuntime, device: DeviceInstance, tick: number) => void
     shouldIgnoreConfiguredOutputInventory: (device: DeviceInstance, fromPortId: string, itemId: ItemId) => boolean
     isSplitterType: (typeId: DeviceInstance['typeId']) => boolean
   }
 }
 
-export function commitTransferMatches(context: CommitContext) {
+function compareAcceptedEdge(
+  left: FlowEdgeSnapshot,
+  right: FlowEdgeSnapshot,
+  nodeOrderIndexById: ReadonlyMap<string, number>,
+) {
+  if (left.senderPickedOutLinkIndex !== right.senderPickedOutLinkIndex) {
+    return left.senderPickedOutLinkIndex - right.senderPickedOutLinkIndex
+  }
+  if (left.receiverPriorityGroup !== right.receiverPriorityGroup) {
+    return left.receiverPriorityGroup - right.receiverPriorityGroup
+  }
+  if (left.receiverPriorityPortIndex !== right.receiverPriorityPortIndex) {
+    return left.receiverPriorityPortIndex - right.receiverPriorityPortIndex
+  }
+
+  const leftOrder = nodeOrderIndexById.get(left.toNodeId) ?? Number.MAX_SAFE_INTEGER
+  const rightOrder = nodeOrderIndexById.get(right.toNodeId) ?? Number.MAX_SAFE_INTEGER
+  if (leftOrder !== rightOrder) return leftOrder - rightOrder
+
+  return left.edgeId.localeCompare(right.edgeId)
+}
+
+function buildCommittedTransfers(context: CommitContext) {
+  const nodeById = new Map(context.nodeStates.map((node) => [node.nodeId, node]))
+  const nodeOrderIndexById = new Map(context.nodeStates.map((node, index) => [node.nodeId, index]))
+  const outgoingByNodeId = new Map<string, FlowEdgeSnapshot[]>()
+
+  for (const edge of context.edgeStates) {
+    const outgoing = outgoingByNodeId.get(edge.fromNodeId)
+    if (outgoing) {
+      outgoing.push(edge)
+      continue
+    }
+    outgoingByNodeId.set(edge.fromNodeId, [edge])
+  }
+
+  const committedTransfers: CommittedTransfer[] = []
+
+  for (const node of context.nodeStates) {
+    if (node.baseState === 'free' || node.result === 'solved-block') continue
+
+    const acceptedOutgoing = (outgoingByNodeId.get(node.nodeId) ?? [])
+      .filter((edge) => !edge.deleted && edge.shadowPull === 'accept' && edge.shadowPush === 'accept' && Boolean(edge.plannedItemId))
+      .sort((left, right) => compareAcceptedEdge(left, right, nodeOrderIndexById))
+
+    if (acceptedOutgoing.length === 0) continue
+
+    for (const edge of acceptedOutgoing) {
+      const toNode = nodeById.get(edge.toNodeId)
+      if (!toNode || !edge.plannedItemId) continue
+
+      committedTransfers.push({
+        edgeId: edge.edgeId,
+        portLinkKey: edge.portLinkKey,
+        fromNodeId: edge.fromNodeId,
+        fromNodeKind: node.kind,
+        fromId: edge.fromId,
+        fromPortId: edge.fromPortId,
+        fromLane: edge.fromLane,
+        fromOutputSlotIndex: edge.fromOutputSlotIndex,
+        fromStorageSlotIndex: edge.fromStorageSlotIndex,
+        toNodeId: edge.toNodeId,
+        toNodeKind: toNode.kind,
+        toId: edge.toId,
+        toPortId: edge.toPortId,
+        toLane: edge.toLane,
+        toInputSlotIndex: edge.toInputSlotIndex,
+        toStorageSlotIndex: edge.toStorageSlotIndex,
+        itemId: edge.plannedItemId,
+        senderOutLinkCount: edge.senderOutLinkCount,
+        senderPickedOutLinkIndex: edge.senderPickedOutLinkIndex,
+        senderPriorityGroupKey: edge.senderPriorityGroupKey,
+        senderPriorityGroup: edge.senderPriorityGroup,
+        senderPriorityPortIndex: edge.senderPriorityPortIndex,
+        senderPriorityPortCount: edge.senderPriorityPortCount,
+        receiverPriorityGroup: edge.receiverPriorityGroup,
+        receiverPriorityPortIndex: edge.receiverPriorityPortIndex,
+        receiverPriorityPortCount: edge.receiverPriorityPortCount,
+      })
+    }
+  }
+
+  return committedTransfers
+}
+
+export function commitFlowPlan(context: CommitContext) {
+  const committedTransfers = buildCommittedTransfers(context)
   const committedSenders = new Set<string>()
   const interactedDeviceIds = new Set<string>()
   let committedCount = 0
 
-  for (const match of context.transferMatches) {
+  for (const match of committedTransfers) {
     const fromRuntime = context.runtimeById[match.fromId]
     const fromDevice = context.deviceById.get(match.fromId)
     if (!fromRuntime || !fromDevice) continue
     context.helpers.consumeSourceByPlan(match, fromRuntime, fromDevice, context.tick)
   }
 
-  for (const match of context.transferMatches) {
+  for (const match of committedTransfers) {
     const fromRuntime = context.runtimeById[match.fromId]
     const toRuntime = context.runtimeById[match.toId]
     const fromDevice = context.deviceById.get(match.fromId)
@@ -53,7 +140,6 @@ export function commitTransferMatches(context: CommitContext) {
       if (shouldTraceFocusedFlow(match.fromId, match.toId)) {
         simFlowLogger.debug('commit-blocked', {
           tick: context.tick,
-          transferId: match.transferId,
           fromId: match.fromId,
           fromTypeId: fromDevice.typeId,
           fromPortId: match.fromPortId,
@@ -71,7 +157,6 @@ export function commitTransferMatches(context: CommitContext) {
     if (shouldTraceFocusedFlow(match.fromId, match.toId)) {
       simFlowLogger.debug('commit-applied', {
         tick: context.tick,
-        transferId: match.transferId,
         fromId: match.fromId,
         fromTypeId: fromDevice.typeId,
         fromPortId: match.fromPortId,

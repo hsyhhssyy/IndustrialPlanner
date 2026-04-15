@@ -426,10 +426,11 @@ function main() {
     if (sim.tick >= focusedDebugStartTick) {
       const debug = debugSolveFlowPlanForCurrentTick(layout, sim)
       assert(debug, 'debugSolveFlowPlanForCurrentTick 返回空')
-      for (const match of debug.planResult.transferMatches) {
-        if (match.itemId !== throughput.targetItemId) continue
-        if (!firstReceiverIdsByOven.get(match.fromId)?.includes(match.toId)) continue
-        firstReceiverTransferTicksByOven.get(match.fromId)?.get(match.toId)?.push(sim.tick + 1)
+      for (const edge of debug.planResult.edgeStates) {
+        if (edge.deleted || edge.shadowPull !== 'accept' || edge.shadowPush !== 'accept') continue
+        if (edge.plannedItemId !== throughput.targetItemId) continue
+        if (!firstReceiverIdsByOven.get(edge.fromId)?.includes(edge.toId)) continue
+        firstReceiverTransferTicksByOven.get(edge.fromId)?.get(edge.toId)?.push(sim.tick + 1)
       }
     }
 

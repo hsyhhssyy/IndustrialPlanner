@@ -19,7 +19,6 @@ import type {
   PlanContext,
   PlanResult,
   PortLink,
-  TransferMatch,
 } from './types'
 
 type InternalNode = FlowNodeSnapshot & {
@@ -74,10 +73,6 @@ type ReactorOutputVirtualSlot = {
   slotIndex: number
   itemId: ItemId
   amount: number
-}
-
-function buildTransferId(tick: number, sequence: number) {
-  return `${tick}:${sequence}`
 }
 
 function buildPortLinkKey(link: Pick<PortLink, 'from' | 'to'>) {
@@ -984,14 +979,35 @@ function sourceCandidatesForEdge(
   return [{ itemId: prepared.itemId }]
 }
 
-function canTransportReceiverAccept(
+function shadowPendingNodeClearsLane(node: InternalNode, edgeById: Map<string, InternalEdge>) {
+  if (node.deleted || node.baseState !== 'shadow-pending' || !node.lane) return false
+  if (node.kind !== 'transport' && node.kind !== 'bridge') return false
+  return activeOutgoingEdges(node, edgeById).some((edge) => edge.shadowPush === 'accept')
+}
+
+function canTransportReceiverAcceptDuringPull(
   context: PlanContext,
   edge: InternalEdge,
   itemId: ItemId,
-  receivableShadowNodes: ReadonlySet<string>,
 ) {
   const clearSet = new Set<string>()
-  if (edge.toNode.baseState === 'shadow-pending' && receivableShadowNodes.has(edge.toNode.nodeId) && edge.toNode.lane) {
+  if (edge.toNode.lane) {
+    clearSet.add(`${edge.toNode.deviceId}:${edge.toNode.lane}`)
+  }
+  return context.helpers.canReceiveLaneForItem(edge.toNode.device, edge.toNode.runtime, edge.toPortId, clearSet, itemId) === edge.toLane
+}
+
+function canTransportReceiverAcceptDuringPush(
+  context: PlanContext,
+  edge: InternalEdge,
+  itemId: ItemId,
+  edgeById: Map<string, InternalEdge>,
+) {
+  const clearSet = new Set<string>()
+  if (edge.toNode.baseState === 'shadow-pending') {
+    if (!shadowPendingNodeClearsLane(edge.toNode, edgeById)) return false
+  }
+  if (edge.toNode.lane && shadowPendingNodeClearsLane(edge.toNode, edgeById)) {
     clearSet.add(`${edge.toNode.deviceId}:${edge.toNode.lane}`)
   }
   return context.helpers.canReceiveLaneForItem(edge.toNode.device, edge.toNode.runtime, edge.toPortId, clearSet, itemId) === edge.toLane
@@ -1032,7 +1048,7 @@ function reserveProcessorInput(
   targetSlot.amount += 1
 }
 
-function nodeReceivesDuringPull(node: InternalNode, receivableShadowNodes: ReadonlySet<string>) {
+function nodeReceivesDuringPull(node: InternalNode, _edgeById: Map<string, InternalEdge>) {
   if (node.deleted) return false
   if (node.kind === 'storage') {
     return node.baseState === 'free' || node.baseState === 'shadow-pending'
@@ -1040,7 +1056,7 @@ function nodeReceivesDuringPull(node: InternalNode, receivableShadowNodes: Reado
   if (node.kind === 'processor-input') return node.baseState === 'free'
   if (node.baseState === 'free') return true
   if ((node.kind === 'transport' || node.kind === 'bridge') && node.baseState === 'shadow-pending') {
-    return receivableShadowNodes.has(node.nodeId)
+    return true
   }
   return false
 }
@@ -1063,7 +1079,6 @@ function selectShadowPull(
   context: PlanContext,
   nodes: InternalNode[],
   edgeById: Map<string, InternalEdge>,
-  receivableShadowNodes: ReadonlySet<string>,
   lanesAdvancedThisTick: Set<string>,
   storageStates: Map<string, StorageVirtualState>,
   reactorOutputStates: Map<string, ReactorOutputVirtualSlot[]>,
@@ -1077,7 +1092,7 @@ function selectShadowPull(
       node.result = 'solved-block'
       continue
     }
-    if (!nodeReceivesDuringPull(node, receivableShadowNodes)) continue
+    if (!nodeReceivesDuringPull(node, edgeById)) continue
     const incoming = activeIncomingEdges(node, edgeById).sort(compareReceiverEdge)
     if (incoming.length === 0) continue
 
@@ -1126,7 +1141,7 @@ function selectShadowPull(
         if (node.kind === 'processor-input') {
           return context.helpers.canAcceptProcessorInputAtSlot(node.device, node.runtime, edge.toPortId, node.slotIndex ?? 0, candidate.itemId, 1)
         }
-        return canTransportReceiverAccept(context, edge, candidate.itemId, receivableShadowNodes)
+        return canTransportReceiverAcceptDuringPull(context, edge, candidate.itemId)
       })
       if (!accepted) continue
       edge.shadowPull = 'accept'
@@ -1139,7 +1154,6 @@ function selectShadowPush(
   context: PlanContext,
   nodes: InternalNode[],
   edgeById: Map<string, InternalEdge>,
-  receivableShadowNodes: Set<string>,
   lanesAdvancedThisTick: Set<string>,
   storageStates: Map<string, StorageVirtualState>,
   reactorOutputStates: Map<string, ReactorOutputVirtualSlot[]>,
@@ -1183,7 +1197,7 @@ function selectShadowPush(
         if (edge.toNode.kind === 'processor-input') {
           return canProcessorInputReceive(context, edge, candidate.itemId, processorStates)
         }
-        return canTransportReceiverAccept(context, edge, candidate.itemId, receivableShadowNodes)
+        return canTransportReceiverAcceptDuringPush(context, edge, candidate.itemId, edgeById)
       })
       if (!selectedCandidate) continue
 
@@ -1217,9 +1231,6 @@ function selectShadowPush(
 
     if (acceptedCount > 0) {
       node.result = 'solved-run'
-      if ((node.kind === 'transport' || node.kind === 'bridge') && node.baseState === 'shadow-pending') {
-        receivableShadowNodes.add(node.nodeId)
-      }
     } else {
       node.result = 'solved-block'
     }
@@ -1244,49 +1255,7 @@ function finalizeNodeResults(nodes: InternalNode[]) {
   }
 }
 
-function buildTransferMatches(tick: number, edgeById: Map<string, InternalEdge>) {
-  const transferMatches: TransferMatch[] = []
-  let sequence = 0
-
-  for (const edge of [...edgeById.values()].sort(compareEdgeKey)) {
-    if (edge.deleted || edge.shadowPull !== 'accept' || edge.shadowPush !== 'accept' || !edge.plannedItemId) continue
-    transferMatches.push({
-      transferId: buildTransferId(tick, sequence),
-      edgeId: edge.edgeId,
-      portLinkKey: edge.portLinkKey,
-      fromNodeId: edge.fromNodeId,
-      fromNodeKind: edge.fromNode.kind,
-      fromId: edge.fromId,
-      fromPortId: edge.fromPortId,
-      fromLane: edge.fromLane,
-      fromOutputSlotIndex: edge.fromNode.kind === 'processor-output' ? edge.fromNode.slotIndex : edge.fromOutputSlotIndex,
-      fromStorageSlotIndex: edge.fromStorageSlotIndex,
-      toNodeId: edge.toNodeId,
-      toNodeKind: edge.toNode.kind,
-      toId: edge.toId,
-      toPortId: edge.toPortId,
-      toLane: edge.toLane,
-      toInputSlotIndex: edge.toNode.kind === 'processor-input' ? edge.toNode.slotIndex : edge.toInputSlotIndex,
-      toStorageSlotIndex: edge.toStorageSlotIndex,
-      receiverCursorKey: `${edge.toId}:${edge.toLane}`,
-      itemId: edge.plannedItemId,
-      senderOutLinkCount: edge.senderOutLinkCount,
-      senderPickedOutLinkIndex: edge.senderPickedOutLinkIndex,
-      senderPriorityGroupKey: edge.senderPriorityGroupKey,
-      senderPriorityGroup: edge.senderPriorityGroup,
-      senderPriorityPortIndex: edge.senderPriorityPortIndex,
-      senderPriorityPortCount: edge.senderPriorityPortCount,
-      receiverPriorityGroup: edge.receiverPriorityGroup,
-      receiverPriorityPortIndex: edge.receiverPriorityPortIndex,
-      receiverPriorityPortCount: edge.receiverPriorityPortCount,
-    })
-    sequence += 1
-  }
-
-  return transferMatches
-}
-
-export function solvePullTransferMatches(context: PlanContext): PlanResult {
+export function solveFlowPlan(context: PlanContext): PlanResult {
   const nodes = buildNodes(context)
   const edgeById = buildEdges(context, nodes)
 
@@ -1294,8 +1263,6 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
   eliminateCycles(nodes, edgeById)
 
   const lanesAdvancedThisTick = new Set<string>()
-  const receivableShadowNodes = new Set<string>()
-
   resetDynamicState(nodes, edgeById)
   const storageStates = buildStorageStates(nodes)
   const reactorOutputStates = buildReactorOutputStates(nodes)
@@ -1303,16 +1270,13 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
   const traversalOrder = buildLayeredTraversalOrder(nodes, edgeById)
 
   for (const node of traversalOrder) {
-    selectShadowPull(context, [node], edgeById, receivableShadowNodes, lanesAdvancedThisTick, storageStates, reactorOutputStates)
-    selectShadowPush(context, [node], edgeById, receivableShadowNodes, lanesAdvancedThisTick, storageStates, reactorOutputStates, processorStates)
+    selectShadowPull(context, [node], edgeById, lanesAdvancedThisTick, storageStates, reactorOutputStates)
+    selectShadowPush(context, [node], edgeById, lanesAdvancedThisTick, storageStates, reactorOutputStates, processorStates)
   }
 
   finalizeNodeResults(nodes)
-  const transferMatches = buildTransferMatches(context.tick, edgeById)
 
   return {
-    transferMatches,
-    plannedSenders: new Set(transferMatches.map((match) => match.fromId)),
     lanesAdvancedThisTick,
     nodeStates: nodes.map(({ device, runtime, deviceIndex, localOrder, ...node }) => node),
     edgeStates: [...edgeById.values()].map(({ fromNode, toNode, ...edge }) => edge),

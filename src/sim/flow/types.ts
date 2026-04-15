@@ -53,8 +53,7 @@ export type FlowEdgeSnapshot = {
   receiverPriorityPortCount: number
 }
 
-export type TransferMatch = {
-  transferId: string
+export type CommittedTransfer = {
   edgeId: string
   portLinkKey: string
   fromNodeId: string
@@ -71,7 +70,6 @@ export type TransferMatch = {
   toLane: ReceiveLane
   toInputSlotIndex?: number
   toStorageSlotIndex?: number
-  receiverCursorKey: string
   itemId: ItemId
   senderOutLinkCount: number
   senderPickedOutLinkIndex: number
@@ -143,8 +141,6 @@ export type PlanContext = {
 }
 
 export type PlanResult = {
-  transferMatches: TransferMatch[]
-  plannedSenders: Set<string>
   lanesAdvancedThisTick: Set<string>
   nodeStates: FlowNodeSnapshot[]
   edgeStates: FlowEdgeSnapshot[]

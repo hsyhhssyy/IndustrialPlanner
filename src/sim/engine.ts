@@ -22,9 +22,9 @@ import {
   reactorSelectedRecipeIds,
 } from './reactorPool'
 import { applySimulationInitializationSpecialRules } from './initializationSpecialRules'
-import { solvePullTransferMatches } from './flow/plan'
-import { commitTransferMatches } from './flow/commit'
-import type { PortLink as FlowPortLink, TransferMatch } from './flow/types'
+import { solveFlowPlan } from './flow/plan'
+import { commitFlowPlan } from './flow/commit'
+import type { CommittedTransfer, PortLink as FlowPortLink } from './flow/types'
 import type {
   BufferGroupRuntime,
   BufferSlotRuntime,
@@ -1606,7 +1606,7 @@ function prepareSourceLaneItem(
 }
 
 function consumeSourceByPlan(
-  plan: TransferMatch,
+  plan: CommittedTransfer,
   fromRuntime: DeviceRuntime,
   fromDevice: DeviceInstance,
   tick: number,
@@ -1639,7 +1639,7 @@ function consumeSourceByPlan(
 }
 
 function applyPlannedReceive(
-  plan: TransferMatch,
+  plan: CommittedTransfer,
   toRuntime: DeviceRuntime,
   toDevice: DeviceInstance,
   tick: number,
@@ -2578,7 +2578,7 @@ export function debugSolveFlowPlanForCurrentTick(layout: LayoutState, sim: SimSt
     }
   }
 
-  const planResult = solvePullTransferMatches({
+  const planResult = solveFlowPlan({
     tick: sim.tick,
     layoutDevices: layout.devices,
     runtimeById,
@@ -2861,7 +2861,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     }
   }
 
-  const planResult = solvePullTransferMatches({
+  const planResult = solveFlowPlan({
     tick: sim.tick,
     layoutDevices: layout.devices,
     runtimeById,
@@ -2892,12 +2892,13 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
   const lanesAdvancedThisTick = new Set(planResult.lanesAdvancedThisTick)
 
-  const commitResult = commitTransferMatches({
+  const commitResult = commitFlowPlan({
     tick: sim.tick,
     runtimeById,
     deviceById,
     warehouse,
-    transferMatches: planResult.transferMatches,
+    nodeStates: planResult.nodeStates,
+    edgeStates: planResult.edgeStates,
     helpers: {
       applyPlannedReceive,
       isWarehouseSubmitPort,
