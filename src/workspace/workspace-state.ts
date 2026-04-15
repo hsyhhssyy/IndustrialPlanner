@@ -1,108 +1,49 @@
-import type { WorldDocument } from "@/domain/document/world-document";
-import type { CompiledTopology } from "@/domain/topology/compiled-topology";
-import type { EditorSession } from "@/editor/contracts/editor-session";
-import { makeAutoObservable } from "@/shared/mobx";
+import { makeAutoObservable } from "mobx";
+import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";
+import { createSnapshotStore } from "@/shared/snapshot-store/snapshot-store";
 import type {
-  CanvasViewState,
-  EditorInternalSessionState,
-  WorkspaceEditorHistoryState,
-  WorkspaceEditorSessionState,
-  WorkspaceEditorState,
-} from "@/workspace/types";
+  WorkspaceState,
+} from "./types";
 
-export interface WorkspaceState {
-  document: WorldDocument;
-  topology: CompiledTopology;
-  editorSession: WorkspaceEditorSessionState;
-  editorHistory: WorkspaceEditorHistoryState;
-}
-
-export type WorkspaceStateInput = WorkspaceState;
-
-export class WorkspaceStateModel implements WorkspaceState {
-  document: WorldDocument;
-  topology: CompiledTopology;
-  editorSession: WorkspaceEditorSessionState;
-  editorHistory: WorkspaceEditorHistoryState;
-
-  constructor(initialState: WorkspaceStateInput) {
-    this.document = initialState.document;
-    this.topology = initialState.topology;
-    this.editorSession = initialState.editorSession;
-    this.editorHistory = initialState.editorHistory;
-
-    makeAutoObservable(this, {}, { autoBind: true });
-  }
-
-  apply(nextState: Partial<WorkspaceState>): void {
-    if (nextState.document !== undefined) {
-      this.document = nextState.document;
-    }
-    if (nextState.topology !== undefined) {
-      this.topology = nextState.topology;
-    }
-    if (nextState.editorSession !== undefined) {
-      this.editorSession = nextState.editorSession;
-    }
-    if (nextState.editorHistory !== undefined) {
-      this.editorHistory = nextState.editorHistory;
-    }
-  }
-}
-
-export function createWorkspaceState(
-  initialState: WorkspaceStateInput,
-): WorkspaceStateModel {
-  return new WorkspaceStateModel(initialState);
-}
-
-export function projectWorkspaceEditorSessionState(
-  session: WorkspaceEditorSessionState | EditorSession,
-): WorkspaceEditorSessionState {
-  return {
-    displayTool: session.displayTool,
-    currentMode: session.currentMode,
-    drafts: session.drafts,
-    selectedEntities: session.selectedEntities,
-    draftEntities: session.draftEntities,
-    marqueeRange: session.marqueeRange,
-    selectionInputMode: session.selectionInputMode,
+export function createWorkspaceState(): WorkspaceState {
+  const state: WorkspaceState = {
+    document: createSnapshotStore(createStage1SeedWorldDocument()),
+    topology: {
+      version: 0,
+      nodes: [],
+      links: [],
+      diagnostics: [],
+    },
+    editorSession: {
+      displayTool: "select",
+      currentMode: {
+        kind: "select",
+        anchorEntityId: null,
+      },
+      drafts: {},
+      selectedEntities: [],
+      draftEntities: [],
+      marqueeRange: null,
+      selectionInputMode: null,
+    },
+    editorHistory: {
+      undoDepth: 0,
+      redoDepth: 0,
+      lastCommandId: null,
+    },
+    ui: {
+      leftDockOpen: true,
+      rightDockOpen: true,
+      bottomBarOpen: true,
+      activePanel: null,
+    },
+    canvasView: {
+      offset: { x: 0, y: 0 },
+      zoom: 1,
+    },
   };
-}
 
-export function projectWorkspaceEditorState(state: {
-  session: WorkspaceEditorSessionState | EditorSession;
-  history: WorkspaceEditorHistoryState;
-}): WorkspaceEditorState {
-  return {
-    session: projectWorkspaceEditorSessionState(state.session),
-    history: state.history,
-  };
-}
+  makeAutoObservable(state, {}, { autoBind: true });
 
-export function projectEditorInternalSessionState(
-  session: EditorSession,
-): EditorInternalSessionState {
-  return {
-    hoveredEntityId: session.hoveredEntityId ?? null,
-  };
+  return state;
 }
-
-export function createInitialCanvasViewState(
-  initialState: Partial<CanvasViewState> = {},
-): CanvasViewState {
-  return {
-    offset: initialState.offset ?? { x: 0, y: 0 },
-    zoom: initialState.zoom ?? 1,
-  };
-}
-
-export type {
-  CanvasPoint,
-  CanvasViewState,
-  EditorHistoryState,
-  EditorSessionState,
-  WorkspaceEditorHistoryState,
-  WorkspaceEditorSessionState,
-  WorkspaceEditorState,
-} from "@/workspace/types";
