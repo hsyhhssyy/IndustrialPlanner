@@ -91,7 +91,7 @@ export function ConnectionList({
             <button
               disabled={removeDisabled}
               onClick={() => {
-                void controller.removeLink(link.id);
+                void controller.editor.action.removeLink(link.id);
               }}
               type="button"
             >

@@ -14,21 +14,59 @@ export interface CanvasViewState {
   zoom: number;
 }
 
-export type EditorSessionState = EditorSession;
-export type EditorHistoryState = EditorHistorySliceState;
+export type WorkspaceEditorSessionState = Omit<EditorSession, "hoveredEntityId">;
+export interface EditorInternalSessionState {
+  hoveredEntityId: string | null;
+}
+
+export type WorkspaceEditorHistoryState = EditorHistorySliceState;
+export type EditorSessionState = WorkspaceEditorSessionState;
+export type EditorHistoryState = WorkspaceEditorHistoryState;
 
 export interface WorkspaceEditorState {
-  session: EditorSessionState;
-  history: EditorHistoryState;
+  session: WorkspaceEditorSessionState;
+  history: WorkspaceEditorHistoryState;
 }
 
 export interface WorkspaceState {
   document: WorldDocument;
   topology: CompiledTopology;
-  editorSession: EditorSessionState;
-  editorHistory: EditorHistoryState;
+  editorSession: WorkspaceEditorSessionState;
+  editorHistory: WorkspaceEditorHistoryState;
   ui: WorkbenchUiState;
   canvasView: CanvasViewState;
+}
+
+export function projectWorkspaceEditorSessionState(
+  session: WorkspaceEditorSessionState | EditorSession,
+): WorkspaceEditorSessionState {
+  return {
+    displayTool: session.displayTool,
+    currentMode: session.currentMode,
+    drafts: session.drafts,
+    selectedEntities: session.selectedEntities,
+    draftEntities: session.draftEntities,
+    marqueeRange: session.marqueeRange,
+    selectionInputMode: session.selectionInputMode,
+  };
+}
+
+export function projectWorkspaceEditorState(state: {
+  session: WorkspaceEditorSessionState | EditorSession;
+  history: WorkspaceEditorHistoryState;
+}): WorkspaceEditorState {
+  return {
+    session: projectWorkspaceEditorSessionState(state.session),
+    history: state.history,
+  };
+}
+
+export function projectEditorInternalSessionState(
+  session: EditorSession,
+): EditorInternalSessionState {
+  return {
+    hoveredEntityId: session.hoveredEntityId ?? null,
+  };
 }
 
 export function createInitialCanvasViewState(

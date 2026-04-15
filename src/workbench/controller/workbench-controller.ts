@@ -1,7 +1,9 @@
+import type { AppFacade } from "@/app/app-facade";
 import type {
   CanvasInteractionTarget,
   WorkbenchController,
 } from "@/workbench/contracts/workbench-facade";
+import type { EditorFacade } from "@/editor/editor-facade";
 import type {
   DockId,
   LeftPanelMode,
@@ -67,6 +69,7 @@ import {
   createEditorRuntimeStore,
 } from "@/editor/editor-runtime-store";
 import type { AppLocale } from "@/i18n/messages";
+import type { RenderFacade } from "@/renderer/render-facade";
 import { deriveRenderWorldBoundsPx } from "@/renderer/scene/render-world-bounds";
 import {
   type SnapshotStore,
@@ -152,6 +155,10 @@ interface CreateWorkbenchControllerOptions {
 
 class WorkbenchControllerImpl implements WorkbenchController {
   readonly registry: Stage1Registry;
+  readonly workspaceState: WorkspaceStore;
+  readonly app: AppFacade;
+  readonly editor: EditorFacade;
+  readonly render: RenderFacade;
   readonly uiStore;
   readonly documentStore;
   readonly editorStore;
@@ -214,6 +221,82 @@ class WorkbenchControllerImpl implements WorkbenchController {
     });
     this.documentStore = this.workspaceStore.documentStore;
     this.topologyStore = this.workspaceStore.topologyStore;
+    this.workspaceState = this.workspaceStore;
+    this.app = {
+      query: {
+        getLogLevel: () => this.getLogLevel(),
+      },
+      action: {
+        setLeftPanelMode: (mode) => this.setLeftPanelMode(mode),
+        setLocale: (locale) => this.setLocale(locale),
+        setLogLevel: (level) => this.setLogLevel(level),
+        setDiagnosticsVisible: (visible) => this.setDiagnosticsVisible(visible),
+        setDockOpen: (dockId, open) => this.setDockOpen(dockId, open),
+        toggleDockCollapsed: (dockId) => this.toggleDockCollapsed(dockId),
+      },
+    };
+    this.editor = {
+      query: {
+        getCanvasInteractionTarget: (screenPoint) =>
+          this.getCanvasInteractionTarget(screenPoint),
+        queryWorldInputFromScreenPoint: (screenPoint) =>
+          this.queryWorldInputFromScreenPoint(screenPoint),
+      },
+      action: {
+        setInteractionMode: (modeKey) => this.setInteractionMode(modeKey),
+        armPlacement: (definitionId, displayTool, inputMode) =>
+          this.armPlacement(definitionId, displayTool, inputMode),
+        beginMoveFromScreenPoint: (entityId, screenPoint, inputMode) =>
+          this.beginMoveFromScreenPoint(entityId, screenPoint, inputMode),
+        beginMarqueeFromScreenPoint: (screenPoint, inputMode, selectionMode) =>
+          this.beginMarqueeFromScreenPoint(
+            screenPoint,
+            inputMode,
+            selectionMode,
+          ),
+        updateMoveDraftFromScreenPoint: (screenPoint) =>
+          this.updateMoveDraftFromScreenPoint(screenPoint),
+        updateMarqueeDraftFromScreenPoint: (screenPoint) =>
+          this.updateMarqueeDraftFromScreenPoint(screenPoint),
+        confirmMovePreview: () => this.confirmMovePreview(),
+        cancelMove: () => this.cancelMove(),
+        confirmMarqueeSelection: () => this.confirmMarqueeSelection(),
+        cancelMarquee: () => this.cancelMarquee(),
+        rotateMoveClockwise: () => this.rotateMoveClockwise(),
+        rotatePlacementClockwise: () => this.rotatePlacementClockwise(),
+        cancelPlacement: () => this.cancelPlacement(),
+        centerPlacementPreview: () => this.centerPlacementPreview(),
+        updatePlacementPreviewFromScreenPoint: (screenPoint) =>
+          this.updatePlacementPreviewFromScreenPoint(screenPoint),
+        confirmPlacementPreview: () => this.confirmPlacementPreview(),
+        clearPlacementPreview: () => this.clearPlacementPreview(),
+        selectEntity: (entityId, inputMode, selectionMode) =>
+          this.selectEntity(entityId, inputMode, selectionMode),
+        rotateSelectionClockwise: () => this.rotateSelectionClockwise(),
+        clearSelection: () => this.clearSelection(),
+        patchEntityConfig: (entityId, patch) =>
+          this.patchEntityConfig(entityId, patch),
+        commitPlacementAtScreenPoint: (screenPoint) =>
+          this.commitPlacementAtScreenPoint(screenPoint),
+        activateLinkTarget: (entityId) => this.activateLinkTarget(entityId),
+        removeSelection: () => this.removeSelection(),
+        removeSelectionLinks: () => this.removeSelectionLinks(),
+        removeLink: (linkId) => this.removeLink(linkId),
+        undo: () => this.undo(),
+        redo: () => this.redo(),
+      },
+    };
+    this.render = {
+      query: {},
+      action: {
+        zoomIn: () => this.zoomIn(),
+        zoomOut: () => this.zoomOut(),
+        zoomCanvasAt: (screenPoint, scaleFactor) =>
+          this.zoomCanvasAt(screenPoint, scaleFactor),
+        panCanvasBy: (screenDelta) => this.panCanvasBy(screenDelta),
+        setCanvasViewportSize: (size) => this.setCanvasViewportSize(size),
+      },
+    };
 
     this.sync("editor");
   }

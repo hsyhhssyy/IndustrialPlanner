@@ -12,7 +12,7 @@ export interface LeftToolbarProps {
 }
 
 export function LeftToolbar({ controller }: LeftToolbarProps) {
-  const ui = useExternalStore(controller.uiStore);
+  const ui = useExternalStore(controller.workspaceState.uiStore);
   const locale = ui.locale;
   const activeLeftPanelMode = ui.leftPanelMode;
   const leftDockOpen = ui.leftDock.open;
@@ -40,11 +40,11 @@ export function LeftToolbar({ controller }: LeftToolbarProps) {
               key={item.id}
               onClick={() => {
                 if (isActive && leftDockOpen) {
-                  controller.setDockOpen("left", false);
+                  controller.app.action.setDockOpen("left", false);
                   return;
                 }
 
-                controller.setLeftPanelMode(item.id);
+                controller.app.action.setLeftPanelMode(item.id);
               }}
               type="button"
             >

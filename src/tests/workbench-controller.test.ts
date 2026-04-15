@@ -13,7 +13,6 @@ import {
   isMoveInteractionMode,
   isPlacementInteractionMode,
 } from "@/editor/contracts/interaction-mode";
-import { buildRenderScene } from "@/renderer/scene/build-render-scene";
 import {
   getGridBoundingBox,
   getGridBoundsCenterCells,
@@ -25,11 +24,23 @@ import {
   type GridRotation,
 } from "@/shared/geometry/grid";
 import { createPlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
-import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
+import { createWorkbenchController as createWorkbenchControllerBase } from "@/workbench/controller/workbench-controller";
+import { asLegacyWorkbenchController } from "@/tests/helpers/legacy-workbench-controller";
+import { buildRenderScene as buildRenderSceneBase } from "@/renderer/scene/build-render-scene";
+import type { RenderSceneInput } from "@/renderer/scene/types";
 import {
   screenToWorldPoint,
   worldToGridPoint,
 } from "@/workbench/viewport/viewport-math";
+
+const createWorkbenchController = (
+  ...args: Parameters<typeof createWorkbenchControllerBase>
+) => asLegacyWorkbenchController(createWorkbenchControllerBase(...args));
+
+function buildRenderScene(input: RenderSceneInput & { runtimeSnapshot?: unknown }) {
+  const { runtimeSnapshot: _runtimeSnapshot, ...nextInput } = input;
+  return buildRenderSceneBase(nextInput);
+}
 
 function getPlacementMode(
   session: ReturnType<typeof createWorkbenchController>["editorStore"]["session"],

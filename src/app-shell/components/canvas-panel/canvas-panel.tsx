@@ -122,9 +122,9 @@ export const CanvasPanel = observer(function CanvasPanel({
   workspaceDerivedStore,
   placementPreviewProfiler,
 }: CanvasPanelProps) {
-  const ui = controller.uiStore;
-  const worldDocument = useExternalStore(controller.documentStore);
-  const editor = controller.editorStore;
+  const ui = useExternalStore(controller.workspaceState.uiStore);
+  const worldDocument = useExternalStore(controller.workspaceState.documentStore);
+  const editor = useExternalStore(controller.workspaceState.editorStore);
   const render = workspaceDerivedStore.render;
   const stageRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -228,12 +228,12 @@ export const CanvasPanel = observer(function CanvasPanel({
     (screenPoint: CanvasPoint) => {
       if (placementPreviewProfiler) {
         placementPreviewProfiler.measureStage("canvas.pointerMoveDispatch", () => {
-          controller.updatePlacementPreviewFromScreenPoint(screenPoint);
+          controller.editor.action.updatePlacementPreviewFromScreenPoint(screenPoint);
         });
         return;
       }
 
-      controller.updatePlacementPreviewFromScreenPoint(screenPoint);
+      controller.editor.action.updatePlacementPreviewFromScreenPoint(screenPoint);
     },
   );
 
@@ -252,15 +252,15 @@ export const CanvasPanel = observer(function CanvasPanel({
 
   const cancelPlacement = () => {
     cancelScheduledPlacementPreview();
-    controller.cancelPlacement();
+    controller.editor.action.cancelPlacement();
   };
 
   const cancelMove = () => {
-    controller.cancelMove();
+    controller.editor.action.cancelMove();
   };
 
   const cancelMarquee = () => {
-    controller.cancelMarquee();
+    controller.editor.action.cancelMarquee();
   };
 
   const routeGestureEvents = useEffectEvent(
@@ -317,12 +317,16 @@ export const CanvasPanel = observer(function CanvasPanel({
 
     applyGestureSessionResult(result);
 
-    if (isMoveInteractionMode(controller.editorStore.getSnapshot().session.currentMode)) {
-      controller.cancelMove();
+    if (
+      isMoveInteractionMode(
+        controller.workspaceState.editorStore.getSnapshot().session.currentMode,
+      )
+    ) {
+      controller.editor.action.cancelMove();
     }
 
-    if (getManagedMarqueeDraft(controller.editorStore.getSnapshot().session)) {
-      controller.cancelMarquee();
+    if (getManagedMarqueeDraft(controller.workspaceState.editorStore.getSnapshot().session)) {
+      controller.editor.action.cancelMarquee();
     }
   });
 
@@ -397,7 +401,7 @@ export const CanvasPanel = observer(function CanvasPanel({
       return;
     }
 
-    controller.centerPlacementPreview();
+    controller.editor.action.centerPlacementPreview();
   }, [
     anchoredPlacementActive,
     controller,
@@ -424,7 +428,7 @@ export const CanvasPanel = observer(function CanvasPanel({
         x: entry.contentRect.width,
         y: entry.contentRect.height,
       });
-      controller.setCanvasViewportSize({
+      controller.render.action.setCanvasViewportSize({
         x: entry.contentRect.width,
         y: entry.contentRect.height,
       });
@@ -454,7 +458,7 @@ export const CanvasPanel = observer(function CanvasPanel({
         return;
       }
 
-      controller.panCanvasBy(screenDelta);
+      controller.render.action.panCanvasBy(screenDelta);
       frameRef.current = window.requestAnimationFrame(tick);
     };
 
@@ -506,7 +510,7 @@ export const CanvasPanel = observer(function CanvasPanel({
         currentMode: editor.session.currentMode,
         screenPoint: point,
         selection: selectedEntityIds,
-        target: controller.getCanvasInteractionTarget(point),
+        target: controller.editor.query.getCanvasInteractionTarget(point),
       });
       const result = gestureSessionRef.current!.handlePointerDown({
         button: event.button,
@@ -529,7 +533,7 @@ export const CanvasPanel = observer(function CanvasPanel({
       selection: selectedEntityIds,
       target:
         event.button === 0
-          ? controller.getCanvasInteractionTarget(point)
+          ? controller.editor.query.getCanvasInteractionTarget(point)
           : { kind: "blank" },
     });
 
@@ -582,7 +586,7 @@ export const CanvasPanel = observer(function CanvasPanel({
 
     if (!anchoredPlacementActive) {
       cancelScheduledPlacementPreview();
-      controller.clearPlacementPreview();
+      controller.editor.action.clearPlacementPreview();
     }
   };
 
@@ -610,7 +614,9 @@ export const CanvasPanel = observer(function CanvasPanel({
 
     if (
       event.pointerType !== "touch" &&
-      isMoveInteractionMode(controller.editorStore.getSnapshot().session.currentMode) &&
+      isMoveInteractionMode(
+        controller.workspaceState.editorStore.getSnapshot().session.currentMode,
+      ) &&
       result.events.some(
         (gestureEvent) =>
           gestureEvent.kind === "drag-end" &&
@@ -618,12 +624,12 @@ export const CanvasPanel = observer(function CanvasPanel({
           gestureEvent.outcome === "cancel",
       )
     ) {
-      controller.cancelMove();
+      controller.editor.action.cancelMove();
     }
 
     if (
       event.pointerType !== "touch" &&
-      getManagedMarqueeDraft(controller.editorStore.getSnapshot().session) &&
+      getManagedMarqueeDraft(controller.workspaceState.editorStore.getSnapshot().session) &&
       result.events.some(
         (gestureEvent) =>
           gestureEvent.kind === "drag-end" &&
@@ -631,7 +637,7 @@ export const CanvasPanel = observer(function CanvasPanel({
           gestureEvent.outcome === "cancel",
       )
     ) {
-      controller.cancelMarquee();
+      controller.editor.action.cancelMarquee();
     }
   };
 
@@ -656,7 +662,7 @@ export const CanvasPanel = observer(function CanvasPanel({
 
     const bounds = event.currentTarget.getBoundingClientRect();
 
-    controller.zoomCanvasAt(
+    controller.render.action.zoomCanvasAt(
       {
         x: event.clientX - bounds.left,
         y: event.clientY - bounds.top,
@@ -694,13 +700,13 @@ export const CanvasPanel = observer(function CanvasPanel({
 
         if (moveMode) {
           event.preventDefault();
-          controller.rotateMoveClockwise();
+          controller.editor.action.rotateMoveClockwise();
           return;
         }
 
         if (placementMode) {
           event.preventDefault();
-          controller.rotatePlacementClockwise();
+          controller.editor.action.rotatePlacementClockwise();
           return;
         }
 
@@ -709,7 +715,7 @@ export const CanvasPanel = observer(function CanvasPanel({
         }
 
         event.preventDefault();
-        void controller.rotateSelectionClockwise();
+        void controller.editor.action.rotateSelectionClockwise();
         return;
       case "delete":
       case "f":
@@ -718,7 +724,7 @@ export const CanvasPanel = observer(function CanvasPanel({
         }
 
         event.preventDefault();
-        void controller.removeSelection();
+  void controller.editor.action.removeSelection();
         return;
       default:
         return;
@@ -786,7 +792,14 @@ export const CanvasPanel = observer(function CanvasPanel({
         >
           <RendererHost
             placementPreviewProfiler={placementPreviewProfiler}
-            sceneSource={controller}
+            sceneSource={{
+              documentStore: controller.workspaceState.documentStore,
+              editorStore: controller.workspaceState.editorStore,
+              uiStore: controller.workspaceState.uiStore,
+              canvasViewStore: controller.workspaceState.canvasViewStore,
+              topologyStore: controller.workspaceState.topologyStore,
+              registry: controller.registry,
+            }}
           />
           {render.marqueeScreenBox ? (
             <div
@@ -849,7 +862,7 @@ export const CanvasPanel = observer(function CanvasPanel({
                   ariaLabel: t("action.rotatePlacement"),
                   icon: "rotate",
                   onClick: () => {
-                    controller.rotatePlacementClockwise();
+                    controller.editor.action.rotatePlacementClockwise();
                   },
                   tone: "rotate",
                 },
@@ -859,7 +872,7 @@ export const CanvasPanel = observer(function CanvasPanel({
                   disabled: !anchoredPlacementPreview?.valid,
                   icon: "confirm",
                   onClick: () => {
-                    void controller.confirmPlacementPreview();
+                    void controller.editor.action.confirmPlacementPreview();
                   },
                   tone: "confirm",
                 },
@@ -883,7 +896,7 @@ export const CanvasPanel = observer(function CanvasPanel({
                   ariaLabel: t("action.rotateMove"),
                   icon: "rotate",
                   onClick: () => {
-                    controller.rotateMoveClockwise();
+                    controller.editor.action.rotateMoveClockwise();
                   },
                   tone: "rotate",
                 },
@@ -893,7 +906,7 @@ export const CanvasPanel = observer(function CanvasPanel({
                   disabled: !anchoredMoveDraft?.valid,
                   icon: "confirm",
                   onClick: () => {
-                    void controller.confirmMovePreview();
+                    void controller.editor.action.confirmMovePreview();
                   },
                   tone: "confirm",
                 },
@@ -910,7 +923,7 @@ export const CanvasPanel = observer(function CanvasPanel({
                   ariaLabel: t("action.rotateSelection"),
                   icon: "rotate",
                   onClick: () => {
-                    void controller.rotateSelectionClockwise();
+                    void controller.editor.action.rotateSelectionClockwise();
                   },
                   tone: "rotate",
                 },
@@ -919,7 +932,7 @@ export const CanvasPanel = observer(function CanvasPanel({
                   ariaLabel: t("action.deleteSelection"),
                   icon: "delete",
                   onClick: () => {
-                    void controller.removeSelection();
+                    void controller.editor.action.removeSelection();
                   },
                   tone: "delete",
                 },

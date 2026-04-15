@@ -10,6 +10,7 @@ import {
   type MessageKey,
 } from "@/i18n/messages";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
+import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import { observer } from "@/shared/mobx";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
 
@@ -42,8 +43,8 @@ function truncateWorkbenchViewLabel(label: string): string {
 export const BottomStatusBar = observer(function BottomStatusBar({
   controller,
 }: BottomStatusBarProps) {
-  const ui = controller.uiStore;
-  const editor = controller.editorStore;
+  const ui = useExternalStore(controller.workspaceState.uiStore);
+  const editor = useExternalStore(controller.workspaceState.editorStore);
   const t = createTranslator(ui.locale);
   const activeView = LEFT_RAIL_PRIMARY_ITEMS.find(
     (item) => item.id === ui.leftPanelMode,

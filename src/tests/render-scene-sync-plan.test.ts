@@ -3,8 +3,14 @@ import { compileStage1World } from "@/domain/compiler/stage1-compiler";
 import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";
 import { createStage1Registry } from "@/domain/registry/stage1-registry";
 import { getRenderSceneSyncPlan } from "@/renderer/host/render-scene-sync-plan";
-import { buildRenderScene } from "@/renderer/scene/build-render-scene";
+import { buildRenderScene as buildRenderSceneBase } from "@/renderer/scene/build-render-scene";
+import type { RenderSceneInput } from "@/renderer/scene/types";
 import { createInitialCanvasViewState } from "@/workbench/state/workspace-state";
+
+function buildRenderScene(input: RenderSceneInput & { runtimeSnapshot?: unknown }) {
+  const { runtimeSnapshot: _runtimeSnapshot, ...nextInput } = input;
+  return buildRenderSceneBase(nextInput);
+}
 
 function createBaseRenderScene() {
   const document = createStage1SeedWorldDocument();

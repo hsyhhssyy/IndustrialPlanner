@@ -1,5 +1,5 @@
 import { autorun } from "@/shared/mobx";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { getStage1BaseDefinition } from "@/domain/base/stage1-bases";
 import { compileStage1World } from "@/domain/compiler/stage1-compiler";
 import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-world-document";

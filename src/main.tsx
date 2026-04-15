@@ -40,7 +40,7 @@ declare global {
 
 if (typeof window !== "undefined") {
   window.__INDUSTRIAL_PLANNER_LOGS__ = {
-    getLogLevel: () => controller.getLogLevel(),
+    getLogLevel: () => controller.app.query.getLogLevel(),
     getSupportedLevels: () => LOG_LEVELS,
     setLogLevel: (level) => {
       if (!isLogLevel(level)) {
@@ -50,7 +50,7 @@ if (typeof window !== "undefined") {
         return;
       }
 
-      controller.setLogLevel(level);
+      controller.app.action.setLogLevel(level);
     },
     placementPreviewProfiler: {
       getSnapshot: () => placementPreviewProfiler.getSnapshot(),

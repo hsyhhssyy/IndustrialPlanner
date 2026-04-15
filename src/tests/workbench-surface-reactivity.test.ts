@@ -5,10 +5,15 @@ import { LeftDock } from "@/app-shell/components/left-dock";
 import { LeftToolbar } from "@/app-shell/components/left-toolbar";
 import { RightDock } from "@/app-shell/components/right-dock";
 import { getManagedPlacementPreview } from "@/editor/contracts/editor-session-helpers";
-import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
+import { createWorkbenchController as createWorkbenchControllerBase } from "@/workbench/controller/workbench-controller";
+import { asLegacyWorkbenchController } from "@/tests/helpers/legacy-workbench-controller";
 import { act, createElement, Fragment, Profiler } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+const createWorkbenchController = (
+  ...args: Parameters<typeof createWorkbenchControllerBase>
+) => asLegacyWorkbenchController(createWorkbenchControllerBase(...args));
 
 function toScreenPointForPlacementCenter(
   controller: ReturnType<typeof createWorkbenchController>,

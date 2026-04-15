@@ -17,6 +17,7 @@ import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
 import { observer } from "@/shared/mobx";
 import { getSelectedEntityIds } from "@/editor/contracts/editor-session-helpers";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
+import type { WorkspaceEditorState } from "@/workbench/state/workspace-state";
 
 export interface RightDockProps {
   controller: WorkbenchController;
@@ -27,7 +28,7 @@ function formatMultiSelectionLabel(locale: "zh-CN" | "en-US", count: number): st
 }
 
 function resolveEditInspectorSelectionIds(
-  selection: RightDockProps["controller"]["editorStore"]["session"],
+  selection: WorkspaceEditorState["session"],
 ): string[] {
   const baselineIds = getSelectedEntityIds(selection);
 
@@ -51,10 +52,10 @@ function resolveEditInspectorSelectionIds(
 export const RightDock = observer(function RightDock({
   controller,
 }: RightDockProps) {
-  const ui = controller.uiStore;
-  const document = useExternalStore(controller.documentStore);
-  const editor = controller.editorStore;
-  const topology = useExternalStore(controller.topologyStore);
+  const ui = useExternalStore(controller.workspaceState.uiStore);
+  const document = useExternalStore(controller.workspaceState.documentStore);
+  const editor = useExternalStore(controller.workspaceState.editorStore);
+  const topology = useExternalStore(controller.workspaceState.topologyStore);
 
   if (!ui.rightDock.open) {
     return null;
@@ -119,7 +120,7 @@ export const RightDock = observer(function RightDock({
                 : t("label.noSelection")}
             </span>
             <button
-              onClick={() => controller.toggleDockCollapsed("right")}
+              onClick={() => controller.app.action.toggleDockCollapsed("right")}
               type="button"
             >
               {t(ui.rightDock.collapsed ? "action.expand" : "action.collapse")}
@@ -211,7 +212,7 @@ export const RightDock = observer(function RightDock({
                     <div className="inspector-option-grid">
                       <button
                         onClick={() => {
-                          void controller.removeSelection();
+                          void controller.editor.action.removeSelection();
                         }}
                         type="button"
                       >
@@ -219,7 +220,7 @@ export const RightDock = observer(function RightDock({
                       </button>
                       <button
                         onClick={() => {
-                          void controller.removeSelectionLinks();
+                          void controller.editor.action.removeSelectionLinks();
                         }}
                         type="button"
                       >

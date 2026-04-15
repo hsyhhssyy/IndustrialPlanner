@@ -36,7 +36,7 @@ export function EditSelectionInspector({
         <div className="inspector-option-grid">
           <button
             onClick={() => {
-              void controller.removeSelection();
+              void controller.editor.action.removeSelection();
             }}
             type="button"
           >
@@ -45,13 +45,16 @@ export function EditSelectionInspector({
           <button
             disabled={context.selectedLinks.length === 0}
             onClick={() => {
-              void controller.removeSelectionLinks();
+              void controller.editor.action.removeSelectionLinks();
             }}
             type="button"
           >
             {t("action.removeLinks")}
           </button>
-          <button onClick={() => controller.setInteractionMode("link")} type="button">
+          <button
+            onClick={() => controller.editor.action.setInteractionMode("link")}
+            type="button"
+          >
             {t("tool.link")}
           </button>
         </div>
@@ -96,7 +99,7 @@ export function EditSelectionInspector({
                   currentValue={context.selectedEntity.config[field.key]}
                   locale={state.locale}
                   onApply={(value) =>
-                    controller.patchEntityConfig(context.selectedEntity.id, {
+                    controller.editor.action.patchEntityConfig(context.selectedEntity.id, {
                       [field.key]: value,
                     })
                   }

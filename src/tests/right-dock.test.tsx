@@ -6,7 +6,12 @@ import {
   getGridBoundingBox,
   getRotatedGridFootprint,
 } from "@/shared/geometry/grid";
-import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
+import { createWorkbenchController as createWorkbenchControllerBase } from "@/workbench/controller/workbench-controller";
+import { asLegacyWorkbenchController } from "@/tests/helpers/legacy-workbench-controller";
+
+const createWorkbenchController = (
+  ...args: Parameters<typeof createWorkbenchControllerBase>
+) => asLegacyWorkbenchController(createWorkbenchControllerBase(...args));
 
 function toScreenPointForGrid(
   controller: ReturnType<typeof createWorkbenchController>,

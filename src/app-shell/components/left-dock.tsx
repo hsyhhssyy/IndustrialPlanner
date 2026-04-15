@@ -22,7 +22,9 @@ import {
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
 import { createLogger } from "@/shared/logging/logger";
 import { observer } from "@/shared/mobx";
+import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
+import type { WorkspaceEditorState } from "@/workbench/state/workspace-state";
 import { useRef } from "react";
 
 const TOOL_LABEL_KEYS: Record<DisplayTool, MessageKey> = {
@@ -51,7 +53,7 @@ function resolveDirectEntryMode(
 
 function isButtonActive(
   button: PlaceholderButtonDescriptor,
-  session: LeftDockProps["controller"]["editorStore"]["session"],
+  session: WorkspaceEditorState["session"],
 ): boolean {
   if (button.definitionId) {
     return (
@@ -132,8 +134,8 @@ function isActionDisabled(
 export const LeftDock = observer(function LeftDock({
   controller,
 }: LeftDockProps) {
-  const ui = controller.uiStore;
-  const editor = controller.editorStore;
+  const ui = useExternalStore(controller.workspaceState.uiStore);
+  const editor = useExternalStore(controller.workspaceState.editorStore);
   const registry = controller.registry;
   const pendingPlacementInteractionModeRef = useRef<{
     buttonId: string;
@@ -178,7 +180,7 @@ export const LeftDock = observer(function LeftDock({
               {t(TOOL_LABEL_KEYS[editor.session.displayTool])}
             </span>
             <button
-              onClick={() => controller.toggleDockCollapsed("left")}
+              onClick={() => controller.app.action.toggleDockCollapsed("left")}
               type="button"
             >
               {t(ui.leftDock.collapsed ? "action.expand" : "action.collapse")}
@@ -271,27 +273,27 @@ export const LeftDock = observer(function LeftDock({
                         }}
                         onClick={() => {
                           if (button.actionId === "selection.clear") {
-                            void controller.clearSelection();
+                            void controller.editor.action.clearSelection();
                             return;
                           }
 
                           if (button.actionId === "selection.remove") {
-                            void controller.removeSelection();
+                            void controller.editor.action.removeSelection();
                             return;
                           }
 
                           if (button.actionId === "selection.links.remove") {
-                            void controller.removeSelectionLinks();
+                            void controller.editor.action.removeSelectionLinks();
                             return;
                           }
 
                           if (button.actionId === "history.undo") {
-                            void controller.undo();
+                            void controller.editor.action.undo();
                             return;
                           }
 
                           if (button.actionId === "history.redo") {
-                            void controller.redo();
+                            void controller.editor.action.redo();
                             return;
                           }
 
@@ -315,7 +317,7 @@ export const LeftDock = observer(function LeftDock({
                               interactionMode,
                               pointerType,
                             });
-                            controller.armPlacement(
+                            controller.editor.action.armPlacement(
                               button.definitionId,
                               button.displayTool && isPlacementDisplayTool(button.displayTool)
                                 ? button.displayTool
@@ -331,7 +333,7 @@ export const LeftDock = observer(function LeftDock({
                           const directEntryMode = resolveDirectEntryMode(button);
 
                           if (directEntryMode) {
-                            controller.setInteractionMode(directEntryMode);
+                            controller.editor.action.setInteractionMode(directEntryMode);
                           }
                         }}
                         type="button"

@@ -5,10 +5,15 @@ import { LEFT_PANEL_CONTENT } from "@/app-shell/workbench-placeholders";
 import { createAppHost } from "@/app/app-host";
 import { isPlacementInteractionMode } from "@/editor/contracts/interaction-mode";
 import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
-import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
+import { createWorkbenchController as createWorkbenchControllerBase } from "@/workbench/controller/workbench-controller";
+import { asLegacyWorkbenchController } from "@/tests/helpers/legacy-workbench-controller";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const createWorkbenchController = (
+  ...args: Parameters<typeof createWorkbenchControllerBase>
+) => asLegacyWorkbenchController(createWorkbenchControllerBase(...args));
 
 vi.mock("@/renderer/host/renderer-host", () => ({
   RendererHost: () => null,

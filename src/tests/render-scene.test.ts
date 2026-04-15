@@ -5,8 +5,14 @@ import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-wor
 import { createStage1Registry } from "@/domain/registry/stage1-registry";
 import { applyWorldDocumentCommand } from "@/editor/core/commands/document-command-applier";
 import type { DocumentCommand } from "@/editor/core/commands/document-command";
-import { buildRenderScene } from "@/renderer/scene/build-render-scene";
+import { buildRenderScene as buildRenderSceneBase } from "@/renderer/scene/build-render-scene";
+import type { RenderSceneInput } from "@/renderer/scene/types";
 import { createInitialCanvasViewState } from "@/workbench/state/workspace-state";
+
+function buildRenderScene(input: RenderSceneInput & { runtimeSnapshot?: unknown }) {
+  const { runtimeSnapshot: _runtimeSnapshot, ...nextInput } = input;
+  return buildRenderSceneBase(nextInput);
+}
 
 function createBaseRenderScene() {
   const document = createStage1SeedWorldDocument();

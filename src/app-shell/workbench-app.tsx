@@ -4,6 +4,7 @@ import { LeftDock } from "@/app-shell/components/left-dock";
 import { LeftToolbar } from "@/app-shell/components/left-toolbar";
 import { RightDock } from "@/app-shell/components/right-dock";
 import { TopBar } from "@/app-shell/components/top-bar";
+import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import type { AppHost } from "@/app/app-host";
 import { Observer } from "@/shared/mobx";
 import type {
@@ -54,6 +55,7 @@ export interface WorkbenchAppProps {
 
 export function WorkbenchApp({ appHost }: WorkbenchAppProps) {
   const { controller, placementPreviewProfiler, workspaceDerivedStore } = appHost;
+  const ui = useExternalStore(controller.workspaceState.uiStore);
 
   const handleWorkbenchContextMenu = (event: MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -62,7 +64,6 @@ export function WorkbenchApp({ appHost }: WorkbenchAppProps) {
   return (
     <Observer>
       {() => {
-        const ui = controller.uiStore;
         const layoutStyle = {
           "--left-dock-width": ui.leftDock.open
             ? ui.leftDock.collapsed

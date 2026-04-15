@@ -112,7 +112,6 @@ export function resolveCanvasPointerDownRoute(
       marqueeSelectionMode: resolvePointerMarqueeSelectionMode({
         currentMode: options.currentMode,
         moveEntityId,
-        phase: options.phase,
         selectionModifierActive: options.selectionModifierActive,
       }),
     };
@@ -205,7 +204,9 @@ function resolveTouchLongPressMarqueeSelectionMode(
 function getSelectedEntityIdForMove(
   controller: WorkbenchController,
 ): string | null {
-  const selection = getSelectedEntityIds(controller.editorStore.getSnapshot().session);
+  const selection = getSelectedEntityIds(
+    controller.workspaceState.editorStore.getSnapshot().session,
+  );
 
   return selection[0] ?? null;
 }
@@ -218,7 +219,9 @@ async function dispatchCanvasTap(options: {
   screenPoint: CanvasPoint;
   selectionModifierActive: boolean;
 }): Promise<void> {
-  const target = options.controller.getCanvasInteractionTarget(options.screenPoint);
+  const target = options.controller.editor.query.getCanvasInteractionTarget(
+    options.screenPoint,
+  );
   const intent = resolveCanvasPanelTapIntent({
     currentMode: options.currentMode,
     selectionModifierActive: options.selectionModifierActive,
@@ -240,23 +243,28 @@ async function dispatchCanvasTap(options: {
 
   switch (intent.kind) {
     case "select-edit-entity":
-      await options.controller.selectEntity(intent.entityId, options.interactionMode);
+      await options.controller.editor.action.selectEntity(
+        intent.entityId,
+        options.interactionMode,
+      );
       return;
     case "toggle-edit-entity":
-      await options.controller.selectEntity(
+      await options.controller.editor.action.selectEntity(
         intent.entityId,
         options.interactionMode,
         "toggle",
       );
       return;
     case "clear-edit-selection":
-      await options.controller.clearSelection();
+      await options.controller.editor.action.clearSelection();
       return;
     case "activate-link-target":
-      await options.controller.activateLinkTarget(intent.entityId);
+      await options.controller.editor.action.activateLinkTarget(intent.entityId);
       return;
     case "commit-placement":
-      await options.controller.commitPlacementAtScreenPoint(options.screenPoint);
+      await options.controller.editor.action.commitPlacementAtScreenPoint(
+        options.screenPoint,
+      );
       return;
     case "noop":
       return;
@@ -285,7 +293,7 @@ export async function routeCanvasGestureEvent(
     case "drag-start":
       switch (options.event.recognizer) {
         case "touch-marquee":
-          options.controller.beginMarqueeFromScreenPoint(
+          options.controller.editor.action.beginMarqueeFromScreenPoint(
             options.event.origin,
             "touch",
             options.event.selectionMode ?? "replace",
@@ -301,7 +309,7 @@ export async function routeCanvasGestureEvent(
             return;
           }
 
-          options.controller.beginMoveFromScreenPoint(
+          options.controller.editor.action.beginMoveFromScreenPoint(
             entityId,
             options.event.origin,
             "touch",
@@ -309,10 +317,10 @@ export async function routeCanvasGestureEvent(
 
           if (
             isMoveInteractionMode(
-              options.controller.editorStore.getSnapshot().session.currentMode,
+              options.controller.workspaceState.editorStore.getSnapshot().session.currentMode,
             )
           ) {
-            options.controller.updateMoveDraftFromScreenPoint(
+            options.controller.editor.action.updateMoveDraftFromScreenPoint(
               options.event.screenPoint,
             );
           }
@@ -323,7 +331,7 @@ export async function routeCanvasGestureEvent(
             return;
           }
 
-          options.controller.beginMoveFromScreenPoint(
+          options.controller.editor.action.beginMoveFromScreenPoint(
             options.event.entityId,
             options.event.origin,
             "pointer",
@@ -331,21 +339,21 @@ export async function routeCanvasGestureEvent(
 
           if (
             isMoveInteractionMode(
-              options.controller.editorStore.getSnapshot().session.currentMode,
+              options.controller.workspaceState.editorStore.getSnapshot().session.currentMode,
             )
           ) {
-            options.controller.updateMoveDraftFromScreenPoint(
+            options.controller.editor.action.updateMoveDraftFromScreenPoint(
               options.event.screenPoint,
             );
           }
           return;
         case "pointer-marquee":
-          options.controller.beginMarqueeFromScreenPoint(
+          options.controller.editor.action.beginMarqueeFromScreenPoint(
             options.event.origin,
             "pointer",
             options.event.selectionMode ?? "replace",
           );
-          options.controller.updateMarqueeDraftFromScreenPoint(
+          options.controller.editor.action.updateMarqueeDraftFromScreenPoint(
             options.event.screenPoint,
           );
           return;
@@ -358,14 +366,14 @@ export async function routeCanvasGestureEvent(
       }
 
       if (options.event.recognizer === "touch-marquee") {
-        options.controller.updateMarqueeDraftFromScreenPoint(
+        options.controller.editor.action.updateMarqueeDraftFromScreenPoint(
           options.event.screenPoint,
         );
         return;
       }
 
       if (options.event.recognizer === "pointer-marquee") {
-        options.controller.updateMarqueeDraftFromScreenPoint(
+        options.controller.editor.action.updateMarqueeDraftFromScreenPoint(
           options.event.screenPoint,
         );
         return;
@@ -373,10 +381,12 @@ export async function routeCanvasGestureEvent(
 
       if (
         isMoveInteractionMode(
-          options.controller.editorStore.getSnapshot().session.currentMode,
+          options.controller.workspaceState.editorStore.getSnapshot().session.currentMode,
         )
       ) {
-        options.controller.updateMoveDraftFromScreenPoint(options.event.screenPoint);
+        options.controller.editor.action.updateMoveDraftFromScreenPoint(
+          options.event.screenPoint,
+        );
       }
       return;
     case "drag-end":
@@ -386,19 +396,19 @@ export async function routeCanvasGestureEvent(
 
       if (options.event.recognizer === "pointer-move") {
         if (options.event.outcome === "cancel") {
-          options.controller.cancelMove();
+          options.controller.editor.action.cancelMove();
           return;
         }
 
         const moveDraft = getManagedMoveDraft(
-          options.controller.editorStore.getSnapshot().session,
-          options.controller.documentStore.getSnapshot(),
+          options.controller.workspaceState.editorStore.getSnapshot().session,
+          options.controller.workspaceState.documentStore.getSnapshot(),
         );
 
         if (moveDraft?.valid) {
-          await options.controller.confirmMovePreview();
+          await options.controller.editor.action.confirmMovePreview();
         } else {
-          options.controller.cancelMove();
+          options.controller.editor.action.cancelMove();
         }
         return;
       }
@@ -409,7 +419,7 @@ export async function routeCanvasGestureEvent(
           return;
         }
 
-        await options.controller.confirmMarqueeSelection();
+        await options.controller.editor.action.confirmMarqueeSelection();
         return;
       }
 
@@ -419,18 +429,18 @@ export async function routeCanvasGestureEvent(
           return;
         }
 
-        await options.controller.confirmMarqueeSelection();
+        await options.controller.editor.action.confirmMarqueeSelection();
       }
       return;
     case "pan-start":
     case "pan":
-      options.controller.panCanvasBy(options.event.screenDelta);
+      options.controller.render.action.panCanvasBy(options.event.screenDelta);
       return;
     case "pan-end":
       return;
     case "pinch":
       if (options.event.scaleFactor && options.event.zoomAnchor) {
-        options.controller.zoomCanvasAt(
+        options.controller.render.action.zoomCanvasAt(
           options.event.zoomAnchor,
           options.event.scaleFactor,
         );
@@ -443,7 +453,9 @@ export async function routeCanvasGestureEvent(
         );
 
         if (distance > 0) {
-          options.controller.panCanvasBy(options.event.midpointDelta);
+          options.controller.render.action.panCanvasBy(
+            options.event.midpointDelta,
+          );
         }
       }
       return;
@@ -469,9 +481,9 @@ export async function routeCanvasGestureEvent(
       options.cancelScheduledPlacementPreview();
 
       if (!options.anchoredPlacementActive) {
-        options.controller.clearPlacementPreview();
+        options.controller.editor.action.clearPlacementPreview();
       } else if (options.event.reason !== "touch-down") {
-        options.controller.clearPlacementPreview();
+        options.controller.editor.action.clearPlacementPreview();
       }
       return;
   }

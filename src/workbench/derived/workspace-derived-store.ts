@@ -139,7 +139,7 @@ class WorkspaceDerivedStoreImpl implements WorkspaceDerivedStore {
         topologyInput: observable.ref,
         render: computed,
         dispose: false,
-      },
+      } as never,
       {
         autoBind: true,
       },

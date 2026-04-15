@@ -21,10 +21,10 @@ export function createAppHost(
   options: CreateAppHostOptions = {},
 ): AppHost {
   const workspaceDerivedStore = createWorkspaceDerivedStore({
-    documentStore: controller.documentStore,
-    editorStore: controller.editorStore,
-    canvasViewStore: controller.canvasViewStore,
-    topologyStore: controller.topologyStore,
+    documentStore: controller.workspaceState.documentStore,
+    editorStore: controller.workspaceState.editorStore,
+    canvasViewStore: controller.workspaceState.canvasViewStore,
+    topologyStore: controller.workspaceState.topologyStore,
     registry: controller.registry,
     placementPreviewProfiler: options.placementPreviewProfiler,
   });

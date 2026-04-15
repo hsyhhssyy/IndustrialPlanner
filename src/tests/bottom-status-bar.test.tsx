@@ -1,10 +1,15 @@
 // @vitest-environment jsdom
 
 import { BottomStatusBar } from "@/app-shell/components/bottom-status-bar";
-import { createWorkbenchController } from "@/workbench/controller/workbench-controller";
+import { createWorkbenchController as createWorkbenchControllerBase } from "@/workbench/controller/workbench-controller";
+import { asLegacyWorkbenchController } from "@/tests/helpers/legacy-workbench-controller";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+const createWorkbenchController = (
+  ...args: Parameters<typeof createWorkbenchControllerBase>
+) => asLegacyWorkbenchController(createWorkbenchControllerBase(...args));
 
 async function renderBottomStatusBar(
   controller: ReturnType<typeof createWorkbenchController>,

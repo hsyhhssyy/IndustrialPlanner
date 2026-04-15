@@ -14,15 +14,22 @@ import type { EditorHistoryState } from "@/editor/core/editor-core";
 import { makeAutoObservable } from "@/shared/mobx";
 import { createSnapshotBridge } from "@/shared/mobx/snapshot-bridge";
 import type { ReadonlySnapshotStore } from "@/workbench/state/workspace-store";
+import {
+  type WorkspaceEditorSessionState,
+  type WorkspaceEditorState,
+  projectWorkspaceEditorState,
+} from "@/workbench/state/workspace-state";
 
-export interface EditorRuntimeState {
-  session: EditorSession;
+export type EditorRuntimeState = WorkspaceEditorState;
+
+type EditorRuntimeStateInput = {
+  session: WorkspaceEditorSessionState | EditorSession;
   history: EditorHistoryState;
-}
+};
 
 export function isSameEditorSession(
-  left: EditorSession,
-  right: EditorSession,
+  left: WorkspaceEditorSessionState,
+  right: WorkspaceEditorSessionState,
 ): boolean {
   return (
     left.displayTool === right.displayTool &&
@@ -31,8 +38,7 @@ export function isSameEditorSession(
     isSameEditorEntityCollectionState(left.selectedEntities, right.selectedEntities) &&
     isSameEditorEntityCollectionState(left.draftEntities, right.draftEntities) &&
     isSameMarqueeRangeState(left.marqueeRange, right.marqueeRange) &&
-    left.selectionInputMode === right.selectionInputMode &&
-    left.hoveredEntityId === right.hoveredEntityId
+    left.selectionInputMode === right.selectionInputMode
   );
 }
 
@@ -48,7 +54,9 @@ function isSameEditorHistoryState(
   );
 }
 
-function cloneEditorSession(session: EditorSession): EditorSession {
+function cloneEditorSession(
+  session: WorkspaceEditorSessionState,
+): WorkspaceEditorSessionState {
   return {
     displayTool: session.displayTool,
     currentMode: cloneCurrentInteractionMode(session.currentMode),
@@ -64,7 +72,6 @@ function cloneEditorSession(session: EditorSession): EditorSession {
         }
       : null,
     selectionInputMode: session.selectionInputMode,
-    hoveredEntityId: session.hoveredEntityId,
   };
 }
 
@@ -84,21 +91,32 @@ function cloneEditorRuntimeState(state: EditorRuntimeState): EditorRuntimeState 
   };
 }
 
+function normalizeEditorRuntimeState(
+  state: EditorRuntimeStateInput,
+): EditorRuntimeState {
+  return projectWorkspaceEditorState({
+    session: state.session,
+    history: state.history,
+  });
+}
+
 export interface EditorRuntimeStore
   extends ReadonlySnapshotStore<EditorRuntimeState> {
-  session: EditorSession;
+  session: WorkspaceEditorSessionState;
   history: EditorHistoryState;
-  setSnapshot: (state: EditorRuntimeState) => boolean;
+  setSnapshot: (state: EditorRuntimeStateInput) => boolean;
 }
 
 class EditorRuntimeStoreImpl implements EditorRuntimeStore {
-  session: EditorSession;
+  session: WorkspaceEditorSessionState;
   history: EditorHistoryState;
 
   readonly #snapshotBridge;
 
-  constructor(initialState: EditorRuntimeState) {
-    const initialSnapshot = cloneEditorRuntimeState(initialState);
+  constructor(initialState: EditorRuntimeStateInput) {
+    const initialSnapshot = cloneEditorRuntimeState(
+      normalizeEditorRuntimeState(initialState),
+    );
     this.session = cloneEditorSession(initialSnapshot.session);
     this.history = cloneEditorHistoryState(initialSnapshot.history);
     this.#snapshotBridge = createSnapshotBridge(initialSnapshot);
@@ -123,8 +141,10 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
     return this.#snapshotBridge.subscribe(listener);
   }
 
-  setSnapshot(state: EditorRuntimeState): boolean {
-    const nextSnapshot = cloneEditorRuntimeState(state);
+  setSnapshot(state: EditorRuntimeStateInput): boolean {
+    const nextSnapshot = cloneEditorRuntimeState(
+      normalizeEditorRuntimeState(state),
+    );
     const currentSnapshot = this.#snapshotBridge.getSnapshot();
 
     if (
@@ -140,7 +160,7 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
     return true;
   }
 
-  private applySessionSnapshot(session: EditorSession): void {
+  private applySessionSnapshot(session: WorkspaceEditorSessionState): void {
     if (this.session.displayTool !== session.displayTool) {
       this.session.displayTool = session.displayTool;
     }
@@ -189,10 +209,6 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
     if (this.session.selectionInputMode !== session.selectionInputMode) {
       this.session.selectionInputMode = session.selectionInputMode;
     }
-
-    if (this.session.hoveredEntityId !== session.hoveredEntityId) {
-      this.session.hoveredEntityId = session.hoveredEntityId;
-    }
   }
 
   private applyHistorySnapshot(history: EditorHistoryState): void {
@@ -215,7 +231,7 @@ class EditorRuntimeStoreImpl implements EditorRuntimeStore {
 }
 
 export function createEditorRuntimeStore(
-  initialState: EditorRuntimeState,
+  initialState: EditorRuntimeStateInput,
 ): EditorRuntimeStore {
   return new EditorRuntimeStoreImpl(initialState);
 }

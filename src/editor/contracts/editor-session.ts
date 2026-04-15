@@ -24,5 +24,5 @@ export interface EditorSession {
   draftEntities: DraftEntitiesState | null;
   marqueeRange: MarqueeRangeState | null;
   selectionInputMode: PlacementInteractionMode | null;
-  hoveredEntityId: string | null;
+  hoveredEntityId?: string | null;
 }
