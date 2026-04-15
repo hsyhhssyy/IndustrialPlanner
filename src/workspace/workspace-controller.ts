@@ -1,15 +1,20 @@
 import type { AppFacade } from "@/app/app-facade";
 import type {
   CanvasInteractionTarget,
-  WorkbenchController,
-} from "@/workbench/contracts/workbench-facade";
+  WorkspaceController,
+  WorkspaceControllerAction,
+  WorkspaceControllerQuery,
+} from "@/workspace/workspace-facade";
 import type { EditorFacade } from "@/editor/editor-facade";
 import type {
   DockId,
   LeftPanelMode,
 } from "@/workbench/state/workbench-ui-state";
 import { createWorkbenchUiStore } from "@/workbench/state/workbench-ui-store";
-import { createCanvasViewStore } from "@/workbench/state/canvas-view-store";
+import {
+  createCanvasViewStore,
+  type CanvasViewStore,
+} from "@/workbench/state/canvas-view-store";
 import {
   createWorkspaceStorage,
   type WorkspacePersistenceState,
@@ -18,8 +23,7 @@ import {
 import {
   type CanvasPoint,
   type CanvasViewState,
-  type WorkspaceState,
-} from "@/workspace/workspace-state";
+} from "@/workspace/types";
 import {
   createWorkspaceStore,
   type WorkspaceStore,
@@ -67,6 +71,7 @@ import {
 } from "@/editor/host/editor-host";
 import {
   createEditorRuntimeStore,
+  type EditorRuntimeStore,
 } from "@/editor/editor-runtime-store";
 import type { AppLocale } from "@/i18n/messages";
 import type { RenderFacade } from "@/renderer/render-facade";
@@ -79,7 +84,9 @@ import {
   setLogLevel as setGlobalLogLevel,
   type LogLevel,
 } from "@/shared/logging/logger";
-import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
+import { action as mobxAction } from "@/shared/mobx";
+
+type WorkspaceState = ReturnType<WorkspaceStore["getSnapshot"]>;
 
 interface MutationState {
   document: WorldDocument;
@@ -150,152 +157,96 @@ function resolveManagedPlacementPreview(
 }
 
 interface CreateWorkbenchControllerOptions {
-  placementPreviewProfiler?: PlacementPreviewProfiler;
+  workspaceState: WorkspaceState;
+  app: AppHost;
+  editor: EditorHost;
+  render: RenderHost;
+  registry?: Stage1Registry;
 }
 
-class WorkbenchControllerImpl implements WorkbenchController {
+class WorkspaceControllerImpl implements WorkspaceController {
   readonly registry: Stage1Registry;
-  readonly workspaceState: WorkspaceStore;
+  readonly workspaceState: WorkspaceState;
   readonly app: AppFacade;
   readonly editor: EditorFacade;
   readonly render: RenderFacade;
-  readonly uiStore;
-  readonly documentStore;
-  readonly editorStore;
-  readonly canvasViewStore;
-  readonly topologyStore: Pick<SnapshotStore<CompiledTopology>, "getSnapshot" | "subscribe">;
 
+  readonly query: WorkspaceControllerQuery;
+  readonly action: WorkspaceControllerAction;
+  
   private readonly logger = createLogger("workbench.controller");
-  private readonly placementPreviewProfiler?: PlacementPreviewProfiler;
-  private readonly canvasKeyboardFocusListeners = new Set<() => void>();
-  private readonly storage: WorkspaceStorage;
-  private readonly workspaceStore: WorkspaceStore;
   private readonly editorHost: EditorHost;
-  private readonly placementPreviewDiagnostics: PlacementPreviewDiagnosticWindow = {
-    startedAt: 0,
-    lastFlushedAt: 0,
-    updateCalls: 0,
-    previewChangedCalls: 0,
-    previewUnchangedCalls: 0,
-    slowSyncCount: 0,
-    totalSyncDurationMs: 0,
-    slowestSyncDurationMs: 0,
-    latest: null,
-  };
-  private lastSavedWorkspacePersistence: WorkspacePersistenceState | null = null;
-
-  private topology: CompiledTopology;
-  private viewportSize: CanvasPoint = { x: 0, y: 0 };
-
+  private readonly renderHost: RenderHost;
+  private readonly appHost: AppHost;
+  
   private static readonly BUTTON_ZOOM_FACTOR = 1.2;
+  private readonly commitWorkspaceMutation = mobxAction(
+    "workspace-controller.commitWorkspaceMutation",
+    (mutator: () => void) => {
+      mutator();
+    },
+  );
 
-  constructor(options: CreateWorkbenchControllerOptions = {}) {
-    this.placementPreviewProfiler = options.placementPreviewProfiler;
-    this.registry = createStage1Registry();
-    this.storage = createWorkspaceStorage();
+  constructor(options: CreateWorkbenchControllerOptions) {
+    this.registry = options.registry ?? createStage1Registry();
+    this.workspaceState = options.workspaceState;
+    this.appHost = options.app;
+    this.editorHost = options.editor;
+    this.renderHost = options.render;
+    
+    this.app = this.appHost.facade;
+    this.editor = this.editorHost;
+    this.render = this.renderHost.facade;
 
-    const persistedState = this.storage.loadWorkspaceState();
-    this.uiStore = createWorkbenchUiStore(persistedState.ui);
-    this.canvasViewStore = createCanvasViewStore(persistedState.canvasView);
-    setGlobalLogLevel(this.uiStore.logLevel);
-
-    this.editorHost = createEditorHost({
-      document: createStage1SeedWorldDocument(),
-      session: createInitialEditorSession(),
-      getTopology: () => this.topology,
-      getDefinition: (definitionId) =>
-        getStage1EntityDefinition(this.registry, definitionId),
-      placementPreviewProfiler: this.placementPreviewProfiler,
-    });
-    this.topology = compileStage1World(this.editorHost.getDocument(), this.registry);
-    this.editorStore = createEditorRuntimeStore(this.editorHost.getState());
-    this.reloadCompiledWorld();
-
-    this.workspaceStore = createWorkspaceStore({
-      document: this.editorHost.getDocument(),
-      topology: this.topology,
-      editorSession: this.editorStore.getSnapshot().session,
-      editorHistory: this.editorStore.getSnapshot().history,
-      ui: this.uiStore.getSnapshot(),
-      canvasView: this.canvasViewStore.getSnapshot(),
-    });
-    this.documentStore = this.workspaceStore.documentStore;
-    this.topologyStore = this.workspaceStore.topologyStore;
-    this.workspaceState = this.workspaceStore;
-    this.app = {
-      query: {
-        getLogLevel: () => this.getLogLevel(),
-      },
-      action: {
-        setLeftPanelMode: (mode) => this.setLeftPanelMode(mode),
-        setLocale: (locale) => this.setLocale(locale),
-        setLogLevel: (level) => this.setLogLevel(level),
-        setDiagnosticsVisible: (visible) => this.setDiagnosticsVisible(visible),
-        setDockOpen: (dockId, open) => this.setDockOpen(dockId, open),
-        toggleDockCollapsed: (dockId) => this.toggleDockCollapsed(dockId),
-      },
+    this.query = {
+      getCanvasInteractionTarget: (_screenPoint) =>
+        null as unknown as CanvasInteractionTarget,
+      queryWorldInputFromScreenPoint: (_screenPoint) =>
+        null as unknown as CanvasWorldInput,
+      getLogLevel: () => null as unknown as LogLevel,
     };
-    this.editor = {
-      query: {
-        getCanvasInteractionTarget: (screenPoint) =>
-          this.getCanvasInteractionTarget(screenPoint),
-        queryWorldInputFromScreenPoint: (screenPoint) =>
-          this.queryWorldInputFromScreenPoint(screenPoint),
-      },
-      action: {
-        setInteractionMode: (modeKey) => this.setInteractionMode(modeKey),
-        armPlacement: (definitionId, displayTool, inputMode) =>
-          this.armPlacement(definitionId, displayTool, inputMode),
-        beginMoveFromScreenPoint: (entityId, screenPoint, inputMode) =>
-          this.beginMoveFromScreenPoint(entityId, screenPoint, inputMode),
-        beginMarqueeFromScreenPoint: (screenPoint, inputMode, selectionMode) =>
-          this.beginMarqueeFromScreenPoint(
-            screenPoint,
-            inputMode,
-            selectionMode,
-          ),
-        updateMoveDraftFromScreenPoint: (screenPoint) =>
-          this.updateMoveDraftFromScreenPoint(screenPoint),
-        updateMarqueeDraftFromScreenPoint: (screenPoint) =>
-          this.updateMarqueeDraftFromScreenPoint(screenPoint),
-        confirmMovePreview: () => this.confirmMovePreview(),
-        cancelMove: () => this.cancelMove(),
-        confirmMarqueeSelection: () => this.confirmMarqueeSelection(),
-        cancelMarquee: () => this.cancelMarquee(),
-        rotateMoveClockwise: () => this.rotateMoveClockwise(),
-        rotatePlacementClockwise: () => this.rotatePlacementClockwise(),
-        cancelPlacement: () => this.cancelPlacement(),
-        centerPlacementPreview: () => this.centerPlacementPreview(),
-        updatePlacementPreviewFromScreenPoint: (screenPoint) =>
-          this.updatePlacementPreviewFromScreenPoint(screenPoint),
-        confirmPlacementPreview: () => this.confirmPlacementPreview(),
-        clearPlacementPreview: () => this.clearPlacementPreview(),
-        selectEntity: (entityId, inputMode, selectionMode) =>
-          this.selectEntity(entityId, inputMode, selectionMode),
-        rotateSelectionClockwise: () => this.rotateSelectionClockwise(),
-        clearSelection: () => this.clearSelection(),
-        patchEntityConfig: (entityId, patch) =>
-          this.patchEntityConfig(entityId, patch),
-        commitPlacementAtScreenPoint: (screenPoint) =>
-          this.commitPlacementAtScreenPoint(screenPoint),
-        activateLinkTarget: (entityId) => this.activateLinkTarget(entityId),
-        removeSelection: () => this.removeSelection(),
-        removeSelectionLinks: () => this.removeSelectionLinks(),
-        removeLink: (linkId) => this.removeLink(linkId),
-        undo: () => this.undo(),
-        redo: () => this.redo(),
-      },
-    };
-    this.render = {
-      query: {},
-      action: {
-        zoomIn: () => this.zoomIn(),
-        zoomOut: () => this.zoomOut(),
-        zoomCanvasAt: (screenPoint, scaleFactor) =>
-          this.zoomCanvasAt(screenPoint, scaleFactor),
-        panCanvasBy: (screenDelta) => this.panCanvasBy(screenDelta),
-        setCanvasViewportSize: (size) => this.setCanvasViewportSize(size),
-      },
+    this.action = {
+      requestCanvasKeyboardFocus: () => {},
+      setInteractionMode: (_modeKey) => {},
+      armPlacement: (_definitionId, _displayTool, _inputMode) => {},
+      beginMoveFromScreenPoint: (_entityId, _screenPoint, _inputMode) => {},
+      beginMarqueeFromScreenPoint: (_screenPoint, _inputMode, _selectionMode) => {},
+      updateMoveDraftFromScreenPoint: (_screenPoint) => {},
+      updateMarqueeDraftFromScreenPoint: (_screenPoint) => {},
+      confirmMovePreview: async () => {},
+      cancelMove: () => {},
+      confirmMarqueeSelection: async () => {},
+      cancelMarquee: () => {},
+      rotateMoveClockwise: () => {},
+      rotatePlacementClockwise: () => {},
+      cancelPlacement: () => {},
+      centerPlacementPreview: () => {},
+      updatePlacementPreviewFromScreenPoint: (_screenPoint) => {},
+      confirmPlacementPreview: async () => {},
+      clearPlacementPreview: () => {},
+      selectEntity: async (_entityId, _inputMode, _selectionMode) => {},
+      rotateSelectionClockwise: async () => {},
+      clearSelection: async () => {},
+      patchEntityConfig: async (_entityId, _patch) => {},
+      commitPlacementAtScreenPoint: async (_screenPoint) => {},
+      activateLinkTarget: async (_entityId) => {},
+      removeSelection: async () => {},
+      removeSelectionLinks: async () => {},
+      removeLink: async (_linkId) => {},
+      undo: async () => {},
+      redo: async () => {},
+      zoomIn: () => {},
+      zoomOut: () => {},
+      zoomCanvasAt: (_screenPoint, _scaleFactor) => {},
+      panCanvasBy: (_screenDelta) => {},
+      setCanvasViewportSize: (_size) => {},
+      setLeftPanelMode: (_mode) => {},
+      setLocale: (_locale) => {},
+      setLogLevel: (_level) => {},
+      setDiagnosticsVisible: (_visible) => {},
+      setDockOpen: (_dockId, _open) => {},
+      toggleDockCollapsed: (_dockId) => {},
+      dispose: () => {},
     };
 
     this.sync("editor");
@@ -516,8 +467,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       const nextPreview = clonePlacementPreview(
         resolveManagedPlacementPreview(sessionAfter),
       );
-
-      this.placementPreviewProfiler?.recordUpdateResult({
+      this.logger.debug("Placement preview updated from screen input.", {
         changed: updateResult.changed,
         previousPreview,
         nextPreview,
@@ -526,23 +476,25 @@ class WorkbenchControllerImpl implements WorkbenchController {
       const syncMetrics = this.sync("editor");
       const placementMode = this.getPlacementMode(sessionBefore);
 
-      if (placementMode) {
-        const definitionId = placementMode.definitionId;
-        const interactionMode = placementMode.inputMode;
-
-        this.measureProfilerStage("controller.diagnostics", () => {
-          this.recordPlacementPreviewDiagnostic({
-            definitionId,
-            interactionMode,
-            screenPoint,
-            worldInput,
-            previousPreview,
-            nextPreview,
-            updateResult,
-            syncMetrics,
-          });
-        });
+      if (!placementMode) {
+        return;
       }
+
+      const definitionId = placementMode.definitionId;
+      const interactionMode = placementMode.inputMode;
+
+      this.measureProfilerStage("controller.diagnostics", () => {
+        this.recordPlacementPreviewDiagnostic({
+          definitionId,
+          interactionMode,
+          screenPoint,
+          worldInput,
+          previousPreview,
+          nextPreview,
+          updateResult,
+          syncMetrics,
+        });
+      });
     });
   }
 
@@ -682,14 +634,14 @@ class WorkbenchControllerImpl implements WorkbenchController {
   zoomIn(): void {
     this.zoomCanvasAt(
       this.getViewportCenterScreenPoint(),
-      WorkbenchControllerImpl.BUTTON_ZOOM_FACTOR,
+      WorkspaceControllerImpl.BUTTON_ZOOM_FACTOR,
     );
   }
 
   zoomOut(): void {
     this.zoomCanvasAt(
       this.getViewportCenterScreenPoint(),
-      1 / WorkbenchControllerImpl.BUTTON_ZOOM_FACTOR,
+      1 / WorkspaceControllerImpl.BUTTON_ZOOM_FACTOR,
     );
   }
 
@@ -768,7 +720,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   getLogLevel(): LogLevel {
-    return this.uiStore.getSnapshot().logLevel;
+    return this.workspaceState.ui.logLevel;
   }
 
   setLogLevel(level: LogLevel): void {
@@ -936,13 +888,35 @@ class WorkbenchControllerImpl implements WorkbenchController {
   private updateUiState(
     updater: (ui: WorkspaceState["ui"]) => WorkspaceState["ui"],
   ): boolean {
-    return this.uiStore.update(updater);
+    const currentUi = this.workspaceState.ui;
+    const nextUi = updater(currentUi);
+
+    if (nextUi === currentUi) {
+      return false;
+    }
+
+    this.commitWorkspaceMutation(() => {
+      this.workspaceState.ui = nextUi;
+    });
+    this.uiStore.setSnapshot(nextUi);
+    return true;
   }
 
   private updateCanvasView(
     updater: (canvasView: CanvasViewState) => CanvasViewState,
   ): boolean {
-    return this.canvasViewStore.update(updater);
+    const currentCanvasView = this.workspaceState.canvasView;
+    const nextCanvasView = updater(currentCanvasView);
+
+    if (nextCanvasView === currentCanvasView) {
+      return false;
+    }
+
+    this.commitWorkspaceMutation(() => {
+      this.workspaceState.canvasView = nextCanvasView;
+    });
+    this.canvasViewStore.setSnapshot(nextCanvasView);
+    return true;
   }
 
   private sync(source: SyncSource): SyncMetrics {
@@ -992,8 +966,8 @@ class WorkbenchControllerImpl implements WorkbenchController {
       topology: source === "editor" ? this.topology : this.workspaceStore.topology,
       editorSession: editorState.session,
       editorHistory: editorState.history,
-      ui: this.uiStore.getSnapshot(),
-      canvasView: this.canvasViewStore.getSnapshot(),
+      ui: this.workspaceState.ui,
+      canvasView: this.workspaceState.canvasView,
     };
   }
 
@@ -1009,6 +983,9 @@ class WorkbenchControllerImpl implements WorkbenchController {
         : clampedCanvasView;
 
     if (nextCanvasView !== workspaceState.canvasView) {
+      this.commitWorkspaceMutation(() => {
+        this.workspaceState.canvasView = nextCanvasView;
+      });
       this.canvasViewStore.setSnapshot(nextCanvasView);
     }
 
@@ -1095,14 +1072,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
   }
 
   private getWorkspaceProjectionState(): WorkspaceState {
-    return {
-      document: this.workspaceStore.document,
-      topology: this.workspaceStore.topology,
-      editorSession: this.workspaceStore.editorSession,
-      editorHistory: this.workspaceStore.editorHistory,
-      ui: this.uiStore.getSnapshot(),
-      canvasView: this.canvasViewStore.getSnapshot(),
-    };
+    return this.workspaceState;
   }
 
   private getViewportMetrics(workspaceState = this.getWorkspaceProjectionState()) {
@@ -1244,9 +1214,7 @@ class WorkbenchControllerImpl implements WorkbenchController {
       | "controller.diagnostics",
     callback: () => T,
   ): T {
-    if (this.placementPreviewProfiler) {
-      return this.placementPreviewProfiler.measureStage(stageId, callback);
-    }
+    
 
     return callback();
   }
@@ -1256,12 +1224,11 @@ class WorkbenchControllerImpl implements WorkbenchController {
       | "controller.sync.rootStoreSet",
     durationMs: number,
   ): void {
-    this.placementPreviewProfiler?.recordStageDuration(stageId, durationMs);
   }
 }
 
-export function createWorkbenchController(
-  options: CreateWorkbenchControllerOptions = {},
-): WorkbenchController {
-  return new WorkbenchControllerImpl(options);
+export function createWorkspaceController(
+  options: CreateWorkbenchControllerOptions,
+): WorkspaceController {
+  return new WorkspaceControllerImpl(options);
 }
