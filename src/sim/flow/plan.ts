@@ -236,18 +236,6 @@ function createProcessorInputVirtualState(node: InternalNode, context: PlanConte
   }
 }
 
-function deleteNode(node: InternalNode, edgeById: Map<string, InternalEdge>) {
-  if (node.deleted) return false
-  node.deleted = true
-  if (node.result === 'uncertain') node.result = 'solved-block'
-  for (const edge of edgeById.values()) {
-    if (edge.fromNode.nodeId === node.nodeId || edge.toNode.nodeId === node.nodeId) {
-      edge.deleted = true
-    }
-  }
-  return true
-}
-
 function deleteEdge(edge: InternalEdge) {
   if (edge.deleted) return false
   edge.deleted = true
@@ -366,34 +354,150 @@ function eliminateCycles(nodes: InternalNode[], edgeById: Map<string, InternalEd
   return changed
 }
 
-function pruneGraph(nodes: InternalNode[], edgeById: Map<string, InternalEdge>) {
-  let changed = true
-  while (changed) {
-    changed = false
-    trimProviderAndFreeEdges(nodes, edgeById)
+type TraversalUnit = {
+  anchor: InternalNode | null
+  pathNodes: InternalNode[]
+}
 
-    for (const node of nodes) {
-      if (node.deleted) continue
-      const incoming = activeIncomingEdges(node, edgeById)
-      const outgoing = activeOutgoingEdges(node, edgeById)
+type UpstreamTrace = {
+  anchor: InternalNode | null
+  pathNodes: InternalNode[]
+}
 
-      if (incoming.length === 0 && outgoing.length === 0) {
-        changed = deleteNode(node, edgeById) || changed
-        continue
+function isStrictTransportType(typeId: DeviceInstance['typeId']) {
+  return typeId === 'belt_straight_1x1'
+    || typeId === 'belt_turn_cw_1x1'
+    || typeId === 'belt_turn_ccw_1x1'
+    || typeId === 'pipe_straight_1x1'
+    || typeId === 'pipe_turn_cw_1x1'
+    || typeId === 'pipe_turn_ccw_1x1'
+}
+
+function shouldBaseBlockNode(node: InternalNode, edgeById: Map<string, InternalEdge>) {
+  if (node.deleted) return true
+
+  const incoming = activeIncomingEdges(node, edgeById)
+  const outgoing = activeOutgoingEdges(node, edgeById)
+
+  if (incoming.length === 0 && outgoing.length === 0) return true
+  if (node.baseState === 'free' && incoming.length === 0) return true
+  if (node.baseState === 'free' && incoming.length > 0 && incoming.every((edge) => edge.fromNode.baseState === 'free' || edge.fromNode.deleted)) {
+    return true
+  }
+  if ((node.baseState === 'shadow-pending' || node.baseState === 'provider') && outgoing.length === 0) return true
+  return false
+}
+
+function traversalUnitSortNode(unit: TraversalUnit) {
+  return unit.anchor ?? unit.pathNodes[unit.pathNodes.length - 1] ?? null
+}
+
+function compareTraversalUnits(left: TraversalUnit, right: TraversalUnit) {
+  const leftNode = traversalUnitSortNode(left)
+  const rightNode = traversalUnitSortNode(right)
+  if (!leftNode && !rightNode) return 0
+  if (!leftNode) return 1
+  if (!rightNode) return -1
+  return compareNodeOrder(leftNode, rightNode)
+}
+
+function tracePreviousAnchorBranches(
+  node: InternalNode,
+  edgeById: Map<string, InternalEdge>,
+  visited: ReadonlySet<string>,
+  branchSeen: ReadonlySet<string>,
+  prefixPath: InternalNode[] = [],
+): UpstreamTrace[] {
+  if (visited.has(node.nodeId) || branchSeen.has(node.nodeId)) {
+    return prefixPath.length > 0 ? [{ anchor: null, pathNodes: prefixPath }] : []
+  }
+
+  const nextSeen = new Set(branchSeen)
+  nextSeen.add(node.nodeId)
+
+  if (shouldBaseBlockNode(node, edgeById)) {
+    return [{ anchor: null, pathNodes: [...prefixPath, node] }]
+  }
+
+  if (!isStrictTransportType(node.device.typeId)) {
+    return [{ anchor: node, pathNodes: prefixPath }]
+  }
+
+  const nextPath = [...prefixPath, node]
+  const incoming = activeIncomingEdges(node, edgeById).sort(compareReceiverEdge)
+  if (incoming.length === 0) {
+    return [{ anchor: null, pathNodes: nextPath }]
+  }
+
+  const traces: UpstreamTrace[] = []
+  for (const edge of incoming) {
+    traces.push(...tracePreviousAnchorBranches(edge.fromNode, edgeById, visited, nextSeen, nextPath))
+  }
+  return traces
+}
+
+function buildLayeredTraversalOrder(nodes: InternalNode[], edgeById: Map<string, InternalEdge>) {
+  const visited = new Set<string>()
+  const orderedNodes: InternalNode[] = []
+
+  let currentLayer: TraversalUnit[] = nodes
+    .filter((node) => !node.deleted && activeOutgoingEdges(node, edgeById).length === 0)
+    .map((node) => ({ anchor: node, pathNodes: [] }))
+    .sort(compareTraversalUnits)
+
+  while (currentLayer.length > 0) {
+    for (const unit of currentLayer) {
+      for (const pathNode of unit.pathNodes) {
+        if (visited.has(pathNode.nodeId)) continue
+        orderedNodes.push(pathNode)
+        visited.add(pathNode.nodeId)
       }
-      if (node.baseState === 'free' && incoming.length === 0) {
-        changed = deleteNode(node, edgeById) || changed
-        continue
-      }
-      if (node.baseState === 'free' && incoming.length > 0 && incoming.every((edge) => edge.fromNode.baseState === 'free' || edge.fromNode.deleted)) {
-        changed = deleteNode(node, edgeById) || changed
-        continue
-      }
-      if ((node.baseState === 'shadow-pending' || node.baseState === 'provider') && outgoing.length === 0) {
-        changed = deleteNode(node, edgeById) || changed
+
+      if (unit.anchor && !visited.has(unit.anchor.nodeId)) {
+        orderedNodes.push(unit.anchor)
+        visited.add(unit.anchor.nodeId)
       }
     }
+
+    const nextUnitsByKey = new Map<string, { unit: TraversalUnit; pathNodeIds: Set<string> }>()
+
+    for (const unit of currentLayer) {
+      const anchor = unit.anchor
+      if (!anchor || shouldBaseBlockNode(anchor, edgeById)) continue
+
+      const incoming = activeIncomingEdges(anchor, edgeById).sort(compareReceiverEdge)
+      for (const edge of incoming) {
+        const traces = tracePreviousAnchorBranches(edge.fromNode, edgeById, visited, new Set<string>())
+        for (const trace of traces) {
+          const keyNode = trace.anchor ?? trace.pathNodes[trace.pathNodes.length - 1] ?? null
+          if (!keyNode || visited.has(keyNode.nodeId)) continue
+
+          let entry = nextUnitsByKey.get(keyNode.nodeId)
+          if (!entry) {
+            entry = {
+              unit: { anchor: trace.anchor, pathNodes: [] },
+              pathNodeIds: new Set<string>(),
+            }
+            nextUnitsByKey.set(keyNode.nodeId, entry)
+          }
+
+          if (!entry.unit.anchor && trace.anchor) {
+            entry.unit.anchor = trace.anchor
+          }
+
+          for (const pathNode of trace.pathNodes) {
+            if (visited.has(pathNode.nodeId) || entry.pathNodeIds.has(pathNode.nodeId)) continue
+            entry.unit.pathNodes.push(pathNode)
+            entry.pathNodeIds.add(pathNode.nodeId)
+          }
+        }
+      }
+    }
+
+    currentLayer = [...nextUnitsByKey.values()].map((entry) => entry.unit).sort(compareTraversalUnits)
   }
+
+  return orderedNodes
 }
 
 function buildDevicePriorityMeta(context: PlanContext) {
@@ -964,9 +1068,15 @@ function selectShadowPull(
   storageStates: Map<string, StorageVirtualState>,
   reactorOutputStates: Map<string, ReactorOutputVirtualSlot[]>,
 ) {
-  const orderedNodes = [...nodes].sort(compareNodeOrder)
+  const orderedNodes = nodes
 
   for (const node of orderedNodes) {
+    if (node.deleted) continue
+    if (node.result === 'solved-block') continue
+    if (shouldBaseBlockNode(node, edgeById)) {
+      node.result = 'solved-block'
+      continue
+    }
     if (!nodeReceivesDuringPull(node, receivableShadowNodes)) continue
     const incoming = activeIncomingEdges(node, edgeById).sort(compareReceiverEdge)
     if (incoming.length === 0) continue
@@ -1035,10 +1145,16 @@ function selectShadowPush(
   reactorOutputStates: Map<string, ReactorOutputVirtualSlot[]>,
   processorStates: Map<string, ProcessorInputVirtualSlot[]>,
 ) {
-  const orderedNodes = [...nodes].sort(compareNodeOrder)
+  const orderedNodes = nodes
 
   for (const node of orderedNodes) {
-    if (node.deleted || node.baseState === 'free') continue
+    if (node.deleted) continue
+    if (node.result === 'solved-block') continue
+    if (shouldBaseBlockNode(node, edgeById)) {
+      node.result = 'solved-block'
+      continue
+    }
+    if (node.baseState === 'free') continue
     const outgoing = activeOutgoingEdges(node, edgeById)
       .filter((edge) => edge.shadowPull === 'accept')
       .sort(compareEdgeKey)
@@ -1118,13 +1234,6 @@ function selectShadowPush(
   }
 }
 
-function signatureForState(edgeById: Map<string, InternalEdge>, receivableShadowNodes: ReadonlySet<string>) {
-  const acceptedPulls = [...edgeById.values()].filter((edge) => !edge.deleted && edge.shadowPull === 'accept').map((edge) => edge.edgeId).sort()
-  const acceptedPushes = [...edgeById.values()].filter((edge) => !edge.deleted && edge.shadowPush === 'accept').map((edge) => edge.edgeId).sort()
-  const receivable = [...receivableShadowNodes].sort()
-  return JSON.stringify({ acceptedPulls, acceptedPushes, receivable })
-}
-
 function finalizeNodeResults(nodes: InternalNode[]) {
   for (const node of nodes) {
     if (node.deleted) {
@@ -1183,25 +1292,19 @@ export function solvePullTransferMatches(context: PlanContext): PlanResult {
 
   trimProviderAndFreeEdges(nodes, edgeById)
   eliminateCycles(nodes, edgeById)
-  pruneGraph(nodes, edgeById)
 
   const lanesAdvancedThisTick = new Set<string>()
   const receivableShadowNodes = new Set<string>()
-  let previousSignature = ''
-  const maxIterations =1
 
-  for (let iteration = 0; iteration < maxIterations; iteration += 1) {
-    resetDynamicState(nodes, edgeById)
-    const storageStates = buildStorageStates(nodes)
-    const reactorOutputStates = buildReactorOutputStates(nodes)
-    selectShadowPull(context, nodes, edgeById, receivableShadowNodes, lanesAdvancedThisTick, storageStates, reactorOutputStates)
-    const processorStates = buildProcessorInputStates(nodes, context)
-    selectShadowPush(context, nodes, edgeById, receivableShadowNodes, lanesAdvancedThisTick, storageStates, reactorOutputStates, processorStates)
-    finalizeNodeResults(nodes)
+  resetDynamicState(nodes, edgeById)
+  const storageStates = buildStorageStates(nodes)
+  const reactorOutputStates = buildReactorOutputStates(nodes)
+  const processorStates = buildProcessorInputStates(nodes, context)
+  const traversalOrder = buildLayeredTraversalOrder(nodes, edgeById)
 
-    const signature = signatureForState(edgeById, receivableShadowNodes)
-    if (signature === previousSignature) break
-    previousSignature = signature
+  for (const node of traversalOrder) {
+    selectShadowPull(context, [node], edgeById, receivableShadowNodes, lanesAdvancedThisTick, storageStates, reactorOutputStates)
+    selectShadowPush(context, [node], edgeById, receivableShadowNodes, lanesAdvancedThisTick, storageStates, reactorOutputStates, processorStates)
   }
 
   finalizeNodeResults(nodes)

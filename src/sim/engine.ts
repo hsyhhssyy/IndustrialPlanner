@@ -34,6 +34,7 @@ import type {
   ItemId,
   JunctionRuntime,
   LayoutState,
+  MinuteWindowDelta,
   PowerMode,
   ProcessorRuntime,
   RecipeDef,
@@ -343,8 +344,15 @@ function emptyPerMinuteRecord(): Record<ItemId, number> {
   return createItemNumberRecord(0)
 }
 
-function createWindowDelta(delta: Partial<Record<ItemId, number>> = {}): Partial<Record<ItemId, number>> {
+function createWindowDeltaRecord(delta: Partial<Record<ItemId, number>> = {}): Partial<Record<ItemId, number>> {
   return Object.fromEntries(ITEM_IDS.map((itemId) => [itemId, delta[itemId] ?? 0])) as Partial<Record<ItemId, number>>
+}
+
+function createWindowDelta(delta: Partial<MinuteWindowDelta> = {}): MinuteWindowDelta {
+  return {
+    produced: createWindowDeltaRecord(delta.produced),
+    consumed: createWindowDeltaRecord(delta.consumed),
+  }
 }
 
 function normalizeRuntimeState(runtime: DeviceRuntime, stallReason: StallReason) {
@@ -371,7 +379,7 @@ function updateThermalPoolPowerAndGetSupplyKw(
   layout: LayoutState,
   runtimeById: Record<string, DeviceRuntime>,
   tickRateHz: number,
-  processorDelta: Partial<Record<ItemId, number>>,
+  processorDelta: MinuteWindowDelta,
 ) {
   void processorDelta
   let totalSupplyKw = 0
@@ -421,7 +429,7 @@ function buildPowerAvailabilityByDeviceId(
   runtimeById: Record<string, DeviceRuntime>,
   poles: DeviceInstance[],
   tickRateHz: number,
-  processorDelta: Partial<Record<ItemId, number>>,
+  processorDelta: MinuteWindowDelta,
   batteryStoredJ: number,
   powerDemandOverrideKw: number | null,
 ) {
@@ -1339,7 +1347,7 @@ function runSecondSettlementStartPhase(
   layoutDevices: readonly DeviceInstance[],
   runtimeById: Record<string, DeviceRuntime>,
   _tick: number,
-  processorDelta: Partial<Record<ItemId, number>>,
+  processorDelta: MinuteWindowDelta,
 ) {
   for (const device of layoutDevices) {
     const runtime = runtimeById[device.instanceId]
@@ -2218,7 +2226,7 @@ function pickRunnableRecipeForDevice(device: DeviceInstance, runtime: DeviceRunt
 function tryStartProcessorCycleOnTick(
   device: DeviceInstance,
   runtime: DeviceRuntime,
-  processorDelta: Partial<Record<ItemId, number>>,
+  processorDelta: MinuteWindowDelta,
 ) {
   if (!('outputBuffer' in runtime && 'inputBuffer' in runtime)) return
   if (isReactorPoolType(device.typeId)) return
@@ -2230,7 +2238,7 @@ function tryStartProcessorCycleOnTick(
   runtime.activeRecipeId = selectedRecipe.id
   runtime.cycleProgressTicks = 0
   for (const input of selectedRecipe.inputs) {
-    mark(processorDelta, input.itemId, -input.amount)
+    mark(processorDelta.consumed, input.itemId, input.amount)
   }
   runtime.progress01 = 0
   normalizeRuntimeState(runtime, 'NONE')
@@ -2239,7 +2247,7 @@ function tryStartProcessorCycleOnTick(
 function tryStartReactorLanesOnTick(
   device: DeviceInstance,
   runtime: DeviceRuntime,
-  processorDelta: Partial<Record<ItemId, number>>,
+  processorDelta: MinuteWindowDelta,
 ) {
   if (!('outputBuffer' in runtime && 'inputBuffer' in runtime)) return
   if (!isReactorPoolType(device.typeId)) return
@@ -2271,7 +2279,7 @@ function tryStartReactorLanesOnTick(
     laneProgress[laneIndex] = 0
     startedAnyLane = true
     for (const input of laneRecipe.inputs) {
-      mark(processorDelta, input.itemId, -input.amount)
+      mark(processorDelta.consumed, input.itemId, input.amount)
     }
   }
 
@@ -2309,25 +2317,28 @@ function ensureMinuteWindow(sim: SimState, capacity: number) {
 function applyMinuteWindowDelta(
   producedPerMinute: Record<ItemId, number>,
   consumedPerMinute: Record<ItemId, number>,
-  deltaRecord: Partial<Record<ItemId, number>>,
+  deltaRecord: MinuteWindowDelta,
   direction: 1 | -1,
 ) {
-  for (const [itemIdRaw, deltaRaw] of Object.entries(deltaRecord)) {
+  for (const [itemIdRaw, deltaRaw] of Object.entries(deltaRecord.produced)) {
     const itemId = itemIdRaw as ItemId
     const delta = Number(deltaRaw ?? 0)
     if (!Number.isFinite(delta) || delta === 0) continue
 
-    if (delta > 0) {
-      producedPerMinute[itemId] = Math.max(0, (producedPerMinute[itemId] ?? 0) + direction * delta)
-    } else {
-      const consumedDelta = Math.abs(delta)
-      consumedPerMinute[itemId] = Math.max(0, (consumedPerMinute[itemId] ?? 0) + direction * consumedDelta)
-    }
+    producedPerMinute[itemId] = Math.max(0, (producedPerMinute[itemId] ?? 0) + direction * delta)
+  }
+
+  for (const [itemIdRaw, deltaRaw] of Object.entries(deltaRecord.consumed)) {
+    const itemId = itemIdRaw as ItemId
+    const delta = Number(deltaRaw ?? 0)
+    if (!Number.isFinite(delta) || delta === 0) continue
+
+    consumedPerMinute[itemId] = Math.max(0, (consumedPerMinute[itemId] ?? 0) + direction * delta)
   }
 }
 
 function recomputePerMinuteTotalsFromWindow(
-  minuteWindowDeltas: Array<Partial<Record<ItemId, number>>>,
+  minuteWindowDeltas: MinuteWindowDelta[],
   minuteWindowCount: number,
   minuteWindowCapacity: number,
 ) {
@@ -2335,7 +2346,7 @@ function recomputePerMinuteTotalsFromWindow(
   const consumedPerMinute = emptyPerMinuteRecord()
   const slotsToScan = Math.min(Math.max(0, minuteWindowCount), minuteWindowCapacity)
   for (let index = 0; index < slotsToScan; index += 1) {
-    const deltaRecord = minuteWindowDeltas[index] ?? {}
+    const deltaRecord = minuteWindowDeltas[index] ?? createWindowDelta()
     applyMinuteWindowDelta(producedPerMinute, consumedPerMinute, deltaRecord, 1)
   }
   return { producedPerMinute, consumedPerMinute }
@@ -2356,7 +2367,7 @@ export function debugSolveFlowPlanForCurrentTick(layout: LayoutState, sim: SimSt
   const purePipeSegmentMembersById = getPurePipeSegmentMembersById(layout)
   const lanesReachedHalfThisTick = new Set<string>()
   const warehouse = { ...sim.warehouse }
-  const processorDelta: Partial<Record<ItemId, number>> = {}
+  const processorDelta = createWindowDelta()
   const poles = layout.devices.filter((device) => device.typeId === 'item_port_power_diffuser_1')
   let batteryStoredJ = sim.powerMode === 'real'
     ? Math.min(Math.max(0, sim.powerStats.batteryStoredJ ?? GLOBAL_BATTERY_CAPACITY_J), GLOBAL_BATTERY_CAPACITY_J)
@@ -2460,7 +2471,7 @@ export function debugSolveFlowPlanForCurrentTick(layout: LayoutState, sim: SimSt
               runtime.lastCompletionTick === null ? 0 : Math.max(1, completionTick - runtime.lastCompletionTick)
             runtime.lastCompletionTick = completionTick
             for (const output of laneRecipe.outputs) {
-              mark(processorDelta, output.itemId, output.amount)
+              mark(processorDelta.produced, output.itemId, output.amount)
             }
             laneRecipeIds[laneIndex] = undefined
             laneProgress[laneIndex] = 0
@@ -2503,7 +2514,7 @@ export function debugSolveFlowPlanForCurrentTick(layout: LayoutState, sim: SimSt
                 runtime.lastCompletionTick === null ? 0 : Math.max(1, completionTick - runtime.lastCompletionTick)
               runtime.lastCompletionTick = completionTick
               for (const output of activeRecipe.outputs) {
-                mark(processorDelta, output.itemId, output.amount)
+                mark(processorDelta.produced, output.itemId, output.amount)
               }
               runtime.cycleProgressTicks = 0
               runtime.progress01 = 0
@@ -2622,7 +2633,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   const completedCycleDeviceIdsThisTick = new Set<string>()
 
   const warehouse = { ...sim.warehouse }
-  const processorDelta: Partial<Record<ItemId, number>> = {}
+  const processorDelta = createWindowDelta()
   const totalDemandKw = totalPowerDemandKw(layout, sim.powerDemandOverrideKw)
   const poles = layout.devices.filter((device) => device.typeId === 'item_port_power_diffuser_1')
   let totalSupplyKw = sim.powerMode === 'infinite' ? Number.POSITIVE_INFINITY : 0
@@ -2732,7 +2743,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
               runtime.lastCompletionTick === null ? 0 : Math.max(1, completionTick - runtime.lastCompletionTick)
             runtime.lastCompletionTick = completionTick
             for (const output of laneRecipe.outputs) {
-              mark(processorDelta, output.itemId, output.amount)
+              mark(processorDelta.produced, output.itemId, output.amount)
             }
             laneRecipeIds[laneIndex] = undefined
             laneProgress[laneIndex] = 0
@@ -2777,7 +2788,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
                 runtime.lastCompletionTick === null ? 0 : Math.max(1, completionTick - runtime.lastCompletionTick)
               runtime.lastCompletionTick = completionTick
               for (const output of activeRecipe.outputs) {
-                mark(processorDelta, output.itemId, output.amount)
+                mark(processorDelta.produced, output.itemId, output.amount)
               }
               runtime.cycleProgressTicks = 0
               runtime.progress01 = 0
@@ -2959,7 +2970,7 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   const minuteWindowDeltas = minuteWindow.buffer
   const writeIndex = minuteWindow.cursor
 
-  const nextDelta = { ...processorDelta }
+  const nextDelta = createWindowDelta(processorDelta)
   minuteWindowDeltas[writeIndex] = nextDelta
 
   const nextMinuteWindowCursor = (writeIndex + 1) % perMinuteWindowTicks
@@ -2980,11 +2991,13 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   }
 
   for (const itemId of ITEM_IDS) {
-    const delta = nextDelta[itemId] ?? 0
-    if (delta > 0) {
-      nextStats.everProduced[itemId] = (nextStats.everProduced[itemId] ?? 0) + delta
-    } else if (delta < 0) {
-      nextStats.everConsumed[itemId] = (nextStats.everConsumed[itemId] ?? 0) + Math.abs(delta)
+    const producedDelta = nextDelta.produced[itemId] ?? 0
+    const consumedDelta = nextDelta.consumed[itemId] ?? 0
+    if (producedDelta > 0) {
+      nextStats.everProduced[itemId] = (nextStats.everProduced[itemId] ?? 0) + producedDelta
+    }
+    if (consumedDelta > 0) {
+      nextStats.everConsumed[itemId] = (nextStats.everConsumed[itemId] ?? 0) + consumedDelta
     }
 
     const stock = warehouse[itemId] ?? 0

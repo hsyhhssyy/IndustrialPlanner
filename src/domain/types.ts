@@ -285,6 +285,11 @@ export interface WarehouseStats {
   everStockPositive: Record<ItemId, number>
 }
 
+export interface MinuteWindowDelta {
+  produced: Partial<Record<ItemId, number>>
+  consumed: Partial<Record<ItemId, number>>
+}
+
 export interface BaseRuntime {
   progress01: number
   stallReason: StallReason
@@ -352,7 +357,7 @@ export interface SimState {
   runtimeById: Record<string, DeviceRuntime>
   warehouse: WarehouseState
   stats: WarehouseStats
-  minuteWindowDeltas: Array<Partial<Record<ItemId, number>>>
+  minuteWindowDeltas: MinuteWindowDelta[]
   minuteWindowCursor: number
   minuteWindowCount: number
   minuteWindowCapacity: number
