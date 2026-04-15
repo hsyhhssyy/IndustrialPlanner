@@ -1,45 +1,40 @@
-import { RendererHost } from "@/renderer/host/renderer-host";
-import { observer } from "@/shared/mobx";
+import {
+  STATIC_UI_PLACEHOLDER_TEXT,
+  handleUiEvent,
+} from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { WorkbenchController } from "@/workspace/workspace-facade";
 import type { WorkspaceDerivedStore } from "@/workbench/derived/workspace-derived-store";
-
-const noop = () => {};
 
 export interface CanvasPanelProps {
   controller: WorkbenchController;
   workspaceDerivedStore: Pick<WorkspaceDerivedStore, "render">;
 }
 
-export const CanvasPanel = observer(function CanvasPanel({
-  controller,
-}: CanvasPanelProps) {
+export function CanvasPanel(_props: CanvasPanelProps) {
   return (
     <main className="canvas-panel panel-surface">
-      <div className="canvas-stage" onBlur={noop} onKeyDown={noop} onKeyUp={noop} tabIndex={0}>
+      <div
+        className="canvas-stage"
+        onBlur={handleUiEvent}
+        onKeyDown={handleUiEvent}
+        onKeyUp={handleUiEvent}
+        tabIndex={0}
+      >
         <div
           className="canvas-viewport-surface"
-          onContextMenu={noop}
-          onLostPointerCapture={noop}
-          onPointerCancel={noop}
-          onPointerDown={noop}
-          onPointerEnter={noop}
-          onPointerLeave={noop}
-          onPointerMove={noop}
-          onPointerUp={noop}
-          onWheel={noop}
+          onContextMenu={handleUiEvent}
+          onLostPointerCapture={handleUiEvent}
+          onPointerCancel={handleUiEvent}
+          onPointerDown={handleUiEvent}
+          onPointerEnter={handleUiEvent}
+          onPointerLeave={handleUiEvent}
+          onPointerMove={handleUiEvent}
+          onPointerUp={handleUiEvent}
+          onWheel={handleUiEvent}
         >
-          <RendererHost
-            sceneSource={{
-              documentStore: controller.workspaceState.documentStore,
-              editorStore: controller.workspaceState.editorStore,
-              uiStore: controller.workspaceState.uiStore,
-              canvasViewStore: controller.workspaceState.canvasViewStore,
-              topologyStore: controller.workspaceState.topologyStore,
-              registry: controller.registry,
-            }}
-          />
+          <div className="canvas-placeholder">{STATIC_UI_PLACEHOLDER_TEXT}</div>
         </div>
       </div>
     </main>
   );
-});
+}

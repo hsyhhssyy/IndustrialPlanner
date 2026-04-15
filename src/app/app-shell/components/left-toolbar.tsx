@@ -1,71 +1,57 @@
 import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
-import { useExternalStore } from "@/app/app-shell/hooks/use-external-store";
 import {
-  LEFT_RAIL_PRIMARY_ITEMS,
-  LEFT_RAIL_UTILITY_ITEMS,
-} from "@/app/app-shell/workbench-placeholders";
-import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
+  STATIC_UI_PLACEHOLDER_TEXT,
+  handleUiEvent,
+} from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { WorkbenchController } from "@/workspace/workspace-facade";
 
-const noop = () => {};
+const PRIMARY_TOOLBAR_ITEMS = [
+  { id: "primary-placement", icon: "placement" as const },
+  { id: "primary-delete", icon: "delete" as const },
+  { id: "primary-blueprint", icon: "blueprint" as const },
+];
+
+const UTILITY_TOOLBAR_ITEMS = [
+  { id: "utility-toolbox", icon: "toolbox" as const },
+  { id: "utility-help", icon: "help" as const },
+  { id: "utility-settings", icon: "settings" as const },
+];
 
 export interface LeftToolbarProps {
   controller: WorkbenchController;
 }
 
-export function LeftToolbar({ controller }: LeftToolbarProps) {
-  const ui = useExternalStore(controller.workspaceState.uiStore);
-  const locale = ui.locale;
-  const activeLeftPanelMode = ui.leftPanelMode;
-  const iconByItemId = {
-    placement: "placement",
-    delete: "delete",
-    blueprint: "blueprint",
-    history: "history",
-    feedback: "feedback",
-    toolbox: "toolbox",
-    help: "help",
-    settings: "settings",
-  } as const;
-
+export function LeftToolbar(_props: LeftToolbarProps) {
   return (
     <aside className="left-toolbar panel-surface">
       <div className="toolbar-rail-group">
-        {LEFT_RAIL_PRIMARY_ITEMS.map((item) => {
-          const isActive = activeLeftPanelMode === item.id;
-
-          return (
-            <button
-              aria-pressed={isActive}
-              className={`rail-button ${isActive ? "is-active" : ""}`.trim()}
-              key={item.id}
-              onClick={noop}
-              type="button"
-            >
-              <span className="rail-button-short">
-                <WorkbenchIcon kind={iconByItemId[item.id] ?? "settings"} />
-              </span>
-              <span className="rail-button-label">
-                {localizeWorkbenchText(locale, item.label)}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="toolbar-rail-group toolbar-rail-utility">
-        {LEFT_RAIL_UTILITY_ITEMS.map((item) => (
+        {PRIMARY_TOOLBAR_ITEMS.map((item) => (
           <button
-            className="rail-button rail-button-utility"
+            aria-label={STATIC_UI_PLACEHOLDER_TEXT}
+            className="rail-button"
             key={item.id}
-            onClick={noop}
+            onClick={handleUiEvent}
             type="button"
           >
             <span className="rail-button-short">
-              <WorkbenchIcon kind={iconByItemId[item.id] ?? "settings"} />
+              <WorkbenchIcon kind={item.icon} />
             </span>
-            <span className="rail-button-label">
-              {localizeWorkbenchText(locale, item.label)}
+            <span className="rail-button-label">{STATIC_UI_PLACEHOLDER_TEXT}</span>
+          </button>
+        ))}
+      </div>
+      <div className="toolbar-rail-group toolbar-rail-utility">
+        {UTILITY_TOOLBAR_ITEMS.map((item) => (
+          <button
+            className="rail-button rail-button-utility"
+            key={item.id}
+            onClick={handleUiEvent}
+            type="button"
+          >
+            <span className="rail-button-short">
+              <WorkbenchIcon kind={item.icon} />
             </span>
+            <span className="rail-button-label">{STATIC_UI_PLACEHOLDER_TEXT}</span>
           </button>
         ))}
       </div>

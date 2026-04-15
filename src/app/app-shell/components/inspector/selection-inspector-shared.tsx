@@ -2,141 +2,106 @@ import type {
   ExplicitLink,
 } from "@/domain/document/world-document";
 import type { AppLocale } from "@/i18n/messages";
-import { createTranslator } from "@/i18n/messages";
-import { getLocalizedStage1EntityName } from "@/i18n/stage1-registry";
 import type {
   SelectionInspectorContext,
   SelectionInspectorState,
 } from "@/app/app-shell/components/inspector/selection-inspector-model";
 import {
-  serializeConfigValueForInput,
-} from "@/app/app-shell/components/inspector/selection-inspector-model";
-
-const noop = () => {};
+  STATIC_UI_PLACEHOLDER_TEXT,
+  handleUiEvent,
+} from "@/app/app-shell/components/ui-shell-null-handlers";
 
 export function SelectionInspectorSummary({
-  state,
-  context,
+  state: _state,
+  context: _context,
 }: {
   state: SelectionInspectorState;
   context: SelectionInspectorContext;
 }) {
-  const t = createTranslator(state.locale);
-
   return (
     <dl className="kv-grid">
       <div className="kv">
-        <dt>{t("label.definition")}</dt>
-        <dd>
-          {getLocalizedStage1EntityName(
-            state.locale,
-            context.selectedDefinition,
-          )}
-        </dd>
+        <dt>{STATIC_UI_PLACEHOLDER_TEXT}</dt>
+        <dd>{STATIC_UI_PLACEHOLDER_TEXT}</dd>
       </div>
       <div className="kv">
-        <dt>{t("label.entityId")}</dt>
-        <dd>{context.selectedEntity.id}</dd>
+        <dt>{STATIC_UI_PLACEHOLDER_TEXT}</dt>
+        <dd>{STATIC_UI_PLACEHOLDER_TEXT}</dd>
       </div>
       <div className="kv">
-        <dt>{t("label.mode")}</dt>
-        <dd>{t("mode.edit")}</dd>
+        <dt>{STATIC_UI_PLACEHOLDER_TEXT}</dt>
+        <dd>{STATIC_UI_PLACEHOLDER_TEXT}</dd>
       </div>
       <div className="kv">
-        <dt>{t("label.position")}</dt>
-        <dd>
-          {context.selectedEntity.position.x}, {context.selectedEntity.position.y}
-        </dd>
+        <dt>{STATIC_UI_PLACEHOLDER_TEXT}</dt>
+        <dd>{STATIC_UI_PLACEHOLDER_TEXT}</dd>
       </div>
       <div className="kv">
-        <dt>{t("label.rotation")}</dt>
-        <dd>{context.selectedEntity.rotation}°</dd>
+        <dt>{STATIC_UI_PLACEHOLDER_TEXT}</dt>
+        <dd>{STATIC_UI_PLACEHOLDER_TEXT}</dd>
       </div>
       <div className="kv">
-        <dt>{t("label.links")}</dt>
-        <dd>{context.selectedLinks.length}</dd>
+        <dt>{STATIC_UI_PLACEHOLDER_TEXT}</dt>
+        <dd>{STATIC_UI_PLACEHOLDER_TEXT}</dd>
       </div>
     </dl>
   );
 }
 
 export function ConnectionList({
-  locale,
-  links,
-  removeDisabled,
+  locale: _locale,
+  links: _links,
+  removeDisabled: _removeDisabled,
 }: {
   locale: AppLocale;
   links: ExplicitLink[];
   removeDisabled: boolean;
 }) {
-  const t = createTranslator(locale);
-
   return (
     <div className="definition-list">
-      {links.length === 0 ? (
-        <article className="definition-card">
-          <p>{t("label.noConnections")}</p>
-        </article>
-      ) : (
-        links.map((link) => (
-          <article className="definition-card" key={link.id}>
-            <h4>{link.id}</h4>
-            <p>
-              {link.sourceEntityId} → {link.targetEntityId}
-            </p>
-            <button
-              disabled={removeDisabled}
-              onClick={noop}
-              type="button"
-            >
-              {t("action.removeLink")}
-            </button>
-          </article>
-        ))
-      )}
+      <article className="definition-card">
+        <h4>{STATIC_UI_PLACEHOLDER_TEXT}</h4>
+        <p>{STATIC_UI_PLACEHOLDER_TEXT}</p>
+        <button onClick={handleUiEvent} type="button">
+          {STATIC_UI_PLACEHOLDER_TEXT}
+        </button>
+      </article>
     </div>
   );
 }
 
 export function RuntimeDetailList({
-  state,
+  state: _state,
 }: {
   state: SelectionInspectorState;
 }) {
-  const t = createTranslator(state.locale);
-  const lines = [t("label.runtimeDetailPlaceholder")];
-
   return (
     <div className="definition-list">
-      {lines.map((line) => (
-        <article className="definition-card" key={line}>
-          <p>{line}</p>
-        </article>
-      ))}
+      <article className="definition-card">
+        <p>{STATIC_UI_PLACEHOLDER_TEXT}</p>
+      </article>
     </div>
   );
 }
 
-export function NoSelectionState({ locale }: { locale: AppLocale }) {
-  const t = createTranslator(locale);
-
+export function NoSelectionState({ locale: _locale }: { locale: AppLocale }) {
   return (
     <article className="definition-card">
-      <h4>{t("label.noSelection")}</h4>
-      <p>{t("label.runtimeDetailPlaceholder")}</p>
+      <h4>{STATIC_UI_PLACEHOLDER_TEXT}</h4>
+      <p>{STATIC_UI_PLACEHOLDER_TEXT}</p>
     </article>
   );
 }
 
 export function ConfigFieldMutationControl({
-  currentValue,
-  locale,
-  submitLabel,
-  toggleLabel,
-  clearLabel,
-  disabled = false,
-  onApply,
-  onClear,
+  currentValue: _currentValue,
+  locale: _locale,
+  submitLabel: _submitLabel,
+  toggleLabel: _toggleLabel,
+  clearLabel: _clearLabel,
+  disabled: _disabled = false,
+  onApply: _onApply,
+  onClear: _onClear,
 }: {
   currentValue: unknown;
   locale: AppLocale;
@@ -147,50 +112,19 @@ export function ConfigFieldMutationControl({
   onApply: (value: unknown) => Promise<void> | void;
   onClear?: () => Promise<void> | void;
 }) {
-  const t = createTranslator(locale);
-
-  if (typeof currentValue === "boolean") {
-    return (
-      <div className="inspector-option-grid">
-        <button
-          disabled={disabled}
-          onClick={noop}
-          type="button"
-        >
-          {toggleLabel}: {currentValue ? t("action.close") : t("action.open")}
-        </button>
-        {onClear ? (
-          <button
-            disabled={disabled}
-            onClick={noop}
-            type="button"
-          >
-            {clearLabel}
-          </button>
-        ) : null}
-      </div>
-    );
-  }
-
   return (
     <div className="cluster">
       <input
-        defaultValue={serializeConfigValueForInput(currentValue)}
-        disabled={disabled}
+        defaultValue={STATIC_UI_PLACEHOLDER_TEXT}
         name="nextValue"
+        onChange={handleUiEvent}
       />
-      <button disabled={disabled} onClick={noop} type="button">
-        {submitLabel}
+      <button onClick={handleUiEvent} type="button">
+        {STATIC_UI_PLACEHOLDER_TEXT}
       </button>
-      {onClear ? (
-        <button
-          disabled={disabled}
-          onClick={noop}
-          type="button"
-        >
-          {clearLabel}
-        </button>
-      ) : null}
+      <button onClick={handleUiEvent} type="button">
+        {STATIC_UI_PLACEHOLDER_TEXT}
+      </button>
     </div>
   );
 }

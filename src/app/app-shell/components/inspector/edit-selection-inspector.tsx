@@ -1,113 +1,74 @@
-import { createTranslator } from "@/i18n/messages";
-import {
-  formatConfigValue,
-  type SelectionInspectorPanelProps,
-} from "@/app/app-shell/components/inspector/selection-inspector-model";
+import type { SelectionInspectorPanelProps } from "@/app/app-shell/components/inspector/selection-inspector-model";
 import {
   ConfigFieldMutationControl,
   ConnectionList,
   NoSelectionState,
   RuntimeDetailList,
-  SelectionInspectorSummary,
 } from "@/app/app-shell/components/inspector/selection-inspector-shared";
 import {
-  getLocalizedMutabilityLabel,
-  getLocalizedStage1ConfigFieldLabel,
-} from "@/i18n/stage1-registry";
-
-const noop = () => {};
+  STATIC_UI_PLACEHOLDER_TEXT,
+  handleUiEvent,
+} from "@/app/app-shell/components/ui-shell-null-handlers";
 
 export function EditSelectionInspector({
-  state,
-  context,
+  controller: _controller,
+  state: _state,
+  context: _context,
 }: SelectionInspectorPanelProps) {
-  const t = createTranslator(state.locale);
-
-  if (!context) {
-    return <NoSelectionState locale={state.locale} />;
-  }
-
   return (
     <div className="stack">
-      <SelectionInspectorSummary context={context} state={state} />
+      <NoSelectionState locale="zh-CN" />
       <div className="cluster">
         <div className="card-header card-subheader">
-          <h4>{t("section.quickActions")}</h4>
+          <h4>{STATIC_UI_PLACEHOLDER_TEXT}</h4>
         </div>
         <div className="inspector-option-grid">
-          <button
-            onClick={noop}
-            type="button"
-          >
-            {t("action.deleteSelection")}
+          <button onClick={handleUiEvent} type="button">
+            {STATIC_UI_PLACEHOLDER_TEXT}
           </button>
-          <button
-            disabled={context.selectedLinks.length === 0}
-            onClick={noop}
-            type="button"
-          >
-            {t("action.removeLinks")}
+          <button onClick={handleUiEvent} type="button">
+            {STATIC_UI_PLACEHOLDER_TEXT}
           </button>
-          <button
-            onClick={noop}
-            type="button"
-          >
-            {t("tool.link")}
+          <button onClick={handleUiEvent} type="button">
+            {STATIC_UI_PLACEHOLDER_TEXT}
           </button>
         </div>
       </div>
       <div className="cluster">
         <div className="card-header card-subheader">
-          <h4>{t("section.connections")}</h4>
+          <h4>{STATIC_UI_PLACEHOLDER_TEXT}</h4>
         </div>
         <ConnectionList
-          links={context.selectedLinks}
-          locale={state.locale}
+          links={[]}
+          locale="zh-CN"
           removeDisabled={false}
         />
       </div>
       <div className="cluster">
         <div className="card-header card-subheader">
-          <h4>{t("section.configFields")}</h4>
+          <h4>{STATIC_UI_PLACEHOLDER_TEXT}</h4>
         </div>
         <div className="definition-list">
-          {context.selectedDefinition.configFields.length === 0 ? (
-            <article className="definition-card">
-              <p>{t("label.noConfigFields")}</p>
-            </article>
-          ) : (
-            context.selectedDefinition.configFields.map((field) => (
-              <article className="definition-card" key={field.key}>
-                <h4>
-                  {getLocalizedStage1ConfigFieldLabel(state.locale, field)}
-                </h4>
-                <p>
-                  {getLocalizedMutabilityLabel(
-                    state.locale,
-                    field.mutability,
-                  )}
-                </p>
-                <p>
-                  {formatConfigValue(context.selectedEntity.config[field.key])}
-                </p>
-                <ConfigFieldMutationControl
-                  clearLabel={t("action.clearPatch")}
-                  currentValue={context.selectedEntity.config[field.key]}
-                  locale={state.locale}
-                  onApply={noop}
-                  submitLabel={t("action.applyValue")}
-                  toggleLabel={t("action.toggleValue")}
-                />
-              </article>
-            ))
-          )}
+          <article className="definition-card">
+            <h4>{STATIC_UI_PLACEHOLDER_TEXT}</h4>
+            <p>{STATIC_UI_PLACEHOLDER_TEXT}</p>
+            <p>{STATIC_UI_PLACEHOLDER_TEXT}</p>
+            <ConfigFieldMutationControl
+              clearLabel={STATIC_UI_PLACEHOLDER_TEXT}
+              currentValue={STATIC_UI_PLACEHOLDER_TEXT}
+              locale="zh-CN"
+              onApply={handleUiEvent}
+              submitLabel={STATIC_UI_PLACEHOLDER_TEXT}
+              toggleLabel={STATIC_UI_PLACEHOLDER_TEXT}
+            />
+          </article>
         </div>
       </div>
       <div className="cluster">
         <div className="card-header card-subheader">
-          <h4>{t("section.runtimeDetails")}</h4>
+          <h4>{STATIC_UI_PLACEHOLDER_TEXT}</h4>
         </div>
-        <RuntimeDetailList state={state} />
+        <RuntimeDetailList state={{ locale: "zh-CN" }} />
       </div>
     </div>
   );
