@@ -5,7 +5,7 @@ import { createStage1Registry } from "@/domain/registry/stage1-registry";
 import { getRenderSceneSyncPlan } from "@/renderer/host/render-scene-sync-plan";
 import { buildRenderScene as buildRenderSceneBase } from "@/renderer/scene/build-render-scene";
 import type { RenderSceneInput } from "@/renderer/scene/types";
-import { createInitialCanvasViewState } from "@/workbench/state/workspace-state";
+import { createInitialCanvasViewState } from "@/workspace/workspace-state";
 
 function buildRenderScene(input: RenderSceneInput & { runtimeSnapshot?: unknown }) {
   const { runtimeSnapshot: _runtimeSnapshot, ...nextInput } = input;

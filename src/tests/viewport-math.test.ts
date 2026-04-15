@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createInitialCanvasViewState } from "@/workbench/state/workspace-state";
+import { createInitialCanvasViewState } from "@/workspace/workspace-state";
 import {
   clampCanvasViewState,
   panCanvasView,

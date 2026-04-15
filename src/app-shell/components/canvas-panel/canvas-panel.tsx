@@ -39,7 +39,7 @@ import type {
   RenderDerivedScreenBox,
 } from "@/workbench/derived/workspace-derived-state";
 import type { WorkspaceDerivedStore } from "@/workbench/derived/workspace-derived-store";
-import type { CanvasPoint } from "@/workbench/state/workspace-state";
+import type { CanvasPoint } from "@/workspace/workspace-state";
 import {
   useEffect,
   useEffectEvent,

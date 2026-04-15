@@ -5,11 +5,9 @@ import {
   type SnapshotStore,
 } from "@/shared/snapshot-store/snapshot-store";
 import type {
-  CanvasViewState,
   WorkspaceEditorState,
   WorkspaceState,
-} from "@/workbench/state/workspace-state";
-import type { WorkbenchUiState } from "@/workbench/state/workbench-ui-state";
+} from "@/workspace/workspace-state";
 
 export type ReadonlySnapshotStore<TSnapshot> = Pick<
   SnapshotStore<TSnapshot>,
@@ -29,8 +27,6 @@ export interface WorkspaceStore {
   editorSessionStore: ReadonlySnapshotStore<WorkspaceState["editorSession"]>;
   editorHistoryStore: ReadonlySnapshotStore<WorkspaceState["editorHistory"]>;
   editorStore: ReadonlySnapshotStore<WorkspaceEditorState>;
-  uiStore: ReadonlySnapshotStore<WorkbenchUiState>;
-  canvasViewStore: ReadonlySnapshotStore<CanvasViewState>;
   dispose: () => void;
 }
 
@@ -96,9 +92,7 @@ function composeWorkspaceState(
     currentState.document === nextState.document &&
     currentState.topology === nextState.topology &&
     currentState.editorSession === nextState.editorSession &&
-    currentState.editorHistory === nextState.editorHistory &&
-    currentState.ui === nextState.ui &&
-    currentState.canvasView === nextState.canvasView
+    currentState.editorHistory === nextState.editorHistory
   ) {
     return currentState;
   }
@@ -120,11 +114,6 @@ function composeWorkspaceState(
       currentState.editorHistory === nextState.editorHistory
         ? currentState.editorHistory
         : nextState.editorHistory,
-    ui: currentState.ui === nextState.ui ? currentState.ui : nextState.ui,
-    canvasView:
-      currentState.canvasView === nextState.canvasView
-        ? currentState.canvasView
-        : nextState.canvasView,
   };
 }
 
@@ -149,8 +138,6 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
   const editorSessionStore = createDerivedStore(rootStore, (state) => state.editorSession);
   const editorHistoryStore = createDerivedStore(rootStore, (state) => state.editorHistory);
   const editorStore = createEditorDerivedStore(rootStore);
-  const uiStore = createDerivedStore(rootStore, (state) => state.ui);
-  const canvasViewStore = createDerivedStore(rootStore, (state) => state.canvasView);
 
   return {
     getSnapshot: () => rootStore.getSnapshot(),
@@ -189,16 +176,12 @@ export function createWorkspaceStore(initialState: WorkspaceState): WorkspaceSto
     editorSessionStore: editorSessionStore.store,
     editorHistoryStore: editorHistoryStore.store,
     editorStore: editorStore.store,
-    uiStore: uiStore.store,
-    canvasViewStore: canvasViewStore.store,
     dispose: () => {
       documentStore.dispose();
       topologyStore.dispose();
       editorSessionStore.dispose();
       editorHistoryStore.dispose();
       editorStore.dispose();
-      uiStore.dispose();
-      canvasViewStore.dispose();
     },
   };
 }

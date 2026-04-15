@@ -24,7 +24,7 @@ import type {
   WorkbenchController,
 } from "@/workbench/contracts/workbench-facade";
 import type { RenderDerivedScreenBox } from "@/workbench/derived/workspace-derived-state";
-import type { CanvasPoint } from "@/workbench/state/workspace-state";
+import type { CanvasPoint } from "@/workspace/workspace-state";
 
 const logger = createLogger("app.canvas-panel");
 

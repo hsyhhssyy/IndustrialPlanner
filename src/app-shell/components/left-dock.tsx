@@ -24,7 +24,7 @@ import { createLogger } from "@/shared/logging/logger";
 import { observer } from "@/shared/mobx";
 import { useExternalStore } from "@/app-shell/hooks/use-external-store";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
-import type { WorkspaceEditorState } from "@/workbench/state/workspace-state";
+import type { WorkspaceEditorState } from "@/workspace/workspace-state";
 import { useRef } from "react";
 
 const TOOL_LABEL_KEYS: Record<DisplayTool, MessageKey> = {

@@ -10,7 +10,7 @@ import type { ReadonlySnapshotStore } from "@/workbench/state/workspace-store";
 import type {
   CanvasViewState,
   WorkspaceEditorState,
-} from "@/workbench/state/workspace-state";
+} from "@/workspace/workspace-state";
 import type { WorkbenchUiState } from "@/workbench/state/workbench-ui-state";
 import type { AppLocale } from "@/i18n/messages";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";

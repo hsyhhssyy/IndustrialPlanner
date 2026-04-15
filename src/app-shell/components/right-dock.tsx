@@ -17,7 +17,7 @@ import { localizeWorkbenchText } from "@/i18n/workbench-placeholders";
 import { observer } from "@/shared/mobx";
 import { getSelectedEntityIds } from "@/editor/contracts/editor-session-helpers";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
-import type { WorkspaceEditorState } from "@/workbench/state/workspace-state";
+import type { WorkspaceEditorState } from "@/workspace/workspace-state";
 
 export interface RightDockProps {
   controller: WorkbenchController;

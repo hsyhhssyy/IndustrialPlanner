@@ -1,5 +1,5 @@
 import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
-import type { CanvasPoint } from "@/workbench/state/workspace-state";
+import type { CanvasPoint } from "@/workspace/workspace-state";
 
 export const TOUCH_MARQUEE_LONG_PRESS_DURATION_MS = 420;
 

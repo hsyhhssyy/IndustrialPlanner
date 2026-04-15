@@ -17,7 +17,7 @@ import type {
   DraftEntitiesState,
   DraftsState,
 } from "@/editor/contracts/entity-collection";
-import type { CanvasViewState } from "@/workbench/state/workspace-state";
+import type { CanvasViewState } from "@/workspace/workspace-state";
 
 export interface RenderSceneInteractionState {
   selectedEntityIds: string[];

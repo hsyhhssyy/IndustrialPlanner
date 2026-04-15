@@ -6,7 +6,7 @@ import {
   createSnapshotStore,
   type SnapshotStore,
 } from "@/shared/snapshot-store/snapshot-store";
-import type { CanvasPoint } from "@/workbench/state/workspace-state";
+import type { CanvasPoint } from "@/workspace/workspace-state";
 import type {
   LoadedSimulationWorld,
   RuntimeInspectorDetails,

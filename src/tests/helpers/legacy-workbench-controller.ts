@@ -16,7 +16,7 @@ import type { EditorRuntimeStore } from "@/editor/editor-runtime-store";
 import type { CanvasViewStore } from "@/workbench/state/canvas-view-store";
 import type { CanvasInteractionTarget } from "@/workbench/contracts/workbench-facade";
 import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
-import type { CanvasPoint } from "@/workbench/state/workspace-state";
+import type { CanvasPoint } from "@/workspace/workspace-state";
 import type { ReadonlySnapshotStore } from "@/workbench/state/workspace-store";
 import type { WorkbenchUiStore } from "@/workbench/state/workbench-ui-store";
 

@@ -31,7 +31,7 @@ import { deriveRenderDerivedState } from "@/workbench/derived/workspace-derived-
 import {
   createInitialCanvasViewState,
   type WorkspaceState,
-} from "@/workbench/state/workspace-state";
+} from "@/workspace/workspace-state";
 import { createInitialWorkbenchUiState } from "@/workbench/state/workbench-ui-store";
 
 function createCollection(ids: string[]) {

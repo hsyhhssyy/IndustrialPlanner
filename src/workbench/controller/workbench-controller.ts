@@ -19,7 +19,7 @@ import {
   type CanvasPoint,
   type CanvasViewState,
   type WorkspaceState,
-} from "@/workbench/state/workspace-state";
+} from "@/workspace/workspace-state";
 import {
   createWorkspaceStore,
   type WorkspaceStore,

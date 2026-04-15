@@ -18,7 +18,7 @@ import {
   type WorkspaceEditorSessionState,
   type WorkspaceEditorState,
   projectWorkspaceEditorState,
-} from "@/workbench/state/workspace-state";
+} from "@/workspace/workspace-state";
 
 export type EditorRuntimeState = WorkspaceEditorState;
 

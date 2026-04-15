@@ -1,8 +1,8 @@
 import { makeAutoObservable } from "@/shared/mobx";
 import { createSnapshotBridge } from "@/shared/mobx/snapshot-bridge";
 import type { ReadonlySnapshotStore } from "@/workbench/state/workspace-store";
-import type { CanvasViewState } from "@/workbench/state/workspace-state";
-import { createInitialCanvasViewState } from "@/workbench/state/workspace-state";
+import type { CanvasViewState } from "@/workspace/workspace-state";
+import { createInitialCanvasViewState } from "@/workspace/workspace-state";
 
 function isSameCanvasPoint(
   left: CanvasViewState["offset"],

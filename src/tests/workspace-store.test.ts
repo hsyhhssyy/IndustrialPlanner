@@ -4,7 +4,7 @@ import { createStage1SeedWorldDocument } from "@/domain/document/stage1-seed-wor
 import { createStage1Registry } from "@/domain/registry/stage1-registry";
 import { createInitialEditorSession } from "@/editor/core/editor-session";
 import { createWorkspaceStore } from "@/workbench/state/workspace-store";
-import { createInitialCanvasViewState } from "@/workbench/state/workspace-state";
+import { createInitialCanvasViewState } from "@/workspace/workspace-state";
 import { createInitialWorkbenchUiState } from "@/workbench/state/workbench-ui-store";
 
 describe("WorkspaceStore", () => {

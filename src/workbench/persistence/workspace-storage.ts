@@ -2,7 +2,7 @@ import type { WorkbenchUiStateInput } from "@/workbench/state/workbench-ui-state
 import type {
   CanvasPoint,
   CanvasViewState,
-} from "@/workbench/state/workspace-state";
+} from "@/workspace/workspace-state";
 import {
   createLogger,
   isLogLevel,

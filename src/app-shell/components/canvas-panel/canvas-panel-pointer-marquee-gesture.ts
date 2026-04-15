@@ -1,5 +1,5 @@
 import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
-import type { CanvasPoint } from "@/workbench/state/workspace-state";
+import type { CanvasPoint } from "@/workspace/workspace-state";
 import { POINTER_MOVE_START_DISTANCE_PX } from "./canvas-panel-pointer-move-gesture";
 
 export type CanvasPanelPointerMarqueeGestureState =

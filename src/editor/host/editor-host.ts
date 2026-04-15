@@ -66,7 +66,7 @@ import {
 } from "@/shared/geometry/grid";
 import { createLogger } from "@/shared/logging/logger";
 import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
-import type { CanvasPoint } from "@/workbench/state/workspace-state";
+import type { CanvasPoint } from "@/workspace/workspace-state";
 import type { AtomicDocumentCommand } from "@/editor/core/commands/document-command";
 
 export interface EditorInteractionTarget {

@@ -12,7 +12,7 @@ import type { ReadonlySnapshotStore } from "@/workbench/state/workspace-store";
 import type {
   CanvasViewState,
   WorkspaceEditorState,
-} from "@/workbench/state/workspace-state";
+} from "@/workspace/workspace-state";
 import {
   type RenderDerivedState,
   type WorkspaceRenderDerivedInputState,

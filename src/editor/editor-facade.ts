@@ -5,7 +5,7 @@ import type {
 import type { PlacementInteractionMode } from "@/editor/contracts/placement-preview";
 import type { EditorSelectionUpdateMode } from "@/editor/contracts/selection";
 import type { CanvasWorldInput } from "@/editor/host/editor-host";
-import type { CanvasPoint } from "@/workbench/state/workspace-state";
+import type { CanvasPoint } from "@/workspace/workspace-state";
 
 export type CanvasInteractionTarget =
   | {

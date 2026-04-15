@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createWorkspaceStorageGateway } from "@/workbench/persistence/workspace-storage";
 import { createWorkbenchUiStore } from "@/workbench/state/workbench-ui-store";
-import { createInitialCanvasViewState } from "@/workbench/state/workspace-state";
+import { createInitialCanvasViewState } from "@/workspace/workspace-state";
 
 const UI_STATE_KEY = "industrial-planner:workbench-ui-state";
 

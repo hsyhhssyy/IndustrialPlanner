@@ -14,7 +14,7 @@ import {
   getGridBoundingBox,
   getRotatedGridFootprint,
 } from "@/shared/geometry/grid";
-import type { CanvasPoint, WorkspaceState } from "@/workbench/state/workspace-state";
+import type { CanvasPoint, WorkspaceState } from "@/workspace/workspace-state";
 
 export type WorkspaceRenderDerivedInputState = Pick<
   WorkspaceState,
