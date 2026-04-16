@@ -1,5 +1,5 @@
 import { BASE_BY_ID, DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, LIQUID_ITEM_IDS, RECIPES } from '../domain/registry'
-import { getLinkedSourceId, getLinkedTargetId } from '../domain/deviceLinks'
+import { getLinkedSourceId, getLinkedTargetId, isDarkPipeInletType, isDarkPipeOutletType } from '../domain/deviceLinks'
 import { detectOverlaps, getFootprintCells, getRotatedPorts, isPipe, isPipeLike, neighborsFromLinks, OPPOSITE_EDGE } from '../domain/geometry'
 import {
   DEFAULT_EXTERNAL_LIQUID_SOURCE_ITEM_ID,
@@ -13,7 +13,14 @@ import {
 } from '../domain/shared/portPriority'
 import { cycleTicksFromSeconds } from '../domain/shared/simulation'
 import {
+  getReactorLiquidInputPortIds,
+  getReactorLiquidOutputPortIds,
+  getReactorRecipeSlotCount,
+  getReactorSolidInputPortIds,
+  getReactorSolidOutputPortIds,
   isReactorPoolType,
+  isReactorLiquidInputPort,
+  isReactorSolidInputPort,
   reactorAcceptInputFromPort,
   reactorCanAcceptRecipeOutputsInSharedSlotPool,
   reactorCommitRecipeOutputsToSharedSlotPool,
@@ -66,12 +73,15 @@ const STORAGE_BOX_TYPE_ID: DeviceInstance['typeId'] = 'item_port_storager_1'
 const LIQUID_STORAGE_TANK_TYPE_ID: DeviceInstance['typeId'] = 'item_port_liquid_storager_1'
 const STORAGE_BOX_GROUP_ID = 'storage-box-group-1'
 const LIQUID_STORAGE_TANK_GROUP_ID = 'liquid-storage-tank-group-1'
+const DARK_PIPE_GROUP_ID = 'dark-pipe-group-1'
 const REACTOR_SOLID_GROUP_ID = 'reactor-solid-group-1'
 const REACTOR_LIQUID_GROUP_ID = 'reactor-liquid-group-1'
 const SLOTLESS_STORAGE_OUTPUT_TYPE_IDS = new Set(['item_port_sp_hub_1'])
 const STORAGE_SLOT_COUNT = 6
 const STORAGE_SLOT_CAPACITY = 50
 const LIQUID_STORAGE_TANK_CAPACITY = 500
+const LARGE_DARK_PIPE_INLET_TYPE_ID: DeviceInstance['typeId'] = 'item_port_udpipe_loader_large_1'
+const LARGE_DARK_PIPE_OUTLET_TYPE_ID: DeviceInstance['typeId'] = 'item_port_udpipe_unloader_large_1'
 const LOADER_TYPE_ID: DeviceInstance['typeId'] = 'item_port_loader_1'
 const THERMAL_POOL_TYPE_ID: DeviceInstance['typeId'] = 'item_port_power_sta_1'
 const PROTOCOL_HUB_SUPPLY_KW = 200
@@ -245,21 +255,22 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
     const inputSpec = processorBufferSpec(device.typeId, 'input')
     const outputSpec = processorBufferSpec(device.typeId, 'output')
     const isReactor = isReactorPoolType(device.typeId)
+    const reactorRecipeSlotCount = isReactor ? getReactorRecipeSlotCount(device.typeId) : 0
     return {
       ...baseRuntime(),
       inputBuffer: {},
       outputBuffer: {},
       inputSlotItems: Array.from({ length: inputSpec.slots }, () => null),
       outputSlotItems: Array.from({ length: outputSpec.slots }, () => null),
-      bufferGroups: isReactor ? createReactorBufferGroups() : undefined,
+      bufferGroups: isReactor ? createReactorBufferGroups(device.typeId) : undefined,
       cycleProgressTicks: 0,
-      reactorCycleProgressTicks: isReactor ? [0, 0] : undefined,
+      reactorCycleProgressTicks: isReactor ? Array.from({ length: reactorRecipeSlotCount }, () => 0) : undefined,
       producedItemsTotal: 0,
       lastCompletedCycleTicks: 0,
       lastCompletionTick: null,
       lastCompletionIntervalTicks: 0,
       activeRecipeId: undefined,
-      reactorActiveRecipeIds: isReactor ? [undefined, undefined] : undefined,
+      reactorActiveRecipeIds: isReactor ? Array.from({ length: reactorRecipeSlotCount }, () => undefined) : undefined,
     }
   }
   if (def.runtimeKind === 'storage') {
@@ -268,6 +279,8 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
         ? [createStorageBoxBufferGroup(device)]
         : device.typeId === LIQUID_STORAGE_TANK_TYPE_ID
           ? [createLiquidStorageTankBufferGroup(device)]
+          : device.typeId === LARGE_DARK_PIPE_INLET_TYPE_ID || device.typeId === LARGE_DARK_PIPE_OUTLET_TYPE_ID
+            ? [createDarkPipeBufferGroup(device)]
           : undefined
     return {
       ...baseRuntime(),
@@ -641,14 +654,12 @@ function externalLiquidSourceItemId(device: DeviceInstance): ItemId {
 }
 
 function shouldGenerateExternalLiquid(device: DeviceInstance) {
-  if (device.typeId === 'item_port_water_pump_1') return true
-  if (device.typeId === 'item_port_udpipe_unloader_1') return false
-  return false
+  return device.typeId === 'item_port_water_pump_1'
 }
 
 function flushDarkPipeInletInventory(layout: LayoutState, runtimeById: Record<string, DeviceRuntime>) {
   for (const device of layout.devices) {
-    if (device.typeId !== 'item_port_udpipe_loader_1') continue
+    if (!isDarkPipeInletType(device.typeId)) continue
     const runtime = runtimeById[device.instanceId]
     if (!runtime || !('inventory' in runtime)) continue
 
@@ -659,7 +670,7 @@ function flushDarkPipeInletInventory(layout: LayoutState, runtimeById: Record<st
     const targetDevice = linkedTargetId ? layout.devices.find((entry) => entry.instanceId === linkedTargetId) ?? null : null
     const targetRuntime = targetDevice ? runtimeById[targetDevice.instanceId] : undefined
     const canForward =
-      targetDevice?.typeId === 'item_port_udpipe_unloader_1' &&
+      isDarkPipeOutletType(targetDevice?.typeId) &&
       targetRuntime &&
       'inventory' in targetRuntime
 
@@ -667,8 +678,9 @@ function flushDarkPipeInletInventory(layout: LayoutState, runtimeById: Record<st
       if (canForward && targetRuntime && 'inventory' in targetRuntime) {
         addToStorage(targetRuntime, itemId, Number(amount ?? 0))
       }
-      runtime.inventory[itemId] = 0
     }
+
+    clearStorageInventory(runtime)
   }
 }
 
@@ -878,17 +890,23 @@ function isReactorProcessorRuntime(runtime: DeviceRuntime): runtime is Processor
 
 function reactorPortCanAcceptItem(toPortId: string, itemId: ItemId) {
   const itemType = ITEM_BY_ID[itemId]?.type
-  if (toPortId === 'in_e_1' || toPortId === 'in_e_3') return itemType === 'liquid'
-  if (toPortId === 'in_s_1' || toPortId === 'in_s_3') return itemType === 'solid'
+  if (isReactorLiquidInputPort(toPortId)) return itemType === 'liquid'
+  if (isReactorSolidInputPort(toPortId)) return itemType === 'solid'
   return false
 }
 
-function tryAddReactorInput(runtime: DeviceRuntime, toPortId: string, itemId: ItemId, amount: number) {
+function tryAddReactorInput(
+  runtime: DeviceRuntime,
+  deviceTypeId: DeviceInstance['typeId'],
+  toPortId: string,
+  itemId: ItemId,
+  amount: number,
+) {
   if (!('inputBuffer' in runtime) || !('outputBuffer' in runtime)) return false
   if (!reactorPortCanAcceptItem(toPortId, itemId)) return false
 
   const processorRuntime = runtime as ProcessorRuntime
-  const inputSpec = processorBufferSpec('item_port_mix_pool_1', 'input')
+  const inputSpec = processorBufferSpec(deviceTypeId, 'input')
   const mappedGroup = getBufferGroupForInputPort(processorRuntime, toPortId)
   if (mappedGroup) {
     syncReactorGroupSlotsFromRuntime(processorRuntime, mappedGroup)
@@ -896,7 +914,7 @@ function tryAddReactorInput(runtime: DeviceRuntime, toPortId: string, itemId: It
     if (!targetSlot) return false
     const slotCapacity = inputSpec.slotCapacities[targetSlot.slotIndex] ?? DEFAULT_PROCESSOR_BUFFER_CAPACITY
     if ((processorRuntime.inputBuffer[itemId] ?? 0) + amount > slotCapacity) return false
-    return tryAddProcessorInputAtSlot(processorRuntime, 'item_port_mix_pool_1', targetSlot.slotIndex, itemId, amount)
+    return tryAddProcessorInputAtSlot(processorRuntime, deviceTypeId, targetSlot.slotIndex, itemId, amount)
   }
 
   return reactorAcceptInputFromPort(processorRuntime, toPortId, itemId, amount, inputSpec.slotCapacities)
@@ -1047,8 +1065,25 @@ function createLiquidStorageTankBufferGroup(device: DeviceInstance): BufferGroup
   }
 }
 
-function createReactorBufferGroups(): BufferGroupRuntime[] {
-  const sharedSlotCapacities = processorBufferSpec('item_port_mix_pool_1', 'input').slotCapacities
+function createDarkPipeBufferGroup(device: DeviceInstance): BufferGroupRuntime {
+  return {
+    id: DARK_PIPE_GROUP_ID,
+    inPortIds: collectLiquidInputPortIds(device.typeId),
+    outPortIds: collectLiquidOutputPortIds(device.typeId),
+    slots: [
+      {
+        slotIndex: 0,
+        mode: 'free',
+        currentItemId: null,
+        amount: 0,
+        capacity: Number.POSITIVE_INFINITY,
+      },
+    ],
+  }
+}
+
+function createReactorBufferGroups(deviceTypeId: DeviceInstance['typeId']): BufferGroupRuntime[] {
+  const sharedSlotCapacities = processorBufferSpec(deviceTypeId, 'input').slotCapacities
   const createSlots = () =>
     Array.from({ length: sharedSlotCapacities.length }, (_, slotIndex) => ({
       slotIndex,
@@ -1061,14 +1096,14 @@ function createReactorBufferGroups(): BufferGroupRuntime[] {
   return [
     {
       id: REACTOR_SOLID_GROUP_ID,
-      inPortIds: ['in_s_1', 'in_s_3'],
-      outPortIds: ['out_n_1', 'out_n_3'],
+      inPortIds: [...getReactorSolidInputPortIds(deviceTypeId)],
+      outPortIds: [...getReactorSolidOutputPortIds(deviceTypeId)],
       slots: createSlots(),
     },
     {
       id: REACTOR_LIQUID_GROUP_ID,
-      inPortIds: ['in_e_1', 'in_e_3'],
-      outPortIds: ['out_w_1', 'out_w_3'],
+      inPortIds: [...getReactorLiquidInputPortIds(deviceTypeId)],
+      outPortIds: [...getReactorLiquidOutputPortIds(deviceTypeId)],
       slots: createSlots(),
     },
   ]
@@ -1148,6 +1183,53 @@ function rebuildStorageInventoryFromGroups(runtime: DeviceRuntime) {
     }
   }
   runtime.inventory = nextInventory
+}
+
+function clearStorageInventory(runtime: DeviceRuntime) {
+  if (!('inventory' in runtime)) return
+
+  for (const itemId of Object.keys(runtime.inventory)) {
+    runtime.inventory[itemId] = 0
+  }
+
+  const groups = getBufferGroups(runtime)
+  if (groups.length === 0) return
+
+  for (const group of groups) {
+    for (const slot of group.slots) {
+      slot.amount = 0
+      slot.currentItemId = null
+    }
+  }
+
+  rebuildStorageInventoryFromGroups(runtime)
+}
+
+function seedExternalLiquidSource(runtime: DeviceRuntime, itemId: ItemId) {
+  if (!('inventory' in runtime)) return
+
+  const groups = getBufferGroups(runtime)
+  if (groups.length === 0) {
+    for (const liquidItemId of EXTERNAL_LIQUID_SOURCE_ITEM_IDS) {
+      runtime.inventory[liquidItemId] = liquidItemId === itemId ? Number.POSITIVE_INFINITY : 0
+    }
+    return
+  }
+
+  for (const group of groups) {
+    for (const slot of group.slots) {
+      slot.amount = 0
+      slot.currentItemId = null
+    }
+  }
+
+  const primarySlot = groups[0]?.slots[0]
+  if (primarySlot) {
+    primarySlot.currentItemId = itemId
+    primarySlot.amount = Number.POSITIVE_INFINITY
+  }
+
+  rebuildStorageInventoryFromGroups(runtime)
 }
 
 function canAddToStorage(runtime: DeviceRuntime, itemId: ItemId, amount: number, toPortId?: string) {
@@ -1276,8 +1358,8 @@ function canStorageSlotOutputToPort(device: DeviceInstance, runtime: DeviceRunti
   if (slot.currentItemId !== itemId) return false
   if (!(group.outPortIds.length === 0 || group.outPortIds.includes(portId))) return false
 
-  if (isReactorProcessorRuntime(runtime) && device.typeId === 'item_port_mix_pool_1') {
-    const configuredItemId = reactorPeekOutputForPort(runtime, device.config, portId)
+  if (isReactorProcessorRuntime(runtime) && isReactorPoolType(device.typeId)) {
+    const configuredItemId = reactorPeekOutputForPort(device.typeId, runtime, device.config, portId)
     return configuredItemId === itemId
   }
 
@@ -1434,7 +1516,7 @@ function canAcceptIntoLane(device: DeviceInstance, runtime: DeviceRuntime, lane:
   if (lane !== 'output') return true
   if ('inputBuffer' in runtime) {
     if (isReactorPoolType(device.typeId)) {
-      return tryAddReactorInput(cloneRuntime(runtime), toPortId, itemId, 1)
+      return tryAddReactorInput(cloneRuntime(runtime), device.typeId, toPortId, itemId, 1)
     }
     return canAcceptProcessorInput(runtime, device.typeId, itemId, 1)
   }
@@ -1454,7 +1536,7 @@ function tryReceiveToLane(
 ) {
   if (lane === 'output') {
     if ('inputBuffer' in runtime) {
-      if (isReactorPoolType(device.typeId)) return tryAddReactorInput(runtime, toPortId, itemId, 1)
+      if (isReactorPoolType(device.typeId)) return tryAddReactorInput(runtime, device.typeId, toPortId, itemId, 1)
       return tryAddProcessorInput(runtime, device.typeId, itemId, 1)
     }
     return addToStorage(runtime, itemId, 1, toPortId)
@@ -1597,7 +1679,7 @@ function prepareSourceLaneItem(
   warehouse: Record<ItemId, number>,
 ) {
   if (fromLane === 'output' && isReactorPoolType(device.typeId) && 'inputBuffer' in runtime && 'outputBuffer' in runtime) {
-    const itemId = reactorPeekOutputForPort(runtime as ProcessorRuntime, device.config, fromPortId)
+    const itemId = reactorPeekOutputForPort(device.typeId, runtime as ProcessorRuntime, device.config, fromPortId)
     return { itemId, laneProgressAdvanced: false }
   }
 
@@ -1784,7 +1866,7 @@ function peekReadyItemForSourceLink(
 ) {
   const fromLane = sourceSlotLane(fromDevice, fromRuntime, fromPortId)
   if (fromLane === 'output' && isReactorPoolType(fromDevice.typeId) && 'inputBuffer' in fromRuntime && 'outputBuffer' in fromRuntime) {
-    return reactorPeekOutputForPort(fromRuntime as ProcessorRuntime, fromDevice.config, fromPortId)
+    return reactorPeekOutputForPort(fromDevice.typeId, fromRuntime as ProcessorRuntime, fromDevice.config, fromPortId)
   }
   return peekReadyItemForLane(fromDevice, fromRuntime, fromLane, warehouse, fromPortId)
 }
@@ -1970,8 +2052,8 @@ function cloneRuntime(runtime: DeviceRuntime): DeviceRuntime {
             slots: group.slots.map((slot) => ({ ...slot })),
           }))
         : undefined,
-      reactorCycleProgressTicks: runtime.reactorCycleProgressTicks ? [...runtime.reactorCycleProgressTicks] as [number, number] : undefined,
-      reactorActiveRecipeIds: runtime.reactorActiveRecipeIds ? [...runtime.reactorActiveRecipeIds] as [string | undefined, string | undefined] : undefined,
+      reactorCycleProgressTicks: runtime.reactorCycleProgressTicks ? [...runtime.reactorCycleProgressTicks] : undefined,
+      reactorActiveRecipeIds: runtime.reactorActiveRecipeIds ? [...runtime.reactorActiveRecipeIds] : undefined,
     }
   }
 
@@ -2210,7 +2292,7 @@ function pickRunnableRecipeForDevice(device: DeviceInstance, runtime: DeviceRunt
   const recipes = recipesForDevice(device.typeId)
   const filteredRecipes = isReactorPoolType(device.typeId)
     ? (() => {
-        const selectedIds = reactorSelectedRecipeIds(device.config)
+        const selectedIds = reactorSelectedRecipeIds(device.typeId, device.config)
         if (selectedIds.length === 0) return []
         const selectedSet = new Set(selectedIds)
         return recipes.filter((recipe) => selectedSet.has(recipe.id))
@@ -2252,21 +2334,18 @@ function tryStartReactorLanesOnTick(
   if (!('outputBuffer' in runtime && 'inputBuffer' in runtime)) return
   if (!isReactorPoolType(device.typeId)) return
 
-  const selectedRecipes = reactorSelectedRecipeIds(device.config)
+  const selectedRecipes = reactorSelectedRecipeIds(device.typeId, device.config)
     .map((recipeId) => recipeById(recipeId))
     .filter((recipe): recipe is NonNullable<typeof recipe> => Boolean(recipe))
-    .slice(0, 2)
+    .slice(0, getReactorRecipeSlotCount(device.typeId))
 
-  const laneProgress: [number, number] = runtime.reactorCycleProgressTicks
-    ? [...runtime.reactorCycleProgressTicks] as [number, number]
-    : [0, 0]
-  const laneRecipeIds: [string | undefined, string | undefined] = runtime.reactorActiveRecipeIds
-    ? [...runtime.reactorActiveRecipeIds] as [string | undefined, string | undefined]
-    : [undefined, undefined]
+  const reactorRecipeSlotCount = getReactorRecipeSlotCount(device.typeId)
+  const laneProgress = Array.from({ length: reactorRecipeSlotCount }, (_, index) => runtime.reactorCycleProgressTicks?.[index] ?? 0)
+  const laneRecipeIds = Array.from({ length: reactorRecipeSlotCount }, (_, index) => runtime.reactorActiveRecipeIds?.[index])
 
   let startedAnyLane = false
 
-  for (let laneIndex = 0 as 0 | 1; laneIndex <= 1; laneIndex = (laneIndex + 1) as 0 | 1) {
+  for (let laneIndex = 0; laneIndex < reactorRecipeSlotCount; laneIndex += 1) {
     const laneRecipe = selectedRecipes[laneIndex]
     if (!laneRecipe) continue
 
@@ -2418,18 +2497,15 @@ export function debugSolveFlowPlanForCurrentTick(layout: LayoutState, sim: SimSt
 
     if (isRecipeProcessorRuntime(runtime)) {
       if (isReactorPoolType(device.typeId)) {
-        const laneProgress: [number, number] = runtime.reactorCycleProgressTicks
-          ? [...runtime.reactorCycleProgressTicks] as [number, number]
-          : [0, 0]
-        const laneRecipeIds: [string | undefined, string | undefined] = runtime.reactorActiveRecipeIds
-          ? [...runtime.reactorActiveRecipeIds] as [string | undefined, string | undefined]
-          : [undefined, undefined]
+        const reactorRecipeSlotCount = getReactorRecipeSlotCount(device.typeId)
+        const laneProgress = Array.from({ length: reactorRecipeSlotCount }, (_, index) => runtime.reactorCycleProgressTicks?.[index] ?? 0)
+        const laneRecipeIds = Array.from({ length: reactorRecipeSlotCount }, (_, index) => runtime.reactorActiveRecipeIds?.[index])
 
         let hasRunnableOrRunningLane = false
         let hasOutputBlockedLane = false
         let maxProgress01 = 0
 
-        for (let laneIndex = 0 as 0 | 1; laneIndex <= 1; laneIndex = (laneIndex + 1) as 0 | 1) {
+        for (let laneIndex = 0; laneIndex < reactorRecipeSlotCount; laneIndex += 1) {
           const laneRecipe = recipeById(laneRecipeIds[laneIndex])
           if (!laneRecipe) {
             laneProgress[laneIndex] = 0
@@ -2537,11 +2613,9 @@ export function debugSolveFlowPlanForCurrentTick(layout: LayoutState, sim: SimSt
       }
     }
 
-    if ((shouldGenerateExternalLiquid(device) || (device.typeId === 'item_port_udpipe_unloader_1' && !getLinkedSourceId(layout, device.instanceId))) && 'inventory' in runtime) {
+    if ((shouldGenerateExternalLiquid(device) || (isDarkPipeOutletType(device.typeId) && !getLinkedSourceId(layout, device.instanceId))) && 'inventory' in runtime) {
       const selectedItemId = externalLiquidSourceItemId(device)
-      for (const itemId of EXTERNAL_LIQUID_SOURCE_ITEM_IDS) {
-        runtime.inventory[itemId] = itemId === selectedItemId ? Number.POSITIVE_INFINITY : 0
-      }
+      seedExternalLiquidSource(runtime, selectedItemId)
     }
 
     if ('slot' in runtime && runtime.slot) {
@@ -2689,18 +2763,15 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
 
     if (isRecipeProcessorRuntime(runtime)) {
       if (isReactorPoolType(device.typeId)) {
-        const laneProgress: [number, number] = runtime.reactorCycleProgressTicks
-          ? [...runtime.reactorCycleProgressTicks] as [number, number]
-          : [0, 0]
-        const laneRecipeIds: [string | undefined, string | undefined] = runtime.reactorActiveRecipeIds
-          ? [...runtime.reactorActiveRecipeIds] as [string | undefined, string | undefined]
-          : [undefined, undefined]
+        const reactorRecipeSlotCount = getReactorRecipeSlotCount(device.typeId)
+        const laneProgress = Array.from({ length: reactorRecipeSlotCount }, (_, index) => runtime.reactorCycleProgressTicks?.[index] ?? 0)
+        const laneRecipeIds = Array.from({ length: reactorRecipeSlotCount }, (_, index) => runtime.reactorActiveRecipeIds?.[index])
 
         let hasRunnableOrRunningLane = false
         let hasOutputBlockedLane = false
         let maxProgress01 = 0
 
-        for (let laneIndex = 0 as 0 | 1; laneIndex <= 1; laneIndex = (laneIndex + 1) as 0 | 1) {
+        for (let laneIndex = 0; laneIndex < reactorRecipeSlotCount; laneIndex += 1) {
           const laneRecipe = recipeById(laneRecipeIds[laneIndex])
           if (!laneRecipe) {
             laneProgress[laneIndex] = 0
@@ -2821,11 +2892,9 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
       }
     }
 
-    if ((shouldGenerateExternalLiquid(device) || (device.typeId === 'item_port_udpipe_unloader_1' && !getLinkedSourceId(layout, device.instanceId))) && 'inventory' in runtime) {
+    if ((shouldGenerateExternalLiquid(device) || (isDarkPipeOutletType(device.typeId) && !getLinkedSourceId(layout, device.instanceId))) && 'inventory' in runtime) {
       const selectedItemId = externalLiquidSourceItemId(device)
-      for (const itemId of EXTERNAL_LIQUID_SOURCE_ITEM_IDS) {
-        runtime.inventory[itemId] = itemId === selectedItemId ? Number.POSITIVE_INFINITY : 0
-      }
+      seedExternalLiquidSource(runtime, selectedItemId)
     }
 
     if ('slot' in runtime && runtime.slot) {
@@ -3026,15 +3095,15 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
   }
 }
 
-export function initialStorageConfig(deviceTypeId: string): DeviceInstance['config'] {
+export function initialStorageConfig(deviceTypeId: DeviceInstance['typeId']): DeviceInstance['config'] {
   if (deviceTypeId === 'item_port_storager_1') return { submitToWarehouse: true }
   if (deviceTypeId === 'item_port_water_pump_1') {
     return { pumpOutputItemId: DEFAULT_EXTERNAL_LIQUID_SOURCE_ITEM_ID }
   }
-  if (deviceTypeId === 'item_port_udpipe_unloader_1') {
+  if (isDarkPipeOutletType(deviceTypeId)) {
     return { pumpOutputItemId: DEFAULT_EXTERNAL_LIQUID_SOURCE_ITEM_ID, darkPipeOutletMode: 'generate' }
   }
-  if (deviceTypeId === 'item_port_udpipe_loader_1') {
+  if (isDarkPipeInletType(deviceTypeId)) {
     return { darkPipeInletMode: 'destroy' }
   }
   return {}

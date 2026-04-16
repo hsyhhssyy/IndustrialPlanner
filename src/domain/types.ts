@@ -34,6 +34,7 @@ export type DeviceTypeId =
   | 'item_port_thickener_1'
   | 'item_port_power_sta_1'
   | 'item_port_mix_pool_1'
+  | 'item_port_mix_pool_large_1'
   | 'item_port_xiranite_oven_1'
   | 'item_port_dismantler_1'
   | 'item_port_log_hongs_bus_source'
@@ -42,6 +43,8 @@ export type DeviceTypeId =
   | 'item_port_water_pump_1'
   | 'item_port_udpipe_loader_1'
   | 'item_port_udpipe_unloader_1'
+  | 'item_port_udpipe_loader_large_1'
+  | 'item_port_udpipe_unloader_large_1'
   | 'item_liquid_cleaner_1'
   | 'item_port_liquid_storager_1'
   | 'item_port_power_diffuser_1'
@@ -304,13 +307,13 @@ export interface ProcessorRuntime extends BaseRuntime {
   inputSlotItems: Array<ItemId | null>
   outputSlotItems: Array<ItemId | null>
   cycleProgressTicks: number
-  reactorCycleProgressTicks?: [number, number]
+  reactorCycleProgressTicks?: number[]
   producedItemsTotal: number
   lastCompletedCycleTicks: number
   lastCompletionTick: number | null
   lastCompletionIntervalTicks: number
   activeRecipeId?: string
-  reactorActiveRecipeIds?: [string | undefined, string | undefined]
+  reactorActiveRecipeIds?: Array<string | undefined>
   thermalPowerTicksRemaining?: number
   thermalPowerKw?: number
   bufferGroups?: BufferGroupRuntime[]

@@ -1,9 +1,10 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { BASES, DEVICE_TYPE_BY_ID } from '../../domain/registry'
-import { isDarkPipeInletType } from '../../domain/deviceLinks'
+import { isDarkPipeInletType, isDarkPipeOutletType } from '../../domain/deviceLinks'
 import type { BaseDef, BaseId, DeviceInstance, DeviceRuntime, ItemId, LayoutState, PowerMode, SimState, SlotData } from '../../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../../i18n'
 import { getRotatedPorts, isBelt, neighborsFromLinks } from '../../domain/geometry'
+import { getReactorRecipeSlotCount, getReactorSharedSlotCount, isReactorPoolType } from '../../sim/reactorPool'
 import {
   getPortPriorityGroup,
   hasCustomPortPriorityGroups,
@@ -129,7 +130,7 @@ type RightPanelProps = {
   } | null
   reactorSolidOutputItemCandidates: ItemId[]
   reactorLiquidOutputItemCandidates: ItemId[]
-  updateReactorSelectedRecipe: (deviceInstanceId: string, slotIndex: 0 | 1, recipeId: string | null) => void
+  updateReactorSelectedRecipe: (deviceInstanceId: string, slotIndex: number, recipeId: string | null) => void
   updateReactorSolidOutputItem: (deviceInstanceId: string, itemId: ItemId | null) => void
   updateReactorLiquidOutputItemA: (deviceInstanceId: string, itemId: ItemId | null) => void
   updateReactorLiquidOutputItemB: (deviceInstanceId: string, itemId: ItemId | null) => void
@@ -227,6 +228,7 @@ export function RightPanel({
   const slotConfigSupportedTypeIds = new Set<DeviceInstance['typeId']>([
     'item_port_storager_1',
     'item_port_mix_pool_1',
+    'item_port_mix_pool_large_1',
   ])
 
   const getPreloadSlotLabel = (deviceTypeId: DeviceInstance['typeId'], slotIndex: number) => {
@@ -253,9 +255,9 @@ export function RightPanel({
   ] as const
   const [showMultiBaseTooltip, setShowMultiBaseTooltip] = useState(false)
 
-  const selectedDarkPipeModeLabel = selectedDevice?.typeId === 'item_port_udpipe_loader_1'
+  const selectedDarkPipeModeLabel = selectedDevice && isDarkPipeInletType(selectedDevice.typeId)
     ? t(`detail.darkPipeInletMode.${selectedDarkPipeInletMode ?? 'destroy'}`)
-    : selectedDevice?.typeId === 'item_port_udpipe_unloader_1'
+    : selectedDevice && isDarkPipeOutletType(selectedDevice.typeId)
       ? t(`detail.darkPipeOutletMode.${selectedDarkPipeOutletMode ?? 'generate'}`)
       : null
   const canStartSelectedDeviceLinking = Boolean(selectedDevice && isDarkPipeInletType(selectedDevice.typeId))
@@ -569,15 +571,16 @@ export function RightPanel({
             <>
               {!isBelt(selectedDevice.typeId) && 'inputBuffer' in selectedRuntime && 'outputBuffer' in selectedRuntime && (
                 (() => {
-                  if (selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning) {
-                    const laneRecipeIds = selectedRuntime.reactorActiveRecipeIds ?? [undefined, undefined]
-                    const laneProgressTicks = selectedRuntime.reactorCycleProgressTicks ?? [0, 0]
+                  if (isReactorPoolType(selectedDevice.typeId) && sim.isRunning) {
+                    const reactorRecipeSlotCount = getReactorRecipeSlotCount(selectedDevice.typeId)
+                    const laneRecipeIds = Array.from({ length: reactorRecipeSlotCount }, (_, index) => selectedRuntime.reactorActiveRecipeIds?.[index])
+                    const laneProgressTicks = Array.from({ length: reactorRecipeSlotCount }, (_, index) => selectedRuntime.reactorCycleProgressTicks?.[index] ?? 0)
                     const lastCompletedCycleTicks = selectedRuntime.lastCompletedCycleTicks
                     const lastCompletionIntervalTicks = selectedRuntime.lastCompletionIntervalTicks
 
                     return (
                       <>
-                        {[0, 1].map((laneIndex) => {
+                        {Array.from({ length: reactorRecipeSlotCount }, (_, laneIndex) => {
                           const recipeId = laneRecipeIds[laneIndex] ?? selectedReactorPoolConfig?.selectedRecipeIds[laneIndex]
                           const recipe = recipeId ? reactorRecipeCandidates.find((entry) => entry.id === recipeId) : undefined
                           const recipeLabel = recipe ? getReactorRecipeOptionLabel(recipe) : t('detail.reactorNoRecipe')
@@ -644,14 +647,14 @@ export function RightPanel({
                 })()
               )}
               {!isBelt(selectedDevice.typeId) && 'inputBuffer' in selectedRuntime && (
-                selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning
+                isReactorPoolType(selectedDevice.typeId) && sim.isRunning
                   ? (
                     <>
                       <div className="kv">
                         <span>{t('detail.reactorSlots')}</span>
                         <span>-</span>
                       </div>
-                      {selectedRuntime.inputSlotItems.slice(0, 5).map((itemId, slotIndex) => {
+                      {selectedRuntime.inputSlotItems.slice(0, getReactorSharedSlotCount(selectedDevice.typeId)).map((itemId, slotIndex) => {
                         const amount = itemId ? (selectedRuntime.inputBuffer[itemId] ?? 0) : 0
                         const value = itemId ? `${getItemLabel(language, itemId)} x${amount}` : t('detail.empty')
                         return (
@@ -679,7 +682,7 @@ export function RightPanel({
                     )
               )}
               {!isBelt(selectedDevice.typeId) && 'outputBuffer' in selectedRuntime && (
-                !(selectedDevice.typeId === 'item_port_mix_pool_1' && sim.isRunning) && (
+                !(isReactorPoolType(selectedDevice.typeId) && sim.isRunning) && (
                   <div className="kv">
                     <span>{t('detail.cacheOutputBuffer')}</span>
                     <span>
@@ -878,7 +881,7 @@ export function RightPanel({
               )}
             </>
           )}
-          {(selectedDevice.typeId === 'item_port_water_pump_1' || (selectedDevice.typeId === 'item_port_udpipe_unloader_1' && selectedDarkPipeOutletMode !== 'link')) && (
+          {(selectedDevice.typeId === 'item_port_water_pump_1' || (isDarkPipeOutletType(selectedDevice.typeId) && selectedDarkPipeOutletMode !== 'link')) && (
             <>
               <div className="kv kv-no-border kv-pickup-inline">
                 <span>{t('detail.pumpOutputLiquid')}</span>
@@ -912,7 +915,7 @@ export function RightPanel({
               </div>
             </>
           )}
-          {(selectedDevice.typeId === 'item_port_udpipe_loader_1' || selectedDevice.typeId === 'item_port_udpipe_unloader_1') && (
+          {(isDarkPipeInletType(selectedDevice.typeId) || isDarkPipeOutletType(selectedDevice.typeId)) && (
             <>
               <div className="kv">
                 <span>{t('detail.darkPipeCurrentMode')}</span>
@@ -1044,10 +1047,10 @@ export function RightPanel({
               </div>
             </>
           )}
-          {selectedDevice.typeId === 'item_port_mix_pool_1' && !simIsRunning && selectedReactorPoolConfig && (
+          {isReactorPoolType(selectedDevice.typeId) && !simIsRunning && selectedReactorPoolConfig && (
             <div className="picker">
               <label>{t('detail.reactorPool')}</label>
-              {[0, 1].map((index) => {
+              {Array.from({ length: getReactorRecipeSlotCount(selectedDevice.typeId) }, (_, index) => {
                 const recipeId = selectedReactorPoolConfig.selectedRecipeIds[index] ?? ''
                 return (
                   <div key={`reactor-recipe-slot-${index}`} className="preload-slot-row">
@@ -1056,7 +1059,7 @@ export function RightPanel({
                       value={recipeId}
                       onChange={(event) => {
                         const value = event.target.value.trim()
-                        updateReactorSelectedRecipe(selectedDevice.instanceId, index as 0 | 1, value.length > 0 ? value : null)
+                        updateReactorSelectedRecipe(selectedDevice.instanceId, index, value.length > 0 ? value : null)
                       }}
                     >
                       <option value="">{t('detail.reactorNoRecipe')}</option>
@@ -1124,7 +1127,12 @@ export function RightPanel({
                 </select>
               </div>
 
-              <small>{t('detail.reactorHint')}</small>
+              <small>
+                {t('detail.reactorHint', {
+                  slotCount: getReactorSharedSlotCount(selectedDevice.typeId),
+                  recipeCount: getReactorRecipeSlotCount(selectedDevice.typeId),
+                })}
+              </small>
             </div>
           )}
           {DEVICE_TYPE_BY_ID[selectedDevice.typeId].runtimeKind === 'processor' && !simIsRunning && (

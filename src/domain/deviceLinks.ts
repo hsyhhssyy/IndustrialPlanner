@@ -11,17 +11,26 @@ import type {
 
 let deviceLinkCounter = 1
 
+const DARK_PIPE_INLET_TYPE_IDS = new Set<DeviceTypeId>([
+  'item_port_udpipe_loader_1',
+  'item_port_udpipe_loader_large_1',
+])
+const DARK_PIPE_OUTLET_TYPE_IDS = new Set<DeviceTypeId>([
+  'item_port_udpipe_unloader_1',
+  'item_port_udpipe_unloader_large_1',
+])
+
 export function createDeviceLinkId() {
   deviceLinkCounter += 1
   return `device-link_${Date.now().toString(36)}_${deviceLinkCounter.toString(36)}`
 }
 
 export function isDarkPipeInletType(typeId: DeviceTypeId | undefined) {
-  return typeId === 'item_port_udpipe_loader_1'
+  return typeId ? DARK_PIPE_INLET_TYPE_IDS.has(typeId) : false
 }
 
 export function isDarkPipeOutletType(typeId: DeviceTypeId | undefined) {
-  return typeId === 'item_port_udpipe_unloader_1'
+  return typeId ? DARK_PIPE_OUTLET_TYPE_IDS.has(typeId) : false
 }
 
 export function isLinkableDeviceType(typeId: DeviceTypeId | undefined) {

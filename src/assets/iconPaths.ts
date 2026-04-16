@@ -6,6 +6,9 @@ const DEVICE_ICON_ALIAS_BY_TYPE_ID: Partial<Record<DeviceTypeId, string>> = {
   item_port_water_pump_1: 'item_port_pump_1',
   item_port_hydro_planter_1: 'item_port_planter_1',
   item_port_liquid_filling_pd_mc_1: 'item_port_filling_pd_mc_1',
+  item_port_udpipe_loader_large_1: 'item_port_udpipe_loader_1',
+  item_port_udpipe_unloader_large_1: 'item_port_udpipe_unloader_1',
+  item_port_mix_pool_large_1: 'item_port_mix_pool_1',
 }
 
 export function getItemIconPath(itemId: ItemId | string) {

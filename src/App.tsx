@@ -123,6 +123,7 @@ const MAX_RECENT_PICKER_ITEMS = 32
 const SLOT_CONFIG_SUPPORTED_TYPE_IDS = new Set<DeviceTypeId>([
   'item_port_storager_1',
   'item_port_mix_pool_1',
+  'item_port_mix_pool_large_1',
 ])
 
 function normalizeRecentPickerItemIds(value: ItemId[]) {
@@ -1106,10 +1107,10 @@ function App() {
       .filter((entry): entry is { linkId: string; otherDeviceLabel: string } => Boolean(entry))
   }, [language, layout, selectedDevice])
 
-  const selectedDarkPipeInletMode = selectedDevice?.typeId === 'item_port_udpipe_loader_1'
+  const selectedDarkPipeInletMode = selectedDevice && isDarkPipeInletType(selectedDevice.typeId)
     ? (selectedDeviceLinks.length > 0 ? 'link' : 'destroy')
     : null
-  const selectedDarkPipeOutletMode = selectedDevice?.typeId === 'item_port_udpipe_unloader_1'
+  const selectedDarkPipeOutletMode = selectedDevice && isDarkPipeOutletType(selectedDevice.typeId)
     ? (selectedDeviceLinks.length > 0 ? 'link' : 'generate')
     : null
 

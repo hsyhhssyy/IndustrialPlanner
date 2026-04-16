@@ -1628,9 +1628,9 @@ button:disabled {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: calc(100% - 10px);
-  height: calc(100% - 10px);
-  object-fit: contain;
+  object-fit: fill;
+  transform-origin: center;
+  pointer-events: none;
 }
 
 .port-priority-config-device-fallback {

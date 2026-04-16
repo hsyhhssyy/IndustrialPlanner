@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef } from 'react'
 import { getDeviceIconPath, getItemIconPath } from '../../assets/iconPaths'
 import { DEVICE_TYPE_BY_ID, DEVICE_TYPES, ITEM_BY_ID, ITEMS, RECIPES } from '../../domain/registry'
+import { recipesForDevice } from '../../domain/shared/recipes'
 import { isSuperRecipeDevice, isSuperRecipeItem, isSuperRecipeRecipe, shouldShowSuperRecipeContent } from '../../domain/shared/superRecipeVisibility'
 import type { DeviceTypeId } from '../../domain/types'
 import { usePersistentState } from '../../core/usePersistentState'
@@ -150,7 +151,11 @@ export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDia
   }, [activeTab, selectedItemId, toolDialogState.itemContentScrollTop, toolDialogState.itemListScrollTop])
 
   const selectedDeviceRecipes = useMemo(
-    () => toolRecipes.filter((recipe) => recipe.machineType === selectedDeviceId),
+    () => {
+      if (!selectedDeviceId) return []
+      const recipeIds = new Set(recipesForDevice(selectedDeviceId).map((recipe) => recipe.id))
+      return toolRecipes.filter((recipe) => recipeIds.has(recipe.id))
+    },
     [selectedDeviceId, toolRecipes],
   )
 

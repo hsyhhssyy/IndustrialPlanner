@@ -1,9 +1,10 @@
-import { sanitizeBlueprintLinks, sanitizeLayoutLinks } from '../domain/deviceLinks'
+import { isDarkPipeInletType, isDarkPipeOutletType, sanitizeBlueprintLinks, sanitizeLayoutLinks } from '../domain/deviceLinks'
 import { trySetLocalStorageItemWithRecovery } from '../core/localStorageRecovery'
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID } from '../domain/registry'
 import { inputBufferAllowedTypesForSlot } from '../domain/shared/itemPickerRules'
 import type { BaseId, BlueprintDeviceLink, DeviceConfig, DeviceInstance, ItemId, LayoutState } from '../domain/types'
 import { normalizePortPriorityGroups } from '../domain/shared/portPriority'
+import { isReactorPoolType, normalizeReactorPoolConfig } from '../sim/reactorPool'
 
 export const APP_VERSION = '1.0'
 const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
@@ -232,30 +233,22 @@ function sanitizeStorageSlots(storageSlots: DeviceConfig['storageSlots']) {
 }
 
 function supportsStorageSlotConfig(deviceTypeId: DeviceInstance['typeId'] | undefined) {
-  return deviceTypeId === 'item_port_storager_1' || deviceTypeId === 'item_port_mix_pool_1'
+  return deviceTypeId === 'item_port_storager_1' || Boolean(deviceTypeId && isReactorPoolType(deviceTypeId))
 }
 
 function supportsLegacyStoragePreloads(deviceTypeId: DeviceInstance['typeId'] | undefined) {
   return deviceTypeId === 'item_port_storager_1' || deviceTypeId === LIQUID_STORAGE_TANK_TYPE_ID
 }
 
-function sanitizeReactorPoolConfig(reactorPool: DeviceConfig['reactorPool']) {
-  if (!reactorPool || typeof reactorPool !== 'object') return undefined
+function sanitizeReactorPoolConfig(deviceTypeId: DeviceInstance['typeId'] | undefined, reactorPool: DeviceConfig['reactorPool']) {
+  if (!reactorPool || typeof reactorPool !== 'object' || !deviceTypeId || !isReactorPoolType(deviceTypeId)) return undefined
 
-  const selectedRecipeIds = Array.isArray(reactorPool.selectedRecipeIds)
-    ? reactorPool.selectedRecipeIds.filter((recipeId): recipeId is string => typeof recipeId === 'string' && recipeId.trim().length > 0)
-    : []
-  const solidOutputItemId = normalizeKnownSolidItemId(reactorPool.solidOutputItemId)
-  const liquidOutputItemId = normalizeKnownLiquidItemId(reactorPool.liquidOutputItemId)
-  const liquidOutputItemIdA = normalizeKnownLiquidItemId(reactorPool.liquidOutputItemIdA)
-  const liquidOutputItemIdB = normalizeKnownLiquidItemId(reactorPool.liquidOutputItemIdB)
-
+  const normalized = normalizeReactorPoolConfig(deviceTypeId, { reactorPool })
   const next: NonNullable<DeviceConfig['reactorPool']> = {}
-  if (selectedRecipeIds.length > 0) next.selectedRecipeIds = selectedRecipeIds
-  if (solidOutputItemId) next.solidOutputItemId = solidOutputItemId
-  if (liquidOutputItemId) next.liquidOutputItemId = liquidOutputItemId
-  if (liquidOutputItemIdA) next.liquidOutputItemIdA = liquidOutputItemIdA
-  if (liquidOutputItemIdB) next.liquidOutputItemIdB = liquidOutputItemIdB
+  if (normalized.selectedRecipeIds.length > 0) next.selectedRecipeIds = normalized.selectedRecipeIds
+  if (normalized.solidOutputItemId) next.solidOutputItemId = normalized.solidOutputItemId
+  if (normalized.liquidOutputItemIdA) next.liquidOutputItemIdA = normalized.liquidOutputItemIdA
+  if (normalized.liquidOutputItemIdB) next.liquidOutputItemIdB = normalized.liquidOutputItemIdB
   return Object.keys(next).length > 0 ? next : undefined
 }
 
@@ -284,13 +277,13 @@ function sanitizeDeviceConfigUnknownItems(config: DeviceConfig, deviceTypeId: De
   if (pumpOutputItemId) nextConfig.pumpOutputItemId = pumpOutputItemId
   else delete nextConfig.pumpOutputItemId
 
-  if (deviceTypeId === 'item_port_udpipe_loader_1') {
+  if (isDarkPipeInletType(deviceTypeId)) {
     nextConfig.darkPipeInletMode = nextConfig.darkPipeInletMode === 'link' ? 'link' : 'destroy'
   } else {
     delete nextConfig.darkPipeInletMode
   }
 
-  if (deviceTypeId === 'item_port_udpipe_unloader_1') {
+  if (isDarkPipeOutletType(deviceTypeId)) {
     nextConfig.darkPipeOutletMode = nextConfig.darkPipeOutletMode === 'link' ? 'link' : 'generate'
   } else {
     delete nextConfig.darkPipeOutletMode
@@ -352,7 +345,7 @@ function sanitizeDeviceConfigUnknownItems(config: DeviceConfig, deviceTypeId: De
     delete nextConfig.storagePreloadInputs
   }
 
-  const reactorPool = sanitizeReactorPoolConfig(nextConfig.reactorPool)
+  const reactorPool = sanitizeReactorPoolConfig(deviceTypeId, nextConfig.reactorPool)
   if (reactorPool) nextConfig.reactorPool = reactorPool
   else delete nextConfig.reactorPool
 

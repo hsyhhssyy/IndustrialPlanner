@@ -9,6 +9,7 @@ import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../../domain/regi
 import { hasCustomPortPriorityGroups } from '../../domain/shared/portPriority'
 import type { DeviceInstance, DeviceRuntime, DeviceTypeId, ItemId } from '../../domain/types'
 import type { Language } from '../../i18n'
+import { isReactorPoolType } from '../../sim/reactorPool'
 
 const BASE_CELL_SIZE = 64
 const BELT_VIEWBOX_SIZE = 64
@@ -421,7 +422,7 @@ export const StaticDeviceLayer = memo(
             ? junctionInternalTransportPath(renderDevice, runtime, rotatedPorts)
             : null
           const reactorLiquidPortTags =
-            renderDevice.typeId === 'item_port_mix_pool_1' && selectionSet.has(renderDevice.instanceId)
+            isReactorPoolType(renderDevice.typeId) && selectionSet.has(renderDevice.instanceId)
               ? rotatedPorts.filter((port) => REACTOR_LIQUID_PORT_TAGS[port.portId])
               : []
           const protocolHubOutputPortTags =

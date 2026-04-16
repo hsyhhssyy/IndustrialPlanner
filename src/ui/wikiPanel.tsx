@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getDeviceIconPath, getItemIconPath } from '../assets/iconPaths'
 import { DEVICE_TYPE_BY_ID, DEVICE_TYPES, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
+import { recipesForDevice } from '../domain/shared/recipes'
 import { isSuperRecipeDevice, isSuperRecipeItem, isSuperRecipeRecipe, shouldShowSuperRecipeContent } from '../domain/shared/superRecipeVisibility'
 import type { DeviceTypeId } from '../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../i18n'
@@ -238,7 +239,11 @@ export function WikiPanel({ language, superRecipeEnabled, t, onClose }: WikiPane
         ]
 
   const selectedDeviceRecipes = useMemo(
-    () => wikiRecipes.filter((recipe) => recipe.machineType === selectedDeviceId),
+    () => {
+      if (!selectedDeviceId) return []
+      const recipeIds = new Set(recipesForDevice(selectedDeviceId).map((recipe) => recipe.id))
+      return wikiRecipes.filter((recipe) => recipeIds.has(recipe.id))
+    },
     [selectedDeviceId, wikiRecipes],
   )
 

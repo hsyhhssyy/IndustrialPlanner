@@ -9,6 +9,7 @@ const SINGLE_SOLID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid
 const DOUBLE_SOLID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid'], ['solid']]
 const SOLID_LIQUID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid'], ['liquid']]
 const FIVE_MIXED_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = Array.from({ length: 5 }, () => ['solid', 'liquid'])
+const EIGHT_MIXED_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = Array.from({ length: 8 }, () => ['solid', 'liquid'])
 
 export const ITEMS: ItemDef[] = [
   { id: 'item_bottled_food_1', displayName: '柑实罐头', type: 'solid' },
@@ -264,8 +265,34 @@ export const RECIPES: RecipeDef[] = [
     ],
   },
   {
+    id: 'r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic_large',
+    machineType: 'item_port_mix_pool_large_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_liquid_xiranite', amount: 1 },
+      { itemId: 'item_liquid_sewage', amount: 1 },
+    ],
+    outputs: [
+      { itemId: 'item_liquid_xiranite_poly', amount: 1 },
+      { itemId: 'item_liquid_xiranite_lowpoly', amount: 1 },
+    ],
+  },
+  {
     id: 'r_chrono_mix_pool_inert_waste_liquid_water_slag_from_waste_liquid_and_iron_powder_basic',
     machineType: 'item_port_mix_pool_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_liquid_xiranite_poly', amount: 2 },
+      { itemId: 'item_iron_powder', amount: 1 },
+    ],
+    outputs: [
+      { itemId: 'item_liquid_sewage', amount: 1 },
+      { itemId: 'item_xiranite_poly', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_chrono_mix_pool_inert_waste_liquid_water_slag_from_waste_liquid_and_iron_powder_basic_large',
+    machineType: 'item_port_mix_pool_large_1',
     cycleSeconds: 2,
     inputs: [
       { itemId: 'item_liquid_xiranite_poly', amount: 2 },
@@ -1319,6 +1346,16 @@ export const RECIPES: RecipeDef[] = [
     outputs: [{ itemId: 'item_liquid_plant_grass_1', amount: 1 }],
   },
   {
+    id: 'r_mix_pool_liquid_plant_grass_1_from_powder_and_water_basic_large',
+    machineType: 'item_port_mix_pool_large_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_plant_grass_powder_1', amount: 1 },
+      { itemId: 'item_liquid_water', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_liquid_plant_grass_1', amount: 1 }],
+  },
+  {
     id: 'r_mix_pool_liquid_plant_grass_2_from_powder_and_water_basic',
     machineType: 'item_port_mix_pool_1',
     cycleSeconds: 2,
@@ -1329,8 +1366,28 @@ export const RECIPES: RecipeDef[] = [
     outputs: [{ itemId: 'item_liquid_plant_grass_2', amount: 1 }],
   },
   {
+    id: 'r_mix_pool_liquid_plant_grass_2_from_powder_and_water_basic_large',
+    machineType: 'item_port_mix_pool_large_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_plant_grass_powder_2', amount: 1 },
+      { itemId: 'item_liquid_water', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_liquid_plant_grass_2', amount: 1 }],
+  },
+  {
     id: 'r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic',
     machineType: 'item_port_mix_pool_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_xiranite_powder', amount: 1 },
+      { itemId: 'item_liquid_water', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_liquid_xiranite', amount: 1 }],
+  },
+  {
+    id: 'r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large',
+    machineType: 'item_port_mix_pool_large_1',
     cycleSeconds: 2,
     inputs: [
       { itemId: 'item_xiranite_powder', amount: 1 },
@@ -1903,6 +1960,58 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     ],
   },
   {
+    id: 'item_port_mix_pool_large_1',
+    runtimeKind: 'processor',
+    requiresPower: true,
+    powerDemand: 50,
+    size: { width: 6, height: 5 },
+    shortName: 'LargeMixPool',
+    inputBufferSlots: 8,
+    outputBufferSlots: 1,
+    inputBufferSlotCapacities: [50, 50, 50, 50, 50, 50, 50, 50],
+    inputBufferAllowedTypesBySlot: EIGHT_MIXED_INPUT_SLOT_TYPES,
+    outputBufferSlotCapacities: [1],
+    tags: ['武陵'],
+    ports0: [
+      ...[1, 2, 3, 4].map((x) => ({
+        id: `out_n_${x}`,
+        localCellX: x,
+        localCellY: 0,
+        edge: 'N' as const,
+        direction: 'Output' as const,
+        allowedItems: { mode: 'recipe_outputs' as const, whitelist: [] },
+        allowedTypes: solidAllowance,
+      })),
+      ...[1, 2, 3, 4].map((x) => ({
+        id: `in_s_${x}`,
+        localCellX: x,
+        localCellY: 4,
+        edge: 'S' as const,
+        direction: 'Input' as const,
+        allowedItems: { mode: 'recipe_inputs' as const, whitelist: [] },
+        allowedTypes: solidAllowance,
+      })),
+      ...[1, 3].map((y) => ({
+        id: `out_w_${y}`,
+        localCellX: 0,
+        localCellY: y,
+        edge: 'W' as const,
+        direction: 'Output' as const,
+        allowedItems: { mode: 'recipe_outputs' as const, whitelist: [] },
+        allowedTypes: liquidAllowance,
+      })),
+      ...[1, 3].map((y) => ({
+        id: `in_e_${y}`,
+        localCellX: 5,
+        localCellY: y,
+        edge: 'E' as const,
+        direction: 'Input' as const,
+        allowedItems: { mode: 'recipe_inputs' as const, whitelist: [] },
+        allowedTypes: liquidAllowance,
+      })),
+    ],
+  },
+  {
     id: 'item_port_xiranite_oven_1',
     runtimeKind: 'processor',
     requiresPower: true,
@@ -2147,10 +2256,72 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     ],
   },
   {
-    id: 'item_liquid_cleaner_1',
+    id: 'item_port_udpipe_loader_large_1',
     runtimeKind: 'storage',
+    requiresPower: false,
+    powerDemand: 10,
+    size: { width: 2, height: 4 },
+    shortName: 'LargeDarkPipeInlet',
+    tags: ['武陵', 'OuterRingAllowed'],
+    ports0: [
+      {
+        id: 'in_w_1',
+        localCellX: 0,
+        localCellY: 1,
+        edge: 'W',
+        direction: 'Input',
+        allowedItems: { mode: 'any', whitelist: [] },
+        allowedTypes: liquidAllowance,
+      },
+      {
+        id: 'in_w_2',
+        localCellX: 0,
+        localCellY: 2,
+        edge: 'W',
+        direction: 'Input',
+        allowedItems: { mode: 'any', whitelist: [] },
+        allowedTypes: liquidAllowance,
+      },
+    ],
+  },
+  {
+    id: 'item_port_udpipe_unloader_large_1',
+    runtimeKind: 'storage',
+    requiresPower: false,
+    powerDemand: 10,
+    size: { width: 2, height: 4 },
+    shortName: 'LargeDarkPipeOutlet',
+    tags: ['武陵', 'OuterRingAllowed'],
+    ports0: [
+      {
+        id: 'out_e_1',
+        localCellX: 1,
+        localCellY: 1,
+        edge: 'E',
+        direction: 'Output',
+        allowedItems: { mode: 'any', whitelist: [] },
+        allowedTypes: liquidAllowance,
+      },
+      {
+        id: 'out_e_2',
+        localCellX: 1,
+        localCellY: 2,
+        edge: 'E',
+        direction: 'Output',
+        allowedItems: { mode: 'any', whitelist: [] },
+        allowedTypes: liquidAllowance,
+      },
+    ],
+  },
+  {
+    id: 'item_liquid_cleaner_1',
+    runtimeKind: 'processor',
     requiresPower: true,
     powerDemand: 20,
+    inputBufferSlots: 1,
+    outputBufferSlots: 1,
+    inputBufferSlotCapacities: [50],
+    outputBufferSlotCapacities: [50],
     size: { width: 3, height: 3 },
     shortName: 'WastewaterTreatment',
     tags: ['武陵', 'OuterRingAllowed'],

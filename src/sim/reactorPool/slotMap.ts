@@ -1,19 +1,16 @@
 import type { ItemId } from '../../domain/types'
+import {
+  isReactorLiquidInputPort,
+  isReactorSolidInputPort,
+} from './types'
+
 export function isReactorInputPort(portId: string): boolean {
-  return portId === 'in_s_1' || portId === 'in_s_3' || portId === 'in_e_1' || portId === 'in_e_3'
+  return isReactorSolidInputPort(portId) || isReactorLiquidInputPort(portId)
 }
 
-export function isReactorSolidInputPort(portId: string): boolean {
-  return portId === 'in_s_1' || portId === 'in_s_3'
-}
-
-export function isReactorLiquidInputPort(portId: string): boolean {
-  return portId === 'in_e_1' || portId === 'in_e_3'
-}
-
-export function clampRecipeIdsMax2(recipeIds: string[]): string[] {
+export function clampRecipeIds(recipeIds: string[], maxCount: number): string[] {
   const deduped = Array.from(new Set(recipeIds.filter((id) => id.trim().length > 0)))
-  return deduped.slice(0, 2)
+  return deduped.slice(0, Math.max(0, Math.floor(maxCount)))
 }
 
 export function isLiquidItem(itemType: 'solid' | 'liquid' | undefined) {

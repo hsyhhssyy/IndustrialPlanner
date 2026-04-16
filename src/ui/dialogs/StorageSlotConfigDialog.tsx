@@ -3,6 +3,7 @@ import { useAppContext } from '../../app/AppContext'
 import { selectableItemIdsForType } from '../../domain/shared/itemPickerRules'
 import type { DeviceInstance, ItemId, StorageSlotConfigEntry } from '../../domain/types'
 import { getItemLabel, type Language } from '../../i18n'
+import { getReactorSharedSlotCount, isReactorPoolType } from '../../sim/reactorPool'
 import { ItemPickerDialog } from './ItemPickerDialog'
 import type { ItemPickerState } from './itemPicker.types'
 
@@ -28,7 +29,7 @@ type StorageSlotPickerState = Extract<ItemPickerState, { kind: 'storageSlotPinne
 const SLOT_CAPACITY = 50
 
 function slotCountForDeviceType(typeId: DeviceInstance['typeId']) {
-  if (typeId === 'item_port_mix_pool_1') return 5
+  if (isReactorPoolType(typeId)) return getReactorSharedSlotCount(typeId)
   return 6
 }
 

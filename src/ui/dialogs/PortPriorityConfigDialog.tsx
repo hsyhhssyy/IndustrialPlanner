@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { getDeviceSpritePath } from '../../domain/deviceSprites'
+import { getDeviceSpritePath, getDeviceSpriteRenderMetrics } from '../../domain/deviceSprites'
 import { getRotatedPorts } from '../../domain/geometry'
 import { DEVICE_TYPE_BY_ID } from '../../domain/registry'
 import { getDirectionalPortIds, getPortPriorityGroup, PORT_PRIORITY_GROUP_MAX, PORT_PRIORITY_GROUP_MIN } from '../../domain/shared/portPriority'
@@ -139,6 +139,12 @@ export function PortPriorityConfigDialog({ device, language, t, onClose, onSave 
   const type = DEVICE_TYPE_BY_ID[device.typeId]
   const spritePath = getDeviceSpritePath(device.typeId)
   const footprint = rotatedFootprintSize(type.size, device.rotation)
+  const { textureWidthPx, textureHeightPx, centerOffsetXPx, centerOffsetYPx } = getDeviceSpriteRenderMetrics({
+    typeId: device.typeId,
+    rotation: device.rotation,
+    baseCellSize: CELL_PX,
+    fallbackTextureSize: type.size,
+  })
   const rotatedPorts = useMemo(() => getRotatedPorts(device), [device])
   const allPortIds = useMemo(() => getDirectionalPortIds(device.typeId), [device.typeId])
   const [groupByPort, setGroupByPort] = useState<Record<string, number>>(() =>
@@ -198,7 +204,13 @@ export function PortPriorityConfigDialog({ device, language, t, onClose, onSave 
                     alt=""
                     aria-hidden="true"
                     draggable={false}
-                    style={{ transform: `translate(-50%, -50%) rotate(${device.rotation}deg)` }}
+                    style={{
+                      left: `calc(50% + ${centerOffsetXPx}px)`,
+                      top: `calc(50% + ${centerOffsetYPx}px)`,
+                      width: `${textureWidthPx}px`,
+                      height: `${textureHeightPx}px`,
+                      transform: `translate(-50%, -50%) rotate(${device.rotation}deg)`,
+                    }}
                   />
                 ) : (
                   <span className="port-priority-config-device-fallback">{getDeviceLabel(language, device.typeId)}</span>

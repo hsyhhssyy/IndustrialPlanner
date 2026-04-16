@@ -31,6 +31,14 @@ export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
   { typeId: 'item_port_thickener_1', fileName: 'item_port_thickener_1.png' },
   { typeId: 'item_port_power_sta_1', fileName: 'item_port_power_sta_1.png' },
   { typeId: 'item_port_mix_pool_1', fileName: 'item_port_mix_pool_1.png' },
+  {
+    typeId: 'item_port_mix_pool_large_1',
+    fileName: 'item_port_mix_pool_1.png',
+    renderBounds: {
+      widthCells: 6,
+      heightCells: 5,
+    },
+  },
   { typeId: 'item_port_xiranite_oven_1', fileName: 'item_port_xiranite_oven_1.png' },
   { typeId: 'item_port_dismantler_1', fileName: 'item_port_dismantler_1.png' },
   { typeId: 'item_port_log_hongs_bus_source', fileName: 'item_port_log_hongs_bus_source.png' },
@@ -47,6 +55,22 @@ export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
   },
   { typeId: 'item_port_udpipe_loader_1', fileName: 'item_port_udpipe_loader_1.png' },
   { typeId: 'item_port_udpipe_unloader_1', fileName: 'item_port_udpipe_unloader_1.png' },
+  {
+    typeId: 'item_port_udpipe_loader_large_1',
+    fileName: 'item_port_udpipe_loader_1.png',
+    renderBounds: {
+      widthCells: 2,
+      heightCells: 4,
+    },
+  },
+  {
+    typeId: 'item_port_udpipe_unloader_large_1',
+    fileName: 'item_port_udpipe_unloader_1.png',
+    renderBounds: {
+      widthCells: 2,
+      heightCells: 4,
+    },
+  },
   { typeId: 'item_liquid_cleaner_1', fileName: 'item_liquid_cleaner_1.png' },
   { typeId: 'item_port_liquid_storager_1', fileName: 'item_port_liquid_storager_1.png' },
   { typeId: 'item_port_power_diffuser_1', fileName: 'item_port_power_diffuser_1.png' },
@@ -94,14 +118,14 @@ export function getDeviceSpriteRenderMetrics({
   fallbackTextureSize: { width: number; height: number }
 }) {
   const renderBounds = DEVICE_SPRITE_RENDER_BOUNDS_BY_TYPE[typeId]
-  const renderSize = renderBounds
+  const baseRenderSize = renderBounds
     ? { width: renderBounds.widthCells, height: renderBounds.heightCells }
     : fallbackTextureSize
   const offsetCells = renderBounds?.offsetCells ? rotateOffset(renderBounds.offsetCells, rotation) : { x: 0, y: 0 }
 
   return {
-    textureWidthPx: renderSize.width * baseCellSize - 6,
-    textureHeightPx: renderSize.height * baseCellSize - 6,
+    textureWidthPx: baseRenderSize.width * baseCellSize - 6,
+    textureHeightPx: baseRenderSize.height * baseCellSize - 6,
     centerOffsetXPx: offsetCells.x * baseCellSize,
     centerOffsetYPx: offsetCells.y * baseCellSize,
   }

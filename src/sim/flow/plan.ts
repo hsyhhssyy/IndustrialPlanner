@@ -651,7 +651,7 @@ function buildNodes(context: PlanContext) {
 
     if (isProcessorRuntime(runtime)) {
       if (isReactorPoolType(device.typeId)) {
-        const reactorOutputs = resolveReactorOutputNodes(runtime, device.config)
+        const reactorOutputs = resolveReactorOutputNodes(device.typeId, runtime, device.config)
         for (let outputIndex = 0; outputIndex < reactorOutputs.length; outputIndex += 1) {
           const outputNode = reactorOutputs[outputIndex]
           const deleted = !outputNode.itemId || outputNode.amount <= 0 || outputNode.mappedSlotIndex === null

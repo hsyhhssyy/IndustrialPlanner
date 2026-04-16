@@ -72,7 +72,9 @@ export function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
     typeId === 'item_port_log_hongs_bus' ||
     typeId === 'item_port_liquid_storager_1' ||
     typeId === 'item_port_udpipe_loader_1' ||
-    typeId === 'item_port_udpipe_unloader_1'
+    typeId === 'item_port_udpipe_unloader_1' ||
+    typeId === 'item_port_udpipe_loader_large_1' ||
+    typeId === 'item_port_udpipe_unloader_large_1'
   )
     return 'storage'
   if (
@@ -100,6 +102,7 @@ export function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
     typeId === 'item_port_tools_asm_mc_1' ||
     typeId === 'item_port_thickener_1' ||
     typeId === 'item_port_mix_pool_1' ||
+    typeId === 'item_port_mix_pool_large_1' ||
     typeId === 'item_port_xiranite_oven_1' ||
     typeId === 'item_port_dismantler_1'
   )

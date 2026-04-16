@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getDeviceById } from '../../domain/geometry'
-import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, LIQUID_ITEM_IDS, RECIPES, SOLID_ITEM_IDS } from '../../domain/registry'
+import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, LIQUID_ITEM_IDS, SOLID_ITEM_IDS } from '../../domain/registry'
 import { buildProcessorPreloadSlots, processorBufferSpec, serializeProcessorPreloadSlots } from '../../domain/shared/deviceConfig'
+import { recipesForDevice } from '../../domain/shared/recipes'
 import {
   inputBufferAllowedTypesForSlot,
   isExternalLiquidSourceDeviceType,
   normalizeExternalLiquidSourceItemId,
 } from '../../domain/shared/itemPickerRules'
 import type { DeviceRuntime, ItemId, LayoutState } from '../../domain/types'
-import { normalizeReactorPoolConfig } from '../../sim/reactorPool'
+import { isReactorPoolType, normalizeReactorPoolConfig } from '../../sim/reactorPool'
 import { useReactorPoolConfigDomain } from './reactorPoolConfigDomain'
 import { useBuildConfigDomain } from './useBuildConfigDomain'
 import type { ItemPickerFilter, ItemPickerState } from '../../ui/dialogs/itemPicker.types'
@@ -124,14 +125,14 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       ? Math.max(0, Math.floor(Number(selectedDevice.config.preloadInputAmount) || 0))
       : 0
 
-  const reactorRecipeCandidates = useMemo(
-    () => RECIPES.filter((recipe) => recipe.machineType === 'item_port_mix_pool_1'),
-    [],
-  )
+  const reactorRecipeCandidates = useMemo(() => {
+    if (!selectedDevice || !isReactorPoolType(selectedDevice.typeId)) return []
+    return recipesForDevice(selectedDevice.typeId)
+  }, [selectedDevice])
 
   const selectedReactorPoolConfig = useMemo(() => {
-    if (!selectedDevice || selectedDevice.typeId !== 'item_port_mix_pool_1') return null
-    return normalizeReactorPoolConfig(selectedDevice.config)
+    if (!selectedDevice || !isReactorPoolType(selectedDevice.typeId)) return null
+    return normalizeReactorPoolConfig(selectedDevice.typeId, selectedDevice.config)
   }, [selectedDevice])
 
   const reactorSolidOutputItemCandidates = useMemo(

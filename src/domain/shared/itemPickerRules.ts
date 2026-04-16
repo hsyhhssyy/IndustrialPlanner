@@ -1,4 +1,5 @@
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, LIQUID_ITEM_IDS, SOLID_ITEM_IDS } from '../registry'
+import { isDarkPipeOutletType } from '../deviceLinks'
 import type { DeviceTypeId, ItemDef, ItemId } from '../types'
 
 const SOLID_ITEM_ID_SET = new Set<ItemId>(SOLID_ITEM_IDS)
@@ -19,7 +20,7 @@ export function normalizeExternalLiquidSourceItemId(itemId: ItemId | undefined):
 }
 
 export function isExternalLiquidSourceDeviceType(typeId: DeviceTypeId | undefined): boolean {
-  return typeId === 'item_port_water_pump_1' || typeId === 'item_port_udpipe_unloader_1'
+  return typeId === 'item_port_water_pump_1' || isDarkPipeOutletType(typeId)
 }
 
 export function inputBufferAllowedTypesForSlot(deviceTypeId: DeviceTypeId, slotIndex: number): Array<ItemDef['type']> {
