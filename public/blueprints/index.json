@@ -1,7 +1,14 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-03-28T10:25:27.139Z",
+  "generatedAt": "2026-04-16T15:38:44.970Z",
   "files": [
+    {
+      "id": "PublicBluePrint-HSY-2dec8da2-1c38-47f3-a574-a586bd4efad5",
+      "blueprintVersion": "1",
+      "name": "中容武陵电池产线-2026-04-16 15_17_06.blueprint.json",
+      "path": "/blueprints/%E4%B8%AD%E5%AE%B9%E6%AD%A6%E9%99%B5%E7%94%B5%E6%B1%A0%E4%BA%A7%E7%BA%BF-2026-04-16%2015_17_06.blueprint.json",
+      "size": 129104
+    },
     {
       "id": "PublicBluePrint-HSY-429609a4-61cb-4083-98fa-b8de1268bec4",
       "blueprintVersion": "1",

@@ -1,0 +1,5933 @@
+{
+  "schema": "industrial-planner-blueprint",
+  "id": "BluePrint-HSY-2dec8da2-1c38-47f3-a574-a586bd4efad5",
+  "version": "1.0",
+  "blueprintVersion": "1",
+  "name": "中容武陵电池产线",
+  "createdAt": "2026-04-16T15:17:06.369Z",
+  "description": "满速对称中容武陵电池，来自B站大佬 莱特雷（https://www.bilibili.com/video/BV16PwYzyEwQ）",
+  "baseId": "wuling_tianwangping_aid",
+  "devices": [
+    {
+      "blueprintInstanceId": "item_port_unloader_1_mo1l7hfi_6",
+      "typeId": "item_port_unloader_1",
+      "rotation": 0,
+      "origin": {
+        "x": 30,
+        "y": 27
+      },
+      "config": {
+        "pickupItemId": "item_xiranite_powder",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_xiranite_powder",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 39,
+          "y": 30
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_unloader_1_mo1l7wni_7",
+      "typeId": "item_port_unloader_1",
+      "rotation": 0,
+      "origin": {
+        "x": 27,
+        "y": 27
+      },
+      "config": {
+        "pickupItemId": "item_originium_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_originium_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 36,
+          "y": 30
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_unloader_1_mo1l86gy_8",
+      "typeId": "item_port_unloader_1",
+      "rotation": 0,
+      "origin": {
+        "x": 24,
+        "y": 27
+      },
+      "config": {
+        "pickupItemId": "item_originium_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_originium_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 33,
+          "y": 30
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_unloader_1_mo1l877d_9",
+      "typeId": "item_port_unloader_1",
+      "rotation": 0,
+      "origin": {
+        "x": 21,
+        "y": 27
+      },
+      "config": {
+        "pickupItemId": "item_originium_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_originium_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 30,
+          "y": 30
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_unloader_1_mo1l88ax_a",
+      "typeId": "item_port_unloader_1",
+      "rotation": 0,
+      "origin": {
+        "x": 18,
+        "y": 27
+      },
+      "config": {
+        "pickupItemId": "item_originium_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_originium_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 27,
+          "y": 30
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_unloader_1_mo1l8nx8_b",
+      "typeId": "item_port_unloader_1",
+      "rotation": 0,
+      "origin": {
+        "x": 15,
+        "y": 27
+      },
+      "config": {
+        "pickupItemId": "item_iron_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_iron_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 24,
+          "y": 30
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_grinder_1_mo1l92lp_c",
+      "typeId": "item_port_grinder_1",
+      "rotation": 0,
+      "origin": {
+        "x": 29,
+        "y": 23
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 38,
+          "y": 26
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_grinder_1_mo1l93j9_d",
+      "typeId": "item_port_grinder_1",
+      "rotation": 0,
+      "origin": {
+        "x": 26,
+        "y": 23
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 35,
+          "y": 26
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1l98tn_x",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 28,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 37,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1l98tn_y",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 29,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 38,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1l9a2i_16",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 25,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 34,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1l9a2i_17",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 26,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 35,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_thickener_1_mo1l9m0d_18",
+      "typeId": "item_port_thickener_1",
+      "rotation": 0,
+      "origin": {
+        "x": 25,
+        "y": 18
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 34,
+          "y": 21
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1l9pq7_1b",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 29,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 38,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1l9qas_1e",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 28,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 37,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_thickener_1_mo1l9ura_1f",
+      "typeId": "item_port_thickener_1",
+      "rotation": 0,
+      "origin": {
+        "x": 18,
+        "y": 18
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 27,
+          "y": 21
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_grinder_1_mo1l9zw0_1g",
+      "typeId": "item_port_grinder_1",
+      "rotation": 0,
+      "origin": {
+        "x": 21,
+        "y": 23
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 30,
+          "y": 26
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_grinder_1_mo1la0fo_1h",
+      "typeId": "item_port_grinder_1",
+      "rotation": 0,
+      "origin": {
+        "x": 18,
+        "y": 23
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 27,
+          "y": 26
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1la2gm_1k",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 22,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 31,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1la3hy_1m",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 19,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1la57z_1p",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 21,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 30,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1la5wu_1s",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 20,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 29,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_power_diffuser_1_mo1la96t_1t",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 24,
+        "y": 23
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 33,
+          "y": 26
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_furnance_1_mo1lar2g_1u",
+      "typeId": "item_port_furnance_1",
+      "rotation": 0,
+      "origin": {
+        "x": 15,
+        "y": 23
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 24,
+          "y": 26
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lawlj_1x",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 16,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 25,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_grinder_1_mo1lb38p_1y",
+      "typeId": "item_port_grinder_1",
+      "rotation": 0,
+      "origin": {
+        "x": 15,
+        "y": 18
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 24,
+          "y": 21
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lb5zb_24",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 17,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 26,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lb5zb_25",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 17,
+        "y": 21
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 26,
+          "y": 24
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_power_diffuser_1_mo1lb81e_26",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 15,
+        "y": 21
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 24,
+          "y": 24
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_grinder_1_mo1lbhx0_27",
+      "typeId": "item_port_grinder_1",
+      "rotation": 180,
+      "origin": {
+        "x": 29,
+        "y": 14
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 38,
+          "y": 17
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lbp4h_4q",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 29,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 38,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lbp4h_4r",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 28,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 37,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lbp4h_4s",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 27,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 36,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lbp4h_4t",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 26,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 35,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lbp4h_4v",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 24,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 33,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lbp4h_4w",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 24,
+        "y": 18
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 33,
+          "y": 21
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lbp4h_4x",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 24,
+        "y": 19
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 33,
+          "y": 22
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lbp4h_4y",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 24,
+        "y": 20
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 33,
+          "y": 23
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lbp4h_4z",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 24,
+        "y": 21
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 33,
+          "y": 24
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lbp4h_50",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 24,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 33,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lbp4h_51",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 23,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 32,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lbu0w_61",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 31,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 40,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lbu0w_62",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 31,
+        "y": 18
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 40,
+          "y": 21
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lbu0w_63",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 31,
+        "y": 19
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 40,
+          "y": 22
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lbu0w_64",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 31,
+        "y": 20
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 40,
+          "y": 23
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lbu0w_65",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 31,
+        "y": 21
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 40,
+          "y": 24
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lbu0w_66",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 31,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 40,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lbu0w_67",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 30,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 39,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_liquid_cleaner_1_mo1lc9nw_68",
+      "typeId": "item_liquid_cleaner_1",
+      "rotation": 270,
+      "origin": {
+        "x": 26,
+        "y": 13
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 35,
+          "y": 16
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_mix_pool_1_mo1lcrby_69",
+      "typeId": "item_port_mix_pool_1",
+      "rotation": 270,
+      "origin": {
+        "x": 27,
+        "y": 7
+      },
+      "config": {
+        "reactorPool": {
+          "selectedRecipeIds": [
+            "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic"
+          ],
+          "solidOutputItemId": "item_plant_moss_3",
+          "liquidOutputItemIdA": "item_liquid_xiranite"
+        }
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 36,
+          "y": 10
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1ld0gw_85",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 31,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 40,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1ld0gw_86",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld0gw_87",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 25
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 28
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld0gw_88",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 24
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 27
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld0gw_89",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 23
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 26
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld0gw_8a",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld0gw_8b",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 21
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 24
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld0gw_8c",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 20
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 23
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld0gw_8d",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 19
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 22
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld0gw_8e",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 18
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 21
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld3ij_9m",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld3ij_9n",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld3ij_9o",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 15
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 18
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld3ij_9p",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 14
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 17
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld3ij_9q",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 13
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 16
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld3ij_9r",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ld3ij_9s",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1ld3ij_9t",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 32,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_mix_pool_1_mo1ldhb2_9u",
+      "typeId": "item_port_mix_pool_1",
+      "rotation": 270,
+      "origin": {
+        "x": 20,
+        "y": 11
+      },
+      "config": {
+        "reactorPool": {
+          "selectedRecipeIds": [
+            "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
+          ],
+          "liquidOutputItemIdA": "item_liquid_xiranite_poly",
+          "liquidOutputItemIdB": "item_liquid_xiranite_lowpoly"
+        }
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 29,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kc",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 21,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 30,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kd",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 22,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 31,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_ke",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 23,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 32,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kf",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 24,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 33,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kg",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 25,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 34,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kh",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 26,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 35,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_ki",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 27,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 36,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kj",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 28,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 37,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kk",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 29,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 38,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kl",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 30,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 39,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_km",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 31,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 40,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1ldrlz_kn",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_ko",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kp",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 15
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 18
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kq",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 14
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 17
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kr",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 13
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 16
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_ks",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kt",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_ku",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kv",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 9
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 12
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kw",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 8
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 11
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kx",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 32,
+        "y": 7
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 10
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1ldrlz_ky",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 32,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 9
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldrlz_kz",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 31,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 40,
+          "y": 9
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1ldrlz_l0",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 30,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 39,
+          "y": 9
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1ldyp4_my",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 28,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 37,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldyp4_mz",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 27,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 36,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1ldyp4_n0",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 26,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 35,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldyp4_n1",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 26,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 35,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1ldyp4_n2",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 26,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 35,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldyp4_n3",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 25,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 34,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1ldyp4_n4",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 24,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 33,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1ldyp4_n5",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 23,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 32,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1le2jp_nq",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 23,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 32,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1le2jp_nr",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 24,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 33,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1le2jp_ns",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 25,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 34,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1le2jp_nt",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 26,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 35,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1le2jp_nu",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 27,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 36,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_udpipe_unloader_1_mo1le86a_nv",
+      "typeId": "item_port_udpipe_unloader_1",
+      "rotation": 90,
+      "origin": {
+        "x": 20,
+        "y": 7
+      },
+      "config": {
+        "pumpOutputItemId": "item_liquid_sewage",
+        "darkPipeOutletMode": "generate"
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 29,
+          "y": 10
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lea00_nx",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 21,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 30,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_power_diffuser_1_mo1leekw_ny",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 90,
+      "origin": {
+        "x": 24,
+        "y": 8
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 33,
+          "y": 11
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_tools_asm_mc_1_mo1les2p_nz",
+      "typeId": "item_port_tools_asm_mc_1",
+      "rotation": 0,
+      "origin": {
+        "x": 14,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 23,
+          "y": 9
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_log_connector_mo1lf0zy_rb",
+      "typeId": "item_log_connector",
+      "rotation": 0,
+      "origin": {
+        "x": 25,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 34,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf0zy_rc",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 25,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 34,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf0zy_rd",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 25,
+        "y": 15
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 34,
+          "y": 18
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf0zy_re",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 25,
+        "y": 14
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 34,
+          "y": 17
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf0zy_rf",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 25,
+        "y": 13
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 34,
+          "y": 16
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf0zy_rg",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 25,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 34,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf0zy_rh",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 25,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 34,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lf0zy_ri",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 25,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 34,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf0zy_rj",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 24,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 33,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf0zy_rk",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 23,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 32,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf0zy_rl",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 22,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 31,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf0zy_rm",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 21,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 30,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf0zy_rn",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 20,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 29,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lf0zy_ro",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 19,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf6tr_t7",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 19,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf6tr_t8",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 19,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf6tr_t9",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 19,
+        "y": 15
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 18
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf6tr_ta",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 19,
+        "y": 14
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 17
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf6tr_tb",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 19,
+        "y": 13
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 16
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf6tr_tc",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 19,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lf6tr_td",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 19,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lf6tr_te",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 18,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 27,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lf6tr_tf",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 18,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 27,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_mix_pool_1_mo1lfdc0_tg",
+      "typeId": "item_port_mix_pool_1",
+      "rotation": 0,
+      "origin": {
+        "x": 14,
+        "y": 12
+      },
+      "config": {
+        "reactorPool": {
+          "selectedRecipeIds": [
+            "r_chrono_mix_pool_inert_waste_liquid_water_slag_from_waste_liquid_and_iron_powder_basic"
+          ],
+          "solidOutputItemId": "item_xiranite_poly",
+          "liquidOutputItemIdB": "item_liquid_sewage"
+        }
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 23,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lfi79_tm",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 17,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 26,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lfi79_tn",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 17,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 26,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lfkrq_tq",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 17,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 26,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1lfs4o_u5",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 21,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 30,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lfs4o_u6",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 20,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 29,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1lfs4o_u7",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 19,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1lfs4o_u8",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 19,
+        "y": 15
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 18
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lfwmm_vg",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 15,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 24,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lfwmm_vh",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 16,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 25,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lfwmm_vi",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 17,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 26,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lfwmm_vj",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 18,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 27,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1lfwmm_vk",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 19,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lfwmm_vl",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 19,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lfwmm_vm",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 19,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1lfwmm_vn",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 19,
+        "y": 13
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 16
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_planter_1_mo1lgkj7_vo",
+      "typeId": "item_port_planter_1",
+      "rotation": 180,
+      "origin": {
+        "x": 28,
+        "y": 1
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 37,
+          "y": 4
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_planter_1_mo1lgmoq_vp",
+      "typeId": "item_port_planter_1",
+      "rotation": 180,
+      "origin": {
+        "x": 18,
+        "y": 1
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 27,
+          "y": 4
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_seedcol_1_mo1lgq1b_vq",
+      "typeId": "item_port_seedcol_1",
+      "rotation": 0,
+      "origin": {
+        "x": 23,
+        "y": 1
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_moss_3",
+            "amount": 50
+          }
+        ]
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 32,
+          "y": 4
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lhxma_vw",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 22,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 31,
+          "y": 9
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lhxma_vx",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 23,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 32,
+          "y": 9
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1li37g_wa",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 32,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 9
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1li37g_wb",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 32,
+        "y": 7
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 10
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1li37g_wc",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 32,
+        "y": 8
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 41,
+          "y": 11
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lig24_wi",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 27,
+        "y": 0
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 36,
+          "y": 3
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lig24_wj",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 28,
+        "y": 0
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 37,
+          "y": 3
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lihaz_wp",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 23,
+        "y": 0
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 32,
+          "y": 3
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lihaz_wq",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 22,
+        "y": 0
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 31,
+          "y": 3
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_storager_1_mo1ljj7y_wr",
+      "typeId": "item_port_storager_1",
+      "rotation": 0,
+      "origin": {
+        "x": 15,
+        "y": 1
+      },
+      "config": {
+        "submitToWarehouse": true
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 24,
+          "y": 4
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ljla2_wx",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 17,
+        "y": 5
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 26,
+          "y": 8
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ljla2_wy",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 17,
+        "y": 4
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 26,
+          "y": 7
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_power_diffuser_1_mo1ljmxv_wz",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 15,
+        "y": 4
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 24,
+          "y": 7
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_unloader_1_mo1lk021_x0",
+      "typeId": "item_port_unloader_1",
+      "rotation": 0,
+      "origin": {
+        "x": 12,
+        "y": 27
+      },
+      "config": {
+        "pickupItemId": "item_originium_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_originium_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 21,
+          "y": 30
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_unloader_1_mo1lk0og_x1",
+      "typeId": "item_port_unloader_1",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 27
+      },
+      "config": {
+        "pickupItemId": "item_originium_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_originium_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 18,
+          "y": 30
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_unloader_1_mo1lk1er_x2",
+      "typeId": "item_port_unloader_1",
+      "rotation": 0,
+      "origin": {
+        "x": 6,
+        "y": 27
+      },
+      "config": {
+        "pickupItemId": "item_originium_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_originium_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 15,
+          "y": 30
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_unloader_1_mo1lk55i_x4",
+      "typeId": "item_port_unloader_1",
+      "rotation": 0,
+      "origin": {
+        "x": 3,
+        "y": 27
+      },
+      "config": {
+        "pickupItemId": "item_originium_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_originium_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 12,
+          "y": 30
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_unloader_1_mo1lk76c_x5",
+      "typeId": "item_port_unloader_1",
+      "rotation": 0,
+      "origin": {
+        "x": 0,
+        "y": 27
+      },
+      "config": {
+        "pickupItemId": "item_xiranite_powder",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_xiranite_powder",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 30
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_grinder_1_mo1lkcht_x6",
+      "typeId": "item_port_grinder_1",
+      "rotation": 0,
+      "origin": {
+        "x": 12,
+        "y": 23
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 21,
+          "y": 26
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_grinder_1_mo1lkd99_x7",
+      "typeId": "item_port_grinder_1",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 23
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 18,
+          "y": 26
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lkfi5_xa",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 13,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 22,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lkg2s_xd",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 10,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 19,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_power_diffuser_1_mo1lkijx_xe",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 7,
+        "y": 23
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 26
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_grinder_1_mo1lkm55_xf",
+      "typeId": "item_port_grinder_1",
+      "rotation": 0,
+      "origin": {
+        "x": 4,
+        "y": 23
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 13,
+          "y": 26
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_grinder_1_mo1lko7a_xg",
+      "typeId": "item_port_grinder_1",
+      "rotation": 0,
+      "origin": {
+        "x": 1,
+        "y": 23
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 10,
+          "y": 26
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lkvsa_xt",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 7,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lkvsa_xu",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 6,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 15,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lkx4o_y0",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 4,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 13,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lkx4o_y1",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 3,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 12,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_thickener_1_mo1lqak5_y2",
+      "typeId": "item_port_thickener_1",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 18
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 18,
+          "y": 21
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_thickener_1_mo1lqc2c_y3",
+      "typeId": "item_port_thickener_1",
+      "rotation": 0,
+      "origin": {
+        "x": 2,
+        "y": 18
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 11,
+          "y": 21
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lqgyx_y6",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 12,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 21,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lqigw_y9",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 11,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 20,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lqkwu_yc",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 3,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 12,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lqld3_yf",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 4,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 13,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_grinder_1_mo1lqqvh_yg",
+      "typeId": "item_port_grinder_1",
+      "rotation": 180,
+      "origin": {
+        "x": 1,
+        "y": 14
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 10,
+          "y": 17
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lqu4a_zg",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 1,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 10,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lqu4a_zh",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 1,
+        "y": 18
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 10,
+          "y": 21
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lqu4a_zi",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 1,
+        "y": 19
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 10,
+          "y": 22
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lqu4a_zj",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 1,
+        "y": 20
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 10,
+          "y": 23
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lqu4a_zk",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 1,
+        "y": 21
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 10,
+          "y": 24
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lqu4a_zl",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 1,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 10,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lqu4a_zm",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 2,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 11,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_mix_pool_1_mo1lr0t7_zn",
+      "typeId": "item_port_mix_pool_1",
+      "rotation": 90,
+      "origin": {
+        "x": 1,
+        "y": 7
+      },
+      "config": {
+        "reactorPool": {
+          "selectedRecipeIds": [
+            "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic"
+          ],
+          "solidOutputItemId": "item_plant_moss_3",
+          "liquidOutputItemIdA": "item_liquid_xiranite"
+        }
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 10,
+          "y": 10
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_planter_1_mo1lszjs_zo",
+      "typeId": "item_port_planter_1",
+      "rotation": 180,
+      "origin": {
+        "x": 0,
+        "y": 1
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 4
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_seedcol_1_mo1lt3f9_zp",
+      "typeId": "item_port_seedcol_1",
+      "rotation": 0,
+      "origin": {
+        "x": 5,
+        "y": 1
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_moss_3",
+            "amount": 50
+          }
+        ]
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 14,
+          "y": 4
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_planter_1_mo1lt5lo_zq",
+      "typeId": "item_port_planter_1",
+      "rotation": 180,
+      "origin": {
+        "x": 10,
+        "y": 1
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 19,
+          "y": 4
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ltq2t_109",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 0,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 9
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ltq2t_10a",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 0,
+        "y": 7
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 10
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ltq2t_10b",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1ltq2t_10c",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 0,
+        "y": 8
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 11
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lttc6_153",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 1,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 10,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lttc6_154",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 0,
+        "y": 26
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 29
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lttc6_155",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 25
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 28
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lttc6_156",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 24
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 27
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lttc6_157",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 23
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 26
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lttc6_158",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lttc6_159",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 21
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 24
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lttc6_15a",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 20
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 23
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lttc6_15b",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 19
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 22
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lttc6_15c",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 18
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 21
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lttc6_15d",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lttc6_15e",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lttc6_15f",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 15
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 18
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lttc6_15g",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 14
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 17
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lttc6_15h",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 13
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 16
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lttc6_15i",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lttc6_15j",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 0,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_udpipe_unloader_1_mo1lv568_15k",
+      "typeId": "item_port_udpipe_unloader_1",
+      "rotation": 90,
+      "origin": {
+        "x": 4,
+        "y": 13
+      },
+      "config": {
+        "pumpOutputItemId": "item_liquid_water",
+        "darkPipeOutletMode": "generate"
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 13,
+          "y": 16
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_pipe_splitter_mo1lvhe8_15l",
+      "typeId": "item_pipe_splitter",
+      "rotation": 270,
+      "origin": {
+        "x": 5,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 14,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1lvmwh_18i",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 4,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 13,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1lvmwh_18j",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 4,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 13,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lvmwh_18k",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 3,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 12,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lvmwh_18l",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 2,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 11,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lvmwh_18m",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 1,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 10,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1lvmwh_18n",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 0,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lvmwh_18o",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lvmwh_18p",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 15
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 18
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lvmwh_18q",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 14
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 17
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lvmwh_18r",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 0,
+        "y": 13
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 16
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1lvmwh_18s",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 0,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 9,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lvmwh_18t",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 1,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 10,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1lvmwh_18u",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 2,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 11,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1lvs7f_19b",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 4,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 13,
+          "y": 9
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lvs7f_19c",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 5,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 14,
+          "y": 9
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1lvs7f_19d",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 6,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 15,
+          "y": 9
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lvs7f_19e",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 6,
+        "y": 7
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 15,
+          "y": 10
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_mix_pool_1_mo1lvzqv_19f",
+      "typeId": "item_port_mix_pool_1",
+      "rotation": 90,
+      "origin": {
+        "x": 8,
+        "y": 11
+      },
+      "config": {
+        "reactorPool": {
+          "selectedRecipeIds": [
+            "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
+          ],
+          "liquidOutputItemIdA": "item_liquid_xiranite_poly",
+          "liquidOutputItemIdB": "item_liquid_xiranite_lowpoly"
+        }
+      },
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 17,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxatv_1cn",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 6,
+        "y": 8
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 15,
+          "y": 11
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxatv_1co",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 6,
+        "y": 9
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 15,
+          "y": 12
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1lxatv_1cp",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 6,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 15,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1lxatv_1cq",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 7,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxatv_1cr",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 7,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxatv_1cs",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 7,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxatv_1ct",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 7,
+        "y": 13
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 16
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxatv_1cu",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 7,
+        "y": 14
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 17
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxatv_1cv",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 7,
+        "y": 15
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 18
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1lxatv_1cw",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 7,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxatv_1cx",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 8,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 17,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1lxatv_1cy",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 9,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 18,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1lxf22_1hl",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 6,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 15,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1lxf22_1hm",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 6,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 15,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxf22_1hn",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 7,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxf22_1ho",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 8,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 17,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxf22_1hp",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 18,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxf22_1hq",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 10,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 19,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxf22_1hr",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 11,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 20,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxf22_1hs",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 12,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 21,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxf22_1ht",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 13,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 22,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxfwz_1il",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 14,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 23,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxfwz_1im",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 20,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 29,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxfwz_1in",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 15,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 24,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxfwz_1io",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 16,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 25,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxfwz_1ip",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 17,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 26,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxfwz_1iq",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 18,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 27,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lxfwz_1ir",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 19,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 28,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1ly2tw_1la",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 3,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 12,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ly2tw_1lb",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 4,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 13,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ly2tw_1lc",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 5,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 14,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ly2tw_1ld",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 6,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 15,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1ly2tw_1lf",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 8,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 17,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ly2tw_1lg",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 8,
+        "y": 18
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 17,
+          "y": 21
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ly2tw_1lh",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 8,
+        "y": 19
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 17,
+          "y": 22
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ly2tw_1li",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 8,
+        "y": 20
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 17,
+          "y": 23
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1ly2tw_1lj",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 8,
+        "y": 21
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 17,
+          "y": 24
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1ly2tw_1lk",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 8,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 17,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1ly2tw_1ll",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 9,
+        "y": 22
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 18,
+          "y": 25
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_log_connector_mo1lyb0b_1pd",
+      "typeId": "item_log_connector",
+      "rotation": 0,
+      "origin": {
+        "x": 7,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lyb0b_1pe",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 7,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lyb0b_1pf",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 7,
+        "y": 15
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 18
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lyb0b_1pg",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 7,
+        "y": 14
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 17
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lyb0b_1ph",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 7,
+        "y": 13
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 16
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lyb0b_1pi",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 7,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lyb0b_1pj",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 7,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lyb0b_1pk",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 7,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lyb0b_1pl",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 8,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 17,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lyb0b_1pm",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 18,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lyb0b_1pn",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 10,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 19,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lyb0b_1po",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 11,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 20,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lyb0b_1pp",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 12,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 21,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lyb0b_1pq",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 13,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 22,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lyb0b_1pr",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 14,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 23,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lydbr_1rl",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 13,
+        "y": 17
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 22,
+          "y": 20
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lydbr_1rm",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 13,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 22,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lydbr_1rn",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 13,
+        "y": 15
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 22,
+          "y": 18
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lydbr_1ro",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 13,
+        "y": 14
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 22,
+          "y": 17
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lydbr_1rp",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 13,
+        "y": 13
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 22,
+          "y": 16
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lydbr_1rq",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 13,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 22,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lydbr_1rr",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 13,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 22,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lydbr_1rs",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 14,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 23,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lydbr_1rt",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 15,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 24,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1lydbr_1ru",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 15,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 24,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lyfxu_1s5",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 14,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 23,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1lyfxu_1s6",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 11,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 20,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lyfxu_1s7",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 12,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 21,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lyfxu_1s8",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 13,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 22,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_liquid_cleaner_1_mo1lyobx_1s9",
+      "typeId": "item_liquid_cleaner_1",
+      "rotation": 0,
+      "origin": {
+        "x": 10,
+        "y": 7
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 19,
+          "y": 10
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lyqb3_1sj",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 9,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 18,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1lyqb3_1sk",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 9,
+        "y": 9
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 18,
+          "y": 12
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1lyqb3_1sl",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 9,
+        "y": 8
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 18,
+          "y": 11
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "item_port_power_diffuser_1_mo1lyz54_1sm",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 7,
+        "y": 8
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 16,
+          "y": 11
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lzhk6_1ss",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 10,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 19,
+          "y": 9
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lzhk6_1st",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 9,
+        "y": 6
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 18,
+          "y": 9
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lzihk_1sz",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 9,
+        "y": 0
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 18,
+          "y": 3
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1lzihk_1t0",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 10,
+        "y": 0
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 19,
+          "y": 3
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lzjpn_1t8",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 5,
+        "y": 0
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 14,
+          "y": 3
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1lzjpn_1t9",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 4,
+        "y": 0
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 13,
+          "y": 3
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1m0jd3_1u9",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 6,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 15,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1m0jd3_1ua",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 6,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 15,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1m0jd3_1ub",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 6,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 15,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1m0jd3_1uc",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 5,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 14,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1m0jd3_1ud",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 4,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 13,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1m0jd3_1ue",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 3,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 12,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1m0jd3_1uf",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 3,
+        "y": 13
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 12,
+          "y": 16
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1m0lk7_1vf",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 26,
+        "y": 10
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 35,
+          "y": 13
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1m0lk7_1vg",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 26,
+        "y": 11
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 35,
+          "y": 14
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_cw_1x1_mo1m0lk7_1vh",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 26,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 35,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1m0lk7_1vi",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 27,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 36,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1m0lk7_1vj",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 28,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 37,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_turn_ccw_1x1_mo1m0lk7_1vk",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 29,
+        "y": 12
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 38,
+          "y": 15
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "belt_straight_1x1_mo1m0lk7_1vl",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 29,
+        "y": 13
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 38,
+          "y": 16
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_cw_1x1_mo1m6le6_1w0",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 13,
+        "y": 15
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 22,
+          "y": 18
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1m6le6_1w1",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 13,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 22,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_straight_1x1_mo1m6le6_1w2",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 12,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 21,
+          "y": 19
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "pipe_turn_ccw_1x1_mo1m6le6_1w3",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 11,
+        "y": 16
+      },
+      "config": {},
+      "placementRecord": {
+        "baseId": "wuling_tianwangping_aid",
+        "baseOrigin": {
+          "x": 20,
+          "y": 19
+        }
+      }
+    }
+  ],
+  "links": []
+}
