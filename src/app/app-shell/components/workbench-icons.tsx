@@ -14,7 +14,7 @@ type WorkbenchIconKind =
   | "confirm"
   | "rotate";
 
-export interface WorkbenchIconProps {
+interface WorkbenchIconProps {
   kind: WorkbenchIconKind;
   className?: string;
 }

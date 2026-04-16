@@ -7,25 +7,15 @@ import { TopBar } from "@/app/app-shell/components/top-bar";
 import { handleUiEvent } from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { AppHost } from "@/app/app-host";
 
-export interface WorkbenchAppProps {
-  appHost: AppHost;
-}
-
-export function WorkbenchApp({ appHost }: WorkbenchAppProps) {
+export function WorkbenchApp({ appHost: _appHost }: { appHost: AppHost }) {
   return (
     <div className="workbench" onContextMenu={handleUiEvent}>
-      <TopBar
-        controller={appHost.controller}
-        workspaceDerivedStore={appHost.workspaceDerivedStore}
-      />
-      <LeftToolbar controller={appHost.controller} />
-      <LeftDock controller={appHost.controller} />
-      <CanvasPanel
-        controller={appHost.controller}
-        workspaceDerivedStore={appHost.workspaceDerivedStore}
-      />
-      <RightDock controller={appHost.controller} />
-      <BottomStatusBar controller={appHost.controller} />
+      <TopBar />
+      <LeftToolbar />
+      <LeftDock />
+      <CanvasPanel />
+      <RightDock />
+      <BottomStatusBar />
     </div>
   );
 }

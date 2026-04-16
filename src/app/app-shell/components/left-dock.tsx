@@ -3,7 +3,6 @@ import {
   STATIC_UI_PLACEHOLDER_TEXT,
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
-import type { WorkbenchController } from "@/workspace/workspace-facade";
 
 const LEFT_DOCK_BUTTONS = [
   { id: "dock-button-1", icon: "pointer" as const },
@@ -11,10 +10,7 @@ const LEFT_DOCK_BUTTONS = [
   { id: "dock-button-3", icon: "history" as const },
 ];
 
-export interface LeftDockProps {
-  controller: WorkbenchController;
-}
-export function LeftDock(_props: LeftDockProps) {
+export function LeftDock() {
   return (
     <aside className="dock dock-left panel-surface">
       <section className="dock-section">

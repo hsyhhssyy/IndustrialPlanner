@@ -3,7 +3,6 @@ import {
   STATIC_UI_PLACEHOLDER_TEXT,
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
-import type { WorkbenchController } from "@/workspace/workspace-facade";
 
 const RIGHT_DOCK_LIST = [
   STATIC_UI_PLACEHOLDER_TEXT,
@@ -11,10 +10,7 @@ const RIGHT_DOCK_LIST = [
   STATIC_UI_PLACEHOLDER_TEXT,
 ];
 
-export interface RightDockProps {
-  controller: WorkbenchController;
-}
-export function RightDock({ controller }: RightDockProps) {
+export function RightDock() {
   return (
     <aside className="dock dock-right panel-surface">
       <section className="dock-section">
@@ -70,7 +66,6 @@ export function RightDock({ controller }: RightDockProps) {
             </div>
             <EditSelectionInspector
               context={null}
-              controller={controller}
               state={{ locale: "zh-CN" }}
             />
           </article>

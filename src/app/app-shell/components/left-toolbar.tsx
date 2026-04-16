@@ -3,7 +3,6 @@ import {
   STATIC_UI_PLACEHOLDER_TEXT,
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
-import type { WorkbenchController } from "@/workspace/workspace-facade";
 
 const PRIMARY_TOOLBAR_ITEMS = [
   { id: "primary-placement", icon: "placement" as const },
@@ -17,11 +16,7 @@ const UTILITY_TOOLBAR_ITEMS = [
   { id: "utility-settings", icon: "settings" as const },
 ];
 
-export interface LeftToolbarProps {
-  controller: WorkbenchController;
-}
-
-export function LeftToolbar(_props: LeftToolbarProps) {
+export function LeftToolbar() {
   return (
     <aside className="left-toolbar panel-surface">
       <div className="toolbar-rail-group">

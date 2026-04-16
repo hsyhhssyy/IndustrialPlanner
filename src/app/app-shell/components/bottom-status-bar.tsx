@@ -1,10 +1,6 @@
 import { STATIC_UI_PLACEHOLDER_TEXT } from "@/app/app-shell/components/ui-shell-null-handlers";
-import type { WorkbenchController } from "@/workspace/workspace-facade";
 
-export interface BottomStatusBarProps {
-  controller: WorkbenchController;
-}
-export function BottomStatusBar(_props: BottomStatusBarProps) {
+export function BottomStatusBar() {
   return (
     <footer className="status-bar">
       <div className="status-bar-group status-bar-group-left">

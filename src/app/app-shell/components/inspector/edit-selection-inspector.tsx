@@ -11,7 +11,6 @@ import {
 } from "@/app/app-shell/components/ui-shell-null-handlers";
 
 export function EditSelectionInspector({
-  controller: _controller,
   state: _state,
   context: _context,
 }: SelectionInspectorPanelProps) {

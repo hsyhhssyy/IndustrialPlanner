@@ -18,7 +18,7 @@ const PLACEHOLDER_ACTIONS: Array<{
   { id: "canvas-action-rotate", icon: "rotate", tone: "rotate" },
 ];
 
-export interface CanvasActionToolbarAction {
+interface CanvasActionToolbarAction {
   id: string;
   ariaLabel: string;
   icon: CanvasActionIconKind;
@@ -27,7 +27,7 @@ export interface CanvasActionToolbarAction {
   tone?: CanvasActionTone;
 }
 
-export interface CanvasActionToolbarProps {
+interface CanvasActionToolbarProps {
   actions: CanvasActionToolbarAction[];
   className?: string;
   style?: CSSProperties;

@@ -3,15 +3,8 @@ import {
   STATIC_UI_PLACEHOLDER_TEXT,
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
-import type { WorkbenchController } from "@/workspace/workspace-facade";
-import type { WorkspaceDerivedStore } from "@/workbench/derived/workspace-derived-store";
 
-export interface TopBarProps {
-  controller: WorkbenchController;
-  workspaceDerivedStore: Pick<WorkspaceDerivedStore, "render">;
-}
-
-export function TopBar(_props: TopBarProps) {
+export function TopBar() {
   return (
     <header className="top-bar">
       <div className="toolbar-group top-bar-layout-controls">

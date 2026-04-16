@@ -1,7 +1,4 @@
 import type {
-  WorkbenchController,
-} from "@/workspace/workspace-facade";
-import type {
   Stage1EntityDefinition,
 } from "@/domain/registry/stage1-registry";
 import type { AppLocale } from "@/i18n/messages";
@@ -22,7 +19,6 @@ export interface SelectionInspectorState {
 }
 
 export interface SelectionInspectorPanelProps {
-  controller: WorkbenchController;
   state: SelectionInspectorState;
   context: SelectionInspectorContext | null;
 }

@@ -2,15 +2,8 @@ import {
   STATIC_UI_PLACEHOLDER_TEXT,
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
-import type { WorkbenchController } from "@/workspace/workspace-facade";
-import type { WorkspaceDerivedStore } from "@/workbench/derived/workspace-derived-store";
 
-export interface CanvasPanelProps {
-  controller: WorkbenchController;
-  workspaceDerivedStore: Pick<WorkspaceDerivedStore, "render">;
-}
-
-export function CanvasPanel(_props: CanvasPanelProps) {
+export function CanvasPanel() {
   return (
     <main className="canvas-panel panel-surface">
       <div

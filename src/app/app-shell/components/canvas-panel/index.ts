@@ -1,1 +1,1 @@
-export { CanvasPanel, type CanvasPanelProps } from "./canvas-panel";
+export { CanvasPanel } from "./canvas-panel";
