@@ -1,0 +1,73 @@
+
+export const ITEM_DEFINITIONS: ItemDefinition[] = [
+  {
+    id: "item_liquid_water",
+    nameKey: "registry.item.item_liquid_water.name",
+    name: "Clean Water",
+    medium: "liquid",
+    tags: [],
+  },
+  {
+    id: "item_liquid_plant_grass_2",
+    nameKey: "registry.item.item_liquid_plant_grass_2.name",
+    name: "Yazhen Solution",
+    medium: "liquid",
+    tags: [],
+  },
+  {
+    id: "item_plant_grass_powder_2",
+    nameKey: "registry.item.item_plant_grass_powder_2.name",
+    name: "Yazhen Powder",
+    medium: "solid",
+    tags: [],
+  },
+  {
+    id: "item_plant_grass_2",
+    nameKey: "registry.item.item_plant_grass_2.name",
+    name: "Yazhen",
+    medium: "solid",
+    tags: [],
+  },
+  {
+    id: "item_plant_grass_powder_1",
+    nameKey: "registry.item.item_plant_grass_powder_1.name",
+    name: "Jincao Powder",
+    medium: "solid",
+    tags: [],
+  },
+  {
+    id: "item_plant_grass_1",
+    nameKey: "registry.item.item_plant_grass_1.name",
+    name: "Jincao",
+    medium: "solid",
+    tags: [],
+  },
+  {
+    id: "item_liquid_plant_grass_1",
+    nameKey: "registry.item.item_liquid_plant_grass_1.name",
+    name: "Jincao Solution",
+    medium: "liquid",
+    tags: [],
+  },
+  {
+    id: "item_iron_bottle",
+    nameKey: "registry.item.item_iron_bottle.name",
+    name: "Blue Iron Bottle",
+    medium: "solid",
+    tags: [],
+  },
+  {
+    id: "item_iron_bottle_filled_liquid_plant_grass_2",
+    nameKey: "registry.item.item_iron_bottle_filled_liquid_plant_grass_2.name",
+    name: "Blue Iron Bottle (Yazhen Solution)",
+    medium: "solid",
+    tags: ["bottled-liquid"],
+  },
+  {
+    id: "item_iron_bottle_filled_liquid_plant_grass_1",
+    nameKey: "registry.item.item_iron_bottle_filled_liquid_plant_grass_1.name",
+    name: "Blue Iron Bottle (Jincao Solution)",
+    medium: "solid",
+    tags: ["bottled-liquid"],
+  },
+];

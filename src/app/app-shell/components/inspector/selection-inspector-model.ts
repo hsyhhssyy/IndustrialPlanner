@@ -1,6 +1,6 @@
 import type {
-  Stage1EntityDefinition,
-} from "@/domain/registry/stage1-registry";
+  EntityDefinition,
+} from "@/domain/registry/registry";
 import type { AppLocale } from "@/i18n/messages";
 import type {
   ExplicitLink,
@@ -10,7 +10,7 @@ import type {
 export interface SelectionInspectorContext {
   selectedEntityId: string;
   selectedEntity: WorldEntity;
-  selectedDefinition: Stage1EntityDefinition;
+  selectedDefinition: EntityDefinition;
   selectedLinks: ExplicitLink[];
 }
 

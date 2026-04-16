@@ -1,1 +1,0 @@
-export { CanvasPanel } from "./canvas-panel";

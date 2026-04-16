@@ -1,40 +1,22 @@
-import type { WorkbenchController } from "@/workbench/contracts/workbench-facade";
-import {
-  createWorkspaceDerivedStore,
-  type WorkspaceDerivedStore,
-} from "@/workbench/derived/workspace-derived-store";
-import type { PlacementPreviewProfiler } from "@/workbench/diagnostics/placement-preview-profiler";
+import { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import { AppContract } from "@/domain/contract/app-contract";
 
-export interface AppHost {
-  controller: WorkbenchController;
-  workspaceDerivedStore: WorkspaceDerivedStore;
-  placementPreviewProfiler?: PlacementPreviewProfiler;
+export interface AppHost extends AppContract {
+  workspace: WorkspaceContract;
   dispose: () => void;
 }
 
-export interface CreateAppHostOptions {
-  placementPreviewProfiler?: PlacementPreviewProfiler;
-}
 
 export function createAppHost(
-  controller: WorkbenchController,
-  options: CreateAppHostOptions = {},
+  workspace: WorkspaceContract
 ): AppHost {
-  const workspaceDerivedStore = createWorkspaceDerivedStore({
-    documentStore: controller.workspaceState.documentStore,
-    editorStore: controller.workspaceState.editorStore,
-    canvasViewStore: controller.workspaceState.canvasViewStore,
-    topologyStore: controller.workspaceState.topologyStore,
-    registry: controller.registry,
-    placementPreviewProfiler: options.placementPreviewProfiler,
-  });
-
-  return {
-    controller,
-    workspaceDerivedStore,
-    placementPreviewProfiler: options.placementPreviewProfiler,
+  const host: AppHost = {
+    workspace,
     dispose: () => {
-      workspaceDerivedStore.dispose();
     },
+    queries: {},
+    actions: {}
   };
+  workspace.app = host;
+  return host;
 }
