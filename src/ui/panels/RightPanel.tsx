@@ -131,9 +131,6 @@ type RightPanelProps = {
   reactorSolidOutputItemCandidates: ItemId[]
   reactorLiquidOutputItemCandidates: ItemId[]
   updateReactorSelectedRecipe: (deviceInstanceId: string, slotIndex: number, recipeId: string | null) => void
-  updateReactorSolidOutputItem: (deviceInstanceId: string, itemId: ItemId | null) => void
-  updateReactorLiquidOutputItemA: (deviceInstanceId: string, itemId: ItemId | null) => void
-  updateReactorLiquidOutputItemB: (deviceInstanceId: string, itemId: ItemId | null) => void
   simIsRunning: boolean
 }
 
@@ -220,9 +217,6 @@ export function RightPanel({
   reactorSolidOutputItemCandidates,
   reactorLiquidOutputItemCandidates,
   updateReactorSelectedRecipe,
-  updateReactorSolidOutputItem,
-  updateReactorLiquidOutputItemA,
-  updateReactorLiquidOutputItemB,
   simIsRunning,
 }: RightPanelProps) {
   const slotConfigSupportedTypeIds = new Set<DeviceInstance['typeId']>([
@@ -1048,91 +1042,143 @@ export function RightPanel({
             </>
           )}
           {isReactorPoolType(selectedDevice.typeId) && !simIsRunning && selectedReactorPoolConfig && (
-            <div className="picker">
+            <div className="picker reactor-config-picker">
               <label>{t('detail.reactorPool')}</label>
-              {Array.from({ length: getReactorRecipeSlotCount(selectedDevice.typeId) }, (_, index) => {
-                const recipeId = selectedReactorPoolConfig.selectedRecipeIds[index] ?? ''
-                return (
-                  <div key={`reactor-recipe-slot-${index}`} className="preload-slot-row">
-                    <span className="preload-slot-label">{t('detail.reactorRecipeSlot', { index: index + 1 })}</span>
-                    <select
-                      value={recipeId}
-                      onChange={(event) => {
-                        const value = event.target.value.trim()
-                        updateReactorSelectedRecipe(selectedDevice.instanceId, index, value.length > 0 ? value : null)
-                      }}
-                    >
-                      <option value="">{t('detail.reactorNoRecipe')}</option>
-                      {reactorRecipeCandidates.map((recipe) => (
-                        <option key={recipe.id} value={recipe.id}>
-                          {getReactorRecipeOptionLabel(recipe)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )
-              })}
-
-              <div className="preload-slot-row">
-                <span className="preload-slot-label">{t('detail.reactorSolidOutputItem')}</span>
-                <select
-                  value={selectedReactorPoolConfig.solidOutputItemId ?? ''}
-                  onChange={(event) => {
-                    const value = event.target.value.trim()
-                    updateReactorSolidOutputItem(selectedDevice.instanceId, value.length > 0 ? (value as ItemId) : null)
-                  }}
-                >
-                  <option value="">{t('detail.reactorNoRecipe')}</option>
-                  {reactorSolidOutputItemCandidates.map((itemId) => (
-                    <option key={`reactor-solid-${itemId}`} value={itemId}>
-                      {getItemLabel(language, itemId)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="preload-slot-row">
-                <span className="preload-slot-label">{t('detail.reactorLiquidOutA')}</span>
-                <select
-                  value={selectedReactorPoolConfig.liquidOutputItemIdA ?? ''}
-                  onChange={(event) => {
-                    const value = event.target.value.trim()
-                    updateReactorLiquidOutputItemA(selectedDevice.instanceId, value.length > 0 ? (value as ItemId) : null)
-                  }}
-                >
-                  <option value="">{t('detail.reactorNoRecipe')}</option>
-                  {reactorLiquidOutputItemCandidates.map((itemId) => (
-                    <option key={`reactor-liquid-${itemId}`} value={itemId}>
-                      {getItemLabel(language, itemId)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="preload-slot-row">
-                <span className="preload-slot-label">{t('detail.reactorLiquidOutB')}</span>
-                <select
-                  value={selectedReactorPoolConfig.liquidOutputItemIdB ?? ''}
-                  onChange={(event) => {
-                    const value = event.target.value.trim()
-                    updateReactorLiquidOutputItemB(selectedDevice.instanceId, value.length > 0 ? (value as ItemId) : null)
-                  }}
-                >
-                  <option value="">{t('detail.reactorNoRecipe')}</option>
-                  {reactorLiquidOutputItemCandidates.map((itemId) => (
-                    <option key={`reactor-liquid-b-${itemId}`} value={itemId}>
-                      {getItemLabel(language, itemId)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <small>
-                {t('detail.reactorHint', {
-                  slotCount: getReactorSharedSlotCount(selectedDevice.typeId),
-                  recipeCount: getReactorRecipeSlotCount(selectedDevice.typeId),
+              <div className="reactor-config-group">
+                <div className="reactor-config-subtitle">{t('detail.reactorRecipeGroup')}</div>
+                {Array.from({ length: getReactorRecipeSlotCount(selectedDevice.typeId) }, (_, index) => {
+                  const recipeId = selectedReactorPoolConfig.selectedRecipeIds[index] ?? ''
+                  return (
+                    <div key={`reactor-recipe-slot-${index}`} className="preload-slot-row">
+                      <span className="preload-slot-label">{t('detail.reactorRecipeSlot', { index: index + 1 })}</span>
+                      <select
+                        value={recipeId}
+                        onChange={(event) => {
+                          const value = event.target.value.trim()
+                          updateReactorSelectedRecipe(selectedDevice.instanceId, index, value.length > 0 ? value : null)
+                        }}
+                      >
+                        <option value="">{t('detail.reactorNoRecipe')}</option>
+                        {reactorRecipeCandidates.map((recipe) => (
+                          <option key={recipe.id} value={recipe.id}>
+                            {getReactorRecipeOptionLabel(recipe)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )
                 })}
-              </small>
+              </div>
+
+              <div className="reactor-config-divider" aria-hidden="true" />
+
+              <div className="reactor-config-group">
+                <div className="reactor-config-subtitle">{t('detail.reactorOutputGroup')}</div>
+                <div className="preload-slot-row">
+                  <span className="preload-slot-label">{t('detail.reactorSolidOutputItem')}</span>
+                  <button
+                    type="button"
+                    className="picker-open-btn"
+                    disabled={simIsRunning || reactorSolidOutputItemCandidates.length === 0}
+                    onClick={() =>
+                      setItemPickerState({
+                        kind: 'reactorOutput',
+                        deviceInstanceId: selectedDevice.instanceId,
+                        output: 'solid',
+                      })
+                    }
+                  >
+                    <span className="pickup-picker-current">
+                      {selectedReactorPoolConfig.solidOutputItemId ? (
+                        <img
+                          className="pickup-picker-current-icon"
+                          src={getItemIconPath(selectedReactorPoolConfig.solidOutputItemId as ItemId)}
+                          alt=""
+                          aria-hidden="true"
+                          draggable={false}
+                        />
+                      ) : (
+                        <span className="pickup-picker-current-icon pickup-picker-current-icon--empty">?</span>
+                      )}
+                      <span>
+                        {selectedReactorPoolConfig.solidOutputItemId
+                          ? getItemLabel(language, selectedReactorPoolConfig.solidOutputItemId as ItemId)
+                          : t('detail.unselected')}
+                      </span>
+                    </span>
+                  </button>
+                </div>
+
+                <div className="preload-slot-row">
+                  <span className="preload-slot-label">{t('detail.reactorLiquidOutA')}</span>
+                  <button
+                    type="button"
+                    className="picker-open-btn"
+                    disabled={simIsRunning || reactorLiquidOutputItemCandidates.length === 0}
+                    onClick={() =>
+                      setItemPickerState({
+                        kind: 'reactorOutput',
+                        deviceInstanceId: selectedDevice.instanceId,
+                        output: 'liquidA',
+                      })
+                    }
+                  >
+                    <span className="pickup-picker-current">
+                      {selectedReactorPoolConfig.liquidOutputItemIdA ? (
+                        <img
+                          className="pickup-picker-current-icon"
+                          src={getItemIconPath(selectedReactorPoolConfig.liquidOutputItemIdA as ItemId)}
+                          alt=""
+                          aria-hidden="true"
+                          draggable={false}
+                        />
+                      ) : (
+                        <span className="pickup-picker-current-icon pickup-picker-current-icon--empty">?</span>
+                      )}
+                      <span>
+                        {selectedReactorPoolConfig.liquidOutputItemIdA
+                          ? getItemLabel(language, selectedReactorPoolConfig.liquidOutputItemIdA as ItemId)
+                          : t('detail.unselected')}
+                      </span>
+                    </span>
+                  </button>
+                </div>
+
+                <div className="preload-slot-row">
+                  <span className="preload-slot-label">{t('detail.reactorLiquidOutB')}</span>
+                  <button
+                    type="button"
+                    className="picker-open-btn"
+                    disabled={simIsRunning || reactorLiquidOutputItemCandidates.length === 0}
+                    onClick={() =>
+                      setItemPickerState({
+                        kind: 'reactorOutput',
+                        deviceInstanceId: selectedDevice.instanceId,
+                        output: 'liquidB',
+                      })
+                    }
+                  >
+                    <span className="pickup-picker-current">
+                      {selectedReactorPoolConfig.liquidOutputItemIdB ? (
+                        <img
+                          className="pickup-picker-current-icon"
+                          src={getItemIconPath(selectedReactorPoolConfig.liquidOutputItemIdB as ItemId)}
+                          alt=""
+                          aria-hidden="true"
+                          draggable={false}
+                        />
+                      ) : (
+                        <span className="pickup-picker-current-icon pickup-picker-current-icon--empty">?</span>
+                      )}
+                      <span>
+                        {selectedReactorPoolConfig.liquidOutputItemIdB
+                          ? getItemLabel(language, selectedReactorPoolConfig.liquidOutputItemIdB as ItemId)
+                          : t('detail.unselected')}
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
           {DEVICE_TYPE_BY_ID[selectedDevice.typeId].runtimeKind === 'processor' && !simIsRunning && (

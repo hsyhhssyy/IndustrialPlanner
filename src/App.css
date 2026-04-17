@@ -1464,6 +1464,25 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.reactor-config-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reactor-config-subtitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.reactor-config-divider {
+  width: 100%;
+  height: 1px;
+  background: var(--border-color);
+  margin: 2px 0;
+}
+
 .pickup-picker-current {
   display: inline-flex;
   align-items: center;

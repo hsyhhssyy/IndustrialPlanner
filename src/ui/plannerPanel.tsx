@@ -123,7 +123,7 @@ type FlowPanState = {
 
 const EPSILON = 1e-9
 const INFINITE_SUPPLY_ITEM_TAG = '矿石'
-const EXTRA_INFINITE_SUPPLY_ITEM_IDS: ItemId[] = ['item_liquid_water']
+const EXTRA_INFINITE_SUPPLY_ITEM_IDS: ItemId[] = ['item_liquid_water', 'item_liquid_acid']
 const FORCED_RAW_ITEM_IDS: ItemId[] = Array.from(
   new Set<ItemId>([
     ...ITEMS.filter((item) => item.tags?.includes(INFINITE_SUPPLY_ITEM_TAG)).map((item) => item.id),

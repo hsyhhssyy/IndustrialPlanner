@@ -178,6 +178,24 @@ type PowerObservationSummary = {
   windows: PowerWindowSummary[]
 }
 
+export type BlueprintRunProgress = {
+  caseId: string
+  simTick: number
+  simSeconds: number
+  targetEndTick: number
+  targetEndSeconds: number
+  firstBatteryDropTick: number | null
+  phase: 'running' | 'waiting_first_battery_drop' | 'observing_power_window'
+  batteryPercent: number
+  totalSupplyKw: number
+  totalDemandKw: number
+  wallElapsedMs: number
+}
+
+type RunBlueprintCaseOptions = {
+  onProgress?: (progress: BlueprintRunProgress) => void
+}
+
 const ROTATIONS: Rotation[] = [0, 90, 180, 270]
 const BATTERY_CAPACITY_J = 100_000_000
 const EDGE_DELTA: Record<Edge, { x: number; y: number }> = {
@@ -187,6 +205,7 @@ const EDGE_DELTA: Record<Edge, { x: number; y: number }> = {
   W: { x: -1, y: 0 },
 }
 const SAMPLE_INTERVAL_SECONDS = 10
+const PROGRESS_REPORT_INTERVAL_MS = 5_000
 export const BLUEPRINT_ROOT = path.resolve(process.cwd(), 'public/blueprints')
 
 export function blueprintFile(fileName: string) {
@@ -648,7 +667,7 @@ function buildPowerObservationSummary(
   }
 }
 
-export function runBlueprintCase(testCase: BlueprintCase) {
+export function runBlueprintCase(testCase: BlueprintCase, options: RunBlueprintCaseOptions = {}) {
   const snapshot = readBlueprint(testCase.blueprintPath)
   const placement = findPlacement(snapshot, testCase)
 
@@ -718,6 +737,8 @@ export function runBlueprintCase(testCase: BlueprintCase) {
         demandKwSum: 0,
       }))
     : []
+  const runStartedAtMs = Date.now()
+  let lastProgressReportAtMs = runStartedAtMs
 
   while (sim.tick < targetEndTick) {
     const previousBatteryStoredJ = sim.powerStats.batteryStoredJ
@@ -750,6 +771,30 @@ export function runBlueprintCase(testCase: BlueprintCase) {
       powerObservationStartTick = sim.tick
       powerObservationEndTickExclusive = sim.tick + powerDurationTicks
       targetEndTick = Math.max(targetEndTick, powerObservationEndTickExclusive)
+    }
+
+    const now = Date.now()
+    if (options.onProgress && now - lastProgressReportAtMs >= PROGRESS_REPORT_INTERVAL_MS) {
+      const phase: BlueprintRunProgress['phase'] =
+        powerObservation && powerObservationAnchor === 'first_battery_drop' && firstBatteryDropTick === null
+          ? 'waiting_first_battery_drop'
+          : powerObservation && powerObservationStartTick !== null && powerObservationEndTickExclusive !== null && sim.tick < powerObservationEndTickExclusive
+            ? 'observing_power_window'
+            : 'running'
+      options.onProgress({
+        caseId: testCase.id,
+        simTick: sim.tick,
+        simSeconds: sim.stats.simSeconds,
+        targetEndTick,
+        targetEndSeconds: targetEndTick / sim.tickRateHz,
+        firstBatteryDropTick,
+        phase,
+        batteryPercent: sim.powerStats.batteryPercent,
+        totalSupplyKw: sim.powerStats.totalSupplyKw,
+        totalDemandKw: sim.powerStats.totalDemandKw,
+        wallElapsedMs: now - runStartedAtMs,
+      })
+      lastProgressReportAtMs = now
     }
 
     if (

@@ -7,6 +7,7 @@ export type ItemPickerState =
   | { kind: 'plannerTarget'; targetId: string }
   | { kind: 'protocolHubOutput'; deviceInstanceId: string; portId: string; portIndex: number }
   | { kind: 'pumpOutput'; deviceInstanceId: string }
+  | { kind: 'reactorOutput'; deviceInstanceId: string; output: 'solid' | 'liquidA' | 'liquidB' }
   | { kind: 'preload'; deviceInstanceId: string; slotIndex: number }
   | { kind: 'storageSlotPinned'; slotIndex: number }
   | { kind: 'storageSlotPreload'; slotIndex: number }

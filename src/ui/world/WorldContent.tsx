@@ -1,4 +1,7 @@
 import type { ReactNode } from 'react'
+
+const LIQUID_CHEVRON_VIEWBOX_WIDTH = 122
+
 type PowerRangeOutline = {
   key: string
   left: number
@@ -33,6 +36,7 @@ type PortChevron = {
   angle: number
   width: number
   height: number
+  isLiquid: boolean
 }
 
 type PlacePreviewChevron = {
@@ -42,6 +46,27 @@ type PlacePreviewChevron = {
   angle: number
   width: number
   height: number
+  isLiquid: boolean
+}
+
+function PortChevronSvg({ isLiquid }: { isLiquid: boolean }) {
+  if (isLiquid) {
+    return (
+      <svg viewBox={`0 0 ${LIQUID_CHEVRON_VIEWBOX_WIDTH} 100`} preserveAspectRatio="none" aria-hidden="true">
+        <rect x="0" y="23" width="9" height="54" rx="4" fill="rgba(50, 66, 87, 0.88)" />
+        <rect x="2" y="29" width="5" height="42" rx="2.5" fill="rgba(233, 239, 249, 0.9)" />
+        <polygon points="22,12 122,50 22,88" fill="rgba(50, 66, 87, 0.88)" />
+        <polygon points="30,22 106,50 30,78" fill="rgba(233, 239, 249, 0.9)" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <polyline className="port-chevron-outline" points="0,12 100,50 0,88" />
+      <polyline className="port-chevron-inner" points="0,22 84,50 0,78" />
+    </svg>
+  )
 }
 
 type LogisticsEndpointHighlight = {
@@ -185,10 +210,7 @@ export function WorldContent({
             transform: `translate(-50%, -50%) rotate(${chevron.angle}deg)`,
           }}
         >
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-            <polyline className="port-chevron-outline" points="0,12 100,50 0,88" />
-            <polyline className="port-chevron-inner" points="0,22 84,50 0,78" />
-          </svg>
+          <PortChevronSvg isLiquid={chevron.isLiquid} />
         </div>
       ))}
 
@@ -232,10 +254,7 @@ export function WorldContent({
                 transform: `translate(-50%, -50%) rotate(${chevron.angle}deg)`,
               }}
             >
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                <polyline className="port-chevron-outline" points="0,12 100,50 0,88" />
-                <polyline className="port-chevron-inner" points="0,22 84,50 0,78" />
-              </svg>
+              <PortChevronSvg isLiquid={chevron.isLiquid} />
             </div>
           ))}
         </div>

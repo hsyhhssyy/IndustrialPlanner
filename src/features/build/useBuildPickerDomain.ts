@@ -178,6 +178,16 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
     if (itemPickerState.kind === 'pumpOutput') {
       return normalizeExternalLiquidSourceItemId(pickerTargetDevice.config.pumpOutputItemId)
     }
+    if (itemPickerState.kind === 'reactorOutput' && isReactorPoolType(pickerTargetDevice.typeId)) {
+      const reactorPoolConfig = normalizeReactorPoolConfig(pickerTargetDevice.typeId, pickerTargetDevice.config)
+      if (itemPickerState.output === 'solid') {
+        return reactorPoolConfig.solidOutputItemId
+      }
+      if (itemPickerState.output === 'liquidA') {
+        return reactorPoolConfig.liquidOutputItemIdA
+      }
+      return reactorPoolConfig.liquidOutputItemIdB
+    }
     if (itemPickerState.kind === 'preload') {
       if (pickerTargetDevice.typeId === LIQUID_STORAGE_TANK_TYPE_ID) {
         return ITEM_BY_ID[pickerTargetDevice.config.preloadInputItemId ?? '']?.type === 'liquid'
@@ -207,6 +217,18 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
         allowedTypes: ['liquid'],
       }
     }
+    if (itemPickerState.kind === 'reactorOutput') {
+      if (itemPickerState.output === 'solid') {
+        return {
+          allowedTypes: ['solid'],
+          allowedItemIds: new Set(reactorSolidOutputItemCandidates),
+        }
+      }
+      return {
+        allowedTypes: ['liquid'],
+        allowedItemIds: new Set(reactorLiquidOutputItemCandidates),
+      }
+    }
     if (itemPickerState.kind === 'preload') {
       if (!pickerTargetDevice) return { allowedTypes: ['solid'] }
       if (pickerTargetDevice.typeId === LIQUID_STORAGE_TANK_TYPE_ID) {
@@ -217,7 +239,7 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       }
     }
     return undefined
-  }, [itemPickerState, pickerTargetDevice])
+  }, [itemPickerState, pickerTargetDevice, reactorLiquidOutputItemCandidates, reactorSolidOutputItemCandidates])
 
   const pickerAllowsEmpty = itemPickerState?.kind !== 'pumpOutput'
 
@@ -263,6 +285,10 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       setItemPickerState(null)
       return
     }
+    if (itemPickerState.kind === 'reactorOutput' && !isReactorPoolType(target.typeId)) {
+      setItemPickerState(null)
+      return
+    }
     if (itemPickerState.kind === 'preload' && DEVICE_TYPE_BY_ID[target.typeId].runtimeKind !== 'processor') {
       if (target.typeId !== LIQUID_STORAGE_TANK_TYPE_ID) {
         setItemPickerState(null)
@@ -292,6 +318,14 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       } else if (itemPickerState.kind === 'pumpOutput') {
         const nextItemId = normalizeExternalLiquidSourceItemId(itemId ?? undefined)
         updatePumpOutputItem(pickerTargetDevice.instanceId, nextItemId)
+      } else if (itemPickerState.kind === 'reactorOutput') {
+        if (itemPickerState.output === 'solid') {
+          updateReactorSolidOutputItem(pickerTargetDevice.instanceId, itemId)
+        } else if (itemPickerState.output === 'liquidA') {
+          updateReactorLiquidOutputItemA(pickerTargetDevice.instanceId, itemId)
+        } else {
+          updateReactorLiquidOutputItemB(pickerTargetDevice.instanceId, itemId)
+        }
       } else if (itemPickerState.kind === 'preload') {
         if (pickerTargetDevice.typeId === LIQUID_STORAGE_TANK_TYPE_ID) {
           updateDevicePreloadInput(pickerTargetDevice.instanceId, { itemId })
@@ -309,6 +343,9 @@ export function useBuildPickerDomain({ layout, selection, runtimeById, simIsRunn
       updatePumpOutputItem,
       updateDevicePreloadInput,
       updateProcessorPreloadSlot,
+      updateReactorLiquidOutputItemA,
+      updateReactorLiquidOutputItemB,
+      updateReactorSolidOutputItem,
     ],
   )
 

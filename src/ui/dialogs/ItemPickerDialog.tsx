@@ -103,6 +103,10 @@ export function ItemPickerDialog({
               ? t('detail.protocolHubOutputDialogTitle', { index: itemPickerState.portIndex + 1 })
             : itemPickerState.kind === 'pumpOutput'
               ? t('detail.pumpOutputDialogTitle')
+            : itemPickerState.kind === 'reactorOutput'
+              ? itemPickerState.output === 'solid'
+                ? t('detail.reactorSolidOutputDialogTitle')
+                : t('detail.reactorLiquidOutputDialogTitle', { index: itemPickerState.output === 'liquidA' ? 1 : 2 })
             : itemPickerState.kind === 'storageSlotPinned'
               ? t('detail.storageSlotPinnedDialogTitle', { index: itemPickerState.slotIndex + 1 })
             : itemPickerState.kind === 'storageSlotPreload'

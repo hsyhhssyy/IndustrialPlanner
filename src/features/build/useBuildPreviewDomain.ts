@@ -41,6 +41,25 @@ type LogisticsEndpointHighlight = {
   kind: 'start' | 'end'
 }
 
+function isLiquidPort(port: ReturnType<typeof getRotatedPorts>[number]) {
+  return (
+    port.allowedTypes.mode === 'liquid' ||
+    (port.allowedTypes.mode === 'whitelist' &&
+      port.allowedTypes.whitelist.includes('liquid') &&
+      !port.allowedTypes.whitelist.includes('solid'))
+  )
+}
+
+const LIQUID_CHEVRON_EXTRA_LENGTH_RATIO = 22 / 100
+
+function offsetBackwardByAngle(x: number, y: number, angle: number, distance: number) {
+  const radians = (angle * Math.PI) / 180
+  return {
+    x: x - Math.cos(radians) * distance,
+    y: y - Math.sin(radians) * distance,
+  }
+}
+
 export function useBuildPreviewDomain({
   layout,
   currentBaseOuterRing,
@@ -108,7 +127,7 @@ export function useBuildPreviewDomain({
     const keyOf = (port: { instanceId: string; portId: string; x: number; y: number; edge: string }) =>
       `${port.instanceId}:${port.portId}:${port.x}:${port.y}:${port.edge}`
 
-    const result: Array<{ key: string; x: number; y: number; angle: number; width: number; height: number }> = []
+    const result: Array<{ key: string; x: number; y: number; angle: number; width: number; height: number; isLiquid: boolean }> = []
     const connectedPortKeys = new Set<string>()
     if (isLogisticsPlacementMode && placeOperation === 'pipe') {
       for (const link of linksFromLayout(layout)) {
@@ -120,6 +139,7 @@ export function useBuildPreviewDomain({
     const chevronThickness = baseCellSize * (2 / 5)
     const chevronGap = baseCellSize * (1 / 12)
     const outsideOffset = chevronLength / 2 + chevronGap
+    const liquidChevronExtraLength = chevronLength * LIQUID_CHEVRON_EXTRA_LENGTH_RATIO
 
     type ChevronCandidate = {
       device: DeviceInstance
@@ -177,13 +197,19 @@ export function useBuildPreviewDomain({
       if (port.edge === 'W') x = port.x * baseCellSize - outsideOffset
       if (port.edge === 'E') x = (port.x + 1) * baseCellSize + outsideOffset
 
+      const angle = port.direction === 'Input' ? edgeAngle[OPPOSITE_EDGE[port.edge]] : edgeAngle[port.edge]
+      const isLiquid = isLiquidPort(port)
+      const width = isLiquid ? chevronLength + liquidChevronExtraLength : chevronLength
+      const center = isLiquid ? offsetBackwardByAngle(x, y, angle, liquidChevronExtraLength / 2) : { x, y }
+
       return {
         key: portKey,
-        x,
-        y,
-        angle: port.direction === 'Input' ? edgeAngle[OPPOSITE_EDGE[port.edge]] : edgeAngle[port.edge],
-        width: chevronLength,
+        x: center.x,
+        y: center.y,
+        angle,
+        width,
         height: chevronThickness,
+        isLiquid,
       }
     }
 
@@ -228,6 +254,7 @@ export function useBuildPreviewDomain({
     const chevronThickness = baseCellSize * (2 / 5)
     const chevronGap = baseCellSize * (1 / 12)
     const outsideOffset = chevronLength / 2 + chevronGap
+    const liquidChevronExtraLength = chevronLength * LIQUID_CHEVRON_EXTRA_LENGTH_RATIO
     const chevrons = getRotatedPorts(instance).map((port) => {
       const localCenterX = (port.x - origin.x + 0.5) * baseCellSize
       const localCenterY = (port.y - origin.y + 0.5) * baseCellSize
@@ -237,13 +264,19 @@ export function useBuildPreviewDomain({
       if (port.edge === 'S') y = (port.y - origin.y + 1) * baseCellSize + outsideOffset
       if (port.edge === 'W') x = (port.x - origin.x) * baseCellSize - outsideOffset
       if (port.edge === 'E') x = (port.x - origin.x + 1) * baseCellSize + outsideOffset
+      const angle = port.direction === 'Input' ? edgeAngle[OPPOSITE_EDGE[port.edge]] : edgeAngle[port.edge]
+      const isLiquid = isLiquidPort(port)
+      const width = isLiquid ? chevronLength + liquidChevronExtraLength : chevronLength
+      const center = isLiquid ? offsetBackwardByAngle(x, y, angle, liquidChevronExtraLength / 2) : { x, y }
+
       return {
         key: `preview-${port.instanceId}-${port.portId}-${port.x}-${port.y}-${port.edge}-${port.direction}`,
-        x,
-        y,
-        angle: port.direction === 'Input' ? edgeAngle[OPPOSITE_EDGE[port.edge]] : edgeAngle[port.edge],
-        width: chevronLength,
+        x: center.x,
+        y: center.y,
+        angle,
+        width,
         height: chevronThickness,
+        isLiquid,
       }
     })
     return {

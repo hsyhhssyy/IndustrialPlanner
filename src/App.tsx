@@ -764,9 +764,6 @@ function App() {
     reactorSolidOutputItemCandidates,
     reactorLiquidOutputItemCandidates,
     updateReactorSelectedRecipe,
-    updateReactorSolidOutputItem,
-    updateReactorLiquidOutputItemA,
-    updateReactorLiquidOutputItemB,
   } = useBuildPickerDomain({
     layout,
     selection,
@@ -1574,9 +1571,6 @@ function App() {
               reactorSolidOutputItemCandidates={reactorSolidOutputItemCandidates}
               reactorLiquidOutputItemCandidates={reactorLiquidOutputItemCandidates}
               updateReactorSelectedRecipe={updateReactorSelectedRecipe}
-              updateReactorSolidOutputItem={updateReactorSolidOutputItem}
-              updateReactorLiquidOutputItemA={updateReactorLiquidOutputItemA}
-              updateReactorLiquidOutputItemB={updateReactorLiquidOutputItemB}
               simIsRunning={sim.isRunning}
             />
           )}

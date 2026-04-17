@@ -33,7 +33,7 @@ export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
   { typeId: 'item_port_mix_pool_1', fileName: 'item_port_mix_pool_1.png' },
   {
     typeId: 'item_port_mix_pool_large_1',
-    fileName: 'item_port_mix_pool_1.png',
+    fileName: 'item_port_mix_pool_large_1.png',
     renderBounds: {
       widthCells: 6,
       heightCells: 5,
