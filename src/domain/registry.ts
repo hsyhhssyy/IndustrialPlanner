@@ -4,7 +4,8 @@ import type { BaseDef, DeviceTypeDef, ItemDef, RecipeDef } from './types'
 const solidAllowance = { mode: 'solid' as const, whitelist: [] }
 const liquidAllowance = { mode: 'liquid' as const, whitelist: [] }
 const recipeItemsAllowance = { mode: 'recipe_items' as const, whitelist: [] }
-const bottledLiquidTags = ['瓶装液体']
+const bottleItemTags = ['瓶子']
+const bottledLiquidTags = [...bottleItemTags, '瓶装液体']
 const SINGLE_SOLID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid']]
 const DOUBLE_SOLID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid'], ['solid']]
 const SOLID_LIQUID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid'], ['liquid']]
@@ -108,7 +109,7 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_crystal_powder', displayName: '晶体外壳粉末', type: 'solid' },
   { id: 'item_crystal_shell', displayName: '晶体外壳', type: 'solid' },
   { id: 'item_copper_ore', displayName: '赤铜矿', type: 'solid', tags: ['矿石'] },
-  { id: 'item_copper_bottle', displayName: '赤铜瓶', type: 'solid' },
+  { id: 'item_copper_bottle', displayName: '赤铜瓶', type: 'solid', tags: bottleItemTags },
   { id: 'item_copper_bottle_filled_water', displayName: '赤铜瓶（已盛装清水）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_copper_bottle_filled_liquid_plant_grass_1', displayName: '赤铜瓶（已盛装锦草溶液）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_copper_bottle_filled_liquid_plant_grass_2', displayName: '赤铜瓶（已盛装芽针溶液）', type: 'solid', tags: bottledLiquidTags },
@@ -129,8 +130,8 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_xiranite_poly', displayName: '壤晶', type: 'solid' },
   { id: 'item_activity_xiranite_cmpt', displayName: '实验息壤零件', type: 'solid' },
   { id: 'item_activity_xiranite_enr_cmpt', displayName: '实验重息壤零件', type: 'solid' },
-  { id: 'item_activity_xiranite_bottle', displayName: '实验息壤瓶', type: 'solid' },
-  { id: 'item_activity_xiranite_enr_bottle', displayName: '实验重息壤瓶', type: 'solid' },
+  { id: 'item_activity_xiranite_bottle', displayName: '实验息壤瓶', type: 'solid', tags: bottleItemTags },
+  { id: 'item_activity_xiranite_enr_bottle', displayName: '实验重息壤瓶', type: 'solid', tags: bottleItemTags },
   ...EXTRA_FILLED_BOTTLE_ITEMS,
   { id: 'item_activity_xiranite_enr_tool', displayName: '实验玉铜发散器', type: 'solid' },
   { id: 'item_activity_xiranite_enr_hulu', displayName: '息壤玉葫芦', type: 'solid' },
@@ -142,7 +143,7 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_equip_script_4', displayName: '息壤装备原件', type: 'solid' },
   { id: 'item_equip_script_4_1', displayName: '赤铜装备原件', type: 'solid' },
   { id: 'item_equip_script_4_2', displayName: '赫铜装备原件', type: 'solid' },
-  { id: 'item_glass_bottle', displayName: '紫晶质瓶', type: 'solid' },
+  { id: 'item_glass_bottle', displayName: '紫晶质瓶', type: 'solid', tags: bottleItemTags },
   { id: 'item_glass_bottle_filled_water', displayName: '紫晶质瓶（已盛装清水）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_glass_bottle_filled_liquid_plant_grass_1', displayName: '紫晶质瓶（已盛装锦草溶液）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_glass_bottle_filled_liquid_plant_grass_2', displayName: '紫晶质瓶（已盛装芽针溶液）', type: 'solid', tags: bottledLiquidTags },
@@ -151,7 +152,7 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_glass_bottle_filled_liquid_xiranite_poly', displayName: '紫晶质瓶（已盛装壤晶废液）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_glass_bottle_filled_liquid_xiranite_lowpoly', displayName: '紫晶质瓶（已盛装惰性壤晶废液）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_glass_cmpt', displayName: '紫晶零件', type: 'solid' },
-  { id: 'item_glass_enr_bottle', displayName: '高晶质瓶', type: 'solid' },
+  { id: 'item_glass_enr_bottle', displayName: '高晶质瓶', type: 'solid', tags: bottleItemTags },
   { id: 'item_glass_enr_bottle_filled_water', displayName: '高晶质瓶（已盛装清水）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_glass_enr_bottle_filled_liquid_plant_grass_1', displayName: '高晶质瓶（已盛装锦草溶液）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_glass_enr_bottle_filled_liquid_plant_grass_2', displayName: '高晶质瓶（已盛装芽针溶液）', type: 'solid', tags: bottledLiquidTags },
@@ -160,7 +161,7 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_glass_enr_bottle_filled_liquid_xiranite_poly', displayName: '高晶质瓶（已盛装壤晶废液）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_glass_enr_bottle_filled_liquid_xiranite_lowpoly', displayName: '高晶质瓶（已盛装惰性壤晶废液）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_glass_enr_cmpt', displayName: '高晶零件', type: 'solid' },
-  { id: 'item_iron_bottle', displayName: '蓝铁瓶', type: 'solid' },
+  { id: 'item_iron_bottle', displayName: '蓝铁瓶', type: 'solid', tags: bottleItemTags },
   { id: 'item_iron_bottle_filled_water', displayName: '蓝铁瓶（已盛装清水）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_iron_bottle_filled_liquid_plant_grass_1', displayName: '蓝铁瓶（已盛装锦草溶液）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_iron_bottle_filled_liquid_plant_grass_2', displayName: '蓝铁瓶（已盛装芽针溶液）', type: 'solid', tags: bottledLiquidTags },
@@ -170,7 +171,7 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_iron_bottle_filled_liquid_xiranite_lowpoly', displayName: '蓝铁瓶（已盛装惰性壤晶废液）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_iron_cmpt', displayName: '铁制零件', type: 'solid' },
   { id: 'item_iron_enr', displayName: '钢块', type: 'solid' },
-  { id: 'item_iron_enr_bottle', displayName: '钢质瓶', type: 'solid' },
+  { id: 'item_iron_enr_bottle', displayName: '钢质瓶', type: 'solid', tags: bottleItemTags },
   { id: 'item_iron_enr_bottle_filled_water', displayName: '钢质瓶（已盛装清水）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_iron_enr_bottle_filled_liquid_plant_grass_1', displayName: '钢质瓶（已盛装锦草溶液）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_iron_enr_bottle_filled_liquid_plant_grass_2', displayName: '钢质瓶（已盛装芽针溶液）', type: 'solid', tags: bottledLiquidTags },
@@ -748,6 +749,27 @@ export const RECIPES: RecipeDef[] = [
     outputs: [{ itemId: 'item_copper_cmpt', amount: 1 }],
   },
   {
+    id: 'r_component_copper_enr_cmpt_from_copper_enr_basic',
+    machineType: 'item_port_cmpt_mc_1',
+    cycleSeconds: 10,
+    inputs: [{ itemId: 'item_copper_enr', amount: 5 }],
+    outputs: [{ itemId: 'item_copper_enr_cmpt', amount: 1 }],
+  },
+  {
+    id: 'r_component_activity_xiranite_cmpt_from_xiranite_powder_basic',
+    machineType: 'item_port_cmpt_mc_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_xiranite_powder', amount: 1 }],
+    outputs: [{ itemId: 'item_activity_xiranite_cmpt', amount: 1 }],
+  },
+  {
+    id: 'r_component_activity_xiranite_enr_cmpt_from_xiranite_enr_powder_basic',
+    machineType: 'item_port_cmpt_mc_1',
+    cycleSeconds: 20,
+    inputs: [{ itemId: 'item_xiranite_enr_powder', amount: 1 }],
+    outputs: [{ itemId: 'item_activity_xiranite_enr_cmpt', amount: 2 }],
+  },
+  {
     id: 'r_component_glass_cmpt_from_quartz_glass_basic',
     machineType: 'item_port_cmpt_mc_1',
     cycleSeconds: 2,
@@ -902,6 +924,26 @@ export const RECIPES: RecipeDef[] = [
     outputs: [{ itemId: 'item_bottled_food_5', amount: 1 }],
   },
   {
+    id: 'r_packaging_activity_xiranite_enr_tool_from_activity_xiranite_enr_cmpt_and_copper_enr_basic',
+    machineType: 'item_port_tools_asm_mc_1',
+    cycleSeconds: 10,
+    inputs: [
+      { itemId: 'item_activity_xiranite_enr_cmpt', amount: 1 },
+      { itemId: 'item_copper_enr', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_activity_xiranite_enr_tool', amount: 1 }],
+  },
+  {
+    id: 'r_packaging_activity_xiranite_enr_hulu_from_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2_and_activity_xiranite_enr_tool_basic',
+    machineType: 'item_port_tools_asm_mc_1',
+    cycleSeconds: 10,
+    inputs: [
+      { itemId: 'item_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2', amount: 1 },
+      { itemId: 'item_activity_xiranite_enr_tool', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_activity_xiranite_enr_hulu', amount: 1 }],
+  },
+  {
     id: 'r_winder_equip_script_1_from_crystal_shell_and_quartz_glass_basic',
     machineType: 'item_port_winder_1',
     cycleSeconds: 10,
@@ -940,6 +982,16 @@ export const RECIPES: RecipeDef[] = [
       { itemId: 'item_xiranite_powder', amount: 10 },
     ],
     outputs: [{ itemId: 'item_equip_script_4', amount: 1 }],
+  },
+  {
+    id: 'r_winder_equip_script_4_2_from_copper_enr_cmpt_and_xiranite_enr_powder_basic',
+    machineType: 'item_port_winder_1',
+    cycleSeconds: 10,
+    inputs: [
+      { itemId: 'item_copper_enr_cmpt', amount: 2 },
+      { itemId: 'item_xiranite_enr_powder', amount: 2 },
+    ],
+    outputs: [{ itemId: 'item_equip_script_4_2', amount: 1 }],
   },
   {
     id: 'r_filling_bottled_food_1_from_glass_bottle_and_moss_powder_2_basic',
@@ -1388,6 +1440,20 @@ export const RECIPES: RecipeDef[] = [
     cycleSeconds: 2,
     inputs: [{ itemId: 'item_quartz_enr', amount: 2 }],
     outputs: [{ itemId: 'item_glass_enr_bottle', amount: 1 }],
+  },
+  {
+    id: 'r_shaper_activity_xiranite_bottle_from_xiranite_powder_basic',
+    machineType: 'item_port_shaper_1',
+    cycleSeconds: 2,
+    inputs: [{ itemId: 'item_xiranite_powder', amount: 2 }],
+    outputs: [{ itemId: 'item_activity_xiranite_bottle', amount: 1 }],
+  },
+  {
+    id: 'r_shaper_activity_xiranite_enr_bottle_from_xiranite_enr_powder_basic',
+    machineType: 'item_port_shaper_1',
+    cycleSeconds: 20,
+    inputs: [{ itemId: 'item_xiranite_enr_powder', amount: 1 }],
+    outputs: [{ itemId: 'item_activity_xiranite_enr_bottle', amount: 2 }],
   },
   {
     id: 'r_xiranite_oven_xiranite_powder_from_carbon_enr_and_water_basic',
