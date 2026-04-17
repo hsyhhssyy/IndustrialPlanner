@@ -7,6 +7,94 @@ export const LANGUAGE_OPTIONS: Array<{ value: Language; label: string }> = [
   { value: 'en-US', label: 'English' },
 ]
 
+const LEGACY_BOTTLE_ITEM_IDS = ['item_iron_bottle', 'item_glass_bottle', 'item_glass_enr_bottle', 'item_iron_enr_bottle', 'item_copper_bottle']
+const EXTRA_BOTTLE_ITEM_IDS = ['item_activity_xiranite_bottle', 'item_activity_xiranite_enr_bottle']
+const LEGACY_FILLABLE_LIQUID_ITEM_IDS = [
+  'item_liquid_water',
+  'item_liquid_plant_grass_1',
+  'item_liquid_plant_grass_2',
+  'item_liquid_xiranite',
+  'item_liquid_sewage',
+  'item_liquid_xiranite_poly',
+  'item_liquid_xiranite_lowpoly',
+]
+const EXTRA_FILLABLE_LIQUID_ITEM_IDS = ['item_liquid_acid', 'item_liquid_copper', 'item_liquid_copper_enr', 'item_liquid_xiranite_enr']
+
+const BOTTLE_LABELS_ZH: Record<string, string> = {
+  item_iron_bottle: '蓝铁瓶',
+  item_glass_bottle: '紫晶质瓶',
+  item_glass_enr_bottle: '高晶质瓶',
+  item_iron_enr_bottle: '钢质瓶',
+  item_copper_bottle: '赤铜瓶',
+  item_activity_xiranite_bottle: '实验息壤瓶',
+  item_activity_xiranite_enr_bottle: '实验重息壤瓶',
+}
+
+const BOTTLE_LABELS_EN: Record<string, string> = {
+  item_iron_bottle: 'Ferrium Bottle',
+  item_glass_bottle: 'Amethyst Bottle',
+  item_glass_enr_bottle: 'Cryston Bottle',
+  item_iron_enr_bottle: 'Steel Bottle',
+  item_copper_bottle: 'Copper Bottle',
+  item_activity_xiranite_bottle: 'Experimental Xiranite Bottle',
+  item_activity_xiranite_enr_bottle: 'Experimental Dense Xiranite Bottle',
+}
+
+const BOTTLED_LIQUID_LABELS_ZH: Record<string, string> = {
+  item_liquid_water: '清水',
+  item_liquid_plant_grass_1: '锦草溶液',
+  item_liquid_plant_grass_2: '芽针溶液',
+  item_liquid_xiranite: '液化息壤',
+  item_liquid_sewage: '污水',
+  item_liquid_xiranite_poly: '壤晶废液',
+  item_liquid_xiranite_lowpoly: '惰性壤晶废液',
+  item_liquid_acid: '沉积酸',
+  item_liquid_copper: '赤铜溶液',
+  item_liquid_copper_enr: '赫铜溶液',
+  item_liquid_xiranite_enr: '液化重息壤',
+}
+
+const BOTTLED_LIQUID_LABELS_EN: Record<string, string> = {
+  item_liquid_water: 'Water',
+  item_liquid_plant_grass_1: 'Jincao Solution',
+  item_liquid_plant_grass_2: 'Yazhen Solution',
+  item_liquid_xiranite: 'Liquid Xiranite',
+  item_liquid_sewage: 'Sewage',
+  item_liquid_xiranite_poly: 'Poly Xiranite Waste Liquid',
+  item_liquid_xiranite_lowpoly: 'Lowpoly Xiranite Waste Liquid',
+  item_liquid_acid: 'Sedimentary Acid',
+  item_liquid_copper: 'Copper Solution',
+  item_liquid_copper_enr: 'Enriched Copper Solution',
+  item_liquid_xiranite_enr: 'Liquid Dense Xiranite',
+}
+
+function filledBottleItemIdFor(bottleItemId: string, liquidItemId: string) {
+  if (liquidItemId === 'item_liquid_water') {
+    return `${bottleItemId}_filled_water`
+  }
+
+  return `${bottleItemId}_filled_${liquidItemId.replace(/^item_/, '')}`
+}
+
+const EXTRA_FILLED_BOTTLE_MESSAGE_VARIANTS = [
+  ...LEGACY_BOTTLE_ITEM_IDS.flatMap((bottleItemId) => EXTRA_FILLABLE_LIQUID_ITEM_IDS.map((liquidItemId) => ({ bottleItemId, liquidItemId }))),
+  ...EXTRA_BOTTLE_ITEM_IDS.flatMap((bottleItemId) => [...LEGACY_FILLABLE_LIQUID_ITEM_IDS, ...EXTRA_FILLABLE_LIQUID_ITEM_IDS].map((liquidItemId) => ({ bottleItemId, liquidItemId }))),
+]
+
+const EXTRA_FILLED_BOTTLE_MESSAGES_ZH: Record<string, string> = Object.fromEntries(
+  EXTRA_FILLED_BOTTLE_MESSAGE_VARIANTS.map(({ bottleItemId, liquidItemId }) => [
+    filledBottleItemIdFor(bottleItemId, liquidItemId),
+    `${BOTTLE_LABELS_ZH[bottleItemId]}（已盛装${BOTTLED_LIQUID_LABELS_ZH[liquidItemId]}）`,
+  ]),
+)
+
+const EXTRA_FILLED_BOTTLE_MESSAGES_EN: Record<string, string> = Object.fromEntries(
+  EXTRA_FILLED_BOTTLE_MESSAGE_VARIANTS.map(({ bottleItemId, liquidItemId }) => [
+    filledBottleItemIdFor(bottleItemId, liquidItemId),
+    `${BOTTLE_LABELS_EN[bottleItemId]} (${BOTTLED_LIQUID_LABELS_EN[liquidItemId]}-filled)`,
+  ]),
+)
+
 const MESSAGES: Record<Language, Record<string, string>> = {
   'zh-CN': {
     'app.title': '终末地工业系统仿真器',
@@ -1165,6 +1253,7 @@ const ITEM_MESSAGES: Record<Language, Record<string, string>> = {
     item_iron_enr_bottle_filled_liquid_sewage: '钢质瓶（已盛装污水）',
     item_iron_enr_bottle_filled_liquid_xiranite_poly: '钢质瓶（已盛装壤晶废液）',
     item_iron_enr_bottle_filled_liquid_xiranite_lowpoly: '钢质瓶（已盛装惰性壤晶废液）',
+    ...EXTRA_FILLED_BOTTLE_MESSAGES_ZH,
     item_iron_enr_cmpt: '钢制零件',
     item_iron_enr_powder: '致密蓝铁粉末',
     item_iron_nugget: '蓝铁块',
@@ -1304,6 +1393,7 @@ const ITEM_MESSAGES: Record<Language, Record<string, string>> = {
     item_iron_enr_bottle_filled_liquid_sewage: 'Steel Bottle (Sewage-filled)',
     item_iron_enr_bottle_filled_liquid_xiranite_poly: 'Steel Bottle (Poly Xiranite Waste Liquid-filled)',
     item_iron_enr_bottle_filled_liquid_xiranite_lowpoly: 'Steel Bottle (Lowpoly Xiranite Waste Liquid-filled)',
+    ...EXTRA_FILLED_BOTTLE_MESSAGES_EN,
     item_iron_enr_cmpt: 'Steel Part',
     item_iron_enr_powder: 'Dense Ferrium Powder',
     item_iron_nugget: 'Ferrium',

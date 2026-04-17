@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
@@ -8,7 +9,15 @@ const __dirname = path.dirname(__filename)
 const projectRoot = path.resolve(__dirname, '..')
 const itemIconDir = path.join(projectRoot, 'public', 'original', 'itemicon')
 
-const bottleItemIds = ['item_iron_bottle', 'item_glass_bottle', 'item_glass_enr_bottle', 'item_iron_enr_bottle', 'item_copper_bottle']
+const bottleItemIds = [
+  'item_iron_bottle',
+  'item_glass_bottle',
+  'item_glass_enr_bottle',
+  'item_iron_enr_bottle',
+  'item_copper_bottle',
+  'item_activity_xiranite_bottle',
+  'item_activity_xiranite_enr_bottle',
+]
 const liquidItemIds = [
   'item_liquid_water',
   'item_liquid_plant_grass_1',
@@ -17,6 +26,10 @@ const liquidItemIds = [
   'item_liquid_sewage',
   'item_liquid_xiranite_poly',
   'item_liquid_xiranite_lowpoly',
+  'item_liquid_acid',
+  'item_liquid_copper',
+  'item_liquid_copper_enr',
+  'item_liquid_xiranite_enr',
 ]
 
 function outputIdFor(bottleId, liquidId) {
@@ -24,9 +37,20 @@ function outputIdFor(bottleId, liquidId) {
   return `${bottleId}_filled_${liquidSuffix}`
 }
 
+function sourcePathFor(itemId) {
+  for (const extension of ['png', 'webp']) {
+    const candidatePath = path.join(itemIconDir, `${itemId}.${extension}`)
+    if (fs.existsSync(candidatePath)) {
+      return candidatePath
+    }
+  }
+
+  throw new Error(`未找到图标源文件: ${itemId}.png/.webp`)
+}
+
 async function composeIcon(bottleId, liquidId) {
-  const bottlePath = path.join(itemIconDir, `${bottleId}.png`)
-  const liquidPath = path.join(itemIconDir, `${liquidId}.png`)
+  const bottlePath = sourcePathFor(bottleId)
+  const liquidPath = sourcePathFor(liquidId)
   const outputId = outputIdFor(bottleId, liquidId)
   const outputPath = path.join(itemIconDir, `${outputId}.png`)
 

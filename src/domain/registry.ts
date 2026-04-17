@@ -11,6 +11,83 @@ const SOLID_LIQUID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid
 const FIVE_MIXED_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = Array.from({ length: 5 }, () => ['solid', 'liquid'])
 const EIGHT_MIXED_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = Array.from({ length: 8 }, () => ['solid', 'liquid'])
 
+const LEGACY_BOTTLE_ITEM_VARIANTS = [
+  { bottleItemId: 'item_iron_bottle', bottleDisplayName: '蓝铁瓶' },
+  { bottleItemId: 'item_glass_bottle', bottleDisplayName: '紫晶质瓶' },
+  { bottleItemId: 'item_glass_enr_bottle', bottleDisplayName: '高晶质瓶' },
+  { bottleItemId: 'item_iron_enr_bottle', bottleDisplayName: '钢质瓶' },
+  { bottleItemId: 'item_copper_bottle', bottleDisplayName: '赤铜瓶' },
+]
+
+const EXTRA_BOTTLE_ITEM_VARIANTS = [
+  { bottleItemId: 'item_activity_xiranite_bottle', bottleDisplayName: '实验息壤瓶' },
+  { bottleItemId: 'item_activity_xiranite_enr_bottle', bottleDisplayName: '实验重息壤瓶' },
+]
+
+const LEGACY_FILLABLE_LIQUID_VARIANTS = [
+  { liquidItemId: 'item_liquid_water', filledDisplayName: '清水', recipeIdSuffix: 'water', ironBottleDefault: true },
+  { liquidItemId: 'item_liquid_plant_grass_1', filledDisplayName: '锦草溶液', recipeIdSuffix: 'grass_1', ironBottleDefault: true },
+  { liquidItemId: 'item_liquid_plant_grass_2', filledDisplayName: '芽针溶液', recipeIdSuffix: 'grass_2', ironBottleDefault: true },
+  { liquidItemId: 'item_liquid_xiranite', filledDisplayName: '液化息壤', recipeIdSuffix: 'xiranite', ironBottleDefault: true },
+  { liquidItemId: 'item_liquid_sewage', filledDisplayName: '污水', recipeIdSuffix: 'sewage', ironBottleDefault: false },
+  { liquidItemId: 'item_liquid_xiranite_poly', filledDisplayName: '壤晶废液', recipeIdSuffix: 'xiranite_poly', ironBottleDefault: false },
+  { liquidItemId: 'item_liquid_xiranite_lowpoly', filledDisplayName: '惰性壤晶废液', recipeIdSuffix: 'xiranite_lowpoly', ironBottleDefault: false },
+]
+
+const EXTRA_FILLABLE_LIQUID_VARIANTS = [
+  { liquidItemId: 'item_liquid_acid', filledDisplayName: '沉积酸', recipeIdSuffix: 'acid', ironBottleDefault: false },
+  { liquidItemId: 'item_liquid_copper', filledDisplayName: '赤铜溶液', recipeIdSuffix: 'copper', ironBottleDefault: false },
+  { liquidItemId: 'item_liquid_copper_enr', filledDisplayName: '赫铜溶液', recipeIdSuffix: 'copper_enr', ironBottleDefault: false },
+  { liquidItemId: 'item_liquid_xiranite_enr', filledDisplayName: '液化重息壤', recipeIdSuffix: 'xiranite_enr', ironBottleDefault: false },
+]
+
+function filledBottleItemIdFor(bottleItemId: string, liquidItemId: string) {
+  if (liquidItemId === 'item_liquid_water') {
+    return `${bottleItemId}_filled_water`
+  }
+
+  return `${bottleItemId}_filled_${liquidItemId.replace(/^item_/, '')}`
+}
+
+function liquidBottleRecipeVisibility(bottleItemId: string, ironBottleDefault: boolean) {
+  return bottleItemId === 'item_iron_bottle' && ironBottleDefault ? 'default' : 'hidden'
+}
+
+const EXTRA_FILLED_BOTTLE_VARIANTS = [
+  ...LEGACY_BOTTLE_ITEM_VARIANTS.flatMap((bottle) => EXTRA_FILLABLE_LIQUID_VARIANTS.map((liquid) => ({ bottle, liquid }))),
+  ...EXTRA_BOTTLE_ITEM_VARIANTS.flatMap((bottle) => [...LEGACY_FILLABLE_LIQUID_VARIANTS, ...EXTRA_FILLABLE_LIQUID_VARIANTS].map((liquid) => ({ bottle, liquid }))),
+]
+
+const EXTRA_FILLED_BOTTLE_ITEMS: ItemDef[] = EXTRA_FILLED_BOTTLE_VARIANTS.map(({ bottle, liquid }) => ({
+  id: filledBottleItemIdFor(bottle.bottleItemId, liquid.liquidItemId),
+  displayName: `${bottle.bottleDisplayName}（已盛装${liquid.filledDisplayName}）`,
+  type: 'solid',
+  tags: bottledLiquidTags,
+}))
+
+const EXTRA_LIQUID_BOTTLE_FILLING_RECIPES: RecipeDef[] = EXTRA_FILLED_BOTTLE_VARIANTS.map(({ bottle, liquid }) => ({
+  id: `r_liquid_filling_${bottle.bottleItemId.replace(/^item_/, '')}_${liquid.recipeIdSuffix}_${liquidBottleRecipeVisibility(bottle.bottleItemId, liquid.ironBottleDefault)}`,
+  machineType: 'item_port_liquid_filling_pd_mc_1',
+  cycleSeconds: 2,
+  inputs: [
+    { itemId: bottle.bottleItemId, amount: 1 },
+    { itemId: liquid.liquidItemId, amount: 1 },
+  ],
+  outputs: [{ itemId: filledBottleItemIdFor(bottle.bottleItemId, liquid.liquidItemId), amount: 1 }],
+}))
+
+const EXTRA_LIQUID_BOTTLE_DISMANTLE_RECIPES: RecipeDef[] = EXTRA_FILLED_BOTTLE_VARIANTS.map(({ bottle, liquid }) => ({
+  id: `r_liquid_dismantling_${bottle.bottleItemId.replace(/^item_/, '')}_${liquid.recipeIdSuffix}_${liquidBottleRecipeVisibility(bottle.bottleItemId, liquid.ironBottleDefault)}`,
+  machineType: 'item_port_dismantler_1',
+  cycleSeconds: 2,
+  tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+  inputs: [{ itemId: filledBottleItemIdFor(bottle.bottleItemId, liquid.liquidItemId), amount: 1 }],
+  outputs: [
+    { itemId: bottle.bottleItemId, amount: 1 },
+    { itemId: liquid.liquidItemId, amount: 1 },
+  ],
+}))
+
 export const ITEMS: ItemDef[] = [
   { id: 'item_bottled_food_1', displayName: '柑实罐头', type: 'solid' },
   { id: 'item_bottled_food_2', displayName: '优质柑实罐头', type: 'solid' },
@@ -54,6 +131,7 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_activity_xiranite_enr_cmpt', displayName: '实验重息壤零件', type: 'solid' },
   { id: 'item_activity_xiranite_bottle', displayName: '实验息壤瓶', type: 'solid' },
   { id: 'item_activity_xiranite_enr_bottle', displayName: '实验重息壤瓶', type: 'solid' },
+  ...EXTRA_FILLED_BOTTLE_ITEMS,
   { id: 'item_activity_xiranite_enr_tool', displayName: '实验玉铜发散器', type: 'solid' },
   { id: 'item_activity_xiranite_enr_hulu', displayName: '息壤玉葫芦', type: 'solid' },
   { id: 'item_copper_cmpt', displayName: '赤铜零件', type: 'solid' },
@@ -1273,7 +1351,9 @@ export const RECIPES: RecipeDef[] = [
     ],
     outputs: [{ itemId: 'item_copper_bottle_filled_liquid_xiranite_lowpoly', amount: 1 }],
   },
+  ...EXTRA_LIQUID_BOTTLE_FILLING_RECIPES,
   ...LIQUID_BOTTLE_DISMANTLE_RECIPES,
+  ...EXTRA_LIQUID_BOTTLE_DISMANTLE_RECIPES,
   {
     id: 'r_shaper_iron_bottle_from_iron_nugget_basic',
     machineType: 'item_port_shaper_1',
