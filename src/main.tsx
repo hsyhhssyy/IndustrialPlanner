@@ -3,11 +3,33 @@ import ReactDOM from "react-dom/client";
 import { WorkbenchApp } from "@/app/app-shell/workbench-app";
 import { createAppHost } from "@/app/app-host";
 import "@/styles.css";
-import { createWorkspace } from "./domain";
+import { createRegistryContract } from "./registry";
+import { WorkspaceContract } from "./domain/contract/workspace-contract";
+import { createWorkspaceState } from "./domain/state/workspace-state";
+import { createEditorHost } from "./editor/editor-host";
+import { createRenderHost } from "./renderer/renderer-host";
+import { createSimulationHost } from "./simulation/simulation-host";
 
-const workspace = createWorkspace();
+const registry = createRegistryContract();
+
+const workspace : WorkspaceContract = {
+  state: createWorkspaceState(),
+  registry: registry,
+  app: null,
+  editor: null,
+  render: null,
+  simulation: null,
+}
+
 const appHost = createAppHost(workspace);
+const editorHost = createEditorHost(workspace);
+const renderHost = createRenderHost(workspace);
+const simulationHost = createSimulationHost(workspace);
 
+workspace.app = appHost;
+workspace.editor = editorHost;
+workspace.render = renderHost;
+workspace.simulation = simulationHost;
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

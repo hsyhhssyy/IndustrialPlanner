@@ -1,11 +1,11 @@
 import type {
   EntityDefinition,
-} from "@/domain/registry/registry";
-import type { AppLocale } from "@/i18n/messages";
+} from "@/domain/types/registry/entity-definition";
+import type { AppLocale } from "@/shared/i18n/messages";
 import type {
   ExplicitLink,
   WorldEntity,
-} from "@/domain/document/world-document";
+} from "@/domain/entity/world-document";
 
 export interface SelectionInspectorContext {
   selectedEntityId: string;

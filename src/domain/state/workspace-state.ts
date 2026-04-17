@@ -1,28 +1,24 @@
 import { makeAutoObservable } from "mobx";
-import { WorkspaceState } from "../types/workspace/types";
+import { createWorldDocument, WorldDocument } from "@/domain/entity/world-document";
+import { SnapshotStore,createSnapshotStore } from "@/shared/snapshot/snapshot-store";
+import { EditorState, HistoryState, UiState } from "./types";
+
+export interface WorkspaceState {
+  document: SnapshotStore<WorldDocument>;
+  editor: EditorState;
+  history: HistoryState;
+  ui: UiState;
+}
 
 export function createWorkspaceState(): WorkspaceState {
   const state: WorkspaceState = {
-    document: null,
-    topology: {
-      version: 0,
-      nodes: [],
-      links: [],
-      diagnostics: [],
-    },
-    editorSession: {
-      displayTool: "select",
-      currentMode: {
-        kind: "select",
-        anchorEntityId: null,
-      },
+    document: createSnapshotStore(createWorldDocument()),
+    editor: {
       drafts: {},
-      selectedEntities: [],
-      draftEntities: [],
-      marqueeRange: null,
-      selectionInputMode: null,
+      selectedEntities: {},
+      previewEntities: {}
     },
-    editorHistory: {
+    history: {
       undoDepth: 0,
       redoDepth: 0,
       lastCommandId: null,
@@ -32,14 +28,10 @@ export function createWorkspaceState(): WorkspaceState {
       rightDockOpen: true,
       bottomBarOpen: true,
       activePanel: null,
-    },
-    canvasView: {
-      offset: { x: 0, y: 0 },
-      zoom: 1,
-    },
+    }
   };
 
-  makeAutoObservable(state, {}, { autoBind: true });
+  makeAutoObservable(state, { document: false }, { autoBind: true });
 
   return state;
 }

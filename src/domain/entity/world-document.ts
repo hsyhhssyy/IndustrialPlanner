@@ -37,61 +37,42 @@ export interface WorldDocument {
   };
 }
 
-function toIdPrefix(definitionId: string): string {
-  return definitionId
-    .replace(/[^a-zA-Z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase();
-}
 
-export function createWorldEntityId(
-  document: WorldDocument,
-  definitionId: string,
-): string {
-  const prefix = toIdPrefix(definitionId);
-  let index = 1;
+const INITIAL_WORLD_DOCUMENT: WorldDocument = {
+  schemaVersion: 1,
+  baseId: "default-world",
+  meta: {
+    id: "default-world",
+    name: "Untitled World",
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  },
+  entities: {},
+  entityOrder: [],
+  explicitLinks: [],
+  documentSettings: {
+    gridSize: 1,
+    showDiagnostics: false,
+  },
+};
 
-  while (document.entities[`${prefix}-${index}`]) {
-    index += 1;
-  }
-
-  return `${prefix}-${index}`;
-}
-
-export function createExplicitLinkId(
-  document: WorldDocument,
-  kind: ExplicitLink["kind"],
-): string {
-  const prefix = `${kind}-link`;
-  let index = 1;
-
-  while (document.explicitLinks.some((link) => link.id === `${prefix}-${index}`)) {
-    index += 1;
-  }
-
-  return `${prefix}-${index}`;
-}
-
-export function getEntityLinks(
-  document: WorldDocument,
-  entityId: string,
-): ExplicitLink[] {
-  return document.explicitLinks.filter(
-    (link) =>
-      link.sourceEntityId === entityId || link.targetEntityId === entityId,
-  );
-}
-
-export function getExplicitLinkBetween(
-  document: WorldDocument,
-  sourceEntityId: string,
-  targetEntityId: string,
-): ExplicitLink | null {
-  return (
-    document.explicitLinks.find(
-      (link) =>
-        link.sourceEntityId === sourceEntityId &&
-        link.targetEntityId === targetEntityId,
-      ) ?? null
-  );
-}
+export const createWorldDocument = (): WorldDocument => {
+  const timestamp = new Date().toISOString();
+  return {
+    schemaVersion: 1,
+    baseId: `world-${timestamp}`,
+    meta: {
+      id: `world-${timestamp}`,
+      name: "Untitled World",
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    },
+    entities: {},
+    entityOrder: [],
+    explicitLinks: [],
+    documentSettings: {
+      gridSize: 1,
+      showDiagnostics: false,
+    },
+  };
+};

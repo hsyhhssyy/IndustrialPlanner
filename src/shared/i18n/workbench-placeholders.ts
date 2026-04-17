@@ -1,5 +1,4 @@
-import type { WorkbenchTextDescriptor } from "@/app/app-shell/workbench-placeholders";
-import type { AppLocale } from "@/i18n/messages";
+import type { AppLocale } from "@/shared/i18n/messages";
 
 const WORKBENCH_PLACEHOLDER_TRANSLATIONS: Record<AppLocale, Record<string, string>> = {
   "zh-CN": {
@@ -102,10 +101,11 @@ const WORKBENCH_PLACEHOLDER_TRANSLATIONS: Record<AppLocale, Record<string, strin
 
 export function localizeWorkbenchText(
   locale: AppLocale,
-  descriptor: WorkbenchTextDescriptor,
+  descriptor: string,
+  fallback?: string
 ): string {
   return (
-    WORKBENCH_PLACEHOLDER_TRANSLATIONS[locale][descriptor.messageKey] ??
-    descriptor.fallback
+    descriptor ??
+    fallback
   );
 }

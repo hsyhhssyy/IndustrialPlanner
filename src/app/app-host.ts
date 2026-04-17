@@ -17,6 +17,5 @@ export function createAppHost(
     queries: {},
     actions: {}
   };
-  workspace.app = host;
   return host;
 }
