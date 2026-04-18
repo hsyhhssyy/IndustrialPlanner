@@ -39,6 +39,7 @@ export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
       heightCells: 5,
     },
   },
+  { typeId: 'item_port_liquid_purifier_1', fileName: 'item_port_liquid_purifier_1.png' },
   { typeId: 'item_port_xiranite_oven_1', fileName: 'item_port_xiranite_oven_1.png' },
   { typeId: 'item_port_dismantler_1', fileName: 'item_port_dismantler_1.png' },
   { typeId: 'item_port_log_hongs_bus_source', fileName: 'item_port_log_hongs_bus_source.png' },

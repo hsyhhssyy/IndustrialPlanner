@@ -103,6 +103,7 @@ export function getPlaceGroup(typeId: DeviceTypeId): PlaceGroupKey {
     typeId === 'item_port_thickener_1' ||
     typeId === 'item_port_mix_pool_1' ||
     typeId === 'item_port_mix_pool_large_1' ||
+    typeId === 'item_port_liquid_purifier_1' ||
     typeId === 'item_port_xiranite_oven_1' ||
     typeId === 'item_port_dismantler_1'
   )

@@ -164,7 +164,8 @@ const AppContext = createContext<AppContextValue | null>(null)
 export function AppProvider({ children }: { children: ReactNode }) {
   const settingsLogger = useMemo(() => createDebugLogger('settings'), [])
   const [mode, setMode] = usePersistentState<EditMode>('stage1-mode', 'place')
-  const [placeType, setPlaceType] = usePersistentState<DeviceTypeId | ''>('stage1-place-type', '')
+  // 当前手持待放置设备属于瞬时交互状态，不应在刷新后恢复，否则会把旧会话的放置动作重新挂回鼠标。
+  const [placeType, setPlaceType] = useState<DeviceTypeId | ''>('')
   const [placeRotation, setPlaceRotation] = usePersistentState<0 | 90 | 180 | 270>('stage1-place-rotation', 0)
   const [deleteTool, setDeleteTool] = usePersistentState<'single' | 'wholeBelt' | 'box'>('stage1-delete-tool', 'single')
   const [activeWorkbenchView, setActiveWorkbenchView] = usePersistentState<WorkbenchView>('stage6-active-workbench-view', 'place')

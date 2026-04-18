@@ -7,6 +7,7 @@ const recipeItemsAllowance = { mode: 'recipe_items' as const, whitelist: [] }
 const bottleItemTags = ['瓶子']
 const bottledLiquidTags = [...bottleItemTags, '瓶装液体']
 const SINGLE_SOLID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid']]
+const SINGLE_LIQUID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['liquid']]
 const DOUBLE_SOLID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid'], ['solid']]
 const SOLID_LIQUID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid'], ['liquid']]
 const FIVE_MIXED_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = Array.from({ length: 5 }, () => ['solid', 'liquid'])
@@ -2231,6 +2232,40 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
         localCellX: 5,
         localCellY: y,
         edge: 'E' as const,
+        direction: 'Input' as const,
+        allowedItems: { mode: 'recipe_inputs' as const, whitelist: [] },
+        allowedTypes: liquidAllowance,
+      })),
+    ],
+  },
+  {
+    id: 'item_port_liquid_purifier_1',
+    runtimeKind: 'processor',
+    requiresPower: true,
+    powerDemand: 50,
+    size: { width: 5, height: 5 },
+    shortName: 'LiquidPurifier',
+    inputBufferSlots: 1,
+    outputBufferSlots: 2,
+    inputBufferSlotCapacities: [50],
+    outputBufferSlotCapacities: [50, 50],
+    inputBufferAllowedTypesBySlot: SINGLE_LIQUID_INPUT_SLOT_TYPES,
+    tags: ['武陵'],
+    ports0: [
+      ...[1, 3].map((x) => ({
+        id: `out_n_${x}`,
+        localCellX: x,
+        localCellY: 0,
+        edge: 'N' as const,
+        direction: 'Output' as const,
+        allowedItems: { mode: 'recipe_outputs' as const, whitelist: [] },
+        allowedTypes: liquidAllowance,
+      })),
+      ...[1, 3].map((x) => ({
+        id: `in_s_${x}`,
+        localCellX: x,
+        localCellY: 4,
+        edge: 'S' as const,
         direction: 'Input' as const,
         allowedItems: { mode: 'recipe_inputs' as const, whitelist: [] },
         allowedTypes: liquidAllowance,
