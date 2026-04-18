@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { match } from 'pinyin-pro'
+import { usePersistentState } from '../../core/usePersistentState'
 import { ITEMS } from '../../domain/registry'
 import { isSuperRecipeItem, shouldShowSuperRecipeContent } from '../../domain/shared/superRecipeVisibility'
 import type { ItemId } from '../../domain/types'
@@ -9,6 +10,7 @@ import type { ItemDef } from '../../domain/types'
 
 const RECENT_ITEMS_SINGLE_ROW_COUNT = 8
 const BOTTLED_LIQUID_TAG = '瓶装液体'
+const HIDE_BOTTLED_LIQUIDS_STORAGE_KEY = 'stage1-item-picker-hide-bottled-liquids'
 const ITEM_ID_COLLATOR = new Intl.Collator('en', {
   numeric: true,
   sensitivity: 'base',
@@ -80,7 +82,7 @@ export function ItemPickerDialog({
   onClose,
   onSelectItem,
 }: ItemPickerDialogProps) {
-  const [hideBottledLiquids, setHideBottledLiquids] = useState(false)
+  const [hideBottledLiquids, setHideBottledLiquids] = usePersistentState(HIDE_BOTTLED_LIQUIDS_STORAGE_KEY, false)
   const [searchQuery, setSearchQuery] = useState('')
 
   const normalizedSearchQuery = normalizeSearchText(searchQuery)

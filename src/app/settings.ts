@@ -48,7 +48,7 @@ export function createDefaultAppSettings(): AppSettings {
     maxTicksPerFrame: SIM_MAX_TICKS_PER_FRAME_DEFAULT,
     layoutHistoryLimit: LAYOUT_HISTORY_LIMIT_DEFAULT,
     uiTheme: 'ayu-dark',
-    leftPanelWidth: 340,
+    leftPanelWidth: 360,
     rightPanelWidth: 340,
     leftPanelCollapsed: false,
     rightPanelCollapsed: false,
@@ -56,6 +56,15 @@ export function createDefaultAppSettings(): AppSettings {
 }
 
 const DEFAULT_SETTINGS: AppSettings = createDefaultAppSettings()
+
+function migratePanelWidths(value: Partial<AppSettings> | null | undefined): Partial<AppSettings> {
+  const next = { ...(value ?? {}) }
+  if (next.leftPanelWidth === 340 && next.rightPanelWidth === 380) {
+    next.leftPanelWidth = 360
+    next.rightPanelWidth = 340
+  }
+  return next
+}
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
@@ -98,7 +107,7 @@ function readLegacyValue<T>(key: string, fallback: T) {
 }
 
 export function normalizeAppSettings(value: Partial<AppSettings> | null | undefined): AppSettings {
-  const next = value ?? {}
+  const next = migratePanelWidths(value)
   return {
     language: normalizeLanguage(next.language, DEFAULT_SETTINGS.language),
     superRecipeEnabled: normalizeBoolean(next.superRecipeEnabled, DEFAULT_SETTINGS.superRecipeEnabled),

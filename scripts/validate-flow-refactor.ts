@@ -585,6 +585,80 @@ function runReactorOutputMappingScenario(): ScenarioResult {
   }
 }
 
+function runLiquidPurifierOutputMappingScenario(): ScenarioResult {
+  const runCase = (
+    caseName: string,
+    inputItemId: ItemId,
+    expectedLeftItemId: ItemId,
+    expectedRightItemId: ItemId,
+  ) => {
+    return ROTATIONS.map((rotation) => {
+      resetInstanceCounter()
+      const purifier = createDevice('item_port_liquid_purifier_1', rotation, { x: 20, y: 20 }, {
+        preloadInputs: [{ slotIndex: 0, itemId: inputItemId, amount: 4 }],
+      })
+      const pole = createDevice('item_port_power_diffuser_1', 0, { x: 21, y: 26 })
+
+      const leftTurn = placeTargetAfter(purifier, 'out_n_1', 'pipe_turn_cw_1x1', 'in_n')
+      const rightTurn = placeTargetAfter(purifier, 'out_n_3', 'pipe_turn_ccw_1x1', 'in_n')
+      const leftPipe = placeTargetAfter(leftTurn, 'out_e', 'pipe_straight_1x1', 'in_w')
+      const rightPipe = placeTargetAfter(rightTurn, 'out_w', 'pipe_straight_1x1', 'in_w')
+      const leftSink = buildLiquidSinkAgainst(leftPipe, 'out_e')
+      const rightSink = buildLiquidSinkAgainst(rightPipe, 'out_e')
+
+      const layout = buildLayout([purifier, pole, leftTurn, rightTurn, leftPipe, rightPipe, leftSink, rightSink])
+      const links = ensureConnected(layout, 6, `liquid-purifier-${caseName}-rot${rotation}`)
+      const sim = simulate(layout, 200)
+      ensureNoHardBlock(sim, layout.devices.map((device) => device.instanceId), `liquid-purifier-${caseName}-rot${rotation}`)
+
+      const leftExpectedAmount = storageAmount(sim, leftSink.instanceId, expectedLeftItemId)
+      const rightExpectedAmount = storageAmount(sim, rightSink.instanceId, expectedRightItemId)
+      const leftUnexpectedAmount = storageAmount(sim, leftSink.instanceId, expectedRightItemId)
+      const rightUnexpectedAmount = storageAmount(sim, rightSink.instanceId, expectedLeftItemId)
+      const purifierRuntime = sim.runtimeById[purifier.instanceId]
+      const remainingInput = purifierRuntime && 'inputBuffer' in purifierRuntime ? (purifierRuntime.inputBuffer[inputItemId] ?? 0) : -1
+
+      assert(leftExpectedAmount === 1, `liquid-purifier-${caseName}-rot${rotation} 左侧储液罐没有收到液体A，actual=${leftExpectedAmount}`)
+      assert(rightExpectedAmount === 1, `liquid-purifier-${caseName}-rot${rotation} 右侧储液罐没有收到液体B，actual=${rightExpectedAmount}`)
+      assert(leftUnexpectedAmount === 0, `liquid-purifier-${caseName}-rot${rotation} 左侧储液罐错误收到了液体B，actual=${leftUnexpectedAmount}`)
+      assert(rightUnexpectedAmount === 0, `liquid-purifier-${caseName}-rot${rotation} 右侧储液罐错误收到了液体A，actual=${rightUnexpectedAmount}`)
+      assert(remainingInput === 0, `liquid-purifier-${caseName}-rot${rotation} 输入液体没有按配方正确消耗，remaining=${remainingInput}`)
+
+      return {
+        rotation,
+        links,
+        leftExpectedAmount,
+        rightExpectedAmount,
+        leftUnexpectedAmount,
+        rightUnexpectedAmount,
+        remainingInput,
+      }
+    })
+  }
+
+  return {
+    name: 'liquid-purifier-output-mapping',
+    summary: {
+      lowpoly: JSON.stringify(
+        runCase(
+          'lowpoly',
+          'item_liquid_xiranite_lowpoly',
+          'item_liquid_water',
+          'item_liquid_xiranite_poly',
+        ),
+      ),
+      copper: JSON.stringify(
+        runCase(
+          'copper',
+          'item_liquid_copper',
+          'item_liquid_acid',
+          'item_liquid_copper_enr',
+        ),
+      ),
+    },
+  }
+}
+
 function runPowerAllStopScenario(): ScenarioResult {
   resetInstanceCounter()
   const heatPool = createDevice('item_port_power_sta_1', 0, { x: 24, y: 20 }, {
@@ -631,6 +705,7 @@ function main() {
     ['belt-chain', runBeltChainScenario],
     ['pipe-round-robin', runPipeRoundRobinScenario],
     ['reactor-output-mapping', runReactorOutputMappingScenario],
+    ['liquid-purifier-output-mapping', runLiquidPurifierOutputMappingScenario],
     ['power-all-stop', runPowerAllStopScenario],
   ]
 

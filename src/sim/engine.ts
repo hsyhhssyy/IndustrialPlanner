@@ -84,8 +84,8 @@ const SLOTLESS_STORAGE_OUTPUT_TYPE_IDS = new Set(['item_port_sp_hub_1'])
 const STORAGE_SLOT_COUNT = 6
 const STORAGE_SLOT_CAPACITY = 50
 const LIQUID_STORAGE_TANK_CAPACITY = 500
-const LARGE_DARK_PIPE_INLET_TYPE_ID: DeviceInstance['typeId'] = 'item_port_udpipe_loader_large_1'
-const LARGE_DARK_PIPE_OUTLET_TYPE_ID: DeviceInstance['typeId'] = 'item_port_udpipe_unloader_large_1'
+const MULTI_PORT_DARK_PIPE_INLET_TYPE_ID: DeviceInstance['typeId'] = 'item_port_udpipe_loader_2'
+const MULTI_PORT_DARK_PIPE_OUTLET_TYPE_ID: DeviceInstance['typeId'] = 'item_port_udpipe_unloader_2'
 const LOADER_TYPE_ID: DeviceInstance['typeId'] = 'item_port_loader_1'
 const THERMAL_POOL_TYPE_ID: DeviceInstance['typeId'] = 'item_port_power_sta_1'
 const PROTOCOL_HUB_SUPPLY_KW = 200
@@ -138,9 +138,23 @@ function isPipeTransportType(typeId: DeviceInstance['typeId']) {
   return isPipeLike(typeId)
 }
 
-function transportSpeedPerTick(typeId: DeviceInstance['typeId'], tickRateHz: number) {
+function transportTicksRequired(typeId: DeviceInstance['typeId'], tickRateHz: number) {
   const secondsPerCell = isPipeTransportType(typeId) ? PIPE_SECONDS_PER_CELL : BELT_SECONDS_PER_CELL
-  return 1 / Math.max(1, secondsPerCell * tickRateHz)
+  return cycleTicksFromSeconds(secondsPerCell, tickRateHz)
+}
+
+function advanceTransportSlotProgress(
+  slot: SlotData,
+  deviceTypeId: DeviceInstance['typeId'],
+  tick: number,
+  tickRateHz: number,
+) {
+  if (slot.progress01 >= 1) return false
+  const requiredTicks = transportTicksRequired(deviceTypeId, tickRateHz)
+  const previousProgress01 = slot.progress01
+  const elapsedTicks = Math.max(0, tick - slot.enteredTick)
+  slot.progress01 = Math.min(1, elapsedTicks / requiredTicks)
+  return previousProgress01 < 1 && slot.progress01 >= 1
 }
 
 type ProcessorBufferKind = 'input' | 'output'
@@ -283,7 +297,7 @@ function runtimeForDevice(device: DeviceInstance): DeviceRuntime {
         ? [createStorageBoxBufferGroup(device)]
         : device.typeId === LIQUID_STORAGE_TANK_TYPE_ID
           ? [createLiquidStorageTankBufferGroup(device)]
-          : device.typeId === LARGE_DARK_PIPE_INLET_TYPE_ID || device.typeId === LARGE_DARK_PIPE_OUTLET_TYPE_ID
+          : device.typeId === MULTI_PORT_DARK_PIPE_INLET_TYPE_ID || device.typeId === MULTI_PORT_DARK_PIPE_OUTLET_TYPE_ID
             ? [createDarkPipeBufferGroup(device)]
           : undefined
     return {
@@ -2706,34 +2720,28 @@ export function debugSolveFlowPlanForCurrentTick(layout: LayoutState, sim: SimSt
     }
 
     if ('slot' in runtime && runtime.slot) {
-      const transportSpeed = transportSpeedPerTick(device.typeId, sim.tickRateHz)
       const slot = runtime.slot
       if (slot.progress01 < 1) {
-        const beforeProgress = slot.progress01
-        slot.progress01 = Math.min(1, slot.progress01 + transportSpeed)
+        const reachedReady = advanceTransportSlotProgress(slot, device.typeId, sim.tick, sim.tickRateHz)
         runtime.progress01 = slot.progress01
-        if (beforeProgress < 1 && slot.progress01 >= 1) {
+        if (reachedReady) {
           lanesReachedHalfThisTick.add(`${device.instanceId}:slot`)
         }
       }
     }
 
     if ('nsSlot' in runtime && runtime.nsSlot && runtime.nsSlot.progress01 < 1) {
-      const transportSpeed = transportSpeedPerTick(device.typeId, sim.tickRateHz)
-      const beforeProgress = runtime.nsSlot.progress01
-      runtime.nsSlot.progress01 = Math.min(1, runtime.nsSlot.progress01 + transportSpeed)
+      const reachedReady = advanceTransportSlotProgress(runtime.nsSlot, device.typeId, sim.tick, sim.tickRateHz)
       runtime.progress01 = runtime.nsSlot.progress01
-      if (beforeProgress < 1 && runtime.nsSlot.progress01 >= 1) {
+      if (reachedReady) {
         lanesReachedHalfThisTick.add(`${device.instanceId}:ns`)
       }
     }
 
     if ('weSlot' in runtime && runtime.weSlot && runtime.weSlot.progress01 < 1) {
-      const transportSpeed = transportSpeedPerTick(device.typeId, sim.tickRateHz)
-      const beforeProgress = runtime.weSlot.progress01
-      runtime.weSlot.progress01 = Math.min(1, runtime.weSlot.progress01 + transportSpeed)
+      const reachedReady = advanceTransportSlotProgress(runtime.weSlot, device.typeId, sim.tick, sim.tickRateHz)
       runtime.progress01 = runtime.weSlot.progress01
-      if (beforeProgress < 1 && runtime.weSlot.progress01 >= 1) {
+      if (reachedReady) {
         lanesReachedHalfThisTick.add(`${device.instanceId}:we`)
       }
     }
@@ -2985,33 +2993,27 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
     }
 
     if ('slot' in runtime && runtime.slot) {
-      const transportSpeed = transportSpeedPerTick(device.typeId, sim.tickRateHz)
       const slot = runtime.slot
       if (slot.progress01 < 1) {
-        const beforeProgress = slot.progress01
-        slot.progress01 = Math.min(1, slot.progress01 + transportSpeed)
+        const reachedReady = advanceTransportSlotProgress(slot, device.typeId, sim.tick, sim.tickRateHz)
         runtime.progress01 = slot.progress01
-        if (beforeProgress < 1 && slot.progress01 >= 1) {
+        if (reachedReady) {
           lanesReachedHalfThisTick.add(`${device.instanceId}:slot`)
         }
       }
     }
 
     if ('nsSlot' in runtime && runtime.nsSlot && runtime.nsSlot.progress01 < 1) {
-      const transportSpeed = transportSpeedPerTick(device.typeId, sim.tickRateHz)
-      const beforeProgress = runtime.nsSlot.progress01
-      runtime.nsSlot.progress01 = Math.min(1, runtime.nsSlot.progress01 + transportSpeed)
+      const reachedReady = advanceTransportSlotProgress(runtime.nsSlot, device.typeId, sim.tick, sim.tickRateHz)
       runtime.progress01 = runtime.nsSlot.progress01
-      if (beforeProgress < 1 && runtime.nsSlot.progress01 >= 1) {
+      if (reachedReady) {
         lanesReachedHalfThisTick.add(`${device.instanceId}:ns`)
       }
     }
     if ('weSlot' in runtime && runtime.weSlot && runtime.weSlot.progress01 < 1) {
-      const transportSpeed = transportSpeedPerTick(device.typeId, sim.tickRateHz)
-      const beforeProgress = runtime.weSlot.progress01
-      runtime.weSlot.progress01 = Math.min(1, runtime.weSlot.progress01 + transportSpeed)
+      const reachedReady = advanceTransportSlotProgress(runtime.weSlot, device.typeId, sim.tick, sim.tickRateHz)
       runtime.progress01 = runtime.weSlot.progress01
-      if (beforeProgress < 1 && runtime.weSlot.progress01 >= 1) {
+      if (reachedReady) {
         lanesReachedHalfThisTick.add(`${device.instanceId}:we`)
       }
     }

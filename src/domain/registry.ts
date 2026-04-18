@@ -4,6 +4,7 @@ import type { BaseDef, DeviceTypeDef, ItemDef, RecipeDef } from './types'
 const solidAllowance = { mode: 'solid' as const, whitelist: [] }
 const liquidAllowance = { mode: 'liquid' as const, whitelist: [] }
 const recipeItemsAllowance = { mode: 'recipe_items' as const, whitelist: [] }
+const NEW_TAG = 'new'
 const bottleItemTags = ['瓶子']
 const bottledLiquidTags = [...bottleItemTags, '瓶装液体']
 const SINGLE_SOLID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid']]
@@ -64,13 +65,14 @@ const EXTRA_FILLED_BOTTLE_ITEMS: ItemDef[] = EXTRA_FILLED_BOTTLE_VARIANTS.map(({
   id: filledBottleItemIdFor(bottle.bottleItemId, liquid.liquidItemId),
   displayName: `${bottle.bottleDisplayName}（已盛装${liquid.filledDisplayName}）`,
   type: 'solid',
-  tags: bottledLiquidTags,
+  tags: [...bottledLiquidTags, NEW_TAG],
 }))
 
 const EXTRA_LIQUID_BOTTLE_FILLING_RECIPES: RecipeDef[] = EXTRA_FILLED_BOTTLE_VARIANTS.map(({ bottle, liquid }) => ({
   id: `r_liquid_filling_${bottle.bottleItemId.replace(/^item_/, '')}_${liquid.recipeIdSuffix}_${liquidBottleRecipeVisibility(bottle.bottleItemId, liquid.ironBottleDefault)}`,
   machineType: 'item_port_liquid_filling_pd_mc_1',
   cycleSeconds: 2,
+  tags: [NEW_TAG],
   inputs: [
     { itemId: bottle.bottleItemId, amount: 1 },
     { itemId: liquid.liquidItemId, amount: 1 },
@@ -82,7 +84,7 @@ const EXTRA_LIQUID_BOTTLE_DISMANTLE_RECIPES: RecipeDef[] = EXTRA_FILLED_BOTTLE_V
   id: `r_liquid_dismantling_${bottle.bottleItemId.replace(/^item_/, '')}_${liquid.recipeIdSuffix}_${liquidBottleRecipeVisibility(bottle.bottleItemId, liquid.ironBottleDefault)}`,
   machineType: 'item_port_dismantler_1',
   cycleSeconds: 2,
-  tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+  tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
   inputs: [{ itemId: filledBottleItemIdFor(bottle.bottleItemId, liquid.liquidItemId), amount: 1 }],
   outputs: [
     { itemId: bottle.bottleItemId, amount: 1 },
@@ -118,32 +120,32 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_copper_bottle_filled_liquid_sewage', displayName: '赤铜瓶（已盛装污水）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_copper_bottle_filled_liquid_xiranite_poly', displayName: '赤铜瓶（已盛装壤晶废液）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_copper_bottle_filled_liquid_xiranite_lowpoly', displayName: '赤铜瓶（已盛装惰性壤晶废液）', type: 'solid', tags: bottledLiquidTags },
-  { id: 'item_copper_enr', displayName: '赫铜块', type: 'solid' },
+  { id: 'item_copper_enr', displayName: '赫铜块', type: 'solid', tags: [NEW_TAG] },
   { id: 'item_copper_powder', displayName: '赤铜粉末', type: 'solid' },
   { id: 'item_copper_nugget', displayName: '赤铜块', type: 'solid' },
-  { id: 'item_liquid_acid', displayName: '沉积酸', type: 'liquid', tags: ['liquid_color:#d97a1f'] },
-  { id: 'item_liquid_copper', displayName: '赤铜溶液', type: 'liquid', tags: ['liquid_color:#8b2a2a'] },
-  { id: 'item_liquid_copper_enr', displayName: '赫铜溶液', type: 'liquid', tags: ['liquid_color:#ff9a24'] },
+  { id: 'item_liquid_acid', displayName: '沉积酸', type: 'liquid', tags: ['liquid_color:#d97a1f', NEW_TAG] },
+  { id: 'item_liquid_copper', displayName: '赤铜溶液', type: 'liquid', tags: ['liquid_color:#8b2a2a', NEW_TAG] },
+  { id: 'item_liquid_copper_enr', displayName: '赫铜溶液', type: 'liquid', tags: ['liquid_color:#6b0f1a', NEW_TAG] },
   { id: 'item_liquid_sewage', displayName: '污水', type: 'liquid', tags: ['liquid_color:#808080'] },
   { id: 'item_liquid_xiranite_poly', displayName: '壤晶废液', type: 'liquid', tags: ['liquid_color:#111111'] },
   { id: 'item_liquid_xiranite_lowpoly', displayName: '惰性壤晶废液', type: 'liquid', tags: ['liquid_color:#4a2f1f'] },
-  { id: 'item_liquid_xiranite_enr', displayName: '液化重息壤', type: 'liquid', tags: ['liquid_color:#0e6a47'] },
+  { id: 'item_liquid_xiranite_enr', displayName: '液化重息壤', type: 'liquid', tags: ['liquid_color:#0e6a47', NEW_TAG] },
   { id: 'item_xiranite_poly', displayName: '壤晶', type: 'solid' },
-  { id: 'item_activity_xiranite_cmpt', displayName: '实验息壤零件', type: 'solid' },
-  { id: 'item_activity_xiranite_enr_cmpt', displayName: '实验重息壤零件', type: 'solid' },
-  { id: 'item_activity_xiranite_bottle', displayName: '实验息壤瓶', type: 'solid', tags: bottleItemTags },
-  { id: 'item_activity_xiranite_enr_bottle', displayName: '实验重息壤瓶', type: 'solid', tags: bottleItemTags },
+  { id: 'item_activity_xiranite_cmpt', displayName: '实验息壤零件', type: 'solid', tags: [NEW_TAG] },
+  { id: 'item_activity_xiranite_enr_cmpt', displayName: '实验重息壤零件', type: 'solid', tags: [NEW_TAG] },
+  { id: 'item_activity_xiranite_bottle', displayName: '实验息壤瓶', type: 'solid', tags: [...bottleItemTags, NEW_TAG] },
+  { id: 'item_activity_xiranite_enr_bottle', displayName: '实验重息壤瓶', type: 'solid', tags: [...bottleItemTags, NEW_TAG] },
   ...EXTRA_FILLED_BOTTLE_ITEMS,
-  { id: 'item_activity_xiranite_enr_tool', displayName: '实验玉铜发散器', type: 'solid' },
-  { id: 'item_activity_xiranite_enr_hulu', displayName: '息壤玉葫芦', type: 'solid' },
+  { id: 'item_activity_xiranite_enr_tool', displayName: '实验玉铜发散器', type: 'solid', tags: [NEW_TAG] },
+  { id: 'item_activity_xiranite_enr_hulu', displayName: '息壤玉葫芦', type: 'solid', tags: [NEW_TAG] },
   { id: 'item_copper_cmpt', displayName: '赤铜零件', type: 'solid' },
-  { id: 'item_copper_enr_cmpt', displayName: '赫铜零件', type: 'solid' },
+  { id: 'item_copper_enr_cmpt', displayName: '赫铜零件', type: 'solid', tags: [NEW_TAG] },
   { id: 'item_equip_script_1', displayName: '紫晶装备原件', type: 'solid' },
   { id: 'item_equip_script_2', displayName: '蓝铁装备原件', type: 'solid' },
   { id: 'item_equip_script_3', displayName: '高晶装备原件', type: 'solid' },
   { id: 'item_equip_script_4', displayName: '息壤装备原件', type: 'solid' },
   { id: 'item_equip_script_4_1', displayName: '赤铜装备原件', type: 'solid' },
-  { id: 'item_equip_script_4_2', displayName: '赫铜装备原件', type: 'solid' },
+  { id: 'item_equip_script_4_2', displayName: '赫铜装备原件', type: 'solid', tags: [NEW_TAG] },
   { id: 'item_glass_bottle', displayName: '紫晶质瓶', type: 'solid', tags: bottleItemTags },
   { id: 'item_glass_bottle_filled_water', displayName: '紫晶质瓶（已盛装清水）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_glass_bottle_filled_liquid_plant_grass_1', displayName: '紫晶质瓶（已盛装锦草溶液）', type: 'solid', tags: bottledLiquidTags },
@@ -227,7 +229,7 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_quartz_glass', displayName: '紫晶纤维', type: 'solid' },
   { id: 'item_quartz_powder', displayName: '紫晶粉末', type: 'solid' },
   { id: 'item_quartz_sand', displayName: '紫晶矿', type: 'solid', tags: ['矿石'] },
-  { id: 'item_xiranite_enr_powder', displayName: '重息壤', type: 'solid' },
+  { id: 'item_xiranite_enr_powder', displayName: '重息壤', type: 'solid', tags: [NEW_TAG] },
   { id: 'item_xiranite_powder', displayName: '息壤', type: 'solid' },
 ]
 
@@ -362,6 +364,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic_large',
     machineType: 'item_port_mix_pool_large_1',
     cycleSeconds: 2,
+    tags: [NEW_TAG],
     inputs: [
       { itemId: 'item_liquid_xiranite', amount: 1 },
       { itemId: 'item_liquid_sewage', amount: 1 },
@@ -388,6 +391,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_chrono_mix_pool_inert_waste_liquid_water_slag_from_waste_liquid_and_iron_powder_basic_large',
     machineType: 'item_port_mix_pool_large_1',
     cycleSeconds: 2,
+    tags: [NEW_TAG],
     inputs: [
       { itemId: 'item_liquid_xiranite_poly', amount: 2 },
       { itemId: 'item_iron_powder', amount: 1 },
@@ -753,6 +757,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_component_copper_enr_cmpt_from_copper_enr_basic',
     machineType: 'item_port_cmpt_mc_1',
     cycleSeconds: 10,
+    tags: [NEW_TAG],
     inputs: [{ itemId: 'item_copper_enr', amount: 5 }],
     outputs: [{ itemId: 'item_copper_enr_cmpt', amount: 1 }],
   },
@@ -760,6 +765,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_component_activity_xiranite_cmpt_from_xiranite_powder_basic',
     machineType: 'item_port_cmpt_mc_1',
     cycleSeconds: 2,
+    tags: [NEW_TAG],
     inputs: [{ itemId: 'item_xiranite_powder', amount: 1 }],
     outputs: [{ itemId: 'item_activity_xiranite_cmpt', amount: 1 }],
   },
@@ -767,6 +773,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_component_activity_xiranite_enr_cmpt_from_xiranite_enr_powder_basic',
     machineType: 'item_port_cmpt_mc_1',
     cycleSeconds: 20,
+    tags: [NEW_TAG],
     inputs: [{ itemId: 'item_xiranite_enr_powder', amount: 1 }],
     outputs: [{ itemId: 'item_activity_xiranite_enr_cmpt', amount: 2 }],
   },
@@ -928,6 +935,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_packaging_activity_xiranite_enr_tool_from_activity_xiranite_enr_cmpt_and_copper_enr_basic',
     machineType: 'item_port_tools_asm_mc_1',
     cycleSeconds: 10,
+    tags: [NEW_TAG],
     inputs: [
       { itemId: 'item_activity_xiranite_enr_cmpt', amount: 1 },
       { itemId: 'item_copper_enr', amount: 1 },
@@ -938,6 +946,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_packaging_activity_xiranite_enr_hulu_from_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2_and_activity_xiranite_enr_tool_basic',
     machineType: 'item_port_tools_asm_mc_1',
     cycleSeconds: 10,
+    tags: [NEW_TAG],
     inputs: [
       { itemId: 'item_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2', amount: 1 },
       { itemId: 'item_activity_xiranite_enr_tool', amount: 1 },
@@ -988,6 +997,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_winder_equip_script_4_2_from_copper_enr_cmpt_and_xiranite_enr_powder_basic',
     machineType: 'item_port_winder_1',
     cycleSeconds: 10,
+    tags: [NEW_TAG],
     inputs: [
       { itemId: 'item_copper_enr_cmpt', amount: 2 },
       { itemId: 'item_xiranite_enr_powder', amount: 2 },
@@ -1446,6 +1456,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_shaper_activity_xiranite_bottle_from_xiranite_powder_basic',
     machineType: 'item_port_shaper_1',
     cycleSeconds: 2,
+    tags: [NEW_TAG],
     inputs: [{ itemId: 'item_xiranite_powder', amount: 2 }],
     outputs: [{ itemId: 'item_activity_xiranite_bottle', amount: 1 }],
   },
@@ -1453,6 +1464,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_shaper_activity_xiranite_enr_bottle_from_xiranite_enr_powder_basic',
     machineType: 'item_port_shaper_1',
     cycleSeconds: 20,
+    tags: [NEW_TAG],
     inputs: [{ itemId: 'item_xiranite_enr_powder', amount: 1 }],
     outputs: [{ itemId: 'item_activity_xiranite_enr_bottle', amount: 2 }],
   },
@@ -1510,6 +1522,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_mix_pool_liquid_plant_grass_1_from_powder_and_water_basic_large',
     machineType: 'item_port_mix_pool_large_1',
     cycleSeconds: 2,
+    tags: [NEW_TAG],
     inputs: [
       { itemId: 'item_plant_grass_powder_1', amount: 1 },
       { itemId: 'item_liquid_water', amount: 1 },
@@ -1530,6 +1543,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_mix_pool_liquid_plant_grass_2_from_powder_and_water_basic_large',
     machineType: 'item_port_mix_pool_large_1',
     cycleSeconds: 2,
+    tags: [NEW_TAG],
     inputs: [
       { itemId: 'item_plant_grass_powder_2', amount: 1 },
       { itemId: 'item_liquid_water', amount: 1 },
@@ -1550,6 +1564,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic_large',
     machineType: 'item_port_mix_pool_large_1',
     cycleSeconds: 2,
+    tags: [NEW_TAG],
     inputs: [
       { itemId: 'item_xiranite_powder', amount: 1 },
       { itemId: 'item_liquid_water', amount: 1 },
@@ -1560,6 +1575,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_mix_pool_liquid_xiranite_enr_from_xiranite_enr_powder_and_acid_basic',
     machineType: 'item_port_mix_pool_1',
     cycleSeconds: 2,
+    tags: [NEW_TAG],
     inputs: [
       { itemId: 'item_xiranite_enr_powder', amount: 1 },
       { itemId: 'item_liquid_acid', amount: 1 },
@@ -1570,6 +1586,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_mix_pool_liquid_xiranite_enr_from_xiranite_enr_powder_and_acid_basic_large',
     machineType: 'item_port_mix_pool_large_1',
     cycleSeconds: 2,
+    tags: [NEW_TAG],
     inputs: [
       { itemId: 'item_xiranite_enr_powder', amount: 1 },
       { itemId: 'item_liquid_acid', amount: 1 },
@@ -1580,6 +1597,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_mix_pool_liquid_copper_from_copper_powder_and_acid_basic',
     machineType: 'item_port_mix_pool_1',
     cycleSeconds: 2,
+    tags: [NEW_TAG],
     inputs: [
       { itemId: 'item_copper_powder', amount: 1 },
       { itemId: 'item_liquid_acid', amount: 1 },
@@ -1590,6 +1608,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_mix_pool_liquid_copper_from_copper_powder_and_acid_basic_large',
     machineType: 'item_port_mix_pool_large_1',
     cycleSeconds: 2,
+    tags: [NEW_TAG],
     inputs: [
       { itemId: 'item_copper_powder', amount: 1 },
       { itemId: 'item_liquid_acid', amount: 1 },
@@ -1600,6 +1619,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_mix_pool_copper_enr_from_liquid_copper_enr_and_iron_powder_basic',
     machineType: 'item_port_mix_pool_1',
     cycleSeconds: 2,
+    tags: [NEW_TAG],
     inputs: [
       { itemId: 'item_liquid_copper_enr', amount: 2 },
       { itemId: 'item_iron_powder', amount: 1 },
@@ -1613,6 +1633,7 @@ export const RECIPES: RecipeDef[] = [
     id: 'r_mix_pool_copper_enr_from_liquid_copper_enr_and_iron_powder_basic_large',
     machineType: 'item_port_mix_pool_large_1',
     cycleSeconds: 2,
+    tags: [NEW_TAG],
     inputs: [
       { itemId: 'item_liquid_copper_enr', amount: 2 },
       { itemId: 'item_iron_powder', amount: 1 },
@@ -1620,6 +1641,28 @@ export const RECIPES: RecipeDef[] = [
     outputs: [
       { itemId: 'item_copper_enr', amount: 1 },
       { itemId: 'item_liquid_sewage', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_purifier_water_and_xiranite_poly_from_xiranite_lowpoly_basic',
+    machineType: 'item_port_liquid_purifier_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [{ itemId: 'item_liquid_xiranite_lowpoly', amount: 4 }],
+    outputs: [
+      { itemId: 'item_liquid_water', amount: 1 },
+      { itemId: 'item_liquid_xiranite_poly', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_purifier_acid_and_copper_enr_from_copper_basic',
+    machineType: 'item_port_liquid_purifier_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [{ itemId: 'item_liquid_copper', amount: 4 }],
+    outputs: [
+      { itemId: 'item_liquid_acid', amount: 1 },
+      { itemId: 'item_liquid_copper_enr', amount: 1 },
     ],
   },
 ]
@@ -2517,12 +2560,12 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     ],
   },
   {
-    id: 'item_port_udpipe_loader_large_1',
+    id: 'item_port_udpipe_loader_2',
     runtimeKind: 'storage',
     requiresPower: false,
     powerDemand: 10,
     size: { width: 2, height: 4 },
-    shortName: 'LargeDarkPipeInlet',
+    shortName: 'MultiPortDarkPipeInlet',
     tags: ['武陵', 'OuterRingAllowed'],
     ports0: [
       {
@@ -2546,12 +2589,12 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     ],
   },
   {
-    id: 'item_port_udpipe_unloader_large_1',
+    id: 'item_port_udpipe_unloader_2',
     runtimeKind: 'storage',
     requiresPower: false,
     powerDemand: 10,
     size: { width: 2, height: 4 },
-    shortName: 'LargeDarkPipeOutlet',
+    shortName: 'MultiPortDarkPipeOutlet',
     tags: ['武陵', 'OuterRingAllowed'],
     ports0: [
       {
@@ -3130,6 +3173,22 @@ export const BASES: BaseDef[] = [
     foundationBuildings: [
       {
         instanceId: 'base_wuling_tianwangping_hub_1',
+        typeId: 'item_port_sp_hub_1',
+        origin: { x: 0, y: 0 },
+        rotation: 0,
+        movable: true,
+      },
+    ],
+  },
+  {
+    id: 'wuling_heart_repair_station',
+    name: '心脏修缮站',
+    placeableSize: 50,
+    outerRing: { top: 4, right: 4, bottom: 4, left: 4 },
+    tags: ['武陵'],
+    foundationBuildings: [
+      {
+        instanceId: 'base_wuling_heart_repair_hub_1',
         typeId: 'item_port_sp_hub_1',
         origin: { x: 0, y: 0 },
         rotation: 0,
