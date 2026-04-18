@@ -2666,6 +2666,14 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.pickup-item-dialog-switch-group {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .pickup-item-dialog-switch {
   flex: 0 1 auto;
   width: auto;

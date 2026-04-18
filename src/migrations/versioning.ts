@@ -24,6 +24,10 @@ export const PUBLIC_BLUEPRINT_INDEX_CACHE_KEY = 'stage3-public-blueprint-index'
 
 const LIQUID_STORAGE_TANK_TYPE_ID: DeviceInstance['typeId'] = 'item_port_liquid_storager_1'
 const LIQUID_STORAGE_TANK_CAPACITY = 500
+const LEGACY_DEVICE_TYPE_ID_ALIASES: Partial<Record<string, DeviceInstance['typeId']>> = {
+  item_port_udpipe_loader_large_1: 'item_port_udpipe_loader_2',
+  item_port_udpipe_unloader_large_1: 'item_port_udpipe_unloader_2',
+}
 
 export type BlueprintSource = 'user' | 'system'
 
@@ -123,7 +127,8 @@ function isValidBlueprintId(id: string, source: BlueprintSource) {
 
 export function normalizeKnownDeviceTypeId(typeId: unknown): DeviceInstance['typeId'] | null {
   if (typeof typeId !== 'string') return null
-  return typeId in DEVICE_TYPE_BY_ID ? (typeId as DeviceInstance['typeId']) : null
+  const normalizedTypeId = LEGACY_DEVICE_TYPE_ID_ALIASES[typeId] ?? typeId
+  return normalizedTypeId in DEVICE_TYPE_BY_ID ? (normalizedTypeId as DeviceInstance['typeId']) : null
 }
 
 function normalizeKnownItemId(itemId: unknown): ItemId | undefined {

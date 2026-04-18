@@ -13,11 +13,11 @@ let deviceLinkCounter = 1
 
 const DARK_PIPE_INLET_TYPE_IDS = new Set<DeviceTypeId>([
   'item_port_udpipe_loader_1',
-  'item_port_udpipe_loader_large_1',
+  'item_port_udpipe_loader_2',
 ])
 const DARK_PIPE_OUTLET_TYPE_IDS = new Set<DeviceTypeId>([
   'item_port_udpipe_unloader_1',
-  'item_port_udpipe_unloader_large_1',
+  'item_port_udpipe_unloader_2',
 ])
 
 export function createDeviceLinkId() {

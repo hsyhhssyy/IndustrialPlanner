@@ -10,7 +10,9 @@ import type { ItemDef } from '../../domain/types'
 
 const RECENT_ITEMS_SINGLE_ROW_COUNT = 8
 const BOTTLED_LIQUID_TAG = '瓶装液体'
+const NEW_ITEM_TAG = 'new'
 const HIDE_BOTTLED_LIQUIDS_STORAGE_KEY = 'stage1-item-picker-hide-bottled-liquids'
+const ONLY_SHOW_NEW_ITEMS_STORAGE_KEY = 'stage1-item-picker-only-show-new-items'
 const ITEM_ID_COLLATOR = new Intl.Collator('en', {
   numeric: true,
   sensitivity: 'base',
@@ -33,6 +35,10 @@ type ItemPickerDialogProps = {
 
 function isBottledLiquidItem(item: ItemDef) {
   return Boolean(item.tags?.includes(BOTTLED_LIQUID_TAG))
+}
+
+function isNewVersionItem(item: ItemDef) {
+  return Boolean(item.tags?.includes(NEW_ITEM_TAG))
 }
 
 function normalizeSearchText(value: string) {
@@ -83,6 +89,7 @@ export function ItemPickerDialog({
   onSelectItem,
 }: ItemPickerDialogProps) {
   const [hideBottledLiquids, setHideBottledLiquids] = usePersistentState(HIDE_BOTTLED_LIQUIDS_STORAGE_KEY, false)
+  const [onlyShowNewItems, setOnlyShowNewItems] = usePersistentState(ONLY_SHOW_NEW_ITEMS_STORAGE_KEY, false)
   const [searchQuery, setSearchQuery] = useState('')
 
   const normalizedSearchQuery = normalizeSearchText(searchQuery)
@@ -128,6 +135,9 @@ export function ItemPickerDialog({
       return false
     }
     if (hideBottledLiquids && isBottledLiquidItem(item)) {
+      return false
+    }
+    if (onlyShowNewItems && !isNewVersionItem(item)) {
       return false
     }
     if (!matchesItemSearch(entry, normalizedSearchQuery, compactSearchQuery)) {
@@ -196,13 +206,22 @@ export function ItemPickerDialog({
           <section className="pickup-item-group">
             <div className="pickup-item-group-header">
               <div className="pickup-item-group-title">{t('detail.itemPickerAllGroup')}</div>
-              <label className="switch-toggle switch-toggle-inline pickup-item-dialog-switch" aria-label={t('detail.itemPickerHideBottledLiquids')}>
-                <span className="pickup-item-dialog-switch-label">{t('detail.itemPickerHideBottledLiquids')}</span>
-                <input type="checkbox" checked={hideBottledLiquids} onChange={(event) => setHideBottledLiquids(event.target.checked)} />
-                <span className="switch-track" aria-hidden="true">
-                  <span className="switch-thumb" />
-                </span>
-              </label>
+              <div className="pickup-item-dialog-switch-group">
+                <label className="switch-toggle switch-toggle-inline pickup-item-dialog-switch" aria-label={t('detail.itemPickerOnlyShowNewItems')}>
+                  <span className="pickup-item-dialog-switch-label">{t('detail.itemPickerOnlyShowNewItems')}</span>
+                  <input type="checkbox" checked={onlyShowNewItems} onChange={(event) => setOnlyShowNewItems(event.target.checked)} />
+                  <span className="switch-track" aria-hidden="true">
+                    <span className="switch-thumb" />
+                  </span>
+                </label>
+                <label className="switch-toggle switch-toggle-inline pickup-item-dialog-switch" aria-label={t('detail.itemPickerHideBottledLiquids')}>
+                  <span className="pickup-item-dialog-switch-label">{t('detail.itemPickerHideBottledLiquids')}</span>
+                  <input type="checkbox" checked={hideBottledLiquids} onChange={(event) => setHideBottledLiquids(event.target.checked)} />
+                  <span className="switch-track" aria-hidden="true">
+                    <span className="switch-thumb" />
+                  </span>
+                </label>
+              </div>
             </div>
             <div className="pickup-item-list pickup-item-list--all">
               {pickerAllowsEmpty ? (

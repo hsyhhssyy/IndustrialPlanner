@@ -57,16 +57,16 @@ export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
   { typeId: 'item_port_udpipe_loader_1', fileName: 'item_port_udpipe_loader_1.png' },
   { typeId: 'item_port_udpipe_unloader_1', fileName: 'item_port_udpipe_unloader_1.png' },
   {
-    typeId: 'item_port_udpipe_loader_large_1',
-    fileName: 'item_port_udpipe_loader_1.png',
+    typeId: 'item_port_udpipe_loader_2',
+    fileName: 'item_port_udpipe_loader_2.png',
     renderBounds: {
       widthCells: 2,
       heightCells: 4,
     },
   },
   {
-    typeId: 'item_port_udpipe_unloader_large_1',
-    fileName: 'item_port_udpipe_unloader_1.png',
+    typeId: 'item_port_udpipe_unloader_2',
+    fileName: 'item_port_udpipe_unloader_2.png',
     renderBounds: {
       widthCells: 2,
       heightCells: 4,
