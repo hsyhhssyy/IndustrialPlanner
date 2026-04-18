@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { match } from 'pinyin-pro'
 import { ITEMS } from '../../domain/registry'
 import { isSuperRecipeItem, shouldShowSuperRecipeContent } from '../../domain/shared/superRecipeVisibility'
 import type { ItemId } from '../../domain/types'
@@ -8,6 +9,10 @@ import type { ItemDef } from '../../domain/types'
 
 const RECENT_ITEMS_SINGLE_ROW_COUNT = 8
 const BOTTLED_LIQUID_TAG = '瓶装液体'
+const ITEM_ID_COLLATOR = new Intl.Collator('en', {
+  numeric: true,
+  sensitivity: 'base',
+})
 
 type ItemPickerDialogProps = {
   itemPickerState: ItemPickerState
@@ -28,6 +33,39 @@ function isBottledLiquidItem(item: ItemDef) {
   return Boolean(item.tags?.includes(BOTTLED_LIQUID_TAG))
 }
 
+function normalizeSearchText(value: string) {
+  return value.trim().toLowerCase()
+}
+
+function compactSearchText(value: string) {
+  return normalizeSearchText(value).replace(/[\s_-]+/g, '')
+}
+
+const ITEM_SEARCH_INDEX = ITEMS.map((item) => {
+  const zhLabel = getItemLabel('zh-CN', item.id)
+  const enLabel = getItemLabel('en-US', item.id)
+  return {
+    item,
+    zhLabel,
+    normalizedZhLabel: normalizeSearchText(zhLabel),
+    normalizedEnLabel: normalizeSearchText(enLabel),
+    compactEnLabel: compactSearchText(enLabel),
+  }
+})
+
+function matchesItemSearch(
+  entry: (typeof ITEM_SEARCH_INDEX)[number],
+  normalizedSearchQuery: string,
+  compactSearchQuery: string,
+) {
+  if (!normalizedSearchQuery) return true
+  if (entry.normalizedZhLabel.includes(normalizedSearchQuery)) return true
+  if (entry.normalizedEnLabel.includes(normalizedSearchQuery)) return true
+  if (compactSearchQuery && entry.compactEnLabel.includes(compactSearchQuery)) return true
+  if (!compactSearchQuery) return false
+  return Boolean(match(entry.zhLabel, compactSearchQuery))
+}
+
 export function ItemPickerDialog({
   itemPickerState,
   pickerSelectedItemId,
@@ -43,13 +81,37 @@ export function ItemPickerDialog({
   onSelectItem,
 }: ItemPickerDialogProps) {
   const [hideBottledLiquids, setHideBottledLiquids] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
-  const labelCollator = new Intl.Collator(language === 'zh-CN' ? 'zh-Hans-CN-u-co-pinyin' : language, {
-    numeric: true,
-    sensitivity: 'base',
-  })
+  const normalizedSearchQuery = normalizeSearchText(searchQuery)
+  const compactSearchQuery = compactSearchText(searchQuery)
+  const hasSearchQuery = normalizedSearchQuery.length > 0
 
-  const filteredItems = ITEMS.filter((item) => {
+  const dialogTitle =
+    itemPickerState.kind === 'pickup'
+      ? t('detail.pickupDialogTitle')
+      : itemPickerState.kind === 'admission'
+        ? t('detail.admissionDialogTitle')
+      : itemPickerState.kind === 'admissionConfig'
+        ? t('detail.admissionDialogTitle')
+      : itemPickerState.kind === 'plannerTarget'
+        ? t('detail.itemPickerTitle')
+      : itemPickerState.kind === 'protocolHubOutput'
+        ? t('detail.protocolHubOutputDialogTitle', { index: itemPickerState.portIndex + 1 })
+      : itemPickerState.kind === 'pumpOutput'
+        ? t('detail.pumpOutputDialogTitle')
+      : itemPickerState.kind === 'reactorOutput'
+        ? itemPickerState.output === 'solid'
+          ? t('detail.reactorSolidOutputDialogTitle')
+          : t('detail.reactorLiquidOutputDialogTitle', { index: itemPickerState.output === 'liquidA' ? 1 : 2 })
+      : itemPickerState.kind === 'storageSlotPinned'
+        ? t('detail.storageSlotPinnedDialogTitle', { index: itemPickerState.slotIndex + 1 })
+      : itemPickerState.kind === 'storageSlotPreload'
+        ? t('detail.storageSlotPreloadDialogTitle', { index: itemPickerState.slotIndex + 1 })
+        : t('detail.preloadDialogTitle', { index: itemPickerState.slotIndex + 1 })
+
+  const filteredItems = ITEM_SEARCH_INDEX.filter((entry) => {
+    const { item } = entry
     if (!shouldShowSuperRecipeContent(superRecipeEnabled, isSuperRecipeItem(item))) {
       return false
     }
@@ -66,12 +128,13 @@ export function ItemPickerDialog({
     if (hideBottledLiquids && isBottledLiquidItem(item)) {
       return false
     }
+    if (!matchesItemSearch(entry, normalizedSearchQuery, compactSearchQuery)) {
+      return false
+    }
     return true
-  }).sort((a, b) => {
-    const byLabel = labelCollator.compare(getItemLabel(language, a.id), getItemLabel(language, b.id))
-    if (byLabel !== 0) return byLabel
-    return a.id.localeCompare(b.id)
   })
+    .map(({ item }) => item)
+    .sort((a, b) => ITEM_ID_COLLATOR.compare(a.id, b.id))
 
   const filteredItemById = new Map(filteredItems.map((item) => [item.id, item]))
   const filteredItemIdSet = new Set(filteredItems.map((item) => item.id))
@@ -80,6 +143,7 @@ export function ItemPickerDialog({
     .map((itemId) => filteredItemById.get(itemId))
     .filter((item): item is (typeof filteredItems)[number] => Boolean(item))
     .slice(0, RECENT_ITEMS_SINGLE_ROW_COUNT)
+  const showRecentGroup = recentItems.length > 0 && !hasSearchQuery
 
   return (
     <div className="global-dialog-backdrop" role="presentation" onClick={onClose}>
@@ -90,50 +154,42 @@ export function ItemPickerDialog({
         aria-label={t('detail.itemPickerTitle')}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="global-dialog-title">
-          {itemPickerState.kind === 'pickup'
-            ? t('detail.pickupDialogTitle')
-            : itemPickerState.kind === 'admission'
-              ? t('detail.admissionDialogTitle')
-            : itemPickerState.kind === 'admissionConfig'
-              ? t('detail.admissionDialogTitle')
-            : itemPickerState.kind === 'plannerTarget'
-              ? t('detail.itemPickerTitle')
-            : itemPickerState.kind === 'protocolHubOutput'
-              ? t('detail.protocolHubOutputDialogTitle', { index: itemPickerState.portIndex + 1 })
-            : itemPickerState.kind === 'pumpOutput'
-              ? t('detail.pumpOutputDialogTitle')
-            : itemPickerState.kind === 'reactorOutput'
-              ? itemPickerState.output === 'solid'
-                ? t('detail.reactorSolidOutputDialogTitle')
-                : t('detail.reactorLiquidOutputDialogTitle', { index: itemPickerState.output === 'liquidA' ? 1 : 2 })
-            : itemPickerState.kind === 'storageSlotPinned'
-              ? t('detail.storageSlotPinnedDialogTitle', { index: itemPickerState.slotIndex + 1 })
-            : itemPickerState.kind === 'storageSlotPreload'
-              ? t('detail.storageSlotPreloadDialogTitle', { index: itemPickerState.slotIndex + 1 })
-              : t('detail.preloadDialogTitle', { index: itemPickerState.slotIndex + 1 })}
+        <div className="pickup-item-dialog-titlebar">
+          <div className="global-dialog-title pickup-item-dialog-title">{dialogTitle}</div>
+          <input
+            className="global-dialog-input pickup-item-dialog-search"
+            type="text"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder={t('detail.itemPickerSearchPlaceholder')}
+            aria-label={t('detail.itemPickerSearchLabel')}
+            autoFocus
+            spellCheck={false}
+          />
         </div>
         <div className="pickup-item-groups">
-          <section className="pickup-item-group">
-            <div className="pickup-item-group-title">{t('detail.itemPickerRecentGroup')}</div>
-            <div className="pickup-item-list pickup-item-list--recent">
-              {recentItems.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`pickup-item-option ${pickerSelectedItemId === item.id ? 'active' : ''}`}
-                  disabled={itemPickerState.kind === 'preload' && pickerDisabledItemIds.has(item.id)}
-                  onClick={() => {
-                    onSelectItem(item.id)
-                    onClose()
-                  }}
-                >
-                  <img className="pickup-item-option-icon" src={getItemIconPath(item.id)} alt="" aria-hidden="true" draggable={false} />
-                  <span>{getItemLabel(language, item.id)}</span>
-                </button>
-              ))}
-            </div>
-          </section>
+          {showRecentGroup ? (
+            <section className="pickup-item-group">
+              <div className="pickup-item-group-title">{t('detail.itemPickerRecentGroup')}</div>
+              <div className="pickup-item-list pickup-item-list--recent">
+                {recentItems.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`pickup-item-option ${pickerSelectedItemId === item.id ? 'active' : ''}`}
+                    disabled={itemPickerState.kind === 'preload' && pickerDisabledItemIds.has(item.id)}
+                    onClick={() => {
+                      onSelectItem(item.id)
+                      onClose()
+                    }}
+                  >
+                    <img className="pickup-item-option-icon" src={getItemIconPath(item.id)} alt="" aria-hidden="true" draggable={false} />
+                    <span>{getItemLabel(language, item.id)}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           <section className="pickup-item-group">
             <div className="pickup-item-group-header">
@@ -160,6 +216,7 @@ export function ItemPickerDialog({
                   <span>{t('detail.unselected')}</span>
                 </button>
               ) : null}
+              {filteredItems.length === 0 ? <div className="pickup-item-empty">{t('detail.itemPickerNoResults')}</div> : null}
               {filteredItems.map((item) => (
                 <button
                   key={item.id}

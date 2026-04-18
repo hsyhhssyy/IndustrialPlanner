@@ -15,6 +15,7 @@ const PAN_KEYS = new Set(['w', 'a', 's', 'd'])
 const PAN_SPEED_CELLS_PER_SECOND = 14
 
 type UseBuildHotkeysDomainParams = {
+  hotkeysEnabled: boolean
   simIsRunning: boolean
   mode: string
   language: Language
@@ -70,6 +71,7 @@ function getDigitHotkeyIndex(event: KeyboardEvent) {
 }
 
 export function useBuildHotkeysDomain({
+  hotkeysEnabled,
   simIsRunning,
   mode,
   language,
@@ -105,6 +107,7 @@ export function useBuildHotkeysDomain({
   t,
 }: UseBuildHotkeysDomainParams) {
   useEffect(() => {
+    if (!hotkeysEnabled) return
     const placeGroups = buildPlaceGroups(visiblePlaceableTypes, language)
     const placeGroupByKey = new Map(placeGroups.map((entry) => [entry.key, entry]))
     const pressedPanKeys = new Set<string>()
@@ -383,6 +386,7 @@ export function useBuildHotkeysDomain({
     fallbackPlacementToastKey,
     foundationIdSet,
     foundationMovableIdSet,
+    hotkeysEnabled,
     highlightedPlaceGroup,
     currentBaseOuterRing,
     language,

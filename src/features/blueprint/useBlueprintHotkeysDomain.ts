@@ -6,6 +6,7 @@ import type { BlueprintSnapshot } from './useBlueprintDomain'
 import { APP_VERSION, createBlueprintId } from '../../migrations/versioning'
 
 type UseBlueprintHotkeysDomainParams = {
+  hotkeysEnabled: boolean
   simIsRunning: boolean
   selection: string[]
   layout: LayoutState
@@ -22,6 +23,7 @@ type UseBlueprintHotkeysDomainParams = {
 }
 
 export function useBlueprintHotkeysDomain({
+  hotkeysEnabled,
   simIsRunning,
   selection,
   layout,
@@ -37,6 +39,7 @@ export function useBlueprintHotkeysDomain({
   t,
 }: UseBlueprintHotkeysDomainParams) {
   useEffect(() => {
+    if (!hotkeysEnabled) return
     const onKeyDown = (event: KeyboardEvent) => {
       if (simIsRunning) return
       const target = event.target as HTMLElement | null
@@ -130,6 +133,7 @@ export function useBlueprintHotkeysDomain({
     activePlacementBlueprint,
     cloneDeviceConfig,
     foundationIdSet,
+    hotkeysEnabled,
     layout,
     lastClipboardBlueprint,
     selection,

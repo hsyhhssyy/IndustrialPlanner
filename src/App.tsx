@@ -497,60 +497,6 @@ function App() {
     }
   }, [setLeftPanelWidth, setRightPanelWidth])
 
-  useBlueprintHotkeysDomain({
-    simIsRunning: sim.isRunning,
-    activeBaseId,
-    activePlacementBlueprint,
-    layout,
-    selection,
-    foundationIdSet,
-    cloneDeviceConfig,
-    setClipboardBlueprint,
-    lastClipboardBlueprint,
-    setLastClipboardBlueprint,
-    setBlueprintPlacementRotation,
-    setArmedBlueprintId,
-    t,
-  })
-
-  useBuildHotkeysDomain({
-    simIsRunning: sim.isRunning,
-    mode,
-    language,
-    canUsePipePlacement: currentBase.tags.includes('武陵'),
-    placeOperation,
-    placeType,
-    visiblePlaceableTypes,
-    setPlaceRotation,
-    setPlaceOperation,
-    setPlaceType,
-    setViewOffset,
-    clampViewportOffset,
-    viewportRef,
-    zoomScale,
-    canvasWidthPx,
-    canvasHeightPx,
-    cellSize,
-    selection,
-    setSelection,
-    layout,
-    foundationIdSet,
-    foundationMovableIdSet,
-    currentBaseOuterRing: currentBase.outerRing,
-    setLayout,
-    returnToIdle,
-    resetPlacementTrace: () => {
-      resetPlacementTrace()
-    },
-    highlightedPlaceGroup,
-    setHighlightedPlaceGroup,
-    undoLayout,
-    redoLayout,
-    outOfLotToastKey: OUT_OF_LOT_TOAST_KEY,
-    fallbackPlacementToastKey: FALLBACK_PLACEMENT_TOAST_KEY,
-    t,
-  })
-
   useEffect(() => {
     if (typeof document === 'undefined') return
     document.body.dataset.uiTheme = uiTheme
@@ -558,25 +504,6 @@ function App() {
       delete document.body.dataset.uiTheme
     }
   }, [uiTheme])
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey) || event.altKey) return
-      if (event.key.toLowerCase() !== 's') return
-      const target = event.target as HTMLElement | null
-      const isTypingTarget =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        Boolean(target?.isContentEditable)
-      event.preventDefault()
-      event.stopPropagation()
-      if (sim.isRunning || isTypingTarget) return
-      eventBus.emit('left.blueprint.saveSelection', undefined)
-    }
-
-    window.addEventListener('keydown', onKeyDown, true)
-    return () => window.removeEventListener('keydown', onKeyDown, true)
-  }, [eventBus, sim.isRunning])
 
   useEffect(() => {
     const unsubscribeReturnIdle = eventBus.on('left.place.returnIdle', () => {
@@ -772,6 +699,81 @@ function App() {
     setLayout,
     isOreItemId,
   })
+
+  useBlueprintHotkeysDomain({
+    hotkeysEnabled: !itemPickerState,
+    simIsRunning: sim.isRunning,
+    activeBaseId,
+    activePlacementBlueprint,
+    layout,
+    selection,
+    foundationIdSet,
+    cloneDeviceConfig,
+    setClipboardBlueprint,
+    lastClipboardBlueprint,
+    setLastClipboardBlueprint,
+    setBlueprintPlacementRotation,
+    setArmedBlueprintId,
+    t,
+  })
+
+  useBuildHotkeysDomain({
+    hotkeysEnabled: !itemPickerState,
+    simIsRunning: sim.isRunning,
+    mode,
+    language,
+    canUsePipePlacement: currentBase.tags.includes('武陵'),
+    placeOperation,
+    placeType,
+    visiblePlaceableTypes,
+    setPlaceRotation,
+    setPlaceOperation,
+    setPlaceType,
+    setViewOffset,
+    clampViewportOffset,
+    viewportRef,
+    zoomScale,
+    canvasWidthPx,
+    canvasHeightPx,
+    cellSize,
+    selection,
+    setSelection,
+    layout,
+    foundationIdSet,
+    foundationMovableIdSet,
+    currentBaseOuterRing: currentBase.outerRing,
+    setLayout,
+    returnToIdle,
+    resetPlacementTrace: () => {
+      resetPlacementTrace()
+    },
+    highlightedPlaceGroup,
+    setHighlightedPlaceGroup,
+    undoLayout,
+    redoLayout,
+    outOfLotToastKey: OUT_OF_LOT_TOAST_KEY,
+    fallbackPlacementToastKey: FALLBACK_PLACEMENT_TOAST_KEY,
+    t,
+  })
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return
+      if (event.key.toLowerCase() !== 's') return
+      const target = event.target as HTMLElement | null
+      const isTypingTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        Boolean(target?.isContentEditable)
+      event.preventDefault()
+      event.stopPropagation()
+      if (itemPickerState || sim.isRunning || isTypingTarget) return
+      eventBus.emit('left.blueprint.saveSelection', undefined)
+    }
+
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  }, [eventBus, itemPickerState, sim.isRunning])
 
   const storageSlotConfigDevice = useMemo(() => {
     if (!storageSlotConfigDeviceId) return null

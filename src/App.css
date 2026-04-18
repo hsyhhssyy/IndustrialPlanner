@@ -2633,6 +2633,31 @@ button:disabled {
   gap: 10px;
 }
 
+.pickup-item-dialog-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.pickup-item-dialog-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pickup-item-dialog-search {
+  flex: 0 1 auto;
+  width: clamp(148px, 32vw, 240px);
+  min-width: 0;
+  margin: 0;
+  padding: 5px 10px;
+  font-size: 13px;
+}
+
 .pickup-item-group-header {
   display: flex;
   align-items: flex-start;
@@ -2670,6 +2695,15 @@ button:disabled {
 
 .pickup-item-list--all {
   margin-top: 6px;
+}
+
+.pickup-item-empty {
+  grid-column: 1 / -1;
+  padding: 16px 12px;
+  border: 1px dashed #35516f;
+  border-radius: 8px;
+  color: #9fb3c9;
+  text-align: center;
 }
 
 .pickup-item-option {
