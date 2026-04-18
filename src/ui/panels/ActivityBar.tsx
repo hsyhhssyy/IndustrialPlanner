@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppContext, type WorkbenchView } from '../../app/AppContext'
-import { getModeLabel } from '../../i18n'
+import { createTranslator, getModeLabel } from '../../i18n'
 
 type ActivityBarProps = {
   simIsRunning: boolean
@@ -8,6 +8,9 @@ type ActivityBarProps = {
 
 type ActivityMode = 'place' | 'delete' | 'blueprint'
 const FEEDBACK_ISSUE_URL = 'https://github.com/hsyhhssyy/IndustrialPlanner/issues/new?template=bilingual-feedback.md'
+const FEEDBACK_BILIBILI_URL = 'https://www.bilibili.com/opus/1192571620530585617'
+
+type FeedbackChannel = 'github' | 'bilibili'
 
 function WorkbenchIcon({ kind }: { kind: 'place' | 'delete' | 'blueprint' | 'history' | 'tool' | 'feedback' | 'help' | 'settings' }) {
   if (kind === 'place') {
@@ -48,7 +51,8 @@ function WorkbenchIcon({ kind }: { kind: 'place' | 'delete' | 'blueprint' | 'his
   if (kind === 'feedback') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M4 17.2V20H6.8L16.1 10.7L13.3 7.9L4 17.2ZM18.2 8.6C18.5 8.3 18.5 7.8 18.2 7.5L16.5 5.8C16.2 5.5 15.7 5.5 15.4 5.8L14.1 7.1L16.9 9.9L18.2 8.6ZM19 20H11V18H19V20Z" />
+        <path d="M8.15 4.4L5.95 2.2L4.55 3.6L6.5 5.55H6.2C4.43 5.55 3 6.98 3 8.75V15.8C3 17.57 4.43 19 6.2 19H17.8C19.57 19 21 17.57 21 15.8V8.75C21 6.98 19.57 5.55 17.8 5.55H17.5L19.45 3.6L18.05 2.2L15.85 4.4H8.15ZM6.2 7.55H17.8C18.47 7.55 19 8.08 19 8.75V15.8C19 16.47 18.47 17 17.8 17H6.2C5.53 17 5 16.47 5 15.8V8.75C5 8.08 5.53 7.55 6.2 7.55Z" />
+        <path d="M8 10H9.8V13H8V10ZM14.2 10H16V13H14.2V10ZM8.1 14.55H15.9V16.2H8.1V14.55Z" />
       </svg>
     )
   }
@@ -77,11 +81,28 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
     editor: { state: { mode } },
     actions: { appendDebugLog, openTool, openHelp, openSettings, setLeftPanelCollapsed, setActiveWorkbenchView },
   } = useAppContext()
+  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false)
+  const t = createTranslator(language)
 
   useEffect(() => {
     if (!simIsRunning || activeWorkbenchView !== 'history') return
     setActiveWorkbenchView(mode)
   }, [activeWorkbenchView, mode, setActiveWorkbenchView, simIsRunning])
+
+  useEffect(() => {
+    if (!isFeedbackDialogOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setIsFeedbackDialogOpen(false)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isFeedbackDialogOpen])
 
   const activateView = (nextView: WorkbenchView) => {
     if (simIsRunning) return
@@ -129,9 +150,16 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
   }
 
   const openFeedback = () => {
-    appendDebugLog('activity-bar', 'Feedback button tapped: opening GitHub issue page')
+    appendDebugLog('activity-bar', 'Feedback button tapped: opening feedback channel dialog')
+    setIsFeedbackDialogOpen(true)
+  }
+
+  const openFeedbackChannel = (channel: FeedbackChannel) => {
     if (typeof window === 'undefined') return
-    window.open(FEEDBACK_ISSUE_URL, '_blank', 'noopener,noreferrer')
+    const url = channel === 'github' ? FEEDBACK_ISSUE_URL : FEEDBACK_BILIBILI_URL
+    appendDebugLog('activity-bar', `Feedback channel selected: ${channel}`)
+    setIsFeedbackDialogOpen(false)
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -167,10 +195,11 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
       <div className="activity-bar-group activity-bar-group-bottom">
         <button
           type="button"
-          className="activity-bar-item"
+          className={`activity-bar-item ${isFeedbackDialogOpen ? 'active' : ''}`.trim()}
           onClick={openFeedback}
           title={getActivityLabel('feedback')}
           aria-label={getActivityLabel('feedback')}
+          aria-pressed={isFeedbackDialogOpen}
         >
           <span className="activity-bar-item-icon"><WorkbenchIcon kind="feedback" /></span>
           <span className="activity-bar-item-label">{getActivityLabel('feedback')}</span>
@@ -212,6 +241,41 @@ export function ActivityBar({ simIsRunning }: ActivityBarProps) {
           <span className="activity-bar-item-label">{getActivityLabel('settings')}</span>
         </button>
       </div>
+
+      {isFeedbackDialogOpen && (
+        <div className="global-dialog-backdrop" role="presentation" onClick={() => setIsFeedbackDialogOpen(false)}>
+          <div className="global-dialog feedback-dialog" role="dialog" aria-modal="true" aria-label={t('feedbackDialog.title')} onClick={(event) => event.stopPropagation()}>
+            <div className="wiki-dialog-header">
+              <div className="global-dialog-title">{t('feedbackDialog.title')}</div>
+              <button className="global-dialog-btn" onClick={() => setIsFeedbackDialogOpen(false)}>
+                {t('feedbackDialog.close')}
+              </button>
+            </div>
+
+            <div className="feedback-dialog-body">
+              <div className="feedback-dialog-intro">{t('feedbackDialog.intro')}</div>
+
+              <section className="feedback-channel-card" aria-labelledby="feedback-channel-github-title">
+                <div className="feedback-channel-card-title" id="feedback-channel-github-title">{t('feedbackDialog.github.title')}</div>
+                <div className="feedback-channel-card-description">{t('feedbackDialog.github.description')}</div>
+                <div className="feedback-channel-card-note">{t('feedbackDialog.github.note')}</div>
+                <button className="global-dialog-btn primary feedback-channel-card-action" onClick={() => openFeedbackChannel('github')}>
+                  {t('feedbackDialog.github.action')}
+                </button>
+              </section>
+
+              <section className="feedback-channel-card" aria-labelledby="feedback-channel-bilibili-title">
+                <div className="feedback-channel-card-title" id="feedback-channel-bilibili-title">{t('feedbackDialog.bilibili.title')}</div>
+                <div className="feedback-channel-card-description">{t('feedbackDialog.bilibili.description')}</div>
+                <div className="feedback-channel-card-note">{t('feedbackDialog.bilibili.note')}</div>
+                <button className="global-dialog-btn primary feedback-channel-card-action" onClick={() => openFeedbackChannel('bilibili')}>
+                  {t('feedbackDialog.bilibili.action')}
+                </button>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   )
 }

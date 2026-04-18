@@ -4808,6 +4808,62 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
   overflow: hidden;
 }
 
+.feedback-dialog {
+  width: 720px;
+  max-width: min(92vw, 720px);
+  max-height: min(88vh, 720px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.feedback-dialog-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.feedback-dialog-intro {
+  grid-column: 1 / -1;
+  color: var(--text-secondary);
+}
+
+.feedback-channel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--panel-bg);
+}
+
+.feedback-channel-card-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.feedback-channel-card-description {
+  color: var(--text-primary);
+}
+
+.feedback-channel-card-note {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.feedback-channel-card-action {
+  margin-top: auto;
+  align-self: flex-start;
+}
+
+@media (max-width: 760px) {
+  .feedback-dialog-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .settings-dialog-body {
   margin-top: 10px;
   flex: 1 1 auto;
