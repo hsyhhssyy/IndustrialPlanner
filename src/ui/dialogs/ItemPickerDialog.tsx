@@ -156,6 +156,16 @@ export function ItemPickerDialog({
     .filter((item): item is (typeof filteredItems)[number] => Boolean(item))
     .slice(0, RECENT_ITEMS_SINGLE_ROW_COUNT)
   const showRecentGroup = recentItems.length > 0 && !hasSearchQuery
+  const emptyStateActiveFilters = [
+    onlyShowNewItems ? t('detail.itemPickerOnlyShowNewItems') : null,
+    hideBottledLiquids ? t('detail.itemPickerHideBottledLiquids') : null,
+  ].filter((label): label is string => Boolean(label))
+  const emptyStateFilterHint =
+    filteredItems.length === 0 && emptyStateActiveFilters.length > 0
+      ? t('detail.itemPickerActiveFiltersHint', {
+          filters: emptyStateActiveFilters.join(language === 'zh-CN' ? '、' : ', '),
+        })
+      : null
 
   return (
     <div className="global-dialog-backdrop" role="presentation" onClick={onClose}>
@@ -237,7 +247,12 @@ export function ItemPickerDialog({
                   <span>{t('detail.unselected')}</span>
                 </button>
               ) : null}
-              {filteredItems.length === 0 ? <div className="pickup-item-empty">{t('detail.itemPickerNoResults')}</div> : null}
+              {filteredItems.length === 0 ? (
+                <div className="pickup-item-empty">
+                  <span>{t('detail.itemPickerNoResults')}</span>
+                  {emptyStateFilterHint ? <span className="pickup-item-empty-hint">{emptyStateFilterHint}</span> : null}
+                </div>
+              ) : null}
               {filteredItems.map((item) => (
                 <button
                   key={item.id}

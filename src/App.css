@@ -2707,11 +2707,20 @@ button:disabled {
 
 .pickup-item-empty {
   grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   padding: 16px 12px;
   border: 1px dashed #35516f;
   border-radius: 8px;
   color: #9fb3c9;
   text-align: center;
+}
+
+.pickup-item-empty-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .pickup-item-option {
