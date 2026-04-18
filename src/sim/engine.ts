@@ -6,6 +6,10 @@ import {
   normalizeExternalLiquidSourceItemId,
 } from '../domain/shared/itemPickerRules'
 import {
+  getFixedProcessorOutputSlotForOutputIndex,
+  getFixedProcessorOutputSlotForPort,
+} from '../domain/shared/deviceConfig'
+import {
   getDirectionalPortIds,
   getPortPriorityGroup,
   normalizePriorityCursorArray,
@@ -962,6 +966,11 @@ function canOutputItemToPort(
   fromPortId: string,
   itemId: ItemId,
 ) {
+  if ('outputBuffer' in runtime) {
+    const fixedSlotIndex = getFixedProcessorOutputSlotForPort(device.typeId, fromPortId)
+    if (fixedSlotIndex !== null && runtime.outputSlotItems[fixedSlotIndex] !== itemId) return false
+  }
+
   if ('inventory' in runtime && isStorageWithBufferGroups(runtime) && !SLOTLESS_STORAGE_OUTPUT_TYPE_IDS.has(device.typeId)) {
     const slotIndices = orderedStorageSlotIndicesForOutput(runtime, fromPortId)
     return slotIndices.some(
@@ -977,6 +986,18 @@ function canAcceptProcessorOutputBatch(
   outputs: Array<{ itemId: ItemId; amount: number }>,
 ) {
   if (!('outputBuffer' in runtime)) return false
+  if (deviceTypeId === 'item_port_liquid_purifier_1') {
+    const shadowRuntime = cloneRuntime(runtime)
+    for (let outputIndex = 0; outputIndex < outputs.length; outputIndex += 1) {
+      const fixedSlotIndex = getFixedProcessorOutputSlotForOutputIndex(deviceTypeId, outputIndex)
+      if (fixedSlotIndex === null) return false
+      if (!tryAddProcessorOutputAtSlot(shadowRuntime, deviceTypeId, fixedSlotIndex, outputs[outputIndex].itemId, outputs[outputIndex].amount)) {
+        return false
+      }
+    }
+    return true
+  }
+
   const shadowBuffer = { ...runtime.outputBuffer }
   const shadowSlotItems = [...runtime.outputSlotItems]
   for (const output of outputs) {
@@ -998,6 +1019,18 @@ function commitProcessorOutputBatch(
   outputs: Array<{ itemId: ItemId; amount: number }>,
 ) {
   if (!('outputBuffer' in runtime)) return 0
+  if (deviceTypeId === 'item_port_liquid_purifier_1') {
+    let producedCount = 0
+    for (let outputIndex = 0; outputIndex < outputs.length; outputIndex += 1) {
+      const fixedSlotIndex = getFixedProcessorOutputSlotForOutputIndex(deviceTypeId, outputIndex)
+      if (fixedSlotIndex === null) return producedCount
+      if (tryAddProcessorOutputAtSlot(runtime, deviceTypeId, fixedSlotIndex, outputs[outputIndex].itemId, outputs[outputIndex].amount)) {
+        producedCount += outputs[outputIndex].amount
+      }
+    }
+    return producedCount
+  }
+
   let producedCount = 0
   for (const output of outputs) {
     if (tryAddProcessorBufferAmount(runtime, deviceTypeId, 'output', output.itemId, output.amount)) {
@@ -1590,6 +1623,23 @@ function outputPortAllowsItem(device: DeviceInstance, fromPortId: string, itemId
   return true
 }
 
+function peekProcessorOutputItemForPort(device: DeviceInstance, runtime: ProcessorRuntime, fromPortId: string) {
+  const fixedSlotIndex = getFixedProcessorOutputSlotForPort(device.typeId, fromPortId)
+  if (fixedSlotIndex !== null) {
+    const slotItemId = runtime.outputSlotItems[fixedSlotIndex]
+    if (!slotItemId) return null
+    if ((runtime.outputBuffer[slotItemId] ?? 0) <= 0) return null
+    return outputPortAllowsItem(device, fromPortId, slotItemId) ? slotItemId : null
+  }
+
+  for (const itemId of ITEM_IDS) {
+    if ((runtime.outputBuffer[itemId] ?? 0) <= 0) continue
+    if (outputPortAllowsItem(device, fromPortId, itemId)) return itemId
+  }
+
+  return null
+}
+
 function peekOutputItem(
   device: DeviceInstance,
   runtime: DeviceRuntime,
@@ -1608,11 +1658,12 @@ function peekOutputItem(
 
   if ('outputBuffer' in runtime) {
     if (fromPortId) {
-      for (const itemId of ITEM_IDS) {
-        if ((runtime.outputBuffer[itemId] ?? 0) <= 0) continue
-        if (outputPortAllowsItem(device, fromPortId, itemId)) return itemId
-      }
-      return null
+      return peekProcessorOutputItemForPort(device, runtime as ProcessorRuntime, fromPortId)
+    }
+
+    for (const itemId of runtime.outputSlotItems) {
+      if (!itemId) continue
+      if ((runtime.outputBuffer[itemId] ?? 0) > 0) return itemId
     }
 
     for (const itemId of ITEM_IDS) {
@@ -1697,6 +1748,16 @@ function consumeSourceByPlan(
     if (isReactorPoolType(fromDevice.typeId) && 'inputBuffer' in fromRuntime && 'outputBuffer' in fromRuntime) {
       reactorConsumeItemFromSharedSlotPool(fromRuntime as ProcessorRuntime, plan.itemId, 1)
     } else if ('outputBuffer' in fromRuntime) {
+      if (typeof plan.fromOutputSlotIndex === 'number') {
+        const slotItemId = fromRuntime.outputSlotItems[plan.fromOutputSlotIndex]
+        if (slotItemId === plan.itemId) {
+          fromRuntime.outputBuffer[plan.itemId] = Math.max(0, (fromRuntime.outputBuffer[plan.itemId] ?? 0) - 1)
+          if ((fromRuntime.outputBuffer[plan.itemId] ?? 0) <= 0) {
+            fromRuntime.outputSlotItems[plan.fromOutputSlotIndex] = null
+          }
+          return
+        }
+      }
       fromRuntime.outputBuffer[plan.itemId] = Math.max(0, (fromRuntime.outputBuffer[plan.itemId] ?? 0) - 1)
       clearSlotBindingIfEmpty(fromRuntime.outputBuffer, fromRuntime.outputSlotItems, plan.itemId)
     } else if ('inventory' in fromRuntime) {
@@ -2012,6 +2073,32 @@ function tryAddProcessorInputAtSlot(
 
   runtime.inputSlotItems[slotIndex] = itemId
   runtime.inputBuffer[itemId] = nextAmount
+  return true
+}
+
+function tryAddProcessorOutputAtSlot(
+  runtime: DeviceRuntime,
+  deviceTypeId: DeviceInstance['typeId'],
+  slotIndex: number,
+  itemId: ItemId,
+  amount: number,
+) {
+  if (!('outputBuffer' in runtime)) return false
+  const spec = processorBufferSpec(deviceTypeId, 'output')
+  if (slotIndex < 0 || slotIndex >= spec.slots) return false
+  if (amount <= 0) return true
+
+  const existingSlotIndex = findSlotIndexByItem(runtime.outputSlotItems, itemId)
+  if (existingSlotIndex >= 0 && existingSlotIndex !== slotIndex) return false
+  const boundItem = runtime.outputSlotItems[slotIndex]
+  if (boundItem && boundItem !== itemId) return false
+
+  const slotCapacity = spec.slotCapacities[slotIndex] ?? DEFAULT_PROCESSOR_BUFFER_CAPACITY
+  const nextAmount = (runtime.outputBuffer[itemId] ?? 0) + amount
+  if (nextAmount > slotCapacity) return false
+
+  runtime.outputSlotItems[slotIndex] = itemId
+  runtime.outputBuffer[itemId] = nextAmount
   return true
 }
 

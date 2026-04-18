@@ -2,6 +2,8 @@ import { DEVICE_TYPE_BY_ID } from '../registry'
 import type { DeviceInstance, DeviceTypeId, ItemId, PreloadInputConfigEntry } from '../types'
 import { clamp } from './math'
 
+const LIQUID_PURIFIER_TYPE_ID: DeviceTypeId = 'item_port_liquid_purifier_1'
+
 export type ProcessorPreloadSlot = { itemId: ItemId | null; amount: number }
 
 export function processorBufferSpec(typeId: DeviceTypeId) {
@@ -62,4 +64,17 @@ export function serializeProcessorPreloadSlots(slots: ProcessorPreloadSlot[]): P
         ]
       : [],
   )
+}
+
+export function getFixedProcessorOutputSlotForPort(typeId: DeviceTypeId, portId: string) {
+  if (typeId !== LIQUID_PURIFIER_TYPE_ID) return null
+  if (portId === 'out_n_1') return 0
+  if (portId === 'out_n_3') return 1
+  return null
+}
+
+export function getFixedProcessorOutputSlotForOutputIndex(typeId: DeviceTypeId, outputIndex: number) {
+  if (typeId !== LIQUID_PURIFIER_TYPE_ID) return null
+  if (outputIndex < 0 || outputIndex > 1) return null
+  return outputIndex
 }

@@ -1,4 +1,5 @@
 import { getRotatedPorts, OPPOSITE_EDGE } from '../../domain/geometry'
+import { getFixedProcessorOutputSlotForPort } from '../../domain/shared/deviceConfig'
 import { getDirectionalPortIds, getPortPriorityGroup } from '../../domain/shared/portPriority'
 import { isReactorPoolType, resolveReactorOutputNodes } from '../reactorPool'
 import type {
@@ -803,6 +804,10 @@ function buildEdges(context: PlanContext, nodes: InternalNode[]) {
           const sourceProcessorOutputs = sourceProcessorOutputNodes.filter((node) => {
             if (!node.reactorOutputPortIds) return true
             return node.reactorOutputPortIds.includes(link.from.portId)
+          }).filter((node) => {
+            const fixedSlotIndex = getFixedProcessorOutputSlotForPort(sourceDevice.typeId, link.from.portId)
+            if (fixedSlotIndex === null) return true
+            return node.slotIndex === fixedSlotIndex
           })
           fromNodes.push(...sourceProcessorOutputs)
         } else {
