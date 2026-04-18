@@ -2978,12 +2978,14 @@ export function tickSimulation(layout: LayoutState, sim: SimState): SimState {
       }
       if (canSubmitToWarehouse && runtime.submitAccumulatorTicks >= storageSubmitTicks) {
         runtime.submitAccumulatorTicks = 0
+        let submittedAny = false
         for (const itemId of ITEM_IDS) {
           const amount = runtime.inventory[itemId] ?? 0
           if (amount <= 0) continue
-          runtime.inventory[itemId] = 0
+          submittedAny = true
           if (Number.isFinite(warehouse[itemId])) warehouse[itemId] += amount
         }
+        if (submittedAny) clearStorageInventory(runtime)
       }
     }
 

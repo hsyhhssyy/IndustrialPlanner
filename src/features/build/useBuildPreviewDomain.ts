@@ -50,7 +50,8 @@ function isLiquidPort(port: ReturnType<typeof getRotatedPorts>[number]) {
   )
 }
 
-const LIQUID_CHEVRON_EXTRA_LENGTH_RATIO = 22 / 100
+const LIQUID_CHEVRON_TOTAL_LENGTH_SCALE = 2.7
+const LIQUID_OUTPUT_CHEVRON_EXTRA_DEVICE_OFFSET_SCALE = 2
 
 function offsetBackwardByAngle(x: number, y: number, angle: number, distance: number) {
   const radians = (angle * Math.PI) / 180
@@ -139,7 +140,7 @@ export function useBuildPreviewDomain({
     const chevronThickness = baseCellSize * (2 / 5)
     const chevronGap = baseCellSize * (1 / 12)
     const outsideOffset = chevronLength / 2 + chevronGap
-    const liquidChevronExtraLength = chevronLength * LIQUID_CHEVRON_EXTRA_LENGTH_RATIO
+    const liquidOutputExtraOffset = chevronGap * LIQUID_OUTPUT_CHEVRON_EXTRA_DEVICE_OFFSET_SCALE
 
     type ChevronCandidate = {
       device: DeviceInstance
@@ -192,15 +193,16 @@ export function useBuildPreviewDomain({
       const centerY = (port.y + 0.5) * baseCellSize
       let x = centerX
       let y = centerY
-      if (port.edge === 'N') y = port.y * baseCellSize - outsideOffset
-      if (port.edge === 'S') y = (port.y + 1) * baseCellSize + outsideOffset
-      if (port.edge === 'W') x = port.x * baseCellSize - outsideOffset
-      if (port.edge === 'E') x = (port.x + 1) * baseCellSize + outsideOffset
+      const deviceOffset = isLiquidPort(port) && port.direction === 'Output' ? outsideOffset + liquidOutputExtraOffset : outsideOffset
+      if (port.edge === 'N') y = port.y * baseCellSize - deviceOffset
+      if (port.edge === 'S') y = (port.y + 1) * baseCellSize + deviceOffset
+      if (port.edge === 'W') x = port.x * baseCellSize - deviceOffset
+      if (port.edge === 'E') x = (port.x + 1) * baseCellSize + deviceOffset
 
       const angle = port.direction === 'Input' ? edgeAngle[OPPOSITE_EDGE[port.edge]] : edgeAngle[port.edge]
       const isLiquid = isLiquidPort(port)
-      const width = isLiquid ? chevronLength + liquidChevronExtraLength : chevronLength
-      const center = isLiquid ? offsetBackwardByAngle(x, y, angle, liquidChevronExtraLength / 2) : { x, y }
+      const width = isLiquid ? chevronLength * LIQUID_CHEVRON_TOTAL_LENGTH_SCALE : chevronLength
+      const center = isLiquid ? offsetBackwardByAngle(x, y, angle, (width - chevronLength) / 2) : { x, y }
 
       return {
         key: portKey,
@@ -254,20 +256,21 @@ export function useBuildPreviewDomain({
     const chevronThickness = baseCellSize * (2 / 5)
     const chevronGap = baseCellSize * (1 / 12)
     const outsideOffset = chevronLength / 2 + chevronGap
-    const liquidChevronExtraLength = chevronLength * LIQUID_CHEVRON_EXTRA_LENGTH_RATIO
+    const liquidOutputExtraOffset = chevronGap * LIQUID_OUTPUT_CHEVRON_EXTRA_DEVICE_OFFSET_SCALE
     const chevrons = getRotatedPorts(instance).map((port) => {
       const localCenterX = (port.x - origin.x + 0.5) * baseCellSize
       const localCenterY = (port.y - origin.y + 0.5) * baseCellSize
       let x = localCenterX
       let y = localCenterY
-      if (port.edge === 'N') y = (port.y - origin.y) * baseCellSize - outsideOffset
-      if (port.edge === 'S') y = (port.y - origin.y + 1) * baseCellSize + outsideOffset
-      if (port.edge === 'W') x = (port.x - origin.x) * baseCellSize - outsideOffset
-      if (port.edge === 'E') x = (port.x - origin.x + 1) * baseCellSize + outsideOffset
+      const deviceOffset = isLiquidPort(port) && port.direction === 'Output' ? outsideOffset + liquidOutputExtraOffset : outsideOffset
+      if (port.edge === 'N') y = (port.y - origin.y) * baseCellSize - deviceOffset
+      if (port.edge === 'S') y = (port.y - origin.y + 1) * baseCellSize + deviceOffset
+      if (port.edge === 'W') x = (port.x - origin.x) * baseCellSize - deviceOffset
+      if (port.edge === 'E') x = (port.x - origin.x + 1) * baseCellSize + deviceOffset
       const angle = port.direction === 'Input' ? edgeAngle[OPPOSITE_EDGE[port.edge]] : edgeAngle[port.edge]
       const isLiquid = isLiquidPort(port)
-      const width = isLiquid ? chevronLength + liquidChevronExtraLength : chevronLength
-      const center = isLiquid ? offsetBackwardByAngle(x, y, angle, liquidChevronExtraLength / 2) : { x, y }
+      const width = isLiquid ? chevronLength * LIQUID_CHEVRON_TOTAL_LENGTH_SCALE : chevronLength
+      const center = isLiquid ? offsetBackwardByAngle(x, y, angle, (width - chevronLength) / 2) : { x, y }
 
       return {
         key: `preview-${port.instanceId}-${port.portId}-${port.x}-${port.y}-${port.edge}-${port.direction}`,

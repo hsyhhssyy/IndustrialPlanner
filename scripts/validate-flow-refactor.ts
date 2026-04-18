@@ -377,6 +377,34 @@ function runStorageScenario(): ScenarioResult {
   }
 }
 
+function runStorageWarehouseSubmitScenario(): ScenarioResult {
+  resetInstanceCounter()
+  const source = buildSourceStorage(ALT_ITEM_ID, 5)
+  const belt = placeTargetAfter(source, 'out_n_1', 'belt_straight_1x1', 'in_w')
+  const receiver = placeTargetAfter(belt, 'out_e', 'item_port_storager_1', 'in_s_1', { submitToWarehouse: true })
+  const pole = createDevice('item_port_power_diffuser_1', 0, { x: receiver.origin.x + 6, y: receiver.origin.y })
+  const layout = buildLayout([source, belt, receiver, pole])
+  const links = ensureConnected(layout, 2, 'storage-warehouse-submit')
+  const sim = simulate(layout, 601)
+  ensureNoHardBlock(sim, layout.devices.map((device) => device.instanceId), 'storage-warehouse-submit')
+  const warehouseAmount = sim.warehouse[ALT_ITEM_ID] ?? 0
+  const receiverRuntime = sim.runtimeById[receiver.instanceId]
+  const receiverAmount = receiverRuntime && 'inventory' in receiverRuntime ? (receiverRuntime.inventory[ALT_ITEM_ID] ?? 0) : -1
+  const sourceAmount = storageAmount(sim, source.instanceId, ALT_ITEM_ID)
+  assert(warehouseAmount === 5, `storage-warehouse-submit 仓库计数异常，expected=5 actual=${warehouseAmount}`)
+  assert(receiverAmount === 0, `storage-warehouse-submit 提交后协议存储箱未清空，actual=${receiverAmount}`)
+  assert(sourceAmount === 0, `storage-warehouse-submit 源存储箱未正常出货，actual=${sourceAmount}`)
+  return {
+    name: 'storage-warehouse-submit',
+    summary: {
+      links,
+      warehouseAmount,
+      receiverAmount,
+      sourceAmount,
+    },
+  }
+}
+
 function buildAdmissionChain(itemId: ItemId) {
   resetInstanceCounter()
   const source = buildSourceStorage(itemId, 6)
@@ -701,6 +729,7 @@ function main() {
     ['junction', runJunctionScenario],
     ['bridge', runBridgeScenario],
     ['storage', runStorageScenario],
+    ['storage-warehouse-submit', runStorageWarehouseSubmitScenario],
     ['admission', runAdmissionScenario],
     ['belt-chain', runBeltChainScenario],
     ['pipe-round-robin', runPipeRoundRobinScenario],

@@ -1,0 +1,49 @@
+{
+  "name": "power-all-stop",
+  "baseId": "wuling_tianwangping_aid",
+  "devices": [
+    {
+      "blueprintInstanceId": "heat-pool",
+      "typeId": "item_port_power_sta_1",
+      "rotation": 0,
+      "origin": {
+        "x": 24,
+        "y": 20
+      },
+      "config": {
+        "preloadInputItemId": "item_originium_ore",
+        "preloadInputAmount": 1
+      }
+    },
+    {
+      "blueprintInstanceId": "pole",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 20,
+        "y": 16
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "top-machine",
+      "typeId": "item_port_thickener_1",
+      "rotation": 0,
+      "origin": {
+        "x": 16,
+        "y": 12
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "bottom-machine",
+      "typeId": "item_port_thickener_1",
+      "rotation": 0,
+      "origin": {
+        "x": 16,
+        "y": 18
+      },
+      "config": {}
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 /// <reference types="node" />
 
 import { selectBlueprintCases } from './blueprints/index.ts'
-import { runBlueprintCase } from './blueprints/harness.ts'
+import { runRegisteredBlueprintCase } from './blueprints/harness.ts'
 
 function formatWallElapsed(ms: number) {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000))
@@ -12,11 +12,14 @@ function formatWallElapsed(ms: number) {
 }
 
 function main() {
-  const filterArg = process.argv[2] ?? 'all'
+  const filterArg = process.argv[2]?.trim()
+  if (!filterArg) {
+    throw new Error('必须指定蓝图名称，例如: npm run validate:flow -- dual-oven-xiranite')
+  }
   const selectedCases = selectBlueprintCases(filterArg)
   const results = selectedCases.map((testCase) => [
     testCase.id,
-    runBlueprintCase(testCase, {
+    runRegisteredBlueprintCase(testCase, {
       onProgress: (progress) => {
         const firstDropSeconds = progress.firstBatteryDropTick === null
           ? '-'

@@ -1,0 +1,710 @@
+{
+  "name": "liquid-purifier-output-mapping",
+  "baseId": "wuling_tianwangping_aid",
+  "devices": [
+    {
+      "blueprintInstanceId": "lowpoly-0-purifier",
+      "typeId": "item_port_liquid_purifier_1",
+      "rotation": 0,
+      "origin": {
+        "x": 8,
+        "y": 8
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_liquid_xiranite_lowpoly",
+            "amount": 4
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "lowpoly-0-pole",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 14
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-0-left-turn",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 9,
+        "y": 7
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-0-right-turn",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 11,
+        "y": 7
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-0-left-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 8,
+        "y": 7
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-0-right-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 12,
+        "y": 7
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-0-left-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 180,
+      "origin": {
+        "x": 5,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-0-right-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 0,
+      "origin": {
+        "x": 13,
+        "y": 6
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-90-purifier",
+      "typeId": "item_port_liquid_purifier_1",
+      "rotation": 90,
+      "origin": {
+        "x": 40,
+        "y": 8
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_liquid_xiranite_lowpoly",
+            "amount": 4
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "lowpoly-90-pole",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 41,
+        "y": 14
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-90-left-turn",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 45,
+        "y": 9
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-90-right-turn",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 45,
+        "y": 11
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-90-left-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 45,
+        "y": 8
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-90-right-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 45,
+        "y": 12
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-90-left-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 270,
+      "origin": {
+        "x": 44,
+        "y": 5
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-90-right-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 44,
+        "y": 13
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-180-purifier",
+      "typeId": "item_port_liquid_purifier_1",
+      "rotation": 180,
+      "origin": {
+        "x": 72,
+        "y": 8
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_liquid_xiranite_lowpoly",
+            "amount": 4
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "lowpoly-180-pole",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 73,
+        "y": 14
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-180-left-turn",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 75,
+        "y": 13
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-180-right-turn",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 73,
+        "y": 13
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-180-left-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 76,
+        "y": 13
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-180-right-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 72,
+        "y": 13
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-180-left-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 0,
+      "origin": {
+        "x": 77,
+        "y": 12
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-180-right-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 180,
+      "origin": {
+        "x": 69,
+        "y": 12
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-270-purifier",
+      "typeId": "item_port_liquid_purifier_1",
+      "rotation": 270,
+      "origin": {
+        "x": 8,
+        "y": 40
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_liquid_xiranite_lowpoly",
+            "amount": 4
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "lowpoly-270-pole",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 46
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-270-left-turn",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 7,
+        "y": 43
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-270-right-turn",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 7,
+        "y": 41
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-270-left-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 7,
+        "y": 44
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-270-right-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 7,
+        "y": 40
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-270-left-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 6,
+        "y": 45
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "lowpoly-270-right-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 270,
+      "origin": {
+        "x": 6,
+        "y": 37
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-0-purifier",
+      "typeId": "item_port_liquid_purifier_1",
+      "rotation": 0,
+      "origin": {
+        "x": 40,
+        "y": 40
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_liquid_copper",
+            "amount": 4
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "copper-0-pole",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 41,
+        "y": 46
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-0-left-turn",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 41,
+        "y": 39
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-0-right-turn",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 43,
+        "y": 39
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-0-left-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 40,
+        "y": 39
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-0-right-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 44,
+        "y": 39
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-0-left-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 180,
+      "origin": {
+        "x": 37,
+        "y": 38
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-0-right-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 0,
+      "origin": {
+        "x": 45,
+        "y": 38
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-90-purifier",
+      "typeId": "item_port_liquid_purifier_1",
+      "rotation": 90,
+      "origin": {
+        "x": 72,
+        "y": 40
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_liquid_copper",
+            "amount": 4
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "copper-90-pole",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 73,
+        "y": 46
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-90-left-turn",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 77,
+        "y": 41
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-90-right-turn",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 77,
+        "y": 43
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-90-left-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 77,
+        "y": 40
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-90-right-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 77,
+        "y": 44
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-90-left-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 270,
+      "origin": {
+        "x": 76,
+        "y": 37
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-90-right-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 76,
+        "y": 45
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-180-purifier",
+      "typeId": "item_port_liquid_purifier_1",
+      "rotation": 180,
+      "origin": {
+        "x": 8,
+        "y": 72
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_liquid_copper",
+            "amount": 4
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "copper-180-pole",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 78
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-180-left-turn",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 11,
+        "y": 77
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-180-right-turn",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 77
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-180-left-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 12,
+        "y": 77
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-180-right-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 8,
+        "y": 77
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-180-left-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 0,
+      "origin": {
+        "x": 13,
+        "y": 76
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-180-right-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 180,
+      "origin": {
+        "x": 5,
+        "y": 76
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-270-purifier",
+      "typeId": "item_port_liquid_purifier_1",
+      "rotation": 270,
+      "origin": {
+        "x": 40,
+        "y": 72
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_liquid_copper",
+            "amount": 4
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "copper-270-pole",
+      "typeId": "item_port_power_diffuser_1",
+      "rotation": 0,
+      "origin": {
+        "x": 41,
+        "y": 78
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-270-left-turn",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 39,
+        "y": 75
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-270-right-turn",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 39,
+        "y": 73
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-270-left-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 39,
+        "y": 76
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-270-right-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 39,
+        "y": 72
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-270-left-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 38,
+        "y": 77
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "copper-270-right-sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 270,
+      "origin": {
+        "x": 38,
+        "y": 69
+      },
+      "config": {}
+    }
+  ]
+}

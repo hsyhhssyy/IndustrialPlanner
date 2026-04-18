@@ -1,0 +1,92 @@
+{
+  "name": "pipe-round-robin",
+  "baseId": "wuling_tianwangping_aid",
+  "devices": [
+    {
+      "blueprintInstanceId": "north-source",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 19,
+        "y": 16
+      },
+      "config": {
+        "storagePreloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_liquid_water",
+            "amount": 20
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "north-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 20,
+        "y": 19
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "east-source",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 180,
+      "origin": {
+        "x": 22,
+        "y": 19
+      },
+      "config": {
+        "storagePreloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_liquid_water",
+            "amount": 20
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "east-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 21,
+        "y": 20
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "converger",
+      "typeId": "item_pipe_converger",
+      "rotation": 0,
+      "origin": {
+        "x": 20,
+        "y": 20
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "out-pipe",
+      "typeId": "pipe_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 19,
+        "y": 20
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "sink",
+      "typeId": "item_port_liquid_storager_1",
+      "rotation": 180,
+      "origin": {
+        "x": 16,
+        "y": 19
+      },
+      "config": {}
+    }
+  ]
+}

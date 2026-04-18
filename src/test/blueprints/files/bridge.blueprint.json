@@ -1,0 +1,454 @@
+{
+  "name": "bridge",
+  "baseId": "wuling_tianwangping_aid",
+  "devices": [
+    {
+      "blueprintInstanceId": "rot-0-left-source",
+      "typeId": "item_port_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 16,
+        "y": 19
+      },
+      "config": {
+        "submitToWarehouse": false,
+        "storagePreloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_originium_ore",
+            "amount": 10
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-0-left-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 19,
+        "y": 20
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-0-bridge",
+      "typeId": "item_log_connector",
+      "rotation": 0,
+      "origin": {
+        "x": 20,
+        "y": 20
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-0-right-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 21,
+        "y": 20
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-0-right-sink",
+      "typeId": "item_port_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 22,
+        "y": 19
+      },
+      "config": {
+        "submitToWarehouse": false
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-0-top-source",
+      "typeId": "item_port_storager_1",
+      "rotation": 180,
+      "origin": {
+        "x": 19,
+        "y": 16
+      },
+      "config": {
+        "submitToWarehouse": false,
+        "storagePreloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_grass_2",
+            "amount": 10
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-0-top-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 20,
+        "y": 19
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-0-bottom-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 20,
+        "y": 21
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-0-bottom-sink",
+      "typeId": "item_port_storager_1",
+      "rotation": 180,
+      "origin": {
+        "x": 19,
+        "y": 22
+      },
+      "config": {
+        "submitToWarehouse": false
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-90-left-source",
+      "typeId": "item_port_storager_1",
+      "rotation": 180,
+      "origin": {
+        "x": 67,
+        "y": 16
+      },
+      "config": {
+        "submitToWarehouse": false,
+        "storagePreloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_originium_ore",
+            "amount": 10
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-90-left-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 68,
+        "y": 19
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-90-bridge",
+      "typeId": "item_log_connector",
+      "rotation": 90,
+      "origin": {
+        "x": 68,
+        "y": 20
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-90-right-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 68,
+        "y": 21
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-90-right-sink",
+      "typeId": "item_port_storager_1",
+      "rotation": 180,
+      "origin": {
+        "x": 67,
+        "y": 22
+      },
+      "config": {
+        "submitToWarehouse": false
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-90-top-source",
+      "typeId": "item_port_storager_1",
+      "rotation": 270,
+      "origin": {
+        "x": 70,
+        "y": 19
+      },
+      "config": {
+        "submitToWarehouse": false,
+        "storagePreloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_grass_2",
+            "amount": 10
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-90-top-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 69,
+        "y": 20
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-90-bottom-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 67,
+        "y": 20
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-90-bottom-sink",
+      "typeId": "item_port_storager_1",
+      "rotation": 270,
+      "origin": {
+        "x": 64,
+        "y": 19
+      },
+      "config": {
+        "submitToWarehouse": false
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-180-left-source",
+      "typeId": "item_port_storager_1",
+      "rotation": 270,
+      "origin": {
+        "x": 22,
+        "y": 67
+      },
+      "config": {
+        "submitToWarehouse": false,
+        "storagePreloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_originium_ore",
+            "amount": 10
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-180-left-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 21,
+        "y": 68
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-180-bridge",
+      "typeId": "item_log_connector",
+      "rotation": 180,
+      "origin": {
+        "x": 20,
+        "y": 68
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-180-right-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 19,
+        "y": 68
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-180-right-sink",
+      "typeId": "item_port_storager_1",
+      "rotation": 270,
+      "origin": {
+        "x": 16,
+        "y": 67
+      },
+      "config": {
+        "submitToWarehouse": false
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-180-top-source",
+      "typeId": "item_port_storager_1",
+      "rotation": 0,
+      "origin": {
+        "x": 19,
+        "y": 70
+      },
+      "config": {
+        "submitToWarehouse": false,
+        "storagePreloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_grass_2",
+            "amount": 10
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-180-top-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 20,
+        "y": 69
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-180-bottom-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 20,
+        "y": 67
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-180-bottom-sink",
+      "typeId": "item_port_storager_1",
+      "rotation": 0,
+      "origin": {
+        "x": 19,
+        "y": 64
+      },
+      "config": {
+        "submitToWarehouse": false
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-270-left-source",
+      "typeId": "item_port_storager_1",
+      "rotation": 0,
+      "origin": {
+        "x": 67,
+        "y": 70
+      },
+      "config": {
+        "submitToWarehouse": false,
+        "storagePreloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_originium_ore",
+            "amount": 10
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-270-left-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 68,
+        "y": 69
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-270-bridge",
+      "typeId": "item_log_connector",
+      "rotation": 270,
+      "origin": {
+        "x": 68,
+        "y": 68
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-270-right-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 270,
+      "origin": {
+        "x": 68,
+        "y": 67
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-270-right-sink",
+      "typeId": "item_port_storager_1",
+      "rotation": 0,
+      "origin": {
+        "x": 67,
+        "y": 64
+      },
+      "config": {
+        "submitToWarehouse": false
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-270-top-source",
+      "typeId": "item_port_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 64,
+        "y": 67
+      },
+      "config": {
+        "submitToWarehouse": false,
+        "storagePreloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_grass_2",
+            "amount": 10
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "rot-270-top-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 67,
+        "y": 68
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-270-bottom-belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 69,
+        "y": 68
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "rot-270-bottom-sink",
+      "typeId": "item_port_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 70,
+        "y": 67
+      },
+      "config": {
+        "submitToWarehouse": false
+      }
+    }
+  ]
+}

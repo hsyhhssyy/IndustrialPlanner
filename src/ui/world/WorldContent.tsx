@@ -1,6 +1,12 @@
 import type { ReactNode } from 'react'
 
-const LIQUID_CHEVRON_VIEWBOX_WIDTH = 122
+const LIQUID_CHEVRON_VIEWBOX_WIDTH = 216
+const LIQUID_CHEVRON_ARROW_OUTER_START_X = 115.2
+const LIQUID_CHEVRON_ARROW_INNER_START_X = 123.2
+const LIQUID_CHEVRON_ARROW_OUTER_END_X = 215.2
+const LIQUID_CHEVRON_ARROW_INNER_END_X = 199.2
+const LIQUID_CHEVRON_TAIL_OUTER_WIDTH = 100
+const LIQUID_CHEVRON_TAIL_INNER_WIDTH = 84
 
 type PowerRangeOutline = {
   key: string
@@ -53,10 +59,23 @@ function PortChevronSvg({ isLiquid }: { isLiquid: boolean }) {
   if (isLiquid) {
     return (
       <svg viewBox={`0 0 ${LIQUID_CHEVRON_VIEWBOX_WIDTH} 100`} preserveAspectRatio="none" aria-hidden="true">
-        <rect x="0" y="23" width="9" height="54" rx="4" fill="rgba(50, 66, 87, 0.88)" />
-        <rect x="2" y="29" width="5" height="42" rx="2.5" fill="rgba(233, 239, 249, 0.9)" />
-        <polygon points="22,12 122,50 22,88" fill="rgba(50, 66, 87, 0.88)" />
-        <polygon points="30,22 106,50 30,78" fill="rgba(233, 239, 249, 0.9)" />
+        <rect x="0" y="0" width={LIQUID_CHEVRON_TAIL_OUTER_WIDTH} height="100" rx="18" fill="rgba(50, 66, 87, 0.88)" />
+        <rect
+          x={(LIQUID_CHEVRON_TAIL_OUTER_WIDTH - LIQUID_CHEVRON_TAIL_INNER_WIDTH) / 2}
+          y="8"
+          width={LIQUID_CHEVRON_TAIL_INNER_WIDTH}
+          height="84"
+          rx="14"
+          fill="rgba(233, 239, 249, 0.9)"
+        />
+        <polygon
+          points={`${LIQUID_CHEVRON_ARROW_OUTER_START_X},12 ${LIQUID_CHEVRON_ARROW_OUTER_END_X},50 ${LIQUID_CHEVRON_ARROW_OUTER_START_X},88`}
+          fill="rgba(50, 66, 87, 0.88)"
+        />
+        <polygon
+          points={`${LIQUID_CHEVRON_ARROW_INNER_START_X},20 ${LIQUID_CHEVRON_ARROW_INNER_END_X},50 ${LIQUID_CHEVRON_ARROW_INNER_START_X},80`}
+          fill="rgba(233, 239, 249, 0.9)"
+        />
       </svg>
     )
   }

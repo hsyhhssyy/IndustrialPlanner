@@ -8,6 +8,26 @@ const dualOvenXiraniteCase: BlueprintCase = {
     requiredPerMinute: 60,
     warmupSeconds: 180,
     stabilitySeconds: 180,
+    storageLimits: [
+      {
+        label: '上方存储箱',
+        device: {
+          typeId: 'item_port_storager_1',
+          rotation: 90,
+          origin: { x: 17, y: 12 },
+        },
+        maxTotalAmount: 20,
+      },
+      {
+        label: '下方存储箱',
+        device: {
+          typeId: 'item_port_storager_1',
+          rotation: 270,
+          origin: { x: 10, y: 10 },
+        },
+        maxTotalAmount: 20,
+      },
+    ],
   },
   expectedExtensionCount: 2,
   extensionDevices: [

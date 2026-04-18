@@ -1,0 +1,47 @@
+{
+  "name": "direct",
+  "baseId": "wuling_tianwangping_aid",
+  "devices": [
+    {
+      "blueprintInstanceId": "source",
+      "typeId": "item_port_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 0,
+        "y": 0
+      },
+      "config": {
+        "submitToWarehouse": false,
+        "storagePreloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_originium_ore",
+            "amount": 6
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "belt",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 3,
+        "y": 1
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "sink",
+      "typeId": "item_port_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 4,
+        "y": 0
+      },
+      "config": {
+        "submitToWarehouse": false
+      }
+    }
+  ]
+}

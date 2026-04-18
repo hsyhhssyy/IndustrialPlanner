@@ -34,7 +34,7 @@ type BlueprintDeviceLink = {
   targetBlueprintInstanceId: string
 }
 
-type BlueprintSnapshot = {
+export type BlueprintSnapshot = {
   name: string
   baseId: BaseId
   devices: BlueprintDeviceSnapshot[]
@@ -75,6 +75,7 @@ export type BlueprintExtensionDevice = {
 export type BlueprintCase = {
   id: string
   blueprintPath: string
+  run?: BlueprintCaseRunner
   simulation?: {
     powerMode?: PowerMode
     initialBatteryPercent?: number
@@ -85,6 +86,11 @@ export type BlueprintCase = {
     requiredPerMinute: number
     warmupSeconds: number
     stabilitySeconds: number
+    storageLimits?: Array<{
+      label?: string
+      device: BlueprintDeviceRef
+      maxTotalAmount: number
+    }>
   }
   overflowBehavior?: {
     sampleIntervalSeconds?: number
@@ -114,10 +120,16 @@ export type RegisteredBlueprintCase = BlueprintCase & {
   sourcePath: string
 }
 
+export type BlueprintCaseRunner = (
+  testCase: RegisteredBlueprintCase,
+  options?: RunBlueprintCaseOptions,
+) => Record<string, unknown>
+
 type ThroughputSample = {
   second: number
   producedPerMinute: number
   everProduced: number
+  storageTotals?: Record<string, number>
 }
 
 type OverflowSample = {
@@ -142,6 +154,12 @@ type PlacementResult = {
   offsetX: number
   offsetY: number
   extensionDeviceIds: string[]
+}
+
+export type FixedBlueprintLayout = {
+  snapshot: BlueprintSnapshot
+  layout: LayoutState
+  blueprintDevices: DeviceInstance[]
 }
 
 type PowerWindowSummary = {
@@ -192,7 +210,7 @@ export type BlueprintRunProgress = {
   wallElapsedMs: number
 }
 
-type RunBlueprintCaseOptions = {
+export type RunBlueprintCaseOptions = {
   onProgress?: (progress: BlueprintRunProgress) => void
 }
 
@@ -207,9 +225,14 @@ const EDGE_DELTA: Record<Edge, { x: number; y: number }> = {
 const SAMPLE_INTERVAL_SECONDS = 10
 const PROGRESS_REPORT_INTERVAL_MS = 5_000
 export const BLUEPRINT_ROOT = path.resolve(process.cwd(), 'public/blueprints')
+export const TEST_BLUEPRINT_ROOT = path.resolve(process.cwd(), 'src/test/blueprints/files')
 
 export function blueprintFile(fileName: string) {
   return path.join(BLUEPRINT_ROOT, fileName)
+}
+
+export function testBlueprintFile(fileName: string) {
+  return path.join(TEST_BLUEPRINT_ROOT, fileName)
 }
 
 export function registerBlueprintCase(sourceName: string, testCase: BlueprintCase): RegisteredBlueprintCase {
@@ -309,7 +332,7 @@ function placeTargetAfter(
   )
 }
 
-function readBlueprint(filePath: string): BlueprintSnapshot {
+export function readBlueprintSnapshot(filePath: string): BlueprintSnapshot {
   const raw = JSON.parse(fs.readFileSync(filePath, 'utf8')) as BlueprintSnapshot
   assert(raw && typeof raw === 'object', '蓝图文件不是有效对象')
   assert(typeof raw.baseId === 'string' && raw.baseId in BASE_BY_ID, `未知基地: ${String(raw.baseId)}`)
@@ -346,7 +369,7 @@ function matchesBlueprintDeviceRef(device: BlueprintDeviceSnapshot, ref: Bluepri
   return true
 }
 
-function resolvePlacedBlueprintDevice(
+export function resolvePlacedBlueprintDevice(
   snapshot: BlueprintSnapshot,
   placedBlueprintDevices: DeviceInstance[],
   ref: BlueprintDeviceRef,
@@ -480,6 +503,49 @@ function findPlacement(snapshot: BlueprintSnapshot, testCase: BlueprintCase): Pl
   throw new Error(`没有找到可合法放置蓝图的位置: ${snapshot.name}`)
 }
 
+export function loadFixedBlueprintLayout(filePath: string): FixedBlueprintLayout {
+  const snapshot = readBlueprintSnapshot(filePath)
+  const base = BASE_BY_ID[snapshot.baseId]
+  const foundationDevices = buildFoundationDevices(snapshot.baseId)
+  const blueprintDevices = buildPlacedBlueprintDevices(snapshot, 0, 0)
+  const mergedDevices = [...foundationDevices, ...blueprintDevices]
+  const links = buildLinks(snapshot, blueprintDevices, mergedDevices)
+
+  assert(
+    isValidPlacement(snapshot.baseId, base.placeableSize, foundationDevices, blueprintDevices, links),
+    `测试蓝图放置非法: ${snapshot.name}`,
+  )
+
+  return {
+    snapshot,
+    blueprintDevices,
+    layout: {
+      baseId: snapshot.baseId,
+      lotSize: base.placeableSize,
+      devices: mergedDevices,
+      links,
+    },
+  }
+}
+
+export function loadStandaloneBlueprintLayout(filePath: string): FixedBlueprintLayout {
+  const snapshot = readBlueprintSnapshot(filePath)
+  const base = BASE_BY_ID[snapshot.baseId]
+  const blueprintDevices = buildPlacedBlueprintDevices(snapshot, 0, 0)
+  const links = buildLinks(snapshot, blueprintDevices, blueprintDevices)
+
+  return {
+    snapshot,
+    blueprintDevices,
+    layout: {
+      baseId: snapshot.baseId,
+      lotSize: base.placeableSize,
+      devices: blueprintDevices,
+      links,
+    },
+  }
+}
+
 function targetEverProduced(sim: SimState, targetItemId: ItemId) {
   return sim.stats.everProduced[targetItemId] ?? 0
 }
@@ -488,11 +554,26 @@ function targetProducedPerMinute(sim: SimState, targetItemId: ItemId) {
   return sim.stats.producedPerMinute[targetItemId] ?? 0
 }
 
+function throughputStorageLimitKey(limit: NonNullable<NonNullable<BlueprintCase['throughput']>['storageLimits']>[number], index: number) {
+  return limit.label?.trim() ? `${limit.label.trim()}#${index + 1}` : `storage-${index + 1}`
+}
+
+function throughputStorageLimitLabel(limit: NonNullable<NonNullable<BlueprintCase['throughput']>['storageLimits']>[number], index: number) {
+  return limit.label?.trim() || `storage-${index + 1}`
+}
+
 function storageAmount(sim: SimState, instanceId: string, itemId: ItemId) {
   const runtime = sim.runtimeById[instanceId]
   assert(runtime, `未找到设备运行时: ${instanceId}`)
   assert('inventory' in runtime, `设备不是仓储类型，无法读取库存: ${instanceId}`)
   return runtime.inventory[itemId] ?? 0
+}
+
+function storageTotalAmount(sim: SimState, instanceId: string) {
+  const runtime = sim.runtimeById[instanceId]
+  assert(runtime, `未找到设备运行时: ${instanceId}`)
+  assert('inventory' in runtime, `设备不是仓储类型，无法读取库存: ${instanceId}`)
+  return Object.values(runtime.inventory).reduce((total, amount) => total + Math.max(0, amount ?? 0), 0)
 }
 
 function summarizeWindow(samples: ThroughputSample[], startSecond: number, endSecond: number): WindowSummary {
@@ -534,9 +615,29 @@ function validateThroughputExpectation(testCase: BlueprintCase, samples: Through
   const lastSample = samples[samples.length - 1]
   assert(lastSample, `${testCase.id} 没有吞吐采样数据`)
 
+  const storageLimits = (expectation.storageLimits ?? []).map((limit, index) => {
+    const key = throughputStorageLimitKey(limit, index)
+    const label = throughputStorageLimitLabel(limit, index)
+    const observedAmounts = samples.map((sample) => sample.storageTotals?.[key] ?? 0)
+    const violatingSample = samples.find((sample) => (sample.storageTotals?.[key] ?? 0) > limit.maxTotalAmount)
+
+    assert(
+      !violatingSample,
+      `${testCase.id} ${label} 在吞吐采样时库存超过上限，limit=${limit.maxTotalAmount}, actual=${violatingSample?.storageTotals?.[key] ?? 0}, second=${violatingSample?.second ?? -1}`,
+    )
+
+    return {
+      label,
+      maxTotalAmount: limit.maxTotalAmount,
+      maxObservedTotalAmount: Math.max(...observedAmounts),
+      finalTotalAmount: lastSample.storageTotals?.[key] ?? 0,
+    }
+  })
+
   return {
     targetItemId: expectation.targetItemId,
     stableWindow,
+    storageLimits,
     endState: {
       simSeconds: lastSample.second,
       producedPerMinute: lastSample.producedPerMinute,
@@ -668,7 +769,7 @@ function buildPowerObservationSummary(
 }
 
 export function runBlueprintCase(testCase: BlueprintCase, options: RunBlueprintCaseOptions = {}) {
-  const snapshot = readBlueprint(testCase.blueprintPath)
+  const snapshot = readBlueprintSnapshot(testCase.blueprintPath)
   const placement = findPlacement(snapshot, testCase)
 
   if (typeof testCase.expectedExtensionCount === 'number') {
@@ -705,6 +806,10 @@ export function runBlueprintCase(testCase: BlueprintCase, options: RunBlueprintC
   const throughputSampleIntervalTicks = SAMPLE_INTERVAL_SECONDS * sim.tickRateHz
   const overflowSampleIntervalTicks = (testCase.overflowBehavior?.sampleIntervalSeconds ?? 1) * sim.tickRateHz
   const throughputSamples: ThroughputSample[] = []
+  const throughputStorageMonitors = (testCase.throughput?.storageLimits ?? []).map((limit, index) => ({
+    key: throughputStorageLimitKey(limit, index),
+    instanceId: resolvePlacedBlueprintDevice(snapshot, placement.blueprintDevices, limit.device).instanceId,
+  }))
 
   const upperStorageDeviceId = testCase.overflowBehavior
     ? resolvePlacedBlueprintDevice(snapshot, placement.blueprintDevices, testCase.overflowBehavior.upperStorage.device).instanceId
@@ -749,6 +854,11 @@ export function runBlueprintCase(testCase: BlueprintCase, options: RunBlueprintC
         second: sim.stats.simSeconds,
         producedPerMinute: targetProducedPerMinute(sim, testCase.throughput.targetItemId),
         everProduced: targetEverProduced(sim, testCase.throughput.targetItemId),
+        storageTotals: throughputStorageMonitors.length > 0
+          ? Object.fromEntries(
+              throughputStorageMonitors.map((monitor) => [monitor.key, storageTotalAmount(sim, monitor.instanceId)]),
+            )
+          : undefined,
       })
     }
 
@@ -893,4 +1003,9 @@ export function runBlueprintCase(testCase: BlueprintCase, options: RunBlueprintC
   }
 
   return summary
+}
+
+export function runRegisteredBlueprintCase(testCase: RegisteredBlueprintCase, options: RunBlueprintCaseOptions = {}) {
+  if (testCase.run) return testCase.run(testCase, options)
+  return runBlueprintCase(testCase, options)
 }

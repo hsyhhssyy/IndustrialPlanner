@@ -1,0 +1,134 @@
+{
+  "name": "admission",
+  "baseId": "wuling_tianwangping_aid",
+  "devices": [
+    {
+      "blueprintInstanceId": "positive-source",
+      "typeId": "item_port_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 0,
+        "y": 0
+      },
+      "config": {
+        "submitToWarehouse": false,
+        "storagePreloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_originium_ore",
+            "amount": 6
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "positive-belt-in",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 3,
+        "y": 1
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "positive-admission",
+      "typeId": "item_log_admission",
+      "rotation": 0,
+      "origin": {
+        "x": 4,
+        "y": 1
+      },
+      "config": {
+        "admissionItemId": "item_originium_ore",
+        "admissionAmount": 6
+      }
+    },
+    {
+      "blueprintInstanceId": "positive-belt-out",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 5,
+        "y": 1
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "positive-sink",
+      "typeId": "item_port_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 6,
+        "y": 0
+      },
+      "config": {
+        "submitToWarehouse": false
+      }
+    },
+    {
+      "blueprintInstanceId": "negative-source",
+      "typeId": "item_port_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 0,
+        "y": 24
+      },
+      "config": {
+        "submitToWarehouse": false,
+        "storagePreloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_grass_2",
+            "amount": 6
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "negative-belt-in",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 3,
+        "y": 25
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "negative-admission",
+      "typeId": "item_log_admission",
+      "rotation": 0,
+      "origin": {
+        "x": 4,
+        "y": 25
+      },
+      "config": {
+        "admissionItemId": "item_originium_ore",
+        "admissionAmount": 6
+      }
+    },
+    {
+      "blueprintInstanceId": "negative-belt-out",
+      "typeId": "belt_straight_1x1",
+      "rotation": 0,
+      "origin": {
+        "x": 5,
+        "y": 25
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "negative-sink",
+      "typeId": "item_port_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 6,
+        "y": 24
+      },
+      "config": {
+        "submitToWarehouse": false
+      }
+    }
+  ]
+}

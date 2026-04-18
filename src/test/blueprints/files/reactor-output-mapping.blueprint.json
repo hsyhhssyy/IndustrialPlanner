@@ -1,0 +1,74 @@
+{
+  "name": "reactor-output-mapping",
+  "baseId": "wuling_tianwangping_aid",
+  "devices": [
+    {
+      "blueprintInstanceId": "reactor",
+      "typeId": "item_port_mix_pool_1",
+      "rotation": 0,
+      "origin": {
+        "x": 20,
+        "y": 20
+      },
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_originium_ore",
+            "amount": 2
+          },
+          {
+            "slotIndex": 1,
+            "itemId": "item_liquid_water",
+            "amount": 2
+          }
+        ],
+        "reactorPool": {
+          "solidOutputItemId": "item_originium_ore",
+          "liquidOutputItemIdA": "item_liquid_water",
+          "liquidOutputItemIdB": "item_liquid_water"
+        }
+      }
+    },
+    {
+      "blueprintInstanceId": "solid-turn-a",
+      "typeId": "belt_turn_cw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 21,
+        "y": 19
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "solid-turn-b",
+      "typeId": "belt_turn_ccw_1x1",
+      "rotation": 180,
+      "origin": {
+        "x": 23,
+        "y": 19
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "liquid-turn-a",
+      "typeId": "pipe_turn_ccw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 19,
+        "y": 21
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "liquid-turn-b",
+      "typeId": "pipe_turn_cw_1x1",
+      "rotation": 90,
+      "origin": {
+        "x": 19,
+        "y": 23
+      },
+      "config": {}
+    }
+  ]
+}

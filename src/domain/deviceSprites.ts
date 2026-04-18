@@ -60,16 +60,16 @@ export const DEVICE_SPRITE_REGISTRATIONS: DeviceSpriteRegistration[] = [
     typeId: 'item_port_udpipe_loader_2',
     fileName: 'item_port_udpipe_loader_2.png',
     renderBounds: {
-      widthCells: 2,
-      heightCells: 4,
+      widthCells: 3,
+      heightCells: 5,
     },
   },
   {
     typeId: 'item_port_udpipe_unloader_2',
     fileName: 'item_port_udpipe_unloader_2.png',
     renderBounds: {
-      widthCells: 2,
-      heightCells: 4,
+      widthCells: 3,
+      heightCells: 5,
     },
   },
   { typeId: 'item_liquid_cleaner_1', fileName: 'item_liquid_cleaner_1.png' },
