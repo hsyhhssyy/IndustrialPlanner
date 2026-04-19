@@ -651,7 +651,7 @@ export function useBlueprintDomain({ activeBaseId, placeOperation, layout, selec
 
     for (const entry of toFetch) {
       try {
-        const response = await fetch(entry.path, { cache: 'no-store' })
+        const response = await fetch(resolvePublicAssetPath(entry.path), { cache: 'no-store' })
         if (!response.ok) continue
         const raw = (await response.json()) as unknown
         const payload = normalizeSharePayload(raw)

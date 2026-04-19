@@ -14,84 +14,6 @@ const SOLID_LIQUID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid
 const FIVE_MIXED_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = Array.from({ length: 5 }, () => ['solid', 'liquid'])
 const EIGHT_MIXED_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = Array.from({ length: 8 }, () => ['solid', 'liquid'])
 
-const LEGACY_BOTTLE_ITEM_VARIANTS = [
-  { bottleItemId: 'item_iron_bottle', bottleDisplayName: '蓝铁瓶' },
-  { bottleItemId: 'item_glass_bottle', bottleDisplayName: '紫晶质瓶' },
-  { bottleItemId: 'item_glass_enr_bottle', bottleDisplayName: '高晶质瓶' },
-  { bottleItemId: 'item_iron_enr_bottle', bottleDisplayName: '钢质瓶' },
-  { bottleItemId: 'item_copper_bottle', bottleDisplayName: '赤铜瓶' },
-]
-
-const EXTRA_BOTTLE_ITEM_VARIANTS = [
-  { bottleItemId: 'item_activity_xiranite_bottle', bottleDisplayName: '实验息壤瓶' },
-  { bottleItemId: 'item_activity_xiranite_enr_bottle', bottleDisplayName: '实验重息壤瓶' },
-]
-
-const LEGACY_FILLABLE_LIQUID_VARIANTS = [
-  { liquidItemId: 'item_liquid_water', filledDisplayName: '清水', recipeIdSuffix: 'water', ironBottleDefault: true },
-  { liquidItemId: 'item_liquid_plant_grass_1', filledDisplayName: '锦草溶液', recipeIdSuffix: 'grass_1', ironBottleDefault: true },
-  { liquidItemId: 'item_liquid_plant_grass_2', filledDisplayName: '芽针溶液', recipeIdSuffix: 'grass_2', ironBottleDefault: true },
-  { liquidItemId: 'item_liquid_xiranite', filledDisplayName: '液化息壤', recipeIdSuffix: 'xiranite', ironBottleDefault: true },
-  { liquidItemId: 'item_liquid_sewage', filledDisplayName: '污水', recipeIdSuffix: 'sewage', ironBottleDefault: false },
-  { liquidItemId: 'item_liquid_xiranite_poly', filledDisplayName: '壤晶废液', recipeIdSuffix: 'xiranite_poly', ironBottleDefault: false },
-  { liquidItemId: 'item_liquid_xiranite_lowpoly', filledDisplayName: '惰性壤晶废液', recipeIdSuffix: 'xiranite_lowpoly', ironBottleDefault: false },
-]
-
-const EXTRA_FILLABLE_LIQUID_VARIANTS = [
-  { liquidItemId: 'item_liquid_acid', filledDisplayName: '沉积酸', recipeIdSuffix: 'acid', ironBottleDefault: false },
-  { liquidItemId: 'item_liquid_copper', filledDisplayName: '赤铜溶液', recipeIdSuffix: 'copper', ironBottleDefault: false },
-  { liquidItemId: 'item_liquid_copper_enr', filledDisplayName: '赫铜溶液', recipeIdSuffix: 'copper_enr', ironBottleDefault: false },
-  { liquidItemId: 'item_liquid_xiranite_enr', filledDisplayName: '液化重息壤', recipeIdSuffix: 'xiranite_enr', ironBottleDefault: false },
-]
-
-function filledBottleItemIdFor(bottleItemId: string, liquidItemId: string) {
-  if (liquidItemId === 'item_liquid_water') {
-    return `${bottleItemId}_filled_water`
-  }
-
-  return `${bottleItemId}_filled_${liquidItemId.replace(/^item_/, '')}`
-}
-
-function liquidBottleRecipeVisibility(bottleItemId: string, ironBottleDefault: boolean) {
-  return bottleItemId === 'item_iron_bottle' && ironBottleDefault ? 'default' : 'hidden'
-}
-
-const EXTRA_FILLED_BOTTLE_VARIANTS = [
-  ...LEGACY_BOTTLE_ITEM_VARIANTS.flatMap((bottle) => EXTRA_FILLABLE_LIQUID_VARIANTS.map((liquid) => ({ bottle, liquid }))),
-  ...EXTRA_BOTTLE_ITEM_VARIANTS.flatMap((bottle) => [...LEGACY_FILLABLE_LIQUID_VARIANTS, ...EXTRA_FILLABLE_LIQUID_VARIANTS].map((liquid) => ({ bottle, liquid }))),
-]
-
-const EXTRA_FILLED_BOTTLE_ITEMS: ItemDef[] = EXTRA_FILLED_BOTTLE_VARIANTS.map(({ bottle, liquid }) => ({
-  id: filledBottleItemIdFor(bottle.bottleItemId, liquid.liquidItemId),
-  displayName: `${bottle.bottleDisplayName}（已盛装${liquid.filledDisplayName}）`,
-  type: 'solid',
-  tags: [...bottledLiquidTags, NEW_TAG],
-}))
-
-const EXTRA_LIQUID_BOTTLE_FILLING_RECIPES: RecipeDef[] = EXTRA_FILLED_BOTTLE_VARIANTS.map(({ bottle, liquid }) => ({
-  id: `r_liquid_filling_${bottle.bottleItemId.replace(/^item_/, '')}_${liquid.recipeIdSuffix}_${liquidBottleRecipeVisibility(bottle.bottleItemId, liquid.ironBottleDefault)}`,
-  machineType: 'item_port_liquid_filling_pd_mc_1',
-  cycleSeconds: 2,
-  tags: [NEW_TAG],
-  inputs: [
-    { itemId: bottle.bottleItemId, amount: 1 },
-    { itemId: liquid.liquidItemId, amount: 1 },
-  ],
-  outputs: [{ itemId: filledBottleItemIdFor(bottle.bottleItemId, liquid.liquidItemId), amount: 1 }],
-}))
-
-const EXTRA_LIQUID_BOTTLE_DISMANTLE_RECIPES: RecipeDef[] = EXTRA_FILLED_BOTTLE_VARIANTS.map(({ bottle, liquid }) => ({
-  id: `r_liquid_dismantling_${bottle.bottleItemId.replace(/^item_/, '')}_${liquid.recipeIdSuffix}_${liquidBottleRecipeVisibility(bottle.bottleItemId, liquid.ironBottleDefault)}`,
-  machineType: 'item_port_dismantler_1',
-  cycleSeconds: 2,
-  tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
-  inputs: [{ itemId: filledBottleItemIdFor(bottle.bottleItemId, liquid.liquidItemId), amount: 1 }],
-  outputs: [
-    { itemId: bottle.bottleItemId, amount: 1 },
-    { itemId: liquid.liquidItemId, amount: 1 },
-  ],
-}))
-
 export const ITEMS: ItemDef[] = [
   { id: 'item_bottled_food_1', displayName: '柑实罐头', type: 'solid' },
   { id: 'item_bottled_food_2', displayName: '优质柑实罐头', type: 'solid' },
@@ -120,6 +42,14 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_copper_bottle_filled_liquid_sewage', displayName: '赤铜瓶（已盛装污水）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_copper_bottle_filled_liquid_xiranite_poly', displayName: '赤铜瓶（已盛装壤晶废液）', type: 'solid', tags: bottledLiquidTags },
   { id: 'item_copper_bottle_filled_liquid_xiranite_lowpoly', displayName: '赤铜瓶（已盛装惰性壤晶废液）', type: 'solid', tags: bottledLiquidTags },
+  { id: 'item_copper_enr_bottle', displayName: '赫铜瓶', type: 'solid', tags: [...bottleItemTags, NEW_TAG] },
+  { id: 'item_copper_enr_bottle_filled_water', displayName: '赫铜瓶（已盛装清水）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_copper_enr_bottle_filled_liquid_plant_grass_1', displayName: '赫铜瓶（已盛装锦草溶液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_copper_enr_bottle_filled_liquid_plant_grass_2', displayName: '赫铜瓶（已盛装芽针溶液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_copper_enr_bottle_filled_liquid_xiranite', displayName: '赫铜瓶（已盛装液化息壤）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_copper_enr_bottle_filled_liquid_sewage', displayName: '赫铜瓶（已盛装污水）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_copper_enr_bottle_filled_liquid_xiranite_poly', displayName: '赫铜瓶（已盛装壤晶废液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_copper_enr_bottle_filled_liquid_xiranite_lowpoly', displayName: '赫铜瓶（已盛装惰性壤晶废液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
   { id: 'item_copper_enr', displayName: '赫铜块', type: 'solid', tags: [NEW_TAG] },
   { id: 'item_copper_powder', displayName: '赤铜粉末', type: 'solid' },
   { id: 'item_copper_nugget', displayName: '赤铜块', type: 'solid' },
@@ -133,10 +63,35 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_xiranite_poly', displayName: '壤晶', type: 'solid' },
   { id: 'item_activity_xiranite_cmpt', displayName: '实验息壤零件', type: 'solid', tags: [NEW_TAG] },
   { id: 'item_activity_xiranite_enr_cmpt', displayName: '实验重息壤零件', type: 'solid', tags: [NEW_TAG] },
-  { id: 'item_activity_xiranite_bottle', displayName: '实验息壤瓶', type: 'solid', tags: [...bottleItemTags, NEW_TAG] },
-  { id: 'item_activity_xiranite_enr_bottle', displayName: '实验重息壤瓶', type: 'solid', tags: [...bottleItemTags, NEW_TAG] },
-  ...EXTRA_FILLED_BOTTLE_ITEMS,
+  { id: 'item_activity_xiranite_bottle', displayName: '实验息壤瓶', type: 'solid', tags: [NEW_TAG] },
+  { id: 'item_activity_xiranite_enr_bottle', displayName: '实验重息壤瓶', type: 'solid', tags: [NEW_TAG] },
+  { id: 'item_iron_bottle_filled_liquid_acid', displayName: '蓝铁瓶（已盛装沉积酸）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_iron_bottle_filled_liquid_copper', displayName: '蓝铁瓶（已盛装赤铜溶液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_iron_bottle_filled_liquid_copper_enr', displayName: '蓝铁瓶（已盛装赫铜溶液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_iron_bottle_filled_liquid_xiranite_enr', displayName: '蓝铁瓶（已盛装液化重息壤）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_glass_bottle_filled_liquid_acid', displayName: '紫晶质瓶（已盛装沉积酸）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_glass_bottle_filled_liquid_copper', displayName: '紫晶质瓶（已盛装赤铜溶液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_glass_bottle_filled_liquid_copper_enr', displayName: '紫晶质瓶（已盛装赫铜溶液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_glass_bottle_filled_liquid_xiranite_enr', displayName: '紫晶质瓶（已盛装液化重息壤）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_glass_enr_bottle_filled_liquid_acid', displayName: '高晶质瓶（已盛装沉积酸）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_glass_enr_bottle_filled_liquid_copper', displayName: '高晶质瓶（已盛装赤铜溶液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_glass_enr_bottle_filled_liquid_copper_enr', displayName: '高晶质瓶（已盛装赫铜溶液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_glass_enr_bottle_filled_liquid_xiranite_enr', displayName: '高晶质瓶（已盛装液化重息壤）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_iron_enr_bottle_filled_liquid_acid', displayName: '钢质瓶（已盛装沉积酸）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_iron_enr_bottle_filled_liquid_copper', displayName: '钢质瓶（已盛装赤铜溶液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_iron_enr_bottle_filled_liquid_copper_enr', displayName: '钢质瓶（已盛装赫铜溶液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_iron_enr_bottle_filled_liquid_xiranite_enr', displayName: '钢质瓶（已盛装液化重息壤）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_copper_bottle_filled_liquid_acid', displayName: '赤铜瓶（已盛装沉积酸）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_copper_bottle_filled_liquid_copper', displayName: '赤铜瓶（已盛装赤铜溶液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_copper_bottle_filled_liquid_copper_enr', displayName: '赤铜瓶（已盛装赫铜溶液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_copper_bottle_filled_liquid_xiranite_enr', displayName: '赤铜瓶（已盛装液化重息壤）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_copper_enr_bottle_filled_liquid_acid', displayName: '赫铜瓶（已盛装沉积酸）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_copper_enr_bottle_filled_liquid_copper', displayName: '赫铜瓶（已盛装赤铜溶液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_copper_enr_bottle_filled_liquid_copper_enr', displayName: '赫铜瓶（已盛装赫铜溶液）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_copper_enr_bottle_filled_liquid_xiranite_enr', displayName: '赫铜瓶（已盛装液化重息壤）', type: 'solid', tags: [...bottledLiquidTags, NEW_TAG] },
+  { id: 'item_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2', displayName: '实验重息壤瓶（芽针溶液）', type: 'solid', tags: [NEW_TAG] },
   { id: 'item_activity_xiranite_enr_tool', displayName: '实验玉铜发散器', type: 'solid', tags: [NEW_TAG] },
+  { id: 'item_activity_xiranite_hulu', displayName: '息壤葫芦', type: 'solid', tags: [NEW_TAG] },
   { id: 'item_activity_xiranite_enr_hulu', displayName: '息壤玉葫芦', type: 'solid', tags: [NEW_TAG] },
   { id: 'item_copper_cmpt', displayName: '赤铜零件', type: 'solid' },
   { id: 'item_copper_enr_cmpt', displayName: '赫铜零件', type: 'solid', tags: [NEW_TAG] },
@@ -234,52 +189,469 @@ export const ITEMS: ItemDef[] = [
 ]
 
 const LIQUID_BOTTLE_DISMANTLE_RECIPES: RecipeDef[] = [
-  { id: 'r_liquid_dismantling_iron_bottle_water_default', bottleItemId: 'item_iron_bottle', liquidItemId: 'item_liquid_water', filledBottleItemId: 'item_iron_bottle_filled_water' },
-  { id: 'r_liquid_dismantling_iron_bottle_grass_1_default', bottleItemId: 'item_iron_bottle', liquidItemId: 'item_liquid_plant_grass_1', filledBottleItemId: 'item_iron_bottle_filled_liquid_plant_grass_1' },
-  { id: 'r_liquid_dismantling_iron_bottle_grass_2_default', bottleItemId: 'item_iron_bottle', liquidItemId: 'item_liquid_plant_grass_2', filledBottleItemId: 'item_iron_bottle_filled_liquid_plant_grass_2' },
-  { id: 'r_liquid_dismantling_iron_bottle_xiranite_default', bottleItemId: 'item_iron_bottle', liquidItemId: 'item_liquid_xiranite', filledBottleItemId: 'item_iron_bottle_filled_liquid_xiranite' },
-  { id: 'r_liquid_dismantling_glass_bottle_water_hidden', bottleItemId: 'item_glass_bottle', liquidItemId: 'item_liquid_water', filledBottleItemId: 'item_glass_bottle_filled_water' },
-  { id: 'r_liquid_dismantling_glass_bottle_grass_1_hidden', bottleItemId: 'item_glass_bottle', liquidItemId: 'item_liquid_plant_grass_1', filledBottleItemId: 'item_glass_bottle_filled_liquid_plant_grass_1' },
-  { id: 'r_liquid_dismantling_glass_bottle_grass_2_hidden', bottleItemId: 'item_glass_bottle', liquidItemId: 'item_liquid_plant_grass_2', filledBottleItemId: 'item_glass_bottle_filled_liquid_plant_grass_2' },
-  { id: 'r_liquid_dismantling_glass_bottle_xiranite_hidden', bottleItemId: 'item_glass_bottle', liquidItemId: 'item_liquid_xiranite', filledBottleItemId: 'item_glass_bottle_filled_liquid_xiranite' },
-  { id: 'r_liquid_dismantling_glass_enr_bottle_water_hidden', bottleItemId: 'item_glass_enr_bottle', liquidItemId: 'item_liquid_water', filledBottleItemId: 'item_glass_enr_bottle_filled_water' },
-  { id: 'r_liquid_dismantling_glass_enr_bottle_grass_1_hidden', bottleItemId: 'item_glass_enr_bottle', liquidItemId: 'item_liquid_plant_grass_1', filledBottleItemId: 'item_glass_enr_bottle_filled_liquid_plant_grass_1' },
-  { id: 'r_liquid_dismantling_glass_enr_bottle_grass_2_hidden', bottleItemId: 'item_glass_enr_bottle', liquidItemId: 'item_liquid_plant_grass_2', filledBottleItemId: 'item_glass_enr_bottle_filled_liquid_plant_grass_2' },
-  { id: 'r_liquid_dismantling_glass_enr_bottle_xiranite_hidden', bottleItemId: 'item_glass_enr_bottle', liquidItemId: 'item_liquid_xiranite', filledBottleItemId: 'item_glass_enr_bottle_filled_liquid_xiranite' },
-  { id: 'r_liquid_dismantling_iron_enr_bottle_water_hidden', bottleItemId: 'item_iron_enr_bottle', liquidItemId: 'item_liquid_water', filledBottleItemId: 'item_iron_enr_bottle_filled_water' },
-  { id: 'r_liquid_dismantling_iron_enr_bottle_grass_1_hidden', bottleItemId: 'item_iron_enr_bottle', liquidItemId: 'item_liquid_plant_grass_1', filledBottleItemId: 'item_iron_enr_bottle_filled_liquid_plant_grass_1' },
-  { id: 'r_liquid_dismantling_iron_enr_bottle_grass_2_hidden', bottleItemId: 'item_iron_enr_bottle', liquidItemId: 'item_liquid_plant_grass_2', filledBottleItemId: 'item_iron_enr_bottle_filled_liquid_plant_grass_2' },
-  { id: 'r_liquid_dismantling_iron_enr_bottle_xiranite_hidden', bottleItemId: 'item_iron_enr_bottle', liquidItemId: 'item_liquid_xiranite', filledBottleItemId: 'item_iron_enr_bottle_filled_liquid_xiranite' },
-  { id: 'r_liquid_dismantling_iron_bottle_sewage_hidden', bottleItemId: 'item_iron_bottle', liquidItemId: 'item_liquid_sewage', filledBottleItemId: 'item_iron_bottle_filled_liquid_sewage' },
-  { id: 'r_liquid_dismantling_iron_bottle_xiranite_poly_hidden', bottleItemId: 'item_iron_bottle', liquidItemId: 'item_liquid_xiranite_poly', filledBottleItemId: 'item_iron_bottle_filled_liquid_xiranite_poly' },
-  { id: 'r_liquid_dismantling_iron_bottle_xiranite_lowpoly_hidden', bottleItemId: 'item_iron_bottle', liquidItemId: 'item_liquid_xiranite_lowpoly', filledBottleItemId: 'item_iron_bottle_filled_liquid_xiranite_lowpoly' },
-  { id: 'r_liquid_dismantling_glass_bottle_sewage_hidden', bottleItemId: 'item_glass_bottle', liquidItemId: 'item_liquid_sewage', filledBottleItemId: 'item_glass_bottle_filled_liquid_sewage' },
-  { id: 'r_liquid_dismantling_glass_bottle_xiranite_poly_hidden', bottleItemId: 'item_glass_bottle', liquidItemId: 'item_liquid_xiranite_poly', filledBottleItemId: 'item_glass_bottle_filled_liquid_xiranite_poly' },
-  { id: 'r_liquid_dismantling_glass_bottle_xiranite_lowpoly_hidden', bottleItemId: 'item_glass_bottle', liquidItemId: 'item_liquid_xiranite_lowpoly', filledBottleItemId: 'item_glass_bottle_filled_liquid_xiranite_lowpoly' },
-  { id: 'r_liquid_dismantling_glass_enr_bottle_sewage_hidden', bottleItemId: 'item_glass_enr_bottle', liquidItemId: 'item_liquid_sewage', filledBottleItemId: 'item_glass_enr_bottle_filled_liquid_sewage' },
-  { id: 'r_liquid_dismantling_glass_enr_bottle_xiranite_poly_hidden', bottleItemId: 'item_glass_enr_bottle', liquidItemId: 'item_liquid_xiranite_poly', filledBottleItemId: 'item_glass_enr_bottle_filled_liquid_xiranite_poly' },
-  { id: 'r_liquid_dismantling_glass_enr_bottle_xiranite_lowpoly_hidden', bottleItemId: 'item_glass_enr_bottle', liquidItemId: 'item_liquid_xiranite_lowpoly', filledBottleItemId: 'item_glass_enr_bottle_filled_liquid_xiranite_lowpoly' },
-  { id: 'r_liquid_dismantling_iron_enr_bottle_sewage_hidden', bottleItemId: 'item_iron_enr_bottle', liquidItemId: 'item_liquid_sewage', filledBottleItemId: 'item_iron_enr_bottle_filled_liquid_sewage' },
-  { id: 'r_liquid_dismantling_iron_enr_bottle_xiranite_poly_hidden', bottleItemId: 'item_iron_enr_bottle', liquidItemId: 'item_liquid_xiranite_poly', filledBottleItemId: 'item_iron_enr_bottle_filled_liquid_xiranite_poly' },
-  { id: 'r_liquid_dismantling_iron_enr_bottle_xiranite_lowpoly_hidden', bottleItemId: 'item_iron_enr_bottle', liquidItemId: 'item_liquid_xiranite_lowpoly', filledBottleItemId: 'item_iron_enr_bottle_filled_liquid_xiranite_lowpoly' },
-  { id: 'r_liquid_dismantling_copper_bottle_water_hidden', bottleItemId: 'item_copper_bottle', liquidItemId: 'item_liquid_water', filledBottleItemId: 'item_copper_bottle_filled_water' },
-  { id: 'r_liquid_dismantling_copper_bottle_grass_1_hidden', bottleItemId: 'item_copper_bottle', liquidItemId: 'item_liquid_plant_grass_1', filledBottleItemId: 'item_copper_bottle_filled_liquid_plant_grass_1' },
-  { id: 'r_liquid_dismantling_copper_bottle_grass_2_hidden', bottleItemId: 'item_copper_bottle', liquidItemId: 'item_liquid_plant_grass_2', filledBottleItemId: 'item_copper_bottle_filled_liquid_plant_grass_2' },
-  { id: 'r_liquid_dismantling_copper_bottle_xiranite_hidden', bottleItemId: 'item_copper_bottle', liquidItemId: 'item_liquid_xiranite', filledBottleItemId: 'item_copper_bottle_filled_liquid_xiranite' },
-  { id: 'r_liquid_dismantling_copper_bottle_sewage_hidden', bottleItemId: 'item_copper_bottle', liquidItemId: 'item_liquid_sewage', filledBottleItemId: 'item_copper_bottle_filled_liquid_sewage' },
-  { id: 'r_liquid_dismantling_copper_bottle_xiranite_poly_hidden', bottleItemId: 'item_copper_bottle', liquidItemId: 'item_liquid_xiranite_poly', filledBottleItemId: 'item_copper_bottle_filled_liquid_xiranite_poly' },
-  { id: 'r_liquid_dismantling_copper_bottle_xiranite_lowpoly_hidden', bottleItemId: 'item_copper_bottle', liquidItemId: 'item_liquid_xiranite_lowpoly', filledBottleItemId: 'item_copper_bottle_filled_liquid_xiranite_lowpoly' },
-].map((recipe) => ({
-  id: recipe.id,
-  machineType: 'item_port_dismantler_1',
-  cycleSeconds: 2,
-  tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
-  inputs: [{ itemId: recipe.filledBottleItemId, amount: 1 }],
-  outputs: [
-    { itemId: recipe.bottleItemId, amount: 1 },
-    { itemId: recipe.liquidItemId, amount: 1 },
-  ],
-}))
+  {
+    id: 'r_liquid_dismantling_iron_bottle_water_default',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_iron_bottle_filled_water', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_water', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_bottle_grass_1_default',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_iron_bottle_filled_liquid_plant_grass_1', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_1', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_bottle_grass_2_default',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_iron_bottle_filled_liquid_plant_grass_2', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_2', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_bottle_xiranite_default',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_iron_bottle_filled_liquid_xiranite', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_bottle_water_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_glass_bottle_filled_water', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_water', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_bottle_grass_1_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_glass_bottle_filled_liquid_plant_grass_1', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_1', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_bottle_grass_2_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_glass_bottle_filled_liquid_plant_grass_2', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_2', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_bottle_xiranite_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_glass_bottle_filled_liquid_xiranite', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_enr_bottle_water_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_glass_enr_bottle_filled_water', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_water', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_enr_bottle_grass_1_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_glass_enr_bottle_filled_liquid_plant_grass_1', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_1', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_enr_bottle_grass_2_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_glass_enr_bottle_filled_liquid_plant_grass_2', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_2', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_enr_bottle_xiranite_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_glass_enr_bottle_filled_liquid_xiranite', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_enr_bottle_water_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_iron_enr_bottle_filled_water', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_water', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_enr_bottle_grass_1_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_iron_enr_bottle_filled_liquid_plant_grass_1', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_1', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_enr_bottle_grass_2_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_iron_enr_bottle_filled_liquid_plant_grass_2', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_2', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_enr_bottle_xiranite_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_iron_enr_bottle_filled_liquid_xiranite', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_bottle_sewage_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_iron_bottle_filled_liquid_sewage', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_sewage', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_bottle_xiranite_poly_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_iron_bottle_filled_liquid_xiranite_poly', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_poly', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_bottle_xiranite_lowpoly_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_iron_bottle_filled_liquid_xiranite_lowpoly', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_lowpoly', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_bottle_sewage_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_glass_bottle_filled_liquid_sewage', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_sewage', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_bottle_xiranite_poly_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_glass_bottle_filled_liquid_xiranite_poly', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_poly', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_bottle_xiranite_lowpoly_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_glass_bottle_filled_liquid_xiranite_lowpoly', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_lowpoly', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_enr_bottle_sewage_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_glass_enr_bottle_filled_liquid_sewage', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_sewage', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_enr_bottle_xiranite_poly_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_glass_enr_bottle_filled_liquid_xiranite_poly', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_poly', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_enr_bottle_xiranite_lowpoly_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_glass_enr_bottle_filled_liquid_xiranite_lowpoly', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_lowpoly', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_enr_bottle_sewage_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_iron_enr_bottle_filled_liquid_sewage', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_sewage', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_enr_bottle_xiranite_poly_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_iron_enr_bottle_filled_liquid_xiranite_poly', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_poly', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_enr_bottle_xiranite_lowpoly_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_iron_enr_bottle_filled_liquid_xiranite_lowpoly', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_lowpoly', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_bottle_water_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_copper_bottle_filled_water', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_water', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_bottle_grass_1_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_copper_bottle_filled_liquid_plant_grass_1', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_1', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_bottle_grass_2_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_copper_bottle_filled_liquid_plant_grass_2', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_2', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_bottle_xiranite_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_copper_bottle_filled_liquid_xiranite', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_bottle_sewage_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_copper_bottle_filled_liquid_sewage', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_sewage', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_bottle_xiranite_poly_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_copper_bottle_filled_liquid_xiranite_poly', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_poly', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_bottle_xiranite_lowpoly_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_copper_bottle_filled_liquid_xiranite_lowpoly', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_lowpoly', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_enr_bottle_water_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_copper_enr_bottle_filled_water', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_water', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_enr_bottle_grass_1_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_plant_grass_1', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_1', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_enr_bottle_grass_2_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_plant_grass_2', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_2', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_enr_bottle_xiranite_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_xiranite', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_enr_bottle_sewage_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_sewage', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_sewage', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_enr_bottle_xiranite_poly_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_xiranite_poly', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_poly', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_enr_bottle_xiranite_lowpoly_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG],
+    inputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_xiranite_lowpoly', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_lowpoly', amount: 1 },
+    ],
+  },
+]
 
 export const RECIPES: RecipeDef[] = [
   {
@@ -943,6 +1315,17 @@ export const RECIPES: RecipeDef[] = [
     outputs: [{ itemId: 'item_activity_xiranite_enr_tool', amount: 1 }],
   },
   {
+    id: 'r_packaging_activity_xiranite_hulu_from_activity_xiranite_bottle_and_activity_xiranite_cmpt_basic',
+    machineType: 'item_port_tools_asm_mc_1',
+    cycleSeconds: 10,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_activity_xiranite_bottle', amount: 5 },
+      { itemId: 'item_activity_xiranite_cmpt', amount: 5 },
+    ],
+    outputs: [{ itemId: 'item_activity_xiranite_hulu', amount: 1 }],
+  },
+  {
     id: 'r_packaging_activity_xiranite_enr_hulu_from_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2_and_activity_xiranite_enr_tool_basic',
     machineType: 'item_port_tools_asm_mc_1',
     cycleSeconds: 10,
@@ -1414,9 +1797,627 @@ export const RECIPES: RecipeDef[] = [
     ],
     outputs: [{ itemId: 'item_copper_bottle_filled_liquid_xiranite_lowpoly', amount: 1 }],
   },
-  ...EXTRA_LIQUID_BOTTLE_FILLING_RECIPES,
+  {
+    id: 'r_liquid_filling_copper_enr_bottle_water_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_water', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_enr_bottle_filled_water', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_copper_enr_bottle_grass_1_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_1', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_plant_grass_1', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_copper_enr_bottle_grass_2_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_2', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_plant_grass_2', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_copper_enr_bottle_xiranite_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_xiranite', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_copper_enr_bottle_sewage_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_sewage', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_sewage', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_copper_enr_bottle_xiranite_poly_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_poly', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_xiranite_poly', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_copper_enr_bottle_xiranite_lowpoly_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    inputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_lowpoly', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_xiranite_lowpoly', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_iron_bottle_acid_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_acid', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_iron_bottle_filled_liquid_acid', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_iron_bottle_copper_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_iron_bottle_filled_liquid_copper', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_iron_bottle_copper_enr_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper_enr', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_iron_bottle_filled_liquid_copper_enr', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_iron_bottle_xiranite_enr_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_enr', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_iron_bottle_filled_liquid_xiranite_enr', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_glass_bottle_acid_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_acid', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_glass_bottle_filled_liquid_acid', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_glass_bottle_copper_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_glass_bottle_filled_liquid_copper', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_glass_bottle_copper_enr_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper_enr', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_glass_bottle_filled_liquid_copper_enr', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_glass_bottle_xiranite_enr_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_enr', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_glass_bottle_filled_liquid_xiranite_enr', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_glass_enr_bottle_acid_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_acid', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_glass_enr_bottle_filled_liquid_acid', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_glass_enr_bottle_copper_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_glass_enr_bottle_filled_liquid_copper', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_glass_enr_bottle_copper_enr_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper_enr', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_glass_enr_bottle_filled_liquid_copper_enr', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_glass_enr_bottle_xiranite_enr_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_enr', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_glass_enr_bottle_filled_liquid_xiranite_enr', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_iron_enr_bottle_acid_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_acid', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_iron_enr_bottle_filled_liquid_acid', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_iron_enr_bottle_copper_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_iron_enr_bottle_filled_liquid_copper', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_iron_enr_bottle_copper_enr_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper_enr', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_iron_enr_bottle_filled_liquid_copper_enr', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_iron_enr_bottle_xiranite_enr_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_enr', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_iron_enr_bottle_filled_liquid_xiranite_enr', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_copper_bottle_acid_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_acid', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_bottle_filled_liquid_acid', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_copper_bottle_copper_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_bottle_filled_liquid_copper', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_copper_bottle_copper_enr_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper_enr', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_bottle_filled_liquid_copper_enr', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_copper_bottle_xiranite_enr_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_enr', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_bottle_filled_liquid_xiranite_enr', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_copper_enr_bottle_acid_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_acid', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_acid', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_copper_enr_bottle_copper_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_copper', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_copper_enr_bottle_copper_enr_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper_enr', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_copper_enr', amount: 1 }],
+  },
+  {
+    id: 'r_liquid_filling_copper_enr_bottle_xiranite_enr_hidden',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_enr', amount: 1 },
+    ],
+    outputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_xiranite_enr', amount: 1 }],
+  },
+  {
+    id: 'r_filling_activity_xiranite_enr_bottle_grass_2_basic',
+    machineType: 'item_port_liquid_filling_pd_mc_1',
+    cycleSeconds: 10,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_activity_xiranite_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_2', amount: 5 },
+    ],
+    outputs: [{ itemId: 'item_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2', amount: 1 }],
+  },
+  {
+    id: 'r_dismantling_activity_xiranite_enr_bottle_grass_2_basic',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 10,
+    tags: [NEW_TAG],
+    inputs: [{ itemId: 'item_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2', amount: 1 }],
+    outputs: [
+      { itemId: 'item_activity_xiranite_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_plant_grass_2', amount: 5 },
+    ],
+  },
   ...LIQUID_BOTTLE_DISMANTLE_RECIPES,
-  ...EXTRA_LIQUID_BOTTLE_DISMANTLE_RECIPES,
+  {
+    id: 'r_liquid_dismantling_iron_bottle_acid_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_iron_bottle_filled_liquid_acid', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_acid', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_bottle_copper_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_iron_bottle_filled_liquid_copper', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_bottle_copper_enr_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_iron_bottle_filled_liquid_copper_enr', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper_enr', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_bottle_xiranite_enr_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_iron_bottle_filled_liquid_xiranite_enr', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_enr', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_bottle_acid_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_glass_bottle_filled_liquid_acid', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_acid', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_bottle_copper_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_glass_bottle_filled_liquid_copper', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_bottle_copper_enr_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_glass_bottle_filled_liquid_copper_enr', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper_enr', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_bottle_xiranite_enr_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_glass_bottle_filled_liquid_xiranite_enr', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_enr', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_enr_bottle_acid_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_glass_enr_bottle_filled_liquid_acid', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_acid', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_enr_bottle_copper_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_glass_enr_bottle_filled_liquid_copper', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_enr_bottle_copper_enr_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_glass_enr_bottle_filled_liquid_copper_enr', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper_enr', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_glass_enr_bottle_xiranite_enr_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_glass_enr_bottle_filled_liquid_xiranite_enr', amount: 1 }],
+    outputs: [
+      { itemId: 'item_glass_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_enr', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_enr_bottle_acid_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_iron_enr_bottle_filled_liquid_acid', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_acid', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_enr_bottle_copper_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_iron_enr_bottle_filled_liquid_copper', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_enr_bottle_copper_enr_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_iron_enr_bottle_filled_liquid_copper_enr', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper_enr', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_iron_enr_bottle_xiranite_enr_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_iron_enr_bottle_filled_liquid_xiranite_enr', amount: 1 }],
+    outputs: [
+      { itemId: 'item_iron_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_enr', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_bottle_acid_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_copper_bottle_filled_liquid_acid', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_acid', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_bottle_copper_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_copper_bottle_filled_liquid_copper', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_bottle_copper_enr_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_copper_bottle_filled_liquid_copper_enr', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper_enr', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_bottle_xiranite_enr_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_copper_bottle_filled_liquid_xiranite_enr', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_enr', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_enr_bottle_acid_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_acid', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_acid', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_enr_bottle_copper_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_copper', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_enr_bottle_copper_enr_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_copper_enr', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_copper_enr', amount: 1 },
+    ],
+  },
+  {
+    id: 'r_liquid_dismantling_copper_enr_bottle_xiranite_enr_hidden',
+    machineType: 'item_port_dismantler_1',
+    cycleSeconds: 2,
+    tags: [LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG, NEW_TAG],
+    inputs: [{ itemId: 'item_copper_enr_bottle_filled_liquid_xiranite_enr', amount: 1 }],
+    outputs: [
+      { itemId: 'item_copper_enr_bottle', amount: 1 },
+      { itemId: 'item_liquid_xiranite_enr', amount: 1 },
+    ],
+  },
   {
     id: 'r_shaper_iron_bottle_from_iron_nugget_basic',
     machineType: 'item_port_shaper_1',
@@ -1444,6 +2445,14 @@ export const RECIPES: RecipeDef[] = [
     cycleSeconds: 2,
     inputs: [{ itemId: 'item_iron_enr', amount: 2 }],
     outputs: [{ itemId: 'item_iron_enr_bottle', amount: 1 }],
+  },
+  {
+    id: 'r_shaper_copper_enr_bottle_from_copper_enr_basic',
+    machineType: 'item_port_shaper_1',
+    cycleSeconds: 2,
+    tags: [NEW_TAG],
+    inputs: [{ itemId: 'item_copper_enr', amount: 2 }],
+    outputs: [{ itemId: 'item_copper_enr_bottle', amount: 1 }],
   },
   {
     id: 'r_shaper_glass_enr_bottle_from_quartz_enr_basic',
@@ -1477,6 +2486,17 @@ export const RECIPES: RecipeDef[] = [
       { itemId: 'item_liquid_water', amount: 1 },
     ],
     outputs: [{ itemId: 'item_xiranite_powder', amount: 1 }],
+  },
+  {
+    id: 'r_xiranite_oven_xiranite_enr_powder_from_xiranite_powder_and_waste_liquid_basic',
+    machineType: 'item_port_xiranite_oven_1',
+    cycleSeconds: 10,
+    tags: [NEW_TAG],
+    inputs: [
+      { itemId: 'item_xiranite_powder', amount: 10 },
+      { itemId: 'item_liquid_xiranite_poly', amount: 5 },
+    ],
+    outputs: [{ itemId: 'item_xiranite_enr_powder', amount: 1 }],
   },
   {
     id: 'r_xiranite_oven_muck_xiranite_1_from_muck_feces_1_and_liquid_xiranite_hidden',

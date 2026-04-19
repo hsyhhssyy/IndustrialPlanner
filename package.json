@@ -14,6 +14,7 @@
     "preview": "vite preview",
     "assets:normalize": "node scripts/normalize-assets.mjs",
     "assets:refresh": "npm run gen:filled-icons && npm run gen:chrono-icons && npm run assets:normalize",
+    "export:end-wiki-recipes:zh": "node scripts/export-end-wiki-recipes-zh.mjs",
     "gen:filled-icons": "node scripts/generate-filled-bottle-icons.mjs",
     "gen:chrono-icons": "node scripts/generate-chrono-item-icons.mjs",
     "gen:blueprint-index": "node scripts/generate-blueprint-index.mjs"

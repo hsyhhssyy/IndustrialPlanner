@@ -2429,6 +2429,155 @@ button:disabled {
   padding: 12px;
 }
 
+.unsupported-viewport-overlay {
+  z-index: 1400;
+  padding: clamp(16px, 4vw, 32px);
+  backdrop-filter: blur(16px);
+}
+
+.unsupported-viewport-overlay__panel {
+  width: min(100%, 560px);
+  min-width: 0;
+  max-width: 560px;
+  max-height: min(100%, 760px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.unsupported-viewport-overlay__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--global-dialog-border) 16%, transparent);
+  color: color-mix(in srgb, var(--global-dialog-text) 82%, var(--global-dialog-border) 18%);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.unsupported-viewport-overlay__title {
+  margin: 0;
+  font-size: clamp(24px, 4vw, 32px);
+  line-height: 1.2;
+  color: var(--global-dialog-text);
+}
+
+.unsupported-viewport-overlay__message {
+  margin: 0;
+  max-width: 42ch;
+  color: color-mix(in srgb, var(--global-dialog-text) 78%, transparent);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.unsupported-viewport-overlay__icons {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.unsupported-viewport-overlay__icon-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 12px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--global-dialog-border) 30%, transparent);
+  background: color-mix(in srgb, var(--global-dialog-surface) 90%, transparent);
+  color: color-mix(in srgb, var(--global-dialog-text) 88%, transparent);
+}
+
+.unsupported-viewport-overlay__icon-card--success {
+  border-color: color-mix(in srgb, #37c87a 52%, transparent);
+  background: color-mix(in srgb, #37c87a 10%, var(--global-dialog-surface) 90%);
+}
+
+.unsupported-viewport-overlay__icon-card svg {
+  width: 82px;
+  height: 82px;
+  flex: 0 0 auto;
+}
+
+.unsupported-viewport-overlay__icon-card span {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.unsupported-viewport-overlay__ring {
+  fill: none;
+  stroke-width: 6;
+}
+
+.unsupported-viewport-overlay__ring--danger {
+  stroke: #ff6b6b;
+}
+
+.unsupported-viewport-overlay__ring--success {
+  stroke: #37c87a;
+}
+
+.unsupported-viewport-overlay__slash {
+  fill: none;
+  stroke: #ff6b6b;
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
+.unsupported-viewport-overlay__device,
+.unsupported-viewport-overlay__device-detail,
+.unsupported-viewport-overlay__device-stand {
+  fill: none;
+  stroke: color-mix(in srgb, var(--global-dialog-text) 92%, transparent);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.unsupported-viewport-overlay__device-detail {
+  fill: color-mix(in srgb, var(--global-dialog-text) 92%, transparent);
+  stroke: none;
+}
+
+.unsupported-viewport-overlay__device--success,
+.unsupported-viewport-overlay__device-stand--success {
+  stroke: #37c87a;
+}
+
+@media (max-width: 640px) {
+  .unsupported-viewport-overlay {
+    align-items: flex-start;
+  }
+
+  .unsupported-viewport-overlay__panel {
+    margin: auto;
+    gap: 14px;
+  }
+
+  .unsupported-viewport-overlay__icons {
+    grid-template-columns: 1fr;
+  }
+
+  .unsupported-viewport-overlay__icon-card {
+    padding: 12px;
+  }
+
+  .unsupported-viewport-overlay__icon-card svg {
+    width: 72px;
+    height: 72px;
+  }
+}
+
 .help-mode-card p {
   margin: 10px 0 0;
   font-size: 13px;

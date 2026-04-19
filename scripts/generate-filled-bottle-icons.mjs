@@ -15,6 +15,7 @@ const bottleItemIds = [
   'item_glass_enr_bottle',
   'item_iron_enr_bottle',
   'item_copper_bottle',
+  'item_copper_enr_bottle',
   'item_activity_xiranite_bottle',
   'item_activity_xiranite_enr_bottle',
 ]

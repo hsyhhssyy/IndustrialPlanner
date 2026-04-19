@@ -94,7 +94,7 @@ async function buildIndex() {
       id,
       blueprintVersion,
       name: fileName,
-      path: `/blueprints/${encodeURIComponent(fileName)}`,
+      path: `blueprints/${encodeURIComponent(fileName)}`,
       size: stat.size,
     })
   }

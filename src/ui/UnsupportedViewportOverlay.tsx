@@ -47,8 +47,8 @@ function LandscapeMonitorAllowedIcon() {
 
 export function UnsupportedViewportOverlay({ t }: UnsupportedViewportOverlayProps) {
   return (
-    <div className="unsupported-viewport-overlay" role="alertdialog" aria-modal="true" aria-labelledby="unsupported-viewport-overlay-title">
-      <div className="unsupported-viewport-overlay__panel">
+    <div className="global-dialog-backdrop unsupported-viewport-overlay" role="alertdialog" aria-modal="true" aria-labelledby="unsupported-viewport-overlay-title">
+      <div className="global-dialog unsupported-viewport-overlay__panel">
         <div className="unsupported-viewport-overlay__badge">{t('viewportGate.badge')}</div>
         <h2 id="unsupported-viewport-overlay-title" className="unsupported-viewport-overlay__title">
           {t('viewportGate.title')}
