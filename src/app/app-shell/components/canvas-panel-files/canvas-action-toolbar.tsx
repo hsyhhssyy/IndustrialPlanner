@@ -1,22 +1,11 @@
 import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
 import {
-  STATIC_UI_PLACEHOLDER_TEXT,
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { CSSProperties, ComponentProps } from "react";
 
 type CanvasActionIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
 type CanvasActionTone = "cancel" | "confirm" | "delete" | "rotate";
-
-const PLACEHOLDER_ACTIONS: Array<{
-  id: string;
-  icon: CanvasActionIconKind;
-  tone?: CanvasActionTone;
-}> = [
-  { id: "canvas-action-cancel", icon: "cancel", tone: "cancel" },
-  { id: "canvas-action-confirm", icon: "confirm", tone: "confirm" },
-  { id: "canvas-action-rotate", icon: "rotate", tone: "rotate" },
-];
 
 interface CanvasActionToolbarAction {
   id: string;
@@ -38,7 +27,7 @@ function joinClassNames(values: Array<string | undefined | false>): string {
 }
 
 export function CanvasActionToolbar({
-  actions: _actions,
+  actions,
   className,
   style,
 }: CanvasActionToolbarProps) {
@@ -49,19 +38,20 @@ export function CanvasActionToolbar({
       onPointerDown={handleUiEvent}
       style={style}
     >
-      {PLACEHOLDER_ACTIONS.map((action) => (
+      {actions.map((action) => (
         <button
-          aria-label={STATIC_UI_PLACEHOLDER_TEXT}
+          aria-label={action.ariaLabel}
           className={joinClassNames([
             "canvas-action-button",
             action.tone ? `is-${action.tone}` : undefined,
           ])}
+          disabled={action.disabled}
           key={action.id}
-          onClick={handleUiEvent}
+          onClick={action.onClick}
           type="button"
         >
           <WorkbenchIcon className="canvas-action-icon" kind={action.icon} />
-          <span className="sr-only">{STATIC_UI_PLACEHOLDER_TEXT}</span>
+          <span className="sr-only">{action.ariaLabel}</span>
         </button>
       ))}
     </div>

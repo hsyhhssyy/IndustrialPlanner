@@ -7,99 +7,160 @@ import type {
   SelectionInspectorState,
 } from "@/app/app-shell/components/inspector/selection-inspector-model";
 import {
-  STATIC_UI_PLACEHOLDER_TEXT,
+  serializeConfigValueForInput,
+} from "@/app/app-shell/components/inspector/selection-inspector-model";
+import {
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
 
+type Translate = (key: string) => string;
+
+function resolveDefinitionLabel(
+  translate: Translate,
+  nameKey: string,
+  fallback: string,
+): string {
+  const translated = translate(nameKey);
+
+  return translated === nameKey ? fallback : translated;
+}
+
 export function SelectionInspectorSummary({
-  state: _state,
-  context: _context,
+  context,
+  translate,
 }: {
   state: SelectionInspectorState;
   context: SelectionInspectorContext;
+  translate: Translate;
 }) {
+  const rows = [
+    {
+      label: translate("label.definition"),
+      value: resolveDefinitionLabel(
+        translate,
+        context.selectedDefinition.nameKey,
+        context.selectedDefinition.id,
+      ),
+    },
+    {
+      label: translate("label.entityId"),
+      value: context.selectedEntityId,
+    },
+    {
+      label: translate("label.mode"),
+      value: translate("mode.edit"),
+    },
+    {
+      label: translate("label.position"),
+      value: `${context.selectedEntity.position.x}, ${context.selectedEntity.position.y}`,
+    },
+    {
+      label: translate("label.rotation"),
+      value: String(context.selectedEntity.rotation),
+    },
+    {
+      label: translate("label.links"),
+      value: String(context.selectedLinks.length),
+    },
+  ];
+
   return (
     <dl className="kv-grid">
-      <div className="kv">
-        <dt>{STATIC_UI_PLACEHOLDER_TEXT}</dt>
-        <dd>{STATIC_UI_PLACEHOLDER_TEXT}</dd>
-      </div>
-      <div className="kv">
-        <dt>{STATIC_UI_PLACEHOLDER_TEXT}</dt>
-        <dd>{STATIC_UI_PLACEHOLDER_TEXT}</dd>
-      </div>
-      <div className="kv">
-        <dt>{STATIC_UI_PLACEHOLDER_TEXT}</dt>
-        <dd>{STATIC_UI_PLACEHOLDER_TEXT}</dd>
-      </div>
-      <div className="kv">
-        <dt>{STATIC_UI_PLACEHOLDER_TEXT}</dt>
-        <dd>{STATIC_UI_PLACEHOLDER_TEXT}</dd>
-      </div>
-      <div className="kv">
-        <dt>{STATIC_UI_PLACEHOLDER_TEXT}</dt>
-        <dd>{STATIC_UI_PLACEHOLDER_TEXT}</dd>
-      </div>
-      <div className="kv">
-        <dt>{STATIC_UI_PLACEHOLDER_TEXT}</dt>
-        <dd>{STATIC_UI_PLACEHOLDER_TEXT}</dd>
-      </div>
+      {rows.map((row) => (
+        <div className="kv" key={row.label}>
+          <dt>{row.label}</dt>
+          <dd>{row.value}</dd>
+        </div>
+      ))}
     </dl>
   );
 }
 
 export function ConnectionList({
   locale: _locale,
-  links: _links,
-  removeDisabled: _removeDisabled,
+  links,
+  removeDisabled,
+  translate,
 }: {
   locale: AppLocale;
   links: ExplicitLink[];
   removeDisabled: boolean;
+  translate: Translate;
 }) {
+  const removeLabel = links.length > 1
+    ? translate("action.removeLinks")
+    : translate("action.removeLink");
+
   return (
     <div className="definition-list">
-      <article className="definition-card">
-        <h4>{STATIC_UI_PLACEHOLDER_TEXT}</h4>
-        <p>{STATIC_UI_PLACEHOLDER_TEXT}</p>
-        <button onClick={handleUiEvent} type="button">
-          {STATIC_UI_PLACEHOLDER_TEXT}
-        </button>
-      </article>
+      {links.length === 0 ? (
+        <article className="definition-card">
+          <h4>{translate("label.links")}</h4>
+          <p>{translate("label.noConnections")}</p>
+          <button disabled onClick={handleUiEvent} type="button">
+            {translate("action.removeLinks")}
+          </button>
+        </article>
+      ) : (
+        <>
+          {links.map((link, index) => (
+            <article className="definition-card" key={link.id}>
+              <h4>{`${translate("label.links")} #${index + 1}`}</h4>
+              <p>{`${link.sourceEntityId} -> ${link.targetEntityId}`}</p>
+              <p>{link.kind}</p>
+            </article>
+          ))}
+          <button
+            disabled={removeDisabled}
+            onClick={handleUiEvent}
+            type="button"
+          >
+            {removeLabel}
+          </button>
+        </>
+      )}
     </div>
   );
 }
 
 export function RuntimeDetailList({
   state: _state,
+  translate,
 }: {
   state: SelectionInspectorState;
+  translate: Translate;
 }) {
   return (
     <div className="definition-list">
       <article className="definition-card">
-        <p>{STATIC_UI_PLACEHOLDER_TEXT}</p>
+        <p>{translate("label.runtimeDetailPlaceholder")}</p>
       </article>
     </div>
   );
 }
 
-export function NoSelectionState({ locale: _locale }: { locale: AppLocale }) {
+export function NoSelectionState({
+  locale: _locale,
+  translate,
+}: {
+  locale: AppLocale;
+  translate: Translate;
+}) {
   return (
     <article className="definition-card">
-      <h4>{STATIC_UI_PLACEHOLDER_TEXT}</h4>
-      <p>{STATIC_UI_PLACEHOLDER_TEXT}</p>
+      <h4>{translate("label.noSelection")}</h4>
+      <p>{translate("status.edit")}</p>
     </article>
   );
 }
 
 export function ConfigFieldMutationControl({
-  currentValue: _currentValue,
+  currentValue,
   locale: _locale,
-  submitLabel: _submitLabel,
-  toggleLabel: _toggleLabel,
-  clearLabel: _clearLabel,
-  disabled: _disabled = false,
+  submitLabel,
+  toggleLabel,
+  clearLabel,
+  disabled = false,
   onApply: _onApply,
   onClear: _onClear,
 }: {
@@ -115,16 +176,22 @@ export function ConfigFieldMutationControl({
   return (
     <div className="cluster">
       <input
-        defaultValue={STATIC_UI_PLACEHOLDER_TEXT}
+        defaultValue={serializeConfigValueForInput(currentValue)}
+        disabled={disabled}
         name="nextValue"
         onChange={handleUiEvent}
       />
-      <button onClick={handleUiEvent} type="button">
-        {STATIC_UI_PLACEHOLDER_TEXT}
+      <button disabled={disabled} onClick={handleUiEvent} type="button">
+        {submitLabel}
       </button>
-      <button onClick={handleUiEvent} type="button">
-        {STATIC_UI_PLACEHOLDER_TEXT}
+      <button disabled={disabled} onClick={handleUiEvent} type="button">
+        {toggleLabel}
       </button>
+      {clearLabel ? (
+        <button disabled={disabled} onClick={handleUiEvent} type="button">
+          {clearLabel}
+        </button>
+      ) : null}
     </div>
   );
 }

@@ -17,19 +17,26 @@ function createWorkspace(): WorkspaceContract {
 }
 
 describe("createAppHost", () => {
-  it("initializes app settings locale and keeps readonly views in sync", () => {
+  it("initializes app settings and workbench state and keeps readonly views in sync", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
     expect(appHost.state.settings.locale).toBe("zh-CN");
     expect(appHost.internalState.settings.locale).toBe("zh-CN");
     expect(workspace.app?.state.settings.locale).toBe("zh-CN");
+    expect(appHost.state.workbench.leftDockOpen).toBe(true);
+    expect(appHost.state.workbench.rightDockOpen).toBe(true);
 
     appHost.internalState.settings.locale = "en-US";
+    appHost.internalState.workbench.leftDockOpen = false;
+    appHost.internalState.workbench.rightDockOpen = false;
 
     expect(appHost.state.settings.locale).toBe("en-US");
     expect(appHost.internalState.settings.locale).toBe("en-US");
     expect(workspace.app?.state.settings.locale).toBe("en-US");
+    expect(appHost.state.workbench.leftDockOpen).toBe(false);
+    expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
+    expect(workspace.app?.state.workbench.leftDockOpen).toBe(false);
   });
 
   it("translates arbitrary i18n keys through the current locale", () => {
@@ -43,6 +50,7 @@ describe("createAppHost", () => {
     appHost.internalState.settings.locale = "en-US";
 
     expect(appHost.actions.translate("app.title")).toBe("Industrial Planner Stage1");
-    expect(appHost.actions.translate("workbench.leftRail.placement")).toBe("放置模式");
+    expect(appHost.actions.translate("workbench.leftRail.placement")).toBe("Placement");
+    expect(appHost.actions.translate("workbench.base.wuling")).toBe("Wuling");
   });
 });

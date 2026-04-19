@@ -1,5 +1,4 @@
 import {
-  STATIC_UI_PLACEHOLDER_TEXT,
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { AppHost } from "@/app/app-host";
@@ -7,6 +6,7 @@ import { useViewportResizeAdapter } from "@/app/app-shell/components/canvas-pane
 import { useEffect, useRef } from "react";
 
 export function CanvasPanel({ appHost }: { appHost: AppHost }) {
+  const t = appHost.actions.translate;
   const rendererHostRef = useRef<HTMLDivElement | null>(null);
   const viewportSurfaceRef = useRef<HTMLDivElement | null>(null);
   const renderCanvas = appHost.workspace.render?.canvas ?? null;
@@ -61,7 +61,7 @@ export function CanvasPanel({ appHost }: { appHost: AppHost }) {
           {renderCanvas ? (
             <div className="renderer-host" ref={rendererHostRef} />
           ) : (
-            <div className="canvas-placeholder">{STATIC_UI_PLACEHOLDER_TEXT}</div>
+            <div className="canvas-placeholder">{t("status.ready")}</div>
           )}
         </div>
       </div>

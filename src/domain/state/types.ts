@@ -49,10 +49,14 @@ export interface AppSettings {
   readonly locale: AppLocale;
 }
 
-export interface UiState {
-  readonly settings: AppSettings;
+export interface WorkbenchState {
   readonly leftDockOpen: boolean;
   readonly rightDockOpen: boolean;
+}
+
+export interface UiState {
+  readonly settings: AppSettings;
+  readonly workbench: WorkbenchState;
   readonly bottomBarOpen: boolean;
   readonly activePanel: "placement" | "delete" | "blueprint" | "history" | null;
 }
