@@ -215,7 +215,7 @@ export function useBuildHotkeysDomain({
         return
       }
 
-      if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key === 'Delete') {
+      if (!event.ctrlKey && !event.metaKey && !event.altKey && (event.key === 'Delete' || lowerKey === 'f')) {
         if (selection.length > 0) {
           event.preventDefault()
           deleteSelectedDevices()

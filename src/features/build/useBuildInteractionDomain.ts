@@ -335,7 +335,7 @@ export function useBuildInteractionDomain({
       if (mode === 'place' && placeType) {
         if (simIsRunning) return
         const placed = placeDevice(cell)
-        if (placed && !event.shiftKey) {
+        if (placed && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
           setPlaceType('')
         }
         return
