@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-04-19T06:29:15.000Z",
+  "generatedAt": "2026-04-19T08:15:42.656Z",
   "files": [
     {
       "id": "PublicBluePrint-HSY-2dec8da2-1c38-47f3-a574-a586bd4efad5",
@@ -29,6 +29,13 @@
       "name": "双烘炉息壤产线-2026-03-04 15_00_38.blueprint.json",
       "path": "blueprints/%E5%8F%8C%E7%83%98%E7%82%89%E6%81%AF%E5%A3%A4%E4%BA%A7%E7%BA%BF-2026-03-04%2015_00_38.blueprint.json",
       "size": 23396
+    },
+    {
+      "id": "PublicBluePrint-HSY-d8591492-55a4-4ce5-b1ac-8fcc6a1ea226",
+      "blueprintVersion": "1",
+      "name": "全暗管优质芽针针剂-2026-04-19 08_10_16.blueprint.json",
+      "path": "blueprints/%E5%85%A8%E6%9A%97%E7%AE%A1%E4%BC%98%E8%B4%A8%E8%8A%BD%E9%92%88%E9%92%88%E5%89%82-2026-04-19%2008_10_16.blueprint.json",
+      "size": 51862
     },
     {
       "id": "PublicBluePrint-HSY-f00abb80-6b5e-45ab-ae01-32bd1e3e1771",
