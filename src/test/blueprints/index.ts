@@ -5,12 +5,14 @@ import liquidOverflowCase from './cases/liquid-overflow.ts'
 import mediumWulingBatteryLineCase from './cases/medium-wuling-battery-line.ts'
 import oneClickDeathMachineCase from './cases/one-click-death-machine.ts'
 import premiumCapsuleLineCase from './cases/premium-capsule-line.ts'
+import premiumYazhenSyringeLineCase from './cases/premium-yazhen-syringe-line.ts'
 import { registerBlueprintCase, TEST_BLUEPRINT_ROOT, type RegisteredBlueprintCase } from './harness.ts'
 import { TEST_BLUEPRINT_CASES } from './testScenarioCases.ts'
 
 export const BLUEPRINT_CASES: RegisteredBlueprintCase[] = [
   ...TEST_BLUEPRINT_CASES.map((testCase) => registerBlueprintCase(`test/${testCase.id}.ts`, testCase)),
   registerBlueprintCase('premium-capsule-line.ts', premiumCapsuleLineCase),
+  registerBlueprintCase('premium-yazhen-syringe-line.ts', premiumYazhenSyringeLineCase),
   registerBlueprintCase('medium-wuling-battery-line.ts', mediumWulingBatteryLineCase),
   registerBlueprintCase('dual-oven-xiranite.ts', dualOvenXiraniteCase),
   registerBlueprintCase('liquid-overflow.ts', liquidOverflowCase),
