@@ -337,6 +337,13 @@ export const DEFAULT_LOCALE: AppLocale = "zh-CN";
 
 export const SUPPORTED_LOCALES: AppLocale[] = ["zh-CN", "en-US"];
 
+export function lookupMessageText(locale: AppLocale, key: string): string | undefined {
+  const localeMessages = MESSAGES[locale] as Record<string, string>;
+  const defaultMessages = MESSAGES[DEFAULT_LOCALE] as Record<string, string>;
+
+  return localeMessages[key] ?? defaultMessages[key];
+}
+
 export function createTranslator(locale: AppLocale) {
-  return (key: MessageKey): string => MESSAGES[locale][key] ?? MESSAGES[DEFAULT_LOCALE][key];
+  return (key: MessageKey): string => lookupMessageText(locale, key) ?? key;
 }

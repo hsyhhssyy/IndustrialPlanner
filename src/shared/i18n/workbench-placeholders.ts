@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE } from "@/shared/i18n/messages";
 import type { AppLocale } from "@/shared/i18n/messages";
 
 const WORKBENCH_PLACEHOLDER_TRANSLATIONS: Record<AppLocale, Record<string, string>> = {
@@ -99,13 +100,17 @@ const WORKBENCH_PLACEHOLDER_TRANSLATIONS: Record<AppLocale, Record<string, strin
   "en-US": {},
 };
 
+export function lookupWorkbenchText(locale: AppLocale, key: string): string | undefined {
+  const localeTranslations = WORKBENCH_PLACEHOLDER_TRANSLATIONS[locale];
+  const defaultTranslations = WORKBENCH_PLACEHOLDER_TRANSLATIONS[DEFAULT_LOCALE];
+
+  return localeTranslations[key] ?? defaultTranslations[key];
+}
+
 export function localizeWorkbenchText(
   locale: AppLocale,
   descriptor: string,
   fallback?: string
 ): string {
-  return (
-    descriptor ??
-    fallback
-  );
+  return lookupWorkbenchText(locale, descriptor) ?? fallback ?? descriptor;
 }

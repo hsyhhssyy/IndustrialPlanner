@@ -1,10 +1,12 @@
 import { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { AppContract } from "@/domain/contract/app-contract";
+import { lookupMessageText } from "@/shared/i18n/messages";
+import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 import { createUiStateReadWrite, UiStateReadWrite } from "./state-impl";
 
 export interface AppHost extends AppContract {
   workspace: WorkspaceContract;
-  state: UiStateReadWrite;
+  internalState: UiStateReadWrite;
   dispose: () => void;
 }
 
@@ -12,16 +14,27 @@ export interface AppHost extends AppContract {
 export function createAppHost(
   workspace: WorkspaceContract
 ): AppHost {
-  const appState = createUiStateReadWrite();
+  const internalState = createUiStateReadWrite();
+  const actions: AppContract["actions"] = {
+    translate: (key) => {
+      const locale = internalState.settings.locale;
+
+      return (
+        lookupMessageText(locale, key) ??
+        lookupWorkbenchText(locale, key) ??
+        key
+      );
+    },
+  };
 
   const host: AppHost = {
-    app: appState,
+    state: internalState,
     workspace,
-    state: appState,
+    internalState,
     dispose: () => {
     },
     queries: {},
-    actions: {}
+    actions,
   };
 
   workspace.app = host;

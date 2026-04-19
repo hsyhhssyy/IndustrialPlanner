@@ -3,7 +3,7 @@ import { AppQuery } from "../query/app-query";
 import { UiState } from "../state/types";
 
 export interface AppContract {
-    app: UiState;
+    state: UiState;
     queries: AppQuery;
     actions: AppAction;
 }

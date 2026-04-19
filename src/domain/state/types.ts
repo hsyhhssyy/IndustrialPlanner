@@ -2,6 +2,7 @@
 // Editor State 定义上是Document的包裹层，他为Document提供一层运行时tag
 // 比如SelectedEntities就是指这些Entity被选中了，这个状态是运行时的
 
+import type { AppLocale } from "@/shared/i18n/messages";
 import type { WorldEntity } from "../entity/world-document";
 
 export interface EditorViewportCenter {
@@ -44,7 +45,12 @@ export interface HistoryState {
   lastCommandId: string | null;
 }
 
+export interface AppSettings {
+  readonly locale: AppLocale;
+}
+
 export interface UiState {
+  readonly settings: AppSettings;
   readonly leftDockOpen: boolean;
   readonly rightDockOpen: boolean;
   readonly bottomBarOpen: boolean;

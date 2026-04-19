@@ -11,7 +11,9 @@ const RIGHT_DOCK_LIST = [
   STATIC_UI_PLACEHOLDER_TEXT,
 ];
 
-export function RightDock({ appHost: _appHost }: { appHost: AppHost }) {
+export function RightDock({ appHost }: { appHost: AppHost }) {
+  const locale = appHost.state.settings.locale;
+
   return (
     <aside className="dock dock-right panel-surface">
       <section className="dock-section">
@@ -67,7 +69,7 @@ export function RightDock({ appHost: _appHost }: { appHost: AppHost }) {
             </div>
             <EditSelectionInspector
               context={null}
-              state={{ locale: "zh-CN" }}
+              state={{ locale }}
             />
           </article>
           <div className="cluster">

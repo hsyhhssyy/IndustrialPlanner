@@ -11,12 +11,14 @@ import {
 } from "@/app/app-shell/components/ui-shell-null-handlers";
 
 export function EditSelectionInspector({
-  state: _state,
+  state,
   context: _context,
 }: SelectionInspectorPanelProps) {
+  const locale = state.locale;
+
   return (
     <div className="stack">
-      <NoSelectionState locale="zh-CN" />
+      <NoSelectionState locale={locale} />
       <div className="cluster">
         <div className="card-header card-subheader">
           <h4>{STATIC_UI_PLACEHOLDER_TEXT}</h4>
@@ -39,7 +41,7 @@ export function EditSelectionInspector({
         </div>
         <ConnectionList
           links={[]}
-          locale="zh-CN"
+          locale={locale}
           removeDisabled={false}
         />
       </div>
@@ -55,7 +57,7 @@ export function EditSelectionInspector({
             <ConfigFieldMutationControl
               clearLabel={STATIC_UI_PLACEHOLDER_TEXT}
               currentValue={STATIC_UI_PLACEHOLDER_TEXT}
-              locale="zh-CN"
+              locale={locale}
               onApply={handleUiEvent}
               submitLabel={STATIC_UI_PLACEHOLDER_TEXT}
               toggleLabel={STATIC_UI_PLACEHOLDER_TEXT}
@@ -67,7 +69,7 @@ export function EditSelectionInspector({
         <div className="card-header card-subheader">
           <h4>{STATIC_UI_PLACEHOLDER_TEXT}</h4>
         </div>
-        <RuntimeDetailList state={{ locale: "zh-CN" }} />
+        <RuntimeDetailList state={{ locale }} />
       </div>
     </div>
   );
