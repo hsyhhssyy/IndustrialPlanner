@@ -36,6 +36,14 @@ jobs:
           VITE_RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
         run: npm run build
 
+      - name: Write deployment metadata
+        env:
+          DEPLOYMENT_RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          cat > dist/release.json <<EOF
+          {"releaseTag":"${DEPLOYMENT_RELEASE_TAG}","sha":"${GITHUB_SHA}","runId":"${GITHUB_RUN_ID}"}
+          EOF
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -47,7 +55,58 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    env:
+      CDN_REFRESH_URL: https://cdn.amiyabot.com/api/v1/tencent/teo/cache/endfield.amiyabot.com
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Wait for deployed release tag
+        env:
+          SITE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SITE_URL:-}" ]; then
+            echo "Deployment page URL is missing"
+            exit 1
+          fi
+
+          metadata_url="${SITE_URL%/}/release.json"
+          expected_sha="\"sha\":\"${GITHUB_SHA}\""
+
+          for attempt in $(seq 1 30); do
+            response_file="$(mktemp)"
+            status_code="$(curl -L -sS --max-time 20 \
+              -H 'Cache-Control: no-cache' \
+              -H 'Pragma: no-cache' \
+              -o "$response_file" \
+              -w '%{http_code}' \
+              "$metadata_url")"
+
+            if [ "$status_code" = "200" ] && grep -Fq "$expected_sha" "$response_file"; then
+              echo "Detected deployment SHA '$GITHUB_SHA' at $metadata_url"
+              rm -f "$response_file"
+              exit 0
+            fi
+
+            echo "Waiting for deployment SHA '$GITHUB_SHA' at $metadata_url (attempt $attempt/30, status=$status_code)"
+            rm -f "$response_file"
+            sleep 10
+          done
+
+          echo "Timed out waiting for deployment SHA '$GITHUB_SHA' at $metadata_url"
+          exit 1
+
+      - name: Refresh CDN cache
+        env:
+          CDN_REFRESH_TOKEN: ${{ secrets.CDN_REFRESH_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CDN_REFRESH_TOKEN:-}" ]; then
+            echo "CDN_REFRESH_TOKEN is not configured"
+            exit 1
+          fi
+
+          curl -fsS -X PUT "$CDN_REFRESH_URL" \
+            -H "Authorization: Bearer $CDN_REFRESH_TOKEN"
