@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
+import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -8,10 +9,13 @@ const __dirname = path.dirname(__filename)
 const projectRoot = path.resolve(__dirname, '..')
 const blueprintsDir = path.join(projectRoot, 'public', 'blueprints')
 const indexPath = path.join(blueprintsDir, 'index.json')
+const generatedDir = path.join(projectRoot, 'src', 'generated')
+const blueprintIndexAssetPath = path.join(generatedDir, 'publicBlueprintIndex.ts')
 
 const INDEX_SCHEMA_VERSION = 1
 const USER_BLUEPRINT_ID_PATTERN = /^BluePrint-HSY-([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/
 const SYSTEM_BLUEPRINT_ID_PATTERN = /^PublicBluePrint-HSY-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+const HASHED_INDEX_FILE_PATTERN = /^index\.[0-9a-f]{8}\.json$/
 
 function normalizeBlueprintPayload(raw) {
   if (!raw || typeof raw !== 'object') return null
@@ -41,6 +45,20 @@ async function ensureBlueprintDirectory() {
   await fs.mkdir(blueprintsDir, { recursive: true })
 }
 
+async function ensureGeneratedDirectory() {
+  await fs.mkdir(generatedDir, { recursive: true })
+}
+
+async function writeBlueprintIndexAssetModule(fileName) {
+  await ensureGeneratedDirectory()
+  const source = [
+    '// 由 scripts/generate-blueprint-index.mjs 自动生成，请勿手改。',
+    `export const PUBLIC_BLUEPRINT_INDEX_PATH = ${JSON.stringify(`/blueprints/${fileName}`)}`,
+    '',
+  ].join('\n')
+  await fs.writeFile(blueprintIndexAssetPath, source, 'utf8')
+}
+
 async function buildIndex() {
   await ensureBlueprintDirectory()
 
@@ -50,6 +68,7 @@ async function buildIndex() {
     .map((entry) => entry.name)
     .filter((name) => name.endsWith('.json'))
     .filter((name) => name !== 'index.json')
+    .filter((name) => !HASHED_INDEX_FILE_PATTERN.test(name))
     .sort((a, b) => a.localeCompare(b))
 
   const files = []
@@ -110,10 +129,34 @@ async function buildIndex() {
     generatedAt: new Date().toISOString(),
     files,
   }
+  const indexVersionPayload = {
+    schemaVersion: INDEX_SCHEMA_VERSION,
+    files,
+  }
+  const indexHash = crypto.createHash('sha1').update(JSON.stringify(indexVersionPayload)).digest('hex').slice(0, 8)
+  const hashedIndexName = `index.${indexHash}.json`
+  const hashedIndexPath = path.join(blueprintsDir, hashedIndexName)
+  const indexSource = `${JSON.stringify(indexPayload, null, 2)}\n`
 
-  await fs.writeFile(indexPath, `${JSON.stringify(indexPayload, null, 2)}\n`, 'utf8')
+  await fs.writeFile(indexPath, indexSource, 'utf8')
+  await fs.writeFile(hashedIndexPath, indexSource, 'utf8')
+  await writeBlueprintIndexAssetModule(hashedIndexName)
+
+  const removedHashedIndexes = []
+  for (const entry of entries) {
+    if (!entry.isFile()) continue
+    if (!HASHED_INDEX_FILE_PATTERN.test(entry.name)) continue
+    if (entry.name === hashedIndexName) continue
+    await fs.rm(path.join(blueprintsDir, entry.name))
+    removedHashedIndexes.push(entry.name)
+  }
 
   console.log(`Generated blueprint index: public/blueprints/index.json (${files.length} entries)`)
+  console.log(`Generated hashed blueprint index: public/blueprints/${hashedIndexName}`)
+  console.log(`Generated blueprint index asset module: src/generated/publicBlueprintIndex.ts`)
+  if (removedHashedIndexes.length > 0) {
+    console.log(`Removed stale hashed blueprint indexes: ${removedHashedIndexes.join(', ')}`)
+  }
 }
 
 buildIndex().catch((error) => {

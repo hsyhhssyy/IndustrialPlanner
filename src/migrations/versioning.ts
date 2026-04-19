@@ -6,7 +6,7 @@ import type { BaseId, BlueprintDeviceLink, DeviceConfig, DeviceInstance, ItemId,
 import { normalizePortPriorityGroups } from '../domain/shared/portPriority'
 import { isReactorPoolType, normalizeReactorPoolConfig } from '../sim/reactorPool'
 
-export const APP_VERSION = '1.0'
+export const APP_VERSION = '1.2.0.4'
 const PICKUP_OUTPUT_PORT_ID = 'p_out_mid'
 
 export const LEGACY_BLUEPRINTS_KEY = 'stage1-blueprints'

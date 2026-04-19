@@ -36,7 +36,7 @@ function normalizeHistoryEntry(entry: unknown): LayoutHistoryEntryLike {
 
 function normalizeLayoutHistoryStorage(value: unknown): LayoutHistoryStorageLike {
   if (!value || typeof value !== 'object') {
-    return { version: '1.0', historiesByBase: {} }
+    return { version: '1.2.0.4', historiesByBase: {} }
   }
 
   const candidate = value as { version?: unknown; historiesByBase?: unknown }
@@ -48,7 +48,7 @@ function normalizeLayoutHistoryStorage(value: unknown): LayoutHistoryStorageLike
     : {}
 
   return {
-    version: typeof candidate.version === 'string' ? candidate.version : '1.0',
+    version: typeof candidate.version === 'string' ? candidate.version : '1.2.0.4',
     historiesByBase,
   }
 }
