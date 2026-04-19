@@ -3,6 +3,9 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
 
 export default defineConfig({
+  build: {
+    chunkSizeWarningLimit: 4096,
+  },
   plugins: [react()],
   server: {
     allowedHosts: ["industrialplanner-refactor-cf01ab.coder-page.hsyhhssyy.net"],

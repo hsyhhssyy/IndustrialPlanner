@@ -7,15 +7,15 @@ import { TopBar } from "@/app/app-shell/components/top-bar";
 import { handleUiEvent } from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { AppHost } from "@/app/app-host";
 
-export function WorkbenchApp({ appHost: _appHost }: { appHost: AppHost }) {
+export function WorkbenchApp({ appHost }: { appHost: AppHost }) {
   return (
     <div className="workbench" onContextMenu={handleUiEvent}>
-      <TopBar />
-      <LeftToolbar />
-      <LeftDock />
-      <CanvasPanel />
-      <RightDock />
-      <BottomStatusBar />
+      <TopBar appHost={appHost} />
+      <LeftToolbar appHost={appHost} />
+      <LeftDock appHost={appHost} />
+      <CanvasPanel appHost={appHost} />
+      <RightDock appHost={appHost} />
+      <BottomStatusBar appHost={appHost} />
     </div>
   );
 }

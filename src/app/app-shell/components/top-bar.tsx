@@ -3,8 +3,9 @@ import {
   STATIC_UI_PLACEHOLDER_TEXT,
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
+import type { AppHost } from "@/app/app-host";
 
-export function TopBar() {
+export function TopBar({ appHost: _appHost }: { appHost: AppHost }) {
   return (
     <header className="top-bar">
       <div className="toolbar-group top-bar-layout-controls">

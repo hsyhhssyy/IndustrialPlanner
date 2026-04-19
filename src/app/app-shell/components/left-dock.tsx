@@ -3,6 +3,7 @@ import {
   STATIC_UI_PLACEHOLDER_TEXT,
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
+import type { AppHost } from "@/app/app-host";
 
 const LEFT_DOCK_BUTTONS = [
   { id: "dock-button-1", icon: "pointer" as const },
@@ -10,7 +11,7 @@ const LEFT_DOCK_BUTTONS = [
   { id: "dock-button-3", icon: "history" as const },
 ];
 
-export function LeftDock() {
+export function LeftDock({ appHost: _appHost }: { appHost: AppHost }) {
   return (
     <aside className="dock dock-left panel-surface">
       <section className="dock-section">

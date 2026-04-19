@@ -1,6 +1,7 @@
 import { STATIC_UI_PLACEHOLDER_TEXT } from "@/app/app-shell/components/ui-shell-null-handlers";
+import type { AppHost } from "@/app/app-host";
 
-export function BottomStatusBar() {
+export function BottomStatusBar({ appHost: _appHost }: { appHost: AppHost }) {
   return (
     <footer className="status-bar">
       <div className="status-bar-group status-bar-group-left">

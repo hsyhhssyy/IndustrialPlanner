@@ -3,6 +3,7 @@ import {
   STATIC_UI_PLACEHOLDER_TEXT,
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
+import type { AppHost } from "@/app/app-host";
 
 const PRIMARY_TOOLBAR_ITEMS = [
   { id: "primary-placement", icon: "placement" as const },
@@ -16,7 +17,7 @@ const UTILITY_TOOLBAR_ITEMS = [
   { id: "utility-settings", icon: "settings" as const },
 ];
 
-export function LeftToolbar() {
+export function LeftToolbar({ appHost: _appHost }: { appHost: AppHost }) {
   return (
     <aside className="left-toolbar panel-surface">
       <div className="toolbar-rail-group">

@@ -23,13 +23,8 @@ const workspace : WorkspaceContract = {
 
 const appHost = createAppHost(workspace);
 const editorHost = createEditorHost(workspace);
-const renderHost = createRenderHost(workspace);
-const simulationHost = createSimulationHost(workspace);
-
-workspace.app = appHost;
-workspace.editor = editorHost;
-workspace.render = renderHost;
-workspace.simulation = simulationHost;
+await createRenderHost(workspace);
+createSimulationHost(workspace);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

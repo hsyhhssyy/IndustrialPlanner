@@ -6,14 +6,18 @@ export type SnapshotUpdater<TSnapshot> =
 
 export interface SnapshotStore<TSnapshot> {
   getSnapshot(): TSnapshot;
+  subscribe(listener: SnapshotListener<TSnapshot>): () => void;
+}
+
+export interface SnapshotStoreReadWrite<TSnapshot>
+  extends SnapshotStore<TSnapshot> {
   setSnapshot(nextSnapshot: TSnapshot): TSnapshot;
   update(updater: SnapshotUpdater<TSnapshot>): TSnapshot;
-  subscribe(listener: SnapshotListener<TSnapshot>): () => void;
 }
 
 export function createSnapshotStore<TSnapshot>(
   initialSnapshot: TSnapshot,
-): SnapshotStore<TSnapshot> {
+): SnapshotStoreReadWrite<TSnapshot> {
   let snapshot = initialSnapshot;
   const listeners = new Set<SnapshotListener<TSnapshot>>();
 

@@ -3,6 +3,7 @@ import {
   STATIC_UI_PLACEHOLDER_TEXT,
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
+import type { AppHost } from "@/app/app-host";
 
 const RIGHT_DOCK_LIST = [
   STATIC_UI_PLACEHOLDER_TEXT,
@@ -10,7 +11,7 @@ const RIGHT_DOCK_LIST = [
   STATIC_UI_PLACEHOLDER_TEXT,
 ];
 
-export function RightDock() {
+export function RightDock({ appHost: _appHost }: { appHost: AppHost }) {
   return (
     <aside className="dock dock-right panel-surface">
       <section className="dock-section">
