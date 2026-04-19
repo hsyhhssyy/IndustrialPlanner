@@ -5,13 +5,10 @@
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "scripts": {
-    "predev": "npm run gen:blueprint-index",
     "dev": "vite --host 0.0.0.0",
-    "prebuild": "npm run gen:blueprint-index",
     "build": "tsc -b && vite build",
     "validate:flow": "esbuild src/test/validate-blueprint-throughput.ts --bundle --platform=node --format=esm --outfile=.temp/validate-blueprint-throughput.mjs && node .temp/validate-blueprint-throughput.mjs",
     "validate:blueprint": "npm run validate:flow --",
-    "pretest-preview": "npm run gen:blueprint-index",
     "test-preview": "tsc -b && vite build --emptyOutDir --outDir .temp/test-dist && vite preview --host 0.0.0.0 --strictPort --port 8000 --outDir .temp/test-dist",
     "lint": "eslint .",
     "preview": "vite preview",

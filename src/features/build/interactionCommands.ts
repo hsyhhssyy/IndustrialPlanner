@@ -14,6 +14,8 @@ import {
 } from './buildInteraction.contract'
 import { nextId } from '../../domain/logistics'
 
+const XIRANITE_OVEN_WULING_WARNING_LIMIT = 12
+
 type PlaceDeviceParams = {
   cell: Cell
   placeType: DeviceTypeId
@@ -101,8 +103,8 @@ export function tryPlaceDevice({
 
   if (isXiraniteOven) {
     const existingCount = layout.devices.filter((device) => device.typeId === 'item_port_xiranite_oven_1').length
-    if (existingCount >= 4) {
-      showToast(t('toast.rule.xiraniteOvenOver4Wuling'), { variant: 'warning' })
+    if (existingCount >= XIRANITE_OVEN_WULING_WARNING_LIMIT) {
+      showToast(t('toast.rule.xiraniteOvenOverLimitWuling', { count: XIRANITE_OVEN_WULING_WARNING_LIMIT }), { variant: 'warning' })
     }
   }
 

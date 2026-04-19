@@ -1,12 +1,16 @@
 import { LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG } from './shared/recipePriority'
-import type { BaseDef, DeviceTypeDef, ItemDef, RecipeDef } from './types'
+import type { BaseDef, DeviceTypeId, DeviceTypeDef, ItemDef, RecipeDef } from './types'
 
 const solidAllowance = { mode: 'solid' as const, whitelist: [] }
 const liquidAllowance = { mode: 'liquid' as const, whitelist: [] }
 const recipeItemsAllowance = { mode: 'recipe_items' as const, whitelist: [] }
 const NEW_TAG = 'new'
+const ALTER_TAG_PREFIX = 'alter:'
+const ALTER_VARIANT_TAG_PREFIX = 'alter-variant:'
 const bottleItemTags = ['瓶子']
 const bottledLiquidTags = [...bottleItemTags, '瓶装液体']
+const alterDeviceTag = (deviceId: DeviceTypeId) => `${ALTER_TAG_PREFIX}${deviceId}`
+const ALTER_VARIANT_LIQUID_TAG = `${ALTER_VARIANT_TAG_PREFIX}liquid`
 const SINGLE_SOLID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid']]
 const SINGLE_LIQUID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['liquid']]
 const DOUBLE_SOLID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid'], ['solid']]
@@ -2811,7 +2815,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     powerDemand: 5,
     size: { width: 3, height: 3 },
     shortName: 'LiquidFurnace',
-    tags: ['武陵'],
+    tags: ['武陵', alterDeviceTag('item_port_furnance_1'), ALTER_VARIANT_LIQUID_TAG],
     inputBufferSlots: 2,
     inputBufferSlotCapacities: [50, 50],
     inputBufferAllowedTypesBySlot: SOLID_LIQUID_INPUT_SLOT_TYPES,
@@ -2979,7 +2983,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     powerDemand: 20,
     size: { width: 5, height: 5 },
     shortName: 'HydroPlanter',
-    tags: ['武陵'],
+    tags: ['武陵', alterDeviceTag('item_port_planter_1'), ALTER_VARIANT_LIQUID_TAG],
     inputBufferSlots: 2,
     inputBufferSlotCapacities: [50, 50],
     inputBufferAllowedTypesBySlot: SOLID_LIQUID_INPUT_SLOT_TYPES,
@@ -3082,6 +3086,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     powerDemand: 20,
     size: { width: 6, height: 4 },
     shortName: 'LiquidFilling',
+    tags: [alterDeviceTag('item_port_filling_pd_mc_1'), ALTER_VARIANT_LIQUID_TAG],
     inputBufferSlots: 2,
     inputBufferSlotCapacities: [50, 50],
     inputBufferAllowedTypesBySlot: SOLID_LIQUID_INPUT_SLOT_TYPES,
@@ -3668,7 +3673,7 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     powerDemand: 0,
     size: { width: 3, height: 3 },
     shortName: 'LiquidStorage',
-    tags: ['武陵', 'OuterRingAllowed'],
+    tags: ['武陵', 'OuterRingAllowed', alterDeviceTag('item_port_storager_1'), ALTER_VARIANT_LIQUID_TAG],
     ports0: [
       {
         id: 'in_w_1',

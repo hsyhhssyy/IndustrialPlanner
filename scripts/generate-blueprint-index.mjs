@@ -129,11 +129,7 @@ async function buildIndex() {
     generatedAt: new Date().toISOString(),
     files,
   }
-  const indexVersionPayload = {
-    schemaVersion: INDEX_SCHEMA_VERSION,
-    files,
-  }
-  const indexHash = crypto.createHash('sha1').update(JSON.stringify(indexVersionPayload)).digest('hex').slice(0, 8)
+  const indexHash = crypto.createHash('sha1').update(JSON.stringify(indexPayload)).digest('hex').slice(0, 8)
   const hashedIndexName = `index.${indexHash}.json`
   const hashedIndexPath = path.join(blueprintsDir, hashedIndexName)
   const indexSource = `${JSON.stringify(indexPayload, null, 2)}\n`
