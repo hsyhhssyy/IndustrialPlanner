@@ -4,11 +4,17 @@ import type { AppAction } from "@/domain/action/app-action";
 import { lookupMessageText } from "@/shared/i18n/messages";
 import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 
-import type { UiStateReadWrite } from "./state-impl";
+import {
+  clampLeftDockWidth,
+  type ActivePanel,
+  type UiStateReadWrite,
+} from "./state-impl";
 
 export interface AppInternalAction {
   toggleLeftDock: () => void;
   toggleRightDock: () => void;
+  setActivePanel: (panel: ActivePanel) => void;
+  setLeftDockWidth: (width: number) => void;
 }
 
 export class AppActionImpl implements AppAction, AppInternalAction {
@@ -32,5 +38,17 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
   public readonly toggleRightDock: AppInternalAction["toggleRightDock"] = action(() => {
     this.internalState.workbench.rightDockOpen = !this.internalState.workbench.rightDockOpen;
+  });
+
+  public readonly setActivePanel: AppInternalAction["setActivePanel"] = action((panel) => {
+    this.internalState.runtime.activePanel = panel;
+
+    if (panel !== null) {
+      this.internalState.workbench.leftDockOpen = true;
+    }
+  });
+
+  public readonly setLeftDockWidth: AppInternalAction["setLeftDockWidth"] = action((width) => {
+    this.internalState.workbench.leftDockWidth = clampLeftDockWidth(width);
   });
 }

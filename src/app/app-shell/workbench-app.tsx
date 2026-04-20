@@ -9,15 +9,16 @@ import { TopBar } from "@/app/app-shell/components/top-bar";
 import { handleUiEvent } from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { AppHost } from "@/app/app-host";
 
+const DEFAULT_RIGHT_DOCK_WIDTH = 340;
+
 export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHost: AppHost }) {
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const rightDockOpen = appHost.state.workbench.rightDockOpen;
-  const workbenchStyle = ((leftDockOpen && rightDockOpen)
-    ? undefined
-    : {
-        ...(leftDockOpen ? undefined : { "--left-dock-width": "0px" }),
-        ...(rightDockOpen ? undefined : { "--right-dock-width": "0px" }),
-      }) as CSSProperties | undefined;
+  const leftDockWidth = appHost.state.workbench.leftDockWidth;
+  const workbenchStyle = {
+    "--left-dock-width": leftDockOpen ? `${leftDockWidth}px` : "0px",
+    "--right-dock-width": rightDockOpen ? `${DEFAULT_RIGHT_DOCK_WIDTH}px` : "0px",
+  } as CSSProperties;
 
   return (
     <div className="workbench" onContextMenu={handleUiEvent} style={workbenchStyle}>

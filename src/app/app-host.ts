@@ -21,6 +21,8 @@ export function createAppHost(
   const internalActions: AppInternalAction = {
     toggleLeftDock: actionImpl.toggleLeftDock,
     toggleRightDock: actionImpl.toggleRightDock,
+    setActivePanel: actionImpl.setActivePanel,
+    setLeftDockWidth: actionImpl.setLeftDockWidth,
   };
   const actions: AppContract["actions"] = {
     translate: actionImpl.translate,

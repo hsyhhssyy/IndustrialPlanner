@@ -52,6 +52,7 @@ export interface AppSettings {
 export interface WorkbenchState {
   readonly leftDockOpen: boolean;
   readonly rightDockOpen: boolean;
+  readonly leftDockWidth: number;
 }
 
 export interface UiState {

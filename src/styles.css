@@ -150,7 +150,7 @@ button.is-active {
   display: grid;
   grid-template-columns:
     68px
-    var(--left-dock-width, 360px)
+    var(--left-dock-width, 375px)
     minmax(0, 1fr)
     var(--right-dock-width, 340px);
   grid-template-rows: 48px minmax(0, 1fr) 28px;
@@ -343,9 +343,46 @@ button.is-active {
   font-size: 0.9rem;
 }
 
-.dock-left {
+.dock-shell-left {
+  position: relative;
   grid-area: left;
+  min-height: 0;
   border-right: 1px solid var(--line);
+}
+
+.dock-left {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+.dock-resize-handle {
+  position: absolute;
+  inset: 0 -5px 0 auto;
+  width: 10px;
+  cursor: col-resize;
+  z-index: 2;
+  touch-action: none;
+}
+
+.dock-resize-handle::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 4px;
+  width: 1px;
+  background: transparent;
+  transition: background-color 120ms ease;
+}
+
+.dock-resize-handle:hover::before {
+  background: rgb(89 194 255 / 0.36);
+}
+
+body.is-resizing-left-dock,
+body.is-resizing-left-dock * {
+  cursor: col-resize !important;
+  user-select: none;
 }
 
 .dock-right {
@@ -449,6 +486,11 @@ button.is-active {
   min-height: 0;
 }
 
+.dock-left .dock-section {
+  height: auto;
+  min-height: 100%;
+}
+
 .section-header {
   display: flex;
   justify-content: space-between;
@@ -501,6 +543,10 @@ button.is-active {
   padding: 10px;
 }
 
+.dock-left .section-body {
+  overflow: visible;
+}
+
 .dock-left .section-body > .cluster:first-child {
   display: none;
 }
@@ -508,6 +554,135 @@ button.is-active {
 .stack {
   display: grid;
   gap: 8px;
+}
+
+.placement-panel {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.placement-panel-group {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.placement-panel-group-resource-power {
+  position: relative;
+}
+
+.placement-panel-group-resource-power::after {
+  content: "";
+  position: absolute;
+  inset: -6px -8px -8px;
+  border: 2px solid rgb(89 194 255 / 0.42);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.placement-panel-group + .placement-panel-group {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.placement-panel-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  padding-right: 4px;
+}
+
+.placement-panel-group-header h3 {
+  margin: 0;
+}
+
+.placement-panel-group-header h3 {
+  color: var(--text-0);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.placement-button-hotkey {
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    monospace;
+}
+
+.placement-panel-group-shortcut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgb(89 194 255 / 0.28);
+  border-radius: 999px;
+  background: rgb(89 194 255 / 0.12);
+  color: rgb(188 231 255);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.12);
+}
+
+.placement-button-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 8px;
+}
+
+.placement-button {
+  display: grid;
+  align-items: flex-start;
+  gap: 8px;
+  align-self: start;
+  min-height: 0;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--surface-2), rgb(30 38 49 / 0.92));
+  text-align: left;
+  overflow: visible;
+}
+
+.placement-action-button {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.placement-device-button {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.placement-button .button-icon {
+  margin-top: 1px;
+}
+
+.placement-button-label {
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.placement-button-hotkey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-4);
+  color: var(--text-1);
+  font-size: 0.72rem;
+  line-height: 1;
 }
 
 .cluster,

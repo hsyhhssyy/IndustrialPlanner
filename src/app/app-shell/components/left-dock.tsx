@@ -1,86 +1,98 @@
-import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
+import { useEffect, useRef, type ComponentType } from "react";
+import { observer } from "mobx-react-lite";
+import { BlueprintPanel } from "@/app/app-shell/components/left-dock-panels/blueprint-panel";
+import { DeletePanel } from "@/app/app-shell/components/left-dock-panels/delete-panel";
+import { HistoryPanel } from "@/app/app-shell/components/left-dock-panels/history-panel";
+import { PlacementPanel } from "@/app/app-shell/components/left-dock-panels/placement-panel";
 import {
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { AppHost } from "@/app/app-host";
+import {
+  clampLeftDockWidth,
+  type ActivePanel,
+} from "@/app/state-impl";
 
-const LEFT_DOCK_BUTTONS = [
-  { id: "dock-button-1", icon: "pointer" as const, labelKey: "tool.select" },
-  { id: "dock-button-2", icon: "placement" as const, labelKey: "tool.place" },
-  { id: "dock-button-3", icon: "history" as const, labelKey: "action.undo" },
-];
+type LeftDockPanelId = Exclude<ActivePanel, null>;
 
-const PANEL_TITLE_KEYS = {
+const DEFAULT_ACTIVE_PANEL: LeftDockPanelId = "placement";
+
+const PANEL_TITLE_KEYS: Record<LeftDockPanelId, string> = {
   placement: "workbench.panel.placement.title",
   delete: "workbench.panel.delete.title",
   blueprint: "workbench.panel.blueprint.title",
   history: "workbench.panel.history.title",
-} as const;
+};
 
-const ACTIVE_TOOL_KEYS = {
+const ACTIVE_TOOL_KEYS: Record<LeftDockPanelId, string> = {
   placement: "tool.place",
   delete: "action.deleteSelection",
   blueprint: "workbench.leftRail.blueprint",
-  history: "action.undo",
-} as const;
+  history: "workbench.leftRail.history",
+};
 
-export function LeftDock({ appHost }: { appHost: AppHost }) {
+const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost }>> = {
+  placement: PlacementPanel,
+  delete: DeletePanel,
+  blueprint: BlueprintPanel,
+  history: HistoryPanel,
+};
+
+export const LeftDock = observer(function LeftDock({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
-  const activePanel = appHost.internalState.runtime.activePanel ?? "placement";
+  const activePanel = appHost.internalState.runtime.activePanel ?? DEFAULT_ACTIVE_PANEL;
   const currentPanelLabel = t(PANEL_TITLE_KEYS[activePanel]);
-  const activeToolLabel = t(ACTIVE_TOOL_KEYS[activePanel]);
+  const ActivePanelComponent = PANEL_COMPONENTS[activePanel];
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      resizeCleanupRef.current?.();
+    };
+  }, []);
+
+  const handleResizeStart = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+
+    const startX = event.clientX;
+    const startWidth = appHost.state.workbench.leftDockWidth;
+
+    resizeCleanupRef.current?.();
+
+    const handlePointerMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+
+      appHost.internalActions.setLeftDockWidth(clampLeftDockWidth(startWidth + deltaX));
+    };
+
+    const stopResize = () => {
+      window.removeEventListener("mousemove", handlePointerMove);
+      window.removeEventListener("mouseup", stopResize);
+      document.body.classList.remove("is-resizing-left-dock");
+      resizeCleanupRef.current = null;
+    };
+
+    resizeCleanupRef.current = stopResize;
+    document.body.classList.add("is-resizing-left-dock");
+    window.addEventListener("mousemove", handlePointerMove);
+    window.addEventListener("mouseup", stopResize);
+  };
 
   return (
-    <aside className="dock dock-left panel-surface">
-      <section className="dock-section">
-        <div className="section-header">
-          <div className="section-header-copy">
-            <p className="section-kicker">{t("leftDock.currentMode")}</p>
-            <h2>{currentPanelLabel}</h2>
-          </div>
-          <div className="header-actions">
-            <span className="pill">{t("leftDock.activeTool")}</span>
-            <button onClick={handleUiEvent} type="button">
-              {activeToolLabel}
-            </button>
-          </div>
-        </div>
-        <div className="section-body stack">
-          <div className="cluster">
-            <div className="pill-row">
-              <span className="pill">{t("tool.select")}</span>
-              <span className="pill">{t("tool.place")}</span>
-              <span className="pill">{t("tool.inspect")}</span>
+    <div className="dock-shell-left">
+      <aside className="dock dock-left panel-surface">
+        <section className="dock-section">
+          <div className="section-header">
+            <div className="section-header-copy">
+              <h2>{currentPanelLabel}</h2>
             </div>
-            <p className="mono-line">{t("label.touchPlacementHint")}</p>
           </div>
-          <section className="placeholder-section">
-            <div className="placeholder-section-header">
-              <h3>{t("section.quickActions")}</h3>
-              <span className="pill">{t("toolbar.tools")}</span>
-            </div>
-            <div className="placeholder-button-grid">
-              {LEFT_DOCK_BUTTONS.map((button) => {
-                const label = t(button.labelKey);
-
-                return (
-                  <button
-                    key={button.id}
-                    onClick={handleUiEvent}
-                    onPointerDown={handleUiEvent}
-                    type="button"
-                  >
-                    <span className="button-icon button-icon-glyph" aria-hidden="true">
-                      <WorkbenchIcon kind={button.icon} />
-                    </span>
-                    <span>{label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        </div>
-      </section>
-    </aside>
+          <div className="section-body">
+            <ActivePanelComponent appHost={appHost} />
+          </div>
+        </section>
+      </aside>
+      <div className="dock-resize-handle" onMouseDown={handleResizeStart} />
+    </div>
   );
-}
+});

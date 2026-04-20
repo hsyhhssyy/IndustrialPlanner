@@ -4,6 +4,7 @@ import type { WorkbenchState } from "@/domain/state/types";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
 import type { AppHost } from "./app-host";
+import { clampLeftDockWidth } from "./state-impl";
 
 export const WORKBENCH_STATE_LOCAL_STORAGE_KEY = "v3-workbench-state";
 
@@ -33,12 +34,17 @@ function hydrateWorkbenchState(appHost: AppHost, persistedState: unknown): void 
   if (typeof persistedState.rightDockOpen === "boolean") {
     appHost.internalState.workbench.rightDockOpen = persistedState.rightDockOpen;
   }
+
+  if (typeof persistedState.leftDockWidth === "number" && Number.isFinite(persistedState.leftDockWidth)) {
+    appHost.internalState.workbench.leftDockWidth = clampLeftDockWidth(persistedState.leftDockWidth);
+  }
 }
 
 function getWorkbenchStateSnapshot(appHost: AppHost): WorkbenchState {
   return {
     leftDockOpen: appHost.internalState.workbench.leftDockOpen,
     rightDockOpen: appHost.internalState.workbench.rightDockOpen,
+    leftDockWidth: appHost.internalState.workbench.leftDockWidth,
   };
 }
 

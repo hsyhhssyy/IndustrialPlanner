@@ -32,11 +32,13 @@ describe("createAppHost", () => {
     expect(workspace.app?.state.settings.locale).toBe("zh-CN");
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
     expect(appHost.state.workbench.rightDockOpen).toBe(true);
+    expect(appHost.state.workbench.leftDockWidth).toBe(375);
 
     runInAction(() => {
       appHost.internalState.settings.locale = "en-US";
       appHost.internalState.workbench.leftDockOpen = false;
       appHost.internalState.workbench.rightDockOpen = false;
+      appHost.internalState.workbench.leftDockWidth = 480;
     });
 
     expect(appHost.state.settings.locale).toBe("en-US");
@@ -45,13 +47,14 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
     expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
     expect(workspace.app?.state.workbench.leftDockOpen).toBe(false);
+    expect(workspace.app?.state.workbench.leftDockWidth).toBe(480);
   });
 
   it("translates arbitrary i18n keys through the current locale", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
-    expect(appHost.actions.translate("app.title")).toBe("终末地工业系统仿真器 Stage1");
+    expect(appHost.actions.translate("app.title")).toBe("集成工业仿真器");
     expect(appHost.actions.translate("workbench.leftRail.placement")).toBe("放置模式");
     expect(appHost.actions.translate("unknown.key")).toBe("unknown.key");
 
@@ -70,6 +73,7 @@ describe("createAppHost", () => {
       JSON.stringify({
         leftDockOpen: false,
         rightDockOpen: false,
+        leftDockWidth: 512,
       }),
     );
 
@@ -78,15 +82,18 @@ describe("createAppHost", () => {
 
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
+    expect(appHost.state.workbench.leftDockWidth).toBe(512);
 
     runInAction(() => {
       appHost.internalState.workbench.rightDockOpen = true;
+      appHost.internalState.workbench.leftDockWidth = 420;
     });
 
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
         leftDockOpen: false,
         rightDockOpen: true,
+        leftDockWidth: 420,
       }),
     );
 
@@ -99,7 +106,25 @@ describe("createAppHost", () => {
       JSON.stringify({
         leftDockOpen: false,
         rightDockOpen: true,
+        leftDockWidth: 420,
       }),
     );
+  });
+
+  it("keeps activePanel in runtime state only without persisting it", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    expect(appHost.internalState.runtime.activePanel).toBeNull();
+
+    appHost.internalActions.setActivePanel("history");
+
+    expect(appHost.internalState.runtime.activePanel).toBe("history");
+    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBeNull();
+
+    const nextWorkspace = createWorkspace();
+    const nextAppHost = createAppHost(nextWorkspace);
+
+    expect(nextAppHost.internalState.runtime.activePanel).toBeNull();
   });
 });

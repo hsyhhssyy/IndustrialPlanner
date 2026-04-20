@@ -122,7 +122,7 @@ export type MessageKey =
 
 const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
   "zh-CN": {
-    "app.title": "终末地工业系统仿真器 Stage1",
+    "app.title": "集成工业仿真器",
     "mode.edit": "放置模式",
     "action.start": "开始仿真",
     "action.stop": "停止仿真",
