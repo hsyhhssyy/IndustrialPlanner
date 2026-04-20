@@ -1,12 +1,19 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
+import Icons from "unplugin-icons/vite";
 
 export default defineConfig({
   build: {
     chunkSizeWarningLimit: 4096,
   },
-  plugins: [react()],
+  plugins: [
+    react(),
+    Icons({
+      compiler: "jsx",
+      jsx: "react",
+    }),
+  ],
   server: {
     allowedHosts: ["industrialplanner-refactor-cf01ab.coder-page.hsyhhssyy.net"],
   },

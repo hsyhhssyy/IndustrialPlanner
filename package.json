@@ -22,6 +22,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@iconify-json/lucide": "^1.2.102",
+    "@svgr/core": "^8.1.0",
+    "@svgr/plugin-jsx": "^8.1.0",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -33,6 +36,7 @@
     "jsdom": "^29.0.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.2",
+    "unplugin-icons": "^23.0.1",
     "vite": "^8.0.3",
     "vitest": "^4.1.2"
   }

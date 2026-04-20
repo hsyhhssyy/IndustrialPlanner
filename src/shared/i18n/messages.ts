@@ -15,6 +15,8 @@ export type MessageKey =
   | "action.close"
   | "action.expand"
   | "action.collapse"
+  | "action.enterFullscreen"
+  | "action.exitFullscreen"
   | "action.deleteSelection"
   | "action.removeLinks"
   | "action.removeLink"
@@ -101,9 +103,17 @@ export type MessageKey =
   | "topBar.speed"
   | "topBar.controls"
   | "topBar.language"
+  | "topBar.device"
+  | "topBar.screen"
   | "topBar.leftPanel"
   | "topBar.rightPanel"
   | "topBar.settings"
+  | "device.mobile"
+  | "device.tablet"
+  | "device.desktop"
+  | "screen.portrait"
+  | "screen.landscape"
+  | "screen.square"
   | "locale.zh-CN"
   | "locale.en-US"
   | "mutability.document-only"
@@ -126,6 +136,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.close": "关闭",
     "action.expand": "展开",
     "action.collapse": "折叠",
+    "action.enterFullscreen": "进入全屏",
+    "action.exitFullscreen": "退出全屏",
     "action.deleteSelection": "删除选中",
     "action.removeLinks": "删除链接",
     "action.removeLink": "移除链接",
@@ -212,9 +224,17 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "topBar.speed": "速率",
     "topBar.controls": "运行控制",
     "topBar.language": "语言",
+    "topBar.device": "设备",
+    "topBar.screen": "屏幕",
     "topBar.leftPanel": "左侧",
     "topBar.rightPanel": "右侧",
     "topBar.settings": "设置",
+    "device.mobile": "手机",
+    "device.tablet": "平板",
+    "device.desktop": "电脑",
+    "screen.portrait": "竖屏",
+    "screen.landscape": "横屏",
+    "screen.square": "近方形",
     "locale.zh-CN": "中文",
     "locale.en-US": "English",
     "mutability.document-only": "仅文档态",
@@ -236,6 +256,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.close": "Close",
     "action.expand": "Expand",
     "action.collapse": "Collapse",
+    "action.enterFullscreen": "Enter Fullscreen",
+    "action.exitFullscreen": "Exit Fullscreen",
     "action.deleteSelection": "Delete Selection",
     "action.removeLinks": "Remove Links",
     "action.removeLink": "Remove Link",
@@ -322,9 +344,17 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "topBar.speed": "Speed",
     "topBar.controls": "Controls",
     "topBar.language": "Language",
+    "topBar.device": "Device",
+    "topBar.screen": "Screen",
     "topBar.leftPanel": "Left",
     "topBar.rightPanel": "Right",
     "topBar.settings": "Settings",
+    "device.mobile": "Phone",
+    "device.tablet": "Tablet",
+    "device.desktop": "Desktop",
+    "screen.portrait": "Portrait",
+    "screen.landscape": "Landscape",
+    "screen.square": "Near Square",
     "locale.zh-CN": "Chinese",
     "locale.en-US": "English",
     "mutability.document-only": "Document Only",

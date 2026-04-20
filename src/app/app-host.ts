@@ -1,6 +1,7 @@
 import { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { AppContract } from "@/domain/contract/app-contract";
 import { AppActionImpl, AppInternalAction } from "./action-impl";
+import { hookLocalstorage } from "./storage-hook";
 import { createUiStateReadWrite, UiStateReadWrite } from "./state-impl";
 
 export interface AppHost extends AppContract {
@@ -14,6 +15,7 @@ export interface AppHost extends AppContract {
 export function createAppHost(
   workspace: WorkspaceContract
 ): AppHost {
+  const disposers: Array<() => void> = [];
   const internalState = createUiStateReadWrite();
   const actionImpl = new AppActionImpl(internalState);
   const internalActions: AppInternalAction = {
@@ -30,12 +32,16 @@ export function createAppHost(
     internalState,
     internalActions,
     dispose: () => {
+      while (disposers.length > 0) {
+        disposers.pop()?.();
+      }
     },
     queries: {},
     actions,
   };
 
   workspace.app = host;
+  disposers.push(hookLocalstorage(host));
 
   return host;
 }

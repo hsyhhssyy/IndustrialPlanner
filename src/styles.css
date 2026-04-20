@@ -382,6 +382,7 @@ button.is-active {
 
 .status-bar-group-right {
   flex: 0 0 auto;
+  gap: 8px;
 }
 
 .status-chip {
@@ -395,6 +396,21 @@ button.is-active {
   content: "|";
   margin: 0 8px;
   color: #586579;
+}
+
+.status-bar-icon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-1);
+  flex: 0 0 auto;
+  line-height: 0;
+}
+
+.status-bar-icon {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
 }
 
 .status-chip-primary {
