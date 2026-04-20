@@ -26,7 +26,7 @@ const ACTIVE_TOOL_KEYS = {
 
 export function LeftDock({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
-  const activePanel = appHost.state.activePanel ?? "placement";
+  const activePanel = appHost.internalState.runtime.activePanel ?? "placement";
   const currentPanelLabel = t(PANEL_TITLE_KEYS[activePanel]);
   const activeToolLabel = t(ACTIVE_TOOL_KEYS[activePanel]);
 
