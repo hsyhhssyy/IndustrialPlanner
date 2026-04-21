@@ -4,9 +4,6 @@ import { BlueprintPanel } from "@/app/app-shell/components/left-dock-panels/blue
 import { DeletePanel } from "@/app/app-shell/components/left-dock-panels/delete-panel";
 import { HistoryPanel } from "@/app/app-shell/components/left-dock-panels/history-panel";
 import { PlacementPanel } from "@/app/app-shell/components/left-dock-panels/placement-panel";
-import {
-  handleUiEvent,
-} from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { AppHost } from "@/app/app-host";
 import {
   clampLeftDockWidth,
@@ -24,13 +21,6 @@ const PANEL_TITLE_KEYS: Record<LeftDockPanelId, string> = {
   history: "workbench.panel.history.title",
 };
 
-const ACTIVE_TOOL_KEYS: Record<LeftDockPanelId, string> = {
-  placement: "tool.place",
-  delete: "action.deleteSelection",
-  blueprint: "workbench.leftRail.blueprint",
-  history: "workbench.leftRail.history",
-};
-
 const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost }>> = {
   placement: PlacementPanel,
   delete: DeletePanel,
@@ -38,7 +28,7 @@ const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost
   history: HistoryPanel,
 };
 
-export const LeftDock = observer(function LeftDock({ appHost }: { appHost: AppHost }) {
+const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const activePanel = appHost.internalState.runtime.activePanel ?? DEFAULT_ACTIVE_PANEL;
   const currentPanelLabel = t(PANEL_TITLE_KEYS[activePanel]);
@@ -96,3 +86,9 @@ export const LeftDock = observer(function LeftDock({ appHost }: { appHost: AppHo
     </div>
   );
 });
+
+export function LeftDock({ appHost }: { appHost: AppHost }) {
+  return <LeftDockView appHost={appHost} />;
+}
+
+export default LeftDock;

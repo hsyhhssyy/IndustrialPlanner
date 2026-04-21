@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/app-shell/components/bottom-status-bar";
 import { CanvasPanel } from "@/app/app-shell/components/canvas-panel";
-import { LeftDock } from "@/app/app-shell/components/left-dock";
+import LeftDock from "@/app/app-shell/components/left-dock";
 import { LeftToolbar } from "@/app/app-shell/components/left-toolbar";
 import { RightDock } from "@/app/app-shell/components/right-dock";
 import { TopBar } from "@/app/app-shell/components/top-bar";

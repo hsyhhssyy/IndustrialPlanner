@@ -559,7 +559,13 @@ body.is-resizing-left-dock * {
 .placement-panel {
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: 0;
+}
+
+.placement-panel-divider {
+  height: 0;
+  margin: 14px 0 12px;
+  border-top: 1px solid var(--line);
 }
 
 .placement-panel-group {
@@ -579,11 +585,6 @@ body.is-resizing-left-dock * {
   border: 2px solid rgb(89 194 255 / 0.42);
   border-radius: 12px;
   pointer-events: none;
-}
-
-.placement-panel-group + .placement-panel-group {
-  border-top: 1px solid var(--line);
-  padding-top: 12px;
 }
 
 .placement-panel-group-header {
@@ -651,7 +652,7 @@ body.is-resizing-left-dock * {
 }
 
 .placement-action-button {
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
 .placement-device-button {
@@ -676,6 +677,7 @@ body.is-resizing-left-dock * {
   justify-content: center;
   min-width: 20px;
   height: 20px;
+  padding: 0 6px;
   margin-top: 1px;
   border: 1px solid var(--line-strong);
   border-radius: 999px;

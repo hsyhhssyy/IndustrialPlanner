@@ -33,7 +33,7 @@ const WORKBENCH_PLACEHOLDER_TRANSLATIONS: Record<AppLocale, Record<string, strin
     "workbench.button.pipeDraw": "铺设管道",
     "workbench.button.linkDarkPipe": "暗管链接",
     "workbench.button.inspect": "观察",
-    "workbench.button.saveAsBlueprint": "保存为蓝图",
+    "workbench.button.saveAsBlueprint": "保存蓝图",
     "workbench.button.beltSplitter": "分流器",
     "workbench.button.beltConverger": "汇流器",
     "workbench.button.beltBridge": "桥接器",

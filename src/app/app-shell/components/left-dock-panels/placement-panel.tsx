@@ -2,6 +2,7 @@ import {
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { AppHost } from "@/app/app-host";
+import { Fragment } from "react";
 
 const PLACEMENT_ICON_PATHS = [
   "/device-icons/item_log_belt_01.webp",
@@ -31,6 +32,11 @@ const OPERATION_BUTTON_KEYS = [
   "workbench.button.pipeDraw",
   "workbench.button.saveAsBlueprint",
 ] as const;
+
+const OPERATION_BUTTON_HOTKEYS = new Map<string, string>([
+  ["workbench.button.select", "Esc"],
+  ["workbench.button.saveAsBlueprint", "Ctrl+S"],
+]);
 
 const PLACEMENT_SECTIONS = [
   {
@@ -98,7 +104,6 @@ function resolvePlacementIconPath(index: number): string {
 
 export function PlacementPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
-  let iconIndex = 0;
 
   return (
     <div className="placement-panel">
@@ -106,49 +111,53 @@ export function PlacementPanel({ appHost }: { appHost: AppHost }) {
         const isOperationSection = sectionIndex === 0;
         const isResourcePowerSection = section.titleKey === "workbench.section.resourcePower";
         const sectionTitleId = `placement-section-${sectionIndex}`;
+        const sectionButtonStartIndex = PLACEMENT_SECTIONS.slice(0, sectionIndex).reduce(
+          (count, currentSection) => count + currentSection.buttonKeys.length,
+          0,
+        );
 
         return (
-          <section
-            aria-labelledby={sectionTitleId}
-            className={isResourcePowerSection
-              ? "placement-panel-group placement-panel-group-resource-power"
-              : "placement-panel-group"}
-            key={section.titleKey}
-          >
-            <div className="placement-panel-group-header">
-              <h3 id={sectionTitleId}>{t(section.titleKey)}</h3>
-              {section.shortcutKey ? (
-                <span className="placement-panel-group-shortcut">{section.shortcutKey}</span>
-              ) : null}
-            </div>
-            <div className="placement-button-list">
-              {section.buttonKeys.map((buttonKey, buttonIndex) => {
-                const iconPath = resolvePlacementIconPath(iconIndex);
-                const hotkey = isOperationSection
-                  ? null
-                  : DEVICE_SHORTCUT_KEYS[buttonIndex % DEVICE_SHORTCUT_KEYS.length];
+          <Fragment key={section.titleKey}>
+            {sectionIndex > 0 ? <div aria-hidden="true" className="placement-panel-divider" /> : null}
+            <section
+              aria-labelledby={sectionTitleId}
+              className={isResourcePowerSection
+                ? "placement-panel-group placement-panel-group-resource-power"
+                : "placement-panel-group"}
+            >
+              <div className="placement-panel-group-header">
+                <h3 id={sectionTitleId}>{t(section.titleKey)}</h3>
+                {section.shortcutKey ? (
+                  <span className="placement-panel-group-shortcut">{section.shortcutKey}</span>
+                ) : null}
+              </div>
+              <div className="placement-button-list">
+                {section.buttonKeys.map((buttonKey, buttonIndex) => {
+                  const iconPath = resolvePlacementIconPath(sectionButtonStartIndex + buttonIndex);
+                  const hotkey = isOperationSection
+                    ? OPERATION_BUTTON_HOTKEYS.get(buttonKey) ?? null
+                    : DEVICE_SHORTCUT_KEYS[buttonIndex % DEVICE_SHORTCUT_KEYS.length];
 
-                iconIndex += 1;
-
-                return (
-                  <button
-                    className={isOperationSection
-                      ? "placement-button placement-action-button"
-                      : "placement-button placement-device-button"}
-                    key={buttonKey}
-                    onClick={handleUiEvent}
-                    type="button"
-                  >
-                    <span className="button-icon" aria-hidden="true">
-                      <img alt="" className="button-icon-image" src={iconPath} />
-                    </span>
-                    <span className="placement-button-label">{t(buttonKey)}</span>
-                    {hotkey ? <span className="placement-button-hotkey">{hotkey}</span> : null}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+                  return (
+                    <button
+                      className={isOperationSection
+                        ? "placement-button placement-action-button"
+                        : "placement-button placement-device-button"}
+                      key={buttonKey}
+                      onClick={handleUiEvent}
+                      type="button"
+                    >
+                      <span className="button-icon" aria-hidden="true">
+                        <img alt="" className="button-icon-image" src={iconPath} />
+                      </span>
+                      <span className="placement-button-label">{t(buttonKey)}</span>
+                      {hotkey ? <span className="placement-button-hotkey">{hotkey}</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          </Fragment>
         );
       })}
     </div>

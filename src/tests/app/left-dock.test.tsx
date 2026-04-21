@@ -61,15 +61,19 @@ describe("Left dock panel switching", () => {
 
     expect(primaryButtons).toHaveLength(4);
     expect(container.textContent).toContain("放置模式");
-    expect(container.textContent).toContain("保存为蓝图");
+    expect(container.textContent).toContain("保存蓝图");
     expect(container.textContent).toContain("多口暗管出口");
     expect(container.textContent).not.toContain("设备");
     expect(container.textContent).not.toContain("拖动虚影后点击确认完成放置。");
     expect(container.querySelectorAll(".placement-panel-group")).toHaveLength(6);
+    expect(container.querySelectorAll(".placement-panel-divider")).toHaveLength(5);
     expect(container.querySelectorAll(".placement-button .button-icon-image")).toHaveLength(
       container.querySelectorAll(".placement-button").length,
     );
+    expect(container.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(2);
     expect(container.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(22);
+    expect(container.textContent).toContain("Esc");
+    expect(container.textContent).toContain("Ctrl+S");
     expect(appHost.internalState.runtime.activePanel).toBeNull();
   });
 
