@@ -19,11 +19,42 @@ export interface EditorViewportStateReadWrite {
   gridSize: number;
 }
 
+export interface EditorInternalPersistStateReadWrite {
+  lastDocumentId: string | null;
+}
+
+export interface EditorInternalTransientStateReadWrite {
+  // 定义瞬态的内部状态属性
+}
+
+class EditorInternalPersistStateReadWriteImpl
+  implements EditorInternalPersistStateReadWrite
+{
+  lastDocumentId: string | null = null;
+
+  public constructor() {
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
+}
+
+class EditorInternalTransientStateReadWriteImpl
+  implements EditorInternalTransientStateReadWrite
+{
+  public constructor() {
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
+}
+
+
 export interface EditorStateReadWrite extends EditorState {
   viewport: EditorViewportStateReadWrite;
   drafts: Record<string, WorldEntity>;
   selectedEntities: Record<string, WorldEntity>;
   previewEntities: Record<string, WorldEntity>;
+
+  // 私有State, 不属于Contract, 但是自己用
+  internalPersistState: EditorInternalPersistStateReadWrite;
+  internalTransientState: EditorInternalTransientStateReadWrite;
 }
 
 const DEFAULT_VIEWPORT_WIDTH = 800;
@@ -46,6 +77,10 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
   drafts: Record<string, WorldEntity> = {};
   selectedEntities: Record<string, WorldEntity> = {};
   previewEntities: Record<string, WorldEntity> = {};
+  internalPersistState: EditorInternalPersistStateReadWrite =
+    new EditorInternalPersistStateReadWriteImpl();
+  internalTransientState: EditorInternalTransientStateReadWrite =
+    new EditorInternalTransientStateReadWriteImpl();
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
