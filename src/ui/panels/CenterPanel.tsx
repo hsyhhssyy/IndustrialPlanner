@@ -60,6 +60,7 @@ export function CenterPanel({
         onMouseUp={onCanvasMouseUp}
         onMouseLeave={onCanvasMouseUp}
         onWheel={onCanvasWheel}
+        onDragStart={(event) => event.preventDefault()}
         onContextMenu={(event) => event.preventDefault()}
         onAuxClick={(event) => event.preventDefault()}
       >
