@@ -1,6 +1,6 @@
 
-import { EditorViewportPixelSize } from "../state/types";
+import { EditorViewportClientRect } from "../state/types";
 
 export interface EditorAction {
-	setViewportPixelSize(pixelSize: EditorViewportPixelSize): void;
+	setViewportClientRect(clientRect: EditorViewportClientRect): void;
 }

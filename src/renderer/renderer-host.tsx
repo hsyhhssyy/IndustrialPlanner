@@ -33,11 +33,11 @@ export async function createRenderHost(
   }
 
   const app = new Application();
-  const { pixelSize } = editor.state.viewport;
+  const { clientRect } = editor.state.viewport;
 
   await app.init({
-    width: resolveViewportAxisSize(pixelSize.width, DEFAULT_VIEWPORT_WIDTH),
-    height: resolveViewportAxisSize(pixelSize.height, DEFAULT_VIEWPORT_HEIGHT),
+    width: resolveViewportAxisSize(clientRect.width, DEFAULT_VIEWPORT_WIDTH),
+    height: resolveViewportAxisSize(clientRect.height, DEFAULT_VIEWPORT_HEIGHT),
     backgroundColor: 0x1099bb,
     antialias: true,
     resolution: 1,

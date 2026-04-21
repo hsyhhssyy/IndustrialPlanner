@@ -1,21 +1,26 @@
 import { makeAutoObservable } from "mobx";
 
 import type { WorldEntity } from "@/domain/entity/world-document";
-import type { EditorState } from "@/domain/state/types";
+import type {
+  EditorState,
+  EditorViewportClientRect,
+} from "@/domain/state/types";
 
 export interface EditorViewportCenterReadWrite {
   x: number;
   y: number;
 }
 
-export interface EditorViewportPixelSizeReadWrite {
+export interface EditorViewportClientRectReadWrite {
+  left: number;
+  top: number;
   width: number;
   height: number;
 }
 
 export interface EditorViewportStateReadWrite {
   center: EditorViewportCenterReadWrite;
-  pixelSize: EditorViewportPixelSizeReadWrite;
+  clientRect: EditorViewportClientRectReadWrite;
   gridSize: number;
 }
 
@@ -60,6 +65,12 @@ export interface EditorStateReadWrite extends EditorState {
 const DEFAULT_VIEWPORT_WIDTH = 800;
 const DEFAULT_VIEWPORT_HEIGHT = 600;
 const DEFAULT_VIEWPORT_GRID_SIZE = 1;
+const DEFAULT_VIEWPORT_CLIENT_RECT: EditorViewportClientRect = {
+  left: 0,
+  top: 0,
+  width: DEFAULT_VIEWPORT_WIDTH,
+  height: DEFAULT_VIEWPORT_HEIGHT,
+};
 
 export class EditorStateReadWriteImpl implements EditorStateReadWrite {
   viewport: EditorViewportStateReadWrite = {
@@ -67,9 +78,8 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
       x: 0,
       y: 0,
     },
-    pixelSize: {
-      width: DEFAULT_VIEWPORT_WIDTH,
-      height: DEFAULT_VIEWPORT_HEIGHT,
+    clientRect: {
+      ...DEFAULT_VIEWPORT_CLIENT_RECT,
     },
     gridSize: DEFAULT_VIEWPORT_GRID_SIZE,
   };

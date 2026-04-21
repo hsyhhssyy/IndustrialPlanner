@@ -97,9 +97,9 @@ describe("CanvasPanel", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
     const editorHost = createEditorHost(workspace);
-    const setViewportPixelSizeSpy = vi.spyOn(
+    const setViewportClientRectSpy = vi.spyOn(
       editorHost.actions,
-      "setViewportPixelSize",
+      "setViewportClientRect",
     );
 
     act(() => {
@@ -128,6 +128,9 @@ describe("CanvasPanel", () => {
       configurable: true,
       value: 480,
     });
+    vi.spyOn(viewportSurface, "getBoundingClientRect").mockReturnValue(
+      createContentRect(640, 480),
+    );
 
     act(() => {
       resizeObserver.emit(viewportSurface, {
@@ -136,11 +139,15 @@ describe("CanvasPanel", () => {
       });
     });
 
-    expect(setViewportPixelSizeSpy).toHaveBeenCalledWith({
+    expect(setViewportClientRectSpy).toHaveBeenCalledWith({
+      left: 0,
+      top: 0,
       width: 640,
       height: 480,
     });
-    expect(editorHost.state.viewport.pixelSize.width).toBe(640);
-    expect(editorHost.state.viewport.pixelSize.height).toBe(480);
+    expect(editorHost.state.viewport.clientRect.left).toBe(0);
+    expect(editorHost.state.viewport.clientRect.top).toBe(0);
+    expect(editorHost.state.viewport.clientRect.width).toBe(640);
+    expect(editorHost.state.viewport.clientRect.height).toBe(480);
   });
 });

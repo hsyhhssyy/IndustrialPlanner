@@ -153,11 +153,11 @@ function readViewportSize(renderHost: RenderHost): {
 
   return {
     width: resolveViewportAxisSize(
-      editor.state.viewport.pixelSize.width,
+      editor.state.viewport.clientRect.width,
       renderHost.app.renderer.width,
     ),
     height: resolveViewportAxisSize(
-      editor.state.viewport.pixelSize.height,
+      editor.state.viewport.clientRect.height,
       renderHost.app.renderer.height,
     ),
   };

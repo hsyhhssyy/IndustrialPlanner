@@ -1,8 +1,12 @@
 import type { EditorContract } from "@/domain/contract/editor-contract";
 import { useEffect, type RefObject } from "react";
 
-function resolveViewportPixelSize(element: HTMLDivElement) {
+function resolveViewportClientRect(element: HTMLDivElement) {
+  const clientRect = element.getBoundingClientRect();
+
   return {
+    left: clientRect.left,
+    top: clientRect.top,
     width: Math.max(0, Math.floor(element.clientWidth)),
     height: Math.max(0, Math.floor(element.clientHeight)),
   };
@@ -22,16 +26,18 @@ export function useViewportResizeAdapter(options: {
     }
 
     const resizeObserver = new ResizeObserver(() => {
-      const pixelSize = resolveViewportPixelSize(viewportSurface);
+      const clientRect = resolveViewportClientRect(viewportSurface);
 
       if (
-        pixelSize.width === editor.state.viewport.pixelSize.width &&
-        pixelSize.height === editor.state.viewport.pixelSize.height
+        clientRect.left === editor.state.viewport.clientRect.left &&
+        clientRect.top === editor.state.viewport.clientRect.top &&
+        clientRect.width === editor.state.viewport.clientRect.width &&
+        clientRect.height === editor.state.viewport.clientRect.height
       ) {
         return;
       }
 
-      editor.actions.setViewportPixelSize(pixelSize);
+      editor.actions.setViewportClientRect(clientRect);
     });
 
     resizeObserver.observe(viewportSurface);

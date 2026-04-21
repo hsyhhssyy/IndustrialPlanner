@@ -10,14 +10,16 @@ export interface EditorViewportCenter {
   readonly y: number;
 }
 
-export interface EditorViewportPixelSize {
+export interface EditorViewportClientRect {
+  readonly left: number;
+  readonly top: number;
   readonly width: number;
   readonly height: number;
 }
 
 export interface EditorViewportState {
   readonly center: EditorViewportCenter;
-  readonly pixelSize: EditorViewportPixelSize;
+  readonly clientRect: EditorViewportClientRect;
   readonly gridSize: number;
 }
 

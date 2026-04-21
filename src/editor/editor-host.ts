@@ -26,9 +26,23 @@ export function createEditorHost(
   const internalDocument = createSnapshotStore(createWorldDocument());
   const editorState = createEditorStateReadWrite();
   const actions: EditorContract["actions"] = {
-    setViewportPixelSize: ({ width, height }) => {
-      editorState.viewport.pixelSize.width = width;
-      editorState.viewport.pixelSize.height = height;
+    setViewportClientRect: ({ left, top, width, height }) => {
+      editorState.viewport.clientRect.left = resolveViewportClientOffset(
+        left,
+        editorState.viewport.clientRect.left,
+      );
+      editorState.viewport.clientRect.top = resolveViewportClientOffset(
+        top,
+        editorState.viewport.clientRect.top,
+      );
+      editorState.viewport.clientRect.width = resolveViewportAxisSize(
+        width,
+        editorState.viewport.clientRect.width,
+      );
+      editorState.viewport.clientRect.height = resolveViewportAxisSize(
+        height,
+        editorState.viewport.clientRect.height,
+      );
     },
   };
 
@@ -52,6 +66,28 @@ export function createEditorHost(
   void hydrateInitialDocument(host);
 
   return host;
+}
+
+function resolveViewportClientOffset(
+  value: number,
+  fallback: number,
+): number {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return value;
+}
+
+function resolveViewportAxisSize(
+  value: number,
+  fallback: number,
+): number {
+  if (!Number.isFinite(value) || value < 0) {
+    return fallback;
+  }
+
+  return Math.floor(value);
 }
 
 async function hydrateInitialDocument(editorHost: EditorHost): Promise<void> {

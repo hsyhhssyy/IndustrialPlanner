@@ -24,23 +24,31 @@ afterEach(() => {
 });
 
 describe("createEditorHost", () => {
-  it("updates viewport pixel size through editor actions", () => {
+  it("updates viewport rect through editor actions", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
     expect(editorHost.internalState.internalPersistState.lastDocumentId).toBeNull();
 
-    editorHost.actions.setViewportPixelSize({
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
       width: 1024,
       height: 768,
     });
 
-    expect(editorHost.internalState.viewport.pixelSize.width).toBe(1024);
-    expect(editorHost.internalState.viewport.pixelSize.height).toBe(768);
-    expect(editorHost.state.viewport.pixelSize.width).toBe(1024);
-    expect(editorHost.state.viewport.pixelSize.height).toBe(768);
-    expect(workspace.editor?.state.viewport.pixelSize.width).toBe(1024);
-    expect(workspace.editor?.state.viewport.pixelSize.height).toBe(768);
+    expect(editorHost.internalState.viewport.clientRect.left).toBe(120);
+    expect(editorHost.internalState.viewport.clientRect.top).toBe(80);
+    expect(editorHost.state.viewport.clientRect.left).toBe(120);
+    expect(editorHost.state.viewport.clientRect.top).toBe(80);
+    expect(editorHost.internalState.viewport.clientRect.width).toBe(1024);
+    expect(editorHost.internalState.viewport.clientRect.height).toBe(768);
+    expect(editorHost.state.viewport.clientRect.width).toBe(1024);
+    expect(editorHost.state.viewport.clientRect.height).toBe(768);
+    expect(workspace.editor?.state.viewport.clientRect.left).toBe(120);
+    expect(workspace.editor?.state.viewport.clientRect.top).toBe(80);
+    expect(workspace.editor?.state.viewport.clientRect.width).toBe(1024);
+    expect(workspace.editor?.state.viewport.clientRect.height).toBe(768);
   });
 
   it.each<[string | null]>([[null], [""], ["document-1"]])(
