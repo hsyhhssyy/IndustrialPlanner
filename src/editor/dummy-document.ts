@@ -10,8 +10,20 @@ export function createDummyWorldDocument(): WorldDocument {
       createdAt: new Date(0).toISOString(),
       updatedAt: new Date(0).toISOString(),
     },
-    entities: {},
-    entityOrder: [],
+    entities: {
+      "dummy-entity-1": {
+        id: "dummy-entity-1",
+        definitionId: "belt_straight_1x1",
+        position: {
+          x: 12,
+          y: 8,
+        },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    },
+    entityOrder: ["dummy-entity-1"],
     explicitLinks: [],
     documentSettings: {
       gridSize: 1,
