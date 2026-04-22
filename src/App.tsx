@@ -163,6 +163,7 @@ function isPortraitViewport() {
 
 function App() {
   const currentYear = new Date().getFullYear()
+  const [isToolMaximized, setIsToolMaximized] = useState(false)
   const [powerMode, setPowerMode] = usePersistentState<PowerMode>('stage3-power-mode', 'infinite')
   const [initialBatteryPercent, setInitialBatteryPercent] = usePersistentState<number>('stage3-initial-battery-percent', 100)
   const [configuredPowerDemandOverrideKw, setConfiguredPowerDemandOverrideKw] = usePersistentState<number | null>(
@@ -1323,6 +1324,11 @@ function App() {
   }, [eventBus, handleStartSimulation, updateSim])
 
   useEffect(() => {
+    if (!isToolOpen || !isToolMaximized || !sim.isRunning || sim.speed === 0) return
+    updateSim((current) => ({ ...current, speed: 0 }))
+  }, [isToolMaximized, isToolOpen, sim.isRunning, sim.speed, updateSim])
+
+  useEffect(() => {
     const unsubscribeDeleteAll = eventBus.on('left.delete.all', () => {
       void handleDeleteAll()
     })
@@ -1727,7 +1733,16 @@ function App() {
         />
       )}
 
-      {isToolOpen && <ToolDialog language={language} t={t} superRecipeEnabled={superRecipeEnabled} onClose={closeTool} />}
+      {isToolOpen && (
+        <ToolDialog
+          language={language}
+          t={t}
+          superRecipeEnabled={superRecipeEnabled}
+          isMaximized={isToolMaximized}
+          onToggleMaximized={() => setIsToolMaximized((current) => !current)}
+          onClose={closeTool}
+        />
+      )}
       {isHelpOpen && <HelpDialog language={language} t={t} onClose={closeHelp} />}
       {isSettingsOpen && <SettingsDialog t={t} onClose={closeSettings} onClearAllHistory={clearAllHistory} />}
       {isPortraitBlocked && <UnsupportedViewportOverlay t={t} />}

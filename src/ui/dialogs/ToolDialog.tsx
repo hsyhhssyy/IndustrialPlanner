@@ -12,6 +12,8 @@ type ToolDialogProps = {
   language: Language
   superRecipeEnabled: boolean
   t: (key: string, params?: Record<string, string | number>) => string
+  isMaximized: boolean
+  onToggleMaximized: () => void
   onClose: () => void
 }
 
@@ -57,7 +59,7 @@ function normalizeToolDialogState(value: ToolDialogPersistedState): ToolDialogPe
   }
 }
 
-export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDialogProps) {
+export function ToolDialog({ language, superRecipeEnabled, t, isMaximized, onToggleMaximized, onClose }: ToolDialogProps) {
   const toolDeviceTypes = useMemo(
     () =>
       DEVICE_TYPES.filter(
@@ -218,7 +220,13 @@ export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDia
 
   return (
     <div className="global-dialog-backdrop" role="presentation" onClick={onClose}>
-      <div className="global-dialog wiki-dialog tool-dialog" role="dialog" aria-modal="true" aria-label={t('tool.title')} onClick={(event) => event.stopPropagation()}>
+      <div
+        className={`global-dialog wiki-dialog tool-dialog ${isMaximized ? 'is-maximized' : ''}`.trim()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('tool.title')}
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="wiki-dialog-header">
           <div className="tool-dialog-header-main">
             <div className="global-dialog-title">{t('tool.title')}</div>
@@ -252,9 +260,19 @@ export function ToolDialog({ language, superRecipeEnabled, t, onClose }: ToolDia
               </button>
             </div>
           </div>
-          <button className="global-dialog-btn" onClick={onClose}>
-            {t('tool.close')}
-          </button>
+          <div className="tool-dialog-header-actions">
+            <button
+              type="button"
+              className="global-dialog-btn"
+              aria-pressed={isMaximized}
+              onClick={onToggleMaximized}
+            >
+              {isMaximized ? t('tool.restore') : t('tool.maximize')}
+            </button>
+            <button type="button" className="global-dialog-btn" onClick={onClose}>
+              {t('tool.close')}
+            </button>
+          </div>
         </div>
 
         <div className={`wiki-dialog-body ${activeTab === 'planner' ? 'tool-dialog-body-planner' : 'is-split'}`}>
