@@ -5,6 +5,7 @@ import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/app-host";
+import type { GestureEvent } from "@/app/input/gesture-adapter";
 import { CanvasPanel } from "@/app/app-shell/components/canvas-panel";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
@@ -34,6 +35,34 @@ function createContentRect(width: number, height: number): DOMRectReadOnly {
     height,
     toJSON: () => ({}),
   } as DOMRectReadOnly;
+}
+
+function dispatchPointerEvent(
+  target: Element,
+  type: string,
+  init: {
+    pointerId: number;
+    pointerType: string;
+    clientX: number;
+    clientY: number;
+    button?: number;
+    buttons?: number;
+  },
+): void {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperties(event, {
+    pointerId: { value: init.pointerId },
+    pointerType: { value: init.pointerType },
+    clientX: { value: init.clientX },
+    clientY: { value: init.clientY },
+    button: { value: init.button ?? 0 },
+    buttons: { value: init.buttons ?? 0 },
+    altKey: { value: false },
+    ctrlKey: { value: false },
+    metaKey: { value: false },
+    shiftKey: { value: false },
+  });
+  target.dispatchEvent(event);
 }
 
 class ResizeObserverMock {
@@ -149,5 +178,65 @@ describe("CanvasPanel", () => {
     expect(editorHost.state.viewport.clientRect.top).toBe(0);
     expect(editorHost.state.viewport.clientRect.width).toBe(640);
     expect(editorHost.state.viewport.clientRect.height).toBe(480);
+  });
+
+  it("routes canvas surface input through the canvas-panel gesture adapter", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+    const gestures: GestureEvent[] = [];
+    appHost.gestureAdapter.subscribe((event) => gestures.push(event));
+
+    act(() => {
+      root.render(<CanvasPanel appHost={appHost} />);
+    });
+
+    const canvasPanel = container.querySelector(".canvas-panel") as HTMLElement | null;
+    const viewportSurface = container.querySelector(
+      ".canvas-viewport-surface",
+    ) as HTMLDivElement | null;
+
+    expect(canvasPanel).not.toBeNull();
+    expect(viewportSurface).not.toBeNull();
+
+    if (!canvasPanel || !viewportSurface) {
+      throw new Error("Canvas panel did not render.");
+    }
+
+    act(() => {
+      dispatchPointerEvent(viewportSurface, "pointerdown", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 10,
+        clientY: 10,
+        buttons: 1,
+      });
+      dispatchPointerEvent(viewportSurface, "pointermove", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 14,
+        clientY: 10,
+        buttons: 1,
+      });
+      dispatchPointerEvent(viewportSurface, "pointerup", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 14,
+        clientY: 10,
+        buttons: 0,
+      });
+      canvasPanel.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          bubbles: true,
+          code: "KeyA",
+          key: "a",
+        }),
+      );
+    });
+
+    expect(gestures.map((event) => event.type)).toEqual([
+      "mouse dragstart",
+      "mouse dragend",
+    ]);
+    expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.has("KeyA")).toBe(true);
   });
 });

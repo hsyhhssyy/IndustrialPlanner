@@ -1,11 +1,13 @@
 import { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { AppContract } from "@/domain/contract/app-contract";
 import { AppActionImpl, AppInternalAction } from "./action-impl";
+import { createGestureAdapter, GestureAdapter } from "./input/gesture-adapter";
 import { hookLocalstorage } from "./storage-hook";
 import { createUiStateReadWrite, UiStateReadWrite } from "./state-impl";
 
 export interface AppHost extends AppContract {
   workspace: WorkspaceContract;
+  gestureAdapter: GestureAdapter;
   internalState: UiStateReadWrite;
   internalActions: AppInternalAction;
   dispose: () => void;
@@ -17,6 +19,7 @@ export function createAppHost(
 ): AppHost {
   const disposers: Array<() => void> = [];
   const internalState = createUiStateReadWrite();
+  const gestureAdapter = createGestureAdapter();
   const actionImpl = new AppActionImpl(internalState, workspace);
   const internalActions: AppInternalAction = {
     toggleLeftDock: actionImpl.toggleLeftDock,
@@ -31,9 +34,11 @@ export function createAppHost(
   const host: AppHost = {
     state: internalState,
     workspace,
+    gestureAdapter,
     internalState,
     internalActions,
     dispose: () => {
+      gestureAdapter.dispose();
       while (disposers.length > 0) {
         disposers.pop()?.();
       }
