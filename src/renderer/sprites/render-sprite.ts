@@ -2,7 +2,7 @@ import { Container } from "pixi.js";
 
 export type RenderLayerId = "background" | "entity" | "overlay";
 
-export type RenderSpriteId = "dummy-box";
+export type RenderSpriteId = "belt_straight_1x1";
 
 export interface RenderLayerMap {
   background: Container;

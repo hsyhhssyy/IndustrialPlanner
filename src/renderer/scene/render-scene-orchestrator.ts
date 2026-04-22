@@ -1,23 +1,40 @@
+import type {
+  WorldDocument,
+  WorldEntity,
+} from "@/domain/entity/world-document"
+import type { EntityDefinition } from "@/domain/types/registry/entity-definition"
+import {
+  getGridFootprintCenterCells,
+  getRotatedGridFootprint,
+  type GridFootprint,
+} from "@/shared/geometry/grid"
 import {
   Container,
   Graphics,
   UPDATE_PRIORITY,
-} from "pixi.js";
-import type { RenderHost } from "../renderer-host";
+} from "pixi.js"
+import type { RenderHost } from "../renderer-host"
 
-import { DummyBoxSprite } from "../sprites/dummy-box-sprite";
+import { BeltStraightSprite } from "../sprites/belt-straight-sprite"
 import {
   RenderLayerMap,
   RenderSprite,
   RenderSpriteId,
-} from "../sprites/render-sprite";
+  type RenderSpriteLayout,
+} from "../sprites/render-sprite"
 
-const VIEWPORT_FRAME_MARGIN = 10;
-const VIEWPORT_FRAME_STROKE_WIDTH = 5;
-const VIEWPORT_FRAME_COLOR = 0xffffff;
-const DUMMY_BOX_WIDTH = 160;
-const DUMMY_BOX_HEIGHT = 120;
-const DUMMY_BOX_MIN_MARGIN = 24;
+const VIEWPORT_FRAME_MARGIN = 10
+const VIEWPORT_FRAME_STROKE_WIDTH = 5
+const VIEWPORT_FRAME_COLOR = 0xffffff
+const WORLD_GRID_CELL_PIXEL_SIZE = 16
+
+interface RenderViewportState {
+  width: number;
+  height: number;
+  centerX: number;
+  centerY: number;
+  gridSize: number;
+}
 
 export interface RenderSceneOrchestrator {
   destroy(): void;
@@ -26,33 +43,37 @@ export interface RenderSceneOrchestrator {
 export function createRenderSceneOrchestrator(
   renderHost: RenderHost,
 ): RenderSceneOrchestrator {
-  const app = renderHost.app;
-  const layers = createRenderLayers();
-  const viewportFrame = new Graphics();
-  const dummySprite = createSpriteById("dummy-box");
-  let hasDrawnInitialFrame = false;
-  let lastViewportSize = {
-    width: app.renderer.width,
-    height: app.renderer.height,
-  };
+  const app = renderHost.app
+  const layers = createRenderLayers()
+  const viewportFrame = new Graphics()
+  const entityDefinitionMap = createEntityDefinitionMap(renderHost)
+  const entitySprites = new Map<string, RenderSprite>()
+  let hasDrawnInitialFrame = false
+  let lastViewportState = readViewportState(renderHost)
+  let lastDocumentSnapshot = readWorldDocumentSnapshot(renderHost)
 
   const flushViewport = (): void => {
-    const nextViewportSize = readViewportSize(renderHost);
+    const nextViewportState = readViewportState(renderHost)
+    const nextDocumentSnapshot = readWorldDocumentSnapshot(renderHost)
 
     if (
       hasDrawnInitialFrame
-      &&
-      nextViewportSize.width === lastViewportSize.width
-      && nextViewportSize.height === lastViewportSize.height
+      && nextViewportState.width === lastViewportState.width
+      && nextViewportState.height === lastViewportState.height
+      && nextViewportState.centerX === lastViewportState.centerX
+      && nextViewportState.centerY === lastViewportState.centerY
+      && nextViewportState.gridSize === lastViewportState.gridSize
+      && nextDocumentSnapshot === lastDocumentSnapshot
     ) {
-      return;
+      return
     }
 
-    hasDrawnInitialFrame = true;
-    lastViewportSize = nextViewportSize;
-    applyViewportSize(app, nextViewportSize);
+    hasDrawnInitialFrame = true
+    lastViewportState = nextViewportState
+    lastDocumentSnapshot = nextDocumentSnapshot
+    applyViewportSize(app, nextViewportState)
 
-    const bounds = resolveViewportFrameBounds(app);
+    const bounds = resolveViewportFrameBounds(app)
 
     viewportFrame
       .clear()
@@ -60,50 +81,39 @@ export function createRenderSceneOrchestrator(
       .stroke({
         width: VIEWPORT_FRAME_STROKE_WIDTH,
         color: VIEWPORT_FRAME_COLOR,
-      });
+      })
 
-    const width = Math.min(
-      DUMMY_BOX_WIDTH,
-      Math.max(48, bounds.width - DUMMY_BOX_MIN_MARGIN * 2),
-    );
-    const height = Math.min(
-      DUMMY_BOX_HEIGHT,
-      Math.max(48, bounds.height - DUMMY_BOX_MIN_MARGIN * 2),
-    );
-    const x = bounds.left + Math.max(
-      DUMMY_BOX_MIN_MARGIN,
-      (bounds.width - width) / 2,
-    );
-    const y = bounds.top + Math.max(
-      DUMMY_BOX_MIN_MARGIN,
-      (bounds.height - height) / 2,
-    );
+    syncWorldEntitySprites({
+      document: nextDocumentSnapshot,
+      entityDefinitionMap,
+      entitySprites,
+      layers,
+      viewportState: nextViewportState,
+      viewportBounds: bounds,
+    })
+  }
 
-    dummySprite.syncLayout({
-      x,
-      y,
-      width,
-      height,
-    });
-  };
-
-  app.stage.addChild(layers.background, layers.entity, layers.overlay);
-  layers.overlay.addChild(viewportFrame);
-  dummySprite.attach(layers);
-  app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH);
+  app.stage.addChild(layers.background, layers.entity, layers.overlay)
+  layers.overlay.addChild(viewportFrame)
+  app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
 
   const host: RenderSceneOrchestrator = {
     destroy: () => {
-      app.ticker.remove(flushViewport);
-      dummySprite.destroy();
-      viewportFrame.destroy();
-      layers.background.destroy({ children: true });
-      layers.entity.destroy({ children: true });
-      layers.overlay.destroy({ children: true });
-    },
-  };
+      app.ticker.remove(flushViewport)
 
-  return host;
+      for (const sprite of entitySprites.values()) {
+        sprite.destroy()
+      }
+
+      entitySprites.clear()
+      viewportFrame.destroy()
+      layers.background.destroy({ children: true })
+      layers.entity.destroy({ children: true })
+      layers.overlay.destroy({ children: true })
+    },
+  }
+
+  return host
 }
 
 function createRenderLayers(): RenderLayerMap {
@@ -111,14 +121,14 @@ function createRenderLayers(): RenderLayerMap {
     background: new Container(),
     entity: new Container(),
     overlay: new Container(),
-  };
+  }
 }
 
 function createSpriteById(spriteId: RenderSpriteId): RenderSprite {
   switch (spriteId) {
-    case "dummy-box":
+    case "belt_straight_1x1":
     default:
-      return new DummyBoxSprite();
+      return new BeltStraightSprite()
   }
 }
 
@@ -133,22 +143,22 @@ function applyViewportSize(
     app.renderer.width === viewportSize.width
     && app.renderer.height === viewportSize.height
   ) {
-    return;
+    return
   }
 
-  app.renderer.resize(viewportSize.width, viewportSize.height);
+  app.renderer.resize(viewportSize.width, viewportSize.height)
 }
 
-function readViewportSize(renderHost: RenderHost): {
-  width: number;
-  height: number;
-} {
-  const editor = renderHost.workspace.editor;
+function readViewportState(renderHost: RenderHost): RenderViewportState {
+  const editor = renderHost.workspace.editor
   if (editor === null) {
     return {
       width: renderHost.app.renderer.width,
       height: renderHost.app.renderer.height,
-    };
+      centerX: 0,
+      centerY: 0,
+      gridSize: 1,
+    }
   }
 
   return {
@@ -160,7 +170,19 @@ function readViewportSize(renderHost: RenderHost): {
       editor.state.viewport.clientRect.height,
       renderHost.app.renderer.height,
     ),
-  };
+    centerX: resolveViewportCoordinate(editor.state.viewport.center.x),
+    centerY: resolveViewportCoordinate(editor.state.viewport.center.y),
+    gridSize: resolveViewportGridSize(editor.state.viewport.gridSize),
+  }
+}
+
+function readWorldDocumentSnapshot(renderHost: RenderHost): WorldDocument | null {
+  const editor = renderHost.workspace.editor
+  if (editor === null) {
+    return null
+  }
+
+  return editor.document.getSnapshot()
 }
 
 function resolveViewportAxisSize(
@@ -168,10 +190,26 @@ function resolveViewportAxisSize(
   fallback: number,
 ): number {
   if (!Number.isFinite(value) || value < 0) {
-    return fallback;
+    return fallback
   }
 
-  return Math.floor(value);
+  return Math.floor(value)
+}
+
+function resolveViewportCoordinate(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0
+  }
+
+  return value
+}
+
+function resolveViewportGridSize(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    return 1
+  }
+
+  return value
 }
 
 function resolveViewportFrameBounds(app: RenderHost["app"]): {
@@ -180,13 +218,145 @@ function resolveViewportFrameBounds(app: RenderHost["app"]): {
   width: number;
   height: number;
 } {
-  const halfStrokeWidth = VIEWPORT_FRAME_STROKE_WIDTH / 2;
-  const frameInset = VIEWPORT_FRAME_MARGIN + halfStrokeWidth;
+  const halfStrokeWidth = VIEWPORT_FRAME_STROKE_WIDTH / 2
+  const frameInset = VIEWPORT_FRAME_MARGIN + halfStrokeWidth
 
   return {
     left: frameInset,
     top: frameInset,
     width: Math.max(0, app.renderer.width - frameInset * 2),
     height: Math.max(0, app.renderer.height - frameInset * 2),
+  }
+}
+
+function createEntityDefinitionMap(
+  renderHost: RenderHost,
+): Map<string, EntityDefinition> {
+  return new Map(
+    renderHost.workspace.registry.entityDefinitions.map((definition) => [
+      definition.id,
+      definition,
+    ]),
+  )
+}
+
+function syncWorldEntitySprites(options: {
+  document: WorldDocument | null;
+  entityDefinitionMap: Map<string, EntityDefinition>;
+  entitySprites: Map<string, RenderSprite>;
+  layers: RenderLayerMap;
+  viewportState: RenderViewportState;
+  viewportBounds: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
   };
+}): void {
+  const nextEntityIds = new Set<string>()
+
+  if (options.document !== null) {
+    for (const entityId of options.document.entityOrder) {
+      const entity = options.document.entities[entityId]
+      if (!entity) {
+        continue
+      }
+
+      const spriteId = resolveRenderSpriteId(entity.definitionId)
+      if (spriteId === null) {
+        continue
+      }
+
+      const definition = options.entityDefinitionMap.get(entity.definitionId)
+      if (!definition) {
+        continue
+      }
+
+      let sprite = options.entitySprites.get(entity.id)
+      if (!sprite) {
+        sprite = createSpriteById(spriteId)
+        sprite.attach(options.layers)
+        options.entitySprites.set(entity.id, sprite)
+      }
+
+      sprite.syncLayout(resolveWorldEntitySpriteLayout({
+        entity,
+        footprint: definition.footprint,
+        viewportBounds: options.viewportBounds,
+        viewportCenter: {
+          x: options.viewportState.centerX,
+          y: options.viewportState.centerY,
+        },
+        gridSize: options.viewportState.gridSize,
+      }))
+      nextEntityIds.add(entity.id)
+    }
+  }
+
+  for (const [entityId, sprite] of options.entitySprites) {
+    if (nextEntityIds.has(entityId)) {
+      continue
+    }
+
+    sprite.destroy()
+    options.entitySprites.delete(entityId)
+  }
+}
+
+function resolveRenderSpriteId(
+  definitionId: WorldEntity["definitionId"],
+): RenderSpriteId | null {
+  switch (definitionId) {
+    case "belt_straight_1x1":
+      return "belt_straight_1x1"
+    default:
+      return null
+  }
+}
+
+export function resolveWorldEntitySpriteLayout(options: {
+  entity: WorldEntity;
+  footprint: GridFootprint;
+  viewportBounds: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  viewportCenter: {
+    x: number;
+    y: number;
+  };
+  gridSize: number;
+}): RenderSpriteLayout {
+  const rotatedFootprint = getRotatedGridFootprint(
+    options.footprint,
+    options.entity.rotation,
+  )
+  const entityCenterCells = getGridFootprintCenterCells(
+    options.entity.position,
+    rotatedFootprint,
+  )
+  const gridCellSize = resolveWorldGridCellPixelSize(options.gridSize)
+  const width = rotatedFootprint.width * gridCellSize
+  const height = rotatedFootprint.height * gridCellSize
+
+  return {
+    x:
+      options.viewportBounds.left
+      + options.viewportBounds.width / 2
+      + (entityCenterCells.x - options.viewportCenter.x) * gridCellSize
+      - width / 2,
+    y:
+      options.viewportBounds.top
+      + options.viewportBounds.height / 2
+      + (entityCenterCells.y - options.viewportCenter.y) * gridCellSize
+      - height / 2,
+    width,
+    height,
+  }
+}
+
+function resolveWorldGridCellPixelSize(gridSize: number): number {
+  return WORLD_GRID_CELL_PIXEL_SIZE * resolveViewportGridSize(gridSize)
 }
