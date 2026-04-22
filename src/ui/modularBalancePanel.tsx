@@ -2,12 +2,12 @@ import { Fragment, useEffect, useMemo, useState, type CSSProperties } from 'reac
 import { match } from 'pinyin-pro'
 import { getItemIconPath } from '../assets/iconPaths'
 import { usePersistentState } from '../core/usePersistentState'
-import { ITEM_BY_ID, ITEMS } from '../domain/registry'
+import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
 import { getDispatchTicketInfo } from '../domain/shared/dispatchTickets'
 import { isKnownItemId } from '../domain/shared/predicates'
-import { isSuperRecipeItem, shouldShowSuperRecipeContent } from '../domain/shared/superRecipeVisibility'
-import type { ItemId } from '../domain/types'
-import { getItemLabel, type Language } from '../i18n'
+import { isSuperRecipeItem, isSuperRecipeRecipe, shouldShowSuperRecipeContent } from '../domain/shared/superRecipeVisibility'
+import type { DeviceTypeId, ItemId, RecipeDef } from '../domain/types'
+import { getDeviceLabel, getItemLabel, type Language } from '../i18n'
 import { ItemPickerDialog } from './dialogs/ItemPickerDialog'
 
 type ModularBalancePanelProps = {
@@ -16,7 +16,7 @@ type ModularBalancePanelProps = {
   t: (key: string, params?: Record<string, string | number>) => string
 }
 
-type SidebarTabKey = 'systemInputs' | 'modules' | 'warehouseCalc'
+type SidebarTabKey = 'systemInputs' | 'modules' | 'systemRecipes' | 'warehouseCalc'
 
 type ModularBalanceActionIconKind =
   | 'add'
@@ -41,6 +41,13 @@ type BalanceModule = {
   colorKey: ModuleColorKey
   inputs: BalanceRateRow[]
   outputs: BalanceRateRow[]
+}
+
+type BalanceLibraryEntry = BalanceModule & {
+  source: 'module' | 'recipe'
+  machineType?: DeviceTypeId
+  cycleSeconds?: number
+  searchTexts?: string[]
 }
 
 type StageModuleInstance = {
@@ -171,6 +178,20 @@ function compactSearchText(value: string) {
   return normalizeSearchText(value).replace(/[\s_-]+/g, '')
 }
 
+function matchesSearchValues(searchValues: string[], normalizedSearchQuery: string, compactSearchQuery: string) {
+  if (!normalizedSearchQuery) return true
+
+  for (const rawValue of searchValues) {
+    if (!rawValue) continue
+    const normalizedValue = normalizeSearchText(rawValue)
+    if (normalizedValue.includes(normalizedSearchQuery)) return true
+    if (compactSearchQuery && compactSearchText(rawValue).includes(compactSearchQuery)) return true
+    if (compactSearchQuery && match(rawValue, compactSearchQuery)) return true
+  }
+
+  return false
+}
+
 function normalizeBoolean(value: unknown) {
   return value === true || value === 'true'
 }
@@ -181,12 +202,7 @@ function normalizeWarehouseMax(value: unknown) {
 }
 
 function matchesModuleSearch(moduleName: string, normalizedSearchQuery: string, compactSearchQuery: string) {
-  if (!normalizedSearchQuery) return true
-  const normalizedModuleName = normalizeSearchText(moduleName)
-  if (normalizedModuleName.includes(normalizedSearchQuery)) return true
-  if (compactSearchQuery && compactSearchText(moduleName).includes(compactSearchQuery)) return true
-  if (!compactSearchQuery) return false
-  return Boolean(match(moduleName, compactSearchQuery))
+  return matchesSearchValues([moduleName], normalizedSearchQuery, compactSearchQuery)
 }
 
 function normalizeNonNegativeNumber(value: unknown) {
@@ -286,7 +302,7 @@ function normalizeCanvasTimeUnit(value: unknown): TimeUnitKey {
 }
 
 function normalizeSidebarTab(value: unknown): SidebarTabKey {
-  return value === 'systemInputs' || value === 'modules' || value === 'warehouseCalc' ? value : 'modules'
+  return value === 'systemInputs' || value === 'modules' || value === 'systemRecipes' || value === 'warehouseCalc' ? value : 'modules'
 }
 
 function normalizeSelectedStageId(value: unknown) {
@@ -319,6 +335,26 @@ function formatHourValue(value: number) {
   if (abs >= 100) return value.toFixed(1)
   if (abs >= 10) return value.toFixed(1).replace(/\.0$/, '')
   return value.toFixed(1)
+}
+
+function toSystemRecipeEntryId(recipeId: string) {
+  return `system_recipe:${recipeId}`
+}
+
+function recipeAmountPerMinute(recipe: RecipeDef, amount: number) {
+  if (recipe.cycleSeconds <= EPSILON) return 0
+  return (amount * 60) / recipe.cycleSeconds
+}
+
+function formatRecipeItemSummary(language: Language, entries: Array<{ itemId: ItemId; amount: number }>) {
+  if (entries.length === 0) return '∅'
+  return entries.map((entry) => `${getItemLabel(language, entry.itemId)} x${entry.amount}`).join(' + ')
+}
+
+function formatSystemRecipeName(language: Language, recipe: RecipeDef) {
+  const inputs = formatRecipeItemSummary(language, recipe.inputs)
+  const outputs = formatRecipeItemSummary(language, recipe.outputs)
+  return `${getDeviceLabel(language, recipe.machineType)} · ${inputs} → ${outputs}`
 }
 
 function getModuleColorOption(colorKey: ModuleColorKey | undefined) {
@@ -542,6 +578,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
     normalizeWarehouseMax,
   )
   const [moduleFilterText, setModuleFilterText] = useState('')
+  const [systemRecipeFilterText, setSystemRecipeFilterText] = useState('')
   const [draft, setDraft] = useState<ModuleDraft | null>(null)
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null)
   const [draggingModuleId, setDraggingModuleId] = useState<string | null>(null)
@@ -554,12 +591,59 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
   )
 
   const modulesById = useMemo(() => new Map(modules.map((module) => [module.id, module])), [modules])
+  const systemRecipeEntries = useMemo<BalanceLibraryEntry[]>(() => {
+    return RECIPES.filter((recipe) =>
+      shouldShowSuperRecipeContent(
+        superRecipeEnabled,
+        isSuperRecipeRecipe(recipe, {
+          getItemById: (itemId) => ITEM_BY_ID[itemId],
+          getDeviceById: (deviceId) => DEVICE_TYPE_BY_ID[deviceId],
+        }),
+      ),
+    )
+      .map((recipe, index) => {
+        const name = formatSystemRecipeName(language, recipe)
+        return {
+          id: toSystemRecipeEntryId(recipe.id),
+          source: 'recipe' as const,
+          name,
+          colorKey: getNextModuleColorKey(index),
+          machineType: recipe.machineType,
+          cycleSeconds: recipe.cycleSeconds,
+          inputs: recipe.inputs.map((entry) => createRateRow(entry.itemId, recipeAmountPerMinute(recipe, entry.amount))),
+          outputs: recipe.outputs.map((entry) => createRateRow(entry.itemId, recipeAmountPerMinute(recipe, entry.amount))),
+          searchTexts: [
+            name,
+            getDeviceLabel(language, recipe.machineType),
+            ...recipe.inputs.map((entry) => getItemLabel(language, entry.itemId)),
+            ...recipe.outputs.map((entry) => getItemLabel(language, entry.itemId)),
+          ],
+        }
+      })
+      .sort((left, right) => left.name.localeCompare(right.name, language))
+  }, [language, superRecipeEnabled])
+  const libraryEntriesById = useMemo(() => {
+    const next = new Map<string, BalanceLibraryEntry>()
+    for (const module of modules) {
+      next.set(module.id, { ...module, source: 'module' })
+    }
+    for (const recipe of systemRecipeEntries) {
+      next.set(recipe.id, recipe)
+    }
+    return next
+  }, [modules, systemRecipeEntries])
   const filteredModules = useMemo(() => {
     const normalizedFilter = normalizeSearchText(moduleFilterText)
     const compactFilter = compactSearchText(moduleFilterText)
     if (!normalizedFilter) return modules
     return modules.filter((module) => matchesModuleSearch(module.name, normalizedFilter, compactFilter))
   }, [moduleFilterText, modules])
+  const filteredSystemRecipeEntries = useMemo(() => {
+    const normalizedFilter = normalizeSearchText(systemRecipeFilterText)
+    const compactFilter = compactSearchText(systemRecipeFilterText)
+    if (!normalizedFilter) return systemRecipeEntries
+    return systemRecipeEntries.filter((entry) => matchesSearchValues(entry.searchTexts ?? [entry.name], normalizedFilter, compactFilter))
+  }, [systemRecipeFilterText, systemRecipeEntries])
   const canvasTimeUnitFactor = TIME_UNITS.find((unit) => unit.key === canvasTimeUnit)?.factor ?? BASE_TIME_UNIT_FACTOR
 
   useEffect(() => {
@@ -640,7 +724,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
       const after = new Map(before)
 
       for (const instance of stage.instances) {
-        const module = modulesById.get(instance.moduleId)
+        const module = libraryEntriesById.get(instance.moduleId)
         if (!module || instance.count <= 0) continue
         for (const entry of module.inputs) {
           sumInto(inputs, entry.itemId, entry.ratePerMinute * instance.count)
@@ -667,7 +751,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
     }
 
     return computations
-  }, [initialBalance, modulesById, stages])
+  }, [initialBalance, libraryEntriesById, stages])
 
   const finalStageComputation = stageComputations[stageComputations.length - 1] ?? null
   const warehouseOverflowEntries = useMemo(() => {
@@ -951,6 +1035,15 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
               </button>
               <button
                 type="button"
+                className={`modular-balance-sidebar-tab ${sidebarTab === 'systemRecipes' ? 'active' : ''}`.trim()}
+                role="tab"
+                aria-selected={sidebarTab === 'systemRecipes'}
+                onClick={() => setSidebarTab('systemRecipes')}
+              >
+                {t('modBalance.systemRecipes')}
+              </button>
+              <button
+                type="button"
                 className={`modular-balance-sidebar-tab ${sidebarTab === 'warehouseCalc' ? 'active' : ''}`.trim()}
                 role="tab"
                 aria-selected={sidebarTab === 'warehouseCalc'}
@@ -1068,6 +1161,62 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                       </span>
                       <span className="modular-balance-add-row-label">{t('modBalance.addModuleRow')}</span>
                     </button>
+                  </div>
+                </section>
+              )}
+
+              {sidebarTab === 'systemRecipes' && (
+                <section className="modular-balance-section modular-balance-section--library modular-balance-section--active">
+                  <div className="modular-balance-module-list">
+                    <input
+                      className="modular-balance-module-filter"
+                      type="text"
+                      value={systemRecipeFilterText}
+                      onChange={(event) => setSystemRecipeFilterText(event.target.value)}
+                      placeholder={t('modBalance.systemRecipeFilterPlaceholder')}
+                      aria-label={t('modBalance.systemRecipeFilterLabel')}
+                    />
+                    {filteredSystemRecipeEntries.length > 0 ? filteredSystemRecipeEntries.map((recipe) => (
+                      <article
+                        key={recipe.id}
+                        className={`modular-balance-module-card ${draggingModuleId === recipe.id ? 'is-dragging' : ''}`.trim()}
+                        style={getModuleColorStyle(recipe.colorKey)}
+                        draggable
+                        onDragStart={(event) => {
+                          event.dataTransfer.setData('text/plain', recipe.id)
+                          setDraggingModuleId(recipe.id)
+                        }}
+                        onDragEnd={() => {
+                          setDraggingModuleId(null)
+                          setDragOverStageId(null)
+                        }}
+                      >
+                        <div className="modular-balance-module-card-head">
+                          <strong>{recipe.name}</strong>
+                          <div className="modular-balance-module-card-actions">
+                            {renderActionButton(t('modBalance.addToStage'), 'addToStage', () => addModuleToStage(selectedStageId, recipe.id), {
+                              disabled: !selectedStageId,
+                            })}
+                          </div>
+                        </div>
+                        {recipe.machineType ? (
+                          <div className="modular-balance-preview-group">
+                            <span className="modular-balance-mini-label">{t('wiki.recipe.machine', { name: getDeviceLabel(language, recipe.machineType) })}</span>
+                            <span className="modular-balance-mini-label">{t('wiki.recipe.cycleSeconds', { seconds: recipe.cycleSeconds ?? 0 })}</span>
+                          </div>
+                        ) : null}
+                        <div className="modular-balance-module-card-groups">
+                          <div>
+                            <span className="modular-balance-mini-label">{t('modBalance.moduleInputs')}</span>
+                            <div className="modular-balance-chip-row">{renderRateChips(recipe.inputs)}</div>
+                          </div>
+                          <div>
+                            <span className="modular-balance-mini-label">{t('modBalance.moduleOutputs')}</span>
+                            <div className="modular-balance-chip-row">{renderRateChips(recipe.outputs)}</div>
+                          </div>
+                        </div>
+                      </article>
+                    )) : <div className="modular-balance-library-empty">{t('modBalance.systemRecipeEmpty')}</div>}
                   </div>
                 </section>
               )}
@@ -1343,7 +1492,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
 
                         <div className="modular-balance-stage-grid">
                           {stage.instances.length > 0 ? stage.instances.map((instance) => {
-                            const module = modulesById.get(instance.moduleId)
+                            const module = libraryEntriesById.get(instance.moduleId)
                             if (!module) return null
                             const scaledInputs = module.inputs.map((entry) => ({ itemId: entry.itemId, amount: entry.ratePerMinute }))
                             const scaledOutputs = module.outputs.map((entry) => ({ itemId: entry.itemId, amount: entry.ratePerMinute }))
@@ -1365,6 +1514,13 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                                     { danger: true },
                                   )}
                                 </div>
+
+                                {module.source === 'recipe' && module.machineType ? (
+                                  <div className="modular-balance-preview-group">
+                                    <span className="modular-balance-mini-label">{t('wiki.recipe.machine', { name: getDeviceLabel(language, module.machineType) })}</span>
+                                    <span className="modular-balance-mini-label">{t('wiki.recipe.cycleSeconds', { seconds: module.cycleSeconds ?? 0 })}</span>
+                                  </div>
+                                ) : null}
 
                                 <div className="modular-balance-instance-count-row">
                                   <span>{t('modBalance.moduleCount')}</span>

@@ -5325,6 +5325,14 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
   padding-right: 2px;
 }
 
+.modular-balance-library-empty {
+  padding: 14px;
+  border: 1px dashed color-mix(in srgb, var(--border-color) 72%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-3) 56%, transparent);
+  color: var(--text-secondary);
+}
+
 .modular-balance-module-filter {
   width: 100%;
   box-sizing: border-box;
