@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { match } from 'pinyin-pro'
-import { getItemIconPath } from '../assets/iconPaths'
+import { getDeviceIconPath, getItemIconPath } from '../assets/iconPaths'
 import { usePersistentState } from '../core/usePersistentState'
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
 import { getDispatchTicketInfo } from '../domain/shared/dispatchTickets'
@@ -45,6 +45,7 @@ type BalanceModule = {
 
 type BalanceLibraryEntry = BalanceModule & {
   source: 'module' | 'recipe'
+  cardTitle?: string
   machineType?: DeviceTypeId
   cycleSeconds?: number
   searchTexts?: string[]
@@ -131,6 +132,7 @@ const MODULE_COLOR_OPTION_BY_KEY = new Map<ModuleColorKey, ModuleColorOption>(
   MODULE_COLOR_OPTIONS.map((option) => [option.key, option]),
 )
 const DEFAULT_MODULE_COLOR_KEY: ModuleColorKey = MODULE_COLOR_OPTIONS[0]?.key ?? 'teal'
+const DEFAULT_SYSTEM_RECIPE_COLOR_KEY: ModuleColorKey = 'blue'
 
 const TIME_UNITS: Array<{ key: TimeUnitKey; factor: number }> = [
   { key: '2s', factor: 2 / 60 },
@@ -357,6 +359,16 @@ function formatSystemRecipeName(language: Language, recipe: RecipeDef) {
   return `${getDeviceLabel(language, recipe.machineType)} · ${inputs} → ${outputs}`
 }
 
+function formatSystemRecipeCardTitle(language: Language, recipe: RecipeDef) {
+  if (recipe.outputs.length > 0) return formatRecipeItemSummary(language, recipe.outputs)
+  if (recipe.inputs.length > 0) return formatRecipeItemSummary(language, recipe.inputs)
+  return getDeviceLabel(language, recipe.machineType)
+}
+
+function formatCycleText(language: Language, seconds: number) {
+  return language === 'zh-CN' ? `${seconds}秒` : `${seconds}s`
+}
+
 function getModuleColorOption(colorKey: ModuleColorKey | undefined) {
   return MODULE_COLOR_OPTION_BY_KEY.get(colorKey ?? DEFAULT_MODULE_COLOR_KEY) ?? MODULE_COLOR_OPTIONS[0]
 }
@@ -527,6 +539,43 @@ function ModularBalanceIconButton({
   )
 }
 
+function ModularBalanceRecipeMetaRow({
+  language,
+  machineType,
+  cycleSeconds,
+}: {
+  language: Language
+  machineType: DeviceTypeId
+  cycleSeconds: number
+}) {
+  return (
+    <div className="modular-balance-recipe-meta-row">
+      <span className="modular-balance-recipe-meta-item" title={getDeviceLabel(language, machineType)}>
+        <img
+          className="modular-balance-recipe-meta-icon"
+          src={getDeviceIconPath(machineType)}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+        />
+        <span>{getDeviceLabel(language, machineType)}</span>
+      </span>
+      <span className="modular-balance-recipe-meta-item" title={formatCycleText(language, cycleSeconds)}>
+        <span className="modular-balance-recipe-meta-glyph" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <circle cx="12" cy="13" r="7" />
+            <path d="M12 13V9" />
+            <path d="M12 13L15 15" />
+            <path d="M9 3H15" />
+            <path d="M12 3V6" />
+          </svg>
+        </span>
+        <span>{formatCycleText(language, cycleSeconds)}</span>
+      </span>
+    </div>
+  )
+}
+
 export function ModularBalancePanel({ language, superRecipeEnabled, t }: ModularBalancePanelProps) {
   const availableItems = useMemo(
     () =>
@@ -601,13 +650,14 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
         }),
       ),
     )
-      .map((recipe, index) => {
+      .map((recipe) => {
         const name = formatSystemRecipeName(language, recipe)
         return {
           id: toSystemRecipeEntryId(recipe.id),
           source: 'recipe' as const,
           name,
-          colorKey: getNextModuleColorKey(index),
+          cardTitle: formatSystemRecipeCardTitle(language, recipe),
+          colorKey: DEFAULT_SYSTEM_RECIPE_COLOR_KEY,
           machineType: recipe.machineType,
           cycleSeconds: recipe.cycleSeconds,
           inputs: recipe.inputs.map((entry) => createRateRow(entry.itemId, recipeAmountPerMinute(recipe, entry.amount))),
@@ -1127,7 +1177,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                         }}
                       >
                         <div className="modular-balance-module-card-head">
-                          <strong>{module.name}</strong>
+                          <strong className="modular-balance-card-title" title={module.name}>{module.name}</strong>
                           <div className="modular-balance-module-card-actions">
                             {renderActionButton(t('modBalance.addToStage'), 'addToStage', () => addModuleToStage(selectedStageId, module.id), {
                               disabled: !selectedStageId,
@@ -1192,7 +1242,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                         }}
                       >
                         <div className="modular-balance-module-card-head">
-                          <strong>{recipe.name}</strong>
+                          <strong className="modular-balance-card-title" title={recipe.name}>{recipe.cardTitle ?? recipe.name}</strong>
                           <div className="modular-balance-module-card-actions">
                             {renderActionButton(t('modBalance.addToStage'), 'addToStage', () => addModuleToStage(selectedStageId, recipe.id), {
                               disabled: !selectedStageId,
@@ -1200,10 +1250,11 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                           </div>
                         </div>
                         {recipe.machineType ? (
-                          <div className="modular-balance-preview-group">
-                            <span className="modular-balance-mini-label">{t('wiki.recipe.machine', { name: getDeviceLabel(language, recipe.machineType) })}</span>
-                            <span className="modular-balance-mini-label">{t('wiki.recipe.cycleSeconds', { seconds: recipe.cycleSeconds ?? 0 })}</span>
-                          </div>
+                          <ModularBalanceRecipeMetaRow
+                            language={language}
+                            machineType={recipe.machineType}
+                            cycleSeconds={recipe.cycleSeconds ?? 0}
+                          />
                         ) : null}
                         <div className="modular-balance-module-card-groups">
                           <div>
@@ -1358,18 +1409,6 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                 </div>
               </section>
 
-              <div className="modular-balance-editor-preview">
-                <span className="modular-balance-mini-label">{t('modBalance.previewPerModule')}</span>
-                <div className="modular-balance-preview-group">
-                  <span className="modular-balance-mini-label">{t('modBalance.moduleInputs')}</span>
-                  <div className="modular-balance-chip-row">{renderRateChips(draft.inputs.map((entry) => ({ itemId: entry.itemId, amount: entry.ratePerMinute })))}</div>
-                </div>
-                <div className="modular-balance-preview-group">
-                  <span className="modular-balance-mini-label">{t('modBalance.moduleOutputs')}</span>
-                  <div className="modular-balance-chip-row">{renderRateChips(draft.outputs.map((entry) => ({ itemId: entry.itemId, amount: entry.ratePerMinute })))}</div>
-                </div>
-              </div>
-
               <div className="modular-balance-editor-actions">
                 <button type="button" className="global-dialog-btn" onClick={() => setDraft(null)}>
                   {t('modBalance.cancel')}
@@ -1499,7 +1538,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                             return (
                               <article key={instance.id} className="modular-balance-instance-card" style={getModuleColorStyle(module.colorKey)}>
                                 <div className="modular-balance-instance-head">
-                                  <strong>{module.name}</strong>
+                                  <strong className="modular-balance-card-title" title={module.name}>{module.cardTitle ?? module.name}</strong>
                                   {renderActionButton(
                                     t('modBalance.removeStageModule'),
                                     'delete',
@@ -1514,13 +1553,6 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                                     { danger: true },
                                   )}
                                 </div>
-
-                                {module.source === 'recipe' && module.machineType ? (
-                                  <div className="modular-balance-preview-group">
-                                    <span className="modular-balance-mini-label">{t('wiki.recipe.machine', { name: getDeviceLabel(language, module.machineType) })}</span>
-                                    <span className="modular-balance-mini-label">{t('wiki.recipe.cycleSeconds', { seconds: module.cycleSeconds ?? 0 })}</span>
-                                  </div>
-                                ) : null}
 
                                 <div className="modular-balance-instance-count-row">
                                   <span>{t('modBalance.moduleCount')}</span>
@@ -1545,6 +1577,14 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                                     )}
                                   </div>
                                 </div>
+
+                                {module.source === 'recipe' && module.machineType ? (
+                                  <ModularBalanceRecipeMetaRow
+                                    language={language}
+                                    machineType={module.machineType}
+                                    cycleSeconds={module.cycleSeconds ?? 0}
+                                  />
+                                ) : null}
 
                                 <div className="modular-balance-instance-groups">
                                   <div>

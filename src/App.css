@@ -5181,7 +5181,7 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 
 .modular-balance-section-head h4,
@@ -5189,6 +5189,15 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 .modular-balance-editor-head h4,
 .modular-balance-editor-group-head h5 {
   margin: 0;
+}
+
+.modular-balance-module-card-head,
+.modular-balance-instance-head {
+  align-items: center;
+}
+
+.modular-balance-module-card-head {
+  min-height: 3.25rem;
 }
 
 .modular-balance-section-head p,
@@ -5214,11 +5223,10 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 
 .modular-balance-rate-list,
 .modular-balance-warehouse-settings,
-.modular-balance-editor-group,
-.modular-balance-editor-preview {
+.modular-balance-editor-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .modular-balance-checkbox-row {
@@ -5234,10 +5242,54 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
   accent-color: var(--accent);
 }
 
-.modular-balance-preview-group {
+.modular-balance-recipe-meta-row {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.modular-balance-recipe-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.modular-balance-recipe-meta-item span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modular-balance-recipe-meta-icon,
+.modular-balance-recipe-meta-glyph {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.modular-balance-recipe-meta-icon {
+  object-fit: contain;
+}
+
+.modular-balance-recipe-meta-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modular-balance-recipe-meta-glyph svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .modular-balance-rate-row {
@@ -5305,7 +5357,7 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 .modular-balance-unit-text,
 .modular-balance-mini-label {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .modular-balance-picker-btn {
@@ -5321,7 +5373,7 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 .modular-balance-module-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   padding-right: 2px;
 }
 
@@ -5355,7 +5407,7 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 .modular-balance-stage {
   border: 1px solid var(--border-color);
   background: var(--surface-2);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .modular-balance-module-card,
@@ -5364,10 +5416,10 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 }
 
 .modular-balance-module-card {
-  padding: 9px;
+  padding: 6px 7px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   cursor: grab;
 }
 
@@ -5379,34 +5431,68 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 .modular-balance-stage-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 2px;
   justify-content: flex-end;
   align-items: center;
+}
+
+.modular-balance-card-title {
+  min-width: 0;
+  flex: 1 1 auto;
+  align-self: auto;
+  display: block;
+  min-height: 0;
+  font-size: 18px;
+  line-height: 1.25;
+  text-align: left;
+  white-space: normal;
+  overflow: visible;
+  word-break: break-word;
 }
 
 .modular-balance-module-card-groups,
 .modular-balance-instance-groups {
   display: grid;
-  gap: 8px;
+  gap: 4px;
+}
+
+.modular-balance-module-card-groups > div,
+.modular-balance-instance-groups > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.modular-balance-module-card-groups > div > .modular-balance-mini-label,
+.modular-balance-instance-groups > div > .modular-balance-mini-label {
+  flex: 0 0 26px;
+  width: 26px;
+  padding-top: 2px;
+}
+
+.modular-balance-module-card-groups > div > .modular-balance-chip-row,
+.modular-balance-instance-groups > div > .modular-balance-chip-row {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .modular-balance-chip-row,
 .modular-balance-ticket-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 3px;
 }
 
 .modular-balance-chip,
 .modular-balance-ticket-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: 3px;
+  padding: 2px 6px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
   background: color-mix(in srgb, var(--surface-3) 88%, transparent);
-  font-size: 11px;
+  font-size: 10px;
   max-width: 100%;
 }
 
@@ -5416,8 +5502,8 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 }
 
 .modular-balance-chip img {
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   object-fit: contain;
 }
 
@@ -5617,10 +5703,10 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 }
 
 .modular-balance-stage {
-  padding: 10px;
+  padding: 7px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
   transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
 }
 
@@ -5669,8 +5755,8 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 
 .modular-balance-stage-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px;
 }
 
 .modular-balance-stage-empty {
@@ -5687,17 +5773,17 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 }
 
 .modular-balance-instance-card {
-  padding: 9px;
+  padding: 6px 7px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .modular-balance-instance-count-row,
 .modular-balance-stepper {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .modular-balance-stepper {
@@ -5763,12 +5849,21 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
+  position: relative;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
 
-.app-shell .modular-balance-color-btn:hover,
-.app-shell .modular-balance-color-btn.active {
+.app-shell .modular-balance-color-btn:hover {
   border-color: var(--modular-balance-module-accent) !important;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--modular-balance-module-accent) 24%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--modular-balance-module-accent) 18%, transparent);
+}
+
+.app-shell .modular-balance-color-btn.active {
+  border-color: color-mix(in srgb, var(--modular-balance-module-accent) 72%, var(--border-color)) !important;
+  box-shadow:
+    0 0 0 2px var(--surface-1),
+    0 0 0 4px color-mix(in srgb, var(--modular-balance-module-accent) 36%, transparent);
+  transform: scale(1.08);
 }
 
 .modular-balance-color-btn-swatch {
@@ -5776,6 +5871,15 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
   height: 12px;
   border-radius: 999px;
   background: var(--modular-balance-module-accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #ffffff 20%, transparent);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.app-shell .modular-balance-color-btn.active .modular-balance-color-btn-swatch {
+  transform: scale(0.78);
+  box-shadow:
+    0 0 0 2px var(--surface-1),
+    inset 0 0 0 1px color-mix(in srgb, #ffffff 22%, transparent);
 }
 
 .modular-balance-editor-actions {
