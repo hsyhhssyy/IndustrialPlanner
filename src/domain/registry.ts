@@ -7,10 +7,12 @@ const recipeItemsAllowance = { mode: 'recipe_items' as const, whitelist: [] }
 const NEW_TAG = 'new'
 const ALTER_TAG_PREFIX = 'alter:'
 const ALTER_VARIANT_TAG_PREFIX = 'alter-variant:'
+const DISPATCH_TICKET_REGION_WULING_TAG = '调度券地区:武陵'
 const bottleItemTags = ['瓶子']
 const bottledLiquidTags = [...bottleItemTags, '瓶装液体']
 const alterDeviceTag = (deviceId: DeviceTypeId) => `${ALTER_TAG_PREFIX}${deviceId}`
 const ALTER_VARIANT_LIQUID_TAG = `${ALTER_VARIANT_TAG_PREFIX}liquid`
+const dispatchTicketValueTag = (value: number) => `调度券价值:${value}`
 const SINGLE_SOLID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid']]
 const SINGLE_LIQUID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['liquid']]
 const DOUBLE_SOLID_INPUT_SLOT_TYPES: Array<Array<'solid' | 'liquid'>> = [['solid'], ['solid']]
@@ -22,13 +24,13 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_bottled_food_1', displayName: '柑实罐头', type: 'solid' },
   { id: 'item_bottled_food_2', displayName: '优质柑实罐头', type: 'solid' },
   { id: 'item_bottled_food_3', displayName: '精选柑实罐头', type: 'solid' },
-  { id: 'item_bottled_food_4', displayName: '锦草软饮', type: 'solid' },
-  { id: 'item_bottled_food_5', displayName: '优质锦草软饮', type: 'solid' },
+  { id: 'item_bottled_food_4', displayName: '锦草软饮', type: 'solid', tags: [DISPATCH_TICKET_REGION_WULING_TAG, dispatchTicketValueTag(16)] },
+  { id: 'item_bottled_food_5', displayName: '优质锦草软饮', type: 'solid', tags: [DISPATCH_TICKET_REGION_WULING_TAG, dispatchTicketValueTag(22)] },
   { id: 'item_bottled_rec_hp_1', displayName: '荞愈胶囊', type: 'solid' },
   { id: 'item_bottled_rec_hp_2', displayName: '优质荞愈胶囊', type: 'solid' },
   { id: 'item_bottled_rec_hp_3', displayName: '精选荞愈胶囊', type: 'solid' },
-  { id: 'item_bottled_rec_hp_4', displayName: '芽针针剂', type: 'solid' },
-  { id: 'item_bottled_rec_hp_5', displayName: '优质芽针针剂', type: 'solid' },
+  { id: 'item_bottled_rec_hp_4', displayName: '芽针针剂', type: 'solid', tags: [DISPATCH_TICKET_REGION_WULING_TAG, dispatchTicketValueTag(16)] },
+  { id: 'item_bottled_rec_hp_5', displayName: '优质芽针针剂', type: 'solid', tags: [DISPATCH_TICKET_REGION_WULING_TAG, dispatchTicketValueTag(22)] },
   { id: 'item_carbon_enr', displayName: '稳定碳块', type: 'solid' },
   { id: 'item_carbon_enr_powder', displayName: '致密碳粉末', type: 'solid' },
   { id: 'item_carbon_mtl', displayName: '碳块', type: 'solid' },
@@ -97,8 +99,8 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_activity_xiranite_enr_tool', displayName: '实验玉铜发散器', type: 'solid', tags: [NEW_TAG] },
   { id: 'item_activity_xiranite_hulu', displayName: '息壤葫芦', type: 'solid', tags: [NEW_TAG] },
   { id: 'item_activity_xiranite_enr_hulu', displayName: '息壤玉葫芦', type: 'solid', tags: [NEW_TAG] },
-  { id: 'item_copper_cmpt', displayName: '赤铜零件', type: 'solid' },
-  { id: 'item_copper_enr_cmpt', displayName: '赫铜零件', type: 'solid', tags: [NEW_TAG] },
+  { id: 'item_copper_cmpt', displayName: '赤铜零件', type: 'solid', tags: [DISPATCH_TICKET_REGION_WULING_TAG, dispatchTicketValueTag(1)] },
+  { id: 'item_copper_enr_cmpt', displayName: '赫铜零件', type: 'solid', tags: [NEW_TAG, DISPATCH_TICKET_REGION_WULING_TAG, dispatchTicketValueTag(48)] },
   { id: 'item_equip_script_1', displayName: '紫晶装备原件', type: 'solid' },
   { id: 'item_equip_script_2', displayName: '蓝铁装备原件', type: 'solid' },
   { id: 'item_equip_script_3', displayName: '高晶装备原件', type: 'solid' },
@@ -180,16 +182,16 @@ export const ITEMS: ItemDef[] = [
   { id: 'item_proc_battery_1', displayName: '低容谷地电池', type: 'solid' },
   { id: 'item_proc_battery_2', displayName: '中容谷地电池', type: 'solid' },
   { id: 'item_proc_battery_3', displayName: '高容谷地电池', type: 'solid' },
-  { id: 'item_proc_battery_4', displayName: '低容武陵电池', type: 'solid' },
-  { id: 'item_proc_battery_5', displayName: '中容武陵电池', type: 'solid' },
+  { id: 'item_proc_battery_4', displayName: '低容武陵电池', type: 'solid', tags: [DISPATCH_TICKET_REGION_WULING_TAG, dispatchTicketValueTag(25)] },
+  { id: 'item_proc_battery_5', displayName: '中容武陵电池', type: 'solid', tags: [DISPATCH_TICKET_REGION_WULING_TAG, dispatchTicketValueTag(54)] },
   { id: 'item_proc_bomb_1', displayName: '工业爆炸物', type: 'solid' },
   { id: 'item_quartz_enr', displayName: '高晶纤维', type: 'solid' },
   { id: 'item_quartz_enr_powder', displayName: '高晶粉末', type: 'solid' },
   { id: 'item_quartz_glass', displayName: '紫晶纤维', type: 'solid' },
   { id: 'item_quartz_powder', displayName: '紫晶粉末', type: 'solid' },
   { id: 'item_quartz_sand', displayName: '紫晶矿', type: 'solid', tags: ['矿石'] },
-  { id: 'item_xiranite_enr_powder', displayName: '重息壤', type: 'solid', tags: [NEW_TAG] },
-  { id: 'item_xiranite_powder', displayName: '息壤', type: 'solid' },
+  { id: 'item_xiranite_enr_powder', displayName: '重息壤', type: 'solid', tags: [NEW_TAG, DISPATCH_TICKET_REGION_WULING_TAG, dispatchTicketValueTag(27)] },
+  { id: 'item_xiranite_powder', displayName: '息壤', type: 'solid', tags: [DISPATCH_TICKET_REGION_WULING_TAG, dispatchTicketValueTag(1)] },
 ]
 
 const LIQUID_BOTTLE_DISMANTLE_RECIPES: RecipeDef[] = [
