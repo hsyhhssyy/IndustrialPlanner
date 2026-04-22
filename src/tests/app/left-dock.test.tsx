@@ -22,6 +22,10 @@ function createWorkspace(): WorkspaceContract {
   };
 }
 
+function queryVisibleLeftDockPanel(container: HTMLDivElement): HTMLDivElement | null {
+  return container.querySelector(".left-dock-panel:not([hidden])") as HTMLDivElement | null;
+}
+
 describe("Left dock panel switching", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -58,26 +62,34 @@ describe("Left dock panel switching", () => {
 
     const toolbarGroups = container.querySelectorAll(".toolbar-rail-group");
     const primaryButtons = toolbarGroups[0]?.querySelectorAll(".rail-button");
+    const visiblePanel = queryVisibleLeftDockPanel(container);
 
     expect(primaryButtons).toHaveLength(4);
     expect(container.textContent).toContain("放置模式");
-    expect(container.textContent).toContain("保存蓝图");
-    expect(container.textContent).toContain("多口暗管出口");
-    expect(container.textContent).not.toContain("设备");
-    expect(container.textContent).not.toContain("拖动虚影后点击确认完成放置。");
-    expect(container.querySelectorAll(".placement-panel-group")).toHaveLength(6);
-    expect(container.querySelectorAll(".placement-panel-divider")).toHaveLength(5);
-    expect(container.querySelectorAll(".placement-button .button-icon-image")).toHaveLength(
-      container.querySelectorAll(".placement-button").length,
+    expect(visiblePanel).not.toBeNull();
+
+    if (!visiblePanel) {
+      throw new Error("Expected the placement panel to be visible by default.");
+    }
+
+    expect(visiblePanel?.getAttribute("data-panel-id")).toBe("placement");
+    expect(visiblePanel.textContent).toContain("保存蓝图");
+    expect(visiblePanel.textContent).toContain("多口暗管出口");
+    expect(visiblePanel.textContent).not.toContain("设备");
+    expect(visiblePanel.textContent).not.toContain("拖动虚影后点击确认完成放置。");
+    expect(visiblePanel.querySelectorAll(".placement-panel-group")).toHaveLength(6);
+    expect(visiblePanel.querySelectorAll(".placement-panel-divider")).toHaveLength(5);
+    expect(visiblePanel.querySelectorAll(".placement-button .button-icon-image")).toHaveLength(
+      visiblePanel.querySelectorAll(".placement-button").length,
     );
-    expect(container.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(2);
-    expect(container.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(22);
-    expect(container.textContent).toContain("Esc");
-    expect(container.textContent).toContain("Ctrl+S");
+    expect(visiblePanel.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(2);
+    expect(visiblePanel.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(22);
+    expect(visiblePanel.textContent).toContain("Esc");
+    expect(visiblePanel.textContent).toContain("Ctrl+S");
     expect(appHost.internalState.runtime.activePanel).toBeNull();
   });
 
-  it("switches runtime activePanel and left dock content when tabs are clicked", () => {
+  it("switches runtime activePanel and left dock content without remounting panel containers", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -89,6 +101,13 @@ describe("Left dock panel switching", () => {
         </>,
       );
     });
+
+    const placementPanelBeforeSwitch = container.querySelector(
+      '.left-dock-panel[data-panel-id="placement"]',
+    ) as HTMLDivElement | null;
+
+    expect(placementPanelBeforeSwitch).not.toBeNull();
+    expect(placementPanelBeforeSwitch?.hidden).toBe(false);
 
     const clickTab = (label: string) => {
       const button = container.querySelector(
@@ -109,24 +128,42 @@ describe("Left dock panel switching", () => {
     };
 
     const historyButton = clickTab("操作历史");
+    const historyPanel = queryVisibleLeftDockPanel(container);
 
     expect(appHost.internalState.runtime.activePanel).toBe("history");
     expect(historyButton.getAttribute("aria-pressed")).toBe("true");
-    expect(container.textContent).toContain("清空历史");
-    expect(container.textContent).toContain("文档命令流");
+    expect(placementPanelBeforeSwitch?.hidden).toBe(true);
+    expect(historyPanel?.getAttribute("data-panel-id")).toBe("history");
+    expect(historyPanel?.textContent).toContain("清空历史");
+    expect(historyPanel?.textContent).toContain("文档命令流");
 
     const blueprintButton = clickTab("蓝图模式");
+    const blueprintPanel = queryVisibleLeftDockPanel(container);
 
     expect(appHost.internalState.runtime.activePanel).toBe("blueprint");
     expect(blueprintButton.getAttribute("aria-pressed")).toBe("true");
-    expect(container.textContent).toContain("导入蓝图");
-    expect(container.textContent).toContain("仓库总线样例");
+    expect(blueprintPanel?.getAttribute("data-panel-id")).toBe("blueprint");
+    expect(blueprintPanel?.textContent).toContain("导入蓝图");
+    expect(blueprintPanel?.textContent).toContain("仓库总线样例");
 
     const deleteButton = clickTab("删除模式");
+    const deletePanel = queryVisibleLeftDockPanel(container);
 
     expect(appHost.internalState.runtime.activePanel).toBe("delete");
     expect(deleteButton.getAttribute("aria-pressed")).toBe("true");
-    expect(container.textContent).toContain("单点删除");
-    expect(container.textContent).toContain("恢复最近");
+    expect(deletePanel?.getAttribute("data-panel-id")).toBe("delete");
+    expect(deletePanel?.textContent).toContain("单点删除");
+    expect(deletePanel?.textContent).toContain("恢复最近");
+
+    act(() => {
+      clickTab("放置模式");
+    });
+
+    const placementPanelAfterSwitch = container.querySelector(
+      '.left-dock-panel[data-panel-id="placement"]',
+    ) as HTMLDivElement | null;
+
+    expect(placementPanelAfterSwitch).toBe(placementPanelBeforeSwitch);
+    expect(placementPanelAfterSwitch?.hidden).toBe(false);
   });
 });

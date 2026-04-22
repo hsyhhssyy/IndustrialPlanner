@@ -547,6 +547,14 @@ body.is-resizing-left-dock * {
   overflow: visible;
 }
 
+.left-dock-panel {
+  min-height: 100%;
+}
+
+.left-dock-panel[hidden] {
+  display: none;
+}
+
 .dock-left .section-body > .cluster:first-child {
   display: none;
 }

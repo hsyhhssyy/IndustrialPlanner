@@ -28,11 +28,12 @@ const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost
   history: HistoryPanel,
 };
 
+const PANEL_ORDER: LeftDockPanelId[] = ["placement", "delete", "blueprint", "history"];
+
 const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const activePanel = appHost.internalState.runtime.activePanel ?? DEFAULT_ACTIVE_PANEL;
   const currentPanelLabel = t(PANEL_TITLE_KEYS[activePanel]);
-  const ActivePanelComponent = PANEL_COMPONENTS[activePanel];
   const resizeCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -78,7 +79,22 @@ const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppH
             </div>
           </div>
           <div className="section-body">
-            <ActivePanelComponent appHost={appHost} />
+              {PANEL_ORDER.map((panelId) => {
+                const PanelComponent = PANEL_COMPONENTS[panelId];
+                const isActive = panelId === activePanel;
+
+                return (
+                  <div
+                    aria-hidden={!isActive}
+                    className={isActive ? "left-dock-panel is-active" : "left-dock-panel"}
+                    data-panel-id={panelId}
+                    hidden={!isActive}
+                    key={panelId}
+                  >
+                    <PanelComponent appHost={appHost} />
+                  </div>
+                );
+              })}
           </div>
         </section>
       </aside>
