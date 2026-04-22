@@ -1,5 +1,6 @@
 import type { BlueprintCase, BlueprintSnapshot, RegisteredBlueprintCase } from './harness.ts'
 import { testBlueprintFile } from './harness.ts'
+import { applyLogisticsPath, longestValidLogisticsPrefix, pathFromTrace } from '../../domain/logistics.ts'
 import {
   ALT_ITEM_ID,
   assert,
@@ -264,6 +265,60 @@ function storageWarehouseSubmitArtifact(): TestScenarioBlueprintArtifact {
         receiverAmount,
         sourceAmount,
         receiverInputPort: `${receiverPort.x},${receiverPort.y}`,
+      }
+    },
+  }
+}
+
+function warehouseLoaderEndpointArtifact(): TestScenarioBlueprintArtifact {
+  resetInstanceCounter()
+  const source = buildSourceStorage(ALT_ITEM_ID, 5, { x: 0, y: 0 }, 'E', 'source')
+  const plannedBelt = placeTargetAfter(source, 'out_n_1', 'belt_straight_1x1', 'in_w', {}, 'planned-belt')
+  const loader = placeTargetAfter(plannedBelt, 'out_e', 'item_port_loader_1', 'p_in_mid', {}, 'loader')
+  const bus = createDevice('item_port_log_hongs_bus', 0, { x: loader.origin.x + 1, y: loader.origin.y }, {}, 'bus')
+  const busSource = createDevice('item_port_log_hongs_bus_source', 0, { x: bus.origin.x + 4, y: bus.origin.y }, {}, 'bus-source')
+
+  return {
+    id: 'warehouse-loader-endpoint',
+    fileName: 'warehouse-loader-endpoint.blueprint.json',
+    snapshot: snapshotFromDevices('warehouse-loader-endpoint', [source, loader, bus, busSource]),
+    run: (testCase) => {
+      const loaded = loadScenarioBlueprint(testCase)
+      const sourceDevice = resolveScenarioDevice(loaded, { blueprintInstanceId: 'source' })
+      const loaderDevice = resolveScenarioDevice(loaded, { blueprintInstanceId: 'loader' })
+      const sourcePort = getPort(sourceDevice, 'out_n_1')
+      const loaderPort = getPort(loaderDevice, 'p_in_mid')
+
+      assert(loaderPort.y === sourcePort.y, `warehouse-loader-endpoint 端口不在同一行，source=${sourcePort.x},${sourcePort.y} loader=${loaderPort.x},${loaderPort.y}`)
+      assert(loaderPort.x === sourcePort.x + 2, `warehouse-loader-endpoint 端口间距异常，source=${sourcePort.x},${sourcePort.y} loader=${loaderPort.x},${loaderPort.y}`)
+
+      const trace = [
+        { x: sourcePort.x, y: sourcePort.y },
+        { x: sourcePort.x + 1, y: sourcePort.y },
+        { x: loaderPort.x, y: loaderPort.y },
+      ]
+      const candidatePath = pathFromTrace(trace)
+      assert(candidatePath, 'warehouse-loader-endpoint 无法从拖拽轨迹生成路径')
+
+      const previewPath = longestValidLogisticsPrefix(loaded.layout, candidatePath, 'belt')
+      assert(
+        previewPath.length === candidatePath.length,
+        `warehouse-loader-endpoint 预览路径被提前截断，expected=${candidatePath.length} actual=${previewPath.length} path=${previewPath.map((cell) => `${cell.x},${cell.y}`).join(' -> ')}`,
+      )
+
+      const editedLayout = applyLogisticsPath(loaded.layout, previewPath, 'belt')
+      const links = ensureConnected(editedLayout, 2, 'warehouse-loader-endpoint')
+      const sim = simulate(editedLayout, 240)
+      ensureNoHardBlock(sim, editedLayout.devices.map((device) => device.instanceId), 'warehouse-loader-endpoint')
+      const warehouseAmount = sim.warehouse[ALT_ITEM_ID] ?? 0
+
+      assert(warehouseAmount === 5, `warehouse-loader-endpoint 仓库计数异常，expected=5 actual=${warehouseAmount}`)
+
+      return {
+        blueprint: loaded.snapshot.name,
+        path: previewPath.map((cell) => `${cell.x},${cell.y}`).join(' -> '),
+        links,
+        warehouseAmount,
       }
     },
   }
@@ -657,6 +712,7 @@ export const TEST_SCENARIO_BLUEPRINT_ARTIFACTS: TestScenarioBlueprintArtifact[] 
   bridgeArtifact(),
   storageArtifact(),
   storageWarehouseSubmitArtifact(),
+  warehouseLoaderEndpointArtifact(),
   admissionArtifact(),
   beltChainArtifact(),
   pipeRoundRobinArtifact(),

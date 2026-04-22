@@ -7,7 +7,6 @@ import {
   edgeFromDelta,
   getDeviceById,
   getRotatedPorts,
-  inferPortDirection,
   isBelt,
   isBeltLike,
   isPipe,
@@ -259,8 +258,8 @@ function rotationFromEdge(baseEdge: Edge, targetEdge: Edge): Rotation {
 function beltInOutEdge(device: DeviceInstance): { inEdge: Edge; outEdge: Edge } | null {
   if (!isBeltLike(device.typeId) && !isPipeLike(device.typeId)) return null
   const ports = getRotatedPorts(device)
-  const inPort = ports.find((port) => inferPortDirection(port.portId) === 'Input')
-  const outPort = ports.find((port) => inferPortDirection(port.portId) === 'Output')
+  const inPort = ports.find((port) => port.direction === 'Input')
+  const outPort = ports.find((port) => port.direction === 'Output')
   if (!inPort || !outPort) return null
   return { inEdge: inPort.edge, outEdge: outPort.edge }
 }
@@ -290,7 +289,7 @@ function hasMatchingPortAtCell(
       port.x === cell.x &&
       port.y === cell.y &&
       port.edge === requiredEdge &&
-      inferPortDirection(port.portId) === requiredDirection,
+      port.direction === requiredDirection,
   )
 }
 

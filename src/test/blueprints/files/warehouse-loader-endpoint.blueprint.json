@@ -1,0 +1,55 @@
+{
+  "name": "warehouse-loader-endpoint",
+  "baseId": "wuling_tianwangping_aid",
+  "devices": [
+    {
+      "blueprintInstanceId": "source",
+      "typeId": "item_port_storager_1",
+      "rotation": 90,
+      "origin": {
+        "x": 0,
+        "y": 0
+      },
+      "config": {
+        "submitToWarehouse": false,
+        "storagePreloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_grass_2",
+            "amount": 5
+          }
+        ]
+      }
+    },
+    {
+      "blueprintInstanceId": "loader",
+      "typeId": "item_port_loader_1",
+      "rotation": 270,
+      "origin": {
+        "x": 4,
+        "y": 0
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "bus",
+      "typeId": "item_port_log_hongs_bus",
+      "rotation": 0,
+      "origin": {
+        "x": 5,
+        "y": 0
+      },
+      "config": {}
+    },
+    {
+      "blueprintInstanceId": "bus-source",
+      "typeId": "item_port_log_hongs_bus_source",
+      "rotation": 0,
+      "origin": {
+        "x": 9,
+        "y": 0
+      },
+      "config": {}
+    }
+  ]
+}
