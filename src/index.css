@@ -5,7 +5,7 @@ body {
   overflow: hidden;
   font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   background: #151a22;
-  --global-dialog-backdrop: rgba(8, 11, 17, 0.55);
+  --global-dialog-backdrop: rgba(8, 11, 17, 0.8);
   --global-dialog-surface: rgba(27, 34, 45, 0.98);
   --global-dialog-border: #4f7bc4;
   --global-dialog-text: #e5ebf3;
@@ -19,7 +19,7 @@ body {
 
 body[data-ui-theme='ayu-light'] {
   background: #f8f9fb;
-  --global-dialog-backdrop: rgba(73, 88, 110, 0.22);
+  --global-dialog-backdrop: rgba(73, 88, 110, 0.8);
   --global-dialog-surface: rgba(255, 255, 255, 0.98);
   --global-dialog-border: #d5dce7;
   --global-dialog-text: #26313d;

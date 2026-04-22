@@ -15,6 +15,7 @@ import {
 import { nextId } from '../../domain/logistics'
 
 const XIRANITE_OVEN_WULING_WARNING_LIMIT = 12
+const BUS_SOURCE_WARNING_LIMIT = 1
 
 type PlaceDeviceParams = {
   cell: Cell
@@ -42,6 +43,7 @@ export function tryPlaceDevice({
   t,
 }: PlaceDeviceParams) {
   const isXiraniteOven = placeType === 'item_port_xiranite_oven_1'
+  const isBusSource = placeType === 'item_port_log_hongs_bus_source'
   const placementLimitToastKey = getPlacementLimitViolationToastKey(layout, placeType)
   if (placementLimitToastKey) {
     showToast(t(placementLimitToastKey), { variant: 'warning' })
@@ -105,6 +107,13 @@ export function tryPlaceDevice({
     const existingCount = layout.devices.filter((device) => device.typeId === 'item_port_xiranite_oven_1').length
     if (existingCount >= XIRANITE_OVEN_WULING_WARNING_LIMIT) {
       showToast(t('toast.rule.xiraniteOvenOverLimitWuling', { count: XIRANITE_OVEN_WULING_WARNING_LIMIT }), { variant: 'warning' })
+    }
+  }
+
+  if (isBusSource) {
+    const existingCount = layout.devices.filter((device) => device.typeId === 'item_port_log_hongs_bus_source').length
+    if (existingCount >= BUS_SOURCE_WARNING_LIMIT) {
+      showToast(t('toast.rule.busSourceMax1'), { variant: 'warning' })
     }
   }
 

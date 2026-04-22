@@ -3429,8 +3429,6 @@ const DEVICE_TYPES_BASE: Array<DeviceTypeDef> = [
     powerDemand: 0,
     size: { width: 4, height: 4 },
     shortName: 'BusSource',
-    maxPlacementCount: 1,
-    placementLimitToastKey: 'toast.rule.busSourceMax1',
     tags: ['武陵', 'bus'],
     ports0: [],
   },

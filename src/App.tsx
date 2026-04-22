@@ -161,6 +161,11 @@ function isPortraitViewport() {
   return window.innerWidth < window.innerHeight
 }
 
+function isUnsupportedViewport() {
+  if (typeof window === 'undefined') return false
+  return isPortraitViewport() || window.innerHeight < 400
+}
+
 function App() {
   const currentYear = new Date().getFullYear()
   const [isToolMaximized, setIsToolMaximized] = useState(false)
@@ -208,6 +213,7 @@ function App() {
       activeWorkbenchView,
     },
     actions: {
+      openTool,
       closeTool,
       closeHelp,
       closeSettings,
@@ -254,7 +260,8 @@ function App() {
     eventBus,
   } = useAppContext()
   const t = useMemo(() => createTranslator(language), [language])
-  const [isPortraitBlocked, setIsPortraitBlocked] = useState(isPortraitViewport)
+  const [isUnsupportedViewportBlocked, setIsUnsupportedViewportBlocked] = useState(isUnsupportedViewport)
+  const [isViewportGateToolForced, setIsViewportGateToolForced] = useState(false)
   const releaseTitle = useMemo(
     () => formatCurrentDocumentTitle(t('app.title')),
     [t],
@@ -270,7 +277,7 @@ function App() {
 
   useEffect(() => {
     const syncViewportGate = () => {
-      setIsPortraitBlocked(isPortraitViewport())
+      setIsUnsupportedViewportBlocked(isUnsupportedViewport())
     }
 
     syncViewportGate()
@@ -281,6 +288,39 @@ function App() {
       window.removeEventListener('orientationchange', syncViewportGate)
     }
   }, [])
+
+  useEffect(() => {
+    if (isUnsupportedViewportBlocked) return
+    setIsViewportGateToolForced(false)
+  }, [isUnsupportedViewportBlocked])
+
+  useEffect(() => {
+    if (!isViewportGateToolForced) return
+    const blockEscapeClose = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
+    window.addEventListener('keydown', blockEscapeClose, true)
+    return () => window.removeEventListener('keydown', blockEscapeClose, true)
+  }, [isViewportGateToolForced])
+
+  const handleOpenViewportGateTool = useCallback(() => {
+    openTool()
+    setIsToolMaximized(true)
+    setIsViewportGateToolForced(true)
+  }, [openTool])
+
+  const handleToggleToolMaximized = useCallback(() => {
+    if (isViewportGateToolForced) return
+    setIsToolMaximized((current) => !current)
+  }, [isViewportGateToolForced])
+
+  const handleCloseToolDialog = useCallback(() => {
+    if (isViewportGateToolForced) return
+    closeTool()
+  }, [closeTool, isViewportGateToolForced])
 
   const setWorkbenchMode = useCallback(
     (nextMode: 'place' | 'delete' | 'blueprint') => {
@@ -1739,13 +1779,14 @@ function App() {
           t={t}
           superRecipeEnabled={superRecipeEnabled}
           isMaximized={isToolMaximized}
-          onToggleMaximized={() => setIsToolMaximized((current) => !current)}
-          onClose={closeTool}
+          onToggleMaximized={handleToggleToolMaximized}
+          onClose={handleCloseToolDialog}
+          closeDisabled={isViewportGateToolForced}
         />
       )}
       {isHelpOpen && <HelpDialog language={language} t={t} onClose={closeHelp} />}
       {isSettingsOpen && <SettingsDialog t={t} onClose={closeSettings} onClearAllHistory={clearAllHistory} />}
-      {isPortraitBlocked && <UnsupportedViewportOverlay t={t} />}
+      {isUnsupportedViewportBlocked && !isViewportGateToolForced && <UnsupportedViewportOverlay t={t} onOpenTool={handleOpenViewportGateTool} />}
     </div>
   )
 }

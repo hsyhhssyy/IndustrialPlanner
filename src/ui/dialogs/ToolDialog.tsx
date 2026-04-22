@@ -6,6 +6,7 @@ import { isSuperRecipeDevice, isSuperRecipeItem, isSuperRecipeRecipe, shouldShow
 import type { DeviceTypeId } from '../../domain/types'
 import { usePersistentState } from '../../core/usePersistentState'
 import { getDeviceLabel, getItemLabel, type Language } from '../../i18n'
+import { ModularBalancePanel } from '../modularBalancePanel'
 import { PlannerPanelContent } from '../plannerPanel'
 
 type ToolDialogProps = {
@@ -15,6 +16,7 @@ type ToolDialogProps = {
   isMaximized: boolean
   onToggleMaximized: () => void
   onClose: () => void
+  closeDisabled?: boolean
 }
 
 const HIDDEN_DEVICE_IDS_IN_TOOLBOX = new Set([
@@ -27,7 +29,7 @@ const HIDDEN_DEVICE_IDS_IN_TOOLBOX = new Set([
   'item_port_sp_hub_1',
 ])
 
-type ToolDialogTab = 'device' | 'item' | 'planner'
+type ToolDialogTab = 'device' | 'item' | 'planner' | 'modularBalance'
 
 type ToolDialogPersistedState = {
   activeTab: ToolDialogTab
@@ -47,7 +49,9 @@ function normalizeToolDialogState(value: ToolDialogPersistedState): ToolDialogPe
     const next = typeof raw === 'number' && Number.isFinite(raw) ? raw : 0
     return Math.max(0, next)
   }
-  const activeTab = candidate.activeTab === 'item' || candidate.activeTab === 'planner' ? candidate.activeTab : 'device'
+  const activeTab = candidate.activeTab === 'item' || candidate.activeTab === 'planner' || candidate.activeTab === 'modularBalance'
+    ? candidate.activeTab
+    : 'device'
   return {
     activeTab,
     selectedDeviceId: typeof candidate.selectedDeviceId === 'string' ? (candidate.selectedDeviceId as DeviceTypeId | '') : '',
@@ -59,7 +63,7 @@ function normalizeToolDialogState(value: ToolDialogPersistedState): ToolDialogPe
   }
 }
 
-export function ToolDialog({ language, superRecipeEnabled, t, isMaximized, onToggleMaximized, onClose }: ToolDialogProps) {
+export function ToolDialog({ language, superRecipeEnabled, t, isMaximized, onToggleMaximized, onClose, closeDisabled = false }: ToolDialogProps) {
   const toolDeviceTypes = useMemo(
     () =>
       DEVICE_TYPES.filter(
@@ -219,7 +223,7 @@ export function ToolDialog({ language, superRecipeEnabled, t, isMaximized, onTog
   )
 
   return (
-    <div className="global-dialog-backdrop" role="presentation" onClick={onClose}>
+    <div className="global-dialog-backdrop" role="presentation" onClick={closeDisabled ? undefined : onClose}>
       <div
         className={`global-dialog wiki-dialog tool-dialog ${isMaximized ? 'is-maximized' : ''}`.trim()}
         role="dialog"
@@ -229,7 +233,6 @@ export function ToolDialog({ language, superRecipeEnabled, t, isMaximized, onTog
       >
         <div className="wiki-dialog-header">
           <div className="tool-dialog-header-main">
-            <div className="global-dialog-title">{t('tool.title')}</div>
             <div className="wiki-tabs wiki-primary-tabs tool-dialog-tabs" role="tablist" aria-label={t('tool.tabs.ariaLabel')}>
               <button
                 type="button"
@@ -258,24 +261,35 @@ export function ToolDialog({ language, superRecipeEnabled, t, isMaximized, onTog
               >
                 {t('tool.tab.planner')}
               </button>
+              <button
+                type="button"
+                className={`wiki-tab-btn ${activeTab === 'modularBalance' ? 'active' : ''}`.trim()}
+                role="tab"
+                aria-selected={activeTab === 'modularBalance'}
+                onClick={() => setToolDialogState((current) => ({ ...current, activeTab: 'modularBalance' }))}
+              >
+                {t('tool.tab.modularBalance')}
+              </button>
             </div>
           </div>
-          <div className="tool-dialog-header-actions">
-            <button
-              type="button"
-              className="global-dialog-btn"
-              aria-pressed={isMaximized}
-              onClick={onToggleMaximized}
-            >
-              {isMaximized ? t('tool.restore') : t('tool.maximize')}
-            </button>
-            <button type="button" className="global-dialog-btn" onClick={onClose}>
-              {t('tool.close')}
-            </button>
-          </div>
+          {!closeDisabled && (
+            <div className="tool-dialog-header-actions">
+              <button
+                type="button"
+                className="global-dialog-btn"
+                aria-pressed={isMaximized}
+                onClick={onToggleMaximized}
+              >
+                {isMaximized ? t('tool.restore') : t('tool.maximize')}
+              </button>
+              <button type="button" className="global-dialog-btn" onClick={onClose}>
+                {t('tool.close')}
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className={`wiki-dialog-body ${activeTab === 'planner' ? 'tool-dialog-body-planner' : 'is-split'}`}>
+        <div className={`wiki-dialog-body ${activeTab === 'planner' || activeTab === 'modularBalance' ? 'tool-dialog-body-planner' : 'is-split'}`}>
           {activeTab === 'device' && (
             <div className="wiki-split-layout">
               <aside
@@ -416,6 +430,10 @@ export function ToolDialog({ language, superRecipeEnabled, t, isMaximized, onTog
 
           {activeTab === 'planner' && (
             <PlannerPanelContent language={language} superRecipeEnabled={superRecipeEnabled} t={t} onClose={onClose} embedded />
+          )}
+
+          {activeTab === 'modularBalance' && (
+            <ModularBalancePanel language={language} superRecipeEnabled={superRecipeEnabled} t={t} />
           )}
         </div>
       </div>

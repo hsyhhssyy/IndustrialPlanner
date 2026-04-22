@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 
 interface UnsupportedViewportOverlayProps {
   t: (key: string, params?: Record<string, string | number>) => string
+  onOpenTool: () => void
 }
 
 function ProhibitedFrame({ children }: { children: ReactNode }) {
@@ -45,7 +46,7 @@ function LandscapeMonitorAllowedIcon() {
   )
 }
 
-export function UnsupportedViewportOverlay({ t }: UnsupportedViewportOverlayProps) {
+export function UnsupportedViewportOverlay({ t, onOpenTool }: UnsupportedViewportOverlayProps) {
   return (
     <div className="global-dialog-backdrop unsupported-viewport-overlay" role="alertdialog" aria-modal="true" aria-labelledby="unsupported-viewport-overlay-title">
       <div className="global-dialog unsupported-viewport-overlay__panel">
@@ -54,6 +55,14 @@ export function UnsupportedViewportOverlay({ t }: UnsupportedViewportOverlayProp
           {t('viewportGate.title')}
         </h2>
         <p className="unsupported-viewport-overlay__message">{t('viewportGate.message')}</p>
+        <button
+          hidden
+          type="button"
+          className="global-dialog-btn primary unsupported-viewport-overlay__toolbox-button"
+          onClick={onOpenTool}
+        >
+          {t('viewportGate.openToolbox')}
+        </button>
         <div className="unsupported-viewport-overlay__icons" aria-hidden="true">
           <div className="unsupported-viewport-overlay__icon-card">
             <PhoneBlockedIcon />
