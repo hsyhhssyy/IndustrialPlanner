@@ -6,6 +6,7 @@ import {
   createSnapshotStore,
   SnapshotStoreReadWrite,
 } from "@/shared/snapshot/snapshot-store";
+import { resolveCompensatedViewportCenter } from "@/shared/geometry/viewport-transform";
 import { readWorldDocumentFromIndexedDb } from "./document-storage";
 import { hookLocalstorage } from "./storage-hook";
 import { createEditorStateReadWrite, EditorStateReadWrite } from "./state-impl";
@@ -27,22 +28,46 @@ export function createEditorHost(
   const editorState = createEditorStateReadWrite();
   const actions: EditorContract["actions"] = {
     setViewportClientRect: ({ left, top, width, height }) => {
-      editorState.viewport.clientRect.left = resolveViewportClientOffset(
+      const previousClientRect = {
+        ...editorState.viewport.clientRect,
+      };
+      const nextClientRect = {
+        left: resolveViewportClientOffset(
         left,
         editorState.viewport.clientRect.left,
-      );
-      editorState.viewport.clientRect.top = resolveViewportClientOffset(
+        ),
+        top: resolveViewportClientOffset(
         top,
         editorState.viewport.clientRect.top,
-      );
-      editorState.viewport.clientRect.width = resolveViewportAxisSize(
+        ),
+        width: resolveViewportAxisSize(
         width,
         editorState.viewport.clientRect.width,
-      );
-      editorState.viewport.clientRect.height = resolveViewportAxisSize(
+        ),
+        height: resolveViewportAxisSize(
         height,
         editorState.viewport.clientRect.height,
-      );
+        ),
+      };
+
+      if (editorState.internalTransientState.hasMeasuredViewportClientRect) {
+        const nextViewportCenter = resolveCompensatedViewportCenter({
+          previousClientRect,
+          nextClientRect,
+          previousViewportCenter: editorState.viewport.center,
+          gridSize: editorState.viewport.gridSize,
+        });
+
+        editorState.viewport.center.x = nextViewportCenter.x;
+        editorState.viewport.center.y = nextViewportCenter.y;
+      } else {
+        editorState.internalTransientState.hasMeasuredViewportClientRect = true;
+      }
+
+      editorState.viewport.clientRect.left = nextClientRect.left;
+      editorState.viewport.clientRect.top = nextClientRect.top;
+      editorState.viewport.clientRect.width = nextClientRect.width;
+      editorState.viewport.clientRect.height = nextClientRect.height;
     },
   };
 

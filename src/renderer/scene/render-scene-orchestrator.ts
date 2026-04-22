@@ -9,6 +9,10 @@ import {
   type GridFootprint,
 } from "@/shared/geometry/grid"
 import {
+  resolveViewportGridSize,
+  resolveWorldGridCellPixelSize,
+} from "@/shared/geometry/viewport-transform"
+import {
   Container,
   Graphics,
   UPDATE_PRIORITY,
@@ -26,8 +30,6 @@ import {
 const VIEWPORT_FRAME_MARGIN = 10
 const VIEWPORT_FRAME_STROKE_WIDTH = 5
 const VIEWPORT_FRAME_COLOR = 0xffffff
-const WORLD_GRID_CELL_PIXEL_SIZE = 16
-
 interface RenderViewportState {
   width: number;
   height: number;
@@ -204,14 +206,6 @@ function resolveViewportCoordinate(value: number): number {
   return value
 }
 
-function resolveViewportGridSize(value: number): number {
-  if (!Number.isFinite(value) || value <= 0) {
-    return 1
-  }
-
-  return value
-}
-
 function resolveViewportFrameBounds(app: RenderHost["app"]): {
   left: number;
   top: number;
@@ -355,8 +349,4 @@ export function resolveWorldEntitySpriteLayout(options: {
     width,
     height,
   }
-}
-
-function resolveWorldGridCellPixelSize(gridSize: number): number {
-  return WORLD_GRID_CELL_PIXEL_SIZE * resolveViewportGridSize(gridSize)
 }

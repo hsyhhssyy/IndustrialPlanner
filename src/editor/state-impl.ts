@@ -29,7 +29,7 @@ export interface EditorInternalPersistStateReadWrite {
 }
 
 export interface EditorInternalTransientStateReadWrite {
-  // 定义瞬态的内部状态属性
+  hasMeasuredViewportClientRect: boolean;
 }
 
 class EditorInternalPersistStateReadWriteImpl
@@ -45,6 +45,8 @@ class EditorInternalPersistStateReadWriteImpl
 class EditorInternalTransientStateReadWriteImpl
   implements EditorInternalTransientStateReadWrite
 {
+  hasMeasuredViewportClientRect = false;
+
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
   }

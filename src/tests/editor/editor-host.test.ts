@@ -7,6 +7,7 @@ import { EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY } from "@/editor/storage-hook";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
+import { resolveWorldEntitySpriteLayout } from "@/renderer/scene/render-scene-orchestrator";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -22,6 +23,9 @@ function createWorkspace(): WorkspaceContract {
 afterEach(() => {
   localStorage.clear();
 });
+
+const VIEWPORT_FRAME_MARGIN = 10;
+const VIEWPORT_FRAME_STROKE_WIDTH = 5;
 
 describe("createEditorHost", () => {
   it("updates viewport rect through editor actions", () => {
@@ -49,6 +53,73 @@ describe("createEditorHost", () => {
     expect(workspace.editor?.state.viewport.clientRect.top).toBe(80);
     expect(workspace.editor?.state.viewport.clientRect.width).toBe(1024);
     expect(workspace.editor?.state.viewport.clientRect.height).toBe(768);
+    expect(editorHost.state.viewport.center.x).toBe(0);
+    expect(editorHost.state.viewport.center.y).toBe(0);
+  });
+
+  it("compensates viewport center after later rect changes to preserve screen position", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+    const entity = document.entities["dummy-entity-1"];
+    const definition = workspace.registry.entityDefinitions.find(
+      (item) => item.id === entity?.definitionId,
+    );
+
+    expect(entity).toBeDefined();
+    expect(definition).toBeDefined();
+
+    if (!entity || !definition) {
+      throw new Error("Expected dummy belt entity and definition to be present.");
+    }
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    const initialRect = {
+      left: 0,
+      top: 0,
+      width: 400,
+      height: 400,
+    };
+    editorHost.actions.setViewportClientRect(initialRect);
+
+    const initialLayout = resolveWorldEntitySpriteLayout({
+      entity,
+      footprint: definition.footprint,
+      viewportBounds: resolveViewportFrameBoundsFromClientRect(initialRect),
+      viewportCenter: editorHost.state.viewport.center,
+      gridSize: editorHost.state.viewport.gridSize,
+    });
+    const initialAbsolutePosition = {
+      x: initialRect.left + initialLayout.x,
+      y: initialRect.top + initialLayout.y,
+    };
+
+    editorHost.actions.setViewportClientRect({
+      left: 200,
+      top: 0,
+      width: 200,
+      height: 400,
+    });
+
+    expect(editorHost.state.viewport.center.x).toBeCloseTo(6.25);
+    expect(editorHost.state.viewport.center.y).toBeCloseTo(0);
+
+    const nextRect = editorHost.state.viewport.clientRect;
+    const nextLayout = resolveWorldEntitySpriteLayout({
+      entity,
+      footprint: definition.footprint,
+      viewportBounds: resolveViewportFrameBoundsFromClientRect(nextRect),
+      viewportCenter: editorHost.state.viewport.center,
+      gridSize: editorHost.state.viewport.gridSize,
+    });
+    const nextAbsolutePosition = {
+      x: nextRect.left + nextLayout.x,
+      y: nextRect.top + nextLayout.y,
+    };
+
+    expect(nextAbsolutePosition.x).toBeCloseTo(initialAbsolutePosition.x);
+    expect(nextAbsolutePosition.y).toBeCloseTo(initialAbsolutePosition.y);
   });
 
   it.each<[string | null]>([[null], [""], ["document-1"]])(
@@ -115,4 +186,24 @@ async function flushMicrotasks(iterations = 4): Promise<void> {
   for (let index = 0; index < iterations; index += 1) {
     await Promise.resolve();
   }
+}
+
+function resolveViewportFrameBoundsFromClientRect(rect: {
+  width: number;
+  height: number;
+}): {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+} {
+  const halfStrokeWidth = VIEWPORT_FRAME_STROKE_WIDTH / 2;
+  const frameInset = VIEWPORT_FRAME_MARGIN + halfStrokeWidth;
+
+  return {
+    left: frameInset,
+    top: frameInset,
+    width: Math.max(0, rect.width - frameInset * 2),
+    height: Math.max(0, rect.height - frameInset * 2),
+  };
 }
