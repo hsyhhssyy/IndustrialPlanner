@@ -23,6 +23,7 @@ type ModularBalanceActionIconKind =
   | 'edit'
   | 'duplicate'
   | 'delete'
+  | 'save'
   | 'moveUp'
   | 'moveDown'
   | 'close'
@@ -101,6 +102,7 @@ type StageComputation = {
   before: Map<ItemId, number>
   inputs: Map<ItemId, number>
   outputs: Map<ItemId, number>
+  netChange: Map<ItemId, number>
   shortage: Map<ItemId, number>
   after: Map<ItemId, number>
   dispatch: DispatchGroup[]
@@ -467,6 +469,15 @@ function ModularBalanceActionIcon({ kind }: { kind: ModularBalanceActionIconKind
       </svg>
     )
   }
+  if (kind === 'save') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M6 4H16L19 7V20H6Z" />
+        <path d="M9 4V9H15V4" />
+        <path d="M9 20V13H15V20" />
+      </svg>
+    )
+  }
   if (kind === 'moveUp') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -798,7 +809,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
       }
 
       const dispatch = computeDispatchGroups(after)
-      computations.push({ before, inputs, outputs, shortage, after, dispatch })
+      computations.push({ before, inputs, outputs, netChange, shortage, after, dispatch })
       running = after
     }
 
@@ -837,6 +848,32 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
       colorKey: getNextModuleColorKey(modules.length),
       inputs: [createRateRow(fallbackItemId, 60)],
       outputs: [createRateRow(fallbackItemId, 60)],
+    })
+  }
+
+  const openSaveStageAsModuleDraft = (stageId: string) => {
+    const stageIndex = stages.findIndex((stage) => stage.id === stageId)
+    if (stageIndex < 0) return
+
+    const stage = stages[stageIndex]
+    const computation = stageComputations[stageIndex]
+    const netEntries = mapToEntries(computation?.netChange ?? new Map())
+    const inputs = netEntries
+      .filter((entry) => entry.amount < -EPSILON)
+      .sort((left, right) => getItemLabel(language, left.itemId).localeCompare(getItemLabel(language, right.itemId), language))
+      .map((entry) => createRateRow(entry.itemId, Math.abs(entry.amount)))
+    const outputs = netEntries
+      .filter((entry) => entry.amount > EPSILON)
+      .sort((left, right) => getItemLabel(language, left.itemId).localeCompare(getItemLabel(language, right.itemId), language))
+      .map((entry) => createRateRow(entry.itemId, entry.amount))
+
+    setSidebarTab('modules')
+    setDraft({
+      moduleId: null,
+      name: stage?.name ?? '',
+      colorKey: getNextModuleColorKey(modules.length),
+      inputs,
+      outputs,
     })
   }
 
@@ -1527,6 +1564,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                             {renderActionButton(t('modBalance.moveUp'), 'moveUp', () => moveStage(stage.id, -1), { disabled: index === 0 })}
                             {renderActionButton(t('modBalance.moveDown'), 'moveDown', () => moveStage(stage.id, 1), { disabled: index === stages.length - 1 })}
                             {renderActionButton(t('modBalance.copyStage'), 'duplicate', () => duplicateStage(stage.id))}
+                            {renderActionButton(t('modBalance.saveStageAsModule'), 'save', () => openSaveStageAsModuleDraft(stage.id), { disabled: stage.instances.length === 0 })}
                             {renderActionButton(t('modBalance.removeStage'), 'delete', () => removeStage(stage.id), { danger: true })}
                           </div>
                         </div>
