@@ -8,8 +8,7 @@ import { RightDock } from "@/app/app-shell/components/right-dock";
 import { TopBar } from "@/app/app-shell/components/top-bar";
 import { handleUiEvent } from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { AppHost } from "@/app/app-host";
-
-const DEFAULT_RIGHT_DOCK_WIDTH = 340;
+import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state-impl";
 
 export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHost: AppHost }) {
   const leftDockOpen = appHost.state.workbench.leftDockOpen;

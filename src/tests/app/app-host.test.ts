@@ -5,6 +5,7 @@ import { createAppHost } from "@/app/app-host";
 import { WORKBENCH_STATE_LOCAL_STORAGE_KEY } from "@/app/storage-hook";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
+import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
 
 function createWorkspace(): WorkspaceContract {
@@ -126,5 +127,34 @@ describe("createAppHost", () => {
     const nextAppHost = createAppHost(nextWorkspace);
 
     expect(nextAppHost.internalState.runtime.activePanel).toBeNull();
+  });
+
+  it("predicts viewport rect immediately when dock toggles run", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+
+    editorHost.actions.setViewportClientRect({
+      left: 460,
+      top: 64,
+      width: 960,
+      height: 720,
+    });
+
+    appHost.internalActions.toggleLeftDock();
+
+    expect(appHost.state.workbench.leftDockOpen).toBe(false);
+    expect(editorHost.state.viewport.clientRect.left).toBe(85);
+    expect(editorHost.state.viewport.clientRect.top).toBe(64);
+    expect(editorHost.state.viewport.clientRect.width).toBe(1335);
+    expect(editorHost.state.viewport.clientRect.height).toBe(720);
+
+    appHost.internalActions.toggleRightDock();
+
+    expect(appHost.state.workbench.rightDockOpen).toBe(false);
+    expect(editorHost.state.viewport.clientRect.left).toBe(85);
+    expect(editorHost.state.viewport.clientRect.top).toBe(64);
+    expect(editorHost.state.viewport.clientRect.width).toBe(1675);
+    expect(editorHost.state.viewport.clientRect.height).toBe(720);
   });
 });

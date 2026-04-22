@@ -17,7 +17,7 @@ export function createAppHost(
 ): AppHost {
   const disposers: Array<() => void> = [];
   const internalState = createUiStateReadWrite();
-  const actionImpl = new AppActionImpl(internalState);
+  const actionImpl = new AppActionImpl(internalState, workspace);
   const internalActions: AppInternalAction = {
     toggleLeftDock: actionImpl.toggleLeftDock,
     toggleRightDock: actionImpl.toggleRightDock,
