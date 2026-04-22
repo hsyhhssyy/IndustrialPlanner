@@ -770,6 +770,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
       const before = new Map(running)
       const inputs = new Map<ItemId, number>()
       const outputs = new Map<ItemId, number>()
+      const netChange = new Map<ItemId, number>()
       const shortage = new Map<ItemId, number>()
       const after = new Map(before)
 
@@ -777,21 +778,22 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
         const module = libraryEntriesById.get(instance.moduleId)
         if (!module || instance.count <= 0) continue
         for (const entry of module.inputs) {
-          sumInto(inputs, entry.itemId, entry.ratePerMinute * instance.count)
+          const amount = entry.ratePerMinute * instance.count
+          sumInto(inputs, entry.itemId, amount)
+          sumInto(netChange, entry.itemId, -amount)
         }
         for (const entry of module.outputs) {
-          sumInto(outputs, entry.itemId, entry.ratePerMinute * instance.count)
+          const amount = entry.ratePerMinute * instance.count
+          sumInto(outputs, entry.itemId, amount)
+          sumInto(netChange, entry.itemId, amount)
         }
       }
 
-      for (const [itemId, amount] of inputs.entries()) {
+      for (const [itemId, amount] of netChange.entries()) {
         const available = before.get(itemId) ?? 0
-        if (amount > available + EPSILON) {
-          shortage.set(itemId, amount - available)
+        if (amount < -EPSILON && available + amount < -EPSILON) {
+          shortage.set(itemId, -(available + amount))
         }
-        sumInto(after, itemId, -amount)
-      }
-      for (const [itemId, amount] of outputs.entries()) {
         sumInto(after, itemId, amount)
       }
 
