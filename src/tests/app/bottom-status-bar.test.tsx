@@ -9,6 +9,7 @@ import { BottomStatusBar } from "@/app/app-shell/components/bottom-status-bar";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
+import { resolveScreenProfileFromWindow } from "@/shared/browser/screen-profile";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -157,7 +158,7 @@ describe("BottomStatusBar", () => {
     });
 
     act(() => {
-      window.dispatchEvent(new Event("resize"));
+      appHost.internalActions.setScreenProfile(resolveScreenProfileFromWindow());
     });
 
     const updatedIcons = rightGroup.querySelectorAll(".status-bar-icon-chip");

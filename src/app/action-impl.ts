@@ -3,13 +3,14 @@ import { action } from "mobx";
 import type { AppAction } from "@/domain/action/app-action";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type { EditorViewportClientRect } from "@/domain/state/types";
+import type { ScreenProfile } from "@/shared/browser/screen-profile";
 import { lookupMessageText } from "@/shared/i18n/messages";
 import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 
 import {
   clampLeftDockWidth,
   DEFAULT_RIGHT_DOCK_WIDTH,
-  resolveLeftDockWidthFromWindow,
+  resolveLeftDockWidthForScreenProfile,
   type ActivePanel,
   type UiStateReadWrite,
 } from "./state-impl";
@@ -20,6 +21,7 @@ export interface AppInternalAction {
   toggleTopBarCollapsed: () => void;
   setActivePanel: (panel: ActivePanel) => void;
   setLeftDockWidth: (width: number) => void;
+  setScreenProfile: (screenProfile: ScreenProfile) => void;
 }
 
 export class AppActionImpl implements AppAction, AppInternalAction {
@@ -66,6 +68,14 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     this.internalState.workbench.leftDockWidth = clampLeftDockWidth(width);
   });
 
+  public readonly setScreenProfile: AppInternalAction["setScreenProfile"] = action((screenProfile) => {
+    if (areScreenProfilesEqual(this.internalState.screenProfile, screenProfile)) {
+      return;
+    }
+
+    this.internalState.screenProfile = screenProfile;
+  });
+
   private setLeftDockOpen(nextOpen: boolean): void {
     if (this.internalState.workbench.leftDockOpen === nextOpen) {
       return;
@@ -90,7 +100,10 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     const currentRect = editor.state.viewport.clientRect;
     const predictedRect = resolvePredictedViewportRectForDockToggle({
       currentRect,
-      leftDockWidth: resolveLeftDockWidthFromWindow(this.internalState.workbench.leftDockWidth),
+      leftDockWidth: resolveLeftDockWidthForScreenProfile(
+        this.internalState.workbench.leftDockWidth,
+        this.internalState.screenProfile,
+      ),
       rightDockWidth: DEFAULT_RIGHT_DOCK_WIDTH,
       dock: options.dock,
       willOpen: options.willOpen,
@@ -141,4 +154,16 @@ function resolvePredictedViewportRectForDockToggle(options: {
       : options.currentRect.width + delta,
     height: options.currentRect.height,
   };
+}
+
+function areScreenProfilesEqual(left: ScreenProfile, right: ScreenProfile): boolean {
+  return (
+    left.viewportWidth === right.viewportWidth
+    && left.viewportHeight === right.viewportHeight
+    && left.devicePixelRatio === right.devicePixelRatio
+    && left.deviceClass === right.deviceClass
+    && left.screenShape === right.screenShape
+    && left.aspectRatio === right.aspectRatio
+    && left.hasTouch === right.hasTouch
+  );
 }

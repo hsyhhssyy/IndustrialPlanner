@@ -45,6 +45,7 @@ export function createAppHost(
     toggleTopBarCollapsed: actionImpl.toggleTopBarCollapsed,
     setActivePanel: actionImpl.setActivePanel,
     setLeftDockWidth: actionImpl.setLeftDockWidth,
+    setScreenProfile: actionImpl.setScreenProfile,
   };
   const actions: AppContract["actions"] = {
     translate: actionImpl.translate,

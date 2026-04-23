@@ -52,6 +52,8 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.locale).toBe("zh-CN");
     expect(appHost.internalState.settings.locale).toBe("zh-CN");
     expect(workspace.app?.state.settings.locale).toBe("zh-CN");
+    expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
+    expect(workspace.app?.state.screenProfile.deviceClass).toBe("desktop");
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
     expect(appHost.state.workbench.rightDockOpen).toBe(true);
     expect(appHost.state.workbench.leftDockWidth).toBe(375);
@@ -62,6 +64,15 @@ describe("createAppHost", () => {
       appHost.internalState.workbench.rightDockOpen = false;
       appHost.internalState.workbench.leftDockWidth = 480;
     });
+    appHost.internalActions.setScreenProfile({
+      viewportWidth: 390,
+      viewportHeight: 844,
+      devicePixelRatio: 3,
+      deviceClass: "mobile",
+      screenShape: "portrait",
+      aspectRatio: 844 / 390,
+      hasTouch: true,
+    });
 
     expect(appHost.state.settings.locale).toBe("en-US");
     expect(appHost.internalState.settings.locale).toBe("en-US");
@@ -70,6 +81,8 @@ describe("createAppHost", () => {
     expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
     expect(workspace.app?.state.workbench.leftDockOpen).toBe(false);
     expect(workspace.app?.state.workbench.leftDockWidth).toBe(480);
+    expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
+    expect(workspace.app?.state.screenProfile.screenShape).toBe("portrait");
   });
 
   it("translates arbitrary i18n keys through the current locale", () => {
@@ -142,6 +155,15 @@ describe("createAppHost", () => {
     expect(appHost.internalState.runtime.activePanel).toBeNull();
 
     appHost.internalActions.setActivePanel("history");
+    appHost.internalActions.setScreenProfile({
+      viewportWidth: 820,
+      viewportHeight: 1180,
+      devicePixelRatio: 2,
+      deviceClass: "tablet",
+      screenShape: "portrait",
+      aspectRatio: 1180 / 820,
+      hasTouch: true,
+    });
 
     expect(appHost.internalState.runtime.activePanel).toBe("history");
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBeNull();

@@ -2,10 +2,9 @@ import type { AppHost } from "@/app/app-host";
 import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
 import {
   type DeviceClass,
-  resolveScreenProfileFromWindow,
   type ScreenShape,
 } from "@/shared/browser/screen-profile";
-import { useEffect, useState } from "react";
+import { observer } from "mobx-react-lite";
 
 function getLocaleLabelKey(locale: AppHost["state"]["settings"]["locale"]): string {
   return locale === "en-US" ? "locale.en-US" : "locale.zh-CN";
@@ -59,10 +58,10 @@ function getScreenShapeIconKind(screenShape: ScreenShape) {
   return "screen-landscape";
 }
 
-export function BottomStatusBar({ appHost }: { appHost: AppHost }) {
+export const BottomStatusBar = observer(function BottomStatusBar({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
-  const [screenProfile, setScreenProfile] = useState(resolveScreenProfileFromWindow);
   const {
+    screenProfile,
     workbench: { leftDockOpen, rightDockOpen },
     settings,
   } = appHost.state;
@@ -75,23 +74,6 @@ export function BottomStatusBar({ appHost }: { appHost: AppHost }) {
     : t("statusBar.none");
   const deviceLabel = t(getDeviceLabelKey(screenProfile.deviceClass));
   const screenShapeLabel = t(getScreenShapeLabelKey(screenProfile.screenShape));
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const handleResize = () => {
-      setScreenProfile(resolveScreenProfileFromWindow());
-    };
-
-    window.addEventListener("resize", handleResize);
-    handleResize();
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
 
   return (
     <footer className="status-bar">
@@ -127,4 +109,4 @@ export function BottomStatusBar({ appHost }: { appHost: AppHost }) {
       </div>
     </footer>
   );
-}
+});

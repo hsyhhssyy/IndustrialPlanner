@@ -28,13 +28,6 @@ export function resolveLeftDockWidthForScreenProfile(
   return clampLeftDockWidth(width);
 }
 
-export function resolveLeftDockWidthFromWindow(
-  width: number,
-  currentWindow: Window | undefined = typeof window === "undefined" ? undefined : window,
-): number {
-  return resolveLeftDockWidthForScreenProfile(width, resolveScreenProfileFromWindow(currentWindow));
-}
-
 export interface AppSettingsReadWrite extends AppSettings {
   locale: AppLocale;
 }
@@ -59,6 +52,8 @@ export interface UiStateReadWrite extends UiState {
   settings: AppSettingsReadWrite;
   /// workbenchState存储用户没有显式配置，但是仍然需要存储的状态，比如dock的开合状态等等。
   workbench: WorkbenchStateReadWrite;
+  /// screenProfile 是当前 browser viewport / device profile 的公共 UI 运行态，不进入持久化。
+  screenProfile: ScreenProfile;
   /// runtimeState存储一些不需要持久化的状态，比如当前打开的panel是什么，手持的工具是什么等等，每次页面刷新时，这些状态都会被重置回默认值。
   /// runtimeState 不进Contract，这是纯私有的状态。
   runtime: RuntimeStateReadWrite;
@@ -89,6 +84,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
   };
 
   workbench: WorkbenchStateReadWrite = new WorkbenchStateReadWriteImpl();
+  screenProfile: ScreenProfile = resolveScreenProfileFromWindow();
   runtime: RuntimeStateReadWrite = new RuntimeStateReadWriteImpl();
 
   public constructor() {

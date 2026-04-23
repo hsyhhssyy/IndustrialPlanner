@@ -2,8 +2,8 @@ import {
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { AppHost } from "@/app/app-host";
-import { resolveScreenProfileFromWindow } from "@/shared/browser/screen-profile";
-import { Fragment, useEffect, useState } from "react";
+import { observer } from "mobx-react-lite";
+import { Fragment } from "react";
 
 const PLACEMENT_ICON_PATHS = [
   "/device-icons/item_log_belt_01.webp",
@@ -103,28 +103,11 @@ function resolvePlacementIconPath(index: number): string {
   return PLACEMENT_ICON_PATHS[index % PLACEMENT_ICON_PATHS.length] ?? PLACEMENT_ICON_PATHS[0];
 }
 
-export function PlacementPanel({ appHost }: { appHost: AppHost }) {
+export const PlacementPanel = observer(function PlacementPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
-  const [screenProfile, setScreenProfile] = useState(resolveScreenProfileFromWindow);
+  const screenProfile = appHost.state.screenProfile;
   const isMobileLayout = screenProfile.deviceClass === "mobile";
   const showShortcutHints = screenProfile.deviceClass !== "mobile";
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const handleResize = () => {
-      setScreenProfile(resolveScreenProfileFromWindow());
-    };
-
-    window.addEventListener("resize", handleResize);
-    handleResize();
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
 
   return (
     <div className="placement-panel">
@@ -183,4 +166,4 @@ export function PlacementPanel({ appHost }: { appHost: AppHost }) {
       })}
     </div>
   );
-}
+});

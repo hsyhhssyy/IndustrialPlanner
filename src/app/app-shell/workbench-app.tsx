@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/app-shell/components/bottom-status-bar";
 import { CanvasPanel } from "@/app/app-shell/components/canvas-panel";
@@ -22,7 +22,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const rightDockOpen = appHost.state.workbench.rightDockOpen;
   const leftDockWidth = appHost.state.workbench.leftDockWidth;
   const topBarCollapsed = appHost.state.workbench.topBarCollapsed;
-  const [screenProfile, setScreenProfile] = useState(resolveScreenProfileFromWindow);
+  const screenProfile = appHost.state.screenProfile;
   const isMobileLandscape = isMobileLandscapeScreenProfile(screenProfile);
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
   const showFloatingTopBarToggle = isMobileLandscape && topBarCollapsed;
@@ -33,7 +33,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     }
 
     const handleResize = () => {
-      setScreenProfile(resolveScreenProfileFromWindow());
+      appHost.internalActions.setScreenProfile(resolveScreenProfileFromWindow());
     };
 
     window.addEventListener("resize", handleResize);
@@ -42,7 +42,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, []);
+  }, [appHost]);
 
   const workbenchStyle = {
     "--left-dock-width": leftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",

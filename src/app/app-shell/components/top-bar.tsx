@@ -4,7 +4,6 @@ import { observer } from "mobx-react-lite";
 import {
   type DeviceClass,
   isMobileLandscapeScreenProfile,
-  resolveScreenProfileFromWindow,
   type ScreenShape,
 } from "@/shared/browser/screen-profile";
 import { useEffect, useState } from "react";
@@ -48,8 +47,8 @@ function resolveFullscreenState(): boolean {
 export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const [isFullscreen, setIsFullscreen] = useState(resolveFullscreenState);
-  const [screenProfile, setScreenProfile] = useState(resolveScreenProfileFromWindow);
   const {
+    screenProfile,
     workbench: { leftDockOpen, rightDockOpen, topBarCollapsed },
     settings,
   } = appHost.state;
@@ -68,23 +67,6 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
 
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const handleResize = () => {
-      setScreenProfile(resolveScreenProfileFromWindow());
-    };
-
-    window.addEventListener("resize", handleResize);
-    handleResize();
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
     };
   }, []);
 

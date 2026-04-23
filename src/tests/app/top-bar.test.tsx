@@ -9,6 +9,7 @@ import { TopBar } from "@/app/app-shell/components/top-bar";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
+import { resolveScreenProfileFromWindow } from "@/shared/browser/screen-profile";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -212,7 +213,7 @@ describe("TopBar", () => {
     expect(fullscreenButton.title).toBe("进入全屏");
   });
 
-  it("shows device class and screen shape and updates them on resize", () => {
+  it("shows device class and screen shape from public UI state", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -235,7 +236,7 @@ describe("TopBar", () => {
     });
 
     act(() => {
-      window.dispatchEvent(new Event("resize"));
+      appHost.internalActions.setScreenProfile(resolveScreenProfileFromWindow());
     });
 
     expect(container.textContent).toContain("设备: 平板");

@@ -136,6 +136,39 @@ describe("WorkbenchApp", () => {
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("512px");
   });
 
+  it("updates public screen profile from the shell resize hook", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
+    expect(appHost.state.screenProfile.screenShape).toBe("landscape");
+    expect(container.textContent).toContain("设备: 电脑");
+    expect(container.textContent).toContain("屏幕: 横屏");
+
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 820,
+      height: 1180,
+      userAgent:
+        "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    act(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
+    expect(appHost.state.screenProfile.screenShape).toBe("portrait");
+    expect(container.textContent).toContain("设备: 平板");
+    expect(container.textContent).toContain("屏幕: 竖屏");
+  });
+
   it("updates left dock width through the edge handle and clamps the value", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
