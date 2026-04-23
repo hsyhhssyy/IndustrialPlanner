@@ -1,9 +1,9 @@
 import { makeAutoObservable } from "mobx";
 
+import type { ScreenProfile } from "@/domain/state/screen-profile";
 import type { AppLocale } from "@/shared/i18n/messages";
 import {
   resolveScreenProfileFromWindow,
-  type ScreenProfile,
 } from "@/shared/browser/screen-profile";
 import type { AppSettings, UiState, WorkbenchState } from "@/domain/state/types";
 

@@ -1,10 +1,12 @@
 import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
 import type { AppHost } from "@/app/app-host";
-import { observer } from "mobx-react-lite";
 import {
   type DeviceClass,
-  isMobileLandscapeScreenProfile,
   type ScreenShape,
+} from "@/domain/state/screen-profile";
+import { observer } from "mobx-react-lite";
+import {
+  isMobileLandscapeScreenProfile,
 } from "@/shared/browser/screen-profile";
 import { useEffect, useState } from "react";
 

@@ -3,8 +3,8 @@
 // 比如SelectedEntities就是指这些Entity被选中了，这个状态是运行时的
 
 import type { AppLocale } from "@/shared/i18n/messages";
-import type { ScreenProfile } from "@/shared/browser/screen-profile";
 import type { WorldEntity } from "../entity/world-document";
+import type { ScreenProfile } from "./screen-profile";
 
 export interface EditorViewportCenter {
   readonly x: number;

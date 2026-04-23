@@ -2,8 +2,8 @@ import { action } from "mobx";
 
 import type { AppAction } from "@/domain/action/app-action";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import type { ScreenProfile } from "@/domain/state/screen-profile";
 import type { EditorViewportClientRect } from "@/domain/state/types";
-import type { ScreenProfile } from "@/shared/browser/screen-profile";
 import { lookupMessageText } from "@/shared/i18n/messages";
 import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 
