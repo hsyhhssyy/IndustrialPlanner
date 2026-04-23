@@ -7,7 +7,10 @@ import LeftDock from "@/app/app-shell/components/left-dock";
 import { LeftToolbar } from "@/app/app-shell/components/left-toolbar";
 import { RightDock } from "@/app/app-shell/components/right-dock";
 import { TopBar } from "@/app/app-shell/components/top-bar";
-import { preventNativeBrowserEvent } from "@/app/app-shell/components/ui-shell-null-handlers";
+import {
+  preventMiddleMousePointerDownBrowserBehavior,
+  preventNativeBrowserEvent,
+} from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { AppHost } from "@/app/app-host";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state-impl";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state-impl";
@@ -57,6 +60,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       onAuxClick={preventNativeBrowserEvent}
       onContextMenu={preventNativeBrowserEvent}
       onDragStart={preventNativeBrowserEvent}
+      onPointerDownCapture={preventMiddleMousePointerDownBrowserBehavior}
       style={workbenchStyle}
     >
       <TopBar appHost={appHost} />

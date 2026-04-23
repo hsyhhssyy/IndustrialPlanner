@@ -48,7 +48,7 @@ function dispatchPointerEvent(
     button?: number;
     buttons?: number;
   },
-): void {
+): Event {
   const event = new Event(type, { bubbles: true, cancelable: true });
   Object.defineProperties(event, {
     pointerId: { value: init.pointerId },
@@ -63,6 +63,7 @@ function dispatchPointerEvent(
     shiftKey: { value: false },
   });
   target.dispatchEvent(event);
+  return event;
 }
 
 class ResizeObserverMock {
@@ -243,6 +244,81 @@ describe("CanvasPanel", () => {
     );
     expect(container.querySelector(".canvas-gesture-diagnostics")?.textContent).toContain(
       "KeyA",
+    );
+  });
+
+  it("pans the editor viewport on middle mouse drag", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+    const editorHost = createEditorHost(workspace);
+    const moveViewportSpy = vi.spyOn(
+      editorHost.actions,
+      "moveViewportByViewportPixelVector",
+    );
+
+    editorHost.actions.setViewportClientRect({
+      left: 100,
+      top: 50,
+      width: 640,
+      height: 480,
+    });
+
+    act(() => {
+      root.render(<CanvasPanel appHost={appHost} />);
+    });
+
+    const viewportSurface = container.querySelector(
+      ".canvas-viewport-surface",
+    ) as HTMLDivElement | null;
+
+    expect(viewportSurface).not.toBeNull();
+
+    if (!viewportSurface) {
+      throw new Error("Canvas viewport surface did not render.");
+    }
+
+    const pointerDownEventRef: { current: Event | null } = { current: null };
+
+    act(() => {
+      pointerDownEventRef.current = dispatchPointerEvent(viewportSurface, "pointerdown", {
+        pointerId: 2,
+        pointerType: "mouse",
+        clientX: 120,
+        clientY: 80,
+        button: 1,
+        buttons: 4,
+      });
+      dispatchPointerEvent(viewportSurface, "pointermove", {
+        pointerId: 2,
+        pointerType: "mouse",
+        clientX: 136,
+        clientY: 64,
+        buttons: 4,
+      });
+      dispatchPointerEvent(viewportSurface, "pointerup", {
+        pointerId: 2,
+        pointerType: "mouse",
+        clientX: 136,
+        clientY: 64,
+        button: 1,
+        buttons: 0,
+      });
+    });
+
+    expect(moveViewportSpy).toHaveBeenCalledWith({
+      startViewportPixel: {
+        x: 20,
+        y: 30,
+      },
+      endViewportPixel: {
+        x: 36,
+        y: 14,
+      },
+    });
+    expect(editorHost.state.viewport.center.x).toBeCloseTo(-1);
+    expect(editorHost.state.viewport.center.y).toBeCloseTo(1);
+    expect(container.querySelector(".canvas-gesture-diagnostics")?.textContent).toContain(
+      "mouse dragend",
     );
   });
 

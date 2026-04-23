@@ -57,6 +57,27 @@ describe("createEditorHost", () => {
     expect(editorHost.state.viewport.center.y).toBe(0);
   });
 
+  it("moves viewport center by viewport pixel vector through editor actions", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.moveViewportByViewportPixelVector({
+      startViewportPixel: {
+        x: 64,
+        y: 80,
+      },
+      endViewportPixel: {
+        x: 96,
+        y: 48,
+      },
+    });
+
+    expect(editorHost.state.viewport.center.x).toBeCloseTo(-2);
+    expect(editorHost.state.viewport.center.y).toBeCloseTo(2);
+    expect(workspace.editor?.state.viewport.center.x).toBeCloseTo(-2);
+    expect(workspace.editor?.state.viewport.center.y).toBeCloseTo(2);
+  });
+
   it("compensates viewport center after later rect changes to preserve screen position", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

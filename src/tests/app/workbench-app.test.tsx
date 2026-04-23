@@ -23,6 +23,35 @@ function createWorkspace(): WorkspaceContract {
   };
 }
 
+function dispatchPointerEvent(
+  target: Element,
+  type: string,
+  init: {
+    pointerId: number;
+    pointerType: string;
+    clientX: number;
+    clientY: number;
+    button?: number;
+    buttons?: number;
+  },
+): Event {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperties(event, {
+    pointerId: { value: init.pointerId },
+    pointerType: { value: init.pointerType },
+    clientX: { value: init.clientX },
+    clientY: { value: init.clientY },
+    button: { value: init.button ?? 0 },
+    buttons: { value: init.buttons ?? 0 },
+    altKey: { value: false },
+    ctrlKey: { value: false },
+    metaKey: { value: false },
+    shiftKey: { value: false },
+  });
+  target.dispatchEvent(event);
+  return event;
+}
+
 describe("WorkbenchApp", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -293,5 +322,42 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.workbench.leftDockWidth).toBe(512);
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe(`${MOBILE_LEFT_DOCK_WIDTH}px`);
     expect(container.querySelector(".dock-resize-handle")).toBeNull();
+  });
+
+  it("prevents middle mouse native pointerdown behavior at the outer shell", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const canvasPanel = container.querySelector(".canvas-panel") as HTMLElement | null;
+
+    expect(canvasPanel).not.toBeNull();
+
+    if (!canvasPanel) {
+      throw new Error("Canvas panel did not render.");
+    }
+
+    const middleMouseEvent = dispatchPointerEvent(canvasPanel, "pointerdown", {
+      pointerId: 7,
+      pointerType: "mouse",
+      clientX: 120,
+      clientY: 80,
+      button: 1,
+      buttons: 4,
+    });
+    const leftMouseEvent = dispatchPointerEvent(canvasPanel, "pointerdown", {
+      pointerId: 8,
+      pointerType: "mouse",
+      clientX: 120,
+      clientY: 80,
+      button: 0,
+      buttons: 1,
+    });
+
+    expect(middleMouseEvent.defaultPrevented).toBe(true);
+    expect(leftMouseEvent.defaultPrevented).toBe(false);
   });
 });

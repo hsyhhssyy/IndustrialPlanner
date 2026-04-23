@@ -11,6 +11,11 @@ export interface EditorViewportCenter {
   readonly y: number;
 }
 
+export interface EditorViewportPixelPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
 export interface EditorViewportClientRect {
   readonly left: number;
   readonly top: number;

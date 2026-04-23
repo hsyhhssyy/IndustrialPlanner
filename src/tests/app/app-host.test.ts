@@ -32,6 +32,7 @@ describe("createAppHost", () => {
     expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.size).toBe(0);
     expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual([
       "app.gesture-diagnostics",
+      "app.mouse-viewport-pan",
     ]);
     expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toBeNull();
 

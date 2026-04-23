@@ -4,6 +4,7 @@ import { AppActionImpl, AppInternalAction } from "./action-impl";
 import { createGestureAdapter, GestureAdapter } from "./input/gesture-adapter";
 import {
   createGestureActionRouter,
+  createMouseViewportPanModule,
   GestureActionRouter,
 } from "./input/gesture-actions";
 import {
@@ -71,6 +72,9 @@ export function createAppHost(
   });
 
   workspace.app = host;
+  disposers.push(gestureActionRouter.registerModule(
+    createMouseViewportPanModule(),
+  ));
   disposers.push(gestureActionRouter.registerModule(
     createGestureDiagnosticsModule(gestureDiagnostics),
   ));

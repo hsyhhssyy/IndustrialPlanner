@@ -6,7 +6,10 @@ import {
   createSnapshotStore,
   SnapshotStoreReadWrite,
 } from "@/shared/snapshot/snapshot-store";
-import { resolveCompensatedViewportCenter } from "@/shared/geometry/viewport-transform";
+import {
+  resolveCompensatedViewportCenter,
+  resolveWorldGridCellPixelSize,
+} from "@/shared/geometry/viewport-transform";
 import { readWorldDocumentFromIndexedDb } from "./document-storage";
 import { hookLocalstorage } from "./storage-hook";
 import { createEditorStateReadWrite, EditorStateReadWrite } from "./state-impl";
@@ -69,6 +72,30 @@ export function createEditorHost(
       editorState.viewport.clientRect.width = nextClientRect.width;
       editorState.viewport.clientRect.height = nextClientRect.height;
     },
+    moveViewportByViewportPixelVector: ({
+      startViewportPixel,
+      endViewportPixel,
+    }) => {
+      const viewportPixelVector = resolveViewportPixelVector({
+        startViewportPixel,
+        endViewportPixel,
+      });
+
+      if (viewportPixelVector === null) {
+        return;
+      }
+
+      const gridCellSize = resolveWorldGridCellPixelSize(
+        editorState.viewport.gridSize,
+      );
+
+      if (gridCellSize <= 0) {
+        return;
+      }
+
+      editorState.viewport.center.x -= viewportPixelVector.x / gridCellSize;
+      editorState.viewport.center.y -= viewportPixelVector.y / gridCellSize;
+    },
   };
 
   const host: EditorHost = {
@@ -113,6 +140,34 @@ function resolveViewportAxisSize(
   }
 
   return Math.floor(value);
+}
+
+function resolveViewportPixelVector(options: {
+  startViewportPixel: {
+    x: number;
+    y: number;
+  };
+  endViewportPixel: {
+    x: number;
+    y: number;
+  };
+}): {
+  x: number;
+  y: number;
+} | null {
+  if (
+    !Number.isFinite(options.startViewportPixel.x)
+    || !Number.isFinite(options.startViewportPixel.y)
+    || !Number.isFinite(options.endViewportPixel.x)
+    || !Number.isFinite(options.endViewportPixel.y)
+  ) {
+    return null;
+  }
+
+  return {
+    x: options.endViewportPixel.x - options.startViewportPixel.x,
+    y: options.endViewportPixel.y - options.startViewportPixel.y,
+  };
 }
 
 async function hydrateInitialDocument(editorHost: EditorHost): Promise<void> {

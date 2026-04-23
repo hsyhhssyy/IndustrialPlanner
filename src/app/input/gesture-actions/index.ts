@@ -3,6 +3,7 @@ export {
   createGestureActionRouter,
   type GestureActionRouterOptions,
 } from "./gesture-action-router";
+export { createMouseViewportPanModule } from "./mouse-viewport-pan-module";
 export type {
   GestureActionContext,
   GestureActionRouterDispatchResult,
