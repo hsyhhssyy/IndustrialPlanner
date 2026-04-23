@@ -24,6 +24,23 @@ afterEach(() => {
 });
 
 describe("createAppHost", () => {
+  it("initializes gesture adapter and gesture action router as app runtime services", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.size).toBe(0);
+    expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual([]);
+
+    appHost.dispose();
+
+    expect(() =>
+      appHost.gestureActionRouter.registerModule({
+        id: "late-module",
+        handle: () => ({ status: "ignored" }),
+      }),
+    ).toThrow("GestureActionRouter has been disposed.");
+  });
+
   it("initializes app settings and workbench state and keeps readonly views in sync", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
