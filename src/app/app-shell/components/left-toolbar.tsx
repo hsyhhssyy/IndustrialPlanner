@@ -55,6 +55,7 @@ const UTILITY_TOOLBAR_ITEMS = [
 
 export const LeftToolbar = observer(function LeftToolbar({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
+  const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const activePanel = appHost.internalState.runtime.activePanel ?? "placement";
 
   return (
@@ -71,6 +72,12 @@ export const LeftToolbar = observer(function LeftToolbar({ appHost }: { appHost:
               className={isActive ? "rail-button is-active" : "rail-button"}
               key={item.id}
               onClick={() => {
+                if (leftDockOpen && isActive) {
+                  appHost.internalActions.toggleLeftDock();
+
+                  return;
+                }
+
                 appHost.internalActions.setActivePanel(item.panel);
               }}
               title={label}

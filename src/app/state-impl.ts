@@ -20,6 +20,7 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
   leftDockOpen: boolean;
   rightDockOpen: boolean;
   leftDockWidth: number;
+  topBarCollapsed: boolean;
 }
 
 export interface RuntimeStateReadWrite {
@@ -44,6 +45,7 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   leftDockOpen = true;
   rightDockOpen = true;
   leftDockWidth = DEFAULT_LEFT_DOCK_WIDTH;
+  topBarCollapsed = false;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

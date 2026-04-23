@@ -9,7 +9,11 @@ import LucideMaximize from "~icons/lucide/maximize";
 import LucideMonitor from "~icons/lucide/monitor";
 import LucideMousePointer2 from "~icons/lucide/mouse-pointer-2";
 import LucidePackage2 from "~icons/lucide/package-2";
+import LucidePanelLeftClose from "~icons/lucide/panel-left-close";
 import LucidePanelLeftOpen from "~icons/lucide/panel-left-open";
+import LucidePanelRightClose from "~icons/lucide/panel-right-close";
+import LucidePanelTopClose from "~icons/lucide/panel-top-close";
+import LucidePanelTopOpen from "~icons/lucide/panel-top-open";
 import LucidePanelRightOpen from "~icons/lucide/panel-right-open";
 import LucideRectangleHorizontal from "~icons/lucide/rectangle-horizontal";
 import LucideRectangleVertical from "~icons/lucide/rectangle-vertical";
@@ -29,8 +33,12 @@ type WorkbenchIconKind =
   | "toolbox"
   | "help"
   | "settings"
-  | "panel-left"
-  | "panel-right"
+  | "panel-left-close"
+  | "panel-left-open"
+  | "panel-right-close"
+  | "panel-right-open"
+  | "panel-top-close"
+  | "panel-top-open"
   | "fullscreen"
   | "pointer"
   | "cancel"
@@ -56,8 +64,12 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   toolbox: LucidePackage2,
   help: LucideHelpCircle,
   settings: LucideSettings,
-  "panel-left": LucidePanelLeftOpen,
-  "panel-right": LucidePanelRightOpen,
+  "panel-left-close": LucidePanelLeftClose,
+  "panel-left-open": LucidePanelLeftOpen,
+  "panel-right-close": LucidePanelRightClose,
+  "panel-right-open": LucidePanelRightOpen,
+  "panel-top-close": LucidePanelTopClose,
+  "panel-top-open": LucidePanelTopOpen,
   fullscreen: LucideMaximize,
   pointer: LucideMousePointer2,
   cancel: LucideX,

@@ -42,6 +42,7 @@ export function createAppHost(
   const internalActions: AppInternalAction = {
     toggleLeftDock: actionImpl.toggleLeftDock,
     toggleRightDock: actionImpl.toggleRightDock,
+    toggleTopBarCollapsed: actionImpl.toggleTopBarCollapsed,
     setActivePanel: actionImpl.setActivePanel,
     setLeftDockWidth: actionImpl.setLeftDockWidth,
   };

@@ -38,6 +38,10 @@ function hydrateWorkbenchState(appHost: AppHost, persistedState: unknown): void 
   if (typeof persistedState.leftDockWidth === "number" && Number.isFinite(persistedState.leftDockWidth)) {
     appHost.internalState.workbench.leftDockWidth = clampLeftDockWidth(persistedState.leftDockWidth);
   }
+
+  if (typeof persistedState.topBarCollapsed === "boolean") {
+    appHost.internalState.workbench.topBarCollapsed = persistedState.topBarCollapsed;
+  }
 }
 
 function getWorkbenchStateSnapshot(appHost: AppHost): WorkbenchState {
@@ -45,6 +49,7 @@ function getWorkbenchStateSnapshot(appHost: AppHost): WorkbenchState {
     leftDockOpen: appHost.internalState.workbench.leftDockOpen,
     rightDockOpen: appHost.internalState.workbench.rightDockOpen,
     leftDockWidth: appHost.internalState.workbench.leftDockWidth,
+    topBarCollapsed: appHost.internalState.workbench.topBarCollapsed,
   };
 }
 

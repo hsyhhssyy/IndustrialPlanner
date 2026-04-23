@@ -28,6 +28,35 @@ describe("TopBar", () => {
   let coarsePointer: boolean;
   let hoverNone: boolean;
 
+  const setViewport = (options: {
+    width: number;
+    height: number;
+    userAgent: string;
+    maxTouchPoints: number;
+  }) => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: options.width,
+    });
+
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      writable: true,
+      value: options.height,
+    });
+
+    Object.defineProperty(window.navigator, "userAgent", {
+      configurable: true,
+      value: options.userAgent,
+    });
+
+    Object.defineProperty(window.navigator, "maxTouchPoints", {
+      configurable: true,
+      value: options.maxTouchPoints,
+    });
+  };
+
   beforeEach(() => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     container = document.createElement("div");
@@ -37,27 +66,12 @@ describe("TopBar", () => {
     coarsePointer = false;
     hoverNone = false;
 
-    Object.defineProperty(window, "innerWidth", {
-      configurable: true,
-      writable: true,
-      value: 1280,
-    });
-
-    Object.defineProperty(window, "innerHeight", {
-      configurable: true,
-      writable: true,
-      value: 800,
-    });
-
-    Object.defineProperty(window.navigator, "userAgent", {
-      configurable: true,
-      value:
+    setViewport({
+      width: 1280,
+      height: 800,
+      userAgent:
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-    });
-
-    Object.defineProperty(window.navigator, "maxTouchPoints", {
-      configurable: true,
-      value: 0,
+      maxTouchPoints: 0,
     });
 
     Object.defineProperty(window.navigator, "userAgentData", {
@@ -212,27 +226,12 @@ describe("TopBar", () => {
     coarsePointer = true;
     hoverNone = true;
 
-    Object.defineProperty(window, "innerWidth", {
-      configurable: true,
-      writable: true,
-      value: 820,
-    });
-
-    Object.defineProperty(window, "innerHeight", {
-      configurable: true,
-      writable: true,
-      value: 1180,
-    });
-
-    Object.defineProperty(window.navigator, "userAgent", {
-      configurable: true,
-      value:
+    setViewport({
+      width: 820,
+      height: 1180,
+      userAgent:
         "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
-    });
-
-    Object.defineProperty(window.navigator, "maxTouchPoints", {
-      configurable: true,
-      value: 5,
+      maxTouchPoints: 5,
     });
 
     act(() => {
@@ -241,5 +240,40 @@ describe("TopBar", () => {
 
     expect(container.textContent).toContain("设备: 平板");
     expect(container.textContent).toContain("屏幕: 竖屏");
+  });
+
+  it("shows a collapse button in phone landscape and toggles the collapsed header state", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 844,
+      height: 390,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<TopBar appHost={appHost} />);
+    });
+
+    const collapseButton = container.querySelector(
+      ".top-bar-collapse-button",
+    ) as HTMLButtonElement | null;
+
+    expect(collapseButton).not.toBeNull();
+    expect(collapseButton?.title).toBe("折叠 运行控制");
+    expect(appHost.state.workbench.topBarCollapsed).toBe(false);
+
+    act(() => {
+      collapseButton?.click();
+    });
+
+    expect(appHost.state.workbench.topBarCollapsed).toBe(true);
+    expect(container.querySelector(".top-bar")).toBeNull();
+    expect(container.textContent).toBe("");
   });
 });

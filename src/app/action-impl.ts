@@ -16,6 +16,7 @@ import {
 export interface AppInternalAction {
   toggleLeftDock: () => void;
   toggleRightDock: () => void;
+  toggleTopBarCollapsed: () => void;
   setActivePanel: (panel: ActivePanel) => void;
   setLeftDockWidth: (width: number) => void;
 }
@@ -37,11 +38,7 @@ export class AppActionImpl implements AppAction, AppInternalAction {
   };
 
   public readonly toggleLeftDock: AppInternalAction["toggleLeftDock"] = action(() => {
-    this.applyPredictedViewportRectForDockToggle({
-      dock: "left",
-      willOpen: !this.internalState.workbench.leftDockOpen,
-    });
-    this.internalState.workbench.leftDockOpen = !this.internalState.workbench.leftDockOpen;
+    this.setLeftDockOpen(!this.internalState.workbench.leftDockOpen);
   });
 
   public readonly toggleRightDock: AppInternalAction["toggleRightDock"] = action(() => {
@@ -52,17 +49,33 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     this.internalState.workbench.rightDockOpen = !this.internalState.workbench.rightDockOpen;
   });
 
+  public readonly toggleTopBarCollapsed: AppInternalAction["toggleTopBarCollapsed"] = action(() => {
+    this.internalState.workbench.topBarCollapsed = !this.internalState.workbench.topBarCollapsed;
+  });
+
   public readonly setActivePanel: AppInternalAction["setActivePanel"] = action((panel) => {
     this.internalState.runtime.activePanel = panel;
 
     if (panel !== null) {
-      this.internalState.workbench.leftDockOpen = true;
+      this.setLeftDockOpen(true);
     }
   });
 
   public readonly setLeftDockWidth: AppInternalAction["setLeftDockWidth"] = action((width) => {
     this.internalState.workbench.leftDockWidth = clampLeftDockWidth(width);
   });
+
+  private setLeftDockOpen(nextOpen: boolean): void {
+    if (this.internalState.workbench.leftDockOpen === nextOpen) {
+      return;
+    }
+
+    this.applyPredictedViewportRectForDockToggle({
+      dock: "left",
+      willOpen: nextOpen,
+    });
+    this.internalState.workbench.leftDockOpen = nextOpen;
+  }
 
   private applyPredictedViewportRectForDockToggle(options: {
     dock: "left" | "right";

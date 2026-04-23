@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAppHost } from "@/app/app-host";
 import { LeftDock } from "@/app/app-shell/components/left-dock";
 import { LeftToolbar } from "@/app/app-shell/components/left-toolbar";
+import { WorkbenchApp } from "@/app/app-shell/workbench-app";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
@@ -165,5 +166,79 @@ describe("Left dock panel switching", () => {
 
     expect(placementPanelAfterSwitch).toBe(placementPanelBeforeSwitch);
     expect(placementPanelAfterSwitch?.hidden).toBe(false);
+  });
+
+  it("reopens the left dock and switches to the clicked panel when the dock is closed", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<LeftToolbar appHost={appHost} />);
+    });
+
+    act(() => {
+      appHost.internalActions.toggleLeftDock();
+    });
+
+    expect(appHost.state.workbench.leftDockOpen).toBe(false);
+    expect(appHost.internalState.runtime.activePanel).toBeNull();
+
+    const historyButton = container.querySelector(
+      'button[title="操作历史"]',
+    ) as HTMLButtonElement | null;
+
+    expect(historyButton).not.toBeNull();
+
+    act(() => {
+      historyButton?.click();
+    });
+
+    expect(appHost.state.workbench.leftDockOpen).toBe(true);
+    expect(appHost.internalState.runtime.activePanel).toBe("history");
+
+    act(() => {
+      root.render(
+        <>
+          <LeftToolbar appHost={appHost} />
+          <LeftDock appHost={appHost} />
+        </>,
+      );
+    });
+
+    const historyPanel = queryVisibleLeftDockPanel(container);
+
+    expect(historyPanel?.getAttribute("data-panel-id")).toBe("history");
+    expect(historyPanel?.textContent).toContain("清空历史");
+  });
+
+  it("collapses the left dock when clicking the currently visible panel button", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const placementButton = container.querySelector(
+      'button[title="放置模式"]',
+    ) as HTMLButtonElement | null;
+
+    expect(placementButton).not.toBeNull();
+    expect(appHost.state.workbench.leftDockOpen).toBe(true);
+    expect(container.querySelector(".dock-left")).not.toBeNull();
+
+    act(() => {
+      placementButton?.click();
+    });
+
+    expect(appHost.state.workbench.leftDockOpen).toBe(false);
+    expect(container.querySelector(".dock-left")).toBeNull();
+
+    act(() => {
+      placementButton?.click();
+    });
+
+    expect(appHost.state.workbench.leftDockOpen).toBe(true);
+    expect(queryVisibleLeftDockPanel(container)?.getAttribute("data-panel-id")).toBe("placement");
   });
 });

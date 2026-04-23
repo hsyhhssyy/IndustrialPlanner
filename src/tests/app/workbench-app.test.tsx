@@ -25,12 +25,80 @@ function createWorkspace(): WorkspaceContract {
 describe("WorkbenchApp", () => {
   let container: HTMLDivElement;
   let root: Root;
+  let coarsePointer: boolean;
+  let hoverNone: boolean;
+
+  const setViewport = (options: {
+    width: number;
+    height: number;
+    userAgent: string;
+    maxTouchPoints: number;
+  }) => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: options.width,
+    });
+
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      writable: true,
+      value: options.height,
+    });
+
+    Object.defineProperty(window.navigator, "userAgent", {
+      configurable: true,
+      value: options.userAgent,
+    });
+
+    Object.defineProperty(window.navigator, "maxTouchPoints", {
+      configurable: true,
+      value: options.maxTouchPoints,
+    });
+  };
 
   beforeEach(() => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
+    coarsePointer = false;
+    hoverNone = false;
+
+    Object.defineProperty(window, "devicePixelRatio", {
+      configurable: true,
+      writable: true,
+      value: 1,
+    });
+
+    setViewport({
+      width: 1280,
+      height: 800,
+      userAgent:
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+      maxTouchPoints: 0,
+    });
+
+    Object.defineProperty(window.navigator, "userAgentData", {
+      configurable: true,
+      value: undefined,
+    });
+
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn((query: string) => ({
+        matches:
+          (query === "(pointer: coarse)" && coarsePointer) ||
+          (query === "(hover: none)" && hoverNone),
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
   });
 
   afterEach(() => {
@@ -94,6 +162,7 @@ describe("WorkbenchApp", () => {
         leftDockOpen: true,
         rightDockOpen: true,
         leftDockWidth: 470,
+        topBarCollapsed: false,
       }),
     );
 
@@ -105,5 +174,55 @@ describe("WorkbenchApp", () => {
 
     expect(appHost.state.workbench.leftDockWidth).toBe(600);
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("600px");
+  });
+
+  it("hides the top and bottom bars and exposes a floating expand button when a phone landscape top bar is collapsed", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 844,
+      height: 390,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        leftDockOpen: true,
+        rightDockOpen: true,
+        leftDockWidth: 375,
+        topBarCollapsed: true,
+      }),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
+    const floatingToggle = container.querySelector(
+      ".workbench-floating-top-bar-toggle",
+    ) as HTMLButtonElement | null;
+
+    expect(workbench).not.toBeNull();
+    expect(workbench?.style.getPropertyValue("--top-bar-height")).toBe("0px");
+    expect(workbench?.style.getPropertyValue("--bottom-bar-height")).toBe("0px");
+    expect(container.querySelector(".status-bar")).toBeNull();
+    expect(container.querySelector(".top-bar")).toBeNull();
+    expect(floatingToggle?.title).toBe("展开 运行控制");
+
+    act(() => {
+      floatingToggle?.click();
+    });
+
+    expect(appHost.state.workbench.topBarCollapsed).toBe(false);
+    expect(workbench?.style.getPropertyValue("--top-bar-height")).toBe("48px");
+    expect(container.querySelector(".workbench-floating-top-bar-toggle")).toBeNull();
+    expect(container.querySelector(".top-bar")).not.toBeNull();
   });
 });

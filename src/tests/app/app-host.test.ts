@@ -115,6 +115,7 @@ describe("createAppHost", () => {
         leftDockOpen: false,
         rightDockOpen: true,
         leftDockWidth: 420,
+        topBarCollapsed: false,
       }),
     );
 
@@ -128,6 +129,7 @@ describe("createAppHost", () => {
         leftDockOpen: false,
         rightDockOpen: true,
         leftDockWidth: 420,
+        topBarCollapsed: false,
       }),
     );
   });
@@ -175,6 +177,34 @@ describe("createAppHost", () => {
     expect(editorHost.state.viewport.clientRect.left).toBe(85);
     expect(editorHost.state.viewport.clientRect.top).toBe(64);
     expect(editorHost.state.viewport.clientRect.width).toBe(1675);
+    expect(editorHost.state.viewport.clientRect.height).toBe(720);
+  });
+
+  it("reopens the left dock and predicts viewport rect when activating a panel while dock is closed", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+
+    editorHost.actions.setViewportClientRect({
+      left: 85,
+      top: 64,
+      width: 1335,
+      height: 720,
+    });
+
+    appHost.internalActions.toggleLeftDock();
+
+    expect(appHost.state.workbench.leftDockOpen).toBe(false);
+    expect(editorHost.state.viewport.clientRect.left).toBe(-290);
+    expect(editorHost.state.viewport.clientRect.width).toBe(1710);
+
+    appHost.internalActions.setActivePanel("history");
+
+    expect(appHost.internalState.runtime.activePanel).toBe("history");
+    expect(appHost.state.workbench.leftDockOpen).toBe(true);
+    expect(editorHost.state.viewport.clientRect.left).toBe(85);
+    expect(editorHost.state.viewport.clientRect.top).toBe(64);
+    expect(editorHost.state.viewport.clientRect.width).toBe(1335);
     expect(editorHost.state.viewport.clientRect.height).toBe(720);
   });
 });

@@ -229,6 +229,10 @@ export function resolveScreenProfile(source: ScreenProfileSource): ScreenProfile
   };
 }
 
+export function isMobileLandscapeScreenProfile(profile: Pick<ScreenProfile, "deviceClass" | "screenShape">): boolean {
+  return profile.deviceClass === "mobile" && profile.screenShape === "landscape";
+}
+
 export function resolveScreenProfileFromWindow(
   currentWindow: Window | undefined = typeof window === "undefined" ? undefined : window,
 ): ScreenProfile {

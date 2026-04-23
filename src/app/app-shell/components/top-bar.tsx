@@ -1,7 +1,9 @@
 import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
 import type { AppHost } from "@/app/app-host";
+import { observer } from "mobx-react-lite";
 import {
   type DeviceClass,
+  isMobileLandscapeScreenProfile,
   resolveScreenProfileFromWindow,
   type ScreenShape,
 } from "@/shared/browser/screen-profile";
@@ -43,12 +45,12 @@ function resolveFullscreenState(): boolean {
   return document.fullscreenElement !== null;
 }
 
-export function TopBar({ appHost }: { appHost: AppHost }) {
+export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const [isFullscreen, setIsFullscreen] = useState(resolveFullscreenState);
   const [screenProfile, setScreenProfile] = useState(resolveScreenProfileFromWindow);
   const {
-    workbench: { leftDockOpen, rightDockOpen },
+    workbench: { leftDockOpen, rightDockOpen, topBarCollapsed },
     settings,
   } = appHost.state;
 
@@ -92,6 +94,9 @@ export function TopBar({ appHost }: { appHost: AppHost }) {
   const toggleRightDock = () => {
     appHost.internalActions.toggleRightDock();
   };
+  const toggleTopBarCollapsed = () => {
+    appHost.internalActions.toggleTopBarCollapsed();
+  };
   const toggleFullscreen = () => {
     if (typeof document === "undefined") {
       return;
@@ -107,8 +112,17 @@ export function TopBar({ appHost }: { appHost: AppHost }) {
   const leftPanelLabel = `${t(leftDockOpen ? "action.close" : "action.open")} ${t("topBar.leftPanel")}`;
   const rightPanelLabel = `${t(rightDockOpen ? "action.close" : "action.open")} ${t("topBar.rightPanel")}`;
   const fullscreenLabel = t(isFullscreen ? "action.exitFullscreen" : "action.enterFullscreen");
+  const isMobileLandscape = isMobileLandscapeScreenProfile(screenProfile);
+  const collapseActionKey = isMobileLandscape && topBarCollapsed ? "action.expand" : "action.collapse";
+  const collapseButtonLabel = `${t(collapseActionKey)} ${t("topBar.controls")}`;
   const deviceLabel = t(getDeviceLabelKey(screenProfile.deviceClass));
   const screenShapeLabel = t(getScreenShapeLabelKey(screenProfile.screenShape));
+  const leftPanelIconKind = leftDockOpen ? "panel-left-close" : "panel-left-open";
+  const rightPanelIconKind = rightDockOpen ? "panel-right-close" : "panel-right-open";
+
+  if (isMobileLandscape && topBarCollapsed) {
+    return null;
+  }
 
   return (
     <header className="top-bar">
@@ -122,7 +136,7 @@ export function TopBar({ appHost }: { appHost: AppHost }) {
           type="button"
         >
           <span className="top-bar-toggle-icon">
-            <WorkbenchIcon kind="panel-left" />
+            <WorkbenchIcon kind={leftPanelIconKind} />
           </span>
           <span className="sr-only">{leftPanelLabel}</span>
         </button>
@@ -135,7 +149,7 @@ export function TopBar({ appHost }: { appHost: AppHost }) {
           type="button"
         >
           <span className="top-bar-toggle-icon">
-            <WorkbenchIcon kind="panel-right" />
+            <WorkbenchIcon kind={rightPanelIconKind} />
           </span>
           <span className="sr-only">{rightPanelLabel}</span>
         </button>
@@ -162,7 +176,21 @@ export function TopBar({ appHost }: { appHost: AppHost }) {
         </span>
         <span className="top-bar-metric">{`${t("topBar.device")}: ${deviceLabel}`}</span>
         <span className="top-bar-metric">{`${t("topBar.screen")}: ${screenShapeLabel}`}</span>
+        {isMobileLandscape ? (
+          <button
+            aria-label={collapseButtonLabel}
+            className="top-bar-collapse-button"
+            onClick={toggleTopBarCollapsed}
+            title={collapseButtonLabel}
+            type="button"
+          >
+            <span className="top-bar-toggle-icon">
+              <WorkbenchIcon kind="panel-top-close" />
+            </span>
+            <span className="sr-only">{t("action.collapse")}</span>
+          </button>
+        ) : null}
       </div>
     </header>
   );
-}
+});
