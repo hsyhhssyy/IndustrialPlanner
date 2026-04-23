@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -43,6 +43,19 @@ jobs:
           cat > dist/release.json <<EOF
           {"releaseTag":"${DEPLOYMENT_RELEASE_TAG}","sha":"${GITHUB_SHA}","runId":"${GITHUB_RUN_ID}"}
           EOF
+
+      - name: Package dist zip
+        if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: npm run package:zip -- "$RELEASE_TAG"
+
+      - name: Upload dist zip to release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$RELEASE_TAG" ".temp/IndustrialPlanner-${RELEASE_TAG}-dist.zip" --clobber
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

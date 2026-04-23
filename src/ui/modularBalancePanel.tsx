@@ -1545,6 +1545,12 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
     />
   )
 
+  const handleLibraryCardDoubleClick = (event: React.MouseEvent<HTMLElement>, entryId: string) => {
+    if (!selectedStageId) return
+    if (event.target instanceof Element && event.target.closest('button, input, select, a')) return
+    addModuleToStage(selectedStageId, entryId)
+  }
+
   return (
     <>
       <div className={`modular-balance-panel ${draft ? 'has-editor' : ''}`.trim()}>
@@ -1653,6 +1659,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                         className={`modular-balance-module-card ${draggingModuleId === module.id ? 'is-dragging' : ''}`.trim()}
                         style={getModuleColorStyle(module.colorKey)}
                         draggable
+                        onDoubleClick={(event) => handleLibraryCardDoubleClick(event, module.id)}
                         onDragStart={(event) => {
                           event.dataTransfer.setData('text/plain', module.id)
                           setDraggingModuleId(module.id)
@@ -1754,6 +1761,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                         className={`modular-balance-module-card ${draggingModuleId === recipe.id ? 'is-dragging' : ''}`.trim()}
                         style={getModuleColorStyle(recipe.colorKey)}
                         draggable
+                        onDoubleClick={(event) => handleLibraryCardDoubleClick(event, recipe.id)}
                         onDragStart={(event) => {
                           event.dataTransfer.setData('text/plain', recipe.id)
                           setDraggingModuleId(recipe.id)

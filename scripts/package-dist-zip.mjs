@@ -60,6 +60,16 @@ async function promptVersion() {
   }
 }
 
+function resolveVersionInput() {
+  const cliVersion = process.argv[2]?.trim()
+  if (cliVersion) return cliVersion
+
+  const envVersion = process.env.PACKAGE_ZIP_VERSION?.trim()
+  if (envVersion) return envVersion
+
+  return ''
+}
+
 async function runZip(outputPath) {
   const files = await collectFiles(distDir)
   if (files.length === 0) {
@@ -85,7 +95,7 @@ async function main() {
     throw new Error('dist 目录不存在，请先执行 npm run build')
   }
 
-  const version = await promptVersion()
+  const version = resolveVersionInput() || await promptVersion()
   if (!version) {
     throw new Error('版本号不能为空')
   }
