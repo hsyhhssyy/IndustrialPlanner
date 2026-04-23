@@ -189,8 +189,8 @@ function CanvasTouchHoldIndicator({ state }: { state: LongPressState }) {
     return null;
   }
 
-  const left = state.position.x;
-  const top = state.position.y;
+  const left = state.position.x - 12;
+  const top = state.position.y - 12;
   const animationDuration = `${state.durationMs}ms`;
   const progressDashOffset = 100.53 * (1 - state.progress);
 

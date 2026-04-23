@@ -170,6 +170,27 @@ describe("GestureAdapter", () => {
     expect(events.map((event) => event.type)).toEqual(["touch move", "touch move"]);
   });
 
+  it("only emits touch move while exactly one touch is active", () => {
+    const adapter = createGestureAdapter();
+    const events: GestureEvent[] = [];
+    adapter.subscribe((event) => events.push(event));
+
+    adapter.handlePointerDown(touchEvent(1, 0, 0));
+    adapter.handlePointerMove(touchEvent(1, 12, 0));
+
+    expect(events.filter((event) => event.type === "touch move")).toHaveLength(1);
+
+    adapter.handlePointerDown(touchEvent(2, 0, 10));
+    adapter.handlePointerMove(touchEvent(1, 16, 0));
+
+    expect(events.filter((event) => event.type === "touch move")).toHaveLength(1);
+
+    adapter.handlePointerUp(touchEvent(2, 0, 10));
+    adapter.handlePointerMove(touchEvent(1, 20, 0));
+
+    expect(events.filter((event) => event.type === "touch move")).toHaveLength(2);
+  });
+
   it("keeps touch drag alive across multiple touches and emits pinch plus two finger move", () => {
     const adapter = createGestureAdapter();
     const events: GestureEvent[] = [];

@@ -245,4 +245,41 @@ describe("CanvasPanel", () => {
       "KeyA",
     );
   });
+
+  it("positions the long press indicator above and left of the touch point", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<CanvasPanel appHost={appHost} />);
+    });
+
+    const viewportSurface = container.querySelector(
+      ".canvas-viewport-surface",
+    ) as HTMLDivElement | null;
+
+    expect(viewportSurface).not.toBeNull();
+
+    if (!viewportSurface) {
+      throw new Error("Canvas viewport surface did not render.");
+    }
+
+    act(() => {
+      dispatchPointerEvent(viewportSurface, "pointerdown", {
+        pointerId: 12,
+        pointerType: "touch",
+        clientX: 4,
+        clientY: 4,
+        buttons: 1,
+      });
+    });
+
+    const indicator = container.querySelector(
+      ".canvas-touch-hold-indicator",
+    ) as HTMLDivElement | null;
+
+    expect(indicator).not.toBeNull();
+    expect(indicator?.style.left).toBe("-8px");
+    expect(indicator?.style.top).toBe("-8px");
+  });
 });

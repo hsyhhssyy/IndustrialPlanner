@@ -497,6 +497,10 @@ export class GestureAdapter {
       session.state = "touch-moving";
       const delta = getDelta(session.lastPosition, position);
       session.lastPosition = position;
+      if (this.activeTouches.size !== 1) {
+        return;
+      }
+
       this.dispatchGesture({
         type: "touch move",
         gestureId: session.gestureId,
@@ -512,6 +516,10 @@ export class GestureAdapter {
     if (session.state === "touch-moving") {
       const delta = getDelta(session.lastPosition, position);
       session.lastPosition = position;
+      if (this.activeTouches.size !== 1) {
+        return;
+      }
+
       this.dispatchGesture({
         type: "touch move",
         gestureId: session.gestureId,

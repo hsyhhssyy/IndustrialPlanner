@@ -869,12 +869,13 @@ body.is-resizing-left-dock * {
 .canvas-panel {
   grid-area: canvas;
   outline: none;
+  overflow: visible;
 }
 
 .canvas-stage {
   min-height: 0;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
   padding: 8px;
   background: var(--canvas-bg);
 }
@@ -898,6 +899,7 @@ body.is-resizing-left-dock * {
 .canvas-viewport-surface {
   position: relative;
   cursor: default;
+  overflow: visible;
 }
 
 .canvas-marquee-box {
@@ -914,7 +916,7 @@ body.is-resizing-left-dock * {
   width: 40px;
   height: 40px;
   pointer-events: none;
-  transform: translate(-50%, -50%);
+  transform: translate(-100%, -100%);
 }
 
 .canvas-touch-hold-indicator-ring {
