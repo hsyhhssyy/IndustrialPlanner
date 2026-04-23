@@ -1,15 +1,38 @@
 import { makeAutoObservable } from "mobx";
 
 import type { AppLocale } from "@/shared/i18n/messages";
+import {
+  resolveScreenProfileFromWindow,
+  type ScreenProfile,
+} from "@/shared/browser/screen-profile";
 import type { AppSettings, UiState, WorkbenchState } from "@/domain/state/types";
 
 export const MIN_LEFT_DOCK_WIDTH = 375;
 export const MAX_LEFT_DOCK_WIDTH = 600;
 export const DEFAULT_LEFT_DOCK_WIDTH = 375;
 export const DEFAULT_RIGHT_DOCK_WIDTH = 340;
+export const MOBILE_LEFT_DOCK_WIDTH = 280;
 
 export function clampLeftDockWidth(width: number): number {
   return Math.min(MAX_LEFT_DOCK_WIDTH, Math.max(MIN_LEFT_DOCK_WIDTH, Math.round(width)));
+}
+
+export function resolveLeftDockWidthForScreenProfile(
+  width: number,
+  screenProfile: Pick<ScreenProfile, "deviceClass">,
+): number {
+  if (screenProfile.deviceClass === "mobile") {
+    return MOBILE_LEFT_DOCK_WIDTH;
+  }
+
+  return clampLeftDockWidth(width);
+}
+
+export function resolveLeftDockWidthFromWindow(
+  width: number,
+  currentWindow: Window | undefined = typeof window === "undefined" ? undefined : window,
+): number {
+  return resolveLeftDockWidthForScreenProfile(width, resolveScreenProfileFromWindow(currentWindow));
 }
 
 export interface AppSettingsReadWrite extends AppSettings {

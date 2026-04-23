@@ -3,6 +3,7 @@ import { runInAction } from "mobx";
 
 import { createAppHost } from "@/app/app-host";
 import { WORKBENCH_STATE_LOCAL_STORAGE_KEY } from "@/app/storage-hook";
+import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createEditorHost } from "@/editor/editor-host";
@@ -206,5 +207,75 @@ describe("createAppHost", () => {
     expect(editorHost.state.viewport.clientRect.top).toBe(64);
     expect(editorHost.state.viewport.clientRect.width).toBe(1335);
     expect(editorHost.state.viewport.clientRect.height).toBe(720);
+  });
+
+  it("uses the fixed mobile left dock width when predicting viewport rect", () => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 390,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      writable: true,
+      value: 844,
+    });
+    Object.defineProperty(window, "devicePixelRatio", {
+      configurable: true,
+      writable: true,
+      value: 1,
+    });
+    Object.defineProperty(window.navigator, "userAgent", {
+      configurable: true,
+      value: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+    });
+    Object.defineProperty(window.navigator, "maxTouchPoints", {
+      configurable: true,
+      value: 5,
+    });
+    Object.defineProperty(window.navigator, "userAgentData", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: (query: string) => ({
+        matches: query === "(pointer: coarse)" || query === "(hover: none)",
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+      }),
+    });
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+
+    editorHost.actions.setViewportClientRect({
+      left: 320,
+      top: 64,
+      width: 900,
+      height: 720,
+    });
+
+    runInAction(() => {
+      appHost.internalState.workbench.leftDockWidth = 512;
+    });
+
+    appHost.internalActions.toggleLeftDock();
+
+    expect(appHost.state.workbench.leftDockOpen).toBe(false);
+    expect(editorHost.state.viewport.clientRect.left).toBe(320 - MOBILE_LEFT_DOCK_WIDTH);
+    expect(editorHost.state.viewport.clientRect.width).toBe(900 + MOBILE_LEFT_DOCK_WIDTH);
+
+    appHost.internalActions.setActivePanel("history");
+
+    expect(appHost.state.workbench.leftDockOpen).toBe(true);
+    expect(editorHost.state.viewport.clientRect.left).toBe(320);
+    expect(editorHost.state.viewport.clientRect.width).toBe(900);
   });
 });

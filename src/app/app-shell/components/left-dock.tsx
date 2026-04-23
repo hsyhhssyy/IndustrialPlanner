@@ -1,10 +1,11 @@
-import { useEffect, useRef, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { observer } from "mobx-react-lite";
 import { BlueprintPanel } from "@/app/app-shell/components/left-dock-panels/blueprint-panel";
 import { DeletePanel } from "@/app/app-shell/components/left-dock-panels/delete-panel";
 import { HistoryPanel } from "@/app/app-shell/components/left-dock-panels/history-panel";
 import { PlacementPanel } from "@/app/app-shell/components/left-dock-panels/placement-panel";
 import type { AppHost } from "@/app/app-host";
+import { resolveScreenProfileFromWindow } from "@/shared/browser/screen-profile";
 import {
   clampLeftDockWidth,
   type ActivePanel,
@@ -35,14 +36,32 @@ const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppH
   const activePanel = appHost.internalState.runtime.activePanel ?? DEFAULT_ACTIVE_PANEL;
   const currentPanelLabel = t(PANEL_TITLE_KEYS[activePanel]);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
+  const [screenProfile, setScreenProfile] = useState(resolveScreenProfileFromWindow);
+  const isMobileLayout = screenProfile.deviceClass === "mobile";
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const handleResize = () => {
+      setScreenProfile(resolveScreenProfileFromWindow());
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize();
+
     return () => {
+      window.removeEventListener("resize", handleResize);
       resizeCleanupRef.current?.();
     };
   }, []);
 
   const handleResizeStart = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (isMobileLayout) {
+      return;
+    }
+
     event.preventDefault();
 
     const startX = event.clientX;
@@ -98,7 +117,7 @@ const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppH
           </div>
         </section>
       </aside>
-      <div className="dock-resize-handle" onMouseDown={handleResizeStart} />
+      {isMobileLayout ? null : <div className="dock-resize-handle" onMouseDown={handleResizeStart} />}
     </div>
   );
 });

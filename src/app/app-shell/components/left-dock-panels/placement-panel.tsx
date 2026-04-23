@@ -2,7 +2,8 @@ import {
   handleUiEvent,
 } from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { AppHost } from "@/app/app-host";
-import { Fragment } from "react";
+import { resolveScreenProfileFromWindow } from "@/shared/browser/screen-profile";
+import { Fragment, useEffect, useState } from "react";
 
 const PLACEMENT_ICON_PATHS = [
   "/device-icons/item_log_belt_01.webp",
@@ -104,6 +105,26 @@ function resolvePlacementIconPath(index: number): string {
 
 export function PlacementPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
+  const [screenProfile, setScreenProfile] = useState(resolveScreenProfileFromWindow);
+  const isMobileLayout = screenProfile.deviceClass === "mobile";
+  const showShortcutHints = screenProfile.deviceClass !== "mobile";
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const handleResize = () => {
+      setScreenProfile(resolveScreenProfileFromWindow());
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize();
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   return (
     <div className="placement-panel">
@@ -127,11 +148,11 @@ export function PlacementPanel({ appHost }: { appHost: AppHost }) {
             >
               <div className="placement-panel-group-header">
                 <h3 id={sectionTitleId}>{t(section.titleKey)}</h3>
-                {section.shortcutKey ? (
+                {showShortcutHints && section.shortcutKey ? (
                   <span className="placement-panel-group-shortcut">{section.shortcutKey}</span>
                 ) : null}
               </div>
-              <div className="placement-button-list">
+              <div className={isMobileLayout ? "placement-button-list is-single-column" : "placement-button-list"}>
                 {section.buttonKeys.map((buttonKey, buttonIndex) => {
                   const iconPath = resolvePlacementIconPath(sectionButtonStartIndex + buttonIndex);
                   const hotkey = isOperationSection
@@ -151,7 +172,7 @@ export function PlacementPanel({ appHost }: { appHost: AppHost }) {
                         <img alt="" className="button-icon-image" src={iconPath} />
                       </span>
                       <span className="placement-button-label">{t(buttonKey)}</span>
-                      {hotkey ? <span className="placement-button-hotkey">{hotkey}</span> : null}
+                      {showShortcutHints && hotkey ? <span className="placement-button-hotkey">{hotkey}</span> : null}
                     </button>
                   );
                 })}

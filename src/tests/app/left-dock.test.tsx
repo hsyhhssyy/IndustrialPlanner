@@ -30,12 +30,80 @@ function queryVisibleLeftDockPanel(container: HTMLDivElement): HTMLDivElement | 
 describe("Left dock panel switching", () => {
   let container: HTMLDivElement;
   let root: Root;
+  let coarsePointer: boolean;
+  let hoverNone: boolean;
+
+  const setViewport = (options: {
+    width: number;
+    height: number;
+    userAgent: string;
+    maxTouchPoints: number;
+  }) => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: options.width,
+    });
+
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      writable: true,
+      value: options.height,
+    });
+
+    Object.defineProperty(window.navigator, "userAgent", {
+      configurable: true,
+      value: options.userAgent,
+    });
+
+    Object.defineProperty(window.navigator, "maxTouchPoints", {
+      configurable: true,
+      value: options.maxTouchPoints,
+    });
+  };
 
   beforeEach(() => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
+    coarsePointer = false;
+    hoverNone = false;
+
+    Object.defineProperty(window, "devicePixelRatio", {
+      configurable: true,
+      writable: true,
+      value: 1,
+    });
+
+    setViewport({
+      width: 1280,
+      height: 800,
+      userAgent:
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+      maxTouchPoints: 0,
+    });
+
+    Object.defineProperty(window.navigator, "userAgentData", {
+      configurable: true,
+      value: undefined,
+    });
+
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn((query: string) => ({
+        matches:
+          (query === "(pointer: coarse)" && coarsePointer) ||
+          (query === "(hover: none)" && hoverNone),
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
   });
 
   afterEach(() => {
@@ -240,5 +308,36 @@ describe("Left dock panel switching", () => {
 
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
     expect(queryVisibleLeftDockPanel(container)?.getAttribute("data-panel-id")).toBe("placement");
+  });
+
+  it("hides placement shortcut hints in mobile mode", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 390,
+      height: 844,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(
+        <>
+          <LeftToolbar appHost={appHost} />
+          <LeftDock appHost={appHost} />
+        </>,
+      );
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+
+    expect(visiblePanel?.getAttribute("data-panel-id")).toBe("placement");
+    expect(visiblePanel?.querySelector(".placement-button-list")?.classList.contains("is-single-column")).toBe(true);
+    expect(visiblePanel?.querySelectorAll(".placement-button-hotkey")).toHaveLength(0);
+    expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
   });
 });

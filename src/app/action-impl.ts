@@ -9,6 +9,7 @@ import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 import {
   clampLeftDockWidth,
   DEFAULT_RIGHT_DOCK_WIDTH,
+  resolveLeftDockWidthFromWindow,
   type ActivePanel,
   type UiStateReadWrite,
 } from "./state-impl";
@@ -89,7 +90,7 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     const currentRect = editor.state.viewport.clientRect;
     const predictedRect = resolvePredictedViewportRectForDockToggle({
       currentRect,
-      leftDockWidth: this.internalState.workbench.leftDockWidth,
+      leftDockWidth: resolveLeftDockWidthFromWindow(this.internalState.workbench.leftDockWidth),
       rightDockWidth: DEFAULT_RIGHT_DOCK_WIDTH,
       dock: options.dock,
       willOpen: options.willOpen,

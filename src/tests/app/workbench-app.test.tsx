@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAppHost } from "@/app/app-host";
 import { WORKBENCH_STATE_LOCAL_STORAGE_KEY } from "@/app/storage-hook";
 import { WorkbenchApp } from "@/app/app-shell/workbench-app";
+import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
@@ -224,5 +225,40 @@ describe("WorkbenchApp", () => {
     expect(workbench?.style.getPropertyValue("--top-bar-height")).toBe("48px");
     expect(container.querySelector(".workbench-floating-top-bar-toggle")).toBeNull();
     expect(container.querySelector(".top-bar")).not.toBeNull();
+  });
+
+  it("forces the left dock to a fixed mobile width and disables resize handles in phone mode", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 390,
+      height: 844,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        leftDockOpen: true,
+        rightDockOpen: true,
+        leftDockWidth: 512,
+        topBarCollapsed: false,
+      }),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
+
+    expect(appHost.state.workbench.leftDockWidth).toBe(512);
+    expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe(`${MOBILE_LEFT_DOCK_WIDTH}px`);
+    expect(container.querySelector(".dock-resize-handle")).toBeNull();
   });
 });

@@ -10,6 +10,7 @@ import { TopBar } from "@/app/app-shell/components/top-bar";
 import { preventNativeBrowserEvent } from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { AppHost } from "@/app/app-host";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state-impl";
+import { resolveLeftDockWidthForScreenProfile } from "@/app/state-impl";
 import {
   isMobileLandscapeScreenProfile,
   resolveScreenProfileFromWindow,
@@ -23,6 +24,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const topBarCollapsed = appHost.state.workbench.topBarCollapsed;
   const [screenProfile, setScreenProfile] = useState(resolveScreenProfileFromWindow);
   const isMobileLandscape = isMobileLandscapeScreenProfile(screenProfile);
+  const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
   const showFloatingTopBarToggle = isMobileLandscape && topBarCollapsed;
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   }, []);
 
   const workbenchStyle = {
-    "--left-dock-width": leftDockOpen ? `${leftDockWidth}px` : "0px",
+    "--left-dock-width": leftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",
     "--right-dock-width": rightDockOpen ? `${DEFAULT_RIGHT_DOCK_WIDTH}px` : "0px",
     "--top-bar-height": showFloatingTopBarToggle ? "0px" : "48px",
     "--bottom-bar-height": isMobileLandscape ? "0px" : "28px",
