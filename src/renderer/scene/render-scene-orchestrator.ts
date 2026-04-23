@@ -27,9 +27,10 @@ import {
   type RenderSpriteLayout,
 } from "../sprites/render-sprite"
 
-const VIEWPORT_FRAME_MARGIN = 10
-const VIEWPORT_FRAME_STROKE_WIDTH = 5
-const VIEWPORT_FRAME_COLOR = 0xffffff
+const WORLD_GRID_LINE_COLOR = 0xffffff
+const WORLD_GRID_LINE_ALPHA = 0.12
+const WORLD_GRID_LINE_WIDTH = 1
+
 interface RenderViewportState {
   width: number;
   height: number;
@@ -47,56 +48,44 @@ export function createRenderSceneOrchestrator(
 ): RenderSceneOrchestrator {
   const app = renderHost.app
   const layers = createRenderLayers()
-  const viewportFrame = new Graphics()
+  const worldGrid = new Graphics()
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
   const entitySprites = new Map<string, RenderSprite>()
-  let hasDrawnInitialFrame = false
-  let lastViewportState = readViewportState(renderHost)
-  let lastDocumentSnapshot = readWorldDocumentSnapshot(renderHost)
 
   const flushViewport = (): void => {
-    const nextViewportState = readViewportState(renderHost)
-    const nextDocumentSnapshot = readWorldDocumentSnapshot(renderHost)
+    const viewportState = readViewportState(renderHost)
+    const documentSnapshot = readWorldDocumentSnapshot(renderHost)
 
-    if (
-      hasDrawnInitialFrame
-      && nextViewportState.width === lastViewportState.width
-      && nextViewportState.height === lastViewportState.height
-      && nextViewportState.centerX === lastViewportState.centerX
-      && nextViewportState.centerY === lastViewportState.centerY
-      && nextViewportState.gridSize === lastViewportState.gridSize
-      && nextDocumentSnapshot === lastDocumentSnapshot
-    ) {
-      return
-    }
+    applyViewportSize(app, viewportState)
 
-    hasDrawnInitialFrame = true
-    lastViewportState = nextViewportState
-    lastDocumentSnapshot = nextDocumentSnapshot
-    applyViewportSize(app, nextViewportState)
-
-    const bounds = resolveViewportFrameBounds(app)
-
-    viewportFrame
-      .clear()
-      .rect(bounds.left, bounds.top, bounds.width, bounds.height)
-      .stroke({
-        width: VIEWPORT_FRAME_STROKE_WIDTH,
-        color: VIEWPORT_FRAME_COLOR,
-      })
+    syncWorldGridBackground({
+      background: worldGrid,
+      viewportState,
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: app.renderer.width,
+        height: app.renderer.height,
+      },
+    })
 
     syncWorldEntitySprites({
-      document: nextDocumentSnapshot,
+      document: documentSnapshot,
       entityDefinitionMap,
       entitySprites,
       layers,
-      viewportState: nextViewportState,
-      viewportBounds: bounds,
+      viewportState,
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: app.renderer.width,
+        height: app.renderer.height,
+      },
     })
   }
 
   app.stage.addChild(layers.background, layers.entity, layers.overlay)
-  layers.overlay.addChild(viewportFrame)
+  layers.background.addChild(worldGrid)
   app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
 
   const host: RenderSceneOrchestrator = {
@@ -108,7 +97,6 @@ export function createRenderSceneOrchestrator(
       }
 
       entitySprites.clear()
-      viewportFrame.destroy()
       layers.background.destroy({ children: true })
       layers.entity.destroy({ children: true })
       layers.overlay.destroy({ children: true })
@@ -206,23 +194,6 @@ function resolveViewportCoordinate(value: number): number {
   return value
 }
 
-function resolveViewportFrameBounds(app: RenderHost["app"]): {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-} {
-  const halfStrokeWidth = VIEWPORT_FRAME_STROKE_WIDTH / 2
-  const frameInset = VIEWPORT_FRAME_MARGIN + halfStrokeWidth
-
-  return {
-    left: frameInset,
-    top: frameInset,
-    width: Math.max(0, app.renderer.width - frameInset * 2),
-    height: Math.max(0, app.renderer.height - frameInset * 2),
-  }
-}
-
 function createEntityDefinitionMap(
   renderHost: RenderHost,
 ): Map<string, EntityDefinition> {
@@ -232,6 +203,109 @@ function createEntityDefinitionMap(
       definition,
     ]),
   )
+}
+
+function syncWorldGridBackground(options: {
+  background: Graphics;
+  viewportState: RenderViewportState;
+  viewportBounds: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+}): void {
+  const lineAxes = resolveWorldGridLineAxes({
+    viewportBounds: options.viewportBounds,
+    viewportCenter: {
+      x: options.viewportState.centerX,
+      y: options.viewportState.centerY,
+    },
+    gridSize: options.viewportState.gridSize,
+  })
+
+  options.background.clear()
+
+  for (const x of lineAxes.vertical) {
+    options.background
+      .moveTo(x, options.viewportBounds.top)
+      .lineTo(x, options.viewportBounds.top + options.viewportBounds.height)
+  }
+
+  for (const y of lineAxes.horizontal) {
+    options.background
+      .moveTo(options.viewportBounds.left, y)
+      .lineTo(options.viewportBounds.left + options.viewportBounds.width, y)
+  }
+
+  options.background.stroke({
+    width: WORLD_GRID_LINE_WIDTH,
+    color: WORLD_GRID_LINE_COLOR,
+    alpha: WORLD_GRID_LINE_ALPHA,
+  })
+}
+
+export function resolveWorldGridLineAxes(options: {
+  viewportBounds: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  viewportCenter: {
+    x: number;
+    y: number;
+  };
+  gridSize: number;
+}): {
+  vertical: number[];
+  horizontal: number[];
+} {
+  const gridCellSize = resolveWorldGridCellPixelSize(options.gridSize)
+
+  return {
+    vertical: resolveWorldGridAxisPositions({
+      viewportStart: options.viewportBounds.left,
+      viewportSpan: options.viewportBounds.width,
+      worldCenter: options.viewportCenter.x,
+      gridCellSize,
+    }),
+    horizontal: resolveWorldGridAxisPositions({
+      viewportStart: options.viewportBounds.top,
+      viewportSpan: options.viewportBounds.height,
+      worldCenter: options.viewportCenter.y,
+      gridCellSize,
+    }),
+  }
+}
+
+function resolveWorldGridAxisPositions(options: {
+  viewportStart: number;
+  viewportSpan: number;
+  worldCenter: number;
+  gridCellSize: number;
+}): number[] {
+  if (options.viewportSpan <= 0 || options.gridCellSize <= 0) {
+    return []
+  }
+
+  const axisCenter = options.viewportStart + options.viewportSpan / 2
+  const worldOrigin = axisCenter - options.worldCenter * options.gridCellSize
+  const firstLineIndex = Math.ceil(
+    (options.viewportStart - worldOrigin) / options.gridCellSize,
+  )
+  const linePositions: number[] = []
+  const viewportEnd = options.viewportStart + options.viewportSpan
+
+  for (
+    let lineIndex = firstLineIndex;
+    worldOrigin + lineIndex * options.gridCellSize <= viewportEnd;
+    lineIndex += 1
+  ) {
+    linePositions.push(worldOrigin + lineIndex * options.gridCellSize)
+  }
+
+  return linePositions
 }
 
 function syncWorldEntitySprites(options: {

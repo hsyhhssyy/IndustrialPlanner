@@ -24,9 +24,6 @@ afterEach(() => {
   localStorage.clear();
 });
 
-const VIEWPORT_FRAME_MARGIN = 10;
-const VIEWPORT_FRAME_STROKE_WIDTH = 5;
-
 describe("createEditorHost", () => {
   it("updates viewport rect through editor actions", () => {
     const workspace = createWorkspace();
@@ -107,7 +104,12 @@ describe("createEditorHost", () => {
     const initialLayout = resolveWorldEntitySpriteLayout({
       entity,
       footprint: definition.footprint,
-      viewportBounds: resolveViewportFrameBoundsFromClientRect(initialRect),
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: initialRect.width,
+        height: initialRect.height,
+      },
       viewportCenter: editorHost.state.viewport.center,
       gridSize: editorHost.state.viewport.gridSize,
     });
@@ -130,7 +132,12 @@ describe("createEditorHost", () => {
     const nextLayout = resolveWorldEntitySpriteLayout({
       entity,
       footprint: definition.footprint,
-      viewportBounds: resolveViewportFrameBoundsFromClientRect(nextRect),
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: nextRect.width,
+        height: nextRect.height,
+      },
       viewportCenter: editorHost.state.viewport.center,
       gridSize: editorHost.state.viewport.gridSize,
     });
@@ -207,24 +214,4 @@ async function flushMicrotasks(iterations = 4): Promise<void> {
   for (let index = 0; index < iterations; index += 1) {
     await Promise.resolve();
   }
-}
-
-function resolveViewportFrameBoundsFromClientRect(rect: {
-  width: number;
-  height: number;
-}): {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-} {
-  const halfStrokeWidth = VIEWPORT_FRAME_STROKE_WIDTH / 2;
-  const frameInset = VIEWPORT_FRAME_MARGIN + halfStrokeWidth;
-
-  return {
-    left: frameInset,
-    top: frameInset,
-    width: Math.max(0, rect.width - frameInset * 2),
-    height: Math.max(0, rect.height - frameInset * 2),
-  };
 }

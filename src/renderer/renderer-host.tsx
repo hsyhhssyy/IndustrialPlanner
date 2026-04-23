@@ -38,7 +38,7 @@ export async function createRenderHost(
   await app.init({
     width: resolveViewportAxisSize(clientRect.width, DEFAULT_VIEWPORT_WIDTH),
     height: resolveViewportAxisSize(clientRect.height, DEFAULT_VIEWPORT_HEIGHT),
-    backgroundColor: 0x1099bb,
+    backgroundAlpha: 0,
     antialias: true,
     resolution: 1,
     preference: "webgl",

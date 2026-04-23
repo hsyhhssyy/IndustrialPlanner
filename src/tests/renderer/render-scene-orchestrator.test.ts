@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest"
 
 import { createDummyWorldDocument } from "@/editor/dummy-document"
 import { createRegistryContract } from "@/registry"
-import { resolveWorldEntitySpriteLayout } from "@/renderer/scene/render-scene-orchestrator"
+import {
+  resolveWorldEntitySpriteLayout,
+  resolveWorldGridLineAxes,
+} from "@/renderer/scene/render-scene-orchestrator"
 
 describe("resolveWorldEntitySpriteLayout", () => {
   it("projects the dummy belt entity into viewport space using registry footprint", () => {
@@ -48,5 +51,42 @@ describe("resolveWorldEntitySpriteLayout", () => {
       width: 16,
       height: 16,
     })
+  })
+})
+
+describe("resolveWorldGridLineAxes", () => {
+  it("shifts visible grid lines with world viewport center", () => {
+    const centeredAxes = resolveWorldGridLineAxes({
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 400,
+      },
+      viewportCenter: {
+        x: 0,
+        y: 0,
+      },
+      gridSize: 1,
+    })
+
+    const shiftedAxes = resolveWorldGridLineAxes({
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 400,
+      },
+      viewportCenter: {
+        x: 0.5,
+        y: 0.5,
+      },
+      gridSize: 1,
+    })
+
+    expect(centeredAxes.vertical.slice(0, 3)).toEqual([8, 24, 40])
+    expect(centeredAxes.horizontal.slice(0, 3)).toEqual([8, 24, 40])
+    expect(shiftedAxes.vertical.slice(0, 3)).toEqual([0, 16, 32])
+    expect(shiftedAxes.horizontal.slice(0, 3)).toEqual([0, 16, 32])
   })
 })
