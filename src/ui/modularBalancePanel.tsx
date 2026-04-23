@@ -1,6 +1,7 @@
-import { Fragment, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { match } from 'pinyin-pro'
 import { getDeviceIconPath, getItemIconPath } from '../assets/iconPaths'
+import { readLocalStorageJson } from '../core/persistentStorage'
 import { usePersistentState } from '../core/usePersistentState'
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
 import { getDispatchTicketInfo } from '../domain/shared/dispatchTickets'
@@ -8,7 +9,9 @@ import { isKnownItemId } from '../domain/shared/predicates'
 import { isSuperRecipeItem, isSuperRecipeRecipe, shouldShowSuperRecipeContent } from '../domain/shared/superRecipeVisibility'
 import type { DeviceTypeId, ItemId, RecipeDef } from '../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../i18n'
+import { useDialog } from './dialog'
 import { ItemPickerDialog } from './dialogs/ItemPickerDialog'
+import { showToast } from './toast'
 
 type ModularBalancePanelProps = {
   language: Language
@@ -23,6 +26,8 @@ type ModularBalanceActionIconKind =
   | 'edit'
   | 'duplicate'
   | 'delete'
+  | 'download'
+  | 'upload'
   | 'save'
   | 'moveUp'
   | 'moveDown'
@@ -62,6 +67,14 @@ type BalanceStage = {
   id: string
   name: string
   instances: StageModuleInstance[]
+}
+
+type BalanceCanvas = {
+  id: string
+  name: string
+  systemInputs: BalanceRateRow[]
+  stages: BalanceStage[]
+  selectedStageId: string
 }
 
 type TimeUnitKey = '2s' | '1m' | '1h' | '24h' | '48h' | '72h'
@@ -120,6 +133,8 @@ const MODULAR_BALANCE_SYSTEM_INPUTS_KEY = 'modular-balance-system-inputs'
 const MODULAR_BALANCE_MODULES_KEY = 'modular-balance-modules'
 const MODULAR_BALANCE_STAGES_KEY = 'modular-balance-stages'
 const MODULAR_BALANCE_SELECTED_STAGE_ID_KEY = 'modular-balance-selected-stage-id'
+const MODULAR_BALANCE_CANVASES_KEY = 'modular-balance-canvases'
+const MODULAR_BALANCE_SELECTED_CANVAS_ID_KEY = 'modular-balance-selected-canvas-id'
 const MODULAR_BALANCE_WAREHOUSE_ENABLED_KEY = 'modular-balance-warehouse-enabled'
 const MODULAR_BALANCE_WAREHOUSE_MAX_KEY = 'modular-balance-warehouse-max'
 const MODULE_COLOR_OPTIONS: ModuleColorOption[] = [
@@ -135,6 +150,8 @@ const MODULE_COLOR_OPTION_BY_KEY = new Map<ModuleColorKey, ModuleColorOption>(
 )
 const DEFAULT_MODULE_COLOR_KEY: ModuleColorKey = MODULE_COLOR_OPTIONS[0]?.key ?? 'teal'
 const DEFAULT_SYSTEM_RECIPE_COLOR_KEY: ModuleColorKey = 'blue'
+const MODULAR_BALANCE_MODULE_SHARE_KIND = 'industrial-planner.modular-balance.modules'
+const MODULAR_BALANCE_CANVAS_SHARE_KIND = 'industrial-planner.modular-balance.canvas'
 
 const TIME_UNITS: Array<{ key: TimeUnitKey; factor: number }> = [
   { key: '2s', factor: 2 / 60 },
@@ -301,6 +318,28 @@ function normalizeBalanceStages(value: unknown): BalanceStage[] {
   })
 }
 
+function normalizeCanvasSelectedStageId(selectedStageId: string, stages: BalanceStage[]) {
+  return selectedStageId && stages.some((stage) => stage.id === selectedStageId)
+    ? selectedStageId
+    : stages[0]?.id ?? ''
+}
+
+function normalizeBalanceCanvases(value: unknown): BalanceCanvas[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return []
+    const candidate = entry as Partial<BalanceCanvas>
+    const stages = normalizeBalanceStages(candidate.stages)
+    return [{
+      id: typeof candidate.id === 'string' && candidate.id ? candidate.id : createId('canvas'),
+      name: typeof candidate.name === 'string' ? candidate.name : '',
+      systemInputs: normalizeBalanceRateRows(candidate.systemInputs),
+      stages,
+      selectedStageId: normalizeCanvasSelectedStageId(normalizeSelectedStageId(candidate.selectedStageId), stages),
+    }]
+  })
+}
+
 function normalizeCanvasTimeUnit(value: unknown): TimeUnitKey {
   return TIME_UNITS.some((unit) => unit.key === value) ? value as TimeUnitKey : BASE_TIME_UNIT
 }
@@ -369,6 +408,53 @@ function formatSystemRecipeCardTitle(language: Language, recipe: RecipeDef) {
 
 function formatCycleText(language: Language, seconds: number) {
   return language === 'zh-CN' ? `${seconds}秒` : `${seconds}s`
+}
+
+function sanitizeExportName(name: string, fallback: string) {
+  return name.replace(/[\\/:*?"<>|]+/g, '_').trim() || fallback
+}
+
+function downloadJsonFile(downloadName: string, payload: unknown) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = downloadName
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+}
+
+function normalizeImportedModulesPayload(value: unknown): BalanceModule[] | null {
+  const rawModules = Array.isArray(value)
+    ? value
+    : value && typeof value === 'object' && Array.isArray((value as { modules?: unknown }).modules)
+      ? (value as { modules: unknown[] }).modules
+      : null
+
+  if (!rawModules) return null
+
+  const normalized = normalizeBalanceModules(rawModules).filter(
+    (module) => module.inputs.length > 0 || module.outputs.length > 0,
+  )
+  return normalized.length > 0 ? normalized : null
+}
+
+function normalizeImportedCanvasPayload(value: unknown): { canvas: BalanceCanvas; modules: BalanceModule[] } | null {
+  if (!value || typeof value !== 'object') return null
+  const candidate = value as { canvas?: unknown; modules?: unknown }
+  const rawCanvas = candidate.canvas
+  if (!rawCanvas || typeof rawCanvas !== 'object' || !Array.isArray((rawCanvas as Partial<BalanceCanvas>).stages)) {
+    return null
+  }
+  const normalizedCanvas = normalizeBalanceCanvases([rawCanvas])[0]
+  if (!normalizedCanvas) return null
+  const importedModules = candidate.modules === undefined ? [] : normalizeImportedModulesPayload(candidate.modules) ?? []
+  return {
+    canvas: normalizedCanvas,
+    modules: importedModules,
+  }
 }
 
 function getModuleColorOption(colorKey: ModuleColorKey | undefined) {
@@ -466,6 +552,24 @@ function ModularBalanceActionIcon({ kind }: { kind: ModularBalanceActionIconKind
         <path d="M7 7L8 19H16L17 7" />
         <path d="M10 11V16" />
         <path d="M14 11V16" />
+      </svg>
+    )
+  }
+  if (kind === 'download') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M12 4V14" />
+        <path d="M8 10L12 14L16 10" />
+        <path d="M5 18H19" />
+      </svg>
+    )
+  }
+  if (kind === 'upload') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M12 20V10" />
+        <path d="M8 14L12 10L16 14" />
+        <path d="M5 6H19" />
       </svg>
     )
   }
@@ -588,6 +692,9 @@ function ModularBalanceRecipeMetaRow({
 }
 
 export function ModularBalancePanel({ language, superRecipeEnabled, t }: ModularBalancePanelProps) {
+  const { confirm, prompt } = useDialog()
+  const moduleImportInputRef = useRef<HTMLInputElement | null>(null)
+  const canvasImportInputRef = useRef<HTMLInputElement | null>(null)
   const availableItems = useMemo(
     () =>
       ITEMS.filter((item) => shouldShowSuperRecipeContent(superRecipeEnabled, isSuperRecipeItem(item))).sort((left, right) =>
@@ -607,24 +714,36 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
     'modules',
     normalizeSidebarTab,
   )
-  const [systemInputs, setSystemInputs] = usePersistentState<BalanceRateRow[]>(
-    MODULAR_BALANCE_SYSTEM_INPUTS_KEY,
-    SAMPLE_SYSTEM_INPUTS,
-    normalizeBalanceRateRows,
-  )
+  const initialCanvasFallback = useMemo<BalanceCanvas[]>(() => {
+    const fallbackStages = normalizeBalanceStages(readLocalStorageJson<BalanceStage[]>(MODULAR_BALANCE_STAGES_KEY) ?? SAMPLE_STAGES)
+    const fallbackSelectedStageId = normalizeCanvasSelectedStageId(
+      normalizeSelectedStageId(readLocalStorageJson<string>(MODULAR_BALANCE_SELECTED_STAGE_ID_KEY) ?? ''),
+      fallbackStages,
+    )
+
+    return [{
+      id: createId('canvas'),
+      name: t('modBalance.canvasDefaultName', { index: 1 }),
+      systemInputs: normalizeBalanceRateRows(
+        readLocalStorageJson<BalanceRateRow[]>(MODULAR_BALANCE_SYSTEM_INPUTS_KEY) ?? SAMPLE_SYSTEM_INPUTS,
+      ),
+      stages: fallbackStages,
+      selectedStageId: fallbackSelectedStageId,
+    }]
+  }, [t])
   const [modules, setModules] = usePersistentState<BalanceModule[]>(
     MODULAR_BALANCE_MODULES_KEY,
     SAMPLE_MODULES,
     normalizeBalanceModules,
   )
-  const [stages, setStages] = usePersistentState<BalanceStage[]>(
-    MODULAR_BALANCE_STAGES_KEY,
-    SAMPLE_STAGES,
-    normalizeBalanceStages,
+  const [canvases, setCanvases] = usePersistentState<BalanceCanvas[]>(
+    MODULAR_BALANCE_CANVASES_KEY,
+    initialCanvasFallback,
+    normalizeBalanceCanvases,
   )
-  const [selectedStageId, setSelectedStageId] = usePersistentState<string>(
-    MODULAR_BALANCE_SELECTED_STAGE_ID_KEY,
-    SAMPLE_STAGES[0]?.id ?? '',
+  const [selectedCanvasId, setSelectedCanvasId] = usePersistentState<string>(
+    MODULAR_BALANCE_SELECTED_CANVAS_ID_KEY,
+    initialCanvasFallback[0]?.id ?? '',
     normalizeSelectedStageId,
   )
   const [computeOverflowTime, setComputeOverflowTime] = usePersistentState<boolean>(
@@ -640,6 +759,9 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
   const [moduleFilterText, setModuleFilterText] = useState('')
   const [systemRecipeFilterText, setSystemRecipeFilterText] = useState('')
   const [draft, setDraft] = useState<ModuleDraft | null>(null)
+  const [isCreateCanvasDialogOpen, setIsCreateCanvasDialogOpen] = useState(false)
+  const [createCanvasDraftName, setCreateCanvasDraftName] = useState('')
+  const [createCanvasDefaultName, setCreateCanvasDefaultName] = useState('')
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null)
   const [draggingModuleId, setDraggingModuleId] = useState<string | null>(null)
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null)
@@ -649,6 +771,114 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
     [],
     normalizeRecentItemIds,
   )
+  const activeCanvas = useMemo(
+    () => canvases.find((canvas) => canvas.id === selectedCanvasId) ?? canvases[0] ?? null,
+    [canvases, selectedCanvasId],
+  )
+  const activeCanvasIndex = useMemo(() => {
+    if (!activeCanvas) return 0
+    const index = canvases.findIndex((canvas) => canvas.id === activeCanvas.id)
+    return index >= 0 ? index : 0
+  }, [activeCanvas, canvases])
+  const systemInputs = activeCanvas?.systemInputs ?? []
+  const stages = activeCanvas?.stages ?? []
+  const selectedStageId = activeCanvas?.selectedStageId ?? ''
+
+  const getCanvasDisplayName = (canvas: BalanceCanvas, index: number) => {
+    const normalizedName = canvas.name.trim()
+    return normalizedName || t('modBalance.canvasDefaultName', { index: index + 1 })
+  }
+
+  const createBlankCanvas = (name: string): BalanceCanvas => {
+    const initialStage: BalanceStage = {
+      id: createId('stage'),
+      name: `${t('modBalance.stageLabel')} 1`,
+      instances: [],
+    }
+
+    return {
+      id: createId('canvas'),
+      name,
+      systemInputs: [],
+      stages: [initialStage],
+      selectedStageId: initialStage.id,
+    }
+  }
+
+  const cloneCanvas = (source: BalanceCanvas, name: string): BalanceCanvas => {
+    const stageIdMap = new Map<string, string>()
+    const nextStages = source.stages.map((stage) => {
+      const nextStageId = createId('stage')
+      stageIdMap.set(stage.id, nextStageId)
+      return {
+        id: nextStageId,
+        name: stage.name,
+        instances: stage.instances.map((instance) => ({ ...instance, id: createId('instance') })),
+      }
+    })
+
+    return {
+      id: createId('canvas'),
+      name,
+      systemInputs: cloneRateRows(source.systemInputs),
+      stages: nextStages,
+      selectedStageId: stageIdMap.get(source.selectedStageId) ?? nextStages[0]?.id ?? '',
+    }
+  }
+
+  const updateActiveCanvas = (updater: (canvas: BalanceCanvas) => BalanceCanvas) => {
+    setCanvases((current) => {
+      const resolvedCanvasId = current.some((canvas) => canvas.id === selectedCanvasId)
+        ? selectedCanvasId
+        : current[0]?.id
+      if (!resolvedCanvasId) return current
+      return current.map((canvas) => (canvas.id === resolvedCanvasId ? updater(canvas) : canvas))
+    })
+  }
+
+  const updateSystemInputs = (updater: (rows: BalanceRateRow[]) => BalanceRateRow[]) => {
+    updateActiveCanvas((canvas) => ({
+      ...canvas,
+      systemInputs: updater(canvas.systemInputs),
+    }))
+  }
+
+  const updateStages = (updater: (entries: BalanceStage[]) => BalanceStage[]) => {
+    updateActiveCanvas((canvas) => ({
+      ...canvas,
+      stages: updater(canvas.stages),
+    }))
+  }
+
+  const updateSelectedStageId = (stageId: string) => {
+    updateActiveCanvas((canvas) => ({
+      ...canvas,
+      selectedStageId: stageId,
+    }))
+  }
+
+  const mergeModulesById = (current: BalanceModule[], incoming: BalanceModule[]) => {
+    const nextById = new Map(incoming.map((module) => [module.id, module]))
+    const merged = current.map((module) => nextById.get(module.id) ?? module)
+
+    for (const importedModule of incoming) {
+      if (!current.some((module) => module.id === importedModule.id)) {
+        merged.push(importedModule)
+      }
+    }
+
+    return merged
+  }
+
+  const sanitizeImportedModules = (importedModules: BalanceModule[]) => {
+    return importedModules.map((module) => ({
+      id: module.id,
+      name: module.name.trim() || t('modBalance.unnamedModule'),
+      colorKey: module.colorKey,
+      inputs: module.inputs.map((entry) => ({ ...entry })),
+      outputs: module.outputs.map((entry) => ({ ...entry })),
+    }))
+  }
 
   const modulesById = useMemo(() => new Map(modules.map((module) => [module.id, module])), [modules])
   const systemRecipeEntries = useMemo<BalanceLibraryEntry[]>(() => {
@@ -708,17 +938,39 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
   const canvasTimeUnitFactor = TIME_UNITS.find((unit) => unit.key === canvasTimeUnit)?.factor ?? BASE_TIME_UNIT_FACTOR
 
   useEffect(() => {
+    if (canvases.length > 0) return
+    setCanvases(initialCanvasFallback)
+  }, [canvases, initialCanvasFallback, setCanvases])
+
+  useEffect(() => {
+    const nextSelectedCanvasId = canvases[0]?.id ?? ''
+    if (selectedCanvasId && canvases.some((canvas) => canvas.id === selectedCanvasId)) {
+      return
+    }
+    if (selectedCanvasId !== nextSelectedCanvasId) {
+      setSelectedCanvasId(nextSelectedCanvasId)
+    }
+  }, [canvases, selectedCanvasId, setSelectedCanvasId])
+
+  useEffect(() => {
+    if (!activeCanvas) return
     const nextSelectedStageId = stages[0]?.id ?? ''
     if (selectedStageId && stages.some((stage) => stage.id === selectedStageId)) {
       return
     }
     if (selectedStageId !== nextSelectedStageId) {
-      setSelectedStageId(nextSelectedStageId)
+      setCanvases((current) =>
+        current.map((canvas) =>
+          canvas.id === activeCanvas.id
+            ? { ...canvas, selectedStageId: nextSelectedStageId }
+            : canvas,
+        ),
+      )
     }
-  }, [selectedStageId, setSelectedStageId, stages])
+  }, [activeCanvas, selectedStageId, setCanvases, stages])
 
   const updateStageInstanceCount = (stageId: string, instanceId: string, updater: (count: number) => number) => {
-    setStages((current) =>
+    updateStages((current) =>
       current.map((stage) =>
         stage.id === stageId
           ? {
@@ -732,6 +984,72 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
           : stage,
       ),
     )
+  }
+
+  const openCreateCanvasDialog = () => {
+    const defaultName = t('modBalance.canvasDefaultName', { index: canvases.length + 1 })
+    setCreateCanvasDefaultName(defaultName)
+    setCreateCanvasDraftName(defaultName)
+    setIsCreateCanvasDialogOpen(true)
+  }
+
+  const closeCreateCanvasDialog = () => {
+    setIsCreateCanvasDialogOpen(false)
+    setCreateCanvasDraftName('')
+    setCreateCanvasDefaultName('')
+  }
+
+  const submitCreateCanvasDialog = () => {
+    const nextCanvas = createBlankCanvas(createCanvasDraftName.trim() || createCanvasDefaultName)
+    setCanvases((current) => [...current, nextCanvas])
+    setSelectedCanvasId(nextCanvas.id)
+    closeCreateCanvasDialog()
+  }
+
+  const renameActiveCanvas = async () => {
+    if (!activeCanvas) return
+    const currentName = getCanvasDisplayName(activeCanvas, activeCanvasIndex)
+    const nextName = await prompt(t('modBalance.canvasRenamePrompt'), currentName, {
+      title: t('modBalance.renameCanvas'),
+      confirmText: t('dialog.ok'),
+      cancelText: t('dialog.cancel'),
+    })
+    if (nextName === null) return
+    setCanvases((current) =>
+      current.map((canvas, index) =>
+        canvas.id === activeCanvas.id
+          ? { ...canvas, name: nextName.trim() || getCanvasDisplayName(canvas, index) }
+          : canvas,
+      ),
+    )
+  }
+
+  const duplicateActiveCanvas = () => {
+    if (!activeCanvas) return
+    const nextCanvas = cloneCanvas(
+      activeCanvas,
+      `${getCanvasDisplayName(activeCanvas, activeCanvasIndex)} ${t('modBalance.copySuffix')}`,
+    )
+    setCanvases((current) => {
+      const index = current.findIndex((canvas) => canvas.id === activeCanvas.id)
+      if (index < 0) return [...current, nextCanvas]
+      return [...current.slice(0, index + 1), nextCanvas, ...current.slice(index + 1)]
+    })
+    setSelectedCanvasId(nextCanvas.id)
+  }
+
+  const removeActiveCanvas = async () => {
+    if (!activeCanvas || canvases.length <= 1) return
+    const shouldRemove = await confirm(t('modBalance.removeCanvasConfirm', {
+      name: getCanvasDisplayName(activeCanvas, activeCanvasIndex),
+    }), {
+      title: t('modBalance.removeCanvas'),
+      confirmText: t('dialog.ok'),
+      cancelText: t('dialog.cancel'),
+      variant: 'warning',
+    })
+    if (!shouldRemove) return
+    setCanvases((current) => current.filter((canvas) => canvas.id !== activeCanvas.id))
   }
 
   const handleInstanceCountChange = (stageId: string, instanceId: string, rawValue: string) => {
@@ -912,10 +1230,13 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
 
   const removeModule = (moduleId: string) => {
     setModules((current) => current.filter((module) => module.id !== moduleId))
-    setStages((current) =>
-      current.map((stage) => ({
-        ...stage,
-        instances: stage.instances.filter((instance) => instance.moduleId !== moduleId),
+    setCanvases((current) =>
+      current.map((canvas) => ({
+        ...canvas,
+        stages: canvas.stages.map((stage) => ({
+          ...stage,
+          instances: stage.instances.filter((instance) => instance.moduleId !== moduleId),
+        })),
       })),
     )
     if (draft?.moduleId === moduleId) {
@@ -938,9 +1259,128 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
     ])
   }
 
+  const exportModules = () => {
+    if (modules.length === 0) return
+    downloadJsonFile('modular-balance-modules.json', {
+      kind: MODULAR_BALANCE_MODULE_SHARE_KIND,
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      modules,
+    })
+    showToast(t('toast.modBalanceModulesExported', { count: modules.length }), { variant: 'success' })
+  }
+
+  const exportActiveCanvas = () => {
+    if (!activeCanvas) return
+    const canvasName = getCanvasDisplayName(activeCanvas, activeCanvasIndex)
+    const referencedModuleIds = new Set(
+      activeCanvas.stages.flatMap((stage) =>
+        stage.instances.map((instance) => instance.moduleId).filter((moduleId) => modulesById.has(moduleId)),
+      ),
+    )
+    const referencedModules = Array.from(referencedModuleIds).flatMap((moduleId) => {
+      const module = modulesById.get(moduleId)
+      return module ? [module] : []
+    })
+    downloadJsonFile(`${sanitizeExportName(canvasName, 'canvas')}.modular-balance-canvas.json`, {
+      kind: MODULAR_BALANCE_CANVAS_SHARE_KIND,
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      canvas: activeCanvas,
+      modules: referencedModules,
+    })
+    showToast(t('toast.modBalanceCanvasExported', { name: canvasName }), { variant: 'success' })
+  }
+
+  const importModulesFromText = async (rawText: string) => {
+    const text = rawText.trim()
+    if (!text) {
+      showToast(t('toast.modBalanceModuleImportEmpty'), { variant: 'warning' })
+      return false
+    }
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(text)
+    } catch {
+      showToast(t('toast.modBalanceModuleImportInvalidJson'), { variant: 'warning' })
+      return false
+    }
+
+    const importedModules = normalizeImportedModulesPayload(parsed)
+    if (!importedModules) {
+      showToast(t('toast.modBalanceModuleImportInvalidPayload'), { variant: 'warning' })
+      return false
+    }
+
+    const nextModules = sanitizeImportedModules(importedModules)
+
+    setModules((current) => mergeModulesById(current, nextModules))
+    showToast(t('toast.modBalanceModulesImported', { count: nextModules.length }), { variant: 'success' })
+    return true
+  }
+
+  const importModulesFromFile = async (file: File) => {
+    try {
+      const text = await file.text()
+      return await importModulesFromText(text)
+    } catch {
+      showToast(t('toast.modBalanceModuleImportFileFailed'), { variant: 'error' })
+      return false
+    }
+  }
+
+  const importCanvasFromText = async (rawText: string) => {
+    const text = rawText.trim()
+    if (!text) {
+      showToast(t('toast.modBalanceCanvasImportEmpty'), { variant: 'warning' })
+      return false
+    }
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(text)
+    } catch {
+      showToast(t('toast.modBalanceCanvasImportInvalidJson'), { variant: 'warning' })
+      return false
+    }
+
+    const importedPayload = normalizeImportedCanvasPayload(parsed)
+    if (!importedPayload) {
+      showToast(t('toast.modBalanceCanvasImportInvalidPayload'), { variant: 'warning' })
+      return false
+    }
+
+    const nextModules = sanitizeImportedModules(importedPayload.modules)
+    if (nextModules.length > 0) {
+      setModules((current) => mergeModulesById(current, nextModules))
+    }
+
+    setCanvases((current) => {
+      const existingIndex = current.findIndex((canvas) => canvas.id === importedPayload.canvas.id)
+      if (existingIndex < 0) return [...current, importedPayload.canvas]
+      return current.map((canvas) => (canvas.id === importedPayload.canvas.id ? importedPayload.canvas : canvas))
+    })
+    setSelectedCanvasId(importedPayload.canvas.id)
+    closeCreateCanvasDialog()
+    showToast(t('toast.modBalanceCanvasImported', { name: importedPayload.canvas.name || t('modBalance.canvasTitle') }), { variant: 'success' })
+    return true
+  }
+
+  const importCanvasFromFile = async (file: File) => {
+    try {
+      const text = await file.text()
+      return await importCanvasFromText(text)
+    } catch {
+      showToast(t('toast.modBalanceCanvasImportFileFailed'), { variant: 'error' })
+      return false
+    }
+  }
+
   const addModuleToStage = (stageId: string, moduleId: string) => {
-    setStages((current) =>
-      current.map((stage) =>
+    updateActiveCanvas((canvas) => ({
+      ...canvas,
+      stages: canvas.stages.map((stage) =>
         stage.id === stageId
           ? (() => {
               const existingInstance = stage.instances.find((instance) => instance.moduleId === moduleId)
@@ -962,8 +1402,8 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
             })()
           : stage,
       ),
-    )
-    setSelectedStageId(stageId)
+      selectedStageId: stageId,
+    }))
   }
 
   const addStage = () => {
@@ -972,8 +1412,11 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
       name: `${t('modBalance.stageLabel')} ${stages.length + 1}`,
       instances: [],
     }
-    setStages((current) => [...current, next])
-    setSelectedStageId(next.id)
+    updateActiveCanvas((canvas) => ({
+      ...canvas,
+      stages: [...canvas.stages, next],
+      selectedStageId: next.id,
+    }))
   }
 
   const duplicateStage = (stageId: string) => {
@@ -985,15 +1428,18 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
       name: `${source.name} ${t('modBalance.copySuffix')}`,
       instances: source.instances.map((instance) => ({ ...instance, id: createId('instance') })),
     }
-    setStages((current) => [...current.slice(0, index + 1), next, ...current.slice(index + 1)])
-    setSelectedStageId(next.id)
+    updateActiveCanvas((canvas) => ({
+      ...canvas,
+      stages: [...canvas.stages.slice(0, index + 1), next, ...canvas.stages.slice(index + 1)],
+      selectedStageId: next.id,
+    }))
   }
 
   const moveStage = (stageId: string, direction: -1 | 1) => {
     const index = stages.findIndex((stage) => stage.id === stageId)
     const nextIndex = index + direction
     if (index < 0 || nextIndex < 0 || nextIndex >= stages.length) return
-    setStages((current) => {
+    updateStages((current) => {
       const clone = [...current]
       const [stage] = clone.splice(index, 1)
       clone.splice(nextIndex, 0, stage)
@@ -1002,12 +1448,13 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
   }
 
   const removeStage = (stageId: string) => {
-    setStages((current) => {
-      const next = current.filter((stage) => stage.id !== stageId)
-      if (selectedStageId === stageId) {
-        setSelectedStageId(next[0]?.id ?? '')
+    updateActiveCanvas((canvas) => {
+      const nextStages = canvas.stages.filter((stage) => stage.id !== stageId)
+      return {
+        ...canvas,
+        stages: nextStages,
+        selectedStageId: canvas.selectedStageId === stageId ? nextStages[0]?.id ?? '' : canvas.selectedStageId,
       }
-      return next
     })
   }
 
@@ -1050,7 +1497,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
       onSelectItem={(itemId) => {
         if (!itemId || !pickerTarget) return
         if (pickerTarget.scope === 'system') {
-          setSystemInputs((current) =>
+          updateSystemInputs((current) =>
             current.map((row) => (row.id === pickerTarget.rowId ? { ...row, itemId } : row)),
           )
         } else {
@@ -1157,7 +1604,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                           value={row.ratePerMinute}
                           onChange={(event) => {
                             const next = Number.parseFloat(event.target.value)
-                            setSystemInputs((current) =>
+                            updateSystemInputs((current) =>
                               current.map((entry) =>
                                 entry.id === row.id ? { ...entry, ratePerMinute: Number.isFinite(next) ? Math.max(0, next) : 0 } : entry,
                               ),
@@ -1168,7 +1615,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                         {renderActionButton(
                           t('modBalance.removeInput'),
                           'delete',
-                          () => setSystemInputs((current) => current.filter((entry) => entry.id !== row.id)),
+                          () => updateSystemInputs((current) => current.filter((entry) => entry.id !== row.id)),
                           { danger: true },
                         )}
                       </div>
@@ -1176,7 +1623,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                     <button
                       type="button"
                       className="modular-balance-add-row"
-                      onClick={() => setSystemInputs((current) => [...current, createRateRow(fallbackItemId, 60)])}
+                      onClick={() => updateSystemInputs((current) => [...current, createRateRow(fallbackItemId, 60)])}
                       aria-label={t('modBalance.addItemRow')}
                       title={t('modBalance.addItemRow')}
                     >
@@ -1250,6 +1697,42 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                       </span>
                       <span className="modular-balance-add-row-label">{t('modBalance.addModuleRow')}</span>
                     </button>
+                    <div className="modular-balance-library-actions">
+                      <button
+                        type="button"
+                        className="modular-balance-library-action-btn"
+                        onClick={() => moduleImportInputRef.current?.click()}
+                      >
+                        <span className="modular-balance-library-action-icon" aria-hidden="true">
+                          <ModularBalanceActionIcon kind="upload" />
+                        </span>
+                        <span>{t('modBalance.importModules')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="modular-balance-library-action-btn"
+                        onClick={exportModules}
+                        disabled={modules.length === 0}
+                      >
+                        <span className="modular-balance-library-action-icon" aria-hidden="true">
+                          <ModularBalanceActionIcon kind="download" />
+                        </span>
+                        <span>{t('modBalance.exportModules')}</span>
+                      </button>
+                    </div>
+                    <input
+                      ref={moduleImportInputRef}
+                      type="file"
+                      accept=".json,application/json"
+                      className="blueprint-file-input"
+                      onChange={(event) => {
+                        const input = event.currentTarget
+                        const file = input.files?.item(0) ?? null
+                        input.value = ''
+                        if (!file) return
+                        void importModulesFromFile(file)
+                      }}
+                    />
                   </div>
                 </section>
               )}
@@ -1462,8 +1945,34 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
           <section className="modular-balance-canvas-pane">
             <div className="modular-balance-canvas-head">
               <div className="modular-balance-canvas-head-primary">
-                <h4>{t('modBalance.canvasTitle')}</h4>
-                <button type="button" className="modular-balance-toolbar-btn" onClick={addStage}>
+                <div className="modular-balance-canvas-switcher">
+                  <span className="modular-balance-canvas-label">{t('modBalance.canvasTitle')}</span>
+                  <div className="modular-balance-canvas-select-row">
+                    <select
+                      className="modular-balance-canvas-select"
+                      value={activeCanvas?.id ?? ''}
+                      onChange={(event) => setSelectedCanvasId(event.target.value)}
+                      aria-label={t('modBalance.canvasSwitcherLabel')}
+                      title={activeCanvas ? getCanvasDisplayName(activeCanvas, activeCanvasIndex) : ''}
+                    >
+                      {canvases.map((canvas, index) => (
+                        <option key={canvas.id} value={canvas.id}>
+                          {getCanvasDisplayName(canvas, index)}
+                        </option>
+                      ))}
+                    </select>
+                    {renderActionButton(t('modBalance.addCanvas'), 'add', openCreateCanvasDialog)}
+                    {renderActionButton(t('modBalance.renameCanvas'), 'edit', () => {
+                      void renameActiveCanvas()
+                    }, { disabled: !activeCanvas })}
+                    {renderActionButton(t('modBalance.copyCanvas'), 'duplicate', duplicateActiveCanvas, { disabled: !activeCanvas })}
+                    {renderActionButton(t('modBalance.removeCanvas'), 'delete', () => {
+                      void removeActiveCanvas()
+                    }, { danger: true, disabled: canvases.length <= 1 || !activeCanvas })}
+                    {renderActionButton(t('modBalance.exportCanvas'), 'download', exportActiveCanvas, { disabled: !activeCanvas })}
+                  </div>
+                </div>
+                <button type="button" className="modular-balance-toolbar-btn" onClick={addStage} disabled={!activeCanvas}>
                   <span className="modular-balance-icon-btn-glyph" aria-hidden="true">
                     <ModularBalanceActionIcon kind="add" />
                   </span>
@@ -1532,7 +2041,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                       <div className="modular-balance-stage-connector" aria-hidden="true" />
                       <section
                         className={`modular-balance-stage ${selectedStageId === stage.id ? 'is-selected' : ''} ${dragOverStageId === stage.id ? 'is-drop-target' : ''}`.trim()}
-                        onClick={() => setSelectedStageId(stage.id)}
+                        onClick={() => updateSelectedStageId(stage.id)}
                         onDragOver={(event) => {
                           event.preventDefault()
                           setDragOverStageId(stage.id)
@@ -1554,7 +2063,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                               value={stage.name}
                               onChange={(event) => {
                                 const nextName = event.target.value
-                                setStages((current) =>
+                                updateStages((current) =>
                                   current.map((entry) => (entry.id === stage.id ? { ...entry, name: nextName } : entry)),
                                 )
                               }}
@@ -1583,7 +2092,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                                     t('modBalance.removeStageModule'),
                                     'delete',
                                     () =>
-                                      setStages((current) =>
+                                      updateStages((current) =>
                                         current.map((entry) =>
                                           entry.id === stage.id
                                             ? { ...entry, instances: entry.instances.filter((row) => row.id !== instance.id) }
@@ -1739,6 +2248,55 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
           </section>
         </div>
       </div>
+      {isCreateCanvasDialogOpen ? (
+        <div className="global-dialog-backdrop" role="presentation" onClick={closeCreateCanvasDialog}>
+          <div className="global-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <div className="global-dialog-title">{t('modBalance.addCanvas')}</div>
+            <div className="global-dialog-message">{t('modBalance.canvasNamePrompt')}</div>
+            <input
+              className="global-dialog-input"
+              type="text"
+              value={createCanvasDraftName}
+              onChange={(event) => setCreateCanvasDraftName(event.target.value)}
+              autoFocus
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  submitCreateCanvasDialog()
+                }
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  closeCreateCanvasDialog()
+                }
+              }}
+            />
+            <div className="global-dialog-actions">
+              <button className="global-dialog-btn" onClick={closeCreateCanvasDialog}>
+                {t('dialog.cancel')}
+              </button>
+              <button className="global-dialog-btn" onClick={() => canvasImportInputRef.current?.click()}>
+                {t('modBalance.importCanvasFromFile')}
+              </button>
+              <button className="global-dialog-btn primary" onClick={submitCreateCanvasDialog}>
+                {t('dialog.ok')}
+              </button>
+            </div>
+            <input
+              ref={canvasImportInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="blueprint-file-input"
+              onChange={(event) => {
+                const input = event.currentTarget
+                const file = input.files?.item(0) ?? null
+                input.value = ''
+                if (!file) return
+                void importCanvasFromFile(file)
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
       {itemPickerDialog}
     </>
   )
