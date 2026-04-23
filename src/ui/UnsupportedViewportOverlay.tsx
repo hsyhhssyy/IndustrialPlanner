@@ -47,6 +47,9 @@ function LandscapeMonitorAllowedIcon() {
 }
 
 export function UnsupportedViewportOverlay({ t, onOpenTool }: UnsupportedViewportOverlayProps) {
+  const currentHostname = typeof window === 'undefined' ? '' : window.location.hostname
+  const shouldShowToolboxButton = currentHostname === 'hsyhhssyy.net'
+
   return (
     <div className="global-dialog-backdrop unsupported-viewport-overlay" role="alertdialog" aria-modal="true" aria-labelledby="unsupported-viewport-overlay-title">
       <div className="global-dialog unsupported-viewport-overlay__panel">
@@ -55,14 +58,15 @@ export function UnsupportedViewportOverlay({ t, onOpenTool }: UnsupportedViewpor
           {t('viewportGate.title')}
         </h2>
         <p className="unsupported-viewport-overlay__message">{t('viewportGate.message')}</p>
-        <button
-          hidden
-          type="button"
-          className="global-dialog-btn primary unsupported-viewport-overlay__toolbox-button"
-          onClick={onOpenTool}
-        >
-          {t('viewportGate.openToolbox')}
-        </button>
+        {shouldShowToolboxButton ? (
+          <button
+            type="button"
+            className="global-dialog-btn primary unsupported-viewport-overlay__toolbox-button"
+            onClick={onOpenTool}
+          >
+            {t('viewportGate.openToolbox')}
+          </button>
+        ) : null}
         <div className="unsupported-viewport-overlay__icons" aria-hidden="true">
           <div className="unsupported-viewport-overlay__icon-card">
             <PhoneBlockedIcon />

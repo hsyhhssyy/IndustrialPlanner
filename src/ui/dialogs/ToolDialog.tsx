@@ -104,11 +104,24 @@ export function ToolDialog({ language, superRecipeEnabled, t, isMaximized, onTog
     },
     normalizeToolDialogState,
   )
-  const { activeTab, selectedDeviceId, selectedItemId } = toolDialogState
+  const { selectedDeviceId, selectedItemId } = toolDialogState
+  const activeTab = closeDisabled && (toolDialogState.activeTab === 'planner' || toolDialogState.activeTab === 'modularBalance')
+    ? 'device'
+    : toolDialogState.activeTab
   const deviceListPaneRef = useRef<HTMLDivElement | null>(null)
   const deviceContentPaneRef = useRef<HTMLElement | null>(null)
   const itemListPaneRef = useRef<HTMLDivElement | null>(null)
   const itemContentPaneRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!closeDisabled) return
+    if (toolDialogState.activeTab === 'device' || toolDialogState.activeTab === 'item') return
+    setToolDialogState((current) =>
+      current.activeTab === 'device' || current.activeTab === 'item'
+        ? current
+        : { ...current, activeTab: 'device' },
+    )
+  }, [closeDisabled, setToolDialogState, toolDialogState.activeTab])
 
   useEffect(() => {
     if (toolDeviceTypes.length === 0) {
