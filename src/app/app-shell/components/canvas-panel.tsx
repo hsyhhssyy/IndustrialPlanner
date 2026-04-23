@@ -1,5 +1,6 @@
 import type { AppHost } from "@/app/app-host";
 import type { LongPressState } from "@/app/input/gesture-adapter";
+import type { GestureDiagnosticsSnapshot } from "@/app/input/gesture-diagnostics";
 import { useViewportResizeAdapter } from "@/app/app-shell/components/canvas-panel-files/viewport-resize-adapter";
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent, WheelEvent } from "react";
@@ -7,11 +8,15 @@ import type { KeyboardEvent, PointerEvent, WheelEvent } from "react";
 export function CanvasPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const gestureAdapter = appHost.gestureAdapter;
+  const gestureDiagnostics = appHost.gestureDiagnostics;
   const rendererHostRef = useRef<HTMLDivElement | null>(null);
   const viewportSurfaceRef = useRef<HTMLDivElement | null>(null);
   const renderCanvas = appHost.workspace.render?.canvas ?? null;
   const [longPressState, setLongPressState] = useState<LongPressState>(() =>
     gestureAdapter.getLongPressState(),
+  );
+  const [diagnosticsSnapshot, setDiagnosticsSnapshot] = useState<GestureDiagnosticsSnapshot>(() =>
+    gestureDiagnostics.getSnapshot(),
   );
 
   useViewportResizeAdapter({
@@ -54,6 +59,10 @@ export function CanvasPanel({ appHost }: { appHost: AppHost }) {
       });
     });
   }, [gestureAdapter]);
+
+  useEffect(() => {
+    return gestureDiagnostics.subscribe(setDiagnosticsSnapshot);
+  }, [gestureDiagnostics]);
 
   useEffect(() => {
     const handleWindowBlur = () => {
@@ -120,10 +129,59 @@ export function CanvasPanel({ appHost }: { appHost: AppHost }) {
           {renderCanvas ? <div className="renderer-host" ref={rendererHostRef} /> : null}
           {renderCanvas ? null : <div className="canvas-placeholder">{t("status.ready")}</div>}
           <CanvasTouchHoldIndicator state={longPressState} />
+          <CanvasGestureDiagnosticsOverlay snapshot={diagnosticsSnapshot} />
         </div>
       </div>
     </main>
   );
+}
+
+function CanvasGestureDiagnosticsOverlay({
+  snapshot,
+}: {
+  snapshot: GestureDiagnosticsSnapshot;
+}) {
+  const latest = snapshot.latestEvent;
+  const pressedKeys = Array.from(snapshot.keyboard.pressedKeys);
+
+  return (
+    <section className="canvas-gesture-diagnostics" aria-label="gesture diagnostics">
+      <div className="canvas-gesture-diagnostics-header">
+        <span>Gesture</span>
+        <strong>{latest?.type ?? "idle"}</strong>
+      </div>
+      <dl className="canvas-gesture-diagnostics-grid">
+        <div>
+          <dt>ID</dt>
+          <dd>{latest?.gestureId ?? "-"}</dd>
+        </div>
+        <div>
+          <dt>Position</dt>
+          <dd>{latest?.position ? formatPoint(latest.position) : "-"}</dd>
+        </div>
+        <div>
+          <dt>Delta</dt>
+          <dd>{latest?.delta ? formatPoint(latest.delta) : "-"}</dd>
+        </div>
+        <div>
+          <dt>Keys</dt>
+          <dd>{pressedKeys.length > 0 ? pressedKeys.join(" + ") : "-"}</dd>
+        </div>
+      </dl>
+      <ol className="canvas-gesture-diagnostics-events">
+        {snapshot.events.slice(0, 4).map((event) => (
+          <li key={event.sequence}>
+            <span>{event.type}</span>
+            <small>{event.detail}</small>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function formatPoint(point: { readonly x: number; readonly y: number }): string {
+  return `${Math.round(point.x)}, ${Math.round(point.y)}`;
 }
 
 function CanvasTouchHoldIndicator({ state }: { state: LongPressState }) {

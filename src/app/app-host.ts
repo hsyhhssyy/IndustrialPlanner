@@ -6,6 +6,11 @@ import {
   createGestureActionRouter,
   GestureActionRouter,
 } from "./input/gesture-actions";
+import {
+  createGestureDiagnosticsModule,
+  createGestureDiagnosticsStore,
+  GestureDiagnosticsStore,
+} from "./input/gesture-diagnostics";
 import { hookLocalstorage } from "./storage-hook";
 import { createUiStateReadWrite, UiStateReadWrite } from "./state-impl";
 
@@ -13,6 +18,7 @@ export interface AppHost extends AppContract {
   workspace: WorkspaceContract;
   gestureAdapter: GestureAdapter;
   gestureActionRouter: GestureActionRouter<AppHost>;
+  gestureDiagnostics: GestureDiagnosticsStore;
   internalState: UiStateReadWrite;
   internalActions: AppInternalAction;
   dispose: () => void;
@@ -25,6 +31,7 @@ export function createAppHost(
   const disposers: Array<() => void> = [];
   const internalState = createUiStateReadWrite();
   const gestureAdapter = createGestureAdapter();
+  const gestureDiagnostics = createGestureDiagnosticsStore();
   const host = {} as AppHost;
   const gestureActionRouter = createGestureActionRouter<AppHost>({
     gestureAdapter,
@@ -47,6 +54,7 @@ export function createAppHost(
     workspace,
     gestureAdapter,
     gestureActionRouter,
+    gestureDiagnostics,
     internalState,
     internalActions,
     dispose: () => {
@@ -61,6 +69,12 @@ export function createAppHost(
   });
 
   workspace.app = host;
+  disposers.push(gestureActionRouter.registerModule(
+    createGestureDiagnosticsModule(gestureDiagnostics),
+  ));
+  disposers.push(gestureAdapter.subscribeKeyboardSnapshot((snapshot) => {
+    gestureDiagnostics.setKeyboardSnapshot(snapshot);
+  }));
   disposers.push(hookLocalstorage(host));
 
   return host;

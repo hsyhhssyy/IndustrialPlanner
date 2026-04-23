@@ -238,5 +238,11 @@ describe("CanvasPanel", () => {
       "mouse dragend",
     ]);
     expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.has("KeyA")).toBe(true);
+    expect(container.querySelector(".canvas-gesture-diagnostics")?.textContent).toContain(
+      "mouse dragend",
+    );
+    expect(container.querySelector(".canvas-gesture-diagnostics")?.textContent).toContain(
+      "KeyA",
+    );
   });
 });

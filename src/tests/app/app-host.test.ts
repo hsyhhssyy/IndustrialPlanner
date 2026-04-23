@@ -29,7 +29,10 @@ describe("createAppHost", () => {
     const appHost = createAppHost(workspace);
 
     expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.size).toBe(0);
-    expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual([]);
+    expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual([
+      "app.gesture-diagnostics",
+    ]);
+    expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toBeNull();
 
     appHost.dispose();
 
