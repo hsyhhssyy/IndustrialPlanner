@@ -2,8 +2,8 @@ import type { AppHost } from "@/app/app-host";
 import type { LongPressState } from "@/app/input/gesture-adapter";
 import type { GestureDiagnosticsSnapshot } from "@/app/input/gesture-diagnostics";
 import { useViewportResizeAdapter } from "@/app/app-shell/components/canvas-panel-files/viewport-resize-adapter";
-import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent, PointerEvent, WheelEvent } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import type { KeyboardEvent, MouseEvent, PointerEvent, WheelEvent } from "react";
 
 export function CanvasPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
@@ -141,41 +141,78 @@ function CanvasGestureDiagnosticsOverlay({
 }: {
   snapshot: GestureDiagnosticsSnapshot;
 }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const bodyId = useId();
   const latest = snapshot.latestEvent;
   const pressedKeys = Array.from(snapshot.keyboard.pressedKeys);
+  const toggleLabel = collapsed ? "Show" : "Hide";
+
+  const handleToggleClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    setCollapsed((value) => !value);
+  };
+  const stopToggleInputPropagation = (
+    event: PointerEvent<HTMLButtonElement> | KeyboardEvent<HTMLButtonElement>,
+  ) => {
+    event.stopPropagation();
+  };
 
   return (
-    <section className="canvas-gesture-diagnostics" aria-label="gesture diagnostics">
+    <section
+      className={`canvas-gesture-diagnostics${collapsed ? " is-collapsed" : ""}`}
+      aria-label="gesture diagnostics"
+    >
       <div className="canvas-gesture-diagnostics-header">
-        <span>Gesture</span>
-        <strong>{latest?.type ?? "idle"}</strong>
+        <div className="canvas-gesture-diagnostics-header-copy">
+          <span>Gesture</span>
+          <strong>{latest?.type ?? "idle"}</strong>
+        </div>
+        <button
+          aria-controls={bodyId}
+          aria-expanded={!collapsed}
+          className="canvas-gesture-diagnostics-toggle"
+          onClick={handleToggleClick}
+          onKeyDown={stopToggleInputPropagation}
+          onKeyUp={stopToggleInputPropagation}
+          onPointerCancel={stopToggleInputPropagation}
+          onPointerDown={stopToggleInputPropagation}
+          onPointerMove={stopToggleInputPropagation}
+          onPointerUp={stopToggleInputPropagation}
+          type="button"
+        >
+          {toggleLabel}
+        </button>
       </div>
-      <dl className="canvas-gesture-diagnostics-grid">
-        <div>
-          <dt>ID</dt>
-          <dd>{latest?.gestureId ?? "-"}</dd>
+      {collapsed ? null : (
+        <div className="canvas-gesture-diagnostics-body" id={bodyId}>
+          <dl className="canvas-gesture-diagnostics-grid">
+            <div>
+              <dt>ID</dt>
+              <dd>{latest?.gestureId ?? "-"}</dd>
+            </div>
+            <div>
+              <dt>Position</dt>
+              <dd>{latest?.position ? formatPoint(latest.position) : "-"}</dd>
+            </div>
+            <div>
+              <dt>Delta</dt>
+              <dd>{latest?.delta ? formatPoint(latest.delta) : "-"}</dd>
+            </div>
+            <div>
+              <dt>Keys</dt>
+              <dd>{pressedKeys.length > 0 ? pressedKeys.join(" + ") : "-"}</dd>
+            </div>
+          </dl>
+          <ol className="canvas-gesture-diagnostics-events">
+            {snapshot.events.slice(0, 4).map((event) => (
+              <li key={event.sequence}>
+                <span>{event.type}</span>
+                <small>{event.detail}</small>
+              </li>
+            ))}
+          </ol>
         </div>
-        <div>
-          <dt>Position</dt>
-          <dd>{latest?.position ? formatPoint(latest.position) : "-"}</dd>
-        </div>
-        <div>
-          <dt>Delta</dt>
-          <dd>{latest?.delta ? formatPoint(latest.delta) : "-"}</dd>
-        </div>
-        <div>
-          <dt>Keys</dt>
-          <dd>{pressedKeys.length > 0 ? pressedKeys.join(" + ") : "-"}</dd>
-        </div>
-      </dl>
-      <ol className="canvas-gesture-diagnostics-events">
-        {snapshot.events.slice(0, 4).map((event) => (
-          <li key={event.sequence}>
-            <span>{event.type}</span>
-            <small>{event.detail}</small>
-          </li>
-        ))}
-      </ol>
+      )}
     </section>
   );
 }

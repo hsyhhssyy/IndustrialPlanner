@@ -247,6 +247,63 @@ describe("CanvasPanel", () => {
     );
   });
 
+  it("collapses and expands diagnostics without routing toggle input into the gesture adapter", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<CanvasPanel appHost={appHost} />);
+    });
+
+    const diagnostics = container.querySelector(
+      ".canvas-gesture-diagnostics",
+    ) as HTMLElement | null;
+    const toggleButton = container.querySelector(
+      ".canvas-gesture-diagnostics-toggle",
+    ) as HTMLButtonElement | null;
+
+    expect(diagnostics).not.toBeNull();
+    expect(toggleButton).not.toBeNull();
+    expect(toggleButton?.getAttribute("aria-expanded")).toBe("true");
+
+    if (!diagnostics || !toggleButton) {
+      throw new Error("Canvas diagnostics toggle did not render.");
+    }
+
+    act(() => {
+      dispatchPointerEvent(toggleButton, "pointerdown", {
+        pointerId: 31,
+        pointerType: "mouse",
+        clientX: 12,
+        clientY: 12,
+        buttons: 1,
+      });
+      dispatchPointerEvent(toggleButton, "pointerup", {
+        pointerId: 31,
+        pointerType: "mouse",
+        clientX: 12,
+        clientY: 12,
+        buttons: 0,
+      });
+      toggleButton.click();
+    });
+
+    expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toBeNull();
+    expect(diagnostics.classList.contains("is-collapsed")).toBe(true);
+    expect(toggleButton.getAttribute("aria-expanded")).toBe("false");
+    expect(container.querySelector(".canvas-gesture-diagnostics-grid")).toBeNull();
+    expect(container.querySelector(".canvas-gesture-diagnostics-events")).toBeNull();
+
+    act(() => {
+      toggleButton.click();
+    });
+
+    expect(diagnostics.classList.contains("is-collapsed")).toBe(false);
+    expect(toggleButton.getAttribute("aria-expanded")).toBe("true");
+    expect(container.querySelector(".canvas-gesture-diagnostics-grid")).not.toBeNull();
+    expect(container.querySelector(".canvas-gesture-diagnostics-events")).not.toBeNull();
+  });
+
   it("pans the editor viewport on middle mouse drag", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);

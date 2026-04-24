@@ -1030,6 +1030,8 @@ body.is-resizing-left-dock * {
   right: 12px;
   bottom: 12px;
   z-index: 3;
+  display: grid;
+  gap: 8px;
   width: min(360px, calc(100% - 24px));
   padding: 10px 12px;
   border: 1px solid rgb(89 194 255 / 0.24);
@@ -1041,26 +1043,66 @@ body.is-resizing-left-dock * {
   box-shadow: 0 14px 36px rgb(0 0 0 / 0.26);
 }
 
+.canvas-gesture-diagnostics.is-collapsed {
+  width: auto;
+  max-width: min(240px, calc(100% - 24px));
+  padding: 8px 10px;
+}
+
 .canvas-gesture-diagnostics-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 8px;
   color: var(--text-1);
 }
 
-.canvas-gesture-diagnostics-header strong {
+.canvas-gesture-diagnostics-header-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.canvas-gesture-diagnostics-header-copy span,
+.canvas-gesture-diagnostics-header-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas-gesture-diagnostics-header-copy strong {
   color: var(--accent-strong);
   font-size: 0.82rem;
   font-weight: 650;
+}
+
+.canvas-gesture-diagnostics-toggle {
+  pointer-events: auto;
+  flex: 0 0 auto;
+  padding: 0.22rem 0.58rem;
+  border-color: rgb(89 194 255 / 0.26);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.06);
+  color: var(--text-0);
+  font-size: 0.68rem;
+  line-height: 1.1;
+}
+
+.canvas-gesture-diagnostics-toggle:hover {
+  border-color: rgb(89 194 255 / 0.44);
+  background: rgb(89 194 255 / 0.14);
+}
+
+.canvas-gesture-diagnostics-body {
+  min-width: 0;
 }
 
 .canvas-gesture-diagnostics-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px 12px;
-  margin: 0 0 8px;
+  margin: 0;
 }
 
 .canvas-gesture-diagnostics-grid div {
