@@ -62,8 +62,9 @@ interface TouchSession {
   primaryId: number;
   readonly startPosition: GesturePosition;
   lastPosition: GesturePosition;
-  state: "pending-long-press" | "touch-moving" | "drag-ready" | "dragging";
+  state: "pending-long-press" | "drag-ready" | "dragging";
   longPressTimer: TimerHandle | null;
+  longPress: boolean;
 }
 
 interface MultiTouchSnapshot {
@@ -422,6 +423,7 @@ export class GestureAdapter {
         lastPosition: position,
         state: "pending-long-press",
         longPressTimer: null,
+        longPress: false,
       };
       session.longPressTimer = this.scheduleTimeout(() => {
         if (this.touchSession !== session || session.state !== "pending-long-press") {
@@ -429,6 +431,7 @@ export class GestureAdapter {
         }
 
         session.state = "drag-ready";
+        session.longPress = true;
         session.longPressTimer = null;
         this.setLongPressState({
           visible: true,
@@ -451,7 +454,8 @@ export class GestureAdapter {
       this.activeTouches.size > 1
     ) {
       this.clearLongPressTimer(this.touchSession);
-      this.touchSession.state = "touch-moving";
+      this.touchSession.state = "drag-ready";
+      this.touchSession.longPress = false;
       this.hideLongPressState();
     }
 
@@ -494,53 +498,23 @@ export class GestureAdapter {
 
       this.clearLongPressTimer(session);
       this.hideLongPressState();
-      session.state = "touch-moving";
-      const delta = getDelta(session.lastPosition, position);
-      session.lastPosition = position;
-      if (this.activeTouches.size !== 1) {
-        return;
-      }
-
-      this.dispatchGesture({
-        type: "touch move",
-        gestureId: session.gestureId,
-        primaryId: session.primaryId,
-        position,
-        delta,
-        modifiers: getModifiers(event),
-        sourceEvent: event,
-      });
-      return;
-    }
-
-    if (session.state === "touch-moving") {
-      const delta = getDelta(session.lastPosition, position);
-      session.lastPosition = position;
-      if (this.activeTouches.size !== 1) {
-        return;
-      }
-
-      this.dispatchGesture({
-        type: "touch move",
-        gestureId: session.gestureId,
-        primaryId: session.primaryId,
-        position,
-        delta,
-        modifiers: getModifiers(event),
-        sourceEvent: event,
-      });
-      return;
+      session.state = "drag-ready";
+      session.longPress = false;
     }
 
     if (session.state === "drag-ready") {
       const delta = getDelta(session.lastPosition, position);
+      session.lastPosition = position;
       if (delta.x === 0 && delta.y === 0) {
+        return;
+      }
+
+      if (!session.longPress && this.activeTouches.size !== 1) {
         return;
       }
 
       this.hideLongPressState();
       session.state = "dragging";
-      session.lastPosition = position;
       this.dispatchGesture({
         type: "touch dragstart",
         gestureId: session.gestureId,
@@ -548,6 +522,7 @@ export class GestureAdapter {
         position,
         startPosition: session.startPosition,
         activeTouchCount: this.activeTouches.size,
+        longPress: session.longPress,
         modifiers: getModifiers(event),
         sourceEvent: event,
       });
@@ -556,6 +531,10 @@ export class GestureAdapter {
 
     const delta = getDelta(session.lastPosition, position);
     session.lastPosition = position;
+    if (!session.longPress && this.activeTouches.size !== 1) {
+      return;
+    }
+
     this.dispatchGesture({
       type: "touch dragmove",
       gestureId: session.gestureId,
@@ -563,6 +542,7 @@ export class GestureAdapter {
       position,
       delta,
       activeTouchCount: this.activeTouches.size,
+      longPress: session.longPress,
       modifiers: getModifiers(event),
       sourceEvent: event,
     });
@@ -609,6 +589,7 @@ export class GestureAdapter {
         primaryId: session.primaryId,
         position: getPosition(event),
         reason,
+        longPress: session.longPress,
         modifiers: getModifiers(event),
         sourceEvent: event,
       });
@@ -702,6 +683,7 @@ export class GestureAdapter {
           primaryId: touchSession.primaryId,
           position: touchSession.lastPosition,
           reason: "cancel",
+          longPress: touchSession.longPress,
           modifiers: emptyModifiers(),
           sourceEvent: null,
         });

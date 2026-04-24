@@ -1,7 +1,11 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { runInAction } from "mobx";
 
 import { createAppHost } from "@/app/app-host";
+import type {
+  GesturePointerEventLike,
+  GestureWheelEventLike,
+} from "@/app/input/gesture-adapter";
 import { WORKBENCH_STATE_LOCAL_STORAGE_KEY } from "@/app/storage-hook";
 import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
@@ -22,6 +26,7 @@ function createWorkspace(): WorkspaceContract {
 
 afterEach(() => {
   localStorage.clear();
+  vi.useRealTimers();
 });
 
 describe("createAppHost", () => {
@@ -33,6 +38,7 @@ describe("createAppHost", () => {
     expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual([
       "app.gesture-diagnostics",
       "app.mouse-viewport-pan",
+      "app.viewport-zoom",
     ]);
     expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toBeNull();
 
@@ -301,4 +307,101 @@ describe("createAppHost", () => {
     expect(editorHost.state.viewport.clientRect.left).toBe(320);
     expect(editorHost.state.viewport.clientRect.width).toBe(900);
   });
+
+  it("zooms the editor viewport on wheel up and wheel down gestures", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+    const zoomSpy = vi.spyOn(editorHost.actions, "zoom");
+
+    appHost.gestureAdapter.handleWheel(wheelEvent({ deltaY: -1.1 }));
+
+    expect(zoomSpy).toHaveBeenCalledTimes(1);
+    expect(zoomSpy.mock.calls[0]?.[0]).toBeGreaterThan(0);
+    expect(editorHost.state.viewport.gridSize).toBeGreaterThan(1);
+
+    const zoomedInGridSize = editorHost.state.viewport.gridSize;
+
+    appHost.gestureAdapter.handleWheel(wheelEvent({ deltaY: 1.4 }));
+
+    expect(zoomSpy).toHaveBeenCalledTimes(2);
+    expect(zoomSpy.mock.calls[1]?.[0]).toBeLessThan(0);
+    expect(editorHost.state.viewport.gridSize).toBeLessThan(zoomedInGridSize);
+  });
+
+  it("zooms the editor viewport on pinch out and pinch in gestures", () => {
+    vi.useFakeTimers();
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+    const zoomSpy = vi.spyOn(editorHost.actions, "zoom");
+
+    appHost.gestureAdapter.handlePointerDown(touchEvent(1, 0, 0));
+    vi.advanceTimersByTime(1000);
+    appHost.gestureAdapter.handlePointerMove(touchEvent(1, 1, 0));
+    appHost.gestureAdapter.handlePointerDown(touchEvent(2, 0, 10));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(2, 4, 16));
+
+    expect(zoomSpy).toHaveBeenCalledTimes(1);
+    expect(zoomSpy.mock.calls[0]?.[0]).toBeGreaterThan(0);
+    expect(editorHost.state.viewport.gridSize).toBeGreaterThan(1);
+
+    const zoomedOutGridSize = editorHost.state.viewport.gridSize;
+
+    appHost.gestureAdapter.handlePointerMove(touchEvent(2, 0, 4));
+
+    expect(zoomSpy).toHaveBeenCalledTimes(2);
+    expect(zoomSpy.mock.calls[1]?.[0]).toBeLessThan(0);
+    expect(editorHost.state.viewport.gridSize).toBeLessThan(zoomedOutGridSize);
+  });
 });
+
+function pointerEvent(
+  overrides: Partial<GesturePointerEventLike> = {},
+): GesturePointerEventLike {
+  return {
+    pointerId: 1,
+    pointerType: "mouse",
+    clientX: 0,
+    clientY: 0,
+    button: 0,
+    buttons: 0,
+    altKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+    ...overrides,
+  };
+}
+
+function touchEvent(
+  pointerId: number,
+  clientX: number,
+  clientY: number,
+): GesturePointerEventLike {
+  return pointerEvent({
+    pointerId,
+    pointerType: "touch",
+    clientX,
+    clientY,
+    button: 0,
+    buttons: 1,
+  });
+}
+
+function wheelEvent(
+  overrides: Partial<GestureWheelEventLike>,
+): GestureWheelEventLike {
+  return {
+    clientX: 20,
+    clientY: 40,
+    deltaY: 0,
+    deltaMode: WheelEvent.DOM_DELTA_PIXEL,
+    altKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+    ...overrides,
+  };
+}

@@ -1,7 +1,11 @@
-import type { WorldDocument } from "@/domain/entity/world-document";
+import type {
+  WorldDocument,
+  WorldEntity,
+} from "@/domain/entity/world-document";
 import { EditorContract } from "@/domain/contract/editor-contract";
 import { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorldDocument } from "@/domain/entity/world-document";
+import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import {
   createSnapshotStore,
   SnapshotStoreReadWrite,
@@ -22,6 +26,10 @@ export interface EditorHost extends EditorContract {
   dispose: () => void;
 }
 
+const VIEWPORT_ZOOM_STEPS_PER_DOUBLING = 6;
+const MIN_VIEWPORT_GRID_SIZE = 1 / 16;
+const MAX_VIEWPORT_GRID_SIZE = 16;
+
 
 export function createEditorHost(
   workspace: WorkspaceContract,
@@ -29,6 +37,12 @@ export function createEditorHost(
   const disposers: Array<() => void> = [];
   const internalDocument = createSnapshotStore(createWorldDocument());
   const editorState = createEditorStateReadWrite();
+  const entityDefinitionMap = new Map(
+    workspace.registry.entityDefinitions.map((definition) => [
+      definition.id,
+      definition,
+    ]),
+  );
   const actions: EditorContract["actions"] = {
     setViewportClientRect: ({ left, top, width, height }) => {
       const previousClientRect = {
@@ -96,6 +110,65 @@ export function createEditorHost(
       editorState.viewport.center.x -= viewportPixelVector.x / gridCellSize;
       editorState.viewport.center.y -= viewportPixelVector.y / gridCellSize;
     },
+    zoom: (step) => {
+      const nextGridSize = resolveViewportGridSizeAfterZoom({
+        currentGridSize: editorState.viewport.gridSize,
+        step,
+      });
+
+      if (nextGridSize === null || nextGridSize === editorState.viewport.gridSize) {
+        return;
+      }
+
+      editorState.viewport.gridSize = nextGridSize;
+    },
+  };
+  const queries: EditorContract["queries"] = {
+    findEntityAtViewportPoint: (viewportPoint) => {
+      const gridCell = resolveGridCellAtViewportPoint({
+        viewportPoint,
+        viewportState: editorState.viewport,
+      });
+
+      if (gridCell === null) {
+        return null;
+      }
+
+      const document = internalDocument.getSnapshot();
+      const orderedEntityIds = resolveOrderedEntityIds(document);
+
+      for (let index = orderedEntityIds.length - 1; index >= 0; index -= 1) {
+        const entityId = orderedEntityIds[index];
+
+        if (entityId === undefined) {
+          continue;
+        }
+
+        const entity = document.entities[entityId];
+
+        if (!entity) {
+          continue;
+        }
+
+        const definition = entityDefinitionMap.get(entity.definitionId);
+
+        if (!definition) {
+          continue;
+        }
+
+        if (
+          isGridCellInsideEntity({
+            cell: gridCell,
+            entity,
+            footprint: definition.footprint,
+          })
+        ) {
+          return entity;
+        }
+      }
+
+      return null;
+    },
   };
 
   const host: EditorHost = {
@@ -108,7 +181,7 @@ export function createEditorHost(
         disposers.pop()?.();
       }
     },
-    queries: {},
+    queries,
     actions,
     internalState: editorState,
   };
@@ -142,6 +215,36 @@ function resolveViewportAxisSize(
   return Math.floor(value);
 }
 
+function resolveViewportGridSizeAfterZoom(options: {
+  currentGridSize: number;
+  step: number;
+}): number | null {
+  if (!Number.isFinite(options.step) || options.step === 0) {
+    return null;
+  }
+
+  const zoomFactor = Math.pow(
+    2,
+    options.step / VIEWPORT_ZOOM_STEPS_PER_DOUBLING,
+  );
+
+  if (!Number.isFinite(zoomFactor) || zoomFactor <= 0) {
+    return null;
+  }
+
+  return clampViewportGridSize(
+    clampViewportGridSize(options.currentGridSize) * zoomFactor,
+  );
+}
+
+function clampViewportGridSize(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    return 1;
+  }
+
+  return Math.min(MAX_VIEWPORT_GRID_SIZE, Math.max(MIN_VIEWPORT_GRID_SIZE, value));
+}
+
 function resolveViewportPixelVector(options: {
   startViewportPixel: {
     x: number;
@@ -168,6 +271,87 @@ function resolveViewportPixelVector(options: {
     x: options.endViewportPixel.x - options.startViewportPixel.x,
     y: options.endViewportPixel.y - options.startViewportPixel.y,
   };
+}
+
+function resolveGridCellAtViewportPoint(options: {
+  viewportPoint: {
+    x: number;
+    y: number;
+  };
+  viewportState: EditorStateReadWrite["viewport"];
+}): {
+  x: number;
+  y: number;
+} | null {
+  if (
+    !Number.isFinite(options.viewportPoint.x)
+    || !Number.isFinite(options.viewportPoint.y)
+  ) {
+    return null;
+  }
+
+  const gridCellSize = resolveWorldGridCellPixelSize(
+    options.viewportState.gridSize,
+  );
+
+  if (gridCellSize <= 0) {
+    return null;
+  }
+
+  const worldX =
+    options.viewportState.center.x
+    + (
+      options.viewportPoint.x - options.viewportState.clientRect.width / 2
+    ) / gridCellSize;
+  const worldY =
+    options.viewportState.center.y
+    + (
+      options.viewportPoint.y - options.viewportState.clientRect.height / 2
+    ) / gridCellSize;
+
+  return {
+    x: Math.floor(worldX),
+    y: Math.floor(worldY),
+  };
+}
+
+function resolveOrderedEntityIds(document: WorldDocument): string[] {
+  const orderedEntityIds = [...document.entityOrder];
+  const knownEntityIds = new Set(orderedEntityIds);
+
+  for (const entityId of Object.keys(document.entities)) {
+    if (knownEntityIds.has(entityId)) {
+      continue;
+    }
+
+    orderedEntityIds.push(entityId);
+  }
+
+  return orderedEntityIds;
+}
+
+function isGridCellInsideEntity(options: {
+  cell: {
+    x: number;
+    y: number;
+  };
+  entity: WorldEntity;
+  footprint: {
+    width: number;
+    height: number;
+  };
+}): boolean {
+  const footprint = getRotatedGridFootprint(
+    options.footprint,
+    options.entity.rotation,
+  );
+
+  return (
+    options.cell.x >= options.entity.position.x
+    && options.cell.x < options.entity.position.x + footprint.width
+    && options.cell.y >= options.entity.position.y
+    && options.cell.y < options.entity.position.y + footprint.height
+  );
 }
 
 async function hydrateInitialDocument(editorHost: EditorHost): Promise<void> {

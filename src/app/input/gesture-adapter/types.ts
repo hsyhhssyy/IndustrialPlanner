@@ -42,7 +42,6 @@ export type GestureEventType =
   | "touch dragmove"
   | "touch dragend"
   | "touch tap"
-  | "touch move"
   | "pinch in"
   | "pinch out"
   | "two finger move"
@@ -103,6 +102,7 @@ export interface TouchDragStartGestureEvent extends GestureEventBase {
   readonly position: GesturePosition;
   readonly startPosition: GesturePosition;
   readonly activeTouchCount: number;
+  readonly longPress: boolean;
 }
 
 export interface TouchDragMoveGestureEvent extends GestureEventBase {
@@ -111,6 +111,7 @@ export interface TouchDragMoveGestureEvent extends GestureEventBase {
   readonly position: GesturePosition;
   readonly delta: GestureDelta;
   readonly activeTouchCount: number;
+  readonly longPress: boolean;
 }
 
 export interface TouchDragEndGestureEvent extends GestureEventBase {
@@ -118,19 +119,13 @@ export interface TouchDragEndGestureEvent extends GestureEventBase {
   readonly primaryId: number;
   readonly position: GesturePosition;
   readonly reason: GestureEndReason;
+  readonly longPress: boolean;
 }
 
 export interface TouchTapGestureEvent extends GestureEventBase {
   readonly type: "touch tap";
   readonly primaryId: number;
   readonly position: GesturePosition;
-}
-
-export interface TouchMoveGestureEvent extends GestureEventBase {
-  readonly type: "touch move";
-  readonly primaryId: number;
-  readonly position: GesturePosition;
-  readonly delta: GestureDelta;
 }
 
 export interface PinchGestureEvent extends GestureEventBase {
@@ -165,7 +160,6 @@ export type GestureEvent =
   | TouchDragMoveGestureEvent
   | TouchDragEndGestureEvent
   | TouchTapGestureEvent
-  | TouchMoveGestureEvent
   | PinchGestureEvent
   | TwoFingerMoveGestureEvent
   | WheelGestureEvent;

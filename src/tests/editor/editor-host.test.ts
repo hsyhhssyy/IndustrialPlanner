@@ -8,6 +8,7 @@ import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { resolveWorldEntitySpriteLayout } from "@/renderer/scene/render-scene-orchestrator";
+import { resolveWorldGridCellPixelSize } from "@/shared/geometry/viewport-transform";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -73,6 +74,37 @@ describe("createEditorHost", () => {
     expect(editorHost.state.viewport.center.y).toBeCloseTo(2);
     expect(workspace.editor?.state.viewport.center.x).toBeCloseTo(-2);
     expect(workspace.editor?.state.viewport.center.y).toBeCloseTo(2);
+  });
+
+  it("zooms viewport through multiplicative steps in both directions", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const expectedGridSizeAfterZoomIn = Math.pow(2, 1 / 3);
+
+    editorHost.actions.zoom(2);
+
+    expect(editorHost.state.viewport.gridSize).toBeCloseTo(expectedGridSizeAfterZoomIn);
+    expect(workspace.editor?.state.viewport.gridSize).toBeCloseTo(expectedGridSizeAfterZoomIn);
+    expect(
+      resolveWorldGridCellPixelSize(editorHost.state.viewport.gridSize),
+    ).toBeCloseTo(resolveWorldGridCellPixelSize(1) * expectedGridSizeAfterZoomIn);
+
+    editorHost.actions.zoom(-2);
+
+    expect(editorHost.state.viewport.gridSize).toBeCloseTo(1);
+    expect(workspace.editor?.state.viewport.gridSize).toBeCloseTo(1);
+  });
+
+  it("ignores zero and non-finite zoom steps", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.zoom(0);
+    editorHost.actions.zoom(Number.NaN);
+    editorHost.actions.zoom(Number.POSITIVE_INFINITY);
+
+    expect(editorHost.state.viewport.gridSize).toBe(1);
+    expect(workspace.editor?.state.viewport.gridSize).toBe(1);
   });
 
   it("compensates viewport center after later rect changes to preserve screen position", () => {
@@ -150,6 +182,66 @@ describe("createEditorHost", () => {
     expect(nextAbsolutePosition.y).toBeCloseTo(initialAbsolutePosition.y);
   });
 
+  it("finds the entity occupying the grid cell at a viewport point", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.actions.setViewportClientRect({
+      left: 0,
+      top: 0,
+      width: 400,
+      height: 400,
+    });
+
+    const entity = editorHost.queries.findEntityAtViewportPoint(
+      resolveViewportPointForGridCell(editorHost, { x: 5, y: 5 }),
+    );
+    const emptyCellEntity = editorHost.queries.findEntityAtViewportPoint(
+      resolveViewportPointForGridCell(editorHost, { x: 0, y: 0 }),
+    );
+
+    expect(entity?.id).toBe("dummy-entity-2");
+    expect(emptyCellEntity).toBeNull();
+  });
+
+  it("uses rotated footprint when resolving entity hits from viewport points", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    document.entities["rotated-entity"] = {
+      id: "rotated-entity",
+      definitionId: "item_port_unloader_1",
+      position: {
+        x: 8,
+        y: 12,
+      },
+      rotation: 90,
+      config: {},
+      tags: [],
+    };
+    document.entityOrder.push("rotated-entity");
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.actions.setViewportClientRect({
+      left: 0,
+      top: 0,
+      width: 400,
+      height: 400,
+    });
+
+    const hitEntity = editorHost.queries.findEntityAtViewportPoint(
+      resolveViewportPointForGridCell(editorHost, { x: 8, y: 13 }),
+    );
+    const missEntity = editorHost.queries.findEntityAtViewportPoint(
+      resolveViewportPointForGridCell(editorHost, { x: 9, y: 13 }),
+    );
+
+    expect(hitEntity?.id).toBe("rotated-entity");
+    expect(missEntity).toBeNull();
+  });
+
   it.each<[string | null]>([[null], [""], ["document-1"]])(
     "loads the dummy document on startup for persisted lastDocumentId=%p",
     async (lastDocumentId) => {
@@ -214,4 +306,28 @@ async function flushMicrotasks(iterations = 4): Promise<void> {
   for (let index = 0; index < iterations; index += 1) {
     await Promise.resolve();
   }
+}
+
+function resolveViewportPointForGridCell(
+  editorHost: ReturnType<typeof createEditorHost>,
+  cell: {
+    x: number;
+    y: number;
+  },
+): {
+  x: number;
+  y: number;
+} {
+  const gridCellSize = resolveWorldGridCellPixelSize(
+    editorHost.state.viewport.gridSize,
+  );
+
+  return {
+    x:
+      editorHost.state.viewport.clientRect.width / 2
+      + (cell.x + 0.5 - editorHost.state.viewport.center.x) * gridCellSize,
+    y:
+      editorHost.state.viewport.clientRect.height / 2
+      + (cell.y + 0.5 - editorHost.state.viewport.center.y) * gridCellSize,
+  };
 }

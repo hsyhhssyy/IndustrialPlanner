@@ -150,11 +150,10 @@ function getEventDetail(event: GestureEvent): string {
       return `buttons ${event.buttons}`;
     case "touch dragstart":
     case "touch dragmove":
-      return `primary ${event.primaryId}, touches ${event.activeTouchCount}`;
+      return `primary ${event.primaryId}, touches ${event.activeTouchCount}, ${event.longPress ? "long press" : "direct"}`;
     case "touch dragend":
-      return `${event.reason}, primary ${event.primaryId}`;
+      return `${event.reason}, primary ${event.primaryId}, ${event.longPress ? "long press" : "direct"}`;
     case "touch tap":
-    case "touch move":
       return `primary ${event.primaryId}`;
     case "pinch in":
     case "pinch out":

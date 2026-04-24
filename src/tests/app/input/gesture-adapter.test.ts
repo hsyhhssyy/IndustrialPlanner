@@ -149,13 +149,18 @@ describe("GestureAdapter", () => {
       "touch dragmove",
       "touch dragend",
     ]);
+    expect(events[0]).toMatchObject({
+      type: "touch dragstart",
+      longPress: true,
+    });
     expect(events[2]).toMatchObject({
       type: "touch dragend",
       reason: "release",
+      longPress: true,
     });
   });
 
-  it("turns early touch movement into touch move and cancels the long press indicator", () => {
+  it("turns early touch movement into non-long-press touch drag and cancels the long press indicator", () => {
     const adapter = createGestureAdapter();
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => events.push(event));
@@ -167,10 +172,28 @@ describe("GestureAdapter", () => {
     adapter.handlePointerUp(touchEvent(1, 14, 4));
 
     expect(adapter.getLongPressState().visible).toBe(false);
-    expect(events.map((event) => event.type)).toEqual(["touch move", "touch move"]);
+    expect(events.map((event) => event.type)).toEqual([
+      "touch dragstart",
+      "touch dragmove",
+      "touch dragend",
+    ]);
+    expect(events[0]).toMatchObject({
+      type: "touch dragstart",
+      longPress: false,
+    });
+    expect(events[1]).toMatchObject({
+      type: "touch dragmove",
+      delta: { x: 2, y: 4 },
+      longPress: false,
+    });
+    expect(events[2]).toMatchObject({
+      type: "touch dragend",
+      reason: "release",
+      longPress: false,
+    });
   });
 
-  it("only emits touch move while exactly one touch is active", () => {
+  it("only emits non-long-press touch drag motion while exactly one touch is active", () => {
     const adapter = createGestureAdapter();
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => events.push(event));
@@ -178,17 +201,22 @@ describe("GestureAdapter", () => {
     adapter.handlePointerDown(touchEvent(1, 0, 0));
     adapter.handlePointerMove(touchEvent(1, 12, 0));
 
-    expect(events.filter((event) => event.type === "touch move")).toHaveLength(1);
+    expect(events.filter((event) => event.type === "touch dragstart")).toHaveLength(1);
+    expect(events.filter((event) => event.type === "touch dragmove")).toHaveLength(0);
 
     adapter.handlePointerDown(touchEvent(2, 0, 10));
     adapter.handlePointerMove(touchEvent(1, 16, 0));
 
-    expect(events.filter((event) => event.type === "touch move")).toHaveLength(1);
+    expect(events.filter((event) => event.type === "touch dragmove")).toHaveLength(0);
 
     adapter.handlePointerUp(touchEvent(2, 0, 10));
     adapter.handlePointerMove(touchEvent(1, 20, 0));
 
-    expect(events.filter((event) => event.type === "touch move")).toHaveLength(2);
+    expect(events.filter((event) => event.type === "touch dragmove")).toHaveLength(1);
+    expect(events.find((event) => event.type === "touch dragmove")).toMatchObject({
+      type: "touch dragmove",
+      longPress: false,
+    });
   });
 
   it("keeps touch drag alive across multiple touches and emits pinch plus two finger move", () => {
@@ -212,10 +240,15 @@ describe("GestureAdapter", () => {
       "touch dragmove",
       "touch dragend",
     ]);
+    expect(events[0]).toMatchObject({
+      type: "touch dragstart",
+      longPress: true,
+    });
     expect(events[4]).toMatchObject({
       type: "touch dragend",
       primaryId: 2,
       reason: "release",
+      longPress: true,
     });
   });
 

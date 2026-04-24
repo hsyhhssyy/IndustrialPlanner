@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { createDummyWorldDocument } from "@/editor/dummy-document"
 import { createRegistryContract } from "@/registry"
 import {
+  resolveGenericDeviceSpriteTexturePath,
   resolveWorldEntitySpriteLayout,
   resolveWorldGridLineAxes,
 } from "@/renderer/scene/render-scene-orchestrator"
@@ -50,7 +51,26 @@ describe("resolveWorldEntitySpriteLayout", () => {
       y: 336.5,
       width: 16,
       height: 16,
+      rotation: 0,
     })
+  })
+})
+
+describe("resolveGenericDeviceSpriteTexturePath", () => {
+  it("maps known device sprites to the scene sprite asset directory", () => {
+    expect(resolveGenericDeviceSpriteTexturePath("item_port_storager_1")).toBe(
+      "/sprites/item_port_storager_1.webp",
+    )
+  })
+
+  it("resolves aliased sprite ids to the shipped sprite asset name", () => {
+    expect(
+      resolveGenericDeviceSpriteTexturePath("item_port_liquid_filling_pd_mc_1"),
+    ).toBe("/sprites/item_port_filling_pd_mc_1.webp")
+  })
+
+  it("returns null when no default scene sprite asset exists", () => {
+    expect(resolveGenericDeviceSpriteTexturePath("pipe_straight_1x1")).toBeNull()
   })
 })
 

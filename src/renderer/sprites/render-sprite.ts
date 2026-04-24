@@ -1,4 +1,5 @@
 import { Container } from "pixi.js";
+import type { GridRotation } from "@/shared/geometry/grid"
 
 export type RenderLayerId = "background" | "entity" | "overlay";
 
@@ -15,6 +16,7 @@ export interface RenderSpriteLayout {
   y: number;
   width: number;
   height: number;
+  rotation: GridRotation;
 }
 
 export interface RenderSprite {

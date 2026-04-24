@@ -20,16 +20,17 @@ export function createMouseViewportPanModule(): GestureMappingModule<AppHost> {
             return { status: "ignored" };
           }
 
-          editor.actions.moveViewportByViewportPixelVector({
-            startViewportPixel: resolveViewportPixelPoint(
-              event.startPosition,
-              editor.state.viewport.clientRect,
-            ),
-            endViewportPixel: resolveViewportPixelPoint(
-              event.position,
-              editor.state.viewport.clientRect,
-            ),
-          });
+          moveViewport(editor, event.startPosition, event.position);
+
+          return { status: "handled" };
+        }
+
+        case "touch dragstart": {
+          if (event.longPress) {
+            return { status: "ignored" };
+          }
+
+          moveViewport(editor, event.startPosition, event.position);
 
           return { status: "handled" };
         }
@@ -39,19 +40,23 @@ export function createMouseViewportPanModule(): GestureMappingModule<AppHost> {
             return { status: "ignored" };
           }
 
-          editor.actions.moveViewportByViewportPixelVector({
-            startViewportPixel: resolveViewportPixelPoint(
-              {
-                x: event.position.x - event.delta.x,
-                y: event.position.y - event.delta.y,
-              },
-              editor.state.viewport.clientRect,
-            ),
-            endViewportPixel: resolveViewportPixelPoint(
-              event.position,
-              editor.state.viewport.clientRect,
-            ),
-          });
+          moveViewport(editor, {
+            x: event.position.x - event.delta.x,
+            y: event.position.y - event.delta.y,
+          }, event.position);
+
+          return { status: "handled" };
+        }
+
+        case "touch dragmove": {
+          if (event.longPress) {
+            return { status: "ignored" };
+          }
+
+          moveViewport(editor, {
+            x: event.position.x - event.delta.x,
+            y: event.position.y - event.delta.y,
+          }, event.position);
 
           return { status: "handled" };
         }
@@ -61,11 +66,33 @@ export function createMouseViewportPanModule(): GestureMappingModule<AppHost> {
             ? { status: "handled" }
             : { status: "ignored" };
 
+        case "touch dragend":
+          return event.longPress
+            ? { status: "ignored" }
+            : { status: "handled" };
+
         default:
           return { status: "ignored" };
       }
     },
   };
+}
+
+function moveViewport(
+  editor: NonNullable<AppHost["workspace"]["editor"]>,
+  startPosition: GesturePosition,
+  endPosition: GesturePosition,
+): void {
+  editor.actions.moveViewportByViewportPixelVector({
+    startViewportPixel: resolveViewportPixelPoint(
+      startPosition,
+      editor.state.viewport.clientRect,
+    ),
+    endViewportPixel: resolveViewportPixelPoint(
+      endPosition,
+      editor.state.viewport.clientRect,
+    ),
+  });
 }
 
 function resolveViewportPixelPoint(
