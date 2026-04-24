@@ -2,6 +2,7 @@ import { RenderContract } from "@/domain/contract/render-contract";
 import { WorkspaceContract } from "@/domain/contract/workspace-contract";
 
 import { Application } from "pixi.js";
+import { resolveRenderResolutionFromApp } from "./render-resolution";
 import { createRenderSceneOrchestrator } from "./scene/render-scene-orchestrator";
 
 export interface RenderHost extends RenderContract {
@@ -40,7 +41,7 @@ export async function createRenderHost(
     height: resolveViewportAxisSize(clientRect.height, DEFAULT_VIEWPORT_HEIGHT),
     backgroundAlpha: 0,
     antialias: true,
-    resolution: 1,
+    resolution: resolveRenderResolutionFromApp(workspace.app),
     preference: "webgl",
   });
 

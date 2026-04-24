@@ -17,6 +17,7 @@ import {
   Graphics,
   UPDATE_PRIORITY,
 } from "pixi.js"
+import { resolveRenderResolutionFromApp } from "../render-resolution"
 import type { RenderHost } from "../renderer-host"
 
 import { BeltStraightSprite } from "../sprites/belt-straight-sprite"
@@ -56,6 +57,7 @@ const GENERIC_DEVICE_SPRITE_ALIASES: Record<string, string> = {
 interface RenderViewportState {
   width: number;
   height: number;
+  resolution: number;
   centerX: number;
   centerY: number;
   gridSize: number;
@@ -151,21 +153,27 @@ function createSpriteForDefinition(
   return new GenericDeviceSprite(texturePath)
 }
 
-function applyViewportSize(
+export function applyViewportSize(
   app: RenderHost["app"],
   viewportSize: {
     width: number;
     height: number;
+    resolution: number;
   },
 ): void {
   if (
     app.renderer.width === viewportSize.width
     && app.renderer.height === viewportSize.height
+    && app.renderer.resolution === viewportSize.resolution
   ) {
     return
   }
 
-  app.renderer.resize(viewportSize.width, viewportSize.height)
+  app.renderer.resize(
+    viewportSize.width,
+    viewportSize.height,
+    viewportSize.resolution,
+  )
 }
 
 function readViewportState(renderHost: RenderHost): RenderViewportState {
@@ -174,6 +182,7 @@ function readViewportState(renderHost: RenderHost): RenderViewportState {
     return {
       width: renderHost.app.renderer.width,
       height: renderHost.app.renderer.height,
+      resolution: renderHost.app.renderer.resolution,
       centerX: 0,
       centerY: 0,
       gridSize: 1,
@@ -188,6 +197,10 @@ function readViewportState(renderHost: RenderHost): RenderViewportState {
     height: resolveViewportAxisSize(
       editor.state.viewport.clientRect.height,
       renderHost.app.renderer.height,
+    ),
+    resolution: resolveRenderResolutionFromApp(
+      renderHost.workspace.app,
+      renderHost.app.renderer.resolution,
     ),
     centerX: resolveViewportCoordinate(editor.state.viewport.center.x),
     centerY: resolveViewportCoordinate(editor.state.viewport.center.y),

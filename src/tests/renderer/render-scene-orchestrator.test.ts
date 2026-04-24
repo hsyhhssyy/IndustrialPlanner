@@ -1,12 +1,60 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { createDummyWorldDocument } from "@/editor/dummy-document"
 import { createRegistryContract } from "@/registry"
 import {
+  applyViewportSize,
   resolveGenericDeviceSpriteTexturePath,
   resolveWorldEntitySpriteLayout,
   resolveWorldGridLineAxes,
 } from "@/renderer/scene/render-scene-orchestrator"
+import type { RenderHost } from "@/renderer/renderer-host"
+
+describe("applyViewportSize", () => {
+  it("resizes the renderer when device pixel ratio changes", () => {
+    const resize = vi.fn()
+
+    applyViewportSize(
+      {
+        renderer: {
+          width: 640,
+          height: 480,
+          resolution: 1,
+          resize,
+        },
+      } as unknown as RenderHost["app"],
+      {
+        width: 640,
+        height: 480,
+        resolution: 2,
+      },
+    )
+
+    expect(resize).toHaveBeenCalledWith(640, 480, 2)
+  })
+
+  it("skips renderer resize when viewport size and resolution are unchanged", () => {
+    const resize = vi.fn()
+
+    applyViewportSize(
+      {
+        renderer: {
+          width: 640,
+          height: 480,
+          resolution: 2,
+          resize,
+        },
+      } as unknown as RenderHost["app"],
+      {
+        width: 640,
+        height: 480,
+        resolution: 2,
+      },
+    )
+
+    expect(resize).not.toHaveBeenCalled()
+  })
+})
 
 describe("resolveWorldEntitySpriteLayout", () => {
   it("projects the dummy belt entity into viewport space using registry footprint", () => {

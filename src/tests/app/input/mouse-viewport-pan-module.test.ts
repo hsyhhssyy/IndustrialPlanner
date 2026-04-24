@@ -140,7 +140,7 @@ function createContext(): {
         moveViewportByViewportPixelVector,
       },
     },
-  } as WorkspaceContract;
+  } as unknown as WorkspaceContract;
 
   return {
     context: {
