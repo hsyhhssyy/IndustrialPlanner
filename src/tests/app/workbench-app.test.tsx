@@ -163,6 +163,8 @@ describe("WorkbenchApp", () => {
 
     container.remove();
     localStorage.clear();
+    document.documentElement.removeAttribute("data-app-theme");
+    document.documentElement.removeAttribute("style");
     vi.unstubAllGlobals();
     document.body.classList.remove("is-resizing-left-dock");
   });
@@ -251,6 +253,7 @@ describe("WorkbenchApp", () => {
         rightDockOpen: true,
         leftDockWidth: 470,
         topBarCollapsed: false,
+        themeId: "ayu-dark",
       }),
     );
 

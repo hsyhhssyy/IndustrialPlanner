@@ -1,4 +1,5 @@
 import { Container } from "pixi.js";
+import type { AppTheme } from "@/domain/state/theme";
 import type { GridRotation } from "@/shared/geometry/grid"
 
 export type RenderLayerId = "background" | "entity" | "overlay";
@@ -19,8 +20,12 @@ export interface RenderSpriteLayout {
   rotation: GridRotation;
 }
 
+export interface RenderSpriteSyncContext {
+  theme: AppTheme;
+}
+
 export interface RenderSprite {
   attach(layers: RenderLayerMap): void;
-  syncLayout(layout: RenderSpriteLayout): void;
+  syncLayout(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void;
   destroy(): void;
 }

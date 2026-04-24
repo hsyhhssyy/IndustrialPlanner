@@ -15,6 +15,7 @@ import {
 } from "./input/gesture-diagnostics";
 import { hookLocalstorage } from "./storage-hook";
 import { createUiStateReadWrite, UiStateReadWrite } from "./state-impl";
+import { hookThemeApplicator } from "./theme/theme-applicator";
 
 export interface AppHost extends AppContract {
   workspace: WorkspaceContract;
@@ -48,6 +49,8 @@ export function createAppHost(
     setActivePanel: actionImpl.setActivePanel,
     setLeftDockWidth: actionImpl.setLeftDockWidth,
     setScreenProfile: actionImpl.setScreenProfile,
+    setThemeId: actionImpl.setThemeId,
+    toggleTheme: actionImpl.toggleTheme,
   };
   const actions: AppContract["actions"] = {
     translate: actionImpl.translate,
@@ -86,6 +89,7 @@ export function createAppHost(
     gestureDiagnostics.setKeyboardSnapshot(snapshot);
   }));
   disposers.push(hookLocalstorage(host));
+  disposers.push(hookThemeApplicator(host));
 
   return host;
 }

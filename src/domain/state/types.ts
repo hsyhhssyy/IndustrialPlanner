@@ -5,6 +5,7 @@
 import type { AppLocale } from "@/shared/i18n/messages";
 import type { WorldEntity } from "../entity/world-document";
 import type { ScreenProfile } from "./screen-profile";
+import type { AppTheme, AppThemeId } from "./theme";
 
 export interface EditorViewportCenter {
   readonly x: number;
@@ -55,6 +56,7 @@ export interface HistoryState {
 
 export interface AppSettings {
   readonly locale: AppLocale;
+  readonly themeId: AppThemeId;
 }
 
 export interface WorkbenchState {
@@ -68,6 +70,7 @@ export interface UiState {
   readonly settings: AppSettings;
   readonly workbench: WorkbenchState;
   readonly screenProfile: ScreenProfile;
+  readonly theme: AppTheme;
 }
 
 export type EntityCollection = Readonly<Record<string, WorldEntity>>;

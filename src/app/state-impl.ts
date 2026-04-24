@@ -1,11 +1,13 @@
 import { makeAutoObservable } from "mobx";
 
 import type { ScreenProfile } from "@/domain/state/screen-profile";
+import type { AppTheme, AppThemeId } from "@/domain/state/theme";
 import type { AppLocale } from "@/shared/i18n/messages";
 import {
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
 import type { AppSettings, UiState, WorkbenchState } from "@/domain/state/types";
+import { DEFAULT_APP_THEME_ID, resolveAppTheme } from "./theme";
 
 export const MIN_LEFT_DOCK_WIDTH = 375;
 export const MAX_LEFT_DOCK_WIDTH = 600;
@@ -30,6 +32,7 @@ export function resolveLeftDockWidthForScreenProfile(
 
 export interface AppSettingsReadWrite extends AppSettings {
   locale: AppLocale;
+  themeId: AppThemeId;
 }
 
 export interface WorkbenchStateReadWrite extends WorkbenchState {
@@ -81,6 +84,7 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
 export class UiStateReadWriteImpl implements UiStateReadWrite {
   settings: AppSettingsReadWrite = {
     locale: DEFAULT_APP_LOCALE,
+    themeId: DEFAULT_APP_THEME_ID,
   };
 
   workbench: WorkbenchStateReadWrite = new WorkbenchStateReadWriteImpl();
@@ -89,6 +93,10 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
+  }
+
+  public get theme(): AppTheme {
+    return resolveAppTheme(this.settings.themeId);
   }
 }
 

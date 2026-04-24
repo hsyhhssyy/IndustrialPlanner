@@ -2,6 +2,8 @@ import type {
   WorldDocument,
   WorldEntity,
 } from "@/domain/entity/world-document"
+import type { AppTheme } from "@/domain/state/theme"
+import { resolveAppThemeColorNumber } from "@/domain/state/theme"
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition"
 import {
   getGridFootprintCenterCells,
@@ -28,7 +30,6 @@ import {
   type RenderSpriteLayout,
 } from "../sprites/render-sprite"
 
-const WORLD_GRID_LINE_COLOR = 0xffffff
 const WORLD_GRID_LINE_ALPHA = 0.12
 const WORLD_GRID_LINE_WIDTH = 1
 
@@ -79,6 +80,7 @@ export function createRenderSceneOrchestrator(
   const flushViewport = (): void => {
     const viewportState = readViewportState(renderHost)
     const documentSnapshot = readWorldDocumentSnapshot(renderHost)
+    const theme = readAppTheme(renderHost)
 
     applyViewportSize(app, viewportState)
 
@@ -91,6 +93,7 @@ export function createRenderSceneOrchestrator(
         width: app.renderer.width,
         height: app.renderer.height,
       },
+      theme,
     })
 
     syncWorldEntitySprites({
@@ -105,6 +108,7 @@ export function createRenderSceneOrchestrator(
         width: app.renderer.width,
         height: app.renderer.height,
       },
+      theme,
     })
   }
 
@@ -217,6 +221,16 @@ function readWorldDocumentSnapshot(renderHost: RenderHost): WorldDocument | null
   return editor.document.getSnapshot()
 }
 
+function readAppTheme(renderHost: RenderHost): AppTheme {
+  const theme = renderHost.workspace.app?.state.theme
+
+  if (theme === undefined) {
+    throw new Error("App host must be initialized before renderer can read theme colors.")
+  }
+
+  return theme
+}
+
 function resolveViewportAxisSize(
   value: number,
   fallback: number,
@@ -256,6 +270,7 @@ function syncWorldGridBackground(options: {
     width: number;
     height: number;
   };
+  theme: AppTheme;
 }): void {
   const lineAxes = resolveWorldGridLineAxes({
     viewportBounds: options.viewportBounds,
@@ -280,10 +295,10 @@ function syncWorldGridBackground(options: {
       .lineTo(options.viewportBounds.left + options.viewportBounds.width, y)
   }
 
-  options.background.stroke(resolveWorldGridStrokeStyle())
+  options.background.stroke(resolveWorldGridStrokeStyle(options.theme))
 }
 
-export function resolveWorldGridStrokeStyle(): {
+export function resolveWorldGridStrokeStyle(theme: AppTheme): {
   width: number;
   color: number;
   alpha: number;
@@ -291,7 +306,10 @@ export function resolveWorldGridStrokeStyle(): {
 } {
   return {
     width: WORLD_GRID_LINE_WIDTH,
-    color: WORLD_GRID_LINE_COLOR,
+    color: resolveAppThemeColorNumber(
+      theme,
+      theme.renderer.worldGridLineColorKey,
+    ),
     alpha: WORLD_GRID_LINE_ALPHA,
     pixelLine: true,
   }
@@ -372,6 +390,7 @@ function syncWorldEntitySprites(options: {
     width: number;
     height: number;
   };
+  theme: AppTheme;
 }): void {
   const nextEntityIds = new Set<string>()
 
@@ -398,16 +417,19 @@ function syncWorldEntitySprites(options: {
         options.entitySprites.set(entity.id, sprite)
       }
 
-      sprite.syncLayout(resolveWorldEntitySpriteLayout({
-        entity,
-        footprint: definition.footprint,
-        viewportBounds: options.viewportBounds,
-        viewportCenter: {
-          x: options.viewportState.centerX,
-          y: options.viewportState.centerY,
-        },
-        gridSize: options.viewportState.gridSize,
-      }))
+      sprite.syncLayout(
+        resolveWorldEntitySpriteLayout({
+          entity,
+          footprint: definition.footprint,
+          viewportBounds: options.viewportBounds,
+          viewportCenter: {
+            x: options.viewportState.centerX,
+            y: options.viewportState.centerY,
+          },
+          gridSize: options.viewportState.gridSize,
+        }),
+        { theme: options.theme },
+      )
       nextEntityIds.add(entity.id)
     }
   }

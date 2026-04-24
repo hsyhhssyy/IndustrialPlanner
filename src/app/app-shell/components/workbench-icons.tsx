@@ -22,6 +22,8 @@ import LucideRotateCcw from "~icons/lucide/rotate-ccw";
 import LucideSettings from "~icons/lucide/settings";
 import LucideSmartphone from "~icons/lucide/smartphone";
 import LucideSquare from "~icons/lucide/square";
+import LucideMoon from "~icons/lucide/moon";
+import LucideSun from "~icons/lucide/sun";
 import LucideTablet from "~icons/lucide/tablet";
 import LucideTrash2 from "~icons/lucide/trash-2";
 import LucideX from "~icons/lucide/x";
@@ -34,6 +36,8 @@ type WorkbenchIconKind =
   | "toolbox"
   | "help"
   | "settings"
+  | "theme-dark"
+  | "theme-light"
   | "panel-left-close"
   | "panel-left-open"
   | "panel-right-close"
@@ -66,6 +70,8 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   toolbox: LucidePackage2,
   help: LucideHelpCircle,
   settings: LucideSettings,
+  "theme-dark": LucideMoon,
+  "theme-light": LucideSun,
   "panel-left-close": LucidePanelLeftClose,
   "panel-left-open": LucidePanelLeftOpen,
   "panel-right-close": LucidePanelRightClose,

@@ -127,6 +127,8 @@ describe("TopBar", () => {
 
     container.remove();
     localStorage.clear();
+    document.documentElement.removeAttribute("data-app-theme");
+    document.documentElement.removeAttribute("style");
     vi.unstubAllGlobals();
   });
 
@@ -221,6 +223,44 @@ describe("TopBar", () => {
     ).toBe("expand");
   });
 
+  it("toggles between the built-in app themes", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<TopBar appHost={appHost} />);
+    });
+
+    const themeButton = container.querySelector(
+      ".top-bar-theme-button",
+    ) as HTMLButtonElement | null;
+
+    expect(themeButton).not.toBeNull();
+
+    if (!themeButton) {
+      throw new Error("Top bar theme button was not rendered.");
+    }
+
+    expect(appHost.state.theme.name).toBe("Ayu Dark");
+    expect(container.textContent).toContain("主题: Ayu Dark");
+    expect(themeButton.title).toBe("切换主题: Ayu Light");
+    expect(
+      themeButton.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("theme-light");
+
+    act(() => {
+      themeButton.click();
+    });
+
+    expect(appHost.state.theme.name).toBe("Ayu Light");
+    expect(container.textContent).toContain("主题: Ayu Light");
+    expect(document.documentElement.dataset.appTheme).toBe("ayu-light");
+    expect(themeButton.title).toBe("切换主题: Ayu Dark");
+    expect(
+      themeButton.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("theme-dark");
+  });
+
   it("shows device class and screen shape from public UI state", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
@@ -280,7 +320,11 @@ describe("TopBar", () => {
     expect(collapseButton).not.toBeNull();
     expect(
       Array.from(container.querySelectorAll(".top-bar-controls button")),
-    ).toEqual([fullscreenButton, collapseButton]);
+    ).toEqual([
+      container.querySelector(".top-bar-theme-button"),
+      fullscreenButton,
+      collapseButton,
+    ]);
     expect(collapseButton?.title).toBe("折叠 运行控制");
     expect(appHost.state.workbench.topBarCollapsed).toBe(false);
 

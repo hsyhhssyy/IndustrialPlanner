@@ -15,6 +15,7 @@ export type MessageKey =
   | "action.close"
   | "action.expand"
   | "action.collapse"
+  | "action.switchTheme"
   | "action.enterFullscreen"
   | "action.exitFullscreen"
   | "action.deleteSelection"
@@ -103,6 +104,7 @@ export type MessageKey =
   | "topBar.speed"
   | "topBar.controls"
   | "topBar.language"
+  | "topBar.theme"
   | "topBar.device"
   | "topBar.screen"
   | "topBar.leftPanel"
@@ -136,6 +138,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.close": "关闭",
     "action.expand": "展开",
     "action.collapse": "折叠",
+    "action.switchTheme": "切换主题",
     "action.enterFullscreen": "进入全屏",
     "action.exitFullscreen": "退出全屏",
     "action.deleteSelection": "删除选中",
@@ -224,6 +227,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "topBar.speed": "速率",
     "topBar.controls": "运行控制",
     "topBar.language": "语言",
+    "topBar.theme": "主题",
     "topBar.device": "设备",
     "topBar.screen": "屏幕",
     "topBar.leftPanel": "左侧",
@@ -256,6 +260,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.close": "Close",
     "action.expand": "Expand",
     "action.collapse": "Collapse",
+    "action.switchTheme": "Switch Theme",
     "action.enterFullscreen": "Enter Fullscreen",
     "action.exitFullscreen": "Exit Fullscreen",
     "action.deleteSelection": "Delete Selection",
@@ -344,6 +349,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "topBar.speed": "Speed",
     "topBar.controls": "Controls",
     "topBar.language": "Language",
+    "topBar.theme": "Theme",
     "topBar.device": "Device",
     "topBar.screen": "Screen",
     "topBar.leftPanel": "Left",

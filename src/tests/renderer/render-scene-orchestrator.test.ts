@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { createDummyWorldDocument } from "@/editor/dummy-document"
+import { AYU_DARK_THEME, AYU_LIGHT_THEME } from "@/app/theme"
 import { createRegistryContract } from "@/registry"
 import {
   applyViewportSize,
@@ -162,11 +163,15 @@ describe("resolveWorldGridLineAxes", () => {
 
 describe("resolveWorldGridStrokeStyle", () => {
   it("uses a pixel-perfect 1px stroke for the editor grid", () => {
-    expect(resolveWorldGridStrokeStyle()).toEqual({
+    expect(resolveWorldGridStrokeStyle(AYU_DARK_THEME)).toEqual({
       width: 1,
       color: 0xffffff,
       alpha: 0.12,
       pixelLine: true,
     })
+  })
+
+  it("resolves the editor grid color from the current theme renderer key", () => {
+    expect(resolveWorldGridStrokeStyle(AYU_LIGHT_THEME).color).toBe(0x5c6773)
   })
 })

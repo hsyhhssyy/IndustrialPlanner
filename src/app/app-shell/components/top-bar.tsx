@@ -9,6 +9,7 @@ import { observer } from "mobx-react-lite";
 import {
   isMobileLandscapeScreenProfile,
 } from "@/shared/browser/screen-profile";
+import { resolveNextAppThemeId } from "@/app/theme";
 
 function getLocaleLabelKey(locale: AppHost["state"]["settings"]["locale"]): string {
   return locale === "en-US" ? "locale.en-US" : "locale.zh-CN";
@@ -55,6 +56,12 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
   const toggleTopBarCollapsed = () => {
     appHost.internalActions.toggleTopBarCollapsed();
   };
+  const toggleTheme = () => {
+    appHost.internalActions.toggleTheme();
+  };
+  const nextTheme = resolveNextAppThemeId(settings.themeId);
+  const nextThemeName = nextTheme === "ayu-dark" ? "Ayu Dark" : "Ayu Light";
+  const themeButtonLabel = `${t("action.switchTheme")}: ${nextThemeName}`;
   const leftPanelLabel = `${t(leftDockOpen ? "action.close" : "action.open")} ${t("topBar.leftPanel")}`;
   const rightPanelLabel = `${t(rightDockOpen ? "action.close" : "action.open")} ${t("topBar.rightPanel")}`;
   const isMobileLandscape = isMobileLandscapeScreenProfile(screenProfile);
@@ -106,8 +113,21 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
         <span className="top-bar-metric">
           {`${t("topBar.language")}: ${t(getLocaleLabelKey(settings.locale))}`}
         </span>
+        <span className="top-bar-metric">{`${t("topBar.theme")}: ${appHost.state.theme.name}`}</span>
         <span className="top-bar-metric">{`${t("topBar.device")}: ${deviceLabel}`}</span>
         <span className="top-bar-metric">{`${t("topBar.screen")}: ${screenShapeLabel}`}</span>
+        <button
+          aria-label={themeButtonLabel}
+          className="top-bar-icon-button top-bar-theme-button"
+          onClick={toggleTheme}
+          title={themeButtonLabel}
+          type="button"
+        >
+          <span className="top-bar-toggle-icon">
+            <WorkbenchIcon kind={nextTheme === "ayu-light" ? "theme-light" : "theme-dark"} />
+          </span>
+          <span className="sr-only">{themeButtonLabel}</span>
+        </button>
         <FullscreenToggleButton
           appHost={appHost}
           className="top-bar-icon-button top-bar-fullscreen-button"

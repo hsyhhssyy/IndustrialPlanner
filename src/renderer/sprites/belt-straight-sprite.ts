@@ -6,13 +6,11 @@ import {
   RenderLayerMap,
   RenderSprite,
   RenderSpriteLayout,
+  RenderSpriteSyncContext,
 } from "./render-sprite"
+import { resolveAppThemeColorNumber } from "@/domain/state/theme"
 
-const BELT_TILE_FILL_COLOR = 0x1f2937
-const BELT_TILE_STROKE_COLOR = 0xf59e0b
 const BELT_TILE_STROKE_WIDTH = 2
-const BELT_TRACK_COLOR = 0x7c8da3
-const BELT_LANE_COLOR = 0xd9e1ee
 
 export class BeltStraightSprite implements RenderSprite {
   private readonly body = new Graphics({ roundPixels: true })
@@ -28,7 +26,7 @@ export class BeltStraightSprite implements RenderSprite {
     layers.entity.addChild(this.body)
   }
 
-  public syncLayout(layout: RenderSpriteLayout): void {
+  public syncLayout(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void {
     const cornerRadius = Math.min(layout.width, layout.height) * 0.28
     const trackInset = Math.min(layout.width, layout.height) * 0.16
     const laneWidth = Math.max(2, Math.min(layout.width, layout.height) * 0.18)
@@ -41,10 +39,18 @@ export class BeltStraightSprite implements RenderSprite {
 
     this.body
       .roundRect(layout.x, layout.y, layout.width, layout.height, cornerRadius)
-      .fill({ color: BELT_TILE_FILL_COLOR })
+      .fill({
+        color: resolveAppThemeColorNumber(
+          context.theme,
+          context.theme.renderer.beltTileFillColorKey,
+        ),
+      })
       .stroke({
         width: BELT_TILE_STROKE_WIDTH,
-        color: BELT_TILE_STROKE_COLOR,
+        color: resolveAppThemeColorNumber(
+          context.theme,
+          context.theme.renderer.beltTileStrokeColorKey,
+        ),
       })
 
     this.body
@@ -55,7 +61,12 @@ export class BeltStraightSprite implements RenderSprite {
         trackHeight,
         Math.max(2, trackHeight * 0.45),
       )
-      .fill({ color: BELT_TRACK_COLOR })
+      .fill({
+        color: resolveAppThemeColorNumber(
+          context.theme,
+          context.theme.renderer.beltTrackColorKey,
+        ),
+      })
 
     this.body
       .roundRect(
@@ -65,7 +76,12 @@ export class BeltStraightSprite implements RenderSprite {
         laneWidth,
         Math.max(1, laneWidth * 0.45),
       )
-      .fill({ color: BELT_LANE_COLOR })
+      .fill({
+        color: resolveAppThemeColorNumber(
+          context.theme,
+          context.theme.renderer.beltLaneColorKey,
+        ),
+      })
   }
 
   public destroy(): void {

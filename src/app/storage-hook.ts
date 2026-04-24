@@ -1,12 +1,18 @@
 import { reaction } from "mobx";
 
+import type { AppThemeId } from "@/domain/state/theme";
 import type { WorkbenchState } from "@/domain/state/types";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
 import type { AppHost } from "./app-host";
 import { clampLeftDockWidth } from "./state-impl";
+import { isAppThemeId } from "./theme";
 
 export const WORKBENCH_STATE_LOCAL_STORAGE_KEY = "v3-workbench-state";
+
+interface PersistedWorkbenchState extends WorkbenchState {
+  readonly themeId: AppThemeId;
+}
 
 export function hookLocalstorage(appHost: AppHost): () => void {
   hydrateWorkbenchState(
@@ -42,14 +48,19 @@ function hydrateWorkbenchState(appHost: AppHost, persistedState: unknown): void 
   if (typeof persistedState.topBarCollapsed === "boolean") {
     appHost.internalState.workbench.topBarCollapsed = persistedState.topBarCollapsed;
   }
+
+  if (isAppThemeId(persistedState.themeId)) {
+    appHost.internalState.settings.themeId = persistedState.themeId;
+  }
 }
 
-function getWorkbenchStateSnapshot(appHost: AppHost): WorkbenchState {
+function getWorkbenchStateSnapshot(appHost: AppHost): PersistedWorkbenchState {
   return {
     leftDockOpen: appHost.internalState.workbench.leftDockOpen,
     rightDockOpen: appHost.internalState.workbench.rightDockOpen,
     leftDockWidth: appHost.internalState.workbench.leftDockWidth,
     topBarCollapsed: appHost.internalState.workbench.topBarCollapsed,
+    themeId: appHost.internalState.settings.themeId,
   };
 }
 
