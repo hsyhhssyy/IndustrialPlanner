@@ -8,47 +8,22 @@ import type { EditorInternalPersistStateReadWrite } from "./state-impl";
 export const EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY = "v1-editor-persist-state";
 
 export function hookLocalstorage(editorHost: EditorHost): () => void {
-  hydrateInternalPersistState(
-    editorHost,
-    readFromLocalStorage<unknown>(EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY),
-  );
+  const persistedInternalPersistState =
+    readFromLocalStorage<EditorInternalPersistStateReadWrite>(
+      EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY,
+    );
+
+  if (persistedInternalPersistState !== null) {
+    editorHost.internalState.internalPersistState = persistedInternalPersistState;
+  }
 
   return reaction(
-    () => getInternalPersistStateSnapshot(editorHost),
-    (internalPersistState) => {
-      saveToLocalStorage(
+    () => JSON.stringify(editorHost.internalState.internalPersistState),
+    () => {
+      saveToLocalStorage<EditorInternalPersistStateReadWrite>(
         EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY,
-        internalPersistState,
+        editorHost.internalState.internalPersistState,
       );
     },
   );
-}
-
-function hydrateInternalPersistState(
-  editorHost: EditorHost,
-  persistedState: unknown,
-): void {
-  if (!isRecord(persistedState)) {
-    return;
-  }
-
-  if (
-    typeof persistedState.lastDocumentId === "string" ||
-    persistedState.lastDocumentId === null
-  ) {
-    editorHost.internalState.internalPersistState.lastDocumentId =
-      persistedState.lastDocumentId;
-  }
-}
-
-function getInternalPersistStateSnapshot(
-  editorHost: EditorHost,
-): EditorInternalPersistStateReadWrite {
-  return {
-    lastDocumentId: editorHost.internalState.internalPersistState.lastDocumentId,
-  };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }

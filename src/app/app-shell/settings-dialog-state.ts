@@ -51,6 +51,15 @@ export interface WorkbenchSettingsGroupDefinition {
   readonly items: readonly WorkbenchSettingDefinition[];
 }
 
+interface WorkbenchSettingExternalBinding {
+  readonly readValue: () => WorkbenchSettingControlValue;
+  readonly writeValue: (value: WorkbenchSettingControlValue) => void;
+}
+
+interface WorkbenchSettingsDialogControllerOptions {
+  readonly externalBindings?: Readonly<Record<string, WorkbenchSettingExternalBinding>>;
+}
+
 interface PersistedUserSettingsDialogState {
   readonly selectedGroupId: SettingsGroupId;
   readonly values: Record<string, WorkbenchSettingControlValue>;
@@ -154,10 +163,12 @@ const SETTING_DEFINITION_BY_ID = new Map<string, WorkbenchSettingDefinition>(
   ),
 );
 
-function createDefaultValues(): Record<string, WorkbenchSettingControlValue> {
+function createDefaultValues(externalBindingIds: ReadonlySet<string> = new Set()): Record<string, WorkbenchSettingControlValue> {
   return Object.fromEntries(
     WORKBENCH_SETTINGS_GROUPS.flatMap((group) =>
-      group.items.map((setting) => [setting.id, setting.defaultValue])
+      group.items
+        .filter((setting) => !externalBindingIds.has(setting.id))
+        .map((setting) => [setting.id, setting.defaultValue])
     ),
   );
 }
@@ -165,20 +176,27 @@ function createDefaultValues(): Record<string, WorkbenchSettingControlValue> {
 export class WorkbenchSettingsDialogController {
   public isOpen = false;
   public selectedGroupId: SettingsGroupId = DEFAULT_SETTINGS_GROUP.id;
-  public values: Record<string, WorkbenchSettingControlValue> = createDefaultValues();
+  public values: Record<string, WorkbenchSettingControlValue> = {};
 
+  private readonly externalBindings: ReadonlyMap<string, WorkbenchSettingExternalBinding>;
+  private readonly externalBindingIds: ReadonlySet<string>;
   private pendingOpenPromise: Promise<void> | null = null;
   private resolvePendingOpen: (() => void) | null = null;
 
-  public constructor() {
+  public constructor(options: WorkbenchSettingsDialogControllerOptions = {}) {
+    this.externalBindings = new Map(Object.entries(options.externalBindings ?? {}));
+    this.externalBindingIds = new Set(this.externalBindings.keys());
+    this.values = createDefaultValues(this.externalBindingIds);
     this.hydrate(readFromLocalStorage<unknown>(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY));
 
     makeAutoObservable<
       WorkbenchSettingsDialogController,
-      "pendingOpenPromise" | "resolvePendingOpen"
+      "externalBindingIds" | "externalBindings" | "pendingOpenPromise" | "resolvePendingOpen"
     >(
       this,
       {
+        externalBindingIds: false,
+        externalBindings: false,
         pendingOpenPromise: false,
         resolvePendingOpen: false,
       },
@@ -189,6 +207,10 @@ export class WorkbenchSettingsDialogController {
   public get selectedGroup(): WorkbenchSettingsGroupDefinition {
     return WORKBENCH_SETTINGS_GROUPS.find((group) => group.id === this.selectedGroupId)
       ?? DEFAULT_SETTINGS_GROUP;
+  }
+
+  public getValue(settingId: string): WorkbenchSettingControlValue | undefined {
+    return this.externalBindings.get(settingId)?.readValue() ?? this.values[settingId];
   }
 
   public open(): Promise<void> {
@@ -238,6 +260,13 @@ export class WorkbenchSettingsDialogController {
       return;
     }
 
+    const externalBinding = this.externalBindings.get(settingId);
+    if (externalBinding) {
+      externalBinding.writeValue(value);
+
+      return;
+    }
+
     this.values[settingId] = value;
     this.persist();
   }
@@ -248,6 +277,13 @@ export class WorkbenchSettingsDialogController {
       return;
     }
 
+    const externalBinding = this.externalBindings.get(settingId);
+    if (externalBinding) {
+      externalBinding.writeValue(normalizeSliderValue(setting, value));
+
+      return;
+    }
+
     this.values[settingId] = normalizeSliderValue(setting, value);
     this.persist();
   }
@@ -255,6 +291,13 @@ export class WorkbenchSettingsDialogController {
   public updateSwitchValue(settingId: string, checked: boolean): void {
     const setting = SETTING_DEFINITION_BY_ID.get(settingId);
     if (setting?.kind !== "switch") {
+      return;
+    }
+
+    const externalBinding = this.externalBindings.get(settingId);
+    if (externalBinding) {
+      externalBinding.writeValue(checked);
+
       return;
     }
 
@@ -275,9 +318,13 @@ export class WorkbenchSettingsDialogController {
       return;
     }
 
-    const nextValues = createDefaultValues();
+    const nextValues = createDefaultValues(this.externalBindingIds);
 
     for (const [settingId, rawValue] of Object.entries(persistedState.values)) {
+      if (this.externalBindings.has(settingId)) {
+        continue;
+      }
+
       const setting = SETTING_DEFINITION_BY_ID.get(settingId);
       if (!setting) {
         continue;

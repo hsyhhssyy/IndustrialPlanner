@@ -5,6 +5,7 @@ import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type { ScreenProfile } from "@/domain/state/screen-profile";
 import type { AppThemeId } from "@/domain/state/theme";
 import type { EditorViewportClientRect } from "@/domain/state/types";
+import type { AppLocale } from "@/shared/i18n/messages";
 import { lookupMessageText } from "@/shared/i18n/messages";
 import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 
@@ -24,6 +25,7 @@ export interface AppInternalAction {
   setActivePanel: (panel: ActivePanel) => void;
   setLeftDockWidth: (width: number) => void;
   setScreenProfile: (screenProfile: ScreenProfile) => void;
+  setLocale: (locale: AppLocale) => void;
   setThemeId: (themeId: AppThemeId) => void;
   toggleTheme: () => void;
 }
@@ -78,6 +80,14 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     }
 
     this.internalState.screenProfile = screenProfile;
+  });
+
+  public readonly setLocale: AppInternalAction["setLocale"] = action((locale) => {
+    if (this.internalState.settings.locale === locale) {
+      return;
+    }
+
+    this.internalState.settings.locale = locale;
   });
 
   public readonly setThemeId: AppInternalAction["setThemeId"] = action((themeId) => {

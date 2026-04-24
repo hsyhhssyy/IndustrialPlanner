@@ -6,7 +6,10 @@ import type {
   GesturePointerEventLike,
   GestureWheelEventLike,
 } from "@/app/input/gesture-adapter";
-import { WORKBENCH_STATE_LOCAL_STORAGE_KEY } from "@/app/storage-hook";
+import {
+  APP_SETTINGS_LOCAL_STORAGE_KEY,
+  WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+} from "@/app/storage-hook";
 import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
@@ -111,23 +114,39 @@ describe("createAppHost", () => {
     expect(appHost.actions.translate("workbench.leftRail.placement")).toBe("放置模式");
     expect(appHost.actions.translate("unknown.key")).toBe("unknown.key");
 
-    runInAction(() => {
-      appHost.internalState.settings.locale = "en-US";
-    });
+    appHost.internalActions.setLocale("en-US");
 
     expect(appHost.actions.translate("app.title")).toBe("Industrial Planner Stage1");
     expect(appHost.actions.translate("workbench.leftRail.placement")).toBe("Placement");
     expect(appHost.actions.translate("workbench.base.wuling")).toBe("Wuling");
   });
 
-  it("hydrates workbench state from localStorage and persists later changes", () => {
+  it("hydrates only the current split localStorage keys and ignores the legacy combined key", () => {
+    localStorage.setItem(
+      "v3-workbench-state",
+      JSON.stringify({
+        leftDockOpen: true,
+        rightDockOpen: true,
+        leftDockWidth: 599,
+        topBarCollapsed: true,
+        locale: "zh-CN",
+        themeId: "ayu-dark",
+      }),
+    );
+    localStorage.setItem(
+      APP_SETTINGS_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        locale: "en-US",
+        themeId: "ayu-light",
+      }),
+    );
     localStorage.setItem(
       WORKBENCH_STATE_LOCAL_STORAGE_KEY,
       JSON.stringify({
         leftDockOpen: false,
         rightDockOpen: false,
         leftDockWidth: 512,
-        themeId: "ayu-light",
+        topBarCollapsed: false,
       }),
     );
 
@@ -137,9 +156,16 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
     expect(appHost.state.workbench.leftDockWidth).toBe(512);
+    expect(appHost.state.settings.locale).toBe("en-US");
     expect(appHost.state.settings.themeId).toBe("ayu-light");
     expect(appHost.state.theme.name).toBe("Ayu Light");
     expect(document.documentElement.dataset.appTheme).toBe("ayu-light");
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        locale: "en-US",
+        themeId: "ayu-light",
+      }),
+    );
 
     runInAction(() => {
       appHost.internalState.workbench.rightDockOpen = true;
@@ -152,7 +178,22 @@ describe("createAppHost", () => {
         rightDockOpen: true,
         leftDockWidth: 420,
         topBarCollapsed: false,
+      }),
+    );
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        locale: "en-US",
         themeId: "ayu-light",
+      }),
+    );
+    expect(localStorage.getItem("v3-workbench-state")).toBe(
+      JSON.stringify({
+        leftDockOpen: true,
+        rightDockOpen: true,
+        leftDockWidth: 599,
+        topBarCollapsed: true,
+        locale: "zh-CN",
+        themeId: "ayu-dark",
       }),
     );
 
@@ -167,6 +208,11 @@ describe("createAppHost", () => {
         rightDockOpen: true,
         leftDockWidth: 420,
         topBarCollapsed: false,
+      }),
+    );
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        locale: "en-US",
         themeId: "ayu-light",
       }),
     );

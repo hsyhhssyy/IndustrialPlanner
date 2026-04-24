@@ -180,7 +180,7 @@ function renderSettingControl(options: {
   t: AppHost["actions"]["translate"];
 }) {
   const { controller, setting, t } = options;
-  const value = controller.values[setting.id];
+  const value = controller.getValue(setting.id);
 
   if (setting.kind === "select") {
     return (

@@ -59,4 +59,37 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["game-use-simplified-device-icons"]).toBe(true);
     expect(hydratedController.values["other-debug-mode"]).toBe(true);
   });
+
+  it("uses external bindings as the source of truth for connected settings", () => {
+    let locale = "zh-CN";
+    const controller = new WorkbenchSettingsDialogController({
+      externalBindings: {
+        "system-language": {
+          readValue: () => locale,
+          writeValue: (value) => {
+            if (value === "zh-CN" || value === "en-US") {
+              locale = value;
+            }
+          },
+        },
+      },
+    });
+
+    controller.selectGroup("system");
+    controller.updateSelectValue("system-language", "en-US");
+    controller.updateSwitchValue("other-debug-mode", true);
+
+    expect(locale).toBe("en-US");
+    expect(controller.getValue("system-language")).toBe("en-US");
+    expect(JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")).toEqual({
+      selectedGroupId: "system",
+      values: {
+        "system-theme": "follow-system",
+        "display-frame-rate-limit": "unlimited",
+        "game-arknights-operation-mode": false,
+        "game-use-simplified-device-icons": false,
+        "other-debug-mode": true,
+      },
+    });
+  });
 });

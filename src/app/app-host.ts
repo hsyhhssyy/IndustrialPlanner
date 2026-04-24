@@ -49,6 +49,7 @@ export function createAppHost(
     setActivePanel: actionImpl.setActivePanel,
     setLeftDockWidth: actionImpl.setLeftDockWidth,
     setScreenProfile: actionImpl.setScreenProfile,
+    setLocale: actionImpl.setLocale,
     setThemeId: actionImpl.setThemeId,
     toggleTheme: actionImpl.toggleTheme,
   };

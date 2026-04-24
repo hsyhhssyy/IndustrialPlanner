@@ -24,7 +24,18 @@ import {
 
 export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
-  const [settingsDialog] = useState(() => new WorkbenchSettingsDialogController());
+  const [settingsDialog] = useState(() => new WorkbenchSettingsDialogController({
+    externalBindings: {
+      "system-language": {
+        readValue: () => appHost.state.settings.locale,
+        writeValue: (value) => {
+          if (value === "zh-CN" || value === "en-US") {
+            appHost.internalActions.setLocale(value);
+          }
+        },
+      },
+    },
+  }));
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const rightDockOpen = appHost.state.workbench.rightDockOpen;
   const leftDockWidth = appHost.state.workbench.leftDockWidth;

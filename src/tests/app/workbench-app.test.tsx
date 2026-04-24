@@ -6,7 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/app-host";
 import { USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY } from "@/app/app-shell/settings-dialog-state";
-import { WORKBENCH_STATE_LOCAL_STORAGE_KEY } from "@/app/storage-hook";
+import {
+  APP_SETTINGS_LOCAL_STORAGE_KEY,
+  WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+} from "@/app/storage-hook";
 import { WorkbenchApp } from "@/app/app-shell/workbench-app";
 import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
@@ -254,9 +257,9 @@ describe("WorkbenchApp", () => {
         rightDockOpen: true,
         leftDockWidth: 470,
         topBarCollapsed: false,
-        themeId: "ayu-light",
       }),
     );
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBeNull();
 
     act(() => {
       handle?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, clientX: 470 }));
@@ -417,7 +420,6 @@ describe("WorkbenchApp", () => {
       JSON.stringify({
         selectedGroupId: "system",
         values: {
-          "system-language": "en-US",
           "system-theme": "follow-system",
           "display-frame-rate-limit": "60",
           "game-arknights-operation-mode": true,
@@ -435,7 +437,7 @@ describe("WorkbenchApp", () => {
     });
 
     const settingsButton = container.querySelector(
-      'button[title="设置"]',
+      ".toolbar-rail-utility .rail-button:last-child",
     ) as HTMLButtonElement | null;
 
     expect(container.querySelector(".settings-dialog")).toBeNull();
@@ -472,7 +474,7 @@ describe("WorkbenchApp", () => {
       "调试和附加能力开关。",
     ]);
     expect(languageOptionLabels).toEqual(["中文(简体)", "English"]);
-    expect(languageSelect?.value).toBe("en-US");
+    expect(languageSelect?.value).toBe("zh-CN");
     expect(themeSelect?.value).toBe("follow-system");
     expect(debugToggle?.checked).toBe(true);
 
@@ -485,6 +487,55 @@ describe("WorkbenchApp", () => {
     });
 
     expect(container.querySelector(".settings-dialog")).toBeNull();
+  });
+
+  it("writes language changes into AppSettings and re-renders through mobx", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const settingsButton = container.querySelector(
+      ".toolbar-rail-utility .rail-button:last-child",
+    ) as HTMLButtonElement | null;
+
+    expect(settingsButton).not.toBeNull();
+    expect(settingsButton?.title).toBe("设置");
+
+    act(() => {
+      settingsButton?.click();
+    });
+
+    const languageSelect = container.querySelector(
+      'select[name="system-language"]',
+    ) as HTMLSelectElement | null;
+
+    expect(languageSelect).not.toBeNull();
+    expect(languageSelect?.value).toBe("zh-CN");
+    expect(container.querySelector(".settings-dialog-header h2")?.textContent).toBe("设置");
+
+    act(() => {
+      if (languageSelect === null) {
+        return;
+      }
+
+      languageSelect.value = "en-US";
+      languageSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(appHost.state.settings.locale).toBe("en-US");
+    expect(languageSelect?.value).toBe("en-US");
+    expect(settingsButton?.title).toBe("Settings");
+    expect(container.querySelector(".settings-dialog-header h2")?.textContent).toBe("Settings");
+    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        locale: "en-US",
+        themeId: "ayu-light",
+      }),
+    );
   });
 
   it("hides the settings group sidebar in phone portrait mode while keeping the full settings list scrollable", () => {
