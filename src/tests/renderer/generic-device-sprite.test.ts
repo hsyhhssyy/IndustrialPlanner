@@ -18,6 +18,7 @@ vi.mock("pixi.js", () => {
     public width = 0
     public height = 0
     public rotation = 0
+    public roundPixels = false
     public visible = true
     private currentTexture: unknown
 
@@ -58,6 +59,7 @@ interface RenderedSpriteSnapshot {
   width: number;
   height: number;
   rotation: number;
+  roundPixels: boolean;
   visible: boolean;
   texture: unknown;
 }
@@ -110,6 +112,7 @@ describe("GenericDeviceSprite", () => {
 
     expect(attachedSprite.texture).toBe(resolvedTexture)
     expect(attachedSprite.visible).toBe(true)
+    expect(attachedSprite.roundPixels).toBe(true)
     expect(attachedSprite.x).toBe(40)
     expect(attachedSprite.y).toBe(40)
     expect(attachedSprite.width).toBe(32)

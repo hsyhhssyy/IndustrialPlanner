@@ -72,7 +72,7 @@ export function createRenderSceneOrchestrator(
 ): RenderSceneOrchestrator {
   const app = renderHost.app
   const layers = createRenderLayers()
-  const worldGrid = new Graphics()
+  const worldGrid = new Graphics({ roundPixels: true })
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
   const entitySprites = new Map<string, RenderSprite>()
 
@@ -280,11 +280,21 @@ function syncWorldGridBackground(options: {
       .lineTo(options.viewportBounds.left + options.viewportBounds.width, y)
   }
 
-  options.background.stroke({
+  options.background.stroke(resolveWorldGridStrokeStyle())
+}
+
+export function resolveWorldGridStrokeStyle(): {
+  width: number;
+  color: number;
+  alpha: number;
+  pixelLine: true;
+} {
+  return {
     width: WORLD_GRID_LINE_WIDTH,
     color: WORLD_GRID_LINE_COLOR,
     alpha: WORLD_GRID_LINE_ALPHA,
-  })
+    pixelLine: true,
+  }
 }
 
 export function resolveWorldGridLineAxes(options: {

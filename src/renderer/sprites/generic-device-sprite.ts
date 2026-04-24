@@ -23,6 +23,7 @@ export class GenericDeviceSprite implements RenderSprite {
   public constructor(texturePath: string) {
     this.body = new Sprite(Texture.EMPTY)
     this.body.anchor.set(0.5)
+    this.body.roundPixels = true
     this.body.visible = false
     void loadTexture(texturePath).then((texture) => {
       if (this.destroyed) {

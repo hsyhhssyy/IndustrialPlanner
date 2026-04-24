@@ -10,6 +10,10 @@ export interface RenderHost extends RenderContract {
   app: Application;
 }
 
+interface RoundPixelsStageLike {
+  roundPixels: boolean;
+}
+
 const DEFAULT_VIEWPORT_WIDTH = 800;
 const DEFAULT_VIEWPORT_HEIGHT = 600;
 
@@ -41,9 +45,12 @@ export async function createRenderHost(
     height: resolveViewportAxisSize(clientRect.height, DEFAULT_VIEWPORT_HEIGHT),
     backgroundAlpha: 0,
     antialias: true,
+    autoDensity: true,
     resolution: resolveRenderResolutionFromApp(workspace.app),
     preference: "webgl",
   });
+
+  (app.stage as unknown as RoundPixelsStageLike).roundPixels = true;
 
   const host: RenderHost = {
     workspace,

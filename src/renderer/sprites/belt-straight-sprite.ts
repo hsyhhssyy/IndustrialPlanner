@@ -15,7 +15,7 @@ const BELT_TRACK_COLOR = 0x7c8da3
 const BELT_LANE_COLOR = 0xd9e1ee
 
 export class BeltStraightSprite implements RenderSprite {
-  private readonly body = new Graphics()
+  private readonly body = new Graphics({ roundPixels: true })
   private currentLayerMap: RenderLayerMap | null = null
 
   public attach(layers: RenderLayerMap): void {

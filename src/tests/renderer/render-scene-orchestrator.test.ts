@@ -6,6 +6,7 @@ import {
   applyViewportSize,
   resolveGenericDeviceSpriteTexturePath,
   resolveWorldEntitySpriteLayout,
+  resolveWorldGridStrokeStyle,
   resolveWorldGridLineAxes,
 } from "@/renderer/scene/render-scene-orchestrator"
 import type { RenderHost } from "@/renderer/renderer-host"
@@ -156,5 +157,16 @@ describe("resolveWorldGridLineAxes", () => {
     expect(centeredAxes.horizontal.slice(0, 3)).toEqual([8, 24, 40])
     expect(shiftedAxes.vertical.slice(0, 3)).toEqual([0, 16, 32])
     expect(shiftedAxes.horizontal.slice(0, 3)).toEqual([0, 16, 32])
+  })
+})
+
+describe("resolveWorldGridStrokeStyle", () => {
+  it("uses a pixel-perfect 1px stroke for the editor grid", () => {
+    expect(resolveWorldGridStrokeStyle()).toEqual({
+      width: 1,
+      color: 0xffffff,
+      alpha: 0.12,
+      pixelLine: true,
+    })
   })
 })
