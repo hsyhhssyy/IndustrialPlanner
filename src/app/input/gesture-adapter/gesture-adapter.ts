@@ -62,7 +62,7 @@ interface TouchSession {
   primaryId: number;
   readonly startPosition: GesturePosition;
   lastPosition: GesturePosition;
-  state: "pending-long-press" | "drag-ready" | "dragging";
+  state: "pending-long-press" | "drag-ready" | "dragging" | "multi-touch";
   longPressTimer: TimerHandle | null;
   longPress: boolean;
 }
@@ -449,14 +449,8 @@ export class GestureAdapter {
         durationMs: this.thresholds.touchLongPressMs,
         progress: 0,
       });
-    } else if (
-      this.touchSession.state === "pending-long-press" &&
-      this.activeTouches.size > 1
-    ) {
-      this.clearLongPressTimer(this.touchSession);
-      this.touchSession.state = "drag-ready";
-      this.touchSession.longPress = false;
-      this.hideLongPressState();
+    } else if (this.activeTouches.size > 1) {
+      this.transitionTouchSessionToMultiTouch(this.touchSession, event);
     }
 
     this.resetMultiTouchSnapshot();
@@ -485,6 +479,10 @@ export class GestureAdapter {
     session: TouchSession,
     touch: TouchPoint,
   ): void {
+    if (session.state === "multi-touch") {
+      return;
+    }
+
     const position = touch.position;
     if (session.state === "pending-long-press") {
       if (distance(session.startPosition, position) <= this.thresholds.touchMoveSlopPx) {
@@ -563,7 +561,7 @@ export class GestureAdapter {
     }
 
     if (this.activeTouches.size > 0) {
-      if (session.primaryId === event.pointerId) {
+      if (session.state !== "multi-touch" && session.primaryId === event.pointerId) {
         this.rebindPrimaryTouch(session);
       }
       this.resetMultiTouchSnapshot();
@@ -607,6 +605,33 @@ export class GestureAdapter {
 
     session.primaryId = nextTouch.id;
     session.lastPosition = nextTouch.position;
+  }
+
+  private transitionTouchSessionToMultiTouch(
+    session: TouchSession,
+    event: GesturePointerEventLike,
+  ): void {
+    if (session.state === "multi-touch") {
+      return;
+    }
+
+    this.clearLongPressTimer(session);
+    this.hideLongPressState();
+
+    if (session.state === "dragging") {
+      this.dispatchGesture({
+        type: "touch dragend",
+        gestureId: session.gestureId,
+        primaryId: session.primaryId,
+        position: session.lastPosition,
+        reason: "cancel",
+        longPress: session.longPress,
+        modifiers: getModifiers(event),
+        sourceEvent: event,
+      });
+    }
+
+    session.state = "multi-touch";
   }
 
   private dispatchMultiTouchGestures(event: GesturePointerEventLike): void {

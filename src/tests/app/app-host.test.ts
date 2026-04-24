@@ -355,6 +355,27 @@ describe("createAppHost", () => {
     expect(zoomSpy.mock.calls[1]?.[0]).toBeLessThan(0);
     expect(editorHost.state.viewport.gridSize).toBeLessThan(zoomedOutGridSize);
   });
+
+  it("does not pan the editor viewport when a pinch ends with one touch still down", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+    const initialCenter = {
+      ...editorHost.state.viewport.center,
+    };
+
+    appHost.gestureAdapter.handlePointerDown(touchEvent(1, 0, 0));
+    appHost.gestureAdapter.handlePointerDown(touchEvent(2, 0, 10));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(2, 4, 16));
+
+    expect(editorHost.state.viewport.center).toEqual(initialCenter);
+
+    appHost.gestureAdapter.handlePointerUp(touchEvent(1, 0, 0));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(2, 7, 20));
+    appHost.gestureAdapter.handlePointerUp(touchEvent(2, 7, 20));
+
+    expect(editorHost.state.viewport.center).toEqual(initialCenter);
+  });
 });
 
 function pointerEvent(

@@ -193,7 +193,7 @@ describe("GestureAdapter", () => {
     });
   });
 
-  it("only emits non-long-press touch drag motion while exactly one touch is active", () => {
+  it("cancels non-long-press touch drag once the gesture becomes multi-touch", () => {
     const adapter = createGestureAdapter();
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => events.push(event));
@@ -205,51 +205,40 @@ describe("GestureAdapter", () => {
     expect(events.filter((event) => event.type === "touch dragmove")).toHaveLength(0);
 
     adapter.handlePointerDown(touchEvent(2, 0, 10));
-    adapter.handlePointerMove(touchEvent(1, 16, 0));
-
-    expect(events.filter((event) => event.type === "touch dragmove")).toHaveLength(0);
-
+    adapter.handlePointerMove(touchEvent(2, 4, 16));
     adapter.handlePointerUp(touchEvent(2, 0, 10));
     adapter.handlePointerMove(touchEvent(1, 20, 0));
+    adapter.handlePointerUp(touchEvent(1, 20, 0));
 
-    expect(events.filter((event) => event.type === "touch dragmove")).toHaveLength(1);
-    expect(events.find((event) => event.type === "touch dragmove")).toMatchObject({
-      type: "touch dragmove",
+    expect(events.map((event) => event.type)).toEqual([
+      "touch dragstart",
+      "touch dragend",
+      "pinch out",
+      "two finger move",
+    ]);
+    expect(events[1]).toMatchObject({
+      type: "touch dragend",
+      reason: "cancel",
       longPress: false,
     });
   });
 
-  it("keeps touch drag alive across multiple touches and emits pinch plus two finger move", () => {
+  it("does not turn a pinch sequence back into touch drag after one finger lifts", () => {
     const adapter = createGestureAdapter();
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => events.push(event));
 
     adapter.handlePointerDown(touchEvent(1, 0, 0));
-    vi.advanceTimersByTime(1000);
-    adapter.handlePointerMove(touchEvent(1, 1, 0));
     adapter.handlePointerDown(touchEvent(2, 0, 10));
     adapter.handlePointerMove(touchEvent(2, 4, 16));
-    adapter.handlePointerUp(touchEvent(1, 1, 0));
+    adapter.handlePointerUp(touchEvent(1, 0, 0));
     adapter.handlePointerMove(touchEvent(2, 7, 20));
     adapter.handlePointerUp(touchEvent(2, 7, 20));
 
     expect(events.map((event) => event.type)).toEqual([
-      "touch dragstart",
       "pinch out",
       "two finger move",
-      "touch dragmove",
-      "touch dragend",
     ]);
-    expect(events[0]).toMatchObject({
-      type: "touch dragstart",
-      longPress: true,
-    });
-    expect(events[4]).toMatchObject({
-      type: "touch dragend",
-      primaryId: 2,
-      reason: "release",
-      longPress: true,
-    });
   });
 
   it("normalizes wheel direction with accumulation", () => {
