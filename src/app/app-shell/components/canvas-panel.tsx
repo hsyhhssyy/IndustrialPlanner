@@ -226,10 +226,12 @@ function CanvasTouchHoldIndicator({ state }: { state: LongPressState }) {
     return null;
   }
 
+  const progress = Math.max(0, Math.min(1, state.progress));
   const left = state.position.x - 12;
   const top = state.position.y - 12;
   const animationDuration = `${state.durationMs}ms`;
-  const progressDashOffset = 100.53 * (1 - state.progress);
+  const animationDelay = `-${progress * state.durationMs}ms`;
+  const progressDashOffset = 100.53 * (1 - progress);
 
   return (
     <div
@@ -250,6 +252,7 @@ function CanvasTouchHoldIndicator({ state }: { state: LongPressState }) {
           cy="20"
           r="16"
           style={{
+            animationDelay,
             animationDuration,
             strokeDasharray: 100.53,
             strokeDashoffset: progressDashOffset,

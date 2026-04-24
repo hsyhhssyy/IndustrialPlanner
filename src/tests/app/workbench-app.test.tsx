@@ -55,6 +55,7 @@ function dispatchPointerEvent(
 describe("WorkbenchApp", () => {
   let container: HTMLDivElement;
   let root: Root;
+  let fullscreenElement: Element | null;
   let coarsePointer: boolean;
   let hoverNone: boolean;
 
@@ -92,6 +93,7 @@ describe("WorkbenchApp", () => {
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
+    fullscreenElement = null;
     coarsePointer = false;
     hoverNone = false;
 
@@ -128,6 +130,29 @@ describe("WorkbenchApp", () => {
         removeListener: vi.fn(),
         dispatchEvent: vi.fn(),
       })),
+    });
+
+    Object.defineProperty(document, "fullscreenElement", {
+      configurable: true,
+      get: () => fullscreenElement,
+    });
+
+    Object.defineProperty(document, "exitFullscreen", {
+      configurable: true,
+      value: vi.fn(() => {
+        fullscreenElement = null;
+        document.dispatchEvent(new Event("fullscreenchange"));
+        return Promise.resolve();
+      }),
+    });
+
+    Object.defineProperty(document.documentElement, "requestFullscreen", {
+      configurable: true,
+      value: vi.fn(() => {
+        fullscreenElement = document.documentElement;
+        document.dispatchEvent(new Event("fullscreenchange"));
+        return Promise.resolve();
+      }),
     });
   });
 
@@ -239,7 +264,7 @@ describe("WorkbenchApp", () => {
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("600px");
   });
 
-  it("hides the top and bottom bars and exposes a floating expand button when a phone landscape top bar is collapsed", () => {
+  it("hides the top and bottom bars and exposes floating fullscreen and expand buttons when a phone landscape top bar is collapsed", async () => {
     coarsePointer = true;
     hoverNone = true;
     setViewport({
@@ -268,6 +293,12 @@ describe("WorkbenchApp", () => {
     });
 
     const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
+    const floatingControls = container.querySelector(
+      ".workbench-floating-top-bar-controls",
+    ) as HTMLDivElement | null;
+    const floatingFullscreenButton = container.querySelector(
+      ".workbench-floating-fullscreen-button",
+    ) as HTMLButtonElement | null;
     const floatingToggle = container.querySelector(
       ".workbench-floating-top-bar-toggle",
     ) as HTMLButtonElement | null;
@@ -277,7 +308,22 @@ describe("WorkbenchApp", () => {
     expect(workbench?.style.getPropertyValue("--bottom-bar-height")).toBe("0px");
     expect(container.querySelector(".status-bar")).toBeNull();
     expect(container.querySelector(".top-bar")).toBeNull();
+    expect(floatingControls).not.toBeNull();
+    expect(floatingFullscreenButton?.title).toBe("进入全屏");
     expect(floatingToggle?.title).toBe("展开 运行控制");
+    expect(
+      floatingFullscreenButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("expand");
+
+    await act(async () => {
+      floatingFullscreenButton?.click();
+    });
+
+    expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(1);
+    expect(floatingFullscreenButton?.getAttribute("aria-pressed")).toBe("true");
+    expect(
+      floatingFullscreenButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("shrink");
 
     act(() => {
       floatingToggle?.click();
@@ -285,7 +331,7 @@ describe("WorkbenchApp", () => {
 
     expect(appHost.state.workbench.topBarCollapsed).toBe(false);
     expect(workbench?.style.getPropertyValue("--top-bar-height")).toBe("48px");
-    expect(container.querySelector(".workbench-floating-top-bar-toggle")).toBeNull();
+    expect(container.querySelector(".workbench-floating-top-bar-controls")).toBeNull();
     expect(container.querySelector(".top-bar")).not.toBeNull();
   });
 

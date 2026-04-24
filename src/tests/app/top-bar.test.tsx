@@ -180,12 +180,11 @@ describe("TopBar", () => {
       root.render(<TopBar appHost={appHost} />);
     });
 
-    const buttons = container.querySelectorAll(
-      ".top-bar-layout-controls button",
-    );
-    const fullscreenButton = buttons[2] as HTMLButtonElement | undefined;
+    const fullscreenButton = container.querySelector(
+      ".top-bar-fullscreen-button",
+    ) as HTMLButtonElement | null;
 
-    expect(fullscreenButton).toBeDefined();
+    expect(fullscreenButton).not.toBeNull();
 
     if (!fullscreenButton) {
       throw new Error("Top bar fullscreen button was not rendered.");
@@ -193,6 +192,9 @@ describe("TopBar", () => {
 
     expect(fullscreenButton.getAttribute("aria-pressed")).toBe("false");
     expect(fullscreenButton.title).toBe("进入全屏");
+    expect(
+      fullscreenButton.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("expand");
 
     await act(async () => {
       fullscreenButton.click();
@@ -202,6 +204,9 @@ describe("TopBar", () => {
     expect(fullscreenButton.getAttribute("aria-pressed")).toBe("true");
     expect(fullscreenButton.classList.contains("is-active")).toBe(true);
     expect(fullscreenButton.title).toBe("退出全屏");
+    expect(
+      fullscreenButton.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("shrink");
 
     await act(async () => {
       fullscreenButton.click();
@@ -211,6 +216,9 @@ describe("TopBar", () => {
     expect(fullscreenButton.getAttribute("aria-pressed")).toBe("false");
     expect(fullscreenButton.classList.contains("is-active")).toBe(false);
     expect(fullscreenButton.title).toBe("进入全屏");
+    expect(
+      fullscreenButton.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("expand");
   });
 
   it("shows device class and screen shape from public UI state", () => {
@@ -261,11 +269,18 @@ describe("TopBar", () => {
       root.render(<TopBar appHost={appHost} />);
     });
 
+    const fullscreenButton = container.querySelector(
+      ".top-bar-fullscreen-button",
+    ) as HTMLButtonElement | null;
     const collapseButton = container.querySelector(
       ".top-bar-collapse-button",
     ) as HTMLButtonElement | null;
 
+    expect(fullscreenButton).not.toBeNull();
     expect(collapseButton).not.toBeNull();
+    expect(
+      Array.from(container.querySelectorAll(".top-bar-controls button")),
+    ).toEqual([fullscreenButton, collapseButton]);
     expect(collapseButton?.title).toBe("折叠 运行控制");
     expect(appHost.state.workbench.topBarCollapsed).toBe(false);
 

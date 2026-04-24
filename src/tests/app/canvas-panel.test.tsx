@@ -105,6 +105,7 @@ describe("CanvasPanel", () => {
   let root: Root;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     ResizeObserverMock.instances = [];
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     vi.stubGlobal("ResizeObserver", ResizeObserverMock);
@@ -120,6 +121,7 @@ describe("CanvasPanel", () => {
     });
 
     container.remove();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -405,6 +407,12 @@ describe("CanvasPanel", () => {
         clientY: 4,
         buttons: 1,
       });
+    });
+
+    expect(container.querySelector(".canvas-touch-hold-indicator")).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(200);
     });
 
     const indicator = container.querySelector(

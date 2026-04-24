@@ -173,11 +173,17 @@ button.is-active {
   -webkit-touch-callout: none;
 }
 
-.workbench-floating-top-bar-toggle {
+.workbench-floating-top-bar-controls {
   position: absolute;
   top: 10px;
   right: 12px;
   z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workbench-floating-top-bar-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -192,7 +198,7 @@ button.is-active {
   backdrop-filter: blur(10px);
 }
 
-.workbench-floating-top-bar-toggle:hover {
+.workbench-floating-top-bar-button:hover {
   background: rgb(22 32 45 / 0.94);
 }
 
@@ -208,11 +214,7 @@ button.is-active {
 .top-bar {
   grid-area: toolbar;
   display: grid;
-  grid-template-columns:
-    auto
-    minmax(220px, 1fr)
-    auto
-    auto;
+  grid-template-columns: auto minmax(220px, 1fr) auto;
   box-sizing: border-box;
   height: var(--top-bar-height, 48px);
   align-items: center;
@@ -303,7 +305,7 @@ button.is-active {
   white-space: nowrap;
 }
 
-.top-bar-collapse-button {
+.top-bar-icon-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -317,7 +319,7 @@ button.is-active {
   line-height: 0;
 }
 
-.top-bar-collapse-button:hover {
+.top-bar-icon-button:hover {
   background: var(--surface-3);
   border-color: var(--line);
   color: var(--text-0);

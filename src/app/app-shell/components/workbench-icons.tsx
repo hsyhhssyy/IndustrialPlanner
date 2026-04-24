@@ -6,6 +6,7 @@ import LucideGrid2x2 from "~icons/lucide/grid-2x2";
 import LucideHelpCircle from "~icons/lucide/help-circle";
 import LucideHistory from "~icons/lucide/history";
 import LucideMaximize from "~icons/lucide/maximize";
+import LucideMinimize from "~icons/lucide/minimize";
 import LucideMonitor from "~icons/lucide/monitor";
 import LucideMousePointer2 from "~icons/lucide/mouse-pointer-2";
 import LucidePackage2 from "~icons/lucide/package-2";
@@ -39,7 +40,8 @@ type WorkbenchIconKind =
   | "panel-right-open"
   | "panel-top-close"
   | "panel-top-open"
-  | "fullscreen"
+  | "expand"
+  | "shrink"
   | "pointer"
   | "cancel"
   | "confirm"
@@ -70,7 +72,8 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   "panel-right-open": LucidePanelRightOpen,
   "panel-top-close": LucidePanelTopClose,
   "panel-top-open": LucidePanelTopOpen,
-  fullscreen: LucideMaximize,
+  expand: LucideMaximize,
+  shrink: LucideMinimize,
   pointer: LucideMousePointer2,
   cancel: LucideX,
   confirm: LucideCheck,
@@ -93,6 +96,7 @@ export function WorkbenchIcon({
     <IconComponent
       aria-hidden="true"
       className={className}
+      data-workbench-icon={kind}
       focusable="false"
     />
   );

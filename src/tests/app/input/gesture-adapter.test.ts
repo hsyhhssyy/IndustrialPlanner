@@ -123,13 +123,19 @@ describe("GestureAdapter", () => {
     adapter.subscribe((event) => events.push(event));
 
     adapter.handlePointerDown(touchEvent(1, 10, 10));
+    expect(adapter.getLongPressState().visible).toBe(false);
+
+    vi.advanceTimersByTime(199);
+    expect(adapter.getLongPressState().visible).toBe(false);
+
+    vi.advanceTimersByTime(1);
     expect(adapter.getLongPressState()).toMatchObject({
       visible: true,
       position: { x: 10, y: 10 },
-      progress: 0,
     });
+    expect(adapter.getLongPressState().progress).toBeCloseTo(0.4);
 
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(300);
     expect(adapter.getLongPressState()).toMatchObject({
       visible: true,
       progress: 1,
@@ -139,7 +145,7 @@ describe("GestureAdapter", () => {
     expect(events).toEqual([]);
 
     adapter.handlePointerDown(touchEvent(2, 30, 30));
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(500);
     adapter.handlePointerMove(touchEvent(2, 33, 30));
     adapter.handlePointerMove(touchEvent(2, 36, 34));
     adapter.handlePointerUp(touchEvent(2, 36, 34));
@@ -167,7 +173,7 @@ describe("GestureAdapter", () => {
 
     adapter.handlePointerDown(touchEvent(1, 0, 0));
     adapter.handlePointerMove(touchEvent(1, 12, 0));
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(500);
     adapter.handlePointerMove(touchEvent(1, 14, 4));
     adapter.handlePointerUp(touchEvent(1, 14, 4));
 
@@ -239,6 +245,17 @@ describe("GestureAdapter", () => {
       "pinch out",
       "two finger move",
     ]);
+  });
+
+  it("does not show the long press indicator for a quick tap", () => {
+    const adapter = createGestureAdapter();
+
+    adapter.handlePointerDown(touchEvent(1, 8, 8));
+    vi.advanceTimersByTime(150);
+    adapter.handlePointerUp(touchEvent(1, 8, 8));
+    vi.advanceTimersByTime(500);
+
+    expect(adapter.getLongPressState().visible).toBe(false);
   });
 
   it("normalizes wheel direction with accumulation", () => {

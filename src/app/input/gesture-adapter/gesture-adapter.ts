@@ -14,7 +14,8 @@ import type {
   LongPressStateListener,
 } from "./types";
 
-const TOUCH_LONG_PRESS_MS = 1000;
+const TOUCH_LONG_PRESS_MS = 500;
+const TOUCH_LONG_PRESS_INDICATOR_DELAY_MS = 200;
 const TOUCH_MOVE_SLOP_PX = 8;
 const MOUSE_DRAG_SLOP_PX = 3;
 const PINCH_DISTANCE_THRESHOLD_PX = 2;
@@ -60,9 +61,11 @@ interface TouchPoint {
 interface TouchSession {
   readonly gestureId: string;
   primaryId: number;
+  readonly pressStartedAt: number;
   readonly startPosition: GesturePosition;
   lastPosition: GesturePosition;
   state: "pending-long-press" | "drag-ready" | "dragging" | "multi-touch";
+  longPressIndicatorTimer: TimerHandle | null;
   longPressTimer: TimerHandle | null;
   longPress: boolean;
 }
@@ -416,15 +419,36 @@ export class GestureAdapter {
     });
 
     if (this.touchSession === null) {
+      const pressStartedAt = this.now();
       const session: TouchSession = {
         gestureId: this.nextGestureId("touch"),
         primaryId: event.pointerId,
+        pressStartedAt,
         startPosition: position,
         lastPosition: position,
         state: "pending-long-press",
+        longPressIndicatorTimer: null,
         longPressTimer: null,
         longPress: false,
       };
+      session.longPressIndicatorTimer = this.scheduleTimeout(() => {
+        if (this.touchSession !== session || session.state !== "pending-long-press") {
+          return;
+        }
+
+        const elapsedMs = Math.min(
+          this.thresholds.touchLongPressMs,
+          Math.max(0, this.now() - session.pressStartedAt),
+        );
+        session.longPressIndicatorTimer = null;
+        this.setLongPressState({
+          visible: true,
+          position: session.lastPosition,
+          startedAt: session.pressStartedAt,
+          durationMs: this.thresholds.touchLongPressMs,
+          progress: elapsedMs / this.thresholds.touchLongPressMs,
+        });
+      }, TOUCH_LONG_PRESS_INDICATOR_DELAY_MS);
       session.longPressTimer = this.scheduleTimeout(() => {
         if (this.touchSession !== session || session.state !== "pending-long-press") {
           return;
@@ -435,20 +459,13 @@ export class GestureAdapter {
         session.longPressTimer = null;
         this.setLongPressState({
           visible: true,
-          position,
-          startedAt: this.longPressState.startedAt,
+          position: session.lastPosition,
+          startedAt: session.pressStartedAt,
           durationMs: this.thresholds.touchLongPressMs,
           progress: 1,
         });
       }, this.thresholds.touchLongPressMs);
       this.touchSession = session;
-      this.setLongPressState({
-        visible: true,
-        position,
-        startedAt: this.now(),
-        durationMs: this.thresholds.touchLongPressMs,
-        progress: 0,
-      });
     } else if (this.activeTouches.size > 1) {
       this.transitionTouchSessionToMultiTouch(this.touchSession, event);
     }
@@ -487,14 +504,16 @@ export class GestureAdapter {
     if (session.state === "pending-long-press") {
       if (distance(session.startPosition, position) <= this.thresholds.touchMoveSlopPx) {
         session.lastPosition = position;
-        this.setLongPressState({
-          ...this.longPressState,
-          position,
-        });
+        if (this.longPressState.visible && this.longPressState.startedAt === session.pressStartedAt) {
+          this.setLongPressState({
+            ...this.longPressState,
+            position,
+          });
+        }
         return;
       }
 
-      this.clearLongPressTimer(session);
+      this.clearLongPressTimers(session);
       this.hideLongPressState();
       session.state = "drag-ready";
       session.longPress = false;
@@ -568,7 +587,7 @@ export class GestureAdapter {
       return;
     }
 
-    this.clearLongPressTimer(session);
+    this.clearLongPressTimers(session);
     this.hideLongPressState();
 
     if (session.state === "pending-long-press" && reason === "release") {
@@ -615,7 +634,7 @@ export class GestureAdapter {
       return;
     }
 
-    this.clearLongPressTimer(session);
+    this.clearLongPressTimers(session);
     this.hideLongPressState();
 
     if (session.state === "dragging") {
@@ -700,7 +719,7 @@ export class GestureAdapter {
 
     const touchSession = this.touchSession;
     if (touchSession !== null) {
-      this.clearLongPressTimer(touchSession);
+      this.clearLongPressTimers(touchSession);
       if (touchSession.state === "dragging") {
         this.dispatchGesture({
           type: "touch dragend",
@@ -755,7 +774,12 @@ export class GestureAdapter {
     }
   }
 
-  private clearLongPressTimer(session: TouchSession): void {
+  private clearLongPressTimers(session: TouchSession): void {
+    if (session.longPressIndicatorTimer !== null) {
+      this.cancelTimeout(session.longPressIndicatorTimer);
+      session.longPressIndicatorTimer = null;
+    }
+
     if (session.longPressTimer !== null) {
       this.cancelTimeout(session.longPressTimer);
       session.longPressTimer = null;

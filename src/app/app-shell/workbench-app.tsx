@@ -2,6 +2,7 @@ import { useEffect, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/app-shell/components/bottom-status-bar";
 import { CanvasPanel } from "@/app/app-shell/components/canvas-panel";
+import { FullscreenToggleButton } from "@/app/app-shell/components/fullscreen-toggle-button";
 import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
 import LeftDock from "@/app/app-shell/components/left-dock";
 import { LeftToolbar } from "@/app/app-shell/components/left-toolbar";
@@ -28,7 +29,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const screenProfile = appHost.state.screenProfile;
   const isMobileLandscape = isMobileLandscapeScreenProfile(screenProfile);
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
-  const showFloatingTopBarToggle = isMobileLandscape && topBarCollapsed;
+  const showFloatingTopBarControls = isMobileLandscape && topBarCollapsed;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -50,7 +51,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const workbenchStyle = {
     "--left-dock-width": leftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",
     "--right-dock-width": rightDockOpen ? `${DEFAULT_RIGHT_DOCK_WIDTH}px` : "0px",
-    "--top-bar-height": showFloatingTopBarToggle ? "0px" : "48px",
+    "--top-bar-height": showFloatingTopBarControls ? "0px" : "48px",
     "--bottom-bar-height": isMobileLandscape ? "0px" : "28px",
   } as CSSProperties;
 
@@ -64,19 +65,25 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       style={workbenchStyle}
     >
       <TopBar appHost={appHost} />
-      {showFloatingTopBarToggle ? (
-        <button
-          aria-label={`${t("action.expand")} ${t("topBar.controls")}`}
-          className="workbench-floating-top-bar-toggle"
-          onClick={appHost.internalActions.toggleTopBarCollapsed}
-          title={`${t("action.expand")} ${t("topBar.controls")}`}
-          type="button"
-        >
-          <span className="top-bar-toggle-icon">
-            <WorkbenchIcon kind="panel-top-open" />
-          </span>
-          <span className="sr-only">{`${t("action.expand")} ${t("topBar.controls")}`}</span>
-        </button>
+      {showFloatingTopBarControls ? (
+        <div className="workbench-floating-top-bar-controls">
+          <FullscreenToggleButton
+            appHost={appHost}
+            className="workbench-floating-top-bar-button workbench-floating-fullscreen-button"
+          />
+          <button
+            aria-label={`${t("action.expand")} ${t("topBar.controls")}`}
+            className="workbench-floating-top-bar-button workbench-floating-top-bar-toggle"
+            onClick={appHost.internalActions.toggleTopBarCollapsed}
+            title={`${t("action.expand")} ${t("topBar.controls")}`}
+            type="button"
+          >
+            <span className="top-bar-toggle-icon">
+              <WorkbenchIcon kind="panel-top-open" />
+            </span>
+            <span className="sr-only">{`${t("action.expand")} ${t("topBar.controls")}`}</span>
+          </button>
+        </div>
       ) : null}
       <LeftToolbar appHost={appHost} />
       {leftDockOpen ? <LeftDock appHost={appHost} /> : null}
