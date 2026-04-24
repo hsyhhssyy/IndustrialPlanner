@@ -1,11 +1,13 @@
-import { useEffect, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/app-shell/components/bottom-status-bar";
 import { CanvasPanel } from "@/app/app-shell/components/canvas-panel";
 import { FullscreenToggleButton } from "@/app/app-shell/components/fullscreen-toggle-button";
+import { SettingsDialog } from "@/app/app-shell/components/settings-dialog";
 import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
 import LeftDock from "@/app/app-shell/components/left-dock";
 import { LeftToolbar } from "@/app/app-shell/components/left-toolbar";
+import { WorkbenchSettingsDialogController } from "@/app/app-shell/settings-dialog-state";
 import { RightDock } from "@/app/app-shell/components/right-dock";
 import { TopBar } from "@/app/app-shell/components/top-bar";
 import {
@@ -22,6 +24,7 @@ import {
 
 export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
+  const [settingsDialog] = useState(() => new WorkbenchSettingsDialogController());
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const rightDockOpen = appHost.state.workbench.rightDockOpen;
   const leftDockWidth = appHost.state.workbench.leftDockWidth;
@@ -47,6 +50,12 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       window.removeEventListener("resize", handleResize);
     };
   }, [appHost]);
+
+  useEffect(() => {
+    return () => {
+      settingsDialog.dispose();
+    };
+  }, [settingsDialog]);
 
   const workbenchStyle = {
     "--left-dock-width": leftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",
@@ -85,11 +94,17 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           </button>
         </div>
       ) : null}
-      <LeftToolbar appHost={appHost} />
+      <LeftToolbar
+        appHost={appHost}
+        onOpenSettings={() => {
+          void settingsDialog.open();
+        }}
+      />
       {leftDockOpen ? <LeftDock appHost={appHost} /> : null}
       <CanvasPanel appHost={appHost} />
       {rightDockOpen ? <RightDock appHost={appHost} /> : null}
       {isMobileLandscape ? null : <BottomStatusBar appHost={appHost} />}
+      <SettingsDialog appHost={appHost} controller={settingsDialog} />
     </div>
   );
 });

@@ -3,13 +3,13 @@ import type {
   WorldEntity,
 } from "@/domain/entity/world-document"
 import type { AppTheme } from "@/domain/state/theme"
-import { resolveAppThemeColorNumber } from "@/domain/state/theme"
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition"
 import {
   getGridFootprintCenterCells,
   getRotatedGridFootprint,
   type GridFootprint,
 } from "@/shared/geometry/grid"
+import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import {
   resolveViewportGridSize,
   resolveWorldGridCellPixelSize,

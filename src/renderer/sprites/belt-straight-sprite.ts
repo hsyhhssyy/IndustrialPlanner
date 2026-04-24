@@ -8,7 +8,7 @@ import {
   RenderSpriteLayout,
   RenderSpriteSyncContext,
 } from "./render-sprite"
-import { resolveAppThemeColorNumber } from "@/domain/state/theme"
+import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
 const BELT_TILE_STROKE_WIDTH = 2
 

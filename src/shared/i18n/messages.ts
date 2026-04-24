@@ -110,6 +110,38 @@ export type MessageKey =
   | "topBar.leftPanel"
   | "topBar.rightPanel"
   | "topBar.settings"
+  | "settingsDialog.title"
+  | "settingsDialog.groups"
+  | "settingsGroup.system"
+  | "settingsGroup.systemDescription"
+  | "settingsGroup.display"
+  | "settingsGroup.displayDescription"
+  | "settingsGroup.game"
+  | "settingsGroup.gameDescription"
+  | "settingsGroup.other"
+  | "settingsGroup.otherDescription"
+  | "settingsField.language"
+  | "settingsField.languageDescription"
+  | "settingsField.theme"
+  | "settingsField.themeDescription"
+  | "settingsField.frameRateLimit"
+  | "settingsField.frameRateLimitDescription"
+  | "settingsField.arknightsOperationMode"
+  | "settingsField.arknightsOperationModeDescription"
+  | "settingsField.useSimplifiedDeviceIcons"
+  | "settingsField.useSimplifiedDeviceIconsDescription"
+  | "settingsField.debugMode"
+  | "settingsField.debugModeDescription"
+  | "settingsOption.languageZhHans"
+  | "settingsOption.languageEnglish"
+  | "settingsOption.frameRate30"
+  | "settingsOption.frameRate60"
+  | "settingsOption.ayuLight"
+  | "settingsOption.ayuDark"
+  | "settingsOption.followSystem"
+  | "settingsOption.unlimited"
+  | "settingsOption.enabled"
+  | "settingsOption.disabled"
   | "device.mobile"
   | "device.tablet"
   | "device.desktop"
@@ -233,6 +265,38 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "topBar.leftPanel": "左侧",
     "topBar.rightPanel": "右侧",
     "topBar.settings": "设置",
+    "settingsDialog.title": "设置",
+    "settingsDialog.groups": "设置分组",
+    "settingsGroup.system": "系统",
+    "settingsGroup.systemDescription": "语言、主题与全局界面偏好。",
+    "settingsGroup.display": "显示",
+    "settingsGroup.displayDescription": "图像输出与帧率表现相关设置。",
+    "settingsGroup.game": "游戏",
+    "settingsGroup.gameDescription": "与游戏操作习惯和显示风格对齐的选项。",
+    "settingsGroup.other": "其他",
+    "settingsGroup.otherDescription": "调试和附加能力开关。",
+    "settingsField.language": "选择语言/Choose Language",
+    "settingsField.languageDescription": "切换界面语言；该条目名称始终以双语显示。",
+    "settingsField.theme": "主题",
+    "settingsField.themeDescription": "选择界面主题，默认跟随系统。",
+    "settingsField.frameRateLimit": "帧率限制",
+    "settingsField.frameRateLimitDescription": "设置渲染帧率上限。",
+    "settingsField.arknightsOperationMode": "鹰角网络操作模式",
+    "settingsField.arknightsOperationModeDescription": "使用和游戏内一致的操作模式和快捷键。",
+    "settingsField.useSimplifiedDeviceIcons": "使用简笔画设备图片",
+    "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图简笔画显示方式，不会提高性能。",
+    "settingsField.debugMode": "调试模式",
+    "settingsField.debugModeDescription": "打开调试模式日志。",
+    "settingsOption.languageZhHans": "中文(简体)",
+    "settingsOption.languageEnglish": "English",
+    "settingsOption.frameRate30": "30",
+    "settingsOption.frameRate60": "60",
+    "settingsOption.ayuLight": "Ayu Light",
+    "settingsOption.ayuDark": "Ayu Dark",
+    "settingsOption.followSystem": "跟随系统",
+    "settingsOption.unlimited": "不限",
+    "settingsOption.enabled": "已开启",
+    "settingsOption.disabled": "已关闭",
     "device.mobile": "手机",
     "device.tablet": "平板",
     "device.desktop": "电脑",
@@ -355,6 +419,38 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "topBar.leftPanel": "Left",
     "topBar.rightPanel": "Right",
     "topBar.settings": "Settings",
+    "settingsDialog.title": "Settings",
+    "settingsDialog.groups": "Setting Groups",
+    "settingsGroup.system": "System",
+    "settingsGroup.systemDescription": "Language, theme, and global interface preferences.",
+    "settingsGroup.display": "Display",
+    "settingsGroup.displayDescription": "Rendering and frame rate related options.",
+    "settingsGroup.game": "Game",
+    "settingsGroup.gameDescription": "Options that align controls and icon style with the game.",
+    "settingsGroup.other": "Other",
+    "settingsGroup.otherDescription": "Debug and auxiliary capability toggles.",
+    "settingsField.language": "选择语言/Choose Language",
+    "settingsField.languageDescription": "Switch the interface language; this entry label stays bilingual in every locale.",
+    "settingsField.theme": "Theme",
+    "settingsField.themeDescription": "Choose the interface theme, with Follow System as the default.",
+    "settingsField.frameRateLimit": "Frame Rate Limit",
+    "settingsField.frameRateLimitDescription": "Set the render frame rate cap.",
+    "settingsField.arknightsOperationMode": "Arknights Operation Mode",
+    "settingsField.arknightsOperationModeDescription": "Use the same operation mode and shortcuts as the game.",
+    "settingsField.useSimplifiedDeviceIcons": "Use Simplified Device Icons",
+    "settingsField.useSimplifiedDeviceIconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
+    "settingsField.debugMode": "Debug Mode",
+    "settingsField.debugModeDescription": "Enable debug mode logging.",
+    "settingsOption.languageZhHans": "中文(简体)",
+    "settingsOption.languageEnglish": "English",
+    "settingsOption.frameRate30": "30",
+    "settingsOption.frameRate60": "60",
+    "settingsOption.ayuLight": "Ayu Light",
+    "settingsOption.ayuDark": "Ayu Dark",
+    "settingsOption.followSystem": "Follow System",
+    "settingsOption.unlimited": "Unlimited",
+    "settingsOption.enabled": "Enabled",
+    "settingsOption.disabled": "Disabled",
     "device.mobile": "Phone",
     "device.tablet": "Tablet",
     "device.desktop": "Desktop",

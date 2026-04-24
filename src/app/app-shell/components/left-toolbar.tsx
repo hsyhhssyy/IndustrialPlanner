@@ -53,7 +53,13 @@ const UTILITY_TOOLBAR_ITEMS = [
   },
 ];
 
-export const LeftToolbar = observer(function LeftToolbar({ appHost }: { appHost: AppHost }) {
+export const LeftToolbar = observer(function LeftToolbar({
+  appHost,
+  onOpenSettings,
+}: {
+  appHost: AppHost;
+  onOpenSettings?: () => void;
+}) {
   const t = appHost.actions.translate;
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const activePanel = appHost.internalState.runtime.activePanel ?? "placement";
@@ -94,13 +100,16 @@ export const LeftToolbar = observer(function LeftToolbar({ appHost }: { appHost:
       <div className="toolbar-rail-group toolbar-rail-utility">
         {UTILITY_TOOLBAR_ITEMS.map((item) => {
           const label = t(item.labelKey);
+          const handleClick = item.id === "utility-settings"
+            ? (onOpenSettings ?? handleUiEvent)
+            : handleUiEvent;
 
           return (
             <button
               aria-label={label}
               className="rail-button rail-button-utility"
               key={item.id}
-              onClick={handleUiEvent}
+              onClick={handleClick}
               title={label}
               type="button"
             >

@@ -59,12 +59,12 @@ describe("createAppHost", () => {
     const appHost = createAppHost(workspace);
 
     expect(appHost.state.settings.locale).toBe("zh-CN");
-    expect(appHost.state.settings.themeId).toBe("ayu-dark");
-    expect(appHost.state.theme.name).toBe("Ayu Dark");
+    expect(appHost.state.settings.themeId).toBe("ayu-light");
+    expect(appHost.state.theme.name).toBe("Ayu Light");
     expect(appHost.internalState.settings.locale).toBe("zh-CN");
-    expect(appHost.internalState.settings.themeId).toBe("ayu-dark");
+    expect(appHost.internalState.settings.themeId).toBe("ayu-light");
     expect(workspace.app?.state.settings.locale).toBe("zh-CN");
-    expect(workspace.app?.state.theme.id).toBe("ayu-dark");
+    expect(workspace.app?.state.theme.id).toBe("ayu-light");
     expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
     expect(workspace.app?.state.screenProfile.deviceClass).toBe("desktop");
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
@@ -176,25 +176,25 @@ describe("createAppHost", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
-    expect(appHost.state.settings.themeId).toBe("ayu-dark");
-    expect(appHost.state.theme.id).toBe("ayu-dark");
-    expect(document.documentElement.dataset.appTheme).toBe("ayu-dark");
-    expect(document.documentElement.style.getPropertyValue("--shell-bg")).toBe("#0f1419");
+    expect(appHost.state.settings.themeId).toBe("ayu-light");
+    expect(appHost.state.theme.id).toBe("ayu-light");
+    expect(document.documentElement.dataset.appTheme).toBe("ayu-light");
+    expect(document.documentElement.style.getPropertyValue("--shell-bg")).toBe("#f5f7fa");
 
     appHost.internalActions.toggleTheme();
 
-    expect(appHost.state.settings.themeId).toBe("ayu-light");
-    expect(appHost.state.theme.id).toBe("ayu-light");
-    expect(workspace.app?.state.theme.id).toBe("ayu-light");
-    expect(document.documentElement.dataset.appTheme).toBe("ayu-light");
-    expect(document.documentElement.style.colorScheme).toBe("light");
-    expect(document.documentElement.style.getPropertyValue("--shell-bg")).toBe("#f5f7fa");
-
-    appHost.internalActions.setThemeId("ayu-dark");
-
     expect(appHost.state.settings.themeId).toBe("ayu-dark");
     expect(appHost.state.theme.id).toBe("ayu-dark");
+    expect(workspace.app?.state.theme.id).toBe("ayu-dark");
     expect(document.documentElement.dataset.appTheme).toBe("ayu-dark");
+    expect(document.documentElement.style.colorScheme).toBe("dark");
+    expect(document.documentElement.style.getPropertyValue("--shell-bg")).toBe("#0f1419");
+
+    appHost.internalActions.setThemeId("ayu-light");
+
+    expect(appHost.state.settings.themeId).toBe("ayu-light");
+    expect(appHost.state.theme.id).toBe("ayu-light");
+    expect(document.documentElement.dataset.appTheme).toBe("ayu-light");
   });
 
   it("keeps activePanel in runtime state only without persisting it", () => {

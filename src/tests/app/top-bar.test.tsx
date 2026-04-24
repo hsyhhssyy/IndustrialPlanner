@@ -241,24 +241,24 @@ describe("TopBar", () => {
       throw new Error("Top bar theme button was not rendered.");
     }
 
-    expect(appHost.state.theme.name).toBe("Ayu Dark");
-    expect(container.textContent).toContain("主题: Ayu Dark");
-    expect(themeButton.title).toBe("切换主题: Ayu Light");
+    expect(appHost.state.theme.name).toBe("Ayu Light");
+    expect(container.textContent).toContain("主题: Ayu Light");
+    expect(themeButton.title).toBe("切换主题: Ayu Dark");
     expect(
       themeButton.querySelector("svg")?.getAttribute("data-workbench-icon"),
-    ).toBe("theme-light");
+    ).toBe("theme-dark");
 
     act(() => {
       themeButton.click();
     });
 
-    expect(appHost.state.theme.name).toBe("Ayu Light");
-    expect(container.textContent).toContain("主题: Ayu Light");
-    expect(document.documentElement.dataset.appTheme).toBe("ayu-light");
-    expect(themeButton.title).toBe("切换主题: Ayu Dark");
+    expect(appHost.state.theme.name).toBe("Ayu Dark");
+    expect(container.textContent).toContain("主题: Ayu Dark");
+    expect(document.documentElement.dataset.appTheme).toBe("ayu-dark");
+    expect(themeButton.title).toBe("切换主题: Ayu Light");
     expect(
       themeButton.querySelector("svg")?.getAttribute("data-workbench-icon"),
-    ).toBe("theme-dark");
+    ).toBe("theme-light");
   });
 
   it("shows device class and screen shape from public UI state", () => {

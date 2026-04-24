@@ -5,6 +5,7 @@ import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/app-host";
+import { USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY } from "@/app/app-shell/settings-dialog-state";
 import { WORKBENCH_STATE_LOCAL_STORAGE_KEY } from "@/app/storage-hook";
 import { WorkbenchApp } from "@/app/app-shell/workbench-app";
 import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state-impl";
@@ -253,7 +254,7 @@ describe("WorkbenchApp", () => {
         rightDockOpen: true,
         leftDockWidth: 470,
         topBarCollapsed: false,
-        themeId: "ayu-dark",
+        themeId: "ayu-light",
       }),
     );
 
@@ -408,5 +409,120 @@ describe("WorkbenchApp", () => {
 
     expect(middleMouseEvent.defaultPrevented).toBe(true);
     expect(leftMouseEvent.defaultPrevented).toBe(false);
+  });
+
+  it("opens the settings dialog from the left toolbar and hydrates saved schema values", () => {
+    localStorage.setItem(
+      USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        selectedGroupId: "system",
+        values: {
+          "system-language": "en-US",
+          "system-theme": "follow-system",
+          "display-frame-rate-limit": "60",
+          "game-arknights-operation-mode": true,
+          "game-use-simplified-device-icons": false,
+          "other-debug-mode": true,
+        },
+      }),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const settingsButton = container.querySelector(
+      'button[title="设置"]',
+    ) as HTMLButtonElement | null;
+
+    expect(container.querySelector(".settings-dialog")).toBeNull();
+    expect(settingsButton).not.toBeNull();
+
+    act(() => {
+      settingsButton?.click();
+    });
+
+    const dialog = container.querySelector(".settings-dialog") as HTMLDivElement | null;
+    const languageSelect = container.querySelector(
+      'select[name="system-language"]',
+    ) as HTMLSelectElement | null;
+    const themeSelect = container.querySelector(
+      'select[name="system-theme"]',
+    ) as HTMLSelectElement | null;
+    const debugToggle = container.querySelector(
+      'input[name="other-debug-mode"]',
+    ) as HTMLInputElement | null;
+    const groupTitles = Array.from(
+      dialog?.querySelectorAll(".settings-dialog-group-header h3") ?? [],
+    ).map((element) => element.textContent);
+    const groupDescriptions = Array.from(
+      dialog?.querySelectorAll(".settings-dialog-group-header p") ?? [],
+    ).map((element) => element.textContent);
+    const languageOptionLabels = Array.from(languageSelect?.options ?? []).map((option) => option.textContent);
+
+    expect(dialog).not.toBeNull();
+    expect(groupTitles).toEqual(["系统", "显示", "游戏", "其他"]);
+    expect(groupDescriptions).toEqual([
+      "语言、主题与全局界面偏好。",
+      "图像输出与帧率表现相关设置。",
+      "与游戏操作习惯和显示风格对齐的选项。",
+      "调试和附加能力开关。",
+    ]);
+    expect(languageOptionLabels).toEqual(["中文(简体)", "English"]);
+    expect(languageSelect?.value).toBe("en-US");
+    expect(themeSelect?.value).toBe("follow-system");
+    expect(debugToggle?.checked).toBe(true);
+
+    const closeButton = container.querySelector(
+      ".settings-dialog-close",
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      closeButton?.click();
+    });
+
+    expect(container.querySelector(".settings-dialog")).toBeNull();
+  });
+
+  it("hides the settings group sidebar in phone portrait mode while keeping the full settings list scrollable", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 390,
+      height: 844,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const settingsButton = container.querySelector(
+      'button[title="设置"]',
+    ) as HTMLButtonElement | null;
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
+    expect(appHost.state.screenProfile.screenShape).toBe("portrait");
+
+    act(() => {
+      settingsButton?.click();
+    });
+
+    const dialog = container.querySelector(".settings-dialog") as HTMLDivElement | null;
+    const groupTitles = Array.from(
+      dialog?.querySelectorAll(".settings-dialog-group-header h3") ?? [],
+    ).map((element) => element.textContent);
+
+    expect(dialog).not.toBeNull();
+    expect(container.querySelector(".settings-dialog-sidebar")).toBeNull();
+    expect(groupTitles).toEqual(["系统", "显示", "游戏", "其他"]);
   });
 });

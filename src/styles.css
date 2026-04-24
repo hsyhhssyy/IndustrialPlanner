@@ -184,6 +184,335 @@ button.is-active {
   background: var(--floating-control-bg-hover);
 }
 
+.settings-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 2.6vw, 28px);
+  background: rgb(15 23 42 / 0.42);
+}
+
+.settings-dialog-backdrop,
+.settings-dialog-backdrop * {
+  touch-action: auto;
+}
+
+.settings-dialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(980px, 100%);
+  min-height: min(620px, 100%);
+  max-height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-1);
+  box-shadow: 0 24px 80px rgb(15 23 42 / 0.22);
+}
+
+.settings-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-dialog-header-copy {
+  min-width: 0;
+}
+
+.settings-dialog-header-copy h2,
+.settings-dialog-group-header h3,
+.settings-dialog-setting-copy h4 {
+  margin: 0;
+}
+
+.settings-dialog-setting-copy p,
+.settings-dialog-group-header p {
+  margin: 0;
+  color: var(--text-1);
+}
+
+.settings-dialog-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+}
+
+.settings-dialog-layout {
+  display: grid;
+  grid-template-columns: minmax(188px, 208px) minmax(0, 1fr);
+  min-height: 0;
+}
+
+.settings-dialog-layout-single-pane {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.settings-dialog-sidebar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  padding: 10px;
+  border-right: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%);
+}
+
+.settings-dialog-sidebar-title {
+  margin-bottom: 8px;
+  color: var(--text-1);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.settings-dialog-tree {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.settings-dialog-tree-button {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--transparent);
+  background: var(--transparent);
+  text-align: left;
+}
+
+.settings-dialog-tree-button:hover,
+.settings-dialog-tree-button.is-active {
+  border-color: var(--line);
+  background: var(--surface-3);
+}
+
+.settings-dialog-tree-label {
+  color: var(--text-0);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.settings-dialog-content {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 14px;
+}
+
+.settings-dialog-group-section {
+  display: grid;
+  gap: 8px;
+  scroll-margin-top: 10px;
+}
+
+.settings-dialog-group-header {
+  display: grid;
+  gap: 4px;
+}
+
+.settings-dialog-settings-list {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-dialog-setting-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 236px);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.settings-dialog-setting-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.settings-dialog-setting-copy h4 {
+  font-size: 0.95rem;
+}
+
+.settings-dialog-setting-copy p {
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.settings-dialog-setting-control {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settings-dialog-field-shell,
+.settings-dialog-slider-shell,
+.settings-dialog-switch-shell {
+  width: min(100%, 236px);
+}
+
+.settings-dialog-field-shell select,
+.settings-dialog-slider-shell input[type="range"] {
+  width: 100%;
+}
+
+.settings-dialog-field-shell select {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-0);
+}
+
+.settings-dialog-slider-shell {
+  display: grid;
+  gap: 4px;
+}
+
+.settings-dialog-slider-value {
+  color: var(--text-1);
+  font-size: 0.76rem;
+  text-align: right;
+}
+
+.settings-dialog-switch-shell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.settings-dialog-switch-shell input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings-dialog-switch-track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 42px;
+  height: 24px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-4);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.settings-dialog-switch-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--surface-1);
+  box-shadow: 0 2px 6px rgb(15 23 42 / 0.16);
+  transition: transform 120ms ease;
+}
+
+.settings-dialog-switch-shell input:checked + .settings-dialog-switch-track {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.settings-dialog-switch-shell input:checked + .settings-dialog-switch-track .settings-dialog-switch-thumb {
+  transform: translateX(18px);
+}
+
+.settings-dialog-switch-label {
+  color: var(--text-0);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.settings-dialog button:focus-visible,
+.settings-dialog input:focus-visible,
+.settings-dialog select:focus-visible {
+  outline: 2px solid var(--highlight-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .settings-dialog {
+    min-height: min(680px, 100%);
+  }
+
+  .settings-dialog-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .settings-dialog-sidebar {
+    padding-bottom: 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .settings-dialog-tree {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .settings-dialog-tree-button {
+    min-width: 148px;
+    flex: 0 0 auto;
+  }
+
+  .settings-dialog-setting-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-dialog-setting-control {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .settings-dialog-backdrop {
+    padding: 8px;
+  }
+
+  .settings-dialog {
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  .settings-dialog-header,
+  .settings-dialog-content,
+  .settings-dialog-sidebar {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .settings-dialog-header {
+    gap: 10px;
+  }
+}
+
 .panel-surface {
   border: 0;
   border-radius: 0;

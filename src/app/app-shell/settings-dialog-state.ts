@@ -1,0 +1,348 @@
+import { makeAutoObservable } from "mobx";
+
+import type { MessageKey } from "@/shared/i18n/messages";
+import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
+
+export const USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY = "v3-user-settings-dialog";
+
+export type SettingsGroupId = "system" | "display" | "game" | "other";
+
+export type WorkbenchSettingControlValue = string | number | boolean;
+
+interface WorkbenchSettingBaseDefinition {
+  readonly id: string;
+  readonly labelKey: MessageKey;
+  readonly descriptionKey: MessageKey;
+}
+
+interface WorkbenchSelectOptionDefinition {
+  readonly value: string;
+  readonly labelKey: MessageKey;
+}
+
+interface WorkbenchSelectSettingDefinition extends WorkbenchSettingBaseDefinition {
+  readonly kind: "select";
+  readonly defaultValue: string;
+  readonly options: readonly WorkbenchSelectOptionDefinition[];
+}
+
+interface WorkbenchSliderSettingDefinition extends WorkbenchSettingBaseDefinition {
+  readonly kind: "slider";
+  readonly defaultValue: number;
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+}
+
+interface WorkbenchSwitchSettingDefinition extends WorkbenchSettingBaseDefinition {
+  readonly kind: "switch";
+  readonly defaultValue: boolean;
+}
+
+export type WorkbenchSettingDefinition =
+  | WorkbenchSelectSettingDefinition
+  | WorkbenchSliderSettingDefinition
+  | WorkbenchSwitchSettingDefinition;
+
+export interface WorkbenchSettingsGroupDefinition {
+  readonly id: SettingsGroupId;
+  readonly labelKey: MessageKey;
+  readonly descriptionKey: MessageKey;
+  readonly items: readonly WorkbenchSettingDefinition[];
+}
+
+interface PersistedUserSettingsDialogState {
+  readonly selectedGroupId: SettingsGroupId;
+  readonly values: Record<string, WorkbenchSettingControlValue>;
+}
+
+export const WORKBENCH_SETTINGS_GROUPS = [
+  {
+    id: "system",
+    labelKey: "settingsGroup.system",
+    descriptionKey: "settingsGroup.systemDescription",
+    items: [
+      {
+        id: "system-language",
+        kind: "select",
+        labelKey: "settingsField.language",
+        descriptionKey: "settingsField.languageDescription",
+        defaultValue: "zh-CN",
+        options: [
+          { value: "zh-CN", labelKey: "settingsOption.languageZhHans" },
+          { value: "en-US", labelKey: "settingsOption.languageEnglish" },
+        ],
+      },
+      {
+        id: "system-theme",
+        kind: "select",
+        labelKey: "settingsField.theme",
+        descriptionKey: "settingsField.themeDescription",
+        defaultValue: "follow-system",
+        options: [
+          { value: "ayu-light", labelKey: "settingsOption.ayuLight" },
+          { value: "ayu-dark", labelKey: "settingsOption.ayuDark" },
+          { value: "follow-system", labelKey: "settingsOption.followSystem" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "display",
+    labelKey: "settingsGroup.display",
+    descriptionKey: "settingsGroup.displayDescription",
+    items: [
+      {
+        id: "display-frame-rate-limit",
+        kind: "select",
+        labelKey: "settingsField.frameRateLimit",
+        descriptionKey: "settingsField.frameRateLimitDescription",
+        defaultValue: "unlimited",
+        options: [
+          { value: "30", labelKey: "settingsOption.frameRate30" },
+          { value: "60", labelKey: "settingsOption.frameRate60" },
+          { value: "unlimited", labelKey: "settingsOption.unlimited" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "game",
+    labelKey: "settingsGroup.game",
+    descriptionKey: "settingsGroup.gameDescription",
+    items: [
+      {
+        id: "game-arknights-operation-mode",
+        kind: "switch",
+        labelKey: "settingsField.arknightsOperationMode",
+        descriptionKey: "settingsField.arknightsOperationModeDescription",
+        defaultValue: false,
+      },
+      {
+        id: "game-use-simplified-device-icons",
+        kind: "switch",
+        labelKey: "settingsField.useSimplifiedDeviceIcons",
+        descriptionKey: "settingsField.useSimplifiedDeviceIconsDescription",
+        defaultValue: false,
+      },
+    ],
+  },
+  {
+    id: "other",
+    labelKey: "settingsGroup.other",
+    descriptionKey: "settingsGroup.otherDescription",
+    items: [
+      {
+        id: "other-debug-mode",
+        kind: "switch",
+        labelKey: "settingsField.debugMode",
+        descriptionKey: "settingsField.debugModeDescription",
+        defaultValue: false,
+      },
+    ],
+  },
+] as const satisfies readonly [
+  WorkbenchSettingsGroupDefinition,
+  ...WorkbenchSettingsGroupDefinition[],
+];
+
+const DEFAULT_SETTINGS_GROUP = WORKBENCH_SETTINGS_GROUPS[0];
+
+const SETTING_DEFINITION_BY_ID = new Map<string, WorkbenchSettingDefinition>(
+  WORKBENCH_SETTINGS_GROUPS.flatMap((group) =>
+    group.items.map((setting): [string, WorkbenchSettingDefinition] => [setting.id, setting])
+  ),
+);
+
+function createDefaultValues(): Record<string, WorkbenchSettingControlValue> {
+  return Object.fromEntries(
+    WORKBENCH_SETTINGS_GROUPS.flatMap((group) =>
+      group.items.map((setting) => [setting.id, setting.defaultValue])
+    ),
+  );
+}
+
+export class WorkbenchSettingsDialogController {
+  public isOpen = false;
+  public selectedGroupId: SettingsGroupId = DEFAULT_SETTINGS_GROUP.id;
+  public values: Record<string, WorkbenchSettingControlValue> = createDefaultValues();
+
+  private pendingOpenPromise: Promise<void> | null = null;
+  private resolvePendingOpen: (() => void) | null = null;
+
+  public constructor() {
+    this.hydrate(readFromLocalStorage<unknown>(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY));
+
+    makeAutoObservable<
+      WorkbenchSettingsDialogController,
+      "pendingOpenPromise" | "resolvePendingOpen"
+    >(
+      this,
+      {
+        pendingOpenPromise: false,
+        resolvePendingOpen: false,
+      },
+      { autoBind: true },
+    );
+  }
+
+  public get selectedGroup(): WorkbenchSettingsGroupDefinition {
+    return WORKBENCH_SETTINGS_GROUPS.find((group) => group.id === this.selectedGroupId)
+      ?? DEFAULT_SETTINGS_GROUP;
+  }
+
+  public open(): Promise<void> {
+    this.isOpen = true;
+
+    if (this.pendingOpenPromise !== null) {
+      return this.pendingOpenPromise;
+    }
+
+    this.pendingOpenPromise = new Promise<void>((resolve) => {
+      this.resolvePendingOpen = resolve;
+    });
+
+    return this.pendingOpenPromise;
+  }
+
+  public close(): void {
+    this.isOpen = false;
+    this.resolveOpenPromise();
+  }
+
+  public dispose(): void {
+    this.isOpen = false;
+    this.resolveOpenPromise();
+  }
+
+  public selectGroup(groupId: SettingsGroupId): void {
+    if (!WORKBENCH_SETTINGS_GROUPS.some((group) => group.id === groupId)) {
+      return;
+    }
+
+    if (this.selectedGroupId === groupId) {
+      return;
+    }
+
+    this.selectedGroupId = groupId;
+    this.persist();
+  }
+
+  public updateSelectValue(settingId: string, value: string): void {
+    const setting = SETTING_DEFINITION_BY_ID.get(settingId);
+    if (setting?.kind !== "select") {
+      return;
+    }
+
+    if (!setting.options.some((option) => option.value === value)) {
+      return;
+    }
+
+    this.values[settingId] = value;
+    this.persist();
+  }
+
+  public updateSliderValue(settingId: string, value: number): void {
+    const setting = SETTING_DEFINITION_BY_ID.get(settingId);
+    if (setting?.kind !== "slider" || !Number.isFinite(value)) {
+      return;
+    }
+
+    this.values[settingId] = normalizeSliderValue(setting, value);
+    this.persist();
+  }
+
+  public updateSwitchValue(settingId: string, checked: boolean): void {
+    const setting = SETTING_DEFINITION_BY_ID.get(settingId);
+    if (setting?.kind !== "switch") {
+      return;
+    }
+
+    this.values[settingId] = checked;
+    this.persist();
+  }
+
+  private hydrate(persistedState: unknown): void {
+    if (!isRecord(persistedState)) {
+      return;
+    }
+
+    if (isSettingsGroupId(persistedState.selectedGroupId)) {
+      this.selectedGroupId = persistedState.selectedGroupId;
+    }
+
+    if (!isRecord(persistedState.values)) {
+      return;
+    }
+
+    const nextValues = createDefaultValues();
+
+    for (const [settingId, rawValue] of Object.entries(persistedState.values)) {
+      const setting = SETTING_DEFINITION_BY_ID.get(settingId);
+      if (!setting) {
+        continue;
+      }
+
+      if (setting.kind === "select" && typeof rawValue === "string") {
+        if (setting.options.some((option) => option.value === rawValue)) {
+          nextValues[settingId] = rawValue;
+        }
+
+        continue;
+      }
+
+      if (setting.kind === "slider" && typeof rawValue === "number" && Number.isFinite(rawValue)) {
+        nextValues[settingId] = normalizeSliderValue(setting, rawValue);
+
+        continue;
+      }
+
+      if (setting.kind === "switch" && typeof rawValue === "boolean") {
+        nextValues[settingId] = rawValue;
+      }
+    }
+
+    this.values = nextValues;
+  }
+
+  private persist(): PersistedUserSettingsDialogState {
+    return saveToLocalStorage(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY, {
+      selectedGroupId: this.selectedGroupId,
+      values: this.values,
+    });
+  }
+
+  private resolveOpenPromise(): void {
+    const resolve = this.resolvePendingOpen;
+
+    this.pendingOpenPromise = null;
+    this.resolvePendingOpen = null;
+    resolve?.();
+  }
+}
+
+function normalizeSliderValue(
+  setting: WorkbenchSliderSettingDefinition,
+  value: number,
+): number {
+  const clamped = Math.min(setting.max, Math.max(setting.min, value));
+  const steps = Math.round((clamped - setting.min) / setting.step);
+  const rounded = setting.min + (steps * setting.step);
+  const decimals = countDecimals(setting.step);
+
+  return Number(rounded.toFixed(decimals));
+}
+
+function countDecimals(step: number): number {
+  const [, decimals = ""] = `${step}`.split(".");
+
+  return decimals.length;
+}
+
+function isSettingsGroupId(value: unknown): value is SettingsGroupId {
+  return WORKBENCH_SETTINGS_GROUPS.some((group) => group.id === value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
