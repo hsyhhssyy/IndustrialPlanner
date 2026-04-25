@@ -3,7 +3,6 @@ import { action } from "mobx";
 import type { AppAction } from "@/domain/action/app-action";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type { ScreenProfile } from "@/domain/state/screen-profile";
-import type { AppThemeId } from "@/domain/state/theme";
 import type { EditorViewportClientRect } from "@/domain/state/types";
 import type { AppLocale } from "@/shared/i18n/messages";
 import { lookupMessageText } from "@/shared/i18n/messages";
@@ -16,7 +15,6 @@ import {
   type ActivePanel,
   type UiStateReadWrite,
 } from "./state-impl";
-import { resolveNextAppThemeId } from "./theme";
 
 export interface AppInternalAction {
   toggleLeftDock: () => void;
@@ -26,8 +24,6 @@ export interface AppInternalAction {
   setLeftDockWidth: (width: number) => void;
   setScreenProfile: (screenProfile: ScreenProfile) => void;
   setLocale: (locale: AppLocale) => void;
-  setThemeId: (themeId: AppThemeId) => void;
-  toggleTheme: () => void;
 }
 
 export class AppActionImpl implements AppAction, AppInternalAction {
@@ -88,18 +84,6 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     }
 
     this.internalState.settings.locale = locale;
-  });
-
-  public readonly setThemeId: AppInternalAction["setThemeId"] = action((themeId) => {
-    if (this.internalState.settings.themeId === themeId) {
-      return;
-    }
-
-    this.internalState.settings.themeId = themeId;
-  });
-
-  public readonly toggleTheme: AppInternalAction["toggleTheme"] = action(() => {
-    this.setThemeId(resolveNextAppThemeId(this.internalState.settings.themeId));
   });
 
   private setLeftDockOpen(nextOpen: boolean): void {

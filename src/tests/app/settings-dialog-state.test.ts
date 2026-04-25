@@ -31,7 +31,7 @@ describe("WorkbenchSettingsDialogController", () => {
 
     controller.selectGroup("game");
     controller.updateSelectValue("system-language", "en-US");
-    controller.updateSelectValue("system-theme", "follow-system");
+    controller.updateSelectValue("system-theme", "ayu-dark");
     controller.updateSelectValue("display-frame-rate-limit", "30");
     controller.updateSwitchValue("game-arknights-operation-mode", true);
     controller.updateSwitchValue("game-use-simplified-device-icons", true);
@@ -41,9 +41,12 @@ describe("WorkbenchSettingsDialogController", () => {
       selectedGroupId: "game",
       values: {
         "system-language": "en-US",
-        "system-theme": "follow-system",
+        "system-theme": "ayu-dark",
         "display-frame-rate-limit": "30",
         "game-arknights-operation-mode": true,
+        "game-arknights-confirm-shortcut": "F",
+        "game-arknights-cancel-shortcut": "G",
+        "game-arknights-rotate-shortcut": "R",
         "game-use-simplified-device-icons": true,
         "other-debug-mode": true,
       },
@@ -53,15 +56,37 @@ describe("WorkbenchSettingsDialogController", () => {
 
     expect(hydratedController.selectedGroupId).toBe("game");
     expect(hydratedController.values["system-language"]).toBe("en-US");
-    expect(hydratedController.values["system-theme"]).toBe("follow-system");
+    expect(hydratedController.values["system-theme"]).toBe("ayu-dark");
     expect(hydratedController.values["display-frame-rate-limit"]).toBe("30");
     expect(hydratedController.values["game-arknights-operation-mode"]).toBe(true);
+    expect(hydratedController.values["game-arknights-confirm-shortcut"]).toBe("F");
+    expect(hydratedController.values["game-arknights-cancel-shortcut"]).toBe("G");
+    expect(hydratedController.values["game-arknights-rotate-shortcut"]).toBe("R");
     expect(hydratedController.values["game-use-simplified-device-icons"]).toBe(true);
     expect(hydratedController.values["other-debug-mode"]).toBe(true);
   });
 
+  it("only updates conditional keybinding settings while their prerequisite matches", () => {
+    const controller = new WorkbenchSettingsDialogController();
+
+    expect(controller.isSettingEditable("game-arknights-confirm-shortcut")).toBe(true);
+
+    controller.updateKeybindingValue("game-arknights-confirm-shortcut", "P");
+
+    expect(controller.values["game-arknights-confirm-shortcut"]).toBe("P");
+
+    controller.updateSwitchValue("game-arknights-operation-mode", true);
+
+    expect(controller.isSettingEditable("game-arknights-confirm-shortcut")).toBe(false);
+
+    controller.updateKeybindingValue("game-arknights-confirm-shortcut", "Z");
+
+    expect(controller.values["game-arknights-confirm-shortcut"]).toBe("P");
+  });
+
   it("uses external bindings as the source of truth for connected settings", () => {
     let locale = "zh-CN";
+    let themeId = "ayu-light";
     const controller = new WorkbenchSettingsDialogController({
       externalBindings: {
         "system-language": {
@@ -72,21 +97,34 @@ describe("WorkbenchSettingsDialogController", () => {
             }
           },
         },
+        "system-theme": {
+          readValue: () => themeId,
+          writeValue: (value) => {
+            if (value === "ayu-light" || value === "ayu-dark") {
+              themeId = value;
+            }
+          },
+        },
       },
     });
 
     controller.selectGroup("system");
     controller.updateSelectValue("system-language", "en-US");
+    controller.updateSelectValue("system-theme", "ayu-dark");
     controller.updateSwitchValue("other-debug-mode", true);
 
     expect(locale).toBe("en-US");
+    expect(themeId).toBe("ayu-dark");
     expect(controller.getValue("system-language")).toBe("en-US");
+    expect(controller.getValue("system-theme")).toBe("ayu-dark");
     expect(JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")).toEqual({
       selectedGroupId: "system",
       values: {
-        "system-theme": "follow-system",
         "display-frame-rate-limit": "unlimited",
         "game-arknights-operation-mode": false,
+        "game-arknights-confirm-shortcut": "F",
+        "game-arknights-cancel-shortcut": "G",
+        "game-arknights-rotate-shortcut": "R",
         "game-use-simplified-device-icons": false,
         "other-debug-mode": true,
       },

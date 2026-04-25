@@ -50,8 +50,6 @@ export function createAppHost(
     setLeftDockWidth: actionImpl.setLeftDockWidth,
     setScreenProfile: actionImpl.setScreenProfile,
     setLocale: actionImpl.setLocale,
-    setThemeId: actionImpl.setThemeId,
-    toggleTheme: actionImpl.toggleTheme,
   };
   const actions: AppContract["actions"] = {
     translate: actionImpl.translate,

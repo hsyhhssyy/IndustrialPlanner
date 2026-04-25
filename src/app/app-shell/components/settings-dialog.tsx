@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/app-host";
@@ -21,9 +21,17 @@ export const SettingsDialog = observer(function SettingsDialog({
   controller,
 }: SettingsDialogProps) {
   const t = appHost.actions.translate;
-  const contentRef = useRef<HTMLDivElement | null>(null);
   const sectionRefs = useRef(new Map<SettingsGroupId, HTMLElement>());
+  const [capturingKeybindingId, setCapturingKeybindingId] = useState<string | null>(null);
   const isMobilePortrait = isMobilePortraitScreenProfile(appHost.state.screenProfile);
+
+  useEffect(() => {
+    if (controller.isOpen) {
+      return;
+    }
+
+    setCapturingKeybindingId(null);
+  }, [controller.isOpen]);
 
   useEffect(() => {
     if (!controller.isOpen) {
@@ -31,6 +39,33 @@ export const SettingsDialog = observer(function SettingsDialog({
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (capturingKeybindingId !== null) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (event.key === "Escape") {
+          setCapturingKeybindingId(null);
+
+          return;
+        }
+
+        if (!controller.isSettingEditable(capturingKeybindingId)) {
+          setCapturingKeybindingId(null);
+
+          return;
+        }
+
+        const nextValue = formatCapturedKeybinding(event);
+        if (nextValue === null) {
+          return;
+        }
+
+        controller.updateKeybindingValue(capturingKeybindingId, nextValue);
+        setCapturingKeybindingId(null);
+
+        return;
+      }
+
       if (event.key !== "Escape") {
         return;
       }
@@ -44,7 +79,7 @@ export const SettingsDialog = observer(function SettingsDialog({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [controller, controller.isOpen]);
+  }, [capturingKeybindingId, controller, controller.isOpen]);
 
   useEffect(() => {
     if (!controller.isOpen || isMobilePortrait) {
@@ -106,33 +141,33 @@ export const SettingsDialog = observer(function SettingsDialog({
         >
           {isMobilePortrait ? null : (
             <aside className="settings-dialog-sidebar">
-            <div className="settings-dialog-sidebar-title">{t("settingsDialog.groups")}</div>
-            <div aria-label={t("settingsDialog.groups")} className="settings-dialog-tree" role="tree">
-              {WORKBENCH_SETTINGS_GROUPS.map((group) => {
-                const isActive = group.id === selectedGroup.id;
+              <div className="settings-dialog-sidebar-title">{t("settingsDialog.groups")}</div>
+              <div aria-label={t("settingsDialog.groups")} className="settings-dialog-tree" role="tree">
+                {WORKBENCH_SETTINGS_GROUPS.map((group) => {
+                  const isActive = group.id === selectedGroup.id;
 
-                return (
-                  <button
-                    aria-selected={isActive}
-                    aria-controls={`settings-dialog-group-${group.id}`}
-                    className={isActive
-                      ? "settings-dialog-tree-button is-active"
-                      : "settings-dialog-tree-button"}
-                    key={group.id}
-                    onClick={() => {
-                      controller.selectGroup(group.id);
-                    }}
-                    role="treeitem"
-                    type="button"
-                  >
-                    <span className="settings-dialog-tree-label">{t(group.labelKey)}</span>
-                  </button>
-                );
-              })}
-            </div>
+                  return (
+                    <button
+                      aria-selected={isActive}
+                      aria-controls={`settings-dialog-group-${group.id}`}
+                      className={isActive
+                        ? "settings-dialog-tree-button is-active"
+                        : "settings-dialog-tree-button"}
+                      key={group.id}
+                      onClick={() => {
+                        controller.selectGroup(group.id);
+                      }}
+                      role="treeitem"
+                      type="button"
+                    >
+                      <span className="settings-dialog-tree-label">{t(group.labelKey)}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </aside>
           )}
-          <div className="settings-dialog-content" ref={contentRef}>
+          <div className="settings-dialog-content">
             {WORKBENCH_SETTINGS_GROUPS.map((group) => (
               <section
                 className="settings-dialog-group-section"
@@ -153,17 +188,34 @@ export const SettingsDialog = observer(function SettingsDialog({
                   <p>{t(group.descriptionKey)}</p>
                 </div>
                 <div className="settings-dialog-settings-list">
-                  {group.items.map((setting) => (
-                    <article className="settings-dialog-setting-card" key={setting.id}>
-                      <div className="settings-dialog-setting-copy">
-                        <h4>{t(setting.labelKey)}</h4>
-                        <p>{t(setting.descriptionKey)}</p>
-                      </div>
-                      <div className="settings-dialog-setting-control">
-                        {renderSettingControl({ controller, setting, t })}
-                      </div>
-                    </article>
-                  ))}
+                  {group.items.map((setting) => {
+                    const isEditable = controller.isSettingEditable(setting.id);
+
+                    return (
+                      <article
+                        aria-disabled={!isEditable}
+                        className={isEditable
+                          ? "settings-dialog-setting-card"
+                          : "settings-dialog-setting-card is-disabled"}
+                        key={setting.id}
+                      >
+                        <div className="settings-dialog-setting-copy">
+                          <h4>{t(setting.labelKey)}</h4>
+                          <p>{t(setting.descriptionKey)}</p>
+                        </div>
+                        <div className="settings-dialog-setting-control">
+                          {renderSettingControl({
+                            controller,
+                            setting,
+                            t,
+                            isEditable,
+                            capturingKeybindingId,
+                            onStartCapturing: setCapturingKeybindingId,
+                          })}
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
               </section>
             ))}
@@ -178,14 +230,25 @@ function renderSettingControl(options: {
   controller: WorkbenchSettingsDialogController;
   setting: WorkbenchSettingDefinition;
   t: AppHost["actions"]["translate"];
+  isEditable: boolean;
+  capturingKeybindingId: string | null;
+  onStartCapturing: (settingId: string | null) => void;
 }) {
-  const { controller, setting, t } = options;
+  const {
+    controller,
+    setting,
+    t,
+    isEditable,
+    capturingKeybindingId,
+    onStartCapturing,
+  } = options;
   const value = controller.getValue(setting.id);
 
   if (setting.kind === "select") {
     return (
       <label className="settings-dialog-field-shell" htmlFor={`setting-${setting.id}`}>
         <select
+          disabled={!isEditable}
           id={`setting-${setting.id}`}
           name={setting.id}
           onChange={(event) => {
@@ -209,6 +272,7 @@ function renderSettingControl(options: {
     return (
       <label className="settings-dialog-slider-shell" htmlFor={`setting-${setting.id}`}>
         <input
+          disabled={!isEditable}
           id={`setting-${setting.id}`}
           max={setting.max}
           min={setting.min}
@@ -225,12 +289,53 @@ function renderSettingControl(options: {
     );
   }
 
+  if (setting.kind === "keybinding") {
+    const isCapturing = capturingKeybindingId === setting.id;
+    const buttonLabel = isCapturing
+      ? t("settingsKeybinding.awaitingInput")
+      : (typeof value === "string" ? value : setting.defaultValue);
+
+    return (
+      <button
+        aria-pressed={isCapturing}
+        className={isCapturing
+          ? "settings-dialog-keybinding-button is-capturing"
+          : "settings-dialog-keybinding-button"}
+        data-setting-id={setting.id}
+        disabled={!isEditable}
+        id={`setting-${setting.id}`}
+        onClick={(event) => {
+          event.preventDefault();
+        }}
+        onMouseDown={(event) => {
+          event.preventDefault();
+
+          if (!isEditable) {
+            return;
+          }
+
+          onStartCapturing(setting.id);
+        }}
+        title={buttonLabel}
+        type="button"
+      >
+        {buttonLabel}
+      </button>
+    );
+  }
+
   const checked = typeof value === "boolean" ? value : setting.defaultValue;
 
   return (
-    <label className="settings-dialog-switch-shell" htmlFor={`setting-${setting.id}`}>
+    <label
+      className={isEditable
+        ? "settings-dialog-switch-shell"
+        : "settings-dialog-switch-shell is-disabled"}
+      htmlFor={`setting-${setting.id}`}
+    >
       <input
         checked={checked}
+        disabled={!isEditable}
         id={`setting-${setting.id}`}
         name={setting.id}
         onChange={(event) => {
@@ -246,4 +351,79 @@ function renderSettingControl(options: {
       </span>
     </label>
   );
+}
+
+function formatCapturedKeybinding(event: KeyboardEvent): string | null {
+  if (isModifierOnlyKey(event.key)) {
+    return null;
+  }
+
+  const keyLabel = normalizeCapturedKeyLabel(event.key);
+  if (keyLabel === null) {
+    return null;
+  }
+
+  const parts: string[] = [];
+
+  if (event.ctrlKey) {
+    parts.push("Ctrl");
+  }
+
+  if (event.altKey) {
+    parts.push("Alt");
+  }
+
+  if (event.shiftKey) {
+    parts.push("Shift");
+  }
+
+  if (event.metaKey) {
+    parts.push("Meta");
+  }
+
+  if (!parts.includes(keyLabel)) {
+    parts.push(keyLabel);
+  }
+
+  return parts.join("+");
+}
+
+function normalizeCapturedKeyLabel(key: string): string | null {
+  if (key === "") {
+    return null;
+  }
+
+  if (key === " ") {
+    return "Space";
+  }
+
+  if (key === "Escape") {
+    return "Esc";
+  }
+
+  if (key === "ArrowUp") {
+    return "Up";
+  }
+
+  if (key === "ArrowDown") {
+    return "Down";
+  }
+
+  if (key === "ArrowLeft") {
+    return "Left";
+  }
+
+  if (key === "ArrowRight") {
+    return "Right";
+  }
+
+  if (key.length === 1) {
+    return key.toUpperCase();
+  }
+
+  return key;
+}
+
+function isModifierOnlyKey(key: string): boolean {
+  return key === "Shift" || key === "Control" || key === "Alt" || key === "Meta";
 }

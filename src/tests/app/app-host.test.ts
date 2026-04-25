@@ -218,7 +218,7 @@ describe("createAppHost", () => {
     );
   });
 
-  it("switches themes through app internal actions and exposes the theme on app state", () => {
+  it("reacts to theme state changes and exposes the theme on app state", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -227,7 +227,9 @@ describe("createAppHost", () => {
     expect(document.documentElement.dataset.appTheme).toBe("ayu-light");
     expect(document.documentElement.style.getPropertyValue("--shell-bg")).toBe("#f5f7fa");
 
-    appHost.internalActions.toggleTheme();
+    runInAction(() => {
+      appHost.internalState.settings.themeId = "ayu-dark";
+    });
 
     expect(appHost.state.settings.themeId).toBe("ayu-dark");
     expect(appHost.state.theme.id).toBe("ayu-dark");
@@ -236,7 +238,9 @@ describe("createAppHost", () => {
     expect(document.documentElement.style.colorScheme).toBe("dark");
     expect(document.documentElement.style.getPropertyValue("--shell-bg")).toBe("#0f1419");
 
-    appHost.internalActions.setThemeId("ayu-light");
+    runInAction(() => {
+      appHost.internalState.settings.themeId = "ayu-light";
+    });
 
     expect(appHost.state.settings.themeId).toBe("ayu-light");
     expect(appHost.state.theme.id).toBe("ayu-light");

@@ -464,6 +464,7 @@ describe("WorkbenchApp", () => {
       dialog?.querySelectorAll(".settings-dialog-group-header p") ?? [],
     ).map((element) => element.textContent);
     const languageOptionLabels = Array.from(languageSelect?.options ?? []).map((option) => option.textContent);
+    const themeOptionLabels = Array.from(themeSelect?.options ?? []).map((option) => option.textContent);
 
     expect(dialog).not.toBeNull();
     expect(groupTitles).toEqual(["系统", "显示", "游戏", "其他"]);
@@ -474,8 +475,9 @@ describe("WorkbenchApp", () => {
       "调试和附加能力开关。",
     ]);
     expect(languageOptionLabels).toEqual(["中文(简体)", "English"]);
+    expect(themeOptionLabels).toEqual(["Ayu Light", "Ayu Dark"]);
     expect(languageSelect?.value).toBe("zh-CN");
-    expect(themeSelect?.value).toBe("follow-system");
+    expect(themeSelect?.value).toBe("ayu-light");
     expect(debugToggle?.checked).toBe(true);
 
     const closeButton = container.querySelector(
@@ -536,6 +538,122 @@ describe("WorkbenchApp", () => {
         themeId: "ayu-light",
       }),
     );
+  });
+
+  it("writes theme changes into AppSettings and reapplies the document theme through mobx", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const settingsButton = container.querySelector(
+      ".toolbar-rail-utility .rail-button:last-child",
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      settingsButton?.click();
+    });
+
+    const themeSelect = container.querySelector(
+      'select[name="system-theme"]',
+    ) as HTMLSelectElement | null;
+
+    expect(themeSelect).not.toBeNull();
+    expect(themeSelect?.value).toBe("ayu-light");
+    expect(document.documentElement.dataset.appTheme).toBe("ayu-light");
+
+    act(() => {
+      if (themeSelect === null) {
+        return;
+      }
+
+      themeSelect.value = "ayu-dark";
+      themeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(appHost.state.settings.themeId).toBe("ayu-dark");
+    expect(themeSelect?.value).toBe("ayu-dark");
+    expect(document.documentElement.dataset.appTheme).toBe("ayu-dark");
+    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        locale: "zh-CN",
+        themeId: "ayu-dark",
+      }),
+    );
+  });
+
+  it("captures keybinding settings and disables them when arknights operation mode is enabled", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const settingsButton = container.querySelector(
+      ".toolbar-rail-utility .rail-button:last-child",
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      settingsButton?.click();
+    });
+
+    const operationModeToggle = container.querySelector(
+      'input[name="game-arknights-operation-mode"]',
+    ) as HTMLInputElement | null;
+    const confirmShortcutButton = container.querySelector(
+      'button[data-setting-id="game-arknights-confirm-shortcut"]',
+    ) as HTMLButtonElement | null;
+    const cancelShortcutButton = container.querySelector(
+      'button[data-setting-id="game-arknights-cancel-shortcut"]',
+    ) as HTMLButtonElement | null;
+
+    expect(operationModeToggle).not.toBeNull();
+    expect(confirmShortcutButton).not.toBeNull();
+    expect(cancelShortcutButton).not.toBeNull();
+    expect(confirmShortcutButton?.disabled).toBe(false);
+    expect(confirmShortcutButton?.textContent).toBe("F");
+
+    act(() => {
+      confirmShortcutButton?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    });
+
+    expect(confirmShortcutButton?.textContent).toBe("按任意键...");
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "p", bubbles: true }));
+    });
+
+    expect(confirmShortcutButton?.textContent).toBe("P");
+    expect(JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")).toEqual({
+      selectedGroupId: "system",
+      values: {
+        "display-frame-rate-limit": "unlimited",
+        "game-arknights-operation-mode": false,
+        "game-arknights-confirm-shortcut": "P",
+        "game-arknights-cancel-shortcut": "G",
+        "game-arknights-rotate-shortcut": "R",
+        "game-use-simplified-device-icons": false,
+        "other-debug-mode": false,
+      },
+    });
+
+    act(() => {
+      operationModeToggle?.click();
+    });
+
+    const disabledConfirmShortcutButton = container.querySelector(
+      'button[data-setting-id="game-arknights-confirm-shortcut"]',
+    ) as HTMLButtonElement | null;
+    const disabledCancelShortcutButton = container.querySelector(
+      'button[data-setting-id="game-arknights-cancel-shortcut"]',
+    ) as HTMLButtonElement | null;
+
+    expect(disabledConfirmShortcutButton?.disabled).toBe(true);
+    expect(disabledCancelShortcutButton?.disabled).toBe(true);
   });
 
   it("hides the settings group sidebar in phone portrait mode while keeping the full settings list scrollable", () => {

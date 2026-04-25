@@ -223,7 +223,7 @@ describe("TopBar", () => {
     ).toBe("expand");
   });
 
-  it("toggles between the built-in app themes", () => {
+  it("shows the current theme and does not render a theme toggle button", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -231,34 +231,9 @@ describe("TopBar", () => {
       root.render(<TopBar appHost={appHost} />);
     });
 
-    const themeButton = container.querySelector(
-      ".top-bar-theme-button",
-    ) as HTMLButtonElement | null;
-
-    expect(themeButton).not.toBeNull();
-
-    if (!themeButton) {
-      throw new Error("Top bar theme button was not rendered.");
-    }
-
     expect(appHost.state.theme.name).toBe("Ayu Light");
     expect(container.textContent).toContain("主题: Ayu Light");
-    expect(themeButton.title).toBe("切换主题: Ayu Dark");
-    expect(
-      themeButton.querySelector("svg")?.getAttribute("data-workbench-icon"),
-    ).toBe("theme-dark");
-
-    act(() => {
-      themeButton.click();
-    });
-
-    expect(appHost.state.theme.name).toBe("Ayu Dark");
-    expect(container.textContent).toContain("主题: Ayu Dark");
-    expect(document.documentElement.dataset.appTheme).toBe("ayu-dark");
-    expect(themeButton.title).toBe("切换主题: Ayu Light");
-    expect(
-      themeButton.querySelector("svg")?.getAttribute("data-workbench-icon"),
-    ).toBe("theme-light");
+    expect(container.querySelector(".top-bar-theme-button")).toBeNull();
   });
 
   it("shows device class and screen shape from public UI state", () => {
@@ -321,10 +296,10 @@ describe("TopBar", () => {
     expect(
       Array.from(container.querySelectorAll(".top-bar-controls button")),
     ).toEqual([
-      container.querySelector(".top-bar-theme-button"),
       fullscreenButton,
       collapseButton,
     ]);
+    expect(container.querySelector(".top-bar-theme-button")).toBeNull();
     expect(collapseButton?.title).toBe("折叠 运行控制");
     expect(appHost.state.workbench.topBarCollapsed).toBe(false);
 

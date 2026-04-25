@@ -1,3 +1,4 @@
+import { action } from "mobx";
 import { useEffect, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/app-shell/components/bottom-status-bar";
@@ -17,10 +18,15 @@ import {
 import type { AppHost } from "@/app/app-host";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state-impl";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state-impl";
+import type { AppThemeId } from "@/domain/state/theme";
 import {
   isMobileLandscapeScreenProfile,
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
+
+function isAppThemeId(value: unknown): value is AppThemeId {
+  return value === "ayu-light" || value === "ayu-dark";
+}
 
 export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
@@ -33,6 +39,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             appHost.internalActions.setLocale(value);
           }
         },
+      },
+      "system-theme": {
+        readValue: () => appHost.state.settings.themeId,
+        writeValue: action((value) => {
+          if (!isAppThemeId(value)) {
+            return;
+          }
+
+          if (appHost.internalState.settings.themeId === value) {
+            return;
+          }
+
+          appHost.internalState.settings.themeId = value;
+        }),
       },
     },
   }));

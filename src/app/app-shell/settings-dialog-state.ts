@@ -9,10 +9,16 @@ export type SettingsGroupId = "system" | "display" | "game" | "other";
 
 export type WorkbenchSettingControlValue = string | number | boolean;
 
+interface WorkbenchSettingEditableWhenDefinition {
+  readonly settingId: string;
+  readonly equals: WorkbenchSettingControlValue;
+}
+
 interface WorkbenchSettingBaseDefinition {
   readonly id: string;
   readonly labelKey: MessageKey;
   readonly descriptionKey: MessageKey;
+  readonly editableWhen?: WorkbenchSettingEditableWhenDefinition;
 }
 
 interface WorkbenchSelectOptionDefinition {
@@ -39,10 +45,16 @@ interface WorkbenchSwitchSettingDefinition extends WorkbenchSettingBaseDefinitio
   readonly defaultValue: boolean;
 }
 
+interface WorkbenchKeybindingSettingDefinition extends WorkbenchSettingBaseDefinition {
+  readonly kind: "keybinding";
+  readonly defaultValue: string;
+}
+
 export type WorkbenchSettingDefinition =
   | WorkbenchSelectSettingDefinition
   | WorkbenchSliderSettingDefinition
-  | WorkbenchSwitchSettingDefinition;
+  | WorkbenchSwitchSettingDefinition
+  | WorkbenchKeybindingSettingDefinition;
 
 export interface WorkbenchSettingsGroupDefinition {
   readonly id: SettingsGroupId;
@@ -87,11 +99,10 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         kind: "select",
         labelKey: "settingsField.theme",
         descriptionKey: "settingsField.themeDescription",
-        defaultValue: "follow-system",
+        defaultValue: "ayu-light",
         options: [
           { value: "ayu-light", labelKey: "settingsOption.ayuLight" },
           { value: "ayu-dark", labelKey: "settingsOption.ayuDark" },
-          { value: "follow-system", labelKey: "settingsOption.followSystem" },
         ],
       },
     ],
@@ -126,6 +137,39 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: "settingsField.arknightsOperationMode",
         descriptionKey: "settingsField.arknightsOperationModeDescription",
         defaultValue: false,
+      },
+      {
+        id: "game-arknights-confirm-shortcut",
+        kind: "keybinding",
+        labelKey: "settingsField.arknightsConfirmShortcut",
+        descriptionKey: "settingsField.arknightsConfirmShortcutDescription",
+        defaultValue: "F",
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: false,
+        },
+      },
+      {
+        id: "game-arknights-cancel-shortcut",
+        kind: "keybinding",
+        labelKey: "settingsField.arknightsCancelShortcut",
+        descriptionKey: "settingsField.arknightsCancelShortcutDescription",
+        defaultValue: "G",
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: false,
+        },
+      },
+      {
+        id: "game-arknights-rotate-shortcut",
+        kind: "keybinding",
+        labelKey: "settingsField.arknightsRotateShortcut",
+        descriptionKey: "settingsField.arknightsRotateShortcutDescription",
+        defaultValue: "R",
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: false,
+        },
       },
       {
         id: "game-use-simplified-device-icons",
@@ -191,12 +235,19 @@ export class WorkbenchSettingsDialogController {
 
     makeAutoObservable<
       WorkbenchSettingsDialogController,
-      "externalBindingIds" | "externalBindings" | "pendingOpenPromise" | "resolvePendingOpen"
+      | "externalBindingIds"
+      | "externalBindings"
+      | "getValue"
+      | "isSettingEditable"
+      | "pendingOpenPromise"
+      | "resolvePendingOpen"
     >(
       this,
       {
         externalBindingIds: false,
         externalBindings: false,
+        getValue: false,
+        isSettingEditable: false,
         pendingOpenPromise: false,
         resolvePendingOpen: false,
       },
@@ -211,6 +262,19 @@ export class WorkbenchSettingsDialogController {
 
   public getValue(settingId: string): WorkbenchSettingControlValue | undefined {
     return this.externalBindings.get(settingId)?.readValue() ?? this.values[settingId];
+  }
+
+  public isSettingEditable(settingId: string): boolean {
+    const setting = SETTING_DEFINITION_BY_ID.get(settingId);
+    if (!setting) {
+      return false;
+    }
+
+    if (!setting.editableWhen) {
+      return true;
+    }
+
+    return this.getValue(setting.editableWhen.settingId) === setting.editableWhen.equals;
   }
 
   public open(): Promise<void> {
@@ -252,7 +316,7 @@ export class WorkbenchSettingsDialogController {
 
   public updateSelectValue(settingId: string, value: string): void {
     const setting = SETTING_DEFINITION_BY_ID.get(settingId);
-    if (setting?.kind !== "select") {
+    if (setting?.kind !== "select" || !this.isSettingEditable(settingId)) {
       return;
     }
 
@@ -273,7 +337,7 @@ export class WorkbenchSettingsDialogController {
 
   public updateSliderValue(settingId: string, value: number): void {
     const setting = SETTING_DEFINITION_BY_ID.get(settingId);
-    if (setting?.kind !== "slider" || !Number.isFinite(value)) {
+    if (setting?.kind !== "slider" || !Number.isFinite(value) || !this.isSettingEditable(settingId)) {
       return;
     }
 
@@ -290,7 +354,7 @@ export class WorkbenchSettingsDialogController {
 
   public updateSwitchValue(settingId: string, checked: boolean): void {
     const setting = SETTING_DEFINITION_BY_ID.get(settingId);
-    if (setting?.kind !== "switch") {
+    if (setting?.kind !== "switch" || !this.isSettingEditable(settingId)) {
       return;
     }
 
@@ -302,6 +366,28 @@ export class WorkbenchSettingsDialogController {
     }
 
     this.values[settingId] = checked;
+    this.persist();
+  }
+
+  public updateKeybindingValue(settingId: string, value: string): void {
+    const setting = SETTING_DEFINITION_BY_ID.get(settingId);
+    if (setting?.kind !== "keybinding" || !this.isSettingEditable(settingId)) {
+      return;
+    }
+
+    const normalizedValue = normalizeKeybindingValue(value);
+    if (normalizedValue === null) {
+      return;
+    }
+
+    const externalBinding = this.externalBindings.get(settingId);
+    if (externalBinding) {
+      externalBinding.writeValue(normalizedValue);
+
+      return;
+    }
+
+    this.values[settingId] = normalizedValue;
     this.persist();
   }
 
@@ -346,6 +432,15 @@ export class WorkbenchSettingsDialogController {
 
       if (setting.kind === "switch" && typeof rawValue === "boolean") {
         nextValues[settingId] = rawValue;
+
+        continue;
+      }
+
+      if (setting.kind === "keybinding" && typeof rawValue === "string") {
+        const normalizedValue = normalizeKeybindingValue(rawValue);
+        if (normalizedValue !== null) {
+          nextValues[settingId] = normalizedValue;
+        }
       }
     }
 
@@ -384,6 +479,12 @@ function countDecimals(step: number): number {
   const [, decimals = ""] = `${step}`.split(".");
 
   return decimals.length;
+}
+
+function normalizeKeybindingValue(value: string): string | null {
+  const normalized = value.trim();
+
+  return normalized === "" ? null : normalized;
 }
 
 function isSettingsGroupId(value: unknown): value is SettingsGroupId {

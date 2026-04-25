@@ -343,6 +343,10 @@ button.is-active {
   background: var(--surface-2);
 }
 
+.settings-dialog-setting-card.is-disabled {
+  opacity: 0.72;
+}
+
 .settings-dialog-setting-copy {
   display: grid;
   gap: 4px;
@@ -368,9 +372,36 @@ button.is-active {
   width: min(100%, 236px);
 }
 
+.settings-dialog-keybinding-button {
+  width: min(100%, 236px);
+  min-height: 34px;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--surface-1);
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.settings-dialog-keybinding-button.is-capturing {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
 .settings-dialog-field-shell select,
 .settings-dialog-slider-shell input[type="range"] {
   width: 100%;
+}
+
+.settings-dialog-field-shell select:disabled,
+.settings-dialog-slider-shell input[type="range"]:disabled,
+.settings-dialog-keybinding-button:disabled {
+  background: var(--surface-2);
+  color: var(--text-1);
 }
 
 .settings-dialog-field-shell select {
@@ -400,6 +431,10 @@ button.is-active {
   gap: 8px;
   cursor: pointer;
   user-select: none;
+}
+
+.settings-dialog-switch-shell.is-disabled {
+  cursor: not-allowed;
 }
 
 .settings-dialog-switch-shell input {
@@ -445,6 +480,10 @@ button.is-active {
   color: var(--text-0);
   font-size: 0.84rem;
   font-weight: 600;
+}
+
+.settings-dialog-switch-shell.is-disabled .settings-dialog-switch-label {
+  color: var(--text-1);
 }
 
 .settings-dialog button:focus-visible,

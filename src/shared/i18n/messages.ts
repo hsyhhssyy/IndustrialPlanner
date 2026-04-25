@@ -128,6 +128,12 @@ export type MessageKey =
   | "settingsField.frameRateLimitDescription"
   | "settingsField.arknightsOperationMode"
   | "settingsField.arknightsOperationModeDescription"
+  | "settingsField.arknightsConfirmShortcut"
+  | "settingsField.arknightsConfirmShortcutDescription"
+  | "settingsField.arknightsCancelShortcut"
+  | "settingsField.arknightsCancelShortcutDescription"
+  | "settingsField.arknightsRotateShortcut"
+  | "settingsField.arknightsRotateShortcutDescription"
   | "settingsField.useSimplifiedDeviceIcons"
   | "settingsField.useSimplifiedDeviceIconsDescription"
   | "settingsField.debugMode"
@@ -142,6 +148,7 @@ export type MessageKey =
   | "settingsOption.unlimited"
   | "settingsOption.enabled"
   | "settingsOption.disabled"
+  | "settingsKeybinding.awaitingInput"
   | "device.mobile"
   | "device.tablet"
   | "device.desktop"
@@ -278,11 +285,17 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.language": "选择语言/Choose Language",
     "settingsField.languageDescription": "切换界面语言；该条目名称始终以双语显示。",
     "settingsField.theme": "主题",
-    "settingsField.themeDescription": "选择界面主题，默认跟随系统。",
+    "settingsField.themeDescription": "选择界面主题，默认 Ayu Light。",
     "settingsField.frameRateLimit": "帧率限制",
     "settingsField.frameRateLimitDescription": "设置渲染帧率上限。",
     "settingsField.arknightsOperationMode": "鹰角网络操作模式",
     "settingsField.arknightsOperationModeDescription": "使用和游戏内一致的操作模式和快捷键。",
+    "settingsField.arknightsConfirmShortcut": "部署确认快捷键",
+    "settingsField.arknightsConfirmShortcutDescription": "当前为占位快捷键，尚未接入功能；关闭鹰角网络操作模式后可编辑。",
+    "settingsField.arknightsCancelShortcut": "部署取消快捷键",
+    "settingsField.arknightsCancelShortcutDescription": "当前为占位快捷键，尚未接入功能；关闭鹰角网络操作模式后可编辑。",
+    "settingsField.arknightsRotateShortcut": "部署旋转快捷键",
+    "settingsField.arknightsRotateShortcutDescription": "当前为占位快捷键，尚未接入功能；关闭鹰角网络操作模式后可编辑。",
     "settingsField.useSimplifiedDeviceIcons": "使用简笔画设备图片",
     "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图简笔画显示方式，不会提高性能。",
     "settingsField.debugMode": "调试模式",
@@ -297,6 +310,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsOption.unlimited": "不限",
     "settingsOption.enabled": "已开启",
     "settingsOption.disabled": "已关闭",
+    "settingsKeybinding.awaitingInput": "按任意键...",
     "device.mobile": "手机",
     "device.tablet": "平板",
     "device.desktop": "电脑",
@@ -432,11 +446,17 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.language": "选择语言/Choose Language",
     "settingsField.languageDescription": "Switch the interface language; this entry label stays bilingual in every locale.",
     "settingsField.theme": "Theme",
-    "settingsField.themeDescription": "Choose the interface theme, with Follow System as the default.",
+    "settingsField.themeDescription": "Choose the interface theme; Ayu Light is the default.",
     "settingsField.frameRateLimit": "Frame Rate Limit",
     "settingsField.frameRateLimitDescription": "Set the render frame rate cap.",
     "settingsField.arknightsOperationMode": "Arknights Operation Mode",
     "settingsField.arknightsOperationModeDescription": "Use the same operation mode and shortcuts as the game.",
+    "settingsField.arknightsConfirmShortcut": "Deploy Confirm Shortcut",
+    "settingsField.arknightsConfirmShortcutDescription": "Placeholder shortcut only; it is not wired yet and is editable when Arknights Operation Mode is off.",
+    "settingsField.arknightsCancelShortcut": "Deploy Cancel Shortcut",
+    "settingsField.arknightsCancelShortcutDescription": "Placeholder shortcut only; it is not wired yet and is editable when Arknights Operation Mode is off.",
+    "settingsField.arknightsRotateShortcut": "Deploy Rotate Shortcut",
+    "settingsField.arknightsRotateShortcutDescription": "Placeholder shortcut only; it is not wired yet and is editable when Arknights Operation Mode is off.",
     "settingsField.useSimplifiedDeviceIcons": "Use Simplified Device Icons",
     "settingsField.useSimplifiedDeviceIconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
     "settingsField.debugMode": "Debug Mode",
@@ -451,6 +471,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsOption.unlimited": "Unlimited",
     "settingsOption.enabled": "Enabled",
     "settingsOption.disabled": "Disabled",
+    "settingsKeybinding.awaitingInput": "Press any key...",
     "device.mobile": "Phone",
     "device.tablet": "Tablet",
     "device.desktop": "Desktop",
