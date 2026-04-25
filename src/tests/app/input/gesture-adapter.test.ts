@@ -186,10 +186,19 @@ describe("GestureAdapter", () => {
       visible: true,
       progress: 1,
     });
+    expect(events).toMatchObject([
+      {
+        type: "mouse-long-press-ready",
+        position: { x: 11, y: 10 },
+      },
+    ]);
 
     adapter.handlePointerUp(pointerEvent({ pointerId: 7, clientX: 11, clientY: 10, buttons: 0 }));
 
     expect(events).toMatchObject([
+      {
+        type: "mouse-long-press-ready",
+      },
       {
         type: "mouse tap",
         longPress: true,
@@ -203,20 +212,25 @@ describe("GestureAdapter", () => {
     adapter.handlePointerMove(pointerEvent({ pointerId: 8, clientX: 27, clientY: 25, buttons: 1 }));
     adapter.handlePointerUp(pointerEvent({ pointerId: 8, clientX: 27, clientY: 25, buttons: 0 }));
 
-    expect(events.slice(1).map((event) => event.type)).toEqual([
+    expect(events.slice(2).map((event) => event.type)).toEqual([
+      "mouse-long-press-ready",
       "mouse dragstart",
       "mouse dragmove",
       "mouse dragend",
     ]);
-    expect(events[1]).toMatchObject({
+    expect(events[2]).toMatchObject({
+      type: "mouse-long-press-ready",
+      position: { x: 20, y: 20 },
+    });
+    expect(events[3]).toMatchObject({
       type: "mouse dragstart",
       longPress: true,
     });
-    expect(events[2]).toMatchObject({
+    expect(events[4]).toMatchObject({
       type: "mouse dragmove",
       longPress: true,
     });
-    expect(events[3]).toMatchObject({
+    expect(events[5]).toMatchObject({
       type: "mouse dragend",
       longPress: true,
     });
@@ -245,9 +259,18 @@ describe("GestureAdapter", () => {
       visible: true,
       progress: 1,
     });
+    expect(events).toMatchObject([
+      {
+        type: "tap-long-press-ready",
+        position: { x: 10, y: 10 },
+      },
+    ]);
 
     adapter.handlePointerUp(touchEvent(1, 10, 10));
     expect(events).toMatchObject([
+      {
+        type: "tap-long-press-ready",
+      },
       {
         type: "touch tap",
         longPress: true,
@@ -261,16 +284,22 @@ describe("GestureAdapter", () => {
     adapter.handlePointerUp(touchEvent(2, 36, 34));
 
     expect(events.map((event) => event.type)).toEqual([
+      "tap-long-press-ready",
       "touch tap",
+      "tap-long-press-ready",
       "touch dragstart",
       "touch dragmove",
       "touch dragend",
     ]);
-    expect(events[1]).toMatchObject({
+    expect(events[2]).toMatchObject({
+      type: "tap-long-press-ready",
+      position: { x: 30, y: 30 },
+    });
+    expect(events[3]).toMatchObject({
       type: "touch dragstart",
       longPress: true,
     });
-    expect(events[3]).toMatchObject({
+    expect(events[5]).toMatchObject({
       type: "touch dragend",
       reason: "release",
       longPress: true,

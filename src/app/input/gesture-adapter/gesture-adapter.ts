@@ -50,6 +50,8 @@ interface MouseSession {
   readonly gestureId: string;
   readonly pointerId: number;
   readonly originButton: number;
+  readonly pressButtons: number;
+  readonly pressModifiers: GestureModifiers;
   readonly pressStartedAt: number;
   readonly startPosition: GesturePosition;
   lastPosition: GesturePosition;
@@ -77,6 +79,7 @@ interface TouchPoint {
 interface TouchSession {
   readonly gestureId: string;
   primaryId: number;
+  readonly pressModifiers: GestureModifiers;
   readonly pressStartedAt: number;
   readonly startPosition: GesturePosition;
   lastPosition: GesturePosition;
@@ -354,6 +357,8 @@ export class GestureAdapter {
       gestureId: this.nextGestureId("mouse"),
       pointerId: event.pointerId,
       originButton: event.button,
+      pressButtons: event.buttons,
+      pressModifiers: getModifiers(event),
       pressStartedAt,
       startPosition: position,
       lastPosition: position,
@@ -365,7 +370,18 @@ export class GestureAdapter {
     this.mouseSession = session;
     this.scheduleLongPressTimers(session, {
       isActive: () => this.mouseSession === session && session.state === "pressed",
-      onLongPress: () => {},
+      onLongPress: () => {
+        this.dispatchGesture({
+          type: "mouse-long-press-ready",
+          gestureId: session.gestureId,
+          button: session.originButton,
+          buttons: session.pressButtons,
+          position: session.lastPosition,
+          pointerEntity: this.resolvePointerEntityAt(session.lastPosition),
+          modifiers: session.pressModifiers,
+          sourceEvent: null,
+        });
+      },
     });
     this.lastMousePosition = position;
   }
@@ -486,6 +502,7 @@ export class GestureAdapter {
       const session: TouchSession = {
         gestureId: this.nextGestureId("touch"),
         primaryId: event.pointerId,
+        pressModifiers: getModifiers(event),
         pressStartedAt,
         startPosition: position,
         lastPosition: position,
@@ -499,6 +516,16 @@ export class GestureAdapter {
         isActive: () => this.touchSession === session && session.state === "pending-long-press",
         onLongPress: () => {
           session.state = "drag-ready";
+          this.dispatchGesture({
+            type: "tap-long-press-ready",
+            gestureId: session.gestureId,
+            primaryId: session.primaryId,
+            position: session.lastPosition,
+            activeTouchCount: this.activeTouches.size,
+            pointerEntity: this.resolvePointerEntityAt(session.lastPosition),
+            modifiers: session.pressModifiers,
+            sourceEvent: null,
+          });
         },
       });
     } else if (this.activeTouches.size > 1) {
@@ -848,7 +875,6 @@ export class GestureAdapter {
 
       session.longPress = true;
       session.longPressTimer = null;
-      options.onLongPress();
       this.setLongPressState({
         visible: true,
         position: session.lastPosition,
@@ -856,6 +882,7 @@ export class GestureAdapter {
         durationMs: this.thresholds.touchLongPressMs,
         progress: 1,
       });
+      options.onLongPress();
     }, this.thresholds.touchLongPressMs);
   }
 

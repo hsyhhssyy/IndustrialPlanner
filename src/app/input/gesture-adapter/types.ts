@@ -39,11 +39,13 @@ export type GestureEventType =
   | "mouse dragmove"
   | "mouse dragend"
   | "mouse tap"
+  | "mouse-long-press-ready"
   | "mouse move"
   | "touch dragstart"
   | "touch dragmove"
   | "touch dragend"
   | "touch tap"
+  | "tap-long-press-ready"
   | "pinch in"
   | "pinch out"
   | "two finger move"
@@ -101,6 +103,14 @@ export interface MouseTapGestureEvent extends GestureEventBase {
   readonly pointerEntity: WorldEntity | null;
 }
 
+export interface MouseLongPressReadyGestureEvent extends GestureEventBase {
+  readonly type: "mouse-long-press-ready";
+  readonly button: number;
+  readonly buttons: number;
+  readonly position: GesturePosition;
+  readonly pointerEntity: WorldEntity | null;
+}
+
 export interface MouseMoveGestureEvent extends GestureEventBase {
   readonly type: "mouse move";
   readonly buttons: number;
@@ -140,6 +150,14 @@ export interface TouchTapGestureEvent extends GestureEventBase {
   readonly primaryId: number;
   readonly position: GesturePosition;
   readonly longPress: boolean;
+  readonly pointerEntity: WorldEntity | null;
+}
+
+export interface TapLongPressReadyGestureEvent extends GestureEventBase {
+  readonly type: "tap-long-press-ready";
+  readonly primaryId: number;
+  readonly position: GesturePosition;
+  readonly activeTouchCount: number;
   readonly pointerEntity: WorldEntity | null;
 }
 
@@ -195,11 +213,13 @@ export type GestureEvent =
   | MouseDragMoveGestureEvent
   | MouseDragEndGestureEvent
   | MouseTapGestureEvent
+  | MouseLongPressReadyGestureEvent
   | MouseMoveGestureEvent
   | TouchDragStartGestureEvent
   | TouchDragMoveGestureEvent
   | TouchDragEndGestureEvent
   | TouchTapGestureEvent
+  | TapLongPressReadyGestureEvent
   | PinchGestureEvent
   | TwoFingerMoveGestureEvent
   | WheelGestureEvent

@@ -7,7 +7,10 @@ import {
 import type { GestureEvent } from "@/app/input/gesture-adapter";
 import type { WorldEntity } from "@/domain/entity/world-document";
 
-function mouseTapEvent(gestureId = "tap-1"): GestureEvent {
+type MouseTapGestureEvent = Extract<GestureEvent, { type: "mouse tap" }>;
+type MouseLongPressReadyGestureEvent = Extract<GestureEvent, { type: "mouse-long-press-ready" }>;
+
+function mouseTapEvent(gestureId = "tap-1"): MouseTapGestureEvent {
   return {
     type: "mouse tap",
     gestureId,
@@ -33,6 +36,24 @@ function keyDownEvent(gestureId = "key-1"): GestureEvent {
     code: "KeyA",
     key: "a",
     keyCode: 65,
+    modifiers: {
+      alt: false,
+      ctrl: false,
+      meta: false,
+      shift: false,
+    },
+    sourceEvent: null,
+  };
+}
+
+function mouseLongPressReadyEvent(gestureId = "ready-1"): MouseLongPressReadyGestureEvent {
+  return {
+    type: "mouse-long-press-ready",
+    gestureId,
+    button: 0,
+    buttons: 1,
+    position: { x: 18, y: 28 },
+    pointerEntity: entity("entity-ready"),
     modifiers: {
       alt: false,
       ctrl: false,
@@ -195,5 +216,19 @@ describe("GestureDiagnosticsStore", () => {
         detail: "code KeyA, key a, keyCode 65",
       },
     ]);
+  });
+
+  it("formats long press ready events with pointer entity details", () => {
+    const store = createGestureDiagnosticsStore();
+
+    store.recordGesture(mouseLongPressReadyEvent());
+
+    expect(store.getSnapshot().latestEvent).toMatchObject({
+      type: "mouse-long-press-ready",
+      gestureId: "ready-1",
+      position: { x: 18, y: 28 },
+      pointerEntityId: "entity-ready",
+      detail: "button 0, buttons 1, ready, entity entity-ready",
+    });
   });
 });
