@@ -1,3 +1,5 @@
+import type { WorldEntity } from "@/domain/entity/world-document";
+
 export interface GesturePosition {
   readonly x: number;
   readonly y: number;
@@ -67,6 +69,7 @@ export interface MouseDragStartGestureEvent extends GestureEventBase {
   readonly position: GesturePosition;
   readonly startPosition: GesturePosition;
   readonly longPress: boolean;
+  readonly pointerEntity: WorldEntity | null;
 }
 
 export interface MouseDragMoveGestureEvent extends GestureEventBase {
@@ -95,6 +98,7 @@ export interface MouseTapGestureEvent extends GestureEventBase {
   readonly buttons: number;
   readonly position: GesturePosition;
   readonly longPress: boolean;
+  readonly pointerEntity: WorldEntity | null;
 }
 
 export interface MouseMoveGestureEvent extends GestureEventBase {
@@ -111,6 +115,7 @@ export interface TouchDragStartGestureEvent extends GestureEventBase {
   readonly startPosition: GesturePosition;
   readonly activeTouchCount: number;
   readonly longPress: boolean;
+  readonly pointerEntity: WorldEntity | null;
 }
 
 export interface TouchDragMoveGestureEvent extends GestureEventBase {
@@ -135,6 +140,7 @@ export interface TouchTapGestureEvent extends GestureEventBase {
   readonly primaryId: number;
   readonly position: GesturePosition;
   readonly longPress: boolean;
+  readonly pointerEntity: WorldEntity | null;
 }
 
 export interface PinchGestureEvent extends GestureEventBase {

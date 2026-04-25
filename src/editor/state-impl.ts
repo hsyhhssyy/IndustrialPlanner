@@ -3,15 +3,15 @@ import { makeAutoObservable } from "mobx";
 import type { WorldEntity } from "@/domain/entity/world-document";
 import type {
   EditorState,
-  EditorViewportClientRect,
 } from "@/domain/state/types";
+import type { ClientPixelRect } from "@/domain/types/client-pixel";
 
-export interface EditorViewportCenterReadWrite {
+export interface GridFloatPointReadWrite {
   x: number;
   y: number;
 }
 
-export interface EditorViewportClientRectReadWrite {
+export interface ClientPixelRectReadWrite {
   left: number;
   top: number;
   width: number;
@@ -19,8 +19,8 @@ export interface EditorViewportClientRectReadWrite {
 }
 
 export interface EditorViewportStateReadWrite {
-  center: EditorViewportCenterReadWrite;
-  clientRect: EditorViewportClientRectReadWrite;
+  center: GridFloatPointReadWrite;
+  clientRect: ClientPixelRectReadWrite;
   gridSize: number;
 }
 
@@ -67,7 +67,7 @@ export interface EditorStateReadWrite extends EditorState {
 const DEFAULT_VIEWPORT_WIDTH = 800;
 const DEFAULT_VIEWPORT_HEIGHT = 600;
 const DEFAULT_VIEWPORT_GRID_SIZE = 1;
-const DEFAULT_VIEWPORT_CLIENT_RECT: EditorViewportClientRect = {
+const DEFAULT_VIEWPORT_CLIENT_RECT: ClientPixelRect = {
   left: 0,
   top: 0,
   width: DEFAULT_VIEWPORT_WIDTH,

@@ -1,9 +1,6 @@
-export type GridRotation = 0 | 90 | 180 | 270;
+export type { GridPoint, GridRotation } from "@/domain/types/grid";
 
-export interface GridPoint {
-  x: number;
-  y: number;
-}
+import type { GridPoint, GridRotation } from "@/domain/types/grid";
 
 export interface GridFootprint {
   width: number;

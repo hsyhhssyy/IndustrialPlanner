@@ -1,7 +1,7 @@
 import type {
   GridPoint,
   GridRotation,
-} from "@/shared/geometry/grid";
+} from "@/domain/types/grid";
 
 export interface WorldEntity {
   id: string;

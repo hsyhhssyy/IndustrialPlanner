@@ -3,6 +3,7 @@ import { runInAction } from "mobx";
 
 import { createAppHost } from "@/app/app-host";
 import type {
+  GestureEvent,
   GesturePointerEventLike,
   GestureWheelEventLike,
 } from "@/app/input/gesture-adapter";
@@ -13,8 +14,10 @@ import {
 import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
+import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
+import { resolveWorldGridCellPixelSize } from "@/shared/geometry/viewport-transform";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -544,6 +547,64 @@ describe("createAppHost", () => {
     expect(appHost.internalState.runtime.activeTool).toBe("select");
   });
 
+  it("attaches pointerEntity from editor queries to pointer tap and dragstart events", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+    const gestures: GestureEvent[] = [];
+    appHost.gestureAdapter.subscribe((event) => gestures.push(event));
+
+    const entityPoint = resolveClientPixelPointForGridCell(editorHost, { x: 4, y: 4 });
+
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 21,
+      clientX: entityPoint.x,
+      clientY: entityPoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 21,
+      clientX: entityPoint.x,
+      clientY: entityPoint.y,
+      buttons: 0,
+    }));
+
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 22,
+      clientX: entityPoint.x,
+      clientY: entityPoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 22,
+      clientX: entityPoint.x + 4,
+      clientY: entityPoint.y,
+      buttons: 1,
+    }));
+
+    expect(gestures).toMatchObject([
+      {
+        type: "mouse tap",
+        pointerEntity: {
+          id: "dummy-entity-2",
+        },
+      },
+      {
+        type: "mouse dragstart",
+        pointerEntity: {
+          id: "dummy-entity-2",
+        },
+      },
+    ]);
+  });
+
   it("zooms the editor viewport on pinch out and pinch in gestures", () => {
     vi.useFakeTimers();
 
@@ -639,5 +700,33 @@ function wheelEvent(
     metaKey: false,
     shiftKey: false,
     ...overrides,
+  };
+}
+
+function resolveClientPixelPointForGridCell(
+  editorHost: ReturnType<typeof createEditorHost>,
+  cell: {
+    x: number;
+    y: number;
+  },
+): {
+  x: number;
+  y: number;
+} {
+  const gridCellSize = resolveWorldGridCellPixelSize(
+    editorHost.state.viewport.gridSize,
+  );
+
+  return {
+    x:
+      editorHost.state.viewport.clientRect.left
+      +
+      editorHost.state.viewport.clientRect.width / 2
+      + (cell.x + 0.5 - editorHost.state.viewport.center.x) * gridCellSize,
+    y:
+      editorHost.state.viewport.clientRect.top
+      +
+      editorHost.state.viewport.clientRect.height / 2
+      + (cell.y + 0.5 - editorHost.state.viewport.center.y) * gridCellSize,
   };
 }

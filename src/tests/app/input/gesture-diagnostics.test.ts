@@ -5,6 +5,7 @@ import {
   createGestureDiagnosticsStore,
 } from "@/app/input/gesture-diagnostics";
 import type { GestureEvent } from "@/app/input/gesture-adapter";
+import type { WorldEntity } from "@/domain/entity/world-document";
 
 function mouseTapEvent(gestureId = "tap-1"): GestureEvent {
   return {
@@ -14,6 +15,7 @@ function mouseTapEvent(gestureId = "tap-1"): GestureEvent {
     buttons: 0,
     position: { x: 12, y: 24 },
     longPress: false,
+    pointerEntity: null,
     modifiers: {
       alt: false,
       ctrl: false,
@@ -57,11 +59,25 @@ function uiButtonMouseTapEvent(gestureId = "ui-button-1"): GestureEvent {
   };
 }
 
+function entity(id: string): WorldEntity {
+  return {
+    id,
+    definitionId: "belt_straight_1x1",
+    position: { x: 0, y: 0 },
+    rotation: 0,
+    config: {},
+    tags: [],
+  };
+}
+
 describe("GestureDiagnosticsStore", () => {
   it("records gesture events without consuming router dispatch", () => {
     const store = createGestureDiagnosticsStore();
     const module = createHypergryphGestureDiagnosticsModule(store);
-    const event = mouseTapEvent();
+    const event = {
+      ...mouseTapEvent(),
+      pointerEntity: entity("entity-7"),
+    } satisfies GestureEvent;
 
     const result = module.handle(event, {} as never);
 
@@ -73,7 +89,8 @@ describe("GestureDiagnosticsStore", () => {
       type: "mouse tap",
       gestureId: "tap-1",
       position: { x: 12, y: 24 },
-      detail: "button 0, direct",
+      pointerEntityId: "entity-7",
+      detail: "button 0, direct, entity entity-7",
     });
   });
 

@@ -31,7 +31,9 @@ export function createAppHost(
 ): AppHost {
   const disposers: Array<() => void> = [];
   const internalState = createUiStateReadWrite();
-  const gestureAdapter = createGestureAdapter();
+  const gestureAdapter = createGestureAdapter({
+    resolvePointerEntity: (position) => workspace.editor?.queries.findEntityAtClientPixelPoint(position) ?? null,
+  });
   const gestureDiagnostics = createGestureDiagnosticsStore();
   const host = {} as AppHost;
   const gestureActionRouter = createGestureActionRouter<AppHost>({

@@ -1,18 +1,18 @@
 
 import type {
-	EditorViewportClientRect,
-	EditorViewportPixelPoint,
-} from "../state/types";
+	ClientPixelPoint,
+	ClientPixelRect,
+} from "../types/client-pixel";
 
-export interface MoveViewportByViewportPixelVectorOptions {
-	readonly startViewportPixel: EditorViewportPixelPoint;
-	readonly endViewportPixel: EditorViewportPixelPoint;
+export interface MoveViewportByClientPixelVectorOptions {
+	readonly startClientPixel: ClientPixelPoint;
+	readonly endClientPixel: ClientPixelPoint;
 }
 
 export interface EditorAction {
-	setViewportClientRect(clientRect: EditorViewportClientRect): void;
+	setViewportClientRect(clientRect: ClientPixelRect): void;
 	zoom(step: number): void;
-	moveViewportByViewportPixelVector(
-		options: MoveViewportByViewportPixelVectorOptions,
+	moveViewportByClientPixelVector(
+		options: MoveViewportByClientPixelVectorOptions,
 	): void;
 }

@@ -55,6 +55,7 @@ function mouseTapEvent(gestureId = "tap-1"): GestureEvent {
     buttons: 0,
     position: { x: 10, y: 12 },
     longPress: false,
+    pointerEntity: null,
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };
@@ -70,6 +71,7 @@ function mouseDragStartEvent(gestureId = "drag-1"): GestureEvent {
     position: { x: 4, y: 4 },
     startPosition: { x: 0, y: 0 },
     longPress: false,
+    pointerEntity: null,
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };

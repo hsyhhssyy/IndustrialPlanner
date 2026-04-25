@@ -86,13 +86,13 @@ export function createEditorHost(
       editorState.viewport.clientRect.width = nextClientRect.width;
       editorState.viewport.clientRect.height = nextClientRect.height;
     },
-    moveViewportByViewportPixelVector: ({
-      startViewportPixel,
-      endViewportPixel,
+    moveViewportByClientPixelVector: ({
+      startClientPixel,
+      endClientPixel,
     }) => {
       const viewportPixelVector = resolveViewportPixelVector({
-        startViewportPixel,
-        endViewportPixel,
+        startViewportPixel: resolveViewportPixelPoint(startClientPixel, editorState.viewport),
+        endViewportPixel: resolveViewportPixelPoint(endClientPixel, editorState.viewport),
       });
 
       if (viewportPixelVector === null) {
@@ -124,9 +124,9 @@ export function createEditorHost(
     },
   };
   const queries: EditorContract["queries"] = {
-    findEntityAtViewportPoint: (viewportPoint) => {
-      const gridCell = resolveGridCellAtViewportPoint({
-        viewportPoint,
+    findEntityAtClientPixelPoint: (clientPixelPoint) => {
+      const gridCell = resolveGridCellAtClientPixelPoint({
+        clientPixelPoint,
         viewportState: editorState.viewport,
       });
 
@@ -169,6 +169,10 @@ export function createEditorHost(
 
       return null;
     },
+    findClientRectForGridCell: (gridCell) => resolveClientRectForGridCell({
+      gridCell,
+      viewportState: editorState.viewport,
+    }),
   };
 
   const host: EditorHost = {
@@ -273,8 +277,24 @@ function resolveViewportPixelVector(options: {
   };
 }
 
-function resolveGridCellAtViewportPoint(options: {
-  viewportPoint: {
+function resolveViewportPixelPoint(
+  clientPixelPoint: {
+    x: number;
+    y: number;
+  },
+  viewportState: EditorStateReadWrite["viewport"],
+): {
+  x: number;
+  y: number;
+} {
+  return {
+    x: clientPixelPoint.x - viewportState.clientRect.left,
+    y: clientPixelPoint.y - viewportState.clientRect.top,
+  };
+}
+
+function resolveGridCellAtClientPixelPoint(options: {
+  clientPixelPoint: {
     x: number;
     y: number;
   };
@@ -284,8 +304,8 @@ function resolveGridCellAtViewportPoint(options: {
   y: number;
 } | null {
   if (
-    !Number.isFinite(options.viewportPoint.x)
-    || !Number.isFinite(options.viewportPoint.y)
+    !Number.isFinite(options.clientPixelPoint.x)
+    || !Number.isFinite(options.clientPixelPoint.y)
   ) {
     return null;
   }
@@ -301,17 +321,64 @@ function resolveGridCellAtViewportPoint(options: {
   const worldX =
     options.viewportState.center.x
     + (
-      options.viewportPoint.x - options.viewportState.clientRect.width / 2
+      options.clientPixelPoint.x
+      - options.viewportState.clientRect.left
+      - options.viewportState.clientRect.width / 2
     ) / gridCellSize;
   const worldY =
     options.viewportState.center.y
     + (
-      options.viewportPoint.y - options.viewportState.clientRect.height / 2
+      options.clientPixelPoint.y
+      - options.viewportState.clientRect.top
+      - options.viewportState.clientRect.height / 2
     ) / gridCellSize;
 
   return {
     x: Math.floor(worldX),
     y: Math.floor(worldY),
+  };
+}
+
+function resolveClientRectForGridCell(options: {
+  gridCell: {
+    x: number;
+    y: number;
+  };
+  viewportState: EditorStateReadWrite["viewport"];
+}): {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+} | null {
+  if (
+    !Number.isFinite(options.gridCell.x)
+    || !Number.isFinite(options.gridCell.y)
+  ) {
+    return null;
+  }
+
+  const gridCellSize = resolveWorldGridCellPixelSize(
+    options.viewportState.gridSize,
+  );
+
+  if (gridCellSize <= 0) {
+    return null;
+  }
+
+  return {
+    left:
+      options.viewportState.clientRect.left
+      +
+      options.viewportState.clientRect.width / 2
+      + (options.gridCell.x - options.viewportState.center.x) * gridCellSize,
+    top:
+      options.viewportState.clientRect.top
+      +
+      options.viewportState.clientRect.height / 2
+      + (options.gridCell.y - options.viewportState.center.y) * gridCellSize,
+    width: gridCellSize,
+    height: gridCellSize,
   };
 }
 

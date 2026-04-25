@@ -55,16 +55,16 @@ describe("createEditorHost", () => {
     expect(editorHost.state.viewport.center.y).toBe(0);
   });
 
-  it("moves viewport center by viewport pixel vector through editor actions", () => {
+  it("moves viewport center by client pixel vector through editor actions", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
-    editorHost.actions.moveViewportByViewportPixelVector({
-      startViewportPixel: {
+    editorHost.actions.moveViewportByClientPixelVector({
+      startClientPixel: {
         x: 64,
         y: 80,
       },
-      endViewportPixel: {
+      endClientPixel: {
         x: 96,
         y: 48,
       },
@@ -182,30 +182,51 @@ describe("createEditorHost", () => {
     expect(nextAbsolutePosition.y).toBeCloseTo(initialAbsolutePosition.y);
   });
 
-  it("finds the entity occupying the grid cell at a viewport point", () => {
+  it("finds the entity occupying the grid cell at a client pixel point", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.actions.setViewportClientRect({
-      left: 0,
-      top: 0,
+      left: 120,
+      top: 80,
       width: 400,
       height: 400,
     });
 
-    const entity = editorHost.queries.findEntityAtViewportPoint(
-      resolveViewportPointForGridCell(editorHost, { x: 5, y: 5 }),
+    const entity = editorHost.queries.findEntityAtClientPixelPoint(
+      resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 5 }),
     );
-    const emptyCellEntity = editorHost.queries.findEntityAtViewportPoint(
-      resolveViewportPointForGridCell(editorHost, { x: 0, y: 0 }),
+    const emptyCellEntity = editorHost.queries.findEntityAtClientPixelPoint(
+      resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 }),
     );
 
     expect(entity?.id).toBe("dummy-entity-2");
     expect(emptyCellEntity).toBeNull();
   });
 
-  it("uses rotated footprint when resolving entity hits from viewport points", () => {
+  it("computes the client rect for a world grid cell", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+
+    const rect = editorHost.queries.findClientRectForGridCell({ x: 4, y: 4 });
+
+    expect(rect).toEqual({
+      left: 384,
+      top: 344,
+      width: 16,
+      height: 16,
+    });
+  });
+
+  it("uses rotated footprint when resolving entity hits from client pixel points", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDummyWorldDocument();
@@ -231,11 +252,11 @@ describe("createEditorHost", () => {
       height: 400,
     });
 
-    const hitEntity = editorHost.queries.findEntityAtViewportPoint(
-      resolveViewportPointForGridCell(editorHost, { x: 8, y: 13 }),
+    const hitEntity = editorHost.queries.findEntityAtClientPixelPoint(
+      resolveClientPixelPointForGridCell(editorHost, { x: 8, y: 13 }),
     );
-    const missEntity = editorHost.queries.findEntityAtViewportPoint(
-      resolveViewportPointForGridCell(editorHost, { x: 9, y: 13 }),
+    const missEntity = editorHost.queries.findEntityAtClientPixelPoint(
+      resolveClientPixelPointForGridCell(editorHost, { x: 9, y: 13 }),
     );
 
     expect(hitEntity?.id).toBe("rotated-entity");
@@ -308,7 +329,7 @@ async function flushMicrotasks(iterations = 4): Promise<void> {
   }
 }
 
-function resolveViewportPointForGridCell(
+function resolveClientPixelPointForGridCell(
   editorHost: ReturnType<typeof createEditorHost>,
   cell: {
     x: number;
@@ -324,9 +345,13 @@ function resolveViewportPointForGridCell(
 
   return {
     x:
+      editorHost.state.viewport.clientRect.left
+      +
       editorHost.state.viewport.clientRect.width / 2
       + (cell.x + 0.5 - editorHost.state.viewport.center.x) * gridCellSize,
     y:
+      editorHost.state.viewport.clientRect.top
+      +
       editorHost.state.viewport.clientRect.height / 2
       + (cell.y + 0.5 - editorHost.state.viewport.center.y) * gridCellSize,
   };

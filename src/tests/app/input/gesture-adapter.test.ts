@@ -9,6 +9,7 @@ import {
   type GesturePointerEventLike,
   type GestureWheelEventLike,
 } from "@/app/input/gesture-adapter";
+import type { WorldEntity } from "@/domain/entity/world-document";
 
 function pointerEvent(
   overrides: Partial<GesturePointerEventLike> = {},
@@ -121,6 +122,45 @@ describe("GestureAdapter", () => {
       type: "mouse tap",
       longPress: false,
     });
+  });
+
+  it("attaches resolved pointerEntity to mouse and touch tap or dragstart events", () => {
+    const adapter = createGestureAdapter({
+      resolvePointerEntity: (position) => createPointerEntity(`entity-${position.x}-${position.y}`),
+    });
+    const events: GestureEvent[] = [];
+    adapter.subscribe((event) => events.push(event));
+
+    adapter.handlePointerDown(pointerEvent({ pointerId: 11, clientX: 6, clientY: 7, buttons: 1 }));
+    adapter.handlePointerUp(pointerEvent({ pointerId: 11, clientX: 6, clientY: 7, buttons: 0 }));
+
+    adapter.handlePointerDown(pointerEvent({ pointerId: 12, clientX: 20, clientY: 20, buttons: 1 }));
+    adapter.handlePointerMove(pointerEvent({ pointerId: 12, clientX: 24, clientY: 20, buttons: 1 }));
+
+    adapter.handlePointerDown(touchEvent(21, 30, 30));
+    adapter.handlePointerUp(touchEvent(21, 30, 30));
+
+    adapter.handlePointerDown(touchEvent(22, 40, 40));
+    adapter.handlePointerMove(touchEvent(22, 52, 40));
+
+    expect(events).toMatchObject([
+      {
+        type: "mouse tap",
+        pointerEntity: { id: "entity-6-7" },
+      },
+      {
+        type: "mouse dragstart",
+        pointerEntity: { id: "entity-24-20" },
+      },
+      {
+        type: "touch tap",
+        pointerEntity: { id: "entity-30-30" },
+      },
+      {
+        type: "touch dragstart",
+        pointerEntity: { id: "entity-52-40" },
+      },
+    ]);
   });
 
   it("marks mouse tap and drag with longPress after a held press and exposes the indicator state", () => {
@@ -439,3 +479,14 @@ describe("GestureAdapter", () => {
     ]);
   });
 });
+
+function createPointerEntity(id: string): WorldEntity {
+  return {
+    id,
+    definitionId: "belt_straight_1x1",
+    position: { x: 0, y: 0 },
+    rotation: 0,
+    config: {},
+    tags: [],
+  };
+}

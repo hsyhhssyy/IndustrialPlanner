@@ -83,29 +83,10 @@ function moveViewport(
   startPosition: GesturePosition,
   endPosition: GesturePosition,
 ): void {
-  editor.actions.moveViewportByViewportPixelVector({
-    startViewportPixel: resolveViewportPixelPoint(
-      startPosition,
-      editor.state.viewport.clientRect,
-    ),
-    endViewportPixel: resolveViewportPixelPoint(
-      endPosition,
-      editor.state.viewport.clientRect,
-    ),
+  editor.actions.moveViewportByClientPixelVector({
+    startClientPixel: startPosition,
+    endClientPixel: endPosition,
   });
-}
-
-function resolveViewportPixelPoint(
-  position: GesturePosition,
-  clientRect: {
-    left: number;
-    top: number;
-  },
-): GesturePosition {
-  return {
-    x: position.x - clientRect.left,
-    y: position.y - clientRect.top,
-  };
 }
 
 function isMousePanButtonAllowed(activeTool: ActiveTool, originButton: number): boolean {

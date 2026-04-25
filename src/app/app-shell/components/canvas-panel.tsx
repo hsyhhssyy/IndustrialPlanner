@@ -199,6 +199,10 @@ function CanvasGestureDiagnosticsOverlay({
               <dd>{latest?.delta ? formatPoint(latest.delta) : "-"}</dd>
             </div>
             <div>
+              <dt>Entity</dt>
+              <dd>{latest?.pointerEntityId ?? "-"}</dd>
+            </div>
+            <div>
               <dt>Keys</dt>
               <dd>{pressedKeys.length > 0 ? pressedKeys.join(" + ") : "-"}</dd>
             </div>

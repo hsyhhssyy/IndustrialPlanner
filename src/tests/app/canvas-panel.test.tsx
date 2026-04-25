@@ -8,6 +8,7 @@ import { createAppHost } from "@/app/app-host";
 import type { GestureEvent } from "@/app/input/gesture-adapter";
 import { CanvasPanel } from "@/app/app-shell/components/canvas-panel";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import type { WorldEntity } from "@/domain/entity/world-document";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
@@ -307,13 +308,45 @@ describe("CanvasPanel", () => {
     expect(container.querySelector(".canvas-gesture-diagnostics-events")).not.toBeNull();
   });
 
+  it("shows pointer entity id in the diagnostics window", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<CanvasPanel appHost={appHost} />);
+    });
+
+    act(() => {
+      appHost.gestureDiagnostics.recordGesture({
+        type: "mouse tap",
+        gestureId: "gesture-entity-1",
+        button: 0,
+        buttons: 0,
+        position: { x: 24, y: 40 },
+        longPress: false,
+        pointerEntity: createPointerEntity("dummy-entity-9"),
+        modifiers: {
+          alt: false,
+          ctrl: false,
+          meta: false,
+          shift: false,
+        },
+        sourceEvent: null,
+      });
+    });
+
+    expect(container.querySelector(".canvas-gesture-diagnostics")?.textContent).toContain(
+      "dummy-entity-9",
+    );
+  });
+
   it("pans the editor viewport on middle mouse drag", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
     const editorHost = createEditorHost(workspace);
     const moveViewportSpy = vi.spyOn(
       editorHost.actions,
-      "moveViewportByViewportPixelVector",
+      "moveViewportByClientPixelVector",
     );
 
     editorHost.actions.setViewportClientRect({
@@ -366,13 +399,13 @@ describe("CanvasPanel", () => {
     });
 
     expect(moveViewportSpy).toHaveBeenCalledWith({
-      startViewportPixel: {
-        x: 20,
-        y: 30,
+      startClientPixel: {
+        x: 120,
+        y: 80,
       },
-      endViewportPixel: {
-        x: 36,
-        y: 14,
+      endClientPixel: {
+        x: 136,
+        y: 64,
       },
     });
     expect(editorHost.state.viewport.center.x).toBeCloseTo(-1);
@@ -425,3 +458,14 @@ describe("CanvasPanel", () => {
     expect(indicator?.style.top).toBe("-8px");
   });
 });
+
+function createPointerEntity(id: string): WorldEntity {
+  return {
+    id,
+    definitionId: "belt_straight_1x1",
+    position: { x: 0, y: 0 },
+    rotation: 0,
+    config: {},
+    tags: [],
+  };
+}

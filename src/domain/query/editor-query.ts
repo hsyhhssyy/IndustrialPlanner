@@ -1,9 +1,16 @@
 
 import type { WorldEntity } from "../entity/world-document";
-import type { EditorViewportPixelPoint } from "../state/types";
+import type {
+	ClientPixelPoint,
+	ClientPixelRect,
+} from "../types/client-pixel";
 
 export interface EditorQuery {
-	findEntityAtViewportPoint(
-		viewportPoint: EditorViewportPixelPoint,
+	findEntityAtClientPixelPoint(
+		clientPixelPoint: ClientPixelPoint,
 	): WorldEntity | null;
+	findClientRectForGridCell(gridCell: {
+		x: number;
+		y: number;
+	}): ClientPixelRect | null;
 }

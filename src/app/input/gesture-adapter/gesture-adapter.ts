@@ -15,6 +15,7 @@ import type {
   LongPressState,
   LongPressStateListener,
 } from "./types";
+import type { WorldEntity } from "@/domain/entity/world-document";
 
 const TOUCH_LONG_PRESS_MS = 500;
 const TOUCH_LONG_PRESS_INDICATOR_DELAY_MS = 200;
@@ -42,6 +43,7 @@ export interface GestureAdapterOptions {
   readonly now?: () => number;
   readonly setTimeout?: (callback: () => void, delayMs: number) => TimerHandle;
   readonly clearTimeout?: (handle: TimerHandle) => void;
+  readonly resolvePointerEntity?: (position: GesturePosition) => WorldEntity | null;
 }
 
 interface MouseSession {
@@ -94,6 +96,7 @@ export class GestureAdapter {
   private readonly now: () => number;
   private readonly scheduleTimeout: (callback: () => void, delayMs: number) => TimerHandle;
   private readonly cancelTimeout: (handle: TimerHandle) => void;
+  private readonly resolvePointerEntity: (position: GesturePosition) => WorldEntity | null;
   private readonly gestureListeners = new Set<GestureListener>();
   private readonly keyboardListeners = new Set<KeyboardSnapshotListener>();
   private readonly longPressListeners = new Set<LongPressStateListener>();
@@ -141,6 +144,7 @@ export class GestureAdapter {
     this.now = options.now ?? (() => performance.now());
     this.scheduleTimeout = options.setTimeout ?? ((callback, delayMs) => setTimeout(callback, delayMs));
     this.cancelTimeout = options.clearTimeout ?? ((handle) => clearTimeout(handle));
+    this.resolvePointerEntity = options.resolvePointerEntity ?? (() => null);
     this.longPressState = {
       ...this.longPressState,
       durationMs: this.thresholds.touchLongPressMs,
@@ -404,6 +408,7 @@ export class GestureAdapter {
         position,
         startPosition: session.startPosition,
         longPress: session.longPress,
+        pointerEntity: this.resolvePointerEntityAt(position),
         modifiers: getModifiers(event),
         sourceEvent: event,
       });
@@ -458,6 +463,7 @@ export class GestureAdapter {
         buttons: event.buttons,
         position,
         longPress: session.longPress,
+        pointerEntity: this.resolvePointerEntityAt(position),
         modifiers: getModifiers(event),
         sourceEvent: event,
       });
@@ -564,6 +570,7 @@ export class GestureAdapter {
         startPosition: session.startPosition,
         activeTouchCount: this.activeTouches.size,
         longPress: session.longPress,
+        pointerEntity: this.resolvePointerEntityAt(position),
         modifiers: getModifiers(event),
         sourceEvent: event,
       });
@@ -618,12 +625,14 @@ export class GestureAdapter {
       reason === "release" &&
       (session.state === "pending-long-press" || (session.state === "drag-ready" && session.longPress))
     ) {
+      const position = getPosition(event);
       this.dispatchGesture({
         type: "touch tap",
         gestureId: session.gestureId,
         primaryId: session.primaryId,
-        position: getPosition(event),
+        position,
         longPress: session.longPress,
+        pointerEntity: this.resolvePointerEntityAt(position),
         modifiers: getModifiers(event),
         sourceEvent: event,
       });
@@ -871,6 +880,10 @@ export class GestureAdapter {
       ...this.longPressState,
       position: session.lastPosition,
     });
+  }
+
+  private resolvePointerEntityAt(position: GesturePosition): WorldEntity | null {
+    return this.resolvePointerEntity(position);
   }
 
   private setLongPressState(state: LongPressState): void {

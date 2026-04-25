@@ -10,7 +10,7 @@ import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 
 describe("createHypergryphMouseViewportPanModule", () => {
   it("accepts left mouse drag in select mode", () => {
-    const { context, moveViewportByViewportPixelVector } = createContext(true, "select");
+    const { context, moveViewportByClientPixelVector } = createContext(true, "select");
     const module = createHypergryphMouseViewportPanModule();
 
     const startResult = module.handle(
@@ -23,6 +23,7 @@ describe("createHypergryphMouseViewportPanModule", () => {
         position: { x: 130, y: 70 },
         startPosition: { x: 120, y: 80 },
         longPress: false,
+        pointerEntity: null,
         modifiers: emptyModifiers(),
         sourceEvent: null,
       },
@@ -30,14 +31,14 @@ describe("createHypergryphMouseViewportPanModule", () => {
     );
 
     expect(startResult).toEqual({ status: "handled" });
-    expect(moveViewportByViewportPixelVector).toHaveBeenCalledWith({
-      startViewportPixel: { x: 20, y: 30 },
-      endViewportPixel: { x: 30, y: 20 },
+    expect(moveViewportByClientPixelVector).toHaveBeenCalledWith({
+      startClientPixel: { x: 120, y: 80 },
+      endClientPixel: { x: 130, y: 70 },
     });
   });
 
   it("ignores left mouse drag in marquee mode", () => {
-    const { context, moveViewportByViewportPixelVector } = createContext(true, "marquee");
+    const { context, moveViewportByClientPixelVector } = createContext(true, "marquee");
     const module = createHypergryphMouseViewportPanModule();
 
     const startResult = module.handle(
@@ -50,6 +51,7 @@ describe("createHypergryphMouseViewportPanModule", () => {
         position: { x: 130, y: 70 },
         startPosition: { x: 120, y: 80 },
         longPress: false,
+        pointerEntity: null,
         modifiers: emptyModifiers(),
         sourceEvent: null,
       },
@@ -57,11 +59,11 @@ describe("createHypergryphMouseViewportPanModule", () => {
     );
 
     expect(startResult).toEqual({ status: "ignored" });
-    expect(moveViewportByViewportPixelVector).not.toHaveBeenCalled();
+    expect(moveViewportByClientPixelVector).not.toHaveBeenCalled();
   });
 
   it("pans the viewport for non-long-press touch drag gestures", () => {
-    const { context, moveViewportByViewportPixelVector } = createContext();
+    const { context, moveViewportByClientPixelVector } = createContext();
     const module = createHypergryphMouseViewportPanModule();
 
     const startResult = module.handle(
@@ -73,6 +75,7 @@ describe("createHypergryphMouseViewportPanModule", () => {
         startPosition: { x: 120, y: 80 },
         activeTouchCount: 1,
         longPress: false,
+        pointerEntity: null,
         modifiers: emptyModifiers(),
         sourceEvent: null,
       },
@@ -109,18 +112,18 @@ describe("createHypergryphMouseViewportPanModule", () => {
     expect(startResult).toEqual({ status: "handled" });
     expect(moveResult).toEqual({ status: "handled" });
     expect(endResult).toEqual({ status: "handled" });
-    expect(moveViewportByViewportPixelVector).toHaveBeenNthCalledWith(1, {
-      startViewportPixel: { x: 20, y: 30 },
-      endViewportPixel: { x: 36, y: 14 },
+    expect(moveViewportByClientPixelVector).toHaveBeenNthCalledWith(1, {
+      startClientPixel: { x: 120, y: 80 },
+      endClientPixel: { x: 136, y: 64 },
     });
-    expect(moveViewportByViewportPixelVector).toHaveBeenNthCalledWith(2, {
-      startViewportPixel: { x: 36, y: 14 },
-      endViewportPixel: { x: 40, y: 22 },
+    expect(moveViewportByClientPixelVector).toHaveBeenNthCalledWith(2, {
+      startClientPixel: { x: 136, y: 64 },
+      endClientPixel: { x: 140, y: 72 },
     });
   });
 
   it("ignores long-press touch drag gestures", () => {
-    const { context, moveViewportByViewportPixelVector } = createContext();
+    const { context, moveViewportByClientPixelVector } = createContext();
     const module = createHypergryphMouseViewportPanModule();
 
     const startResult = module.handle(
@@ -132,6 +135,7 @@ describe("createHypergryphMouseViewportPanModule", () => {
         startPosition: { x: 120, y: 80 },
         activeTouchCount: 1,
         longPress: true,
+        pointerEntity: null,
         modifiers: emptyModifiers(),
         sourceEvent: null,
       },
@@ -168,7 +172,7 @@ describe("createHypergryphMouseViewportPanModule", () => {
     expect(startResult).toEqual({ status: "ignored" });
     expect(moveResult).toEqual({ status: "ignored" });
     expect(endResult).toEqual({ status: "ignored" });
-    expect(moveViewportByViewportPixelVector).not.toHaveBeenCalled();
+    expect(moveViewportByClientPixelVector).not.toHaveBeenCalled();
   });
 
   it("only enables the module while hypergryph operation mode is on", () => {
@@ -181,9 +185,9 @@ describe("createHypergryphMouseViewportPanModule", () => {
 
 function createContext(hypergryphOperationMode = true, activeTool: "select" | "marquee" | "placement" = "select"): {
   context: GestureActionContext<AppHost>;
-  moveViewportByViewportPixelVector: ReturnType<typeof vi.fn>;
+  moveViewportByClientPixelVector: ReturnType<typeof vi.fn>;
 } {
-  const moveViewportByViewportPixelVector = vi.fn();
+  const moveViewportByClientPixelVector = vi.fn();
   const workspace = {
     editor: {
       state: {
@@ -195,7 +199,7 @@ function createContext(hypergryphOperationMode = true, activeTool: "select" | "m
         },
       },
       actions: {
-        moveViewportByViewportPixelVector,
+        moveViewportByClientPixelVector,
       },
     },
   } as unknown as WorkspaceContract;
@@ -217,7 +221,7 @@ function createContext(hypergryphOperationMode = true, activeTool: "select" | "m
       } as AppHost,
       keyboard: emptyKeyboardSnapshot(),
     },
-    moveViewportByViewportPixelVector,
+    moveViewportByClientPixelVector,
   };
 }
 

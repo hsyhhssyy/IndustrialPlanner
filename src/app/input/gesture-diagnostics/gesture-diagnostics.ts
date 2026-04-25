@@ -14,6 +14,7 @@ export interface GestureDiagnosticEventRecord {
   readonly gestureId: string;
   readonly position: GesturePosition | null;
   readonly delta: GestureDelta | null;
+  readonly pointerEntityId: string | null;
   readonly detail: string;
 }
 
@@ -56,6 +57,7 @@ export class GestureDiagnosticsStore {
         gestureId: event.gestureId,
         position: getEventPosition(event),
         delta: getEventDelta(event),
+        pointerEntityId: getEventPointerEntityId(event),
         detail: getEventDetail(event),
       },
       ...this.events,
@@ -119,25 +121,38 @@ function getEventDelta(event: GestureEvent): GestureDelta | null {
   return null;
 }
 
+function getEventPointerEntityId(event: GestureEvent): string | null {
+  if (!("pointerEntity" in event)) {
+    return null;
+  }
+
+  return event.pointerEntity?.id ?? null;
+}
+
 function getEventDetail(event: GestureEvent): string {
+  const pointerEntityDetail = "pointerEntity" in event && event.pointerEntity !== null
+    ? `, entity ${event.pointerEntity.id}`
+    : "";
+
   switch (event.type) {
     case "mouse dragstart":
-      return `button ${event.originButton}, buttons ${event.buttons}, ${event.longPress ? "long press" : "direct"}`;
+      return `button ${event.originButton}, buttons ${event.buttons}, ${event.longPress ? "long press" : "direct"}${pointerEntityDetail}`;
     case "mouse dragmove":
       return `buttons ${event.buttons}, ${event.longPress ? "long press" : "direct"}`;
     case "mouse dragend":
       return `${event.reason}, button ${event.releaseButton}, ${event.longPress ? "long press" : "direct"}`;
     case "mouse tap":
-      return `button ${event.button}, ${event.longPress ? "long press" : "direct"}`;
+      return `button ${event.button}, ${event.longPress ? "long press" : "direct"}${pointerEntityDetail}`;
     case "mouse move":
       return `buttons ${event.buttons}`;
     case "touch dragstart":
+      return `primary ${event.primaryId}, touches ${event.activeTouchCount}, ${event.longPress ? "long press" : "direct"}${pointerEntityDetail}`;
     case "touch dragmove":
       return `primary ${event.primaryId}, touches ${event.activeTouchCount}, ${event.longPress ? "long press" : "direct"}`;
     case "touch dragend":
       return `${event.reason}, primary ${event.primaryId}, ${event.longPress ? "long press" : "direct"}`;
     case "touch tap":
-      return `primary ${event.primaryId}, ${event.longPress ? "long press" : "direct"}`;
+      return `primary ${event.primaryId}, ${event.longPress ? "long press" : "direct"}${pointerEntityDetail}`;
     case "pinch in":
     case "pinch out":
       return `distance ${formatNumber(event.distanceDelta)}, scale ${formatNumber(event.scaleDelta)}`;

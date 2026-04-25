@@ -1,40 +1,23 @@
 
-// Editor State 定义上是Document的包裹层，他为Document提供一层运行时tag
-// 比如SelectedEntities就是指这些Entity被选中了，这个状态是运行时的
+
 
 import type { AppLocale } from "@/shared/i18n/messages";
 import type { WorldEntity } from "../entity/world-document";
 import type { ScreenProfile } from "./screen-profile";
 import type { AppTheme, AppThemeId } from "./theme";
-
-export interface EditorViewportCenter {
-  readonly x: number;
-  readonly y: number;
-}
-
-export interface EditorViewportPixelPoint {
-  readonly x: number;
-  readonly y: number;
-}
-
-export interface EditorViewportClientRect {
-  readonly left: number;
-  readonly top: number;
-  readonly width: number;
-  readonly height: number;
-}
+import type { ClientPixelRect } from "../types/client-pixel";
+import type { GridFloatPoint } from "../types/grid";
 
 export interface EditorViewportState {
-  readonly center: EditorViewportCenter;
-  readonly clientRect: EditorViewportClientRect;
+  readonly center: GridFloatPoint;
+  readonly clientRect: ClientPixelRect;
   readonly gridSize: number;
 }
 
-// 操作也是通过这个状态来进行的，比如MoveSelectionTo, MovePreviewTo, PlacePreviewTo
+/// Editor State 定义上是Document的包裹层，他为Document提供一层运行时tag
+/// 比如SelectedEntities就是指这些Entity被选中了，这个状态是运行时的
+/// 操作也是通过这个状态来进行的，比如MoveSelectionTo, MovePreviewTo, PlacePreviewTo
 export interface EditorState {
-
-  //currentMode: EditorMode;
-  //displayTool: DisplayTool;
 
   readonly viewport: EditorViewportState;
   

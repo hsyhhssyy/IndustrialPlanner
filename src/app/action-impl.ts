@@ -3,7 +3,7 @@ import { action } from "mobx";
 import type { AppAction } from "@/domain/action/app-action";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type { ScreenProfile } from "@/domain/state/screen-profile";
-import type { EditorViewportClientRect } from "@/domain/state/types";
+import type { ClientPixelRect } from "@/domain/types/client-pixel";
 import type { AppLocale } from "@/shared/i18n/messages";
 import { lookupMessageText } from "@/shared/i18n/messages";
 import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
@@ -143,12 +143,12 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 }
 
 function resolvePredictedViewportRectForDockToggle(options: {
-  currentRect: EditorViewportClientRect;
+  currentRect: ClientPixelRect;
   leftDockWidth: number;
   rightDockWidth: number;
   dock: "left" | "right";
   willOpen: boolean;
-}): EditorViewportClientRect {
+}): ClientPixelRect {
   const delta = options.dock === "left"
     ? options.leftDockWidth
     : options.rightDockWidth;
