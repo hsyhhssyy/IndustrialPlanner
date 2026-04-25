@@ -46,6 +46,7 @@ describe("createAppHost", () => {
     expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual([
       "hypergryph-gesture-diagnostics",
       "hypergryph-move-mode-toggle",
+      "hypergryph-select-gesture",
       "hypergryph-mouse-viewport-pan",
       "hypergryph-viewport-zoom",
       "hypergryph-select-tool-button",

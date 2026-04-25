@@ -38,8 +38,7 @@ export function createEditorHost(
 
   const publicState: EditorContract["state"] = {
     viewport: editorState.viewport,
-    selectedEntities: editorState.selectedEntities,
-    previewEntities: editorState.previewEntities,
+    collections: editorState.collections,
   };
 
   const host: EditorHost = {

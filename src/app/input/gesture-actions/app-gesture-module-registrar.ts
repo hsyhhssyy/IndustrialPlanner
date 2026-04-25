@@ -7,6 +7,7 @@ import { createHypergryphGestureDiagnosticsModule } from "./hypergryph/hypergryp
 import { createHypergryphMarqueeModeToggleModule } from "./hypergryph/hypergryph-marquee-mode-toggle-module";
 import { createHypergryphMoveModeToggleModule } from "./hypergryph/hypergryph-move-mode-toggle-module";
 import { createHypergryphMouseViewportPanModule } from "./hypergryph/hypergryph-mouse-viewport-pan-module";
+import { createHypergryphSelectGestureModule } from "./hypergryph/hypergryph-select-gesture-module";
 import { createHypergryphSelectToolButtonModule } from "./hypergryph/hypergryph-select-tool-button-module";
 import { createHypergryphViewportZoomModule } from "./hypergryph/hypergryph-viewport-zoom-module";
 
@@ -22,6 +23,7 @@ export class AppGestureModuleRegistrar {
   public constructor(options: AppGestureModuleRegistrarOptions) {
     this.unregisterModules.push(
       options.router.registerModule(createHypergryphMoveModeToggleModule()),
+      options.router.registerModule(createHypergryphSelectGestureModule()),
       options.router.registerModule(createHypergryphMouseViewportPanModule()),
       options.router.registerModule(createHypergryphViewportZoomModule()),
       options.router.registerModule(createHypergryphSelectToolButtonModule()),

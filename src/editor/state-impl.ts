@@ -1,8 +1,15 @@
-import { makeAutoObservable } from "mobx";
+import {
+  makeAutoObservable,
+  observable,
+  type IObservableArray,
+} from "mobx";
 
 import type { WorldEntity } from "@/domain/entity/world-document";
-import type {
-  EditorState,
+import {
+  EntityCollectionType,
+  type EntityCollection,
+  type EditorState,
+  type EntityCollectionType as EntityCollectionTypeValue,
 } from "@/domain/state/types";
 import type { ClientPixelRect } from "@/domain/types/client-pixel";
 
@@ -52,12 +59,30 @@ class EditorInternalTransientStateReadWriteImpl
   }
 }
 
+type EntityCollectionReadWrite = IObservableArray<string> & EntityCollection;
+
+function createEntityCollection(
+  entityIds: readonly string[] = [],
+): EntityCollectionReadWrite {
+  const collection = observable.array<string>([...entityIds], {
+    deep: false,
+  }) as EntityCollectionReadWrite;
+
+  Object.defineProperty(collection, "contains", {
+    value: (entityId: string) => collection.includes(entityId),
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
+
+  return collection;
+}
+
 
 export interface EditorStateReadWrite extends EditorState {
   viewport: EditorViewportStateReadWrite;
   drafts: WorldEntity[];
-  selectedEntities: Record<string, WorldEntity>;
-  previewEntities: Record<string, WorldEntity>;
+  collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite>;
 
   // 私有State, 不属于Contract, 但是自己用
   internalPersistState: EditorInternalPersistStateReadWrite;
@@ -87,8 +112,10 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
   };
 
   drafts: WorldEntity[] = [];
-  selectedEntities: Record<string, WorldEntity> = {};
-  previewEntities: Record<string, WorldEntity> = {};
+  collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite> = {
+    [EntityCollectionType.selection]: createEntityCollection(),
+    [EntityCollectionType.preview]: createEntityCollection(),
+  };
   internalPersistState: EditorInternalPersistStateReadWrite =
     new EditorInternalPersistStateReadWriteImpl();
   internalTransientState: EditorInternalTransientStateReadWrite =

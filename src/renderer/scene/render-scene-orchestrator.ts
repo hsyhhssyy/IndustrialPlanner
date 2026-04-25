@@ -32,6 +32,9 @@ import {
 
 const WORLD_GRID_LINE_ALPHA = 0.12
 const WORLD_GRID_LINE_WIDTH = 1
+const WORLD_ENTITY_SELECTION_STROKE_COLOR = 0xffa500
+const WORLD_ENTITY_SELECTION_STROKE_WIDTH = 2
+const WORLD_ENTITY_SELECTION_STROKE_INSET = 1
 
 const GENERIC_DEVICE_SPRITE_ASSET_IDS = new Set<string>([
   "item_log_connector",
@@ -74,6 +77,7 @@ export function createRenderSceneOrchestrator(
   const app = renderHost.app
   const layers = createRenderLayers()
   const worldGrid = new Graphics({ roundPixels: true })
+  const worldEntitySelectionOverlay = new Graphics({ roundPixels: true })
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
   const entitySprites = new Map<string, RenderSprite>()
 
@@ -101,6 +105,8 @@ export function createRenderSceneOrchestrator(
       entityDefinitionMap,
       entitySprites,
       layers,
+      selectionOverlay: worldEntitySelectionOverlay,
+      selectedEntityIds: readSelectedEntityIds(renderHost),
       viewportState,
       viewportBounds: {
         left: 0,
@@ -114,6 +120,7 @@ export function createRenderSceneOrchestrator(
 
   app.stage.addChild(layers.background, layers.entity, layers.overlay)
   layers.background.addChild(worldGrid)
+  layers.overlay.addChild(worldEntitySelectionOverlay)
   app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
 
   const host: RenderSceneOrchestrator = {
@@ -219,6 +226,15 @@ function readWorldDocumentSnapshot(renderHost: RenderHost): WorldDocument | null
   }
 
   return editor.document.getSnapshot()
+}
+
+function readSelectedEntityIds(renderHost: RenderHost): readonly string[] {
+  const editor = renderHost.workspace.editor
+  if (editor === null) {
+    return []
+  }
+
+  return editor.state.collections.selection
 }
 
 function readAppTheme(renderHost: RenderHost): AppTheme {
@@ -383,6 +399,8 @@ function syncWorldEntitySprites(options: {
   entityDefinitionMap: Map<string, EntityDefinition>;
   entitySprites: Map<string, RenderSprite>;
   layers: RenderLayerMap;
+  selectionOverlay: Graphics;
+  selectedEntityIds: readonly string[];
   viewportState: RenderViewportState;
   viewportBounds: {
     left: number;
@@ -392,6 +410,21 @@ function syncWorldEntitySprites(options: {
   };
   theme: AppTheme;
 }): void {
+  syncWorldEntitySelectionOverlay({
+    overlay: options.selectionOverlay,
+    layouts: resolveWorldEntitySelectionOverlayLayouts({
+      document: options.document,
+      entityDefinitionMap: options.entityDefinitionMap,
+      selectedEntityIds: options.selectedEntityIds,
+      viewportBounds: options.viewportBounds,
+      viewportCenter: {
+        x: options.viewportState.centerX,
+        y: options.viewportState.centerY,
+      },
+      gridSize: options.viewportState.gridSize,
+    }),
+  })
+
   const nextEntityIds = new Set<string>()
 
   if (options.document !== null) {
@@ -444,6 +477,53 @@ function syncWorldEntitySprites(options: {
   }
 }
 
+function syncWorldEntitySelectionOverlay(options: {
+  overlay: Graphics;
+  layouts: readonly RenderSpriteLayout[];
+}): void {
+  options.overlay.clear()
+
+  for (const layout of options.layouts) {
+    const innerRect = resolveWorldEntitySelectionInnerRect(layout)
+    if (innerRect === null) {
+      continue
+    }
+
+    options.overlay
+      .rect(innerRect.x, innerRect.y, innerRect.width, innerRect.height)
+      .stroke({
+        width: WORLD_ENTITY_SELECTION_STROKE_WIDTH,
+        color: WORLD_ENTITY_SELECTION_STROKE_COLOR,
+      })
+  }
+}
+
+function resolveWorldEntitySelectionInnerRect(layout: RenderSpriteLayout): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} | null {
+  const inset = Math.min(
+    WORLD_ENTITY_SELECTION_STROKE_INSET,
+    layout.width / 2,
+    layout.height / 2,
+  )
+  const width = layout.width - inset * 2
+  const height = layout.height - inset * 2
+
+  if (width <= 0 || height <= 0) {
+    return null
+  }
+
+  return {
+    x: layout.x + inset,
+    y: layout.y + inset,
+    width,
+    height,
+  }
+}
+
 export function resolveGenericDeviceSpriteTexturePath(
   spriteId: EntityDefinition["spriteId"],
 ): string | null {
@@ -454,6 +534,58 @@ export function resolveGenericDeviceSpriteTexturePath(
   }
 
   return `/sprites/${assetId}.webp`
+}
+
+export function resolveWorldEntitySelectionOverlayLayouts(options: {
+  document: WorldDocument | null;
+  entityDefinitionMap: Map<string, EntityDefinition>;
+  selectedEntityIds: readonly string[];
+  viewportBounds: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  viewportCenter: {
+    x: number;
+    y: number;
+  };
+  gridSize: number;
+}): RenderSpriteLayout[] {
+  if (options.document === null || options.selectedEntityIds.length === 0) {
+    return []
+  }
+
+  const selectedEntityIdSet = new Set(options.selectedEntityIds)
+  const layouts: RenderSpriteLayout[] = []
+
+  for (const entityId of options.document.entityOrder) {
+    if (!selectedEntityIdSet.has(entityId)) {
+      continue
+    }
+
+    const entity = options.document.entities[entityId]
+    if (!entity) {
+      continue
+    }
+
+    const definition = options.entityDefinitionMap.get(entity.definitionId)
+    if (!definition) {
+      continue
+    }
+
+    layouts.push(
+      resolveWorldEntitySpriteLayout({
+        entity,
+        footprint: definition.footprint,
+        viewportBounds: options.viewportBounds,
+        viewportCenter: options.viewportCenter,
+        gridSize: options.gridSize,
+      }),
+    )
+  }
+
+  return layouts
 }
 
 export function resolveWorldEntitySpriteLayout(options: {

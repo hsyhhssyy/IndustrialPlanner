@@ -1,8 +1,8 @@
-import type { WorldEntity } from "@/domain/entity/world-document";
+import type { WorldDocument, WorldEntity } from "@/domain/entity/world-document";
 import type { EditorQuery } from "@/domain/query/editor-query";
 import {
-  EntityCollectionType,
   type EntityCollection,
+  type EntityCollectionType,
 } from "@/domain/state/types";
 import type { GridRect } from "@/domain/types/grid";
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
@@ -50,14 +50,19 @@ export function createEditorEntityQueries({
       document: document.getSnapshot(),
       drafts: state.drafts,
     }),
-    findEntityCollectionGridRect: (collectionType) =>
-      resolveEntityCollectionGridRect({
+    findEntityCollectionGridRect: (collectionType) => {
+      const currentDocument = document.getSnapshot();
+
+      return resolveEntityCollectionGridRect({
         collection: resolveEntityCollection({
           collectionType,
           state,
         }),
+        document: currentDocument,
+        drafts: state.drafts,
         entityDefinitionMap,
-      }),
+      });
+    },
     findEntityAtClientPixelPoint: (clientPixelPoint) => {
       const gridCell = resolveGridCellAtClientPixelPoint({
         clientPixelPoint,
@@ -110,21 +115,28 @@ function resolveEntityCollection(options: {
   collectionType: EntityCollectionType;
   state: EditorQueriesContext["state"];
 }): EntityCollection {
-  switch (options.collectionType) {
-    case EntityCollectionType.selection:
-      return options.state.selectedEntities;
-    case EntityCollectionType.preview:
-      return options.state.previewEntities;
-  }
+  return options.state.collections[options.collectionType];
 }
 
 function resolveEntityCollectionGridRect(options: {
   collection: EntityCollection;
+  document: WorldDocument;
+  drafts: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
 }): GridRect | null {
   const areas: GridArea[] = [];
 
-  for (const entity of Object.values(options.collection)) {
+  for (const entityId of options.collection) {
+    const entity = resolveEntityById({
+      entityId,
+      document: options.document,
+      drafts: options.drafts,
+    });
+
+    if (entity === null) {
+      continue;
+    }
+
     const definition = options.entityDefinitionMap.get(entity.definitionId);
 
     if (!definition) {

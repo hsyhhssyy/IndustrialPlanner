@@ -276,7 +276,7 @@ describe("createEditorHost", () => {
     expect(entityIds).toHaveLength(Object.keys(document.entities).length + 1);
   });
 
-  it("adds the requested entity into selectedEntities through editor actions", () => {
+  it("mutates entity collections through editor actions", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDummyWorldDocument();
@@ -292,18 +292,52 @@ describe("createEditorHost", () => {
     editorHost.internalDocument.setSnapshot(document);
     editorHost.internalState.drafts = [draftEntity];
 
-    editorHost.actions.selectEntity("dummy-entity-1");
-    editorHost.actions.selectEntity("draft-only");
-    editorHost.actions.selectEntity("missing-entity");
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "dummy-entity-1",
+    });
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "draft-only",
+    });
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "missing-entity",
+    });
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "dummy-entity-1",
+    });
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.preview,
+      entityId: "draft-only",
+    });
 
-    expect(Object.keys(editorHost.state.selectedEntities)).toEqual([
+    expect(editorHost.state.collections.selection).toEqual([
       "dummy-entity-1",
       "draft-only",
     ]);
-    expect(editorHost.state.selectedEntities["dummy-entity-1"]).toMatchObject(
-      document.entities["dummy-entity-1"] ?? {},
-    );
-    expect(editorHost.state.selectedEntities["draft-only"]).toMatchObject(draftEntity);
+    expect(editorHost.state.collections.selection.contains("dummy-entity-1")).toBe(true);
+    expect(editorHost.state.collections.selection.contains("missing-entity")).toBe(false);
+    expect(editorHost.state.collections.preview).toEqual(["draft-only"]);
+    expect(editorHost.state.collections.preview.contains("draft-only")).toBe(true);
+
+    editorHost.actions.removeFromCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "dummy-entity-1",
+    });
+    editorHost.actions.removeFromCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "missing-entity",
+    });
+
+    expect(editorHost.state.collections.selection).toEqual(["draft-only"]);
+    expect(editorHost.state.collections.selection.contains("dummy-entity-1")).toBe(false);
+
+    editorHost.actions.clearCollection(EntityCollectionType.preview);
+
+    expect(editorHost.state.collections.preview).toEqual([]);
+    expect(editorHost.state.collections.preview.contains("preview-only")).toBe(false);
   });
 
   it("computes grid rects for selected and preview entity collections", () => {
@@ -318,12 +352,8 @@ describe("createEditorHost", () => {
     }
 
     editorHost.internalDocument.setSnapshot(document);
-    editorHost.internalState.selectedEntities = {
-      [selectedStorager.id]: selectedStorager,
-      [selectedBelt.id]: selectedBelt,
-    };
-    editorHost.internalState.previewEntities = {
-      "preview-unloader": {
+    editorHost.internalState.drafts = [
+      {
         id: "preview-unloader",
         definitionId: "item_port_unloader_1",
         position: {
@@ -334,7 +364,7 @@ describe("createEditorHost", () => {
         config: {},
         tags: [],
       },
-      "preview-belt": {
+      {
         id: "preview-belt",
         definitionId: "belt_straight_1x1",
         position: {
@@ -345,7 +375,15 @@ describe("createEditorHost", () => {
         config: {},
         tags: [],
       },
-    };
+    ];
+    editorHost.internalState.collections.selection.replace([
+      selectedStorager.id,
+      selectedBelt.id,
+    ]);
+    editorHost.internalState.collections.preview.replace([
+      "preview-unloader",
+      "preview-belt",
+    ]);
 
     expect(
       editorHost.queries.findEntityCollectionGridRect("selection"),
