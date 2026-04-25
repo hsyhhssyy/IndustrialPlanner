@@ -9,7 +9,10 @@ export {
 } from "./gesture-action-router";
 export { createHypergryphGestureDiagnosticsModule } from "./hypergryph/hypergryph-gesture-diagnostics-module";
 export { createHypergryphMarqueeModeToggleModule } from "./hypergryph/hypergryph-marquee-mode-toggle-module";
-export { createHypergryphMoveModeToggleModule } from "./hypergryph/hypergryph-move-mode-toggle-module";
+export {
+  cleanupMoveOperationDraft,
+  createHypergryphMoveGestureModule,
+} from "./hypergryph/hypergryph-move-gesture-module";
 export { createHypergryphMouseViewportPanModule } from "./hypergryph/hypergryph-mouse-viewport-pan-module";
 export { createHypergryphSelectGestureModule } from "./hypergryph/hypergryph-select-gesture-module";
 export { createHypergryphSelectToolButtonModule } from "./hypergryph/hypergryph-select-tool-button-module";

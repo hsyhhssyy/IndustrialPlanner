@@ -45,7 +45,7 @@ describe("createAppHost", () => {
     expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.size).toBe(0);
     expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual([
       "hypergryph-gesture-diagnostics",
-      "hypergryph-move-mode-toggle",
+      "hypergryph-move-gesture",
       "hypergryph-select-gesture",
       "hypergryph-mouse-viewport-pan",
       "hypergryph-viewport-zoom",
@@ -623,7 +623,7 @@ describe("createAppHost", () => {
     ]);
   });
 
-  it("switches the active tool to move on longpress tap over an entity", () => {
+  it("creates a move draft on long press over a selected entity", () => {
     vi.useFakeTimers();
 
     const workspace = createWorkspace();
@@ -669,18 +669,46 @@ describe("createAppHost", () => {
       buttons: 0,
     }));
 
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
+
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
+
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 33,
+      clientX: entityPoint.x,
+      clientY: entityPoint.y,
+      buttons: 1,
+    }));
+    vi.advanceTimersByTime(500);
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 33,
+      clientX: entityPoint.x,
+      clientY: entityPoint.y,
+      buttons: 0,
+    }));
+
     expect(appHost.internalState.runtime.activeTool).toBe("move");
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
+    expect(editorHost.state.collections.selection).toEqual([]);
+    expect(editorHost.state.collections.ghost).toEqual(["dummy-entity-2"]);
+    expect(editorHost.state.collections.preview).toHaveLength(1);
 
     appHost.internalActions.setActiveTool("select");
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
 
-    appHost.gestureAdapter.handlePointerDown(touchEvent(33, entityPoint.x, entityPoint.y));
+    appHost.gestureAdapter.handlePointerDown(touchEvent(34, entityPoint.x, entityPoint.y));
     vi.advanceTimersByTime(500);
-    appHost.gestureAdapter.handlePointerUp(touchEvent(33, entityPoint.x, entityPoint.y));
+    appHost.gestureAdapter.handlePointerUp(touchEvent(34, entityPoint.x, entityPoint.y));
 
     expect(appHost.internalState.runtime.activeTool).toBe("move");
+    expect(appHost.internalState.runtime.canvasToolbar.visible).toBe(true);
+    expect(appHost.internalState.runtime.canvasToolbar.buttonIds).toEqual([
+      "canvas-toolbar-button-ok",
+      "canvas-toolbar-button-cancel",
+    ]);
   });
 
-  it("switches the active tool to move on longpress dragstart over an entity and exits on right tap", () => {
+  it("moves the preview draft and applies or cancels the move gesture", () => {
     vi.useFakeTimers();
 
     const workspace = createWorkspace();
@@ -712,6 +740,8 @@ describe("createAppHost", () => {
 
     expect(appHost.internalState.runtime.activeTool).toBe("select");
 
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
+
     appHost.gestureAdapter.handlePointerDown(pointerEvent({
       pointerId: 35,
       clientX: entityPoint.x,
@@ -727,6 +757,29 @@ describe("createAppHost", () => {
     }));
 
     expect(appHost.internalState.runtime.activeTool).toBe("move");
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
+
+    const previewDraftId = editorHost.state.collections.preview[0];
+    expect(previewDraftId).toBeDefined();
+
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 35,
+      clientX: entityPoint.x + 20,
+      clientY: entityPoint.y,
+      buttons: 1,
+    }));
+
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 5, y: 4 });
+    expect(
+      editorHost.internalState.drafts.find((entity) => entity.id === previewDraftId)?.position,
+    ).toEqual({ x: 5, y: 4 });
+
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 35,
+      clientX: entityPoint.x + 20,
+      clientY: entityPoint.y,
+      buttons: 0,
+    }));
 
     appHost.gestureAdapter.handlePointerDown(pointerEvent({
       pointerId: 36,
@@ -744,12 +797,63 @@ describe("createAppHost", () => {
     }));
 
     expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(editorHost.state.collections.preview).toEqual([]);
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]?.position).toEqual({
+      x: 4,
+      y: 4,
+    });
+
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
 
     appHost.gestureAdapter.handlePointerDown(touchEvent(37, entityPoint.x, entityPoint.y));
     vi.advanceTimersByTime(500);
     appHost.gestureAdapter.handlePointerMove(touchEvent(37, entityPoint.x + 4, entityPoint.y));
 
     expect(appHost.internalState.runtime.activeTool).toBe("move");
+
+    appHost.gestureAdapter.handlePointerMove(touchEvent(37, entityPoint.x + 20, entityPoint.y));
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "canvas-toolbar-button-ok",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.internalState.runtime.canvasToolbar.visible).toBe(false);
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]?.position).toEqual({
+      x: 5,
+      y: 4,
+    });
+  });
+
+  it("cancels move drafts when activeTool leaves move by another path", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+
+    editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
+    editorHost.actions.createMoveOperationDraft();
+    appHost.internalState.runtime.moveAnchor = { x: 12, y: 8 };
+    appHost.internalActions.showCanvasToolbar(
+      ["canvas-toolbar-button-ok", "canvas-toolbar-button-cancel"],
+      { x: 100, y: 80 },
+    );
+    appHost.internalActions.setActiveTool("move");
+
+    expect(editorHost.state.collections.preview).toHaveLength(1);
+    expect(appHost.internalState.runtime.canvasToolbar.visible).toBe(true);
+
+    appHost.internalActions.setActiveTool("placement");
+
+    expect(appHost.internalState.runtime.activeTool).toBe("placement");
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.internalState.runtime.canvasToolbar.visible).toBe(false);
+    expect(editorHost.state.collections.preview).toEqual([]);
+    expect(editorHost.state.collections.ghost).toEqual([]);
   });
 
   it("zooms the editor viewport on pinch out and pinch in gestures", () => {
