@@ -183,11 +183,12 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel.querySelectorAll(".placement-button .button-icon-image")).toHaveLength(
       visiblePanel.querySelectorAll(".placement-button").length,
     );
-    expect(visiblePanel.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(2);
+    expect(visiblePanel.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(3);
     expect(visiblePanel.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(22);
     expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-select"]')?.classList.contains("is-active")).toBe(true);
     expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-marquee"]')?.classList.contains("is-active")).toBe(false);
     expect(visiblePanel.textContent).toContain("Esc");
+    expect(visiblePanel.textContent).toContain("X");
     expect(visiblePanel.textContent).toContain("Ctrl+S");
     expect(appHost.internalState.runtime.activePanel).toBeNull();
     expect(appHost.internalState.runtime.activeTool).toBe("select");
@@ -267,6 +268,25 @@ describe("Left dock panel switching", () => {
       uiButtonId: "placement-tool-marquee",
       button: 0,
     });
+
+    act(() => {
+      if (!marqueeButton) {
+        throw new Error("Expected the marquee button to be rendered.");
+      }
+
+      dispatchPointerEvent(marqueeButton, "pointerup", {
+        pointerId: 9,
+        pointerType: "mouse",
+        clientX: 16,
+        clientY: 16,
+        button: 0,
+        buttons: 0,
+      });
+    });
+
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(selectButton?.classList.contains("is-active")).toBe(true);
+    expect(marqueeButton?.classList.contains("is-active")).toBe(false);
 
     act(() => {
       if (!selectButton) {

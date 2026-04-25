@@ -8,7 +8,9 @@ export {
   type GestureActionRouterOptions,
 } from "./gesture-action-router";
 export { createHypergryphGestureDiagnosticsModule } from "./hypergryph/hypergryph-gesture-diagnostics-module";
+export { createHypergryphMarqueeModeToggleModule } from "./hypergryph/hypergryph-marquee-mode-toggle-module";
 export { createHypergryphMouseViewportPanModule } from "./hypergryph/hypergryph-mouse-viewport-pan-module";
+export { createHypergryphSelectToolButtonModule } from "./hypergryph/hypergryph-select-tool-button-module";
 export { createHypergryphViewportZoomModule } from "./hypergryph/hypergryph-viewport-zoom-module";
 export type {
   GestureActionContext,

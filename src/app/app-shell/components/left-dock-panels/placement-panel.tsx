@@ -49,6 +49,7 @@ const OPERATION_BUTTONS: readonly PlacementButtonDefinition[] = [
   {
     uiButtonId: "placement-tool-marquee",
     labelKey: "workbench.button.batchSelect",
+    hotkey: "X",
     visibleWhen: (appHost) => appHost.state.settings.hypergryphOperationMode,
     activeWhen: (appHost) => appHost.internalState.runtime.activeTool === "marquee",
   },

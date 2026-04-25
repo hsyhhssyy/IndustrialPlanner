@@ -44,7 +44,8 @@ describe("createAppHost", () => {
       "hypergryph-gesture-diagnostics",
       "hypergryph-mouse-viewport-pan",
       "hypergryph-viewport-zoom",
-      "app-placement-tool-button",
+      "hypergryph-select-tool-button",
+      "hypergryph-marquee-mode-toggle",
     ]);
     expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toBeNull();
 
@@ -449,11 +450,23 @@ describe("createAppHost", () => {
     expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toBeNull();
   });
 
-  it("switches the private active tool from semantic placement button events", () => {
+  it("switches the private active tool from hypergryph gesture modules", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
     expect(appHost.internalState.runtime.activeTool).toBe("select");
+
+    appHost.gestureAdapter.handleKeyDown({
+      code: "KeyX",
+      key: "x",
+      keyCode: 88,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
 
     appHost.gestureAdapter.handleUiButtonMouseTap({
       uiButtonId: "placement-tool-marquee",
@@ -464,7 +477,34 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "placement-tool-marquee",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
     expect(appHost.internalState.runtime.activeTool).toBe("marquee");
+
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 7,
+      button: 2,
+      buttons: 2,
+      clientX: 14,
+      clientY: 18,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 7,
+      button: 2,
+      buttons: 0,
+      clientX: 14,
+      clientY: 18,
+    }));
+
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
       uiButtonId: "placement-tool-select",
@@ -479,6 +519,18 @@ describe("createAppHost", () => {
     runInAction(() => {
       appHost.internalState.settings.hypergryphOperationMode = false;
     });
+
+    appHost.gestureAdapter.handleKeyDown({
+      code: "KeyX",
+      key: "x",
+      keyCode: 88,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
 
     appHost.gestureAdapter.handleUiButtonMouseTap({
       uiButtonId: "placement-tool-marquee",

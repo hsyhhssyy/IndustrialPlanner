@@ -1,5 +1,6 @@
 import type { AppHost } from "@/app/app-host";
 import type { GesturePosition } from "@/app/input/gesture-adapter";
+import type { ActiveTool } from "@/app/state-impl";
 import type { GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
@@ -15,7 +16,7 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
 
       switch (event.type) {
         case "mouse dragstart": {
-          if (event.originButton !== 1) {
+          if (!isMousePanButtonAllowed(context.appHost.internalState.runtime.activeTool, event.originButton)) {
             return { status: "ignored" };
           }
 
@@ -35,7 +36,7 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
         }
 
         case "mouse dragmove": {
-          if (event.originButton !== 1) {
+          if (!isMousePanButtonAllowed(context.appHost.internalState.runtime.activeTool, event.originButton)) {
             return { status: "ignored" };
           }
 
@@ -61,7 +62,7 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
         }
 
         case "mouse dragend":
-          return event.originButton === 1
+          return isMousePanButtonAllowed(context.appHost.internalState.runtime.activeTool, event.originButton)
             ? { status: "handled" }
             : { status: "ignored" };
 
@@ -105,4 +106,12 @@ function resolveViewportPixelPoint(
     x: position.x - clientRect.left,
     y: position.y - clientRect.top,
   };
+}
+
+function isMousePanButtonAllowed(activeTool: ActiveTool, originButton: number): boolean {
+  if (originButton === 1) {
+    return true;
+  }
+
+  return activeTool === "select" && originButton === 0;
 }

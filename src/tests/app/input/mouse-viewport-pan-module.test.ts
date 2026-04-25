@@ -9,6 +9,55 @@ import {
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 
 describe("createHypergryphMouseViewportPanModule", () => {
+  it("accepts left mouse drag in select mode", () => {
+    const { context, moveViewportByViewportPixelVector } = createContext(true, "select");
+    const module = createHypergryphMouseViewportPanModule();
+
+    const startResult = module.handle(
+      {
+        type: "mouse dragstart",
+        gestureId: "mouse-pan-1",
+        originButton: 0,
+        button: 0,
+        buttons: 1,
+        position: { x: 130, y: 70 },
+        startPosition: { x: 120, y: 80 },
+        modifiers: emptyModifiers(),
+        sourceEvent: null,
+      },
+      context,
+    );
+
+    expect(startResult).toEqual({ status: "handled" });
+    expect(moveViewportByViewportPixelVector).toHaveBeenCalledWith({
+      startViewportPixel: { x: 20, y: 30 },
+      endViewportPixel: { x: 30, y: 20 },
+    });
+  });
+
+  it("ignores left mouse drag in marquee mode", () => {
+    const { context, moveViewportByViewportPixelVector } = createContext(true, "marquee");
+    const module = createHypergryphMouseViewportPanModule();
+
+    const startResult = module.handle(
+      {
+        type: "mouse dragstart",
+        gestureId: "mouse-pan-2",
+        originButton: 0,
+        button: 0,
+        buttons: 1,
+        position: { x: 130, y: 70 },
+        startPosition: { x: 120, y: 80 },
+        modifiers: emptyModifiers(),
+        sourceEvent: null,
+      },
+      context,
+    );
+
+    expect(startResult).toEqual({ status: "ignored" });
+    expect(moveViewportByViewportPixelVector).not.toHaveBeenCalled();
+  });
+
   it("pans the viewport for non-long-press touch drag gestures", () => {
     const { context, moveViewportByViewportPixelVector } = createContext();
     const module = createHypergryphMouseViewportPanModule();
@@ -128,7 +177,7 @@ describe("createHypergryphMouseViewportPanModule", () => {
   });
 });
 
-function createContext(hypergryphOperationMode = true): {
+function createContext(hypergryphOperationMode = true, activeTool: "select" | "marquee" | "placement" = "select"): {
   context: GestureActionContext<AppHost>;
   moveViewportByViewportPixelVector: ReturnType<typeof vi.fn>;
 } {
@@ -156,6 +205,11 @@ function createContext(hypergryphOperationMode = true): {
         state: {
           settings: {
             hypergryphOperationMode,
+          },
+        },
+        internalState: {
+          runtime: {
+            activeTool,
           },
         },
       } as AppHost,
