@@ -5,7 +5,6 @@ import type {
   GesturePosition,
   KeyboardSnapshot,
 } from "@/app/input/gesture-adapter";
-import type { GestureMappingModule } from "@/app/input/gesture-actions";
 
 const MAX_DIAGNOSTIC_EVENTS = 8;
 
@@ -81,22 +80,6 @@ export function createGestureDiagnosticsStore(): GestureDiagnosticsStore {
   return new GestureDiagnosticsStore();
 }
 
-export function createGestureDiagnosticsModule(
-  store: GestureDiagnosticsStore,
-): GestureMappingModule<AppHost> {
-  return {
-    id: "app.gesture-diagnostics",
-    priority: Number.MAX_SAFE_INTEGER,
-    handle(event) {
-      store.recordGesture(event);
-      return {
-        status: "handled",
-        consume: false,
-      };
-    },
-  };
-}
-
 function createEmptyKeyboardSnapshot(): KeyboardSnapshot {
   return {
     pressedKeys: new Set<string>(),
@@ -163,6 +146,17 @@ function getEventDetail(event: GestureEvent): string {
     case "wheel up":
     case "wheel down":
       return `delta ${formatNumber(event.normalizedDelta)}`;
+    case "key down":
+    case "key up":
+      return [
+        event.code ? `code ${event.code}` : null,
+        event.key ? `key ${event.key}` : null,
+        event.keyCode !== null ? `keyCode ${event.keyCode}` : null,
+      ].filter(Boolean).join(", ");
+    case "ui-button-touch-tap":
+      return `id ${event.uiButtonId}`;
+    case "ui-button-mouse-tap":
+      return `id ${event.uiButtonId}, button ${event.button}`;
   }
 }
 

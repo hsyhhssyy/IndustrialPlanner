@@ -3,15 +3,15 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppHost } from "@/app/app-host";
 import type { KeyboardSnapshot } from "@/app/input/gesture-adapter";
 import {
-  createMouseViewportPanModule,
+  createHypergryphMouseViewportPanModule,
   type GestureActionContext,
 } from "@/app/input/gesture-actions";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 
-describe("createMouseViewportPanModule", () => {
+describe("createHypergryphMouseViewportPanModule", () => {
   it("pans the viewport for non-long-press touch drag gestures", () => {
     const { context, moveViewportByViewportPixelVector } = createContext();
-    const module = createMouseViewportPanModule();
+    const module = createHypergryphMouseViewportPanModule();
 
     const startResult = module.handle(
       {
@@ -70,7 +70,7 @@ describe("createMouseViewportPanModule", () => {
 
   it("ignores long-press touch drag gestures", () => {
     const { context, moveViewportByViewportPixelVector } = createContext();
-    const module = createMouseViewportPanModule();
+    const module = createHypergryphMouseViewportPanModule();
 
     const startResult = module.handle(
       {
@@ -119,9 +119,16 @@ describe("createMouseViewportPanModule", () => {
     expect(endResult).toEqual({ status: "ignored" });
     expect(moveViewportByViewportPixelVector).not.toHaveBeenCalled();
   });
+
+  it("only enables the module while hypergryph operation mode is on", () => {
+    const module = createHypergryphMouseViewportPanModule();
+
+    expect(module.when?.(createContext(true).context)).toBe(true);
+    expect(module.when?.(createContext(false).context)).toBe(false);
+  });
 });
 
-function createContext(): {
+function createContext(hypergryphOperationMode = true): {
   context: GestureActionContext<AppHost>;
   moveViewportByViewportPixelVector: ReturnType<typeof vi.fn>;
 } {
@@ -145,7 +152,13 @@ function createContext(): {
   return {
     context: {
       workspace,
-      appHost: {} as AppHost,
+      appHost: {
+        state: {
+          settings: {
+            hypergryphOperationMode,
+          },
+        },
+      } as AppHost,
       keyboard: emptyKeyboardSnapshot(),
     },
     moveViewportByViewportPixelVector,

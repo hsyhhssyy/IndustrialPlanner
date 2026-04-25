@@ -54,6 +54,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.themeId = value;
         }),
       },
+      "game-arknights-operation-mode": {
+        readValue: () => appHost.state.settings.hypergryphOperationMode,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.hypergryphOperationMode === value) {
+            return;
+          }
+
+          appHost.internalState.settings.hypergryphOperationMode = value;
+        }),
+      },
     },
   }));
   const leftDockOpen = appHost.state.workbench.leftDockOpen;

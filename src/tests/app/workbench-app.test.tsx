@@ -416,6 +416,14 @@ describe("WorkbenchApp", () => {
 
   it("opens the settings dialog from the left toolbar and hydrates saved schema values", () => {
     localStorage.setItem(
+      APP_SETTINGS_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        locale: "zh-CN",
+        themeId: "ayu-light",
+        hypergryphOperationMode: false,
+      }),
+    );
+    localStorage.setItem(
       USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY,
       JSON.stringify({
         selectedGroupId: "system",
@@ -454,6 +462,9 @@ describe("WorkbenchApp", () => {
     const themeSelect = container.querySelector(
       'select[name="system-theme"]',
     ) as HTMLSelectElement | null;
+    const operationModeToggle = container.querySelector(
+      'input[name="game-arknights-operation-mode"]',
+    ) as HTMLInputElement | null;
     const debugToggle = container.querySelector(
       'input[name="other-debug-mode"]',
     ) as HTMLInputElement | null;
@@ -467,17 +478,20 @@ describe("WorkbenchApp", () => {
     const themeOptionLabels = Array.from(themeSelect?.options ?? []).map((option) => option.textContent);
 
     expect(dialog).not.toBeNull();
-    expect(groupTitles).toEqual(["系统", "显示", "游戏", "其他"]);
+    expect(groupTitles).toEqual(["系统", "显示", "游戏", "快捷键", "其他"]);
     expect(groupDescriptions).toEqual([
       "语言、主题与全局界面偏好。",
       "图像输出与帧率表现相关设置。",
       "与游戏操作习惯和显示风格对齐的选项。",
+      "编辑当前可自定义的快捷键设置。",
       "调试和附加能力开关。",
     ]);
     expect(languageOptionLabels).toEqual(["中文(简体)", "English"]);
     expect(themeOptionLabels).toEqual(["Ayu Light", "Ayu Dark"]);
     expect(languageSelect?.value).toBe("zh-CN");
     expect(themeSelect?.value).toBe("ayu-light");
+    expect(operationModeToggle?.checked).toBe(false);
+    expect(operationModeToggle?.disabled).toBe(true);
     expect(debugToggle?.checked).toBe(true);
 
     const closeButton = container.querySelector(
@@ -536,6 +550,7 @@ describe("WorkbenchApp", () => {
       JSON.stringify({
         locale: "en-US",
         themeId: "ayu-light",
+        hypergryphOperationMode: true,
       }),
     );
   });
@@ -581,11 +596,21 @@ describe("WorkbenchApp", () => {
       JSON.stringify({
         locale: "zh-CN",
         themeId: "ayu-dark",
+        hypergryphOperationMode: true,
       }),
     );
   });
 
-  it("captures keybinding settings and disables them when arknights operation mode is enabled", () => {
+  it("captures keybinding settings when operation mode is externally off and keeps the mode toggle disabled", () => {
+    localStorage.setItem(
+      APP_SETTINGS_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        locale: "zh-CN",
+        themeId: "ayu-light",
+        hypergryphOperationMode: false,
+      }),
+    );
+
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -614,6 +639,8 @@ describe("WorkbenchApp", () => {
     expect(operationModeToggle).not.toBeNull();
     expect(confirmShortcutButton).not.toBeNull();
     expect(cancelShortcutButton).not.toBeNull();
+  expect(operationModeToggle?.checked).toBe(false);
+  expect(operationModeToggle?.disabled).toBe(true);
     expect(confirmShortcutButton?.disabled).toBe(false);
     expect(confirmShortcutButton?.textContent).toBe("F");
 
@@ -632,7 +659,6 @@ describe("WorkbenchApp", () => {
       selectedGroupId: "system",
       values: {
         "display-frame-rate-limit": "unlimited",
-        "game-arknights-operation-mode": false,
         "game-arknights-confirm-shortcut": "P",
         "game-arknights-cancel-shortcut": "G",
         "game-arknights-rotate-shortcut": "R",
@@ -640,20 +666,13 @@ describe("WorkbenchApp", () => {
         "other-debug-mode": false,
       },
     });
-
-    act(() => {
-      operationModeToggle?.click();
-    });
-
-    const disabledConfirmShortcutButton = container.querySelector(
-      'button[data-setting-id="game-arknights-confirm-shortcut"]',
-    ) as HTMLButtonElement | null;
-    const disabledCancelShortcutButton = container.querySelector(
-      'button[data-setting-id="game-arknights-cancel-shortcut"]',
-    ) as HTMLButtonElement | null;
-
-    expect(disabledConfirmShortcutButton?.disabled).toBe(true);
-    expect(disabledCancelShortcutButton?.disabled).toBe(true);
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        locale: "zh-CN",
+        themeId: "ayu-light",
+        hypergryphOperationMode: false,
+      }),
+    );
   });
 
   it("hides the settings group sidebar in phone portrait mode while keeping the full settings list scrollable", () => {
@@ -692,6 +711,6 @@ describe("WorkbenchApp", () => {
 
     expect(dialog).not.toBeNull();
     expect(container.querySelector(".settings-dialog-sidebar")).toBeNull();
-    expect(groupTitles).toEqual(["系统", "显示", "游戏", "其他"]);
+    expect(groupTitles).toEqual(["系统", "显示", "游戏", "快捷键", "其他"]);
   });
 });

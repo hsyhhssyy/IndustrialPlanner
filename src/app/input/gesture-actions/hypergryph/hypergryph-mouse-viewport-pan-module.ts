@@ -1,13 +1,12 @@
 import type { AppHost } from "@/app/app-host";
-import type {
-  GestureEvent,
-  GesturePosition,
-} from "@/app/input/gesture-adapter";
-import type { GestureMappingModule } from "@/app/input/gesture-actions";
+import type { GesturePosition } from "@/app/input/gesture-adapter";
+import type { GestureMappingModule } from "../types";
+import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
-export function createMouseViewportPanModule(): GestureMappingModule<AppHost> {
+export function createHypergryphMouseViewportPanModule(): GestureMappingModule<AppHost> {
   return {
-    id: "app.mouse-viewport-pan",
+    id: "hypergryph-mouse-viewport-pan",
+    when: isHypergryphGestureEnabled,
     handle(event, context) {
       const editor = context.workspace.editor;
       if (editor === null) {

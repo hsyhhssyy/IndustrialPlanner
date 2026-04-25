@@ -1,6 +1,5 @@
 export {
   GestureDiagnosticsStore,
-  createGestureDiagnosticsModule,
   createGestureDiagnosticsStore,
 } from "./gesture-diagnostics";
 export type {

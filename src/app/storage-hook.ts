@@ -20,7 +20,10 @@ export function hookLocalstorage(appHost: AppHost): () => void {
   );
 
   if (persistedAppSettings !== null) {
-    appHost.internalState.settings = persistedAppSettings;
+    Object.assign(
+      appHost.internalState.settings,
+      normalizePersistedAppSettings(persistedAppSettings, appHost.internalState.settings),
+    );
   }
 
   if (persistedWorkbenchState !== null) {
@@ -49,5 +52,22 @@ export function hookLocalstorage(appHost: AppHost): () => void {
   return () => {
     disposeWorkbenchReaction();
     disposeAppSettingsReaction();
+  };
+}
+
+function normalizePersistedAppSettings(
+  persistedAppSettings: AppSettingsReadWrite,
+  fallback: AppSettingsReadWrite,
+): AppSettingsReadWrite {
+  return {
+    locale: persistedAppSettings.locale === "zh-CN" || persistedAppSettings.locale === "en-US"
+      ? persistedAppSettings.locale
+      : fallback.locale,
+    themeId: persistedAppSettings.themeId === "ayu-light" || persistedAppSettings.themeId === "ayu-dark"
+      ? persistedAppSettings.themeId
+      : fallback.themeId,
+    hypergryphOperationMode: typeof persistedAppSettings.hypergryphOperationMode === "boolean"
+      ? persistedAppSettings.hypergryphOperationMode
+      : fallback.hypergryphOperationMode,
   };
 }

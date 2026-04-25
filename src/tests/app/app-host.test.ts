@@ -41,9 +41,9 @@ describe("createAppHost", () => {
 
     expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.size).toBe(0);
     expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual([
-      "app.gesture-diagnostics",
-      "app.mouse-viewport-pan",
-      "app.viewport-zoom",
+      "hypergryph-gesture-diagnostics",
+      "hypergryph-mouse-viewport-pan",
+      "hypergryph-viewport-zoom",
     ]);
     expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toBeNull();
 
@@ -63,10 +63,13 @@ describe("createAppHost", () => {
 
     expect(appHost.state.settings.locale).toBe("zh-CN");
     expect(appHost.state.settings.themeId).toBe("ayu-light");
+    expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.theme.name).toBe("Ayu Light");
     expect(appHost.internalState.settings.locale).toBe("zh-CN");
     expect(appHost.internalState.settings.themeId).toBe("ayu-light");
+    expect(appHost.internalState.settings.hypergryphOperationMode).toBe(true);
     expect(workspace.app?.state.settings.locale).toBe("zh-CN");
+    expect(workspace.app?.state.settings.hypergryphOperationMode).toBe(true);
     expect(workspace.app?.state.theme.id).toBe("ayu-light");
     expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
     expect(workspace.app?.state.screenProfile.deviceClass).toBe("desktop");
@@ -93,10 +96,13 @@ describe("createAppHost", () => {
 
     expect(appHost.state.settings.locale).toBe("en-US");
     expect(appHost.state.settings.themeId).toBe("ayu-light");
+    expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.theme.name).toBe("Ayu Light");
     expect(appHost.internalState.settings.locale).toBe("en-US");
     expect(appHost.internalState.settings.themeId).toBe("ayu-light");
+    expect(appHost.internalState.settings.hypergryphOperationMode).toBe(true);
     expect(workspace.app?.state.settings.locale).toBe("en-US");
+    expect(workspace.app?.state.settings.hypergryphOperationMode).toBe(true);
     expect(workspace.app?.state.theme.id).toBe("ayu-light");
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
     expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
@@ -158,6 +164,7 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.leftDockWidth).toBe(512);
     expect(appHost.state.settings.locale).toBe("en-US");
     expect(appHost.state.settings.themeId).toBe("ayu-light");
+    expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.theme.name).toBe("Ayu Light");
     expect(document.documentElement.dataset.appTheme).toBe("ayu-light");
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
@@ -419,6 +426,24 @@ describe("createAppHost", () => {
     expect(zoomSpy).toHaveBeenCalledTimes(2);
     expect(zoomSpy.mock.calls[1]?.[0]).toBeLessThan(0);
     expect(editorHost.state.viewport.gridSize).toBeLessThan(zoomedInGridSize);
+  });
+
+  it("disables all hypergryph gesture modules when hypergryph operation mode is off", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+    const zoomSpy = vi.spyOn(editorHost.actions, "zoom");
+    const initialGridSize = editorHost.state.viewport.gridSize;
+
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphOperationMode = false;
+    });
+
+    appHost.gestureAdapter.handleWheel(wheelEvent({ deltaY: -1.1 }));
+
+    expect(zoomSpy).not.toHaveBeenCalled();
+    expect(editorHost.state.viewport.gridSize).toBe(initialGridSize);
+    expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toBeNull();
   });
 
   it("zooms the editor viewport on pinch out and pinch in gestures", () => {

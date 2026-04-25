@@ -46,7 +46,11 @@ export type GestureEventType =
   | "pinch out"
   | "two finger move"
   | "wheel up"
-  | "wheel down";
+  | "wheel down"
+  | "key down"
+  | "key up"
+  | "ui-button-touch-tap"
+  | "ui-button-mouse-tap";
 
 interface GestureEventBase {
   readonly type: GestureEventType;
@@ -150,6 +154,31 @@ export interface WheelGestureEvent extends GestureEventBase {
   readonly position: GesturePosition;
 }
 
+export interface KeyDownGestureEvent extends GestureEventBase {
+  readonly type: "key down";
+  readonly code: string | null;
+  readonly key: string | null;
+  readonly keyCode: number | null;
+}
+
+export interface KeyUpGestureEvent extends GestureEventBase {
+  readonly type: "key up";
+  readonly code: string | null;
+  readonly key: string | null;
+  readonly keyCode: number | null;
+}
+
+export interface UiButtonTouchTapGestureEvent extends GestureEventBase {
+  readonly type: "ui-button-touch-tap";
+  readonly uiButtonId: string;
+}
+
+export interface UiButtonMouseTapGestureEvent extends GestureEventBase {
+  readonly type: "ui-button-mouse-tap";
+  readonly uiButtonId: string;
+  readonly button: number;
+}
+
 export type GestureEvent =
   | MouseDragStartGestureEvent
   | MouseDragMoveGestureEvent
@@ -162,7 +191,11 @@ export type GestureEvent =
   | TouchTapGestureEvent
   | PinchGestureEvent
   | TwoFingerMoveGestureEvent
-  | WheelGestureEvent;
+  | WheelGestureEvent
+  | KeyDownGestureEvent
+  | KeyUpGestureEvent
+  | UiButtonTouchTapGestureEvent
+  | UiButtonMouseTapGestureEvent;
 
 export interface GesturePointerEventLike {
   readonly pointerId: number;
@@ -201,6 +234,23 @@ export interface GestureKeyboardEventLike {
   readonly ctrlKey: boolean;
   readonly metaKey: boolean;
   readonly shiftKey: boolean;
+}
+
+interface GestureUiButtonEventLikeBase {
+  readonly uiButtonId: string;
+  readonly altKey: boolean;
+  readonly ctrlKey: boolean;
+  readonly metaKey: boolean;
+  readonly shiftKey: boolean;
+  readonly sourceEvent?: unknown;
+}
+
+export interface GestureUiButtonTouchTapEventLike extends GestureUiButtonEventLikeBase {
+  readonly pointerId?: number;
+}
+
+export interface GestureUiButtonMouseTapEventLike extends GestureUiButtonEventLikeBase {
+  readonly button: number;
 }
 
 export type GestureListener = (event: GestureEvent) => void;

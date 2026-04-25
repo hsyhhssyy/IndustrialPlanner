@@ -281,7 +281,9 @@ describe("GestureAdapter", () => {
 
   it("maintains pressedKeys and clears keyboard state on blur", () => {
     const adapter = createGestureAdapter();
+    const events: GestureEvent[] = [];
     const snapshots = [adapter.getKeyboardSnapshot()];
+    adapter.subscribe((event) => events.push(event));
     adapter.subscribeKeyboardSnapshot((snapshot) => snapshots.push(snapshot));
 
     adapter.handleKeyDown(keyEvent({ code: "KeyA", key: "a", keyCode: 65 }));
@@ -292,6 +294,26 @@ describe("GestureAdapter", () => {
 
     expect(adapter.getKeyboardSnapshot().pressedKeys.has("KeyA")).toBe(false);
     expect(adapter.getKeyboardSnapshot().pressedKeys.has("ShiftLeft")).toBe(true);
+    expect(events).toMatchObject([
+      {
+        type: "key down",
+        code: "KeyA",
+        key: "a",
+        keyCode: 65,
+      },
+      {
+        type: "key down",
+        code: "ShiftLeft",
+        key: "Shift",
+        keyCode: 16,
+      },
+      {
+        type: "key up",
+        code: "KeyA",
+        key: "a",
+        keyCode: 65,
+      },
+    ]);
 
     adapter.handleBlur();
 
@@ -302,5 +324,39 @@ describe("GestureAdapter", () => {
     });
     expect(adapter.getKeyboardSnapshot().pressedKeys.size).toBe(0);
     expect(snapshots.at(-1)?.pressedKeys.size).toBe(0);
+  });
+
+  it("emits semantic ui button tap gestures", () => {
+    const adapter = createGestureAdapter();
+    const events: GestureEvent[] = [];
+    adapter.subscribe((event) => events.push(event));
+
+    adapter.handleUiButtonMouseTap({
+      uiButtonId: "utility-settings",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+    adapter.handleUiButtonTouchTap({
+      uiButtonId: "utility-settings",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(events).toMatchObject([
+      {
+        type: "ui-button-mouse-tap",
+        uiButtonId: "utility-settings",
+        button: 0,
+      },
+      {
+        type: "ui-button-touch-tap",
+        uiButtonId: "utility-settings",
+      },
+    ]);
   });
 });

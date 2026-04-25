@@ -7,6 +7,8 @@ import type {
   GestureModifiers,
   GesturePointerEventLike,
   GesturePosition,
+  GestureUiButtonMouseTapEventLike,
+  GestureUiButtonTouchTapEventLike,
   GestureWheelEventLike,
   KeyboardSnapshot,
   KeyboardSnapshotListener,
@@ -276,6 +278,7 @@ export class GestureAdapter {
     }
 
     this.publishKeyboardSnapshot(event);
+    this.dispatchGesture(createKeyboardGestureEvent("key down", event, this.nextGestureId("key")));
   }
 
   public handleKeyUp(event: GestureKeyboardEventLike): void {
@@ -285,6 +288,28 @@ export class GestureAdapter {
     }
 
     this.publishKeyboardSnapshot(event);
+    this.dispatchGesture(createKeyboardGestureEvent("key up", event, this.nextGestureId("key")));
+  }
+
+  public handleUiButtonTouchTap(event: GestureUiButtonTouchTapEventLike): void {
+    this.dispatchGesture({
+      type: "ui-button-touch-tap",
+      gestureId: this.nextGestureId("ui-button-touch"),
+      uiButtonId: event.uiButtonId,
+      modifiers: getModifiers(event),
+      sourceEvent: event.sourceEvent ?? event,
+    });
+  }
+
+  public handleUiButtonMouseTap(event: GestureUiButtonMouseTapEventLike): void {
+    this.dispatchGesture({
+      type: "ui-button-mouse-tap",
+      gestureId: this.nextGestureId("ui-button-mouse"),
+      uiButtonId: event.uiButtonId,
+      button: event.button,
+      modifiers: getModifiers(event),
+      sourceEvent: event.sourceEvent ?? event,
+    });
   }
 
   public handleBlur(): void {
@@ -862,16 +887,32 @@ function vectorLength(delta: GestureDelta): number {
 }
 
 function getModifiers(event: {
-  readonly altKey: boolean;
-  readonly ctrlKey: boolean;
-  readonly metaKey: boolean;
-  readonly shiftKey: boolean;
+  readonly altKey?: boolean;
+  readonly ctrlKey?: boolean;
+  readonly metaKey?: boolean;
+  readonly shiftKey?: boolean;
 }): GestureModifiers {
   return {
-    alt: event.altKey,
-    ctrl: event.ctrlKey,
-    meta: event.metaKey,
-    shift: event.shiftKey,
+    alt: event.altKey ?? false,
+    ctrl: event.ctrlKey ?? false,
+    meta: event.metaKey ?? false,
+    shift: event.shiftKey ?? false,
+  };
+}
+
+function createKeyboardGestureEvent(
+  type: "key down" | "key up",
+  event: GestureKeyboardEventLike,
+  gestureId: string,
+): GestureEvent {
+  return {
+    type,
+    gestureId,
+    code: event.code || null,
+    key: event.key || null,
+    keyCode: Number.isFinite(event.keyCode) ? event.keyCode : null,
+    modifiers: getModifiers(event),
+    sourceEvent: event,
   };
 }
 

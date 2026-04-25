@@ -33,6 +33,7 @@ export function resolveLeftDockWidthForScreenProfile(
 export interface AppSettingsReadWrite extends AppSettings {
   locale: AppLocale;
   themeId: AppThemeId;
+  hypergryphOperationMode: boolean;
 }
 
 export interface WorkbenchStateReadWrite extends WorkbenchState {
@@ -85,6 +86,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
   settings: AppSettingsReadWrite = {
     locale: DEFAULT_APP_LOCALE,
     themeId: DEFAULT_APP_THEME_ID,
+    hypergryphOperationMode: true,
   };
 
   workbench: WorkbenchStateReadWrite = new WorkbenchStateReadWriteImpl();

@@ -280,8 +280,8 @@ describe("GestureActionRouter", () => {
     });
     router.handleGesture(mouseTapEvent());
 
-    expect(contextSpy).toHaveBeenCalledOnce();
-    const context = contextSpy.mock.calls[0]?.[0] as GestureActionContext<FakeAppHost>;
+    expect(contextSpy).toHaveBeenCalledTimes(2);
+    const context = contextSpy.mock.calls[1]?.[0] as GestureActionContext<FakeAppHost>;
     expect(context.workspace).toBe(workspace);
     expect(context.appHost).toBe(appHost);
     expect(context.keyboard.pressedKeys.has("ShiftLeft")).toBe(true);
@@ -348,6 +348,62 @@ describe("GestureActionRouter", () => {
     expect(() => router.registerModule(createModule({ id: "late" }))).toThrow(
       "GestureActionRouter has been disposed.",
     );
+  });
+
+  it("forwards key and semantic ui button events from the adapter", () => {
+    const adapter = createGestureAdapter();
+    const workspace = createWorkspace();
+    const received: Array<{ type: string; pressedShift: boolean; uiButtonId?: string }> = [];
+
+    createGestureActionRouter({
+      gestureAdapter: adapter,
+      workspace,
+      getAppHost: () => ({ id: "host" }),
+      modules: [
+        createModule({
+          id: "observer",
+          handle: (event, context) => {
+            received.push({
+              type: event.type,
+              pressedShift: context.keyboard.pressedKeys.has("ShiftLeft"),
+              uiButtonId: "uiButtonId" in event ? event.uiButtonId : undefined,
+            });
+            return { status: "handled", consume: false };
+          },
+        }),
+      ],
+    });
+
+    adapter.handleKeyDown({
+      code: "ShiftLeft",
+      key: "Shift",
+      keyCode: 16,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: true,
+    });
+    adapter.handleUiButtonMouseTap({
+      uiButtonId: "utility-settings",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(received).toEqual([
+      {
+        type: "key down",
+        pressedShift: true,
+        uiButtonId: undefined,
+      },
+      {
+        type: "ui-button-mouse-tap",
+        pressedShift: true,
+        uiButtonId: "utility-settings",
+      },
+    ]);
   });
 
   it("rejects duplicate module ids and supports unregistering modules", () => {

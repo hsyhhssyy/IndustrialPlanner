@@ -57,6 +57,7 @@ export interface HistoryState {
 export interface AppSettings {
   readonly locale: AppLocale;
   readonly themeId: AppThemeId;
+  readonly hypergryphOperationMode: boolean;
 }
 
 export interface WorkbenchState {

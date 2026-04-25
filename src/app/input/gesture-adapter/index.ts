@@ -12,6 +12,8 @@ export type {
   GestureModifiers,
   GesturePointerEventLike,
   GesturePosition,
+  GestureUiButtonMouseTapEventLike,
+  GestureUiButtonTouchTapEventLike,
   GestureWheelEventLike,
   KeyboardSnapshot,
   KeyboardSnapshotListener,

@@ -3,13 +3,11 @@ import { AppContract } from "@/domain/contract/app-contract";
 import { AppActionImpl, AppInternalAction } from "./action-impl";
 import { createGestureAdapter, GestureAdapter } from "./input/gesture-adapter";
 import {
+  AppGestureModuleRegistrar,
   createGestureActionRouter,
-  createMouseViewportPanModule,
-  createViewportZoomModule,
   GestureActionRouter,
 } from "./input/gesture-actions";
 import {
-  createGestureDiagnosticsModule,
   createGestureDiagnosticsStore,
   GestureDiagnosticsStore,
 } from "./input/gesture-diagnostics";
@@ -75,15 +73,13 @@ export function createAppHost(
   });
 
   workspace.app = host;
-  disposers.push(gestureActionRouter.registerModule(
-    createMouseViewportPanModule(),
-  ));
-  disposers.push(gestureActionRouter.registerModule(
-    createViewportZoomModule(),
-  ));
-  disposers.push(gestureActionRouter.registerModule(
-    createGestureDiagnosticsModule(gestureDiagnostics),
-  ));
+  const gestureModuleRegistrar = new AppGestureModuleRegistrar({
+    router: gestureActionRouter,
+    gestureDiagnostics,
+  });
+  disposers.push(() => {
+    gestureModuleRegistrar.dispose();
+  });
   disposers.push(gestureAdapter.subscribeKeyboardSnapshot((snapshot) => {
     gestureDiagnostics.setKeyboardSnapshot(snapshot);
   }));

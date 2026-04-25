@@ -1,13 +1,15 @@
 import type { AppHost } from "@/app/app-host";
-import type { GestureMappingModule } from "@/app/input/gesture-actions";
+import type { GestureMappingModule } from "../types";
+import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
 const PINCH_ZOOM_STEPS_PER_DOUBLING = 4;
 const MIN_WHEEL_ZOOM_STEP = 1;
 const MAX_WHEEL_ZOOM_STEP = 2;
 
-export function createViewportZoomModule(): GestureMappingModule<AppHost> {
+export function createHypergryphViewportZoomModule(): GestureMappingModule<AppHost> {
   return {
-    id: "app.viewport-zoom",
+    id: "hypergryph-viewport-zoom",
+    when: isHypergryphGestureEnabled,
     handle(event, context) {
       const editor = context.workspace.editor;
       if (editor === null) {

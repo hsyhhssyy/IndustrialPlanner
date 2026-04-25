@@ -5,7 +5,7 @@ import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
 export const USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY = "v3-user-settings-dialog";
 
-export type SettingsGroupId = "system" | "display" | "game" | "other";
+export type SettingsGroupId = "system" | "display" | "game" | "shortcuts" | "other";
 
 export type WorkbenchSettingControlValue = string | number | boolean;
 
@@ -18,6 +18,7 @@ interface WorkbenchSettingBaseDefinition {
   readonly id: string;
   readonly labelKey: MessageKey;
   readonly descriptionKey: MessageKey;
+  readonly disabled?: boolean;
   readonly editableWhen?: WorkbenchSettingEditableWhenDefinition;
 }
 
@@ -136,8 +137,23 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         kind: "switch",
         labelKey: "settingsField.arknightsOperationMode",
         descriptionKey: "settingsField.arknightsOperationModeDescription",
+        defaultValue: true,
+        disabled: true,
+      },
+      {
+        id: "game-use-simplified-device-icons",
+        kind: "switch",
+        labelKey: "settingsField.useSimplifiedDeviceIcons",
+        descriptionKey: "settingsField.useSimplifiedDeviceIconsDescription",
         defaultValue: false,
       },
+    ],
+  },
+  {
+    id: "shortcuts",
+    labelKey: "settingsGroup.shortcuts",
+    descriptionKey: "settingsGroup.shortcutsDescription",
+    items: [
       {
         id: "game-arknights-confirm-shortcut",
         kind: "keybinding",
@@ -170,13 +186,6 @@ export const WORKBENCH_SETTINGS_GROUPS = [
           settingId: "game-arknights-operation-mode",
           equals: false,
         },
-      },
-      {
-        id: "game-use-simplified-device-icons",
-        kind: "switch",
-        labelKey: "settingsField.useSimplifiedDeviceIcons",
-        descriptionKey: "settingsField.useSimplifiedDeviceIconsDescription",
-        defaultValue: false,
       },
     ],
   },
@@ -267,6 +276,10 @@ export class WorkbenchSettingsDialogController {
   public isSettingEditable(settingId: string): boolean {
     const setting = SETTING_DEFINITION_BY_ID.get(settingId);
     if (!setting) {
+      return false;
+    }
+
+    if (setting.disabled) {
       return false;
     }
 

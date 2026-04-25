@@ -118,6 +118,8 @@ export type MessageKey =
   | "settingsGroup.displayDescription"
   | "settingsGroup.game"
   | "settingsGroup.gameDescription"
+  | "settingsGroup.shortcuts"
+  | "settingsGroup.shortcutsDescription"
   | "settingsGroup.other"
   | "settingsGroup.otherDescription"
   | "settingsField.language"
@@ -280,6 +282,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsGroup.displayDescription": "图像输出与帧率表现相关设置。",
     "settingsGroup.game": "游戏",
     "settingsGroup.gameDescription": "与游戏操作习惯和显示风格对齐的选项。",
+    "settingsGroup.shortcuts": "快捷键",
+    "settingsGroup.shortcutsDescription": "编辑当前可自定义的快捷键设置。",
     "settingsGroup.other": "其他",
     "settingsGroup.otherDescription": "调试和附加能力开关。",
     "settingsField.language": "选择语言/Choose Language",
@@ -289,13 +293,13 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.frameRateLimit": "帧率限制",
     "settingsField.frameRateLimitDescription": "设置渲染帧率上限。",
     "settingsField.arknightsOperationMode": "鹰角网络操作模式",
-    "settingsField.arknightsOperationModeDescription": "使用和游戏内一致的操作模式和快捷键。",
+    "settingsField.arknightsOperationModeDescription": "使用和游戏内一致的操作模式和快捷键；当前版本暂不可修改。",
     "settingsField.arknightsConfirmShortcut": "部署确认快捷键",
-    "settingsField.arknightsConfirmShortcutDescription": "当前为占位快捷键，尚未接入功能；关闭鹰角网络操作模式后可编辑。",
+    "settingsField.arknightsConfirmShortcutDescription": "当前为占位快捷键，尚未接入功能；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.arknightsCancelShortcut": "部署取消快捷键",
-    "settingsField.arknightsCancelShortcutDescription": "当前为占位快捷键，尚未接入功能；关闭鹰角网络操作模式后可编辑。",
+    "settingsField.arknightsCancelShortcutDescription": "当前为占位快捷键，尚未接入功能；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.arknightsRotateShortcut": "部署旋转快捷键",
-    "settingsField.arknightsRotateShortcutDescription": "当前为占位快捷键，尚未接入功能；关闭鹰角网络操作模式后可编辑。",
+    "settingsField.arknightsRotateShortcutDescription": "当前为占位快捷键，尚未接入功能；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.useSimplifiedDeviceIcons": "使用简笔画设备图片",
     "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图简笔画显示方式，不会提高性能。",
     "settingsField.debugMode": "调试模式",
@@ -441,6 +445,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsGroup.displayDescription": "Rendering and frame rate related options.",
     "settingsGroup.game": "Game",
     "settingsGroup.gameDescription": "Options that align controls and icon style with the game.",
+    "settingsGroup.shortcuts": "Keybindings",
+    "settingsGroup.shortcutsDescription": "Edit the shortcut settings that are currently customizable.",
     "settingsGroup.other": "Other",
     "settingsGroup.otherDescription": "Debug and auxiliary capability toggles.",
     "settingsField.language": "选择语言/Choose Language",
@@ -450,13 +456,13 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.frameRateLimit": "Frame Rate Limit",
     "settingsField.frameRateLimitDescription": "Set the render frame rate cap.",
     "settingsField.arknightsOperationMode": "Arknights Operation Mode",
-    "settingsField.arknightsOperationModeDescription": "Use the same operation mode and shortcuts as the game.",
+    "settingsField.arknightsOperationModeDescription": "Use the same operation mode and shortcuts as the game; this setting is currently unavailable.",
     "settingsField.arknightsConfirmShortcut": "Deploy Confirm Shortcut",
-    "settingsField.arknightsConfirmShortcutDescription": "Placeholder shortcut only; it is not wired yet and is editable when Arknights Operation Mode is off.",
+    "settingsField.arknightsConfirmShortcutDescription": "Placeholder shortcut only; it is not wired yet and is editable only when Arknights Operation Mode is off.",
     "settingsField.arknightsCancelShortcut": "Deploy Cancel Shortcut",
-    "settingsField.arknightsCancelShortcutDescription": "Placeholder shortcut only; it is not wired yet and is editable when Arknights Operation Mode is off.",
+    "settingsField.arknightsCancelShortcutDescription": "Placeholder shortcut only; it is not wired yet and is editable only when Arknights Operation Mode is off.",
     "settingsField.arknightsRotateShortcut": "Deploy Rotate Shortcut",
-    "settingsField.arknightsRotateShortcutDescription": "Placeholder shortcut only; it is not wired yet and is editable when Arknights Operation Mode is off.",
+    "settingsField.arknightsRotateShortcutDescription": "Placeholder shortcut only; it is not wired yet and is editable only when Arknights Operation Mode is off.",
     "settingsField.useSimplifiedDeviceIcons": "Use Simplified Device Icons",
     "settingsField.useSimplifiedDeviceIconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
     "settingsField.debugMode": "Debug Mode",

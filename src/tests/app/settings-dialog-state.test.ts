@@ -29,16 +29,15 @@ describe("WorkbenchSettingsDialogController", () => {
   it("persists schema-driven values and hydrates them on the next controller", () => {
     const controller = new WorkbenchSettingsDialogController();
 
-    controller.selectGroup("game");
+    controller.selectGroup("shortcuts");
     controller.updateSelectValue("system-language", "en-US");
     controller.updateSelectValue("system-theme", "ayu-dark");
     controller.updateSelectValue("display-frame-rate-limit", "30");
-    controller.updateSwitchValue("game-arknights-operation-mode", true);
     controller.updateSwitchValue("game-use-simplified-device-icons", true);
     controller.updateSwitchValue("other-debug-mode", true);
 
     expect(JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")).toEqual({
-      selectedGroupId: "game",
+      selectedGroupId: "shortcuts",
       values: {
         "system-language": "en-US",
         "system-theme": "ayu-dark",
@@ -54,7 +53,7 @@ describe("WorkbenchSettingsDialogController", () => {
 
     const hydratedController = new WorkbenchSettingsDialogController();
 
-    expect(hydratedController.selectedGroupId).toBe("game");
+  expect(hydratedController.selectedGroupId).toBe("shortcuts");
     expect(hydratedController.values["system-language"]).toBe("en-US");
     expect(hydratedController.values["system-theme"]).toBe("ayu-dark");
     expect(hydratedController.values["display-frame-rate-limit"]).toBe("30");
@@ -67,7 +66,19 @@ describe("WorkbenchSettingsDialogController", () => {
   });
 
   it("only updates conditional keybinding settings while their prerequisite matches", () => {
-    const controller = new WorkbenchSettingsDialogController();
+    let hypergryphOperationMode = false;
+    const controller = new WorkbenchSettingsDialogController({
+      externalBindings: {
+        "game-arknights-operation-mode": {
+          readValue: () => hypergryphOperationMode,
+          writeValue: (value) => {
+            if (typeof value === "boolean") {
+              hypergryphOperationMode = value;
+            }
+          },
+        },
+      },
+    });
 
     expect(controller.isSettingEditable("game-arknights-confirm-shortcut")).toBe(true);
 
@@ -75,7 +86,7 @@ describe("WorkbenchSettingsDialogController", () => {
 
     expect(controller.values["game-arknights-confirm-shortcut"]).toBe("P");
 
-    controller.updateSwitchValue("game-arknights-operation-mode", true);
+    hypergryphOperationMode = true;
 
     expect(controller.isSettingEditable("game-arknights-confirm-shortcut")).toBe(false);
 
@@ -84,9 +95,21 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(controller.values["game-arknights-confirm-shortcut"]).toBe("P");
   });
 
+  it("treats permanently disabled settings as read-only", () => {
+    const controller = new WorkbenchSettingsDialogController();
+
+    expect(controller.isSettingEditable("game-arknights-operation-mode")).toBe(false);
+    expect(controller.getValue("game-arknights-operation-mode")).toBe(true);
+
+    controller.updateSwitchValue("game-arknights-operation-mode", false);
+
+    expect(controller.getValue("game-arknights-operation-mode")).toBe(true);
+  });
+
   it("uses external bindings as the source of truth for connected settings", () => {
     let locale = "zh-CN";
     let themeId = "ayu-light";
+    let hypergryphOperationMode = false;
     const controller = new WorkbenchSettingsDialogController({
       externalBindings: {
         "system-language": {
@@ -105,6 +128,14 @@ describe("WorkbenchSettingsDialogController", () => {
             }
           },
         },
+        "game-arknights-operation-mode": {
+          readValue: () => hypergryphOperationMode,
+          writeValue: (value) => {
+            if (typeof value === "boolean") {
+              hypergryphOperationMode = value;
+            }
+          },
+        },
       },
     });
 
@@ -115,13 +146,14 @@ describe("WorkbenchSettingsDialogController", () => {
 
     expect(locale).toBe("en-US");
     expect(themeId).toBe("ayu-dark");
+    expect(hypergryphOperationMode).toBe(false);
     expect(controller.getValue("system-language")).toBe("en-US");
     expect(controller.getValue("system-theme")).toBe("ayu-dark");
+    expect(controller.getValue("game-arknights-operation-mode")).toBe(false);
     expect(JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")).toEqual({
       selectedGroupId: "system",
       values: {
         "display-frame-rate-limit": "unlimited",
-        "game-arknights-operation-mode": false,
         "game-arknights-confirm-shortcut": "F",
         "game-arknights-cancel-shortcut": "G",
         "game-arknights-rotate-shortcut": "R",
