@@ -3,6 +3,7 @@ import { makeAutoObservable } from "mobx";
 import type { ScreenProfile } from "@/domain/state/screen-profile";
 import type { AppTheme, AppThemeId } from "@/domain/state/theme";
 import type { ClientPixelPoint } from "@/domain/types/client-pixel";
+import type { GridPoint } from "@/domain/types/grid";
 import type { AppLocale } from "@/shared/i18n/messages";
 import {
   resolveScreenProfileFromWindow,
@@ -67,6 +68,7 @@ export type ActiveTool = "select" | "move" | "marquee" | "placement";
 export interface RuntimeStateReadWrite {
   activePanel: ActivePanel;
   activeTool: ActiveTool;
+  moveAnchor: GridPoint | null;
   canvasToolbar: CanvasToolbarStateReadWrite;
 }
 
@@ -110,6 +112,7 @@ class CanvasToolbarStateReadWriteImpl implements CanvasToolbarStateReadWrite {
 class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   activePanel: ActivePanel = null;
   activeTool: ActiveTool = "select";
+  moveAnchor: GridPoint | null = null;
   canvasToolbar: CanvasToolbarStateReadWrite = new CanvasToolbarStateReadWriteImpl();
 
   public constructor() {

@@ -24,12 +24,19 @@ export interface MoveCollectionToOptions {
 
 export interface EditorAction {
 	setViewportClientRect(clientRect: ClientPixelRect): void;
-	zoom(step: number): void;
-	clearCollection(collectionType: EntityCollectionType): void;
-	addToCollection(options: EntityCollectionMemberOptions): void;
-	removeFromCollection(options: EntityCollectionMemberOptions): void;
-	moveCollectionTo(options: MoveCollectionToOptions): void;
+	/// 平移画布用的
 	moveViewportByClientPixelVector(
 		options: MoveViewportByClientPixelVectorOptions,
 	): void;
+	zoom(step: number): void;
+
+	clearCollection(collectionType: EntityCollectionType): void;
+	addToCollection(options: EntityCollectionMemberOptions): void;
+	removeFromCollection(options: EntityCollectionMemberOptions): void;
+	
+	moveCollectionTo(options: MoveCollectionToOptions): void;
+
+	createMoveOperationDraft(): void;
+	applyMoveOerationDraft(): boolean;
+	cancelMoveOperationDraft(): void;
 }

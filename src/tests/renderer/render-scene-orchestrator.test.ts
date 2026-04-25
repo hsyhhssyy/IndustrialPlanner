@@ -117,40 +117,24 @@ describe("resolveWorldEntitySelectionOverlayLayouts", () => {
     )
 
     const layouts = resolveWorldEntitySelectionOverlayLayouts({
-      document: {
-        schemaVersion: 1,
-        baseId: "test-world",
-        meta: {
-          id: "test-world",
-          name: "Test World",
-          createdAt: new Date(0).toISOString(),
-          updatedAt: new Date(0).toISOString(),
+      entities: [
+        {
+          id: "selected",
+          definitionId: "item_port_unloader_1",
+          position: { x: 4, y: 6 },
+          rotation: 90,
+          config: {},
+          tags: [],
         },
-        entities: {
-          selected: {
-            id: "selected",
-            definitionId: "item_port_unloader_1",
-            position: { x: 4, y: 6 },
-            rotation: 90,
-            config: {},
-            tags: [],
-          },
-          unselected: {
-            id: "unselected",
-            definitionId: "item_port_unloader_1",
-            position: { x: 8, y: 10 },
-            rotation: 0,
-            config: {},
-            tags: [],
-          },
+        {
+          id: "unselected",
+          definitionId: "item_port_unloader_1",
+          position: { x: 8, y: 10 },
+          rotation: 0,
+          config: {},
+          tags: [],
         },
-        entityOrder: ["selected", "unselected"],
-        explicitLinks: [],
-        documentSettings: {
-          gridSize: 1,
-          showDiagnostics: false,
-        },
-      },
+      ],
       entityDefinitionMap,
       selectedEntityIds: ["selected", "missing"],
       viewportBounds: {
@@ -171,6 +155,46 @@ describe("resolveWorldEntitySelectionOverlayLayouts", () => {
       width: 16,
       height: 48,
       rotation: 90,
+    })
+  })
+
+  it("returns overlay layouts for selected draft-only entities", () => {
+    const registry = createRegistryContract()
+    const entityDefinitionMap = new Map(
+      registry.entityDefinitions.map((definition) => [definition.id, definition]),
+    )
+
+    const layouts = resolveWorldEntitySelectionOverlayLayouts({
+      entities: [
+        {
+          id: "draft-only",
+          definitionId: "belt_straight_1x1",
+          position: { x: 2, y: 3 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+      ],
+      entityDefinitionMap,
+      selectedEntityIds: ["draft-only"],
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 400,
+      },
+      viewportCenter: {
+        x: 0,
+        y: 0,
+      },
+      gridSize: 1,
+    })
+
+    expect(layouts).toHaveLength(1)
+    expect(layouts[0]).toMatchObject({
+      width: 16,
+      height: 16,
+      rotation: 0,
     })
   })
 })

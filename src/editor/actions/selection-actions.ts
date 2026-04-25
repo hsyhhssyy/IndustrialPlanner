@@ -8,7 +8,10 @@ import type { EditorActionsContext } from "./types";
 
 type EditorCollectionActions = Pick<
   EditorAction,
-  "addToCollection" | "clearCollection" | "moveCollectionTo" | "removeFromCollection"
+  | "addToCollection"
+  | "clearCollection"
+  | "moveCollectionTo"
+  | "removeFromCollection"
 >;
 
 export function createEditorSelectionActions({
@@ -125,12 +128,15 @@ function resolveGridVector(options: {
   return { x, y };
 }
 
-function moveEntityByGridVector(entity: WorldEntity, gridVector: GridPoint): WorldEntity {
+function moveEntityByGridVector<EntityT extends WorldEntity>(
+  entity: EntityT,
+  gridVector: GridPoint,
+): EntityT {
   return {
     ...entity,
     position: {
       x: entity.position.x + gridVector.x,
       y: entity.position.y + gridVector.y,
     },
-  };
+  } as EntityT;
 }

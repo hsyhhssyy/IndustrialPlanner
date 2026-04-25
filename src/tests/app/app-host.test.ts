@@ -90,6 +90,7 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.rightDockOpen).toBe(true);
     expect(appHost.state.workbench.leftDockWidth).toBe(375);
     expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
 
     runInAction(() => {
       appHost.internalState.settings.locale = "en-US";
@@ -131,6 +132,7 @@ describe("createAppHost", () => {
     expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
     expect(workspace.app?.state.screenProfile.screenShape).toBe("portrait");
     expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
   });
 
   it("translates arbitrary i18n keys through the current locale", () => {

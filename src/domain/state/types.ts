@@ -14,6 +14,7 @@ export interface EntityCollection extends ReadonlyArray<string> {
 export const EntityCollectionType = {
   selection: "selection",
   preview: "preview",
+  ghost: "ghost",
 } as const;
 
 export type EntityCollectionType =

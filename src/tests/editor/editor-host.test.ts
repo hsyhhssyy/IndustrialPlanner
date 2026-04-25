@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { runInAction } from "mobx";
 
+import type { DraftEntity } from "@/editor/draft-entity";
 import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY } from "@/editor/storage-hook";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import type { WorldEntity } from "@/domain/entity/world-document";
 import { EntityCollectionType } from "@/domain/state/types";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
@@ -209,6 +209,50 @@ describe("createEditorHost", () => {
     expect(emptyCellEntity).toBeNull();
   });
 
+  it("finds draft entities at a client pixel point and prioritizes them over document entities", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.drafts = [
+      {
+        id: "draft-only",
+        originalEntityId: "draft-only",
+        definitionId: "belt_straight_1x1",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      {
+        id: "preview-storager",
+        originalEntityId: "dummy-entity-2",
+        definitionId: "item_port_storager_1",
+        position: { x: 4, y: 4 },
+        rotation: 0,
+        config: {},
+        tags: ["preview"],
+      },
+    ];
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+
+    const draftOnlyEntity = editorHost.queries.findEntityAtClientPixelPoint(
+      resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 }),
+    );
+    const overlappingDraftEntity = editorHost.queries.findEntityAtClientPixelPoint(
+      resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 5 }),
+    );
+
+    expect(draftOnlyEntity?.id).toBe("draft-only");
+    expect(overlappingDraftEntity?.id).toBe("preview-storager");
+  });
+
   it("gets entities by id from the world document first and then drafts", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -218,6 +262,7 @@ describe("createEditorHost", () => {
     editorHost.internalState.drafts = [
       {
         id: "draft-only",
+        originalEntityId: "draft-only",
         definitionId: "belt_straight_1x1",
         position: { x: 9, y: 9 },
         rotation: 0,
@@ -226,6 +271,7 @@ describe("createEditorHost", () => {
       },
       {
         id: "dummy-entity-1",
+        originalEntityId: "dummy-entity-1",
         definitionId: "belt_straight_1x1",
         position: { x: 11, y: 11 },
         rotation: 0,
@@ -250,6 +296,7 @@ describe("createEditorHost", () => {
     editorHost.internalState.drafts = [
       {
         id: "draft-only",
+        originalEntityId: "draft-only",
         definitionId: "belt_straight_1x1",
         position: { x: 9, y: 9 },
         rotation: 0,
@@ -258,6 +305,7 @@ describe("createEditorHost", () => {
       },
       {
         id: "dummy-entity-2",
+        originalEntityId: "dummy-entity-2",
         definitionId: "belt_straight_1x1",
         position: { x: 11, y: 11 },
         rotation: 0,
@@ -280,8 +328,9 @@ describe("createEditorHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDummyWorldDocument();
-    const draftEntity: WorldEntity = {
+    const draftEntity: DraftEntity = {
       id: "draft-only",
+      originalEntityId: "draft-only",
       definitionId: "belt_straight_1x1",
       position: { x: 9, y: 9 },
       rotation: 0,
@@ -340,20 +389,157 @@ describe("createEditorHost", () => {
     expect(editorHost.state.collections.preview.contains("preview-only")).toBe(false);
   });
 
+  it("creates move operation ghost entities and preview drafts from the current selection", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.drafts = [
+      {
+        id: "persisted-draft",
+        originalEntityId: "persisted-origin",
+        definitionId: "belt_straight_1x1",
+        position: { x: 30, y: 30 },
+        rotation: 0,
+        config: {},
+        tags: ["persisted"],
+      },
+    ];
+    editorHost.internalState.collections.selection.replace([
+      "dummy-entity-1",
+      "dummy-entity-2",
+    ]);
+
+    editorHost.actions.createMoveOperationDraft();
+
+    expect(editorHost.state.collections.selection).toEqual([]);
+    expect(editorHost.state.collections.ghost).toEqual([
+      "dummy-entity-1",
+      "dummy-entity-2",
+    ]);
+    expect(editorHost.state.collections.preview).toHaveLength(2);
+    expect(editorHost.internalState.drafts).toHaveLength(3);
+
+    const createdDrafts = editorHost.state.collections.preview.map((draftId) =>
+      editorHost.internalState.drafts.find((entity) => entity.id === draftId) ?? null,
+    );
+
+    expect(createdDrafts).toHaveLength(2);
+    expect(createdDrafts[0]).toMatchObject({
+      definitionId: document.entities["dummy-entity-1"]?.definitionId,
+      position: document.entities["dummy-entity-1"]?.position,
+      rotation: document.entities["dummy-entity-1"]?.rotation,
+      config: document.entities["dummy-entity-1"]?.config,
+      tags: document.entities["dummy-entity-1"]?.tags,
+      originalEntityId: "dummy-entity-1",
+    });
+    expect(createdDrafts[1]).toMatchObject({
+      definitionId: document.entities["dummy-entity-2"]?.definitionId,
+      position: document.entities["dummy-entity-2"]?.position,
+      rotation: document.entities["dummy-entity-2"]?.rotation,
+      config: document.entities["dummy-entity-2"]?.config,
+      tags: document.entities["dummy-entity-2"]?.tags,
+      originalEntityId: "dummy-entity-2",
+    });
+    expect(createdDrafts[0]?.id).not.toBe("dummy-entity-1");
+    expect(createdDrafts[1]?.id).not.toBe("dummy-entity-2");
+    expect(
+      editorHost.internalState.drafts.find((entity) => entity.id === "persisted-draft"),
+    ).toBeDefined();
+  });
+
+  it("applies move operation drafts back into ghost entities and clears operation state", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.drafts = [
+      {
+        id: "persisted-draft",
+        originalEntityId: "persisted-origin",
+        definitionId: "belt_straight_1x1",
+        position: { x: 30, y: 30 },
+        rotation: 0,
+        config: {},
+        tags: ["persisted"],
+      },
+    ];
+    editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
+
+    editorHost.actions.createMoveOperationDraft();
+
+    const previewDraftId = editorHost.state.collections.preview[0];
+    const previewDraft = editorHost.internalState.drafts.find((entity) => entity.id === previewDraftId);
+
+    if (!previewDraft) {
+      throw new Error("Expected move operation preview draft to exist.");
+    }
+
+    runInAction(() => {
+      previewDraft.position = { x: 20, y: 18 };
+      previewDraft.rotation = 180;
+    });
+
+    expect(editorHost.actions.applyMoveOerationDraft()).toBe(true);
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-1"]).toMatchObject({
+      position: { x: 20, y: 18 },
+      rotation: 180,
+    });
+    expect(editorHost.state.collections.ghost).toEqual([]);
+    expect(editorHost.state.collections.preview).toEqual([]);
+    expect(editorHost.internalState.drafts).toHaveLength(1);
+    expect(editorHost.internalState.drafts[0]?.id).toBe("persisted-draft");
+  });
+
+  it("cancels move operation drafts by clearing ghost and preview state only", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.drafts = [
+      {
+        id: "persisted-draft",
+        originalEntityId: "persisted-origin",
+        definitionId: "belt_straight_1x1",
+        position: { x: 30, y: 30 },
+        rotation: 0,
+        config: {},
+        tags: ["persisted"],
+      },
+    ];
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
+
+    editorHost.actions.createMoveOperationDraft();
+    editorHost.actions.cancelMoveOperationDraft();
+
+    expect(editorHost.state.collections.ghost).toEqual([]);
+    expect(editorHost.state.collections.preview).toEqual([]);
+    expect(editorHost.internalState.drafts).toHaveLength(1);
+    expect(editorHost.internalState.drafts[0]?.id).toBe("persisted-draft");
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]).toEqual(
+      document.entities["dummy-entity-2"],
+    );
+  });
+
   it("moves entity collections by grid point vector through editor actions", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const document = createDummyWorldDocument();
-    const draftOnlyEntity: WorldEntity = {
+    const draftOnlyEntity: DraftEntity = {
       id: "draft-only",
+      originalEntityId: "draft-only",
       definitionId: "belt_straight_1x1",
       position: { x: 9, y: 9 },
       rotation: 0,
       config: {},
       tags: [],
     };
-    const documentShadowDraft: WorldEntity = {
+    const documentShadowDraft: DraftEntity = {
       id: "dummy-entity-1",
+      originalEntityId: "dummy-entity-1",
       definitionId: "belt_straight_1x1",
       position: { x: 30, y: 30 },
       rotation: 0,
@@ -411,6 +597,7 @@ describe("createEditorHost", () => {
     editorHost.internalState.drafts = [
       {
         id: "preview-unloader",
+        originalEntityId: "preview-unloader",
         definitionId: "item_port_unloader_1",
         position: {
           x: -2,
@@ -422,6 +609,7 @@ describe("createEditorHost", () => {
       },
       {
         id: "preview-belt",
+        originalEntityId: "preview-belt",
         definitionId: "belt_straight_1x1",
         position: {
           x: 4,
@@ -464,6 +652,7 @@ describe("createEditorHost", () => {
     editorHost.internalState.drafts = [
       {
         id: "draft-only",
+        originalEntityId: "draft-only",
         definitionId: "item_port_storager_1",
         position: {
           x: 40,
@@ -475,11 +664,12 @@ describe("createEditorHost", () => {
       },
     ];
 
-    expect(Object.values(EntityCollectionType)).toEqual(["selection", "preview"]);
+    expect(Object.values(EntityCollectionType)).toEqual(["selection", "preview", "ghost"]);
     expect(
       editorHost.queries.findEntityCollectionGridRect("selection"),
     ).toBeNull();
     expect(editorHost.queries.findEntityCollectionGridRect("preview")).toBeNull();
+    expect(editorHost.queries.findEntityCollectionGridRect("ghost")).toBeNull();
   });
 
   it("computes the client rect for a world grid cell", () => {

@@ -4,7 +4,6 @@ import {
   type IObservableArray,
 } from "mobx";
 
-import type { WorldEntity } from "@/domain/entity/world-document";
 import {
   EntityCollectionType,
   type EntityCollection,
@@ -12,6 +11,8 @@ import {
   type EntityCollectionType as EntityCollectionTypeValue,
 } from "@/domain/state/types";
 import type { ClientPixelRect } from "@/domain/types/client-pixel";
+
+import type { DraftEntity } from "./draft-entity";
 
 export interface GridFloatPointReadWrite {
   x: number;
@@ -81,7 +82,7 @@ function createEntityCollection(
 
 export interface EditorStateReadWrite extends EditorState {
   viewport: EditorViewportStateReadWrite;
-  drafts: WorldEntity[];
+  drafts: DraftEntity[];
   collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite>;
 
   // 私有State, 不属于Contract, 但是自己用
@@ -111,10 +112,11 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
     gridSize: DEFAULT_VIEWPORT_GRID_SIZE,
   };
 
-  drafts: WorldEntity[] = [];
+  drafts: DraftEntity[] = [];
   collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite> = {
     [EntityCollectionType.selection]: createEntityCollection(),
     [EntityCollectionType.preview]: createEntityCollection(),
+    [EntityCollectionType.ghost]: createEntityCollection(),
   };
   internalPersistState: EditorInternalPersistStateReadWrite =
     new EditorInternalPersistStateReadWriteImpl();

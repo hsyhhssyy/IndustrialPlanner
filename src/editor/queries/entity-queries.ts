@@ -74,18 +74,15 @@ export function createEditorEntityQueries({
       }
 
       const currentDocument = document.getSnapshot();
-      const orderedEntityIds = resolveOrderedEntityIds(currentDocument);
+      const listedEntities = resolveListedEntities({
+        document: currentDocument,
+        drafts: state.drafts,
+      });
 
-      for (let index = orderedEntityIds.length - 1; index >= 0; index -= 1) {
-        const entityId = orderedEntityIds[index];
+      for (let index = listedEntities.length - 1; index >= 0; index -= 1) {
+        const entity = listedEntities[index];
 
-        if (entityId === undefined) {
-          continue;
-        }
-
-        const entity = currentDocument.entities[entityId];
-
-        if (!entity) {
+        if (entity === undefined) {
           continue;
         }
 
