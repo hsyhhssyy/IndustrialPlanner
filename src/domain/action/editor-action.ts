@@ -12,6 +12,7 @@ export interface MoveViewportByClientPixelVectorOptions {
 export interface EditorAction {
 	setViewportClientRect(clientRect: ClientPixelRect): void;
 	zoom(step: number): void;
+	selectEntity(entityId: string): void;
 	moveViewportByClientPixelVector(
 		options: MoveViewportByClientPixelVectorOptions,
 	): void;

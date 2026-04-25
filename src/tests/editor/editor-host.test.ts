@@ -5,6 +5,7 @@ import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY } from "@/editor/storage-hook";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import type { WorldEntity } from "@/domain/entity/world-document";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { resolveWorldEntitySpriteLayout } from "@/renderer/scene/render-scene-orchestrator";
@@ -31,6 +32,8 @@ describe("createEditorHost", () => {
     const editorHost = createEditorHost(workspace);
 
     expect(editorHost.internalState.internalPersistState.lastDocumentId).toBeNull();
+    expect("drafts" in editorHost.state).toBe(false);
+    expect(editorHost.internalState.drafts).toEqual([]);
 
     editorHost.actions.setViewportClientRect({
       left: 120,
@@ -203,6 +206,103 @@ describe("createEditorHost", () => {
 
     expect(entity?.id).toBe("dummy-entity-2");
     expect(emptyCellEntity).toBeNull();
+  });
+
+  it("gets entities by id from the world document first and then drafts", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.drafts = [
+      {
+        id: "draft-only",
+        definitionId: "belt_straight_1x1",
+        position: { x: 9, y: 9 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      {
+        id: "dummy-entity-1",
+        definitionId: "belt_straight_1x1",
+        position: { x: 11, y: 11 },
+        rotation: 0,
+        config: {},
+        tags: ["draft-shadow"],
+      },
+    ];
+
+    expect(editorHost.queries.getEntityById("dummy-entity-1")).toBe(
+      document.entities["dummy-entity-1"],
+    );
+    expect(editorHost.queries.getEntityById("draft-only")?.id).toBe("draft-only");
+    expect(editorHost.queries.getEntityById("missing-entity")).toBeNull();
+  });
+
+  it("lists document entities plus draft entities as a union by id", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.drafts = [
+      {
+        id: "draft-only",
+        definitionId: "belt_straight_1x1",
+        position: { x: 9, y: 9 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      {
+        id: "dummy-entity-2",
+        definitionId: "belt_straight_1x1",
+        position: { x: 11, y: 11 },
+        rotation: 0,
+        config: {},
+        tags: ["draft-shadow"],
+      },
+    ];
+
+    const entityIds = editorHost.queries.listEntities().map((entity) => entity.id);
+
+    expect(entityIds).toContain("dummy-entity-1");
+    expect(entityIds).toContain("dummy-entity-2");
+    expect(entityIds).toContain("draft-only");
+    expect(entityIds.filter((entityId) => entityId === "dummy-entity-2")).toHaveLength(1);
+    expect(entityIds.filter((entityId) => entityId === "draft-only")).toHaveLength(1);
+    expect(entityIds).toHaveLength(Object.keys(document.entities).length + 1);
+  });
+
+  it("adds the requested entity into selectedEntities through editor actions", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+    const draftEntity: WorldEntity = {
+      id: "draft-only",
+      definitionId: "belt_straight_1x1",
+      position: { x: 9, y: 9 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    };
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.drafts = [draftEntity];
+
+    editorHost.actions.selectEntity("dummy-entity-1");
+    editorHost.actions.selectEntity("draft-only");
+    editorHost.actions.selectEntity("missing-entity");
+
+    expect(Object.keys(editorHost.state.selectedEntities)).toEqual([
+      "dummy-entity-1",
+      "draft-only",
+    ]);
+    expect(editorHost.state.selectedEntities["dummy-entity-1"]).toMatchObject(
+      document.entities["dummy-entity-1"] ?? {},
+    );
+    expect(editorHost.state.selectedEntities["draft-only"]).toMatchObject(draftEntity);
   });
 
   it("computes the client rect for a world grid cell", () => {

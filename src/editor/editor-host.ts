@@ -122,8 +122,30 @@ export function createEditorHost(
 
       editorState.viewport.gridSize = nextGridSize;
     },
+    selectEntity: (entityId) => {
+      const entity = resolveEntityById({
+        entityId,
+        document: internalDocument.getSnapshot(),
+        drafts: editorState.drafts,
+      });
+
+      if (entity === null) {
+        return;
+      }
+
+      editorState.selectedEntities[entity.id] = entity;
+    },
   };
   const queries: EditorContract["queries"] = {
+    getEntityById: (entityId) => resolveEntityById({
+      entityId,
+      document: internalDocument.getSnapshot(),
+      drafts: editorState.drafts,
+    }),
+    listEntities: () => resolveListedEntities({
+      document: internalDocument.getSnapshot(),
+      drafts: editorState.drafts,
+    }),
     findEntityAtClientPixelPoint: (clientPixelPoint) => {
       const gridCell = resolveGridCellAtClientPixelPoint({
         clientPixelPoint,
@@ -175,9 +197,15 @@ export function createEditorHost(
     }),
   };
 
+  const publicState: EditorContract["state"] = {
+    viewport: editorState.viewport,
+    selectedEntities: editorState.selectedEntities,
+    previewEntities: editorState.previewEntities,
+  };
+
   const host: EditorHost = {
     document: internalDocument,
-    state: editorState,
+    state: publicState,
     internalDocument,
     workspace,
     dispose: () => {
@@ -427,4 +455,48 @@ async function hydrateInitialDocument(editorHost: EditorHost): Promise<void> {
   );
 
   editorHost.internalDocument.setSnapshot(document);
+}
+
+function resolveEntityById(options: {
+  entityId: string;
+  document: WorldDocument;
+  drafts: readonly WorldEntity[];
+}): WorldEntity | null {
+  const entityFromDocument = options.document.entities[options.entityId];
+  if (entityFromDocument !== undefined) {
+    return entityFromDocument;
+  }
+
+  return options.drafts.find((entity) => entity.id === options.entityId) ?? null;
+}
+
+function resolveListedEntities(options: {
+  document: WorldDocument;
+  drafts: readonly WorldEntity[];
+}): readonly WorldEntity[] {
+  const entities: WorldEntity[] = [];
+  const knownEntityIds = new Set<string>();
+  const orderedEntityIds = resolveOrderedEntityIds(options.document);
+
+  for (const entityId of orderedEntityIds) {
+    const entity = options.document.entities[entityId];
+
+    if (entity === undefined || knownEntityIds.has(entity.id)) {
+      continue;
+    }
+
+    entities.push(entity);
+    knownEntityIds.add(entity.id);
+  }
+
+  for (const entity of options.drafts) {
+    if (knownEntityIds.has(entity.id)) {
+      continue;
+    }
+
+    entities.push(entity);
+    knownEntityIds.add(entity.id);
+  }
+
+  return entities;
 }

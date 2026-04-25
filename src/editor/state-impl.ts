@@ -55,7 +55,7 @@ class EditorInternalTransientStateReadWriteImpl
 
 export interface EditorStateReadWrite extends EditorState {
   viewport: EditorViewportStateReadWrite;
-  drafts: Record<string, WorldEntity>;
+  drafts: WorldEntity[];
   selectedEntities: Record<string, WorldEntity>;
   previewEntities: Record<string, WorldEntity>;
 
@@ -86,7 +86,7 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
     gridSize: DEFAULT_VIEWPORT_GRID_SIZE,
   };
 
-  drafts: Record<string, WorldEntity> = {};
+  drafts: WorldEntity[] = [];
   selectedEntities: Record<string, WorldEntity> = {};
   previewEntities: Record<string, WorldEntity> = {};
   internalPersistState: EditorInternalPersistStateReadWrite =

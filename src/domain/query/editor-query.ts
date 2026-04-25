@@ -6,6 +6,8 @@ import type {
 } from "../types/client-pixel";
 
 export interface EditorQuery {
+	getEntityById(entityId: string): WorldEntity | null;
+	listEntities(): readonly WorldEntity[];
 	findEntityAtClientPixelPoint(
 		clientPixelPoint: ClientPixelPoint,
 	): WorldEntity | null;

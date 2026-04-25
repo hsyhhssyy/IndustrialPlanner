@@ -20,8 +20,6 @@ export interface EditorViewportState {
 export interface EditorState {
 
   readonly viewport: EditorViewportState;
-  
-  readonly drafts: EntityCollection;
 
   readonly selectedEntities: EntityCollection;
   readonly previewEntities: EntityCollection;
