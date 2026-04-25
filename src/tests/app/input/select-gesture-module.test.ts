@@ -11,7 +11,7 @@ import type { WorldEntity } from "@/domain/entity/world-document";
 import { EntityCollectionType } from "@/domain/state/types";
 
 describe("createHypergryphSelectGestureModule", () => {
-  it("adds a clicked entity to the selection collection in select mode", () => {
+  it("clears the selection collection before selecting a different clicked entity", () => {
     const { context, addToCollection, clearCollection } = createContext();
     const module = createHypergryphSelectGestureModule();
 
@@ -31,15 +31,42 @@ describe("createHypergryphSelectGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "handled" });
+    expect(clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
     expect(addToCollection).toHaveBeenCalledWith({
       collectionType: EntityCollectionType.selection,
       entityId: "entity-1",
     });
-    expect(clearCollection).not.toHaveBeenCalled();
   });
 
-  it("adds a tapped entity to the selection collection in select mode", () => {
-    const { context, addToCollection } = createContext();
+  it("keeps the current selection when the clicked entity is already selected", () => {
+    const { context, addToCollection, clearCollection } = createContext("select", true, ["entity-1"]);
+    const module = createHypergryphSelectGestureModule();
+
+    const result = module.handle(
+      {
+        type: "mouse tap",
+        gestureId: "mouse-select-keep-1",
+        button: 0,
+        buttons: 0,
+        position: { x: 48, y: 32 },
+        longPress: false,
+        pointerEntity: entity("entity-1"),
+        modifiers: emptyModifiers(),
+        sourceEvent: null,
+      },
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(clearCollection).not.toHaveBeenCalled();
+    expect(addToCollection).toHaveBeenCalledWith({
+      collectionType: EntityCollectionType.selection,
+      entityId: "entity-1",
+    });
+  });
+
+  it("clears the selection collection before selecting a different tapped entity", () => {
+    const { context, addToCollection, clearCollection } = createContext();
     const module = createHypergryphSelectGestureModule();
 
     const result = module.handle(
@@ -57,6 +84,7 @@ describe("createHypergryphSelectGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "handled" });
+    expect(clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
     expect(addToCollection).toHaveBeenCalledWith({
       collectionType: EntityCollectionType.selection,
       entityId: "entity-2",
@@ -153,6 +181,7 @@ describe("createHypergryphSelectGestureModule", () => {
 function createContext(
   activeTool: "select" | "move" | "marquee" = "select",
   hypergryphOperationMode = true,
+  selectedEntityIds: readonly string[] = [],
 ): {
   context: GestureActionContext<AppHost>;
   addToCollection: ReturnType<typeof vi.fn>;
@@ -165,6 +194,13 @@ function createContext(
     context: {
       workspace: {
         editor: {
+          state: {
+            collections: {
+              selection: {
+                contains: (entityId: string) => selectedEntityIds.includes(entityId),
+              },
+            },
+          },
           actions: {
             addToCollection,
             clearCollection,

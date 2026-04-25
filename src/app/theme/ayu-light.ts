@@ -69,6 +69,7 @@ export const AYU_LIGHT_THEME: AppTheme = {
     "canvas-action-cancel": "rgb(194 58 58)",
     "canvas-action-confirm": "rgb(28 146 95)",
     "renderer-grid-line": "#5c6773",
+    "renderer-selection-stroke": "#ffa500",
     "renderer-belt-tile-fill": "#e6ecf3",
     "renderer-belt-tile-stroke": "#d9822b",
     "renderer-belt-track": "#94a3b8",
@@ -76,6 +77,7 @@ export const AYU_LIGHT_THEME: AppTheme = {
   },
   renderer: {
     worldGridLineColorKey: "renderer-grid-line",
+    worldEntitySelectionStrokeColorKey: "renderer-selection-stroke",
     beltTileFillColorKey: "renderer-belt-tile-fill",
     beltTileStrokeColorKey: "renderer-belt-tile-stroke",
     beltTrackColorKey: "renderer-belt-track",

@@ -35,6 +35,8 @@ export interface AppSettingsReadWrite extends AppSettings {
   locale: AppLocale;
   themeId: AppThemeId;
   hypergryphOperationMode: boolean;
+  hypergryphImmediateMove: boolean;
+  hypergryphImmediateMarquee: boolean;
 }
 
 export interface WorkbenchStateReadWrite extends WorkbenchState {
@@ -120,6 +122,8 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     locale: DEFAULT_APP_LOCALE,
     themeId: DEFAULT_APP_THEME_ID,
     hypergryphOperationMode: true,
+    hypergryphImmediateMove: true,
+    hypergryphImmediateMarquee: false,
   };
 
   workbench: WorkbenchStateReadWrite = new WorkbenchStateReadWriteImpl();

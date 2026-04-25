@@ -118,6 +118,8 @@ export type MessageKey =
   | "settingsGroup.displayDescription"
   | "settingsGroup.game"
   | "settingsGroup.gameDescription"
+  | "settingsGroup.arknightsOperation"
+  | "settingsGroup.arknightsOperationDescription"
   | "settingsGroup.shortcuts"
   | "settingsGroup.shortcutsDescription"
   | "settingsGroup.other"
@@ -130,6 +132,10 @@ export type MessageKey =
   | "settingsField.frameRateLimitDescription"
   | "settingsField.arknightsOperationMode"
   | "settingsField.arknightsOperationModeDescription"
+  | "settingsField.arknightsImmediateMove"
+  | "settingsField.arknightsImmediateMoveDescription"
+  | "settingsField.arknightsImmediateMarquee"
+  | "settingsField.arknightsImmediateMarqueeDescription"
   | "settingsField.arknightsConfirmShortcut"
   | "settingsField.arknightsConfirmShortcutDescription"
   | "settingsField.arknightsCancelShortcut"
@@ -282,6 +288,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsGroup.displayDescription": "图像输出与帧率表现相关设置。",
     "settingsGroup.game": "游戏",
     "settingsGroup.gameDescription": "与游戏操作习惯和显示风格对齐的选项。",
+    "settingsGroup.arknightsOperation": "鹰角操作模式",
+    "settingsGroup.arknightsOperationDescription": "与鹰角操作模式附加行为相关的选项。",
     "settingsGroup.shortcuts": "快捷键",
     "settingsGroup.shortcutsDescription": "编辑当前可自定义的快捷键设置。",
     "settingsGroup.other": "其他",
@@ -294,6 +302,10 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.frameRateLimitDescription": "设置渲染帧率上限。",
     "settingsField.arknightsOperationMode": "鹰角网络操作模式",
     "settingsField.arknightsOperationModeDescription": "使用和游戏内一致的操作模式和快捷键；当前版本暂不可修改。",
+    "settingsField.arknightsImmediateMove": "立即移动",
+    "settingsField.arknightsImmediateMoveDescription": "从一个已选择的设备拖动时，立即触发移动。",
+    "settingsField.arknightsImmediateMarquee": "立即框选",
+    "settingsField.arknightsImmediateMarqueeDescription": "鼠标从画布空白处开始拖动时，立即开始框选，这会同时打开立即移动，并使左键不能再拖动画布。（触控模式下无效）",
     "settingsField.arknightsConfirmShortcut": "部署确认快捷键",
     "settingsField.arknightsConfirmShortcutDescription": "当前为占位快捷键，尚未接入功能；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.arknightsCancelShortcut": "部署取消快捷键",
@@ -445,6 +457,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsGroup.displayDescription": "Rendering and frame rate related options.",
     "settingsGroup.game": "Game",
     "settingsGroup.gameDescription": "Options that align controls and icon style with the game.",
+    "settingsGroup.arknightsOperation": "Arknights Operation",
+    "settingsGroup.arknightsOperationDescription": "Options for additional behaviors under Arknights operation mode.",
     "settingsGroup.shortcuts": "Keybindings",
     "settingsGroup.shortcutsDescription": "Edit the shortcut settings that are currently customizable.",
     "settingsGroup.other": "Other",
@@ -457,6 +471,10 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.frameRateLimitDescription": "Set the render frame rate cap.",
     "settingsField.arknightsOperationMode": "Arknights Operation Mode",
     "settingsField.arknightsOperationModeDescription": "Use the same operation mode and shortcuts as the game; this setting is currently unavailable.",
+    "settingsField.arknightsImmediateMove": "Immediate Move",
+    "settingsField.arknightsImmediateMoveDescription": "Immediately trigger move when dragging from a selected device.",
+    "settingsField.arknightsImmediateMarquee": "Immediate Marquee",
+    "settingsField.arknightsImmediateMarqueeDescription": "Immediately start marquee selection when dragging from empty canvas space. This also turns on immediate move and prevents left mouse dragging from panning the canvas. No effect in touch mode.",
     "settingsField.arknightsConfirmShortcut": "Deploy Confirm Shortcut",
     "settingsField.arknightsConfirmShortcutDescription": "Placeholder shortcut only; it is not wired yet and is editable only when Arknights Operation Mode is off.",
     "settingsField.arknightsCancelShortcut": "Deploy Cancel Shortcut",

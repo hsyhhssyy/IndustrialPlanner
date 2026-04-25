@@ -14,6 +14,17 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
         return { status: "ignored" };
       }
 
+      const selectEntity = (entityId: string) => {
+        if (!editor.state.collections.selection.contains(entityId)) {
+          editor.actions.clearCollection(EntityCollectionType.selection);
+        }
+
+        editor.actions.addToCollection({
+          collectionType: EntityCollectionType.selection,
+          entityId,
+        });
+      };
+
       switch (event.type) {
         case "mouse tap":
           if (event.button === 2) {
@@ -25,10 +36,7 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
             return { status: "ignored" };
           }
 
-          editor.actions.addToCollection({
-            collectionType: EntityCollectionType.selection,
-            entityId: event.pointerEntity.id,
-          });
+          selectEntity(event.pointerEntity.id);
           return { status: "handled" };
 
         case "touch tap":
@@ -36,10 +44,7 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
             return { status: "ignored" };
           }
 
-          editor.actions.addToCollection({
-            collectionType: EntityCollectionType.selection,
-            entityId: event.pointerEntity.id,
-          });
+          selectEntity(event.pointerEntity.id);
           return { status: "handled" };
 
         default:

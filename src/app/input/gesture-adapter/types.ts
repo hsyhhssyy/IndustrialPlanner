@@ -63,7 +63,11 @@ interface GestureEventBase {
   readonly sourceEvent: unknown;
 }
 
-export interface MouseDragStartGestureEvent extends GestureEventBase {
+interface GestureDragEventBase extends GestureEventBase {
+  payload?: unknown | null;
+}
+
+export interface MouseDragStartGestureEvent extends GestureDragEventBase {
   readonly type: "mouse dragstart";
   readonly originButton: number;
   readonly button: number;
@@ -74,7 +78,7 @@ export interface MouseDragStartGestureEvent extends GestureEventBase {
   readonly pointerEntity: WorldEntity | null;
 }
 
-export interface MouseDragMoveGestureEvent extends GestureEventBase {
+export interface MouseDragMoveGestureEvent extends GestureDragEventBase {
   readonly type: "mouse dragmove";
   readonly originButton: number;
   readonly buttons: number;
@@ -83,7 +87,7 @@ export interface MouseDragMoveGestureEvent extends GestureEventBase {
   readonly longPress: boolean;
 }
 
-export interface MouseDragEndGestureEvent extends GestureEventBase {
+export interface MouseDragEndGestureEvent extends GestureDragEventBase {
   readonly type: "mouse dragend";
   readonly originButton: number;
   readonly releaseButton: number;
@@ -118,7 +122,7 @@ export interface MouseMoveGestureEvent extends GestureEventBase {
   readonly delta: GestureDelta;
 }
 
-export interface TouchDragStartGestureEvent extends GestureEventBase {
+export interface TouchDragStartGestureEvent extends GestureDragEventBase {
   readonly type: "touch dragstart";
   readonly primaryId: number;
   readonly position: GesturePosition;
@@ -128,7 +132,7 @@ export interface TouchDragStartGestureEvent extends GestureEventBase {
   readonly pointerEntity: WorldEntity | null;
 }
 
-export interface TouchDragMoveGestureEvent extends GestureEventBase {
+export interface TouchDragMoveGestureEvent extends GestureDragEventBase {
   readonly type: "touch dragmove";
   readonly primaryId: number;
   readonly position: GesturePosition;
@@ -137,7 +141,7 @@ export interface TouchDragMoveGestureEvent extends GestureEventBase {
   readonly longPress: boolean;
 }
 
-export interface TouchDragEndGestureEvent extends GestureEventBase {
+export interface TouchDragEndGestureEvent extends GestureDragEventBase {
   readonly type: "touch dragend";
   readonly primaryId: number;
   readonly position: GesturePosition;

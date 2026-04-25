@@ -69,6 +69,42 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.hypergryphOperationMode = value;
         }),
       },
+      "game-arknights-immediate-move": {
+        readValue: () => appHost.state.settings.hypergryphImmediateMove,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.hypergryphImmediateMove === value) {
+            return;
+          }
+
+          appHost.internalState.settings.hypergryphImmediateMove = value;
+        }),
+      },
+      "game-arknights-immediate-marquee": {
+        readValue: () => appHost.state.settings.hypergryphImmediateMarquee,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          const nextImmediateMove = value
+            ? true
+            : appHost.internalState.settings.hypergryphImmediateMove;
+
+          if (
+            appHost.internalState.settings.hypergryphImmediateMarquee === value
+            && appHost.internalState.settings.hypergryphImmediateMove === nextImmediateMove
+          ) {
+            return;
+          }
+
+          appHost.internalState.settings.hypergryphImmediateMarquee = value;
+          appHost.internalState.settings.hypergryphImmediateMove = nextImmediateMove;
+        }),
+      },
     },
   }));
   const leftDockOpen = appHost.state.workbench.leftDockOpen;

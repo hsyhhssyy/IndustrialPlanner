@@ -32,9 +32,8 @@ import {
 
 const WORLD_GRID_LINE_ALPHA = 0.12
 const WORLD_GRID_LINE_WIDTH = 1
-const WORLD_ENTITY_SELECTION_STROKE_COLOR = 0xffa500
-const WORLD_ENTITY_SELECTION_STROKE_WIDTH = 2
-const WORLD_ENTITY_SELECTION_STROKE_INSET = 1
+const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
+const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
 
 const GENERIC_DEVICE_SPRITE_ASSET_IDS = new Set<string>([
   "item_log_connector",
@@ -423,6 +422,8 @@ function syncWorldEntitySprites(options: {
       },
       gridSize: options.viewportState.gridSize,
     }),
+    theme: options.theme,
+    gridSize: options.viewportState.gridSize,
   })
 
   const nextEntityIds = new Set<string>()
@@ -480,32 +481,63 @@ function syncWorldEntitySprites(options: {
 function syncWorldEntitySelectionOverlay(options: {
   overlay: Graphics;
   layouts: readonly RenderSpriteLayout[];
+  theme: AppTheme;
+  gridSize: number;
 }): void {
   options.overlay.clear()
+  const strokeStyle = resolveWorldEntitySelectionStrokeStyle({
+    theme: options.theme,
+    gridSize: options.gridSize,
+  })
 
   for (const layout of options.layouts) {
-    const innerRect = resolveWorldEntitySelectionInnerRect(layout)
+    const innerRect = resolveWorldEntitySelectionInnerRect(layout, strokeStyle.width)
     if (innerRect === null) {
       continue
     }
 
     options.overlay
       .rect(innerRect.x, innerRect.y, innerRect.width, innerRect.height)
-      .stroke({
-        width: WORLD_ENTITY_SELECTION_STROKE_WIDTH,
-        color: WORLD_ENTITY_SELECTION_STROKE_COLOR,
-      })
+      .stroke(strokeStyle)
   }
 }
 
-function resolveWorldEntitySelectionInnerRect(layout: RenderSpriteLayout): {
+export function resolveWorldEntitySelectionStrokeStyle(options: {
+  theme: AppTheme;
+  gridSize: number;
+}): {
+  width: number;
+  color: number;
+} {
+  return {
+    width: resolveWorldEntitySelectionStrokeWidth(options.gridSize),
+    color: resolveAppThemeColorNumber(
+      options.theme,
+      options.theme.renderer.worldEntitySelectionStrokeColorKey,
+    ),
+  }
+}
+
+export function resolveWorldEntitySelectionStrokeWidth(gridSize: number): number {
+  const width = resolveWorldGridCellPixelSize(gridSize) / 8
+
+  return Math.max(
+    WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH,
+    Math.min(WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH, width),
+  )
+}
+
+function resolveWorldEntitySelectionInnerRect(
+  layout: RenderSpriteLayout,
+  strokeWidth: number,
+): {
   x: number;
   y: number;
   width: number;
   height: number;
 } | null {
   const inset = Math.min(
-    WORLD_ENTITY_SELECTION_STROKE_INSET,
+    strokeWidth / 2,
     layout.width / 2,
     layout.height / 2,
   )

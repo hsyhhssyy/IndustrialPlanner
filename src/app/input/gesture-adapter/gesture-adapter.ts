@@ -59,6 +59,7 @@ interface MouseSession {
   longPressTimer: TimerHandle | null;
   longPress: boolean;
   state: "pressed" | "dragging";
+  payload: unknown | null;
 }
 
 interface LongPressTrackingSession {
@@ -87,6 +88,7 @@ interface TouchSession {
   longPressIndicatorTimer: TimerHandle | null;
   longPressTimer: TimerHandle | null;
   longPress: boolean;
+  payload: unknown | null;
 }
 
 interface MultiTouchSnapshot {
@@ -366,6 +368,7 @@ export class GestureAdapter {
       longPressTimer: null,
       longPress: false,
       state: "pressed",
+      payload: null,
     };
     this.mouseSession = session;
     this.scheduleLongPressTimers(session, {
@@ -418,6 +421,7 @@ export class GestureAdapter {
       this.dispatchGesture({
         type: "mouse dragstart",
         gestureId: session.gestureId,
+        payload: session.payload,
         originButton: session.originButton,
         button: event.button,
         buttons: event.buttons,
@@ -436,6 +440,7 @@ export class GestureAdapter {
     this.dispatchGesture({
       type: "mouse dragmove",
       gestureId: session.gestureId,
+      payload: session.payload,
       originButton: session.originButton,
       buttons: event.buttons,
       position,
@@ -461,6 +466,7 @@ export class GestureAdapter {
       this.dispatchGesture({
         type: "mouse dragend",
         gestureId: session.gestureId,
+        payload: session.payload,
         originButton: session.originButton,
         releaseButton: event.button,
         button: event.button,
@@ -510,6 +516,7 @@ export class GestureAdapter {
         longPressIndicatorTimer: null,
         longPressTimer: null,
         longPress: false,
+        payload: null,
       };
       this.touchSession = session;
       this.scheduleLongPressTimers(session, {
@@ -592,6 +599,7 @@ export class GestureAdapter {
       this.dispatchGesture({
         type: "touch dragstart",
         gestureId: session.gestureId,
+        payload: session.payload,
         primaryId: session.primaryId,
         position,
         startPosition: session.startPosition,
@@ -613,6 +621,7 @@ export class GestureAdapter {
     this.dispatchGesture({
       type: "touch dragmove",
       gestureId: session.gestureId,
+      payload: session.payload,
       primaryId: session.primaryId,
       position,
       delta,
@@ -667,6 +676,7 @@ export class GestureAdapter {
       this.dispatchGesture({
         type: "touch dragend",
         gestureId: session.gestureId,
+        payload: session.payload,
         primaryId: session.primaryId,
         position: getPosition(event),
         reason,
@@ -938,6 +948,21 @@ export class GestureAdapter {
     for (const listener of this.gestureListeners) {
       listener(event);
     }
+
+    this.persistDragPayload(event);
+  }
+
+  private persistDragPayload(event: GestureEvent): void {
+    if (isMouseDragGestureEvent(event)) {
+      if (this.mouseSession?.gestureId === event.gestureId) {
+        this.mouseSession.payload = event.payload ?? null;
+      }
+      return;
+    }
+
+    if (isTouchDragGestureEvent(event) && this.touchSession?.gestureId === event.gestureId) {
+      this.touchSession.payload = event.payload ?? null;
+    }
   }
 
   private nextGestureId(prefix: string): string {
@@ -960,6 +985,26 @@ function getPointerKind(pointerType: string): "mouse" | "touch" | "unknown" {
   }
 
   return "unknown";
+}
+
+function isMouseDragGestureEvent(
+  event: GestureEvent,
+): event is Extract<GestureEvent, { type: "mouse dragstart" | "mouse dragmove" | "mouse dragend" }> {
+  return (
+    event.type === "mouse dragstart" ||
+    event.type === "mouse dragmove" ||
+    event.type === "mouse dragend"
+  );
+}
+
+function isTouchDragGestureEvent(
+  event: GestureEvent,
+): event is Extract<GestureEvent, { type: "touch dragstart" | "touch dragmove" | "touch dragend" }> {
+  return (
+    event.type === "touch dragstart" ||
+    event.type === "touch dragmove" ||
+    event.type === "touch dragend"
+  );
 }
 
 function getPosition(event: { readonly clientX: number; readonly clientY: number }): GesturePosition {

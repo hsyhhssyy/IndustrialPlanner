@@ -340,6 +340,62 @@ describe("createEditorHost", () => {
     expect(editorHost.state.collections.preview.contains("preview-only")).toBe(false);
   });
 
+  it("moves entity collections by grid point vector through editor actions", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+    const draftOnlyEntity: WorldEntity = {
+      id: "draft-only",
+      definitionId: "belt_straight_1x1",
+      position: { x: 9, y: 9 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    };
+    const documentShadowDraft: WorldEntity = {
+      id: "dummy-entity-1",
+      definitionId: "belt_straight_1x1",
+      position: { x: 30, y: 30 },
+      rotation: 0,
+      config: {},
+      tags: ["draft-shadow"],
+    };
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.drafts = [draftOnlyEntity, documentShadowDraft];
+    editorHost.internalState.collections.selection.replace([
+      "dummy-entity-1",
+      "draft-only",
+      "missing-entity",
+    ]);
+
+    editorHost.actions.moveCollectionTo({
+      collectionType: EntityCollectionType.selection,
+      startGridPoint: { x: 2, y: 2 },
+      endGridPoint: { x: 5, y: 0 },
+    });
+
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-1"]?.position).toEqual({
+      x: 15,
+      y: 6,
+    });
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]?.position).toEqual({
+      x: 4,
+      y: 4,
+    });
+    expect(editorHost.internalState.drafts.find((entity) => entity.id === "draft-only")?.position).toEqual({
+      x: 12,
+      y: 7,
+    });
+    expect(
+      editorHost.internalState.drafts.find((entity) => entity.tags.includes("draft-shadow"))
+        ?.position,
+    ).toEqual({
+      x: 30,
+      y: 30,
+    });
+  });
+
   it("computes grid rects for selected and preview entity collections", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -445,6 +501,24 @@ describe("createEditorHost", () => {
       width: 16,
       height: 16,
     });
+  });
+
+  it("finds the world grid cell for a client pixle point", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+
+    const gridCell = editorHost.queries.findGridCellForClientPixlePoint(
+      resolveClientPixelPointForGridCell(editorHost, { x: 4, y: 4 }),
+    );
+
+    expect(gridCell).toEqual({ x: 4, y: 4 });
   });
 
   it("uses rotated footprint when resolving entity hits from client pixel points", () => {

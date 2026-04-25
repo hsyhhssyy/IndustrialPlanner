@@ -7,6 +7,8 @@ import {
   applyViewportSize,
   resolveGenericDeviceSpriteTexturePath,
   resolveWorldEntitySelectionOverlayLayouts,
+  resolveWorldEntitySelectionStrokeStyle,
+  resolveWorldEntitySelectionStrokeWidth,
   resolveWorldEntitySpriteLayout,
   resolveWorldGridStrokeStyle,
   resolveWorldGridLineAxes,
@@ -240,5 +242,36 @@ describe("resolveWorldGridStrokeStyle", () => {
 
   it("resolves the editor grid color from the current theme renderer key", () => {
     expect(resolveWorldGridStrokeStyle(AYU_LIGHT_THEME).color).toBe(0x5c6773)
+  })
+})
+
+describe("resolveWorldEntitySelectionStrokeWidth", () => {
+  it("scales with zoom and clamps to the configured range", () => {
+    expect(resolveWorldEntitySelectionStrokeWidth(0.25)).toBe(1)
+    expect(resolveWorldEntitySelectionStrokeWidth(1)).toBe(2)
+    expect(resolveWorldEntitySelectionStrokeWidth(3)).toBe(4)
+  })
+})
+
+describe("resolveWorldEntitySelectionStrokeStyle", () => {
+  it("reads the selection outline color from the theme renderer key", () => {
+    expect(
+      resolveWorldEntitySelectionStrokeStyle({
+        theme: AYU_DARK_THEME,
+        gridSize: 1,
+      }),
+    ).toEqual({
+      width: 2,
+      color: 0xffa500,
+    })
+  })
+
+  it("keeps the light theme selection outline on the same orange token", () => {
+    expect(
+      resolveWorldEntitySelectionStrokeStyle({
+        theme: AYU_LIGHT_THEME,
+        gridSize: 2,
+      }).color,
+    ).toBe(0xffa500)
   })
 })

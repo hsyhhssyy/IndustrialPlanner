@@ -5,7 +5,10 @@ import type {
 	ClientPixelPoint,
 	ClientPixelRect,
 } from "../types/client-pixel";
-import type { GridRect } from "../types/grid";
+import type {
+	GridPoint,
+	GridRect,
+} from "../types/grid";
 
 export interface EditorQuery {
 	getEntityById(entityId: string): WorldEntity | null;
@@ -16,6 +19,9 @@ export interface EditorQuery {
 	findEntityCollectionGridRect(
 		collectionType: EntityCollectionType,
 	): GridRect | null;
+	findGridCellForClientPixlePoint(
+		clientPixelPoint: ClientPixelPoint,
+	): GridPoint | null;
 	findClientRectForGridCell(gridCell: {
 		x: number;
 		y: number;

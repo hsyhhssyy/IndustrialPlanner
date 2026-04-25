@@ -65,6 +65,7 @@ export const APP_THEME_COLOR_KEYS = [
   "canvas-action-cancel",
   "canvas-action-confirm",
   "renderer-grid-line",
+  "renderer-selection-stroke",
   "renderer-belt-tile-fill",
   "renderer-belt-tile-stroke",
   "renderer-belt-track",
@@ -76,6 +77,7 @@ export type AppThemeColorMap = Readonly<Record<AppThemeColorKey, string>>;
 
 export interface AppThemeRendererColorKeys {
   readonly worldGridLineColorKey: AppThemeColorKey;
+  readonly worldEntitySelectionStrokeColorKey: AppThemeColorKey;
   readonly beltTileFillColorKey: AppThemeColorKey;
   readonly beltTileStrokeColorKey: AppThemeColorKey;
   readonly beltTrackColorKey: AppThemeColorKey;

@@ -612,6 +612,12 @@ describe("WorkbenchApp", () => {
     const operationModeToggle = container.querySelector(
       'input[name="game-arknights-operation-mode"]',
     ) as HTMLInputElement | null;
+    const immediateMoveToggle = container.querySelector(
+      'input[name="game-arknights-immediate-move"]',
+    ) as HTMLInputElement | null;
+    const immediateMarqueeToggle = container.querySelector(
+      'input[name="game-arknights-immediate-marquee"]',
+    ) as HTMLInputElement | null;
     const debugToggle = container.querySelector(
       'input[name="other-debug-mode"]',
     ) as HTMLInputElement | null;
@@ -625,11 +631,12 @@ describe("WorkbenchApp", () => {
     const themeOptionLabels = Array.from(themeSelect?.options ?? []).map((option) => option.textContent);
 
     expect(dialog).not.toBeNull();
-    expect(groupTitles).toEqual(["系统", "显示", "游戏", "快捷键", "其他"]);
+    expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他"]);
     expect(groupDescriptions).toEqual([
       "语言、主题与全局界面偏好。",
       "图像输出与帧率表现相关设置。",
       "与游戏操作习惯和显示风格对齐的选项。",
+      "与鹰角操作模式附加行为相关的选项。",
       "编辑当前可自定义的快捷键设置。",
       "调试和附加能力开关。",
     ]);
@@ -639,6 +646,10 @@ describe("WorkbenchApp", () => {
     expect(themeSelect?.value).toBe("ayu-light");
     expect(operationModeToggle?.checked).toBe(false);
     expect(operationModeToggle?.disabled).toBe(true);
+    expect(immediateMoveToggle?.checked).toBe(true);
+    expect(immediateMoveToggle?.disabled).toBe(true);
+    expect(immediateMarqueeToggle?.checked).toBe(false);
+    expect(immediateMarqueeToggle?.disabled).toBe(true);
     expect(debugToggle?.checked).toBe(true);
 
     const closeButton = container.querySelector(
@@ -698,6 +709,8 @@ describe("WorkbenchApp", () => {
         locale: "en-US",
         themeId: "ayu-light",
         hypergryphOperationMode: true,
+        hypergryphImmediateMove: true,
+        hypergryphImmediateMarquee: false,
       }),
     );
   });
@@ -744,6 +757,72 @@ describe("WorkbenchApp", () => {
         locale: "zh-CN",
         themeId: "ayu-dark",
         hypergryphOperationMode: true,
+        hypergryphImmediateMove: true,
+        hypergryphImmediateMarquee: false,
+      }),
+    );
+  });
+
+  it("writes immediate marquee changes into AppSettings and forces immediate move on", () => {
+    localStorage.setItem(
+      APP_SETTINGS_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        locale: "zh-CN",
+        themeId: "ayu-light",
+        hypergryphOperationMode: true,
+        hypergryphImmediateMove: false,
+        hypergryphImmediateMarquee: false,
+      }),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const settingsButton = container.querySelector(
+      ".toolbar-rail-utility .rail-button:last-child",
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      settingsButton?.click();
+    });
+
+    const immediateMoveToggle = container.querySelector(
+      'input[name="game-arknights-immediate-move"]',
+    ) as HTMLInputElement | null;
+    const immediateMarqueeToggle = container.querySelector(
+      'input[name="game-arknights-immediate-marquee"]',
+    ) as HTMLInputElement | null;
+
+    expect(immediateMoveToggle).not.toBeNull();
+    expect(immediateMarqueeToggle).not.toBeNull();
+    expect(immediateMoveToggle?.checked).toBe(false);
+    expect(immediateMoveToggle?.disabled).toBe(false);
+    expect(immediateMarqueeToggle?.checked).toBe(false);
+    expect(immediateMarqueeToggle?.disabled).toBe(false);
+
+    act(() => {
+      if (immediateMarqueeToggle === null) {
+        return;
+      }
+
+      immediateMarqueeToggle.click();
+    });
+
+    expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(true);
+    expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
+    expect(immediateMoveToggle?.checked).toBe(true);
+    expect(immediateMarqueeToggle?.checked).toBe(true);
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        locale: "zh-CN",
+        themeId: "ayu-light",
+        hypergryphOperationMode: true,
+        hypergryphImmediateMove: true,
+        hypergryphImmediateMarquee: true,
       }),
     );
   });
@@ -776,6 +855,12 @@ describe("WorkbenchApp", () => {
     const operationModeToggle = container.querySelector(
       'input[name="game-arknights-operation-mode"]',
     ) as HTMLInputElement | null;
+    const immediateMoveToggle = container.querySelector(
+      'input[name="game-arknights-immediate-move"]',
+    ) as HTMLInputElement | null;
+    const immediateMarqueeToggle = container.querySelector(
+      'input[name="game-arknights-immediate-marquee"]',
+    ) as HTMLInputElement | null;
     const confirmShortcutButton = container.querySelector(
       'button[data-setting-id="game-arknights-confirm-shortcut"]',
     ) as HTMLButtonElement | null;
@@ -784,10 +869,16 @@ describe("WorkbenchApp", () => {
     ) as HTMLButtonElement | null;
 
     expect(operationModeToggle).not.toBeNull();
+    expect(immediateMoveToggle).not.toBeNull();
+    expect(immediateMarqueeToggle).not.toBeNull();
     expect(confirmShortcutButton).not.toBeNull();
     expect(cancelShortcutButton).not.toBeNull();
-  expect(operationModeToggle?.checked).toBe(false);
-  expect(operationModeToggle?.disabled).toBe(true);
+    expect(operationModeToggle?.checked).toBe(false);
+    expect(operationModeToggle?.disabled).toBe(true);
+    expect(immediateMoveToggle?.checked).toBe(true);
+    expect(immediateMoveToggle?.disabled).toBe(true);
+    expect(immediateMarqueeToggle?.checked).toBe(false);
+    expect(immediateMarqueeToggle?.disabled).toBe(true);
     expect(confirmShortcutButton?.disabled).toBe(false);
     expect(confirmShortcutButton?.textContent).toBe("F");
 
@@ -858,6 +949,6 @@ describe("WorkbenchApp", () => {
 
     expect(dialog).not.toBeNull();
     expect(container.querySelector(".settings-dialog-sidebar")).toBeNull();
-    expect(groupTitles).toEqual(["系统", "显示", "游戏", "快捷键", "其他"]);
+    expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他"]);
   });
 });

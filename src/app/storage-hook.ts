@@ -69,5 +69,11 @@ function normalizePersistedAppSettings(
     hypergryphOperationMode: typeof persistedAppSettings.hypergryphOperationMode === "boolean"
       ? persistedAppSettings.hypergryphOperationMode
       : fallback.hypergryphOperationMode,
+    hypergryphImmediateMove: typeof persistedAppSettings.hypergryphImmediateMove === "boolean"
+      ? persistedAppSettings.hypergryphImmediateMove
+      : fallback.hypergryphImmediateMove,
+    hypergryphImmediateMarquee: typeof persistedAppSettings.hypergryphImmediateMarquee === "boolean"
+      ? persistedAppSettings.hypergryphImmediateMarquee
+      : fallback.hypergryphImmediateMarquee,
   };
 }

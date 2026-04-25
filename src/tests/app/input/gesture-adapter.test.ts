@@ -163,6 +163,86 @@ describe("GestureAdapter", () => {
     ]);
   });
 
+  it("persists mouse drag payload across drag events and drops it after dragend", () => {
+    const adapter = createGestureAdapter();
+    const startPayloads: Array<unknown | null | undefined> = [];
+    const movePayloads: Array<unknown | null | undefined> = [];
+    const endPayloads: Array<unknown | null | undefined> = [];
+
+    adapter.subscribe((event) => {
+      if (event.type === "mouse dragstart") {
+        startPayloads.push(event.payload);
+        if (startPayloads.length === 1) {
+          event.payload = { tag: "mouse-payload" };
+        }
+        return;
+      }
+
+      if (event.type === "mouse dragmove") {
+        movePayloads.push(event.payload);
+        event.payload = null;
+        return;
+      }
+
+      if (event.type === "mouse dragend") {
+        endPayloads.push(event.payload);
+        event.payload = { tag: "drop-after-end" };
+      }
+    });
+
+    adapter.handlePointerDown(pointerEvent({ pointerId: 31, clientX: 10, clientY: 10, buttons: 1 }));
+    adapter.handlePointerMove(pointerEvent({ pointerId: 31, clientX: 14, clientY: 10, buttons: 1 }));
+    adapter.handlePointerMove(pointerEvent({ pointerId: 31, clientX: 18, clientY: 10, buttons: 1 }));
+    adapter.handlePointerUp(pointerEvent({ pointerId: 31, clientX: 18, clientY: 10, buttons: 0 }));
+
+    adapter.handlePointerDown(pointerEvent({ pointerId: 32, clientX: 30, clientY: 30, buttons: 1 }));
+    adapter.handlePointerMove(pointerEvent({ pointerId: 32, clientX: 34, clientY: 30, buttons: 1 }));
+
+    expect(startPayloads).toEqual([null, null]);
+    expect(movePayloads).toEqual([{ tag: "mouse-payload" }]);
+    expect(endPayloads).toEqual([null]);
+  });
+
+  it("persists touch drag payload across drag events and drops it after dragend", () => {
+    const adapter = createGestureAdapter();
+    const startPayloads: Array<unknown | null | undefined> = [];
+    const movePayloads: Array<unknown | null | undefined> = [];
+    const endPayloads: Array<unknown | null | undefined> = [];
+
+    adapter.subscribe((event) => {
+      if (event.type === "touch dragstart") {
+        startPayloads.push(event.payload);
+        if (startPayloads.length === 1) {
+          event.payload = { tag: "touch-payload" };
+        }
+        return;
+      }
+
+      if (event.type === "touch dragmove") {
+        movePayloads.push(event.payload);
+        event.payload = null;
+        return;
+      }
+
+      if (event.type === "touch dragend") {
+        endPayloads.push(event.payload);
+        event.payload = { tag: "drop-after-end" };
+      }
+    });
+
+    adapter.handlePointerDown(touchEvent(41, 10, 10));
+    adapter.handlePointerMove(touchEvent(41, 22, 10));
+    adapter.handlePointerMove(touchEvent(41, 28, 10));
+    adapter.handlePointerUp(touchEvent(41, 28, 10));
+
+    adapter.handlePointerDown(touchEvent(42, 30, 30));
+    adapter.handlePointerMove(touchEvent(42, 42, 30));
+
+    expect(startPayloads).toEqual([null, null]);
+    expect(movePayloads).toEqual([{ tag: "touch-payload" }]);
+    expect(endPayloads).toEqual([null]);
+  });
+
   it("marks mouse tap and drag with longPress after a held press and exposes the indicator state", () => {
     const adapter = createGestureAdapter();
     const events: GestureEvent[] = [];

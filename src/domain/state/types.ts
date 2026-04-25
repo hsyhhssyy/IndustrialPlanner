@@ -51,6 +51,8 @@ export interface AppSettings {
   readonly locale: AppLocale;
   readonly themeId: AppThemeId;
   readonly hypergryphOperationMode: boolean;
+  readonly hypergryphImmediateMove: boolean;
+  readonly hypergryphImmediateMarquee: boolean;
 }
 
 export interface WorkbenchState {

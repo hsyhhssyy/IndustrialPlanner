@@ -5,7 +5,7 @@ import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
 export const USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY = "v3-user-settings-dialog";
 
-export type SettingsGroupId = "system" | "display" | "game" | "shortcuts" | "other";
+export type SettingsGroupId = "system" | "display" | "game" | "arknights-operation" | "shortcuts" | "other";
 
 export type WorkbenchSettingControlValue = string | number | boolean;
 
@@ -146,6 +146,35 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: "settingsField.useSimplifiedDeviceIcons",
         descriptionKey: "settingsField.useSimplifiedDeviceIconsDescription",
         defaultValue: false,
+      },
+    ],
+  },
+  {
+    id: "arknights-operation",
+    labelKey: "settingsGroup.arknightsOperation",
+    descriptionKey: "settingsGroup.arknightsOperationDescription",
+    items: [
+      {
+        id: "game-arknights-immediate-move",
+        kind: "switch",
+        labelKey: "settingsField.arknightsImmediateMove",
+        descriptionKey: "settingsField.arknightsImmediateMoveDescription",
+        defaultValue: true,
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: true,
+        },
+      },
+      {
+        id: "game-arknights-immediate-marquee",
+        kind: "switch",
+        labelKey: "settingsField.arknightsImmediateMarquee",
+        descriptionKey: "settingsField.arknightsImmediateMarqueeDescription",
+        defaultValue: false,
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: true,
+        },
       },
     ],
   },
