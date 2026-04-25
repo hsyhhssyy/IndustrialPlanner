@@ -65,6 +65,7 @@ export const BottomStatusBar = observer(function BottomStatusBar({ appHost }: { 
     workbench: { leftDockOpen, rightDockOpen },
     settings,
   } = appHost.state;
+  const activeTool = appHost.internalState.runtime.activeTool;
   const visibleViews = [
     leftDockOpen ? t("view.library") : null,
     rightDockOpen ? t("view.inspector") : null,
@@ -78,7 +79,7 @@ export const BottomStatusBar = observer(function BottomStatusBar({ appHost }: { 
   return (
     <footer className="status-bar">
       <div className="status-bar-group status-bar-group-left">
-        <span className="status-chip status-chip-primary">{t("status.ready")}</span>
+        <span className="status-chip status-chip-primary">{`工具:${activeTool}`}</span>
         <span className="status-bar-copyright">{t("statusBar.copyright")}</span>
         <span className="status-chip">
           {`${t("statusBar.locale")}: ${t(getLocaleLabelKey(settings.locale))}`}

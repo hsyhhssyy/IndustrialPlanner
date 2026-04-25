@@ -9,7 +9,6 @@ import { TopBar } from "@/app/app-shell/components/top-bar";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
-import { resolveScreenProfileFromWindow } from "@/shared/browser/screen-profile";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -223,7 +222,7 @@ describe("TopBar", () => {
     ).toBe("expand");
   });
 
-  it("shows the current theme and does not render a theme toggle button", () => {
+  it("removes all top-right status text and keeps only control buttons", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -231,39 +230,15 @@ describe("TopBar", () => {
       root.render(<TopBar appHost={appHost} />);
     });
 
-    expect(appHost.state.theme.name).toBe("Ayu Light");
-    expect(container.textContent).toContain("主题: Ayu Light");
+    expect(container.querySelectorAll(".top-bar-metric")).toHaveLength(0);
+    expect(container.textContent).not.toContain("语言:");
+    expect(container.textContent).not.toContain("主题:");
+    expect(container.textContent).not.toContain("设备:");
+    expect(container.textContent).not.toContain("屏幕:");
+    expect(
+      Array.from(container.querySelectorAll(".top-bar-controls button")),
+    ).toHaveLength(1);
     expect(container.querySelector(".top-bar-theme-button")).toBeNull();
-  });
-
-  it("shows device class and screen shape from public UI state", () => {
-    const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
-
-    act(() => {
-      root.render(<TopBar appHost={appHost} />);
-    });
-
-    expect(container.textContent).toContain("设备: 电脑");
-    expect(container.textContent).toContain("屏幕: 横屏");
-
-    coarsePointer = true;
-    hoverNone = true;
-
-    setViewport({
-      width: 820,
-      height: 1180,
-      userAgent:
-        "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
-      maxTouchPoints: 5,
-    });
-
-    act(() => {
-      appHost.internalActions.setScreenProfile(resolveScreenProfileFromWindow());
-    });
-
-    expect(container.textContent).toContain("设备: 平板");
-    expect(container.textContent).toContain("屏幕: 竖屏");
   });
 
   it("shows a collapse button in phone landscape and toggles the collapsed header state", () => {

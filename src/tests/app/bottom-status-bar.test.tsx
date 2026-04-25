@@ -119,10 +119,16 @@ describe("BottomStatusBar", () => {
       throw new Error("Bottom status bar groups were not rendered.");
     }
 
-    expect(leftGroup.textContent).toContain("Stage1 工作台脚手架已就绪。");
+    expect(leftGroup.textContent).toContain("工具:select");
     expect(leftGroup.textContent).toContain("集成工业仿真");
     expect(leftGroup.textContent).toContain("语言: 中文");
     expect(leftGroup.textContent).toContain("当前视图: 左侧面板 / 右侧面板");
+
+    act(() => {
+      appHost.internalActions.setActiveTool("move");
+    });
+
+    expect(leftGroup.textContent).toContain("工具:move");
 
     const icons = rightGroup.querySelectorAll(".status-bar-icon-chip");
 

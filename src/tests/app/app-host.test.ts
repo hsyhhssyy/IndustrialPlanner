@@ -45,6 +45,7 @@ describe("createAppHost", () => {
     expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.size).toBe(0);
     expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual([
       "hypergryph-gesture-diagnostics",
+      "hypergryph-move-mode-toggle",
       "hypergryph-mouse-viewport-pan",
       "hypergryph-viewport-zoom",
       "hypergryph-select-tool-button",
@@ -603,6 +604,135 @@ describe("createAppHost", () => {
         },
       },
     ]);
+  });
+
+  it("switches the active tool to move on longpress tap over an entity", () => {
+    vi.useFakeTimers();
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+    const entityPoint = resolveClientPixelPointForGridCell(editorHost, { x: 4, y: 4 });
+    const emptyPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
+
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 31,
+      clientX: emptyPoint.x,
+      clientY: emptyPoint.y,
+      buttons: 1,
+    }));
+    vi.advanceTimersByTime(500);
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 31,
+      clientX: emptyPoint.x,
+      clientY: emptyPoint.y,
+      buttons: 0,
+    }));
+
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
+
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 32,
+      clientX: entityPoint.x,
+      clientY: entityPoint.y,
+      buttons: 1,
+    }));
+    vi.advanceTimersByTime(500);
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 32,
+      clientX: entityPoint.x,
+      clientY: entityPoint.y,
+      buttons: 0,
+    }));
+
+    expect(appHost.internalState.runtime.activeTool).toBe("move");
+
+    appHost.internalActions.setActiveTool("select");
+
+    appHost.gestureAdapter.handlePointerDown(touchEvent(33, entityPoint.x, entityPoint.y));
+    vi.advanceTimersByTime(500);
+    appHost.gestureAdapter.handlePointerUp(touchEvent(33, entityPoint.x, entityPoint.y));
+
+    expect(appHost.internalState.runtime.activeTool).toBe("move");
+  });
+
+  it("switches the active tool to move on longpress dragstart over an entity and exits on right tap", () => {
+    vi.useFakeTimers();
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+    const entityPoint = resolveClientPixelPointForGridCell(editorHost, { x: 4, y: 4 });
+    const emptyPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
+
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 34,
+      clientX: emptyPoint.x,
+      clientY: emptyPoint.y,
+      buttons: 1,
+    }));
+    vi.advanceTimersByTime(500);
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 34,
+      clientX: emptyPoint.x + 4,
+      clientY: emptyPoint.y,
+      buttons: 1,
+    }));
+
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
+
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 35,
+      clientX: entityPoint.x,
+      clientY: entityPoint.y,
+      buttons: 1,
+    }));
+    vi.advanceTimersByTime(500);
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 35,
+      clientX: entityPoint.x + 4,
+      clientY: entityPoint.y,
+      buttons: 1,
+    }));
+
+    expect(appHost.internalState.runtime.activeTool).toBe("move");
+
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 36,
+      button: 2,
+      buttons: 2,
+      clientX: entityPoint.x,
+      clientY: entityPoint.y,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 36,
+      button: 2,
+      buttons: 0,
+      clientX: entityPoint.x,
+      clientY: entityPoint.y,
+    }));
+
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
+
+    appHost.gestureAdapter.handlePointerDown(touchEvent(37, entityPoint.x, entityPoint.y));
+    vi.advanceTimersByTime(500);
+    appHost.gestureAdapter.handlePointerMove(touchEvent(37, entityPoint.x + 4, entityPoint.y));
+
+    expect(appHost.internalState.runtime.activeTool).toBe("move");
   });
 
   it("zooms the editor viewport on pinch out and pinch in gestures", () => {
