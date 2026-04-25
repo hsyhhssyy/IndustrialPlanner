@@ -239,6 +239,7 @@ describe("CanvasPanel", () => {
     expect(gestures.map((event) => event.type)).toEqual([
       "mouse dragstart",
       "mouse dragend",
+      "key down",
     ]);
     expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.has("KeyA")).toBe(true);
     expect(container.querySelector(".canvas-gesture-diagnostics")?.textContent).toContain(

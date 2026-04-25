@@ -110,14 +110,79 @@ describe("GestureAdapter", () => {
     expect(events[3]).toMatchObject({
       type: "mouse dragmove",
       delta: { x: 3, y: 5 },
+      longPress: false,
     });
     expect(events[4]).toMatchObject({
       type: "mouse dragend",
       reason: "release",
+      longPress: false,
+    });
+    expect(events[1]).toMatchObject({
+      type: "mouse tap",
+      longPress: false,
     });
   });
 
-  it("uses long press to unlock touch drag and ignores release with no drag move", () => {
+  it("marks mouse tap and drag with longPress after a held press and exposes the indicator state", () => {
+    const adapter = createGestureAdapter();
+    const events: GestureEvent[] = [];
+    adapter.subscribe((event) => events.push(event));
+
+    adapter.handlePointerDown(pointerEvent({ pointerId: 7, clientX: 10, clientY: 10, buttons: 1 }));
+    expect(adapter.getLongPressState().visible).toBe(false);
+
+    vi.advanceTimersByTime(200);
+    expect(adapter.getLongPressState()).toMatchObject({
+      visible: true,
+      position: { x: 10, y: 10 },
+    });
+    expect(adapter.getLongPressState().progress).toBeCloseTo(0.4);
+
+    adapter.handlePointerMove(pointerEvent({ pointerId: 7, clientX: 11, clientY: 10, buttons: 1 }));
+    expect(adapter.getLongPressState().position).toEqual({ x: 11, y: 10 });
+
+    vi.advanceTimersByTime(300);
+    expect(adapter.getLongPressState()).toMatchObject({
+      visible: true,
+      progress: 1,
+    });
+
+    adapter.handlePointerUp(pointerEvent({ pointerId: 7, clientX: 11, clientY: 10, buttons: 0 }));
+
+    expect(events).toMatchObject([
+      {
+        type: "mouse tap",
+        longPress: true,
+      },
+    ]);
+    expect(adapter.getLongPressState().visible).toBe(false);
+
+    adapter.handlePointerDown(pointerEvent({ pointerId: 8, clientX: 20, clientY: 20, buttons: 1 }));
+    vi.advanceTimersByTime(500);
+    adapter.handlePointerMove(pointerEvent({ pointerId: 8, clientX: 24, clientY: 20, buttons: 1 }));
+    adapter.handlePointerMove(pointerEvent({ pointerId: 8, clientX: 27, clientY: 25, buttons: 1 }));
+    adapter.handlePointerUp(pointerEvent({ pointerId: 8, clientX: 27, clientY: 25, buttons: 0 }));
+
+    expect(events.slice(1).map((event) => event.type)).toEqual([
+      "mouse dragstart",
+      "mouse dragmove",
+      "mouse dragend",
+    ]);
+    expect(events[1]).toMatchObject({
+      type: "mouse dragstart",
+      longPress: true,
+    });
+    expect(events[2]).toMatchObject({
+      type: "mouse dragmove",
+      longPress: true,
+    });
+    expect(events[3]).toMatchObject({
+      type: "mouse dragend",
+      longPress: true,
+    });
+  });
+
+  it("uses long press to unlock touch drag and emits a longPress tap on release with no drag move", () => {
     const adapter = createGestureAdapter();
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => events.push(event));
@@ -142,7 +207,12 @@ describe("GestureAdapter", () => {
     });
 
     adapter.handlePointerUp(touchEvent(1, 10, 10));
-    expect(events).toEqual([]);
+    expect(events).toMatchObject([
+      {
+        type: "touch tap",
+        longPress: true,
+      },
+    ]);
 
     adapter.handlePointerDown(touchEvent(2, 30, 30));
     vi.advanceTimersByTime(500);
@@ -151,15 +221,16 @@ describe("GestureAdapter", () => {
     adapter.handlePointerUp(touchEvent(2, 36, 34));
 
     expect(events.map((event) => event.type)).toEqual([
+      "touch tap",
       "touch dragstart",
       "touch dragmove",
       "touch dragend",
     ]);
-    expect(events[0]).toMatchObject({
+    expect(events[1]).toMatchObject({
       type: "touch dragstart",
       longPress: true,
     });
-    expect(events[2]).toMatchObject({
+    expect(events[3]).toMatchObject({
       type: "touch dragend",
       reason: "release",
       longPress: true,
@@ -249,6 +320,8 @@ describe("GestureAdapter", () => {
 
   it("does not show the long press indicator for a quick tap", () => {
     const adapter = createGestureAdapter();
+    const events: GestureEvent[] = [];
+    adapter.subscribe((event) => events.push(event));
 
     adapter.handlePointerDown(touchEvent(1, 8, 8));
     vi.advanceTimersByTime(150);
@@ -256,6 +329,12 @@ describe("GestureAdapter", () => {
     vi.advanceTimersByTime(500);
 
     expect(adapter.getLongPressState().visible).toBe(false);
+    expect(events).toMatchObject([
+      {
+        type: "touch tap",
+        longPress: false,
+      },
+    ]);
   });
 
   it("normalizes wheel direction with accumulation", () => {

@@ -66,6 +66,7 @@ export interface MouseDragStartGestureEvent extends GestureEventBase {
   readonly buttons: number;
   readonly position: GesturePosition;
   readonly startPosition: GesturePosition;
+  readonly longPress: boolean;
 }
 
 export interface MouseDragMoveGestureEvent extends GestureEventBase {
@@ -74,6 +75,7 @@ export interface MouseDragMoveGestureEvent extends GestureEventBase {
   readonly buttons: number;
   readonly position: GesturePosition;
   readonly delta: GestureDelta;
+  readonly longPress: boolean;
 }
 
 export interface MouseDragEndGestureEvent extends GestureEventBase {
@@ -84,6 +86,7 @@ export interface MouseDragEndGestureEvent extends GestureEventBase {
   readonly buttons: number;
   readonly position: GesturePosition;
   readonly reason: GestureEndReason;
+  readonly longPress: boolean;
 }
 
 export interface MouseTapGestureEvent extends GestureEventBase {
@@ -91,6 +94,7 @@ export interface MouseTapGestureEvent extends GestureEventBase {
   readonly button: number;
   readonly buttons: number;
   readonly position: GesturePosition;
+  readonly longPress: boolean;
 }
 
 export interface MouseMoveGestureEvent extends GestureEventBase {
@@ -130,6 +134,7 @@ export interface TouchTapGestureEvent extends GestureEventBase {
   readonly type: "touch tap";
   readonly primaryId: number;
   readonly position: GesturePosition;
+  readonly longPress: boolean;
 }
 
 export interface PinchGestureEvent extends GestureEventBase {

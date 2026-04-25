@@ -122,13 +122,13 @@ function getEventDelta(event: GestureEvent): GestureDelta | null {
 function getEventDetail(event: GestureEvent): string {
   switch (event.type) {
     case "mouse dragstart":
-      return `button ${event.originButton}, buttons ${event.buttons}`;
+      return `button ${event.originButton}, buttons ${event.buttons}, ${event.longPress ? "long press" : "direct"}`;
     case "mouse dragmove":
-      return `buttons ${event.buttons}`;
+      return `buttons ${event.buttons}, ${event.longPress ? "long press" : "direct"}`;
     case "mouse dragend":
-      return `${event.reason}, button ${event.releaseButton}`;
+      return `${event.reason}, button ${event.releaseButton}, ${event.longPress ? "long press" : "direct"}`;
     case "mouse tap":
-      return `button ${event.button}`;
+      return `button ${event.button}, ${event.longPress ? "long press" : "direct"}`;
     case "mouse move":
       return `buttons ${event.buttons}`;
     case "touch dragstart":
@@ -137,7 +137,7 @@ function getEventDetail(event: GestureEvent): string {
     case "touch dragend":
       return `${event.reason}, primary ${event.primaryId}, ${event.longPress ? "long press" : "direct"}`;
     case "touch tap":
-      return `primary ${event.primaryId}`;
+      return `primary ${event.primaryId}, ${event.longPress ? "long press" : "direct"}`;
     case "pinch in":
     case "pinch out":
       return `distance ${formatNumber(event.distanceDelta)}, scale ${formatNumber(event.scaleDelta)}`;

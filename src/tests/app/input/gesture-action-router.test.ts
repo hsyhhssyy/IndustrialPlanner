@@ -54,6 +54,7 @@ function mouseTapEvent(gestureId = "tap-1"): GestureEvent {
     button: 0,
     buttons: 0,
     position: { x: 10, y: 12 },
+    longPress: false,
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };
@@ -68,6 +69,7 @@ function mouseDragStartEvent(gestureId = "drag-1"): GestureEvent {
     buttons: 1,
     position: { x: 4, y: 4 },
     startPosition: { x: 0, y: 0 },
+    longPress: false,
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };
@@ -81,6 +83,7 @@ function mouseDragMoveEvent(gestureId = "drag-1"): GestureEvent {
     buttons: 1,
     position: { x: 8, y: 4 },
     delta: { x: 4, y: 0 },
+    longPress: false,
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };
@@ -96,6 +99,7 @@ function mouseDragEndEvent(gestureId = "drag-1"): GestureEvent {
     buttons: 0,
     position: { x: 8, y: 4 },
     reason: "release",
+    longPress: false,
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };

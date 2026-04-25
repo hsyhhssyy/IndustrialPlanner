@@ -13,6 +13,7 @@ function mouseTapEvent(gestureId = "tap-1"): GestureEvent {
     button: 0,
     buttons: 0,
     position: { x: 12, y: 24 },
+    longPress: false,
     modifiers: {
       alt: false,
       ctrl: false,
@@ -72,7 +73,7 @@ describe("GestureDiagnosticsStore", () => {
       type: "mouse tap",
       gestureId: "tap-1",
       position: { x: 12, y: 24 },
-      detail: "button 0",
+      detail: "button 0, direct",
     });
   });
 

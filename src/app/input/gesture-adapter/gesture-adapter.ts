@@ -48,9 +48,21 @@ interface MouseSession {
   readonly gestureId: string;
   readonly pointerId: number;
   readonly originButton: number;
+  readonly pressStartedAt: number;
   readonly startPosition: GesturePosition;
   lastPosition: GesturePosition;
+  longPressIndicatorTimer: TimerHandle | null;
+  longPressTimer: TimerHandle | null;
+  longPress: boolean;
   state: "pressed" | "dragging";
+}
+
+interface LongPressTrackingSession {
+  readonly pressStartedAt: number;
+  lastPosition: GesturePosition;
+  longPressIndicatorTimer: TimerHandle | null;
+  longPressTimer: TimerHandle | null;
+  longPress: boolean;
 }
 
 interface TouchPoint {
@@ -333,14 +345,24 @@ export class GestureAdapter {
 
   private startMouseSession(event: GesturePointerEventLike): void {
     const position = getPosition(event);
-    this.mouseSession = {
+    const pressStartedAt = this.now();
+    const session: MouseSession = {
       gestureId: this.nextGestureId("mouse"),
       pointerId: event.pointerId,
       originButton: event.button,
+      pressStartedAt,
       startPosition: position,
       lastPosition: position,
+      longPressIndicatorTimer: null,
+      longPressTimer: null,
+      longPress: false,
       state: "pressed",
     };
+    this.mouseSession = session;
+    this.scheduleLongPressTimers(session, {
+      isActive: () => this.mouseSession === session && session.state === "pressed",
+      onLongPress: () => {},
+    });
     this.lastMousePosition = position;
   }
 
@@ -365,9 +387,12 @@ export class GestureAdapter {
     if (session.state === "pressed") {
       if (distance(session.startPosition, position) < this.thresholds.mouseDragSlopPx) {
         session.lastPosition = position;
+        this.syncLongPressPosition(session);
         return;
       }
 
+      this.clearLongPressTimers(session);
+      this.hideLongPressState();
       session.state = "dragging";
       session.lastPosition = position;
       this.dispatchGesture({
@@ -378,6 +403,7 @@ export class GestureAdapter {
         buttons: event.buttons,
         position,
         startPosition: session.startPosition,
+        longPress: session.longPress,
         modifiers: getModifiers(event),
         sourceEvent: event,
       });
@@ -393,6 +419,7 @@ export class GestureAdapter {
       buttons: event.buttons,
       position,
       delta,
+      longPress: session.longPress,
       modifiers: getModifiers(event),
       sourceEvent: event,
     });
@@ -406,6 +433,9 @@ export class GestureAdapter {
       return;
     }
 
+    this.clearLongPressTimers(session);
+    this.hideLongPressState();
+
     if (session.state === "dragging") {
       this.dispatchGesture({
         type: "mouse dragend",
@@ -416,6 +446,7 @@ export class GestureAdapter {
         buttons: event.buttons,
         position,
         reason,
+        longPress: session.longPress,
         modifiers: getModifiers(event),
         sourceEvent: event,
       });
@@ -426,6 +457,7 @@ export class GestureAdapter {
         button: event.button,
         buttons: event.buttons,
         position,
+        longPress: session.longPress,
         modifiers: getModifiers(event),
         sourceEvent: event,
       });
@@ -456,41 +488,13 @@ export class GestureAdapter {
         longPressTimer: null,
         longPress: false,
       };
-      session.longPressIndicatorTimer = this.scheduleTimeout(() => {
-        if (this.touchSession !== session || session.state !== "pending-long-press") {
-          return;
-        }
-
-        const elapsedMs = Math.min(
-          this.thresholds.touchLongPressMs,
-          Math.max(0, this.now() - session.pressStartedAt),
-        );
-        session.longPressIndicatorTimer = null;
-        this.setLongPressState({
-          visible: true,
-          position: session.lastPosition,
-          startedAt: session.pressStartedAt,
-          durationMs: this.thresholds.touchLongPressMs,
-          progress: elapsedMs / this.thresholds.touchLongPressMs,
-        });
-      }, TOUCH_LONG_PRESS_INDICATOR_DELAY_MS);
-      session.longPressTimer = this.scheduleTimeout(() => {
-        if (this.touchSession !== session || session.state !== "pending-long-press") {
-          return;
-        }
-
-        session.state = "drag-ready";
-        session.longPress = true;
-        session.longPressTimer = null;
-        this.setLongPressState({
-          visible: true,
-          position: session.lastPosition,
-          startedAt: session.pressStartedAt,
-          durationMs: this.thresholds.touchLongPressMs,
-          progress: 1,
-        });
-      }, this.thresholds.touchLongPressMs);
       this.touchSession = session;
+      this.scheduleLongPressTimers(session, {
+        isActive: () => this.touchSession === session && session.state === "pending-long-press",
+        onLongPress: () => {
+          session.state = "drag-ready";
+        },
+      });
     } else if (this.activeTouches.size > 1) {
       this.transitionTouchSessionToMultiTouch(this.touchSession, event);
     }
@@ -529,12 +533,7 @@ export class GestureAdapter {
     if (session.state === "pending-long-press") {
       if (distance(session.startPosition, position) <= this.thresholds.touchMoveSlopPx) {
         session.lastPosition = position;
-        if (this.longPressState.visible && this.longPressState.startedAt === session.pressStartedAt) {
-          this.setLongPressState({
-            ...this.longPressState,
-            position,
-          });
-        }
+        this.syncLongPressPosition(session);
         return;
       }
 
@@ -615,12 +614,16 @@ export class GestureAdapter {
     this.clearLongPressTimers(session);
     this.hideLongPressState();
 
-    if (session.state === "pending-long-press" && reason === "release") {
+    if (
+      reason === "release" &&
+      (session.state === "pending-long-press" || (session.state === "drag-ready" && session.longPress))
+    ) {
       this.dispatchGesture({
         type: "touch tap",
         gestureId: session.gestureId,
         primaryId: session.primaryId,
         position: getPosition(event),
+        longPress: session.longPress,
         modifiers: getModifiers(event),
         sourceEvent: event,
       });
@@ -726,19 +729,23 @@ export class GestureAdapter {
 
   private cancelAllPointerSessions(): void {
     const mouseSession = this.mouseSession;
-    if (mouseSession !== null && mouseSession.state === "dragging") {
-      this.dispatchGesture({
-        type: "mouse dragend",
-        gestureId: mouseSession.gestureId,
-        originButton: mouseSession.originButton,
-        releaseButton: mouseSession.originButton,
-        button: mouseSession.originButton,
-        buttons: 0,
-        position: mouseSession.lastPosition,
-        reason: "cancel",
-        modifiers: emptyModifiers(),
-        sourceEvent: null,
-      });
+    if (mouseSession !== null) {
+      this.clearLongPressTimers(mouseSession);
+      if (mouseSession.state === "dragging") {
+        this.dispatchGesture({
+          type: "mouse dragend",
+          gestureId: mouseSession.gestureId,
+          originButton: mouseSession.originButton,
+          releaseButton: mouseSession.originButton,
+          button: mouseSession.originButton,
+          buttons: 0,
+          position: mouseSession.lastPosition,
+          reason: "cancel",
+          longPress: mouseSession.longPress,
+          modifiers: emptyModifiers(),
+          sourceEvent: null,
+        });
+      }
     }
     this.mouseSession = null;
 
@@ -799,7 +806,51 @@ export class GestureAdapter {
     }
   }
 
-  private clearLongPressTimers(session: TouchSession): void {
+  private scheduleLongPressTimers(
+    session: LongPressTrackingSession,
+    options: {
+      readonly isActive: () => boolean;
+      readonly onLongPress: () => void;
+    },
+  ): void {
+    session.longPressIndicatorTimer = this.scheduleTimeout(() => {
+      if (!options.isActive()) {
+        return;
+      }
+
+      const elapsedMs = Math.min(
+        this.thresholds.touchLongPressMs,
+        Math.max(0, this.now() - session.pressStartedAt),
+      );
+      session.longPressIndicatorTimer = null;
+      this.setLongPressState({
+        visible: true,
+        position: session.lastPosition,
+        startedAt: session.pressStartedAt,
+        durationMs: this.thresholds.touchLongPressMs,
+        progress: elapsedMs / this.thresholds.touchLongPressMs,
+      });
+    }, TOUCH_LONG_PRESS_INDICATOR_DELAY_MS);
+
+    session.longPressTimer = this.scheduleTimeout(() => {
+      if (!options.isActive()) {
+        return;
+      }
+
+      session.longPress = true;
+      session.longPressTimer = null;
+      options.onLongPress();
+      this.setLongPressState({
+        visible: true,
+        position: session.lastPosition,
+        startedAt: session.pressStartedAt,
+        durationMs: this.thresholds.touchLongPressMs,
+        progress: 1,
+      });
+    }, this.thresholds.touchLongPressMs);
+  }
+
+  private clearLongPressTimers(session: LongPressTrackingSession): void {
     if (session.longPressIndicatorTimer !== null) {
       this.cancelTimeout(session.longPressIndicatorTimer);
       session.longPressIndicatorTimer = null;
@@ -809,6 +860,17 @@ export class GestureAdapter {
       this.cancelTimeout(session.longPressTimer);
       session.longPressTimer = null;
     }
+  }
+
+  private syncLongPressPosition(session: LongPressTrackingSession): void {
+    if (!this.longPressState.visible || this.longPressState.startedAt !== session.pressStartedAt) {
+      return;
+    }
+
+    this.setLongPressState({
+      ...this.longPressState,
+      position: session.lastPosition,
+    });
   }
 
   private setLongPressState(state: LongPressState): void {
