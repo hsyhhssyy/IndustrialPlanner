@@ -3,6 +3,7 @@ import { action } from "mobx";
 import type { AppAction } from "@/domain/action/app-action";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type { ScreenProfile } from "@/domain/state/screen-profile";
+import type { ClientPixelPoint } from "@/domain/types/client-pixel";
 import type { ClientPixelRect } from "@/domain/types/client-pixel";
 import type { AppLocale } from "@/shared/i18n/messages";
 import { lookupMessageText } from "@/shared/i18n/messages";
@@ -10,6 +11,8 @@ import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 
 import {
   type ActiveTool,
+  CANVAS_TOOLBAR_BUTTON_IDS,
+  type CanvasToolbarButtonId,
   clampLeftDockWidth,
   DEFAULT_RIGHT_DOCK_WIDTH,
   resolveLeftDockWidthForScreenProfile,
@@ -23,6 +26,12 @@ export interface AppInternalAction {
   toggleTopBarCollapsed: () => void;
   setActivePanel: (panel: ActivePanel) => void;
   setActiveTool: (activeTool: ActiveTool) => void;
+  showCanvasToolbar: (
+    buttonIds: readonly CanvasToolbarButtonId[],
+    clientPixelPoint: ClientPixelPoint,
+  ) => void;
+  moveCanvasToolbar: (clientPixelPoint: ClientPixelPoint) => void;
+  hideCanvasToolbar: () => void;
   setLeftDockWidth: (width: number) => void;
   setScreenProfile: (screenProfile: ScreenProfile) => void;
   setLocale: (locale: AppLocale) => void;
@@ -74,6 +83,52 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     }
 
     this.internalState.runtime.activeTool = activeTool;
+  });
+
+  public readonly showCanvasToolbar: AppInternalAction["showCanvasToolbar"] = action((
+    buttonIds,
+    clientPixelPoint,
+  ) => {
+    const nextButtonIds = normalizeCanvasToolbarButtonIds(buttonIds);
+    const nextAnchor = normalizeClientPixelPoint(clientPixelPoint);
+
+    if (nextButtonIds.length === 0 || nextAnchor === null) {
+      this.hideCanvasToolbar();
+      return;
+    }
+
+    this.internalState.runtime.canvasToolbar.visible = true;
+    this.internalState.runtime.canvasToolbar.buttonIds = nextButtonIds;
+    this.internalState.runtime.canvasToolbar.anchor = nextAnchor;
+  });
+
+  public readonly moveCanvasToolbar: AppInternalAction["moveCanvasToolbar"] = action((
+    clientPixelPoint,
+  ) => {
+    if (!this.internalState.runtime.canvasToolbar.visible) {
+      return;
+    }
+
+    const nextAnchor = normalizeClientPixelPoint(clientPixelPoint);
+    if (nextAnchor === null) {
+      return;
+    }
+
+    this.internalState.runtime.canvasToolbar.anchor = nextAnchor;
+  });
+
+  public readonly hideCanvasToolbar: AppInternalAction["hideCanvasToolbar"] = action(() => {
+    if (
+      !this.internalState.runtime.canvasToolbar.visible
+      && this.internalState.runtime.canvasToolbar.buttonIds.length === 0
+      && this.internalState.runtime.canvasToolbar.anchor === null
+    ) {
+      return;
+    }
+
+    this.internalState.runtime.canvasToolbar.visible = false;
+    this.internalState.runtime.canvasToolbar.buttonIds = [];
+    this.internalState.runtime.canvasToolbar.anchor = null;
   });
 
   public readonly setLeftDockWidth: AppInternalAction["setLeftDockWidth"] = action((width) => {
@@ -186,4 +241,34 @@ function areScreenProfilesEqual(left: ScreenProfile, right: ScreenProfile): bool
     && left.aspectRatio === right.aspectRatio
     && left.hasTouch === right.hasTouch
   );
+}
+
+function normalizeCanvasToolbarButtonIds(
+  buttonIds: readonly CanvasToolbarButtonId[],
+): CanvasToolbarButtonId[] {
+  const knownButtonIds = new Set<CanvasToolbarButtonId>(CANVAS_TOOLBAR_BUTTON_IDS);
+  const deduped: CanvasToolbarButtonId[] = [];
+
+  for (const buttonId of buttonIds) {
+    if (!knownButtonIds.has(buttonId) || deduped.includes(buttonId)) {
+      continue;
+    }
+
+    deduped.push(buttonId);
+  }
+
+  return deduped;
+}
+
+function normalizeClientPixelPoint(
+  clientPixelPoint: ClientPixelPoint,
+): ClientPixelPoint | null {
+  if (!Number.isFinite(clientPixelPoint.x) || !Number.isFinite(clientPixelPoint.y)) {
+    return null;
+  }
+
+  return {
+    x: clientPixelPoint.x,
+    y: clientPixelPoint.y,
+  };
 }

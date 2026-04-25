@@ -1520,17 +1520,19 @@ body.is-resizing-left-dock * {
 }
 
 .canvas-action-toolbar {
-  position: absolute;
-  z-index: 2;
+  position: fixed;
+  z-index: 4;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px;
-  border: 1px solid var(--canvas-action-toolbar-border);
+  padding: 0;
+  border: 0;
   border-radius: 999px;
-  background: var(--canvas-action-toolbar-bg);
-  box-shadow: 0 10px 24px var(--canvas-action-toolbar-shadow);
-  backdrop-filter: blur(10px);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
 }
 
 .canvas-action-button {
@@ -1546,6 +1548,10 @@ body.is-resizing-left-dock * {
   background: var(--canvas-action-button-bg);
   box-shadow: none;
   color: var(--canvas-action-button-text);
+}
+
+.canvas-toolbar-button {
+  touch-action: manipulation;
 }
 
 .canvas-action-button:not(:disabled):hover {

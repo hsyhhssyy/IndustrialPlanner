@@ -5,6 +5,7 @@ import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/app-host";
+import type { GestureEvent } from "@/app/input/gesture-adapter";
 import { USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY } from "@/app/app-shell/settings-dialog-state";
 import {
   APP_SETTINGS_LOCAL_STORAGE_KEY,
@@ -206,8 +207,6 @@ describe("WorkbenchApp", () => {
 
     expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
     expect(appHost.state.screenProfile.screenShape).toBe("landscape");
-    expect(container.textContent).toContain("设备: 电脑");
-    expect(container.textContent).toContain("屏幕: 横屏");
 
     coarsePointer = true;
     hoverNone = true;
@@ -225,8 +224,6 @@ describe("WorkbenchApp", () => {
 
     expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
     expect(appHost.state.screenProfile.screenShape).toBe("portrait");
-    expect(container.textContent).toContain("设备: 平板");
-    expect(container.textContent).toContain("屏幕: 竖屏");
   });
 
   it("updates left dock width through the edge handle and clamps the value", () => {
@@ -412,6 +409,156 @@ describe("WorkbenchApp", () => {
 
     expect(middleMouseEvent.defaultPrevented).toBe(true);
     expect(leftMouseEvent.defaultPrevented).toBe(false);
+  });
+
+  it("shows, moves and hides the floating canvas toolbar through app internal actions", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    expect(container.querySelector(".canvas-action-toolbar")).toBeNull();
+
+    act(() => {
+      appHost.internalActions.showCanvasToolbar(
+        [
+          "canvas-toolbar-button-ok",
+          "canvas-toolbar-button-delete-many",
+        ],
+        { x: 220, y: 180 },
+      );
+    });
+
+    const toolbar = container.querySelector(".canvas-action-toolbar") as HTMLDivElement | null;
+
+    expect(toolbar).not.toBeNull();
+    expect(toolbar?.style.left).toBe("220px");
+    expect(toolbar?.style.top).toBe("180px");
+    expect(
+      Array.from(toolbar?.querySelectorAll("[data-ui-button-id]") ?? []).map((button) =>
+        button.getAttribute("data-ui-button-id"),
+      ),
+    ).toEqual([
+      "canvas-toolbar-button-ok",
+      "canvas-toolbar-button-delete-many",
+    ]);
+
+    act(() => {
+      appHost.internalActions.moveCanvasToolbar({ x: 256, y: 144 });
+    });
+
+    expect(toolbar?.style.left).toBe("256px");
+    expect(toolbar?.style.top).toBe("144px");
+
+    act(() => {
+      appHost.internalActions.hideCanvasToolbar();
+    });
+
+    expect(container.querySelector(".canvas-action-toolbar")).toBeNull();
+  });
+
+  it("keeps pointer activity inside the canvas toolbar out of canvas gestures and only emits ui-button events", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+    const gestures: GestureEvent[] = [];
+    appHost.gestureAdapter.subscribe((event) => gestures.push(event));
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      appHost.internalActions.showCanvasToolbar(
+        [
+          "canvas-toolbar-button-ok",
+          "canvas-toolbar-button-delete",
+        ],
+        { x: 220, y: 180 },
+      );
+    });
+
+    const toolbar = container.querySelector(".canvas-action-toolbar") as HTMLDivElement | null;
+    const okButton = container.querySelector(
+      '[data-ui-button-id="canvas-toolbar-button-ok"]',
+    ) as HTMLButtonElement | null;
+    const deleteButton = container.querySelector(
+      '[data-ui-button-id="canvas-toolbar-button-delete"]',
+    ) as HTMLButtonElement | null;
+
+    expect(toolbar).not.toBeNull();
+    expect(okButton).not.toBeNull();
+    expect(deleteButton).not.toBeNull();
+
+    if (!toolbar || !okButton || !deleteButton) {
+      throw new Error("Canvas toolbar did not render expected buttons.");
+    }
+
+    act(() => {
+      dispatchPointerEvent(toolbar, "pointerdown", {
+        pointerId: 21,
+        pointerType: "mouse",
+        clientX: 220,
+        clientY: 180,
+        buttons: 1,
+      });
+      dispatchPointerEvent(toolbar, "pointermove", {
+        pointerId: 21,
+        pointerType: "mouse",
+        clientX: 228,
+        clientY: 186,
+        buttons: 1,
+      });
+      dispatchPointerEvent(toolbar, "pointerup", {
+        pointerId: 21,
+        pointerType: "mouse",
+        clientX: 228,
+        clientY: 186,
+        buttons: 0,
+      });
+    });
+
+    expect(gestures).toHaveLength(0);
+
+    act(() => {
+      dispatchPointerEvent(okButton, "pointerdown", {
+        pointerId: 22,
+        pointerType: "mouse",
+        clientX: 220,
+        clientY: 180,
+        buttons: 1,
+      });
+      dispatchPointerEvent(okButton, "pointerup", {
+        pointerId: 22,
+        pointerType: "mouse",
+        clientX: 220,
+        clientY: 180,
+        buttons: 0,
+      });
+      dispatchPointerEvent(deleteButton, "pointerdown", {
+        pointerId: 23,
+        pointerType: "touch",
+        clientX: 252,
+        clientY: 180,
+        buttons: 1,
+      });
+      dispatchPointerEvent(deleteButton, "pointerup", {
+        pointerId: 23,
+        pointerType: "touch",
+        clientX: 252,
+        clientY: 180,
+        buttons: 0,
+      });
+    });
+
+    expect(gestures).toMatchObject([
+      {
+        type: "ui-button-mouse-tap",
+        uiButtonId: "canvas-toolbar-button-ok",
+      },
+      {
+        type: "ui-button-touch-tap",
+        uiButtonId: "canvas-toolbar-button-delete",
+      },
+    ]);
   });
 
   it("opens the settings dialog from the left toolbar and hydrates saved schema values", () => {

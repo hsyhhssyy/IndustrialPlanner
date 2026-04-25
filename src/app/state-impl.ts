@@ -2,6 +2,7 @@ import { makeAutoObservable } from "mobx";
 
 import type { ScreenProfile } from "@/domain/state/screen-profile";
 import type { AppTheme, AppThemeId } from "@/domain/state/theme";
+import type { ClientPixelPoint } from "@/domain/types/client-pixel";
 import type { AppLocale } from "@/shared/i18n/messages";
 import {
   resolveScreenProfileFromWindow,
@@ -43,11 +44,28 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
   topBarCollapsed: boolean;
 }
 
-export type ActiveTool = "select" | "marquee" | "placement";
+export const CANVAS_TOOLBAR_BUTTON_IDS = [
+  "canvas-toolbar-button-ok",
+  "canvas-toolbar-button-cancel",
+  "canvas-toolbar-button-rotate",
+  "canvas-toolbar-button-delete",
+  "canvas-toolbar-button-delete-many",
+] as const;
+
+export type CanvasToolbarButtonId = typeof CANVAS_TOOLBAR_BUTTON_IDS[number];
+
+export interface CanvasToolbarStateReadWrite {
+  visible: boolean;
+  buttonIds: CanvasToolbarButtonId[];
+  anchor: ClientPixelPoint | null;
+}
+
+export type ActiveTool = "select" | "move" | "marquee" | "placement";
 
 export interface RuntimeStateReadWrite {
   activePanel: ActivePanel;
   activeTool: ActiveTool;
+  canvasToolbar: CanvasToolbarStateReadWrite;
 }
 
 const DEFAULT_APP_LOCALE: AppLocale = "zh-CN";
@@ -77,9 +95,20 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   }
 }
 
+class CanvasToolbarStateReadWriteImpl implements CanvasToolbarStateReadWrite {
+  visible = false;
+  buttonIds: CanvasToolbarButtonId[] = [];
+  anchor: ClientPixelPoint | null = null;
+
+  public constructor() {
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
+}
+
 class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   activePanel: ActivePanel = null;
   activeTool: ActiveTool = "select";
+  canvasToolbar: CanvasToolbarStateReadWrite = new CanvasToolbarStateReadWriteImpl();
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
