@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 
+import { runInAction } from "mobx";
 import { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/app-host";
+import type { GestureEvent } from "@/app/input/gesture-adapter";
 import { LeftDock } from "@/app/app-shell/components/left-dock";
 import { LeftToolbar } from "@/app/app-shell/components/left-toolbar";
 import { WorkbenchApp } from "@/app/app-shell/workbench-app";
@@ -25,6 +27,35 @@ function createWorkspace(): WorkspaceContract {
 
 function queryVisibleLeftDockPanel(container: HTMLDivElement): HTMLDivElement | null {
   return container.querySelector(".left-dock-panel:not([hidden])") as HTMLDivElement | null;
+}
+
+function dispatchPointerEvent(
+  target: Element,
+  type: string,
+  init: {
+    pointerId: number;
+    pointerType: string;
+    clientX: number;
+    clientY: number;
+    button?: number;
+    buttons?: number;
+  },
+): Event {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperties(event, {
+    pointerId: { value: init.pointerId },
+    pointerType: { value: init.pointerType },
+    clientX: { value: init.clientX },
+    clientY: { value: init.clientY },
+    button: { value: init.button ?? 0 },
+    buttons: { value: init.buttons ?? 0 },
+    altKey: { value: false },
+    ctrlKey: { value: false },
+    metaKey: { value: false },
+    shiftKey: { value: false },
+  });
+  target.dispatchEvent(event);
+  return event;
 }
 
 describe("Left dock panel switching", () => {
@@ -143,6 +174,7 @@ describe("Left dock panel switching", () => {
 
     expect(visiblePanel?.getAttribute("data-panel-id")).toBe("placement");
     expect(visiblePanel.textContent).toContain("保存蓝图");
+    expect(visiblePanel?.textContent).toContain("批量选择");
     expect(visiblePanel.textContent).toContain("多口暗管出口");
     expect(visiblePanel.textContent).not.toContain("设备");
     expect(visiblePanel.textContent).not.toContain("拖动虚影后点击确认完成放置。");
@@ -153,9 +185,110 @@ describe("Left dock panel switching", () => {
     );
     expect(visiblePanel.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(2);
     expect(visiblePanel.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(22);
+    expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-select"]')?.classList.contains("is-active")).toBe(true);
+    expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-marquee"]')?.classList.contains("is-active")).toBe(false);
     expect(visiblePanel.textContent).toContain("Esc");
     expect(visiblePanel.textContent).toContain("Ctrl+S");
     expect(appHost.internalState.runtime.activePanel).toBeNull();
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
+  });
+
+  it("hides the batch select button when hypergryph operation mode is off", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphOperationMode = false;
+    });
+
+    act(() => {
+      root.render(
+        <>
+          <LeftToolbar appHost={appHost} />
+          <LeftDock appHost={appHost} />
+        </>,
+      );
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+
+    expect(visiblePanel?.querySelector('[data-ui-button-id="placement-tool-select"]')).not.toBeNull();
+    expect(visiblePanel?.querySelector('[data-ui-button-id="placement-tool-marquee"]')).toBeNull();
+  });
+
+  it("emits semantic ui-button events and toggles the active placement tool", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+    const events: GestureEvent[] = [];
+    appHost.gestureAdapter.subscribe((event) => events.push(event));
+
+    act(() => {
+      root.render(
+        <>
+          <LeftToolbar appHost={appHost} />
+          <LeftDock appHost={appHost} />
+        </>,
+      );
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const selectButton = visiblePanel?.querySelector(
+      '[data-ui-button-id="placement-tool-select"]',
+    ) as HTMLButtonElement | null;
+    const marqueeButton = visiblePanel?.querySelector(
+      '[data-ui-button-id="placement-tool-marquee"]',
+    ) as HTMLButtonElement | null;
+
+    expect(selectButton).not.toBeNull();
+    expect(marqueeButton).not.toBeNull();
+    expect(selectButton?.classList.contains("is-active")).toBe(true);
+    expect(marqueeButton?.classList.contains("is-active")).toBe(false);
+
+    act(() => {
+      if (!marqueeButton) {
+        throw new Error("Expected the marquee button to be rendered.");
+      }
+
+      dispatchPointerEvent(marqueeButton, "pointerup", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 16,
+        clientY: 16,
+        button: 0,
+        buttons: 0,
+      });
+    });
+
+    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
+    expect(selectButton?.classList.contains("is-active")).toBe(false);
+    expect(marqueeButton?.classList.contains("is-active")).toBe(true);
+    expect(events.at(-1)).toMatchObject({
+      type: "ui-button-mouse-tap",
+      uiButtonId: "placement-tool-marquee",
+      button: 0,
+    });
+
+    act(() => {
+      if (!selectButton) {
+        throw new Error("Expected the select button to be rendered.");
+      }
+
+      dispatchPointerEvent(selectButton, "pointerup", {
+        pointerId: 2,
+        pointerType: "touch",
+        clientX: 20,
+        clientY: 20,
+        buttons: 0,
+      });
+    });
+
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(selectButton?.classList.contains("is-active")).toBe(true);
+    expect(marqueeButton?.classList.contains("is-active")).toBe(false);
+    expect(events.at(-1)).toMatchObject({
+      type: "ui-button-touch-tap",
+      uiButtonId: "placement-tool-select",
+    });
   });
 
   it("switches runtime activePanel and left dock content without remounting panel containers", () => {

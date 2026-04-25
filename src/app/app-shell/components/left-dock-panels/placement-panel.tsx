@@ -1,9 +1,7 @@
-import {
-  handleUiEvent,
-} from "@/app/app-shell/components/ui-shell-null-handlers";
 import type { AppHost } from "@/app/app-host";
 import { observer } from "mobx-react-lite";
 import { Fragment } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 
 const PLACEMENT_ICON_PATHS = [
   "/device-icons/item_log_belt_01.webp",
@@ -27,74 +25,104 @@ const PLACEMENT_ICON_PATHS = [
 
 const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
 
-const OPERATION_BUTTON_KEYS = [
-  "workbench.button.select",
-  "workbench.button.beltDraw",
-  "workbench.button.pipeDraw",
-  "workbench.button.saveAsBlueprint",
+interface PlacementButtonDefinition {
+  readonly uiButtonId: string;
+  readonly labelKey: string;
+  readonly hotkey?: string | null;
+  readonly visibleWhen?: (appHost: AppHost) => boolean;
+  readonly activeWhen?: (appHost: AppHost) => boolean;
+}
+
+interface PlacementSectionDefinition {
+  readonly titleKey: string;
+  readonly shortcutKey: string | null;
+  readonly buttons: readonly PlacementButtonDefinition[];
+}
+
+const OPERATION_BUTTONS: readonly PlacementButtonDefinition[] = [
+  {
+    uiButtonId: "placement-tool-select",
+    labelKey: "workbench.button.select",
+    hotkey: "Esc",
+    activeWhen: (appHost) => appHost.internalState.runtime.activeTool === "select",
+  },
+  {
+    uiButtonId: "placement-tool-marquee",
+    labelKey: "workbench.button.batchSelect",
+    visibleWhen: (appHost) => appHost.state.settings.hypergryphOperationMode,
+    activeWhen: (appHost) => appHost.internalState.runtime.activeTool === "marquee",
+  },
+  {
+    uiButtonId: "placement-action-belt-draw",
+    labelKey: "workbench.button.beltDraw",
+  },
+  {
+    uiButtonId: "placement-action-pipe-draw",
+    labelKey: "workbench.button.pipeDraw",
+  },
+  {
+    uiButtonId: "placement-action-save-blueprint",
+    labelKey: "workbench.button.saveAsBlueprint",
+    hotkey: "Ctrl+S",
+  },
 ] as const;
 
-const OPERATION_BUTTON_HOTKEYS = new Map<string, string>([
-  ["workbench.button.select", "Esc"],
-  ["workbench.button.saveAsBlueprint", "Ctrl+S"],
-]);
-
-const PLACEMENT_SECTIONS = [
+const PLACEMENT_SECTIONS: readonly PlacementSectionDefinition[] = [
   {
     titleKey: "workbench.section.operation",
     shortcutKey: null,
-    buttonKeys: OPERATION_BUTTON_KEYS,
+    buttons: OPERATION_BUTTONS,
   },
   {
     titleKey: "workbench.section.beltLogistics",
     shortcutKey: "E",
-    buttonKeys: [
-      "workbench.button.beltSplitter",
-      "workbench.button.beltConverger",
-      "workbench.button.beltBridge",
-      "workbench.button.itemInlet",
+    buttons: [
+      { uiButtonId: "placement-belt-splitter", labelKey: "workbench.button.beltSplitter" },
+      { uiButtonId: "placement-belt-converger", labelKey: "workbench.button.beltConverger" },
+      { uiButtonId: "placement-belt-bridge", labelKey: "workbench.button.beltBridge" },
+      { uiButtonId: "placement-item-inlet", labelKey: "workbench.button.itemInlet" },
     ],
   },
   {
     titleKey: "workbench.section.pipeLogistics",
     shortcutKey: "Q",
-    buttonKeys: [
-      "workbench.button.pipeSplitter",
-      "workbench.button.pipeConverger",
-      "workbench.button.pipeBridge",
-      "workbench.button.pipeInlet",
+    buttons: [
+      { uiButtonId: "placement-pipe-splitter", labelKey: "workbench.button.pipeSplitter" },
+      { uiButtonId: "placement-pipe-converger", labelKey: "workbench.button.pipeConverger" },
+      { uiButtonId: "placement-pipe-bridge", labelKey: "workbench.button.pipeBridge" },
+      { uiButtonId: "placement-pipe-inlet", labelKey: "workbench.button.pipeInlet" },
     ],
   },
   {
     titleKey: "workbench.section.resourcePower",
     shortcutKey: "X",
-    buttonKeys: [
-      "workbench.button.waterPump",
-      "workbench.button.powerPost",
-      "workbench.button.thermalPool",
+    buttons: [
+      { uiButtonId: "placement-water-pump", labelKey: "workbench.button.waterPump" },
+      { uiButtonId: "placement-power-post", labelKey: "workbench.button.powerPost" },
+      { uiButtonId: "placement-thermal-pool", labelKey: "workbench.button.thermalPool" },
     ],
   },
   {
     titleKey: "workbench.section.warehouse",
     shortcutKey: "C",
-    buttonKeys: [
-      "workbench.button.darkOutlet",
-      "workbench.button.darkInlet",
-      "workbench.button.warehouseStoragePort",
-      "workbench.button.warehousePickupPort",
-      "workbench.button.liquidTank",
-      "workbench.button.warehouseBusSegment",
-      "workbench.button.warehouseBusSource",
-      "workbench.button.protocolStorage",
+    buttons: [
+      { uiButtonId: "placement-dark-outlet", labelKey: "workbench.button.darkOutlet" },
+      { uiButtonId: "placement-dark-inlet", labelKey: "workbench.button.darkInlet" },
+      { uiButtonId: "placement-warehouse-storage-port", labelKey: "workbench.button.warehouseStoragePort" },
+      { uiButtonId: "placement-warehouse-pickup-port", labelKey: "workbench.button.warehousePickupPort" },
+      { uiButtonId: "placement-liquid-tank", labelKey: "workbench.button.liquidTank" },
+      { uiButtonId: "placement-warehouse-bus-segment", labelKey: "workbench.button.warehouseBusSegment" },
+      { uiButtonId: "placement-warehouse-bus-source", labelKey: "workbench.button.warehouseBusSource" },
+      { uiButtonId: "placement-protocol-storage", labelKey: "workbench.button.protocolStorage" },
     ],
   },
   {
     titleKey: "workbench.section.production",
     shortcutKey: "V",
-    buttonKeys: [
-      "workbench.button.reactorPool",
-      "workbench.button.grinder",
-      "workbench.button.fillingMachine",
+    buttons: [
+      { uiButtonId: "placement-reactor-pool", labelKey: "workbench.button.reactorPool" },
+      { uiButtonId: "placement-grinder", labelKey: "workbench.button.grinder" },
+      { uiButtonId: "placement-filling-machine", labelKey: "workbench.button.fillingMachine" },
     ],
   },
 ] as const;
@@ -108,15 +136,48 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
   const screenProfile = appHost.state.screenProfile;
   const isMobileLayout = screenProfile.deviceClass === "mobile";
   const showShortcutHints = screenProfile.deviceClass !== "mobile";
+  const sections = PLACEMENT_SECTIONS.map((section) => ({
+    ...section,
+    buttons: section.buttons.filter((button) => button.visibleWhen?.(appHost) ?? true),
+  }));
+
+  const handleButtonPointerUp = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+    button: PlacementButtonDefinition,
+  ) => {
+    if (event.pointerType === "mouse") {
+      appHost.gestureAdapter.handleUiButtonMouseTap({
+        uiButtonId: button.uiButtonId,
+        button: event.button,
+        altKey: event.altKey,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        shiftKey: event.shiftKey,
+        sourceEvent: event.nativeEvent,
+      });
+      return;
+    }
+
+    if (event.pointerType === "touch" || event.pointerType === "pen") {
+      appHost.gestureAdapter.handleUiButtonTouchTap({
+        uiButtonId: button.uiButtonId,
+        altKey: event.altKey,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        shiftKey: event.shiftKey,
+        sourceEvent: event.nativeEvent,
+      });
+    }
+  };
 
   return (
     <div className="placement-panel">
-      {PLACEMENT_SECTIONS.map((section, sectionIndex) => {
+      {sections.map((section, sectionIndex) => {
         const isOperationSection = sectionIndex === 0;
         const isResourcePowerSection = section.titleKey === "workbench.section.resourcePower";
         const sectionTitleId = `placement-section-${sectionIndex}`;
-        const sectionButtonStartIndex = PLACEMENT_SECTIONS.slice(0, sectionIndex).reduce(
-          (count, currentSection) => count + currentSection.buttonKeys.length,
+        const sectionButtonStartIndex = sections.slice(0, sectionIndex).reduce(
+          (count, currentSection) => count + currentSection.buttons.length,
           0,
         );
 
@@ -136,25 +197,35 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
                 ) : null}
               </div>
               <div className={isMobileLayout ? "placement-button-list is-single-column" : "placement-button-list"}>
-                {section.buttonKeys.map((buttonKey, buttonIndex) => {
+                {section.buttons.map((button, buttonIndex) => {
                   const iconPath = resolvePlacementIconPath(sectionButtonStartIndex + buttonIndex);
-                  const hotkey = isOperationSection
-                    ? OPERATION_BUTTON_HOTKEYS.get(buttonKey) ?? null
-                    : DEVICE_SHORTCUT_KEYS[buttonIndex % DEVICE_SHORTCUT_KEYS.length];
+                  const hotkey = button.hotkey ?? (
+                    isOperationSection
+                      ? null
+                      : DEVICE_SHORTCUT_KEYS[buttonIndex % DEVICE_SHORTCUT_KEYS.length]
+                  );
+                  const isActive = button.activeWhen?.(appHost) ?? false;
+                  const className = isOperationSection
+                    ? (isActive
+                      ? "placement-button placement-action-button is-active"
+                      : "placement-button placement-action-button")
+                    : "placement-button placement-device-button";
 
                   return (
                     <button
-                      className={isOperationSection
-                        ? "placement-button placement-action-button"
-                        : "placement-button placement-device-button"}
-                      key={buttonKey}
-                      onClick={handleUiEvent}
+                      aria-pressed={button.activeWhen ? isActive : undefined}
+                      className={className}
+                      data-ui-button-id={button.uiButtonId}
+                      key={button.uiButtonId}
+                      onPointerUp={(event) => {
+                        handleButtonPointerUp(event, button);
+                      }}
                       type="button"
                     >
                       <span className="button-icon" aria-hidden="true">
                         <img alt="" className="button-icon-image" src={iconPath} />
                       </span>
-                      <span className="placement-button-label">{t(buttonKey)}</span>
+                      <span className="placement-button-label">{t(button.labelKey)}</span>
                       {showShortcutHints && hotkey ? <span className="placement-button-hotkey">{hotkey}</span> : null}
                     </button>
                   );

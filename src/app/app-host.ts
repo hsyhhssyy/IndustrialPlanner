@@ -45,6 +45,7 @@ export function createAppHost(
     toggleRightDock: actionImpl.toggleRightDock,
     toggleTopBarCollapsed: actionImpl.toggleTopBarCollapsed,
     setActivePanel: actionImpl.setActivePanel,
+    setActiveTool: actionImpl.setActiveTool,
     setLeftDockWidth: actionImpl.setLeftDockWidth,
     setScreenProfile: actionImpl.setScreenProfile,
     setLocale: actionImpl.setLocale,

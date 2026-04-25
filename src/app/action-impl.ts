@@ -9,6 +9,7 @@ import { lookupMessageText } from "@/shared/i18n/messages";
 import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 
 import {
+  type ActiveTool,
   clampLeftDockWidth,
   DEFAULT_RIGHT_DOCK_WIDTH,
   resolveLeftDockWidthForScreenProfile,
@@ -21,6 +22,7 @@ export interface AppInternalAction {
   toggleRightDock: () => void;
   toggleTopBarCollapsed: () => void;
   setActivePanel: (panel: ActivePanel) => void;
+  setActiveTool: (activeTool: ActiveTool) => void;
   setLeftDockWidth: (width: number) => void;
   setScreenProfile: (screenProfile: ScreenProfile) => void;
   setLocale: (locale: AppLocale) => void;
@@ -64,6 +66,14 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     if (panel !== null) {
       this.setLeftDockOpen(true);
     }
+  });
+
+  public readonly setActiveTool: AppInternalAction["setActiveTool"] = action((activeTool) => {
+    if (this.internalState.runtime.activeTool === activeTool) {
+      return;
+    }
+
+    this.internalState.runtime.activeTool = activeTool;
   });
 
   public readonly setLeftDockWidth: AppInternalAction["setLeftDockWidth"] = action((width) => {

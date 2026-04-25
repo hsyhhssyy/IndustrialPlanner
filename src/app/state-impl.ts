@@ -43,8 +43,11 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
   topBarCollapsed: boolean;
 }
 
+export type ActiveTool = "select" | "marquee" | "placement";
+
 export interface RuntimeStateReadWrite {
   activePanel: ActivePanel;
+  activeTool: ActiveTool;
 }
 
 const DEFAULT_APP_LOCALE: AppLocale = "zh-CN";
@@ -76,6 +79,7 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
 
 class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   activePanel: ActivePanel = null;
+  activeTool: ActiveTool = "select";
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

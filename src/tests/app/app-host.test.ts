@@ -44,6 +44,7 @@ describe("createAppHost", () => {
       "hypergryph-gesture-diagnostics",
       "hypergryph-mouse-viewport-pan",
       "hypergryph-viewport-zoom",
+      "app-placement-tool-button",
     ]);
     expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toBeNull();
 
@@ -76,6 +77,7 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
     expect(appHost.state.workbench.rightDockOpen).toBe(true);
     expect(appHost.state.workbench.leftDockWidth).toBe(375);
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
 
     runInAction(() => {
       appHost.internalState.settings.locale = "en-US";
@@ -110,6 +112,7 @@ describe("createAppHost", () => {
     expect(workspace.app?.state.workbench.leftDockWidth).toBe(480);
     expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
     expect(workspace.app?.state.screenProfile.screenShape).toBe("portrait");
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
   });
 
   it("translates arbitrary i18n keys through the current locale", () => {
@@ -444,6 +447,49 @@ describe("createAppHost", () => {
     expect(zoomSpy).not.toHaveBeenCalled();
     expect(editorHost.state.viewport.gridSize).toBe(initialGridSize);
     expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toBeNull();
+  });
+
+  it("switches the private active tool from semantic placement button events", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
+
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: "placement-tool-marquee",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "placement-tool-select",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
+
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphOperationMode = false;
+    });
+
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: "placement-tool-marquee",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
   });
 
   it("zooms the editor viewport on pinch out and pinch in gestures", () => {
