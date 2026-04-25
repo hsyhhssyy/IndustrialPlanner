@@ -1,7 +1,16 @@
 import type { WorldEntity } from "@/domain/entity/world-document";
 import type { EditorQuery } from "@/domain/query/editor-query";
+import {
+  EntityCollectionType,
+  type EntityCollection,
+} from "@/domain/state/types";
+import type { GridRect } from "@/domain/types/grid";
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
-import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+import {
+  getGridBoundingBox,
+  getRotatedGridFootprint,
+  type GridArea,
+} from "@/shared/geometry/grid";
 
 import {
   resolveEntityById,
@@ -13,7 +22,10 @@ import { resolveGridCellAtClientPixelPoint } from "./viewport-geometry";
 
 type EditorEntityQueries = Pick<
   EditorQuery,
-  "findEntityAtClientPixelPoint" | "getEntityById" | "listEntities"
+  | "findEntityAtClientPixelPoint"
+  | "findEntityCollectionGridRect"
+  | "getEntityById"
+  | "listEntities"
 >;
 
 export function createEditorEntityQueries({
@@ -38,6 +50,14 @@ export function createEditorEntityQueries({
       document: document.getSnapshot(),
       drafts: state.drafts,
     }),
+    findEntityCollectionGridRect: (collectionType) =>
+      resolveEntityCollectionGridRect({
+        collection: resolveEntityCollection({
+          collectionType,
+          state,
+        }),
+        entityDefinitionMap,
+      }),
     findEntityAtClientPixelPoint: (clientPixelPoint) => {
       const gridCell = resolveGridCellAtClientPixelPoint({
         clientPixelPoint,
@@ -83,6 +103,54 @@ export function createEditorEntityQueries({
 
       return null;
     },
+  };
+}
+
+function resolveEntityCollection(options: {
+  collectionType: EntityCollectionType;
+  state: EditorQueriesContext["state"];
+}): EntityCollection {
+  switch (options.collectionType) {
+    case EntityCollectionType.selection:
+      return options.state.selectedEntities;
+    case EntityCollectionType.preview:
+      return options.state.previewEntities;
+  }
+}
+
+function resolveEntityCollectionGridRect(options: {
+  collection: EntityCollection;
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+}): GridRect | null {
+  const areas: GridArea[] = [];
+
+  for (const entity of Object.values(options.collection)) {
+    const definition = options.entityDefinitionMap.get(entity.definitionId);
+
+    if (!definition) {
+      continue;
+    }
+
+    areas.push({
+      position: entity.position,
+      footprint: getRotatedGridFootprint(
+        definition.footprint,
+        entity.rotation,
+      ),
+    });
+  }
+
+  const bounds = getGridBoundingBox(areas);
+
+  if (bounds === null) {
+    return null;
+  }
+
+  return {
+    x: bounds.left,
+    y: bounds.top,
+    width: bounds.width,
+    height: bounds.height,
   };
 }
 

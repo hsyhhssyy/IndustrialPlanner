@@ -6,6 +6,7 @@ import { createEditorHost } from "@/editor/editor-host";
 import { EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY } from "@/editor/storage-hook";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type { WorldEntity } from "@/domain/entity/world-document";
+import { EntityCollectionType } from "@/domain/state/types";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { resolveWorldEntitySpriteLayout } from "@/renderer/scene/render-scene-orchestrator";
@@ -303,6 +304,88 @@ describe("createEditorHost", () => {
       document.entities["dummy-entity-1"] ?? {},
     );
     expect(editorHost.state.selectedEntities["draft-only"]).toMatchObject(draftEntity);
+  });
+
+  it("computes grid rects for selected and preview entity collections", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+    const selectedStorager = document.entities["dummy-entity-2"];
+    const selectedBelt = document.entities["dummy-entity-1"];
+
+    if (!selectedStorager || !selectedBelt) {
+      throw new Error("Expected dummy selected entities to be present.");
+    }
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.selectedEntities = {
+      [selectedStorager.id]: selectedStorager,
+      [selectedBelt.id]: selectedBelt,
+    };
+    editorHost.internalState.previewEntities = {
+      "preview-unloader": {
+        id: "preview-unloader",
+        definitionId: "item_port_unloader_1",
+        position: {
+          x: -2,
+          y: 3,
+        },
+        rotation: 90,
+        config: {},
+        tags: [],
+      },
+      "preview-belt": {
+        id: "preview-belt",
+        definitionId: "belt_straight_1x1",
+        position: {
+          x: 4,
+          y: 8,
+        },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    };
+
+    expect(
+      editorHost.queries.findEntityCollectionGridRect("selection"),
+    ).toEqual({
+      x: 4,
+      y: 4,
+      width: 9,
+      height: 5,
+    });
+    expect(editorHost.queries.findEntityCollectionGridRect("preview")).toEqual({
+      x: -2,
+      y: 3,
+      width: 7,
+      height: 6,
+    });
+  });
+
+  it("does not expose draft as an entity collection type", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalState.drafts = [
+      {
+        id: "draft-only",
+        definitionId: "item_port_storager_1",
+        position: {
+          x: 40,
+          y: 40,
+        },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    ];
+
+    expect(Object.values(EntityCollectionType)).toEqual(["selection", "preview"]);
+    expect(
+      editorHost.queries.findEntityCollectionGridRect("selection"),
+    ).toBeNull();
+    expect(editorHost.queries.findEntityCollectionGridRect("preview")).toBeNull();
   });
 
   it("computes the client rect for a world grid cell", () => {

@@ -56,3 +56,11 @@ export interface UiState {
 }
 
 export type EntityCollection = Readonly<Record<string, WorldEntity>>;
+
+export const EntityCollectionType = {
+  selection: "selection",
+  preview: "preview",
+} as const;
+
+export type EntityCollectionType =
+  typeof EntityCollectionType[keyof typeof EntityCollectionType];
