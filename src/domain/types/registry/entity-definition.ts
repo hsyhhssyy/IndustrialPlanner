@@ -1,12 +1,11 @@
+import type { GridRectSize } from "../grid";
+
 export interface EntityDefinition {
   id: string;
   // i18n 设备名称
   nameKey: string;
   spriteId: string;
-  footprint: {
-    width: number;
-    height: number;
-  };
+  footprint: GridRectSize;
   tags: string[];
   // 是否耗电, 存储箱有powerDemand但是requiresPower为false
   // powerDemand表示只要他在电网里，就需要扣除的值。但是如果requiresPower为false，那么他可以在电网外运行，只不过放到电网里的时候耗电罢了。

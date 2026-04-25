@@ -5,5 +5,7 @@ export type {
 export type {
 	GridFloatPoint,
 	GridPoint,
+	GridRect,
+	GridRectSize,
 	GridRotation,
 } from "./types/grid";

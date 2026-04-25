@@ -1,11 +1,10 @@
-export type { GridPoint, GridRotation } from "@/domain/types/grid";
+export type {
+  GridPoint,
+  GridRectSize,
+  GridRotation,
+} from "@/domain/types/grid";
 
-import type { GridPoint, GridRotation } from "@/domain/types/grid";
-
-export interface GridFootprint {
-  width: number;
-  height: number;
-}
+import type { GridPoint, GridRectSize, GridRotation } from "@/domain/types/grid";
 
 export interface GridBounds {
   left: number;
@@ -16,7 +15,7 @@ export interface GridBounds {
 
 export interface GridArea {
   position: GridPoint;
-  footprint: GridFootprint;
+  footprint: GridRectSize;
 }
 
 export function rotateGridRotationClockwise(
@@ -36,9 +35,9 @@ export function rotateGridRotationClockwise(
 }
 
 export function getRotatedGridFootprint(
-  footprint: GridFootprint,
+  footprint: GridRectSize,
   rotation: GridRotation,
-): GridFootprint {
+): GridRectSize {
   if (rotation === 90 || rotation === 270) {
     return {
       width: footprint.height,
@@ -54,7 +53,7 @@ export function getRotatedGridFootprint(
 
 export function getGridFootprintCenterCells(
   gridPoint: GridPoint,
-  footprint: GridFootprint,
+  footprint: GridRectSize,
 ): {
   x: number;
   y: number;
@@ -131,7 +130,7 @@ export function resolveCenteredGridPoint(
     x: number;
     y: number;
   },
-  footprint: GridFootprint,
+  footprint: GridRectSize,
 ): GridPoint {
   return {
     x: Math.max(0, Math.round(centerCells.x - footprint.width / 2)),
@@ -141,8 +140,8 @@ export function resolveCenteredGridPoint(
 
 export function resolveCenteredRotatedGridPoint(options: {
   gridPoint: GridPoint;
-  currentFootprint: GridFootprint;
-  nextFootprint: GridFootprint;
+  currentFootprint: GridRectSize;
+  nextFootprint: GridRectSize;
 }): GridPoint {
   return resolveCenteredGridPoint(
     getGridFootprintCenterCells(options.gridPoint, options.currentFootprint),

@@ -7,8 +7,8 @@ import type { EntityDefinition } from "@/domain/types/registry/entity-definition
 import {
   getGridFootprintCenterCells,
   getRotatedGridFootprint,
-  type GridFootprint,
 } from "@/shared/geometry/grid"
+import type { GridRectSize } from "@/domain/types/grid"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import {
   resolveViewportGridSize,
@@ -458,7 +458,7 @@ export function resolveGenericDeviceSpriteTexturePath(
 
 export function resolveWorldEntitySpriteLayout(options: {
   entity: WorldEntity;
-  footprint: GridFootprint;
+  footprint: GridRectSize;
   viewportBounds: {
     left: number;
     top: number;
