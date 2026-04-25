@@ -1,0 +1,108 @@
+import type { WorldEntity } from "@/domain/entity/world-document";
+import type { EditorQuery } from "@/domain/query/editor-query";
+import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+
+import {
+  resolveEntityById,
+  resolveListedEntities,
+  resolveOrderedEntityIds,
+} from "../entity-resolvers";
+import type { EditorQueriesContext } from "./types";
+import { resolveGridCellAtClientPixelPoint } from "./viewport-geometry";
+
+type EditorEntityQueries = Pick<
+  EditorQuery,
+  "findEntityAtClientPixelPoint" | "getEntityById" | "listEntities"
+>;
+
+export function createEditorEntityQueries({
+  document,
+  state,
+  workspace,
+}: EditorQueriesContext): EditorEntityQueries {
+  const entityDefinitionMap = new Map(
+    workspace.registry.entityDefinitions.map((definition) => [
+      definition.id,
+      definition,
+    ]),
+  );
+
+  return {
+    getEntityById: (entityId) => resolveEntityById({
+      entityId,
+      document: document.getSnapshot(),
+      drafts: state.drafts,
+    }),
+    listEntities: () => resolveListedEntities({
+      document: document.getSnapshot(),
+      drafts: state.drafts,
+    }),
+    findEntityAtClientPixelPoint: (clientPixelPoint) => {
+      const gridCell = resolveGridCellAtClientPixelPoint({
+        clientPixelPoint,
+        viewportState: state.viewport,
+      });
+
+      if (gridCell === null) {
+        return null;
+      }
+
+      const currentDocument = document.getSnapshot();
+      const orderedEntityIds = resolveOrderedEntityIds(currentDocument);
+
+      for (let index = orderedEntityIds.length - 1; index >= 0; index -= 1) {
+        const entityId = orderedEntityIds[index];
+
+        if (entityId === undefined) {
+          continue;
+        }
+
+        const entity = currentDocument.entities[entityId];
+
+        if (!entity) {
+          continue;
+        }
+
+        const definition = entityDefinitionMap.get(entity.definitionId);
+
+        if (!definition) {
+          continue;
+        }
+
+        if (
+          isGridCellInsideEntity({
+            cell: gridCell,
+            entity,
+            footprint: definition.footprint,
+          })
+        ) {
+          return entity;
+        }
+      }
+
+      return null;
+    },
+  };
+}
+
+function isGridCellInsideEntity(options: {
+  cell: {
+    x: number;
+    y: number;
+  };
+  entity: WorldEntity;
+  footprint: EntityDefinition["footprint"];
+}): boolean {
+  const footprint = getRotatedGridFootprint(
+    options.footprint,
+    options.entity.rotation,
+  );
+
+  return (
+    options.cell.x >= options.entity.position.x
+    && options.cell.x < options.entity.position.x + footprint.width
+    && options.cell.y >= options.entity.position.y
+    && options.cell.y < options.entity.position.y + footprint.height
+  );
+}
