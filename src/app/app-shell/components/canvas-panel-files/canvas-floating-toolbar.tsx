@@ -1,6 +1,6 @@
 import type { AppHost } from "@/app/app-host";
 import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
-import type { CanvasToolbarButtonId } from "@/app/state-impl";
+import type { CanvasFloatingToolbarButtonId } from "@/app/state-impl";
 import type { ClientPixelPoint } from "@/domain/types/client-pixel";
 import {
   useLayoutEffect,
@@ -11,26 +11,26 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 
-type CanvasActionIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
-type CanvasActionTone = "cancel" | "confirm" | "delete" | "rotate";
+type CanvasFloatingToolbarIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
+type CanvasFloatingToolbarTone = "cancel" | "confirm" | "delete" | "rotate";
 
-interface CanvasActionToolbarDefinition {
+interface CanvasFloatingToolbarDefinition {
   readonly ariaLabel: {
     readonly "zh-CN": string;
     readonly "en-US": string;
   };
-  icon: CanvasActionIconKind;
-  tone?: CanvasActionTone;
+  icon: CanvasFloatingToolbarIconKind;
+  tone?: CanvasFloatingToolbarTone;
 }
 
-interface CanvasActionToolbarProps {
+interface CanvasFloatingToolbarProps {
   appHost: AppHost;
-  buttonIds: readonly CanvasToolbarButtonId[];
+  buttonIds: readonly CanvasFloatingToolbarButtonId[];
   anchor: ClientPixelPoint;
 }
 
-const CANVAS_ACTION_TOOLBAR_DEFINITIONS: Record<CanvasToolbarButtonId, CanvasActionToolbarDefinition> = {
-  "canvas-toolbar-button-ok": {
+const CANVAS_FLOATING_TOOLBAR_DEFINITIONS: Record<CanvasFloatingToolbarButtonId, CanvasFloatingToolbarDefinition> = {
+  "canvas-floating-toolbar-button-ok": {
     ariaLabel: {
       "zh-CN": "确认",
       "en-US": "Confirm",
@@ -38,7 +38,7 @@ const CANVAS_ACTION_TOOLBAR_DEFINITIONS: Record<CanvasToolbarButtonId, CanvasAct
     icon: "confirm",
     tone: "confirm",
   },
-  "canvas-toolbar-button-cancel": {
+  "canvas-floating-toolbar-button-cancel": {
     ariaLabel: {
       "zh-CN": "取消",
       "en-US": "Cancel",
@@ -46,7 +46,7 @@ const CANVAS_ACTION_TOOLBAR_DEFINITIONS: Record<CanvasToolbarButtonId, CanvasAct
     icon: "cancel",
     tone: "cancel",
   },
-  "canvas-toolbar-button-rotate": {
+  "canvas-floating-toolbar-button-rotate": {
     ariaLabel: {
       "zh-CN": "旋转",
       "en-US": "Rotate",
@@ -54,7 +54,7 @@ const CANVAS_ACTION_TOOLBAR_DEFINITIONS: Record<CanvasToolbarButtonId, CanvasAct
     icon: "rotate",
     tone: "rotate",
   },
-  "canvas-toolbar-button-delete": {
+  "canvas-floating-toolbar-button-delete": {
     ariaLabel: {
       "zh-CN": "删除",
       "en-US": "Delete",
@@ -62,7 +62,7 @@ const CANVAS_ACTION_TOOLBAR_DEFINITIONS: Record<CanvasToolbarButtonId, CanvasAct
     icon: "delete",
     tone: "delete",
   },
-  "canvas-toolbar-button-delete-many": {
+  "canvas-floating-toolbar-button-delete-many": {
     ariaLabel: {
       "zh-CN": "批量删除",
       "en-US": "Delete Many",
@@ -76,24 +76,24 @@ function joinClassNames(values: Array<string | undefined | false>): string {
   return values.filter(Boolean).join(" ");
 }
 
-export function CanvasActionToolbar({
+export function CanvasFloatingToolbar({
   appHost,
   buttonIds,
   anchor,
-}: CanvasActionToolbarProps) {
+}: CanvasFloatingToolbarProps) {
   const locale = appHost.state.settings.locale;
   const toolbarRef = useRef<HTMLDivElement | null>(null);
 
   useLayoutEffect(() => {
     const toolbar = toolbarRef.current;
     if (toolbar === null) {
-      appHost.internalActions.setCanvasToolbarSize(null);
+      appHost.internalActions.setCanvasFloatingToolbarSize(null);
       return;
     }
 
     const measure = () => {
       const rect = toolbar.getBoundingClientRect();
-      appHost.internalActions.setCanvasToolbarSize({
+      appHost.internalActions.setCanvasFloatingToolbarSize({
         width: rect.width,
         height: rect.height,
       });
@@ -131,7 +131,7 @@ export function CanvasActionToolbar({
 
   const handleButtonPointerUp = (
     event: ReactPointerEvent<HTMLButtonElement>,
-    buttonId: CanvasToolbarButtonId,
+    buttonId: CanvasFloatingToolbarButtonId,
   ) => {
     event.stopPropagation();
 
@@ -162,8 +162,8 @@ export function CanvasActionToolbar({
 
   return (
     <div
-      aria-label="canvas toolbar"
-      className="canvas-action-toolbar"
+      aria-label="canvas floating toolbar"
+      className="canvas-floating-toolbar"
       onAuxClick={stopUiPropagationAndDefault}
       onClick={stopUiPropagation}
       onContextMenu={stopUiPropagationAndDefault}
@@ -179,15 +179,14 @@ export function CanvasActionToolbar({
       }}
     >
       {buttonIds.map((buttonId) => {
-        const definition = CANVAS_ACTION_TOOLBAR_DEFINITIONS[buttonId];
+        const definition = CANVAS_FLOATING_TOOLBAR_DEFINITIONS[buttonId];
         const ariaLabel = definition.ariaLabel[locale];
 
         return (
           <button
             aria-label={ariaLabel}
             className={joinClassNames([
-              "canvas-toolbar-button",
-              "canvas-action-button",
+              "canvas-floating-toolbar-button",
               definition.tone ? `is-${definition.tone}` : undefined,
             ])}
             data-ui-button-id={buttonId}
@@ -202,7 +201,7 @@ export function CanvasActionToolbar({
             }}
             type="button"
           >
-            <WorkbenchIcon className="canvas-action-icon" kind={definition.icon} />
+            <WorkbenchIcon className="canvas-floating-toolbar-icon" kind={definition.icon} />
             <span className="sr-only">{ariaLabel}</span>
           </button>
         );

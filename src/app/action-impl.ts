@@ -14,9 +14,9 @@ import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 
 import {
   type ActiveTool,
-  CANVAS_TOOLBAR_BUTTON_IDS,
-  type CanvasToolbarButtonId,
-  type CanvasToolbarSize,
+  CANVAS_FLOATING_TOOLBAR_BUTTON_IDS,
+  type CanvasFloatingToolbarButtonId,
+  type CanvasFloatingToolbarSize,
   clampLeftDockWidth,
   DEFAULT_RIGHT_DOCK_WIDTH,
   resolveLeftDockWidthForScreenProfile,
@@ -24,7 +24,7 @@ import {
   type UiStateReadWrite,
 } from "./state-impl";
 
-const DEFAULT_CANVAS_TOOLBAR_HEIGHT = 44;
+const DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT = 44;
 
 export interface AppInternalAction {
   toggleLeftDock: () => void;
@@ -32,18 +32,18 @@ export interface AppInternalAction {
   toggleTopBarCollapsed: () => void;
   setActivePanel: (panel: ActivePanel) => void;
   setActiveTool: (activeTool: ActiveTool) => void;
-  showCanvasToolbar: (
-    buttonIds: readonly CanvasToolbarButtonId[],
+  showCanvasFloatingToolbar: (
+    buttonIds: readonly CanvasFloatingToolbarButtonId[],
     clientPixelPoint: ClientPixelPoint,
   ) => void;
-  showCanvasToolbarForCollection: (
-    buttonIds: readonly CanvasToolbarButtonId[],
+  showCanvasFloatingToolbarForCollection: (
+    buttonIds: readonly CanvasFloatingToolbarButtonId[],
     collectionType: EntityCollectionType,
   ) => boolean;
-  moveCanvasToolbar: (clientPixelPoint: ClientPixelPoint) => void;
-  alignCanvasToolbar: () => boolean;
-  setCanvasToolbarSize: (size: CanvasToolbarSize | null) => void;
-  hideCanvasToolbar: () => void;
+  moveCanvasFloatingToolbar: (clientPixelPoint: ClientPixelPoint) => void;
+  alignCanvasFloatingToolbar: () => boolean;
+  setCanvasFloatingToolbarSize: (size: CanvasFloatingToolbarSize | null) => void;
+  hideCanvasFloatingToolbar: () => void;
   setLeftDockWidth: (width: number) => void;
   setScreenProfile: (screenProfile: ScreenProfile) => void;
   setLocale: (locale: AppLocale) => void;
@@ -97,51 +97,51 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     this.internalState.runtime.activeTool = activeTool;
   });
 
-  public readonly showCanvasToolbar: AppInternalAction["showCanvasToolbar"] = action((
+  public readonly showCanvasFloatingToolbar: AppInternalAction["showCanvasFloatingToolbar"] = action((
     buttonIds,
     clientPixelPoint,
   ) => {
-    const nextButtonIds = normalizeCanvasToolbarButtonIds(buttonIds);
+    const nextButtonIds = normalizeCanvasFloatingToolbarButtonIds(buttonIds);
     const nextAnchor = normalizeClientPixelPoint(clientPixelPoint);
 
     if (nextButtonIds.length === 0 || nextAnchor === null) {
-      this.hideCanvasToolbar();
+      this.hideCanvasFloatingToolbar();
       return;
     }
 
-    this.internalState.runtime.canvasToolbar.visible = true;
-    this.internalState.runtime.canvasToolbar.buttonIds = nextButtonIds;
-    this.internalState.runtime.canvasToolbar.anchor = nextAnchor;
-    this.internalState.runtime.canvasToolbar.attachedCollection = null;
+    this.internalState.runtime.canvasFloatingToolbar.visible = true;
+    this.internalState.runtime.canvasFloatingToolbar.buttonIds = nextButtonIds;
+    this.internalState.runtime.canvasFloatingToolbar.anchor = nextAnchor;
+    this.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
   });
 
-  public readonly showCanvasToolbarForCollection: AppInternalAction["showCanvasToolbarForCollection"] = action((
+  public readonly showCanvasFloatingToolbarForCollection: AppInternalAction["showCanvasFloatingToolbarForCollection"] = action((
     buttonIds,
     collectionType,
   ) => {
-    const nextButtonIds = normalizeCanvasToolbarButtonIds(buttonIds);
+    const nextButtonIds = normalizeCanvasFloatingToolbarButtonIds(buttonIds);
 
     if (nextButtonIds.length === 0) {
-      this.hideCanvasToolbar();
+      this.hideCanvasFloatingToolbar();
       return false;
     }
 
-    this.internalState.runtime.canvasToolbar.visible = true;
-    this.internalState.runtime.canvasToolbar.buttonIds = nextButtonIds;
-    this.internalState.runtime.canvasToolbar.attachedCollection = collectionType;
+    this.internalState.runtime.canvasFloatingToolbar.visible = true;
+    this.internalState.runtime.canvasFloatingToolbar.buttonIds = nextButtonIds;
+    this.internalState.runtime.canvasFloatingToolbar.attachedCollection = collectionType;
 
-    if (!this.alignCanvasToolbar()) {
-      this.hideCanvasToolbar();
+    if (!this.alignCanvasFloatingToolbar()) {
+      this.hideCanvasFloatingToolbar();
       return false;
     }
 
     return true;
   });
 
-  public readonly moveCanvasToolbar: AppInternalAction["moveCanvasToolbar"] = action((
+  public readonly moveCanvasFloatingToolbar: AppInternalAction["moveCanvasFloatingToolbar"] = action((
     clientPixelPoint,
   ) => {
-    if (!this.internalState.runtime.canvasToolbar.visible) {
+    if (!this.internalState.runtime.canvasFloatingToolbar.visible) {
       return;
     }
 
@@ -150,11 +150,11 @@ export class AppActionImpl implements AppAction, AppInternalAction {
       return;
     }
 
-    this.internalState.runtime.canvasToolbar.anchor = nextAnchor;
+    this.internalState.runtime.canvasFloatingToolbar.anchor = nextAnchor;
   });
 
-  public readonly alignCanvasToolbar: AppInternalAction["alignCanvasToolbar"] = action(() => {
-    const toolbar = this.internalState.runtime.canvasToolbar;
+  public readonly alignCanvasFloatingToolbar: AppInternalAction["alignCanvasFloatingToolbar"] = action(() => {
+    const toolbar = this.internalState.runtime.canvasFloatingToolbar;
     if (!toolbar.visible || toolbar.attachedCollection === null) {
       return false;
     }
@@ -179,17 +179,17 @@ export class AppActionImpl implements AppAction, AppInternalAction {
       return false;
     }
 
-    toolbar.anchor = resolveCanvasToolbarAnchor({
+    toolbar.anchor = resolveCanvasFloatingToolbarAnchor({
       collectionWidth: collectionRect.width,
       topLeftAboveCellRect,
-      toolbarHeight: toolbar.measuredSize?.height ?? DEFAULT_CANVAS_TOOLBAR_HEIGHT,
+      toolbarHeight: toolbar.measuredSize?.height ?? DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT,
     });
     return true;
   });
 
-  public readonly setCanvasToolbarSize: AppInternalAction["setCanvasToolbarSize"] = action((size) => {
-    const nextSize = normalizeCanvasToolbarSize(size);
-    const currentSize = this.internalState.runtime.canvasToolbar.measuredSize;
+  public readonly setCanvasFloatingToolbarSize: AppInternalAction["setCanvasFloatingToolbarSize"] = action((size) => {
+    const nextSize = normalizeCanvasFloatingToolbarSize(size);
+    const currentSize = this.internalState.runtime.canvasFloatingToolbar.measuredSize;
 
     if (
       currentSize?.width === nextSize?.width
@@ -198,24 +198,24 @@ export class AppActionImpl implements AppAction, AppInternalAction {
       return;
     }
 
-    this.internalState.runtime.canvasToolbar.measuredSize = nextSize;
-    this.alignCanvasToolbar();
+    this.internalState.runtime.canvasFloatingToolbar.measuredSize = nextSize;
+    this.alignCanvasFloatingToolbar();
   });
 
-  public readonly hideCanvasToolbar: AppInternalAction["hideCanvasToolbar"] = action(() => {
+  public readonly hideCanvasFloatingToolbar: AppInternalAction["hideCanvasFloatingToolbar"] = action(() => {
     if (
-      !this.internalState.runtime.canvasToolbar.visible
-      && this.internalState.runtime.canvasToolbar.buttonIds.length === 0
-      && this.internalState.runtime.canvasToolbar.anchor === null
-      && this.internalState.runtime.canvasToolbar.attachedCollection === null
+      !this.internalState.runtime.canvasFloatingToolbar.visible
+      && this.internalState.runtime.canvasFloatingToolbar.buttonIds.length === 0
+      && this.internalState.runtime.canvasFloatingToolbar.anchor === null
+      && this.internalState.runtime.canvasFloatingToolbar.attachedCollection === null
     ) {
       return;
     }
 
-    this.internalState.runtime.canvasToolbar.visible = false;
-    this.internalState.runtime.canvasToolbar.buttonIds = [];
-    this.internalState.runtime.canvasToolbar.anchor = null;
-    this.internalState.runtime.canvasToolbar.attachedCollection = null;
+    this.internalState.runtime.canvasFloatingToolbar.visible = false;
+    this.internalState.runtime.canvasFloatingToolbar.buttonIds = [];
+    this.internalState.runtime.canvasFloatingToolbar.anchor = null;
+    this.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
   });
 
   public readonly setLeftDockWidth: AppInternalAction["setLeftDockWidth"] = action((width) => {
@@ -330,11 +330,11 @@ function areScreenProfilesEqual(left: ScreenProfile, right: ScreenProfile): bool
   );
 }
 
-function normalizeCanvasToolbarButtonIds(
-  buttonIds: readonly CanvasToolbarButtonId[],
-): CanvasToolbarButtonId[] {
-  const knownButtonIds = new Set<CanvasToolbarButtonId>(CANVAS_TOOLBAR_BUTTON_IDS);
-  const deduped: CanvasToolbarButtonId[] = [];
+function normalizeCanvasFloatingToolbarButtonIds(
+  buttonIds: readonly CanvasFloatingToolbarButtonId[],
+): CanvasFloatingToolbarButtonId[] {
+  const knownButtonIds = new Set<CanvasFloatingToolbarButtonId>(CANVAS_FLOATING_TOOLBAR_BUTTON_IDS);
+  const deduped: CanvasFloatingToolbarButtonId[] = [];
 
   for (const buttonId of buttonIds) {
     if (!knownButtonIds.has(buttonId) || deduped.includes(buttonId)) {
@@ -360,9 +360,9 @@ function normalizeClientPixelPoint(
   };
 }
 
-function normalizeCanvasToolbarSize(
-  size: CanvasToolbarSize | null,
-): CanvasToolbarSize | null {
+function normalizeCanvasFloatingToolbarSize(
+  size: CanvasFloatingToolbarSize | null,
+): CanvasFloatingToolbarSize | null {
   if (
     size === null
     || !Number.isFinite(size.width)
@@ -379,7 +379,7 @@ function normalizeCanvasToolbarSize(
   };
 }
 
-function resolveCanvasToolbarAnchor(options: {
+function resolveCanvasFloatingToolbarAnchor(options: {
   collectionWidth: number;
   topLeftAboveCellRect: ClientPixelRect;
   toolbarHeight: number;

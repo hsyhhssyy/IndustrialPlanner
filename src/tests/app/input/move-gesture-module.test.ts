@@ -39,7 +39,7 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
     expect(appHost.internalState.runtime.activeTool).toBe("move");
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
-    expect(appHost.internalActions.hideCanvasToolbar).toHaveBeenCalled();
+    expect(appHost.internalActions.hideCanvasFloatingToolbar).toHaveBeenCalled();
   });
 
   it("requires an existing selection when mouse move enters from marquee", () => {
@@ -108,7 +108,7 @@ describe("createHypergryphMoveGestureModule", () => {
     });
     expect(select.editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
     expect(select.appHost.internalState.runtime.activeTool).toBe("move");
-    expect(select.appHost.internalActions.showCanvasToolbarForCollection).toHaveBeenCalledWith(
+    expect(select.appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
       MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
     );
@@ -222,7 +222,7 @@ describe("createHypergryphMoveGestureModule", () => {
       endGridPoint: { x: 6, y: 4 },
     });
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 6, y: 4 });
-    expect(appHost.internalActions.alignCanvasToolbar).toHaveBeenCalledTimes(1);
+    expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
   it("rotates the preview with the R key while moving", () => {
@@ -239,7 +239,7 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(editor.actions.rotateCollection).toHaveBeenCalledWith(
       EntityCollectionType.preview,
     );
-    expect(appHost.internalActions.alignCanvasToolbar).toHaveBeenCalledTimes(1);
+    expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
   it("rotates the preview from the rotate toolbar button while moving", () => {
@@ -250,13 +250,13 @@ describe("createHypergryphMoveGestureModule", () => {
     });
     const module = createHypergryphMoveGestureModule();
 
-    const result = module.handle(uiButtonTouchTapEvent("canvas-toolbar-button-rotate"), context);
+    const result = module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-rotate"), context);
 
     expect(result).toEqual({ status: "handled" });
     expect(editor.actions.rotateCollection).toHaveBeenCalledWith(
       EntityCollectionType.preview,
     );
-    expect(appHost.internalActions.alignCanvasToolbar).toHaveBeenCalledTimes(1);
+    expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
   it("applies with a non-long-press left mouse tap and cancels with a right mouse tap", () => {
@@ -394,7 +394,7 @@ function createContext(options: {
       runtime: {
         activeTool: options.activeTool ?? "select",
         moveAnchor: options.moveAnchor ?? null,
-        canvasToolbar: {
+        canvasFloatingToolbar: {
           visible: options.toolbarVisible ?? false,
           buttonIds: [],
           anchor: null,
@@ -407,28 +407,28 @@ function createContext(options: {
       setActiveTool: vi.fn((activeTool) => {
         appHost.internalState.runtime.activeTool = activeTool;
       }),
-      showCanvasToolbar: vi.fn((_, anchor) => {
-        appHost.internalState.runtime.canvasToolbar.visible = true;
-        appHost.internalState.runtime.canvasToolbar.anchor = anchor;
-        appHost.internalState.runtime.canvasToolbar.attachedCollection = null;
+      showCanvasFloatingToolbar: vi.fn((_, anchor) => {
+        appHost.internalState.runtime.canvasFloatingToolbar.visible = true;
+        appHost.internalState.runtime.canvasFloatingToolbar.anchor = anchor;
+        appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
       }),
-      showCanvasToolbarForCollection: vi.fn((buttonIds, collectionType) => {
+      showCanvasFloatingToolbarForCollection: vi.fn((buttonIds, collectionType) => {
         if (editor.queries.findEntityCollectionGridRect(collectionType) === null) {
           return false;
         }
 
-        appHost.internalState.runtime.canvasToolbar.visible = true;
-        appHost.internalState.runtime.canvasToolbar.buttonIds = [...buttonIds];
-        appHost.internalState.runtime.canvasToolbar.anchor = { x: 80, y: 72 };
-        appHost.internalState.runtime.canvasToolbar.attachedCollection = collectionType;
+        appHost.internalState.runtime.canvasFloatingToolbar.visible = true;
+        appHost.internalState.runtime.canvasFloatingToolbar.buttonIds = [...buttonIds];
+        appHost.internalState.runtime.canvasFloatingToolbar.anchor = { x: 80, y: 72 };
+        appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = collectionType;
         return true;
       }),
-      moveCanvasToolbar: vi.fn(),
-      alignCanvasToolbar: vi.fn(() => true),
-      setCanvasToolbarSize: vi.fn(),
-      hideCanvasToolbar: vi.fn(() => {
-        appHost.internalState.runtime.canvasToolbar.visible = false;
-        appHost.internalState.runtime.canvasToolbar.attachedCollection = null;
+      moveCanvasFloatingToolbar: vi.fn(),
+      alignCanvasFloatingToolbar: vi.fn(() => true),
+      setCanvasFloatingToolbarSize: vi.fn(),
+      hideCanvasFloatingToolbar: vi.fn(() => {
+        appHost.internalState.runtime.canvasFloatingToolbar.visible = false;
+        appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
       }),
     },
     workspace: {
@@ -528,9 +528,9 @@ function mouseLongPressReadyEvent(options: {
 }
 
 const MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST = [
-  "canvas-toolbar-button-ok",
-  "canvas-toolbar-button-rotate",
-  "canvas-toolbar-button-cancel",
+  "canvas-floating-toolbar-button-ok",
+  "canvas-floating-toolbar-button-rotate",
+  "canvas-floating-toolbar-button-cancel",
 ] as const;
 
 function tapLongPressReadyEvent(options: {

@@ -12,9 +12,9 @@ import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
 const MOVE_TOOLBAR_BUTTON_IDS = [
-  "canvas-toolbar-button-ok",
-  "canvas-toolbar-button-rotate",
-  "canvas-toolbar-button-cancel",
+  "canvas-floating-toolbar-button-ok",
+  "canvas-floating-toolbar-button-rotate",
+  "canvas-floating-toolbar-button-cancel",
 ] as const;
 
 export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHost> {
@@ -113,17 +113,17 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             return { status: "handled" };
 
           case "ui-button-touch-tap":
-            if (event.uiButtonId === "canvas-toolbar-button-ok") {
+            if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
               applyMoveOperation(context.appHost, editor);
               return { status: "handled" };
             }
 
-            if (event.uiButtonId === "canvas-toolbar-button-rotate") {
+            if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
               rotateMovePreview(context.appHost, editor);
               return { status: "handled" };
             }
 
-            if (event.uiButtonId === "canvas-toolbar-button-cancel") {
+            if (event.uiButtonId === "canvas-floating-toolbar-button-cancel") {
               cancelMoveOperation(context.appHost, editor);
               return { status: "handled" };
             }
@@ -135,17 +135,17 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
               return { status: "ignored" };
             }
 
-            if (event.uiButtonId === "canvas-toolbar-button-ok") {
+            if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
               applyMoveOperation(context.appHost, editor);
               return { status: "handled" };
             }
 
-            if (event.uiButtonId === "canvas-toolbar-button-rotate") {
+            if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
               rotateMovePreview(context.appHost, editor);
               return { status: "handled" };
             }
 
-            if (event.uiButtonId === "canvas-toolbar-button-cancel") {
+            if (event.uiButtonId === "canvas-floating-toolbar-button-cancel") {
               cancelMoveOperation(context.appHost, editor);
               return { status: "handled" };
             }
@@ -266,7 +266,7 @@ function tryEnterMoveMode(options: {
     }
 
     if (options.source === "touch") {
-      if (!options.appHost.internalActions.showCanvasToolbarForCollection(
+      if (!options.appHost.internalActions.showCanvasFloatingToolbarForCollection(
         MOVE_TOOLBAR_BUTTON_IDS,
         EntityCollectionType.preview,
       )) {
@@ -280,7 +280,7 @@ function tryEnterMoveMode(options: {
       }
 
     } else {
-      options.appHost.internalActions.hideCanvasToolbar();
+      options.appHost.internalActions.hideCanvasFloatingToolbar();
     }
 
     options.appHost.internalState.runtime.moveAnchor = anchor;
@@ -351,7 +351,7 @@ function restoreFailedEnterMove(options: {
 }): void {
   safelyCancelMoveDraft(options.editor);
   options.appHost.internalState.runtime.moveAnchor = null;
-  options.appHost.internalActions.hideCanvasToolbar();
+  options.appHost.internalActions.hideCanvasFloatingToolbar();
   options.appHost.internalActions.setActiveTool(options.previousTool);
 
   try {
@@ -452,7 +452,7 @@ function driveMovePreview(options: {
       })
     ) {
       options.appHost.internalState.runtime.moveAnchor = nextGridPoint;
-      options.appHost.internalActions.alignCanvasToolbar();
+      options.appHost.internalActions.alignCanvasFloatingToolbar();
     }
 
     return { status: "handled" };
@@ -464,7 +464,7 @@ function driveMovePreview(options: {
 
 function rotateMovePreview(appHost: AppHost, editor: EditorContract): void {
   editor.actions.rotateCollection(EntityCollectionType.preview);
-  appHost.internalActions.alignCanvasToolbar();
+  appHost.internalActions.alignCanvasFloatingToolbar();
 }
 
 function applyMoveOperation(appHost: AppHost, editor: EditorContract): void {
@@ -509,7 +509,7 @@ export function hookMoveToolCleanupFallback(appHost: AppHost): () => void {
 
 function clearMoveUi(appHost: AppHost): void {
   appHost.internalState.runtime.moveAnchor = null;
-  appHost.internalActions.hideCanvasToolbar();
+  appHost.internalActions.hideCanvasFloatingToolbar();
 }
 
 function safelyCancelMoveDraft(editor: EditorContract): void {

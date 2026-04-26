@@ -12,7 +12,7 @@ describe("createHypergryphMouseViewportPanModule", () => {
   it("accepts left mouse drag in select mode", () => {
     const {
       context,
-      alignCanvasToolbar,
+      alignCanvasFloatingToolbar,
       moveViewportByClientPixelVector,
     } = createContext(true, "select");
     const module = createHypergryphMouseViewportPanModule();
@@ -39,13 +39,13 @@ describe("createHypergryphMouseViewportPanModule", () => {
       startClientPixel: { x: 120, y: 80 },
       endClientPixel: { x: 130, y: 70 },
     });
-    expect(alignCanvasToolbar).toHaveBeenCalledTimes(1);
+    expect(alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
   it("ignores left mouse drag in marquee mode", () => {
     const {
       context,
-      alignCanvasToolbar,
+      alignCanvasFloatingToolbar,
       moveViewportByClientPixelVector,
     } = createContext(true, "marquee");
     const module = createHypergryphMouseViewportPanModule();
@@ -69,13 +69,13 @@ describe("createHypergryphMouseViewportPanModule", () => {
 
     expect(startResult).toEqual({ status: "ignored" });
     expect(moveViewportByClientPixelVector).not.toHaveBeenCalled();
-    expect(alignCanvasToolbar).not.toHaveBeenCalled();
+    expect(alignCanvasFloatingToolbar).not.toHaveBeenCalled();
   });
 
   it("pans the viewport for non-long-press touch drag gestures", () => {
     const {
       context,
-      alignCanvasToolbar,
+      alignCanvasFloatingToolbar,
       moveViewportByClientPixelVector,
     } = createContext();
     const module = createHypergryphMouseViewportPanModule();
@@ -134,13 +134,13 @@ describe("createHypergryphMouseViewportPanModule", () => {
       startClientPixel: { x: 136, y: 64 },
       endClientPixel: { x: 140, y: 72 },
     });
-    expect(alignCanvasToolbar).toHaveBeenCalledTimes(2);
+    expect(alignCanvasFloatingToolbar).toHaveBeenCalledTimes(2);
   });
 
   it("ignores long-press touch drag gestures", () => {
     const {
       context,
-      alignCanvasToolbar,
+      alignCanvasFloatingToolbar,
       moveViewportByClientPixelVector,
     } = createContext();
     const module = createHypergryphMouseViewportPanModule();
@@ -192,7 +192,7 @@ describe("createHypergryphMouseViewportPanModule", () => {
     expect(moveResult).toEqual({ status: "ignored" });
     expect(endResult).toEqual({ status: "ignored" });
     expect(moveViewportByClientPixelVector).not.toHaveBeenCalled();
-    expect(alignCanvasToolbar).not.toHaveBeenCalled();
+    expect(alignCanvasFloatingToolbar).not.toHaveBeenCalled();
   });
 
   it("only enables the module while hypergryph operation mode is on", () => {
@@ -205,10 +205,10 @@ describe("createHypergryphMouseViewportPanModule", () => {
 
 function createContext(hypergryphOperationMode = true, activeTool: "select" | "marquee" | "placement" = "select"): {
   context: GestureActionContext<AppHost>;
-  alignCanvasToolbar: ReturnType<typeof vi.fn>;
+  alignCanvasFloatingToolbar: ReturnType<typeof vi.fn>;
   moveViewportByClientPixelVector: ReturnType<typeof vi.fn>;
 } {
-  const alignCanvasToolbar = vi.fn(() => true);
+  const alignCanvasFloatingToolbar = vi.fn(() => true);
   const moveViewportByClientPixelVector = vi.fn();
   const workspace = {
     editor: {
@@ -241,12 +241,12 @@ function createContext(hypergryphOperationMode = true, activeTool: "select" | "m
           },
         },
         internalActions: {
-          alignCanvasToolbar,
+          alignCanvasFloatingToolbar,
         },
       } as unknown as AppHost,
       keyboard: emptyKeyboardSnapshot(),
     },
-    alignCanvasToolbar,
+    alignCanvasFloatingToolbar,
     moveViewportByClientPixelVector,
   };
 }

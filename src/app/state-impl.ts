@@ -52,27 +52,27 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
   topBarCollapsed: boolean;
 }
 
-export const CANVAS_TOOLBAR_BUTTON_IDS = [
-  "canvas-toolbar-button-ok",
-  "canvas-toolbar-button-cancel",
-  "canvas-toolbar-button-rotate",
-  "canvas-toolbar-button-delete",
-  "canvas-toolbar-button-delete-many",
+export const CANVAS_FLOATING_TOOLBAR_BUTTON_IDS = [
+  "canvas-floating-toolbar-button-ok",
+  "canvas-floating-toolbar-button-cancel",
+  "canvas-floating-toolbar-button-rotate",
+  "canvas-floating-toolbar-button-delete",
+  "canvas-floating-toolbar-button-delete-many",
 ] as const;
 
-export type CanvasToolbarButtonId = typeof CANVAS_TOOLBAR_BUTTON_IDS[number];
+export type CanvasFloatingToolbarButtonId = typeof CANVAS_FLOATING_TOOLBAR_BUTTON_IDS[number];
 
-export interface CanvasToolbarSize {
+export interface CanvasFloatingToolbarSize {
   readonly width: number;
   readonly height: number;
 }
 
-export interface CanvasToolbarStateReadWrite {
+export interface CanvasFloatingToolbarStateReadWrite {
   visible: boolean;
-  buttonIds: CanvasToolbarButtonId[];
+  buttonIds: CanvasFloatingToolbarButtonId[];
   anchor: ClientPixelPoint | null;
   attachedCollection: EntityCollectionType | null;
-  measuredSize: CanvasToolbarSize | null;
+  measuredSize: CanvasFloatingToolbarSize | null;
 }
 
 export type ActiveTool = "select" | "move" | "marquee" | "placement";
@@ -81,7 +81,7 @@ export interface RuntimeStateReadWrite {
   activePanel: ActivePanel;
   activeTool: ActiveTool;
   moveAnchor: GridPoint | null;
-  canvasToolbar: CanvasToolbarStateReadWrite;
+  canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite;
 }
 
 const DEFAULT_APP_LOCALE: AppLocale = "zh-CN";
@@ -111,12 +111,12 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   }
 }
 
-class CanvasToolbarStateReadWriteImpl implements CanvasToolbarStateReadWrite {
+class CanvasFloatingToolbarStateReadWriteImpl implements CanvasFloatingToolbarStateReadWrite {
   visible = false;
-  buttonIds: CanvasToolbarButtonId[] = [];
+  buttonIds: CanvasFloatingToolbarButtonId[] = [];
   anchor: ClientPixelPoint | null = null;
   attachedCollection: EntityCollectionType | null = null;
-  measuredSize: CanvasToolbarSize | null = null;
+  measuredSize: CanvasFloatingToolbarSize | null = null;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -127,7 +127,7 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   activePanel: ActivePanel = null;
   activeTool: ActiveTool = "select";
   moveAnchor: GridPoint | null = null;
-  canvasToolbar: CanvasToolbarStateReadWrite = new CanvasToolbarStateReadWriteImpl();
+  canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite = new CanvasFloatingToolbarStateReadWriteImpl();
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

@@ -3,7 +3,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/app-shell/components/bottom-status-bar";
 import { CanvasPanel } from "@/app/app-shell/components/canvas-panel";
-import { CanvasActionToolbar } from "@/app/app-shell/components/canvas-panel-files/canvas-action-toolbar";
+import { CanvasFloatingToolbar } from "@/app/app-shell/components/canvas-panel-files/canvas-floating-toolbar";
 import { FullscreenToggleButton } from "@/app/app-shell/components/fullscreen-toggle-button";
 import { SettingsDialog } from "@/app/app-shell/components/settings-dialog";
 import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
@@ -112,7 +112,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const leftDockWidth = appHost.state.workbench.leftDockWidth;
   const topBarCollapsed = appHost.state.workbench.topBarCollapsed;
   const screenProfile = appHost.state.screenProfile;
-  const canvasToolbar = appHost.internalState.runtime.canvasToolbar;
+  const canvasFloatingToolbar = appHost.internalState.runtime.canvasFloatingToolbar;
   const isMobileLandscape = isMobileLandscapeScreenProfile(screenProfile);
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
   const showFloatingTopBarControls = isMobileLandscape && topBarCollapsed;
@@ -185,11 +185,11 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       />
       {leftDockOpen ? <LeftDock appHost={appHost} /> : null}
       <CanvasPanel appHost={appHost} />
-      {canvasToolbar.visible && canvasToolbar.anchor !== null && canvasToolbar.buttonIds.length > 0 ? (
-        <CanvasActionToolbar
-          anchor={canvasToolbar.anchor}
+      {canvasFloatingToolbar.visible && canvasFloatingToolbar.anchor !== null && canvasFloatingToolbar.buttonIds.length > 0 ? (
+        <CanvasFloatingToolbar
+          anchor={canvasFloatingToolbar.anchor}
           appHost={appHost}
-          buttonIds={canvasToolbar.buttonIds}
+          buttonIds={canvasFloatingToolbar.buttonIds}
         />
       ) : null}
       {rightDockOpen ? <RightDock appHost={appHost} /> : null}

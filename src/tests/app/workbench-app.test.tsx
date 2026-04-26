@@ -411,7 +411,7 @@ describe("WorkbenchApp", () => {
     expect(leftMouseEvent.defaultPrevented).toBe(false);
   });
 
-  it("shows, moves and hides the floating canvas toolbar through app internal actions", () => {
+  it("shows, moves and hides the canvas floating toolbar through app internal actions", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -419,19 +419,19 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    expect(container.querySelector(".canvas-action-toolbar")).toBeNull();
+    expect(container.querySelector(".canvas-floating-toolbar")).toBeNull();
 
     act(() => {
-      appHost.internalActions.showCanvasToolbar(
+      appHost.internalActions.showCanvasFloatingToolbar(
         [
-          "canvas-toolbar-button-ok",
-          "canvas-toolbar-button-delete-many",
+          "canvas-floating-toolbar-button-ok",
+          "canvas-floating-toolbar-button-delete-many",
         ],
         { x: 220, y: 180 },
       );
     });
 
-    const toolbar = container.querySelector(".canvas-action-toolbar") as HTMLDivElement | null;
+    const toolbar = container.querySelector(".canvas-floating-toolbar") as HTMLDivElement | null;
 
     expect(toolbar).not.toBeNull();
     expect(toolbar?.style.left).toBe("220px");
@@ -441,25 +441,25 @@ describe("WorkbenchApp", () => {
         button.getAttribute("data-ui-button-id"),
       ),
     ).toEqual([
-      "canvas-toolbar-button-ok",
-      "canvas-toolbar-button-delete-many",
+      "canvas-floating-toolbar-button-ok",
+      "canvas-floating-toolbar-button-delete-many",
     ]);
 
     act(() => {
-      appHost.internalActions.moveCanvasToolbar({ x: 256, y: 144 });
+      appHost.internalActions.moveCanvasFloatingToolbar({ x: 256, y: 144 });
     });
 
     expect(toolbar?.style.left).toBe("256px");
     expect(toolbar?.style.top).toBe("144px");
 
     act(() => {
-      appHost.internalActions.hideCanvasToolbar();
+      appHost.internalActions.hideCanvasFloatingToolbar();
     });
 
-    expect(container.querySelector(".canvas-action-toolbar")).toBeNull();
+    expect(container.querySelector(".canvas-floating-toolbar")).toBeNull();
   });
 
-  it("keeps pointer activity inside the canvas toolbar out of canvas gestures and only emits ui-button events", () => {
+  it("keeps pointer activity inside the canvas floating toolbar out of canvas gestures and only emits ui-button events", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
     const gestures: GestureEvent[] = [];
@@ -467,21 +467,21 @@ describe("WorkbenchApp", () => {
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
-      appHost.internalActions.showCanvasToolbar(
+      appHost.internalActions.showCanvasFloatingToolbar(
         [
-          "canvas-toolbar-button-ok",
-          "canvas-toolbar-button-delete",
+          "canvas-floating-toolbar-button-ok",
+          "canvas-floating-toolbar-button-delete",
         ],
         { x: 220, y: 180 },
       );
     });
 
-    const toolbar = container.querySelector(".canvas-action-toolbar") as HTMLDivElement | null;
+    const toolbar = container.querySelector(".canvas-floating-toolbar") as HTMLDivElement | null;
     const okButton = container.querySelector(
-      '[data-ui-button-id="canvas-toolbar-button-ok"]',
+      '[data-ui-button-id="canvas-floating-toolbar-button-ok"]',
     ) as HTMLButtonElement | null;
     const deleteButton = container.querySelector(
-      '[data-ui-button-id="canvas-toolbar-button-delete"]',
+      '[data-ui-button-id="canvas-floating-toolbar-button-delete"]',
     ) as HTMLButtonElement | null;
 
     expect(toolbar).not.toBeNull();
@@ -489,7 +489,7 @@ describe("WorkbenchApp", () => {
     expect(deleteButton).not.toBeNull();
 
     if (!toolbar || !okButton || !deleteButton) {
-      throw new Error("Canvas toolbar did not render expected buttons.");
+      throw new Error("Canvas floating toolbar did not render expected buttons.");
     }
 
     act(() => {
@@ -552,11 +552,11 @@ describe("WorkbenchApp", () => {
     expect(gestures).toMatchObject([
       {
         type: "ui-button-mouse-tap",
-        uiButtonId: "canvas-toolbar-button-ok",
+        uiButtonId: "canvas-floating-toolbar-button-ok",
       },
       {
         type: "ui-button-touch-tap",
-        uiButtonId: "canvas-toolbar-button-delete",
+        uiButtonId: "canvas-floating-toolbar-button-delete",
       },
     ]);
   });

@@ -684,17 +684,18 @@ describe("createAppHost", () => {
     appHost.gestureAdapter.handlePointerUp(touchEvent(34, entityPoint.x, entityPoint.y));
 
     expect(appHost.internalState.runtime.activeTool).toBe("move");
-    expect(appHost.internalState.runtime.canvasToolbar.visible).toBe(true);
-    expect(appHost.internalState.runtime.canvasToolbar.attachedCollection).toBe(
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection).toBe(
       EntityCollectionType.preview,
     );
-    expect(appHost.internalState.runtime.canvasToolbar.buttonIds).toEqual([
-      "canvas-toolbar-button-ok",
-      "canvas-toolbar-button-cancel",
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.buttonIds).toEqual([
+      "canvas-floating-toolbar-button-ok",
+      "canvas-floating-toolbar-button-rotate",
+      "canvas-floating-toolbar-button-cancel",
     ]);
   });
 
-  it("aligns an attached canvas toolbar to its collection and avoids the cell below", () => {
+  it("aligns an attached canvas floating toolbar to its collection and avoids the cell below", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
@@ -708,24 +709,24 @@ describe("createAppHost", () => {
 
     editorHost.internalState.collections.preview.replace(["dummy-entity-1"]);
 
-    expect(appHost.internalActions.showCanvasToolbarForCollection(
-      ["canvas-toolbar-button-ok"],
+    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection(
+      ["canvas-floating-toolbar-button-ok"],
       EntityCollectionType.preview,
     )).toBe(true);
-    expect(appHost.internalState.runtime.canvasToolbar.attachedCollection).toBe(
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection).toBe(
       EntityCollectionType.preview,
     );
-    expect(appHost.internalState.runtime.canvasToolbar.anchor).toEqual({
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
       x: 520,
       y: 386,
     });
 
-    appHost.internalActions.setCanvasToolbarSize({
+    appHost.internalActions.setCanvasFloatingToolbarSize({
       width: 44,
       height: 16,
     });
 
-    expect(appHost.internalState.runtime.canvasToolbar.anchor).toEqual({
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
       x: 520,
       y: 400,
     });
@@ -836,7 +837,7 @@ describe("createAppHost", () => {
 
     appHost.gestureAdapter.handlePointerMove(touchEvent(37, entityPoint.x + 20, entityPoint.y));
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "canvas-toolbar-button-ok",
+      uiButtonId: "canvas-floating-toolbar-button-ok",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -845,7 +846,7 @@ describe("createAppHost", () => {
 
     expect(appHost.internalState.runtime.activeTool).toBe("select");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
-    expect(appHost.internalState.runtime.canvasToolbar.visible).toBe(false);
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(false);
     expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]?.position).toEqual({
       x: 5,
       y: 4,
@@ -861,20 +862,20 @@ describe("createAppHost", () => {
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
     editorHost.actions.createMoveOperationDraft();
     appHost.internalState.runtime.moveAnchor = { x: 12, y: 8 };
-    appHost.internalActions.showCanvasToolbar(
-      ["canvas-toolbar-button-ok", "canvas-toolbar-button-cancel"],
+    appHost.internalActions.showCanvasFloatingToolbar(
+      ["canvas-floating-toolbar-button-ok", "canvas-floating-toolbar-button-cancel"],
       { x: 100, y: 80 },
     );
     appHost.internalActions.setActiveTool("move");
 
     expect(editorHost.state.collections.preview).toHaveLength(1);
-    expect(appHost.internalState.runtime.canvasToolbar.visible).toBe(true);
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
 
     appHost.internalActions.setActiveTool("placement");
 
     expect(appHost.internalState.runtime.activeTool).toBe("placement");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
-    expect(appHost.internalState.runtime.canvasToolbar.visible).toBe(false);
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(false);
     expect(editorHost.state.collections.preview).toEqual([]);
     expect(editorHost.state.collections.ghost).toEqual([]);
   });

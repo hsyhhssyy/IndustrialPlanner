@@ -1519,7 +1519,7 @@ body.is-resizing-left-dock * {
   cursor: grabbing;
 }
 
-.canvas-action-toolbar {
+.canvas-floating-toolbar {
   position: fixed;
   z-index: 4;
   display: flex;
@@ -1535,7 +1535,7 @@ body.is-resizing-left-dock * {
   pointer-events: auto;
 }
 
-.canvas-action-button {
+.canvas-floating-toolbar-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1543,36 +1543,36 @@ body.is-resizing-left-dock * {
   min-width: 44px;
   height: 44px;
   padding: 0;
-  border-color: var(--canvas-action-button-border);
+  border-color: var(--canvas-floating-toolbar-button-border);
   border-radius: 999px;
-  background: var(--canvas-action-button-bg);
+  background: var(--canvas-floating-toolbar-button-bg);
   box-shadow: none;
-  color: var(--canvas-action-button-text);
+  color: var(--canvas-floating-toolbar-button-text);
 }
 
-.canvas-toolbar-button {
+.canvas-floating-toolbar-button {
   touch-action: manipulation;
 }
 
-.canvas-action-button:not(:disabled):hover {
-  border-color: var(--canvas-action-button-hover-border);
-  background: var(--canvas-action-button-hover-bg);
+.canvas-floating-toolbar-button:not(:disabled):hover {
+  border-color: var(--canvas-floating-toolbar-button-hover-border);
+  background: var(--canvas-floating-toolbar-button-hover-bg);
 }
 
-.canvas-action-button.is-cancel,
-.canvas-action-button.is-delete {
-  color: var(--canvas-action-cancel);
+.canvas-floating-toolbar-button.is-cancel,
+.canvas-floating-toolbar-button.is-delete {
+  color: var(--canvas-floating-toolbar-cancel);
 }
 
-.canvas-action-button.is-rotate {
-  color: var(--canvas-action-button-text);
+.canvas-floating-toolbar-button.is-rotate {
+  color: var(--canvas-floating-toolbar-button-text);
 }
 
-.canvas-action-button.is-confirm {
-  color: var(--canvas-action-confirm);
+.canvas-floating-toolbar-button.is-confirm {
+  color: var(--canvas-floating-toolbar-confirm);
 }
 
-.canvas-action-icon {
+.canvas-floating-toolbar-icon {
   width: 22px;
   height: 22px;
   fill: currentColor;
