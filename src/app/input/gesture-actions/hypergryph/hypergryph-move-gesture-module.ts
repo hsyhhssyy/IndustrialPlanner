@@ -1,5 +1,6 @@
 import type { AppHost } from "@/app/app-host";
 import type { GesturePosition } from "@/app/input/gesture-adapter";
+import { matchesHypergryphRotateShortcut } from "@/app/workbench-keybinding-policy";
 import type { EditorContract } from "@/domain/contract/editor-contract";
 import type { WorldEntity } from "@/domain/entity/world-document";
 import { EntityCollectionType } from "@/domain/state/types";
@@ -34,7 +35,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             return { status: "handled" };
 
           case "key down":
-            if (!isRotateMoveShortcut({
+            if (!matchesHypergryphRotateShortcut(context.appHost.state.settings, {
               code: event.code,
               key: event.key,
               modifiers: event.modifiers,
@@ -518,26 +519,6 @@ function safelyCancelMoveDraft(editor: EditorContract): void {
   } catch {
     // Best-effort cleanup is intentionally silent; move should not leave UI half-entered.
   }
-}
-
-function isRotateMoveShortcut(options: {
-  code: string | null;
-  key: string | null;
-  modifiers: {
-    alt: boolean;
-    ctrl: boolean;
-    meta: boolean;
-  };
-}): boolean {
-  if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-    return false;
-  }
-
-  if (options.code === "KeyR") {
-    return true;
-  }
-
-  return options.key?.trim().toLowerCase() === "r";
 }
 
 function isPreviewEntityAtClientPoint(options: {

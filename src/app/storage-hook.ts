@@ -3,6 +3,7 @@ import { reaction } from "mobx";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
 import type { AppHost } from "./app-host";
+import { DEFAULT_WORKBENCH_KEYBINDINGS } from "./workbench-keybinding-policy";
 import type {
   AppSettingsReadWrite,
   WorkbenchStateReadWrite,
@@ -75,5 +76,33 @@ function normalizePersistedAppSettings(
     hypergryphImmediateMarquee: typeof persistedAppSettings.hypergryphImmediateMarquee === "boolean"
       ? persistedAppSettings.hypergryphImmediateMarquee
       : fallback.hypergryphImmediateMarquee,
+    hypergryphConfirmShortcut: normalizePersistedShortcut(
+      persistedAppSettings.hypergryphConfirmShortcut,
+      fallback.hypergryphConfirmShortcut,
+      DEFAULT_WORKBENCH_KEYBINDINGS.hypergryphConfirmShortcut,
+    ),
+    hypergryphCancelShortcut: normalizePersistedShortcut(
+      persistedAppSettings.hypergryphCancelShortcut,
+      fallback.hypergryphCancelShortcut,
+      DEFAULT_WORKBENCH_KEYBINDINGS.hypergryphCancelShortcut,
+    ),
+    hypergryphRotateShortcut: normalizePersistedShortcut(
+      persistedAppSettings.hypergryphRotateShortcut,
+      fallback.hypergryphRotateShortcut,
+      DEFAULT_WORKBENCH_KEYBINDINGS.hypergryphRotateShortcut,
+    ),
   };
+}
+
+function normalizePersistedShortcut(
+  value: unknown,
+  fallback: string,
+  defaultValue: string,
+): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const normalized = value.trim().toUpperCase();
+  return normalized.length > 0 ? normalized : defaultValue;
 }

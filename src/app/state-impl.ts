@@ -14,6 +14,7 @@ import type { AppLocale } from "@/shared/i18n/messages";
 import {
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
+import { DEFAULT_WORKBENCH_KEYBINDINGS } from "./workbench-keybinding-policy";
 import { DEFAULT_APP_THEME_ID, resolveAppTheme } from "./theme";
 
 export const MIN_LEFT_DOCK_WIDTH = 375;
@@ -43,6 +44,9 @@ export interface AppSettingsReadWrite extends AppSettings {
   hypergryphOperationMode: boolean;
   hypergryphImmediateMove: boolean;
   hypergryphImmediateMarquee: boolean;
+  hypergryphConfirmShortcut: string;
+  hypergryphCancelShortcut: string;
+  hypergryphRotateShortcut: string;
 }
 
 export interface WorkbenchStateReadWrite extends WorkbenchState {
@@ -188,6 +192,9 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphOperationMode: true,
     hypergryphImmediateMove: true,
     hypergryphImmediateMarquee: false,
+    hypergryphConfirmShortcut: DEFAULT_WORKBENCH_KEYBINDINGS.hypergryphConfirmShortcut,
+    hypergryphCancelShortcut: DEFAULT_WORKBENCH_KEYBINDINGS.hypergryphCancelShortcut,
+    hypergryphRotateShortcut: DEFAULT_WORKBENCH_KEYBINDINGS.hypergryphRotateShortcut,
   };
 
   workbench: WorkbenchStateReadWrite = new WorkbenchStateReadWriteImpl();

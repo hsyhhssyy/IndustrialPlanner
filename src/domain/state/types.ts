@@ -56,6 +56,9 @@ export interface AppSettings {
   readonly hypergryphOperationMode: boolean;
   readonly hypergryphImmediateMove: boolean;
   readonly hypergryphImmediateMarquee: boolean;
+  readonly hypergryphConfirmShortcut: string;
+  readonly hypergryphCancelShortcut: string;
+  readonly hypergryphRotateShortcut: string;
 }
 
 export interface WorkbenchState {

@@ -1,4 +1,5 @@
 import type { AppHost } from "@/app/app-host";
+import { matchesHypergryphMarqueeToggleShortcut } from "@/app/workbench-keybinding-policy";
 import type { GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
@@ -9,7 +10,11 @@ export function createHypergryphMarqueeModeToggleModule(): GestureMappingModule<
     handle(event, context) {
       switch (event.type) {
         case "key down":
-          if (event.code !== "KeyX") {
+          if (!matchesHypergryphMarqueeToggleShortcut({
+            code: event.code,
+            key: event.key,
+            modifiers: event.modifiers,
+          })) {
             return { status: "ignored" };
           }
 

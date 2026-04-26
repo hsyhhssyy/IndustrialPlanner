@@ -225,15 +225,16 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
-  it("rotates the preview with the R key while moving", () => {
+  it("rotates the preview with the configured workbench shortcut while moving", () => {
     const { context, editor, appHost } = createContext({
       activeTool: "move",
       moveAnchor: { x: 5, y: 5 },
       toolbarVisible: true,
+      rotateShortcut: "P",
     });
     const module = createHypergryphMoveGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: "KeyR", key: "r" }), context);
+    const result = module.handle(keyDownEvent({ code: "KeyP", key: "p" }), context);
 
     expect(result).toEqual({ status: "handled" });
     expect(editor.actions.rotateCollection).toHaveBeenCalledWith(
@@ -290,6 +291,7 @@ function createContext(options: {
   activeTool?: "select" | "move" | "marquee" | "placement";
   moveAnchor?: GridPoint | null;
   toolbarVisible?: boolean;
+  rotateShortcut?: string;
 } = {}): {
   context: GestureActionContext<AppHost>;
   editor: MockEditor;
@@ -392,6 +394,9 @@ function createContext(options: {
       settings: {
         hypergryphOperationMode: true,
         hypergryphImmediateMove: true,
+        hypergryphConfirmShortcut: "F",
+        hypergryphCancelShortcut: "G",
+        hypergryphRotateShortcut: options.rotateShortcut ?? "R",
       },
     },
     internalState: {

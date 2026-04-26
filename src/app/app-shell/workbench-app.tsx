@@ -107,6 +107,60 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.hypergryphImmediateMove = nextImmediateMove;
         }),
       },
+      "game-arknights-confirm-shortcut": {
+        readValue: () => appHost.state.settings.hypergryphConfirmShortcut,
+        writeValue: action((value) => {
+          if (typeof value !== "string") {
+            return;
+          }
+
+          const normalizedValue = value.trim().toUpperCase();
+          if (
+            normalizedValue.length === 0
+            || appHost.internalState.settings.hypergryphConfirmShortcut === normalizedValue
+          ) {
+            return;
+          }
+
+          appHost.internalState.settings.hypergryphConfirmShortcut = normalizedValue;
+        }),
+      },
+      "game-arknights-cancel-shortcut": {
+        readValue: () => appHost.state.settings.hypergryphCancelShortcut,
+        writeValue: action((value) => {
+          if (typeof value !== "string") {
+            return;
+          }
+
+          const normalizedValue = value.trim().toUpperCase();
+          if (
+            normalizedValue.length === 0
+            || appHost.internalState.settings.hypergryphCancelShortcut === normalizedValue
+          ) {
+            return;
+          }
+
+          appHost.internalState.settings.hypergryphCancelShortcut = normalizedValue;
+        }),
+      },
+      "game-arknights-rotate-shortcut": {
+        readValue: () => appHost.state.settings.hypergryphRotateShortcut,
+        writeValue: action((value) => {
+          if (typeof value !== "string") {
+            return;
+          }
+
+          const normalizedValue = value.trim().toUpperCase();
+          if (
+            normalizedValue.length === 0
+            || appHost.internalState.settings.hypergryphRotateShortcut === normalizedValue
+          ) {
+            return;
+          }
+
+          appHost.internalState.settings.hypergryphRotateShortcut = normalizedValue;
+        }),
+      },
     },
   }));
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
