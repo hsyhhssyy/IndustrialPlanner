@@ -389,6 +389,126 @@ describe("createEditorHost", () => {
     expect(editorHost.state.collections.preview.contains("preview-only")).toBe(false);
   });
 
+  it("updates marquee collections from grid rect and clears both when cancelled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.drafts = [
+      {
+        id: "draft-only",
+        originalEntityId: "draft-only",
+        definitionId: "belt_straight_1x1",
+        position: { x: 9, y: 9 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    ];
+
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.marquee,
+      entityId: "dummy-entity-2",
+    });
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.reverseMarquee,
+      entityId: "dummy-entity-3",
+    });
+    editorHost.actions.setMarqueeRange(EntityCollectionType.marquee, {
+      x: 9,
+      y: 8,
+      width: 4,
+      height: 2,
+    });
+
+    expect(editorHost.state.collections.marquee).toEqual([
+      "dummy-entity-1",
+      "draft-only",
+    ]);
+
+    editorHost.actions.setMarqueeRange(EntityCollectionType.reverseMarquee, {
+      x: 9,
+      y: 4,
+      width: 4,
+      height: 1,
+    });
+
+    expect(
+      editorHost.state.collections[EntityCollectionType.reverseMarquee],
+    ).toEqual(["dummy-entity-3"]);
+
+    editorHost.actions.setMarqueeRange(EntityCollectionType.marquee, {
+      x: 9,
+      y: 9,
+      width: 1,
+      height: 1,
+    });
+
+    expect(editorHost.state.collections.marquee).toEqual(["draft-only"]);
+
+    editorHost.actions.cancelMarquee();
+
+    expect(editorHost.state.collections.marquee).toEqual([]);
+    expect(
+      editorHost.state.collections[EntityCollectionType.reverseMarquee],
+    ).toEqual([]);
+  });
+
+  it("applies marquee additions, removes reverse marquee entities, and clears both collections", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+    const draftEntity: DraftEntity = {
+      id: "draft-only",
+      originalEntityId: "draft-only",
+      definitionId: "belt_straight_1x1",
+      position: { x: 9, y: 9 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    };
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.drafts = [draftEntity];
+
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId: "dummy-entity-2",
+    });
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.marquee,
+      entityId: "dummy-entity-1",
+    });
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.marquee,
+      entityId: "dummy-entity-2",
+    });
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.marquee,
+      entityId: "draft-only",
+    });
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.reverseMarquee,
+      entityId: "dummy-entity-2",
+    });
+    editorHost.actions.addToCollection({
+      collectionType: EntityCollectionType.reverseMarquee,
+      entityId: "missing-entity",
+    });
+
+    editorHost.actions.applyMarquee();
+
+    expect(editorHost.state.collections.selection).toEqual([
+      "dummy-entity-1",
+      "draft-only",
+    ]);
+    expect(editorHost.state.collections.marquee).toEqual([]);
+    expect(
+      editorHost.state.collections[EntityCollectionType.reverseMarquee],
+    ).toEqual([]);
+  });
+
   it("creates move operation ghost entities and preview drafts from the current selection", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -731,10 +851,18 @@ describe("createEditorHost", () => {
       },
     ];
 
-    expect(Object.values(EntityCollectionType)).toEqual(["selection", "preview", "ghost"]);
+    expect(Object.values(EntityCollectionType)).toEqual([
+      "selection",
+      "marquee",
+      "reverse-marquee",
+      "preview",
+      "ghost",
+    ]);
     expect(
       editorHost.queries.findEntityCollectionGridRect("selection"),
     ).toBeNull();
+    expect(editorHost.queries.findEntityCollectionGridRect("marquee")).toBeNull();
+    expect(editorHost.queries.findEntityCollectionGridRect("reverse-marquee")).toBeNull();
     expect(editorHost.queries.findEntityCollectionGridRect("preview")).toBeNull();
     expect(editorHost.queries.findEntityCollectionGridRect("ghost")).toBeNull();
   });

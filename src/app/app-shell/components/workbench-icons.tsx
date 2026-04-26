@@ -2,12 +2,15 @@ import type { ComponentType, SVGProps } from "react";
 
 import LucideCheck from "~icons/lucide/check";
 import LucideDraftingCompass from "~icons/lucide/drafting-compass";
+import LucideEye from "~icons/lucide/eye";
+import LucideEyeOff from "~icons/lucide/eye-off";
 import LucideGrid2x2 from "~icons/lucide/grid-2x2";
 import LucideHelpCircle from "~icons/lucide/help-circle";
 import LucideHistory from "~icons/lucide/history";
 import LucideMaximize from "~icons/lucide/maximize";
 import LucideMinimize from "~icons/lucide/minimize";
 import LucideMonitor from "~icons/lucide/monitor";
+import LucideMove from "~icons/lucide/move";
 import LucideMousePointer2 from "~icons/lucide/mouse-pointer-2";
 import LucidePackage2 from "~icons/lucide/package-2";
 import LucidePanelLeftClose from "~icons/lucide/panel-left-close";
@@ -47,6 +50,9 @@ type WorkbenchIconKind =
   | "expand"
   | "shrink"
   | "pointer"
+  | "move"
+  | "eye"
+  | "eye-off"
   | "cancel"
   | "confirm"
   | "rotate"
@@ -81,6 +87,9 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   expand: LucideMaximize,
   shrink: LucideMinimize,
   pointer: LucideMousePointer2,
+  move: LucideMove,
+  eye: LucideEye,
+  "eye-off": LucideEyeOff,
   cancel: LucideX,
   confirm: LucideCheck,
   rotate: LucideRotateCcw,

@@ -62,6 +62,21 @@ export const CANVAS_FLOATING_TOOLBAR_BUTTON_IDS = [
 
 export type CanvasFloatingToolbarButtonId = typeof CANVAS_FLOATING_TOOLBAR_BUTTON_IDS[number];
 
+export const CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS = [
+  "canvas-right-dock-toolbar-button-exit",
+  "canvas-right-dock-toolbar-button-move",
+] as const;
+
+export type CanvasRightDockToolbarButtonId = typeof CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS[number];
+
+export const CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS = [
+  "canvas-top-left-corner-toolbar-button-toggle-pipe",
+  "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
+] as const;
+
+export type CanvasTopLeftCornerToolbarButtonId =
+  typeof CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS[number];
+
 export interface CanvasFloatingToolbarSize {
   readonly width: number;
   readonly height: number;
@@ -75,6 +90,16 @@ export interface CanvasFloatingToolbarStateReadWrite {
   measuredSize: CanvasFloatingToolbarSize | null;
 }
 
+export interface CanvasRightDockToolbarStateReadWrite {
+  visible: boolean;
+  buttonIds: CanvasRightDockToolbarButtonId[];
+}
+
+export interface CanvasTopLeftCornerToolbarStateReadWrite {
+  visible: boolean;
+  buttonIds: CanvasTopLeftCornerToolbarButtonId[];
+}
+
 export type ActiveTool = "select" | "move" | "marquee" | "placement";
 
 export interface RuntimeStateReadWrite {
@@ -82,6 +107,8 @@ export interface RuntimeStateReadWrite {
   activeTool: ActiveTool;
   moveAnchor: GridPoint | null;
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite;
+  canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite;
+  canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite;
 }
 
 const DEFAULT_APP_LOCALE: AppLocale = "zh-CN";
@@ -123,11 +150,31 @@ class CanvasFloatingToolbarStateReadWriteImpl implements CanvasFloatingToolbarSt
   }
 }
 
+class CanvasRightDockToolbarStateReadWriteImpl implements CanvasRightDockToolbarStateReadWrite {
+  visible = false;
+  buttonIds: CanvasRightDockToolbarButtonId[] = [];
+
+  public constructor() {
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
+}
+
+class CanvasTopLeftCornerToolbarStateReadWriteImpl implements CanvasTopLeftCornerToolbarStateReadWrite {
+  visible = false;
+  buttonIds: CanvasTopLeftCornerToolbarButtonId[] = [];
+
+  public constructor() {
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
+}
+
 class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   activePanel: ActivePanel = null;
   activeTool: ActiveTool = "select";
   moveAnchor: GridPoint | null = null;
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite = new CanvasFloatingToolbarStateReadWriteImpl();
+  canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite = new CanvasRightDockToolbarStateReadWriteImpl();
+  canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite = new CanvasTopLeftCornerToolbarStateReadWriteImpl();
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

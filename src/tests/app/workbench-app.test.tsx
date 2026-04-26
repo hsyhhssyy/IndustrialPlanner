@@ -561,6 +561,351 @@ describe("WorkbenchApp", () => {
     ]);
   });
 
+  it("shows the canvas right dock toolbar only while the right dock is closed and restores it after reopen", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      appHost.internalActions.showCanvasRightDockToolbar([
+        "canvas-right-dock-toolbar-button-exit",
+        "canvas-right-dock-toolbar-button-move",
+      ]);
+    });
+
+    expect(container.querySelector(".canvas-right-dock-toolbar")).toBeNull();
+
+    act(() => {
+      appHost.internalActions.toggleRightDock();
+    });
+
+    const toolbar = container.querySelector(".canvas-right-dock-toolbar") as HTMLDivElement | null;
+    const labels = Array.from(
+      toolbar?.querySelectorAll(".canvas-right-dock-toolbar-label") ?? [],
+    ).map((element) => element.textContent);
+
+    expect(toolbar).not.toBeNull();
+    expect(
+      Array.from(toolbar?.querySelectorAll("[data-ui-button-id]") ?? []).map((button) =>
+        button.getAttribute("data-ui-button-id"),
+      ),
+    ).toEqual([
+      "canvas-right-dock-toolbar-button-exit",
+      "canvas-right-dock-toolbar-button-move",
+    ]);
+    expect(labels).toEqual(["退出", "移动"]);
+    expect(
+      toolbar?.querySelector('[data-ui-button-id="canvas-right-dock-toolbar-button-move"] svg')?.getAttribute("data-workbench-icon"),
+    ).toBe("move");
+
+    act(() => {
+      appHost.internalActions.toggleRightDock();
+    });
+
+    expect(container.querySelector(".canvas-right-dock-toolbar")).toBeNull();
+
+    act(() => {
+      appHost.internalActions.toggleRightDock();
+    });
+
+    expect(container.querySelector(".canvas-right-dock-toolbar")).not.toBeNull();
+
+    act(() => {
+      appHost.internalActions.hideCanvasRightDockToolbar();
+    });
+
+    expect(container.querySelector(".canvas-right-dock-toolbar")).toBeNull();
+  });
+
+  it("emits ui-button events from the canvas right dock toolbar without leaking canvas gestures", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+    const gestures: GestureEvent[] = [];
+    appHost.gestureAdapter.subscribe((event) => gestures.push(event));
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      appHost.internalActions.showCanvasRightDockToolbar([
+        "canvas-right-dock-toolbar-button-exit",
+        "canvas-right-dock-toolbar-button-move",
+      ]);
+      appHost.internalActions.toggleRightDock();
+    });
+
+    const toolbar = container.querySelector(".canvas-right-dock-toolbar") as HTMLDivElement | null;
+    const exitButton = container.querySelector(
+      '[data-ui-button-id="canvas-right-dock-toolbar-button-exit"]',
+    ) as HTMLButtonElement | null;
+    const moveButton = container.querySelector(
+      '[data-ui-button-id="canvas-right-dock-toolbar-button-move"]',
+    ) as HTMLButtonElement | null;
+
+    expect(toolbar).not.toBeNull();
+    expect(exitButton).not.toBeNull();
+    expect(moveButton).not.toBeNull();
+
+    if (!toolbar || !exitButton || !moveButton) {
+      throw new Error("Canvas right dock toolbar did not render expected buttons.");
+    }
+
+    act(() => {
+      dispatchPointerEvent(toolbar, "pointerdown", {
+        pointerId: 24,
+        pointerType: "mouse",
+        clientX: 1200,
+        clientY: 280,
+        buttons: 1,
+      });
+      dispatchPointerEvent(toolbar, "pointerup", {
+        pointerId: 24,
+        pointerType: "mouse",
+        clientX: 1200,
+        clientY: 280,
+        buttons: 0,
+      });
+    });
+
+    expect(gestures).toHaveLength(0);
+
+    act(() => {
+      dispatchPointerEvent(exitButton, "pointerdown", {
+        pointerId: 25,
+        pointerType: "mouse",
+        clientX: 1200,
+        clientY: 280,
+        buttons: 1,
+      });
+      dispatchPointerEvent(exitButton, "pointerup", {
+        pointerId: 25,
+        pointerType: "mouse",
+        clientX: 1200,
+        clientY: 280,
+        buttons: 0,
+      });
+      dispatchPointerEvent(moveButton, "pointerdown", {
+        pointerId: 26,
+        pointerType: "touch",
+        clientX: 1200,
+        clientY: 332,
+        buttons: 1,
+      });
+      dispatchPointerEvent(moveButton, "pointerup", {
+        pointerId: 26,
+        pointerType: "touch",
+        clientX: 1200,
+        clientY: 332,
+        buttons: 0,
+      });
+    });
+
+    expect(gestures).toMatchObject([
+      {
+        type: "ui-button-mouse-tap",
+        uiButtonId: "canvas-right-dock-toolbar-button-exit",
+      },
+      {
+        type: "ui-button-touch-tap",
+        uiButtonId: "canvas-right-dock-toolbar-button-move",
+      },
+    ]);
+  });
+
+  it("shows the canvas top left corner toolbar and updates toggle labels locally", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    expect(container.querySelector(".canvas-top-left-corner-toolbar")).toBeNull();
+
+    act(() => {
+      appHost.internalActions.showCanvasTopLeftCornerToolbar([
+        "canvas-top-left-corner-toolbar-button-toggle-pipe",
+        "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
+      ]);
+    });
+
+    const toolbar = container.querySelector(".canvas-top-left-corner-toolbar") as HTMLDivElement | null;
+    const pipeButton = container.querySelector(
+      '[data-ui-button-id="canvas-top-left-corner-toolbar-button-toggle-pipe"]',
+    ) as HTMLButtonElement | null;
+    const reverseMarqueeButton = container.querySelector(
+      '[data-ui-button-id="canvas-top-left-corner-toolbar-button-toggle-reverse-marquee"]',
+    ) as HTMLButtonElement | null;
+
+    expect(toolbar).not.toBeNull();
+    expect(pipeButton?.textContent).toBe("弱化管道");
+    expect(reverseMarqueeButton?.textContent).toBe("切换到反选");
+    expect(pipeButton?.getAttribute("aria-pressed")).toBe("false");
+    expect(reverseMarqueeButton?.getAttribute("aria-pressed")).toBe("false");
+
+    act(() => {
+      if (pipeButton === null) {
+        return;
+      }
+
+      dispatchPointerEvent(pipeButton, "pointerdown", {
+        pointerId: 31,
+        pointerType: "mouse",
+        clientX: 464,
+        clientY: 92,
+        buttons: 1,
+      });
+      dispatchPointerEvent(pipeButton, "pointerup", {
+        pointerId: 31,
+        pointerType: "mouse",
+        clientX: 464,
+        clientY: 92,
+        buttons: 0,
+      });
+    });
+
+    expect(pipeButton?.textContent).toBe("显示管道");
+    expect(pipeButton?.getAttribute("aria-pressed")).toBe("true");
+
+    act(() => {
+      if (reverseMarqueeButton === null) {
+        return;
+      }
+
+      dispatchPointerEvent(reverseMarqueeButton, "pointerdown", {
+        pointerId: 32,
+        pointerType: "touch",
+        clientX: 464,
+        clientY: 124,
+        buttons: 1,
+      });
+      dispatchPointerEvent(reverseMarqueeButton, "pointerup", {
+        pointerId: 32,
+        pointerType: "touch",
+        clientX: 464,
+        clientY: 124,
+        buttons: 0,
+      });
+    });
+
+    expect(reverseMarqueeButton?.textContent).toBe("切换到正选");
+    expect(reverseMarqueeButton?.getAttribute("aria-pressed")).toBe("true");
+
+    act(() => {
+      appHost.internalActions.hideCanvasTopLeftCornerToolbar();
+    });
+
+    expect(container.querySelector(".canvas-top-left-corner-toolbar")).toBeNull();
+  });
+
+  it("emits toggle ui-button events from the canvas top left corner toolbar without leaking canvas gestures", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+    const gestures: GestureEvent[] = [];
+    appHost.gestureAdapter.subscribe((event) => gestures.push(event));
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      appHost.internalActions.showCanvasTopLeftCornerToolbar([
+        "canvas-top-left-corner-toolbar-button-toggle-pipe",
+        "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
+      ]);
+    });
+
+    const toolbar = container.querySelector(".canvas-top-left-corner-toolbar") as HTMLDivElement | null;
+    const pipeButton = container.querySelector(
+      '[data-ui-button-id="canvas-top-left-corner-toolbar-button-toggle-pipe"]',
+    ) as HTMLButtonElement | null;
+    const reverseMarqueeButton = container.querySelector(
+      '[data-ui-button-id="canvas-top-left-corner-toolbar-button-toggle-reverse-marquee"]',
+    ) as HTMLButtonElement | null;
+
+    expect(toolbar).not.toBeNull();
+    expect(pipeButton).not.toBeNull();
+    expect(reverseMarqueeButton).not.toBeNull();
+
+    if (!toolbar || !pipeButton || !reverseMarqueeButton) {
+      throw new Error("Canvas top left corner toolbar did not render expected buttons.");
+    }
+
+    act(() => {
+      dispatchPointerEvent(toolbar, "pointerdown", {
+        pointerId: 33,
+        pointerType: "mouse",
+        clientX: 464,
+        clientY: 92,
+        buttons: 1,
+      });
+      dispatchPointerEvent(toolbar, "pointerup", {
+        pointerId: 33,
+        pointerType: "mouse",
+        clientX: 464,
+        clientY: 92,
+        buttons: 0,
+      });
+    });
+
+    expect(gestures).toHaveLength(0);
+
+    act(() => {
+      dispatchPointerEvent(pipeButton, "pointerdown", {
+        pointerId: 34,
+        pointerType: "mouse",
+        clientX: 464,
+        clientY: 92,
+        buttons: 1,
+      });
+      dispatchPointerEvent(pipeButton, "pointerup", {
+        pointerId: 34,
+        pointerType: "mouse",
+        clientX: 464,
+        clientY: 92,
+        buttons: 0,
+      });
+      dispatchPointerEvent(pipeButton, "pointerdown", {
+        pointerId: 35,
+        pointerType: "mouse",
+        clientX: 464,
+        clientY: 92,
+        buttons: 1,
+      });
+      dispatchPointerEvent(pipeButton, "pointerup", {
+        pointerId: 35,
+        pointerType: "mouse",
+        clientX: 464,
+        clientY: 92,
+        buttons: 0,
+      });
+      dispatchPointerEvent(reverseMarqueeButton, "pointerdown", {
+        pointerId: 36,
+        pointerType: "touch",
+        clientX: 464,
+        clientY: 124,
+        buttons: 1,
+      });
+      dispatchPointerEvent(reverseMarqueeButton, "pointerup", {
+        pointerId: 36,
+        pointerType: "touch",
+        clientX: 464,
+        clientY: 124,
+        buttons: 0,
+      });
+    });
+
+    expect(gestures).toMatchObject([
+      {
+        type: "ui-button-mouse-tap",
+        uiButtonId: "canvas-top-left-corner-toolbar-button-toggle-pipe-on",
+      },
+      {
+        type: "ui-button-mouse-tap",
+        uiButtonId: "canvas-top-left-corner-toolbar-button-toggle-pipe-off",
+      },
+      {
+        type: "ui-button-touch-tap",
+        uiButtonId: "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee-on",
+      },
+    ]);
+  });
+
   it("opens the settings dialog from the left toolbar and hydrates saved schema values", () => {
     localStorage.setItem(
       APP_SETTINGS_LOCAL_STORAGE_KEY,

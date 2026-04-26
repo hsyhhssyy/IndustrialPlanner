@@ -4,6 +4,8 @@ import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/app-shell/components/bottom-status-bar";
 import { CanvasPanel } from "@/app/app-shell/components/canvas-panel";
 import { CanvasFloatingToolbar } from "@/app/app-shell/components/canvas-panel-files/canvas-floating-toolbar";
+import { CanvasTopLeftCornerToolbar } from "@/app/app-shell/components/canvas-panel-files/canvas-top-left-corner-toolbar";
+import { CanvasRightDockToolbar } from "@/app/app-shell/components/canvas-panel-files/canvas-right-dock-toolbar";
 import { FullscreenToggleButton } from "@/app/app-shell/components/fullscreen-toggle-button";
 import { SettingsDialog } from "@/app/app-shell/components/settings-dialog";
 import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
@@ -113,6 +115,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const topBarCollapsed = appHost.state.workbench.topBarCollapsed;
   const screenProfile = appHost.state.screenProfile;
   const canvasFloatingToolbar = appHost.internalState.runtime.canvasFloatingToolbar;
+  const canvasRightDockToolbar = appHost.internalState.runtime.canvasRightDockToolbar;
+  const canvasTopLeftCornerToolbar = appHost.internalState.runtime.canvasTopLeftCornerToolbar;
   const isMobileLandscape = isMobileLandscapeScreenProfile(screenProfile);
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
   const showFloatingTopBarControls = isMobileLandscape && topBarCollapsed;
@@ -185,11 +189,23 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       />
       {leftDockOpen ? <LeftDock appHost={appHost} /> : null}
       <CanvasPanel appHost={appHost} />
+      {canvasTopLeftCornerToolbar.visible && canvasTopLeftCornerToolbar.buttonIds.length > 0 ? (
+        <CanvasTopLeftCornerToolbar
+          appHost={appHost}
+          buttonIds={canvasTopLeftCornerToolbar.buttonIds}
+        />
+      ) : null}
       {canvasFloatingToolbar.visible && canvasFloatingToolbar.anchor !== null && canvasFloatingToolbar.buttonIds.length > 0 ? (
         <CanvasFloatingToolbar
           anchor={canvasFloatingToolbar.anchor}
           appHost={appHost}
           buttonIds={canvasFloatingToolbar.buttonIds}
+        />
+      ) : null}
+      {canvasRightDockToolbar.visible && !rightDockOpen && canvasRightDockToolbar.buttonIds.length > 0 ? (
+        <CanvasRightDockToolbar
+          appHost={appHost}
+          buttonIds={canvasRightDockToolbar.buttonIds}
         />
       ) : null}
       {rightDockOpen ? <RightDock appHost={appHost} /> : null}

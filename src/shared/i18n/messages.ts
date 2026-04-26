@@ -15,6 +15,11 @@ export type MessageKey =
   | "action.close"
   | "action.expand"
   | "action.collapse"
+  | "action.exit"
+  | "action.deemphasizePipe"
+  | "action.showPipe"
+  | "action.switchToNormalMarquee"
+  | "action.switchToReverseMarquee"
   | "action.switchTheme"
   | "action.enterFullscreen"
   | "action.exitFullscreen"
@@ -33,6 +38,8 @@ export type MessageKey =
   | "action.clearPatch"
   | "toolbar.tools"
   | "toolbar.views"
+  | "toolbar.canvasTopLeftCorner"
+  | "toolbar.canvasRightDock"
   | "tool.select"
   | "tool.place"
   | "tool.belt"
@@ -185,6 +192,11 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.close": "关闭",
     "action.expand": "展开",
     "action.collapse": "折叠",
+    "action.exit": "退出",
+    "action.deemphasizePipe": "弱化管道",
+    "action.showPipe": "显示管道",
+    "action.switchToNormalMarquee": "切换到正选",
+    "action.switchToReverseMarquee": "切换到反选",
     "action.switchTheme": "切换主题",
     "action.enterFullscreen": "进入全屏",
     "action.exitFullscreen": "退出全屏",
@@ -203,6 +215,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.clearPatch": "清除覆盖",
     "toolbar.tools": "工具",
     "toolbar.views": "视图",
+    "toolbar.canvasTopLeftCorner": "画布左上角工具栏",
+    "toolbar.canvasRightDock": "画布右侧工具栏",
     "tool.select": "选择",
     "tool.place": "放置",
     "tool.belt": "传送带",
@@ -354,6 +368,11 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.close": "Close",
     "action.expand": "Expand",
     "action.collapse": "Collapse",
+    "action.exit": "Exit",
+    "action.deemphasizePipe": "De-emphasize Pipes",
+    "action.showPipe": "Show Pipes",
+    "action.switchToNormalMarquee": "Switch to Normal Marquee",
+    "action.switchToReverseMarquee": "Switch to Reverse Marquee",
     "action.switchTheme": "Switch Theme",
     "action.enterFullscreen": "Enter Fullscreen",
     "action.exitFullscreen": "Exit Fullscreen",
@@ -372,6 +391,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.clearPatch": "Clear Patch",
     "toolbar.tools": "Tools",
     "toolbar.views": "Views",
+    "toolbar.canvasTopLeftCorner": "Canvas Top Left Corner Toolbar",
+    "toolbar.canvasRightDock": "Canvas Right Dock Toolbar",
     "tool.select": "Select",
     "tool.place": "Place",
     "tool.belt": "Belt",

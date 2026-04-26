@@ -13,12 +13,18 @@ export interface EntityCollection extends ReadonlyArray<string> {
 
 export const EntityCollectionType = {
   selection: "selection",
+  marquee: "marquee",
+  reverseMarquee: "reverse-marquee",
   preview: "preview",
   ghost: "ghost",
 } as const;
 
 export type EntityCollectionType =
   typeof EntityCollectionType[keyof typeof EntityCollectionType];
+
+export type MarqueeCollectionType =
+  | typeof EntityCollectionType.marquee
+  | typeof EntityCollectionType.reverseMarquee;
 
 export type EntityCollections = Readonly<Record<EntityCollectionType, EntityCollection>>;
 
@@ -36,10 +42,6 @@ export interface EditorState {
   readonly viewport: EditorViewportState;
 
   readonly collections: EntityCollections;
-
-  
-
-  //marquee的entity存储归属于ui!
 }
 
 export interface HistoryState {

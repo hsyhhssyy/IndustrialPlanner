@@ -115,6 +115,8 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
   drafts: DraftEntity[] = [];
   collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite> = {
     [EntityCollectionType.selection]: createEntityCollection(),
+    [EntityCollectionType.marquee]: createEntityCollection(),
+    [EntityCollectionType.reverseMarquee]: createEntityCollection(),
     [EntityCollectionType.preview]: createEntityCollection(),
     [EntityCollectionType.ghost]: createEntityCollection(),
   };

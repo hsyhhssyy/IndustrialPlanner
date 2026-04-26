@@ -299,6 +299,8 @@ function createContext(options: {
   previewRectRef: { current: GridRect };
 } {
   const selection = createCollection(["selected-entity"]);
+  const marquee = createCollection([]);
+  const reverseMarquee = createCollection([]);
   const preview = createCollection(["preview-entity"]);
   const ghost = createCollection([]);
   const previewRectRef = {
@@ -316,6 +318,8 @@ function createContext(options: {
     state: {
       collections: {
         [EntityCollectionType.selection]: selection,
+        [EntityCollectionType.marquee]: marquee,
+        [EntityCollectionType.reverseMarquee]: reverseMarquee,
         [EntityCollectionType.preview]: preview,
         [EntityCollectionType.ghost]: ghost,
       },

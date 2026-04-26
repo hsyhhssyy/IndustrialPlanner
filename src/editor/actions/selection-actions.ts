@@ -1,7 +1,7 @@
 import type { EditorAction } from "@/domain/action/editor-action";
 import type { WorldEntity } from "@/domain/entity/world-document";
-import { EntityCollectionType } from "@/domain/state/types";
-import type { GridPoint, GridRectSize } from "@/domain/types/grid";
+import { EntityCollectionType, type MarqueeCollectionType } from "@/domain/state/types";
+import type { GridPoint, GridRect, GridRectSize } from "@/domain/types/grid";
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
 import {
   getGridBoundingBox,
@@ -12,16 +12,19 @@ import {
   rotateGridRotationClockwise,
 } from "@/shared/geometry/grid";
 
-import { resolveEntityById } from "../entity-resolvers";
+import { resolveEntityById, resolveListedEntities } from "../entity-resolvers";
 import type { EditorActionsContext } from "./types";
 
 type EditorCollectionActions = Pick<
   EditorAction,
   | "addToCollection"
+  | "applyMarquee"
+  | "cancelMarquee"
   | "clearCollection"
   | "moveCollectionTo"
   | "removeFromCollection"
   | "rotateCollection"
+  | "setMarqueeRange"
 >;
 
 export function createEditorSelectionActions({
@@ -31,6 +34,28 @@ export function createEditorSelectionActions({
 }: EditorActionsContext): EditorCollectionActions {
   const resolveCollection = (collectionType: EntityCollectionType) =>
     state.collections[collectionType];
+  const addEntityIdToCollection = (
+    collectionType: EntityCollectionType,
+    entityId: string,
+  ) => {
+    const entity = resolveEntityById({
+      entityId,
+      document: document.getSnapshot(),
+      drafts: state.drafts,
+    });
+
+    if (entity === null) {
+      return;
+    }
+
+    const collection = resolveCollection(collectionType);
+
+    if (collection.contains(entity.id)) {
+      return;
+    }
+
+    collection.push(entity.id);
+  };
   const entityDefinitionMap = new Map(
     workspace.registry.entityDefinitions.map((definition) => [
       definition.id,
@@ -43,23 +68,7 @@ export function createEditorSelectionActions({
       resolveCollection(collectionType).replace([]);
     },
     addToCollection: ({ collectionType, entityId }) => {
-      const entity = resolveEntityById({
-        entityId,
-        document: document.getSnapshot(),
-        drafts: state.drafts,
-      });
-
-      if (entity === null) {
-        return;
-      }
-
-      const collection = resolveCollection(collectionType);
-
-      if (collection.contains(entity.id)) {
-        return;
-      }
-
-      collection.push(entity.id);
+      addEntityIdToCollection(collectionType, entityId);
     },
     removeFromCollection: ({ collectionType, entityId }) => {
       const collection = resolveCollection(collectionType);
@@ -70,6 +79,54 @@ export function createEditorSelectionActions({
       }
 
       collection.splice(entityIndex, 1);
+    },
+    setMarqueeRange: (collectionType, gridRect) => {
+      const marquee = resolveCollection(collectionType);
+
+      if (!isValidGridRect(gridRect)) {
+        marquee.replace([]);
+        return;
+      }
+
+      const currentDocument = document.getSnapshot();
+      const nextEntityIds = resolveListedEntities({
+        document: currentDocument,
+        drafts: state.drafts,
+      })
+        .filter((entity) => isEntityIntersectingGridRect({
+          entity,
+          gridRect,
+          entityDefinitionMap,
+        }))
+        .map((entity) => entity.id);
+
+      marquee.replace(nextEntityIds);
+    },
+    applyMarquee: () => {
+      const marquee = resolveCollection(EntityCollectionType.marquee);
+      const reverseMarquee = resolveCollection(EntityCollectionType.reverseMarquee);
+
+      for (const entityId of marquee) {
+        addEntityIdToCollection(EntityCollectionType.selection, entityId);
+      }
+
+      marquee.replace([]);
+
+      for (const entityId of reverseMarquee) {
+        const entityIndex = resolveCollection(EntityCollectionType.selection).indexOf(entityId);
+
+        if (entityIndex < 0) {
+          continue;
+        }
+
+        resolveCollection(EntityCollectionType.selection).splice(entityIndex, 1);
+      }
+
+      reverseMarquee.replace([]);
+    },
+    cancelMarquee: () => {
+      resolveCollection(EntityCollectionType.marquee).replace([]);
+      resolveCollection(EntityCollectionType.reverseMarquee).replace([]);
     },
     moveCollectionTo: ({ collectionType, startGridPoint, endGridPoint }) => {
       const gridVector = resolveGridVector({
@@ -331,4 +388,47 @@ function resolveCenteredGridPointWithoutClamp(
     x: Math.round(centerCells.x - footprint.width / 2),
     y: Math.round(centerCells.y - footprint.height / 2),
   };
+}
+
+function isValidGridRect(gridRect: GridRect): boolean {
+  return Number.isFinite(gridRect.x)
+    && Number.isFinite(gridRect.y)
+    && Number.isFinite(gridRect.width)
+    && Number.isFinite(gridRect.height)
+    && gridRect.width > 0
+    && gridRect.height > 0;
+}
+
+function isEntityIntersectingGridRect(options: {
+  entity: WorldEntity;
+  gridRect: GridRect;
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+}): boolean {
+  const definition = options.entityDefinitionMap.get(options.entity.definitionId);
+
+  if (definition === undefined) {
+    return false;
+  }
+
+  const footprint = getRotatedGridFootprint(
+    definition.footprint,
+    options.entity.rotation,
+  );
+
+  return doGridRectsIntersect(
+    options.gridRect,
+    {
+      x: options.entity.position.x,
+      y: options.entity.position.y,
+      width: footprint.width,
+      height: footprint.height,
+    },
+  );
+}
+
+function doGridRectsIntersect(a: GridRect, b: GridRect): boolean {
+  return a.x < b.x + b.width
+    && a.x + a.width > b.x
+    && a.y < b.y + b.height
+    && a.y + a.height > b.y;
 }

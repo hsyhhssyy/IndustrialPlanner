@@ -15,8 +15,12 @@ import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 import {
   type ActiveTool,
   CANVAS_FLOATING_TOOLBAR_BUTTON_IDS,
+  CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS,
+  CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS,
   type CanvasFloatingToolbarButtonId,
   type CanvasFloatingToolbarSize,
+  type CanvasRightDockToolbarButtonId,
+  type CanvasTopLeftCornerToolbarButtonId,
   clampLeftDockWidth,
   DEFAULT_RIGHT_DOCK_WIDTH,
   resolveLeftDockWidthForScreenProfile,
@@ -44,6 +48,14 @@ export interface AppInternalAction {
   alignCanvasFloatingToolbar: () => boolean;
   setCanvasFloatingToolbarSize: (size: CanvasFloatingToolbarSize | null) => void;
   hideCanvasFloatingToolbar: () => void;
+  showCanvasRightDockToolbar: (
+    buttonIds: readonly CanvasRightDockToolbarButtonId[],
+  ) => void;
+  hideCanvasRightDockToolbar: () => void;
+  showCanvasTopLeftCornerToolbar: (
+    buttonIds: readonly CanvasTopLeftCornerToolbarButtonId[],
+  ) => void;
+  hideCanvasTopLeftCornerToolbar: () => void;
   setLeftDockWidth: (width: number) => void;
   setScreenProfile: (screenProfile: ScreenProfile) => void;
   setLocale: (locale: AppLocale) => void;
@@ -218,6 +230,58 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     this.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
   });
 
+  public readonly showCanvasRightDockToolbar: AppInternalAction["showCanvasRightDockToolbar"] = action((
+    buttonIds,
+  ) => {
+    const nextButtonIds = normalizeCanvasRightDockToolbarButtonIds(buttonIds);
+
+    if (nextButtonIds.length === 0) {
+      this.hideCanvasRightDockToolbar();
+      return;
+    }
+
+    this.internalState.runtime.canvasRightDockToolbar.visible = true;
+    this.internalState.runtime.canvasRightDockToolbar.buttonIds = nextButtonIds;
+  });
+
+  public readonly hideCanvasRightDockToolbar: AppInternalAction["hideCanvasRightDockToolbar"] = action(() => {
+    if (
+      !this.internalState.runtime.canvasRightDockToolbar.visible
+      && this.internalState.runtime.canvasRightDockToolbar.buttonIds.length === 0
+    ) {
+      return;
+    }
+
+    this.internalState.runtime.canvasRightDockToolbar.visible = false;
+    this.internalState.runtime.canvasRightDockToolbar.buttonIds = [];
+  });
+
+  public readonly showCanvasTopLeftCornerToolbar: AppInternalAction["showCanvasTopLeftCornerToolbar"] = action((
+    buttonIds,
+  ) => {
+    const nextButtonIds = normalizeCanvasTopLeftCornerToolbarButtonIds(buttonIds);
+
+    if (nextButtonIds.length === 0) {
+      this.hideCanvasTopLeftCornerToolbar();
+      return;
+    }
+
+    this.internalState.runtime.canvasTopLeftCornerToolbar.visible = true;
+    this.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = nextButtonIds;
+  });
+
+  public readonly hideCanvasTopLeftCornerToolbar: AppInternalAction["hideCanvasTopLeftCornerToolbar"] = action(() => {
+    if (
+      !this.internalState.runtime.canvasTopLeftCornerToolbar.visible
+      && this.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds.length === 0
+    ) {
+      return;
+    }
+
+    this.internalState.runtime.canvasTopLeftCornerToolbar.visible = false;
+    this.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [];
+  });
+
   public readonly setLeftDockWidth: AppInternalAction["setLeftDockWidth"] = action((width) => {
     this.internalState.workbench.leftDockWidth = clampLeftDockWidth(width);
   });
@@ -335,6 +399,42 @@ function normalizeCanvasFloatingToolbarButtonIds(
 ): CanvasFloatingToolbarButtonId[] {
   const knownButtonIds = new Set<CanvasFloatingToolbarButtonId>(CANVAS_FLOATING_TOOLBAR_BUTTON_IDS);
   const deduped: CanvasFloatingToolbarButtonId[] = [];
+
+  for (const buttonId of buttonIds) {
+    if (!knownButtonIds.has(buttonId) || deduped.includes(buttonId)) {
+      continue;
+    }
+
+    deduped.push(buttonId);
+  }
+
+  return deduped;
+}
+
+function normalizeCanvasRightDockToolbarButtonIds(
+  buttonIds: readonly CanvasRightDockToolbarButtonId[],
+): CanvasRightDockToolbarButtonId[] {
+  const knownButtonIds = new Set<CanvasRightDockToolbarButtonId>(CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS);
+  const deduped: CanvasRightDockToolbarButtonId[] = [];
+
+  for (const buttonId of buttonIds) {
+    if (!knownButtonIds.has(buttonId) || deduped.includes(buttonId)) {
+      continue;
+    }
+
+    deduped.push(buttonId);
+  }
+
+  return deduped;
+}
+
+function normalizeCanvasTopLeftCornerToolbarButtonIds(
+  buttonIds: readonly CanvasTopLeftCornerToolbarButtonId[],
+): CanvasTopLeftCornerToolbarButtonId[] {
+  const knownButtonIds = new Set<CanvasTopLeftCornerToolbarButtonId>(
+    CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS,
+  );
+  const deduped: CanvasTopLeftCornerToolbarButtonId[] = [];
 
   for (const buttonId of buttonIds) {
     if (!knownButtonIds.has(buttonId) || deduped.includes(buttonId)) {
