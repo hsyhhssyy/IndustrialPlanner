@@ -112,6 +112,8 @@ export function ToolDialog({ language, superRecipeEnabled, t, isMaximized, onTog
   const deviceContentPaneRef = useRef<HTMLElement | null>(null)
   const itemListPaneRef = useRef<HTMLDivElement | null>(null)
   const itemContentPaneRef = useRef<HTMLElement | null>(null)
+  const itemEntryButtonRefs = useRef(new Map<string, HTMLButtonElement>())
+  const pendingItemJumpRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!closeDisabled) return
@@ -169,6 +171,18 @@ export function ToolDialog({ language, superRecipeEnabled, t, isMaximized, onTog
     if (itemContentPaneRef.current) itemContentPaneRef.current.scrollTop = toolDialogState.itemContentScrollTop
   }, [activeTab, selectedItemId, toolDialogState.itemContentScrollTop, toolDialogState.itemListScrollTop])
 
+  useEffect(() => {
+    if (activeTab !== 'item') return
+    if (pendingItemJumpRef.current !== selectedItemId) return
+    const targetButton = itemEntryButtonRefs.current.get(selectedItemId)
+    pendingItemJumpRef.current = null
+    if (!targetButton) return
+    const frameId = requestAnimationFrame(() => {
+      targetButton.scrollIntoView({ block: 'nearest' })
+    })
+    return () => cancelAnimationFrame(frameId)
+  }, [activeTab, selectedItemId])
+
   const selectedDeviceRecipes = useMemo(
     () => {
       if (!selectedDeviceId) return []
@@ -196,16 +210,29 @@ export function ToolDialog({ language, superRecipeEnabled, t, isMaximized, onTog
 
   const formatCycleText = (seconds: number) => (language === 'zh-CN' ? `${seconds}秒` : `${seconds}s`)
 
+  const jumpToItem = (itemId: string) => {
+    pendingItemJumpRef.current = itemId
+    setToolDialogState((current) => ({
+      ...current,
+      activeTab: 'item',
+      selectedItemId: itemId,
+    }))
+  }
+
   const renderRecipeEntries = (entries: Array<{ itemId: string; amount: number }>, key: string, side: 'in' | 'out') => (
     entries.map((entry, index) => (
       <Fragment key={`${key}-${side}-${entry.itemId}-${index}`}>
         {index > 0 && <span className="toolbox-recipe-joiner" aria-hidden="true">+</span>}
         <span className="toolbox-recipe-node">
-          <span className="wiki-item-main toolbox-recipe-item">
+          <button
+            type="button"
+            className="wiki-item-main toolbox-recipe-item toolbox-recipe-item-button"
+            onClick={() => jumpToItem(entry.itemId)}
+          >
             <img className="wiki-entry-icon wiki-item-icon toolbox-recipe-item-icon" src={getItemIconPath(entry.itemId)} alt="" aria-hidden="true" draggable={false} />
             <span className="toolbox-recipe-qty-badge">x{entry.amount}</span>
             <span className="wiki-item-name toolbox-recipe-item-name">{limitItemLabel(getItemLabel(language, entry.itemId))}</span>
-          </span>
+          </button>
         </span>
       </Fragment>
     ))
@@ -389,6 +416,13 @@ export function ToolDialog({ language, superRecipeEnabled, t, isMaximized, onTog
                     <button
                       key={item.id}
                       type="button"
+                      ref={(element) => {
+                        if (element) {
+                          itemEntryButtonRefs.current.set(item.id, element)
+                          return
+                        }
+                        itemEntryButtonRefs.current.delete(item.id)
+                      }}
                       className={`wiki-entry-btn ${selectedItemId === item.id ? 'active' : ''}`.trim()}
                       onClick={() =>
                         setToolDialogState((current) => ({

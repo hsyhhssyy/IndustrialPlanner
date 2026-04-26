@@ -14,6 +14,8 @@ const NON_ROTATABLE_PLACED_TYPE_IDS = new Set<DeviceTypeId>(['item_port_unloader
 const PAN_KEYS = new Set(['w', 'a', 's', 'd'])
 const PAN_SPEED_CELLS_PER_SECOND = 14
 
+type PreviewPositionMap = Record<string, { x: number; y: number }>
+
 type UseBuildHotkeysDomainParams = {
   hotkeysEnabled: boolean
   simIsRunning: boolean
@@ -39,6 +41,13 @@ type UseBuildHotkeysDomainParams = {
   cellSize: number
   selection: string[]
   setSelection: Dispatch<SetStateAction<string[]>>
+  dragBasePositions: PreviewPositionMap | null
+  dragPreviewPositions: PreviewPositionMap
+  setDragBasePositions: Dispatch<SetStateAction<PreviewPositionMap | null>>
+  setDragPreviewPositions: Dispatch<SetStateAction<PreviewPositionMap>>
+  setDragPreviewValid: Dispatch<SetStateAction<boolean>>
+  setDragInvalidMessage: Dispatch<SetStateAction<string | null>>
+  setDragInvalidSelection: Dispatch<SetStateAction<Set<string>>>
   layout: LayoutState
   foundationIdSet: ReadonlySet<string>
   foundationMovableIdSet: ReadonlySet<string>
@@ -70,6 +79,106 @@ function getDigitHotkeyIndex(event: KeyboardEvent) {
   return null
 }
 
+function rotateSelectedDevicesClockwise(selectedDevices: DeviceInstance[]) {
+  const selectedRects = selectedDevices.map((device) => {
+    const size = rotatedFootprintSize(DEVICE_TYPE_BY_ID[device.typeId].size, device.rotation)
+    return {
+      device,
+      x: device.origin.x,
+      y: device.origin.y,
+      width: size.width,
+      height: size.height,
+    }
+  })
+
+  const bounds = selectedRects.reduce(
+    (acc, rect) => ({
+      minX: Math.min(acc.minX, rect.x),
+      minY: Math.min(acc.minY, rect.y),
+      maxX: Math.max(acc.maxX, rect.x + rect.width),
+      maxY: Math.max(acc.maxY, rect.y + rect.height),
+    }),
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+  )
+
+  const selectionHeight = bounds.maxY - bounds.minY
+  const rotatedById = new Map<string, DeviceInstance>()
+
+  for (const rect of selectedRects) {
+    const normalizedX = rect.x - bounds.minX
+    const normalizedY = rect.y - bounds.minY
+    const nextRotation = ((rect.device.rotation + 90) % 360) as Rotation
+    rotatedById.set(rect.device.instanceId, {
+      ...rect.device,
+      rotation: nextRotation,
+      origin: {
+        x: bounds.minX + selectionHeight - (normalizedY + rect.height),
+        y: bounds.minY + normalizedX,
+      },
+    })
+  }
+
+  return rotatedById
+}
+
+function toPreviewPositionMap(devices: Iterable<DeviceInstance>) {
+  const positions: PreviewPositionMap = {}
+  for (const device of devices) {
+    positions[device.instanceId] = { ...device.origin }
+  }
+  return positions
+}
+
+function getDragDelta(selection: string[], dragBasePositions: PreviewPositionMap | null, dragPreviewPositions: PreviewPositionMap) {
+  if (!dragBasePositions) return { x: 0, y: 0 }
+  for (const instanceId of selection) {
+    const base = dragBasePositions[instanceId]
+    const preview = dragPreviewPositions[instanceId]
+    if (!base || !preview) continue
+    return {
+      x: preview.x - base.x,
+      y: preview.y - base.y,
+    }
+  }
+  return { x: 0, y: 0 }
+}
+
+function applyPreviewPositions(layout: LayoutState, previewPositions: PreviewPositionMap) {
+  return {
+    ...layout,
+    devices: layout.devices.map((device) => {
+      const preview = previewPositions[device.instanceId]
+      if (!preview) return device
+      return {
+        ...device,
+        origin: preview,
+      }
+    }),
+  }
+}
+
+function findPlacementFailureMessage(
+  layout: LayoutState,
+  devices: DeviceInstance[],
+  currentBaseOuterRing: OuterRing,
+  outOfLotToastKey: string,
+  fallbackPlacementToastKey: string,
+) {
+  const outOfLotDevice = devices.find((device) => {
+    return !isDeviceWithinAllowedPlacementArea(device, layout.lotSize, currentBaseOuterRing)
+  })
+  if (outOfLotDevice) return outOfLotToastKey
+
+  const constraintFailure = devices
+    .map((device) => validatePlacementConstraints(layout, device))
+    .find((result) => !result.isValid)
+  if (constraintFailure && !constraintFailure.isValid) {
+    return constraintFailure.messageKey ?? fallbackPlacementToastKey
+  }
+
+  return null
+}
+
 export function useBuildHotkeysDomain({
   hotkeysEnabled,
   simIsRunning,
@@ -91,6 +200,13 @@ export function useBuildHotkeysDomain({
   cellSize,
   selection,
   setSelection,
+  dragBasePositions,
+  dragPreviewPositions,
+  setDragBasePositions,
+  setDragPreviewPositions,
+  setDragPreviewValid,
+  setDragInvalidMessage,
+  setDragInvalidSelection,
   layout,
   foundationIdSet,
   foundationMovableIdSet,
@@ -293,63 +409,65 @@ export function useBuildHotkeysDomain({
       )
       if (selectedRotatable.length === 0) return
 
-      const selectedBounds = selectedRotatable.reduce(
-        (acc, device) => {
-          const type = DEVICE_TYPE_BY_ID[device.typeId]
-          const size = rotatedFootprintSize(type.size, device.rotation)
-          const right = device.origin.x + size.width
-          const bottom = device.origin.y + size.height
-          return {
-            minX: Math.min(acc.minX, device.origin.x),
-            minY: Math.min(acc.minY, device.origin.y),
-            maxX: Math.max(acc.maxX, right),
-            maxY: Math.max(acc.maxY, bottom),
-          }
-        },
-        { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
-      )
-
-      const centerX = (selectedBounds.minX + selectedBounds.maxX) / 2
-      const centerY = (selectedBounds.minY + selectedBounds.maxY) / 2
-
-      const rotatedById = new Map<string, DeviceInstance>()
-      for (const device of selectedRotatable) {
-        const currentSize = rotatedFootprintSize(DEVICE_TYPE_BY_ID[device.typeId].size, device.rotation)
-        const currentCenterX = device.origin.x + currentSize.width / 2
-        const currentCenterY = device.origin.y + currentSize.height / 2
-        const nextCenterX = centerX - (currentCenterY - centerY)
-        const nextCenterY = centerY + (currentCenterX - centerX)
-        const nextRotation = ((device.rotation + 90) % 360) as Rotation
-        const nextSize = rotatedFootprintSize(DEVICE_TYPE_BY_ID[device.typeId].size, nextRotation)
-        const nextOrigin = {
-          x: Math.round(nextCenterX - nextSize.width / 2),
-          y: Math.round(nextCenterY - nextSize.height / 2),
-        }
-        rotatedById.set(device.instanceId, {
-          ...device,
-          rotation: nextRotation,
-          origin: nextOrigin,
-        })
-      }
+      const rotatedById = rotateSelectedDevicesClockwise(selectedRotatable)
 
       const nextLayout: LayoutState = {
         ...layout,
         devices: layout.devices.map((device) => rotatedById.get(device.instanceId) ?? device),
       }
 
-      const outOfLotDevice = Array.from(rotatedById.values()).find((device) => {
-        return !isDeviceWithinAllowedPlacementArea(device, nextLayout.lotSize, currentBaseOuterRing)
-      })
-      if (outOfLotDevice) {
-        showToast(t(outOfLotToastKey), { variant: 'warning' })
+      if (dragBasePositions) {
+        const dragBaseDevices = selectedRotatable.map((device) => ({
+          ...device,
+          origin: dragBasePositions[device.instanceId] ?? device.origin,
+        }))
+        const rotatedDragBaseById = rotateSelectedDevicesClockwise(dragBaseDevices)
+        const dragDelta = getDragDelta(selection, dragBasePositions, dragPreviewPositions)
+        const nextDragBasePositions = {
+          ...dragBasePositions,
+          ...toPreviewPositionMap(rotatedDragBaseById.values()),
+        }
+        const nextDragPreviewPositions = { ...dragPreviewPositions }
+        for (const [instanceId, origin] of Object.entries(nextDragBasePositions)) {
+          if (!(instanceId in dragPreviewPositions) && !(instanceId in dragBasePositions)) continue
+          nextDragPreviewPositions[instanceId] = {
+            x: origin.x + dragDelta.x,
+            y: origin.y + dragDelta.y,
+          }
+        }
+
+        const previewLayout = applyPreviewPositions(nextLayout, nextDragPreviewPositions)
+        const previewSelection = previewLayout.devices.filter((device) => selection.includes(device.instanceId))
+        const previewFailureMessage = findPlacementFailureMessage(
+          previewLayout,
+          previewSelection,
+          currentBaseOuterRing,
+          outOfLotToastKey,
+          fallbackPlacementToastKey,
+        )
+        if (previewFailureMessage) {
+          showToast(t(previewFailureMessage), { variant: 'warning' })
+          return
+        }
+
+        setLayout(nextLayout)
+        setDragBasePositions(nextDragBasePositions)
+        setDragPreviewPositions(nextDragPreviewPositions)
+        setDragPreviewValid(true)
+        setDragInvalidMessage(null)
+        setDragInvalidSelection(new Set())
         return
       }
 
-      const constraintFailure = Array.from(rotatedById.values())
-        .map((device) => validatePlacementConstraints(nextLayout, device))
-        .find((result) => !result.isValid)
-      if (constraintFailure && !constraintFailure.isValid) {
-        showToast(t(constraintFailure.messageKey ?? fallbackPlacementToastKey), { variant: 'warning' })
+      const failureMessage = findPlacementFailureMessage(
+        nextLayout,
+        Array.from(rotatedById.values()),
+        currentBaseOuterRing,
+        outOfLotToastKey,
+        fallbackPlacementToastKey,
+      )
+      if (failureMessage) {
+        showToast(t(failureMessage), { variant: 'warning' })
         return
       }
 
@@ -383,6 +501,8 @@ export function useBuildHotkeysDomain({
     canvasWidthPx,
     cellSize,
     clampViewportOffset,
+    dragBasePositions,
+    dragPreviewPositions,
     fallbackPlacementToastKey,
     foundationIdSet,
     foundationMovableIdSet,
@@ -400,6 +520,11 @@ export function useBuildHotkeysDomain({
     returnToIdle,
     selection,
     setHighlightedPlaceGroup,
+    setDragBasePositions,
+    setDragInvalidMessage,
+    setDragInvalidSelection,
+    setDragPreviewPositions,
+    setDragPreviewValid,
     setLayout,
     setPlaceOperation,
     setPlaceRotation,

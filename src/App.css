@@ -2131,6 +2131,23 @@ button:disabled {
   background: rgba(21, 34, 48, 0.18);
 }
 
+.tool-dialog .toolbox-recipe-item-button {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.tool-dialog .toolbox-recipe-item-button:hover {
+  border-color: rgba(120, 164, 218, 0.58);
+  background: rgba(27, 44, 63, 0.32);
+}
+
+.tool-dialog .toolbox-recipe-item-button:focus-visible {
+  outline: 2px solid rgba(143, 198, 255, 0.82);
+  outline-offset: 2px;
+}
+
 .tool-dialog .toolbox-recipe-item-name {
   font-size: 13px;
   line-height: 1.15;
