@@ -47,11 +47,11 @@ describe("createAppHost", () => {
     expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual([
       "hypergryph-gesture-diagnostics",
       "hypergryph-move-gesture",
+      "hypergryph-marquee-gesture",
       "hypergryph-select-gesture",
       "hypergryph-mouse-viewport-pan",
       "hypergryph-viewport-zoom",
       "hypergryph-select-tool-button",
-      "hypergryph-marquee-mode-toggle",
     ]);
     expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toBeNull();
 
@@ -499,7 +499,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
       uiButtonId: "placement-tool-marquee",

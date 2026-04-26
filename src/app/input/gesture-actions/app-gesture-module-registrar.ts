@@ -4,7 +4,10 @@ import {
 } from "@/app/input/gesture-diagnostics";
 import type { GestureActionRouter } from "./gesture-action-router";
 import { createHypergryphGestureDiagnosticsModule } from "./hypergryph/hypergryph-gesture-diagnostics-module";
-import { createHypergryphMarqueeModeToggleModule } from "./hypergryph/hypergryph-marquee-mode-toggle-module";
+import {
+  createHypergryphMarqueeGestureModule,
+  hookMarqueeToolCleanupFallback,
+} from "./hypergryph/hypergryph-marquee-gesture-module";
 import {
   createHypergryphMoveGestureModule,
   hookMoveToolCleanupFallback,
@@ -27,12 +30,13 @@ export class AppGestureModuleRegistrar {
   public constructor(options: AppGestureModuleRegistrarOptions) {
     this.unregisterModules.push(
       hookMoveToolCleanupFallback(options.appHost),
+      hookMarqueeToolCleanupFallback(options.appHost),
       options.router.registerModule(createHypergryphMoveGestureModule()),
+      options.router.registerModule(createHypergryphMarqueeGestureModule()),
       options.router.registerModule(createHypergryphSelectGestureModule()),
       options.router.registerModule(createHypergryphMouseViewportPanModule()),
       options.router.registerModule(createHypergryphViewportZoomModule()),
       options.router.registerModule(createHypergryphSelectToolButtonModule()),
-      options.router.registerModule(createHypergryphMarqueeModeToggleModule()),
       options.router.registerModule(
         createHypergryphGestureDiagnosticsModule(options.gestureDiagnostics),
       ),

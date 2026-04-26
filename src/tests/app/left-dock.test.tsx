@@ -289,9 +289,9 @@ describe("Left dock panel switching", () => {
       });
     });
 
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
-    expect(selectButton?.classList.contains("is-active")).toBe(true);
-    expect(marqueeButton?.classList.contains("is-active")).toBe(false);
+    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
+    expect(selectButton?.classList.contains("is-active")).toBe(false);
+    expect(marqueeButton?.classList.contains("is-active")).toBe(true);
 
     act(() => {
       if (!selectButton) {

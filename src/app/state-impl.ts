@@ -106,6 +106,8 @@ export interface RuntimeStateReadWrite {
   activePanel: ActivePanel;
   activeTool: ActiveTool;
   moveAnchor: GridPoint | null;
+  marqueeAnchor: GridPoint | null;
+  isReverseMarquee: boolean;
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite;
   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite;
   canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite;
@@ -172,6 +174,8 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   activePanel: ActivePanel = null;
   activeTool: ActiveTool = "select";
   moveAnchor: GridPoint | null = null;
+  marqueeAnchor: GridPoint | null = null;
+  isReverseMarquee = false;
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite = new CanvasFloatingToolbarStateReadWriteImpl();
   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite = new CanvasRightDockToolbarStateReadWriteImpl();
   canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite = new CanvasTopLeftCornerToolbarStateReadWriteImpl();
