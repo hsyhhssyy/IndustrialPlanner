@@ -1056,9 +1056,6 @@ describe("WorkbenchApp", () => {
         hypergryphOperationMode: true,
         hypergryphImmediateMove: true,
         hypergryphImmediateMarquee: false,
-        hypergryphConfirmShortcut: "F",
-        hypergryphCancelShortcut: "G",
-        hypergryphRotateShortcut: "R",
       }),
     );
   });
@@ -1107,9 +1104,6 @@ describe("WorkbenchApp", () => {
         hypergryphOperationMode: true,
         hypergryphImmediateMove: true,
         hypergryphImmediateMarquee: false,
-        hypergryphConfirmShortcut: "F",
-        hypergryphCancelShortcut: "G",
-        hypergryphRotateShortcut: "R",
       }),
     );
   });
@@ -1174,9 +1168,6 @@ describe("WorkbenchApp", () => {
         hypergryphOperationMode: true,
         hypergryphImmediateMove: true,
         hypergryphImmediateMarquee: true,
-        hypergryphConfirmShortcut: "F",
-        hypergryphCancelShortcut: "G",
-        hypergryphRotateShortcut: "R",
       }),
     );
   });
@@ -1247,17 +1238,22 @@ describe("WorkbenchApp", () => {
     });
 
     expect(confirmShortcutButton?.textContent).toBe("P");
-    expect(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY)).toBeNull();
+    expect(JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")).toEqual({
+      selectedGroupId: "system",
+      values: {
+        "display-frame-rate-limit": "unlimited",
+        "game-arknights-confirm-shortcut": "P",
+        "game-arknights-cancel-shortcut": "G",
+        "game-arknights-rotate-shortcut": "R",
+        "game-use-simplified-device-icons": false,
+        "other-debug-mode": false,
+      },
+    });
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
         locale: "zh-CN",
         themeId: "ayu-light",
         hypergryphOperationMode: false,
-        hypergryphImmediateMove: true,
-        hypergryphImmediateMarquee: false,
-        hypergryphConfirmShortcut: "P",
-        hypergryphCancelShortcut: "G",
-        hypergryphRotateShortcut: "R",
       }),
     );
   });
