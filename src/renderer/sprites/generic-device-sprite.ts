@@ -5,28 +5,31 @@ import {
 } from "pixi.js"
 
 import {
-  RenderLayerMap,
-  RenderSprite,
   RenderSpriteLayout,
+  RenderSpriteSyncContext,
 } from "./render-sprite"
+import { BaseRenderSprite } from "./base-render-sprite"
 
 const DEGREE_TO_RADIAN = Math.PI / 180
 const textureLoadCache = new Map<string, Promise<Texture>>()
 
-export class GenericDeviceSprite implements RenderSprite {
+export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly body: Sprite
-  private currentLayerMap: RenderLayerMap | null = null
   private currentLayout: RenderSpriteLayout | null = null
-  private destroyed = false
+  private disposed = false
   private isTextureReady = false
 
-  public constructor(texturePath: string) {
+  public constructor(entityId: string, texturePath: string) {
+    super(entityId)
+
     this.body = new Sprite(Texture.EMPTY)
     this.body.anchor.set(0.5)
     this.body.roundPixels = true
     this.body.visible = false
+    this.getRootOfLayer("entity").addChild(this.body)
+
     void loadTexture(texturePath).then((texture) => {
-      if (this.destroyed) {
+      if (this.disposed) {
         return
       }
 
@@ -38,21 +41,20 @@ export class GenericDeviceSprite implements RenderSprite {
         this.applyLayout(this.currentLayout)
       }
     }).catch(() => {
+      if (this.disposed) {
+        return
+      }
+
       this.body.visible = false
     })
   }
 
-  public attach(layers: RenderLayerMap): void {
-    if (this.currentLayerMap === layers) {
-      return
-    }
+  protected syncSpriteLayout(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void {
+    void context
 
-    this.detach()
-    this.currentLayerMap = layers
-    layers.entity.addChild(this.body)
-  }
-
-  public syncLayout(layout: RenderSpriteLayout): void {
     this.currentLayout = layout
 
     if (!this.isTextureReady) {
@@ -62,10 +64,8 @@ export class GenericDeviceSprite implements RenderSprite {
     this.applyLayout(layout)
   }
 
-  public destroy(): void {
-    this.destroyed = true
-    this.detach()
-    this.body.destroy()
+  protected onDestroy(): void {
+    this.disposed = true
   }
 
   private applyLayout(layout: RenderSpriteLayout): void {
@@ -78,13 +78,6 @@ export class GenericDeviceSprite implements RenderSprite {
     this.body.rotation = layout.rotation * DEGREE_TO_RADIAN
   }
 
-  private detach(): void {
-    if (this.body.parent !== null) {
-      this.body.parent.removeChild(this.body)
-    }
-
-    this.currentLayerMap = null
-  }
 }
 
 function loadTexture(texturePath: string): Promise<Texture> {

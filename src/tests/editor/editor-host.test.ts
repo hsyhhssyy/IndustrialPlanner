@@ -582,6 +582,73 @@ describe("createEditorHost", () => {
     });
   });
 
+  it("rotates entity collections around the collection bounding center through editor actions", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.collections.selection.replace([
+      "dummy-entity-2",
+      "dummy-entity-1",
+    ]);
+
+    editorHost.actions.rotateCollection(EntityCollectionType.selection);
+
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]).toMatchObject({
+      position: {
+        x: 8,
+        y: 2,
+      },
+      rotation: 90,
+    });
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-1"]).toMatchObject({
+      position: {
+        x: 6,
+        y: 10,
+      },
+      rotation: 90,
+    });
+    expect(editorHost.queries.findEntityCollectionGridRect("selection")).toEqual({
+      x: 6,
+      y: 2,
+      width: 5,
+      height: 9,
+    });
+  });
+
+  it("rotates preview draft collections without clamping negative grid positions", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalState.drafts = [
+      {
+        id: "preview-belt",
+        originalEntityId: "preview-belt",
+        definitionId: "belt_straight_1x1",
+        position: {
+          x: -2,
+          y: 3,
+        },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    ];
+    editorHost.internalState.collections.preview.replace(["preview-belt"]);
+
+    editorHost.actions.rotateCollection(EntityCollectionType.preview);
+
+    expect(editorHost.internalState.drafts[0]).toMatchObject({
+      id: "preview-belt",
+      position: {
+        x: -2,
+        y: 3,
+      },
+      rotation: 90,
+    });
+  });
+
   it("computes grid rects for selected and preview entity collections", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

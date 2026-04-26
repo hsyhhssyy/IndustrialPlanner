@@ -75,7 +75,6 @@ export function createRenderSceneOrchestrator(
   const app = renderHost.app
   const layers = createRenderLayers()
   const worldGrid = new Graphics({ roundPixels: true })
-  const worldEntitySelectionOverlay = new Graphics({ roundPixels: true })
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
   const entitySprites = new Map<string, RenderSprite>()
 
@@ -99,12 +98,11 @@ export function createRenderSceneOrchestrator(
     })
 
     syncWorldEntitySprites({
+      workspace: renderHost.workspace,
       entities: worldEntities,
       entityDefinitionMap,
       entitySprites,
       layers,
-      selectionOverlay: worldEntitySelectionOverlay,
-      selectedEntityIds: readSelectedEntityIds(renderHost),
       viewportState,
       viewportBounds: {
         left: 0,
@@ -118,7 +116,6 @@ export function createRenderSceneOrchestrator(
 
   app.stage.addChild(layers.background, layers.entity, layers.overlay)
   layers.background.addChild(worldGrid)
-  layers.overlay.addChild(worldEntitySelectionOverlay)
   app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
 
   const host: RenderSceneOrchestrator = {
@@ -148,10 +145,11 @@ function createRenderLayers(): RenderLayerMap {
 }
 
 function createSpriteForDefinition(
+  entityId: string,
   definition: EntityDefinition,
 ): RenderSprite | null {
   if (definition.spriteId === "belt_straight_1x1") {
-    return new BeltStraightSprite()
+    return new BeltStraightSprite(entityId)
   }
 
   const texturePath = resolveGenericDeviceSpriteTexturePath(definition.spriteId)
@@ -159,7 +157,7 @@ function createSpriteForDefinition(
     return null
   }
 
-  return new GenericDeviceSprite(texturePath)
+  return new GenericDeviceSprite(entityId, texturePath)
 }
 
 export function applyViewportSize(
@@ -224,15 +222,6 @@ function readWorldEntities(renderHost: RenderHost): readonly WorldEntity[] {
   }
 
   return editor.queries.listEntities()
-}
-
-function readSelectedEntityIds(renderHost: RenderHost): readonly string[] {
-  const editor = renderHost.workspace.editor
-  if (editor === null) {
-    return []
-  }
-
-  return editor.state.collections.selection
 }
 
 function readAppTheme(renderHost: RenderHost): AppTheme {
@@ -393,12 +382,11 @@ function resolveWorldGridAxisPositions(options: {
 }
 
 function syncWorldEntitySprites(options: {
+  workspace: RenderHost["workspace"];
   entities: readonly WorldEntity[];
   entityDefinitionMap: Map<string, EntityDefinition>;
   entitySprites: Map<string, RenderSprite>;
   layers: RenderLayerMap;
-  selectionOverlay: Graphics;
-  selectedEntityIds: readonly string[];
   viewportState: RenderViewportState;
   viewportBounds: {
     left: number;
@@ -408,23 +396,6 @@ function syncWorldEntitySprites(options: {
   };
   theme: AppTheme;
 }): void {
-  syncWorldEntitySelectionOverlay({
-    overlay: options.selectionOverlay,
-    layouts: resolveWorldEntitySelectionOverlayLayouts({
-      entities: options.entities,
-      entityDefinitionMap: options.entityDefinitionMap,
-      selectedEntityIds: options.selectedEntityIds,
-      viewportBounds: options.viewportBounds,
-      viewportCenter: {
-        x: options.viewportState.centerX,
-        y: options.viewportState.centerY,
-      },
-      gridSize: options.viewportState.gridSize,
-    }),
-    theme: options.theme,
-    gridSize: options.viewportState.gridSize,
-  })
-
   const nextEntityIds = new Set<string>()
 
   for (const entity of options.entities) {
@@ -435,7 +406,7 @@ function syncWorldEntitySprites(options: {
 
     let sprite: RenderSprite | null = options.entitySprites.get(entity.id) ?? null
     if (!sprite) {
-      sprite = createSpriteForDefinition(definition)
+      sprite = createSpriteForDefinition(entity.id, definition)
       if (sprite === null) {
         continue
       }
@@ -455,7 +426,10 @@ function syncWorldEntitySprites(options: {
         },
         gridSize: options.viewportState.gridSize,
       }),
-      { theme: options.theme },
+      {
+        theme: options.theme,
+        workspace: options.workspace,
+      },
     )
     nextEntityIds.add(entity.id)
   }
@@ -467,30 +441,6 @@ function syncWorldEntitySprites(options: {
 
     sprite.destroy()
     options.entitySprites.delete(entityId)
-  }
-}
-
-function syncWorldEntitySelectionOverlay(options: {
-  overlay: Graphics;
-  layouts: readonly RenderSpriteLayout[];
-  theme: AppTheme;
-  gridSize: number;
-}): void {
-  options.overlay.clear()
-  const strokeStyle = resolveWorldEntitySelectionStrokeStyle({
-    theme: options.theme,
-    gridSize: options.gridSize,
-  })
-
-  for (const layout of options.layouts) {
-    const innerRect = resolveWorldEntitySelectionInnerRect(layout, strokeStyle.width)
-    if (innerRect === null) {
-      continue
-    }
-
-    options.overlay
-      .rect(innerRect.x, innerRect.y, innerRect.width, innerRect.height)
-      .stroke(strokeStyle)
   }
 }
 
@@ -517,35 +467,6 @@ export function resolveWorldEntitySelectionStrokeWidth(gridSize: number): number
     WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH,
     Math.min(WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH, width),
   )
-}
-
-function resolveWorldEntitySelectionInnerRect(
-  layout: RenderSpriteLayout,
-  strokeWidth: number,
-): {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-} | null {
-  const inset = Math.min(
-    strokeWidth / 2,
-    layout.width / 2,
-    layout.height / 2,
-  )
-  const width = layout.width - inset * 2
-  const height = layout.height - inset * 2
-
-  if (width <= 0 || height <= 0) {
-    return null
-  }
-
-  return {
-    x: layout.x + inset,
-    y: layout.y + inset,
-    width,
-    height,
-  }
 }
 
 export function resolveGenericDeviceSpriteTexturePath(

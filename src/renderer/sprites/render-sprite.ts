@@ -1,4 +1,5 @@
 import { Container } from "pixi.js";
+import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type { AppTheme } from "@/domain/state/theme";
 import type { GridRotation } from "@/shared/geometry/grid"
 
@@ -22,6 +23,7 @@ export interface RenderSpriteLayout {
 
 export interface RenderSpriteSyncContext {
   theme: AppTheme;
+  workspace: WorkspaceContract;
 }
 
 export interface RenderSprite {

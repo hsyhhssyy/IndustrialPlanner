@@ -1,11 +1,9 @@
 import { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { AppContract } from "@/domain/contract/app-contract";
-import { reaction } from "mobx";
 import { AppActionImpl, AppInternalAction } from "./action-impl";
 import { createGestureAdapter, GestureAdapter } from "./input/gesture-adapter";
 import {
   AppGestureModuleRegistrar,
-  cleanupMoveOperationDraft,
   createGestureActionRouter,
   GestureActionRouter,
 } from "./input/gesture-actions";
@@ -85,6 +83,7 @@ export function createAppHost(
 
   workspace.app = host;
   const gestureModuleRegistrar = new AppGestureModuleRegistrar({
+    appHost: host,
     router: gestureActionRouter,
     gestureDiagnostics,
   });
@@ -96,14 +95,6 @@ export function createAppHost(
   }));
   disposers.push(hookLocalstorage(host));
   disposers.push(hookThemeApplicator(host));
-  disposers.push(reaction(
-    () => internalState.runtime.activeTool,
-    (activeTool, previousActiveTool) => {
-      if (previousActiveTool === "move" && activeTool !== "move") {
-        cleanupMoveOperationDraft(host);
-      }
-    },
-  ));
 
   return host;
 }

@@ -29,6 +29,7 @@ export function createEditorHost(
   const actions: EditorContract["actions"] = createEditorActions({
     document: internalDocument,
     state: editorState,
+    workspace,
   });
   const queries: EditorContract["queries"] = createEditorQueries({
     document: internalDocument,

@@ -5,6 +5,37 @@ const { loadTexture } = vi.hoisted(() => ({
 }))
 
 vi.mock("pixi.js", () => {
+  class MockContainer {
+    public readonly children: unknown[] = []
+    public parent: {
+      removeChild: (child: MockContainer) => void;
+    } | null = null
+    public alpha = 1
+    public visible = true
+
+    public addChild<T extends { parent: unknown }>(child: T): T {
+      child.parent = this
+      this.children.push(child)
+      return child
+    }
+
+    public removeChild(child: unknown): void {
+      const index = this.children.indexOf(child)
+      if (index >= 0) {
+        this.children.splice(index, 1)
+      }
+
+      if (child && typeof child === "object" && "parent" in child) {
+        (child as { parent: unknown }).parent = null
+      }
+    }
+
+    public destroy(): void {
+      this.children.length = 0
+      this.parent = null
+    }
+  }
+
   class MockSprite {
     public static instances: MockSprite[] = []
     public readonly anchor = {
@@ -42,15 +73,32 @@ vi.mock("pixi.js", () => {
     public static readonly EMPTY = { id: "empty-texture" }
   }
 
+  class MockGraphics extends MockContainer {
+    public clear(): this {
+      return this
+    }
+
+    public rect(): this {
+      return this
+    }
+
+    public stroke(): this {
+      return this
+    }
+  }
+
   return {
     Assets: {
       load: loadTexture,
     },
+    Container: MockContainer,
+    Graphics: MockGraphics,
     Sprite: MockSprite,
     Texture: MockTexture,
   }
 })
 
+import { AYU_LIGHT_THEME } from "@/app/theme"
 import { GenericDeviceSprite } from "@/renderer/sprites/generic-device-sprite"
 
 interface RenderedSpriteSnapshot {
@@ -81,7 +129,10 @@ describe("GenericDeviceSprite", () => {
         child.parent = null
       }),
     }
-    const sprite = new GenericDeviceSprite("/sprites/item_port_storager_1.webp")
+    const sprite = new GenericDeviceSprite(
+      "dummy-entity-1",
+      "/sprites/item_port_storager_1.webp",
+    )
 
     sprite.attach({
       background: {} as never,
@@ -94,13 +145,28 @@ describe("GenericDeviceSprite", () => {
       width: 48,
       height: 32,
       rotation: 90,
+    }, {
+      theme: AYU_LIGHT_THEME,
+      workspace: {
+        editor: null,
+      } as never,
     })
 
     expect(loadTexture).toHaveBeenCalledWith("/sprites/item_port_storager_1.webp")
 
     await flushMicrotasks()
 
-    const renderedSprite = entityLayer.addChild.mock.calls[0]?.[0]
+    const entityRoot = entityLayer.addChild.mock.calls[0]?.[0] as {
+      children?: unknown[];
+    } | undefined
+
+    expect(entityRoot).toBeDefined()
+
+    if (!entityRoot) {
+      throw new Error("Expected GenericDeviceSprite to attach an entity root container.")
+    }
+
+    const renderedSprite = entityRoot.children?.[0]
 
     expect(renderedSprite).toBeDefined()
 

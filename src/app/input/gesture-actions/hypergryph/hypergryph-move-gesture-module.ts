@@ -6,12 +6,14 @@ import { EntityCollectionType } from "@/domain/state/types";
 import type { GridPoint, GridRect } from "@/domain/types/grid";
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+import { reaction } from "mobx";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
 const MOVE_TOOLBAR_BUTTON_IDS = [
   "canvas-toolbar-button-ok",
+  "canvas-toolbar-button-rotate",
   "canvas-toolbar-button-cancel",
 ] as const;
 
@@ -29,6 +31,18 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
         switch (event.type) {
           case "mouse-long-press-ready":
           case "tap-long-press-ready":
+            return { status: "handled" };
+
+          case "key down":
+            if (!isRotateMoveShortcut({
+              code: event.code,
+              key: event.key,
+              modifiers: event.modifiers,
+            })) {
+              return { status: "ignored" };
+            }
+
+            rotateMovePreview(context.appHost, editor);
             return { status: "handled" };
 
           case "mouse dragstart":
@@ -104,6 +118,11 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
               return { status: "handled" };
             }
 
+            if (event.uiButtonId === "canvas-toolbar-button-rotate") {
+              rotateMovePreview(context.appHost, editor);
+              return { status: "handled" };
+            }
+
             if (event.uiButtonId === "canvas-toolbar-button-cancel") {
               cancelMoveOperation(context.appHost, editor);
               return { status: "handled" };
@@ -118,6 +137,11 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
 
             if (event.uiButtonId === "canvas-toolbar-button-ok") {
               applyMoveOperation(context.appHost, editor);
+              return { status: "handled" };
+            }
+
+            if (event.uiButtonId === "canvas-toolbar-button-rotate") {
+              rotateMovePreview(context.appHost, editor);
               return { status: "handled" };
             }
 
@@ -284,16 +308,10 @@ function prepareSelectionForMoveEnter(options: {
     return false;
   }
 
-  if (options.source === "touch") {
-    return (
-      options.previousTool === "select"
-      && options.selection.length > 0
-      && options.selection.contains(options.pointerEntity.id)
-    );
-  }
-
   if (options.previousTool === "marquee") {
     return (
+      options.source === "mouse"
+      &&
       options.selection.length > 0
       && options.selection.contains(options.pointerEntity.id)
     );
@@ -320,8 +338,7 @@ function didMouseSelectEnterMutateSelection(options: {
   source: "mouse" | "touch";
 }): boolean {
   return (
-    options.source === "mouse"
-    && options.previousTool === "select"
+    options.previousTool === "select"
     && options.pointerEntity !== null
   );
 }
@@ -445,6 +462,11 @@ function driveMovePreview(options: {
   }
 }
 
+function rotateMovePreview(appHost: AppHost, editor: EditorContract): void {
+  editor.actions.rotateCollection(EntityCollectionType.preview);
+  appHost.internalActions.alignCanvasToolbar();
+}
+
 function applyMoveOperation(appHost: AppHost, editor: EditorContract): void {
   try {
     editor.actions.applyMoveOerationDraft();
@@ -474,6 +496,17 @@ export function cleanupMoveOperationDraft(appHost: AppHost): void {
   clearMoveUi(appHost);
 }
 
+export function hookMoveToolCleanupFallback(appHost: AppHost): () => void {
+  return reaction(
+    () => appHost.internalState.runtime.activeTool,
+    (activeTool, previousActiveTool) => {
+      if (previousActiveTool === "move" && activeTool !== "move") {
+        cleanupMoveOperationDraft(appHost);
+      }
+    },
+  );
+}
+
 function clearMoveUi(appHost: AppHost): void {
   appHost.internalState.runtime.moveAnchor = null;
   appHost.internalActions.hideCanvasToolbar();
@@ -485,6 +518,26 @@ function safelyCancelMoveDraft(editor: EditorContract): void {
   } catch {
     // Best-effort cleanup is intentionally silent; move should not leave UI half-entered.
   }
+}
+
+function isRotateMoveShortcut(options: {
+  code: string | null;
+  key: string | null;
+  modifiers: {
+    alt: boolean;
+    ctrl: boolean;
+    meta: boolean;
+  };
+}): boolean {
+  if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
+    return false;
+  }
+
+  if (options.code === "KeyR") {
+    return true;
+  }
+
+  return options.key?.trim().toLowerCase() === "r";
 }
 
 function isPreviewEntityAtClientPoint(options: {

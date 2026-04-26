@@ -35,6 +35,7 @@ export interface EditorAction {
 	removeFromCollection(options: EntityCollectionMemberOptions): void;
 	
 	moveCollectionTo(options: MoveCollectionToOptions): void;
+	rotateCollection(collectionType: EntityCollectionType): void;
 
 	createMoveOperationDraft(): void;
 	applyMoveOerationDraft(): boolean;

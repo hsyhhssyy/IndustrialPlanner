@@ -75,12 +75,11 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(handled.appHost.internalState.runtime.moveAnchor).toEqual({ x: 2, y: 2 });
   });
 
-  it("only enters touch move from select over an already selected entity", () => {
+  it("enters touch move from select by selecting the pointer entity first", () => {
     const marquee = createContext({
       activeTool: "marquee",
     });
-    const unselected = createContext();
-    const selected = createContext();
+    const select = createContext();
     const module = createHypergryphMoveGestureModule();
 
     const marqueeResult = module.handle(
@@ -89,28 +88,27 @@ describe("createHypergryphMoveGestureModule", () => {
       }),
       marquee.context,
     );
-    const unselectedResult = module.handle(
+    const selectResult = module.handle(
       tapLongPressReadyEvent({
         pointerEntity: entity("unselected-entity", { x: 4, y: 4 }),
         position: { x: 4, y: 4 },
       }),
-      unselected.context,
-    );
-    const selectedResult = module.handle(
-      tapLongPressReadyEvent({
-        pointerEntity: entity("selected-entity", { x: 2, y: 2 }),
-      }),
-      selected.context,
+      select.context,
     );
 
     expect(marqueeResult).toEqual({ status: "ignored" });
     expect(marquee.editor.actions.createMoveOperationDraft).not.toHaveBeenCalled();
-    expect(unselectedResult).toEqual({ status: "ignored" });
-    expect(unselected.editor.actions.createMoveOperationDraft).not.toHaveBeenCalled();
-    expect(selectedResult).toEqual({ status: "handled" });
-    expect(selected.editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
-    expect(selected.appHost.internalState.runtime.activeTool).toBe("move");
-    expect(selected.appHost.internalActions.showCanvasToolbarForCollection).toHaveBeenCalledWith(
+    expect(selectResult).toEqual({ status: "handled" });
+    expect(select.editor.actions.clearCollection).toHaveBeenCalledWith(
+      EntityCollectionType.selection,
+    );
+    expect(select.editor.actions.addToCollection).toHaveBeenCalledWith({
+      collectionType: EntityCollectionType.selection,
+      entityId: "unselected-entity",
+    });
+    expect(select.editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
+    expect(select.appHost.internalState.runtime.activeTool).toBe("move");
+    expect(select.appHost.internalActions.showCanvasToolbarForCollection).toHaveBeenCalledWith(
       MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
     );
@@ -137,6 +135,28 @@ describe("createHypergryphMoveGestureModule", () => {
     expect([...selection]).toEqual(["selected-entity"]);
     expect(appHost.internalState.runtime.activeTool).toBe("select");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+  });
+
+  it("restores the original selection when touch move enter fails after retargeting selection", () => {
+    const { context, editor, selection, preview } = createContext();
+    const module = createHypergryphMoveGestureModule();
+
+    vi.mocked(editor.actions.createMoveOperationDraft).mockImplementation(() => {
+      selection.replace([]);
+      preview.replace([]);
+    });
+
+    const result = module.handle(
+      tapLongPressReadyEvent({
+        pointerEntity: entity("unselected-entity", { x: 4, y: 4 }),
+        position: { x: 4, y: 4 },
+      }),
+      context,
+    );
+
+    expect(result).toEqual({ status: "ignored" });
+    expect(editor.actions.cancelMoveOperationDraft).toHaveBeenCalledTimes(1);
+    expect([...selection]).toEqual(["selected-entity"]);
   });
 
   it("uses preview entity hit testing for touch drag start while already moving", () => {
@@ -202,6 +222,40 @@ describe("createHypergryphMoveGestureModule", () => {
       endGridPoint: { x: 6, y: 4 },
     });
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 6, y: 4 });
+    expect(appHost.internalActions.alignCanvasToolbar).toHaveBeenCalledTimes(1);
+  });
+
+  it("rotates the preview with the R key while moving", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "move",
+      moveAnchor: { x: 5, y: 5 },
+      toolbarVisible: true,
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    const result = module.handle(keyDownEvent({ code: "KeyR", key: "r" }), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(editor.actions.rotateCollection).toHaveBeenCalledWith(
+      EntityCollectionType.preview,
+    );
+    expect(appHost.internalActions.alignCanvasToolbar).toHaveBeenCalledTimes(1);
+  });
+
+  it("rotates the preview from the rotate toolbar button while moving", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "move",
+      moveAnchor: { x: 5, y: 5 },
+      toolbarVisible: true,
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    const result = module.handle(uiButtonTouchTapEvent("canvas-toolbar-button-rotate"), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(editor.actions.rotateCollection).toHaveBeenCalledWith(
+      EntityCollectionType.preview,
+    );
     expect(appHost.internalActions.alignCanvasToolbar).toHaveBeenCalledTimes(1);
   });
 
@@ -311,6 +365,7 @@ function createContext(options: {
       }),
       applyMoveOerationDraft: vi.fn(() => true),
       moveCollectionTo: vi.fn(),
+      rotateCollection: vi.fn(),
       clearCollection: vi.fn((collectionType: EntityCollectionTypeValue) => {
         (editor.state.collections[collectionType] as MockCollection).replace([]);
       }),
@@ -425,6 +480,7 @@ type MockEditor = {
     | "clearCollection"
     | "createMoveOperationDraft"
     | "moveCollectionTo"
+    | "rotateCollection"
   >;
   queries: Pick<
     EditorContract["queries"],
@@ -473,6 +529,7 @@ function mouseLongPressReadyEvent(options: {
 
 const MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST = [
   "canvas-toolbar-button-ok",
+  "canvas-toolbar-button-rotate",
   "canvas-toolbar-button-cancel",
 ] as const;
 
@@ -538,6 +595,31 @@ function mouseTapEvent(options: {
     position: { x: 6, y: 4 },
     longPress: options.longPress,
     pointerEntity: null,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function keyDownEvent(options: {
+  code: string | null;
+  key: string | null;
+}) {
+  return {
+    type: "key down" as const,
+    gestureId: "key-down-1",
+    code: options.code,
+    key: options.key,
+    keyCode: options.key === null ? null : options.key.toUpperCase().charCodeAt(0),
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function uiButtonTouchTapEvent(uiButtonId: string) {
+  return {
+    type: "ui-button-touch-tap" as const,
+    gestureId: "ui-touch-tap-1",
+    uiButtonId,
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };

@@ -3,30 +3,23 @@ import {
 } from "pixi.js"
 
 import {
-  RenderLayerMap,
-  RenderSprite,
   RenderSpriteLayout,
   RenderSpriteSyncContext,
 } from "./render-sprite"
+import { BaseRenderSprite } from "./base-render-sprite"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
 const BELT_TILE_STROKE_WIDTH = 2
 
-export class BeltStraightSprite implements RenderSprite {
+export class BeltStraightSprite extends BaseRenderSprite {
   private readonly body = new Graphics({ roundPixels: true })
-  private currentLayerMap: RenderLayerMap | null = null
 
-  public attach(layers: RenderLayerMap): void {
-    if (this.currentLayerMap === layers) {
-      return
-    }
-
-    this.detach()
-    this.currentLayerMap = layers
-    layers.entity.addChild(this.body)
+  public constructor(entityId: string) {
+    super(entityId)
+    this.getRootOfLayer("entity").addChild(this.body)
   }
 
-  public syncLayout(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void {
+  protected syncSpriteLayout(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void {
     const cornerRadius = Math.min(layout.width, layout.height) * 0.28
     const trackInset = Math.min(layout.width, layout.height) * 0.16
     const laneWidth = Math.max(2, Math.min(layout.width, layout.height) * 0.18)
@@ -82,18 +75,5 @@ export class BeltStraightSprite implements RenderSprite {
           context.theme.renderer.beltLaneColorKey,
         ),
       })
-  }
-
-  public destroy(): void {
-    this.detach()
-    this.body.destroy()
-  }
-
-  private detach(): void {
-    if (this.body.parent !== null) {
-      this.body.parent.removeChild(this.body)
-    }
-
-    this.currentLayerMap = null
   }
 }

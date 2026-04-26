@@ -1,7 +1,16 @@
 import type { EditorAction } from "@/domain/action/editor-action";
 import type { WorldEntity } from "@/domain/entity/world-document";
 import { EntityCollectionType } from "@/domain/state/types";
-import type { GridPoint } from "@/domain/types/grid";
+import type { GridPoint, GridRectSize } from "@/domain/types/grid";
+import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+import {
+  getGridBoundingBox,
+  getGridBoundsCenterCells,
+  getGridFootprintCenterCells,
+  getRotatedGridFootprint,
+  rotateGridCenterCellsClockwise,
+  rotateGridRotationClockwise,
+} from "@/shared/geometry/grid";
 
 import { resolveEntityById } from "../entity-resolvers";
 import type { EditorActionsContext } from "./types";
@@ -12,14 +21,22 @@ type EditorCollectionActions = Pick<
   | "clearCollection"
   | "moveCollectionTo"
   | "removeFromCollection"
+  | "rotateCollection"
 >;
 
 export function createEditorSelectionActions({
   document,
   state,
+  workspace,
 }: EditorActionsContext): EditorCollectionActions {
   const resolveCollection = (collectionType: EntityCollectionType) =>
     state.collections[collectionType];
+  const entityDefinitionMap = new Map(
+    workspace.registry.entityDefinitions.map((definition) => [
+      definition.id,
+      definition,
+    ]),
+  );
 
   return {
     clearCollection: (collectionType) => {
@@ -107,7 +124,81 @@ export function createEditorSelectionActions({
         state.drafts = nextDrafts;
       }
     },
+    rotateCollection: (collectionType) => {
+      const collection = resolveCollection(collectionType);
+
+      if (collection.length === 0) {
+        return;
+      }
+
+      const currentDocument = document.getSnapshot();
+      const rotatableEntities = resolveRotatableCollectionEntities({
+        collection,
+        document: currentDocument,
+        drafts: state.drafts,
+        entityDefinitionMap,
+      });
+      const rotationCenterCells = resolveCollectionRotationCenterCells(
+        rotatableEntities,
+      );
+
+      if (rotationCenterCells === null) {
+        return;
+      }
+
+      const rotatedEntityMap = new Map(
+        rotatableEntities.map(({ definition, entity }) => [
+          entity.id,
+          rotateEntityClockwise({
+            entity,
+            footprint: definition.footprint,
+            rotationCenterCells,
+          }),
+        ]),
+      );
+      const nextEntities = { ...currentDocument.entities };
+      let didUpdateDocument = false;
+
+      for (const entityId of collection) {
+        const rotatedEntity = rotatedEntityMap.get(entityId);
+
+        if (rotatedEntity === undefined || currentDocument.entities[entityId] === undefined) {
+          continue;
+        }
+
+        nextEntities[entityId] = rotatedEntity;
+        didUpdateDocument = true;
+      }
+
+      if (didUpdateDocument) {
+        document.setSnapshot({
+          ...currentDocument,
+          entities: nextEntities,
+        });
+      }
+
+      let didUpdateDrafts = false;
+      const nextDrafts = state.drafts.map((entity) => {
+        const rotatedEntity = rotatedEntityMap.get(entity.id);
+
+        if (rotatedEntity === undefined || currentDocument.entities[entity.id] !== undefined) {
+          return entity;
+        }
+
+        didUpdateDrafts = true;
+        return rotatedEntity;
+      });
+
+      if (didUpdateDrafts) {
+        state.drafts = nextDrafts;
+      }
+    },
   };
+}
+
+interface RotatableCollectionEntity<EntityT extends WorldEntity = WorldEntity> {
+  entity: EntityT;
+  definition: EntityDefinition;
 }
 
 function resolveGridVector(options: {
@@ -139,4 +230,105 @@ function moveEntityByGridVector<EntityT extends WorldEntity>(
       y: entity.position.y + gridVector.y,
     },
   } as EntityT;
+}
+
+function resolveRotatableCollectionEntities(options: {
+  collection: readonly string[];
+  document: EditorActionsContext["document"] extends { getSnapshot(): infer Snapshot }
+    ? Snapshot
+    : never;
+  drafts: readonly WorldEntity[];
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+}): RotatableCollectionEntity[] {
+  const entries: RotatableCollectionEntity[] = [];
+
+  for (const entityId of options.collection) {
+    const entity = resolveEntityById({
+      entityId,
+      document: options.document,
+      drafts: options.drafts,
+    });
+
+    if (entity === null) {
+      continue;
+    }
+
+    const definition = options.entityDefinitionMap.get(entity.definitionId);
+
+    if (definition === undefined) {
+      continue;
+    }
+
+    entries.push({
+      entity,
+      definition,
+    });
+  }
+
+  return entries;
+}
+
+function resolveCollectionRotationCenterCells(
+  entries: readonly RotatableCollectionEntity[],
+): {
+  x: number;
+  y: number;
+} | null {
+  const bounds = getGridBoundingBox(
+    entries.map(({ definition, entity }) => ({
+      position: entity.position,
+      footprint: getRotatedGridFootprint(definition.footprint, entity.rotation),
+    })),
+  );
+
+  if (bounds === null) {
+    return null;
+  }
+
+  return getGridBoundsCenterCells(bounds);
+}
+
+function rotateEntityClockwise<EntityT extends WorldEntity>(options: {
+  entity: EntityT;
+  footprint: EntityDefinition["footprint"];
+  rotationCenterCells: {
+    x: number;
+    y: number;
+  };
+}): EntityT {
+  const nextRotation = rotateGridRotationClockwise(options.entity.rotation);
+  const currentFootprint = getRotatedGridFootprint(
+    options.footprint,
+    options.entity.rotation,
+  );
+  const nextFootprint = getRotatedGridFootprint(options.footprint, nextRotation);
+  const rotatedCenterCells = rotateGridCenterCellsClockwise({
+    centerCells: getGridFootprintCenterCells(
+      options.entity.position,
+      currentFootprint,
+    ),
+    rotationCenterCells: options.rotationCenterCells,
+  });
+
+  return {
+    ...options.entity,
+    position: resolveCenteredGridPointWithoutClamp(
+      rotatedCenterCells,
+      nextFootprint,
+    ),
+    rotation: nextRotation,
+  } as EntityT;
+}
+
+function resolveCenteredGridPointWithoutClamp(
+  centerCells: {
+    x: number;
+    y: number;
+  },
+  footprint: GridRectSize,
+): GridPoint {
+  return {
+    x: Math.round(centerCells.x - footprint.width / 2),
+    y: Math.round(centerCells.y - footprint.height / 2),
+  };
 }

@@ -12,6 +12,7 @@ export { createHypergryphMarqueeModeToggleModule } from "./hypergryph/hypergryph
 export {
   cleanupMoveOperationDraft,
   createHypergryphMoveGestureModule,
+  hookMoveToolCleanupFallback,
 } from "./hypergryph/hypergryph-move-gesture-module";
 export { createHypergryphMouseViewportPanModule } from "./hypergryph/hypergryph-mouse-viewport-pan-module";
 export { createHypergryphSelectGestureModule } from "./hypergryph/hypergryph-select-gesture-module";
