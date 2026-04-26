@@ -16,33 +16,104 @@ import {
 import type { GridPoint, GridRect } from "@/domain/types/grid";
 
 describe("createHypergryphMoveGestureModule", () => {
-  it("enters move from mouse long press only when the pointer entity is selected", () => {
+  it("enters mouse move from select by selecting the pointer entity first", () => {
     const { context, editor, appHost } = createContext();
     const module = createHypergryphMoveGestureModule();
 
-    const missedResult = module.handle(
-      mouseLongPressReadyEvent({
-        pointerEntity: entity("unselected-entity", { x: 4, y: 4 }),
-      }),
-      context,
-    );
-
-    expect(missedResult).toEqual({ status: "ignored" });
-    expect(editor.actions.createMoveOperationDraft).not.toHaveBeenCalled();
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
-
     const result = module.handle(
       mouseLongPressReadyEvent({
-        pointerEntity: entity("selected-entity", { x: 2, y: 2 }),
+        pointerEntity: entity("unselected-entity", { x: 4, y: 4 }),
+        position: { x: 4, y: 4 },
       }),
       context,
     );
 
     expect(result).toEqual({ status: "handled" });
+    expect(editor.actions.clearCollection).toHaveBeenCalledWith(
+      EntityCollectionType.selection,
+    );
+    expect(editor.actions.addToCollection).toHaveBeenCalledWith({
+      collectionType: EntityCollectionType.selection,
+      entityId: "unselected-entity",
+    });
     expect(editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
     expect(appHost.internalState.runtime.activeTool).toBe("move");
-    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 2, y: 2 });
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
     expect(appHost.internalActions.hideCanvasToolbar).toHaveBeenCalled();
+  });
+
+  it("requires an existing selection when mouse move enters from marquee", () => {
+    const missed = createContext({
+      activeTool: "marquee",
+    });
+    const handled = createContext({
+      activeTool: "marquee",
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    const missedResult = module.handle(
+      mouseLongPressReadyEvent({
+        pointerEntity: entity("unselected-entity", { x: 4, y: 4 }),
+        position: { x: 4, y: 4 },
+      }),
+      missed.context,
+    );
+
+    const result = module.handle(
+      mouseLongPressReadyEvent({
+        pointerEntity: entity("selected-entity", { x: 2, y: 2 }),
+      }),
+      handled.context,
+    );
+
+    expect(missedResult).toEqual({ status: "ignored" });
+    expect(missed.editor.actions.createMoveOperationDraft).not.toHaveBeenCalled();
+    expect(missed.appHost.internalState.runtime.activeTool).toBe("marquee");
+    expect(result).toEqual({ status: "handled" });
+    expect(handled.editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
+    expect(handled.appHost.internalState.runtime.activeTool).toBe("move");
+    expect(handled.appHost.internalState.runtime.moveAnchor).toEqual({ x: 2, y: 2 });
+  });
+
+  it("only enters touch move from select over an already selected entity", () => {
+    const marquee = createContext({
+      activeTool: "marquee",
+    });
+    const unselected = createContext();
+    const selected = createContext();
+    const module = createHypergryphMoveGestureModule();
+
+    const marqueeResult = module.handle(
+      tapLongPressReadyEvent({
+        pointerEntity: entity("selected-entity", { x: 2, y: 2 }),
+      }),
+      marquee.context,
+    );
+    const unselectedResult = module.handle(
+      tapLongPressReadyEvent({
+        pointerEntity: entity("unselected-entity", { x: 4, y: 4 }),
+        position: { x: 4, y: 4 },
+      }),
+      unselected.context,
+    );
+    const selectedResult = module.handle(
+      tapLongPressReadyEvent({
+        pointerEntity: entity("selected-entity", { x: 2, y: 2 }),
+      }),
+      selected.context,
+    );
+
+    expect(marqueeResult).toEqual({ status: "ignored" });
+    expect(marquee.editor.actions.createMoveOperationDraft).not.toHaveBeenCalled();
+    expect(unselectedResult).toEqual({ status: "ignored" });
+    expect(unselected.editor.actions.createMoveOperationDraft).not.toHaveBeenCalled();
+    expect(selectedResult).toEqual({ status: "handled" });
+    expect(selected.editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
+    expect(selected.appHost.internalState.runtime.activeTool).toBe("move");
+    expect(selected.appHost.internalActions.showCanvasToolbarForCollection).toHaveBeenCalledWith(
+      MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST,
+      EntityCollectionType.preview,
+    );
   });
 
   it("rolls back draft state and restores selection when entering move cannot create a preview", () => {
@@ -131,10 +202,7 @@ describe("createHypergryphMoveGestureModule", () => {
       endGridPoint: { x: 6, y: 4 },
     });
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 6, y: 4 });
-    expect(appHost.internalActions.moveCanvasToolbar).toHaveBeenCalledWith({
-      x: 104,
-      y: 56,
-    });
+    expect(appHost.internalActions.alignCanvasToolbar).toHaveBeenCalledTimes(1);
   });
 
   it("applies with a non-long-press left mouse tap and cancels with a right mouse tap", () => {
@@ -189,6 +257,7 @@ function createContext(options: {
   };
   const previewEntity = entity("preview-entity", { x: 5, y: 5 });
   const selectedEntity = entity("selected-entity", { x: 2, y: 2 });
+  const unselectedEntity = entity("unselected-entity", { x: 4, y: 4 });
   const editor: MockEditor = {
     state: {
       collections: {
@@ -205,6 +274,10 @@ function createContext(options: {
 
         if (entityId === "selected-entity") {
           return selectedEntity;
+        }
+
+        if (entityId === "unselected-entity") {
+          return unselectedEntity;
         }
 
         return null;
@@ -227,9 +300,10 @@ function createContext(options: {
     },
     actions: {
       createMoveOperationDraft: vi.fn(() => {
+        const sourceEntityIds = [...selection];
         selection.replace([]);
         preview.replace(["preview-entity"]);
-        ghost.replace(["selected-entity"]);
+        ghost.replace(sourceEntityIds);
       }),
       cancelMoveOperationDraft: vi.fn(() => {
         preview.replace([]);
@@ -269,6 +343,8 @@ function createContext(options: {
           visible: options.toolbarVisible ?? false,
           buttonIds: [],
           anchor: null,
+          attachedCollection: null,
+          measuredSize: null,
         },
       },
     },
@@ -279,10 +355,25 @@ function createContext(options: {
       showCanvasToolbar: vi.fn((_, anchor) => {
         appHost.internalState.runtime.canvasToolbar.visible = true;
         appHost.internalState.runtime.canvasToolbar.anchor = anchor;
+        appHost.internalState.runtime.canvasToolbar.attachedCollection = null;
+      }),
+      showCanvasToolbarForCollection: vi.fn((buttonIds, collectionType) => {
+        if (editor.queries.findEntityCollectionGridRect(collectionType) === null) {
+          return false;
+        }
+
+        appHost.internalState.runtime.canvasToolbar.visible = true;
+        appHost.internalState.runtime.canvasToolbar.buttonIds = [...buttonIds];
+        appHost.internalState.runtime.canvasToolbar.anchor = { x: 80, y: 72 };
+        appHost.internalState.runtime.canvasToolbar.attachedCollection = collectionType;
+        return true;
       }),
       moveCanvasToolbar: vi.fn(),
+      alignCanvasToolbar: vi.fn(() => true),
+      setCanvasToolbarSize: vi.fn(),
       hideCanvasToolbar: vi.fn(() => {
         appHost.internalState.runtime.canvasToolbar.visible = false;
+        appHost.internalState.runtime.canvasToolbar.attachedCollection = null;
       }),
     },
     workspace: {
@@ -366,13 +457,35 @@ function entity(id: string, position: GridPoint): WorldEntity {
 
 function mouseLongPressReadyEvent(options: {
   pointerEntity: WorldEntity | null;
+  position?: GridPoint;
 }) {
   return {
     type: "mouse-long-press-ready" as const,
     gestureId: "mouse-ready-1",
     button: 0,
     buttons: 1,
-    position: { x: 2, y: 2 },
+    position: options.position ?? { x: 2, y: 2 },
+    pointerEntity: options.pointerEntity,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+const MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST = [
+  "canvas-toolbar-button-ok",
+  "canvas-toolbar-button-cancel",
+] as const;
+
+function tapLongPressReadyEvent(options: {
+  pointerEntity: WorldEntity | null;
+  position?: GridPoint;
+}) {
+  return {
+    type: "tap-long-press-ready" as const,
+    gestureId: "tap-ready-1",
+    primaryId: 1,
+    position: options.position ?? { x: 2, y: 2 },
+    activeTouchCount: 1,
     pointerEntity: options.pointerEntity,
     modifiers: emptyModifiers(),
     sourceEvent: null,

@@ -2,7 +2,14 @@ import type { AppHost } from "@/app/app-host";
 import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
 import type { CanvasToolbarButtonId } from "@/app/state-impl";
 import type { ClientPixelPoint } from "@/domain/types/client-pixel";
-import type { ComponentProps, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  type ComponentProps,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent as ReactWheelEvent,
+} from "react";
 
 type CanvasActionIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
 type CanvasActionTone = "cancel" | "confirm" | "delete" | "rotate";
@@ -75,6 +82,36 @@ export function CanvasActionToolbar({
   anchor,
 }: CanvasActionToolbarProps) {
   const locale = appHost.state.settings.locale;
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    const toolbar = toolbarRef.current;
+    if (toolbar === null) {
+      appHost.internalActions.setCanvasToolbarSize(null);
+      return;
+    }
+
+    const measure = () => {
+      const rect = toolbar.getBoundingClientRect();
+      appHost.internalActions.setCanvasToolbarSize({
+        width: rect.width,
+        height: rect.height,
+      });
+    };
+
+    measure();
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(toolbar);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [appHost, buttonIds]);
 
   const stopUiPropagation = (
     event:
@@ -135,6 +172,7 @@ export function CanvasActionToolbar({
       onPointerMove={stopUiPropagation}
       onPointerUp={stopUiPropagation}
       onWheel={stopUiPropagationAndDefault}
+      ref={toolbarRef}
       style={{
         left: `${anchor.x}px`,
         top: `${anchor.y}px`,
@@ -145,28 +183,28 @@ export function CanvasActionToolbar({
         const ariaLabel = definition.ariaLabel[locale];
 
         return (
-        <button
-          aria-label={ariaLabel}
-          className={joinClassNames([
-            "canvas-toolbar-button",
-            "canvas-action-button",
-            definition.tone ? `is-${definition.tone}` : undefined,
-          ])}
-          data-ui-button-id={buttonId}
-          key={buttonId}
-          onClick={stopUiPropagation}
-          onContextMenu={stopUiPropagationAndDefault}
-          onPointerCancel={stopUiPropagation}
-          onPointerDown={stopUiPropagation}
-          onPointerMove={stopUiPropagation}
-          onPointerUp={(event) => {
-            handleButtonPointerUp(event, buttonId);
-          }}
-          type="button"
-        >
-          <WorkbenchIcon className="canvas-action-icon" kind={definition.icon} />
-          <span className="sr-only">{ariaLabel}</span>
-        </button>
+          <button
+            aria-label={ariaLabel}
+            className={joinClassNames([
+              "canvas-toolbar-button",
+              "canvas-action-button",
+              definition.tone ? `is-${definition.tone}` : undefined,
+            ])}
+            data-ui-button-id={buttonId}
+            key={buttonId}
+            onClick={stopUiPropagation}
+            onContextMenu={stopUiPropagationAndDefault}
+            onPointerCancel={stopUiPropagation}
+            onPointerDown={stopUiPropagation}
+            onPointerMove={stopUiPropagation}
+            onPointerUp={(event) => {
+              handleButtonPointerUp(event, buttonId);
+            }}
+            type="button"
+          >
+            <WorkbenchIcon className="canvas-action-icon" kind={definition.icon} />
+            <span className="sr-only">{ariaLabel}</span>
+          </button>
         );
       })}
     </div>

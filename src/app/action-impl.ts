@@ -3,8 +3,11 @@ import { action } from "mobx";
 import type { AppAction } from "@/domain/action/app-action";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type { ScreenProfile } from "@/domain/state/screen-profile";
-import type { ClientPixelPoint } from "@/domain/types/client-pixel";
-import type { ClientPixelRect } from "@/domain/types/client-pixel";
+import type { EntityCollectionType } from "@/domain/state/types";
+import type {
+  ClientPixelPoint,
+  ClientPixelRect,
+} from "@/domain/types/client-pixel";
 import type { AppLocale } from "@/shared/i18n/messages";
 import { lookupMessageText } from "@/shared/i18n/messages";
 import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
@@ -13,12 +16,15 @@ import {
   type ActiveTool,
   CANVAS_TOOLBAR_BUTTON_IDS,
   type CanvasToolbarButtonId,
+  type CanvasToolbarSize,
   clampLeftDockWidth,
   DEFAULT_RIGHT_DOCK_WIDTH,
   resolveLeftDockWidthForScreenProfile,
   type ActivePanel,
   type UiStateReadWrite,
 } from "./state-impl";
+
+const DEFAULT_CANVAS_TOOLBAR_HEIGHT = 44;
 
 export interface AppInternalAction {
   toggleLeftDock: () => void;
@@ -30,7 +36,13 @@ export interface AppInternalAction {
     buttonIds: readonly CanvasToolbarButtonId[],
     clientPixelPoint: ClientPixelPoint,
   ) => void;
+  showCanvasToolbarForCollection: (
+    buttonIds: readonly CanvasToolbarButtonId[],
+    collectionType: EntityCollectionType,
+  ) => boolean;
   moveCanvasToolbar: (clientPixelPoint: ClientPixelPoint) => void;
+  alignCanvasToolbar: () => boolean;
+  setCanvasToolbarSize: (size: CanvasToolbarSize | null) => void;
   hideCanvasToolbar: () => void;
   setLeftDockWidth: (width: number) => void;
   setScreenProfile: (screenProfile: ScreenProfile) => void;
@@ -100,6 +112,30 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     this.internalState.runtime.canvasToolbar.visible = true;
     this.internalState.runtime.canvasToolbar.buttonIds = nextButtonIds;
     this.internalState.runtime.canvasToolbar.anchor = nextAnchor;
+    this.internalState.runtime.canvasToolbar.attachedCollection = null;
+  });
+
+  public readonly showCanvasToolbarForCollection: AppInternalAction["showCanvasToolbarForCollection"] = action((
+    buttonIds,
+    collectionType,
+  ) => {
+    const nextButtonIds = normalizeCanvasToolbarButtonIds(buttonIds);
+
+    if (nextButtonIds.length === 0) {
+      this.hideCanvasToolbar();
+      return false;
+    }
+
+    this.internalState.runtime.canvasToolbar.visible = true;
+    this.internalState.runtime.canvasToolbar.buttonIds = nextButtonIds;
+    this.internalState.runtime.canvasToolbar.attachedCollection = collectionType;
+
+    if (!this.alignCanvasToolbar()) {
+      this.hideCanvasToolbar();
+      return false;
+    }
+
+    return true;
   });
 
   public readonly moveCanvasToolbar: AppInternalAction["moveCanvasToolbar"] = action((
@@ -117,11 +153,61 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     this.internalState.runtime.canvasToolbar.anchor = nextAnchor;
   });
 
+  public readonly alignCanvasToolbar: AppInternalAction["alignCanvasToolbar"] = action(() => {
+    const toolbar = this.internalState.runtime.canvasToolbar;
+    if (!toolbar.visible || toolbar.attachedCollection === null) {
+      return false;
+    }
+
+    const editor = this.workspace.editor;
+    if (editor === null) {
+      return false;
+    }
+
+    const collectionRect = editor.queries.findEntityCollectionGridRect(
+      toolbar.attachedCollection,
+    );
+    if (collectionRect === null) {
+      return false;
+    }
+
+    const topLeftAboveCellRect = editor.queries.findClientRectForGridCell({
+      x: collectionRect.x,
+      y: collectionRect.y - 1,
+    });
+    if (topLeftAboveCellRect === null) {
+      return false;
+    }
+
+    toolbar.anchor = resolveCanvasToolbarAnchor({
+      collectionWidth: collectionRect.width,
+      topLeftAboveCellRect,
+      toolbarHeight: toolbar.measuredSize?.height ?? DEFAULT_CANVAS_TOOLBAR_HEIGHT,
+    });
+    return true;
+  });
+
+  public readonly setCanvasToolbarSize: AppInternalAction["setCanvasToolbarSize"] = action((size) => {
+    const nextSize = normalizeCanvasToolbarSize(size);
+    const currentSize = this.internalState.runtime.canvasToolbar.measuredSize;
+
+    if (
+      currentSize?.width === nextSize?.width
+      && currentSize?.height === nextSize?.height
+    ) {
+      return;
+    }
+
+    this.internalState.runtime.canvasToolbar.measuredSize = nextSize;
+    this.alignCanvasToolbar();
+  });
+
   public readonly hideCanvasToolbar: AppInternalAction["hideCanvasToolbar"] = action(() => {
     if (
       !this.internalState.runtime.canvasToolbar.visible
       && this.internalState.runtime.canvasToolbar.buttonIds.length === 0
       && this.internalState.runtime.canvasToolbar.anchor === null
+      && this.internalState.runtime.canvasToolbar.attachedCollection === null
     ) {
       return;
     }
@@ -129,6 +215,7 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     this.internalState.runtime.canvasToolbar.visible = false;
     this.internalState.runtime.canvasToolbar.buttonIds = [];
     this.internalState.runtime.canvasToolbar.anchor = null;
+    this.internalState.runtime.canvasToolbar.attachedCollection = null;
   });
 
   public readonly setLeftDockWidth: AppInternalAction["setLeftDockWidth"] = action((width) => {
@@ -270,5 +357,43 @@ function normalizeClientPixelPoint(
   return {
     x: clientPixelPoint.x,
     y: clientPixelPoint.y,
+  };
+}
+
+function normalizeCanvasToolbarSize(
+  size: CanvasToolbarSize | null,
+): CanvasToolbarSize | null {
+  if (
+    size === null
+    || !Number.isFinite(size.width)
+    || !Number.isFinite(size.height)
+    || size.width <= 0
+    || size.height <= 0
+  ) {
+    return null;
+  }
+
+  return {
+    width: size.width,
+    height: size.height,
+  };
+}
+
+function resolveCanvasToolbarAnchor(options: {
+  collectionWidth: number;
+  topLeftAboveCellRect: ClientPixelRect;
+  toolbarHeight: number;
+}): ClientPixelPoint {
+  const cellHeight = options.topLeftAboveCellRect.height;
+  const verticalOverflow = Math.max(0, options.toolbarHeight - cellHeight);
+
+  return {
+    x:
+      options.topLeftAboveCellRect.left
+      + options.topLeftAboveCellRect.width * options.collectionWidth / 2,
+    y:
+      options.topLeftAboveCellRect.top
+      + cellHeight / 2
+      - verticalOverflow / 2,
   };
 }

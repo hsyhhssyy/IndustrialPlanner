@@ -2,13 +2,18 @@ import { makeAutoObservable } from "mobx";
 
 import type { ScreenProfile } from "@/domain/state/screen-profile";
 import type { AppTheme, AppThemeId } from "@/domain/state/theme";
+import type {
+  AppSettings,
+  EntityCollectionType,
+  UiState,
+  WorkbenchState,
+} from "@/domain/state/types";
 import type { ClientPixelPoint } from "@/domain/types/client-pixel";
 import type { GridPoint } from "@/domain/types/grid";
 import type { AppLocale } from "@/shared/i18n/messages";
 import {
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
-import type { AppSettings, UiState, WorkbenchState } from "@/domain/state/types";
 import { DEFAULT_APP_THEME_ID, resolveAppTheme } from "./theme";
 
 export const MIN_LEFT_DOCK_WIDTH = 375;
@@ -57,10 +62,17 @@ export const CANVAS_TOOLBAR_BUTTON_IDS = [
 
 export type CanvasToolbarButtonId = typeof CANVAS_TOOLBAR_BUTTON_IDS[number];
 
+export interface CanvasToolbarSize {
+  readonly width: number;
+  readonly height: number;
+}
+
 export interface CanvasToolbarStateReadWrite {
   visible: boolean;
   buttonIds: CanvasToolbarButtonId[];
   anchor: ClientPixelPoint | null;
+  attachedCollection: EntityCollectionType | null;
+  measuredSize: CanvasToolbarSize | null;
 }
 
 export type ActiveTool = "select" | "move" | "marquee" | "placement";
@@ -103,6 +115,8 @@ class CanvasToolbarStateReadWriteImpl implements CanvasToolbarStateReadWrite {
   visible = false;
   buttonIds: CanvasToolbarButtonId[] = [];
   anchor: ClientPixelPoint | null = null;
+  attachedCollection: EntityCollectionType | null = null;
+  measuredSize: CanvasToolbarSize | null = null;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

@@ -3,7 +3,6 @@ import type { GesturePosition } from "@/app/input/gesture-adapter";
 import type { EditorContract } from "@/domain/contract/editor-contract";
 import type { WorldEntity } from "@/domain/entity/world-document";
 import { EntityCollectionType } from "@/domain/state/types";
-import type { ClientPixelPoint } from "@/domain/types/client-pixel";
 import type { GridPoint, GridRect } from "@/domain/types/grid";
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
@@ -189,22 +188,40 @@ function tryEnterMoveMode(options: {
 }): GestureHandleResult {
   const previousTool = options.appHost.internalState.runtime.activeTool;
 
-  if (previousTool !== "select" && previousTool !== "marquee") {
-    return { status: "ignored" };
-  }
-
-  const selection = options.editor.state.collections[EntityCollectionType.selection];
   if (
-    selection.length === 0
-    || options.pointerEntity === null
-    || !selection.contains(options.pointerEntity.id)
+    previousTool !== "select"
+    && previousTool !== "marquee"
   ) {
     return { status: "ignored" };
   }
 
+  const selection = options.editor.state.collections[EntityCollectionType.selection];
   const selectedEntityIds = [...selection];
 
   try {
+    if (!prepareSelectionForMoveEnter({
+      editor: options.editor,
+      pointerEntity: options.pointerEntity,
+      previousTool,
+      selection,
+      source: options.source,
+    })) {
+      if (didMouseSelectEnterMutateSelection({
+        pointerEntity: options.pointerEntity,
+        previousTool,
+        source: options.source,
+      })) {
+        restoreFailedEnterMove({
+          appHost: options.appHost,
+          editor: options.editor,
+          selectedEntityIds,
+          previousTool,
+        });
+      }
+
+      return { status: "ignored" };
+    }
+
     options.editor.actions.createMoveOperationDraft();
 
     const previewRect = options.editor.queries.findEntityCollectionGridRect(
@@ -225,8 +242,10 @@ function tryEnterMoveMode(options: {
     }
 
     if (options.source === "touch") {
-      const toolbarAnchor = resolveToolbarAnchor(options.editor, previewRect);
-      if (toolbarAnchor === null) {
+      if (!options.appHost.internalActions.showCanvasToolbarForCollection(
+        MOVE_TOOLBAR_BUTTON_IDS,
+        EntityCollectionType.preview,
+      )) {
         restoreFailedEnterMove({
           appHost: options.appHost,
           editor: options.editor,
@@ -236,10 +255,6 @@ function tryEnterMoveMode(options: {
         return { status: "ignored" };
       }
 
-      options.appHost.internalActions.showCanvasToolbar(
-        MOVE_TOOLBAR_BUTTON_IDS,
-        toolbarAnchor,
-      );
     } else {
       options.appHost.internalActions.hideCanvasToolbar();
     }
@@ -256,6 +271,59 @@ function tryEnterMoveMode(options: {
     });
     return { status: "ignored" };
   }
+}
+
+function prepareSelectionForMoveEnter(options: {
+  editor: EditorContract;
+  pointerEntity: WorldEntity | null;
+  previousTool: AppHost["internalState"]["runtime"]["activeTool"];
+  selection: EditorContract["state"]["collections"][typeof EntityCollectionType.selection];
+  source: "mouse" | "touch";
+}): boolean {
+  if (options.pointerEntity === null) {
+    return false;
+  }
+
+  if (options.source === "touch") {
+    return (
+      options.previousTool === "select"
+      && options.selection.length > 0
+      && options.selection.contains(options.pointerEntity.id)
+    );
+  }
+
+  if (options.previousTool === "marquee") {
+    return (
+      options.selection.length > 0
+      && options.selection.contains(options.pointerEntity.id)
+    );
+  }
+
+  if (options.previousTool !== "select") {
+    return false;
+  }
+
+  options.editor.actions.clearCollection(EntityCollectionType.selection);
+  options.editor.actions.addToCollection({
+    collectionType: EntityCollectionType.selection,
+    entityId: options.pointerEntity.id,
+  });
+
+  return options.editor.state.collections[EntityCollectionType.selection].contains(
+    options.pointerEntity.id,
+  );
+}
+
+function didMouseSelectEnterMutateSelection(options: {
+  pointerEntity: WorldEntity | null;
+  previousTool: AppHost["internalState"]["runtime"]["activeTool"];
+  source: "mouse" | "touch";
+}): boolean {
+  return (
+    options.source === "mouse"
+    && options.previousTool === "select"
+    && options.pointerEntity !== null
+  );
 }
 
 function restoreFailedEnterMove(options: {
@@ -367,7 +435,7 @@ function driveMovePreview(options: {
       })
     ) {
       options.appHost.internalState.runtime.moveAnchor = nextGridPoint;
-      moveToolbarToPreview(options.appHost, options.editor, afterRect);
+      options.appHost.internalActions.alignCanvasToolbar();
     }
 
     return { status: "handled" };
@@ -417,42 +485,6 @@ function safelyCancelMoveDraft(editor: EditorContract): void {
   } catch {
     // Best-effort cleanup is intentionally silent; move should not leave UI half-entered.
   }
-}
-
-function moveToolbarToPreview(
-  appHost: AppHost,
-  editor: EditorContract,
-  previewRect: GridRect,
-): void {
-  if (!appHost.internalState.runtime.canvasToolbar.visible) {
-    return;
-  }
-
-  const toolbarAnchor = resolveToolbarAnchor(editor, previewRect);
-  if (toolbarAnchor === null) {
-    return;
-  }
-
-  appHost.internalActions.moveCanvasToolbar(toolbarAnchor);
-}
-
-function resolveToolbarAnchor(
-  editor: EditorContract,
-  previewRect: GridRect,
-): ClientPixelPoint | null {
-  const topLeftAboveCellRect = editor.queries.findClientRectForGridCell({
-    x: previewRect.x,
-    y: previewRect.y - 1,
-  });
-
-  if (topLeftAboveCellRect === null) {
-    return null;
-  }
-
-  return {
-    x: topLeftAboveCellRect.left + topLeftAboveCellRect.width * previewRect.width / 2,
-    y: topLeftAboveCellRect.top + topLeftAboveCellRect.height / 2,
-  };
 }
 
 function isPreviewEntityAtClientPoint(options: {

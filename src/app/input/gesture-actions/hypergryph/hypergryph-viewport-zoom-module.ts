@@ -26,6 +26,7 @@ export function createHypergryphViewportZoomModule(): GestureMappingModule<AppHo
           }
 
           editor.actions.zoom(step);
+          context.appHost.internalActions.alignCanvasToolbar();
           return { status: "handled" };
         }
 
@@ -38,6 +39,7 @@ export function createHypergryphViewportZoomModule(): GestureMappingModule<AppHo
           }
 
           editor.actions.zoom(step);
+          context.appHost.internalActions.alignCanvasToolbar();
           return { status: "handled" };
         }
 

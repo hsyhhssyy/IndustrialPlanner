@@ -13,6 +13,7 @@ import {
 } from "@/app/storage-hook";
 import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import { EntityCollectionType } from "@/domain/state/types";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
@@ -623,7 +624,7 @@ describe("createAppHost", () => {
     ]);
   });
 
-  it("creates a move draft on long press over a selected entity", () => {
+  it("creates a move draft from mouse entity hit or touch selected entity", () => {
     vi.useFakeTimers();
 
     const workspace = createWorkspace();
@@ -669,24 +670,6 @@ describe("createAppHost", () => {
       buttons: 0,
     }));
 
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
-
-    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-
-    appHost.gestureAdapter.handlePointerDown(pointerEvent({
-      pointerId: 33,
-      clientX: entityPoint.x,
-      clientY: entityPoint.y,
-      buttons: 1,
-    }));
-    vi.advanceTimersByTime(500);
-    appHost.gestureAdapter.handlePointerUp(pointerEvent({
-      pointerId: 33,
-      clientX: entityPoint.x,
-      clientY: entityPoint.y,
-      buttons: 0,
-    }));
-
     expect(appHost.internalState.runtime.activeTool).toBe("move");
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
     expect(editorHost.state.collections.selection).toEqual([]);
@@ -702,10 +685,50 @@ describe("createAppHost", () => {
 
     expect(appHost.internalState.runtime.activeTool).toBe("move");
     expect(appHost.internalState.runtime.canvasToolbar.visible).toBe(true);
+    expect(appHost.internalState.runtime.canvasToolbar.attachedCollection).toBe(
+      EntityCollectionType.preview,
+    );
     expect(appHost.internalState.runtime.canvasToolbar.buttonIds).toEqual([
       "canvas-toolbar-button-ok",
       "canvas-toolbar-button-cancel",
     ]);
+  });
+
+  it("aligns an attached canvas toolbar to its collection and avoids the cell below", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+
+    editorHost.internalState.collections.preview.replace(["dummy-entity-1"]);
+
+    expect(appHost.internalActions.showCanvasToolbarForCollection(
+      ["canvas-toolbar-button-ok"],
+      EntityCollectionType.preview,
+    )).toBe(true);
+    expect(appHost.internalState.runtime.canvasToolbar.attachedCollection).toBe(
+      EntityCollectionType.preview,
+    );
+    expect(appHost.internalState.runtime.canvasToolbar.anchor).toEqual({
+      x: 520,
+      y: 386,
+    });
+
+    appHost.internalActions.setCanvasToolbarSize({
+      width: 44,
+      height: 16,
+    });
+
+    expect(appHost.internalState.runtime.canvasToolbar.anchor).toEqual({
+      x: 520,
+      y: 400,
+    });
   });
 
   it("moves the preview draft and applies or cancels the move gesture", () => {

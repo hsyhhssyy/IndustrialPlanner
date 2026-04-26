@@ -21,6 +21,7 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
           }
 
           moveViewport(editor, event.startPosition, event.position);
+          context.appHost.internalActions.alignCanvasToolbar();
 
           return { status: "handled" };
         }
@@ -31,6 +32,7 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
           }
 
           moveViewport(editor, event.startPosition, event.position);
+          context.appHost.internalActions.alignCanvasToolbar();
 
           return { status: "handled" };
         }
@@ -44,6 +46,7 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
             x: event.position.x - event.delta.x,
             y: event.position.y - event.delta.y,
           }, event.position);
+          context.appHost.internalActions.alignCanvasToolbar();
 
           return { status: "handled" };
         }
@@ -57,6 +60,7 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
             x: event.position.x - event.delta.x,
             y: event.position.y - event.delta.y,
           }, event.position);
+          context.appHost.internalActions.alignCanvasToolbar();
 
           return { status: "handled" };
         }
