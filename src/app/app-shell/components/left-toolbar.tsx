@@ -37,6 +37,21 @@ const PRIMARY_TOOLBAR_ITEMS = [
 
 const UTILITY_TOOLBAR_ITEMS = [
   {
+    id: "utility-save-blueprint",
+    icon: "save-blueprint" as const,
+    labelKey: "workbench.utility.saveBlueprint",
+  },
+  {
+    id: "utility-copy",
+    icon: "copy" as const,
+    labelKey: "workbench.utility.copy",
+  },
+  {
+    id: "utility-delete-selection",
+    icon: "delete" as const,
+    labelKey: "workbench.utility.delete",
+  },
+  {
     id: "utility-toolbox",
     icon: "toolbox" as const,
     labelKey: "workbench.utility.toolbox",

@@ -1,6 +1,7 @@
 import type { ComponentType, SVGProps } from "react";
 
 import LucideCheck from "~icons/lucide/check";
+import LucideCopy from "~icons/lucide/copy";
 import LucideDraftingCompass from "~icons/lucide/drafting-compass";
 import LucideEye from "~icons/lucide/eye";
 import LucideEyeOff from "~icons/lucide/eye-off";
@@ -22,6 +23,7 @@ import LucidePanelRightOpen from "~icons/lucide/panel-right-open";
 import LucideRectangleHorizontal from "~icons/lucide/rectangle-horizontal";
 import LucideRectangleVertical from "~icons/lucide/rectangle-vertical";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
+import LucideSave from "~icons/lucide/save";
 import LucideSettings from "~icons/lucide/settings";
 import LucideSmartphone from "~icons/lucide/smartphone";
 import LucideSquare from "~icons/lucide/square";
@@ -36,6 +38,8 @@ type WorkbenchIconKind =
   | "delete"
   | "blueprint"
   | "history"
+  | "save-blueprint"
+  | "copy"
   | "toolbox"
   | "help"
   | "settings"
@@ -73,6 +77,8 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   delete: LucideTrash2,
   blueprint: LucideDraftingCompass,
   history: LucideHistory,
+  "save-blueprint": LucideSave,
+  copy: LucideCopy,
   toolbox: LucidePackage2,
   help: LucideHelpCircle,
   settings: LucideSettings,

@@ -162,9 +162,14 @@ describe("Left dock panel switching", () => {
 
     const toolbarGroups = container.querySelectorAll(".toolbar-rail-group");
     const primaryButtons = toolbarGroups[0]?.querySelectorAll(".rail-button");
+    const utilityButtons = toolbarGroups[1]?.querySelectorAll(".rail-button");
     const visiblePanel = queryVisibleLeftDockPanel(container);
 
     expect(primaryButtons).toHaveLength(4);
+    expect(utilityButtons).toHaveLength(6);
+    expect(toolbarGroups[1]?.querySelector('[aria-label="保存蓝图"]')).not.toBeNull();
+    expect(toolbarGroups[1]?.querySelector('[aria-label="复制"]')).not.toBeNull();
+    expect(toolbarGroups[1]?.querySelector('[aria-label="删除"]')).not.toBeNull();
     expect(container.textContent).toContain("放置模式");
     expect(visiblePanel).not.toBeNull();
 
