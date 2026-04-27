@@ -109,7 +109,9 @@ describe("createRenderHost", () => {
         repeatCompatibleResolution: 4,
       },
     })
-    expect(renderHost.textureManager.getCustomTexture("future-custom-texture")).toBeNull()
+    await expect(
+      renderHost.textureManager.getTexture("future-custom-texture"),
+    ).rejects.toThrow("Unknown render texture key: future-custom-texture")
     expect(createRenderSceneOrchestrator).toHaveBeenCalledWith(renderHost)
     expect(workspace.render).toBe(renderHost)
   })

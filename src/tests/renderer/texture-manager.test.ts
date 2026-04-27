@@ -1,11 +1,14 @@
 import { makeAutoObservable, runInAction } from "mobx"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
-const { createCustomTexture } = vi.hoisted(() => ({
-  createCustomTexture: vi.fn(({ textureConfig }: { textureConfig: { renderResolution: number } }) => ({
-    id: `custom-texture-${textureConfig.renderResolution}`,
-    destroy: vi.fn(),
-  })),
+const { loadTexture } = vi.hoisted(() => ({
+  loadTexture: vi.fn<() => Promise<unknown>>(),
+}))
+
+vi.mock("pixi.js", () => ({
+  Assets: {
+    load: loadTexture,
+  },
 }))
 
 vi.mock("@/renderer/texture/create-custom-texture", async (importOriginal) => {
@@ -13,11 +16,15 @@ vi.mock("@/renderer/texture/create-custom-texture", async (importOriginal) => {
 
   return {
     ...actual,
-    createCustomTexture,
   }
 })
 
+import { resolveGenericDeviceSpriteTextureKeys } from "@/renderer/texture/texture-registry"
 import { createRenderTextureManager } from "@/renderer/texture/texture-manager"
+
+afterEach(() => {
+  loadTexture.mockReset()
+})
 
 class ScreenProfileState {
   public devicePixelRatio = 2
@@ -28,8 +35,74 @@ class ScreenProfileState {
 }
 
 describe("RenderTextureManager", () => {
-  it("reacts to mobx dpr changes and rebuilds texture config and custom textures", () => {
+  it("loads and caches bitmap textures by usage key", async () => {
+    const textureKeys = resolveGenericDeviceSpriteTextureKeys("item_port_storager_1")
+    const bitmapTexture = createLoadedTextureMock("device-body")
+
+    expect(textureKeys).not.toBeNull()
+
+    if (textureKeys === null) {
+      throw new Error("Expected generic device texture keys to resolve.")
+    }
+
+    loadTexture.mockResolvedValue(bitmapTexture)
+
+    const manager = createRenderTextureManager({
+      renderer: {} as never,
+      app: null,
+      initialResolution: 2,
+    })
+
+    const firstTexture = await manager.getTexture(textureKeys.body)
+    const secondTexture = await manager.getTexture(textureKeys.body)
+
+    expect(firstTexture).toBe(bitmapTexture)
+    expect(secondTexture).toBe(bitmapTexture)
+    expect(loadTexture).toHaveBeenCalledTimes(1)
+    expect(loadTexture).toHaveBeenCalledWith("/sprites/item_port_storager_1.webp")
+
+    manager.destroy()
+  })
+
+  it("falls back to body texture when preview mask asset is missing", async () => {
+    const textureKeys = resolveGenericDeviceSpriteTextureKeys("item_port_storager_1")
+    const bitmapTexture = createLoadedTextureMock("device-body")
+
+    expect(textureKeys).not.toBeNull()
+
+    if (textureKeys === null) {
+      throw new Error("Expected generic device texture keys to resolve.")
+    }
+
+    loadTexture.mockImplementation((assetPath: string) => {
+      if (assetPath.startsWith("/sprite-masks/")) {
+        return Promise.reject(new Error("missing preview mask"))
+      }
+
+      return Promise.resolve(bitmapTexture)
+    })
+
+    const manager = createRenderTextureManager({
+      renderer: {} as never,
+      app: null,
+      initialResolution: 2,
+    })
+
+    const previewMaskTexture = await manager.getTexture(textureKeys.previewMask)
+    const cachedPreviewMaskTexture = await manager.getTexture(textureKeys.previewMask)
+
+    expect(previewMaskTexture).toBe(bitmapTexture)
+    expect(cachedPreviewMaskTexture).toBe(bitmapTexture)
+    expect(loadTexture).toHaveBeenCalledTimes(2)
+    expect(loadTexture).toHaveBeenNthCalledWith(1, "/sprite-masks/item_port_storager_1.webp")
+    expect(loadTexture).toHaveBeenNthCalledWith(2, "/sprites/item_port_storager_1.webp")
+
+    manager.destroy()
+  })
+
+  it("reacts to mobx dpr changes and reapplies bitmap sampling to loaded textures", async () => {
     const screenProfile = new ScreenProfileState()
+    const textureKeys = resolveGenericDeviceSpriteTextureKeys("item_port_storager_1")
     const bitmapTexture = {
       source: {
         scaleMode: "nearest",
@@ -47,6 +120,14 @@ describe("RenderTextureManager", () => {
       update: vi.fn(),
     }
 
+    expect(textureKeys).not.toBeNull()
+
+    if (textureKeys === null) {
+      throw new Error("Expected generic device texture keys to resolve.")
+    }
+
+    loadTexture.mockResolvedValue(bitmapTexture)
+
     const manager = createRenderTextureManager({
       renderer: {} as never,
       app: {
@@ -57,19 +138,15 @@ describe("RenderTextureManager", () => {
       initialResolution: 2,
     })
 
-    manager.registerBitmapTexture(bitmapTexture as never)
+    await manager.getTexture(textureKeys.body)
 
-    expect(createCustomTexture).toHaveBeenCalledTimes(0)
     expect(manager.textureConfig.renderResolution).toBe(2)
-    expect(manager.getCustomTexture("future-custom-texture")).toBeNull()
 
     runInAction(() => {
       screenProfile.devicePixelRatio = 3
     })
 
-    expect(createCustomTexture).toHaveBeenCalledTimes(0)
     expect(manager.textureConfig.renderResolution).toBe(3)
-    expect(manager.getCustomTexture("future-custom-texture")).toBeNull()
     expect(bitmapTexture.source.scaleMode).toBe("linear")
     expect(bitmapTexture.source.autoGenerateMipmaps).toBe(true)
     expect(bitmapTexture.source.updateMipmaps).toHaveBeenCalledTimes(2)
@@ -77,3 +154,23 @@ describe("RenderTextureManager", () => {
     manager.destroy()
   })
 })
+
+function createLoadedTextureMock(id: string) {
+  return {
+    id,
+    source: {
+      scaleMode: "linear",
+      autoGenerateMipmaps: false,
+      mipmapFilter: "nearest",
+      style: {
+        scaleMode: "nearest",
+        mipmapFilter: "nearest",
+        maxAnisotropy: 4,
+        update: vi.fn(),
+      },
+      update: vi.fn(),
+      updateMipmaps: vi.fn(),
+    },
+    update: vi.fn(),
+  }
+}

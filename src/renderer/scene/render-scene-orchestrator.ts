@@ -16,6 +16,7 @@ import {
 } from "pixi.js"
 import { resolveRenderResolutionFromApp } from "../render-resolution"
 import type { RenderHost } from "../renderer-host"
+import { resolveGenericDeviceSpriteTextureKeys } from "../texture/texture-registry"
 
 import { BeltStraightSprite } from "../sprites/belt-straight-sprite"
 import { GenericDeviceSprite } from "../sprites/generic-device-sprite"
@@ -29,28 +30,6 @@ const WORLD_GRID_LINE_ALPHA = 0.12
 const WORLD_GRID_LINE_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
-
-const GENERIC_DEVICE_SPRITE_ASSET_IDS = new Set<string>([
-  "item_log_connector",
-  "item_log_converger",
-  "item_log_splitter",
-  "item_pipe_connector",
-  "item_pipe_converger",
-  "item_pipe_splitter",
-  "item_port_filling_pd_mc_1",
-  "item_port_grinder_1",
-  "item_port_log_hongs_bus",
-  "item_port_log_hongs_bus_source",
-  "item_port_mix_pool_1",
-  "item_port_storager_1",
-  "item_port_udpipe_loader_1",
-  "item_port_udpipe_unloader_1",
-  "item_port_unloader_1",
-])
-
-const GENERIC_DEVICE_SPRITE_ALIASES: Record<string, string> = {
-  item_port_liquid_filling_pd_mc_1: "item_port_filling_pd_mc_1",
-}
 
 interface RenderViewportState {
   width: number;
@@ -167,12 +146,12 @@ function createSpriteForDefinition(
     return new BeltStraightSprite(entityId)
   }
 
-  const texturePath = resolveGenericDeviceSpriteTexturePath(definition.spriteId)
-  if (texturePath === null) {
+  const textureKeys = resolveGenericDeviceSpriteTextureKeys(definition.spriteId)
+  if (textureKeys === null) {
     return null
   }
 
-  return new GenericDeviceSprite(entityId, texturePath, renderHost)
+  return new GenericDeviceSprite(entityId, textureKeys, renderHost)
 }
 
 export function applyViewportSize(
@@ -540,18 +519,6 @@ export function resolveWorldEntitySelectionStrokeWidth(gridCellPixelSize: number
     WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH,
     Math.min(WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH, width),
   )
-}
-
-export function resolveGenericDeviceSpriteTexturePath(
-  spriteId: EntityDefinition["spriteId"],
-): string | null {
-  const assetId = GENERIC_DEVICE_SPRITE_ALIASES[spriteId] ?? spriteId
-
-  if (!GENERIC_DEVICE_SPRITE_ASSET_IDS.has(assetId)) {
-    return null
-  }
-
-  return `/sprites/${assetId}.webp`
 }
 
 export function resolveWorldEntitySelectionOverlayLayouts(options: {

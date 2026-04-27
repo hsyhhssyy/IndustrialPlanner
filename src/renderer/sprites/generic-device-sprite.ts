@@ -1,11 +1,11 @@
 import {
-  Assets,
   Container,
   Sprite,
   Texture,
 } from "pixi.js"
 
 import type { RenderHost } from "@/renderer/renderer-host"
+import type { RenderTextureKey } from "@/renderer/texture/texture-registry"
 import {
   RenderSpriteLayout,
   RenderSpriteSyncContext,
@@ -13,7 +13,6 @@ import {
 import { BaseRenderSprite } from "./base-render-sprite"
 
 const DEGREE_TO_RADIAN = Math.PI / 180
-const textureLoadCache = new Map<string, Promise<Texture>>()
 
 export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly body: Sprite
@@ -26,7 +25,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
   public constructor(
     entityId: string,
-    texturePath: string,
+    textureKeys: {
+      body: RenderTextureKey;
+      previewMask: RenderTextureKey;
+    },
     private readonly renderHost: RenderHost,
   ) {
     super(entityId)
@@ -50,11 +52,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.previewEffectRoot.addChild(this.previewMask)
     this.getRootOfLayer("overlay").addChild(this.previewEffectRoot)
 
-    const bodyTextureLoad = loadTexture(texturePath)
-    const previewMaskTexturePath = resolvePreviewMaskTexturePath(texturePath)
-    const previewMaskTextureLoad = previewMaskTexturePath === texturePath
-      ? Promise.resolve<Texture | null>(null)
-      : loadTexture(previewMaskTexturePath).catch(() => null)
+    const bodyTextureLoad = this.renderHost.textureManager.getTexture(textureKeys.body)
+    const previewMaskTextureLoad = this.renderHost.textureManager.getTexture(textureKeys.previewMask)
 
     void Promise.all([bodyTextureLoad, previewMaskTextureLoad]).then(([
       bodyTexture,
@@ -65,9 +64,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       }
 
       this.body.texture = bodyTexture
-  this.previewMask.texture = previewMaskTexture ?? bodyTexture
-      this.renderHost.textureManager.registerBitmapTexture(this.body.texture)
-      this.renderHost.textureManager.registerBitmapTexture(this.previewMask.texture)
+        this.previewMask.texture = previewMaskTexture
       this.isTextureReady = true
       this.body.visible = true
 
@@ -161,27 +158,4 @@ function applyCenteredSpriteLayout(target: {
   target.width = layout.width
   target.height = layout.height
   target.rotation = layout.rotation
-}
-
-function loadTexture(texturePath: string): Promise<Texture> {
-  const existingLoad = textureLoadCache.get(texturePath)
-  if (existingLoad) {
-    return existingLoad
-  }
-
-  const nextLoad = Assets.load<Texture>(texturePath).catch((error) => {
-    textureLoadCache.delete(texturePath)
-    throw error
-  })
-
-  textureLoadCache.set(texturePath, nextLoad)
-  return nextLoad
-}
-
-function resolvePreviewMaskTexturePath(texturePath: string): string {
-  if (!texturePath.startsWith("/sprites/")) {
-    return texturePath
-  }
-
-  return `/sprite-masks/${texturePath.slice("/sprites/".length)}`
 }

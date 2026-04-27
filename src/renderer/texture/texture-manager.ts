@@ -1,3 +1,4 @@
+import { Assets } from "pixi.js"
 import { reaction } from "mobx"
 import type {
   Renderer,
@@ -8,10 +9,12 @@ import type { AppContract } from "@/domain/contract/app-contract"
 import { resolveRenderResolutionFromApp } from "@/renderer/render-resolution"
 
 import {
-  CUSTOM_TEXTURE_KEYS,
   createCustomTexture,
-  type CustomTextureKey as CustomTextureKeyValue,
 } from "./create-custom-texture"
+import {
+  resolveRenderTextureProvider,
+  type RenderTextureKey,
+} from "./texture-registry"
 import {
   applyBitmapTextureConfig,
   createRenderTextureConfig,
@@ -20,17 +23,17 @@ import {
 
 export interface RenderTextureManager {
   readonly textureConfig: RenderTextureConfig;
-  getCustomTexture(key: CustomTextureKeyValue): Texture | null;
-  registerBitmapTexture(texture: Texture): Texture;
+  getTexture(key: RenderTextureKey): Promise<Texture>;
   destroy(): void;
 }
 
 class RenderTextureManagerImpl implements RenderTextureManager {
   public textureConfig: RenderTextureConfig
 
-  private readonly customTextures: Partial<Record<CustomTextureKeyValue, Texture>> = {}
+  private readonly texturePromisesByKey = new Map<RenderTextureKey, Promise<Texture>>()
+  private readonly bitmapTexturePromisesByPath = new Map<string, Promise<Texture>>()
   private readonly trackedBitmapTextures = new Set<Texture>()
-  private readonly ownedCustomTextures = new Set<Texture>()
+  private readonly customTexturesByKey = new Map<RenderTextureKey, Texture>()
   private readonly disposeResolutionReaction: (() => void) | null
 
   public constructor(options: {
@@ -44,7 +47,6 @@ class RenderTextureManagerImpl implements RenderTextureManager {
       resolution: options.initialResolution,
     })
 
-    this.rebuildCustomTextures()
     this.disposeResolutionReaction = this.app === null
       ? null
       : reaction(
@@ -61,28 +63,37 @@ class RenderTextureManagerImpl implements RenderTextureManager {
   private readonly renderer: Renderer
   private readonly app: AppContract | null
 
-  public getCustomTexture(key: CustomTextureKeyValue): Texture | null {
-    return this.customTextures[key] ?? null
-  }
-
-  public registerBitmapTexture(texture: Texture): Texture {
-    if (this.trackedBitmapTextures.has(texture)) {
-      return texture
+  public getTexture(key: RenderTextureKey): Promise<Texture> {
+    const existingTexturePromise = this.texturePromisesByKey.get(key)
+    if (existingTexturePromise !== undefined) {
+      return existingTexturePromise
     }
 
-    this.trackedBitmapTextures.add(texture)
+    const provider = resolveRenderTextureProvider(key)
+    if (provider === null) {
+      return Promise.reject(new Error(`Unknown render texture key: ${key}`))
+    }
 
-    return applyBitmapTextureConfig(texture, this.textureConfig)
+    const nextTexturePromise = this.loadTextureFromProvider(key, provider).catch((error) => {
+      this.texturePromisesByKey.delete(key)
+      throw error
+    })
+
+    this.texturePromisesByKey.set(key, nextTexturePromise)
+
+    return nextTexturePromise
   }
 
   public destroy(): void {
     this.disposeResolutionReaction?.()
 
-    for (const texture of this.ownedCustomTextures) {
+    for (const texture of this.customTexturesByKey.values()) {
       texture.destroy(true)
     }
 
-    this.ownedCustomTextures.clear()
+    this.texturePromisesByKey.clear()
+    this.bitmapTexturePromisesByPath.clear()
+    this.customTexturesByKey.clear()
     this.trackedBitmapTextures.clear()
   }
 
@@ -94,24 +105,73 @@ class RenderTextureManagerImpl implements RenderTextureManager {
     this.textureConfig = createRenderTextureConfig({
       resolution,
     })
-    this.rebuildCustomTextures()
+    this.invalidateCustomTextures()
 
     for (const texture of this.trackedBitmapTextures) {
       applyBitmapTextureConfig(texture, this.textureConfig)
     }
   }
 
-  private rebuildCustomTextures(): void {
-    for (const key of CUSTOM_TEXTURE_KEYS) {
-      const texture = createCustomTexture({
-        key,
-        renderer: this.renderer,
-        textureConfig: this.textureConfig,
+  private loadTextureFromProvider(
+    key: RenderTextureKey,
+    provider: ReturnType<typeof resolveRenderTextureProvider> extends infer Provider
+      ? Exclude<Provider, null>
+      : never,
+  ): Promise<Texture> {
+    if (provider.kind === "bitmap") {
+      return this.loadBitmapTexture(provider.assetPath, provider.fallbackKey)
+    }
+
+    const texture = createCustomTexture({
+      key: provider.customTextureKey,
+      renderer: this.renderer,
+      textureConfig: this.textureConfig,
+    })
+
+    this.customTexturesByKey.set(key, texture)
+
+    return Promise.resolve(texture)
+  }
+
+  private loadBitmapTexture(
+    assetPath: string,
+    fallbackKey?: RenderTextureKey,
+  ): Promise<Texture> {
+    const existingBitmapPromise = this.bitmapTexturePromisesByPath.get(assetPath)
+    if (existingBitmapPromise !== undefined) {
+      return existingBitmapPromise
+    }
+
+    const nextBitmapPromise = Assets.load<Texture>(assetPath)
+      .then((texture) => this.trackBitmapTexture(texture))
+      .catch((error) => {
+        this.bitmapTexturePromisesByPath.delete(assetPath)
+
+        if (fallbackKey !== undefined) {
+          return this.getTexture(fallbackKey)
+        }
+
+        throw error
       })
 
-      this.customTextures[key] = texture
-      this.ownedCustomTextures.add(texture)
+    this.bitmapTexturePromisesByPath.set(assetPath, nextBitmapPromise)
+
+    return nextBitmapPromise
+  }
+
+  private trackBitmapTexture(texture: Texture): Texture {
+    this.trackedBitmapTextures.add(texture)
+
+    return applyBitmapTextureConfig(texture, this.textureConfig)
+  }
+
+  private invalidateCustomTextures(): void {
+    for (const [key, texture] of this.customTexturesByKey) {
+      texture.destroy(true)
+      this.texturePromisesByKey.delete(key)
     }
+
+    this.customTexturesByKey.clear()
   }
 }
 

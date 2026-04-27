@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
 
-const { loadTexture } = vi.hoisted(() => ({
-  loadTexture: vi.fn<() => Promise<unknown>>(),
-}))
-
 vi.mock("pixi.js", () => {
   class MockContainer {
     public readonly children: unknown[] = []
@@ -78,9 +74,6 @@ vi.mock("pixi.js", () => {
   }
 
   return {
-    Assets: {
-      load: loadTexture,
-    },
     Container: MockContainer,
     Sprite: MockSprite,
     Texture: MockTexture,
@@ -90,11 +83,8 @@ vi.mock("pixi.js", () => {
 import { AYU_LIGHT_THEME } from "@/app/theme"
 import { EntityCollectionType } from "@/domain/state/types"
 import { GenericDeviceSprite } from "@/renderer/sprites/generic-device-sprite"
+import type { RenderTextureKey } from "@/renderer/texture/texture-registry"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
-import {
-  applyBitmapTextureConfig,
-  createRenderTextureConfig,
-} from "@/renderer/texture/texture-config"
 
 interface RenderedSpriteSnapshot {
   x: number;
@@ -111,18 +101,19 @@ interface RenderedSpriteSnapshot {
 
 describe("GenericDeviceSprite", () => {
   it("loads the sprite texture before making the device visible", async () => {
+    const textureKeys = createGenericDeviceTextureKeys()
     const resolvedTexture = createLoadedTextureMock("device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
-    loadTexture.mockImplementation((path: string) => Promise.resolve(
-      path.startsWith("/sprite-masks/") ? resolvedMaskTexture : resolvedTexture,
-    ))
 
     const entityLayer = createLayerStub()
     const overlayLayer = createLayerStub()
-    const renderHost = createRenderHostStub()
+    const renderHost = createRenderHostStub({
+      [textureKeys.body]: resolvedTexture,
+      [textureKeys.previewMask]: resolvedMaskTexture,
+    })
     const sprite = new GenericDeviceSprite(
       "dummy-entity-1",
-      "/sprites/device-body-primary.webp",
+      textureKeys,
       renderHost as never,
     )
 
@@ -167,8 +158,8 @@ describe("GenericDeviceSprite", () => {
       } as never,
     })
 
-    expect(loadTexture).toHaveBeenCalledWith("/sprites/device-body-primary.webp")
-    expect(loadTexture).toHaveBeenCalledWith("/sprite-masks/device-body-primary.webp")
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(textureKeys.body)
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(textureKeys.previewMask)
 
     await flushMicrotasks(8)
 
@@ -200,27 +191,22 @@ describe("GenericDeviceSprite", () => {
     expect(attachedSprite.width).toBe(32)
     expect(attachedSprite.height).toBe(48)
     expect(attachedSprite.rotation).toBeCloseTo(Math.PI / 2)
-    expect(resolvedTexture.source.scaleMode).toBe("linear")
-    expect(resolvedTexture.source.autoGenerateMipmaps).toBe(true)
-    expect(resolvedTexture.source.style.scaleMode).toBe("linear")
-    expect(resolvedTexture.source.style.mipmapFilter).toBe("linear")
-    expect(resolvedTexture.source.style.maxAnisotropy).toBe(4)
-    expect(resolvedTexture.source.updateMipmaps).toHaveBeenCalledTimes(1)
   })
 
   it("shows a masked solid white overlay for preview devices", async () => {
+    const textureKeys = createGenericDeviceTextureKeys()
     const resolvedTexture = createLoadedTextureMock("device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
-    loadTexture.mockImplementation((path: string) => Promise.resolve(
-      path.startsWith("/sprite-masks/") ? resolvedMaskTexture : resolvedTexture,
-    ))
 
     const entityLayer = createLayerStub()
     const overlayLayer = createLayerStub()
-    const renderHost = createRenderHostStub()
+    const renderHost = createRenderHostStub({
+      [textureKeys.body]: resolvedTexture,
+      [textureKeys.previewMask]: resolvedMaskTexture,
+    })
     const sprite = new GenericDeviceSprite(
       "dummy-preview-entity",
-      "/sprites/device-preview.webp",
+      textureKeys,
       renderHost as never,
     )
 
@@ -320,51 +306,21 @@ describe("GenericDeviceSprite", () => {
       },
     })
     expect(previewOverlay?.mask).toBe(previewMask)
-    renderHost.textureManager.textureConfig = {
-      ...renderHost.textureManager.textureConfig,
-      bitmap: {
-        ...renderHost.textureManager.textureConfig.bitmap,
-        sampling: {
-          ...renderHost.textureManager.textureConfig.bitmap.sampling,
-          scaleMode: "nearest",
-        },
-      },
-    }
-    for (const texture of renderHost.textureManager.registeredBitmapTextures) {
-      applyBitmapTextureConfig(texture as never, renderHost.textureManager.textureConfig)
-    }
-    sprite.syncLayout({
-      x: 16,
-      y: 24,
-      width: 48,
-      height: 32,
-      rotation: 90,
-    }, context)
-
-    expect(previewMask?.texture).toMatchObject({
-      id: "device-mask-texture",
-      source: {
-        scaleMode: "nearest",
-      },
-    })
   })
 
-  it("falls back to the sprite texture when a same-name preview mask is missing", async () => {
+  it("uses the preview-mask key result even when it resolves to the body texture", async () => {
+    const textureKeys = createGenericDeviceTextureKeys()
     const resolvedTexture = createLoadedTextureMock("device-texture-fallback")
-    loadTexture.mockImplementation((path: string) => {
-      if (path.startsWith("/sprite-masks/")) {
-        return Promise.reject(new Error("missing mask"))
-      }
-
-      return Promise.resolve(resolvedTexture)
-    })
 
     const entityLayer = createLayerStub()
     const overlayLayer = createLayerStub()
-    const renderHost = createRenderHostStub()
+    const renderHost = createRenderHostStub({
+      [textureKeys.body]: resolvedTexture,
+      [textureKeys.previewMask]: resolvedTexture,
+    })
     const sprite = new GenericDeviceSprite(
       "dummy-preview-entity-fallback",
-      "/sprites/device-preview-fallback.webp",
+      textureKeys,
       renderHost as never,
     )
 
@@ -461,11 +417,16 @@ function createLayerStub() {
   return layer
 }
 
-function createRenderHostStub() {
-  const textureConfig = createRenderTextureConfig({
-    resolution: 3,
+function createRenderHostStub(textureByKey: Record<RenderTextureKey, object>) {
+  const getTexture = vi.fn((key: RenderTextureKey) => {
+    const resolvedTexture = textureByKey[key]
+
+    if (resolvedTexture === undefined) {
+      return Promise.reject(new Error(`Missing texture stub for key: ${key}`))
+    }
+
+    return Promise.resolve(resolvedTexture)
   })
-  const registeredBitmapTextures = new Set<object>()
 
   return {
     app: {
@@ -474,17 +435,18 @@ function createRenderHostStub() {
       },
     },
     textureManager: {
-      textureConfig,
-      registeredBitmapTextures,
-      registerBitmapTexture: (texture: object) => {
-        if (!registeredBitmapTextures.has(texture)) {
-          registeredBitmapTextures.add(texture)
-          applyBitmapTextureConfig(texture as never, textureConfig)
-        }
-
-        return texture
-      },
+      getTexture,
     },
+  }
+}
+
+function createGenericDeviceTextureKeys(): {
+  body: RenderTextureKey;
+  previewMask: RenderTextureKey;
+} {
+  return {
+    body: "test/body",
+    previewMask: "test/preview-mask",
   }
 }
 
