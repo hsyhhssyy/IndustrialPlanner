@@ -32,6 +32,7 @@ export interface EditorViewportState {
   readonly center: GridFloatPoint;
   readonly clientRect: ClientPixelRect;
   readonly gridSize: number;
+  readonly gridCellPixelSize: number;
 }
 
 /// Editor State 定义上是Document的包裹层，他为Document提供一层运行时tag
@@ -57,6 +58,8 @@ export interface AppSettings {
   readonly hypergryphOperationMode: boolean;
   readonly hypergryphImmediateMove: boolean;
   readonly hypergryphImmediateMarquee: boolean;
+  readonly debugShowFps: boolean;
+  readonly debugShowGestureDiagnosticsWindow: boolean;
 }
 
 export interface WorkbenchState {

@@ -1,15 +1,11 @@
 import {
   Assets,
   Container,
-  Graphics,
   Sprite,
   Texture,
-  TilingSprite,
 } from "pixi.js"
 
 import type { RenderHost } from "@/renderer/renderer-host"
-import { CustomTextureKey } from "@/renderer/texture/create-custom-texture"
-import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import {
   RenderSpriteLayout,
   RenderSpriteSyncContext,
@@ -17,16 +13,13 @@ import {
 import { BaseRenderSprite } from "./base-render-sprite"
 
 const DEGREE_TO_RADIAN = Math.PI / 180
-const PREVIEW_SCAN_LINE_ALPHA = 0.5
-const PREVIEW_SCAN_LINE_PIXELS_PER_SECOND = 4
-const PREVIEW_SCAN_LINE_ROTATION = Math.PI / 4
 const textureLoadCache = new Map<string, Promise<Texture>>()
 
 export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly body: Sprite
   private readonly previewEffectRoot: Container
-  private readonly previewScanLineOverlay: TilingSprite
-  private readonly previewMask: Graphics
+  private readonly previewOverlay: Sprite
+  private readonly previewMask: Sprite
   private currentLayout: RenderSpriteLayout | null = null
   private disposed = false
   private isTextureReady = false
@@ -46,36 +39,40 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     this.previewEffectRoot = new Container()
     this.previewEffectRoot.visible = false
-    this.previewScanLineOverlay = new TilingSprite({
-      texture: this.resolvePreviewTexture(),
-      width: 1,
-      height: 1,
-      anchor: 0.5,
-      roundPixels: true,
-    })
-    this.previewScanLineOverlay.alpha = PREVIEW_SCAN_LINE_ALPHA
-    this.previewScanLineOverlay.applyAnchorToTexture = true
-    this.previewScanLineOverlay.tileRotation = PREVIEW_SCAN_LINE_ROTATION
-    // 使用几何遮罩而不是设备贴图本身，避免 Pixi alpha mask 再乘一遍底图颜色，导致扫描线几乎不可见。
-    this.previewMask = new Graphics({ roundPixels: true })
-    this.previewScanLineOverlay.mask = this.previewMask
-    this.previewEffectRoot.addChild(this.previewScanLineOverlay)
+    this.previewOverlay = new Sprite(Texture.WHITE)
+    this.previewOverlay.anchor.set(0.5)
+    this.previewOverlay.roundPixels = true
+    this.previewMask = new Sprite(Texture.EMPTY)
+    this.previewMask.anchor.set(0.5)
+    this.previewMask.roundPixels = true
+    this.previewOverlay.mask = this.previewMask
+    this.previewEffectRoot.addChild(this.previewOverlay)
     this.previewEffectRoot.addChild(this.previewMask)
     this.getRootOfLayer("overlay").addChild(this.previewEffectRoot)
 
-    void loadTexture(texturePath).then((texture) => {
+    const bodyTextureLoad = loadTexture(texturePath)
+    const previewMaskTexturePath = resolvePreviewMaskTexturePath(texturePath)
+    const previewMaskTextureLoad = previewMaskTexturePath === texturePath
+      ? Promise.resolve<Texture | null>(null)
+      : loadTexture(previewMaskTexturePath).catch(() => null)
+
+    void Promise.all([bodyTextureLoad, previewMaskTextureLoad]).then(([
+      bodyTexture,
+      previewMaskTexture,
+    ]) => {
       if (this.disposed) {
         return
       }
 
-      this.body.texture = texture
+      this.body.texture = bodyTexture
+  this.previewMask.texture = previewMaskTexture ?? bodyTexture
       this.renderHost.textureManager.registerBitmapTexture(this.body.texture)
+      this.renderHost.textureManager.registerBitmapTexture(this.previewMask.texture)
       this.isTextureReady = true
       this.body.visible = true
 
       if (this.currentLayout !== null) {
         this.applyLayout(this.currentLayout)
-        this.applyPreviewAnimation()
       }
     }).catch(() => {
       if (this.disposed) {
@@ -99,9 +96,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return
     }
 
-    this.syncPreviewTexture()
     this.applyLayout(layout)
-    this.applyPreviewAnimation()
   }
 
   protected resetCollectionOverlay(
@@ -125,7 +120,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     this.previewEffectRoot.visible = true
-    this.applyPreviewAnimation()
   }
 
   protected onDestroy(): void {
@@ -141,62 +135,12 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       height: isQuarterTurn ? layout.width : layout.height,
       rotation: layout.rotation * DEGREE_TO_RADIAN,
     }
-    const previewOverlaySpan = resolvePreviewScanLineOverlaySpan(normalizedLayout)
 
     applyCenteredSpriteLayout(this.body, normalizedLayout)
-    applyCenteredRectMaskLayout(this.previewMask, normalizedLayout)
-    applyCenteredSpriteLayout(this.previewScanLineOverlay, {
-      ...normalizedLayout,
-      width: previewOverlaySpan,
-      height: previewOverlaySpan,
-    })
+    applyCenteredSpriteLayout(this.previewOverlay, normalizedLayout)
+    applyCenteredSpriteLayout(this.previewMask, normalizedLayout)
   }
 
-  private resolvePreviewTexture(): Texture {
-    return this.renderHost.textureManager.getCustomTexture(CustomTextureKey.whiteScanLines)
-      ?? Texture.EMPTY
-  }
-
-  private syncPreviewTexture(): void {
-    const nextTexture = this.resolvePreviewTexture()
-
-    if (this.previewScanLineOverlay.texture === nextTexture) {
-      return
-    }
-
-    this.previewScanLineOverlay.texture = nextTexture
-  }
-
-  private applyPreviewAnimation(): void {
-    this.previewScanLineOverlay.tilePosition.x = 0
-    this.previewScanLineOverlay.tilePosition.y = resolvePreviewScanLineTileOffset(
-      this.renderHost.app.ticker.lastTime,
-    )
-  }
-
-}
-
-export function resolvePreviewScanLineTileOffset(lastTimeMs: number): number {
-  if (!Number.isFinite(lastTimeMs) || lastTimeMs <= 0) {
-    return 0
-  }
-
-  return ((lastTimeMs / 1000) * PREVIEW_SCAN_LINE_PIXELS_PER_SECOND)
-    % WORLD_GRID_CELL_PIXEL_SIZE
-}
-
-export function resolvePreviewScanLineOverlaySpan(layout: {
-  width: number;
-  height: number;
-}): number {
-  if (!Number.isFinite(layout.width) || !Number.isFinite(layout.height)) {
-    return WORLD_GRID_CELL_PIXEL_SIZE
-  }
-
-  return Math.max(
-    WORLD_GRID_CELL_PIXEL_SIZE,
-    Math.ceil(Math.hypot(layout.width, layout.height)),
-  )
 }
 
 function applyCenteredSpriteLayout(target: {
@@ -219,32 +163,6 @@ function applyCenteredSpriteLayout(target: {
   target.rotation = layout.rotation
 }
 
-function applyCenteredRectMaskLayout(
-  target: Graphics,
-  layout: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    rotation: number;
-  },
-): void {
-  target.x = layout.x
-  target.y = layout.y
-  target.rotation = layout.rotation
-  target.clear()
-  target
-    .rect(
-      -layout.width / 2,
-      -layout.height / 2,
-      layout.width,
-      layout.height,
-    )
-    .fill({
-      color: 0xffffff,
-    })
-}
-
 function loadTexture(texturePath: string): Promise<Texture> {
   const existingLoad = textureLoadCache.get(texturePath)
   if (existingLoad) {
@@ -258,4 +176,12 @@ function loadTexture(texturePath: string): Promise<Texture> {
 
   textureLoadCache.set(texturePath, nextLoad)
   return nextLoad
+}
+
+function resolvePreviewMaskTexturePath(texturePath: string): string {
+  if (!texturePath.startsWith("/sprites/")) {
+    return texturePath
+  }
+
+  return `/sprite-masks/${texturePath.slice("/sprites/".length)}`
 }

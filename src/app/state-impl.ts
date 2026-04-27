@@ -43,6 +43,8 @@ export interface AppSettingsReadWrite extends AppSettings {
   hypergryphOperationMode: boolean;
   hypergryphImmediateMove: boolean;
   hypergryphImmediateMarquee: boolean;
+  debugShowFps: boolean;
+  debugShowGestureDiagnosticsWindow: boolean;
 }
 
 export interface WorkbenchStateReadWrite extends WorkbenchState {
@@ -192,6 +194,8 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphOperationMode: true,
     hypergryphImmediateMove: true,
     hypergryphImmediateMarquee: false,
+    debugShowFps: false,
+    debugShowGestureDiagnosticsWindow: false,
   };
 
   workbench: WorkbenchStateReadWrite = new WorkbenchStateReadWriteImpl();

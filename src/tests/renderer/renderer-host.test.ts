@@ -52,7 +52,7 @@ vi.mock("@/renderer/texture/create-custom-texture", async (importOriginal) => {
 
 import { createRenderHost } from "@/renderer/renderer-host"
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract"
-import { CustomTextureKey } from "@/renderer/texture/create-custom-texture"
+import { DEFAULT_RENDER_TEXTURE_CELL_PIXEL_SIZE } from "@/renderer/texture/texture-config"
 
 describe("createRenderHost", () => {
   it("enables autoDensity and roundPixels for high-dpr canvas rendering", async () => {
@@ -92,11 +92,7 @@ describe("createRenderHost", () => {
       preference: "webgl",
     })
     expect(applicationState.stage.roundPixels).toBe(true)
-    expect(createCustomTexture).toHaveBeenCalledWith({
-      key: CustomTextureKey.whiteScanLines,
-      renderer: applicationState.renderer,
-      textureConfig: renderHost.textureManager.textureConfig,
-    })
+    expect(createCustomTexture).not.toHaveBeenCalled()
     expect(renderHost.textureManager.textureConfig).toEqual({
       renderResolution: 3,
       bitmap: {
@@ -109,18 +105,11 @@ describe("createRenderHost", () => {
         },
       },
       custom: {
+        cellPixelSize: DEFAULT_RENDER_TEXTURE_CELL_PIXEL_SIZE,
         repeatCompatibleResolution: 4,
-        whiteScanLineRects: [
-          { y: 0, height: 4 },
-          { y: 5, height: 4 },
-          { y: 10, height: 4 },
-          { y: 15, height: 1 },
-        ],
       },
     })
-    expect(renderHost.textureManager.getCustomTexture(CustomTextureKey.whiteScanLines)).toBe(
-      createCustomTexture.mock.results[0]?.value,
-    )
+    expect(renderHost.textureManager.getCustomTexture("future-custom-texture")).toBeNull()
     expect(createRenderSceneOrchestrator).toHaveBeenCalledWith(renderHost)
     expect(workspace.render).toBe(renderHost)
   })

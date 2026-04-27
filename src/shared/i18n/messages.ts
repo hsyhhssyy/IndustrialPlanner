@@ -131,6 +131,8 @@ export type MessageKey =
   | "settingsGroup.shortcutsDescription"
   | "settingsGroup.other"
   | "settingsGroup.otherDescription"
+  | "settingsGroup.debug"
+  | "settingsGroup.debugDescription"
   | "settingsField.language"
   | "settingsField.languageDescription"
   | "settingsField.theme"
@@ -153,6 +155,10 @@ export type MessageKey =
   | "settingsField.useSimplifiedDeviceIconsDescription"
   | "settingsField.debugMode"
   | "settingsField.debugModeDescription"
+  | "settingsField.showFps"
+  | "settingsField.showFpsDescription"
+  | "settingsField.showGestureTestWindow"
+  | "settingsField.showGestureTestWindowDescription"
   | "settingsOption.languageZhHans"
   | "settingsOption.languageEnglish"
   | "settingsOption.frameRate30"
@@ -308,6 +314,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsGroup.shortcutsDescription": "编辑当前可自定义的快捷键设置。",
     "settingsGroup.other": "其他",
     "settingsGroup.otherDescription": "调试和附加能力开关。",
+    "settingsGroup.debug": "调试",
+    "settingsGroup.debugDescription": "FPS 与手势测试开关。当前版本只保存设置，不影响界面行为。",
     "settingsField.language": "选择语言/Choose Language",
     "settingsField.languageDescription": "切换界面语言；该条目名称始终以双语显示。",
     "settingsField.theme": "主题",
@@ -330,6 +338,10 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图简笔画显示方式，不会提高性能。",
     "settingsField.debugMode": "调试模式",
     "settingsField.debugModeDescription": "打开调试模式日志。",
+    "settingsField.showFps": "显示 FPS",
+    "settingsField.showFpsDescription": "保存 FPS 显示开关；当前版本仅写入配置，暂未实际显示 FPS。",
+    "settingsField.showGestureTestWindow": "显示手势测试窗口",
+    "settingsField.showGestureTestWindowDescription": "保存手势测试窗口显示开关；当前版本仅写入配置，暂未控制窗口显示。",
     "settingsOption.languageZhHans": "中文(简体)",
     "settingsOption.languageEnglish": "English",
     "settingsOption.frameRate30": "30",
@@ -484,6 +496,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsGroup.shortcutsDescription": "Edit the shortcut settings that are currently customizable.",
     "settingsGroup.other": "Other",
     "settingsGroup.otherDescription": "Debug and auxiliary capability toggles.",
+    "settingsGroup.debug": "Debug",
+    "settingsGroup.debugDescription": "FPS and gesture test toggles. The current version only persists them and does not apply them yet.",
     "settingsField.language": "选择语言/Choose Language",
     "settingsField.languageDescription": "Switch the interface language; this entry label stays bilingual in every locale.",
     "settingsField.theme": "Theme",
@@ -506,6 +520,10 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.useSimplifiedDeviceIconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
     "settingsField.debugMode": "Debug Mode",
     "settingsField.debugModeDescription": "Enable debug mode logging.",
+    "settingsField.showFps": "Show FPS",
+    "settingsField.showFpsDescription": "Persist the FPS toggle; the current version does not render an FPS indicator yet.",
+    "settingsField.showGestureTestWindow": "Show Gesture Test Window",
+    "settingsField.showGestureTestWindowDescription": "Persist the gesture test window toggle; the current version does not control the window visibility yet.",
     "settingsOption.languageZhHans": "中文(简体)",
     "settingsOption.languageEnglish": "English",
     "settingsOption.frameRate30": "30",

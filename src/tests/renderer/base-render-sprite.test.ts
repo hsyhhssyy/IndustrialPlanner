@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import { AYU_LIGHT_THEME } from "@/app/theme"
 import { EntityCollectionType } from "@/domain/state/types"
 import { BaseRenderSprite } from "@/renderer/sprites/base-render-sprite"
+import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import type {
   RenderSpriteLayout,
   RenderSpriteSyncContext,
@@ -251,6 +252,7 @@ function createContext(collections: Partial<Record<string, readonly string[]>>):
         state: {
           viewport: {
             gridSize: 1,
+            gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
           },
           collections: {
             [EntityCollectionType.selection]: {

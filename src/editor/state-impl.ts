@@ -14,6 +14,7 @@ import type { ClientPixelRect } from "@/domain/types/client-pixel";
 import type { GridRect } from "@/domain/types/grid";
 
 import type { DraftEntity } from "./draft-entity";
+import { EDITOR_GRID_CELL_PIXEL_SIZE } from "./viewport-constants";
 
 export interface GridFloatPointReadWrite {
   x: number;
@@ -31,6 +32,7 @@ export interface EditorViewportStateReadWrite {
   center: GridFloatPointReadWrite;
   clientRect: ClientPixelRectReadWrite;
   gridSize: number;
+  gridCellPixelSize: number;
 }
 
 export interface EditorInternalPersistStateReadWrite {
@@ -112,6 +114,7 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
       ...DEFAULT_VIEWPORT_CLIENT_RECT,
     },
     gridSize: DEFAULT_VIEWPORT_GRID_SIZE,
+    gridCellPixelSize: EDITOR_GRID_CELL_PIXEL_SIZE,
   };
   marqueeGridRect: GridRect | null = null;
 

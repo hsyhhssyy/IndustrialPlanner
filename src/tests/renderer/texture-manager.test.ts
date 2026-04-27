@@ -17,7 +17,6 @@ vi.mock("@/renderer/texture/create-custom-texture", async (importOriginal) => {
   }
 })
 
-import { CustomTextureKey } from "@/renderer/texture/create-custom-texture"
 import { createRenderTextureManager } from "@/renderer/texture/texture-manager"
 
 class ScreenProfileState {
@@ -60,21 +59,17 @@ describe("RenderTextureManager", () => {
 
     manager.registerBitmapTexture(bitmapTexture as never)
 
-    expect(createCustomTexture).toHaveBeenCalledTimes(1)
+    expect(createCustomTexture).toHaveBeenCalledTimes(0)
     expect(manager.textureConfig.renderResolution).toBe(2)
-    expect(manager.getCustomTexture(CustomTextureKey.whiteScanLines)).toMatchObject({
-      id: "custom-texture-2",
-    })
+    expect(manager.getCustomTexture("future-custom-texture")).toBeNull()
 
     runInAction(() => {
       screenProfile.devicePixelRatio = 3
     })
 
-    expect(createCustomTexture).toHaveBeenCalledTimes(2)
+    expect(createCustomTexture).toHaveBeenCalledTimes(0)
     expect(manager.textureConfig.renderResolution).toBe(3)
-    expect(manager.getCustomTexture(CustomTextureKey.whiteScanLines)).toMatchObject({
-      id: "custom-texture-3",
-    })
+    expect(manager.getCustomTexture("future-custom-texture")).toBeNull()
     expect(bitmapTexture.source.scaleMode).toBe("linear")
     expect(bitmapTexture.source.autoGenerateMipmaps).toBe(true)
     expect(bitmapTexture.source.updateMipmaps).toHaveBeenCalledTimes(2)

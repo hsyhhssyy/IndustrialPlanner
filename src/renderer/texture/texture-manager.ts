@@ -8,8 +8,8 @@ import type { AppContract } from "@/domain/contract/app-contract"
 import { resolveRenderResolutionFromApp } from "@/renderer/render-resolution"
 
 import {
+  CUSTOM_TEXTURE_KEYS,
   createCustomTexture,
-  CustomTextureKey,
   type CustomTextureKey as CustomTextureKeyValue,
 } from "./create-custom-texture"
 import {
@@ -17,8 +17,6 @@ import {
   createRenderTextureConfig,
   type RenderTextureConfig,
 } from "./texture-config"
-
-const CUSTOM_TEXTURE_KEYS = Object.values(CustomTextureKey) as CustomTextureKeyValue[]
 
 export interface RenderTextureManager {
   readonly textureConfig: RenderTextureConfig;

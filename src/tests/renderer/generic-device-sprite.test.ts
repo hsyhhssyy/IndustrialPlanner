@@ -72,80 +72,9 @@ vi.mock("pixi.js", () => {
     }
   }
 
-  class MockTilingSprite extends MockSprite {
-    public readonly tilePosition = {
-      x: 0,
-      y: 0,
-    }
-    public tileRotation = 0
-    public applyAnchorToTexture = false
-
-    public constructor(options?: {
-      texture?: unknown;
-      width?: number;
-      height?: number;
-      roundPixels?: boolean;
-    }) {
-      super(options?.texture ?? MockTexture.EMPTY)
-      this.width = options?.width ?? 0
-      this.height = options?.height ?? 0
-      this.roundPixels = options?.roundPixels ?? false
-    }
-  }
-
   class MockTexture {
     public static readonly EMPTY = { id: "empty-texture" }
-  }
-
-  class MockGraphics extends MockContainer {
-    public readonly commands: Array<
-      | {
-        type: "rect";
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-      }
-      | {
-        type: "fill";
-        options: {
-          color: number;
-          alpha?: number;
-        };
-      }
-    > = []
-    public x = 0
-    public y = 0
-    public rotation = 0
-    public roundPixels = false
-    public visible = true
-    public alpha = 1
-
-    public constructor(options?: {
-      roundPixels?: boolean;
-    }) {
-      super()
-      this.roundPixels = options?.roundPixels ?? false
-    }
-
-    public clear(): this {
-      this.commands.length = 0
-      return this
-    }
-
-    public rect(x: number, y: number, width: number, height: number): this {
-      this.commands.push({ type: "rect", x, y, width, height })
-      return this
-    }
-
-    public fill(options: { color: number; alpha?: number }): this {
-      this.commands.push({ type: "fill", options })
-      return this
-    }
-
-    public stroke(): this {
-      return this
-    }
+    public static readonly WHITE = { id: "white-texture" }
   }
 
   return {
@@ -153,21 +82,15 @@ vi.mock("pixi.js", () => {
       load: loadTexture,
     },
     Container: MockContainer,
-    Graphics: MockGraphics,
     Sprite: MockSprite,
-    TilingSprite: MockTilingSprite,
     Texture: MockTexture,
   }
 })
 
 import { AYU_LIGHT_THEME } from "@/app/theme"
 import { EntityCollectionType } from "@/domain/state/types"
-import {
-  GenericDeviceSprite,
-  resolvePreviewScanLineOverlaySpan,
-  resolvePreviewScanLineTileOffset,
-} from "@/renderer/sprites/generic-device-sprite"
-import { CustomTextureKey } from "@/renderer/texture/create-custom-texture"
+import { GenericDeviceSprite } from "@/renderer/sprites/generic-device-sprite"
+import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import {
   applyBitmapTextureConfig,
   createRenderTextureConfig,
@@ -184,48 +107,22 @@ interface RenderedSpriteSnapshot {
   texture: unknown;
   alpha?: number;
   mask?: unknown;
-  tilePosition?: {
-    x: number;
-    y: number;
-  };
-  tileRotation?: number;
-  applyAnchorToTexture?: boolean;
-}
-
-interface RenderedGraphicsSnapshot {
-  x: number;
-  y: number;
-  rotation: number;
-  roundPixels: boolean;
-  commands: Array<
-    | {
-      type: "rect";
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    }
-    | {
-      type: "fill";
-      options: {
-        color: number;
-        alpha?: number;
-      };
-    }
-  >;
 }
 
 describe("GenericDeviceSprite", () => {
   it("loads the sprite texture before making the device visible", async () => {
     const resolvedTexture = createLoadedTextureMock("device-texture")
-    loadTexture.mockResolvedValueOnce(resolvedTexture)
+    const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
+    loadTexture.mockImplementation((path: string) => Promise.resolve(
+      path.startsWith("/sprite-masks/") ? resolvedMaskTexture : resolvedTexture,
+    ))
 
     const entityLayer = createLayerStub()
     const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub()
     const sprite = new GenericDeviceSprite(
       "dummy-entity-1",
-      "/sprites/item_port_storager_1.webp",
+      "/sprites/device-body-primary.webp",
       renderHost as never,
     )
 
@@ -243,13 +140,37 @@ describe("GenericDeviceSprite", () => {
     }, {
       theme: AYU_LIGHT_THEME,
       workspace: {
-        editor: null,
+        editor: {
+          state: {
+            viewport: {
+              gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
+            },
+            collections: {
+              [EntityCollectionType.selection]: {
+                contains: () => false,
+              },
+              [EntityCollectionType.marquee]: {
+                contains: () => false,
+              },
+              [EntityCollectionType.reverseMarquee]: {
+                contains: () => false,
+              },
+              [EntityCollectionType.preview]: {
+                contains: () => false,
+              },
+              [EntityCollectionType.ghost]: {
+                contains: () => false,
+              },
+            },
+          },
+        },
       } as never,
     })
 
-    expect(loadTexture).toHaveBeenCalledWith("/sprites/item_port_storager_1.webp")
+    expect(loadTexture).toHaveBeenCalledWith("/sprites/device-body-primary.webp")
+    expect(loadTexture).toHaveBeenCalledWith("/sprite-masks/device-body-primary.webp")
 
-    await flushMicrotasks()
+    await flushMicrotasks(8)
 
     const entityRoot = entityLayer.addChild.mock.calls[0]?.[0] as {
       children?: unknown[];
@@ -287,16 +208,19 @@ describe("GenericDeviceSprite", () => {
     expect(resolvedTexture.source.updateMipmaps).toHaveBeenCalledTimes(1)
   })
 
-  it("shows a masked animated scan-line overlay for preview devices", async () => {
+  it("shows a masked solid white overlay for preview devices", async () => {
     const resolvedTexture = createLoadedTextureMock("device-texture")
-    loadTexture.mockResolvedValueOnce(resolvedTexture)
+    const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
+    loadTexture.mockImplementation((path: string) => Promise.resolve(
+      path.startsWith("/sprite-masks/") ? resolvedMaskTexture : resolvedTexture,
+    ))
 
     const entityLayer = createLayerStub()
     const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub()
     const sprite = new GenericDeviceSprite(
       "dummy-preview-entity",
-      "/sprites/item_port_storager_1.webp",
+      "/sprites/device-preview.webp",
       renderHost as never,
     )
 
@@ -313,6 +237,7 @@ describe("GenericDeviceSprite", () => {
           state: {
             viewport: {
               gridSize: 1,
+              gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
             },
             collections: {
               [EntityCollectionType.selection]: {
@@ -326,6 +251,150 @@ describe("GenericDeviceSprite", () => {
               },
               [EntityCollectionType.preview]: {
                 contains: (entityId: string) => entityId === "dummy-preview-entity",
+              },
+              [EntityCollectionType.ghost]: {
+                contains: () => false,
+              },
+            },
+          },
+        },
+      } as never,
+    }
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 32,
+      rotation: 90,
+    }, context)
+
+    await flushMicrotasks(8)
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 32,
+      rotation: 90,
+    }, context)
+
+    const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
+      children?: unknown[];
+    } | undefined
+
+    expect(overlayRoot).toBeDefined()
+
+    if (!overlayRoot) {
+      throw new Error("Expected GenericDeviceSprite to attach an overlay root container.")
+    }
+
+    const previewEffectRoot = overlayRoot.children?.[0] as {
+      visible?: boolean;
+      children?: unknown[];
+    } | undefined
+
+    expect(overlayRoot.children).toHaveLength(1)
+    expect(previewEffectRoot?.visible).toBe(true)
+
+    const previewOverlay = previewEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+    const previewMask = previewEffectRoot?.children?.[1] as RenderedSpriteSnapshot | undefined
+
+    expect(previewOverlay).toMatchObject({
+      x: 40,
+      y: 40,
+      width: 32,
+      height: 48,
+      rotation: Math.PI / 2,
+      texture: { id: "white-texture" },
+    })
+    expect(previewMask).toMatchObject({
+      x: 40,
+      y: 40,
+      width: 32,
+      height: 48,
+      rotation: Math.PI / 2,
+      roundPixels: true,
+      texture: {
+        id: "device-mask-texture",
+      },
+    })
+    expect(previewOverlay?.mask).toBe(previewMask)
+    renderHost.textureManager.textureConfig = {
+      ...renderHost.textureManager.textureConfig,
+      bitmap: {
+        ...renderHost.textureManager.textureConfig.bitmap,
+        sampling: {
+          ...renderHost.textureManager.textureConfig.bitmap.sampling,
+          scaleMode: "nearest",
+        },
+      },
+    }
+    for (const texture of renderHost.textureManager.registeredBitmapTextures) {
+      applyBitmapTextureConfig(texture as never, renderHost.textureManager.textureConfig)
+    }
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 32,
+      rotation: 90,
+    }, context)
+
+    expect(previewMask?.texture).toMatchObject({
+      id: "device-mask-texture",
+      source: {
+        scaleMode: "nearest",
+      },
+    })
+  })
+
+  it("falls back to the sprite texture when a same-name preview mask is missing", async () => {
+    const resolvedTexture = createLoadedTextureMock("device-texture-fallback")
+    loadTexture.mockImplementation((path: string) => {
+      if (path.startsWith("/sprite-masks/")) {
+        return Promise.reject(new Error("missing mask"))
+      }
+
+      return Promise.resolve(resolvedTexture)
+    })
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub()
+    const sprite = new GenericDeviceSprite(
+      "dummy-preview-entity-fallback",
+      "/sprites/device-preview-fallback.webp",
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = {
+      theme: AYU_LIGHT_THEME,
+      workspace: {
+        editor: {
+          state: {
+            viewport: {
+              gridSize: 1,
+              gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
+            },
+            collections: {
+              [EntityCollectionType.selection]: {
+                contains: () => false,
+              },
+              [EntityCollectionType.marquee]: {
+                contains: () => false,
+              },
+              [EntityCollectionType.reverseMarquee]: {
+                contains: () => false,
+              },
+              [EntityCollectionType.preview]: {
+                contains: (entityId: string) => entityId === "dummy-preview-entity-fallback",
               },
               [EntityCollectionType.ghost]: {
                 contains: () => false,
@@ -365,107 +434,13 @@ describe("GenericDeviceSprite", () => {
     }
 
     const previewEffectRoot = overlayRoot.children?.[0] as {
-      visible?: boolean;
       children?: unknown[];
     } | undefined
+    const previewMask = previewEffectRoot?.children?.[1] as RenderedSpriteSnapshot | undefined
 
-    expect(overlayRoot.children).toHaveLength(1)
-    expect(previewEffectRoot?.visible).toBe(true)
-
-    const previewOverlay = previewEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
-    const previewMask = previewEffectRoot?.children?.[1] as RenderedGraphicsSnapshot | undefined
-
-    expect(previewOverlay).toMatchObject({
-      x: 40,
-      y: 40,
-      width: 58,
-      height: 58,
-      rotation: Math.PI / 2,
-      alpha: 0.5,
-      applyAnchorToTexture: true,
-      tileRotation: Math.PI / 4,
-      texture: { id: "white-scan-lines-texture" },
-      tilePosition: {
-        x: 0,
-        y: 4,
-      },
+    expect(previewMask?.texture).toMatchObject({
+      id: "device-texture-fallback",
     })
-    expect(previewMask).toMatchObject({
-      x: 40,
-      y: 40,
-      rotation: Math.PI / 2,
-      roundPixels: true,
-      commands: [
-        {
-          type: "rect",
-          x: -16,
-          y: -24,
-          width: 32,
-          height: 48,
-        },
-        {
-          type: "fill",
-          options: {
-            color: 0xffffff,
-          },
-        },
-      ],
-    })
-    expect(previewOverlay?.mask).toBe(previewMask)
-
-    renderHost.app.ticker.lastTime = 2000
-    sprite.syncLayout({
-      x: 16,
-      y: 24,
-      width: 48,
-      height: 32,
-      rotation: 90,
-    }, context)
-
-    expect(previewOverlay?.tilePosition?.y).toBe(8)
-
-    renderHost.textureManager.customTextures[CustomTextureKey.whiteScanLines] = {
-      id: "white-scan-lines-texture-hi-res",
-    }
-    renderHost.textureManager.textureConfig = {
-      ...renderHost.textureManager.textureConfig,
-      bitmap: {
-        ...renderHost.textureManager.textureConfig.bitmap,
-        sampling: {
-          ...renderHost.textureManager.textureConfig.bitmap.sampling,
-          scaleMode: "nearest",
-        },
-      },
-    }
-    for (const texture of renderHost.textureManager.registeredBitmapTextures) {
-      applyBitmapTextureConfig(texture as never, renderHost.textureManager.textureConfig)
-    }
-    sprite.syncLayout({
-      x: 16,
-      y: 24,
-      width: 48,
-      height: 32,
-      rotation: 90,
-    }, context)
-
-    expect(previewOverlay?.texture).toEqual({
-      id: "white-scan-lines-texture-hi-res",
-    })
-  })
-})
-
-describe("resolvePreviewScanLineTileOffset", () => {
-  it("scrolls the scan-line texture slowly in cell-space pixels", () => {
-    expect(resolvePreviewScanLineTileOffset(0)).toBe(0)
-    expect(resolvePreviewScanLineTileOffset(1000)).toBe(4)
-    expect(resolvePreviewScanLineTileOffset(5000)).toBe(4)
-  })
-})
-
-describe("resolvePreviewScanLineOverlaySpan", () => {
-  it("expands the tiling overlay to the device diagonal so rotated scan lines still cover the full mask", () => {
-    expect(resolvePreviewScanLineOverlaySpan({ width: 32, height: 48 })).toBe(58)
-    expect(resolvePreviewScanLineOverlaySpan({ width: 8, height: 8 })).toBe(16)
   })
 })
 
@@ -490,9 +465,6 @@ function createRenderHostStub() {
   const textureConfig = createRenderTextureConfig({
     resolution: 3,
   })
-  const customTextures: Record<string, unknown> = {
-    [CustomTextureKey.whiteScanLines]: { id: "white-scan-lines-texture" },
-  }
   const registeredBitmapTextures = new Set<object>()
 
   return {
@@ -503,7 +475,6 @@ function createRenderHostStub() {
     },
     textureManager: {
       textureConfig,
-      customTextures,
       registeredBitmapTextures,
       registerBitmapTexture: (texture: object) => {
         if (!registeredBitmapTextures.has(texture)) {
@@ -513,7 +484,6 @@ function createRenderHostStub() {
 
         return texture
       },
-      getCustomTexture: (key: string) => customTextures[key] ?? null,
     },
   }
 }

@@ -75,5 +75,12 @@ function normalizePersistedAppSettings(
     hypergryphImmediateMarquee: typeof persistedAppSettings.hypergryphImmediateMarquee === "boolean"
       ? persistedAppSettings.hypergryphImmediateMarquee
       : fallback.hypergryphImmediateMarquee,
+    debugShowFps: typeof persistedAppSettings.debugShowFps === "boolean"
+      ? persistedAppSettings.debugShowFps
+      : fallback.debugShowFps,
+    debugShowGestureDiagnosticsWindow:
+      typeof persistedAppSettings.debugShowGestureDiagnosticsWindow === "boolean"
+        ? persistedAppSettings.debugShowGestureDiagnosticsWindow
+        : fallback.debugShowGestureDiagnosticsWindow,
   };
 }

@@ -1,0 +1,1 @@
+export const EDITOR_GRID_CELL_PIXEL_SIZE = 16;

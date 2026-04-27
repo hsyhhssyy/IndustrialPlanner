@@ -10,7 +10,7 @@ import { EntityCollectionType } from "@/domain/state/types";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { resolveWorldEntitySpriteLayout } from "@/renderer/scene/render-scene-orchestrator";
-import { resolveWorldGridCellPixelSize } from "@/shared/geometry/viewport-transform";
+import { EDITOR_GRID_CELL_PIXEL_SIZE } from "@/editor/viewport-constants";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -89,9 +89,9 @@ describe("createEditorHost", () => {
 
     expect(editorHost.state.viewport.gridSize).toBeCloseTo(expectedGridSizeAfterZoomIn);
     expect(workspace.editor?.state.viewport.gridSize).toBeCloseTo(expectedGridSizeAfterZoomIn);
-    expect(
-      resolveWorldGridCellPixelSize(editorHost.state.viewport.gridSize),
-    ).toBeCloseTo(resolveWorldGridCellPixelSize(1) * expectedGridSizeAfterZoomIn);
+    expect(editorHost.state.viewport.gridCellPixelSize).toBeCloseTo(
+      EDITOR_GRID_CELL_PIXEL_SIZE * expectedGridSizeAfterZoomIn,
+    );
 
     editorHost.actions.zoom(-2);
 
@@ -147,7 +147,7 @@ describe("createEditorHost", () => {
         height: initialRect.height,
       },
       viewportCenter: editorHost.state.viewport.center,
-      gridSize: editorHost.state.viewport.gridSize,
+      gridCellPixelSize: editorHost.state.viewport.gridCellPixelSize,
     });
     const initialAbsolutePosition = {
       x: initialRect.left + initialLayout.x,
@@ -175,7 +175,7 @@ describe("createEditorHost", () => {
         height: nextRect.height,
       },
       viewportCenter: editorHost.state.viewport.center,
-      gridSize: editorHost.state.viewport.gridSize,
+      gridCellPixelSize: editorHost.state.viewport.gridCellPixelSize,
     });
     const nextAbsolutePosition = {
       x: nextRect.left + nextLayout.x,
@@ -1039,9 +1039,7 @@ function resolveClientPixelPointForGridCell(
   x: number;
   y: number;
 } {
-  const gridCellSize = resolveWorldGridCellPixelSize(
-    editorHost.state.viewport.gridSize,
-  );
+  const gridCellSize = editorHost.state.viewport.gridCellPixelSize;
 
   return {
     x:

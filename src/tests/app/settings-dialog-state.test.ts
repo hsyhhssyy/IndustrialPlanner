@@ -35,6 +35,8 @@ describe("WorkbenchSettingsDialogController", () => {
     controller.updateSelectValue("display-frame-rate-limit", "30");
     controller.updateSwitchValue("game-use-simplified-device-icons", true);
     controller.updateSwitchValue("other-debug-mode", true);
+    controller.updateSwitchValue("debug-show-fps", true);
+    controller.updateSwitchValue("debug-show-gesture-diagnostics-window", true);
 
     expect(JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")).toEqual({
       selectedGroupId: "shortcuts",
@@ -50,6 +52,8 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-rotate-shortcut": "R",
         "game-use-simplified-device-icons": true,
         "other-debug-mode": true,
+        "debug-show-fps": true,
+        "debug-show-gesture-diagnostics-window": true,
       },
     });
 
@@ -67,6 +71,8 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["game-arknights-rotate-shortcut"]).toBe("R");
     expect(hydratedController.values["game-use-simplified-device-icons"]).toBe(true);
     expect(hydratedController.values["other-debug-mode"]).toBe(true);
+    expect(hydratedController.values["debug-show-fps"]).toBe(true);
+    expect(hydratedController.values["debug-show-gesture-diagnostics-window"]).toBe(true);
   });
 
   it("only updates conditional keybinding settings while their prerequisite matches", () => {
@@ -165,6 +171,8 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-rotate-shortcut": "R",
         "game-use-simplified-device-icons": false,
         "other-debug-mode": true,
+        "debug-show-fps": false,
+        "debug-show-gesture-diagnostics-window": false,
       },
     });
   });

@@ -5,18 +5,14 @@ import type {
 } from "pixi.js"
 
 import { resolveRenderResolutionValue } from "@/renderer/render-resolution"
-import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
+
+export const DEFAULT_RENDER_TEXTURE_CELL_PIXEL_SIZE = 16
 
 const DEFAULT_BITMAP_TEXTURE_SCALE_LIMIT = 2
 const DEFAULT_BITMAP_TEXTURE_SCALE_MODE: SCALE_MODE = "linear"
 const DEFAULT_BITMAP_TEXTURE_MIPMAP_FILTER: SCALE_MODE = "linear"
 const DEFAULT_BITMAP_TEXTURE_AUTO_GENERATE_MIPMAPS = true
 const DEFAULT_BITMAP_TEXTURE_MAX_ANISOTROPY = 4
-
-export interface ScanLineRect {
-  y: number;
-  height: number;
-}
 
 export interface RenderTextureSamplingStrategy {
   scaleMode: SCALE_MODE;
@@ -32,8 +28,8 @@ export interface RenderTextureConfig {
     sampling: RenderTextureSamplingStrategy;
   };
   custom: {
+    cellPixelSize: number;
     repeatCompatibleResolution: number;
-    whiteScanLineRects: readonly ScanLineRect[];
   };
 }
 
@@ -69,6 +65,11 @@ export function createRenderTextureConfig(options: {
   cellSize?: number;
 }): RenderTextureConfig {
   const renderResolution = Math.max(1, resolveRenderResolutionValue(options.resolution))
+  const configuredCellSize = options.cellSize
+  const cellPixelSize =
+    typeof configuredCellSize === "number" && Number.isFinite(configuredCellSize)
+      ? Math.max(1, Math.floor(configuredCellSize))
+      : DEFAULT_RENDER_TEXTURE_CELL_PIXEL_SIZE
   const repeatCompatibleResolution = resolveRepeatCompatibleTextureResolution(renderResolution)
 
   return {
@@ -85,33 +86,10 @@ export function createRenderTextureConfig(options: {
       },
     },
     custom: {
+      cellPixelSize,
       repeatCompatibleResolution,
-      whiteScanLineRects: resolveWhiteScanLineRects({
-        cellSize: options.cellSize,
-        resolution: repeatCompatibleResolution,
-      }),
     },
   }
-}
-
-export function resolveWhiteScanLineRects(options: {
-  cellSize?: number;
-  resolution: number;
-}): ScanLineRect[] {
-  const cellSize = Math.max(1, Math.floor(options.cellSize ?? WORLD_GRID_CELL_PIXEL_SIZE))
-  const normalizedResolution = resolveRenderResolutionValue(options.resolution)
-  const lineThickness = Math.max(1, Math.round(normalizedResolution))
-  const linePitch = Math.max(lineThickness + 1, Math.floor(cellSize / 4))
-  const rects: ScanLineRect[] = []
-
-  for (let y = 0; y < cellSize; y += linePitch) {
-    rects.push({
-      y,
-      height: Math.min(lineThickness, cellSize - y),
-    })
-  }
-
-  return rects
 }
 
 export function applyBitmapTextureConfig(

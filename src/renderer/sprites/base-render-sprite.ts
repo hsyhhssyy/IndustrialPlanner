@@ -1,6 +1,5 @@
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { EntityCollectionType, type EntityCollectionType as EntityCollectionTypeValue } from "@/domain/state/types";
-import { resolveWorldGridCellPixelSize } from "@/shared/geometry/viewport-transform";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 import { Container, Graphics } from "pixi.js";
 
@@ -253,7 +252,7 @@ export abstract class BaseRenderSprite implements RenderSprite {
   protected resolveSelectionCollectionOverlayStrokeWidth(
     context: RenderSpriteSyncContext,
   ): number {
-    return resolveWorldEntitySelectionStrokeWidth(this.resolveWorkspaceGridSize(context));
+    return resolveWorldEntitySelectionStrokeWidth(this.resolveWorkspaceGridCellPixelSize(context));
   }
 
   protected resolveSelectionCollectionOverlayColor(
@@ -284,11 +283,7 @@ export abstract class BaseRenderSprite implements RenderSprite {
     collectionType: EntityCollectionTypeValue,
     context: RenderSpriteSyncContext,
   ): boolean {
-    const editor = context.workspace.editor;
-    if (editor === null) {
-      return false;
-    }
-
+    const editor = requireWorkspaceEditor(context);
     return editor.state.collections[collectionType].contains(this.entityId);
   }
 
@@ -296,8 +291,8 @@ export abstract class BaseRenderSprite implements RenderSprite {
     return context.workspace;
   }
 
-  protected resolveWorkspaceGridSize(context: RenderSpriteSyncContext): number {
-    return context.workspace.editor?.state.viewport.gridSize ?? 1;
+  protected resolveWorkspaceGridCellPixelSize(context: RenderSpriteSyncContext): number {
+    return requireWorkspaceEditor(context).state.viewport.gridCellPixelSize;
   }
 
   protected drawCollectionOverlayStroke(options: {
@@ -335,13 +330,25 @@ export abstract class BaseRenderSprite implements RenderSprite {
   }
 }
 
-function resolveWorldEntitySelectionStrokeWidth(gridSize: number): number {
-  const width = resolveWorldGridCellPixelSize(gridSize) / 8;
+function resolveWorldEntitySelectionStrokeWidth(gridCellPixelSize: number): number {
+  const width = gridCellPixelSize / 8;
 
   return Math.max(
     WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH,
     Math.min(WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH, width),
   );
+}
+
+function requireWorkspaceEditor(
+  context: RenderSpriteSyncContext,
+): NonNullable<RenderSpriteSyncContext["workspace"]["editor"]> {
+  const editor = context.workspace.editor;
+
+  if (editor === null) {
+    throw new Error("Render sprites require an initialized editor host.");
+  }
+
+  return editor;
 }
 
 function resolveInnerStrokeRect(

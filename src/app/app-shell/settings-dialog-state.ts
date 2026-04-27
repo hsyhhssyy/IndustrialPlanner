@@ -5,7 +5,7 @@ import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
 export const USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY = "v3-user-settings-dialog";
 
-export type SettingsGroupId = "system" | "display" | "game" | "arknights-operation" | "shortcuts" | "other";
+export type SettingsGroupId = "system" | "display" | "game" | "arknights-operation" | "shortcuts" | "other" | "debug";
 
 export type WorkbenchSettingControlValue = string | number | boolean;
 
@@ -228,6 +228,27 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         kind: "switch",
         labelKey: "settingsField.debugMode",
         descriptionKey: "settingsField.debugModeDescription",
+        defaultValue: false,
+      },
+    ],
+  },
+  {
+    id: "debug",
+    labelKey: "settingsGroup.debug",
+    descriptionKey: "settingsGroup.debugDescription",
+    items: [
+      {
+        id: "debug-show-fps",
+        kind: "switch",
+        labelKey: "settingsField.showFps",
+        descriptionKey: "settingsField.showFpsDescription",
+        defaultValue: false,
+      },
+      {
+        id: "debug-show-gesture-diagnostics-window",
+        kind: "switch",
+        labelKey: "settingsField.showGestureTestWindow",
+        descriptionKey: "settingsField.showGestureTestWindowDescription",
         defaultValue: false,
       },
     ],

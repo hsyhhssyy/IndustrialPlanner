@@ -1,10 +1,10 @@
 import type { EditorAction } from "@/domain/action/editor-action";
 import {
   resolveCompensatedViewportCenter,
-  resolveWorldGridCellPixelSize,
 } from "@/shared/geometry/viewport-transform";
 
 import type { EditorStateReadWrite } from "../state-impl";
+import { EDITOR_GRID_CELL_PIXEL_SIZE } from "../viewport-constants";
 import type { EditorActionsContext } from "./types";
 
 type EditorViewportActions = Pick<
@@ -48,7 +48,7 @@ export function createEditorViewportActions({
           previousClientRect,
           nextClientRect,
           previousViewportCenter: state.viewport.center,
-          gridSize: state.viewport.gridSize,
+          gridCellPixelSize: state.viewport.gridCellPixelSize,
         });
 
         state.viewport.center.x = nextViewportCenter.x;
@@ -81,9 +81,7 @@ export function createEditorViewportActions({
         return;
       }
 
-      const gridCellSize = resolveWorldGridCellPixelSize(
-        state.viewport.gridSize,
-      );
+      const gridCellSize = state.viewport.gridCellPixelSize;
 
       if (gridCellSize <= 0) {
         return;
@@ -103,6 +101,7 @@ export function createEditorViewportActions({
       }
 
       state.viewport.gridSize = nextGridSize;
+      state.viewport.gridCellPixelSize = EDITOR_GRID_CELL_PIXEL_SIZE * nextGridSize;
     },
   };
 }

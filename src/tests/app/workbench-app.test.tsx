@@ -953,6 +953,8 @@ describe("WorkbenchApp", () => {
         locale: "zh-CN",
         themeId: "ayu-light",
         hypergryphOperationMode: false,
+        debugShowFps: true,
+        debugShowGestureDiagnosticsWindow: true,
       }),
     );
     localStorage.setItem(
@@ -1006,6 +1008,12 @@ describe("WorkbenchApp", () => {
     const debugToggle = container.querySelector(
       'input[name="other-debug-mode"]',
     ) as HTMLInputElement | null;
+    const showFpsToggle = container.querySelector(
+      'input[name="debug-show-fps"]',
+    ) as HTMLInputElement | null;
+    const showGestureTestWindowToggle = container.querySelector(
+      'input[name="debug-show-gesture-diagnostics-window"]',
+    ) as HTMLInputElement | null;
     const groupTitles = Array.from(
       dialog?.querySelectorAll(".settings-dialog-group-header h3") ?? [],
     ).map((element) => element.textContent);
@@ -1016,7 +1024,7 @@ describe("WorkbenchApp", () => {
     const themeOptionLabels = Array.from(themeSelect?.options ?? []).map((option) => option.textContent);
 
     expect(dialog).not.toBeNull();
-    expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他"]);
+    expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他", "调试"]);
     expect(groupDescriptions).toEqual([
       "语言、主题与全局界面偏好。",
       "图像输出与帧率表现相关设置。",
@@ -1024,6 +1032,7 @@ describe("WorkbenchApp", () => {
       "与鹰角操作模式附加行为相关的选项。",
       "编辑当前可自定义的快捷键设置。",
       "调试和附加能力开关。",
+      "FPS 与手势测试开关。当前版本只保存设置，不影响界面行为。",
     ]);
     expect(languageOptionLabels).toEqual(["中文(简体)", "English"]);
     expect(themeOptionLabels).toEqual(["Ayu Light", "Ayu Dark"]);
@@ -1036,6 +1045,8 @@ describe("WorkbenchApp", () => {
     expect(immediateMarqueeToggle?.checked).toBe(false);
     expect(immediateMarqueeToggle?.disabled).toBe(true);
     expect(debugToggle?.checked).toBe(true);
+    expect(showFpsToggle?.checked).toBe(true);
+    expect(showGestureTestWindowToggle?.checked).toBe(true);
 
     const closeButton = container.querySelector(
       ".settings-dialog-close",
@@ -1096,6 +1107,8 @@ describe("WorkbenchApp", () => {
         hypergryphOperationMode: true,
         hypergryphImmediateMove: true,
         hypergryphImmediateMarquee: false,
+        debugShowFps: false,
+        debugShowGestureDiagnosticsWindow: false,
       }),
     );
   });
@@ -1144,6 +1157,8 @@ describe("WorkbenchApp", () => {
         hypergryphOperationMode: true,
         hypergryphImmediateMove: true,
         hypergryphImmediateMarquee: false,
+        debugShowFps: false,
+        debugShowGestureDiagnosticsWindow: false,
       }),
     );
   });
@@ -1216,6 +1231,56 @@ describe("WorkbenchApp", () => {
         hypergryphOperationMode: true,
         hypergryphImmediateMove: true,
         hypergryphImmediateMarquee: true,
+        debugShowFps: false,
+        debugShowGestureDiagnosticsWindow: false,
+      }),
+    );
+  });
+
+  it("writes debug settings into AppSettings storage without applying them to the UI", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const settingsButton = container.querySelector(
+      ".toolbar-rail-utility .rail-button:last-child",
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      settingsButton?.click();
+    });
+
+    const showFpsToggle = container.querySelector(
+      'input[name="debug-show-fps"]',
+    ) as HTMLInputElement | null;
+    const showGestureTestWindowToggle = container.querySelector(
+      'input[name="debug-show-gesture-diagnostics-window"]',
+    ) as HTMLInputElement | null;
+
+    expect(showFpsToggle).not.toBeNull();
+    expect(showGestureTestWindowToggle).not.toBeNull();
+    expect(showFpsToggle?.checked).toBe(false);
+    expect(showGestureTestWindowToggle?.checked).toBe(false);
+
+    act(() => {
+      showFpsToggle?.click();
+      showGestureTestWindowToggle?.click();
+    });
+
+    expect(appHost.state.settings.debugShowFps).toBe(true);
+    expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(true);
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        locale: "zh-CN",
+        themeId: "ayu-light",
+        hypergryphOperationMode: true,
+        hypergryphImmediateMove: true,
+        hypergryphImmediateMarquee: false,
+        debugShowFps: true,
+        debugShowGestureDiagnosticsWindow: true,
       }),
     );
   });
@@ -1342,6 +1407,6 @@ describe("WorkbenchApp", () => {
 
     expect(dialog).not.toBeNull();
     expect(container.querySelector(".settings-dialog-sidebar")).toBeNull();
-    expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他"]);
+    expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他", "调试"]);
   });
 });

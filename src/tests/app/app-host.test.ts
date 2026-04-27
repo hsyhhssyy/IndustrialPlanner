@@ -18,7 +18,6 @@ import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
-import { resolveWorldGridCellPixelSize } from "@/shared/geometry/viewport-transform";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -74,16 +73,22 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(appHost.state.settings.debugShowFps).toBe(false);
+    expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(appHost.state.theme.name).toBe("Ayu Light");
     expect(appHost.internalState.settings.locale).toBe("zh-CN");
     expect(appHost.internalState.settings.themeId).toBe("ayu-light");
     expect(appHost.internalState.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(appHost.internalState.settings.debugShowFps).toBe(false);
+    expect(appHost.internalState.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(workspace.app?.state.settings.locale).toBe("zh-CN");
     expect(workspace.app?.state.settings.hypergryphOperationMode).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(workspace.app?.state.settings.debugShowFps).toBe(false);
+    expect(workspace.app?.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(workspace.app?.state.theme.id).toBe("ayu-light");
     expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
     expect(workspace.app?.state.screenProfile.deviceClass).toBe("desktop");
@@ -115,16 +120,22 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(appHost.state.settings.debugShowFps).toBe(false);
+    expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(appHost.state.theme.name).toBe("Ayu Light");
     expect(appHost.internalState.settings.locale).toBe("en-US");
     expect(appHost.internalState.settings.themeId).toBe("ayu-light");
     expect(appHost.internalState.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(appHost.internalState.settings.debugShowFps).toBe(false);
+    expect(appHost.internalState.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(workspace.app?.state.settings.locale).toBe("en-US");
     expect(workspace.app?.state.settings.hypergryphOperationMode).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(workspace.app?.state.settings.debugShowFps).toBe(false);
+    expect(workspace.app?.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(workspace.app?.state.theme.id).toBe("ayu-light");
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
     expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
@@ -191,6 +202,8 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(appHost.state.settings.debugShowFps).toBe(false);
+    expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(appHost.state.theme.name).toBe("Ayu Light");
     expect(document.documentElement.dataset.appTheme).toBe("ayu-light");
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
@@ -988,9 +1001,7 @@ function resolveClientPixelPointForGridCell(
   x: number;
   y: number;
 } {
-  const gridCellSize = resolveWorldGridCellPixelSize(
-    editorHost.state.viewport.gridSize,
-  );
+  const gridCellSize = editorHost.state.viewport.gridCellPixelSize;
 
   return {
     x:

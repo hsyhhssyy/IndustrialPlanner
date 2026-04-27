@@ -20,10 +20,6 @@ export function resolveViewportGridSize(value: number): number {
   return value;
 }
 
-export function resolveWorldGridCellPixelSize(gridSize: number): number {
-  return WORLD_GRID_CELL_PIXEL_SIZE * resolveViewportGridSize(gridSize);
-}
-
 export function resolveViewportClientRectCenter(rect: ViewportClientRectLike): {
   x: number;
   y: number;
@@ -38,7 +34,7 @@ export function resolveCompensatedViewportCenter(options: {
   previousClientRect: ViewportClientRectLike;
   nextClientRect: ViewportClientRectLike;
   previousViewportCenter: ViewportCenterLike;
-  gridSize: number;
+  gridCellPixelSize: number;
 }): ViewportCenterLike {
   const previousClientCenter = resolveViewportClientRectCenter(
     options.previousClientRect,
@@ -46,7 +42,7 @@ export function resolveCompensatedViewportCenter(options: {
   const nextClientCenter = resolveViewportClientRectCenter(
     options.nextClientRect,
   );
-  const gridCellSize = resolveWorldGridCellPixelSize(options.gridSize);
+  const gridCellSize = options.gridCellPixelSize;
 
   return {
     x:

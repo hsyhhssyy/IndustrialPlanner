@@ -15,6 +15,7 @@ import {
   resolveWorldGridStrokeStyle,
   resolveWorldGridLineAxes,
 } from "@/renderer/scene/render-scene-orchestrator"
+import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import type { RenderHost } from "@/renderer/renderer-host"
 
 describe("applyViewportSize", () => {
@@ -98,7 +99,7 @@ describe("resolveWorldEntitySpriteLayout", () => {
         x: 0,
         y: 0,
       },
-      gridSize: 1,
+      gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
     })
 
     expect(layout).toEqual({
@@ -149,7 +150,7 @@ describe("resolveWorldEntitySelectionOverlayLayouts", () => {
         x: 0,
         y: 0,
       },
-      gridSize: 1,
+      gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
     })
 
     expect(layouts).toHaveLength(1)
@@ -189,7 +190,7 @@ describe("resolveWorldEntitySelectionOverlayLayouts", () => {
         x: 0,
         y: 0,
       },
-      gridSize: 1,
+      gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
     })
 
     expect(layouts).toHaveLength(1)
@@ -221,7 +222,7 @@ describe("resolveMarqueeGridRectLayout", () => {
           x: 0,
           y: 0,
         },
-        gridSize: 1,
+        gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
       }),
     ).toEqual({
       x: 216,
@@ -250,7 +251,7 @@ describe("resolveMarqueeGridRectLayout", () => {
           x: 0,
           y: 0,
         },
-        gridSize: 1,
+        gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
       }),
     ).toBeNull()
   })
@@ -258,8 +259,8 @@ describe("resolveMarqueeGridRectLayout", () => {
 
 describe("resolveMarqueeGridRectStrokeStyle", () => {
   it("uses a white stroke with the same width as selection overlays", () => {
-    expect(resolveMarqueeGridRectStrokeStyle(1)).toEqual({
-      width: resolveWorldEntitySelectionStrokeWidth(1),
+    expect(resolveMarqueeGridRectStrokeStyle(WORLD_GRID_CELL_PIXEL_SIZE)).toEqual({
+      width: resolveWorldEntitySelectionStrokeWidth(WORLD_GRID_CELL_PIXEL_SIZE),
       color: 0xffffff,
     })
   })
@@ -296,7 +297,7 @@ describe("resolveWorldGridLineAxes", () => {
         x: 0,
         y: 0,
       },
-      gridSize: 1,
+      gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
     })
 
     const shiftedAxes = resolveWorldGridLineAxes({
@@ -310,7 +311,7 @@ describe("resolveWorldGridLineAxes", () => {
         x: 0.5,
         y: 0.5,
       },
-      gridSize: 1,
+      gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
     })
 
     expect(centeredAxes.vertical.slice(0, 3)).toEqual([8, 24, 40])
@@ -337,9 +338,9 @@ describe("resolveWorldGridStrokeStyle", () => {
 
 describe("resolveWorldEntitySelectionStrokeWidth", () => {
   it("scales with zoom and clamps to the configured range", () => {
-    expect(resolveWorldEntitySelectionStrokeWidth(0.25)).toBe(1)
-    expect(resolveWorldEntitySelectionStrokeWidth(1)).toBe(2)
-    expect(resolveWorldEntitySelectionStrokeWidth(3)).toBe(4)
+    expect(resolveWorldEntitySelectionStrokeWidth(WORLD_GRID_CELL_PIXEL_SIZE / 4)).toBe(1)
+    expect(resolveWorldEntitySelectionStrokeWidth(WORLD_GRID_CELL_PIXEL_SIZE)).toBe(2)
+    expect(resolveWorldEntitySelectionStrokeWidth(WORLD_GRID_CELL_PIXEL_SIZE * 3)).toBe(4)
   })
 })
 
@@ -348,7 +349,7 @@ describe("resolveWorldEntitySelectionStrokeStyle", () => {
     expect(
       resolveWorldEntitySelectionStrokeStyle({
         theme: AYU_DARK_THEME,
-        gridSize: 1,
+        gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
       }),
     ).toEqual({
       width: 2,
@@ -360,7 +361,7 @@ describe("resolveWorldEntitySelectionStrokeStyle", () => {
     expect(
       resolveWorldEntitySelectionStrokeStyle({
         theme: AYU_LIGHT_THEME,
-        gridSize: 2,
+        gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE * 2,
       }).color,
     ).toBe(0xffa500)
   })

@@ -1,5 +1,3 @@
-import { resolveWorldGridCellPixelSize } from "@/shared/geometry/viewport-transform";
-
 import type { EditorStateReadWrite } from "../state-impl";
 
 export function resolveGridCellAtClientPixelPoint(options: {
@@ -19,9 +17,7 @@ export function resolveGridCellAtClientPixelPoint(options: {
     return null;
   }
 
-  const gridCellSize = resolveWorldGridCellPixelSize(
-    options.viewportState.gridSize,
-  );
+  const gridCellSize = options.viewportState.gridCellPixelSize;
 
   if (gridCellSize <= 0) {
     return null;
@@ -67,9 +63,7 @@ export function resolveClientRectForGridCell(options: {
     return null;
   }
 
-  const gridCellSize = resolveWorldGridCellPixelSize(
-    options.viewportState.gridSize,
-  );
+  const gridCellSize = options.viewportState.gridCellPixelSize;
 
   if (gridCellSize <= 0) {
     return null;

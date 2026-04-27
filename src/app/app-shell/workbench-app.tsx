@@ -107,6 +107,34 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.hypergryphImmediateMove = nextImmediateMove;
         }),
       },
+      "debug-show-fps": {
+        readValue: () => appHost.state.settings.debugShowFps,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.debugShowFps === value) {
+            return;
+          }
+
+          appHost.internalState.settings.debugShowFps = value;
+        }),
+      },
+      "debug-show-gesture-diagnostics-window": {
+        readValue: () => appHost.state.settings.debugShowGestureDiagnosticsWindow,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.debugShowGestureDiagnosticsWindow === value) {
+            return;
+          }
+
+          appHost.internalState.settings.debugShowGestureDiagnosticsWindow = value;
+        }),
+      },
     },
   }));
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
