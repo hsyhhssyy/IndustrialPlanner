@@ -161,8 +161,15 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   }
 
   private syncBitmapTextureConfig(): void {
-    applyBitmapTextureConfig(this.body.texture, this.renderHost.internalState.textureConfig)
-    applyBitmapTextureConfig(this.previewMask.texture, this.renderHost.internalState.textureConfig)
+    const textureConfig = this.renderHost.internalState.textureConfig
+    const bitmapTextures = new Set([
+      this.body.texture,
+      this.previewMask.texture,
+    ])
+
+    for (const texture of bitmapTextures) {
+      applyBitmapTextureConfig(texture, textureConfig)
+    }
   }
 
   private syncPreviewTexture(): void {

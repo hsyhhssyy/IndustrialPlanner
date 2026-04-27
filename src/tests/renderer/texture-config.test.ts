@@ -82,9 +82,9 @@ describe("createRenderTextureConfig", () => {
         scaleLimit: 2,
         sampling: {
           scaleMode: "linear",
-          mipmap: false,
+          autoGenerateMipmaps: true,
           mipmapFilter: "linear",
-          maxAnisotropy: 1,
+          maxAnisotropy: 4,
         },
       },
       custom: {
@@ -112,7 +112,7 @@ describe("applyBitmapTextureConfig", () => {
     const texture = {
       source: {
         scaleMode: "nearest",
-        mipmap: true,
+        autoGenerateMipmaps: false,
         mipmapFilter: "nearest",
         style: {
           scaleMode: "nearest",
@@ -121,6 +121,7 @@ describe("applyBitmapTextureConfig", () => {
           update: vi.fn(),
         },
         update: vi.fn(),
+        updateMipmaps: vi.fn(),
       },
       update: vi.fn(),
     }
@@ -129,14 +130,15 @@ describe("applyBitmapTextureConfig", () => {
 
     expect(texture.source).toMatchObject({
       scaleMode: "linear",
-      mipmap: false,
+      autoGenerateMipmaps: true,
       mipmapFilter: "linear",
     })
     expect(texture.source.style).toMatchObject({
       scaleMode: "linear",
       mipmapFilter: "linear",
-      maxAnisotropy: 1,
+      maxAnisotropy: 4,
     })
+    expect(texture.source.updateMipmaps).toHaveBeenCalledTimes(1)
   })
 })
 

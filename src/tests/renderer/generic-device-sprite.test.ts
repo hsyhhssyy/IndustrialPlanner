@@ -217,10 +217,11 @@ describe("GenericDeviceSprite", () => {
     expect(attachedSprite.height).toBe(48)
     expect(attachedSprite.rotation).toBeCloseTo(Math.PI / 2)
     expect(resolvedTexture.source.scaleMode).toBe("linear")
-    expect(resolvedTexture.source.mipmap).toBe(false)
+    expect(resolvedTexture.source.autoGenerateMipmaps).toBe(true)
     expect(resolvedTexture.source.style.scaleMode).toBe("linear")
     expect(resolvedTexture.source.style.mipmapFilter).toBe("linear")
-    expect(resolvedTexture.source.style.maxAnisotropy).toBe(1)
+    expect(resolvedTexture.source.style.maxAnisotropy).toBe(4)
+    expect(resolvedTexture.source.updateMipmaps).toHaveBeenCalledTimes(1)
   })
 
   it("shows a masked animated scan-line overlay for preview devices", async () => {
@@ -446,7 +447,7 @@ function createLoadedTextureMock(id: string) {
     id,
     source: {
       scaleMode: "linear",
-      mipmap: true,
+      autoGenerateMipmaps: false,
       mipmapFilter: "nearest",
       style: {
         scaleMode: "nearest",
@@ -455,6 +456,7 @@ function createLoadedTextureMock(id: string) {
         update: vi.fn(),
       },
       update: vi.fn(),
+      updateMipmaps: vi.fn(),
     },
     update: vi.fn(),
   }

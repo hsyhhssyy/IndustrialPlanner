@@ -10,7 +10,8 @@ import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform
 const DEFAULT_BITMAP_TEXTURE_SCALE_LIMIT = 2
 const DEFAULT_BITMAP_TEXTURE_SCALE_MODE: SCALE_MODE = "linear"
 const DEFAULT_BITMAP_TEXTURE_MIPMAP_FILTER: SCALE_MODE = "linear"
-const DEFAULT_BITMAP_TEXTURE_MAX_ANISOTROPY = 1
+const DEFAULT_BITMAP_TEXTURE_AUTO_GENERATE_MIPMAPS = true
+const DEFAULT_BITMAP_TEXTURE_MAX_ANISOTROPY = 4
 
 export interface ScanLineRect {
   y: number;
@@ -19,7 +20,7 @@ export interface ScanLineRect {
 
 export interface RenderTextureSamplingStrategy {
   scaleMode: SCALE_MODE;
-  mipmap: boolean;
+  autoGenerateMipmaps: boolean;
   mipmapFilter: SCALE_MODE;
   maxAnisotropy: number;
 }
@@ -78,7 +79,7 @@ export function createRenderTextureConfig(options: {
       }),
       sampling: {
         scaleMode: DEFAULT_BITMAP_TEXTURE_SCALE_MODE,
-        mipmap: false,
+        autoGenerateMipmaps: DEFAULT_BITMAP_TEXTURE_AUTO_GENERATE_MIPMAPS,
         mipmapFilter: DEFAULT_BITMAP_TEXTURE_MIPMAP_FILTER,
         maxAnisotropy: DEFAULT_BITMAP_TEXTURE_MAX_ANISOTROPY,
       },
@@ -119,7 +120,7 @@ export function applyBitmapTextureConfig(
 ): Texture {
   return applyTextureSamplingOptions(texture, {
     scaleMode: textureConfig.bitmap.sampling.scaleMode,
-    mipmap: textureConfig.bitmap.sampling.mipmap,
+    autoGenerateMipmaps: textureConfig.bitmap.sampling.autoGenerateMipmaps,
     mipmapFilter: textureConfig.bitmap.sampling.mipmapFilter,
     maxAnisotropy: textureConfig.bitmap.sampling.maxAnisotropy,
   })
@@ -129,7 +130,7 @@ export function applyTextureSamplingOptions(
   texture: Texture,
   options: {
     scaleMode?: SCALE_MODE;
-    mipmap?: boolean;
+    autoGenerateMipmaps?: boolean;
     mipmapFilter?: SCALE_MODE;
     maxAnisotropy?: number;
     wrapMode?: WRAP_MODE;
@@ -139,7 +140,7 @@ export function applyTextureSamplingOptions(
   const source = (texture as Texture & {
     source?: {
       scaleMode?: SCALE_MODE;
-      mipmap?: boolean;
+      autoGenerateMipmaps?: boolean;
       mipmapFilter?: SCALE_MODE;
       wrapMode?: WRAP_MODE;
       repeatMode?: WRAP_MODE;
@@ -151,6 +152,7 @@ export function applyTextureSamplingOptions(
         update?: () => void;
       };
       update?: () => void;
+      updateMipmaps?: () => void;
     };
     update?: () => void;
   }).source
@@ -167,8 +169,8 @@ export function applyTextureSamplingOptions(
     }
   }
 
-  if (options.mipmap !== undefined) {
-    source.mipmap = options.mipmap
+  if (options.autoGenerateMipmaps !== undefined) {
+    source.autoGenerateMipmaps = options.autoGenerateMipmaps
   }
 
   if (options.mipmapFilter !== undefined) {
@@ -197,6 +199,9 @@ export function applyTextureSamplingOptions(
 
   source.style?.update?.()
   source.update?.()
+  if (source.autoGenerateMipmaps) {
+    source.updateMipmaps?.()
+  }
   ;(texture as Texture & { update?: () => void }).update?.()
 
   return texture

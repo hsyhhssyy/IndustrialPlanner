@@ -100,9 +100,9 @@ describe("createRenderHost", () => {
         scaleLimit: 2,
         sampling: {
           scaleMode: "linear",
-          mipmap: false,
+          autoGenerateMipmaps: true,
           mipmapFilter: "linear",
-          maxAnisotropy: 1,
+          maxAnisotropy: 4,
         },
       },
       custom: {
