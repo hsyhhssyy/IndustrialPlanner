@@ -156,6 +156,10 @@ describe("GenericDeviceSprite", () => {
           },
         },
       } as never,
+      time: {
+        nowMs: 1000,
+        deltaMs: 16.67,
+      },
     })
 
     expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(textureKeys.body)
@@ -245,6 +249,10 @@ describe("GenericDeviceSprite", () => {
           },
         },
       } as never,
+      time: {
+        nowMs: 1000,
+        deltaMs: 16.67,
+      },
     }
 
     sprite.syncLayout({
@@ -359,6 +367,10 @@ describe("GenericDeviceSprite", () => {
           },
         },
       } as never,
+      time: {
+        nowMs: 1000,
+        deltaMs: 16.67,
+      },
     }
 
     sprite.syncLayout({

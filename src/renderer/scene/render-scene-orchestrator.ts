@@ -40,6 +40,11 @@ interface RenderViewportState {
   gridCellPixelSize: number;
 }
 
+interface RenderFrameTimeState {
+  nowMs: number;
+  deltaMs: number;
+}
+
 export interface RenderSceneOrchestrator {
   destroy(): void;
 }
@@ -60,6 +65,7 @@ export function createRenderSceneOrchestrator(
     const worldEntities = readWorldEntities(renderHost)
     const marqueeGridRect = readMarqueeGridRect(renderHost)
     const theme = readAppTheme(renderHost)
+    const frameTime = readRenderFrameTime(renderHost)
 
     applyViewportSize(app, viewportState)
 
@@ -73,6 +79,7 @@ export function createRenderSceneOrchestrator(
         height: app.renderer.height,
       },
       theme,
+      frameTime,
     })
 
     syncWorldEntitySprites({
@@ -219,6 +226,13 @@ function readAppTheme(renderHost: RenderHost): AppTheme {
   return theme
 }
 
+function readRenderFrameTime(renderHost: RenderHost): RenderFrameTimeState {
+  return {
+    nowMs: resolveTickerTimeValue(renderHost.app.ticker.lastTime),
+    deltaMs: resolveTickerTimeValue(renderHost.app.ticker.deltaMS),
+  }
+}
+
 function resolveViewportAxisSize(
   value: number,
   fallback: number,
@@ -241,6 +255,14 @@ function resolveViewportCoordinate(value: number): number {
 function requireViewportGridCellPixelSize(value: number): number {
   if (!Number.isFinite(value) || value <= 0) {
     throw new Error("Renderer requires a positive viewport gridCellPixelSize.")
+  }
+
+  return value
+}
+
+function resolveTickerTimeValue(value: number): number {
+  if (!Number.isFinite(value) || value < 0) {
+    return 0
   }
 
   return value
@@ -394,6 +416,7 @@ function syncWorldEntitySprites(options: {
   entitySprites: Map<string, RenderSprite>;
   layers: RenderLayerMap;
   viewportState: RenderViewportState;
+  frameTime: RenderFrameTimeState;
   viewportBounds: {
     left: number;
     top: number;
@@ -435,6 +458,7 @@ function syncWorldEntitySprites(options: {
       {
         theme: options.theme,
         workspace: options.workspace,
+        time: options.frameTime,
       },
     )
     nextEntityIds.add(entity.id)

@@ -21,9 +21,15 @@ export interface RenderSpriteLayout {
   rotation: GridRotation;
 }
 
+export interface RenderSpriteTimeContext {
+  nowMs: number;
+  deltaMs: number;
+}
+
 export interface RenderSpriteSyncContext {
   theme: AppTheme;
   workspace: WorkspaceContract;
+  time: RenderSpriteTimeContext;
 }
 
 export interface RenderSprite {

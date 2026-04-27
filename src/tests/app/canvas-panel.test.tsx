@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { runInAction } from "mobx";
 import { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -101,6 +102,12 @@ class ResizeObserverMock {
   }
 }
 
+function enableGestureDiagnosticsWindow(appHost: ReturnType<typeof createAppHost>) {
+  runInAction(() => {
+    appHost.internalState.settings.debugShowGestureDiagnosticsWindow = true;
+  });
+}
+
 describe("CanvasPanel", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -189,6 +196,7 @@ describe("CanvasPanel", () => {
     const appHost = createAppHost(workspace);
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
+    enableGestureDiagnosticsWindow(appHost);
 
     act(() => {
       root.render(<CanvasPanel appHost={appHost} />);
@@ -254,6 +262,7 @@ describe("CanvasPanel", () => {
   it("collapses and expands diagnostics without routing toggle input into the gesture adapter", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
+    enableGestureDiagnosticsWindow(appHost);
 
     act(() => {
       root.render(<CanvasPanel appHost={appHost} />);
@@ -311,6 +320,7 @@ describe("CanvasPanel", () => {
   it("shows pointer entity id in the diagnostics window", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
+    enableGestureDiagnosticsWindow(appHost);
 
     act(() => {
       root.render(<CanvasPanel appHost={appHost} />);
@@ -340,6 +350,37 @@ describe("CanvasPanel", () => {
     );
   });
 
+  it("shows and hides diagnostics window from app settings", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.settings.debugShowGestureDiagnosticsWindow = false;
+    });
+
+    act(() => {
+      root.render(<CanvasPanel appHost={appHost} />);
+    });
+
+    expect(container.querySelector(".canvas-gesture-diagnostics")).toBeNull();
+
+    act(() => {
+      runInAction(() => {
+        appHost.internalState.settings.debugShowGestureDiagnosticsWindow = true;
+      });
+    });
+
+    expect(container.querySelector(".canvas-gesture-diagnostics")).not.toBeNull();
+
+    act(() => {
+      runInAction(() => {
+        appHost.internalState.settings.debugShowGestureDiagnosticsWindow = false;
+      });
+    });
+
+    expect(container.querySelector(".canvas-gesture-diagnostics")).toBeNull();
+  });
+
   it("pans the editor viewport on middle mouse drag", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
@@ -348,6 +389,7 @@ describe("CanvasPanel", () => {
       editorHost.actions,
       "moveViewportByClientPixelVector",
     );
+    enableGestureDiagnosticsWindow(appHost);
 
     editorHost.actions.setViewportClientRect({
       left: 100,

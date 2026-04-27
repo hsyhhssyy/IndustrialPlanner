@@ -274,5 +274,9 @@ function createContext(collections: Partial<Record<string, readonly string[]>>):
         },
       },
     } as never,
+    time: {
+      nowMs: 1000,
+      deltaMs: 16.67,
+    },
   }
 }

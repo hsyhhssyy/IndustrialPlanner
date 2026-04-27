@@ -2,13 +2,15 @@ import type { AppHost } from "@/app/app-host";
 import type { LongPressState } from "@/app/input/gesture-adapter";
 import type { GestureDiagnosticsSnapshot } from "@/app/input/gesture-diagnostics";
 import { useViewportResizeAdapter } from "@/app/app-shell/components/canvas-panel-files/viewport-resize-adapter";
+import { observer } from "mobx-react-lite";
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent, MouseEvent, PointerEvent, WheelEvent } from "react";
 
-export function CanvasPanel({ appHost }: { appHost: AppHost }) {
+export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const gestureAdapter = appHost.gestureAdapter;
   const gestureDiagnostics = appHost.gestureDiagnostics;
+  const showGestureDiagnosticsWindow = appHost.state.settings.debugShowGestureDiagnosticsWindow;
   const rendererHostRef = useRef<HTMLDivElement | null>(null);
   const viewportSurfaceRef = useRef<HTMLDivElement | null>(null);
   const renderCanvas = appHost.workspace.render?.canvas ?? null;
@@ -129,12 +131,14 @@ export function CanvasPanel({ appHost }: { appHost: AppHost }) {
           {renderCanvas ? <div className="renderer-host" ref={rendererHostRef} /> : null}
           {renderCanvas ? null : <div className="canvas-placeholder">{t("status.ready")}</div>}
           <CanvasTouchHoldIndicator state={longPressState} />
-          <CanvasGestureDiagnosticsOverlay snapshot={diagnosticsSnapshot} />
+          {showGestureDiagnosticsWindow ? (
+            <CanvasGestureDiagnosticsOverlay snapshot={diagnosticsSnapshot} />
+          ) : null}
         </div>
       </div>
     </main>
   );
-}
+});
 
 function CanvasGestureDiagnosticsOverlay({
   snapshot,
