@@ -10,9 +10,11 @@ const { applicationState, createRenderSceneOrchestrator, createCustomTexture } =
     renderer: {
       generateTexture: vi.fn(),
     },
+    destroy: vi.fn(),
   },
   createRenderSceneOrchestrator: vi.fn(),
   createCustomTexture: vi.fn(() => ({
+    destroy: vi.fn(),
     source: {
       style: {
         wrapMode: "repeat",
@@ -27,6 +29,7 @@ vi.mock("pixi.js", () => {
     public readonly canvas = applicationState.canvas
     public readonly stage = applicationState.stage
     public readonly renderer = applicationState.renderer
+    public readonly destroy = applicationState.destroy
   }
 
   return {
@@ -92,9 +95,9 @@ describe("createRenderHost", () => {
     expect(createCustomTexture).toHaveBeenCalledWith({
       key: CustomTextureKey.whiteScanLines,
       renderer: applicationState.renderer,
-      textureConfig: renderHost.internalState.textureConfig,
+      textureConfig: renderHost.textureManager.textureConfig,
     })
-    expect(renderHost.internalState.textureConfig).toEqual({
+    expect(renderHost.textureManager.textureConfig).toEqual({
       renderResolution: 3,
       bitmap: {
         scaleLimit: 2,
@@ -115,10 +118,50 @@ describe("createRenderHost", () => {
         ],
       },
     })
-    expect(renderHost.internalState.customTextures[CustomTextureKey.whiteScanLines]).toBe(
+    expect(renderHost.textureManager.getCustomTexture(CustomTextureKey.whiteScanLines)).toBe(
       createCustomTexture.mock.results[0]?.value,
     )
     expect(createRenderSceneOrchestrator).toHaveBeenCalledWith(renderHost)
     expect(workspace.render).toBe(renderHost)
+  })
+
+  it("owns orchestrator, texture manager, and app teardown from host.destroy", async () => {
+    const orchestratorDestroy = vi.fn()
+    createRenderSceneOrchestrator.mockReturnValueOnce({
+      destroy: orchestratorDestroy,
+    })
+
+    const workspace = {
+      state: {} as never,
+      registry: {} as never,
+      app: {
+        state: {
+          screenProfile: {
+            devicePixelRatio: 2,
+          },
+        },
+      },
+      editor: {
+        state: {
+          viewport: {
+            clientRect: {
+              width: 320,
+              height: 240,
+            },
+          },
+        },
+      },
+      render: null,
+      simulation: null,
+    } as unknown as WorkspaceContract
+
+    const renderHost = await createRenderHost(workspace)
+    const textureManagerDestroy = vi.spyOn(renderHost.textureManager, "destroy")
+
+    renderHost.destroy()
+
+    expect(orchestratorDestroy).toHaveBeenCalledTimes(1)
+    expect(textureManagerDestroy).toHaveBeenCalledTimes(1)
+    expect(applicationState.destroy).toHaveBeenCalledTimes(1)
   })
 })

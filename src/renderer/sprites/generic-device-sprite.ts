@@ -1,6 +1,7 @@
 import {
   Assets,
   Container,
+  Graphics,
   Sprite,
   Texture,
   TilingSprite,
@@ -8,7 +9,6 @@ import {
 
 import type { RenderHost } from "@/renderer/renderer-host"
 import { CustomTextureKey } from "@/renderer/texture/create-custom-texture"
-import { applyBitmapTextureConfig } from "@/renderer/texture/texture-config"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import {
   RenderSpriteLayout,
@@ -26,7 +26,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly body: Sprite
   private readonly previewEffectRoot: Container
   private readonly previewScanLineOverlay: TilingSprite
-  private readonly previewMask: Sprite
+  private readonly previewMask: Graphics
   private currentLayout: RenderSpriteLayout | null = null
   private disposed = false
   private isTextureReady = false
@@ -56,9 +56,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.previewScanLineOverlay.alpha = PREVIEW_SCAN_LINE_ALPHA
     this.previewScanLineOverlay.applyAnchorToTexture = true
     this.previewScanLineOverlay.tileRotation = PREVIEW_SCAN_LINE_ROTATION
-    this.previewMask = new Sprite(Texture.EMPTY)
-    this.previewMask.anchor.set(0.5)
-    this.previewMask.roundPixels = true
+    // 使用几何遮罩而不是设备贴图本身，避免 Pixi alpha mask 再乘一遍底图颜色，导致扫描线几乎不可见。
+    this.previewMask = new Graphics({ roundPixels: true })
     this.previewScanLineOverlay.mask = this.previewMask
     this.previewEffectRoot.addChild(this.previewScanLineOverlay)
     this.previewEffectRoot.addChild(this.previewMask)
@@ -70,8 +69,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       }
 
       this.body.texture = texture
-      this.previewMask.texture = texture
-      this.syncBitmapTextureConfig()
+      this.renderHost.textureManager.registerBitmapTexture(this.body.texture)
       this.isTextureReady = true
       this.body.visible = true
 
@@ -101,7 +99,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return
     }
 
-    this.syncBitmapTextureConfig()
     this.syncPreviewTexture()
     this.applyLayout(layout)
     this.applyPreviewAnimation()
@@ -147,7 +144,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     const previewOverlaySpan = resolvePreviewScanLineOverlaySpan(normalizedLayout)
 
     applyCenteredSpriteLayout(this.body, normalizedLayout)
-    applyCenteredSpriteLayout(this.previewMask, normalizedLayout)
+    applyCenteredRectMaskLayout(this.previewMask, normalizedLayout)
     applyCenteredSpriteLayout(this.previewScanLineOverlay, {
       ...normalizedLayout,
       width: previewOverlaySpan,
@@ -156,20 +153,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   }
 
   private resolvePreviewTexture(): Texture {
-    return this.renderHost.internalState.customTextures[CustomTextureKey.whiteScanLines]
+    return this.renderHost.textureManager.getCustomTexture(CustomTextureKey.whiteScanLines)
       ?? Texture.EMPTY
-  }
-
-  private syncBitmapTextureConfig(): void {
-    const textureConfig = this.renderHost.internalState.textureConfig
-    const bitmapTextures = new Set([
-      this.body.texture,
-      this.previewMask.texture,
-    ])
-
-    for (const texture of bitmapTextures) {
-      applyBitmapTextureConfig(texture, textureConfig)
-    }
   }
 
   private syncPreviewTexture(): void {
@@ -232,6 +217,32 @@ function applyCenteredSpriteLayout(target: {
   target.width = layout.width
   target.height = layout.height
   target.rotation = layout.rotation
+}
+
+function applyCenteredRectMaskLayout(
+  target: Graphics,
+  layout: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    rotation: number;
+  },
+): void {
+  target.x = layout.x
+  target.y = layout.y
+  target.rotation = layout.rotation
+  target.clear()
+  target
+    .rect(
+      -layout.width / 2,
+      -layout.height / 2,
+      layout.width,
+      layout.height,
+    )
+    .fill({
+      color: 0xffffff,
+    })
 }
 
 function loadTexture(texturePath: string): Promise<Texture> {

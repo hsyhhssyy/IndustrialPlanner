@@ -98,11 +98,48 @@ vi.mock("pixi.js", () => {
   }
 
   class MockGraphics extends MockContainer {
+    public readonly commands: Array<
+      | {
+        type: "rect";
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }
+      | {
+        type: "fill";
+        options: {
+          color: number;
+          alpha?: number;
+        };
+      }
+    > = []
+    public x = 0
+    public y = 0
+    public rotation = 0
+    public roundPixels = false
+    public visible = true
+    public alpha = 1
+
+    public constructor(options?: {
+      roundPixels?: boolean;
+    }) {
+      super()
+      this.roundPixels = options?.roundPixels ?? false
+    }
+
     public clear(): this {
+      this.commands.length = 0
       return this
     }
 
-    public rect(): this {
+    public rect(x: number, y: number, width: number, height: number): this {
+      this.commands.push({ type: "rect", x, y, width, height })
+      return this
+    }
+
+    public fill(options: { color: number; alpha?: number }): this {
+      this.commands.push({ type: "fill", options })
       return this
     }
 
@@ -131,7 +168,10 @@ import {
   resolvePreviewScanLineTileOffset,
 } from "@/renderer/sprites/generic-device-sprite"
 import { CustomTextureKey } from "@/renderer/texture/create-custom-texture"
-import { createRenderTextureConfig } from "@/renderer/texture/texture-config"
+import {
+  applyBitmapTextureConfig,
+  createRenderTextureConfig,
+} from "@/renderer/texture/texture-config"
 
 interface RenderedSpriteSnapshot {
   x: number;
@@ -150,6 +190,29 @@ interface RenderedSpriteSnapshot {
   };
   tileRotation?: number;
   applyAnchorToTexture?: boolean;
+}
+
+interface RenderedGraphicsSnapshot {
+  x: number;
+  y: number;
+  rotation: number;
+  roundPixels: boolean;
+  commands: Array<
+    | {
+      type: "rect";
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }
+    | {
+      type: "fill";
+      options: {
+        color: number;
+        alpha?: number;
+      };
+    }
+  >;
 }
 
 describe("GenericDeviceSprite", () => {
@@ -310,7 +373,7 @@ describe("GenericDeviceSprite", () => {
     expect(previewEffectRoot?.visible).toBe(true)
 
     const previewOverlay = previewEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
-    const previewMask = previewEffectRoot?.children?.[1] as RenderedSpriteSnapshot | undefined
+    const previewMask = previewEffectRoot?.children?.[1] as RenderedGraphicsSnapshot | undefined
 
     expect(previewOverlay).toMatchObject({
       x: 40,
@@ -330,17 +393,25 @@ describe("GenericDeviceSprite", () => {
     expect(previewMask).toMatchObject({
       x: 40,
       y: 40,
-      width: 32,
-      height: 48,
       rotation: Math.PI / 2,
+      roundPixels: true,
+      commands: [
+        {
+          type: "rect",
+          x: -16,
+          y: -24,
+          width: 32,
+          height: 48,
+        },
+        {
+          type: "fill",
+          options: {
+            color: 0xffffff,
+          },
+        },
+      ],
     })
     expect(previewOverlay?.mask).toBe(previewMask)
-    expect(previewMask?.texture).toMatchObject({
-      id: "device-texture",
-      source: {
-        scaleMode: "linear",
-      },
-    })
 
     renderHost.app.ticker.lastTime = 2000
     sprite.syncLayout({
@@ -353,18 +424,21 @@ describe("GenericDeviceSprite", () => {
 
     expect(previewOverlay?.tilePosition?.y).toBe(8)
 
-    renderHost.internalState.customTextures[CustomTextureKey.whiteScanLines] = {
+    renderHost.textureManager.customTextures[CustomTextureKey.whiteScanLines] = {
       id: "white-scan-lines-texture-hi-res",
     }
-    renderHost.internalState.textureConfig = {
-      ...renderHost.internalState.textureConfig,
+    renderHost.textureManager.textureConfig = {
+      ...renderHost.textureManager.textureConfig,
       bitmap: {
-        ...renderHost.internalState.textureConfig.bitmap,
+        ...renderHost.textureManager.textureConfig.bitmap,
         sampling: {
-          ...renderHost.internalState.textureConfig.bitmap.sampling,
+          ...renderHost.textureManager.textureConfig.bitmap.sampling,
           scaleMode: "nearest",
         },
       },
+    }
+    for (const texture of renderHost.textureManager.registeredBitmapTextures) {
+      applyBitmapTextureConfig(texture as never, renderHost.textureManager.textureConfig)
     }
     sprite.syncLayout({
       x: 16,
@@ -377,18 +451,6 @@ describe("GenericDeviceSprite", () => {
     expect(previewOverlay?.texture).toEqual({
       id: "white-scan-lines-texture-hi-res",
     })
-
-    const previewMaskTexture = previewMask?.texture as {
-      source?: {
-        scaleMode?: string;
-        style?: {
-          scaleMode?: string;
-        };
-      };
-    } | undefined
-
-    expect(previewMaskTexture?.source?.scaleMode).toBe("nearest")
-    expect(previewMaskTexture?.source?.style?.scaleMode).toBe("nearest")
   })
 })
 
@@ -425,19 +487,33 @@ function createLayerStub() {
 }
 
 function createRenderHostStub() {
+  const textureConfig = createRenderTextureConfig({
+    resolution: 3,
+  })
+  const customTextures: Record<string, unknown> = {
+    [CustomTextureKey.whiteScanLines]: { id: "white-scan-lines-texture" },
+  }
+  const registeredBitmapTextures = new Set<object>()
+
   return {
     app: {
       ticker: {
         lastTime: 1000,
       },
     },
-    internalState: {
-      textureConfig: createRenderTextureConfig({
-        resolution: 3,
-      }),
-      customTextures: {
-        [CustomTextureKey.whiteScanLines]: { id: "white-scan-lines-texture" },
+    textureManager: {
+      textureConfig,
+      customTextures,
+      registeredBitmapTextures,
+      registerBitmapTexture: (texture: object) => {
+        if (!registeredBitmapTextures.has(texture)) {
+          registeredBitmapTextures.add(texture)
+          applyBitmapTextureConfig(texture as never, textureConfig)
+        }
+
+        return texture
       },
+      getCustomTexture: (key: string) => customTextures[key] ?? null,
     },
   }
 }

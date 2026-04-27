@@ -3,14 +3,19 @@ import { WorkspaceContract } from "@/domain/contract/workspace-contract";
 
 import { Application } from "pixi.js";
 import { resolveRenderResolutionFromApp } from "./render-resolution";
-import { createRenderSceneOrchestrator } from "./scene/render-scene-orchestrator";
-import { createRenderStateReadWrite, type RenderStateReadWrite } from "./state-impl";
-import { createCustomTexture, CustomTextureKey } from "./texture/create-custom-texture";
+import {
+  createRenderSceneOrchestrator,
+  type RenderSceneOrchestrator,
+} from "./scene/render-scene-orchestrator";
+import {
+  createRenderTextureManager,
+  type RenderTextureManager,
+} from "./texture/texture-manager";
 
 export interface RenderHost extends RenderContract {
   workspace: WorkspaceContract;
   app: Application;
-  internalState: RenderStateReadWrite;
+  textureManager: RenderTextureManager;
 }
 
 interface RoundPixelsStageLike {
@@ -55,26 +60,29 @@ export async function createRenderHost(
   });
 
   (app.stage as unknown as RoundPixelsStageLike).roundPixels = true;
-  const internalState = createRenderStateReadWrite({
-    resolution: renderResolution,
-  });
-
-  internalState.customTextures[CustomTextureKey.whiteScanLines] = createCustomTexture({
-    key: CustomTextureKey.whiteScanLines,
+  const textureManager = createRenderTextureManager({
     renderer: app.renderer,
-    textureConfig: internalState.textureConfig,
+    app: workspace.app,
+    initialResolution: renderResolution,
   });
+  let orchestrator: RenderSceneOrchestrator | null = null;
 
   const host: RenderHost = {
     workspace,
     app,
-    internalState,
+    textureManager,
     canvas: app.canvas,
     queries: {},
     actions: {},
+    destroy: () => {
+      orchestrator?.destroy();
+      orchestrator = null;
+      textureManager.destroy();
+      app.destroy();
+    },
   };
 
-  createRenderSceneOrchestrator(host);
+  orchestrator = createRenderSceneOrchestrator(host);
 
   workspace.render = host;
 

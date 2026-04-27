@@ -6,4 +6,5 @@ export interface RenderContract {
   canvas: HTMLCanvasElement;
   queries: RenderQuery;
   actions: RenderAction;
+  destroy(): void;
 }
