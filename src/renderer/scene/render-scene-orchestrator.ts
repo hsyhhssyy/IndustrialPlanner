@@ -7,7 +7,7 @@ import {
   getGridFootprintCenterCells,
   getRotatedGridFootprint,
 } from "@/shared/geometry/grid"
-import type { GridRectSize } from "@/domain/types/grid"
+import type { GridRect, GridRectSize } from "@/domain/types/grid"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import {
   resolveViewportGridSize,
@@ -74,13 +74,16 @@ export function createRenderSceneOrchestrator(
 ): RenderSceneOrchestrator {
   const app = renderHost.app
   const layers = createRenderLayers()
+  const marqueeOverlayLayer = new Container()
   const worldGrid = new Graphics({ roundPixels: true })
+  const marqueeGridRectOverlay = new Graphics({ roundPixels: true })
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
   const entitySprites = new Map<string, RenderSprite>()
 
   const flushViewport = (): void => {
     const viewportState = readViewportState(renderHost)
     const worldEntities = readWorldEntities(renderHost)
+    const marqueeGridRect = readMarqueeGridRect(renderHost)
     const theme = readAppTheme(renderHost)
 
     applyViewportSize(app, viewportState)
@@ -112,10 +115,23 @@ export function createRenderSceneOrchestrator(
       },
       theme,
     })
+
+    syncWorldMarqueeGridRectOverlay({
+      overlay: marqueeGridRectOverlay,
+      marqueeGridRect,
+      viewportState,
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: app.renderer.width,
+        height: app.renderer.height,
+      },
+    })
   }
 
-  app.stage.addChild(layers.background, layers.entity, layers.overlay)
+  app.stage.addChild(layers.background, layers.entity, layers.overlay, marqueeOverlayLayer)
   layers.background.addChild(worldGrid)
+  marqueeOverlayLayer.addChild(marqueeGridRectOverlay)
   app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
 
   const host: RenderSceneOrchestrator = {
@@ -130,6 +146,7 @@ export function createRenderSceneOrchestrator(
       layers.background.destroy({ children: true })
       layers.entity.destroy({ children: true })
       layers.overlay.destroy({ children: true })
+      marqueeOverlayLayer.destroy({ children: true })
     },
   }
 
@@ -222,6 +239,15 @@ function readWorldEntities(renderHost: RenderHost): readonly WorldEntity[] {
   }
 
   return editor.queries.listEntities()
+}
+
+function readMarqueeGridRect(renderHost: RenderHost): GridRect | null {
+  const editor = renderHost.workspace.editor
+  if (editor === null) {
+    return null
+  }
+
+  return editor.state.marqueeGridRect
 }
 
 function readAppTheme(renderHost: RenderHost): AppTheme {
@@ -444,6 +470,42 @@ function syncWorldEntitySprites(options: {
   }
 }
 
+function syncWorldMarqueeGridRectOverlay(options: {
+  overlay: Graphics;
+  marqueeGridRect: GridRect | null;
+  viewportState: RenderViewportState;
+  viewportBounds: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+}): void {
+  options.overlay.clear()
+
+  if (options.marqueeGridRect === null) {
+    return
+  }
+
+  const layout = resolveMarqueeGridRectLayout({
+    gridRect: options.marqueeGridRect,
+    viewportBounds: options.viewportBounds,
+    viewportCenter: {
+      x: options.viewportState.centerX,
+      y: options.viewportState.centerY,
+    },
+    gridSize: options.viewportState.gridSize,
+  })
+
+  if (layout === null) {
+    return
+  }
+
+  options.overlay
+    .rect(layout.x, layout.y, layout.width, layout.height)
+    .stroke(resolveMarqueeGridRectStrokeStyle(options.viewportState.gridSize))
+}
+
 export function resolveWorldEntitySelectionStrokeStyle(options: {
   theme: AppTheme;
   gridSize: number;
@@ -457,6 +519,16 @@ export function resolveWorldEntitySelectionStrokeStyle(options: {
       options.theme,
       options.theme.renderer.worldEntitySelectionStrokeColorKey,
     ),
+  }
+}
+
+export function resolveMarqueeGridRectStrokeStyle(gridSize: number): {
+  width: number;
+  color: number;
+} {
+  return {
+    width: resolveWorldEntitySelectionStrokeWidth(gridSize),
+    color: 0xffffff,
   }
 }
 
@@ -528,6 +600,47 @@ export function resolveWorldEntitySelectionOverlayLayouts(options: {
   return layouts
 }
 
+export function resolveMarqueeGridRectLayout(options: {
+  gridRect: GridRect;
+  viewportBounds: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  viewportCenter: {
+    x: number;
+    y: number;
+  };
+  gridSize: number;
+}): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} | null {
+  if (!isValidMarqueeGridRect(options.gridRect)) {
+    return null
+  }
+
+  const gridCellSize = resolveWorldGridCellPixelSize(options.gridSize)
+  const worldOriginX =
+    options.viewportBounds.left
+    + options.viewportBounds.width / 2
+    - options.viewportCenter.x * gridCellSize
+  const worldOriginY =
+    options.viewportBounds.top
+    + options.viewportBounds.height / 2
+    - options.viewportCenter.y * gridCellSize
+
+  return {
+    x: worldOriginX + options.gridRect.x * gridCellSize,
+    y: worldOriginY + options.gridRect.y * gridCellSize,
+    width: options.gridRect.width * gridCellSize,
+    height: options.gridRect.height * gridCellSize,
+  }
+}
+
 export function resolveWorldEntitySpriteLayout(options: {
   entity: WorldEntity;
   footprint: GridRectSize;
@@ -570,4 +683,13 @@ export function resolveWorldEntitySpriteLayout(options: {
     height,
     rotation: options.entity.rotation,
   }
+}
+
+function isValidMarqueeGridRect(gridRect: GridRect): boolean {
+  return Number.isFinite(gridRect.x)
+    && Number.isFinite(gridRect.y)
+    && Number.isFinite(gridRect.width)
+    && Number.isFinite(gridRect.height)
+    && gridRect.width > 0
+    && gridRect.height > 0
 }

@@ -11,6 +11,7 @@ import {
   type EntityCollectionType as EntityCollectionTypeValue,
 } from "@/domain/state/types";
 import type { ClientPixelRect } from "@/domain/types/client-pixel";
+import type { GridRect } from "@/domain/types/grid";
 
 import type { DraftEntity } from "./draft-entity";
 
@@ -82,6 +83,7 @@ function createEntityCollection(
 
 export interface EditorStateReadWrite extends EditorState {
   viewport: EditorViewportStateReadWrite;
+  marqueeGridRect: GridRect | null;
   drafts: DraftEntity[];
   collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite>;
 
@@ -111,6 +113,7 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
     },
     gridSize: DEFAULT_VIEWPORT_GRID_SIZE,
   };
+  marqueeGridRect: GridRect | null = null;
 
   drafts: DraftEntity[] = [];
   collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite> = {

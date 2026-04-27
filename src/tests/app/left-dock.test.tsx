@@ -170,6 +170,9 @@ describe("Left dock panel switching", () => {
     expect(toolbarGroups[1]?.querySelector('[aria-label="保存蓝图"]')).not.toBeNull();
     expect(toolbarGroups[1]?.querySelector('[aria-label="复制"]')).not.toBeNull();
     expect(toolbarGroups[1]?.querySelector('[aria-label="删除"]')).not.toBeNull();
+    expect(toolbarGroups[1]?.querySelector('[aria-label="保存蓝图"] svg')?.getAttribute("data-workbench-icon")).toBe("xx-save-blueprint");
+    expect(toolbarGroups[1]?.querySelector('[aria-label="复制"] svg')?.getAttribute("data-workbench-icon")).toBe("xx-copy");
+    expect(toolbarGroups[1]?.querySelector('[aria-label="删除"] svg')?.getAttribute("data-workbench-icon")).toBe("xx-delete");
     expect(container.textContent).toContain("放置模式");
     expect(visiblePanel).not.toBeNull();
 

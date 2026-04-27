@@ -5,6 +5,8 @@ import { AYU_DARK_THEME, AYU_LIGHT_THEME } from "@/app/theme"
 import { createRegistryContract } from "@/registry"
 import {
   applyViewportSize,
+  resolveMarqueeGridRectLayout,
+  resolveMarqueeGridRectStrokeStyle,
   resolveGenericDeviceSpriteTexturePath,
   resolveWorldEntitySelectionOverlayLayouts,
   resolveWorldEntitySelectionStrokeStyle,
@@ -195,6 +197,70 @@ describe("resolveWorldEntitySelectionOverlayLayouts", () => {
       width: 16,
       height: 16,
       rotation: 0,
+    })
+  })
+})
+
+describe("resolveMarqueeGridRectLayout", () => {
+  it("projects marquee grid rects into viewport space", () => {
+    expect(
+      resolveMarqueeGridRectLayout({
+        gridRect: {
+          x: 1,
+          y: 2,
+          width: 3,
+          height: 2,
+        },
+        viewportBounds: {
+          left: 0,
+          top: 0,
+          width: 400,
+          height: 400,
+        },
+        viewportCenter: {
+          x: 0,
+          y: 0,
+        },
+        gridSize: 1,
+      }),
+    ).toEqual({
+      x: 216,
+      y: 232,
+      width: 48,
+      height: 32,
+    })
+  })
+
+  it("returns null for invalid marquee grid rects", () => {
+    expect(
+      resolveMarqueeGridRectLayout({
+        gridRect: {
+          x: 1,
+          y: 2,
+          width: 0,
+          height: 2,
+        },
+        viewportBounds: {
+          left: 0,
+          top: 0,
+          width: 400,
+          height: 400,
+        },
+        viewportCenter: {
+          x: 0,
+          y: 0,
+        },
+        gridSize: 1,
+      }),
+    ).toBeNull()
+  })
+})
+
+describe("resolveMarqueeGridRectStrokeStyle", () => {
+  it("uses a white stroke with the same width as selection overlays", () => {
+    expect(resolveMarqueeGridRectStrokeStyle(1)).toEqual({
+      width: resolveWorldEntitySelectionStrokeWidth(1),
+      color: 0xffffff,
     })
   })
 })

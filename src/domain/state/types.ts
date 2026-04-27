@@ -5,7 +5,7 @@ import type { AppLocale } from "@/shared/i18n/messages";
 import type { ScreenProfile } from "./screen-profile";
 import type { AppTheme, AppThemeId } from "./theme";
 import type { ClientPixelRect } from "../types/client-pixel";
-import type { GridFloatPoint } from "../types/grid";
+import type { GridFloatPoint, GridRect } from "../types/grid";
 
 export interface EntityCollection extends ReadonlyArray<string> {
   contains(entityId: string): boolean;
@@ -40,6 +40,7 @@ export interface EditorViewportState {
 export interface EditorState {
 
   readonly viewport: EditorViewportState;
+  readonly marqueeGridRect: GridRect | null;
 
   readonly collections: EntityCollections;
 }

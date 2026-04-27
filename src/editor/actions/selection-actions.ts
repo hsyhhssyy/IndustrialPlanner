@@ -66,6 +66,11 @@ export function createEditorSelectionActions({
   return {
     clearCollection: (collectionType) => {
       resolveCollection(collectionType).replace([]);
+
+      if (collectionType === EntityCollectionType.marquee
+        || collectionType === EntityCollectionType.reverseMarquee) {
+        state.marqueeGridRect = null;
+      }
     },
     addToCollection: ({ collectionType, entityId }) => {
       addEntityIdToCollection(collectionType, entityId);
@@ -85,6 +90,7 @@ export function createEditorSelectionActions({
 
       if (!isValidGridRect(gridRect)) {
         marquee.replace([]);
+        state.marqueeGridRect = null;
         return;
       }
 
@@ -101,6 +107,7 @@ export function createEditorSelectionActions({
         .map((entity) => entity.id);
 
       marquee.replace(nextEntityIds);
+      state.marqueeGridRect = { ...gridRect };
     },
     applyMarquee: () => {
       const marquee = resolveCollection(EntityCollectionType.marquee);
@@ -123,10 +130,12 @@ export function createEditorSelectionActions({
       }
 
       reverseMarquee.replace([]);
+      state.marqueeGridRect = null;
     },
     cancelMarquee: () => {
       resolveCollection(EntityCollectionType.marquee).replace([]);
       resolveCollection(EntityCollectionType.reverseMarquee).replace([]);
+      state.marqueeGridRect = null;
     },
     moveCollectionTo: ({ collectionType, startGridPoint, endGridPoint }) => {
       const gridVector = resolveGridVector({

@@ -39,6 +39,9 @@ export function createEditorHost(
 
   const publicState: EditorContract["state"] = {
     viewport: editorState.viewport,
+    get marqueeGridRect() {
+      return editorState.marqueeGridRect;
+    },
     collections: editorState.collections,
   };
 

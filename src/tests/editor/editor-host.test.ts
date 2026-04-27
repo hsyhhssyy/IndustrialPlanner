@@ -426,6 +426,12 @@ describe("createEditorHost", () => {
       "dummy-entity-1",
       "draft-only",
     ]);
+    expect(editorHost.state.marqueeGridRect).toEqual({
+      x: 9,
+      y: 8,
+      width: 4,
+      height: 2,
+    });
 
     editorHost.actions.setMarqueeRange(EntityCollectionType.reverseMarquee, {
       x: 9,
@@ -437,6 +443,12 @@ describe("createEditorHost", () => {
     expect(
       editorHost.state.collections[EntityCollectionType.reverseMarquee],
     ).toEqual(["dummy-entity-3"]);
+    expect(editorHost.state.marqueeGridRect).toEqual({
+      x: 9,
+      y: 4,
+      width: 4,
+      height: 1,
+    });
 
     editorHost.actions.setMarqueeRange(EntityCollectionType.marquee, {
       x: 9,
@@ -453,6 +465,7 @@ describe("createEditorHost", () => {
     expect(
       editorHost.state.collections[EntityCollectionType.reverseMarquee],
     ).toEqual([]);
+    expect(editorHost.state.marqueeGridRect).toBeNull();
   });
 
   it("applies marquee additions, removes reverse marquee entities, and clears both collections", () => {
@@ -496,6 +509,12 @@ describe("createEditorHost", () => {
       collectionType: EntityCollectionType.reverseMarquee,
       entityId: "missing-entity",
     });
+    editorHost.internalState.marqueeGridRect = {
+      x: 3,
+      y: 4,
+      width: 2,
+      height: 2,
+    };
 
     editorHost.actions.applyMarquee();
 
@@ -507,6 +526,7 @@ describe("createEditorHost", () => {
     expect(
       editorHost.state.collections[EntityCollectionType.reverseMarquee],
     ).toEqual([]);
+    expect(editorHost.state.marqueeGridRect).toBeNull();
   });
 
   it("creates move operation ghost entities and preview drafts from the current selection", () => {

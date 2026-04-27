@@ -15,6 +15,8 @@ import type {
 const DEFAULT_COLLECTION_SYNC_ORDER: readonly EntityCollectionTypeValue[] = [
   EntityCollectionType.ghost,
   EntityCollectionType.preview,
+  EntityCollectionType.marquee,
+  EntityCollectionType.reverseMarquee,
   EntityCollectionType.selection,
 ];
 
@@ -55,9 +57,11 @@ export abstract class BaseRenderSprite implements RenderSprite {
     this.syncSpriteLayout(layout, context);
     this.resetCollectionOverlay(layout, context);
 
-    for (const collectionType of this.resolveCollectionSyncOrder(context)) {
-      this.syncCollectionOverlay(collectionType, layout, context);
-    }
+    this.syncCollectionOverlay(
+      this.resolveCurrentCollectionOverlayTypes(context),
+      layout,
+      context,
+    );
 
     this.afterSyncLayout(layout, context);
   }
@@ -96,26 +100,28 @@ export abstract class BaseRenderSprite implements RenderSprite {
   }
 
   protected syncCollectionOverlay(
-    collectionType: EntityCollectionTypeValue,
+    collectionTypes: readonly EntityCollectionTypeValue[],
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
-    if (!this.isCurrentEntityInCollection(collectionType, context)) {
-      return;
+    const activeCollectionTypeSet = new Set(collectionTypes);
+
+    if (activeCollectionTypeSet.has(EntityCollectionType.ghost)) {
+      this.drawDefaultGhostOverlay(layout, context);
     }
 
-    switch (collectionType) {
-      case EntityCollectionType.ghost:
-        this.syncGhostCollectionOverlay(layout, context);
-        return;
-      case EntityCollectionType.preview:
-        this.syncPreviewCollectionOverlay(layout, context);
-        return;
-      case EntityCollectionType.selection:
-        this.syncSelectionCollectionOverlay(layout, context);
-        return;
-      default:
-        return;
+    if (activeCollectionTypeSet.has(EntityCollectionType.preview)) {
+      this.drawDefaultPreviewOverlay(layout, context);
+    }
+
+    if (
+      activeCollectionTypeSet.has(EntityCollectionType.marquee)
+      || (
+        activeCollectionTypeSet.has(EntityCollectionType.selection)
+        && !activeCollectionTypeSet.has(EntityCollectionType.reverseMarquee)
+      )
+    ) {
+      this.drawDefaultSelectionOverlay(layout, context);
     }
   }
 
@@ -129,7 +135,7 @@ export abstract class BaseRenderSprite implements RenderSprite {
 
   protected onDestroy(): void {}
 
-  protected syncGhostCollectionOverlay(
+  protected drawDefaultGhostOverlay(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
@@ -139,7 +145,7 @@ export abstract class BaseRenderSprite implements RenderSprite {
     this.setAllRootAlpha(DEFAULT_GHOST_ROOT_ALPHA);
   }
 
-  protected syncPreviewCollectionOverlay(
+  protected drawDefaultPreviewOverlay(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
@@ -150,7 +156,7 @@ export abstract class BaseRenderSprite implements RenderSprite {
     });
   }
 
-  protected syncSelectionCollectionOverlay(
+  protected drawDefaultSelectionOverlay(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
@@ -166,6 +172,14 @@ export abstract class BaseRenderSprite implements RenderSprite {
   ): readonly EntityCollectionTypeValue[] {
     void context;
     return DEFAULT_COLLECTION_SYNC_ORDER;
+  }
+
+  private resolveCurrentCollectionOverlayTypes(
+    context: RenderSpriteSyncContext,
+  ): readonly EntityCollectionTypeValue[] {
+    return this.resolveCollectionSyncOrder(context).filter((collectionType) =>
+      this.isCurrentEntityInCollection(collectionType, context),
+    );
   }
 
   protected getRootOfLayer(layerId: RenderLayerId): Container {
