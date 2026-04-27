@@ -11,6 +11,8 @@ import {
 import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
 import { isMobilePortraitScreenProfile } from "@/shared/browser/screen-profile";
 
+const SETTINGS_DIALOG_SECTION_SCROLL_OFFSET = 10;
+
 interface SettingsDialogProps {
   appHost: AppHost;
   controller: WorkbenchSettingsDialogController;
@@ -21,6 +23,7 @@ export const SettingsDialog = observer(function SettingsDialog({
   controller,
 }: SettingsDialogProps) {
   const t = appHost.actions.translate;
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const sectionRefs = useRef(new Map<SettingsGroupId, HTMLElement>());
   const [capturingKeybindingId, setCapturingKeybindingId] = useState<string | null>(null);
   const isMobilePortrait = isMobilePortraitScreenProfile(appHost.state.screenProfile);
@@ -86,12 +89,16 @@ export const SettingsDialog = observer(function SettingsDialog({
       return;
     }
 
+    const contentElement = contentRef.current;
     const selectedSection = sectionRefs.current.get(controller.selectedGroupId);
-    if (typeof selectedSection?.scrollIntoView !== "function") {
+    if (contentElement === null || selectedSection === undefined) {
       return;
     }
 
-    selectedSection.scrollIntoView({ block: "start" });
+    scrollSettingsDialogContentToSection({
+      contentElement,
+      selectedSection,
+    });
   }, [controller.isOpen, controller.selectedGroupId, isMobilePortrait]);
 
   if (!controller.isOpen) {
@@ -167,7 +174,7 @@ export const SettingsDialog = observer(function SettingsDialog({
               </div>
             </aside>
           )}
-          <div className="settings-dialog-content">
+          <div className="settings-dialog-content" ref={contentRef}>
             {WORKBENCH_SETTINGS_GROUPS.map((group) => (
               <section
                 className="settings-dialog-group-section"
@@ -225,6 +232,27 @@ export const SettingsDialog = observer(function SettingsDialog({
     </div>
   );
 });
+
+function scrollSettingsDialogContentToSection(options: {
+  contentElement: HTMLDivElement;
+  selectedSection: HTMLElement;
+}): void {
+  const { contentElement, selectedSection } = options;
+  const contentRect = contentElement.getBoundingClientRect();
+  const sectionRect = selectedSection.getBoundingClientRect();
+  const nextScrollTop = Math.max(
+    0,
+    contentElement.scrollTop + sectionRect.top - contentRect.top - SETTINGS_DIALOG_SECTION_SCROLL_OFFSET,
+  );
+
+  if (typeof contentElement.scrollTo === "function") {
+    contentElement.scrollTo({ top: nextScrollTop });
+
+    return;
+  }
+
+  contentElement.scrollTop = nextScrollTop;
+}
 
 function renderSettingControl(options: {
   controller: WorkbenchSettingsDialogController;
