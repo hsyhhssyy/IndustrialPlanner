@@ -20,9 +20,11 @@ import {
 } from "pixi.js"
 import { resolveRenderResolutionFromApp } from "../render-resolution"
 import type { RenderHost } from "../renderer-host"
+import { updateRenderTextureConfig } from "../state-impl"
 
 import { BeltStraightSprite } from "../sprites/belt-straight-sprite"
 import { GenericDeviceSprite } from "../sprites/generic-device-sprite"
+import { createCustomTexture, CustomTextureKey } from "../texture/create-custom-texture"
 import {
   RenderLayerMap,
   RenderSprite,
@@ -87,6 +89,7 @@ export function createRenderSceneOrchestrator(
     const theme = readAppTheme(renderHost)
 
     applyViewportSize(app, viewportState)
+    syncTextureConfig(renderHost, viewportState.resolution)
 
     syncWorldGridBackground({
       background: worldGrid,
@@ -101,6 +104,7 @@ export function createRenderSceneOrchestrator(
     })
 
     syncWorldEntitySprites({
+      renderHost,
       workspace: renderHost.workspace,
       entities: worldEntities,
       entityDefinitionMap,
@@ -162,6 +166,7 @@ function createRenderLayers(): RenderLayerMap {
 }
 
 function createSpriteForDefinition(
+  renderHost: RenderHost,
   entityId: string,
   definition: EntityDefinition,
 ): RenderSprite | null {
@@ -174,7 +179,7 @@ function createSpriteForDefinition(
     return null
   }
 
-  return new GenericDeviceSprite(entityId, texturePath)
+  return new GenericDeviceSprite(entityId, texturePath, renderHost)
 }
 
 export function applyViewportSize(
@@ -198,6 +203,24 @@ export function applyViewportSize(
     viewportSize.height,
     viewportSize.resolution,
   )
+}
+
+function syncTextureConfig(
+  renderHost: RenderHost,
+  resolution: number,
+): void {
+  if (!updateRenderTextureConfig({
+    state: renderHost.internalState,
+    resolution,
+  })) {
+    return
+  }
+
+  renderHost.internalState.customTextures[CustomTextureKey.whiteScanLines] = createCustomTexture({
+    key: CustomTextureKey.whiteScanLines,
+    renderer: renderHost.app.renderer,
+    textureConfig: renderHost.internalState.textureConfig,
+  })
 }
 
 function readViewportState(renderHost: RenderHost): RenderViewportState {
@@ -408,6 +431,7 @@ function resolveWorldGridAxisPositions(options: {
 }
 
 function syncWorldEntitySprites(options: {
+  renderHost: RenderHost;
   workspace: RenderHost["workspace"];
   entities: readonly WorldEntity[];
   entityDefinitionMap: Map<string, EntityDefinition>;
@@ -432,7 +456,7 @@ function syncWorldEntitySprites(options: {
 
     let sprite: RenderSprite | null = options.entitySprites.get(entity.id) ?? null
     if (!sprite) {
-      sprite = createSpriteForDefinition(entity.id, definition)
+      sprite = createSpriteForDefinition(options.renderHost, entity.id, definition)
       if (sprite === null) {
         continue
       }

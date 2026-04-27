@@ -113,9 +113,23 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
         case "touch dragstart":
           if (
             editor === null
-            || context.appHost.internalState.runtime.activeTool !== "marquee"
             || !event.longPress
           ) {
+            return { status: "ignored" };
+          }
+
+          if (
+            context.appHost.internalState.runtime.activeTool === "select"
+            && context.appHost.state.settings.hypergryphImmediateMarquee
+            && event.pointerEntity === null
+          ) {
+            enterMarqueeMode({
+              appHost: context.appHost,
+              source: "touch",
+            });
+          }
+
+          if (context.appHost.internalState.runtime.activeTool !== "marquee") {
             return { status: "ignored" };
           }
 
@@ -183,14 +197,6 @@ function handleUiButtonTap(options: {
       }
 
       exitMarqueeToSelect(options.appHost, options.editor);
-      return { status: "handled" };
-
-    case "canvas-right-dock-toolbar-button-move":
-      if (options.appHost.internalState.runtime.activeTool !== "marquee") {
-        return { status: "ignored" };
-      }
-
-      options.appHost.internalActions.setActiveTool("move");
       return { status: "handled" };
 
     case TOGGLE_REVERSE_MARQUEE_ON:

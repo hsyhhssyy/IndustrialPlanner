@@ -4,10 +4,13 @@ import { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { Application } from "pixi.js";
 import { resolveRenderResolutionFromApp } from "./render-resolution";
 import { createRenderSceneOrchestrator } from "./scene/render-scene-orchestrator";
+import { createRenderStateReadWrite, type RenderStateReadWrite } from "./state-impl";
+import { createCustomTexture, CustomTextureKey } from "./texture/create-custom-texture";
 
 export interface RenderHost extends RenderContract {
   workspace: WorkspaceContract;
   app: Application;
+  internalState: RenderStateReadWrite;
 }
 
 interface RoundPixelsStageLike {
@@ -39,6 +42,7 @@ export async function createRenderHost(
 
   const app = new Application();
   const { clientRect } = editor.state.viewport;
+  const renderResolution = resolveRenderResolutionFromApp(workspace.app);
 
   await app.init({
     width: resolveViewportAxisSize(clientRect.width, DEFAULT_VIEWPORT_WIDTH),
@@ -46,15 +50,25 @@ export async function createRenderHost(
     backgroundAlpha: 0,
     antialias: true,
     autoDensity: true,
-    resolution: resolveRenderResolutionFromApp(workspace.app),
+    resolution: renderResolution,
     preference: "webgl",
   });
 
   (app.stage as unknown as RoundPixelsStageLike).roundPixels = true;
+  const internalState = createRenderStateReadWrite({
+    resolution: renderResolution,
+  });
+
+  internalState.customTextures[CustomTextureKey.whiteScanLines] = createCustomTexture({
+    key: CustomTextureKey.whiteScanLines,
+    renderer: app.renderer,
+    textureConfig: internalState.textureConfig,
+  });
 
   const host: RenderHost = {
     workspace,
     app,
+    internalState,
     canvas: app.canvas,
     queries: {},
     actions: {},

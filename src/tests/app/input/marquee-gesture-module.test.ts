@@ -75,6 +75,60 @@ describe("createHypergryphMarqueeGestureModule", () => {
     );
   });
 
+  it("starts immediate touch marquee from empty select long-press drag start", () => {
+    const { context, appHost, editor } = createContext({
+      hypergryphImmediateMarquee: true,
+    });
+    const module = createHypergryphMarqueeGestureModule();
+
+    const result = module.handle(
+      touchDragStartEvent({
+        longPress: true,
+        pointerEntity: null,
+        position: { x: 6.4, y: 7.9 },
+      }),
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
+    expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
+      "canvas-right-dock-toolbar-button-exit",
+      "canvas-right-dock-toolbar-button-move",
+    ]);
+    expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
+      "canvas-top-left-corner-toolbar-button-toggle-pipe",
+      "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
+    ]);
+    expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
+    expect(appHost.internalState.runtime.marqueeAnchor).toEqual({ x: 6, y: 7 });
+    expect(appHost.internalState.runtime.isReverseMarquee).toBe(false);
+    expect(editor.actions.setMarqueeRange).toHaveBeenCalledWith(
+      EntityCollectionType.marquee,
+      { x: 6, y: 7, width: 1, height: 1 },
+    );
+  });
+
+  it("does not claim touch long-press drag from an entity when immediate marquee is enabled", () => {
+    const { context, appHost, editor } = createContext({
+      hypergryphImmediateMarquee: true,
+    });
+    const module = createHypergryphMarqueeGestureModule();
+
+    const result = module.handle(
+      touchDragStartEvent({
+        longPress: true,
+        pointerEntity: { id: "entity-1" } as WorldEntity,
+      }),
+      context,
+    );
+
+    expect(result).toEqual({ status: "ignored" });
+    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.runtime.marqueeAnchor).toBeNull();
+    expect(editor.actions.setMarqueeRange).not.toHaveBeenCalled();
+  });
+
   it("uses right mouse drag for reverse marquee and applies on drag end", () => {
     const { context, appHost, editor } = createContext({
       activeTool: "marquee",
@@ -172,13 +226,8 @@ describe("createHypergryphMarqueeGestureModule", () => {
     ).toEqual({ status: "handled" });
   });
 
-  it("handles exit and move right dock buttons without restoring the right dock", () => {
+  it("handles the exit right dock button without restoring the right dock", () => {
     const exitContext = createContext({
-      activeTool: "marquee",
-      marqueeAnchor: { x: 1, y: 1 },
-      rightDockOpen: false,
-    });
-    const moveContext = createContext({
       activeTool: "marquee",
       marqueeAnchor: { x: 1, y: 1 },
       rightDockOpen: false,
@@ -194,14 +243,6 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(exitContext.editor.actions.cancelMarquee).toHaveBeenCalledTimes(1);
     expect(exitContext.appHost.internalState.runtime.activeTool).toBe("select");
     expect(exitContext.appHost.internalState.workbench.rightDockOpen).toBe(false);
-
-    expect(
-      module.handle(
-        uiButtonTouchTapEvent("canvas-right-dock-toolbar-button-move"),
-        moveContext.context,
-      ),
-    ).toEqual({ status: "handled" });
-    expect(moveContext.appHost.internalState.runtime.activeTool).toBe("move");
   });
 });
 
@@ -399,6 +440,7 @@ function mouseDragEndEvent() {
 function touchDragStartEvent(options: {
   longPress: boolean;
   position?: GridPoint;
+  pointerEntity?: WorldEntity | null;
 }) {
   return {
     type: "touch dragstart" as const,
@@ -408,7 +450,7 @@ function touchDragStartEvent(options: {
     startPosition: options.position ?? { x: 2, y: 2 },
     activeTouchCount: 1,
     longPress: options.longPress,
-    pointerEntity: null,
+    pointerEntity: options.pointerEntity ?? null,
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };

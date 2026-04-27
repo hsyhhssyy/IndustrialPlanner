@@ -359,6 +359,7 @@ button.is-active {
 .settings-dialog-setting-copy p {
   font-size: 0.84rem;
   line-height: 1.35;
+  white-space: pre-line;
 }
 
 .settings-dialog-setting-control {

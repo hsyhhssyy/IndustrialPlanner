@@ -335,8 +335,48 @@ describe("WorkbenchApp", () => {
 
     expect(appHost.state.workbench.topBarCollapsed).toBe(false);
     expect(workbench?.style.getPropertyValue("--top-bar-height")).toBe("48px");
+    expect(workbench?.style.getPropertyValue("--bottom-bar-height")).toBe("28px");
     expect(container.querySelector(".workbench-floating-top-bar-controls")).toBeNull();
     expect(container.querySelector(".top-bar")).not.toBeNull();
+    expect(container.querySelector(".status-bar")).not.toBeNull();
+  });
+
+  it("keeps the bottom bar visible in phone landscape until the top bar is collapsed", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 844,
+      height: 390,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        leftDockOpen: true,
+        rightDockOpen: true,
+        leftDockWidth: 375,
+        topBarCollapsed: false,
+      }),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
+
+    expect(workbench).not.toBeNull();
+    expect(workbench?.style.getPropertyValue("--top-bar-height")).toBe("48px");
+    expect(workbench?.style.getPropertyValue("--bottom-bar-height")).toBe("28px");
+    expect(container.querySelector(".top-bar")).not.toBeNull();
+    expect(container.querySelector(".status-bar")).not.toBeNull();
+    expect(container.querySelector(".workbench-floating-top-bar-controls")).toBeNull();
   });
 
   it("forces the left dock to a fixed mobile width and disables resize handles in phone mode", () => {
@@ -1148,6 +1188,14 @@ describe("WorkbenchApp", () => {
     expect(immediateMoveToggle?.disabled).toBe(false);
     expect(immediateMarqueeToggle?.checked).toBe(false);
     expect(immediateMarqueeToggle?.disabled).toBe(false);
+
+    const immediateMarqueeDescription = immediateMarqueeToggle
+      ?.closest(".settings-dialog-setting-card")
+      ?.querySelector(".settings-dialog-setting-copy p");
+
+    expect(immediateMarqueeDescription?.textContent).toBe(
+      "鼠标模式：从画布空白处开始拖动时，立即开始框选。\n触控模式：从画布空白处长按并拖动时，立即开始框选。\n开启该选项会强制打开立即移动。",
+    );
 
     act(() => {
       if (immediateMarqueeToggle === null) {

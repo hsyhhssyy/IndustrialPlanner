@@ -120,6 +120,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const isMobileLandscape = isMobileLandscapeScreenProfile(screenProfile);
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
   const showFloatingTopBarControls = isMobileLandscape && topBarCollapsed;
+  const showBottomStatusBar = !showFloatingTopBarControls;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -148,7 +149,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     "--left-dock-width": leftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",
     "--right-dock-width": rightDockOpen ? `${DEFAULT_RIGHT_DOCK_WIDTH}px` : "0px",
     "--top-bar-height": showFloatingTopBarControls ? "0px" : "48px",
-    "--bottom-bar-height": isMobileLandscape ? "0px" : "28px",
+    "--bottom-bar-height": showBottomStatusBar ? "28px" : "0px",
   } as CSSProperties;
 
   return (
@@ -209,7 +210,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         />
       ) : null}
       {rightDockOpen ? <RightDock appHost={appHost} /> : null}
-      {isMobileLandscape ? null : <BottomStatusBar appHost={appHost} />}
+      {showBottomStatusBar ? <BottomStatusBar appHost={appHost} /> : null}
       <SettingsDialog appHost={appHost} controller={settingsDialog} />
     </div>
   );

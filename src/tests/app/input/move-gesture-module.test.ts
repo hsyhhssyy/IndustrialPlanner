@@ -114,6 +114,54 @@ describe("createHypergryphMoveGestureModule", () => {
     );
   });
 
+  it("enters move from the marquee right dock button and initializes the touch move ui", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "marquee",
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    const result = module.handle(
+      uiButtonTouchTapEvent("canvas-right-dock-toolbar-button-move"),
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
+    expect(appHost.internalState.runtime.activeTool).toBe("move");
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
+      MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST,
+      EntityCollectionType.preview,
+    );
+  });
+
+  it("primes the mouse anchor from the preview after entering move from the right dock button", () => {
+    const { context, appHost } = createContext({
+      activeTool: "marquee",
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    expect(
+      module.handle(
+        uiButtonMouseTapEvent("canvas-right-dock-toolbar-button-move"),
+        context,
+      ),
+    ).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+
+    const dragStartResult = module.handle(
+      mouseDragStartEvent({
+        originButton: 0,
+        pointerEntity: null,
+        position: { x: 5, y: 5 },
+      }),
+      context,
+    );
+
+    expect(dragStartResult).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 5, y: 5 });
+  });
+
   it("rolls back draft state and restores selection when entering move cannot create a preview", () => {
     const { context, editor, appHost, selection, preview } = createContext();
     const module = createHypergryphMoveGestureModule();
@@ -624,6 +672,37 @@ function uiButtonTouchTapEvent(uiButtonId: string) {
     type: "ui-button-touch-tap" as const,
     gestureId: "ui-touch-tap-1",
     uiButtonId,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function uiButtonMouseTapEvent(uiButtonId: string) {
+  return {
+    type: "ui-button-mouse-tap" as const,
+    gestureId: "ui-mouse-tap-1",
+    uiButtonId,
+    button: 0,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function mouseDragStartEvent(options: {
+  originButton: number;
+  pointerEntity: WorldEntity | null;
+  position: GridPoint;
+}) {
+  return {
+    type: "mouse dragstart" as const,
+    gestureId: "mouse-drag-1",
+    originButton: options.originButton,
+    button: options.originButton,
+    buttons: 1,
+    position: options.position,
+    startPosition: options.position,
+    longPress: false,
+    pointerEntity: options.pointerEntity,
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };

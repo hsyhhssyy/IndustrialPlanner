@@ -17,6 +17,8 @@ const MOVE_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-cancel",
 ] as const;
 
+const MOVE_ENTRY_BUTTON_ID = "canvas-right-dock-toolbar-button-move";
+
 export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHost> {
   return {
     id: "hypergryph-move-gesture",
@@ -46,12 +48,13 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             return { status: "handled" };
 
           case "mouse dragstart":
-            return (
-              event.originButton === 0
-              && context.appHost.internalState.runtime.moveAnchor !== null
-            )
-              ? { status: "handled" }
-              : { status: "ignored" };
+            return handleMoveMouseDragStart({
+              appHost: context.appHost,
+              editor,
+              entityDefinitionMap: createEntityDefinitionMap(context.appHost),
+              originButton: event.originButton,
+              position: event.position,
+            });
 
           case "touch dragstart":
             return handleMoveTouchDragStart({
@@ -158,6 +161,26 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
       }
 
       switch (event.type) {
+        case "ui-button-touch-tap":
+          return handleMoveEntryButtonTap({
+            appHost: context.appHost,
+            editor,
+            uiButtonId: event.uiButtonId,
+            source: "touch",
+          });
+
+        case "ui-button-mouse-tap":
+          if (event.button !== 0) {
+            return { status: "ignored" };
+          }
+
+          return handleMoveEntryButtonTap({
+            appHost: context.appHost,
+            editor,
+            uiButtonId: event.uiButtonId,
+            source: "mouse",
+          });
+
         case "mouse dragstart":
           if (
             event.originButton !== 0
@@ -203,6 +226,19 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
   };
 }
 
+function handleMoveEntryButtonTap(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+  uiButtonId: string;
+  source: "mouse" | "touch";
+}): GestureHandleResult {
+  if (options.uiButtonId !== MOVE_ENTRY_BUTTON_ID) {
+    return { status: "ignored" };
+  }
+
+  return tryEnterMoveModeFromSelection(options);
+}
+
 function tryEnterMoveMode(options: {
   appHost: AppHost;
   editor: EditorContract;
@@ -221,6 +257,9 @@ function tryEnterMoveMode(options: {
 
   const selection = options.editor.state.collections[EntityCollectionType.selection];
   const selectedEntityIds = [...selection];
+  const anchor = options.editor.queries.findGridCellForClientPixlePoint(
+    options.position,
+  );
 
   try {
     if (!prepareSelectionForMoveEnter({
@@ -246,21 +285,74 @@ function tryEnterMoveMode(options: {
       return { status: "ignored" };
     }
 
+    return finalizeMoveEnter({
+      appHost: options.appHost,
+      editor: options.editor,
+      selectedEntityIds,
+      previousTool,
+      source: options.source,
+      anchor,
+      requireAnchor: true,
+    });
+  } catch {
+    restoreFailedEnterMove({
+      appHost: options.appHost,
+      editor: options.editor,
+      selectedEntityIds,
+      previousTool,
+    });
+    return { status: "ignored" };
+  }
+}
+
+function tryEnterMoveModeFromSelection(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+  source: "mouse" | "touch";
+}): GestureHandleResult {
+  const previousTool = options.appHost.internalState.runtime.activeTool;
+  if (previousTool !== "marquee") {
+    return { status: "ignored" };
+  }
+
+  const selection = options.editor.state.collections[EntityCollectionType.selection];
+  if (selection.length === 0) {
+    return { status: "ignored" };
+  }
+
+  return finalizeMoveEnter({
+    appHost: options.appHost,
+    editor: options.editor,
+    selectedEntityIds: [...selection],
+    previousTool,
+    source: options.source,
+    anchor: null,
+    requireAnchor: false,
+  });
+}
+
+function finalizeMoveEnter(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+  selectedEntityIds: readonly string[];
+  previousTool: AppHost["internalState"]["runtime"]["activeTool"];
+  source: "mouse" | "touch";
+  anchor: GridPoint | null;
+  requireAnchor: boolean;
+}): GestureHandleResult {
+  try {
     options.editor.actions.createMoveOperationDraft();
 
     const previewRect = options.editor.queries.findEntityCollectionGridRect(
       EntityCollectionType.preview,
     );
-    const anchor = options.editor.queries.findGridCellForClientPixlePoint(
-      options.position,
-    );
 
-    if (previewRect === null || anchor === null) {
+    if (previewRect === null || (options.requireAnchor && options.anchor === null)) {
       restoreFailedEnterMove({
         appHost: options.appHost,
         editor: options.editor,
-        selectedEntityIds,
-        previousTool,
+        selectedEntityIds: options.selectedEntityIds,
+        previousTool: options.previousTool,
       });
       return { status: "ignored" };
     }
@@ -273,8 +365,8 @@ function tryEnterMoveMode(options: {
         restoreFailedEnterMove({
           appHost: options.appHost,
           editor: options.editor,
-          selectedEntityIds,
-          previousTool,
+          selectedEntityIds: options.selectedEntityIds,
+          previousTool: options.previousTool,
         });
         return { status: "ignored" };
       }
@@ -283,15 +375,15 @@ function tryEnterMoveMode(options: {
       options.appHost.internalActions.hideCanvasFloatingToolbar();
     }
 
-    options.appHost.internalState.runtime.moveAnchor = anchor;
+    options.appHost.internalState.runtime.moveAnchor = options.anchor;
     options.appHost.internalActions.setActiveTool("move");
     return { status: "handled" };
   } catch {
     restoreFailedEnterMove({
       appHost: options.appHost,
       editor: options.editor,
-      selectedEntityIds,
-      previousTool,
+      selectedEntityIds: options.selectedEntityIds,
+      previousTool: options.previousTool,
     });
     return { status: "ignored" };
   }
@@ -369,6 +461,38 @@ function restoreFailedEnterMove(options: {
 }
 
 function handleMoveTouchDragStart(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  position: GesturePosition;
+}): GestureHandleResult {
+  return primeMoveAnchorFromPreview(options);
+}
+
+function handleMoveMouseDragStart(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  originButton: number;
+  position: GesturePosition;
+}): GestureHandleResult {
+  if (options.originButton !== 0) {
+    return { status: "ignored" };
+  }
+
+  if (options.appHost.internalState.runtime.moveAnchor !== null) {
+    return { status: "handled" };
+  }
+
+  return primeMoveAnchorFromPreview({
+    appHost: options.appHost,
+    editor: options.editor,
+    entityDefinitionMap: options.entityDefinitionMap,
+    position: options.position,
+  });
+}
+
+function primeMoveAnchorFromPreview(options: {
   appHost: AppHost;
   editor: EditorContract;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
