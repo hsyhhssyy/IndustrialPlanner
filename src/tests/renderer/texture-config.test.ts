@@ -1,17 +1,13 @@
 import { describe, expect, it, vi } from "vitest"
 
 import {
-  createCustomTexture,
-} from "@/renderer/texture/create-custom-texture"
-import {
   applyBitmapTextureConfig,
   createRenderTextureConfig,
-  DEFAULT_RENDER_TEXTURE_CELL_PIXEL_SIZE,
   resolveBitmapTextureScaleLimit,
 } from "@/renderer/texture/texture-config"
 
 describe("createRenderTextureConfig", () => {
-  it("builds one shared config for bitmap and custom textures", () => {
+  it("builds a render texture config with bitmap sampling defaults", () => {
     expect(createRenderTextureConfig({ resolution: 3 })).toEqual({
       renderResolution: 3,
       bitmap: {
@@ -22,10 +18,6 @@ describe("createRenderTextureConfig", () => {
           mipmapFilter: "linear",
           maxAnisotropy: 4,
         },
-      },
-      custom: {
-        cellPixelSize: DEFAULT_RENDER_TEXTURE_CELL_PIXEL_SIZE,
-        repeatCompatibleResolution: 4,
       },
     })
   })
@@ -70,15 +62,5 @@ describe("applyBitmapTextureConfig", () => {
       maxAnisotropy: 4,
     })
     expect(texture.source.updateMipmaps).toHaveBeenCalledTimes(1)
-  })
-})
-
-describe("createCustomTexture", () => {
-  it("rejects unknown keys when no custom texture is registered", () => {
-    expect(() => createCustomTexture({
-      key: "future-custom-texture",
-      renderer: {} as never,
-      textureConfig: createRenderTextureConfig({ resolution: 3 }),
-    })).toThrow("Unknown custom texture key: future-custom-texture")
   })
 })

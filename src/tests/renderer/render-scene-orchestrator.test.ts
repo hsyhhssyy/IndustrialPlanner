@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest"
 import { createDummyWorldDocument } from "@/editor/dummy-document"
 import { AYU_DARK_THEME, AYU_LIGHT_THEME } from "@/app/theme"
 import { createRegistryContract } from "@/registry"
-import { resolveGenericDeviceSpriteTextureKeys } from "@/renderer/texture/texture-registry"
 import {
   applyViewportSize,
   resolveMarqueeGridRectLayout,
@@ -263,28 +262,6 @@ describe("resolveMarqueeGridRectStrokeStyle", () => {
       width: resolveWorldEntitySelectionStrokeWidth(WORLD_GRID_CELL_PIXEL_SIZE),
       color: 0xffffff,
     })
-  })
-})
-
-describe("resolveGenericDeviceSpriteTextureKeys", () => {
-  it("maps known device sprites to stable usage keys", () => {
-    expect(resolveGenericDeviceSpriteTextureKeys("item_port_storager_1")).toEqual({
-      body: "generic-device/body/item_port_storager_1",
-      previewMask: "generic-device/preview-mask/item_port_storager_1",
-    })
-  })
-
-  it("resolves aliased sprite ids to the canonical usage key", () => {
-    expect(
-      resolveGenericDeviceSpriteTextureKeys("item_port_liquid_filling_pd_mc_1"),
-    ).toEqual({
-      body: "generic-device/body/item_port_filling_pd_mc_1",
-      previewMask: "generic-device/preview-mask/item_port_filling_pd_mc_1",
-    })
-  })
-
-  it("returns null when no default scene sprite asset exists", () => {
-    expect(resolveGenericDeviceSpriteTextureKeys("pipe_straight_1x1")).toBeNull()
   })
 })
 

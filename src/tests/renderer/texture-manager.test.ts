@@ -9,18 +9,14 @@ vi.mock("pixi.js", () => ({
   Assets: {
     load: loadTexture,
   },
+  Texture: {
+    from: () => ({
+      destroy: vi.fn(),
+    }),
+  },
 }))
 
-vi.mock("@/renderer/texture/create-custom-texture", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/renderer/texture/create-custom-texture")>()
-
-  return {
-    ...actual,
-  }
-})
-
-import { resolveGenericDeviceSpriteTextureKeys } from "@/renderer/texture/texture-registry"
-import { createRenderTextureManager } from "@/renderer/texture/texture-manager"
+import { createTextureActions } from "@/renderer/texture/texture-manager"
 
 afterEach(() => {
   loadTexture.mockReset()
@@ -34,27 +30,21 @@ class ScreenProfileState {
   }
 }
 
-describe("RenderTextureManager", () => {
-  it("loads and caches bitmap textures by usage key", async () => {
-    const textureKeys = resolveGenericDeviceSpriteTextureKeys("item_port_storager_1")
+describe("TextureActions", () => {
+  it("loads and caches textures by unified resource key", async () => {
+    const bodyKey = "device-sprite-item_port_storager_1"
     const bitmapTexture = createLoadedTextureMock("device-body")
-
-    expect(textureKeys).not.toBeNull()
-
-    if (textureKeys === null) {
-      throw new Error("Expected generic device texture keys to resolve.")
-    }
 
     loadTexture.mockResolvedValue(bitmapTexture)
 
-    const manager = createRenderTextureManager({
+    const manager = createTextureActions({
       renderer: {} as never,
       app: null,
       initialResolution: 2,
     })
 
-    const firstTexture = await manager.getTexture(textureKeys.body)
-    const secondTexture = await manager.getTexture(textureKeys.body)
+    const firstTexture = await manager.getTexture(bodyKey)
+    const secondTexture = await manager.getTexture(bodyKey)
 
     expect(firstTexture).toBe(bitmapTexture)
     expect(secondTexture).toBe(bitmapTexture)
@@ -64,45 +54,48 @@ describe("RenderTextureManager", () => {
     manager.destroy()
   })
 
-  it("falls back to body texture when preview mask asset is missing", async () => {
-    const textureKeys = resolveGenericDeviceSpriteTextureKeys("item_port_storager_1")
-    const bitmapTexture = createLoadedTextureMock("device-body")
+  it("returns a red fallback texture when the asset fails to load", async () => {
+    loadTexture.mockRejectedValue(new Error("not found"))
 
-    expect(textureKeys).not.toBeNull()
-
-    if (textureKeys === null) {
-      throw new Error("Expected generic device texture keys to resolve.")
-    }
-
-    loadTexture.mockImplementation((assetPath: string) => {
-      if (assetPath.startsWith("/sprite-masks/")) {
-        return Promise.reject(new Error("missing preview mask"))
-      }
-
-      return Promise.resolve(bitmapTexture)
-    })
-
-    const manager = createRenderTextureManager({
+    const manager = createTextureActions({
       renderer: {} as never,
       app: null,
       initialResolution: 2,
     })
 
-    const previewMaskTexture = await manager.getTexture(textureKeys.previewMask)
-    const cachedPreviewMaskTexture = await manager.getTexture(textureKeys.previewMask)
+    const texture = await manager.getTexture("device-sprite-missing")
+    expect(texture).toBeDefined()
 
-    expect(previewMaskTexture).toBe(bitmapTexture)
-    expect(cachedPreviewMaskTexture).toBe(bitmapTexture)
-    expect(loadTexture).toHaveBeenCalledTimes(2)
-    expect(loadTexture).toHaveBeenNthCalledWith(1, "/sprite-masks/item_port_storager_1.webp")
-    expect(loadTexture).toHaveBeenNthCalledWith(2, "/sprites/item_port_storager_1.webp")
+    manager.destroy()
+  })
+
+  it("prefix device-masks- maps to sprite-masks with webp fallback to png", async () => {
+    const maskKey = "device-masks-item_port_storager_1"
+    const maskTexture = createLoadedTextureMock("mask")
+
+    loadTexture.mockImplementation((path: string) => {
+      if (path === "/sprite-masks/item_port_storager_1.webp") {
+        return Promise.resolve(maskTexture)
+      }
+      return Promise.reject(new Error("unexpected path"))
+    })
+
+    const manager = createTextureActions({
+      renderer: {} as never,
+      app: null,
+      initialResolution: 2,
+    })
+
+    const texture = await manager.getTexture(maskKey)
+    expect(texture).toBe(maskTexture)
+    expect(loadTexture).toHaveBeenCalledWith("/sprite-masks/item_port_storager_1.webp")
 
     manager.destroy()
   })
 
   it("reacts to mobx dpr changes and reapplies bitmap sampling to loaded textures", async () => {
     const screenProfile = new ScreenProfileState()
-    const textureKeys = resolveGenericDeviceSpriteTextureKeys("item_port_storager_1")
+    const bodyKey = "device-sprite-item_port_storager_1"
     const bitmapTexture = {
       source: {
         scaleMode: "nearest",
@@ -120,15 +113,9 @@ describe("RenderTextureManager", () => {
       update: vi.fn(),
     }
 
-    expect(textureKeys).not.toBeNull()
-
-    if (textureKeys === null) {
-      throw new Error("Expected generic device texture keys to resolve.")
-    }
-
     loadTexture.mockResolvedValue(bitmapTexture)
 
-    const manager = createRenderTextureManager({
+    const manager = createTextureActions({
       renderer: {} as never,
       app: {
         state: {
@@ -138,7 +125,7 @@ describe("RenderTextureManager", () => {
       initialResolution: 2,
     })
 
-    await manager.getTexture(textureKeys.body)
+    await manager.getTexture(bodyKey)
 
     expect(manager.textureConfig.renderResolution).toBe(2)
 

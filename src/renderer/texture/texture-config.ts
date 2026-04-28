@@ -6,8 +6,6 @@ import type {
 
 import { resolveRenderResolutionValue } from "@/renderer/render-resolution"
 
-export const DEFAULT_RENDER_TEXTURE_CELL_PIXEL_SIZE = 16
-
 const DEFAULT_BITMAP_TEXTURE_SCALE_LIMIT = 2
 const DEFAULT_BITMAP_TEXTURE_SCALE_MODE: SCALE_MODE = "linear"
 const DEFAULT_BITMAP_TEXTURE_MIPMAP_FILTER: SCALE_MODE = "linear"
@@ -27,21 +25,6 @@ export interface RenderTextureConfig {
     scaleLimit: number;
     sampling: RenderTextureSamplingStrategy;
   };
-  custom: {
-    cellPixelSize: number;
-    repeatCompatibleResolution: number;
-  };
-}
-
-export function resolveRepeatCompatibleTextureResolution(resolution: number): number {
-  const normalizedResolution = Math.max(1, resolveRenderResolutionValue(resolution))
-  let nextResolution = 1
-
-  while (nextResolution < normalizedResolution) {
-    nextResolution *= 2
-  }
-
-  return nextResolution
 }
 
 export function resolveBitmapTextureScaleLimit(options: {
@@ -62,15 +45,8 @@ export function resolveBitmapTextureScaleLimit(options: {
 
 export function createRenderTextureConfig(options: {
   resolution: number;
-  cellSize?: number;
 }): RenderTextureConfig {
   const renderResolution = Math.max(1, resolveRenderResolutionValue(options.resolution))
-  const configuredCellSize = options.cellSize
-  const cellPixelSize =
-    typeof configuredCellSize === "number" && Number.isFinite(configuredCellSize)
-      ? Math.max(1, Math.floor(configuredCellSize))
-      : DEFAULT_RENDER_TEXTURE_CELL_PIXEL_SIZE
-  const repeatCompatibleResolution = resolveRepeatCompatibleTextureResolution(renderResolution)
 
   return {
     renderResolution,
@@ -84,10 +60,6 @@ export function createRenderTextureConfig(options: {
         mipmapFilter: DEFAULT_BITMAP_TEXTURE_MIPMAP_FILTER,
         maxAnisotropy: DEFAULT_BITMAP_TEXTURE_MAX_ANISOTROPY,
       },
-    },
-    custom: {
-      cellPixelSize,
-      repeatCompatibleResolution,
     },
   }
 }

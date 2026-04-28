@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-const { applicationState, createRenderSceneOrchestrator, createCustomTexture } = vi.hoisted(() => ({
+const { applicationState, createRenderSceneOrchestrator } = vi.hoisted(() => ({
   applicationState: {
     init: vi.fn(async () => undefined),
     canvas: { tagName: "CANVAS" } as HTMLCanvasElement,
@@ -13,14 +13,6 @@ const { applicationState, createRenderSceneOrchestrator, createCustomTexture } =
     destroy: vi.fn(),
   },
   createRenderSceneOrchestrator: vi.fn(),
-  createCustomTexture: vi.fn(() => ({
-    destroy: vi.fn(),
-    source: {
-      style: {
-        wrapMode: "repeat",
-      },
-    },
-  })),
 }))
 
 vi.mock("pixi.js", () => {
@@ -41,18 +33,8 @@ vi.mock("@/renderer/scene/render-scene-orchestrator", () => ({
   createRenderSceneOrchestrator,
 }))
 
-vi.mock("@/renderer/texture/create-custom-texture", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/renderer/texture/create-custom-texture")>()
-
-  return {
-    ...actual,
-    createCustomTexture,
-  }
-})
-
 import { createRenderHost } from "@/renderer/renderer-host"
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract"
-import { DEFAULT_RENDER_TEXTURE_CELL_PIXEL_SIZE } from "@/renderer/texture/texture-config"
 
 describe("createRenderHost", () => {
   it("enables autoDensity and roundPixels for high-dpr canvas rendering", async () => {
@@ -92,7 +74,6 @@ describe("createRenderHost", () => {
       preference: "webgl",
     })
     expect(applicationState.stage.roundPixels).toBe(true)
-    expect(createCustomTexture).not.toHaveBeenCalled()
     expect(renderHost.textureManager.textureConfig).toEqual({
       renderResolution: 3,
       bitmap: {
@@ -104,14 +85,10 @@ describe("createRenderHost", () => {
           maxAnisotropy: 4,
         },
       },
-      custom: {
-        cellPixelSize: DEFAULT_RENDER_TEXTURE_CELL_PIXEL_SIZE,
-        repeatCompatibleResolution: 4,
-      },
     })
     await expect(
       renderHost.textureManager.getTexture("future-custom-texture"),
-    ).rejects.toThrow("Unknown render texture key: future-custom-texture")
+    ).rejects.toThrow("Unknown texture key prefix: future-custom-texture")
     expect(createRenderSceneOrchestrator).toHaveBeenCalledWith(renderHost)
     expect(workspace.render).toBe(renderHost)
   })

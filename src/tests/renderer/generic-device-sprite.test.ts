@@ -83,7 +83,6 @@ vi.mock("pixi.js", () => {
 import { AYU_LIGHT_THEME } from "@/app/theme"
 import { EntityCollectionType } from "@/domain/state/types"
 import { GenericDeviceSprite } from "@/renderer/sprites/generic-device-sprite"
-import type { RenderTextureKey } from "@/renderer/texture/texture-registry"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 
 interface RenderedSpriteSnapshot {
@@ -100,20 +99,23 @@ interface RenderedSpriteSnapshot {
 }
 
 describe("GenericDeviceSprite", () => {
+  const SPRITE_ID = "item_port_storager_1"
+  const BODY_KEY = "device-sprite-item_port_storager_1"
+  const MASK_KEY = "device-masks-item_port_storager_1"
+
   it("loads the sprite texture before making the device visible", async () => {
-    const textureKeys = createGenericDeviceTextureKeys()
     const resolvedTexture = createLoadedTextureMock("device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
 
     const entityLayer = createLayerStub()
     const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
-      [textureKeys.body]: resolvedTexture,
-      [textureKeys.previewMask]: resolvedMaskTexture,
+      [BODY_KEY]: resolvedTexture,
+      [MASK_KEY]: resolvedMaskTexture,
     })
     const sprite = new GenericDeviceSprite(
       "dummy-entity-1",
-      textureKeys,
+      SPRITE_ID,
       renderHost as never,
     )
 
@@ -162,8 +164,8 @@ describe("GenericDeviceSprite", () => {
       },
     })
 
-    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(textureKeys.body)
-    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(textureKeys.previewMask)
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(BODY_KEY)
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(MASK_KEY)
 
     await flushMicrotasks(8)
 
@@ -198,19 +200,18 @@ describe("GenericDeviceSprite", () => {
   })
 
   it("shows a masked solid white overlay for preview devices", async () => {
-    const textureKeys = createGenericDeviceTextureKeys()
     const resolvedTexture = createLoadedTextureMock("device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
 
     const entityLayer = createLayerStub()
     const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
-      [textureKeys.body]: resolvedTexture,
-      [textureKeys.previewMask]: resolvedMaskTexture,
+      [BODY_KEY]: resolvedTexture,
+      [MASK_KEY]: resolvedMaskTexture,
     })
     const sprite = new GenericDeviceSprite(
       "dummy-preview-entity",
-      textureKeys,
+      SPRITE_ID,
       renderHost as never,
     )
 
@@ -317,18 +318,17 @@ describe("GenericDeviceSprite", () => {
   })
 
   it("uses the preview-mask key result even when it resolves to the body texture", async () => {
-    const textureKeys = createGenericDeviceTextureKeys()
     const resolvedTexture = createLoadedTextureMock("device-texture-fallback")
 
     const entityLayer = createLayerStub()
     const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
-      [textureKeys.body]: resolvedTexture,
-      [textureKeys.previewMask]: resolvedTexture,
+      [BODY_KEY]: resolvedTexture,
+      [MASK_KEY]: resolvedTexture,
     })
     const sprite = new GenericDeviceSprite(
       "dummy-preview-entity-fallback",
-      textureKeys,
+      SPRITE_ID,
       renderHost as never,
     )
 
@@ -429,8 +429,8 @@ function createLayerStub() {
   return layer
 }
 
-function createRenderHostStub(textureByKey: Record<RenderTextureKey, object>) {
-  const getTexture = vi.fn((key: RenderTextureKey) => {
+function createRenderHostStub(textureByKey: Record<string, object>) {
+  const getTexture = vi.fn((key: string) => {
     const resolvedTexture = textureByKey[key]
 
     if (resolvedTexture === undefined) {
@@ -449,16 +449,6 @@ function createRenderHostStub(textureByKey: Record<RenderTextureKey, object>) {
     textureManager: {
       getTexture,
     },
-  }
-}
-
-function createGenericDeviceTextureKeys(): {
-  body: RenderTextureKey;
-  previewMask: RenderTextureKey;
-} {
-  return {
-    body: "test/body",
-    previewMask: "test/preview-mask",
   }
 }
 

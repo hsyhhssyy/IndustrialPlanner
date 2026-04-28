@@ -16,7 +16,6 @@ import {
 } from "pixi.js"
 import { resolveRenderResolutionFromApp } from "../render-resolution"
 import type { RenderHost } from "../renderer-host"
-import { resolveGenericDeviceSpriteTextureKeys } from "../texture/texture-registry"
 
 import { BeltStraightSprite } from "../sprites/belt-straight-sprite"
 import { GenericDeviceSprite } from "../sprites/generic-device-sprite"
@@ -153,12 +152,7 @@ function createSpriteForDefinition(
     return new BeltStraightSprite(entityId)
   }
 
-  const textureKeys = resolveGenericDeviceSpriteTextureKeys(definition.spriteId)
-  if (textureKeys === null) {
-    return null
-  }
-
-  return new GenericDeviceSprite(entityId, textureKeys, renderHost)
+  return new GenericDeviceSprite(entityId, definition.spriteId, renderHost)
 }
 
 export function applyViewportSize(

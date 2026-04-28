@@ -8,14 +8,14 @@ import {
   type RenderSceneOrchestrator,
 } from "./scene/render-scene-orchestrator";
 import {
-  createRenderTextureManager,
-  type RenderTextureManager,
+  createTextureActions,
+  type TextureActions,
 } from "./texture/texture-manager";
 
 export interface RenderHost extends RenderContract {
   workspace: WorkspaceContract;
   app: Application;
-  textureManager: RenderTextureManager;
+  textureManager: TextureActions;
 }
 
 interface RoundPixelsStageLike {
@@ -60,7 +60,7 @@ export async function createRenderHost(
   });
 
   (app.stage as unknown as RoundPixelsStageLike).roundPixels = true;
-  const textureManager = createRenderTextureManager({
+  const textureManager = createTextureActions({
     renderer: app.renderer,
     app: workspace.app,
     initialResolution: renderResolution,

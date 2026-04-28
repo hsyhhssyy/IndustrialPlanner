@@ -5,7 +5,6 @@ import {
 } from "pixi.js"
 
 import type { RenderHost } from "@/renderer/renderer-host"
-import type { RenderTextureKey } from "@/renderer/texture/texture-registry"
 import {
   RenderSpriteLayout,
   RenderSpriteSyncContext,
@@ -25,10 +24,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
   public constructor(
     entityId: string,
-    textureKeys: {
-      body: RenderTextureKey;
-      previewMask: RenderTextureKey;
-    },
+    spriteId: string,
     private readonly renderHost: RenderHost,
   ) {
     super(entityId)
@@ -52,8 +48,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.previewEffectRoot.addChild(this.previewMask)
     this.getRootOfLayer("overlay").addChild(this.previewEffectRoot)
 
-    const bodyTextureLoad = this.renderHost.textureManager.getTexture(textureKeys.body)
-    const previewMaskTextureLoad = this.renderHost.textureManager.getTexture(textureKeys.previewMask)
+    const bodyTextureLoad = this.renderHost.textureManager.getTexture(`device-sprite-${spriteId}`)
+    const previewMaskTextureLoad = this.renderHost.textureManager.getTexture(`device-masks-${spriteId}`)
 
     void Promise.all([bodyTextureLoad, previewMaskTextureLoad]).then(([
       bodyTexture,

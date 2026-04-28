@@ -1,40 +1,38 @@
-import { Assets } from "pixi.js"
+import { Assets, Texture } from "pixi.js"
 import { reaction } from "mobx"
-import type {
-  Renderer,
-  Texture,
-} from "pixi.js"
+import type { Renderer } from "pixi.js"
 
 import type { AppContract } from "@/domain/contract/app-contract"
 import { resolveRenderResolutionFromApp } from "@/renderer/render-resolution"
 
-import {
-  createCustomTexture,
-} from "./create-custom-texture"
-import {
-  resolveRenderTextureProvider,
-  type RenderTextureKey,
-} from "./texture-registry"
 import {
   applyBitmapTextureConfig,
   createRenderTextureConfig,
   type RenderTextureConfig,
 } from "./texture-config"
 
-export interface RenderTextureManager {
+const PREFIX_DEVICE_SPRITE = "device-sprite-"
+const PREFIX_TEXTURE = "texture-"
+const PREFIX_DEVICE_MASKS = "device-masks-"
+
+/**
+ * TextureActions 是 src/renderer/texture 对外唯一出口。
+ * 目录外代码不得 import texture 目录下其他任何东西。
+ */
+export interface TextureActions {
   readonly textureConfig: RenderTextureConfig;
-  getTexture(key: RenderTextureKey): Promise<Texture>;
+  getTexture(unifiedResourceKey: string): Promise<Texture>;
   destroy(): void;
 }
 
-class RenderTextureManagerImpl implements RenderTextureManager {
+class TextureActionsImpl implements TextureActions {
   public textureConfig: RenderTextureConfig
 
-  private readonly texturePromisesByKey = new Map<RenderTextureKey, Promise<Texture>>()
-  private readonly bitmapTexturePromisesByPath = new Map<string, Promise<Texture>>()
+  private readonly texturePromisesByKey = new Map<string, Promise<Texture>>()
   private readonly trackedBitmapTextures = new Set<Texture>()
-  private readonly customTexturesByKey = new Map<RenderTextureKey, Texture>()
   private readonly disposeResolutionReaction: (() => void) | null
+  private readonly renderer: Renderer
+  private readonly app: AppContract | null
 
   public constructor(options: {
     renderer: Renderer;
@@ -60,40 +58,20 @@ class RenderTextureManagerImpl implements RenderTextureManager {
       )
   }
 
-  private readonly renderer: Renderer
-  private readonly app: AppContract | null
-
-  public getTexture(key: RenderTextureKey): Promise<Texture> {
-    const existingTexturePromise = this.texturePromisesByKey.get(key)
-    if (existingTexturePromise !== undefined) {
-      return existingTexturePromise
+  public getTexture(unifiedResourceKey: string): Promise<Texture> {
+    const existing = this.texturePromisesByKey.get(unifiedResourceKey)
+    if (existing !== undefined) {
+      return existing
     }
 
-    const provider = resolveRenderTextureProvider(key)
-    if (provider === null) {
-      return Promise.reject(new Error(`Unknown render texture key: ${key}`))
-    }
-
-    const nextTexturePromise = this.loadTextureFromProvider(key, provider).catch((error) => {
-      this.texturePromisesByKey.delete(key)
-      throw error
-    })
-
-    this.texturePromisesByKey.set(key, nextTexturePromise)
-
-    return nextTexturePromise
+    const promise = this.resolveTexture(unifiedResourceKey)
+    this.texturePromisesByKey.set(unifiedResourceKey, promise)
+    return promise
   }
 
   public destroy(): void {
     this.disposeResolutionReaction?.()
-
-    for (const texture of this.customTexturesByKey.values()) {
-      texture.destroy(true)
-    }
-
     this.texturePromisesByKey.clear()
-    this.bitmapTexturePromisesByPath.clear()
-    this.customTexturesByKey.clear()
     this.trackedBitmapTextures.clear()
   }
 
@@ -102,83 +80,69 @@ class RenderTextureManagerImpl implements RenderTextureManager {
       return
     }
 
-    this.textureConfig = createRenderTextureConfig({
-      resolution,
-    })
-    this.invalidateCustomTextures()
+    this.textureConfig = createRenderTextureConfig({ resolution })
 
     for (const texture of this.trackedBitmapTextures) {
       applyBitmapTextureConfig(texture, this.textureConfig)
     }
   }
 
-  private loadTextureFromProvider(
-    key: RenderTextureKey,
-    provider: ReturnType<typeof resolveRenderTextureProvider> extends infer Provider
-      ? Exclude<Provider, null>
-      : never,
-  ): Promise<Texture> {
-    if (provider.kind === "bitmap") {
-      return this.loadBitmapTexture(provider.assetPath, provider.fallbackKey)
+  private async resolveTexture(key: string): Promise<Texture> {
+    const paths = this.resolveCandidatePaths(key)
+
+    for (const path of paths) {
+      try {
+        const texture = await Assets.load<Texture>(path)
+        this.trackedBitmapTextures.add(texture)
+        return applyBitmapTextureConfig(texture, this.textureConfig)
+      } catch {
+        // Try next candidate
+      }
     }
 
-    const texture = createCustomTexture({
-      key: provider.customTextureKey,
-      renderer: this.renderer,
-      textureConfig: this.textureConfig,
-    })
-
-    this.customTexturesByKey.set(key, texture)
-
-    return Promise.resolve(texture)
+    return this.createFallbackTexture()
   }
 
-  private loadBitmapTexture(
-    assetPath: string,
-    fallbackKey?: RenderTextureKey,
-  ): Promise<Texture> {
-    const existingBitmapPromise = this.bitmapTexturePromisesByPath.get(assetPath)
-    if (existingBitmapPromise !== undefined) {
-      return existingBitmapPromise
+  private resolveCandidatePaths(key: string): string[] {
+    if (key.startsWith(PREFIX_DEVICE_SPRITE)) {
+      return [`/sprites/${key.slice(PREFIX_DEVICE_SPRITE.length)}.webp`]
     }
 
-    const nextBitmapPromise = Assets.load<Texture>(assetPath)
-      .then((texture) => this.trackBitmapTexture(texture))
-      .catch((error) => {
-        this.bitmapTexturePromisesByPath.delete(assetPath)
-
-        if (fallbackKey !== undefined) {
-          return this.getTexture(fallbackKey)
-        }
-
-        throw error
-      })
-
-    this.bitmapTexturePromisesByPath.set(assetPath, nextBitmapPromise)
-
-    return nextBitmapPromise
-  }
-
-  private trackBitmapTexture(texture: Texture): Texture {
-    this.trackedBitmapTextures.add(texture)
-
-    return applyBitmapTextureConfig(texture, this.textureConfig)
-  }
-
-  private invalidateCustomTextures(): void {
-    for (const [key, texture] of this.customTexturesByKey) {
-      texture.destroy(true)
-      this.texturePromisesByKey.delete(key)
+    if (key.startsWith(PREFIX_TEXTURE)) {
+      const id = key.slice(PREFIX_TEXTURE.length)
+      return [`/textures/${id}.webp`, `/textures/${id}.png`]
     }
 
-    this.customTexturesByKey.clear()
+    if (key.startsWith(PREFIX_DEVICE_MASKS)) {
+      const id = key.slice(PREFIX_DEVICE_MASKS.length)
+      return [`/sprite-masks/${id}.webp`, `/sprite-masks/${id}.png`]
+    }
+
+    throw new Error(`Unknown texture key prefix: ${key}`)
+  }
+
+  private createFallbackTexture(): Texture {
+    const canvas = document.createElement("canvas")
+    canvas.width = 16
+    canvas.height = 16
+    const ctx = canvas.getContext("2d")
+    if (ctx !== null) {
+      ctx.fillStyle = "#ff0000"
+      ctx.fillRect(0, 0, 16, 16)
+    }
+    return Texture.from(canvas)
   }
 }
 
-export function createRenderTextureManager(options: {
+/**
+ * 工厂函数，是 src/renderer/texture 对目录外唯一的公开入口。
+ * 返回的 TextureActions 只有 getTexture 与 destroy 两个方法。
+ * textureConfig 作为内部状态由 render host 持有，不额外 export。
+ */
+export function createTextureActions(options: {
   renderer: Renderer;
   app: AppContract | null;
   initialResolution: number;
-}): RenderTextureManager {
-  return new RenderTextureManagerImpl(options)
+}): TextureActions {
+  return new TextureActionsImpl(options)
 }
