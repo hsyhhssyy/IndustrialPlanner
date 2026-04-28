@@ -5,15 +5,19 @@ import { AYU_DARK_THEME, AYU_LIGHT_THEME } from "@/app/theme"
 import { createRegistryContract } from "@/registry"
 import {
   applyViewportSize,
-  resolveMarqueeGridRectLayout,
-  resolveMarqueeGridRectStrokeStyle,
   resolveWorldEntitySelectionOverlayLayouts,
   resolveWorldEntitySelectionStrokeStyle,
   resolveWorldEntitySelectionStrokeWidth,
   resolveWorldEntitySpriteLayout,
+} from "@/renderer/scene/render-scene-orchestrator"
+import {
   resolveWorldGridStrokeStyle,
   resolveWorldGridLineAxes,
-} from "@/renderer/scene/render-scene-orchestrator"
+} from "@/renderer/scene/decorations/GridLineDecoration"
+import {
+  resolveMarqueeGridRectLayout,
+  resolveMarqueeGridRectStrokeStyle,
+} from "@/renderer/scene/decorations/MarqueeRectDecoration"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import type { RenderHost } from "@/renderer/renderer-host"
 
