@@ -63,7 +63,6 @@ export async function createRenderHost(
   const textureManager = createTextureActions({
     renderer: app.renderer,
     app: workspace.app,
-    initialResolution: renderResolution,
   });
   let orchestrator: RenderSceneOrchestrator | null = null;
 

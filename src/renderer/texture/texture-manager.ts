@@ -37,12 +37,14 @@ class TextureActionsImpl implements TextureActions {
   public constructor(options: {
     renderer: Renderer;
     app: AppContract | null;
-    initialResolution: number;
   }) {
     this.renderer = options.renderer
     this.app = options.app
+    const initialResolution = options.app !== null
+      ? resolveRenderResolutionFromApp(options.app, 1)
+      : 1
     this.textureConfig = createRenderTextureConfig({
-      resolution: options.initialResolution,
+      resolution: initialResolution,
     })
 
     this.disposeResolutionReaction = this.app === null
@@ -142,7 +144,6 @@ class TextureActionsImpl implements TextureActions {
 export function createTextureActions(options: {
   renderer: Renderer;
   app: AppContract | null;
-  initialResolution: number;
 }): TextureActions {
   return new TextureActionsImpl(options)
 }

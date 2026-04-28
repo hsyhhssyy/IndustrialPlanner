@@ -40,7 +40,6 @@ describe("TextureActions", () => {
     const manager = createTextureActions({
       renderer: {} as never,
       app: null,
-      initialResolution: 2,
     })
 
     const firstTexture = await manager.getTexture(bodyKey)
@@ -60,7 +59,6 @@ describe("TextureActions", () => {
     const manager = createTextureActions({
       renderer: {} as never,
       app: null,
-      initialResolution: 2,
     })
 
     const texture = await manager.getTexture("device-sprite-missing")
@@ -83,7 +81,6 @@ describe("TextureActions", () => {
     const manager = createTextureActions({
       renderer: {} as never,
       app: null,
-      initialResolution: 2,
     })
 
     const texture = await manager.getTexture(maskKey)
@@ -122,7 +119,6 @@ describe("TextureActions", () => {
           screenProfile,
         },
       } as never,
-      initialResolution: 2,
     })
 
     await manager.getTexture(bodyKey)
