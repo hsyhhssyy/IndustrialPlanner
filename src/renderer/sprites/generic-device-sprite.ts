@@ -29,7 +29,6 @@ const SCANLINE_SCROLL_INTERVAL_MS = 2000;
 export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly body: Sprite
   private readonly previewEffectRoot: Container
-  private readonly previewFillContainer: Container
   private readonly previewMask: Sprite
   private currentLayout: RenderSpriteLayout | null = null
   private disposed = false
@@ -58,21 +57,19 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.previewEffectRoot = new Container()
     this.previewEffectRoot.visible = false
 
-    this.previewFillContainer = new Container()
-
     this.previewMask = new Sprite(Texture.EMPTY)
     this.previewMask.anchor.set(0.5)
     this.previewMask.roundPixels = true
 
-    // 自行创建扫描线，直接放入 masked container（不再从基类移入）
+    // 扫描线直接放入 previewEffectRoot，mask 设在 TilingSprite 上
+    // 不再经过中间 Container，避免 Container 的 scale/rotation 副作用
     this.scanlineTiling = new TilingSprite({ texture: Texture.EMPTY, width: 0, height: 0 });
     this.scanlineTiling.anchor.set(0.5);
     this.scanlineTiling.roundPixels = true;
     this.scanlineTiling.visible = false;
-    this.previewFillContainer.addChild(this.scanlineTiling)
-    this.previewFillContainer.mask = this.previewMask
+    this.scanlineTiling.mask = this.previewMask
 
-    this.previewEffectRoot.addChild(this.previewFillContainer)
+    this.previewEffectRoot.addChild(this.scanlineTiling)
     this.previewEffectRoot.addChild(this.previewMask)
     this.getRootOfLayer("overlay").addChild(this.previewEffectRoot)
 
@@ -165,8 +162,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     const paddingPixels = SCANLINE_PADDING_TILES * tilePixelSize;
 
     this.scanlineTiling.visible = true;
-    this.scanlineTiling.x = 0;
-    this.scanlineTiling.y = 0;
+    this.scanlineTiling.x = layout.x + layout.width / 2;
+    this.scanlineTiling.y = layout.y + layout.height / 2;
+    this.scanlineTiling.rotation = 0;
     this.scanlineTiling.width = layout.width + paddingPixels * 2;
     this.scanlineTiling.height = layout.height + paddingPixels * 2;
 
@@ -275,7 +273,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     applyCenteredSpriteLayout(this.body, normalizedLayout)
-    applyCenteredSpriteLayout(this.previewFillContainer, normalizedLayout)
     applyCenteredSpriteLayout(this.previewMask, normalizedLayout)
   }
 

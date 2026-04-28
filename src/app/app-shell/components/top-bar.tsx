@@ -3,7 +3,7 @@ import { WorkbenchIcon } from "@/app/app-shell/components/workbench-icons";
 import type { AppHost } from "@/app/app-host";
 import { observer } from "mobx-react-lite";
 import {
-  isMobileLandscapeScreenProfile,
+  isTouchLandscapeScreenProfile,
 } from "@/shared/browser/screen-profile";
 
 export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }) {
@@ -24,13 +24,13 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
   };
   const leftPanelLabel = `${t(leftDockOpen ? "action.close" : "action.open")} ${t("topBar.leftPanel")}`;
   const rightPanelLabel = `${t(rightDockOpen ? "action.close" : "action.open")} ${t("topBar.rightPanel")}`;
-  const isMobileLandscape = isMobileLandscapeScreenProfile(screenProfile);
-  const collapseActionKey = isMobileLandscape && topBarCollapsed ? "action.expand" : "action.collapse";
+  const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
+  const collapseActionKey = isTouchLandscape && topBarCollapsed ? "action.expand" : "action.collapse";
   const collapseButtonLabel = `${t(collapseActionKey)} ${t("topBar.controls")}`;
   const leftPanelIconKind = leftDockOpen ? "panel-left-close" : "panel-left-open";
   const rightPanelIconKind = rightDockOpen ? "panel-right-close" : "panel-right-open";
 
-  if (isMobileLandscape && topBarCollapsed) {
+  if (isTouchLandscape && topBarCollapsed) {
     return null;
   }
 
@@ -72,7 +72,7 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
           appHost={appHost}
           className="top-bar-icon-button top-bar-fullscreen-button"
         />
-        {isMobileLandscape ? (
+        {isTouchLandscape ? (
           <button
             aria-label={collapseButtonLabel}
             className="top-bar-collapse-button top-bar-icon-button"

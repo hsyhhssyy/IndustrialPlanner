@@ -83,6 +83,7 @@ vi.mock("pixi.js", () => {
     public roundPixels = false
     public visible = true
     public tilePosition = { x: 0, y: 0 }
+    public mask: unknown = null
     public tileScale = { set: vi.fn() }
     private currentTexture: unknown
 
@@ -333,15 +334,10 @@ describe("GenericDeviceSprite", () => {
     expect(overlayRoot.children).toHaveLength(1)
     expect(previewEffectRoot?.visible).toBe(true)
 
-    const previewFillContainer = previewEffectRoot?.children?.[0] as {
-      mask?: unknown;
-      children?: unknown[];
-    } | undefined
+    const scanlineTiling = previewEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
     const previewMask = previewEffectRoot?.children?.[1] as RenderedSpriteSnapshot | undefined
 
-    const scanlineTiling = previewFillContainer?.children?.[0] as RenderedSpriteSnapshot | undefined
-
-    expect(previewFillContainer?.children).toHaveLength(1)
+    expect(previewEffectRoot?.children).toHaveLength(2)
     expect(previewMask).toMatchObject({
       x: 40,
       y: 40,
@@ -353,7 +349,7 @@ describe("GenericDeviceSprite", () => {
         id: "device-mask-texture",
       },
     })
-    expect(previewFillContainer?.mask).toBe(previewMask)
+    expect(scanlineTiling?.mask).toBe(previewMask)
   })
 
   it("uses the preview-mask key result even when it resolves to the body texture", async () => {

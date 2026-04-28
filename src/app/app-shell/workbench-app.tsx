@@ -24,6 +24,7 @@ import { resolveLeftDockWidthForScreenProfile } from "@/app/state-impl";
 import type { AppThemeId } from "@/domain/state/theme";
 import {
   isMobileLandscapeScreenProfile,
+  isTouchLandscapeScreenProfile,
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
 
@@ -145,9 +146,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const canvasFloatingToolbar = appHost.internalState.runtime.canvasFloatingToolbar;
   const canvasRightDockToolbar = appHost.internalState.runtime.canvasRightDockToolbar;
   const canvasTopLeftCornerToolbar = appHost.internalState.runtime.canvasTopLeftCornerToolbar;
-  const isMobileLandscape = isMobileLandscapeScreenProfile(screenProfile);
+  const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
-  const showFloatingTopBarControls = isMobileLandscape && topBarCollapsed;
+  const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
   const showBottomStatusBar = !showFloatingTopBarControls;
 
   useEffect(() => {
