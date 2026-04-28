@@ -1,7 +1,5 @@
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { EntityCollectionType, type EntityCollectionType as EntityCollectionTypeValue } from "@/domain/state/types";
-import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
-import { Container, Graphics } from "pixi.js";
+import { Container } from "pixi.js";
 
 import type {
   RenderLayerId,
@@ -19,16 +17,9 @@ const DEFAULT_COLLECTION_SYNC_ORDER: readonly EntityCollectionTypeValue[] = [
   EntityCollectionType.selection,
 ];
 
-const DEFAULT_GHOST_ROOT_ALPHA = 0.2;
-const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1;
-const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4;
-
 export abstract class BaseRenderSprite implements RenderSprite {
   private currentLayerMap: RenderLayerMap | null = null;
   private readonly layerRoots = new Map<RenderLayerId, Container>();
-  private defaultCollectionOverlayGraphics: Graphics | null = null;
-  private rootAlpha = 1;
-  private rootVisible = true;
   private destroyed = false;
 
   protected constructor(
@@ -86,17 +77,11 @@ export abstract class BaseRenderSprite implements RenderSprite {
     context: RenderSpriteSyncContext,
   ): void;
 
-  protected resetCollectionOverlay(
+  /** 由子类实现，重置 collection overlay（如清空 Graphics、隐藏扫描线等） */
+  protected abstract resetCollectionOverlay(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
-  ): void {
-    void layout;
-    void context;
-
-    this.setAllRootAlpha(1);
-    this.setAllRootVisible(true);
-    this.defaultCollectionOverlayGraphics?.clear();
-  }
+  ): void;
 
   protected syncCollectionOverlay(
     collectionTypes: readonly EntityCollectionTypeValue[],
@@ -106,11 +91,11 @@ export abstract class BaseRenderSprite implements RenderSprite {
     const activeCollectionTypeSet = new Set(collectionTypes);
 
     if (activeCollectionTypeSet.has(EntityCollectionType.ghost)) {
-      this.drawDefaultGhostOverlay(layout, context);
+      this.drawGhostOverlay(layout, context);
     }
 
     if (activeCollectionTypeSet.has(EntityCollectionType.preview)) {
-      this.drawDefaultPreviewOverlay(layout, context);
+      this.drawPreviewOverlay(layout, context);
     }
 
     if (
@@ -120,7 +105,7 @@ export abstract class BaseRenderSprite implements RenderSprite {
         && !activeCollectionTypeSet.has(EntityCollectionType.reverseMarquee)
       )
     ) {
-      this.drawDefaultSelectionOverlay(layout, context);
+      this.drawSelectionOverlay(layout, context);
     }
   }
 
@@ -134,37 +119,23 @@ export abstract class BaseRenderSprite implements RenderSprite {
 
   protected onDestroy(): void {}
 
-  protected drawDefaultGhostOverlay(
+  /** ghost 特效绘制，由子类实现 */
+  protected abstract drawGhostOverlay(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
-  ): void {
-    void layout;
-    void context;
+  ): void;
 
-    this.setAllRootAlpha(DEFAULT_GHOST_ROOT_ALPHA);
-  }
-
-  protected drawDefaultPreviewOverlay(
+  /** preview 特效绘制，由子类实现 */
+  protected abstract drawPreviewOverlay(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
-  ): void {
-    this.drawCollectionOverlayStroke({
-      layout,
-      color: this.resolvePreviewCollectionOverlayColor(context),
-      width: this.resolvePreviewCollectionOverlayStrokeWidth(context),
-    });
-  }
+  ): void;
 
-  protected drawDefaultSelectionOverlay(
+  /** selection/marquee 特效绘制，由子类实现 */
+  protected abstract drawSelectionOverlay(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
-  ): void {
-    this.drawCollectionOverlayStroke({
-      layout,
-      color: this.resolveSelectionCollectionOverlayColor(context),
-      width: this.resolveSelectionCollectionOverlayStrokeWidth(context),
-    });
-  }
+  ): void;
 
   protected resolveCollectionSyncOrder(
     context: RenderSpriteSyncContext,
@@ -189,7 +160,7 @@ export abstract class BaseRenderSprite implements RenderSprite {
       return existingRoot;
     }
 
-    const root = this.createRootOfLayer(layerId);
+    const root = new Container();
     this.layerRoots.set(layerId, root);
 
     if (this.currentLayerMap !== null) {
@@ -199,118 +170,20 @@ export abstract class BaseRenderSprite implements RenderSprite {
     return root;
   }
 
-  protected getExistingRootOfLayer(layerId: RenderLayerId): Container | null {
-    return this.layerRoots.get(layerId) ?? null;
-  }
-
-  protected createRootOfLayer(layerId: RenderLayerId): Container {
-    void layerId;
-
-    const root = new Container();
-    root.alpha = this.rootAlpha;
-    root.visible = this.rootVisible;
-    return root;
-  }
-
-  protected setLayerRootAlpha(layerId: RenderLayerId, alpha: number): void {
-    this.getRootOfLayer(layerId).alpha = alpha;
-  }
-
-  protected setLayerRootVisible(layerId: RenderLayerId, visible: boolean): void {
-    this.getRootOfLayer(layerId).visible = visible;
-  }
-
-  protected setAllRootAlpha(alpha: number): void {
-    this.rootAlpha = alpha;
-
-    for (const root of this.layerRoots.values()) {
-      root.alpha = alpha;
-    }
-  }
-
-  protected setAllRootVisible(visible: boolean): void {
-    this.rootVisible = visible;
-
-    for (const root of this.layerRoots.values()) {
-      root.visible = visible;
-    }
-  }
-
-  protected getCollectionOverlayGraphics(): Graphics {
-    this.ensureNotDestroyed();
-
-    if (this.defaultCollectionOverlayGraphics !== null) {
-      return this.defaultCollectionOverlayGraphics;
-    }
-
-    const graphics = new Graphics({ roundPixels: true });
-    this.getRootOfLayer("overlay").addChild(graphics);
-    this.defaultCollectionOverlayGraphics = graphics;
-    return graphics;
-  }
-
-  protected resolveSelectionCollectionOverlayStrokeWidth(
-    context: RenderSpriteSyncContext,
-  ): number {
-    return resolveWorldEntitySelectionStrokeWidth(this.resolveWorkspaceGridCellPixelSize(context));
-  }
-
-  protected resolveSelectionCollectionOverlayColor(
-    context: RenderSpriteSyncContext,
-  ): number {
-    return resolveAppThemeColorNumber(
-      context.theme,
-      context.theme.renderer.worldEntitySelectionStrokeColorKey,
-    );
-  }
-
-  protected resolvePreviewCollectionOverlayStrokeWidth(
-    context: RenderSpriteSyncContext,
-  ): number {
-    return this.resolveSelectionCollectionOverlayStrokeWidth(context) * 2;
-  }
-
-  protected resolvePreviewCollectionOverlayColor(
-    context: RenderSpriteSyncContext,
-  ): number {
-    return resolveAppThemeColorNumber(
-      context.theme,
-      context.theme.renderer.spritePreviewBorderBoxColorKey,
-    );
+  /** 返回所有已创建的层容器，供子类批量调整 alpha/visible 等属性 */
+  protected getAllRoots(): IterableIterator<Container> {
+    return this.layerRoots.values();
   }
 
   protected isCurrentEntityInCollection(
     collectionType: EntityCollectionTypeValue,
     context: RenderSpriteSyncContext,
   ): boolean {
-    const editor = requireWorkspaceEditor(context);
-    return editor.state.collections[collectionType].contains(this.entityId);
-  }
-
-  protected getWorkspace(context: RenderSpriteSyncContext): WorkspaceContract {
-    return context.workspace;
+    return context.workspace.editor!.state.collections[collectionType].contains(this.entityId);
   }
 
   protected resolveWorkspaceGridCellPixelSize(context: RenderSpriteSyncContext): number {
-    return requireWorkspaceEditor(context).state.viewport.gridCellPixelSize;
-  }
-
-  protected drawCollectionOverlayStroke(options: {
-    layout: RenderSpriteLayout;
-    color: number;
-    width: number;
-  }): void {
-    const innerRect = resolveInnerStrokeRect(options.layout, options.width);
-    if (innerRect === null) {
-      return;
-    }
-
-    this.getCollectionOverlayGraphics()
-      .rect(innerRect.x, innerRect.y, innerRect.width, innerRect.height)
-      .stroke({
-        width: options.width,
-        color: options.color,
-      });
+    return context.workspace.editor!.state.viewport.gridCellPixelSize;
   }
 
   private detach(): void {
@@ -330,52 +203,3 @@ export abstract class BaseRenderSprite implements RenderSprite {
   }
 }
 
-function resolveWorldEntitySelectionStrokeWidth(gridCellPixelSize: number): number {
-  const width = gridCellPixelSize / 8;
-
-  return Math.max(
-    WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH,
-    Math.min(WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH, width),
-  );
-}
-
-function requireWorkspaceEditor(
-  context: RenderSpriteSyncContext,
-): NonNullable<RenderSpriteSyncContext["workspace"]["editor"]> {
-  const editor = context.workspace.editor;
-
-  if (editor === null) {
-    throw new Error("Render sprites require an initialized editor host.");
-  }
-
-  return editor;
-}
-
-function resolveInnerStrokeRect(
-  layout: RenderSpriteLayout,
-  strokeWidth: number,
-): {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-} | null {
-  const inset = Math.min(
-    strokeWidth / 2,
-    layout.width / 2,
-    layout.height / 2,
-  );
-  const width = layout.width - inset * 2;
-  const height = layout.height - inset * 2;
-
-  if (width <= 0 || height <= 0) {
-    return null;
-  }
-
-  return {
-    x: layout.x + inset,
-    y: layout.y + inset,
-    width,
-    height,
-  };
-}

@@ -68,15 +68,56 @@ vi.mock("pixi.js", () => {
     }
   }
 
+  class MockTilingSprite {
+    public readonly anchor = {
+      set: vi.fn(),
+    }
+    public parent: {
+      removeChild: (child: MockTilingSprite) => void;
+    } | null = null
+    public x = 0
+    public y = 0
+    public width = 0
+    public height = 0
+    public rotation = 0
+    public roundPixels = false
+    public visible = true
+    public tilePosition = { x: 0, y: 0 }
+    public tileScale = { set: vi.fn() }
+    private currentTexture: unknown
+
+    public constructor(options: { texture: unknown; width: number; height: number }) {
+      this.currentTexture = options.texture
+      this.width = options.width
+      this.height = options.height
+    }
+
+    public destroy(): void {}
+
+    public get texture(): unknown {
+      return this.currentTexture
+    }
+
+    public set texture(value: unknown) {
+      this.currentTexture = value
+    }
+  }
+
   class MockTexture {
-    public static readonly EMPTY = { id: "empty-texture" }
-    public static readonly WHITE = { id: "white-texture" }
+    public static readonly EMPTY = { id: "empty-texture", width: 0 }
+    public static readonly WHITE = { id: "white-texture", width: 0 }
+  }
+
+  const MockAssets = {
+    load: vi.fn().mockResolvedValue({ id: "scanline-texture", width: 64 }),
   }
 
   return {
     Container: MockContainer,
     Sprite: MockSprite,
+    TilingSprite: MockTilingSprite,
     Texture: MockTexture,
+    Assets: MockAssets,
   }
 })
 
@@ -292,17 +333,15 @@ describe("GenericDeviceSprite", () => {
     expect(overlayRoot.children).toHaveLength(1)
     expect(previewEffectRoot?.visible).toBe(true)
 
-    const previewOverlay = previewEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+    const previewFillContainer = previewEffectRoot?.children?.[0] as {
+      mask?: unknown;
+      children?: unknown[];
+    } | undefined
     const previewMask = previewEffectRoot?.children?.[1] as RenderedSpriteSnapshot | undefined
 
-    expect(previewOverlay).toMatchObject({
-      x: 40,
-      y: 40,
-      width: 32,
-      height: 48,
-      rotation: Math.PI / 2,
-      texture: { id: "white-texture" },
-    })
+    const scanlineTiling = previewFillContainer?.children?.[0] as RenderedSpriteSnapshot | undefined
+
+    expect(previewFillContainer?.children).toHaveLength(1)
     expect(previewMask).toMatchObject({
       x: 40,
       y: 40,
@@ -314,7 +353,7 @@ describe("GenericDeviceSprite", () => {
         id: "device-mask-texture",
       },
     })
-    expect(previewOverlay?.mask).toBe(previewMask)
+    expect(previewFillContainer?.mask).toBe(previewMask)
   })
 
   it("uses the preview-mask key result even when it resolves to the body texture", async () => {

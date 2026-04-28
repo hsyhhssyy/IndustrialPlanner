@@ -77,8 +77,7 @@ export function createRenderSceneOrchestrator(
         width: app.renderer.width,
         height: app.renderer.height,
       },
-      theme,
-      frameTime,
+      theme
     })
 
     syncWorldEntitySprites({
@@ -89,6 +88,7 @@ export function createRenderSceneOrchestrator(
       entitySprites,
       layers,
       viewportState,
+      frameTime,
       viewportBounds: {
         left: 0,
         top: 0,
@@ -501,89 +501,19 @@ function syncWorldMarqueeGridRectOverlay(options: {
 
   options.overlay
     .rect(layout.x, layout.y, layout.width, layout.height)
-    .stroke(resolveMarqueeGridRectStrokeStyle(options.viewportState.gridCellPixelSize))
-}
-
-export function resolveWorldEntitySelectionStrokeStyle(options: {
-  theme: AppTheme;
-  gridCellPixelSize: number;
-}): {
-  width: number;
-  color: number;
-} {
-  return {
-    width: resolveWorldEntitySelectionStrokeWidth(options.gridCellPixelSize),
-    color: resolveAppThemeColorNumber(
-      options.theme,
-      options.theme.renderer.worldEntitySelectionStrokeColorKey,
-    ),
-  }
-}
-
-export function resolveMarqueeGridRectStrokeStyle(gridCellPixelSize: number): {
-  width: number;
-  color: number;
-} {
-  return {
-    width: resolveWorldEntitySelectionStrokeWidth(gridCellPixelSize),
+    .stroke({
+    width: resolveWorldAuxiliaryStrokeWidth(options.viewportState.gridCellPixelSize),
     color: 0xffffff,
-  }
+  })
 }
 
-export function resolveWorldEntitySelectionStrokeWidth(gridCellPixelSize: number): number {
+export function resolveWorldAuxiliaryStrokeWidth(gridCellPixelSize: number): number {
   const width = gridCellPixelSize / 8
 
   return Math.max(
     WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH,
     Math.min(WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH, width),
   )
-}
-
-export function resolveWorldEntitySelectionOverlayLayouts(options: {
-  entities: readonly WorldEntity[];
-  entityDefinitionMap: Map<string, EntityDefinition>;
-  selectedEntityIds: readonly string[];
-  viewportBounds: {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  };
-  viewportCenter: {
-    x: number;
-    y: number;
-  };
-  gridCellPixelSize: number;
-}): RenderSpriteLayout[] {
-  if (options.entities.length === 0 || options.selectedEntityIds.length === 0) {
-    return []
-  }
-
-  const selectedEntityIdSet = new Set(options.selectedEntityIds)
-  const layouts: RenderSpriteLayout[] = []
-
-  for (const entity of options.entities) {
-    if (!selectedEntityIdSet.has(entity.id)) {
-      continue
-    }
-
-    const definition = options.entityDefinitionMap.get(entity.definitionId)
-    if (!definition) {
-      continue
-    }
-
-    layouts.push(
-      resolveWorldEntitySpriteLayout({
-        entity,
-        footprint: definition.footprint,
-        viewportBounds: options.viewportBounds,
-        viewportCenter: options.viewportCenter,
-        gridCellPixelSize: options.gridCellPixelSize,
-      }),
-    )
-  }
-
-  return layouts
 }
 
 export function resolveMarqueeGridRectLayout(options: {
