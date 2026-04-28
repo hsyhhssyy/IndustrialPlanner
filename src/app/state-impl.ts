@@ -67,6 +67,9 @@ export type CanvasFloatingToolbarButtonId = typeof CANVAS_FLOATING_TOOLBAR_BUTTO
 export const CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS = [
   "canvas-right-dock-toolbar-button-exit",
   "canvas-right-dock-toolbar-button-move",
+  "canvas-right-dock-toolbar-button-save-blueprint",
+  "canvas-right-dock-toolbar-button-copy",
+  "canvas-right-dock-toolbar-button-delete",
 ] as const;
 
 export type CanvasRightDockToolbarButtonId = typeof CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS[number];

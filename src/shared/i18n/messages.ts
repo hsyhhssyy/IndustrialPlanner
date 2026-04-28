@@ -36,6 +36,8 @@ export type MessageKey =
   | "action.confirmMove"
   | "action.toggleValue"
   | "action.clearPatch"
+  | "action.saveBlueprint"
+  | "action.copySelection"
   | "toolbar.tools"
   | "toolbar.views"
   | "toolbar.canvasTopLeftCorner"
@@ -212,6 +214,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.applyValue": "应用",
     "action.rotatePlacement": "旋转",
     "action.rotateSelection": "旋转",
+    "action.saveBlueprint": "保存蓝图",
+    "action.copySelection": "复制选中",
     "action.cancelPlacement": "取消",
     "action.confirmPlacement": "确认放置",
     "action.cancelMove": "取消移动",
@@ -394,6 +398,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.applyValue": "Apply",
     "action.rotatePlacement": "Rotate",
     "action.rotateSelection": "Rotate",
+    "action.saveBlueprint": "Save Blueprint",
+    "action.copySelection": "Copy Selection",
     "action.cancelPlacement": "Cancel",
     "action.confirmPlacement": "Confirm Placement",
     "action.cancelMove": "Cancel Move",

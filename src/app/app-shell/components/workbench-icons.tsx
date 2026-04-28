@@ -39,10 +39,7 @@ type WorkbenchIconKind =
   | "blueprint"
   | "history"
   | "save-blueprint"
-  | "xx-save-blueprint"
   | "copy"
-  | "xx-copy"
-  | "xx-delete"
   | "toolbox"
   | "help"
   | "settings"
@@ -81,10 +78,7 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   blueprint: LucideDraftingCompass,
   history: LucideHistory,
   "save-blueprint": LucideSave,
-  "xx-save-blueprint": LucideSave,
   copy: LucideCopy,
-  "xx-copy": LucideCopy,
-  "xx-delete": LucideTrash2,
   toolbox: LucidePackage2,
   help: LucideHelpCircle,
   settings: LucideSettings,

@@ -36,6 +36,18 @@ const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
     labelKey: "tool.move",
     icon: "move",
   },
+  "canvas-right-dock-toolbar-button-save-blueprint": {
+    labelKey: "action.saveBlueprint",
+    icon: "save-blueprint",
+  },
+  "canvas-right-dock-toolbar-button-copy": {
+    labelKey: "action.copySelection",
+    icon: "copy",
+  },
+  "canvas-right-dock-toolbar-button-delete": {
+    labelKey: "action.deleteSelection",
+    icon: "delete",
+  },
 };
 
 function joinClassNames(values: Array<string | undefined | false>): string {
