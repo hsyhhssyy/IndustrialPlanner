@@ -75,6 +75,9 @@ function normalizePersistedAppSettings(
     hypergryphImmediateMarquee: typeof persistedAppSettings.hypergryphImmediateMarquee === "boolean"
       ? persistedAppSettings.hypergryphImmediateMarquee
       : fallback.hypergryphImmediateMarquee,
+    gameShowHotkeys: typeof persistedAppSettings.gameShowHotkeys === "boolean"
+      ? persistedAppSettings.gameShowHotkeys
+      : fallback.gameShowHotkeys,
     debugShowFps: typeof persistedAppSettings.debugShowFps === "boolean"
       ? persistedAppSettings.debugShowFps
       : fallback.debugShowFps,

@@ -147,6 +147,13 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         descriptionKey: "settingsField.useSimplifiedDeviceIconsDescription",
         defaultValue: false,
       },
+      {
+        id: "game-show-hotkeys",
+        kind: "switch",
+        labelKey: "settingsField.showHotkeys",
+        descriptionKey: "settingsField.showHotkeysDescription",
+        defaultValue: true,
+      },
     ],
   },
   {

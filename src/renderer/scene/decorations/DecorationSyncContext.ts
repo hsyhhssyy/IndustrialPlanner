@@ -20,4 +20,5 @@ export interface DecorationSyncContext {
   viewportState: RenderViewportState;
   viewportBounds: DecorationViewportBounds;
   workspace: WorkspaceContract;
+  nowMs: number;
 }

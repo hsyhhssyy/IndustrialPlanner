@@ -1,11 +1,21 @@
 import type { GridRectSize } from "../grid";
 
+export type UiGroup =
+  | "beltLogistics"           // 传送带物流
+  | "pipeLogistics"           // 管道物流
+  | "resourcePower"           // 资源与电力
+  | "warehouse"               // 仓库存取
+  | "basicProduction"         // 基础生产
+  | "advancedManufacturing"   // 合成制造
+  | "hidden";                 // 隐藏设备
+
 export interface EntityDefinition {
   id: string;
   // i18n 设备名称
   nameKey: string;
   spriteId: string;
   footprint: GridRectSize;
+  uiGroup: UiGroup;
   tags: string[];
   // 是否耗电, 存储箱有powerDemand但是requiresPower为false
   // powerDemand表示只要他在电网里，就需要扣除的值。但是如果requiresPower为false，那么他可以在电网外运行，只不过放到电网里的时候耗电罢了。

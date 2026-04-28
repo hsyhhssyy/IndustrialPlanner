@@ -108,6 +108,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.hypergryphImmediateMove = nextImmediateMove;
         }),
       },
+      "game-show-hotkeys": {
+        readValue: () => appHost.state.settings.gameShowHotkeys,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.gameShowHotkeys === value) {
+            return;
+          }
+
+          appHost.internalState.settings.gameShowHotkeys = value;
+        }),
+      },
       "debug-show-fps": {
         readValue: () => appHost.state.settings.debugShowFps,
         writeValue: action((value) => {

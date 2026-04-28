@@ -155,6 +155,8 @@ export type MessageKey =
   | "settingsField.arknightsRotateShortcutDescription"
   | "settingsField.useSimplifiedDeviceIcons"
   | "settingsField.useSimplifiedDeviceIconsDescription"
+  | "settingsField.showHotkeys"
+  | "settingsField.showHotkeysDescription"
   | "settingsField.debugMode"
   | "settingsField.debugModeDescription"
   | "settingsField.showFps"
@@ -182,7 +184,14 @@ export type MessageKey =
   | "locale.en-US"
   | "mutability.document-only"
   | "mutability.runtime-mutable"
-  | "mutability.recompile-required";
+  | "mutability.recompile-required"
+  | "uiGroup.beltLogistics"
+  | "uiGroup.pipeLogistics"
+  | "uiGroup.resourcePower"
+  | "uiGroup.warehouse"
+  | "uiGroup.basicProduction"
+  | "uiGroup.advancedManufacturing"
+  | "uiGroup.hidden";
 
 const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
   "zh-CN": {
@@ -319,7 +328,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsGroup.other": "其他",
     "settingsGroup.otherDescription": "调试和附加能力开关。",
     "settingsGroup.debug": "调试",
-    "settingsGroup.debugDescription": "FPS 与手势测试开关。当前版本只保存设置，不影响界面行为。",
+    "settingsGroup.debugDescription": "FPS 与手势测试开关，可用于开发调试。",
     "settingsField.language": "选择语言/Choose Language",
     "settingsField.languageDescription": "切换界面语言；该条目名称始终以双语显示。",
     "settingsField.theme": "主题",
@@ -340,10 +349,12 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.arknightsRotateShortcutDescription": "当前为占位快捷键，尚未接入功能；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.useSimplifiedDeviceIcons": "使用简笔画设备图片",
     "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图简笔画显示方式，不会提高性能。",
+    "settingsField.showHotkeys": "显示快捷键",
+    "settingsField.showHotkeysDescription": "在界面按钮上展示对应的快捷键提示。",
     "settingsField.debugMode": "调试模式",
     "settingsField.debugModeDescription": "打开调试模式日志。",
     "settingsField.showFps": "显示 FPS",
-    "settingsField.showFpsDescription": "保存 FPS 显示开关；当前版本仅写入配置，暂未实际显示 FPS。",
+    "settingsField.showFpsDescription": "开启后在画布右上角显示实时 FPS 指示器。",
     "settingsField.showGestureTestWindow": "显示手势测试窗口",
     "settingsField.showGestureTestWindowDescription": "保存手势测试窗口显示开关；当前版本仅写入配置，暂未控制窗口显示。",
     "settingsOption.languageZhHans": "中文(简体)",
@@ -368,6 +379,13 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "mutability.document-only": "仅文档态",
     "mutability.runtime-mutable": "运行态可改",
     "mutability.recompile-required": "需要重编译",
+    "uiGroup.beltLogistics": "传送带物流",
+    "uiGroup.pipeLogistics": "管道物流",
+    "uiGroup.resourcePower": "资源与电力",
+    "uiGroup.warehouse": "仓库存取",
+    "uiGroup.basicProduction": "基础生产",
+    "uiGroup.advancedManufacturing": "合成制造",
+    "uiGroup.hidden": "隐藏设备",
   },
   "en-US": {
     "app.title": "Industrial Planner Stage1",
@@ -503,7 +521,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsGroup.other": "Other",
     "settingsGroup.otherDescription": "Debug and auxiliary capability toggles.",
     "settingsGroup.debug": "Debug",
-    "settingsGroup.debugDescription": "FPS and gesture test toggles. The current version only persists them and does not apply them yet.",
+    "settingsGroup.debugDescription": "FPS and gesture test toggles for development debugging.",
     "settingsField.language": "选择语言/Choose Language",
     "settingsField.languageDescription": "Switch the interface language; this entry label stays bilingual in every locale.",
     "settingsField.theme": "Theme",
@@ -524,10 +542,12 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.arknightsRotateShortcutDescription": "Placeholder shortcut only; it is not wired yet and is editable only when Arknights Operation Mode is off.",
     "settingsField.useSimplifiedDeviceIcons": "Use Simplified Device Icons",
     "settingsField.useSimplifiedDeviceIconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
+    "settingsField.showHotkeys": "Show Hotkeys",
+    "settingsField.showHotkeysDescription": "Display shortcut key hints on interface buttons.",
     "settingsField.debugMode": "Debug Mode",
     "settingsField.debugModeDescription": "Enable debug mode logging.",
     "settingsField.showFps": "Show FPS",
-    "settingsField.showFpsDescription": "Persist the FPS toggle; the current version does not render an FPS indicator yet.",
+    "settingsField.showFpsDescription": "Show a real-time FPS indicator at the top-right corner of the canvas when enabled.",
     "settingsField.showGestureTestWindow": "Show Gesture Test Window",
     "settingsField.showGestureTestWindowDescription": "Persist the gesture test window toggle; the current version does not control the window visibility yet.",
     "settingsOption.languageZhHans": "中文(简体)",
@@ -552,6 +572,13 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "mutability.document-only": "Document Only",
     "mutability.runtime-mutable": "Runtime Mutable",
     "mutability.recompile-required": "Recompile Required",
+    "uiGroup.beltLogistics": "Belt Logistics",
+    "uiGroup.pipeLogistics": "Pipe Logistics",
+    "uiGroup.resourcePower": "Resources & Power",
+    "uiGroup.warehouse": "Warehouse Access",
+    "uiGroup.basicProduction": "Basic Production",
+    "uiGroup.advancedManufacturing": "Advanced Manufacturing",
+    "uiGroup.hidden": "Hidden Devices",
   },
 };
 
