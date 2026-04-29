@@ -316,7 +316,7 @@ describe("resolveWorldGridLineAxes", () => {
     expect(shiftedAxes.horizontal.major).toEqual([160])
   })
 
-  it("hides fine grid lines when cells are smaller than 50 pixels", () => {
+  it("hides fine grid lines when cells are smaller than 20 pixels", () => {
     const axes = resolveWorldGridLineAxes({
       viewportBounds: {
         left: 0,
@@ -336,6 +336,27 @@ describe("resolveWorldGridLineAxes", () => {
     expect(axes.vertical.major.slice(0, 3)).toEqual([40, 120, 200])
     expect(axes.horizontal.major.slice(0, 3)).toEqual([40, 120, 200])
   })
+
+  it("keeps fine grid lines visible at 20 pixels", () => {
+    const axes = resolveWorldGridLineAxes({
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 100,
+        height: 100,
+      },
+      viewportCenter: {
+        x: 0,
+        y: 0,
+      },
+      gridCellPixelSize: 20,
+    })
+
+    expect(axes.vertical.fine).toEqual([10, 30, 70, 90])
+    expect(axes.horizontal.fine).toEqual([10, 30, 70, 90])
+    expect(axes.vertical.major).toEqual([50])
+    expect(axes.horizontal.major).toEqual([50])
+  })
 })
 
 describe("resolveWorldGridStrokeStyle", () => {
@@ -352,9 +373,9 @@ describe("resolveWorldGridStrokeStyle", () => {
     expect(resolveWorldGridStrokeStyle(AYU_LIGHT_THEME).color).toBe(0x5c6773)
   })
 
-  it("uses a 1.5x stroke for major grid lines", () => {
+  it("uses a 2x stroke for major grid lines", () => {
     expect(resolveWorldGridMajorStrokeStyle(AYU_DARK_THEME)).toEqual({
-      width: 1.5,
+      width: 2,
       color: 0xffffff,
       alpha: 0.12,
       pixelLine: true,

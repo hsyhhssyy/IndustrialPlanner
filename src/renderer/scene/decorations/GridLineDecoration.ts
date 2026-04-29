@@ -7,8 +7,8 @@ import type { DecorationSyncContext } from "./DecorationSyncContext";
 const WORLD_GRID_LINE_ALPHA = 0.12;
 const WORLD_GRID_LINE_WIDTH = 1;
 const WORLD_GRID_MAJOR_LINE_INTERVAL = 5;
-const WORLD_GRID_MAJOR_LINE_WIDTH_MULTIPLIER = 1.5;
-const WORLD_GRID_FINE_LINE_MIN_CELL_PIXEL_SIZE = 50;
+const WORLD_GRID_MAJOR_LINE_WIDTH_MULTIPLIER = 2;
+const WORLD_GRID_FINE_LINE_MIN_CELL_PIXEL_SIZE = 20;
 
 interface WorldGridLinePosition {
   lineIndex: number;
