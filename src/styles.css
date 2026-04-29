@@ -453,6 +453,7 @@ button.is-active {
 }
 
 .settings-dialog-switch-shell {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
@@ -1105,7 +1106,7 @@ body.is-resizing-left-dock * {
   width: 100%;
   padding: 8px 10px;
   border-radius: 8px;
-  background: linear-gradient(180deg, var(--surface-2), var(--placement-button-bg-end));
+  background: transparent;
   text-align: left;
   overflow: visible;
 }

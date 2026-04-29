@@ -43,4 +43,8 @@ export interface EditorAction {
 	createMoveOperationDraft(): void;
 	applyMoveOerationDraft(): boolean;
 	cancelMoveOperationDraft(): void;
+
+	createSinglePlacementDraft(deviceDefinitionId: string): void;
+	applyPlacementDraft(): boolean;
+	cancelPlacementDraft(): void;
 }

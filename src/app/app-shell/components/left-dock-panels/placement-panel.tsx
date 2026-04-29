@@ -2,28 +2,64 @@ import type { AppHost } from "@/app/app-host";
 import { observer } from "mobx-react-lite";
 import { Fragment } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-
-const PLACEMENT_ICON_PATHS = [
-  "/device-icons/item_log_belt_01.webp",
-  "/device-icons/item_log_connector.webp",
-  "/device-icons/item_log_converger.webp",
-  "/device-icons/item_log_pipe_01.webp",
-  "/device-icons/item_log_splitter.webp",
-  "/device-icons/item_pipe_connector.webp",
-  "/device-icons/item_pipe_converger.webp",
-  "/device-icons/item_pipe_splitter.webp",
-  "/device-icons/item_port_filling_pd_mc_1.webp",
-  "/device-icons/item_port_grinder_1.webp",
-  "/device-icons/item_port_log_hongs_bus.webp",
-  "/device-icons/item_port_log_hongs_bus_source.webp",
-  "/device-icons/item_port_mix_pool_1.webp",
-  "/device-icons/item_port_storager_1.webp",
-  "/device-icons/item_port_udpipe_loader_1.webp",
-  "/device-icons/item_port_udpipe_unloader_1.webp",
-  "/device-icons/item_port_unloader_1.webp",
-] as const;
+import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
+import type { UiGroup } from "@/domain/types/registry/entity-definition";
+import { SHORTCUT_KEY } from "@/app/keyboard-shortcut-manager";
 
 const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
+
+// ─── 设备图标路径映射 ───
+function resolveDeviceIconPath(entityId: string): string {
+  // 特殊映射：entity id 与图标文件名不一致的情况
+  const SPECIAL_ICON_MAP: Record<string, string> = {
+    "item_port_liquid_filling_pd_mc_1": "/device-icons/item_port_filling_pd_mc_1.webp",
+  };
+  if (SPECIAL_ICON_MAP[entityId]) return SPECIAL_ICON_MAP[entityId];
+  return `/device-icons/${entityId}.webp`;
+}
+
+// ─── uiGroup → 分组配置映射 ───
+const UI_GROUP_SECTION_CONFIG: Record<Exclude<UiGroup, "hidden">, {
+  titleKey: string;
+  shortcutKeyId: string;
+}> = {
+  beltLogistics: {
+    titleKey: "workbench.section.beltLogistics",
+    shortcutKeyId: SHORTCUT_KEY.PLACE_CONVEYOR,
+  },
+  pipeLogistics: {
+    titleKey: "workbench.section.pipeLogistics",
+    shortcutKeyId: SHORTCUT_KEY.PLACE_PIPE,
+  },
+  resourcePower: {
+    titleKey: "workbench.section.resourcePower",
+    shortcutKeyId: SHORTCUT_KEY.RESOURCES_POWER,
+  },
+  warehouse: {
+    titleKey: "workbench.section.warehouse",
+    shortcutKeyId: SHORTCUT_KEY.WAREHOUSE,
+  },
+  basicProduction: {
+    titleKey: "workbench.section.production",
+    shortcutKeyId: SHORTCUT_KEY.BASIC_PRODUCTION,
+  },
+  advancedManufacturing: {
+    titleKey: "workbench.section.advancedManufacturing",
+    shortcutKeyId: SHORTCUT_KEY.SYNTHESIS,
+  },
+};
+
+/** 设备分组在面板中的显示顺序 */
+const DEVICE_SECTION_ORDER: readonly Exclude<UiGroup, "hidden">[] = [
+  "beltLogistics",
+  "pipeLogistics",
+  "resourcePower",
+  "warehouse",
+  "basicProduction",
+  "advancedManufacturing",
+];
+
+// ─── 类型定义 ───
 
 interface PlacementButtonDefinition {
   readonly uiButtonId: string;
@@ -38,6 +74,8 @@ interface PlacementSectionDefinition {
   readonly shortcutKey: string | null;
   readonly buttons: readonly PlacementButtonDefinition[];
 }
+
+// ─── 操作区按钮（保持硬编码） ───
 
 const OPERATION_BUTTONS: readonly PlacementButtonDefinition[] = [
   {
@@ -68,87 +106,76 @@ const OPERATION_BUTTONS: readonly PlacementButtonDefinition[] = [
   },
 ] as const;
 
-const PLACEMENT_SECTIONS: readonly PlacementSectionDefinition[] = [
-  {
+// ─── 动态构建设备分组 ───
+
+function buildPlacementSections(appHost: AppHost): readonly PlacementSectionDefinition[] {
+  // 1. 操作区
+  const operationSection: PlacementSectionDefinition = {
     titleKey: "workbench.section.operation",
     shortcutKey: null,
-    buttons: OPERATION_BUTTONS,
-  },
-  {
-    titleKey: "workbench.section.beltLogistics",
-    shortcutKey: "E",
-    buttons: [
-      { uiButtonId: "placement-belt-splitter", labelKey: "workbench.button.beltSplitter" },
-      { uiButtonId: "placement-belt-converger", labelKey: "workbench.button.beltConverger" },
-      { uiButtonId: "placement-belt-bridge", labelKey: "workbench.button.beltBridge" },
-      { uiButtonId: "placement-item-inlet", labelKey: "workbench.button.itemInlet" },
-    ],
-  },
-  {
-    titleKey: "workbench.section.pipeLogistics",
-    shortcutKey: "Q",
-    buttons: [
-      { uiButtonId: "placement-pipe-splitter", labelKey: "workbench.button.pipeSplitter" },
-      { uiButtonId: "placement-pipe-converger", labelKey: "workbench.button.pipeConverger" },
-      { uiButtonId: "placement-pipe-bridge", labelKey: "workbench.button.pipeBridge" },
-      { uiButtonId: "placement-pipe-inlet", labelKey: "workbench.button.pipeInlet" },
-    ],
-  },
-  {
-    titleKey: "workbench.section.resourcePower",
-    shortcutKey: "X",
-    buttons: [
-      { uiButtonId: "placement-water-pump", labelKey: "workbench.button.waterPump" },
-      { uiButtonId: "placement-power-post", labelKey: "workbench.button.powerPost" },
-      { uiButtonId: "placement-thermal-pool", labelKey: "workbench.button.thermalPool" },
-    ],
-  },
-  {
-    titleKey: "workbench.section.warehouse",
-    shortcutKey: "C",
-    buttons: [
-      { uiButtonId: "placement-dark-outlet", labelKey: "workbench.button.darkOutlet" },
-      { uiButtonId: "placement-dark-inlet", labelKey: "workbench.button.darkInlet" },
-      { uiButtonId: "placement-warehouse-storage-port", labelKey: "workbench.button.warehouseStoragePort" },
-      { uiButtonId: "placement-warehouse-pickup-port", labelKey: "workbench.button.warehousePickupPort" },
-      { uiButtonId: "placement-liquid-tank", labelKey: "workbench.button.liquidTank" },
-      { uiButtonId: "placement-warehouse-bus-segment", labelKey: "workbench.button.warehouseBusSegment" },
-      { uiButtonId: "placement-warehouse-bus-source", labelKey: "workbench.button.warehouseBusSource" },
-      { uiButtonId: "placement-protocol-storage", labelKey: "workbench.button.protocolStorage" },
-    ],
-  },
-  {
-    titleKey: "workbench.section.production",
-    shortcutKey: "V",
-    buttons: [
-      { uiButtonId: "placement-reactor-pool", labelKey: "workbench.button.reactorPool" },
-      { uiButtonId: "placement-grinder", labelKey: "workbench.button.grinder" },
-      { uiButtonId: "placement-filling-machine", labelKey: "workbench.button.fillingMachine" },
-    ],
-  },
-] as const;
+    buttons: OPERATION_BUTTONS.filter((b) => (b.visibleWhen?.(appHost) ?? true)),
+  };
 
-function resolvePlacementIconPath(index: number): string {
-  return PLACEMENT_ICON_PATHS[index % PLACEMENT_ICON_PATHS.length] ?? PLACEMENT_ICON_PATHS[0];
+  // 2. 按 uiGroup 分组设备（过滤 hidden，组内按 id 排序）
+  const groupedByUiGroup = new Map<Exclude<UiGroup, "hidden">, typeof ENTITY_DEFINITIONS>();
+  for (const group of DEVICE_SECTION_ORDER) {
+    groupedByUiGroup.set(group, []);
+  }
+
+  for (const entity of ENTITY_DEFINITIONS) {
+    if (entity.uiGroup === "hidden") continue;
+    const group = groupedByUiGroup.get(entity.uiGroup);
+    if (group) {
+      group.push(entity);
+    }
+  }
+
+  // 组内按 id 排序
+  for (const [, entities] of groupedByUiGroup) {
+    entities.sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  // 3. 构建设备分组 section
+  const deviceSections: PlacementSectionDefinition[] = DEVICE_SECTION_ORDER
+    .map((uiGroup) => {
+      const config = UI_GROUP_SECTION_CONFIG[uiGroup];
+      const entities = groupedByUiGroup.get(uiGroup) ?? [];
+      const shortcutKey = appHost.internalActions.getKeyboardShortcutFor(config.shortcutKeyId);
+
+      const buttons: PlacementButtonDefinition[] = entities.map((entity) => ({
+        uiButtonId: `placement-${entity.id}`,
+        labelKey: entity.nameKey,
+      }));
+
+      return {
+        titleKey: config.titleKey,
+        shortcutKey: shortcutKey || null,
+        buttons,
+      };
+    });
+
+  return [operationSection, ...deviceSections];
 }
 
 export const PlacementPanel = observer(function PlacementPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const screenProfile = appHost.state.screenProfile;
   const isMobileLayout = screenProfile.deviceClass === "mobile";
-  const showShortcutHints = screenProfile.deviceClass !== "mobile";
-  const sections = PLACEMENT_SECTIONS.map((section) => ({
-    ...section,
-    buttons: section.buttons.filter((button) => button.visibleWhen?.(appHost) ?? true),
-  }));
+  const showShortcutHints = screenProfile.deviceClass !== "mobile" && appHost.state.settings.gameShowHotkeys;
+  const sections = buildPlacementSections(appHost);
 
   const handleButtonPointerUp = (
     event: ReactPointerEvent<HTMLButtonElement>,
     button: PlacementButtonDefinition,
+    isDeviceButton: boolean,
   ) => {
+    const uiButtonId = isDeviceButton
+      ? `ui-left-dock-placement-mode-${button.uiButtonId.replace("placement-", "")}-${event.pointerType === "mouse" ? "mouse-tap" : "touch-tap"}`
+      : button.uiButtonId;
+
     if (event.pointerType === "mouse") {
       appHost.gestureAdapter.handleUiButtonMouseTap({
-        uiButtonId: button.uiButtonId,
+        uiButtonId,
         button: event.button,
         altKey: event.altKey,
         ctrlKey: event.ctrlKey,
@@ -161,7 +188,7 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
 
     if (event.pointerType === "touch" || event.pointerType === "pen") {
       appHost.gestureAdapter.handleUiButtonTouchTap({
-        uiButtonId: button.uiButtonId,
+        uiButtonId,
         altKey: event.altKey,
         ctrlKey: event.ctrlKey,
         metaKey: event.metaKey,
@@ -177,10 +204,6 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
         const isOperationSection = sectionIndex === 0;
         const isResourcePowerSection = section.titleKey === "workbench.section.resourcePower";
         const sectionTitleId = `placement-section-${sectionIndex}`;
-        const sectionButtonStartIndex = sections.slice(0, sectionIndex).reduce(
-          (count, currentSection) => count + currentSection.buttons.length,
-          0,
-        );
 
         return (
           <Fragment key={section.titleKey}>
@@ -199,7 +222,6 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
               </div>
               <div className={isMobileLayout ? "placement-button-list is-single-column" : "placement-button-list"}>
                 {section.buttons.map((button, buttonIndex) => {
-                  const iconPath = resolvePlacementIconPath(sectionButtonStartIndex + buttonIndex);
                   const hotkey = button.hotkey ?? (
                     isOperationSection
                       ? null
@@ -219,13 +241,15 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
                       data-ui-button-id={button.uiButtonId}
                       key={button.uiButtonId}
                       onPointerUp={(event) => {
-                        handleButtonPointerUp(event, button);
+                        handleButtonPointerUp(event, button, !isOperationSection);
                       }}
                       type="button"
                     >
-                      <span className="button-icon" aria-hidden="true">
-                        <img alt="" className="button-icon-image" src={iconPath} />
-                      </span>
+                      {isOperationSection ? null : (
+                        <span className="button-icon" aria-hidden="true">
+                          <img alt="" className="button-icon-image" src={resolveDeviceIconPath(button.uiButtonId.replace("placement-", ""))} />
+                        </span>
+                      )}
                       <span className="placement-button-label">{t(button.labelKey)}</span>
                       {showShortcutHints && hotkey ? <span className="placement-button-hotkey">{hotkey}</span> : null}
                     </button>
