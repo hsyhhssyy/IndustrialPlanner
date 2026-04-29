@@ -6,6 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/app-host";
 import type { GestureEvent } from "@/app/input/gesture-adapter";
+import {
+  APP_SHORTCUTS_LOCAL_STORAGE_KEY,
+  SHORTCUT_KEY,
+} from "@/app/keyboard-shortcut-manager";
 import { USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY } from "@/app/app-shell/settings-dialog-state";
 import {
   APP_SETTINGS_LOCAL_STORAGE_KEY,
@@ -27,6 +31,26 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
   };
 }
+
+const DEFAULT_APP_SETTINGS_STORAGE = {
+  locale: "zh-CN",
+  themeId: "ayu-light",
+  hypergryphOperationMode: true,
+  hypergryphImmediateMove: true,
+  hypergryphImmediateMarquee: false,
+  gameShowHotkeys: false,
+  debugShowFps: false,
+  debugShowGestureDiagnosticsWindow: false,
+} as const;
+
+const DEFAULT_APP_SHORTCUTS_STORAGE = {
+  [SHORTCUT_KEY.PLACE_CONVEYOR]: "E",
+  [SHORTCUT_KEY.PLACE_PIPE]: "Q",
+  [SHORTCUT_KEY.RESOURCES_POWER]: "X",
+  [SHORTCUT_KEY.WAREHOUSE]: "C",
+  [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
+  [SHORTCUT_KEY.SYNTHESIS]: "B",
+} as const;
 
 function dispatchPointerEvent(
   target: Element,
@@ -1102,20 +1126,8 @@ describe("WorkbenchApp", () => {
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
+        ...DEFAULT_APP_SETTINGS_STORAGE,
         locale: "en-US",
-        themeId: "ayu-light",
-        hypergryphOperationMode: true,
-        hypergryphImmediateMove: true,
-        hypergryphImmediateMarquee: false,
-        gameShowHotkeys: false,
-        debugShowFps: false,
-        debugShowGestureDiagnosticsWindow: false,
-        shortcutPlaceConveyor: "E",
-        shortcutPlacePipe: "Q",
-        shortcutResourcesPower: "X",
-        shortcutWarehouse: "C",
-        shortcutBasicProduction: "V",
-        shortcutSynthesis: "B",
       }),
     );
   });
@@ -1159,20 +1171,8 @@ describe("WorkbenchApp", () => {
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
-        locale: "zh-CN",
+        ...DEFAULT_APP_SETTINGS_STORAGE,
         themeId: "ayu-dark",
-        hypergryphOperationMode: true,
-        hypergryphImmediateMove: true,
-        hypergryphImmediateMarquee: false,
-        gameShowHotkeys: false,
-        debugShowFps: false,
-        debugShowGestureDiagnosticsWindow: false,
-        shortcutPlaceConveyor: "E",
-        shortcutPlacePipe: "Q",
-        shortcutResourcesPower: "X",
-        shortcutWarehouse: "C",
-        shortcutBasicProduction: "V",
-        shortcutSynthesis: "B",
       }),
     );
   });
@@ -1240,20 +1240,9 @@ describe("WorkbenchApp", () => {
     expect(immediateMarqueeToggle?.checked).toBe(true);
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
-        locale: "zh-CN",
-        themeId: "ayu-light",
-        hypergryphOperationMode: true,
+        ...DEFAULT_APP_SETTINGS_STORAGE,
         hypergryphImmediateMove: true,
         hypergryphImmediateMarquee: true,
-        gameShowHotkeys: false,
-        debugShowFps: false,
-        debugShowGestureDiagnosticsWindow: false,
-        shortcutPlaceConveyor: "E",
-        shortcutPlacePipe: "Q",
-        shortcutResourcesPower: "X",
-        shortcutWarehouse: "C",
-        shortcutBasicProduction: "V",
-        shortcutSynthesis: "B",
       }),
     );
   });
@@ -1295,20 +1284,9 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(true);
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
-        locale: "zh-CN",
-        themeId: "ayu-light",
-        hypergryphOperationMode: true,
-        hypergryphImmediateMove: true,
-        hypergryphImmediateMarquee: false,
-        gameShowHotkeys: false,
+        ...DEFAULT_APP_SETTINGS_STORAGE,
         debugShowFps: true,
         debugShowGestureDiagnosticsWindow: true,
-        shortcutPlaceConveyor: "E",
-        shortcutPlacePipe: "Q",
-        shortcutResourcesPower: "X",
-        shortcutWarehouse: "C",
-        shortcutBasicProduction: "V",
-        shortcutSynthesis: "B",
       }),
     );
   });
@@ -1385,17 +1363,12 @@ describe("WorkbenchApp", () => {
         locale: "zh-CN",
         themeId: "ayu-light",
         hypergryphOperationMode: false,
-        hypergryphImmediateMove: true,
-        hypergryphImmediateMarquee: false,
-        gameShowHotkeys: false,
-        debugShowFps: false,
-        debugShowGestureDiagnosticsWindow: false,
-        shortcutPlaceConveyor: "P",
-        shortcutPlacePipe: "Q",
-        shortcutResourcesPower: "X",
-        shortcutWarehouse: "C",
-        shortcutBasicProduction: "V",
-        shortcutSynthesis: "B",
+      }),
+    );
+    expect(localStorage.getItem(APP_SHORTCUTS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        ...DEFAULT_APP_SHORTCUTS_STORAGE,
+        [SHORTCUT_KEY.PLACE_CONVEYOR]: "P",
       }),
     );
   });

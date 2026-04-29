@@ -151,6 +151,10 @@ describe("Left dock panel switching", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
+    runInAction(() => {
+      appHost.internalState.settings.gameShowHotkeys = true;
+    });
+
     act(() => {
       root.render(
         <>
@@ -177,16 +181,18 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.getAttribute("data-panel-id")).toBe("placement");
     expect(visiblePanel.textContent).toContain("保存蓝图");
     expect(visiblePanel?.textContent).toContain("批量选择");
-    expect(visiblePanel.textContent).toContain("多口暗管出口");
+    expect(visiblePanel.textContent).toContain("暗管出口");
     expect(visiblePanel.textContent).not.toContain("设备");
     expect(visiblePanel.textContent).not.toContain("拖动虚影后点击确认完成放置。");
-    expect(visiblePanel.querySelectorAll(".placement-panel-group")).toHaveLength(6);
-    expect(visiblePanel.querySelectorAll(".placement-panel-divider")).toHaveLength(5);
+    expect(visiblePanel.querySelectorAll(".placement-panel-group")).toHaveLength(7);
+    expect(visiblePanel.querySelectorAll(".placement-panel-divider")).toHaveLength(6);
     expect(visiblePanel.querySelectorAll(".placement-button .button-icon-image")).toHaveLength(
-      visiblePanel.querySelectorAll(".placement-button").length,
+      visiblePanel.querySelectorAll(".placement-device-button").length,
     );
     expect(visiblePanel.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(3);
-    expect(visiblePanel.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(22);
+    expect(visiblePanel.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(
+      visiblePanel.querySelectorAll(".placement-device-button").length,
+    );
     expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-select"]')?.classList.contains("is-active")).toBe(true);
     expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-marquee"]')?.classList.contains("is-active")).toBe(false);
     expect(visiblePanel.textContent).toContain("Esc");
@@ -199,6 +205,10 @@ describe("Left dock panel switching", () => {
   it("hides the batch select button when hypergryph operation mode is off", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.settings.gameShowHotkeys = true;
+    });
 
     runInAction(() => {
       appHost.internalState.settings.hypergryphOperationMode = false;

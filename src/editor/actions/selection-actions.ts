@@ -13,6 +13,7 @@ import {
 } from "@/shared/geometry/grid";
 
 import { resolveEntityById, resolveListedEntities } from "../entity-resolvers";
+import type { DraftEntity } from "../draft-entity";
 import type { EditorActionsContext } from "./types";
 
 type EditorCollectionActions = Pick<
@@ -244,7 +245,7 @@ export function createEditorSelectionActions({
       }
 
       let didUpdateDrafts = false;
-      const nextDrafts = state.drafts.map((entity) => {
+      const nextDrafts: DraftEntity[] = state.drafts.map((entity) => {
         const rotatedEntity = rotatedEntityMap.get(entity.id);
 
         if (rotatedEntity === undefined || currentDocument.entities[entity.id] !== undefined) {
@@ -252,7 +253,10 @@ export function createEditorSelectionActions({
         }
 
         didUpdateDrafts = true;
-        return rotatedEntity;
+        return {
+          ...rotatedEntity,
+          originalEntityId: entity.originalEntityId,
+        };
       });
 
       if (didUpdateDrafts) {

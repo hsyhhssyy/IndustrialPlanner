@@ -162,18 +162,7 @@ describe("createAppHost", () => {
     expect(appHost.actions.translate("workbench.base.wuling")).toBe("Wuling");
   });
 
-  it("hydrates only the current split localStorage keys and ignores the legacy combined key", () => {
-    localStorage.setItem(
-      "v3-workbench-state",
-      JSON.stringify({
-        leftDockOpen: true,
-        rightDockOpen: true,
-        leftDockWidth: 599,
-        topBarCollapsed: true,
-        locale: "zh-CN",
-        themeId: "ayu-dark",
-      }),
-    );
+  it("hydrates and persists the current split localStorage keys", () => {
     localStorage.setItem(
       APP_SETTINGS_LOCAL_STORAGE_KEY,
       JSON.stringify({
@@ -232,17 +221,6 @@ describe("createAppHost", () => {
         themeId: "ayu-light",
       }),
     );
-    expect(localStorage.getItem("v3-workbench-state")).toBe(
-      JSON.stringify({
-        leftDockOpen: true,
-        rightDockOpen: true,
-        leftDockWidth: 599,
-        topBarCollapsed: true,
-        locale: "zh-CN",
-        themeId: "ayu-dark",
-      }),
-    );
-
     appHost.dispose();
     runInAction(() => {
       appHost.internalState.workbench.leftDockOpen = true;

@@ -35,7 +35,7 @@ const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
 export type AppShortcutState = Record<ShortcutKeyId, string>;
 
 // ─── localStorage key ───
-const APP_SHORTCUTS_LOCAL_STORAGE_KEY = "v3-app-shortcuts";
+export const APP_SHORTCUTS_LOCAL_STORAGE_KEY = "v3-app-shortcuts";
 
 // ─── Manager 类 ───
 export class KeyboardShortcutManager {
@@ -62,7 +62,14 @@ export class KeyboardShortcutManager {
     }
 
     this.shortcuts = initial;
-    makeAutoObservable(this, {}, { autoBind: true });
+    makeAutoObservable<KeyboardShortcutManager, "appHost" | "disposeReaction">(
+      this,
+      {
+        appHost: false,
+        disposeReaction: false,
+      },
+      { autoBind: true },
+    );
   }
 
   /**
