@@ -85,5 +85,23 @@ function normalizePersistedAppSettings(
       typeof persistedAppSettings.debugShowGestureDiagnosticsWindow === "boolean"
         ? persistedAppSettings.debugShowGestureDiagnosticsWindow
         : fallback.debugShowGestureDiagnosticsWindow,
+    shortcutPlaceConveyor: typeof persistedAppSettings.shortcutPlaceConveyor === "string"
+      ? persistedAppSettings.shortcutPlaceConveyor
+      : fallback.shortcutPlaceConveyor,
+    shortcutPlacePipe: typeof persistedAppSettings.shortcutPlacePipe === "string"
+      ? persistedAppSettings.shortcutPlacePipe
+      : fallback.shortcutPlacePipe,
+    shortcutResourcesPower: typeof persistedAppSettings.shortcutResourcesPower === "string"
+      ? persistedAppSettings.shortcutResourcesPower
+      : fallback.shortcutResourcesPower,
+    shortcutWarehouse: typeof persistedAppSettings.shortcutWarehouse === "string"
+      ? persistedAppSettings.shortcutWarehouse
+      : fallback.shortcutWarehouse,
+    shortcutBasicProduction: typeof persistedAppSettings.shortcutBasicProduction === "string"
+      ? persistedAppSettings.shortcutBasicProduction
+      : fallback.shortcutBasicProduction,
+    shortcutSynthesis: typeof persistedAppSettings.shortcutSynthesis === "string"
+      ? persistedAppSettings.shortcutSynthesis
+      : fallback.shortcutSynthesis,
   };
 }

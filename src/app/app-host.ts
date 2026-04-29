@@ -11,6 +11,7 @@ import {
   createGestureDiagnosticsStore,
   GestureDiagnosticsStore,
 } from "./input/gesture-diagnostics";
+import { KeyboardShortcutManager } from "./keyboard-shortcut-manager";
 import { hookLocalstorage } from "./storage-hook";
 import { createUiStateReadWrite, UiStateReadWrite } from "./state-impl";
 import { hookThemeApplicator } from "./theme/theme-applicator";
@@ -41,7 +42,8 @@ export function createAppHost(
     workspace,
     getAppHost: () => host,
   });
-  const actionImpl = new AppActionImpl(internalState, workspace);
+  const shortcutManager = new KeyboardShortcutManager(() => internalState.settings);
+  const actionImpl = new AppActionImpl(internalState, workspace, shortcutManager);
   const internalActions: AppInternalAction = {
     toggleLeftDock: actionImpl.toggleLeftDock,
     toggleRightDock: actionImpl.toggleRightDock,
@@ -61,6 +63,7 @@ export function createAppHost(
     setLeftDockWidth: actionImpl.setLeftDockWidth,
     setScreenProfile: actionImpl.setScreenProfile,
     setLocale: actionImpl.setLocale,
+    getKeyboardShortcutFor: actionImpl.getKeyboardShortcutFor,
   };
   const actions: AppContract["actions"] = {
     translate: actionImpl.translate,

@@ -347,6 +347,33 @@ button.is-active {
   opacity: 0.72;
 }
 
+/* 快捷键设置项-伪表格样式 */
+.settings-dialog-setting-card.is-keybinding {
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 6px 0;
+  gap: 8px;
+  background: transparent;
+}
+
+.settings-dialog-setting-card.is-keybinding:first-child {
+  border-top: 1px solid var(--line);
+}
+
+.settings-dialog-setting-card.is-keybinding .settings-dialog-setting-copy {
+  gap: 0;
+}
+
+.settings-dialog-setting-card.is-keybinding .settings-dialog-setting-copy h4 {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.settings-dialog-setting-card.is-keybinding .settings-dialog-setting-copy p {
+  display: none;
+}
+
 .settings-dialog-setting-copy {
   display: grid;
   gap: 4px;

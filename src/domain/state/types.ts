@@ -61,6 +61,12 @@ export interface AppSettings {
   readonly gameShowHotkeys: boolean;
   readonly debugShowFps: boolean;
   readonly debugShowGestureDiagnosticsWindow: boolean;
+  readonly shortcutPlaceConveyor: string;
+  readonly shortcutPlacePipe: string;
+  readonly shortcutResourcesPower: string;
+  readonly shortcutWarehouse: string;
+  readonly shortcutBasicProduction: string;
+  readonly shortcutSynthesis: string;
 }
 
 export interface WorkbenchState {

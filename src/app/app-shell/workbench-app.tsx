@@ -150,6 +150,66 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.debugShowGestureDiagnosticsWindow = value;
         }),
       },
+      "shortcut-place-conveyor": {
+        readValue: () => appHost.state.settings.shortcutPlaceConveyor,
+        writeValue: action((value) => {
+          if (typeof value !== "string" || value.trim() === "") {
+            return;
+          }
+
+          appHost.internalState.settings.shortcutPlaceConveyor = value.trim();
+        }),
+      },
+      "shortcut-place-pipe": {
+        readValue: () => appHost.state.settings.shortcutPlacePipe,
+        writeValue: action((value) => {
+          if (typeof value !== "string" || value.trim() === "") {
+            return;
+          }
+
+          appHost.internalState.settings.shortcutPlacePipe = value.trim();
+        }),
+      },
+      "shortcut-resources-power": {
+        readValue: () => appHost.state.settings.shortcutResourcesPower,
+        writeValue: action((value) => {
+          if (typeof value !== "string" || value.trim() === "") {
+            return;
+          }
+
+          appHost.internalState.settings.shortcutResourcesPower = value.trim();
+        }),
+      },
+      "shortcut-warehouse": {
+        readValue: () => appHost.state.settings.shortcutWarehouse,
+        writeValue: action((value) => {
+          if (typeof value !== "string" || value.trim() === "") {
+            return;
+          }
+
+          appHost.internalState.settings.shortcutWarehouse = value.trim();
+        }),
+      },
+      "shortcut-basic-production": {
+        readValue: () => appHost.state.settings.shortcutBasicProduction,
+        writeValue: action((value) => {
+          if (typeof value !== "string" || value.trim() === "") {
+            return;
+          }
+
+          appHost.internalState.settings.shortcutBasicProduction = value.trim();
+        }),
+      },
+      "shortcut-synthesis": {
+        readValue: () => appHost.state.settings.shortcutSynthesis,
+        writeValue: action((value) => {
+          if (typeof value !== "string" || value.trim() === "") {
+            return;
+          }
+
+          appHost.internalState.settings.shortcutSynthesis = value.trim();
+        }),
+      },
     },
   }));
   const leftDockOpen = appHost.state.workbench.leftDockOpen;

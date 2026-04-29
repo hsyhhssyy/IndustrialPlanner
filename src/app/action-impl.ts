@@ -11,6 +11,7 @@ import type {
 import type { AppLocale } from "@/shared/i18n/messages";
 import { lookupMessageText } from "@/shared/i18n/messages";
 import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
+import type { KeyboardShortcutManager } from "./keyboard-shortcut-manager";
 
 import {
   type ActiveTool,
@@ -59,12 +60,14 @@ export interface AppInternalAction {
   setLeftDockWidth: (width: number) => void;
   setScreenProfile: (screenProfile: ScreenProfile) => void;
   setLocale: (locale: AppLocale) => void;
+  getKeyboardShortcutFor: (key: string) => string;
 }
 
 export class AppActionImpl implements AppAction, AppInternalAction {
   public constructor(
     private readonly internalState: UiStateReadWrite,
     private readonly workspace: WorkspaceContract,
+    private readonly shortcutManager: KeyboardShortcutManager,
   ) {}
 
   public readonly translate: AppAction["translate"] = (key) => {
@@ -301,6 +304,10 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
     this.internalState.settings.locale = locale;
   });
+
+  public readonly getKeyboardShortcutFor: AppInternalAction["getKeyboardShortcutFor"] = (key) => {
+    return this.shortcutManager.getKeyboardShortcutFor(key);
+  };
 
   private setLeftDockOpen(nextOpen: boolean): void {
     if (this.internalState.workbench.leftDockOpen === nextOpen) {

@@ -47,9 +47,13 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-operation-mode": true,
         "game-arknights-immediate-move": true,
         "game-arknights-immediate-marquee": false,
-        "game-arknights-confirm-shortcut": "F",
-        "game-arknights-cancel-shortcut": "G",
-        "game-arknights-rotate-shortcut": "R",
+        "shortcut-place-conveyor": "E",
+        "shortcut-place-pipe": "Q",
+        "shortcut-resources-power": "X",
+        "shortcut-warehouse": "C",
+        "shortcut-basic-production": "V",
+        "shortcut-synthesis": "B",
+        "game-show-hotkeys": true,
         "game-use-simplified-device-icons": true,
         "other-debug-mode": true,
         "debug-show-fps": true,
@@ -66,9 +70,12 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["game-arknights-operation-mode"]).toBe(true);
     expect(hydratedController.values["game-arknights-immediate-move"]).toBe(true);
     expect(hydratedController.values["game-arknights-immediate-marquee"]).toBe(false);
-    expect(hydratedController.values["game-arknights-confirm-shortcut"]).toBe("F");
-    expect(hydratedController.values["game-arknights-cancel-shortcut"]).toBe("G");
-    expect(hydratedController.values["game-arknights-rotate-shortcut"]).toBe("R");
+    expect(hydratedController.values["shortcut-place-conveyor"]).toBe("E");
+    expect(hydratedController.values["shortcut-place-pipe"]).toBe("Q");
+    expect(hydratedController.values["shortcut-resources-power"]).toBe("X");
+    expect(hydratedController.values["shortcut-warehouse"]).toBe("C");
+    expect(hydratedController.values["shortcut-basic-production"]).toBe("V");
+    expect(hydratedController.values["shortcut-synthesis"]).toBe("B");
     expect(hydratedController.values["game-use-simplified-device-icons"]).toBe(true);
     expect(hydratedController.values["other-debug-mode"]).toBe(true);
     expect(hydratedController.values["debug-show-fps"]).toBe(true);
@@ -90,19 +97,19 @@ describe("WorkbenchSettingsDialogController", () => {
       },
     });
 
-    expect(controller.isSettingEditable("game-arknights-confirm-shortcut")).toBe(true);
+    expect(controller.isSettingEditable("shortcut-place-conveyor")).toBe(true);
 
-    controller.updateKeybindingValue("game-arknights-confirm-shortcut", "P");
+    controller.updateKeybindingValue("shortcut-place-conveyor", "P");
 
-    expect(controller.values["game-arknights-confirm-shortcut"]).toBe("P");
+    expect(controller.values["shortcut-place-conveyor"]).toBe("P");
 
     hypergryphOperationMode = true;
 
-    expect(controller.isSettingEditable("game-arknights-confirm-shortcut")).toBe(false);
+    expect(controller.isSettingEditable("shortcut-place-conveyor")).toBe(false);
 
-    controller.updateKeybindingValue("game-arknights-confirm-shortcut", "Z");
+    controller.updateKeybindingValue("shortcut-place-conveyor", "Z");
 
-    expect(controller.values["game-arknights-confirm-shortcut"]).toBe("P");
+    expect(controller.values["shortcut-place-conveyor"]).toBe("P");
   });
 
   it("treats permanently disabled settings as read-only", () => {
@@ -166,9 +173,13 @@ describe("WorkbenchSettingsDialogController", () => {
         "display-frame-rate-limit": "unlimited",
         "game-arknights-immediate-move": true,
         "game-arknights-immediate-marquee": false,
-        "game-arknights-confirm-shortcut": "F",
-        "game-arknights-cancel-shortcut": "G",
-        "game-arknights-rotate-shortcut": "R",
+        "shortcut-place-conveyor": "E",
+        "shortcut-place-pipe": "Q",
+        "shortcut-resources-power": "X",
+        "shortcut-warehouse": "C",
+        "shortcut-basic-production": "V",
+        "shortcut-synthesis": "B",
+        "game-show-hotkeys": true,
         "game-use-simplified-device-icons": false,
         "other-debug-mode": true,
         "debug-show-fps": false,

@@ -198,17 +198,23 @@ export const SettingsDialog = observer(function SettingsDialog({
                   {group.items.map((setting) => {
                     const isEditable = controller.isSettingEditable(setting.id);
 
+                    const isKeybinding = setting.kind === "keybinding";
+
                     return (
                       <article
                         aria-disabled={!isEditable}
-                        className={isEditable
-                          ? "settings-dialog-setting-card"
-                          : "settings-dialog-setting-card is-disabled"}
+                        className={
+                          [
+                            "settings-dialog-setting-card",
+                            isEditable ? "" : "is-disabled",
+                            isKeybinding ? "is-keybinding" : "",
+                          ].filter(Boolean).join(" ")
+                        }
                         key={setting.id}
                       >
                         <div className="settings-dialog-setting-copy">
                           <h4>{t(setting.labelKey)}</h4>
-                          <p>{t(setting.descriptionKey)}</p>
+                          {!isKeybinding && <p>{t(setting.descriptionKey)}</p>}
                         </div>
                         <div className="settings-dialog-setting-control">
                           {renderSettingControl({

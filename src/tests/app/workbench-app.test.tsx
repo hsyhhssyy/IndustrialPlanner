@@ -1032,7 +1032,7 @@ describe("WorkbenchApp", () => {
       "与鹰角操作模式附加行为相关的选项。",
       "编辑当前可自定义的快捷键设置。",
       "调试和附加能力开关。",
-      "FPS 与手势测试开关。当前版本只保存设置，不影响界面行为。",
+      "FPS 与手势测试开关，可用于开发调试。",
     ]);
     expect(languageOptionLabels).toEqual(["中文(简体)", "English"]);
     expect(themeOptionLabels).toEqual(["Ayu Light", "Ayu Dark"]);
@@ -1107,8 +1107,15 @@ describe("WorkbenchApp", () => {
         hypergryphOperationMode: true,
         hypergryphImmediateMove: true,
         hypergryphImmediateMarquee: false,
+        gameShowHotkeys: false,
         debugShowFps: false,
         debugShowGestureDiagnosticsWindow: false,
+        shortcutPlaceConveyor: "E",
+        shortcutPlacePipe: "Q",
+        shortcutResourcesPower: "X",
+        shortcutWarehouse: "C",
+        shortcutBasicProduction: "V",
+        shortcutSynthesis: "B",
       }),
     );
   });
@@ -1157,8 +1164,15 @@ describe("WorkbenchApp", () => {
         hypergryphOperationMode: true,
         hypergryphImmediateMove: true,
         hypergryphImmediateMarquee: false,
+        gameShowHotkeys: false,
         debugShowFps: false,
         debugShowGestureDiagnosticsWindow: false,
+        shortcutPlaceConveyor: "E",
+        shortcutPlacePipe: "Q",
+        shortcutResourcesPower: "X",
+        shortcutWarehouse: "C",
+        shortcutBasicProduction: "V",
+        shortcutSynthesis: "B",
       }),
     );
   });
@@ -1231,8 +1245,15 @@ describe("WorkbenchApp", () => {
         hypergryphOperationMode: true,
         hypergryphImmediateMove: true,
         hypergryphImmediateMarquee: true,
+        gameShowHotkeys: false,
         debugShowFps: false,
         debugShowGestureDiagnosticsWindow: false,
+        shortcutPlaceConveyor: "E",
+        shortcutPlacePipe: "Q",
+        shortcutResourcesPower: "X",
+        shortcutWarehouse: "C",
+        shortcutBasicProduction: "V",
+        shortcutSynthesis: "B",
       }),
     );
   });
@@ -1279,8 +1300,15 @@ describe("WorkbenchApp", () => {
         hypergryphOperationMode: true,
         hypergryphImmediateMove: true,
         hypergryphImmediateMarquee: false,
+        gameShowHotkeys: false,
         debugShowFps: true,
         debugShowGestureDiagnosticsWindow: true,
+        shortcutPlaceConveyor: "E",
+        shortcutPlacePipe: "Q",
+        shortcutResourcesPower: "X",
+        shortcutWarehouse: "C",
+        shortcutBasicProduction: "V",
+        shortcutSynthesis: "B",
       }),
     );
   });
@@ -1320,10 +1348,10 @@ describe("WorkbenchApp", () => {
       'input[name="game-arknights-immediate-marquee"]',
     ) as HTMLInputElement | null;
     const confirmShortcutButton = container.querySelector(
-      'button[data-setting-id="game-arknights-confirm-shortcut"]',
+      'button[data-setting-id="shortcut-place-conveyor"]',
     ) as HTMLButtonElement | null;
     const cancelShortcutButton = container.querySelector(
-      'button[data-setting-id="game-arknights-cancel-shortcut"]',
+      'button[data-setting-id="shortcut-place-pipe"]',
     ) as HTMLButtonElement | null;
 
     expect(operationModeToggle).not.toBeNull();
@@ -1338,7 +1366,7 @@ describe("WorkbenchApp", () => {
     expect(immediateMarqueeToggle?.checked).toBe(false);
     expect(immediateMarqueeToggle?.disabled).toBe(true);
     expect(confirmShortcutButton?.disabled).toBe(false);
-    expect(confirmShortcutButton?.textContent).toBe("F");
+    expect(confirmShortcutButton?.textContent).toBe("E");
 
     act(() => {
       confirmShortcutButton?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
@@ -1351,22 +1379,23 @@ describe("WorkbenchApp", () => {
     });
 
     expect(confirmShortcutButton?.textContent).toBe("P");
-    expect(JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")).toEqual({
-      selectedGroupId: "system",
-      values: {
-        "display-frame-rate-limit": "unlimited",
-        "game-arknights-confirm-shortcut": "P",
-        "game-arknights-cancel-shortcut": "G",
-        "game-arknights-rotate-shortcut": "R",
-        "game-use-simplified-device-icons": false,
-        "other-debug-mode": false,
-      },
-    });
+    expect(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
         locale: "zh-CN",
         themeId: "ayu-light",
         hypergryphOperationMode: false,
+        hypergryphImmediateMove: true,
+        hypergryphImmediateMarquee: false,
+        gameShowHotkeys: false,
+        debugShowFps: false,
+        debugShowGestureDiagnosticsWindow: false,
+        shortcutPlaceConveyor: "P",
+        shortcutPlacePipe: "Q",
+        shortcutResourcesPower: "X",
+        shortcutWarehouse: "C",
+        shortcutBasicProduction: "V",
+        shortcutSynthesis: "B",
       }),
     );
   });

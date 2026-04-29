@@ -46,6 +46,12 @@ export interface AppSettingsReadWrite extends AppSettings {
   gameShowHotkeys: boolean;
   debugShowFps: boolean;
   debugShowGestureDiagnosticsWindow: boolean;
+  shortcutPlaceConveyor: string;
+  shortcutPlacePipe: string;
+  shortcutResourcesPower: string;
+  shortcutWarehouse: string;
+  shortcutBasicProduction: string;
+  shortcutSynthesis: string;
 }
 
 export interface WorkbenchStateReadWrite extends WorkbenchState {
@@ -201,6 +207,12 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     gameShowHotkeys: false,
     debugShowFps: false,
     debugShowGestureDiagnosticsWindow: false,
+    shortcutPlaceConveyor: "E",
+    shortcutPlacePipe: "Q",
+    shortcutResourcesPower: "X",
+    shortcutWarehouse: "C",
+    shortcutBasicProduction: "V",
+    shortcutSynthesis: "B",
   };
 
   workbench: WorkbenchStateReadWrite = new WorkbenchStateReadWriteImpl();
