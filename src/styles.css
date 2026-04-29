@@ -1095,6 +1095,17 @@ body.is-resizing-left-dock * {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.placement-operation-button-list {
+  display: grid;
+  align-items: start;
+  grid-auto-rows: auto;
+  gap: 6px;
+}
+
+.placement-operation-button-list.is-mobile-icon-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .placement-button {
   display: grid;
   align-items: center;
@@ -1118,6 +1129,21 @@ body.is-resizing-left-dock * {
 
 .placement-device-button {
   grid-template-columns: 24px minmax(0, 1fr);
+}
+
+.placement-operation-button-list.is-mobile-icon-grid .placement-action-button {
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  padding: 0;
+  text-align: center;
+}
+
+.placement-operation-button-list.is-mobile-icon-grid .button-icon,
+.placement-operation-button-list.is-mobile-icon-grid .button-icon-image {
+  width: 28px;
+  height: 28px;
 }
 
 .placement-button .button-icon {

@@ -537,8 +537,21 @@ describe("Left dock panel switching", () => {
     });
 
     const visiblePanel = queryVisibleLeftDockPanel(container);
+    const operationGroup = visiblePanel?.querySelector(".placement-panel-group-operation") as HTMLElement | null;
+    const operationButtonList = operationGroup?.querySelector(".placement-operation-button-list") as HTMLElement | null;
 
     expect(visiblePanel?.getAttribute("data-panel-id")).toBe("placement");
+    expect(operationGroup).not.toBeNull();
+    expect(operationGroup?.querySelector(".placement-panel-group-header")).toBeNull();
+    expect(operationButtonList?.classList.contains("is-mobile-icon-grid")).toBe(true);
+    expect(operationGroup?.querySelectorAll(".placement-action-button")).toHaveLength(4);
+    expect(operationGroup?.querySelectorAll(".placement-button-label")).toHaveLength(0);
+    expect(operationGroup?.querySelectorAll(".placement-button-hotkey")).toHaveLength(0);
+    expect(operationGroup?.querySelectorAll(".placement-action-button .button-icon-image")).toHaveLength(4);
+    expect(operationGroup?.querySelector('[data-ui-button-id="placement-tool-select"]')?.getAttribute("aria-label")).toBe("选择");
+    expect(operationGroup?.textContent).not.toContain("操作");
+    expect(operationGroup?.textContent).not.toContain("选择");
+    expect(operationGroup?.textContent).not.toContain("Esc");
     expect(visiblePanel?.querySelector(".placement-button-list")?.classList.contains("is-single-column")).toBe(true);
     expect(visiblePanel?.querySelectorAll(".placement-button-hotkey")).toHaveLength(0);
     expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
