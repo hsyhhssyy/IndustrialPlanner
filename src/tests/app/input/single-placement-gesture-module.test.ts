@@ -90,6 +90,26 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("item_port_storager_1");
   });
 
+  it("uses the last mouse position when entering placement from a number shortcut", () => {
+    const { context, editor, appHost } = createContext({
+      selectingPlacementGroup: "warehouse",
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    expect(module.handle(mouseMoveEvent({ position: { x: 7.8, y: 8.1 } }), context)).toEqual({
+      status: "ignored",
+    });
+
+    const result = module.handle(keyDownEvent({ code: "Digit3", key: "3" }), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith(
+      "item_port_storager_1",
+      { x: 7, y: 8 },
+    );
+    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 7, y: 8 });
+  });
+
   it("ignores number shortcuts when the active placement group has no target device", () => {
     const { context, editor, appHost } = createContext({
       selectingPlacementGroup: "resourcePower",
@@ -567,6 +587,18 @@ function mouseTapEvent(options: {
     position: { x: 6, y: 4 },
     longPress: options.longPress,
     pointerEntity: null,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function mouseMoveEvent(options: { position: { x: number; y: number } }) {
+  return {
+    type: "mouse move" as const,
+    gestureId: "mouse-move-1",
+    buttons: 0,
+    position: options.position,
+    delta: { x: 0, y: 0 },
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };

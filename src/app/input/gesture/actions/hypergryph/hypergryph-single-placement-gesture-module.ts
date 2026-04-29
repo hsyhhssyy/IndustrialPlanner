@@ -33,10 +33,16 @@ const PLACEMENT_GROUP_SHORTCUTS: Readonly<Record<PlacementGroup, ShortcutKeyId>>
 };
 
 export function createHypergryphSinglePlacementGestureModule(): GestureMappingModule<AppHost> {
+  let lastMousePosition: GesturePosition | null = null;
+
   return {
     id: "hypergryph-single-placement-gesture",
     when: isHypergryphGestureEnabled,
     handle(event, context) {
+      if (event.type === "mouse move") {
+        lastMousePosition = event.position;
+      }
+
       if (
         event.type === "key down"
         && context.appHost.internalState.activeTool === "select"
@@ -61,6 +67,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           appHost: context.appHost,
           editor,
           registry: context.workspace.registry,
+          lastMousePosition,
           code: event.code,
           key: event.key,
           modifiers: event.modifiers,
@@ -235,6 +242,7 @@ function handlePlacementEntryButtonTap(options: {
   editor: EditorContract;
   deviceId: string;
   source: "mouse" | "touch";
+  initialPlacementAnchor?: GridPoint | null;
 }): GestureHandleResult {
   const previousTool = options.appHost.internalState.activeTool;
 
@@ -254,6 +262,7 @@ function handlePlacementEntryButtonTap(options: {
       editor: options.editor,
       deviceId: options.deviceId,
       source: options.source,
+      initialPlacementAnchor: options.initialPlacementAnchor,
       shouldSetActiveTool: false,
     });
   }
@@ -267,6 +276,7 @@ function handlePlacementEntryButtonTap(options: {
     editor: options.editor,
     deviceId: options.deviceId,
     source: options.source,
+    initialPlacementAnchor: options.initialPlacementAnchor,
     shouldSetActiveTool: true,
   });
 }
@@ -294,6 +304,7 @@ function handleSelectPlacementDeviceShortcut(options: {
   appHost: AppHost;
   editor: EditorContract;
   registry: RegistryContract;
+  lastMousePosition: GesturePosition | null;
   code: string | null;
   key: string | null;
   modifiers: {
@@ -322,11 +333,17 @@ function handleSelectPlacementDeviceShortcut(options: {
     return { status: "ignored" };
   }
 
+  const initialPlacementAnchor = resolveGridPointFromGesturePosition(
+    options.editor,
+    options.lastMousePosition,
+  );
+
   return handlePlacementEntryButtonTap({
     appHost: options.appHost,
     editor: options.editor,
     deviceId,
     source: "mouse",
+    initialPlacementAnchor,
   });
 }
 
@@ -335,9 +352,11 @@ function finalizePlacementEnter(options: {
   editor: EditorContract;
   deviceId: string;
   source: "mouse" | "touch";
+  initialPlacementAnchor?: GridPoint | null;
   shouldSetActiveTool: boolean;
 }): GestureHandleResult {
-  const placementAnchor = resolveViewportCenterGridPoint(options.editor);
+  const placementAnchor = options.initialPlacementAnchor
+    ?? resolveViewportCenterGridPoint(options.editor);
 
   if (placementAnchor === null) {
     return { status: "ignored" };
@@ -588,6 +607,17 @@ function resolveViewportCenterGridPoint(editor: EditorContract): GridPoint | nul
     x: clientRect.left + clientRect.width / 2,
     y: clientRect.top + clientRect.height / 2,
   });
+}
+
+function resolveGridPointFromGesturePosition(
+  editor: EditorContract,
+  position: GesturePosition | null,
+): GridPoint | null {
+  if (position === null) {
+    return null;
+  }
+
+  return editor.queries.findGridCellForClientPixlePoint(position);
 }
 
 function isPreviewEntityAtClientPoint(
