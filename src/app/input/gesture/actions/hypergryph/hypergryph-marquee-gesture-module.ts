@@ -76,12 +76,33 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           });
 
         case "mouse tap":
-          if (event.button !== 2 || context.appHost.internalState.activeTool !== "marquee") {
+          if (context.appHost.internalState.activeTool !== "marquee") {
             return { status: "ignored" };
           }
 
-          exitMarqueeToSelect(context.appHost, editor);
-          return { status: "handled" };
+          if (event.button === 2) {
+            exitMarqueeToSelect(context.appHost, editor);
+            return { status: "handled" };
+          }
+
+          if (event.button === 0 && editor !== null && event.pointerEntity !== null) {
+            toggleEntityInSelection(editor, event.pointerEntity.id);
+            return { status: "handled" };
+          }
+
+          return { status: "ignored" };
+
+        case "touch tap":
+          if (context.appHost.internalState.activeTool !== "marquee") {
+            return { status: "ignored" };
+          }
+
+          if (editor !== null && event.pointerEntity !== null) {
+            toggleEntityInSelection(editor, event.pointerEntity.id);
+            return { status: "handled" };
+          }
+
+          return { status: "ignored" };
 
         case "mouse dragstart":
           if (editor === null) {
@@ -317,6 +338,20 @@ export function hookMarqueeToolCleanupFallback(appHost: AppHost): () => void {
       }
     },
   );
+}
+
+function toggleEntityInSelection(editor: EditorContract, entityId: string): void {
+  if (editor.state.collections.selection.contains(entityId)) {
+    editor.actions.removeFromCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId,
+    });
+  } else {
+    editor.actions.addToCollection({
+      collectionType: EntityCollectionType.selection,
+      entityId,
+    });
+  }
 }
 
 function resolveMarqueeCollectionType(isReverseMarquee: boolean): MarqueeCollectionType {

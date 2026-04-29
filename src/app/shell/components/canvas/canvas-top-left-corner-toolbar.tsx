@@ -37,8 +37,8 @@ const CANVAS_TOP_LEFT_CORNER_TOOLBAR_DEFINITIONS: Record<
     labelKeyWhenOn: "action.showPipe",
   },
   "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee": {
-    iconWhenOff: "pointer",
-    iconWhenOn: "pointer",
+    iconWhenOff: "batch-select",
+    iconWhenOn: "batch-select",
     labelKeyWhenOff: "action.switchToReverseMarquee",
     labelKeyWhenOn: "action.switchToNormalMarquee",
   },

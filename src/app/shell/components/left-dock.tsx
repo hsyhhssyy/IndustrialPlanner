@@ -79,11 +79,13 @@ const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppH
     <div className="dock-shell-left">
       <aside className="dock dock-left panel-surface">
         <section className="dock-section">
-          <div className="section-header">
-            <div className="section-header-copy">
-              <h2>{currentPanelLabel}</h2>
+          {isMobileLayout ? null : (
+            <div className="section-header">
+              <div className="section-header-copy">
+                <h2>{currentPanelLabel}</h2>
+              </div>
             </div>
-          </div>
+          )}
           <div className="section-body">
               {PANEL_ORDER.map((panelId) => {
                 const PanelComponent = PANEL_COMPONENTS[panelId];

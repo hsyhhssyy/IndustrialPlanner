@@ -1113,11 +1113,11 @@ body.is-resizing-left-dock * {
 }
 
 .placement-action-button {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 24px minmax(0, 1fr);
 }
 
 .placement-device-button {
-  grid-template-columns: 24px minmax(0, 1fr) auto;
+  grid-template-columns: 24px minmax(0, 1fr);
 }
 
 .placement-button .button-icon {
@@ -1135,17 +1135,19 @@ body.is-resizing-left-dock * {
   align-items: center;
   min-width: 0;
   min-height: 24px;
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   line-height: 1.2;
   white-space: normal;
   overflow-wrap: anywhere;
 }
 
 .placement-button-hotkey {
+  position: absolute;
+  top: 3px;
+  inset-inline-end: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  align-self: start;
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
@@ -1342,7 +1344,6 @@ body.is-resizing-left-dock * {
   min-height: 0;
   height: 100%;
   overflow: visible;
-  padding: 8px;
   background: var(--canvas-bg);
 }
 
@@ -1733,8 +1734,7 @@ body.is-resizing-left-dock * {
 }
 
 .renderer-canvas {
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  border: none;
   box-shadow: none;
 }
 

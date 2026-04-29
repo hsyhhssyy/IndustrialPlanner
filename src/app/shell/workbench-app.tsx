@@ -93,19 +93,11 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             return;
           }
 
-          const nextImmediateMove = value
-            ? true
-            : appHost.internalState.settings.hypergryphImmediateMove;
-
-          if (
-            appHost.internalState.settings.hypergryphImmediateMarquee === value
-            && appHost.internalState.settings.hypergryphImmediateMove === nextImmediateMove
-          ) {
+          if (appHost.internalState.settings.hypergryphImmediateMarquee === value) {
             return;
           }
 
           appHost.internalState.settings.hypergryphImmediateMarquee = value;
-          appHost.internalState.settings.hypergryphImmediateMove = nextImmediateMove;
         }),
       },
       "game-show-hotkeys": {

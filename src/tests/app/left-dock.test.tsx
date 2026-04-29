@@ -179,17 +179,21 @@ describe("Left dock panel switching", () => {
     }
 
     expect(visiblePanel?.getAttribute("data-panel-id")).toBe("placement");
-    expect(visiblePanel.textContent).toContain("保存蓝图");
     expect(visiblePanel?.textContent).toContain("批量选择");
     expect(visiblePanel.textContent).toContain("暗管出口");
     expect(visiblePanel.textContent).not.toContain("设备");
     expect(visiblePanel.textContent).not.toContain("拖动虚影后点击确认完成放置。");
     expect(visiblePanel.querySelectorAll(".placement-panel-group")).toHaveLength(7);
     expect(visiblePanel.querySelectorAll(".placement-panel-divider")).toHaveLength(6);
-    expect(visiblePanel.querySelectorAll(".placement-button .button-icon-image")).toHaveLength(
+    expect(visiblePanel.querySelectorAll(".placement-action-button .button-icon-image")).toHaveLength(
+      visiblePanel.querySelectorAll(".placement-action-button").length,
+    );
+    expect(visiblePanel.querySelectorAll(".placement-device-button .button-icon-image")).toHaveLength(
       visiblePanel.querySelectorAll(".placement-device-button").length,
     );
-    expect(visiblePanel.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(3);
+    expect(visiblePanel.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(
+      visiblePanel.querySelectorAll(".placement-action-button").length,
+    );
     expect(visiblePanel.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(
       visiblePanel.querySelectorAll(".placement-device-button").length,
     );
@@ -197,7 +201,6 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-marquee"]')?.classList.contains("is-active")).toBe(false);
     expect(visiblePanel.textContent).toContain("Esc");
     expect(visiblePanel.textContent).toContain("X");
-    expect(visiblePanel.textContent).toContain("Ctrl+S");
     expect(appHost.internalState.runtime.activePanel).toBeNull();
     expect(appHost.internalState.activeTool).toBe("select");
   });

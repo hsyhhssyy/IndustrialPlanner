@@ -32,6 +32,8 @@ import LucideSun from "~icons/lucide/sun";
 import LucideTablet from "~icons/lucide/tablet";
 import LucideTrash2 from "~icons/lucide/trash-2";
 import LucideX from "~icons/lucide/x";
+import MdiSelection from "~icons/mdi/selection";
+import GisArrowO from "~icons/gis/arrow-o";
 
 type WorkbenchIconKind =
   | "placement"
@@ -65,7 +67,9 @@ type WorkbenchIconKind =
   | "device-desktop"
   | "screen-square"
   | "screen-landscape"
-  | "screen-portrait";
+  | "screen-portrait"
+  | "batch-select"
+  | "select-arrow";
 
 interface WorkbenchIconProps {
   kind: WorkbenchIconKind;
@@ -105,6 +109,8 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   "screen-square": LucideSquare,
   "screen-landscape": LucideRectangleHorizontal,
   "screen-portrait": LucideRectangleVertical,
+  "batch-select": MdiSelection,
+  "select-arrow": GisArrowO,
 };
 
 export function WorkbenchIcon({

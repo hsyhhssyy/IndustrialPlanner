@@ -110,7 +110,7 @@ const WORKBENCH_PLACEHOLDER_TRANSLATIONS: Record<AppLocale, Record<string, strin
     "registry.entity.item_pipe_connector.name": "管道桥接器",
     "registry.entity.item_port_storager_1.name": "协议存储箱",
     "registry.entity.item_port_log_hongs_bus.name": "存取线基段",
-    "registry.entity.item_port_log_hongs_bus_source.name": "存取线源桩",
+    "registry.entity.item_port_log_hongs_bus_source.name": "存取线源源桩",
     "registry.entity.item_port_unloader_1.name": "仓库取货口",
     "registry.entity.item_port_udpipe_loader_1.name": "暗管入口",
     "registry.entity.item_port_udpipe_unloader_1.name": "暗管出口",

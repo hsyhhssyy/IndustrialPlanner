@@ -26,7 +26,7 @@ const SCANLINE_TEXTURE_PATH = "/textures/scanline-45deg-50opacity.png";
 const SCANLINE_PADDING_TILES = 2;
 const SCANLINE_SCROLL_INTERVAL_MS = 2000;
 
-const BLUEPRINT_MASK_TEXTURE_PATH = "/textures/blueprint-mask-80opacity.png";
+const BLUEPRINT_MASK_TEXTURE_PATH = "/textures/blueprint-mask-50opacity.png";
 const PREVIEW_BORDER_WIDTH = 1;
 const PREVIEW_BORDER_ALPHA = 0.5;
 
@@ -75,6 +75,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.previewMask.anchor.set(0.5)
     this.previewMask.roundPixels = true
 
+    // previewMask 只作为裁剪遮罩，不参与可见渲染
+    this.previewMask.renderable = false;
+
     // 扫描线直接放入 previewEffectRoot，mask 设在 TilingSprite 上
     // 不再经过中间 Container，避免 Container 的 scale/rotation 副作用
     this.scanlineTiling = new TilingSprite({ texture: Texture.EMPTY, width: 0, height: 0 });
@@ -99,6 +102,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.selectionMask = new Sprite(Texture.EMPTY)
     this.selectionMask.anchor.set(0.5)
     this.selectionMask.roundPixels = true
+    // selectionMask 只作为裁剪遮罩，不参与可见渲染
+    this.selectionMask.renderable = false;
 
     this.selectionTiling = new TilingSprite({ texture: Texture.EMPTY, width: 0, height: 0 });
     this.selectionTiling.anchor.set(0.5);

@@ -9,9 +9,9 @@ import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
 const PLACEMENT_TOOLBAR_BUTTON_IDS = [
-  "canvas-floating-toolbar-button-ok",
-  "canvas-floating-toolbar-button-rotate",
   "canvas-floating-toolbar-button-cancel",
+  "canvas-floating-toolbar-button-rotate",
+  "canvas-floating-toolbar-button-ok",
 ] as const;
 
 const PLACEMENT_MODE_EVENT_PREFIX = "ui-left-dock-placement-mode-";

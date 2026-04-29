@@ -31,6 +31,7 @@ import {
 import { createGridLineDecoration } from "./decorations/GridLineDecoration"
 import { createDiagnosticsDecoration } from "./decorations/DiagnosticsDecoration"
 import { createMarqueeRectDecoration } from "./decorations/MarqueeRectDecoration"
+import { createMarqueeCanvasDecoration } from "./decorations/MarqueeCanvasDecoration"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
@@ -52,6 +53,7 @@ export function createRenderSceneOrchestrator(
   const gridDecoration = createGridLineDecoration()
   const marqueeDecoration = createMarqueeRectDecoration()
   const diagnosticsDecoration = createDiagnosticsDecoration()
+  const marqueeCanvasDecoration = createMarqueeCanvasDecoration()
   const marqueeOverlayLayer = new Container()
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
   const entitySprites = new Map<string, RenderSprite>()
@@ -93,11 +95,14 @@ export function createRenderSceneOrchestrator(
 
     marqueeDecoration.sync(ctx)
 
+    marqueeCanvasDecoration.sync(ctx)
+
     diagnosticsDecoration.sync(ctx)
   }
 
   app.stage.addChild(layers.background, layers.entity, layers.overlay, marqueeOverlayLayer)
   layers.background.addChild(gridDecoration.container)
+  marqueeOverlayLayer.addChild(marqueeCanvasDecoration.container)
   marqueeOverlayLayer.addChild(marqueeDecoration.container)
   layers.overlay.addChild(diagnosticsDecoration.container)
   app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
@@ -113,6 +118,7 @@ export function createRenderSceneOrchestrator(
       entitySprites.clear()
       gridDecoration.destroy()
       marqueeDecoration.destroy()
+      marqueeCanvasDecoration.destroy()
       diagnosticsDecoration.destroy()
       layers.background.destroy({ children: true })
       layers.entity.destroy({ children: true })

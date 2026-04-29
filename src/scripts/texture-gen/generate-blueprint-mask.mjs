@@ -6,12 +6,12 @@ import sharp from 'sharp';
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, '..', '..', '..');
 const outputFilePath = path.resolve(
-  process.argv[2] ?? path.join(projectRoot, 'public', 'textures', 'blueprint-mask-80opacity.png'),
+  process.argv[2] ?? path.join(projectRoot, 'public', 'textures', 'blueprint-mask-50opacity.png'),
 );
 
 // ── 蓝图配色 ──────────────────────────────────────────────
 const TILE_SIZE     = 64;
-const OPACITY       = Math.round(255 * 0.8);   // 80% 不透明度 → alpha=204
+const OPACITY       = Math.round(255 * 0.5);   // 50% 不透明度 → alpha=128
 
 const BG_COLOR      = [ 10,  30,  80, OPACITY];  // 深蓝图底色
 const MAJOR_GRID    = [ 80, 140, 220, OPACITY];  // 主网格线（16px）

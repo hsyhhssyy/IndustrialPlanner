@@ -12,7 +12,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format-device-sprites": "node src/scripts/format-device-sprites.mjs"
+    "format-device-sprites": "node src/scripts/format-device-sprites.mjs",
+    "generate-liquid-port-chevron": "node src/scripts/texture-gen/generate-liquid-port-chevron.mjs",
+    "generate-solid-port-chevron": "node src/scripts/texture-gen/generate-solid-port-chevron.mjs"
   },
   "dependencies": {
     "mobx": "^6.15.0",
@@ -23,7 +25,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@iconify-json/gis": "^1.2.5",
     "@iconify-json/lucide": "^1.2.102",
+    "@iconify-json/mdi": "^1.2.3",
     "@svgr/core": "^8.1.0",
     "@svgr/plugin-jsx": "^8.1.0",
     "@types/node": "^25.5.0",

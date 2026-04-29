@@ -1,10 +1,11 @@
 import type { AppHost } from "@/app/host/app-host";
 import { observer } from "mobx-react-lite";
-import { Fragment } from "react";
+import { Fragment, type ComponentProps } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
 import type { UiGroup } from "@/domain/types/registry/entity-definition";
-import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
+import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
+import { WorkbenchIcon } from "@/app/shell/components/workbench-icons";
 
 const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
 
@@ -64,7 +65,10 @@ const DEVICE_SECTION_ORDER: readonly Exclude<UiGroup, "hidden">[] = [
 interface PlacementButtonDefinition {
   readonly uiButtonId: string;
   readonly labelKey: string;
+  readonly icon?: ComponentProps<typeof WorkbenchIcon>["kind"];
+  readonly iconSrc?: string;
   readonly hotkey?: string | null;
+  readonly hotkeyKeyId?: ShortcutKeyId;
   readonly visibleWhen?: (appHost: AppHost) => boolean;
   readonly activeWhen?: (appHost: AppHost) => boolean;
 }
@@ -81,12 +85,14 @@ const OPERATION_BUTTONS: readonly PlacementButtonDefinition[] = [
   {
     uiButtonId: "placement-tool-select",
     labelKey: "workbench.button.select",
+    icon: "select-arrow",
     hotkey: "Esc",
     activeWhen: (appHost) => appHost.state.activeTool === "select",
   },
   {
     uiButtonId: "placement-tool-marquee",
     labelKey: "workbench.button.batchSelect",
+    icon: "batch-select",
     hotkey: "X",
     visibleWhen: (appHost) => appHost.state.settings.hypergryphOperationMode,
     activeWhen: (appHost) => appHost.state.activeTool === "marquee",
@@ -94,15 +100,14 @@ const OPERATION_BUTTONS: readonly PlacementButtonDefinition[] = [
   {
     uiButtonId: "placement-action-belt-draw",
     labelKey: "workbench.button.beltDraw",
+    iconSrc: "/device-icons/item_log_belt_01.webp",
+    hotkeyKeyId: SHORTCUT_KEY.PLACE_CONVEYOR,
   },
   {
     uiButtonId: "placement-action-pipe-draw",
     labelKey: "workbench.button.pipeDraw",
-  },
-  {
-    uiButtonId: "placement-action-save-blueprint",
-    labelKey: "workbench.button.saveAsBlueprint",
-    hotkey: "Ctrl+S",
+    iconSrc: "/device-icons/item_log_pipe_01.webp",
+    hotkeyKeyId: SHORTCUT_KEY.PLACE_PIPE,
   },
 ] as const;
 
@@ -222,11 +227,14 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
               </div>
               <div className={isMobileLayout ? "placement-button-list is-single-column" : "placement-button-list"}>
                 {section.buttons.map((button, buttonIndex) => {
-                  const hotkey = button.hotkey ?? (
-                    isOperationSection
-                      ? null
-                      : DEVICE_SHORTCUT_KEYS[buttonIndex % DEVICE_SHORTCUT_KEYS.length]
-                  );
+                  const hotkey = button.hotkey
+                    ?? (button.hotkeyKeyId
+                      ? appHost.internalActions.getKeyboardShortcutFor(button.hotkeyKeyId)
+                      : (
+                        isOperationSection
+                          ? null
+                          : DEVICE_SHORTCUT_KEYS[buttonIndex % DEVICE_SHORTCUT_KEYS.length]
+                      ));
                   const deviceId = button.uiButtonId.replace("placement-", "");
                   const isActive = isOperationSection
                     ? (button.activeWhen?.(appHost) ?? false)
@@ -253,13 +261,19 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
                       }}
                       type="button"
                     >
-                      {isOperationSection ? null : (
+                      {isOperationSection ? (
+                        <span className="button-icon" aria-hidden="true">
+                          {button.icon ? <WorkbenchIcon className="button-icon-image" kind={button.icon} /> : null}
+                          {button.iconSrc ? <img alt="" className="button-icon-image" src={button.iconSrc} /> : null}
+                        </span>
+                      ) : (
                         <span className="button-icon" aria-hidden="true">
                           <img alt="" className="button-icon-image" src={resolveDeviceIconPath(deviceId)} />
                         </span>
                       )}
                       <span className="placement-button-label">{t(button.labelKey)}</span>
                       {showShortcutHints && hotkey ? <span className="placement-button-hotkey">{hotkey}</span> : null}
+                      
                     </button>
                   );
                 })}

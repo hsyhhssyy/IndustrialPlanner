@@ -8,7 +8,7 @@ const WORLD_GRID_LINE_ALPHA = 0.12;
 const WORLD_GRID_LINE_WIDTH = 1;
 const WORLD_GRID_MAJOR_LINE_INTERVAL = 5;
 const WORLD_GRID_MAJOR_LINE_WIDTH_MULTIPLIER = 2;
-const WORLD_GRID_FINE_LINE_MIN_CELL_PIXEL_SIZE = 20;
+const WORLD_GRID_FINE_LINE_MIN_CELL_PIXEL_SIZE = 10;
 
 interface WorldGridLinePosition {
   lineIndex: number;
@@ -29,7 +29,7 @@ export function resolveWorldGridStrokeStyle(
   width: number;
   color: number;
   alpha: number;
-  pixelLine: true;
+  pixelLine: boolean;
 } {
   return {
     width: WORLD_GRID_LINE_WIDTH * (options.widthMultiplier ?? 1),
@@ -38,7 +38,7 @@ export function resolveWorldGridStrokeStyle(
       theme.renderer.worldGridLineColorKey,
     ),
     alpha: WORLD_GRID_LINE_ALPHA,
-    pixelLine: true,
+    pixelLine: false,
   };
 }
 
@@ -46,7 +46,7 @@ export function resolveWorldGridMajorStrokeStyle(theme: AppTheme): {
   width: number;
   color: number;
   alpha: number;
-  pixelLine: true;
+  pixelLine: boolean;
 } {
   return resolveWorldGridStrokeStyle(theme, {
     widthMultiplier: WORLD_GRID_MAJOR_LINE_WIDTH_MULTIPLIER,
@@ -209,7 +209,13 @@ export function createGridLineDecoration(): DecorationLayer {
           horizontal: lineAxes.horizontal.major,
           viewportBounds: ctx.viewportBounds,
         });
-        graphics.stroke(resolveWorldGridMajorStrokeStyle(theme));
+        const fineLinesVisible =
+          ctx.viewportState.gridCellPixelSize >= WORLD_GRID_FINE_LINE_MIN_CELL_PIXEL_SIZE;
+        graphics.stroke(
+          fineLinesVisible
+            ? resolveWorldGridMajorStrokeStyle(theme)
+            : resolveWorldGridStrokeStyle(theme),
+        );
       }
     },
 

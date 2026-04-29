@@ -580,9 +580,9 @@ function mouseLongPressReadyEvent(options: {
 }
 
 const MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST = [
-  "canvas-floating-toolbar-button-ok",
-  "canvas-floating-toolbar-button-rotate",
   "canvas-floating-toolbar-button-cancel",
+  "canvas-floating-toolbar-button-rotate",
+  "canvas-floating-toolbar-button-ok",
 ] as const;
 
 function tapLongPressReadyEvent(options: {
