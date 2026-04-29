@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { runInAction } from "mobx";
 
 import type { DraftEntity } from "@/editor/draft-entity";
@@ -6,11 +6,22 @@ import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY } from "@/editor/storage-hook";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import type { WorldDocument } from "@/domain/entity/world-document";
 import { EntityCollectionType } from "@/domain/state/types";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { resolveWorldEntitySpriteLayout } from "@/renderer/scene/render-scene-orchestrator";
 import { EDITOR_GRID_CELL_PIXEL_SIZE } from "@/editor/viewport-constants";
+import {
+  readFromIndexedDb,
+  saveToIndexedDb,
+} from "@/shared/storage/browser-storage";
+import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
+
+const WORLD_DOCUMENT_DATABASE_LOCATION = {
+  databaseName: "industrial-planner",
+  storeName: "worddocument",
+};
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -25,6 +36,7 @@ function createWorkspace(): WorkspaceContract {
 
 afterEach(() => {
   localStorage.clear();
+  vi.unstubAllGlobals();
 });
 
 describe("createEditorHost", () => {
@@ -963,9 +975,10 @@ describe("createEditorHost", () => {
     expect(missEntity).toBeNull();
   });
 
-  it.each<[string | null]>([[null], [""], ["document-1"]])(
-    "loads the dummy document on startup for persisted lastDocumentId=%p",
+  it.each<[string | null]>([[null], [""]])(
+    "creates and persists a new world document on startup for empty lastDocumentId=%p",
     async (lastDocumentId) => {
+      vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
       localStorage.setItem(
         EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY,
         JSON.stringify({
@@ -978,11 +991,73 @@ describe("createEditorHost", () => {
 
       await flushMicrotasks();
 
-      expect(editorHost.document.getSnapshot()).toEqual(
-        createDummyWorldDocument(),
+      const document = editorHost.document.getSnapshot();
+
+      expect(document.documentKey).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+      );
+      expect(editorHost.internalState.internalPersistState.lastDocumentId).toBe(
+        document.documentKey,
+      );
+      await expect(readStoredWorldDocument(document.documentKey)).resolves.toEqual(
+        document,
       );
     },
   );
+
+  it("hydrates the last opened document from IndexedDB on startup", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    const persistedDocument = {
+      ...createDummyWorldDocument(),
+      documentKey: "22222222-2222-4222-8222-222222222222",
+      meta: {
+        ...createDummyWorldDocument().meta,
+        name: "Persisted World",
+      },
+    };
+    await saveStoredWorldDocument(persistedDocument);
+    localStorage.setItem(
+      EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        lastDocumentId: persistedDocument.documentKey,
+      }),
+    );
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    await flushMicrotasks();
+
+    expect(editorHost.document.getSnapshot()).toEqual(persistedDocument);
+    expect(editorHost.internalState.internalPersistState.lastDocumentId).toBe(
+      persistedDocument.documentKey,
+    );
+  });
+
+  it("writes document snapshot changes back into IndexedDB", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    await flushMicrotasks();
+
+    const currentDocument = editorHost.document.getSnapshot();
+    const nextDocument: WorldDocument = {
+      ...currentDocument,
+      meta: {
+        ...currentDocument.meta,
+        name: "Saved From Snapshot",
+      },
+    };
+
+    editorHost.internalDocument.setSnapshot(nextDocument);
+
+    await flushMicrotasks();
+
+    await expect(readStoredWorldDocument(nextDocument.documentKey)).resolves.toEqual(
+      nextDocument,
+    );
+  });
 
   it("hydrates internal persist state from localStorage and persists later changes", () => {
     localStorage.setItem(
@@ -1023,10 +1098,29 @@ describe("createEditorHost", () => {
   });
 });
 
-async function flushMicrotasks(iterations = 4): Promise<void> {
+async function flushMicrotasks(iterations = 20): Promise<void> {
   for (let index = 0; index < iterations; index += 1) {
     await Promise.resolve();
   }
+}
+
+function readStoredWorldDocument(
+  documentKey: string,
+): Promise<WorldDocument | null> {
+  return readFromIndexedDb<WorldDocument>({
+    ...WORLD_DOCUMENT_DATABASE_LOCATION,
+    key: documentKey,
+  });
+}
+
+function saveStoredWorldDocument(document: WorldDocument): Promise<WorldDocument> {
+  return saveToIndexedDb(
+    {
+      ...WORLD_DOCUMENT_DATABASE_LOCATION,
+      key: document.documentKey,
+    },
+    document,
+  );
 }
 
 function resolveClientPixelPointForGridCell(

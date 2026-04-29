@@ -3,6 +3,7 @@ import type { WorldDocument } from "@/domain/entity/world-document";
 export function createDummyWorldDocument(): WorldDocument {
   return {
     schemaVersion: 1,
+    documentKey: "11111111-1111-4111-8111-111111111111",
     baseId: "dummy-world",
     meta: {
       id: "dummy-world",

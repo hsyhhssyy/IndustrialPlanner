@@ -7,7 +7,7 @@ import {
   SnapshotStoreReadWrite,
 } from "@/shared/snapshot/snapshot-store";
 import { createEditorActions } from "./actions";
-import { readWorldDocumentFromIndexedDb } from "./document-storage";
+import { hookDocumentStorage } from "./document-storage";
 import { createEditorQueries } from "./queries";
 import { hookLocalstorage } from "./storage-hook";
 import { createEditorStateReadWrite, EditorStateReadWrite } from "./state-impl";
@@ -62,15 +62,7 @@ export function createEditorHost(
 
   workspace.editor = host;
   disposers.push(hookLocalstorage(host));
-  void hydrateInitialDocument(host);
+  disposers.push(hookDocumentStorage(host));
 
   return host;
-}
-
-async function hydrateInitialDocument(editorHost: EditorHost): Promise<void> {
-  const document = await readWorldDocumentFromIndexedDb(
-    editorHost.internalState.internalPersistState.lastDocumentId,
-  );
-
-  editorHost.internalDocument.setSnapshot(document);
 }
