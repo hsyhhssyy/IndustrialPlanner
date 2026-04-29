@@ -94,7 +94,7 @@ export function createGridLineDecoration(): DecorationLayer {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
-      const theme = ctx.workspace.app.state.theme;
+      const theme = ctx.workspace.app!.state.theme;
 
       const lineAxes = resolveWorldGridLineAxes({
         viewportBounds: ctx.viewportBounds,
