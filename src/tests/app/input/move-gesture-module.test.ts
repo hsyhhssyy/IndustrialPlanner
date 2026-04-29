@@ -11,6 +11,7 @@ import type { EditorContract } from "@/domain/contract/editor-contract";
 import type { WorldEntity } from "@/domain/entity/world-document";
 import {
   EntityCollectionType,
+  type ActiveTool,
   type EntityCollectionType as EntityCollectionTypeValue,
 } from "@/domain/state/types";
 import type { GridPoint, GridRect } from "@/domain/types/grid";
@@ -39,6 +40,7 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
     expect(appHost.internalState.activeTool).toBe("move");
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
+    expect(appHost.internalState.runtime.moveEnterFrom).toBe("select");
     expect(appHost.internalActions.hideCanvasFloatingToolbar).toHaveBeenCalled();
   });
 
@@ -73,6 +75,7 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(handled.editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
     expect(handled.appHost.internalState.activeTool).toBe("move");
     expect(handled.appHost.internalState.runtime.moveAnchor).toEqual({ x: 2, y: 2 });
+    expect(handled.appHost.internalState.runtime.moveEnterFrom).toBe("marquee");
   });
 
   it("enters touch move from select by selecting the pointer entity first", () => {
@@ -108,6 +111,7 @@ describe("createHypergryphMoveGestureModule", () => {
     });
     expect(select.editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
     expect(select.appHost.internalState.activeTool).toBe("move");
+    expect(select.appHost.internalState.runtime.moveEnterFrom).toBe("select");
     expect(select.appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
       MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
@@ -129,6 +133,7 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
     expect(appHost.internalState.activeTool).toBe("move");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.internalState.runtime.moveEnterFrom).toBe("marquee");
     expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
       MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
@@ -183,6 +188,7 @@ describe("createHypergryphMoveGestureModule", () => {
     expect([...selection]).toEqual(["selected-entity"]);
     expect(appHost.internalState.activeTool).toBe("select");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.internalState.runtime.moveEnterFrom).toBeNull();
   });
 
   it("restores the original selection when touch move enter fails after retargeting selection", () => {
@@ -332,11 +338,79 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(cancelContext.appHost.internalState.activeTool).toBe("select");
     expect(cancelContext.appHost.internalState.runtime.moveAnchor).toBeNull();
   });
+
+  it("returns to marquee through a mouse tool tap when mouse applying a marquee-entered move", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "move",
+      moveAnchor: { x: 5, y: 5 },
+      moveEnterFrom: "marquee",
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    expect(
+      module.handle(mouseTapEvent({ button: 0, longPress: false }), context),
+    ).toEqual({ status: "handled" });
+
+    expect(editor.actions.applyMoveOerationDraft).toHaveBeenCalledTimes(1);
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.internalState.runtime.moveEnterFrom).toBeNull();
+    expect(appHost.gestureAdapter.handleUiButtonMouseTap).toHaveBeenCalledWith({
+      uiButtonId: "placement-tool-marquee",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+    expect(appHost.gestureAdapter.handleUiButtonTouchTap).not.toHaveBeenCalled();
+  });
+
+  it("returns to marquee through a touch tool tap when touch cancelling a marquee-entered move", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "move",
+      moveAnchor: { x: 5, y: 5 },
+      moveEnterFrom: "marquee",
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    expect(
+      module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-cancel"), context),
+    ).toEqual({ status: "handled" });
+
+    expect(editor.actions.cancelMoveOperationDraft).toHaveBeenCalledTimes(1);
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.internalState.runtime.moveEnterFrom).toBeNull();
+    expect(appHost.gestureAdapter.handleUiButtonTouchTap).toHaveBeenCalledWith({
+      uiButtonId: "placement-tool-marquee",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+    expect(appHost.gestureAdapter.handleUiButtonMouseTap).not.toHaveBeenCalled();
+  });
+
+  it("does not return to marquee after active exits from a select-entered move", () => {
+    const { context, appHost } = createContext({
+      activeTool: "move",
+      moveAnchor: { x: 5, y: 5 },
+      moveEnterFrom: "select",
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    expect(
+      module.handle(mouseTapEvent({ button: 0, longPress: false }), context),
+    ).toEqual({ status: "handled" });
+
+    expect(appHost.gestureAdapter.handleUiButtonMouseTap).not.toHaveBeenCalled();
+    expect(appHost.gestureAdapter.handleUiButtonTouchTap).not.toHaveBeenCalled();
+  });
 });
 
 function createContext(options: {
-  activeTool?: "select" | "move" | "marquee" | "single-placement";
+  activeTool?: ActiveTool;
   moveAnchor?: GridPoint | null;
+  moveEnterFrom?: ActiveTool | null;
   toolbarVisible?: boolean;
 } = {}): {
   context: GestureActionContext<AppHost>;
@@ -446,6 +520,7 @@ function createContext(options: {
       activeTool: options.activeTool ?? "select",
       runtime: {
         moveAnchor: options.moveAnchor ?? null,
+        moveEnterFrom: options.moveEnterFrom ?? null,
         canvasFloatingToolbar: {
           visible: options.toolbarVisible ?? false,
           buttonIds: [],
@@ -454,6 +529,10 @@ function createContext(options: {
           measuredSize: null,
         },
       },
+    },
+    gestureAdapter: {
+      handleUiButtonMouseTap: vi.fn(),
+      handleUiButtonTouchTap: vi.fn(),
     },
     internalActions: {
       setActiveTool: vi.fn((activeTool) => {

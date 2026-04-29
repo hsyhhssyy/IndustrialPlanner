@@ -18,6 +18,7 @@ const MOVE_TOOLBAR_BUTTON_IDS = [
 ] as const;
 
 const MOVE_ENTRY_BUTTON_ID = "canvas-right-dock-toolbar-button-move";
+const PLACEMENT_MARQUEE_TOOL_BUTTON_ID = "placement-tool-marquee";
 
 export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHost> {
   return {
@@ -104,12 +105,12 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
 
           case "mouse tap":
             if (event.button === 2) {
-              cancelMoveOperation(context.appHost, editor);
+              cancelMoveOperation(context.appHost, editor, "mouse");
               return { status: "handled" };
             }
 
             if (event.button === 0 && !event.longPress) {
-              applyMoveOperation(context.appHost, editor);
+              applyMoveOperation(context.appHost, editor, "mouse");
               return { status: "handled" };
             }
 
@@ -117,7 +118,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
 
           case "ui-button-touch-tap":
             if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
-              applyMoveOperation(context.appHost, editor);
+              applyMoveOperation(context.appHost, editor, "touch");
               return { status: "handled" };
             }
 
@@ -127,7 +128,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-cancel") {
-              cancelMoveOperation(context.appHost, editor);
+              cancelMoveOperation(context.appHost, editor, "touch");
               return { status: "handled" };
             }
 
@@ -139,7 +140,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
-              applyMoveOperation(context.appHost, editor);
+              applyMoveOperation(context.appHost, editor, "mouse");
               return { status: "handled" };
             }
 
@@ -149,7 +150,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-cancel") {
-              cancelMoveOperation(context.appHost, editor);
+              cancelMoveOperation(context.appHost, editor, "mouse");
               return { status: "handled" };
             }
 
@@ -376,6 +377,7 @@ function finalizeMoveEnter(options: {
     }
 
     options.appHost.internalState.runtime.moveAnchor = options.anchor;
+    options.appHost.internalState.runtime.moveEnterFrom = options.previousTool;
     options.appHost.internalActions.setActiveTool("move");
     return { status: "handled" };
   } catch {
@@ -443,6 +445,7 @@ function restoreFailedEnterMove(options: {
 }): void {
   safelyCancelMoveDraft(options.editor);
   options.appHost.internalState.runtime.moveAnchor = null;
+  options.appHost.internalState.runtime.moveEnterFrom = null;
   options.appHost.internalActions.hideCanvasFloatingToolbar();
   options.appHost.internalActions.setActiveTool(options.previousTool);
 
@@ -591,7 +594,13 @@ function rotateMovePreview(appHost: AppHost, editor: EditorContract): void {
   appHost.internalActions.alignCanvasFloatingToolbar();
 }
 
-function applyMoveOperation(appHost: AppHost, editor: EditorContract): void {
+function applyMoveOperation(
+  appHost: AppHost,
+  editor: EditorContract,
+  source: "mouse" | "touch",
+): void {
+  const shouldReturnToMarquee = appHost.internalState.runtime.moveEnterFrom === "marquee";
+
   try {
     editor.actions.applyMoveOerationDraft();
   } catch {
@@ -599,15 +608,27 @@ function applyMoveOperation(appHost: AppHost, editor: EditorContract): void {
   } finally {
     clearMoveUi(appHost);
     appHost.internalActions.setActiveTool("select");
+    if (shouldReturnToMarquee) {
+      triggerPlacementMarqueeToolTap(appHost, source);
+    }
   }
 }
 
-function cancelMoveOperation(appHost: AppHost, editor: EditorContract): void {
+function cancelMoveOperation(
+  appHost: AppHost,
+  editor: EditorContract,
+  source: "mouse" | "touch",
+): void {
+  const shouldReturnToMarquee = appHost.internalState.runtime.moveEnterFrom === "marquee";
+
   try {
     editor.actions.cancelMoveOperationDraft();
   } finally {
     clearMoveUi(appHost);
     appHost.internalActions.setActiveTool("select");
+    if (shouldReturnToMarquee) {
+      triggerPlacementMarqueeToolTap(appHost, source);
+    }
   }
 }
 
@@ -633,7 +654,34 @@ export function hookMoveToolCleanupFallback(appHost: AppHost): () => void {
 
 function clearMoveUi(appHost: AppHost): void {
   appHost.internalState.runtime.moveAnchor = null;
+  appHost.internalState.runtime.moveEnterFrom = null;
   appHost.internalActions.hideCanvasFloatingToolbar();
+}
+
+function triggerPlacementMarqueeToolTap(
+  appHost: AppHost,
+  source: "mouse" | "touch",
+): void {
+  const modifiers = {
+    altKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+  };
+
+  if (source === "touch") {
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: PLACEMENT_MARQUEE_TOOL_BUTTON_ID,
+      ...modifiers,
+    });
+    return;
+  }
+
+  appHost.gestureAdapter.handleUiButtonMouseTap({
+    uiButtonId: PLACEMENT_MARQUEE_TOOL_BUTTON_ID,
+    button: 0,
+    ...modifiers,
+  });
 }
 
 function safelyCancelMoveDraft(editor: EditorContract): void {

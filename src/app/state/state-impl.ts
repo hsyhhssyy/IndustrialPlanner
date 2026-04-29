@@ -111,6 +111,7 @@ export interface CanvasTopLeftCornerToolbarStateReadWrite {
 export interface RuntimeStateReadWrite {
   activePanel: ActivePanel;
   moveAnchor: GridPoint | null;
+  moveEnterFrom: ActiveTool | null;
   placementAnchor: GridPoint | null;
   singlePlacementDeviceId: string | null;
   selectingPlacementGroup: PlacementGroup | null;
@@ -184,6 +185,7 @@ class CanvasTopLeftCornerToolbarStateReadWriteImpl implements CanvasTopLeftCorne
 class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   activePanel: ActivePanel = null;
   moveAnchor: GridPoint | null = null;
+  moveEnterFrom: ActiveTool | null = null;
   placementAnchor: GridPoint | null = null;
   singlePlacementDeviceId: string | null = null;
   selectingPlacementGroup: PlacementGroup | null = null;
