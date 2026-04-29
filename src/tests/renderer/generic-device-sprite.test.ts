@@ -158,6 +158,7 @@ vi.mock("pixi.js", () => {
 
 import { AYU_LIGHT_THEME } from "@/app/theme"
 import { EntityCollectionType } from "@/domain/state/types"
+import type { EntityDefinition } from "@/domain/types/registry/entity-definition"
 import { GenericDeviceSprite } from "@/renderer/sprites/generic-device-sprite"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 
@@ -178,6 +179,10 @@ describe("GenericDeviceSprite", () => {
   const SPRITE_ID = "item_port_storager_1"
   const BODY_KEY = "device-sprite-item_port_storager_1"
   const MASK_KEY = "device-masks-item_port_storager_1"
+  const SOLID_INPUT_KEY = "texture-solid-port-chevron-input"
+  const SOLID_OUTPUT_KEY = "texture-solid-port-chevron-output"
+  const LIQUID_INPUT_KEY = "texture-liquid-port-chevron-input"
+  const LIQUID_OUTPUT_KEY = "texture-liquid-port-chevron-output"
 
   it("loads the sprite texture before making the device visible", async () => {
     const resolvedTexture = createLoadedTextureMock("device-texture")
@@ -191,7 +196,7 @@ describe("GenericDeviceSprite", () => {
     })
     const sprite = new GenericDeviceSprite(
       "dummy-entity-1",
-      SPRITE_ID,
+      createEntityDefinitionStub(),
       renderHost as never,
     )
 
@@ -287,7 +292,7 @@ describe("GenericDeviceSprite", () => {
     })
     const sprite = new GenericDeviceSprite(
       "dummy-preview-entity",
-      SPRITE_ID,
+      createEntityDefinitionStub(),
       renderHost as never,
     )
 
@@ -365,7 +370,7 @@ describe("GenericDeviceSprite", () => {
       children?: unknown[];
     } | undefined
 
-    expect(overlayRoot.children).toHaveLength(2)
+    expect(overlayRoot.children).toHaveLength(3)
     expect(previewEffectRoot?.visible).toBe(true)
 
     const scanlineTiling = previewEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
@@ -397,7 +402,7 @@ describe("GenericDeviceSprite", () => {
     })
     const sprite = new GenericDeviceSprite(
       "dummy-preview-entity-fallback",
-      SPRITE_ID,
+      createEntityDefinitionStub(),
       renderHost as never,
     )
 
@@ -479,7 +484,378 @@ describe("GenericDeviceSprite", () => {
       id: "device-texture-fallback",
     })
   })
+
+  it("draws solid input and output port chevrons for the only selected device", async () => {
+    const resolvedTexture = createLoadedTextureMock("device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
+    const solidInputTexture = createLoadedTextureMock("solid-input-texture")
+    const solidOutputTexture = createLoadedTextureMock("solid-output-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: resolvedTexture,
+      [MASK_KEY]: resolvedMaskTexture,
+      [SOLID_INPUT_KEY]: solidInputTexture,
+      [SOLID_OUTPUT_KEY]: solidOutputTexture,
+      [LIQUID_INPUT_KEY]: createLoadedTextureMock("liquid-input-texture"),
+      [LIQUID_OUTPUT_KEY]: createLoadedTextureMock("liquid-output-texture"),
+    })
+    const sprite = new GenericDeviceSprite(
+      "selected-device",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: ["selected-device"],
+      previewIds: [],
+    })
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 48,
+      rotation: 0,
+    }, context)
+
+    await flushMicrotasks(8)
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 48,
+      rotation: 0,
+    }, context)
+
+    await flushMicrotasks(8)
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 48,
+      rotation: 0,
+    }, context)
+
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(SOLID_INPUT_KEY)
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(SOLID_OUTPUT_KEY)
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(LIQUID_INPUT_KEY)
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(LIQUID_OUTPUT_KEY)
+
+    const portOverlayRoot = resolvePortOverlayRoot(overlayLayer)
+    expect(portOverlayRoot?.visible).toBe(true)
+    expect(portOverlayRoot?.children).toHaveLength(6)
+
+    const firstInputChevron = portOverlayRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+    const firstOutputChevron = portOverlayRoot?.children?.[3] as RenderedSpriteSnapshot | undefined
+
+    expect(firstInputChevron).toMatchObject({
+      x: 24,
+      y: 80,
+      width: 16,
+      height: 16,
+      rotation: Math.PI,
+      roundPixels: true,
+      visible: true,
+      texture: solidInputTexture,
+    })
+    expect(firstOutputChevron).toMatchObject({
+      x: 24,
+      y: 16,
+      width: 16,
+      height: 16,
+      rotation: 0,
+      roundPixels: true,
+      visible: true,
+      texture: solidOutputTexture,
+    })
+  })
+
+  it("draws a liquid port chevron for the only preview device after rotation", async () => {
+    const resolvedTexture = createLoadedTextureMock("device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
+    const liquidInputTexture = createLoadedTextureMock("liquid-input-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: resolvedTexture,
+      [MASK_KEY]: resolvedMaskTexture,
+      [SOLID_INPUT_KEY]: createLoadedTextureMock("solid-input-texture"),
+      [SOLID_OUTPUT_KEY]: createLoadedTextureMock("solid-output-texture"),
+      [LIQUID_INPUT_KEY]: liquidInputTexture,
+      [LIQUID_OUTPUT_KEY]: createLoadedTextureMock("liquid-output-texture"),
+    })
+    const sprite = new GenericDeviceSprite(
+      "preview-device",
+      createLiquidInputEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: [],
+      previewIds: ["preview-device"],
+    })
+
+    sprite.syncLayout({
+      x: 10,
+      y: 20,
+      width: 64,
+      height: 96,
+      rotation: 90,
+    }, context)
+
+    await flushMicrotasks(8)
+
+    sprite.syncLayout({
+      x: 10,
+      y: 20,
+      width: 64,
+      height: 96,
+      rotation: 90,
+    }, context)
+
+    await flushMicrotasks(8)
+
+    sprite.syncLayout({
+      x: 10,
+      y: 20,
+      width: 64,
+      height: 96,
+      rotation: 90,
+    }, context)
+
+    const portOverlayRoot = resolvePortOverlayRoot(overlayLayer)
+    expect(portOverlayRoot?.visible).toBe(true)
+    expect(portOverlayRoot?.children).toHaveLength(1)
+
+    const liquidChevron = portOverlayRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+
+    expect(liquidChevron).toMatchObject({
+      x: 34,
+      y: 124,
+      width: 16,
+      height: 16,
+      rotation: Math.PI,
+      roundPixels: true,
+      visible: true,
+      texture: liquidInputTexture,
+    })
+  })
+
+  it("does not draw port chevrons when selection contains multiple devices", async () => {
+    const resolvedTexture = createLoadedTextureMock("device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: resolvedTexture,
+      [MASK_KEY]: resolvedMaskTexture,
+    })
+    const sprite = new GenericDeviceSprite(
+      "multi-selected-device",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 48,
+      rotation: 0,
+    }, createRenderContextStub({
+      selectionIds: ["multi-selected-device", "other-device"],
+      previewIds: [],
+    }))
+
+    await flushMicrotasks(8)
+
+    const portOverlayRoot = resolvePortOverlayRoot(overlayLayer)
+    expect(portOverlayRoot?.visible).toBe(false)
+    expect(portOverlayRoot?.children).toHaveLength(0)
+    expect(renderHost.textureManager.getTexture).not.toHaveBeenCalledWith(SOLID_INPUT_KEY)
+  })
 })
+
+function createEntityDefinitionStub(): EntityDefinition {
+  return {
+    id: "item_port_storager_1",
+    nameKey: "registry.entity.item_port_storager_1.name",
+    spriteId: "item_port_storager_1",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "warehouse",
+    tags: [],
+    requiresPower: false,
+    powerDemand: 5,
+    portGroups: [
+      {
+        id: "item_input",
+        kind: "item",
+        direction: "input",
+        ports: [0, 1, 2].map((x) => ({
+          id: `in_s_${x}`,
+          localCellX: x,
+          localCellY: 2,
+          edge: "SOUTH",
+        })),
+      },
+      {
+        id: "item_output",
+        kind: "item",
+        direction: "output",
+        ports: [0, 1, 2].map((x) => ({
+          id: `out_n_${x}`,
+          localCellX: x,
+          localCellY: 0,
+          edge: "NORTH",
+        })),
+      },
+    ],
+    storageSlotGroups: [
+      {
+        id: "item_storage",
+        kind: "item",
+        role: "bidirectional",
+        slots: [
+          {
+            id: "slot_1",
+            capacity: 50,
+            itemFilter: "type",
+            itemFilterType: "solid",
+          },
+        ],
+      },
+    ],
+    portStorageBindings: [
+      {
+        id: "bind_item_input",
+        portGroupId: "item_input",
+        storageSlotGroupId: "item_storage",
+      },
+      {
+        id: "bind_item_output",
+        portGroupId: "item_output",
+        storageSlotGroupId: "item_storage",
+      },
+    ],
+  }
+}
+
+function createLiquidInputEntityDefinitionStub(): EntityDefinition {
+  return {
+    ...createEntityDefinitionStub(),
+    id: "item_port_liquid_filling_pd_mc_1",
+    nameKey: "registry.entity.item_port_liquid_filling_pd_mc_1.name",
+    footprint: { width: 6, height: 4 },
+    portGroups: [
+      {
+        id: "fluid_input",
+        kind: "fluid",
+        direction: "input",
+        ports: [
+          {
+            id: "in_e_2",
+            localCellX: 5,
+            localCellY: 2,
+            edge: "EAST",
+          },
+        ],
+      },
+    ],
+    storageSlotGroups: [
+      {
+        id: "fluid_input_buffer",
+        kind: "fluid",
+        role: "input",
+        slots: [
+          {
+            id: "input_fluid_slot",
+            capacity: 50,
+            itemFilter: "type",
+            itemFilterType: "liquid",
+          },
+        ],
+      },
+    ],
+    portStorageBindings: [
+      {
+        id: "bind_fluid_input",
+        portGroupId: "fluid_input",
+        storageSlotGroupId: "fluid_input_buffer",
+      },
+    ],
+  }
+}
+
+function createRenderContextStub(options: {
+  selectionIds: readonly string[];
+  previewIds: readonly string[];
+}) {
+  return {
+    theme: AYU_LIGHT_THEME,
+    workspace: {
+      editor: {
+        state: {
+          viewport: {
+            gridSize: 1,
+            gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
+          },
+          collections: {
+            [EntityCollectionType.selection]: createCollectionStub(options.selectionIds),
+            [EntityCollectionType.marquee]: createCollectionStub([]),
+            [EntityCollectionType.reverseMarquee]: createCollectionStub([]),
+            [EntityCollectionType.preview]: createCollectionStub(options.previewIds),
+            [EntityCollectionType.ghost]: createCollectionStub([]),
+          },
+        },
+      },
+    } as never,
+    time: {
+      nowMs: 1000,
+      deltaMs: 16.67,
+    },
+  }
+}
+
+function createCollectionStub(entityIds: readonly string[]) {
+  return Object.assign([...entityIds], {
+    contains: (entityId: string) => entityIds.includes(entityId),
+  })
+}
+
+function resolvePortOverlayRoot(overlayLayer: ReturnType<typeof createLayerStub>) {
+  const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
+    children?: unknown[];
+  } | undefined
+
+  return overlayRoot?.children?.[2] as {
+    visible?: boolean;
+    children?: unknown[];
+  } | undefined
+}
 
 function createLayerStub() {
   const layer = {

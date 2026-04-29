@@ -8,7 +8,7 @@ const WORLD_GRID_LINE_ALPHA = 0.12;
 const WORLD_GRID_LINE_WIDTH = 1;
 const WORLD_GRID_MAJOR_LINE_INTERVAL = 5;
 const WORLD_GRID_MAJOR_LINE_WIDTH_MULTIPLIER = 2;
-const WORLD_GRID_FINE_LINE_MIN_CELL_PIXEL_SIZE = 10;
+const WORLD_GRID_FINE_LINE_MIN_CELL_PIXEL_SIZE = 20;
 
 interface WorldGridLinePosition {
   lineIndex: number;
@@ -38,7 +38,7 @@ export function resolveWorldGridStrokeStyle(
       theme.renderer.worldGridLineColorKey,
     ),
     alpha: WORLD_GRID_LINE_ALPHA,
-    pixelLine: false,
+    pixelLine: true,
   };
 }
 

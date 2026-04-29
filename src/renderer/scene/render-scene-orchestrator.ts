@@ -147,7 +147,7 @@ function createSpriteForDefinition(
     return new BeltStraightSprite(entityId)
   }
 
-  return new GenericDeviceSprite(entityId, definition.spriteId, renderHost)
+  return new GenericDeviceSprite(entityId, definition, renderHost)
 }
 
 export function applyViewportSize(

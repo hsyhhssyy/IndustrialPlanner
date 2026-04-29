@@ -8,6 +8,10 @@ import {
 } from "pixi.js"
 
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
+import { getRotatedGridFootprint } from "@/shared/geometry/grid"
+import type { GridRectSize, GridRotation } from "@/domain/types/grid"
+import { EntityCollectionType } from "@/domain/state/types"
+import type { EntityDefinition } from "@/domain/types/registry/entity-definition"
 import type { RenderHost } from "@/renderer/renderer-host"
 import {
   RenderSpriteLayout,
@@ -29,6 +33,20 @@ const SCANLINE_SCROLL_INTERVAL_MS = 2000;
 const BLUEPRINT_MASK_TEXTURE_PATH = "/textures/blueprint-mask-50opacity.png";
 const PREVIEW_BORDER_WIDTH = 1;
 const PREVIEW_BORDER_ALPHA = 0.5;
+
+type PortGroupDefinition = EntityDefinition["portGroups"][number];
+type PortDefinition = PortGroupDefinition["ports"][number];
+type PortEdge = PortDefinition["edge"];
+type PortChevronMaterial = "solid" | "liquid";
+type PortChevronDirection = "input" | "output";
+type PortChevronTextureKey = `${PortChevronMaterial}-${PortChevronDirection}`;
+
+const PORT_CHEVRON_TEXTURE_KEYS = [
+  "solid-input",
+  "solid-output",
+  "liquid-input",
+  "liquid-output",
+] as const satisfies readonly PortChevronTextureKey[];
 
 export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly body: Sprite
@@ -55,12 +73,20 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
   private defaultCollectionOverlayGraphics: Graphics | null = null;
 
+  private readonly portOverlayRoot: Container;
+  private readonly portChevronSprites: Sprite[] = [];
+  private readonly portChevronTextures = new Map<PortChevronTextureKey, Texture>();
+  private portChevronTextureLoadStarted = false;
+  private arePortChevronTexturesReady = false;
+
   public constructor(
     entityId: string,
-    spriteId: string,
+    private readonly definition: EntityDefinition,
     private readonly renderHost: RenderHost,
   ) {
     super(entityId)
+
+    const spriteId = definition.spriteId
 
     this.body = new Sprite(Texture.EMPTY)
     this.body.anchor.set(0.5)
@@ -114,6 +140,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.selectionEffectRoot.addChild(this.selectionTiling)
     this.selectionEffectRoot.addChild(this.selectionMask)
     this.getRootOfLayer("overlay").addChild(this.selectionEffectRoot)
+
+    this.portOverlayRoot = new Container()
+    this.portOverlayRoot.visible = false
+    this.getRootOfLayer("overlay").addChild(this.portOverlayRoot)
 
     const bodyTextureLoad = this.renderHost.textureManager.getTexture(`device-sprite-${spriteId}`)
     const previewMaskTextureLoad = this.renderHost.textureManager.getTexture(`device-masks-${spriteId}`)
@@ -177,6 +207,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.previewBorderGraphics.visible = false;
     this.previewEffectRoot.visible = false;
     this.selectionEffectRoot.visible = false;
+    this.portOverlayRoot.visible = false;
+    this.hidePortChevronSprites();
   }
 
   // ---- 三个 abstract overlay 方法实现 ----
@@ -253,6 +285,13 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     void context;
 
     this.selectionEffectRoot.visible = true;
+  }
+
+  protected afterSyncLayout(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void {
+    this.syncPortOverlay(layout, context);
   }
 
   // ---- overlay 辅助方法 ----
@@ -341,6 +380,129 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     });
   }
 
+  private loadPortChevronTextures(): void {
+    if (this.portChevronTextureLoadStarted) {
+      return;
+    }
+
+    this.portChevronTextureLoadStarted = true;
+
+    void Promise.all(
+      PORT_CHEVRON_TEXTURE_KEYS.map(async (key) => {
+        const texture = await this.renderHost.textureManager.getTexture(
+          resolvePortChevronTextureResourceKey(key),
+        );
+        return [key, texture] as const;
+      }),
+    ).then((entries) => {
+      if (this.disposed) {
+        return;
+      }
+
+      for (const [key, texture] of entries) {
+        this.portChevronTextures.set(key, texture);
+      }
+
+      this.arePortChevronTexturesReady = true;
+    }).catch(() => {
+      // 端口贴图走 texture manager fallback；这里仅避免异步异常影响 sprite 同步。
+    });
+  }
+
+  private syncPortOverlay(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void {
+    if (!this.isTextureReady) {
+      return;
+    }
+
+    if (!this.shouldDrawPortOverlay(context)) {
+      return;
+    }
+
+    const portChevronSpecs = resolvePortChevronSpecs({
+      definition: this.definition,
+      layout,
+    });
+
+    if (portChevronSpecs.length === 0) {
+      return;
+    }
+
+    if (!this.arePortChevronTexturesReady) {
+      this.loadPortChevronTextures();
+      return;
+    }
+
+    for (let index = 0; index < portChevronSpecs.length; index += 1) {
+      const spec = portChevronSpecs[index];
+
+      if (spec === undefined) {
+        continue;
+      }
+
+      const texture = this.portChevronTextures.get(spec.textureKey);
+
+      if (texture === undefined) {
+        continue;
+      }
+
+      const sprite = this.getPortChevronSprite(index);
+      sprite.texture = texture;
+      sprite.visible = true;
+      sprite.x = spec.x;
+      sprite.y = spec.y;
+      sprite.width = spec.width;
+      sprite.height = spec.height;
+      sprite.rotation = spec.rotation;
+    }
+
+    for (let index = portChevronSpecs.length; index < this.portChevronSprites.length; index += 1) {
+      const sprite = this.portChevronSprites[index];
+
+      if (sprite !== undefined) {
+        sprite.visible = false;
+      }
+    }
+
+    this.portOverlayRoot.visible = true;
+  }
+
+  private shouldDrawPortOverlay(context: RenderSpriteSyncContext): boolean {
+    const collections = context.workspace.editor!.state.collections;
+
+    return isOnlyEntityInCollection(
+      collections[EntityCollectionType.selection],
+      this.entityId,
+    ) || isOnlyEntityInCollection(
+      collections[EntityCollectionType.preview],
+      this.entityId,
+    );
+  }
+
+  private getPortChevronSprite(index: number): Sprite {
+    const existingSprite = this.portChevronSprites[index];
+
+    if (existingSprite !== undefined) {
+      return existingSprite;
+    }
+
+    const sprite = new Sprite(Texture.EMPTY);
+    sprite.anchor.set(0.5);
+    sprite.roundPixels = true;
+    sprite.visible = false;
+    this.portOverlayRoot.addChild(sprite);
+    this.portChevronSprites[index] = sprite;
+    return sprite;
+  }
+
+  private hidePortChevronSprites(): void {
+    for (const sprite of this.portChevronSprites) {
+      sprite.visible = false;
+    }
+  }
+
   private ensureNotDisposed(): void {
     if (this.disposed) {
       throw new Error("Cannot use a destroyed render sprite.");
@@ -366,6 +528,246 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     applyCenteredSpriteLayout(this.selectionMask, normalizedLayout)
   }
 
+}
+
+function isOnlyEntityInCollection(
+  collection: {
+    readonly length: number;
+    contains(entityId: string): boolean;
+  },
+  entityId: string,
+): boolean {
+  return collection.length === 1 && collection.contains(entityId);
+}
+
+function resolvePortChevronSpecs(options: {
+  definition: EntityDefinition;
+  layout: RenderSpriteLayout;
+}): {
+  textureKey: PortChevronTextureKey;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+}[] {
+  const specs: {
+    textureKey: PortChevronTextureKey;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    rotation: number;
+  }[] = [];
+
+  for (const portGroup of options.definition.portGroups) {
+    const material = resolvePortChevronMaterial(options.definition, portGroup);
+    const direction = resolvePortChevronDirection(portGroup.direction);
+    const textureKey = `${material}-${direction}` as PortChevronTextureKey;
+
+    for (const port of portGroup.ports) {
+      const chevronLayout = resolvePortChevronLayout({
+        footprint: options.definition.footprint,
+        layout: options.layout,
+        port,
+      });
+
+      if (chevronLayout === null) {
+        continue;
+      }
+
+      specs.push({
+        textureKey,
+        ...chevronLayout,
+      });
+    }
+  }
+
+  return specs;
+}
+
+function resolvePortChevronMaterial(
+  definition: EntityDefinition,
+  portGroup: PortGroupDefinition,
+): PortChevronMaterial {
+  if (portGroup.kind === "fluid") {
+    return "liquid";
+  }
+
+  const storageSlotGroupById = new Map(
+    definition.storageSlotGroups.map((slotGroup) => [
+      slotGroup.id,
+      slotGroup,
+    ]),
+  );
+
+  for (const binding of definition.portStorageBindings) {
+    if (binding.portGroupId !== portGroup.id) {
+      continue;
+    }
+
+    const storageSlotGroup = storageSlotGroupById.get(binding.storageSlotGroupId);
+
+    if (storageSlotGroup === undefined) {
+      continue;
+    }
+
+    if (storageSlotGroup.kind === "fluid") {
+      return "liquid";
+    }
+
+    if (storageSlotGroup.slots.some((slot) => slot.itemFilterType === "liquid")) {
+      return "liquid";
+    }
+  }
+
+  return "solid";
+}
+
+function resolvePortChevronDirection(
+  direction: PortGroupDefinition["direction"],
+): PortChevronDirection {
+  return direction === "output" ? "output" : "input";
+}
+
+function resolvePortChevronTextureResourceKey(
+  key: PortChevronTextureKey,
+): string {
+  const [material, direction] = key.split("-") as [
+    PortChevronMaterial,
+    PortChevronDirection,
+  ];
+
+  return `texture-${material}-port-chevron-${direction}`;
+}
+
+function resolvePortChevronLayout(options: {
+  footprint: GridRectSize;
+  layout: RenderSpriteLayout;
+  port: PortDefinition;
+}): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+} | null {
+  const rotatedFootprint = getRotatedGridFootprint(
+    options.footprint,
+    options.layout.rotation,
+  );
+  const gridCellPixelSize = resolveLayoutGridCellPixelSize(
+    options.layout,
+    rotatedFootprint,
+  );
+
+  if (gridCellPixelSize === null) {
+    return null;
+  }
+
+  const portCell = rotateLocalPortCell({
+    footprint: options.footprint,
+    port: options.port,
+    rotation: options.layout.rotation,
+  });
+  const edge = rotatePortEdge(options.port.edge, options.layout.rotation);
+  const outsideCell = resolveOutsidePortCell(portCell, edge);
+
+  return {
+    x: options.layout.x + (outsideCell.x + 0.5) * gridCellPixelSize,
+    y: options.layout.y + (outsideCell.y + 0.5) * gridCellPixelSize,
+    width: gridCellPixelSize,
+    height: gridCellPixelSize,
+    rotation: resolvePortChevronRotation(edge),
+  };
+}
+
+function resolveLayoutGridCellPixelSize(
+  layout: RenderSpriteLayout,
+  footprint: GridRectSize,
+): number | null {
+  if (footprint.width <= 0 || footprint.height <= 0) {
+    return null;
+  }
+
+  const widthSize = layout.width / footprint.width;
+  const heightSize = layout.height / footprint.height;
+
+  if (!Number.isFinite(widthSize) || !Number.isFinite(heightSize)) {
+    return null;
+  }
+
+  if (widthSize <= 0 || heightSize <= 0) {
+    return null;
+  }
+
+  return (widthSize + heightSize) / 2;
+}
+
+function rotateLocalPortCell(options: {
+  footprint: GridRectSize;
+  port: PortDefinition;
+  rotation: GridRotation;
+}): {
+  x: number;
+  y: number;
+} {
+  const { width, height } = options.footprint;
+  const { localCellX: x, localCellY: y } = options.port;
+
+  switch (options.rotation) {
+    case 0:
+      return { x, y };
+    case 90:
+      return { x: height - 1 - y, y: x };
+    case 180:
+      return { x: width - 1 - x, y: height - 1 - y };
+    case 270:
+      return { x: y, y: width - 1 - x };
+  }
+}
+
+function rotatePortEdge(edge: PortEdge, rotation: GridRotation): PortEdge {
+  const steps = rotation / 90;
+  const edges: readonly PortEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
+  const currentIndex = edges.indexOf(edge);
+  const nextIndex = (currentIndex + steps) % edges.length;
+  return edges[nextIndex] ?? edge;
+}
+
+function resolveOutsidePortCell(
+  portCell: {
+    x: number;
+    y: number;
+  },
+  edge: PortEdge,
+): {
+  x: number;
+  y: number;
+} {
+  switch (edge) {
+    case "NORTH":
+      return { x: portCell.x, y: portCell.y - 1 };
+    case "EAST":
+      return { x: portCell.x + 1, y: portCell.y };
+    case "SOUTH":
+      return { x: portCell.x, y: portCell.y + 1 };
+    case "WEST":
+      return { x: portCell.x - 1, y: portCell.y };
+  }
+}
+
+function resolvePortChevronRotation(edge: PortEdge): number {
+  switch (edge) {
+    case "NORTH":
+      return 0;
+    case "EAST":
+      return 90 * DEGREE_TO_RADIAN;
+    case "SOUTH":
+      return 180 * DEGREE_TO_RADIAN;
+    case "WEST":
+      return 270 * DEGREE_TO_RADIAN;
+  }
 }
 
 function applyCenteredSpriteLayout(target: {
