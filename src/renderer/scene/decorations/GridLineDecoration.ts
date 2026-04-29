@@ -6,15 +6,33 @@ import type { DecorationSyncContext } from "./DecorationSyncContext";
 
 const WORLD_GRID_LINE_ALPHA = 0.12;
 const WORLD_GRID_LINE_WIDTH = 1;
+const WORLD_GRID_MAJOR_LINE_INTERVAL = 5;
+const WORLD_GRID_MAJOR_LINE_WIDTH_MULTIPLIER = 1.5;
+const WORLD_GRID_FINE_LINE_MIN_CELL_PIXEL_SIZE = 50;
 
-export function resolveWorldGridStrokeStyle(theme: AppTheme): {
+interface WorldGridLinePosition {
+  lineIndex: number;
+  position: number;
+}
+
+export interface WorldGridLineAxisGroup {
+  fine: number[];
+  major: number[];
+}
+
+export function resolveWorldGridStrokeStyle(
+  theme: AppTheme,
+  options: {
+    widthMultiplier?: number;
+  } = {},
+): {
   width: number;
   color: number;
   alpha: number;
   pixelLine: true;
 } {
   return {
-    width: WORLD_GRID_LINE_WIDTH,
+    width: WORLD_GRID_LINE_WIDTH * (options.widthMultiplier ?? 1),
     color: resolveAppThemeColorNumber(
       theme,
       theme.renderer.worldGridLineColorKey,
@@ -22,6 +40,17 @@ export function resolveWorldGridStrokeStyle(theme: AppTheme): {
     alpha: WORLD_GRID_LINE_ALPHA,
     pixelLine: true,
   };
+}
+
+export function resolveWorldGridMajorStrokeStyle(theme: AppTheme): {
+  width: number;
+  color: number;
+  alpha: number;
+  pixelLine: true;
+} {
+  return resolveWorldGridStrokeStyle(theme, {
+    widthMultiplier: WORLD_GRID_MAJOR_LINE_WIDTH_MULTIPLIER,
+  });
 }
 
 export function resolveWorldGridLineAxes(options: {
@@ -37,19 +66,19 @@ export function resolveWorldGridLineAxes(options: {
   };
   gridCellPixelSize: number;
 }): {
-  vertical: number[];
-  horizontal: number[];
+  vertical: WorldGridLineAxisGroup;
+  horizontal: WorldGridLineAxisGroup;
 } {
   const gridCellSize = options.gridCellPixelSize;
 
   return {
-    vertical: resolveWorldGridAxisPositions({
+    vertical: resolveWorldGridAxisGroup({
       viewportStart: options.viewportBounds.left,
       viewportSpan: options.viewportBounds.width,
       worldCenter: options.viewportCenter.x,
       gridCellSize,
     }),
-    horizontal: resolveWorldGridAxisPositions({
+    horizontal: resolveWorldGridAxisGroup({
       viewportStart: options.viewportBounds.top,
       viewportSpan: options.viewportBounds.height,
       worldCenter: options.viewportCenter.y,
@@ -58,12 +87,40 @@ export function resolveWorldGridLineAxes(options: {
   };
 }
 
+function resolveWorldGridAxisGroup(options: {
+  viewportStart: number;
+  viewportSpan: number;
+  worldCenter: number;
+  gridCellSize: number;
+}): WorldGridLineAxisGroup {
+  const linePositions = resolveWorldGridAxisPositions(options);
+  const shouldShowFineLines = options.gridCellSize
+    >= WORLD_GRID_FINE_LINE_MIN_CELL_PIXEL_SIZE;
+  const group: WorldGridLineAxisGroup = {
+    fine: [],
+    major: [],
+  };
+
+  for (const linePosition of linePositions) {
+    if (linePosition.lineIndex % WORLD_GRID_MAJOR_LINE_INTERVAL === 0) {
+      group.major.push(linePosition.position);
+      continue;
+    }
+
+    if (shouldShowFineLines) {
+      group.fine.push(linePosition.position);
+    }
+  }
+
+  return group;
+}
+
 function resolveWorldGridAxisPositions(options: {
   viewportStart: number;
   viewportSpan: number;
   worldCenter: number;
   gridCellSize: number;
-}): number[] {
+}): WorldGridLinePosition[] {
   if (options.viewportSpan <= 0 || options.gridCellSize <= 0) {
     return [];
   }
@@ -73,7 +130,7 @@ function resolveWorldGridAxisPositions(options: {
   const firstLineIndex = Math.ceil(
     (options.viewportStart - worldOrigin) / options.gridCellSize,
   );
-  const linePositions: number[] = [];
+  const linePositions: WorldGridLinePosition[] = [];
   const viewportEnd = options.viewportStart + options.viewportSpan;
 
   for (
@@ -81,10 +138,32 @@ function resolveWorldGridAxisPositions(options: {
     worldOrigin + lineIndex * options.gridCellSize <= viewportEnd;
     lineIndex += 1
   ) {
-    linePositions.push(worldOrigin + lineIndex * options.gridCellSize);
+    linePositions.push({
+      lineIndex,
+      position: worldOrigin + lineIndex * options.gridCellSize,
+    });
   }
 
   return linePositions;
+}
+
+function drawGridLineAxes(options: {
+  graphics: Graphics;
+  vertical: number[];
+  horizontal: number[];
+  viewportBounds: DecorationSyncContext["viewportBounds"];
+}): void {
+  for (const x of options.vertical) {
+    options.graphics
+      .moveTo(x, options.viewportBounds.top)
+      .lineTo(x, options.viewportBounds.top + options.viewportBounds.height);
+  }
+
+  for (const y of options.horizontal) {
+    options.graphics
+      .moveTo(options.viewportBounds.left, y)
+      .lineTo(options.viewportBounds.left + options.viewportBounds.width, y);
+  }
 }
 
 export function createGridLineDecoration(): DecorationLayer {
@@ -107,19 +186,31 @@ export function createGridLineDecoration(): DecorationLayer {
 
       graphics.clear();
 
-      for (const x of lineAxes.vertical) {
-        graphics
-          .moveTo(x, ctx.viewportBounds.top)
-          .lineTo(x, ctx.viewportBounds.top + ctx.viewportBounds.height);
+      if (
+        lineAxes.vertical.fine.length > 0
+        || lineAxes.horizontal.fine.length > 0
+      ) {
+        drawGridLineAxes({
+          graphics,
+          vertical: lineAxes.vertical.fine,
+          horizontal: lineAxes.horizontal.fine,
+          viewportBounds: ctx.viewportBounds,
+        });
+        graphics.stroke(resolveWorldGridStrokeStyle(theme));
       }
 
-      for (const y of lineAxes.horizontal) {
-        graphics
-          .moveTo(ctx.viewportBounds.left, y)
-          .lineTo(ctx.viewportBounds.left + ctx.viewportBounds.width, y);
+      if (
+        lineAxes.vertical.major.length > 0
+        || lineAxes.horizontal.major.length > 0
+      ) {
+        drawGridLineAxes({
+          graphics,
+          vertical: lineAxes.vertical.major,
+          horizontal: lineAxes.horizontal.major,
+          viewportBounds: ctx.viewportBounds,
+        });
+        graphics.stroke(resolveWorldGridMajorStrokeStyle(theme));
       }
-
-      graphics.stroke(resolveWorldGridStrokeStyle(theme));
     },
 
     destroy(): void {

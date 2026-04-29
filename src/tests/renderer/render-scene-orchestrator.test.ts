@@ -11,6 +11,7 @@ import {
   resolveWorldEntitySpriteLayout,
 } from "@/renderer/scene/render-scene-orchestrator"
 import {
+  resolveWorldGridMajorStrokeStyle,
   resolveWorldGridStrokeStyle,
   resolveWorldGridLineAxes,
 } from "@/renderer/scene/decorations/GridLineDecoration"
@@ -288,7 +289,7 @@ describe("resolveWorldGridLineAxes", () => {
         x: 0,
         y: 0,
       },
-      gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
+      gridCellPixelSize: 80,
     })
 
     const shiftedAxes = resolveWorldGridLineAxes({
@@ -302,13 +303,38 @@ describe("resolveWorldGridLineAxes", () => {
         x: 0.5,
         y: 0.5,
       },
+      gridCellPixelSize: 80,
+    })
+
+    expect(centeredAxes.vertical.fine).toEqual([40, 120, 280, 360])
+    expect(centeredAxes.horizontal.fine).toEqual([40, 120, 280, 360])
+    expect(centeredAxes.vertical.major).toEqual([200])
+    expect(centeredAxes.horizontal.major).toEqual([200])
+    expect(shiftedAxes.vertical.fine).toEqual([0, 80, 240, 320, 400])
+    expect(shiftedAxes.horizontal.fine).toEqual([0, 80, 240, 320, 400])
+    expect(shiftedAxes.vertical.major).toEqual([160])
+    expect(shiftedAxes.horizontal.major).toEqual([160])
+  })
+
+  it("hides fine grid lines when cells are smaller than 50 pixels", () => {
+    const axes = resolveWorldGridLineAxes({
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 400,
+      },
+      viewportCenter: {
+        x: 0,
+        y: 0,
+      },
       gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
     })
 
-    expect(centeredAxes.vertical.slice(0, 3)).toEqual([8, 24, 40])
-    expect(centeredAxes.horizontal.slice(0, 3)).toEqual([8, 24, 40])
-    expect(shiftedAxes.vertical.slice(0, 3)).toEqual([0, 16, 32])
-    expect(shiftedAxes.horizontal.slice(0, 3)).toEqual([0, 16, 32])
+    expect(axes.vertical.fine).toEqual([])
+    expect(axes.horizontal.fine).toEqual([])
+    expect(axes.vertical.major.slice(0, 3)).toEqual([40, 120, 200])
+    expect(axes.horizontal.major.slice(0, 3)).toEqual([40, 120, 200])
   })
 })
 
@@ -324,6 +350,15 @@ describe("resolveWorldGridStrokeStyle", () => {
 
   it("resolves the editor grid color from the current theme renderer key", () => {
     expect(resolveWorldGridStrokeStyle(AYU_LIGHT_THEME).color).toBe(0x5c6773)
+  })
+
+  it("uses a 1.5x stroke for major grid lines", () => {
+    expect(resolveWorldGridMajorStrokeStyle(AYU_DARK_THEME)).toEqual({
+      width: 1.5,
+      color: 0xffffff,
+      alpha: 0.12,
+      pixelLine: true,
+    })
   })
 })
 
