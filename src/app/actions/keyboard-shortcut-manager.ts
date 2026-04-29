@@ -24,7 +24,7 @@ const VALID_SHORTCUT_KEYS: ReadonlySet<string> = new Set(Object.values(SHORTCUT_
 const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.PLACE_CONVEYOR]:   "E",
   [SHORTCUT_KEY.PLACE_PIPE]:       "Q",
-  [SHORTCUT_KEY.RESOURCES_POWER]:  "X",
+  [SHORTCUT_KEY.RESOURCES_POWER]:  "G",
   [SHORTCUT_KEY.WAREHOUSE]:        "C",
   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
   [SHORTCUT_KEY.SYNTHESIS]:        "B",

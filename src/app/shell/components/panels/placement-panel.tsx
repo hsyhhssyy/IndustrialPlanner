@@ -2,9 +2,9 @@ import type { AppHost } from "@/app/host/app-host";
 import { observer } from "mobx-react-lite";
 import { Fragment, type ComponentProps } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
-import type { UiGroup } from "@/domain/types/registry/entity-definition";
+import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
 import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
+import type { PlacementGroup } from "@/app/state/state-impl";
 import { WorkbenchIcon } from "@/app/shell/components/workbench-icons";
 
 const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
@@ -20,9 +20,9 @@ function resolveDeviceIconPath(entityId: string): string {
 }
 
 // ─── uiGroup → 分组配置映射 ───
-const UI_GROUP_SECTION_CONFIG: Record<Exclude<UiGroup, "hidden">, {
+const UI_GROUP_SECTION_CONFIG: Record<PlacementGroup, {
   titleKey: string;
-  shortcutKeyId: string;
+  shortcutKeyId: ShortcutKeyId;
 }> = {
   beltLogistics: {
     titleKey: "workbench.section.beltLogistics",
@@ -51,7 +51,7 @@ const UI_GROUP_SECTION_CONFIG: Record<Exclude<UiGroup, "hidden">, {
 };
 
 /** 设备分组在面板中的显示顺序 */
-const DEVICE_SECTION_ORDER: readonly Exclude<UiGroup, "hidden">[] = [
+const DEVICE_SECTION_ORDER: readonly PlacementGroup[] = [
   "beltLogistics",
   "pipeLogistics",
   "resourcePower",
@@ -74,6 +74,7 @@ interface PlacementButtonDefinition {
 }
 
 interface PlacementSectionDefinition {
+  readonly uiGroup: PlacementGroup;
   readonly titleKey: string;
   readonly shortcutKey: string | null;
   readonly buttons: readonly PlacementButtonDefinition[];
@@ -116,12 +117,12 @@ const PIPE_DRAW_OPERATION_BUTTON: PlacementButtonDefinition = {
 
 function buildPlacementDeviceSections(appHost: AppHost): readonly PlacementSectionDefinition[] {
   // 1. 按 uiGroup 分组设备（过滤 hidden，组内按 id 排序）
-  const groupedByUiGroup = new Map<Exclude<UiGroup, "hidden">, typeof ENTITY_DEFINITIONS>();
+  const groupedByUiGroup = new Map<PlacementGroup, EntityDefinition[]>();
   for (const group of DEVICE_SECTION_ORDER) {
     groupedByUiGroup.set(group, []);
   }
 
-  for (const entity of ENTITY_DEFINITIONS) {
+  for (const entity of appHost.workspace.registry.entityDefinitions) {
     if (entity.uiGroup === "hidden") continue;
     const group = groupedByUiGroup.get(entity.uiGroup);
     if (group) {
@@ -147,6 +148,7 @@ function buildPlacementDeviceSections(appHost: AppHost): readonly PlacementSecti
       }));
 
       return {
+        uiGroup,
         titleKey: config.titleKey,
         shortcutKey: shortcutKey || null,
         buttons,
@@ -264,16 +266,17 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
       <div aria-hidden="true" className="placement-panel-divider" />
 
       {deviceSections.map((section, sectionIndex) => {
-        const isResourcePowerSection = section.titleKey === "workbench.section.resourcePower";
         const sectionTitleId = `placement-device-section-${sectionIndex}`;
+        const isPlacementGroupActive = appHost.state.activeTool === "select"
+          && appHost.internalState.runtime.selectingPlacementGroup === section.uiGroup;
 
         return (
           <Fragment key={section.titleKey}>
             {sectionIndex > 0 ? <div aria-hidden="true" className="placement-panel-divider" /> : null}
             <section
               aria-labelledby={sectionTitleId}
-              className={isResourcePowerSection
-                ? "placement-panel-group placement-panel-group-resource-power"
+              className={isPlacementGroupActive
+                ? "placement-panel-group is-placement-group-active"
                 : "placement-panel-group"}
             >
               <div className="placement-panel-group-header">
@@ -287,10 +290,11 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
                   const hotkey = button.hotkey
                     ?? (button.hotkeyKeyId
                       ? appHost.internalActions.getKeyboardShortcutFor(button.hotkeyKeyId)
-                      : DEVICE_SHORTCUT_KEYS[buttonIndex % DEVICE_SHORTCUT_KEYS.length]);
+                      : DEVICE_SHORTCUT_KEYS[buttonIndex]);
                   const deviceId = button.uiButtonId.replace("placement-", "");
                   const isActive = appHost.state.activeTool === "single-placement"
                     && appHost.internalState.runtime.singlePlacementDeviceId === deviceId;
+                  const showDeviceHotkey = !isMobileLayout && isPlacementGroupActive && hotkey;
                   const className = isActive
                     ? "placement-button placement-device-button is-active"
                     : "placement-button placement-device-button";
@@ -310,7 +314,7 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
                         <img alt="" className="button-icon-image" src={resolveDeviceIconPath(deviceId)} />
                       </span>
                       <span className="placement-button-label">{t(button.labelKey)}</span>
-                      {showShortcutHints && hotkey ? <span className="placement-button-hotkey">{hotkey}</span> : null}
+                      {showDeviceHotkey ? <span className="placement-button-hotkey">{hotkey}</span> : null}
                       
                     </button>
                   );

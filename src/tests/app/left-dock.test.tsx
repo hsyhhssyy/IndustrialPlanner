@@ -194,15 +194,49 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(
       visiblePanel.querySelectorAll(".placement-action-button").length,
     );
-    expect(visiblePanel.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(
-      visiblePanel.querySelectorAll(".placement-device-button").length,
-    );
+    expect(visiblePanel.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(0);
+    expect(visiblePanel.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(6);
     expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-select"]')?.classList.contains("is-active")).toBe(true);
     expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-marquee"]')?.classList.contains("is-active")).toBe(false);
     expect(visiblePanel.textContent).toContain("Esc");
     expect(visiblePanel.textContent).toContain("X");
+    expect(visiblePanel.textContent).toContain("G");
     expect(appHost.internalState.runtime.activePanel).toBeNull();
     expect(appHost.internalState.activeTool).toBe("select");
+  });
+
+  it("frames the selected placement group and shows number shortcuts only inside it", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.settings.gameShowHotkeys = false;
+      appHost.internalState.runtime.selectingPlacementGroup = "warehouse";
+    });
+
+    act(() => {
+      root.render(
+        <>
+          <LeftToolbar appHost={appHost} />
+          <LeftDock appHost={appHost} />
+        </>,
+      );
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const groups = Array.from(
+      visiblePanel?.querySelectorAll(".placement-panel-group") ?? [],
+    );
+    const warehouseGroup = groups.find((group) => group.textContent?.includes("仓库存取"));
+    const productionGroup = groups.find((group) => group.textContent?.includes("基础生产"));
+
+    expect(warehouseGroup).not.toBeUndefined();
+    expect(productionGroup).not.toBeUndefined();
+    expect(warehouseGroup?.classList.contains("is-placement-group-active")).toBe(true);
+    expect(productionGroup?.classList.contains("is-placement-group-active")).toBe(false);
+    expect(warehouseGroup?.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(6);
+    expect(productionGroup?.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(0);
+    expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
   });
 
   it("hides the batch select button when hypergryph operation mode is off", () => {

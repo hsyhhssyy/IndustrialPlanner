@@ -219,7 +219,7 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         kind: "keybinding",
         labelKey: shortcutKeybindingLabelKey("shortcut-resources-power"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-resources-power"),
-        defaultValue: "X",
+        defaultValue: "G",
         editableWhen: {
           settingId: "game-arknights-operation-mode",
           equals: false,

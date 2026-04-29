@@ -11,6 +11,7 @@ import type {
 } from "@/domain/state/types";
 import type { ClientPixelPoint } from "@/domain/types/client-pixel";
 import type { GridPoint } from "@/domain/types/grid";
+import type { UiGroup } from "@/domain/types/registry/entity-definition";
 import type { AppLocale } from "@/shared/i18n/messages";
 import {
   resolveScreenProfileFromWindow,
@@ -112,6 +113,7 @@ export interface RuntimeStateReadWrite {
   moveAnchor: GridPoint | null;
   placementAnchor: GridPoint | null;
   singlePlacementDeviceId: string | null;
+  selectingPlacementGroup: PlacementGroup | null;
   marqueeAnchor: GridPoint | null;
   isReverseMarquee: boolean;
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite;
@@ -122,6 +124,7 @@ export interface RuntimeStateReadWrite {
 const DEFAULT_APP_LOCALE: AppLocale = "zh-CN";
 
 export type ActivePanel = "placement" | "delete" | "blueprint" | "history" | null;
+export type PlacementGroup = Exclude<UiGroup, "hidden">;
 
 export interface UiStateReadWrite extends UiState {
   /// settings存储用户显式在设置页面配置的设置，这里面所有的内容都要持久化
@@ -183,6 +186,7 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   moveAnchor: GridPoint | null = null;
   placementAnchor: GridPoint | null = null;
   singlePlacementDeviceId: string | null = null;
+  selectingPlacementGroup: PlacementGroup | null = null;
   marqueeAnchor: GridPoint | null = null;
   isReverseMarquee = false;
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite = new CanvasFloatingToolbarStateReadWriteImpl();

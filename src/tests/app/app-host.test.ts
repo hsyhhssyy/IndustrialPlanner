@@ -948,6 +948,25 @@ describe("createAppHost", () => {
     expect(editorHost.state.collections.preview).toEqual([]);
   });
 
+  it("clears selected placement groups on active tool changes except select to placement", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    appHost.internalState.runtime.selectingPlacementGroup = "warehouse";
+    appHost.internalActions.setActiveTool("single-placement");
+
+    expect(appHost.internalState.runtime.selectingPlacementGroup).toBe("warehouse");
+
+    appHost.internalActions.setActiveTool("select");
+
+    expect(appHost.internalState.runtime.selectingPlacementGroup).toBeNull();
+
+    appHost.internalState.runtime.selectingPlacementGroup = "warehouse";
+    appHost.internalActions.setActiveTool("move");
+
+    expect(appHost.internalState.runtime.selectingPlacementGroup).toBeNull();
+  });
+
   it("zooms the editor viewport on pinch out and pinch in gestures", () => {
     vi.useFakeTimers();
 

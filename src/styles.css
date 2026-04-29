@@ -1040,11 +1040,11 @@ body.is-resizing-left-dock * {
   background: var(--surface-1);
 }
 
-.placement-panel-group-resource-power {
+.placement-panel-group.is-placement-group-active {
   position: relative;
 }
 
-.placement-panel-group-resource-power::after {
+.placement-panel-group.is-placement-group-active::after {
   content: "";
   position: absolute;
   inset: -6px -8px -8px;

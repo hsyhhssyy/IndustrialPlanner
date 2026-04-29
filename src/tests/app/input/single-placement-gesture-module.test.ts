@@ -14,6 +14,7 @@ import {
 } from "@/domain/state/types";
 import type { ClientPixelRect } from "@/domain/types/client-pixel";
 import type { GridPoint, GridRect } from "@/domain/types/grid";
+import { createRegistryContract } from "@/registry";
 
 describe("createHypergryphSinglePlacementGestureModule", () => {
   it("enters mouse single-placement from a placement device button at the viewport center", () => {
@@ -59,6 +60,47 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
     );
+  });
+
+  it("selects a placement group from its configured shortcut while in select", () => {
+    const { context, editor, appHost } = createContext();
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    const result = module.handle(keyDownEvent({ code: "KeyG", key: "g" }), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.selectingPlacementGroup).toBe("resourcePower");
+    expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
+  });
+
+  it("enters single-placement from the active placement group number shortcut", () => {
+    const { context, editor, appHost } = createContext({
+      selectingPlacementGroup: "warehouse",
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    const result = module.handle(keyDownEvent({ code: "Digit3", key: "3" }), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith(
+      "item_port_storager_1",
+      { x: 50, y: 40 },
+    );
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("item_port_storager_1");
+  });
+
+  it("ignores number shortcuts when the active placement group has no target device", () => {
+    const { context, editor, appHost } = createContext({
+      selectingPlacementGroup: "resourcePower",
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    const result = module.handle(keyDownEvent({ code: "Digit1", key: "1" }), context);
+
+    expect(result).toEqual({ status: "ignored" });
+    expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
+    expect(appHost.internalState.activeTool).toBe("select");
   });
 
   it("ignores the same device while switching different devices without resetting activeTool", () => {
@@ -213,6 +255,7 @@ function createContext(options: {
   activeTool?: "select" | "move" | "marquee" | "single-placement";
   placementAnchor?: GridPoint | null;
   singlePlacementDeviceId?: string | null;
+  selectingPlacementGroup?: "beltLogistics" | "pipeLogistics" | "resourcePower" | "warehouse" | "basicProduction" | "advancedManufacturing" | null;
   initialPreview?: boolean;
   previewRect?: GridRect;
 } = {}): {
@@ -347,6 +390,7 @@ function createContext(options: {
       runtime: {
         placementAnchor: options.placementAnchor ?? null,
         singlePlacementDeviceId: options.singlePlacementDeviceId ?? null,
+        selectingPlacementGroup: options.selectingPlacementGroup ?? null,
         canvasFloatingToolbar: {
           visible: false,
           buttonIds: [],
@@ -376,9 +420,22 @@ function createContext(options: {
         appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
       }),
       alignCanvasFloatingToolbar: vi.fn(() => true),
+      getKeyboardShortcutFor: vi.fn((key: string) => {
+        const shortcuts: Record<string, string> = {
+          "shortcut-place-conveyor": "E",
+          "shortcut-place-pipe": "Q",
+          "shortcut-resources-power": "G",
+          "shortcut-warehouse": "C",
+          "shortcut-basic-production": "V",
+          "shortcut-synthesis": "B",
+        };
+
+        return shortcuts[key] ?? "";
+      }),
     },
     workspace: {
       editor,
+      registry: createRegistryContract(),
     },
   } as unknown as AppHost;
 
@@ -386,6 +443,7 @@ function createContext(options: {
     context: {
       workspace: {
         editor,
+        registry: createRegistryContract(),
       } as unknown as WorkspaceContract,
       appHost,
       keyboard: emptyKeyboardSnapshot(),

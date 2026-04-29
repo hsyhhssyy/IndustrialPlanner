@@ -49,7 +49,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-immediate-marquee": false,
         "shortcut-place-conveyor": "E",
         "shortcut-place-pipe": "Q",
-        "shortcut-resources-power": "X",
+        "shortcut-resources-power": "G",
         "shortcut-warehouse": "C",
         "shortcut-basic-production": "V",
         "shortcut-synthesis": "B",
@@ -72,7 +72,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["game-arknights-immediate-marquee"]).toBe(false);
     expect(hydratedController.values["shortcut-place-conveyor"]).toBe("E");
     expect(hydratedController.values["shortcut-place-pipe"]).toBe("Q");
-    expect(hydratedController.values["shortcut-resources-power"]).toBe("X");
+    expect(hydratedController.values["shortcut-resources-power"]).toBe("G");
     expect(hydratedController.values["shortcut-warehouse"]).toBe("C");
     expect(hydratedController.values["shortcut-basic-production"]).toBe("V");
     expect(hydratedController.values["shortcut-synthesis"]).toBe("B");
@@ -175,7 +175,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-immediate-marquee": false,
         "shortcut-place-conveyor": "E",
         "shortcut-place-pipe": "Q",
-        "shortcut-resources-power": "X",
+        "shortcut-resources-power": "G",
         "shortcut-warehouse": "C",
         "shortcut-basic-production": "V",
         "shortcut-synthesis": "B",

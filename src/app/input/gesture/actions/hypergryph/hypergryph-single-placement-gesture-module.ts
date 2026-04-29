@@ -1,6 +1,12 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
+import {
+  SHORTCUT_KEY,
+  type ShortcutKeyId,
+} from "@/app/actions/keyboard-shortcut-manager";
+import type { PlacementGroup } from "@/app/state/state-impl";
 import type { EditorContract } from "@/domain/contract/editor-contract";
+import type { RegistryContract } from "@/domain/contract/registry-contracts";
 import { EntityCollectionType } from "@/domain/state/types";
 import type { GridPoint, GridRect } from "@/domain/types/grid";
 import { reaction } from "mobx";
@@ -15,12 +21,52 @@ const PLACEMENT_TOOLBAR_BUTTON_IDS = [
 ] as const;
 
 const PLACEMENT_MODE_EVENT_PREFIX = "ui-left-dock-placement-mode-";
+const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
+
+const PLACEMENT_GROUP_SHORTCUTS: Readonly<Record<PlacementGroup, ShortcutKeyId>> = {
+  beltLogistics: SHORTCUT_KEY.PLACE_CONVEYOR,
+  pipeLogistics: SHORTCUT_KEY.PLACE_PIPE,
+  resourcePower: SHORTCUT_KEY.RESOURCES_POWER,
+  warehouse: SHORTCUT_KEY.WAREHOUSE,
+  basicProduction: SHORTCUT_KEY.BASIC_PRODUCTION,
+  advancedManufacturing: SHORTCUT_KEY.SYNTHESIS,
+};
 
 export function createHypergryphSinglePlacementGestureModule(): GestureMappingModule<AppHost> {
   return {
     id: "hypergryph-single-placement-gesture",
     when: isHypergryphGestureEnabled,
     handle(event, context) {
+      if (
+        event.type === "key down"
+        && context.appHost.internalState.activeTool === "select"
+      ) {
+        const groupResult = handleSelectPlacementGroupShortcut({
+          appHost: context.appHost,
+          code: event.code,
+          key: event.key,
+          modifiers: event.modifiers,
+        });
+
+        if (groupResult.status !== "ignored") {
+          return groupResult;
+        }
+
+        const editor = context.workspace.editor;
+        if (editor === null) {
+          return { status: "ignored" };
+        }
+
+        return handleSelectPlacementDeviceShortcut({
+          appHost: context.appHost,
+          editor,
+          registry: context.workspace.registry,
+          code: event.code,
+          key: event.key,
+          modifiers: event.modifiers,
+        });
+      }
+
       const editor = context.workspace.editor;
       if (editor === null) {
         return { status: "ignored" };
@@ -225,6 +271,65 @@ function handlePlacementEntryButtonTap(options: {
   });
 }
 
+function handleSelectPlacementGroupShortcut(options: {
+  appHost: AppHost;
+  code: string | null;
+  key: string | null;
+  modifiers: {
+    alt: boolean;
+    ctrl: boolean;
+    meta: boolean;
+  };
+}): GestureHandleResult {
+  const group = resolvePlacementGroupByShortcut(options);
+  if (group === null) {
+    return { status: "ignored" };
+  }
+
+  options.appHost.internalState.runtime.selectingPlacementGroup = group;
+  return { status: "handled" };
+}
+
+function handleSelectPlacementDeviceShortcut(options: {
+  appHost: AppHost;
+  editor: EditorContract;
+  registry: RegistryContract;
+  code: string | null;
+  key: string | null;
+  modifiers: {
+    alt: boolean;
+    ctrl: boolean;
+    meta: boolean;
+    shift: boolean;
+  };
+}): GestureHandleResult {
+  const shortcutIndex = resolveDeviceShortcutIndex(options);
+  if (shortcutIndex === null) {
+    return { status: "ignored" };
+  }
+
+  const selectingGroup = options.appHost.internalState.runtime.selectingPlacementGroup;
+  if (selectingGroup === null) {
+    return { status: "ignored" };
+  }
+
+  const deviceId = resolveDeviceIdForPlacementGroupShortcut({
+    registry: options.registry,
+    group: selectingGroup,
+    shortcutIndex,
+  });
+  if (deviceId === null) {
+    return { status: "ignored" };
+  }
+
+  return handlePlacementEntryButtonTap({
+    appHost: options.appHost,
+    editor: options.editor,
+    deviceId,
+    source: "mouse",
+  });
+}
+
 function finalizePlacementEnter(options: {
   appHost: AppHost;
   editor: EditorContract;
@@ -424,6 +529,10 @@ export function hookSinglePlacementToolCleanupFallback(appHost: AppHost): () => 
   return reaction(
     () => appHost.internalState.activeTool,
     (activeTool, previousActiveTool) => {
+      if (!(previousActiveTool === "select" && activeTool === "single-placement")) {
+        appHost.internalState.runtime.selectingPlacementGroup = null;
+      }
+
       if (previousActiveTool === "single-placement" && activeTool !== "single-placement") {
         cleanupPlacementDraft(appHost);
       }
@@ -511,6 +620,118 @@ function isRotatePlacementShortcut(options: {
   }
 
   return options.key?.trim().toLowerCase() === "r";
+}
+
+function resolvePlacementGroupByShortcut(options: {
+  appHost: AppHost;
+  code: string | null;
+  key: string | null;
+  modifiers: {
+    alt: boolean;
+    ctrl: boolean;
+    meta: boolean;
+  };
+}): PlacementGroup | null {
+  if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
+    return null;
+  }
+
+  for (const [group, shortcutKeyId] of Object.entries(PLACEMENT_GROUP_SHORTCUTS)) {
+    const shortcut = options.appHost.internalActions.getKeyboardShortcutFor(shortcutKeyId);
+    if (doesKeyEventMatchShortcut({
+      code: options.code,
+      key: options.key,
+      shortcut,
+    })) {
+      return group as PlacementGroup;
+    }
+  }
+
+  return null;
+}
+
+function doesKeyEventMatchShortcut(options: {
+  code: string | null;
+  key: string | null;
+  shortcut: string;
+}): boolean {
+  const shortcut = normalizeShortcut(options.shortcut);
+  if (shortcut === "") {
+    return false;
+  }
+
+  const key = normalizeShortcut(options.key ?? "");
+  if (key === shortcut) {
+    return true;
+  }
+
+  const code = options.code ?? "";
+  if (shortcut.length === 1 && shortcut >= "a" && shortcut <= "z") {
+    return code === `Key${shortcut.toUpperCase()}`;
+  }
+
+  if (shortcut.length === 1 && shortcut >= "0" && shortcut <= "9") {
+    return code === `Digit${shortcut}` || code === `Numpad${shortcut}`;
+  }
+
+  return false;
+}
+
+function normalizeShortcut(shortcut: string): string {
+  return shortcut.trim().toLowerCase();
+}
+
+function resolveDeviceShortcutIndex(options: {
+  code: string | null;
+  key: string | null;
+  modifiers: {
+    alt: boolean;
+    ctrl: boolean;
+    meta: boolean;
+    shift: boolean;
+  };
+}): number | null {
+  if (
+    options.modifiers.alt
+    || options.modifiers.ctrl
+    || options.modifiers.meta
+    || options.modifiers.shift
+  ) {
+    return null;
+  }
+
+  const key = options.key?.trim() ?? "";
+  const shortcut = DEVICE_SHORTCUT_KEYS.find((candidate) => candidate === key)
+    ?? resolveDeviceShortcutFromCode(options.code);
+
+  if (shortcut === undefined) {
+    return null;
+  }
+
+  const index = DEVICE_SHORTCUT_KEYS.indexOf(shortcut);
+  return index >= 0 ? index : null;
+}
+
+function resolveDeviceShortcutFromCode(code: string | null): typeof DEVICE_SHORTCUT_KEYS[number] | undefined {
+  const match = code?.match(/^(?:Digit|Numpad)([0-9])$/);
+  const digit = match?.[1];
+  if (digit === undefined) {
+    return undefined;
+  }
+
+  return DEVICE_SHORTCUT_KEYS.find((shortcut) => shortcut === digit);
+}
+
+function resolveDeviceIdForPlacementGroupShortcut(options: {
+  registry: RegistryContract;
+  group: PlacementGroup;
+  shortcutIndex: number;
+}): string | null {
+  const entities = options.registry.entityDefinitions
+    .filter((definition) => definition.uiGroup === options.group)
+    .sort((left, right) => left.id.localeCompare(right.id));
+
+  return entities[options.shortcutIndex]?.id ?? null;
 }
 
 function didRectMoveByGridVector(options: {
