@@ -2,7 +2,7 @@ import { makeAutoObservable, runInAction } from "mobx"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 const { loadTexture } = vi.hoisted(() => ({
-  loadTexture: vi.fn<() => Promise<unknown>>(),
+  loadTexture: vi.fn<(path: string) => Promise<unknown>>(),
 }))
 
 vi.mock("pixi.js", () => ({
@@ -67,12 +67,29 @@ describe("TextureActions", () => {
     manager.destroy()
   })
 
+  it("returns a red fallback texture for unknown key prefixes", async () => {
+    const manager = createTextureActions({
+      renderer: {} as never,
+      app: null,
+    })
+
+    const texture = await manager.getTexture("future-custom-texture")
+
+    expect(texture).toBeDefined()
+    expect(loadTexture).not.toHaveBeenCalled()
+
+    manager.destroy()
+  })
+
   it("prefix device-masks- maps to sprite-masks with webp fallback to png", async () => {
     const maskKey = "device-masks-item_port_storager_1"
     const maskTexture = createLoadedTextureMock("mask")
 
     loadTexture.mockImplementation((path: string) => {
       if (path === "/sprite-masks/item_port_storager_1.webp") {
+        return Promise.reject(new Error("missing webp"))
+      }
+      if (path === "/sprite-masks/item_port_storager_1.png") {
         return Promise.resolve(maskTexture)
       }
       return Promise.reject(new Error("unexpected path"))
@@ -86,6 +103,7 @@ describe("TextureActions", () => {
     const texture = await manager.getTexture(maskKey)
     expect(texture).toBe(maskTexture)
     expect(loadTexture).toHaveBeenCalledWith("/sprite-masks/item_port_storager_1.webp")
+    expect(loadTexture).toHaveBeenCalledWith("/sprite-masks/item_port_storager_1.png")
 
     manager.destroy()
   })
@@ -93,6 +111,7 @@ describe("TextureActions", () => {
   it("reacts to mobx dpr changes and reapplies bitmap sampling to loaded textures", async () => {
     const screenProfile = new ScreenProfileState()
     const bodyKey = "device-sprite-item_port_storager_1"
+    const textureConfigs: unknown[] = []
     const bitmapTexture = {
       source: {
         scaleMode: "nearest",
@@ -119,17 +138,24 @@ describe("TextureActions", () => {
           screenProfile,
         },
       } as never,
+      syncTextureConfigState: (textureConfig) => {
+        textureConfigs.push(textureConfig)
+      },
     })
 
     await manager.getTexture(bodyKey)
 
-    expect(manager.textureConfig.renderResolution).toBe(2)
+    expect(textureConfigs.at(-1)).toMatchObject({
+      renderResolution: 2,
+    })
 
     runInAction(() => {
       screenProfile.devicePixelRatio = 3
     })
 
-    expect(manager.textureConfig.renderResolution).toBe(3)
+    expect(textureConfigs.at(-1)).toMatchObject({
+      renderResolution: 3,
+    })
     expect(bitmapTexture.source.scaleMode).toBe("linear")
     expect(bitmapTexture.source.autoGenerateMipmaps).toBe(true)
     expect(bitmapTexture.source.updateMipmaps).toHaveBeenCalledTimes(2)

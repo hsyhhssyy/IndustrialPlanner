@@ -9,13 +9,15 @@ import {
 } from "./scene/render-scene-orchestrator";
 import {
   createTextureActions,
-  type TextureActions,
 } from "./texture/texture-manager";
 
 export interface RenderHost extends RenderContract {
   workspace: WorkspaceContract;
   app: Application;
-  textureManager: TextureActions;
+  textureManager: ReturnType<typeof createTextureActions>;
+  internalState: {
+    textureConfig: unknown | null;
+  };
 }
 
 interface RoundPixelsStageLike {
@@ -60,9 +62,15 @@ export async function createRenderHost(
   });
 
   (app.stage as unknown as RoundPixelsStageLike).roundPixels = true;
+  const internalState: RenderHost["internalState"] = {
+    textureConfig: null,
+  };
   const textureManager = createTextureActions({
     renderer: app.renderer,
     app: workspace.app,
+    syncTextureConfigState: (textureConfig) => {
+      internalState.textureConfig = textureConfig;
+    },
   });
   let orchestrator: RenderSceneOrchestrator | null = null;
 
@@ -70,6 +78,7 @@ export async function createRenderHost(
     workspace,
     app,
     textureManager,
+    internalState,
     canvas: app.canvas,
     queries: {},
     actions: {},

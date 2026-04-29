@@ -19,33 +19,36 @@ const PREFIX_DEVICE_MASKS = "device-masks-"
  * TextureActions 是 src/renderer/texture 对外唯一出口。
  * 目录外代码不得 import texture 目录下其他任何东西。
  */
-export interface TextureActions {
-  readonly textureConfig: RenderTextureConfig;
+interface TextureActions {
   getTexture(unifiedResourceKey: string): Promise<Texture>;
   destroy(): void;
 }
 
 class TextureActionsImpl implements TextureActions {
-  public textureConfig: RenderTextureConfig
+  private textureConfig: RenderTextureConfig
 
   private readonly texturePromisesByKey = new Map<string, Promise<Texture>>()
   private readonly trackedBitmapTextures = new Set<Texture>()
   private readonly disposeResolutionReaction: (() => void) | null
   private readonly renderer: Renderer
   private readonly app: AppContract | null
+  private readonly syncTextureConfigState: (textureConfig: RenderTextureConfig) => void
 
   public constructor(options: {
     renderer: Renderer;
     app: AppContract | null;
+    syncTextureConfigState?: (textureConfig: RenderTextureConfig) => void;
   }) {
     this.renderer = options.renderer
     this.app = options.app
+    this.syncTextureConfigState = options.syncTextureConfigState ?? (() => undefined)
     const initialResolution = options.app !== null
       ? resolveRenderResolutionFromApp(options.app, 1)
       : 1
     this.textureConfig = createRenderTextureConfig({
       resolution: initialResolution,
     })
+    this.syncTextureConfigState(this.textureConfig)
 
     this.disposeResolutionReaction = this.app === null
       ? null
@@ -83,6 +86,7 @@ class TextureActionsImpl implements TextureActions {
     }
 
     this.textureConfig = createRenderTextureConfig({ resolution })
+    this.syncTextureConfigState(this.textureConfig)
 
     for (const texture of this.trackedBitmapTextures) {
       applyBitmapTextureConfig(texture, this.textureConfig)
@@ -91,6 +95,10 @@ class TextureActionsImpl implements TextureActions {
 
   private async resolveTexture(key: string): Promise<Texture> {
     const paths = this.resolveCandidatePaths(key)
+
+    if (paths.length === 0) {
+      return this.createFallbackTexture()
+    }
 
     for (const path of paths) {
       try {
@@ -120,7 +128,7 @@ class TextureActionsImpl implements TextureActions {
       return [`/sprite-masks/${id}.webp`, `/sprite-masks/${id}.png`]
     }
 
-    throw new Error(`Unknown texture key prefix: ${key}`)
+    return []
   }
 
   private createFallbackTexture(): Texture {
@@ -144,6 +152,7 @@ class TextureActionsImpl implements TextureActions {
 export function createTextureActions(options: {
   renderer: Renderer;
   app: AppContract | null;
+  syncTextureConfigState?: (textureConfig: RenderTextureConfig) => void;
 }): TextureActions {
   return new TextureActionsImpl(options)
 }

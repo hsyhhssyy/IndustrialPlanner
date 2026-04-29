@@ -74,7 +74,7 @@ describe("createRenderHost", () => {
       preference: "webgl",
     })
     expect(applicationState.stage.roundPixels).toBe(true)
-    expect(renderHost.textureManager.textureConfig).toEqual({
+    expect(renderHost.internalState.textureConfig).toEqual({
       renderResolution: 3,
       bitmap: {
         scaleLimit: 2,
@@ -86,9 +86,6 @@ describe("createRenderHost", () => {
         },
       },
     })
-    await expect(
-      renderHost.textureManager.getTexture("future-custom-texture"),
-    ).rejects.toThrow("Unknown texture key prefix: future-custom-texture")
     expect(createRenderSceneOrchestrator).toHaveBeenCalledWith(renderHost)
     expect(workspace.render).toBe(renderHost)
   })
