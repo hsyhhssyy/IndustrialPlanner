@@ -1030,6 +1030,16 @@ body.is-resizing-left-dock * {
   gap: 8px;
 }
 
+.placement-panel-group-operation.is-mobile-layout {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  margin: -10px -10px 0;
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-1);
+}
+
 .placement-panel-group-resource-power {
   position: relative;
 }
