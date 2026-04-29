@@ -247,7 +247,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
 });
 
 function createContext(options: {
-  activeTool?: "select" | "move" | "marquee" | "placement";
+  activeTool?: "select" | "move" | "marquee" | "single-placement";
   hypergryphImmediateMarquee?: boolean;
   marqueeAnchor?: GridPoint | null;
   rightDockOpen?: boolean;

@@ -227,16 +227,24 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
                       ? null
                       : DEVICE_SHORTCUT_KEYS[buttonIndex % DEVICE_SHORTCUT_KEYS.length]
                   );
-                  const isActive = button.activeWhen?.(appHost) ?? false;
+                  const deviceId = button.uiButtonId.replace("placement-", "");
+                  const isActive = isOperationSection
+                    ? (button.activeWhen?.(appHost) ?? false)
+                    : (
+                      appHost.state.activeTool === "single-placement"
+                      && appHost.internalState.runtime.singlePlacementDeviceId === deviceId
+                    );
                   const className = isOperationSection
                     ? (isActive
                       ? "placement-button placement-action-button is-active"
                       : "placement-button placement-action-button")
-                    : "placement-button placement-device-button";
+                    : (isActive
+                      ? "placement-button placement-device-button is-active"
+                      : "placement-button placement-device-button");
 
                   return (
                     <button
-                      aria-pressed={button.activeWhen ? isActive : undefined}
+                      aria-pressed={isActive || button.activeWhen ? isActive : undefined}
                       className={className}
                       data-ui-button-id={button.uiButtonId}
                       key={button.uiButtonId}
@@ -247,7 +255,7 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
                     >
                       {isOperationSection ? null : (
                         <span className="button-icon" aria-hidden="true">
-                          <img alt="" className="button-icon-image" src={resolveDeviceIconPath(button.uiButtonId.replace("placement-", ""))} />
+                          <img alt="" className="button-icon-image" src={resolveDeviceIconPath(deviceId)} />
                         </span>
                       )}
                       <span className="placement-button-label">{t(button.labelKey)}</span>

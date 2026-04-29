@@ -214,11 +214,9 @@ function createContext(
           },
         },
         internalState: {
-          runtime: {
-            activeTool,
-          },
+          activeTool,
         },
-      } as AppHost,
+      } as unknown as AppHost,
       keyboard: emptyKeyboardSnapshot(),
     },
     addToCollection,

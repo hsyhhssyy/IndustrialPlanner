@@ -1,6 +1,6 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
-import type { ActiveTool } from "@/app/state/state-impl";
+import type { ActiveTool } from "@/domain/state/types";
 import type { GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 

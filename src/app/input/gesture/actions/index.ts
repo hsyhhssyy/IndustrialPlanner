@@ -18,6 +18,11 @@ export {
   createHypergryphMoveGestureModule,
   hookMoveToolCleanupFallback,
 } from "./hypergryph/hypergryph-move-gesture-module";
+export {
+  cleanupPlacementDraft,
+  createHypergryphSinglePlacementGestureModule,
+  hookSinglePlacementToolCleanupFallback,
+} from "./hypergryph/hypergryph-single-placement-gesture-module";
 export { createHypergryphMouseViewportPanModule } from "./hypergryph/hypergryph-mouse-viewport-pan-module";
 export { createHypergryphSelectGestureModule } from "./hypergryph/hypergryph-select-gesture-module";
 export { createHypergryphSelectToolButtonModule } from "./hypergryph/hypergryph-select-tool-button-module";

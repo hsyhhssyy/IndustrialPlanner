@@ -229,6 +229,41 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.querySelector('[data-ui-button-id="placement-tool-marquee"]')).toBeNull();
   });
 
+  it("marks the active single-placement device button", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.activeTool = "single-placement";
+      appHost.internalState.runtime.singlePlacementDeviceId = "item_port_storager_1";
+    });
+
+    act(() => {
+      root.render(
+        <>
+          <LeftToolbar appHost={appHost} />
+          <LeftDock appHost={appHost} />
+        </>,
+      );
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const activeDeviceButton = visiblePanel?.querySelector(
+      '[data-ui-button-id="placement-item_port_storager_1"]',
+    ) as HTMLButtonElement | null;
+    const inactiveDeviceButton = visiblePanel?.querySelector(
+      '[data-ui-button-id="placement-item_port_grinder_1"]',
+    ) as HTMLButtonElement | null;
+
+    expect(activeDeviceButton).not.toBeNull();
+    expect(inactiveDeviceButton).not.toBeNull();
+    expect(activeDeviceButton?.classList.contains("is-active")).toBe(true);
+    expect(activeDeviceButton?.getAttribute("aria-pressed")).toBe("true");
+    expect(inactiveDeviceButton?.classList.contains("is-active")).toBe(false);
+    expect(inactiveDeviceButton?.hasAttribute("aria-pressed")).toBe(false);
+    expect(visiblePanel?.querySelector('[data-ui-button-id="placement-tool-select"]')?.classList.contains("is-active")).toBe(false);
+  });
+
   it("emits semantic ui-button events and toggles the active placement tool", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);

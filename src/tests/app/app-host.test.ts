@@ -45,6 +45,7 @@ describe("createAppHost", () => {
     expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.size).toBe(0);
     expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual([
       "hypergryph-gesture-diagnostics",
+      "hypergryph-single-placement-gesture",
       "hypergryph-move-gesture",
       "hypergryph-marquee-gesture",
       "hypergryph-select-gesture",
@@ -862,13 +863,89 @@ describe("createAppHost", () => {
     expect(editorHost.state.collections.preview).toHaveLength(1);
     expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
 
-    appHost.internalActions.setActiveTool("placement");
+    appHost.internalActions.setActiveTool("single-placement");
 
-    expect(appHost.internalState.activeTool).toBe("placement");
+    expect(appHost.internalState.activeTool).toBe("single-placement");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
     expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(false);
     expect(editorHost.state.collections.preview).toEqual([]);
     expect(editorHost.state.collections.ghost).toEqual([]);
+  });
+
+  it("creates and applies single-placement drafts from placement device buttons", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+    const initialEntityOrderLength = editorHost.document.getSnapshot().entityOrder.length;
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "ui-left-dock-placement-mode-item_port_storager_1-touch-tap",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 0, y: 0 });
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("item_port_storager_1");
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(editorHost.state.collections.preview).toHaveLength(1);
+
+    const draftId = editorHost.state.collections.preview[0];
+    expect(draftId).toBeDefined();
+    expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
+      definitionId: "item_port_storager_1",
+      position: { x: 0, y: 0 },
+    });
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "canvas-floating-toolbar-button-ok",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.internalState.runtime.placementAnchor).toBeNull();
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBeNull();
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(false);
+    expect(editorHost.state.collections.preview).toEqual([]);
+    expect(editorHost.document.getSnapshot().entityOrder).toHaveLength(
+      initialEntityOrderLength + 1,
+    );
+    expect(editorHost.document.getSnapshot().entities[draftId ?? ""]).toMatchObject({
+      definitionId: "item_port_storager_1",
+      position: { x: 0, y: 0 },
+    });
+  });
+
+  it("cancels single-placement drafts when activeTool leaves by another path", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: "ui-left-dock-placement-mode-item_port_storager_1-mouse-tap",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(editorHost.state.collections.preview).toHaveLength(1);
+
+    appHost.internalActions.setActiveTool("select");
+
+    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.internalState.runtime.placementAnchor).toBeNull();
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBeNull();
+    expect(editorHost.state.collections.preview).toEqual([]);
   });
 
   it("zooms the editor viewport on pinch out and pinch in gestures", () => {

@@ -12,6 +12,10 @@ import {
   createHypergryphMoveGestureModule,
   hookMoveToolCleanupFallback,
 } from "./hypergryph/hypergryph-move-gesture-module";
+import {
+  createHypergryphSinglePlacementGestureModule,
+  hookSinglePlacementToolCleanupFallback,
+} from "./hypergryph/hypergryph-single-placement-gesture-module";
 import { createHypergryphMouseViewportPanModule } from "./hypergryph/hypergryph-mouse-viewport-pan-module";
 import { createHypergryphSelectGestureModule } from "./hypergryph/hypergryph-select-gesture-module";
 import { createHypergryphSelectToolButtonModule } from "./hypergryph/hypergryph-select-tool-button-module";
@@ -30,7 +34,9 @@ export class AppGestureModuleRegistrar {
   public constructor(options: AppGestureModuleRegistrarOptions) {
     this.unregisterModules.push(
       hookMoveToolCleanupFallback(options.appHost),
+      hookSinglePlacementToolCleanupFallback(options.appHost),
       hookMarqueeToolCleanupFallback(options.appHost),
+      options.router.registerModule(createHypergryphSinglePlacementGestureModule()),
       options.router.registerModule(createHypergryphMoveGestureModule()),
       options.router.registerModule(createHypergryphMarqueeGestureModule()),
       options.router.registerModule(createHypergryphSelectGestureModule()),

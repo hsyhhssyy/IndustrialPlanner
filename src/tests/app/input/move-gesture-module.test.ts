@@ -335,7 +335,7 @@ describe("createHypergryphMoveGestureModule", () => {
 });
 
 function createContext(options: {
-  activeTool?: "select" | "move" | "marquee" | "placement";
+  activeTool?: "select" | "move" | "marquee" | "single-placement";
   moveAnchor?: GridPoint | null;
   toolbarVisible?: boolean;
 } = {}): {

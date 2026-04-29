@@ -1,0 +1,550 @@
+import { describe, expect, it, vi } from "vitest";
+
+import type { AppHost } from "@/app/host/app-host";
+import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
+import {
+  createHypergryphSinglePlacementGestureModule,
+  type GestureActionContext,
+} from "@/app/input/gesture/actions";
+import type { EditorContract } from "@/domain/contract/editor-contract";
+import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import type { WorldEntity } from "@/domain/entity/world-document";
+import {
+  EntityCollectionType,
+} from "@/domain/state/types";
+import type { ClientPixelRect } from "@/domain/types/client-pixel";
+import type { GridPoint, GridRect } from "@/domain/types/grid";
+
+describe("createHypergryphSinglePlacementGestureModule", () => {
+  it("enters mouse single-placement from a placement device button at the viewport center", () => {
+    const { context, editor, appHost } = createContext();
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    const result = module.handle(placementMouseTapEvent("device-a"), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-a");
+    expect(editor.actions.moveCollectionTo).toHaveBeenCalledWith({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 0, y: 0 },
+      endGridPoint: { x: 50, y: 40 },
+    });
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 50, y: 40 });
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-a");
+    expect(appHost.internalActions.hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+  });
+
+  it("only enters from select unless it is switching an existing single-placement draft", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "marquee",
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    const result = module.handle(placementMouseTapEvent("device-a"), context);
+
+    expect(result).toEqual({ status: "ignored" });
+    expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
+    expect(appHost.internalState.activeTool).toBe("marquee");
+  });
+
+  it("enters touch single-placement and shows the floating toolbar for preview", () => {
+    const { context, appHost } = createContext();
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    const result = module.handle(placementTouchTapEvent("device-a"), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
+      PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST,
+      EntityCollectionType.preview,
+    );
+  });
+
+  it("ignores the same device while switching different devices without resetting activeTool", () => {
+    const same = createContext({
+      activeTool: "single-placement",
+      placementAnchor: { x: 50, y: 40 },
+      singlePlacementDeviceId: "device-a",
+      initialPreview: true,
+    });
+    const different = createContext({
+      activeTool: "single-placement",
+      placementAnchor: { x: 50, y: 40 },
+      singlePlacementDeviceId: "device-a",
+      initialPreview: true,
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    expect(module.handle(placementMouseTapEvent("device-a"), same.context)).toEqual({
+      status: "handled",
+    });
+    expect(same.editor.actions.cancelPlacementDraft).not.toHaveBeenCalled();
+    expect(same.editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
+
+    expect(module.handle(placementMouseTapEvent("device-b"), different.context)).toEqual({
+      status: "handled",
+    });
+    expect(different.editor.actions.cancelPlacementDraft).toHaveBeenCalledTimes(1);
+    expect(different.editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-b");
+    expect(different.appHost.internalActions.setActiveTool).not.toHaveBeenCalled();
+    expect(different.appHost.internalState.activeTool).toBe("single-placement");
+    expect(different.appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-b");
+  });
+
+  it("moves the placement preview by incremental grid vectors and aligns toolbar", () => {
+    const { context, editor, appHost, previewRectRef } = createContext({
+      activeTool: "single-placement",
+      placementAnchor: { x: 5, y: 5 },
+      singlePlacementDeviceId: "device-a",
+      initialPreview: true,
+      previewRect: { x: 5, y: 5, width: 1, height: 1 },
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    vi.mocked(editor.actions.moveCollectionTo).mockImplementation(({
+      startGridPoint,
+      endGridPoint,
+    }) => {
+      previewRectRef.current = {
+        ...previewRectRef.current,
+        x: previewRectRef.current.x + endGridPoint.x - startGridPoint.x,
+        y: previewRectRef.current.y + endGridPoint.y - startGridPoint.y,
+      };
+    });
+
+    const result = module.handle(touchDragMoveEvent({ position: { x: 6, y: 4 } }), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(editor.actions.moveCollectionTo).toHaveBeenCalledWith({
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 5, y: 5 },
+      endGridPoint: { x: 6, y: 4 },
+    });
+    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 6, y: 4 });
+    expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets touch drag fall through when it does not start from the preview", () => {
+    const { context, appHost } = createContext({
+      activeTool: "single-placement",
+      placementAnchor: { x: 5, y: 5 },
+      singlePlacementDeviceId: "device-a",
+      initialPreview: true,
+      previewRect: { x: 5, y: 5, width: 1, height: 1 },
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    const missResult = module.handle(touchDragStartEvent({ position: { x: 2, y: 2 } }), context);
+
+    expect(missResult).toEqual({ status: "ignored" });
+    expect(appHost.internalState.runtime.placementAnchor).toBeNull();
+  });
+
+  it("rotates from the R key and toolbar button while placing", () => {
+    const keyboard = createContext({
+      activeTool: "single-placement",
+      placementAnchor: { x: 5, y: 5 },
+      singlePlacementDeviceId: "device-a",
+      initialPreview: true,
+    });
+    const toolbar = createContext({
+      activeTool: "single-placement",
+      placementAnchor: { x: 5, y: 5 },
+      singlePlacementDeviceId: "device-a",
+      initialPreview: true,
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    expect(module.handle(keyDownEvent({ code: "KeyR", key: "r" }), keyboard.context)).toEqual({
+      status: "handled",
+    });
+    expect(keyboard.editor.actions.rotateCollection).toHaveBeenCalledWith(
+      EntityCollectionType.preview,
+    );
+    expect(keyboard.appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+
+    expect(
+      module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-rotate"), toolbar.context),
+    ).toEqual({ status: "handled" });
+    expect(toolbar.editor.actions.rotateCollection).toHaveBeenCalledWith(
+      EntityCollectionType.preview,
+    );
+    expect(toolbar.appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+  });
+
+  it("applies with mouse left tap and cancels from the toolbar", () => {
+    const apply = createContext({
+      activeTool: "single-placement",
+      placementAnchor: { x: 5, y: 5 },
+      singlePlacementDeviceId: "device-a",
+      initialPreview: true,
+    });
+    const cancel = createContext({
+      activeTool: "single-placement",
+      placementAnchor: { x: 5, y: 5 },
+      singlePlacementDeviceId: "device-a",
+      initialPreview: true,
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    expect(module.handle(mouseTapEvent({ button: 0, longPress: false }), apply.context)).toEqual({
+      status: "handled",
+    });
+    expect(apply.editor.actions.applyPlacementDraft).toHaveBeenCalledTimes(1);
+    expect(apply.appHost.internalState.activeTool).toBe("select");
+    expect(apply.appHost.internalState.runtime.placementAnchor).toBeNull();
+    expect(apply.appHost.internalState.runtime.singlePlacementDeviceId).toBeNull();
+
+    expect(
+      module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-cancel"), cancel.context),
+    ).toEqual({ status: "handled" });
+    expect(cancel.editor.actions.cancelPlacementDraft).toHaveBeenCalledTimes(1);
+    expect(cancel.appHost.internalState.activeTool).toBe("select");
+    expect(cancel.appHost.internalState.runtime.placementAnchor).toBeNull();
+    expect(cancel.appHost.internalState.runtime.singlePlacementDeviceId).toBeNull();
+  });
+});
+
+function createContext(options: {
+  activeTool?: "select" | "move" | "marquee" | "single-placement";
+  placementAnchor?: GridPoint | null;
+  singlePlacementDeviceId?: string | null;
+  initialPreview?: boolean;
+  previewRect?: GridRect;
+} = {}): {
+  context: GestureActionContext<AppHost>;
+  editor: MockEditor;
+  appHost: AppHost;
+  preview: MockCollection;
+  previewRectRef: { current: GridRect };
+} {
+  const selection = createCollection([]);
+  const marquee = createCollection([]);
+  const reverseMarquee = createCollection([]);
+  const preview = createCollection(options.initialPreview ? ["preview-entity"] : []);
+  const ghost = createCollection([]);
+  const previewRectRef = {
+    current: options.previewRect ?? {
+      x: 0,
+      y: 0,
+      width: 1,
+      height: 1,
+    },
+  };
+  const previewEntity = entity("preview-entity", {
+    x: previewRectRef.current.x,
+    y: previewRectRef.current.y,
+  });
+  const viewportClientRect: ClientPixelRect = {
+    left: 0,
+    top: 0,
+    width: 100,
+    height: 80,
+  };
+  const editor: MockEditor = {
+    state: {
+      viewport: {
+        center: { x: 0, y: 0 },
+        clientRect: viewportClientRect,
+        gridSize: 1,
+        gridCellPixelSize: 1,
+      },
+      collections: {
+        [EntityCollectionType.selection]: selection,
+        [EntityCollectionType.marquee]: marquee,
+        [EntityCollectionType.reverseMarquee]: reverseMarquee,
+        [EntityCollectionType.preview]: preview,
+        [EntityCollectionType.ghost]: ghost,
+      },
+    },
+    queries: {
+      findEntityAtClientPixelPoint: vi.fn((point) => {
+        const gridCell = {
+          x: Math.floor(point.x),
+          y: Math.floor(point.y),
+        };
+
+        if (
+          preview.contains(previewEntity.id)
+          && gridCell.x >= previewRectRef.current.x
+          && gridCell.x < previewRectRef.current.x + previewRectRef.current.width
+          && gridCell.y >= previewRectRef.current.y
+          && gridCell.y < previewRectRef.current.y + previewRectRef.current.height
+        ) {
+          return previewEntity;
+        }
+
+        return null;
+      }),
+      findEntityCollectionGridRect: vi.fn((collectionType) =>
+        collectionType === EntityCollectionType.preview && preview.length > 0
+          ? previewRectRef.current
+          : null,
+      ),
+      findGridCellForClientPixlePoint: vi.fn((point) => ({
+        x: Math.floor(point.x),
+        y: Math.floor(point.y),
+      })),
+      findClientRectForGridCell: vi.fn((cell) => ({
+        left: cell.x,
+        top: cell.y,
+        width: 1,
+        height: 1,
+      })),
+    },
+    actions: {
+      createSinglePlacementDraft: vi.fn((deviceDefinitionId: string) => {
+        previewEntity.definitionId = deviceDefinitionId;
+        previewEntity.position = { x: 0, y: 0 };
+        previewRectRef.current = { x: 0, y: 0, width: 1, height: 1 };
+        preview.replace(["preview-entity"]);
+      }),
+      cancelPlacementDraft: vi.fn(() => {
+        preview.replace([]);
+      }),
+      applyPlacementDraft: vi.fn(() => true),
+      moveCollectionTo: vi.fn(({
+        startGridPoint,
+        endGridPoint,
+      }) => {
+        const vector = {
+          x: endGridPoint.x - startGridPoint.x,
+          y: endGridPoint.y - startGridPoint.y,
+        };
+        previewRectRef.current = {
+          ...previewRectRef.current,
+          x: previewRectRef.current.x + vector.x,
+          y: previewRectRef.current.y + vector.y,
+        };
+        previewEntity.position = {
+          x: previewEntity.position.x + vector.x,
+          y: previewEntity.position.y + vector.y,
+        };
+      }),
+      rotateCollection: vi.fn(),
+    },
+  };
+  const appHost = {
+    state: {
+      settings: {
+        hypergryphOperationMode: true,
+      },
+      activeTool: options.activeTool ?? "select",
+    },
+    internalState: {
+      activeTool: options.activeTool ?? "select",
+      runtime: {
+        placementAnchor: options.placementAnchor ?? null,
+        singlePlacementDeviceId: options.singlePlacementDeviceId ?? null,
+        canvasFloatingToolbar: {
+          visible: false,
+          buttonIds: [],
+          anchor: null,
+          attachedCollection: null,
+          measuredSize: null,
+        },
+      },
+    },
+    internalActions: {
+      setActiveTool: vi.fn((activeTool) => {
+        appHost.internalState.activeTool = activeTool;
+      }),
+      showCanvasFloatingToolbarForCollection: vi.fn((buttonIds, collectionType) => {
+        if (editor.queries.findEntityCollectionGridRect(collectionType) === null) {
+          return false;
+        }
+
+        appHost.internalState.runtime.canvasFloatingToolbar.visible = true;
+        appHost.internalState.runtime.canvasFloatingToolbar.buttonIds = [...buttonIds];
+        appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = collectionType;
+        return true;
+      }),
+      hideCanvasFloatingToolbar: vi.fn(() => {
+        appHost.internalState.runtime.canvasFloatingToolbar.visible = false;
+        appHost.internalState.runtime.canvasFloatingToolbar.buttonIds = [];
+        appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
+      }),
+      alignCanvasFloatingToolbar: vi.fn(() => true),
+    },
+    workspace: {
+      editor,
+    },
+  } as unknown as AppHost;
+
+  return {
+    context: {
+      workspace: {
+        editor,
+      } as unknown as WorkspaceContract,
+      appHost,
+      keyboard: emptyKeyboardSnapshot(),
+    },
+    editor,
+    appHost,
+    preview,
+    previewRectRef,
+  };
+}
+
+const PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST = [
+  "canvas-floating-toolbar-button-ok",
+  "canvas-floating-toolbar-button-rotate",
+  "canvas-floating-toolbar-button-cancel",
+] as const;
+
+type MockCollection = string[] & {
+  contains(entityId: string): boolean;
+  replace(entityIds: readonly string[]): void;
+};
+
+type MockEditor = {
+  state: Pick<EditorContract["state"], "collections" | "viewport">;
+  actions: Pick<
+    EditorContract["actions"],
+    | "applyPlacementDraft"
+    | "cancelPlacementDraft"
+    | "createSinglePlacementDraft"
+    | "moveCollectionTo"
+    | "rotateCollection"
+  >;
+  queries: Pick<
+    EditorContract["queries"],
+    | "findClientRectForGridCell"
+    | "findEntityAtClientPixelPoint"
+    | "findEntityCollectionGridRect"
+    | "findGridCellForClientPixlePoint"
+  >;
+};
+
+function createCollection(entityIds: readonly string[]): MockCollection {
+  const collection = [...entityIds] as MockCollection;
+  collection.contains = (entityId: string) => collection.includes(entityId);
+  collection.replace = (nextEntityIds: readonly string[]) => {
+    collection.splice(0, collection.length, ...nextEntityIds);
+  };
+  return collection;
+}
+
+function entity(id: string, position: GridPoint): WorldEntity {
+  return {
+    id,
+    definitionId: "device-a",
+    position,
+    rotation: 0,
+    config: {},
+    tags: [],
+  };
+}
+
+function placementMouseTapEvent(deviceId: string) {
+  return {
+    type: "ui-button-mouse-tap" as const,
+    gestureId: "placement-mouse-tap-1",
+    uiButtonId: `ui-left-dock-placement-mode-${deviceId}-mouse-tap`,
+    button: 0,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function placementTouchTapEvent(deviceId: string) {
+  return {
+    type: "ui-button-touch-tap" as const,
+    gestureId: "placement-touch-tap-1",
+    uiButtonId: `ui-left-dock-placement-mode-${deviceId}-touch-tap`,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function touchDragStartEvent(options: { position: GridPoint }) {
+  return {
+    type: "touch dragstart" as const,
+    gestureId: "touch-drag-1",
+    primaryId: 1,
+    position: options.position,
+    startPosition: options.position,
+    activeTouchCount: 1,
+    longPress: true,
+    pointerEntity: null,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function touchDragMoveEvent(options: { position: GridPoint }) {
+  return {
+    type: "touch dragmove" as const,
+    gestureId: "touch-drag-1",
+    primaryId: 1,
+    position: options.position,
+    delta: { x: 1, y: -1 },
+    activeTouchCount: 1,
+    longPress: true,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function mouseTapEvent(options: {
+  button: number;
+  longPress: boolean;
+}) {
+  return {
+    type: "mouse tap" as const,
+    gestureId: "mouse-tap-1",
+    button: options.button,
+    buttons: 0,
+    position: { x: 6, y: 4 },
+    longPress: options.longPress,
+    pointerEntity: null,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function keyDownEvent(options: {
+  code: string | null;
+  key: string | null;
+}) {
+  return {
+    type: "key down" as const,
+    gestureId: "key-down-1",
+    code: options.code,
+    key: options.key,
+    keyCode: options.key === null ? null : options.key.toUpperCase().charCodeAt(0),
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function uiButtonTouchTapEvent(uiButtonId: string) {
+  return {
+    type: "ui-button-touch-tap" as const,
+    gestureId: "ui-touch-tap-1",
+    uiButtonId,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function emptyKeyboardSnapshot(): KeyboardSnapshot {
+  return {
+    pressedKeys: new Set(),
+    lastCode: null,
+    lastKey: null,
+    lastKeyCode: null,
+    modifiers: emptyModifiers(),
+  };
+}
+
+function emptyModifiers() {
+  return {
+    alt: false,
+    ctrl: false,
+    meta: false,
+    shift: false,
+  };
+}

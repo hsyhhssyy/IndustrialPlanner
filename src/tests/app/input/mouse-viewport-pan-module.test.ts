@@ -203,7 +203,7 @@ describe("createHypergryphMouseViewportPanModule", () => {
   });
 });
 
-function createContext(hypergryphOperationMode = true, activeTool: "select" | "marquee" | "placement" = "select"): {
+function createContext(hypergryphOperationMode = true, activeTool: "select" | "marquee" | "single-placement" = "select"): {
   context: GestureActionContext<AppHost>;
   alignCanvasFloatingToolbar: ReturnType<typeof vi.fn>;
   moveViewportByClientPixelVector: ReturnType<typeof vi.fn>;
@@ -236,9 +236,7 @@ function createContext(hypergryphOperationMode = true, activeTool: "select" | "m
           },
         },
         internalState: {
-          runtime: {
-            activeTool,
-          },
+          activeTool,
         },
         internalActions: {
           alignCanvasFloatingToolbar,
