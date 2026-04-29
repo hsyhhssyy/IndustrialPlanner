@@ -45,7 +45,7 @@ export interface EditorAction {
 	applyMoveOerationDraft(): boolean;
 	cancelMoveOperationDraft(): void;
 
-	createSinglePlacementDraft(deviceDefinitionId: string): void;
+	createSinglePlacementDraft(deviceDefinitionId: string, centerGridPoint: GridPoint): void;
 	applyPlacementDraft(): boolean;
 	cancelPlacementDraft(): void;
 }

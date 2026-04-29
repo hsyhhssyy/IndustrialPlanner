@@ -897,7 +897,7 @@ describe("createAppHost", () => {
     expect(draftId).toBeDefined();
     expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
       definitionId: "item_port_storager_1",
-      position: { x: 0, y: 0 },
+      position: { x: -1, y: -1 },
     });
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
@@ -918,7 +918,7 @@ describe("createAppHost", () => {
     );
     expect(editorHost.document.getSnapshot().entities[draftId ?? ""]).toMatchObject({
       definitionId: "item_port_storager_1",
-      position: { x: 0, y: 0 },
+      position: { x: -1, y: -1 },
     });
   });
 

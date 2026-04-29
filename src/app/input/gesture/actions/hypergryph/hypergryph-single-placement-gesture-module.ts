@@ -240,7 +240,7 @@ function finalizePlacementEnter(options: {
 
   try {
     options.appHost.internalState.runtime.placementAnchor = placementAnchor;
-    options.editor.actions.createSinglePlacementDraft(options.deviceId);
+    options.editor.actions.createSinglePlacementDraft(options.deviceId, placementAnchor);
 
     const previewRect = options.editor.queries.findEntityCollectionGridRect(
       EntityCollectionType.preview,
@@ -251,11 +251,6 @@ function finalizePlacementEnter(options: {
       return { status: "ignored" };
     }
 
-    options.editor.actions.moveCollectionTo({
-      collectionType: EntityCollectionType.preview,
-      startGridPoint: { x: 0, y: 0 },
-      endGridPoint: placementAnchor,
-    });
     options.appHost.internalState.runtime.singlePlacementDeviceId = options.deviceId;
 
     if (options.source === "touch") {

@@ -1,6 +1,7 @@
 import type { EditorAction } from "@/domain/action/editor-action";
 import type { DraftEntity } from "../draft-entity";
 import { EntityCollectionType } from "@/domain/state/types";
+import type { GridPoint, GridRectSize } from "@/domain/types/grid";
 
 import type { EditorActionsContext } from "./types";
 
@@ -20,7 +21,10 @@ export function createEditorPlacementActions({
   let placementDraftCounter = 0;
 
   return {
-    createSinglePlacementDraft: (deviceDefinitionId: string) => {
+    createSinglePlacementDraft: (
+      deviceDefinitionId: string,
+      centerGridPoint: GridPoint,
+    ) => {
       const definition = workspace.registry.entityDefinitions.find(
         (def) => def.id === deviceDefinitionId,
       );
@@ -45,7 +49,10 @@ export function createEditorPlacementActions({
       const draft: DraftEntity = {
         id: nextDraftId,
         definitionId: deviceDefinitionId,
-        position: { x: 0, y: 0 },
+        position: resolvePlacementDraftPosition({
+          centerGridPoint,
+          footprint: definition.footprint,
+        }),
         rotation: 0,
         config: {},
         tags: [],
@@ -95,6 +102,25 @@ export function createEditorPlacementActions({
       clearPlacementState(state);
     },
   };
+}
+
+function resolvePlacementDraftPosition(options: {
+  centerGridPoint: GridPoint;
+  footprint: GridRectSize;
+}): GridPoint {
+  const centerOffset = {
+    x: resolvePlacementCenterOffset(options.footprint.width),
+    y: resolvePlacementCenterOffset(options.footprint.height),
+  };
+
+  return {
+    x: options.centerGridPoint.x - centerOffset.x,
+    y: options.centerGridPoint.y - centerOffset.y,
+  };
+}
+
+function resolvePlacementCenterOffset(size: number): number {
+  return Math.floor((size - 1) / 2);
 }
 
 function clearPlacementState(state: EditorActionsContext["state"]): void {

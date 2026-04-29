@@ -541,6 +541,60 @@ describe("createEditorHost", () => {
     expect(editorHost.state.marqueeGridRect).toBeNull();
   });
 
+  it("creates single-placement drafts with odd footprints centered on the provided grid point", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createSinglePlacementDraft("item_port_storager_1", {
+      x: 10,
+      y: 20,
+    });
+
+    const draftId = editorHost.state.collections.preview[0];
+    expect(draftId).toBeDefined();
+    expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
+      definitionId: "item_port_storager_1",
+      position: {
+        x: 9,
+        y: 19,
+      },
+      rotation: 0,
+    });
+    expect(editorHost.queries.findEntityCollectionGridRect(EntityCollectionType.preview)).toEqual({
+      x: 9,
+      y: 19,
+      width: 3,
+      height: 3,
+    });
+  });
+
+  it("uses the left/up center cell for even single-placement footprints", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createSinglePlacementDraft("item_port_log_hongs_bus", {
+      x: 10,
+      y: 20,
+    });
+
+    const draftId = editorHost.state.collections.preview[0];
+    expect(draftId).toBeDefined();
+    expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
+      definitionId: "item_port_log_hongs_bus",
+      position: {
+        x: 9,
+        y: 17,
+      },
+      rotation: 0,
+    });
+    expect(editorHost.queries.findEntityCollectionGridRect(EntityCollectionType.preview)).toEqual({
+      x: 9,
+      y: 17,
+      width: 4,
+      height: 8,
+    });
+  });
+
   it("creates move operation ghost entities and preview drafts from the current selection", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

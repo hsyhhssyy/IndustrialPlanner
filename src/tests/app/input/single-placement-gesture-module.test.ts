@@ -23,12 +23,11 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     const result = module.handle(placementMouseTapEvent("device-a"), context);
 
     expect(result).toEqual({ status: "handled" });
-    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-a");
-    expect(editor.actions.moveCollectionTo).toHaveBeenCalledWith({
-      collectionType: EntityCollectionType.preview,
-      startGridPoint: { x: 0, y: 0 },
-      endGridPoint: { x: 50, y: 40 },
+    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-a", {
+      x: 50,
+      y: 40,
     });
+    expect(editor.actions.moveCollectionTo).not.toHaveBeenCalled();
     expect(appHost.internalState.activeTool).toBe("single-placement");
     expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 50, y: 40 });
     expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-a");
@@ -87,7 +86,10 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       status: "handled",
     });
     expect(different.editor.actions.cancelPlacementDraft).toHaveBeenCalledTimes(1);
-    expect(different.editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-b");
+    expect(different.editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-b", {
+      x: 50,
+      y: 40,
+    });
     expect(different.appHost.internalActions.setActiveTool).not.toHaveBeenCalled();
     expect(different.appHost.internalState.activeTool).toBe("single-placement");
     expect(different.appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-b");
@@ -295,12 +297,19 @@ function createContext(options: {
       })),
     },
     actions: {
-      createSinglePlacementDraft: vi.fn((deviceDefinitionId: string) => {
-        previewEntity.definitionId = deviceDefinitionId;
-        previewEntity.position = { x: 0, y: 0 };
-        previewRectRef.current = { x: 0, y: 0, width: 1, height: 1 };
-        preview.replace(["preview-entity"]);
-      }),
+      createSinglePlacementDraft: vi.fn(
+        (deviceDefinitionId: string, centerGridPoint: GridPoint) => {
+          previewEntity.definitionId = deviceDefinitionId;
+          previewEntity.position = { ...centerGridPoint };
+          previewRectRef.current = {
+            x: centerGridPoint.x,
+            y: centerGridPoint.y,
+            width: 1,
+            height: 1,
+          };
+          preview.replace(["preview-entity"]);
+        },
+      ),
       cancelPlacementDraft: vi.fn(() => {
         preview.replace([]);
       }),
