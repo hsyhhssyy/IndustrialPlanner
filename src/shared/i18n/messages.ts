@@ -147,18 +147,18 @@ export type MessageKey =
   | "settingsField.arknightsImmediateMoveDescription"
   | "settingsField.arknightsImmediateMarquee"
   | "settingsField.arknightsImmediateMarqueeDescription"
-  | "settingsField.shortcutPlaceConveyor"
-  | "settingsField.shortcutPlaceConveyorDescription"
-  | "settingsField.shortcutPlacePipe"
-  | "settingsField.shortcutPlacePipeDescription"
-  | "settingsField.shortcutResourcesPower"
-  | "settingsField.shortcutResourcesPowerDescription"
-  | "settingsField.shortcutWarehouse"
-  | "settingsField.shortcutWarehouseDescription"
-  | "settingsField.shortcutBasicProduction"
-  | "settingsField.shortcutBasicProductionDescription"
-  | "settingsField.shortcutSynthesis"
-  | "settingsField.shortcutSynthesisDescription"
+  | "settingsField.shortcut-place-conveyor"
+  | "settingsField.shortcut-place-conveyorDescription"
+  | "settingsField.shortcut-place-pipe"
+  | "settingsField.shortcut-place-pipeDescription"
+  | "settingsField.shortcut-resources-power"
+  | "settingsField.shortcut-resources-powerDescription"
+  | "settingsField.shortcut-warehouse"
+  | "settingsField.shortcut-warehouseDescription"
+  | "settingsField.shortcut-basic-production"
+  | "settingsField.shortcut-basic-productionDescription"
+  | "settingsField.shortcut-synthesis"
+  | "settingsField.shortcut-synthesisDescription"
   | "settingsField.useSimplifiedDeviceIcons"
   | "settingsField.useSimplifiedDeviceIconsDescription"
   | "settingsField.showHotkeys"
@@ -347,18 +347,18 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.arknightsImmediateMoveDescription": "从一个已选择的设备拖动时，立即触发移动。",
     "settingsField.arknightsImmediateMarquee": "立即框选",
     "settingsField.arknightsImmediateMarqueeDescription": "鼠标模式：从画布空白处开始拖动时，立即开始框选。\n触控模式：从画布空白处长按并拖动时，立即开始框选。\n开启该选项会强制打开立即移动。",
-    "settingsField.shortcutPlaceConveyor": "布设传送带",
-    "settingsField.shortcutPlaceConveyorDescription": "设置布设传送带的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
-    "settingsField.shortcutPlacePipe": "布设管道",
-    "settingsField.shortcutPlacePipeDescription": "设置布设管道的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
-    "settingsField.shortcutResourcesPower": "资源与电力",
-    "settingsField.shortcutResourcesPowerDescription": "设置资源与电力的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
-    "settingsField.shortcutWarehouse": "仓库存取",
-    "settingsField.shortcutWarehouseDescription": "设置仓库存取的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
-    "settingsField.shortcutBasicProduction": "基础生产",
-    "settingsField.shortcutBasicProductionDescription": "设置基础生产的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
-    "settingsField.shortcutSynthesis": "合成制造",
-    "settingsField.shortcutSynthesisDescription": "设置合成制造的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-place-conveyor": "布设传送带",
+    "settingsField.shortcut-place-conveyorDescription": "设置布设传送带的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-place-pipe": "布设管道",
+    "settingsField.shortcut-place-pipeDescription": "设置布设管道的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-resources-power": "资源与电力",
+    "settingsField.shortcut-resources-powerDescription": "设置资源与电力的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-warehouse": "仓库存取",
+    "settingsField.shortcut-warehouseDescription": "设置仓库存取的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-basic-production": "基础生产",
+    "settingsField.shortcut-basic-productionDescription": "设置基础生产的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-synthesis": "合成制造",
+    "settingsField.shortcut-synthesisDescription": "设置合成制造的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.useSimplifiedDeviceIcons": "使用简笔画设备图片",
     "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图简笔画显示方式，不会提高性能。",
     "settingsField.showHotkeys": "显示快捷键",
@@ -546,18 +546,18 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.arknightsImmediateMoveDescription": "Immediately trigger move when dragging from a selected device.",
     "settingsField.arknightsImmediateMarquee": "Immediate Marquee",
     "settingsField.arknightsImmediateMarqueeDescription": "Mouse mode: Immediately start marquee selection when dragging from empty canvas space.\nTouch mode: Immediately start marquee selection when long-pressing and dragging from empty canvas space.\nEnabling this option forces Immediate Move on.",
-    "settingsField.shortcutPlaceConveyor": "Place Conveyor",
-    "settingsField.shortcutPlaceConveyorDescription": "Set the shortcut key for placing conveyors; editable only when Arknights Operation Mode is off.",
-    "settingsField.shortcutPlacePipe": "Place Pipe",
-    "settingsField.shortcutPlacePipeDescription": "Set the shortcut key for placing pipes; editable only when Arknights Operation Mode is off.",
-    "settingsField.shortcutResourcesPower": "Resources & Power",
-    "settingsField.shortcutResourcesPowerDescription": "Set the shortcut key for resources and power; editable only when Arknights Operation Mode is off.",
-    "settingsField.shortcutWarehouse": "Warehouse",
-    "settingsField.shortcutWarehouseDescription": "Set the shortcut key for warehouse access; editable only when Arknights Operation Mode is off.",
-    "settingsField.shortcutBasicProduction": "Basic Production",
-    "settingsField.shortcutBasicProductionDescription": "Set the shortcut key for basic production; editable only when Arknights Operation Mode is off.",
-    "settingsField.shortcutSynthesis": "Synthesis",
-    "settingsField.shortcutSynthesisDescription": "Set the shortcut key for synthesis manufacturing; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-place-conveyor": "Place Conveyor",
+    "settingsField.shortcut-place-conveyorDescription": "Set the shortcut key for placing conveyors; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-place-pipe": "Place Pipe",
+    "settingsField.shortcut-place-pipeDescription": "Set the shortcut key for placing pipes; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-resources-power": "Resources & Power",
+    "settingsField.shortcut-resources-powerDescription": "Set the shortcut key for resources and power; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-warehouse": "Warehouse",
+    "settingsField.shortcut-warehouseDescription": "Set the shortcut key for warehouse access; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-basic-production": "Basic Production",
+    "settingsField.shortcut-basic-productionDescription": "Set the shortcut key for basic production; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-synthesis": "Synthesis",
+    "settingsField.shortcut-synthesisDescription": "Set the shortcut key for synthesis manufacturing; editable only when Arknights Operation Mode is off.",
     "settingsField.useSimplifiedDeviceIcons": "Use Simplified Device Icons",
     "settingsField.useSimplifiedDeviceIconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
     "settingsField.showHotkeys": "Show Hotkeys",

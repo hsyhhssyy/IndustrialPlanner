@@ -42,7 +42,21 @@ export function createAppHost(
     workspace,
     getAppHost: () => host,
   });
-  const shortcutManager = new KeyboardShortcutManager(() => internalState.settings);
+
+  // 先组装 host 的基础部分（state 必须就绪，shortcutManager 构造时需要读）
+  Object.assign(host, {
+    state: internalState,
+    workspace,
+    gestureAdapter,
+    gestureActionRouter,
+    gestureDiagnostics,
+    internalState,
+  });
+
+  const shortcutManager = new KeyboardShortcutManager(host);
+  disposers.push(shortcutManager.hookPersistence());
+  disposers.push(() => shortcutManager.dispose());
+
   const actionImpl = new AppActionImpl(internalState, workspace, shortcutManager);
   const internalActions: AppInternalAction = {
     toggleLeftDock: actionImpl.toggleLeftDock,
@@ -64,18 +78,13 @@ export function createAppHost(
     setScreenProfile: actionImpl.setScreenProfile,
     setLocale: actionImpl.setLocale,
     getKeyboardShortcutFor: actionImpl.getKeyboardShortcutFor,
+    setShortcutFor: actionImpl.setShortcutFor,
   };
   const actions: AppContract["actions"] = {
     translate: actionImpl.translate,
   };
 
   Object.assign(host, {
-    state: internalState,
-    workspace,
-    gestureAdapter,
-    gestureActionRouter,
-    gestureDiagnostics,
-    internalState,
     internalActions,
     dispose: () => {
       gestureActionRouter.dispose();

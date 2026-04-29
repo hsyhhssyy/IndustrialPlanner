@@ -61,6 +61,7 @@ export interface AppInternalAction {
   setScreenProfile: (screenProfile: ScreenProfile) => void;
   setLocale: (locale: AppLocale) => void;
   getKeyboardShortcutFor: (key: string) => string;
+  setShortcutFor: (key: string, value: string) => void;
 }
 
 export class AppActionImpl implements AppAction, AppInternalAction {
@@ -307,6 +308,10 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
   public readonly getKeyboardShortcutFor: AppInternalAction["getKeyboardShortcutFor"] = (key) => {
     return this.shortcutManager.getKeyboardShortcutFor(key);
+  };
+
+  public readonly setShortcutFor: AppInternalAction["setShortcutFor"] = (key, value) => {
+    this.shortcutManager.setShortcutFor(key, value);
   };
 
   private setLeftDockOpen(nextOpen: boolean): void {

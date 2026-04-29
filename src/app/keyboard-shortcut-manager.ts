@@ -1,77 +1,123 @@
-import type { AppSettingsReadWrite } from "./state-impl";
+import type { AppHost } from "@/app/app-host";
+import { makeAutoObservable, reaction } from "mobx";
+import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 
-/**
- * 快捷键设置 key 的联合类型。
- */
-export type ShortcutKey =
-  | "shortcut-place-conveyor"
-  | "shortcut-place-pipe"
-  | "shortcut-resources-power"
-  | "shortcut-warehouse"
-  | "shortcut-basic-production"
-  | "shortcut-synthesis";
+// ─── Key 常量定义 ───
+/** 所有快捷键 key 的常量对象。新增快捷键只需在此添加。 */
+export const SHORTCUT_KEY = {
+  PLACE_CONVEYOR:      "shortcut-place-conveyor",
+  PLACE_PIPE:          "shortcut-place-pipe",
+  RESOURCES_POWER:     "shortcut-resources-power",
+  WAREHOUSE:           "shortcut-warehouse",
+  BASIC_PRODUCTION:    "shortcut-basic-production",
+  SYNTHESIS:           "shortcut-synthesis",
+} as const;
 
-/**
- * 所有快捷键的默认值（鹰角网络模式下的固定值）。
- */
-const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKey, string>> = {
-  "shortcut-place-conveyor": "E",
-  "shortcut-place-pipe": "Q",
-  "shortcut-resources-power": "X",
-  "shortcut-warehouse": "C",
-  "shortcut-basic-production": "V",
-  "shortcut-synthesis": "B",
+/** 从 SHORTCUT_KEY 推导出的联合类型 */
+export type ShortcutKeyId = typeof SHORTCUT_KEY[keyof typeof SHORTCUT_KEY];
+
+/** 所有有效的 key id 集合（用于运行时校验） */
+const VALID_SHORTCUT_KEYS: ReadonlySet<string> = new Set(Object.values(SHORTCUT_KEY));
+
+// ─── 默认值 ───
+/** 所有快捷键的默认值（鹰角网络模式下的固定值）。 */
+const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
+  [SHORTCUT_KEY.PLACE_CONVEYOR]:   "E",
+  [SHORTCUT_KEY.PLACE_PIPE]:       "Q",
+  [SHORTCUT_KEY.RESOURCES_POWER]:  "X",
+  [SHORTCUT_KEY.WAREHOUSE]:        "C",
+  [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
+  [SHORTCUT_KEY.SYNTHESIS]:        "B",
 };
 
-const VALID_SHORTCUT_KEYS: ReadonlySet<string> = new Set(Object.keys(SHORTCUT_DEFAULTS));
+// ─── Contract State 类型 ───
+/** 快捷键合约态：字典结构，key 为 ShortcutKeyId，value 为用户绑定的按键字符串 */
+export type AppShortcutState = Record<ShortcutKeyId, string>;
 
-function isShortcutKey(key: string): key is ShortcutKey {
-  return VALID_SHORTCUT_KEYS.has(key);
-}
+// ─── localStorage key ───
+const APP_SHORTCUTS_LOCAL_STORAGE_KEY = "v3-app-shortcuts";
 
-/**
- * 将 settings dialog 中的 kebab-case setting id 映射到 AppSettingsReadWrite 的 camelCase 属性名。
- */
-const SHORTCUT_SETTINGS_KEY_MAP: Readonly<Record<ShortcutKey, keyof AppSettingsReadWrite>> = {
-  "shortcut-place-conveyor": "shortcutPlaceConveyor",
-  "shortcut-place-pipe": "shortcutPlacePipe",
-  "shortcut-resources-power": "shortcutResourcesPower",
-  "shortcut-warehouse": "shortcutWarehouse",
-  "shortcut-basic-production": "shortcutBasicProduction",
-  "shortcut-synthesis": "shortcutSynthesis",
-};
-
-/**
- * KeyboardShortcutManager 负责解析快捷键的值：
- * - 如果当前处于鹰角网络模式（hypergryphOperationMode），始终返回默认值。
- * - 否则从 AppSettings 中读取用户自定义的值。
- * - 如果传入的 key 不是有效的快捷键设置 key，返回空字符串。
- */
+// ─── Manager 类 ───
 export class KeyboardShortcutManager {
-  public constructor(
-    private readonly getSettings: () => AppSettingsReadWrite,
-  ) {}
+  /** 快捷键状态字典（MobX observable） */
+  public readonly shortcuts: AppShortcutState;
+
+  private readonly appHost: AppHost;
+  private disposeReaction: (() => void) | null = null;
+
+  public constructor(appHost: AppHost) {
+    this.appHost = appHost;
+
+    // 初始化：先取默认值，再用 localStorage 覆盖
+    const initial = { ...SHORTCUT_DEFAULTS };
+    const persisted = readFromLocalStorage<Partial<AppShortcutState>>(
+      APP_SHORTCUTS_LOCAL_STORAGE_KEY,
+    );
+    if (persisted !== null) {
+      for (const [k, v] of Object.entries(persisted)) {
+        if (isShortcutKey(k) && typeof v === "string" && v.trim() !== "") {
+          initial[k] = v.trim();
+        }
+      }
+    }
+
+    this.shortcuts = initial;
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
 
   /**
-   * 根据快捷键设置 key 获取当前的快捷键值。
-   * @param key - settings dialog 中的快捷键 setting id（free text，如 "shortcut-place-conveyor"）
-   * @returns 快捷键字符串，如果 key 无效则返回空字符串
+   * 启动 localStorage 持久化 reaction。
+   * 在 AppHost 创建后调用一次。
+   */
+  public hookPersistence(): () => void {
+    this.disposeReaction = reaction(
+      () => JSON.stringify(this.shortcuts),
+      () => {
+        saveToLocalStorage(APP_SHORTCUTS_LOCAL_STORAGE_KEY, this.shortcuts);
+      },
+    );
+
+    return () => {
+      this.disposeReaction?.();
+      this.disposeReaction = null;
+    };
+  }
+
+  /**
+   * 统一的快捷键写入 action。
+   * 所有 keybinding 设置写入都通过此方法。
+   * 鹰角网络模式下静默拒绝。
+   */
+  public readonly setShortcutFor = (key: string, value: string): void => {
+    if (!isShortcutKey(key)) return;
+    if (this.appHost.state.settings.hypergryphOperationMode) return;
+
+    const normalized = value.trim();
+    if (normalized === "") return;
+
+    this.shortcuts[key] = normalized;
+  };
+
+  /**
+   * 根据快捷键 key 获取当前快捷键值。
+   * 鹰角网络模式下始终返回默认值。
+   * 此方法同时用于：画布上的快捷键显示、settings 界面上的 keybinding 值展示。
    */
   public getKeyboardShortcutFor(key: string): string {
-    if (!isShortcutKey(key)) {
-      return "";
-    }
+    if (!isShortcutKey(key)) return "";
+    if (this.appHost.state.settings.hypergryphOperationMode) return SHORTCUT_DEFAULTS[key];
 
-    const settings = this.getSettings();
-
-    // 鹰角网络模式下始终返回默认值
-    if (settings.hypergryphOperationMode) {
-      return SHORTCUT_DEFAULTS[key];
-    }
-
-    // 非鹰角模式下从 settings 读取
-    const value = settings[SHORTCUT_SETTINGS_KEY_MAP[key]];
-
-    return typeof value === "string" && value !== "" ? value : SHORTCUT_DEFAULTS[key];
+    return this.shortcuts[key] || SHORTCUT_DEFAULTS[key];
   }
+
+  /** 释放资源 */
+  public dispose(): void {
+    this.disposeReaction?.();
+    this.disposeReaction = null;
+  }
+}
+
+// ─── 辅助函数 ───
+function isShortcutKey(key: string): key is ShortcutKeyId {
+  return VALID_SHORTCUT_KEYS.has(key);
 }

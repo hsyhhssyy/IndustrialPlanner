@@ -253,7 +253,6 @@ function scrollSettingsDialogContentToSection(options: {
 
   if (typeof contentElement.scrollTo === "function") {
     contentElement.scrollTo({ top: nextScrollTop });
-
     return;
   }
 

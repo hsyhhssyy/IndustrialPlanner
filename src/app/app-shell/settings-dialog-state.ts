@@ -71,6 +71,8 @@ interface WorkbenchSettingExternalBinding {
 
 interface WorkbenchSettingsDialogControllerOptions {
   readonly externalBindings?: Readonly<Record<string, WorkbenchSettingExternalBinding>>;
+  readonly shortcutReader?: (key: string) => string;
+  readonly shortcutWriter?: (key: string, value: string) => void;
 }
 
 interface PersistedUserSettingsDialogState {
@@ -193,8 +195,8 @@ export const WORKBENCH_SETTINGS_GROUPS = [
       {
         id: "shortcut-place-conveyor",
         kind: "keybinding",
-        labelKey: "settingsField.shortcutPlaceConveyor",
-        descriptionKey: "settingsField.shortcutPlaceConveyorDescription",
+        labelKey: shortcutKeybindingLabelKey("shortcut-place-conveyor"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-place-conveyor"),
         defaultValue: "E",
         editableWhen: {
           settingId: "game-arknights-operation-mode",
@@ -204,8 +206,8 @@ export const WORKBENCH_SETTINGS_GROUPS = [
       {
         id: "shortcut-place-pipe",
         kind: "keybinding",
-        labelKey: "settingsField.shortcutPlacePipe",
-        descriptionKey: "settingsField.shortcutPlacePipeDescription",
+        labelKey: shortcutKeybindingLabelKey("shortcut-place-pipe"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-place-pipe"),
         defaultValue: "Q",
         editableWhen: {
           settingId: "game-arknights-operation-mode",
@@ -215,8 +217,8 @@ export const WORKBENCH_SETTINGS_GROUPS = [
       {
         id: "shortcut-resources-power",
         kind: "keybinding",
-        labelKey: "settingsField.shortcutResourcesPower",
-        descriptionKey: "settingsField.shortcutResourcesPowerDescription",
+        labelKey: shortcutKeybindingLabelKey("shortcut-resources-power"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-resources-power"),
         defaultValue: "X",
         editableWhen: {
           settingId: "game-arknights-operation-mode",
@@ -226,8 +228,8 @@ export const WORKBENCH_SETTINGS_GROUPS = [
       {
         id: "shortcut-warehouse",
         kind: "keybinding",
-        labelKey: "settingsField.shortcutWarehouse",
-        descriptionKey: "settingsField.shortcutWarehouseDescription",
+        labelKey: shortcutKeybindingLabelKey("shortcut-warehouse"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-warehouse"),
         defaultValue: "C",
         editableWhen: {
           settingId: "game-arknights-operation-mode",
@@ -237,8 +239,8 @@ export const WORKBENCH_SETTINGS_GROUPS = [
       {
         id: "shortcut-basic-production",
         kind: "keybinding",
-        labelKey: "settingsField.shortcutBasicProduction",
-        descriptionKey: "settingsField.shortcutBasicProductionDescription",
+        labelKey: shortcutKeybindingLabelKey("shortcut-basic-production"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-basic-production"),
         defaultValue: "V",
         editableWhen: {
           settingId: "game-arknights-operation-mode",
@@ -248,8 +250,8 @@ export const WORKBENCH_SETTINGS_GROUPS = [
       {
         id: "shortcut-synthesis",
         kind: "keybinding",
-        labelKey: "settingsField.shortcutSynthesis",
-        descriptionKey: "settingsField.shortcutSynthesisDescription",
+        labelKey: shortcutKeybindingLabelKey("shortcut-synthesis"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-synthesis"),
         defaultValue: "B",
         editableWhen: {
           settingId: "game-arknights-operation-mode",
@@ -306,6 +308,22 @@ const SETTING_DEFINITION_BY_ID = new Map<string, WorkbenchSettingDefinition>(
   ),
 );
 
+/** 所有 keybinding 类型的 setting 定义 */
+const ALL_KEYBINDING_SETTINGS: readonly WorkbenchKeybindingSettingDefinition[] =
+  WORKBENCH_SETTINGS_GROUPS.flatMap((group) =>
+    group.items.filter((setting) => setting.kind === "keybinding"),
+  ) as WorkbenchKeybindingSettingDefinition[];
+
+/** 从 shortcut setting id 推导 i18n label key。前缀 `settingsField.` + setting id */
+function shortcutKeybindingLabelKey(id: string): MessageKey {
+  return `settingsField.${id}` as MessageKey;
+}
+
+/** 从 shortcut setting id 推导 i18n description key。前缀 `settingsField.` + setting id + `Description` */
+function shortcutKeybindingDescriptionKey(id: string): MessageKey {
+  return `settingsField.${id}Description` as MessageKey;
+}
+
 function createDefaultValues(externalBindingIds: ReadonlySet<string> = new Set()): Record<string, WorkbenchSettingControlValue> {
   return Object.fromEntries(
     WORKBENCH_SETTINGS_GROUPS.flatMap((group) =>
@@ -327,7 +345,25 @@ export class WorkbenchSettingsDialogController {
   private resolvePendingOpen: (() => void) | null = null;
 
   public constructor(options: WorkbenchSettingsDialogControllerOptions = {}) {
-    this.externalBindings = new Map(Object.entries(options.externalBindings ?? {}));
+    const explicitBindings = new Map(Object.entries(options.externalBindings ?? {}));
+
+    // 自动为所有 keybinding 类型生成 externalBinding
+    if (options.shortcutReader && options.shortcutWriter) {
+      for (const setting of ALL_KEYBINDING_SETTINGS) {
+        if (explicitBindings.has(setting.id)) continue;
+
+        explicitBindings.set(setting.id, {
+          readValue: () => options.shortcutReader!(setting.id),
+          writeValue: (value: WorkbenchSettingControlValue) => {
+            if (typeof value === "string") {
+              options.shortcutWriter!(setting.id, value);
+            }
+          },
+        });
+      }
+    }
+
+    this.externalBindings = explicitBindings;
     this.externalBindingIds = new Set(this.externalBindings.keys());
     this.values = createDefaultValues(this.externalBindingIds);
     this.hydrate(readFromLocalStorage<unknown>(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY));

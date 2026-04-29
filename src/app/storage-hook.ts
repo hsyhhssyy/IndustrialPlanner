@@ -8,8 +8,8 @@ import type {
   WorkbenchStateReadWrite,
 } from "./state-impl";
 
-export const APP_SETTINGS_LOCAL_STORAGE_KEY = "v4-app-settings";
-export const WORKBENCH_STATE_LOCAL_STORAGE_KEY = "v4-workbench-state";
+export const APP_SETTINGS_LOCAL_STORAGE_KEY = "v3-app-settings";
+export const WORKBENCH_STATE_LOCAL_STORAGE_KEY = "v3-workbench-state";
 
 export function hookLocalstorage(appHost: AppHost): () => void {
   const persistedAppSettings = readFromLocalStorage<AppSettingsReadWrite>(
@@ -85,23 +85,5 @@ function normalizePersistedAppSettings(
       typeof persistedAppSettings.debugShowGestureDiagnosticsWindow === "boolean"
         ? persistedAppSettings.debugShowGestureDiagnosticsWindow
         : fallback.debugShowGestureDiagnosticsWindow,
-    shortcutPlaceConveyor: typeof persistedAppSettings.shortcutPlaceConveyor === "string"
-      ? persistedAppSettings.shortcutPlaceConveyor
-      : fallback.shortcutPlaceConveyor,
-    shortcutPlacePipe: typeof persistedAppSettings.shortcutPlacePipe === "string"
-      ? persistedAppSettings.shortcutPlacePipe
-      : fallback.shortcutPlacePipe,
-    shortcutResourcesPower: typeof persistedAppSettings.shortcutResourcesPower === "string"
-      ? persistedAppSettings.shortcutResourcesPower
-      : fallback.shortcutResourcesPower,
-    shortcutWarehouse: typeof persistedAppSettings.shortcutWarehouse === "string"
-      ? persistedAppSettings.shortcutWarehouse
-      : fallback.shortcutWarehouse,
-    shortcutBasicProduction: typeof persistedAppSettings.shortcutBasicProduction === "string"
-      ? persistedAppSettings.shortcutBasicProduction
-      : fallback.shortcutBasicProduction,
-    shortcutSynthesis: typeof persistedAppSettings.shortcutSynthesis === "string"
-      ? persistedAppSettings.shortcutSynthesis
-      : fallback.shortcutSynthesis,
   };
 }
