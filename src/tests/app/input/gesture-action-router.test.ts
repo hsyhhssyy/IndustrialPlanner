@@ -2,13 +2,13 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { createGestureAdapter, type GestureEvent } from "@/app/input/gesture-adapter";
+import { createGestureAdapter, type GestureEvent } from "@/app/input/gesture/adapter";
 import {
   createGestureActionRouter,
   type GestureActionContext,
   type GestureHandleResult,
   type GestureMappingModule,
-} from "@/app/input/gesture-actions";
+} from "@/app/input/gesture/actions";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";

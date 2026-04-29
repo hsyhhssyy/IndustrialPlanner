@@ -17,6 +17,7 @@ import {
 import {
   resolveMarqueeGridRectLayout,
   resolveMarqueeGridRectStrokeStyle,
+  resolveWorldAuxiliaryStrokeWidth,
 } from "@/renderer/scene/decorations/MarqueeRectDecoration"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import type { RenderHost } from "@/renderer/renderer-host"
@@ -261,10 +262,15 @@ describe("resolveMarqueeGridRectLayout", () => {
 })
 
 describe("resolveMarqueeGridRectStrokeStyle", () => {
-  it("uses a white stroke with the same width as selection overlays", () => {
-    expect(resolveMarqueeGridRectStrokeStyle(WORLD_GRID_CELL_PIXEL_SIZE)).toEqual({
-      width: resolveWorldEntitySelectionStrokeWidth(WORLD_GRID_CELL_PIXEL_SIZE),
+  it("uses theme-aware stroke color with 1.5x auxiliary stroke width", () => {
+    const baseWidth = resolveWorldAuxiliaryStrokeWidth(WORLD_GRID_CELL_PIXEL_SIZE)
+    expect(resolveMarqueeGridRectStrokeStyle(WORLD_GRID_CELL_PIXEL_SIZE, AYU_DARK_THEME)).toEqual({
+      width: baseWidth * 1.5,
       color: 0xffffff,
+    })
+    expect(resolveMarqueeGridRectStrokeStyle(WORLD_GRID_CELL_PIXEL_SIZE, AYU_LIGHT_THEME)).toEqual({
+      width: baseWidth * 1.5,
+      color: 0x000000,
     })
   })
 })

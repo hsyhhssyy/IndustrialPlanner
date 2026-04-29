@@ -66,6 +66,7 @@ export const APP_THEME_COLOR_KEYS = [
   "canvas-floating-toolbar-confirm",
   "renderer-grid-line",
   "renderer-selection-stroke",
+  "renderer-marquee-stroke",
   "sprite-preview-border-box",
   "renderer-belt-tile-fill",
   "renderer-belt-tile-stroke",
@@ -79,6 +80,7 @@ export type AppThemeColorMap = Readonly<Record<AppThemeColorKey, string>>;
 export interface AppThemeRendererColorKeys {
   readonly worldGridLineColorKey: AppThemeColorKey;
   readonly worldEntitySelectionStrokeColorKey: AppThemeColorKey;
+  readonly worldMarqueeStrokeColorKey: AppThemeColorKey;
   readonly spritePreviewBorderBoxColorKey: AppThemeColorKey;
   readonly beltTileFillColorKey: AppThemeColorKey;
   readonly beltTileStrokeColorKey: AppThemeColorKey;

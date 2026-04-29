@@ -70,6 +70,7 @@ export const AYU_LIGHT_THEME: AppTheme = {
     "canvas-floating-toolbar-confirm": "rgb(28 146 95)",
     "renderer-grid-line": "#5c6773",
     "renderer-selection-stroke": "#ffa500",
+    "renderer-marquee-stroke": "#000000",
     "sprite-preview-border-box": "#ffffff",
     "renderer-belt-tile-fill": "#e6ecf3",
     "renderer-belt-tile-stroke": "#d9822b",
@@ -79,6 +80,7 @@ export const AYU_LIGHT_THEME: AppTheme = {
   renderer: {
     worldGridLineColorKey: "renderer-grid-line",
     worldEntitySelectionStrokeColorKey: "renderer-selection-stroke",
+    worldMarqueeStrokeColorKey: "renderer-marquee-stroke",
     spritePreviewBorderBoxColorKey: "sprite-preview-border-box",
     beltTileFillColorKey: "renderer-belt-tile-fill",
     beltTileStrokeColorKey: "renderer-belt-tile-stroke",

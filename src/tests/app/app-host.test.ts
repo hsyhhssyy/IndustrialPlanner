@@ -1,17 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runInAction } from "mobx";
 
-import { createAppHost } from "@/app/app-host";
+import { createAppHost } from "@/app/host/app-host";
 import type {
   GestureEvent,
   GesturePointerEventLike,
   GestureWheelEventLike,
-} from "@/app/input/gesture-adapter";
+} from "@/app/input/gesture/adapter";
 import {
   APP_SETTINGS_LOCAL_STORAGE_KEY,
   WORKBENCH_STATE_LOCAL_STORAGE_KEY,
-} from "@/app/storage-hook";
-import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state-impl";
+} from "@/app/state/storage-hook";
+import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { EntityCollectionType } from "@/domain/state/types";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
@@ -95,7 +95,7 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
     expect(appHost.state.workbench.rightDockOpen).toBe(true);
     expect(appHost.state.workbench.leftDockWidth).toBe(375);
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
 
     runInAction(() => {
@@ -143,7 +143,7 @@ describe("createAppHost", () => {
     expect(workspace.app?.state.workbench.leftDockWidth).toBe(480);
     expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
     expect(workspace.app?.state.screenProfile.screenShape).toBe("portrait");
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
   });
 
@@ -467,7 +467,7 @@ describe("createAppHost", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
 
     appHost.gestureAdapter.handleKeyDown({
       code: "KeyX",
@@ -479,7 +479,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
+    expect(appHost.internalState.activeTool).toBe("marquee");
 
     appHost.gestureAdapter.handleUiButtonMouseTap({
       uiButtonId: "placement-tool-marquee",
@@ -490,7 +490,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
+    expect(appHost.internalState.activeTool).toBe("marquee");
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
       uiButtonId: "placement-tool-marquee",
@@ -500,7 +500,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
+    expect(appHost.internalState.activeTool).toBe("marquee");
 
     appHost.gestureAdapter.handlePointerDown(pointerEvent({
       pointerId: 7,
@@ -517,7 +517,7 @@ describe("createAppHost", () => {
       clientY: 18,
     }));
 
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
       uiButtonId: "placement-tool-select",
@@ -527,7 +527,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
 
     runInAction(() => {
       appHost.internalState.settings.hypergryphOperationMode = false;
@@ -543,7 +543,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
 
     appHost.gestureAdapter.handleUiButtonMouseTap({
       uiButtonId: "placement-tool-marquee",
@@ -554,7 +554,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
   });
 
   it("attaches pointerEntity from editor queries to pointer tap and dragstart events", () => {
@@ -645,7 +645,7 @@ describe("createAppHost", () => {
       buttons: 0,
     }));
 
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
 
     appHost.gestureAdapter.handlePointerDown(pointerEvent({
       pointerId: 32,
@@ -661,7 +661,7 @@ describe("createAppHost", () => {
       buttons: 0,
     }));
 
-    expect(appHost.internalState.runtime.activeTool).toBe("move");
+    expect(appHost.internalState.activeTool).toBe("move");
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
     expect(editorHost.state.collections.selection).toEqual([]);
     expect(editorHost.state.collections.ghost).toEqual(["dummy-entity-2"]);
@@ -674,7 +674,7 @@ describe("createAppHost", () => {
     vi.advanceTimersByTime(500);
     appHost.gestureAdapter.handlePointerUp(touchEvent(34, entityPoint.x, entityPoint.y));
 
-    expect(appHost.internalState.runtime.activeTool).toBe("move");
+    expect(appHost.internalState.activeTool).toBe("move");
     expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
     expect(appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection).toBe(
       EntityCollectionType.preview,
@@ -753,7 +753,7 @@ describe("createAppHost", () => {
       buttons: 1,
     }));
 
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
 
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
 
@@ -771,7 +771,7 @@ describe("createAppHost", () => {
       buttons: 1,
     }));
 
-    expect(appHost.internalState.runtime.activeTool).toBe("move");
+    expect(appHost.internalState.activeTool).toBe("move");
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
 
     const previewDraftId = editorHost.state.collections.preview[0];
@@ -811,7 +811,7 @@ describe("createAppHost", () => {
       clientY: entityPoint.y,
     }));
 
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
     expect(editorHost.state.collections.preview).toEqual([]);
     expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]?.position).toEqual({
       x: 4,
@@ -824,7 +824,7 @@ describe("createAppHost", () => {
     vi.advanceTimersByTime(500);
     appHost.gestureAdapter.handlePointerMove(touchEvent(37, entityPoint.x + 4, entityPoint.y));
 
-    expect(appHost.internalState.runtime.activeTool).toBe("move");
+    expect(appHost.internalState.activeTool).toBe("move");
 
     appHost.gestureAdapter.handlePointerMove(touchEvent(37, entityPoint.x + 20, entityPoint.y));
     appHost.gestureAdapter.handleUiButtonTouchTap({
@@ -835,7 +835,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
     expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(false);
     expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]?.position).toEqual({
@@ -864,7 +864,7 @@ describe("createAppHost", () => {
 
     appHost.internalActions.setActiveTool("placement");
 
-    expect(appHost.internalState.runtime.activeTool).toBe("placement");
+    expect(appHost.internalState.activeTool).toBe("placement");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
     expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(false);
     expect(editorHost.state.collections.preview).toEqual([]);

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { createHypergryphGestureDiagnosticsModule } from "@/app/input/gesture-actions";
+import { createHypergryphGestureDiagnosticsModule } from "@/app/input/gesture/actions";
 import {
   createGestureDiagnosticsStore,
-} from "@/app/input/gesture-diagnostics";
-import type { GestureEvent } from "@/app/input/gesture-adapter";
+} from "@/app/input/gesture/diagnostics";
+import type { GestureEvent } from "@/app/input/gesture/adapter";
 import type { WorldEntity } from "@/domain/entity/world-document";
 
 type MouseTapGestureEvent = Extract<GestureEvent, { type: "mouse tap" }>;

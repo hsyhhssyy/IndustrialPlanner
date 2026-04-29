@@ -70,9 +70,12 @@ export interface WorkbenchState {
   readonly topBarCollapsed: boolean;
 }
 
+export type ActiveTool = "select" | "move" | "marquee" | "placement";
+
 export interface UiState {
   readonly settings: AppSettings;
   readonly workbench: WorkbenchState;
   readonly screenProfile: ScreenProfile;
   readonly theme: AppTheme;
+  readonly activeTool: ActiveTool;
 }

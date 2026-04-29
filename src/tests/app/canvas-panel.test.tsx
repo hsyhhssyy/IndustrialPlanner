@@ -5,9 +5,9 @@ import { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost } from "@/app/app-host";
-import type { GestureEvent } from "@/app/input/gesture-adapter";
-import { CanvasPanel } from "@/app/app-shell/components/canvas-panel";
+import { createAppHost } from "@/app/host/app-host";
+import type { GestureEvent } from "@/app/input/gesture/adapter";
+import { CanvasPanel } from "@/app/shell/components/canvas-panel";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type { WorldEntity } from "@/domain/entity/world-document";
 import { createWorkspaceState } from "@/domain/state/workspace-state";

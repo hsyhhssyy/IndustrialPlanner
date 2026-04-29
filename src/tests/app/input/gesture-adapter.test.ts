@@ -8,7 +8,7 @@ import {
   type GestureKeyboardEventLike,
   type GesturePointerEventLike,
   type GestureWheelEventLike,
-} from "@/app/input/gesture-adapter";
+} from "@/app/input/gesture/adapter";
 import type { WorldEntity } from "@/domain/entity/world-document";
 
 function pointerEvent(

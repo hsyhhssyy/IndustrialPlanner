@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { AppHost } from "@/app/app-host";
-import type { KeyboardSnapshot } from "@/app/input/gesture-adapter";
+import type { AppHost } from "@/app/host/app-host";
+import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
 import {
   createHypergryphSelectGestureModule,
   type GestureActionContext,
-} from "@/app/input/gesture-actions";
+} from "@/app/input/gesture/actions";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type { WorldEntity } from "@/domain/entity/world-document";
 import { EntityCollectionType } from "@/domain/state/types";

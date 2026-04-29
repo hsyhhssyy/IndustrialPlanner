@@ -4,19 +4,19 @@ import { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost } from "@/app/app-host";
-import type { GestureEvent } from "@/app/input/gesture-adapter";
+import { createAppHost } from "@/app/host/app-host";
+import type { GestureEvent } from "@/app/input/gesture/adapter";
 import {
   APP_SHORTCUTS_LOCAL_STORAGE_KEY,
   SHORTCUT_KEY,
-} from "@/app/keyboard-shortcut-manager";
-import { USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY } from "@/app/app-shell/settings-dialog-state";
+} from "@/app/actions/keyboard-shortcut-manager";
+import { USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY } from "@/app/shell/settings-dialog-state";
 import {
   APP_SETTINGS_LOCAL_STORAGE_KEY,
   WORKBENCH_STATE_LOCAL_STORAGE_KEY,
-} from "@/app/storage-hook";
-import { WorkbenchApp } from "@/app/app-shell/workbench-app";
-import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state-impl";
+} from "@/app/state/storage-hook";
+import { WorkbenchApp } from "@/app/shell/workbench-app";
+import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";

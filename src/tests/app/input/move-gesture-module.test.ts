@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { AppHost } from "@/app/app-host";
-import type { KeyboardSnapshot } from "@/app/input/gesture-adapter";
+import type { AppHost } from "@/app/host/app-host";
+import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
 import {
   createHypergryphMoveGestureModule,
   type GestureActionContext,
-} from "@/app/input/gesture-actions";
+} from "@/app/input/gesture/actions";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type { EditorContract } from "@/domain/contract/editor-contract";
 import type { WorldEntity } from "@/domain/entity/world-document";
@@ -37,7 +37,7 @@ describe("createHypergryphMoveGestureModule", () => {
       entityId: "unselected-entity",
     });
     expect(editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
-    expect(appHost.internalState.runtime.activeTool).toBe("move");
+    expect(appHost.internalState.activeTool).toBe("move");
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
     expect(appHost.internalActions.hideCanvasFloatingToolbar).toHaveBeenCalled();
   });
@@ -68,10 +68,10 @@ describe("createHypergryphMoveGestureModule", () => {
 
     expect(missedResult).toEqual({ status: "ignored" });
     expect(missed.editor.actions.createMoveOperationDraft).not.toHaveBeenCalled();
-    expect(missed.appHost.internalState.runtime.activeTool).toBe("marquee");
+    expect(missed.appHost.internalState.activeTool).toBe("marquee");
     expect(result).toEqual({ status: "handled" });
     expect(handled.editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
-    expect(handled.appHost.internalState.runtime.activeTool).toBe("move");
+    expect(handled.appHost.internalState.activeTool).toBe("move");
     expect(handled.appHost.internalState.runtime.moveAnchor).toEqual({ x: 2, y: 2 });
   });
 
@@ -107,7 +107,7 @@ describe("createHypergryphMoveGestureModule", () => {
       entityId: "unselected-entity",
     });
     expect(select.editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
-    expect(select.appHost.internalState.runtime.activeTool).toBe("move");
+    expect(select.appHost.internalState.activeTool).toBe("move");
     expect(select.appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
       MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
@@ -127,7 +127,7 @@ describe("createHypergryphMoveGestureModule", () => {
 
     expect(result).toEqual({ status: "handled" });
     expect(editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
-    expect(appHost.internalState.runtime.activeTool).toBe("move");
+    expect(appHost.internalState.activeTool).toBe("move");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
     expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
       MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST,
@@ -181,7 +181,7 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(result).toEqual({ status: "ignored" });
     expect(editor.actions.cancelMoveOperationDraft).toHaveBeenCalledTimes(1);
     expect([...selection]).toEqual(["selected-entity"]);
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
   });
 
@@ -322,14 +322,14 @@ describe("createHypergryphMoveGestureModule", () => {
       module.handle(mouseTapEvent({ button: 0, longPress: false }), applyContext.context),
     ).toEqual({ status: "handled" });
     expect(applyContext.editor.actions.applyMoveOerationDraft).toHaveBeenCalledTimes(1);
-    expect(applyContext.appHost.internalState.runtime.activeTool).toBe("select");
+    expect(applyContext.appHost.internalState.activeTool).toBe("select");
     expect(applyContext.appHost.internalState.runtime.moveAnchor).toBeNull();
 
     expect(
       module.handle(mouseTapEvent({ button: 2, longPress: false }), cancelContext.context),
     ).toEqual({ status: "handled" });
     expect(cancelContext.editor.actions.cancelMoveOperationDraft).toHaveBeenCalledTimes(1);
-    expect(cancelContext.appHost.internalState.runtime.activeTool).toBe("select");
+    expect(cancelContext.appHost.internalState.activeTool).toBe("select");
     expect(cancelContext.appHost.internalState.runtime.moveAnchor).toBeNull();
   });
 });
@@ -443,8 +443,8 @@ function createContext(options: {
       },
     },
     internalState: {
+      activeTool: options.activeTool ?? "select",
       runtime: {
-        activeTool: options.activeTool ?? "select",
         moveAnchor: options.moveAnchor ?? null,
         canvasFloatingToolbar: {
           visible: options.toolbarVisible ?? false,
@@ -457,7 +457,7 @@ function createContext(options: {
     },
     internalActions: {
       setActiveTool: vi.fn((activeTool) => {
-        appHost.internalState.runtime.activeTool = activeTool;
+        appHost.internalState.activeTool = activeTool;
       }),
       showCanvasFloatingToolbar: vi.fn((_, anchor) => {
         appHost.internalState.runtime.canvasFloatingToolbar.visible = true;

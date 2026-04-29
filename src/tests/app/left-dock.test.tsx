@@ -5,11 +5,11 @@ import { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost } from "@/app/app-host";
-import type { GestureEvent } from "@/app/input/gesture-adapter";
-import { LeftDock } from "@/app/app-shell/components/left-dock";
-import { LeftToolbar } from "@/app/app-shell/components/left-toolbar";
-import { WorkbenchApp } from "@/app/app-shell/workbench-app";
+import { createAppHost } from "@/app/host/app-host";
+import type { GestureEvent } from "@/app/input/gesture/adapter";
+import { LeftDock } from "@/app/shell/components/left-dock";
+import { LeftToolbar } from "@/app/shell/components/left-toolbar";
+import { WorkbenchApp } from "@/app/shell/workbench-app";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
@@ -199,7 +199,7 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel.textContent).toContain("X");
     expect(visiblePanel.textContent).toContain("Ctrl+S");
     expect(appHost.internalState.runtime.activePanel).toBeNull();
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
   });
 
   it("hides the batch select button when hypergryph operation mode is off", () => {
@@ -272,7 +272,7 @@ describe("Left dock panel switching", () => {
       });
     });
 
-    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
+    expect(appHost.internalState.activeTool).toBe("marquee");
     expect(selectButton?.classList.contains("is-active")).toBe(false);
     expect(marqueeButton?.classList.contains("is-active")).toBe(true);
     expect(events.at(-1)).toMatchObject({
@@ -296,7 +296,7 @@ describe("Left dock panel switching", () => {
       });
     });
 
-    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
+    expect(appHost.internalState.activeTool).toBe("marquee");
     expect(selectButton?.classList.contains("is-active")).toBe(false);
     expect(marqueeButton?.classList.contains("is-active")).toBe(true);
 
@@ -314,7 +314,7 @@ describe("Left dock panel switching", () => {
       });
     });
 
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
     expect(selectButton?.classList.contains("is-active")).toBe(true);
     expect(marqueeButton?.classList.contains("is-active")).toBe(false);
     expect(events.at(-1)).toMatchObject({

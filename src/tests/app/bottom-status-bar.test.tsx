@@ -4,8 +4,8 @@ import { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost } from "@/app/app-host";
-import { BottomStatusBar } from "@/app/app-shell/components/bottom-status-bar";
+import { createAppHost } from "@/app/host/app-host";
+import { BottomStatusBar } from "@/app/shell/components/bottom-status-bar";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";

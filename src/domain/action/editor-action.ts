@@ -33,6 +33,7 @@ export interface EditorAction {
 	clearCollection(collectionType: EntityCollectionType): void;
 	addToCollection(options: EntityCollectionMemberOptions): void;
 	removeFromCollection(options: EntityCollectionMemberOptions): void;
+	
 	setMarqueeRange(collectionType: MarqueeCollectionType, gridRect: GridRect): void;
 	applyMarquee(): void;
 	cancelMarquee(): void;

@@ -1045,9 +1045,9 @@ body.is-resizing-left-dock * {
 
 .placement-panel-group-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-height: 24px;
   padding-right: 4px;
 }
@@ -1062,28 +1062,25 @@ body.is-resizing-left-dock * {
   font-weight: 600;
 }
 
-.placement-button-hotkey {
-  font-family:
-    "IBM Plex Mono",
-    "SFMono-Regular",
-    monospace;
-}
-
 .placement-panel-group-shortcut {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
   border: 1px solid var(--placement-shortcut-border);
   border-radius: 999px;
   background: var(--placement-shortcut-bg);
   color: var(--placement-shortcut-text);
-  font-size: 0.74rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   line-height: 1;
-  box-shadow: 0 1px 4px var(--placement-shortcut-shadow);
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    monospace;
 }
 
 .placement-button-list {
@@ -1109,14 +1106,15 @@ body.is-resizing-left-dock * {
   background: transparent;
   text-align: left;
   overflow: visible;
+  position: relative;
 }
 
 .placement-action-button {
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
 }
 
 .placement-device-button {
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
 }
 
 .placement-button .button-icon {
@@ -1132,19 +1130,28 @@ body.is-resizing-left-dock * {
 }
 
 .placement-button-hotkey {
+  position: absolute;
+  top: 2px;
+  right: 2px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  margin-top: 1px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   background: var(--surface-4);
   color: var(--text-1);
-  font-size: 0.72rem;
+  font-size: 0.62rem;
+  font-weight: 700;
   line-height: 1;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    monospace;
 }
 
 .cluster,

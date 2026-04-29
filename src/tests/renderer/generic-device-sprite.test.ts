@@ -104,6 +104,39 @@ vi.mock("pixi.js", () => {
     }
   }
 
+  class MockGraphics {
+    public parent: {
+      removeChild: (child: MockGraphics) => void;
+    } | null = null
+    public roundPixels = false
+    public visible = true
+    public mask: unknown = null
+
+    public constructor(options?: { roundPixels?: boolean }) {
+      if (options?.roundPixels) {
+        this.roundPixels = true
+      }
+    }
+
+    public rect(_x: number, _y: number, _width: number, _height: number): this {
+      return this
+    }
+
+    public stroke(_options?: unknown): this {
+      return this
+    }
+
+    public fill(_options?: unknown): this {
+      return this
+    }
+
+    public clear(): this {
+      return this
+    }
+
+    public destroy(): void {}
+  }
+
   class MockTexture {
     public static readonly EMPTY = { id: "empty-texture", width: 0 }
     public static readonly WHITE = { id: "white-texture", width: 0 }
@@ -117,6 +150,7 @@ vi.mock("pixi.js", () => {
     Container: MockContainer,
     Sprite: MockSprite,
     TilingSprite: MockTilingSprite,
+    Graphics: MockGraphics,
     Texture: MockTexture,
     Assets: MockAssets,
   }
@@ -331,13 +365,13 @@ describe("GenericDeviceSprite", () => {
       children?: unknown[];
     } | undefined
 
-    expect(overlayRoot.children).toHaveLength(1)
+    expect(overlayRoot.children).toHaveLength(2)
     expect(previewEffectRoot?.visible).toBe(true)
 
     const scanlineTiling = previewEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
     const previewMask = previewEffectRoot?.children?.[1] as RenderedSpriteSnapshot | undefined
 
-    expect(previewEffectRoot?.children).toHaveLength(2)
+    expect(previewEffectRoot?.children).toHaveLength(3)
     expect(previewMask).toMatchObject({
       x: 40,
       y: 40,

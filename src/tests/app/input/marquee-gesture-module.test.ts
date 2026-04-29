@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { AppHost } from "@/app/app-host";
-import type { KeyboardSnapshot } from "@/app/input/gesture-adapter";
+import type { AppHost } from "@/app/host/app-host";
+import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
 import {
   createHypergryphMarqueeGestureModule,
   type GestureActionContext,
-} from "@/app/input/gesture-actions";
+} from "@/app/input/gesture/actions";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type { EditorContract } from "@/domain/contract/editor-contract";
 import type { WorldEntity } from "@/domain/entity/world-document";
@@ -18,12 +18,12 @@ describe("createHypergryphMarqueeGestureModule", () => {
     const module = createHypergryphMarqueeGestureModule();
 
     expect(module.handle(keyDownEvent("KeyX"), context)).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
+    expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalActions.showCanvasRightDockToolbar).not.toHaveBeenCalled();
 
     expect(module.handle(keyDownEvent("KeyX"), context)).toEqual({ status: "handled" });
     expect(editor.actions.cancelMarquee).toHaveBeenCalledTimes(1);
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
     expect(appHost.internalState.runtime.marqueeAnchor).toBeNull();
     expect(appHost.internalState.runtime.isReverseMarquee).toBe(false);
   });
@@ -38,7 +38,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
+    expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
       "canvas-right-dock-toolbar-button-exit",
       "canvas-right-dock-toolbar-button-move",
@@ -66,7 +66,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
+    expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalState.runtime.marqueeAnchor).toEqual({ x: 3, y: 4 });
     expect(appHost.internalState.runtime.isReverseMarquee).toBe(false);
     expect(editor.actions.setMarqueeRange).toHaveBeenCalledWith(
@@ -91,7 +91,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.activeTool).toBe("marquee");
+    expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
       "canvas-right-dock-toolbar-button-exit",
       "canvas-right-dock-toolbar-button-move",
@@ -124,7 +124,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "ignored" });
-    expect(appHost.internalState.runtime.activeTool).toBe("select");
+    expect(appHost.internalState.activeTool).toBe("select");
     expect(appHost.internalState.runtime.marqueeAnchor).toBeNull();
     expect(editor.actions.setMarqueeRange).not.toHaveBeenCalled();
   });
@@ -241,7 +241,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
       ),
     ).toEqual({ status: "handled" });
     expect(exitContext.editor.actions.cancelMarquee).toHaveBeenCalledTimes(1);
-    expect(exitContext.appHost.internalState.runtime.activeTool).toBe("select");
+    expect(exitContext.appHost.internalState.activeTool).toBe("select");
     expect(exitContext.appHost.internalState.workbench.rightDockOpen).toBe(false);
   });
 });
@@ -280,11 +280,11 @@ function createContext(options: {
       },
     },
     internalState: {
+      activeTool: options.activeTool ?? "select",
       workbench: {
         rightDockOpen: options.rightDockOpen ?? true,
       },
       runtime: {
-        activeTool: options.activeTool ?? "select",
         moveAnchor: null,
         marqueeAnchor: options.marqueeAnchor ?? null,
         isReverseMarquee: false,
@@ -300,7 +300,7 @@ function createContext(options: {
     },
     internalActions: {
       setActiveTool: vi.fn((activeTool) => {
-        appHost.internalState.runtime.activeTool = activeTool;
+        appHost.internalState.activeTool = activeTool;
       }),
       toggleRightDock: vi.fn(() => {
         appHost.internalState.workbench.rightDockOpen =

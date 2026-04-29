@@ -26,6 +26,10 @@ const SCANLINE_TEXTURE_PATH = "/textures/scanline-45deg-50opacity.png";
 const SCANLINE_PADDING_TILES = 2;
 const SCANLINE_SCROLL_INTERVAL_MS = 2000;
 
+const BLUEPRINT_MASK_TEXTURE_PATH = "/textures/blueprint-mask-80opacity.png";
+const PREVIEW_BORDER_WIDTH = 1;
+const PREVIEW_BORDER_ALPHA = 0.5;
+
 export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly body: Sprite
   private readonly previewEffectRoot: Container
@@ -38,6 +42,16 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   protected readonly scanlineTiling: TilingSprite;
   private scanlineTexture: Texture | null = null;
   private scanlineLoadStarted = false;
+
+  /** preview 白色固定宽度边框线 */
+  private readonly previewBorderGraphics: Graphics;
+
+  /** selection 特效：blueprint mask 平铺 + device mask 裁剪 */
+  private readonly selectionEffectRoot: Container;
+  private readonly selectionMask: Sprite;
+  protected readonly selectionTiling: TilingSprite;
+  private selectionTexture: Texture | null = null;
+  private selectionTextureLoadStarted = false;
 
   private defaultCollectionOverlayGraphics: Graphics | null = null;
 
@@ -69,9 +83,32 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.scanlineTiling.visible = false;
     this.scanlineTiling.mask = this.previewMask
 
+    // preview 白色固定边框线，位于扫描线之上
+    this.previewBorderGraphics = new Graphics({ roundPixels: true });
+    this.previewBorderGraphics.visible = false;
+
     this.previewEffectRoot.addChild(this.scanlineTiling)
     this.previewEffectRoot.addChild(this.previewMask)
+    this.previewEffectRoot.addChild(this.previewBorderGraphics)
     this.getRootOfLayer("overlay").addChild(this.previewEffectRoot)
+
+    // selection 特效：blueprint mask 平铺 + device mask 裁剪
+    this.selectionEffectRoot = new Container()
+    this.selectionEffectRoot.visible = false
+
+    this.selectionMask = new Sprite(Texture.EMPTY)
+    this.selectionMask.anchor.set(0.5)
+    this.selectionMask.roundPixels = true
+
+    this.selectionTiling = new TilingSprite({ texture: Texture.EMPTY, width: 0, height: 0 });
+    this.selectionTiling.anchor.set(0.5);
+    this.selectionTiling.roundPixels = true;
+    this.selectionTiling.visible = false;
+    this.selectionTiling.mask = this.selectionMask;
+
+    this.selectionEffectRoot.addChild(this.selectionTiling)
+    this.selectionEffectRoot.addChild(this.selectionMask)
+    this.getRootOfLayer("overlay").addChild(this.selectionEffectRoot)
 
     const bodyTextureLoad = this.renderHost.textureManager.getTexture(`device-sprite-${spriteId}`)
     const previewMaskTextureLoad = this.renderHost.textureManager.getTexture(`device-masks-${spriteId}`)
@@ -86,6 +123,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
       this.body.texture = bodyTexture
       this.previewMask.texture = previewMaskTexture
+      this.selectionMask.texture = previewMaskTexture
       this.isTextureReady = true
       this.body.visible = true
 
@@ -130,7 +168,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
     this.defaultCollectionOverlayGraphics?.clear();
     this.scanlineTiling.visible = false;
+    this.previewBorderGraphics.clear();
+    this.previewBorderGraphics.visible = false;
     this.previewEffectRoot.visible = false;
+    this.selectionEffectRoot.visible = false;
   }
 
   // ---- 三个 abstract overlay 方法实现 ----
@@ -171,6 +212,16 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     const phase = (context.time.nowMs % SCANLINE_SCROLL_INTERVAL_MS) / SCANLINE_SCROLL_INTERVAL_MS;
     this.scanlineTiling.tilePosition.x = phase * tilePixelSize;
 
+    // 白色固定宽度边框线，50% 不透明度
+    this.previewBorderGraphics.visible = true;
+    this.previewBorderGraphics
+      .rect(layout.x, layout.y, layout.width, layout.height)
+      .stroke({
+        width: PREVIEW_BORDER_WIDTH,
+        color: 0xffffff,
+        alpha: PREVIEW_BORDER_ALPHA,
+      });
+
     this.previewEffectRoot.visible = true;
   }
 
@@ -178,11 +229,25 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
-    this.drawCollectionOverlayStroke({
-      layout,
-      color: this.resolveSelectionCollectionOverlayColor(context),
-      width: this.resolveSelectionCollectionOverlayStrokeWidth(context),
-    });
+    if (!this.isTextureReady) {
+      return;
+    }
+
+    this.loadSelectionTexture();
+
+    // 以纹理原始像素尺寸平铺，不做 zoom 缩放
+    const tilePixelSize = this.selectionTexture?.width ?? 64;
+
+    this.selectionTiling.visible = true;
+    this.selectionTiling.x = layout.x + layout.width / 2;
+    this.selectionTiling.y = layout.y + layout.height / 2;
+    this.selectionTiling.rotation = 0;
+    this.selectionTiling.width = layout.width;
+    this.selectionTiling.height = layout.height;
+
+    void context;
+
+    this.selectionEffectRoot.visible = true;
   }
 
   // ---- overlay 辅助方法 ----
@@ -252,6 +317,25 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     });
   }
 
+  private loadSelectionTexture(): void {
+    if (this.selectionTextureLoadStarted) {
+      return;
+    }
+
+    this.selectionTextureLoadStarted = true;
+
+    void Assets.load<Texture>(BLUEPRINT_MASK_TEXTURE_PATH).then((texture) => {
+      if (this.disposed) {
+        return;
+      }
+
+      this.selectionTexture = texture;
+      this.selectionTiling.texture = texture;
+    }).catch(() => {
+      // blueprint mask 纹理加载失败，无伤大雅
+    });
+  }
+
   private ensureNotDisposed(): void {
     if (this.disposed) {
       throw new Error("Cannot use a destroyed render sprite.");
@@ -274,6 +358,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     applyCenteredSpriteLayout(this.body, normalizedLayout)
     applyCenteredSpriteLayout(this.previewMask, normalizedLayout)
+    applyCenteredSpriteLayout(this.selectionMask, normalizedLayout)
   }
 
 }

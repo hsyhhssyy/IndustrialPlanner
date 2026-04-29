@@ -1,6 +1,6 @@
 import { reaction } from "mobx";
 
-import type { AppHost } from "@/app/app-host";
+import type { AppHost } from "@/app/host/app-host";
 import {
   APP_THEME_COLOR_KEYS,
   type AppTheme,

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY,
   WorkbenchSettingsDialogController,
-} from "@/app/app-shell/settings-dialog-state";
+} from "@/app/shell/settings-dialog-state";
 
 describe("WorkbenchSettingsDialogController", () => {
   afterEach(() => {
