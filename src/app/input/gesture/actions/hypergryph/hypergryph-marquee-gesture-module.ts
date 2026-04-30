@@ -246,7 +246,7 @@ function enterMarqueeMode(options: {
   source: "mouse" | "touch";
 }): void {
   options.appHost.internalActions.setActiveTool("marquee");
-  options.appHost.workspace.editor?.actions.clearCollection(EntityCollectionType.selection);
+  // options.appHost.workspace.editor?.actions.clearCollection(EntityCollectionType.selection);
 
   if (options.source === "touch") {
     options.appHost.internalActions.showCanvasRightDockToolbar(MARQUEE_RIGHT_DOCK_BUTTON_IDS);
@@ -324,9 +324,11 @@ function exitMarqueeToSelect(appHost: AppHost, editor: EditorContract | null): v
   appHost.internalActions.setActiveTool("select");
 }
 
-export function cleanupMarquee(appHost: AppHost, editor: EditorContract | null): void {
+export function cleanupMarquee(appHost: AppHost, editor: EditorContract | null, skipClearSelection = false): void {
   editor?.actions.cancelMarquee();
-  editor?.actions.clearCollection(EntityCollectionType.selection);
+  if (!skipClearSelection) {
+    editor?.actions.clearCollection(EntityCollectionType.selection);
+  }
   appHost.internalState.runtime.marqueeAnchor = null;
   appHost.internalState.toolInfo.marqueeType = EntityCollectionType.marquee;
   appHost.internalActions.hideCanvasRightDockToolbar();
@@ -338,7 +340,8 @@ export function hookMarqueeToolCleanupFallback(appHost: AppHost): () => void {
     () => appHost.internalState.activeTool,
     (activeTool, previousActiveTool) => {
       if (previousActiveTool === "marquee" && activeTool !== "marquee") {
-        cleanupMarquee(appHost, appHost.workspace.editor);
+        const skipClearSelection = activeTool === "move";
+        cleanupMarquee(appHost, appHost.workspace.editor, skipClearSelection);
       }
     },
   );

@@ -23,6 +23,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
 
     expect(module.handle(keyDownEvent("KeyX"), context)).toEqual({ status: "handled" });
     expect(editor.actions.cancelMarquee).toHaveBeenCalledTimes(1);
+    expect(editor.actions.clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
     expect(appHost.internalState.activeTool).toBe("select");
     expect(appHost.internalState.runtime.marqueeAnchor).toBeNull();
     expect(appHost.state.toolInfo.marqueeType).toBe(EntityCollectionType.marquee);
@@ -241,6 +242,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
       ),
     ).toEqual({ status: "handled" });
     expect(exitContext.editor.actions.cancelMarquee).toHaveBeenCalledTimes(1);
+    expect(exitContext.editor.actions.clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
     expect(exitContext.appHost.internalState.activeTool).toBe("select");
     expect(exitContext.appHost.internalState.workbench.rightDockOpen).toBe(false);
   });
@@ -264,6 +266,7 @@ function createContext(options: {
       setMarqueeRange: vi.fn(),
       applyMarquee: vi.fn(),
       cancelMarquee: vi.fn(),
+      clearCollection: vi.fn(),
     },
     queries: {
       findGridCellForClientPixlePoint: vi.fn((point) => ({
@@ -348,6 +351,7 @@ type MockEditor = {
     EditorContract["actions"],
     | "applyMarquee"
     | "cancelMarquee"
+    | "clearCollection"
     | "setMarqueeRange"
   >;
   queries: Pick<

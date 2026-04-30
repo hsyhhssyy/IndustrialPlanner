@@ -14,8 +14,10 @@
     "test:watch": "vitest",
     "format-device-sprites": "node src/scripts/format-device-sprites.mjs",
     "split-device-sprites": "node src/scripts/split-device-sprites.mjs",
+    "generate-textures": "node src/scripts/texture-gen/generate-all-textures.mjs",
     "generate-liquid-port-chevron": "node src/scripts/texture-gen/generate-liquid-port-chevron.mjs",
-    "generate-solid-port-chevron": "node src/scripts/texture-gen/generate-solid-port-chevron.mjs"
+    "generate-solid-port-chevron": "node src/scripts/texture-gen/generate-solid-port-chevron.mjs",
+    "generate-flow-texture": "node src/scripts/texture-gen/generate-flow-texture.mjs"
   },
   "dependencies": {
     "mobx": "^6.15.0",

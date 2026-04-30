@@ -34,6 +34,12 @@ const BLUEPRINT_MASK_TEXTURE_PATH = "/textures/blueprint-mask-50opacity.png";
 const PREVIEW_BORDER_WIDTH = 1;
 const PREVIEW_BORDER_ALPHA = 0.5;
 
+const FLOW_GLOW_TEXTURE_PATH = "/textures/flow-glow.png";
+/** 边缘流光内边框粗细（px），默认 5px */
+const FLOW_GLOW_BORDER_WIDTH = 5;
+/** 流光滑动周期（ms） */
+const FLOW_GLOW_SCROLL_INTERVAL_MS = 2000;
+
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
 type PortEdge = PortDefinition["edge"];
@@ -70,6 +76,14 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   protected readonly selectionTiling: TilingSprite;
   private selectionTexture: Texture | null = null;
   private selectionTextureLoadStarted = false;
+
+  /** 边缘流光特效：flow-glow 纹理沿内边框平铺滚动 */
+  private readonly flowGlowEffectRoot: Container;
+  private readonly flowGlowTiling: TilingSprite;
+  private readonly flowGlowMask: Graphics;
+  private readonly flowGlowBorderGraphics: Graphics;
+  private flowGlowTexture: Texture | null = null;
+  private flowGlowTextureLoadStarted = false;
 
   private defaultCollectionOverlayGraphics: Graphics | null = null;
 
@@ -141,6 +155,27 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.selectionEffectRoot.addChild(this.selectionMask)
     this.getRootOfLayer("overlay").addChild(this.selectionEffectRoot)
 
+    // 边缘流光特效：flow-glow 纹理平铺 + 内边框环形 Graphics 遮罩
+    this.flowGlowEffectRoot = new Container()
+    this.flowGlowEffectRoot.visible = false
+
+    this.flowGlowMask = new Graphics();
+    this.flowGlowMask.renderable = false;
+
+    this.flowGlowTiling = new TilingSprite({ texture: Texture.EMPTY, width: 0, height: 0 });
+    this.flowGlowTiling.anchor.set(0.5);
+    this.flowGlowTiling.roundPixels = true;
+    this.flowGlowTiling.visible = false;
+    this.flowGlowTiling.mask = this.flowGlowMask;
+
+    // 内边框底色（不参与遮罩，绘制在 TilingSprite 下方）
+    this.flowGlowBorderGraphics = new Graphics({ roundPixels: true });
+
+    this.flowGlowEffectRoot.addChild(this.flowGlowBorderGraphics);
+    this.flowGlowEffectRoot.addChild(this.flowGlowTiling);
+    this.flowGlowEffectRoot.addChild(this.flowGlowMask);
+    this.getRootOfLayer("overlay").addChild(this.flowGlowEffectRoot);
+
     this.portOverlayRoot = new Container()
     this.portOverlayRoot.visible = false
     this.getRootOfLayer("overlay").addChild(this.portOverlayRoot)
@@ -207,6 +242,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.previewBorderGraphics.visible = false;
     this.previewEffectRoot.visible = false;
     this.selectionEffectRoot.visible = false;
+    this.flowGlowEffectRoot.visible = false;
     this.portOverlayRoot.visible = false;
     this.hidePortChevronSprites();
   }
@@ -275,6 +311,12 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     context: RenderSpriteSyncContext,
   ): void {
     if (!this.isTextureReady) {
+      return;
+    }
+
+    // 当只有自己处于 selection 中，且不是 marquee/move 模式时，使用边缘流光特效
+    if (this.shouldDrawFlowGlowOverlay(context)) {
+      this.drawFlowGlowOverlay(layout, context);
       return;
     }
 
@@ -389,6 +431,109 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.selectionTiling.texture = texture;
     }).catch(() => {
       // blueprint mask 纹理加载失败，无伤大雅
+    });
+  }
+
+  private shouldDrawFlowGlowOverlay(context: RenderSpriteSyncContext): boolean {
+    const collections = context.workspace.editor?.state.collections;
+    if (!collections) {
+      return false;
+    }
+
+    // 只有自己处于 selection 中
+    const selectionCollection = collections[EntityCollectionType.selection];
+    if (!isOnlyEntityInCollection(selectionCollection, this.entityId)) {
+      return false;
+    }
+
+    // 不是 marquee 模式
+    const activeTool = context.workspace.app?.state.activeTool;
+    if (activeTool === "marquee" || activeTool === "move") {
+      return false;
+    }
+
+    return true;
+  }
+
+  private drawFlowGlowOverlay(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void {
+    if (!this.isTextureReady) {
+      return;
+    }
+
+    this.loadFlowGlowTexture();
+
+    const borderWidth = FLOW_GLOW_BORDER_WIDTH;
+    const halfW = layout.width / 2;
+    const halfH = layout.height / 2;
+    const fullW = layout.width;
+    const fullH = layout.height;
+
+    // 1. 绘制内边框底色（solid inner border）
+    this.flowGlowBorderGraphics.clear();
+
+    const strokeColor = resolveAppThemeColorNumber(
+      context.theme,
+      context.theme.renderer.flowGlowStrokeColorKey,
+    );
+
+    // 绘制向内的矩形环（内边框）
+    this.flowGlowBorderGraphics
+      .rect(layout.x, layout.y, fullW, fullH)
+      .rect(layout.x + borderWidth, layout.y + borderWidth, fullW - borderWidth * 2, fullH - borderWidth * 2)
+      .fill({ color: strokeColor, fillRule: "evenodd" });
+
+    // 2. 更新内边框环形遮罩（与上述内边框形状一致，用于裁剪流光纹理）
+    this.flowGlowMask.clear();
+    this.flowGlowMask
+      .rect(-halfW, -halfH, fullW, fullH)
+      .rect(-halfW + borderWidth, -halfH + borderWidth, fullW - borderWidth * 2, fullH - borderWidth * 2)
+      .fill({ color: 0xffffff, fillRule: "evenodd" });
+    this.flowGlowMask.x = layout.x + halfW;
+    this.flowGlowMask.y = layout.y + halfH;
+
+    // 3. 流光纹理滚动
+    const tilePixelSize = this.flowGlowTexture?.width ?? 256;
+
+    this.flowGlowTiling.visible = true;
+    this.flowGlowTiling.x = layout.x + halfW;
+    this.flowGlowTiling.y = layout.y + halfH;
+    this.flowGlowTiling.rotation = 0;
+    this.flowGlowTiling.width = fullW;
+    this.flowGlowTiling.height = fullH;
+
+    // 流光水平滚动动画
+    const phase = (context.time.nowMs % FLOW_GLOW_SCROLL_INTERVAL_MS) / FLOW_GLOW_SCROLL_INTERVAL_MS;
+    this.flowGlowTiling.tilePosition.x = phase * tilePixelSize;
+
+    // 应用流光 tint 颜色
+    const tintColor = resolveAppThemeColorNumber(
+      context.theme,
+      context.theme.renderer.flowGlowTintColorKey,
+    );
+    this.flowGlowTiling.tint = tintColor;
+
+    this.flowGlowEffectRoot.visible = true;
+  }
+
+  private loadFlowGlowTexture(): void {
+    if (this.flowGlowTextureLoadStarted) {
+      return;
+    }
+
+    this.flowGlowTextureLoadStarted = true;
+
+    void Assets.load<Texture>(FLOW_GLOW_TEXTURE_PATH).then((texture) => {
+      if (this.disposed) {
+        return;
+      }
+
+      this.flowGlowTexture = texture;
+      this.flowGlowTiling.texture = texture;
+    }).catch(() => {
+      // flow-glow 纹理加载失败，无伤大雅
     });
   }
 

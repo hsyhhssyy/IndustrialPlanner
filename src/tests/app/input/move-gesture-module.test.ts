@@ -405,6 +405,61 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(appHost.gestureAdapter.handleUiButtonMouseTap).not.toHaveBeenCalled();
     expect(appHost.gestureAdapter.handleUiButtonTouchTap).not.toHaveBeenCalled();
   });
+
+  it("preserves selection through the marquee → move → marquee round-trip", () => {
+    const { context, editor, appHost, selection, preview } = createContext({
+      activeTool: "marquee",
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    // The real createMoveOperationDraft reads from selection but does NOT clear it.
+    // Override the mock to match the real implementation.
+    vi.mocked(editor.actions.createMoveOperationDraft).mockImplementation(() => {
+      const sourceEntityIds = [...selection];
+      preview.replace(["preview-entity"]);
+      vi.mocked(editor.state.collections[EntityCollectionType.ghost]).replace(sourceEntityIds);
+    });
+
+    // Push a second entity into selection so the round-trip preserves multiple entities.
+    selection.push("another-selected");
+
+    // Enter move from marquee via mouse long-press.
+    const enterResult = module.handle(
+      mouseLongPressReadyEvent({
+        pointerEntity: entity("selected-entity", { x: 2, y: 2 }),
+      }),
+      context,
+    );
+
+    expect(enterResult).toEqual({ status: "handled" });
+    expect(appHost.internalState.activeTool).toBe("move");
+    expect(appHost.internalState.runtime.moveEnterFrom).toBe("marquee");
+    expect([...selection]).toEqual(["selected-entity", "another-selected"]);
+
+    // Apply the move — the module should trigger a return to marquee
+    // without clearing selection.
+    const applyResult = module.handle(
+      mouseTapEvent({ button: 0, longPress: false }),
+      context,
+    );
+
+    expect(applyResult).toEqual({ status: "handled" });
+    expect(editor.actions.applyMoveOerationDraft).toHaveBeenCalledTimes(1);
+    expect(appHost.internalActions.setActiveTool).toHaveBeenCalledWith("select");
+    expect([...selection]).toEqual(["selected-entity", "another-selected"]);
+
+    // The marquee re-entry is delegated to the marquee gesture module via
+    // handleUiButtonMouseTap — selection clearing (or preservation) at that
+    // point is the marquee module's responsibility.
+    expect(appHost.gestureAdapter.handleUiButtonMouseTap).toHaveBeenCalledWith({
+      uiButtonId: "placement-tool-marquee",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+  });
 });
 
 function createContext(options: {

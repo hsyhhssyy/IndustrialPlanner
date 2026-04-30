@@ -28,6 +28,7 @@ import {
   isOrdinaryLogisticsDefinitionId,
   resolveEntityGridRect,
   resolveInputEndpointAtPointer,
+  resolveInputEndpointOnPath,
   resolveLogisticsDefinitionId,
   resolveLogisticsPathCells,
   resolveNearestDevicePortEndpoint,
@@ -96,6 +97,7 @@ export function createEditorLogisticsActions(
     moveLogisticEnd: (options) => {
       // TODO: 实现物流终点移动逻辑
       // 2026-04-30 订正：ST1-RQ-047 已实现 touch freehand 与 mouse single-bend 路径更新。
+      // 2026-04-30 修正：已吸附设备端口时，指针在设备内保持吸附，不深入设备内部。
       const draft = logisticsContext.state.internalTransientState.logisticsDraft;
       if (draft === null || draft.source === null) {
         return createIgnoredLogisticsActionResult();
@@ -110,21 +112,70 @@ export function createEditorLogisticsActions(
         return createIgnoredLogisticsActionResult();
       }
 
-      const target = resolveInputEndpointAtPointer({
+      const currentDocument = logisticsContext.document.getSnapshot();
+
+      if (draft.target?.type === "device-port") {
+        const targetEntity = currentDocument.entities[draft.target.entityId];
+        if (targetEntity !== undefined) {
+          const targetDefinition = logisticsContext.entityDefinitionMap.get(
+            targetEntity.definitionId,
+          );
+          if (
+            targetDefinition !== undefined
+            && isGridPointInsideRect(
+              options.pointerGridPoint,
+              resolveEntityGridRect({
+                entity: targetEntity,
+                definition: targetDefinition,
+              }),
+            )
+          ) {
+            return createLogisticsActionResultFromDraft(draft);
+          }
+        }
+      }
+
+      const cursorTarget = resolveInputEndpointAtPointer({
         pointerGridPoint: options.pointerGridPoint,
         kind: draft.kind,
-        document: logisticsContext.document.getSnapshot(),
+        document: currentDocument,
         drafts: [],
         entityDefinitionMap: logisticsContext.entityDefinitionMap,
       });
-      const targetPoint = target?.outsideGridPoint ?? options.pointerGridPoint;
 
       if (options.routeMode.type === "freehand") {
         const currentPoints = draft.cells.map((cell) => cell.gridPoint);
-        const points = appendFreehandPathPoints({
+
+        const tentativePoints = appendFreehandPathPoints({
           points: currentPoints,
-          pointerGridPoint: targetPoint,
+          pointerGridPoint: options.pointerGridPoint,
         });
+
+        const onPathPort = resolveInputEndpointOnPath({
+          pathPoints: tentativePoints,
+          kind: draft.kind,
+          document: currentDocument,
+          entityDefinitionMap: logisticsContext.entityDefinitionMap,
+        });
+
+        let target: DevicePortEndpoint | null = onPathPort
+          ?? cursorTarget;
+        let points: GridPoint[] = tentativePoints;
+
+        if (target !== null) {
+          const outsideIndex = tentativePoints.findIndex(
+            (p) => areGridPointsEqual(p, target.outsideGridPoint),
+          );
+          if (outsideIndex >= 0) {
+            points = tentativePoints.slice(0, outsideIndex + 1);
+          } else {
+            points = appendFreehandPathPoints({
+              points: currentPoints,
+              pointerGridPoint: target.outsideGridPoint,
+            });
+          }
+        }
+
         if (
           shouldKeepDraftWhenFirstStepMovesTowardFixedSourceInput({
             context: logisticsContext,
@@ -152,16 +203,35 @@ export function createEditorLogisticsActions(
         context: logisticsContext,
         kind: draft.kind,
         source,
-        targetPoint,
+        targetPoint: options.pointerGridPoint,
         replacingEntityId: draft.replacingEntityId,
         routeOrder: options.routeMode.routeOrder,
         allowTemporaryOrderFlip: options.routeMode.allowTemporaryOrderFlip,
       });
-      const points = generateSingleBendPathPoints({
+
+      let points = generateSingleBendPathPoints({
         start: resolveSourceStartGridPoint(source),
-        target: targetPoint,
+        target: options.pointerGridPoint,
         routeOrder,
       });
+
+      const onPathPort = resolveInputEndpointOnPath({
+        pathPoints: points,
+        kind: draft.kind,
+        document: currentDocument,
+        entityDefinitionMap: logisticsContext.entityDefinitionMap,
+      });
+
+      const target = onPathPort ?? cursorTarget;
+
+      if (target !== null) {
+        points = generateSingleBendPathPoints({
+          start: resolveSourceStartGridPoint(source),
+          target: target.outsideGridPoint,
+          routeOrder,
+        });
+      }
+
       if (
         shouldKeepDraftWhenFirstStepMovesTowardFixedSourceInput({
           context: logisticsContext,

@@ -177,7 +177,8 @@ export function resolveInputEndpointAtPointer(options: {
   });
 
   const endpointsAtPointer = endpoints.filter((endpoint) =>
-    areGridPointsEqual(endpoint.insideGridPoint, options.pointerGridPoint),
+    areGridPointsEqual(endpoint.insideGridPoint, options.pointerGridPoint)
+    || areGridPointsEqual(endpoint.outsideGridPoint, options.pointerGridPoint),
   );
   if (endpointsAtPointer.length === 0) {
     return null;
@@ -193,6 +194,53 @@ export function resolveInputEndpointAtPointer(options: {
     const groupDelta = left.portGroupId.localeCompare(right.portGroupId);
     return groupDelta !== 0 ? groupDelta : left.portId.localeCompare(right.portId);
   })[0] ?? null;
+}
+
+export function resolveInputEndpointOnPath(options: {
+  pathPoints: readonly GridPoint[];
+  kind: LogisticsKind;
+  document: WorldDocument;
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+}): DevicePortEndpoint | null {
+  for (let i = 0; i < options.pathPoints.length - 1; i += 1) {
+    const current = options.pathPoints[i];
+    const next = options.pathPoints[i + 1];
+
+    if (current === undefined || next === undefined) {
+      continue;
+    }
+
+    const entity = findTopEntityAtGridPoint({
+      gridPoint: next,
+      document: options.document,
+      drafts: [],
+      entityDefinitionMap: options.entityDefinitionMap,
+    });
+    if (entity === null || isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)) {
+      continue;
+    }
+
+    const definition = options.entityDefinitionMap.get(entity.definitionId);
+    if (definition === undefined) {
+      continue;
+    }
+
+    const endpoints = resolveDevicePortEndpoints({
+      entity,
+      definition,
+      kind: options.kind,
+      direction: "input",
+      pointerGridPoint: next,
+    });
+
+    for (const endpoint of endpoints) {
+      if (areGridPointsEqual(current, endpoint.outsideGridPoint)) {
+        return endpoint;
+      }
+    }
+  }
+
+  return null;
 }
 
 export function resolveDevicePortEndpoints(options: {
