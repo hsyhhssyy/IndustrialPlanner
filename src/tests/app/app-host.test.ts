@@ -1106,6 +1106,99 @@ describe("createAppHost", () => {
     expect(logisticsDraft?.cells.at(-1)?.gridPoint).toEqual({ x: 0, y: 2 });
   });
 
+  it("lets touch drags away from an unfinished logistics head fall through to viewport pan", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+    const panSpy = vi.spyOn(editorHost.actions, "moveViewportByClientPixelVector");
+    const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
+    const headPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 2 });
+    const otherStartPoint = resolveClientPixelPointForGridCell(editorHost, { x: 4, y: 4 });
+    const otherEndPoint = resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 4 });
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "placement-action-belt-draw",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+    appHost.gestureAdapter.handlePointerDown(touchEvent(71, startPoint.x, startPoint.y));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(71, headPoint.x, headPoint.y));
+    appHost.gestureAdapter.handlePointerUp(touchEvent(71, headPoint.x, headPoint.y));
+
+    const beforeDraft = editorHost.queries.resolveLogisticsDraftState();
+    const beforeCells = beforeDraft?.cells.map((cell) => ({
+      gridPoint: cell.gridPoint,
+      shape: cell.shape,
+      rotation: cell.rotation,
+    }));
+    const beforePreview = [...editorHost.state.collections.preview];
+
+    appHost.gestureAdapter.handlePointerDown(touchEvent(72, otherStartPoint.x, otherStartPoint.y));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(72, otherEndPoint.x, otherEndPoint.y));
+
+    const afterDraft = editorHost.queries.resolveLogisticsDraftState();
+    expect(panSpy).toHaveBeenCalled();
+    expect(editorHost.state.collections.preview).toEqual(beforePreview);
+    expect(afterDraft?.source).toEqual(beforeDraft?.source);
+    expect(afterDraft?.cells.map((cell) => ({
+      gridPoint: cell.gridPoint,
+      shape: cell.shape,
+      rotation: cell.rotation,
+    }))).toEqual(beforeCells);
+  });
+
+  it("continues touch logistics drafts only when dragging from the logistics head", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+    const panSpy = vi.spyOn(editorHost.actions, "moveViewportByClientPixelVector");
+    const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
+    const headPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 2 });
+    const nextHeadPoint = resolveClientPixelPointForGridCell(editorHost, { x: 1, y: 2 });
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "placement-action-belt-draw",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+    appHost.gestureAdapter.handlePointerDown(touchEvent(81, startPoint.x, startPoint.y));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(81, headPoint.x, headPoint.y));
+    appHost.gestureAdapter.handlePointerUp(touchEvent(81, headPoint.x, headPoint.y));
+    panSpy.mockClear();
+
+    appHost.gestureAdapter.handlePointerDown(touchEvent(82, headPoint.x, headPoint.y));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(82, nextHeadPoint.x, nextHeadPoint.y));
+
+    const logisticsDraft = editorHost.queries.resolveLogisticsDraftState();
+    expect(panSpy).not.toHaveBeenCalled();
+    expect(logisticsDraft).toMatchObject({
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 0, y: 0 },
+      },
+    });
+    expect(logisticsDraft?.cells.at(-1)?.gridPoint).toEqual({ x: 1, y: 2 });
+    expect(editorHost.state.collections[EntityCollectionType.logisticsHead]).toEqual([
+      editorHost.state.collections.preview.at(-1),
+    ]);
+  });
+
   it("switches from logistics-placement to current logistics device placement on number shortcuts", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

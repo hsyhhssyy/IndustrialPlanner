@@ -289,6 +289,20 @@ function handleTouchDragStart(options: {
     return { status: "ignored" };
   }
 
+  if (options.editor.queries.resolveLogisticsDraftState() !== null) {
+    if (!isTouchDragStartOnLogisticsHead(options.editor, options.startPosition)) {
+      return { status: "ignored" };
+    }
+
+    options.appHost.internalState.runtime.logisticsPlacement.pointerMode = "touch";
+    moveTouchLogisticsEnd({
+      appHost: options.appHost,
+      editor: options.editor,
+      gridPoint: pointerGridPoint,
+    });
+    return { status: "claimed" };
+  }
+
   const endpoint = options.editor.queries.findLogisticsDraftEndpointAtGridPoint(
     startGridPoint,
     kind,
@@ -799,6 +813,17 @@ function resolveGridPointFromGesturePosition(
   }
 
   return editor.queries.findGridCellForClientPixlePoint(position);
+}
+
+function isTouchDragStartOnLogisticsHead(
+  editor: NonNullable<AppHost["workspace"]["editor"]>,
+  startPosition: GesturePosition,
+): boolean {
+  const startEntity = editor.queries.findEntityAtClientPixelPoint(startPosition);
+  return (
+    startEntity !== null
+    && editor.state.collections[EntityCollectionType.logisticsHead].contains(startEntity.id)
+  );
 }
 
 function resolveViewportCenterGridPoint(
