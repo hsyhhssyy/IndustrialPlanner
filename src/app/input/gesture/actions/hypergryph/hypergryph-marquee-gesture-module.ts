@@ -246,6 +246,7 @@ function enterMarqueeMode(options: {
   source: "mouse" | "touch";
 }): void {
   options.appHost.internalActions.setActiveTool("marquee");
+  options.appHost.workspace.editor?.actions.clearCollection(EntityCollectionType.selection);
 
   if (options.source === "touch") {
     options.appHost.internalActions.showCanvasRightDockToolbar(MARQUEE_RIGHT_DOCK_BUTTON_IDS);
@@ -325,6 +326,7 @@ function exitMarqueeToSelect(appHost: AppHost, editor: EditorContract | null): v
 
 export function cleanupMarquee(appHost: AppHost, editor: EditorContract | null): void {
   editor?.actions.cancelMarquee();
+  editor?.actions.clearCollection(EntityCollectionType.selection);
   appHost.internalState.runtime.marqueeAnchor = null;
   appHost.internalState.toolInfo.marqueeType = EntityCollectionType.marquee;
   appHost.internalActions.hideCanvasRightDockToolbar();

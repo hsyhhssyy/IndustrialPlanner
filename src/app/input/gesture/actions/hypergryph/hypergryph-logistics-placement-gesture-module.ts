@@ -26,6 +26,10 @@ const LOGISTICS_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-ok",
 ] as const;
 
+const LOGISTICS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS = [
+  "canvas-right-dock-toolbar-button-exit",
+] as const;
+
 const BELT_DRAW_BUTTON_ID = "placement-action-belt-draw";
 const PIPE_DRAW_BUTTON_ID = "placement-action-pipe-draw";
 
@@ -170,8 +174,13 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
 
         case "mouse tap":
           if (event.button === 2) {
-            cancelLogisticsPlacement(context.appHost, editor);
-            context.appHost.internalActions.setActiveTool("select");
+            const draftState = editor.queries.resolveLogisticsDraftState();
+            if (draftState !== null) {
+              cancelLogisticsPlacement(context.appHost, editor);
+              return { status: "handled" };
+            }
+
+            exitLogisticsPlacementToSelect(context.appHost, editor);
             return { status: "handled" };
           }
 
@@ -199,7 +208,11 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
 
           if (event.uiButtonId === "canvas-floating-toolbar-button-cancel") {
             cancelLogisticsPlacement(context.appHost, editor);
-            context.appHost.internalActions.setActiveTool("select");
+            return { status: "handled" };
+          }
+
+          if (event.uiButtonId === "canvas-right-dock-toolbar-button-exit") {
+            exitLogisticsPlacementToSelect(context.appHost, editor);
             return { status: "handled" };
           }
 
@@ -220,6 +233,7 @@ export function cleanupLogisticsPlacement(appHost: AppHost): void {
 
   resetLogisticsRuntime(appHost);
   appHost.internalActions.hideCanvasFloatingToolbar();
+  appHost.internalActions.hideCanvasRightDockToolbar();
 }
 
 export function hookLogisticsPlacementToolCleanupFallback(appHost: AppHost): () => void {
@@ -253,6 +267,14 @@ function enterLogisticsPlacementMode(options: {
   options.appHost.internalState.runtime.selectingPlacementGroup = runtime.shortcutPlacementGroup;
   options.appHost.internalActions.hideCanvasFloatingToolbar();
   options.appHost.internalActions.setActiveTool("logistics-placement");
+  options.editor.actions.clearCollection(EntityCollectionType.selection);
+
+  if (options.pointerMode === "touch") {
+    options.appHost.internalActions.showCanvasRightDockToolbar(LOGISTICS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS);
+    if (options.appHost.internalState.workbench.rightDockOpen) {
+      options.appHost.internalActions.toggleRightDock();
+    }
+  }
 }
 
 function handleTouchTap(options: {
@@ -596,9 +618,8 @@ function applyTouchLogisticsPlacement(
     return;
   }
 
-  resetLogisticsRuntime(appHost);
+  softResetLogisticsRuntime(appHost);
   appHost.internalActions.hideCanvasFloatingToolbar();
-  appHost.internalActions.setActiveTool("select");
 }
 
 function moveTouchLogisticsEnd(options: {
@@ -661,8 +682,22 @@ function cancelLogisticsPlacement(
   editor: NonNullable<AppHost["workspace"]["editor"]>,
 ): void {
   editor.actions.cancelLogisticsDraft();
+  softResetLogisticsRuntime(appHost);
+  appHost.internalActions.hideCanvasFloatingToolbar();
+}
+
+function exitLogisticsPlacementToSelect(
+  appHost: AppHost,
+  editor: NonNullable<AppHost["workspace"]["editor"]> | null,
+): void {
+  if (editor !== null) {
+    safelyCancelLogisticsDraft(editor);
+  }
+
   resetLogisticsRuntime(appHost);
   appHost.internalActions.hideCanvasFloatingToolbar();
+  appHost.internalActions.hideCanvasRightDockToolbar();
+  appHost.internalActions.setActiveTool("select");
 }
 
 function handleRouteOrderShortcut(options: {
@@ -794,6 +829,16 @@ function resetLogisticsRuntime(appHost: AppHost): void {
   runtime.pointerMode = null;
   runtime.phase = "idle";
   runtime.routeOrder = "vertical-first";
+  runtime.sourceEntityId = null;
+  runtime.targetEntityId = null;
+  runtime.anchorGridPoint = null;
+  runtime.headGridPoint = null;
+  runtime.statusMessageKey = null;
+}
+
+function softResetLogisticsRuntime(appHost: AppHost): void {
+  const runtime = appHost.internalState.runtime.logisticsPlacement;
+  runtime.phase = "idle";
   runtime.sourceEntityId = null;
   runtime.targetEntityId = null;
   runtime.anchorGridPoint = null;

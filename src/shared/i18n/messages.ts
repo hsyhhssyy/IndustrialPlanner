@@ -197,6 +197,7 @@ export type MessageKey =
   | "uiGroup.warehouse"
   | "uiGroup.basicProduction"
   | "uiGroup.advancedManufacturing"
+  | "registry.entity.item_port_filling_pd_mc_1.name"
   | "uiGroup.hidden";
 
 const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
@@ -397,6 +398,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "uiGroup.warehouse": "仓库存取",
     "uiGroup.basicProduction": "基础生产",
     "uiGroup.advancedManufacturing": "合成制造",
+    "registry.entity.item_port_filling_pd_mc_1.name": "灌装机",
     "uiGroup.hidden": "隐藏设备",
   },
   "en-US": {
@@ -596,6 +598,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "uiGroup.warehouse": "Warehouse Access",
     "uiGroup.basicProduction": "Basic Production",
     "uiGroup.advancedManufacturing": "Advanced Manufacturing",
+    "registry.entity.item_port_filling_pd_mc_1.name": "Bottling Machine",
     "uiGroup.hidden": "Hidden Devices",
   },
 };

@@ -433,9 +433,13 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return;
     }
 
+    // 物流模式下根据是否已起笔决定显示出口还是入口箭头
+    const directionFilter = this.resolveLogisticsPortDirectionFilter(context);
+
     const portChevronSpecs = resolvePortChevronSpecs({
       definition: this.definition,
       layout,
+      directionFilter,
     });
 
     if (portChevronSpecs.length === 0) {
@@ -490,13 +494,46 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private shouldDrawPortOverlay(context: RenderSpriteSyncContext): boolean {
     const collections = context.workspace.editor!.state.collections;
 
-    return isOnlyEntityInCollection(
+    if (isOnlyEntityInCollection(
       collections[EntityCollectionType.selection],
       this.entityId,
     ) || isOnlyEntityInCollection(
       collections[EntityCollectionType.preview],
       this.entityId,
-    );
+    )) {
+      return true;
+    }
+
+    // 传送带模式下，对所有设备显示端口箭头
+    if (context.workspace.app?.state.activeTool === "logistics-placement") {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 物流模式下，根据是否已起笔（已有 head）决定显示出口还是入口箭头：
+   * - 未起笔（无 draft / headDraftEntityId 为 null）：显示 output（出口）箭头
+   * - 已起笔（有 draft 且 headDraftEntityId 非 null）：显示 input（入口/终点）箭头
+   * - 非物流模式返回 null，不过滤
+   */
+  private resolveLogisticsPortDirectionFilter(
+    context: RenderSpriteSyncContext,
+  ): "input" | "output" | null {
+    if (context.workspace.app?.state.activeTool !== "logistics-placement") {
+      return null;
+    }
+
+    const draft = context.workspace.editor?.queries?.resolveLogisticsDraftState?.();
+
+    if (draft && draft.headDraftEntityId !== null) {
+      // 已起笔 → 显示入口箭头（可作为终点连接的目标设备）
+      return "input";
+    }
+
+    // 未起笔 → 显示出口箭头（可作为起点的设备）
+    return "output";
   }
 
   private shouldDrawLogisticsEndpointOverlay(context: RenderSpriteSyncContext): boolean {
@@ -573,6 +610,7 @@ function isOnlyEntityInCollection(
 function resolvePortChevronSpecs(options: {
   definition: EntityDefinition;
   layout: RenderSpriteLayout;
+  directionFilter?: "input" | "output" | null;
 }): {
   textureKey: PortChevronTextureKey;
   x: number;
@@ -591,6 +629,16 @@ function resolvePortChevronSpecs(options: {
   }[] = [];
 
   for (const portGroup of options.definition.portGroups) {
+    // 按方向过滤：bidirectional 端口在两个方向都显示
+    if (options.directionFilter) {
+      if (
+        portGroup.direction !== options.directionFilter
+        && portGroup.direction !== "bidirectional"
+      ) {
+        continue;
+      }
+    }
+
     const material = resolvePortChevronMaterial(options.definition, portGroup);
     const direction = resolvePortChevronDirection(portGroup.direction);
     const textureKey = `${material}-${direction}` as PortChevronTextureKey;

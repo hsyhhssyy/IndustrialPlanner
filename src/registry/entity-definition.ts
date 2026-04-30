@@ -285,7 +285,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   {
     id: "item_port_liquid_filling_pd_mc_1",
     nameKey: "registry.entity.item_port_liquid_filling_pd_mc_1.name",
-    spriteId: "item_port_liquid_filling_pd_mc_1",
+    spriteId: "item_port_filling_pd_mc_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "basicProduction",
     tags: [],
@@ -334,6 +334,48 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_fluid_input", "fluid_input", "fluid_input_buffer"),
+      createBinding("bind_item_output", "item_output", "item_output_buffer"),
+    ],
+  },
+  {
+    id: "item_port_filling_pd_mc_1",
+    nameKey: "registry.entity.item_port_filling_pd_mc_1.name",
+    spriteId: "item_port_filling_pd_mc_1",
+    footprint: { width: 6, height: 4 },
+    uiGroup: "basicProduction",
+    tags: [],
+    requiresPower: true,
+    powerDemand: 20,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+    ],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "item_input_buffer",
+        "item",
+        "input",
+        createSlots("input_item_slot", [50,50], "solid"),
+      ),
+      createStorageSlotGroup(
+        "item_output_buffer",
+        "item",
+        "output",
+        createSlots("output_slot", [50], "solid"),
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
   },
