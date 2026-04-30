@@ -652,7 +652,7 @@ function isRotatePlacementShortcut(options: {
   return options.key?.trim().toLowerCase() === "r";
 }
 
-function resolvePlacementGroupByShortcut(options: {
+export function resolvePlacementGroupByShortcut(options: {
   appHost: AppHost;
   code: string | null;
   key: string | null;
@@ -711,7 +711,7 @@ function normalizeShortcut(shortcut: string): string {
   return shortcut.trim().toLowerCase();
 }
 
-function resolveDeviceShortcutIndex(options: {
+export function resolveDeviceShortcutIndex(options: {
   code: string | null;
   key: string | null;
   modifiers: {
@@ -752,7 +752,7 @@ function resolveDeviceShortcutFromCode(code: string | null): typeof DEVICE_SHORT
   return DEVICE_SHORTCUT_KEYS.find((shortcut) => shortcut === digit);
 }
 
-function resolveDeviceIdForPlacementGroupShortcut(options: {
+export function resolveDeviceIdForPlacementGroupShortcut(options: {
   registry: RegistryContract;
   group: PlacementGroup;
   shortcutIndex: number;

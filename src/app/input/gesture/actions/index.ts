@@ -9,6 +9,11 @@ export {
 } from "./gesture-action-router";
 export { createHypergryphGestureDiagnosticsModule } from "./hypergryph/hypergryph-gesture-diagnostics-module";
 export {
+  cleanupLogisticsPlacement,
+  createHypergryphLogisticsPlacementGestureModule,
+  hookLogisticsPlacementToolCleanupFallback,
+} from "./hypergryph/hypergryph-logistics-placement-gesture-module";
+export {
   cleanupMarquee,
   createHypergryphMarqueeGestureModule,
   hookMarqueeToolCleanupFallback,

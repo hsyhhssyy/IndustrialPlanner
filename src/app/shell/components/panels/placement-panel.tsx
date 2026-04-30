@@ -104,6 +104,9 @@ const BELT_DRAW_OPERATION_BUTTON: PlacementButtonDefinition = {
   labelKey: "workbench.button.beltDraw",
   iconSrc: "/device-icons/item_log_belt_01.webp",
   hotkeyKeyId: SHORTCUT_KEY.PLACE_CONVEYOR,
+  activeWhen: (appHost) =>
+    appHost.state.activeTool === "logistics-placement"
+    && appHost.internalState.runtime.logisticsPlacement.kind === "belt",
 };
 
 const PIPE_DRAW_OPERATION_BUTTON: PlacementButtonDefinition = {
@@ -111,6 +114,9 @@ const PIPE_DRAW_OPERATION_BUTTON: PlacementButtonDefinition = {
   labelKey: "workbench.button.pipeDraw",
   iconSrc: "/device-icons/item_log_pipe_01.webp",
   hotkeyKeyId: SHORTCUT_KEY.PLACE_PIPE,
+  activeWhen: (appHost) =>
+    appHost.state.activeTool === "logistics-placement"
+    && appHost.internalState.runtime.logisticsPlacement.kind === "pipe",
 };
 
 // ─── 动态构建设备分组 ───
@@ -267,8 +273,13 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
 
       {deviceSections.map((section, sectionIndex) => {
         const sectionTitleId = `placement-device-section-${sectionIndex}`;
-        const isPlacementGroupActive = appHost.state.activeTool === "select"
-          && appHost.internalState.runtime.selectingPlacementGroup === section.uiGroup;
+        const isPlacementGroupActive = (
+          appHost.state.activeTool === "select"
+          && appHost.internalState.runtime.selectingPlacementGroup === section.uiGroup
+        ) || (
+          appHost.state.activeTool === "logistics-placement"
+          && appHost.internalState.runtime.logisticsPlacement.shortcutPlacementGroup === section.uiGroup
+        );
 
         return (
           <Fragment key={section.titleKey}>

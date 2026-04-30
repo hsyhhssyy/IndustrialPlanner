@@ -5,6 +5,10 @@ import {
 import type { GestureActionRouter } from "./gesture-action-router";
 import { createHypergryphGestureDiagnosticsModule } from "./hypergryph/hypergryph-gesture-diagnostics-module";
 import {
+  createHypergryphLogisticsPlacementGestureModule,
+  hookLogisticsPlacementToolCleanupFallback,
+} from "./hypergryph/hypergryph-logistics-placement-gesture-module";
+import {
   createHypergryphMarqueeGestureModule,
   hookMarqueeToolCleanupFallback,
 } from "./hypergryph/hypergryph-marquee-gesture-module";
@@ -33,9 +37,11 @@ export class AppGestureModuleRegistrar {
 
   public constructor(options: AppGestureModuleRegistrarOptions) {
     this.unregisterModules.push(
+      hookLogisticsPlacementToolCleanupFallback(options.appHost),
       hookMoveToolCleanupFallback(options.appHost),
       hookSinglePlacementToolCleanupFallback(options.appHost),
       hookMarqueeToolCleanupFallback(options.appHost),
+      options.router.registerModule(createHypergryphLogisticsPlacementGestureModule()),
       options.router.registerModule(createHypergryphSinglePlacementGestureModule()),
       options.router.registerModule(createHypergryphMoveGestureModule()),
       options.router.registerModule(createHypergryphMarqueeGestureModule()),

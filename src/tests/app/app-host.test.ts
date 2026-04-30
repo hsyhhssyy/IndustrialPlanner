@@ -4,6 +4,7 @@ import { runInAction } from "mobx";
 import { createAppHost } from "@/app/host/app-host";
 import type {
   GestureEvent,
+  GestureKeyboardEventLike,
   GesturePointerEventLike,
   GestureWheelEventLike,
 } from "@/app/input/gesture/adapter";
@@ -45,6 +46,7 @@ describe("createAppHost", () => {
     expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.size).toBe(0);
     expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual([
       "hypergryph-gesture-diagnostics",
+      "hypergryph-logistics-placement-gesture",
       "hypergryph-single-placement-gesture",
       "hypergryph-move-gesture",
       "hypergryph-marquee-gesture",
@@ -948,6 +950,202 @@ describe("createAppHost", () => {
     expect(editorHost.state.collections.preview).toEqual([]);
   });
 
+  it("enters logistics-placement from E/Q and arms logistics device shortcuts", () => {
+    const workspace = createWorkspace();
+    createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyE",
+      key: "e",
+      keyCode: 69,
+    }));
+
+    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+    expect(appHost.internalState.runtime.logisticsPlacement.kind).toBe("belt");
+    expect(appHost.internalState.runtime.logisticsPlacement.shortcutPlacementGroup).toBe(
+      "beltLogistics",
+    );
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyQ",
+      key: "q",
+      keyCode: 81,
+    }));
+
+    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+    expect(appHost.internalState.runtime.logisticsPlacement.kind).toBe("pipe");
+    expect(appHost.internalState.runtime.logisticsPlacement.shortcutPlacementGroup).toBe(
+      "pipeLogistics",
+    );
+  });
+
+  it("draws, applies, and continues mouse logistics placement from the previous head", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+    const initialEntityOrderLength = editorHost.document.getSnapshot().entityOrder.length;
+    const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
+    const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 2, y: 0 });
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyE",
+      key: "e",
+      keyCode: 69,
+    }));
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 41,
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 41,
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 42,
+      clientX: endPoint.x,
+      clientY: endPoint.y,
+      buttons: 0,
+    }));
+
+    let logisticsDraft = editorHost.queries.resolveLogisticsDraftState();
+    expect(logisticsDraft).toMatchObject({
+      canApply: true,
+    });
+    expect(logisticsDraft?.cells.at(-1)?.gridPoint).toEqual({ x: 2, y: 0 });
+    expect(editorHost.state.collections[EntityCollectionType.logisticsHead]).toEqual([
+      editorHost.state.collections.preview.at(-1),
+    ]);
+
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 43,
+      clientX: endPoint.x,
+      clientY: endPoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 43,
+      clientX: endPoint.x,
+      clientY: endPoint.y,
+      buttons: 0,
+    }));
+
+    const snapshot = editorHost.document.getSnapshot();
+    const headEntity = Object.values(snapshot.entities).find((entity) =>
+      entity.definitionId.startsWith("belt_")
+      && entity.position.x === 2
+      && entity.position.y === 0,
+    );
+
+    expect(headEntity).toBeDefined();
+    expect(snapshot.entityOrder).toHaveLength(initialEntityOrderLength + 3);
+    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+    logisticsDraft = editorHost.queries.resolveLogisticsDraftState();
+    expect(logisticsDraft).toMatchObject({
+      canApply: true,
+      source: {
+        type: "logistics-entity",
+        entityId: headEntity?.id,
+      },
+    });
+    expect(logisticsDraft?.cells.at(-1)?.gridPoint).toEqual({ x: 2, y: 0 });
+    expect(editorHost.state.collections.ghost).toEqual([headEntity?.id]);
+  });
+
+  it("creates touch logistics drafts from the press cell and anchors the toolbar to logistics head", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+    const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
+    const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 2 });
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "placement-action-belt-draw",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+    appHost.gestureAdapter.handlePointerDown(touchEvent(51, startPoint.x, startPoint.y));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(51, endPoint.x, endPoint.y));
+
+    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+    expect(appHost.internalState.runtime.logisticsPlacement.pointerMode).toBe("touch");
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection).toBe(
+      EntityCollectionType.logisticsHead,
+    );
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.buttonIds).toEqual([
+      "canvas-floating-toolbar-button-cancel",
+      "canvas-floating-toolbar-button-ok",
+    ]);
+    const logisticsDraft = editorHost.queries.resolveLogisticsDraftState();
+    expect(logisticsDraft).toMatchObject({
+      canApply: true,
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 0, y: 0 },
+      },
+    });
+    expect(logisticsDraft?.cells.at(-1)?.gridPoint).toEqual({ x: 0, y: 2 });
+  });
+
+  it("switches from logistics-placement to current logistics device placement on number shortcuts", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+    const expectedDeviceId = workspace.registry.entityDefinitions
+      .filter((definition) => definition.uiGroup === "beltLogistics")
+      .sort((left, right) => left.id.localeCompare(right.id))[0]?.id;
+    const anchorPoint = resolveClientPixelPointForGridCell(editorHost, { x: 3, y: 2 });
+
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 61,
+      clientX: anchorPoint.x,
+      clientY: anchorPoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyE",
+      key: "e",
+      keyCode: 69,
+    }));
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "Digit1",
+      key: "1",
+      keyCode: 49,
+    }));
+
+    expect(expectedDeviceId).toBeDefined();
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(appHost.internalState.runtime.logisticsPlacement.kind).toBeNull();
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe(expectedDeviceId);
+    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 3, y: 2 });
+    expect(editorHost.state.collections.preview).toHaveLength(1);
+  });
+
   it("clears selected placement groups on active tool changes except select to placement", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
@@ -1047,6 +1245,21 @@ function touchEvent(
     button: 0,
     buttons: 1,
   });
+}
+
+function keyEvent(
+  overrides: Partial<GestureKeyboardEventLike>,
+): GestureKeyboardEventLike {
+  return {
+    code: "",
+    key: "",
+    keyCode: 0,
+    altKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+    ...overrides,
+  };
 }
 
 function wheelEvent(

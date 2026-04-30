@@ -272,18 +272,20 @@ function createContext(options: {
       })),
     },
   };
+  const toolInfo = {
+    marqueeType: EntityCollectionType.marquee,
+  };
   const appHost = {
     state: {
       settings: {
         hypergryphOperationMode: true,
         hypergryphImmediateMarquee: options.hypergryphImmediateMarquee ?? false,
       },
-      toolInfo: {
-        marqueeType: EntityCollectionType.marquee,
-      },
+      toolInfo,
     },
     internalState: {
       activeTool: options.activeTool ?? "select",
+      toolInfo,
       workbench: {
         rightDockOpen: options.rightDockOpen ?? true,
       },
