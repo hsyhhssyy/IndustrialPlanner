@@ -761,6 +761,125 @@ describe("createEditorHost", () => {
     });
   });
 
+  it("keeps an existing-source logistics draft when the first step points back into its connected predecessor", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    document.entities["dummy-entity-1"] = {
+      ...document.entities["dummy-entity-1"]!,
+      position: { x: 12, y: 8 },
+      rotation: 180,
+    };
+    document.entities["dummy-belt-predecessor"] = {
+      id: "dummy-belt-predecessor",
+      definitionId: "belt_straight_1x1",
+      position: { x: 13, y: 8 },
+      rotation: 180,
+      config: {},
+      tags: [],
+    };
+    document.entityOrder = [
+      ...document.entityOrder.filter((entityId) => entityId !== "dummy-belt-predecessor"),
+      "dummy-belt-predecessor",
+    ];
+    editorHost.internalDocument.setSnapshot(document);
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "logistics-entity",
+        entityId: "dummy-entity-1",
+        gridPoint: { x: 12, y: 8 },
+      },
+    });
+    const initialCells = editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => ({
+      gridPoint: cell.gridPoint,
+      fromEdge: cell.fromEdge,
+      toEdge: cell.toEdge,
+      shape: cell.shape,
+      rotation: cell.rotation,
+    }));
+
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 13, y: 8 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      status: "ignored",
+      headGridPoint: { x: 12, y: 8 },
+    });
+    expect(editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => ({
+      gridPoint: cell.gridPoint,
+      fromEdge: cell.fromEdge,
+      toEdge: cell.toEdge,
+      shape: cell.shape,
+      rotation: cell.rotation,
+    }))).toEqual(initialCells);
+  });
+
+  it("allows an existing-source logistics draft to start away from its connected predecessor", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    document.entities["dummy-entity-1"] = {
+      ...document.entities["dummy-entity-1"]!,
+      position: { x: 12, y: 8 },
+      rotation: 180,
+    };
+    document.entities["dummy-belt-predecessor"] = {
+      id: "dummy-belt-predecessor",
+      definitionId: "belt_straight_1x1",
+      position: { x: 13, y: 8 },
+      rotation: 180,
+      config: {},
+      tags: [],
+    };
+    document.entityOrder = [
+      ...document.entityOrder.filter((entityId) => entityId !== "dummy-belt-predecessor"),
+      "dummy-belt-predecessor",
+    ];
+    editorHost.internalDocument.setSnapshot(document);
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "logistics-entity",
+        entityId: "dummy-entity-1",
+        gridPoint: { x: 12, y: 8 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 12, y: 7 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      status: "updated",
+      headGridPoint: { x: 12, y: 7 },
+    });
+    expect(editorHost.queries.resolveLogisticsDraftState()?.cells).toMatchObject([
+      {
+        gridPoint: { x: 12, y: 8 },
+        fromEdge: "EAST",
+        toEdge: "NORTH",
+      },
+      {
+        gridPoint: { x: 12, y: 7 },
+      },
+    ]);
+  });
+
   it("ignores stale replaced tile rotation when no predecessor is connected", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

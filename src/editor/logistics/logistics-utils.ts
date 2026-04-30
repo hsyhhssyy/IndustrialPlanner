@@ -367,6 +367,29 @@ export function resolveLogisticsPathCells(options: {
   return cells;
 }
 
+export function doesFirstStepMoveTowardFixedSourceInput(options: {
+  kind: LogisticsKind;
+  points: readonly GridPoint[];
+  source: LogisticsDraftEndpoint | null;
+  document: WorldDocument;
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  replacingEntity: WorldEntity | null;
+  replacingDefinition: EntityDefinition | null;
+}): boolean {
+  const start = options.points[0];
+  const firstStep = options.points[1];
+  if (start === undefined || firstStep === undefined) {
+    return false;
+  }
+
+  const fixedInputEdge = resolveFixedSourceInputEdge(options);
+  if (fixedInputEdge === null) {
+    return false;
+  }
+
+  return resolveDirectionEdge(start, firstStep) === fixedInputEdge;
+}
+
 export function findTopEntityAtGridPoint(options: {
   gridPoint: GridPoint;
   document: WorldDocument;
@@ -533,6 +556,31 @@ function resolveCellFromEdge(options: {
   }
 
   return "WEST";
+}
+
+function resolveFixedSourceInputEdge(options: {
+  kind: LogisticsKind;
+  source: LogisticsDraftEndpoint | null;
+  document: WorldDocument;
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  replacingEntity: WorldEntity | null;
+  replacingDefinition: EntityDefinition | null;
+}): GridEdge | null {
+  if (options.source?.type === "device-port") {
+    return oppositeEdge(options.source.edge);
+  }
+
+  if (options.source?.type !== "logistics-entity") {
+    return null;
+  }
+
+  return resolveConnectedReplacingInputEdge({
+    kind: options.kind,
+    document: options.document,
+    entityDefinitionMap: options.entityDefinitionMap,
+    replacingEntity: options.replacingEntity,
+    replacingDefinition: options.replacingDefinition,
+  });
 }
 
 function resolveCellToEdge(options: {

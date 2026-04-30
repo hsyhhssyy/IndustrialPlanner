@@ -20,6 +20,7 @@ import {
   appendFreehandPathPoints,
   areGridPointsEqual,
   createEntityDefinitionMap,
+  doesFirstStepMoveTowardFixedSourceInput,
   findEntityById,
   generateSingleBendPathPoints,
   gridPointKey,
@@ -120,16 +121,28 @@ export function createEditorLogisticsActions(
 
       if (options.routeMode.type === "freehand") {
         const currentPoints = draft.cells.map((cell) => cell.gridPoint);
+        const points = appendFreehandPathPoints({
+          points: currentPoints,
+          pointerGridPoint: targetPoint,
+        });
+        if (
+          shouldKeepDraftWhenFirstStepMovesTowardFixedSourceInput({
+            context: logisticsContext,
+            draft,
+            source,
+            points,
+          })
+        ) {
+          return createLogisticsActionResultFromDraft(draft);
+        }
+
         return rebuildLogisticsDraft({
           context: logisticsContext,
           kind: draft.kind,
           source,
           target,
           routeOrder: draft.routeOrder,
-          points: appendFreehandPathPoints({
-            points: currentPoints,
-            pointerGridPoint: targetPoint,
-          }),
+          points,
           replacingEntityId: draft.replacingEntityId,
           status: "updated",
         });
@@ -144,6 +157,21 @@ export function createEditorLogisticsActions(
         routeOrder: options.routeMode.routeOrder,
         allowTemporaryOrderFlip: options.routeMode.allowTemporaryOrderFlip,
       });
+      const points = generateSingleBendPathPoints({
+        start: resolveSourceStartGridPoint(source),
+        target: targetPoint,
+        routeOrder,
+      });
+      if (
+        shouldKeepDraftWhenFirstStepMovesTowardFixedSourceInput({
+          context: logisticsContext,
+          draft,
+          source,
+          points,
+        })
+      ) {
+        return createLogisticsActionResultFromDraft(draft);
+      }
 
       return rebuildLogisticsDraft({
         context: logisticsContext,
@@ -151,11 +179,7 @@ export function createEditorLogisticsActions(
         source,
         target,
         routeOrder,
-        points: generateSingleBendPathPoints({
-          start: resolveSourceStartGridPoint(source),
-          target: targetPoint,
-          routeOrder,
-        }),
+        points,
         replacingEntityId: draft.replacingEntityId,
         status: "updated",
       });
@@ -435,6 +459,51 @@ function rebuildLogisticsDraft(options: {
     headDraftEntityId,
     sourceEntityId: options.source.type === "device-port" ? options.source.entityId : null,
     targetEntityId: options.target?.type === "device-port" ? options.target.entityId : null,
+  };
+}
+
+function shouldKeepDraftWhenFirstStepMovesTowardFixedSourceInput(options: {
+  context: LogisticsActionContext;
+  draft: LogisticsDraftReadonlyState;
+  source: LogisticsDraftEndpoint;
+  points: readonly GridPoint[];
+}): boolean {
+  const currentDocument = options.context.document.getSnapshot();
+  const replacingEntity = options.draft.replacingEntityId === null
+    ? null
+    : findEntityById({
+        entityId: options.draft.replacingEntityId,
+        document: currentDocument,
+        drafts: [],
+      });
+  const replacingDefinition = replacingEntity === null
+    ? null
+    : options.context.entityDefinitionMap.get(replacingEntity.definitionId) ?? null;
+
+  return doesFirstStepMoveTowardFixedSourceInput({
+    kind: options.draft.kind,
+    points: options.points,
+    source: options.source,
+    document: currentDocument,
+    entityDefinitionMap: options.context.entityDefinitionMap,
+    replacingEntity,
+    replacingDefinition,
+  });
+}
+
+function createLogisticsActionResultFromDraft(
+  draft: LogisticsDraftReadonlyState,
+): LogisticsDraftActionResult {
+  const headCell = draft.cells[draft.cells.length - 1] ?? null;
+
+  return {
+    status: "ignored",
+    canApply: draft.canApply,
+    invalidReason: draft.invalidReason,
+    headGridPoint: headCell?.gridPoint ?? null,
+    headDraftEntityId: draft.headDraftEntityId,
+    sourceEntityId: draft.source?.type === "device-port" ? draft.source.entityId : null,
+    targetEntityId: draft.target?.type === "device-port" ? draft.target.entityId : null,
   };
 }
 
