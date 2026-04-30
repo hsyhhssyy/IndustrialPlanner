@@ -1,5 +1,9 @@
 import type { EditorQuery } from "@/domain/query/editor-query";
 import type { EditorQueriesContext } from "./types";
+import {
+  createEntityDefinitionMap,
+  resolveLogisticsEndpointAtGridPoint,
+} from "../logistics/logistics-utils";
 
 type EditorLogisticsQueries = Pick<
   EditorQuery,
@@ -9,17 +13,33 @@ type EditorLogisticsQueries = Pick<
 >;
 
 export function createEditorLogisticsQueries(
-  _context: EditorQueriesContext,
+  context: EditorQueriesContext,
 ): EditorLogisticsQueries {
+  const entityDefinitionMap = createEntityDefinitionMap(
+    context.workspace.registry.entityDefinitions,
+  );
+
   return {
     resolveLogisticsDraftState: () => {
-      return _context.state.internalTransientState.logisticsDraft;
+      return context.state.internalTransientState.logisticsDraft;
     },
-    findLogisticsDraftEndpointAtGridPoint: () => {
-      return null;
+    findLogisticsDraftEndpointAtGridPoint: (gridPoint, kind) => {
+      return resolveLogisticsEndpointAtGridPoint({
+        gridPoint,
+        kind,
+        document: context.document.getSnapshot(),
+        drafts: [],
+        entityDefinitionMap,
+      });
     },
-    canCreateLogisticsDraftStartHere: () => {
-      return false;
+    canCreateLogisticsDraftStartHere: (gridPoint, kind) => {
+      return resolveLogisticsEndpointAtGridPoint({
+        gridPoint,
+        kind,
+        document: context.document.getSnapshot(),
+        drafts: [],
+        entityDefinitionMap,
+      }) !== null;
     },
   };
 }

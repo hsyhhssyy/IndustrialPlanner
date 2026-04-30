@@ -1,0 +1,717 @@
+import type { WorldDocument, WorldEntity } from "@/domain/entity/world-document";
+import type {
+  GridEdge,
+  GridPoint,
+  GridRect,
+  GridRectSize,
+  GridRotation,
+} from "@/domain/types/grid";
+import type {
+  LogisticsDraftEndpoint,
+  LogisticsKind,
+  LogisticsPathCell,
+  LogisticsPathShape,
+  LogisticsPortDirection,
+  LogisticsPortKind,
+  LogisticsRouteOrder,
+} from "@/domain/types/logistics";
+import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+
+type PortGroupDefinition = EntityDefinition["portGroups"][number];
+type PortDefinition = PortGroupDefinition["ports"][number];
+type DevicePortEndpoint = Extract<LogisticsDraftEndpoint, { readonly type: "device-port" }>;
+
+export const LOGISTICS_DEFINITION_IDS = {
+  belt: {
+    straight: "belt_straight_1x1",
+    turnCw: "belt_turn_cw_1x1",
+    turnCcw: "belt_turn_ccw_1x1",
+  },
+  pipe: {
+    straight: "pipe_straight_1x1",
+    turnCw: "pipe_turn_cw_1x1",
+    turnCcw: "pipe_turn_ccw_1x1",
+  },
+} as const;
+
+const EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
+
+export function createEntityDefinitionMap(
+  definitions: readonly EntityDefinition[],
+): ReadonlyMap<string, EntityDefinition> {
+  return new Map(definitions.map((definition) => [definition.id, definition]));
+}
+
+export function resolvePortKindForLogisticsKind(kind: LogisticsKind): LogisticsPortKind {
+  return kind === "belt" ? "item" : "fluid";
+}
+
+export function isOrdinaryLogisticsDefinitionId(
+  definitionId: string,
+  kind: LogisticsKind,
+): boolean {
+  const ids = LOGISTICS_DEFINITION_IDS[kind];
+  return (
+    definitionId === ids.straight
+    || definitionId === ids.turnCw
+    || definitionId === ids.turnCcw
+  );
+}
+
+export function isAnyOrdinaryLogisticsDefinitionId(definitionId: string): boolean {
+  return (
+    isOrdinaryLogisticsDefinitionId(definitionId, "belt")
+    || isOrdinaryLogisticsDefinitionId(definitionId, "pipe")
+  );
+}
+
+export function resolveLogisticsDefinitionId(options: {
+  kind: LogisticsKind;
+  shape: LogisticsPathShape;
+}): string {
+  const ids = LOGISTICS_DEFINITION_IDS[options.kind];
+
+  switch (options.shape) {
+    case "turn-cw":
+      return ids.turnCw;
+    case "turn-ccw":
+      return ids.turnCcw;
+    case "straight":
+    default:
+      return ids.straight;
+  }
+}
+
+export function resolveLogisticsEndpointAtGridPoint(options: {
+  gridPoint: GridPoint;
+  kind: LogisticsKind;
+  document: WorldDocument;
+  drafts: readonly WorldEntity[];
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+}): LogisticsDraftEndpoint | null {
+  const entity = findTopEntityAtGridPoint(options);
+
+  if (entity === null) {
+    return {
+      type: "empty-cell",
+      gridPoint: { ...options.gridPoint },
+    };
+  }
+
+  if (isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)) {
+    return {
+      type: "logistics-entity",
+      entityId: entity.id,
+      gridPoint: { ...entity.position },
+    };
+  }
+
+  const definition = options.entityDefinitionMap.get(entity.definitionId);
+  if (definition === undefined) {
+    return null;
+  }
+
+  return resolveNearestDevicePortEndpoint({
+    entity,
+    definition,
+    kind: options.kind,
+    direction: "output",
+    pointerGridPoint: options.gridPoint,
+  });
+}
+
+export function resolveNearestDevicePortEndpoint(options: {
+  entity: WorldEntity;
+  definition: EntityDefinition;
+  kind: LogisticsKind;
+  direction: LogisticsPortDirection;
+  pointerGridPoint: GridPoint;
+}): DevicePortEndpoint | null {
+  const endpoints = resolveDevicePortEndpoints(options);
+
+  if (endpoints.length === 0) {
+    return null;
+  }
+
+  return [...endpoints].sort((left, right) => {
+    const distanceDelta = manhattanDistance(left.outsideGridPoint, options.pointerGridPoint)
+      - manhattanDistance(right.outsideGridPoint, options.pointerGridPoint);
+    if (distanceDelta !== 0) {
+      return distanceDelta;
+    }
+
+    const groupDelta = left.portGroupId.localeCompare(right.portGroupId);
+    return groupDelta !== 0 ? groupDelta : left.portId.localeCompare(right.portId);
+  })[0] ?? null;
+}
+
+export function resolveInputEndpointAtPointer(options: {
+  pointerGridPoint: GridPoint;
+  kind: LogisticsKind;
+  document: WorldDocument;
+  drafts: readonly WorldEntity[];
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+}): DevicePortEndpoint | null {
+  const entity = findTopEntityAtGridPoint({
+    gridPoint: options.pointerGridPoint,
+    document: options.document,
+    drafts: options.drafts,
+    entityDefinitionMap: options.entityDefinitionMap,
+  });
+  if (entity === null || isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)) {
+    return null;
+  }
+
+  const definition = options.entityDefinitionMap.get(entity.definitionId);
+  if (definition === undefined) {
+    return null;
+  }
+
+  const endpoints = resolveDevicePortEndpoints({
+    entity,
+    definition,
+    kind: options.kind,
+    direction: "input",
+    pointerGridPoint: options.pointerGridPoint,
+  });
+
+  const endpointsAtPointer = endpoints.filter((endpoint) =>
+    areGridPointsEqual(endpoint.insideGridPoint, options.pointerGridPoint),
+  );
+  if (endpointsAtPointer.length === 0) {
+    return null;
+  }
+
+  return [...endpointsAtPointer].sort((left, right) => {
+    const distanceDelta = manhattanDistance(left.outsideGridPoint, options.pointerGridPoint)
+      - manhattanDistance(right.outsideGridPoint, options.pointerGridPoint);
+    if (distanceDelta !== 0) {
+      return distanceDelta;
+    }
+
+    const groupDelta = left.portGroupId.localeCompare(right.portGroupId);
+    return groupDelta !== 0 ? groupDelta : left.portId.localeCompare(right.portId);
+  })[0] ?? null;
+}
+
+export function resolveDevicePortEndpoints(options: {
+  entity: WorldEntity;
+  definition: EntityDefinition;
+  kind: LogisticsKind;
+  direction: LogisticsPortDirection;
+  pointerGridPoint: GridPoint;
+}): DevicePortEndpoint[] {
+  const portKind = resolvePortKindForLogisticsKind(options.kind);
+  const endpoints: DevicePortEndpoint[] = [];
+
+  for (const portGroup of options.definition.portGroups) {
+    if (portGroup.kind !== portKind || portGroup.direction !== options.direction) {
+      continue;
+    }
+
+    for (const port of portGroup.ports) {
+      const localCell = rotateLocalPortCell({
+        footprint: options.definition.footprint,
+        port,
+        rotation: options.entity.rotation,
+      });
+      const edge = rotateGridEdge(port.edge, options.entity.rotation);
+      const insideGridPoint = {
+        x: options.entity.position.x + localCell.x,
+        y: options.entity.position.y + localCell.y,
+      };
+      const delta = resolveEdgeDelta(edge);
+      const outsideGridPoint = {
+        x: insideGridPoint.x + delta.x,
+        y: insideGridPoint.y + delta.y,
+      };
+
+      endpoints.push({
+        type: "device-port",
+        entityId: options.entity.id,
+        portGroupId: portGroup.id,
+        portId: port.id,
+        portKind,
+        portDirection: options.direction,
+        insideGridPoint,
+        outsideGridPoint,
+        edge,
+      });
+    }
+  }
+
+  return endpoints;
+}
+
+export function resolveSourceStartGridPoint(source: LogisticsDraftEndpoint): GridPoint {
+  return source.type === "device-port"
+    ? { ...source.outsideGridPoint }
+    : { ...source.gridPoint };
+}
+
+export function generateSingleBendPathPoints(options: {
+  start: GridPoint;
+  target: GridPoint;
+  routeOrder: LogisticsRouteOrder;
+}): GridPoint[] {
+  const points: GridPoint[] = [{ ...options.start }];
+
+  if (areGridPointsEqual(options.start, options.target)) {
+    return points;
+  }
+
+  const corner = options.routeOrder === "vertical-first"
+    ? { x: options.start.x, y: options.target.y }
+    : { x: options.target.x, y: options.start.y };
+
+  appendManhattanSegment(points, corner);
+  appendManhattanSegment(points, options.target);
+
+  return dedupeAdjacentPoints(points);
+}
+
+export function appendFreehandPathPoints(options: {
+  points: readonly GridPoint[];
+  pointerGridPoint: GridPoint;
+}): GridPoint[] {
+  if (options.points.length === 0) {
+    return [{ ...options.pointerGridPoint }];
+  }
+
+  const points = options.points.map((point) => ({ ...point }));
+  const head = points[points.length - 1];
+
+  if (head === undefined || areGridPointsEqual(head, options.pointerGridPoint)) {
+    return points;
+  }
+
+  const previous = points[points.length - 2];
+  if (previous !== undefined && areGridPointsEqual(previous, options.pointerGridPoint)) {
+    points.pop();
+    return points;
+  }
+
+  if (areAdjacentGridPoints(head, options.pointerGridPoint)) {
+    points.push({ ...options.pointerGridPoint });
+    return points;
+  }
+
+  const dx = options.pointerGridPoint.x - head.x;
+  const dy = options.pointerGridPoint.y - head.y;
+  const preferHorizontal = Math.abs(dx) >= Math.abs(dy);
+  const corner = preferHorizontal
+    ? { x: options.pointerGridPoint.x, y: head.y }
+    : { x: head.x, y: options.pointerGridPoint.y };
+
+  appendManhattanSegment(points, corner);
+  appendManhattanSegment(points, options.pointerGridPoint);
+
+  return dedupeAdjacentPoints(points);
+}
+
+export function resolveLogisticsPathCells(options: {
+  points: readonly GridPoint[];
+  source: LogisticsDraftEndpoint | null;
+  target: LogisticsDraftEndpoint | null;
+  replacingEntity: WorldEntity | null;
+  replacingDefinition: EntityDefinition | null;
+}): LogisticsPathCell[] {
+  const cells: LogisticsPathCell[] = [];
+
+  for (let index = 0; index < options.points.length; index += 1) {
+    const point = options.points[index];
+    if (point === undefined) {
+      continue;
+    }
+
+    const previous = options.points[index - 1] ?? null;
+    const next = options.points[index + 1] ?? null;
+    const fromEdge = resolveCellFromEdge({
+      point,
+      previous,
+      next,
+      source: index === 0 ? options.source : null,
+      replacingEntity: index === 0 ? options.replacingEntity : null,
+      replacingDefinition: index === 0 ? options.replacingDefinition : null,
+    });
+    const toEdge = resolveCellToEdge({
+      point,
+      previous,
+      next,
+      target: index === options.points.length - 1 ? options.target : null,
+      fromEdge,
+    });
+    const normalized = normalizeCellEdges(fromEdge, toEdge);
+    const shape = resolveShapeFromEdges(normalized.fromEdge, normalized.toEdge);
+
+    cells.push({
+      gridPoint: { ...point },
+      fromEdge: normalized.fromEdge,
+      toEdge: normalized.toEdge,
+      shape,
+      rotation: resolveRotationForShape({
+        shape,
+        fromEdge: normalized.fromEdge,
+        toEdge: normalized.toEdge,
+      }),
+    });
+  }
+
+  return cells;
+}
+
+export function findTopEntityAtGridPoint(options: {
+  gridPoint: GridPoint;
+  document: WorldDocument;
+  drafts: readonly WorldEntity[];
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+}): WorldEntity | null {
+  const draft = findTopEntityInListAtGridPoint({
+    gridPoint: options.gridPoint,
+    entities: options.drafts,
+    entityDefinitionMap: options.entityDefinitionMap,
+  });
+  if (draft !== null) {
+    return draft;
+  }
+
+  const orderedEntities = [...options.document.entityOrder]
+    .map((entityId) => options.document.entities[entityId])
+    .filter((entity): entity is WorldEntity => entity !== undefined);
+
+  return findTopEntityInListAtGridPoint({
+    gridPoint: options.gridPoint,
+    entities: orderedEntities,
+    entityDefinitionMap: options.entityDefinitionMap,
+  });
+}
+
+export function findEntityById(options: {
+  entityId: string;
+  document: WorldDocument;
+  drafts: readonly WorldEntity[];
+}): WorldEntity | null {
+  return options.document.entities[options.entityId]
+    ?? options.drafts.find((entity) => entity.id === options.entityId)
+    ?? null;
+}
+
+export function resolveEntityGridRect(options: {
+  entity: WorldEntity;
+  definition: EntityDefinition;
+}): GridRect {
+  const footprint = getRotatedGridFootprint(
+    options.definition.footprint,
+    options.entity.rotation,
+  );
+
+  return {
+    x: options.entity.position.x,
+    y: options.entity.position.y,
+    width: footprint.width,
+    height: footprint.height,
+  };
+}
+
+export function isGridPointInsideRect(point: GridPoint, rect: GridRect): boolean {
+  return (
+    point.x >= rect.x
+    && point.x < rect.x + rect.width
+    && point.y >= rect.y
+    && point.y < rect.y + rect.height
+  );
+}
+
+export function areGridPointsEqual(left: GridPoint, right: GridPoint): boolean {
+  return left.x === right.x && left.y === right.y;
+}
+
+export function gridPointKey(point: GridPoint): string {
+  return `${point.x}:${point.y}`;
+}
+
+export function oppositeEdge(edge: GridEdge): GridEdge {
+  switch (edge) {
+    case "NORTH":
+      return "SOUTH";
+    case "EAST":
+      return "WEST";
+    case "SOUTH":
+      return "NORTH";
+    case "WEST":
+      return "EAST";
+  }
+}
+
+export function resolveDirectionEdge(from: GridPoint, to: GridPoint): GridEdge | null {
+  if (to.x === from.x && to.y === from.y - 1) {
+    return "NORTH";
+  }
+  if (to.x === from.x + 1 && to.y === from.y) {
+    return "EAST";
+  }
+  if (to.x === from.x && to.y === from.y + 1) {
+    return "SOUTH";
+  }
+  if (to.x === from.x - 1 && to.y === from.y) {
+    return "WEST";
+  }
+
+  return null;
+}
+
+function findTopEntityInListAtGridPoint(options: {
+  gridPoint: GridPoint;
+  entities: readonly WorldEntity[];
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+}): WorldEntity | null {
+  for (let index = options.entities.length - 1; index >= 0; index -= 1) {
+    const entity = options.entities[index];
+    if (entity === undefined) {
+      continue;
+    }
+
+    const definition = options.entityDefinitionMap.get(entity.definitionId);
+    if (definition === undefined) {
+      continue;
+    }
+
+    if (
+      isGridPointInsideRect(
+        options.gridPoint,
+        resolveEntityGridRect({ entity, definition }),
+      )
+    ) {
+      return entity;
+    }
+  }
+
+  return null;
+}
+
+function resolveCellFromEdge(options: {
+  point: GridPoint;
+  previous: GridPoint | null;
+  next: GridPoint | null;
+  source: LogisticsDraftEndpoint | null;
+  replacingEntity: WorldEntity | null;
+  replacingDefinition: EntityDefinition | null;
+}): GridEdge | null {
+  if (options.previous !== null) {
+    const direction = resolveDirectionEdge(options.previous, options.point);
+    return direction === null ? null : oppositeEdge(direction);
+  }
+
+  if (options.source?.type === "device-port") {
+    return oppositeEdge(options.source.edge);
+  }
+
+  const replacingInputEdge = resolveReplacingInputEdge({
+    replacingEntity: options.replacingEntity,
+    replacingDefinition: options.replacingDefinition,
+  });
+  if (replacingInputEdge !== null) {
+    return replacingInputEdge;
+  }
+
+  if (options.next !== null) {
+    const direction = resolveDirectionEdge(options.point, options.next);
+    return direction === null ? null : oppositeEdge(direction);
+  }
+
+  return "WEST";
+}
+
+function resolveCellToEdge(options: {
+  point: GridPoint;
+  previous: GridPoint | null;
+  next: GridPoint | null;
+  target: LogisticsDraftEndpoint | null;
+  fromEdge: GridEdge | null;
+}): GridEdge | null {
+  if (options.next !== null) {
+    return resolveDirectionEdge(options.point, options.next);
+  }
+
+  if (options.target?.type === "device-port") {
+    return oppositeEdge(options.target.edge);
+  }
+
+  if (options.previous !== null) {
+    return resolveDirectionEdge(options.previous, options.point);
+  }
+
+  return options.fromEdge === null ? "EAST" : oppositeEdge(options.fromEdge);
+}
+
+function normalizeCellEdges(
+  fromEdge: GridEdge | null,
+  toEdge: GridEdge | null,
+): {
+  fromEdge: GridEdge;
+  toEdge: GridEdge;
+} {
+  if (fromEdge !== null && toEdge !== null && fromEdge !== toEdge) {
+    return { fromEdge, toEdge };
+  }
+
+  if (fromEdge !== null) {
+    return {
+      fromEdge,
+      toEdge: oppositeEdge(fromEdge),
+    };
+  }
+
+  if (toEdge !== null) {
+    return {
+      fromEdge: oppositeEdge(toEdge),
+      toEdge,
+    };
+  }
+
+  return {
+    fromEdge: "WEST",
+    toEdge: "EAST",
+  };
+}
+
+function resolveReplacingInputEdge(options: {
+  replacingEntity: WorldEntity | null;
+  replacingDefinition: EntityDefinition | null;
+}): GridEdge | null {
+  if (options.replacingEntity === null || options.replacingDefinition === null) {
+    return null;
+  }
+
+  const inputGroup = options.replacingDefinition.portGroups.find((group) =>
+    group.direction === "input",
+  );
+  const inputPort = inputGroup?.ports[0];
+  if (inputPort === undefined) {
+    return null;
+  }
+
+  return rotateGridEdge(inputPort.edge, options.replacingEntity.rotation);
+}
+
+function resolveShapeFromEdges(fromEdge: GridEdge, toEdge: GridEdge): LogisticsPathShape {
+  if (oppositeEdge(fromEdge) === toEdge) {
+    return "straight";
+  }
+
+  const entry = resolveEdgeDelta(oppositeEdge(fromEdge));
+  const exit = resolveEdgeDelta(toEdge);
+  const cross = entry.x * exit.y - entry.y * exit.x;
+
+  return cross > 0 ? "turn-cw" : "turn-ccw";
+}
+
+function resolveRotationForShape(options: {
+  shape: LogisticsPathShape;
+  fromEdge: GridEdge;
+  toEdge: GridEdge;
+}): GridRotation {
+  const base = options.shape === "turn-cw"
+    ? { fromEdge: "WEST" as const, toEdge: "SOUTH" as const }
+    : options.shape === "turn-ccw"
+      ? { fromEdge: "WEST" as const, toEdge: "NORTH" as const }
+      : { fromEdge: "WEST" as const, toEdge: "EAST" as const };
+
+  for (const rotation of [0, 90, 180, 270] as const) {
+    if (
+      rotateGridEdge(base.fromEdge, rotation) === options.fromEdge
+      && rotateGridEdge(base.toEdge, rotation) === options.toEdge
+    ) {
+      return rotation;
+    }
+  }
+
+  return 0;
+}
+
+function rotateLocalPortCell(options: {
+  footprint: GridRectSize;
+  port: PortDefinition;
+  rotation: GridRotation;
+}): GridPoint {
+  const { width, height } = options.footprint;
+  const { localCellX: x, localCellY: y } = options.port;
+
+  switch (options.rotation) {
+    case 0:
+      return { x, y };
+    case 90:
+      return { x: height - 1 - y, y: x };
+    case 180:
+      return { x: width - 1 - x, y: height - 1 - y };
+    case 270:
+      return { x: y, y: width - 1 - x };
+  }
+}
+
+function rotateGridEdge(edge: GridEdge, rotation: GridRotation): GridEdge {
+  const currentIndex = EDGE_ORDER.indexOf(edge);
+  const steps = rotation / 90;
+  return EDGE_ORDER[(currentIndex + steps) % EDGE_ORDER.length] ?? edge;
+}
+
+function resolveEdgeDelta(edge: GridEdge): GridPoint {
+  switch (edge) {
+    case "NORTH":
+      return { x: 0, y: -1 };
+    case "EAST":
+      return { x: 1, y: 0 };
+    case "SOUTH":
+      return { x: 0, y: 1 };
+    case "WEST":
+      return { x: -1, y: 0 };
+  }
+}
+
+function appendManhattanSegment(points: GridPoint[], target: GridPoint): void {
+  const head = points[points.length - 1];
+  if (head === undefined || areGridPointsEqual(head, target)) {
+    return;
+  }
+
+  let current = { ...head };
+  while (current.x !== target.x) {
+    current = {
+      x: current.x + Math.sign(target.x - current.x),
+      y: current.y,
+    };
+    points.push({ ...current });
+  }
+
+  while (current.y !== target.y) {
+    current = {
+      x: current.x,
+      y: current.y + Math.sign(target.y - current.y),
+    };
+    points.push({ ...current });
+  }
+}
+
+function dedupeAdjacentPoints(points: readonly GridPoint[]): GridPoint[] {
+  const result: GridPoint[] = [];
+
+  for (const point of points) {
+    const previous = result[result.length - 1];
+    if (previous !== undefined && areGridPointsEqual(previous, point)) {
+      continue;
+    }
+
+    result.push({ ...point });
+  }
+
+  return result;
+}
+
+function areAdjacentGridPoints(left: GridPoint, right: GridPoint): boolean {
+  return manhattanDistance(left, right) === 1;
+}
+
+function manhattanDistance(left: GridPoint, right: GridPoint): number {
+  return Math.abs(left.x - right.x) + Math.abs(left.y - right.y);
+}

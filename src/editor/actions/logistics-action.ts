@@ -1,7 +1,37 @@
 import type { EditorAction } from "@/domain/action/editor-action";
+import type { WorldDocument, WorldEntity } from "@/domain/entity/world-document";
 import { EntityCollectionType } from "@/domain/state/types";
-import type { LogisticsDraftActionResult } from "@/domain/types/logistics";
+import type { GridPoint } from "@/domain/types/grid";
+import type {
+  CreateLogisticsDraftStartOptions,
+  LogisticsDraftActionResult,
+  LogisticsDraftEndpoint,
+  LogisticsDraftInvalidReason,
+  LogisticsDraftReadonlyState,
+  LogisticsKind,
+  LogisticsPathCell,
+  LogisticsRouteOrder,
+  MoveLogisticsDraftEndOptions,
+} from "@/domain/types/logistics";
+import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+import type { DraftEntity } from "../draft-entity";
 import type { EditorActionsContext } from "./types";
+import {
+  appendFreehandPathPoints,
+  areGridPointsEqual,
+  createEntityDefinitionMap,
+  findEntityById,
+  generateSingleBendPathPoints,
+  gridPointKey,
+  isGridPointInsideRect,
+  isOrdinaryLogisticsDefinitionId,
+  resolveEntityGridRect,
+  resolveInputEndpointAtPointer,
+  resolveLogisticsDefinitionId,
+  resolveLogisticsPathCells,
+  resolveNearestDevicePortEndpoint,
+  resolveSourceStartGridPoint,
+} from "../logistics/logistics-utils";
 
 type EditorLogisticsActions = Pick<
   EditorAction,
@@ -11,35 +41,565 @@ type EditorLogisticsActions = Pick<
   | "moveLogisticEnd"
 >;
 
+type DevicePortEndpoint = Extract<LogisticsDraftEndpoint, { readonly type: "device-port" }>;
+
+interface LogisticsActionContext extends EditorActionsContext {
+  readonly entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  nextDraftCounter(): number;
+}
+
 export function createEditorLogisticsActions(
   context: EditorActionsContext,
 ): EditorLogisticsActions {
+  let logisticsDraftCounter = 0;
+  const logisticsContext: LogisticsActionContext = {
+    ...context,
+    entityDefinitionMap: createEntityDefinitionMap(
+      context.workspace.registry.entityDefinitions,
+    ),
+    nextDraftCounter: () => {
+      logisticsDraftCounter += 1;
+      return logisticsDraftCounter;
+    },
+  };
+
   return {
-    createLogisticsDraftStart: () => {
+    createLogisticsDraftStart: (options) => {
       // TODO: 实现物流草稿起点创建逻辑
-      // 2026-04-30 订正：ST1-RQ-047 先建立 action result 接口，路径逻辑在后续步骤实现。
-      return createIgnoredLogisticsActionResult();
+      // 2026-04-30 订正：ST1-RQ-047 已实现 source 解析、初始 preview 和 collection 接线。
+      clearLogisticsDraftState(logisticsContext);
+
+      const source = resolveCreateSourceEndpoint(logisticsContext, options);
+      if (source === null) {
+        return createIgnoredLogisticsActionResult();
+      }
+
+      const replacingEntityId = source.type === "logistics-entity"
+        ? source.entityId
+        : null;
+      const start = resolveSourceStartGridPoint(source);
+      const routeOrder = options.routeOrder ?? "vertical-first";
+
+      return rebuildLogisticsDraft({
+        context: logisticsContext,
+        kind: options.kind,
+        source,
+        target: null,
+        routeOrder,
+        points: [start],
+        replacingEntityId,
+        status: "created",
+      });
     },
-    moveLogisticEnd: () => {
+
+    moveLogisticEnd: (options) => {
       // TODO: 实现物流终点移动逻辑
-      // 2026-04-30 订正：ST1-RQ-047 先建立 action result 接口，路径逻辑在后续步骤实现。
-      return createIgnoredLogisticsActionResult();
+      // 2026-04-30 订正：ST1-RQ-047 已实现 touch freehand 与 mouse single-bend 路径更新。
+      const draft = logisticsContext.state.internalTransientState.logisticsDraft;
+      if (draft === null || draft.source === null) {
+        return createIgnoredLogisticsActionResult();
+      }
+
+      const source = resolveMoveSourceEndpoint({
+        context: logisticsContext,
+        draft,
+        options,
+      });
+      if (source === null) {
+        return createIgnoredLogisticsActionResult();
+      }
+
+      const target = resolveInputEndpointAtPointer({
+        pointerGridPoint: options.pointerGridPoint,
+        kind: draft.kind,
+        document: logisticsContext.document.getSnapshot(),
+        drafts: [],
+        entityDefinitionMap: logisticsContext.entityDefinitionMap,
+      });
+      const targetPoint = target?.outsideGridPoint ?? options.pointerGridPoint;
+
+      if (options.routeMode.type === "freehand") {
+        const currentPoints = draft.cells.map((cell) => cell.gridPoint);
+        return rebuildLogisticsDraft({
+          context: logisticsContext,
+          kind: draft.kind,
+          source,
+          target,
+          routeOrder: draft.routeOrder,
+          points: appendFreehandPathPoints({
+            points: currentPoints,
+            pointerGridPoint: targetPoint,
+          }),
+          replacingEntityId: draft.replacingEntityId,
+          status: "updated",
+        });
+      }
+
+      const routeOrder = resolveEffectiveSingleBendRouteOrder({
+        context: logisticsContext,
+        kind: draft.kind,
+        source,
+        targetPoint,
+        replacingEntityId: draft.replacingEntityId,
+        routeOrder: options.routeMode.routeOrder,
+        allowTemporaryOrderFlip: options.routeMode.allowTemporaryOrderFlip,
+      });
+
+      return rebuildLogisticsDraft({
+        context: logisticsContext,
+        kind: draft.kind,
+        source,
+        target,
+        routeOrder,
+        points: generateSingleBendPathPoints({
+          start: resolveSourceStartGridPoint(source),
+          target: targetPoint,
+          routeOrder,
+        }),
+        replacingEntityId: draft.replacingEntityId,
+        status: "updated",
+      });
     },
+
     applyLogisticDraft: () => {
       // TODO: 实现物流草稿应用逻辑
-      // 2026-04-30 订正：ST1-RQ-047 先接入 canApply 返回语义，真实写入在后续步骤实现。
-      const draft = context.state.internalTransientState.logisticsDraft;
-      return draft?.canApply === true ? false : false;
+      // 2026-04-30 订正：ST1-RQ-047 已实现 canApply 校验、起点替换和 preview 写入 document。
+      const draft = logisticsContext.state.internalTransientState.logisticsDraft;
+      if (draft === null || !draft.canApply) {
+        return false;
+      }
+
+      const preview = logisticsContext.state.collections[EntityCollectionType.preview];
+      if (preview.length === 0) {
+        return false;
+      }
+
+      const previewDrafts = resolvePreviewDrafts({
+        previewDraftIds: preview,
+        drafts: logisticsContext.state.drafts,
+      });
+      if (previewDrafts.length === 0) {
+        return false;
+      }
+
+      const currentDocument = logisticsContext.document.getSnapshot();
+      const nextEntities = { ...currentDocument.entities };
+      let nextEntityOrder = [...currentDocument.entityOrder];
+
+      if (draft.replacingEntityId !== null) {
+        delete nextEntities[draft.replacingEntityId];
+        nextEntityOrder = nextEntityOrder.filter((entityId) =>
+          entityId !== draft.replacingEntityId,
+        );
+      }
+
+      for (const previewDraft of previewDrafts) {
+        nextEntities[previewDraft.id] = {
+          id: previewDraft.id,
+          definitionId: previewDraft.definitionId,
+          position: { ...previewDraft.position },
+          rotation: previewDraft.rotation,
+          config: { ...previewDraft.config },
+          tags: [...previewDraft.tags],
+        };
+        nextEntityOrder.push(previewDraft.id);
+      }
+
+      logisticsContext.document.setSnapshot({
+        ...currentDocument,
+        entities: nextEntities,
+        entityOrder: nextEntityOrder,
+      });
+
+      clearLogisticsDraftState(logisticsContext);
+      return true;
     },
+
     cancelLogisticsDraft: () => {
       // TODO: 实现物流草稿取消逻辑
-      // 2026-04-30 订正：ST1-RQ-047 已实现 logistics draft / collection 的最小清理。
-      clearLogisticsDraftState(context);
+      // 2026-04-30 订正：ST1-RQ-047 已实现 logistics draft / collection 的清理。
+      clearLogisticsDraftState(logisticsContext);
     },
   };
 }
 
-function clearLogisticsDraftState(context: EditorActionsContext): void {
+function resolveCreateSourceEndpoint(
+  context: LogisticsActionContext,
+  options: CreateLogisticsDraftStartOptions,
+): LogisticsDraftEndpoint | null {
+  const currentDocument = context.document.getSnapshot();
+
+  switch (options.source.type) {
+    case "device": {
+      const entity = currentDocument.entities[options.source.entityId];
+      if (entity === undefined) {
+        return null;
+      }
+
+      const definition = context.entityDefinitionMap.get(entity.definitionId);
+      if (definition === undefined) {
+        return null;
+      }
+
+      return resolveNearestDevicePortEndpoint({
+        entity,
+        definition,
+        kind: options.kind,
+        direction: "output",
+        pointerGridPoint: options.source.pointerGridPoint,
+      });
+    }
+
+    case "logistics-entity": {
+      const entity = currentDocument.entities[options.source.entityId];
+      if (
+        entity === undefined
+        || !isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
+      ) {
+        return null;
+      }
+
+      return {
+        type: "logistics-entity",
+        entityId: entity.id,
+        gridPoint: { ...options.source.gridPoint },
+      };
+    }
+
+    case "empty-cell":
+      return {
+        type: "empty-cell",
+        gridPoint: { ...options.source.gridPoint },
+      };
+  }
+}
+
+function resolveMoveSourceEndpoint(options: {
+  context: LogisticsActionContext;
+  draft: LogisticsDraftReadonlyState;
+  options: MoveLogisticsDraftEndOptions;
+}): LogisticsDraftEndpoint | null {
+  const source = options.draft.source;
+  if (source?.type !== "device-port" || options.options.routeMode.type !== "single-bend") {
+    return source;
+  }
+
+  const currentDocument = options.context.document.getSnapshot();
+  const entity = currentDocument.entities[source.entityId];
+  if (entity === undefined) {
+    return null;
+  }
+
+  const definition = options.context.entityDefinitionMap.get(entity.definitionId);
+  if (definition === undefined) {
+    return null;
+  }
+
+  return resolveNearestDevicePortEndpoint({
+    entity,
+    definition,
+    kind: options.draft.kind,
+    direction: "output",
+    pointerGridPoint: options.options.pointerGridPoint,
+  });
+}
+
+function resolveEffectiveSingleBendRouteOrder(options: {
+  context: LogisticsActionContext;
+  kind: LogisticsKind;
+  source: LogisticsDraftEndpoint;
+  targetPoint: GridPoint;
+  replacingEntityId: string | null;
+  routeOrder: LogisticsRouteOrder;
+  allowTemporaryOrderFlip: boolean;
+}): LogisticsRouteOrder {
+  if (!options.allowTemporaryOrderFlip || options.replacingEntityId === null) {
+    return options.routeOrder;
+  }
+
+  const start = resolveSourceStartGridPoint(options.source);
+  const currentPoints = generateSingleBendPathPoints({
+    start,
+    target: options.targetPoint,
+    routeOrder: options.routeOrder,
+  });
+  if (
+    !doesFirstStepOverlapExistingLogistics({
+      context: options.context,
+      kind: options.kind,
+      points: currentPoints,
+      replacingEntityId: options.replacingEntityId,
+    })
+  ) {
+    return options.routeOrder;
+  }
+
+  const flippedOrder = flipRouteOrder(options.routeOrder);
+  const flippedPoints = generateSingleBendPathPoints({
+    start,
+    target: options.targetPoint,
+    routeOrder: flippedOrder,
+  });
+
+  return doesFirstStepOverlapExistingLogistics({
+    context: options.context,
+    kind: options.kind,
+    points: flippedPoints,
+    replacingEntityId: options.replacingEntityId,
+  })
+    ? options.routeOrder
+    : flippedOrder;
+}
+
+function rebuildLogisticsDraft(options: {
+  context: LogisticsActionContext;
+  kind: LogisticsKind;
+  source: LogisticsDraftEndpoint;
+  target: LogisticsDraftEndpoint | null;
+  routeOrder: LogisticsRouteOrder;
+  points: readonly GridPoint[];
+  replacingEntityId: string | null;
+  status: "created" | "updated";
+}): LogisticsDraftActionResult {
+  const currentDocument = options.context.document.getSnapshot();
+  const preview = options.context.state.collections[EntityCollectionType.preview];
+  const logisticsHead = options.context.state.collections[EntityCollectionType.logisticsHead];
+  const ghost = options.context.state.collections[EntityCollectionType.ghost];
+  const previousPreviewDraftIds = new Set(preview);
+  const replacingEntity = options.replacingEntityId === null
+    ? null
+    : findEntityById({
+        entityId: options.replacingEntityId,
+        document: currentDocument,
+        drafts: [],
+      });
+  const replacingDefinition = replacingEntity === null
+    ? null
+    : options.context.entityDefinitionMap.get(replacingEntity.definitionId) ?? null;
+  const cells = resolveLogisticsPathCells({
+    points: options.points,
+    source: options.source,
+    target: options.target,
+    replacingEntity,
+    replacingDefinition,
+  });
+  const invalidReason = resolveInvalidReason({
+    context: options.context,
+    kind: options.kind,
+    cells,
+    replacingEntityId: options.replacingEntityId,
+    target: options.target,
+  });
+  const canApply = invalidReason === null;
+  const draftEntities = createDraftEntities({
+    context: options.context,
+    kind: options.kind,
+    cells,
+    currentDocument,
+    previousPreviewDraftIds,
+  });
+  const draftIds = draftEntities.map((entity) => entity.id);
+
+  options.context.state.drafts = [
+    ...options.context.state.drafts.filter((entity) =>
+      !previousPreviewDraftIds.has(entity.id),
+    ),
+    ...draftEntities,
+  ];
+  preview.replace(draftIds);
+  logisticsHead.replace(draftIds.length === 0 ? [] : [draftIds[draftIds.length - 1] as string]);
+  ghost.replace(options.replacingEntityId === null ? [] : [options.replacingEntityId]);
+
+  const headCell = cells[cells.length - 1] ?? null;
+  const headDraftEntityId = draftIds[draftIds.length - 1] ?? null;
+  options.context.state.internalTransientState.logisticsDraft = {
+    kind: options.kind,
+    source: options.source,
+    target: options.target,
+    routeOrder: options.routeOrder,
+    cells,
+    headDraftEntityId,
+    replacingEntityId: options.replacingEntityId,
+    canApply,
+    invalidReason,
+  };
+
+  return {
+    status: options.status,
+    canApply,
+    invalidReason,
+    headGridPoint: headCell?.gridPoint ?? null,
+    headDraftEntityId,
+    sourceEntityId: options.source.type === "device-port" ? options.source.entityId : null,
+    targetEntityId: options.target?.type === "device-port" ? options.target.entityId : null,
+  };
+}
+
+function createDraftEntities(options: {
+  context: LogisticsActionContext;
+  kind: LogisticsKind;
+  cells: readonly LogisticsPathCell[];
+  currentDocument: WorldDocument;
+  previousPreviewDraftIds: ReadonlySet<string>;
+}): DraftEntity[] {
+  const reservedIds = new Set<string>([
+    ...Object.keys(options.currentDocument.entities),
+    ...options.context.state.drafts
+      .filter((entity) => !options.previousPreviewDraftIds.has(entity.id))
+      .map((entity) => entity.id),
+  ]);
+  const batchCounter = options.context.nextDraftCounter();
+
+  return options.cells.map((cell, index) => {
+    const id = generateLogisticsDraftId({
+      kind: options.kind,
+      batchCounter,
+      index,
+      reservedIds,
+    });
+
+    return {
+      id,
+      originalEntityId: id,
+      definitionId: resolveLogisticsDefinitionId({
+        kind: options.kind,
+        shape: cell.shape,
+      }),
+      position: { ...cell.gridPoint },
+      rotation: cell.rotation,
+      config: {},
+      tags: [],
+    };
+  });
+}
+
+function resolveInvalidReason(options: {
+  context: LogisticsActionContext;
+  kind: LogisticsKind;
+  cells: readonly LogisticsPathCell[];
+  replacingEntityId: string | null;
+  target: LogisticsDraftEndpoint | null;
+}): LogisticsDraftInvalidReason | null {
+  if (options.cells.length === 0) {
+    return "empty-path";
+  }
+
+  const seen = new Set<string>();
+  for (const cell of options.cells) {
+    const key = gridPointKey(cell.gridPoint);
+    if (seen.has(key)) {
+      return "overlap-own-preview";
+    }
+    seen.add(key);
+  }
+
+  if (
+    options.target?.type === "device-port"
+    && doesRouteCrossTargetDevice({
+      context: options.context,
+      target: options.target,
+      cells: options.cells,
+    })
+  ) {
+    return "target-route-crosses-target-device";
+  }
+
+  const currentDocument = options.context.document.getSnapshot();
+  for (const cell of options.cells) {
+    for (const entityId of currentDocument.entityOrder) {
+      const entity = currentDocument.entities[entityId];
+      if (entity === undefined) {
+        continue;
+      }
+
+      if (!isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)) {
+        continue;
+      }
+
+      if (
+        options.replacingEntityId === entity.id
+        && areGridPointsEqual(entity.position, cell.gridPoint)
+      ) {
+        continue;
+      }
+
+      if (areGridPointsEqual(entity.position, cell.gridPoint)) {
+        return "overlap-existing-logistics";
+      }
+    }
+  }
+
+  return null;
+}
+
+function doesRouteCrossTargetDevice(options: {
+  context: LogisticsActionContext;
+  target: DevicePortEndpoint;
+  cells: readonly LogisticsPathCell[];
+}): boolean {
+  const currentDocument = options.context.document.getSnapshot();
+  const targetEntity = currentDocument.entities[options.target.entityId];
+  if (targetEntity === undefined) {
+    return false;
+  }
+
+  const targetDefinition = options.context.entityDefinitionMap.get(targetEntity.definitionId);
+  if (targetDefinition === undefined) {
+    return false;
+  }
+
+  const targetRect = resolveEntityGridRect({
+    entity: targetEntity,
+    definition: targetDefinition,
+  });
+
+  return options.cells.some((cell) => isGridPointInsideRect(cell.gridPoint, targetRect));
+}
+
+function doesFirstStepOverlapExistingLogistics(options: {
+  context: LogisticsActionContext;
+  kind: LogisticsKind;
+  points: readonly GridPoint[];
+  replacingEntityId: string;
+}): boolean {
+  const firstStep = options.points[1];
+  if (firstStep === undefined) {
+    return false;
+  }
+
+  const currentDocument = options.context.document.getSnapshot();
+  return currentDocument.entityOrder.some((entityId) => {
+    if (entityId === options.replacingEntityId) {
+      return false;
+    }
+
+    const entity = currentDocument.entities[entityId];
+    return (
+      entity !== undefined
+      && isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
+      && areGridPointsEqual(entity.position, firstStep)
+    );
+  });
+}
+
+function resolvePreviewDrafts(options: {
+  previewDraftIds: readonly string[];
+  drafts: readonly DraftEntity[];
+}): DraftEntity[] {
+  const draftMap = new Map(options.drafts.map((entity) => [entity.id, entity]));
+  const previewDrafts: DraftEntity[] = [];
+
+  for (const draftId of options.previewDraftIds) {
+    const draft = draftMap.get(draftId);
+    if (draft !== undefined) {
+      previewDrafts.push(draft);
+    }
+  }
+
+  return previewDrafts;
+}
+
+function clearLogisticsDraftState(context: LogisticsActionContext | EditorActionsContext): void {
   const preview = context.state.collections[EntityCollectionType.preview];
   const logisticsHead = context.state.collections[EntityCollectionType.logisticsHead];
   const ghost = context.state.collections[EntityCollectionType.ghost];
@@ -62,4 +622,27 @@ function createIgnoredLogisticsActionResult(): LogisticsDraftActionResult {
     sourceEntityId: null,
     targetEntityId: null,
   };
+}
+
+function generateLogisticsDraftId(options: {
+  kind: LogisticsKind;
+  batchCounter: number;
+  index: number;
+  reservedIds: Set<string>;
+}): string {
+  const baseId = `logistics-draft:${options.kind}:${options.batchCounter}:${options.index}`;
+  let candidate = baseId;
+  let suffix = 1;
+
+  while (options.reservedIds.has(candidate)) {
+    candidate = `${baseId}:${suffix}`;
+    suffix += 1;
+  }
+
+  options.reservedIds.add(candidate);
+  return candidate;
+}
+
+function flipRouteOrder(routeOrder: LogisticsRouteOrder): LogisticsRouteOrder {
+  return routeOrder === "vertical-first" ? "horizontal-first" : "vertical-first";
 }

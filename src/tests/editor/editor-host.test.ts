@@ -595,6 +595,143 @@ describe("createEditorHost", () => {
     });
   });
 
+  it("creates and applies a single-bend belt logistics draft from an empty cell", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    const startResult = editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 0, y: 0 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 2, y: 1 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(startResult.status).toBe("created");
+    expect(moveResult).toMatchObject({
+      status: "updated",
+      canApply: true,
+      invalidReason: null,
+      headGridPoint: { x: 2, y: 1 },
+    });
+    expect(editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => ({
+      x: cell.gridPoint.x,
+      y: cell.gridPoint.y,
+      definitionId: cell.shape,
+    }))).toEqual([
+      { x: 0, y: 0, definitionId: "straight" },
+      { x: 0, y: 1, definitionId: "turn-ccw" },
+      { x: 1, y: 1, definitionId: "straight" },
+      { x: 2, y: 1, definitionId: "straight" },
+    ]);
+    expect(editorHost.state.collections[EntityCollectionType.logisticsHead]).toEqual([
+      editorHost.state.collections.preview.at(-1),
+    ]);
+
+    expect(editorHost.actions.applyLogisticDraft()).toBe(true);
+    expect(editorHost.state.collections.preview).toEqual([]);
+    expect(editorHost.state.collections[EntityCollectionType.logisticsHead]).toEqual([]);
+    expect(editorHost.queries.resolveLogisticsDraftState()).toBeNull();
+    expect(editorHost.queries.listEntities().filter((entity) =>
+      entity.id.startsWith("logistics-draft:belt"),
+    )).toHaveLength(4);
+  });
+
+  it("marks logistics drafts invalid when they overlap existing path tiles", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 11, y: 8 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 12, y: 8 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult).toMatchObject({
+      canApply: false,
+      invalidReason: "overlap-existing-logistics",
+    });
+    expect(editorHost.actions.applyLogisticDraft()).toBe(false);
+    expect(editorHost.internalDocument.getSnapshot().entities["dummy-entity-1"]).toBeDefined();
+  });
+
+  it("replaces only the starting logistics tile when applying from an existing path", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "logistics-entity",
+        entityId: "dummy-entity-1",
+        gridPoint: { x: 12, y: 8 },
+      },
+    });
+    const moveResult = editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 13, y: 8 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(moveResult.canApply).toBe(true);
+    expect(editorHost.state.collections.ghost).toEqual(["dummy-entity-1"]);
+    expect(editorHost.actions.applyLogisticDraft()).toBe(true);
+
+    const snapshot = editorHost.internalDocument.getSnapshot();
+    expect(snapshot.entities["dummy-entity-1"]).toBeUndefined();
+    expect(Object.values(snapshot.entities).filter((entity) =>
+      entity.definitionId.startsWith("belt_")
+      && entity.position.y === 8
+      && (entity.position.x === 12 || entity.position.x === 13),
+    )).toHaveLength(2);
+  });
+
+  it("resolves logistics endpoints without treating splitter devices as replaceable path tiles", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+
+    expect(
+      editorHost.queries.findLogisticsDraftEndpointAtGridPoint({ x: 12, y: 8 }, "belt"),
+    ).toMatchObject({
+      type: "logistics-entity",
+      entityId: "dummy-entity-1",
+    });
+    expect(
+      editorHost.queries.findLogisticsDraftEndpointAtGridPoint({ x: 14, y: 10 }, "belt"),
+    ).toMatchObject({
+      type: "device-port",
+      entityId: "dummy-entity-6",
+      portDirection: "output",
+    });
+  });
+
   it("creates move operation ghost entities and preview drafts from the current selection", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -946,6 +1083,7 @@ describe("createEditorHost", () => {
       "reverse-marquee",
       "preview",
       "ghost",
+      "logistics-head",
     ]);
     expect(
       editorHost.queries.findEntityCollectionGridRect("selection"),
@@ -954,6 +1092,7 @@ describe("createEditorHost", () => {
     expect(editorHost.queries.findEntityCollectionGridRect("reverse-marquee")).toBeNull();
     expect(editorHost.queries.findEntityCollectionGridRect("preview")).toBeNull();
     expect(editorHost.queries.findEntityCollectionGridRect("ghost")).toBeNull();
+    expect(editorHost.queries.findEntityCollectionGridRect("logistics-head")).toBeNull();
   });
 
   it("computes the client rect for a world grid cell", () => {
