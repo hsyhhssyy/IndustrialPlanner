@@ -1121,6 +1121,10 @@ describe("createAppHost", () => {
     const headPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 2 });
     const otherStartPoint = resolveClientPixelPointForGridCell(editorHost, { x: 4, y: 4 });
     const otherEndPoint = resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 4 });
+    const otherContinuePoint = {
+      x: otherEndPoint.x + editorHost.state.viewport.gridCellPixelSize,
+      y: otherEndPoint.y,
+    };
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
       uiButtonId: "placement-action-belt-draw",
@@ -1143,9 +1147,14 @@ describe("createAppHost", () => {
 
     appHost.gestureAdapter.handlePointerDown(touchEvent(72, otherStartPoint.x, otherStartPoint.y));
     appHost.gestureAdapter.handlePointerMove(touchEvent(72, otherEndPoint.x, otherEndPoint.y));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(
+      72,
+      otherContinuePoint.x,
+      otherContinuePoint.y,
+    ));
 
     const afterDraft = editorHost.queries.resolveLogisticsDraftState();
-    expect(panSpy).toHaveBeenCalled();
+    expect(panSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(editorHost.state.collections.preview).toEqual(beforePreview);
     expect(afterDraft?.source).toEqual(beforeDraft?.source);
     expect(afterDraft?.cells.map((cell) => ({
@@ -1169,6 +1178,7 @@ describe("createAppHost", () => {
     const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
     const headPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 2 });
     const nextHeadPoint = resolveClientPixelPointForGridCell(editorHost, { x: 1, y: 2 });
+    const secondNextHeadPoint = resolveClientPixelPointForGridCell(editorHost, { x: 2, y: 2 });
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
       uiButtonId: "placement-action-belt-draw",
@@ -1184,6 +1194,11 @@ describe("createAppHost", () => {
 
     appHost.gestureAdapter.handlePointerDown(touchEvent(82, headPoint.x, headPoint.y));
     appHost.gestureAdapter.handlePointerMove(touchEvent(82, nextHeadPoint.x, nextHeadPoint.y));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(
+      82,
+      secondNextHeadPoint.x,
+      secondNextHeadPoint.y,
+    ));
 
     const logisticsDraft = editorHost.queries.resolveLogisticsDraftState();
     expect(panSpy).not.toHaveBeenCalled();
@@ -1193,7 +1208,7 @@ describe("createAppHost", () => {
         gridPoint: { x: 0, y: 0 },
       },
     });
-    expect(logisticsDraft?.cells.at(-1)?.gridPoint).toEqual({ x: 1, y: 2 });
+    expect(logisticsDraft?.cells.at(-1)?.gridPoint).toEqual({ x: 2, y: 2 });
     expect(editorHost.state.collections[EntityCollectionType.logisticsHead]).toEqual([
       editorHost.state.collections.preview.at(-1),
     ]);

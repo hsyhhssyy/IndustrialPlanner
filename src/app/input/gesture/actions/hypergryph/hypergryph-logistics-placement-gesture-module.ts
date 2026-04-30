@@ -30,6 +30,8 @@ const BELT_DRAW_BUTTON_ID = "placement-action-belt-draw";
 const PIPE_DRAW_BUTTON_ID = "placement-action-pipe-draw";
 
 export function createHypergryphLogisticsPlacementGestureModule(): GestureMappingModule<AppHost> {
+  let activeTouchLogisticsDragGestureId: string | null = null;
+
   return {
     id: "hypergryph-logistics-placement-gesture",
     when: isHypergryphGestureEnabled,
@@ -94,6 +96,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
       }
 
       if (context.appHost.internalState.activeTool !== "logistics-placement") {
+        activeTouchLogisticsDragGestureId = null;
         return { status: "ignored" };
       }
 
@@ -125,25 +128,38 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
             pointerEntityId: event.pointerEntity?.id ?? null,
           });
 
-        case "touch dragstart":
-          return handleTouchDragStart({
+        case "touch dragstart": {
+          const result = handleTouchDragStart({
             appHost: context.appHost,
             editor,
             position: event.position,
             startPosition: event.startPosition,
           });
+          activeTouchLogisticsDragGestureId = result.status === "claimed" ? event.gestureId : null;
+          return result;
+        }
 
         case "touch dragmove":
+          if (activeTouchLogisticsDragGestureId !== event.gestureId) {
+            return { status: "ignored" };
+          }
+
           return handleTouchDragMove({
             appHost: context.appHost,
             editor,
             position: event.position,
           });
 
-        case "touch dragend":
+        case "touch dragend": {
+          if (activeTouchLogisticsDragGestureId !== event.gestureId) {
+            return { status: "ignored" };
+          }
+
+          activeTouchLogisticsDragGestureId = null;
           return context.appHost.internalState.runtime.logisticsPlacement.phase === "idle"
             ? { status: "ignored" }
             : { status: "handled" };
+        }
 
         case "mouse move":
           return driveMouseLogisticsPreview({
