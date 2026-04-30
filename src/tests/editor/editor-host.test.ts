@@ -711,6 +711,94 @@ describe("createEditorHost", () => {
     )).toHaveLength(2);
   });
 
+  it("uses a real predecessor connection when shaping the first replaced logistics tile", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    document.entities["dummy-entity-1"] = {
+      ...document.entities["dummy-entity-1"]!,
+      position: { x: 12, y: 8 },
+      rotation: 90,
+    };
+    document.entities["dummy-belt-predecessor"] = {
+      id: "dummy-belt-predecessor",
+      definitionId: "belt_straight_1x1",
+      position: { x: 12, y: 7 },
+      rotation: 90,
+      config: {},
+      tags: [],
+    };
+    document.entityOrder = [
+      ...document.entityOrder.filter((entityId) => entityId !== "dummy-belt-predecessor"),
+      "dummy-belt-predecessor",
+    ];
+    editorHost.internalDocument.setSnapshot(document);
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "logistics-entity",
+        entityId: "dummy-entity-1",
+        gridPoint: { x: 12, y: 8 },
+      },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 13, y: 8 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(editorHost.queries.resolveLogisticsDraftState()?.cells[0]).toMatchObject({
+      gridPoint: { x: 12, y: 8 },
+      fromEdge: "NORTH",
+      toEdge: "EAST",
+      shape: "turn-ccw",
+      rotation: 90,
+    });
+  });
+
+  it("ignores stale replaced tile rotation when no predecessor is connected", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    document.entities["dummy-entity-1"] = {
+      ...document.entities["dummy-entity-1"]!,
+      position: { x: 12, y: 8 },
+      rotation: 90,
+    };
+    editorHost.internalDocument.setSnapshot(document);
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "logistics-entity",
+        entityId: "dummy-entity-1",
+        gridPoint: { x: 12, y: 8 },
+      },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 13, y: 8 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(editorHost.queries.resolveLogisticsDraftState()?.cells[0]).toMatchObject({
+      gridPoint: { x: 12, y: 8 },
+      fromEdge: "WEST",
+      toEdge: "EAST",
+      shape: "straight",
+      rotation: 0,
+    });
+  });
+
   it("resolves logistics endpoints without treating splitter devices as replaceable path tiles", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

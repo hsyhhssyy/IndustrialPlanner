@@ -311,9 +311,12 @@ export function appendFreehandPathPoints(options: {
 }
 
 export function resolveLogisticsPathCells(options: {
+  kind: LogisticsKind;
   points: readonly GridPoint[];
   source: LogisticsDraftEndpoint | null;
   target: LogisticsDraftEndpoint | null;
+  document: WorldDocument;
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   replacingEntity: WorldEntity | null;
   replacingDefinition: EntityDefinition | null;
 }): LogisticsPathCell[] {
@@ -332,6 +335,9 @@ export function resolveLogisticsPathCells(options: {
       previous,
       next,
       source: index === 0 ? options.source : null,
+      kind: options.kind,
+      document: options.document,
+      entityDefinitionMap: options.entityDefinitionMap,
       replacingEntity: index === 0 ? options.replacingEntity : null,
       replacingDefinition: index === 0 ? options.replacingDefinition : null,
     });
@@ -495,6 +501,9 @@ function resolveCellFromEdge(options: {
   previous: GridPoint | null;
   next: GridPoint | null;
   source: LogisticsDraftEndpoint | null;
+  kind: LogisticsKind;
+  document: WorldDocument;
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   replacingEntity: WorldEntity | null;
   replacingDefinition: EntityDefinition | null;
 }): GridEdge | null {
@@ -507,7 +516,10 @@ function resolveCellFromEdge(options: {
     return oppositeEdge(options.source.edge);
   }
 
-  const replacingInputEdge = resolveReplacingInputEdge({
+  const replacingInputEdge = resolveConnectedReplacingInputEdge({
+    kind: options.kind,
+    document: options.document,
+    entityDefinitionMap: options.entityDefinitionMap,
     replacingEntity: options.replacingEntity,
     replacingDefinition: options.replacingDefinition,
   });
@@ -576,7 +588,10 @@ function normalizeCellEdges(
   };
 }
 
-function resolveReplacingInputEdge(options: {
+function resolveConnectedReplacingInputEdge(options: {
+  kind: LogisticsKind;
+  document: WorldDocument;
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   replacingEntity: WorldEntity | null;
   replacingDefinition: EntityDefinition | null;
 }): GridEdge | null {
@@ -584,15 +599,65 @@ function resolveReplacingInputEdge(options: {
     return null;
   }
 
-  const inputGroup = options.replacingDefinition.portGroups.find((group) =>
-    group.direction === "input",
-  );
-  const inputPort = inputGroup?.ports[0];
-  if (inputPort === undefined) {
-    return null;
+  const inputEndpoints = resolveDevicePortEndpoints({
+    entity: options.replacingEntity,
+    definition: options.replacingDefinition,
+    kind: options.kind,
+    direction: "input",
+    pointerGridPoint: options.replacingEntity.position,
+  });
+
+  for (const inputEndpoint of inputEndpoints) {
+    const predecessor = findTopEntityAtGridPoint({
+      gridPoint: inputEndpoint.outsideGridPoint,
+      document: options.document,
+      drafts: [],
+      entityDefinitionMap: options.entityDefinitionMap,
+    });
+    if (
+      predecessor === null
+      || predecessor.id === options.replacingEntity.id
+      || !isOrdinaryLogisticsDefinitionId(predecessor.definitionId, options.kind)
+    ) {
+      continue;
+    }
+
+    const predecessorDefinition = options.entityDefinitionMap.get(predecessor.definitionId);
+    if (predecessorDefinition === undefined) {
+      continue;
+    }
+
+    if (
+      doesLogisticsEntityOutputConnectToGridPoint({
+        kind: options.kind,
+        entity: predecessor,
+        definition: predecessorDefinition,
+        targetGridPoint: options.replacingEntity.position,
+      })
+    ) {
+      return inputEndpoint.edge;
+    }
   }
 
-  return rotateGridEdge(inputPort.edge, options.replacingEntity.rotation);
+  return null;
+}
+
+function doesLogisticsEntityOutputConnectToGridPoint(options: {
+  kind: LogisticsKind;
+  entity: WorldEntity;
+  definition: EntityDefinition;
+  targetGridPoint: GridPoint;
+}): boolean {
+  return resolveDevicePortEndpoints({
+    entity: options.entity,
+    definition: options.definition,
+    kind: options.kind,
+    direction: "output",
+    pointerGridPoint: options.targetGridPoint,
+  }).some((endpoint) => areGridPointsEqual(
+    endpoint.outsideGridPoint,
+    options.targetGridPoint,
+  ));
 }
 
 function resolveShapeFromEdges(fromEdge: GridEdge, toEdge: GridEdge): LogisticsPathShape {

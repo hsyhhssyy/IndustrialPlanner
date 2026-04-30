@@ -12,6 +12,9 @@ const pixiMocks = vi.hoisted(() => {
     public parent: MockContainer | null = null
     public alpha = 1
     public visible = true
+    public rotation = 0
+    public readonly pivot = createPoint()
+    public readonly position = createPoint()
 
     public addChild<T extends { parent: MockContainer | null }>(child: T): T {
       child.parent = this
@@ -27,6 +30,17 @@ const pixiMocks = vi.hoisted(() => {
     }
 
     public destroy(): void {}
+  }
+
+  function createPoint() {
+    return {
+      x: 0,
+      y: 0,
+      set(x: number, y: number) {
+        this.x = x
+        this.y = y
+      },
+    }
   }
 
   class MockGraphics extends MockContainer {
@@ -103,6 +117,28 @@ describe("LogisticsSprite", () => {
     expect(overlayGraphics?.[0]?.commands).toContain("fill")
     expect(overlayGraphics?.[0]?.commands).toContain("stroke")
     expect(overlayGraphics?.[1]?.commands).toContain("stroke")
+  })
+
+  it("rotates the logistics arrow around the tile center", () => {
+    const sprite = new LogisticsSprite("draft-head", "belt_turn_cw_1x1")
+    const layers = createLayers()
+
+    sprite.attach(layers)
+    sprite.syncLayout({
+      ...createLayout(),
+      rotation: 90,
+    }, createContext({
+      previewIds: [],
+      logisticsHeadIds: [],
+      canApply: true,
+    }))
+
+    const entityRoot = layers.entity.children[0] as InstanceType<typeof pixiMocks.MockContainer> | undefined
+    const arrow = entityRoot?.children[1] as InstanceType<typeof pixiMocks.MockGraphics> | undefined
+
+    expect(arrow?.rotation).toBeCloseTo(Math.PI / 2)
+    expect(arrow?.pivot).toMatchObject({ x: 26, y: 36 })
+    expect(arrow?.position).toMatchObject({ x: 26, y: 36 })
   })
 })
 

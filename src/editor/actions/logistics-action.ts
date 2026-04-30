@@ -377,9 +377,12 @@ function rebuildLogisticsDraft(options: {
     ? null
     : options.context.entityDefinitionMap.get(replacingEntity.definitionId) ?? null;
   const cells = resolveLogisticsPathCells({
+    kind: options.kind,
     points: options.points,
     source: options.source,
     target: options.target,
+    document: currentDocument,
+    entityDefinitionMap: options.context.entityDefinitionMap,
     replacingEntity,
     replacingDefinition,
   });

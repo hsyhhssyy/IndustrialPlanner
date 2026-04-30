@@ -29,6 +29,7 @@ const ARROW_STROKE_WIDTH = 2;
 const LOGISTICS_PREVIEW_VALID_COLOR = 0xffffff;
 const LOGISTICS_PREVIEW_INVALID_COLOR = 0xff3b30;
 const LOGISTICS_HEAD_STROKE_COLOR = 0xffd633;
+const DEGREE_TO_RADIAN = Math.PI / 180;
 
 function isPipe(spriteId: LogisticsSpriteId): boolean {
   return spriteId.startsWith("pipe_");
@@ -89,6 +90,7 @@ export class LogisticsSprite extends BaseRenderSprite {
     } else {
       this.drawStraightArrow(x, y, width, height);
     }
+    this.applyArrowRotation(layout);
   }
 
   /**
@@ -169,6 +171,15 @@ export class LogisticsSprite extends BaseRenderSprite {
         ])
         .fill({ color: ARROW_STROKE_COLOR });
     }
+  }
+
+  private applyArrowRotation(layout: RenderSpriteLayout): void {
+    const centerX = layout.x + layout.width / 2;
+    const centerY = layout.y + layout.height / 2;
+
+    this.arrow.pivot.set(centerX, centerY);
+    this.arrow.position.set(centerX, centerY);
+    this.arrow.rotation = layout.rotation * DEGREE_TO_RADIAN;
   }
 
   protected resetCollectionOverlay(
