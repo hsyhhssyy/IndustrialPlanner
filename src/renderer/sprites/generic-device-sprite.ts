@@ -299,6 +299,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
+    if (this.shouldDrawLogisticsEndpointOverlay(context)) {
+      this.drawPreviewOverlay(layout, context);
+    }
+
     this.syncPortOverlay(layout, context);
   }
 
@@ -493,6 +497,18 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       collections[EntityCollectionType.preview],
       this.entityId,
     );
+  }
+
+  private shouldDrawLogisticsEndpointOverlay(context: RenderSpriteSyncContext): boolean {
+    const draft = context.workspace.editor?.queries?.resolveLogisticsDraftState?.();
+    const sourceEntityId = draft?.source?.type === "device-port"
+      ? draft.source.entityId
+      : null;
+    const targetEntityId = draft?.target?.type === "device-port"
+      ? draft.target.entityId
+      : null;
+
+    return this.entityId === sourceEntityId || this.entityId === targetEntityId;
   }
 
   private getPortChevronSprite(index: number): Sprite {

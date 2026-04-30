@@ -8,6 +8,7 @@ import {
 } from "./render-sprite"
 import { BaseRenderSprite } from "./base-render-sprite"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
+import { EntityCollectionType, type EntityCollectionType as EntityCollectionTypeValue } from "@/domain/state/types"
 
 const DEFAULT_GHOST_ROOT_ALPHA = 0.2;
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1;
@@ -25,6 +26,9 @@ const BELT_COLOR = 0xffcc00;  // 黄色（传送带）
 const PIPE_COLOR = 0x3388ff;  // 蓝色（管道）
 const ARROW_STROKE_COLOR = 0x222222;  // 深灰色箭头描边
 const ARROW_STROKE_WIDTH = 2;
+const LOGISTICS_PREVIEW_VALID_COLOR = 0xffffff;
+const LOGISTICS_PREVIEW_INVALID_COLOR = 0xff3b30;
+const LOGISTICS_HEAD_STROKE_COLOR = 0xffd633;
 
 function isPipe(spriteId: LogisticsSpriteId): boolean {
   return spriteId.startsWith("pipe_");
@@ -53,6 +57,8 @@ export class LogisticsSprite extends BaseRenderSprite {
   private readonly body = new Graphics({ roundPixels: true })
   private readonly arrow = new Graphics({ roundPixels: true })
   private defaultCollectionOverlayGraphics: Graphics | null = null;
+  private previewOverlayGraphics: Graphics | null = null;
+  private headOverlayGraphics: Graphics | null = null;
   private readonly spriteId: LogisticsSpriteId;
 
   public constructor(entityId: string, spriteId: LogisticsSpriteId) {
@@ -177,6 +183,8 @@ export class LogisticsSprite extends BaseRenderSprite {
       root.visible = true;
     }
     this.defaultCollectionOverlayGraphics?.clear();
+    this.previewOverlayGraphics?.clear();
+    this.headOverlayGraphics?.clear();
   }
 
   protected drawGhostOverlay(
@@ -195,8 +203,27 @@ export class LogisticsSprite extends BaseRenderSprite {
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
-    void layout;
-    void context;
+    const draft = context.workspace.editor?.queries.resolveLogisticsDraftState();
+    const isInvalid = draft?.canApply === false;
+    const color = isInvalid ? LOGISTICS_PREVIEW_INVALID_COLOR : LOGISTICS_PREVIEW_VALID_COLOR;
+    const width = resolveWorldEntitySelectionStrokeWidth(this.resolveWorkspaceGridCellPixelSize(context));
+    const innerRect = resolveInnerStrokeRect(layout, width);
+
+    if (innerRect === null) {
+      return;
+    }
+
+    this.getPreviewOverlayGraphics()
+      .rect(innerRect.x, innerRect.y, innerRect.width, innerRect.height)
+      .fill({
+        color,
+        alpha: isInvalid ? 0.45 : 0.25,
+      })
+      .stroke({
+        width,
+        color,
+        alpha: isInvalid ? 0.95 : 0.75,
+      });
   }
 
   protected drawSelectionOverlay(
@@ -231,6 +258,76 @@ export class LogisticsSprite extends BaseRenderSprite {
     this.getRootOfLayer("overlay").addChild(graphics);
     this.defaultCollectionOverlayGraphics = graphics;
     return graphics;
+  }
+
+  protected getPreviewOverlayGraphics(): Graphics {
+    if (this.previewOverlayGraphics !== null) {
+      return this.previewOverlayGraphics;
+    }
+
+    const graphics = new Graphics({ roundPixels: true });
+    this.getRootOfLayer("overlay").addChild(graphics);
+    this.previewOverlayGraphics = graphics;
+    return graphics;
+  }
+
+  protected getHeadOverlayGraphics(): Graphics {
+    if (this.headOverlayGraphics !== null) {
+      return this.headOverlayGraphics;
+    }
+
+    const graphics = new Graphics({ roundPixels: true });
+    this.getRootOfLayer("overlay").addChild(graphics);
+    this.headOverlayGraphics = graphics;
+    return graphics;
+  }
+
+  protected override resolveCollectionSyncOrder(
+    context: RenderSpriteSyncContext,
+  ): readonly EntityCollectionTypeValue[] {
+    void context;
+    return [
+      EntityCollectionType.ghost,
+      EntityCollectionType.preview,
+      EntityCollectionType.logisticsHead,
+      EntityCollectionType.marquee,
+      EntityCollectionType.reverseMarquee,
+      EntityCollectionType.selection,
+    ];
+  }
+
+  protected override syncCollectionOverlay(
+    collectionTypes: readonly EntityCollectionTypeValue[],
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void {
+    super.syncCollectionOverlay(collectionTypes, layout, context);
+
+    if (collectionTypes.includes(EntityCollectionType.logisticsHead)) {
+      this.drawHeadOverlay(layout, context);
+    }
+  }
+
+  private drawHeadOverlay(
+    layout: RenderSpriteLayout,
+    context: RenderSpriteSyncContext,
+  ): void {
+    const width = Math.max(
+      WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH,
+      resolveWorldEntitySelectionStrokeWidth(this.resolveWorkspaceGridCellPixelSize(context)),
+    );
+    const innerRect = resolveInnerStrokeRect(layout, width);
+
+    if (innerRect === null) {
+      return;
+    }
+
+    this.getHeadOverlayGraphics()
+      .rect(innerRect.x, innerRect.y, innerRect.width, innerRect.height)
+      .stroke({
+        width,
+        color: LOGISTICS_HEAD_STROKE_COLOR,
+      });
   }
 }
 
