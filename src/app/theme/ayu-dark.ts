@@ -76,6 +76,8 @@ export const AYU_DARK_THEME: AppTheme = {
     "renderer-belt-tile-stroke": "#f59e0b",
     "renderer-belt-track": "#7c8da3",
     "renderer-belt-lane": "#d9e1ee",
+    "renderer-port-chevron": "#ffffff",
+    "renderer-preview-rect-fill": "#59c2ff",
   },
   renderer: {
     worldGridLineColorKey: "renderer-grid-line",
@@ -86,5 +88,7 @@ export const AYU_DARK_THEME: AppTheme = {
     beltTileStrokeColorKey: "renderer-belt-tile-stroke",
     beltTrackColorKey: "renderer-belt-track",
     beltLaneColorKey: "renderer-belt-lane",
+    portChevronColorKey: "renderer-port-chevron",
+    worldPreviewRectFillColorKey: "renderer-preview-rect-fill",
   },
 };

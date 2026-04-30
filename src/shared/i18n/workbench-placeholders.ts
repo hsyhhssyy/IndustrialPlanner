@@ -117,6 +117,12 @@ const WORKBENCH_PLACEHOLDER_TRANSLATIONS: Record<AppLocale, Record<string, strin
     "registry.entity.item_port_grinder_1.name": "粉碎机",
     "registry.entity.item_port_liquid_filling_pd_mc_1.name": "液体灌装机",
     "registry.entity.item_port_mix_pool_1.name": "反应池",
+    "registry.entity.belt_straight_1x1.name": "直行传送带",
+    "registry.entity.belt_turn_cw_1x1.name": "转向传送带(顺时针)",
+    "registry.entity.belt_turn_ccw_1x1.name": "转向传送带(逆时针)",
+    "registry.entity.pipe_straight_1x1.name": "直行管道",
+    "registry.entity.pipe_turn_cw_1x1.name": "转向管道(顺时针)",
+    "registry.entity.pipe_turn_ccw_1x1.name": "转向管道(逆时针)",
   },
   "en-US": {
     "workbench.leftRail.placement": "Placement",
@@ -228,6 +234,12 @@ const WORKBENCH_PLACEHOLDER_TRANSLATIONS: Record<AppLocale, Record<string, strin
     "registry.entity.item_port_grinder_1.name": "Crusher",
     "registry.entity.item_port_liquid_filling_pd_mc_1.name": "Liquid Filling Machine",
     "registry.entity.item_port_mix_pool_1.name": "Reaction Pool",
+    "registry.entity.belt_straight_1x1.name": "Straight Belt",
+    "registry.entity.belt_turn_cw_1x1.name": "Belt Turn (CW)",
+    "registry.entity.belt_turn_ccw_1x1.name": "Belt Turn (CCW)",
+    "registry.entity.pipe_straight_1x1.name": "Straight Pipe",
+    "registry.entity.pipe_turn_cw_1x1.name": "Pipe Turn (CW)",
+    "registry.entity.pipe_turn_ccw_1x1.name": "Pipe Turn (CCW)",
   },
 };
 

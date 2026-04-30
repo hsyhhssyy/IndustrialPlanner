@@ -1,6 +1,7 @@
 import type { EditorQuery } from "@/domain/query/editor-query";
 
 import { createEditorEntityQueries } from "./entity-queries";
+import { createEditorLogisticsQueries } from "./logistics-queries";
 import type { EditorQueriesContext } from "./types";
 import { createEditorViewportQueries } from "./viewport-queries";
 
@@ -9,6 +10,7 @@ export function createEditorQueries(
 ): EditorQuery {
   return {
     ...createEditorEntityQueries(context),
+    ...createEditorLogisticsQueries(context),
     ...createEditorViewportQueries(context),
   };
 }

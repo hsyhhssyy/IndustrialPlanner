@@ -72,10 +72,15 @@ export interface WorkbenchState {
 
 export type ActiveTool = "select" | "move" | "marquee" | "single-placement";
 
+export interface ToolInfo {
+  readonly marqueeType: MarqueeCollectionType;
+}
+
 export interface UiState {
   readonly settings: AppSettings;
   readonly workbench: WorkbenchState;
   readonly screenProfile: ScreenProfile;
   readonly theme: AppTheme;
   readonly activeTool: ActiveTool;
+  readonly toolInfo: ToolInfo;
 }

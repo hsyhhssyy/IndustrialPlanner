@@ -68,7 +68,6 @@ export function createEditorMoveActions({
         previewDraftIds: preview,
         nextPreviewDrafts,
       });
-      selection.replace([]);
       ghost.replace(nextGhostEntityIds);
       preview.replace(nextPreviewDrafts.map((entity) => entity.id));
     },

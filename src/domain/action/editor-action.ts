@@ -48,4 +48,9 @@ export interface EditorAction {
 	createSinglePlacementDraft(deviceDefinitionId: string, centerGridPoint: GridPoint): void;
 	applyPlacementDraft(): boolean;
 	cancelPlacementDraft(): void;
+
+	createLogisticsDraftStart(gridPoint: GridPoint, type: 'belt' | 'pipe'): void;
+	moveLogisticEnd(gridPoint: GridPoint, turn: boolean): void;
+	applyLogisticDraft(): boolean;
+	cancelLogisticsDraft(): void;
 }

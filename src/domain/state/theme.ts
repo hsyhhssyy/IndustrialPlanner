@@ -72,6 +72,8 @@ export const APP_THEME_COLOR_KEYS = [
   "renderer-belt-tile-stroke",
   "renderer-belt-track",
   "renderer-belt-lane",
+  "renderer-port-chevron",
+  "renderer-preview-rect-fill",
 ] as const;
 
 export type AppThemeColorKey = typeof APP_THEME_COLOR_KEYS[number];
@@ -86,6 +88,8 @@ export interface AppThemeRendererColorKeys {
   readonly beltTileStrokeColorKey: AppThemeColorKey;
   readonly beltTrackColorKey: AppThemeColorKey;
   readonly beltLaneColorKey: AppThemeColorKey;
+  readonly portChevronColorKey: AppThemeColorKey;
+  readonly worldPreviewRectFillColorKey: AppThemeColorKey;
 }
 
 export interface AppTheme {

@@ -538,11 +538,6 @@ function createContext(options: {
       setActiveTool: vi.fn((activeTool) => {
         appHost.internalState.activeTool = activeTool;
       }),
-      showCanvasFloatingToolbar: vi.fn((_, anchor) => {
-        appHost.internalState.runtime.canvasFloatingToolbar.visible = true;
-        appHost.internalState.runtime.canvasFloatingToolbar.anchor = anchor;
-        appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
-      }),
       showCanvasFloatingToolbarForCollection: vi.fn((buttonIds, collectionType) => {
         if (editor.queries.findEntityCollectionGridRect(collectionType) === null) {
           return false;
@@ -554,7 +549,6 @@ function createContext(options: {
         appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = collectionType;
         return true;
       }),
-      moveCanvasFloatingToolbar: vi.fn(),
       alignCanvasFloatingToolbar: vi.fn(() => true),
       setCanvasFloatingToolbarSize: vi.fn(),
       hideCanvasFloatingToolbar: vi.fn(() => {

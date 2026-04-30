@@ -195,11 +195,73 @@ export class AppActionImpl implements AppAction, AppInternalAction {
       return false;
     }
 
-    toolbar.anchor = resolveCanvasFloatingToolbarAnchor({
+    const toolbarHeight = toolbar.measuredSize?.height ?? DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT;
+    const toolbarWidth = toolbar.measuredSize?.width ?? 0;
+    const viewport = editor.state.viewport.clientRect;
+    const cellHeight = topLeftAboveCellRect.height;
+
+    const aboveAnchor = resolveCanvasFloatingToolbarAnchor({
       collectionWidth: collectionRect.width,
       topLeftAboveCellRect,
-      toolbarHeight: toolbar.measuredSize?.height ?? DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT,
+      toolbarHeight,
     });
+
+    let anchor = aboveAnchor;
+
+    const viewportTopSixth = viewport.top + viewport.height / 6;
+    if (aboveAnchor.y < viewportTopSixth) {
+      const topLeftBelowCellRect = editor.queries.findClientRectForGridCell({
+        x: collectionRect.x,
+        y: collectionRect.y + collectionRect.height,
+      });
+      const viewportBottomFiveSixths = viewport.top + (viewport.height * 5) / 6;
+
+      if (topLeftBelowCellRect !== null) {
+        const verticalOverflow = Math.max(0, toolbarHeight - cellHeight);
+        const belowY =
+          topLeftBelowCellRect.top
+          + cellHeight
+          + cellHeight / 2
+          + verticalOverflow / 2;
+
+        if (belowY <= viewportBottomFiveSixths) {
+          anchor = {
+            x: aboveAnchor.x,
+            y: belowY,
+          };
+        } else {
+          anchor = {
+            x: aboveAnchor.x,
+            y: viewport.top + toolbarHeight * 1.5,
+          };
+        }
+      } else {
+        anchor = {
+          x: aboveAnchor.x,
+          y: viewport.top + toolbarHeight * 1.5,
+        };
+      }
+    }
+
+    if (toolbarWidth > 0) {
+      const halfWidth = toolbarWidth / 2;
+      const viewportLeft = viewport.left;
+      const viewportRight = viewport.left + viewport.width;
+
+      if (anchor.x - halfWidth < viewportLeft) {
+        anchor = {
+          x: viewportLeft + halfWidth,
+          y: anchor.y,
+        };
+      } else if (anchor.x + halfWidth > viewportRight) {
+        anchor = {
+          x: viewportRight - halfWidth,
+          y: anchor.y,
+        };
+      }
+    }
+
+    toolbar.anchor = anchor;
     return true;
   });
 
@@ -505,7 +567,7 @@ function resolveCanvasFloatingToolbarAnchor(options: {
       + options.topLeftAboveCellRect.width * options.collectionWidth / 2,
     y:
       options.topLeftAboveCellRect.top
-      + cellHeight / 2
+      - cellHeight / 2
       - verticalOverflow / 2,
   };
 }

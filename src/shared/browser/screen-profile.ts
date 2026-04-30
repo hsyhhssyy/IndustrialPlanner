@@ -182,7 +182,11 @@ export function resolveScreenProfile(source: ScreenProfileSource): ScreenProfile
   let deviceClass: DeviceClass;
 
   if (hints.tablet) {
-    deviceClass = "tablet";
+    if (shorterSide <= MOBILE_MAX_SHORT_EDGE) {
+      deviceClass = "mobile";
+    } else {
+      deviceClass = "tablet";
+    }
   } else if (hints.mobile) {
     deviceClass = "mobile";
   } else if (

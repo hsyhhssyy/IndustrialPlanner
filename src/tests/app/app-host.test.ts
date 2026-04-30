@@ -664,7 +664,7 @@ describe("createAppHost", () => {
 
     expect(appHost.internalState.activeTool).toBe("move");
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
-    expect(editorHost.state.collections.selection).toEqual([]);
+    expect(editorHost.state.collections.selection).toEqual(["dummy-entity-2"]);
     expect(editorHost.state.collections.ghost).toEqual(["dummy-entity-2"]);
     expect(editorHost.state.collections.preview).toHaveLength(1);
 
@@ -681,9 +681,9 @@ describe("createAppHost", () => {
       EntityCollectionType.preview,
     );
     expect(appHost.internalState.runtime.canvasFloatingToolbar.buttonIds).toEqual([
-      "canvas-floating-toolbar-button-ok",
-      "canvas-floating-toolbar-button-rotate",
       "canvas-floating-toolbar-button-cancel",
+      "canvas-floating-toolbar-button-rotate",
+      "canvas-floating-toolbar-button-ok",
     ]);
   });
 
@@ -710,7 +710,7 @@ describe("createAppHost", () => {
     );
     expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
       x: 520,
-      y: 386,
+      y: 370,
     });
 
     appHost.internalActions.setCanvasFloatingToolbarSize({
@@ -719,8 +719,8 @@ describe("createAppHost", () => {
     });
 
     expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
-      x: 520,
-      y: 400,
+      x: 498,
+      y: 384,
     });
   });
 
@@ -854,9 +854,9 @@ describe("createAppHost", () => {
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
     editorHost.actions.createMoveOperationDraft();
     appHost.internalState.runtime.moveAnchor = { x: 12, y: 8 };
-    appHost.internalActions.showCanvasFloatingToolbar(
+    appHost.internalActions.showCanvasFloatingToolbarForCollection(
       ["canvas-floating-toolbar-button-ok", "canvas-floating-toolbar-button-cancel"],
-      { x: 100, y: 80 },
+      "preview",
     );
     appHost.internalActions.setActiveTool("move");
 

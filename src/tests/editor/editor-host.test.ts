@@ -619,7 +619,10 @@ describe("createEditorHost", () => {
 
     editorHost.actions.createMoveOperationDraft();
 
-    expect(editorHost.state.collections.selection).toEqual([]);
+    expect(editorHost.state.collections.selection).toEqual([
+      "dummy-entity-1",
+      "dummy-entity-2",
+    ]);
     expect(editorHost.state.collections.ghost).toEqual([
       "dummy-entity-1",
       "dummy-entity-2",

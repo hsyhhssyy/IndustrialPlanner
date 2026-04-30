@@ -16,7 +16,7 @@ import {
 import { resolveRenderResolutionFromApp } from "../render-resolution"
 import type { RenderHost } from "../renderer-host"
 
-import { BeltStraightSprite } from "../sprites/belt-straight-sprite"
+import { LogisticsSprite, type LogisticsSpriteId } from "../sprites/logistics-sprite"
 import { GenericDeviceSprite } from "../sprites/generic-device-sprite"
 import {
   RenderLayerMap,
@@ -32,6 +32,7 @@ import { createGridLineDecoration } from "./decorations/GridLineDecoration"
 import { createDiagnosticsDecoration } from "./decorations/DiagnosticsDecoration"
 import { createMarqueeRectDecoration } from "./decorations/MarqueeRectDecoration"
 import { createMarqueeCanvasDecoration } from "./decorations/MarqueeCanvasDecoration"
+import { createPreviewRectDecoration } from "./decorations/PreviewRectDecoration"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
@@ -51,6 +52,7 @@ export function createRenderSceneOrchestrator(
   const app = renderHost.app
   const layers = createRenderLayers()
   const gridDecoration = createGridLineDecoration()
+  const previewRectDecoration = createPreviewRectDecoration()
   const marqueeDecoration = createMarqueeRectDecoration()
   const diagnosticsDecoration = createDiagnosticsDecoration()
   const marqueeCanvasDecoration = createMarqueeCanvasDecoration()
@@ -77,6 +79,8 @@ export function createRenderSceneOrchestrator(
 
     gridDecoration.sync(ctx)
 
+    previewRectDecoration.sync(ctx)
+
     syncWorldEntitySprites({
       renderHost,
       workspace: renderHost.workspace,
@@ -102,6 +106,7 @@ export function createRenderSceneOrchestrator(
 
   app.stage.addChild(layers.background, layers.entity, layers.overlay, marqueeOverlayLayer)
   layers.background.addChild(gridDecoration.container)
+  layers.background.addChild(previewRectDecoration.container)
   marqueeOverlayLayer.addChild(marqueeCanvasDecoration.container)
   marqueeOverlayLayer.addChild(marqueeDecoration.container)
   layers.overlay.addChild(diagnosticsDecoration.container)
@@ -117,6 +122,7 @@ export function createRenderSceneOrchestrator(
 
       entitySprites.clear()
       gridDecoration.destroy()
+      previewRectDecoration.destroy()
       marqueeDecoration.destroy()
       marqueeCanvasDecoration.destroy()
       diagnosticsDecoration.destroy()
@@ -143,8 +149,17 @@ function createSpriteForDefinition(
   entityId: string,
   definition: EntityDefinition,
 ): RenderSprite | null {
-  if (definition.spriteId === "belt_straight_1x1") {
-    return new BeltStraightSprite(entityId)
+  const LOGISTICS_SPRITE_IDS: ReadonlySet<string> = new Set([
+    "belt_straight_1x1",
+    "belt_turn_cw_1x1",
+    "belt_turn_ccw_1x1",
+    "pipe_straight_1x1",
+    "pipe_turn_cw_1x1",
+    "pipe_turn_ccw_1x1",
+  ]);
+
+  if (LOGISTICS_SPRITE_IDS.has(definition.spriteId)) {
+    return new LogisticsSprite(entityId, definition.spriteId as LogisticsSpriteId)
   }
 
   return new GenericDeviceSprite(entityId, definition, renderHost)

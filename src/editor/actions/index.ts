@@ -1,5 +1,6 @@
 import type { EditorAction } from "@/domain/action/editor-action";
 
+import { createEditorLogisticsActions } from "./logistics-action";
 import { createEditorMoveActions } from "./move-action";
 import { createEditorPlacementActions } from "./placement-action";
 import { createEditorSelectionActions } from "./selection-actions";
@@ -10,6 +11,7 @@ export function createEditorActions(
   context: EditorActionsContext,
 ): EditorAction {
   return {
+    ...createEditorLogisticsActions(context),
     ...createEditorMoveActions(context),
     ...createEditorPlacementActions(context),
     ...createEditorViewportActions(context),

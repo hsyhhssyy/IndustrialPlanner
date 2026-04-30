@@ -233,6 +233,14 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return;
     }
 
+    // 当 preview 包含多个元素时，使用蓝色 selection 特效
+    const previewCollection = context.workspace.editor?.state.collections[EntityCollectionType.preview];
+    if (previewCollection && previewCollection.length > 1) {
+      this.drawSelectionOverlay(layout, context);
+      return;
+    }
+
+    // 单元素 preview：使用白色系动画遮罩
     this.loadScanlineTexture();
 
     // 以纹理原始像素尺寸平铺，不做 zoom 缩放
@@ -380,7 +388,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     });
   }
 
-  private loadPortChevronTextures(): void {
+  private loadPortChevronTextures(useMobile: boolean): void {
     if (this.portChevronTextureLoadStarted) {
       return;
     }
@@ -390,7 +398,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     void Promise.all(
       PORT_CHEVRON_TEXTURE_KEYS.map(async (key) => {
         const texture = await this.renderHost.textureManager.getTexture(
-          resolvePortChevronTextureResourceKey(key),
+          resolvePortChevronTextureResourceKey(key, useMobile),
         );
         return [key, texture] as const;
       }),
@@ -431,7 +439,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     if (!this.arePortChevronTexturesReady) {
-      this.loadPortChevronTextures();
+      const deviceClass = context.workspace.app?.state.screenProfile.deviceClass;
+      const useMobile = deviceClass === "mobile" || deviceClass === "tablet";
+      this.loadPortChevronTextures(useMobile);
       return;
     }
 
@@ -450,6 +460,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
       const sprite = this.getPortChevronSprite(index);
       sprite.texture = texture;
+      sprite.tint = resolveAppThemeColorNumber(
+        context.theme,
+        context.theme.renderer.portChevronColorKey,
+      );
       sprite.visible = true;
       sprite.x = spec.x;
       sprite.y = spec.y;
@@ -632,13 +646,15 @@ function resolvePortChevronDirection(
 
 function resolvePortChevronTextureResourceKey(
   key: PortChevronTextureKey,
+  useMobile: boolean,
 ): string {
   const [material, direction] = key.split("-") as [
     PortChevronMaterial,
     PortChevronDirection,
   ];
 
-  return `texture-${material}-port-chevron-${direction}`;
+  const suffix = useMobile ? "-mobile" : "";
+  return `texture-${material}-port-chevron-${direction}${suffix}`;
 }
 
 function resolvePortChevronLayout(options: {

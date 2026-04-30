@@ -26,4 +26,6 @@ export interface EditorQuery {
 		x: number;
 		y: number;
 	}): ClientPixelRect | null;
+
+	canCreateLogisticsDraftStartHere(gridPoint: GridPoint, type: 'belt' | 'pipe'): boolean;
 }

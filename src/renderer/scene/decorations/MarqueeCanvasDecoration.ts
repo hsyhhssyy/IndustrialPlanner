@@ -1,7 +1,8 @@
-import { BlurFilter, Graphics } from "pixi.js";
+import { BlurFilter, Graphics, Text, TextStyle } from "pixi.js";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
+import { EntityCollectionType } from "@/domain/state/types";
 
 /** 边缘发光动画周期（毫秒） */
 const CANVAS_GLOW_ANIMATION_PERIOD_MS = 2000;
@@ -24,6 +25,18 @@ const NEAR_BLUR_STRENGTH = 10;
 const FAR_STROKE_WIDTH = 8;
 /** 远距层模糊强度 ≈ 30px 延伸 */
 const FAR_BLUR_STRENGTH = 30;
+
+/** 左上角模式标签样式 */
+const MODE_LABEL_TEXT_STYLE = new TextStyle({
+  fontSize: 14,
+  fontFamily: "sans-serif",
+  fontWeight: "bold",
+  dropShadow: {
+    alpha: 0.6,
+    blur: 4,
+    distance: 1,
+  },
+});
 
 function resolveGlowAlpha(nowMs: number): number {
   const phase =
@@ -64,11 +77,15 @@ export function createMarqueeCanvasDecoration(): DecorationLayer {
   nearGlow.mask = glowMask;
   farGlow.mask = glowMask;
 
-  // 从后到前：遮罩 → 远距 → 近边 → 核心
+  // 左上角模式标签
+  const modeLabel = new Text({ text: "", style: MODE_LABEL_TEXT_STYLE });
+
+  // 从后到前：遮罩 → 远距 → 近边 → 核心 → 标签
   graphics.addChild(glowMask);
   graphics.addChild(farGlow);
   graphics.addChild(nearGlow);
   graphics.addChild(coreEdge);
+  graphics.addChild(modeLabel);
 
   return {
     container: graphics,
@@ -98,7 +115,9 @@ export function createMarqueeCanvasDecoration(): DecorationLayer {
 
       const color = resolveAppThemeColorNumber(
         ctx.workspace.app!.state.theme,
-        "accent",
+        ctx.workspace.app!.state.toolInfo.marqueeType === EntityCollectionType.marquee
+          ? "accent"
+          : "danger",
       );
       const alpha = resolveGlowAlpha(ctx.nowMs);
 
@@ -130,11 +149,19 @@ export function createMarqueeCanvasDecoration(): DecorationLayer {
           color,
           alpha,
         });
+
+      // 左上角模式标签（仅阴影，不跟随发光颜色）
+      const isReverse =
+        ctx.workspace.app!.state.toolInfo.marqueeType === EntityCollectionType.reverseMarquee;
+      modeLabel.text = isReverse ? "批量反选模式" : "批量选择模式";
+      modeLabel.x = 12;
+      modeLabel.y = 12;
     },
 
     destroy(): void {
       nearBlur.destroy();
       farBlur.destroy();
+      modeLabel.destroy({ children: true });
       glowMask.destroy({ children: true });
       coreEdge.destroy({ children: true });
       nearGlow.destroy({ children: true });

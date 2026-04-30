@@ -158,7 +158,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
             appHost: context.appHost,
             editor,
             position: event.position,
-            isReverseMarquee: context.appHost.internalState.runtime.isReverseMarquee,
+            marqueeType: context.appHost.state.toolInfo.marqueeType,
           });
 
         case "mouse dragmove":
@@ -225,7 +225,7 @@ function handleUiButtonTap(options: {
         return { status: "ignored" };
       }
 
-      options.appHost.internalState.runtime.isReverseMarquee = true;
+      options.appHost.state.toolInfo.marqueeType = EntityCollectionType.reverseMarquee;
       return { status: "handled" };
 
     case TOGGLE_REVERSE_MARQUEE_OFF:
@@ -233,7 +233,7 @@ function handleUiButtonTap(options: {
         return { status: "ignored" };
       }
 
-      options.appHost.internalState.runtime.isReverseMarquee = false;
+      options.appHost.state.toolInfo.marqueeType = EntityCollectionType.marquee;
       return { status: "handled" };
 
     default:
@@ -274,7 +274,9 @@ function startMouseMarqueeDrag(options: {
     appHost: options.appHost,
     editor: options.editor,
     position: options.position,
-    isReverseMarquee: options.originButton === 2,
+    marqueeType: options.originButton === 2
+      ? EntityCollectionType.reverseMarquee
+      : EntityCollectionType.marquee,
   });
 }
 
@@ -282,7 +284,7 @@ function startMarqueeDrag(options: {
   appHost: AppHost;
   editor: EditorContract;
   position: GesturePosition;
-  isReverseMarquee: boolean;
+  marqueeType: MarqueeCollectionType;
 }): GestureHandleResult {
   const anchor = options.editor.queries.findGridCellForClientPixlePoint(options.position);
   if (anchor === null) {
@@ -290,9 +292,9 @@ function startMarqueeDrag(options: {
   }
 
   options.appHost.internalState.runtime.marqueeAnchor = anchor;
-  options.appHost.internalState.runtime.isReverseMarquee = options.isReverseMarquee;
+  options.appHost.state.toolInfo.marqueeType = options.marqueeType;
   options.editor.actions.setMarqueeRange(
-    resolveMarqueeCollectionType(options.isReverseMarquee),
+    options.marqueeType,
     resolveGridRectFromPoints(anchor, anchor),
   );
   return { status: "handled" };
@@ -310,7 +312,7 @@ function updateMarqueeRange(options: {
   }
 
   options.editor.actions.setMarqueeRange(
-    resolveMarqueeCollectionType(options.appHost.internalState.runtime.isReverseMarquee),
+    options.appHost.state.toolInfo.marqueeType,
     resolveGridRectFromPoints(anchor, currentPoint),
   );
   return { status: "handled" };
@@ -324,7 +326,7 @@ function exitMarqueeToSelect(appHost: AppHost, editor: EditorContract | null): v
 export function cleanupMarquee(appHost: AppHost, editor: EditorContract | null): void {
   editor?.actions.cancelMarquee();
   appHost.internalState.runtime.marqueeAnchor = null;
-  appHost.internalState.runtime.isReverseMarquee = false;
+  appHost.state.toolInfo.marqueeType = EntityCollectionType.marquee;
   appHost.internalActions.hideCanvasRightDockToolbar();
   appHost.internalActions.hideCanvasTopLeftCornerToolbar();
 }
@@ -352,12 +354,6 @@ function toggleEntityInSelection(editor: EditorContract, entityId: string): void
       entityId,
     });
   }
-}
-
-function resolveMarqueeCollectionType(isReverseMarquee: boolean): MarqueeCollectionType {
-  return isReverseMarquee
-    ? EntityCollectionType.reverseMarquee
-    : EntityCollectionType.marquee;
 }
 
 function resolveGridRectFromPoints(start: GridPoint, end: GridPoint): GridRect {

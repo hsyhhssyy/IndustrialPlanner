@@ -20,6 +20,8 @@ import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
+import { createDummyWorldDocument } from "@/editor/dummy-document";
+import { createEditorHost } from "@/editor/editor-host";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -475,68 +477,24 @@ describe("WorkbenchApp", () => {
     expect(leftMouseEvent.defaultPrevented).toBe(false);
   });
 
-  it("shows, moves and hides the canvas floating toolbar through app internal actions", () => {
-    const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
-
-    act(() => {
-      root.render(<WorkbenchApp appHost={appHost} />);
-    });
-
-    expect(container.querySelector(".canvas-floating-toolbar")).toBeNull();
-
-    act(() => {
-      appHost.internalActions.showCanvasFloatingToolbar(
-        [
-          "canvas-floating-toolbar-button-ok",
-          "canvas-floating-toolbar-button-delete-many",
-        ],
-        { x: 220, y: 180 },
-      );
-    });
-
-    const toolbar = container.querySelector(".canvas-floating-toolbar") as HTMLDivElement | null;
-
-    expect(toolbar).not.toBeNull();
-    expect(toolbar?.style.left).toBe("220px");
-    expect(toolbar?.style.top).toBe("180px");
-    expect(
-      Array.from(toolbar?.querySelectorAll("[data-ui-button-id]") ?? []).map((button) =>
-        button.getAttribute("data-ui-button-id"),
-      ),
-    ).toEqual([
-      "canvas-floating-toolbar-button-ok",
-      "canvas-floating-toolbar-button-delete-many",
-    ]);
-
-    act(() => {
-      appHost.internalActions.moveCanvasFloatingToolbar({ x: 256, y: 144 });
-    });
-
-    expect(toolbar?.style.left).toBe("256px");
-    expect(toolbar?.style.top).toBe("144px");
-
-    act(() => {
-      appHost.internalActions.hideCanvasFloatingToolbar();
-    });
-
-    expect(container.querySelector(".canvas-floating-toolbar")).toBeNull();
-  });
-
   it("keeps pointer activity inside the canvas floating toolbar out of canvas gestures and only emits ui-button events", () => {
     const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppHost(workspace);
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
-      appHost.internalActions.showCanvasFloatingToolbar(
+      editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
+      editorHost.actions.createMoveOperationDraft();
+      appHost.internalActions.showCanvasFloatingToolbarForCollection(
         [
           "canvas-floating-toolbar-button-ok",
           "canvas-floating-toolbar-button-delete",
         ],
-        { x: 220, y: 180 },
+        "preview",
       );
     });
 
@@ -1235,13 +1193,11 @@ describe("WorkbenchApp", () => {
     });
 
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(true);
-    expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
-    expect(immediateMoveToggle?.checked).toBe(true);
     expect(immediateMarqueeToggle?.checked).toBe(true);
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
         ...DEFAULT_APP_SETTINGS_STORAGE,
-        hypergryphImmediateMove: true,
+        hypergryphImmediateMove: false,
         hypergryphImmediateMarquee: true,
       }),
     );

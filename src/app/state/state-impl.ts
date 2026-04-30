@@ -2,10 +2,14 @@ import { makeAutoObservable } from "mobx";
 
 import type { ScreenProfile } from "@/domain/state/screen-profile";
 import type { AppTheme, AppThemeId } from "@/domain/state/theme";
+import {
+  EntityCollectionType,
+} from "@/domain/state/types";
 import type {
   ActiveTool,
   AppSettings,
-  EntityCollectionType,
+  MarqueeCollectionType,
+  ToolInfo,
   UiState,
   WorkbenchState,
 } from "@/domain/state/types";
@@ -116,10 +120,13 @@ export interface RuntimeStateReadWrite {
   singlePlacementDeviceId: string | null;
   selectingPlacementGroup: PlacementGroup | null;
   marqueeAnchor: GridPoint | null;
-  isReverseMarquee: boolean;
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite;
   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite;
   canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite;
+}
+
+export interface ToolInfoReadWrite extends ToolInfo {
+  marqueeType: MarqueeCollectionType;
 }
 
 const DEFAULT_APP_LOCALE: AppLocale = "zh-CN";
@@ -136,6 +143,8 @@ export interface UiStateReadWrite extends UiState {
   screenProfile: ScreenProfile;
   /// activeTool 是当前激活的工具，属于公共 contract 状态。
   activeTool: ActiveTool;
+  /// toolInfo 是当前工具的运行参数，属于公共 contract 状态。
+  toolInfo: ToolInfoReadWrite;
   /// runtimeState存储一些不需要持久化的状态，比如当前打开的panel是什么等等，每次页面刷新时，这些状态都会被重置回默认值。
   /// runtimeState 不进Contract，这是纯私有的状态。
   runtime: RuntimeStateReadWrite;
@@ -190,10 +199,17 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   singlePlacementDeviceId: string | null = null;
   selectingPlacementGroup: PlacementGroup | null = null;
   marqueeAnchor: GridPoint | null = null;
-  isReverseMarquee = false;
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite = new CanvasFloatingToolbarStateReadWriteImpl();
   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite = new CanvasRightDockToolbarStateReadWriteImpl();
   canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite = new CanvasTopLeftCornerToolbarStateReadWriteImpl();
+
+  public constructor() {
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
+}
+
+class ToolInfoReadWriteImpl implements ToolInfoReadWrite {
+  marqueeType: MarqueeCollectionType = EntityCollectionType.marquee;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -215,6 +231,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
   workbench: WorkbenchStateReadWrite = new WorkbenchStateReadWriteImpl();
   screenProfile: ScreenProfile = resolveScreenProfileFromWindow();
   activeTool: ActiveTool = "select";
+  toolInfo: ToolInfoReadWrite = new ToolInfoReadWriteImpl();
   runtime: RuntimeStateReadWrite = new RuntimeStateReadWriteImpl();
 
   public constructor() {

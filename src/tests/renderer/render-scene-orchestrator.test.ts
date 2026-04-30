@@ -316,7 +316,7 @@ describe("resolveWorldGridLineAxes", () => {
     expect(shiftedAxes.horizontal.major).toEqual([160])
   })
 
-  it("hides fine grid lines when cells are smaller than 20 pixels", () => {
+  it("hides fine grid lines when cells are smaller than 10 pixels", () => {
     const axes = resolveWorldGridLineAxes({
       viewportBounds: {
         left: 0,
@@ -328,16 +328,16 @@ describe("resolveWorldGridLineAxes", () => {
         x: 0,
         y: 0,
       },
-      gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
+      gridCellPixelSize: 9,
     })
 
     expect(axes.vertical.fine).toEqual([])
     expect(axes.horizontal.fine).toEqual([])
-    expect(axes.vertical.major.slice(0, 3)).toEqual([40, 120, 200])
-    expect(axes.horizontal.major.slice(0, 3)).toEqual([40, 120, 200])
+    expect(axes.vertical.major.slice(0, 3)).toEqual([20, 65, 110])
+    expect(axes.horizontal.major.slice(0, 3)).toEqual([20, 65, 110])
   })
 
-  it("keeps fine grid lines visible at 20 pixels", () => {
+  it("keeps fine grid lines visible at 10 pixels", () => {
     const axes = resolveWorldGridLineAxes({
       viewportBounds: {
         left: 0,
@@ -349,13 +349,13 @@ describe("resolveWorldGridLineAxes", () => {
         x: 0,
         y: 0,
       },
-      gridCellPixelSize: 20,
+      gridCellPixelSize: 10,
     })
 
-    expect(axes.vertical.fine).toEqual([10, 30, 70, 90])
-    expect(axes.horizontal.fine).toEqual([10, 30, 70, 90])
-    expect(axes.vertical.major).toEqual([50])
-    expect(axes.horizontal.major).toEqual([50])
+    expect(axes.vertical.fine).toEqual([10, 20, 30, 40, 60, 70, 80, 90])
+    expect(axes.horizontal.fine).toEqual([10, 20, 30, 40, 60, 70, 80, 90])
+    expect(axes.vertical.major).toEqual([0, 50, 100])
+    expect(axes.horizontal.major).toEqual([0, 50, 100])
   })
 })
 

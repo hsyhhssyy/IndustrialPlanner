@@ -25,7 +25,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(editor.actions.cancelMarquee).toHaveBeenCalledTimes(1);
     expect(appHost.internalState.activeTool).toBe("select");
     expect(appHost.internalState.runtime.marqueeAnchor).toBeNull();
-    expect(appHost.internalState.runtime.isReverseMarquee).toBe(false);
+    expect(appHost.state.toolInfo.marqueeType).toBe(EntityCollectionType.marquee);
   });
 
   it("enters touch marquee from the placement button and collapses the right dock", () => {
@@ -68,7 +68,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(result).toEqual({ status: "handled" });
     expect(appHost.internalState.activeTool).toBe("marquee");
     expect(appHost.internalState.runtime.marqueeAnchor).toEqual({ x: 3, y: 4 });
-    expect(appHost.internalState.runtime.isReverseMarquee).toBe(false);
+    expect(appHost.state.toolInfo.marqueeType).toBe(EntityCollectionType.marquee);
     expect(editor.actions.setMarqueeRange).toHaveBeenCalledWith(
       EntityCollectionType.marquee,
       { x: 3, y: 4, width: 1, height: 1 },
@@ -102,7 +102,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     ]);
     expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
     expect(appHost.internalState.runtime.marqueeAnchor).toEqual({ x: 6, y: 7 });
-    expect(appHost.internalState.runtime.isReverseMarquee).toBe(false);
+    expect(appHost.state.toolInfo.marqueeType).toBe(EntityCollectionType.marquee);
     expect(editor.actions.setMarqueeRange).toHaveBeenCalledWith(
       EntityCollectionType.marquee,
       { x: 6, y: 7, width: 1, height: 1 },
@@ -145,7 +145,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
         context,
       ),
     ).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.isReverseMarquee).toBe(true);
+    expect(appHost.state.toolInfo.marqueeType).toBe(EntityCollectionType.reverseMarquee);
 
     expect(
       module.handle(
@@ -278,6 +278,9 @@ function createContext(options: {
         hypergryphOperationMode: true,
         hypergryphImmediateMarquee: options.hypergryphImmediateMarquee ?? false,
       },
+      toolInfo: {
+        marqueeType: EntityCollectionType.marquee,
+      },
     },
     internalState: {
       activeTool: options.activeTool ?? "select",
@@ -287,7 +290,6 @@ function createContext(options: {
       runtime: {
         moveAnchor: null,
         marqueeAnchor: options.marqueeAnchor ?? null,
-        isReverseMarquee: false,
         canvasRightDockToolbar: {
           visible: false,
           buttonIds: [],
