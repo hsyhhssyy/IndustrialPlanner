@@ -12,6 +12,7 @@ import {
 } from "@/domain/state/types";
 import type { ClientPixelRect } from "@/domain/types/client-pixel";
 import type { GridRect } from "@/domain/types/grid";
+import type { LogisticsDraftReadonlyState } from "@/domain/types/logistics";
 
 import type { DraftEntity } from "./draft-entity";
 import { EDITOR_GRID_CELL_PIXEL_SIZE } from "./viewport-constants";
@@ -41,6 +42,7 @@ export interface EditorInternalPersistStateReadWrite {
 
 export interface EditorInternalTransientStateReadWrite {
   hasMeasuredViewportClientRect: boolean;
+  logisticsDraft: LogisticsDraftReadonlyState | null;
 }
 
 class EditorInternalPersistStateReadWriteImpl
@@ -57,6 +59,7 @@ class EditorInternalTransientStateReadWriteImpl
   implements EditorInternalTransientStateReadWrite
 {
   hasMeasuredViewportClientRect = false;
+  logisticsDraft: LogisticsDraftReadonlyState | null = null;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -125,6 +128,7 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
     [EntityCollectionType.reverseMarquee]: createEntityCollection(),
     [EntityCollectionType.preview]: createEntityCollection(),
     [EntityCollectionType.ghost]: createEntityCollection(),
+    [EntityCollectionType.logisticsHead]: createEntityCollection(),
   };
   internalPersistState: EditorInternalPersistStateReadWrite =
     new EditorInternalPersistStateReadWriteImpl();

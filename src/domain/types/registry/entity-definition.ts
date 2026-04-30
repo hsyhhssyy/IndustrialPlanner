@@ -1,4 +1,4 @@
-import type { GridRectSize } from "../grid";
+import type { GridEdge, GridRectSize } from "../grid";
 
 export type UiGroup =
   | "beltLogistics"           // 传送带物流
@@ -64,6 +64,6 @@ interface PortDefinition {
   localCellX: number;
   localCellY: number;
   // 是相对于Entity处于 Rotation = 0 时的方向
-  edge: "SOUTH" | "WEST" | "NORTH" | "EAST";
+  edge: GridEdge;
 
 }

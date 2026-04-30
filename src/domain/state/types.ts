@@ -17,6 +17,7 @@ export const EntityCollectionType = {
   reverseMarquee: "reverse-marquee",
   preview: "preview",
   ghost: "ghost",
+  logisticsHead: "logistics-head",
 } as const;
 
 export type EntityCollectionType =
@@ -70,7 +71,12 @@ export interface WorkbenchState {
   readonly topBarCollapsed: boolean;
 }
 
-export type ActiveTool = "select" | "move" | "marquee" | "single-placement";
+export type ActiveTool =
+  | "select"
+  | "move"
+  | "marquee"
+  | "single-placement"
+  | "logistics-placement";
 
 export interface ToolInfo {
   readonly marqueeType: MarqueeCollectionType;

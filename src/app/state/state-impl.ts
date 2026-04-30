@@ -15,6 +15,7 @@ import type {
 } from "@/domain/state/types";
 import type { ClientPixelPoint } from "@/domain/types/client-pixel";
 import type { GridPoint } from "@/domain/types/grid";
+import type { LogisticsKind, LogisticsRouteOrder } from "@/domain/types/logistics";
 import type { UiGroup } from "@/domain/types/registry/entity-definition";
 import type { AppLocale } from "@/shared/i18n/messages";
 import {
@@ -119,10 +120,25 @@ export interface RuntimeStateReadWrite {
   placementAnchor: GridPoint | null;
   singlePlacementDeviceId: string | null;
   selectingPlacementGroup: PlacementGroup | null;
+  logisticsPlacement: LogisticsPlacementRuntimeStateReadWrite;
   marqueeAnchor: GridPoint | null;
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite;
   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite;
   canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite;
+}
+
+export interface LogisticsPlacementRuntimeStateReadWrite {
+  kind: LogisticsKind | null;
+  shortcutPlacementGroup: "beltLogistics" | "pipeLogistics" | null;
+  pointerMode: "mouse" | "touch" | null;
+  phase: "idle" | "waiting-touch-device-exit" | "drawing" | "snapped-target";
+  routeOrder: LogisticsRouteOrder;
+  sourceEntityId: string | null;
+  targetEntityId: string | null;
+  anchorGridPoint: GridPoint | null;
+  headGridPoint: GridPoint | null;
+  lastMousePosition: ClientPixelPoint | null;
+  statusMessageKey: string | null;
 }
 
 export interface ToolInfoReadWrite extends ToolInfo {
@@ -191,6 +207,24 @@ class CanvasTopLeftCornerToolbarStateReadWriteImpl implements CanvasTopLeftCorne
   }
 }
 
+class LogisticsPlacementRuntimeStateReadWriteImpl implements LogisticsPlacementRuntimeStateReadWrite {
+  kind: LogisticsKind | null = null;
+  shortcutPlacementGroup: "beltLogistics" | "pipeLogistics" | null = null;
+  pointerMode: "mouse" | "touch" | null = null;
+  phase: "idle" | "waiting-touch-device-exit" | "drawing" | "snapped-target" = "idle";
+  routeOrder: LogisticsRouteOrder = "vertical-first";
+  sourceEntityId: string | null = null;
+  targetEntityId: string | null = null;
+  anchorGridPoint: GridPoint | null = null;
+  headGridPoint: GridPoint | null = null;
+  lastMousePosition: ClientPixelPoint | null = null;
+  statusMessageKey: string | null = null;
+
+  public constructor() {
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
+}
+
 class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   activePanel: ActivePanel = null;
   moveAnchor: GridPoint | null = null;
@@ -198,6 +232,7 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   placementAnchor: GridPoint | null = null;
   singlePlacementDeviceId: string | null = null;
   selectingPlacementGroup: PlacementGroup | null = null;
+  logisticsPlacement: LogisticsPlacementRuntimeStateReadWrite = new LogisticsPlacementRuntimeStateReadWriteImpl();
   marqueeAnchor: GridPoint | null = null;
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite = new CanvasFloatingToolbarStateReadWriteImpl();
   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite = new CanvasRightDockToolbarStateReadWriteImpl();

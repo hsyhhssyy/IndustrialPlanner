@@ -5,6 +5,11 @@ import type {
 } from "../types/client-pixel";
 import type { GridPoint, GridRect } from "../types/grid";
 import type { EntityCollectionType, MarqueeCollectionType } from "../state/types";
+import type {
+	CreateLogisticsDraftStartOptions,
+	LogisticsDraftActionResult,
+	MoveLogisticsDraftEndOptions,
+} from "../types/logistics";
 
 export interface MoveViewportByClientPixelVectorOptions {
 	readonly startClientPixel: ClientPixelPoint;
@@ -49,8 +54,10 @@ export interface EditorAction {
 	applyPlacementDraft(): boolean;
 	cancelPlacementDraft(): void;
 
-	createLogisticsDraftStart(gridPoint: GridPoint, type: 'belt' | 'pipe'): void;
-	moveLogisticEnd(gridPoint: GridPoint, turn: boolean): void;
+	createLogisticsDraftStart(
+		options: CreateLogisticsDraftStartOptions,
+	): LogisticsDraftActionResult;
+	moveLogisticEnd(options: MoveLogisticsDraftEndOptions): LogisticsDraftActionResult;
 	applyLogisticDraft(): boolean;
 	cancelLogisticsDraft(): void;
 }

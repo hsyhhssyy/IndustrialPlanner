@@ -1,5 +1,7 @@
 export type GridRotation = 0 | 90 | 180 | 270;
 
+export type GridEdge = "NORTH" | "EAST" | "SOUTH" | "WEST";
+
 export interface GridPoint {
   readonly x: number;
   readonly y: number;

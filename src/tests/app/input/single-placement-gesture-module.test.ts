@@ -322,6 +322,7 @@ function createContext(options: {
         [EntityCollectionType.reverseMarquee]: reverseMarquee,
         [EntityCollectionType.preview]: preview,
         [EntityCollectionType.ghost]: ghost,
+        [EntityCollectionType.logisticsHead]: createCollection([]),
       },
     },
     queries: {

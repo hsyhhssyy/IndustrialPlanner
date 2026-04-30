@@ -3,16 +3,23 @@ import type { EditorQueriesContext } from "./types";
 
 type EditorLogisticsQueries = Pick<
   EditorQuery,
-  "canCreateLogisticsDraftStartHere"
+  | "canCreateLogisticsDraftStartHere"
+  | "findLogisticsDraftEndpointAtGridPoint"
+  | "resolveLogisticsDraftState"
 >;
 
 export function createEditorLogisticsQueries(
   _context: EditorQueriesContext,
 ): EditorLogisticsQueries {
   return {
+    resolveLogisticsDraftState: () => {
+      return _context.state.internalTransientState.logisticsDraft;
+    },
+    findLogisticsDraftEndpointAtGridPoint: () => {
+      return null;
+    },
     canCreateLogisticsDraftStartHere: () => {
-      // TODO: 实现物流草稿起点可行性检查逻辑
-      return true;
+      return false;
     },
   };
 }

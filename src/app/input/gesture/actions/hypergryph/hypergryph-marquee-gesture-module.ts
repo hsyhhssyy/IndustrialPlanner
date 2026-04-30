@@ -225,7 +225,7 @@ function handleUiButtonTap(options: {
         return { status: "ignored" };
       }
 
-      options.appHost.state.toolInfo.marqueeType = EntityCollectionType.reverseMarquee;
+      options.appHost.internalState.toolInfo.marqueeType = EntityCollectionType.reverseMarquee;
       return { status: "handled" };
 
     case TOGGLE_REVERSE_MARQUEE_OFF:
@@ -233,7 +233,7 @@ function handleUiButtonTap(options: {
         return { status: "ignored" };
       }
 
-      options.appHost.state.toolInfo.marqueeType = EntityCollectionType.marquee;
+      options.appHost.internalState.toolInfo.marqueeType = EntityCollectionType.marquee;
       return { status: "handled" };
 
     default:
@@ -292,7 +292,7 @@ function startMarqueeDrag(options: {
   }
 
   options.appHost.internalState.runtime.marqueeAnchor = anchor;
-  options.appHost.state.toolInfo.marqueeType = options.marqueeType;
+  options.appHost.internalState.toolInfo.marqueeType = options.marqueeType;
   options.editor.actions.setMarqueeRange(
     options.marqueeType,
     resolveGridRectFromPoints(anchor, anchor),
@@ -326,7 +326,7 @@ function exitMarqueeToSelect(appHost: AppHost, editor: EditorContract | null): v
 export function cleanupMarquee(appHost: AppHost, editor: EditorContract | null): void {
   editor?.actions.cancelMarquee();
   appHost.internalState.runtime.marqueeAnchor = null;
-  appHost.state.toolInfo.marqueeType = EntityCollectionType.marquee;
+  appHost.internalState.toolInfo.marqueeType = EntityCollectionType.marquee;
   appHost.internalActions.hideCanvasRightDockToolbar();
   appHost.internalActions.hideCanvasTopLeftCornerToolbar();
 }

@@ -9,6 +9,11 @@ import type {
 	GridPoint,
 	GridRect,
 } from "../types/grid";
+import type {
+	LogisticsDraftEndpoint,
+	LogisticsDraftReadonlyState,
+	LogisticsKind,
+} from "../types/logistics";
 
 export interface EditorQuery {
 	getEntityById(entityId: string): WorldEntity | null;
@@ -27,5 +32,10 @@ export interface EditorQuery {
 		y: number;
 	}): ClientPixelRect | null;
 
-	canCreateLogisticsDraftStartHere(gridPoint: GridPoint, type: 'belt' | 'pipe'): boolean;
+	resolveLogisticsDraftState(): LogisticsDraftReadonlyState | null;
+	findLogisticsDraftEndpointAtGridPoint(
+		gridPoint: GridPoint,
+		kind: LogisticsKind,
+	): LogisticsDraftEndpoint | null;
+	canCreateLogisticsDraftStartHere(gridPoint: GridPoint, kind: LogisticsKind): boolean;
 }
