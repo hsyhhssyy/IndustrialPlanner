@@ -12,7 +12,10 @@ import {
   APP_SETTINGS_LOCAL_STORAGE_KEY,
   WORKBENCH_STATE_LOCAL_STORAGE_KEY,
 } from "@/app/state/storage-hook";
-import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state/state-impl";
+import {
+  DEFAULT_HELP_DIALOG_TAB_ID,
+  MOBILE_LEFT_DOCK_WIDTH,
+} from "@/app/state/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { EntityCollectionType } from "@/domain/state/types";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
@@ -98,6 +101,7 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
     expect(appHost.state.workbench.rightDockOpen).toBe(true);
     expect(appHost.state.workbench.leftDockWidth).toBe(375);
+    expect(appHost.state.workbench.helpDialogMaximized).toBe(false);
     expect(appHost.internalState.activeTool).toBe("select");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
 
@@ -165,6 +169,42 @@ describe("createAppHost", () => {
     expect(appHost.actions.translate("workbench.base.wuling")).toBe("Wuling");
   });
 
+  it("opens the help dialog and persists its maximized state through internal actions", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    expect(appHost.internalState.runtime.helpDialog.visible).toBe(false);
+    expect(appHost.state.workbench.helpDialogMaximized).toBe(false);
+    expect(appHost.internalState.runtime.helpDialog.activeTab).toBe(DEFAULT_HELP_DIALOG_TAB_ID);
+
+    appHost.internalActions.openHelpDialog("faq");
+
+    expect(appHost.internalState.runtime.helpDialog.visible).toBe(true);
+    expect(appHost.internalState.runtime.helpDialog.activeTab).toBe("faq");
+
+    appHost.internalActions.toggleHelpDialogMaximized();
+
+    expect(appHost.state.workbench.helpDialogMaximized).toBe(true);
+    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        leftDockOpen: true,
+        rightDockOpen: true,
+        leftDockWidth: 375,
+        topBarCollapsed: false,
+        rightDockBaseExpanded: true,
+        rightDockPowerExpanded: true,
+        rightDockSelectionExpanded: true,
+        helpDialogMaximized: true,
+      }),
+    );
+
+    appHost.internalActions.closeHelpDialog();
+
+    expect(appHost.internalState.runtime.helpDialog.visible).toBe(false);
+    expect(appHost.state.workbench.helpDialogMaximized).toBe(true);
+    expect(appHost.internalState.runtime.helpDialog.activeTab).toBe(DEFAULT_HELP_DIALOG_TAB_ID);
+  });
+
   it("hydrates and persists the current split localStorage keys", () => {
     localStorage.setItem(
       APP_SETTINGS_LOCAL_STORAGE_KEY,
@@ -180,6 +220,10 @@ describe("createAppHost", () => {
         rightDockOpen: false,
         leftDockWidth: 512,
         topBarCollapsed: false,
+        rightDockBaseExpanded: true,
+        rightDockPowerExpanded: true,
+        rightDockSelectionExpanded: true,
+        helpDialogMaximized: true,
       }),
     );
 
@@ -189,6 +233,7 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
     expect(appHost.state.workbench.leftDockWidth).toBe(512);
+    expect(appHost.state.workbench.helpDialogMaximized).toBe(true);
     expect(appHost.state.settings.locale).toBe("en-US");
     expect(appHost.state.settings.themeId).toBe("ayu-light");
     expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
@@ -216,6 +261,10 @@ describe("createAppHost", () => {
         rightDockOpen: true,
         leftDockWidth: 420,
         topBarCollapsed: false,
+        rightDockBaseExpanded: true,
+        rightDockPowerExpanded: true,
+        rightDockSelectionExpanded: true,
+        helpDialogMaximized: true,
       }),
     );
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
@@ -235,6 +284,10 @@ describe("createAppHost", () => {
         rightDockOpen: true,
         leftDockWidth: 420,
         topBarCollapsed: false,
+        rightDockBaseExpanded: true,
+        rightDockPowerExpanded: true,
+        rightDockSelectionExpanded: true,
+        helpDialogMaximized: true,
       }),
     );
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(

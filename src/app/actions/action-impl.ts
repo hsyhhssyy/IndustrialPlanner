@@ -23,7 +23,10 @@ import {
   type CanvasRightDockToolbarButtonId,
   type CanvasTopLeftCornerToolbarButtonId,
   clampLeftDockWidth,
+  DEFAULT_HELP_DIALOG_TAB_ID,
   DEFAULT_RIGHT_DOCK_WIDTH,
+  HELP_DIALOG_TAB_IDS,
+  type HelpDialogTabId,
   resolveLeftDockWidthForScreenProfile,
   type ActivePanel,
   type UiStateReadWrite,
@@ -35,6 +38,13 @@ export interface AppInternalAction {
   toggleLeftDock: () => void;
   toggleRightDock: () => void;
   toggleTopBarCollapsed: () => void;
+  toggleRightDockBaseExpanded: () => void;
+  toggleRightDockPowerExpanded: () => void;
+  toggleRightDockSelectionExpanded: () => void;
+  openHelpDialog: (tabId?: HelpDialogTabId) => void;
+  closeHelpDialog: () => void;
+  toggleHelpDialogMaximized: () => void;
+  setHelpDialogTab: (tabId: HelpDialogTabId) => void;
   setActivePanel: (panel: ActivePanel) => void;
   setActiveTool: (activeTool: ActiveTool) => void;
   showCanvasFloatingToolbar: (
@@ -95,6 +105,57 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
   public readonly toggleTopBarCollapsed: AppInternalAction["toggleTopBarCollapsed"] = action(() => {
     this.internalState.workbench.topBarCollapsed = !this.internalState.workbench.topBarCollapsed;
+  });
+
+  public readonly toggleRightDockBaseExpanded: AppInternalAction["toggleRightDockBaseExpanded"] = action(() => {
+    this.internalState.workbench.rightDockBaseExpanded = !this.internalState.workbench.rightDockBaseExpanded;
+  });
+
+  public readonly toggleRightDockPowerExpanded: AppInternalAction["toggleRightDockPowerExpanded"] = action(() => {
+    this.internalState.workbench.rightDockPowerExpanded = !this.internalState.workbench.rightDockPowerExpanded;
+  });
+
+  public readonly toggleRightDockSelectionExpanded: AppInternalAction["toggleRightDockSelectionExpanded"] = action(() => {
+    this.internalState.workbench.rightDockSelectionExpanded = !this.internalState.workbench.rightDockSelectionExpanded;
+  });
+
+  public readonly openHelpDialog: AppInternalAction["openHelpDialog"] = action((tabId) => {
+    const nextTab = normalizeHelpDialogTab(tabId) ?? this.internalState.runtime.helpDialog.activeTab;
+
+    this.internalState.runtime.helpDialog.visible = true;
+    this.internalState.runtime.helpDialog.activeTab = nextTab;
+  });
+
+  public readonly closeHelpDialog: AppInternalAction["closeHelpDialog"] = action(() => {
+    const helpDialog = this.internalState.runtime.helpDialog;
+
+    if (
+      !helpDialog.visible
+      && helpDialog.activeTab === DEFAULT_HELP_DIALOG_TAB_ID
+    ) {
+      return;
+    }
+
+    helpDialog.visible = false;
+    helpDialog.activeTab = DEFAULT_HELP_DIALOG_TAB_ID;
+  });
+
+  public readonly toggleHelpDialogMaximized: AppInternalAction["toggleHelpDialogMaximized"] = action(() => {
+    if (!this.internalState.runtime.helpDialog.visible) {
+      return;
+    }
+
+    this.internalState.workbench.helpDialogMaximized = !this.internalState.workbench.helpDialogMaximized;
+  });
+
+  public readonly setHelpDialogTab: AppInternalAction["setHelpDialogTab"] = action((tabId) => {
+    const nextTab = normalizeHelpDialogTab(tabId);
+
+    if (nextTab === null || this.internalState.runtime.helpDialog.activeTab === nextTab) {
+      return;
+    }
+
+    this.internalState.runtime.helpDialog.activeTab = nextTab;
   });
 
   public readonly setActivePanel: AppInternalAction["setActivePanel"] = action((panel) => {
@@ -519,6 +580,15 @@ function normalizeCanvasTopLeftCornerToolbarButtonIds(
   }
 
   return deduped;
+}
+
+function normalizeHelpDialogTab(tabId: HelpDialogTabId | undefined): HelpDialogTabId | null {
+  if (tabId === undefined) {
+    return null;
+  }
+
+  const knownTabs = new Set<HelpDialogTabId>(HELP_DIALOG_TAB_IDS);
+  return knownTabs.has(tabId) ? tabId : null;
 }
 
 function normalizeClientPixelPoint(

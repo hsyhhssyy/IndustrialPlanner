@@ -522,32 +522,176 @@ button.is-active {
   outline-offset: 2px;
 }
 
+.help-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 13;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 2.6vw, 28px);
+  background: rgb(15 23 42 / 0.42);
+}
+
+.help-dialog-backdrop,
+.help-dialog-backdrop * {
+  touch-action: auto;
+}
+
+.help-dialog-backdrop.is-immersive-maximized {
+  padding: 0;
+}
+
+.help-dialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(920px, 100%);
+  min-height: min(560px, 100%);
+  max-height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-1);
+  box-shadow: 0 24px 80px rgb(15 23 42 / 0.22);
+}
+
+.help-dialog.is-maximized {
+  width: 100%;
+  height: 100%;
+}
+
+.help-dialog-backdrop.is-immersive-maximized .help-dialog {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.help-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.help-dialog-header-copy {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.help-dialog-header.is-draggable {
+  cursor: grab;
+  user-select: none;
+}
+
+.help-dialog-header-copy h2,
+.help-dialog-placeholder h3 {
+  margin: 0;
+}
+
+.help-dialog-placeholder p {
+  margin: 0;
+  color: var(--text-1);
+}
+
+.help-dialog-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.help-dialog-header-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+}
+
+.help-dialog-tab,
+.help-dialog-header-button {
+  cursor: pointer;
+}
+
+.help-dialog-layout {
+  display: grid;
+  min-height: 0;
+}
+
+.help-dialog-tab-list {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 8px;
+  min-width: 0;
+  overflow-y: hidden;
+  overflow-x: auto;
+  padding: 0;
+}
+
+.help-dialog-tab {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-1);
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+.help-dialog-tab:hover,
+.help-dialog-tab.is-active {
+  background: var(--surface-3);
+  color: var(--text-0);
+}
+
+.help-dialog-tab.is-active {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.help-dialog-content {
+  display: grid;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px;
+}
+
+.help-dialog-placeholder {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 100%;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--surface-2) 0%, var(--surface-1) 100%);
+}
+
+.help-dialog button:focus-visible {
+  outline: 2px solid var(--highlight-ring);
+  outline-offset: 2px;
+}
+
+body.is-dragging-help-dialog,
+body.is-dragging-help-dialog * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
 @media (max-width: 900px) {
   .settings-dialog {
     min-height: min(680px, 100%);
   }
 
-  .settings-dialog-layout {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-
-  .settings-dialog-sidebar {
-    padding-bottom: 8px;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .settings-dialog-tree {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-
-  .settings-dialog-tree-button {
-    min-width: 148px;
-    flex: 0 0 auto;
+  .help-dialog {
+    min-height: min(620px, 100%);
   }
 
   .settings-dialog-setting-card {
@@ -564,7 +708,16 @@ button.is-active {
     padding: 8px;
   }
 
+  .help-dialog-backdrop {
+    padding: 8px;
+  }
+
   .settings-dialog {
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  .help-dialog {
     width: 100%;
     border-radius: 12px;
   }
@@ -578,6 +731,13 @@ button.is-active {
 
   .settings-dialog-header {
     gap: 10px;
+  }
+
+  .help-dialog-header,
+  .help-dialog-tab-list,
+  .help-dialog-content {
+    padding-left: 12px;
+    padding-right: 12px;
   }
 }
 
@@ -1247,6 +1407,45 @@ body.is-resizing-left-dock * {
   padding: 0;
   border: 0;
   background: var(--transparent);
+}
+
+.expandable-card-header {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+}
+
+.expandable-card-header:hover {
+  background: transparent;
+}
+
+.expand-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.expand-toggle::before {
+  content: "";
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--text-1);
+}
+
+.expand-toggle.is-expanded {
+  transform: rotate(180deg);
 }
 
 .placeholder-button-grid,

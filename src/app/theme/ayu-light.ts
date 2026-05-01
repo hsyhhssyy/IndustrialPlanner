@@ -78,8 +78,8 @@ export const AYU_LIGHT_THEME: AppTheme = {
     "renderer-belt-lane": "#334155",
     "renderer-port-chevron": "#334155",
     "renderer-preview-rect-fill": "#399ee6",
-    "renderer-flow-glow-stroke": "#ffffff",
-    "renderer-flow-glow-tint": "#000000",
+    "renderer-flow-glow-stroke": "#555555",
+    "renderer-flow-glow-tint": "#ffffff",
   },
   renderer: {
     worldGridLineColorKey: "renderer-grid-line",

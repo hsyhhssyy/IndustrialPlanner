@@ -192,6 +192,28 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(appHost.internalState.runtime.marqueeAnchor).toBeNull();
   });
 
+  it("does not enter marquee on middle mouse drag even when immediate marquee is enabled", () => {
+    const { context, appHost, editor } = createContext({
+      activeTool: "select",
+      hypergryphImmediateMarquee: true,
+    });
+    const module = createHypergryphMarqueeGestureModule();
+
+    const result = module.handle(
+      mouseDragStartEvent({
+        originButton: 1,
+        pointerEntity: null,
+        position: { x: 5, y: 5 },
+      }),
+      context,
+    );
+
+    expect(result).toEqual({ status: "ignored" });
+    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.internalState.runtime.marqueeAnchor).toBeNull();
+    expect(editor.actions.setMarqueeRange).not.toHaveBeenCalled();
+  });
+
   it("uses the top-left toggle state for touch reverse marquee", () => {
     const { context, editor } = createContext({
       activeTool: "marquee",

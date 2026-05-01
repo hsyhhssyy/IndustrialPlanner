@@ -11,9 +11,14 @@ import {
   resolveWorldEntitySpriteLayout,
 } from "@/renderer/scene/render-scene-orchestrator"
 import {
+  resolveWorldGridDisconnectedSegmentSpans,
+  resolveWorldGridIntersectionDotSize,
+  resolveWorldGridLocalViewportBounds,
   resolveWorldGridMajorStrokeStyle,
+  resolveWorldGridPreviewFocusLineBounds,
   resolveWorldGridStrokeStyle,
   resolveWorldGridLineAxes,
+  resolveWorldGridVisibilityScope,
 } from "@/renderer/scene/decorations/GridLineDecoration"
 import {
   resolveMarqueeGridRectLayout,
@@ -356,6 +361,164 @@ describe("resolveWorldGridLineAxes", () => {
     expect(axes.horizontal.fine).toEqual([10, 20, 30, 40, 60, 70, 80, 90])
     expect(axes.vertical.major).toEqual([0, 50, 100])
     expect(axes.horizontal.major).toEqual([0, 50, 100])
+  })
+})
+
+describe("resolveWorldGridDisconnectedSegmentSpans", () => {
+  it("centers a short segment inside every gap between visible axes", () => {
+    expect(
+      resolveWorldGridDisconnectedSegmentSpans({
+        axisPositions: [40, 120, 200],
+        viewportStart: 0,
+        viewportSpan: 240,
+      }),
+    ).toEqual([
+      { start: 10, end: 30 },
+      { start: 60, end: 100 },
+      { start: 140, end: 180 },
+      { start: 210, end: 230 },
+    ])
+  })
+
+  it("keeps edge spans stable when an axis sits on the viewport boundary", () => {
+    expect(
+      resolveWorldGridDisconnectedSegmentSpans({
+        axisPositions: [100, 0, 50],
+        viewportStart: 0,
+        viewportSpan: 100,
+      }),
+    ).toEqual([
+      { start: 12.5, end: 37.5 },
+      { start: 62.5, end: 87.5 },
+    ])
+  })
+})
+
+describe("resolveWorldGridPreviewFocusLineBounds", () => {
+  it("uses the larger range between expanded preview bounds and the minimum center span", () => {
+    expect(
+      resolveWorldGridPreviewFocusLineBounds({
+        x: 10,
+        y: 20,
+        width: 2,
+        height: 3,
+      }),
+    ).toEqual({
+      left: 3,
+      top: 13,
+      right: 20,
+      bottom: 30,
+    })
+  })
+
+  it("keeps larger previews on their expanded bounding range", () => {
+    expect(
+      resolveWorldGridPreviewFocusLineBounds({
+        x: 10,
+        y: 4,
+        width: 30,
+        height: 2,
+      }),
+    ).toEqual({
+      left: 6,
+      top: -3,
+      right: 44,
+      bottom: 14,
+    })
+  })
+})
+
+describe("resolveWorldGridVisibilityScope", () => {
+  it("keeps the existing full-grid behavior when always-show is enabled", () => {
+    expect(
+      resolveWorldGridVisibilityScope({
+        alwaysShowGridLines: true,
+        activeTool: "select",
+        previewGridRect: null,
+      }),
+    ).toEqual({ kind: "all" })
+  })
+
+  it("shows the full grid in marquee mode even when always-show is disabled", () => {
+    expect(
+      resolveWorldGridVisibilityScope({
+        alwaysShowGridLines: false,
+        activeTool: "marquee",
+        previewGridRect: null,
+      }),
+    ).toEqual({ kind: "all" })
+  })
+
+  it("hides the grid outside marquee mode when there is no preview", () => {
+    expect(
+      resolveWorldGridVisibilityScope({
+        alwaysShowGridLines: false,
+        activeTool: "single-placement",
+        previewGridRect: null,
+      }),
+    ).toEqual({ kind: "hidden" })
+  })
+
+  it("returns a local focus window when preview content exists", () => {
+    expect(
+      resolveWorldGridVisibilityScope({
+        alwaysShowGridLines: false,
+        activeTool: "move",
+        previewGridRect: {
+          x: 10,
+          y: 20,
+          width: 2,
+          height: 3,
+        },
+      }),
+    ).toEqual({
+      kind: "local",
+      lineBounds: {
+        left: 3,
+        top: 13,
+        right: 20,
+        bottom: 30,
+      },
+    })
+  })
+})
+
+describe("resolveWorldGridLocalViewportBounds", () => {
+  it("projects local world line bounds into clipped viewport pixel bounds", () => {
+    expect(
+      resolveWorldGridLocalViewportBounds({
+        viewportBounds: {
+          left: 0,
+          top: 0,
+          width: 100,
+          height: 100,
+        },
+        viewportCenter: {
+          x: 0,
+          y: 0,
+        },
+        gridCellPixelSize: 10,
+        lineBounds: {
+          left: -2,
+          top: -1,
+          right: 3,
+          bottom: 2,
+        },
+      }),
+    ).toEqual({
+      left: 30,
+      top: 40,
+      width: 50,
+      height: 30,
+    })
+  })
+})
+
+describe("resolveWorldGridIntersectionDotSize", () => {
+  it("uses a single dot size rule for the current zoom level", () => {
+    expect(resolveWorldGridIntersectionDotSize(8)).toBe(2.5)
+    expect(resolveWorldGridIntersectionDotSize(15)).toBe(3.5999999999999996)
+    expect(resolveWorldGridIntersectionDotSize(40)).toBe(4.5)
   })
 })
 

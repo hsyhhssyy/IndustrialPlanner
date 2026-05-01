@@ -9,7 +9,6 @@ import {
   WorkbenchSettingsDialogController,
 } from "@/app/shell/settings-dialog-state";
 import { WorkbenchIcon } from "@/app/shell/components/workbench-icons";
-import { isMobilePortraitScreenProfile } from "@/shared/browser/screen-profile";
 
 const SETTINGS_DIALOG_SECTION_SCROLL_OFFSET = 10;
 
@@ -26,7 +25,7 @@ export const SettingsDialog = observer(function SettingsDialog({
   const contentRef = useRef<HTMLDivElement | null>(null);
   const sectionRefs = useRef(new Map<SettingsGroupId, HTMLElement>());
   const [capturingKeybindingId, setCapturingKeybindingId] = useState<string | null>(null);
-  const isMobilePortrait = isMobilePortraitScreenProfile(appHost.state.screenProfile);
+  const hideGroupSidebar = appHost.state.screenProfile.deviceClass !== "desktop";
 
   useEffect(() => {
     if (controller.isOpen) {
@@ -85,7 +84,7 @@ export const SettingsDialog = observer(function SettingsDialog({
   }, [capturingKeybindingId, controller, controller.isOpen]);
 
   useEffect(() => {
-    if (!controller.isOpen || isMobilePortrait) {
+    if (!controller.isOpen || hideGroupSidebar) {
       return;
     }
 
@@ -99,7 +98,7 @@ export const SettingsDialog = observer(function SettingsDialog({
       contentElement,
       selectedSection,
     });
-  }, [controller.isOpen, controller.selectedGroupId, isMobilePortrait]);
+  }, [controller.isOpen, controller.selectedGroupId, hideGroupSidebar]);
 
   if (!controller.isOpen) {
     return null;
@@ -142,11 +141,11 @@ export const SettingsDialog = observer(function SettingsDialog({
           </button>
         </header>
         <div
-          className={isMobilePortrait
+          className={hideGroupSidebar
             ? "settings-dialog-layout settings-dialog-layout-single-pane"
             : "settings-dialog-layout"}
         >
-          {isMobilePortrait ? null : (
+          {hideGroupSidebar ? null : (
             <aside className="settings-dialog-sidebar">
               <div className="settings-dialog-sidebar-title">{t("settingsDialog.groups")}</div>
               <div aria-label={t("settingsDialog.groups")} className="settings-dialog-tree" role="tree">

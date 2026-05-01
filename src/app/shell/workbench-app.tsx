@@ -7,6 +7,7 @@ import { CanvasFloatingToolbar } from "@/app/shell/components/canvas/canvas-floa
 import { CanvasTopLeftCornerToolbar } from "@/app/shell/components/canvas/canvas-top-left-corner-toolbar";
 import { CanvasRightDockToolbar } from "@/app/shell/components/canvas/canvas-right-dock-toolbar";
 import { FullscreenToggleButton } from "@/app/shell/components/fullscreen-toggle-button";
+import { HelpDialog } from "@/app/shell/components/help-dialog";
 import { SettingsDialog } from "@/app/shell/components/settings-dialog";
 import { WorkbenchIcon } from "@/app/shell/components/workbench-icons";
 import LeftDock from "@/app/shell/components/left-dock";
@@ -112,6 +113,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           }
 
           appHost.internalState.settings.gameShowHotkeys = value;
+        }),
+      },
+      "game-always-show-grid-lines": {
+        readValue: () => appHost.state.settings.gameAlwaysShowGridLines,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.gameAlwaysShowGridLines === value) {
+            return;
+          }
+
+          appHost.internalState.settings.gameAlwaysShowGridLines = value;
         }),
       },
       "game-show-grass-background": {
@@ -265,6 +280,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       ) : null}
       {rightDockOpen ? <RightDock appHost={appHost} /> : null}
       {showBottomStatusBar ? <BottomStatusBar appHost={appHost} /> : null}
+      <HelpDialog appHost={appHost} />
       <SettingsDialog appHost={appHost} controller={settingsDialog} />
     </div>
   );

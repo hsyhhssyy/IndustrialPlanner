@@ -9,47 +9,57 @@ const outputFilePath = path.resolve(
   process.argv[2] ?? path.join(projectRoot, 'public', 'textures', 'flow-glow.png'),
 );
 
-const TEXTURE_WIDTH = 256;
-const TEXTURE_HEIGHT = 32;
-
-/**
- * 高斯函数：exp(-(x - μ)² / (2σ²))
- * 返回归一化值 [0, 1]，峰值在 μ 处为 1
- */
-function gaussian(x, mu, sigma) {
-  const exponent = -((x - mu) ** 2) / (2 * sigma ** 2);
-  return Math.exp(exponent);
-}
+const TEXTURE_WIDTH = 512;
+const TEXTURE_HEIGHT = 512;
 
 /**
  * 创建流光特效 texture 的 RGBA 缓冲区。
  *
- * 横向 512×64，从左到右：
- *   透明 → 高斯渐变柔光 → 白色核心 → 高斯渐变柔光 → 透明
- * 亮度通过 alpha 通道（不透明度）表达，颜色固定为白色。
+ * 512×512，从中心向左右两侧发出扇形光：
+ *   - 中心白色核心最亮
+ *   - 沿水平轴向两侧扇开（总张角约 60°）
+ *   - 径向高斯衰减：离中心越远越暗
+ *   - 角度高斯衰减：偏离主轴越远越暗
+ * 亮度通过 alpha 通道表达，颜色固定为白色。
  */
 function createFlowTextureBuffer() {
   const pixelCount = TEXTURE_WIDTH * TEXTURE_HEIGHT;
   const textureBuffer = Buffer.alloc(pixelCount * 4, 0);
 
-  const centerX = (TEXTURE_WIDTH - 1) / 2;
-  // sigma 控制柔光扩散范围：3σ ≈ 半宽时边缘 alpha 趋近于 0
-  const sigma = TEXTURE_WIDTH / 6;
+  const cx = (TEXTURE_WIDTH - 1) / 2;
+  const cy = (TEXTURE_HEIGHT - 1) / 2;
+
+  // 径向 sigma：控制光束延伸距离，σ ≈ 纹理半宽的 1/3
+  const radialSigma = TEXTURE_WIDTH / 6;
+  // 角度 sigma：控制扇形张角，约 30°（π/6）使得边缘合理衰减
+  const angularSigma = Math.PI / 12; // 15°
 
   for (let y = 0; y < TEXTURE_HEIGHT; y += 1) {
     for (let x = 0; x < TEXTURE_WIDTH; x += 1) {
-      // alpha = gaussian(x, centerX, sigma) 映射到 [0, 255]
-      const alpha = Math.round(gaussian(x, centerX, sigma) * 255);
+      const dx = x - cx;
+      const dy = y - cy;
+
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      // 角度偏离量：取与主轴（水平轴，0° / 180°）的最小夹角
+      const absAngle = Math.abs(Math.atan2(dy, dx));
+      const angleDeviation = Math.min(absAngle, Math.PI - absAngle);
+
+      // 径向衰减
+      const radialAlpha = Math.exp(-(dist * dist) / (2 * radialSigma * radialSigma));
+      // 角度衰减
+      const angularAlpha = Math.exp(-(angleDeviation * angleDeviation) / (2 * angularSigma * angularSigma));
+
+      const alpha = Math.round(radialAlpha * angularAlpha * 255);
 
       if (alpha === 0) {
         continue; // 全透明像素保持默认 0
       }
 
       const pixelOffset = (y * TEXTURE_WIDTH + x) * 4;
-      textureBuffer[pixelOffset] = 255;     // R - 白色
-      textureBuffer[pixelOffset + 1] = 255; // G
-      textureBuffer[pixelOffset + 2] = 255; // B
-      textureBuffer[pixelOffset + 3] = alpha; // A - 高斯渐变不透明度
+      textureBuffer[pixelOffset] = 255;       // R - 白色
+      textureBuffer[pixelOffset + 1] = 255;   // G
+      textureBuffer[pixelOffset + 2] = 255;   // B
+      textureBuffer[pixelOffset + 3] = alpha; // A - 渐变不透明度
     }
   }
 

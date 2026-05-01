@@ -12,7 +12,8 @@
  *   4. 对每个设备求最小包围盒（像素坐标）
  *   5. 用 sharp.extract 裁出包围盒区域
  *   6. 用 sharp.trim 移除四周透明边缘
- *   7. 输出为独立 PNG：<原文件名>-1.png、<原文件名>-2.png …
+ *   7. 将设备实体及其内部镂空区域与白底合成，烘焙为最终颜色
+ *   8. 输出为独立 PNG：<原文件名>-1.png、<原文件名>-2.png …
  *
  * 用法：
  *   node src/scripts/split-device-sprites.mjs <输入PNG路径> [最小像素数]
@@ -123,11 +124,187 @@ function sortComponents(components) {
 }
 
 // ---------------------------------------------------------------------------
-// 步骤 3：提取矩形 + 裁切透明边
+// 步骤 3：填充不与边缘连通的透明孔洞
+// ---------------------------------------------------------------------------
+
+function trimTransparentEdges(rawData, width, height, channels) {
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const alpha = rawData[(y * width + x) * channels + 3];
+      if (alpha === 0) {
+        continue;
+      }
+
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+
+  if (maxX === -1 || maxY === -1) {
+    return null;
+  }
+
+  const trimmedWidth = maxX - minX + 1;
+  const trimmedHeight = maxY - minY + 1;
+  if (trimmedWidth === width && trimmedHeight === height && minX === 0 && minY === 0) {
+    return { data: rawData, width, height, channels };
+  }
+
+  const trimmedData = Buffer.alloc(trimmedWidth * trimmedHeight * channels);
+  for (let y = 0; y < trimmedHeight; y++) {
+    const sourceStart = ((minY + y) * width + minX) * channels;
+    const sourceEnd = sourceStart + trimmedWidth * channels;
+    rawData.copy(trimmedData, y * trimmedWidth * channels, sourceStart, sourceEnd);
+  }
+
+  return {
+    data: trimmedData,
+    width: trimmedWidth,
+    height: trimmedHeight,
+    channels,
+  };
+}
+
+function findEdgeConnectedTransparentPixels(rawData, width, height) {
+  if (width === 0 || height === 0) {
+    return new Uint8Array(0);
+  }
+
+  const totalPixels = width * height;
+  const edgeConnected = new Uint8Array(totalPixels);
+  const queueX = [];
+  const queueY = [];
+  const NEIGHBORS = [
+    -1, -1,  -1, 0,  -1, 1,
+     0, -1,           0, 1,
+     1, -1,   1, 0,   1, 1,
+  ];
+
+  function enqueueIfTransparent(x, y) {
+    const pixelIndex = y * width + x;
+    if (edgeConnected[pixelIndex]) {
+      return;
+    }
+    if (rawData[pixelIndex * 4 + 3] !== 0) {
+      return;
+    }
+
+    edgeConnected[pixelIndex] = 1;
+    queueX.push(x);
+    queueY.push(y);
+  }
+
+  for (let x = 0; x < width; x++) {
+    enqueueIfTransparent(x, 0);
+    enqueueIfTransparent(x, height - 1);
+  }
+
+  for (let y = 1; y < height - 1; y++) {
+    enqueueIfTransparent(0, y);
+    enqueueIfTransparent(width - 1, y);
+  }
+
+  while (queueX.length > 0) {
+    const currentX = queueX.pop();
+    const currentY = queueY.pop();
+
+    for (let index = 0; index < NEIGHBORS.length; index += 2) {
+      const nextX = currentX + NEIGHBORS[index];
+      const nextY = currentY + NEIGHBORS[index + 1];
+      if (nextX < 0 || nextX >= width || nextY < 0 || nextY >= height) {
+        continue;
+      }
+
+      enqueueIfTransparent(nextX, nextY);
+    }
+  }
+
+  return edgeConnected;
+}
+
+function compositeSpriteInteriorOverWhite(rawData, width, height) {
+  const edgeConnectedTransparentPixels = findEdgeConnectedTransparentPixels(rawData, width, height);
+  const totalPixels = width * height;
+
+  for (let pixelIndex = 0; pixelIndex < totalPixels; pixelIndex++) {
+    if (edgeConnectedTransparentPixels[pixelIndex]) {
+      continue;
+    }
+
+    const colorOffset = pixelIndex * 4;
+    const alphaOffset = colorOffset + 3;
+    const alpha = rawData[alphaOffset];
+
+    if (alpha === 0) {
+      rawData[colorOffset] = 255;
+      rawData[colorOffset + 1] = 255;
+      rawData[colorOffset + 2] = 255;
+      rawData[alphaOffset] = 255;
+      continue;
+    }
+
+    if (alpha === 255) {
+      continue;
+    }
+
+    const inverseAlpha = 255 - alpha;
+    rawData[colorOffset] = Math.round((rawData[colorOffset] * alpha + 255 * inverseAlpha) / 255);
+    rawData[colorOffset + 1] = Math.round((rawData[colorOffset + 1] * alpha + 255 * inverseAlpha) / 255);
+    rawData[colorOffset + 2] = Math.round((rawData[colorOffset + 2] * alpha + 255 * inverseAlpha) / 255);
+    rawData[alphaOffset] = 255;
+  }
+}
+
+async function buildProcessedSprite(extractedBuffer, shouldTrimTransparentEdges) {
+  const image = sharp(extractedBuffer);
+  const { data, info } = await image.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+
+  const processedSprite = shouldTrimTransparentEdges
+    ? trimTransparentEdges(data, info.width, info.height, info.channels) ?? {
+      data,
+      width: info.width,
+      height: info.height,
+      channels: info.channels,
+    }
+    : {
+      data,
+      width: info.width,
+      height: info.height,
+      channels: info.channels,
+    };
+
+  compositeSpriteInteriorOverWhite(
+    processedSprite.data,
+    processedSprite.width,
+    processedSprite.height,
+  );
+
+  return {
+    pipeline: sharp(processedSprite.data, {
+      raw: {
+        width: processedSprite.width,
+        height: processedSprite.height,
+        channels: processedSprite.channels,
+      },
+    }),
+    width: processedSprite.width,
+    height: processedSprite.height,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 步骤 4：提取矩形 + 裁切透明边
 // ---------------------------------------------------------------------------
 
 /**
- * 从原图中裁出 bbox 区域，然后 trim 掉四周透明像素
+ * 从原图中裁出 bbox 区域，然后按 alpha 裁掉四周透明像素
  */
 async function extractAndTrim(sourceImage, bbox) {
   const [minX, minY, maxX, maxY] = bbox;
@@ -146,18 +323,9 @@ async function extractAndTrim(sourceImage, bbox) {
   }
 
   try {
-    const trimmed = sharp(extracted).trim({ threshold: 0 });
-    const metadata = await trimmed.metadata();
-    if (!metadata.width || !metadata.height) {
-      return null;
-    }
-    return { pipeline: trimmed, width: metadata.width, height: metadata.height };
+    return await buildProcessedSprite(extracted, true);
   } catch {
-    return {
-      pipeline: sharp(extracted),
-      width: extractWidth,
-      height: extractHeight,
-    };
+    return buildProcessedSprite(extracted, false);
   }
 }
 

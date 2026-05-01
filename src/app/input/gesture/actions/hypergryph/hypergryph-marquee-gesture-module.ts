@@ -113,6 +113,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
             context.appHost.internalState.activeTool === "select"
             && context.appHost.state.settings.hypergryphImmediateMarquee
             && event.pointerEntity === null
+            && event.originButton !== 1
           ) {
             enterMarqueeMode({
               appHost: context.appHost,

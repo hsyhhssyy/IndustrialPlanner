@@ -54,6 +54,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "shortcut-basic-production": "V",
         "shortcut-synthesis": "B",
         "game-show-hotkeys": true,
+        "game-always-show-grid-lines": true,
         "game-show-grass-background": false,
         "game-use-simplified-device-icons": true,
         "other-debug-mode": true,
@@ -77,6 +78,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["shortcut-warehouse"]).toBe("C");
     expect(hydratedController.values["shortcut-basic-production"]).toBe("V");
     expect(hydratedController.values["shortcut-synthesis"]).toBe("B");
+    expect(hydratedController.values["game-always-show-grid-lines"]).toBe(true);
     expect(hydratedController.values["game-show-grass-background"]).toBe(false);
     expect(hydratedController.values["game-use-simplified-device-icons"]).toBe(true);
     expect(hydratedController.values["other-debug-mode"]).toBe(true);
@@ -182,6 +184,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "shortcut-basic-production": "V",
         "shortcut-synthesis": "B",
         "game-show-hotkeys": true,
+        "game-always-show-grid-lines": true,
         "game-show-grass-background": false,
         "game-use-simplified-device-icons": false,
         "other-debug-mode": true,

@@ -121,6 +121,15 @@ export type MessageKey =
   | "topBar.settings"
   | "settingsDialog.title"
   | "settingsDialog.groups"
+  | "helpDialog.title"
+  | "helpDialog.description"
+  | "helpDialog.tab.overview"
+  | "helpDialog.tab.shortcuts"
+  | "helpDialog.tab.faq"
+  | "helpDialog.tab.versionUpdates"
+  | "helpDialog.empty"
+  | "helpDialog.maximize"
+  | "helpDialog.restore"
   | "settingsGroup.system"
   | "settingsGroup.systemDescription"
   | "settingsGroup.display"
@@ -163,6 +172,8 @@ export type MessageKey =
   | "settingsField.useSimplifiedDeviceIconsDescription"
   | "settingsField.showHotkeys"
   | "settingsField.showHotkeysDescription"
+  | "settingsField.alwaysShowGridLines"
+  | "settingsField.alwaysShowGridLinesDescription"
   | "settingsField.showGrassBackground"
   | "settingsField.showGrassBackgroundDescription"
   | "settingsField.debugMode"
@@ -324,6 +335,15 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "topBar.settings": "设置",
     "settingsDialog.title": "设置",
     "settingsDialog.groups": "设置分组",
+    "helpDialog.title": "帮助",
+    "helpDialog.description": "多个帮助主题会在这里按标签页组织。",
+    "helpDialog.tab.overview": "概览",
+    "helpDialog.tab.shortcuts": "快捷键",
+    "helpDialog.tab.faq": "常见问题",
+    "helpDialog.tab.versionUpdates": "版本更新",
+    "helpDialog.empty": "当前帮助内容尚未填充，这里先保留为空面板。",
+    "helpDialog.maximize": "最大化帮助",
+    "helpDialog.restore": "还原帮助",
     "settingsGroup.system": "系统",
     "settingsGroup.systemDescription": "语言、主题与全局界面偏好。",
     "settingsGroup.display": "显示",
@@ -366,6 +386,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图简笔画显示方式，不会提高性能。",
     "settingsField.showHotkeys": "显示快捷键",
     "settingsField.showHotkeysDescription": "在界面按钮上展示对应的快捷键提示。",
+    "settingsField.alwaysShowGridLines": "总是显示网格线",
+    "settingsField.alwaysShowGridLinesDescription": "开启后总是显示网格线；关闭后仅在框选模式显示全部网格线，其余模式只显示 preview 附近的网格线。",
     "settingsField.showGrassBackground": "草地背景",
     "settingsField.showGrassBackgroundDescription": "在画布背景平铺草地纹理贴图。",
     "settingsField.debugMode": "调试模式",
@@ -526,6 +548,15 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "topBar.settings": "Settings",
     "settingsDialog.title": "Settings",
     "settingsDialog.groups": "Setting Groups",
+    "helpDialog.title": "Help",
+    "helpDialog.description": "Help topics will be organized here as multiple tabs.",
+    "helpDialog.tab.overview": "Overview",
+    "helpDialog.tab.shortcuts": "Shortcuts",
+    "helpDialog.tab.faq": "FAQ",
+    "helpDialog.tab.versionUpdates": "Version Updates",
+    "helpDialog.empty": "Help content has not been filled in yet, so this panel is intentionally empty for now.",
+    "helpDialog.maximize": "Maximize Help",
+    "helpDialog.restore": "Restore Help",
     "settingsGroup.system": "System",
     "settingsGroup.systemDescription": "Language, theme, and global interface preferences.",
     "settingsGroup.display": "Display",
@@ -566,6 +597,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.shortcut-synthesisDescription": "Set the shortcut key for synthesis manufacturing; editable only when Arknights Operation Mode is off.",
     "settingsField.useSimplifiedDeviceIcons": "Use Simplified Device Icons",
     "settingsField.useSimplifiedDeviceIconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
+    "settingsField.alwaysShowGridLines": "Always Show Grid Lines",
+    "settingsField.alwaysShowGridLinesDescription": "When enabled, grid lines are always visible. When disabled, marquee mode still shows the full grid, while other modes only show grid lines near the current preview.",
     "settingsField.showGrassBackground": "Grass Background",
     "settingsField.showGrassBackgroundDescription": "Tile a grass texture across the canvas background.",
     "settingsField.showHotkeys": "Show Hotkeys",

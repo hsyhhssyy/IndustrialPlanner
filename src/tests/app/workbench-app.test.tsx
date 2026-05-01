@@ -41,6 +41,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   hypergryphImmediateMove: true,
   hypergryphImmediateMarquee: false,
   gameShowHotkeys: false,
+  gameAlwaysShowGridLines: true,
   showGrassBackground: false,
   debugShowFps: false,
   debugShowGestureDiagnosticsWindow: false,
@@ -81,6 +82,34 @@ function dispatchPointerEvent(
     shiftKey: { value: false },
   });
   target.dispatchEvent(event);
+  return event;
+}
+
+function dispatchWindowPointerEvent(
+  type: string,
+  init: {
+    pointerId: number;
+    pointerType: string;
+    clientX: number;
+    clientY: number;
+    button?: number;
+    buttons?: number;
+  },
+): Event {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperties(event, {
+    pointerId: { value: init.pointerId },
+    pointerType: { value: init.pointerType },
+    clientX: { value: init.clientX },
+    clientY: { value: init.clientY },
+    button: { value: init.button ?? 0 },
+    buttons: { value: init.buttons ?? 0 },
+    altKey: { value: false },
+    ctrlKey: { value: false },
+    metaKey: { value: false },
+    shiftKey: { value: false },
+  });
+  window.dispatchEvent(event);
   return event;
 }
 
@@ -281,6 +310,10 @@ describe("WorkbenchApp", () => {
         rightDockOpen: true,
         leftDockWidth: 470,
         topBarCollapsed: false,
+        rightDockBaseExpanded: true,
+        rightDockPowerExpanded: true,
+        rightDockSelectionExpanded: true,
+        helpDialogMaximized: false,
       }),
     );
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBeNull();
@@ -313,6 +346,9 @@ describe("WorkbenchApp", () => {
         rightDockOpen: true,
         leftDockWidth: 375,
         topBarCollapsed: true,
+        rightDockBaseExpanded: true,
+        rightDockPowerExpanded: true,
+        rightDockSelectionExpanded: true,
       }),
     );
 
@@ -386,6 +422,9 @@ describe("WorkbenchApp", () => {
         rightDockOpen: true,
         leftDockWidth: 375,
         topBarCollapsed: false,
+        rightDockBaseExpanded: true,
+        rightDockPowerExpanded: true,
+        rightDockSelectionExpanded: true,
       }),
     );
 
@@ -424,6 +463,9 @@ describe("WorkbenchApp", () => {
         rightDockOpen: true,
         leftDockWidth: 512,
         topBarCollapsed: false,
+        rightDockBaseExpanded: true,
+        rightDockPowerExpanded: true,
+        rightDockSelectionExpanded: true,
       }),
     );
 
@@ -936,6 +978,7 @@ describe("WorkbenchApp", () => {
         locale: "zh-CN",
         themeId: "ayu-light",
         hypergryphOperationMode: false,
+        gameAlwaysShowGridLines: true,
         debugShowFps: true,
         debugShowGestureDiagnosticsWindow: true,
       }),
@@ -991,6 +1034,9 @@ describe("WorkbenchApp", () => {
     const debugToggle = container.querySelector(
       'input[name="other-debug-mode"]',
     ) as HTMLInputElement | null;
+    const alwaysShowGridLinesToggle = container.querySelector(
+      'input[name="game-always-show-grid-lines"]',
+    ) as HTMLInputElement | null;
     const showFpsToggle = container.querySelector(
       'input[name="debug-show-fps"]',
     ) as HTMLInputElement | null;
@@ -1028,6 +1074,7 @@ describe("WorkbenchApp", () => {
     expect(immediateMarqueeToggle?.checked).toBe(false);
     expect(immediateMarqueeToggle?.disabled).toBe(true);
     expect(debugToggle?.checked).toBe(true);
+    expect(alwaysShowGridLinesToggle?.checked).toBe(true);
     expect(showFpsToggle?.checked).toBe(true);
     expect(showGestureTestWindowToggle?.checked).toBe(true);
 
@@ -1040,6 +1087,218 @@ describe("WorkbenchApp", () => {
     });
 
     expect(container.querySelector(".settings-dialog")).toBeNull();
+  });
+
+  it("opens the help dialog from the left toolbar and supports tabs, maximize, and close", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const helpButton = container.querySelector(
+      'button[title="帮助"]',
+    ) as HTMLButtonElement | null;
+
+    expect(container.querySelector(".help-dialog")).toBeNull();
+    expect(helpButton).not.toBeNull();
+    expect(helpButton?.getAttribute("aria-pressed")).toBe("false");
+
+    act(() => {
+      helpButton?.click();
+    });
+
+    const dialog = container.querySelector(".help-dialog") as HTMLDivElement | null;
+    const faqTab = container.querySelector(
+      '#help-dialog-tab-faq',
+    ) as HTMLButtonElement | null;
+    const maximizeButton = container.querySelector(
+      'button[title="最大化帮助"]',
+    ) as HTMLButtonElement | null;
+
+    expect(dialog).not.toBeNull();
+    expect(helpButton?.getAttribute("aria-pressed")).toBe("true");
+    expect(container.querySelector(".help-dialog-placeholder h3")?.textContent).toBe("概览");
+    expect(container.querySelector(".help-dialog-placeholder p")?.textContent).toBe(
+      "当前帮助内容尚未填充，这里先保留为空面板。",
+    );
+
+    act(() => {
+      faqTab?.click();
+    });
+
+    expect(faqTab?.getAttribute("aria-selected")).toBe("true");
+    expect(container.querySelector(".help-dialog-placeholder h3")?.textContent).toBe("常见问题");
+
+    act(() => {
+      maximizeButton?.click();
+    });
+
+    expect(container.querySelector(".help-dialog")?.classList.contains("is-maximized")).toBe(true);
+    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        leftDockOpen: true,
+        rightDockOpen: true,
+        leftDockWidth: 375,
+        topBarCollapsed: false,
+        rightDockBaseExpanded: true,
+        rightDockPowerExpanded: true,
+        rightDockSelectionExpanded: true,
+        helpDialogMaximized: true,
+      }),
+    );
+    expect(
+      container.querySelector('button[title="还原帮助"] svg')?.getAttribute("data-workbench-icon"),
+    ).toBe("shrink");
+
+    const closeButton = container.querySelector(
+      '.help-dialog-header button[title="关闭"]',
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      closeButton?.click();
+    });
+
+    expect(container.querySelector(".help-dialog")).toBeNull();
+    expect(helpButton?.getAttribute("aria-pressed")).toBe("false");
+
+    act(() => {
+      helpButton?.click();
+    });
+
+    expect(container.querySelector(".help-dialog")?.classList.contains("is-maximized")).toBe(true);
+  });
+
+  it("moves the help dialog when dragging the title bar in windowed mode", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const helpButton = container.querySelector(
+      'button[title="帮助"]',
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      helpButton?.click();
+    });
+
+    const dialog = container.querySelector(".help-dialog") as HTMLDivElement | null;
+    const header = container.querySelector(".help-dialog-header") as HTMLElement | null;
+
+    expect(dialog).not.toBeNull();
+    expect(header).not.toBeNull();
+    expect(dialog?.style.transform).toBe("translate(0px, 0px)");
+
+    act(() => {
+      if (header === null) {
+        return;
+      }
+
+      dispatchPointerEvent(header, "pointerdown", {
+        pointerId: 41,
+        pointerType: "mouse",
+        clientX: 240,
+        clientY: 140,
+        button: 0,
+        buttons: 1,
+      });
+      dispatchWindowPointerEvent("pointermove", {
+        pointerId: 41,
+        pointerType: "mouse",
+        clientX: 320,
+        clientY: 196,
+        buttons: 1,
+      });
+    });
+
+    expect(document.body.classList.contains("is-dragging-help-dialog")).toBe(true);
+    expect(dialog?.style.transform).toBe("translate(80px, 56px)");
+
+    act(() => {
+      dispatchWindowPointerEvent("pointerup", {
+        pointerId: 41,
+        pointerType: "mouse",
+        clientX: 320,
+        clientY: 196,
+        buttons: 0,
+      });
+    });
+
+    expect(document.body.classList.contains("is-dragging-help-dialog")).toBe(false);
+    expect(dialog?.style.transform).toBe("translate(80px, 56px)");
+  });
+
+  it("uses immersive fullscreen help dialog maximization on tablet screens and remembers it", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 820,
+      height: 1180,
+      userAgent:
+        "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const helpButton = container.querySelector(
+      'button[title="帮助"]',
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      helpButton?.click();
+    });
+
+    const maximizeButton = container.querySelector(
+      'button[title="最大化帮助"]',
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      maximizeButton?.click();
+    });
+
+    expect(container.querySelector(".help-dialog-backdrop")?.classList.contains("is-immersive-maximized")).toBe(true);
+    expect(container.querySelector(".help-dialog")?.classList.contains("is-maximized")).toBe(true);
+
+    act(() => {
+      root.unmount();
+    });
+
+    root = createRoot(container);
+
+    const nextWorkspace = createWorkspace();
+    const nextAppHost = createAppHost(nextWorkspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={nextAppHost} />);
+      nextAppHost.internalActions.openHelpDialog();
+    });
+
+    expect(nextAppHost.state.workbench.helpDialogMaximized).toBe(true);
+    expect(container.querySelector(".help-dialog-backdrop")?.classList.contains("is-immersive-maximized")).toBe(true);
+  });
+
+  it("opens the help dialog through app internal actions", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      appHost.internalActions.openHelpDialog("version-updates");
+    });
+
+    expect(container.querySelector(".help-dialog")).not.toBeNull();
+    expect(container.querySelector("#help-dialog-tab-version-updates")?.getAttribute("aria-selected")).toBe("true");
+    expect(container.querySelector(".help-dialog-placeholder h3")?.textContent).toBe("版本更新");
   });
 
   it("writes language changes into AppSettings and re-renders through mobx", () => {
@@ -1248,6 +1507,43 @@ describe("WorkbenchApp", () => {
     );
   });
 
+  it("writes always-show-grid-lines into AppSettings storage without applying grid behavior yet", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const settingsButton = container.querySelector(
+      ".toolbar-rail-utility .rail-button:last-child",
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      settingsButton?.click();
+    });
+
+    const alwaysShowGridLinesToggle = container.querySelector(
+      'input[name="game-always-show-grid-lines"]',
+    ) as HTMLInputElement | null;
+
+    expect(alwaysShowGridLinesToggle).not.toBeNull();
+    expect(alwaysShowGridLinesToggle?.checked).toBe(true);
+
+    act(() => {
+      alwaysShowGridLinesToggle?.click();
+    });
+
+    expect(appHost.state.settings.gameAlwaysShowGridLines).toBe(false);
+    expect(alwaysShowGridLinesToggle?.checked).toBe(false);
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        ...DEFAULT_APP_SETTINGS_STORAGE,
+        gameAlwaysShowGridLines: false,
+      }),
+    );
+  });
+
   it("captures keybinding settings when operation mode is externally off and keeps the mode toggle disabled", () => {
     localStorage.setItem(
       APP_SETTINGS_LOCAL_STORAGE_KEY,
@@ -1330,7 +1626,7 @@ describe("WorkbenchApp", () => {
     );
   });
 
-  it("hides the settings group sidebar in phone portrait mode while keeping the full settings list scrollable", () => {
+  it("hides the settings group sidebar on phones while keeping the full settings list scrollable", () => {
     coarsePointer = true;
     hoverNone = true;
     setViewport({
@@ -1367,5 +1663,65 @@ describe("WorkbenchApp", () => {
     expect(dialog).not.toBeNull();
     expect(container.querySelector(".settings-dialog-sidebar")).toBeNull();
     expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他", "调试"]);
+  });
+
+  it("hides the settings group sidebar on tablets", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 1024,
+      height: 768,
+      userAgent:
+        "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const settingsButton = container.querySelector(
+      'button[title="设置"]',
+    ) as HTMLButtonElement | null;
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
+
+    act(() => {
+      settingsButton?.click();
+    });
+
+    expect(container.querySelector(".settings-dialog-sidebar")).toBeNull();
+  });
+
+  it("keeps the settings group sidebar visible on desktop-sized devices", () => {
+    setViewport({
+      width: 820,
+      height: 700,
+      userAgent:
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+      maxTouchPoints: 0,
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const settingsButton = container.querySelector(
+      'button[title="设置"]',
+    ) as HTMLButtonElement | null;
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
+
+    act(() => {
+      settingsButton?.click();
+    });
+
+    expect(container.querySelector(".settings-dialog-sidebar")).not.toBeNull();
   });
 });

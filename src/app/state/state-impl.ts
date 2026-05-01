@@ -51,6 +51,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   hypergryphImmediateMove: boolean;
   hypergryphImmediateMarquee: boolean;
   gameShowHotkeys: boolean;
+  gameAlwaysShowGridLines: boolean;
   showGrassBackground: boolean;
   debugShowFps: boolean;
   debugShowGestureDiagnosticsWindow: boolean;
@@ -61,6 +62,10 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
   rightDockOpen: boolean;
   leftDockWidth: number;
   topBarCollapsed: boolean;
+  rightDockBaseExpanded: boolean;
+  rightDockPowerExpanded: boolean;
+  rightDockSelectionExpanded: boolean;
+  helpDialogMaximized: boolean;
 }
 
 export const CANVAS_FLOATING_TOOLBAR_BUTTON_IDS = [
@@ -91,6 +96,16 @@ export const CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS = [
 export type CanvasTopLeftCornerToolbarButtonId =
   typeof CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS[number];
 
+export const HELP_DIALOG_TAB_IDS = [
+  "overview",
+  "shortcuts",
+  "faq",
+  "version-updates",
+] as const;
+
+export type HelpDialogTabId = typeof HELP_DIALOG_TAB_IDS[number];
+export const DEFAULT_HELP_DIALOG_TAB_ID: HelpDialogTabId = HELP_DIALOG_TAB_IDS[0];
+
 export interface CanvasFloatingToolbarSize {
   readonly width: number;
   readonly height: number;
@@ -114,6 +129,11 @@ export interface CanvasTopLeftCornerToolbarStateReadWrite {
   buttonIds: CanvasTopLeftCornerToolbarButtonId[];
 }
 
+export interface HelpDialogStateReadWrite {
+  visible: boolean;
+  activeTab: HelpDialogTabId;
+}
+
 export interface RuntimeStateReadWrite {
   activePanel: ActivePanel;
   moveAnchor: GridPoint | null;
@@ -126,6 +146,7 @@ export interface RuntimeStateReadWrite {
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite;
   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite;
   canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite;
+  helpDialog: HelpDialogStateReadWrite;
 }
 
 export interface LogisticsPlacementRuntimeStateReadWrite {
@@ -172,6 +193,10 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   rightDockOpen = true;
   leftDockWidth = DEFAULT_LEFT_DOCK_WIDTH;
   topBarCollapsed = false;
+  rightDockBaseExpanded = true;
+  rightDockPowerExpanded = true;
+  rightDockSelectionExpanded = true;
+  helpDialogMaximized = false;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -208,6 +233,15 @@ class CanvasTopLeftCornerToolbarStateReadWriteImpl implements CanvasTopLeftCorne
   }
 }
 
+class HelpDialogStateReadWriteImpl implements HelpDialogStateReadWrite {
+  visible = false;
+  activeTab: HelpDialogTabId = DEFAULT_HELP_DIALOG_TAB_ID;
+
+  public constructor() {
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
+}
+
 class LogisticsPlacementRuntimeStateReadWriteImpl implements LogisticsPlacementRuntimeStateReadWrite {
   kind: LogisticsKind | null = null;
   shortcutPlacementGroup: "beltLogistics" | "pipeLogistics" | null = null;
@@ -238,6 +272,7 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite = new CanvasFloatingToolbarStateReadWriteImpl();
   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite = new CanvasRightDockToolbarStateReadWriteImpl();
   canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite = new CanvasTopLeftCornerToolbarStateReadWriteImpl();
+  helpDialog: HelpDialogStateReadWrite = new HelpDialogStateReadWriteImpl();
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -260,6 +295,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphImmediateMove: true,
     hypergryphImmediateMarquee: false,
     gameShowHotkeys: false,
+    gameAlwaysShowGridLines: true,
     showGrassBackground: false,
     debugShowFps: false,
     debugShowGestureDiagnosticsWindow: false,

@@ -130,6 +130,10 @@ vi.mock("pixi.js", () => {
       return this
     }
 
+    public cut(): this {
+      return this
+    }
+
     public clear(): this {
       return this
     }

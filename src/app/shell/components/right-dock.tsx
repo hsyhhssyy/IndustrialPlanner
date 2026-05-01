@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+import { observer } from "mobx-react-lite";
 import { EditSelectionInspector } from "@/app/shell/components/inspector/edit-selection-inspector";
 import {
   handleUiEvent,
@@ -44,34 +46,57 @@ const RIGHT_DOCK_POWER_ROWS = [
   },
 ] as const;
 
-export function RightDock({ appHost }: { appHost: AppHost }) {
+function ExpandToggle({ expanded }: { expanded: boolean }) {
+  return (
+    <span className={`expand-toggle${expanded ? " is-expanded" : ""}`} aria-hidden="true" />
+  );
+}
+
+function ExpandableCard({
+  title,
+  expanded,
+  onToggle,
+  children,
+}: {
+  title: string;
+  expanded: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <article className="inspector-card">
+      <button
+        className="card-header expandable-card-header"
+        onClick={onToggle}
+        type="button"
+      >
+        <h3>{title}</h3>
+        <ExpandToggle expanded={expanded} />
+      </button>
+      {expanded ? children : null}
+    </article>
+  );
+}
+
+export const RightDock = observer(function RightDock({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const locale = appHost.state.settings.locale;
-  const toggleRightDock = () => {
-    appHost.internalActions.toggleRightDock();
-  };
-  const rightPanelActionLabel = `${t(appHost.state.workbench.rightDockOpen ? "action.close" : "action.open")} ${t("topBar.rightPanel")}`;
+
+  const {
+    rightDockBaseExpanded,
+    rightDockPowerExpanded,
+    rightDockSelectionExpanded,
+  } = appHost.state.workbench;
 
   return (
     <aside className="dock dock-right panel-surface">
       <section className="dock-section">
-        <div className="section-header">
-          <h2>{t("rightDock.title")}</h2>
-          <div className="header-actions">
-            <span className="pill">{t("rightDock.selection")}</span>
-            <button
-              onClick={toggleRightDock}
-              type="button"
-            >
-              {rightPanelActionLabel}
-            </button>
-          </div>
-        </div>
         <div className="section-body stack">
-          <article className="inspector-card">
-            <div className="card-header">
-              <h3>{t("rightDock.base")}</h3>
-            </div>
+          <ExpandableCard
+            title={t("rightDock.base")}
+            expanded={rightDockBaseExpanded}
+            onToggle={appHost.internalActions.toggleRightDockBaseExpanded}
+          >
             <div className="inspector-option-grid">
               {RIGHT_DOCK_BASE_OPTIONS.map((entryKey, index) => (
                 <button key={`right-dock-base-${index}`} onClick={handleUiEvent} type="button">
@@ -87,11 +112,12 @@ export function RightDock({ appHost }: { appHost: AppHost }) {
                 </div>
               ))}
             </dl>
-          </article>
-          <article className="inspector-card">
-            <div className="card-header">
-              <h3>{t("rightDock.power")}</h3>
-            </div>
+          </ExpandableCard>
+          <ExpandableCard
+            title={t("rightDock.power")}
+            expanded={rightDockPowerExpanded}
+            onToggle={appHost.internalActions.toggleRightDockPowerExpanded}
+          >
             <dl className="inspector-summary-list">
               {RIGHT_DOCK_POWER_ROWS.map((entry, index) => (
                 <div className="inspector-summary-row" key={`right-dock-power-${index}`}>
@@ -100,31 +126,21 @@ export function RightDock({ appHost }: { appHost: AppHost }) {
                 </div>
               ))}
             </dl>
-          </article>
-          <article className="inspector-card">
-            <div className="card-header">
-              <h3>{t("rightDock.selection")}</h3>
-            </div>
+          </ExpandableCard>
+          <ExpandableCard
+            title={t("rightDock.selection")}
+            expanded={rightDockSelectionExpanded}
+            onToggle={appHost.internalActions.toggleRightDockSelectionExpanded}
+          >
             <EditSelectionInspector
               appHost={appHost}
               context={null}
               state={{ locale }}
               translate={t}
             />
-          </article>
-          <div className="cluster">
-            <div className="card-header card-subheader">
-              <h3>{t("section.diagnostics")}</h3>
-            </div>
-            <div className="definition-list">
-              <article className="log-card">
-                <h4>{t("view.diagnostics")}</h4>
-                <p>{t("label.noDiagnostics")}</p>
-              </article>
-            </div>
-          </div>
+          </ExpandableCard>
         </div>
       </section>
     </aside>
   );
-}
+});

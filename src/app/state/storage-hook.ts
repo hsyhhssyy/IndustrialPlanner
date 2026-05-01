@@ -7,6 +7,7 @@ import type {
   AppSettingsReadWrite,
   WorkbenchStateReadWrite,
 } from "./state-impl";
+import { clampLeftDockWidth } from "./state-impl";
 
 export const APP_SETTINGS_LOCAL_STORAGE_KEY = "v3-app-settings";
 export const WORKBENCH_STATE_LOCAL_STORAGE_KEY = "v3-workbench-state";
@@ -27,7 +28,13 @@ export function hookLocalstorage(appHost: AppHost): () => void {
   }
 
   if (persistedWorkbenchState !== null) {
-    appHost.internalState.workbench = persistedWorkbenchState;
+    Object.assign(
+      appHost.internalState.workbench,
+      normalizePersistedWorkbenchState(
+        persistedWorkbenchState,
+        appHost.internalState.workbench,
+      ),
+    );
   }
 
   const disposeWorkbenchReaction = reaction(
@@ -78,6 +85,9 @@ function normalizePersistedAppSettings(
     gameShowHotkeys: typeof persistedAppSettings.gameShowHotkeys === "boolean"
       ? persistedAppSettings.gameShowHotkeys
       : fallback.gameShowHotkeys,
+    gameAlwaysShowGridLines: typeof persistedAppSettings.gameAlwaysShowGridLines === "boolean"
+      ? persistedAppSettings.gameAlwaysShowGridLines
+      : fallback.gameAlwaysShowGridLines,
     showGrassBackground: typeof persistedAppSettings.showGrassBackground === "boolean"
       ? persistedAppSettings.showGrassBackground
       : fallback.showGrassBackground,
@@ -88,5 +98,40 @@ function normalizePersistedAppSettings(
       typeof persistedAppSettings.debugShowGestureDiagnosticsWindow === "boolean"
         ? persistedAppSettings.debugShowGestureDiagnosticsWindow
         : fallback.debugShowGestureDiagnosticsWindow,
+  };
+}
+
+function normalizePersistedWorkbenchState(
+  persistedWorkbenchState: WorkbenchStateReadWrite,
+  fallback: WorkbenchStateReadWrite,
+): WorkbenchStateReadWrite {
+  return {
+    leftDockOpen: typeof persistedWorkbenchState.leftDockOpen === "boolean"
+      ? persistedWorkbenchState.leftDockOpen
+      : fallback.leftDockOpen,
+    rightDockOpen: typeof persistedWorkbenchState.rightDockOpen === "boolean"
+      ? persistedWorkbenchState.rightDockOpen
+      : fallback.rightDockOpen,
+    leftDockWidth:
+      typeof persistedWorkbenchState.leftDockWidth === "number"
+      && Number.isFinite(persistedWorkbenchState.leftDockWidth)
+        ? clampLeftDockWidth(persistedWorkbenchState.leftDockWidth)
+        : fallback.leftDockWidth,
+    topBarCollapsed: typeof persistedWorkbenchState.topBarCollapsed === "boolean"
+      ? persistedWorkbenchState.topBarCollapsed
+      : fallback.topBarCollapsed,
+    rightDockBaseExpanded: typeof persistedWorkbenchState.rightDockBaseExpanded === "boolean"
+      ? persistedWorkbenchState.rightDockBaseExpanded
+      : fallback.rightDockBaseExpanded,
+    rightDockPowerExpanded: typeof persistedWorkbenchState.rightDockPowerExpanded === "boolean"
+      ? persistedWorkbenchState.rightDockPowerExpanded
+      : fallback.rightDockPowerExpanded,
+    rightDockSelectionExpanded:
+      typeof persistedWorkbenchState.rightDockSelectionExpanded === "boolean"
+        ? persistedWorkbenchState.rightDockSelectionExpanded
+        : fallback.rightDockSelectionExpanded,
+    helpDialogMaximized: typeof persistedWorkbenchState.helpDialogMaximized === "boolean"
+      ? persistedWorkbenchState.helpDialogMaximized
+      : fallback.helpDialogMaximized,
   };
 }

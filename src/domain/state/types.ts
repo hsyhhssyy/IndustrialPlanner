@@ -60,6 +60,7 @@ export interface AppSettings {
   readonly hypergryphImmediateMove: boolean;
   readonly hypergryphImmediateMarquee: boolean;
   readonly gameShowHotkeys: boolean;
+  readonly gameAlwaysShowGridLines: boolean;
   readonly showGrassBackground: boolean;
   readonly debugShowFps: boolean;
   readonly debugShowGestureDiagnosticsWindow: boolean;
@@ -70,6 +71,10 @@ export interface WorkbenchState {
   readonly rightDockOpen: boolean;
   readonly leftDockWidth: number;
   readonly topBarCollapsed: boolean;
+  readonly rightDockBaseExpanded: boolean;
+  readonly rightDockPowerExpanded: boolean;
+  readonly rightDockSelectionExpanded: boolean;
+  readonly helpDialogMaximized: boolean;
 }
 
 export type ActiveTool =

@@ -81,8 +81,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly flowGlowEffectRoot: Container;
   /** 内边框底色 Graphics */
   private readonly flowGlowBorderGraphics: Graphics;
-  /** 单道光束 Sprite，沿边框周长运动 */
-  private readonly flowGlowBeam: Sprite;
+  /** 矩形遮罩 Graphics，将流光裁剪到设备矩形区域内 */
+  private readonly flowGlowMask: Graphics;
+  /** 扇形光束 TilingSprite，从设备中心旋转，纹理平铺填充 */
+  private readonly flowGlowBeam: TilingSprite;
   private flowGlowTexture: Texture | null = null;
   private flowGlowTextureLoadStarted = false;
 
@@ -156,13 +158,17 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.selectionEffectRoot.addChild(this.selectionMask)
     this.getRootOfLayer("overlay").addChild(this.selectionEffectRoot)
 
-    // 边缘流光特效：内边框底色 + 单道光束 Sprite 沿边框运动
+    // 边缘流光特效：内边框底色 + 扇形光束从中心旋转，矩形遮罩裁剪
     this.flowGlowEffectRoot = new Container()
     this.flowGlowEffectRoot.visible = false
 
     this.flowGlowBorderGraphics = new Graphics({ roundPixels: true });
 
-    this.flowGlowBeam = new Sprite(Texture.EMPTY);
+    this.flowGlowMask = new Graphics({ roundPixels: true });
+    this.flowGlowEffectRoot.addChild(this.flowGlowMask);
+    this.flowGlowEffectRoot.mask = this.flowGlowMask;
+
+    this.flowGlowBeam = new TilingSprite({ texture: Texture.EMPTY, width: 0, height: 0 });
     this.flowGlowBeam.anchor.set(0.5);
     this.flowGlowBeam.roundPixels = true;
     this.flowGlowBeam.visible = false;
@@ -466,6 +472,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     const y0 = layout.y;
     const w = layout.width;
     const h = layout.height;
+    const cx = x0 + w / 2;
+    const cy = y0 + h / 2;
     const halfBw = bw / 2;
 
     // 1. 内边框底色（向内缩进半线宽 stroke）
@@ -478,61 +486,23 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       .rect(x0 + halfBw, y0 + halfBw, w - bw, h - bw)
       .stroke({ width: bw, color: strokeColor });
 
-    // 2. 单道光束 —— 仅在纹理加载后显示
+    // 2. 矩形边框环遮罩：光束只在边缘边框区域可见（挖空内部）
+    this.flowGlowMask.clear();
+    this.flowGlowMask
+      .rect(x0, y0, w, h).fill({ color: 0xffffff })
+      .rect(x0 + bw, y0 + bw, w - 2 * bw, h - 2 * bw).cut();
+
+    // 3. 扇形光束 TilingSprite：从设备中心旋转，纹理平铺
     if (this.flowGlowTexture !== null) {
-      const texW = this.flowGlowTexture.width;   // 256
-      const texH = this.flowGlowTexture.height;  // 32
+      const texSize = this.flowGlowTexture.width; // 512
 
-      // Sprite 高度 = 边框粗细，宽度按纹理比例缩放
-      const beamHeight = bw;
-      const beamWidth = (texW / texH) * bw;
+      // 边长至少覆盖设备对角线，确保旋转 45° 时仍填满矩形
+      const diag = Math.sqrt(w * w + h * h);
+      const tileSize = Math.max(diag, texSize);
 
-      // 边框中心线四条边长度（不含角部，避免重复）
-      // top / bottom 有效长度 = w - bw（减去左右两个 b​w/2 角）
-      // left / right 有效长度 = h - bw
-      const topLen = w - bw;
-      const rightLen = h - bw;
-      const bottomLen = w - bw;
-      const leftLen = h - bw;
-      const totalLen = topLen + rightLen + bottomLen + leftLen;
-
-      // 相位 0→1，顺时针：top → right → bottom → left
-      const phase = ((context.time.nowMs % FLOW_GLOW_SCROLL_INTERVAL_MS) / FLOW_GLOW_SCROLL_INTERVAL_MS + 1) % 1;
-      const dist = phase * totalLen;
-
-      // 计算光束在周长上的位置 (px, py) 和旋转角 (rot)
-      let px: number, py: number, rot: number;
-
-      const topStart = 0;
-      const rightStart = topLen;
-      const bottomStart = topLen + rightLen;
-      const leftStart = topLen + rightLen + bottomLen;
-
-      if (dist < rightStart) {
-        // top: 左→右
-        const t = dist / topLen;
-        px = (x0 + halfBw) + t * topLen;
-        py = y0 + halfBw;
-        rot = 0;
-      } else if (dist < bottomStart) {
-        // right: 上→下
-        const t = (dist - rightStart) / rightLen;
-        px = x0 + w - halfBw;
-        py = (y0 + halfBw) + t * rightLen;
-        rot = Math.PI / 2;
-      } else if (dist < leftStart) {
-        // bottom: 右→左
-        const t = (dist - bottomStart) / bottomLen;
-        px = (x0 + w - halfBw) - t * bottomLen;
-        py = y0 + h - halfBw;
-        rot = Math.PI;
-      } else {
-        // left: 下→上
-        const t = (dist - leftStart) / leftLen;
-        px = x0 + halfBw;
-        py = (y0 + h - halfBw) - t * leftLen;
-        rot = -Math.PI / 2;
-      }
+      // 旋转相位：一个周期完成 360° 旋转
+      const phase = ((context.time.nowMs % FLOW_GLOW_SCROLL_INTERVAL_MS) / FLOW_GLOW_SCROLL_INTERVAL_MS);
+      const rotation = phase * Math.PI * 2;
 
       const tintColor = resolveAppThemeColorNumber(
         context.theme,
@@ -540,11 +510,12 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       );
 
       this.flowGlowBeam.visible = true;
-      this.flowGlowBeam.x = px;
-      this.flowGlowBeam.y = py;
-      this.flowGlowBeam.width = beamWidth;
-      this.flowGlowBeam.height = beamHeight;
-      this.flowGlowBeam.rotation = rot;
+      this.flowGlowBeam.x = cx;
+      this.flowGlowBeam.y = cy;
+      this.flowGlowBeam.width = tileSize;
+      this.flowGlowBeam.height = tileSize;
+      this.flowGlowBeam.tileScale.set(1);
+      this.flowGlowBeam.rotation = rotation;
       this.flowGlowBeam.tint = tintColor;
     } else {
       this.flowGlowBeam.visible = false;

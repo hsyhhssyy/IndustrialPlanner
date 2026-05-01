@@ -2,6 +2,7 @@
 
 import { RegistryContract } from "@/domain/contract/registry-contracts"
 
+import { BASE_DEFINITIONS } from "./base-definition"
 import { ENTITY_DEFINITIONS } from "./entity-definition"
 import { ITEM_DEFINITIONS } from "./item-definition"
 import { RECIPE_DEFINITIONS } from "./recipe-definition"
@@ -9,6 +10,7 @@ import { RECIPE_DEFINITIONS } from "./recipe-definition"
 export const createRegistryContract = (): RegistryContract => {
     return {
         queries: {},
+        baseDefinitions: [...BASE_DEFINITIONS],
         entityDefinitions: [...ENTITY_DEFINITIONS],
         itemDefinitions: [...ITEM_DEFINITIONS],
         recipeDefinitions: [...RECIPE_DEFINITIONS],

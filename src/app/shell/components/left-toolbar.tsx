@@ -63,6 +63,7 @@ export const LeftToolbar = observer(function LeftToolbar({
   const t = appHost.actions.translate;
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const activePanel = appHost.internalState.runtime.activePanel ?? "placement";
+  const helpDialogVisible = appHost.internalState.runtime.helpDialog.visible;
 
   return (
     <aside className="left-toolbar panel-surface">
@@ -100,14 +101,25 @@ export const LeftToolbar = observer(function LeftToolbar({
       <div className="toolbar-rail-group toolbar-rail-utility">
         {UTILITY_TOOLBAR_ITEMS.map((item) => {
           const label = t(item.labelKey);
-          const handleClick = item.id === "utility-settings"
-            ? (onOpenSettings ?? handleUiEvent)
-            : handleUiEvent;
+          const isHelpButton = item.id === "utility-help";
+          const isActive = isHelpButton && helpDialogVisible;
+          let handleClick = handleUiEvent;
+
+          if (item.id === "utility-help") {
+            handleClick = () => {
+              appHost.internalActions.openHelpDialog();
+            };
+          } else if (item.id === "utility-settings") {
+            handleClick = onOpenSettings ?? handleUiEvent;
+          }
 
           return (
             <button
               aria-label={label}
-              className="rail-button rail-button-utility"
+              aria-pressed={isHelpButton ? isActive : undefined}
+              className={isActive
+                ? "rail-button rail-button-utility is-active"
+                : "rail-button rail-button-utility"}
               key={item.id}
               onClick={handleClick}
               title={label}

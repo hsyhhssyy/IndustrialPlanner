@@ -157,6 +157,13 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         defaultValue: true,
       },
       {
+        id: "game-always-show-grid-lines",
+        kind: "switch",
+        labelKey: "settingsField.alwaysShowGridLines",
+        descriptionKey: "settingsField.alwaysShowGridLinesDescription",
+        defaultValue: true,
+      },
+      {
         id: "game-show-grass-background",
         kind: "switch",
         labelKey: "settingsField.showGrassBackground",
