@@ -1,4 +1,5 @@
 import type { GridEdge, GridRectSize } from "../grid";
+import type { EntityInspectorKey } from "./entity-inspector";
 
 export type UiGroup =
   | "beltLogistics"           // 传送带物流
@@ -21,6 +22,7 @@ export interface EntityDefinition {
   // powerDemand表示只要他在电网里，就需要扣除的值。但是如果requiresPower为false，那么他可以在电网外运行，只不过放到电网里的时候耗电罢了。
   requiresPower: boolean;
   powerDemand: number;
+  inspectors: EntityInspectorKey[];
   //端口与组
   portGroups: PortGroupDefinition[];
   storageSlotGroups: StorageSlotGroupDefinition[];

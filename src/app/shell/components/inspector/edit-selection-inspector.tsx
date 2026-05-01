@@ -1,9 +1,10 @@
+import type { AppHost } from "@/app/host/app-host";
 import type { SelectionInspectorPanelProps } from "@/app/shell/components/inspector/selection-inspector-model";
+import { SelectionInspectorSlot } from "@/app/shell/components/inspector/selection-inspector-slot";
 import {
   ConfigFieldMutationControl,
   ConnectionList,
   NoSelectionState,
-  RuntimeDetailList,
 } from "@/app/shell/components/inspector/selection-inspector-shared";
 import {
   handleUiEvent,
@@ -16,10 +17,14 @@ const QUICK_ACTION_KEYS = [
 ] as const;
 
 export function EditSelectionInspector({
+  appHost,
   state,
   context: _context,
   translate,
-}: SelectionInspectorPanelProps & { translate: (key: string) => string }) {
+}: SelectionInspectorPanelProps & {
+  appHost: AppHost;
+  translate: (key: string) => string;
+}) {
   const locale = state.locale;
 
   return (
@@ -68,12 +73,7 @@ export function EditSelectionInspector({
           </article>
         </div>
       </div>
-      <div className="cluster">
-        <div className="card-header card-subheader">
-          <h4>{translate("section.runtimeDetails")}</h4>
-        </div>
-        <RuntimeDetailList state={{ locale }} translate={translate} />
-      </div>
+      <SelectionInspectorSlot appHost={appHost} translate={translate} />
     </div>
   );
 }

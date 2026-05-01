@@ -106,6 +106,7 @@ export function RightDock({ appHost }: { appHost: AppHost }) {
               <h3>{t("rightDock.selection")}</h3>
             </div>
             <EditSelectionInspector
+              appHost={appHost}
               context={null}
               state={{ locale }}
               translate={t}

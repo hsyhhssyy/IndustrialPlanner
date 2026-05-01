@@ -2,6 +2,7 @@ import type {
   EntityDefinition,
   ItemFilterDefinition,
 } from "@/domain/types/registry/entity-definition";
+import { DEFAULT_ENTITY_INSPECTORS } from "@/domain/types/registry/entity-inspector";
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
@@ -10,6 +11,16 @@ type StorageSlotDefinition = StorageSlotGroupDefinition["slots"][number];
 type PortStorageBindingDefinition = EntityDefinition["portStorageBindings"][number];
 type PortEdgeInput = "N" | "S" | "W" | "E";
 type FilterType = NonNullable<ItemFilterDefinition["itemFilterType"]>;
+type EntityDefinitionInput = Omit<EntityDefinition, "inspectors">;
+
+function createEntityDefinition(
+  definition: EntityDefinitionInput,
+): EntityDefinition {
+  return {
+    ...definition,
+    inspectors: [...DEFAULT_ENTITY_INSPECTORS],
+  };
+}
 
 function resolveEdge(edge: PortEdgeInput): PortDefinition["edge"] {
   switch (edge) {
@@ -102,7 +113,7 @@ function createBinding(
 }
 
 export const ENTITY_DEFINITIONS: EntityDefinition[] = [
-  {
+  createEntityDefinition({
     id: "item_port_storager_1",
     nameKey: "registry.entity.item_port_storager_1.name",
     spriteId: "item_port_storager_1",
@@ -137,8 +148,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_storage"),
       createBinding("bind_item_output", "item_output", "item_storage"),
     ],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_port_log_hongs_bus",
     nameKey: "registry.entity.item_port_log_hongs_bus.name",
     spriteId: "item_port_log_hongs_bus",
@@ -150,8 +161,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [],
     storageSlotGroups: [],
     portStorageBindings: [],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_port_log_hongs_bus_source",
     nameKey: "registry.entity.item_port_log_hongs_bus_source.name",
     spriteId: "item_port_log_hongs_bus_source",
@@ -163,8 +174,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portGroups: [],
     storageSlotGroups: [],
     portStorageBindings: [],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_port_unloader_1",
     nameKey: "registry.entity.item_port_unloader_1.name",
     spriteId: "item_port_unloader_1",
@@ -183,8 +194,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_port_mix_pool_1",
     nameKey: "registry.entity.item_port_mix_pool_1.name",
     spriteId: "item_port_mix_pool_1",
@@ -239,8 +250,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_output", "item_output", "shared_output_buffer"),
       createBinding("bind_fluid_output", "fluid_output", "shared_output_buffer"),
     ],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_port_grinder_1",
     nameKey: "registry.entity.item_port_grinder_1.name",
     spriteId: "item_port_grinder_1",
@@ -281,8 +292,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_port_liquid_filling_pd_mc_1",
     nameKey: "registry.entity.item_port_liquid_filling_pd_mc_1.name",
     spriteId: "item_port_filling_pd_mc_1",
@@ -336,8 +347,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_fluid_input", "fluid_input", "fluid_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_port_filling_pd_mc_1",
     nameKey: "registry.entity.item_port_filling_pd_mc_1.name",
     spriteId: "item_port_filling_pd_mc_1",
@@ -378,8 +389,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "belt_straight_1x1",
     nameKey: "registry.entity.belt_straight_1x1.name",
     spriteId: "belt_straight_1x1",
@@ -420,8 +431,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "belt_turn_cw_1x1",
     nameKey: "registry.entity.belt_turn_cw_1x1.name",
     spriteId: "belt_turn_cw_1x1",
@@ -462,8 +473,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "belt_turn_ccw_1x1",
     nameKey: "registry.entity.belt_turn_ccw_1x1.name",
     spriteId: "belt_turn_ccw_1x1",
@@ -504,8 +515,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_log_splitter",
     nameKey: "registry.entity.item_log_splitter.name",
     spriteId: "item_log_splitter",
@@ -534,8 +545,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_log_converger",
     nameKey: "registry.entity.item_log_converger.name",
     spriteId: "item_log_converger",
@@ -564,8 +575,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_log_connector",
     nameKey: "registry.entity.item_log_connector.name",
     spriteId: "item_log_connector",
@@ -600,8 +611,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "pipe_straight_1x1",
     nameKey: "registry.entity.pipe_straight_1x1.name",
     spriteId: "pipe_straight_1x1",
@@ -626,8 +637,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "pipe_turn_cw_1x1",
     nameKey: "registry.entity.pipe_turn_cw_1x1.name",
     spriteId: "pipe_turn_cw_1x1",
@@ -652,8 +663,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "pipe_turn_ccw_1x1",
     nameKey: "registry.entity.pipe_turn_ccw_1x1.name",
     spriteId: "pipe_turn_ccw_1x1",
@@ -678,8 +689,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_pipe_splitter",
     nameKey: "registry.entity.item_pipe_splitter.name",
     spriteId: "item_pipe_splitter",
@@ -708,8 +719,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_pipe_converger",
     nameKey: "registry.entity.item_pipe_converger.name",
     spriteId: "item_pipe_converger",
@@ -738,8 +749,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_pipe_connector",
     nameKey: "registry.entity.item_pipe_connector.name",
     spriteId: "item_pipe_connector",
@@ -774,8 +785,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_port_udpipe_loader_1",
     nameKey: "registry.entity.item_port_udpipe_loader_1.name",
     spriteId: "item_port_udpipe_loader_1",
@@ -794,8 +805,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  },
-  {
+  }),
+  createEntityDefinition({
     id: "item_port_udpipe_unloader_1",
     nameKey: "registry.entity.item_port_udpipe_unloader_1.name",
     spriteId: "item_port_udpipe_unloader_1",
@@ -814,5 +825,5 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  },
+  }),
 ];

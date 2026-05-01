@@ -159,6 +159,7 @@ vi.mock("pixi.js", () => {
 import { AYU_LIGHT_THEME } from "@/app/theme"
 import { EntityCollectionType } from "@/domain/state/types"
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition"
+import { DEFAULT_ENTITY_INSPECTORS } from "@/domain/types/registry/entity-inspector"
 import { GenericDeviceSprite } from "@/renderer/sprites/generic-device-sprite"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 
@@ -710,6 +711,7 @@ function createEntityDefinitionStub(): EntityDefinition {
     tags: [],
     requiresPower: false,
     powerDemand: 5,
+    inspectors: [...DEFAULT_ENTITY_INSPECTORS],
     portGroups: [
       {
         id: "item_input",
