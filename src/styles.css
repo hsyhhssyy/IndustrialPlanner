@@ -184,6 +184,146 @@ button.is-active {
   background: var(--floating-control-bg-hover);
 }
 
+.dialog-shell-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 13;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 2.6vw, 28px);
+  background: rgb(15 23 42 / 0.42);
+}
+
+.dialog-shell-backdrop,
+.dialog-shell-backdrop * {
+  touch-action: auto;
+}
+
+.dialog-shell-backdrop.is-immersive-maximized {
+  padding: 0;
+}
+
+.dialog-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(980px, 100%);
+  min-height: min(620px, 100%);
+  max-height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-1);
+  box-shadow: 0 24px 80px rgb(15 23 42 / 0.22);
+}
+
+.dialog-shell.is-maximized {
+  width: 100%;
+  height: 100%;
+}
+
+.dialog-shell-backdrop.is-immersive-maximized .dialog-shell {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.dialog-shell-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dialog-shell-header.is-draggable {
+  cursor: grab;
+  user-select: none;
+}
+
+.dialog-shell-header-copy {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.dialog-shell-header-copy h2 {
+  margin: 0;
+}
+
+.dialog-shell-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.dialog-shell-header-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.dialog-shell-tab-list {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 8px;
+  min-width: 0;
+  overflow-y: hidden;
+  overflow-x: auto;
+  padding: 0;
+}
+
+.dialog-shell-tab {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-1);
+  color: var(--text-1);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dialog-shell-tab:hover,
+.dialog-shell-tab.is-active {
+  background: var(--surface-3);
+  color: var(--text-0);
+}
+
+.dialog-shell-tab.is-active {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.dialog-shell-body,
+.dialog-shell-tab-panel {
+  display: grid;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dialog-shell button:focus-visible,
+.dialog-shell input:focus-visible,
+.dialog-shell select:focus-visible {
+  outline: 2px solid var(--highlight-ring);
+  outline-offset: 2px;
+}
+
+body.is-dragging-dialog-shell,
+body.is-dragging-dialog-shell * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
 .settings-dialog-backdrop {
   position: absolute;
   inset: 0;

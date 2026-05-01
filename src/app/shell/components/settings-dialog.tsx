@@ -1,20 +1,26 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
+import { DialogShell } from "@/app/shell/components/dialog-shell";
 import {
   type SettingsGroupId,
   type WorkbenchSettingDefinition,
   WORKBENCH_SETTINGS_GROUPS,
   WorkbenchSettingsDialogController,
 } from "@/app/shell/settings-dialog-state";
-import { WorkbenchIcon } from "@/app/shell/components/workbench-icons";
 
 const SETTINGS_DIALOG_SECTION_SCROLL_OFFSET = 10;
 
 interface SettingsDialogProps {
   appHost: AppHost;
   controller: WorkbenchSettingsDialogController;
+}
+
+function shouldUseImmersiveMaximizedDialog(
+  screenProfile: AppHost["state"]["screenProfile"],
+): boolean {
+  return screenProfile.deviceClass === "mobile" || screenProfile.deviceClass === "tablet";
 }
 
 export const SettingsDialog = observer(function SettingsDialog({
@@ -25,66 +31,56 @@ export const SettingsDialog = observer(function SettingsDialog({
   const contentRef = useRef<HTMLDivElement | null>(null);
   const sectionRefs = useRef(new Map<SettingsGroupId, HTMLElement>());
   const [capturingKeybindingId, setCapturingKeybindingId] = useState<string | null>(null);
+  const dialogState = appHost.internalState.workbench.dialogState.settings;
+  const isOpen = dialogState.visible;
   const hideGroupSidebar = appHost.state.screenProfile.deviceClass !== "desktop";
 
+  const handleClose = useCallback(() => {
+    setCapturingKeybindingId(null);
+    appHost.internalActions.closeDialog("settings");
+  }, [appHost]);
+
+  const handleWindowKeyDown = useCallback((event: KeyboardEvent) => {
+    if (capturingKeybindingId === null) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.key === "Escape") {
+      setCapturingKeybindingId(null);
+
+      return true;
+    }
+
+    if (!controller.isSettingEditable(capturingKeybindingId)) {
+      setCapturingKeybindingId(null);
+
+      return true;
+    }
+
+    const nextValue = formatCapturedKeybinding(event);
+    if (nextValue === null) {
+      return true;
+    }
+
+    controller.updateKeybindingValue(capturingKeybindingId, nextValue);
+    setCapturingKeybindingId(null);
+
+    return true;
+  }, [capturingKeybindingId, controller]);
+
   useEffect(() => {
-    if (controller.isOpen) {
+    if (isOpen) {
       return;
     }
 
     setCapturingKeybindingId(null);
-  }, [controller.isOpen]);
+  }, [isOpen]);
 
   useEffect(() => {
-    if (!controller.isOpen) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (capturingKeybindingId !== null) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (event.key === "Escape") {
-          setCapturingKeybindingId(null);
-
-          return;
-        }
-
-        if (!controller.isSettingEditable(capturingKeybindingId)) {
-          setCapturingKeybindingId(null);
-
-          return;
-        }
-
-        const nextValue = formatCapturedKeybinding(event);
-        if (nextValue === null) {
-          return;
-        }
-
-        controller.updateKeybindingValue(capturingKeybindingId, nextValue);
-        setCapturingKeybindingId(null);
-
-        return;
-      }
-
-      if (event.key !== "Escape") {
-        return;
-      }
-
-      event.preventDefault();
-      controller.close();
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [capturingKeybindingId, controller, controller.isOpen]);
-
-  useEffect(() => {
-    if (!controller.isOpen || hideGroupSidebar) {
+    if (!isOpen || hideGroupSidebar) {
       return;
     }
 
@@ -98,48 +94,34 @@ export const SettingsDialog = observer(function SettingsDialog({
       contentElement,
       selectedSection,
     });
-  }, [controller.isOpen, controller.selectedGroupId, hideGroupSidebar]);
+  }, [isOpen, controller.selectedGroupId, hideGroupSidebar]);
 
-  if (!controller.isOpen) {
+  if (!isOpen) {
     return null;
   }
 
   const selectedGroup = controller.selectedGroup;
 
   return (
-    <div
-      className="settings-dialog-backdrop"
-      onMouseDown={(event) => {
-        if (event.target !== event.currentTarget) {
-          return;
-        }
-
-        controller.close();
+    <DialogShell
+      className="settings-dialog"
+      closeTitle={t("action.close")}
+      dialogKey="settings"
+      dialogState={dialogState}
+      immersiveMaximized={dialogState.maximized && shouldUseImmersiveMaximizedDialog(appHost.state.screenProfile)}
+      maximizeTitle={t("dialog.maximize")}
+      onClose={handleClose}
+      onOffsetChange={(offsetX, offsetY) => {
+        appHost.internalActions.setDialogOffset("settings", offsetX, offsetY);
       }}
+      onToggleMaximized={() => {
+        appHost.internalActions.toggleDialogMaximized("settings");
+      }}
+      onWindowKeyDown={handleWindowKeyDown}
+      restoreTitle={t("dialog.restore")}
+      title={t("settingsDialog.title")}
+      titleId="settings-dialog-title"
     >
-      <section
-        aria-labelledby="settings-dialog-title"
-        aria-modal="true"
-        className="settings-dialog"
-        role="dialog"
-      >
-        <header className="settings-dialog-header">
-          <div className="settings-dialog-header-copy">
-            <h2 id="settings-dialog-title">{t("settingsDialog.title")}</h2>
-          </div>
-          <button
-            aria-label={t("action.close")}
-            className="settings-dialog-close"
-            onClick={controller.close}
-            title={t("action.close")}
-            type="button"
-          >
-            <span className="top-bar-toggle-icon">
-              <WorkbenchIcon kind="cancel" />
-            </span>
-            <span className="sr-only">{t("action.close")}</span>
-          </button>
-        </header>
         <div
           className={hideGroupSidebar
             ? "settings-dialog-layout settings-dialog-layout-single-pane"
@@ -233,8 +215,7 @@ export const SettingsDialog = observer(function SettingsDialog({
             ))}
           </div>
         </div>
-      </section>
-    </div>
+    </DialogShell>
   );
 });
 

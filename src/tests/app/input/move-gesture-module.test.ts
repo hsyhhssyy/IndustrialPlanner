@@ -417,7 +417,7 @@ describe("createHypergryphMoveGestureModule", () => {
     vi.mocked(editor.actions.createMoveOperationDraft).mockImplementation(() => {
       const sourceEntityIds = [...selection];
       preview.replace(["preview-entity"]);
-      vi.mocked(editor.state.collections[EntityCollectionType.ghost]).replace(sourceEntityIds);
+      (editor.state.collections[EntityCollectionType.ghost] as MockCollection).replace(sourceEntityIds);
     });
 
     // Push a second entity into selection so the round-trip preserves multiple entities.

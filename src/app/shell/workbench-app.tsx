@@ -208,11 +208,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     };
   }, [appHost]);
 
-  useEffect(() => {
-    return () => {
-      settingsDialog.dispose();
-    };
-  }, [settingsDialog]);
+
 
   const workbenchStyle = {
     "--left-dock-width": leftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",
@@ -251,12 +247,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           </button>
         </div>
       ) : null}
-      <LeftToolbar
-        appHost={appHost}
-        onOpenSettings={() => {
-          void settingsDialog.open();
-        }}
-      />
+      <LeftToolbar appHost={appHost} />
       {leftDockOpen ? <LeftDock appHost={appHost} /> : null}
       <CanvasPanel appHost={appHost} />
       {canvasTopLeftCornerToolbar.visible && canvasTopLeftCornerToolbar.buttonIds.length > 0 ? (

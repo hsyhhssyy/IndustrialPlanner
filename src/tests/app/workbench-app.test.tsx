@@ -16,7 +16,10 @@ import {
   WORKBENCH_STATE_LOCAL_STORAGE_KEY,
 } from "@/app/state/storage-hook";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
-import { MOBILE_LEFT_DOCK_WIDTH } from "@/app/state/state-impl";
+import {
+  DEFAULT_HELP_DIALOG_TAB_ID,
+  MOBILE_LEFT_DOCK_WIDTH,
+} from "@/app/state/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
@@ -55,6 +58,52 @@ const DEFAULT_APP_SHORTCUTS_STORAGE = {
   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
   [SHORTCUT_KEY.SYNTHESIS]: "B",
 } as const;
+
+function createDialogStateSnapshot(options: {
+  visible?: boolean;
+  maximized?: boolean;
+  offsetX?: number;
+  offsetY?: number;
+  width?: number | null;
+  height?: number | null;
+  activeTab?: string | null;
+} = {}) {
+  return {
+    visible: options.visible ?? false,
+    maximized: options.maximized ?? false,
+    offsetX: options.offsetX ?? 0,
+    offsetY: options.offsetY ?? 0,
+    width: options.width ?? null,
+    height: options.height ?? null,
+    activeTab: options.activeTab ?? null,
+  };
+}
+
+function createWorkbenchStorageSnapshot(options: {
+  leftDockOpen?: boolean;
+  rightDockOpen?: boolean;
+  leftDockWidth?: number;
+  topBarCollapsed?: boolean;
+  rightDockBaseExpanded?: boolean;
+  rightDockPowerExpanded?: boolean;
+  rightDockSelectionExpanded?: boolean;
+  helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
+} = {}) {
+  return {
+    leftDockOpen: options.leftDockOpen ?? true,
+    rightDockOpen: options.rightDockOpen ?? true,
+    leftDockWidth: options.leftDockWidth ?? 375,
+    topBarCollapsed: options.topBarCollapsed ?? false,
+    rightDockBaseExpanded: options.rightDockBaseExpanded ?? true,
+    rightDockPowerExpanded: options.rightDockPowerExpanded ?? true,
+    rightDockSelectionExpanded: options.rightDockSelectionExpanded ?? true,
+    dialogState: {
+      help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
+      settings: options.settingsDialog ?? createDialogStateSnapshot(),
+    },
+  };
+}
 
 function dispatchPointerEvent(
   target: Element,
@@ -305,16 +354,9 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.workbench.leftDockWidth).toBe(470);
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("470px");
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
-      JSON.stringify({
-        leftDockOpen: true,
-        rightDockOpen: true,
+      JSON.stringify(createWorkbenchStorageSnapshot({
         leftDockWidth: 470,
-        topBarCollapsed: false,
-        rightDockBaseExpanded: true,
-        rightDockPowerExpanded: true,
-        rightDockSelectionExpanded: true,
-        helpDialogMaximized: false,
-      }),
+      })),
     );
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBeNull();
 
@@ -1137,16 +1179,13 @@ describe("WorkbenchApp", () => {
 
     expect(container.querySelector(".help-dialog")?.classList.contains("is-maximized")).toBe(true);
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
-      JSON.stringify({
-        leftDockOpen: true,
-        rightDockOpen: true,
-        leftDockWidth: 375,
-        topBarCollapsed: false,
-        rightDockBaseExpanded: true,
-        rightDockPowerExpanded: true,
-        rightDockSelectionExpanded: true,
-        helpDialogMaximized: true,
-      }),
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        helpDialog: createDialogStateSnapshot({
+          visible: true,
+          maximized: true,
+          activeTab: "faq",
+        }),
+      })),
     );
     expect(
       container.querySelector('button[title="还原帮助"] svg')?.getAttribute("data-workbench-icon"),
@@ -1215,7 +1254,7 @@ describe("WorkbenchApp", () => {
       });
     });
 
-    expect(document.body.classList.contains("is-dragging-help-dialog")).toBe(true);
+    expect(document.body.classList.contains("is-dragging-dialog-shell")).toBe(true);
     expect(dialog?.style.transform).toBe("translate(80px, 56px)");
 
     act(() => {
@@ -1228,7 +1267,7 @@ describe("WorkbenchApp", () => {
       });
     });
 
-    expect(document.body.classList.contains("is-dragging-help-dialog")).toBe(false);
+    expect(document.body.classList.contains("is-dragging-dialog-shell")).toBe(false);
     expect(dialog?.style.transform).toBe("translate(80px, 56px)");
   });
 
@@ -1280,10 +1319,10 @@ describe("WorkbenchApp", () => {
 
     act(() => {
       root.render(<WorkbenchApp appHost={nextAppHost} />);
-      nextAppHost.internalActions.openHelpDialog();
+      nextAppHost.internalActions.openDialog("help");
     });
 
-    expect(nextAppHost.state.workbench.helpDialogMaximized).toBe(true);
+    expect(nextAppHost.internalState.workbench.dialogState.help.maximized).toBe(true);
     expect(container.querySelector(".help-dialog-backdrop")?.classList.contains("is-immersive-maximized")).toBe(true);
   });
 
@@ -1293,11 +1332,11 @@ describe("WorkbenchApp", () => {
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
-      appHost.internalActions.openHelpDialog("version-updates");
+      appHost.internalActions.openDialog("help:version");
     });
 
     expect(container.querySelector(".help-dialog")).not.toBeNull();
-    expect(container.querySelector("#help-dialog-tab-version-updates")?.getAttribute("aria-selected")).toBe("true");
+    expect(container.querySelector("#help-dialog-tab-version")?.getAttribute("aria-selected")).toBe("true");
     expect(container.querySelector(".help-dialog-placeholder h3")?.textContent).toBe("版本更新");
   });
 
@@ -1341,7 +1380,11 @@ describe("WorkbenchApp", () => {
     expect(languageSelect?.value).toBe("en-US");
     expect(settingsButton?.title).toBe("Settings");
     expect(container.querySelector(".settings-dialog-header h2")?.textContent).toBe("Settings");
-    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        settingsDialog: createDialogStateSnapshot({ visible: true }),
+      })),
+    );
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
         ...DEFAULT_APP_SETTINGS_STORAGE,
@@ -1386,7 +1429,11 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.settings.themeId).toBe("ayu-dark");
     expect(themeSelect?.value).toBe("ayu-dark");
     expect(document.documentElement.dataset.appTheme).toBe("ayu-dark");
-    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        settingsDialog: createDialogStateSnapshot({ visible: true }),
+      })),
+    );
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
         ...DEFAULT_APP_SETTINGS_STORAGE,

@@ -1,0 +1,287 @@
+import {
+  useEffect,
+  useRef,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
+import { observer } from "mobx-react-lite";
+
+import type { DialogStateReadWrite } from "@/app/state/state-impl";
+import { WorkbenchIcon } from "@/app/shell/components/workbench-icons";
+
+export interface DialogShellTab {
+  id: string;
+  label: string;
+  content: ReactNode;
+}
+
+interface DialogShellProps {
+  dialogKey: string;
+  dialogState: DialogStateReadWrite;
+  title: string;
+  titleId: string;
+  tabs?: readonly DialogShellTab[];
+  className?: string;
+  bodyClassName?: string;
+  maximizeTitle: string;
+  restoreTitle: string;
+  closeTitle: string;
+  immersiveMaximized?: boolean;
+  onClose: () => void;
+  onToggleMaximized: () => void;
+  onTabChange?: (tabId: string) => void;
+  onOffsetChange?: (offsetX: number, offsetY: number) => void;
+  onWindowKeyDown?: (event: KeyboardEvent) => boolean;
+  children?: ReactNode;
+}
+
+export const DialogShell = observer(function DialogShell({
+  dialogKey,
+  dialogState,
+  title,
+  titleId,
+  tabs = [],
+  className,
+  bodyClassName,
+  maximizeTitle,
+  restoreTitle,
+  closeTitle,
+  immersiveMaximized = false,
+  onClose,
+  onToggleMaximized,
+  onTabChange,
+  onOffsetChange,
+  onWindowKeyDown,
+  children,
+}: DialogShellProps) {
+  const dragCleanupRef = useRef<(() => void) | null>(null);
+  const activeTab = tabs.find((tab) => tab.id === dialogState.activeTab) ?? tabs[0] ?? null;
+  const isDraggable = !dialogState.maximized && onOffsetChange !== undefined;
+  const maximizeButtonTitle = dialogState.maximized ? restoreTitle : maximizeTitle;
+
+  useEffect(() => {
+    if (!dialogState.visible) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (onWindowKeyDown?.(event)) {
+        return;
+      }
+
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      event.preventDefault();
+      onClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [dialogState.visible, onClose, onWindowKeyDown]);
+
+  useEffect(() => {
+    if (!dialogState.visible || dialogState.maximized) {
+      dragCleanupRef.current?.();
+    }
+  }, [dialogState.visible, dialogState.maximized]);
+
+  useEffect(() => {
+    return () => {
+      dragCleanupRef.current?.();
+    };
+  }, []);
+
+  if (!dialogState.visible) {
+    return null;
+  }
+
+  const shellStyle: CSSProperties | undefined = dialogState.maximized
+    ? undefined
+    : {
+      transform: `translate(${dialogState.offsetX}px, ${dialogState.offsetY}px)`,
+      ...(dialogState.width === null ? {} : { width: `${dialogState.width}px` }),
+      ...(dialogState.height === null ? {} : { height: `${dialogState.height}px` }),
+    };
+  const classPrefix = className ?? "dialog-shell";
+  const shellClassName = [
+    "dialog-shell",
+    className,
+    dialogState.maximized ? "is-maximized" : "",
+  ].filter(Boolean).join(" ");
+  const backdropClassName = [
+    "dialog-shell-backdrop",
+    `${classPrefix}-backdrop`,
+    immersiveMaximized ? "is-immersive-maximized" : "",
+  ].filter(Boolean).join(" ");
+  const headerClassName = [
+    "dialog-shell-header",
+    `${classPrefix}-header`,
+    isDraggable ? "is-draggable" : "",
+  ].filter(Boolean).join(" ");
+  const bodyClassNames = [
+    "dialog-shell-body",
+    bodyClassName,
+  ].filter(Boolean).join(" ");
+
+  const handleHeaderPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    if (!isDraggable || onOffsetChange === undefined) {
+      return;
+    }
+
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+
+    const target = event.target;
+    if (
+      !(target instanceof HTMLElement)
+      || target.closest("button, input, select, textarea, [data-dialog-shell-no-drag]") !== null
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    const pointerId = event.pointerId;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const originX = dialogState.offsetX;
+    const originY = dialogState.offsetY;
+
+    dragCleanupRef.current?.();
+    document.body.classList.add("is-dragging-dialog-shell");
+
+    const cleanup = () => {
+      document.body.classList.remove("is-dragging-dialog-shell");
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
+
+      if (dragCleanupRef.current === cleanup) {
+        dragCleanupRef.current = null;
+      }
+    };
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId !== pointerId) {
+        return;
+      }
+
+      onOffsetChange(
+        originX + moveEvent.clientX - startX,
+        originY + moveEvent.clientY - startY,
+      );
+    };
+
+    const handlePointerEnd = (endEvent: PointerEvent) => {
+      if (endEvent.pointerId !== pointerId) {
+        return;
+      }
+
+      cleanup();
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
+    dragCleanupRef.current = cleanup;
+  };
+
+  return (
+    <div
+      className={backdropClassName}
+      onMouseDown={(event) => {
+        if (event.target !== event.currentTarget) {
+          return;
+        }
+
+        onClose();
+      }}
+    >
+      <section
+        aria-labelledby={titleId}
+        aria-modal="true"
+        className={shellClassName}
+        data-dialog-key={dialogKey}
+        role="dialog"
+        style={shellStyle}
+      >
+        <header className={headerClassName} onPointerDown={handleHeaderPointerDown}>
+          <div className={["dialog-shell-header-copy", `${classPrefix}-header-copy`].join(" ")}>
+            <h2 id={titleId}>{title}</h2>
+          </div>
+          {tabs.length > 0 ? (
+            <div aria-label={title} className={["dialog-shell-tab-list", `${classPrefix}-tab-list`].join(" ")} role="tablist">
+              {tabs.map((tab) => {
+                const isActive = activeTab?.id === tab.id;
+
+                return (
+                  <button
+                    aria-controls={`${dialogKey}-dialog-panel-${tab.id}`}
+                    aria-selected={isActive}
+                    className={isActive
+                      ? `dialog-shell-tab ${classPrefix}-tab is-active`
+                      : `dialog-shell-tab ${classPrefix}-tab`}
+                    id={`${dialogKey}-dialog-tab-${tab.id}`}
+                    key={tab.id}
+                    onClick={() => {
+                      onTabChange?.(tab.id);
+                    }}
+                    role="tab"
+                    type="button"
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          <div className={["dialog-shell-header-actions", `${classPrefix}-header-actions`].join(" ")}>
+            <button
+              aria-label={maximizeButtonTitle}
+              className={`dialog-shell-header-button ${classPrefix}-header-button`}
+              onClick={onToggleMaximized}
+              title={maximizeButtonTitle}
+              type="button"
+            >
+              <span className="top-bar-toggle-icon">
+                <WorkbenchIcon kind={dialogState.maximized ? "shrink" : "expand"} />
+              </span>
+              <span className="sr-only">{maximizeButtonTitle}</span>
+            </button>
+            <button
+              aria-label={closeTitle}
+              className={`dialog-shell-header-button ${classPrefix}-header-button ${classPrefix}-close`}
+              onClick={onClose}
+              title={closeTitle}
+              type="button"
+            >
+              <span className="top-bar-toggle-icon">
+                <WorkbenchIcon kind="cancel" />
+              </span>
+              <span className="sr-only">{closeTitle}</span>
+            </button>
+          </div>
+        </header>
+        <div className={bodyClassNames}>
+          {activeTab === null ? children : (
+            <section
+              aria-labelledby={`${dialogKey}-dialog-tab-${activeTab.id}`}
+              className="dialog-shell-tab-panel"
+              id={`${dialogKey}-dialog-panel-${activeTab.id}`}
+              role="tabpanel"
+            >
+              {activeTab.content}
+            </section>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+});

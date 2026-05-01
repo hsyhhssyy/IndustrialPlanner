@@ -55,15 +55,14 @@ const UTILITY_TOOLBAR_ITEMS = [
 
 export const LeftToolbar = observer(function LeftToolbar({
   appHost,
-  onOpenSettings,
 }: {
   appHost: AppHost;
-  onOpenSettings?: () => void;
 }) {
   const t = appHost.actions.translate;
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const activePanel = appHost.internalState.runtime.activePanel ?? "placement";
-  const helpDialogVisible = appHost.internalState.runtime.helpDialog.visible;
+  const helpDialogVisible = appHost.internalState.workbench.dialogState.help.visible;
+  const settingsDialogVisible = appHost.internalState.workbench.dialogState.settings.visible;
 
   return (
     <aside className="left-toolbar panel-surface">
@@ -102,21 +101,24 @@ export const LeftToolbar = observer(function LeftToolbar({
         {UTILITY_TOOLBAR_ITEMS.map((item) => {
           const label = t(item.labelKey);
           const isHelpButton = item.id === "utility-help";
-          const isActive = isHelpButton && helpDialogVisible;
+          const isSettingsButton = item.id === "utility-settings";
+          const isActive = (isHelpButton && helpDialogVisible) || (isSettingsButton && settingsDialogVisible);
           let handleClick = handleUiEvent;
 
           if (item.id === "utility-help") {
             handleClick = () => {
-              appHost.internalActions.openHelpDialog();
+              appHost.internalActions.openDialog("help");
             };
           } else if (item.id === "utility-settings") {
-            handleClick = onOpenSettings ?? handleUiEvent;
+            handleClick = () => {
+              appHost.internalActions.openDialog("settings");
+            };
           }
 
           return (
             <button
               aria-label={label}
-              aria-pressed={isHelpButton ? isActive : undefined}
+              aria-pressed={isHelpButton || isSettingsButton ? isActive : undefined}
               className={isActive
                 ? "rail-button rail-button-utility is-active"
                 : "rail-button rail-button-utility"}

@@ -66,6 +66,16 @@ export interface AppSettings {
   readonly debugShowGestureDiagnosticsWindow: boolean;
 }
 
+export interface DialogState {
+  readonly visible: boolean;
+  readonly maximized: boolean;
+  readonly offsetX: number;
+  readonly offsetY: number;
+  readonly width: number | null;
+  readonly height: number | null;
+  readonly activeTab: string | null;
+}
+
 export interface WorkbenchState {
   readonly leftDockOpen: boolean;
   readonly rightDockOpen: boolean;
@@ -74,7 +84,7 @@ export interface WorkbenchState {
   readonly rightDockBaseExpanded: boolean;
   readonly rightDockPowerExpanded: boolean;
   readonly rightDockSelectionExpanded: boolean;
-  readonly helpDialogMaximized: boolean;
+  readonly dialogState: Record<string, DialogState>;
 }
 
 export type ActiveTool =

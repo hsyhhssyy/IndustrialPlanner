@@ -349,14 +349,11 @@ function createDefaultValues(externalBindingIds: ReadonlySet<string> = new Set()
 }
 
 export class WorkbenchSettingsDialogController {
-  public isOpen = false;
   public selectedGroupId: SettingsGroupId = DEFAULT_SETTINGS_GROUP.id;
   public values: Record<string, WorkbenchSettingControlValue> = {};
 
   private readonly externalBindings: ReadonlyMap<string, WorkbenchSettingExternalBinding>;
   private readonly externalBindingIds: ReadonlySet<string>;
-  private pendingOpenPromise: Promise<void> | null = null;
-  private resolvePendingOpen: (() => void) | null = null;
 
   public constructor(options: WorkbenchSettingsDialogControllerOptions = {}) {
     const explicitBindings = new Map(Object.entries(options.externalBindings ?? {}));
@@ -388,8 +385,6 @@ export class WorkbenchSettingsDialogController {
       | "externalBindings"
       | "getValue"
       | "isSettingEditable"
-      | "pendingOpenPromise"
-      | "resolvePendingOpen"
     >(
       this,
       {
@@ -397,8 +392,6 @@ export class WorkbenchSettingsDialogController {
         externalBindings: false,
         getValue: false,
         isSettingEditable: false,
-        pendingOpenPromise: false,
-        resolvePendingOpen: false,
       },
       { autoBind: true },
     );
@@ -428,30 +421,6 @@ export class WorkbenchSettingsDialogController {
     }
 
     return this.getValue(setting.editableWhen.settingId) === setting.editableWhen.equals;
-  }
-
-  public open(): Promise<void> {
-    this.isOpen = true;
-
-    if (this.pendingOpenPromise !== null) {
-      return this.pendingOpenPromise;
-    }
-
-    this.pendingOpenPromise = new Promise<void>((resolve) => {
-      this.resolvePendingOpen = resolve;
-    });
-
-    return this.pendingOpenPromise;
-  }
-
-  public close(): void {
-    this.isOpen = false;
-    this.resolveOpenPromise();
-  }
-
-  public dispose(): void {
-    this.isOpen = false;
-    this.resolveOpenPromise();
   }
 
   public selectGroup(groupId: SettingsGroupId): void {
@@ -607,13 +576,6 @@ export class WorkbenchSettingsDialogController {
     });
   }
 
-  private resolveOpenPromise(): void {
-    const resolve = this.resolvePendingOpen;
-
-    this.pendingOpenPromise = null;
-    this.resolvePendingOpen = null;
-    resolve?.();
-  }
 }
 
 function normalizeSliderValue(

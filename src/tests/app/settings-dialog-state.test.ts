@@ -12,20 +12,6 @@ describe("WorkbenchSettingsDialogController", () => {
     localStorage.clear();
   });
 
-  it("reuses the same open promise and resolves it on close", async () => {
-    const controller = new WorkbenchSettingsDialogController();
-    const firstOpen = controller.open();
-    const secondOpen = controller.open();
-
-    expect(firstOpen).toBe(secondOpen);
-    expect(controller.isOpen).toBe(true);
-
-    controller.close();
-
-    await expect(firstOpen).resolves.toBeUndefined();
-    expect(controller.isOpen).toBe(false);
-  });
-
   it("persists schema-driven values and hydrates them on the next controller", () => {
     const controller = new WorkbenchSettingsDialogController();
 

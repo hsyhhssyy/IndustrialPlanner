@@ -65,7 +65,7 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
   rightDockBaseExpanded: boolean;
   rightDockPowerExpanded: boolean;
   rightDockSelectionExpanded: boolean;
-  helpDialogMaximized: boolean;
+  dialogState: DialogStateMapReadWrite;
 }
 
 export const CANVAS_FLOATING_TOOLBAR_BUTTON_IDS = [
@@ -100,11 +100,31 @@ export const HELP_DIALOG_TAB_IDS = [
   "overview",
   "shortcuts",
   "faq",
-  "version-updates",
+  "version",
 ] as const;
 
 export type HelpDialogTabId = typeof HELP_DIALOG_TAB_IDS[number];
 export const DEFAULT_HELP_DIALOG_TAB_ID: HelpDialogTabId = HELP_DIALOG_TAB_IDS[0];
+
+export const DIALOG_KEYS = ["help", "settings"] as const;
+export type DialogKey = typeof DIALOG_KEYS[number];
+
+export interface DialogStateReadWrite {
+  visible: boolean;
+  maximized: boolean;
+  offsetX: number;
+  offsetY: number;
+  width: number | null;
+  height: number | null;
+  activeTab: string | null;
+}
+
+export type DialogStateMapReadWrite = Record<DialogKey, DialogStateReadWrite>
+  & Record<string, DialogStateReadWrite | undefined>;
+
+export function createDefaultDialogStateForKey(dialogKey: string): DialogStateReadWrite {
+  return new DialogStateReadWriteImpl(dialogKey === "help" ? DEFAULT_HELP_DIALOG_TAB_ID : null);
+}
 
 export interface CanvasFloatingToolbarSize {
   readonly width: number;
@@ -129,11 +149,6 @@ export interface CanvasTopLeftCornerToolbarStateReadWrite {
   buttonIds: CanvasTopLeftCornerToolbarButtonId[];
 }
 
-export interface HelpDialogStateReadWrite {
-  visible: boolean;
-  activeTab: HelpDialogTabId;
-}
-
 export interface RuntimeStateReadWrite {
   activePanel: ActivePanel;
   moveAnchor: GridPoint | null;
@@ -146,7 +161,6 @@ export interface RuntimeStateReadWrite {
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite;
   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite;
   canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite;
-  helpDialog: HelpDialogStateReadWrite;
 }
 
 export interface LogisticsPlacementRuntimeStateReadWrite {
@@ -196,9 +210,27 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   rightDockBaseExpanded = true;
   rightDockPowerExpanded = true;
   rightDockSelectionExpanded = true;
-  helpDialogMaximized = false;
+  dialogState: DialogStateMapReadWrite = {
+    help: createDefaultDialogStateForKey("help"),
+    settings: createDefaultDialogStateForKey("settings"),
+  };
 
   public constructor() {
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
+}
+
+class DialogStateReadWriteImpl implements DialogStateReadWrite {
+  visible = false;
+  maximized = false;
+  offsetX = 0;
+  offsetY = 0;
+  width: number | null = null;
+  height: number | null = null;
+  activeTab: string | null;
+
+  public constructor(activeTab: string | null) {
+    this.activeTab = activeTab;
     makeAutoObservable(this, {}, { autoBind: true });
   }
 }
@@ -227,15 +259,6 @@ class CanvasRightDockToolbarStateReadWriteImpl implements CanvasRightDockToolbar
 class CanvasTopLeftCornerToolbarStateReadWriteImpl implements CanvasTopLeftCornerToolbarStateReadWrite {
   visible = false;
   buttonIds: CanvasTopLeftCornerToolbarButtonId[] = [];
-
-  public constructor() {
-    makeAutoObservable(this, {}, { autoBind: true });
-  }
-}
-
-class HelpDialogStateReadWriteImpl implements HelpDialogStateReadWrite {
-  visible = false;
-  activeTab: HelpDialogTabId = DEFAULT_HELP_DIALOG_TAB_ID;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -272,7 +295,6 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite = new CanvasFloatingToolbarStateReadWriteImpl();
   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite = new CanvasRightDockToolbarStateReadWriteImpl();
   canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite = new CanvasTopLeftCornerToolbarStateReadWriteImpl();
-  helpDialog: HelpDialogStateReadWrite = new HelpDialogStateReadWriteImpl();
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

@@ -34,6 +34,52 @@ function createWorkspace(): WorkspaceContract {
   };
 }
 
+function createDialogStateSnapshot(options: {
+  visible?: boolean;
+  maximized?: boolean;
+  offsetX?: number;
+  offsetY?: number;
+  width?: number | null;
+  height?: number | null;
+  activeTab?: string | null;
+} = {}) {
+  return {
+    visible: options.visible ?? false,
+    maximized: options.maximized ?? false,
+    offsetX: options.offsetX ?? 0,
+    offsetY: options.offsetY ?? 0,
+    width: options.width ?? null,
+    height: options.height ?? null,
+    activeTab: options.activeTab ?? null,
+  };
+}
+
+function createWorkbenchStorageSnapshot(options: {
+  leftDockOpen?: boolean;
+  rightDockOpen?: boolean;
+  leftDockWidth?: number;
+  topBarCollapsed?: boolean;
+  rightDockBaseExpanded?: boolean;
+  rightDockPowerExpanded?: boolean;
+  rightDockSelectionExpanded?: boolean;
+  helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
+} = {}) {
+  return {
+    leftDockOpen: options.leftDockOpen ?? true,
+    rightDockOpen: options.rightDockOpen ?? true,
+    leftDockWidth: options.leftDockWidth ?? 375,
+    topBarCollapsed: options.topBarCollapsed ?? false,
+    rightDockBaseExpanded: options.rightDockBaseExpanded ?? true,
+    rightDockPowerExpanded: options.rightDockPowerExpanded ?? true,
+    rightDockSelectionExpanded: options.rightDockSelectionExpanded ?? true,
+    dialogState: {
+      help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
+      settings: options.settingsDialog ?? createDialogStateSnapshot(),
+    },
+  };
+}
+
 afterEach(() => {
   localStorage.clear();
   document.documentElement.removeAttribute("data-app-theme");
@@ -101,7 +147,10 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
     expect(appHost.state.workbench.rightDockOpen).toBe(true);
     expect(appHost.state.workbench.leftDockWidth).toBe(375);
-    expect(appHost.state.workbench.helpDialogMaximized).toBe(false);
+    expect(appHost.internalState.workbench.dialogState.help.visible).toBe(false);
+    expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(false);
+    expect(appHost.internalState.workbench.dialogState.help.activeTab).toBe(DEFAULT_HELP_DIALOG_TAB_ID);
+    expect(appHost.internalState.workbench.dialogState.settings.visible).toBe(false);
     expect(appHost.internalState.activeTool).toBe("select");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
 
@@ -169,40 +218,46 @@ describe("createAppHost", () => {
     expect(appHost.actions.translate("workbench.base.wuling")).toBe("Wuling");
   });
 
-  it("opens the help dialog and persists its maximized state through internal actions", () => {
+  it("opens dialogs and persists dialog state through generic internal actions", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
-    expect(appHost.internalState.runtime.helpDialog.visible).toBe(false);
-    expect(appHost.state.workbench.helpDialogMaximized).toBe(false);
-    expect(appHost.internalState.runtime.helpDialog.activeTab).toBe(DEFAULT_HELP_DIALOG_TAB_ID);
+    expect(appHost.internalState.workbench.dialogState.help.visible).toBe(false);
+    expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(false);
+    expect(appHost.internalState.workbench.dialogState.help.activeTab).toBe(DEFAULT_HELP_DIALOG_TAB_ID);
 
-    appHost.internalActions.openHelpDialog("faq");
+    appHost.internalActions.openDialog("help:faq");
 
-    expect(appHost.internalState.runtime.helpDialog.visible).toBe(true);
-    expect(appHost.internalState.runtime.helpDialog.activeTab).toBe("faq");
+    expect(appHost.internalState.workbench.dialogState.help.visible).toBe(true);
+    expect(appHost.internalState.workbench.dialogState.help.activeTab).toBe("faq");
 
-    appHost.internalActions.toggleHelpDialogMaximized();
+    appHost.internalActions.toggleDialogMaximized("help");
+    appHost.internalActions.setDialogOffset("help", 18.4, -7.6);
 
-    expect(appHost.state.workbench.helpDialogMaximized).toBe(true);
+    expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(true);
+    expect(appHost.internalState.workbench.dialogState.help.offsetX).toBe(18);
+    expect(appHost.internalState.workbench.dialogState.help.offsetY).toBe(-8);
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
-      JSON.stringify({
-        leftDockOpen: true,
-        rightDockOpen: true,
-        leftDockWidth: 375,
-        topBarCollapsed: false,
-        rightDockBaseExpanded: true,
-        rightDockPowerExpanded: true,
-        rightDockSelectionExpanded: true,
-        helpDialogMaximized: true,
-      }),
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        helpDialog: createDialogStateSnapshot({
+          visible: true,
+          maximized: true,
+          offsetX: 18,
+          offsetY: -8,
+          activeTab: "faq",
+        }),
+      })),
     );
 
-    appHost.internalActions.closeHelpDialog();
+    appHost.internalActions.openDialog("settings");
 
-    expect(appHost.internalState.runtime.helpDialog.visible).toBe(false);
-    expect(appHost.state.workbench.helpDialogMaximized).toBe(true);
-    expect(appHost.internalState.runtime.helpDialog.activeTab).toBe(DEFAULT_HELP_DIALOG_TAB_ID);
+    expect(appHost.internalState.workbench.dialogState.settings.visible).toBe(true);
+
+    appHost.internalActions.closeDialog("help");
+
+    expect(appHost.internalState.workbench.dialogState.help.visible).toBe(false);
+    expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(true);
+    expect(appHost.internalState.workbench.dialogState.help.activeTab).toBe("faq");
   });
 
   it("hydrates and persists the current split localStorage keys", () => {
@@ -215,16 +270,17 @@ describe("createAppHost", () => {
     );
     localStorage.setItem(
       WORKBENCH_STATE_LOCAL_STORAGE_KEY,
-      JSON.stringify({
-        leftDockOpen: false,
-        rightDockOpen: false,
-        leftDockWidth: 512,
-        topBarCollapsed: false,
-        rightDockBaseExpanded: true,
-        rightDockPowerExpanded: true,
-        rightDockSelectionExpanded: true,
-        helpDialogMaximized: true,
-      }),
+      JSON.stringify(
+        createWorkbenchStorageSnapshot({
+          leftDockOpen: false,
+          rightDockOpen: false,
+          leftDockWidth: 512,
+          helpDialog: createDialogStateSnapshot({
+            maximized: true,
+            activeTab: DEFAULT_HELP_DIALOG_TAB_ID,
+          }),
+        }),
+      ),
     );
 
     const workspace = createWorkspace();
@@ -233,7 +289,7 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
     expect(appHost.state.workbench.leftDockWidth).toBe(512);
-    expect(appHost.state.workbench.helpDialogMaximized).toBe(true);
+    expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(true);
     expect(appHost.state.settings.locale).toBe("en-US");
     expect(appHost.state.settings.themeId).toBe("ayu-light");
     expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
@@ -256,16 +312,15 @@ describe("createAppHost", () => {
     });
 
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
-      JSON.stringify({
+      JSON.stringify(createWorkbenchStorageSnapshot({
         leftDockOpen: false,
         rightDockOpen: true,
         leftDockWidth: 420,
-        topBarCollapsed: false,
-        rightDockBaseExpanded: true,
-        rightDockPowerExpanded: true,
-        rightDockSelectionExpanded: true,
-        helpDialogMaximized: true,
-      }),
+        helpDialog: createDialogStateSnapshot({
+          maximized: true,
+          activeTab: DEFAULT_HELP_DIALOG_TAB_ID,
+        }),
+      })),
     );
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
@@ -279,16 +334,15 @@ describe("createAppHost", () => {
     });
 
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
-      JSON.stringify({
+      JSON.stringify(createWorkbenchStorageSnapshot({
         leftDockOpen: false,
         rightDockOpen: true,
         leftDockWidth: 420,
-        topBarCollapsed: false,
-        rightDockBaseExpanded: true,
-        rightDockPowerExpanded: true,
-        rightDockSelectionExpanded: true,
-        helpDialogMaximized: true,
-      }),
+        helpDialog: createDialogStateSnapshot({
+          maximized: true,
+          activeTab: DEFAULT_HELP_DIALOG_TAB_ID,
+        }),
+      })),
     );
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({

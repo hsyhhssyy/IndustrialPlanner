@@ -15,6 +15,8 @@ export type MessageKey =
   | "action.close"
   | "action.expand"
   | "action.collapse"
+  | "dialog.maximize"
+  | "dialog.restore"
   | "action.exit"
   | "action.deemphasizePipe"
   | "action.showPipe"
@@ -229,6 +231,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.close": "关闭",
     "action.expand": "展开",
     "action.collapse": "折叠",
+    "dialog.maximize": "最大化",
+    "dialog.restore": "还原",
     "action.exit": "退出",
     "action.deemphasizePipe": "弱化管道",
     "action.showPipe": "显示管道",
@@ -442,6 +446,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.close": "Close",
     "action.expand": "Expand",
     "action.collapse": "Collapse",
+    "dialog.maximize": "Maximize",
+    "dialog.restore": "Restore",
     "action.exit": "Exit",
     "action.deemphasizePipe": "De-emphasize Pipes",
     "action.showPipe": "Show Pipes",

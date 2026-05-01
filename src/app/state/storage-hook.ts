@@ -5,9 +5,15 @@ import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 import type { AppHost } from "../host/app-host";
 import type {
   AppSettingsReadWrite,
+  DialogStateMapReadWrite,
+  DialogStateReadWrite,
   WorkbenchStateReadWrite,
 } from "./state-impl";
-import { clampLeftDockWidth } from "./state-impl";
+import {
+  clampLeftDockWidth,
+  createDefaultDialogStateForKey,
+  DIALOG_KEYS,
+} from "./state-impl";
 
 export const APP_SETTINGS_LOCAL_STORAGE_KEY = "v3-app-settings";
 export const WORKBENCH_STATE_LOCAL_STORAGE_KEY = "v3-workbench-state";
@@ -16,7 +22,7 @@ export function hookLocalstorage(appHost: AppHost): () => void {
   const persistedAppSettings = readFromLocalStorage<AppSettingsReadWrite>(
     APP_SETTINGS_LOCAL_STORAGE_KEY,
   );
-  const persistedWorkbenchState = readFromLocalStorage<WorkbenchStateReadWrite>(
+  const persistedWorkbenchState = readFromLocalStorage<unknown>(
     WORKBENCH_STATE_LOCAL_STORAGE_KEY,
   );
 
@@ -102,9 +108,13 @@ function normalizePersistedAppSettings(
 }
 
 function normalizePersistedWorkbenchState(
-  persistedWorkbenchState: WorkbenchStateReadWrite,
+  persistedWorkbenchState: unknown,
   fallback: WorkbenchStateReadWrite,
 ): WorkbenchStateReadWrite {
+  if (!isRecord(persistedWorkbenchState)) {
+    return fallback;
+  }
+
   return {
     leftDockOpen: typeof persistedWorkbenchState.leftDockOpen === "boolean"
       ? persistedWorkbenchState.leftDockOpen
@@ -130,8 +140,93 @@ function normalizePersistedWorkbenchState(
       typeof persistedWorkbenchState.rightDockSelectionExpanded === "boolean"
         ? persistedWorkbenchState.rightDockSelectionExpanded
         : fallback.rightDockSelectionExpanded,
-    helpDialogMaximized: typeof persistedWorkbenchState.helpDialogMaximized === "boolean"
-      ? persistedWorkbenchState.helpDialogMaximized
-      : fallback.helpDialogMaximized,
+    dialogState: normalizePersistedDialogStateMap(persistedWorkbenchState, fallback.dialogState),
   };
+}
+
+function normalizePersistedDialogStateMap(
+  persistedWorkbenchState: Record<string, unknown>,
+  fallback: DialogStateMapReadWrite,
+): DialogStateMapReadWrite {
+  const persistedDialogStateMap = isRecord(persistedWorkbenchState.dialogState)
+    ? persistedWorkbenchState.dialogState
+    : {};
+  const nextDialogState: DialogStateMapReadWrite = {
+    help: normalizePersistedDialogState(
+      "help",
+      persistedDialogStateMap.help,
+      fallback.help,
+    ),
+    settings: normalizePersistedDialogState(
+      "settings",
+      persistedDialogStateMap.settings,
+      fallback.settings,
+    ),
+  };
+
+  for (const [dialogKey, persistedDialogState] of Object.entries(persistedDialogStateMap)) {
+    if (DIALOG_KEYS.includes(dialogKey as typeof DIALOG_KEYS[number])) {
+      continue;
+    }
+
+    nextDialogState[dialogKey] = normalizePersistedDialogState(
+      dialogKey,
+      persistedDialogState,
+      fallback[dialogKey] ?? createDefaultDialogStateForKey(dialogKey),
+    );
+  }
+
+  return nextDialogState;
+}
+
+function normalizePersistedDialogState(
+  dialogKey: string,
+  persistedDialogState: unknown,
+  fallback: DialogStateReadWrite,
+): DialogStateReadWrite {
+  const defaultDialogState = createDefaultDialogStateForKey(dialogKey);
+  const baseDialogState = {
+    ...defaultDialogState,
+    ...fallback,
+  };
+
+  if (!isRecord(persistedDialogState)) {
+    return baseDialogState;
+  }
+
+  return {
+    visible: typeof persistedDialogState.visible === "boolean"
+      ? persistedDialogState.visible
+      : baseDialogState.visible,
+    maximized: typeof persistedDialogState.maximized === "boolean"
+      ? persistedDialogState.maximized
+      : baseDialogState.maximized,
+    offsetX: normalizeFiniteNumber(persistedDialogState.offsetX, baseDialogState.offsetX),
+    offsetY: normalizeFiniteNumber(persistedDialogState.offsetY, baseDialogState.offsetY),
+    width: normalizePositiveNumberOrNull(persistedDialogState.width, baseDialogState.width),
+    height: normalizePositiveNumberOrNull(persistedDialogState.height, baseDialogState.height),
+    activeTab: typeof persistedDialogState.activeTab === "string"
+      ? persistedDialogState.activeTab
+      : baseDialogState.activeTab,
+  };
+}
+
+function normalizeFiniteNumber(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.round(value)
+    : fallback;
+}
+
+function normalizePositiveNumberOrNull(value: unknown, fallback: number | null): number | null {
+  if (value === null) {
+    return null;
+  }
+
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.round(value)
+    : fallback;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

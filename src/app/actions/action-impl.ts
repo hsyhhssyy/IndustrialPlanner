@@ -23,10 +23,12 @@ import {
   type CanvasRightDockToolbarButtonId,
   type CanvasTopLeftCornerToolbarButtonId,
   clampLeftDockWidth,
+  createDefaultDialogStateForKey,
   DEFAULT_HELP_DIALOG_TAB_ID,
   DEFAULT_RIGHT_DOCK_WIDTH,
+  DIALOG_KEYS,
+  type DialogKey,
   HELP_DIALOG_TAB_IDS,
-  type HelpDialogTabId,
   resolveLeftDockWidthForScreenProfile,
   type ActivePanel,
   type UiStateReadWrite,
@@ -41,10 +43,11 @@ export interface AppInternalAction {
   toggleRightDockBaseExpanded: () => void;
   toggleRightDockPowerExpanded: () => void;
   toggleRightDockSelectionExpanded: () => void;
-  openHelpDialog: (tabId?: HelpDialogTabId) => void;
-  closeHelpDialog: () => void;
-  toggleHelpDialogMaximized: () => void;
-  setHelpDialogTab: (tabId: HelpDialogTabId) => void;
+  openDialog: (request: string) => void;
+  closeDialog: (dialogKey: string) => void;
+  toggleDialogMaximized: (dialogKey: string) => void;
+  setDialogTab: (dialogKey: string, tabId: string) => void;
+  setDialogOffset: (dialogKey: string, offsetX: number, offsetY: number) => void;
   setActivePanel: (panel: ActivePanel) => void;
   setActiveTool: (activeTool: ActiveTool) => void;
   showCanvasFloatingToolbar: (
@@ -119,43 +122,89 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     this.internalState.workbench.rightDockSelectionExpanded = !this.internalState.workbench.rightDockSelectionExpanded;
   });
 
-  public readonly openHelpDialog: AppInternalAction["openHelpDialog"] = action((tabId) => {
-    const nextTab = normalizeHelpDialogTab(tabId) ?? this.internalState.runtime.helpDialog.activeTab;
+  public readonly openDialog: AppInternalAction["openDialog"] = action((request) => {
+    const target = normalizeDialogRequest(request);
 
-    this.internalState.runtime.helpDialog.visible = true;
-    this.internalState.runtime.helpDialog.activeTab = nextTab;
+    if (target === null) {
+      return;
+    }
+
+    const dialogState = this.ensureDialogState(target.dialogKey);
+    dialogState.visible = true;
+
+    if (target.tabId !== null) {
+      const nextTab = normalizeDialogTab(target.dialogKey, target.tabId);
+
+      if (nextTab !== null) {
+        dialogState.activeTab = nextTab;
+      }
+    } else if (target.dialogKey === "help" && dialogState.activeTab === null) {
+      dialogState.activeTab = DEFAULT_HELP_DIALOG_TAB_ID;
+    }
   });
 
-  public readonly closeHelpDialog: AppInternalAction["closeHelpDialog"] = action(() => {
-    const helpDialog = this.internalState.runtime.helpDialog;
+  public readonly closeDialog: AppInternalAction["closeDialog"] = action((dialogKey) => {
+    const normalizedDialogKey = normalizeDialogKey(dialogKey);
+
+    if (normalizedDialogKey === null) {
+      return;
+    }
+
+    this.ensureDialogState(normalizedDialogKey).visible = false;
+  });
+
+  public readonly toggleDialogMaximized: AppInternalAction["toggleDialogMaximized"] = action((dialogKey) => {
+    const normalizedDialogKey = normalizeDialogKey(dialogKey);
+
+    if (normalizedDialogKey === null) {
+      return;
+    }
+
+    const dialogState = this.ensureDialogState(normalizedDialogKey);
+
+    if (!dialogState.visible) {
+      return;
+    }
+
+    dialogState.maximized = !dialogState.maximized;
+  });
+
+  public readonly setDialogTab: AppInternalAction["setDialogTab"] = action((dialogKey, tabId) => {
+    const normalizedDialogKey = normalizeDialogKey(dialogKey);
+
+    if (normalizedDialogKey === null) {
+      return;
+    }
+
+    const nextTab = normalizeDialogTab(normalizedDialogKey, tabId);
+
+    if (nextTab === null) {
+      return;
+    }
+
+    const dialogState = this.ensureDialogState(normalizedDialogKey);
+
+    if (dialogState.activeTab === nextTab) {
+      return;
+    }
+
+    dialogState.activeTab = nextTab;
+  });
+
+  public readonly setDialogOffset: AppInternalAction["setDialogOffset"] = action((dialogKey, offsetX, offsetY) => {
+    const normalizedDialogKey = normalizeDialogKey(dialogKey);
 
     if (
-      !helpDialog.visible
-      && helpDialog.activeTab === DEFAULT_HELP_DIALOG_TAB_ID
+      normalizedDialogKey === null
+      || !Number.isFinite(offsetX)
+      || !Number.isFinite(offsetY)
     ) {
       return;
     }
 
-    helpDialog.visible = false;
-    helpDialog.activeTab = DEFAULT_HELP_DIALOG_TAB_ID;
-  });
-
-  public readonly toggleHelpDialogMaximized: AppInternalAction["toggleHelpDialogMaximized"] = action(() => {
-    if (!this.internalState.runtime.helpDialog.visible) {
-      return;
-    }
-
-    this.internalState.workbench.helpDialogMaximized = !this.internalState.workbench.helpDialogMaximized;
-  });
-
-  public readonly setHelpDialogTab: AppInternalAction["setHelpDialogTab"] = action((tabId) => {
-    const nextTab = normalizeHelpDialogTab(tabId);
-
-    if (nextTab === null || this.internalState.runtime.helpDialog.activeTab === nextTab) {
-      return;
-    }
-
-    this.internalState.runtime.helpDialog.activeTab = nextTab;
+    const dialogState = this.ensureDialogState(normalizedDialogKey);
+    dialogState.offsetX = Math.round(offsetX);
+    dialogState.offsetY = Math.round(offsetY);
   });
 
   public readonly setActivePanel: AppInternalAction["setActivePanel"] = action((panel) => {
@@ -481,6 +530,44 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
     editor.actions.setViewportClientRect(predictedRect);
   }
+
+  private ensureDialogState(dialogKey: DialogKey) {
+    this.internalState.workbench.dialogState[dialogKey] ??= createDefaultDialogStateForKey(dialogKey);
+
+    return this.internalState.workbench.dialogState[dialogKey];
+  }
+}
+
+function normalizeDialogRequest(request: string): { dialogKey: DialogKey; tabId: string | null } | null {
+  const [rawDialogKey = "", ...tabParts] = request.split(":");
+  const dialogKey = normalizeDialogKey(rawDialogKey);
+
+  if (dialogKey === null) {
+    return null;
+  }
+
+  const rawTabId = tabParts.join(":").trim();
+
+  return {
+    dialogKey,
+    tabId: rawTabId === "" ? null : rawTabId,
+  };
+}
+
+function normalizeDialogKey(dialogKey: string): DialogKey | null {
+  const trimmedDialogKey = dialogKey.trim();
+
+  return DIALOG_KEYS.includes(trimmedDialogKey as DialogKey)
+    ? trimmedDialogKey as DialogKey
+    : null;
+}
+
+function normalizeDialogTab(dialogKey: DialogKey, tabId: string): string | null {
+  if (dialogKey !== "help") {
+    return null;
+  }
+
+  return normalizeHelpDialogTab(tabId);
 }
 
 function resolvePredictedViewportRectForDockToggle(options: {
@@ -582,12 +669,9 @@ function normalizeCanvasTopLeftCornerToolbarButtonIds(
   return deduped;
 }
 
-function normalizeHelpDialogTab(tabId: HelpDialogTabId | undefined): HelpDialogTabId | null {
-  if (tabId === undefined) {
-    return null;
-  }
+function normalizeHelpDialogTab(tabId: string): string | null {
+  const knownTabs = new Set<string>(HELP_DIALOG_TAB_IDS);
 
-  const knownTabs = new Set<HelpDialogTabId>(HELP_DIALOG_TAB_IDS);
   return knownTabs.has(tabId) ? tabId : null;
 }
 

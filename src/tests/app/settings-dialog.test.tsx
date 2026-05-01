@@ -152,7 +152,7 @@ describe("SettingsDialog", () => {
     });
 
     act(() => {
-      void controller.open();
+      appHost.internalActions.openDialog("settings");
     });
 
     const contentElement = container.querySelector(".settings-dialog-content");
