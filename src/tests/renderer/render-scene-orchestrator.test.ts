@@ -360,12 +360,11 @@ describe("resolveWorldGridLineAxes", () => {
 })
 
 describe("resolveWorldGridStrokeStyle", () => {
-  it("uses a pixel-perfect 1px stroke for the editor grid", () => {
+  it("uses a pixel-perfect 1.5px stroke for the editor grid", () => {
     expect(resolveWorldGridStrokeStyle(AYU_DARK_THEME)).toEqual({
-      width: 1,
+      width: 1.5,
       color: 0xffffff,
-      alpha: 0.12,
-      pixelLine: true,
+      alpha: 0.30,
     })
   })
 
@@ -373,12 +372,11 @@ describe("resolveWorldGridStrokeStyle", () => {
     expect(resolveWorldGridStrokeStyle(AYU_LIGHT_THEME).color).toBe(0x5c6773)
   })
 
-  it("uses a 2x stroke for major grid lines", () => {
+  it("uses a 3x stroke for major grid lines", () => {
     expect(resolveWorldGridMajorStrokeStyle(AYU_DARK_THEME)).toEqual({
-      width: 2,
+      width: 3,
       color: 0xffffff,
-      alpha: 0.12,
-      pixelLine: true,
+      alpha: 0.30,
     })
   })
 })

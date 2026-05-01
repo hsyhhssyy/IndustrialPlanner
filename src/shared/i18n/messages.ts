@@ -163,6 +163,8 @@ export type MessageKey =
   | "settingsField.useSimplifiedDeviceIconsDescription"
   | "settingsField.showHotkeys"
   | "settingsField.showHotkeysDescription"
+  | "settingsField.showGrassBackground"
+  | "settingsField.showGrassBackgroundDescription"
   | "settingsField.debugMode"
   | "settingsField.debugModeDescription"
   | "settingsField.showFps"
@@ -364,6 +366,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图简笔画显示方式，不会提高性能。",
     "settingsField.showHotkeys": "显示快捷键",
     "settingsField.showHotkeysDescription": "在界面按钮上展示对应的快捷键提示。",
+    "settingsField.showGrassBackground": "草地背景",
+    "settingsField.showGrassBackgroundDescription": "在画布背景平铺草地纹理贴图。",
     "settingsField.debugMode": "调试模式",
     "settingsField.debugModeDescription": "打开调试模式日志。",
     "settingsField.showFps": "显示 FPS",
@@ -562,6 +566,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.shortcut-synthesisDescription": "Set the shortcut key for synthesis manufacturing; editable only when Arknights Operation Mode is off.",
     "settingsField.useSimplifiedDeviceIcons": "Use Simplified Device Icons",
     "settingsField.useSimplifiedDeviceIconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
+    "settingsField.showGrassBackground": "Grass Background",
+    "settingsField.showGrassBackgroundDescription": "Tile a grass texture across the canvas background.",
     "settingsField.showHotkeys": "Show Hotkeys",
     "settingsField.showHotkeysDescription": "Display shortcut key hints on interface buttons.",
     "settingsField.debugMode": "Debug Mode",

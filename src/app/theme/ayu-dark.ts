@@ -78,8 +78,8 @@ export const AYU_DARK_THEME: AppTheme = {
     "renderer-belt-lane": "#d9e1ee",
     "renderer-port-chevron": "#ffffff",
     "renderer-preview-rect-fill": "#59c2ff",
-    "renderer-flow-glow-stroke": "#ffffff",
-    "renderer-flow-glow-tint": "#000000",
+    "renderer-flow-glow-stroke": "#000000",
+    "renderer-flow-glow-tint": "#ffffff",
   },
   renderer: {
     worldGridLineColorKey: "renderer-grid-line",

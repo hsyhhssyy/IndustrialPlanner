@@ -60,6 +60,7 @@ export interface AppSettings {
   readonly hypergryphImmediateMove: boolean;
   readonly hypergryphImmediateMarquee: boolean;
   readonly gameShowHotkeys: boolean;
+  readonly showGrassBackground: boolean;
   readonly debugShowFps: boolean;
   readonly debugShowGestureDiagnosticsWindow: boolean;
 }

@@ -51,6 +51,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   hypergryphImmediateMove: boolean;
   hypergryphImmediateMarquee: boolean;
   gameShowHotkeys: boolean;
+  showGrassBackground: boolean;
   debugShowFps: boolean;
   debugShowGestureDiagnosticsWindow: boolean;
 }
@@ -259,6 +260,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphImmediateMove: true,
     hypergryphImmediateMarquee: false,
     gameShowHotkeys: false,
+    showGrassBackground: false,
     debugShowFps: false,
     debugShowGestureDiagnosticsWindow: false,
   };

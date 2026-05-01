@@ -78,6 +78,9 @@ function normalizePersistedAppSettings(
     gameShowHotkeys: typeof persistedAppSettings.gameShowHotkeys === "boolean"
       ? persistedAppSettings.gameShowHotkeys
       : fallback.gameShowHotkeys,
+    showGrassBackground: typeof persistedAppSettings.showGrassBackground === "boolean"
+      ? persistedAppSettings.showGrassBackground
+      : fallback.showGrassBackground,
     debugShowFps: typeof persistedAppSettings.debugShowFps === "boolean"
       ? persistedAppSettings.debugShowFps
       : fallback.debugShowFps,

@@ -533,18 +533,22 @@ function handleMouseLeftTap(options: {
   }
 
   const headGridPoint = runtime.headGridPoint;
+  const targetEntityId = runtime.targetEntityId;
   if (!options.editor.actions.applyLogisticDraft()) {
     runtime.statusMessageKey = options.editor.queries.resolveLogisticsDraftState()?.invalidReason ?? "unknown";
     return { status: "handled" };
   }
 
-  if (headGridPoint !== null) {
+  // 若终止于设备端口则回到准备起笔状态，不从入口前那一格继续
+  if (headGridPoint !== null && targetEntityId === null) {
     createContinuedMouseLogisticsStart({
       appHost: options.appHost,
       editor: options.editor,
       kind,
       gridPoint: headGridPoint,
     });
+  } else {
+    softResetLogisticsRuntime(options.appHost);
   }
 
   return { status: "handled" };

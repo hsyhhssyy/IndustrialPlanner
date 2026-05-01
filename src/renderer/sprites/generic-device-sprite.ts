@@ -38,7 +38,7 @@ const FLOW_GLOW_TEXTURE_PATH = "/textures/flow-glow.png";
 /** 边缘流光内边框粗细（px），默认 5px */
 const FLOW_GLOW_BORDER_WIDTH = 5;
 /** 流光滑动周期（ms） */
-const FLOW_GLOW_SCROLL_INTERVAL_MS = 2000;
+const FLOW_GLOW_SCROLL_INTERVAL_MS = 5000;
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
@@ -77,11 +77,12 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private selectionTexture: Texture | null = null;
   private selectionTextureLoadStarted = false;
 
-  /** 边缘流光特效：flow-glow 纹理沿内边框平铺滚动 */
+  /** 边缘流光特效 */
   private readonly flowGlowEffectRoot: Container;
-  private readonly flowGlowTiling: TilingSprite;
-  private readonly flowGlowMask: Graphics;
+  /** 内边框底色 Graphics */
   private readonly flowGlowBorderGraphics: Graphics;
+  /** 单道光束 Sprite，沿边框周长运动 */
+  private readonly flowGlowBeam: Sprite;
   private flowGlowTexture: Texture | null = null;
   private flowGlowTextureLoadStarted = false;
 
@@ -155,25 +156,19 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.selectionEffectRoot.addChild(this.selectionMask)
     this.getRootOfLayer("overlay").addChild(this.selectionEffectRoot)
 
-    // 边缘流光特效：flow-glow 纹理平铺 + 内边框环形 Graphics 遮罩
+    // 边缘流光特效：内边框底色 + 单道光束 Sprite 沿边框运动
     this.flowGlowEffectRoot = new Container()
     this.flowGlowEffectRoot.visible = false
 
-    this.flowGlowMask = new Graphics();
-    this.flowGlowMask.renderable = false;
-
-    this.flowGlowTiling = new TilingSprite({ texture: Texture.EMPTY, width: 0, height: 0 });
-    this.flowGlowTiling.anchor.set(0.5);
-    this.flowGlowTiling.roundPixels = true;
-    this.flowGlowTiling.visible = false;
-    this.flowGlowTiling.mask = this.flowGlowMask;
-
-    // 内边框底色（不参与遮罩，绘制在 TilingSprite 下方）
     this.flowGlowBorderGraphics = new Graphics({ roundPixels: true });
 
+    this.flowGlowBeam = new Sprite(Texture.EMPTY);
+    this.flowGlowBeam.anchor.set(0.5);
+    this.flowGlowBeam.roundPixels = true;
+    this.flowGlowBeam.visible = false;
+
     this.flowGlowEffectRoot.addChild(this.flowGlowBorderGraphics);
-    this.flowGlowEffectRoot.addChild(this.flowGlowTiling);
-    this.flowGlowEffectRoot.addChild(this.flowGlowMask);
+    this.flowGlowEffectRoot.addChild(this.flowGlowBeam);
     this.getRootOfLayer("overlay").addChild(this.flowGlowEffectRoot);
 
     this.portOverlayRoot = new Container()
@@ -242,6 +237,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.previewBorderGraphics.visible = false;
     this.previewEffectRoot.visible = false;
     this.selectionEffectRoot.visible = false;
+    this.flowGlowBorderGraphics.clear();
     this.flowGlowEffectRoot.visible = false;
     this.portOverlayRoot.visible = false;
     this.hidePortChevronSprites();
@@ -465,55 +461,94 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     this.loadFlowGlowTexture();
 
-    const borderWidth = FLOW_GLOW_BORDER_WIDTH;
-    const halfW = layout.width / 2;
-    const halfH = layout.height / 2;
-    const fullW = layout.width;
-    const fullH = layout.height;
+    const bw = FLOW_GLOW_BORDER_WIDTH;
+    const x0 = layout.x;
+    const y0 = layout.y;
+    const w = layout.width;
+    const h = layout.height;
+    const halfBw = bw / 2;
 
-    // 1. 绘制内边框底色（solid inner border）
+    // 1. 内边框底色（向内缩进半线宽 stroke）
     this.flowGlowBorderGraphics.clear();
-
     const strokeColor = resolveAppThemeColorNumber(
       context.theme,
       context.theme.renderer.flowGlowStrokeColorKey,
     );
-
-    // 绘制向内的矩形环（内边框）
     this.flowGlowBorderGraphics
-      .rect(layout.x, layout.y, fullW, fullH)
-      .rect(layout.x + borderWidth, layout.y + borderWidth, fullW - borderWidth * 2, fullH - borderWidth * 2)
-      .fill({ color: strokeColor, fillRule: "evenodd" });
+      .rect(x0 + halfBw, y0 + halfBw, w - bw, h - bw)
+      .stroke({ width: bw, color: strokeColor });
 
-    // 2. 更新内边框环形遮罩（与上述内边框形状一致，用于裁剪流光纹理）
-    this.flowGlowMask.clear();
-    this.flowGlowMask
-      .rect(-halfW, -halfH, fullW, fullH)
-      .rect(-halfW + borderWidth, -halfH + borderWidth, fullW - borderWidth * 2, fullH - borderWidth * 2)
-      .fill({ color: 0xffffff, fillRule: "evenodd" });
-    this.flowGlowMask.x = layout.x + halfW;
-    this.flowGlowMask.y = layout.y + halfH;
+    // 2. 单道光束 —— 仅在纹理加载后显示
+    if (this.flowGlowTexture !== null) {
+      const texW = this.flowGlowTexture.width;   // 256
+      const texH = this.flowGlowTexture.height;  // 32
 
-    // 3. 流光纹理滚动
-    const tilePixelSize = this.flowGlowTexture?.width ?? 256;
+      // Sprite 高度 = 边框粗细，宽度按纹理比例缩放
+      const beamHeight = bw;
+      const beamWidth = (texW / texH) * bw;
 
-    this.flowGlowTiling.visible = true;
-    this.flowGlowTiling.x = layout.x + halfW;
-    this.flowGlowTiling.y = layout.y + halfH;
-    this.flowGlowTiling.rotation = 0;
-    this.flowGlowTiling.width = fullW;
-    this.flowGlowTiling.height = fullH;
+      // 边框中心线四条边长度（不含角部，避免重复）
+      // top / bottom 有效长度 = w - bw（减去左右两个 b​w/2 角）
+      // left / right 有效长度 = h - bw
+      const topLen = w - bw;
+      const rightLen = h - bw;
+      const bottomLen = w - bw;
+      const leftLen = h - bw;
+      const totalLen = topLen + rightLen + bottomLen + leftLen;
 
-    // 流光水平滚动动画
-    const phase = (context.time.nowMs % FLOW_GLOW_SCROLL_INTERVAL_MS) / FLOW_GLOW_SCROLL_INTERVAL_MS;
-    this.flowGlowTiling.tilePosition.x = phase * tilePixelSize;
+      // 相位 0→1，顺时针：top → right → bottom → left
+      const phase = ((context.time.nowMs % FLOW_GLOW_SCROLL_INTERVAL_MS) / FLOW_GLOW_SCROLL_INTERVAL_MS + 1) % 1;
+      const dist = phase * totalLen;
 
-    // 应用流光 tint 颜色
-    const tintColor = resolveAppThemeColorNumber(
-      context.theme,
-      context.theme.renderer.flowGlowTintColorKey,
-    );
-    this.flowGlowTiling.tint = tintColor;
+      // 计算光束在周长上的位置 (px, py) 和旋转角 (rot)
+      let px: number, py: number, rot: number;
+
+      const topStart = 0;
+      const rightStart = topLen;
+      const bottomStart = topLen + rightLen;
+      const leftStart = topLen + rightLen + bottomLen;
+
+      if (dist < rightStart) {
+        // top: 左→右
+        const t = dist / topLen;
+        px = (x0 + halfBw) + t * topLen;
+        py = y0 + halfBw;
+        rot = 0;
+      } else if (dist < bottomStart) {
+        // right: 上→下
+        const t = (dist - rightStart) / rightLen;
+        px = x0 + w - halfBw;
+        py = (y0 + halfBw) + t * rightLen;
+        rot = Math.PI / 2;
+      } else if (dist < leftStart) {
+        // bottom: 右→左
+        const t = (dist - bottomStart) / bottomLen;
+        px = (x0 + w - halfBw) - t * bottomLen;
+        py = y0 + h - halfBw;
+        rot = Math.PI;
+      } else {
+        // left: 下→上
+        const t = (dist - leftStart) / leftLen;
+        px = x0 + halfBw;
+        py = (y0 + h - halfBw) - t * leftLen;
+        rot = -Math.PI / 2;
+      }
+
+      const tintColor = resolveAppThemeColorNumber(
+        context.theme,
+        context.theme.renderer.flowGlowTintColorKey,
+      );
+
+      this.flowGlowBeam.visible = true;
+      this.flowGlowBeam.x = px;
+      this.flowGlowBeam.y = py;
+      this.flowGlowBeam.width = beamWidth;
+      this.flowGlowBeam.height = beamHeight;
+      this.flowGlowBeam.rotation = rot;
+      this.flowGlowBeam.tint = tintColor;
+    } else {
+      this.flowGlowBeam.visible = false;
+    }
 
     this.flowGlowEffectRoot.visible = true;
   }
@@ -531,7 +566,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       }
 
       this.flowGlowTexture = texture;
-      this.flowGlowTiling.texture = texture;
+      this.flowGlowBeam.texture = texture;
     }).catch(() => {
       // flow-glow 纹理加载失败，无伤大雅
     });

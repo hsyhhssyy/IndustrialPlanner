@@ -156,6 +156,13 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         descriptionKey: "settingsField.showHotkeysDescription",
         defaultValue: true,
       },
+      {
+        id: "game-show-grass-background",
+        kind: "switch",
+        labelKey: "settingsField.showGrassBackground",
+        descriptionKey: "settingsField.showGrassBackgroundDescription",
+        defaultValue: false,
+      },
     ],
   },
   {

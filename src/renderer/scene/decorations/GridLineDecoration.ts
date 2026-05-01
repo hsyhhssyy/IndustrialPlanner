@@ -4,8 +4,8 @@ import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
 
-const WORLD_GRID_LINE_ALPHA = 0.12;
-const WORLD_GRID_LINE_WIDTH = 1;
+const WORLD_GRID_LINE_ALPHA = 0.30;
+const WORLD_GRID_LINE_WIDTH = 1.5;
 const WORLD_GRID_MAJOR_LINE_INTERVAL = 5;
 const WORLD_GRID_MAJOR_LINE_WIDTH_MULTIPLIER = 2;
 const WORLD_GRID_FINE_LINE_MIN_CELL_PIXEL_SIZE = 10;
@@ -29,7 +29,6 @@ export function resolveWorldGridStrokeStyle(
   width: number;
   color: number;
   alpha: number;
-  pixelLine: boolean;
 } {
   return {
     width: WORLD_GRID_LINE_WIDTH * (options.widthMultiplier ?? 1),
@@ -38,7 +37,6 @@ export function resolveWorldGridStrokeStyle(
       theme.renderer.worldGridLineColorKey,
     ),
     alpha: WORLD_GRID_LINE_ALPHA,
-    pixelLine: true,
   };
 }
 
@@ -46,7 +44,6 @@ export function resolveWorldGridMajorStrokeStyle(theme: AppTheme): {
   width: number;
   color: number;
   alpha: number;
-  pixelLine: boolean;
 } {
   return resolveWorldGridStrokeStyle(theme, {
     widthMultiplier: WORLD_GRID_MAJOR_LINE_WIDTH_MULTIPLIER,

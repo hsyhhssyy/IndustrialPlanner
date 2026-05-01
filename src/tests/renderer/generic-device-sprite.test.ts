@@ -370,7 +370,7 @@ describe("GenericDeviceSprite", () => {
       children?: unknown[];
     } | undefined
 
-    expect(overlayRoot.children).toHaveLength(3)
+    expect(overlayRoot.children).toHaveLength(4)
     expect(previewEffectRoot?.visible).toBe(true)
 
     const scanlineTiling = previewEffectRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
@@ -851,7 +851,7 @@ function resolvePortOverlayRoot(overlayLayer: ReturnType<typeof createLayerStub>
     children?: unknown[];
   } | undefined
 
-  return overlayRoot?.children?.[2] as {
+  return overlayRoot?.children?.[3] as {
     visible?: boolean;
     children?: unknown[];
   } | undefined

@@ -114,6 +114,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.gameShowHotkeys = value;
         }),
       },
+      "game-show-grass-background": {
+        readValue: () => appHost.state.settings.showGrassBackground,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.showGrassBackground === value) {
+            return;
+          }
+
+          appHost.internalState.settings.showGrassBackground = value;
+        }),
+      },
       "debug-show-fps": {
         readValue: () => appHost.state.settings.debugShowFps,
         writeValue: action((value) => {

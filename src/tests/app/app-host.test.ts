@@ -1062,6 +1062,85 @@ describe("createAppHost", () => {
     expect(editorHost.state.collections.ghost).toEqual([headEntity?.id]);
   });
 
+  it("returns to idle after applying a mouse logistics draft that snapped to a device input port", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+    const initialEntityOrderLength = editorHost.document.getSnapshot().entityOrder.length;
+
+    // Place a device with input ports (3x3 footprint, input ports on south edge)
+    editorHost.actions.createSinglePlacementDraft("item_port_storager_1", { x: 6, y: 6 });
+    editorHost.actions.applyPlacementDraft();
+
+    // Enter belt logistics placement mode
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyE",
+      key: "e",
+      keyCode: 69,
+    }));
+    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+
+    // Start drawing from an empty cell south of the device
+    const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 11 });
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 41,
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 41,
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+      buttons: 0,
+    }));
+
+    // Move mouse to a cell inside the device to snap to its input port
+    const insideDevicePoint = resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 7 });
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 42,
+      clientX: insideDevicePoint.x,
+      clientY: insideDevicePoint.y,
+      buttons: 0,
+    }));
+
+    // The draft should be snapped to a device input port
+    let draft = editorHost.queries.resolveLogisticsDraftState();
+    expect(draft?.target?.type).toBe("device-port");
+    expect(draft?.canApply).toBe(true);
+    expect(appHost.internalState.runtime.logisticsPlacement.targetEntityId).not.toBeNull();
+
+    // Apply the draft with left click
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 43,
+      clientX: insideDevicePoint.x,
+      clientY: insideDevicePoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 43,
+      clientX: insideDevicePoint.x,
+      clientY: insideDevicePoint.y,
+      buttons: 0,
+    }));
+
+    // Should be back to idle, NOT continuing from the head cell
+    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
+    expect(appHost.internalState.runtime.logisticsPlacement.headGridPoint).toBeNull();
+    expect(editorHost.queries.resolveLogisticsDraftState()).toBeNull();
+
+    // The belt tiles should be committed to the document
+    const snapshot = editorHost.document.getSnapshot();
+    expect(snapshot.entityOrder).toHaveLength(initialEntityOrderLength + 1 + 4);
+    // 1 device + 4 belt tiles (from y=11 to y=8)
+  });
+
   it("creates touch logistics drafts from the press cell and anchors the toolbar to logistics head", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

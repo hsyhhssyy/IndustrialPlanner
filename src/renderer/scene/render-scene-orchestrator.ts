@@ -33,6 +33,7 @@ import { createDiagnosticsDecoration } from "./decorations/DiagnosticsDecoration
 import { createMarqueeRectDecoration } from "./decorations/MarqueeRectDecoration"
 import { createMarqueeCanvasDecoration } from "./decorations/MarqueeCanvasDecoration"
 import { createPreviewRectDecoration } from "./decorations/PreviewRectDecoration"
+import { createGrassBackgroundDecoration } from "./decorations/GrassBackgroundDecoration"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
@@ -59,6 +60,7 @@ export function createRenderSceneOrchestrator(
   const marqueeOverlayLayer = new Container()
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
   const entitySprites = new Map<string, RenderSprite>()
+  const grassBackgroundDecoration = createGrassBackgroundDecoration(renderHost)
 
   const flushViewport = (): void => {
     const viewportState = readViewportState(renderHost)
@@ -102,9 +104,12 @@ export function createRenderSceneOrchestrator(
     marqueeCanvasDecoration.sync(ctx)
 
     diagnosticsDecoration.sync(ctx)
+
+    grassBackgroundDecoration.sync(ctx)
   }
 
   app.stage.addChild(layers.background, layers.entity, layers.overlay, marqueeOverlayLayer)
+  app.stage.addChildAt(grassBackgroundDecoration.container, 0)
   layers.background.addChild(gridDecoration.container)
   layers.background.addChild(previewRectDecoration.container)
   marqueeOverlayLayer.addChild(marqueeCanvasDecoration.container)
@@ -130,6 +135,7 @@ export function createRenderSceneOrchestrator(
       layers.entity.destroy({ children: true })
       layers.overlay.destroy({ children: true })
       marqueeOverlayLayer.destroy({ children: true })
+      grassBackgroundDecoration.destroy()
     },
   }
 

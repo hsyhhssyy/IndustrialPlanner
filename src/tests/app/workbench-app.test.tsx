@@ -41,6 +41,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   hypergryphImmediateMove: true,
   hypergryphImmediateMarquee: false,
   gameShowHotkeys: false,
+  showGrassBackground: false,
   debugShowFps: false,
   debugShowGestureDiagnosticsWindow: false,
 } as const;
