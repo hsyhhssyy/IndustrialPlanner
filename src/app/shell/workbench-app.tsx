@@ -187,9 +187,11 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const canvasRightDockToolbar = appHost.internalState.runtime.canvasRightDockToolbar;
   const canvasTopLeftCornerToolbar = appHost.internalState.runtime.canvasTopLeftCornerToolbar;
   const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
+  const isCompactLeftToolbar = screenProfile.deviceClass === "mobile" || screenProfile.deviceClass === "tablet";
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
   const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
   const showBottomStatusBar = !showFloatingTopBarControls;
+  const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -211,6 +213,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
 
 
   const workbenchStyle = {
+    "--left-toolbar-width": isCompactLeftToolbar ? "51px" : "68px",
+    "--left-toolbar-button-scale": isCompactLeftToolbar ? "0.75" : "1",
     "--left-dock-width": leftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",
     "--right-dock-width": rightDockOpen ? `${DEFAULT_RIGHT_DOCK_WIDTH}px` : "0px",
     "--top-bar-height": showFloatingTopBarControls ? "0px" : "48px",
@@ -233,6 +237,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             appHost={appHost}
             className="workbench-floating-top-bar-button workbench-floating-fullscreen-button"
           />
+          {!rightDockOpen ? (
+            <button
+              aria-label={floatingOpenRightDockLabel}
+              className="workbench-floating-top-bar-button workbench-floating-right-dock-button"
+              onClick={appHost.internalActions.toggleRightDock}
+              title={floatingOpenRightDockLabel}
+              type="button"
+            >
+              <span className="top-bar-toggle-icon">
+                <WorkbenchIcon kind="panel-right-open" />
+              </span>
+              <span className="sr-only">{floatingOpenRightDockLabel}</span>
+            </button>
+          ) : null}
           <button
             aria-label={`${t("action.expand")} ${t("topBar.controls")}`}
             className="workbench-floating-top-bar-button workbench-floating-top-bar-toggle"

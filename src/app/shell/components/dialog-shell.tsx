@@ -1,6 +1,7 @@
 import {
   useEffect,
   useRef,
+  useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
@@ -32,6 +33,7 @@ interface DialogShellProps {
   onToggleMaximized: () => void;
   onTabChange?: (tabId: string) => void;
   onOffsetChange?: (offsetX: number, offsetY: number) => void;
+  onResize?: (width: number, height: number) => void;
   onWindowKeyDown?: (event: KeyboardEvent) => boolean;
   children?: ReactNode;
 }
@@ -52,12 +54,20 @@ export const DialogShell = observer(function DialogShell({
   onToggleMaximized,
   onTabChange,
   onOffsetChange,
+  onResize,
   onWindowKeyDown,
   children,
 }: DialogShellProps) {
   const dragCleanupRef = useRef<(() => void) | null>(null);
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
+  const shellRef = useRef<HTMLElement | null>(null);
+  const [liveSize, setLiveSize] = useState<{ width: number | null; height: number | null }>({
+    width: null,
+    height: null,
+  });
   const activeTab = tabs.find((tab) => tab.id === dialogState.activeTab) ?? tabs[0] ?? null;
   const isDraggable = !dialogState.maximized && onOffsetChange !== undefined;
+  const isResizable = !dialogState.maximized && onResize !== undefined;
   const maximizeButtonTitle = dialogState.maximized ? restoreTitle : maximizeTitle;
 
   useEffect(() => {
@@ -88,14 +98,23 @@ export const DialogShell = observer(function DialogShell({
   useEffect(() => {
     if (!dialogState.visible || dialogState.maximized) {
       dragCleanupRef.current?.();
+      resizeCleanupRef.current?.();
     }
   }, [dialogState.visible, dialogState.maximized]);
 
   useEffect(() => {
     return () => {
       dragCleanupRef.current?.();
+      resizeCleanupRef.current?.();
     };
   }, []);
+
+  useEffect(() => {
+    setLiveSize({
+      width: dialogState.width,
+      height: dialogState.height,
+    });
+  }, [dialogState.height, dialogState.width, dialogState.visible, dialogState.maximized]);
 
   if (!dialogState.visible) {
     return null;
@@ -105,8 +124,8 @@ export const DialogShell = observer(function DialogShell({
     ? undefined
     : {
       transform: `translate(${dialogState.offsetX}px, ${dialogState.offsetY}px)`,
-      ...(dialogState.width === null ? {} : { width: `${dialogState.width}px` }),
-      ...(dialogState.height === null ? {} : { height: `${dialogState.height}px` }),
+      ...(liveSize.width === null ? {} : { width: `${liveSize.width}px` }),
+      ...(liveSize.height === null ? {} : { height: `${liveSize.height}px` }),
     };
   const classPrefix = className ?? "dialog-shell";
   const shellClassName = [
@@ -193,6 +212,72 @@ export const DialogShell = observer(function DialogShell({
     dragCleanupRef.current = cleanup;
   };
 
+  const handleResizePointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    if (!isResizable || onResize === undefined) {
+      return;
+    }
+
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const pointerId = event.pointerId;
+    const startX = event.clientX;
+    const startY = event.clientY;
+
+    // 获取当前实际渲染的尺寸作为起始尺寸
+    const shellElement = shellRef.current;
+    const originWidth = shellElement?.offsetWidth ?? dialogState.width ?? 400;
+    const originHeight = shellElement?.offsetHeight ?? dialogState.height ?? 300;
+
+    resizeCleanupRef.current?.();
+    document.body.classList.add("is-resizing-dialog-shell");
+
+    const cleanup = () => {
+      document.body.classList.remove("is-resizing-dialog-shell");
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
+
+      if (resizeCleanupRef.current === cleanup) {
+        resizeCleanupRef.current = null;
+      }
+    };
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId !== pointerId) {
+        return;
+      }
+
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+      const nextWidth = Math.max(320, originWidth + deltaX);
+      const nextHeight = Math.max(240, originHeight + deltaY);
+
+      setLiveSize({
+        width: nextWidth,
+        height: nextHeight,
+      });
+      onResize(nextWidth, nextHeight);
+    };
+
+    const handlePointerEnd = (endEvent: PointerEvent) => {
+      if (endEvent.pointerId !== pointerId) {
+        return;
+      }
+
+      cleanup();
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
+    resizeCleanupRef.current = cleanup;
+  };
+
   return (
     <div
       className={backdropClassName}
@@ -209,6 +294,7 @@ export const DialogShell = observer(function DialogShell({
         aria-modal="true"
         className={shellClassName}
         data-dialog-key={dialogKey}
+        ref={shellRef}
         role="dialog"
         style={shellStyle}
       >
@@ -281,6 +367,12 @@ export const DialogShell = observer(function DialogShell({
             </section>
           )}
         </div>
+        {isResizable ? (
+          <div
+            className="dialog-shell-resize-grip"
+            onPointerDown={handleResizePointerDown}
+          />
+        ) : null}
       </section>
     </div>
   );

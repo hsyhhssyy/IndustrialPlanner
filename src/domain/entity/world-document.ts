@@ -38,11 +38,13 @@ export interface WorldDocument {
   };
 }
 
+export const DEFAULT_WORLD_BASE_ID = "wuling_protocol_core";
+
 
 const INITIAL_WORLD_DOCUMENT: WorldDocument = {
   schemaVersion: 1,
   documentKey: "00000000-0000-4000-8000-000000000000",
-  baseId: "default-world",
+  baseId: DEFAULT_WORLD_BASE_ID,
   meta: {
     id: "default-world",
     name: "Untitled World",
@@ -63,7 +65,7 @@ export const createWorldDocument = (): WorldDocument => {
   return {
     schemaVersion: 1,
     documentKey: createUuid(),
-    baseId: `world-${timestamp}`,
+    baseId: DEFAULT_WORLD_BASE_ID,
     meta: {
       id: `world-${timestamp}`,
       name: "Untitled World",

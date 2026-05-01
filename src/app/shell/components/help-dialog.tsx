@@ -62,6 +62,9 @@ export const HelpDialog = observer(function HelpDialog({ appHost }: { appHost: A
       onOffsetChange={(offsetX, offsetY) => {
         appHost.internalActions.setDialogOffset("help", offsetX, offsetY);
       }}
+      onResize={(width, height) => {
+        appHost.internalActions.setDialogSize("help", width, height);
+      }}
       onTabChange={(tabId) => {
         appHost.internalActions.setDialogTab("help", tabId);
       }}

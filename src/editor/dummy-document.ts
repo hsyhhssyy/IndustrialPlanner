@@ -1,10 +1,13 @@
-import type { WorldDocument } from "@/domain/entity/world-document";
+import {
+  DEFAULT_WORLD_BASE_ID,
+  type WorldDocument,
+} from "@/domain/entity/world-document";
 
 export function createDummyWorldDocument(): WorldDocument {
   return {
     schemaVersion: 1,
     documentKey: "11111111-1111-4111-8111-111111111111",
-    baseId: "dummy-world",
+    baseId: DEFAULT_WORLD_BASE_ID,
     meta: {
       id: "dummy-world",
       name: "Dummy World",

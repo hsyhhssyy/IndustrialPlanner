@@ -114,6 +114,9 @@ export const SettingsDialog = observer(function SettingsDialog({
       onOffsetChange={(offsetX, offsetY) => {
         appHost.internalActions.setDialogOffset("settings", offsetX, offsetY);
       }}
+      onResize={(width, height) => {
+        appHost.internalActions.setDialogSize("settings", width, height);
+      }}
       onToggleMaximized={() => {
         appHost.internalActions.toggleDialogMaximized("settings");
       }}

@@ -9,6 +9,7 @@ import type {
   ActiveTool,
   AppSettings,
   MarqueeCollectionType,
+  RightDockTabId,
   ToolInfo,
   UiState,
   WorkbenchState,
@@ -62,9 +63,7 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
   rightDockOpen: boolean;
   leftDockWidth: number;
   topBarCollapsed: boolean;
-  rightDockBaseExpanded: boolean;
-  rightDockPowerExpanded: boolean;
-  rightDockSelectionExpanded: boolean;
+  rightDockActiveTab: RightDockTabId;
   dialogState: DialogStateMapReadWrite;
 }
 
@@ -105,6 +104,18 @@ export const HELP_DIALOG_TAB_IDS = [
 
 export type HelpDialogTabId = typeof HELP_DIALOG_TAB_IDS[number];
 export const DEFAULT_HELP_DIALOG_TAB_ID: HelpDialogTabId = HELP_DIALOG_TAB_IDS[0];
+
+export const RIGHT_DOCK_TAB_IDS = [
+  "base",
+  "power",
+  "selection",
+] as const satisfies readonly RightDockTabId[];
+
+export const DEFAULT_RIGHT_DOCK_TAB_ID: RightDockTabId = RIGHT_DOCK_TAB_IDS[0];
+
+export function isRightDockTabId(value: unknown): value is RightDockTabId {
+  return typeof value === "string" && RIGHT_DOCK_TAB_IDS.includes(value as RightDockTabId);
+}
 
 export const DIALOG_KEYS = ["help", "settings"] as const;
 export type DialogKey = typeof DIALOG_KEYS[number];
@@ -207,9 +218,7 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   rightDockOpen = true;
   leftDockWidth = DEFAULT_LEFT_DOCK_WIDTH;
   topBarCollapsed = false;
-  rightDockBaseExpanded = true;
-  rightDockPowerExpanded = true;
-  rightDockSelectionExpanded = true;
+  rightDockActiveTab = DEFAULT_RIGHT_DOCK_TAB_ID;
   dialogState: DialogStateMapReadWrite = {
     help: createDefaultDialogStateForKey("help"),
     settings: createDefaultDialogStateForKey("settings"),

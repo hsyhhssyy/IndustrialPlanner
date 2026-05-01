@@ -14,6 +14,7 @@ import {
 } from "@/app/state/storage-hook";
 import {
   DEFAULT_HELP_DIALOG_TAB_ID,
+  DEFAULT_RIGHT_DOCK_TAB_ID,
   MOBILE_LEFT_DOCK_WIDTH,
 } from "@/app/state/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
@@ -59,9 +60,7 @@ function createWorkbenchStorageSnapshot(options: {
   rightDockOpen?: boolean;
   leftDockWidth?: number;
   topBarCollapsed?: boolean;
-  rightDockBaseExpanded?: boolean;
-  rightDockPowerExpanded?: boolean;
-  rightDockSelectionExpanded?: boolean;
+  rightDockActiveTab?: "base" | "power" | "selection";
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
 } = {}) {
@@ -70,9 +69,7 @@ function createWorkbenchStorageSnapshot(options: {
     rightDockOpen: options.rightDockOpen ?? true,
     leftDockWidth: options.leftDockWidth ?? 375,
     topBarCollapsed: options.topBarCollapsed ?? false,
-    rightDockBaseExpanded: options.rightDockBaseExpanded ?? true,
-    rightDockPowerExpanded: options.rightDockPowerExpanded ?? true,
-    rightDockSelectionExpanded: options.rightDockSelectionExpanded ?? true,
+    rightDockActiveTab: options.rightDockActiveTab ?? DEFAULT_RIGHT_DOCK_TAB_ID,
     dialogState: {
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
@@ -128,6 +125,7 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.debugShowFps).toBe(false);
     expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(appHost.state.theme.name).toBe("Ayu Light");
+    expect(appHost.state.workbench.rightDockActiveTab).toBe(DEFAULT_RIGHT_DOCK_TAB_ID);
     expect(appHost.internalState.settings.locale).toBe("zh-CN");
     expect(appHost.internalState.settings.themeId).toBe("ayu-light");
     expect(appHost.internalState.settings.hypergryphOperationMode).toBe(true);
@@ -233,10 +231,13 @@ describe("createAppHost", () => {
 
     appHost.internalActions.toggleDialogMaximized("help");
     appHost.internalActions.setDialogOffset("help", 18.4, -7.6);
+    appHost.internalActions.setDialogSize("help", 768.2, 512.4);
 
     expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(true);
     expect(appHost.internalState.workbench.dialogState.help.offsetX).toBe(18);
     expect(appHost.internalState.workbench.dialogState.help.offsetY).toBe(-8);
+    expect(appHost.internalState.workbench.dialogState.help.width).toBe(768);
+    expect(appHost.internalState.workbench.dialogState.help.height).toBe(512);
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify(createWorkbenchStorageSnapshot({
         helpDialog: createDialogStateSnapshot({
@@ -244,6 +245,8 @@ describe("createAppHost", () => {
           maximized: true,
           offsetX: 18,
           offsetY: -8,
+          width: 768,
+          height: 512,
           activeTab: "faq",
         }),
       })),
@@ -349,6 +352,36 @@ describe("createAppHost", () => {
         locale: "en-US",
         themeId: "ayu-light",
       }),
+    );
+  });
+
+  it("migrates legacy right dock expand flags to the active tab state", () => {
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        leftDockOpen: true,
+        rightDockOpen: true,
+        leftDockWidth: 375,
+        topBarCollapsed: false,
+        rightDockBaseExpanded: false,
+        rightDockPowerExpanded: true,
+        rightDockSelectionExpanded: true,
+        dialogState: {
+          help: createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
+          settings: createDialogStateSnapshot(),
+        },
+      }),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    expect(appHost.state.workbench.rightDockActiveTab).toBe("power");
+
+    appHost.internalActions.setRightDockActiveTab("selection");
+
+    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify(createWorkbenchStorageSnapshot({ rightDockActiveTab: "selection" })),
     );
   });
 

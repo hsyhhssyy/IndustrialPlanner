@@ -13,6 +13,7 @@ import {
   clampLeftDockWidth,
   createDefaultDialogStateForKey,
   DIALOG_KEYS,
+  isRightDockTabId,
 } from "./state-impl";
 
 export const APP_SETTINGS_LOCAL_STORAGE_KEY = "v3-app-settings";
@@ -130,18 +131,35 @@ function normalizePersistedWorkbenchState(
     topBarCollapsed: typeof persistedWorkbenchState.topBarCollapsed === "boolean"
       ? persistedWorkbenchState.topBarCollapsed
       : fallback.topBarCollapsed,
-    rightDockBaseExpanded: typeof persistedWorkbenchState.rightDockBaseExpanded === "boolean"
-      ? persistedWorkbenchState.rightDockBaseExpanded
-      : fallback.rightDockBaseExpanded,
-    rightDockPowerExpanded: typeof persistedWorkbenchState.rightDockPowerExpanded === "boolean"
-      ? persistedWorkbenchState.rightDockPowerExpanded
-      : fallback.rightDockPowerExpanded,
-    rightDockSelectionExpanded:
-      typeof persistedWorkbenchState.rightDockSelectionExpanded === "boolean"
-        ? persistedWorkbenchState.rightDockSelectionExpanded
-        : fallback.rightDockSelectionExpanded,
+    rightDockActiveTab: normalizePersistedRightDockActiveTab(
+      persistedWorkbenchState,
+      fallback.rightDockActiveTab,
+    ),
     dialogState: normalizePersistedDialogStateMap(persistedWorkbenchState, fallback.dialogState),
   };
+}
+
+function normalizePersistedRightDockActiveTab(
+  persistedWorkbenchState: Record<string, unknown>,
+  fallback: WorkbenchStateReadWrite["rightDockActiveTab"],
+): WorkbenchStateReadWrite["rightDockActiveTab"] {
+  if (isRightDockTabId(persistedWorkbenchState.rightDockActiveTab)) {
+    return persistedWorkbenchState.rightDockActiveTab;
+  }
+
+  if (persistedWorkbenchState.rightDockBaseExpanded === true) {
+    return "base";
+  }
+
+  if (persistedWorkbenchState.rightDockPowerExpanded === true) {
+    return "power";
+  }
+
+  if (persistedWorkbenchState.rightDockSelectionExpanded === true) {
+    return "selection";
+  }
+
+  return fallback;
 }
 
 function normalizePersistedDialogStateMap(

@@ -1,12 +1,38 @@
-import type { WorldDocument } from "@/domain/entity/world-document";
-import { createWorldDocument } from "@/domain/entity/world-document";
-import { readFromIndexedDb, saveToIndexedDb } from "@/shared/storage";
+import {
+  DEFAULT_WORLD_BASE_ID,
+  type WorldDocument,
+  createWorldDocument,
+} from "@/domain/entity/world-document";
+import {
+  readFromIndexedDbWithMigration,
+  saveToIndexedDbWithVersion,
+  type StorageMigration,
+} from "@/shared/storage";
 import { runInAction } from "mobx";
 
 import type { EditorHost } from "./editor-host";
 
 const DOCUMENT_DATABASE_NAME = "industrial-planner";
 const WORD_DOCUMENT_STORE_NAME = "worddocument";
+const WORLD_DOCUMENT_PERSIST_VERSION = 1;
+
+interface WorldDocumentPersistContext {
+  fallbackDocumentKey: string;
+  fallbackBaseId: string;
+  validBaseIds: ReadonlySet<string>;
+}
+
+const WORLD_DOCUMENT_PERSIST_MIGRATIONS: readonly StorageMigration<
+  WorldDocument,
+  WorldDocumentPersistContext
+>[] = [
+  {
+    version: WORLD_DOCUMENT_PERSIST_VERSION,
+    migrate(value, context) {
+      return normalizeWorldDocument(value, context);
+    },
+  },
+];
 
 export function hookDocumentStorage(editorHost: EditorHost): () => void {
   let disposed = false;
@@ -49,7 +75,7 @@ async function resolveInitialDocument(
   const lastDocumentId = resolveLastDocumentId(editorHost);
 
   if (lastDocumentId !== null) {
-    const persistedDocument = await readWorldDocument(lastDocumentId);
+    const persistedDocument = await readWorldDocument(editorHost, lastDocumentId);
 
     if (persistedDocument !== null) {
       return persistedDocument;
@@ -60,17 +86,26 @@ async function resolveInitialDocument(
 }
 
 async function readWorldDocument(
+  editorHost: EditorHost,
   documentKey: string,
 ): Promise<WorldDocument | null> {
-  const persistedDocument = await readFromIndexedDb<unknown>(
+  const context = createWorldDocumentPersistContext(editorHost, documentKey);
+  const persistedDocument = await readFromIndexedDbWithMigration(
     createWordDocumentLocation(documentKey),
+    WORLD_DOCUMENT_PERSIST_VERSION,
+    WORLD_DOCUMENT_PERSIST_MIGRATIONS,
+    context,
   );
 
-  return normalizeWorldDocument(persistedDocument, documentKey);
+  return normalizeWorldDocument(persistedDocument, context);
 }
 
 async function writeWorldDocument(document: WorldDocument): Promise<void> {
-  await saveToIndexedDb(createWordDocumentLocation(document.documentKey), document);
+  await saveToIndexedDbWithVersion(
+    createWordDocumentLocation(document.documentKey),
+    WORLD_DOCUMENT_PERSIST_VERSION,
+    document,
+  );
 }
 
 function createWordDocumentLocation(documentKey: string) {
@@ -105,7 +140,7 @@ function setLastDocumentId(
 
 function normalizeWorldDocument(
   value: unknown,
-  fallbackDocumentKey: string,
+  context: WorldDocumentPersistContext,
 ): WorldDocument | null {
   if (!isWorldDocumentLike(value)) {
     return null;
@@ -114,12 +149,40 @@ function normalizeWorldDocument(
   const documentKey =
     typeof value.documentKey === "string" && value.documentKey.trim() !== ""
       ? value.documentKey
-      : fallbackDocumentKey;
+      : context.fallbackDocumentKey;
 
   return {
     ...value,
     documentKey,
+    baseId: normalizeBaseId(value.baseId, context),
   };
+}
+
+function createWorldDocumentPersistContext(
+  editorHost: EditorHost,
+  fallbackDocumentKey: string,
+): WorldDocumentPersistContext {
+  const baseDefinitions = editorHost.workspace.registry.baseDefinitions;
+  const validBaseIds = new Set(
+    baseDefinitions.map((definition) => definition.id),
+  );
+
+  return {
+    fallbackDocumentKey,
+    fallbackBaseId:
+      baseDefinitions.find((definition) => definition.id === DEFAULT_WORLD_BASE_ID)
+        ?.id
+      ?? baseDefinitions[0]?.id
+      ?? DEFAULT_WORLD_BASE_ID,
+    validBaseIds,
+  };
+}
+
+function normalizeBaseId(
+  baseId: string,
+  context: WorldDocumentPersistContext,
+): string {
+  return context.validBaseIds.has(baseId) ? baseId : context.fallbackBaseId;
 }
 
 function isWorldDocumentLike(

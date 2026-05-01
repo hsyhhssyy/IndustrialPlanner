@@ -18,6 +18,8 @@ import {
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import {
   DEFAULT_HELP_DIALOG_TAB_ID,
+  DEFAULT_RIGHT_DOCK_TAB_ID,
+  DEFAULT_RIGHT_DOCK_WIDTH,
   MOBILE_LEFT_DOCK_WIDTH,
 } from "@/app/state/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
@@ -84,9 +86,7 @@ function createWorkbenchStorageSnapshot(options: {
   rightDockOpen?: boolean;
   leftDockWidth?: number;
   topBarCollapsed?: boolean;
-  rightDockBaseExpanded?: boolean;
-  rightDockPowerExpanded?: boolean;
-  rightDockSelectionExpanded?: boolean;
+  rightDockActiveTab?: "base" | "power" | "selection";
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
 } = {}) {
@@ -95,9 +95,7 @@ function createWorkbenchStorageSnapshot(options: {
     rightDockOpen: options.rightDockOpen ?? true,
     leftDockWidth: options.leftDockWidth ?? 375,
     topBarCollapsed: options.topBarCollapsed ?? false,
-    rightDockBaseExpanded: options.rightDockBaseExpanded ?? true,
-    rightDockPowerExpanded: options.rightDockPowerExpanded ?? true,
-    rightDockSelectionExpanded: options.rightDockSelectionExpanded ?? true,
+    rightDockActiveTab: options.rightDockActiveTab ?? DEFAULT_RIGHT_DOCK_TAB_ID,
     dialogState: {
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
@@ -310,8 +308,12 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
+    const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
+
     expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
     expect(appHost.state.screenProfile.screenShape).toBe("landscape");
+    expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("68px");
+    expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("1");
 
     coarsePointer = true;
     hoverNone = true;
@@ -329,6 +331,8 @@ describe("WorkbenchApp", () => {
 
     expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
     expect(appHost.state.screenProfile.screenShape).toBe("portrait");
+    expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("51px");
+    expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("0.75");
   });
 
   it("updates left dock width through the edge handle and clamps the value", () => {
@@ -388,9 +392,7 @@ describe("WorkbenchApp", () => {
         rightDockOpen: true,
         leftDockWidth: 375,
         topBarCollapsed: true,
-        rightDockBaseExpanded: true,
-        rightDockPowerExpanded: true,
-        rightDockSelectionExpanded: true,
+        rightDockActiveTab: DEFAULT_RIGHT_DOCK_TAB_ID,
       }),
     );
 
@@ -408,6 +410,9 @@ describe("WorkbenchApp", () => {
     const floatingFullscreenButton = container.querySelector(
       ".workbench-floating-fullscreen-button",
     ) as HTMLButtonElement | null;
+    const floatingRightDockButton = container.querySelector(
+      ".workbench-floating-right-dock-button",
+    ) as HTMLButtonElement | null;
     const floatingToggle = container.querySelector(
       ".workbench-floating-top-bar-toggle",
     ) as HTMLButtonElement | null;
@@ -419,6 +424,7 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".top-bar")).toBeNull();
     expect(floatingControls).not.toBeNull();
     expect(floatingFullscreenButton?.title).toBe("进入全屏");
+    expect(floatingRightDockButton).toBeNull();
     expect(floatingToggle?.title).toBe("展开 运行控制");
     expect(
       floatingFullscreenButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
@@ -446,6 +452,102 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".status-bar")).not.toBeNull();
   });
 
+  it("shows a floating open-right-dock button in phone landscape collapsed top bar mode and hides it after reopening the dock", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 844,
+      height: 390,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        leftDockOpen: true,
+        rightDockOpen: false,
+        leftDockWidth: 375,
+        topBarCollapsed: true,
+        rightDockActiveTab: DEFAULT_RIGHT_DOCK_TAB_ID,
+      }),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
+    const floatingRightDockButton = container.querySelector(
+      ".workbench-floating-right-dock-button",
+    ) as HTMLButtonElement | null;
+
+    expect(workbench).not.toBeNull();
+    expect(workbench?.style.getPropertyValue("--right-dock-width")).toBe("0px");
+    expect(floatingRightDockButton?.title).toBe("打开 右侧");
+    expect(
+      floatingRightDockButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("panel-right-open");
+
+    act(() => {
+      floatingRightDockButton?.click();
+    });
+
+    expect(appHost.state.workbench.rightDockOpen).toBe(true);
+    expect(workbench?.style.getPropertyValue("--right-dock-width")).toBe(
+      `${DEFAULT_RIGHT_DOCK_WIDTH}px`,
+    );
+    expect(container.querySelector(".workbench-floating-right-dock-button")).toBeNull();
+    expect(container.querySelector(".dock-right")).not.toBeNull();
+  });
+
+  it("renders the right dock as tabs and closes it from the header button", () => {
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        rightDockActiveTab: "power",
+      })),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const baseTab = container.querySelector("#right-dock-tab-base") as HTMLButtonElement | null;
+    const powerTab = container.querySelector("#right-dock-tab-power") as HTMLButtonElement | null;
+    const selectionTab = container.querySelector("#right-dock-tab-selection") as HTMLButtonElement | null;
+    const closeButton = container.querySelector(".right-dock-close-button") as HTMLButtonElement | null;
+
+    expect(baseTab?.getAttribute("aria-selected")).toBe("false");
+    expect(powerTab?.getAttribute("aria-selected")).toBe("true");
+    expect(selectionTab?.getAttribute("aria-selected")).toBe("false");
+    expect(container.textContent).toContain("总耗电");
+    expect(container.textContent).not.toContain("可放置区域");
+    expect(closeButton?.title).toBe("关闭 右侧");
+
+    act(() => {
+      selectionTab?.click();
+    });
+
+    expect(appHost.state.workbench.rightDockActiveTab).toBe("selection");
+    expect(selectionTab?.getAttribute("aria-selected")).toBe("true");
+    expect(container.textContent).toContain("未选中对象");
+
+    act(() => {
+      closeButton?.click();
+    });
+
+    expect(appHost.state.workbench.rightDockOpen).toBe(false);
+    expect(container.querySelector(".dock-right")).toBeNull();
+  });
+
   it("keeps the bottom bar visible in phone landscape until the top bar is collapsed", () => {
     coarsePointer = true;
     hoverNone = true;
@@ -464,9 +566,7 @@ describe("WorkbenchApp", () => {
         rightDockOpen: true,
         leftDockWidth: 375,
         topBarCollapsed: false,
-        rightDockBaseExpanded: true,
-        rightDockPowerExpanded: true,
-        rightDockSelectionExpanded: true,
+        rightDockActiveTab: DEFAULT_RIGHT_DOCK_TAB_ID,
       }),
     );
 
@@ -505,9 +605,7 @@ describe("WorkbenchApp", () => {
         rightDockOpen: true,
         leftDockWidth: 512,
         topBarCollapsed: false,
-        rightDockBaseExpanded: true,
-        rightDockPowerExpanded: true,
-        rightDockSelectionExpanded: true,
+        rightDockActiveTab: DEFAULT_RIGHT_DOCK_TAB_ID,
       }),
     );
 
@@ -522,6 +620,8 @@ describe("WorkbenchApp", () => {
 
     expect(appHost.state.workbench.leftDockWidth).toBe(512);
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe(`${MOBILE_LEFT_DOCK_WIDTH}px`);
+    expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("51px");
+    expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("0.75");
     expect(container.querySelector(".dock-resize-handle")).toBeNull();
   });
 

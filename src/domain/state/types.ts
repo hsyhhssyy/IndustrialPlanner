@@ -76,15 +76,15 @@ export interface DialogState {
   readonly activeTab: string | null;
 }
 
+export type RightDockTabId = "base" | "power" | "selection";
+
 export interface WorkbenchState {
   readonly leftDockOpen: boolean;
   readonly rightDockOpen: boolean;
   readonly leftDockWidth: number;
   readonly topBarCollapsed: boolean;
-  readonly rightDockBaseExpanded: boolean;
-  readonly rightDockPowerExpanded: boolean;
-  readonly rightDockSelectionExpanded: boolean;
-  readonly dialogState: Record<string, DialogState>;
+  readonly rightDockActiveTab: RightDockTabId;
+  readonly dialogState: Record<string, DialogState | undefined>;
 }
 
 export type ActiveTool =

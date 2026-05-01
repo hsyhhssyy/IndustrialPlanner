@@ -3,7 +3,7 @@ import { action } from "mobx";
 import type { AppAction } from "@/domain/action/app-action";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type { ScreenProfile } from "@/domain/state/screen-profile";
-import type { EntityCollectionType } from "@/domain/state/types";
+import type { EntityCollectionType, RightDockTabId } from "@/domain/state/types";
 import type {
   ClientPixelPoint,
   ClientPixelRect,
@@ -40,14 +40,13 @@ export interface AppInternalAction {
   toggleLeftDock: () => void;
   toggleRightDock: () => void;
   toggleTopBarCollapsed: () => void;
-  toggleRightDockBaseExpanded: () => void;
-  toggleRightDockPowerExpanded: () => void;
-  toggleRightDockSelectionExpanded: () => void;
+  setRightDockActiveTab: (tabId: RightDockTabId) => void;
   openDialog: (request: string) => void;
   closeDialog: (dialogKey: string) => void;
   toggleDialogMaximized: (dialogKey: string) => void;
   setDialogTab: (dialogKey: string, tabId: string) => void;
   setDialogOffset: (dialogKey: string, offsetX: number, offsetY: number) => void;
+  setDialogSize: (dialogKey: string, width: number | null, height: number | null) => void;
   setActivePanel: (panel: ActivePanel) => void;
   setActiveTool: (activeTool: ActiveTool) => void;
   showCanvasFloatingToolbar: (
@@ -110,16 +109,12 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     this.internalState.workbench.topBarCollapsed = !this.internalState.workbench.topBarCollapsed;
   });
 
-  public readonly toggleRightDockBaseExpanded: AppInternalAction["toggleRightDockBaseExpanded"] = action(() => {
-    this.internalState.workbench.rightDockBaseExpanded = !this.internalState.workbench.rightDockBaseExpanded;
-  });
+  public readonly setRightDockActiveTab: AppInternalAction["setRightDockActiveTab"] = action((tabId) => {
+    if (this.internalState.workbench.rightDockActiveTab === tabId) {
+      return;
+    }
 
-  public readonly toggleRightDockPowerExpanded: AppInternalAction["toggleRightDockPowerExpanded"] = action(() => {
-    this.internalState.workbench.rightDockPowerExpanded = !this.internalState.workbench.rightDockPowerExpanded;
-  });
-
-  public readonly toggleRightDockSelectionExpanded: AppInternalAction["toggleRightDockSelectionExpanded"] = action(() => {
-    this.internalState.workbench.rightDockSelectionExpanded = !this.internalState.workbench.rightDockSelectionExpanded;
+    this.internalState.workbench.rightDockActiveTab = tabId;
   });
 
   public readonly openDialog: AppInternalAction["openDialog"] = action((request) => {
@@ -131,6 +126,32 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
     const dialogState = this.ensureDialogState(target.dialogKey);
     dialogState.visible = true;
+
+    // 打开时检查对话框尺寸是否超过网页可视区域，超过则自动调整
+    const maxWidth = window.innerWidth;
+    const maxHeight = window.innerHeight;
+    let sizeChanged = false;
+
+    if (dialogState.width !== null && dialogState.width > maxWidth) {
+      dialogState.width = maxWidth;
+      sizeChanged = true;
+    }
+
+    if (dialogState.height !== null && dialogState.height > maxHeight) {
+      dialogState.height = maxHeight;
+      sizeChanged = true;
+    }
+
+    if (sizeChanged) {
+      // 确保偏移量也合理（对话框不会超出屏幕）
+      if (dialogState.offsetX + (dialogState.width ?? 0) > maxWidth) {
+        dialogState.offsetX = Math.max(0, maxWidth - (dialogState.width ?? 400));
+      }
+
+      if (dialogState.offsetY + (dialogState.height ?? 0) > maxHeight) {
+        dialogState.offsetY = Math.max(0, maxHeight - (dialogState.height ?? 300));
+      }
+    }
 
     if (target.tabId !== null) {
       const nextTab = normalizeDialogTab(target.dialogKey, target.tabId);
@@ -205,6 +226,27 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     const dialogState = this.ensureDialogState(normalizedDialogKey);
     dialogState.offsetX = Math.round(offsetX);
     dialogState.offsetY = Math.round(offsetY);
+  });
+
+  public readonly setDialogSize: AppInternalAction["setDialogSize"] = action((dialogKey, width, height) => {
+    const normalizedDialogKey = normalizeDialogKey(dialogKey);
+
+    if (normalizedDialogKey === null) {
+      return;
+    }
+
+    const dialogState = this.ensureDialogState(normalizedDialogKey);
+
+    if (width !== null && (!Number.isFinite(width) || width <= 0)) {
+      return;
+    }
+
+    if (height !== null && (!Number.isFinite(height) || height <= 0)) {
+      return;
+    }
+
+    dialogState.width = width === null ? null : Math.round(width);
+    dialogState.height = height === null ? null : Math.round(height);
   });
 
   public readonly setActivePanel: AppInternalAction["setActivePanel"] = action((panel) => {
