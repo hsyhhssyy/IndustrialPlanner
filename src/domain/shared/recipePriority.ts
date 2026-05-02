@@ -1,9 +1,18 @@
 import type { RecipeDef } from '../types'
 
+export const BOTTLE_FILLING_RECIPE_TAG = 'bottle_filling'
 export const LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG = 'liquid_bottle_dismantle'
 
 export function isLiquidBottleDismantleRecipe(recipe: Pick<RecipeDef, 'tags'> | null | undefined) {
   return recipe?.tags?.includes(LIQUID_BOTTLE_DISMANTLE_RECIPE_TAG) ?? false
+}
+
+export function isBottleFillingRecipe(recipe: Pick<RecipeDef, 'tags'> | null | undefined) {
+  return recipe?.tags?.includes(BOTTLE_FILLING_RECIPE_TAG) ?? false
+}
+
+export function isBottleRelatedRecipe(recipe: Pick<RecipeDef, 'tags'> | null | undefined) {
+  return isBottleFillingRecipe(recipe) || isLiquidBottleDismantleRecipe(recipe)
 }
 
 export function prioritizeNonBottleDismantleRecipes<T extends Pick<RecipeDef, 'tags'>>(recipes: T[]) {

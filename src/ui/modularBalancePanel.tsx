@@ -6,6 +6,7 @@ import { usePersistentState } from '../core/usePersistentState'
 import { DEVICE_TYPE_BY_ID, ITEM_BY_ID, ITEMS, RECIPES } from '../domain/registry'
 import { getDispatchTicketInfo } from '../domain/shared/dispatchTickets'
 import { isKnownItemId } from '../domain/shared/predicates'
+import { isBottleRelatedRecipe } from '../domain/shared/recipePriority'
 import { isSuperRecipeItem, isSuperRecipeRecipe, shouldShowSuperRecipeContent } from '../domain/shared/superRecipeVisibility'
 import type { DeviceTypeId, ItemId, RecipeDef } from '../domain/types'
 import { getDeviceLabel, getItemLabel, type Language } from '../i18n'
@@ -41,6 +42,11 @@ type BalanceRateRow = {
   ratePerMinute: number
 }
 
+type RecipeTitleEntry = {
+  itemId: ItemId
+  amount: number
+}
+
 type BalanceModule = {
   id: string
   name: string
@@ -52,9 +58,14 @@ type BalanceModule = {
 type BalanceLibraryEntry = BalanceModule & {
   source: 'module' | 'recipe'
   cardTitle?: string
+  cardTitleEntries?: RecipeTitleEntry[]
   machineType?: DeviceTypeId
   cycleSeconds?: number
   searchTexts?: string[]
+}
+
+type SystemRecipeEntry = BalanceLibraryEntry & {
+  recipeTags?: string[]
 }
 
 type StageModuleInstance = {
@@ -123,6 +134,7 @@ type StageComputation = {
 
 const EMPTY_DISABLED_ITEM_IDS = new Set<ItemId>()
 const EPSILON = 1e-9
+const BOTTLED_LIQUID_ITEM_TAG = '瓶装液体'
 const BASE_TIME_UNIT: TimeUnitKey = '1m'
 const BASE_TIME_UNIT_FACTOR = 1
 const STAGE_MODULE_COUNT_STEP = 0.5
@@ -226,6 +238,10 @@ function matchesModuleSearch(moduleName: string, normalizedSearchQuery: string, 
   return matchesSearchValues([moduleName], normalizedSearchQuery, compactSearchQuery)
 }
 
+function isBottledLiquidItemId(itemId: ItemId) {
+  return ITEM_BY_ID[itemId]?.tags?.includes(BOTTLED_LIQUID_ITEM_TAG) ?? false
+}
+
 function normalizeNonNegativeNumber(value: unknown) {
   const parsed = typeof value === 'number'
     ? value
@@ -235,17 +251,20 @@ function normalizeNonNegativeNumber(value: unknown) {
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 0
 }
 
-function roundToSingleDecimal(value: number) {
-  return Math.round((value + Number.EPSILON) * 10) / 10
+function roundToTwoDecimals(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+function floorToTwoDecimals(value: number) {
+  return Math.floor((value + Number.EPSILON) * 100) / 100
 }
 
 function normalizeStageModuleCount(value: unknown) {
-  return roundToSingleDecimal(normalizeNonNegativeNumber(value))
+  return roundToTwoDecimals(normalizeNonNegativeNumber(value))
 }
 
 function formatStageModuleCount(value: number) {
-  const normalized = normalizeStageModuleCount(value)
-  return Number.isInteger(normalized) ? String(normalized) : normalized.toFixed(1)
+  return normalizeStageModuleCount(value).toFixed(2)
 }
 
 function sanitizeStageModuleCountInput(value: string) {
@@ -253,7 +272,7 @@ function sanitizeStageModuleCountInput(value: string) {
   if (!stripped) return ''
   const startsWithDot = stripped.startsWith('.')
   const [integerPart, ...decimalParts] = stripped.split('.')
-  const decimalPart = decimalParts.join('').slice(0, 1)
+  const decimalPart = decimalParts.join('').slice(0, 2)
   const normalizedIntegerPart = startsWithDot ? '0' : integerPart
   if (decimalParts.length === 0) return normalizedIntegerPart
   if (!decimalPart) return `${normalizedIntegerPart}.`
@@ -404,6 +423,12 @@ function formatSystemRecipeCardTitle(language: Language, recipe: RecipeDef) {
   if (recipe.outputs.length > 0) return formatRecipeItemSummary(language, recipe.outputs)
   if (recipe.inputs.length > 0) return formatRecipeItemSummary(language, recipe.inputs)
   return getDeviceLabel(language, recipe.machineType)
+}
+
+function getRecipeCardTitleEntries(recipe: Pick<RecipeDef, 'outputs' | 'inputs'>): RecipeTitleEntry[] {
+  if (recipe.outputs.length > 0) return recipe.outputs.map((entry) => ({ itemId: entry.itemId, amount: entry.amount }))
+  if (recipe.inputs.length > 0) return recipe.inputs.map((entry) => ({ itemId: entry.itemId, amount: entry.amount }))
+  return []
 }
 
 function formatCycleText(language: Language, seconds: number) {
@@ -654,6 +679,64 @@ function ModularBalanceIconButton({
   )
 }
 
+function getCardTitleItemIds(entry: Pick<BalanceLibraryEntry, 'source' | 'outputs' | 'inputs'>) {
+  const modulePrimaryItemId = entry.outputs[0]?.itemId ?? entry.inputs[0]?.itemId
+  return modulePrimaryItemId ? [modulePrimaryItemId] : []
+}
+
+function ModularBalanceCardTitle({
+  title,
+  tooltip,
+  itemIds = [],
+  recipeTitleEntries,
+  language,
+}: {
+  title: string
+  tooltip?: string
+  itemIds?: ItemId[]
+  recipeTitleEntries?: RecipeTitleEntry[]
+  language?: Language
+}) {
+  const hasRecipeTitleEntries = Boolean(recipeTitleEntries && recipeTitleEntries.length > 0)
+
+  return (
+    <strong className="modular-balance-card-title" title={tooltip ?? title}>
+      {hasRecipeTitleEntries ? (
+        <span className="modular-balance-card-title-text modular-balance-card-title-text--recipe">
+          {recipeTitleEntries.map((entry, index) => (
+            <Fragment key={`${entry.itemId}_${entry.amount}_${index}`}>
+              {index > 0 ? <span className="modular-balance-card-title-separator">+</span> : null}
+              <span className="modular-balance-card-title-entry">
+                <img
+                  className="modular-balance-card-title-icon"
+                  src={getItemIconPath(entry.itemId)}
+                  alt=""
+                  aria-hidden="true"
+                  draggable={false}
+                />
+                <span>{getItemLabel(language ?? 'zh-CN', entry.itemId)} x{entry.amount}</span>
+              </span>
+            </Fragment>
+          ))}
+        </span>
+      ) : itemIds.length > 0 ? (
+        <span className="modular-balance-card-title-icons" aria-hidden="true">
+          {itemIds.map((itemId) => (
+            <img
+              key={itemId}
+              className="modular-balance-card-title-icon"
+              src={getItemIconPath(itemId)}
+              alt=""
+              draggable={false}
+            />
+          ))}
+        </span>
+      ) : null}
+      {!hasRecipeTitleEntries ? <span className="modular-balance-card-title-text">{title}</span> : null}
+    </strong>
+  )
+}
+
 function ModularBalanceRecipeMetaRow({
   language,
   machineType,
@@ -881,7 +964,7 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
   }
 
   const modulesById = useMemo(() => new Map(modules.map((module) => [module.id, module])), [modules])
-  const systemRecipeEntries = useMemo<BalanceLibraryEntry[]>(() => {
+  const systemRecipeEntries = useMemo<SystemRecipeEntry[]>(() => {
     return RECIPES.filter((recipe) =>
       shouldShowSuperRecipeContent(
         superRecipeEnabled,
@@ -898,9 +981,11 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
           source: 'recipe' as const,
           name,
           cardTitle: formatSystemRecipeCardTitle(language, recipe),
+          cardTitleEntries: getRecipeCardTitleEntries(recipe),
           colorKey: DEFAULT_SYSTEM_RECIPE_COLOR_KEY,
           machineType: recipe.machineType,
           cycleSeconds: recipe.cycleSeconds,
+          recipeTags: recipe.tags,
           inputs: recipe.inputs.map((entry) => createRateRow(entry.itemId, recipeAmountPerMinute(recipe, entry.amount))),
           outputs: recipe.outputs.map((entry) => createRateRow(entry.itemId, recipeAmountPerMinute(recipe, entry.amount))),
           searchTexts: [
@@ -929,12 +1014,6 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
     if (!normalizedFilter) return modules
     return modules.filter((module) => matchesModuleSearch(module.name, normalizedFilter, compactFilter))
   }, [moduleFilterText, modules])
-  const filteredSystemRecipeEntries = useMemo(() => {
-    const normalizedFilter = normalizeSearchText(systemRecipeFilterText)
-    const compactFilter = compactSearchText(systemRecipeFilterText)
-    if (!normalizedFilter) return systemRecipeEntries
-    return systemRecipeEntries.filter((entry) => matchesSearchValues(entry.searchTexts ?? [entry.name], normalizedFilter, compactFilter))
-  }, [systemRecipeFilterText, systemRecipeEntries])
   const canvasTimeUnitFactor = TIME_UNITS.find((unit) => unit.key === canvasTimeUnit)?.factor ?? BASE_TIME_UNIT_FACTOR
 
   useEffect(() => {
@@ -1135,6 +1214,55 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
   }, [initialBalance, libraryEntriesById, stages])
 
   const finalStageComputation = stageComputations[stageComputations.length - 1] ?? null
+  const finalShortageItemIdSet = useMemo(() => {
+    const next = new Set<ItemId>()
+    if (!finalStageComputation) return next
+    for (const [itemId, amount] of finalStageComputation.after.entries()) {
+      if (amount < -EPSILON) next.add(itemId)
+    }
+    return next
+  }, [finalStageComputation])
+  const finalSurplusItemIdSet = useMemo(() => {
+    const next = new Set<ItemId>()
+    if (!finalStageComputation) return next
+    for (const [itemId, amount] of finalStageComputation.after.entries()) {
+      if (amount > EPSILON) next.add(itemId)
+    }
+    return next
+  }, [finalStageComputation])
+  const finalBottledLiquidShortageItemIdSet = useMemo(() => {
+    const next = new Set<ItemId>()
+    for (const itemId of finalShortageItemIdSet) {
+      if (isBottledLiquidItemId(itemId)) next.add(itemId)
+    }
+    return next
+  }, [finalShortageItemIdSet])
+  const visibleSystemRecipeEntries = useMemo(() => {
+    const getSortGroup = (entry: SystemRecipeEntry) => {
+      const bottleRelated = isBottleRelatedRecipe({ tags: entry.recipeTags })
+      const outputsShortage = entry.outputs.some((output) => finalShortageItemIdSet.has(output.itemId))
+      const outputsBottledLiquidShortage = entry.outputs.some((output) => finalBottledLiquidShortageItemIdSet.has(output.itemId))
+      const inputsSurplus = entry.inputs.some((input) => finalSurplusItemIdSet.has(input.itemId))
+
+      if (outputsShortage && (!bottleRelated || outputsBottledLiquidShortage)) return 0
+      if (inputsSurplus && !bottleRelated) return 1
+      if (!bottleRelated) return 2
+      return 3
+    }
+
+    return [...systemRecipeEntries].sort((left, right) => {
+      const leftGroup = getSortGroup(left)
+      const rightGroup = getSortGroup(right)
+      if (leftGroup !== rightGroup) return leftGroup - rightGroup
+      return left.name.localeCompare(right.name, language)
+    })
+  }, [finalBottledLiquidShortageItemIdSet, finalShortageItemIdSet, finalSurplusItemIdSet, language, systemRecipeEntries])
+  const filteredSystemRecipeEntries = useMemo(() => {
+    const normalizedFilter = normalizeSearchText(systemRecipeFilterText)
+    const compactFilter = compactSearchText(systemRecipeFilterText)
+    if (!normalizedFilter) return visibleSystemRecipeEntries
+    return visibleSystemRecipeEntries.filter((entry) => matchesSearchValues(entry.searchTexts ?? [entry.name], normalizedFilter, compactFilter))
+  }, [systemRecipeFilterText, visibleSystemRecipeEntries])
   const warehouseOverflowEntries = useMemo(() => {
     if (!finalStageComputation) return []
     return mapToEntries(finalStageComputation.after)
@@ -1144,6 +1272,41 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
         hours: warehouseMax <= EPSILON ? 0 : warehouseMax / entry.amount / 60,
       }))
   }, [finalStageComputation, warehouseMax])
+  const warehouseStockoutEntries = useMemo(() => {
+    if (!finalStageComputation) return []
+    return mapToEntries(finalStageComputation.after)
+      .filter((entry) => entry.amount < -EPSILON)
+      .map((entry) => ({
+        itemId: entry.itemId,
+        hours: warehouseMax <= EPSILON ? 0 : warehouseMax / Math.abs(entry.amount) / 60,
+      }))
+  }, [finalStageComputation, warehouseMax])
+  const getSystemInputAutoIncreaseAmount = (itemId: ItemId) => {
+    if (!finalStageComputation) return 0
+    const finalAmount = finalStageComputation.after.get(itemId) ?? 0
+    if (finalAmount >= -EPSILON) return 0
+    return roundToTwoDecimals(-finalAmount)
+  }
+  const getInstanceAutoIncreaseDelta = (module: BalanceLibraryEntry | undefined, computation: StageComputation | undefined) => {
+    if (!module || !computation || module.inputs.length === 0) return 0
+
+    const requiredInputs = new Map<ItemId, number>()
+    for (const entry of module.inputs) {
+      if (entry.ratePerMinute <= EPSILON) continue
+      sumInto(requiredInputs, entry.itemId, entry.ratePerMinute)
+    }
+    if (requiredInputs.size === 0) return 0
+
+    let maxAdditionalCount = Number.POSITIVE_INFINITY
+    for (const [itemId, requiredPerCount] of requiredInputs.entries()) {
+      const available = computation.after.get(itemId) ?? 0
+      if (available <= EPSILON) return 0
+      maxAdditionalCount = Math.min(maxAdditionalCount, available / requiredPerCount)
+    }
+
+    if (!Number.isFinite(maxAdditionalCount) || maxAdditionalCount < 0.01 - EPSILON) return 0
+    return floorToTwoDecimals(maxAdditionalCount)
+  }
 
   const initialDispatchGroups = useMemo(() => computeDispatchGroups(initialBalance), [initialBalance])
 
@@ -1599,33 +1762,58 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
               {sidebarTab === 'systemInputs' && (
                 <section className="modular-balance-section modular-balance-section--active">
                   <div className="modular-balance-rate-list">
-                    {systemInputs.map((row) => (
-                      <div key={row.id} className="modular-balance-rate-row">
-                        {renderPickerButton(row.itemId, () => setPickerTarget({ scope: 'system', rowId: row.id }), 'modular-balance-picker-btn')}
-                        <input
-                          className="modular-balance-number-input"
-                          type="number"
-                          min={0}
-                          step="0.1"
-                          value={row.ratePerMinute}
-                          onChange={(event) => {
-                            const next = Number.parseFloat(event.target.value)
-                            updateSystemInputs((current) =>
-                              current.map((entry) =>
-                                entry.id === row.id ? { ...entry, ratePerMinute: Number.isFinite(next) ? Math.max(0, next) : 0 } : entry,
-                              ),
-                            )
-                          }}
-                        />
-                        <span className="modular-balance-unit-text">/{BASE_TIME_UNIT}</span>
-                        {renderActionButton(
-                          t('modBalance.removeInput'),
-                          'delete',
-                          () => updateSystemInputs((current) => current.filter((entry) => entry.id !== row.id)),
-                          { danger: true },
-                        )}
-                      </div>
-                    ))}
+                    {systemInputs.map((row) => {
+                      const autoIncreaseAmount = getSystemInputAutoIncreaseAmount(row.itemId)
+                      return (
+                        <div key={row.id} className="modular-balance-rate-row modular-balance-rate-row--system">
+                          {renderPickerButton(
+                            row.itemId,
+                            () => setPickerTarget({ scope: 'system', rowId: row.id }),
+                            'modular-balance-picker-btn modular-balance-picker-btn--compact',
+                          )}
+                          <input
+                            className="modular-balance-number-input"
+                            type="number"
+                            min={0}
+                            step="0.1"
+                            value={row.ratePerMinute}
+                            onChange={(event) => {
+                              const next = Number.parseFloat(event.target.value)
+                              updateSystemInputs((current) =>
+                                current.map((entry) =>
+                                  entry.id === row.id ? { ...entry, ratePerMinute: Number.isFinite(next) ? Math.max(0, next) : 0 } : entry,
+                                ),
+                              )
+                            }}
+                          />
+                          <span className="modular-balance-unit-text">/{BASE_TIME_UNIT}</span>
+                          <button
+                            type="button"
+                            className="modular-balance-stepper-auto-btn modular-balance-stepper-auto-btn--compact"
+                            onClick={() => {
+                              updateSystemInputs((current) =>
+                                current.map((entry) =>
+                                  entry.id === row.id
+                                    ? { ...entry, ratePerMinute: roundToTwoDecimals(entry.ratePerMinute + autoIncreaseAmount) }
+                                    : entry,
+                                ),
+                              )
+                            }}
+                            disabled={autoIncreaseAmount <= EPSILON}
+                            aria-label={t('modBalance.autoFillShortage')}
+                            title={t('modBalance.autoFillShortage')}
+                          >
+                            {t('modBalance.fillShortageShort')}
+                          </button>
+                          {renderActionButton(
+                            t('modBalance.removeInput'),
+                            'delete',
+                            () => updateSystemInputs((current) => current.filter((entry) => entry.id !== row.id)),
+                            { danger: true },
+                          )}
+                        </div>
+                      )
+                    })}
                     <button
                       type="button"
                       className="modular-balance-add-row"
@@ -1670,7 +1858,10 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                         }}
                       >
                         <div className="modular-balance-module-card-head">
-                          <strong className="modular-balance-card-title" title={module.name}>{module.name}</strong>
+                          <ModularBalanceCardTitle
+                            title={module.name}
+                            itemIds={getCardTitleItemIds({ ...module, source: 'module' })}
+                          />
                           <div className="modular-balance-module-card-actions">
                             {renderActionButton(t('modBalance.addToStage'), 'addToStage', () => addModuleToStage(selectedStageId, module.id), {
                               disabled: !selectedStageId,
@@ -1772,7 +1963,12 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                         }}
                       >
                         <div className="modular-balance-module-card-head">
-                          <strong className="modular-balance-card-title" title={recipe.name}>{recipe.cardTitle ?? recipe.name}</strong>
+                          <ModularBalanceCardTitle
+                            title={recipe.cardTitle ?? recipe.name}
+                            tooltip={recipe.name}
+                            recipeTitleEntries={recipe.cardTitleEntries}
+                            language={language}
+                          />
                           <div className="modular-balance-module-card-actions">
                             {renderActionButton(t('modBalance.addToStage'), 'addToStage', () => addModuleToStage(selectedStageId, recipe.id), {
                               disabled: !selectedStageId,
@@ -2092,10 +2288,17 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                             if (!module) return null
                             const scaledInputs = module.inputs.map((entry) => ({ itemId: entry.itemId, amount: entry.ratePerMinute }))
                             const scaledOutputs = module.outputs.map((entry) => ({ itemId: entry.itemId, amount: entry.ratePerMinute }))
+                            const autoIncreaseDelta = getInstanceAutoIncreaseDelta(module, computation)
                             return (
                               <article key={instance.id} className="modular-balance-instance-card" style={getModuleColorStyle(module.colorKey)}>
                                 <div className="modular-balance-instance-head">
-                                  <strong className="modular-balance-card-title" title={module.name}>{module.cardTitle ?? module.name}</strong>
+                                  <ModularBalanceCardTitle
+                                    title={module.cardTitle ?? module.name}
+                                    tooltip={module.name}
+                                    itemIds={module.source === 'module' ? getCardTitleItemIds(module) : []}
+                                    recipeTitleEntries={module.source === 'recipe' ? module.cardTitleEntries : undefined}
+                                    language={language}
+                                  />
                                   {renderActionButton(
                                     t('modBalance.removeStageModule'),
                                     'delete',
@@ -2132,6 +2335,16 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
                                       'add',
                                       () => stepInstanceCount(stage.id, instance.id, STAGE_MODULE_COUNT_STEP),
                                     )}
+                                    <button
+                                      type="button"
+                                      className="modular-balance-stepper-auto-btn"
+                                      onClick={() => stepInstanceCount(stage.id, instance.id, autoIncreaseDelta)}
+                                      disabled={autoIncreaseDelta < 0.01}
+                                      aria-label={t('modBalance.autoIncreaseCount')}
+                                      title={t('modBalance.autoIncreaseCount')}
+                                    >
+                                      {t('modBalance.fillShortageShort')}
+                                    </button>
                                   </div>
                                 </div>
 
@@ -2228,16 +2441,36 @@ export function ModularBalancePanel({ language, superRecipeEnabled, t }: Modular
               {computeOverflowTime && finalStageComputation ? (
                 <div className="modular-balance-band-stack">
                   <div className="modular-balance-band-title-card">
-                    <div className="modular-balance-band-title">{t('modBalance.storageOverflowTitle')}</div>
+                    <div className="modular-balance-band-title">{t('modBalance.warehouseCalc')}</div>
                   </div>
                   <div className="modular-balance-band-row is-terminal">
                     <section className="modular-balance-band">
                       <div className="modular-balance-band-grid">
                         <div className="modular-balance-band-panel modular-balance-band-panel--flow">
-                          <span className="modular-balance-mini-label">{t('modBalance.storageOverflowHint', { max: warehouseMax })}</span>
+                          <div className="modular-balance-band-panel-meta">
+                            <span className="modular-balance-mini-label">{t('modBalance.storageOverflowTitle')}</span>
+                            <span className="modular-balance-mini-label">{t('modBalance.storageOverflowHint', { max: warehouseMax })}</span>
+                          </div>
                           <div className="modular-balance-chip-row">
                             {warehouseOverflowEntries.length > 0
                               ? warehouseOverflowEntries.map((entry) => (
+                                  <span key={entry.itemId} className="modular-balance-chip">
+                                    <img src={getItemIconPath(entry.itemId)} alt="" aria-hidden="true" draggable={false} />
+                                    <span>{getItemLabel(language, entry.itemId)}</span>
+                                    <strong>{formatHourValue(entry.hours)} {t('modBalance.hoursUnit')}</strong>
+                                  </span>
+                                ))
+                              : <span className="modular-balance-chip modular-balance-chip--empty">{t('modBalance.none')}</span>}
+                          </div>
+                        </div>
+                        <div className="modular-balance-band-panel modular-balance-band-panel--flow">
+                          <div className="modular-balance-band-panel-meta">
+                            <span className="modular-balance-mini-label">{t('modBalance.storageStockoutTitle')}</span>
+                            <span className="modular-balance-mini-label">{t('modBalance.storageStockoutHint', { max: warehouseMax })}</span>
+                          </div>
+                          <div className="modular-balance-chip-row">
+                            {warehouseStockoutEntries.length > 0
+                              ? warehouseStockoutEntries.map((entry) => (
                                   <span key={entry.itemId} className="modular-balance-chip">
                                     <img src={getItemIconPath(entry.itemId)} alt="" aria-hidden="true" draggable={false} />
                                     <span>{getItemLabel(language, entry.itemId)}</span>

@@ -5316,6 +5316,10 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
   align-items: center;
 }
 
+.modular-balance-rate-row--system {
+  grid-template-columns: minmax(0, 1fr) 72px auto auto auto;
+}
+
 .modular-balance-add-row {
   width: 100%;
   min-height: 38px;
@@ -5432,6 +5436,20 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
   width: 100%;
 }
 
+.modular-balance-picker-btn--compact {
+  padding: 6px 7px;
+  font-size: 12px;
+}
+
+.modular-balance-picker-btn--compact .pickup-picker-current {
+  gap: 6px;
+}
+
+.modular-balance-picker-btn--compact .pickup-picker-current-icon {
+  width: 18px;
+  height: 18px;
+}
+
 .modular-balance-picker-btn .pickup-picker-current > span:last-child {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -5508,7 +5526,9 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
   min-width: 0;
   flex: 1 1 auto;
   align-self: auto;
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   min-height: 0;
   font-size: 18px;
   line-height: 1.25;
@@ -5516,6 +5536,44 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
   white-space: normal;
   overflow: visible;
   word-break: break-word;
+}
+
+.modular-balance-card-title-icon {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.modular-balance-card-title-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.modular-balance-card-title-text {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.modular-balance-card-title-text--recipe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.modular-balance-card-title-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.modular-balance-card-title-separator {
+  color: var(--text-secondary);
 }
 
 .modular-balance-module-card-groups,
@@ -5813,6 +5871,13 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
   min-width: 0;
 }
 
+.modular-balance-band-panel-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
 .modular-balance-band-panel--flow {
   flex: 1 1 0;
 }
@@ -5882,7 +5947,7 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 
 .modular-balance-stage-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 6px;
 }
 
@@ -5915,6 +5980,39 @@ body[data-ui-theme='ayu-light'] .port-priority-pad-option.is-selected {
 
 .modular-balance-stepper {
   margin-left: auto;
+}
+
+.modular-balance-stepper-auto-btn {
+  height: 28px;
+  min-width: 42px;
+  margin: 0;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  text-transform: lowercase;
+  cursor: pointer;
+}
+
+.modular-balance-stepper-auto-btn:hover,
+.modular-balance-stepper-auto-btn:focus-visible {
+  background: var(--surface-3);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.modular-balance-stepper-auto-btn:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.modular-balance-stepper-auto-btn--compact {
+  min-width: 28px;
+  padding: 0 6px;
 }
 
 .modular-balance-editor {
