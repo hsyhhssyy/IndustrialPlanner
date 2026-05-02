@@ -163,7 +163,7 @@ vi.mock("pixi.js", () => {
 import { AYU_LIGHT_THEME } from "@/app/theme"
 import { EntityCollectionType } from "@/domain/state/types"
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition"
-import { DEFAULT_ENTITY_INSPECTORS } from "@/domain/types/registry/entity-inspector"
+import type { FieldDef, SubmitMode } from "@/domain/types/registry/inspector-types"
 import { GenericDeviceSprite } from "@/renderer/sprites/generic-device-sprite"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 
@@ -715,7 +715,16 @@ function createEntityDefinitionStub(): EntityDefinition {
     tags: [],
     requiresPower: false,
     powerDemand: 5,
-    inspectors: [...DEFAULT_ENTITY_INSPECTORS],
+    inspectors: {
+      slotConfig: {
+        mutable: true,
+        lock: { mutable: true, default: null } as FieldDef<string | null>,
+        capacity: { mutable: true, default: 1 } as FieldDef<number>,
+        initialCount: { mutable: true, default: 0 } as FieldDef<number>,
+        submitMode: { mutable: true, default: 'never' } as FieldDef<SubmitMode>,
+        submitInterval: { mutable: true, default: 10 } as FieldDef<number>,
+      },
+    },
     portGroups: [
       {
         id: "item_input",

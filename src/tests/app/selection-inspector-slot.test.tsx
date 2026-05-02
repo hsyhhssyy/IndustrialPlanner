@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAppHost, type AppHost } from "@/app/host/app-host";
 import { SelectionInspectorSlot } from "@/app/shell/components/inspector/selection-inspector-slot";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import { DEFAULT_ENTITY_INSPECTORS } from "@/domain/types/registry/entity-inspector";
+import { INSPECTOR_TYPE } from "@/domain/types/registry/inspector-types";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createEditorHost, type EditorHost } from "@/editor/editor-host";
@@ -81,14 +81,14 @@ describe("SelectionInspectorSlot", () => {
       vi.advanceTimersByTime(50);
     });
 
-    expect(queryInspectorKeys(container)).toEqual(DEFAULT_ENTITY_INSPECTORS);
+    expect(queryInspectorKeys(container)).toEqual([INSPECTOR_TYPE.slotConfig]);
     expect(container.textContent).toContain("tick 1");
 
     act(() => {
       vi.advanceTimersByTime(100);
     });
 
-    expect(container.querySelector("[data-inspector-key='generic-device']")?.textContent)
+    expect(container.querySelector("[data-inspector-key='slot-config']")?.textContent)
       .toContain("tick 3");
   });
 
@@ -113,7 +113,7 @@ describe("SelectionInspectorSlot", () => {
       vi.advanceTimersByTime(100);
     });
 
-    expect(container.querySelector("[data-inspector-key='generic-device']")?.textContent)
+    expect(container.querySelector("[data-inspector-key='slot-config']")?.textContent)
       .toContain("tick 2");
 
     editorHost.internalState.collections.selection.replace([
@@ -133,7 +133,7 @@ describe("SelectionInspectorSlot", () => {
       vi.advanceTimersByTime(50);
     });
 
-    expect(container.querySelector("[data-inspector-key='generic-device']")?.textContent)
+    expect(container.querySelector("[data-inspector-key='slot-config']")?.textContent)
       .toContain("tick 1");
   });
 });

@@ -6,6 +6,10 @@ import type { EntityDefinition } from "@/domain/types/registry/entity-definition
 import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
 import type { PlacementGroup } from "@/app/state/state-impl";
 import { WorkbenchIcon } from "@/app/shell/components/workbench-icons";
+import {
+  getVisiblePlacementOperationButtons,
+  type PlacementOperationButtonDefinition,
+} from "@/app/shell/components/panels/placement-operation-buttons";
 
 const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
 
@@ -80,45 +84,6 @@ interface PlacementSectionDefinition {
   readonly buttons: readonly PlacementButtonDefinition[];
 }
 
-// ─── 操作区按钮（保持硬编码） ───
-
-const SELECT_OPERATION_BUTTON: PlacementButtonDefinition = {
-  uiButtonId: "placement-tool-select",
-  labelKey: "workbench.button.select",
-  icon: "select-arrow",
-  hotkey: "Esc",
-  activeWhen: (appHost) => appHost.state.activeTool === "select",
-};
-
-const MARQUEE_OPERATION_BUTTON: PlacementButtonDefinition = {
-  uiButtonId: "placement-tool-marquee",
-  labelKey: "workbench.button.batchSelect",
-  icon: "batch-select",
-  hotkey: "X",
-  visibleWhen: (appHost) => appHost.state.settings.hypergryphOperationMode,
-  activeWhen: (appHost) => appHost.state.activeTool === "marquee",
-};
-
-const BELT_DRAW_OPERATION_BUTTON: PlacementButtonDefinition = {
-  uiButtonId: "placement-action-belt-draw",
-  labelKey: "workbench.button.beltDraw",
-  iconSrc: "/device-icons/item_log_belt_01.webp",
-  hotkeyKeyId: SHORTCUT_KEY.PLACE_CONVEYOR,
-  activeWhen: (appHost) =>
-    appHost.state.activeTool === "logistics-placement"
-    && appHost.internalState.runtime.logisticsPlacement.kind === "belt",
-};
-
-const PIPE_DRAW_OPERATION_BUTTON: PlacementButtonDefinition = {
-  uiButtonId: "placement-action-pipe-draw",
-  labelKey: "workbench.button.pipeDraw",
-  iconSrc: "/device-icons/item_log_pipe_01.webp",
-  hotkeyKeyId: SHORTCUT_KEY.PLACE_PIPE,
-  activeWhen: (appHost) =>
-    appHost.state.activeTool === "logistics-placement"
-    && appHost.internalState.runtime.logisticsPlacement.kind === "pipe",
-};
-
 // ─── 动态构建设备分组 ───
 
 function buildPlacementDeviceSections(appHost: AppHost): readonly PlacementSectionDefinition[] {
@@ -170,10 +135,11 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
   const isMobileLayout = screenProfile.deviceClass === "mobile";
   const showShortcutHints = screenProfile.deviceClass !== "mobile" && appHost.state.settings.gameShowHotkeys;
   const deviceSections = buildPlacementDeviceSections(appHost);
+  const visibleOperationButtons = getVisiblePlacementOperationButtons(appHost);
 
   const handleButtonPointerUp = (
     event: ReactPointerEvent<HTMLButtonElement>,
-    button: PlacementButtonDefinition,
+    button: Pick<PlacementButtonDefinition, "uiButtonId">,
     isDeviceButton: boolean,
   ) => {
     const uiButtonId = isDeviceButton
@@ -205,7 +171,7 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
     }
   };
 
-  const renderOperationButton = (button: PlacementButtonDefinition) => {
+  const renderOperationButton = (button: PlacementOperationButtonDefinition) => {
     const buttonLabel = t(button.labelKey);
     const hotkey = button.hotkey
       ?? (button.hotkeyKeyId
@@ -260,12 +226,7 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
             ? "placement-operation-button-list is-mobile-icon-grid"
             : "placement-button-list placement-operation-button-list"}
         >
-          {renderOperationButton(SELECT_OPERATION_BUTTON)}
-          {MARQUEE_OPERATION_BUTTON.visibleWhen?.(appHost) ?? true
-            ? renderOperationButton(MARQUEE_OPERATION_BUTTON)
-            : null}
-          {renderOperationButton(BELT_DRAW_OPERATION_BUTTON)}
-          {renderOperationButton(PIPE_DRAW_OPERATION_BUTTON)}
+          {visibleOperationButtons.map((button) => renderOperationButton(button))}
         </div>
       </section>
 

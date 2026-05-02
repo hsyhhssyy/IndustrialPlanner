@@ -40,6 +40,10 @@ export type MessageKey =
   | "action.clearPatch"
   | "action.saveBlueprint"
   | "action.copySelection"
+  | "workbench.button.select"
+  | "workbench.button.batchSelect"
+  | "workbench.button.beltDraw"
+  | "workbench.button.pipeDraw"
   | "toolbar.tools"
   | "toolbar.views"
   | "toolbar.canvasTopLeftCorner"
@@ -249,6 +253,10 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.rotateSelection": "旋转",
     "action.saveBlueprint": "保存蓝图",
     "action.copySelection": "复制选中",
+    "workbench.button.select": "选择",
+    "workbench.button.batchSelect": "批量选择",
+    "workbench.button.beltDraw": "铺设传送带",
+    "workbench.button.pipeDraw": "铺设管道",
     "action.cancelPlacement": "取消",
     "action.confirmPlacement": "确认放置",
     "action.cancelMove": "取消移动",
@@ -464,6 +472,10 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "action.rotateSelection": "Rotate",
     "action.saveBlueprint": "Save Blueprint",
     "action.copySelection": "Copy Selection",
+    "workbench.button.select": "Select",
+    "workbench.button.batchSelect": "Batch Select",
+    "workbench.button.beltDraw": "Draw Belt",
+    "workbench.button.pipeDraw": "Draw Pipe",
     "action.cancelPlacement": "Cancel",
     "action.confirmPlacement": "Confirm Placement",
     "action.cancelMove": "Cancel Move",

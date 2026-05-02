@@ -4,6 +4,7 @@ import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/components/bottom-status-bar";
 import { CanvasPanel } from "@/app/shell/components/canvas-panel";
 import { CanvasFloatingToolbar } from "@/app/shell/components/canvas/canvas-floating-toolbar";
+import { CanvasLeftBottomToolbar } from "@/app/shell/components/canvas/canvas-left-bottom-toolbar";
 import { CanvasTopLeftCornerToolbar } from "@/app/shell/components/canvas/canvas-top-left-corner-toolbar";
 import { CanvasRightDockToolbar } from "@/app/shell/components/canvas/canvas-right-dock-toolbar";
 import { FullscreenToggleButton } from "@/app/shell/components/fullscreen-toggle-button";
@@ -191,6 +192,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
   const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
   const showBottomStatusBar = !showFloatingTopBarControls;
+  const showCanvasLeftBottomToolbar = screenProfile.deviceClass === "mobile" && !leftDockOpen;
   const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;
 
   useEffect(() => {
@@ -268,6 +270,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       <LeftToolbar appHost={appHost} />
       {leftDockOpen ? <LeftDock appHost={appHost} /> : null}
       <CanvasPanel appHost={appHost} />
+      {showCanvasLeftBottomToolbar ? <CanvasLeftBottomToolbar appHost={appHost} /> : null}
       {canvasTopLeftCornerToolbar.visible && canvasTopLeftCornerToolbar.buttonIds.length > 0 ? (
         <CanvasTopLeftCornerToolbar
           appHost={appHost}

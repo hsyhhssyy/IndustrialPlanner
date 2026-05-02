@@ -131,7 +131,9 @@ export function saveToLocalStorageWithVersion<T>(
 ): T {
   const payload: VersionedPayload<T> = { _v: currentVersion, data: value };
 
-  return saveToLocalStorage(key, payload);
+  saveToLocalStorage(key, payload);
+
+  return value;
 }
 
 // ---------------------------------------------------------------------------
@@ -166,5 +168,7 @@ export async function saveToIndexedDbWithVersion<T>(
 ): Promise<T> {
   const payload: VersionedPayload<T> = { _v: currentVersion, data: value };
 
-  return await saveToIndexedDb(location, payload);
+  await saveToIndexedDb(location, payload);
+
+  return value;
 }

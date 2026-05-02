@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 
 import type { AppHost } from "@/app/host/app-host";
-import type { EntityInspectorKey } from "@/domain/types/registry/entity-inspector";
-import { ENTITY_INSPECTOR_KEY } from "@/domain/types/registry/entity-inspector";
+import type { InspectorType } from "@/domain/types/registry/inspector-types";
+import { INSPECTOR_TYPE } from "@/domain/types/registry/inspector-types";
 
 const INSPECTOR_SLOT_INTERVAL_MS = 50;
 
 type Translate = (key: string) => string;
 
 interface InspectorQueryResult {
-  key: EntityInspectorKey;
+  key: InspectorType;
   name: string;
   ticks: number;
 }
@@ -24,7 +24,17 @@ interface InspectorSlotState {
   inspectors: InspectorQueryResult[];
 }
 
-function mountEmptyInspector(key: EntityInspectorKey): MountedInspector {
+const INSPECTOR_LABELS: Record<InspectorType, string> = {
+  [INSPECTOR_TYPE.portFilter]: "端口过滤器",
+  [INSPECTOR_TYPE.recipeConfig]: "配方配置",
+  [INSPECTOR_TYPE.slotConfig]: "槽位配置",
+  [INSPECTOR_TYPE.linkConfig]: "链接配置",
+  [INSPECTOR_TYPE.routing]: "分流/优先级",
+  [INSPECTOR_TYPE.structure]: "结构配置",
+  [INSPECTOR_TYPE.behaviorToggle]: "行为开关",
+};
+
+function mountEmptyInspector(key: InspectorType): MountedInspector {
   let ticks = 0;
 
   return {
@@ -33,35 +43,12 @@ function mountEmptyInspector(key: EntityInspectorKey): MountedInspector {
 
       return {
         key,
-        name: key,
+        name: INSPECTOR_LABELS[key],
         ticks,
       };
     },
   };
 }
-
-function mountGenericDeviceInspector(): MountedInspector {
-  return mountEmptyInspector(ENTITY_INSPECTOR_KEY.genericDevice);
-}
-
-function mountRuntimeStatisticsInspector(): MountedInspector {
-  return mountEmptyInspector(ENTITY_INSPECTOR_KEY.runtimeStatistics);
-}
-
-function mountStorageManagementInspector(): MountedInspector {
-  return mountEmptyInspector(ENTITY_INSPECTOR_KEY.storageManagement);
-}
-
-function mountStorageTypeFilterInspector(): MountedInspector {
-  return mountEmptyInspector(ENTITY_INSPECTOR_KEY.storageTypeFilter);
-}
-
-const INSPECTOR_MOUNTERS: Record<EntityInspectorKey, () => MountedInspector> = {
-  [ENTITY_INSPECTOR_KEY.genericDevice]: mountGenericDeviceInspector,
-  [ENTITY_INSPECTOR_KEY.runtimeStatistics]: mountRuntimeStatisticsInspector,
-  [ENTITY_INSPECTOR_KEY.storageManagement]: mountStorageManagementInspector,
-  [ENTITY_INSPECTOR_KEY.storageTypeFilter]: mountStorageTypeFilterInspector,
-};
 
 function EmptyInspector({
   result,
@@ -133,12 +120,17 @@ export function SelectionInspectorSlot({
         return;
       }
 
+      const inspectorKeys = (
+        Object.keys(selectedDefinition.inspectors) as (keyof typeof selectedDefinition.inspectors)[]
+      ).filter((k) => selectedDefinition.inspectors[k] !== undefined);
+
       const nextInstanceIds = new Set<string>();
-      const inspectors = selectedDefinition.inspectors.map((inspectorKey) => {
+      const inspectors = inspectorKeys.map((propKey) => {
+        const inspectorKey = INSPECTOR_TYPE[propKey];
         const instanceId = `${selectedEntity.id}:${inspectorKey}`;
         const mountedInspector =
           mountedInspectors.get(instanceId)
-          ?? INSPECTOR_MOUNTERS[inspectorKey]();
+          ?? mountEmptyInspector(inspectorKey);
 
         mountedInspectors.set(instanceId, mountedInspector);
         nextInstanceIds.add(instanceId);

@@ -2,7 +2,91 @@ import type {
   EntityDefinition,
   ItemFilterDefinition,
 } from "@/domain/types/registry/entity-definition";
-import { DEFAULT_ENTITY_INSPECTORS } from "@/domain/types/registry/entity-inspector";
+import {
+  type DeviceInspectorDeclarations,
+  type PortFilterInspectorDef,
+  type RecipeConfigInspectorDef,
+  type SlotConfigInspectorDef,
+  type LinkConfigInspectorDef,
+  type RoutingInspectorDef,
+  type StructureInspectorDef,
+  type BehaviorToggleInspectorDef,
+} from "@/domain/types/registry/inspector-types";
+
+// ---------------------------------------------------------------------------
+// FieldDef helpers
+// ---------------------------------------------------------------------------
+
+function fd<T>(value: T): { mutable: boolean; default: T } {
+  return { mutable: true, default: value };
+}
+
+// ---------------------------------------------------------------------------
+// Inspector helpers — 目前所有字段 mutable = true
+// ---------------------------------------------------------------------------
+
+function portFilterInspector(): PortFilterInspectorDef {
+  return {
+    mutable: true,
+    acceptRule: {
+      base: fd<'any' | 'solid' | 'liquid' | string>('any'),
+      exclude: fd<string[]>([]),
+    },
+    count: fd<number | 'unlimited'>('unlimited'),
+  };
+}
+
+function recipeConfigInspector(): RecipeConfigInspectorDef {
+  return {
+    mutable: true,
+    recipeId: fd<string | null>(null),
+    recipeType: fd<'immediate-consume' | 'reserved-item'>('immediate-consume'),
+    duration: fd<number>(1),
+  };
+}
+
+function slotConfigInspector(): SlotConfigInspectorDef {
+  return {
+    mutable: true,
+    lock: fd<string | null>(null),
+    capacity: fd<number>(1),
+    initialCount: fd<number>(0),
+    submitMode: fd<'never' | 'every-tick' | 'every-n-seconds'>('never'),
+    submitInterval: fd<number>(10),
+  };
+}
+
+function linkConfigInspector(
+  linkType: 'share-cap' | 'share-all' = 'share-cap',
+): LinkConfigInspectorDef {
+  return {
+    mutable: true,
+    linkType: fd<'share-cap' | 'share-all'>(linkType),
+    peerCache: fd<string>(''),
+    shareLimit: fd<number>(1),
+  };
+}
+
+function routingInspector(): RoutingInspectorDef {
+  return {
+    mutable: true,
+    entries: fd<RoutingInspectorDef['entries']['default']>([]),
+  };
+}
+
+function structureInspector(): StructureInspectorDef {
+  return {
+    mutable: true,
+    cacheGroups: fd<StructureInspectorDef['cacheGroups']['default']>([]),
+  };
+}
+
+function behaviorToggleInspector(): BehaviorToggleInspectorDef {
+  return {
+    mutable: true,
+    ignoreStock: fd<boolean>(false),
+  };
+}
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
@@ -15,10 +99,11 @@ type EntityDefinitionInput = Omit<EntityDefinition, "inspectors">;
 
 function createEntityDefinition(
   definition: EntityDefinitionInput,
+  inspectors: DeviceInspectorDeclarations = {},
 ): EntityDefinition {
   return {
     ...definition,
-    inspectors: [...DEFAULT_ENTITY_INSPECTORS],
+    inspectors,
   };
 }
 
@@ -148,6 +233,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_storage"),
       createBinding("bind_item_output", "item_output", "item_storage"),
     ],
+  }, {
+    slotConfig: slotConfigInspector(),
   }),
   createEntityDefinition({
     id: "item_port_log_hongs_bus",
@@ -194,6 +281,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
+  }, {
+    portFilter: portFilterInspector(),
   }),
   createEntityDefinition({
     id: "item_port_mix_pool_1",
@@ -250,6 +339,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_output", "item_output", "shared_output_buffer"),
       createBinding("bind_fluid_output", "fluid_output", "shared_output_buffer"),
     ],
+  }, {
+    portFilter: portFilterInspector(),
+    recipeConfig: recipeConfigInspector(),
+    routing: routingInspector(),
+    structure: structureInspector(),
   }),
   createEntityDefinition({
     id: "item_port_grinder_1",
@@ -292,6 +386,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
+  }, {
+    portFilter: portFilterInspector(),
+    recipeConfig: recipeConfigInspector(),
   }),
   createEntityDefinition({
     id: "item_port_liquid_filling_pd_mc_1",
@@ -347,6 +444,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_fluid_input", "fluid_input", "fluid_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
+  }, {
+    portFilter: portFilterInspector(),
+    recipeConfig: recipeConfigInspector(),
   }),
   createEntityDefinition({
     id: "item_port_filling_pd_mc_1",
@@ -389,6 +489,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
+  }, {
+    portFilter: portFilterInspector(),
+    recipeConfig: recipeConfigInspector(),
   }),
   createEntityDefinition({
     id: "belt_straight_1x1",
@@ -431,6 +534,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
+  }, {
+    portFilter: portFilterInspector(),
+    recipeConfig: recipeConfigInspector(),
+    linkConfig: linkConfigInspector('share-cap'),
   }),
   createEntityDefinition({
     id: "belt_turn_cw_1x1",
@@ -473,6 +580,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
+  }, {
+    portFilter: portFilterInspector(),
+    recipeConfig: recipeConfigInspector(),
+    linkConfig: linkConfigInspector('share-cap'),
   }),
   createEntityDefinition({
     id: "belt_turn_ccw_1x1",
@@ -515,6 +626,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
+  }, {
+    portFilter: portFilterInspector(),
+    recipeConfig: recipeConfigInspector(),
+    linkConfig: linkConfigInspector('share-cap'),
   }),
   createEntityDefinition({
     id: "item_log_splitter",
@@ -545,6 +660,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
+  }, {
+    portFilter: portFilterInspector(),
+    routing: routingInspector(),
   }),
   createEntityDefinition({
     id: "item_log_converger",
@@ -575,6 +693,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
+  }, {
+    portFilter: portFilterInspector(),
+    routing: routingInspector(),
   }),
   createEntityDefinition({
     id: "item_log_connector",
@@ -611,6 +732,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
+  }, {
+    portFilter: portFilterInspector(),
+    recipeConfig: recipeConfigInspector(),
   }),
   createEntityDefinition({
     id: "pipe_straight_1x1",
@@ -663,6 +787,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
+  }, {
+    portFilter: portFilterInspector(),
+    recipeConfig: recipeConfigInspector(),
+    linkConfig: linkConfigInspector('share-cap'),
   }),
   createEntityDefinition({
     id: "pipe_turn_ccw_1x1",
@@ -689,6 +817,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
+  }, {
+    portFilter: portFilterInspector(),
+    recipeConfig: recipeConfigInspector(),
+    linkConfig: linkConfigInspector('share-cap'),
   }),
   createEntityDefinition({
     id: "item_pipe_splitter",
@@ -719,6 +851,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
+  }, {
+    portFilter: portFilterInspector(),
+    routing: routingInspector(),
   }),
   createEntityDefinition({
     id: "item_pipe_converger",
@@ -749,6 +884,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
+  }, {
+    portFilter: portFilterInspector(),
+    routing: routingInspector(),
   }),
   createEntityDefinition({
     id: "item_pipe_connector",
@@ -785,6 +923,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
+  }, {
+    portFilter: portFilterInspector(),
+    recipeConfig: recipeConfigInspector(),
   }),
   createEntityDefinition({
     id: "item_port_udpipe_loader_1",
@@ -805,6 +946,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
+  }, {
+    portFilter: portFilterInspector(),
+    slotConfig: slotConfigInspector(),
+    linkConfig: linkConfigInspector('share-all'),
   }),
   createEntityDefinition({
     id: "item_port_udpipe_unloader_1",
@@ -825,5 +970,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
+  }, {
+    portFilter: portFilterInspector(),
+    slotConfig: slotConfigInspector(),
+    linkConfig: linkConfigInspector('share-all'),
   }),
 ];
