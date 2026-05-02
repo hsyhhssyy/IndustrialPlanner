@@ -25,7 +25,6 @@ import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
 import type { AppThemeId } from "@/domain/state/theme";
 import {
-  isMobileLandscapeScreenProfile,
   isTouchLandscapeScreenProfile,
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";

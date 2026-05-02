@@ -1,2 +1,1 @@
-export interface AppQuery {
-}
+export type AppQuery = Record<string, never>;

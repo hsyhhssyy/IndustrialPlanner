@@ -40,26 +40,6 @@ export interface WorldDocument {
 
 export const DEFAULT_WORLD_BASE_ID = "wuling_protocol_core";
 
-
-const INITIAL_WORLD_DOCUMENT: WorldDocument = {
-  schemaVersion: 1,
-  documentKey: "00000000-0000-4000-8000-000000000000",
-  baseId: DEFAULT_WORLD_BASE_ID,
-  meta: {
-    id: "default-world",
-    name: "Untitled World",
-    createdAt: new Date(0).toISOString(),
-    updatedAt: new Date(0).toISOString(),
-  },
-  entities: {},
-  entityOrder: [],
-  explicitLinks: [],
-  documentSettings: {
-    gridSize: 1,
-    showDiagnostics: false,
-  },
-};
-
 export const createWorldDocument = (): WorldDocument => {
   const timestamp = new Date().toISOString();
   return {

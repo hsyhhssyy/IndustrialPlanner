@@ -63,11 +63,17 @@ export function CanvasTopLeftCornerToolbar({
   const [pressedButtonIds, setPressedButtonIds] = useState<CanvasTopLeftCornerToolbarButtonId[]>([]);
   const pressedButtonIdsRef = useRef<CanvasTopLeftCornerToolbarButtonId[]>([]);
   const buttonIdsKey = buttonIds.join("|");
+  const visibleButtonIds = new Set(buttonIds);
+  const visiblePressedButtonIds = pressedButtonIds.filter((buttonId) =>
+    visibleButtonIds.has(buttonId),
+  );
 
   useEffect(() => {
-    pressedButtonIdsRef.current = [];
-    setPressedButtonIds([]);
-  }, [buttonIdsKey]);
+    const nextPressedButtonIds = pressedButtonIdsRef.current.filter((buttonId) =>
+      buttonIds.includes(buttonId),
+    );
+    pressedButtonIdsRef.current = nextPressedButtonIds;
+  }, [buttonIds, buttonIdsKey]);
 
   const stopUiPropagation = (
     event:
@@ -89,14 +95,17 @@ export function CanvasTopLeftCornerToolbar({
     event: ReactPointerEvent<HTMLButtonElement>,
     buttonId: CanvasTopLeftCornerToolbarButtonId,
   ) => {
-    const isPressed = pressedButtonIdsRef.current.includes(buttonId);
+    const currentPressedButtonIds = pressedButtonIdsRef.current.filter((currentButtonId) =>
+      buttonIds.includes(currentButtonId),
+    );
+    const isPressed = currentPressedButtonIds.includes(buttonId);
     const nextPressed = !isPressed;
     const uiButtonId = resolveToggleUiButtonId(buttonId, nextPressed);
 
     event.stopPropagation();
     pressedButtonIdsRef.current = nextPressed
-      ? [...pressedButtonIdsRef.current, buttonId]
-      : pressedButtonIdsRef.current.filter((currentButtonId) => currentButtonId !== buttonId);
+      ? [...currentPressedButtonIds, buttonId]
+      : currentPressedButtonIds.filter((currentButtonId) => currentButtonId !== buttonId);
     setPressedButtonIds(pressedButtonIdsRef.current);
 
     if (event.pointerType === "mouse") {
@@ -139,7 +148,7 @@ export function CanvasTopLeftCornerToolbar({
     >
       {buttonIds.map((buttonId) => {
         const definition = CANVAS_TOP_LEFT_CORNER_TOOLBAR_DEFINITIONS[buttonId];
-        const isPressed = pressedButtonIds.includes(buttonId);
+        const isPressed = visiblePressedButtonIds.includes(buttonId);
         const label = t(isPressed ? definition.labelKeyWhenOn : definition.labelKeyWhenOff);
         const icon = isPressed ? definition.iconWhenOn : definition.iconWhenOff;
 

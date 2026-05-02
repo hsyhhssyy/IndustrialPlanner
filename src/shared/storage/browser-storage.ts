@@ -176,7 +176,7 @@ function openDatabase(
     request.onerror = () => {
       reject(
         request.error ??
-          new Error(`Failed to open IndexedDB database \"${databaseName}\".`),
+          new Error(`Failed to open IndexedDB database "${databaseName}".`),
       );
     };
 

@@ -324,9 +324,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     this.loadSelectionTexture();
 
-    // 以纹理原始像素尺寸平铺，不做 zoom 缩放
-    const tilePixelSize = this.selectionTexture?.width ?? 64;
-
     this.selectionTiling.visible = true;
     this.selectionTiling.x = layout.x + layout.width / 2;
     this.selectionTiling.y = layout.y + layout.height / 2;

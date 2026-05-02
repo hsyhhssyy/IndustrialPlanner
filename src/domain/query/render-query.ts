@@ -1,4 +1,2 @@
 
-
-export interface RenderQuery {
-}
+export type RenderQuery = Record<string, never>;

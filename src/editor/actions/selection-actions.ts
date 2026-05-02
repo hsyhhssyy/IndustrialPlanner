@@ -1,6 +1,6 @@
 import type { EditorAction } from "@/domain/action/editor-action";
 import type { WorldEntity } from "@/domain/entity/world-document";
-import { EntityCollectionType, type MarqueeCollectionType } from "@/domain/state/types";
+import { EntityCollectionType } from "@/domain/state/types";
 import type { GridPoint, GridRect, GridRectSize } from "@/domain/types/grid";
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
 import {

@@ -181,7 +181,6 @@ interface RenderedSpriteSnapshot {
 }
 
 describe("GenericDeviceSprite", () => {
-  const SPRITE_ID = "item_port_storager_1"
   const BODY_KEY = "device-sprite-item_port_storager_1"
   const MASK_KEY = "device-masks-item_port_storager_1"
   const SOLID_INPUT_KEY = "texture-solid-port-chevron-input"

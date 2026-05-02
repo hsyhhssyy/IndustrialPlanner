@@ -1,4 +1,2 @@
 
-export interface RenderAction {
-    
-}
+export type RenderAction = Record<string, never>;

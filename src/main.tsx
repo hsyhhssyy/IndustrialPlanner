@@ -22,7 +22,7 @@ const workspace : WorkspaceContract = {
 }
 
 const appHost = createAppHost(workspace);
-const editorHost = createEditorHost(workspace);
+createEditorHost(workspace);
 await createRenderHost(workspace);
 createSimulationHost(workspace);
 

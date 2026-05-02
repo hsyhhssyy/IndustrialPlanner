@@ -15,7 +15,6 @@ import {
 import {
   resolveEntityById,
   resolveListedEntities,
-  resolveOrderedEntityIds,
 } from "../entity-resolvers";
 import type { EditorQueriesContext } from "./types";
 import { resolveGridCellAtClientPixelPoint } from "./viewport-geometry";

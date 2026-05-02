@@ -23,7 +23,6 @@ import {
   RenderSprite,
   type RenderSpriteLayout,
 } from "../sprites/render-sprite"
-import type { DecorationLayer } from "./decorations/DecorationLayer"
 import {
   type DecorationSyncContext,
   type RenderViewportState,

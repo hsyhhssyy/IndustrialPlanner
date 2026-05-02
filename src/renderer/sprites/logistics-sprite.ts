@@ -25,7 +25,6 @@ export type LogisticsSpriteId =
 const BELT_COLOR = 0xffcc00;  // 黄色（传送带）
 const PIPE_COLOR = 0x3388ff;  // 蓝色（管道）
 const ARROW_STROKE_COLOR = 0x222222;  // 深灰色箭头描边
-const ARROW_STROKE_WIDTH = 2;
 const LOGISTICS_PREVIEW_VALID_COLOR = 0xffffff;
 const LOGISTICS_PREVIEW_INVALID_COLOR = 0xff3b30;
 const LOGISTICS_HEAD_STROKE_COLOR = 0xffd633;
@@ -138,8 +137,6 @@ export class LogisticsSprite extends BaseRenderSprite {
 
     // 用两条贝塞尔曲线近似 90° 弧线（入口水平 → 出口垂直）
     const cp1X = isClockwise ? startX : startX;
-    const cp1Y = isClockwise ? midY : midY;
-    const cp2X = isClockwise ? endX : endX;
     const cp2Y = isClockwise ? endY : endY;
 
     // 绘制圆弧箭头主体（用二次贝塞尔曲线近似 90° 弯）

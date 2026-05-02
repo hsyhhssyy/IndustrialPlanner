@@ -9,3 +9,10 @@ export type {
 	GridRectSize,
 	GridRotation,
 } from "./types/grid";
+export type {
+	CompiledSimulationTopology,
+	GetSimulationTickSnapshotResult,
+	SimulationRuntimeStatus,
+	SimulationStartResult,
+	SimulationTickSnapshot,
+} from "./types/simulation";

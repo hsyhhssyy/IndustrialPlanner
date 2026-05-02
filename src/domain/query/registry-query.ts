@@ -1,3 +1,1 @@
-
-export interface RegistryQuery {
-}
+export type RegistryQuery = Record<string, never>;

@@ -10,7 +10,6 @@ import {
   type LinkConfigInspectorDef,
   type RoutingInspectorDef,
   type StructureInspectorDef,
-  type BehaviorToggleInspectorDef,
 } from "@/domain/types/registry/inspector-types";
 
 // ---------------------------------------------------------------------------
@@ -78,13 +77,6 @@ function structureInspector(): StructureInspectorDef {
   return {
     mutable: true,
     cacheGroups: fd<StructureInspectorDef['cacheGroups']['default']>([]),
-  };
-}
-
-function behaviorToggleInspector(): BehaviorToggleInspectorDef {
-  return {
-    mutable: true,
-    ignoreStock: fd<boolean>(false),
   };
 }
 

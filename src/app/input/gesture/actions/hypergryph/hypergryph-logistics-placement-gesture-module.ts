@@ -1,11 +1,9 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
-import type { PlacementGroup } from "@/app/state/state-impl";
 import { EntityCollectionType } from "@/domain/state/types";
 import type { GridPoint } from "@/domain/types/grid";
 import type {
   LogisticsDraftActionResult,
-  LogisticsDraftEndpoint,
   LogisticsKind,
   LogisticsRouteOrder,
 } from "@/domain/types/logistics";

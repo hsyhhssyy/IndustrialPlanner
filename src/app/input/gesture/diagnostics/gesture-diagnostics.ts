@@ -1,4 +1,3 @@
-import type { AppHost } from "@/app/host/app-host";
 import type {
   GestureDelta,
   GestureEvent,

@@ -1251,7 +1251,7 @@ describe("createAppHost", () => {
     }));
 
     // The draft should be snapped to a device input port
-    let draft = editorHost.queries.resolveLogisticsDraftState();
+    const draft = editorHost.queries.resolveLogisticsDraftState();
     expect(draft?.target?.type).toBe("device-port");
     expect(draft?.canApply).toBe(true);
     expect(appHost.internalState.runtime.logisticsPlacement.targetEntityId).not.toBeNull();

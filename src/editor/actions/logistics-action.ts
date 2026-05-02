@@ -1,5 +1,5 @@
 import type { EditorAction } from "@/domain/action/editor-action";
-import type { WorldDocument, WorldEntity } from "@/domain/entity/world-document";
+import type { WorldDocument } from "@/domain/entity/world-document";
 import { EntityCollectionType } from "@/domain/state/types";
 import type { GridPoint } from "@/domain/types/grid";
 import type {
@@ -158,7 +158,7 @@ export function createEditorLogisticsActions(
           entityDefinitionMap: logisticsContext.entityDefinitionMap,
         });
 
-        let target: DevicePortEndpoint | null = onPathPort
+        const target: DevicePortEndpoint | null = onPathPort
           ?? cursorTarget;
         let points: GridPoint[] = tentativePoints;
 
