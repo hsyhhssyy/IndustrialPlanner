@@ -697,13 +697,14 @@ function ModularBalanceCardTitle({
   recipeTitleEntries?: RecipeTitleEntry[]
   language?: Language
 }) {
-  const hasRecipeTitleEntries = Boolean(recipeTitleEntries && recipeTitleEntries.length > 0)
+  const normalizedRecipeTitleEntries = recipeTitleEntries ?? []
+  const hasRecipeTitleEntries = normalizedRecipeTitleEntries.length > 0
 
   return (
     <strong className="modular-balance-card-title" title={tooltip ?? title}>
       {hasRecipeTitleEntries ? (
         <span className="modular-balance-card-title-text modular-balance-card-title-text--recipe">
-          {recipeTitleEntries.map((entry, index) => (
+          {normalizedRecipeTitleEntries.map((entry, index) => (
             <Fragment key={`${entry.itemId}_${entry.amount}_${index}`}>
               {index > 0 ? <span className="modular-balance-card-title-separator">+</span> : null}
               <span className="modular-balance-card-title-entry">
