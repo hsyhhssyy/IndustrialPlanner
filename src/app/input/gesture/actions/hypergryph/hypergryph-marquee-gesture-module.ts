@@ -14,6 +14,7 @@ import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 const MARQUEE_RIGHT_DOCK_BUTTON_IDS = [
   "canvas-right-dock-toolbar-button-exit",
   "canvas-right-dock-toolbar-button-move",
+  "canvas-right-dock-toolbar-button-delete",
 ] as const;
 
 const MARQUEE_TOP_LEFT_BUTTON_IDS = [

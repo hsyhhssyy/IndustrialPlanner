@@ -34,6 +34,7 @@ const outputDir = path.join(projectRoot, 'resources', 'device-sprite-original');
 
 /** 连通域的最小像素数，少于此值的视为噪点予以过滤 */
 const DEFAULT_MIN_PIXELS = 50;
+const WHITE_OVERLAY_EDGE_ALPHA_THRESHOLD = 10;
 
 // ---------------------------------------------------------------------------
 // 步骤 1：像素级 8-邻域 BFS 连通域检测
@@ -172,7 +173,7 @@ function trimTransparentEdges(rawData, width, height, channels) {
   };
 }
 
-function findEdgeConnectedTransparentPixels(rawData, width, height) {
+function findEdgeConnectedLowAlphaPixels(rawData, width, height, alphaThreshold) {
   if (width === 0 || height === 0) {
     return new Uint8Array(0);
   }
@@ -187,12 +188,12 @@ function findEdgeConnectedTransparentPixels(rawData, width, height) {
      1, -1,   1, 0,   1, 1,
   ];
 
-  function enqueueIfTransparent(x, y) {
+  function enqueueIfLowAlpha(x, y) {
     const pixelIndex = y * width + x;
     if (edgeConnected[pixelIndex]) {
       return;
     }
-    if (rawData[pixelIndex * 4 + 3] !== 0) {
+    if (rawData[pixelIndex * 4 + 3] >= alphaThreshold) {
       return;
     }
 
@@ -202,13 +203,13 @@ function findEdgeConnectedTransparentPixels(rawData, width, height) {
   }
 
   for (let x = 0; x < width; x++) {
-    enqueueIfTransparent(x, 0);
-    enqueueIfTransparent(x, height - 1);
+    enqueueIfLowAlpha(x, 0);
+    enqueueIfLowAlpha(x, height - 1);
   }
 
   for (let y = 1; y < height - 1; y++) {
-    enqueueIfTransparent(0, y);
-    enqueueIfTransparent(width - 1, y);
+    enqueueIfLowAlpha(0, y);
+    enqueueIfLowAlpha(width - 1, y);
   }
 
   while (queueX.length > 0) {
@@ -222,7 +223,7 @@ function findEdgeConnectedTransparentPixels(rawData, width, height) {
         continue;
       }
 
-      enqueueIfTransparent(nextX, nextY);
+      enqueueIfLowAlpha(nextX, nextY);
     }
   }
 
@@ -230,11 +231,16 @@ function findEdgeConnectedTransparentPixels(rawData, width, height) {
 }
 
 function compositeSpriteInteriorOverWhite(rawData, width, height) {
-  const edgeConnectedTransparentPixels = findEdgeConnectedTransparentPixels(rawData, width, height);
+  const edgeConnectedLowAlphaPixels = findEdgeConnectedLowAlphaPixels(
+    rawData,
+    width,
+    height,
+    WHITE_OVERLAY_EDGE_ALPHA_THRESHOLD,
+  );
   const totalPixels = width * height;
 
   for (let pixelIndex = 0; pixelIndex < totalPixels; pixelIndex++) {
-    if (edgeConnectedTransparentPixels[pixelIndex]) {
+    if (edgeConnectedLowAlphaPixels[pixelIndex]) {
       continue;
     }
 

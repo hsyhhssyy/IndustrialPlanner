@@ -12,8 +12,8 @@ import {
   rotateGridRotationClockwise,
 } from "@/shared/geometry/grid";
 
+import { type DraftEntity, isDraftEntity } from "../draft-entity";
 import { resolveEntityById, resolveListedEntities } from "../entity-resolvers";
-import type { DraftEntity } from "../draft-entity";
 import type { EditorActionsContext } from "./types";
 
 type EditorCollectionActions = Pick<
@@ -22,6 +22,7 @@ type EditorCollectionActions = Pick<
   | "applyMarquee"
   | "cancelMarquee"
   | "clearCollection"
+  | "deleteCollection"
   | "moveCollectionTo"
   | "removeFromCollection"
   | "rotateCollection"
@@ -35,6 +36,23 @@ export function createEditorSelectionActions({
 }: EditorActionsContext): EditorCollectionActions {
   const resolveCollection = (collectionType: EntityCollectionType) =>
     state.collections[collectionType];
+  const removeEntityIdsFromCollections = (entityIds: ReadonlySet<string>) => {
+    for (const collectionType of Object.values(EntityCollectionType)) {
+      const collection = resolveCollection(collectionType);
+
+      if (collection.length === 0) {
+        continue;
+      }
+
+      const nextEntityIds = collection.filter((entityId) => !entityIds.has(entityId));
+
+      if (nextEntityIds.length === collection.length) {
+        continue;
+      }
+
+      collection.replace(nextEntityIds);
+    }
+  };
   const addEntityIdToCollection = (
     collectionType: EntityCollectionType,
     entityId: string,
@@ -67,6 +85,80 @@ export function createEditorSelectionActions({
   return {
     clearCollection: (collectionType) => {
       resolveCollection(collectionType).replace([]);
+
+      if (collectionType === EntityCollectionType.marquee
+        || collectionType === EntityCollectionType.reverseMarquee) {
+        state.marqueeGridRect = null;
+      }
+    },
+    deleteCollection: (collectionType) => {
+      const collection = resolveCollection(collectionType);
+
+      if (collection.length === 0) {
+        return;
+      }
+
+      const currentDocument = document.getSnapshot();
+      const removedCollectionIds = new Set(collection);
+      const deletedEntityIds = new Set<string>();
+
+      for (const entityId of collection) {
+        const entity = resolveEntityById({
+          entityId,
+          document: currentDocument,
+          drafts: state.drafts,
+        });
+
+        if (entity === null) {
+          continue;
+        }
+
+        deletedEntityIds.add(isDraftEntity(entity) ? entity.originalEntityId : entity.id);
+      }
+
+      const nextEntities = { ...currentDocument.entities };
+      let didUpdateDocument = false;
+
+      for (const entityId of deletedEntityIds) {
+        if (nextEntities[entityId] === undefined) {
+          continue;
+        }
+
+        delete nextEntities[entityId];
+        didUpdateDocument = true;
+      }
+
+      if (didUpdateDocument) {
+        document.setSnapshot({
+          ...currentDocument,
+          entities: nextEntities,
+        });
+      }
+
+      const removedDraftIds = new Set<string>();
+      const nextDrafts = state.drafts.filter((entity) => {
+        const shouldDelete = removedCollectionIds.has(entity.id)
+          || deletedEntityIds.has(entity.id)
+          || deletedEntityIds.has(entity.originalEntityId);
+
+        if (shouldDelete) {
+          removedDraftIds.add(entity.id);
+        }
+
+        return !shouldDelete;
+      });
+
+      if (nextDrafts.length !== state.drafts.length) {
+        state.drafts = nextDrafts;
+      }
+
+      removeEntityIdsFromCollections(
+        new Set([
+          ...removedCollectionIds,
+          ...deletedEntityIds,
+          ...removedDraftIds,
+        ]),
+      );
 
       if (collectionType === EntityCollectionType.marquee
         || collectionType === EntityCollectionType.reverseMarquee) {

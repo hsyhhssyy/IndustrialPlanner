@@ -10,12 +10,13 @@ import { CanvasRightDockToolbar } from "@/app/shell/components/canvas/canvas-rig
 import { FullscreenToggleButton } from "@/app/shell/components/fullscreen-toggle-button";
 import { HelpDialog } from "@/app/shell/components/help-dialog";
 import { SettingsDialog } from "@/app/shell/components/settings-dialog";
+import { ToolboxDialog } from "@/app/shell/components/toolbox-dialog";
 import { WorkbenchIcon } from "@/app/shell/components/workbench-icons";
 import LeftDock from "@/app/shell/components/left-dock";
 import { LeftToolbar } from "@/app/shell/components/left-toolbar";
 import { WorkbenchSettingsDialogController } from "@/app/shell/settings-dialog-state";
 import { RightDock } from "@/app/shell/components/right-dock";
-import { TopBar } from "@/app/shell/components/top-bar";
+import { SimulationControlButton, TopBar } from "@/app/shell/components/top-bar";
 import {
   preventMiddleMousePointerDownBrowserBehavior,
   preventNativeBrowserEvent,
@@ -234,6 +235,10 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       <TopBar appHost={appHost} />
       {showFloatingTopBarControls ? (
         <div className="workbench-floating-top-bar-controls">
+          <SimulationControlButton
+            appHost={appHost}
+            className="workbench-floating-top-bar-button"
+          />
           <FullscreenToggleButton
             appHost={appHost}
             className="workbench-floating-top-bar-button workbench-floating-fullscreen-button"
@@ -283,7 +288,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           buttonIds={canvasFloatingToolbar.buttonIds}
         />
       ) : null}
-      {canvasRightDockToolbar.visible && !rightDockOpen && canvasRightDockToolbar.buttonIds.length > 0 ? (
+      {canvasRightDockToolbar.visible && canvasRightDockToolbar.buttonIds.length > 0 ? (
         <CanvasRightDockToolbar
           appHost={appHost}
           buttonIds={canvasRightDockToolbar.buttonIds}
@@ -291,6 +296,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       ) : null}
       {rightDockOpen ? <RightDock appHost={appHost} /> : null}
       {showBottomStatusBar ? <BottomStatusBar appHost={appHost} /> : null}
+      <ToolboxDialog appHost={appHost} />
       <HelpDialog appHost={appHost} />
       <SettingsDialog appHost={appHost} controller={settingsDialog} />
     </div>

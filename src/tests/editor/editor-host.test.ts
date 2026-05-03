@@ -1145,6 +1145,83 @@ describe("createEditorHost", () => {
     });
   });
 
+  it("deletes entity collections from document, drafts, and stale collection references", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+    const draftOnlyEntity: DraftEntity = {
+      id: "draft-only",
+      originalEntityId: "draft-only",
+      definitionId: "belt_straight_1x1",
+      position: { x: 9, y: 9 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    };
+    const movePreviewDraft: DraftEntity = {
+      id: "move-draft:dummy-entity-1",
+      originalEntityId: "dummy-entity-1",
+      definitionId: "belt_straight_1x1",
+      position: { x: 30, y: 30 },
+      rotation: 0,
+      config: {},
+      tags: ["draft-shadow"],
+    };
+    const unrelatedDraft: DraftEntity = {
+      id: "persisted-draft",
+      originalEntityId: "persisted-draft",
+      definitionId: "belt_straight_1x1",
+      position: { x: 18, y: 11 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    };
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.drafts = [draftOnlyEntity, movePreviewDraft, unrelatedDraft];
+    editorHost.internalState.collections.selection.replace([
+      "dummy-entity-1",
+      "draft-only",
+      "missing-entity",
+    ]);
+    editorHost.internalState.collections.preview.replace([
+      "draft-only",
+      "move-draft:dummy-entity-1",
+      "dummy-entity-2",
+    ]);
+    editorHost.internalState.collections.ghost.replace(["dummy-entity-1"]);
+    editorHost.internalState.collections.marquee.replace([
+      "dummy-entity-1",
+      "dummy-entity-2",
+    ]);
+    editorHost.internalState.marqueeGridRect = {
+      x: 1,
+      y: 1,
+      width: 2,
+      height: 2,
+    };
+
+    editorHost.actions.deleteCollection(EntityCollectionType.selection);
+
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-1"]).toBeUndefined();
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]).toEqual(
+      document.entities["dummy-entity-2"],
+    );
+    expect(editorHost.internalState.drafts.map((entity) => entity.id)).toEqual([
+      "persisted-draft",
+    ]);
+    expect(editorHost.state.collections.selection).toEqual([]);
+    expect(editorHost.state.collections.preview).toEqual(["dummy-entity-2"]);
+    expect(editorHost.state.collections.ghost).toEqual([]);
+    expect(editorHost.state.collections.marquee).toEqual(["dummy-entity-2"]);
+    expect(editorHost.state.marqueeGridRect).toEqual({
+      x: 1,
+      y: 1,
+      width: 2,
+      height: 2,
+    });
+  });
+
   it("rotates entity collections around the collection bounding center through editor actions", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

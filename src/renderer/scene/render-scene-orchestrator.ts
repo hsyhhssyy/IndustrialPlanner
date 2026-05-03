@@ -154,16 +154,7 @@ function createSpriteForDefinition(
   entityId: string,
   definition: EntityDefinition,
 ): RenderSprite | null {
-  const LOGISTICS_SPRITE_IDS: ReadonlySet<string> = new Set([
-    "belt_straight_1x1",
-    "belt_turn_cw_1x1",
-    "belt_turn_ccw_1x1",
-    "pipe_straight_1x1",
-    "pipe_turn_cw_1x1",
-    "pipe_turn_ccw_1x1",
-  ]);
-
-  if (LOGISTICS_SPRITE_IDS.has(definition.spriteId)) {
+  if (renderHost.workspace.registry.queries.isDedicatedLogisticsDevice(definition.id)) {
     return new LogisticsSprite(entityId, definition.spriteId as LogisticsSpriteId)
   }
 

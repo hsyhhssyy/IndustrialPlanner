@@ -170,6 +170,11 @@ function normalizePersistedDialogStateMap(
     ? persistedWorkbenchState.dialogState
     : {};
   const nextDialogState: DialogStateMapReadWrite = {
+    toolbox: normalizePersistedDialogState(
+      "toolbox",
+      persistedDialogStateMap.toolbox,
+      fallback.toolbox,
+    ),
     help: normalizePersistedDialogState(
       "help",
       persistedDialogStateMap.help,

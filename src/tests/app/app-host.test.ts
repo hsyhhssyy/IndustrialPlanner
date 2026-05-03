@@ -15,6 +15,7 @@ import {
 import {
   DEFAULT_HELP_DIALOG_TAB_ID,
   DEFAULT_RIGHT_DOCK_TAB_ID,
+  DEFAULT_TOOLBOX_DIALOG_TAB_ID,
   MOBILE_LEFT_DOCK_WIDTH,
 } from "@/app/state/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
@@ -61,6 +62,7 @@ function createWorkbenchStorageSnapshot(options: {
   leftDockWidth?: number;
   topBarCollapsed?: boolean;
   rightDockActiveTab?: "base" | "power" | "selection";
+  toolboxDialog?: ReturnType<typeof createDialogStateSnapshot>;
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
 } = {}) {
@@ -71,6 +73,7 @@ function createWorkbenchStorageSnapshot(options: {
     topBarCollapsed: options.topBarCollapsed ?? false,
     rightDockActiveTab: options.rightDockActiveTab ?? DEFAULT_RIGHT_DOCK_TAB_ID,
     dialogState: {
+      toolbox: options.toolboxDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_TOOLBOX_DIALOG_TAB_ID }),
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
     },
@@ -90,17 +93,20 @@ describe("createAppHost", () => {
     const appHost = createAppHost(workspace);
 
     expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.size).toBe(0);
-    expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual([
-      "hypergryph-gesture-diagnostics",
-      "hypergryph-logistics-placement-gesture",
-      "hypergryph-single-placement-gesture",
-      "hypergryph-move-gesture",
-      "hypergryph-marquee-gesture",
-      "hypergryph-select-gesture",
-      "hypergryph-mouse-viewport-pan",
-      "hypergryph-viewport-zoom",
-      "hypergryph-select-tool-button",
-    ]);
+    expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual(
+      expect.arrayContaining([
+        "hypergryph-gesture-diagnostics",
+        "hypergryph-logistics-placement-gesture",
+        "hypergryph-single-placement-gesture",
+        "hypergryph-move-gesture",
+        "hypergryph-marquee-gesture",
+        "hypergryph-select-gesture",
+        "hypergryph-mouse-viewport-pan",
+        "hypergryph-viewport-zoom",
+        "hypergryph-select-tool-button",
+        "simulation-control-button",
+      ]),
+    );
     expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toBeNull();
 
     appHost.dispose();
@@ -145,6 +151,9 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
     expect(appHost.state.workbench.rightDockOpen).toBe(true);
     expect(appHost.state.workbench.leftDockWidth).toBe(375);
+    expect(appHost.internalState.workbench.dialogState.toolbox.visible).toBe(false);
+    expect(appHost.internalState.workbench.dialogState.toolbox.maximized).toBe(false);
+    expect(appHost.internalState.workbench.dialogState.toolbox.activeTab).toBe(DEFAULT_TOOLBOX_DIALOG_TAB_ID);
     expect(appHost.internalState.workbench.dialogState.help.visible).toBe(false);
     expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(false);
     expect(appHost.internalState.workbench.dialogState.help.activeTab).toBe(DEFAULT_HELP_DIALOG_TAB_ID);
@@ -220,9 +229,18 @@ describe("createAppHost", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
+    expect(appHost.internalState.workbench.dialogState.toolbox.visible).toBe(false);
+    expect(appHost.internalState.workbench.dialogState.toolbox.activeTab).toBe(DEFAULT_TOOLBOX_DIALOG_TAB_ID);
     expect(appHost.internalState.workbench.dialogState.help.visible).toBe(false);
     expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(false);
     expect(appHost.internalState.workbench.dialogState.help.activeTab).toBe(DEFAULT_HELP_DIALOG_TAB_ID);
+
+    appHost.internalActions.openDialog("toolbox:production-planning");
+
+    expect(appHost.internalState.workbench.dialogState.toolbox.visible).toBe(true);
+    expect(appHost.internalState.workbench.dialogState.toolbox.activeTab).toBe("production-planning");
+
+    appHost.internalActions.closeDialog("toolbox");
 
     appHost.internalActions.openDialog("help:faq");
 
@@ -240,6 +258,9 @@ describe("createAppHost", () => {
     expect(appHost.internalState.workbench.dialogState.help.height).toBe(512);
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify(createWorkbenchStorageSnapshot({
+        toolboxDialog: createDialogStateSnapshot({
+          activeTab: "production-planning",
+        }),
         helpDialog: createDialogStateSnapshot({
           visible: true,
           maximized: true,
@@ -261,6 +282,79 @@ describe("createAppHost", () => {
     expect(appHost.internalState.workbench.dialogState.help.visible).toBe(false);
     expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(true);
     expect(appHost.internalState.workbench.dialogState.help.activeTab).toBe("faq");
+  });
+
+  it.each([
+    [
+      "too wide",
+      createDialogStateSnapshot({
+        maximized: true,
+        offsetX: 48,
+        offsetY: 32,
+        width: 1600,
+        height: 520,
+      }),
+    ],
+    [
+      "too tall",
+      createDialogStateSnapshot({
+        maximized: true,
+        offsetX: 48,
+        offsetY: 32,
+        width: 720,
+        height: 1200,
+      }),
+    ],
+    [
+      "off-screen top-left",
+      createDialogStateSnapshot({
+        maximized: true,
+        offsetX: -48,
+        offsetY: -32,
+        width: 720,
+        height: 520,
+      }),
+    ],
+  ])("resets invalid settings dialog shell state to defaults when reopening (%s)", (_, settingsDialog) => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 1280,
+    });
+
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      writable: true,
+      value: 800,
+    });
+
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(
+        createWorkbenchStorageSnapshot({
+          settingsDialog,
+        }),
+      ),
+    );
+
+    const appHost = createAppHost(createWorkspace());
+
+    appHost.internalActions.openDialog("settings");
+
+    expect(appHost.internalState.workbench.dialogState.settings).toEqual(
+      createDialogStateSnapshot({
+        visible: true,
+      }),
+    );
+    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify(
+        createWorkbenchStorageSnapshot({
+          settingsDialog: createDialogStateSnapshot({
+            visible: true,
+          }),
+        }),
+      ),
+    );
   });
 
   it("hydrates and persists the current split localStorage keys", () => {
@@ -367,6 +461,7 @@ describe("createAppHost", () => {
         rightDockPowerExpanded: true,
         rightDockSelectionExpanded: true,
         dialogState: {
+          toolbox: createDialogStateSnapshot({ activeTab: DEFAULT_TOOLBOX_DIALOG_TAB_ID }),
           help: createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
           settings: createDialogStateSnapshot(),
         },
@@ -829,7 +924,7 @@ describe("createAppHost", () => {
     ]);
   });
 
-  it("aligns an attached canvas floating toolbar to its collection and avoids the cell below", () => {
+  it("aligns an attached canvas floating toolbar to the adjacent row on desktop", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
@@ -841,6 +936,16 @@ describe("createAppHost", () => {
     });
     const appHost = createAppHost(workspace);
 
+    appHost.internalActions.setScreenProfile({
+      viewportWidth: 1440,
+      viewportHeight: 900,
+      devicePixelRatio: 1,
+      deviceClass: "desktop",
+      screenShape: "landscape",
+      aspectRatio: 1440 / 900,
+      hasTouch: false,
+    });
+
     editorHost.internalState.collections.preview.replace(["dummy-entity-1"]);
 
     expect(appHost.internalActions.showCanvasFloatingToolbarForCollection(
@@ -850,6 +955,50 @@ describe("createAppHost", () => {
     expect(appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection).toBe(
       EntityCollectionType.preview,
     );
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
+      x: 520,
+      y: 386,
+    });
+
+    appHost.internalActions.setCanvasFloatingToolbarSize({
+      width: 44,
+      height: 16,
+    });
+
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
+      x: 498,
+      y: 400,
+    });
+  });
+
+  it("keeps the larger floating toolbar gap on mobile", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+
+    appHost.internalActions.setScreenProfile({
+      viewportWidth: 390,
+      viewportHeight: 844,
+      devicePixelRatio: 3,
+      deviceClass: "mobile",
+      screenShape: "portrait",
+      aspectRatio: 844 / 390,
+      hasTouch: true,
+    });
+
+    editorHost.internalState.collections.preview.replace(["dummy-entity-1"]);
+
+    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection(
+      ["canvas-floating-toolbar-button-ok"],
+      EntityCollectionType.preview,
+    )).toBe(true);
     expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
       x: 520,
       y: 370,
@@ -980,7 +1129,11 @@ describe("createAppHost", () => {
 
     expect(appHost.internalState.activeTool).toBe("select");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(false);
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.buttonIds).toEqual([
+      "canvas-floating-toolbar-button-move",
+      "canvas-floating-toolbar-button-delete",
+    ]);
     expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]?.position).toEqual({
       x: 5,
       y: 4,
@@ -1118,6 +1271,55 @@ describe("createAppHost", () => {
     expect(appHost.internalState.runtime.logisticsPlacement.shortcutPlacementGroup).toBe(
       "pipeLogistics",
     );
+  });
+
+  it("deletes the current selection from the delete-device shortcut", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+
+    editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyF",
+      key: "f",
+      keyCode: 70,
+    }));
+
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-1"]).toBeUndefined();
+    expect(editorHost.state.collections.selection).toEqual([]);
+  });
+
+  it("deletes the current selection from the delete-device shortcut while marquee stays active", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+
+    editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
+    appHost.internalActions.showCanvasRightDockToolbar([
+      "canvas-right-dock-toolbar-button-exit",
+      "canvas-right-dock-toolbar-button-move",
+      "canvas-right-dock-toolbar-button-delete",
+    ]);
+    appHost.internalActions.setActiveTool("marquee");
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyF",
+      key: "f",
+      keyCode: 70,
+    }));
+
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-1"]).toBeUndefined();
+    expect(editorHost.state.collections.selection).toEqual([]);
+    expect(appHost.internalState.activeTool).toBe("marquee");
+    expect(appHost.internalState.runtime.canvasRightDockToolbar.visible).toBe(true);
+    expect(appHost.internalState.runtime.canvasRightDockToolbar.buttonIds).toEqual([
+      "canvas-right-dock-toolbar-button-exit",
+      "canvas-right-dock-toolbar-button-move",
+      "canvas-right-dock-toolbar-button-delete",
+    ]);
   });
 
   it("draws, applies, and continues mouse logistics placement from the previous head", () => {

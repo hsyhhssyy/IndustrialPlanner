@@ -13,6 +13,7 @@ export {
   createHypergryphLogisticsPlacementGestureModule,
   hookLogisticsPlacementToolCleanupFallback,
 } from "./hypergryph/hypergryph-logistics-placement-gesture-module";
+export { createHypergryphDeleteSelectionGestureModule } from "./hypergryph/hypergryph-delete-selection-gesture-module";
 export {
   cleanupMarquee,
   createHypergryphMarqueeGestureModule,
@@ -28,8 +29,12 @@ export {
   createHypergryphSinglePlacementGestureModule,
   hookSinglePlacementToolCleanupFallback,
 } from "./hypergryph/hypergryph-single-placement-gesture-module";
+export { createSimulationControlGestureModule } from "./simulation-control-gesture-module";
 export { createHypergryphMouseViewportPanModule } from "./hypergryph/hypergryph-mouse-viewport-pan-module";
-export { createHypergryphSelectGestureModule } from "./hypergryph/hypergryph-select-gesture-module";
+export {
+  createHypergryphSelectGestureModule,
+  hookSelectToolToolbarFallback,
+} from "./hypergryph/hypergryph-select-gesture-module";
 export { createHypergryphSelectToolButtonModule } from "./hypergryph/hypergryph-select-tool-button-module";
 export { createHypergryphViewportZoomModule } from "./hypergryph/hypergryph-viewport-zoom-module";
 export type {

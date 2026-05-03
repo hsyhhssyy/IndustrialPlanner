@@ -2,9 +2,87 @@ import { FullscreenToggleButton } from "@/app/shell/components/fullscreen-toggle
 import { WorkbenchIcon } from "@/app/shell/components/workbench-icons";
 import type { AppHost } from "@/app/host/app-host";
 import { observer } from "mobx-react-lite";
+import type {
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import {
   isTouchLandscapeScreenProfile,
 } from "@/shared/browser/screen-profile";
+
+const SIMULATION_CONTROL_BUTTON_ID = "top-bar-simulation-control";
+
+export const SimulationControlButton = observer(function SimulationControlButton({
+  appHost,
+  className,
+}: {
+  appHost: AppHost;
+  className: string;
+}) {
+  const simulationState = appHost.state.simulationState;
+  const isRunning = simulationState === "start";
+  const label = appHost.actions.translate(isRunning ? "action.pause" : "action.start");
+
+  const handlePointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType === "mouse") {
+      appHost.gestureAdapter.handleUiButtonMouseTap({
+        uiButtonId: SIMULATION_CONTROL_BUTTON_ID,
+        button: event.button,
+        altKey: event.altKey,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        shiftKey: event.shiftKey,
+        sourceEvent: event.nativeEvent,
+      });
+      return;
+    }
+
+    if (event.pointerType === "touch" || event.pointerType === "pen") {
+      appHost.gestureAdapter.handleUiButtonTouchTap({
+        uiButtonId: SIMULATION_CONTROL_BUTTON_ID,
+        altKey: event.altKey,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        shiftKey: event.shiftKey,
+        sourceEvent: event.nativeEvent,
+      });
+    }
+  };
+
+  const handleClick = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (event.detail !== 0) {
+      return;
+    }
+
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: SIMULATION_CONTROL_BUTTON_ID,
+      button: 0,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey,
+      sourceEvent: event.nativeEvent,
+    });
+  };
+
+  return (
+    <button
+      aria-label={label}
+      aria-pressed={isRunning}
+      className={className}
+      data-ui-button-id={SIMULATION_CONTROL_BUTTON_ID}
+      onClick={handleClick}
+      onPointerUp={handlePointerUp}
+      title={label}
+      type="button"
+    >
+      <span className="top-bar-toggle-icon">
+        <WorkbenchIcon kind={isRunning ? "pause" : "play"} />
+      </span>
+      <span className="sr-only">{label}</span>
+    </button>
+  );
+});
 
 export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
@@ -68,6 +146,10 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
         <div className="top-bar-title">{t("app.title")}</div>
       </div>
       <div className="toolbar-group top-bar-controls">
+        <SimulationControlButton
+          appHost={appHost}
+          className="top-bar-icon-button"
+        />
         <FullscreenToggleButton
           appHost={appHost}
           className="top-bar-icon-button top-bar-fullscreen-button"

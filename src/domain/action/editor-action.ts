@@ -36,6 +36,7 @@ export interface EditorAction {
 	zoom(step: number): void;
 
 	clearCollection(collectionType: EntityCollectionType): void;
+	deleteCollection(collectionType: EntityCollectionType): void;
 	addToCollection(options: EntityCollectionMemberOptions): void;
 	removeFromCollection(options: EntityCollectionMemberOptions): void;
 	

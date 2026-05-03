@@ -11,6 +11,7 @@ export const SHORTCUT_KEY = {
   WAREHOUSE:           "shortcut-warehouse",
   BASIC_PRODUCTION:    "shortcut-basic-production",
   SYNTHESIS:           "shortcut-synthesis",
+  DELETE_DEVICE:       "shortcut-delete-device",
 } as const;
 
 /** 从 SHORTCUT_KEY 推导出的联合类型 */
@@ -28,6 +29,7 @@ const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.WAREHOUSE]:        "C",
   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
   [SHORTCUT_KEY.SYNTHESIS]:        "B",
+  [SHORTCUT_KEY.DELETE_DEVICE]:    "F",
 };
 
 // ─── Contract State 类型 ───
@@ -117,6 +119,20 @@ export class KeyboardShortcutManager {
     return this.shortcuts[key] || SHORTCUT_DEFAULTS[key];
   }
 
+  public isShortcutFor(
+    key: string,
+    code: string | null,
+    eventKey: string | null = null,
+  ): boolean {
+    if (!isShortcutKey(key)) return false;
+
+    return doesShortcutMatchKeyEvent({
+      shortcut: this.getKeyboardShortcutFor(key),
+      code,
+      key: eventKey,
+    });
+  }
+
   /** 释放资源 */
   public dispose(): void {
     this.disposeReaction?.();
@@ -127,4 +143,59 @@ export class KeyboardShortcutManager {
 // ─── 辅助函数 ───
 function isShortcutKey(key: string): key is ShortcutKeyId {
   return VALID_SHORTCUT_KEYS.has(key);
+}
+
+function doesShortcutMatchKeyEvent(options: {
+  shortcut: string;
+  code: string | null;
+  key: string | null;
+}): boolean {
+  const shortcut = normalizeShortcut(options.shortcut);
+  if (shortcut === "" || shortcut.includes("+")) {
+    return false;
+  }
+
+  const key = normalizeShortcut(options.key ?? "");
+  if (key === shortcut) {
+    return true;
+  }
+
+  const code = options.code ?? "";
+  if (shortcut.length === 1 && shortcut >= "a" && shortcut <= "z") {
+    return code === `Key${shortcut.toUpperCase()}`;
+  }
+
+  if (shortcut.length === 1 && shortcut >= "0" && shortcut <= "9") {
+    return code === `Digit${shortcut}` || code === `Numpad${shortcut}`;
+  }
+
+  return normalizeShortcutCode(code) === shortcut;
+}
+
+function normalizeShortcut(shortcut: string): string {
+  return shortcut.trim().toLowerCase();
+}
+
+function normalizeShortcutCode(code: string): string {
+  if (code === "Escape") {
+    return "esc";
+  }
+
+  if (code === "ArrowUp") {
+    return "up";
+  }
+
+  if (code === "ArrowDown") {
+    return "down";
+  }
+
+  if (code === "ArrowLeft") {
+    return "left";
+  }
+
+  if (code === "ArrowRight") {
+    return "right";
+  }
+
+  return code.trim().toLowerCase();
 }

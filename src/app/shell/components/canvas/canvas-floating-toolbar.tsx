@@ -54,6 +54,13 @@ const CANVAS_FLOATING_TOOLBAR_DEFINITIONS: Record<CanvasFloatingToolbarButtonId,
     icon: "rotate",
     tone: "rotate",
   },
+  "canvas-floating-toolbar-button-move": {
+    ariaLabel: {
+      "zh-CN": "移动",
+      "en-US": "Move",
+    },
+    icon: "move",
+  },
   "canvas-floating-toolbar-button-delete": {
     ariaLabel: {
       "zh-CN": "删除",
@@ -67,7 +74,7 @@ const CANVAS_FLOATING_TOOLBAR_DEFINITIONS: Record<CanvasFloatingToolbarButtonId,
       "zh-CN": "批量删除",
       "en-US": "Delete Many",
     },
-    icon: "delete",
+    icon: "delete-sweep",
     tone: "delete",
   },
 };
@@ -160,6 +167,27 @@ export function CanvasFloatingToolbar({
     }
   };
 
+  const handleButtonClick = (
+    event: ReactMouseEvent<HTMLButtonElement>,
+    buttonId: CanvasFloatingToolbarButtonId,
+  ) => {
+    event.stopPropagation();
+
+    if (event.detail !== 0) {
+      return;
+    }
+
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: buttonId,
+      button: 0,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey,
+      sourceEvent: event.nativeEvent,
+    });
+  };
+
   return (
     <div
       aria-label="canvas floating toolbar"
@@ -191,7 +219,9 @@ export function CanvasFloatingToolbar({
             ])}
             data-ui-button-id={buttonId}
             key={buttonId}
-            onClick={stopUiPropagation}
+            onClick={(event) => {
+              handleButtonClick(event, buttonId);
+            }}
             onContextMenu={stopUiPropagationAndDefault}
             onPointerCancel={stopUiPropagation}
             onPointerDown={stopUiPropagation}

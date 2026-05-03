@@ -14,12 +14,14 @@ import LucideMonitor from "~icons/lucide/monitor";
 import LucideMove from "~icons/lucide/move";
 import LucideMousePointer2 from "~icons/lucide/mouse-pointer-2";
 import LucidePackage2 from "~icons/lucide/package-2";
+import LucidePause from "~icons/lucide/pause";
 import LucidePanelLeftClose from "~icons/lucide/panel-left-close";
 import LucidePanelLeftOpen from "~icons/lucide/panel-left-open";
 import LucidePanelRightClose from "~icons/lucide/panel-right-close";
 import LucidePanelTopClose from "~icons/lucide/panel-top-close";
 import LucidePanelTopOpen from "~icons/lucide/panel-top-open";
 import LucidePanelRightOpen from "~icons/lucide/panel-right-open";
+import LucidePlay from "~icons/lucide/play";
 import LucideRectangleHorizontal from "~icons/lucide/rectangle-horizontal";
 import LucideRectangleVertical from "~icons/lucide/rectangle-vertical";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
@@ -32,12 +34,14 @@ import LucideSun from "~icons/lucide/sun";
 import LucideTablet from "~icons/lucide/tablet";
 import LucideTrash2 from "~icons/lucide/trash-2";
 import LucideX from "~icons/lucide/x";
+import MaterialSymbolsDeleteSweep from "~icons/material-symbols/delete-sweep";
 import MdiSelection from "~icons/mdi/selection";
 import GisArrowO from "~icons/gis/arrow-o";
 
 type WorkbenchIconKind =
   | "placement"
   | "delete"
+  | "delete-sweep"
   | "blueprint"
   | "history"
   | "save-blueprint"
@@ -53,6 +57,8 @@ type WorkbenchIconKind =
   | "panel-right-open"
   | "panel-top-close"
   | "panel-top-open"
+  | "play"
+  | "pause"
   | "expand"
   | "shrink"
   | "pointer"
@@ -79,6 +85,7 @@ interface WorkbenchIconProps {
 const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGElement>>> = {
   placement: LucideGrid2x2,
   delete: LucideTrash2,
+  "delete-sweep": MaterialSymbolsDeleteSweep,
   blueprint: LucideDraftingCompass,
   history: LucideHistory,
   "save-blueprint": LucideSave,
@@ -94,6 +101,8 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   "panel-right-open": LucidePanelRightOpen,
   "panel-top-close": LucidePanelTopClose,
   "panel-top-open": LucidePanelTopOpen,
+  play: LucidePlay,
+  pause: LucidePause,
   expand: LucideMaximize,
   shrink: LucideMinimize,
   pointer: LucideMousePointer2,

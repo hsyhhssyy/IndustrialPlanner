@@ -244,6 +244,56 @@ function resolveWorldGridVisibleAxisPositions(
   );
 }
 
+function filterWorldGridAxisPositionsWithinBounds(options: {
+  axisPositions: readonly number[];
+  viewportStart: number;
+  viewportSpan: number;
+}): number[] {
+  const viewportEnd = options.viewportStart + options.viewportSpan;
+
+  return options.axisPositions.filter(
+    (position) => position >= options.viewportStart && position <= viewportEnd,
+  );
+}
+
+export function clipWorldGridLineAxesToViewportBounds(options: {
+  lineAxes: {
+    vertical: WorldGridLineAxisGroup;
+    horizontal: WorldGridLineAxisGroup;
+  };
+  viewportBounds: DecorationSyncContext["viewportBounds"];
+}): {
+  vertical: WorldGridLineAxisGroup;
+  horizontal: WorldGridLineAxisGroup;
+} {
+  return {
+    vertical: {
+      fine: filterWorldGridAxisPositionsWithinBounds({
+        axisPositions: options.lineAxes.vertical.fine,
+        viewportStart: options.viewportBounds.left,
+        viewportSpan: options.viewportBounds.width,
+      }),
+      major: filterWorldGridAxisPositionsWithinBounds({
+        axisPositions: options.lineAxes.vertical.major,
+        viewportStart: options.viewportBounds.left,
+        viewportSpan: options.viewportBounds.width,
+      }),
+    },
+    horizontal: {
+      fine: filterWorldGridAxisPositionsWithinBounds({
+        axisPositions: options.lineAxes.horizontal.fine,
+        viewportStart: options.viewportBounds.top,
+        viewportSpan: options.viewportBounds.height,
+      }),
+      major: filterWorldGridAxisPositionsWithinBounds({
+        axisPositions: options.lineAxes.horizontal.major,
+        viewportStart: options.viewportBounds.top,
+        viewportSpan: options.viewportBounds.height,
+      }),
+    },
+  };
+}
+
 export function resolveWorldGridDisconnectedSegmentSpans(options: {
   axisPositions: readonly number[];
   viewportStart: number;
@@ -483,14 +533,20 @@ export function createGridLineDecoration(): DecorationLayer {
         return;
       }
 
-      const lineAxes = resolveWorldGridLineAxes({
-        viewportBounds: drawViewportBounds,
+      const fullViewportLineAxes = resolveWorldGridLineAxes({
+        viewportBounds: ctx.viewportBounds,
         viewportCenter: {
           x: ctx.viewportState.centerX,
           y: ctx.viewportState.centerY,
         },
         gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
       });
+      const lineAxes = visibilityScope.kind === "local"
+        ? clipWorldGridLineAxesToViewportBounds({
+          lineAxes: fullViewportLineAxes,
+          viewportBounds: drawViewportBounds,
+        })
+        : fullViewportLineAxes;
 
       const allVerticalPositions = resolveWorldGridVisibleAxisPositions(
         lineAxes.vertical,

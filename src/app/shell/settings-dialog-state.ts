@@ -272,6 +272,17 @@ export const WORKBENCH_SETTINGS_GROUPS = [
           equals: false,
         },
       },
+      {
+        id: "shortcut-delete-device",
+        kind: "keybinding",
+        labelKey: shortcutKeybindingLabelKey("shortcut-delete-device"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-delete-device"),
+        defaultValue: "F",
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: false,
+        },
+      },
     ],
   },
   {

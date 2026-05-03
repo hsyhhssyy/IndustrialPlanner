@@ -61,6 +61,7 @@ export const LeftToolbar = observer(function LeftToolbar({
   const t = appHost.actions.translate;
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const activePanel = appHost.internalState.runtime.activePanel ?? "placement";
+  const toolboxDialogVisible = appHost.internalState.workbench.dialogState.toolbox.visible;
   const helpDialogVisible = appHost.internalState.workbench.dialogState.help.visible;
   const settingsDialogVisible = appHost.internalState.workbench.dialogState.settings.visible;
 
@@ -100,12 +101,19 @@ export const LeftToolbar = observer(function LeftToolbar({
       <div className="toolbar-rail-group toolbar-rail-utility">
         {UTILITY_TOOLBAR_ITEMS.map((item) => {
           const label = t(item.labelKey);
+          const isToolboxButton = item.id === "utility-toolbox";
           const isHelpButton = item.id === "utility-help";
           const isSettingsButton = item.id === "utility-settings";
-          const isActive = (isHelpButton && helpDialogVisible) || (isSettingsButton && settingsDialogVisible);
+          const isActive = (isToolboxButton && toolboxDialogVisible)
+            || (isHelpButton && helpDialogVisible)
+            || (isSettingsButton && settingsDialogVisible);
           let handleClick = handleUiEvent;
 
-          if (item.id === "utility-help") {
+          if (item.id === "utility-toolbox") {
+            handleClick = () => {
+              appHost.internalActions.openDialog("toolbox");
+            };
+          } else if (item.id === "utility-help") {
             handleClick = () => {
               appHost.internalActions.openDialog("help");
             };
@@ -118,7 +126,7 @@ export const LeftToolbar = observer(function LeftToolbar({
           return (
             <button
               aria-label={label}
-              aria-pressed={isHelpButton || isSettingsButton ? isActive : undefined}
+              aria-pressed={isToolboxButton || isHelpButton || isSettingsButton ? isActive : undefined}
               className={isActive
                 ? "rail-button rail-button-utility is-active"
                 : "rail-button rail-button-utility"}

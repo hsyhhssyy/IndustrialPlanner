@@ -10,6 +10,8 @@ import type {
   AppSettings,
   MarqueeCollectionType,
   RightDockTabId,
+  SimulationSpeed,
+  SimulationState,
   ToolInfo,
   UiState,
   WorkbenchState,
@@ -71,6 +73,7 @@ export const CANVAS_FLOATING_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-ok",
   "canvas-floating-toolbar-button-cancel",
   "canvas-floating-toolbar-button-rotate",
+  "canvas-floating-toolbar-button-move",
   "canvas-floating-toolbar-button-delete",
   "canvas-floating-toolbar-button-delete-many",
 ] as const;
@@ -95,6 +98,15 @@ export const CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS = [
 export type CanvasTopLeftCornerToolbarButtonId =
   typeof CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS[number];
 
+export const TOOLBOX_DIALOG_TAB_IDS = [
+  "item-encyclopedia",
+  "production-planning",
+  "module-balancing",
+] as const;
+
+export type ToolboxDialogTabId = typeof TOOLBOX_DIALOG_TAB_IDS[number];
+export const DEFAULT_TOOLBOX_DIALOG_TAB_ID: ToolboxDialogTabId = TOOLBOX_DIALOG_TAB_IDS[0];
+
 export const HELP_DIALOG_TAB_IDS = [
   "overview",
   "shortcuts",
@@ -117,7 +129,7 @@ export function isRightDockTabId(value: unknown): value is RightDockTabId {
   return typeof value === "string" && RIGHT_DOCK_TAB_IDS.includes(value as RightDockTabId);
 }
 
-export const DIALOG_KEYS = ["help", "settings"] as const;
+export const DIALOG_KEYS = ["toolbox", "help", "settings"] as const;
 export type DialogKey = typeof DIALOG_KEYS[number];
 
 export interface DialogStateReadWrite {
@@ -133,8 +145,20 @@ export interface DialogStateReadWrite {
 export type DialogStateMapReadWrite = Record<DialogKey, DialogStateReadWrite>
   & Record<string, DialogStateReadWrite | undefined>;
 
+export function resolveDefaultDialogTabId(dialogKey: string): string | null {
+  if (dialogKey === "toolbox") {
+    return DEFAULT_TOOLBOX_DIALOG_TAB_ID;
+  }
+
+  if (dialogKey === "help") {
+    return DEFAULT_HELP_DIALOG_TAB_ID;
+  }
+
+  return null;
+}
+
 export function createDefaultDialogStateForKey(dialogKey: string): DialogStateReadWrite {
-  return new DialogStateReadWriteImpl(dialogKey === "help" ? DEFAULT_HELP_DIALOG_TAB_ID : null);
+  return new DialogStateReadWriteImpl(resolveDefaultDialogTabId(dialogKey));
 }
 
 export interface CanvasFloatingToolbarSize {
@@ -204,6 +228,8 @@ export interface UiStateReadWrite extends UiState {
   workbench: WorkbenchStateReadWrite;
   /// screenProfile 是当前 browser viewport / device profile 的公共 UI 运行态，不进入持久化。
   screenProfile: ScreenProfile;
+  simulationState: SimulationState;
+  simulationSpeed: SimulationSpeed;
   /// activeTool 是当前激活的工具，属于公共 contract 状态。
   activeTool: ActiveTool;
   /// toolInfo 是当前工具的运行参数，属于公共 contract 状态。
@@ -220,6 +246,7 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   topBarCollapsed = false;
   rightDockActiveTab = DEFAULT_RIGHT_DOCK_TAB_ID;
   dialogState: DialogStateMapReadWrite = {
+    toolbox: createDefaultDialogStateForKey("toolbox"),
     help: createDefaultDialogStateForKey("help"),
     settings: createDefaultDialogStateForKey("settings"),
   };
@@ -334,6 +361,8 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
 
   workbench: WorkbenchStateReadWrite = new WorkbenchStateReadWriteImpl();
   screenProfile: ScreenProfile = resolveScreenProfileFromWindow();
+  simulationState: SimulationState = "stop";
+  simulationSpeed: SimulationSpeed = 1;
   activeTool: ActiveTool = "select";
   toolInfo: ToolInfoReadWrite = new ToolInfoReadWriteImpl();
   runtime: RuntimeStateReadWrite = new RuntimeStateReadWriteImpl();

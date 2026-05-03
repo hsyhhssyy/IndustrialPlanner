@@ -698,7 +698,8 @@ body.is-resizing-dialog-shell * {
   outline-offset: 2px;
 }
 
-.help-dialog-backdrop {
+.help-dialog-backdrop,
+.toolbox-dialog-backdrop {
   position: absolute;
   inset: 0;
   z-index: 13;
@@ -710,15 +711,19 @@ body.is-resizing-dialog-shell * {
 }
 
 .help-dialog-backdrop,
-.help-dialog-backdrop * {
+.toolbox-dialog-backdrop,
+.help-dialog-backdrop *,
+.toolbox-dialog-backdrop * {
   touch-action: auto;
 }
 
-.help-dialog-backdrop.is-immersive-maximized {
+.help-dialog-backdrop.is-immersive-maximized,
+.toolbox-dialog-backdrop.is-immersive-maximized {
   padding: 0;
 }
 
-.help-dialog {
+.help-dialog,
+.toolbox-dialog {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   width: min(920px, 100%);
@@ -731,18 +736,21 @@ body.is-resizing-dialog-shell * {
   box-shadow: 0 24px 80px rgb(15 23 42 / 0.22);
 }
 
-.help-dialog.is-maximized {
+.help-dialog.is-maximized,
+.toolbox-dialog.is-maximized {
   width: 100%;
   height: 100%;
 }
 
-.help-dialog-backdrop.is-immersive-maximized .help-dialog {
+.help-dialog-backdrop.is-immersive-maximized .help-dialog,
+.toolbox-dialog-backdrop.is-immersive-maximized .toolbox-dialog {
   border: 0;
   border-radius: 0;
   box-shadow: none;
 }
 
-.help-dialog-header {
+.help-dialog-header,
+.toolbox-dialog-header {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -751,29 +759,35 @@ body.is-resizing-dialog-shell * {
   border-bottom: 1px solid var(--line);
 }
 
-.help-dialog-header-copy {
+.help-dialog-header-copy,
+.toolbox-dialog-header-copy {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
   min-width: 0;
 }
 
-.help-dialog-header.is-draggable {
+.help-dialog-header.is-draggable,
+.toolbox-dialog-header.is-draggable {
   cursor: grab;
   user-select: none;
 }
 
 .help-dialog-header-copy h2,
-.help-dialog-placeholder h3 {
+.toolbox-dialog-header-copy h2,
+.help-dialog-placeholder h3,
+.toolbox-dialog-placeholder h3 {
   margin: 0;
 }
 
-.help-dialog-placeholder p {
+.help-dialog-placeholder p,
+.toolbox-dialog-placeholder p {
   margin: 0;
   color: var(--text-1);
 }
 
-.help-dialog-header-actions {
+.help-dialog-header-actions,
+.toolbox-dialog-header-actions {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -781,7 +795,8 @@ body.is-resizing-dialog-shell * {
   margin-left: auto;
 }
 
-.help-dialog-header-button {
+.help-dialog-header-button,
+.toolbox-dialog-header-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -792,16 +807,20 @@ body.is-resizing-dialog-shell * {
 }
 
 .help-dialog-tab,
-.help-dialog-header-button {
+.toolbox-dialog-tab,
+.help-dialog-header-button,
+.toolbox-dialog-header-button {
   cursor: pointer;
 }
 
-.help-dialog-layout {
+.help-dialog-layout,
+.toolbox-dialog-layout {
   display: grid;
   min-height: 0;
 }
 
-.help-dialog-tab-list {
+.help-dialog-tab-list,
+.toolbox-dialog-tab-list {
   display: flex;
   flex: 1 1 auto;
   gap: 8px;
@@ -811,7 +830,8 @@ body.is-resizing-dialog-shell * {
   padding: 0;
 }
 
-.help-dialog-tab {
+.help-dialog-tab,
+.toolbox-dialog-tab {
   min-height: 34px;
   padding: 0 12px;
   border: 1px solid var(--line);
@@ -822,24 +842,29 @@ body.is-resizing-dialog-shell * {
 }
 
 .help-dialog-tab:hover,
-.help-dialog-tab.is-active {
+.toolbox-dialog-tab:hover,
+.help-dialog-tab.is-active,
+.toolbox-dialog-tab.is-active {
   background: var(--surface-3);
   color: var(--text-0);
 }
 
-.help-dialog-tab.is-active {
+.help-dialog-tab.is-active,
+.toolbox-dialog-tab.is-active {
   border-color: var(--accent-strong);
   background: var(--accent-soft);
 }
 
-.help-dialog-content {
+.help-dialog-content,
+.toolbox-dialog-content {
   display: grid;
   min-height: 0;
   overflow: auto;
   padding: 14px;
 }
 
-.help-dialog-placeholder {
+.help-dialog-placeholder,
+.toolbox-dialog-placeholder {
   display: grid;
   align-content: start;
   gap: 8px;
@@ -850,13 +875,16 @@ body.is-resizing-dialog-shell * {
   background: linear-gradient(135deg, var(--surface-2) 0%, var(--surface-1) 100%);
 }
 
-.help-dialog button:focus-visible {
+.help-dialog button:focus-visible,
+.toolbox-dialog button:focus-visible {
   outline: 2px solid var(--highlight-ring);
   outline-offset: 2px;
 }
 
 body.is-dragging-help-dialog,
-body.is-dragging-help-dialog * {
+body.is-dragging-help-dialog *,
+body.is-dragging-toolbox-dialog,
+body.is-dragging-toolbox-dialog * {
   cursor: grabbing !important;
   user-select: none;
 }
@@ -866,7 +894,8 @@ body.is-dragging-help-dialog * {
     height: min(680px, 100%);
   }
 
-  .help-dialog {
+  .help-dialog,
+  .toolbox-dialog {
     height: min(620px, 100%);
   }
 
@@ -884,7 +913,8 @@ body.is-dragging-help-dialog * {
     padding: 8px;
   }
 
-  .help-dialog-backdrop {
+  .help-dialog-backdrop,
+  .toolbox-dialog-backdrop {
     padding: 8px;
   }
 
@@ -893,7 +923,8 @@ body.is-dragging-help-dialog * {
     border-radius: 12px;
   }
 
-  .help-dialog {
+  .help-dialog,
+  .toolbox-dialog {
     width: 100%;
     border-radius: 12px;
   }
@@ -910,8 +941,11 @@ body.is-dragging-help-dialog * {
   }
 
   .help-dialog-header,
+  .toolbox-dialog-header,
   .help-dialog-tab-list,
-  .help-dialog-content {
+  .toolbox-dialog-tab-list,
+  .help-dialog-content,
+  .toolbox-dialog-content {
     padding-left: 12px;
     padding-right: 12px;
   }

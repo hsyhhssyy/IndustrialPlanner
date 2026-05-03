@@ -83,11 +83,11 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
 
     expect(result).toEqual({ status: "handled" });
     expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith(
-      "item_port_storager_1",
+      "item_port_log_hongs_bus",
       { x: 50, y: 40 },
     );
     expect(appHost.internalState.activeTool).toBe("single-placement");
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("item_port_storager_1");
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("item_port_log_hongs_bus");
   });
 
   it("uses the last mouse position when entering placement from a number shortcut", () => {
@@ -104,19 +104,19 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
 
     expect(result).toEqual({ status: "handled" });
     expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith(
-      "item_port_storager_1",
+      "item_port_log_hongs_bus",
       { x: 7, y: 8 },
     );
     expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 7, y: 8 });
   });
 
-  it("ignores number shortcuts when the active placement group has no target device", () => {
+  it("ignores number shortcuts when the active placement group has no target device for that slot", () => {
     const { context, editor, appHost } = createContext({
       selectingPlacementGroup: "resourcePower",
     });
     const module = createHypergryphSinglePlacementGestureModule();
 
-    const result = module.handle(keyDownEvent({ code: "Digit1", key: "1" }), context);
+    const result = module.handle(keyDownEvent({ code: "Digit4", key: "4" }), context);
 
     expect(result).toEqual({ status: "ignored" });
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
@@ -399,6 +399,15 @@ function createContext(options: {
       rotateCollection: vi.fn(),
     },
   };
+  const shortcuts: Record<string, string> = {
+    "shortcut-place-conveyor": "E",
+    "shortcut-place-pipe": "Q",
+    "shortcut-resources-power": "G",
+    "shortcut-warehouse": "C",
+    "shortcut-basic-production": "V",
+    "shortcut-synthesis": "B",
+  };
+
   const appHost = {
     state: {
       settings: {
@@ -441,17 +450,26 @@ function createContext(options: {
         appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
       }),
       alignCanvasFloatingToolbar: vi.fn(() => true),
-      getKeyboardShortcutFor: vi.fn((key: string) => {
-        const shortcuts: Record<string, string> = {
-          "shortcut-place-conveyor": "E",
-          "shortcut-place-pipe": "Q",
-          "shortcut-resources-power": "G",
-          "shortcut-warehouse": "C",
-          "shortcut-basic-production": "V",
-          "shortcut-synthesis": "B",
-        };
+      getKeyboardShortcutFor: vi.fn((key: string) => shortcuts[key] ?? ""),
+      isShortcutFor: vi.fn((key: string, code: string | null, eventKey?: string | null) => {
+        const shortcut = (shortcuts[key] ?? "").trim().toLowerCase();
+        if (shortcut === "") {
+          return false;
+        }
 
-        return shortcuts[key] ?? "";
+        if ((eventKey ?? "").trim().toLowerCase() === shortcut) {
+          return true;
+        }
+
+        if (shortcut.length === 1 && shortcut >= "a" && shortcut <= "z") {
+          return code === `Key${shortcut.toUpperCase()}`;
+        }
+
+        if (shortcut.length === 1 && shortcut >= "0" && shortcut <= "9") {
+          return code === `Digit${shortcut}` || code === `Numpad${shortcut}`;
+        }
+
+        return (code ?? "").trim().toLowerCase() === shortcut;
       }),
     },
     workspace: {

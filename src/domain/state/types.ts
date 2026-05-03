@@ -98,11 +98,17 @@ export interface ToolInfo {
   readonly marqueeType: MarqueeCollectionType;
 }
 
+export type SimulationState = "stop" | "start" | "pause";
+
+export type SimulationSpeed = 0.25 | 1 | 2 | 4 | 8 | 16;
+
 export interface UiState {
   readonly settings: AppSettings;
   readonly workbench: WorkbenchState;
   readonly screenProfile: ScreenProfile;
   readonly theme: AppTheme;
+  readonly simulationState: SimulationState;
+  readonly simulationSpeed: SimulationSpeed;
   readonly activeTool: ActiveTool;
   readonly toolInfo: ToolInfo;
 }

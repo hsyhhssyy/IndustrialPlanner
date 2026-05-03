@@ -116,6 +116,7 @@ export function compileSimulationTopology(
       result: compileEntityDevice({
         entity,
         definition,
+        registryQueries: options.registry.queries,
         recipeDefinitionMap,
         itemCatalog,
         ticksPerSecond,
@@ -355,12 +356,13 @@ function compileWarehouseDevice(
 function compileEntityDevice(options: {
   readonly entity: WorldEntity;
   readonly definition: EntityDefinition;
+  readonly registryQueries: RegistryContract["queries"];
   readonly recipeDefinitionMap: ReadonlyMap<string, RecipeDefinition>;
   readonly itemCatalog: Record<string, CompiledSimulationItem>;
   readonly ticksPerSecond: number;
 }): DeviceCompileResult {
   const deviceId = `device:${options.entity.id}`;
-  const transportClass = resolveTransportClass(options.definition);
+  const transportClass = resolveTransportClass(options.registryQueries, options.definition);
   const cacheGroups: CompiledSimulationCacheGroup[] = [];
   const slots: CompiledSimulationSlotTemplate[] = [];
   const ports: CompiledSimulationPort[] = [];
@@ -1045,21 +1047,20 @@ function minCountLimit(
   return Math.min(left, right);
 }
 
-function resolveTransportClass(definition: EntityDefinition): SimulationTransportClass {
-  if (
-    definition.id === "belt_straight_1x1"
-    || definition.id === "belt_turn_cw_1x1"
-    || definition.id === "belt_turn_ccw_1x1"
-  ) {
+function resolveTransportClass(
+  registryQueries: RegistryContract["queries"],
+  definition: EntityDefinition,
+): SimulationTransportClass {
+  const dedicatedLogisticsKind = registryQueries.resolveDedicatedLogisticsKind(definition.id);
+
+  if (dedicatedLogisticsKind === "belt") {
     return "strict-belt";
   }
-  if (
-    definition.id === "pipe_straight_1x1"
-    || definition.id === "pipe_turn_cw_1x1"
-    || definition.id === "pipe_turn_ccw_1x1"
-  ) {
+
+  if (dedicatedLogisticsKind === "pipe") {
     return "strict-pipe";
   }
+
   if (definition.portGroups.length === 0 && definition.storageSlotGroups.length === 0) {
     return "non-graph";
   }

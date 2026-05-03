@@ -667,48 +667,12 @@ export function resolvePlacementGroupByShortcut(options: {
   }
 
   for (const [group, shortcutKeyId] of Object.entries(PLACEMENT_GROUP_SHORTCUTS)) {
-    const shortcut = options.appHost.internalActions.getKeyboardShortcutFor(shortcutKeyId);
-    if (doesKeyEventMatchShortcut({
-      code: options.code,
-      key: options.key,
-      shortcut,
-    })) {
+    if (options.appHost.internalActions.isShortcutFor(shortcutKeyId, options.code, options.key)) {
       return group as PlacementGroup;
     }
   }
 
   return null;
-}
-
-function doesKeyEventMatchShortcut(options: {
-  code: string | null;
-  key: string | null;
-  shortcut: string;
-}): boolean {
-  const shortcut = normalizeShortcut(options.shortcut);
-  if (shortcut === "") {
-    return false;
-  }
-
-  const key = normalizeShortcut(options.key ?? "");
-  if (key === shortcut) {
-    return true;
-  }
-
-  const code = options.code ?? "";
-  if (shortcut.length === 1 && shortcut >= "a" && shortcut <= "z") {
-    return code === `Key${shortcut.toUpperCase()}`;
-  }
-
-  if (shortcut.length === 1 && shortcut >= "0" && shortcut <= "9") {
-    return code === `Digit${shortcut}` || code === `Numpad${shortcut}`;
-  }
-
-  return false;
-}
-
-function normalizeShortcut(shortcut: string): string {
-  return shortcut.trim().toLowerCase();
 }
 
 export function resolveDeviceShortcutIndex(options: {

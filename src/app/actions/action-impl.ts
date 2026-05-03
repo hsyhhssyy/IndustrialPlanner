@@ -13,7 +13,7 @@ import { lookupMessageText } from "@/shared/i18n/messages";
 import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 import type { KeyboardShortcutManager } from "./keyboard-shortcut-manager";
 
-import type { ActiveTool } from "@/domain/state/types";
+import type { ActiveTool, SimulationState } from "@/domain/state/types";
 import {
   CANVAS_FLOATING_TOOLBAR_BUTTON_IDS,
   CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS,
@@ -24,12 +24,13 @@ import {
   type CanvasTopLeftCornerToolbarButtonId,
   clampLeftDockWidth,
   createDefaultDialogStateForKey,
-  DEFAULT_HELP_DIALOG_TAB_ID,
   DEFAULT_RIGHT_DOCK_WIDTH,
   DIALOG_KEYS,
   type DialogKey,
   HELP_DIALOG_TAB_IDS,
+  resolveDefaultDialogTabId,
   resolveLeftDockWidthForScreenProfile,
+  TOOLBOX_DIALOG_TAB_IDS,
   type ActivePanel,
   type UiStateReadWrite,
 } from "../state/state-impl";
@@ -40,6 +41,7 @@ export interface AppInternalAction {
   toggleLeftDock: () => void;
   toggleRightDock: () => void;
   toggleTopBarCollapsed: () => void;
+  setSimulationState: (simulationState: SimulationState) => void;
   setRightDockActiveTab: (tabId: RightDockTabId) => void;
   openDialog: (request: string) => void;
   closeDialog: (dialogKey: string) => void;
@@ -73,6 +75,7 @@ export interface AppInternalAction {
   setScreenProfile: (screenProfile: ScreenProfile) => void;
   setLocale: (locale: AppLocale) => void;
   getKeyboardShortcutFor: (key: string) => string;
+  isShortcutFor: (key: string, code: string | null, eventKey?: string | null) => boolean;
   setShortcutFor: (key: string, value: string) => void;
 }
 
@@ -109,6 +112,14 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     this.internalState.workbench.topBarCollapsed = !this.internalState.workbench.topBarCollapsed;
   });
 
+  public readonly setSimulationState: AppInternalAction["setSimulationState"] = action((simulationState) => {
+    if (this.internalState.simulationState === simulationState) {
+      return;
+    }
+
+    this.internalState.simulationState = simulationState;
+  });
+
   public readonly setRightDockActiveTab: AppInternalAction["setRightDockActiveTab"] = action((tabId) => {
     if (this.internalState.workbench.rightDockActiveTab === tabId) {
       return;
@@ -125,33 +136,17 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     }
 
     const dialogState = this.ensureDialogState(target.dialogKey);
+    const shouldResetDialogShellState =
+      (dialogState.width !== null && dialogState.width > window.innerWidth)
+      || (dialogState.height !== null && dialogState.height > window.innerHeight)
+      || dialogState.offsetX < 0
+      || dialogState.offsetY < 0;
+
+    if (shouldResetDialogShellState) {
+      Object.assign(dialogState, createDefaultDialogStateForKey(target.dialogKey));
+    }
+
     dialogState.visible = true;
-
-    // 打开时检查对话框尺寸是否超过网页可视区域，超过则自动调整
-    const maxWidth = window.innerWidth;
-    const maxHeight = window.innerHeight;
-    let sizeChanged = false;
-
-    if (dialogState.width !== null && dialogState.width > maxWidth) {
-      dialogState.width = maxWidth;
-      sizeChanged = true;
-    }
-
-    if (dialogState.height !== null && dialogState.height > maxHeight) {
-      dialogState.height = maxHeight;
-      sizeChanged = true;
-    }
-
-    if (sizeChanged) {
-      // 确保偏移量也合理（对话框不会超出屏幕）
-      if (dialogState.offsetX + (dialogState.width ?? 0) > maxWidth) {
-        dialogState.offsetX = Math.max(0, maxWidth - (dialogState.width ?? 400));
-      }
-
-      if (dialogState.offsetY + (dialogState.height ?? 0) > maxHeight) {
-        dialogState.offsetY = Math.max(0, maxHeight - (dialogState.height ?? 300));
-      }
-    }
 
     if (target.tabId !== null) {
       const nextTab = normalizeDialogTab(target.dialogKey, target.tabId);
@@ -159,8 +154,8 @@ export class AppActionImpl implements AppAction, AppInternalAction {
       if (nextTab !== null) {
         dialogState.activeTab = nextTab;
       }
-    } else if (target.dialogKey === "help" && dialogState.activeTab === null) {
-      dialogState.activeTab = DEFAULT_HELP_DIALOG_TAB_ID;
+    } else if (dialogState.activeTab === null) {
+      dialogState.activeTab = resolveDefaultDialogTabId(target.dialogKey);
     }
   });
 
@@ -354,6 +349,7 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
     const aboveAnchor = resolveCanvasFloatingToolbarAnchor({
       collectionWidth: collectionRect.width,
+      deviceClass: this.internalState.screenProfile.deviceClass,
       topLeftAboveCellRect,
       toolbarHeight,
     });
@@ -524,6 +520,10 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     return this.shortcutManager.getKeyboardShortcutFor(key);
   };
 
+  public readonly isShortcutFor: AppInternalAction["isShortcutFor"] = (key, code, eventKey) => {
+    return this.shortcutManager.isShortcutFor(key, code, eventKey);
+  };
+
   public readonly setShortcutFor: AppInternalAction["setShortcutFor"] = (key, value) => {
     this.shortcutManager.setShortcutFor(key, value);
   };
@@ -605,11 +605,15 @@ function normalizeDialogKey(dialogKey: string): DialogKey | null {
 }
 
 function normalizeDialogTab(dialogKey: DialogKey, tabId: string): string | null {
-  if (dialogKey !== "help") {
-    return null;
+  if (dialogKey === "toolbox") {
+    return normalizeToolboxDialogTab(tabId);
   }
 
-  return normalizeHelpDialogTab(tabId);
+  if (dialogKey === "help") {
+    return normalizeHelpDialogTab(tabId);
+  }
+
+  return null;
 }
 
 function resolvePredictedViewportRectForDockToggle(options: {
@@ -717,6 +721,12 @@ function normalizeHelpDialogTab(tabId: string): string | null {
   return knownTabs.has(tabId) ? tabId : null;
 }
 
+function normalizeToolboxDialogTab(tabId: string): string | null {
+  const knownTabs = new Set<string>(TOOLBOX_DIALOG_TAB_IDS);
+
+  return knownTabs.has(tabId) ? tabId : null;
+}
+
 function normalizeClientPixelPoint(
   clientPixelPoint: ClientPixelPoint,
 ): ClientPixelPoint | null {
@@ -751,11 +761,13 @@ function normalizeCanvasFloatingToolbarSize(
 
 function resolveCanvasFloatingToolbarAnchor(options: {
   collectionWidth: number;
+  deviceClass: ScreenProfile["deviceClass"];
   topLeftAboveCellRect: ClientPixelRect;
   toolbarHeight: number;
 }): ClientPixelPoint {
   const cellHeight = options.topLeftAboveCellRect.height;
   const verticalOverflow = Math.max(0, options.toolbarHeight - cellHeight);
+  const desktopOffset = options.deviceClass === "desktop" ? cellHeight : 0;
 
   return {
     x:
@@ -764,6 +776,7 @@ function resolveCanvasFloatingToolbarAnchor(options: {
     y:
       options.topLeftAboveCellRect.top
       - cellHeight / 2
-      - verticalOverflow / 2,
+      - verticalOverflow / 2
+      + desktopOffset,
   };
 }

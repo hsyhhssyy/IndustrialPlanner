@@ -230,14 +230,26 @@ describe("TopBar", () => {
       root.render(<TopBar appHost={appHost} />);
     });
 
+    const simulationButton = container.querySelector(
+      '[data-ui-button-id="top-bar-simulation-control"]',
+    ) as HTMLButtonElement | null;
+    const fullscreenButton = container.querySelector(
+      ".top-bar-fullscreen-button",
+    ) as HTMLButtonElement | null;
+
     expect(container.querySelectorAll(".top-bar-metric")).toHaveLength(0);
     expect(container.textContent).not.toContain("语言:");
     expect(container.textContent).not.toContain("主题:");
     expect(container.textContent).not.toContain("设备:");
     expect(container.textContent).not.toContain("屏幕:");
+    expect(simulationButton).not.toBeNull();
+    expect(fullscreenButton).not.toBeNull();
     expect(
       Array.from(container.querySelectorAll(".top-bar-controls button")),
-    ).toHaveLength(1);
+    ).toEqual([
+      simulationButton,
+      fullscreenButton,
+    ]);
     expect(container.querySelector(".top-bar-theme-button")).toBeNull();
   });
 
@@ -262,15 +274,20 @@ describe("TopBar", () => {
     const fullscreenButton = container.querySelector(
       ".top-bar-fullscreen-button",
     ) as HTMLButtonElement | null;
+    const simulationButton = container.querySelector(
+      '[data-ui-button-id="top-bar-simulation-control"]',
+    ) as HTMLButtonElement | null;
     const collapseButton = container.querySelector(
       ".top-bar-collapse-button",
     ) as HTMLButtonElement | null;
 
+    expect(simulationButton).not.toBeNull();
     expect(fullscreenButton).not.toBeNull();
     expect(collapseButton).not.toBeNull();
     expect(
       Array.from(container.querySelectorAll(".top-bar-controls button")),
     ).toEqual([
+      simulationButton,
       fullscreenButton,
       collapseButton,
     ]);

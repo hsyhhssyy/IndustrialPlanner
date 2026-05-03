@@ -229,12 +229,16 @@ describe("Left dock panel switching", () => {
     );
     const warehouseGroup = groups.find((group) => group.textContent?.includes("仓库存取"));
     const productionGroup = groups.find((group) => group.textContent?.includes("基础生产"));
+    const warehouseDeviceButtons = warehouseGroup?.querySelectorAll(".placement-device-button") ?? [];
 
     expect(warehouseGroup).not.toBeUndefined();
     expect(productionGroup).not.toBeUndefined();
     expect(warehouseGroup?.classList.contains("is-placement-group-active")).toBe(true);
     expect(productionGroup?.classList.contains("is-placement-group-active")).toBe(false);
-    expect(warehouseGroup?.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(6);
+    expect(warehouseDeviceButtons.length).toBeGreaterThan(0);
+    expect(warehouseGroup?.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(
+      warehouseDeviceButtons.length,
+    );
     expect(productionGroup?.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(0);
     expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
   });

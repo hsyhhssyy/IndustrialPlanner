@@ -127,6 +127,13 @@ export type MessageKey =
   | "topBar.settings"
   | "settingsDialog.title"
   | "settingsDialog.groups"
+  | "toolboxDialog.title"
+  | "toolboxDialog.tab.itemEncyclopedia"
+  | "toolboxDialog.tab.productionPlanning"
+  | "toolboxDialog.tab.moduleBalancing"
+  | "toolboxDialog.empty"
+  | "toolboxDialog.maximize"
+  | "toolboxDialog.restore"
   | "helpDialog.title"
   | "helpDialog.description"
   | "helpDialog.tab.overview"
@@ -174,6 +181,8 @@ export type MessageKey =
   | "settingsField.shortcut-basic-productionDescription"
   | "settingsField.shortcut-synthesis"
   | "settingsField.shortcut-synthesisDescription"
+  | "settingsField.shortcut-delete-device"
+  | "settingsField.shortcut-delete-deviceDescription"
   | "settingsField.useSimplifiedDeviceIcons"
   | "settingsField.useSimplifiedDeviceIconsDescription"
   | "settingsField.showHotkeys"
@@ -347,6 +356,13 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "topBar.settings": "设置",
     "settingsDialog.title": "设置",
     "settingsDialog.groups": "设置分组",
+    "toolboxDialog.title": "工具箱",
+    "toolboxDialog.tab.itemEncyclopedia": "物品百科",
+    "toolboxDialog.tab.productionPlanning": "产线规划",
+    "toolboxDialog.tab.moduleBalancing": "模块配平",
+    "toolboxDialog.empty": "当前工具箱内容尚未填充，这里先保留为空面板。",
+    "toolboxDialog.maximize": "最大化工具箱",
+    "toolboxDialog.restore": "还原工具箱",
     "helpDialog.title": "帮助",
     "helpDialog.description": "多个帮助主题会在这里按标签页组织。",
     "helpDialog.tab.overview": "概览",
@@ -394,6 +410,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.shortcut-basic-productionDescription": "设置基础生产的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-synthesis": "合成制造",
     "settingsField.shortcut-synthesisDescription": "设置合成制造的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-delete-device": "删除设备",
+    "settingsField.shortcut-delete-deviceDescription": "设置删除选中设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.useSimplifiedDeviceIcons": "使用简笔画设备图片",
     "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图简笔画显示方式，不会提高性能。",
     "settingsField.showHotkeys": "显示快捷键",
@@ -566,6 +584,13 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "topBar.settings": "Settings",
     "settingsDialog.title": "Settings",
     "settingsDialog.groups": "Setting Groups",
+    "toolboxDialog.title": "Toolbox",
+    "toolboxDialog.tab.itemEncyclopedia": "Item Encyclopedia",
+    "toolboxDialog.tab.productionPlanning": "Production Planning",
+    "toolboxDialog.tab.moduleBalancing": "Module Balancing",
+    "toolboxDialog.empty": "Toolbox content has not been filled in yet, so this panel is intentionally empty for now.",
+    "toolboxDialog.maximize": "Maximize Toolbox",
+    "toolboxDialog.restore": "Restore Toolbox",
     "helpDialog.title": "Help",
     "helpDialog.description": "Help topics will be organized here as multiple tabs.",
     "helpDialog.tab.overview": "Overview",
@@ -613,6 +638,8 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "settingsField.shortcut-basic-productionDescription": "Set the shortcut key for basic production; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-synthesis": "Synthesis",
     "settingsField.shortcut-synthesisDescription": "Set the shortcut key for synthesis manufacturing; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-delete-device": "Delete Device",
+    "settingsField.shortcut-delete-deviceDescription": "Set the shortcut key for deleting selected devices; editable only when Arknights Operation Mode is off.",
     "settingsField.useSimplifiedDeviceIcons": "Use Simplified Device Icons",
     "settingsField.useSimplifiedDeviceIconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
     "settingsField.alwaysShowGridLines": "Always Show Grid Lines",
@@ -655,7 +682,7 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "uiGroup.warehouse": "Warehouse Access",
     "uiGroup.basicProduction": "Basic Production",
     "uiGroup.advancedManufacturing": "Advanced Manufacturing",
-    "registry.entity.item_port_filling_pd_mc_1.name": "Bottling Machine",
+    "registry.entity.item_port_filling_pd_mc_1.name": "Filling Unit",
     "uiGroup.hidden": "Hidden Devices",
   },
 };

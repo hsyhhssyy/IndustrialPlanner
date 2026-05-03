@@ -20,6 +20,7 @@ import {
   DEFAULT_HELP_DIALOG_TAB_ID,
   DEFAULT_RIGHT_DOCK_TAB_ID,
   DEFAULT_RIGHT_DOCK_WIDTH,
+  DEFAULT_TOOLBOX_DIALOG_TAB_ID,
   MOBILE_LEFT_DOCK_WIDTH,
 } from "@/app/state/state-impl";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
@@ -59,6 +60,7 @@ const DEFAULT_APP_SHORTCUTS_STORAGE = {
   [SHORTCUT_KEY.WAREHOUSE]: "C",
   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
   [SHORTCUT_KEY.SYNTHESIS]: "B",
+  [SHORTCUT_KEY.DELETE_DEVICE]: "F",
 } as const;
 
 function createDialogStateSnapshot(options: {
@@ -87,6 +89,7 @@ function createWorkbenchStorageSnapshot(options: {
   leftDockWidth?: number;
   topBarCollapsed?: boolean;
   rightDockActiveTab?: "base" | "power" | "selection";
+  toolboxDialog?: ReturnType<typeof createDialogStateSnapshot>;
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
 } = {}) {
@@ -97,6 +100,7 @@ function createWorkbenchStorageSnapshot(options: {
     topBarCollapsed: options.topBarCollapsed ?? false,
     rightDockActiveTab: options.rightDockActiveTab ?? DEFAULT_RIGHT_DOCK_TAB_ID,
     dialogState: {
+      toolbox: options.toolboxDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_TOOLBOX_DIALOG_TAB_ID }),
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
     },
@@ -157,6 +161,21 @@ function dispatchWindowPointerEvent(
     shiftKey: { value: false },
   });
   window.dispatchEvent(event);
+  return event;
+}
+
+function dispatchClickEvent(
+  target: Element,
+  init: {
+    detail?: number;
+  } = {},
+): MouseEvent {
+  const event = new MouseEvent("click", {
+    bubbles: true,
+    cancelable: true,
+    detail: init.detail ?? 1,
+  });
+  target.dispatchEvent(event);
   return event;
 }
 
@@ -662,7 +681,7 @@ describe("WorkbenchApp", () => {
     expect(leftMouseEvent.defaultPrevented).toBe(false);
   });
 
-  it("keeps pointer activity inside the canvas floating toolbar out of canvas gestures and only emits ui-button events", () => {
+  it("keeps pointer activity inside the canvas floating toolbar out of canvas gestures and emits selection action buttons for pointer activation", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
@@ -676,7 +695,7 @@ describe("WorkbenchApp", () => {
       editorHost.actions.createMoveOperationDraft();
       appHost.internalActions.showCanvasFloatingToolbarForCollection(
         [
-          "canvas-floating-toolbar-button-ok",
+          "canvas-floating-toolbar-button-move",
           "canvas-floating-toolbar-button-delete",
         ],
         "preview",
@@ -684,18 +703,21 @@ describe("WorkbenchApp", () => {
     });
 
     const toolbar = container.querySelector(".canvas-floating-toolbar") as HTMLDivElement | null;
-    const okButton = container.querySelector(
-      '[data-ui-button-id="canvas-floating-toolbar-button-ok"]',
+    const moveButton = container.querySelector(
+      '[data-ui-button-id="canvas-floating-toolbar-button-move"]',
     ) as HTMLButtonElement | null;
     const deleteButton = container.querySelector(
       '[data-ui-button-id="canvas-floating-toolbar-button-delete"]',
     ) as HTMLButtonElement | null;
 
     expect(toolbar).not.toBeNull();
-    expect(okButton).not.toBeNull();
+    expect(moveButton).not.toBeNull();
     expect(deleteButton).not.toBeNull();
+    expect(
+      moveButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("move");
 
-    if (!toolbar || !okButton || !deleteButton) {
+    if (!toolbar || !moveButton || !deleteButton) {
       throw new Error("Canvas floating toolbar did not render expected buttons.");
     }
 
@@ -726,14 +748,14 @@ describe("WorkbenchApp", () => {
     expect(gestures).toHaveLength(0);
 
     act(() => {
-      dispatchPointerEvent(okButton, "pointerdown", {
+      dispatchPointerEvent(moveButton, "pointerdown", {
         pointerId: 22,
         pointerType: "mouse",
         clientX: 220,
         clientY: 180,
         buttons: 1,
       });
-      dispatchPointerEvent(okButton, "pointerup", {
+      dispatchPointerEvent(moveButton, "pointerup", {
         pointerId: 22,
         pointerType: "mouse",
         clientX: 220,
@@ -759,7 +781,7 @@ describe("WorkbenchApp", () => {
     expect(gestures).toMatchObject([
       {
         type: "ui-button-mouse-tap",
-        uiButtonId: "canvas-floating-toolbar-button-ok",
+        uiButtonId: "canvas-floating-toolbar-button-move",
       },
       {
         type: "ui-button-touch-tap",
@@ -768,7 +790,57 @@ describe("WorkbenchApp", () => {
     ]);
   });
 
-  it("shows the canvas right dock toolbar only while the right dock is closed and restores it after reopen", () => {
+  it("emits canvas floating toolbar keyboard activation only from accessibility clicks", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+    const gestures: GestureEvent[] = [];
+    appHost.gestureAdapter.subscribe((event) => gestures.push(event));
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
+      editorHost.actions.createMoveOperationDraft();
+      appHost.internalActions.showCanvasFloatingToolbarForCollection(
+        [
+          "canvas-floating-toolbar-button-move",
+          "canvas-floating-toolbar-button-delete",
+        ],
+        "preview",
+      );
+    });
+
+    const moveButton = container.querySelector(
+      '[data-ui-button-id="canvas-floating-toolbar-button-move"]',
+    ) as HTMLButtonElement | null;
+
+    expect(moveButton).not.toBeNull();
+
+    if (!moveButton) {
+      throw new Error("Canvas floating toolbar did not render the move button.");
+    }
+
+    act(() => {
+      dispatchClickEvent(moveButton, { detail: 1 });
+    });
+
+    expect(gestures).toHaveLength(0);
+
+    act(() => {
+      dispatchClickEvent(moveButton, { detail: 0 });
+    });
+
+    expect(gestures).toMatchObject([
+      {
+        type: "ui-button-mouse-tap",
+        uiButtonId: "canvas-floating-toolbar-button-move",
+        button: 0,
+      },
+    ]);
+  });
+
+  it("keeps the canvas right dock toolbar visible while the right dock toggles", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -780,7 +852,7 @@ describe("WorkbenchApp", () => {
       ]);
     });
 
-    expect(container.querySelector(".canvas-right-dock-toolbar")).toBeNull();
+    expect(container.querySelector(".canvas-right-dock-toolbar")).not.toBeNull();
 
     act(() => {
       appHost.internalActions.toggleRightDock();
@@ -809,7 +881,7 @@ describe("WorkbenchApp", () => {
       appHost.internalActions.toggleRightDock();
     });
 
-    expect(container.querySelector(".canvas-right-dock-toolbar")).toBeNull();
+    expect(container.querySelector(".canvas-right-dock-toolbar")).not.toBeNull();
 
     act(() => {
       appHost.internalActions.toggleRightDock();
@@ -1438,6 +1510,39 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".help-dialog")).not.toBeNull();
     expect(container.querySelector("#help-dialog-tab-version")?.getAttribute("aria-selected")).toBe("true");
     expect(container.querySelector(".help-dialog-placeholder h3")?.textContent).toBe("版本更新");
+  });
+
+  it("opens the toolbox dialog through toolbar interaction", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const toolboxButton = container.querySelector(
+      'button[title="工具箱"]',
+    ) as HTMLButtonElement | null;
+
+    expect(toolboxButton).not.toBeNull();
+
+    act(() => {
+      toolboxButton?.click();
+    });
+
+    expect(container.querySelector(".toolbox-dialog")).not.toBeNull();
+    expect(container.querySelector("#toolbox-dialog-tab-item-encyclopedia")?.getAttribute("aria-selected")).toBe("true");
+
+    const productionPlanningTab = container.querySelector(
+      "#toolbox-dialog-tab-production-planning",
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      productionPlanningTab?.click();
+    });
+
+    expect(appHost.internalState.workbench.dialogState.toolbox.activeTab).toBe("production-planning");
+    expect(container.querySelector(".toolbox-dialog-placeholder h3")?.textContent).toBe("产线规划");
   });
 
   it("writes language changes into AppSettings and re-renders through mobx", () => {

@@ -11,6 +11,7 @@ import {
   resolveWorldEntitySpriteLayout,
 } from "@/renderer/scene/render-scene-orchestrator"
 import {
+  clipWorldGridLineAxesToViewportBounds,
   resolveWorldGridDisconnectedSegmentSpans,
   resolveWorldGridIntersectionDotSize,
   resolveWorldGridLocalViewportBounds,
@@ -511,6 +512,48 @@ describe("resolveWorldGridLocalViewportBounds", () => {
       width: 50,
       height: 30,
     })
+  })
+
+  it("clips local grid lines from the full viewport without shifting them", () => {
+    const viewportBounds = {
+      left: 0,
+      top: 0,
+      width: 100,
+      height: 100,
+    }
+    const drawViewportBounds = resolveWorldGridLocalViewportBounds({
+      viewportBounds,
+      viewportCenter: {
+        x: 0,
+        y: 0,
+      },
+      gridCellPixelSize: 10,
+      lineBounds: {
+        left: -2,
+        top: -1,
+        right: 3,
+        bottom: 2,
+      },
+    })
+
+    expect(drawViewportBounds).not.toBeNull()
+
+    const lineAxes = clipWorldGridLineAxesToViewportBounds({
+      lineAxes: resolveWorldGridLineAxes({
+        viewportBounds,
+        viewportCenter: {
+          x: 0,
+          y: 0,
+        },
+        gridCellPixelSize: 10,
+      }),
+      viewportBounds: drawViewportBounds!,
+    })
+
+    expect(lineAxes.vertical.fine).toEqual([30, 40, 60, 70, 80])
+    expect(lineAxes.vertical.major).toEqual([50])
+    expect(lineAxes.horizontal.fine).toEqual([40, 60, 70])
+    expect(lineAxes.horizontal.major).toEqual([50])
   })
 })
 

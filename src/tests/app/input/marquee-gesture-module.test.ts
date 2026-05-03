@@ -43,6 +43,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
       "canvas-right-dock-toolbar-button-exit",
       "canvas-right-dock-toolbar-button-move",
+      "canvas-right-dock-toolbar-button-delete",
     ]);
     expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       "canvas-top-left-corner-toolbar-button-toggle-pipe",
@@ -96,6 +97,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
       "canvas-right-dock-toolbar-button-exit",
       "canvas-right-dock-toolbar-button-move",
+      "canvas-right-dock-toolbar-button-delete",
     ]);
     expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       "canvas-top-left-corner-toolbar-button-toggle-pipe",

@@ -27,4 +27,29 @@ describe("createRegistryContract", () => {
       expect(definition.outerRing.left).toBeGreaterThanOrEqual(0);
     }
   });
+
+  it("classifies dedicated and general logistics devices by definition id", () => {
+    const registry = createRegistryContract();
+
+    expect(registry.queries.isDedicatedLogisticsDevice("belt_straight_1x1")).toBe(true);
+    expect(registry.queries.isDedicatedLogisticsDevice("pipe_turn_ccw_1x1")).toBe(true);
+    expect(registry.queries.isDedicatedLogisticsDevice("item_log_splitter")).toBe(false);
+    expect(registry.queries.isDedicatedLogisticsDevice("item_pipe_connector")).toBe(false);
+
+    expect(registry.queries.isGeneralLogisticsDevice("belt_straight_1x1")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("item_log_splitter")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("item_log_converger")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("item_log_connector")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("item_pipe_splitter")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("item_pipe_converger")).toBe(true);
+    expect(registry.queries.isGeneralLogisticsDevice("item_pipe_connector")).toBe(true);
+
+    expect(registry.queries.isGeneralLogisticsDevice("item_log_admission")).toBe(false);
+    expect(registry.queries.isGeneralLogisticsDevice("item_pipe_admission")).toBe(false);
+    expect(registry.queries.isGeneralLogisticsDevice("ore_miner")).toBe(false);
+
+    expect(registry.queries.resolveDedicatedLogisticsKind("belt_straight_1x1")).toBe("belt");
+    expect(registry.queries.resolveDedicatedLogisticsKind("pipe_turn_ccw_1x1")).toBe("pipe");
+    expect(registry.queries.resolveDedicatedLogisticsKind("item_log_splitter")).toBeNull();
+  });
 });

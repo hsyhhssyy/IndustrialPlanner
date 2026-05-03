@@ -88,6 +88,10 @@ type PortStorageBindingDefinition = EntityDefinition["portStorageBindings"][numb
 type PortEdgeInput = "N" | "S" | "W" | "E";
 type FilterType = NonNullable<ItemFilterDefinition["itemFilterType"]>;
 type EntityDefinitionInput = Omit<EntityDefinition, "inspectors">;
+type EmptyEntityDefinitionInput = Pick<
+  EntityDefinitionInput,
+  "id" | "nameKey" | "spriteId" | "footprint" | "uiGroup" | "tags"
+> & Partial<Pick<EntityDefinitionInput, "requiresPower" | "powerDemand">>;
 
 function createEntityDefinition(
   definition: EntityDefinitionInput,
@@ -97,6 +101,19 @@ function createEntityDefinition(
     ...definition,
     inspectors,
   };
+}
+
+function createEmptyEntityDefinition(
+  definition: EmptyEntityDefinitionInput,
+): EntityDefinition {
+  return createEntityDefinition({
+    ...definition,
+    requiresPower: definition.requiresPower ?? false,
+    powerDemand: definition.powerDemand ?? 0,
+    portGroups: [],
+    storageSlotGroups: [],
+    portStorageBindings: [],
+  });
 }
 
 function resolveEdge(edge: PortEdgeInput): PortDefinition["edge"] {
@@ -388,7 +405,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_filling_pd_mc_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "basicProduction",
-    tags: [],
+    tags: ["alter:item_port_filling_pd_mc_1", "alter-variant:liquid"],
     requiresPower: true,
     powerDemand: 20,
     portGroups: [
@@ -966,5 +983,206 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     portFilter: portFilterInspector(),
     slotConfig: slotConfigInspector(),
     linkConfig: linkConfigInspector('share-all'),
+  }),
+  // v2 metadata sync: only keep name, footprint, sprite, tags, and basic placement group.
+  createEmptyEntityDefinition({
+    id: "item_port_loader_1",
+    nameKey: "registry.entity.item_port_loader_1.name",
+    spriteId: "item_port_loader_1",
+    footprint: { width: 3, height: 1 },
+    uiGroup: "warehouse",
+    tags: [],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_furnance_1",
+    nameKey: "registry.entity.item_port_furnance_1.name",
+    spriteId: "item_port_furnance_1",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "basicProduction",
+    tags: [],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_liquid_furnance_1",
+    nameKey: "registry.entity.item_port_liquid_furnance_1.name",
+    spriteId: "item_port_liquid_furnance_1",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "basicProduction",
+    tags: ["武陵", "alter:item_port_furnance_1", "alter-variant:liquid"],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_cmpt_mc_1",
+    nameKey: "registry.entity.item_port_cmpt_mc_1.name",
+    spriteId: "item_port_cmpt_mc_1",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "basicProduction",
+    tags: [],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_shaper_1",
+    nameKey: "registry.entity.item_port_shaper_1.name",
+    spriteId: "item_port_shaper_1",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "basicProduction",
+    tags: [],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_seedcol_1",
+    nameKey: "registry.entity.item_port_seedcol_1.name",
+    spriteId: "item_port_seedcol_1",
+    footprint: { width: 5, height: 5 },
+    uiGroup: "basicProduction",
+    tags: [],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_planter_1",
+    nameKey: "registry.entity.item_port_planter_1.name",
+    spriteId: "item_port_planter_1",
+    footprint: { width: 5, height: 5 },
+    uiGroup: "basicProduction",
+    tags: [],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_hydro_planter_1",
+    nameKey: "registry.entity.item_port_hydro_planter_1.name",
+    spriteId: "item_port_planter_1",
+    footprint: { width: 5, height: 5 },
+    uiGroup: "basicProduction",
+    tags: ["武陵", "alter:item_port_planter_1", "alter-variant:liquid"],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_winder_1",
+    nameKey: "registry.entity.item_port_winder_1.name",
+    spriteId: "item_port_winder_1",
+    footprint: { width: 6, height: 4 },
+    uiGroup: "advancedManufacturing",
+    tags: [],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_tools_asm_mc_1",
+    nameKey: "registry.entity.item_port_tools_asm_mc_1.name",
+    spriteId: "item_port_tools_asm_mc_1",
+    footprint: { width: 6, height: 4 },
+    uiGroup: "advancedManufacturing",
+    tags: [],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_thickener_1",
+    nameKey: "registry.entity.item_port_thickener_1.name",
+    spriteId: "item_port_thickener_1",
+    footprint: { width: 6, height: 4 },
+    uiGroup: "advancedManufacturing",
+    tags: [],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_power_sta_1",
+    nameKey: "registry.entity.item_port_power_sta_1.name",
+    spriteId: "item_port_power_sta_1",
+    footprint: { width: 2, height: 2 },
+    uiGroup: "resourcePower",
+    tags: [],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_mix_pool_large_1",
+    nameKey: "registry.entity.item_port_mix_pool_large_1.name",
+    spriteId: "item_port_mix_pool_large_1",
+    footprint: { width: 6, height: 5 },
+    uiGroup: "advancedManufacturing",
+    tags: ["武陵"],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_liquid_purifier_1",
+    nameKey: "registry.entity.item_port_liquid_purifier_1.name",
+    spriteId: "item_port_liquid_purifier_1",
+    footprint: { width: 5, height: 5 },
+    uiGroup: "advancedManufacturing",
+    tags: ["武陵"],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_xiranite_oven_1",
+    nameKey: "registry.entity.item_port_xiranite_oven_1.name",
+    spriteId: "item_port_xiranite_oven_1",
+    footprint: { width: 5, height: 5 },
+    uiGroup: "advancedManufacturing",
+    tags: ["武陵"],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_dismantler_1",
+    nameKey: "registry.entity.item_port_dismantler_1.name",
+    spriteId: "item_port_dismantler_1",
+    footprint: { width: 6, height: 4 },
+    uiGroup: "advancedManufacturing",
+    tags: ["武陵"],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_sp_hub_1",
+    nameKey: "registry.entity.item_port_sp_hub_1.name",
+    spriteId: "item_port_sp_hub_1",
+    footprint: { width: 9, height: 9 },
+    uiGroup: "hidden",
+    tags: [],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_water_pump_1",
+    nameKey: "registry.entity.item_port_water_pump_1.name",
+    spriteId: "item_port_water_pump_1",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "resourcePower",
+    tags: ["武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_udpipe_loader_2",
+    nameKey: "registry.entity.item_port_udpipe_loader_2.name",
+    spriteId: "item_port_udpipe_loader_2",
+    footprint: { width: 3, height: 5 },
+    uiGroup: "warehouse",
+    tags: ["武陵", "OuterRingAllowed"],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_udpipe_unloader_2",
+    nameKey: "registry.entity.item_port_udpipe_unloader_2.name",
+    spriteId: "item_port_udpipe_unloader_2",
+    footprint: { width: 3, height: 5 },
+    uiGroup: "warehouse",
+    tags: ["武陵", "OuterRingAllowed"],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_liquid_cleaner_1",
+    nameKey: "registry.entity.item_liquid_cleaner_1.name",
+    spriteId: "item_liquid_cleaner_1",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "basicProduction",
+    tags: ["武陵", "OuterRingAllowed"],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_liquid_storager_1",
+    nameKey: "registry.entity.item_port_liquid_storager_1.name",
+    spriteId: "item_port_liquid_storager_1",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "warehouse",
+    tags: ["武陵", "OuterRingAllowed", "alter:item_port_storager_1", "alter-variant:liquid"],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_port_power_diffuser_1",
+    nameKey: "registry.entity.item_port_power_diffuser_1.name",
+    spriteId: "item_port_power_diffuser_1",
+    footprint: { width: 2, height: 2 },
+    uiGroup: "resourcePower",
+    tags: [],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_log_admission",
+    nameKey: "registry.entity.item_log_admission.name",
+    spriteId: "item_log_admission",
+    footprint: { width: 1, height: 1 },
+    uiGroup: "beltLogistics",
+    tags: ["BeltFamily"],
+  }),
+  createEmptyEntityDefinition({
+    id: "item_pipe_admission",
+    nameKey: "registry.entity.item_pipe_admission.name",
+    spriteId: "item_pipe_admission",
+    footprint: { width: 1, height: 1 },
+    uiGroup: "pipeLogistics",
+    tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
   }),
 ];
