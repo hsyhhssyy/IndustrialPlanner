@@ -1,5 +1,5 @@
 import { action } from "mobx";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/components/bottom-status-bar";
 import { CanvasPanel } from "@/app/shell/components/canvas-panel";
@@ -7,8 +7,13 @@ import { CanvasFloatingToolbar } from "@/app/shell/components/canvas/canvas-floa
 import { CanvasLeftBottomToolbar } from "@/app/shell/components/canvas/canvas-left-bottom-toolbar";
 import { CanvasTopLeftCornerToolbar } from "@/app/shell/components/canvas/canvas-top-left-corner-toolbar";
 import { CanvasRightDockToolbar } from "@/app/shell/components/canvas/canvas-right-dock-toolbar";
-import { FullscreenToggleButton } from "@/app/shell/components/fullscreen-toggle-button";
+import {
+  FullscreenToggleButton,
+  requestDocumentFullscreen,
+  resolveFullscreenState,
+} from "@/app/shell/components/fullscreen-toggle-button";
 import { HelpDialog } from "@/app/shell/components/help-dialog";
+import { MobilePortraitGate } from "@/app/shell/components/mobile-portrait-gate";
 import { SettingsDialog } from "@/app/shell/components/settings-dialog";
 import { ToolboxDialog } from "@/app/shell/components/toolbox-dialog";
 import { WorkbenchIcon } from "@/app/shell/components/workbench-icons";
@@ -26,6 +31,8 @@ import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
 import type { AppThemeId } from "@/domain/state/theme";
 import {
+  isMobileLandscapeScreenProfile,
+  isMobilePortraitScreenProfile,
   isTouchLandscapeScreenProfile,
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
@@ -193,25 +200,47 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
   const showBottomStatusBar = !showFloatingTopBarControls;
   const showCanvasLeftBottomToolbar = screenProfile.deviceClass === "mobile" && !leftDockOpen;
+  const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
   const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;
+  const previousScreenProfileRef = useRef(screenProfile);
 
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
 
-    const handleResize = () => {
+    const handleViewportChange = () => {
       appHost.internalActions.setScreenProfile(resolveScreenProfileFromWindow());
     };
 
-    window.addEventListener("resize", handleResize);
-    handleResize();
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("orientationchange", handleViewportChange);
+    handleViewportChange();
 
     return () => {
-      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("orientationchange", handleViewportChange);
     };
   }, [appHost]);
 
+  useEffect(() => {
+    const previousScreenProfile = previousScreenProfileRef.current;
+    previousScreenProfileRef.current = screenProfile;
+
+    if (!isMobilePortraitScreenProfile(previousScreenProfile)) {
+      return;
+    }
+
+    if (!isMobileLandscapeScreenProfile(screenProfile)) {
+      return;
+    }
+
+    if (resolveFullscreenState()) {
+      return;
+    }
+
+    requestDocumentFullscreen();
+  }, [screenProfile]);
 
 
   const workbenchStyle = {
@@ -299,6 +328,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       <ToolboxDialog appHost={appHost} />
       <HelpDialog appHost={appHost} />
       <SettingsDialog appHost={appHost} controller={settingsDialog} />
+      {showMobilePortraitGate ? <MobilePortraitGate appHost={appHost} /> : null}
     </div>
   );
 });

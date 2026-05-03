@@ -1,0 +1,160 @@
+.mobile-portrait-gate {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background:
+    linear-gradient(180deg, rgb(0 0 0 / 0.24), rgb(0 0 0 / 0.12)),
+    var(--shell-bg);
+  color: var(--text-0);
+  pointer-events: auto;
+}
+
+.mobile-portrait-gate-panel {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  width: min(340px, 100%);
+  padding: 24px 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.24);
+  text-align: center;
+}
+
+.mobile-portrait-gate-motion {
+  position: relative;
+  width: 140px;
+  height: 92px;
+}
+
+.mobile-portrait-gate-motion::before {
+  content: "";
+  position: absolute;
+  inset: 10px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 999px;
+  opacity: 0.55;
+}
+
+.mobile-portrait-gate-phone,
+.mobile-portrait-gate-landscape {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  color: var(--accent-strong);
+  transform: translate(-50%, -50%);
+}
+
+.mobile-portrait-gate-phone {
+  animation: mobile-portrait-gate-phone-rotate 2.6s ease-in-out infinite;
+}
+
+.mobile-portrait-gate-landscape {
+  color: var(--text-1);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.86);
+  animation: mobile-portrait-gate-landscape-fade 2.6s ease-in-out infinite;
+}
+
+.mobile-portrait-gate-phone svg,
+.mobile-portrait-gate-landscape svg {
+  width: 54px;
+  height: 54px;
+  fill: currentColor;
+}
+
+.mobile-portrait-gate-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.mobile-portrait-gate-copy h2 {
+  margin: 0;
+  font-size: 1.18rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.mobile-portrait-gate-copy p {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.mobile-portrait-gate-fullscreen {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+  color: var(--text-0);
+  font-weight: 700;
+}
+
+.mobile-portrait-gate-fullscreen svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+@keyframes mobile-portrait-gate-phone-rotate {
+  0%,
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  }
+
+  48%,
+  74% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(90deg) scale(1.05);
+  }
+
+  88%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(90deg) scale(0.9);
+  }
+}
+
+@keyframes mobile-portrait-gate-landscape-fade {
+  0%,
+  44% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.86);
+  }
+
+  62%,
+  82% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-portrait-gate-phone,
+  .mobile-portrait-gate-landscape {
+    animation: none;
+  }
+
+  .mobile-portrait-gate-phone {
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+}
