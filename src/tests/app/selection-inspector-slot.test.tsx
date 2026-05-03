@@ -5,7 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost, type AppHost } from "@/app/host/app-host";
-import { SelectionInspectorSlot } from "@/app/shell/components/inspector/selection-inspector-slot";
+import { SelectionInspectorSlot } from "@/app/shell/inspector/selection-inspector-slot";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { INSPECTOR_TYPE } from "@/domain/types/registry/inspector-types";
 import { createWorkspaceState } from "@/domain/state/workspace-state";

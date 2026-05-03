@@ -6,7 +6,7 @@ import {
   buildModuleBalancingIndex,
   computeModuleBalancing,
   computeStageModuleTotals,
-} from "@/app/shell/components/module-balancing-model";
+} from "@/app/shell/module-balancing/module-balancing-model";
 
 const TEST_REGISTRY: RegistryContract = {
   queries: {} as RegistryContract["queries"],

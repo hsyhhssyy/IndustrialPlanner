@@ -10,7 +10,7 @@ import {
   APP_SHORTCUTS_LOCAL_STORAGE_KEY,
   SHORTCUT_KEY,
 } from "@/app/actions/keyboard-shortcut-manager";
-import { USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY } from "@/app/shell/settings-dialog-state";
+import { USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY } from "@/app/shell/state/settings-dialog-state";
 import {
   APP_SETTINGS_LOCAL_STORAGE_KEY,
   WORKBENCH_STATE_LOCAL_STORAGE_KEY,

@@ -5,7 +5,7 @@ import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/host/app-host";
-import { TopBar } from "@/app/shell/components/top-bar";
+import { TopBar } from "@/app/shell/layout/top-bar";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";

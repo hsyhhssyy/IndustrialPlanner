@@ -1,32 +1,32 @@
 import { action } from "mobx";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
-import { BottomStatusBar } from "@/app/shell/components/bottom-status-bar";
-import { CanvasPanel } from "@/app/shell/components/canvas-panel";
-import { CanvasFloatingToolbar } from "@/app/shell/components/canvas/canvas-floating-toolbar";
-import { CanvasLeftBottomToolbar } from "@/app/shell/components/canvas/canvas-left-bottom-toolbar";
-import { CanvasTopLeftCornerToolbar } from "@/app/shell/components/canvas/canvas-top-left-corner-toolbar";
-import { CanvasRightDockToolbar } from "@/app/shell/components/canvas/canvas-right-dock-toolbar";
+import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
+import { CanvasPanel } from "@/app/shell/canvas/canvas-panel";
+import { CanvasFloatingToolbar } from "@/app/shell/canvas/canvas-floating-toolbar";
+import { CanvasLeftBottomToolbar } from "@/app/shell/canvas/canvas-left-bottom-toolbar";
+import { CanvasTopLeftCornerToolbar } from "@/app/shell/canvas/canvas-top-left-corner-toolbar";
+import { CanvasRightDockToolbar } from "@/app/shell/canvas/canvas-right-dock-toolbar";
 import {
   FullscreenToggleButton,
   requestDocumentFullscreen,
   resolveFullscreenState,
-} from "@/app/shell/components/fullscreen-toggle-button";
-import { HelpDialog } from "@/app/shell/components/help-dialog";
-import { MobilePortraitGate } from "@/app/shell/components/mobile-portrait-gate";
-import { SettingsDialog } from "@/app/shell/components/settings-dialog";
-import { EncyclopediaPickerDialog } from "@/app/shell/components/encyclopedia-picker-dialog";
-import { ToolboxDialog } from "@/app/shell/components/toolbox-dialog";
-import { WorkbenchIcon } from "@/app/shell/components/workbench-icons";
-import LeftDock from "@/app/shell/components/left-dock";
-import { LeftToolbar } from "@/app/shell/components/left-toolbar";
-import { WorkbenchSettingsDialogController } from "@/app/shell/settings-dialog-state";
-import { RightDock } from "@/app/shell/components/right-dock";
-import { SimulationControlButton, TopBar } from "@/app/shell/components/top-bar";
+} from "@/app/shell/layout/fullscreen-toggle-button";
+import { HelpDialog } from "@/app/shell/dialogs/help-dialog";
+import { MobilePortraitGate } from "@/app/shell/layout/mobile-portrait-gate";
+import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
+import { EncyclopediaPickerDialog } from "@/app/shell/encyclopedia/encyclopedia-picker-dialog";
+import { ToolboxDialog } from "@/app/shell/dialogs/toolbox-dialog";
+import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
+import LeftDock from "@/app/shell/layout/left-dock";
+import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
+import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
+import { RightDock } from "@/app/shell/layout/right-dock";
+import { SimulationControlButton, TopBar } from "@/app/shell/layout/top-bar";
 import {
   preventMiddleMousePointerDownBrowserBehavior,
   preventNativeBrowserEvent,
-} from "@/app/shell/components/ui-shell-null-handlers";
+} from "@/app/shell/shared/ui-shell-null-handlers";
 import type { AppHost } from "@/app/host/app-host";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";

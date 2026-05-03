@@ -7,8 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/host/app-host";
 import type { GestureEvent } from "@/app/input/gesture/adapter";
-import { LeftDock } from "@/app/shell/components/left-dock";
-import { LeftToolbar } from "@/app/shell/components/left-toolbar";
+import { LeftDock } from "@/app/shell/layout/left-dock";
+import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";

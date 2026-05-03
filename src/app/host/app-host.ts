@@ -15,7 +15,7 @@ import { KeyboardShortcutManager } from "../actions/keyboard-shortcut-manager";
 import { hookLocalstorage } from "../state/storage-hook";
 import { createUiStateReadWrite, UiStateReadWrite } from "../state/state-impl";
 import { hookThemeApplicator } from "../theme/theme-applicator";
-import { WorkbenchEncyclopediaPickerController } from "../shell/encyclopedia-picker-state";
+import { WorkbenchEncyclopediaPickerController } from "../shell/state/encyclopedia-picker-state";
 
 export interface AppHost extends AppContract {
   workspace: WorkspaceContract;

@@ -9,7 +9,7 @@ import { createAppHost, type AppHost } from "@/app/host/app-host";
 import {
   EncyclopediaBrowser,
   buildEncyclopediaIndex,
-} from "@/app/shell/components/encyclopedia-browser";
+} from "@/app/shell/encyclopedia/encyclopedia-browser";
 import type {
   ToolboxWikiDesktopCategory,
   ToolboxWikiMobileFilterOption,
