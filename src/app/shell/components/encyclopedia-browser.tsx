@@ -1,0 +1,720 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import type {
+  ToolboxWikiDesktopCategory as CategoryType,
+  ToolboxWikiEntityGroupCategory,
+  ToolboxWikiMobileCategory as FilterableCategory,
+  ToolboxWikiMobileFilterOption,
+} from "@/domain/state/types";
+import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+import type { ItemDefinition } from "@/domain/types/registry/item-definition";
+import type { RecipeDefinition } from "@/domain/types/registry/recipe-definition";
+
+export const ENTITY_UI_GROUP_ORDER: ToolboxWikiEntityGroupCategory[] = [
+  "basicProduction",
+  "advancedManufacturing",
+  "beltLogistics",
+  "pipeLogistics",
+  "resourcePower",
+  "warehouse",
+];
+
+export const EXCLUDE_BOTTLED_LIQUID_FILTER = "excludeBottledLiquid" as const;
+export const BOTTLED_LIQUID_TAG = "瓶装液体";
+
+export const MOBILE_FILTERABLE_CATEGORY_ORDER: ToolboxWikiMobileFilterOption[] = [
+  EXCLUDE_BOTTLED_LIQUID_FILTER,
+  "item",
+  "entity",
+  ...ENTITY_UI_GROUP_ORDER,
+];
+
+export interface EncyclopediaIndex {
+  itemById: Map<string, ItemDefinition>;
+  entityById: Map<string, EntityDefinition>;
+  recipesByInputItem: Map<string, RecipeDefinition[]>;
+  recipesByOutputItem: Map<string, RecipeDefinition[]>;
+  recipesByMachine: Map<string, RecipeDefinition[]>;
+  allItems: ItemDefinition[];
+  allEntities: EntityDefinition[];
+}
+
+export interface EncyclopediaBrowserProps {
+  index: EncyclopediaIndex;
+  isTouch: boolean;
+  query: string;
+  desktopCategory: CategoryType;
+  mobileSelectedCategories: ToolboxWikiMobileFilterOption[];
+  onQueryChange: (query: string) => void;
+  onDesktopCategoryChange: (category: CategoryType) => void;
+  onMobileSelectedCategoriesChange: (categories: ToolboxWikiMobileFilterOption[]) => void;
+  onItemClick: (id: string) => void;
+  onEntityClick: (id: string) => void;
+  itemFilter?: (item: ItemDefinition) => boolean;
+  entityFilter?: (entity: EntityDefinition) => boolean;
+  autoFocusSearch?: boolean;
+  t: (key: string) => string;
+}
+
+export function buildEncyclopediaIndex(
+  items: ItemDefinition[],
+  entities: EntityDefinition[],
+  recipes: RecipeDefinition[],
+): EncyclopediaIndex {
+  const itemById = new Map<string, ItemDefinition>();
+  for (const item of items) {
+    itemById.set(item.id, item);
+  }
+
+  const entityById = new Map<string, EntityDefinition>();
+  for (const entity of entities) {
+    entityById.set(entity.id, entity);
+  }
+
+  const recipesByInputItem = new Map<string, RecipeDefinition[]>();
+  const recipesByOutputItem = new Map<string, RecipeDefinition[]>();
+  const recipesByMachine = new Map<string, RecipeDefinition[]>();
+
+  for (const recipe of recipes) {
+    for (const input of recipe.inputs) {
+      const arr = recipesByInputItem.get(input.itemId);
+      if (arr) {
+        arr.push(recipe);
+      } else {
+        recipesByInputItem.set(input.itemId, [recipe]);
+      }
+    }
+    for (const output of recipe.outputs) {
+      const arr = recipesByOutputItem.get(output.itemId);
+      if (arr) {
+        arr.push(recipe);
+      } else {
+        recipesByOutputItem.set(output.itemId, [recipe]);
+      }
+    }
+    const arr = recipesByMachine.get(recipe.machineId);
+    if (arr) {
+      arr.push(recipe);
+    } else {
+      recipesByMachine.set(recipe.machineId, [recipe]);
+    }
+  }
+
+  return {
+    itemById,
+    entityById,
+    recipesByInputItem,
+    recipesByOutputItem,
+    recipesByMachine,
+    allItems: items,
+    allEntities: entities.filter((entity) => entity.uiGroup !== "hidden"),
+  };
+}
+
+export function resolveItemName(
+  itemId: string,
+  index: EncyclopediaIndex,
+  t: (key: string) => string,
+): string {
+  const def = index.itemById.get(itemId);
+  return def ? t(def.nameKey) : itemId;
+}
+
+export function resolveItemIcon(itemId: string, index: EncyclopediaIndex): string {
+  const def = index.itemById.get(itemId);
+  const iconId = def?.iconId ?? itemId;
+  return `/item-icons/${iconId}.webp`;
+}
+
+export function resolveEntityIcon(entityId: string): string {
+  return `/device-icons/${entityId}.webp`;
+}
+
+export function isMobileDisplayCategory(
+  category: ToolboxWikiMobileFilterOption,
+): category is FilterableCategory {
+  return category === "item"
+    || category === "entity"
+    || ENTITY_UI_GROUP_ORDER.includes(category as ToolboxWikiEntityGroupCategory);
+}
+
+function resolveCategoryLabel(
+  category: CategoryType | ToolboxWikiMobileFilterOption,
+  t: (key: string) => string,
+): string {
+  switch (category) {
+    case "all":
+      return t("encyclopedia.category.all");
+    case EXCLUDE_BOTTLED_LIQUID_FILTER:
+      return t("encyclopedia.filter.excludeBottledLiquid");
+    case "item":
+      return t("encyclopedia.category.items");
+    case "entity":
+      return t("encyclopedia.category.entities");
+    default:
+      return t(`uiGroup.${category}`);
+  }
+}
+
+function includesSearchQuery(
+  name: string,
+  tags: readonly string[],
+  query: string,
+): boolean {
+  if (query.length === 0) {
+    return true;
+  }
+
+  if (name.toLowerCase().includes(query)) {
+    return true;
+  }
+
+  return tags.some((tag) => tag.toLowerCase().includes(query));
+}
+
+function isBottledLiquid(item: ItemDefinition): boolean {
+  return item.tags.includes(BOTTLED_LIQUID_TAG);
+}
+
+function arraysEqual<T>(left: readonly T[], right: readonly T[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((value, index) => value === right[index]);
+}
+
+function normalizeMobileSelectedCategories(
+  selectedCategories: readonly ToolboxWikiMobileFilterOption[],
+  availableCategories: ReadonlySet<ToolboxWikiMobileFilterOption>,
+): ToolboxWikiMobileFilterOption[] {
+  const nextSelected = new Set<ToolboxWikiMobileFilterOption>();
+  for (const category of selectedCategories) {
+    if (availableCategories.has(category)) {
+      nextSelected.add(category);
+    }
+  }
+
+  return MOBILE_FILTERABLE_CATEGORY_ORDER.filter((category) => nextSelected.has(category));
+}
+
+function SearchBar({
+  autoFocus = false,
+  query,
+  onChange,
+  t,
+}: {
+  autoFocus?: boolean;
+  query: string;
+  onChange: (query: string) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <div className="encyclopedia-search">
+      <input
+        autoFocus={autoFocus}
+        type="text"
+        className="encyclopedia-search-input"
+        placeholder={t("encyclopedia.searchPlaceholder")}
+        value={query}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  );
+}
+
+function CardGrid({
+  items,
+  entities,
+  index,
+  onItemClick,
+  onEntityClick,
+  t,
+}: {
+  items: ItemDefinition[];
+  entities: EntityDefinition[];
+  index: EncyclopediaIndex;
+  onItemClick: (id: string) => void;
+  onEntityClick: (id: string) => void;
+  t: (key: string) => string;
+}) {
+  if (items.length === 0 && entities.length === 0) {
+    return <p className="encyclopedia-empty">{t("encyclopedia.noResults")}</p>;
+  }
+
+  return (
+    <div className="encyclopedia-card-grid">
+      {entities.map((entity) => (
+        <button
+          key={`entity-${entity.id}`}
+          type="button"
+          className="encyclopedia-card"
+          onClick={() => onEntityClick(entity.id)}
+        >
+          <img
+            alt=""
+            className="encyclopedia-card-icon"
+            src={resolveEntityIcon(entity.id)}
+          />
+          <span className="encyclopedia-card-label">{t(entity.nameKey)}</span>
+          <span className="encyclopedia-card-kind">{t("encyclopedia.entityLabel")}</span>
+        </button>
+      ))}
+      {items.map((item) => (
+        <button
+          key={`item-${item.id}`}
+          type="button"
+          className="encyclopedia-card"
+          onClick={() => onItemClick(item.id)}
+        >
+          <img
+            alt=""
+            className="encyclopedia-card-icon"
+            src={resolveItemIcon(item.id, index)}
+          />
+          <span className="encyclopedia-card-label">{t(item.nameKey)}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SidebarCategories({
+  activeCategory,
+  availableCategories,
+  onChange,
+  t,
+}: {
+  activeCategory: CategoryType;
+  availableCategories: readonly CategoryType[];
+  onChange: (category: CategoryType) => void;
+  t: (key: string) => string;
+}) {
+  const availableSet = useMemo(
+    () => new Set<CategoryType>(availableCategories),
+    [availableCategories],
+  );
+  const primaryGroups: Array<{ id: CategoryType; label: string }> = [
+    { id: "all" as CategoryType, label: t("encyclopedia.category.all") },
+    { id: "item" as CategoryType, label: t("encyclopedia.category.items") },
+    { id: "entity" as CategoryType, label: t("encyclopedia.category.entities") },
+  ].filter((group) => availableSet.has(group.id));
+
+  const entitySubgroups = ENTITY_UI_GROUP_ORDER
+    .filter((group) => availableSet.has(group))
+    .map((group) => ({
+      id: group as CategoryType,
+      label: t(`uiGroup.${group}`),
+    }));
+
+  return (
+    <div className="encyclopedia-category-list">
+      {primaryGroups.map((group) => (
+        <CategoryButton
+          key={group.id}
+          id={group.id}
+          label={group.label}
+          isActive={activeCategory === group.id}
+          onChange={onChange}
+        />
+      ))}
+      {entitySubgroups.length > 0 ? <hr className="encyclopedia-sidebar-divider" /> : null}
+      {entitySubgroups.map((group) => (
+        <CategoryButton
+          key={group.id}
+          id={group.id}
+          label={group.label}
+          isActive={activeCategory === group.id}
+          onChange={onChange}
+        />
+      ))}
+    </div>
+  );
+}
+
+function CategoryDropdown({
+  availableCategories,
+  isOpen,
+  onChange,
+  onClose,
+  onToggle,
+  selectedCategories,
+  t,
+}: {
+  availableCategories: readonly ToolboxWikiMobileFilterOption[];
+  isOpen: boolean;
+  onChange: (categories: ToolboxWikiMobileFilterOption[]) => void;
+  onClose: () => void;
+  onToggle: () => void;
+  selectedCategories: readonly ToolboxWikiMobileFilterOption[];
+  t: (key: string) => string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (ref.current !== null && !ref.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [isOpen, onClose]);
+
+  const selectedSet = useMemo(
+    () => new Set<ToolboxWikiMobileFilterOption>(selectedCategories),
+    [selectedCategories],
+  );
+  const options = availableCategories.map((category) => ({
+    id: category,
+    label: resolveCategoryLabel(category, t),
+  }));
+  const selectedOptions = options.filter((option) => selectedSet.has(option.id));
+  const isFiltered = selectedCategories.length > 0;
+  const primarySelectedLabel = selectedOptions[0]?.label ?? t("encyclopedia.filter.label");
+  const summaryLabel = !isFiltered
+    ? t("encyclopedia.category.all")
+    : selectedOptions.length === 1
+      ? primarySelectedLabel
+      : `${primarySelectedLabel} +${selectedOptions.length - 1}`;
+
+  return (
+    <div className="encyclopedia-category-dropdown" ref={ref}>
+      <button
+        type="button"
+        className={`encyclopedia-category-dropdown-trigger${isFiltered ? " is-filtered" : ""}`}
+        onClick={onToggle}
+      >
+        <span className="encyclopedia-category-dropdown-copy">
+          <span className="encyclopedia-category-dropdown-title">{t("encyclopedia.filter.label")}</span>
+          <span className="encyclopedia-category-dropdown-label">{summaryLabel}</span>
+        </span>
+        <span className="encyclopedia-category-dropdown-meta">
+          {isFiltered ? (
+            <span className="encyclopedia-category-dropdown-badge">{selectedCategories.length}</span>
+          ) : null}
+          <span className={`encyclopedia-category-dropdown-arrow${isOpen ? " is-open" : ""}`}>▾</span>
+        </span>
+      </button>
+      {isOpen ? (
+        <div className="encyclopedia-category-dropdown-menu">
+          <button
+            type="button"
+            className={`encyclopedia-category-dropdown-item${!isFiltered ? " is-active" : ""}`}
+            onClick={() => onChange([])}
+          >
+            <span>{t("encyclopedia.category.all")}</span>
+            <span className="encyclopedia-category-dropdown-check">{!isFiltered ? "✓" : ""}</span>
+          </button>
+          {options.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={`encyclopedia-category-dropdown-item${selectedSet.has(option.id) ? " is-active" : ""}`}
+              onClick={() => {
+                const nextSelected = new Set(selectedCategories);
+                if (nextSelected.has(option.id)) {
+                  nextSelected.delete(option.id);
+                } else {
+                  nextSelected.add(option.id);
+                }
+                onChange(MOBILE_FILTERABLE_CATEGORY_ORDER.filter((category) => nextSelected.has(category)));
+              }}
+            >
+              <span>{option.label}</span>
+              <span className="encyclopedia-category-dropdown-check">
+                {selectedSet.has(option.id) ? "✓" : ""}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CategoryButton({
+  id,
+  isActive,
+  label,
+  onChange,
+}: {
+  id: CategoryType;
+  isActive: boolean;
+  label: string;
+  onChange: (category: CategoryType) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`encyclopedia-category-button${isActive ? " is-active" : ""}`}
+      onClick={() => onChange(id)}
+    >
+      {label}
+    </button>
+  );
+}
+
+export function EncyclopediaBrowser({
+  autoFocusSearch = false,
+  desktopCategory,
+  entityFilter,
+  index,
+  isTouch,
+  itemFilter,
+  mobileSelectedCategories,
+  onDesktopCategoryChange,
+  onEntityClick,
+  onItemClick,
+  onMobileSelectedCategoriesChange,
+  onQueryChange,
+  query,
+  t,
+}: EncyclopediaBrowserProps) {
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
+  const normalizedQuery = query.trim().toLowerCase();
+  const selectedMobileFilters = useMemo(
+    () => new Set<ToolboxWikiMobileFilterOption>(mobileSelectedCategories),
+    [mobileSelectedCategories],
+  );
+  const selectedMobileCategories = useMemo(
+    () => new Set<FilterableCategory>(mobileSelectedCategories.filter(isMobileDisplayCategory)),
+    [mobileSelectedCategories],
+  );
+
+  const searchMatchedItems = useMemo(
+    () => index.allItems.filter((item) => {
+      if (itemFilter !== undefined && !itemFilter(item)) {
+        return false;
+      }
+
+      return includesSearchQuery(t(item.nameKey), item.tags, normalizedQuery);
+    }),
+    [index, itemFilter, normalizedQuery, t],
+  );
+
+  const searchMatchedEntities = useMemo(
+    () => index.allEntities.filter((entity) => {
+      if (entityFilter !== undefined && !entityFilter(entity)) {
+        return false;
+      }
+
+      return includesSearchQuery(t(entity.nameKey), entity.tags, normalizedQuery);
+    }),
+    [entityFilter, index, normalizedQuery, t],
+  );
+
+  const availableDesktopCategories = useMemo(() => {
+    const categories: CategoryType[] = ["all"];
+
+    if (searchMatchedItems.length > 0) {
+      categories.push("item");
+    }
+
+    if (searchMatchedEntities.length > 0) {
+      categories.push("entity");
+    }
+
+    for (const group of ENTITY_UI_GROUP_ORDER) {
+      if (searchMatchedEntities.some((entity) => entity.uiGroup === group)) {
+        categories.push(group);
+      }
+    }
+
+    return categories;
+  }, [searchMatchedEntities, searchMatchedItems]);
+  const availableDesktopCategorySet = useMemo(
+    () => new Set<CategoryType>(availableDesktopCategories),
+    [availableDesktopCategories],
+  );
+
+  const availableMobileCategories = useMemo(() => {
+    const categories: ToolboxWikiMobileFilterOption[] = [];
+
+    if (searchMatchedItems.some(isBottledLiquid)) {
+      categories.push(EXCLUDE_BOTTLED_LIQUID_FILTER);
+    }
+
+    if (searchMatchedItems.length > 0) {
+      categories.push("item");
+    }
+
+    if (searchMatchedEntities.length > 0) {
+      categories.push("entity");
+    }
+
+    for (const group of ENTITY_UI_GROUP_ORDER) {
+      if (searchMatchedEntities.some((entity) => entity.uiGroup === group)) {
+        categories.push(group);
+      }
+    }
+
+    return categories;
+  }, [searchMatchedEntities, searchMatchedItems]);
+  const availableMobileCategorySet = useMemo(
+    () => new Set<ToolboxWikiMobileFilterOption>(availableMobileCategories),
+    [availableMobileCategories],
+  );
+
+  useEffect(() => {
+    if (isTouch || availableDesktopCategorySet.has(desktopCategory)) {
+      return;
+    }
+
+    onDesktopCategoryChange(availableDesktopCategories[0] ?? "all");
+  }, [
+    availableDesktopCategories,
+    availableDesktopCategorySet,
+    desktopCategory,
+    isTouch,
+    onDesktopCategoryChange,
+  ]);
+
+  useEffect(() => {
+    if (!isTouch) {
+      return;
+    }
+
+    const normalizedSelectedCategories = normalizeMobileSelectedCategories(
+      mobileSelectedCategories,
+      availableMobileCategorySet,
+    );
+
+    if (arraysEqual(normalizedSelectedCategories, mobileSelectedCategories)) {
+      return;
+    }
+
+    onMobileSelectedCategoriesChange(normalizedSelectedCategories);
+  }, [
+    availableMobileCategorySet,
+    isTouch,
+    mobileSelectedCategories,
+    onMobileSelectedCategoriesChange,
+  ]);
+
+  const filteredItems = useMemo(() => {
+    let items = searchMatchedItems;
+
+    if (isTouch) {
+      if (selectedMobileFilters.has(EXCLUDE_BOTTLED_LIQUID_FILTER)) {
+        items = items.filter((item) => !isBottledLiquid(item));
+      }
+
+      if (selectedMobileCategories.size === 0) {
+        return items;
+      }
+
+      return selectedMobileCategories.has("item") ? items : [];
+    }
+
+    if (desktopCategory !== "all" && desktopCategory !== "item" && desktopCategory !== "entity") {
+      return [];
+    }
+
+    return desktopCategory === "entity" ? [] : items;
+  }, [
+    desktopCategory,
+    isTouch,
+    searchMatchedItems,
+    selectedMobileCategories,
+    selectedMobileFilters,
+  ]);
+
+  const filteredEntities = useMemo(() => {
+    let entities = searchMatchedEntities;
+
+    if (isTouch) {
+      if (selectedMobileCategories.size === 0 || selectedMobileCategories.has("entity")) {
+        return entities;
+      }
+
+      const selectedGroups = ENTITY_UI_GROUP_ORDER.filter((group) => selectedMobileCategories.has(group));
+      if (selectedGroups.length === 0) {
+        return [];
+      }
+
+      const selectedGroupSet = new Set(selectedGroups);
+      return entities.filter((entity) => selectedGroupSet.has(entity.uiGroup as ToolboxWikiEntityGroupCategory));
+    }
+
+    if (desktopCategory !== "all" && desktopCategory !== "entity") {
+      if (ENTITY_UI_GROUP_ORDER.includes(desktopCategory as ToolboxWikiEntityGroupCategory)) {
+        entities = entities.filter((entity) => entity.uiGroup === desktopCategory);
+      } else if (desktopCategory === "item") {
+        return [];
+      }
+    }
+
+    return entities;
+  }, [desktopCategory, isTouch, searchMatchedEntities, selectedMobileCategories]);
+
+  if (!isTouch) {
+    return (
+      <div className="encyclopedia-panel">
+        <SearchBar
+          autoFocus={autoFocusSearch}
+          query={query}
+          onChange={onQueryChange}
+          t={t}
+        />
+        <div className="encyclopedia-pc-layout">
+          <nav className="encyclopedia-sidebar">
+            <SidebarCategories
+              activeCategory={desktopCategory}
+              availableCategories={availableDesktopCategories}
+              onChange={onDesktopCategoryChange}
+              t={t}
+            />
+          </nav>
+          <main className="encyclopedia-main">
+            <CardGrid
+              items={filteredItems}
+              entities={filteredEntities}
+              index={index}
+              onItemClick={onItemClick}
+              onEntityClick={onEntityClick}
+              t={t}
+            />
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="encyclopedia-panel is-touch is-browser">
+      <div className="encyclopedia-mobile-controls">
+        <SearchBar
+          autoFocus={autoFocusSearch}
+          query={query}
+          onChange={onQueryChange}
+          t={t}
+        />
+        <CategoryDropdown
+          availableCategories={availableMobileCategories}
+          isOpen={categoryMenuOpen}
+          onChange={onMobileSelectedCategoriesChange}
+          onClose={() => setCategoryMenuOpen(false)}
+          onToggle={() => setCategoryMenuOpen((value) => !value)}
+          selectedCategories={mobileSelectedCategories}
+          t={t}
+        />
+      </div>
+      <main className="encyclopedia-main">
+        <CardGrid
+          items={filteredItems}
+          entities={filteredEntities}
+          index={index}
+          onItemClick={onItemClick}
+          onEntityClick={onEntityClick}
+          t={t}
+        />
+      </main>
+    </div>
+  );
+}

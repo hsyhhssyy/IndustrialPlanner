@@ -6,6 +6,7 @@ import type { ScreenProfile } from "./screen-profile";
 import type { AppTheme, AppThemeId } from "./theme";
 import type { ClientPixelRect } from "../types/client-pixel";
 import type { GridFloatPoint, GridRect } from "../types/grid";
+import type { UiGroup } from "../types/registry/entity-definition";
 
 export interface EntityCollection extends ReadonlyArray<string> {
   contains(entityId: string): boolean;
@@ -76,6 +77,91 @@ export interface DialogState {
   readonly activeTab: string | null;
 }
 
+export type ToolboxWikiNavigationEntryType = "item" | "entity";
+export type ToolboxWikiEntityGroupCategory = Exclude<UiGroup, "hidden">;
+export type ToolboxWikiDesktopCategory =
+  | "all"
+  | "item"
+  | "entity"
+  | ToolboxWikiEntityGroupCategory;
+export type ToolboxWikiMobileCategory = Exclude<ToolboxWikiDesktopCategory, "all">;
+export type ToolboxWikiMobileFilterOption =
+  | ToolboxWikiMobileCategory
+  | "excludeBottledLiquid";
+
+export interface ToolboxWikiNavigationEntry {
+  type: ToolboxWikiNavigationEntryType;
+  id: string;
+}
+
+export type ToolboxWikiOpenedPage =
+  | { kind: "browser" }
+  | { kind: "item"; id: string }
+  | { kind: "entity"; id: string };
+
+export interface ToolboxWikiState {
+  searchQuery: string;
+  desktopCategory: ToolboxWikiDesktopCategory;
+  mobileSelectedCategories: ToolboxWikiMobileFilterOption[];
+  navigationStack: ToolboxWikiNavigationEntry[];
+  openedPage: ToolboxWikiOpenedPage;
+}
+
+export interface ModuleBalancingIOPort {
+  itemId: string;
+  perMinute: number;
+}
+
+export interface ModuleBalancingCustomModule {
+  id: string;
+  name: string;
+  color: string;
+  iconId: string;
+  inputs: ModuleBalancingIOPort[];
+  outputs: ModuleBalancingIOPort[];
+  sourceType: "custom";
+}
+
+export interface ModuleBalancingSystemRecipeModule {
+  id: string;
+  sourceType: "system-recipe";
+  recipeId: string;
+}
+
+export type ModuleBalancingModule =
+  | ModuleBalancingCustomModule
+  | ModuleBalancingSystemRecipeModule;
+
+export interface ModuleBalancingStageModuleEntry {
+  moduleId: string;
+  quantity: number;
+}
+
+export interface ModuleBalancingStage {
+  id: string;
+  name: string;
+  entries: ModuleBalancingStageModuleEntry[];
+}
+
+export interface ModuleBalancingCanvas {
+  id: string;
+  name: string;
+  globalInputs: ModuleBalancingIOPort[];
+  stages: ModuleBalancingStage[];
+  warehouseCapacity: number | null;
+}
+
+export interface ModuleBalancingState {
+  canvases: ModuleBalancingCanvas[];
+  customModules: ModuleBalancingCustomModule[];
+  activeCanvasId: string | null;
+}
+
+export interface ToolboxState {
+  wiki: ToolboxWikiState;
+  moduleBalancing: ModuleBalancingState;
+}
+
 export type RightDockTabId = "base" | "power" | "selection";
 
 export interface WorkbenchState {
@@ -85,6 +171,7 @@ export interface WorkbenchState {
   readonly topBarCollapsed: boolean;
   readonly rightDockActiveTab: RightDockTabId;
   readonly dialogState: Record<string, DialogState | undefined>;
+  readonly toolbox: ToolboxState;
 }
 
 export type ActiveTool =

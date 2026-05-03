@@ -34,6 +34,7 @@ export const SettingsDialog = observer(function SettingsDialog({
   const dialogState = appHost.internalState.workbench.dialogState.settings;
   const isOpen = dialogState.visible;
   const hideGroupSidebar = appHost.state.screenProfile.deviceClass !== "desktop";
+  const isMobileCompactLayout = appHost.state.screenProfile.deviceClass === "mobile";
 
   const handleClose = useCallback(() => {
     setCapturingKeybindingId(null);
@@ -106,6 +107,7 @@ export const SettingsDialog = observer(function SettingsDialog({
     <DialogShell
       className="settings-dialog"
       closeTitle={t("action.close")}
+      compactMobileLayout={isMobileCompactLayout}
       dialogKey="settings"
       dialogState={dialogState}
       immersiveMaximized={dialogState.maximized && shouldUseImmersiveMaximizedDialog(appHost.state.screenProfile)}

@@ -127,6 +127,9 @@ export type MessageKey =
   | "topBar.settings"
   | "settingsDialog.title"
   | "settingsDialog.groups"
+  | "encyclopediaPicker.title.item"
+  | "encyclopediaPicker.title.entity"
+  | "encyclopediaPicker.title.entry"
   | "toolboxDialog.title"
   | "toolboxDialog.tab.itemEncyclopedia"
   | "toolboxDialog.tab.productionPlanning"
@@ -226,9 +229,25 @@ export type MessageKey =
   | "uiGroup.basicProduction"
   | "uiGroup.advancedManufacturing"
   | "registry.entity.item_port_filling_pd_mc_1.name"
-  | "uiGroup.hidden";
+  | "uiGroup.hidden"
+  | "encyclopedia.searchPlaceholder"
+  | "encyclopedia.category.all"
+  | "encyclopedia.category.items"
+  | "encyclopedia.category.entities"
+  | "encyclopedia.filter.excludeBottledLiquid"
+  | "encyclopedia.group.asInput"
+  | "encyclopedia.group.asOutput"
+  | "encyclopedia.group.asMachine"
+  | "encyclopedia.noResults"
+  | "encyclopedia.noRecipes"
+  | "encyclopedia.back"
+  | "encyclopedia.home"
+  | "encyclopedia.viewDetails"
+  | "encyclopedia.entityLabel"
+  | "encyclopedia.itemLabel"
+  | "encyclopedia.filter.label";
 
-const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
+const MESSAGES: Record<AppLocale, Record<string, string>> = {
   "zh-CN": {
     "app.title": "集成工业仿真器",
     "mode.edit": "放置模式",
@@ -356,6 +375,9 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "topBar.settings": "设置",
     "settingsDialog.title": "设置",
     "settingsDialog.groups": "设置分组",
+    "encyclopediaPicker.title.item": "选择物品",
+    "encyclopediaPicker.title.entity": "选择设备",
+    "encyclopediaPicker.title.entry": "选择物品或设备",
     "toolboxDialog.title": "工具箱",
     "toolboxDialog.tab.itemEncyclopedia": "物品百科",
     "toolboxDialog.tab.productionPlanning": "产线规划",
@@ -363,6 +385,58 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "toolboxDialog.empty": "当前工具箱内容尚未填充，这里先保留为空面板。",
     "toolboxDialog.maximize": "最大化工具箱",
     "toolboxDialog.restore": "还原工具箱",
+    "moduleBalancing.canvas": "画布",
+    "moduleBalancing.newCanvas": "新建画布",
+    "moduleBalancing.deleteCanvas": "删除画布",
+    "moduleBalancing.canvasPlaceholder": "画布名称",
+    "moduleBalancing.stage": "阶段",
+    "moduleBalancing.newStage": "新建阶段",
+    "moduleBalancing.clearStage": "清空阶段",
+    "moduleBalancing.systemInput": "系统输入",
+    "moduleBalancing.addInput": "添加输入物品",
+    "moduleBalancing.removeInput": "移除输入",
+    "moduleBalancing.warehouseCapacity": "仓库容量",
+    "moduleBalancing.warehouseCapacityHint": "留空不计算",
+    "moduleBalancing.surplus": "结余",
+    "moduleBalancing.deficit": "缺口",
+    "moduleBalancing.balanced": "持平",
+    "moduleBalancing.summary": "最终汇总",
+    "moduleBalancing.warehouseAnalysis": "仓库分析",
+    "moduleBalancing.overflowTime": "爆仓",
+    "moduleBalancing.exhaustTime": "耗尽",
+    "moduleBalancing.after": "后",
+    "moduleBalancing.systemModules": "系统模块",
+    "moduleBalancing.customModules": "自定义模块",
+    "moduleBalancing.newModule": "新建模块",
+    "moduleBalancing.editModule": "编辑模块",
+    "moduleBalancing.deleteModule": "删除模块",
+    "moduleBalancing.moduleName": "模块名称",
+    "moduleBalancing.moduleColor": "颜色",
+    "moduleBalancing.moduleIcon": "图标",
+    "moduleBalancing.inputItems": "输入",
+    "moduleBalancing.outputItems": "输出",
+    "moduleBalancing.addInputItem": "添加输入",
+    "moduleBalancing.addOutputItem": "添加输出",
+    "moduleBalancing.moduleLibrary": "模块库",
+    "moduleBalancing.canvasInput": "画布输入",
+    "moduleBalancing.stageDetail": "详情",
+    "moduleBalancing.saveAsModule": "保存为模块",
+    "moduleBalancing.saveModule": "保存模块",
+    "moduleBalancing.addToStage": "添加模块",
+    "moduleBalancing.editQuantity": "编辑数量",
+    "moduleBalancing.quantity": "数量",
+    "moduleBalancing.confirmAdd": "确认添加",
+    "moduleBalancing.confirmEdit": "确认修改",
+    "moduleBalancing.deleteFromStage": "删除模块",
+    "moduleBalancing.searchModules": "搜索模块...",
+    "moduleBalancing.searchItems": "搜索物品...",
+    "moduleBalancing.expandDetails": "展开详情",
+    "moduleBalancing.collapseDetails": "收起",
+    "moduleBalancing.nItemsMore": "+{n}项展开",
+    "moduleBalancing.emptyPorts": "暂无物品",
+    "moduleBalancing.none": "无",
+    "moduleBalancing.noStages": "还没有阶段",
+    "moduleBalancing.noSummary": "添加输入或模块后显示汇总",
     "helpDialog.title": "帮助",
     "helpDialog.description": "多个帮助主题会在这里按标签页组织。",
     "helpDialog.tab.overview": "概览",
@@ -456,6 +530,22 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "uiGroup.advancedManufacturing": "合成制造",
     "registry.entity.item_port_filling_pd_mc_1.name": "灌装机",
     "uiGroup.hidden": "隐藏设备",
+    "encyclopedia.searchPlaceholder": "搜索物品或设备…",
+    "encyclopedia.category.all": "全部",
+    "encyclopedia.category.items": "物品",
+    "encyclopedia.category.entities": "设备",
+    "encyclopedia.filter.excludeBottledLiquid": "排除瓶装液体",
+    "encyclopedia.group.asInput": "作为原料",
+    "encyclopedia.group.asOutput": "作为产物",
+    "encyclopedia.group.asMachine": "适用机器",
+    "encyclopedia.noResults": "未找到匹配项",
+    "encyclopedia.noRecipes": "暂无相关配方",
+    "encyclopedia.back": "返回",
+    "encyclopedia.home": "百科",
+    "encyclopedia.viewDetails": "查看详情",
+    "encyclopedia.entityLabel": "设备",
+    "encyclopedia.itemLabel": "物品",
+    "encyclopedia.filter.label": "筛选",
   },
   "en-US": {
     "app.title": "Industrial Planner Stage1",
@@ -584,6 +674,9 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "topBar.settings": "Settings",
     "settingsDialog.title": "Settings",
     "settingsDialog.groups": "Setting Groups",
+    "encyclopediaPicker.title.item": "Select Item",
+    "encyclopediaPicker.title.entity": "Select Device",
+    "encyclopediaPicker.title.entry": "Select Item or Device",
     "toolboxDialog.title": "Toolbox",
     "toolboxDialog.tab.itemEncyclopedia": "Item Encyclopedia",
     "toolboxDialog.tab.productionPlanning": "Production Planning",
@@ -591,6 +684,58 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "toolboxDialog.empty": "Toolbox content has not been filled in yet, so this panel is intentionally empty for now.",
     "toolboxDialog.maximize": "Maximize Toolbox",
     "toolboxDialog.restore": "Restore Toolbox",
+    "moduleBalancing.canvas": "Canvas",
+    "moduleBalancing.newCanvas": "New Canvas",
+    "moduleBalancing.deleteCanvas": "Delete Canvas",
+    "moduleBalancing.canvasPlaceholder": "Canvas name",
+    "moduleBalancing.stage": "Stage",
+    "moduleBalancing.newStage": "New Stage",
+    "moduleBalancing.clearStage": "Clear Stage",
+    "moduleBalancing.systemInput": "System Input",
+    "moduleBalancing.addInput": "Add Input Item",
+    "moduleBalancing.removeInput": "Remove Input",
+    "moduleBalancing.warehouseCapacity": "Warehouse Capacity",
+    "moduleBalancing.warehouseCapacityHint": "Blank to skip",
+    "moduleBalancing.surplus": "Surplus",
+    "moduleBalancing.deficit": "Deficit",
+    "moduleBalancing.balanced": "Balanced",
+    "moduleBalancing.summary": "Final Summary",
+    "moduleBalancing.warehouseAnalysis": "Warehouse Analysis",
+    "moduleBalancing.overflowTime": "Fill",
+    "moduleBalancing.exhaustTime": "Empty",
+    "moduleBalancing.after": "until",
+    "moduleBalancing.systemModules": "System Modules",
+    "moduleBalancing.customModules": "Custom Modules",
+    "moduleBalancing.newModule": "New Module",
+    "moduleBalancing.editModule": "Edit Module",
+    "moduleBalancing.deleteModule": "Delete Module",
+    "moduleBalancing.moduleName": "Module Name",
+    "moduleBalancing.moduleColor": "Color",
+    "moduleBalancing.moduleIcon": "Icon",
+    "moduleBalancing.inputItems": "Inputs",
+    "moduleBalancing.outputItems": "Outputs",
+    "moduleBalancing.addInputItem": "Add Input",
+    "moduleBalancing.addOutputItem": "Add Output",
+    "moduleBalancing.moduleLibrary": "Module Library",
+    "moduleBalancing.canvasInput": "Canvas Input",
+    "moduleBalancing.stageDetail": "Details",
+    "moduleBalancing.saveAsModule": "Save as Module",
+    "moduleBalancing.saveModule": "Save Module",
+    "moduleBalancing.addToStage": "Add Module",
+    "moduleBalancing.editQuantity": "Edit Quantity",
+    "moduleBalancing.quantity": "Quantity",
+    "moduleBalancing.confirmAdd": "Confirm Add",
+    "moduleBalancing.confirmEdit": "Confirm Edit",
+    "moduleBalancing.deleteFromStage": "Remove Module",
+    "moduleBalancing.searchModules": "Search modules...",
+    "moduleBalancing.searchItems": "Search items...",
+    "moduleBalancing.expandDetails": "Expand Details",
+    "moduleBalancing.collapseDetails": "Collapse",
+    "moduleBalancing.nItemsMore": "+{n} more",
+    "moduleBalancing.emptyPorts": "No items yet",
+    "moduleBalancing.none": "None",
+    "moduleBalancing.noStages": "No stages yet",
+    "moduleBalancing.noSummary": "Add inputs or modules to see the summary",
     "helpDialog.title": "Help",
     "helpDialog.description": "Help topics will be organized here as multiple tabs.",
     "helpDialog.tab.overview": "Overview",
@@ -684,6 +829,22 @@ const MESSAGES: Record<AppLocale, Record<MessageKey, string>> = {
     "uiGroup.advancedManufacturing": "Advanced Manufacturing",
     "registry.entity.item_port_filling_pd_mc_1.name": "Filling Unit",
     "uiGroup.hidden": "Hidden Devices",
+    "encyclopedia.searchPlaceholder": "Search items or devices…",
+    "encyclopedia.category.all": "All",
+    "encyclopedia.category.items": "Items",
+    "encyclopedia.category.entities": "Devices",
+    "encyclopedia.filter.excludeBottledLiquid": "Exclude Bottled Liquids",
+    "encyclopedia.group.asInput": "As Input",
+    "encyclopedia.group.asOutput": "As Output",
+    "encyclopedia.group.asMachine": "Machines",
+    "encyclopedia.noResults": "No results found",
+    "encyclopedia.noRecipes": "No related recipes",
+    "encyclopedia.back": "Back",
+    "encyclopedia.home": "Encyclopedia",
+    "encyclopedia.viewDetails": "View Details",
+    "encyclopedia.entityLabel": "Device",
+    "encyclopedia.itemLabel": "Item",
+    "encyclopedia.filter.label": "Filter",
   },
 };
 

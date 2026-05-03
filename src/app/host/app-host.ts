@@ -15,6 +15,7 @@ import { KeyboardShortcutManager } from "../actions/keyboard-shortcut-manager";
 import { hookLocalstorage } from "../state/storage-hook";
 import { createUiStateReadWrite, UiStateReadWrite } from "../state/state-impl";
 import { hookThemeApplicator } from "../theme/theme-applicator";
+import { WorkbenchEncyclopediaPickerController } from "../shell/encyclopedia-picker-state";
 
 export interface AppHost extends AppContract {
   workspace: WorkspaceContract;
@@ -23,6 +24,7 @@ export interface AppHost extends AppContract {
   gestureDiagnostics: GestureDiagnosticsStore;
   internalState: UiStateReadWrite;
   internalActions: AppInternalAction;
+  encyclopediaPicker: WorkbenchEncyclopediaPickerController;
   dispose: () => void;
 }
 
@@ -36,6 +38,9 @@ export function createAppHost(
     resolvePointerEntity: (position) => workspace.editor?.queries.findEntityAtClientPixelPoint(position) ?? null,
   });
   const gestureDiagnostics = createGestureDiagnosticsStore();
+  const encyclopediaPicker = new WorkbenchEncyclopediaPickerController(
+    () => internalState.workbench.toolbox.wiki,
+  );
   const host = {} as AppHost;
   const gestureActionRouter = createGestureActionRouter<AppHost>({
     gestureAdapter,
@@ -51,6 +56,7 @@ export function createAppHost(
     gestureActionRouter,
     gestureDiagnostics,
     internalState,
+    encyclopediaPicker,
   });
 
   const shortcutManager = new KeyboardShortcutManager(host);
@@ -96,6 +102,7 @@ export function createAppHost(
   Object.assign(host, {
     internalActions,
     dispose: () => {
+      encyclopediaPicker.dispose();
       gestureActionRouter.dispose();
       gestureAdapter.dispose();
       while (disposers.length > 0) {

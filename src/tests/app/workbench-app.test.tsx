@@ -18,6 +18,8 @@ import {
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import {
   DEFAULT_HELP_DIALOG_TAB_ID,
+  DEFAULT_MODULE_BALANCING_CANVAS_ID,
+  DEFAULT_MODULE_BALANCING_STAGE_ID,
   DEFAULT_RIGHT_DOCK_TAB_ID,
   DEFAULT_RIGHT_DOCK_WIDTH,
   DEFAULT_TOOLBOX_DIALOG_TAB_ID,
@@ -83,6 +85,66 @@ function createDialogStateSnapshot(options: {
   };
 }
 
+function createToolboxWikiStorageSnapshot(options: {
+  searchQuery?: string;
+  desktopCategory?: "all" | "item" | "entity" | "basicProduction" | "advancedManufacturing" | "beltLogistics" | "pipeLogistics" | "resourcePower" | "warehouse";
+  mobileSelectedCategories?: Array<"excludeBottledLiquid" | "item" | "entity" | "basicProduction" | "advancedManufacturing" | "beltLogistics" | "pipeLogistics" | "resourcePower" | "warehouse">;
+  navigationStack?: Array<{ type: "item" | "entity"; id: string }>;
+  openedPage?: { kind: "browser" } | { kind: "item" | "entity"; id: string };
+} = {}) {
+  return {
+    searchQuery: options.searchQuery ?? "",
+    desktopCategory: options.desktopCategory ?? "all",
+    mobileSelectedCategories: options.mobileSelectedCategories ?? ["excludeBottledLiquid"],
+    navigationStack: options.navigationStack ?? [],
+    openedPage: options.openedPage ?? { kind: "browser" },
+  };
+}
+
+function createModuleBalancingStorageSnapshot(options: {
+  canvases?: Array<{
+    id: string;
+    name: string;
+    globalInputs: Array<{ itemId: string; perMinute: number }>;
+    stages: Array<{
+      id: string;
+      name: string;
+      entries: Array<{ moduleId: string; quantity: number }>;
+    }>;
+    warehouseCapacity: number | null;
+  }>;
+  customModules?: Array<{
+    id: string;
+    name: string;
+    color: string;
+    iconId: string;
+    sourceType: "custom";
+    inputs: Array<{ itemId: string; perMinute: number }>;
+    outputs: Array<{ itemId: string; perMinute: number }>;
+  }>;
+  activeCanvasId?: string | null;
+} = {}) {
+  return {
+    canvases: options.canvases ?? [
+      {
+        id: DEFAULT_MODULE_BALANCING_CANVAS_ID,
+        name: "主基地配平",
+        globalInputs: [],
+        stages: [
+          {
+            id: DEFAULT_MODULE_BALANCING_STAGE_ID,
+            name: "Stage 1",
+            entries: [],
+          },
+        ],
+        warehouseCapacity: null,
+      },
+    ],
+    customModules: options.customModules ?? [],
+    activeCanvasId: options.activeCanvasId ?? DEFAULT_MODULE_BALANCING_CANVAS_ID,
+  };
+}
+
 function createWorkbenchStorageSnapshot(options: {
   leftDockOpen?: boolean;
   rightDockOpen?: boolean;
@@ -92,6 +154,8 @@ function createWorkbenchStorageSnapshot(options: {
   toolboxDialog?: ReturnType<typeof createDialogStateSnapshot>;
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  toolboxWiki?: ReturnType<typeof createToolboxWikiStorageSnapshot>;
+  moduleBalancing?: ReturnType<typeof createModuleBalancingStorageSnapshot>;
 } = {}) {
   return {
     leftDockOpen: options.leftDockOpen ?? true,
@@ -103,6 +167,10 @@ function createWorkbenchStorageSnapshot(options: {
       toolbox: options.toolboxDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_TOOLBOX_DIALOG_TAB_ID }),
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
+    },
+    toolbox: {
+      wiki: options.toolboxWiki ?? createToolboxWikiStorageSnapshot(),
+      moduleBalancing: options.moduleBalancing ?? createModuleBalancingStorageSnapshot(),
     },
   };
 }
@@ -352,6 +420,51 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.screenProfile.screenShape).toBe("portrait");
     expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("51px");
     expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("0.75");
+  });
+
+  it("requests fullscreen after a phone rotates from portrait to landscape", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 390,
+      height: 844,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
+    expect(appHost.state.screenProfile.screenShape).toBe("portrait");
+    expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(0);
+
+    setViewport({
+      width: 844,
+      height: 390,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    act(() => {
+      window.dispatchEvent(new Event("orientationchange"));
+    });
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
+    expect(appHost.state.screenProfile.screenShape).toBe("landscape");
+    expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+
+    expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(1);
   });
 
   it("updates left dock width through the edge handle and clamps the value", () => {
@@ -1545,6 +1658,66 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".toolbox-dialog-placeholder h3")?.textContent).toBe("产线规划");
   });
 
+  it("opens the global encyclopedia picker and resolves the selected item", async () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+    const copperOreName = appHost.actions.translate("registry.item.item_copper_ore.name");
+    let selectionPromise!: Promise<string | null>;
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    act(() => {
+      selectionPromise = appHost.encyclopediaPicker.pickItem({
+        filterItem: (item) => item.id === "item_copper_ore",
+      });
+    });
+
+    const pickerDialog = container.querySelector(
+      ".encyclopedia-picker-dialog",
+    ) as HTMLElement | null;
+
+    expect(pickerDialog).not.toBeNull();
+    expect(container.querySelector("#encyclopedia-picker-dialog-title")?.textContent).toBe("选择物品");
+    expect(container.querySelector(".encyclopedia-category-button")?.textContent).toBe("全部");
+    expect(Array.from(container.querySelectorAll(".encyclopedia-card-label"))).toHaveLength(1);
+    expect(container.querySelector(".encyclopedia-card-label")?.textContent).toBe(copperOreName);
+    expect(Array.from(container.querySelectorAll(".encyclopedia-category-button"))).not.toContainEqual(
+      expect.objectContaining({ textContent: "设备" }),
+    );
+    expect(pickerDialog?.querySelector(".dialog-shell-resize-grip")).toBeNull();
+    expect(
+      container.querySelector(".encyclopedia-picker-dialog-header")?.classList.contains("is-draggable"),
+    ).toBe(false);
+
+    const maximizeButton = container.querySelector(
+      '.encyclopedia-picker-dialog button[title="最大化"]',
+    ) as HTMLButtonElement | null;
+
+    expect(maximizeButton).not.toBeNull();
+
+    act(() => {
+      maximizeButton?.click();
+    });
+
+    expect(container.querySelector(".encyclopedia-picker-dialog")?.classList.contains("is-maximized")).toBe(true);
+
+    const copperButton = Array.from(container.querySelectorAll(".encyclopedia-card")).find(
+      (element) => element.textContent?.includes(copperOreName),
+    ) as HTMLButtonElement | undefined;
+
+    expect(copperButton).toBeDefined();
+
+    await act(async () => {
+      copperButton?.click();
+      await selectionPromise;
+    });
+
+    await expect(selectionPromise).resolves.toBe("item_copper_ore");
+    expect(container.querySelector(".encyclopedia-picker-dialog")).toBeNull();
+  });
+
   it("writes language changes into AppSettings and re-renders through mobx", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
@@ -1915,6 +2088,51 @@ describe("WorkbenchApp", () => {
     expect(dialog).not.toBeNull();
     expect(container.querySelector(".settings-dialog-sidebar")).toBeNull();
     expect(groupTitles).toEqual(["系统", "显示", "游戏", "鹰角操作模式", "快捷键", "其他", "调试"]);
+  });
+
+  it("marks help and toolbox dialogs as compact shells on phones", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 390,
+      height: 844,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const helpButton = container.querySelector(
+      'button[title="帮助"]',
+    ) as HTMLButtonElement | null;
+    const toolboxButton = container.querySelector(
+      'button[title="工具箱"]',
+    ) as HTMLButtonElement | null;
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
+
+    act(() => {
+      helpButton?.click();
+    });
+
+    expect(container.querySelector(".help-dialog")?.classList.contains("is-mobile-compact")).toBe(true);
+
+    const helpCloseButton = container.querySelector(
+      '.help-dialog-header button[title="关闭"]',
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      helpCloseButton?.click();
+      toolboxButton?.click();
+    });
+
+    expect(container.querySelector(".toolbox-dialog")?.classList.contains("is-mobile-compact")).toBe(true);
   });
 
   it("hides the settings group sidebar on tablets", () => {

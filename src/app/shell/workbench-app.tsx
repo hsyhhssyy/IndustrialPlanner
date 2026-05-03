@@ -15,6 +15,7 @@ import {
 import { HelpDialog } from "@/app/shell/components/help-dialog";
 import { MobilePortraitGate } from "@/app/shell/components/mobile-portrait-gate";
 import { SettingsDialog } from "@/app/shell/components/settings-dialog";
+import { EncyclopediaPickerDialog } from "@/app/shell/components/encyclopedia-picker-dialog";
 import { ToolboxDialog } from "@/app/shell/components/toolbox-dialog";
 import { WorkbenchIcon } from "@/app/shell/components/workbench-icons";
 import LeftDock from "@/app/shell/components/left-dock";
@@ -326,6 +327,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       {rightDockOpen ? <RightDock appHost={appHost} /> : null}
       {showBottomStatusBar ? <BottomStatusBar appHost={appHost} /> : null}
       <ToolboxDialog appHost={appHost} />
+      <EncyclopediaPickerDialog appHost={appHost} />
       <HelpDialog appHost={appHost} />
       <SettingsDialog appHost={appHost} controller={settingsDialog} />
       {showMobilePortraitGate ? <MobilePortraitGate appHost={appHost} /> : null}

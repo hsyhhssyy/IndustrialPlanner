@@ -35,6 +35,7 @@ const HELP_DIALOG_TABS: Array<{
 export const HelpDialog = observer(function HelpDialog({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const dialogState = appHost.internalState.workbench.dialogState.help;
+  const isMobileCompactLayout = appHost.state.screenProfile.deviceClass === "mobile";
   const tabs: DialogShellTab[] = HELP_DIALOG_TABS.map((tab) => ({
     id: tab.id,
     label: t(tab.labelKey),
@@ -52,6 +53,7 @@ export const HelpDialog = observer(function HelpDialog({ appHost }: { appHost: A
     <DialogShell
       className="help-dialog"
       closeTitle={t("action.close")}
+      compactMobileLayout={isMobileCompactLayout}
       dialogKey="help"
       dialogState={dialogState}
       immersiveMaximized={dialogState.maximized && shouldUseImmersiveMaximizedDialog(appHost.state.screenProfile)}

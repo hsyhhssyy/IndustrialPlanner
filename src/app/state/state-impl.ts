@@ -9,9 +9,23 @@ import type {
   ActiveTool,
   AppSettings,
   MarqueeCollectionType,
+  ModuleBalancingCanvas,
+  ModuleBalancingCustomModule,
+  ModuleBalancingIOPort,
+  ModuleBalancingStage,
+  ModuleBalancingStageModuleEntry,
+  ModuleBalancingState,
   RightDockTabId,
   SimulationSpeed,
   SimulationState,
+  ToolboxState,
+  ToolboxWikiDesktopCategory,
+  ToolboxWikiEntityGroupCategory,
+  ToolboxWikiMobileCategory,
+  ToolboxWikiMobileFilterOption,
+  ToolboxWikiNavigationEntry,
+  ToolboxWikiOpenedPage,
+  ToolboxWikiState,
   ToolInfo,
   UiState,
   WorkbenchState,
@@ -67,6 +81,60 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
   topBarCollapsed: boolean;
   rightDockActiveTab: RightDockTabId;
   dialogState: DialogStateMapReadWrite;
+  toolbox: ToolboxStateReadWrite;
+}
+
+export interface ToolboxStateReadWrite extends ToolboxState {
+  wiki: ToolboxWikiStateReadWrite;
+  moduleBalancing: ModuleBalancingStateReadWrite;
+}
+
+export interface ToolboxWikiStateReadWrite extends ToolboxWikiState {
+  searchQuery: string;
+  desktopCategory: ToolboxWikiDesktopCategory;
+  mobileSelectedCategories: ToolboxWikiMobileFilterOption[];
+  navigationStack: ToolboxWikiNavigationEntry[];
+  openedPage: ToolboxWikiOpenedPage;
+}
+
+export interface ModuleBalancingStateReadWrite extends ModuleBalancingState {
+  canvases: ModuleBalancingCanvasReadWrite[];
+  customModules: ModuleBalancingCustomModuleReadWrite[];
+  activeCanvasId: string | null;
+}
+
+export interface ModuleBalancingCanvasReadWrite extends ModuleBalancingCanvas {
+  id: string;
+  name: string;
+  globalInputs: ModuleBalancingIOPortReadWrite[];
+  stages: ModuleBalancingStageReadWrite[];
+  warehouseCapacity: number | null;
+}
+
+export interface ModuleBalancingStageReadWrite extends ModuleBalancingStage {
+  id: string;
+  name: string;
+  entries: ModuleBalancingStageModuleEntryReadWrite[];
+}
+
+export interface ModuleBalancingCustomModuleReadWrite extends ModuleBalancingCustomModule {
+  id: string;
+  name: string;
+  color: string;
+  iconId: string;
+  inputs: ModuleBalancingIOPortReadWrite[];
+  outputs: ModuleBalancingIOPortReadWrite[];
+  sourceType: "custom";
+}
+
+export interface ModuleBalancingIOPortReadWrite extends ModuleBalancingIOPort {
+  itemId: string;
+  perMinute: number;
+}
+
+export interface ModuleBalancingStageModuleEntryReadWrite extends ModuleBalancingStageModuleEntry {
+  moduleId: string;
+  quantity: number;
 }
 
 export const CANVAS_FLOATING_TOOLBAR_BUTTON_IDS = [
@@ -106,6 +174,79 @@ export const TOOLBOX_DIALOG_TAB_IDS = [
 
 export type ToolboxDialogTabId = typeof TOOLBOX_DIALOG_TAB_IDS[number];
 export const DEFAULT_TOOLBOX_DIALOG_TAB_ID: ToolboxDialogTabId = TOOLBOX_DIALOG_TAB_IDS[0];
+
+export const TOOLBOX_WIKI_ENTITY_GROUP_CATEGORY_IDS = [
+  "basicProduction",
+  "advancedManufacturing",
+  "beltLogistics",
+  "pipeLogistics",
+  "resourcePower",
+  "warehouse",
+] as const satisfies readonly ToolboxWikiEntityGroupCategory[];
+
+export const TOOLBOX_WIKI_MOBILE_CATEGORY_IDS = [
+  "item",
+  "entity",
+  ...TOOLBOX_WIKI_ENTITY_GROUP_CATEGORY_IDS,
+] as const satisfies readonly ToolboxWikiMobileCategory[];
+
+export const TOOLBOX_WIKI_MOBILE_FILTER_OPTION_IDS = [
+  "excludeBottledLiquid",
+  ...TOOLBOX_WIKI_MOBILE_CATEGORY_IDS,
+] as const satisfies readonly ToolboxWikiMobileFilterOption[];
+
+export const TOOLBOX_WIKI_DESKTOP_CATEGORY_IDS = [
+  "all",
+  ...TOOLBOX_WIKI_MOBILE_CATEGORY_IDS,
+] as const satisfies readonly ToolboxWikiDesktopCategory[];
+
+export function isToolboxWikiDesktopCategory(value: unknown): value is ToolboxWikiDesktopCategory {
+  return typeof value === "string"
+    && TOOLBOX_WIKI_DESKTOP_CATEGORY_IDS.includes(value as ToolboxWikiDesktopCategory);
+}
+
+export function isToolboxWikiMobileCategory(value: unknown): value is ToolboxWikiMobileCategory {
+  return typeof value === "string"
+    && TOOLBOX_WIKI_MOBILE_CATEGORY_IDS.includes(value as ToolboxWikiMobileCategory);
+}
+
+export function isToolboxWikiMobileFilterOption(value: unknown): value is ToolboxWikiMobileFilterOption {
+  return typeof value === "string"
+    && TOOLBOX_WIKI_MOBILE_FILTER_OPTION_IDS.includes(value as ToolboxWikiMobileFilterOption);
+}
+
+export function createDefaultToolboxWikiOpenedPage(): ToolboxWikiOpenedPage {
+  return { kind: "browser" };
+}
+
+export const DEFAULT_MODULE_BALANCING_CANVAS_ID = "module-balancing-canvas-main";
+export const DEFAULT_MODULE_BALANCING_STAGE_ID = "module-balancing-stage-1";
+
+export function createDefaultModuleBalancingStage(): ModuleBalancingStageReadWrite {
+  return {
+    id: DEFAULT_MODULE_BALANCING_STAGE_ID,
+    name: "Stage 1",
+    entries: [],
+  };
+}
+
+export function createDefaultModuleBalancingCanvas(): ModuleBalancingCanvasReadWrite {
+  return {
+    id: DEFAULT_MODULE_BALANCING_CANVAS_ID,
+    name: "主基地配平",
+    globalInputs: [],
+    stages: [createDefaultModuleBalancingStage()],
+    warehouseCapacity: null,
+  };
+}
+
+export function createDefaultModuleBalancingState(): ModuleBalancingStateReadWrite {
+  return {
+    canvases: [createDefaultModuleBalancingCanvas()],
+    customModules: [],
+    activeCanvasId: DEFAULT_MODULE_BALANCING_CANVAS_ID,
+  };
+}
 
 export const HELP_DIALOG_TAB_IDS = [
   "overview",
@@ -250,6 +391,28 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
     help: createDefaultDialogStateForKey("help"),
     settings: createDefaultDialogStateForKey("settings"),
   };
+  toolbox: ToolboxStateReadWrite = new ToolboxStateReadWriteImpl();
+
+  public constructor() {
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
+}
+
+class ToolboxStateReadWriteImpl implements ToolboxStateReadWrite {
+  wiki: ToolboxWikiStateReadWrite = new ToolboxWikiStateReadWriteImpl();
+  moduleBalancing: ModuleBalancingStateReadWrite = createDefaultModuleBalancingState();
+
+  public constructor() {
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
+}
+
+class ToolboxWikiStateReadWriteImpl implements ToolboxWikiStateReadWrite {
+  searchQuery = "";
+  desktopCategory: ToolboxWikiDesktopCategory = "all";
+  mobileSelectedCategories: ToolboxWikiMobileFilterOption[] = ["excludeBottledLiquid"];
+  navigationStack: ToolboxWikiNavigationEntry[] = [];
+  openedPage: ToolboxWikiOpenedPage = createDefaultToolboxWikiOpenedPage();
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

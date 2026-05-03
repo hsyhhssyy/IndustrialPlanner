@@ -14,6 +14,8 @@ import {
 } from "@/app/state/storage-hook";
 import {
   DEFAULT_HELP_DIALOG_TAB_ID,
+  DEFAULT_MODULE_BALANCING_CANVAS_ID,
+  DEFAULT_MODULE_BALANCING_STAGE_ID,
   DEFAULT_RIGHT_DOCK_TAB_ID,
   DEFAULT_TOOLBOX_DIALOG_TAB_ID,
   MOBILE_LEFT_DOCK_WIDTH,
@@ -56,6 +58,66 @@ function createDialogStateSnapshot(options: {
   };
 }
 
+function createToolboxWikiStorageSnapshot(options: {
+  searchQuery?: string;
+  desktopCategory?: "all" | "item" | "entity" | "basicProduction" | "advancedManufacturing" | "beltLogistics" | "pipeLogistics" | "resourcePower" | "warehouse";
+  mobileSelectedCategories?: Array<"excludeBottledLiquid" | "item" | "entity" | "basicProduction" | "advancedManufacturing" | "beltLogistics" | "pipeLogistics" | "resourcePower" | "warehouse">;
+  navigationStack?: Array<{ type: "item" | "entity"; id: string }>;
+  openedPage?: { kind: "browser" } | { kind: "item" | "entity"; id: string };
+} = {}) {
+  return {
+    searchQuery: options.searchQuery ?? "",
+    desktopCategory: options.desktopCategory ?? "all",
+    mobileSelectedCategories: options.mobileSelectedCategories ?? ["excludeBottledLiquid"],
+    navigationStack: options.navigationStack ?? [],
+    openedPage: options.openedPage ?? { kind: "browser" },
+  };
+}
+
+function createModuleBalancingStorageSnapshot(options: {
+  canvases?: Array<{
+    id: string;
+    name: string;
+    globalInputs: Array<{ itemId: string; perMinute: number }>;
+    stages: Array<{
+      id: string;
+      name: string;
+      entries: Array<{ moduleId: string; quantity: number }>;
+    }>;
+    warehouseCapacity: number | null;
+  }>;
+  customModules?: Array<{
+    id: string;
+    name: string;
+    color: string;
+    iconId: string;
+    sourceType: "custom";
+    inputs: Array<{ itemId: string; perMinute: number }>;
+    outputs: Array<{ itemId: string; perMinute: number }>;
+  }>;
+  activeCanvasId?: string | null;
+} = {}) {
+  return {
+    canvases: options.canvases ?? [
+      {
+        id: DEFAULT_MODULE_BALANCING_CANVAS_ID,
+        name: "主基地配平",
+        globalInputs: [],
+        stages: [
+          {
+            id: DEFAULT_MODULE_BALANCING_STAGE_ID,
+            name: "Stage 1",
+            entries: [],
+          },
+        ],
+        warehouseCapacity: null,
+      },
+    ],
+    customModules: options.customModules ?? [],
+    activeCanvasId: options.activeCanvasId ?? DEFAULT_MODULE_BALANCING_CANVAS_ID,
+  };
+}
+
 function createWorkbenchStorageSnapshot(options: {
   leftDockOpen?: boolean;
   rightDockOpen?: boolean;
@@ -65,6 +127,8 @@ function createWorkbenchStorageSnapshot(options: {
   toolboxDialog?: ReturnType<typeof createDialogStateSnapshot>;
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  toolboxWiki?: ReturnType<typeof createToolboxWikiStorageSnapshot>;
+  moduleBalancing?: ReturnType<typeof createModuleBalancingStorageSnapshot>;
 } = {}) {
   return {
     leftDockOpen: options.leftDockOpen ?? true,
@@ -77,6 +141,10 @@ function createWorkbenchStorageSnapshot(options: {
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
     },
+    toolbox: {
+      wiki: options.toolboxWiki ?? createToolboxWikiStorageSnapshot(),
+      moduleBalancing: options.moduleBalancing ?? createModuleBalancingStorageSnapshot(),
+    },
   };
 }
 
@@ -88,6 +156,63 @@ afterEach(() => {
 });
 
 describe("createAppHost", () => {
+  it("defaults encyclopedia mobile filters to excluding bottled liquids", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    expect(appHost.internalState.workbench.toolbox.wiki.mobileSelectedCategories).toEqual([
+      "excludeBottledLiquid",
+    ]);
+  });
+
+  it("shares persisted encyclopedia filters between wiki and the global picker", async () => {
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        toolboxWiki: createToolboxWikiStorageSnapshot({
+          desktopCategory: "resourcePower",
+          mobileSelectedCategories: ["excludeBottledLiquid", "item"],
+        }),
+      })),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    expect(appHost.encyclopediaPicker.desktopCategory).toBe("resourcePower");
+    expect(appHost.encyclopediaPicker.mobileSelectedCategories).toEqual([
+      "excludeBottledLiquid",
+      "item",
+    ]);
+
+    const pendingSelection = appHost.encyclopediaPicker.pickItem();
+
+    expect(appHost.encyclopediaPicker.desktopCategory).toBe("resourcePower");
+    expect(appHost.encyclopediaPicker.mobileSelectedCategories).toEqual([
+      "excludeBottledLiquid",
+      "item",
+    ]);
+
+    appHost.encyclopediaPicker.setDesktopCategory("all");
+    appHost.encyclopediaPicker.setMobileSelectedCategories(["excludeBottledLiquid"]);
+
+    expect(appHost.internalState.workbench.toolbox.wiki.desktopCategory).toBe("all");
+    expect(appHost.internalState.workbench.toolbox.wiki.mobileSelectedCategories).toEqual([
+      "excludeBottledLiquid",
+    ]);
+    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        toolboxWiki: createToolboxWikiStorageSnapshot({
+          desktopCategory: "all",
+          mobileSelectedCategories: ["excludeBottledLiquid"],
+        }),
+      })),
+    );
+
+    appHost.encyclopediaPicker.cancel();
+    await expect(pendingSelection).resolves.toBeNull();
+  });
+
   it("initializes gesture adapter and gesture action router as app runtime services", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
@@ -154,6 +279,9 @@ describe("createAppHost", () => {
     expect(appHost.internalState.workbench.dialogState.toolbox.visible).toBe(false);
     expect(appHost.internalState.workbench.dialogState.toolbox.maximized).toBe(false);
     expect(appHost.internalState.workbench.dialogState.toolbox.activeTab).toBe(DEFAULT_TOOLBOX_DIALOG_TAB_ID);
+    expect(appHost.internalState.workbench.toolbox.wiki.searchQuery).toBe("");
+    expect(appHost.internalState.workbench.toolbox.wiki.navigationStack).toEqual([]);
+    expect(appHost.internalState.workbench.toolbox.wiki.openedPage).toEqual({ kind: "browser" });
     expect(appHost.internalState.workbench.dialogState.help.visible).toBe(false);
     expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(false);
     expect(appHost.internalState.workbench.dialogState.help.activeTab).toBe(DEFAULT_HELP_DIALOG_TAB_ID);
@@ -372,6 +500,13 @@ describe("createAppHost", () => {
           leftDockOpen: false,
           rightDockOpen: false,
           leftDockWidth: 512,
+          toolboxWiki: createToolboxWikiStorageSnapshot({
+            searchQuery: "铜",
+            desktopCategory: "basicProduction",
+            mobileSelectedCategories: ["item", "basicProduction"],
+            navigationStack: [{ type: "item", id: "item_copper_ore" }],
+            openedPage: { kind: "item", id: "item_copper_ore" },
+          }),
           helpDialog: createDialogStateSnapshot({
             maximized: true,
             activeTab: DEFAULT_HELP_DIALOG_TAB_ID,
@@ -386,6 +521,11 @@ describe("createAppHost", () => {
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
     expect(appHost.state.workbench.leftDockWidth).toBe(512);
+    expect(appHost.internalState.workbench.toolbox.wiki.searchQuery).toBe("铜");
+    expect(appHost.internalState.workbench.toolbox.wiki.desktopCategory).toBe("basicProduction");
+    expect(appHost.internalState.workbench.toolbox.wiki.mobileSelectedCategories).toEqual(["item", "basicProduction"]);
+    expect(appHost.internalState.workbench.toolbox.wiki.navigationStack).toEqual([{ type: "item", id: "item_copper_ore" }]);
+    expect(appHost.internalState.workbench.toolbox.wiki.openedPage).toEqual({ kind: "item", id: "item_copper_ore" });
     expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(true);
     expect(appHost.state.settings.locale).toBe("en-US");
     expect(appHost.state.settings.themeId).toBe("ayu-light");
@@ -406,6 +546,9 @@ describe("createAppHost", () => {
     runInAction(() => {
       appHost.internalState.workbench.rightDockOpen = true;
       appHost.internalState.workbench.leftDockWidth = 420;
+      appHost.internalState.workbench.toolbox.wiki.searchQuery = "铜锭";
+      appHost.internalState.workbench.toolbox.wiki.navigationStack = [{ type: "entity", id: "item_port_grinder_1" }];
+      appHost.internalState.workbench.toolbox.wiki.openedPage = { kind: "entity", id: "item_port_grinder_1" };
     });
 
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
@@ -413,6 +556,13 @@ describe("createAppHost", () => {
         leftDockOpen: false,
         rightDockOpen: true,
         leftDockWidth: 420,
+        toolboxWiki: createToolboxWikiStorageSnapshot({
+          searchQuery: "铜锭",
+          desktopCategory: "basicProduction",
+          mobileSelectedCategories: ["item", "basicProduction"],
+          navigationStack: [{ type: "entity", id: "item_port_grinder_1" }],
+          openedPage: { kind: "entity", id: "item_port_grinder_1" },
+        }),
         helpDialog: createDialogStateSnapshot({
           maximized: true,
           activeTab: DEFAULT_HELP_DIALOG_TAB_ID,
@@ -435,6 +585,13 @@ describe("createAppHost", () => {
         leftDockOpen: false,
         rightDockOpen: true,
         leftDockWidth: 420,
+        toolboxWiki: createToolboxWikiStorageSnapshot({
+          searchQuery: "铜锭",
+          desktopCategory: "basicProduction",
+          mobileSelectedCategories: ["item", "basicProduction"],
+          navigationStack: [{ type: "entity", id: "item_port_grinder_1" }],
+          openedPage: { kind: "entity", id: "item_port_grinder_1" },
+        }),
         helpDialog: createDialogStateSnapshot({
           maximized: true,
           activeTab: DEFAULT_HELP_DIALOG_TAB_ID,
@@ -447,6 +604,24 @@ describe("createAppHost", () => {
         themeId: "ayu-light",
       }),
     );
+  });
+
+  it("preserves an explicitly cleared encyclopedia mobile filter selection from storage", () => {
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(
+        createWorkbenchStorageSnapshot({
+          toolboxWiki: createToolboxWikiStorageSnapshot({
+            mobileSelectedCategories: [],
+          }),
+        }),
+      ),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    expect(appHost.internalState.workbench.toolbox.wiki.mobileSelectedCategories).toEqual([]);
   });
 
   it("migrates legacy right dock expand flags to the active tab state", () => {

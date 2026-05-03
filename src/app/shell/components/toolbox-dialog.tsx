@@ -1,7 +1,10 @@
+import type { ReactNode } from "react";
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
 import { DialogShell, type DialogShellTab } from "@/app/shell/components/dialog-shell";
+import { EncyclopediaPanel } from "@/app/shell/components/encyclopedia-panel";
+import { ModuleBalancingPanel } from "@/app/shell/components/module-balancing-panel";
 import { TOOLBOX_DIALOG_TAB_IDS, type ToolboxDialogTabId } from "@/app/state/state-impl";
 
 function shouldUseImmersiveMaximizedDialog(
@@ -31,23 +34,39 @@ const TOOLBOX_DIALOG_TABS: Array<{
 export const ToolboxDialog = observer(function ToolboxDialog({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const dialogState = appHost.internalState.workbench.dialogState.toolbox;
-  const tabs: DialogShellTab[] = TOOLBOX_DIALOG_TABS.map((tab) => ({
-    id: tab.id,
-    label: t(tab.labelKey),
-    content: (
-      <div className="toolbox-dialog-content">
-        <div className="toolbox-dialog-placeholder">
-          <h3>{t(tab.labelKey)}</h3>
-          <p>{t("toolboxDialog.empty")}</p>
-        </div>
-      </div>
+  const isTouch = shouldUseImmersiveMaximizedDialog(appHost.state.screenProfile);
+  const isMobileCompactLayout = appHost.state.screenProfile.deviceClass === "mobile";
+
+  const tabContents: Record<string, ReactNode> = {
+    [TOOLBOX_DIALOG_TAB_IDS[0]]: (
+      <EncyclopediaPanel appHost={appHost} isTouch={isTouch} />
     ),
-  }));
+    [TOOLBOX_DIALOG_TAB_IDS[2]]: (
+      <ModuleBalancingPanel appHost={appHost} isTouch={isTouch} />
+    ),
+  };
+
+  const tabs: DialogShellTab[] = TOOLBOX_DIALOG_TABS.map((tab) => {
+    const customContent = tabContents[tab.id];
+    return {
+      id: tab.id,
+      label: t(tab.labelKey),
+      content: customContent ?? (
+        <div className="toolbox-dialog-content">
+          <div className="toolbox-dialog-placeholder">
+            <h3>{t(tab.labelKey)}</h3>
+            <p>{t("toolboxDialog.empty")}</p>
+          </div>
+        </div>
+      ),
+    };
+  });
 
   return (
     <DialogShell
       className="toolbox-dialog"
       closeTitle={t("action.close")}
+      compactMobileLayout={isMobileCompactLayout}
       dialogKey="toolbox"
       dialogState={dialogState}
       immersiveMaximized={dialogState.maximized && shouldUseImmersiveMaximizedDialog(appHost.state.screenProfile)}

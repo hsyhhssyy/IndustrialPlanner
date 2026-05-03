@@ -25,6 +25,7 @@ interface DialogShellProps {
   tabs?: readonly DialogShellTab[];
   className?: string;
   bodyClassName?: string;
+  compactMobileLayout?: boolean;
   maximizeTitle: string;
   restoreTitle: string;
   closeTitle: string;
@@ -46,6 +47,7 @@ export const DialogShell = observer(function DialogShell({
   tabs = [],
   className,
   bodyClassName,
+  compactMobileLayout = false,
   maximizeTitle,
   restoreTitle,
   closeTitle,
@@ -131,6 +133,7 @@ export const DialogShell = observer(function DialogShell({
   const shellClassName = [
     "dialog-shell",
     className,
+    compactMobileLayout ? "is-mobile-compact" : "",
     dialogState.maximized ? "is-maximized" : "",
   ].filter(Boolean).join(" ");
   const backdropClassName = [
