@@ -68,7 +68,6 @@ export function createAppHost(
     toggleLeftDock: actionImpl.toggleLeftDock,
     toggleRightDock: actionImpl.toggleRightDock,
     toggleTopBarCollapsed: actionImpl.toggleTopBarCollapsed,
-    setSimulationState: actionImpl.setSimulationState,
     setRightDockActiveTab: actionImpl.setRightDockActiveTab,
     openDialog: actionImpl.openDialog,
     closeDialog: actionImpl.closeDialog,

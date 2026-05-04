@@ -66,8 +66,13 @@ export function createRenderSceneOrchestrator(
 
   const flushViewport = (): void => {
     const viewportState = readViewportState(renderHost)
+    const frameTime: RenderFrameTimeState = {
+      nowMs: renderHost.app.ticker.lastTime,
+      deltaMs: renderHost.app.ticker.deltaMS,
+    }
 
     applyViewportSize(app, viewportState)
+    void renderHost.workspace.simulation?.actions.advancePlaybackByDeltaMs(frameTime.deltaMs)
 
     const ctx: DecorationSyncContext = {
       viewportState,
@@ -78,7 +83,7 @@ export function createRenderSceneOrchestrator(
         height: app.renderer.height,
       },
       workspace: renderHost.workspace,
-      nowMs: renderHost.app.ticker.lastTime,
+      nowMs: frameTime.nowMs,
     }
 
     gridDecoration.sync(ctx)
@@ -93,10 +98,7 @@ export function createRenderSceneOrchestrator(
       entitySprites,
       layers,
       viewportState,
-      frameTime: {
-        nowMs: renderHost.app.ticker.lastTime,
-        deltaMs: renderHost.app.ticker.deltaMS,
-      },
+      frameTime,
       viewportBounds: ctx.viewportBounds,
       theme: renderHost.workspace.app!.state.theme,
     })

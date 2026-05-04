@@ -3268,6 +3268,121 @@ body.is-resizing-left-dock * {
     monospace;
 }
 
+.slot-config-inspector,
+.slot-config-list,
+.slot-config-row,
+.slot-config-row-main,
+.slot-config-row-actions,
+.slot-config-stepper {
+  display: grid;
+  gap: 8px;
+}
+
+.slot-config-group-header,
+.slot-config-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.slot-config-group-header p,
+.slot-config-row-header strong,
+.slot-config-meta {
+  margin: 0;
+}
+
+.slot-config-row {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.slot-config-row-main {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.slot-config-item-button,
+.slot-config-clear-button,
+.slot-config-step-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-0);
+  font: inherit;
+}
+
+.slot-config-item-button,
+.slot-config-clear-button {
+  padding: 0 10px;
+}
+
+.slot-config-item-button {
+  justify-content: space-between;
+  width: 100%;
+  min-width: 0;
+}
+
+.slot-config-item-button:disabled,
+.slot-config-clear-button:disabled,
+.slot-config-step-button:disabled,
+.slot-config-count-input:disabled {
+  opacity: 0.6;
+}
+
+.slot-config-lock-tag {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-0) 72%, transparent);
+  color: var(--text-1);
+  font-size: 0.72rem;
+}
+
+.slot-config-stepper {
+  grid-template-columns: 32px 72px 32px;
+  align-items: center;
+}
+
+.slot-config-step-button {
+  padding: 0;
+}
+
+.slot-config-step-button svg,
+.slot-config-clear-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.slot-config-count-input {
+  min-width: 0;
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-0);
+  font: inherit;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .slot-config-row-main {
+    grid-template-columns: 1fr;
+  }
+
+  .slot-config-row-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ================================================================
    Encyclopedia Panel
    ================================================================ */

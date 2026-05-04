@@ -35,6 +35,8 @@ export interface EditorAction {
 	): void;
 	zoom(step: number): void;
 
+	patchEntityConfig(entityId: string, patch: Record<string, unknown>): void;
+
 	clearCollection(collectionType: EntityCollectionType): void;
 	deleteCollection(collectionType: EntityCollectionType): void;
 	addToCollection(options: EntityCollectionMemberOptions): void;

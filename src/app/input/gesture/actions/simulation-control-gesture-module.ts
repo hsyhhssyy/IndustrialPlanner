@@ -19,13 +19,17 @@ export function createSimulationControlGestureModule(): GestureMappingModule<App
         return { status: "ignored" };
       }
 
-      if (context.appHost.state.simulationState === "start") {
-        context.appHost.internalActions.setSimulationState("pause");
+      const simulation = context.workspace.simulation;
+      if (simulation === null) {
+        return { status: "ignored" };
+      }
+
+      if (simulation.state === "start") {
+        simulation.actions.pause();
         return { status: "handled" };
       }
 
-      context.appHost.internalActions.setSimulationState("start");
-      void context.workspace.simulation?.actions.start();
+      void simulation.actions.start();
       return { status: "handled" };
     },
   };

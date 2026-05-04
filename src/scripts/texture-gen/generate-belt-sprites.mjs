@@ -92,32 +92,41 @@ function createStraightLogisticsSvg(spec) {
   `;
 }
 
-function createTurnLogisticsSvg(spec) {
-  const centerY = SPRITE_SIZE;
+function createTurnLogisticsSvg(spec, turnType) {
+  const isCw = turnType === 'cw';
+
+  // CW: bottom-left corner, curve from left to bottom (WEST→SOUTH)
+  // CCW: top-left corner, curve from left to top (WEST→NORTH)
+  const centerY = isCw ? SPRITE_SIZE : 0;
   const outerRadius = SPRITE_SIZE - spec.sideInset;
   const innerRadius = spec.sideInset;
 
-  const outerStartY = SPRITE_SIZE - outerRadius;
+  const outerStartY = isCw ? SPRITE_SIZE - outerRadius : outerRadius;
   const outerEndX = outerRadius;
-  const innerStartY = SPRITE_SIZE - innerRadius;
+  const innerStartY = isCw ? SPRITE_SIZE - innerRadius : innerRadius;
   const innerEndX = innerRadius;
+
+  // Outer arc goes CW for CW turn (sweep=1), CCW for CCW turn (sweep=0)
+  const outerSweep = isCw ? 1 : 0;
+  // Inner arc goes the opposite direction to close the band
+  const innerSweep = isCw ? 0 : 1;
 
   const fillPath = [
     `M 0 ${outerStartY}`,
-    `A ${outerRadius} ${outerRadius} 0 0 1 ${outerEndX} ${centerY}`,
+    `A ${outerRadius} ${outerRadius} 0 0 ${outerSweep} ${outerEndX} ${centerY}`,
     `L ${innerEndX} ${centerY}`,
-    `A ${innerRadius} ${innerRadius} 0 0 0 0 ${innerStartY}`,
+    `A ${innerRadius} ${innerRadius} 0 0 ${innerSweep} 0 ${innerStartY}`,
     'Z',
   ].join(' ');
 
   const outerEdgePath = [
     `M 0 ${outerStartY}`,
-    `A ${outerRadius} ${outerRadius} 0 0 1 ${outerEndX} ${centerY}`,
+    `A ${outerRadius} ${outerRadius} 0 0 ${outerSweep} ${outerEndX} ${centerY}`,
   ].join(' ');
 
   const innerEdgePath = [
     `M 0 ${innerStartY}`,
-    `A ${innerRadius} ${innerRadius} 0 0 1 ${innerEndX} ${centerY}`,
+    `A ${innerRadius} ${innerRadius} 0 0 ${outerSweep} ${innerEndX} ${centerY}`,
   ].join(' ');
 
   return `
@@ -188,8 +197,8 @@ async function main() {
     console.log(`Generated ${spec.straightSpriteId} sprite (${SPRITE_SIZE}x${SPRITE_SIZE}) at ${straightOutputs.spriteOutputFilePath}`);
     console.log(`Generated ${spec.straightSpriteId} mask (${SPRITE_SIZE}x${SPRITE_SIZE}) at ${straightOutputs.maskOutputFilePath}`);
 
-    const turnSvg = createTurnLogisticsSvg(spec);
-    for (const spriteId of spec.turnSpriteIds) {
+    for (const [index, spriteId] of spec.turnSpriteIds.entries()) {
+      const turnSvg = createTurnLogisticsSvg(spec, index === 0 ? 'cw' : 'ccw');
       const turnOutputs = await writeSpriteAndMask(spriteId, turnSvg);
       console.log(`Generated ${spriteId} sprite (${SPRITE_SIZE}x${SPRITE_SIZE}) at ${turnOutputs.spriteOutputFilePath}`);
       console.log(`Generated ${spriteId} mask (${SPRITE_SIZE}x${SPRITE_SIZE}) at ${turnOutputs.maskOutputFilePath}`);

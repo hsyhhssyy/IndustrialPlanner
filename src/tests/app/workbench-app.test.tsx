@@ -28,6 +28,7 @@ import {
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
+import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 
@@ -152,7 +153,7 @@ function createWorkbenchStorageSnapshot(options: {
   rightDockOpen?: boolean;
   leftDockWidth?: number;
   topBarCollapsed?: boolean;
-  rightDockActiveTab?: "base" | "power" | "selection";
+  rightDockActiveTab?: "base" | "power" | "selection" | "simulation";
   toolboxDialog?: ReturnType<typeof createDialogStateSnapshot>;
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
@@ -657,11 +658,13 @@ describe("WorkbenchApp", () => {
     const baseTab = container.querySelector("#right-dock-tab-base") as HTMLButtonElement | null;
     const powerTab = container.querySelector("#right-dock-tab-power") as HTMLButtonElement | null;
     const selectionTab = container.querySelector("#right-dock-tab-selection") as HTMLButtonElement | null;
+    const simulationTab = container.querySelector("#right-dock-tab-simulation") as HTMLButtonElement | null;
     const closeButton = container.querySelector(".right-dock-close-button") as HTMLButtonElement | null;
 
     expect(baseTab?.getAttribute("aria-selected")).toBe("false");
     expect(powerTab?.getAttribute("aria-selected")).toBe("true");
     expect(selectionTab?.getAttribute("aria-selected")).toBe("false");
+    expect(simulationTab?.getAttribute("aria-selected")).toBe("false");
     expect(container.textContent).toContain("总耗电");
     expect(container.textContent).not.toContain("可放置区域");
     expect(closeButton?.title).toBe("关闭 右侧");
@@ -680,6 +683,76 @@ describe("WorkbenchApp", () => {
 
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
     expect(container.querySelector(".dock-right")).toBeNull();
+  });
+
+  it("renders current tick snapshot json in the simulation right dock tab", () => {
+    vi.useFakeTimers();
+
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        rightDockActiveTab: "simulation",
+      })),
+    );
+
+    const workspace = createWorkspace();
+    workspace.simulation = {
+      state: "stop",
+      playbackTickRateHz: 1,
+      topology: createSnapshotStore(null),
+      queries: {
+        getStatus: () => ({
+          mode: "stopped",
+          topologyId: null,
+          documentHash: null,
+          retainedFromTick: 3,
+          latestTickNumber: 3,
+          bufferSize: 1,
+          maxBufferSize: 180,
+          error: null,
+        }),
+        getCurrentTickSnapshot: () => ({
+          tickNumber: 3,
+          status: "running",
+          devices: {},
+        } as never),
+      },
+      actions: {
+        start: vi.fn(async () => ({
+          status: "started",
+          topologyId: null,
+          diagnostics: [],
+        })),
+        pause: vi.fn(),
+        stop: vi.fn(),
+        getTickSnapshot: vi.fn(async () => ({
+          status: "not-ready",
+          requestedTickNumber: 4,
+          retainedFromTick: 3,
+          latestTickNumber: 3,
+          bufferSize: 1,
+        })),
+        advancePlaybackByDeltaMs: vi.fn(async () => null),
+      },
+    } as NonNullable<WorkspaceContract["simulation"]>;
+
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const simulationTab = container.querySelector("#right-dock-tab-simulation") as HTMLButtonElement | null;
+    const snapshotTextarea = container.querySelector("[data-simulation-current-tick-json]") as HTMLTextAreaElement | null;
+
+    expect(simulationTab?.getAttribute("aria-selected")).toBe("true");
+
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(snapshotTextarea?.value).toContain('"tickNumber": 3');
+    expect(snapshotTextarea?.value).toContain('"status": "running"');
   });
 
   it("keeps the bottom bar visible in phone landscape until the top bar is collapsed", () => {

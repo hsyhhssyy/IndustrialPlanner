@@ -1,7 +1,11 @@
 
 
-import type { SimulationRuntimeStatus } from "../types/simulation";
+import type {
+  SimulationRuntimeStatus,
+  SimulationTickSnapshot,
+} from "../types/simulation";
 
 export interface SimulationQuery {
   getStatus(): SimulationRuntimeStatus;
+  getCurrentTickSnapshot(): SimulationTickSnapshot | null;
 }

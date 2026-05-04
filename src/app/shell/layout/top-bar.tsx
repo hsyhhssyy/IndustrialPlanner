@@ -19,7 +19,7 @@ export const SimulationControlButton = observer(function SimulationControlButton
   appHost: AppHost;
   className: string;
 }) {
-  const simulationState = appHost.state.simulationState;
+  const simulationState = appHost.workspace.simulation?.state ?? "stop";
   const isRunning = simulationState === "start";
   const label = appHost.actions.translate(isRunning ? "action.pause" : "action.start");
 

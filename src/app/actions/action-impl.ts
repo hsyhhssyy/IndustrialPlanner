@@ -13,7 +13,7 @@ import { lookupMessageText } from "@/shared/i18n/messages";
 import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 import type { KeyboardShortcutManager } from "./keyboard-shortcut-manager";
 
-import type { ActiveTool, SimulationState } from "@/domain/state/types";
+import type { ActiveTool } from "@/domain/state/types";
 import {
   CANVAS_FLOATING_TOOLBAR_BUTTON_IDS,
   CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS,
@@ -41,7 +41,6 @@ export interface AppInternalAction {
   toggleLeftDock: () => void;
   toggleRightDock: () => void;
   toggleTopBarCollapsed: () => void;
-  setSimulationState: (simulationState: SimulationState) => void;
   setRightDockActiveTab: (tabId: RightDockTabId) => void;
   openDialog: (request: string) => void;
   closeDialog: (dialogKey: string) => void;
@@ -110,14 +109,6 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
   public readonly toggleTopBarCollapsed: AppInternalAction["toggleTopBarCollapsed"] = action(() => {
     this.internalState.workbench.topBarCollapsed = !this.internalState.workbench.topBarCollapsed;
-  });
-
-  public readonly setSimulationState: AppInternalAction["setSimulationState"] = action((simulationState) => {
-    if (this.internalState.simulationState === simulationState) {
-      return;
-    }
-
-    this.internalState.simulationState = simulationState;
   });
 
   public readonly setRightDockActiveTab: AppInternalAction["setRightDockActiveTab"] = action((tabId) => {

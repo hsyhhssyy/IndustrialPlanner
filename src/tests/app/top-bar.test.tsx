@@ -9,6 +9,7 @@ import { TopBar } from "@/app/shell/layout/top-bar";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
+import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -220,6 +221,124 @@ describe("TopBar", () => {
     expect(
       fullscreenButton.querySelector("svg")?.getAttribute("data-workbench-icon"),
     ).toBe("expand");
+  });
+
+  it("starts the simulation through the simulation contract when the control button is idle", async () => {
+    const start = vi.fn(async () => ({
+      status: "started" as const,
+      topologyId: null,
+      diagnostics: [],
+    }));
+    const pause = vi.fn();
+    const workspace = createWorkspace();
+    workspace.simulation = {
+      state: "stop",
+      playbackTickRateHz: 1,
+      topology: createSnapshotStore(null),
+      queries: {
+        getStatus: () => ({
+          mode: "idle",
+          topologyId: null,
+          documentHash: null,
+          retainedFromTick: null,
+          latestTickNumber: null,
+          bufferSize: 0,
+          maxBufferSize: 180,
+          error: null,
+        }),
+        getCurrentTickSnapshot: () => null,
+      },
+      actions: {
+        start,
+        pause,
+        stop: vi.fn(),
+        getTickSnapshot: vi.fn(async () => ({
+          status: "not-ready" as const,
+          requestedTickNumber: 0,
+          retainedFromTick: null,
+          latestTickNumber: null,
+          bufferSize: 0,
+        })),
+        advancePlaybackByDeltaMs: vi.fn(async () => null),
+      },
+    } as NonNullable<WorkspaceContract["simulation"]>;
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<TopBar appHost={appHost} />);
+    });
+
+    const simulationButton = container.querySelector(
+      '[data-ui-button-id="top-bar-simulation-control"]',
+    ) as HTMLButtonElement | null;
+
+    expect(simulationButton).not.toBeNull();
+
+    await act(async () => {
+      simulationButton?.click();
+    });
+
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(pause).not.toHaveBeenCalled();
+  });
+
+  it("pauses the simulation through the simulation contract when the control button is running", async () => {
+    const start = vi.fn(async () => ({
+      status: "started" as const,
+      topologyId: null,
+      diagnostics: [],
+    }));
+    const pause = vi.fn();
+    const workspace = createWorkspace();
+    workspace.simulation = {
+      state: "start",
+      playbackTickRateHz: 1,
+      topology: createSnapshotStore(null),
+      queries: {
+        getStatus: () => ({
+          mode: "running",
+          topologyId: null,
+          documentHash: null,
+          retainedFromTick: null,
+          latestTickNumber: 0,
+          bufferSize: 1,
+          maxBufferSize: 180,
+          error: null,
+        }),
+        getCurrentTickSnapshot: () => null,
+      },
+      actions: {
+        start,
+        pause,
+        stop: vi.fn(),
+        getTickSnapshot: vi.fn(async () => ({
+          status: "not-ready" as const,
+          requestedTickNumber: 1,
+          retainedFromTick: 0,
+          latestTickNumber: 0,
+          bufferSize: 1,
+        })),
+        advancePlaybackByDeltaMs: vi.fn(async () => null),
+      },
+    } as NonNullable<WorkspaceContract["simulation"]>;
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<TopBar appHost={appHost} />);
+    });
+
+    const simulationButton = container.querySelector(
+      '[data-ui-button-id="top-bar-simulation-control"]',
+    ) as HTMLButtonElement | null;
+
+    expect(simulationButton).not.toBeNull();
+
+    await act(async () => {
+      simulationButton?.click();
+    });
+
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(start).not.toHaveBeenCalled();
   });
 
   it("removes all top-right status text and keeps only control buttons", () => {

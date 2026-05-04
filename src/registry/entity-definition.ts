@@ -1,18 +1,57 @@
+// =========================================================================
+// 实体定义注册表（Entity Definitions Registry）
+//
+// 本文件包含所有设备类型的完整定义。每个设备通过 createEntityDefinition()
+// ／ createEmptyEntityDefinition() 构建，声明其端口、存储槽组、缓存链接、
+// 配方和 Inspector 面板。
+//
+// 对应设计文档：
+//   - 《模拟器抽象方式》§2 Entity 定义层 — EntityDefinition 的结构与默认值
+//   - 《仿真运行原理》§3 核心原语 — 缓存类型 / 配方类型 / 缓存链接
+//   - 《仿真运行原理》§5 图模型 — 节点来源与能力
+//
+// 设备分为两类：
+//   1. 完整定义设备 — 声明了全部 portGroups/storageSlotGroups/
+//      portStorageBindings/recipe/cacheLinks（如传送带、仓库、反应池等）。
+//      这些设备直接参与仿真求解。
+//   2. 空壳设备 — 通过 createEmptyEntityDefinition() 创建，
+//      只声明 id/nameKey/spriteId/footprint/uiGroup/tags。
+//      用于放置面板展示，其端口/槽位/配方由外部配方注册表（recipe-definition.ts）
+//      中的 machineId 对应关系在编译时注入。标记 "v2 metadata sync"。
+//
+// Inspector 声明规则（对应《模拟器抽象方式》§4）：
+//   每个设备的 inspectors[] 声明"用哪个面板编辑哪个路径"。
+//   Inspector 不持有数据，只声明 type + targetPath + 最少必要参数。
+// =========================================================================
+
 import type {
   CacheLinkDefinition,
   EntityDefinition,
   EntityRecipeDefinition,
   ItemFilterDefinition,
 } from "@/domain/types/registry/entity-definition";
-import type { EntityInspectorDeclaration } from "@/domain/types/registry/entity-inspector";
+import {
+  INSPECTOR_TYPE,
+  type EntityInspectorDeclaration,
+} from "@/domain/types/registry/entity-inspector";
+
+// ---------------------------------------------------------------------------
+// 类型别名 — 从 EntityDefinition 中提取子类型
+// ---------------------------------------------------------------------------
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
 type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
 type StorageSlotDefinition = StorageSlotGroupDefinition["slots"][number];
 type PortStorageBindingDefinition = EntityDefinition["portStorageBindings"][number];
+
+/** 端口朝向简写：N=北 S=南 W=西 E=东（相对于设备 rotation=0） */
 type PortEdgeInput = "N" | "S" | "W" | "E";
+
+/** 槽位物品过滤类型：solid（固体）/ liquid（液体）/ any（任意） */
 type FilterType = NonNullable<ItemFilterDefinition["itemFilterType"]>;
+
+/** createPort() 的输入类型 — 必填字段 + 可选覆盖字段 */
 type PortDefinitionInput = Pick<
   PortDefinition,
   "id" | "localCellX" | "localCellY" | "edge"
@@ -20,16 +59,29 @@ type PortDefinitionInput = Pick<
   PortDefinition,
   "acceptRule" | "count" | "priorityGroup" | "roundRobinSeed"
 >>;
+
+/** createEntityDefinition() 的输入类型 — inspectors/recipe/cacheLinks 可选 */
 type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "recipe" | "cacheLinks"> & {
   readonly inspectors?: readonly EntityInspectorDeclaration[];
   readonly recipe?: EntityRecipeDefinition | null;
   readonly cacheLinks?: readonly CacheLinkDefinition[];
 };
+
+/** createEmptyEntityDefinition() 的输入类型 — 基础字段必填，电力字段可选 */
 type EmptyEntityDefinitionInput = Pick<
   EntityDefinitionInput,
   "id" | "nameKey" | "spriteId" | "footprint" | "uiGroup" | "tags"
 > & Partial<Pick<EntityDefinitionInput, "requiresPower" | "powerDemand">>;
 
+// =========================================================================
+// 工厂函数
+// =========================================================================
+
+/**
+ * 创建完整实体定义。
+ * 确保 recipe/cacheLinks/inspectors 始终为非 null/undefined 的规范化值。
+ * 对应《模拟器抽象方式》§2 — Entity 定义层的完整属性默认值。
+ */
 function createEntityDefinition(definition: EntityDefinitionInput): EntityDefinition {
   return {
     ...definition,
@@ -39,6 +91,16 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
   };
 }
 
+/**
+ * 创建空壳实体定义。
+ * 只声明 id/nameKey/spriteId/footprint/uiGroup/tags + 电力字段。
+ * recipe=null, cacheLinks=[], inspectors=[], portGroups=[], storageSlotGroups=[],
+ * portStorageBindings=[]。
+ *
+ * 空壳设备的实际端口/槽位/配方由外部配方注册表（recipe-definition.ts）中
+ * machineId 对应关系在 Topology Compiler 编译时注入。
+ * 标记 "v2 metadata sync" 的都属于此类。
+ */
 function createEmptyEntityDefinition(
   definition: EmptyEntityDefinitionInput,
 ): EntityDefinition {
@@ -55,6 +117,10 @@ function createEmptyEntityDefinition(
   });
 }
 
+/**
+ * 将简写朝向转为标准 GridEdge 枚举。
+ * N→NORTH  S→SOUTH  W→WEST  E→EAST
+ */
 function resolveEdge(edge: PortEdgeInput): PortDefinition["edge"] {
   switch (edge) {
     case "N":
@@ -68,6 +134,14 @@ function resolveEdge(edge: PortEdgeInput): PortDefinition["edge"] {
   }
 }
 
+/**
+ * 创建端口定义。
+ * acceptRule 默认按 portGroup.kind 推导（item→solid, fluid→liquid），
+ * 可通过 options 覆盖。
+ * count 默认 "unlimited"。
+ * priorityGroup 默认 0。
+ * roundRobinSeed 默认等于端口在组内的 index。
+ */
 function createPort(
   id: string,
   localCellX: number,
@@ -87,6 +161,15 @@ function createPort(
   };
 }
 
+/**
+ * 创建端口组。
+ * kind：item（固体物品端口）/ fluid（液体端口）——决定默认 acceptRule。
+ * direction：input（物品流入）/ output（物品流出）/ bidirectional（编译时分解为 input+output）。
+ * 每个端口的 acceptRule 默认按 kind 推导，count 默认 "unlimited"，
+ * priorityGroup 默认 0，roundRobinSeed 默认按 index 递增。
+ *
+ * 对应《仿真运行原理》§3.1 中 Port 的两个通用配置（acceptRule, count）。
+ */
 function createPortGroup(
   id: string,
   kind: PortGroupDefinition["kind"],
@@ -107,6 +190,16 @@ function createPortGroup(
   };
 }
 
+/**
+ * 创建单个存储槽位。
+ *
+ * 对应《仿真运行原理》§3.1 缓存类型中 slot 的概念。
+ * - capacity：槽位最大容量
+ * - itemFilterType：solid/liquid/any — 决定可存放的物品域
+ * - lock：锁定物品 ID，null=不锁定。用户可通过 entity.config["slots[N].lock"] 覆盖
+ * - ignoreStock：忽略仓库库存检查，取货口/出货口常用
+ * - submitMode：never（不自动提交）/ every-tick（每 tick）/ every-n-seconds（定时提交）
+ */
 function createSlot(
   id: string,
   capacity: number,
@@ -130,6 +223,10 @@ function createSlot(
   };
 }
 
+/**
+ * 批量创建同质槽位（相同 itemFilterType，不同 capacity）。
+ * 槽位 ID 格式为 "${prefix}_1", "${prefix}_2", ...
+ */
 function createSlots(
   prefix: string,
   capacities: number[],
@@ -140,6 +237,18 @@ function createSlots(
   );
 }
 
+/**
+ * 创建存储槽组。
+ *
+ * 对应《仿真运行原理》§3.1 缓存类型 + §3.4 缓存组。
+ * role 决定编译时的缓存类型：
+ *   "input"         → ingredient
+ *   "output"        → product
+ *   "bidirectional" → universal
+ *
+ * 每个存储槽组编译后 = 一个 CacheGroup（求解图节点）。
+ * 组内 slot 互斥（同物品不能出现在多槽），跨组不互斥（§3.4）。
+ */
 function createStorageSlotGroup(
   id: string,
   kind: StorageSlotGroupDefinition["kind"],
@@ -154,6 +263,15 @@ function createStorageSlotGroup(
   };
 }
 
+/**
+ * 创建端口-存储绑定。
+ *
+ * 将 portGroup 与 storageSlotGroup 关联，
+ * 决定物品从哪个端口流入哪个缓存组。
+ * 无显式绑定时，编译器自动生成 synthetic-input/synthetic-output 缓存组。
+ *
+ * 对应《仿真运行原理》§5.1 节点来源中的 port-cache 绑定关系。
+ */
 function createBinding(
   id: string,
   portGroupId: string,
@@ -166,6 +284,13 @@ function createBinding(
   };
 }
 
+/**
+ * 从端口 kind 推导默认 acceptRule。
+ * item → { base: { kind: "solid" }, exclude: [] }
+ * fluid → { base: { kind: "liquid" }, exclude: [] }
+ *
+ * 对应《仿真运行原理》§3.1 表格中 Port 的 acceptRule 默认值。
+ */
 function acceptRuleFromPortKind(kind: PortGroupDefinition["kind"]): PortDefinition["acceptRule"] {
   return {
     base: kind === "fluid" ? { kind: "liquid" } : { kind: "solid" },
@@ -173,6 +298,15 @@ function acceptRuleFromPortKind(kind: PortGroupDefinition["kind"]): PortDefiniti
   };
 }
 
+/**
+ * 创建搬运配方（传送带/管道用）。
+ *
+ * 对应《仿真运行原理》§3.2 配方类型中的 "reserved-item"：
+ *   - 进度=100% 时消耗原料，占用存储
+ *   - 原料在搬运过程中被"预定"，不可被他人使用
+ *   - inputs: any(1) — 接受任意物品
+ *   - outputs: same-as-input(1) — 输出与输入相同物品
+ */
 function createTransportRecipe(durationSeconds = 1): EntityRecipeDefinition {
   return {
     recipeId: null,
@@ -183,6 +317,16 @@ function createTransportRecipe(durationSeconds = 1): EntityRecipeDefinition {
   };
 }
 
+/**
+ * 创建空配方壳（生产设备初始配方占位）。
+ *
+ * 对应《仿真运行原理》§3.2 配方类型中的 "immediate-consume"：
+ *   - 进度=0% 时立即扣除原料，不占用存储
+ *   - inputs/outputs 初始为空，由用户在 Inspector 中选择外部配方后填充
+ *
+ * recipeId=null 时表示使用内联配方；
+ * 用户在 recipeConfig 面板中选择外部配方后 recipeId 被设置为实际配方 ID。
+ */
 function createRecipeShell(): EntityRecipeDefinition {
   return {
     recipeId: null,
@@ -193,6 +337,17 @@ function createRecipeShell(): EntityRecipeDefinition {
   };
 }
 
+/**
+ * 创建缓存链接定义。
+ *
+ * 对应《仿真运行原理》§3.3 缓存链接。
+ * linkType：
+ *   - "share-cap"：共享容量上限（shareLimit 有效），存储各自独立
+ *   - "share-all"：共享存储内容和上限（shareLimit 忽略）
+ *
+ * endpoints 是多对多的——一个 Link 可连接多个存储槽组。
+ * 编译时每个 endpoint 解析为对应的 slot ID 列表。
+ */
 function createCacheLink(
   id: string,
   linkType: CacheLinkDefinition["linkType"],
@@ -207,6 +362,16 @@ function createCacheLink(
   };
 }
 
+/**
+ * 创建传送带/管道标准 share-cap 链接。
+ *
+ * 对应《仿真运行原理》§5.1.1 传送带模型：
+ *   - ingredient 槽位 + product 槽位通过 share-cap(1) Link 关联
+ *   - 两端累计最多 1 个物品（容量共享上限=1）
+ *   - 存储各自独立（物品在 ingredient 和 product 之间搬运）
+ *
+ * 默认绑定 synthetic-input 和 synthetic-output 缓存组。
+ */
 function createShareCapTransportLink(
   inputStorageSlotGroupId = "synthetic-input",
   outputStorageSlotGroupId = "synthetic-output",
@@ -219,7 +384,48 @@ function createShareCapTransportLink(
   );
 }
 
+// =========================================================================
+// ENTITY_DEFINITIONS — 全部设备定义注册表
+//
+// 设备按 uiGroup 分组：
+//   1. warehouse              — 仓库存取设备
+//   2. beltLogistics          — 传送带物流设备
+//   3. pipeLogistics          — 管道物流设备
+//   4. basicProduction        — 基础生产设备
+//   5. advancedManufacturing  — 高级合成制造
+//   6. resourcePower          — 资源与电力
+//   7. hidden                 — 隐藏设备（不显示在放置面板）
+//
+// 每个设备的注释标注了：
+//   - 对应的游戏设备名称
+//   - 缓存组数量与类型（ingredient/product/universal）
+//   - 求解图节点数（每个 storageSlotGroup = 1 个节点，见《仿真运行原理》§5.1）
+//   - 配方类型
+//   - Link 类型
+// =========================================================================
+
 export const ENTITY_DEFINITIONS: EntityDefinition[] = [
+
+  // =========================================================================
+  // 仓库存取设备 (uiGroup: "warehouse")
+  //
+  // 仓储类设备的特点：
+  //   - 大容量存储槽组（50+）
+  //   - role="bidirectional" → universal 缓存类型
+  //   - 通常 requiresPower=false（可在电网外运行）
+  //   - 通过 warehouse-item-link 面板将槽位连接到仓库
+  // =========================================================================
+
+  /**
+   * item_port_storager_1 — 协议存储箱（3×3）
+   *
+   * 缓存组：1 个 universal（6 槽 × 50 容量）
+   * 求解图节点：1 个（所有槽位聚合到一个节点）
+   * 端口：3 input(南) + 3 output(北)
+   *
+   * 对比《模拟器抽象方式》§2 的仓库取货口示例，
+   * 本设备 slot.lock=null（未锁定），用户可通过 storageManagement 面板锁定。
+   */
   createEntityDefinition({
     id: "item_port_storager_1",
     nameKey: "registry.entity.item_port_storager_1.name",
@@ -247,7 +453,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "item_storage",
         "item",
-        "bidirectional",
+        "bidirectional",  // → universal 缓存类型
         createSlots("slot", [50, 50, 50, 50, 50, 50], "solid"),
       ),
     ],
@@ -255,7 +461,18 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_storage"),
       createBinding("bind_item_output", "item_output", "item_storage"),
     ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.slotConfig,
+        targetPath: "storageSlotGroups[0].slots",
+      },
+    ],
   }),
+
+  /**
+   * item_port_log_hongs_bus — 物流洪斯总线（4×8）
+   * 空壳设备，仅用于放置面板展示。不参与仿真求解。
+   */
   createEntityDefinition({
     id: "item_port_log_hongs_bus",
     nameKey: "registry.entity.item_port_log_hongs_bus.name",
@@ -269,6 +486,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [],
     portStorageBindings: [],
   }),
+
+  /**
+   * item_port_log_hongs_bus_source — 物流洪斯总线源桩（4×4）
+   * 空壳设备，仅用于放置面板展示。
+   */
   createEntityDefinition({
     id: "item_port_log_hongs_bus_source",
     nameKey: "registry.entity.item_port_log_hongs_bus_source.name",
@@ -282,6 +504,17 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [],
     portStorageBindings: [],
   }),
+
+  /**
+   * item_port_unloader_1 — 取货口（3×1）
+   *
+   * 缓存组：1 个 product（单一槽位 × 1 容量，自动合成）
+   * 求解图节点：1 个
+   * 端口：1 output(北)
+   *
+   * 通过 warehouse-item-link 面板将槽位连接到仓库。
+   * ignoreStock 可设为 true 实现无限取货。
+   */
   createEntityDefinition({
     id: "item_port_unloader_1",
     nameKey: "registry.entity.item_port_unloader_1.name",
@@ -302,6 +535,23 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [],
     portStorageBindings: [],
   }),
+
+  /**
+   * item_port_mix_pool_1 — 反应池（5×5）
+   *
+   * 缓存组：2 个 — 1 ingredient（5 槽 × 50 容量）+ 1 product（1 槽 × 1 容量）
+   * 求解图节点：2 个
+   * 端口：2 item-input(南) + 2 item-output(北) + 2 fluid-input(东) + 2 fluid-output(西)
+   *      注意：item 和 fluid 端口都绑定到同一组存储槽组（shared_input_buffer / shared_output_buffer）
+   *      因为 itemFilterType="any"，该缓存组可接收固体和液体。
+   *
+   * 对应《仿真运行原理》§3.4 缓存组示例：
+   *   - 1 个缓存组，5 个槽位（反应池普通版）
+   *   - 组内互斥：同物品只能出现在一个槽
+   *   - 输入缓存组同时接收 item 和 fluid 端口
+   *
+   * 配方：immediate-consume（进度 0% 时立即扣除原料）
+   */
   createEntityDefinition({
     id: "item_port_mix_pool_1",
     nameKey: "registry.entity.item_port_mix_pool_1.name",
@@ -342,13 +592,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "shared_input_buffer",
         "item",
-        "input",
+        "input",  // → ingredient 缓存类型
         createSlots("input_slot", [50, 50, 50, 50, 50], "any"),
       ),
       createStorageSlotGroup(
         "shared_output_buffer",
         "item",
-        "output",
+        "output",  // → product 缓存类型
         createSlots("output_slot", [1], "any"),
       ),
     ],
@@ -359,6 +609,22 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_fluid_output", "fluid_output", "shared_output_buffer"),
     ],
   }),
+  // =========================================================================
+  // 基础生产设备 (uiGroup: "basicProduction")
+  //
+  // 生产设备的特点（对应《仿真运行原理》§3.2）：
+  //   - immediate-consume 配方：进度 0% 时立即扣除原料
+  //   - 独立的 ingredient 缓存组（输入缓冲）+ product 缓存组（输出缓冲）
+  //   - recipe 通过 recipeConfig 面板选择外部配方
+  // =========================================================================
+
+  /**
+   * item_port_grinder_1 — 粉碎机（3×3）
+   *
+   * 缓存组：2 个 — 1 ingredient（1 槽 × 50）+ 1 product（1 槽 × 50）
+   * 端口：3 input(南) + 3 output(北)
+   * 配方：immediate-consume + recipeShell（选择外部配方 "r_crusher_*"）
+   */
   createEntityDefinition({
     id: "item_port_grinder_1",
     nameKey: "registry.entity.item_port_grinder_1.name",
@@ -402,6 +668,15 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
   }),
+  /**
+   * item_port_liquid_filling_pd_mc_1 — 液体填充器（6×4，液体变体）
+   *
+   * 缓存组：3 个 — 1 ingredient-item（1 槽 × 50）+ 1 ingredient-fluid（1 槽 × 50）+ 1 product（1 槽 × 50）
+   * 端口：6 item-input(南) + 1 fluid-input(东) + 6 item-output(北)
+   *
+   * 本设备是 item_port_filling_pd_mc_1 的液体变体（alter-variant:liquid），
+   * 增加了 fluid_input 端口和对应的 fluid 输入缓冲。
+   */
   createEntityDefinition({
     id: "item_port_liquid_filling_pd_mc_1",
     nameKey: "registry.entity.item_port_liquid_filling_pd_mc_1.name",
@@ -501,6 +776,22 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
   }),
+  // =========================================================================
+  // 传送带物流设备 (uiGroup: "beltLogistics" 或 "hidden")
+  //
+  // 传送带设备的特点（对应《仿真运行原理》§5.1.1-5.1.3）：
+  //   - 2 个缓存组：ingredient + product（各 1 槽 × 1 容量）
+  //   - 2 个求解图节点
+  //   - share-cap(1) Link 约束两端累计容量上限=1
+  //   - reserved-item 搬运配方：any × 1s → same-as-input
+  //   - 分流器/汇流器/连接器：多端口绑定到同一组节点
+  //   - uiGroup="hidden" 的设备不显示在放置面板（由传送带绘制工具自动生成）
+  // =========================================================================
+
+  /**
+   * belt_straight_1x1 — 传送带直段（1×1）
+   * 端口：W→E 流向
+   */
   createEntityDefinition({
     id: "belt_straight_1x1",
     nameKey: "registry.entity.belt_straight_1x1.name",
@@ -530,13 +821,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "item_input_buffer",
         "item",
-        "input",
+        "input",  // → ingredient
         createSlots("input_slot", [1], "solid"),
       ),
       createStorageSlotGroup(
         "item_output_buffer",
         "item",
-        "output",
+        "output",  // → product
         createSlots("output_slot", [1], "solid"),
       ),
     ],
@@ -545,6 +836,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
   }),
+
+  /**
+   * belt_turn_cw_1x1 — 传送带顺时针转弯（1×1）
+   * 端口：W→S 流向
+   */
   createEntityDefinition({
     id: "belt_turn_cw_1x1",
     nameKey: "registry.entity.belt_turn_cw_1x1.name",
@@ -589,6 +885,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
   }),
+
+  /**
+   * belt_turn_ccw_1x1 — 传送带逆时针转弯（1×1）
+   * 端口：W→N 流向
+   */
   createEntityDefinition({
     id: "belt_turn_ccw_1x1",
     nameKey: "registry.entity.belt_turn_ccw_1x1.name",
@@ -633,6 +934,18 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
   }),
+  /**
+   * item_log_splitter — 分流器（1×1）
+   *
+   * 缓存组：2 个 — ingredient + product（自动合成，各 1 槽 × 1 容量）
+   * 求解图节点：2 个
+   * 端口：1 input(东) + 3 output(北/南/西)
+   *
+   * 对应《仿真运行原理》§5.1.2：
+   *   1 个 input port → ingredient 组节点，3 个 output port → product 组节点
+   *   多个端口连接到同一个组节点是合法且预期的。
+   *   调度由 port 的 priorityGroup 和 roundRobinSeed 控制。
+   */
   createEntityDefinition({
     id: "item_log_splitter",
     nameKey: "registry.entity.item_log_splitter.name",
@@ -662,9 +975,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    storageSlotGroups: [],
+    storageSlotGroups: [],  // 无显式存储组 → 编译器自动合成
     portStorageBindings: [],
   }),
+
+  /**
+   * item_log_converger — 汇流器（1×1）
+   *
+   * 对应《仿真运行原理》§5.1.2：
+   *   3 个 input port → ingredient 组节点，1 个 output port → product 组节点
+   */
   createEntityDefinition({
     id: "item_log_converger",
     nameKey: "registry.entity.item_log_converger.name",
@@ -697,6 +1017,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [],
     portStorageBindings: [],
   }),
+
+  /**
+   * item_log_connector — 连接器/十字路口（1×1）
+   * 4 方向全连接，用于传送带交叉。
+   */
   createEntityDefinition({
     id: "item_log_connector",
     nameKey: "registry.entity.item_log_connector.name",
@@ -735,6 +1060,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [],
     portStorageBindings: [],
   }),
+  // =========================================================================
+  // 管道物流设备 (uiGroup: "pipeLogistics" 或 "hidden")
+  //
+  // 管道设备与传送带结构相同（对应《仿真运行原理》§5.1.4）：
+  //   - 2 个缓存组：ingredient + product（自动合成，kind="fluid"）
+  //   - share-cap(1) Link
+  //   - reserved-item 搬运配方
+  //   - 仅物品域为 liquid
+  // =========================================================================
+
+  /**
+   * pipe_straight_1x1 — 管道直段（1×1）
+   * 端口：W→E 流向
+   */
   createEntityDefinition({
     id: "pipe_straight_1x1",
     nameKey: "registry.entity.pipe_straight_1x1.name",
@@ -763,6 +1102,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [],
     portStorageBindings: [],
   }),
+
+  /**
+   * pipe_turn_cw_1x1 — 管道顺时针转弯（1×1）
+   */
   createEntityDefinition({
     id: "pipe_turn_cw_1x1",
     nameKey: "registry.entity.pipe_turn_cw_1x1.name",
@@ -791,6 +1134,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [],
     portStorageBindings: [],
   }),
+
+  /**
+   * pipe_turn_ccw_1x1 — 管道逆时针转弯（1×1）
+   */
   createEntityDefinition({
     id: "pipe_turn_ccw_1x1",
     nameKey: "registry.entity.pipe_turn_ccw_1x1.name",
@@ -819,6 +1166,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [],
     portStorageBindings: [],
   }),
+
+  /**
+   * item_pipe_splitter — 管道分流器（1×1）
+   * 与 item_log_splitter 结构相同，kind 为 fluid。
+   */
   createEntityDefinition({
     id: "item_pipe_splitter",
     nameKey: "registry.entity.item_pipe_splitter.name",
@@ -851,6 +1203,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [],
     portStorageBindings: [],
   }),
+
+  /**
+   * item_pipe_converger — 管道汇流器（1×1）
+   */
   createEntityDefinition({
     id: "item_pipe_converger",
     nameKey: "registry.entity.item_pipe_converger.name",
@@ -883,6 +1239,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [],
     portStorageBindings: [],
   }),
+
+  /**
+   * item_pipe_connector — 管道连接器/十字路口（1×1）
+   * 4 方向全连接，ChevronHidden=不显示方向箭头。
+   */
   createEntityDefinition({
     id: "item_pipe_connector",
     nameKey: "registry.entity.item_pipe_connector.name",
@@ -921,6 +1282,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [],
     portStorageBindings: [],
   }),
+
+  /**
+   * item_port_udpipe_loader_1 — 地下管道装载口（3×3）
+   * 流体输入方向。仅 1 个 input port(西)。
+   */
   createEntityDefinition({
     id: "item_port_udpipe_loader_1",
     nameKey: "registry.entity.item_port_udpipe_loader_1.name",
@@ -941,6 +1307,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [],
     portStorageBindings: [],
   }),
+
+  /**
+   * item_port_udpipe_unloader_1 — 地下管道卸载口（3×3）
+   * 流体输出方向。仅 1 个 output port(东)。
+   */
   createEntityDefinition({
     id: "item_port_udpipe_unloader_1",
     nameKey: "registry.entity.item_port_udpipe_unloader_1.name",
@@ -961,7 +1332,21 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [],
     portStorageBindings: [],
   }),
-  // v2 metadata sync: only keep name, footprint, sprite, tags, and basic placement group.
+
+  // =========================================================================
+  // 空壳设备 (v2 metadata sync)
+  //
+  // 以下设备仅保留 name, footprint, sprite, tags 和基础放置组信息。
+  // 其端口组、存储槽组、端口绑定、配方均在编译时通过外部配方注册表
+  // (recipe-definition.ts) 中的 machineId 对应关系注入。
+  //
+  // 对应《模拟器抽象方式》§5 编译期合并：
+  //   编译时 EntityDefinition + 外部 RecipeDefinition → 完整 CompiledSimulationDevice
+  //
+  // 这些设备属于"未完成迁移"的设备，等待在后续 v2 迭代中
+  // 补全 portGroups/storageSlotGroups/portStorageBindings/recipe 定义。
+  // =========================================================================
+
   createEmptyEntityDefinition({
     id: "item_port_loader_1",
     nameKey: "registry.entity.item_port_loader_1.name",

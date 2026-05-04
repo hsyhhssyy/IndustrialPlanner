@@ -2,16 +2,21 @@ import type { SimulationContract } from "@/domain/contract/simulation-contract";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type {
   CompiledSimulationTopology,
-  GetSimulationTickSnapshotResult,
-  SimulationRuntimeStatus,
-  SimulationStartResult,
 } from "@/domain/types/simulation";
 import {
   createSnapshotStore,
   type SnapshotStoreReadWrite,
 } from "@/shared/snapshot/snapshot-store";
 
-import { compileSimulationTopology } from "./topology-compiler";
+import {
+  SimulationActionImpl,
+  type SimulationInternalAction,
+  type SimulationWorkerBridge,
+} from "./action-impl";
+import {
+  createSimulationStateReadWrite,
+  type SimulationStateReadWrite,
+} from "./state-impl";
 import { SimulationWorkerRuntime } from "./worker-runtime";
 import type {
   SimulationWorkerRequest,
@@ -20,31 +25,10 @@ import type {
 
 export interface SimulationHost extends SimulationContract {
   workspace: WorkspaceContract;
+  internalState: SimulationStateReadWrite;
+  internalActions: SimulationInternalAction;
   dispose: () => void;
 }
-
-interface SimulationWorkerBridge {
-  loadTopology(topology: CompiledSimulationTopology): Promise<Extract<
-    SimulationWorkerResponse,
-    { readonly type: "topology-loaded" }
-  >>;
-  getTickSnapshot(tickNumber: number): Promise<Extract<
-    SimulationWorkerResponse,
-    { readonly type: "tick-snapshot-result" }
-  >>;
-  dispose(): void;
-}
-
-const INITIAL_STATUS: SimulationRuntimeStatus = {
-  mode: "idle",
-  topologyId: null,
-  documentHash: null,
-  retainedFromTick: null,
-  latestTickNumber: null,
-  bufferSize: 0,
-  maxBufferSize: 180,
-  error: null,
-};
 
 export function createSimulationHost(
   workspace: WorkspaceContract
@@ -52,66 +36,40 @@ export function createSimulationHost(
   const bridge = createSimulationWorkerBridge();
   const disposers: Array<() => void> = [];
   const topologyStore: SnapshotStoreReadWrite<CompiledSimulationTopology | null> = createSnapshotStore<CompiledSimulationTopology | null>(null);
-  let status: SimulationRuntimeStatus = INITIAL_STATUS;
-  let hasStarted = false;
-
-  const startFromCurrentDocument = async (): Promise<SimulationStartResult> => {
-    const document = workspace.editor?.document.getSnapshot();
-    if (document === undefined) {
-      topologyStore.setSnapshot(null);
-      status = {
-        ...status,
-        mode: "error",
-        error: "Simulation cannot start before editor document is available.",
-      };
-      return {
-        status: "failed",
-        topologyId: null,
-        diagnostics: [],
-        error: status.error ?? undefined,
-      };
-    }
-
-    status = {
-      ...status,
-      mode: "starting",
-      error: null,
-    };
-
-    const compiledTopology = compileSimulationTopology({
-      document,
-      registry: workspace.registry,
-    });
-    const response = await bridge.loadTopology(compiledTopology);
-    topologyStore.setSnapshot(compiledTopology);
-    status = response.status;
-    return response.result;
-  };
+  const internalState = createSimulationStateReadWrite();
+  const actionImpl = new SimulationActionImpl({
+    workspace,
+    state: internalState,
+    topology: topologyStore,
+    bridge,
+  });
+  const actions: SimulationContract["actions"] = actionImpl;
+  const internalActions: SimulationInternalAction = actionImpl;
 
   const host: SimulationHost = {
     workspace,
+    internalState,
+    internalActions,
+    get state() {
+      return internalState.state;
+    },
+    get playbackTickRateHz() {
+      return internalState.playbackTickRateHz;
+    },
+    set playbackTickRateHz(value: number) {
+      internalActions.setPlaybackTickRateHz(value);
+    },
     topology: topologyStore,
     queries: {
-      getStatus: () => status,
+      getStatus: () => internalState.runtimeStatus,
+      getCurrentTickSnapshot: () => internalState.currentTickSnapshot,
     },
-    actions: {
-      start: async () => {
-        hasStarted = true;
-        return startFromCurrentDocument();
-      },
-      getTickSnapshot: async (
-        tickNumber: number,
-      ): Promise<GetSimulationTickSnapshotResult> => {
-        const response = await bridge.getTickSnapshot(tickNumber);
-        status = response.status;
-        return response.result;
-      },
-    },
+    actions,
     dispose: () => {
       while (disposers.length > 0) {
         disposers.pop()?.();
       }
-      topologyStore.setSnapshot(null);
+      internalActions.reset();
       bridge.dispose();
     },
   };
@@ -121,8 +79,8 @@ export function createSimulationHost(
   const document = workspace.editor?.document;
   if (document !== undefined) {
     disposers.push(document.subscribe(() => {
-      if (hasStarted) {
-        void startFromCurrentDocument();
+      if (internalState.hasStarted) {
+        void internalActions.refreshFromCurrentDocument();
       }
     }));
   }

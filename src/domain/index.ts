@@ -13,6 +13,7 @@ export type {
 	CompiledSimulationTopology,
 	GetSimulationTickSnapshotResult,
 	SimulationRuntimeStatus,
+	SimulationState,
 	SimulationStartResult,
 	SimulationTickSnapshot,
 } from "./types/simulation";

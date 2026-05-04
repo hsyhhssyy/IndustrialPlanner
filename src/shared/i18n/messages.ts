@@ -68,6 +68,7 @@ export type MessageKey =
   | "rightDock.base"
   | "rightDock.power"
   | "rightDock.selection"
+  | "rightDock.simulation"
   | "section.configFields"
   | "section.runtimeDetails"
   | "section.runtimePatch"
@@ -77,6 +78,7 @@ export type MessageKey =
   | "label.definition"
   | "label.entityId"
   | "label.mode"
+  | "label.currentTickSnapshot"
   | "label.runtime"
   | "label.position"
   | "label.rotation"
@@ -97,6 +99,11 @@ export type MessageKey =
   | "label.runtimePatchDisabled"
   | "label.runtimePatchClearsOnExit"
   | "label.touchPlacementHint"
+  | "inspector.slotConfig.group"
+  | "inspector.slotConfig.selectItem"
+  | "inspector.slotConfig.clearSlot"
+  | "inspector.slotConfig.capacity"
+  | "inspector.slotConfig.locked"
   | "status.ready"
   | "status.edit"
   | "statusBar.mode"
@@ -318,6 +325,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "rightDock.base": "基地",
     "rightDock.power": "电力",
     "rightDock.selection": "属性",
+    "rightDock.simulation": "仿真",
     "section.configFields": "配置字段",
     "section.runtimeDetails": "运行态细节",
     "section.runtimePatch": "运行态覆盖",
@@ -327,6 +335,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "label.definition": "定义",
     "label.entityId": "实体 ID",
     "label.mode": "模式",
+    "label.currentTickSnapshot": "当前 Tick 快照",
     "label.runtime": "运行态",
     "label.position": "位置",
     "label.rotation": "朝向",
@@ -347,6 +356,11 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "label.runtimePatchDisabled": "该字段不能在仿真态做临时覆盖。",
     "label.runtimePatchClearsOnExit": "退出仿真会清空全部运行态覆盖，不会写回文档。",
     "label.touchPlacementHint": "拖动虚影后点击确认完成放置。",
+    "inspector.slotConfig.group": "槽位组",
+    "inspector.slotConfig.selectItem": "选择物品",
+    "inspector.slotConfig.clearSlot": "清空槽位",
+    "inspector.slotConfig.capacity": "容量",
+    "inspector.slotConfig.locked": "锁定",
     "status.ready": "Stage1 工作台脚手架已就绪。",
     "status.edit": "编辑态聚焦文档事实与编译产物。",
     "statusBar.mode": "当前模式",
@@ -619,6 +633,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "rightDock.base": "Base",
     "rightDock.power": "Power",
     "rightDock.selection": "Properties",
+    "rightDock.simulation": "Simulation",
     "section.configFields": "Config Fields",
     "section.runtimeDetails": "Runtime Details",
     "section.runtimePatch": "Runtime Patch",
@@ -628,6 +643,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "label.definition": "Definition",
     "label.entityId": "Entity ID",
     "label.mode": "Mode",
+    "label.currentTickSnapshot": "Current Tick Snapshot",
     "label.runtime": "Runtime",
     "label.position": "Position",
     "label.rotation": "Rotation",
@@ -648,6 +664,11 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "label.runtimePatchDisabled": "This field cannot be overridden during simulation.",
     "label.runtimePatchClearsOnExit": "Leaving simulation clears runtime patches and keeps the document unchanged.",
     "label.touchPlacementHint": "Drag the ghost, then tap confirm to place it.",
+    "inspector.slotConfig.group": "Slot Group",
+    "inspector.slotConfig.selectItem": "Select Item",
+    "inspector.slotConfig.clearSlot": "Clear Slot",
+    "inspector.slotConfig.capacity": "Capacity",
+    "inspector.slotConfig.locked": "Locked",
     "status.ready": "Stage1 workbench scaffold is ready.",
     "status.edit": "Edit mode focuses on document facts and compiled topology.",
     "statusBar.mode": "Mode",

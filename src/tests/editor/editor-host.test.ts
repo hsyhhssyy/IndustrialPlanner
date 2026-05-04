@@ -309,6 +309,33 @@ describe("createEditorHost", () => {
     expect(editorHost.queries.getEntityById("missing-entity")).toBeNull();
   });
 
+  it("patches entity config values through editor actions", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    editorHost.internalDocument.setSnapshot(document);
+
+    editorHost.actions.patchEntityConfig("dummy-entity-2", {
+      "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+      "storageSlotGroups[0].slots[0].initialCount": 7,
+    });
+
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]?.config).toEqual({
+      "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+      "storageSlotGroups[0].slots[0].initialCount": 7,
+    });
+
+    editorHost.actions.patchEntityConfig("missing-entity", {
+      "storageSlotGroups[0].slots[0].initialCount": 9,
+    });
+
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]?.config).toEqual({
+      "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+      "storageSlotGroups[0].slots[0].initialCount": 7,
+    });
+  });
+
   it("lists document entities plus draft entities as a union by id", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

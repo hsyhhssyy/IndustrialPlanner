@@ -1,3 +1,29 @@
+// =========================================================================
+// Topology Compiler — 将 WorldDocument + Registry 编译为 CompiledSimulationTopology
+//
+// 对应《模拟器抽象方式》§5 编译期合并 + 《仿真运行原理》§5 图模型。
+//
+// 编译流程：
+//   1. compileItemCatalog()          — 物品目录
+//   2. compileWarehouseDevice()      — 仓库虚拟设备
+//   3. compileEntityDevice()         — 每个 WorldEntity → CompiledSimulationDevice
+//      a. compileStorageSlotGroups() — 显式存储槽组 → CacheGroup + SlotTemplate
+//      b. compileSyntheticCacheGroups() — 无显式存储时自动合成 ingredient/product 缓存组
+//      c. compilePorts()            — 端口编译（计算旋转后位置、merge acceptRule、绑定缓存组）
+//      d. compileRecipePlan()       — 配方计划（内联 vs 外部配方）
+//      e. compileInternalLinks()    — 内部 Link（share-cap / share-all）
+//   4. compileExplicitLinks()       — 显式连接（dark-pipe → share-all）
+//   5. compilePhysicalConnections() — 物理端口连接 → CompiledSimulationPhysicalConnection
+//   6. 对每条物理连接生成 CompiledSimulationTransferEdge（求解图的有向边）
+//
+// 编译时关键操作：
+//   - deepMerge(definitionDefaults, entityConfig) — 配置覆盖（《模拟器抽象方式》§5）
+//   - acceptRule 交集运算（《仿真运行原理》§5.2）
+//   - count = min(sourcePort.count, targetPort.count)
+//   - role → cacheType 映射（input→ingredient, output→product, bidirectional→universal）
+//   - direction="bidirectional" 的端口自动分解为 input + output
+// =========================================================================
+
 import type { RegistryContract } from "@/domain/contract/registry-contracts";
 import type { WorldDocument, WorldEntity } from "@/domain/entity/world-document";
 import type { GridEdge, GridPoint, GridRotation } from "@/domain/types/grid";
@@ -26,6 +52,7 @@ import type { EntityDefinition } from "@/domain/types/registry/entity-definition
 import type { RecipeDefinition } from "@/domain/types/registry/recipe-definition";
 import { hashStable } from "./deterministic";
 
+// 从 EntityDefinition 解构的子类型别名
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
 type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
@@ -38,6 +65,7 @@ interface CompileOptions {
   readonly ticksPerSecond?: number;
 }
 
+/** 单个设备编译产物的临时结构 */
 interface DeviceCompileResult {
   readonly device: CompiledSimulationDevice;
   readonly cacheGroups: readonly CompiledSimulationCacheGroup[];
@@ -46,8 +74,23 @@ interface DeviceCompileResult {
   readonly links: readonly CompiledSimulationCacheLink[];
 }
 
+/** 端口朝向排序优先级：北→东→南→西 */
 const EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
 
+/**
+ * 编译仿真拓扑主入口。
+ *
+ * 对应《仿真运行原理》§2 总原则 + §5 图模型。
+ *
+ * 输出 CompiledSimulationTopology，包含：
+ *   - devices/cacheGroups/slots/ports/links — 编译后的仿真数据模型
+ *   - physicalConnections — 端口间的物理连接
+ *   - transferEdges — 求解图的有向边（对应《仿真运行原理》§5.2 边来源）
+ *   - ordering — 各集合的确定性遍历顺序（保证确定性仿真）
+ *
+ * 边的 acceptRule = sourcePort.acceptRule AND targetPort.acceptRule (§5.2)
+ * 边的 count = min(sourcePort.count, targetPort.count) (§5.2)
+ */
 export function compileSimulationTopology(
   options: CompileOptions,
 ): CompiledSimulationTopology {
@@ -205,6 +248,7 @@ export function compileSimulationTopology(
   const topologyHashInput = {
     documentHash,
     registryHash,
+    standardTickRate: ticksPerSecond,
     devices,
     cacheGroups,
     slots,
@@ -228,7 +272,7 @@ export function compileSimulationTopology(
     documentKey: options.document.documentKey,
     documentHash,
     registryHash,
-    tickRate: { ticksPerSecond },
+    standardTickRate: ticksPerSecond,
     itemCatalog,
     devices,
     cacheGroups,
@@ -284,6 +328,19 @@ function addDeviceCompileResult(options: {
   }
 }
 
+/**
+ * deepMerge 定义默认值与 entity.config 覆盖值。
+ *
+ * 对应《模拟器抽象方式》§5 编译期合并：
+ *   - config 中存在的字段覆盖定义默认值
+ *   - config 中不存在的字段保留定义默认值
+ *   - 路径语法如 "slots[0].lock" 自动解析为嵌套对象路径
+ *
+ * 例如：
+ *   EntityDefinition.slots[0].lock = null
+ *   entity.config["slots[0].lock"] = "iron_plate"
+ *   → 合并后 slots[0].lock = "iron_plate"
+ */
 function mergeEntityDefinitionConfig(
   definition: EntityDefinition,
   config: WorldEntity["config"],
@@ -410,6 +467,16 @@ function compileItemCatalog(
   return catalog;
 }
 
+/**
+ * 编译仓库虚拟设备。
+ *
+ * 仓库不是世界中的实体，而是编译时自动生成的锚点设备。
+ * 它为每个物品 ID 生成一个无限容量槽位（capacity=MAX_SAFE_INTEGER），
+ * 所有槽位属于同一个 universal 缓存组。
+ *
+ * 仓储设备（取货口/出货口）通过 share-all Link（warehouse-item-link 面板）
+ * 将自己的槽位连接到仓库对应物品的槽位，实现无限存取。
+ */
 function compileWarehouseDevice(
   document: WorldDocument,
   itemCatalog: Record<string, CompiledSimulationItem>,
@@ -462,6 +529,17 @@ function compileWarehouseDevice(
   };
 }
 
+/**
+ * 编译单个世界实体为 CompiledSimulationDevice。
+ *
+ * 编译步骤（对应《仿真运行原理》§5 图模型）：
+ *   1. mergeEntityDefinitionConfig() — 合并 config 覆盖
+ *   2. compileStorageSlotGroups() — 显式存储槽组 → CacheGroup + SlotTemplate
+ *   3. compileSyntheticCacheGroups() — 无显式存储时自动合成 ingredient/product 缓存组
+ *   4. compilePorts() — 端口编译
+ *   5. compileRecipePlan() — 配方计划
+ *   6. compileInternalLinks() — 内部 Link
+ */
 function compileEntityDevice(options: {
   readonly entity: WorldEntity;
   readonly definition: EntityDefinition;
@@ -568,6 +646,19 @@ function compileEntityDevice(options: {
   };
 }
 
+/**
+ * 编译显式存储槽组。
+ *
+ * 对应《仿真运行原理》§3.1 缓存类型 + §3.4 缓存组：
+ *   - 每个 storageSlotGroup 生成 1 个 CacheGroup（= 1 个求解图节点）
+ *   - role → cacheType：input→ingredient, output→product, bidirectional→universal
+ *   - 组内所有 slot 编译为 SlotTemplate
+ *
+ * 例如：
+ *   协议存储箱：6 槽 universal 组 → 1 个 CacheGroup（1 个节点）
+ *   反应池：5 槽 ingredient 组 → 1 个 CacheGroup（1 个节点）
+ *   传送带：1 槽 ingredient 组 + 1 槽 product 组 → 2 个 CacheGroup（2 个节点）
+ */
 function compileStorageSlotGroups(options: {
   readonly deviceId: string;
   readonly definition: EntityDefinition;
@@ -608,6 +699,17 @@ function compileStorageSlotGroups(options: {
   });
 }
 
+/**
+ * 合成缓存组（无显式 storageSlotGroup 时自动生成）。
+ *
+ * 对应《仿真运行原理》§5.1 中"无显式存储组"的设备（分流器、汇流器、管道等）。
+ * 这些设备只需要 ingredient + product 行为而不需要持久存储。
+ *
+ * 规则：
+ *   - 有 input 方向端口 → 合成 1 个 ingredient 缓存组（capacity=1）
+ *   - 有 output 方向端口 → 合成 1 个 product 缓存组（capacity=1）
+ *   - 设备级别 share-cap(1) Link 在 compileInternalLinks 中连接两端
+ */
 function compileSyntheticCacheGroups(options: {
   readonly deviceId: string;
   readonly definition: EntityDefinition;
@@ -718,6 +820,21 @@ function compileSlotTemplate(options: {
   };
 }
 
+/**
+ * 编译端口。
+ *
+ * 对应《仿真运行原理》§3.1 中 Port 的两个通用配置 + §5.2 边来源。
+ *
+ * 关键操作：
+ *   - 根据 entity.rotation 旋转端口局部坐标和朝向
+ *   - 计算 insideGridPoint（设备内部位置）和 outsideGridPoint（外部连接位置）
+ *   - 解析 boundCacheGroupIds（端口绑定到哪些缓存组）
+ *   - merge acceptRule：portGroup.kind 推导的默认规则 AND port 显式 acceptRule
+ *   - direction="bidirectional" 的端口组自动分解为 input + output
+ *
+ * 端口编译结果在后续 compilePhysicalConnections 中匹配生成物理连接，
+ * 物理连接再生成 CompiledSimulationTransferEdge（求解图有向边）。
+ */
 function compilePorts(options: {
   readonly deviceId: string;
   readonly entity: WorldEntity;
@@ -826,6 +943,23 @@ function compileRouting(
   return routing;
 }
 
+/**
+ * 编译设备配方计划。
+ *
+ * 对应《仿真运行原理》§3.2 配方类型。
+ *
+ * 三种情况：
+ *   1. recipe=null → 无配方，返回 null
+ *   2. recipeId=null 且有内联 inputs/outputs → 使用定义内联配方（如传送带的搬运配方）
+ *   3. recipeId 指向外部 RecipeDefinition → 使用外部配方（如生产设备的粉碎/熔炼配方）
+ *
+ * recipeType 决定求解行为：
+ *   - "immediate-consume"：0% 时扣原料（生产设备）
+ *   - "reserved-item"：100% 时消耗（搬运设备）
+ *
+ * ingredientCacheGroupIds 和 productCacheGroupIds 告知求解器
+ * 配方原料从哪些缓存组取、产物写入哪些缓存组。
+ */
 function compileRecipePlan(options: {
   readonly deviceId: string;
   readonly definition: EntityDefinition;
@@ -879,6 +1013,20 @@ function compileRecipePlan(options: {
   };
 }
 
+/**
+ * 编译内部缓存链接。
+ *
+ * 对应《仿真运行原理》§3.3 缓存链接。
+ *
+ * 遍历 definition.cacheLinks，将每个 endpoint（storageSlotGroupId）解析为
+ * 具体的 slot ID 列表，生成 CompiledSimulationCacheLink。
+ *
+ * Link 类型：
+ *   - "share-cap"：shareLimit 有效，约束多槽位累计容量上限
+ *   - "share-all"：shareLimit 忽略，存储内容和上限完全共享
+ *
+ * 链接约束通过影响缓存的 shadow 容量间接参与求解。
+ */
 function compileInternalLinks(options: {
   readonly deviceId: string;
   readonly definition: EntityDefinition;
@@ -943,6 +1091,15 @@ function resolveCacheLinkEndpointSlotIds(options: {
   });
 }
 
+/**
+ * 编译显式链接（暗管 dark-pipe）。
+ *
+ * 对应《仿真运行原理》§5.1.3 桥接器概念，但此处是显式的跨设备 share-all Link。
+ *
+ * 暗管连接两个设备的 product→ingredient 缓存组，
+ * 通过 share-all Link 使源设备的 product 槽位与目标设备的 ingredient 槽位
+ * 共享存储内容和上限。
+ */
 function compileExplicitLinks(options: {
   readonly document: WorldDocument;
   readonly devices: Readonly<Record<string, CompiledSimulationDevice>>;
@@ -986,6 +1143,17 @@ function compileExplicitLinks(options: {
   return links;
 }
 
+/**
+ * 编译物理连接。
+ *
+ * 对应《仿真运行原理》§5.2 边来源：
+ *   - 布局中相邻端口之间自动建立物理连接
+ *   - sourcePort.direction="output" && targetPort.direction="input"
+ *   - sourcePort.outsideGridPoint === targetPort.insideGridPoint
+ *   - 同设备端口不自连
+ *
+ * 每条物理连接后续拆解为多条 transferEdge（每对 source/target cacheGroup 一条边）。
+ */
 function compilePhysicalConnections(
   maybePorts: readonly (CompiledSimulationPort | undefined)[],
 ): CompiledSimulationPhysicalConnection[] {
@@ -1031,6 +1199,14 @@ function getOrderedEntityIds(document: WorldDocument): string[] {
   return [...ordered, ...missingFromOrder];
 }
 
+/**
+ * role → cacheType 映射。
+ *
+ * 对应《仿真运行原理》§3.1 缓存类型：
+ *   "input"         → "ingredient"（链接到输入端口的缓存）
+ *   "output"        → "product"（链接到输出端口的缓存）
+ *   "bidirectional" → "universal"（同时链接输入和输出）
+ */
 function resolveCacheType(role: StorageSlotGroupDefinition["role"]): SimulationCacheType {
   switch (role) {
     case "input":
@@ -1098,6 +1274,22 @@ function readPortAcceptRule(
   };
 }
 
+/**
+ * acceptRule 交集运算（AND）。
+ *
+ * 对应《仿真运行原理》§5.2 边来源中的规则：
+ *   边的 acceptRule = sourcePort.acceptRule AND targetPort.acceptRule
+ *
+ * AND 规则：
+ *   - base 取两端口最严格交集：
+ *       itemId(A) ∩ itemId(B) → 只有 A=B 时有效，否则返回 null（边不生成）
+ *       itemId(A) ∩ solid → 只有 A 是固体时有效
+ *       any ∩ solid → solid
+ *       solid ∩ liquid → 空（返回 null）
+ *   - exclude 取两端口排除列表的并集
+ *
+ * 若 AND 后无有效物品，返回 null，该边不生成。
+ */
 function intersectAcceptRules(
   left: SimulationAcceptRule,
   right: SimulationAcceptRule,

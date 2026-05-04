@@ -16,8 +16,6 @@ import type {
   ModuleBalancingStageModuleEntry,
   ModuleBalancingState,
   RightDockTabId,
-  SimulationSpeed,
-  SimulationState,
   ToolboxState,
   ToolboxWikiDesktopCategory,
   ToolboxWikiEntityGroupCategory,
@@ -263,6 +261,7 @@ export const RIGHT_DOCK_TAB_IDS = [
   "base",
   "power",
   "selection",
+  "simulation",
 ] as const satisfies readonly RightDockTabId[];
 
 export const DEFAULT_RIGHT_DOCK_TAB_ID: RightDockTabId = RIGHT_DOCK_TAB_IDS[0];
@@ -371,8 +370,6 @@ export interface UiStateReadWrite extends UiState {
   workbench: WorkbenchStateReadWrite;
   /// screenProfile 是当前 browser viewport / device profile 的公共 UI 运行态，不进入持久化。
   screenProfile: ScreenProfile;
-  simulationState: SimulationState;
-  simulationSpeed: SimulationSpeed;
   /// activeTool 是当前激活的工具，属于公共 contract 状态。
   activeTool: ActiveTool;
   /// toolInfo 是当前工具的运行参数，属于公共 contract 状态。
@@ -528,8 +525,6 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
 
   workbench: WorkbenchStateReadWrite = new WorkbenchStateReadWriteImpl();
   screenProfile: ScreenProfile = resolveScreenProfileFromWindow();
-  simulationState: SimulationState = "stop";
-  simulationSpeed: SimulationSpeed = 1;
   activeTool: ActiveTool = "select";
   toolInfo: ToolInfoReadWrite = new ToolInfoReadWriteImpl();
   runtime: RuntimeStateReadWrite = new RuntimeStateReadWriteImpl();

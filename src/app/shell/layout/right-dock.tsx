@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { observer } from "mobx-react-lite";
 import { EditSelectionInspector } from "@/app/shell/inspector/edit-selection-inspector";
+import { RightDockSimulationPanel } from "@/app/shell/layout/right-dock-simulation-panel";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import {
   handleUiEvent,
@@ -60,6 +61,10 @@ const RIGHT_DOCK_TABS = [
     id: "selection",
     labelKey: "rightDock.selection",
   },
+  {
+    id: "simulation",
+    labelKey: "rightDock.simulation",
+  },
 ] as const;
 
 function RightDockCard({ children }: { children: ReactNode }) {
@@ -103,6 +108,13 @@ export const RightDock = observer(function RightDock({ appHost }: { appHost: App
           state={{ locale }}
           translate={t}
         />
+      );
+      break;
+    case "simulation":
+      activePanel = (
+        <RightDockCard>
+          <RightDockSimulationPanel appHost={appHost} translate={t} />
+        </RightDockCard>
       );
       break;
     case "base":

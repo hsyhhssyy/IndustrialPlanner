@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAppHost, type AppHost } from "@/app/host/app-host";
 import { SelectionInspectorSlot } from "@/app/shell/inspector/selection-inspector-slot";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import { INSPECTOR_TYPE } from "@/domain/types/registry/entity-inspector";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createEditorHost, type EditorHost } from "@/editor/editor-host";
@@ -27,25 +26,6 @@ function createWorkspace(): WorkspaceContract {
 function queryInspectorKeys(container: HTMLElement): string[] {
   return Array.from(container.querySelectorAll<HTMLElement>("[data-inspector-key]"))
     .map((element) => element.dataset.inspectorKey ?? "");
-}
-
-function attachSlotInspector(workspace: WorkspaceContract): void {
-  const definition = workspace.registry.entityDefinitions.find(
-    (candidate) => candidate.id === "item_port_storager_1",
-  );
-
-  if (
-    definition !== undefined
-    && !definition.inspectors.some((inspector) =>
-      inspector.type === INSPECTOR_TYPE.slotConfig
-      && inspector.targetPath === "storageSlotGroups[0].slots",
-    )
-  ) {
-    definition.inspectors.push({
-      type: INSPECTOR_TYPE.slotConfig,
-      targetPath: "storageSlotGroups[0].slots",
-    });
-  }
 }
 
 describe("SelectionInspectorSlot", () => {
@@ -77,9 +57,8 @@ describe("SelectionInspectorSlot", () => {
     vi.unstubAllGlobals();
   });
 
-  it("polls the single selected entity definition and mounts inspectors in definition order", () => {
+  it("mounts the default slot-config inspector for a storage device selection", () => {
     const workspace = createWorkspace();
-    attachSlotInspector(workspace);
     editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
@@ -101,20 +80,14 @@ describe("SelectionInspectorSlot", () => {
       vi.advanceTimersByTime(50);
     });
 
-    expect(queryInspectorKeys(container)).toEqual([INSPECTOR_TYPE.slotConfig]);
-    expect(container.textContent).toContain("tick 1");
-
-    act(() => {
-      vi.advanceTimersByTime(100);
-    });
-
-    expect(container.querySelector("[data-inspector-key='slot-config']")?.textContent)
-      .toContain("tick 3");
+    expect(queryInspectorKeys(container)).toEqual(["slot-config"]);
+    expect(container.querySelector("[data-slot-config-group='item_storage']")).not.toBeNull();
+    expect(container.querySelector("[data-slot-id='slot_1']")?.textContent).toContain("slot_1");
+    expect(container.querySelector("[data-slot-id='slot_6']")?.textContent).toContain("slot_6");
   });
 
-  it("hides on multi selection and resets inspector counters after remount", () => {
+  it("hides on multi selection and remounts after narrowing back to one entity", () => {
     const workspace = createWorkspace();
-    attachSlotInspector(workspace);
     editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
@@ -134,8 +107,7 @@ describe("SelectionInspectorSlot", () => {
       vi.advanceTimersByTime(100);
     });
 
-    expect(container.querySelector("[data-inspector-key='slot-config']")?.textContent)
-      .toContain("tick 2");
+    expect(container.querySelector("[data-slot-config-group='item_storage']")).not.toBeNull();
 
     editorHost.internalState.collections.selection.replace([
       "dummy-entity-2",
@@ -154,7 +126,6 @@ describe("SelectionInspectorSlot", () => {
       vi.advanceTimersByTime(50);
     });
 
-    expect(container.querySelector("[data-inspector-key='slot-config']")?.textContent)
-      .toContain("tick 1");
+    expect(container.querySelector("[data-slot-config-group='item_storage']")).not.toBeNull();
   });
 });

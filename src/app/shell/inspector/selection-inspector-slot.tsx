@@ -1,28 +1,29 @@
 import { useEffect, useState } from "react";
 
 import type { AppHost } from "@/app/host/app-host";
-import type { EntityInspectorType } from "@/domain/types/registry/entity-inspector";
+import type { WorldEntity } from "@/domain/entity/world-document";
+import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+import type {
+  EntityInspectorDeclaration,
+  EntityInspectorType,
+} from "@/domain/types/registry/entity-inspector";
 import { INSPECTOR_TYPE } from "@/domain/types/registry/entity-inspector";
+
+import { SlotConfigInspector } from "./slot-config-inspector";
 
 const INSPECTOR_SLOT_INTERVAL_MS = 50;
 
 type Translate = (key: string) => string;
 
-interface InspectorQueryResult {
+interface InspectorDescriptor {
   id: string;
-  key: EntityInspectorType;
-  name: string;
-  ticks: number;
-}
-
-interface MountedInspector {
-  query: () => Omit<InspectorQueryResult, "id">;
+  declaration: EntityInspectorDeclaration;
 }
 
 interface InspectorSlotState {
-  selectedEntityId: string;
-  selectedDefinitionId: string;
-  inspectors: InspectorQueryResult[];
+  selectedEntity: WorldEntity;
+  selectedDefinition: EntityDefinition;
+  inspectors: InspectorDescriptor[];
   debugEntityJson: string | null;
 }
 
@@ -41,33 +42,40 @@ const INSPECTOR_LABELS: Partial<Record<EntityInspectorType, string>> = {
   [INSPECTOR_TYPE.warehouseItemLink]: "仓库物品链接",
 };
 
-function mountEmptyInspector(key: EntityInspectorType): MountedInspector {
-  let ticks = 0;
-
-  return {
-    query: () => {
-      ticks += 1;
-
-      return {
-        key,
-        name: INSPECTOR_LABELS[key] ?? key,
-        ticks,
-      };
-    },
-  };
-}
-
 function EmptyInspector({
-  result,
+  declaration,
 }: {
-  result: InspectorQueryResult;
+  declaration: EntityInspectorDeclaration;
 }) {
   return (
-    <article className="definition-card" data-inspector-key={result.key}>
-      <h4>{result.name}</h4>
-      <p>{`tick ${result.ticks}`}</p>
+    <article className="definition-card" data-inspector-key={declaration.type}>
+      <h4>{INSPECTOR_LABELS[declaration.type] ?? declaration.type}</h4>
+      <p>该 inspector 尚未接入真实编辑器。</p>
     </article>
   );
+}
+
+function renderInspector(options: {
+  appHost: AppHost;
+  declaration: EntityInspectorDeclaration;
+  entity: WorldEntity;
+  definition: EntityDefinition;
+  translate: Translate;
+}) {
+  switch (options.declaration.type) {
+    case INSPECTOR_TYPE.slotConfig:
+      return (
+        <SlotConfigInspector
+          appHost={options.appHost}
+          declaration={options.declaration}
+          definition={options.definition}
+          entity={options.entity}
+          translate={options.translate}
+        />
+      );
+    default:
+      return <EmptyInspector declaration={options.declaration} />;
+  }
 }
 
 export function SelectionInspectorSlot({
@@ -80,10 +88,7 @@ export function SelectionInspectorSlot({
   const [slotState, setSlotState] = useState<InspectorSlotState | null>(null);
 
   useEffect(() => {
-    const mountedInspectors = new Map<string, MountedInspector>();
-
     const hideSlot = () => {
-      mountedInspectors.clear();
       setSlotState((current) => current === null ? current : null);
     };
 
@@ -126,37 +131,22 @@ export function SelectionInspectorSlot({
       }
 
       const inspectorDeclarations = selectedDefinition.inspectors;
-
-      const nextInstanceIds = new Set<string>();
       const inspectors = inspectorDeclarations.map((declaration, declarationIndex) => {
-        const inspectorKey = declaration.type;
-        const instanceId = [
+        const id = [
           selectedEntity.id,
-          inspectorKey,
+          declaration.type,
           declaration.targetPath ?? declarationIndex,
         ].join(":");
-        const mountedInspector =
-          mountedInspectors.get(instanceId)
-          ?? mountEmptyInspector(inspectorKey);
-
-        mountedInspectors.set(instanceId, mountedInspector);
-        nextInstanceIds.add(instanceId);
 
         return {
-          ...mountedInspector.query(),
-          id: instanceId,
+          id,
+          declaration,
         };
       });
 
-      for (const instanceId of mountedInspectors.keys()) {
-        if (!nextInstanceIds.has(instanceId)) {
-          mountedInspectors.delete(instanceId);
-        }
-      }
-
       setSlotState({
-        selectedEntityId: selectedEntity.id,
-        selectedDefinitionId: selectedDefinition.id,
+        selectedEntity,
+        selectedDefinition,
         inspectors,
         debugEntityJson: appHost.state.settings.debugMode
           ? JSON.stringify(selectedEntity, null, 2)
@@ -168,7 +158,6 @@ export function SelectionInspectorSlot({
 
     return () => {
       window.clearInterval(intervalId);
-      mountedInspectors.clear();
     };
   }, [appHost]);
 
@@ -179,8 +168,8 @@ export function SelectionInspectorSlot({
   return (
     <div
       className="cluster"
-      data-selected-definition-id={slotState.selectedDefinitionId}
-      data-selected-entity-id={slotState.selectedEntityId}
+      data-selected-definition-id={slotState.selectedDefinition.id}
+      data-selected-entity-id={slotState.selectedEntity.id}
       data-selection-inspector-slot
     >
       <div className="card-header card-subheader">
@@ -188,10 +177,17 @@ export function SelectionInspectorSlot({
       </div>
       <div className="definition-list">
         {slotState.inspectors.map((inspector) => (
-          <EmptyInspector
+          <div
             key={inspector.id}
-            result={inspector}
-          />
+          >
+            {renderInspector({
+              appHost,
+              declaration: inspector.declaration,
+              entity: slotState.selectedEntity,
+              definition: slotState.selectedDefinition,
+              translate,
+            })}
+          </div>
         ))}
         {slotState.debugEntityJson !== null ? (
           <article className="definition-card" data-inspector-key="json-debug">
