@@ -3240,6 +3240,27 @@ body.is-resizing-left-dock * {
   line-height: 1.45;
 }
 
+.json-debug-textarea {
+  width: 100%;
+  min-height: 300px;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    monospace;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  resize: vertical;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
 .mono-line {
   font-family:
     "IBM Plex Mono",

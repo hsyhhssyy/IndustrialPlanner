@@ -180,6 +180,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.debugShowGestureDiagnosticsWindow = value;
         }),
       },
+      "other-debug-mode": {
+        readValue: () => appHost.state.settings.debugMode,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.debugMode === value) {
+            return;
+          }
+
+          appHost.internalState.settings.debugMode = value;
+        }),
+      },
     },
     // 所有 keybinding 类型设置统一走 shortcutReader/shortcutWriter
     shortcutReader: (key) => appHost.internalActions.getKeyboardShortcutFor(key),
@@ -204,6 +218,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
   const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;
   const previousScreenProfileRef = useRef(screenProfile);
+  const hasVisibleDialogShell = isAnyDialogShellVisible(appHost);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -242,6 +257,40 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
 
     requestDocumentFullscreen();
   }, [screenProfile]);
+
+  useEffect(() => {
+    if (!hasVisibleDialogShell) {
+      return;
+    }
+
+    appHost.gestureAdapter.handleBlur();
+  }, [appHost, hasVisibleDialogShell]);
+
+  useEffect(() => {
+    const handleWindowKeyDown = (event: KeyboardEvent) => {
+      if (hasVisibleDialogShell) {
+        return;
+      }
+
+      appHost.gestureAdapter.handleKeyDown(event);
+    };
+
+    const handleWindowKeyUp = (event: KeyboardEvent) => {
+      if (hasVisibleDialogShell) {
+        return;
+      }
+
+      appHost.gestureAdapter.handleKeyUp(event);
+    };
+
+    window.addEventListener("keydown", handleWindowKeyDown);
+    window.addEventListener("keyup", handleWindowKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleWindowKeyDown);
+      window.removeEventListener("keyup", handleWindowKeyUp);
+    };
+  }, [appHost, hasVisibleDialogShell]);
 
 
   const workbenchStyle = {
@@ -334,3 +383,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     </div>
   );
 });
+
+function isAnyDialogShellVisible(appHost: AppHost): boolean {
+  return Object.values(appHost.internalState.workbench.dialogState).some(
+    (dialogState) => dialogState?.visible === true,
+  ) || appHost.encyclopediaPicker.dialogState.visible;
+}

@@ -53,6 +53,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   showGrassBackground: false,
   debugShowFps: false,
   debugShowGestureDiagnosticsWindow: false,
+  debugMode: false,
 } as const;
 
 const DEFAULT_APP_SHORTCUTS_STORAGE = {
@@ -62,6 +63,7 @@ const DEFAULT_APP_SHORTCUTS_STORAGE = {
   [SHORTCUT_KEY.WAREHOUSE]: "C",
   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
   [SHORTCUT_KEY.SYNTHESIS]: "B",
+  [SHORTCUT_KEY.ROTATE]: "R",
   [SHORTCUT_KEY.DELETE_DEVICE]: "F",
 } as const;
 
@@ -1308,6 +1310,7 @@ describe("WorkbenchApp", () => {
         gameAlwaysShowGridLines: true,
         debugShowFps: true,
         debugShowGestureDiagnosticsWindow: true,
+        debugMode: true,
       }),
     );
     localStorage.setItem(
@@ -2009,12 +2012,16 @@ describe("WorkbenchApp", () => {
     const cancelShortcutButton = container.querySelector(
       'button[data-setting-id="shortcut-place-pipe"]',
     ) as HTMLButtonElement | null;
+    const rotateShortcutButton = container.querySelector(
+      'button[data-setting-id="shortcut-rotate"]',
+    ) as HTMLButtonElement | null;
 
     expect(operationModeToggle).not.toBeNull();
     expect(immediateMoveToggle).not.toBeNull();
     expect(immediateMarqueeToggle).not.toBeNull();
     expect(confirmShortcutButton).not.toBeNull();
     expect(cancelShortcutButton).not.toBeNull();
+    expect(rotateShortcutButton).not.toBeNull();
     expect(operationModeToggle?.checked).toBe(false);
     expect(operationModeToggle?.disabled).toBe(true);
     expect(immediateMoveToggle?.checked).toBe(true);
@@ -2023,6 +2030,8 @@ describe("WorkbenchApp", () => {
     expect(immediateMarqueeToggle?.disabled).toBe(true);
     expect(confirmShortcutButton?.disabled).toBe(false);
     expect(confirmShortcutButton?.textContent).toBe("E");
+    expect(rotateShortcutButton?.disabled).toBe(false);
+    expect(rotateShortcutButton?.textContent).toBe("R");
 
     act(() => {
       confirmShortcutButton?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
@@ -2049,6 +2058,62 @@ describe("WorkbenchApp", () => {
         [SHORTCUT_KEY.PLACE_CONVEYOR]: "P",
       }),
     );
+  });
+
+  it("routes global keyboard events only while no dialog shell is visible", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+    const gestures: GestureEvent[] = [];
+    appHost.gestureAdapter.subscribe((event) => gestures.push(event));
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        bubbles: true,
+        code: "KeyR",
+        key: "r",
+      }));
+      window.dispatchEvent(new KeyboardEvent("keyup", {
+        bubbles: true,
+        code: "KeyR",
+        key: "r",
+      }));
+    });
+
+    expect(gestures).toMatchObject([
+      {
+        type: "key down",
+        key: "r",
+      },
+      {
+        type: "key up",
+        key: "r",
+      },
+    ]);
+
+    act(() => {
+      appHost.internalActions.openDialog("help");
+    });
+
+    expect(container.querySelector(".dialog-shell")).not.toBeNull();
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        bubbles: true,
+        code: "KeyR",
+        key: "r",
+      }));
+      window.dispatchEvent(new KeyboardEvent("keyup", {
+        bubbles: true,
+        code: "KeyR",
+        key: "r",
+      }));
+    });
+
+    expect(gestures).toHaveLength(2);
   });
 
   it("hides the settings group sidebar on phones while keeping the full settings list scrollable", () => {

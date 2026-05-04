@@ -102,12 +102,6 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
   const handleWheel = (event: WheelEvent<HTMLElement>) => {
     gestureAdapter.handleWheel(event);
   };
-  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    gestureAdapter.handleKeyDown(event);
-  };
-  const handleKeyUp = (event: KeyboardEvent<HTMLElement>) => {
-    gestureAdapter.handleKeyUp(event);
-  };
   const handleBlur = () => {
     gestureAdapter.handleBlur();
   };
@@ -116,8 +110,6 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
     <main
       className="canvas-panel panel-surface"
       onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
-      onKeyUp={handleKeyUp}
       onLostPointerCapture={handleLostPointerCapture}
       onPointerCancel={handlePointerCancel}
       onPointerDown={handlePointerDown}

@@ -65,6 +65,7 @@ export interface AppSettings {
   readonly showGrassBackground: boolean;
   readonly debugShowFps: boolean;
   readonly debugShowGestureDiagnosticsWindow: boolean;
+  readonly debugMode: boolean;
 }
 
 export interface DialogState {

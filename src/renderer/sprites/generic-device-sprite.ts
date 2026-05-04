@@ -640,6 +640,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   }
 
   private shouldDrawPortOverlay(context: RenderSpriteSyncContext): boolean {
+    if (this.definition.tags.includes("ChevronHidden")) {
+      return false;
+    }
+
     const collections = context.workspace.editor!.state.collections;
 
     if (isOnlyEntityInCollection(
@@ -775,7 +779,6 @@ function resolvePortChevronSpecs(options: {
     height: number;
     rotation: number;
   }[] = [];
-
   for (const portGroup of options.definition.portGroups) {
     // 按方向过滤：bidirectional 端口在两个方向都显示
     if (options.directionFilter) {

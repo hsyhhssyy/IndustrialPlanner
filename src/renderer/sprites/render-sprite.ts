@@ -5,7 +5,11 @@ import type { GridRotation } from "@/shared/geometry/grid"
 
 export type RenderLayerId = "background" | "entity" | "overlay";
 
-export type RenderSpriteId = "belt_straight_1x1" | "belt_turn_cw_1x1" | "belt_turn_ccw_1x1" | "pipe_straight_1x1" | "pipe_turn_cw_1x1" | "pipe_turn_ccw_1x1";
+export type BeltRenderSpriteId = "belt_straight_1x1" | "belt_turn_cw_1x1" | "belt_turn_ccw_1x1";
+
+export type PipeRenderSpriteId = "pipe_straight_1x1" | "pipe_turn_cw_1x1" | "pipe_turn_ccw_1x1";
+
+export type RenderSpriteId = BeltRenderSpriteId | PipeRenderSpriteId;
 
 export interface RenderLayerMap {
   background: Container;

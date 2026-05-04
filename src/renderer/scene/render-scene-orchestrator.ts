@@ -16,8 +16,9 @@ import {
 import { resolveRenderResolutionFromApp } from "../render-resolution"
 import type { RenderHost } from "../renderer-host"
 
-import { LogisticsSprite, type LogisticsSpriteId } from "../sprites/logistics-sprite"
+import { BeltSprite } from "../sprites/belt-sprite"
 import { GenericDeviceSprite } from "../sprites/generic-device-sprite"
+import { PipeSprite } from "../sprites/pipe-sprite"
 import {
   RenderLayerMap,
   RenderSprite,
@@ -29,6 +30,7 @@ import {
 } from "./decorations/DecorationSyncContext"
 import { createGridLineDecoration } from "./decorations/GridLineDecoration"
 import { createDiagnosticsDecoration } from "./decorations/DiagnosticsDecoration"
+import { createLogisticsPlacementCanvasDecoration } from "./decorations/LogisticsPlacementCanvasDecoration"
 import { createMarqueeRectDecoration } from "./decorations/MarqueeRectDecoration"
 import { createMarqueeCanvasDecoration } from "./decorations/MarqueeCanvasDecoration"
 import { createPreviewRectDecoration } from "./decorations/PreviewRectDecoration"
@@ -56,6 +58,7 @@ export function createRenderSceneOrchestrator(
   const marqueeDecoration = createMarqueeRectDecoration()
   const diagnosticsDecoration = createDiagnosticsDecoration()
   const marqueeCanvasDecoration = createMarqueeCanvasDecoration()
+  const logisticsPlacementCanvasDecoration = createLogisticsPlacementCanvasDecoration()
   const marqueeOverlayLayer = new Container()
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
   const entitySprites = new Map<string, RenderSprite>()
@@ -102,6 +105,8 @@ export function createRenderSceneOrchestrator(
 
     marqueeCanvasDecoration.sync(ctx)
 
+    logisticsPlacementCanvasDecoration.sync(ctx)
+
     diagnosticsDecoration.sync(ctx)
 
     grassBackgroundDecoration.sync(ctx)
@@ -112,6 +117,7 @@ export function createRenderSceneOrchestrator(
   layers.background.addChild(gridDecoration.container)
   layers.background.addChild(previewRectDecoration.container)
   marqueeOverlayLayer.addChild(marqueeCanvasDecoration.container)
+  marqueeOverlayLayer.addChild(logisticsPlacementCanvasDecoration.container)
   marqueeOverlayLayer.addChild(marqueeDecoration.container)
   layers.overlay.addChild(diagnosticsDecoration.container)
   app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
@@ -129,6 +135,7 @@ export function createRenderSceneOrchestrator(
       previewRectDecoration.destroy()
       marqueeDecoration.destroy()
       marqueeCanvasDecoration.destroy()
+      logisticsPlacementCanvasDecoration.destroy()
       diagnosticsDecoration.destroy()
       layers.background.destroy({ children: true })
       layers.entity.destroy({ children: true })
@@ -155,7 +162,13 @@ function createSpriteForDefinition(
   definition: EntityDefinition,
 ): RenderSprite | null {
   if (renderHost.workspace.registry.queries.isDedicatedLogisticsDevice(definition.id)) {
-    return new LogisticsSprite(entityId, definition.spriteId as LogisticsSpriteId)
+    const dedicatedLogisticsKind = renderHost.workspace.registry.queries.resolveDedicatedLogisticsKind(definition.id)
+
+    if (dedicatedLogisticsKind === "belt") {
+      return new BeltSprite(entityId, definition, renderHost)
+    }
+
+    return new PipeSprite(entityId, definition, renderHost)
   }
 
   return new GenericDeviceSprite(entityId, definition, renderHost)

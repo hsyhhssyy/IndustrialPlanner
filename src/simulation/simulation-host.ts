@@ -6,6 +6,11 @@ import type {
   SimulationRuntimeStatus,
   SimulationStartResult,
 } from "@/domain/types/simulation";
+import {
+  createSnapshotStore,
+  type SnapshotStoreReadWrite,
+} from "@/shared/snapshot/snapshot-store";
+
 import { compileSimulationTopology } from "./topology-compiler";
 import { SimulationWorkerRuntime } from "./worker-runtime";
 import type {
@@ -46,12 +51,14 @@ export function createSimulationHost(
 ): SimulationHost {
   const bridge = createSimulationWorkerBridge();
   const disposers: Array<() => void> = [];
+  const topologyStore: SnapshotStoreReadWrite<CompiledSimulationTopology | null> = createSnapshotStore<CompiledSimulationTopology | null>(null);
   let status: SimulationRuntimeStatus = INITIAL_STATUS;
   let hasStarted = false;
 
   const startFromCurrentDocument = async (): Promise<SimulationStartResult> => {
     const document = workspace.editor?.document.getSnapshot();
     if (document === undefined) {
+      topologyStore.setSnapshot(null);
       status = {
         ...status,
         mode: "error",
@@ -71,17 +78,19 @@ export function createSimulationHost(
       error: null,
     };
 
-    const topology = compileSimulationTopology({
+    const compiledTopology = compileSimulationTopology({
       document,
       registry: workspace.registry,
     });
-    const response = await bridge.loadTopology(topology);
+    const response = await bridge.loadTopology(compiledTopology);
+    topologyStore.setSnapshot(compiledTopology);
     status = response.status;
     return response.result;
   };
 
   const host: SimulationHost = {
     workspace,
+    topology: topologyStore,
     queries: {
       getStatus: () => status,
     },
@@ -102,6 +111,7 @@ export function createSimulationHost(
       while (disposers.length > 0) {
         disposers.pop()?.();
       }
+      topologyStore.setSnapshot(null);
       bridge.dispose();
     },
   };

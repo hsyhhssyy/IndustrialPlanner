@@ -284,6 +284,114 @@ function addDeviceCompileResult(options: {
   }
 }
 
+function mergeEntityDefinitionConfig(
+  definition: EntityDefinition,
+  config: WorldEntity["config"],
+): EntityDefinition {
+  return deepMergeJson(
+    cloneJson(definition),
+    materializeConfigOverrides(config),
+  ) as EntityDefinition;
+}
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function materializeConfigOverrides(config: WorldEntity["config"]): Record<string, unknown> {
+  const materialized: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(config)) {
+    if (key.includes(".") || key.includes("[")) {
+      assignPathValue(materialized, parseConfigPath(key), value);
+      continue;
+    }
+
+    materialized[key] = value;
+  }
+
+  return materialized;
+}
+
+function parseConfigPath(path: string): (string | number)[] {
+  const tokens: (string | number)[] = [];
+  const matcher = /([^[.\]]+)|\[(\d+)\]/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = matcher.exec(path)) !== null) {
+    const property = match[1];
+    const index = match[2];
+
+    if (property !== undefined) {
+      tokens.push(property);
+      continue;
+    }
+
+    if (index !== undefined) {
+      tokens.push(Number(index));
+    }
+  }
+
+  return tokens;
+}
+
+function assignPathValue(
+  target: Record<string, unknown>,
+  path: readonly (string | number)[],
+  value: unknown,
+): void {
+  let cursor: Record<string, unknown> | unknown[] = target;
+
+  path.forEach((token, index) => {
+    const isLast = index === path.length - 1;
+
+    if (isLast) {
+      cursor[token as keyof typeof cursor] = value as never;
+      return;
+    }
+
+    const nextToken = path[index + 1];
+    const currentValue = cursor[token as keyof typeof cursor];
+    if (typeof currentValue === "object" && currentValue !== null) {
+      cursor = currentValue as Record<string, unknown> | unknown[];
+      return;
+    }
+
+    const nextValue: Record<string, unknown> | unknown[] =
+      typeof nextToken === "number" ? [] : {};
+    cursor[token as keyof typeof cursor] = nextValue as never;
+    cursor = nextValue;
+  });
+}
+
+function deepMergeJson(left: unknown, right: unknown): unknown {
+  if (Array.isArray(left) && Array.isArray(right)) {
+    const merged = [...left];
+    right.forEach((rightValue, index) => {
+      merged[index] = index in merged
+        ? deepMergeJson(merged[index], rightValue)
+        : rightValue;
+    });
+    return merged;
+  }
+
+  if (isPlainObject(left) && isPlainObject(right)) {
+    const merged: Record<string, unknown> = { ...left };
+    for (const [key, value] of Object.entries(right)) {
+      merged[key] = key in merged
+        ? deepMergeJson(merged[key], value)
+        : value;
+    }
+    return merged;
+  }
+
+  return right;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function compileItemCatalog(
   registry: RegistryContract,
 ): Record<string, CompiledSimulationItem> {
@@ -317,6 +425,7 @@ function compileWarehouseDevice(
     lock: itemId,
     initialItemType: itemId,
     initialCount: 0,
+    ignoreStock: false,
     submitMode: "never" as const,
     submitIntervalTicks: null,
   }));
@@ -362,7 +471,8 @@ function compileEntityDevice(options: {
   readonly ticksPerSecond: number;
 }): DeviceCompileResult {
   const deviceId = `device:${options.entity.id}`;
-  const transportClass = resolveTransportClass(options.registryQueries, options.definition);
+  const definition = mergeEntityDefinitionConfig(options.definition, options.entity.config);
+  const transportClass = resolveTransportClass(options.registryQueries, definition);
   const cacheGroups: CompiledSimulationCacheGroup[] = [];
   const slots: CompiledSimulationSlotTemplate[] = [];
   const ports: CompiledSimulationPort[] = [];
@@ -371,7 +481,7 @@ function compileEntityDevice(options: {
 
   compileStorageSlotGroups({
     deviceId,
-    definition: options.definition,
+    definition,
     cacheGroups,
     slots,
     cacheGroupIdsByStorageGroupId,
@@ -381,7 +491,7 @@ function compileEntityDevice(options: {
   if (cacheGroups.length === 0) {
     compileSyntheticCacheGroups({
       deviceId,
-      definition: options.definition,
+      definition,
       cacheGroups,
       slots,
       cacheGroupIdsByStorageGroupId,
@@ -391,7 +501,7 @@ function compileEntityDevice(options: {
   compilePorts({
     deviceId,
     entity: options.entity,
-    definition: options.definition,
+    definition,
     cacheGroupIdsByStorageGroupId,
     itemCatalog: options.itemCatalog,
     ports,
@@ -419,30 +529,31 @@ function compileEntityDevice(options: {
   const device: CompiledSimulationDevice = {
     id: deviceId,
     sourceEntityId: options.entity.id,
-    definitionId: options.definition.id,
+    definitionId: definition.id,
     position: { ...options.entity.position },
     rotation: options.entity.rotation,
-    tags: [...options.definition.tags].sort(),
+    tags: [...definition.tags].sort(),
     transportClass,
     cacheGroupIds: cacheGroups.map((cacheGroup) => cacheGroup.id),
     portIds: ports.map((port) => port.id),
     recipePlan: compileRecipePlan({
       deviceId,
-      definition: options.definition,
+      definition,
       recipeDefinitionMap: options.recipeDefinitionMap,
       cacheGroups,
       ticksPerSecond: options.ticksPerSecond,
     }),
-    routing: compileRouting(options.definition),
+    routing: compileRouting(definition),
     configHash: hashStable({
       entity: options.entity,
-      definition: options.definition,
+      definition,
     }),
   };
 
   compileInternalLinks({
     deviceId,
-    definition: options.definition,
+    definition,
+    cacheGroupIdsByStorageGroupId,
     cacheGroups,
     slots,
     links,
@@ -569,6 +680,7 @@ function addSyntheticCacheGroup(options: {
     lock: null,
     initialItemType: null,
     initialCount: 0,
+    ignoreStock: false,
     submitMode: "never",
     submitIntervalTicks: null,
   });
@@ -583,24 +695,24 @@ function compileSlotTemplate(options: {
   readonly definition: EntityDefinition;
   readonly ticksPerSecond: number;
 }): CompiledSimulationSlotTemplate {
-  const slotConfig = options.definition.inspectors.slotConfig;
-  const submitMode = slotConfig?.submitMode.default ?? "never";
+  const submitMode = options.slot.submitMode;
   const submitInterval = submitMode === "every-n-seconds"
-    ? Math.max(1, Math.round((slotConfig?.submitInterval.default ?? 10) * options.ticksPerSecond))
+    ? Math.max(1, Math.round((options.slot.submitIntervalSeconds ?? 10) * options.ticksPerSecond))
     : null;
-  const initialCount = slotConfig?.initialCount.default ?? 0;
-  const lock = slotConfig?.lock.default ?? null;
-  const itemType = lock ?? null;
+  const initialCount = options.slot.initialCount;
+  const lock = options.slot.lock;
+  const itemType = options.slot.initialItemType ?? lock;
 
   return {
     id: `${options.cacheGroupId}/slot:${options.slot.id}`,
     cacheGroupId: options.cacheGroupId,
     sourceSlotId: options.slot.id,
-    capacity: slotConfig?.capacity.default ?? options.slot.capacity,
+    capacity: options.slot.capacity,
     domain: resolveSlotDomain(options.storageGroup, options.slot),
     lock,
     initialItemType: itemType,
     initialCount,
+    ignoreStock: options.slot.ignoreStock,
     submitMode,
     submitIntervalTicks: submitInterval,
   };
@@ -646,7 +758,7 @@ function compilePorts(options: {
         ].join("/");
         const acceptRule = intersectAcceptRules(
           acceptRuleFromPortKind(portGroup.kind),
-          readPortFilterAcceptRule(options.definition, portGroup.kind),
+          readPortAcceptRule(port),
           options.itemCatalog,
         ) ?? acceptRuleFromPortKind(portGroup.kind);
 
@@ -667,7 +779,7 @@ function compilePorts(options: {
             cacheGroupIdsByStorageGroupId: options.cacheGroupIdsByStorageGroupId,
           }),
           acceptRule,
-          count: options.definition.inspectors.portFilter?.count.default ?? "unlimited",
+          count: port.count,
           order,
         });
         order += 1;
@@ -699,14 +811,16 @@ function resolveBoundCacheGroupIds(options: {
 function compileRouting(
   definition: EntityDefinition,
 ): Record<string, CompiledSimulationRoutingEntry> {
-  const entries = definition.inspectors.routing?.entries.default ?? [];
   const routing: Record<string, CompiledSimulationRoutingEntry> = {};
 
-  for (const entry of entries) {
-    routing[entry.portRef] = {
-      priorityGroup: entry.group.default,
-      roundRobinSeed: entry.roundRobinIndex.default,
-    };
+  for (const portGroup of definition.portGroups) {
+    for (const port of portGroup.ports) {
+      const portRef = `${portGroup.id}.${port.id}`;
+      routing[portRef] = {
+        priorityGroup: port.priorityGroup,
+        roundRobinSeed: port.roundRobinSeed,
+      };
+    }
   }
 
   return routing;
@@ -719,29 +833,30 @@ function compileRecipePlan(options: {
   readonly cacheGroups: readonly CompiledSimulationCacheGroup[];
   readonly ticksPerSecond: number;
 }): CompiledSimulationRecipePlan | null {
-  const recipeConfig = options.definition.inspectors.recipeConfig;
-  if (recipeConfig === undefined) {
+  const recipeConfig = options.definition.recipe;
+  if (recipeConfig === null) {
     return null;
   }
 
-  const selectedRecipeId = recipeConfig.recipeId.default;
+  const selectedRecipeId = recipeConfig.recipeId;
   if (selectedRecipeId === null) {
-    if (options.definition.tags.includes("BeltFamily") || options.definition.tags.includes("PipeFamily")) {
-      return {
-        recipeId: `${options.definition.id}:transport`,
-        recipeType: "reserved-item",
-        durationTicks: Math.max(1, Math.round(recipeConfig.duration.default * options.ticksPerSecond)),
-        inputs: [{ itemId: "any", amount: 1 }],
-        outputs: [{ itemId: "same-as-input", amount: 1 }],
-        ingredientCacheGroupIds: options.cacheGroups
-          .filter((cacheGroup) => cacheGroup.cacheType === "ingredient")
-          .map((cacheGroup) => cacheGroup.id),
-        productCacheGroupIds: options.cacheGroups
-          .filter((cacheGroup) => cacheGroup.cacheType === "product")
-          .map((cacheGroup) => cacheGroup.id),
-      };
+    if (recipeConfig.inputs.length === 0 && recipeConfig.outputs.length === 0) {
+      return null;
     }
-    return null;
+
+    return {
+      recipeId: `${options.definition.id}:definition-recipe`,
+      recipeType: recipeConfig.recipeType,
+      durationTicks: Math.max(1, Math.round(recipeConfig.durationSeconds * options.ticksPerSecond)),
+      inputs: recipeConfig.inputs,
+      outputs: recipeConfig.outputs,
+      ingredientCacheGroupIds: options.cacheGroups
+        .filter((cacheGroup) => cacheGroup.cacheType === "ingredient")
+        .map((cacheGroup) => cacheGroup.id),
+      productCacheGroupIds: options.cacheGroups
+        .filter((cacheGroup) => cacheGroup.cacheType === "product")
+        .map((cacheGroup) => cacheGroup.id),
+    };
   }
 
   const recipe = options.recipeDefinitionMap.get(selectedRecipeId);
@@ -751,7 +866,7 @@ function compileRecipePlan(options: {
 
   return {
     recipeId: recipe.id,
-    recipeType: recipeConfig.recipeType.default,
+    recipeType: recipeConfig.recipeType,
     durationTicks: Math.max(1, Math.round(recipe.durationSeconds * options.ticksPerSecond)),
     inputs: recipe.inputs,
     outputs: recipe.outputs,
@@ -767,37 +882,64 @@ function compileRecipePlan(options: {
 function compileInternalLinks(options: {
   readonly deviceId: string;
   readonly definition: EntityDefinition;
+  readonly cacheGroupIdsByStorageGroupId: ReadonlyMap<string, readonly string[]>;
   readonly cacheGroups: readonly CompiledSimulationCacheGroup[];
   readonly slots: readonly CompiledSimulationSlotTemplate[];
   readonly links: CompiledSimulationCacheLink[];
 }): void {
-  const linkConfig = options.definition.inspectors.linkConfig;
-  if (linkConfig === undefined || linkConfig.peerCache.default !== "") {
-    return;
+  for (const link of options.definition.cacheLinks) {
+    const endpointSlotIds = link.endpoints.flatMap((endpoint) =>
+      resolveCacheLinkEndpointSlotIds({
+        endpoint,
+        cacheGroupIdsByStorageGroupId: options.cacheGroupIdsByStorageGroupId,
+        cacheGroups: options.cacheGroups,
+      }),
+    ).filter((slotId) => options.slots.some((slot) => slot.id === slotId));
+
+    if (endpointSlotIds.length < 2) {
+      continue;
+    }
+
+    const sortedEndpointSlotIds = [...new Set(endpointSlotIds)].sort();
+    options.links.push({
+      id: [
+        "link",
+        options.deviceId,
+        link.id,
+        link.linkType,
+        sortedEndpointSlotIds.join("<->"),
+      ].join(":"),
+      linkType: link.linkType,
+      endpointSlotIds: sortedEndpointSlotIds,
+      shareLimit: link.linkType === "share-cap" ? link.shareLimit : null,
+    });
   }
+}
 
-  const ingredientSlotIds = getSlotIdsByCacheType(options.cacheGroups, "ingredient");
-  const productSlotIds = getSlotIdsByCacheType(options.cacheGroups, "product");
-  const endpointSlotIds = [...ingredientSlotIds, ...productSlotIds].filter((slotId) =>
-    options.slots.some((slot) => slot.id === slotId),
-  );
+function resolveCacheLinkEndpointSlotIds(options: {
+  readonly endpoint: EntityDefinition["cacheLinks"][number]["endpoints"][number];
+  readonly cacheGroupIdsByStorageGroupId: ReadonlyMap<string, readonly string[]>;
+  readonly cacheGroups: readonly CompiledSimulationCacheGroup[];
+}): readonly string[] {
+  const cacheGroupIds = options.cacheGroupIdsByStorageGroupId.get(
+    options.endpoint.storageSlotGroupId,
+  ) ?? [];
 
-  if (endpointSlotIds.length < 2) {
-    return;
-  }
+  return cacheGroupIds.flatMap((cacheGroupId) => {
+    const cacheGroup = options.cacheGroups.find((candidate) =>
+      candidate.id === cacheGroupId,
+    );
+    if (cacheGroup === undefined) {
+      return [];
+    }
 
-  const sortedEndpointSlotIds = [...endpointSlotIds].sort();
-  options.links.push({
-    id: [
-      "link",
-      linkConfig.linkType.default,
-      sortedEndpointSlotIds.join("<->"),
-    ].join(":"),
-    linkType: linkConfig.linkType.default,
-    endpointSlotIds: sortedEndpointSlotIds,
-    shareLimit: linkConfig.linkType.default === "share-cap"
-      ? linkConfig.shareLimit.default
-      : null,
+    if (options.endpoint.slotId === undefined) {
+      return [...cacheGroup.slotIds];
+    }
+
+    return cacheGroup.slotIds.filter((slotId) =>
+      slotId.endsWith(`/slot:${options.endpoint.slotId}`),
+    );
   });
 }
 
@@ -947,17 +1089,12 @@ function acceptRuleFromPortKind(kind: SimulationPortKind): SimulationAcceptRule 
   };
 }
 
-function readPortFilterAcceptRule(
-  definition: EntityDefinition,
-  portKind: SimulationPortKind,
+function readPortAcceptRule(
+  port: PortDefinition,
 ): SimulationAcceptRule {
-  const portFilter = definition.inspectors.portFilter;
-  const base = portFilter?.acceptRule.base.default ?? (portKind === "fluid" ? "liquid" : "solid");
   return {
-    base: typeof base === "string" && (base === "any" || base === "solid" || base === "liquid")
-      ? { kind: base }
-      : { kind: "item", itemId: String(base) },
-    exclude: [...(portFilter?.acceptRule.exclude.default ?? [])].sort(),
+    base: port.acceptRule.base,
+    exclude: [...port.acceptRule.exclude].sort(),
   };
 }
 
@@ -1130,15 +1267,6 @@ function inferItemDomain(
   }
 
   return "solid";
-}
-
-function getSlotIdsByCacheType(
-  cacheGroups: readonly CompiledSimulationCacheGroup[],
-  cacheType: SimulationCacheType,
-): string[] {
-  return cacheGroups
-    .filter((cacheGroup) => cacheGroup.cacheType === cacheType)
-    .flatMap((cacheGroup) => cacheGroup.slotIds);
 }
 
 function findFirstSlotIdByCacheType(

@@ -118,6 +118,9 @@ function normalizePersistedAppSettings(
       typeof persistedAppSettings.debugShowGestureDiagnosticsWindow === "boolean"
         ? persistedAppSettings.debugShowGestureDiagnosticsWindow
         : fallback.debugShowGestureDiagnosticsWindow,
+    debugMode: typeof persistedAppSettings.debugMode === "boolean"
+      ? persistedAppSettings.debugMode
+      : fallback.debugMode,
   };
 }
 

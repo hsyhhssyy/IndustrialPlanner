@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
 import {
@@ -290,6 +291,11 @@ describe("createHypergryphMoveGestureModule", () => {
     const result = module.handle(keyDownEvent({ code: "KeyR", key: "r" }), context);
 
     expect(result).toEqual({ status: "handled" });
+    expect(appHost.internalActions.isShortcutFor).toHaveBeenCalledWith(
+      SHORTCUT_KEY.ROTATE,
+      "KeyR",
+      "r",
+    );
     expect(editor.actions.rotateCollection).toHaveBeenCalledWith(
       EntityCollectionType.preview,
     );
@@ -491,6 +497,9 @@ function createContext(options: {
   const previewEntity = entity("preview-entity", { x: 5, y: 5 });
   const selectedEntity = entity("selected-entity", { x: 2, y: 2 });
   const unselectedEntity = entity("unselected-entity", { x: 4, y: 4 });
+  const shortcuts: Record<string, string> = {
+    [SHORTCUT_KEY.ROTATE]: "R",
+  };
   const editor: MockEditor = {
     state: {
       collections: {
@@ -610,6 +619,29 @@ function createContext(options: {
       hideCanvasFloatingToolbar: vi.fn(() => {
         appHost.internalState.runtime.canvasFloatingToolbar.visible = false;
         appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
+      }),
+      getKeyboardShortcutFor: vi.fn((key: string) => shortcuts[key] ?? ""),
+      isShortcutFor: vi.fn((key: string, code: string | null, eventKey?: string | null) => {
+        const shortcut = (shortcuts[key] ?? "")
+          .trim()
+          .toLowerCase();
+        if (shortcut === "") {
+          return false;
+        }
+
+        if ((eventKey ?? "").trim().toLowerCase() === shortcut) {
+          return true;
+        }
+
+        if (shortcut.length === 1 && shortcut >= "a" && shortcut <= "z") {
+          return code === `Key${shortcut.toUpperCase()}`;
+        }
+
+        if (shortcut.length === 1 && shortcut >= "0" && shortcut <= "9") {
+          return code === `Digit${shortcut}` || code === `Numpad${shortcut}`;
+        }
+
+        return (code ?? "").trim().toLowerCase() === shortcut;
       }),
     },
     workspace: {

@@ -655,6 +655,76 @@ describe("createEditorHost", () => {
     )).toHaveLength(4);
   });
 
+  it("reuses preview draft ids for unchanged logistics cells across updates", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 0, y: 0 },
+      },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 2, y: 0 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    const previewBefore = [...editorHost.state.collections.preview];
+
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 3, y: 0 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(editorHost.state.collections.preview.slice(0, previewBefore.length)).toEqual(previewBefore);
+    expect(editorHost.state.collections.preview).toHaveLength(4);
+  });
+
+  it("does not reuse preview draft ids when a logistics cell changes definition", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: {
+        type: "empty-cell",
+        gridPoint: { x: 0, y: 0 },
+      },
+    });
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 2, y: 0 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "horizontal-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    const previewBefore = [...editorHost.state.collections.preview];
+
+    editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 2, y: 1 },
+      routeMode: {
+        type: "single-bend",
+        routeOrder: "vertical-first",
+        allowTemporaryOrderFlip: true,
+      },
+    });
+
+    expect(editorHost.state.collections.preview[0]).toBe(previewBefore[0]);
+    expect(editorHost.state.collections.preview[1]).not.toBe(previewBefore[1]);
+  });
+
   it("marks logistics drafts invalid when they overlap existing path tiles", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

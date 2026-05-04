@@ -114,6 +114,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
 
         case "key down":
           if (!isRotatePlacementShortcut({
+            appHost: context.appHost,
             code: event.code,
             key: event.key,
             modifiers: event.modifiers,
@@ -633,6 +634,7 @@ function isPreviewEntityAtClientPoint(
 }
 
 function isRotatePlacementShortcut(options: {
+  appHost: AppHost;
   code: string | null;
   key: string | null;
   modifiers: {
@@ -645,11 +647,11 @@ function isRotatePlacementShortcut(options: {
     return false;
   }
 
-  if (options.code === "KeyR") {
-    return true;
-  }
-
-  return options.key?.trim().toLowerCase() === "r";
+  return options.appHost.internalActions.isShortcutFor(
+    SHORTCUT_KEY.ROTATE,
+    options.code,
+    options.key,
+  );
 }
 
 export function resolvePlacementGroupByShortcut(options: {

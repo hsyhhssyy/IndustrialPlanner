@@ -1,30 +1,36 @@
 import { useEffect, useState } from "react";
 
 import type { AppHost } from "@/app/host/app-host";
-import type { InspectorType } from "@/domain/types/registry/inspector-types";
-import { INSPECTOR_TYPE } from "@/domain/types/registry/inspector-types";
+import type { EntityInspectorType } from "@/domain/types/registry/entity-inspector";
+import { INSPECTOR_TYPE } from "@/domain/types/registry/entity-inspector";
 
 const INSPECTOR_SLOT_INTERVAL_MS = 50;
 
 type Translate = (key: string) => string;
 
 interface InspectorQueryResult {
-  key: InspectorType;
+  id: string;
+  key: EntityInspectorType;
   name: string;
   ticks: number;
 }
 
 interface MountedInspector {
-  query: () => InspectorQueryResult;
+  query: () => Omit<InspectorQueryResult, "id">;
 }
 
 interface InspectorSlotState {
   selectedEntityId: string;
   selectedDefinitionId: string;
   inspectors: InspectorQueryResult[];
+  debugEntityJson: string | null;
 }
 
-const INSPECTOR_LABELS: Record<InspectorType, string> = {
+const INSPECTOR_LABELS: Partial<Record<EntityInspectorType, string>> = {
+  [INSPECTOR_TYPE.genericDevice]: "设备概览",
+  [INSPECTOR_TYPE.runtimeStatistics]: "运行统计",
+  [INSPECTOR_TYPE.storageManagement]: "缓存管理",
+  [INSPECTOR_TYPE.storageTypeFilter]: "缓存类型过滤",
   [INSPECTOR_TYPE.portFilter]: "端口过滤器",
   [INSPECTOR_TYPE.recipeConfig]: "配方配置",
   [INSPECTOR_TYPE.slotConfig]: "槽位配置",
@@ -32,9 +38,10 @@ const INSPECTOR_LABELS: Record<InspectorType, string> = {
   [INSPECTOR_TYPE.routing]: "分流/优先级",
   [INSPECTOR_TYPE.structure]: "结构配置",
   [INSPECTOR_TYPE.behaviorToggle]: "行为开关",
+  [INSPECTOR_TYPE.warehouseItemLink]: "仓库物品链接",
 };
 
-function mountEmptyInspector(key: InspectorType): MountedInspector {
+function mountEmptyInspector(key: EntityInspectorType): MountedInspector {
   let ticks = 0;
 
   return {
@@ -43,7 +50,7 @@ function mountEmptyInspector(key: InspectorType): MountedInspector {
 
       return {
         key,
-        name: INSPECTOR_LABELS[key],
+        name: INSPECTOR_LABELS[key] ?? key,
         ticks,
       };
     },
@@ -102,9 +109,7 @@ export function SelectionInspectorSlot({
         return;
       }
 
-      const selectedEntity =
-        editor.document.getSnapshot().entities[selectedEntityId]
-        ?? editor.queries.getEntityById(selectedEntityId);
+      const selectedEntity = editor.queries.getEntityById(selectedEntityId);
 
       if (selectedEntity === null || selectedEntity === undefined) {
         hideSlot();
@@ -120,14 +125,16 @@ export function SelectionInspectorSlot({
         return;
       }
 
-      const inspectorKeys = (
-        Object.keys(selectedDefinition.inspectors) as (keyof typeof selectedDefinition.inspectors)[]
-      ).filter((k) => selectedDefinition.inspectors[k] !== undefined);
+      const inspectorDeclarations = selectedDefinition.inspectors;
 
       const nextInstanceIds = new Set<string>();
-      const inspectors = inspectorKeys.map((propKey) => {
-        const inspectorKey = INSPECTOR_TYPE[propKey];
-        const instanceId = `${selectedEntity.id}:${inspectorKey}`;
+      const inspectors = inspectorDeclarations.map((declaration, declarationIndex) => {
+        const inspectorKey = declaration.type;
+        const instanceId = [
+          selectedEntity.id,
+          inspectorKey,
+          declaration.targetPath ?? declarationIndex,
+        ].join(":");
         const mountedInspector =
           mountedInspectors.get(instanceId)
           ?? mountEmptyInspector(inspectorKey);
@@ -135,7 +142,10 @@ export function SelectionInspectorSlot({
         mountedInspectors.set(instanceId, mountedInspector);
         nextInstanceIds.add(instanceId);
 
-        return mountedInspector.query();
+        return {
+          ...mountedInspector.query(),
+          id: instanceId,
+        };
       });
 
       for (const instanceId of mountedInspectors.keys()) {
@@ -148,6 +158,9 @@ export function SelectionInspectorSlot({
         selectedEntityId: selectedEntity.id,
         selectedDefinitionId: selectedDefinition.id,
         inspectors,
+        debugEntityJson: appHost.state.settings.debugMode
+          ? JSON.stringify(selectedEntity, null, 2)
+          : null,
       });
     };
 
@@ -176,10 +189,21 @@ export function SelectionInspectorSlot({
       <div className="definition-list">
         {slotState.inspectors.map((inspector) => (
           <EmptyInspector
-            key={`${slotState.selectedEntityId}:${inspector.key}`}
+            key={inspector.id}
             result={inspector}
           />
         ))}
+        {slotState.debugEntityJson !== null ? (
+          <article className="definition-card" data-inspector-key="json-debug">
+            <h4>JSON Debug</h4>
+            <textarea
+              className="json-debug-textarea"
+              readOnly
+              value={slotState.debugEntityJson}
+              rows={20}
+            />
+          </article>
+        ) : null}
       </div>
     </div>
   );

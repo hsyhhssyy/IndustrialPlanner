@@ -184,6 +184,8 @@ export type MessageKey =
   | "settingsField.shortcut-basic-productionDescription"
   | "settingsField.shortcut-synthesis"
   | "settingsField.shortcut-synthesisDescription"
+  | "settingsField.shortcut-rotate"
+  | "settingsField.shortcut-rotateDescription"
   | "settingsField.shortcut-delete-device"
   | "settingsField.shortcut-delete-deviceDescription"
   | "settingsField.useSimplifiedDeviceIcons"
@@ -484,6 +486,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-basic-productionDescription": "设置基础生产的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-synthesis": "合成制造",
     "settingsField.shortcut-synthesisDescription": "设置合成制造的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-rotate": "旋转",
+    "settingsField.shortcut-rotateDescription": "设置旋转预览设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-delete-device": "删除设备",
     "settingsField.shortcut-delete-deviceDescription": "设置删除选中设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.useSimplifiedDeviceIcons": "使用简笔画设备图片",
@@ -783,6 +787,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-basic-productionDescription": "Set the shortcut key for basic production; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-synthesis": "Synthesis",
     "settingsField.shortcut-synthesisDescription": "Set the shortcut key for synthesis manufacturing; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-rotate": "Rotate",
+    "settingsField.shortcut-rotateDescription": "Set the shortcut key for rotating preview devices; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-delete-device": "Delete Device",
     "settingsField.shortcut-delete-deviceDescription": "Set the shortcut key for deleting selected devices; editable only when Arknights Operation Mode is off.",
     "settingsField.useSimplifiedDeviceIcons": "Use Simplified Device Icons",

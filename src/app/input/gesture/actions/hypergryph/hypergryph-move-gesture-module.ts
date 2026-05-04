@@ -1,5 +1,6 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
+import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { EditorContract } from "@/domain/contract/editor-contract";
 import type { WorldEntity } from "@/domain/entity/world-document";
 import { EntityCollectionType } from "@/domain/state/types";
@@ -38,6 +39,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
 
           case "key down":
             if (!isRotateMoveShortcut({
+              appHost: context.appHost,
               code: event.code,
               key: event.key,
               modifiers: event.modifiers,
@@ -693,6 +695,7 @@ function safelyCancelMoveDraft(editor: EditorContract): void {
 }
 
 function isRotateMoveShortcut(options: {
+  appHost: AppHost;
   code: string | null;
   key: string | null;
   modifiers: {
@@ -705,11 +708,11 @@ function isRotateMoveShortcut(options: {
     return false;
   }
 
-  if (options.code === "KeyR") {
-    return true;
-  }
-
-  return options.key?.trim().toLowerCase() === "r";
+  return options.appHost.internalActions.isShortcutFor(
+    SHORTCUT_KEY.ROTATE,
+    options.code,
+    options.key,
+  );
 }
 
 function isPreviewEntityAtClientPoint(options: {

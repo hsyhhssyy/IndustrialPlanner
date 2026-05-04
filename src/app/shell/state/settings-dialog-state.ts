@@ -273,6 +273,17 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         },
       },
       {
+        id: "shortcut-rotate",
+        kind: "keybinding",
+        labelKey: shortcutKeybindingLabelKey("shortcut-rotate"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-rotate"),
+        defaultValue: "R",
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: false,
+        },
+      },
+      {
         id: "shortcut-delete-device",
         kind: "keybinding",
         labelKey: shortcutKeybindingLabelKey("shortcut-delete-device"),

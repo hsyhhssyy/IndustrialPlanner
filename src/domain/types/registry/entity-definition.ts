@@ -1,5 +1,11 @@
 import type { GridEdge, GridRectSize } from "../grid";
-import type { DeviceInspectorDeclarations } from "./inspector-types";
+import type {
+  SimulationCountLimit,
+  SimulationRecipeType,
+  SimulationSubmitMode,
+  SimulationLinkType,
+} from "../simulation";
+import type { EntityInspectorDeclaration } from "./entity-inspector";
 
 export type UiGroup =
   | "beltLogistics"           // 传送带物流
@@ -22,7 +28,9 @@ export interface EntityDefinition {
   // powerDemand表示只要他在电网里，就需要扣除的值。但是如果requiresPower为false，那么他可以在电网外运行，只不过放到电网里的时候耗电罢了。
   requiresPower: boolean;
   powerDemand: number;
-  inspectors: DeviceInspectorDeclarations;
+  recipe: EntityRecipeDefinition | null;
+  cacheLinks: CacheLinkDefinition[];
+  inspectors: EntityInspectorDeclaration[];
   //端口与组
   portGroups: PortGroupDefinition[];
   storageSlotGroups: StorageSlotGroupDefinition[];
@@ -53,6 +61,12 @@ interface StorageSlotGroupDefinition {
 interface StorageSlotDefinition extends ItemFilterDefinition {
   id: string;
   capacity: number;
+  lock: string | null;
+  initialItemType: string | null;
+  initialCount: number;
+  ignoreStock: boolean;
+  submitMode: SimulationSubmitMode;
+  submitIntervalSeconds: number | null;
 }
 
 interface PortStorageBindingDefinition {
@@ -67,5 +81,42 @@ interface PortDefinition {
   localCellY: number;
   // 是相对于Entity处于 Rotation = 0 时的方向
   edge: GridEdge;
+  acceptRule: EntityAcceptRuleDefinition;
+  count: SimulationCountLimit;
+  priorityGroup: number;
+  roundRobinSeed: number;
+}
 
+export interface EntityAcceptRuleDefinition {
+  readonly base:
+    | { readonly kind: "any" }
+    | { readonly kind: "solid" }
+    | { readonly kind: "liquid" }
+    | { readonly kind: "item"; readonly itemId: string };
+  readonly exclude: readonly string[];
+}
+
+export interface EntityRecipeDefinition {
+  readonly recipeId: string | null;
+  readonly recipeType: SimulationRecipeType;
+  readonly durationSeconds: number;
+  readonly inputs: readonly EntityRecipeItemDefinition[];
+  readonly outputs: readonly EntityRecipeItemDefinition[];
+}
+
+export interface EntityRecipeItemDefinition {
+  readonly itemId: string | "any" | "same-as-input";
+  readonly amount: number;
+}
+
+export interface CacheLinkDefinition {
+  readonly id: string;
+  readonly linkType: SimulationLinkType;
+  readonly endpoints: readonly CacheLinkEndpointDefinition[];
+  readonly shareLimit: number | null;
+}
+
+export interface CacheLinkEndpointDefinition {
+  readonly storageSlotGroupId: string;
+  readonly slotId?: string;
 }

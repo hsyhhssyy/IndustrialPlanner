@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
 import {
@@ -224,6 +225,11 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(module.handle(keyDownEvent({ code: "KeyR", key: "r" }), keyboard.context)).toEqual({
       status: "handled",
     });
+    expect(keyboard.appHost.internalActions.isShortcutFor).toHaveBeenCalledWith(
+      SHORTCUT_KEY.ROTATE,
+      "KeyR",
+      "r",
+    );
     expect(keyboard.editor.actions.rotateCollection).toHaveBeenCalledWith(
       EntityCollectionType.preview,
     );
@@ -406,6 +412,7 @@ function createContext(options: {
     "shortcut-warehouse": "C",
     "shortcut-basic-production": "V",
     "shortcut-synthesis": "B",
+    "shortcut-rotate": "R",
   };
 
   const appHost = {

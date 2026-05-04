@@ -492,6 +492,13 @@ function driveMouseLogisticsPreview(options: {
     return { status: "ignored" };
   }
 
+  if (
+    runtime.lastPreviewGridPoint !== null
+    && areGridPointsEqual(runtime.lastPreviewGridPoint, gridPoint)
+  ) {
+    return { status: "handled" };
+  }
+
   const result = options.editor.actions.moveLogisticEnd({
     pointerGridPoint: gridPoint,
     routeMode: {
@@ -506,6 +513,7 @@ function driveMouseLogisticsPreview(options: {
     phase: result.targetEntityId === null ? "drawing" : "snapped-target",
     result,
   });
+  runtime.lastPreviewGridPoint = gridPoint;
   return { status: "handled" };
 }
 
@@ -606,6 +614,7 @@ function createMouseLogisticsStart(options: {
     phase: "drawing",
     result,
   });
+  options.appHost.internalState.runtime.logisticsPlacement.lastPreviewGridPoint = options.gridPoint;
   return { status: "handled" };
 }
 
@@ -677,6 +686,7 @@ function createContinuedMouseLogisticsStart(options: {
     phase: "drawing",
     result,
   });
+  options.appHost.internalState.runtime.logisticsPlacement.lastPreviewGridPoint = options.gridPoint;
 }
 
 function cancelLogisticsPlacement(
@@ -835,6 +845,7 @@ function resetLogisticsRuntime(appHost: AppHost): void {
   runtime.targetEntityId = null;
   runtime.anchorGridPoint = null;
   runtime.headGridPoint = null;
+  runtime.lastPreviewGridPoint = null;
   runtime.statusMessageKey = null;
 }
 
@@ -845,6 +856,7 @@ function softResetLogisticsRuntime(appHost: AppHost): void {
   runtime.targetEntityId = null;
   runtime.anchorGridPoint = null;
   runtime.headGridPoint = null;
+  runtime.lastPreviewGridPoint = null;
   runtime.statusMessageKey = null;
 }
 
@@ -876,6 +888,10 @@ function resolveGridPointFromGesturePosition(
   }
 
   return editor.queries.findGridCellForClientPixlePoint(position);
+}
+
+function areGridPointsEqual(left: GridPoint, right: GridPoint): boolean {
+  return left.x === right.x && left.y === right.y;
 }
 
 function isTouchDragStartOnLogisticsHead(

@@ -191,7 +191,7 @@ describe("CanvasPanel", () => {
     expect(editorHost.state.viewport.clientRect.height).toBe(480);
   });
 
-  it("routes canvas surface input through the canvas-panel gesture adapter", () => {
+  it("routes canvas surface pointer input through the canvas-panel gesture adapter", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
     const gestures: GestureEvent[] = [];
@@ -236,26 +236,14 @@ describe("CanvasPanel", () => {
         clientY: 10,
         buttons: 0,
       });
-      canvasPanel.dispatchEvent(
-        new KeyboardEvent("keydown", {
-          bubbles: true,
-          code: "KeyA",
-          key: "a",
-        }),
-      );
     });
 
     expect(gestures.map((event) => event.type)).toEqual([
       "mouse dragstart",
       "mouse dragend",
-      "key down",
     ]);
-    expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.has("KeyA")).toBe(true);
     expect(container.querySelector(".canvas-gesture-diagnostics")?.textContent).toContain(
       "mouse dragend",
-    );
-    expect(container.querySelector(".canvas-gesture-diagnostics")?.textContent).toContain(
-      "KeyA",
     );
   });
 

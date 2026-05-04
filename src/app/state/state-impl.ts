@@ -72,6 +72,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   showGrassBackground: boolean;
   debugShowFps: boolean;
   debugShowGestureDiagnosticsWindow: boolean;
+  debugMode: boolean;
 }
 
 export interface WorkbenchStateReadWrite extends WorkbenchState {
@@ -349,6 +350,7 @@ export interface LogisticsPlacementRuntimeStateReadWrite {
   targetEntityId: string | null;
   anchorGridPoint: GridPoint | null;
   headGridPoint: GridPoint | null;
+  lastPreviewGridPoint: GridPoint | null;
   lastMousePosition: ClientPixelPoint | null;
   statusMessageKey: string | null;
 }
@@ -474,6 +476,7 @@ class LogisticsPlacementRuntimeStateReadWriteImpl implements LogisticsPlacementR
   targetEntityId: string | null = null;
   anchorGridPoint: GridPoint | null = null;
   headGridPoint: GridPoint | null = null;
+  lastPreviewGridPoint: GridPoint | null = null;
   lastMousePosition: ClientPixelPoint | null = null;
   statusMessageKey: string | null = null;
 
@@ -520,6 +523,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     showGrassBackground: false,
     debugShowFps: false,
     debugShowGestureDiagnosticsWindow: false,
+    debugMode: false,
   };
 
   workbench: WorkbenchStateReadWrite = new WorkbenchStateReadWriteImpl();

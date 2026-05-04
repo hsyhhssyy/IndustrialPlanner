@@ -11,6 +11,7 @@ export const SHORTCUT_KEY = {
   WAREHOUSE:           "shortcut-warehouse",
   BASIC_PRODUCTION:    "shortcut-basic-production",
   SYNTHESIS:           "shortcut-synthesis",
+  ROTATE:              "shortcut-rotate",
   DELETE_DEVICE:       "shortcut-delete-device",
 } as const;
 
@@ -29,6 +30,7 @@ const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.WAREHOUSE]:        "C",
   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
   [SHORTCUT_KEY.SYNTHESIS]:        "B",
+  [SHORTCUT_KEY.ROTATE]:           "R",
   [SHORTCUT_KEY.DELETE_DEVICE]:    "F",
 };
 

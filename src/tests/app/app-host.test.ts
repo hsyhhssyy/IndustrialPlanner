@@ -1579,6 +1579,63 @@ describe("createAppHost", () => {
     expect(editorHost.state.collections.ghost).toEqual([headEntity?.id]);
   });
 
+  it("keeps mouse logistics preview stable while the pointer stays in the same grid cell", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.actions.setViewportClientRect({
+      left: 120,
+      top: 80,
+      width: 400,
+      height: 400,
+    });
+    const appHost = createAppHost(workspace);
+    const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
+    const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 2, y: 0 });
+    const sameCellPoint = {
+      x: endPoint.x + editorHost.state.viewport.gridCellPixelSize / 4,
+      y: endPoint.y - editorHost.state.viewport.gridCellPixelSize / 4,
+    };
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyE",
+      key: "e",
+      keyCode: 69,
+    }));
+    appHost.gestureAdapter.handlePointerDown(pointerEvent({
+      pointerId: 41,
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+      buttons: 1,
+    }));
+    appHost.gestureAdapter.handlePointerUp(pointerEvent({
+      pointerId: 41,
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+      buttons: 0,
+    }));
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 42,
+      clientX: endPoint.x,
+      clientY: endPoint.y,
+      buttons: 0,
+    }));
+
+    const previewBefore = [...editorHost.state.collections.preview];
+    const draftBefore = editorHost.queries.resolveLogisticsDraftState();
+
+    appHost.gestureAdapter.handlePointerMove(pointerEvent({
+      pointerId: 42,
+      clientX: sameCellPoint.x,
+      clientY: sameCellPoint.y,
+      buttons: 0,
+    }));
+
+    const draftAfter = editorHost.queries.resolveLogisticsDraftState();
+    expect(editorHost.state.collections.preview).toEqual(previewBefore);
+    expect(draftAfter?.headDraftEntityId).toBe(draftBefore?.headDraftEntityId);
+    expect(draftAfter?.cells).toEqual(draftBefore?.cells);
+  });
+
   it("returns to idle after applying a mouse logistics draft that snapped to a device input port", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);

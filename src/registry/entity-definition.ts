@@ -1,84 +1,10 @@
 import type {
+  CacheLinkDefinition,
   EntityDefinition,
+  EntityRecipeDefinition,
   ItemFilterDefinition,
 } from "@/domain/types/registry/entity-definition";
-import {
-  type DeviceInspectorDeclarations,
-  type PortFilterInspectorDef,
-  type RecipeConfigInspectorDef,
-  type SlotConfigInspectorDef,
-  type LinkConfigInspectorDef,
-  type RoutingInspectorDef,
-  type StructureInspectorDef,
-} from "@/domain/types/registry/inspector-types";
-
-// ---------------------------------------------------------------------------
-// FieldDef helpers
-// ---------------------------------------------------------------------------
-
-function fd<T>(value: T): { mutable: boolean; default: T } {
-  return { mutable: true, default: value };
-}
-
-// ---------------------------------------------------------------------------
-// Inspector helpers — 目前所有字段 mutable = true
-// ---------------------------------------------------------------------------
-
-function portFilterInspector(): PortFilterInspectorDef {
-  return {
-    mutable: true,
-    acceptRule: {
-      base: fd<'any' | 'solid' | 'liquid' | string>('any'),
-      exclude: fd<string[]>([]),
-    },
-    count: fd<number | 'unlimited'>('unlimited'),
-  };
-}
-
-function recipeConfigInspector(): RecipeConfigInspectorDef {
-  return {
-    mutable: true,
-    recipeId: fd<string | null>(null),
-    recipeType: fd<'immediate-consume' | 'reserved-item'>('immediate-consume'),
-    duration: fd<number>(1),
-  };
-}
-
-function slotConfigInspector(): SlotConfigInspectorDef {
-  return {
-    mutable: true,
-    lock: fd<string | null>(null),
-    capacity: fd<number>(1),
-    initialCount: fd<number>(0),
-    submitMode: fd<'never' | 'every-tick' | 'every-n-seconds'>('never'),
-    submitInterval: fd<number>(10),
-  };
-}
-
-function linkConfigInspector(
-  linkType: 'share-cap' | 'share-all' = 'share-cap',
-): LinkConfigInspectorDef {
-  return {
-    mutable: true,
-    linkType: fd<'share-cap' | 'share-all'>(linkType),
-    peerCache: fd<string>(''),
-    shareLimit: fd<number>(1),
-  };
-}
-
-function routingInspector(): RoutingInspectorDef {
-  return {
-    mutable: true,
-    entries: fd<RoutingInspectorDef['entries']['default']>([]),
-  };
-}
-
-function structureInspector(): StructureInspectorDef {
-  return {
-    mutable: true,
-    cacheGroups: fd<StructureInspectorDef['cacheGroups']['default']>([]),
-  };
-}
+import type { EntityInspectorDeclaration } from "@/domain/types/registry/entity-inspector";
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
@@ -87,19 +13,29 @@ type StorageSlotDefinition = StorageSlotGroupDefinition["slots"][number];
 type PortStorageBindingDefinition = EntityDefinition["portStorageBindings"][number];
 type PortEdgeInput = "N" | "S" | "W" | "E";
 type FilterType = NonNullable<ItemFilterDefinition["itemFilterType"]>;
-type EntityDefinitionInput = Omit<EntityDefinition, "inspectors">;
+type PortDefinitionInput = Pick<
+  PortDefinition,
+  "id" | "localCellX" | "localCellY" | "edge"
+> & Partial<Pick<
+  PortDefinition,
+  "acceptRule" | "count" | "priorityGroup" | "roundRobinSeed"
+>>;
+type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "recipe" | "cacheLinks"> & {
+  readonly inspectors?: readonly EntityInspectorDeclaration[];
+  readonly recipe?: EntityRecipeDefinition | null;
+  readonly cacheLinks?: readonly CacheLinkDefinition[];
+};
 type EmptyEntityDefinitionInput = Pick<
   EntityDefinitionInput,
   "id" | "nameKey" | "spriteId" | "footprint" | "uiGroup" | "tags"
 > & Partial<Pick<EntityDefinitionInput, "requiresPower" | "powerDemand">>;
 
-function createEntityDefinition(
-  definition: EntityDefinitionInput,
-  inspectors: DeviceInspectorDeclarations = {},
-): EntityDefinition {
+function createEntityDefinition(definition: EntityDefinitionInput): EntityDefinition {
   return {
     ...definition,
-    inspectors,
+    recipe: definition.recipe ?? null,
+    cacheLinks: [...(definition.cacheLinks ?? [])],
+    inspectors: [...(definition.inspectors ?? [])],
   };
 }
 
@@ -110,6 +46,9 @@ function createEmptyEntityDefinition(
     ...definition,
     requiresPower: definition.requiresPower ?? false,
     powerDemand: definition.powerDemand ?? 0,
+    recipe: null,
+    cacheLinks: [],
+    inspectors: [],
     portGroups: [],
     storageSlotGroups: [],
     portStorageBindings: [],
@@ -134,12 +73,17 @@ function createPort(
   localCellX: number,
   localCellY: number,
   edge: PortEdgeInput,
-): PortDefinition {
+  options: Partial<Pick<
+    PortDefinition,
+    "acceptRule" | "count" | "priorityGroup" | "roundRobinSeed"
+  >> = {},
+): PortDefinitionInput {
   return {
     id,
     localCellX,
     localCellY,
     edge: resolveEdge(edge),
+    ...options,
   };
 }
 
@@ -147,13 +91,19 @@ function createPortGroup(
   id: string,
   kind: PortGroupDefinition["kind"],
   direction: PortGroupDefinition["direction"],
-  ports: PortDefinition[],
+  ports: PortDefinitionInput[],
 ): PortGroupDefinition {
   return {
     id,
     kind,
     direction,
-    ports,
+    ports: ports.map((port, index) => ({
+      ...port,
+      acceptRule: port.acceptRule ?? acceptRuleFromPortKind(kind),
+      count: port.count ?? "unlimited",
+      priorityGroup: port.priorityGroup ?? 0,
+      roundRobinSeed: port.roundRobinSeed ?? index,
+    })),
   };
 }
 
@@ -161,12 +111,22 @@ function createSlot(
   id: string,
   capacity: number,
   itemFilterType: FilterType,
+  options: Partial<Pick<
+  StorageSlotDefinition,
+  "lock" | "initialItemType" | "initialCount" | "ignoreStock" | "submitMode" | "submitIntervalSeconds"
+  >> = {},
 ): StorageSlotDefinition {
   return {
     id,
     capacity,
     itemFilter: "type",
     itemFilterType,
+    lock: options.lock ?? null,
+    initialItemType: options.initialItemType ?? null,
+    initialCount: options.initialCount ?? 0,
+    ignoreStock: options.ignoreStock ?? false,
+    submitMode: options.submitMode ?? "never",
+    submitIntervalSeconds: options.submitIntervalSeconds ?? null,
   };
 }
 
@@ -206,6 +166,59 @@ function createBinding(
   };
 }
 
+function acceptRuleFromPortKind(kind: PortGroupDefinition["kind"]): PortDefinition["acceptRule"] {
+  return {
+    base: kind === "fluid" ? { kind: "liquid" } : { kind: "solid" },
+    exclude: [],
+  };
+}
+
+function createTransportRecipe(durationSeconds = 1): EntityRecipeDefinition {
+  return {
+    recipeId: null,
+    recipeType: "reserved-item",
+    durationSeconds,
+    inputs: [{ itemId: "any", amount: 1 }],
+    outputs: [{ itemId: "same-as-input", amount: 1 }],
+  };
+}
+
+function createRecipeShell(): EntityRecipeDefinition {
+  return {
+    recipeId: null,
+    recipeType: "immediate-consume",
+    durationSeconds: 1,
+    inputs: [],
+    outputs: [],
+  };
+}
+
+function createCacheLink(
+  id: string,
+  linkType: CacheLinkDefinition["linkType"],
+  storageSlotGroupIds: readonly string[],
+  shareLimit: number | null,
+): CacheLinkDefinition {
+  return {
+    id,
+    linkType,
+    endpoints: storageSlotGroupIds.map((storageSlotGroupId) => ({ storageSlotGroupId })),
+    shareLimit,
+  };
+}
+
+function createShareCapTransportLink(
+  inputStorageSlotGroupId = "synthetic-input",
+  outputStorageSlotGroupId = "synthetic-output",
+): CacheLinkDefinition {
+  return createCacheLink(
+    "transport-share-cap",
+    "share-cap",
+    [inputStorageSlotGroupId, outputStorageSlotGroupId],
+    1,
+  );
+}
+
 export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   createEntityDefinition({
     id: "item_port_storager_1",
@@ -242,8 +255,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_storage"),
       createBinding("bind_item_output", "item_output", "item_storage"),
     ],
-  }, {
-    slotConfig: slotConfigInspector(),
   }),
   createEntityDefinition({
     id: "item_port_log_hongs_bus",
@@ -290,8 +301,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  }, {
-    portFilter: portFilterInspector(),
   }),
   createEntityDefinition({
     id: "item_port_mix_pool_1",
@@ -302,6 +311,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵"],
     requiresPower: true,
     powerDemand: 50,
+    recipe: createRecipeShell(),
     portGroups: [
       createPortGroup(
         "item_output",
@@ -348,11 +358,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_output", "item_output", "shared_output_buffer"),
       createBinding("bind_fluid_output", "fluid_output", "shared_output_buffer"),
     ],
-  }, {
-    portFilter: portFilterInspector(),
-    recipeConfig: recipeConfigInspector(),
-    routing: routingInspector(),
-    structure: structureInspector(),
   }),
   createEntityDefinition({
     id: "item_port_grinder_1",
@@ -363,6 +368,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [],
     requiresPower: true,
     powerDemand: 5,
+    recipe: createRecipeShell(),
     portGroups: [
       createPortGroup(
         "item_input",
@@ -395,9 +401,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
-  }, {
-    portFilter: portFilterInspector(),
-    recipeConfig: recipeConfigInspector(),
   }),
   createEntityDefinition({
     id: "item_port_liquid_filling_pd_mc_1",
@@ -408,6 +411,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["alter:item_port_filling_pd_mc_1", "alter-variant:liquid"],
     requiresPower: true,
     powerDemand: 20,
+    recipe: createRecipeShell(),
     portGroups: [
       createPortGroup(
         "item_input",
@@ -453,9 +457,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_fluid_input", "fluid_input", "fluid_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
-  }, {
-    portFilter: portFilterInspector(),
-    recipeConfig: recipeConfigInspector(),
   }),
   createEntityDefinition({
     id: "item_port_filling_pd_mc_1",
@@ -466,6 +467,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [],
     requiresPower: true,
     powerDemand: 20,
+    recipe: createRecipeShell(),
     portGroups: [
       createPortGroup(
         "item_input",
@@ -498,9 +500,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
-  }, {
-    portFilter: portFilterInspector(),
-    recipeConfig: recipeConfigInspector(),
   }),
   createEntityDefinition({
     id: "belt_straight_1x1",
@@ -508,9 +507,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "belt_straight_1x1",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
-    tags: ["BeltFamily"],
+    tags: ["BeltFamily", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
+    recipe: createTransportRecipe(),
+    cacheLinks: [createShareCapTransportLink("item_input_buffer", "item_output_buffer")],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -543,10 +544,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
-  }, {
-    portFilter: portFilterInspector(),
-    recipeConfig: recipeConfigInspector(),
-    linkConfig: linkConfigInspector('share-cap'),
   }),
   createEntityDefinition({
     id: "belt_turn_cw_1x1",
@@ -554,9 +551,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "belt_turn_cw_1x1",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
-    tags: ["BeltFamily"],
+    tags: ["BeltFamily", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
+    recipe: createTransportRecipe(),
+    cacheLinks: [createShareCapTransportLink("item_input_buffer", "item_output_buffer")],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -589,10 +588,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
-  }, {
-    portFilter: portFilterInspector(),
-    recipeConfig: recipeConfigInspector(),
-    linkConfig: linkConfigInspector('share-cap'),
   }),
   createEntityDefinition({
     id: "belt_turn_ccw_1x1",
@@ -600,9 +595,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "belt_turn_ccw_1x1",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
-    tags: ["BeltFamily"],
+    tags: ["BeltFamily", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
+    recipe: createTransportRecipe(),
+    cacheLinks: [createShareCapTransportLink("item_input_buffer", "item_output_buffer")],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -635,10 +632,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
-  }, {
-    portFilter: portFilterInspector(),
-    recipeConfig: recipeConfigInspector(),
-    linkConfig: linkConfigInspector('share-cap'),
   }),
   createEntityDefinition({
     id: "item_log_splitter",
@@ -646,9 +639,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_log_splitter",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
-    tags: ["BeltFamily"],
+    tags: ["BeltFamily", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
+    recipe: createTransportRecipe(),
+    cacheLinks: [createShareCapTransportLink()],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -669,9 +664,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  }, {
-    portFilter: portFilterInspector(),
-    routing: routingInspector(),
   }),
   createEntityDefinition({
     id: "item_log_converger",
@@ -679,9 +671,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_log_converger",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
-    tags: ["BeltFamily"],
+    tags: ["BeltFamily", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
+    recipe: createTransportRecipe(),
+    cacheLinks: [createShareCapTransportLink()],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -702,9 +696,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  }, {
-    portFilter: portFilterInspector(),
-    routing: routingInspector(),
   }),
   createEntityDefinition({
     id: "item_log_connector",
@@ -715,6 +706,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["BeltFamily", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
+    recipe: createTransportRecipe(),
+    cacheLinks: [createShareCapTransportLink()],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -741,9 +734,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  }, {
-    portFilter: portFilterInspector(),
-    recipeConfig: recipeConfigInspector(),
   }),
   createEntityDefinition({
     id: "pipe_straight_1x1",
@@ -754,6 +744,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
+    recipe: createTransportRecipe(),
+    cacheLinks: [createShareCapTransportLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -780,6 +772,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
+    recipe: createTransportRecipe(),
+    cacheLinks: [createShareCapTransportLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -796,10 +790,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  }, {
-    portFilter: portFilterInspector(),
-    recipeConfig: recipeConfigInspector(),
-    linkConfig: linkConfigInspector('share-cap'),
   }),
   createEntityDefinition({
     id: "pipe_turn_ccw_1x1",
@@ -810,6 +800,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
+    recipe: createTransportRecipe(),
+    cacheLinks: [createShareCapTransportLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -826,10 +818,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  }, {
-    portFilter: portFilterInspector(),
-    recipeConfig: recipeConfigInspector(),
-    linkConfig: linkConfigInspector('share-cap'),
   }),
   createEntityDefinition({
     id: "item_pipe_splitter",
@@ -840,6 +828,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
+    recipe: createTransportRecipe(),
+    cacheLinks: [createShareCapTransportLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -860,9 +850,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  }, {
-    portFilter: portFilterInspector(),
-    routing: routingInspector(),
   }),
   createEntityDefinition({
     id: "item_pipe_converger",
@@ -873,6 +860,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
+    recipe: createTransportRecipe(),
+    cacheLinks: [createShareCapTransportLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -893,9 +882,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  }, {
-    portFilter: portFilterInspector(),
-    routing: routingInspector(),
   }),
   createEntityDefinition({
     id: "item_pipe_connector",
@@ -906,6 +892,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
+    recipe: createTransportRecipe(),
+    cacheLinks: [createShareCapTransportLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -932,9 +920,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  }, {
-    portFilter: portFilterInspector(),
-    recipeConfig: recipeConfigInspector(),
   }),
   createEntityDefinition({
     id: "item_port_udpipe_loader_1",
@@ -955,10 +940,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  }, {
-    portFilter: portFilterInspector(),
-    slotConfig: slotConfigInspector(),
-    linkConfig: linkConfigInspector('share-all'),
   }),
   createEntityDefinition({
     id: "item_port_udpipe_unloader_1",
@@ -979,10 +960,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [],
     portStorageBindings: [],
-  }, {
-    portFilter: portFilterInspector(),
-    slotConfig: slotConfigInspector(),
-    linkConfig: linkConfigInspector('share-all'),
   }),
   // v2 metadata sync: only keep name, footprint, sprite, tags, and basic placement group.
   createEmptyEntityDefinition({

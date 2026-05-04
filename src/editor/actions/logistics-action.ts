@@ -459,7 +459,11 @@ function rebuildLogisticsDraft(options: {
   const preview = options.context.state.collections[EntityCollectionType.preview];
   const logisticsHead = options.context.state.collections[EntityCollectionType.logisticsHead];
   const ghost = options.context.state.collections[EntityCollectionType.ghost];
-  const previousPreviewDraftIds = new Set(preview);
+  const previousPreviewDrafts = resolvePreviewDrafts({
+    previewDraftIds: preview,
+    drafts: options.context.state.drafts,
+  });
+  const previousPreviewDraftIds = new Set(previousPreviewDrafts.map((entity) => entity.id));
   const replacingEntity = options.replacingEntityId === null
     ? null
     : findEntityById({
@@ -493,6 +497,7 @@ function rebuildLogisticsDraft(options: {
     kind: options.kind,
     cells,
     currentDocument,
+    previousPreviewDrafts,
     previousPreviewDraftIds,
   });
   const draftIds = draftEntities.map((entity) => entity.id);
@@ -582,6 +587,7 @@ function createDraftEntities(options: {
   kind: LogisticsKind;
   cells: readonly LogisticsPathCell[];
   currentDocument: WorldDocument;
+  previousPreviewDrafts: readonly DraftEntity[];
   previousPreviewDraftIds: ReadonlySet<string>;
 }): DraftEntity[] {
   const reservedIds = new Set<string>([
@@ -593,20 +599,26 @@ function createDraftEntities(options: {
   const batchCounter = options.context.nextDraftCounter();
 
   return options.cells.map((cell, index) => {
-    const id = generateLogisticsDraftId({
+    const definitionId = resolveLogisticsDefinitionId({
       kind: options.kind,
-      batchCounter,
-      index,
-      reservedIds,
+      shape: cell.shape,
     });
+    const reusableDraft = options.previousPreviewDrafts[index];
+    const id = reusableDraft?.definitionId === definitionId
+      ? reusableDraft.id
+      : generateLogisticsDraftId({
+          kind: options.kind,
+          batchCounter,
+          index,
+          reservedIds,
+        });
+
+    reservedIds.add(id);
 
     return {
       id,
       originalEntityId: id,
-      definitionId: resolveLogisticsDefinitionId({
-        kind: options.kind,
-        shape: cell.shape,
-      }),
+      definitionId,
       position: { ...cell.gridPoint },
       rotation: cell.rotation,
       config: {},

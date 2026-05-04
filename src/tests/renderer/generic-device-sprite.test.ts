@@ -163,7 +163,7 @@ vi.mock("pixi.js", () => {
 import { AYU_LIGHT_THEME } from "@/app/theme"
 import { EntityCollectionType } from "@/domain/state/types"
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition"
-import type { FieldDef, SubmitMode } from "@/domain/types/registry/inspector-types"
+import { BeltSprite } from "@/renderer/sprites/belt-sprite"
 import { GenericDeviceSprite } from "@/renderer/sprites/generic-device-sprite"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 
@@ -282,6 +282,68 @@ describe("GenericDeviceSprite", () => {
     expect(attachedSprite.width).toBe(32)
     expect(attachedSprite.height).toBe(48)
     expect(attachedSprite.rotation).toBeCloseTo(Math.PI / 2)
+  })
+
+  it("loads generated belt sprite and mask textures through BeltSprite", async () => {
+    const beltBodyKey = "device-sprite-belt_straight_1x1"
+    const beltMaskKey = "device-masks-belt_straight_1x1"
+    const resolvedTexture = createLoadedTextureMock("belt-device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("belt-mask-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [beltBodyKey]: resolvedTexture,
+      [beltMaskKey]: resolvedMaskTexture,
+    })
+    const sprite = new BeltSprite(
+      "belt-entity-1",
+      createBeltEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+    sprite.syncLayout({
+      x: 10,
+      y: 20,
+      width: 32,
+      height: 32,
+      rotation: 0,
+    }, createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    }))
+
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(beltBodyKey)
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(beltMaskKey)
+
+    await flushMicrotasks(8)
+
+    const entityRoot = entityLayer.addChild.mock.calls[0]?.[0] as {
+      children?: unknown[];
+    } | undefined
+
+    expect(entityRoot).toBeDefined()
+
+    if (!entityRoot) {
+      throw new Error("Expected BeltSprite to attach an entity root container.")
+    }
+
+    const renderedSprite = entityRoot.children?.[0] as RenderedSpriteSnapshot | undefined
+
+    expect(renderedSprite).toMatchObject({
+      texture: resolvedTexture,
+      visible: true,
+      x: 26,
+      y: 36,
+      width: 32,
+      height: 32,
+      rotation: 0,
+    })
   })
 
   it("shows a masked solid white overlay for preview devices", async () => {
@@ -584,6 +646,53 @@ describe("GenericDeviceSprite", () => {
     })
   })
 
+  it("does not draw port chevrons for ChevronHidden devices even when selected", async () => {
+    const resolvedTexture = createLoadedTextureMock("device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: resolvedTexture,
+      [MASK_KEY]: resolvedMaskTexture,
+    })
+    const sprite = new GenericDeviceSprite(
+      "hidden-chevron-device",
+      {
+        ...createEntityDefinitionStub(),
+        tags: ["ChevronHidden"],
+      },
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: ["hidden-chevron-device"],
+      previewIds: [],
+    })
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 48,
+      rotation: 0,
+    }, context)
+
+    await flushMicrotasks(8)
+
+    const portOverlayRoot = resolvePortOverlayRoot(overlayLayer)
+    expect(portOverlayRoot?.visible).toBe(false)
+    expect(portOverlayRoot?.children).toHaveLength(0)
+    expect(renderHost.textureManager.getTexture).not.toHaveBeenCalledWith(SOLID_INPUT_KEY)
+    expect(renderHost.textureManager.getTexture).not.toHaveBeenCalledWith(SOLID_OUTPUT_KEY)
+  })
+
   it("draws a liquid port chevron for the only preview device after rotation", async () => {
     const resolvedTexture = createLoadedTextureMock("device-texture")
     const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
@@ -704,6 +813,34 @@ describe("GenericDeviceSprite", () => {
   })
 })
 
+function createPortDefaults(
+  kind: "item" | "fluid",
+  roundRobinSeed = 0,
+) {
+  return {
+    acceptRule: {
+      base: kind === "fluid"
+        ? { kind: "liquid" as const }
+        : { kind: "solid" as const },
+      exclude: [],
+    },
+    count: "unlimited" as const,
+    priorityGroup: 0,
+    roundRobinSeed,
+  }
+}
+
+function createSlotDefaults() {
+  return {
+    lock: null,
+    initialItemType: null,
+    initialCount: 0,
+    ignoreStock: false,
+    submitMode: "never" as const,
+    submitIntervalSeconds: null,
+  }
+}
+
 function createEntityDefinitionStub(): EntityDefinition {
   return {
     id: "item_port_storager_1",
@@ -714,16 +851,9 @@ function createEntityDefinitionStub(): EntityDefinition {
     tags: [],
     requiresPower: false,
     powerDemand: 5,
-    inspectors: {
-      slotConfig: {
-        mutable: true,
-        lock: { mutable: true, default: null } as FieldDef<string | null>,
-        capacity: { mutable: true, default: 1 } as FieldDef<number>,
-        initialCount: { mutable: true, default: 0 } as FieldDef<number>,
-        submitMode: { mutable: true, default: 'never' } as FieldDef<SubmitMode>,
-        submitInterval: { mutable: true, default: 10 } as FieldDef<number>,
-      },
-    },
+    recipe: null,
+    cacheLinks: [],
+    inspectors: [],
     portGroups: [
       {
         id: "item_input",
@@ -734,6 +864,7 @@ function createEntityDefinitionStub(): EntityDefinition {
           localCellX: x,
           localCellY: 2,
           edge: "SOUTH",
+          ...createPortDefaults("item", x),
         })),
       },
       {
@@ -745,6 +876,7 @@ function createEntityDefinitionStub(): EntityDefinition {
           localCellX: x,
           localCellY: 0,
           edge: "NORTH",
+          ...createPortDefaults("item", x),
         })),
       },
     ],
@@ -759,6 +891,7 @@ function createEntityDefinitionStub(): EntityDefinition {
             capacity: 50,
             itemFilter: "type",
             itemFilterType: "solid",
+            ...createSlotDefaults(),
           },
         ],
       },
@@ -795,6 +928,7 @@ function createLiquidInputEntityDefinitionStub(): EntityDefinition {
             localCellX: 5,
             localCellY: 2,
             edge: "EAST",
+            ...createPortDefaults("fluid"),
           },
         ],
       },
@@ -810,6 +944,7 @@ function createLiquidInputEntityDefinitionStub(): EntityDefinition {
             capacity: 50,
             itemFilter: "type",
             itemFilterType: "liquid",
+            ...createSlotDefaults(),
           },
         ],
       },
@@ -821,6 +956,17 @@ function createLiquidInputEntityDefinitionStub(): EntityDefinition {
         storageSlotGroupId: "fluid_input_buffer",
       },
     ],
+  }
+}
+
+function createBeltEntityDefinitionStub(): EntityDefinition {
+  return {
+    ...createEntityDefinitionStub(),
+    id: "belt_straight_1x1",
+    nameKey: "registry.entity.belt_straight_1x1.name",
+    spriteId: "belt_straight_1x1",
+    footprint: { width: 1, height: 1 },
+    uiGroup: "hidden",
   }
 }
 

@@ -111,6 +111,7 @@ export interface CompiledSimulationSlotTemplate {
   readonly lock: string | null;
   readonly initialItemType: string | null;
   readonly initialCount: number;
+  readonly ignoreStock: boolean;
   readonly submitMode: SimulationSubmitMode;
   readonly submitIntervalTicks: number | null;
 }
