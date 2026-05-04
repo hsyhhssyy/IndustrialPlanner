@@ -716,6 +716,7 @@ describe("WorkbenchApp", () => {
           status: "running",
           devices: {},
         } as never),
+        getDeviceRuntimeStatus: () => null,
       },
       actions: {
         start: vi.fn(async () => ({

@@ -2,11 +2,21 @@ import { makeAutoObservable } from "mobx";
 import { HistoryState } from "./types";
 
 export interface WorkspaceState {
-  history: HistoryState;
+  readonly history: HistoryState;
 }
 
-export class WorkspaceStateImpl implements WorkspaceState {
-  history: HistoryState;
+export interface HistoryStateReadWrite extends HistoryState {
+  undoDepth: number;
+  redoDepth: number;
+  lastCommandId: string | null;
+}
+
+export interface WorkspaceStateReadWrite extends WorkspaceState {
+  history: HistoryStateReadWrite;
+}
+
+export class WorkspaceStateImpl implements WorkspaceStateReadWrite {
+  history: HistoryStateReadWrite;
 
   public constructor() {
     this.history = {
@@ -19,6 +29,10 @@ export class WorkspaceStateImpl implements WorkspaceState {
   }
 }
 
-export function createWorkspaceState(): WorkspaceState {
+export function createWorkspaceStateReadWrite(): WorkspaceStateReadWrite {
   return new WorkspaceStateImpl();
+}
+
+export function createWorkspaceState(): WorkspaceState {
+  return createWorkspaceStateReadWrite();
 }

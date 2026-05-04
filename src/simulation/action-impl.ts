@@ -7,10 +7,7 @@ import type {
   GetSimulationTickSnapshotResult,
   SimulationStartResult,
 } from "@/domain/types/simulation";
-import type {
-  SimulationWorkerRequest,
-  SimulationWorkerResponse,
-} from "@/simulation/worker-protocol";
+import type { SimulationWorkerResponse } from "@/simulation/worker-protocol";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 
 import { compileSimulationTopology } from "./topology-compiler";

@@ -10,7 +10,7 @@
 //     │   ├── CompiledSimulationCacheGroup — 缓存组（= 1 个求解图节点）
 //     │   │   └── CompiledSimulationSlotTemplate — 槽位模板
 //     │   ├── CompiledSimulationPort   — 端口
-//     │   ├── CompiledSimulationCacheLink — 缓存链接（share-cap / share-all）
+//     │   ├── CompiledSimulationCacheLink — 有向缓存代理链接
 //     │   └── CompiledSimulationRecipePlan — 配方计划
 //     ├── CompiledSimulationPhysicalConnection — 物理端口连接
 //     └── CompiledSimulationTransferEdge — 求解图有向边
@@ -35,20 +35,11 @@ export type SimulationPortKind = "item" | "fluid";
 /** 端口方向：input=物品流入、output=物品流出 */
 export type SimulationPortDirection = "input" | "output";
 
-/**
- * 缓存类型（对应《仿真运行原理》§3.1 缓存类型）。
- *   - ingredient：链接到输入端口的缓存，用于接收物品、作配方原料
- *   - product：链接到输出端口的缓存，用于存放产物
- *   - universal：同时链接输入/输出（如反应池共享槽位）
- */
+/** 缓存类型（对应《仿真运行原理》§3.1 缓存类型）。 */
 export type SimulationCacheType = "ingredient" | "product" | "universal";
 
-/**
- * Link 类型（对应《仿真运行原理》§3.3 缓存链接）。
- *   - "share-cap"：共享容量上限（shareLimit 有效），存储各自独立
- *   - "share-all"：共享存储内容和上限，读写立即可见
- */
-export type SimulationLinkType = "share-cap" | "share-all";
+/** Link 类型（对应《仿真运行原理》§3.3 缓存链接）。 */
+export type SimulationLinkType = "share-all";
 
 /**
  * 端口吞吐量限制（对应《仿真运行原理》§3.1 表格中的 count）。
@@ -143,7 +134,7 @@ export interface CompiledSimulationTopology {
   readonly standardTickRate: number;
   readonly itemCatalog: Record<string, CompiledSimulationItem>;
   readonly devices: Record<string, CompiledSimulationDevice>;
-  /** 缓存组 = 求解图节点（对应 §5.1 节点来源） */
+  /** 编译后 Node（历史字段名仍为 cacheGroups） */
   readonly cacheGroups: Record<string, CompiledSimulationCacheGroup>;
   /** 槽位模板 = 节点能力 entry 的来源（对应 §5.3 节点能力） */
   readonly slots: Record<string, CompiledSimulationSlotTemplate>;
@@ -190,10 +181,11 @@ export interface CompiledSimulationDevice {
   readonly tags: readonly string[];
   /** 物流设备分类（严格传送带/严格管道/锚点/非图） */
   readonly transportClass: SimulationTransportClass;
-  /** 所属缓存组 ID 列表（= 求解图节点列表，对应 §5.1） */
+  /** 所属 Node ID 列表（历史字段名仍为 cacheGroupIds） */
   readonly cacheGroupIds: readonly string[];
   readonly portIds: readonly string[];
   readonly recipePlan: CompiledSimulationRecipePlan | null;
+  readonly recipePlans: readonly CompiledSimulationRecipePlan[];
   /** 路由配置：portRef → { priorityGroup, roundRobinSeed }，用于多端口调度 */
   readonly routing: Record<string, CompiledSimulationRoutingEntry>;
   /** 编译时生成的配置哈希（用于检测是否需要重新编译） */
@@ -201,16 +193,11 @@ export interface CompiledSimulationDevice {
 }
 
 // =========================================================================
-// 编译后缓存组（= 求解图节点，对应《仿真运行原理》§5.1 节点来源）
+// 编译后 Node（历史字段名仍为 CacheGroup，对应《仿真运行原理》§5.0）。
 //
-// 每个缓存组 = 1 个求解图节点。
-// cacheType 决定其在求解中的行为：
-//   - ingredient：接收物品、提供配方原料
-//   - product：接收产物、对外提供物品
-//   - universal：同时承担 ingredient 和 product 角色
-//
-// inputPortIds / outputPortIds 指向与该缓存组绑定的端口。
-// slotIds 指向该组内所有槽位（组内互斥，跨组不互斥，§3.4）。
+// cacheType 只表达配方存储角色，不决定 Node 是否有输入/输出能力。
+// inputPortIds / outputPortIds 决定 Node 的求解侧能力。
+// slotIds 指向该 Node 代理的槽位。
 // =========================================================================
 
 export interface CompiledSimulationCacheGroup {
@@ -222,6 +209,11 @@ export interface CompiledSimulationCacheGroup {
   readonly cacheType: SimulationCacheType;
   /** 组内槽位 ID 列表 */
   readonly slotIds: readonly string[];
+  readonly inputPortIds: readonly string[];
+  readonly outputPortIds: readonly string[];
+  readonly groupOrder: number;
+}
+
 // =========================================================================
 // 槽位模板（对应《仿真运行原理》§5.3 节点能力中的 entry）
 //
@@ -313,18 +305,17 @@ export interface CompiledSimulationTransferEdge {
 }
 
 // =========================================================================
-// 缓存链接（对应《仿真运行原理》§3.3）
+// 缓存链接（对应《仿真运行原理》§3.3）。
 //
-// endpointSlotIds 是链接端点解析后的具体槽位 ID 列表（多对多）。
-// shareLimit 仅在 share-cap 时有效。
+// Link 是有向代理：对 sourceSlot 的读写实际作用于 targetSlot。
 // =========================================================================
 
 export interface CompiledSimulationCacheLink {
   readonly id: string;
   readonly linkType: SimulationLinkType;
-  /** 链接端点的槽位 ID 列表 */
-  readonly endpointSlotIds: readonly string[];
-  readonly shareLimit: number | null;
+  readonly sourceSlotIds: readonly string[];
+  readonly targetSlotIds: readonly string[];
+  readonly targetSlotIdBySourceSlotId: Readonly<Record<string, string>>;
 }
 
 // =========================================================================
@@ -390,6 +381,12 @@ export interface SimulationRuntimeStatus {
   readonly bufferSize: number;
   readonly maxBufferSize: number;
   readonly error: string | null;
+}
+
+export interface SimulationDeviceRuntimeStatus {
+  readonly recipeId: string | null;
+  readonly progressTicks: number | null;
+  readonly desiredTicks: number | null;
 }
 
 export interface SimulationStartResult {

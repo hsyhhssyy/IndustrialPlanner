@@ -7,7 +7,7 @@ import { SimulationContract } from "./simulation-contract";
 
 
 export interface WorkspaceContract {
-    state : WorkspaceState;
+    readonly state : WorkspaceState;
     registry: RegistryContract;
     app: AppContract | null;
     editor: EditorContract | null;

@@ -29,12 +29,16 @@ describe("compileSimulationTopology", () => {
     });
 
     const slot = topology.slots[
-      "device:dummy-entity-2/cache-group:item_storage/slot:slot_1"
+      "device:dummy-entity-2/cache-group:item_storage.slot_1.output-view/slot:slot_1.out-view"
     ];
+    const storagerCacheGroups = Object.values(topology.cacheGroups).filter((cacheGroup) =>
+      cacheGroup.id.startsWith("device:dummy-entity-2/cache-group:item_storage"),
+    );
     const port = topology.ports[
       "device:dummy-entity-2/port:item_input.in_s_0.input"
     ];
 
+    expect(storagerCacheGroups).toHaveLength(12);
     expect(slot?.capacity).toBe(50);
     expect(slot?.lock).toBe("item_test_plate");
     expect(slot?.initialItemType).toBe("item_test_plate");
@@ -43,7 +47,7 @@ describe("compileSimulationTopology", () => {
     expect(port?.count).toBe(3);
   });
 
-  it("compiles transport recipe and share-cap link from entity definition properties", () => {
+  it("compiles transport recipe and directed cache link from entity definition properties", () => {
     const topology = compileSimulationTopology({
       document: createDummyWorldDocument(),
       registry: createRegistryContract(),
@@ -56,14 +60,15 @@ describe("compileSimulationTopology", () => {
 
     expect(belt?.recipePlan).toMatchObject({
       recipeType: "reserved-item",
-      durationTicks: 1,
+      durationTicks: 4,
       inputs: [{ itemId: "any", amount: 1 }],
       outputs: [{ itemId: "same-as-input", amount: 1 }],
     });
     expect(beltLinks).toHaveLength(1);
     expect(beltLinks[0]).toMatchObject({
-      linkType: "share-cap",
-      shareLimit: 1,
+      linkType: "share-all",
+      sourceSlotIds: ["device:dummy-entity-1/cache-group:item_input_buffer/slot:input_slot_1"],
+      targetSlotIds: ["device:dummy-entity-1/cache-group:item_output_buffer/slot:output_slot_1"],
     });
   });
 

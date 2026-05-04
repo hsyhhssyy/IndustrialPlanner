@@ -3,7 +3,6 @@ import type {
   SimulationCountLimit,
   SimulationRecipeType,
   SimulationSubmitMode,
-  SimulationLinkType,
 } from "../simulation";
 import type { EntityInspectorDeclaration } from "./entity-inspector";
 
@@ -72,11 +71,8 @@ export interface EntityDefinition {
   recipe: EntityRecipeDefinition | null;
 
   /**
-   * 缓存链接（对应《仿真运行原理》§3.3）。
-   * 在多个存储槽组之间建立容量共享约束。
-   * linkType 取值：
-   *   - "share-cap"：共享容量上限，但存储各自独立（传送带 ingredient↔product 用）
-   *   - "share-all"：共享存储内容和上限，读写立即可见（暗管连接、仓库链接用）
+  * 缓存链接（对应《仿真运行原理》§3.3）。
+  * 有向代理：source 端点的读写实际作用于 target 端点。
    */
   cacheLinks: CacheLinkDefinition[];
 
@@ -302,28 +298,14 @@ export interface EntityRecipeItemDefinition {
 }
 
 // ---------------------------------------------------------------------------
-// 缓存链接（对应《仿真运行原理》§3.3）
-//
-// Link 在两个或多个缓存之间建立容量共享约束。是求解器除环后分层逆
-// 向求解时影响 shadow 容量的关键输入。
-//
-// linkType：
-//   - "share-all"：共享存储内容和上限（暗管连接、仓库物品链接）
-//   - "share-cap"：共享容量上限，存储各自独立（传送带 ingredient↔product）
+// 缓存链接（对应《仿真运行原理》§3.3）。
+// Link 是有向代理，source 端点自身不保存真实库存。
 // ---------------------------------------------------------------------------
 
 export interface CacheLinkDefinition {
   readonly id: string;
-  /** 链接类型 */
-  readonly linkType: SimulationLinkType;
-  /** 链接端点列表（多对多） */
-  readonly endpoints: readonly CacheLinkEndpointDefinition[];
-  /**
-   * 共享容量上限。
-   * 仅在 "share-cap" 类型时有意义（如传送带 share-cap(1) 表示两端累计最多 1 个物品）。
-   * "share-all" 时为 null。
-   */
-  readonly shareLimit: number | null;
+  readonly source: CacheLinkEndpointDefinition;
+  readonly target: CacheLinkEndpointDefinition;
 }
 
 export interface CacheLinkEndpointDefinition {

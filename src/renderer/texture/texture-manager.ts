@@ -14,6 +14,7 @@ import {
 const PREFIX_DEVICE_SPRITE = "device-sprite-"
 const PREFIX_TEXTURE = "texture-"
 const PREFIX_DEVICE_MASKS = "device-masks-"
+const PREFIX_ITEM_ICON = "item-icon-"
 
 /**
  * TextureActions 是 src/renderer/texture 对外唯一出口。
@@ -126,6 +127,11 @@ class TextureActionsImpl implements TextureActions {
     if (key.startsWith(PREFIX_DEVICE_MASKS)) {
       const id = key.slice(PREFIX_DEVICE_MASKS.length)
       return [`/sprite-masks/${id}.webp`, `/sprite-masks/${id}.png`]
+    }
+
+    if (key.startsWith(PREFIX_ITEM_ICON)) {
+      const id = key.slice(PREFIX_ITEM_ICON.length)
+      return [`/item-icons/${id}.webp`, `/item-icons/${id}.png`]
     }
 
     return []

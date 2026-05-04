@@ -247,6 +247,7 @@ describe("TopBar", () => {
           error: null,
         }),
         getCurrentTickSnapshot: () => null,
+        getDeviceRuntimeStatus: () => null,
       },
       actions: {
         start,
@@ -306,6 +307,7 @@ describe("TopBar", () => {
           error: null,
         }),
         getCurrentTickSnapshot: () => null,
+        getDeviceRuntimeStatus: () => null,
       },
       actions: {
         start,

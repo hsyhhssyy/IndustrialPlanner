@@ -12,6 +12,7 @@
 //      c. compilePorts()            — 端口编译（计算旋转后位置、merge acceptRule、绑定缓存组）
 //      d. compileRecipePlan()       — 配方计划（内联 vs 外部配方）
 //      e. compileInternalLinks()    — 内部 Link（share-cap / share-all）
+//      2026-05-04 订正：内部 Link 只编译为有向 share-all 代理，不再存在 share-cap。
 //   4. compileExplicitLinks()       — 显式连接（dark-pipe → share-all）
 //   5. compilePhysicalConnections() — 物理端口连接 → CompiledSimulationPhysicalConnection
 //   6. 对每条物理连接生成 CompiledSimulationTransferEdge（求解图的有向边）
@@ -74,6 +75,12 @@ interface DeviceCompileResult {
   readonly links: readonly CompiledSimulationCacheLink[];
 }
 
+interface StorageGroupNodeBinding {
+  readonly inputNodeIds: readonly string[];
+  readonly outputNodeIds: readonly string[];
+  readonly recipeNodeIds: readonly string[];
+}
+
 /** 端口朝向排序优先级：北→东→南→西 */
 const EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
 
@@ -94,7 +101,7 @@ const EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
 export function compileSimulationTopology(
   options: CompileOptions,
 ): CompiledSimulationTopology {
-  const ticksPerSecond = options.ticksPerSecond ?? 1;
+  const ticksPerSecond = options.ticksPerSecond ?? 2;
   const diagnostics: SimulationCompileDiagnostic[] = [];
   const entityDefinitionMap = new Map(
     options.registry.entityDefinitions.map((definition) => [definition.id, definition]),
@@ -351,6 +358,202 @@ function mergeEntityDefinitionConfig(
   ) as EntityDefinition;
 }
 
+function completeExternalRecipeMachineDefinition(options: {
+  readonly definition: EntityDefinition;
+  readonly recipeDefinitionMap: ReadonlyMap<string, RecipeDefinition>;
+  readonly itemCatalog: Record<string, CompiledSimulationItem>;
+}): EntityDefinition {
+  const recipes = [...options.recipeDefinitionMap.values()]
+    .filter((recipe) => recipe.machineId === options.definition.id)
+    .sort((left, right) => left.id.localeCompare(right.id));
+  if (
+    recipes.length === 0
+    || options.definition.portGroups.length > 0
+    || options.definition.storageSlotGroups.length > 0
+  ) {
+    return options.definition;
+  }
+
+  const inputProfile = summarizeRecipeItems(recipes.map((recipe) => recipe.inputs), options.itemCatalog);
+  const outputProfile = summarizeRecipeItems(recipes.map((recipe) => recipe.outputs), options.itemCatalog);
+  const portGroups: EntityDefinition["portGroups"] = [];
+  const storageSlotGroups: EntityDefinition["storageSlotGroups"] = [];
+  const portStorageBindings: EntityDefinition["portStorageBindings"] = [];
+
+  if (inputProfile.solidSlotCount > 0) {
+    portGroups.push(createGeneratedPortGroup(options.definition, "item_input", "item", "input"));
+    storageSlotGroups.push(createGeneratedStorageSlotGroup(
+      "item_input_buffer",
+      "item",
+      "input",
+      "input_slot",
+      inputProfile.solidSlotCount,
+      "solid",
+    ));
+    portStorageBindings.push({
+      id: "bind_item_input",
+      portGroupId: "item_input",
+      storageSlotGroupId: "item_input_buffer",
+    });
+  }
+
+  if (inputProfile.liquidSlotCount > 0) {
+    portGroups.push(createGeneratedPortGroup(options.definition, "fluid_input", "fluid", "input"));
+    storageSlotGroups.push(createGeneratedStorageSlotGroup(
+      "fluid_input_buffer",
+      "fluid",
+      "input",
+      "input_fluid_slot",
+      inputProfile.liquidSlotCount,
+      "liquid",
+    ));
+    portStorageBindings.push({
+      id: "bind_fluid_input",
+      portGroupId: "fluid_input",
+      storageSlotGroupId: "fluid_input_buffer",
+    });
+  }
+
+  if (outputProfile.solidSlotCount > 0) {
+    portGroups.push(createGeneratedPortGroup(options.definition, "item_output", "item", "output"));
+    storageSlotGroups.push(createGeneratedStorageSlotGroup(
+      "item_output_buffer",
+      "item",
+      "output",
+      "output_slot",
+      outputProfile.solidSlotCount,
+      "solid",
+    ));
+    portStorageBindings.push({
+      id: "bind_item_output",
+      portGroupId: "item_output",
+      storageSlotGroupId: "item_output_buffer",
+    });
+  }
+
+  if (outputProfile.liquidSlotCount > 0) {
+    portGroups.push(createGeneratedPortGroup(options.definition, "fluid_output", "fluid", "output"));
+    storageSlotGroups.push(createGeneratedStorageSlotGroup(
+      "fluid_output_buffer",
+      "fluid",
+      "output",
+      "output_fluid_slot",
+      outputProfile.liquidSlotCount,
+      "liquid",
+    ));
+    portStorageBindings.push({
+      id: "bind_fluid_output",
+      portGroupId: "fluid_output",
+      storageSlotGroupId: "fluid_output_buffer",
+    });
+  }
+
+  return {
+    ...options.definition,
+    recipe: options.definition.recipe ?? {
+      recipeId: null,
+      recipeType: "immediate-consume",
+      durationSeconds: 1,
+      inputs: [],
+      outputs: [],
+    },
+    portGroups,
+    storageSlotGroups,
+    portStorageBindings,
+  };
+}
+
+function summarizeRecipeItems(
+  itemGroups: ReadonlyArray<RecipeDefinition["inputs"]>,
+  itemCatalog: Record<string, CompiledSimulationItem>,
+): {
+  readonly solidSlotCount: number;
+  readonly liquidSlotCount: number;
+} {
+  let solidSlotCount = 0;
+  let liquidSlotCount = 0;
+  for (const items of itemGroups) {
+    const solidItems = new Set<string>();
+    const liquidItems = new Set<string>();
+    for (const item of items) {
+      const domain = itemCatalog[item.itemId]?.domain ?? inferItemDomain(item.itemId, []);
+      if (domain === "liquid") {
+        liquidItems.add(item.itemId);
+      } else {
+        solidItems.add(item.itemId);
+      }
+    }
+    solidSlotCount = Math.max(solidSlotCount, solidItems.size);
+    liquidSlotCount = Math.max(liquidSlotCount, liquidItems.size);
+  }
+  return {
+    solidSlotCount,
+    liquidSlotCount,
+  };
+}
+
+function createGeneratedPortGroup(
+  definition: EntityDefinition,
+  id: string,
+  kind: PortGroupDefinition["kind"],
+  direction: PortGroupDefinition["direction"],
+): PortGroupDefinition {
+  const isInput = direction === "input";
+  const isFluid = kind === "fluid";
+  const localCellX = isFluid
+    ? (isInput ? definition.footprint.width - 1 : 0)
+    : Math.floor((definition.footprint.width - 1) / 2);
+  const localCellY = isFluid
+    ? Math.floor((definition.footprint.height - 1) / 2)
+    : (isInput ? definition.footprint.height - 1 : 0);
+  const edge = isFluid
+    ? (isInput ? "EAST" : "WEST")
+    : (isInput ? "SOUTH" : "NORTH");
+
+  return {
+    id,
+    kind,
+    direction,
+    ports: [{
+      id: isInput ? "in_auto" : "out_auto",
+      localCellX,
+      localCellY,
+      edge,
+      acceptRule: acceptRuleFromPortKind(kind),
+      count: "unlimited",
+      priorityGroup: 0,
+      roundRobinSeed: 0,
+    }],
+  };
+}
+
+function createGeneratedStorageSlotGroup(
+  id: string,
+  kind: StorageSlotGroupDefinition["kind"],
+  role: StorageSlotGroupDefinition["role"],
+  slotPrefix: string,
+  slotCount: number,
+  itemFilterType: "solid" | "liquid",
+): StorageSlotGroupDefinition {
+  return {
+    id,
+    kind,
+    role,
+    slots: Array.from({ length: Math.max(1, slotCount) }, (_, slotIndex) => ({
+      id: `${slotPrefix}_${slotIndex + 1}`,
+      capacity: 50,
+      itemFilter: "type",
+      itemFilterType,
+      lock: null,
+      initialItemType: null,
+      initialCount: 0,
+      ignoreStock: false,
+      submitMode: "never",
+      submitIntervalSeconds: null,
+    })),
+  };
+}
+
 function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -519,6 +722,7 @@ function compileWarehouseDevice(
       cacheGroupIds: [cacheGroupId],
       portIds: [],
       recipePlan: null,
+      recipePlans: [],
       routing: {},
       configHash: hashStable({ baseId: document.baseId, itemIds: Object.keys(itemCatalog).sort() }),
     },
@@ -549,20 +753,25 @@ function compileEntityDevice(options: {
   readonly ticksPerSecond: number;
 }): DeviceCompileResult {
   const deviceId = `device:${options.entity.id}`;
-  const definition = mergeEntityDefinitionConfig(options.definition, options.entity.config);
+  const definition = mergeEntityDefinitionConfig(completeExternalRecipeMachineDefinition({
+    definition: options.definition,
+    recipeDefinitionMap: options.recipeDefinitionMap,
+    itemCatalog: options.itemCatalog,
+  }), options.entity.config);
   const transportClass = resolveTransportClass(options.registryQueries, definition);
   const cacheGroups: CompiledSimulationCacheGroup[] = [];
   const slots: CompiledSimulationSlotTemplate[] = [];
   const ports: CompiledSimulationPort[] = [];
   const links: CompiledSimulationCacheLink[] = [];
-  const cacheGroupIdsByStorageGroupId = new Map<string, string[]>();
+  const nodeBindingsByStorageGroupId = new Map<string, StorageGroupNodeBinding>();
 
   compileStorageSlotGroups({
     deviceId,
     definition,
     cacheGroups,
     slots,
-    cacheGroupIdsByStorageGroupId,
+    links,
+    nodeBindingsByStorageGroupId,
     ticksPerSecond: options.ticksPerSecond,
   });
 
@@ -572,7 +781,7 @@ function compileEntityDevice(options: {
       definition,
       cacheGroups,
       slots,
-      cacheGroupIdsByStorageGroupId,
+      nodeBindingsByStorageGroupId,
     });
   }
 
@@ -580,7 +789,7 @@ function compileEntityDevice(options: {
     deviceId,
     entity: options.entity,
     definition,
-    cacheGroupIdsByStorageGroupId,
+    nodeBindingsByStorageGroupId,
     itemCatalog: options.itemCatalog,
     ports,
   });
@@ -604,6 +813,15 @@ function compileEntityDevice(options: {
     };
   }
 
+  const recipePlans = compileRecipePlans({
+    deviceId,
+    definition,
+    recipeDefinitionMap: options.recipeDefinitionMap,
+    cacheGroups,
+    nodeBindingsByStorageGroupId,
+    ticksPerSecond: options.ticksPerSecond,
+  });
+
   const device: CompiledSimulationDevice = {
     id: deviceId,
     sourceEntityId: options.entity.id,
@@ -614,13 +832,8 @@ function compileEntityDevice(options: {
     transportClass,
     cacheGroupIds: cacheGroups.map((cacheGroup) => cacheGroup.id),
     portIds: ports.map((port) => port.id),
-    recipePlan: compileRecipePlan({
-      deviceId,
-      definition,
-      recipeDefinitionMap: options.recipeDefinitionMap,
-      cacheGroups,
-      ticksPerSecond: options.ticksPerSecond,
-    }),
+    recipePlan: recipePlans[0] ?? null,
+    recipePlans,
     routing: compileRouting(definition),
     configHash: hashStable({
       entity: options.entity,
@@ -631,7 +844,7 @@ function compileEntityDevice(options: {
   compileInternalLinks({
     deviceId,
     definition,
-    cacheGroupIdsByStorageGroupId,
+    nodeBindingsByStorageGroupId,
     cacheGroups,
     slots,
     links,
@@ -656,6 +869,7 @@ function compileEntityDevice(options: {
  *
  * 例如：
  *   协议存储箱：6 槽 universal 组 → 1 个 CacheGroup（1 个节点）
+ *   订正（2026-05-04）：协议存储箱在仿真编译期按 6 个独立 CacheGroup 处理。
  *   反应池：5 槽 ingredient 组 → 1 个 CacheGroup（1 个节点）
  *   传送带：1 槽 ingredient 组 + 1 槽 product 组 → 2 个 CacheGroup（2 个节点）
  */
@@ -664,39 +878,221 @@ function compileStorageSlotGroups(options: {
   readonly definition: EntityDefinition;
   readonly cacheGroups: CompiledSimulationCacheGroup[];
   readonly slots: CompiledSimulationSlotTemplate[];
-  readonly cacheGroupIdsByStorageGroupId: Map<string, string[]>;
+  readonly links: CompiledSimulationCacheLink[];
+  readonly nodeBindingsByStorageGroupId: Map<string, StorageGroupNodeBinding>;
   readonly ticksPerSecond: number;
 }): void {
   options.definition.storageSlotGroups.forEach((storageGroup, groupIndex) => {
-    const cacheGroupId = `${options.deviceId}/cache-group:${storageGroup.id}`;
-    const slotIds: string[] = [];
-    const cacheGroup: CompiledSimulationCacheGroup = {
-      id: cacheGroupId,
-      deviceId: options.deviceId,
-      sourceStorageSlotGroupId: storageGroup.id,
-      cacheType: resolveCacheType(storageGroup.role),
-      slotIds,
-      inputPortIds: [],
-      outputPortIds: [],
-      groupOrder: groupIndex,
-    };
+    const portDirections = resolveStorageGroupPortDirections(options.definition, storageGroup.id);
+    const inputNodeIds: string[] = [];
+    const outputNodeIds: string[] = [];
+    const recipeNodeIds: string[] = [];
 
-    storageGroup.slots.forEach((slot, slotIndex) => {
-      const slotTemplate = compileSlotTemplate({
+    if (shouldTreatStorageSlotsAsIndependentGroups(options.definition, storageGroup)) {
+      storageGroup.slots.forEach((slot, slotIndex) => {
+        const nodeSet = compileStorageNodeSet({
+          deviceId: options.deviceId,
+          definition: options.definition,
+          storageGroup,
+          slots: [slot],
+          slotStartIndex: slotIndex,
+          baseNodeId: `${options.deviceId}/cache-group:${storageGroup.id}.${slot.id}`,
+          groupOrder: groupIndex + slotIndex,
+          hasInputBinding: portDirections.hasInput,
+          hasOutputBinding: portDirections.hasOutput,
+          cacheGroups: options.cacheGroups,
+          compiledSlots: options.slots,
+          links: options.links,
+          ticksPerSecond: options.ticksPerSecond,
+        });
+        inputNodeIds.push(...nodeSet.inputNodeIds);
+        outputNodeIds.push(...nodeSet.outputNodeIds);
+        recipeNodeIds.push(...nodeSet.recipeNodeIds);
+      });
+      options.nodeBindingsByStorageGroupId.set(storageGroup.id, { inputNodeIds, outputNodeIds, recipeNodeIds });
+      return;
+    }
+
+    const nodeSet = compileStorageNodeSet({
+      deviceId: options.deviceId,
+      definition: options.definition,
+      storageGroup,
+      slots: storageGroup.slots,
+      slotStartIndex: 0,
+      baseNodeId: `${options.deviceId}/cache-group:${storageGroup.id}`,
+      groupOrder: groupIndex,
+      hasInputBinding: portDirections.hasInput,
+      hasOutputBinding: portDirections.hasOutput,
+      cacheGroups: options.cacheGroups,
+      compiledSlots: options.slots,
+      links: options.links,
+      ticksPerSecond: options.ticksPerSecond,
+    });
+    options.nodeBindingsByStorageGroupId.set(storageGroup.id, nodeSet);
+  });
+}
+
+function compileStorageNodeSet(options: {
+  readonly deviceId: string;
+  readonly definition: EntityDefinition;
+  readonly storageGroup: StorageSlotGroupDefinition;
+  readonly slots: readonly StorageSlotDefinition[];
+  readonly slotStartIndex: number;
+  readonly baseNodeId: string;
+  readonly groupOrder: number;
+  readonly hasInputBinding: boolean;
+  readonly hasOutputBinding: boolean;
+  readonly cacheGroups: CompiledSimulationCacheGroup[];
+  readonly compiledSlots: CompiledSimulationSlotTemplate[];
+  readonly links: CompiledSimulationCacheLink[];
+  readonly ticksPerSecond: number;
+}): StorageGroupNodeBinding {
+  if (options.hasInputBinding && options.hasOutputBinding) {
+    const inputNodeId = `${options.baseNodeId}.input-view`;
+    const outputNodeId = `${options.baseNodeId}.output-view`;
+    const inputSlotIds: string[] = [];
+    const outputSlotIds: string[] = [];
+    const targetSlotIdBySourceSlotId: Record<string, string> = {};
+
+    options.slots.forEach((slot, slotOffset) => {
+      const slotIndex = options.slotStartIndex + slotOffset;
+      const inputSlot = compileSlotTemplate({
         slot,
         slotIndex,
-        cacheGroupId,
-        storageGroup,
+        cacheGroupId: inputNodeId,
+        storageGroup: options.storageGroup,
         definition: options.definition,
         ticksPerSecond: options.ticksPerSecond,
+        slotIdSuffix: ".in-view",
+        initialItemType: null,
+        initialCount: 0,
       });
-      options.slots.push(slotTemplate);
-      slotIds.push(slotTemplate.id);
+      const outputSlot = compileSlotTemplate({
+        slot,
+        slotIndex,
+        cacheGroupId: outputNodeId,
+        storageGroup: options.storageGroup,
+        definition: options.definition,
+        ticksPerSecond: options.ticksPerSecond,
+        slotIdSuffix: ".out-view",
+      });
+      options.compiledSlots.push(inputSlot, outputSlot);
+      inputSlotIds.push(inputSlot.id);
+      outputSlotIds.push(outputSlot.id);
+      targetSlotIdBySourceSlotId[inputSlot.id] = outputSlot.id;
     });
 
-    options.cacheGroups.push(cacheGroup);
-    options.cacheGroupIdsByStorageGroupId.set(storageGroup.id, [cacheGroupId]);
+    options.cacheGroups.push(createCompiledNode({
+      id: inputNodeId,
+      deviceId: options.deviceId,
+      sourceStorageSlotGroupId: options.storageGroup.id,
+      cacheType: resolveCacheType(options.storageGroup.role),
+      slotIds: inputSlotIds,
+      groupOrder: options.groupOrder,
+    }));
+    options.cacheGroups.push(createCompiledNode({
+      id: outputNodeId,
+      deviceId: options.deviceId,
+      sourceStorageSlotGroupId: options.storageGroup.id,
+      cacheType: resolveCacheType(options.storageGroup.role),
+      slotIds: outputSlotIds,
+      groupOrder: options.groupOrder + 0.5,
+    }));
+    options.links.push({
+      id: ["link", options.deviceId, options.storageGroup.id, "input-view-to-output-view", inputNodeId, outputNodeId].join(":"),
+      linkType: "share-all",
+      sourceSlotIds: inputSlotIds,
+      targetSlotIds: outputSlotIds,
+      targetSlotIdBySourceSlotId,
+    });
+
+    return {
+      inputNodeIds: [inputNodeId],
+      outputNodeIds: [outputNodeId],
+      recipeNodeIds: [outputNodeId],
+    };
+  }
+
+  const nodeId = options.baseNodeId;
+  const slotIds: string[] = [];
+  options.slots.forEach((slot, slotOffset) => {
+    const slotTemplate = compileSlotTemplate({
+      slot,
+      slotIndex: options.slotStartIndex + slotOffset,
+      cacheGroupId: nodeId,
+      storageGroup: options.storageGroup,
+      definition: options.definition,
+      ticksPerSecond: options.ticksPerSecond,
+    });
+    options.compiledSlots.push(slotTemplate);
+    slotIds.push(slotTemplate.id);
   });
+  options.cacheGroups.push(createCompiledNode({
+    id: nodeId,
+    deviceId: options.deviceId,
+    sourceStorageSlotGroupId: options.storageGroup.id,
+    cacheType: resolveCacheType(options.storageGroup.role),
+    slotIds,
+    groupOrder: options.groupOrder,
+  }));
+  return {
+    inputNodeIds: options.hasInputBinding ? [nodeId] : [],
+    outputNodeIds: options.hasOutputBinding ? [nodeId] : [],
+    recipeNodeIds: [nodeId],
+  };
+}
+
+function createCompiledNode(options: {
+  readonly id: string;
+  readonly deviceId: string;
+  readonly sourceStorageSlotGroupId: string | null;
+  readonly cacheType: SimulationCacheType;
+  readonly slotIds: readonly string[];
+  readonly groupOrder: number;
+}): CompiledSimulationCacheGroup {
+  return {
+    id: options.id,
+    deviceId: options.deviceId,
+    sourceStorageSlotGroupId: options.sourceStorageSlotGroupId,
+    cacheType: options.cacheType,
+    slotIds: options.slotIds,
+    inputPortIds: [],
+    outputPortIds: [],
+    groupOrder: options.groupOrder,
+  };
+}
+
+function resolveStorageGroupPortDirections(
+  definition: EntityDefinition,
+  storageGroupId: string,
+): { readonly hasInput: boolean; readonly hasOutput: boolean } {
+  let hasInput = false;
+  let hasOutput = false;
+  for (const binding of definition.portStorageBindings) {
+    if (binding.storageSlotGroupId !== storageGroupId) {
+      continue;
+    }
+    const portGroup = definition.portGroups.find((candidate) => candidate.id === binding.portGroupId);
+    if (portGroup === undefined) {
+      continue;
+    }
+    if (portGroup.direction === "input" || portGroup.direction === "bidirectional") {
+      hasInput = true;
+    }
+    if (portGroup.direction === "output" || portGroup.direction === "bidirectional") {
+      hasOutput = true;
+    }
+  }
+  return { hasInput, hasOutput };
+}
+
+function shouldTreatStorageSlotsAsIndependentGroups(
+  definition: EntityDefinition,
+  storageGroup: StorageSlotGroupDefinition,
+): boolean {
+  return definition.id === "item_port_storager_1"
+    && storageGroup.id === "item_storage"
+    && storageGroup.slots.length > 1;
 }
 
 /**
@@ -709,13 +1105,14 @@ function compileStorageSlotGroups(options: {
  *   - 有 input 方向端口 → 合成 1 个 ingredient 缓存组（capacity=1）
  *   - 有 output 方向端口 → 合成 1 个 product 缓存组（capacity=1）
  *   - 设备级别 share-cap(1) Link 在 compileInternalLinks 中连接两端
+ *   - 2026-05-04 订正：合成缓存组使用有向 share-all 代理 Link 连接 source/target。
  */
 function compileSyntheticCacheGroups(options: {
   readonly deviceId: string;
   readonly definition: EntityDefinition;
   readonly cacheGroups: CompiledSimulationCacheGroup[];
   readonly slots: CompiledSimulationSlotTemplate[];
-  readonly cacheGroupIdsByStorageGroupId: Map<string, string[]>;
+  readonly nodeBindingsByStorageGroupId: Map<string, StorageGroupNodeBinding>;
 }): void {
   const hasInput = options.definition.portGroups.some((portGroup) =>
     portGroup.direction === "input" || portGroup.direction === "bidirectional",
@@ -732,8 +1129,9 @@ function compileSyntheticCacheGroups(options: {
       groupOrder: options.cacheGroups.length,
       cacheGroups: options.cacheGroups,
       slots: options.slots,
-      cacheGroupIdsByStorageGroupId: options.cacheGroupIdsByStorageGroupId,
+      nodeBindingsByStorageGroupId: options.nodeBindingsByStorageGroupId,
       domain: inferStorageDomainFromPortGroups(options.definition.portGroups, "input"),
+      bindDirection: "input",
     });
   }
 
@@ -745,8 +1143,9 @@ function compileSyntheticCacheGroups(options: {
       groupOrder: options.cacheGroups.length,
       cacheGroups: options.cacheGroups,
       slots: options.slots,
-      cacheGroupIdsByStorageGroupId: options.cacheGroupIdsByStorageGroupId,
+      nodeBindingsByStorageGroupId: options.nodeBindingsByStorageGroupId,
       domain: inferStorageDomainFromPortGroups(options.definition.portGroups, "output"),
+      bindDirection: "output",
     });
   }
 }
@@ -758,8 +1157,9 @@ function addSyntheticCacheGroup(options: {
   readonly groupOrder: number;
   readonly cacheGroups: CompiledSimulationCacheGroup[];
   readonly slots: CompiledSimulationSlotTemplate[];
-  readonly cacheGroupIdsByStorageGroupId: Map<string, string[]>;
+  readonly nodeBindingsByStorageGroupId: Map<string, StorageGroupNodeBinding>;
   readonly domain: SimulationItemDomain | "any";
+  readonly bindDirection: SimulationPortDirection;
 }): void {
   const cacheGroupId = `${options.deviceId}/cache-group:${options.sourceStorageSlotGroupId}`;
   const slotId = `${cacheGroupId}/slot:slot_1`;
@@ -786,7 +1186,11 @@ function addSyntheticCacheGroup(options: {
     submitMode: "never",
     submitIntervalTicks: null,
   });
-  options.cacheGroupIdsByStorageGroupId.set(options.sourceStorageSlotGroupId, [cacheGroupId]);
+  options.nodeBindingsByStorageGroupId.set(options.sourceStorageSlotGroupId, {
+    inputNodeIds: options.bindDirection === "input" ? [cacheGroupId] : [],
+    outputNodeIds: options.bindDirection === "output" ? [cacheGroupId] : [],
+    recipeNodeIds: [cacheGroupId],
+  });
 }
 
 function compileSlotTemplate(options: {
@@ -796,17 +1200,23 @@ function compileSlotTemplate(options: {
   readonly storageGroup: StorageSlotGroupDefinition;
   readonly definition: EntityDefinition;
   readonly ticksPerSecond: number;
+  readonly slotIdSuffix?: string;
+  readonly initialItemType?: string | null;
+  readonly initialCount?: number;
 }): CompiledSimulationSlotTemplate {
   const submitMode = options.slot.submitMode;
   const submitInterval = submitMode === "every-n-seconds"
     ? Math.max(1, Math.round((options.slot.submitIntervalSeconds ?? 10) * options.ticksPerSecond))
     : null;
-  const initialCount = options.slot.initialCount;
+  const initialCount = options.initialCount ?? options.slot.initialCount;
   const lock = options.slot.lock;
-  const itemType = options.slot.initialItemType ?? lock;
+  const hasInitialItemTypeOverride = Object.prototype.hasOwnProperty.call(options, "initialItemType");
+  const itemType = hasInitialItemTypeOverride
+    ? options.initialItemType ?? null
+    : options.slot.initialItemType ?? lock;
 
   return {
-    id: `${options.cacheGroupId}/slot:${options.slot.id}`,
+    id: `${options.cacheGroupId}/slot:${options.slot.id}${options.slotIdSuffix ?? ""}`,
     cacheGroupId: options.cacheGroupId,
     sourceSlotId: options.slot.id,
     capacity: options.slot.capacity,
@@ -821,8 +1231,6 @@ function compileSlotTemplate(options: {
 }
 
 /**
- * 编译端口。
- *
  * 对应《仿真运行原理》§3.1 中 Port 的两个通用配置 + §5.2 边来源。
  *
  * 关键操作：
@@ -839,7 +1247,7 @@ function compilePorts(options: {
   readonly deviceId: string;
   readonly entity: WorldEntity;
   readonly definition: EntityDefinition;
-  readonly cacheGroupIdsByStorageGroupId: ReadonlyMap<string, readonly string[]>;
+  readonly nodeBindingsByStorageGroupId: ReadonlyMap<string, StorageGroupNodeBinding>;
   readonly itemCatalog: Record<string, CompiledSimulationItem>;
   readonly ports: CompiledSimulationPort[];
 }): void {
@@ -893,7 +1301,7 @@ function compilePorts(options: {
             portGroup,
             direction,
             bindingByPortGroupId,
-            cacheGroupIdsByStorageGroupId: options.cacheGroupIdsByStorageGroupId,
+            nodeBindingsByStorageGroupId: options.nodeBindingsByStorageGroupId,
           }),
           acceptRule,
           count: port.count,
@@ -909,11 +1317,11 @@ function resolveBoundCacheGroupIds(options: {
   readonly portGroup: PortGroupDefinition;
   readonly direction: SimulationPortDirection;
   readonly bindingByPortGroupId: ReadonlyMap<string, readonly PortStorageBindingDefinition[]>;
-  readonly cacheGroupIdsByStorageGroupId: ReadonlyMap<string, readonly string[]>;
+  readonly nodeBindingsByStorageGroupId: ReadonlyMap<string, StorageGroupNodeBinding>;
 }): readonly string[] {
   const bindings = options.bindingByPortGroupId.get(options.portGroup.id) ?? [];
   const boundFromBindings = bindings.flatMap((binding) =>
-    options.cacheGroupIdsByStorageGroupId.get(binding.storageSlotGroupId) ?? [],
+    resolveBindingNodeIds(options.nodeBindingsByStorageGroupId.get(binding.storageSlotGroupId), options.direction),
   );
   if (boundFromBindings.length > 0) {
     return boundFromBindings;
@@ -922,7 +1330,17 @@ function resolveBoundCacheGroupIds(options: {
   const syntheticGroupId = options.direction === "input"
     ? "synthetic-input"
     : "synthetic-output";
-  return options.cacheGroupIdsByStorageGroupId.get(syntheticGroupId) ?? [];
+  return resolveBindingNodeIds(options.nodeBindingsByStorageGroupId.get(syntheticGroupId), options.direction);
+}
+
+function resolveBindingNodeIds(
+  binding: StorageGroupNodeBinding | undefined,
+  direction: SimulationPortDirection,
+): readonly string[] {
+  if (binding === undefined) {
+    return [];
+  }
+  return direction === "input" ? binding.inputNodeIds : binding.outputNodeIds;
 }
 
 function compileRouting(
@@ -960,118 +1378,179 @@ function compileRouting(
  * ingredientCacheGroupIds 和 productCacheGroupIds 告知求解器
  * 配方原料从哪些缓存组取、产物写入哪些缓存组。
  */
-function compileRecipePlan(options: {
+function compileRecipePlans(options: {
   readonly deviceId: string;
   readonly definition: EntityDefinition;
   readonly recipeDefinitionMap: ReadonlyMap<string, RecipeDefinition>;
   readonly cacheGroups: readonly CompiledSimulationCacheGroup[];
+  readonly nodeBindingsByStorageGroupId: ReadonlyMap<string, StorageGroupNodeBinding>;
   readonly ticksPerSecond: number;
-}): CompiledSimulationRecipePlan | null {
+}): readonly CompiledSimulationRecipePlan[] {
   const recipeConfig = options.definition.recipe;
+  const ingredientCacheGroupIds = resolveRecipeCacheGroupIds({
+    definition: options.definition,
+    cacheGroups: options.cacheGroups,
+    nodeBindingsByStorageGroupId: options.nodeBindingsByStorageGroupId,
+    recipeSide: "ingredient",
+  });
+  const productCacheGroupIds = resolveRecipeCacheGroupIds({
+    definition: options.definition,
+    cacheGroups: options.cacheGroups,
+    nodeBindingsByStorageGroupId: options.nodeBindingsByStorageGroupId,
+    recipeSide: "product",
+  });
+  const machineRecipes = [...options.recipeDefinitionMap.values()]
+    .filter((recipe) => recipe.machineId === options.definition.id)
+    .sort((left, right) => left.id.localeCompare(right.id));
+
   if (recipeConfig === null) {
-    return null;
+    return [];
   }
 
   const selectedRecipeId = recipeConfig.recipeId;
   if (selectedRecipeId === null) {
-    if (recipeConfig.inputs.length === 0 && recipeConfig.outputs.length === 0) {
-      return null;
+    if (recipeConfig.inputs.length > 0 || recipeConfig.outputs.length > 0) {
+      return [{
+        recipeId: `${options.definition.id}:definition-recipe`,
+        recipeType: recipeConfig.recipeType,
+        durationTicks: Math.max(1, Math.round(recipeConfig.durationSeconds * options.ticksPerSecond)),
+        inputs: recipeConfig.inputs,
+        outputs: recipeConfig.outputs,
+        ingredientCacheGroupIds,
+        productCacheGroupIds,
+      }];
     }
 
-    return {
-      recipeId: `${options.definition.id}:definition-recipe`,
+    return machineRecipes.map((recipe) => ({
+      recipeId: recipe.id,
       recipeType: recipeConfig.recipeType,
-      durationTicks: Math.max(1, Math.round(recipeConfig.durationSeconds * options.ticksPerSecond)),
-      inputs: recipeConfig.inputs,
-      outputs: recipeConfig.outputs,
-      ingredientCacheGroupIds: options.cacheGroups
-        .filter((cacheGroup) => cacheGroup.cacheType === "ingredient")
-        .map((cacheGroup) => cacheGroup.id),
-      productCacheGroupIds: options.cacheGroups
-        .filter((cacheGroup) => cacheGroup.cacheType === "product")
-        .map((cacheGroup) => cacheGroup.id),
-    };
+      durationTicks: Math.max(1, Math.round(recipe.durationSeconds * options.ticksPerSecond)),
+      inputs: recipe.inputs,
+      outputs: recipe.outputs,
+      ingredientCacheGroupIds,
+      productCacheGroupIds,
+    }));
   }
 
   const recipe = options.recipeDefinitionMap.get(selectedRecipeId);
   if (recipe === undefined) {
-    return null;
+    return [];
   }
 
-  return {
+  return [{
     recipeId: recipe.id,
     recipeType: recipeConfig.recipeType,
     durationTicks: Math.max(1, Math.round(recipe.durationSeconds * options.ticksPerSecond)),
     inputs: recipe.inputs,
     outputs: recipe.outputs,
-    ingredientCacheGroupIds: options.cacheGroups
-      .filter((cacheGroup) => cacheGroup.cacheType === "ingredient" || cacheGroup.cacheType === "universal")
-      .map((cacheGroup) => cacheGroup.id),
-    productCacheGroupIds: options.cacheGroups
-      .filter((cacheGroup) => cacheGroup.cacheType === "product" || cacheGroup.cacheType === "universal")
-      .map((cacheGroup) => cacheGroup.id),
-  };
+    ingredientCacheGroupIds,
+    productCacheGroupIds,
+  }];
 }
 
-/**
- * 编译内部缓存链接。
- *
- * 对应《仿真运行原理》§3.3 缓存链接。
- *
- * 遍历 definition.cacheLinks，将每个 endpoint（storageSlotGroupId）解析为
- * 具体的 slot ID 列表，生成 CompiledSimulationCacheLink。
- *
- * Link 类型：
- *   - "share-cap"：shareLimit 有效，约束多槽位累计容量上限
- *   - "share-all"：shareLimit 忽略，存储内容和上限完全共享
- *
- * 链接约束通过影响缓存的 shadow 容量间接参与求解。
- */
+function resolveRecipeCacheGroupIds(options: {
+  readonly definition: EntityDefinition;
+  readonly cacheGroups: readonly CompiledSimulationCacheGroup[];
+  readonly nodeBindingsByStorageGroupId: ReadonlyMap<string, StorageGroupNodeBinding>;
+  readonly recipeSide: "ingredient" | "product";
+}): readonly string[] {
+  const knownCacheGroupIds = new Set(options.cacheGroups.map((cacheGroup) => cacheGroup.id));
+  const cacheGroupIds: string[] = [];
+
+  for (const storageGroup of options.definition.storageSlotGroups) {
+    const cacheType = resolveCacheType(storageGroup.role);
+    if (!cacheTypeParticipatesInRecipeSide(cacheType, options.recipeSide)) {
+      continue;
+    }
+
+    const binding = options.nodeBindingsByStorageGroupId.get(storageGroup.id);
+    if (binding !== undefined) {
+      cacheGroupIds.push(...binding.recipeNodeIds);
+    }
+  }
+
+  const syntheticStorageGroupIds = options.recipeSide === "ingredient"
+    ? ["synthetic-input"]
+    : ["synthetic-output"];
+  for (const storageGroupId of syntheticStorageGroupIds) {
+    const binding = options.nodeBindingsByStorageGroupId.get(storageGroupId);
+    if (binding !== undefined) {
+      cacheGroupIds.push(...binding.recipeNodeIds);
+    }
+  }
+
+  return [...new Set(cacheGroupIds)].filter((cacheGroupId) => knownCacheGroupIds.has(cacheGroupId));
+}
+
+function cacheTypeParticipatesInRecipeSide(
+  cacheType: SimulationCacheType,
+  recipeSide: "ingredient" | "product",
+): boolean {
+  if (cacheType === "universal") {
+    return true;
+  }
+  return recipeSide === "ingredient"
+    ? cacheType === "ingredient"
+    : cacheType === "product";
+}
+
+/** 编译设备内部有向 Cache Link。 */
 function compileInternalLinks(options: {
   readonly deviceId: string;
   readonly definition: EntityDefinition;
-  readonly cacheGroupIdsByStorageGroupId: ReadonlyMap<string, readonly string[]>;
+  readonly nodeBindingsByStorageGroupId: ReadonlyMap<string, StorageGroupNodeBinding>;
   readonly cacheGroups: readonly CompiledSimulationCacheGroup[];
   readonly slots: readonly CompiledSimulationSlotTemplate[];
   readonly links: CompiledSimulationCacheLink[];
 }): void {
   for (const link of options.definition.cacheLinks) {
-    const endpointSlotIds = link.endpoints.flatMap((endpoint) =>
-      resolveCacheLinkEndpointSlotIds({
-        endpoint,
-        cacheGroupIdsByStorageGroupId: options.cacheGroupIdsByStorageGroupId,
-        cacheGroups: options.cacheGroups,
-      }),
-    ).filter((slotId) => options.slots.some((slot) => slot.id === slotId));
+    const sourceSlotIds = resolveCacheLinkEndpointSlotIds({
+      endpoint: link.source,
+      direction: "input",
+      nodeBindingsByStorageGroupId: options.nodeBindingsByStorageGroupId,
+      cacheGroups: options.cacheGroups,
+    }).filter((slotId) => options.slots.some((slot) => slot.id === slotId));
+    const targetSlotIds = resolveCacheLinkEndpointSlotIds({
+      endpoint: link.target,
+      direction: "output",
+      nodeBindingsByStorageGroupId: options.nodeBindingsByStorageGroupId,
+      cacheGroups: options.cacheGroups,
+    }).filter((slotId) => options.slots.some((slot) => slot.id === slotId));
 
-    if (endpointSlotIds.length < 2) {
+    const targetSlotIdBySourceSlotId = pairSourceSlotsToTargetSlots(sourceSlotIds, targetSlotIds);
+    const linkedSourceSlotIds = Object.keys(targetSlotIdBySourceSlotId).sort();
+    const linkedTargetSlotIds = [...new Set(Object.values(targetSlotIdBySourceSlotId))].sort();
+    if (linkedSourceSlotIds.length === 0 || linkedTargetSlotIds.length === 0) {
       continue;
     }
 
-    const sortedEndpointSlotIds = [...new Set(endpointSlotIds)].sort();
     options.links.push({
       id: [
         "link",
         options.deviceId,
         link.id,
-        link.linkType,
-        sortedEndpointSlotIds.join("<->"),
+        linkedSourceSlotIds.join("->"),
+        linkedTargetSlotIds.join("->"),
       ].join(":"),
-      linkType: link.linkType,
-      endpointSlotIds: sortedEndpointSlotIds,
-      shareLimit: link.linkType === "share-cap" ? link.shareLimit : null,
+      linkType: "share-all",
+      sourceSlotIds: linkedSourceSlotIds,
+      targetSlotIds: linkedTargetSlotIds,
+      targetSlotIdBySourceSlotId,
     });
   }
 }
 
 function resolveCacheLinkEndpointSlotIds(options: {
-  readonly endpoint: EntityDefinition["cacheLinks"][number]["endpoints"][number];
-  readonly cacheGroupIdsByStorageGroupId: ReadonlyMap<string, readonly string[]>;
+  readonly endpoint: EntityDefinition["cacheLinks"][number]["source"];
+  readonly direction: SimulationPortDirection;
+  readonly nodeBindingsByStorageGroupId: ReadonlyMap<string, StorageGroupNodeBinding>;
   readonly cacheGroups: readonly CompiledSimulationCacheGroup[];
 }): readonly string[] {
-  const cacheGroupIds = options.cacheGroupIdsByStorageGroupId.get(
-    options.endpoint.storageSlotGroupId,
-  ) ?? [];
+  const binding = options.nodeBindingsByStorageGroupId.get(options.endpoint.storageSlotGroupId);
+  const directionalNodeIds = resolveBindingNodeIds(binding, options.direction);
+  const cacheGroupIds = directionalNodeIds.length > 0
+    ? directionalNodeIds
+    : binding?.recipeNodeIds ?? [];
 
   return cacheGroupIds.flatMap((cacheGroupId) => {
     const cacheGroup = options.cacheGroups.find((candidate) =>
@@ -1086,9 +1565,23 @@ function resolveCacheLinkEndpointSlotIds(options: {
     }
 
     return cacheGroup.slotIds.filter((slotId) =>
-      slotId.endsWith(`/slot:${options.endpoint.slotId}`),
+      slotId.includes(`/slot:${options.endpoint.slotId}`),
     );
   });
+}
+
+function pairSourceSlotsToTargetSlots(
+  sourceSlotIds: readonly string[],
+  targetSlotIds: readonly string[],
+): Record<string, string> {
+  const targetSlotIdBySourceSlotId: Record<string, string> = {};
+  if (targetSlotIds.length === 0) {
+    return targetSlotIdBySourceSlotId;
+  }
+  sourceSlotIds.forEach((sourceSlotId, index) => {
+    targetSlotIdBySourceSlotId[sourceSlotId] = targetSlotIds[Math.min(index, targetSlotIds.length - 1)] ?? targetSlotIds[0] ?? sourceSlotId;
+  });
+  return targetSlotIdBySourceSlotId;
 }
 
 /**
@@ -1127,16 +1620,18 @@ function compileExplicitLinks(options: {
       continue;
     }
 
-    const endpointSlotIds = [sourceSlotId, targetSlotId].sort();
-    if (endpointSlotIds.some((slotId) => options.slots[slotId] === undefined)) {
+    if (options.slots[sourceSlotId] === undefined || options.slots[targetSlotId] === undefined) {
       continue;
     }
 
     links.push({
-      id: ["link", "share-all", link.id, endpointSlotIds.join("<->")].join(":"),
+      id: ["link", "share-all", link.id, sourceSlotId, targetSlotId].join(":"),
       linkType: "share-all",
-      endpointSlotIds,
-      shareLimit: null,
+      sourceSlotIds: [sourceSlotId],
+      targetSlotIds: [targetSlotId],
+      targetSlotIdBySourceSlotId: {
+        [sourceSlotId]: targetSlotId,
+      },
     });
   }
 

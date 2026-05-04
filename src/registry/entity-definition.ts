@@ -306,8 +306,9 @@ function acceptRuleFromPortKind(kind: PortGroupDefinition["kind"]): PortDefiniti
  *   - 原料在搬运过程中被"预定"，不可被他人使用
  *   - inputs: any(1) — 接受任意物品
  *   - outputs: same-as-input(1) — 输出与输入相同物品
+ * 订正（2026-05-04）：传送带默认 2 秒；管道类设备在定义处显式传入 0.5 秒。
  */
-function createTransportRecipe(durationSeconds = 1): EntityRecipeDefinition {
+function createTransportRecipe(durationSeconds = 2): EntityRecipeDefinition {
   return {
     recipeId: null,
     recipeType: "reserved-item",
@@ -337,50 +338,28 @@ function createRecipeShell(): EntityRecipeDefinition {
   };
 }
 
-/**
- * 创建缓存链接定义。
- *
- * 对应《仿真运行原理》§3.3 缓存链接。
- * linkType：
- *   - "share-cap"：共享容量上限（shareLimit 有效），存储各自独立
- *   - "share-all"：共享存储内容和上限（shareLimit 忽略）
- *
- * endpoints 是多对多的——一个 Link 可连接多个存储槽组。
- * 编译时每个 endpoint 解析为对应的 slot ID 列表。
- */
+/** 创建有向缓存代理链接定义。 */
 function createCacheLink(
   id: string,
-  linkType: CacheLinkDefinition["linkType"],
-  storageSlotGroupIds: readonly string[],
-  shareLimit: number | null,
+  sourceStorageSlotGroupId: string,
+  targetStorageSlotGroupId: string,
 ): CacheLinkDefinition {
   return {
     id,
-    linkType,
-    endpoints: storageSlotGroupIds.map((storageSlotGroupId) => ({ storageSlotGroupId })),
-    shareLimit,
+    source: { storageSlotGroupId: sourceStorageSlotGroupId },
+    target: { storageSlotGroupId: targetStorageSlotGroupId },
   };
 }
 
-/**
- * 创建传送带/管道标准 share-cap 链接。
- *
- * 对应《仿真运行原理》§5.1.1 传送带模型：
- *   - ingredient 槽位 + product 槽位通过 share-cap(1) Link 关联
- *   - 两端累计最多 1 个物品（容量共享上限=1）
- *   - 存储各自独立（物品在 ingredient 和 product 之间搬运）
- *
- * 默认绑定 synthetic-input 和 synthetic-output 缓存组。
- */
-function createShareCapTransportLink(
+/** 创建传送带/管道标准有向代理链接。 */
+function createTransportCacheLink(
   inputStorageSlotGroupId = "synthetic-input",
   outputStorageSlotGroupId = "synthetic-output",
 ): CacheLinkDefinition {
   return createCacheLink(
-    "transport-share-cap",
-    "share-cap",
-    [inputStorageSlotGroupId, outputStorageSlotGroupId],
-    1,
+    "transport-cache-link",
+    inputStorageSlotGroupId,
+    outputStorageSlotGroupId,
   );
 }
 
@@ -782,8 +761,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   // 传送带设备的特点（对应《仿真运行原理》§5.1.1-5.1.3）：
   //   - 2 个缓存组：ingredient + product（各 1 槽 × 1 容量）
   //   - 2 个求解图节点
-  //   - share-cap(1) Link 约束两端累计容量上限=1
+  //   - Cache Link 约束两端累计容量上限=1
   //   - reserved-item 搬运配方：any × 1s → same-as-input
+  // 订正（2026-05-04）：传送带搬运配方时间为 2 秒。
   //   - 分流器/汇流器/连接器：多端口绑定到同一组节点
   //   - uiGroup="hidden" 的设备不显示在放置面板（由传送带绘制工具自动生成）
   // =========================================================================
@@ -802,7 +782,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     requiresPower: false,
     powerDemand: 0,
     recipe: createTransportRecipe(),
-    cacheLinks: [createShareCapTransportLink("item_input_buffer", "item_output_buffer")],
+    cacheLinks: [createTransportCacheLink("item_input_buffer", "item_output_buffer")],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -851,7 +831,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     requiresPower: false,
     powerDemand: 0,
     recipe: createTransportRecipe(),
-    cacheLinks: [createShareCapTransportLink("item_input_buffer", "item_output_buffer")],
+    cacheLinks: [createTransportCacheLink("item_input_buffer", "item_output_buffer")],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -900,7 +880,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     requiresPower: false,
     powerDemand: 0,
     recipe: createTransportRecipe(),
-    cacheLinks: [createShareCapTransportLink("item_input_buffer", "item_output_buffer")],
+    cacheLinks: [createTransportCacheLink("item_input_buffer", "item_output_buffer")],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -956,7 +936,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     requiresPower: false,
     powerDemand: 0,
     recipe: createTransportRecipe(),
-    cacheLinks: [createShareCapTransportLink()],
+    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -995,7 +975,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     requiresPower: false,
     powerDemand: 0,
     recipe: createTransportRecipe(),
-    cacheLinks: [createShareCapTransportLink()],
+    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -1032,7 +1012,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     requiresPower: false,
     powerDemand: 0,
     recipe: createTransportRecipe(),
-    cacheLinks: [createShareCapTransportLink()],
+    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -1065,8 +1045,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   //
   // 管道设备与传送带结构相同（对应《仿真运行原理》§5.1.4）：
   //   - 2 个缓存组：ingredient + product（自动合成，kind="fluid"）
-  //   - share-cap(1) Link
+  //   - Cache Link
   //   - reserved-item 搬运配方
+  // 订正（2026-05-04）：管道类搬运配方时间为 0.5 秒。
   //   - 仅物品域为 liquid
   // =========================================================================
 
@@ -1083,8 +1064,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(),
-    cacheLinks: [createShareCapTransportLink()],
+    recipe: createTransportRecipe(0.5),
+    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -1115,8 +1096,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(),
-    cacheLinks: [createShareCapTransportLink()],
+    recipe: createTransportRecipe(0.5),
+    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -1147,8 +1128,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(),
-    cacheLinks: [createShareCapTransportLink()],
+    recipe: createTransportRecipe(0.5),
+    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -1180,8 +1161,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(),
-    cacheLinks: [createShareCapTransportLink()],
+    recipe: createTransportRecipe(0.5),
+    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -1216,8 +1197,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(),
-    cacheLinks: [createShareCapTransportLink()],
+    recipe: createTransportRecipe(0.5),
+    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -1253,8 +1234,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(),
-    cacheLinks: [createShareCapTransportLink()],
+    recipe: createTransportRecipe(0.5),
+    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",

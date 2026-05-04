@@ -86,12 +86,14 @@ export const INSPECTOR_TYPE = {
 
   /**
    * 链接配置面板。
-   * 编辑 cacheLinks 的 linkType、shareLimit、endpoints 等。
+  * 编辑 cacheLinks 的 linkType、shareLimit、endpoints 等。
+  * 2026-05-04 订正：CacheLinkDefinition 现为 source -> target 的有向 share-all 代理，不再编辑 shareLimit/endpoints。
    * cacheLinkIndex 绑定到具体链接。
    *
    * 对应 CacheLinkDefinition，与设计文档《仿真运行原理》§3.3 缓存链接相关：
    *   - share-all：共享内容和上限
-   *   - share-cap：仅共享容量上限
+  *   - share-cap：仅共享容量上限
+  *   - 2026-05-04 订正：share-cap 已删除，保留本行仅作历史语义说明。
    */
   linkConfig: "link-config",
 

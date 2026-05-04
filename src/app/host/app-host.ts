@@ -34,6 +34,26 @@ export function createAppHost(
 ): AppHost {
   const disposers: Array<() => void> = [];
   const internalState = createUiStateReadWrite();
+  const publicState: AppContract["state"] = {
+    get settings() {
+      return internalState.settings;
+    },
+    get workbench() {
+      return internalState.workbench;
+    },
+    get screenProfile() {
+      return internalState.screenProfile;
+    },
+    get theme() {
+      return internalState.theme;
+    },
+    get activeTool() {
+      return internalState.activeTool;
+    },
+    get toolInfo() {
+      return internalState.toolInfo;
+    },
+  };
   const gestureAdapter = createGestureAdapter({
     resolvePointerEntity: (position) => workspace.editor?.queries.findEntityAtClientPixelPoint(position) ?? null,
   });
@@ -50,7 +70,7 @@ export function createAppHost(
 
   // 先组装 host 的基础部分（state 必须就绪，shortcutManager 构造时需要读）
   Object.assign(host, {
-    state: internalState,
+    state: publicState,
     workspace,
     gestureAdapter,
     gestureActionRouter,

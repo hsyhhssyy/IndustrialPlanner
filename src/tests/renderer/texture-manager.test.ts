@@ -108,6 +108,25 @@ describe("TextureActions", () => {
     manager.destroy()
   })
 
+  it("prefix item-icon- maps to item-icons assets", async () => {
+    const iconKey = "item-icon-item_iron_ore"
+    const iconTexture = createLoadedTextureMock("item-icon")
+
+    loadTexture.mockResolvedValue(iconTexture)
+
+    const manager = createTextureActions({
+      renderer: {} as never,
+      app: null,
+    })
+
+    const texture = await manager.getTexture(iconKey)
+
+    expect(texture).toBe(iconTexture)
+    expect(loadTexture).toHaveBeenCalledWith("/item-icons/item_iron_ore.webp")
+
+    manager.destroy()
+  })
+
   it("reacts to mobx dpr changes and reapplies bitmap sampling to loaded textures", async () => {
     const screenProfile = new ScreenProfileState()
     const bodyKey = "device-sprite-item_port_storager_1"

@@ -49,9 +49,9 @@ export interface EditorState {
 }
 
 export interface HistoryState {
-  undoDepth: number;
-  redoDepth: number;
-  lastCommandId: string | null;
+  readonly undoDepth: number;
+  readonly redoDepth: number;
+  readonly lastCommandId: string | null;
 }
 
 export interface AppSettings {
@@ -91,42 +91,42 @@ export type ToolboxWikiMobileFilterOption =
   | "excludeBottledLiquid";
 
 export interface ToolboxWikiNavigationEntry {
-  type: ToolboxWikiNavigationEntryType;
-  id: string;
+  readonly type: ToolboxWikiNavigationEntryType;
+  readonly id: string;
 }
 
 export type ToolboxWikiOpenedPage =
-  | { kind: "browser" }
-  | { kind: "item"; id: string }
-  | { kind: "entity"; id: string };
+  | { readonly kind: "browser" }
+  | { readonly kind: "item"; readonly id: string }
+  | { readonly kind: "entity"; readonly id: string };
 
 export interface ToolboxWikiState {
-  searchQuery: string;
-  desktopCategory: ToolboxWikiDesktopCategory;
-  mobileSelectedCategories: ToolboxWikiMobileFilterOption[];
-  navigationStack: ToolboxWikiNavigationEntry[];
-  openedPage: ToolboxWikiOpenedPage;
+  readonly searchQuery: string;
+  readonly desktopCategory: ToolboxWikiDesktopCategory;
+  readonly mobileSelectedCategories: readonly ToolboxWikiMobileFilterOption[];
+  readonly navigationStack: readonly ToolboxWikiNavigationEntry[];
+  readonly openedPage: ToolboxWikiOpenedPage;
 }
 
 export interface ModuleBalancingIOPort {
-  itemId: string;
-  perMinute: number;
+  readonly itemId: string;
+  readonly perMinute: number;
 }
 
 export interface ModuleBalancingCustomModule {
-  id: string;
-  name: string;
-  color: string;
-  iconId: string;
-  inputs: ModuleBalancingIOPort[];
-  outputs: ModuleBalancingIOPort[];
-  sourceType: "custom";
+  readonly id: string;
+  readonly name: string;
+  readonly color: string;
+  readonly iconId: string;
+  readonly inputs: readonly ModuleBalancingIOPort[];
+  readonly outputs: readonly ModuleBalancingIOPort[];
+  readonly sourceType: "custom";
 }
 
 export interface ModuleBalancingSystemRecipeModule {
-  id: string;
-  sourceType: "system-recipe";
-  recipeId: string;
+  readonly id: string;
+  readonly sourceType: "system-recipe";
+  readonly recipeId: string;
 }
 
 export type ModuleBalancingModule =
@@ -134,33 +134,33 @@ export type ModuleBalancingModule =
   | ModuleBalancingSystemRecipeModule;
 
 export interface ModuleBalancingStageModuleEntry {
-  moduleId: string;
-  quantity: number;
+  readonly moduleId: string;
+  readonly quantity: number;
 }
 
 export interface ModuleBalancingStage {
-  id: string;
-  name: string;
-  entries: ModuleBalancingStageModuleEntry[];
+  readonly id: string;
+  readonly name: string;
+  readonly entries: readonly ModuleBalancingStageModuleEntry[];
 }
 
 export interface ModuleBalancingCanvas {
-  id: string;
-  name: string;
-  globalInputs: ModuleBalancingIOPort[];
-  stages: ModuleBalancingStage[];
-  warehouseCapacity: number | null;
+  readonly id: string;
+  readonly name: string;
+  readonly globalInputs: readonly ModuleBalancingIOPort[];
+  readonly stages: readonly ModuleBalancingStage[];
+  readonly warehouseCapacity: number | null;
 }
 
 export interface ModuleBalancingState {
-  canvases: ModuleBalancingCanvas[];
-  customModules: ModuleBalancingCustomModule[];
-  activeCanvasId: string | null;
+  readonly canvases: readonly ModuleBalancingCanvas[];
+  readonly customModules: readonly ModuleBalancingCustomModule[];
+  readonly activeCanvasId: string | null;
 }
 
 export interface ToolboxState {
-  wiki: ToolboxWikiState;
-  moduleBalancing: ModuleBalancingState;
+  readonly wiki: ToolboxWikiState;
+  readonly moduleBalancing: ModuleBalancingState;
 }
 
 export type RightDockTabId = "base" | "power" | "selection" | "simulation";
@@ -171,7 +171,7 @@ export interface WorkbenchState {
   readonly leftDockWidth: number;
   readonly topBarCollapsed: boolean;
   readonly rightDockActiveTab: RightDockTabId;
-  readonly dialogState: Record<string, DialogState | undefined>;
+  readonly dialogState: Readonly<Record<string, DialogState | undefined>>;
   readonly toolbox: ToolboxState;
 }
 

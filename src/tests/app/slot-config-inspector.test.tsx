@@ -54,11 +54,13 @@ describe("SlotConfigInspector", () => {
   it("filters duplicate and mismatched-domain items, then clamps count changes to slot capacity", async () => {
     const workspace = createWorkspace();
     const document = createDummyWorldDocument();
-    let currentEntity = document.entities["dummy-entity-2"];
+    const initialEntity = document.entities["dummy-entity-2"];
 
-    if (currentEntity === undefined) {
+    if (initialEntity === undefined) {
       throw new Error("Expected dummy storager entity to exist.");
     }
+
+    let currentEntity: WorldEntity = initialEntity;
 
     const picker = new WorkbenchEncyclopediaPickerController(() => ({
       desktopCategory: "all",

@@ -8,7 +8,9 @@ import type {
   EntityInspectorType,
 } from "@/domain/types/registry/entity-inspector";
 import { INSPECTOR_TYPE } from "@/domain/types/registry/entity-inspector";
+import type { SimulationDeviceRuntimeStatus } from "@/domain/types/simulation";
 
+import { SimulationRuntimeInspector } from "./simulation-runtime-inspector";
 import { SlotConfigInspector } from "./slot-config-inspector";
 
 const INSPECTOR_SLOT_INTERVAL_MS = 50;
@@ -24,6 +26,8 @@ interface InspectorSlotState {
   selectedEntity: WorldEntity;
   selectedDefinition: EntityDefinition;
   inspectors: InspectorDescriptor[];
+  simulationRuntimeStatus: SimulationDeviceRuntimeStatus | null;
+  showSimulationRuntimeInspector: boolean;
   debugEntityJson: string | null;
 }
 
@@ -143,11 +147,17 @@ export function SelectionInspectorSlot({
           declaration,
         };
       });
+      const simulation = appHost.workspace.simulation;
+      const showSimulationRuntimeInspector = simulation?.state === "start";
 
       setSlotState({
         selectedEntity,
         selectedDefinition,
         inspectors,
+        simulationRuntimeStatus: showSimulationRuntimeInspector
+          ? simulation?.queries.getDeviceRuntimeStatus(selectedEntity.id) ?? null
+          : null,
+        showSimulationRuntimeInspector,
         debugEntityJson: appHost.state.settings.debugMode
           ? JSON.stringify(selectedEntity, null, 2)
           : null,
@@ -176,6 +186,11 @@ export function SelectionInspectorSlot({
         <h4>{translate("section.runtimeDetails")}</h4>
       </div>
       <div className="definition-list">
+        {slotState.showSimulationRuntimeInspector ? (
+          <SimulationRuntimeInspector
+            runtimeStatus={slotState.simulationRuntimeStatus}
+          />
+        ) : null}
         {slotState.inspectors.map((inspector) => (
           <div
             key={inspector.id}

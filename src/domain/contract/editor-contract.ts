@@ -7,7 +7,7 @@ import type { SnapshotStore } from "@/shared/snapshot/snapshot-store";
 
 export interface EditorContract {
   document: SnapshotStore<WorldDocument>;
-  state: EditorState;
+  readonly state: EditorState;
   queries: EditorQuery;
   actions: EditorAction;
 }

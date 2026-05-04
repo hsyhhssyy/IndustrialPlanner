@@ -35,6 +35,7 @@ import { createMarqueeRectDecoration } from "./decorations/MarqueeRectDecoration
 import { createMarqueeCanvasDecoration } from "./decorations/MarqueeCanvasDecoration"
 import { createPreviewRectDecoration } from "./decorations/PreviewRectDecoration"
 import { createGrassBackgroundDecoration } from "./decorations/GrassBackgroundDecoration"
+import { createBeltCargoDecoration } from "./decorations/BeltCargoDecoration"
 
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
@@ -59,6 +60,8 @@ export function createRenderSceneOrchestrator(
   const diagnosticsDecoration = createDiagnosticsDecoration()
   const marqueeCanvasDecoration = createMarqueeCanvasDecoration()
   const logisticsPlacementCanvasDecoration = createLogisticsPlacementCanvasDecoration()
+  const beltCargoDecoration = createBeltCargoDecoration()
+  const beltCargoOverlayLayer = new Container()
   const marqueeOverlayLayer = new Container()
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
   const entitySprites = new Map<string, RenderSprite>()
@@ -111,13 +114,22 @@ export function createRenderSceneOrchestrator(
 
     diagnosticsDecoration.sync(ctx)
 
+    beltCargoDecoration.sync(ctx)
+
     grassBackgroundDecoration.sync(ctx)
   }
 
-  app.stage.addChild(layers.background, layers.entity, layers.overlay, marqueeOverlayLayer)
+  app.stage.addChild(
+    layers.background,
+    layers.entity,
+    beltCargoOverlayLayer,
+    layers.overlay,
+    marqueeOverlayLayer,
+  )
   app.stage.addChildAt(grassBackgroundDecoration.container, 0)
   layers.background.addChild(gridDecoration.container)
   layers.background.addChild(previewRectDecoration.container)
+  beltCargoOverlayLayer.addChild(beltCargoDecoration.container)
   marqueeOverlayLayer.addChild(marqueeCanvasDecoration.container)
   marqueeOverlayLayer.addChild(logisticsPlacementCanvasDecoration.container)
   marqueeOverlayLayer.addChild(marqueeDecoration.container)
@@ -139,8 +151,10 @@ export function createRenderSceneOrchestrator(
       marqueeCanvasDecoration.destroy()
       logisticsPlacementCanvasDecoration.destroy()
       diagnosticsDecoration.destroy()
+      beltCargoDecoration.destroy()
       layers.background.destroy({ children: true })
       layers.entity.destroy({ children: true })
+      beltCargoOverlayLayer.destroy({ children: true })
       layers.overlay.destroy({ children: true })
       marqueeOverlayLayer.destroy({ children: true })
       grassBackgroundDecoration.destroy()

@@ -2,6 +2,7 @@ import type { SimulationContract } from "@/domain/contract/simulation-contract";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type {
   CompiledSimulationTopology,
+  SimulationDeviceRuntimeStatus,
 } from "@/domain/types/simulation";
 import {
   createSnapshotStore,
@@ -17,7 +18,7 @@ import {
   createSimulationStateReadWrite,
   type SimulationStateReadWrite,
 } from "./state-impl";
-import { SimulationWorkerRuntime } from "./worker-runtime";
+import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
 import type {
   SimulationWorkerRequest,
   SimulationWorkerResponse,
@@ -63,6 +64,11 @@ export function createSimulationHost(
     queries: {
       getStatus: () => internalState.runtimeStatus,
       getCurrentTickSnapshot: () => internalState.currentTickSnapshot,
+      getDeviceRuntimeStatus: (deviceId) => resolveDeviceRuntimeStatus({
+        topology: topologyStore.getSnapshot(),
+        deviceId,
+        currentTickSnapshot: internalState.currentTickSnapshot,
+      }),
     },
     actions,
     dispose: () => {
@@ -86,6 +92,34 @@ export function createSimulationHost(
   }
 
   return host;
+}
+
+function resolveDeviceRuntimeStatus(options: {
+  topology: CompiledSimulationTopology | null;
+  deviceId: string;
+  currentTickSnapshot: SimulationHost["internalState"]["currentTickSnapshot"];
+}): SimulationDeviceRuntimeStatus | null {
+  if (options.topology === null || options.currentTickSnapshot === null) {
+    return null;
+  }
+
+  const compiledDeviceId = options.topology.ordering.deviceOrder.find((topologyDeviceId) =>
+    options.topology?.devices[topologyDeviceId]?.sourceEntityId === options.deviceId
+  );
+  if (compiledDeviceId === undefined) {
+    return null;
+  }
+
+  const deviceSnapshot = options.currentTickSnapshot.devices[compiledDeviceId];
+  if (deviceSnapshot === undefined) {
+    return null;
+  }
+
+  return {
+    recipeId: deviceSnapshot.recipe?.recipeId ?? null,
+    progressTicks: deviceSnapshot.recipe?.progressTicks ?? null,
+    desiredTicks: deviceSnapshot.recipe?.durationTicks ?? null,
+  };
 }
 
 function createSimulationWorkerBridge(): SimulationWorkerBridge {

@@ -1,10 +1,7 @@
 import type {
   CompiledSimulationTopology,
   GetSimulationTickSnapshotResult,
-  SimulationDeviceRuntimeSnapshot,
-  SimulationNodeSolveSnapshot,
   SimulationRuntimeStatus,
-  SimulationSlotRuntimeSnapshot,
   SimulationStartResult,
   SimulationTickSnapshot,
 } from "@/domain/types/simulation";
@@ -13,10 +10,24 @@ import type {
   SimulationWorkerResponse,
 } from "./worker-protocol";
 
+import { advanceDevices } from "./runtime/advance-devices";
+import { breakCycles } from "./runtime/break-cycles";
+import { buildSolveGraph } from "./runtime/build-solve-graph";
+import { createTickSnapshot } from "./runtime/create-tick-snapshot";
+import { moveItems } from "./runtime/move-items";
+import { resetTickState } from "./runtime/reset-tick-state";
+import {
+  createSimulationMutableRuntimeState,
+  type SimulationMutableRuntimeState,
+} from "./runtime/runtime-state";
+import { settleRecipes } from "./runtime/settle-recipes";
+import { solveTransferGraph } from "./runtime/solve-transfer-graph";
+
 const MAX_RETAINED_TICKS = 180;
 
 export class SimulationWorkerRuntime {
   private topology: CompiledSimulationTopology | null = null;
+  private runtimeState: SimulationMutableRuntimeState | null = null;
   private snapshots = new Map<number, SimulationTickSnapshot>();
   private nextTickNumber = 0;
   private retainedFromTick: number | null = null;
@@ -58,6 +69,7 @@ export class SimulationWorkerRuntime {
 
   private loadTopology(topology: CompiledSimulationTopology): SimulationStartResult {
     this.topology = topology;
+    this.runtimeState = createSimulationMutableRuntimeState(topology);
     this.snapshots.clear();
     this.nextTickNumber = 0;
     this.retainedFromTick = null;
@@ -85,7 +97,7 @@ export class SimulationWorkerRuntime {
   }
 
   private getTickSnapshot(tickNumber: number): GetSimulationTickSnapshotResult {
-    if (this.topology === null) {
+    if (this.topology === null || this.runtimeState === null) {
       return {
         status: "not-found",
         reason: "missing-topology",
@@ -147,15 +159,12 @@ export class SimulationWorkerRuntime {
   }
 
   private fillSnapshotWindow(): void {
-    if (this.topology === null) {
+    if (this.topology === null || this.runtimeState === null) {
       return;
     }
 
     while (this.snapshots.size < MAX_RETAINED_TICKS) {
-      const snapshot = createTickSnapshot({
-        topology: this.topology,
-        tickNumber: this.nextTickNumber,
-      });
+      const snapshot = this.createNextSnapshot(this.nextTickNumber);
       this.snapshots.set(this.nextTickNumber, snapshot);
       this.latestTickNumber = this.nextTickNumber;
       this.retainedFromTick = Math.min(
@@ -164,121 +173,27 @@ export class SimulationWorkerRuntime {
       );
       this.nextTickNumber += 1;
     }
-
-    this.mode = "stopped";
   }
-}
 
-function createTickSnapshot(options: {
-  readonly topology: CompiledSimulationTopology;
-  readonly tickNumber: number;
-}): SimulationTickSnapshot {
-  return {
-    schemaVersion: 1,
-    topologyId: options.topology.topologyId,
-    documentHash: options.topology.documentHash,
-    tickNumber: options.tickNumber,
-    status: options.tickNumber === 0 ? "initial" : "running",
-    slots: createSlotSnapshots(options.topology),
-    devices: createDeviceSnapshots(options.topology),
-    nodes: createNodeSnapshots(options.topology),
-    transfers: [],
-    routingCursors: createRoutingCursorSnapshot(options.topology),
-    warehouse: createWarehouseSnapshot(options.topology),
-    diagnostics: [],
-  };
-}
-
-function createSlotSnapshots(
-  topology: CompiledSimulationTopology,
-): Record<string, SimulationSlotRuntimeSnapshot> {
-  const slots: Record<string, SimulationSlotRuntimeSnapshot> = {};
-
-  for (const slotId of topology.ordering.slotOrder) {
-    const slot = topology.slots[slotId];
-    if (slot === undefined) {
-      continue;
+  private createNextSnapshot(tickNumber: number): SimulationTickSnapshot {
+    if (this.topology === null || this.runtimeState === null) {
+      throw new Error("Simulation runtime is not initialized.");
     }
 
-    slots[slotId] = {
-      slotId,
-      itemType: slot.initialItemType,
-      count: slot.initialCount,
-      reserved: [],
-    };
-  }
+    this.runtimeState.tickNumber = tickNumber;
+    resetTickState(this.topology, this.runtimeState);
 
-  return slots;
-}
-
-function createDeviceSnapshots(
-  topology: CompiledSimulationTopology,
-): Record<string, SimulationDeviceRuntimeSnapshot> {
-  const devices: Record<string, SimulationDeviceRuntimeSnapshot> = {};
-
-  for (const deviceId of topology.ordering.deviceOrder) {
-    const device = topology.devices[deviceId];
-    if (device === undefined) {
-      continue;
+    if (tickNumber > 0) {
+      advanceDevices(this.topology, this.runtimeState);
+      buildSolveGraph(this.topology, this.runtimeState);
+      breakCycles(this.topology, this.runtimeState);
+      solveTransferGraph(this.topology, this.runtimeState);
+      moveItems(this.topology, this.runtimeState);
+      settleRecipes(this.topology, this.runtimeState);
+      return createTickSnapshot(this.topology, this.runtimeState, tickNumber);
     }
 
-    devices[deviceId] = {
-      deviceId,
-      block: false,
-      recipe: null,
-    };
+    buildSolveGraph(this.topology, this.runtimeState);
+    return createTickSnapshot(this.topology, this.runtimeState, tickNumber);
   }
-
-  return devices;
-}
-
-function createNodeSnapshots(
-  topology: CompiledSimulationTopology,
-): Record<string, SimulationNodeSolveSnapshot> {
-  const nodes: Record<string, SimulationNodeSolveSnapshot> = {};
-
-  for (const cacheGroupId of topology.ordering.cacheGroupOrder) {
-    nodes[cacheGroupId] = {
-      cacheGroupId,
-      result: "uncertain",
-      acceptedInputEdgeIds: [],
-      acceptedOutputEdgeIds: [],
-    };
-  }
-
-  return nodes;
-}
-
-function createRoutingCursorSnapshot(
-  topology: CompiledSimulationTopology,
-): Record<string, number> {
-  const cursors: Record<string, number> = {};
-
-  for (const deviceId of topology.ordering.deviceOrder) {
-    const device = topology.devices[deviceId];
-    if (device === undefined) {
-      continue;
-    }
-
-    for (const [portRef, entry] of Object.entries(device.routing)) {
-      cursors[`${deviceId}:${portRef}`] = entry.roundRobinSeed;
-    }
-  }
-
-  return cursors;
-}
-
-function createWarehouseSnapshot(
-  topology: CompiledSimulationTopology,
-): Record<string, number> {
-  const warehouse: Record<string, number> = {};
-
-  for (const slotId of topology.ordering.slotOrder) {
-    const slot = topology.slots[slotId];
-    if (slot !== undefined && slot.lock !== null && slot.sourceSlotId === slot.lock) {
-      warehouse[slot.lock] = slot.initialCount;
-    }
-  }
-
-  return warehouse;
 }
