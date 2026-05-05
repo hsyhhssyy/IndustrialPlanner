@@ -51,6 +51,10 @@ commit_repo_if_needed() {
   git -C "$repo_path" commit -m "$commit_message"
   echo "已提交: $repo_label"
   did_commit=1
+
+  # Push changes
+  git -C "$repo_path" push
+  echo "已推送: $repo_label"
 }
 
 commit_submodules_recursively() {
