@@ -148,7 +148,7 @@ describe("createRenderSceneOrchestrator", () => {
         render: null,
         simulation: {
           state: "start",
-          playbackTickRateHz: 1,
+          simulationSpeed: 1,
           topology: {} as never,
           queries: {} as never,
           actions: {

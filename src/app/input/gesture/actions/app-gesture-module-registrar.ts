@@ -1,34 +1,28 @@
 import type { AppHost } from "@/app/host/app-host";
 import {
   type GestureDiagnosticsStore,
+  createGestureDiagnosticsModule,
 } from "@/app/input/gesture/diagnostics";
 import type { GestureActionRouter } from "./gesture-action-router";
-import { createHypergryphGestureDiagnosticsModule } from "./hypergryph/hypergryph-gesture-diagnostics-module";
 import {
   createHypergryphDeleteSelectionGestureModule,
 } from "./hypergryph/hypergryph-delete-selection-gesture-module";
 import {
   createHypergryphLogisticsPlacementGestureModule,
-  hookLogisticsPlacementToolCleanupFallback,
 } from "./hypergryph/hypergryph-logistics-placement-gesture-module";
 import {
   createHypergryphMarqueeGestureModule,
-  hookMarqueeToolCleanupFallback,
 } from "./hypergryph/hypergryph-marquee-gesture-module";
 import {
   createHypergryphMoveGestureModule,
-  hookMoveToolCleanupFallback,
 } from "./hypergryph/hypergryph-move-gesture-module";
 import {
   createHypergryphSinglePlacementGestureModule,
-  hookSinglePlacementToolCleanupFallback,
 } from "./hypergryph/hypergryph-single-placement-gesture-module";
 import { createHypergryphMouseViewportPanModule } from "./hypergryph/hypergryph-mouse-viewport-pan-module";
 import {
   createHypergryphSelectGestureModule,
-  hookSelectToolToolbarFallback,
 } from "./hypergryph/hypergryph-select-gesture-module";
-import { createHypergryphSelectToolButtonModule } from "./hypergryph/hypergryph-select-tool-button-module";
 import { createHypergryphViewportZoomModule } from "./hypergryph/hypergryph-viewport-zoom-module";
 import { createSimulationControlGestureModule } from "./simulation-control-gesture-module";
 
@@ -44,11 +38,6 @@ export class AppGestureModuleRegistrar {
 
   public constructor(options: AppGestureModuleRegistrarOptions) {
     this.unregisterModules.push(
-      hookLogisticsPlacementToolCleanupFallback(options.appHost),
-      hookMoveToolCleanupFallback(options.appHost),
-      hookSinglePlacementToolCleanupFallback(options.appHost),
-      hookMarqueeToolCleanupFallback(options.appHost),
-      hookSelectToolToolbarFallback(options.appHost),
       options.router.registerModule(createHypergryphLogisticsPlacementGestureModule()),
       options.router.registerModule(createHypergryphSinglePlacementGestureModule()),
       options.router.registerModule(createHypergryphMoveGestureModule()),
@@ -57,10 +46,9 @@ export class AppGestureModuleRegistrar {
       options.router.registerModule(createHypergryphDeleteSelectionGestureModule()),
       options.router.registerModule(createHypergryphMouseViewportPanModule()),
       options.router.registerModule(createHypergryphViewportZoomModule()),
-      options.router.registerModule(createHypergryphSelectToolButtonModule()),
       options.router.registerModule(createSimulationControlGestureModule()),
       options.router.registerModule(
-        createHypergryphGestureDiagnosticsModule(options.gestureDiagnostics),
+        createGestureDiagnosticsModule(options.gestureDiagnostics),
       ),
     );
   }

@@ -21,7 +21,13 @@ export const SimulationControlButton = observer(function SimulationControlButton
 }) {
   const simulationState = appHost.workspace.simulation?.state ?? "stop";
   const isRunning = simulationState === "start";
-  const label = appHost.actions.translate(isRunning ? "action.pause" : "action.start");
+  const label = appHost.actions.translate(
+    isRunning
+      ? "action.pause"
+      : simulationState === "pause"
+        ? "action.resume"
+        : "action.start",
+  );
 
   const handlePointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (event.pointerType === "mouse") {

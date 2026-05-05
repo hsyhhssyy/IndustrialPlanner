@@ -100,11 +100,18 @@ function createTurnLogisticsSvg(spec, turnType) {
   const centerY = isCw ? SPRITE_SIZE : 0;
   const outerRadius = SPRITE_SIZE - spec.sideInset;
   const innerRadius = spec.sideInset;
+  const edgeInset = spec.edgeWidth / 2;
+  const outerEdgeRadius = outerRadius - edgeInset;
+  const innerEdgeRadius = innerRadius + edgeInset;
 
   const outerStartY = isCw ? SPRITE_SIZE - outerRadius : outerRadius;
   const outerEndX = outerRadius;
   const innerStartY = isCw ? SPRITE_SIZE - innerRadius : innerRadius;
   const innerEndX = innerRadius;
+  const outerEdgeStartY = isCw ? SPRITE_SIZE - outerEdgeRadius : outerEdgeRadius;
+  const outerEdgeEndX = outerEdgeRadius;
+  const innerEdgeStartY = isCw ? SPRITE_SIZE - innerEdgeRadius : innerEdgeRadius;
+  const innerEdgeEndX = innerEdgeRadius;
 
   // Outer arc goes CW for CW turn (sweep=1), CCW for CCW turn (sweep=0)
   const outerSweep = isCw ? 1 : 0;
@@ -120,13 +127,13 @@ function createTurnLogisticsSvg(spec, turnType) {
   ].join(' ');
 
   const outerEdgePath = [
-    `M 0 ${outerStartY}`,
-    `A ${outerRadius} ${outerRadius} 0 0 ${outerSweep} ${outerEndX} ${centerY}`,
+    `M 0 ${outerEdgeStartY}`,
+    `A ${outerEdgeRadius} ${outerEdgeRadius} 0 0 ${outerSweep} ${outerEdgeEndX} ${centerY}`,
   ].join(' ');
 
   const innerEdgePath = [
-    `M 0 ${innerStartY}`,
-    `A ${innerRadius} ${innerRadius} 0 0 ${outerSweep} ${innerEndX} ${centerY}`,
+    `M 0 ${innerEdgeStartY}`,
+    `A ${innerEdgeRadius} ${innerEdgeRadius} 0 0 ${outerSweep} ${innerEdgeEndX} ${centerY}`,
   ].join(' ');
 
   return `

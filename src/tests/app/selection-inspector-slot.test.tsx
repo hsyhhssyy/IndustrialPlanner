@@ -42,7 +42,7 @@ function attachSimulationStub(
 
   workspace.simulation = {
     state: options.state,
-    playbackTickRateHz: 1,
+    simulationSpeed: 1,
     topology: createSnapshotStore(null),
     queries: {
       getStatus: () => ({
@@ -190,8 +190,8 @@ describe("SelectionInspectorSlot", () => {
       state: "start",
       runtimeStatus: {
         recipeId: "transport-recipe",
-        progressTicks: 1,
-        desiredTicks: 4,
+        progressSeconds: 0.5,
+        desiredSeconds: 2,
       },
     });
     const currentAppHost = createAppHost(workspace);
@@ -213,8 +213,8 @@ describe("SelectionInspectorSlot", () => {
     expect(queryInspectorKeys(container)).toEqual([SIMULATION_RUNTIME_INSPECTOR_KEY]);
     expect(getDeviceRuntimeStatus).toHaveBeenCalledWith("dummy-entity-1");
     expect(container.querySelector("[data-runtime-field='recipeId']")?.textContent).toContain("transport-recipe");
-    expect(container.querySelector("[data-runtime-field='progressTicks']")?.textContent).toContain("1");
-    expect(container.querySelector("[data-runtime-field='desiredTicks']")?.textContent).toContain("4");
+    expect(container.querySelector("[data-runtime-field='progressSeconds']")?.textContent).toContain("0.5");
+    expect(container.querySelector("[data-runtime-field='desiredSeconds']")?.textContent).toContain("2");
     expect(container.querySelector("[data-runtime-field='progressPercent']")?.textContent).toContain("25%");
   });
 
@@ -227,8 +227,8 @@ describe("SelectionInspectorSlot", () => {
       state: "pause",
       runtimeStatus: {
         recipeId: "paused-recipe",
-        progressTicks: 2,
-        desiredTicks: 4,
+        progressSeconds: 0.1,
+        desiredSeconds: 2,
       },
     });
     const currentAppHost = createAppHost(workspace);

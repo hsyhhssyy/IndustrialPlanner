@@ -9,7 +9,6 @@ import type { EditorContract } from "@/domain/contract/editor-contract";
 import type { RegistryContract } from "@/domain/contract/registry-contracts";
 import { EntityCollectionType } from "@/domain/state/types";
 import type { GridPoint, GridRect } from "@/domain/types/grid";
-import { reaction } from "mobx";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
@@ -39,6 +38,15 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
     id: "hypergryph-single-placement-gesture",
     when: isHypergryphGestureEnabled,
     handle(event, context) {
+      if (event.type === "on-exit-active-tool") {
+        if (event.from !== "single-placement" || event.to === "single-placement") {
+          return { status: "ignored" };
+        }
+
+        cleanupPlacementDraft(context.appHost);
+        return { status: "handled" };
+      }
+
       if (event.type === "mouse move") {
         lastMousePosition = event.position;
       }
@@ -543,21 +551,6 @@ export function cleanupPlacementDraft(appHost: AppHost): void {
   }
 
   clearPlacementUi(appHost);
-}
-
-export function hookSinglePlacementToolCleanupFallback(appHost: AppHost): () => void {
-  return reaction(
-    () => appHost.internalState.activeTool,
-    (activeTool, previousActiveTool) => {
-      if (!(previousActiveTool === "select" && activeTool === "single-placement")) {
-        appHost.internalState.runtime.selectingPlacementGroup = null;
-      }
-
-      if (previousActiveTool === "single-placement" && activeTool !== "single-placement") {
-        cleanupPlacementDraft(appHost);
-      }
-    },
-  );
 }
 
 function clearPlacementUi(appHost: AppHost): void {

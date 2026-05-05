@@ -230,10 +230,11 @@ describe("TopBar", () => {
       diagnostics: [],
     }));
     const pause = vi.fn();
+    const resume = vi.fn();
     const workspace = createWorkspace();
     workspace.simulation = {
       state: "stop",
-      playbackTickRateHz: 1,
+      simulationSpeed: 1,
       topology: createSnapshotStore(null),
       queries: {
         getStatus: () => ({
@@ -252,6 +253,7 @@ describe("TopBar", () => {
       actions: {
         start,
         pause,
+        resume,
         stop: vi.fn(),
         getTickSnapshot: vi.fn(async () => ({
           status: "not-ready" as const,
@@ -281,6 +283,7 @@ describe("TopBar", () => {
 
     expect(start).toHaveBeenCalledTimes(1);
     expect(pause).not.toHaveBeenCalled();
+    expect(resume).not.toHaveBeenCalled();
   });
 
   it("pauses the simulation through the simulation contract when the control button is running", async () => {
@@ -290,10 +293,11 @@ describe("TopBar", () => {
       diagnostics: [],
     }));
     const pause = vi.fn();
+    const resume = vi.fn();
     const workspace = createWorkspace();
     workspace.simulation = {
       state: "start",
-      playbackTickRateHz: 1,
+      simulationSpeed: 1,
       topology: createSnapshotStore(null),
       queries: {
         getStatus: () => ({
@@ -312,6 +316,7 @@ describe("TopBar", () => {
       actions: {
         start,
         pause,
+        resume,
         stop: vi.fn(),
         getTickSnapshot: vi.fn(async () => ({
           status: "not-ready" as const,
@@ -341,6 +346,71 @@ describe("TopBar", () => {
 
     expect(pause).toHaveBeenCalledTimes(1);
     expect(start).not.toHaveBeenCalled();
+    expect(resume).not.toHaveBeenCalled();
+  });
+
+  it("resumes the simulation through the simulation contract when the control button is paused", async () => {
+    const start = vi.fn(async () => ({
+      status: "started" as const,
+      topologyId: null,
+      diagnostics: [],
+    }));
+    const pause = vi.fn();
+    const resume = vi.fn();
+    const workspace = createWorkspace();
+    workspace.simulation = {
+      state: "pause",
+      simulationSpeed: 1,
+      topology: createSnapshotStore(null),
+      queries: {
+        getStatus: () => ({
+          mode: "stopped",
+          topologyId: null,
+          documentHash: null,
+          retainedFromTick: 0,
+          latestTickNumber: 2,
+          bufferSize: 1,
+          maxBufferSize: 180,
+          error: null,
+        }),
+        getCurrentTickSnapshot: () => null,
+        getDeviceRuntimeStatus: () => null,
+      },
+      actions: {
+        start,
+        pause,
+        resume,
+        stop: vi.fn(),
+        getTickSnapshot: vi.fn(async () => ({
+          status: "not-ready" as const,
+          requestedTickNumber: 2,
+          retainedFromTick: 1,
+          latestTickNumber: 2,
+          bufferSize: 1,
+        })),
+        advancePlaybackByDeltaMs: vi.fn(async () => null),
+      },
+    } as NonNullable<WorkspaceContract["simulation"]>;
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<TopBar appHost={appHost} />);
+    });
+
+    const simulationButton = container.querySelector(
+      '[data-ui-button-id="top-bar-simulation-control"]',
+    ) as HTMLButtonElement | null;
+
+    expect(simulationButton).not.toBeNull();
+    expect(simulationButton?.title).toBe("继续");
+
+    await act(async () => {
+      simulationButton?.click();
+    });
+
+    expect(resume).toHaveBeenCalledTimes(1);
+    expect(start).not.toHaveBeenCalled();
+    expect(pause).not.toHaveBeenCalled();
   });
 
   it("removes all top-right status text and keeps only control buttons", () => {

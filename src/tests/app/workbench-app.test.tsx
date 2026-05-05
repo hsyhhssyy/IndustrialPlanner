@@ -64,6 +64,7 @@ const DEFAULT_APP_SHORTCUTS_STORAGE = {
   [SHORTCUT_KEY.WAREHOUSE]: "C",
   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
   [SHORTCUT_KEY.SYNTHESIS]: "B",
+  [SHORTCUT_KEY.RETURN_SELECT]: "Esc",
   [SHORTCUT_KEY.ROTATE]: "R",
   [SHORTCUT_KEY.DELETE_DEVICE]: "F",
 } as const;
@@ -698,7 +699,7 @@ describe("WorkbenchApp", () => {
     const workspace = createWorkspace();
     workspace.simulation = {
       state: "stop",
-      playbackTickRateHz: 1,
+      simulationSpeed: 1,
       topology: createSnapshotStore(null),
       queries: {
         getStatus: () => ({

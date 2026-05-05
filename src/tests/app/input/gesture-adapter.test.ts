@@ -1,15 +1,45 @@
 // @vitest-environment jsdom
 
+import { observable, runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createGestureAdapter,
   type GestureEvent,
+  type GestureAdapterOptions,
   type GestureKeyboardEventLike,
   type GesturePointerEventLike,
+  type GesturePosition,
   type GestureWheelEventLike,
 } from "@/app/input/gesture/adapter";
+import type { ActiveTool } from "@/domain/state/types";
 import type { WorldEntity } from "@/domain/entity/world-document";
+
+function createAdapterHarness(options: {
+  readonly activeTool?: ActiveTool;
+  readonly resolvePointerEntity?: (position: GesturePosition) => WorldEntity | null;
+  readonly adapterOptions?: GestureAdapterOptions;
+} = {}) {
+  const appHost = {
+    workspace: {
+      editor: options.resolvePointerEntity === undefined
+        ? null
+        : {
+            queries: {
+              findEntityAtClientPixelPoint: options.resolvePointerEntity,
+            },
+          },
+    },
+    internalState: observable({
+      activeTool: options.activeTool ?? "select",
+    }),
+  };
+
+  return {
+    appHost,
+    adapter: createGestureAdapter(appHost, options.adapterOptions),
+  };
+}
 
 function pointerEvent(
   overrides: Partial<GesturePointerEventLike> = {},
@@ -81,7 +111,7 @@ describe("GestureAdapter", () => {
   });
 
   it("normalizes mouse move, tap and drag without emitting move during drag", () => {
-    const adapter = createGestureAdapter();
+    const { adapter } = createAdapterHarness();
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => events.push(event));
 
@@ -125,7 +155,7 @@ describe("GestureAdapter", () => {
   });
 
   it("attaches resolved pointerEntity to mouse and touch tap or dragstart events", () => {
-    const adapter = createGestureAdapter({
+    const { adapter } = createAdapterHarness({
       resolvePointerEntity: (position) => createPointerEntity(`entity-${position.x}-${position.y}`),
     });
     const events: GestureEvent[] = [];
@@ -164,7 +194,7 @@ describe("GestureAdapter", () => {
   });
 
   it("persists mouse drag payload across drag events and drops it after dragend", () => {
-    const adapter = createGestureAdapter();
+    const { adapter } = createAdapterHarness();
     const startPayloads: Array<unknown | null | undefined> = [];
     const movePayloads: Array<unknown | null | undefined> = [];
     const endPayloads: Array<unknown | null | undefined> = [];
@@ -204,7 +234,7 @@ describe("GestureAdapter", () => {
   });
 
   it("persists touch drag payload across drag events and drops it after dragend", () => {
-    const adapter = createGestureAdapter();
+    const { adapter } = createAdapterHarness();
     const startPayloads: Array<unknown | null | undefined> = [];
     const movePayloads: Array<unknown | null | undefined> = [];
     const endPayloads: Array<unknown | null | undefined> = [];
@@ -244,7 +274,7 @@ describe("GestureAdapter", () => {
   });
 
   it("marks mouse tap and drag with longPress after a held press and exposes the indicator state", () => {
-    const adapter = createGestureAdapter();
+    const { adapter } = createAdapterHarness();
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => events.push(event));
 
@@ -317,7 +347,7 @@ describe("GestureAdapter", () => {
   });
 
   it("uses long press to unlock touch drag and emits a longPress tap on release with no drag move", () => {
-    const adapter = createGestureAdapter();
+    const { adapter } = createAdapterHarness();
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => events.push(event));
 
@@ -387,7 +417,7 @@ describe("GestureAdapter", () => {
   });
 
   it("turns early touch movement into non-long-press touch drag and cancels the long press indicator", () => {
-    const adapter = createGestureAdapter();
+    const { adapter } = createAdapterHarness();
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => events.push(event));
 
@@ -420,7 +450,7 @@ describe("GestureAdapter", () => {
   });
 
   it("cancels non-long-press touch drag once the gesture becomes multi-touch", () => {
-    const adapter = createGestureAdapter();
+    const { adapter } = createAdapterHarness();
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => events.push(event));
 
@@ -450,7 +480,7 @@ describe("GestureAdapter", () => {
   });
 
   it("does not turn a pinch sequence back into touch drag after one finger lifts", () => {
-    const adapter = createGestureAdapter();
+    const { adapter } = createAdapterHarness();
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => events.push(event));
 
@@ -468,7 +498,7 @@ describe("GestureAdapter", () => {
   });
 
   it("does not show the long press indicator for a quick tap", () => {
-    const adapter = createGestureAdapter();
+    const { adapter } = createAdapterHarness();
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => events.push(event));
 
@@ -487,9 +517,11 @@ describe("GestureAdapter", () => {
   });
 
   it("normalizes wheel direction with accumulation", () => {
-    const adapter = createGestureAdapter({
-      thresholds: {
-        wheelAccumulateThreshold: 1,
+    const { adapter } = createAdapterHarness({
+      adapterOptions: {
+        thresholds: {
+          wheelAccumulateThreshold: 1,
+        },
       },
     });
     const events: GestureEvent[] = [];
@@ -508,7 +540,7 @@ describe("GestureAdapter", () => {
   });
 
   it("maintains pressedKeys and clears keyboard state on blur", () => {
-    const adapter = createGestureAdapter();
+    const { adapter } = createAdapterHarness();
     const events: GestureEvent[] = [];
     const snapshots = [adapter.getKeyboardSnapshot()];
     adapter.subscribe((event) => events.push(event));
@@ -555,7 +587,7 @@ describe("GestureAdapter", () => {
   });
 
   it("emits semantic ui button tap gestures", () => {
-    const adapter = createGestureAdapter();
+    const { adapter } = createAdapterHarness();
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => events.push(event));
 
@@ -584,6 +616,37 @@ describe("GestureAdapter", () => {
       {
         type: "ui-button-touch-tap",
         uiButtonId: "utility-settings",
+      },
+    ]);
+  });
+
+  it("emits active tool exit before enter and carries from/to tool keys", () => {
+    const { adapter, appHost } = createAdapterHarness({ activeTool: "select" });
+    const events: GestureEvent[] = [];
+    adapter.subscribe((event) => {
+      if (event.type === "on-exit-active-tool" || event.type === "on-enter-active-tool") {
+        events.push(event);
+      }
+    });
+
+    runInAction(() => {
+      appHost.internalState.activeTool = "move";
+    });
+
+    expect(events.map((event) => event.type)).toEqual([
+      "on-exit-active-tool",
+      "on-enter-active-tool",
+    ]);
+    expect(events).toMatchObject([
+      {
+        type: "on-exit-active-tool",
+        from: "select",
+        to: "move",
+      },
+      {
+        type: "on-enter-active-tool",
+        from: "select",
+        to: "move",
       },
     ]);
   });

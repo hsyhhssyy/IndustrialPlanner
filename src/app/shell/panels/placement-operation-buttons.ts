@@ -21,7 +21,7 @@ const SELECT_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
   uiButtonId: "placement-tool-select",
   labelKey: "workbench.button.select",
   icon: "select-arrow",
-  hotkey: "Esc",
+  hotkeyKeyId: SHORTCUT_KEY.RETURN_SELECT,
   activeWhen: (appHost) => appHost.state.activeTool === "select",
 };
 

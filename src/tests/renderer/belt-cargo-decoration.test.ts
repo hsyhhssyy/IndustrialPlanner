@@ -89,6 +89,7 @@ vi.mock("pixi.js", () => {
 })
 
 import { createBeltCargoDecoration } from "@/renderer/scene/decorations/BeltCargoDecoration"
+import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate"
 
 describe("createBeltCargoDecoration", () => {
   it("draws the moving cargo box and only requests each item icon once", async () => {
@@ -121,8 +122,9 @@ describe("createBeltCargoDecoration", () => {
       height: 60,
       fill: 0xffffff,
       stroke: {
-        width: expect.any(Number),
+        width: 1,
         color: 0x000000,
+        pixelLine: true,
       },
     })
 
@@ -149,6 +151,69 @@ describe("createBeltCargoDecoration", () => {
     decoration.destroy()
   })
 
+  it("draws the moving cargo box when the belt input slot is proxied to another slot", () => {
+    const decoration = createBeltCargoDecoration()
+    const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+    const ctx = createContext({
+      getTexture,
+      reserveOnProxyTargetSlot: true,
+    })
+
+    decoration.sync(ctx as never)
+
+    expect(decoration.container.visible).toBe(true)
+    const boxGraphics = decoration.container.children[0] as unknown as {
+      drawCommands: Array<unknown>;
+    }
+    expect(boxGraphics.drawCommands).toHaveLength(1)
+
+    decoration.destroy()
+  })
+
+  it("draws turn belts along the belt centerline", () => {
+    const cases = [
+      {
+        definitionId: "belt_turn_cw_1x1" as const,
+        expected: {
+          x: 55.35533905932738,
+          y: 84.64466094067262,
+        },
+      },
+      {
+        definitionId: "belt_turn_ccw_1x1" as const,
+        expected: {
+          x: 55.35533905932738,
+          y: 55.35533905932738,
+        },
+      },
+    ]
+
+    for (const testCase of cases) {
+      const decoration = createBeltCargoDecoration()
+      const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+      const ctx = createContext({
+        getTexture,
+        definitionId: testCase.definitionId,
+      })
+
+      decoration.sync(ctx as never)
+
+      const boxGraphics = decoration.container.children[0] as unknown as {
+        drawCommands: Array<{
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+        }>;
+      }
+      expect(boxGraphics.drawCommands).toHaveLength(1)
+      expect(boxGraphics.drawCommands[0]?.x).toBeCloseTo(testCase.expected.x)
+      expect(boxGraphics.drawCommands[0]?.y).toBeCloseTo(testCase.expected.y)
+
+      decoration.destroy()
+    }
+  })
+
   it("stays hidden when the running belt has no matching reserved item", () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
@@ -168,15 +233,21 @@ describe("createBeltCargoDecoration", () => {
 
 function createContext(options: {
   getTexture: (key: string) => Promise<unknown>;
+  reserveOnProxyTargetSlot?: boolean;
   reserved?: readonly {
     recipeRunId: string;
     itemType: string;
     amount: number;
   }[];
+  definitionId?: "belt_straight_1x1" | "belt_turn_cw_1x1" | "belt_turn_ccw_1x1";
 }) {
   const compiledDeviceId = "device:belt-1"
   const inputSlotId = `${compiledDeviceId}/cache-group:item_input_buffer/slot:input_slot_1`
+  const outputSlotId = `${compiledDeviceId}/cache-group:item_output_buffer/slot:output_slot_1`
+  const definitionId = options.definitionId ?? "belt_straight_1x1"
   const recipeRunId = "recipe:device:belt-1:0"
+  const recipeDefinitionId = `${definitionId}:definition-recipe`
+  const reservationSlotId = options.reserveOnProxyTargetSlot ? outputSlotId : inputSlotId
 
   return {
     viewportState: {
@@ -215,13 +286,13 @@ function createContext(options: {
             documentKey: "document-1",
             documentHash: "hash-1",
             registryHash: "registry-hash-1",
-            standardTickRate: 1,
+            standardTickRate: STANDARD_TICK_RATE_PER_SECOND,
             itemCatalog: {},
             devices: {
               [compiledDeviceId]: {
                 id: compiledDeviceId,
                 sourceEntityId: "belt-1",
-                definitionId: "belt_straight_1x1",
+                definitionId,
                 position: { x: 0, y: 0 },
                 rotation: 0,
                 tags: [],
@@ -245,6 +316,16 @@ function createContext(options: {
                 outputPortIds: [],
                 groupOrder: 0,
               },
+              [`${compiledDeviceId}/cache-group:item_output_buffer`]: {
+                id: `${compiledDeviceId}/cache-group:item_output_buffer`,
+                deviceId: compiledDeviceId,
+                sourceStorageSlotGroupId: "item_output_buffer",
+                cacheType: "product",
+                slotIds: [outputSlotId],
+                inputPortIds: [],
+                outputPortIds: [],
+                groupOrder: 1,
+              },
             },
             slots: {
               [inputSlotId]: {
@@ -260,15 +341,38 @@ function createContext(options: {
                 submitMode: "never",
                 submitIntervalTicks: null,
               },
+              [outputSlotId]: {
+                id: outputSlotId,
+                cacheGroupId: `${compiledDeviceId}/cache-group:item_output_buffer`,
+                sourceSlotId: "output_slot_1",
+                capacity: 1,
+                domain: "solid",
+                lock: null,
+                initialItemType: null,
+                initialCount: 0,
+                ignoreStock: false,
+                submitMode: "never",
+                submitIntervalTicks: null,
+              },
             },
             ports: {},
-            links: {},
+            links: options.reserveOnProxyTargetSlot ? {
+              [`${compiledDeviceId}/link:transport-cache-link`]: {
+                id: `${compiledDeviceId}/link:transport-cache-link`,
+                linkType: "share-all",
+                sourceSlotIds: [inputSlotId],
+                targetSlotIds: [outputSlotId],
+                targetSlotIdBySourceSlotId: {
+                  [inputSlotId]: outputSlotId,
+                },
+              },
+            } : {},
             physicalConnections: {},
             transferEdges: {},
             ordering: {
               deviceOrder: [compiledDeviceId],
               cacheGroupOrder: [],
-              slotOrder: [inputSlotId],
+              slotOrder: [inputSlotId, outputSlotId],
               portOrder: [],
               physicalConnectionOrder: [],
               edgeOrder: [],
@@ -284,8 +388,8 @@ function createContext(options: {
             tickNumber: 2,
             status: "running",
             slots: {
-              [inputSlotId]: {
-                slotId: inputSlotId,
+              [reservationSlotId]: {
+                slotId: reservationSlotId,
                 itemType: "item_iron_ore",
                 count: 1,
                 reserved: options.reserved ?? [{
@@ -301,10 +405,10 @@ function createContext(options: {
                 block: false,
                 recipe: {
                   runId: recipeRunId,
-                  recipeId: "belt_straight_1x1:definition-recipe",
+                  recipeId: recipeDefinitionId,
                   recipeType: "reserved-item",
-                  progressTicks: 2,
-                  durationTicks: 4,
+                  progressTicks: 20,
+                  durationTicks: 40,
                   state: "running",
                 },
               },
@@ -316,9 +420,9 @@ function createContext(options: {
             diagnostics: [],
           }),
           getDeviceRuntimeStatus: () => ({
-            recipeId: "belt_straight_1x1:definition-recipe",
-            progressTicks: 2,
-            desiredTicks: 4,
+            recipeId: recipeDefinitionId,
+            progressSeconds: 1,
+            desiredSeconds: 2,
           }),
         },
       },

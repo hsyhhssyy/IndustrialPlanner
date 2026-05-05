@@ -52,6 +52,7 @@ import type {
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
 import type { RecipeDefinition } from "@/domain/types/registry/recipe-definition";
 import { hashStable } from "./deterministic";
+import { STANDARD_TICK_RATE_PER_SECOND } from "./tick-rate";
 
 // 从 EntityDefinition 解构的子类型别名
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
@@ -63,7 +64,6 @@ type PortStorageBindingDefinition = EntityDefinition["portStorageBindings"][numb
 interface CompileOptions {
   readonly document: WorldDocument;
   readonly registry: RegistryContract;
-  readonly ticksPerSecond?: number;
 }
 
 /** 单个设备编译产物的临时结构 */
@@ -101,7 +101,7 @@ const EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
 export function compileSimulationTopology(
   options: CompileOptions,
 ): CompiledSimulationTopology {
-  const ticksPerSecond = options.ticksPerSecond ?? 2;
+  const standardTickRate = STANDARD_TICK_RATE_PER_SECOND;
   const diagnostics: SimulationCompileDiagnostic[] = [];
   const entityDefinitionMap = new Map(
     options.registry.entityDefinitions.map((definition) => [definition.id, definition]),
@@ -169,7 +169,6 @@ export function compileSimulationTopology(
         registryQueries: options.registry.queries,
         recipeDefinitionMap,
         itemCatalog,
-        ticksPerSecond,
       }),
       devices,
       cacheGroups,
@@ -255,7 +254,7 @@ export function compileSimulationTopology(
   const topologyHashInput = {
     documentHash,
     registryHash,
-    standardTickRate: ticksPerSecond,
+    standardTickRate,
     devices,
     cacheGroups,
     slots,
@@ -279,7 +278,7 @@ export function compileSimulationTopology(
     documentKey: options.document.documentKey,
     documentHash,
     registryHash,
-    standardTickRate: ticksPerSecond,
+    standardTickRate,
     itemCatalog,
     devices,
     cacheGroups,
@@ -298,6 +297,10 @@ export function compileSimulationTopology(
     },
     diagnostics,
   };
+}
+
+function convertSecondsToSimulationTicks(durationSeconds: number): number {
+  return Math.max(1, Math.round(durationSeconds * STANDARD_TICK_RATE_PER_SECOND));
 }
 
 function addDeviceCompileResult(options: {
@@ -750,7 +753,6 @@ function compileEntityDevice(options: {
   readonly registryQueries: RegistryContract["queries"];
   readonly recipeDefinitionMap: ReadonlyMap<string, RecipeDefinition>;
   readonly itemCatalog: Record<string, CompiledSimulationItem>;
-  readonly ticksPerSecond: number;
 }): DeviceCompileResult {
   const deviceId = `device:${options.entity.id}`;
   const definition = mergeEntityDefinitionConfig(completeExternalRecipeMachineDefinition({
@@ -772,7 +774,6 @@ function compileEntityDevice(options: {
     slots,
     links,
     nodeBindingsByStorageGroupId,
-    ticksPerSecond: options.ticksPerSecond,
   });
 
   if (cacheGroups.length === 0) {
@@ -819,7 +820,6 @@ function compileEntityDevice(options: {
     recipeDefinitionMap: options.recipeDefinitionMap,
     cacheGroups,
     nodeBindingsByStorageGroupId,
-    ticksPerSecond: options.ticksPerSecond,
   });
 
   const device: CompiledSimulationDevice = {
@@ -880,7 +880,6 @@ function compileStorageSlotGroups(options: {
   readonly slots: CompiledSimulationSlotTemplate[];
   readonly links: CompiledSimulationCacheLink[];
   readonly nodeBindingsByStorageGroupId: Map<string, StorageGroupNodeBinding>;
-  readonly ticksPerSecond: number;
 }): void {
   options.definition.storageSlotGroups.forEach((storageGroup, groupIndex) => {
     const portDirections = resolveStorageGroupPortDirections(options.definition, storageGroup.id);
@@ -903,7 +902,6 @@ function compileStorageSlotGroups(options: {
           cacheGroups: options.cacheGroups,
           compiledSlots: options.slots,
           links: options.links,
-          ticksPerSecond: options.ticksPerSecond,
         });
         inputNodeIds.push(...nodeSet.inputNodeIds);
         outputNodeIds.push(...nodeSet.outputNodeIds);
@@ -926,7 +924,6 @@ function compileStorageSlotGroups(options: {
       cacheGroups: options.cacheGroups,
       compiledSlots: options.slots,
       links: options.links,
-      ticksPerSecond: options.ticksPerSecond,
     });
     options.nodeBindingsByStorageGroupId.set(storageGroup.id, nodeSet);
   });
@@ -945,7 +942,6 @@ function compileStorageNodeSet(options: {
   readonly cacheGroups: CompiledSimulationCacheGroup[];
   readonly compiledSlots: CompiledSimulationSlotTemplate[];
   readonly links: CompiledSimulationCacheLink[];
-  readonly ticksPerSecond: number;
 }): StorageGroupNodeBinding {
   if (options.hasInputBinding && options.hasOutputBinding) {
     const inputNodeId = `${options.baseNodeId}.input-view`;
@@ -962,7 +958,6 @@ function compileStorageNodeSet(options: {
         cacheGroupId: inputNodeId,
         storageGroup: options.storageGroup,
         definition: options.definition,
-        ticksPerSecond: options.ticksPerSecond,
         slotIdSuffix: ".in-view",
         initialItemType: null,
         initialCount: 0,
@@ -973,7 +968,6 @@ function compileStorageNodeSet(options: {
         cacheGroupId: outputNodeId,
         storageGroup: options.storageGroup,
         definition: options.definition,
-        ticksPerSecond: options.ticksPerSecond,
         slotIdSuffix: ".out-view",
       });
       options.compiledSlots.push(inputSlot, outputSlot);
@@ -1022,7 +1016,6 @@ function compileStorageNodeSet(options: {
       cacheGroupId: nodeId,
       storageGroup: options.storageGroup,
       definition: options.definition,
-      ticksPerSecond: options.ticksPerSecond,
     });
     options.compiledSlots.push(slotTemplate);
     slotIds.push(slotTemplate.id);
@@ -1199,14 +1192,13 @@ function compileSlotTemplate(options: {
   readonly cacheGroupId: string;
   readonly storageGroup: StorageSlotGroupDefinition;
   readonly definition: EntityDefinition;
-  readonly ticksPerSecond: number;
   readonly slotIdSuffix?: string;
   readonly initialItemType?: string | null;
   readonly initialCount?: number;
 }): CompiledSimulationSlotTemplate {
   const submitMode = options.slot.submitMode;
   const submitInterval = submitMode === "every-n-seconds"
-    ? Math.max(1, Math.round((options.slot.submitIntervalSeconds ?? 10) * options.ticksPerSecond))
+    ? convertSecondsToSimulationTicks(options.slot.submitIntervalSeconds ?? 10)
     : null;
   const initialCount = options.initialCount ?? options.slot.initialCount;
   const lock = options.slot.lock;
@@ -1384,7 +1376,6 @@ function compileRecipePlans(options: {
   readonly recipeDefinitionMap: ReadonlyMap<string, RecipeDefinition>;
   readonly cacheGroups: readonly CompiledSimulationCacheGroup[];
   readonly nodeBindingsByStorageGroupId: ReadonlyMap<string, StorageGroupNodeBinding>;
-  readonly ticksPerSecond: number;
 }): readonly CompiledSimulationRecipePlan[] {
   const recipeConfig = options.definition.recipe;
   const ingredientCacheGroupIds = resolveRecipeCacheGroupIds({
@@ -1413,7 +1404,7 @@ function compileRecipePlans(options: {
       return [{
         recipeId: `${options.definition.id}:definition-recipe`,
         recipeType: recipeConfig.recipeType,
-        durationTicks: Math.max(1, Math.round(recipeConfig.durationSeconds * options.ticksPerSecond)),
+        durationTicks: convertSecondsToSimulationTicks(recipeConfig.durationSeconds),
         inputs: recipeConfig.inputs,
         outputs: recipeConfig.outputs,
         ingredientCacheGroupIds,
@@ -1424,7 +1415,7 @@ function compileRecipePlans(options: {
     return machineRecipes.map((recipe) => ({
       recipeId: recipe.id,
       recipeType: recipeConfig.recipeType,
-      durationTicks: Math.max(1, Math.round(recipe.durationSeconds * options.ticksPerSecond)),
+      durationTicks: convertSecondsToSimulationTicks(recipe.durationSeconds),
       inputs: recipe.inputs,
       outputs: recipe.outputs,
       ingredientCacheGroupIds,
@@ -1440,7 +1431,7 @@ function compileRecipePlans(options: {
   return [{
     recipeId: recipe.id,
     recipeType: recipeConfig.recipeType,
-    durationTicks: Math.max(1, Math.round(recipe.durationSeconds * options.ticksPerSecond)),
+    durationTicks: convertSecondsToSimulationTicks(recipe.durationSeconds),
     inputs: recipe.inputs,
     outputs: recipe.outputs,
     ingredientCacheGroupIds,

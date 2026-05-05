@@ -9,7 +9,6 @@ import type {
 } from "@/domain/types/logistics";
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
-import { reaction } from "mobx";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
@@ -38,6 +37,16 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
     id: "hypergryph-logistics-placement-gesture",
     when: isHypergryphGestureEnabled,
     handle(event, context) {
+      if (event.type === "on-exit-active-tool") {
+        if (event.from !== "logistics-placement" || event.to === "logistics-placement") {
+          return { status: "ignored" };
+        }
+
+        activeTouchLogisticsDragGestureId = null;
+        cleanupLogisticsPlacement(context.appHost);
+        return { status: "handled" };
+      }
+
       const editor = context.workspace.editor;
 
       if (event.type === "mouse move") {
@@ -232,17 +241,6 @@ export function cleanupLogisticsPlacement(appHost: AppHost): void {
   resetLogisticsRuntime(appHost);
   appHost.internalActions.hideCanvasFloatingToolbar();
   appHost.internalActions.hideCanvasRightDockToolbar();
-}
-
-export function hookLogisticsPlacementToolCleanupFallback(appHost: AppHost): () => void {
-  return reaction(
-    () => appHost.internalState.activeTool,
-    (activeTool, previousActiveTool) => {
-      if (previousActiveTool === "logistics-placement" && activeTool !== "logistics-placement") {
-        cleanupLogisticsPlacement(appHost);
-      }
-    },
-  );
 }
 
 function enterLogisticsPlacementMode(options: {

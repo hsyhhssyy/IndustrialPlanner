@@ -6,6 +6,7 @@ export type MessageKey =
   | "action.start"
   | "action.stop"
   | "action.pause"
+  | "action.resume"
   | "action.step"
   | "action.undo"
   | "action.redo"
@@ -191,6 +192,8 @@ export type MessageKey =
   | "settingsField.shortcut-basic-productionDescription"
   | "settingsField.shortcut-synthesis"
   | "settingsField.shortcut-synthesisDescription"
+  | "settingsField.shortcut-return-select"
+  | "settingsField.shortcut-return-selectDescription"
   | "settingsField.shortcut-rotate"
   | "settingsField.shortcut-rotateDescription"
   | "settingsField.shortcut-delete-device"
@@ -263,6 +266,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "action.start": "开始仿真",
     "action.stop": "停止仿真",
     "action.pause": "暂停",
+    "action.resume": "继续",
     "action.step": "单步",
     "action.undo": "撤销",
     "action.redo": "重做",
@@ -500,6 +504,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-basic-productionDescription": "设置基础生产的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-synthesis": "合成制造",
     "settingsField.shortcut-synthesisDescription": "设置合成制造的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-return-select": "返回选择模式",
+    "settingsField.shortcut-return-selectDescription": "设置返回选择模式的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-rotate": "旋转",
     "settingsField.shortcut-rotateDescription": "设置旋转预览设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-delete-device": "删除设备",
@@ -571,6 +577,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "action.start": "Start",
     "action.stop": "Stop",
     "action.pause": "Pause",
+    "action.resume": "Resume",
     "action.step": "Step",
     "action.undo": "Undo",
     "action.redo": "Redo",
@@ -808,6 +815,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-basic-productionDescription": "Set the shortcut key for basic production; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-synthesis": "Synthesis",
     "settingsField.shortcut-synthesisDescription": "Set the shortcut key for synthesis manufacturing; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-return-select": "Return To Select",
+    "settingsField.shortcut-return-selectDescription": "Set the shortcut key for returning to select mode; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-rotate": "Rotate",
     "settingsField.shortcut-rotateDescription": "Set the shortcut key for rotating preview devices; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-delete-device": "Delete Device",

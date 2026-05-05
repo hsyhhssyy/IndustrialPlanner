@@ -8,6 +8,7 @@ import type {
 export interface SimulationAction {
   start(): Promise<SimulationStartResult>;
   pause(): void;
+  resume(): void;
   stop(): void;
   getTickSnapshot(tickNumber: number): Promise<GetSimulationTickSnapshotResult>;
   advancePlaybackByDeltaMs(deltaMs: number): Promise<GetSimulationTickSnapshotResult | null>;

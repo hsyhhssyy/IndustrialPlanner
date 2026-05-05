@@ -134,6 +134,9 @@ function getEventDetail(event: GestureEvent): string {
     : "";
 
   switch (event.type) {
+    case "on-enter-active-tool":
+    case "on-exit-active-tool":
+      return `${event.from} -> ${event.to}`;
     case "mouse dragstart":
       return `button ${event.originButton}, buttons ${event.buttons}, ${event.longPress ? "long press" : "direct"}${pointerEntityDetail}`;
     case "mouse dragmove":

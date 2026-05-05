@@ -29,6 +29,11 @@ export function createSimulationControlGestureModule(): GestureMappingModule<App
         return { status: "handled" };
       }
 
+      if (simulation.state === "pause") {
+        simulation.actions.resume();
+        return { status: "handled" };
+      }
+
       void simulation.actions.start();
       return { status: "handled" };
     },

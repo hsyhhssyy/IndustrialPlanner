@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { makeAutoObservable, runInAction } from "mobx";
+import { makeAutoObservable } from "mobx";
 
+import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
 import {
   createHypergryphSelectGestureModule,
-  hookSelectToolToolbarFallback,
   type GestureActionContext,
 } from "@/app/input/gesture/actions";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
@@ -55,12 +55,13 @@ describe("createHypergryphSelectGestureModule", () => {
     expect(isDedicatedLogisticsDevice).toHaveBeenCalledWith("not-strict-device");
   });
 
-  it("keeps the current selection when the clicked entity is already selected", () => {
+  it("clears the current selection when the clicked entity is the only selected entity", () => {
     const {
       context,
       addToCollection,
       clearCollection,
       showCanvasFloatingToolbarForCollection,
+      hideCanvasFloatingToolbar,
     } = createContext("select", true, ["entity-1"]);
     const module = createHypergryphSelectGestureModule();
 
@@ -68,6 +69,38 @@ describe("createHypergryphSelectGestureModule", () => {
       {
         type: "mouse tap",
         gestureId: "mouse-select-keep-1",
+        button: 0,
+        buttons: 0,
+        position: { x: 48, y: 32 },
+        longPress: false,
+        pointerEntity: entity("entity-1"),
+        modifiers: emptyModifiers(),
+        sourceEvent: null,
+      },
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
+    expect(addToCollection).not.toHaveBeenCalled();
+    expect(showCanvasFloatingToolbarForCollection).not.toHaveBeenCalled();
+    expect(hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the current selection when the clicked entity is already part of a multi-selection", () => {
+    const {
+      context,
+      addToCollection,
+      clearCollection,
+      showCanvasFloatingToolbarForCollection,
+      hideCanvasFloatingToolbar,
+    } = createContext("select", true, ["entity-1", "entity-2"]);
+    const module = createHypergryphSelectGestureModule();
+
+    const result = module.handle(
+      {
+        type: "mouse tap",
+        gestureId: "mouse-select-keep-multi-1",
         button: 0,
         buttons: 0,
         position: { x: 48, y: 32 },
@@ -92,6 +125,7 @@ describe("createHypergryphSelectGestureModule", () => {
       ],
       EntityCollectionType.selection,
     );
+    expect(hideCanvasFloatingToolbar).not.toHaveBeenCalled();
   });
 
   it("clears the selection collection before selecting a different tapped entity", () => {
@@ -270,6 +304,107 @@ describe("createHypergryphSelectGestureModule", () => {
     ).toEqual({ status: "ignored" });
   });
 
+  it("switches back to select when the select tool button is tapped", () => {
+    const { context, setActiveTool } = createContext("move");
+    const module = createHypergryphSelectGestureModule();
+
+    const mouseResult = module.handle(
+      {
+        type: "ui-button-mouse-tap",
+        gestureId: "select-tool-button-mouse-1",
+        button: 0,
+        buttons: 0,
+        uiButtonId: "placement-tool-select",
+        modifiers: emptyModifiers(),
+        sourceEvent: null,
+      },
+      context,
+    );
+    const touchResult = module.handle(
+      {
+        type: "ui-button-touch-tap",
+        gestureId: "select-tool-button-touch-1",
+        primaryId: 1,
+        uiButtonId: "placement-tool-select",
+        modifiers: emptyModifiers(),
+        sourceEvent: null,
+      },
+      context,
+    );
+
+    expect(mouseResult).toEqual({ status: "handled" });
+    expect(touchResult).toEqual({ status: "handled" });
+    expect(setActiveTool).toHaveBeenNthCalledWith(1, "select");
+    expect(setActiveTool).toHaveBeenNthCalledWith(2, "select");
+  });
+
+  it("ignores non-primary or unrelated select tool button taps", () => {
+    const { context, setActiveTool } = createContext("move");
+    const module = createHypergryphSelectGestureModule();
+
+    expect(
+      module.handle(
+        {
+          type: "ui-button-mouse-tap",
+          gestureId: "select-tool-button-ignore-1",
+          button: 2,
+          buttons: 0,
+          uiButtonId: "placement-tool-select",
+          modifiers: emptyModifiers(),
+          sourceEvent: null,
+        },
+        context,
+      ),
+    ).toEqual({ status: "ignored" });
+
+    expect(
+      module.handle(
+        {
+          type: "ui-button-touch-tap",
+          gestureId: "select-tool-button-ignore-2",
+          primaryId: 1,
+          uiButtonId: "placement-tool-delete",
+          modifiers: emptyModifiers(),
+          sourceEvent: null,
+        },
+        context,
+      ),
+    ).toEqual({ status: "ignored" });
+
+    expect(setActiveTool).not.toHaveBeenCalled();
+  });
+
+  it("returns to select mode when the return-select shortcut is pressed", () => {
+    const { context, isShortcutFor, setActiveTool } = createContext("logistics-placement");
+    const module = createHypergryphSelectGestureModule();
+
+    const result = module.handle(
+      keyDownEvent({
+        code: "Escape",
+        key: "Escape",
+      }),
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(isShortcutFor).toHaveBeenCalledWith(
+      SHORTCUT_KEY.RETURN_SELECT,
+      "Escape",
+      "Escape",
+    );
+    expect(setActiveTool).toHaveBeenCalledWith("select");
+  });
+
+  it("ignores non-matching return-select shortcut keys", () => {
+    const { context, setActiveTool } = createContext("single-placement");
+    const module = createHypergryphSelectGestureModule();
+
+    expect(module.handle(keyDownEvent({ code: "KeyR", key: "r" }), context)).toEqual({
+      status: "ignored",
+    });
+    expect(setActiveTool).not.toHaveBeenCalled();
+  });
+
   it("shows the select toolbar again when another tool returns to select with a preserved selection", () => {
     const {
       appHost,
@@ -278,12 +413,21 @@ describe("createHypergryphSelectGestureModule", () => {
       activeTool: "move",
       selectedEntities: [entity("entity-1")],
     });
-    const dispose = hookSelectToolToolbarFallback(appHost);
+    const module = createHypergryphSelectGestureModule();
 
-    runInAction(() => {
-      appHost.internalState.activeTool = "select";
-    });
+    const result = module.handle(
+      {
+        type: "on-enter-active-tool",
+        gestureId: "enter-select-tool-1",
+        from: "move",
+        to: "select",
+        modifiers: emptyModifiers(),
+        sourceEvent: null,
+      },
+      createToolbarFallbackGestureContext(appHost),
+    );
 
+    expect(result).toEqual({ status: "handled" });
     expect(showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
       [
         "canvas-floating-toolbar-button-move",
@@ -291,8 +435,6 @@ describe("createHypergryphSelectGestureModule", () => {
       ],
       EntityCollectionType.selection,
     );
-
-    dispose();
   });
 
   it("does not show the select toolbar on return when the selection is empty", () => {
@@ -303,15 +445,42 @@ describe("createHypergryphSelectGestureModule", () => {
       activeTool: "move",
       selectedEntities: [],
     });
-    const dispose = hookSelectToolToolbarFallback(appHost);
+    const module = createHypergryphSelectGestureModule();
 
-    runInAction(() => {
-      appHost.internalState.activeTool = "select";
-    });
+    const result = module.handle(
+      {
+        type: "on-enter-active-tool",
+        gestureId: "enter-select-tool-empty-1",
+        from: "move",
+        to: "select",
+        modifiers: emptyModifiers(),
+        sourceEvent: null,
+      },
+      createToolbarFallbackGestureContext(appHost),
+    );
 
+    expect(result).toEqual({ status: "handled" });
     expect(showCanvasFloatingToolbarForCollection).not.toHaveBeenCalled();
+  });
 
-    dispose();
+  it("hides the select toolbar when leaving select mode", () => {
+    const { context, hideCanvasFloatingToolbar } = createContext("select", true, ["entity-1"]);
+    const module = createHypergryphSelectGestureModule();
+
+    const result = module.handle(
+      {
+        type: "on-exit-active-tool",
+        gestureId: "exit-select-tool-1",
+        from: "select",
+        to: "move",
+        modifiers: emptyModifiers(),
+        sourceEvent: null,
+      },
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -326,11 +495,17 @@ function createContext(
   showCanvasFloatingToolbarForCollection: ReturnType<typeof vi.fn>;
   hideCanvasFloatingToolbar: ReturnType<typeof vi.fn>;
   isDedicatedLogisticsDevice: ReturnType<typeof vi.fn>;
+  isShortcutFor: ReturnType<typeof vi.fn>;
+  setActiveTool: ReturnType<typeof vi.fn>;
 } {
   const addToCollection = vi.fn();
   const clearCollection = vi.fn();
   const showCanvasFloatingToolbarForCollection = vi.fn(() => true);
   const hideCanvasFloatingToolbar = vi.fn();
+  const setActiveTool = vi.fn();
+  const isShortcutFor = vi.fn((shortcutKeyId: string, code: string | null) => (
+    shortcutKeyId === SHORTCUT_KEY.RETURN_SELECT && code === "Escape"
+  ));
   const isDedicatedLogisticsDevice = vi.fn((definitionId: string) => [
     "belt_straight_1x1",
     "belt_turn_cw_1x1",
@@ -352,9 +527,7 @@ function createContext(
         editor: {
           state: {
             collections: {
-              selection: {
-                contains: (entityId: string) => selectedEntityIds.includes(entityId),
-              },
+              selection: createSelectionCollection(selectedEntityIds),
             },
           },
           actions: {
@@ -373,6 +546,8 @@ function createContext(
           activeTool,
         },
         internalActions: {
+          isShortcutFor,
+          setActiveTool,
           showCanvasFloatingToolbarForCollection,
           hideCanvasFloatingToolbar,
         },
@@ -384,6 +559,8 @@ function createContext(
     showCanvasFloatingToolbarForCollection,
     hideCanvasFloatingToolbar,
     isDedicatedLogisticsDevice,
+    isShortcutFor,
+    setActiveTool,
   };
 }
 
@@ -405,6 +582,21 @@ function emptyKeyboardSnapshot(): KeyboardSnapshot {
     lastKey: null,
     lastKeyCode: null,
     modifiers: emptyModifiers(),
+  };
+}
+
+function keyDownEvent(options: {
+  code: string;
+  key: string;
+}) {
+  return {
+    type: "key down" as const,
+    gestureId: "key-select-tool-shortcut-1",
+    code: options.code,
+    key: options.key,
+    keyCode: 0,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
   };
 }
 
@@ -480,6 +672,14 @@ function createSelectionCollection(entityIds: readonly string[]): EntityCollecti
   selection.contains = (entityId: string) => selection.includes(entityId);
 
   return selection;
+}
+
+function createToolbarFallbackGestureContext(appHost: AppHost): GestureActionContext<AppHost> {
+  return {
+    workspace: appHost.workspace,
+    appHost,
+    keyboard: emptyKeyboardSnapshot(),
+  } as unknown as GestureActionContext<AppHost>;
 }
 
 class TestInternalState {

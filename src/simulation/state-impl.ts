@@ -5,8 +5,7 @@ import type {
   SimulationState,
   SimulationTickSnapshot,
 } from "@/domain/types/simulation";
-
-export const DEFAULT_PLAYBACK_TICK_RATE_HZ = 1;
+import { DEFAULT_SIMULATION_SPEED } from "./tick-rate";
 
 export function createInitialSimulationRuntimeStatus(): SimulationRuntimeStatus {
   return {
@@ -23,7 +22,7 @@ export function createInitialSimulationRuntimeStatus(): SimulationRuntimeStatus 
 
 export interface SimulationStateReadWrite {
   state: SimulationState;
-  playbackTickRateHz: number;
+  simulationSpeed: number;
   hasStarted: boolean;
   runtimeStatus: SimulationRuntimeStatus;
   currentTickSnapshot: SimulationTickSnapshot | null;
@@ -32,7 +31,7 @@ export interface SimulationStateReadWrite {
 
 class SimulationStateReadWriteImpl implements SimulationStateReadWrite {
   state: SimulationState = "stop";
-  playbackTickRateHz = DEFAULT_PLAYBACK_TICK_RATE_HZ;
+  simulationSpeed = DEFAULT_SIMULATION_SPEED;
   hasStarted = false;
   runtimeStatus: SimulationRuntimeStatus = createInitialSimulationRuntimeStatus();
   currentTickSnapshot: SimulationTickSnapshot | null = null;

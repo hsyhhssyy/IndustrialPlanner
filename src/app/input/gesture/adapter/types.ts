@@ -1,4 +1,5 @@
 import type { WorldEntity } from "@/domain/entity/world-document";
+import type { ActiveTool } from "@/domain/state/types";
 
 export interface GesturePosition {
   readonly x: number;
@@ -35,6 +36,8 @@ export interface LongPressState {
 
 export type GestureEndReason = "release" | "cancel";
 export type GestureEventType =
+  | "on-enter-active-tool"
+  | "on-exit-active-tool"
   | "mouse dragstart"
   | "mouse dragmove"
   | "mouse dragend"
@@ -61,6 +64,19 @@ interface GestureEventBase {
   readonly gestureId: string;
   readonly modifiers: GestureModifiers;
   readonly sourceEvent: unknown;
+}
+
+interface ActiveToolGestureEventBase extends GestureEventBase {
+  readonly from: ActiveTool;
+  readonly to: ActiveTool;
+}
+
+export interface EnterActiveToolGestureEvent extends ActiveToolGestureEventBase {
+  readonly type: "on-enter-active-tool";
+}
+
+export interface ExitActiveToolGestureEvent extends ActiveToolGestureEventBase {
+  readonly type: "on-exit-active-tool";
 }
 
 interface GestureDragEventBase extends GestureEventBase {
@@ -213,6 +229,8 @@ export interface UiButtonMouseTapGestureEvent extends GestureEventBase {
 }
 
 export type GestureEvent =
+  | EnterActiveToolGestureEvent
+  | ExitActiveToolGestureEvent
   | MouseDragStartGestureEvent
   | MouseDragMoveGestureEvent
   | MouseDragEndGestureEvent

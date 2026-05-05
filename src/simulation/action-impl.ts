@@ -13,9 +13,12 @@ import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 import { compileSimulationTopology } from "./topology-compiler";
 import {
   createInitialSimulationRuntimeStatus,
-  DEFAULT_PLAYBACK_TICK_RATE_HZ,
   type SimulationStateReadWrite,
 } from "./state-impl";
+import {
+  DEFAULT_SIMULATION_SPEED,
+  STANDARD_TICK_RATE_PER_SECOND,
+} from "./tick-rate";
 
 export interface SimulationWorkerBridge {
   loadTopology(topology: CompiledSimulationTopology): Promise<Extract<
@@ -31,7 +34,7 @@ export interface SimulationWorkerBridge {
 
 export interface SimulationInternalAction {
   refreshFromCurrentDocument(): Promise<SimulationStartResult>;
-  setPlaybackTickRateHz(value: number): void;
+  setSimulationSpeed(value: number): void;
   reset(): void;
 }
 
@@ -76,6 +79,14 @@ implements SimulationAction, SimulationInternalAction {
     this.stateReadWrite.state = "pause";
   });
 
+  public readonly resume: SimulationAction["resume"] = action(() => {
+    if (this.stateReadWrite.state !== "pause") {
+      return;
+    }
+
+    this.stateReadWrite.state = "start";
+  });
+
   public readonly stop: SimulationAction["stop"] = action(() => {
     this.stateReadWrite.hasStarted = false;
     this.stateReadWrite.state = "stop";
@@ -93,7 +104,12 @@ implements SimulationAction, SimulationInternalAction {
     }
 
     const previousPlaybackTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
-    const tickDelta = deltaMs * this.stateReadWrite.playbackTickRateHz / 1000;
+    // simulationSpeed 有且仅有这一处可以参与运算：它只影响 add time 的推进速度。
+    // 任何其他场合都不得使用该倍率做 tick/second 换算；换算只能依赖 standard tick rate。
+    const tickDelta = deltaMs
+      * STANDARD_TICK_RATE_PER_SECOND
+      * this.stateReadWrite.simulationSpeed
+      / 1000;
 
     runInAction(() => {
       this.stateReadWrite.currentPlaybackTickNumber += tickDelta;
@@ -162,18 +178,18 @@ implements SimulationAction, SimulationInternalAction {
     return response.result;
   };
 
-  public readonly setPlaybackTickRateHz: SimulationInternalAction["setPlaybackTickRateHz"] = action((value) => {
-    if (!Number.isFinite(value)) {
+  public readonly setSimulationSpeed: SimulationInternalAction["setSimulationSpeed"] = action((value) => {
+    if (!Number.isFinite(value) || value < 0) {
       return;
     }
 
-    this.stateReadWrite.playbackTickRateHz = Math.trunc(value);
+    this.stateReadWrite.simulationSpeed = value;
   });
 
   public readonly reset: SimulationInternalAction["reset"] = action(() => {
     this.topology.setSnapshot(null);
     this.stateReadWrite.state = "stop";
-    this.stateReadWrite.playbackTickRateHz = DEFAULT_PLAYBACK_TICK_RATE_HZ;
+    this.stateReadWrite.simulationSpeed = DEFAULT_SIMULATION_SPEED;
     this.stateReadWrite.hasStarted = false;
     this.stateReadWrite.runtimeStatus = createInitialSimulationRuntimeStatus();
     this.stateReadWrite.currentTickSnapshot = null;

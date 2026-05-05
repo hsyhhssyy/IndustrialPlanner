@@ -1,7 +1,7 @@
+import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import type { CanvasFloatingToolbarButtonId } from "@/app/state/state-impl";
 import { EntityCollectionType } from "@/domain/state/types";
-import { reaction } from "mobx";
 
 import type { GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
@@ -19,8 +19,53 @@ const SELECT_STRICT_LOGISTICS_FLOATING_TOOLBAR_BUTTON_IDS = [
 export function createHypergryphSelectGestureModule(): GestureMappingModule<AppHost> {
   return {
     id: "hypergryph-select-gesture",
+    priority: 100,
     when: isHypergryphGestureEnabled,
     handle(event, context) {
+      if (event.type === "key down") {
+        if (!context.appHost.internalActions.isShortcutFor(
+          SHORTCUT_KEY.RETURN_SELECT,
+          event.code,
+          event.key,
+        )) {
+          return { status: "ignored" };
+        }
+
+        context.appHost.internalActions.setActiveTool("select");
+        return { status: "handled" };
+      }
+
+      if (event.type === "ui-button-touch-tap" || event.type === "ui-button-mouse-tap") {
+        if (event.uiButtonId !== "placement-tool-select") {
+          return { status: "ignored" };
+        }
+
+        if (event.type === "ui-button-mouse-tap" && event.button !== 0) {
+          return { status: "ignored" };
+        }
+
+        context.appHost.internalActions.setActiveTool("select");
+        return { status: "handled" };
+      }
+
+      if (event.type === "on-exit-active-tool") {
+        if (event.from !== "select" || event.to === "select") {
+          return { status: "ignored" };
+        }
+
+        context.appHost.internalActions.hideCanvasFloatingToolbar();
+        return { status: "handled" };
+      }
+
+      if (event.type === "on-enter-active-tool") {
+        if (event.to !== "select") {
+          return { status: "ignored" };
+        }
+
+        restoreSelectionToolbar(context.appHost);
+        return { status: "handled" };
+      }
+
       const editor = context.workspace.editor;
       if (editor === null || context.appHost.internalState.activeTool !== "select") {
         return { status: "ignored" };
@@ -30,7 +75,14 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
         entityId: string;
         definitionId: string;
       }) => {
-        if (!editor.state.collections.selection.contains(options.entityId)) {
+        const selection = editor.state.collections.selection;
+
+        if (selection.length === 1 && selection.contains(options.entityId)) {
+          clearSelection();
+          return;
+        }
+
+        if (!selection.contains(options.entityId)) {
           editor.actions.clearCollection(EntityCollectionType.selection);
         }
 
@@ -85,23 +137,6 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
       }
     },
   };
-}
-
-export function hookSelectToolToolbarFallback(appHost: AppHost): () => void {
-  return reaction(
-    () => appHost.internalState.activeTool,
-    (activeTool, previousActiveTool) => {
-      if (
-        activeTool !== "select"
-        || previousActiveTool === "select"
-        || !appHost.state.settings.hypergryphOperationMode
-      ) {
-        return;
-      }
-
-      restoreSelectionToolbar(appHost);
-    },
-  );
 }
 
 function restoreSelectionToolbar(appHost: AppHost): void {

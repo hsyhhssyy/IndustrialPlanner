@@ -9,12 +9,12 @@ export function resolveSimulationRuntimeProgressPercent(
     return null;
   }
 
-  const { desiredTicks, progressTicks } = runtimeStatus;
-  if (progressTicks === null || desiredTicks === null || desiredTicks <= 0) {
+  const { desiredSeconds, progressSeconds } = runtimeStatus;
+  if (progressSeconds === null || desiredSeconds === null || desiredSeconds <= 0) {
     return null;
   }
 
-  const progressPercent = progressTicks / desiredTicks * 100;
+  const progressPercent = progressSeconds / desiredSeconds * 100;
   if (!Number.isFinite(progressPercent)) {
     return null;
   }
@@ -50,12 +50,12 @@ export function SimulationRuntimeInspector({
       value: formatRuntimeValue(runtimeStatus?.recipeId ?? null),
     },
     {
-      field: "progressTicks",
-      value: formatRuntimeValue(runtimeStatus?.progressTicks ?? null),
+      field: "progressSeconds",
+      value: formatRuntimeValue(runtimeStatus?.progressSeconds ?? null),
     },
     {
-      field: "desiredTicks",
-      value: formatRuntimeValue(runtimeStatus?.desiredTicks ?? null),
+      field: "desiredSeconds",
+      value: formatRuntimeValue(runtimeStatus?.desiredSeconds ?? null),
     },
     {
       field: "progressPercent",

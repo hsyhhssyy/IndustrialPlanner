@@ -6,7 +6,6 @@ import {
   type MarqueeCollectionType,
 } from "@/domain/state/types";
 import type { GridPoint, GridRect } from "@/domain/types/grid";
-import { reaction } from "mobx";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
@@ -35,6 +34,14 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
       const editor = context.workspace.editor;
 
       switch (event.type) {
+        case "on-exit-active-tool":
+          if (event.from !== "marquee" || event.to === "marquee") {
+            return { status: "ignored" };
+          }
+
+          cleanupMarquee(context.appHost, editor, event.to === "move");
+          return { status: "handled" };
+
         case "key down":
           if (event.code === "Escape" && context.appHost.internalState.activeTool === "marquee") {
             exitMarqueeToSelect(context.appHost, editor);
@@ -335,18 +342,6 @@ export function cleanupMarquee(appHost: AppHost, editor: EditorContract | null, 
   appHost.internalState.toolInfo.marqueeType = EntityCollectionType.marquee;
   appHost.internalActions.hideCanvasRightDockToolbar();
   appHost.internalActions.hideCanvasTopLeftCornerToolbar();
-}
-
-export function hookMarqueeToolCleanupFallback(appHost: AppHost): () => void {
-  return reaction(
-    () => appHost.internalState.activeTool,
-    (activeTool, previousActiveTool) => {
-      if (previousActiveTool === "marquee" && activeTool !== "marquee") {
-        const skipClearSelection = activeTool === "move";
-        cleanupMarquee(appHost, appHost.workspace.editor, skipClearSelection);
-      }
-    },
-  );
 }
 
 function toggleEntityInSelection(editor: EditorContract, entityId: string): void {

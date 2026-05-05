@@ -244,8 +244,13 @@ export class AppActionImpl implements AppAction, AppInternalAction {
   });
 
   public readonly setActiveTool: AppInternalAction["setActiveTool"] = action((activeTool) => {
-    if (this.internalState.activeTool === activeTool) {
+    const previousActiveTool = this.internalState.activeTool;
+    if (previousActiveTool === activeTool) {
       return;
+    }
+
+    if (!(previousActiveTool === "select" && activeTool === "single-placement")) {
+      this.internalState.runtime.selectingPlacementGroup = null;
     }
 
     this.internalState.activeTool = activeTool;

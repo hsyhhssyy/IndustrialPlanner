@@ -14,6 +14,7 @@ import {
   type SimulationInternalAction,
   type SimulationWorkerBridge,
 } from "./action-impl";
+import { convertSimulationTicksToSeconds } from "./tick-rate";
 import {
   createSimulationStateReadWrite,
   type SimulationStateReadWrite,
@@ -54,11 +55,11 @@ export function createSimulationHost(
     get state() {
       return internalState.state;
     },
-    get playbackTickRateHz() {
-      return internalState.playbackTickRateHz;
+    get simulationSpeed() {
+      return internalState.simulationSpeed;
     },
-    set playbackTickRateHz(value: number) {
-      internalActions.setPlaybackTickRateHz(value);
+    set simulationSpeed(value: number) {
+      internalActions.setSimulationSpeed(value);
     },
     topology: topologyStore,
     queries: {
@@ -117,8 +118,12 @@ function resolveDeviceRuntimeStatus(options: {
 
   return {
     recipeId: deviceSnapshot.recipe?.recipeId ?? null,
-    progressTicks: deviceSnapshot.recipe?.progressTicks ?? null,
-    desiredTicks: deviceSnapshot.recipe?.durationTicks ?? null,
+    progressSeconds: deviceSnapshot.recipe === null
+      ? null
+      : convertSimulationTicksToSeconds(deviceSnapshot.recipe.progressTicks),
+    desiredSeconds: deviceSnapshot.recipe === null
+      ? null
+      : convertSimulationTicksToSeconds(deviceSnapshot.recipe.durationTicks),
   };
 }
 

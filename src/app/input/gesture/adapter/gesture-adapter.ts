@@ -15,7 +15,9 @@ import type {
   LongPressState,
   LongPressStateListener,
 } from "./types";
+import { reaction, type IReactionDisposer } from "mobx";
 import type { WorldEntity } from "@/domain/entity/world-document";
+import type { ActiveTool } from "@/domain/state/types";
 
 const TOUCH_LONG_PRESS_MS = 500;
 const TOUCH_LONG_PRESS_INDICATOR_DELAY_MS = 200;
@@ -40,10 +42,19 @@ interface GestureAdapterThresholds {
 
 export interface GestureAdapterOptions {
   readonly thresholds?: Partial<GestureAdapterThresholds>;
-  readonly now?: () => number;
-  readonly setTimeout?: (callback: () => void, delayMs: number) => TimerHandle;
-  readonly clearTimeout?: (handle: TimerHandle) => void;
-  readonly resolvePointerEntity?: (position: GesturePosition) => WorldEntity | null;
+}
+
+export interface GestureAdapterAppHost {
+  readonly workspace: {
+    readonly editor: {
+      readonly queries: {
+        findEntityAtClientPixelPoint: (position: GesturePosition) => WorldEntity | null;
+      };
+    } | null;
+  };
+  readonly internalState: {
+    activeTool: ActiveTool;
+  };
 }
 
 interface MouseSession {
@@ -97,14 +108,18 @@ interface MultiTouchSnapshot {
 }
 
 export class GestureAdapter {
+  private readonly appHost: GestureAdapterAppHost;
   private readonly thresholds: GestureAdapterThresholds;
-  private readonly now: () => number;
-  private readonly scheduleTimeout: (callback: () => void, delayMs: number) => TimerHandle;
-  private readonly cancelTimeout: (handle: TimerHandle) => void;
-  private readonly resolvePointerEntity: (position: GesturePosition) => WorldEntity | null;
+  private readonly now = () => performance.now();
+  private readonly scheduleTimeout = (callback: () => void, delayMs: number): TimerHandle =>
+    setTimeout(callback, delayMs);
+  private readonly cancelTimeout = (handle: TimerHandle): void => {
+    clearTimeout(handle);
+  };
   private readonly gestureListeners = new Set<GestureListener>();
   private readonly keyboardListeners = new Set<KeyboardSnapshotListener>();
   private readonly longPressListeners = new Set<LongPressStateListener>();
+  private readonly unsubscribeActiveToolReaction: IReactionDisposer;
   private readonly pressedKeys = new Set<string>();
   private mouseSession: MouseSession | null = null;
   private lastMousePosition: GesturePosition | null = null;
@@ -134,7 +149,8 @@ export class GestureAdapter {
     progress: 0,
   };
 
-  public constructor(options: GestureAdapterOptions = {}) {
+  public constructor(appHost: GestureAdapterAppHost, options: GestureAdapterOptions = {}) {
+    this.appHost = appHost;
     this.thresholds = {
       touchLongPressMs: options.thresholds?.touchLongPressMs ?? TOUCH_LONG_PRESS_MS,
       touchMoveSlopPx: options.thresholds?.touchMoveSlopPx ?? TOUCH_MOVE_SLOP_PX,
@@ -146,14 +162,20 @@ export class GestureAdapter {
       wheelAccumulateThreshold:
         options.thresholds?.wheelAccumulateThreshold ?? WHEEL_ACCUMULATE_THRESHOLD,
     };
-    this.now = options.now ?? (() => performance.now());
-    this.scheduleTimeout = options.setTimeout ?? ((callback, delayMs) => setTimeout(callback, delayMs));
-    this.cancelTimeout = options.clearTimeout ?? ((handle) => clearTimeout(handle));
-    this.resolvePointerEntity = options.resolvePointerEntity ?? (() => null);
     this.longPressState = {
       ...this.longPressState,
       durationMs: this.thresholds.touchLongPressMs,
     };
+    this.unsubscribeActiveToolReaction = reaction(
+      () => this.appHost.internalState.activeTool,
+      (activeTool, previousActiveTool) => {
+        if (activeTool === previousActiveTool) {
+          return;
+        }
+
+        this.dispatchActiveToolEvents(previousActiveTool, activeTool);
+      },
+    );
   }
 
   public subscribe(listener: GestureListener): () => void {
@@ -345,6 +367,7 @@ export class GestureAdapter {
   }
 
   public dispose(): void {
+    this.unsubscribeActiveToolReaction();
     this.cancelAllPointerSessions();
     this.clearPressedKeys();
     this.gestureListeners.clear();
@@ -920,7 +943,7 @@ export class GestureAdapter {
   }
 
   private resolvePointerEntityAt(position: GesturePosition): WorldEntity | null {
-    return this.resolvePointerEntity(position);
+    return this.appHost.workspace.editor?.queries.findEntityAtClientPixelPoint(position) ?? null;
   }
 
   private setLongPressState(state: LongPressState): void {
@@ -952,6 +975,26 @@ export class GestureAdapter {
     this.persistDragPayload(event);
   }
 
+  private dispatchActiveToolEvents(from: ActiveTool, to: ActiveTool): void {
+    const gestureId = this.nextGestureId("active-tool");
+    const baseEvent = {
+      gestureId,
+      from,
+      to,
+      modifiers: emptyModifiers(),
+      sourceEvent: null,
+    };
+
+    this.dispatchGesture({
+      type: "on-exit-active-tool",
+      ...baseEvent,
+    });
+    this.dispatchGesture({
+      type: "on-enter-active-tool",
+      ...baseEvent,
+    });
+  }
+
   private persistDragPayload(event: GestureEvent): void {
     if (isMouseDragGestureEvent(event)) {
       if (this.mouseSession?.gestureId === event.gestureId) {
@@ -971,8 +1014,11 @@ export class GestureAdapter {
   }
 }
 
-export function createGestureAdapter(options?: GestureAdapterOptions): GestureAdapter {
-  return new GestureAdapter(options);
+export function createGestureAdapter(
+  appHost: GestureAdapterAppHost,
+  options?: GestureAdapterOptions,
+): GestureAdapter {
+  return new GestureAdapter(appHost, options);
 }
 
 function getPointerKind(pointerType: string): "mouse" | "touch" | "unknown" {

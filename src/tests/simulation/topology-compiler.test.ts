@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createRegistryContract } from "@/registry";
+import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import { compileSimulationTopology } from "@/simulation/topology-compiler";
 
 describe("compileSimulationTopology", () => {
@@ -60,7 +61,7 @@ describe("compileSimulationTopology", () => {
 
     expect(belt?.recipePlan).toMatchObject({
       recipeType: "reserved-item",
-      durationTicks: 4,
+      durationTicks: 2 * STANDARD_TICK_RATE_PER_SECOND,
       inputs: [{ itemId: "any", amount: 1 }],
       outputs: [{ itemId: "same-as-input", amount: 1 }],
     });

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { observable, runInAction } from "mobx";
 import { describe, expect, it, vi } from "vitest";
 
 import { createGestureAdapter, type GestureEvent } from "@/app/input/gesture/adapter";
@@ -15,6 +16,17 @@ import { createRegistryContract } from "@/registry";
 
 interface FakeAppHost {
   readonly id: string;
+}
+
+function createAdapterHost(activeTool = "select") {
+  return {
+    workspace: {
+      editor: null,
+    },
+    internalState: observable({
+      activeTool,
+    }),
+  };
 }
 
 function createWorkspace(): WorkspaceContract {
@@ -118,7 +130,7 @@ function emptyModifiers() {
 
 describe("GestureActionRouter", () => {
   it("uses when guards and priority order before consuming handled events", () => {
-    const adapter = createGestureAdapter();
+    const adapter = createGestureAdapter(createAdapterHost());
     const workspace = createWorkspace();
     const appHost: FakeAppHost = { id: "host" };
     const calls: string[] = [];
@@ -167,7 +179,7 @@ describe("GestureActionRouter", () => {
   });
 
   it("allows non-exclusive modules to continue dispatch with consume false", () => {
-    const adapter = createGestureAdapter();
+    const adapter = createGestureAdapter(createAdapterHost());
     const workspace = createWorkspace();
     const calls: string[] = [];
     const router = createGestureActionRouter({
@@ -205,7 +217,7 @@ describe("GestureActionRouter", () => {
   });
 
   it("keeps dragmove and dragend routed to the module that claimed dragstart", () => {
-    const adapter = createGestureAdapter();
+    const adapter = createGestureAdapter(createAdapterHost());
     const workspace = createWorkspace();
     const claimedCalls: string[] = [];
     const fallbackCalls: string[] = [];
@@ -256,7 +268,7 @@ describe("GestureActionRouter", () => {
   });
 
   it("passes workspace, appHost and keyboard snapshot through context", () => {
-    const adapter = createGestureAdapter();
+    const adapter = createGestureAdapter(createAdapterHost());
     const workspace = createWorkspace();
     const appHost: FakeAppHost = { id: "app-host" };
     const contextSpy = vi.fn();
@@ -294,7 +306,7 @@ describe("GestureActionRouter", () => {
   });
 
   it("subscribes to adapter events and stops after dispose", () => {
-    const adapter = createGestureAdapter();
+    const adapter = createGestureAdapter(createAdapterHost());
     const workspace = createWorkspace();
     const calls: string[] = [];
     const router = createGestureActionRouter({
@@ -357,7 +369,7 @@ describe("GestureActionRouter", () => {
   });
 
   it("forwards key and semantic ui button events from the adapter", () => {
-    const adapter = createGestureAdapter();
+    const adapter = createGestureAdapter(createAdapterHost());
     const workspace = createWorkspace();
     const received: Array<{ type: string; pressedShift: boolean; uiButtonId?: string }> = [];
 
@@ -413,7 +425,7 @@ describe("GestureActionRouter", () => {
   });
 
   it("rejects duplicate module ids and supports unregistering modules", () => {
-    const adapter = createGestureAdapter();
+    const adapter = createGestureAdapter(createAdapterHost());
     const workspace = createWorkspace();
     const calls: string[] = [];
     const router = createGestureActionRouter({
@@ -441,5 +453,74 @@ describe("GestureActionRouter", () => {
 
     expect(calls).toEqual([]);
     expect(router.getRegisteredModuleIds()).toEqual([]);
+  });
+
+  it("dispatches active tool exit before enter and blocks later handlers once one is not ignored", () => {
+    const adapterHost = createAdapterHost();
+    const adapter = createGestureAdapter(adapterHost);
+    const workspace = createWorkspace();
+    const calls: string[] = [];
+
+    createGestureActionRouter({
+      gestureAdapter: adapter,
+      workspace,
+      getAppHost: () => ({ id: "host" }),
+      modules: [
+        createModule({
+          id: "exit-first",
+          priority: 40,
+          handle: (event) => {
+            if (event.type !== "on-exit-active-tool") {
+              return { status: "ignored" };
+            }
+
+            calls.push("exit-first");
+            return { status: "handled", consume: false };
+          },
+        }),
+        createModule({
+          id: "exit-second",
+          priority: 30,
+          handle: (event) => {
+            if (event.type !== "on-exit-active-tool") {
+              return { status: "ignored" };
+            }
+
+            calls.push("exit-second");
+            return { status: "handled" };
+          },
+        }),
+        createModule({
+          id: "enter-first",
+          priority: 20,
+          handle: (event) => {
+            if (event.type !== "on-enter-active-tool") {
+              return { status: "ignored" };
+            }
+
+            calls.push("enter-first");
+            return { status: "handled", consume: false };
+          },
+        }),
+        createModule({
+          id: "enter-second",
+          priority: 10,
+          handle: (event) => {
+            if (event.type !== "on-enter-active-tool") {
+              return { status: "ignored" };
+            }
+
+            calls.push("enter-second");
+            return { status: "handled" };
+          },
+        }),
+      ],
+    });
+
+    runInAction(() => {
+      adapterHost.internalState.activeTool = "move";
+    });
+
+    expect(calls).toEqual(["exit-first", "enter-first"]);
   });
 });

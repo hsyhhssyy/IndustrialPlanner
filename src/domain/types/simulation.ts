@@ -385,8 +385,8 @@ export interface SimulationRuntimeStatus {
 
 export interface SimulationDeviceRuntimeStatus {
   readonly recipeId: string | null;
-  readonly progressTicks: number | null;
-  readonly desiredTicks: number | null;
+  readonly progressSeconds: number | null;
+  readonly desiredSeconds: number | null;
 }
 
 export interface SimulationStartResult {

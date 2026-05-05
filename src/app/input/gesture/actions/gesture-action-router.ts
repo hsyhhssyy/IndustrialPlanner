@@ -122,7 +122,7 @@ export class GestureActionRouter<THost = unknown> {
         }
       }
 
-      if (result.consume !== false) {
+      if (result.consume !== false || isActiveToolLifecycleEvent(event)) {
         return {
           handledBy,
           consumedBy: entry.module.id,
@@ -233,6 +233,10 @@ function isDragEvent(event: GestureEvent): boolean {
 
 function isDragEndEvent(event: GestureEvent): boolean {
   return event.type === "mouse dragend" || event.type === "touch dragend";
+}
+
+function isActiveToolLifecycleEvent(event: GestureEvent): boolean {
+  return event.type === "on-enter-active-tool" || event.type === "on-exit-active-tool";
 }
 
 function emptyDispatchResult(): GestureActionRouterDispatchResult {

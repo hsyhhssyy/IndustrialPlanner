@@ -37,6 +37,8 @@ const DEVICE_SPRITE_MAPPINGS = [
   ['精炼炉', 'item_port_furnance_1'],
   ['配件机', 'item_port_cmpt_mc_1'],
   ['采种机', 'item_port_seedcol_1'],
+  ['存取线基段', 'item_port_log_hongs_bus'],
+  ['存取线源桩', 'item_port_log_hongs_bus_source'],
 ];
 
 function createMaskBuffer(sourceBuffer, width, height, channels) {

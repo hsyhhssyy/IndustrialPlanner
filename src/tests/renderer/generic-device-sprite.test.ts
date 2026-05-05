@@ -111,6 +111,14 @@ vi.mock("pixi.js", () => {
     public roundPixels = false
     public visible = true
     public mask: unknown = null
+    public readonly rectCalls: Array<{
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }> = []
+    public readonly strokeCalls: unknown[] = []
+    public readonly fillCalls: unknown[] = []
 
     public constructor(options?: { roundPixels?: boolean }) {
       if (options?.roundPixels) {
@@ -118,15 +126,18 @@ vi.mock("pixi.js", () => {
       }
     }
 
-    public rect(_x: number, _y: number, _width: number, _height: number): this {
+    public rect(x: number, y: number, width: number, height: number): this {
+      this.rectCalls.push({ x, y, width, height })
       return this
     }
 
-    public stroke(_options?: unknown): this {
+    public stroke(options?: unknown): this {
+      this.strokeCalls.push(options)
       return this
     }
 
-    public fill(_options?: unknown): this {
+    public fill(options?: unknown): this {
+      this.fillCalls.push(options)
       return this
     }
 
@@ -178,6 +189,11 @@ interface RenderedSpriteSnapshot {
   texture: unknown;
   alpha?: number;
   mask?: unknown;
+}
+
+interface RenderedGraphicsSnapshot {
+  visible: boolean;
+  strokeCalls: unknown[];
 }
 
 describe("GenericDeviceSprite", () => {
@@ -548,6 +564,83 @@ describe("GenericDeviceSprite", () => {
 
     expect(previewMask?.texture).toMatchObject({
       id: "device-texture-fallback",
+    })
+  })
+
+  it("scales the single-selection flow glow border width from the longest side and clamps it", async () => {
+    const resolvedTexture = createLoadedTextureMock("device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: resolvedTexture,
+      [MASK_KEY]: resolvedMaskTexture,
+    })
+    const sprite = new GenericDeviceSprite(
+      "single-selected-device",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: ["single-selected-device"],
+      previewIds: [],
+    })
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 32,
+      rotation: 0,
+    }, context)
+
+    await flushMicrotasks(8)
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 32,
+      rotation: 0,
+    }, context)
+
+    const flowGlowBorder = resolveFlowGlowBorderGraphics(overlayLayer)
+    expect(flowGlowBorder?.visible).toBe(true)
+    expect(flowGlowBorder?.strokeCalls).toHaveLength(1)
+    expect(flowGlowBorder?.strokeCalls[0]).toMatchObject({
+      width: 3.84,
+    })
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 8,
+      height: 8,
+      rotation: 0,
+    }, context)
+
+    expect(flowGlowBorder?.strokeCalls.at(-1)).toMatchObject({
+      width: 1,
+    })
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 96,
+      height: 40,
+      rotation: 0,
+    }, context)
+
+    expect(flowGlowBorder?.strokeCalls.at(-1)).toMatchObject({
+      width: 5,
     })
   })
 
@@ -1015,6 +1108,18 @@ function resolvePortOverlayRoot(overlayLayer: ReturnType<typeof createLayerStub>
     visible?: boolean;
     children?: unknown[];
   } | undefined
+}
+
+function resolveFlowGlowBorderGraphics(overlayLayer: ReturnType<typeof createLayerStub>) {
+  const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
+    children?: unknown[];
+  } | undefined
+
+  const flowGlowRoot = overlayRoot?.children?.[2] as {
+    children?: unknown[];
+  } | undefined
+
+  return flowGlowRoot?.children?.[1] as RenderedGraphicsSnapshot | undefined
 }
 
 function createLayerStub() {

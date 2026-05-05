@@ -1,6 +1,7 @@
 export {
   GestureAdapter,
   createGestureAdapter,
+  type GestureAdapterAppHost,
   type GestureAdapterOptions,
 } from "./gesture-adapter";
 export type {

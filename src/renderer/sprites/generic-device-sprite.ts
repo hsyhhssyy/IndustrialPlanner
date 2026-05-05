@@ -36,7 +36,9 @@ const PREVIEW_BORDER_ALPHA = 0.5;
 
 const FLOW_GLOW_TEXTURE_PATH = "/textures/flow-glow.png";
 /** 边缘流光内边框粗细（px），默认 5px */
-const FLOW_GLOW_BORDER_WIDTH = 5;
+/** 2026-05-05: 现改为动态计算后的上限值，真实线宽按实体渲染后最长边的 8% 决定，并夹取到 1-5px。 */
+const FLOW_GLOW_BORDER_MAX_WIDTH = 5;
+const FLOW_GLOW_BORDER_MIN_WIDTH = 1;
 /** 流光滑动周期（ms） */
 const FLOW_GLOW_SCROLL_INTERVAL_MS = 5000;
 
@@ -464,7 +466,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     this.loadFlowGlowTexture();
 
-    const bw = FLOW_GLOW_BORDER_WIDTH;
+    const bw = resolveFlowGlowBorderWidth(layout);
     const x0 = layout.x;
     const y0 = layout.y;
     const w = layout.width;
@@ -1027,6 +1029,15 @@ function resolveWorldEntitySelectionStrokeWidth(gridCellPixelSize: number): numb
   return Math.max(
     WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH,
     Math.min(WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH, width),
+  );
+}
+
+function resolveFlowGlowBorderWidth(layout: Pick<RenderSpriteLayout, "width" | "height">): number {
+  const width = Math.max(layout.width, layout.height) * 0.08;
+
+  return Math.max(
+    FLOW_GLOW_BORDER_MIN_WIDTH,
+    Math.min(FLOW_GLOW_BORDER_MAX_WIDTH, width),
   );
 }
 

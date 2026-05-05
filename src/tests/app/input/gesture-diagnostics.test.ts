@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { createHypergryphGestureDiagnosticsModule } from "@/app/input/gesture/actions";
 import {
+  createGestureDiagnosticsModule,
   createGestureDiagnosticsStore,
 } from "@/app/input/gesture/diagnostics";
 import type { GestureEvent } from "@/app/input/gesture/adapter";
@@ -94,7 +94,7 @@ function entity(id: string): WorldEntity {
 describe("GestureDiagnosticsStore", () => {
   it("records gesture events without consuming router dispatch", () => {
     const store = createGestureDiagnosticsStore();
-    const module = createHypergryphGestureDiagnosticsModule(store);
+    const module = createGestureDiagnosticsModule(store);
     const event = {
       ...mouseTapEvent(),
       pointerEntity: entity("entity-7"),
@@ -115,54 +115,12 @@ describe("GestureDiagnosticsStore", () => {
     });
   });
 
-  it("only enables the diagnostics module while hypergryph operation mode is on", () => {
+  it("exposes the diagnostics module as a global router observer", () => {
     const store = createGestureDiagnosticsStore();
-    const module = createHypergryphGestureDiagnosticsModule(store);
+    const module = createGestureDiagnosticsModule(store);
 
-    expect(module.when?.({
-      workspace: {} as never,
-      appHost: {
-        state: {
-          settings: {
-            hypergryphOperationMode: true,
-          },
-        },
-      } as never,
-      keyboard: {
-        pressedKeys: new Set<string>(),
-        lastCode: null,
-        lastKey: null,
-        lastKeyCode: null,
-        modifiers: {
-          alt: false,
-          ctrl: false,
-          meta: false,
-          shift: false,
-        },
-      },
-    })).toBe(true);
-    expect(module.when?.({
-      workspace: {} as never,
-      appHost: {
-        state: {
-          settings: {
-            hypergryphOperationMode: false,
-          },
-        },
-      } as never,
-      keyboard: {
-        pressedKeys: new Set<string>(),
-        lastCode: null,
-        lastKey: null,
-        lastKeyCode: null,
-        modifiers: {
-          alt: false,
-          ctrl: false,
-          meta: false,
-          shift: false,
-        },
-      },
-    })).toBe(false);
+    expect(module.when).toBeUndefined();
+    expect(module.id).toBe("gesture-diagnostics");
   });
 
   it("keeps a bounded event history and publishes keyboard snapshots", () => {

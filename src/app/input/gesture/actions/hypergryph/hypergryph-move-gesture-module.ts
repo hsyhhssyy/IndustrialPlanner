@@ -7,7 +7,6 @@ import { EntityCollectionType } from "@/domain/state/types";
 import type { GridPoint, GridRect } from "@/domain/types/grid";
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
-import { reaction } from "mobx";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
@@ -26,6 +25,15 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
     id: "hypergryph-move-gesture",
     when: isHypergryphGestureEnabled,
     handle(event, context) {
+      if (event.type === "on-exit-active-tool") {
+        if (event.from !== "move" || event.to === "move") {
+          return { status: "ignored" };
+        }
+
+        cleanupMoveOperationDraft(context.appHost);
+        return { status: "handled" };
+      }
+
       const editor = context.workspace.editor;
       if (editor === null) {
         return { status: "ignored" };
@@ -641,17 +649,6 @@ export function cleanupMoveOperationDraft(appHost: AppHost): void {
   }
 
   clearMoveUi(appHost);
-}
-
-export function hookMoveToolCleanupFallback(appHost: AppHost): () => void {
-  return reaction(
-    () => appHost.internalState.activeTool,
-    (activeTool, previousActiveTool) => {
-      if (previousActiveTool === "move" && activeTool !== "move") {
-        cleanupMoveOperationDraft(appHost);
-      }
-    },
-  );
 }
 
 function clearMoveUi(appHost: AppHost): void {

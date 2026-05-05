@@ -39,6 +39,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "shortcut-warehouse": "C",
         "shortcut-basic-production": "V",
         "shortcut-synthesis": "B",
+        "shortcut-return-select": "Esc",
         "shortcut-rotate": "R",
         "shortcut-delete-device": "F",
         "game-show-hotkeys": true,
@@ -66,6 +67,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["shortcut-warehouse"]).toBe("C");
     expect(hydratedController.values["shortcut-basic-production"]).toBe("V");
     expect(hydratedController.values["shortcut-synthesis"]).toBe("B");
+    expect(hydratedController.values["shortcut-return-select"]).toBe("Esc");
     expect(hydratedController.values["shortcut-rotate"]).toBe("R");
     expect(hydratedController.values["shortcut-delete-device"]).toBe("F");
     expect(hydratedController.values["game-always-show-grid-lines"]).toBe(true);
@@ -173,6 +175,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "shortcut-warehouse": "C",
         "shortcut-basic-production": "V",
         "shortcut-synthesis": "B",
+        "shortcut-return-select": "Esc",
         "shortcut-rotate": "R",
         "shortcut-delete-device": "F",
         "game-show-hotkeys": true,

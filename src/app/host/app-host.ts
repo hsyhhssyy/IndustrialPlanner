@@ -34,6 +34,10 @@ export function createAppHost(
 ): AppHost {
   const disposers: Array<() => void> = [];
   const internalState = createUiStateReadWrite();
+  const host = {
+    workspace,
+    internalState,
+  } as AppHost;
   const publicState: AppContract["state"] = {
     get settings() {
       return internalState.settings;
@@ -54,14 +58,11 @@ export function createAppHost(
       return internalState.toolInfo;
     },
   };
-  const gestureAdapter = createGestureAdapter({
-    resolvePointerEntity: (position) => workspace.editor?.queries.findEntityAtClientPixelPoint(position) ?? null,
-  });
+  const gestureAdapter = createGestureAdapter(host);
   const gestureDiagnostics = createGestureDiagnosticsStore();
   const encyclopediaPicker = new WorkbenchEncyclopediaPickerController(
     () => internalState.workbench.toolbox.wiki,
   );
-  const host = {} as AppHost;
   const gestureActionRouter = createGestureActionRouter<AppHost>({
     gestureAdapter,
     workspace,

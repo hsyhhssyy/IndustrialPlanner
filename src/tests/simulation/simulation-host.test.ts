@@ -8,12 +8,21 @@ import { createDummyWorldDocument } from "@/editor/dummy-document"
 import { createRegistryContract } from "@/registry"
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store"
 import { createSimulationHost } from "@/simulation/simulation-host"
+import {
+  convertSimulationTicksToSeconds,
+  STANDARD_TICK_RATE_PER_SECOND,
+} from "@/simulation/tick-rate"
 
 afterEach(() => {
   vi.unstubAllGlobals()
 })
 
 describe("createSimulationHost", () => {
+  const transportRecipeDurationTicks = 2 * STANDARD_TICK_RATE_PER_SECOND
+  const transportRecipeDurationSeconds = convertSimulationTicksToSeconds(transportRecipeDurationTicks)
+  const transportRecipeCompletionTick = transportRecipeDurationTicks + 1
+  const transportDeliveryTick = transportRecipeDurationTicks + 2
+
   it("exposes the compiled topology through the public contract", async () => {
     vi.stubGlobal("Worker", undefined)
 
@@ -36,7 +45,7 @@ describe("createSimulationHost", () => {
     host.dispose()
   })
 
-  it("updates the public simulation state through start pause and stop actions", async () => {
+  it("updates the public simulation state through start pause resume and stop actions", async () => {
     vi.stubGlobal("Worker", undefined)
 
     const { workspace } = createWorkspace(createDummyWorldDocument())
@@ -50,8 +59,51 @@ describe("createSimulationHost", () => {
     host.actions.pause()
     expect(host.state).toBe("pause")
 
+    host.actions.resume()
+    expect(host.state).toBe("start")
+
     host.actions.stop()
     expect(host.state).toBe("stop")
+
+    host.dispose()
+  })
+
+  it("resumes playback from the paused tick without recompiling the simulation", async () => {
+    vi.stubGlobal("Worker", undefined)
+
+    const { workspace } = createWorkspace(createDummyWorldDocument())
+    const host = createSimulationHost(workspace)
+
+    await host.actions.start()
+    await host.actions.getTickSnapshot(0)
+
+    const tickOne = await host.actions.advancePlaybackByDeltaMs(500)
+    expect(tickOne?.status).toBe("ready")
+    const firstAdvancedTickNumber = tickOne?.status === "ready"
+      ? tickOne.snapshot.tickNumber
+      : null
+
+    expect(firstAdvancedTickNumber).not.toBeNull()
+
+    const topologyBeforePause = host.topology.getSnapshot()
+
+    host.actions.pause()
+    expect(host.state).toBe("pause")
+    expect(await host.actions.advancePlaybackByDeltaMs(500)).toBeNull()
+
+    host.actions.resume()
+    expect(host.state).toBe("start")
+
+    const tickTwo = await host.actions.advancePlaybackByDeltaMs(500)
+
+    expect(host.topology.getSnapshot()).toBe(topologyBeforePause)
+    expect(tickTwo?.status).toBe("ready")
+    expect(
+      tickTwo?.status === "ready" ? tickTwo.snapshot.tickNumber : null,
+    ).toBeGreaterThan(firstAdvancedTickNumber ?? -1)
+    expect(host.queries.getCurrentTickSnapshot()?.tickNumber).toBe(
+      tickTwo?.status === "ready" ? tickTwo.snapshot.tickNumber : null,
+    )
 
     host.dispose()
   })
@@ -63,10 +115,10 @@ describe("createSimulationHost", () => {
     const host = createSimulationHost(workspace)
 
     await host.actions.start()
-    expect(host.playbackTickRateHz).toBe(1)
+    expect(host.simulationSpeed).toBe(1)
 
-    host.playbackTickRateHz = 2.8
-    expect(host.playbackTickRateHz).toBe(2)
+    host.simulationSpeed = 0.1
+    expect(host.simulationSpeed).toBe(0.1)
 
     const halfTick = await host.actions.advancePlaybackByDeltaMs(250)
 
@@ -119,7 +171,7 @@ describe("createSimulationHost", () => {
     const host = createSimulationHost(workspace)
 
     await host.actions.start()
-    host.playbackTickRateHz = 180
+    host.simulationSpeed = 9
 
     const firstAttempt = await host.actions.advancePlaybackByDeltaMs(1000)
     const secondAttempt = await host.actions.advancePlaybackByDeltaMs(1000)
@@ -139,7 +191,7 @@ describe("createSimulationHost", () => {
     const { workspace } = createWorkspace(createDummyWorldDocument())
     const host = createSimulationHost(workspace)
 
-    host.playbackTickRateHz = 4
+    host.simulationSpeed = 4
 
     const beforeStart = await host.actions.advancePlaybackByDeltaMs(1000)
 
@@ -197,16 +249,16 @@ describe("createSimulationHost", () => {
     expect(host.queries.getDeviceRuntimeStatus("missing-device")).toBeNull()
     expect(host.queries.getDeviceRuntimeStatus("grinder")).toEqual({
       recipeId: "r_crusher_iron_powder_from_iron_nugget_basic",
-      progressTicks: 0,
-      desiredTicks: 4,
+      progressSeconds: 0,
+      desiredSeconds: transportRecipeDurationSeconds,
     })
 
-    await host.actions.getTickSnapshot(5)
+    await host.actions.getTickSnapshot(transportRecipeCompletionTick)
 
     expect(host.queries.getDeviceRuntimeStatus("grinder")).toEqual({
       recipeId: null,
-      progressTicks: null,
-      desiredTicks: null,
+      progressSeconds: null,
+      desiredSeconds: null,
     })
 
     host.dispose()
@@ -221,18 +273,18 @@ describe("createSimulationHost", () => {
     await host.actions.start()
 
     const tickOne = await host.actions.getTickSnapshot(1)
-    const tickSix = await host.actions.getTickSnapshot(6)
+    const deliveredTick = await host.actions.getTickSnapshot(transportDeliveryTick)
 
     expect(tickOne.status).toBe("ready")
-    expect(tickSix.status).toBe("ready")
-    if (tickSix.status !== "ready") {
-      throw new Error("Expected tick six to be ready.")
+    expect(deliveredTick.status).toBe("ready")
+    if (deliveredTick.status !== "ready") {
+      throw new Error("Expected delivered tick to be ready.")
     }
 
-    expect(tickSix.snapshot.slots["device:source-storage/cache-group:item_storage.slot_1.output-view/slot:slot_1.out-view"]?.count).toBe(19)
-    expect(tickSix.snapshot.slots["device:sink-storage/cache-group:item_storage.slot_1.output-view/slot:slot_1.out-view"]?.itemType).toBe("item_iron_ore")
-    expect(tickSix.snapshot.slots["device:sink-storage/cache-group:item_storage.slot_1.output-view/slot:slot_1.out-view"]?.count).toBe(1)
-    expect(tickSix.snapshot.transfers).toEqual([
+    expect(deliveredTick.snapshot.slots["device:source-storage/cache-group:item_storage.slot_1.output-view/slot:slot_1.out-view"]?.count).toBe(19)
+    expect(deliveredTick.snapshot.slots["device:sink-storage/cache-group:item_storage.slot_1.output-view/slot:slot_1.out-view"]?.itemType).toBe("item_iron_ore")
+    expect(deliveredTick.snapshot.slots["device:sink-storage/cache-group:item_storage.slot_1.output-view/slot:slot_1.out-view"]?.count).toBe(1)
+    expect(deliveredTick.snapshot.transfers).toEqual([
       expect.objectContaining({
         edgeId: expect.stringContaining("device:belt/cache-group:item_output_buffer"),
         itemType: "item_iron_ore",
@@ -250,17 +302,17 @@ describe("createSimulationHost", () => {
     const host = createSimulationHost(workspace)
 
     await host.actions.start()
-    const tickFive = await host.actions.getTickSnapshot(5)
+    const completedTick = await host.actions.getTickSnapshot(transportRecipeCompletionTick)
 
-    expect(tickFive.status).toBe("ready")
-    if (tickFive.status !== "ready") {
-      throw new Error("Expected tick five to be ready.")
+    expect(completedTick.status).toBe("ready")
+    if (completedTick.status !== "ready") {
+      throw new Error("Expected completed tick to be ready.")
     }
 
-    expect(tickFive.snapshot.slots["device:grinder/cache-group:item_input_buffer/slot:input_slot_1"]?.count).toBe(0)
-    expect(tickFive.snapshot.slots["device:grinder/cache-group:item_output_buffer/slot:output_slot_1"]?.itemType).toBe("item_iron_powder")
-    expect(tickFive.snapshot.slots["device:grinder/cache-group:item_output_buffer/slot:output_slot_1"]?.count).toBe(1)
-    expect(tickFive.snapshot.devices["device:grinder"]?.recipe).toBeNull()
+    expect(completedTick.snapshot.slots["device:grinder/cache-group:item_input_buffer/slot:input_slot_1"]?.count).toBe(0)
+    expect(completedTick.snapshot.slots["device:grinder/cache-group:item_output_buffer/slot:output_slot_1"]?.itemType).toBe("item_iron_powder")
+    expect(completedTick.snapshot.slots["device:grinder/cache-group:item_output_buffer/slot:output_slot_1"]?.count).toBe(1)
+    expect(completedTick.snapshot.devices["device:grinder"]?.recipe).toBeNull()
 
     host.dispose()
   })
@@ -272,16 +324,16 @@ describe("createSimulationHost", () => {
     const host = createSimulationHost(workspace)
 
     await host.actions.start()
-    const tickFive = await host.actions.getTickSnapshot(5)
+    const completedTick = await host.actions.getTickSnapshot(transportRecipeCompletionTick)
 
-    expect(tickFive.status).toBe("ready")
-    if (tickFive.status !== "ready") {
-      throw new Error("Expected tick five to be ready.")
+    expect(completedTick.status).toBe("ready")
+    if (completedTick.status !== "ready") {
+      throw new Error("Expected completed tick to be ready.")
     }
 
-    expect(tickFive.snapshot.slots["device:furnace/cache-group:item_input_buffer/slot:input_slot_1"]?.count).toBe(0)
-    expect(tickFive.snapshot.slots["device:furnace/cache-group:item_output_buffer/slot:output_slot_1"]?.itemType).toBe("item_iron_nugget")
-    expect(tickFive.snapshot.slots["device:furnace/cache-group:item_output_buffer/slot:output_slot_1"]?.count).toBe(1)
+    expect(completedTick.snapshot.slots["device:furnace/cache-group:item_input_buffer/slot:input_slot_1"]?.count).toBe(0)
+    expect(completedTick.snapshot.slots["device:furnace/cache-group:item_output_buffer/slot:output_slot_1"]?.itemType).toBe("item_iron_nugget")
+    expect(completedTick.snapshot.slots["device:furnace/cache-group:item_output_buffer/slot:output_slot_1"]?.count).toBe(1)
 
     host.dispose()
   })

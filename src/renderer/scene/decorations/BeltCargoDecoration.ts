@@ -21,7 +21,7 @@ const BELT_INPUT_BUFFER_ID = "item_input_buffer"
 const ITEM_ICON_TEXTURE_PREFIX = "item-icon-"
 const BOX_SIZE_RATIO = 0.6
 const BOX_ICON_SIZE_RATIO = 0.72
-const BOX_STROKE_WIDTH_RATIO = 0.08
+const BOX_STROKE_WIDTH_PX = 1
 
 type BeltDefinitionId =
   | "belt_straight_1x1"
@@ -32,7 +32,7 @@ interface BeltCargoBinding {
   readonly compiledDeviceId: string;
   readonly worldEntityId: string;
   readonly definitionId: BeltDefinitionId;
-  readonly inputSlotId: string;
+  readonly reservationSlotId: string;
   readonly position: GridPoint;
   readonly rotation: GridRotation;
 }
@@ -157,9 +157,9 @@ export function createBeltCargoDecoration(): DecorationLayer {
         const runtimeStatus = simulation.queries.getDeviceRuntimeStatus(binding.worldEntityId)
         if (
           runtimeStatus === null
-          || runtimeStatus.progressTicks === null
-          || runtimeStatus.desiredTicks === null
-          || runtimeStatus.desiredTicks <= 0
+          || runtimeStatus.progressSeconds === null
+          || runtimeStatus.desiredSeconds === null
+          || runtimeStatus.desiredSeconds <= 0
         ) {
           continue
         }
@@ -169,14 +169,14 @@ export function createBeltCargoDecoration(): DecorationLayer {
           continue
         }
 
-        const itemId = resolveReservedItemId(tickSnapshot, binding.inputSlotId, recipeRunId)
+        const itemId = resolveReservedItemId(tickSnapshot, binding.reservationSlotId, recipeRunId)
         if (itemId === null) {
           continue
         }
 
         const center = resolveBeltCargoViewportCenter({
           binding,
-          progress: clamp01(runtimeStatus.progressTicks / runtimeStatus.desiredTicks),
+          progress: clamp01(runtimeStatus.progressSeconds / runtimeStatus.desiredSeconds),
           viewportBounds: ctx.viewportBounds,
           viewportState: ctx.viewportState,
         })
@@ -252,7 +252,7 @@ function resolveBeltBindings(
       compiledDeviceId,
       worldEntityId: device.sourceEntityId,
       definitionId: device.definitionId as BeltDefinitionId,
-      inputSlotId,
+      reservationSlotId: resolveReservationSlotId(topology, inputSlotId),
       position: device.position,
       rotation: device.rotation,
     })
@@ -279,12 +279,26 @@ function resolveDeviceInputSlotId(
 
 function resolveReservedItemId(
   tickSnapshot: SimulationTickSnapshot,
-  inputSlotId: string,
+  reservationSlotId: string,
   recipeRunId: string,
 ): string | null {
-  const slotSnapshot = tickSnapshot.slots[inputSlotId]
+  const slotSnapshot = tickSnapshot.slots[reservationSlotId]
   const reservation = slotSnapshot?.reserved.find((entry) => entry.recipeRunId === recipeRunId)
   return reservation?.itemType ?? null
+}
+
+function resolveReservationSlotId(
+  topology: CompiledSimulationTopology,
+  sourceSlotId: string,
+): string {
+  for (const link of Object.values(topology.links)) {
+    const targetSlotId = link.targetSlotIdBySourceSlotId[sourceSlotId]
+    if (targetSlotId !== undefined) {
+      return targetSlotId
+    }
+  }
+
+  return sourceSlotId
 }
 
 function resolveItemIconTextureKey(
@@ -300,7 +314,6 @@ function drawBeltCargoBoxes(
   boxSize: number,
 ): void {
   const boxHalfSize = boxSize / 2
-  const strokeWidth = Math.max(1, boxSize * BOX_STROKE_WIDTH_RATIO)
 
   graphics.clear()
 
@@ -314,8 +327,9 @@ function drawBeltCargoBoxes(
       )
       .fill(0xffffff)
       .stroke({
-        width: strokeWidth,
+        width: BOX_STROKE_WIDTH_PX,
         color: 0x000000,
+        pixelLine: true,
       })
   }
 }
@@ -403,13 +417,16 @@ function resolveBeltCargoLocalPoint(
     }
   }
 
+  const turnCenter = definitionId === "belt_turn_cw_1x1"
+    ? { x: 0, y: 1 }
+    : { x: 0, y: 0 }
   const angle = definitionId === "belt_turn_cw_1x1"
-    ? lerp(Math.PI, Math.PI / 2, progress)
-    : lerp(Math.PI, Math.PI * 1.5, progress)
+    ? lerp(-Math.PI / 2, 0, progress)
+    : lerp(Math.PI / 2, 0, progress)
 
   return {
-    x: 0.5 + Math.cos(angle) * 0.5,
-    y: 0.5 + Math.sin(angle) * 0.5,
+    x: turnCenter.x + Math.cos(angle) * 0.5,
+    y: turnCenter.y + Math.sin(angle) * 0.5,
   }
 }
 

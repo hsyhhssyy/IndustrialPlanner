@@ -273,6 +273,17 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         },
       },
       {
+        id: "shortcut-return-select",
+        kind: "keybinding",
+        labelKey: shortcutKeybindingLabelKey("shortcut-return-select"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-return-select"),
+        defaultValue: "Esc",
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: false,
+        },
+      },
+      {
         id: "shortcut-rotate",
         kind: "keybinding",
         labelKey: shortcutKeybindingLabelKey("shortcut-rotate"),

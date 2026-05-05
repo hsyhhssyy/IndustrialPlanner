@@ -220,7 +220,7 @@ describe("createAppHost", () => {
     expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.size).toBe(0);
     expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual(
       expect.arrayContaining([
-        "hypergryph-gesture-diagnostics",
+        "gesture-diagnostics",
         "hypergryph-logistics-placement-gesture",
         "hypergryph-single-placement-gesture",
         "hypergryph-move-gesture",
@@ -228,7 +228,6 @@ describe("createAppHost", () => {
         "hypergryph-select-gesture",
         "hypergryph-mouse-viewport-pan",
         "hypergryph-viewport-zoom",
-        "hypergryph-select-tool-button",
         "simulation-control-button",
       ]),
     );
@@ -858,7 +857,7 @@ describe("createAppHost", () => {
     expect(editorHost.state.viewport.gridSize).toBeLessThan(zoomedInGridSize);
   });
 
-  it("disables all hypergryph gesture modules when hypergryph operation mode is off", () => {
+  it("disables hypergryph gesture handlers when hypergryph operation mode is off", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     const appHost = createAppHost(workspace);
@@ -873,7 +872,10 @@ describe("createAppHost", () => {
 
     expect(zoomSpy).not.toHaveBeenCalled();
     expect(editorHost.state.viewport.gridSize).toBe(initialGridSize);
-    expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toBeNull();
+    expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toMatchObject({
+      type: "wheel up",
+      gestureId: "wheel-1",
+    });
   });
 
   it("switches the private active tool from hypergryph gesture modules", () => {
@@ -1012,7 +1014,9 @@ describe("createAppHost", () => {
       buttons: 1,
     }));
 
-    expect(gestures).toMatchObject([
+    expect(
+      gestures.filter((event) => event.type === "mouse tap" || event.type === "mouse dragstart"),
+    ).toMatchObject([
       {
         type: "mouse tap",
         pointerEntity: {
@@ -1495,6 +1499,27 @@ describe("createAppHost", () => {
       "canvas-right-dock-toolbar-button-move",
       "canvas-right-dock-toolbar-button-delete",
     ]);
+  });
+
+  it("returns to select mode from any active tool using the return-select shortcut", () => {
+    const workspace = createWorkspace();
+    createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyE",
+      key: "e",
+      keyCode: 69,
+    }));
+    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "Escape",
+      key: "Escape",
+      keyCode: 27,
+    }));
+
+    expect(appHost.internalState.activeTool).toBe("select");
   });
 
   it("draws, applies, and continues mouse logistics placement from the previous head", () => {
