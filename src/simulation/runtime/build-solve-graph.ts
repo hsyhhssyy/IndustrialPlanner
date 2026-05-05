@@ -15,68 +15,133 @@ export function buildSolveGraph(
   state: SimulationMutableRuntimeState,
 ): void {
   for (const cacheGroupId of topology.ordering.cacheGroupOrder) {
-    const cacheGroup = topology.cacheGroups[cacheGroupId];
-    const nodeState = state.transient.nodes[cacheGroupId];
-    if (cacheGroup === undefined || nodeState === undefined) {
-      continue;
-    }
-
-    const inputCapacities: RuntimeInputCapacityEntry[] = [];
-    const outputSupplies: RuntimeOutputSupplyEntry[] = [];
-
-    for (const slotId of cacheGroup.slotIds) {
-      const slot = topology.slots[slotId];
-      const slotState = state.persistent.slots[slotId];
-      if (slot === undefined || slotState === undefined) {
-        continue;
-      }
-
-      if (cacheGroup.inputPortIds.length > 0) {
-        const inputEntry = createInputCapacityEntry(topology, state, slot);
-        if (inputEntry !== null) {
-          inputCapacities.push(inputEntry);
-        }
-      }
-
-      if (cacheGroup.outputPortIds.length > 0) {
-        const outputEntry = createOutputSupplyEntry(topology, state, slot);
-        if (outputEntry !== null) {
-          outputSupplies.push(outputEntry);
-        }
-      }
-    }
-
-    const occupiedItemIds = inputCapacities
-      .map((entry) => entry.acceptRule.base.kind === "item" ? entry.acceptRule.base.itemId : null)
-      .filter((itemId): itemId is string => itemId !== null);
-    for (const entry of inputCapacities) {
-      if (entry.acceptRule.base.kind !== "any" && entry.acceptRule.base.kind !== "solid" && entry.acceptRule.base.kind !== "liquid") {
-        continue;
-      }
-      entry.acceptRule = {
-        base: entry.acceptRule.base,
-        exclude: [...new Set([...entry.acceptRule.exclude, ...occupiedItemIds])].sort(),
-      };
-    }
-
-    nodeState.inputCapacities = inputCapacities;
-    nodeState.outputSupplies = outputSupplies;
-    nodeState.isDeleted = inputCapacities.length === 0 && outputSupplies.length === 0;
+    refreshNodeState(topology, state, cacheGroupId);
   }
 
   for (const edgeId of topology.ordering.edgeOrder) {
-    const edge = topology.transferEdges[edgeId];
-    const edgeState = state.transient.edges[edgeId];
-    if (edge === undefined || edgeState === undefined) {
+    refreshEdgeDeletionState(topology, state, edgeId);
+  }
+}
+
+export function refreshNodeState(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  cacheGroupId: string,
+): void {
+  const cacheGroup = topology.cacheGroups[cacheGroupId];
+  const nodeState = state.transient.nodes[cacheGroupId];
+  if (cacheGroup === undefined || nodeState === undefined) {
+    return;
+  }
+
+  const inputCapacities = buildInputCapacities(topology, state, cacheGroup);
+  const outputSupplies = buildOutputSupplies(topology, state, cacheGroup);
+
+  nodeState.inputCapacities = inputCapacities;
+  nodeState.outputSupplies = outputSupplies;
+  nodeState.isDeleted = inputCapacities.length === 0 && outputSupplies.length === 0;
+}
+
+export function refreshNodeInputCapacities(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  cacheGroupId: string,
+): void {
+  const cacheGroup = topology.cacheGroups[cacheGroupId];
+  const nodeState = state.transient.nodes[cacheGroupId];
+  if (cacheGroup === undefined || nodeState === undefined) {
+    return;
+  }
+
+  const inputCapacities = buildInputCapacities(topology, state, cacheGroup);
+  nodeState.inputCapacities = inputCapacities;
+  nodeState.isDeleted = inputCapacities.length === 0 && nodeState.outputSupplies.length === 0;
+}
+
+export function refreshEdgeDeletionState(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  edgeId: string,
+): void {
+  const edge = topology.transferEdges[edgeId];
+  const edgeState = state.transient.edges[edgeId];
+  if (edge === undefined || edgeState === undefined) {
+    return;
+  }
+
+  if (edgeState.shadowPull === "accept" || edgeState.shadowPush === "accept" || edgeState.amount > 0) {
+    edgeState.isDeleted = false;
+    return;
+  }
+
+  const sourceNode = state.transient.nodes[edge.sourceCacheGroupId];
+  const targetNode = state.transient.nodes[edge.targetCacheGroupId];
+  edgeState.isDeleted = sourceNode?.isDeleted !== false || targetNode?.isDeleted !== false;
+}
+
+function buildInputCapacities(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  cacheGroup: CompiledSimulationTopology["cacheGroups"][string],
+): RuntimeInputCapacityEntry[] {
+  const inputCapacities: RuntimeInputCapacityEntry[] = [];
+  if (cacheGroup.inputPortIds.length === 0) {
+    return inputCapacities;
+  }
+
+  for (const slotId of cacheGroup.slotIds) {
+    const slot = topology.slots[slotId];
+    const slotState = state.persistent.slots[slotId];
+    if (slot === undefined || slotState === undefined) {
       continue;
     }
 
-    const sourceNode = state.transient.nodes[edge.sourceCacheGroupId];
-    const targetNode = state.transient.nodes[edge.targetCacheGroupId];
-    if (sourceNode?.isDeleted !== false || targetNode?.isDeleted !== false) {
-      edgeState.isDeleted = true;
+    const inputEntry = createInputCapacityEntry(topology, state, slot);
+    if (inputEntry !== null) {
+      inputCapacities.push(inputEntry);
     }
   }
+
+  const occupiedItemIds = inputCapacities
+    .map((entry) => entry.acceptRule.base.kind === "item" ? entry.acceptRule.base.itemId : null)
+    .filter((itemId): itemId is string => itemId !== null);
+  for (const entry of inputCapacities) {
+    if (entry.acceptRule.base.kind !== "any" && entry.acceptRule.base.kind !== "solid" && entry.acceptRule.base.kind !== "liquid") {
+      continue;
+    }
+    entry.acceptRule = {
+      base: entry.acceptRule.base,
+      exclude: [...new Set([...entry.acceptRule.exclude, ...occupiedItemIds])].sort(),
+    };
+  }
+
+  return inputCapacities;
+}
+
+function buildOutputSupplies(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  cacheGroup: CompiledSimulationTopology["cacheGroups"][string],
+): RuntimeOutputSupplyEntry[] {
+  const outputSupplies: RuntimeOutputSupplyEntry[] = [];
+  if (cacheGroup.outputPortIds.length === 0) {
+    return outputSupplies;
+  }
+
+  for (const slotId of cacheGroup.slotIds) {
+    const slot = topology.slots[slotId];
+    const slotState = state.persistent.slots[slotId];
+    if (slot === undefined || slotState === undefined) {
+      continue;
+    }
+
+    const outputEntry = createOutputSupplyEntry(topology, state, slot);
+    if (outputEntry !== null) {
+      outputSupplies.push(outputEntry);
+    }
+  }
+
+  return outputSupplies;
 }
 
 function createInputCapacityEntry(
@@ -84,19 +149,29 @@ function createInputCapacityEntry(
   state: SimulationMutableRuntimeState,
   slot: CompiledSimulationSlotTemplate,
 ): RuntimeInputCapacityEntry | null {
-  const storageSlotId = resolveStorageSlotId(state, slot.id);
-  const storageSlot = topology.slots[storageSlotId] ?? slot;
-  const slotState = state.persistent.slots[storageSlotId];
-  if (slotState === undefined) {
+  const inventorySlotId = resolveInventorySlotId(state, slot.id);
+  const inventorySlot = topology.slots[inventorySlotId] ?? slot;
+  const inventorySlotState = state.persistent.slots[inventorySlotId];
+  if (inventorySlotState === undefined) {
     return null;
   }
 
-  const amount = Math.max(0, storageSlot.capacity - slotState.count);
+  const { capacityLimit, occupiedCount } = resolveSharedCapacityState(
+    state,
+    slot.id,
+    inventorySlotId,
+    inventorySlot.capacity,
+  );
+  const amount = Math.max(0, capacityLimit - occupiedCount);
   if (amount <= 0) {
     return null;
   }
 
-  const acceptRule = createSlotAcceptRule(storageSlot, slotState.itemType, slotState.count);
+  const acceptRule = createSlotAcceptRule(
+    inventorySlot,
+    inventorySlotState.itemType,
+    inventorySlotState.count,
+  );
   return {
     slotId: slot.id,
     acceptRule,
@@ -110,18 +185,18 @@ function createOutputSupplyEntry(
   state: SimulationMutableRuntimeState,
   slot: CompiledSimulationSlotTemplate,
 ): RuntimeOutputSupplyEntry | null {
-  const storageSlotId = resolveStorageSlotId(state, slot.id);
-  const storageSlot = topology.slots[storageSlotId] ?? slot;
-  const slotState = state.persistent.slots[storageSlotId];
-  const itemType = slotState?.itemType ?? storageSlot.lock;
-  if (slotState === undefined || itemType === null) {
+  const inventorySlotId = resolveInventorySlotId(state, slot.id);
+  const inventorySlot = topology.slots[inventorySlotId] ?? slot;
+  const inventorySlotState = state.persistent.slots[inventorySlotId];
+  const itemType = inventorySlotState?.itemType ?? inventorySlot.lock;
+  if (inventorySlotState === undefined || itemType === null) {
     return null;
   }
 
-  const reservedAmount = getReservedAmount(state, storageSlotId);
-  const amount = storageSlot.ignoreStock
+  const reservedAmount = getReservedAmount(state, inventorySlotId);
+  const amount = inventorySlot.ignoreStock
     ? Number.MAX_SAFE_INTEGER
-    : Math.max(0, slotState.count - reservedAmount);
+    : Math.max(0, inventorySlotState.count - reservedAmount);
   if (amount <= 0) {
     return null;
   }
@@ -134,11 +209,46 @@ function createOutputSupplyEntry(
   };
 }
 
-function resolveStorageSlotId(
+function resolveInventorySlotId(
   state: SimulationMutableRuntimeState,
   slotId: string,
 ): string {
   return state.persistent.proxyTargetSlotIdBySourceSlotId[slotId] ?? slotId;
+}
+
+function resolveSharedCapacityState(
+  state: SimulationMutableRuntimeState,
+  slotId: string,
+  inventorySlotId: string,
+  fallbackCapacity: number,
+): {
+  readonly capacityLimit: number;
+  readonly occupiedCount: number;
+} {
+  const sharedCapacitySlotIds = state.persistent.sharedCapacitySlotIdsBySlotId[slotId];
+  if (sharedCapacitySlotIds === undefined) {
+    return {
+      capacityLimit: fallbackCapacity,
+      occupiedCount: state.persistent.slots[inventorySlotId]?.count ?? 0,
+    };
+  }
+
+  const visitedInventorySlotIds = new Set<string>();
+  let occupiedCount = 0;
+  for (const sharedCapacitySlotId of sharedCapacitySlotIds) {
+    const sharedInventorySlotId = resolveInventorySlotId(state, sharedCapacitySlotId);
+    if (visitedInventorySlotIds.has(sharedInventorySlotId)) {
+      continue;
+    }
+
+    visitedInventorySlotIds.add(sharedInventorySlotId);
+    occupiedCount += state.persistent.slots[sharedInventorySlotId]?.count ?? 0;
+  }
+
+  return {
+    capacityLimit: state.persistent.sharedCapacityLimitBySlotId[slotId] ?? fallbackCapacity,
+    occupiedCount,
+  };
 }
 
 function createSlotAcceptRule(

@@ -13,6 +13,7 @@
 //      d. compileRecipePlan()       — 配方计划（内联 vs 外部配方）
 //      e. compileInternalLinks()    — 内部 Link（share-cap / share-all）
 //      2026-05-04 订正：内部 Link 只编译为有向 share-all 代理，不再存在 share-cap。
+//      订正（2026-05-05）：恢复 share-cap；share-all 共享库存，share-cap 只共享容量。
 //   4. compileExplicitLinks()       — 显式连接（dark-pipe → share-all）
 //   5. compilePhysicalConnections() — 物理端口连接 → CompiledSimulationPhysicalConnection
 //   6. 对每条物理连接生成 CompiledSimulationTransferEdge（求解图的有向边）
@@ -1099,6 +1100,7 @@ function shouldTreatStorageSlotsAsIndependentGroups(
  *   - 有 output 方向端口 → 合成 1 个 product 缓存组（capacity=1）
  *   - 设备级别 share-cap(1) Link 在 compileInternalLinks 中连接两端
  *   - 2026-05-04 订正：合成缓存组使用有向 share-all 代理 Link 连接 source/target。
+ *   - 订正（2026-05-05）：搬运设备重新使用 share-cap；仅仓库/双视图等场景继续使用 share-all。
  */
 function compileSyntheticCacheGroups(options: {
   readonly deviceId: string;
@@ -1366,6 +1368,7 @@ function compileRouting(
  * recipeType 决定求解行为：
  *   - "immediate-consume"：0% 时扣原料（生产设备）
  *   - "reserved-item"：100% 时消耗（搬运设备）
+ * 订正（2026-05-05）：`reserved-item` 在推进阶段若输出缓存可接收，则立即写入产物、消耗原料并结束当前 run；仅在推进阶段无法完整输出时，才留待二次结算阶段处理。
  *
  * ingredientCacheGroupIds 和 productCacheGroupIds 告知求解器
  * 配方原料从哪些缓存组取、产物写入哪些缓存组。
@@ -1523,7 +1526,7 @@ function compileInternalLinks(options: {
         linkedSourceSlotIds.join("->"),
         linkedTargetSlotIds.join("->"),
       ].join(":"),
-      linkType: "share-all",
+      linkType: link.linkType,
       sourceSlotIds: linkedSourceSlotIds,
       targetSlotIds: linkedTargetSlotIds,
       targetSlotIdBySourceSlotId,

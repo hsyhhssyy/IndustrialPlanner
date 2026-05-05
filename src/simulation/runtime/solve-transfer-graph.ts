@@ -9,12 +9,26 @@ import type {
   RuntimeOutputSupplyEntry,
   SimulationMutableRuntimeState,
 } from "./runtime-state";
+import {
+  refreshEdgeDeletionState,
+  refreshNodeInputCapacities,
+} from "./build-solve-graph";
 
 export function solveTransferGraph(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): void {
-  for (const edgeId of topology.ordering.edgeOrder) {
+  const edgeQueue = [...topology.ordering.edgeOrder];
+  const queuedEdgeIds = new Set(edgeQueue);
+
+  for (let edgeIndex = 0; edgeIndex < edgeQueue.length; edgeIndex += 1) {
+    const edgeId = edgeQueue[edgeIndex];
+    if (edgeId === undefined) {
+      continue;
+    }
+
+    queuedEdgeIds.delete(edgeId);
+
     const edge = topology.transferEdges[edgeId];
     const edgeState = state.transient.edges[edgeId];
     if (edge === undefined || edgeState?.isDeleted !== false || edgeState.remainingCount <= 0) {
@@ -60,6 +74,17 @@ export function solveTransferGraph(
     targetNode.result = "solved-run";
     sourceNode.acceptedOutputEdgeIds.push(edgeId);
     targetNode.acceptedInputEdgeIds.push(edgeId);
+
+    const retryEdgeIds = commitAcceptedTransfer(
+      topology,
+      state,
+      edgeId,
+      sourceEntry.slotId,
+      targetEntry.slotId,
+      sourceEntry.itemType,
+      amount,
+    );
+    enqueueRetryEdges(edgeQueue, queuedEdgeIds, retryEdgeIds);
   }
 
   for (const cacheGroupId of topology.ordering.cacheGroupOrder) {
@@ -73,6 +98,153 @@ export function solveTransferGraph(
       nodeState.blockReason = "empty-node";
     }
   }
+}
+
+function commitAcceptedTransfer(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  edgeId: string,
+  sourceSlotId: string,
+  targetSlotId: string,
+  itemType: string,
+  amount: number,
+): string[] {
+  const sourceSlot = topology.slots[sourceSlotId];
+  const sourceStorageSlotId = resolveStorageSlotId(state, sourceSlotId);
+  const targetStorageSlotId = resolveStorageSlotId(state, targetSlotId);
+  const sourceSlotState = state.persistent.slots[sourceStorageSlotId];
+  const targetSlotState = state.persistent.slots[targetStorageSlotId];
+  if (sourceSlot === undefined || sourceSlotState === undefined || targetSlotState === undefined) {
+    return [];
+  }
+
+  if (!sourceSlot.ignoreStock) {
+    sourceSlotState.count = Math.max(0, sourceSlotState.count - amount);
+  }
+  if (targetSlotState.itemType === null) {
+    targetSlotState.itemType = itemType;
+  }
+  targetSlotState.count += amount;
+
+  state.transient.transfers.push({
+    edgeId,
+    sourceSlotId,
+    targetSlotId,
+    itemType,
+    amount,
+  });
+
+  return refreshAffectedGraph(
+    topology,
+    state,
+    new Set([sourceStorageSlotId, targetStorageSlotId]),
+  );
+}
+
+function refreshAffectedGraph(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  storageSlotIds: ReadonlySet<string>,
+): string[] {
+  const affectedStorageSlotIds = expandSharedCapacitySlotIds(state, storageSlotIds);
+  const affectedCacheGroupIds = findAffectedCacheGroupIds(topology, state, affectedStorageSlotIds);
+  const retryEdgeIds: string[] = [];
+
+  for (const cacheGroupId of affectedCacheGroupIds) {
+    refreshNodeInputCapacities(topology, state, cacheGroupId);
+  }
+
+  for (const edgeId of topology.ordering.edgeOrder) {
+    const edge = topology.transferEdges[edgeId];
+    if (
+      edge === undefined
+      || (!affectedCacheGroupIds.has(edge.sourceCacheGroupId)
+        && !affectedCacheGroupIds.has(edge.targetCacheGroupId))
+    ) {
+      continue;
+    }
+
+    refreshEdgeDeletionState(topology, state, edgeId);
+
+    const edgeState = state.transient.edges[edgeId];
+    if (
+      affectedCacheGroupIds.has(edge.targetCacheGroupId)
+      && edgeState?.isDeleted === false
+      && edgeState.shadowPull === "uncertain"
+      && edgeState.shadowPush === "uncertain"
+      && edgeState.remainingCount > 0
+    ) {
+      retryEdgeIds.push(edgeId);
+    }
+  }
+
+  return retryEdgeIds;
+}
+
+function expandSharedCapacitySlotIds(
+  state: SimulationMutableRuntimeState,
+  storageSlotIds: ReadonlySet<string>,
+): Set<string> {
+  const expandedStorageSlotIds = new Set(storageSlotIds);
+
+  for (const storageSlotId of storageSlotIds) {
+    const sharedCapacitySlotIds = state.persistent.sharedCapacitySlotIdsBySlotId[storageSlotId];
+    if (sharedCapacitySlotIds === undefined) {
+      continue;
+    }
+
+    for (const sharedCapacitySlotId of sharedCapacitySlotIds) {
+      expandedStorageSlotIds.add(sharedCapacitySlotId);
+    }
+  }
+
+  return expandedStorageSlotIds;
+}
+
+function enqueueRetryEdges(
+  edgeQueue: string[],
+  queuedEdgeIds: Set<string>,
+  edgeIds: readonly string[],
+): void {
+  for (const edgeId of edgeIds) {
+    if (queuedEdgeIds.has(edgeId)) {
+      continue;
+    }
+
+    edgeQueue.push(edgeId);
+    queuedEdgeIds.add(edgeId);
+  }
+}
+
+function findAffectedCacheGroupIds(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  storageSlotIds: ReadonlySet<string>,
+): Set<string> {
+  const affectedCacheGroupIds = new Set<string>();
+
+  for (const cacheGroupId of topology.ordering.cacheGroupOrder) {
+    const cacheGroup = topology.cacheGroups[cacheGroupId];
+    if (cacheGroup === undefined) {
+      continue;
+    }
+
+    for (const slotId of cacheGroup.slotIds) {
+      if (storageSlotIds.has(resolveStorageSlotId(state, slotId))) {
+        affectedCacheGroupIds.add(cacheGroupId);
+        break;
+      }
+    }
+  }
+
+  return affectedCacheGroupIds;
+}
+
+function resolveStorageSlotId(
+  state: SimulationMutableRuntimeState,
+  slotId: string,
+): string {
+  return state.persistent.proxyTargetSlotIdBySourceSlotId[slotId] ?? slotId;
 }
 
 function findOutputEntry(

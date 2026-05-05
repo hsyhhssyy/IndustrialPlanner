@@ -67,7 +67,7 @@ describe("compileSimulationTopology", () => {
     });
     expect(beltLinks).toHaveLength(1);
     expect(beltLinks[0]).toMatchObject({
-      linkType: "share-all",
+      linkType: "share-cap",
       sourceSlotIds: ["device:dummy-entity-1/cache-group:item_input_buffer/slot:input_slot_1"],
       targetSlotIds: ["device:dummy-entity-1/cache-group:item_output_buffer/slot:output_slot_1"],
     });

@@ -8,47 +8,11 @@ export function moveItems(
 ): void {
   const interactedDeviceIds = new Set<string>();
 
-  for (const edgeId of topology.ordering.edgeOrder) {
-    const edge = topology.transferEdges[edgeId];
-    const edgeState = state.transient.edges[edgeId];
-    if (
-      edge === undefined
-      || edgeState === undefined
-      || edgeState.isDeleted
-      || edgeState.shadowPull !== "accept"
-      || edgeState.shadowPush !== "accept"
-      || edgeState.sourceSlotId === null
-      || edgeState.targetSlotId === null
-      || edgeState.itemType === null
-      || edgeState.amount <= 0
-    ) {
+  for (const transfer of state.transient.transfers) {
+    const edge = topology.transferEdges[transfer.edgeId];
+    if (edge === undefined) {
       continue;
     }
-
-    const sourceSlot = topology.slots[edgeState.sourceSlotId];
-    const sourceStorageSlotId = resolveStorageSlotId(state, edgeState.sourceSlotId);
-    const targetStorageSlotId = resolveStorageSlotId(state, edgeState.targetSlotId);
-    const sourceSlotState = state.persistent.slots[sourceStorageSlotId];
-    const targetSlotState = state.persistent.slots[targetStorageSlotId];
-    if (sourceSlot === undefined || sourceSlotState === undefined || targetSlotState === undefined) {
-      continue;
-    }
-
-    if (!sourceSlot.ignoreStock) {
-      sourceSlotState.count = Math.max(0, sourceSlotState.count - edgeState.amount);
-    }
-    if (targetSlotState.itemType === null) {
-      targetSlotState.itemType = edgeState.itemType;
-    }
-    targetSlotState.count += edgeState.amount;
-
-    state.transient.transfers.push({
-      edgeId,
-      sourceSlotId: edgeState.sourceSlotId,
-      targetSlotId: edgeState.targetSlotId,
-      itemType: edgeState.itemType,
-      amount: edgeState.amount,
-    });
 
     const sourceCacheGroup = topology.cacheGroups[edge.sourceCacheGroupId];
     const targetCacheGroup = topology.cacheGroups[edge.targetCacheGroupId];
@@ -68,13 +32,6 @@ export function moveItems(
       deviceState.block = !interactedDeviceIds.has(deviceId);
     }
   }
-}
-
-function resolveStorageSlotId(
-  state: SimulationMutableRuntimeState,
-  slotId: string,
-): string {
-  return state.persistent.proxyTargetSlotIdBySourceSlotId[slotId] ?? slotId;
 }
 
 function submitSlots(

@@ -307,6 +307,7 @@ function acceptRuleFromPortKind(kind: PortGroupDefinition["kind"]): PortDefiniti
  *   - inputs: any(1) — 接受任意物品
  *   - outputs: same-as-input(1) — 输出与输入相同物品
  * 订正（2026-05-04）：传送带默认 2 秒；管道类设备在定义处显式传入 0.5 秒。
+ * 订正（2026-05-05）：推进阶段若输出缓存可接收，则立即写入产物、消耗原料并结束当前 run；仅在推进阶段无法完整输出时，才留待二次结算阶段处理。
  */
 function createTransportRecipe(durationSeconds = 2): EntityRecipeDefinition {
   return {
@@ -343,9 +344,11 @@ function createCacheLink(
   id: string,
   sourceStorageSlotGroupId: string,
   targetStorageSlotGroupId: string,
+  linkType: CacheLinkDefinition["linkType"] = "share-all",
 ): CacheLinkDefinition {
   return {
     id,
+    linkType,
     source: { storageSlotGroupId: sourceStorageSlotGroupId },
     target: { storageSlotGroupId: targetStorageSlotGroupId },
   };
@@ -360,6 +363,7 @@ function createTransportCacheLink(
     "transport-cache-link",
     inputStorageSlotGroupId,
     outputStorageSlotGroupId,
+    "share-cap",
   );
 }
 

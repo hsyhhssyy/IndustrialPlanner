@@ -2,7 +2,9 @@ import type { SimulationContract } from "@/domain/contract/simulation-contract";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type {
   CompiledSimulationTopology,
+  SimulationDeviceRuntimeSlotItem,
   SimulationDeviceRuntimeStatus,
+  SimulationReservedItemSnapshot,
 } from "@/domain/types/simulation";
 import {
   createSnapshotStore,
@@ -124,7 +126,79 @@ function resolveDeviceRuntimeStatus(options: {
     desiredSeconds: deviceSnapshot.recipe === null
       ? null
       : convertSimulationTicksToSeconds(deviceSnapshot.recipe.durationTicks),
+    slotItems: resolveDeviceRuntimeSlotItems({
+      topology: options.topology,
+      compiledDeviceId,
+      currentTickSnapshot: options.currentTickSnapshot,
+    }),
   };
+}
+
+function resolveDeviceRuntimeSlotItems(options: {
+  topology: CompiledSimulationTopology;
+  compiledDeviceId: string;
+  currentTickSnapshot: NonNullable<SimulationHost["internalState"]["currentTickSnapshot"]>;
+}): SimulationDeviceRuntimeSlotItem[] {
+  const device = options.topology.devices[options.compiledDeviceId];
+  if (device === undefined) {
+    return [];
+  }
+
+  const slotItemsByRealSlotKey = new Map<string, SimulationDeviceRuntimeSlotItem>();
+  for (const cacheGroupId of device.cacheGroupIds) {
+    const cacheGroup = options.topology.cacheGroups[cacheGroupId];
+    if (cacheGroup === undefined) {
+      continue;
+    }
+
+    for (const compiledSlotId of cacheGroup.slotIds) {
+      const compiledSlot = options.topology.slots[compiledSlotId];
+      const snapshotSlot = options.currentTickSnapshot.slots[compiledSlotId];
+      if (compiledSlot === undefined || snapshotSlot === undefined) {
+        continue;
+      }
+
+      const storageGroupId = cacheGroup.sourceStorageSlotGroupId;
+      const slotId = compiledSlot.sourceSlotId ?? compiledSlot.id;
+      const realSlotKey = `${storageGroupId ?? "<synthetic>"}:${slotId}`;
+      const existing = slotItemsByRealSlotKey.get(realSlotKey);
+      const reserved = mergeReservedItems([
+        ...(existing?.reserved ?? []),
+        ...snapshotSlot.reserved,
+      ]);
+
+      slotItemsByRealSlotKey.set(realSlotKey, {
+        storageGroupId,
+        slotId,
+        itemType: existing?.itemType ?? snapshotSlot.itemType,
+        count: (existing?.count ?? 0) + snapshotSlot.count,
+        reserved,
+      });
+    }
+  }
+
+  return [...slotItemsByRealSlotKey.values()];
+}
+
+function mergeReservedItems(
+  reservedItems: readonly SimulationReservedItemSnapshot[],
+): SimulationReservedItemSnapshot[] {
+  const reservedByKey = new Map<string, SimulationReservedItemSnapshot>();
+  for (const reservedItem of reservedItems) {
+    const key = `${reservedItem.recipeRunId}:${reservedItem.itemType}`;
+    const existing = reservedByKey.get(key);
+    if (existing === undefined) {
+      reservedByKey.set(key, { ...reservedItem });
+      continue;
+    }
+
+    reservedByKey.set(key, {
+      ...existing,
+      amount: existing.amount + reservedItem.amount,
+    });
+  }
+
+  return [...reservedByKey.values()];
 }
 
 function createSimulationWorkerBridge(): SimulationWorkerBridge {

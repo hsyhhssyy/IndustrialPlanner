@@ -1,6 +1,7 @@
 import type { GridEdge, GridRectSize } from "../grid";
 import type {
   SimulationCountLimit,
+  SimulationLinkType,
   SimulationRecipeType,
   SimulationSubmitMode,
 } from "../simulation";
@@ -67,6 +68,7 @@ export interface EntityDefinition {
    * recipeType 取值：
    *   - "immediate-consume"：进度 0% 时立即扣除原料（生产设备用）
    *   - "reserved-item"：进度 100% 时消耗原料，占用存储（搬运设备用）
+    * 订正（2026-05-05）：`reserved-item` 在推进阶段若输出缓存可接收，则立即写入产物、消耗原料并结束当前 run；仅在推进阶段无法完整输出时，才留待二次结算阶段处理。
    */
   recipe: EntityRecipeDefinition | null;
 
@@ -268,6 +270,7 @@ export interface EntityAcceptRuleDefinition {
 // 两种配方类型：
 //   - "immediate-consume"：进度=0% 时立即扣除原料，不占用存储（生产设备）
 //   - "reserved-item"：进度=100% 时消耗原料，占用存储（搬运设备如传送带）
+// 订正（2026-05-05）：`reserved-item` 在推进阶段若输出缓存可接收，则立即写入产物、消耗原料并结束当前 run；仅在推进阶段无法完整输出时，才留待二次结算阶段处理。
 //
 // 在 EntityDefinition 层，配方可以是：
 //   - null：无配方（纯仓储/物流设备）
@@ -300,10 +303,12 @@ export interface EntityRecipeItemDefinition {
 // ---------------------------------------------------------------------------
 // 缓存链接（对应《仿真运行原理》§3.3）。
 // Link 是有向代理，source 端点自身不保存真实库存。
+// 订正（2026-05-05）：`share-cap` 仅共享容量，不代理 source 的真实库存。
 // ---------------------------------------------------------------------------
 
 export interface CacheLinkDefinition {
   readonly id: string;
+  readonly linkType: SimulationLinkType;
   readonly source: CacheLinkEndpointDefinition;
   readonly target: CacheLinkEndpointDefinition;
 }

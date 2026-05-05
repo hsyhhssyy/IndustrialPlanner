@@ -11,6 +11,7 @@ export type {
 } from "./types/grid";
 export type {
 	CompiledSimulationTopology,
+	SimulationDeviceRuntimeSlotItem,
 	SimulationDeviceRuntimeStatus,
 	GetSimulationTickSnapshotResult,
 	SimulationRuntimeStatus,

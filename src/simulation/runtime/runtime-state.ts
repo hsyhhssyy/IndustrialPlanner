@@ -4,6 +4,7 @@ import type {
   SimulationAcceptRule,
   SimulationRecipeType,
 } from "@/domain/types/simulation";
+import { getRuntimeLinkTopologyState } from "./cache-link-topology";
 
 export type RuntimeShadowState = "uncertain" | "accept";
 
@@ -18,6 +19,8 @@ export interface SimulationPersistentRuntimeState {
   devices: Record<string, RuntimeDeviceState>;
   routingCursors: Record<string, number>;
   proxyTargetSlotIdBySourceSlotId: Record<string, string>;
+  sharedCapacitySlotIdsBySlotId: Record<string, readonly string[]>;
+  sharedCapacityLimitBySlotId: Record<string, number>;
   nextRecipeRunIndex: number;
 }
 
@@ -128,26 +131,26 @@ export function createSimulationMutableRuntimeState(
     };
   }
 
-  const proxyTargetSlotIdBySourceSlotId: Record<string, string> = {};
-  for (const link of Object.values(topology.links)) {
-    for (const [sourceSlotId, targetSlotId] of Object.entries(link.targetSlotIdBySourceSlotId)) {
-      const sourceSlot = slots[sourceSlotId];
-      const targetSlot = slots[targetSlotId];
-      if (sourceSlot === undefined || targetSlot === undefined) {
-        continue;
-      }
-      proxyTargetSlotIdBySourceSlotId[sourceSlotId] = targetSlotId;
-      if (sourceSlot.count > 0) {
-        if (targetSlot.itemType === null) {
-          targetSlot.itemType = sourceSlot.itemType;
-        }
-        if (sourceSlot.itemType === targetSlot.itemType || sourceSlot.itemType === null) {
-          targetSlot.count += sourceSlot.count;
-        }
-      }
-      sourceSlot.itemType = null;
-      sourceSlot.count = 0;
+  const linkTopologyState = getRuntimeLinkTopologyState(topology);
+  const proxyTargetSlotIdBySourceSlotId = {
+    ...linkTopologyState.shareAllTargetSlotIdBySourceSlotId,
+  };
+  for (const [sourceSlotId, targetSlotId] of Object.entries(proxyTargetSlotIdBySourceSlotId)) {
+    const sourceSlot = slots[sourceSlotId];
+    const targetSlot = slots[targetSlotId];
+    if (sourceSlot === undefined || targetSlot === undefined) {
+      continue;
     }
+    if (sourceSlot.count > 0) {
+      if (targetSlot.itemType === null) {
+        targetSlot.itemType = sourceSlot.itemType;
+      }
+      if (sourceSlot.itemType === targetSlot.itemType || sourceSlot.itemType === null) {
+        targetSlot.count += sourceSlot.count;
+      }
+    }
+    sourceSlot.itemType = null;
+    sourceSlot.count = 0;
   }
 
   const devices: Record<string, RuntimeDeviceState> = {};
@@ -175,6 +178,12 @@ export function createSimulationMutableRuntimeState(
       devices,
       routingCursors,
       proxyTargetSlotIdBySourceSlotId,
+      sharedCapacitySlotIdsBySlotId: {
+        ...linkTopologyState.sharedCapacitySlotIdsBySlotId,
+      },
+      sharedCapacityLimitBySlotId: {
+        ...linkTopologyState.sharedCapacityLimitBySlotId,
+      },
       nextRecipeRunIndex: 1,
     },
     transient: {

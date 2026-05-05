@@ -292,6 +292,10 @@ function resolveReservationSlotId(
   sourceSlotId: string,
 ): string {
   for (const link of Object.values(topology.links)) {
+    if (link.linkType !== "share-all") {
+      continue
+    }
+
     const targetSlotId = link.targetSlotIdBySourceSlotId[sourceSlotId]
     if (targetSlotId !== undefined) {
       return targetSlotId

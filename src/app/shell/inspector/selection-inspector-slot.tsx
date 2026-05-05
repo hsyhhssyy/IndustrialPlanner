@@ -148,7 +148,7 @@ export function SelectionInspectorSlot({
         };
       });
       const simulation = appHost.workspace.simulation;
-      const showSimulationRuntimeInspector = simulation?.state === "start";
+      const showSimulationRuntimeInspector = simulation?.state !== "stop";
 
       setSlotState({
         selectedEntity,

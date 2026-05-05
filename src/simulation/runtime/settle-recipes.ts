@@ -2,9 +2,7 @@ import type {
   CompiledSimulationDevice,
   CompiledSimulationRecipeItem,
   CompiledSimulationRecipePlan,
-  CompiledSimulationSlotTemplate,
   CompiledSimulationTopology,
-  SimulationItemDomain,
 } from "@/domain/types/simulation";
 
 import type {
@@ -14,6 +12,7 @@ import type {
   RuntimeSlotState,
   SimulationMutableRuntimeState,
 } from "./runtime-state";
+import { placeRecipeOutputs } from "./place-recipe-outputs";
 
 export function settleRecipes(
   topology: CompiledSimulationTopology,
@@ -71,14 +70,14 @@ function finishRecipeIfPossible(
     consumeSelectionsFromSlots(simulatedSlots, recipe.reservations);
   }
 
-  if (!placeOutputs(topology, simulatedSlots, recipe.plan, recipe.inputItems)) {
+  if (!placeRecipeOutputs(topology, simulatedSlots, recipe.plan, recipe.inputItems)) {
     return false;
   }
 
   if (recipe.recipeType === "reserved-item") {
     consumeSelections(state, recipe.reservations);
   }
-  placeOutputs(topology, state.persistent.slots, recipe.plan, recipe.inputItems);
+  placeRecipeOutputs(topology, state.persistent.slots, recipe.plan, recipe.inputItems);
   return true;
 }
 
@@ -96,9 +95,6 @@ function findStartableRecipe(
     if (selections === null) {
       continue;
     }
-    if (shouldDeferReservedRecipeStart(topology, state, plan, selections)) {
-      continue;
-    }
 
     return {
       plan,
@@ -109,49 +105,6 @@ function findStartableRecipe(
 
   return null;
 }
-
-function shouldDeferReservedRecipeStart(
-  topology: CompiledSimulationTopology,
-  state: SimulationMutableRuntimeState,
-  plan: CompiledSimulationRecipePlan,
-  selections: readonly RuntimeReservedItem[],
-): boolean {
-  if (plan.recipeType !== "reserved-item") {
-    return false;
-  }
-
-  const productStorageSlotIds = new Set<string>();
-  for (const cacheGroupId of plan.productCacheGroupIds) {
-    const cacheGroup = topology.cacheGroups[cacheGroupId];
-    if (cacheGroup === undefined) {
-      continue;
-    }
-    for (const slotId of cacheGroup.slotIds) {
-      productStorageSlotIds.add(resolveStorageSlotId(state, slotId));
-    }
-  }
-
-  for (const selection of selections) {
-    if (
-      productStorageSlotIds.has(selection.slotId)
-      && !wasStorageSlotWrittenByTransferThisTick(state, selection.slotId)
-    ) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function wasStorageSlotWrittenByTransferThisTick(
-  state: SimulationMutableRuntimeState,
-  storageSlotId: string,
-): boolean {
-  return state.transient.transfers.some((transfer) => (
-    resolveStorageSlotId(state, transfer.targetSlotId) === storageSlotId
-  ));
-}
-
 function selectInputs(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
@@ -249,147 +202,11 @@ function consumeSelectionsFromSlots(
   }
 }
 
-function placeOutputs(
-  topology: CompiledSimulationTopology,
-  slots: Record<string, RuntimeSlotState>,
-  plan: CompiledSimulationRecipePlan,
-  inputItems: readonly RuntimeRecipeItem[],
-): boolean {
-  const outputItems = resolveOutputItems(plan, inputItems);
-  for (const outputItem of outputItems) {
-    let remainingAmount = outputItem.amount;
-    while (remainingAmount > 0) {
-      const target = findOutputTarget(topology, slots, plan, outputItem.itemType);
-      if (target === null) {
-        return false;
-      }
-
-      const amount = Math.min(target.availableAmount, remainingAmount);
-      const targetSlot = slots[target.slotId];
-      if (targetSlot === undefined) {
-        return false;
-      }
-      targetSlot.itemType = outputItem.itemType;
-      targetSlot.count += amount;
-      remainingAmount -= amount;
-    }
-  }
-
-  return true;
-}
-
-function resolveOutputItems(
-  plan: CompiledSimulationRecipePlan,
-  inputItems: readonly RuntimeRecipeItem[],
-): RuntimeRecipeItem[] {
-  const outputItems: RuntimeRecipeItem[] = [];
-  for (const output of plan.outputs) {
-    const itemType = output.itemId === "same-as-input"
-      ? inputItems[0]?.itemType ?? null
-      : output.itemId;
-    if (itemType === null || itemType === "any") {
-      continue;
-    }
-    outputItems.push({
-      itemType,
-      amount: output.amount,
-    });
-  }
-  return outputItems;
-}
-
-function findOutputTarget(
-  topology: CompiledSimulationTopology,
-  slots: Record<string, RuntimeSlotState>,
-  plan: CompiledSimulationRecipePlan,
-  itemType: string,
-): {
-  readonly slotId: string;
-  readonly availableAmount: number;
-} | null {
-  const sameItemTarget = findOutputTargetByMode(topology, slots, plan, itemType, "same-item");
-  if (sameItemTarget !== null) {
-    return sameItemTarget;
-  }
-  return findOutputTargetByMode(topology, slots, plan, itemType, "empty");
-}
-
-function findOutputTargetByMode(
-  topology: CompiledSimulationTopology,
-  slots: Record<string, RuntimeSlotState>,
-  plan: CompiledSimulationRecipePlan,
-  itemType: string,
-  mode: "same-item" | "empty",
-): {
-  readonly slotId: string;
-  readonly availableAmount: number;
-} | null {
-  for (const cacheGroupId of plan.productCacheGroupIds) {
-    const cacheGroup = topology.cacheGroups[cacheGroupId];
-    if (cacheGroup === undefined) {
-      continue;
-    }
-
-    for (const slotId of cacheGroup.slotIds) {
-      const storageSlotId = resolveStorageSlotIdFromSlots(topology, slotId);
-      const slot = topology.slots[storageSlotId] ?? topology.slots[slotId];
-      const slotState = slots[storageSlotId];
-      if (slot === undefined || slotState === undefined || !slotCanHold(topology, slot, itemType)) {
-        continue;
-      }
-
-      if (mode === "same-item" && slotState.itemType !== itemType) {
-        continue;
-      }
-      if (mode === "empty" && slotState.count > 0) {
-        continue;
-      }
-      if (mode === "empty" && slot.lock !== null && slot.lock !== itemType) {
-        continue;
-      }
-
-      const availableAmount = Math.max(0, slot.capacity - slotState.count);
-      if (availableAmount > 0) {
-        return { slotId: storageSlotId, availableAmount };
-      }
-    }
-  }
-
-  return null;
-}
-
 function resolveStorageSlotId(
   state: SimulationMutableRuntimeState,
   slotId: string,
 ): string {
   return state.persistent.proxyTargetSlotIdBySourceSlotId[slotId] ?? slotId;
-}
-
-function resolveStorageSlotIdFromSlots(
-  topology: CompiledSimulationTopology,
-  slotId: string,
-): string {
-  for (const link of Object.values(topology.links)) {
-    const targetSlotId = link.targetSlotIdBySourceSlotId[slotId];
-    if (targetSlotId !== undefined) {
-      return targetSlotId;
-    }
-  }
-  return slotId;
-}
-
-function slotCanHold(
-  topology: CompiledSimulationTopology,
-  slot: CompiledSimulationSlotTemplate,
-  itemType: string,
-): boolean {
-  if (slot.lock !== null && slot.lock !== itemType) {
-    return false;
-  }
-  if (slot.domain === "any") {
-    return true;
-  }
-  return getItemDomain(topology, itemType) === slot.domain;
 }
 
 function aggregateInputItems(
@@ -435,17 +252,4 @@ function cloneSlotStates(
     };
   }
   return clonedSlots;
-}
-
-function getItemDomain(
-  topology: CompiledSimulationTopology,
-  itemType: string,
-): SimulationItemDomain {
-  const item = topology.itemCatalog[itemType];
-  if (item !== undefined) {
-    return item.domain;
-  }
-  return itemType.includes("_liquid") || itemType.startsWith("liquid_")
-    ? "liquid"
-    : "solid";
 }

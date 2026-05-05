@@ -94,6 +94,7 @@ export const INSPECTOR_TYPE = {
    *   - share-all：共享内容和上限
   *   - share-cap：仅共享容量上限
   *   - 2026-05-04 订正：share-cap 已删除，保留本行仅作历史语义说明。
+  *   - 订正（2026-05-05）：share-cap 已恢复，用于库存分离但容量联动的场景。
    */
   linkConfig: "link-config",
 

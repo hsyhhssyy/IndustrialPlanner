@@ -39,7 +39,8 @@ export type SimulationPortDirection = "input" | "output";
 export type SimulationCacheType = "ingredient" | "product" | "universal";
 
 /** Link 类型（对应《仿真运行原理》§3.3 缓存链接）。 */
-export type SimulationLinkType = "share-all";
+/** 订正（2026-05-05）：恢复 `share-cap`，用于共享容量但不代理库存。 */
+export type SimulationLinkType = "share-all" | "share-cap";
 
 /**
  * 端口吞吐量限制（对应《仿真运行原理》§3.1 表格中的 count）。
@@ -65,6 +66,7 @@ export type SimulationTransportClass =
  * 配方类型（对应《仿真运行原理》§3.2 配方类型）。
  *   - "immediate-consume"：进度=0% 时立即扣除原料，不占用存储
  *   - "reserved-item"：进度=100% 时消耗原料，占用存储（搬运设备）
+ * 订正（2026-05-05）：`reserved-item` 在推进阶段若输出缓存可接收，则立即写入产物、消耗原料并结束当前 run；仅在推进阶段无法完整输出时，才留待二次结算阶段处理。
  */
 export type SimulationRecipeType =
   | "immediate-consume"
@@ -383,10 +385,19 @@ export interface SimulationRuntimeStatus {
   readonly error: string | null;
 }
 
+export interface SimulationDeviceRuntimeSlotItem {
+  readonly storageGroupId: string | null;
+  readonly slotId: string;
+  readonly itemType: string | null;
+  readonly count: number;
+  readonly reserved: readonly SimulationReservedItemSnapshot[];
+}
+
 export interface SimulationDeviceRuntimeStatus {
   readonly recipeId: string | null;
   readonly progressSeconds: number | null;
   readonly desiredSeconds: number | null;
+  readonly slotItems: readonly SimulationDeviceRuntimeSlotItem[];
 }
 
 export interface SimulationStartResult {

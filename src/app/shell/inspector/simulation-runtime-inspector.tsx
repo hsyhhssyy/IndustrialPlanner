@@ -1,4 +1,7 @@
-import type { SimulationDeviceRuntimeStatus } from "@/domain/types/simulation";
+import type {
+  SimulationDeviceRuntimeSlotItem,
+  SimulationDeviceRuntimeStatus,
+} from "@/domain/types/simulation";
 
 export const SIMULATION_RUNTIME_INSPECTOR_KEY = "simulation-runtime-inspecotr";
 
@@ -38,6 +41,31 @@ function formatProgressPercent(progressPercent: number | null): string {
   return `${formatted}%`;
 }
 
+function formatSlotItemLabel(slotItem: SimulationDeviceRuntimeSlotItem): string {
+  return slotItem.storageGroupId === null
+    ? slotItem.slotId
+    : `${slotItem.storageGroupId}.${slotItem.slotId}`;
+}
+
+function formatReservedItems(slotItem: SimulationDeviceRuntimeSlotItem): string | null {
+  if (slotItem.reserved.length === 0) {
+    return null;
+  }
+
+  return slotItem.reserved
+    .map((reservedItem) => `${reservedItem.itemType} x ${reservedItem.amount}`)
+    .join(", ");
+}
+
+function formatSlotItemValue(slotItem: SimulationDeviceRuntimeSlotItem): string {
+  const reserved = formatReservedItems(slotItem);
+  const segments = [`item=${formatRuntimeValue(slotItem.itemType)}`, `count=${slotItem.count}`];
+  if (reserved !== null) {
+    segments.push(`reserved=${reserved}`);
+  }
+  return segments.join(", ");
+}
+
 export function SimulationRuntimeInspector({
   runtimeStatus,
 }: {
@@ -62,6 +90,7 @@ export function SimulationRuntimeInspector({
       value: formatProgressPercent(progressPercent),
     },
   ];
+  const slotItems = runtimeStatus?.slotItems ?? [];
 
   return (
     <article
@@ -77,6 +106,24 @@ export function SimulationRuntimeInspector({
           </div>
         ))}
       </dl>
+      <h5>slotItems</h5>
+      {runtimeStatus === null ? (
+        <p>null</p>
+      ) : slotItems.length === 0 ? (
+        <p>[]</p>
+      ) : (
+        <dl className="kv-grid">
+          {slotItems.map((slotItem) => {
+            const label = formatSlotItemLabel(slotItem);
+            return (
+              <div className="kv" data-runtime-slot={label} key={label}>
+                <dt>{label}</dt>
+                <dd>{formatSlotItemValue(slotItem)}</dd>
+              </div>
+            );
+          })}
+        </dl>
+      )}
     </article>
   );
 }

@@ -156,7 +156,27 @@ describe("createBeltCargoDecoration", () => {
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
     const ctx = createContext({
       getTexture,
+      linkType: "share-all",
       reserveOnProxyTargetSlot: true,
+    })
+
+    decoration.sync(ctx as never)
+
+    expect(decoration.container.visible).toBe(true)
+    const boxGraphics = decoration.container.children[0] as unknown as {
+      drawCommands: Array<unknown>;
+    }
+    expect(boxGraphics.drawCommands).toHaveLength(1)
+
+    decoration.destroy()
+  })
+
+  it("keeps reservations on the input slot when the belt link only shares capacity", () => {
+    const decoration = createBeltCargoDecoration()
+    const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+    const ctx = createContext({
+      getTexture,
+      linkType: "share-cap",
     })
 
     decoration.sync(ctx as never)
@@ -233,6 +253,7 @@ describe("createBeltCargoDecoration", () => {
 
 function createContext(options: {
   getTexture: (key: string) => Promise<unknown>;
+  linkType?: "share-all" | "share-cap";
   reserveOnProxyTargetSlot?: boolean;
   reserved?: readonly {
     recipeRunId: string;
@@ -356,10 +377,10 @@ function createContext(options: {
               },
             },
             ports: {},
-            links: options.reserveOnProxyTargetSlot ? {
+            links: options.linkType !== undefined ? {
               [`${compiledDeviceId}/link:transport-cache-link`]: {
                 id: `${compiledDeviceId}/link:transport-cache-link`,
-                linkType: "share-all",
+                linkType: options.linkType,
                 sourceSlotIds: [inputSlotId],
                 targetSlotIds: [outputSlotId],
                 targetSlotIdBySourceSlotId: {

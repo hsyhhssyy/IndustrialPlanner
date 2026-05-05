@@ -247,19 +247,47 @@ describe("createSimulationHost", () => {
 
     expect(tickOne.status).toBe("ready")
     expect(host.queries.getDeviceRuntimeStatus("missing-device")).toBeNull()
-    expect(host.queries.getDeviceRuntimeStatus("grinder")).toEqual({
+    expect(host.queries.getDeviceRuntimeStatus("grinder")).toEqual(expect.objectContaining({
       recipeId: "r_crusher_iron_powder_from_iron_nugget_basic",
       progressSeconds: 0,
       desiredSeconds: transportRecipeDurationSeconds,
-    })
+      slotItems: expect.arrayContaining([
+        expect.objectContaining({
+          storageGroupId: "item_input_buffer",
+          slotId: "input_slot_1",
+          itemType: "item_iron_nugget",
+          count: 0,
+        }),
+        expect.objectContaining({
+          storageGroupId: "item_output_buffer",
+          slotId: "output_slot_1",
+          itemType: null,
+          count: 0,
+        }),
+      ]),
+    }))
 
     await host.actions.getTickSnapshot(transportRecipeCompletionTick)
 
-    expect(host.queries.getDeviceRuntimeStatus("grinder")).toEqual({
+    expect(host.queries.getDeviceRuntimeStatus("grinder")).toEqual(expect.objectContaining({
       recipeId: null,
       progressSeconds: null,
       desiredSeconds: null,
-    })
+      slotItems: expect.arrayContaining([
+        expect.objectContaining({
+          storageGroupId: "item_input_buffer",
+          slotId: "input_slot_1",
+          itemType: "item_iron_nugget",
+          count: 0,
+        }),
+        expect.objectContaining({
+          storageGroupId: "item_output_buffer",
+          slotId: "output_slot_1",
+          itemType: "item_iron_powder",
+          count: 1,
+        }),
+      ]),
+    }))
 
     host.dispose()
   })
@@ -281,16 +309,56 @@ describe("createSimulationHost", () => {
       throw new Error("Expected delivered tick to be ready.")
     }
 
-    expect(deliveredTick.snapshot.slots["device:source-storage/cache-group:item_storage.slot_1.output-view/slot:slot_1.out-view"]?.count).toBe(19)
+    expect(deliveredTick.snapshot.slots["device:source-storage/cache-group:item_storage.slot_1.output-view/slot:slot_1.out-view"]?.count).toBe(18)
+    expect(deliveredTick.snapshot.slots["device:belt/cache-group:item_input_buffer/slot:input_slot_1"]?.count).toBe(1)
+    expect(deliveredTick.snapshot.slots["device:belt/cache-group:item_output_buffer/slot:output_slot_1"]?.count).toBe(0)
     expect(deliveredTick.snapshot.slots["device:sink-storage/cache-group:item_storage.slot_1.output-view/slot:slot_1.out-view"]?.itemType).toBe("item_iron_ore")
     expect(deliveredTick.snapshot.slots["device:sink-storage/cache-group:item_storage.slot_1.output-view/slot:slot_1.out-view"]?.count).toBe(1)
-    expect(deliveredTick.snapshot.transfers).toEqual([
+    expect(deliveredTick.snapshot.transfers).toHaveLength(2)
+    expect(deliveredTick.snapshot.transfers).toEqual(expect.arrayContaining([
       expect.objectContaining({
         edgeId: expect.stringContaining("device:belt/cache-group:item_output_buffer"),
+        sourceSlotId: "device:belt/cache-group:item_output_buffer/slot:output_slot_1",
         itemType: "item_iron_ore",
         amount: 1,
       }),
-    ])
+      expect.objectContaining({
+        edgeId: expect.stringContaining("device:source-storage/cache-group:item_storage.slot_1.output-view"),
+        sourceSlotId: "device:source-storage/cache-group:item_storage.slot_1.output-view/slot:slot_1.out-view",
+        targetSlotId: "device:belt/cache-group:item_input_buffer/slot:input_slot_1",
+        itemType: "item_iron_ore",
+        amount: 1,
+      }),
+    ]))
+    expect(host.queries.getDeviceRuntimeStatus("source-storage")).toEqual(expect.objectContaining({
+      recipeId: null,
+      progressSeconds: null,
+      desiredSeconds: null,
+      slotItems: expect.arrayContaining([
+        expect.objectContaining({
+          storageGroupId: "item_storage",
+          slotId: "slot_1",
+          itemType: "item_iron_ore",
+          count: 18,
+        }),
+      ]),
+    }))
+    expect(host.queries.getDeviceRuntimeStatus("source-storage")?.slotItems).toHaveLength(6)
+    expect(host.queries.getDeviceRuntimeStatus("belt")?.recipeId).not.toBeNull()
+    expect(host.queries.getDeviceRuntimeStatus("sink-storage")).toEqual(expect.objectContaining({
+      recipeId: null,
+      progressSeconds: null,
+      desiredSeconds: null,
+      slotItems: expect.arrayContaining([
+        expect.objectContaining({
+          storageGroupId: "item_storage",
+          slotId: "slot_1",
+          itemType: "item_iron_ore",
+          count: 1,
+        }),
+      ]),
+    }))
+    expect(host.queries.getDeviceRuntimeStatus("sink-storage")?.slotItems).toHaveLength(6)
 
     host.dispose()
   })
