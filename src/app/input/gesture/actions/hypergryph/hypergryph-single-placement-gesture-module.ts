@@ -47,6 +47,15 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
         return { status: "handled" };
       }
 
+      if (event.type === "on-enter-active-tool") {
+        if (event.to !== "single-placement") {
+          return { status: "ignored" };
+        }
+
+        syncPlacementEntryUi(context.appHost);
+        return { status: "handled" };
+      }
+
       if (event.type === "mouse move") {
         lastMousePosition = event.position;
       }
@@ -373,6 +382,7 @@ function finalizePlacementEnter(options: {
 
   try {
     options.appHost.internalState.runtime.placementAnchor = placementAnchor;
+    options.appHost.internalState.runtime.singlePlacementPointerMode = options.source;
     options.editor.actions.createSinglePlacementDraft(options.deviceId, placementAnchor);
 
     const previewRect = options.editor.queries.findEntityCollectionGridRect(
@@ -386,20 +396,11 @@ function finalizePlacementEnter(options: {
 
     options.appHost.internalState.runtime.singlePlacementDeviceId = options.deviceId;
 
-    if (options.source === "touch") {
-      if (!options.appHost.internalActions.showCanvasFloatingToolbarForCollection(
-        PLACEMENT_TOOLBAR_BUTTON_IDS,
-        EntityCollectionType.preview,
-      )) {
-        restoreFailedPlacementEnter(options.appHost, options.editor);
-        return { status: "ignored" };
-      }
-    } else {
-      options.appHost.internalActions.hideCanvasFloatingToolbar();
-    }
-
     if (options.shouldSetActiveTool) {
       options.appHost.internalActions.setActiveTool("single-placement");
+    } else if (!syncPlacementEntryUi(options.appHost)) {
+        restoreFailedPlacementEnter(options.appHost, options.editor);
+        return { status: "ignored" };
     }
 
     return { status: "handled" };
@@ -556,6 +557,7 @@ export function cleanupPlacementDraft(appHost: AppHost): void {
 function clearPlacementUi(appHost: AppHost): void {
   appHost.internalState.runtime.placementAnchor = null;
   appHost.internalState.runtime.singlePlacementDeviceId = null;
+  appHost.internalState.runtime.singlePlacementPointerMode = null;
   appHost.internalActions.hideCanvasFloatingToolbar();
 }
 
@@ -571,6 +573,23 @@ function safelyCancelPlacementDraft(editor: EditorContract): void {
   } catch {
     // Best-effort cleanup is intentionally silent; placement should not leave UI half-entered.
   }
+}
+
+function syncPlacementEntryUi(appHost: AppHost): boolean {
+  const pointerMode = appHost.internalState.runtime.singlePlacementPointerMode;
+  if (pointerMode === null) {
+    return true;
+  }
+
+  if (pointerMode !== "touch") {
+    appHost.internalActions.hideCanvasFloatingToolbar();
+    return true;
+  }
+
+  return appHost.internalActions.showCanvasFloatingToolbarForCollection(
+    PLACEMENT_TOOLBAR_BUTTON_IDS,
+    EntityCollectionType.preview,
+  );
 }
 
 function parsePlacementModeDeviceId(

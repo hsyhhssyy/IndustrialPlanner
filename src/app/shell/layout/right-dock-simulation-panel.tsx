@@ -4,9 +4,8 @@ import type { AppHost } from "@/app/host/app-host";
 
 const SIMULATION_PANEL_INTERVAL_MS = 250;
 
-function formatCurrentTickSnapshotJson(appHost: AppHost): string {
-  const snapshot = appHost.workspace.simulation?.queries.getCurrentTickSnapshot() ?? null;
-  return JSON.stringify(snapshot, null, 2) ?? "null";
+function formatCurrentTickReadModelJson(appHost: AppHost): string {
+  return JSON.stringify(appHost.workspace.simulation?.queries.getCurrentTick() ?? null, null, 2);
 }
 
 export function RightDockSimulationPanel({
@@ -16,11 +15,11 @@ export function RightDockSimulationPanel({
   appHost: AppHost;
   translate: (key: string) => string;
 }) {
-  const [snapshotJson, setSnapshotJson] = useState(() => formatCurrentTickSnapshotJson(appHost));
+  const [currentTickJson, setCurrentTickJson] = useState(() => formatCurrentTickReadModelJson(appHost));
 
   useEffect(() => {
     const tick = () => {
-      setSnapshotJson(formatCurrentTickSnapshotJson(appHost));
+      setCurrentTickJson(formatCurrentTickReadModelJson(appHost));
     };
 
     tick();
@@ -39,7 +38,7 @@ export function RightDockSimulationPanel({
         data-simulation-current-tick-json
         readOnly
         rows={20}
-        value={snapshotJson}
+        value={currentTickJson}
       />
     </article>
   );

@@ -22,9 +22,9 @@ const LOGISTICS_SPRITE_SPECS = [
       'belt_turn_ccw_1x1',
     ],
     sideInset: SPRITE_SIZE * 0.05,
-    fillColor: '#f28c28',
-    fillOpacity: 0.72,
-    edgeColor: '#b45309',
+    fillColor: '#ffffff',
+    fillOpacity: 0.50,
+    edgeColor: '#ffffff',
     edgeWidth: Math.max(6, Math.round(SPRITE_SIZE * 0.035)),
   },
   {

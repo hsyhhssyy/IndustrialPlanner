@@ -1,34 +1,33 @@
 import type {
   CompiledSimulationTopology,
-  GetSimulationTickSnapshotResult,
+  SimulationTickPullStatus,
+  SimulationTickReadResult,
   SimulationRuntimeStatus,
   SimulationStartResult,
-  SimulationTickSnapshot,
-} from "@/domain/types/simulation";
+} from "./types";
+import type { SimulationCurrentTickReadModel } from "@/domain/query/simulation-read-model";
 import type {
   SimulationWorkerRequest,
   SimulationWorkerResponse,
 } from "./worker-protocol";
 
-import { advanceDevices } from "./runtime/advance-devices";
-import { breakCycles } from "./runtime/break-cycles";
-import { buildSolveGraph } from "./runtime/build-solve-graph";
-import { createTickSnapshot } from "./runtime/create-tick-snapshot";
-import { moveItems } from "./runtime/move-items";
-import { resetTickState } from "./runtime/reset-tick-state";
+import { createTickReadModel } from "./runtime/create-tick-snapshot";
+import { advanceDevices } from "./runtime/stage-1-advance-devices";
+import { buildSolveGraph } from "./runtime/stage-2-build-solve-graph";
+import { solveTransferGraph } from "./runtime/stage-3-layered-reverse-solve";
+import { rotateRoutingCursors } from "./runtime/stage-4-rotate-routing-cursors";
+import { settleRecipes } from "./runtime/stage-5-settle-recipes";
 import {
   createSimulationMutableRuntimeState,
   type SimulationMutableRuntimeState,
 } from "./runtime/runtime-state";
-import { settleRecipes } from "./runtime/settle-recipes";
-import { solveTransferGraph } from "./runtime/solve-transfer-graph";
 
 const MAX_RETAINED_TICKS = 180;
 
 export class SimulationWorkerRuntime {
   private topology: CompiledSimulationTopology | null = null;
   private runtimeState: SimulationMutableRuntimeState | null = null;
-  private snapshots = new Map<number, SimulationTickSnapshot>();
+  private tickReadModels = new Map<number, SimulationCurrentTickReadModel>();
   private nextTickNumber = 0;
   private retainedFromTick: number | null = null;
   private latestTickNumber: number | null = null;
@@ -44,11 +43,11 @@ export class SimulationWorkerRuntime {
           result: this.loadTopology(request.topology),
           status: this.getStatus(),
         };
-      case "get-tick-snapshot":
+      case "get-tick-read-model":
         return {
-          type: "tick-snapshot-result",
+          type: "tick-read-model-result",
           requestId: request.requestId,
-          result: this.getTickSnapshot(request.tickNumber),
+          result: this.getTickReadModel(request.tickNumber),
           status: this.getStatus(),
         };
     }
@@ -61,7 +60,7 @@ export class SimulationWorkerRuntime {
       documentHash: this.topology?.documentHash ?? null,
       retainedFromTick: this.retainedFromTick,
       latestTickNumber: this.latestTickNumber,
-      bufferSize: this.snapshots.size,
+      bufferSize: this.tickReadModels.size,
       maxBufferSize: MAX_RETAINED_TICKS,
       error: this.error,
     };
@@ -70,7 +69,7 @@ export class SimulationWorkerRuntime {
   private loadTopology(topology: CompiledSimulationTopology): SimulationStartResult {
     this.topology = topology;
     this.runtimeState = createSimulationMutableRuntimeState(topology);
-    this.snapshots.clear();
+    this.tickReadModels.clear();
     this.nextTickNumber = 0;
     this.retainedFromTick = null;
     this.latestTickNumber = null;
@@ -96,65 +95,70 @@ export class SimulationWorkerRuntime {
     }
   }
 
-  private getTickSnapshot(tickNumber: number): GetSimulationTickSnapshotResult {
+  private getTickReadModel(tickNumber: number): SimulationTickReadResult {
     if (this.topology === null || this.runtimeState === null) {
       return {
-        status: "not-found",
-        reason: "missing-topology",
-        requestedTickNumber: tickNumber,
-        retainedFromTick: null,
-        latestTickNumber: null,
-        bufferSize: 0,
+        status: createNotFoundStatus(tickNumber, "missing-topology", null, null, 0),
+        currentTick: null,
       };
     }
 
     if (this.latestTickNumber === null || tickNumber > this.latestTickNumber) {
       return {
-        status: "not-ready",
-        requestedTickNumber: tickNumber,
-        retainedFromTick: this.retainedFromTick,
-        latestTickNumber: this.latestTickNumber,
-        bufferSize: this.snapshots.size,
+        status: {
+          status: "not-ready",
+          requestedTickNumber: tickNumber,
+          retainedFromTick: this.retainedFromTick,
+          latestTickNumber: this.latestTickNumber,
+          bufferSize: this.tickReadModels.size,
+        },
+        currentTick: null,
       };
     }
 
     if (this.retainedFromTick !== null && tickNumber < this.retainedFromTick) {
       return {
-        status: "not-found",
-        reason: "cleared",
-        requestedTickNumber: tickNumber,
-        retainedFromTick: this.retainedFromTick,
-        latestTickNumber: this.latestTickNumber,
-        bufferSize: this.snapshots.size,
+        status: createNotFoundStatus(
+          tickNumber,
+          "cleared",
+          this.retainedFromTick,
+          this.latestTickNumber,
+          this.tickReadModels.size,
+        ),
+        currentTick: null,
       };
     }
 
-    const snapshot = this.snapshots.get(tickNumber);
-    if (snapshot === undefined) {
+    const currentTick = this.tickReadModels.get(tickNumber);
+    if (currentTick === undefined) {
       return {
-        status: "not-found",
-        reason: "unknown",
-        requestedTickNumber: tickNumber,
-        retainedFromTick: this.retainedFromTick,
-        latestTickNumber: this.latestTickNumber,
-        bufferSize: this.snapshots.size,
+        status: createNotFoundStatus(
+          tickNumber,
+          "unknown",
+          this.retainedFromTick,
+          this.latestTickNumber,
+          this.tickReadModels.size,
+        ),
+        currentTick: null,
       };
     }
 
-    for (const retainedTickNumber of [...this.snapshots.keys()]) {
+    for (const retainedTickNumber of [...this.tickReadModels.keys()]) {
       if (retainedTickNumber < tickNumber) {
-        this.snapshots.delete(retainedTickNumber);
+        this.tickReadModels.delete(retainedTickNumber);
       }
     }
     this.retainedFromTick = tickNumber;
     this.fillSnapshotWindow();
 
     return {
-      status: "ready",
-      snapshot,
-      retainedFromTick: this.retainedFromTick,
-      latestTickNumber: this.latestTickNumber ?? tickNumber,
-      bufferSize: this.snapshots.size,
+      status: {
+        status: "ready",
+        retainedFromTick: this.retainedFromTick,
+        latestTickNumber: this.latestTickNumber ?? tickNumber,
+        bufferSize: this.tickReadModels.size,
+      },
+      currentTick,
     };
   }
 
@@ -163,9 +167,9 @@ export class SimulationWorkerRuntime {
       return;
     }
 
-    while (this.snapshots.size < MAX_RETAINED_TICKS) {
-      const snapshot = this.createNextSnapshot(this.nextTickNumber);
-      this.snapshots.set(this.nextTickNumber, snapshot);
+    while (this.tickReadModels.size < MAX_RETAINED_TICKS) {
+      const currentTick = this.createNextTickReadModel(this.nextTickNumber);
+      this.tickReadModels.set(this.nextTickNumber, currentTick);
       this.latestTickNumber = this.nextTickNumber;
       this.retainedFromTick = Math.min(
         this.retainedFromTick ?? this.nextTickNumber,
@@ -175,25 +179,40 @@ export class SimulationWorkerRuntime {
     }
   }
 
-  private createNextSnapshot(tickNumber: number): SimulationTickSnapshot {
+  private createNextTickReadModel(tickNumber: number): SimulationCurrentTickReadModel {
     if (this.topology === null || this.runtimeState === null) {
       throw new Error("Simulation runtime is not initialized.");
     }
 
     this.runtimeState.tickNumber = tickNumber;
-    resetTickState(this.topology, this.runtimeState);
 
     if (tickNumber > 0) {
       advanceDevices(this.topology, this.runtimeState);
       buildSolveGraph(this.topology, this.runtimeState);
-      breakCycles(this.topology, this.runtimeState);
       solveTransferGraph(this.topology, this.runtimeState);
-      moveItems(this.topology, this.runtimeState);
+      rotateRoutingCursors(this.topology, this.runtimeState);
       settleRecipes(this.topology, this.runtimeState);
-      return createTickSnapshot(this.topology, this.runtimeState, tickNumber);
+      return createTickReadModel(this.topology, this.runtimeState);
     }
 
     buildSolveGraph(this.topology, this.runtimeState);
-    return createTickSnapshot(this.topology, this.runtimeState, tickNumber);
+    return createTickReadModel(this.topology, this.runtimeState);
   }
+}
+
+function createNotFoundStatus(
+  requestedTickNumber: number,
+  reason: Extract<SimulationTickPullStatus, { readonly status: "not-found" }> ["reason"],
+  retainedFromTick: number | null,
+  latestTickNumber: number | null,
+  bufferSize: number,
+): Extract<SimulationTickPullStatus, { readonly status: "not-found" }> {
+  return {
+    status: "not-found",
+    reason,
+    requestedTickNumber,
+    retainedFromTick,
+    latestTickNumber,
+    bufferSize,
+  };
 }

@@ -89,7 +89,6 @@ vi.mock("pixi.js", () => {
 })
 
 import { createBeltCargoDecoration } from "@/renderer/scene/decorations/BeltCargoDecoration"
-import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate"
 
 describe("createBeltCargoDecoration", () => {
   it("draws the moving cargo box and only requests each item icon once", async () => {
@@ -151,13 +150,27 @@ describe("createBeltCargoDecoration", () => {
     decoration.destroy()
   })
 
-  it("draws the moving cargo box when the belt input slot is proxied to another slot", () => {
+  it("draws every cargo entry returned by the simulation query", () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
     const ctx = createContext({
       getTexture,
-      linkType: "share-all",
-      reserveOnProxyTargetSlot: true,
+      entries: [
+        {
+          beltShape: "straight",
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          itemId: "item_iron_ore",
+          progress: 0.25,
+        },
+        {
+          beltShape: "straight",
+          position: { x: 1, y: 0 },
+          rotation: 90,
+          itemId: "item_iron_ore",
+          progress: 0.75,
+        },
+      ],
     })
 
     decoration.sync(ctx as never)
@@ -166,26 +179,7 @@ describe("createBeltCargoDecoration", () => {
     const boxGraphics = decoration.container.children[0] as unknown as {
       drawCommands: Array<unknown>;
     }
-    expect(boxGraphics.drawCommands).toHaveLength(1)
-
-    decoration.destroy()
-  })
-
-  it("keeps reservations on the input slot when the belt link only shares capacity", () => {
-    const decoration = createBeltCargoDecoration()
-    const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    const ctx = createContext({
-      getTexture,
-      linkType: "share-cap",
-    })
-
-    decoration.sync(ctx as never)
-
-    expect(decoration.container.visible).toBe(true)
-    const boxGraphics = decoration.container.children[0] as unknown as {
-      drawCommands: Array<unknown>;
-    }
-    expect(boxGraphics.drawCommands).toHaveLength(1)
+    expect(boxGraphics.drawCommands).toHaveLength(2)
 
     decoration.destroy()
   })
@@ -193,14 +187,14 @@ describe("createBeltCargoDecoration", () => {
   it("draws turn belts along the belt centerline", () => {
     const cases = [
       {
-        definitionId: "belt_turn_cw_1x1" as const,
+        beltShape: "turn-cw" as const,
         expected: {
           x: 55.35533905932738,
           y: 84.64466094067262,
         },
       },
       {
-        definitionId: "belt_turn_ccw_1x1" as const,
+        beltShape: "turn-ccw" as const,
         expected: {
           x: 55.35533905932738,
           y: 55.35533905932738,
@@ -213,7 +207,7 @@ describe("createBeltCargoDecoration", () => {
       const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
       const ctx = createContext({
         getTexture,
-        definitionId: testCase.definitionId,
+        beltShape: testCase.beltShape,
       })
 
       decoration.sync(ctx as never)
@@ -239,7 +233,7 @@ describe("createBeltCargoDecoration", () => {
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
     const ctx = createContext({
       getTexture,
-      reserved: [],
+      entries: [],
     })
 
     decoration.sync(ctx as never)
@@ -253,22 +247,22 @@ describe("createBeltCargoDecoration", () => {
 
 function createContext(options: {
   getTexture: (key: string) => Promise<unknown>;
-  linkType?: "share-all" | "share-cap";
-  reserveOnProxyTargetSlot?: boolean;
-  reserved?: readonly {
-    recipeRunId: string;
-    itemType: string;
-    amount: number;
+  entries?: readonly {
+    beltShape: "straight" | "turn-cw" | "turn-ccw";
+    position: { x: number; y: number };
+    rotation: 0 | 90 | 180 | 270;
+    itemId: string;
+    progress: number;
   }[];
-  definitionId?: "belt_straight_1x1" | "belt_turn_cw_1x1" | "belt_turn_ccw_1x1";
+  beltShape?: "straight" | "turn-cw" | "turn-ccw";
 }) {
-  const compiledDeviceId = "device:belt-1"
-  const inputSlotId = `${compiledDeviceId}/cache-group:item_input_buffer/slot:input_slot_1`
-  const outputSlotId = `${compiledDeviceId}/cache-group:item_output_buffer/slot:output_slot_1`
-  const definitionId = options.definitionId ?? "belt_straight_1x1"
-  const recipeRunId = "recipe:device:belt-1:0"
-  const recipeDefinitionId = `${definitionId}:definition-recipe`
-  const reservationSlotId = options.reserveOnProxyTargetSlot ? outputSlotId : inputSlotId
+  const entries = options.entries ?? [{
+    beltShape: options.beltShape ?? "straight",
+    position: { x: 0, y: 0 },
+    rotation: 0 as const,
+    itemId: "item_iron_ore",
+    progress: 0.5,
+  }]
 
   return {
     viewportState: {
@@ -300,151 +294,8 @@ function createContext(options: {
         },
       },
       simulation: {
-        topology: {
-          getSnapshot: () => ({
-            schemaVersion: 1,
-            topologyId: "topology-1",
-            documentKey: "document-1",
-            documentHash: "hash-1",
-            registryHash: "registry-hash-1",
-            standardTickRate: STANDARD_TICK_RATE_PER_SECOND,
-            itemCatalog: {},
-            devices: {
-              [compiledDeviceId]: {
-                id: compiledDeviceId,
-                sourceEntityId: "belt-1",
-                definitionId,
-                position: { x: 0, y: 0 },
-                rotation: 0,
-                tags: [],
-                transportClass: "strict-belt",
-                cacheGroupIds: [`${compiledDeviceId}/cache-group:item_input_buffer`],
-                portIds: [],
-                recipePlan: null,
-                recipePlans: [],
-                routing: {},
-                configHash: "config-hash",
-              },
-            },
-            cacheGroups: {
-              [`${compiledDeviceId}/cache-group:item_input_buffer`]: {
-                id: `${compiledDeviceId}/cache-group:item_input_buffer`,
-                deviceId: compiledDeviceId,
-                sourceStorageSlotGroupId: "item_input_buffer",
-                cacheType: "ingredient",
-                slotIds: [inputSlotId],
-                inputPortIds: [],
-                outputPortIds: [],
-                groupOrder: 0,
-              },
-              [`${compiledDeviceId}/cache-group:item_output_buffer`]: {
-                id: `${compiledDeviceId}/cache-group:item_output_buffer`,
-                deviceId: compiledDeviceId,
-                sourceStorageSlotGroupId: "item_output_buffer",
-                cacheType: "product",
-                slotIds: [outputSlotId],
-                inputPortIds: [],
-                outputPortIds: [],
-                groupOrder: 1,
-              },
-            },
-            slots: {
-              [inputSlotId]: {
-                id: inputSlotId,
-                cacheGroupId: `${compiledDeviceId}/cache-group:item_input_buffer`,
-                sourceSlotId: "input_slot_1",
-                capacity: 1,
-                domain: "solid",
-                lock: null,
-                initialItemType: null,
-                initialCount: 0,
-                ignoreStock: false,
-                submitMode: "never",
-                submitIntervalTicks: null,
-              },
-              [outputSlotId]: {
-                id: outputSlotId,
-                cacheGroupId: `${compiledDeviceId}/cache-group:item_output_buffer`,
-                sourceSlotId: "output_slot_1",
-                capacity: 1,
-                domain: "solid",
-                lock: null,
-                initialItemType: null,
-                initialCount: 0,
-                ignoreStock: false,
-                submitMode: "never",
-                submitIntervalTicks: null,
-              },
-            },
-            ports: {},
-            links: options.linkType !== undefined ? {
-              [`${compiledDeviceId}/link:transport-cache-link`]: {
-                id: `${compiledDeviceId}/link:transport-cache-link`,
-                linkType: options.linkType,
-                sourceSlotIds: [inputSlotId],
-                targetSlotIds: [outputSlotId],
-                targetSlotIdBySourceSlotId: {
-                  [inputSlotId]: outputSlotId,
-                },
-              },
-            } : {},
-            physicalConnections: {},
-            transferEdges: {},
-            ordering: {
-              deviceOrder: [compiledDeviceId],
-              cacheGroupOrder: [],
-              slotOrder: [inputSlotId, outputSlotId],
-              portOrder: [],
-              physicalConnectionOrder: [],
-              edgeOrder: [],
-            },
-            diagnostics: [],
-          }),
-        },
         queries: {
-          getCurrentTickSnapshot: () => ({
-            schemaVersion: 1,
-            topologyId: "topology-1",
-            documentHash: "hash-1",
-            tickNumber: 2,
-            status: "running",
-            slots: {
-              [reservationSlotId]: {
-                slotId: reservationSlotId,
-                itemType: "item_iron_ore",
-                count: 1,
-                reserved: options.reserved ?? [{
-                  recipeRunId,
-                  itemType: "item_iron_ore",
-                  amount: 1,
-                }],
-              },
-            },
-            devices: {
-              [compiledDeviceId]: {
-                deviceId: compiledDeviceId,
-                block: false,
-                recipe: {
-                  runId: recipeRunId,
-                  recipeId: recipeDefinitionId,
-                  recipeType: "reserved-item",
-                  progressTicks: 20,
-                  durationTicks: 40,
-                  state: "running",
-                },
-              },
-            },
-            nodes: {},
-            transfers: [],
-            routingCursors: {},
-            warehouse: {},
-            diagnostics: [],
-          }),
-          getDeviceRuntimeStatus: () => ({
-            recipeId: recipeDefinitionId,
-            progressSeconds: 1,
-            desiredSeconds: 2,
-          }),
+          getBeltCargoEntries: () => entries,
         },
       },
     },

@@ -55,7 +55,8 @@ function attachSimulationStub(
         maxBufferSize: 180,
         error: null,
       }),
-      getCurrentTickSnapshot: () => null,
+      getCurrentTick: () => null,
+      getBeltCargoEntries: () => [],
       getDeviceRuntimeStatus,
     },
     actions: {
@@ -65,15 +66,9 @@ function attachSimulationStub(
         diagnostics: [],
       })),
       pause: vi.fn(),
+      resume: vi.fn(),
       stop: vi.fn(),
-      getTickSnapshot: vi.fn(async () => ({
-        status: "not-ready",
-        requestedTickNumber: 0,
-        retainedFromTick: null,
-        latestTickNumber: null,
-        bufferSize: 0,
-      })),
-      advancePlaybackByDeltaMs: vi.fn(async () => null),
+      advancePlaybackByDeltaMs: vi.fn(async () => {}),
     },
   } as NonNullable<WorkspaceContract["simulation"]>;
 
@@ -132,7 +127,10 @@ describe("SelectionInspectorSlot", () => {
       vi.advanceTimersByTime(50);
     });
 
-    expect(queryInspectorKeys(container)).toEqual(["slot-config"]);
+    expect(queryInspectorKeys(container)).toEqual([
+      SIMULATION_RUNTIME_INSPECTOR_KEY,
+      "slot-config",
+    ]);
     expect(container.querySelector("[data-slot-config-group='item_storage']")).not.toBeNull();
     expect(container.querySelector("[data-slot-id='slot_1']")?.textContent).toContain("slot_1");
     expect(container.querySelector("[data-slot-id='slot_6']")?.textContent).toContain("slot_6");
@@ -192,6 +190,7 @@ describe("SelectionInspectorSlot", () => {
         recipeId: "transport-recipe",
         progressSeconds: 0.5,
         desiredSeconds: 2,
+        slotItems: [],
       },
     });
     const currentAppHost = createAppHost(workspace);
@@ -229,6 +228,7 @@ describe("SelectionInspectorSlot", () => {
         recipeId: "paused-recipe",
         progressSeconds: 0.1,
         desiredSeconds: 2,
+        slotItems: [],
       },
     });
     const currentAppHost = createAppHost(workspace);
@@ -247,7 +247,7 @@ describe("SelectionInspectorSlot", () => {
       vi.advanceTimersByTime(50);
     });
 
-    expect(queryInspectorKeys(container)).toEqual([]);
-    expect(getDeviceRuntimeStatus).not.toHaveBeenCalled();
+    expect(queryInspectorKeys(container)).toEqual([SIMULATION_RUNTIME_INSPECTOR_KEY]);
+    expect(getDeviceRuntimeStatus).toHaveBeenCalledWith("dummy-entity-1");
   });
 });

@@ -34,6 +34,15 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
         return { status: "handled" };
       }
 
+      if (event.type === "on-enter-active-tool") {
+        if (event.to !== "move") {
+          return { status: "ignored" };
+        }
+
+        syncMoveEntryUi(context.appHost);
+        return { status: "handled" };
+      }
+
       const editor = context.workspace.editor;
       if (editor === null) {
         return { status: "ignored" };
@@ -368,24 +377,7 @@ function finalizeMoveEnter(options: {
       return { status: "ignored" };
     }
 
-    if (options.source === "touch") {
-      if (!options.appHost.internalActions.showCanvasFloatingToolbarForCollection(
-        MOVE_TOOLBAR_BUTTON_IDS,
-        EntityCollectionType.preview,
-      )) {
-        restoreFailedEnterMove({
-          appHost: options.appHost,
-          editor: options.editor,
-          selectedEntityIds: options.selectedEntityIds,
-          previousTool: options.previousTool,
-        });
-        return { status: "ignored" };
-      }
-
-    } else {
-      options.appHost.internalActions.hideCanvasFloatingToolbar();
-    }
-
+    options.appHost.internalState.runtime.movePointerMode = options.source;
     options.appHost.internalState.runtime.moveAnchor = options.anchor;
     options.appHost.internalState.runtime.moveEnterFrom = options.previousTool;
     options.appHost.internalActions.setActiveTool("move");
@@ -454,9 +446,7 @@ function restoreFailedEnterMove(options: {
   previousTool: AppHost["internalState"]["activeTool"];
 }): void {
   safelyCancelMoveDraft(options.editor);
-  options.appHost.internalState.runtime.moveAnchor = null;
-  options.appHost.internalState.runtime.moveEnterFrom = null;
-  options.appHost.internalActions.hideCanvasFloatingToolbar();
+  clearMoveUi(options.appHost);
   options.appHost.internalActions.setActiveTool(options.previousTool);
 
   try {
@@ -654,7 +644,25 @@ export function cleanupMoveOperationDraft(appHost: AppHost): void {
 function clearMoveUi(appHost: AppHost): void {
   appHost.internalState.runtime.moveAnchor = null;
   appHost.internalState.runtime.moveEnterFrom = null;
+  appHost.internalState.runtime.movePointerMode = null;
   appHost.internalActions.hideCanvasFloatingToolbar();
+}
+
+function syncMoveEntryUi(appHost: AppHost): boolean {
+  const pointerMode = appHost.internalState.runtime.movePointerMode;
+  if (pointerMode === null) {
+    return true;
+  }
+
+  if (pointerMode !== "touch") {
+    appHost.internalActions.hideCanvasFloatingToolbar();
+    return true;
+  }
+
+  return appHost.internalActions.showCanvasFloatingToolbarForCollection(
+    MOVE_TOOLBAR_BUTTON_IDS,
+    EntityCollectionType.preview,
+  );
 }
 
 function triggerPlacementMarqueeToolTap(

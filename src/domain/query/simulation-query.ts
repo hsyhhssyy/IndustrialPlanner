@@ -1,13 +1,13 @@
-
-
+import type { SimulationRuntimeStatus } from "../contract/simulation-contract-types";
 import type {
-  SimulationDeviceRuntimeStatus,
-  SimulationRuntimeStatus,
-  SimulationTickSnapshot,
-} from "../types/simulation";
+  SimulationBeltCargoReadModel,
+  SimulationCurrentTickReadModel,
+  SimulationDeviceRuntimeReadModel,
+} from "./simulation-read-model";
 
 export interface SimulationQuery {
   getStatus(): SimulationRuntimeStatus;
-  getCurrentTickSnapshot(): SimulationTickSnapshot | null;
-  getDeviceRuntimeStatus(deviceId: string): SimulationDeviceRuntimeStatus | null;
+  getCurrentTick(): SimulationCurrentTickReadModel | null;
+  getBeltCargoEntries(): readonly SimulationBeltCargoReadModel[];
+  getDeviceRuntimeStatus(deviceId: string): SimulationDeviceRuntimeReadModel | null;
 }

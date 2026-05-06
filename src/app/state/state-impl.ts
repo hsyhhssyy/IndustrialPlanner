@@ -329,8 +329,10 @@ export interface RuntimeStateReadWrite {
   activePanel: ActivePanel;
   moveAnchor: GridPoint | null;
   moveEnterFrom: ActiveTool | null;
+  movePointerMode: "mouse" | "touch" | null;
   placementAnchor: GridPoint | null;
   singlePlacementDeviceId: string | null;
+  singlePlacementPointerMode: "mouse" | "touch" | null;
   selectingPlacementGroup: PlacementGroup | null;
   logisticsPlacement: LogisticsPlacementRuntimeStateReadWrite;
   marqueeAnchor: GridPoint | null;
@@ -486,8 +488,10 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   activePanel: ActivePanel = null;
   moveAnchor: GridPoint | null = null;
   moveEnterFrom: ActiveTool | null = null;
+  movePointerMode: "mouse" | "touch" | null = null;
   placementAnchor: GridPoint | null = null;
   singlePlacementDeviceId: string | null = null;
+  singlePlacementPointerMode: "mouse" | "touch" | null = null;
   selectingPlacementGroup: PlacementGroup | null = null;
   logisticsPlacement: LogisticsPlacementRuntimeStateReadWrite = new LogisticsPlacementRuntimeStateReadWriteImpl();
   marqueeAnchor: GridPoint | null = null;

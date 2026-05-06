@@ -47,6 +47,15 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
         return { status: "handled" };
       }
 
+      if (event.type === "on-enter-active-tool") {
+        if (event.to !== "logistics-placement") {
+          return { status: "ignored" };
+        }
+
+        syncLogisticsPlacementEntryUi(context.appHost);
+        return { status: "handled" };
+      }
+
       const editor = context.workspace.editor;
 
       if (event.type === "mouse move") {
@@ -249,7 +258,8 @@ function enterLogisticsPlacementMode(options: {
   kind: LogisticsKind;
   pointerMode: "mouse" | "touch";
 }): void {
-  if (options.appHost.internalState.activeTool === "logistics-placement") {
+  const wasLogisticsPlacement = options.appHost.internalState.activeTool === "logistics-placement";
+  if (wasLogisticsPlacement) {
     safelyCancelLogisticsDraft(options.editor);
   }
 
@@ -261,15 +271,11 @@ function enterLogisticsPlacementMode(options: {
   runtime.phase = "idle";
   runtime.routeOrder = "vertical-first";
   options.appHost.internalState.runtime.selectingPlacementGroup = runtime.shortcutPlacementGroup;
-  options.appHost.internalActions.hideCanvasFloatingToolbar();
   options.appHost.internalActions.setActiveTool("logistics-placement");
   options.editor.actions.clearCollection(EntityCollectionType.selection);
 
-  if (options.pointerMode === "touch") {
-    options.appHost.internalActions.showCanvasRightDockToolbar(LOGISTICS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS);
-    if (options.appHost.internalState.workbench.rightDockOpen) {
-      options.appHost.internalActions.toggleRightDock();
-    }
+  if (wasLogisticsPlacement) {
+    syncLogisticsPlacementEntryUi(options.appHost);
   }
 }
 
@@ -786,7 +792,7 @@ function handleLogisticsDeviceShortcut(options: {
 
   options.editor.actions.cancelLogisticsDraft();
   resetLogisticsRuntime(options.appHost);
-  options.appHost.internalActions.hideCanvasFloatingToolbar();
+  options.appHost.internalState.runtime.singlePlacementPointerMode = "mouse";
   options.appHost.internalActions.setActiveTool("single-placement");
   options.appHost.internalState.runtime.selectingPlacementGroup = group;
   options.appHost.internalState.runtime.placementAnchor = anchor;
@@ -830,6 +836,20 @@ function showTouchToolbar(appHost: AppHost): void {
     LOGISTICS_TOOLBAR_BUTTON_IDS,
     EntityCollectionType.logisticsHead,
   );
+}
+
+function syncLogisticsPlacementEntryUi(appHost: AppHost): void {
+  appHost.internalActions.hideCanvasFloatingToolbar();
+  appHost.internalActions.hideCanvasRightDockToolbar();
+
+  if (appHost.internalState.runtime.logisticsPlacement.pointerMode !== "touch") {
+    return;
+  }
+
+  appHost.internalActions.showCanvasRightDockToolbar(LOGISTICS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS);
+  if (appHost.internalState.workbench.rightDockOpen) {
+    appHost.internalActions.toggleRightDock();
+  }
 }
 
 function resetLogisticsRuntime(appHost: AppHost): void {

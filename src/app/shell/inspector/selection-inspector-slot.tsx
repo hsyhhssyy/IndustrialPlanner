@@ -8,7 +8,7 @@ import type {
   EntityInspectorType,
 } from "@/domain/types/registry/entity-inspector";
 import { INSPECTOR_TYPE } from "@/domain/types/registry/entity-inspector";
-import type { SimulationDeviceRuntimeStatus } from "@/domain/types/simulation";
+import type { SimulationDeviceRuntimeReadModel } from "@/domain/query/simulation-read-model";
 
 import { SimulationRuntimeInspector } from "./simulation-runtime-inspector";
 import { SlotConfigInspector } from "./slot-config-inspector";
@@ -26,7 +26,7 @@ interface InspectorSlotState {
   selectedEntity: WorldEntity;
   selectedDefinition: EntityDefinition;
   inspectors: InspectorDescriptor[];
-  simulationRuntimeStatus: SimulationDeviceRuntimeStatus | null;
+  simulationRuntimeStatus: SimulationDeviceRuntimeReadModel | null;
   showSimulationRuntimeInspector: boolean;
   debugEntityJson: string | null;
 }

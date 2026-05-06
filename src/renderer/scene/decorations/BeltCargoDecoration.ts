@@ -1,12 +1,11 @@
 import type {
   GridFloatPoint,
-  GridPoint,
   GridRotation,
 } from "@/domain/types/grid"
 import type {
-  CompiledSimulationTopology,
-  SimulationTickSnapshot,
-} from "@/domain/types/simulation"
+  SimulationBeltCargoReadModel,
+  SimulationBeltCargoShape,
+} from "@/domain/query/simulation-read-model"
 import {
   Container,
   Graphics,
@@ -17,37 +16,16 @@ import {
 import type { DecorationLayer } from "./DecorationLayer"
 import type { DecorationSyncContext } from "./DecorationSyncContext"
 
-const BELT_INPUT_BUFFER_ID = "item_input_buffer"
 const ITEM_ICON_TEXTURE_PREFIX = "item-icon-"
 const BOX_SIZE_RATIO = 0.6
 const BOX_ICON_SIZE_RATIO = 0.72
 const BOX_STROKE_WIDTH_PX = 1
-
-type BeltDefinitionId =
-  | "belt_straight_1x1"
-  | "belt_turn_cw_1x1"
-  | "belt_turn_ccw_1x1"
-
-interface BeltCargoBinding {
-  readonly compiledDeviceId: string;
-  readonly worldEntityId: string;
-  readonly definitionId: BeltDefinitionId;
-  readonly reservationSlotId: string;
-  readonly position: GridPoint;
-  readonly rotation: GridRotation;
-}
 
 interface BeltCargoRenderEntry {
   readonly centerX: number;
   readonly centerY: number;
   readonly itemId: string;
 }
-
-const BELT_DEFINITION_IDS = new Set<BeltDefinitionId>([
-  "belt_straight_1x1",
-  "belt_turn_cw_1x1",
-  "belt_turn_ccw_1x1",
-])
 
 export function createBeltCargoDecoration(): DecorationLayer {
   const container = new Container()
@@ -60,8 +38,6 @@ export function createBeltCargoDecoration(): DecorationLayer {
   container.addChild(iconLayer)
 
   let destroyed = false
-  let cachedTopology: CompiledSimulationTopology | null = null
-  let beltBindings: readonly BeltCargoBinding[] = []
   let itemIconIdByItemId: Map<string, string> | null = null
 
   const hideAll = (): void => {
@@ -82,15 +58,6 @@ export function createBeltCargoDecoration(): DecorationLayer {
       ctx.workspace.registry.itemDefinitions.map((item) => [item.id, item.iconId]),
     )
     return itemIconIdByItemId
-  }
-
-  const ensureTopologyBindings = (topology: CompiledSimulationTopology): void => {
-    if (cachedTopology === topology) {
-      return
-    }
-
-    cachedTopology = topology
-    beltBindings = resolveBeltBindings(topology)
   }
 
   const ensureTexture = (ctx: DecorationSyncContext, textureKey: string): void => {
@@ -140,43 +107,20 @@ export function createBeltCargoDecoration(): DecorationLayer {
       }
 
       const simulation = ctx.workspace.simulation
-      const topology = simulation?.topology.getSnapshot() ?? null
-      const tickSnapshot = simulation?.queries.getCurrentTickSnapshot() ?? null
-      if (simulation === null || topology === null || tickSnapshot === null) {
+      const beltCargoEntries = simulation?.queries.getBeltCargoEntries() ?? []
+      if (simulation === null || beltCargoEntries.length === 0) {
         hideAll()
         return
       }
 
-      ensureTopologyBindings(topology)
       const itemIconMap = ensureItemIconMap(ctx)
       const boxSize = ctx.viewportState.gridCellPixelSize * BOX_SIZE_RATIO
       const boxHalfSize = boxSize / 2
       const entries: BeltCargoRenderEntry[] = []
 
-      for (const binding of beltBindings) {
-        const runtimeStatus = simulation.queries.getDeviceRuntimeStatus(binding.worldEntityId)
-        if (
-          runtimeStatus === null
-          || runtimeStatus.progressSeconds === null
-          || runtimeStatus.desiredSeconds === null
-          || runtimeStatus.desiredSeconds <= 0
-        ) {
-          continue
-        }
-
-        const recipeRunId = tickSnapshot.devices[binding.compiledDeviceId]?.recipe?.runId ?? null
-        if (recipeRunId === null) {
-          continue
-        }
-
-        const itemId = resolveReservedItemId(tickSnapshot, binding.reservationSlotId, recipeRunId)
-        if (itemId === null) {
-          continue
-        }
-
+      for (const beltCargoEntry of beltCargoEntries) {
         const center = resolveBeltCargoViewportCenter({
-          binding,
-          progress: clamp01(runtimeStatus.progressSeconds / runtimeStatus.desiredSeconds),
+          entry: beltCargoEntry,
           viewportBounds: ctx.viewportBounds,
           viewportState: ctx.viewportState,
         })
@@ -184,11 +128,11 @@ export function createBeltCargoDecoration(): DecorationLayer {
           continue
         }
 
-        ensureTexture(ctx, resolveItemIconTextureKey(itemId, itemIconMap))
+        ensureTexture(ctx, resolveItemIconTextureKey(beltCargoEntry.itemId, itemIconMap))
         entries.push({
           centerX: center.x,
           centerY: center.y,
-          itemId,
+          itemId: beltCargoEntry.itemId,
         })
       }
 
@@ -224,85 +168,6 @@ export function createBeltCargoDecoration(): DecorationLayer {
       container.destroy({ children: true })
     },
   }
-}
-
-function resolveBeltBindings(
-  topology: CompiledSimulationTopology,
-): readonly BeltCargoBinding[] {
-  const bindings: BeltCargoBinding[] = []
-
-  for (const compiledDeviceId of topology.ordering.deviceOrder) {
-    const device = topology.devices[compiledDeviceId]
-    if (
-      device === undefined
-      || device.sourceEntityId === null
-      || device.position === null
-      || device.rotation === null
-      || !BELT_DEFINITION_IDS.has(device.definitionId as BeltDefinitionId)
-    ) {
-      continue
-    }
-
-    const inputSlotId = resolveDeviceInputSlotId(topology, device.cacheGroupIds)
-    if (inputSlotId === null) {
-      continue
-    }
-
-    bindings.push({
-      compiledDeviceId,
-      worldEntityId: device.sourceEntityId,
-      definitionId: device.definitionId as BeltDefinitionId,
-      reservationSlotId: resolveReservationSlotId(topology, inputSlotId),
-      position: device.position,
-      rotation: device.rotation,
-    })
-  }
-
-  return bindings
-}
-
-function resolveDeviceInputSlotId(
-  topology: CompiledSimulationTopology,
-  cacheGroupIds: readonly string[],
-): string | null {
-  for (const cacheGroupId of cacheGroupIds) {
-    const cacheGroup = topology.cacheGroups[cacheGroupId]
-    if (cacheGroup?.sourceStorageSlotGroupId !== BELT_INPUT_BUFFER_ID) {
-      continue
-    }
-
-    return cacheGroup.slotIds[0] ?? null
-  }
-
-  return null
-}
-
-function resolveReservedItemId(
-  tickSnapshot: SimulationTickSnapshot,
-  reservationSlotId: string,
-  recipeRunId: string,
-): string | null {
-  const slotSnapshot = tickSnapshot.slots[reservationSlotId]
-  const reservation = slotSnapshot?.reserved.find((entry) => entry.recipeRunId === recipeRunId)
-  return reservation?.itemType ?? null
-}
-
-function resolveReservationSlotId(
-  topology: CompiledSimulationTopology,
-  sourceSlotId: string,
-): string {
-  for (const link of Object.values(topology.links)) {
-    if (link.linkType !== "share-all") {
-      continue
-    }
-
-    const targetSlotId = link.targetSlotIdBySourceSlotId[sourceSlotId]
-    if (targetSlotId !== undefined) {
-      return targetSlotId
-    }
-  }
-
-  return sourceSlotId
 }
 
 function resolveItemIconTextureKey(
@@ -376,8 +241,7 @@ function syncBeltCargoIcons(options: {
 }
 
 function resolveBeltCargoViewportCenter(options: {
-  binding: BeltCargoBinding;
-  progress: number;
+  entry: SimulationBeltCargoReadModel;
   viewportBounds: {
     left: number;
     top: number;
@@ -391,18 +255,18 @@ function resolveBeltCargoViewportCenter(options: {
   };
 }): GridFloatPoint {
   const localPoint = rotatePointClockwise(
-    resolveBeltCargoLocalPoint(options.binding.definitionId, options.progress),
-    options.binding.rotation,
+    resolveBeltCargoLocalPoint(options.entry.beltShape, options.entry.progress),
+    options.entry.rotation,
   )
   const gridCellSize = options.viewportState.gridCellPixelSize
   const cellLeft =
     options.viewportBounds.left
     + options.viewportBounds.width / 2
-    + (options.binding.position.x - options.viewportState.centerX) * gridCellSize
+    + (options.entry.position.x - options.viewportState.centerX) * gridCellSize
   const cellTop =
     options.viewportBounds.top
     + options.viewportBounds.height / 2
-    + (options.binding.position.y - options.viewportState.centerY) * gridCellSize
+    + (options.entry.position.y - options.viewportState.centerY) * gridCellSize
 
   return {
     x: cellLeft + localPoint.x * gridCellSize,
@@ -411,20 +275,20 @@ function resolveBeltCargoViewportCenter(options: {
 }
 
 function resolveBeltCargoLocalPoint(
-  definitionId: BeltDefinitionId,
+  beltShape: SimulationBeltCargoShape,
   progress: number,
 ): GridFloatPoint {
-  if (definitionId === "belt_straight_1x1") {
+  if (beltShape === "straight") {
     return {
       x: progress,
       y: 0.5,
     }
   }
 
-  const turnCenter = definitionId === "belt_turn_cw_1x1"
+  const turnCenter = beltShape === "turn-cw"
     ? { x: 0, y: 1 }
     : { x: 0, y: 0 }
-  const angle = definitionId === "belt_turn_cw_1x1"
+  const angle = beltShape === "turn-cw"
     ? lerp(-Math.PI / 2, 0, progress)
     : lerp(Math.PI / 2, 0, progress)
 
@@ -475,10 +339,6 @@ function isPointVisible(
     || point.y < viewportBounds.top - padding
     || point.y > viewportBounds.top + viewportBounds.height + padding
   )
-}
-
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value))
 }
 
 function lerp(start: number, end: number, t: number): number {

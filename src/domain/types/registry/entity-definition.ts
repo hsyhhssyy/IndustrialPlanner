@@ -1,10 +1,4 @@
 import type { GridEdge, GridRectSize } from "../grid";
-import type {
-  SimulationCountLimit,
-  SimulationLinkType,
-  SimulationRecipeType,
-  SimulationSubmitMode,
-} from "../simulation";
 import type { EntityInspectorDeclaration } from "./entity-inspector";
 
 // ---------------------------------------------------------------------------
@@ -59,24 +53,6 @@ export interface EntityDefinition {
   requiresPower: boolean;
   /** 在电网中每 tick 消耗的电量 */
   powerDemand: number;
-
-  // ---- 三大原语 ----
-
-  /**
-   * 配方配置（对应《仿真运行原理》§3.2 配方类型）。
-   * null = 设备无配方（如纯仓储/纯物流设备可在定义层为 null）。
-   * recipeType 取值：
-   *   - "immediate-consume"：进度 0% 时立即扣除原料（生产设备用）
-   *   - "reserved-item"：进度 100% 时消耗原料，占用存储（搬运设备用）
-    * 订正（2026-05-05）：`reserved-item` 在推进阶段若输出缓存可接收，则立即写入产物、消耗原料并结束当前 run；仅在推进阶段无法完整输出时，才留待二次结算阶段处理。
-   */
-  recipe: EntityRecipeDefinition | null;
-
-  /**
-  * 缓存链接（对应《仿真运行原理》§3.3）。
-  * 有向代理：source 端点的读写实际作用于 target 端点。
-   */
-  cacheLinks: CacheLinkDefinition[];
 
   /**
    * Inspector 面板声明（对应《模拟器抽象方式》§4 Inspector 层）。
@@ -175,6 +151,10 @@ interface StorageSlotGroupDefinition {
   slots: StorageSlotDefinition[];
 }
 
+
+export type CountLimit = number | "unlimited";
+export type SubmitMode = "never" | "every-tick" | "every-n-seconds";
+
 /**
  * 存储槽位定义。
  * 对应《仿真运行原理》§5.3 节点能力中的 entry：
@@ -198,7 +178,7 @@ interface StorageSlotDefinition extends ItemFilterDefinition {
    */
   ignoreStock: boolean;
   /** 提交模式：never（不自动提交）/ every-tick（每 tick）/ every-n-seconds（定时） */
-  submitMode: SimulationSubmitMode;
+  submitMode: SubmitMode;
   /** 当 submitMode="every-n-seconds" 时的间隔秒数 */
   submitIntervalSeconds: number | null;
 }
@@ -244,7 +224,7 @@ interface PortDefinition {
    * "unlimited" = 无上限，数字 = 上限值。
    * 编译时边的 count = min(sourcePort.count, targetPort.count)（§5.2）。
    */
-  count: SimulationCountLimit;
+  count: CountLimit;
   /** 优先级分组（用于分流器调度，对应《仿真运行原理》中 routing 概念） */
   priorityGroup: number;
   /** 轮询种子（同一 priorityGroup 内用于 round-robin 调度） */
@@ -264,58 +244,3 @@ export interface EntityAcceptRuleDefinition {
   readonly exclude: readonly string[];
 }
 
-// ---------------------------------------------------------------------------
-// 配方定义（对应《仿真运行原理》§3.2 配方类型）
-//
-// 两种配方类型：
-//   - "immediate-consume"：进度=0% 时立即扣除原料，不占用存储（生产设备）
-//   - "reserved-item"：进度=100% 时消耗原料，占用存储（搬运设备如传送带）
-// 订正（2026-05-05）：`reserved-item` 在推进阶段若输出缓存可接收，则立即写入产物、消耗原料并结束当前 run；仅在推进阶段无法完整输出时，才留待二次结算阶段处理。
-//
-// 在 EntityDefinition 层，配方可以是：
-//   - null：无配方（纯仓储/物流设备）
-//   - recipeId=null 但有 inputs/outputs：使用定义内联配方（传送带的搬运配方）
-//   - recipeId 指向 RECIPE_DEFINITIONS 中的外部配方
-// ---------------------------------------------------------------------------
-
-export interface EntityRecipeDefinition {
-  /** 外部配方 ID，null 表示使用内联 inputs/outputs */
-  readonly recipeId: string | null;
-  /** 配方类型 */
-  readonly recipeType: SimulationRecipeType;
-  /** 配方耗时（秒），编译时转换为 ticks */
-  readonly durationSeconds: number;
-  readonly inputs: readonly EntityRecipeItemDefinition[];
-  readonly outputs: readonly EntityRecipeItemDefinition[];
-}
-
-/**
- * 配方物品条目。
- * itemId 特殊值：
- *   - "any"：任意物品（传送带搬运配方用）
- *   - "same-as-input"：与输入相同（传送带搬运配方输出用）
- */
-export interface EntityRecipeItemDefinition {
-  readonly itemId: string | "any" | "same-as-input";
-  readonly amount: number;
-}
-
-// ---------------------------------------------------------------------------
-// 缓存链接（对应《仿真运行原理》§3.3）。
-// Link 是有向代理，source 端点自身不保存真实库存。
-// 订正（2026-05-05）：`share-cap` 仅共享容量，不代理 source 的真实库存。
-// ---------------------------------------------------------------------------
-
-export interface CacheLinkDefinition {
-  readonly id: string;
-  readonly linkType: SimulationLinkType;
-  readonly source: CacheLinkEndpointDefinition;
-  readonly target: CacheLinkEndpointDefinition;
-}
-
-export interface CacheLinkEndpointDefinition {
-  /** 端点绑定的存储槽组 ID */
-  readonly storageSlotGroupId: string;
-  /** 可选：精确到具体槽位 ID */
-  readonly slotId?: string;
-}

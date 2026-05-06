@@ -1,11 +1,12 @@
 import { makeAutoObservable } from "mobx";
 
+import type { SimulationCurrentTickReadModel } from "@/domain/query/simulation-read-model";
+
+import { DEFAULT_SIMULATION_SPEED } from "./tick-rate";
 import type {
   SimulationRuntimeStatus,
   SimulationState,
-  SimulationTickSnapshot,
-} from "@/domain/types/simulation";
-import { DEFAULT_SIMULATION_SPEED } from "./tick-rate";
+} from "./types";
 
 export function createInitialSimulationRuntimeStatus(): SimulationRuntimeStatus {
   return {
@@ -25,7 +26,7 @@ export interface SimulationStateReadWrite {
   simulationSpeed: number;
   hasStarted: boolean;
   runtimeStatus: SimulationRuntimeStatus;
-  currentTickSnapshot: SimulationTickSnapshot | null;
+  currentTickReadModel: SimulationCurrentTickReadModel | null;
   currentPlaybackTickNumber: number;
 }
 
@@ -34,7 +35,7 @@ class SimulationStateReadWriteImpl implements SimulationStateReadWrite {
   simulationSpeed = DEFAULT_SIMULATION_SPEED;
   hasStarted = false;
   runtimeStatus: SimulationRuntimeStatus = createInitialSimulationRuntimeStatus();
-  currentTickSnapshot: SimulationTickSnapshot | null = null;
+  currentTickReadModel: SimulationCurrentTickReadModel | null = null;
   currentPlaybackTickNumber = 0;
 
   public constructor() {

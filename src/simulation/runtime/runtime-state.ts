@@ -1,10 +1,14 @@
 import type {
   CompiledSimulationRecipePlan,
   CompiledSimulationTopology,
-  SimulationAcceptRule,
-  SimulationRecipeType,
-} from "@/domain/types/simulation";
-import { getRuntimeLinkTopologyState } from "./cache-link-topology";
+} from "../types";
+import type { SimulationRecipeType } from "@/domain/types/registry/simulation-definition";
+
+/**
+ * 对应《仿真运行原理》§6.4、§6.6 与 §3.3。
+ * 这里保存 worker 内部可变运行态：persistent 是跨 tick 保留的库存、设备、游标与 Link 解析结果；
+ * transient 是每个 tick 重新生成的 Node/Edge 求解状态。该文件不执行阶段逻辑，只提供五阶段共享状态模型。
+ */
 
 export type RuntimeShadowState = "uncertain" | "accept";
 
@@ -18,7 +22,7 @@ export interface SimulationPersistentRuntimeState {
   slots: Record<string, RuntimeSlotState>;
   devices: Record<string, RuntimeDeviceState>;
   routingCursors: Record<string, number>;
-  proxyTargetSlotIdBySourceSlotId: Record<string, string>;
+  shareAllTargetSlotIdBySourceSlotId: Record<string, string>;
   sharedCapacitySlotIdsBySlotId: Record<string, readonly string[]>;
   sharedCapacityLimitBySlotId: Record<string, number>;
   nextRecipeRunIndex: number;
@@ -65,36 +69,20 @@ export interface SimulationTickTransientState {
 }
 
 export interface RuntimeTickNodeState {
-  cacheGroupId: string;
-  isDeleted: boolean;
+  nodeId: string;
   result: "uncertain" | "solved-run" | "solved-block";
-  inputCapacities: RuntimeInputCapacityEntry[];
-  outputSupplies: RuntimeOutputSupplyEntry[];
+  visited: boolean;
+  excludedItemTypes: readonly string[];
   acceptedInputEdgeIds: string[];
   acceptedOutputEdgeIds: string[];
   blockReason?: string;
 }
 
-export interface RuntimeInputCapacityEntry {
-  slotId: string;
-  acceptRule: SimulationAcceptRule;
-  amount: number;
-  shadowAmount: number;
-}
-
-export interface RuntimeOutputSupplyEntry {
-  slotId: string;
-  itemType: string;
-  amount: number;
-  shadowAmount: number;
-}
-
 export interface RuntimeTickEdgeState {
   edgeId: string;
-  isDeleted: boolean;
   shadowPull: RuntimeShadowState;
   shadowPush: RuntimeShadowState;
-  remainingCount: number;
+  currentThroughCount: number;
   sourceSlotId: string | null;
   targetSlotId: string | null;
   itemType: string | null;
@@ -131,27 +119,8 @@ export function createSimulationMutableRuntimeState(
     };
   }
 
-  const linkTopologyState = getRuntimeLinkTopologyState(topology);
-  const proxyTargetSlotIdBySourceSlotId = {
-    ...linkTopologyState.shareAllTargetSlotIdBySourceSlotId,
-  };
-  for (const [sourceSlotId, targetSlotId] of Object.entries(proxyTargetSlotIdBySourceSlotId)) {
-    const sourceSlot = slots[sourceSlotId];
-    const targetSlot = slots[targetSlotId];
-    if (sourceSlot === undefined || targetSlot === undefined) {
-      continue;
-    }
-    if (sourceSlot.count > 0) {
-      if (targetSlot.itemType === null) {
-        targetSlot.itemType = sourceSlot.itemType;
-      }
-      if (sourceSlot.itemType === targetSlot.itemType || sourceSlot.itemType === null) {
-        targetSlot.count += sourceSlot.count;
-      }
-    }
-    sourceSlot.itemType = null;
-    sourceSlot.count = 0;
-  }
+  const linkState = buildRuntimeLinkState(topology);
+  normalizeShareAllSources(slots, linkState.shareAllTargetSlotIdBySourceSlotId);
 
   const devices: Record<string, RuntimeDeviceState> = {};
   const routingCursors: Record<string, number> = {};
@@ -161,11 +130,7 @@ export function createSimulationMutableRuntimeState(
       continue;
     }
 
-    devices[deviceId] = {
-      block: false,
-      recipe: null,
-    };
-
+    devices[deviceId] = { block: false, recipe: null };
     for (const [portRef, entry] of Object.entries(device.routing)) {
       routingCursors[`${deviceId}:${portRef}`] = entry.roundRobinSeed;
     }
@@ -177,20 +142,73 @@ export function createSimulationMutableRuntimeState(
       slots,
       devices,
       routingCursors,
-      proxyTargetSlotIdBySourceSlotId,
-      sharedCapacitySlotIdsBySlotId: {
-        ...linkTopologyState.sharedCapacitySlotIdsBySlotId,
-      },
-      sharedCapacityLimitBySlotId: {
-        ...linkTopologyState.sharedCapacityLimitBySlotId,
-      },
+      ...linkState,
       nextRecipeRunIndex: 1,
     },
-    transient: {
-      nodes: {},
-      edges: {},
-      transfers: [],
-      diagnostics: [],
-    },
+    transient: createEmptyTransientState(),
   };
+}
+
+export function createEmptyTransientState(): SimulationTickTransientState {
+  return {
+    nodes: {},
+    edges: {},
+    transfers: [],
+    diagnostics: [],
+  };
+}
+
+function buildRuntimeLinkState(topology: CompiledSimulationTopology): Pick<
+  SimulationPersistentRuntimeState,
+  "shareAllTargetSlotIdBySourceSlotId" | "sharedCapacitySlotIdsBySlotId" | "sharedCapacityLimitBySlotId"
+> {
+  const shareAllTargetSlotIdBySourceSlotId: Record<string, string> = {};
+  const sharedCapacitySlotIdsBySlotId: Record<string, readonly string[]> = {};
+  const sharedCapacityLimitBySlotId: Record<string, number> = {};
+
+  for (const link of Object.values(topology.links)) {
+    if (link.linkType === "share-all") {
+      Object.assign(shareAllTargetSlotIdBySourceSlotId, link.targetSlotIdBySourceSlotId);
+      continue;
+    }
+
+    const componentSlotIds = [...new Set([...link.sourceSlotIds, ...link.targetSlotIds])].sort();
+    const capacityLimit = Math.max(
+      0,
+      ...componentSlotIds.map((slotId) => topology.slots[slotId]?.capacity ?? 0),
+    );
+    for (const slotId of componentSlotIds) {
+      sharedCapacitySlotIdsBySlotId[slotId] = componentSlotIds;
+      sharedCapacityLimitBySlotId[slotId] = capacityLimit;
+    }
+  }
+
+  return {
+    shareAllTargetSlotIdBySourceSlotId,
+    sharedCapacitySlotIdsBySlotId,
+    sharedCapacityLimitBySlotId,
+  };
+}
+
+function normalizeShareAllSources(
+  slots: Record<string, RuntimeSlotState>,
+  targetSlotIdBySourceSlotId: Readonly<Record<string, string>>,
+): void {
+  for (const [sourceSlotId, targetSlotId] of Object.entries(targetSlotIdBySourceSlotId)) {
+    const source = slots[sourceSlotId];
+    const target = slots[targetSlotId];
+    if (source === undefined || target === undefined) {
+      continue;
+    }
+
+    if (source.count > 0) {
+      target.itemType = target.itemType ?? source.itemType;
+      if (target.itemType === source.itemType || source.itemType === null) {
+        target.count += source.count;
+      }
+    }
+
+    source.itemType = null;
+    source.count = 0;
+  }
 }

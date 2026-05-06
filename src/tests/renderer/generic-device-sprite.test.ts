@@ -49,6 +49,7 @@ vi.mock("pixi.js", () => {
     public roundPixels = false
     public visible = true
     public alpha = 1
+    public tint = 0xffffff
     public mask: unknown = null
     private currentTexture: unknown
 
@@ -171,12 +172,13 @@ vi.mock("pixi.js", () => {
   }
 })
 
-import { AYU_LIGHT_THEME } from "@/app/theme"
+import { AYU_DARK_THEME, AYU_LIGHT_THEME } from "@/app/theme"
 import { EntityCollectionType } from "@/domain/state/types"
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition"
 import { BeltSprite } from "@/renderer/sprites/belt-sprite"
 import { GenericDeviceSprite } from "@/renderer/sprites/generic-device-sprite"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
+import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
 interface RenderedSpriteSnapshot {
   x: number;
@@ -187,6 +189,7 @@ interface RenderedSpriteSnapshot {
   roundPixels: boolean;
   visible: boolean;
   texture: unknown;
+  tint?: number;
   alpha?: number;
   mask?: unknown;
 }
@@ -300,17 +303,15 @@ describe("GenericDeviceSprite", () => {
     expect(attachedSprite.rotation).toBeCloseTo(Math.PI / 2)
   })
 
-  it("loads generated belt sprite and mask textures through BeltSprite", async () => {
+  it("loads only the generated belt sprite texture through BeltSprite", async () => {
     const beltBodyKey = "device-sprite-belt_straight_1x1"
     const beltMaskKey = "device-masks-belt_straight_1x1"
     const resolvedTexture = createLoadedTextureMock("belt-device-texture")
-    const resolvedMaskTexture = createLoadedTextureMock("belt-mask-texture")
 
     const entityLayer = createLayerStub()
     const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       [beltBodyKey]: resolvedTexture,
-      [beltMaskKey]: resolvedMaskTexture,
     })
     const sprite = new BeltSprite(
       "belt-entity-1",
@@ -335,9 +336,11 @@ describe("GenericDeviceSprite", () => {
     }))
 
     expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(beltBodyKey)
-    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(beltMaskKey)
+    expect(renderHost.textureManager.getTexture).not.toHaveBeenCalledWith(beltMaskKey)
 
     await flushMicrotasks(8)
+
+    expect(overlayLayer.addChild).not.toHaveBeenCalled()
 
     const entityRoot = entityLayer.addChild.mock.calls[0]?.[0] as {
       children?: unknown[];
@@ -359,7 +362,120 @@ describe("GenericDeviceSprite", () => {
       width: 32,
       height: 32,
       rotation: 0,
+      tint: resolveAppThemeColorNumber(
+        AYU_LIGHT_THEME,
+        AYU_LIGHT_THEME.renderer.beltTileStrokeColorKey,
+      ),
     })
+  })
+
+  it("uses the muted light-theme tint for single selection, preview, and logistics head", async () => {
+    const resolvedTexture = createLoadedTextureMock("belt-device-texture")
+    const entityLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      "device-sprite-belt_straight_1x1": resolvedTexture,
+    })
+    const sprite = new BeltSprite(
+      "belt-entity-2",
+      createBeltEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: {} as never,
+    })
+
+    await flushMicrotasks(4)
+
+    const mutedLightTint = resolveAppThemeColorNumber(AYU_LIGHT_THEME, "text-2")
+
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+      selectionIds: ["belt-entity-2"],
+      previewIds: [],
+    }))
+    expect(resolveEntitySprite(entityLayer)?.tint).toBe(mutedLightTint)
+
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+      selectionIds: [],
+      previewIds: ["belt-entity-2"],
+    }))
+    expect(resolveEntitySprite(entityLayer)?.tint).toBe(mutedLightTint)
+
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+      logisticsHeadIds: ["belt-entity-2"],
+    }))
+    expect(resolveEntitySprite(entityLayer)?.tint).toBe(mutedLightTint)
+  })
+
+  it("uses the preview blue tint for multi selection", async () => {
+    const resolvedTexture = createLoadedTextureMock("belt-device-texture")
+    const entityLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      "device-sprite-belt_straight_1x1": resolvedTexture,
+    })
+    const sprite = new BeltSprite(
+      "belt-entity-3",
+      createBeltEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: {} as never,
+    })
+
+    await flushMicrotasks(4)
+
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+      selectionIds: ["belt-entity-3", "other-entity"],
+      previewIds: [],
+    }))
+
+    expect(resolveEntitySprite(entityLayer)?.tint).toBe(resolveAppThemeColorNumber(
+      AYU_LIGHT_THEME,
+      AYU_LIGHT_THEME.renderer.worldPreviewRectFillColorKey,
+    ))
+  })
+
+  it("uses white tint for preview and logistics head under the dark theme", async () => {
+    const resolvedTexture = createLoadedTextureMock("belt-device-texture")
+    const entityLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      "device-sprite-belt_straight_1x1": resolvedTexture,
+    })
+    const sprite = new BeltSprite(
+      "belt-entity-4",
+      createBeltEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: {} as never,
+    })
+
+    await flushMicrotasks(4)
+
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+      selectionIds: [],
+      previewIds: ["belt-entity-4"],
+      theme: AYU_DARK_THEME,
+    }))
+    expect(resolveEntitySprite(entityLayer)?.tint).toBe(0xffffff)
+
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+      logisticsHeadIds: ["belt-entity-4"],
+      theme: AYU_DARK_THEME,
+    }))
+    expect(resolveEntitySprite(entityLayer)?.tint).toBe(0xffffff)
   })
 
   it("shows a masked solid white overlay for preview devices", async () => {
@@ -1066,9 +1182,11 @@ function createBeltEntityDefinitionStub(): EntityDefinition {
 function createRenderContextStub(options: {
   selectionIds: readonly string[];
   previewIds: readonly string[];
+  logisticsHeadIds?: readonly string[];
+  theme?: typeof AYU_LIGHT_THEME;
 }) {
   return {
-    theme: AYU_LIGHT_THEME,
+    theme: options.theme ?? AYU_LIGHT_THEME,
     workspace: {
       editor: {
         state: {
@@ -1082,6 +1200,7 @@ function createRenderContextStub(options: {
             [EntityCollectionType.reverseMarquee]: createCollectionStub([]),
             [EntityCollectionType.preview]: createCollectionStub(options.previewIds),
             [EntityCollectionType.ghost]: createCollectionStub([]),
+            [EntityCollectionType.logisticsHead]: createCollectionStub(options.logisticsHeadIds ?? []),
           },
         },
       },
@@ -1097,6 +1216,24 @@ function createCollectionStub(entityIds: readonly string[]) {
   return Object.assign([...entityIds], {
     contains: (entityId: string) => entityIds.includes(entityId),
   })
+}
+
+function createBeltLayout() {
+  return {
+    x: 10,
+    y: 20,
+    width: 32,
+    height: 32,
+    rotation: 0 as const,
+  }
+}
+
+function resolveEntitySprite(entityLayer: ReturnType<typeof createLayerStub>) {
+  const entityRoot = entityLayer.addChild.mock.calls[0]?.[0] as {
+    children?: unknown[];
+  } | undefined
+
+  return entityRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
 }
 
 function resolvePortOverlayRoot(overlayLayer: ReturnType<typeof createLayerStub>) {

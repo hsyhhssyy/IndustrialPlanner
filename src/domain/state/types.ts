@@ -1,12 +1,11 @@
 
-
-
-import type { AppLocale } from "@/shared/i18n/messages";
 import type { ScreenProfile } from "./screen-profile";
 import type { AppTheme, AppThemeId } from "./theme";
 import type { ClientPixelRect } from "../types/client-pixel";
 import type { GridFloatPoint, GridRect } from "../types/grid";
 import type { UiGroup } from "../types/registry/entity-definition";
+
+export type AppLocale = "zh-CN" | "en-US";
 
 export interface EntityCollection extends ReadonlyArray<string> {
   contains(entityId: string): boolean;

@@ -1,9 +1,9 @@
 import type {
   CompiledSimulationTopology,
-  GetSimulationTickSnapshotResult,
   SimulationRuntimeStatus,
   SimulationStartResult,
-} from "@/domain/types/simulation";
+  SimulationTickReadResult,
+} from "./types";
 
 export type SimulationWorkerRequest =
   | {
@@ -12,7 +12,7 @@ export type SimulationWorkerRequest =
       readonly topology: CompiledSimulationTopology;
     }
   | {
-      readonly type: "get-tick-snapshot";
+      readonly type: "get-tick-read-model";
       readonly requestId: number;
       readonly tickNumber: number;
     };
@@ -25,8 +25,8 @@ export type SimulationWorkerResponse =
       readonly status: SimulationRuntimeStatus;
     }
   | {
-      readonly type: "tick-snapshot-result";
+      readonly type: "tick-read-model-result";
       readonly requestId: number;
-      readonly result: GetSimulationTickSnapshotResult;
+      readonly result: SimulationTickReadResult;
       readonly status: SimulationRuntimeStatus;
     };

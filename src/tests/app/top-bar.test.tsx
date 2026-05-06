@@ -247,7 +247,8 @@ describe("TopBar", () => {
           maxBufferSize: 180,
           error: null,
         }),
-        getCurrentTickSnapshot: () => null,
+        getCurrentTick: () => null,
+        getBeltCargoEntries: () => [],
         getDeviceRuntimeStatus: () => null,
       },
       actions: {
@@ -255,14 +256,7 @@ describe("TopBar", () => {
         pause,
         resume,
         stop: vi.fn(),
-        getTickSnapshot: vi.fn(async () => ({
-          status: "not-ready" as const,
-          requestedTickNumber: 0,
-          retainedFromTick: null,
-          latestTickNumber: null,
-          bufferSize: 0,
-        })),
-        advancePlaybackByDeltaMs: vi.fn(async () => null),
+        advancePlaybackByDeltaMs: vi.fn(async () => {}),
       },
     } as NonNullable<WorkspaceContract["simulation"]>;
     const appHost = createAppHost(workspace);
@@ -310,7 +304,8 @@ describe("TopBar", () => {
           maxBufferSize: 180,
           error: null,
         }),
-        getCurrentTickSnapshot: () => null,
+        getCurrentTick: () => null,
+        getBeltCargoEntries: () => [],
         getDeviceRuntimeStatus: () => null,
       },
       actions: {
@@ -318,14 +313,7 @@ describe("TopBar", () => {
         pause,
         resume,
         stop: vi.fn(),
-        getTickSnapshot: vi.fn(async () => ({
-          status: "not-ready" as const,
-          requestedTickNumber: 1,
-          retainedFromTick: 0,
-          latestTickNumber: 0,
-          bufferSize: 1,
-        })),
-        advancePlaybackByDeltaMs: vi.fn(async () => null),
+        advancePlaybackByDeltaMs: vi.fn(async () => {}),
       },
     } as NonNullable<WorkspaceContract["simulation"]>;
     const appHost = createAppHost(workspace);
@@ -373,7 +361,8 @@ describe("TopBar", () => {
           maxBufferSize: 180,
           error: null,
         }),
-        getCurrentTickSnapshot: () => null,
+        getCurrentTick: () => null,
+        getBeltCargoEntries: () => [],
         getDeviceRuntimeStatus: () => null,
       },
       actions: {
@@ -381,14 +370,7 @@ describe("TopBar", () => {
         pause,
         resume,
         stop: vi.fn(),
-        getTickSnapshot: vi.fn(async () => ({
-          status: "not-ready" as const,
-          requestedTickNumber: 2,
-          retainedFromTick: 1,
-          latestTickNumber: 2,
-          bufferSize: 1,
-        })),
-        advancePlaybackByDeltaMs: vi.fn(async () => null),
+        advancePlaybackByDeltaMs: vi.fn(async () => {}),
       },
     } as NonNullable<WorkspaceContract["simulation"]>;
     const appHost = createAppHost(workspace);

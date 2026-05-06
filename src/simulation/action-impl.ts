@@ -2,11 +2,6 @@ import { action, runInAction } from "mobx";
 
 import type { SimulationAction } from "@/domain/action/simulation-action";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import type {
-  CompiledSimulationTopology,
-  GetSimulationTickSnapshotResult,
-  SimulationStartResult,
-} from "@/domain/types/simulation";
 import type { SimulationWorkerResponse } from "@/simulation/worker-protocol";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 
@@ -19,21 +14,27 @@ import {
   DEFAULT_SIMULATION_SPEED,
   STANDARD_TICK_RATE_PER_SECOND,
 } from "./tick-rate";
+import type {
+  CompiledSimulationTopology,
+  SimulationStartResult,
+  SimulationTickPullStatus,
+} from "./types";
 
 export interface SimulationWorkerBridge {
   loadTopology(topology: CompiledSimulationTopology): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >>;
-  getTickSnapshot(tickNumber: number): Promise<Extract<
+  getTickReadModel(tickNumber: number): Promise<Extract<
     SimulationWorkerResponse,
-    { readonly type: "tick-snapshot-result" }
+    { readonly type: "tick-read-model-result" }
   >>;
   dispose(): void;
 }
 
 export interface SimulationInternalAction {
   refreshFromCurrentDocument(): Promise<SimulationStartResult>;
+  syncToTick(tickNumber: number, playbackTickNumberOnReady?: number): Promise<SimulationTickPullStatus>;
   setSimulationSpeed(value: number): void;
   reset(): void;
 }
@@ -71,8 +72,6 @@ implements SimulationAction, SimulationInternalAction {
         this.stateReadWrite.state = "start";
       });
     }
-
-    return result;
   };
 
   public readonly pause: SimulationAction["pause"] = action(() => {
@@ -92,15 +91,11 @@ implements SimulationAction, SimulationInternalAction {
     this.stateReadWrite.state = "stop";
   });
 
-  public readonly getTickSnapshot: SimulationAction["getTickSnapshot"] = async (
-    tickNumber,
-  ) => this.requestTickSnapshot(tickNumber, tickNumber);
-
   public readonly advancePlaybackByDeltaMs: SimulationAction["advancePlaybackByDeltaMs"] = async (
     deltaMs,
   ) => {
     if (this.stateReadWrite.state !== "start") {
-      return null;
+      return;
     }
 
     const previousPlaybackTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
@@ -118,22 +113,20 @@ implements SimulationAction, SimulationInternalAction {
     const previousIntegerTickNumber = Math.trunc(previousPlaybackTickNumber);
     const nextIntegerTickNumber = Math.trunc(this.stateReadWrite.currentPlaybackTickNumber);
     if (previousIntegerTickNumber === nextIntegerTickNumber) {
-      return null;
+      return;
     }
 
-    const result = await this.requestTickSnapshot(nextIntegerTickNumber);
+    const result = await this.syncToTick(nextIntegerTickNumber);
     if (result.status === "not-ready") {
       runInAction(() => {
         this.stateReadWrite.currentPlaybackTickNumber = previousPlaybackTickNumber;
       });
     }
-
-    return result;
   };
 
   public readonly refreshFromCurrentDocument: SimulationInternalAction["refreshFromCurrentDocument"] = async () => {
     runInAction(() => {
-      this.stateReadWrite.currentTickSnapshot = null;
+      this.stateReadWrite.currentTickReadModel = null;
       this.stateReadWrite.currentPlaybackTickNumber = 0;
     });
 
@@ -192,27 +185,27 @@ implements SimulationAction, SimulationInternalAction {
     this.stateReadWrite.simulationSpeed = DEFAULT_SIMULATION_SPEED;
     this.stateReadWrite.hasStarted = false;
     this.stateReadWrite.runtimeStatus = createInitialSimulationRuntimeStatus();
-    this.stateReadWrite.currentTickSnapshot = null;
+    this.stateReadWrite.currentTickReadModel = null;
     this.stateReadWrite.currentPlaybackTickNumber = 0;
   });
 
-  private readonly requestTickSnapshot = async (
+  public readonly syncToTick: SimulationInternalAction["syncToTick"] = async (
     tickNumber: number,
     playbackTickNumberOnReady?: number,
-  ): Promise<GetSimulationTickSnapshotResult> => {
-    const response = await this.bridge.getTickSnapshot(tickNumber);
+  ): Promise<SimulationTickPullStatus> => {
+    const response = await this.bridge.getTickReadModel(tickNumber);
 
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = response.status;
 
-      if (response.result.status === "ready") {
-        this.stateReadWrite.currentTickSnapshot = response.result.snapshot;
+      if (response.result.status.status === "ready") {
+        this.stateReadWrite.currentTickReadModel = response.result.currentTick;
         if (playbackTickNumberOnReady !== undefined) {
           this.stateReadWrite.currentPlaybackTickNumber = playbackTickNumberOnReady;
         }
       }
     });
 
-    return response.result;
+    return response.result.status;
   };
 }

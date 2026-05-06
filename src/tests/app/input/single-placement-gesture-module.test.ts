@@ -33,6 +33,11 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(appHost.internalState.activeTool).toBe("single-placement");
     expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 50, y: 40 });
     expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-a");
+    expect(appHost.internalActions.hideCanvasFloatingToolbar).not.toHaveBeenCalled();
+
+    expect(
+      module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
+    ).toEqual({ status: "handled" });
     expect(appHost.internalActions.hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
@@ -57,6 +62,11 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
 
     expect(result).toEqual({ status: "handled" });
     expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).not.toHaveBeenCalled();
+
+    expect(
+      module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
+    ).toEqual({ status: "handled" });
     expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
       PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
@@ -650,6 +660,20 @@ function uiButtonTouchTapEvent(uiButtonId: string) {
     type: "ui-button-touch-tap" as const,
     gestureId: "ui-touch-tap-1",
     uiButtonId,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function onEnterActiveToolEvent(
+  from: "select" | "move" | "marquee" | "single-placement" | "logistics-placement",
+  to: "select" | "move" | "marquee" | "single-placement" | "logistics-placement",
+) {
+  return {
+    type: "on-enter-active-tool" as const,
+    gestureId: "enter-active-tool-1",
+    from,
+    to,
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };

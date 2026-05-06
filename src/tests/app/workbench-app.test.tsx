@@ -712,11 +712,10 @@ describe("WorkbenchApp", () => {
           maxBufferSize: 180,
           error: null,
         }),
-        getCurrentTickSnapshot: () => ({
-          tickNumber: 3,
-          status: "running",
-          devices: {},
+        getCurrentTick: () => ({
+          source: "query-read-model",
         } as never),
+        getBeltCargoEntries: () => [],
         getDeviceRuntimeStatus: () => null,
       },
       actions: {
@@ -726,15 +725,9 @@ describe("WorkbenchApp", () => {
           diagnostics: [],
         })),
         pause: vi.fn(),
+        resume: vi.fn(),
         stop: vi.fn(),
-        getTickSnapshot: vi.fn(async () => ({
-          status: "not-ready",
-          requestedTickNumber: 4,
-          retainedFromTick: 3,
-          latestTickNumber: 3,
-          bufferSize: 1,
-        })),
-        advancePlaybackByDeltaMs: vi.fn(async () => null),
+        advancePlaybackByDeltaMs: vi.fn(async () => {}),
       },
     } as NonNullable<WorkspaceContract["simulation"]>;
 
@@ -753,8 +746,9 @@ describe("WorkbenchApp", () => {
       vi.advanceTimersByTime(250);
     });
 
-    expect(snapshotTextarea?.value).toContain('"tickNumber": 3');
-    expect(snapshotTextarea?.value).toContain('"status": "running"');
+    expect(snapshotTextarea?.value).toBe(`{
+  "source": "query-read-model"
+}`);
   });
 
   it("keeps the bottom bar visible in phone landscape until the top bar is collapsed", () => {

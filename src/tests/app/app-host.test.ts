@@ -1328,6 +1328,7 @@ describe("createAppHost", () => {
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
     editorHost.actions.createMoveOperationDraft();
     appHost.internalState.runtime.moveAnchor = { x: 12, y: 8 };
+    appHost.internalState.runtime.movePointerMode = "touch";
     appHost.internalActions.showCanvasFloatingToolbarForCollection(
       ["canvas-floating-toolbar-button-ok", "canvas-floating-toolbar-button-cancel"],
       "preview",

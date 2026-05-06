@@ -10,12 +10,5 @@ export type {
 	GridRotation,
 } from "./types/grid";
 export type {
-	CompiledSimulationTopology,
-	SimulationDeviceRuntimeSlotItem,
-	SimulationDeviceRuntimeStatus,
-	GetSimulationTickSnapshotResult,
-	SimulationRuntimeStatus,
 	SimulationState,
-	SimulationStartResult,
-	SimulationTickSnapshot,
-} from "./types/simulation";
+} from "./contract/simulation-contract-types";

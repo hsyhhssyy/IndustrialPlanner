@@ -1,12 +1,12 @@
 import type {
-  SimulationDeviceRuntimeSlotItem,
-  SimulationDeviceRuntimeStatus,
-} from "@/domain/types/simulation";
+  SimulationDeviceRuntimeReadModel,
+  SimulationDeviceRuntimeSlotItemReadModel,
+} from "@/domain/query/simulation-read-model";
 
 export const SIMULATION_RUNTIME_INSPECTOR_KEY = "simulation-runtime-inspecotr";
 
 export function resolveSimulationRuntimeProgressPercent(
-  runtimeStatus: SimulationDeviceRuntimeStatus | null,
+  runtimeStatus: SimulationDeviceRuntimeReadModel | null,
 ): number | null {
   if (runtimeStatus === null) {
     return null;
@@ -41,13 +41,13 @@ function formatProgressPercent(progressPercent: number | null): string {
   return `${formatted}%`;
 }
 
-function formatSlotItemLabel(slotItem: SimulationDeviceRuntimeSlotItem): string {
+function formatSlotItemLabel(slotItem: SimulationDeviceRuntimeSlotItemReadModel): string {
   return slotItem.storageGroupId === null
     ? slotItem.slotId
     : `${slotItem.storageGroupId}.${slotItem.slotId}`;
 }
 
-function formatReservedItems(slotItem: SimulationDeviceRuntimeSlotItem): string | null {
+function formatReservedItems(slotItem: SimulationDeviceRuntimeSlotItemReadModel): string | null {
   if (slotItem.reserved.length === 0) {
     return null;
   }
@@ -57,7 +57,7 @@ function formatReservedItems(slotItem: SimulationDeviceRuntimeSlotItem): string 
     .join(", ");
 }
 
-function formatSlotItemValue(slotItem: SimulationDeviceRuntimeSlotItem): string {
+function formatSlotItemValue(slotItem: SimulationDeviceRuntimeSlotItemReadModel): string {
   const reserved = formatReservedItems(slotItem);
   const segments = [`item=${formatRuntimeValue(slotItem.itemType)}`, `count=${slotItem.count}`];
   if (reserved !== null) {
@@ -69,7 +69,7 @@ function formatSlotItemValue(slotItem: SimulationDeviceRuntimeSlotItem): string 
 export function SimulationRuntimeInspector({
   runtimeStatus,
 }: {
-  runtimeStatus: SimulationDeviceRuntimeStatus | null;
+  runtimeStatus: SimulationDeviceRuntimeReadModel | null;
 }) {
   const progressPercent = resolveSimulationRuntimeProgressPercent(runtimeStatus);
   const rows = [

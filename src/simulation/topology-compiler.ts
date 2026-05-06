@@ -49,7 +49,7 @@ import type {
   SimulationPortDirection,
   SimulationPortKind,
   SimulationTransportClass,
-} from "@/domain/types/simulation";
+} from "./types";
 import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
 import type { RecipeDefinition } from "@/domain/types/registry/recipe-definition";
 import { hashStable } from "./deterministic";
@@ -230,6 +230,8 @@ export function compileSimulationTopology(
           physicalConnectionId: connection.id,
           sourcePortId: sourcePort.id,
           targetPortId: targetPort.id,
+          sourceNodeId: sourceCacheGroupId,
+          targetNodeId: targetCacheGroupId,
           sourceCacheGroupId,
           targetCacheGroupId,
           acceptRule,
@@ -257,6 +259,7 @@ export function compileSimulationTopology(
     registryHash,
     standardTickRate,
     devices,
+    nodes: cacheGroups,
     cacheGroups,
     slots,
     ports,
@@ -265,6 +268,7 @@ export function compileSimulationTopology(
     transferEdges,
     ordering: {
       deviceOrder,
+      nodeOrder: cacheGroupOrder,
       cacheGroupOrder,
       slotOrder,
       portOrder,
@@ -274,7 +278,7 @@ export function compileSimulationTopology(
   };
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     topologyId: hashStable(topologyHashInput),
     documentKey: options.document.documentKey,
     documentHash,
@@ -282,6 +286,7 @@ export function compileSimulationTopology(
     standardTickRate,
     itemCatalog,
     devices,
+    nodes: cacheGroups,
     cacheGroups,
     slots,
     ports,
@@ -290,6 +295,7 @@ export function compileSimulationTopology(
     transferEdges,
     ordering: {
       deviceOrder,
+      nodeOrder: cacheGroupOrder,
       cacheGroupOrder,
       slotOrder,
       portOrder,
@@ -693,6 +699,7 @@ function compileWarehouseDevice(
   const slots: CompiledSimulationSlotTemplate[] = Object.keys(itemCatalog).sort().map((itemId) => ({
     id: `${cacheGroupId}/slot:${itemId}`,
     cacheGroupId,
+    nodeId: cacheGroupId,
     sourceSlotId: itemId,
     capacity: Number.MAX_SAFE_INTEGER,
     domain: itemCatalog[itemId]?.domain ?? "any",
@@ -711,6 +718,7 @@ function compileWarehouseDevice(
     slotIds: slots.map((slot) => slot.id),
     inputPortIds: [],
     outputPortIds: [],
+    viewRole: "single-view",
     groupOrder: 0,
   };
 
@@ -723,6 +731,7 @@ function compileWarehouseDevice(
       rotation: null,
       tags: ["warehouse"],
       transportClass: "anchor",
+      nodeIds: [cacheGroupId],
       cacheGroupIds: [cacheGroupId],
       portIds: [],
       recipePlan: null,
@@ -831,6 +840,7 @@ function compileEntityDevice(options: {
     rotation: options.entity.rotation,
     tags: [...definition.tags].sort(),
     transportClass,
+    nodeIds: cacheGroups.map((cacheGroup) => cacheGroup.id),
     cacheGroupIds: cacheGroups.map((cacheGroup) => cacheGroup.id),
     portIds: ports.map((port) => port.id),
     recipePlan: recipePlans[0] ?? null,
@@ -984,6 +994,7 @@ function compileStorageNodeSet(options: {
       cacheType: resolveCacheType(options.storageGroup.role),
       slotIds: inputSlotIds,
       groupOrder: options.groupOrder,
+      viewRole: "input-view",
     }));
     options.cacheGroups.push(createCompiledNode({
       id: outputNodeId,
@@ -992,6 +1003,7 @@ function compileStorageNodeSet(options: {
       cacheType: resolveCacheType(options.storageGroup.role),
       slotIds: outputSlotIds,
       groupOrder: options.groupOrder + 0.5,
+      viewRole: "output-view",
     }));
     options.links.push({
       id: ["link", options.deviceId, options.storageGroup.id, "input-view-to-output-view", inputNodeId, outputNodeId].join(":"),
@@ -1043,12 +1055,14 @@ function createCompiledNode(options: {
   readonly cacheType: SimulationCacheType;
   readonly slotIds: readonly string[];
   readonly groupOrder: number;
+  readonly viewRole?: "single-view" | "input-view" | "output-view";
 }): CompiledSimulationCacheGroup {
   return {
     id: options.id,
     deviceId: options.deviceId,
     sourceStorageSlotGroupId: options.sourceStorageSlotGroupId,
     cacheType: options.cacheType,
+    viewRole: options.viewRole ?? "single-view",
     slotIds: options.slotIds,
     inputPortIds: [],
     outputPortIds: [],
@@ -1166,11 +1180,13 @@ function addSyntheticCacheGroup(options: {
     slotIds: [slotId],
     inputPortIds: [],
     outputPortIds: [],
+    viewRole: "single-view",
     groupOrder: options.groupOrder,
   });
   options.slots.push({
     id: slotId,
     cacheGroupId,
+    nodeId: cacheGroupId,
     sourceSlotId: "slot_1",
     capacity: 1,
     domain: options.domain,
@@ -1212,6 +1228,7 @@ function compileSlotTemplate(options: {
   return {
     id: `${options.cacheGroupId}/slot:${options.slot.id}${options.slotIdSuffix ?? ""}`,
     cacheGroupId: options.cacheGroupId,
+    nodeId: options.cacheGroupId,
     sourceSlotId: options.slot.id,
     capacity: options.slot.capacity,
     domain: resolveSlotDomain(options.storageGroup, options.slot),
@@ -1281,6 +1298,13 @@ function compilePorts(options: {
           options.itemCatalog,
         ) ?? acceptRuleFromPortKind(portGroup.kind);
 
+        const boundNodeIds = resolveBoundCacheGroupIds({
+          portGroup,
+          direction,
+          bindingByPortGroupId,
+          nodeBindingsByStorageGroupId: options.nodeBindingsByStorageGroupId,
+        });
+
         options.ports.push({
           id: portId,
           deviceId: options.deviceId,
@@ -1291,12 +1315,8 @@ function compilePorts(options: {
           insideGridPoint,
           outsideGridPoint,
           edge,
-          boundCacheGroupIds: resolveBoundCacheGroupIds({
-            portGroup,
-            direction,
-            bindingByPortGroupId,
-            nodeBindingsByStorageGroupId: options.nodeBindingsByStorageGroupId,
-          }),
+          boundNodeIds,
+          boundCacheGroupIds: boundNodeIds,
           acceptRule,
           count: port.count,
           order,

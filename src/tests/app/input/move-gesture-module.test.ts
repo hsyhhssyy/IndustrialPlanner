@@ -42,6 +42,11 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(appHost.internalState.activeTool).toBe("move");
     expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
     expect(appHost.internalState.runtime.moveEnterFrom).toBe("select");
+    expect(appHost.internalActions.hideCanvasFloatingToolbar).not.toHaveBeenCalled();
+
+    expect(module.handle(onEnterActiveToolEvent("select", "move"), context)).toEqual({
+      status: "handled",
+    });
     expect(appHost.internalActions.hideCanvasFloatingToolbar).toHaveBeenCalled();
   });
 
@@ -113,6 +118,11 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(select.editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
     expect(select.appHost.internalState.activeTool).toBe("move");
     expect(select.appHost.internalState.runtime.moveEnterFrom).toBe("select");
+    expect(select.appHost.internalActions.showCanvasFloatingToolbarForCollection).not.toHaveBeenCalled();
+
+    expect(
+      module.handle(onEnterActiveToolEvent("select", "move"), select.context),
+    ).toEqual({ status: "handled" });
     expect(select.appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
       MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
@@ -135,6 +145,11 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(appHost.internalState.activeTool).toBe("move");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
     expect(appHost.internalState.runtime.moveEnterFrom).toBe("marquee");
+    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).not.toHaveBeenCalled();
+
+    expect(
+      module.handle(onEnterActiveToolEvent("marquee", "move"), context),
+    ).toEqual({ status: "handled" });
     expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
       MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
@@ -844,6 +859,17 @@ function uiButtonMouseTapEvent(uiButtonId: string) {
     gestureId: "ui-mouse-tap-1",
     uiButtonId,
     button: 0,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function onEnterActiveToolEvent(from: ActiveTool, to: ActiveTool) {
+  return {
+    type: "on-enter-active-tool" as const,
+    gestureId: "enter-active-tool-1",
+    from,
+    to,
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };
