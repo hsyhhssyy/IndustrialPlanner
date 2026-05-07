@@ -2,7 +2,7 @@ import type {
   DeviceClass,
   ScreenProfile,
   ScreenShape,
-} from "@/domain/state/screen-profile";
+} from "@/domain/app/types/screen-profile";
 
 export interface ScreenProfileSource {
   readonly innerWidth: number;

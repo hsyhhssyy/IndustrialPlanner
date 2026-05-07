@@ -1,10 +1,8 @@
 import { Graphics } from "pixi.js";
-import type { AppTheme } from "@/domain/state/theme";
-import {
-  EntityCollectionType,
-  type ActiveTool,
-} from "@/domain/state/types";
-import type { GridRect } from "@/domain/types/grid";
+import type { AppTheme } from "@/domain/app/types/theme";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import type { ActiveTool } from "@/domain/app/types/app-types";
+import type { GridRect } from "@/domain/shared/grid";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";

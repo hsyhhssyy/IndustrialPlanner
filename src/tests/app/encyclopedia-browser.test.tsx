@@ -13,9 +13,9 @@ import {
 import type {
   ToolboxWikiDesktopCategory,
   ToolboxWikiMobileFilterOption,
-} from "@/domain/state/types";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import { createWorkspaceState } from "@/domain/state/workspace-state";
+} from "@/domain/app/types/app-types";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 
 function createWorkspace(): WorkspaceContract {

@@ -2,9 +2,9 @@ export type {
   GridPoint,
   GridRectSize,
   GridRotation,
-} from "@/domain/types/grid";
+} from "@/domain/shared/grid";
 
-import type { GridPoint, GridRectSize, GridRotation } from "@/domain/types/grid";
+import type { GridPoint, GridRectSize, GridRotation } from "@/domain/shared/grid";
 
 export interface GridBounds {
   left: number;

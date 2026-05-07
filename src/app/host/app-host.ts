@@ -1,5 +1,5 @@
-import { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import { AppContract } from "@/domain/contract/app-contract";
+import { WorkspaceContract } from "@/domain/document/workspace-contract";
+import { AppContract } from "@/domain/app/app-contract";
 import { AppActionImpl, AppInternalAction } from "../actions/action-impl";
 import { createGestureAdapter, GestureAdapter } from "../input/gesture/adapter";
 import {

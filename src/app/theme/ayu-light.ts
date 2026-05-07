@@ -1,4 +1,4 @@
-import type { AppTheme } from "@/domain/state/theme";
+import type { AppTheme } from "@/domain/app/types/theme";
 
 export const AYU_LIGHT_THEME: AppTheme = {
   id: "ayu-light",

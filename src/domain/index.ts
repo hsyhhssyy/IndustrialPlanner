@@ -1,15 +1,15 @@
 export type {
 	ClientPixelPoint,
 	ClientPixelRect,
-} from "./types/client-pixel";
+} from "./shared/client-pixel";
 export type {
 	GridFloatPoint,
 	GridPoint,
 	GridRect,
 	GridRectSize,
 	GridRotation,
-} from "./types/grid";
+} from "./shared/grid";
 export type {
 	SimulationRunState,
 	SimulationState,
-} from "./contract/simulation-contract";
+} from "./simulation/types/simulation-types";

@@ -6,7 +6,7 @@ import {
   createHypergryphMouseViewportPanModule,
   type GestureActionContext,
 } from "@/app/input/gesture/actions";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 
 describe("createHypergryphMouseViewportPanModule", () => {
   it("accepts left mouse drag in select mode", () => {

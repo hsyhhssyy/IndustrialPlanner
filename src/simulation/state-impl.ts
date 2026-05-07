@@ -1,6 +1,6 @@
 import { makeAutoObservable } from "mobx";
 
-import type { SimulationState } from "@/domain/contract/simulation-contract";
+import type { SimulationState } from "@/domain/simulation/types/simulation-types";
 
 import { DEFAULT_SIMULATION_SPEED } from "./tick-rate";
 import type {

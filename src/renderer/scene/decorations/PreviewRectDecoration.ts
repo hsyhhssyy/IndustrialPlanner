@@ -1,5 +1,5 @@
 import { Graphics } from "pixi.js";
-import { EntityCollectionType } from "@/domain/state/types";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";

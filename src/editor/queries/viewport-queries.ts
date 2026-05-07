@@ -1,4 +1,4 @@
-import type { EditorQuery } from "@/domain/query/editor-query";
+import type { EditorQuery } from "@/domain/editor/editor-query";
 
 import type { EditorQueriesContext } from "./types";
 import {

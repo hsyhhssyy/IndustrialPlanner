@@ -5,7 +5,7 @@ import {
   createGestureDiagnosticsStore,
 } from "@/app/input/gesture/diagnostics";
 import type { GestureEvent } from "@/app/input/gesture/adapter";
-import type { WorldEntity } from "@/domain/entity/world-document";
+import type { WorldEntity } from "@/domain/document/world-document";
 
 type MouseTapGestureEvent = Extract<GestureEvent, { type: "mouse tap" }>;
 type MouseLongPressReadyGestureEvent = Extract<GestureEvent, { type: "mouse-long-press-ready" }>;

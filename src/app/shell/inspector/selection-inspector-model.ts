@@ -1,11 +1,11 @@
 import type {
   EntityDefinition,
-} from "@/domain/types/registry/entity-definition";
+} from "@/domain/registry/types/entity-definition";
 import type { AppLocale } from "@/shared/i18n/messages";
 import type {
   SlotLinkDefinition,
   WorldEntity,
-} from "@/domain/entity/world-document";
+} from "@/domain/document/world-document";
 
 export interface SelectionInspectorContext {
   selectedEntityId: string;

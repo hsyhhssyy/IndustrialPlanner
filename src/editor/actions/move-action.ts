@@ -1,6 +1,6 @@
-import type { EditorAction } from "@/domain/action/editor-action";
-import type { WorldEntity } from "@/domain/entity/world-document";
-import { EntityCollectionType } from "@/domain/state/types";
+import type { EditorAction } from "@/domain/editor/editor-action";
+import type { WorldEntity } from "@/domain/document/world-document";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
 import {
   type DraftEntity,

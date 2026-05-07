@@ -1,6 +1,6 @@
 import { BlurFilter, Graphics } from "pixi.js";
-import type { GridRect } from "@/domain/types/grid";
-import type { AppTheme } from "@/domain/state/theme";
+import type { GridRect } from "@/domain/shared/grid";
+import type { AppTheme } from "@/domain/app/types/theme";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";

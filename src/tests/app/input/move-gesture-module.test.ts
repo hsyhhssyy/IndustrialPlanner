@@ -7,15 +7,15 @@ import {
   createHypergryphMoveGestureModule,
   type GestureActionContext,
 } from "@/app/input/gesture/actions";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import type { EditorContract } from "@/domain/contract/editor-contract";
-import type { WorldEntity } from "@/domain/entity/world-document";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { EditorContract } from "@/domain/editor/editor-contract";
+import type { WorldEntity } from "@/domain/document/world-document";
 import {
   EntityCollectionType,
-  type ActiveTool,
   type EntityCollectionType as EntityCollectionTypeValue,
-} from "@/domain/state/types";
-import type { GridPoint, GridRect } from "@/domain/types/grid";
+} from "@/domain/editor/types/editor-types";
+import type { ActiveTool } from "@/domain/app/types/app-types";
+import type { GridPoint, GridRect } from "@/domain/shared/grid";
 
 describe("createHypergryphMoveGestureModule", () => {
   it("enters mouse move from select by selecting the pointer entity first", () => {

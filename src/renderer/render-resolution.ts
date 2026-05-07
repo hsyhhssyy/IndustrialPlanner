@@ -1,4 +1,4 @@
-import type { AppContract } from "@/domain/contract/app-contract"
+import type { AppContract } from "@/domain/app/app-contract"
 
 export const DEFAULT_RENDER_RESOLUTION = 1
 

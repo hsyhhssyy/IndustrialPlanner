@@ -27,11 +27,11 @@
 import type {
   EntityDefinition,
   ItemFilterDefinition,
-} from "@/domain/types/registry/entity-definition";
+} from "@/domain/registry/types/entity-definition";
 import {
   INSPECTOR_TYPE,
   type EntityInspectorDeclaration,
-} from "@/domain/types/registry/entity-inspector";
+} from "@/domain/registry/types/entity-inspector";
 
 // ---------------------------------------------------------------------------
 // 类型别名 — 从 EntityDefinition 中提取子类型

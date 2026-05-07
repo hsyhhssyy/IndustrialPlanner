@@ -20,9 +20,9 @@ import {
   DEFAULT_TOOLBOX_DIALOG_TAB_ID,
   MOBILE_LEFT_DOCK_WIDTH,
 } from "@/app/state/state-impl";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import { EntityCollectionType } from "@/domain/state/types";
-import { createWorkspaceState } from "@/domain/state/workspace-state";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";

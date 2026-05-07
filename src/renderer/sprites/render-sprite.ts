@@ -1,6 +1,6 @@
 import { Container } from "pixi.js";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import type { AppTheme } from "@/domain/state/theme";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { AppTheme } from "@/domain/app/types/theme";
 import type { GridRotation } from "@/shared/geometry/grid"
 
 export type RenderLayerId = "background" | "entity" | "overlay";

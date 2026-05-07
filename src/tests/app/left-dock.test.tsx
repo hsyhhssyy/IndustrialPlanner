@@ -10,8 +10,8 @@ import type { GestureEvent } from "@/app/input/gesture/adapter";
 import { LeftDock } from "@/app/shell/layout/left-dock";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import { createWorkspaceState } from "@/domain/state/workspace-state";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 
 function createWorkspace(): WorkspaceContract {

@@ -2,9 +2,9 @@ import type {
   GridFloatPoint,
   GridPoint,
   GridRotation,
-} from "@/domain/types/grid"
-import type { WorldEntity } from "@/domain/entity/world-document"
-import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/query/simulation-query"
+} from "@/domain/shared/grid"
+import type { WorldEntity } from "@/domain/document/world-document"
+import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types"
 import {
   Container,
   Graphics,

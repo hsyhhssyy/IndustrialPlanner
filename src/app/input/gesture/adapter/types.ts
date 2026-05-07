@@ -1,5 +1,5 @@
-import type { WorldEntity } from "@/domain/entity/world-document";
-import type { ActiveTool } from "@/domain/state/types";
+import type { WorldEntity } from "@/domain/document/world-document";
+import type { ActiveTool } from "@/domain/app/types/app-types";
 
 export interface GesturePosition {
   readonly x: number;

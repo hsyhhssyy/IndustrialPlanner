@@ -6,9 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/host/app-host";
 import { TopBar } from "@/app/shell/layout/top-bar";
-import type { SimulationRunState } from "@/domain/contract/simulation-contract";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import { createWorkspaceState } from "@/domain/state/workspace-state";
+import type { SimulationRunState } from "@/domain/simulation/types/simulation-types";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 

@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/host/app-host";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import { createWorkspaceState } from "@/domain/state/workspace-state";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 
 function createWorkspace(): WorkspaceContract {

@@ -26,7 +26,7 @@ import type {
   ModuleBalancingCustomModule,
   ModuleBalancingIOPort,
   ModuleBalancingModule,
-} from "@/domain/state/types";
+} from "@/domain/app/types/app-types";
 import {
   buildModuleBalancingIndex,
   computeModuleBalancing,

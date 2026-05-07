@@ -2,7 +2,7 @@ import { BlurFilter, Graphics, Text, TextStyle } from "pixi.js";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
-import { EntityCollectionType } from "@/domain/state/types";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
 /** 边缘发光动画周期（毫秒） */
 const CANVAS_GLOW_ANIMATION_PERIOD_MS = 2000;

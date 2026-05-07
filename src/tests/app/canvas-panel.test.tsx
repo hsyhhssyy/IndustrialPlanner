@@ -8,9 +8,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAppHost } from "@/app/host/app-host";
 import type { GestureEvent } from "@/app/input/gesture/adapter";
 import { CanvasPanel } from "@/app/shell/canvas/canvas-panel";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import type { WorldEntity } from "@/domain/entity/world-document";
-import { createWorkspaceState } from "@/domain/state/workspace-state";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { WorldEntity } from "@/domain/document/world-document";
+import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
 

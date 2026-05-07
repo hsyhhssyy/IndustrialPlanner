@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { AYU_LIGHT_THEME } from "@/app/theme"
-import { EntityCollectionType } from "@/domain/state/types"
+import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import { BaseRenderSprite } from "@/renderer/sprites/base-render-sprite"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import type {

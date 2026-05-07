@@ -1,13 +1,13 @@
 import type {
   WorldEntity,
-} from "@/domain/entity/world-document"
-import type { AppTheme } from "@/domain/state/theme"
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition"
+} from "@/domain/document/world-document"
+import type { AppTheme } from "@/domain/app/types/theme"
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import {
   getGridFootprintCenterCells,
   getRotatedGridFootprint,
 } from "@/shared/geometry/grid"
-import type { GridRectSize } from "@/domain/types/grid"
+import type { GridRectSize } from "@/domain/shared/grid"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import {
   Container,

@@ -16,8 +16,8 @@ import type {
   LongPressStateListener,
 } from "./types";
 import { reaction, type IReactionDisposer } from "mobx";
-import type { WorldEntity } from "@/domain/entity/world-document";
-import type { ActiveTool } from "@/domain/state/types";
+import type { WorldEntity } from "@/domain/document/world-document";
+import type { ActiveTool } from "@/domain/app/types/app-types";
 
 const TOUCH_LONG_PRESS_MS = 500;
 const TOUCH_LONG_PRESS_INDICATOR_DELAY_MS = 200;

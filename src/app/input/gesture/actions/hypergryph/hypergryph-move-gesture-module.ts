@@ -1,11 +1,11 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
-import type { EditorContract } from "@/domain/contract/editor-contract";
-import type { WorldEntity } from "@/domain/entity/world-document";
-import { EntityCollectionType } from "@/domain/state/types";
-import type { GridPoint, GridRect } from "@/domain/types/grid";
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+import type { EditorContract } from "@/domain/editor/editor-contract";
+import type { WorldEntity } from "@/domain/document/world-document";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import type { GridPoint, GridRect } from "@/domain/shared/grid";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";

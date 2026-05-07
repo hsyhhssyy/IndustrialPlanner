@@ -1,13 +1,13 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
-import { EntityCollectionType } from "@/domain/state/types";
-import type { GridPoint } from "@/domain/types/grid";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import type { GridPoint } from "@/domain/shared/grid";
 import type {
   LogisticsDraftActionResult,
   LogisticsKind,
   LogisticsRouteOrder,
-} from "@/domain/types/logistics";
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+} from "@/domain/shared/logistics";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";

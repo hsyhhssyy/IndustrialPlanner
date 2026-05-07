@@ -1,4 +1,4 @@
-import { EntityCollectionType, type EntityCollectionType as EntityCollectionTypeValue } from "@/domain/state/types";
+import { EntityCollectionType, type EntityCollectionType as EntityCollectionTypeValue } from "@/domain/editor/types/editor-types";
 import { Container } from "pixi.js";
 
 import type {

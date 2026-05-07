@@ -1,7 +1,7 @@
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import type { CanvasFloatingToolbarButtonId } from "@/app/state/state-impl";
-import { EntityCollectionType } from "@/domain/state/types";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
 import type { GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";

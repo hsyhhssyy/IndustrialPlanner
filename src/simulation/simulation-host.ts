@@ -1,9 +1,9 @@
-import type { SimulationContract } from "@/domain/contract/simulation-contract";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import type { SimulationContract } from "@/domain/simulation/simulation-contract";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type {
   SimulationDeviceRuntimeSlotItemReadModel,
   SimulationDeviceRuntimeStatusReadModel,
-} from "@/domain/query/simulation-query";
+} from "@/domain/simulation/types/simulation-types";
 import {
   createSnapshotStore,
   type SnapshotStoreReadWrite,

@@ -7,14 +7,14 @@ import {
   createHypergryphSinglePlacementGestureModule,
   type GestureActionContext,
 } from "@/app/input/gesture/actions";
-import type { EditorContract } from "@/domain/contract/editor-contract";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import type { WorldEntity } from "@/domain/entity/world-document";
+import type { EditorContract } from "@/domain/editor/editor-contract";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { WorldEntity } from "@/domain/document/world-document";
 import {
   EntityCollectionType,
-} from "@/domain/state/types";
-import type { ClientPixelRect } from "@/domain/types/client-pixel";
-import type { GridPoint, GridRect } from "@/domain/types/grid";
+} from "@/domain/editor/types/editor-types";
+import type { ClientPixelRect } from "@/domain/shared/client-pixel";
+import type { GridPoint, GridRect } from "@/domain/shared/grid";
 import { createRegistryContract } from "@/registry";
 
 describe("createHypergryphSinglePlacementGestureModule", () => {

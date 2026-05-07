@@ -1,7 +1,7 @@
 import {
   type WorldDocument,
   createWorldDocument,
-} from "@/domain/entity/world-document";
+} from "@/domain/document/world-document";
 import {
   readFromIndexedDb,
   saveToIndexedDb,

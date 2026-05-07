@@ -2,7 +2,7 @@ import type { AppHost } from "@/app/host/app-host";
 import { observer } from "mobx-react-lite";
 import { Fragment, type ComponentProps } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
 import type { PlacementGroup } from "@/app/state/state-impl";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";

@@ -1,7 +1,7 @@
 import type { AppHost } from "@/app/host/app-host";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { CanvasFloatingToolbarButtonId } from "@/app/state/state-impl";
-import type { ClientPixelPoint } from "@/domain/types/client-pixel";
+import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
 import {
   useLayoutEffect,
   useRef,

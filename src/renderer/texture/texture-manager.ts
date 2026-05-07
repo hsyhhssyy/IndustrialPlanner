@@ -2,7 +2,7 @@ import { Assets, Texture } from "pixi.js"
 import { reaction } from "mobx"
 import type { Renderer } from "pixi.js"
 
-import type { AppContract } from "@/domain/contract/app-contract"
+import type { AppContract } from "@/domain/app/app-contract"
 import { resolveRenderResolutionFromApp } from "@/renderer/render-resolution"
 
 import {

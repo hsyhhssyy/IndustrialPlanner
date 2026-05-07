@@ -1,5 +1,5 @@
-import type { RegistryQuery } from "@/domain/query/registry-query"
-import type { LogisticsKind } from "@/domain/types/logistics"
+import type { RegistryQuery } from "@/domain/registry/registry-query"
+import type { LogisticsKind } from "@/domain/shared/logistics"
 
 const DEDICATED_LOGISTICS_DEVICE_KINDS = new Map<string, LogisticsKind>([
     ["belt_straight_1x1", "belt"],

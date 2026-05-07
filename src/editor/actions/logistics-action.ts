@@ -1,7 +1,7 @@
-import type { EditorAction } from "@/domain/action/editor-action";
-import type { WorldDocument } from "@/domain/entity/world-document";
-import { EntityCollectionType } from "@/domain/state/types";
-import type { GridPoint } from "@/domain/types/grid";
+import type { EditorAction } from "@/domain/editor/editor-action";
+import type { WorldDocument } from "@/domain/document/world-document";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import type { GridPoint } from "@/domain/shared/grid";
 import type {
   CreateLogisticsDraftStartOptions,
   LogisticsDraftActionResult,
@@ -12,8 +12,8 @@ import type {
   LogisticsPathCell,
   LogisticsRouteOrder,
   MoveLogisticsDraftEndOptions,
-} from "@/domain/types/logistics";
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+} from "@/domain/shared/logistics";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { DraftEntity } from "../draft-entity";
 import type { EditorActionsContext } from "./types";
 import {

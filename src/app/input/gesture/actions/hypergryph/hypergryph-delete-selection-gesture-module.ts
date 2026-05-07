@@ -1,7 +1,7 @@
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
-import type { EditorContract } from "@/domain/contract/editor-contract";
-import { EntityCollectionType } from "@/domain/state/types";
+import type { EditorContract } from "@/domain/editor/editor-contract";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";

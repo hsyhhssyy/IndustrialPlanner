@@ -1,7 +1,7 @@
-import type { EditorAction } from "@/domain/action/editor-action";
+import type { EditorAction } from "@/domain/editor/editor-action";
 import type { DraftEntity } from "../draft-entity";
-import { EntityCollectionType } from "@/domain/state/types";
-import type { GridPoint, GridRectSize } from "@/domain/types/grid";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import type { GridPoint, GridRectSize } from "@/domain/shared/grid";
 
 import type { EditorActionsContext } from "./types";
 

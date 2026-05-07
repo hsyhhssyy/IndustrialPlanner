@@ -1,8 +1,8 @@
-import type { EditorAction } from "@/domain/action/editor-action";
-import type { WorldEntity } from "@/domain/entity/world-document";
-import { EntityCollectionType } from "@/domain/state/types";
-import type { GridPoint, GridRect, GridRectSize } from "@/domain/types/grid";
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+import type { EditorAction } from "@/domain/editor/editor-action";
+import type { WorldEntity } from "@/domain/document/world-document";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import type { GridPoint, GridRect, GridRectSize } from "@/domain/shared/grid";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import {
   getGridBoundingBox,
   getGridBoundsCenterCells,

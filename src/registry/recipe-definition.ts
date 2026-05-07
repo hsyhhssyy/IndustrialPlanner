@@ -1,4 +1,4 @@
-import type { RecipeDefinition } from "@/domain/types/registry/recipe-definition";
+import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 
 export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
   {

@@ -1,4 +1,4 @@
-import type { WorldEntity } from "@/domain/entity/world-document";
+import type { WorldEntity } from "@/domain/document/world-document";
 
 export interface DraftEntity extends WorldEntity {
   originalEntityId: string;

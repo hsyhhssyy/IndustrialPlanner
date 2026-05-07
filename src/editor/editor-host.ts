@@ -1,7 +1,7 @@
-import type { WorldDocument } from "@/domain/entity/world-document";
-import { EditorContract } from "@/domain/contract/editor-contract";
-import { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import { createWorldDocument } from "@/domain/entity/world-document";
+import type { WorldDocument } from "@/domain/document/world-document";
+import { EditorContract } from "@/domain/editor/editor-contract";
+import { WorkspaceContract } from "@/domain/document/workspace-contract";
+import { createWorldDocument } from "@/domain/document/world-document";
 import {
   createSnapshotStore,
   SnapshotStoreReadWrite,

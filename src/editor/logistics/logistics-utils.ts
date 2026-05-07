@@ -1,11 +1,11 @@
-import type { WorldDocument, WorldEntity } from "@/domain/entity/world-document";
+import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import type {
   GridEdge,
   GridPoint,
   GridRect,
   GridRectSize,
   GridRotation,
-} from "@/domain/types/grid";
+} from "@/domain/shared/grid";
 import type {
   LogisticsDraftEndpoint,
   LogisticsKind,
@@ -14,8 +14,8 @@ import type {
   LogisticsPortDirection,
   LogisticsPortKind,
   LogisticsRouteOrder,
-} from "@/domain/types/logistics";
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+} from "@/domain/shared/logistics";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];

@@ -5,10 +5,10 @@ import LucidePlus from "~icons/lucide/plus";
 import LucideX from "~icons/lucide/x";
 
 import type { AppHost } from "@/app/host/app-host";
-import type { WorldEntity } from "@/domain/entity/world-document";
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
-import type { EntityInspectorDeclaration } from "@/domain/types/registry/entity-inspector";
-import type { ItemDefinition } from "@/domain/types/registry/item-definition";
+import type { WorldEntity } from "@/domain/document/world-document";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import type { EntityInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
+import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 
 type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
 type StorageSlotDefinition = StorageSlotGroupDefinition["slots"][number];

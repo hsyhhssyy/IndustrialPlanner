@@ -1,7 +1,7 @@
 import {
   DEFAULT_WORLD_BASE_ID,
   type WorldDocument,
-} from "@/domain/entity/world-document";
+} from "@/domain/document/world-document";
 
 export function createDummyWorldDocument(): WorldDocument {
   return {

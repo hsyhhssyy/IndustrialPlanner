@@ -30,7 +30,7 @@ import {
 import type { AppHost } from "@/app/host/app-host";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
-import type { AppThemeId } from "@/domain/state/theme";
+import type { AppThemeId } from "@/domain/app/types/theme";
 import {
   isMobileLandscapeScreenProfile,
   isMobilePortraitScreenProfile,

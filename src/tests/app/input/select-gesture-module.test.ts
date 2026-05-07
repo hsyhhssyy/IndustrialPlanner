@@ -8,10 +8,11 @@ import {
   createHypergryphSelectGestureModule,
   type GestureActionContext,
 } from "@/app/input/gesture/actions";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import type { WorldEntity } from "@/domain/entity/world-document";
-import type { ActiveTool, EntityCollection } from "@/domain/state/types";
-import { EntityCollectionType } from "@/domain/state/types";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { WorldEntity } from "@/domain/document/world-document";
+import type { ActiveTool } from "@/domain/app/types/app-types";
+import type { EntityCollection } from "@/domain/editor/types/editor-types";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
 describe("createHypergryphSelectGestureModule", () => {
   it("clears the selection collection before selecting a different clicked entity and shows move/delete actions", () => {

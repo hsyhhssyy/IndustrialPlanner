@@ -1,4 +1,4 @@
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition"
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import type { RenderHost } from "@/renderer/renderer-host"
 
 import { GenericDeviceSprite } from "./generic-device-sprite"

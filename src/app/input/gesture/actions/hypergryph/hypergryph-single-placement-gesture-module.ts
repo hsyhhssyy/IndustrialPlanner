@@ -5,10 +5,10 @@ import {
   type ShortcutKeyId,
 } from "@/app/actions/keyboard-shortcut-manager";
 import type { PlacementGroup } from "@/app/state/state-impl";
-import type { EditorContract } from "@/domain/contract/editor-contract";
-import type { RegistryContract } from "@/domain/contract/registry-contracts";
-import { EntityCollectionType } from "@/domain/state/types";
-import type { GridPoint, GridRect } from "@/domain/types/grid";
+import type { EditorContract } from "@/domain/editor/editor-contract";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import type { GridPoint, GridRect } from "@/domain/shared/grid";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";

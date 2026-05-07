@@ -1,4 +1,4 @@
-import type { ItemDefinition } from "@/domain/types/registry/item-definition";
+import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 
 export const ITEM_DEFINITIONS: ItemDefinition[] = [
   {

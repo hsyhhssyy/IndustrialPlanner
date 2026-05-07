@@ -10,9 +10,9 @@ import {
   type GestureHandleResult,
   type GestureMappingModule,
 } from "@/app/input/gesture/actions";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import type { ActiveTool } from "@/domain/state/types";
-import { createWorkspaceState } from "@/domain/state/workspace-state";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { ActiveTool } from "@/domain/app/types/app-types";
+import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 
 interface FakeAppHost {

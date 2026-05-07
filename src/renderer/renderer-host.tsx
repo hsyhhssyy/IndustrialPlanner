@@ -1,5 +1,5 @@
-import { RenderContract } from "@/domain/contract/render-contract";
-import { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import { RenderContract } from "@/domain/renderer/render-contract";
+import { WorkspaceContract } from "@/domain/document/workspace-contract";
 
 import { Application } from "pixi.js";
 import { resolveRenderResolutionFromApp } from "./render-resolution";

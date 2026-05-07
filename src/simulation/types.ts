@@ -1,6 +1,6 @@
-import type { LinkType } from "@/domain/entity/world-document";
-import type { GridEdge, GridPoint, GridRotation } from "@/domain/types/grid";
-import type { RecipeDefinition, RecipeType } from "@/domain/types/registry/recipe-definition";
+import type { LinkType } from "@/domain/document/world-document";
+import type { GridEdge, GridPoint, GridRotation } from "@/domain/shared/grid";
+import type { RecipeDefinition, RecipeType } from "@/domain/registry/types/recipe-definition";
 
 export type SimulationItemDomain = "solid" | "liquid";
 export type SimulationPortKind = "item" | "fluid";

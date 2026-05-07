@@ -1,11 +1,11 @@
-import type { RegistryContract } from "@/domain/contract/registry-contracts";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type {
   CacheLinkEndpointDefinition,
   WorldDocument,
   WorldEntity,
-} from "@/domain/entity/world-document";
-import type { GridEdge, GridPoint, GridRotation } from "@/domain/types/grid";
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+} from "@/domain/document/world-document";
+import type { GridEdge, GridPoint, GridRotation } from "@/domain/shared/grid";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 
 import { hashStable } from "./deterministic";
 import { STANDARD_TICK_RATE_PER_SECOND } from "./tick-rate";

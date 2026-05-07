@@ -1,14 +1,16 @@
 import { makeAutoObservable } from "mobx";
 
-import type { ScreenProfile } from "@/domain/state/screen-profile";
-import type { AppTheme, AppThemeId } from "@/domain/state/theme";
+import type { ScreenProfile } from "@/domain/app/types/screen-profile";
+import type { AppTheme, AppThemeId } from "@/domain/app/types/theme";
 import {
   EntityCollectionType,
-} from "@/domain/state/types";
+} from "@/domain/editor/types/editor-types";
+import type {
+  MarqueeCollectionType,
+} from "@/domain/editor/types/editor-types";
 import type {
   ActiveTool,
   AppSettings,
-  MarqueeCollectionType,
   ModuleBalancingCanvas,
   ModuleBalancingCustomModule,
   ModuleBalancingIOPort,
@@ -27,11 +29,11 @@ import type {
   ToolInfo,
   UiState,
   WorkbenchState,
-} from "@/domain/state/types";
-import type { ClientPixelPoint } from "@/domain/types/client-pixel";
-import type { GridPoint } from "@/domain/types/grid";
-import type { LogisticsKind, LogisticsRouteOrder } from "@/domain/types/logistics";
-import type { UiGroup } from "@/domain/types/registry/entity-definition";
+} from "@/domain/app/types/app-types";
+import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
+import type { GridPoint } from "@/domain/shared/grid";
+import type { LogisticsKind, LogisticsRouteOrder } from "@/domain/shared/logistics";
+import type { UiGroup } from "@/domain/registry/types/entity-definition";
 import type { AppLocale } from "@/shared/i18n/messages";
 import {
   resolveScreenProfileFromWindow,

@@ -1,4 +1,4 @@
-import type { BaseDefinition } from "@/domain/types/registry/base-definition";
+import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 
 export const BASE_DEFINITIONS: BaseDefinition[] = [
   {

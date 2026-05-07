@@ -1,6 +1,6 @@
 import type {
   SlotLinkDefinition,
-} from "@/domain/entity/world-document";
+} from "@/domain/document/world-document";
 import type { AppLocale } from "@/shared/i18n/messages";
 import type {
   SelectionInspectorContext,

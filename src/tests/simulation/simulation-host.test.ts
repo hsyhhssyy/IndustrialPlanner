@@ -1,9 +1,9 @@
 import { autorun } from "mobx"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract"
-import type { WorldDocument } from "@/domain/entity/world-document"
-import { createWorkspaceState } from "@/domain/state/workspace-state"
+import type { WorkspaceContract } from "@/domain/document/workspace-contract"
+import type { WorldDocument } from "@/domain/document/world-document"
+import { createWorkspaceState } from "@/domain/document/workspace-state"
 import { createDummyWorldDocument } from "@/editor/dummy-document"
 import { createRegistryContract } from "@/registry"
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store"

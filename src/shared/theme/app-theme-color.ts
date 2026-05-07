@@ -1,4 +1,4 @@
-import type { AppTheme, AppThemeColorKey } from "@/domain/state/theme";
+import type { AppTheme, AppThemeColorKey } from "@/domain/app/types/theme";
 
 export function resolveAppThemeColor(
   theme: AppTheme,

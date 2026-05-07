@@ -6,11 +6,11 @@ import {
   createHypergryphMarqueeGestureModule,
   type GestureActionContext,
 } from "@/app/input/gesture/actions";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import type { EditorContract } from "@/domain/contract/editor-contract";
-import type { WorldEntity } from "@/domain/entity/world-document";
-import { EntityCollectionType } from "@/domain/state/types";
-import type { GridPoint } from "@/domain/types/grid";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { EditorContract } from "@/domain/editor/editor-contract";
+import type { WorldEntity } from "@/domain/document/world-document";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import type { GridPoint } from "@/domain/shared/grid";
 
 describe("createHypergryphMarqueeGestureModule", () => {
   it("enters and exits marquee from the X key", () => {

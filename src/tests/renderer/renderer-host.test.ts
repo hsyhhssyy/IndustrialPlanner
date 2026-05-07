@@ -34,7 +34,7 @@ vi.mock("@/renderer/scene/render-scene-orchestrator", () => ({
 }))
 
 import { createRenderHost } from "@/renderer/renderer-host"
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract"
+import type { WorkspaceContract } from "@/domain/document/workspace-contract"
 
 describe("createRenderHost", () => {
   it("enables autoDensity and roundPixels for high-dpr canvas rendering", async () => {

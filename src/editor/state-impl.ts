@@ -7,12 +7,12 @@ import {
 import {
   EntityCollectionType,
   type EntityCollection,
-  type EditorState,
   type EntityCollectionType as EntityCollectionTypeValue,
-} from "@/domain/state/types";
-import type { ClientPixelRect } from "@/domain/types/client-pixel";
-import type { GridRect } from "@/domain/types/grid";
-import type { LogisticsDraftReadonlyState } from "@/domain/types/logistics";
+} from "@/domain/editor/types/editor-types";
+import type { EditorState } from "@/domain/editor/editor-state";
+import type { ClientPixelRect } from "@/domain/shared/client-pixel";
+import type { GridRect } from "@/domain/shared/grid";
+import type { LogisticsDraftReadonlyState } from "@/domain/shared/logistics";
 
 import type { DraftEntity } from "./draft-entity";
 import { EDITOR_GRID_CELL_PIXEL_SIZE } from "./viewport-constants";

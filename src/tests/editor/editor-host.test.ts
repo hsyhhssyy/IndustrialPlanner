@@ -5,13 +5,13 @@ import type { DraftEntity } from "@/editor/draft-entity";
 import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY } from "@/editor/storage-hook";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import {
   DEFAULT_WORLD_BASE_ID,
   type WorldDocument,
-} from "@/domain/entity/world-document";
-import { EntityCollectionType } from "@/domain/state/types";
-import { createWorkspaceState } from "@/domain/state/workspace-state";
+} from "@/domain/document/world-document";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { resolveWorldEntitySpriteLayout } from "@/renderer/scene/render-scene-orchestrator";
 import { EDITOR_GRID_CELL_PIXEL_SIZE } from "@/editor/viewport-constants";

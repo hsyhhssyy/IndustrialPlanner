@@ -7,9 +7,10 @@ import {
   createHypergryphDeleteSelectionGestureModule,
   type GestureActionContext,
 } from "@/app/input/gesture/actions";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import type { ActiveTool, EntityCollection } from "@/domain/state/types";
-import { EntityCollectionType } from "@/domain/state/types";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { ActiveTool } from "@/domain/app/types/app-types";
+import type { EntityCollection } from "@/domain/editor/types/editor-types";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
 describe("createHypergryphDeleteSelectionGestureModule", () => {
   it("deletes the current selection from the delete-device shortcut and hides selection toolbars", () => {

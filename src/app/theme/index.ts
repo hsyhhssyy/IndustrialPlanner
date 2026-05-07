@@ -1,4 +1,4 @@
-import type { AppTheme, AppThemeId } from "@/domain/state/theme";
+import type { AppTheme, AppThemeId } from "@/domain/app/types/theme";
 
 import { AYU_DARK_THEME } from "./ayu-dark";
 import { AYU_LIGHT_THEME } from "./ayu-light";

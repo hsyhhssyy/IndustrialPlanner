@@ -9,8 +9,8 @@ import { observer } from "mobx-react-lite";
 import type { AppHost } from "@/app/host/app-host";
 import type {
   ToolboxWikiNavigationEntry as NavEntry,
-} from "@/domain/state/types";
-import type { RecipeDefinition } from "@/domain/types/registry/recipe-definition";
+} from "@/domain/app/types/app-types";
+import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import {
   EncyclopediaBrowser,
   type EncyclopediaIndex,

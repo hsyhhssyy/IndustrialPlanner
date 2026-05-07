@@ -3,7 +3,7 @@ import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import {
   type DeviceClass,
   type ScreenShape,
-} from "@/domain/state/screen-profile";
+} from "@/domain/app/types/screen-profile";
 import { observer } from "mobx-react-lite";
 
 function getLocaleLabelKey(locale: AppHost["state"]["settings"]["locale"]): string {

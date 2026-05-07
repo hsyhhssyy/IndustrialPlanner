@@ -1,11 +1,11 @@
-import type { WorldDocument, WorldEntity } from "@/domain/entity/world-document";
-import type { EditorQuery } from "@/domain/query/editor-query";
+import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
+import type { EditorQuery } from "@/domain/editor/editor-query";
 import {
   type EntityCollection,
   type EntityCollectionType,
-} from "@/domain/state/types";
-import type { GridRect } from "@/domain/types/grid";
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+} from "@/domain/editor/types/editor-types";
+import type { GridRect } from "@/domain/shared/grid";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import {
   getGridBoundingBox,
   getRotatedGridFootprint,

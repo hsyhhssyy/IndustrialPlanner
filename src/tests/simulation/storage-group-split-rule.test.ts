@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createRegistryContract } from "@/registry";
 import { compileSimulationTopology } from "@/simulation/topology-compiler";

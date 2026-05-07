@@ -1,4 +1,4 @@
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { GestureAdapter, GestureEvent } from "@/app/input/gesture/adapter";
 import type {
   GestureActionContext,

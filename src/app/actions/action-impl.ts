@@ -1,19 +1,20 @@
 import { action } from "mobx";
 
-import type { AppAction } from "@/domain/action/app-action";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import type { ScreenProfile } from "@/domain/state/screen-profile";
-import type { EntityCollectionType, RightDockTabId } from "@/domain/state/types";
+import type { AppAction } from "@/domain/app/app-action";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { ScreenProfile } from "@/domain/app/types/screen-profile";
+import type { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import type { RightDockTabId } from "@/domain/app/types/app-types";
 import type {
   ClientPixelPoint,
   ClientPixelRect,
-} from "@/domain/types/client-pixel";
+} from "@/domain/shared/client-pixel";
 import type { AppLocale } from "@/shared/i18n/messages";
 import { lookupMessageText } from "@/shared/i18n/messages";
 import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
 import type { KeyboardShortcutManager } from "./keyboard-shortcut-manager";
 
-import type { ActiveTool } from "@/domain/state/types";
+import type { ActiveTool } from "@/domain/app/types/app-types";
 import {
   CANVAS_FLOATING_TOOLBAR_BUTTON_IDS,
   CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS,

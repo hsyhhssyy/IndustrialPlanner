@@ -4,7 +4,7 @@ import type { AppHost } from "@/app/host/app-host";
 import {
   APP_THEME_COLOR_KEYS,
   type AppTheme,
-} from "@/domain/state/theme";
+} from "@/domain/app/types/theme";
 
 export function applyAppThemeToDocument(
   theme: AppTheme,

@@ -4,9 +4,9 @@ import type { DialogStateReadWrite } from "@/app/state/state-impl";
 import type {
   ToolboxWikiDesktopCategory,
   ToolboxWikiMobileFilterOption,
-} from "@/domain/state/types";
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
-import type { ItemDefinition } from "@/domain/types/registry/item-definition";
+} from "@/domain/app/types/app-types";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 
 export type EncyclopediaPickerSelectionKind = "item" | "entity";
 

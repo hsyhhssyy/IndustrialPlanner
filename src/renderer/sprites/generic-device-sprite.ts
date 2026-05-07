@@ -9,9 +9,9 @@ import {
 
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import { getRotatedGridFootprint } from "@/shared/geometry/grid"
-import type { GridRectSize, GridRotation } from "@/domain/types/grid"
-import { EntityCollectionType } from "@/domain/state/types"
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition"
+import type { GridRectSize, GridRotation } from "@/domain/shared/grid"
+import { EntityCollectionType } from "@/domain/editor/types/editor-types"
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import type { RenderHost } from "@/renderer/renderer-host"
 import {
   RenderSpriteLayout,

@@ -1,7 +1,7 @@
 import { action, runInAction } from "mobx";
 
-import type { SimulationAction } from "@/domain/action/simulation-action";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import type { SimulationAction } from "@/domain/simulation/simulation-action";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 
 import { compileSimulationTopology } from "./topology-compiler";

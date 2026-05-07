@@ -1,7 +1,7 @@
 import type {
   WorldDocument,
   WorldEntity,
-} from "@/domain/entity/world-document";
+} from "@/domain/document/world-document";
 
 export function resolveEntityById(options: {
   entityId: string;

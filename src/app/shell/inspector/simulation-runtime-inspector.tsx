@@ -1,7 +1,7 @@
 import type {
   SimulationDeviceRuntimeStatusReadModel,
   SimulationDeviceRuntimeSlotItemReadModel,
-} from "@/domain/query/simulation-query";
+} from "@/domain/simulation/types/simulation-types";
 
 export const SIMULATION_RUNTIME_INSPECTOR_KEY = "simulation-runtime-inspecotr";
 

@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 
 import type { AppHost } from "@/app/host/app-host";
-import type { WorldEntity } from "@/domain/entity/world-document";
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
+import type { WorldEntity } from "@/domain/document/world-document";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type {
   EntityInspectorDeclaration,
   EntityInspectorType,
-} from "@/domain/types/registry/entity-inspector";
-import { INSPECTOR_TYPE } from "@/domain/types/registry/entity-inspector";
-import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/query/simulation-query";
+} from "@/domain/registry/types/entity-inspector";
+import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
+import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
 
 import { SimulationRuntimeInspector } from "./simulation-runtime-inspector";
 import { SlotConfigInspector } from "./slot-config-inspector";

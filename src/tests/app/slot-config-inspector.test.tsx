@@ -7,12 +7,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppHost } from "@/app/host/app-host";
 import { SlotConfigInspector } from "@/app/shell/inspector/slot-config-inspector";
 import { WorkbenchEncyclopediaPickerController } from "@/app/shell/state/encyclopedia-picker-state";
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
-import type { WorldEntity } from "@/domain/entity/world-document";
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
-import { INSPECTOR_TYPE } from "@/domain/types/registry/entity-inspector";
-import type { ItemDefinition } from "@/domain/types/registry/item-definition";
-import { createWorkspaceState } from "@/domain/state/workspace-state";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { WorldEntity } from "@/domain/document/world-document";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
+import type { ItemDefinition } from "@/domain/registry/types/item-definition";
+import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createRegistryContract } from "@/registry";
 

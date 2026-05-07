@@ -1,4 +1,4 @@
-import type { EditorContract } from "@/domain/contract/editor-contract";
+import type { EditorContract } from "@/domain/editor/editor-contract";
 import { useEffect, type RefObject } from "react";
 
 function resolveViewportClientRect(element: HTMLDivElement) {

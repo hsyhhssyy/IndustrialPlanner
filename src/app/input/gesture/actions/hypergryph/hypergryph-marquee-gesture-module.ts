@@ -1,11 +1,11 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
-import type { EditorContract } from "@/domain/contract/editor-contract";
+import type { EditorContract } from "@/domain/editor/editor-contract";
 import {
   EntityCollectionType,
   type MarqueeCollectionType,
-} from "@/domain/state/types";
-import type { GridPoint, GridRect } from "@/domain/types/grid";
+} from "@/domain/editor/types/editor-types";
+import type { GridPoint, GridRect } from "@/domain/shared/grid";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";

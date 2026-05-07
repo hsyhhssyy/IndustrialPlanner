@@ -12,8 +12,8 @@ import {
   type GesturePosition,
   type GestureWheelEventLike,
 } from "@/app/input/gesture/adapter";
-import type { ActiveTool } from "@/domain/state/types";
-import type { WorldEntity } from "@/domain/entity/world-document";
+import type { ActiveTool } from "@/domain/app/types/app-types";
+import type { WorldEntity } from "@/domain/document/world-document";
 
 function createAdapterHarness(options: {
   readonly activeTool?: ActiveTool;

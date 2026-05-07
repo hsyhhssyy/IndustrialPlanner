@@ -1,4 +1,4 @@
-import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { GestureEvent, KeyboardSnapshot } from "@/app/input/gesture/adapter";
 
 export interface GestureActionContext<THost = unknown> {

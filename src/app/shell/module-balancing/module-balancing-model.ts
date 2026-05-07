@@ -1,4 +1,4 @@
-import type { RegistryContract } from "@/domain/contract/registry-contracts";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type {
   ModuleBalancingCanvas,
   ModuleBalancingCustomModule,
@@ -7,10 +7,10 @@ import type {
   ModuleBalancingStage,
   ModuleBalancingState,
   ModuleBalancingSystemRecipeModule,
-} from "@/domain/state/types";
-import type { EntityDefinition } from "@/domain/types/registry/entity-definition";
-import type { ItemDefinition } from "@/domain/types/registry/item-definition";
-import type { RecipeDefinition } from "@/domain/types/registry/recipe-definition";
+} from "@/domain/app/types/app-types";
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import type { ItemDefinition } from "@/domain/registry/types/item-definition";
+import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 
 export interface ModuleBalancingItemBalance {
   itemId: string;

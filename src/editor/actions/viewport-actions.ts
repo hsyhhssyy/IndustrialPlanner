@@ -1,4 +1,4 @@
-import type { EditorAction } from "@/domain/action/editor-action";
+import type { EditorAction } from "@/domain/editor/editor-action";
 import {
   resolveCompensatedViewportCenter,
 } from "@/shared/geometry/viewport-transform";
