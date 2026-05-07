@@ -1,5 +1,5 @@
 import type { ClientPixelPoint, ClientPixelRect } from "../../shared/client-pixel";
-import type { GridFloatPoint, GridPoint, GridRect } from "../../shared/grid";
+import type { GridFloatPoint, GridPoint } from "../../shared/grid";
 
 // ---------------------------------------------------------------------------
 // Entity 集合 — 编辑器运行时对 entity 的分类标记

@@ -5,10 +5,7 @@ import type {
 	EntityCollectionMemberOptions,
 	MoveCollectionToOptions,
 } from "./types/editor-types";
-import type {
-	ClientPixelPoint,
-	ClientPixelRect,
-} from "../shared/client-pixel";
+import type { ClientPixelRect } from "../shared/client-pixel";
 import type { GridPoint, GridRect } from "../shared/grid";
 import type {
 	CreateLogisticsDraftStartOptions,

@@ -27,6 +27,7 @@ import type {
 import type {
   CompiledSimulationTopology,
   RuntimeTickSnapshot,
+  SimulationTopologyMigration,
 } from "./types";
 
 export interface SimulationHost extends SimulationContract {
@@ -243,7 +244,7 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     });
   }
 
-  public loadTopology(topology: CompiledSimulationTopology): Promise<Extract<
+  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >> {
@@ -251,6 +252,7 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
       type: "load-topology",
       requestId: this.createRequestId(),
       topology,
+      migration,
     }, "topology-loaded");
   }
 
@@ -296,7 +298,7 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
   private readonly runtime = new SimulationWorkerRuntime();
   private nextRequestId = 1;
 
-  public loadTopology(topology: CompiledSimulationTopology): Promise<Extract<
+  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >> {
@@ -304,6 +306,7 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       type: "load-topology",
       requestId: this.createRequestId(),
       topology,
+      migration,
     });
     if (response.type !== "topology-loaded") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);

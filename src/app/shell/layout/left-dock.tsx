@@ -1,9 +1,11 @@
 import { useEffect, useRef, type ComponentType } from "react";
 import { observer } from "mobx-react-lite";
+import { BasePanel } from "@/app/shell/panels/base-panel";
 import { BlueprintPanel } from "@/app/shell/panels/blueprint-panel";
 import { DeletePanel } from "@/app/shell/panels/delete-panel";
 import { HistoryPanel } from "@/app/shell/panels/history-panel";
 import { PlacementPanel } from "@/app/shell/panels/placement-panel";
+import { SimulationPanel } from "@/app/shell/panels/simulation-panel";
 import type { AppHost } from "@/app/host/app-host";
 import {
   clampLeftDockWidth,
@@ -19,6 +21,8 @@ const PANEL_TITLE_KEYS: Record<LeftDockPanelId, string> = {
   delete: "workbench.panel.delete.title",
   blueprint: "workbench.panel.blueprint.title",
   history: "workbench.panel.history.title",
+  base: "workbench.panel.base.title",
+  simulation: "workbench.panel.simulation.title",
 };
 
 const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost }>> = {
@@ -26,9 +30,11 @@ const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost
   delete: DeletePanel,
   blueprint: BlueprintPanel,
   history: HistoryPanel,
+  base: BasePanel,
+  simulation: SimulationPanel,
 };
 
-const PANEL_ORDER: LeftDockPanelId[] = ["placement", "delete", "blueprint", "history"];
+const PANEL_ORDER: LeftDockPanelId[] = ["placement", "delete", "blueprint", "history", "base", "simulation"];
 
 const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;

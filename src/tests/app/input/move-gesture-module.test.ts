@@ -179,6 +179,54 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).not.toHaveBeenCalled();
   });
 
+  it("snaps mouse-entered move from the preview center cell and keeps tracking by cell centers", () => {
+    const { context, editor, appHost, previewRectRef } = createContext({
+      previewRect: {
+        x: 9,
+        y: 17,
+        width: 4,
+        height: 8,
+      },
+    });
+    const module = createHypergryphMoveGestureModule();
+
+    vi.mocked(editor.actions.moveCollectionTo).mockImplementation(({
+      startGridPoint,
+      endGridPoint,
+    }) => {
+      previewRectRef.current = {
+        ...previewRectRef.current,
+        x: previewRectRef.current.x + endGridPoint.x - startGridPoint.x,
+        y: previewRectRef.current.y + endGridPoint.y - startGridPoint.y,
+      };
+    });
+
+    expect(
+      module.handle(uiButtonMouseTapEvent("canvas-floating-toolbar-button-move"), context),
+    ).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+
+    expect(
+      module.handle(mouseMoveEvent({ position: { x: 20, y: 30 } }), context),
+    ).toEqual({ status: "handled" });
+    expect(editor.actions.moveCollectionTo).toHaveBeenNthCalledWith(1, {
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 10.5, y: 20.5 },
+      endGridPoint: { x: 20.5, y: 30.5 },
+    });
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 20.5, y: 30.5 });
+
+    expect(
+      module.handle(mouseMoveEvent({ position: { x: 21, y: 31 } }), context),
+    ).toEqual({ status: "handled" });
+    expect(editor.actions.moveCollectionTo).toHaveBeenNthCalledWith(2, {
+      collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 20.5, y: 30.5 },
+      endGridPoint: { x: 21.5, y: 31.5 },
+    });
+    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 21.5, y: 31.5 });
+  });
+
   it("enters move from the select floating button with touch and initializes the touch move ui", () => {
     const { context, editor, appHost } = createContext();
     const module = createHypergryphMoveGestureModule();
@@ -536,6 +584,7 @@ function createContext(options: {
   moveAnchor?: GridPoint | null;
   moveEnterFrom?: ActiveTool | null;
   toolbarVisible?: boolean;
+  previewRect?: GridRect;
 } = {}): {
   context: GestureActionContext<AppHost>;
   editor: MockEditor;
@@ -550,7 +599,7 @@ function createContext(options: {
   const preview = createCollection(["preview-entity"]);
   const ghost = createCollection([]);
   const previewRectRef = {
-    current: {
+    current: options.previewRect ?? {
       x: 5,
       y: 5,
       width: 1,
@@ -871,6 +920,20 @@ function mouseTapEvent(options: {
     position: { x: 6, y: 4 },
     longPress: options.longPress,
     pointerEntity: null,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
+  };
+}
+
+function mouseMoveEvent(options: {
+  position: GridPoint;
+}) {
+  return {
+    type: "mouse move" as const,
+    gestureId: "mouse-move-1",
+    buttons: 0,
+    position: options.position,
+    delta: { x: 1, y: 1 },
     modifiers: emptyModifiers(),
     sourceEvent: null,
   };

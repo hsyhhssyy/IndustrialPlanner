@@ -12,7 +12,9 @@ import {
   requestDocumentFullscreen,
   resolveFullscreenState,
 } from "@/app/shell/layout/fullscreen-toggle-button";
+import { DebugLogDialog } from "@/app/shell/dialogs/debug-log-dialog";
 import { HelpDialog } from "@/app/shell/dialogs/help-dialog";
+import { InspectorDialog } from "@/app/shell/dialogs/inspector-dialog";
 import { MobilePortraitGate } from "@/app/shell/layout/mobile-portrait-gate";
 import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
 import { EncyclopediaPickerDialog } from "@/app/shell/encyclopedia/encyclopedia-picker-dialog";
@@ -31,6 +33,15 @@ import type { AppHost } from "@/app/host/app-host";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
 import type { AppThemeId } from "@/domain/app/types/theme";
+import {
+  clearDebugLogEntries,
+  installDebugLogCapture,
+  setDebugLogCaptureEnabled,
+} from "@/shared/logging/debug-log-store";
+import {
+  DEFAULT_WORKBENCH_LOG_LEVEL,
+  setLogLevel,
+} from "@/shared/logging/logger";
 import {
   isMobileLandscapeScreenProfile,
   isMobilePortraitScreenProfile,
@@ -110,6 +121,34 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.hypergryphImmediateMarquee = value;
         }),
       },
+      "game-arknights-selection-right-dock-sync": {
+        readValue: () => appHost.state.settings.hypergryphSelectionRightDockSync,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.hypergryphSelectionRightDockSync === value) {
+            return;
+          }
+
+          appHost.internalState.settings.hypergryphSelectionRightDockSync = value;
+        }),
+      },
+      "game-arknights-inspector-open-on-second-click": {
+        readValue: () => appHost.state.settings.hypergryphInspectorOpenOnSecondClick,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick === value) {
+            return;
+          }
+
+          appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick = value;
+        }),
+      },
       "game-show-hotkeys": {
         readValue: () => appHost.state.settings.gameShowHotkeys,
         writeValue: action((value) => {
@@ -122,6 +161,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           }
 
           appHost.internalState.settings.gameShowHotkeys = value;
+        }),
+      },
+      "game-use-inspector-panel": {
+        readValue: () => appHost.state.settings.gameUseInspectorPanel,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.gameUseInspectorPanel === value) {
+            return;
+          }
+
+          appHost.internalState.settings.gameUseInspectorPanel = value;
         }),
       },
       "game-always-show-grid-lines": {
@@ -203,12 +256,17 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   }));
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const rightDockOpen = appHost.state.workbench.rightDockOpen;
+  const useInspectorPanel = appHost.state.settings.gameUseInspectorPanel;
   const leftDockWidth = appHost.state.workbench.leftDockWidth;
   const topBarCollapsed = appHost.state.workbench.topBarCollapsed;
   const screenProfile = appHost.state.screenProfile;
+  const activeTool = appHost.state.activeTool;
   const canvasFloatingToolbar = appHost.internalState.runtime.canvasFloatingToolbar;
   const canvasRightDockToolbar = appHost.internalState.runtime.canvasRightDockToolbar;
   const canvasTopLeftCornerToolbar = appHost.internalState.runtime.canvasTopLeftCornerToolbar;
+  const inspectorDialogState = appHost.internalState.workbench.dialogState.inspector;
+  const selectionCount = appHost.workspace.editor?.state.collections.selection.length ?? 0;
+  const openInspectorOnSecondClick = appHost.state.settings.hypergryphInspectorOpenOnSecondClick;
   const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
   const isCompactLeftToolbar = screenProfile.deviceClass === "mobile" || screenProfile.deviceClass === "tablet";
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
@@ -216,6 +274,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const showBottomStatusBar = !showFloatingTopBarControls;
   const showCanvasLeftBottomToolbar = screenProfile.deviceClass === "mobile" && !leftDockOpen;
   const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
+  const showRightDock = useInspectorPanel && rightDockOpen;
+  const canKeepInspectorDialogOpen = !useInspectorPanel && activeTool === "select" && selectionCount === 1;
+  const shouldAutoOpenInspectorDialog = canKeepInspectorDialogOpen && !openInspectorOnSecondClick;
   const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;
   const previousScreenProfileRef = useRef(screenProfile);
   const hasVisibleDialogShell = isAnyDialogShellVisible(appHost);
@@ -238,6 +299,31 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       window.removeEventListener("orientationchange", handleViewportChange);
     };
   }, [appHost]);
+
+  useEffect(() => {
+    const disposeDebugLogCapture = installDebugLogCapture();
+    clearDebugLogEntries();
+
+    return () => {
+      setDebugLogCaptureEnabled(false);
+      setLogLevel(DEFAULT_WORKBENCH_LOG_LEVEL);
+      disposeDebugLogCapture();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!appHost.state.settings.debugMode) {
+      setLogLevel(DEFAULT_WORKBENCH_LOG_LEVEL);
+      setDebugLogCaptureEnabled(false);
+      if (appHost.internalState.workbench.dialogState["debug-log"]?.visible) {
+        appHost.internalActions.closeDialog("debug-log");
+      }
+      return;
+    }
+
+    setDebugLogCaptureEnabled(true);
+    setLogLevel("debug", { announce: true });
+  }, [appHost, appHost.state.settings.debugMode]);
 
   useEffect(() => {
     const previousScreenProfile = previousScreenProfileRef.current;
@@ -292,12 +378,50 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     };
   }, [appHost, hasVisibleDialogShell]);
 
+  useEffect(() => {
+    if (useInspectorPanel) {
+      if (inspectorDialogState.visible) {
+        appHost.internalActions.closeDialog("inspector");
+      }
+
+      return;
+    }
+
+    if (rightDockOpen) {
+      appHost.internalActions.setRightDockOpen(false, { preserveSingleSelection: true });
+    }
+  }, [appHost, inspectorDialogState.visible, rightDockOpen, useInspectorPanel]);
+
+  useEffect(() => {
+    if (useInspectorPanel) {
+      return;
+    }
+
+    if (shouldAutoOpenInspectorDialog) {
+      if (!inspectorDialogState.visible) {
+        appHost.internalActions.openDialog("inspector");
+      }
+
+      return;
+    }
+
+    if (!canKeepInspectorDialogOpen && inspectorDialogState.visible) {
+      appHost.internalActions.closeDialog("inspector");
+    }
+  }, [
+    appHost,
+    canKeepInspectorDialogOpen,
+    inspectorDialogState.visible,
+    shouldAutoOpenInspectorDialog,
+    useInspectorPanel,
+  ]);
+
 
   const workbenchStyle = {
     "--left-toolbar-width": isCompactLeftToolbar ? "51px" : "68px",
     "--left-toolbar-button-scale": isCompactLeftToolbar ? "0.75" : "1",
     "--left-dock-width": leftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",
-    "--right-dock-width": rightDockOpen ? `${DEFAULT_RIGHT_DOCK_WIDTH}px` : "0px",
+    "--right-dock-width": showRightDock ? `${DEFAULT_RIGHT_DOCK_WIDTH}px` : "0px",
     "--top-bar-height": showFloatingTopBarControls ? "0px" : "48px",
     "--bottom-bar-height": showBottomStatusBar ? "28px" : "0px",
   } as CSSProperties;
@@ -322,7 +446,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             appHost={appHost}
             className="workbench-floating-top-bar-button workbench-floating-fullscreen-button"
           />
-          {!rightDockOpen ? (
+          {useInspectorPanel && !rightDockOpen ? (
             <button
               aria-label={floatingOpenRightDockLabel}
               className="workbench-floating-top-bar-button workbench-floating-right-dock-button"
@@ -373,8 +497,10 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           buttonIds={canvasRightDockToolbar.buttonIds}
         />
       ) : null}
-      {rightDockOpen ? <RightDock appHost={appHost} /> : null}
+      {showRightDock ? <RightDock appHost={appHost} /> : null}
       {showBottomStatusBar ? <BottomStatusBar appHost={appHost} /> : null}
+      {appHost.state.settings.debugMode ? <DebugLogDialog appHost={appHost} /> : null}
+      <InspectorDialog appHost={appHost} />
       <ToolboxDialog appHost={appHost} />
       <EncyclopediaPickerDialog appHost={appHost} />
       <HelpDialog appHost={appHost} />
@@ -385,7 +511,13 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
 });
 
 function isAnyDialogShellVisible(appHost: AppHost): boolean {
-  return Object.values(appHost.internalState.workbench.dialogState).some(
-    (dialogState) => dialogState?.visible === true,
+  return Object.entries(appHost.internalState.workbench.dialogState).some(
+    ([dialogKey, dialogState]) => {
+      if (dialogKey === "debug-log" && !appHost.state.settings.debugMode) {
+        return false;
+      }
+
+      return dialogState?.visible === true;
+    },
   ) || appHost.encyclopediaPicker.dialogState.visible;
 }

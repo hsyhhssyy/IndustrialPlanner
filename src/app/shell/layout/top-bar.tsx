@@ -6,11 +6,32 @@ import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
+import { useEffect, useState } from "react";
 import {
   isTouchLandscapeScreenProfile,
 } from "@/shared/browser/screen-profile";
 
 const SIMULATION_CONTROL_BUTTON_ID = "top-bar-simulation-control";
+const SIMULATION_SECONDARY_BUTTON_ID = "top-bar-simulation-secondary-control";
+const SIMULATION_SPEED_OPTIONS = [0.25, 1, 2, 4, 8, 16] as const;
+
+function getNextSimulationSpeed(current: number): number {
+  const currentIndex = SIMULATION_SPEED_OPTIONS.findIndex((candidate) => candidate === current);
+  if (currentIndex !== -1) {
+    return SIMULATION_SPEED_OPTIONS[(currentIndex + 1) % SIMULATION_SPEED_OPTIONS.length] ?? 1;
+  }
+
+  const nextIndex = SIMULATION_SPEED_OPTIONS.findIndex((candidate) => candidate > current);
+  if (nextIndex !== -1) {
+    return SIMULATION_SPEED_OPTIONS[nextIndex] ?? 1;
+  }
+
+  return SIMULATION_SPEED_OPTIONS[0] ?? 1;
+}
+
+function formatSimulationSpeedLabel(speed: number) {
+  return `x${speed}`;
+}
 
 export const SimulationControlButton = observer(function SimulationControlButton({
   appHost,
@@ -90,28 +111,76 @@ export const SimulationControlButton = observer(function SimulationControlButton
   );
 });
 
+export const SimulationSecondaryButton = observer(function SimulationSecondaryButton({
+  appHost,
+}: {
+  appHost: AppHost;
+}) {
+  const simulation = appHost.workspace.simulation;
+  const simulationState = simulation?.state.runningState ?? "stop";
+  const isRunning = simulationState === "start";
+  const simulationSpeed = simulation?.state.simulationSpeed ?? 1;
+  const [displaySpeed, setDisplaySpeed] = useState(() => simulationSpeed);
+
+  useEffect(() => {
+    setDisplaySpeed(simulationSpeed);
+  }, [simulationSpeed, simulationState]);
+
+  const speedLabel = formatSimulationSpeedLabel(displaySpeed);
+  const label = isRunning
+    ? `${appHost.actions.translate("statusBar.speed")} ${speedLabel}`
+    : appHost.actions.translate("action.stop");
+
+  const handleClick = () => {
+    if (!isRunning) {
+      return;
+    }
+
+    setDisplaySpeed((current) => getNextSimulationSpeed(current));
+  };
+
+  return (
+    <button
+      aria-label={label}
+      className={isRunning
+        ? "top-bar-simulation-secondary-button top-bar-speed-button"
+        : "top-bar-simulation-secondary-button top-bar-icon-button"}
+      data-ui-button-id={SIMULATION_SECONDARY_BUTTON_ID}
+      onClick={handleClick}
+      title={label}
+      type="button"
+    >
+      {isRunning ? (
+        <span className="top-bar-speed-label">{speedLabel}</span>
+      ) : (
+        <>
+          <span className="top-bar-toggle-icon">
+            <WorkbenchIcon kind="stop" />
+          </span>
+          <span className="sr-only">{label}</span>
+        </>
+      )}
+    </button>
+  );
+});
+
 export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const {
     screenProfile,
-    workbench: { leftDockOpen, rightDockOpen, topBarCollapsed },
+    workbench: { rightDockOpen, topBarCollapsed },
   } = appHost.state;
 
-  const toggleLeftDock = () => {
-    appHost.internalActions.toggleLeftDock();
-  };
   const toggleRightDock = () => {
     appHost.internalActions.toggleRightDock();
   };
   const toggleTopBarCollapsed = () => {
     appHost.internalActions.toggleTopBarCollapsed();
   };
-  const leftPanelLabel = `${t(leftDockOpen ? "action.close" : "action.open")} ${t("topBar.leftPanel")}`;
   const rightPanelLabel = `${t(rightDockOpen ? "action.close" : "action.open")} ${t("topBar.rightPanel")}`;
   const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
   const collapseActionKey = isTouchLandscape && topBarCollapsed ? "action.expand" : "action.collapse";
   const collapseButtonLabel = `${t(collapseActionKey)} ${t("topBar.controls")}`;
-  const leftPanelIconKind = leftDockOpen ? "panel-left-close" : "panel-left-open";
   const rightPanelIconKind = rightDockOpen ? "panel-right-close" : "panel-right-open";
 
   if (isTouchLandscape && topBarCollapsed) {
@@ -120,34 +189,6 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
 
   return (
     <header className="top-bar">
-      <div className="toolbar-group top-bar-layout-controls">
-        <button
-          aria-label={leftPanelLabel}
-          aria-pressed={leftDockOpen}
-          className={leftDockOpen ? "is-active" : undefined}
-          onClick={toggleLeftDock}
-          title={leftPanelLabel}
-          type="button"
-        >
-          <span className="top-bar-toggle-icon">
-            <WorkbenchIcon kind={leftPanelIconKind} />
-          </span>
-          <span className="sr-only">{leftPanelLabel}</span>
-        </button>
-        <button
-          aria-label={rightPanelLabel}
-          aria-pressed={rightDockOpen}
-          className={rightDockOpen ? "is-active" : undefined}
-          onClick={toggleRightDock}
-          title={rightPanelLabel}
-          type="button"
-        >
-          <span className="top-bar-toggle-icon">
-            <WorkbenchIcon kind={rightPanelIconKind} />
-          </span>
-          <span className="sr-only">{rightPanelLabel}</span>
-        </button>
-      </div>
       <div className="top-bar-title-block">
         <div className="top-bar-title">{t("app.title")}</div>
       </div>
@@ -156,6 +197,7 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
           appHost={appHost}
           className="top-bar-icon-button"
         />
+        <SimulationSecondaryButton appHost={appHost} />
         <FullscreenToggleButton
           appHost={appHost}
           className="top-bar-icon-button top-bar-fullscreen-button"

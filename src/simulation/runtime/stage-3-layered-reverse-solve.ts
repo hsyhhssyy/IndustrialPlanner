@@ -183,7 +183,10 @@ function selectAcceptedSourceItemType(
     }
   }
 
-  return [...candidates].sort().find((itemType) => acceptsItem(topology, acceptRule, itemType)) ?? null;
+  return [...candidates].sort().find((itemType) =>
+    acceptsItem(topology, acceptRule, itemType)
+    && findOutputSlotForItem({ topology, state, node: sourceNode, itemType }) !== null,
+  ) ?? null;
 }
 
 function resolvePerTickLimit(count: SimulationCountLimit): number {

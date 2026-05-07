@@ -17,13 +17,8 @@ function formatSimulationRuntimeJson(appHost: AppHost): string {
   }
 }
 
-export function RightDockSimulationPanel({
-  appHost,
-  translate,
-}: {
-  appHost: AppHost;
-  translate: (key: string) => string;
-}) {
+export function SimulationPanel({ appHost }: { appHost: AppHost }) {
+  const t = appHost.actions.translate;
   const [runtimeJson, setRuntimeJson] = useState(() => formatSimulationRuntimeJson(appHost));
 
   useEffect(() => {
@@ -40,8 +35,8 @@ export function RightDockSimulationPanel({
   }, [appHost]);
 
   return (
-    <article className="definition-card" data-right-dock-simulation-panel>
-      <h4>{translate("label.currentTickSnapshot")}</h4>
+    <article className="definition-card" data-simulation-panel>
+      <h4>{t("label.currentTickSnapshot")}</h4>
       <textarea
         className="json-debug-textarea"
         data-simulation-runtime-json

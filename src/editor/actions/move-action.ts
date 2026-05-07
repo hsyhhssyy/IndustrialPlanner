@@ -73,6 +73,7 @@ export function createEditorMoveActions({
     },
     applyMoveOerationDraft: () => {
       const currentDocument = document.getSnapshot();
+      const selection = resolveCollection(EntityCollectionType.selection);
       const ghostEntityIds = new Set(resolveCollection(EntityCollectionType.ghost));
       const previewDrafts = resolvePreviewDrafts({
         previewDraftIds: resolveCollection(EntityCollectionType.preview),
@@ -110,6 +111,11 @@ export function createEditorMoveActions({
       }
 
       clearMoveOperationState(state);
+
+      if (ghostEntityIds.size === 1) {
+        selection.replace([]);
+      }
+
       return true;
     },
     cancelMoveOperationDraft: () => {

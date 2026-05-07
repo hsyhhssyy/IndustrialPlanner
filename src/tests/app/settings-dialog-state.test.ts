@@ -33,6 +33,8 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-operation-mode": true,
         "game-arknights-immediate-move": true,
         "game-arknights-immediate-marquee": false,
+        "game-arknights-selection-right-dock-sync": true,
+        "game-arknights-inspector-open-on-second-click": false,
         "shortcut-place-conveyor": "E",
         "shortcut-place-pipe": "Q",
         "shortcut-resources-power": "G",
@@ -45,6 +47,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-show-hotkeys": true,
         "game-always-show-grid-lines": true,
         "game-show-grass-background": false,
+        "game-use-inspector-panel": false,
         "game-use-simplified-device-icons": true,
         "other-debug-mode": true,
         "debug-show-fps": true,
@@ -61,6 +64,8 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["game-arknights-operation-mode"]).toBe(true);
     expect(hydratedController.values["game-arknights-immediate-move"]).toBe(true);
     expect(hydratedController.values["game-arknights-immediate-marquee"]).toBe(false);
+    expect(hydratedController.values["game-arknights-selection-right-dock-sync"]).toBe(true);
+    expect(hydratedController.values["game-arknights-inspector-open-on-second-click"]).toBe(false);
     expect(hydratedController.values["shortcut-place-conveyor"]).toBe("E");
     expect(hydratedController.values["shortcut-place-pipe"]).toBe("Q");
     expect(hydratedController.values["shortcut-resources-power"]).toBe("G");
@@ -169,6 +174,8 @@ describe("WorkbenchSettingsDialogController", () => {
         "display-frame-rate-limit": "unlimited",
         "game-arknights-immediate-move": true,
         "game-arknights-immediate-marquee": false,
+        "game-arknights-selection-right-dock-sync": true,
+        "game-arknights-inspector-open-on-second-click": false,
         "shortcut-place-conveyor": "E",
         "shortcut-place-pipe": "Q",
         "shortcut-resources-power": "G",
@@ -181,6 +188,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-show-hotkeys": true,
         "game-always-show-grid-lines": true,
         "game-show-grass-background": false,
+        "game-use-inspector-panel": false,
         "game-use-simplified-device-icons": false,
         "other-debug-mode": true,
         "debug-show-fps": false,

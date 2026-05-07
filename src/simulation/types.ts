@@ -241,6 +241,11 @@ export interface SimulationStartResult {
   readonly error?: string;
 }
 
+export interface SimulationTopologyMigration {
+  readonly baseTickNumber: number;
+  readonly resetDeviceIds: readonly string[];
+}
+
 export interface SimulationTickSnapshotResult {
   readonly status: SimulationTickPullStatus;
   readonly currentTick: RuntimeTickSnapshot | null;

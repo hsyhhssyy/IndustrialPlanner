@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { runInAction } from "mobx";
 import { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -49,6 +50,9 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   hypergryphOperationMode: true,
   hypergryphImmediateMove: true,
   hypergryphImmediateMarquee: false,
+  hypergryphSelectionRightDockSync: true,
+  hypergryphInspectorOpenOnSecondClick: false,
+  gameUseInspectorPanel: false,
   gameShowHotkeys: false,
   gameAlwaysShowGridLines: true,
   showGrassBackground: false,
@@ -154,16 +158,17 @@ function createWorkbenchStorageSnapshot(options: {
   rightDockOpen?: boolean;
   leftDockWidth?: number;
   topBarCollapsed?: boolean;
-  rightDockActiveTab?: "base" | "power" | "selection" | "simulation";
+  rightDockActiveTab?: "selection";
   toolboxDialog?: ReturnType<typeof createDialogStateSnapshot>;
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  inspectorDialog?: ReturnType<typeof createDialogStateSnapshot>;
   toolboxWiki?: ReturnType<typeof createToolboxWikiStorageSnapshot>;
   moduleBalancing?: ReturnType<typeof createModuleBalancingStorageSnapshot>;
 } = {}) {
   return {
     leftDockOpen: options.leftDockOpen ?? true,
-    rightDockOpen: options.rightDockOpen ?? true,
+    rightDockOpen: options.rightDockOpen ?? false,
     leftDockWidth: options.leftDockWidth ?? 375,
     topBarCollapsed: options.topBarCollapsed ?? false,
     rightDockActiveTab: options.rightDockActiveTab ?? DEFAULT_RIGHT_DOCK_TAB_ID,
@@ -171,6 +176,7 @@ function createWorkbenchStorageSnapshot(options: {
       toolbox: options.toolboxDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_TOOLBOX_DIALOG_TAB_ID }),
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
+      inspector: options.inspectorDialog ?? createDialogStateSnapshot(),
     },
     toolbox: {
       wiki: options.toolboxWiki ?? createToolboxWikiStorageSnapshot(),
@@ -613,6 +619,10 @@ describe("WorkbenchApp", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
+    runInAction(() => {
+      appHost.internalState.settings.gameUseInspectorPanel = true;
+    });
+
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
@@ -641,42 +651,42 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".dock-right")).not.toBeNull();
   });
 
-  it("renders the right dock as tabs and closes it from the header button", () => {
+  it("renders the right dock as device properties and closes it from the header button", () => {
     localStorage.setItem(
       WORKBENCH_STATE_LOCAL_STORAGE_KEY,
-      JSON.stringify(createWorkbenchStorageSnapshot({
+      JSON.stringify({
+        ...createWorkbenchStorageSnapshot(),
+        rightDockOpen: true,
         rightDockActiveTab: "power",
-      })),
+      }),
     );
 
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
+    runInAction(() => {
+      appHost.internalState.settings.gameUseInspectorPanel = true;
+    });
+
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const baseTab = container.querySelector("#right-dock-tab-base") as HTMLButtonElement | null;
-    const powerTab = container.querySelector("#right-dock-tab-power") as HTMLButtonElement | null;
-    const selectionTab = container.querySelector("#right-dock-tab-selection") as HTMLButtonElement | null;
-    const simulationTab = container.querySelector("#right-dock-tab-simulation") as HTMLButtonElement | null;
+    const rightDock = container.querySelector(".dock-right") as HTMLElement | null;
+    const title = container.querySelector(".dock-right .section-header h2") as HTMLHeadingElement | null;
     const closeButton = container.querySelector(".right-dock-close-button") as HTMLButtonElement | null;
 
-    expect(baseTab?.getAttribute("aria-selected")).toBe("false");
-    expect(powerTab?.getAttribute("aria-selected")).toBe("true");
-    expect(selectionTab?.getAttribute("aria-selected")).toBe("false");
-    expect(simulationTab?.getAttribute("aria-selected")).toBe("false");
-    expect(container.textContent).toContain("总耗电");
-    expect(container.textContent).not.toContain("可放置区域");
+    expect(rightDock).not.toBeNull();
+    expect(appHost.state.workbench.rightDockActiveTab).toBe(DEFAULT_RIGHT_DOCK_TAB_ID);
+    expect(title?.textContent).toBe("设备属性");
+    expect(container.querySelector("#right-dock-tab-base")).toBeNull();
+    expect(container.querySelector("#right-dock-tab-power")).toBeNull();
+    expect(container.querySelector("#right-dock-tab-selection")).toBeNull();
+    expect(container.querySelector("#right-dock-tab-simulation")).toBeNull();
+    expect(rightDock?.textContent).toContain("未选中对象");
+    expect(rightDock?.textContent).not.toContain("总耗电");
+    expect(rightDock?.textContent).not.toContain("可放置区域");
     expect(closeButton?.title).toBe("关闭 右侧");
-
-    act(() => {
-      selectionTab?.click();
-    });
-
-    expect(appHost.state.workbench.rightDockActiveTab).toBe("selection");
-    expect(selectionTab?.getAttribute("aria-selected")).toBe("true");
-    expect(container.textContent).toContain("未选中对象");
 
     act(() => {
       closeButton?.click();
@@ -686,15 +696,100 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".dock-right")).toBeNull();
   });
 
-  it("renders current tick snapshot json in the simulation right dock tab", () => {
-    vi.useFakeTimers();
-
+  it("shows selection actions in the right dock without reopening the canvas floating toolbar", () => {
     localStorage.setItem(
       WORKBENCH_STATE_LOCAL_STORAGE_KEY,
-      JSON.stringify(createWorkbenchStorageSnapshot({
-        rightDockActiveTab: "simulation",
-      })),
+      JSON.stringify({
+        ...createWorkbenchStorageSnapshot(),
+        rightDockOpen: true,
+      }),
     );
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+    const gestures: GestureEvent[] = [];
+    appHost.gestureAdapter.subscribe((event) => gestures.push(event));
+
+    runInAction(() => {
+      appHost.internalState.settings.gameUseInspectorPanel = true;
+    });
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
+    });
+
+    const actionStrip = container.querySelector("[data-selection-action-strip]") as HTMLElement | null;
+    const moveButton = container.querySelector(
+      '.dock-right [data-ui-button-id="canvas-floating-toolbar-button-move"]',
+    ) as HTMLButtonElement | null;
+    const deleteButton = container.querySelector(
+      '.dock-right [data-ui-button-id="canvas-floating-toolbar-button-delete"]',
+    ) as HTMLButtonElement | null;
+    const deleteManyButton = container.querySelector(
+      '.dock-right [data-ui-button-id="canvas-floating-toolbar-button-delete-many"]',
+    ) as HTMLButtonElement | null;
+
+    expect(actionStrip).not.toBeNull();
+    expect(container.querySelector(".canvas-floating-toolbar")).toBeNull();
+    expect(moveButton).not.toBeNull();
+    expect(deleteButton).not.toBeNull();
+    expect(deleteManyButton).not.toBeNull();
+    expect(
+      moveButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("move");
+
+    if (!moveButton || !deleteManyButton) {
+      throw new Error("Right dock selection action strip did not render expected buttons.");
+    }
+
+    act(() => {
+      dispatchPointerEvent(moveButton, "pointerdown", {
+        pointerId: 61,
+        pointerType: "mouse",
+        clientX: 980,
+        clientY: 120,
+        buttons: 1,
+      });
+      dispatchPointerEvent(moveButton, "pointerup", {
+        pointerId: 61,
+        pointerType: "mouse",
+        clientX: 980,
+        clientY: 120,
+        buttons: 0,
+      });
+      dispatchPointerEvent(deleteManyButton, "pointerdown", {
+        pointerId: 62,
+        pointerType: "touch",
+        clientX: 1032,
+        clientY: 120,
+        buttons: 1,
+      });
+      dispatchPointerEvent(deleteManyButton, "pointerup", {
+        pointerId: 62,
+        pointerType: "touch",
+        clientX: 1032,
+        clientY: 120,
+        buttons: 0,
+      });
+    });
+
+    expect(gestures).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "ui-button-mouse-tap",
+        uiButtonId: "canvas-floating-toolbar-button-move",
+      }),
+      expect.objectContaining({
+        type: "ui-button-touch-tap",
+        uiButtonId: "canvas-floating-toolbar-button-delete-many",
+      }),
+    ]));
+  });
+
+  it("renders current tick snapshot json in the simulation left dock panel", () => {
+    vi.useFakeTimers();
 
     const workspace = createWorkspace();
     workspace.simulation = {
@@ -741,10 +836,17 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const simulationTab = container.querySelector("#right-dock-tab-simulation") as HTMLButtonElement | null;
-    const snapshotTextarea = container.querySelector("[data-simulation-runtime-json]") as HTMLTextAreaElement | null;
+    const simulationButton = container.querySelector(
+      'button[title="仿真"]',
+    ) as HTMLButtonElement | null;
 
-    expect(simulationTab?.getAttribute("aria-selected")).toBe("true");
+    expect(simulationButton).not.toBeNull();
+
+    act(() => {
+      simulationButton?.click();
+    });
+
+    const snapshotTextarea = container.querySelector("[data-simulation-runtime-json]") as HTMLTextAreaElement | null;
 
     act(() => {
       vi.advanceTimersByTime(250);
@@ -1049,6 +1151,10 @@ describe("WorkbenchApp", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
+    runInAction(() => {
+      appHost.internalState.settings.gameUseInspectorPanel = true;
+    });
+
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
       appHost.internalActions.showCanvasRightDockToolbar([
@@ -1056,7 +1162,6 @@ describe("WorkbenchApp", () => {
         "canvas-right-dock-toolbar-button-move",
       ]);
     });
-
     expect(container.querySelector(".canvas-right-dock-toolbar")).not.toBeNull();
 
     act(() => {
@@ -1101,11 +1206,163 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".canvas-right-dock-toolbar")).toBeNull();
   });
 
+  it("switches from right dock to inspector dialog without clearing the current selection", () => {
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify(createWorkbenchStorageSnapshot({
+        rightDockOpen: true,
+      })),
+    );
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.settings.gameUseInspectorPanel = true;
+    });
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    expect(container.querySelector(".dock-right")).not.toBeNull();
+    expect(container.querySelector('[data-dialog-key="inspector"]')).toBeNull();
+
+    act(() => {
+      appHost.internalState.settings.gameUseInspectorPanel = false;
+    });
+
+    expect(appHost.state.workbench.rightDockOpen).toBe(false);
+    expect(editorHost.state.collections.selection).toEqual(["dummy-entity-2"]);
+    expect(container.querySelector(".dock-right")).toBeNull();
+    expect(container.querySelector('[data-dialog-key="inspector"]')).not.toBeNull();
+  });
+
+  it("does not auto-open the inspector dialog until it is explicitly requested when second-click opening is enabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick = true;
+    });
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    expect(container.querySelector('[data-dialog-key="inspector"]')).toBeNull();
+
+    act(() => {
+      appHost.internalActions.openDialog("inspector");
+    });
+
+    expect(container.querySelector('[data-dialog-key="inspector"]')).not.toBeNull();
+  });
+
+  it("clears the selection when the inspector dialog backdrop closes", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const backdrop = container.querySelector(".inspector-dialog-backdrop") as HTMLDivElement | null;
+
+    expect(backdrop).not.toBeNull();
+
+    if (!backdrop) {
+      throw new Error("Inspector dialog backdrop did not render.");
+    }
+
+    act(() => {
+      backdrop.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    });
+
+    expect(editorHost.state.collections.selection).toEqual([]);
+    expect(container.querySelector('[data-dialog-key="inspector"]')).toBeNull();
+  });
+
+  it("uses a fixed 90% inspector dialog without resize handles on phones", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 390,
+      height: 844,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const dialog = container.querySelector('.inspector-dialog[data-dialog-key="inspector"]') as HTMLElement | null;
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
+    expect(dialog).not.toBeNull();
+    expect(dialog?.style.width).toBe("90%");
+    expect(dialog?.style.height).toBe("90%");
+    expect(dialog?.querySelector(".dialog-shell-resize-grip")).toBeNull();
+    expect(dialog?.querySelector('button[title="最大化"]')).toBeNull();
+  });
+
+  it("uses a 60% by 80% inspector dialog with resize handles on tablets", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 1024,
+      height: 768,
+      userAgent:
+        "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const dialog = container.querySelector('.inspector-dialog[data-dialog-key="inspector"]') as HTMLElement | null;
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
+    expect(dialog).not.toBeNull();
+    expect(dialog?.style.width).toBe("60%");
+    expect(dialog?.style.height).toBe("80%");
+    expect(dialog?.querySelector(".dialog-shell-resize-grip")).not.toBeNull();
+    expect(dialog?.querySelector('button[title="最大化"]')).not.toBeNull();
+  });
+
   it("emits ui-button events from the canvas right dock toolbar without leaking canvas gestures", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
+
+    runInAction(() => {
+      appHost.internalState.settings.gameUseInspectorPanel = true;
+    });
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -1585,6 +1842,55 @@ describe("WorkbenchApp", () => {
     });
 
     expect(container.querySelector(".help-dialog")?.classList.contains("is-maximized")).toBe(true);
+  });
+
+  it("shows debug logs behind the debug mode gate and closes the dialog when debug mode is turned off", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      runInAction(() => {
+        appHost.internalState.settings.debugMode = true;
+      });
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const debugLogButton = container.querySelector(
+      'button[title="调试日志"]',
+    ) as HTMLButtonElement | null;
+
+    expect(debugLogButton).not.toBeNull();
+    expect(container.querySelector(".debug-log-dialog")).toBeNull();
+
+    act(() => {
+      debugLogButton?.click();
+    });
+
+    const textarea = container.querySelector(
+      ".debug-log-dialog-textarea",
+    ) as HTMLTextAreaElement | null;
+
+    expect(container.querySelector(".debug-log-dialog")).not.toBeNull();
+    expect(textarea).not.toBeNull();
+
+    act(() => {
+      console.warn("debug log panel smoke");
+    });
+
+    expect(textarea?.value).toContain("debug log panel smoke");
+
+    act(() => {
+      runInAction(() => {
+        appHost.internalState.settings.debugMode = false;
+      });
+    });
+
+    expect(container.querySelector('button[title="调试日志"]')).toBeNull();
+    expect(container.querySelector(".debug-log-dialog")).toBeNull();
+    expect(appHost.internalState.workbench.dialogState["debug-log"]?.visible).toBe(false);
+
+    warnSpy.mockRestore();
   });
 
   it("moves the help dialog when dragging the title bar in windowed mode", () => {

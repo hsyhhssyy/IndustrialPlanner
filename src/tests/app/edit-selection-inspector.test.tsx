@@ -69,12 +69,13 @@ describe("EditSelectionInspector", () => {
     });
 
     expect(container.textContent).toContain("未选中对象");
+    expect(container.querySelector("[data-selection-action-strip]")).toBeNull();
     expect(container.textContent).not.toContain("快捷操作");
     expect(container.textContent).not.toContain("连接");
     expect(container.textContent).not.toContain("配置字段");
   });
 
-  it("shows the mounted inspector without placeholder sections for a single selection", () => {
+  it("shows the mounted inspector and action strip for a non-logistics single selection", () => {
     const workspace = createWorkspace();
     editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
@@ -93,6 +94,15 @@ describe("EditSelectionInspector", () => {
       );
     });
 
+  const actionStrip = container.querySelector("[data-selection-action-strip]") as HTMLElement | null;
+  const actionButtonList = container.querySelector(".selection-inspector-action-button-list") as HTMLElement | null;
+
+  expect(actionStrip).not.toBeNull();
+  expect(actionButtonList?.style.gridTemplateColumns).toBe("repeat(2, minmax(0, 1fr))");
+    expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-move"]')).not.toBeNull();
+    expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-delete"]')).not.toBeNull();
+    expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-delete-many"]')).toBeNull();
+
     act(() => {
       vi.advanceTimersByTime(50);
     });
@@ -102,5 +112,32 @@ describe("EditSelectionInspector", () => {
     expect(container.textContent).not.toContain("快捷操作");
     expect(container.textContent).not.toContain("连接");
     expect(container.textContent).not.toContain("配置字段");
+  });
+
+  it("shows batch delete in the action strip for a dedicated logistics selection", () => {
+    const workspace = createWorkspace();
+    editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    act(() => {
+      root.render(
+        <EditSelectionInspector
+          appHost={currentAppHost}
+          context={null}
+          state={{ locale: "zh-CN" }}
+          translate={currentAppHost.actions.translate}
+        />,
+      );
+    });
+
+    const actionStrip = container.querySelector("[data-selection-action-strip]") as HTMLElement | null;
+    const actionButtonList = container.querySelector(".selection-inspector-action-button-list") as HTMLElement | null;
+
+    expect(actionStrip).not.toBeNull();
+    expect(actionButtonList?.style.gridTemplateColumns).toBe("repeat(3, minmax(0, 1fr))");
+    expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-delete-many"]')).not.toBeNull();
   });
 });

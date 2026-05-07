@@ -8,6 +8,7 @@ import LucideEyeOff from "~icons/lucide/eye-off";
 import LucideGrid2x2 from "~icons/lucide/grid-2x2";
 import LucideHelpCircle from "~icons/lucide/help-circle";
 import LucideHistory from "~icons/lucide/history";
+import LucideBuilding2 from "~icons/lucide/building-2";
 import LucideMaximize from "~icons/lucide/maximize";
 import LucideMinimize from "~icons/lucide/minimize";
 import LucideMonitor from "~icons/lucide/monitor";
@@ -22,6 +23,7 @@ import LucidePanelTopClose from "~icons/lucide/panel-top-close";
 import LucidePanelTopOpen from "~icons/lucide/panel-top-open";
 import LucidePanelRightOpen from "~icons/lucide/panel-right-open";
 import LucidePlay from "~icons/lucide/play";
+import LucideActivity from "~icons/lucide/activity";
 import LucideRectangleHorizontal from "~icons/lucide/rectangle-horizontal";
 import LucideRectangleVertical from "~icons/lucide/rectangle-vertical";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
@@ -44,6 +46,9 @@ type WorkbenchIconKind =
   | "delete-sweep"
   | "blueprint"
   | "history"
+  | "base"
+  | "simulation"
+  | "debug-log"
   | "save-blueprint"
   | "copy"
   | "toolbox"
@@ -59,6 +64,7 @@ type WorkbenchIconKind =
   | "panel-top-open"
   | "play"
   | "pause"
+  | "stop"
   | "expand"
   | "shrink"
   | "pointer"
@@ -88,6 +94,9 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   "delete-sweep": MaterialSymbolsDeleteSweep,
   blueprint: LucideDraftingCompass,
   history: LucideHistory,
+  base: LucideBuilding2,
+  simulation: LucideActivity,
+  "debug-log": LucideHistory,
   "save-blueprint": LucideSave,
   copy: LucideCopy,
   toolbox: LucidePackage2,
@@ -103,6 +112,7 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   "panel-top-open": LucidePanelTopOpen,
   play: LucidePlay,
   pause: LucidePause,
+  stop: LucideSquare,
   expand: LucideMaximize,
   shrink: LucideMinimize,
   pointer: LucideMousePointer2,

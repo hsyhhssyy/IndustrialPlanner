@@ -123,10 +123,11 @@ function createWorkbenchStorageSnapshot(options: {
   rightDockOpen?: boolean;
   leftDockWidth?: number;
   topBarCollapsed?: boolean;
-  rightDockActiveTab?: "base" | "power" | "selection" | "simulation";
+  rightDockActiveTab?: "selection";
   toolboxDialog?: ReturnType<typeof createDialogStateSnapshot>;
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  inspectorDialog?: ReturnType<typeof createDialogStateSnapshot>;
   toolboxWiki?: ReturnType<typeof createToolboxWikiStorageSnapshot>;
   moduleBalancing?: ReturnType<typeof createModuleBalancingStorageSnapshot>;
 } = {}) {
@@ -140,6 +141,7 @@ function createWorkbenchStorageSnapshot(options: {
       toolbox: options.toolboxDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_TOOLBOX_DIALOG_TAB_ID }),
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
+      inspector: options.inspectorDialog ?? createDialogStateSnapshot(),
     },
     toolbox: {
       wiki: options.toolboxWiki ?? createToolboxWikiStorageSnapshot(),
@@ -252,6 +254,8 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(true);
+    expect(appHost.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.state.settings.debugShowFps).toBe(false);
     expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(appHost.state.theme.name).toBe("Ayu Light");
@@ -261,12 +265,16 @@ describe("createAppHost", () => {
     expect(appHost.internalState.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(appHost.internalState.settings.hypergryphSelectionRightDockSync).toBe(true);
+    expect(appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.internalState.settings.debugShowFps).toBe(false);
     expect(appHost.internalState.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(workspace.app?.state.settings.locale).toBe("zh-CN");
     expect(workspace.app?.state.settings.hypergryphOperationMode).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(workspace.app?.state.settings.hypergryphSelectionRightDockSync).toBe(true);
+    expect(workspace.app?.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(workspace.app?.state.settings.debugShowFps).toBe(false);
     expect(workspace.app?.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(workspace.app?.state.theme.id).toBe("ayu-light");
@@ -310,6 +318,8 @@ describe("createAppHost", () => {
     expect(appHost.state.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(true);
+    expect(appHost.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.state.settings.debugShowFps).toBe(false);
     expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(appHost.state.theme.name).toBe("Ayu Light");
@@ -318,12 +328,16 @@ describe("createAppHost", () => {
     expect(appHost.internalState.settings.hypergryphOperationMode).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMove).toBe(true);
     expect(appHost.internalState.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(appHost.internalState.settings.hypergryphSelectionRightDockSync).toBe(true);
+    expect(appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.internalState.settings.debugShowFps).toBe(false);
     expect(appHost.internalState.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(workspace.app?.state.settings.locale).toBe("en-US");
     expect(workspace.app?.state.settings.hypergryphOperationMode).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMove).toBe(true);
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
+    expect(workspace.app?.state.settings.hypergryphSelectionRightDockSync).toBe(true);
+    expect(workspace.app?.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(workspace.app?.state.settings.debugShowFps).toBe(false);
     expect(workspace.app?.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(workspace.app?.state.theme.id).toBe("ayu-light");
@@ -343,12 +357,14 @@ describe("createAppHost", () => {
 
     expect(appHost.actions.translate("app.title")).toBe("集成工业仿真器");
     expect(appHost.actions.translate("workbench.leftRail.placement")).toBe("放置模式");
+    expect(appHost.actions.translate("workbench.leftRail.base")).toBe("基地");
     expect(appHost.actions.translate("unknown.key")).toBe("unknown.key");
 
     appHost.internalActions.setLocale("en-US");
 
     expect(appHost.actions.translate("app.title")).toBe("Industrial Planner Stage1");
     expect(appHost.actions.translate("workbench.leftRail.placement")).toBe("Placement");
+    expect(appHost.actions.translate("workbench.leftRail.base")).toBe("Base");
     expect(appHost.actions.translate("workbench.base.wuling")).toBe("Wuling");
   });
 
@@ -623,9 +639,9 @@ describe("createAppHost", () => {
     expect(appHost.internalState.workbench.toolbox.wiki.mobileSelectedCategories).toEqual([]);
   });
 
-  it("migrates legacy right dock expand flags to the active tab state", () => {
+  it("ignores legacy workbench storage snapshots from the previous schema key", () => {
     localStorage.setItem(
-      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      "v3-workbench-state",
       JSON.stringify({
         leftDockOpen: true,
         rightDockOpen: true,
@@ -645,13 +661,8 @@ describe("createAppHost", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
-    expect(appHost.state.workbench.rightDockActiveTab).toBe("power");
-
-    appHost.internalActions.setRightDockActiveTab("selection");
-
-    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
-      JSON.stringify(createWorkbenchStorageSnapshot({ rightDockActiveTab: "selection" })),
-    );
+    expect(appHost.state.workbench.rightDockActiveTab).toBe("selection");
+    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBeNull();
   });
 
   it("reacts to theme state changes and exposes the theme on app state", () => {
@@ -736,6 +747,35 @@ describe("createAppHost", () => {
     expect(editorHost.state.viewport.clientRect.top).toBe(64);
     expect(editorHost.state.viewport.clientRect.width).toBe(1675);
     expect(editorHost.state.viewport.clientRect.height).toBe(720);
+  });
+
+  it("clears a single selection when closing the right dock in select mode", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+
+    editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
+
+    appHost.internalActions.toggleRightDock();
+
+    expect(appHost.state.workbench.rightDockOpen).toBe(false);
+    expect(editorHost.state.collections.selection).toEqual([]);
+  });
+
+  it("still clears a single selection when closing the right dock with selection sync disabled", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.settings.hypergryphSelectionRightDockSync = false;
+    });
+    editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
+
+    appHost.internalActions.toggleRightDock();
+
+    expect(appHost.state.workbench.rightDockOpen).toBe(false);
+    expect(editorHost.state.collections.selection).toEqual([]);
   });
 
   it("reopens the left dock and predicts viewport rect when activating a panel while dock is closed", () => {
@@ -1308,11 +1348,8 @@ describe("createAppHost", () => {
 
     expect(appHost.internalState.activeTool).toBe("select");
     expect(appHost.internalState.runtime.moveAnchor).toBeNull();
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.buttonIds).toEqual([
-      "canvas-floating-toolbar-button-move",
-      "canvas-floating-toolbar-button-delete",
-    ]);
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(false);
+    expect(editorHost.state.collections.selection).toEqual([]);
     expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]?.position).toEqual({
       x: 5,
       y: 4,

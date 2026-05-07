@@ -2,9 +2,11 @@ import { action, runInAction } from "mobx";
 
 import type { SimulationAction } from "@/domain/simulation/simulation-action";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { WorldDocument } from "@/domain/document/world-document";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 
 import { compileSimulationTopology } from "./topology-compiler";
+import { createSimulationTopologyMigration } from "./topology-migration";
 import {
   createInitialSimulationRuntimeStatus,
   type SimulationStateReadWrite,
@@ -17,11 +19,12 @@ import type {
   CompiledSimulationTopology,
   SimulationStartResult,
   SimulationTickPullStatus,
+  SimulationTopologyMigration,
 } from "./types";
 import type { SimulationWorkerResponse } from "./worker-protocol";
 
 export interface SimulationWorkerBridge {
-  loadTopology(topology: CompiledSimulationTopology): Promise<Extract<
+  loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >>;
@@ -52,6 +55,7 @@ implements SimulationAction, SimulationInternalAction {
   private readonly stateReadWrite: SimulationStateReadWrite;
   private readonly topology: SnapshotStoreReadWrite<CompiledSimulationTopology | null>;
   private readonly bridge: SimulationWorkerBridge;
+  private compiledDocument: WorldDocument | null = null;
 
   public constructor(options: SimulationActionImplOptions) {
     this.workspace = options.workspace;
@@ -120,18 +124,23 @@ implements SimulationAction, SimulationInternalAction {
       runInAction(() => {
         this.stateReadWrite.currentPlaybackTickNumber = previousPlaybackTickNumber;
       });
+      return;
+    }
+
+    if (result.status === "not-found") {
+      await this.recoverPlaybackFromUnavailableTick(result, previousPlaybackTickNumber);
     }
   };
 
   public readonly refreshFromCurrentDocument: SimulationInternalAction["refreshFromCurrentDocument"] = async () => {
-    runInAction(() => {
-      this.stateReadWrite.currentSnapshot = null;
-      this.stateReadWrite.currentPlaybackTickNumber = 0;
-    });
-
     const document = this.workspace.editor?.document.getSnapshot();
     if (document === undefined) {
       this.topology.setSnapshot(null);
+      this.compiledDocument = null;
+      runInAction(() => {
+        this.stateReadWrite.currentSnapshot = null;
+        this.stateReadWrite.currentPlaybackTickNumber = 0;
+      });
       runInAction(() => {
         this.stateReadWrite.runtimeStatus = {
           ...this.stateReadWrite.runtimeStatus,
@@ -160,15 +169,32 @@ implements SimulationAction, SimulationInternalAction {
       document,
       registry: this.workspace.registry,
     });
-    const response = await this.bridge.loadTopology(compiledTopology);
+    const previousTopology = this.topology.getSnapshot();
+    const previousDocument = this.compiledDocument;
+    const baseTickNumber = this.stateReadWrite.currentSnapshot?.tickNumber ?? 0;
+    const playbackTickNumber = this.stateReadWrite.currentPlaybackTickNumber;
+    const migration = createSimulationTopologyMigration({
+      previousDocument,
+      nextDocument: document,
+      previousTopology,
+      nextTopology: compiledTopology,
+      baseTickNumber,
+    });
+    const response = await this.bridge.loadTopology(compiledTopology, migration ?? undefined);
     this.topology.setSnapshot(compiledTopology);
+    this.compiledDocument = cloneWorldDocument(document);
 
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = response.status;
     });
 
     if (response.result.status === "started") {
-      await this.syncToTick(0, 0);
+      const targetTickNumber = migration?.baseTickNumber ?? 0;
+      const targetPlaybackTickNumber = migration === null ? 0 : playbackTickNumber;
+      const tickStatus = await this.syncToTick(targetTickNumber, targetPlaybackTickNumber);
+      if (tickStatus.status === "not-found") {
+        await this.recoverPlaybackFromUnavailableTick(tickStatus, targetPlaybackTickNumber);
+      }
     }
 
     return response.result;
@@ -184,6 +210,7 @@ implements SimulationAction, SimulationInternalAction {
 
   public readonly reset: SimulationInternalAction["reset"] = action(() => {
     this.topology.setSnapshot(null);
+    this.compiledDocument = null;
     this.stateReadWrite.runningState = "stop";
     this.stateReadWrite.simulationSpeed = DEFAULT_SIMULATION_SPEED;
     this.stateReadWrite.hasStarted = false;
@@ -211,4 +238,30 @@ implements SimulationAction, SimulationInternalAction {
 
     return response.result.status;
   };
+
+  private async recoverPlaybackFromUnavailableTick(
+    status: Extract<SimulationTickPullStatus, { readonly status: "not-found" }>,
+    fallbackPlaybackTickNumber: number,
+  ): Promise<void> {
+    const recoveryTickNumber = status.retainedFromTick
+      ?? this.stateReadWrite.currentSnapshot?.tickNumber
+      ?? status.latestTickNumber;
+    if (recoveryTickNumber === null || recoveryTickNumber === undefined) {
+      runInAction(() => {
+        this.stateReadWrite.currentPlaybackTickNumber = fallbackPlaybackTickNumber;
+      });
+      return;
+    }
+
+    const recoveryStatus = await this.syncToTick(recoveryTickNumber, recoveryTickNumber);
+    if (recoveryStatus.status !== "ready") {
+      runInAction(() => {
+        this.stateReadWrite.currentPlaybackTickNumber = fallbackPlaybackTickNumber;
+      });
+    }
+  }
+}
+
+function cloneWorldDocument(document: WorldDocument): WorldDocument {
+  return JSON.parse(JSON.stringify(document)) as WorldDocument;
 }

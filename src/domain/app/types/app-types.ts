@@ -10,6 +10,9 @@ export interface AppSettings {
   readonly hypergryphOperationMode: boolean;
   readonly hypergryphImmediateMove: boolean;
   readonly hypergryphImmediateMarquee: boolean;
+  readonly hypergryphSelectionRightDockSync: boolean;
+  readonly hypergryphInspectorOpenOnSecondClick: boolean;
+  readonly gameUseInspectorPanel: boolean;
   readonly gameShowHotkeys: boolean;
   readonly gameAlwaysShowGridLines: boolean;
   readonly showGrassBackground: boolean;
@@ -113,7 +116,7 @@ export interface ToolboxState {
   readonly moduleBalancing: ModuleBalancingState;
 }
 
-export type RightDockTabId = "base" | "power" | "selection" | "simulation";
+export type RightDockTabId = "selection";
 
 export interface WorkbenchState {
   readonly leftDockOpen: boolean;

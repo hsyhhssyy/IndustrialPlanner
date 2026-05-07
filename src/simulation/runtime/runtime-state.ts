@@ -1,5 +1,7 @@
 import type {
+  CompiledSimulationDevice,
   CompiledSimulationRecipePlan,
+  CompiledSimulationSlot,
   CompiledSimulationTopology,
   SimulationRecipeType,
 } from "../types";
@@ -109,10 +111,7 @@ export function createSimulationMutableRuntimeState(
       continue;
     }
 
-    slots[slotId] = {
-      itemType: slot.initialItemType ?? slot.lock,
-      count: Math.max(0, slot.initialCount),
-    };
+    slots[slotId] = createInitialSlotState(slot);
   }
 
   const linkState = buildRuntimeLinkState(topology);
@@ -145,6 +144,88 @@ export function createSimulationMutableRuntimeState(
       ),
     },
     transient: createEmptyTransientState(),
+  };
+}
+
+export interface SimulationRuntimeStateMigrationOptions {
+  readonly previousTopology: CompiledSimulationTopology;
+  readonly previousState: SimulationMutableRuntimeState;
+  readonly topology: CompiledSimulationTopology;
+  readonly resetDeviceIds: readonly string[];
+}
+
+export function createMigratedSimulationMutableRuntimeState(
+  options: SimulationRuntimeStateMigrationOptions,
+): SimulationMutableRuntimeState {
+  const state = createSimulationMutableRuntimeState(options.topology);
+  const resetDeviceIds = new Set(options.resetDeviceIds);
+
+  state.tickNumber = options.previousState.tickNumber;
+  state.persistent.nextRecipeRunIndex = options.previousState.persistent.nextRecipeRunIndex;
+
+  for (const deviceId of options.topology.ordering.deviceOrder) {
+    if (resetDeviceIds.has(deviceId)) {
+      continue;
+    }
+
+    const previousDevice = options.previousTopology.devices[deviceId];
+    const nextDevice = options.topology.devices[deviceId];
+    const previousDeviceState = options.previousState.persistent.devices[deviceId];
+    if (previousDevice === undefined || nextDevice === undefined || previousDeviceState === undefined) {
+      continue;
+    }
+
+    for (const slotId of listDeviceSlotIds(options.topology, nextDevice)) {
+      const previousSlotState = options.previousState.persistent.slots[slotId];
+      if (previousSlotState !== undefined) {
+        state.persistent.slots[slotId] = cloneRuntimeSlotState(previousSlotState);
+      }
+    }
+
+    state.persistent.devices[deviceId] = cloneRuntimeDeviceState(previousDeviceState);
+    for (const cursorKey of Object.keys(state.persistent.routingCursors)) {
+      if (!cursorKey.startsWith(`${deviceId}:`)) {
+        continue;
+      }
+      const previousCursor = options.previousState.persistent.routingCursors[cursorKey];
+      if (previousCursor !== undefined) {
+        state.persistent.routingCursors[cursorKey] = previousCursor;
+      }
+    }
+  }
+
+  normalizeShareAllSources(state.persistent.slots, state.persistent.shareAllTargetSlotIdBySourceSlotId);
+  resetConflictingTransportComponents(options.topology, state);
+  return state;
+}
+
+export function cloneSimulationMutableRuntimeState(
+  state: SimulationMutableRuntimeState,
+): SimulationMutableRuntimeState {
+  return {
+    tickNumber: state.tickNumber,
+    persistent: {
+      slots: Object.fromEntries(Object.entries(state.persistent.slots).map(([slotId, slot]) => [
+        slotId,
+        cloneRuntimeSlotState(slot),
+      ])),
+      devices: Object.fromEntries(Object.entries(state.persistent.devices).map(([deviceId, device]) => [
+        deviceId,
+        cloneRuntimeDeviceState(device),
+      ])),
+      routingCursors: { ...state.persistent.routingCursors },
+      shareAllTargetSlotIdBySourceSlotId: { ...state.persistent.shareAllTargetSlotIdBySourceSlotId },
+      sharedCapacitySlotIdsBySlotId: Object.fromEntries(
+        Object.entries(state.persistent.sharedCapacitySlotIdsBySlotId).map(([slotId, slotIds]) => [
+          slotId,
+          [...slotIds],
+        ]),
+      ),
+      sharedCapacityLimitBySlotId: { ...state.persistent.sharedCapacityLimitBySlotId },
+      nextRecipeRunIndex: state.persistent.nextRecipeRunIndex,
+      transportComponentDomain: { ...state.persistent.transportComponentDomain },
+    },
+    transient: cloneTransientState(state.transient),
   };
 }
 
@@ -206,5 +287,107 @@ function normalizeShareAllSources(
     target.count += source.count;
     source.itemType = null;
     source.count = 0;
+  }
+}
+
+function createInitialSlotState(slot: CompiledSimulationSlot): RuntimeSlotState {
+  return {
+    itemType: slot.initialItemType ?? slot.lock,
+    count: Math.max(0, slot.initialCount),
+  };
+}
+
+function cloneRuntimeSlotState(slot: RuntimeSlotState): RuntimeSlotState {
+  return {
+    itemType: slot.itemType,
+    count: slot.count,
+  };
+}
+
+function cloneRuntimeDeviceState(device: RuntimeDeviceState): RuntimeDeviceState {
+  return {
+    block: device.block,
+    recipe: device.recipe === null
+      ? null
+      : {
+          ...device.recipe,
+          plan: cloneRecipePlan(device.recipe.plan),
+          reservations: device.recipe.reservations.map((reservation) => ({ ...reservation })),
+          inputItems: device.recipe.inputItems.map((item) => ({ ...item })),
+        },
+  };
+}
+
+function cloneRecipePlan(plan: CompiledSimulationRecipePlan): CompiledSimulationRecipePlan {
+  return {
+    recipeId: plan.recipeId,
+    recipeType: plan.recipeType,
+    durationTicks: plan.durationTicks,
+    inputs: plan.inputs.map((input) => ({ ...input })),
+    outputs: plan.outputs.map((output) => ({ ...output })),
+    ingredientNodeIds: [...plan.ingredientNodeIds],
+    productNodeIds: [...plan.productNodeIds],
+  };
+}
+
+function cloneTransientState(transient: SimulationTickTransientState): SimulationTickTransientState {
+  return {
+    nodes: Object.fromEntries(Object.entries(transient.nodes).map(([nodeId, node]) => [
+      nodeId,
+      {
+        ...node,
+        excludedItemTypes: [...node.excludedItemTypes],
+        acceptedInputEdgeIds: [...node.acceptedInputEdgeIds],
+        acceptedOutputEdgeIds: [...node.acceptedOutputEdgeIds],
+      },
+    ])),
+    edges: Object.fromEntries(Object.entries(transient.edges).map(([edgeId, edge]) => [
+      edgeId,
+      { ...edge },
+    ])),
+    transfers: transient.transfers.map((transfer) => ({ ...transfer })),
+    diagnostics: transient.diagnostics.map((diagnostic) => ({ ...diagnostic })),
+  };
+}
+
+function listDeviceSlotIds(
+  topology: CompiledSimulationTopology,
+  device: CompiledSimulationDevice,
+): readonly string[] {
+  return device.nodeIds.flatMap((nodeId) => topology.nodes[nodeId]?.slotIds ?? []);
+}
+
+function resetConflictingTransportComponents(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+): void {
+  for (const [componentId, component] of Object.entries(topology.transportComponents)) {
+    const itemTypes = new Set<string>();
+    for (const slotId of component.slotIds) {
+      const slotState = state.persistent.slots[slotId];
+      if (slotState !== undefined && slotState.count > 0 && slotState.itemType !== null) {
+        itemTypes.add(slotState.itemType);
+      }
+    }
+
+    if (itemTypes.size <= 1) {
+      state.persistent.transportComponentDomain[componentId] = [...itemTypes][0] ?? null;
+      continue;
+    }
+
+    for (const slotId of component.slotIds) {
+      const slot = topology.slots[slotId];
+      if (slot !== undefined) {
+        state.persistent.slots[slotId] = createInitialSlotState(slot);
+      }
+    }
+    for (const deviceId of component.deviceIds) {
+      const deviceState = state.persistent.devices[deviceId];
+      if (deviceState !== undefined) {
+        deviceState.block = false;
+        deviceState.recipe = null;
+      }
+    }
+    state.persistent.transportComponentDomain[componentId] = null;
   }
 }

@@ -24,6 +24,14 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
+function isSameNavigationEntry(left: NavEntry | null, right: NavEntry | null): boolean {
+  if (left === null || right === null) {
+    return left === right;
+  }
+
+  return left.type === right.type && left.id === right.id;
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
@@ -376,8 +384,12 @@ export const EncyclopediaPanel = observer(function EncyclopediaPanel({
       return;
     }
 
+    if (isSameNavigationEntry(currentEntry, entry)) {
+      return;
+    }
+
     persistNavigation([...wikiState.navigationStack, entry]);
-  }, [persistNavigation, wikiState]);
+  }, [currentEntry, persistNavigation, wikiState]);
 
   const navigateToIndex = useCallback((stackIndex: number) => {
     if (stackIndex < 0) {

@@ -150,6 +150,13 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         defaultValue: false,
       },
       {
+        id: "game-use-inspector-panel",
+        kind: "switch",
+        labelKey: "settingsField.useInspectorPanel",
+        descriptionKey: "settingsField.useInspectorPanelDescription",
+        defaultValue: false,
+      },
+      {
         id: "game-show-hotkeys",
         kind: "switch",
         labelKey: "settingsField.showHotkeys",
@@ -193,6 +200,28 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         kind: "switch",
         labelKey: "settingsField.arknightsImmediateMarquee",
         descriptionKey: "settingsField.arknightsImmediateMarqueeDescription",
+        defaultValue: false,
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: true,
+        },
+      },
+      {
+        id: "game-arknights-selection-right-dock-sync",
+        kind: "switch",
+        labelKey: "settingsField.arknightsSelectionRightDockSync",
+        descriptionKey: "settingsField.arknightsSelectionRightDockSyncDescription",
+        defaultValue: true,
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: true,
+        },
+      },
+      {
+        id: "game-arknights-inspector-open-on-second-click",
+        kind: "switch",
+        labelKey: "settingsField.arknightsInspectorOpenOnSecondClick",
+        descriptionKey: "settingsField.arknightsInspectorOpenOnSecondClickDescription",
         defaultValue: false,
         editableWhen: {
           settingId: "game-arknights-operation-mode",

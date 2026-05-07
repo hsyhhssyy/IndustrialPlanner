@@ -1,0 +1,200 @@
+import type { AppHost } from "@/app/host/app-host";
+import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
+import type { CanvasFloatingToolbarButtonId } from "@/app/state/state-impl";
+import {
+  type ComponentProps,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+
+type CanvasFloatingToolbarIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
+type CanvasFloatingToolbarTone = "cancel" | "confirm" | "delete" | "rotate";
+
+interface CanvasFloatingToolbarDefinition {
+  readonly label: {
+    readonly "zh-CN": string;
+    readonly "en-US": string;
+  };
+  icon: CanvasFloatingToolbarIconKind;
+  tone?: CanvasFloatingToolbarTone;
+}
+
+interface CanvasFloatingToolbarButtonStripProps {
+  appHost: AppHost;
+  buttonIds: readonly CanvasFloatingToolbarButtonId[];
+  buttonClassName: string;
+  iconClassName: string;
+  labelClassName?: string;
+  showLabels?: boolean;
+}
+
+const CANVAS_FLOATING_TOOLBAR_DEFINITIONS: Record<CanvasFloatingToolbarButtonId, CanvasFloatingToolbarDefinition> = {
+  "canvas-floating-toolbar-button-ok": {
+    label: {
+      "zh-CN": "确认",
+      "en-US": "Confirm",
+    },
+    icon: "confirm",
+    tone: "confirm",
+  },
+  "canvas-floating-toolbar-button-cancel": {
+    label: {
+      "zh-CN": "取消",
+      "en-US": "Cancel",
+    },
+    icon: "cancel",
+    tone: "cancel",
+  },
+  "canvas-floating-toolbar-button-rotate": {
+    label: {
+      "zh-CN": "旋转",
+      "en-US": "Rotate",
+    },
+    icon: "rotate",
+    tone: "rotate",
+  },
+  "canvas-floating-toolbar-button-move": {
+    label: {
+      "zh-CN": "移动",
+      "en-US": "Move",
+    },
+    icon: "move",
+  },
+  "canvas-floating-toolbar-button-delete": {
+    label: {
+      "zh-CN": "删除",
+      "en-US": "Delete",
+    },
+    icon: "delete",
+    tone: "delete",
+  },
+  "canvas-floating-toolbar-button-delete-many": {
+    label: {
+      "zh-CN": "批量删除",
+      "en-US": "Delete Many",
+    },
+    icon: "delete-sweep",
+    tone: "delete",
+  },
+};
+
+function joinClassNames(values: Array<string | undefined | false>): string {
+  return values.filter(Boolean).join(" ");
+}
+
+export function CanvasFloatingToolbarButtonStrip({
+  appHost,
+  buttonIds,
+  buttonClassName,
+  iconClassName,
+  labelClassName,
+  showLabels = false,
+}: CanvasFloatingToolbarButtonStripProps) {
+  const locale = appHost.state.settings.locale;
+
+  const stopUiPropagation = (
+    event:
+      | ReactMouseEvent<HTMLElement>
+      | ReactPointerEvent<HTMLElement>,
+  ) => {
+    event.stopPropagation();
+  };
+
+  const stopUiPropagationAndDefault = (event: ReactMouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleButtonPointerUp = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+    buttonId: CanvasFloatingToolbarButtonId,
+  ) => {
+    event.stopPropagation();
+
+    if (event.pointerType === "mouse") {
+      appHost.gestureAdapter.handleUiButtonMouseTap({
+        uiButtonId: buttonId,
+        button: event.button,
+        altKey: event.altKey,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        shiftKey: event.shiftKey,
+        sourceEvent: event.nativeEvent,
+      });
+      return;
+    }
+
+    if (event.pointerType === "touch" || event.pointerType === "pen") {
+      appHost.gestureAdapter.handleUiButtonTouchTap({
+        uiButtonId: buttonId,
+        altKey: event.altKey,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        shiftKey: event.shiftKey,
+        sourceEvent: event.nativeEvent,
+      });
+    }
+  };
+
+  const handleButtonClick = (
+    event: ReactMouseEvent<HTMLButtonElement>,
+    buttonId: CanvasFloatingToolbarButtonId,
+  ) => {
+    event.stopPropagation();
+
+    if (event.detail !== 0) {
+      return;
+    }
+
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: buttonId,
+      button: 0,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey,
+      sourceEvent: event.nativeEvent,
+    });
+  };
+
+  return (
+    <>
+      {buttonIds.map((buttonId) => {
+        const definition = CANVAS_FLOATING_TOOLBAR_DEFINITIONS[buttonId];
+        const label = definition.label[locale];
+
+        return (
+          <button
+            aria-label={label}
+            className={joinClassNames([
+              buttonClassName,
+              definition.tone ? `is-${definition.tone}` : undefined,
+            ])}
+            data-ui-button-id={buttonId}
+            key={buttonId}
+            onAuxClick={stopUiPropagationAndDefault}
+            onClick={(event) => {
+              handleButtonClick(event, buttonId);
+            }}
+            onContextMenu={stopUiPropagationAndDefault}
+            onPointerCancel={stopUiPropagation}
+            onPointerDown={stopUiPropagation}
+            onPointerMove={stopUiPropagation}
+            onPointerUp={(event) => {
+              handleButtonPointerUp(event, buttonId);
+            }}
+            title={label}
+            type="button"
+          >
+            <WorkbenchIcon className={iconClassName} kind={definition.icon} />
+            {showLabels ? (
+              <span className={labelClassName}>{label}</span>
+            ) : (
+              <span className="sr-only">{label}</span>
+            )}
+          </button>
+        );
+      })}
+    </>
+  );
+}

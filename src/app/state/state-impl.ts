@@ -67,6 +67,9 @@ export interface AppSettingsReadWrite extends AppSettings {
   hypergryphOperationMode: boolean;
   hypergryphImmediateMove: boolean;
   hypergryphImmediateMarquee: boolean;
+  hypergryphSelectionRightDockSync: boolean;
+  hypergryphInspectorOpenOnSecondClick: boolean;
+  gameUseInspectorPanel: boolean;
   gameShowHotkeys: boolean;
   gameAlwaysShowGridLines: boolean;
   showGrassBackground: boolean;
@@ -260,10 +263,7 @@ export type HelpDialogTabId = typeof HELP_DIALOG_TAB_IDS[number];
 export const DEFAULT_HELP_DIALOG_TAB_ID: HelpDialogTabId = HELP_DIALOG_TAB_IDS[0];
 
 export const RIGHT_DOCK_TAB_IDS = [
-  "base",
-  "power",
   "selection",
-  "simulation",
 ] as const satisfies readonly RightDockTabId[];
 
 export const DEFAULT_RIGHT_DOCK_TAB_ID: RightDockTabId = RIGHT_DOCK_TAB_IDS[0];
@@ -272,7 +272,7 @@ export function isRightDockTabId(value: unknown): value is RightDockTabId {
   return typeof value === "string" && RIGHT_DOCK_TAB_IDS.includes(value as RightDockTabId);
 }
 
-export const DIALOG_KEYS = ["toolbox", "help", "settings"] as const;
+export const DIALOG_KEYS = ["toolbox", "help", "settings", "debug-log", "inspector"] as const;
 export type DialogKey = typeof DIALOG_KEYS[number];
 
 export interface DialogStateReadWrite {
@@ -285,8 +285,13 @@ export interface DialogStateReadWrite {
   activeTab: string | null;
 }
 
-export type DialogStateMapReadWrite = Record<DialogKey, DialogStateReadWrite>
-  & Record<string, DialogStateReadWrite | undefined>;
+export interface DialogStateMapReadWrite extends Record<string, DialogStateReadWrite | undefined> {
+  toolbox: DialogStateReadWrite;
+  help: DialogStateReadWrite;
+  settings: DialogStateReadWrite;
+  "debug-log": DialogStateReadWrite | undefined;
+  inspector: DialogStateReadWrite;
+}
 
 export function resolveDefaultDialogTabId(dialogKey: string): string | null {
   if (dialogKey === "toolbox") {
@@ -364,7 +369,7 @@ export interface ToolInfoReadWrite extends ToolInfo {
 
 const DEFAULT_APP_LOCALE: AppLocale = "zh-CN";
 
-export type ActivePanel = "placement" | "delete" | "blueprint" | "history" | null;
+export type ActivePanel = "placement" | "delete" | "blueprint" | "history" | "base" | "simulation" | null;
 export type PlacementGroup = Exclude<UiGroup, "hidden">;
 
 export interface UiStateReadWrite extends UiState {
@@ -393,6 +398,8 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
     toolbox: createDefaultDialogStateForKey("toolbox"),
     help: createDefaultDialogStateForKey("help"),
     settings: createDefaultDialogStateForKey("settings"),
+    "debug-log": undefined,
+    inspector: createDefaultDialogStateForKey("inspector"),
   };
   toolbox: ToolboxStateReadWrite = new ToolboxStateReadWriteImpl();
 
@@ -521,6 +528,9 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphOperationMode: true,
     hypergryphImmediateMove: true,
     hypergryphImmediateMarquee: false,
+    hypergryphSelectionRightDockSync: true,
+    hypergryphInspectorOpenOnSecondClick: false,
+    gameUseInspectorPanel: false,
     gameShowHotkeys: false,
     gameAlwaysShowGridLines: true,
     showGrassBackground: false,

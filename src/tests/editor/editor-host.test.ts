@@ -1140,10 +1140,27 @@ describe("createEditorHost", () => {
       position: { x: 20, y: 18 },
       rotation: 180,
     });
+    expect(editorHost.state.collections.selection).toEqual([]);
     expect(editorHost.state.collections.ghost).toEqual([]);
     expect(editorHost.state.collections.preview).toEqual([]);
     expect(editorHost.internalState.drafts).toHaveLength(1);
     expect(editorHost.internalState.drafts[0]?.id).toBe("persisted-draft");
+  });
+
+  it("keeps multi-selection after applying move operation drafts for multiple entities", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const document = createDummyWorldDocument();
+
+    editorHost.internalDocument.setSnapshot(document);
+    editorHost.internalState.collections.selection.replace(["dummy-entity-1", "dummy-entity-2"]);
+
+    editorHost.actions.createMoveOperationDraft();
+
+    expect(editorHost.actions.applyMoveOerationDraft()).toBe(true);
+    expect(editorHost.state.collections.selection).toEqual(["dummy-entity-1", "dummy-entity-2"]);
+    expect(editorHost.state.collections.ghost).toEqual([]);
+    expect(editorHost.state.collections.preview).toEqual([]);
   });
 
   it("cancels move operation drafts by clearing ghost and preview state only", () => {

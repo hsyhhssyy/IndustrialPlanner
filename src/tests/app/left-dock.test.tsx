@@ -147,7 +147,7 @@ describe("Left dock panel switching", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders four primary tabs and defaults to the placement panel", () => {
+  it("renders six primary tabs and defaults to the placement panel", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -169,7 +169,7 @@ describe("Left dock panel switching", () => {
     const utilityButtons = toolbarGroups[1]?.querySelectorAll(".rail-button");
     const visiblePanel = queryVisibleLeftDockPanel(container);
 
-    expect(primaryButtons).toHaveLength(4);
+    expect(primaryButtons).toHaveLength(6);
     expect(utilityButtons).toHaveLength(3);
     expect(container.textContent).toContain("放置模式");
     expect(visiblePanel).not.toBeNull();
@@ -203,6 +203,34 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel.textContent).toContain("G");
     expect(appHost.internalState.runtime.activePanel).toBeNull();
     expect(appHost.internalState.activeTool).toBe("select");
+  });
+
+  it("shows the debug log button above toolbox only when debug mode is enabled", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<LeftToolbar appHost={appHost} />);
+    });
+
+    const utilityGroup = container.querySelectorAll(".toolbar-rail-group")[1] as HTMLElement | undefined;
+    const utilityTitlesBefore = Array.from(
+      utilityGroup?.querySelectorAll(".rail-button") ?? [],
+    ).map((button) => button.getAttribute("title"));
+
+    expect(utilityTitlesBefore).toEqual(["工具箱", "帮助", "设置"]);
+
+    act(() => {
+      runInAction(() => {
+        appHost.internalState.settings.debugMode = true;
+      });
+    });
+
+    const utilityTitlesAfter = Array.from(
+      utilityGroup?.querySelectorAll(".rail-button") ?? [],
+    ).map((button) => button.getAttribute("title"));
+
+    expect(utilityTitlesAfter).toEqual(["调试日志", "工具箱", "帮助", "设置"]);
   });
 
   it("frames the selected placement group and shows number shortcuts only inside it", () => {
@@ -465,6 +493,27 @@ describe("Left dock panel switching", () => {
     expect(deletePanel?.textContent).toContain("单点删除");
     expect(deletePanel?.textContent).toContain("恢复最近");
 
+    const baseButton = clickTab("基地");
+    const basePanel = queryVisibleLeftDockPanel(container);
+
+    expect(appHost.internalState.runtime.activePanel).toBe("base");
+    expect(baseButton.getAttribute("aria-pressed")).toBe("true");
+    expect(basePanel?.getAttribute("data-panel-id")).toBe("base");
+    expect(basePanel?.textContent).toContain("可放置区域");
+    expect(basePanel?.textContent).toContain("总耗电");
+
+    const simulationButton = clickTab("仿真");
+    const simulationPanel = queryVisibleLeftDockPanel(container);
+    const simulationTextarea = simulationPanel?.querySelector(
+      "[data-simulation-runtime-json]",
+    ) as HTMLTextAreaElement | null;
+
+    expect(appHost.internalState.runtime.activePanel).toBe("simulation");
+    expect(simulationButton.getAttribute("aria-pressed")).toBe("true");
+    expect(simulationPanel?.getAttribute("data-panel-id")).toBe("simulation");
+    expect(simulationTextarea).not.toBeNull();
+    expect(simulationTextarea?.value).toBe("null");
+
     act(() => {
       clickTab("放置模式");
     });
@@ -497,6 +546,8 @@ describe("Left dock panel switching", () => {
     ) as HTMLButtonElement | null;
 
     expect(historyButton).not.toBeNull();
+    expect(historyButton?.classList.contains("is-active")).toBe(false);
+    expect(historyButton?.getAttribute("aria-pressed")).toBe("false");
 
     act(() => {
       historyButton?.click();
@@ -504,6 +555,8 @@ describe("Left dock panel switching", () => {
 
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
     expect(appHost.internalState.runtime.activePanel).toBe("history");
+    expect(historyButton?.classList.contains("is-active")).toBe(true);
+    expect(historyButton?.getAttribute("aria-pressed")).toBe("true");
 
     act(() => {
       root.render(

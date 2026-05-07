@@ -185,46 +185,16 @@ describe("TopBar", () => {
     vi.unstubAllGlobals();
   });
 
-  it("marks dock toggle buttons as active while their panels are open", () => {
+  it("renders the title and action controls without layout toggle buttons", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
-
-    const renderTopBar = () => {
-      act(() => {
-        root.render(<TopBar appHost={appHost} />);
-      });
-    };
-
-    renderTopBar();
-
-    const buttons = container.querySelectorAll(
-      ".top-bar-layout-controls button",
-    );
-    const leftButton = buttons[0] as HTMLButtonElement | undefined;
-    const rightButton = buttons[1] as HTMLButtonElement | undefined;
-
-    expect(leftButton).toBeDefined();
-    expect(rightButton).toBeDefined();
-
-    if (!leftButton || !rightButton) {
-      throw new Error("Top bar layout buttons were not rendered.");
-    }
-
-    expect(leftButton.classList.contains("is-active")).toBe(true);
-    expect(leftButton.getAttribute("aria-pressed")).toBe("true");
-    expect(rightButton.classList.contains("is-active")).toBe(true);
-    expect(rightButton.getAttribute("aria-pressed")).toBe("true");
-
     act(() => {
-      appHost.internalActions.toggleLeftDock();
-      appHost.internalActions.toggleRightDock();
+      root.render(<TopBar appHost={appHost} />);
     });
-    renderTopBar();
 
-    expect(leftButton.classList.contains("is-active")).toBe(false);
-    expect(leftButton.getAttribute("aria-pressed")).toBe("false");
-    expect(rightButton.classList.contains("is-active")).toBe(false);
-    expect(rightButton.getAttribute("aria-pressed")).toBe("false");
+    expect(container.querySelector(".top-bar-layout-controls")).toBeNull();
+    expect(container.querySelector(".top-bar-title")?.textContent).toBe(appHost.actions.translate("app.title"));
+    expect(container.querySelectorAll(".top-bar-controls .top-bar-icon-button")).toHaveLength(3);
   });
 
   it("toggles fullscreen state through the top bar button", async () => {
@@ -349,6 +319,52 @@ describe("TopBar", () => {
     expect(pause).not.toHaveBeenCalled();
   });
 
+  it("shows a local speed cycle button beside the pause button while running", async () => {
+    const workspace = createWorkspace();
+    attachSimulationStub(workspace, { state: "start" });
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<TopBar appHost={appHost} />);
+    });
+
+    const speedButton = container.querySelector(
+      '[data-ui-button-id="top-bar-simulation-secondary-control"]',
+    ) as HTMLButtonElement | null;
+
+    expect(speedButton).not.toBeNull();
+    expect(speedButton?.textContent).toBe("x1");
+    expect(speedButton?.title).toBe("速率 x1");
+
+    for (const expected of ["x2", "x4", "x8", "x16", "x0.25", "x1"]) {
+      await act(async () => {
+        speedButton?.click();
+      });
+
+      expect(speedButton?.textContent).toBe(expected);
+    }
+  });
+
+  it("shows a stop button beside the play button while the simulation is not running", () => {
+    const workspace = createWorkspace();
+    attachSimulationStub(workspace, { state: "pause" });
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<TopBar appHost={appHost} />);
+    });
+
+    const secondaryButton = container.querySelector(
+      '[data-ui-button-id="top-bar-simulation-secondary-control"]',
+    ) as HTMLButtonElement | null;
+
+    expect(secondaryButton).not.toBeNull();
+    expect(secondaryButton?.title).toBe("停止仿真");
+    expect(
+      secondaryButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("stop");
+  });
+
   it("removes all top-right status text and keeps only control buttons", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
@@ -360,6 +376,9 @@ describe("TopBar", () => {
     const simulationButton = container.querySelector(
       '[data-ui-button-id="top-bar-simulation-control"]',
     ) as HTMLButtonElement | null;
+    const secondaryButton = container.querySelector(
+      '[data-ui-button-id="top-bar-simulation-secondary-control"]',
+    ) as HTMLButtonElement | null;
     const fullscreenButton = container.querySelector(
       ".top-bar-fullscreen-button",
     ) as HTMLButtonElement | null;
@@ -370,11 +389,13 @@ describe("TopBar", () => {
     expect(container.textContent).not.toContain("设备:");
     expect(container.textContent).not.toContain("屏幕:");
     expect(simulationButton).not.toBeNull();
+    expect(secondaryButton).not.toBeNull();
     expect(fullscreenButton).not.toBeNull();
     expect(
       Array.from(container.querySelectorAll(".top-bar-controls button")),
     ).toEqual([
       simulationButton,
+      secondaryButton,
       fullscreenButton,
     ]);
     expect(container.querySelector(".top-bar-theme-button")).toBeNull();
@@ -404,17 +425,22 @@ describe("TopBar", () => {
     const simulationButton = container.querySelector(
       '[data-ui-button-id="top-bar-simulation-control"]',
     ) as HTMLButtonElement | null;
+    const secondaryButton = container.querySelector(
+      '[data-ui-button-id="top-bar-simulation-secondary-control"]',
+    ) as HTMLButtonElement | null;
     const collapseButton = container.querySelector(
       ".top-bar-collapse-button",
     ) as HTMLButtonElement | null;
 
     expect(simulationButton).not.toBeNull();
+    expect(secondaryButton).not.toBeNull();
     expect(fullscreenButton).not.toBeNull();
     expect(collapseButton).not.toBeNull();
     expect(
       Array.from(container.querySelectorAll(".top-bar-controls button")),
     ).toEqual([
       simulationButton,
+      secondaryButton,
       fullscreenButton,
       collapseButton,
     ]);

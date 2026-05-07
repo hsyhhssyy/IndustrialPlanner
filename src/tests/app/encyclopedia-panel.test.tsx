@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { runInAction } from "mobx";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -97,5 +98,44 @@ describe("EncyclopediaPanel", () => {
 
     expect(currentAppHost.internalState.workbench.toolbox.wiki.mobileSelectedCategories).toEqual([]);
     expect(getCardLabels(container)).toContain(bottledLiquidName);
+  });
+
+  it("does not push the current item again when clicking it from a recipe", () => {
+    const workspace = createWorkspace();
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    runInAction(() => {
+      currentAppHost.internalState.workbench.toolbox.wiki.navigationStack = [
+        { type: "item", id: "item_copper_ore" },
+      ];
+      currentAppHost.internalState.workbench.toolbox.wiki.openedPage = {
+        kind: "item",
+        id: "item_copper_ore",
+      };
+    });
+
+    act(() => {
+      root.render(<EncyclopediaPanel appHost={currentAppHost} isTouch={false} />);
+    });
+
+    const copperOreName = currentAppHost.actions.translate("registry.item.item_copper_ore.name");
+    const currentItemRecipeButton = Array.from(
+      container.querySelectorAll(".encyclopedia-recipe-row"),
+    ).find((element) => element.textContent?.includes(copperOreName)) as HTMLButtonElement | undefined;
+
+    expect(currentItemRecipeButton).toBeDefined();
+
+    act(() => {
+      currentItemRecipeButton?.click();
+    });
+
+    expect(currentAppHost.internalState.workbench.toolbox.wiki.navigationStack).toEqual([
+      { type: "item", id: "item_copper_ore" },
+    ]);
+    expect(currentAppHost.internalState.workbench.toolbox.wiki.openedPage).toEqual({
+      kind: "item",
+      id: "item_copper_ore",
+    });
   });
 });

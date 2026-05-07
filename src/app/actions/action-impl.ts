@@ -3,7 +3,7 @@ import { action } from "mobx";
 import type { AppAction } from "@/domain/app/app-action";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { ScreenProfile } from "@/domain/app/types/screen-profile";
-import type { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { RightDockTabId } from "@/domain/app/types/app-types";
 import type {
   ClientPixelPoint,
@@ -41,6 +41,7 @@ const DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT = 44;
 export interface AppInternalAction {
   toggleLeftDock: () => void;
   toggleRightDock: () => void;
+  setRightDockOpen: (open: boolean, options?: { preserveSingleSelection?: boolean }) => void;
   toggleTopBarCollapsed: () => void;
   setRightDockActiveTab: (tabId: RightDockTabId) => void;
   openDialog: (request: string) => void;
@@ -101,11 +102,24 @@ export class AppActionImpl implements AppAction, AppInternalAction {
   });
 
   public readonly toggleRightDock: AppInternalAction["toggleRightDock"] = action(() => {
+    this.setRightDockOpen(!this.internalState.workbench.rightDockOpen);
+  });
+
+  public readonly setRightDockOpen: AppInternalAction["setRightDockOpen"] = action((open, options = {}) => {
+    if (this.internalState.workbench.rightDockOpen === open) {
+      return;
+    }
+
     this.applyPredictedViewportRectForDockToggle({
       dock: "right",
-      willOpen: !this.internalState.workbench.rightDockOpen,
+      willOpen: open,
     });
-    this.internalState.workbench.rightDockOpen = !this.internalState.workbench.rightDockOpen;
+
+    if (!open && !options.preserveSingleSelection) {
+      this.clearSingleSelectionForRightDockClose();
+    }
+
+    this.internalState.workbench.rightDockOpen = open;
   });
 
   public readonly toggleTopBarCollapsed: AppInternalAction["toggleTopBarCollapsed"] = action(() => {
@@ -120,10 +134,30 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     this.internalState.workbench.rightDockActiveTab = tabId;
   });
 
+  private clearSingleSelectionForRightDockClose(): void {
+    if (
+      this.internalState.activeTool !== "select"
+    ) {
+      return;
+    }
+
+    const editor = this.workspace.editor;
+    if (editor === null || editor.state.collections.selection.length !== 1) {
+      return;
+    }
+
+    editor.actions.clearCollection(EntityCollectionType.selection);
+    this.hideCanvasFloatingToolbar();
+  }
+
   public readonly openDialog: AppInternalAction["openDialog"] = action((request) => {
     const target = normalizeDialogRequest(request);
 
     if (target === null) {
+      return;
+    }
+
+    if (target.dialogKey === "debug-log" && !this.internalState.settings.debugMode) {
       return;
     }
 
@@ -573,7 +607,9 @@ export class AppActionImpl implements AppAction, AppInternalAction {
   private ensureDialogState(dialogKey: DialogKey) {
     this.internalState.workbench.dialogState[dialogKey] ??= createDefaultDialogStateForKey(dialogKey);
 
-    return this.internalState.workbench.dialogState[dialogKey];
+    return this.internalState.workbench.dialogState[dialogKey] as NonNullable<
+      UiStateReadWrite["workbench"]["dialogState"][DialogKey]
+    >;
   }
 }
 

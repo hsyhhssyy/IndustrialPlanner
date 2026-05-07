@@ -1,5 +1,6 @@
 import { observer } from "mobx-react-lite";
 import type { AppHost } from "@/app/host/app-host";
+import { SelectionInspectorActionStrip } from "@/app/shell/inspector/selection-inspector-action-strip";
 import type { SelectionInspectorPanelProps } from "@/app/shell/inspector/selection-inspector-model";
 import { SelectionInspectorSlot } from "@/app/shell/inspector/selection-inspector-slot";
 import {
@@ -24,11 +25,19 @@ export const EditSelectionInspector = observer(function EditSelectionInspector({
 
   if (selectionCount > 1) {
     return (
-      <article className="definition-card">
-        <p>{translate("label.multiSelectionSummary")}</p>
-      </article>
+      <div className="cluster">
+        <SelectionInspectorActionStrip appHost={appHost} />
+        <article className="definition-card">
+          <p>{translate("label.multiSelectionSummary")}</p>
+        </article>
+      </div>
     );
   }
 
-  return <SelectionInspectorSlot appHost={appHost} translate={translate} />;
+  return (
+    <div className="cluster">
+      <SelectionInspectorActionStrip appHost={appHost} />
+      <SelectionInspectorSlot appHost={appHost} translate={translate} />
+    </div>
+  );
 });

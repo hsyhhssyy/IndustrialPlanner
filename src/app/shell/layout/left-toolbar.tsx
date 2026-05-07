@@ -33,23 +33,45 @@ const PRIMARY_TOOLBAR_ITEMS = [
     labelKey: "workbench.leftRail.history",
     panel: "history" as LeftToolbarPanel,
   },
+  {
+    id: "primary-base",
+    icon: "base" as const,
+    labelKey: "workbench.leftRail.base",
+    panel: "base" as LeftToolbarPanel,
+  },
+  {
+    id: "primary-simulation",
+    icon: "simulation" as const,
+    labelKey: "workbench.leftRail.simulation",
+    panel: "simulation" as LeftToolbarPanel,
+  },
 ];
 
 const UTILITY_TOOLBAR_ITEMS = [
   {
+    id: "utility-debug-log",
+    icon: "debug-log" as const,
+    labelKey: "workbench.utility.debugLogs",
+    dialogKey: "debug-log",
+    debugOnly: true,
+  },
+  {
     id: "utility-toolbox",
     icon: "toolbox" as const,
     labelKey: "workbench.utility.toolbox",
+    dialogKey: "toolbox",
   },
   {
     id: "utility-help",
     icon: "help" as const,
     labelKey: "workbench.utility.help",
+    dialogKey: "help",
   },
   {
     id: "utility-settings",
     icon: "settings" as const,
     labelKey: "workbench.utility.settings",
+    dialogKey: "settings",
   },
 ];
 
@@ -64,13 +86,17 @@ export const LeftToolbar = observer(function LeftToolbar({
   const toolboxDialogVisible = appHost.internalState.workbench.dialogState.toolbox.visible;
   const helpDialogVisible = appHost.internalState.workbench.dialogState.help.visible;
   const settingsDialogVisible = appHost.internalState.workbench.dialogState.settings.visible;
+  const debugLogDialogVisible = appHost.internalState.workbench.dialogState["debug-log"]?.visible ?? false;
+  const utilityToolbarItems = UTILITY_TOOLBAR_ITEMS.filter((item) => {
+    return item.debugOnly !== true || appHost.state.settings.debugMode;
+  });
 
   return (
     <aside className="left-toolbar panel-surface">
       <div className="toolbar-rail-group">
         {PRIMARY_TOOLBAR_ITEMS.map((item) => {
           const label = t(item.labelKey);
-          const isActive = activePanel === item.panel;
+          const isActive = leftDockOpen && activePanel === item.panel;
 
           return (
             <button
@@ -99,34 +125,26 @@ export const LeftToolbar = observer(function LeftToolbar({
         })}
       </div>
       <div className="toolbar-rail-group toolbar-rail-utility">
-        {UTILITY_TOOLBAR_ITEMS.map((item) => {
+        {utilityToolbarItems.map((item) => {
           const label = t(item.labelKey);
+          const isDebugLogButton = item.id === "utility-debug-log";
           const isToolboxButton = item.id === "utility-toolbox";
           const isHelpButton = item.id === "utility-help";
           const isSettingsButton = item.id === "utility-settings";
-          const isActive = (isToolboxButton && toolboxDialogVisible)
+          const isActive = (isDebugLogButton && debugLogDialogVisible)
+            || (isToolboxButton && toolboxDialogVisible)
             || (isHelpButton && helpDialogVisible)
             || (isSettingsButton && settingsDialogVisible);
-          let handleClick = handleUiEvent;
-
-          if (item.id === "utility-toolbox") {
-            handleClick = () => {
-              appHost.internalActions.openDialog("toolbox");
+          const handleClick = item.dialogKey === undefined
+            ? handleUiEvent
+            : () => {
+              appHost.internalActions.openDialog(item.dialogKey);
             };
-          } else if (item.id === "utility-help") {
-            handleClick = () => {
-              appHost.internalActions.openDialog("help");
-            };
-          } else if (item.id === "utility-settings") {
-            handleClick = () => {
-              appHost.internalActions.openDialog("settings");
-            };
-          }
 
           return (
             <button
               aria-label={label}
-              aria-pressed={isToolboxButton || isHelpButton || isSettingsButton ? isActive : undefined}
+              aria-pressed={isDebugLogButton || isToolboxButton || isHelpButton || isSettingsButton ? isActive : undefined}
               className={isActive
                 ? "rail-button rail-button-utility is-active"
                 : "rail-button rail-button-utility"}

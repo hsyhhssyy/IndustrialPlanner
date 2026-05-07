@@ -1,5 +1,4 @@
-import type { GridFloatPoint, GridRect } from "../shared/grid";
-import type { ClientPixelRect } from "../shared/client-pixel";
+import type { GridRect } from "../shared/grid";
 import type {
 	EditorViewportState,
 	EntityCollections,

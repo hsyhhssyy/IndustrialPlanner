@@ -30,7 +30,7 @@ import {
 } from "./state-impl";
 
 export const APP_SETTINGS_LOCAL_STORAGE_KEY = "v3-app-settings";
-export const WORKBENCH_STATE_LOCAL_STORAGE_KEY = "v3-workbench-state";
+export const WORKBENCH_STATE_LOCAL_STORAGE_KEY = "v4-workbench-state";
 
 export function hookLocalstorage(appHost: AppHost): () => void {
   const persistedAppSettings = readFromLocalStorage<AppSettingsReadWrite>(
@@ -102,6 +102,17 @@ function normalizePersistedAppSettings(
     hypergryphImmediateMarquee: typeof persistedAppSettings.hypergryphImmediateMarquee === "boolean"
       ? persistedAppSettings.hypergryphImmediateMarquee
       : fallback.hypergryphImmediateMarquee,
+    hypergryphSelectionRightDockSync:
+      typeof persistedAppSettings.hypergryphSelectionRightDockSync === "boolean"
+        ? persistedAppSettings.hypergryphSelectionRightDockSync
+        : fallback.hypergryphSelectionRightDockSync,
+    hypergryphInspectorOpenOnSecondClick:
+      typeof persistedAppSettings.hypergryphInspectorOpenOnSecondClick === "boolean"
+        ? persistedAppSettings.hypergryphInspectorOpenOnSecondClick
+        : fallback.hypergryphInspectorOpenOnSecondClick,
+    gameUseInspectorPanel: typeof persistedAppSettings.gameUseInspectorPanel === "boolean"
+      ? persistedAppSettings.gameUseInspectorPanel
+      : fallback.gameUseInspectorPanel,
     gameShowHotkeys: typeof persistedAppSettings.gameShowHotkeys === "boolean"
       ? persistedAppSettings.gameShowHotkeys
       : fallback.gameShowHotkeys,
@@ -553,18 +564,6 @@ function normalizePersistedRightDockActiveTab(
     return persistedWorkbenchState.rightDockActiveTab;
   }
 
-  if (persistedWorkbenchState.rightDockBaseExpanded === true) {
-    return "base";
-  }
-
-  if (persistedWorkbenchState.rightDockPowerExpanded === true) {
-    return "power";
-  }
-
-  if (persistedWorkbenchState.rightDockSelectionExpanded === true) {
-    return "selection";
-  }
-
   return fallback;
 }
 
@@ -590,6 +589,18 @@ function normalizePersistedDialogStateMap(
       "settings",
       persistedDialogStateMap.settings,
       fallback.settings,
+    ),
+    "debug-log": persistedDialogStateMap["debug-log"] !== undefined || fallback["debug-log"] !== undefined
+      ? normalizePersistedDialogState(
+        "debug-log",
+        persistedDialogStateMap["debug-log"],
+        fallback["debug-log"] ?? createDefaultDialogStateForKey("debug-log"),
+      )
+      : undefined,
+    inspector: normalizePersistedDialogState(
+      "inspector",
+      persistedDialogStateMap.inspector,
+      fallback.inspector,
     ),
   };
 

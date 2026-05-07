@@ -141,29 +141,43 @@ function resolveBeltTintColor(options: {
     context.theme,
     context.theme.renderer.beltTileStrokeColorKey,
   )
+  const selectionTintColor = resolveAppThemeColorNumber(
+    context.theme,
+    context.theme.renderer.worldPreviewRectFillColorKey,
+  )
 
   if (!collections) {
     return ordinaryColor
   }
 
   const previewCollection = collections[EntityCollectionType.preview]
+  const marqueeCollection = collections[EntityCollectionType.marquee]
+  const reverseMarqueeCollection = collections[EntityCollectionType.reverseMarquee]
   const logisticsHeadCollection = collections[EntityCollectionType.logisticsHead]
   const selectionCollection = collections[EntityCollectionType.selection]
   const isPreview = previewCollection?.contains(entityId) ?? false
+  const isPreviewGroup = isPreview && (previewCollection?.length ?? 0) > 1
+  const isMarquee = marqueeCollection?.contains(entityId) ?? false
+  const isReverseMarquee = reverseMarqueeCollection?.contains(entityId) ?? false
   const isPlacementHead = logisticsHeadCollection?.contains(entityId) ?? false
   const isSelected = selectionCollection?.contains(entityId) ?? false
 
-  if (isPreview || isPlacementHead || (isSelected && selectionCollection.length === 1)) {
+  if (
+    isPreviewGroup
+    || isMarquee
+    || (isSelected && (selectionCollection?.length ?? 0) > 1 && !isReverseMarquee)
+  ) {
+    return selectionTintColor
+  }
+
+  if (
+    isPreview
+    || isPlacementHead
+    || (isSelected && (selectionCollection?.length ?? 0) === 1 && !isReverseMarquee)
+  ) {
     return context.theme.colorScheme === "dark"
       ? 0xffffff
       : resolveAppThemeColorNumber(context.theme, "text-2")
-  }
-
-  if (isSelected && selectionCollection.length > 1) {
-    return resolveAppThemeColorNumber(
-      context.theme,
-      context.theme.renderer.worldPreviewRectFillColorKey,
-    )
   }
 
   return ordinaryColor

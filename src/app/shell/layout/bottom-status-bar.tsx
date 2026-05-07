@@ -66,9 +66,10 @@ export const BottomStatusBar = observer(function BottomStatusBar({ appHost }: { 
     settings,
   } = appHost.state;
   const activeTool = appHost.state.activeTool;
+  const showRightDock = settings.gameUseInspectorPanel && rightDockOpen;
   const visibleViews = [
     leftDockOpen ? t("view.library") : null,
-    rightDockOpen ? t("view.inspector") : null,
+    showRightDock ? t("view.inspector") : null,
   ].filter((value): value is string => value !== null);
   const visibleViewLabel = visibleViews.length > 0
     ? visibleViews.join(" / ")

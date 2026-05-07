@@ -1,20 +1,9 @@
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
-import type { CanvasFloatingToolbarButtonId } from "@/app/state/state-impl";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
 import type { GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
-
-const SELECT_FLOATING_TOOLBAR_BUTTON_IDS = [
-  "canvas-floating-toolbar-button-move",
-  "canvas-floating-toolbar-button-delete",
-] as const satisfies readonly CanvasFloatingToolbarButtonId[];
-
-const SELECT_STRICT_LOGISTICS_FLOATING_TOOLBAR_BUTTON_IDS = [
-  ...SELECT_FLOATING_TOOLBAR_BUTTON_IDS,
-  "canvas-floating-toolbar-button-delete-many",
-] as const satisfies readonly CanvasFloatingToolbarButtonId[];
 
 export function createHypergryphSelectGestureModule(): GestureMappingModule<AppHost> {
   return {
@@ -62,7 +51,7 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
           return { status: "ignored" };
         }
 
-        restoreSelectionToolbar(context.appHost);
+        context.appHost.internalActions.hideCanvasFloatingToolbar();
         return { status: "handled" };
       }
 
@@ -71,13 +60,32 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
         return { status: "ignored" };
       }
 
+      const revealInspector = () => {
+        if (context.appHost.state.settings.gameUseInspectorPanel) {
+          context.appHost.internalActions.setRightDockActiveTab("selection");
+          if (!context.appHost.internalState.workbench.rightDockOpen) {
+            context.appHost.internalActions.toggleRightDock();
+          }
+          return;
+        }
+
+        context.appHost.internalActions.openDialog("inspector");
+      };
+
       const selectEntity = (options: {
         entityId: string;
         definitionId: string;
       }) => {
         const selection = editor.state.collections.selection;
+        const openInspectorOnSecondClick =
+          context.appHost.state.settings.hypergryphInspectorOpenOnSecondClick;
 
         if (selection.length === 1 && selection.contains(options.entityId)) {
+          if (openInspectorOnSecondClick) {
+            revealInspector();
+            return;
+          }
+
           clearSelection();
           return;
         }
@@ -91,22 +99,28 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
           entityId: options.entityId,
         });
 
-        context.appHost.internalActions.setRightDockActiveTab("selection");
-        if (!context.appHost.internalState.workbench.rightDockOpen) {
-          context.appHost.internalActions.toggleRightDock();
+        if (
+          context.appHost.state.settings.gameUseInspectorPanel
+          && context.appHost.state.settings.hypergryphSelectionRightDockSync
+          && !openInspectorOnSecondClick
+        ) {
+          context.appHost.internalActions.setRightDockActiveTab("selection");
+          if (!context.appHost.internalState.workbench.rightDockOpen) {
+            context.appHost.internalActions.toggleRightDock();
+          }
         }
-
-        context.appHost.internalActions.showCanvasFloatingToolbarForCollection(
-          resolveSelectionToolbarButtonIds(
-            context.workspace.registry.queries.isDedicatedLogisticsDevice(options.definitionId),
-          ),
-          EntityCollectionType.selection,
-        );
       };
 
       const clearSelection = () => {
         editor.actions.clearCollection(EntityCollectionType.selection);
         context.appHost.internalActions.hideCanvasFloatingToolbar();
+
+        if (
+          context.appHost.state.settings.gameUseInspectorPanel
+          && context.appHost.internalState.workbench.rightDockOpen
+        ) {
+          context.appHost.internalActions.toggleRightDock();
+        }
       };
 
       switch (event.type) {
@@ -142,38 +156,4 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
       }
     },
   };
-}
-
-function restoreSelectionToolbar(appHost: AppHost): void {
-  const editor = appHost.workspace.editor;
-  if (editor === null) {
-    return;
-  }
-
-  const selection = editor.state.collections.selection;
-  if (selection.length === 0) {
-    return;
-  }
-
-  const shouldShowDeleteMany = [...selection].every((entityId) => {
-    const entity = editor.queries.getEntityById(entityId);
-
-    return (
-      entity !== null
-      && appHost.workspace.registry.queries.isDedicatedLogisticsDevice(entity.definitionId)
-    );
-  });
-
-  appHost.internalActions.showCanvasFloatingToolbarForCollection(
-    resolveSelectionToolbarButtonIds(shouldShowDeleteMany),
-    EntityCollectionType.selection,
-  );
-}
-
-function resolveSelectionToolbarButtonIds(
-  isDedicatedLogisticsDevice: boolean,
-): readonly CanvasFloatingToolbarButtonId[] {
-  return isDedicatedLogisticsDevice
-    ? SELECT_STRICT_LOGISTICS_FLOATING_TOOLBAR_BUTTON_IDS
-    : SELECT_FLOATING_TOOLBAR_BUTTON_IDS;
 }

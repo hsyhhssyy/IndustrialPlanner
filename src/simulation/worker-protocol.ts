@@ -2,6 +2,7 @@ import type {
   CompiledSimulationTopology,
   SimulationRuntimeStatus,
   SimulationStartResult,
+  SimulationTopologyMigration,
   SimulationTickSnapshotResult,
 } from "./types";
 
@@ -10,6 +11,7 @@ export type SimulationWorkerRequest =
       readonly type: "load-topology";
       readonly requestId: number;
       readonly topology: CompiledSimulationTopology;
+      readonly migration?: SimulationTopologyMigration;
     }
   | {
       readonly type: "get-tick-snapshot";

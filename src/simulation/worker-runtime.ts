@@ -5,6 +5,7 @@ import type {
   SimulationTickSnapshotResult,
   SimulationRuntimeStatus,
   SimulationStartResult,
+  SimulationTopologyMigration,
 } from "./types";
 import type {
   SimulationWorkerRequest,
@@ -19,6 +20,8 @@ import { rotateRoutingCursors } from "./runtime/stage-4-rotate-routing-cursors";
 import { settleRecipes } from "./runtime/stage-5-settle-recipes";
 import { maintainTransportComponentDomains } from "./runtime/runtime-slot-access";
 import {
+  cloneSimulationMutableRuntimeState,
+  createMigratedSimulationMutableRuntimeState,
   createSimulationMutableRuntimeState,
   type SimulationMutableRuntimeState,
 } from "./runtime/runtime-state";
@@ -29,6 +32,7 @@ export class SimulationWorkerRuntime {
   private topology: CompiledSimulationTopology | null = null;
   private runtimeState: SimulationMutableRuntimeState | null = null;
   private tickSnapshots = new Map<number, RuntimeTickSnapshot>();
+  private tickRuntimeStates = new Map<number, SimulationMutableRuntimeState>();
   private nextTickNumber = 0;
   private retainedFromTick: number | null = null;
   private latestTickNumber: number | null = null;
@@ -41,7 +45,7 @@ export class SimulationWorkerRuntime {
         return {
           type: "topology-loaded",
           requestId: request.requestId,
-          result: this.loadTopology(request.topology),
+          result: this.loadTopology(request.topology, request.migration),
           status: this.getStatus(),
         };
       case "get-tick-snapshot":
@@ -67,11 +71,31 @@ export class SimulationWorkerRuntime {
     };
   }
 
-  private loadTopology(topology: CompiledSimulationTopology): SimulationStartResult {
+  private loadTopology(
+    topology: CompiledSimulationTopology,
+    migration?: SimulationTopologyMigration,
+  ): SimulationStartResult {
+    const previousTopology = this.topology;
+    const previousBaseState = migration === undefined
+      ? null
+      : this.tickRuntimeStates.get(migration.baseTickNumber) ?? null;
+    const nextRuntimeState = previousTopology !== null && previousBaseState !== null && migration !== undefined
+      ? createMigratedSimulationMutableRuntimeState({
+          previousTopology,
+          previousState: previousBaseState,
+          topology,
+          resetDeviceIds: migration.resetDeviceIds,
+        })
+      : createSimulationMutableRuntimeState(topology);
+    if (previousBaseState === null && migration !== undefined) {
+      nextRuntimeState.tickNumber = Math.max(0, Math.trunc(migration.baseTickNumber));
+    }
+
     this.topology = topology;
-    this.runtimeState = createSimulationMutableRuntimeState(topology);
+    this.runtimeState = nextRuntimeState;
     this.tickSnapshots.clear();
-    this.nextTickNumber = 0;
+    this.tickRuntimeStates.clear();
+    this.nextTickNumber = this.runtimeState.tickNumber;
     this.retainedFromTick = null;
     this.latestTickNumber = null;
     this.mode = "running";
@@ -147,6 +171,7 @@ export class SimulationWorkerRuntime {
     for (const retainedTickNumber of [...this.tickSnapshots.keys()]) {
       if (retainedTickNumber < tickNumber) {
         this.tickSnapshots.delete(retainedTickNumber);
+        this.tickRuntimeStates.delete(retainedTickNumber);
       }
     }
     this.retainedFromTick = tickNumber;
@@ -171,6 +196,7 @@ export class SimulationWorkerRuntime {
     while (this.tickSnapshots.size < MAX_RETAINED_TICKS) {
       const currentTick = this.createNextTickSnapshot(this.nextTickNumber);
       this.tickSnapshots.set(this.nextTickNumber, currentTick);
+      this.tickRuntimeStates.set(this.nextTickNumber, cloneSimulationMutableRuntimeState(this.runtimeState));
       this.latestTickNumber = this.nextTickNumber;
       this.retainedFromTick = Math.min(
         this.retainedFromTick ?? this.nextTickNumber,
@@ -185,9 +211,14 @@ export class SimulationWorkerRuntime {
       throw new Error("Simulation runtime is not initialized.");
     }
 
+    if (tickNumber < this.runtimeState.tickNumber) {
+      throw new Error(`Cannot rewind simulation runtime from tick ${this.runtimeState.tickNumber} to ${tickNumber}.`);
+    }
+
+    const shouldAdvance = tickNumber > this.runtimeState.tickNumber;
     this.runtimeState.tickNumber = tickNumber;
 
-    if (tickNumber > 0) {
+    if (shouldAdvance) {
       advanceDevices(this.topology, this.runtimeState);
       buildSolveGraph(this.topology, this.runtimeState);
       solveTransferGraph(this.topology, this.runtimeState);

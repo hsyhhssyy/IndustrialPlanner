@@ -25,11 +25,13 @@ interface DialogShellProps {
   tabs?: readonly DialogShellTab[];
   className?: string;
   bodyClassName?: string;
+  shellStyle?: CSSProperties;
   compactMobileLayout?: boolean;
   maximizeTitle: string;
   restoreTitle: string;
   closeTitle: string;
   immersiveMaximized?: boolean;
+  showMaximizeButton?: boolean;
   onClose: () => void;
   onToggleMaximized: () => void;
   onTabChange?: (tabId: string) => void;
@@ -47,11 +49,13 @@ export const DialogShell = observer(function DialogShell({
   tabs = [],
   className,
   bodyClassName,
+  shellStyle,
   compactMobileLayout = false,
   maximizeTitle,
   restoreTitle,
   closeTitle,
   immersiveMaximized = false,
+  showMaximizeButton = true,
   onClose,
   onToggleMaximized,
   onTabChange,
@@ -122,12 +126,13 @@ export const DialogShell = observer(function DialogShell({
     return null;
   }
 
-  const shellStyle: CSSProperties | undefined = dialogState.maximized
-    ? undefined
+  const resolvedShellStyle: CSSProperties | undefined = dialogState.maximized
+    ? shellStyle
     : {
       transform: `translate(${dialogState.offsetX}px, ${dialogState.offsetY}px)`,
       ...(liveSize.width === null ? {} : { width: `${liveSize.width}px` }),
       ...(liveSize.height === null ? {} : { height: `${liveSize.height}px` }),
+      ...shellStyle,
     };
   const classPrefix = className ?? "dialog-shell";
   const shellClassName = [
@@ -299,7 +304,7 @@ export const DialogShell = observer(function DialogShell({
         data-dialog-key={dialogKey}
         ref={shellRef}
         role="dialog"
-        style={shellStyle}
+        style={resolvedShellStyle}
       >
         <header className={headerClassName} onPointerDown={handleHeaderPointerDown}>
           <div className={["dialog-shell-header-copy", `${classPrefix}-header-copy`].join(" ")}>
@@ -332,18 +337,20 @@ export const DialogShell = observer(function DialogShell({
             </div>
           ) : null}
           <div className={["dialog-shell-header-actions", `${classPrefix}-header-actions`].join(" ")}>
-            <button
-              aria-label={maximizeButtonTitle}
-              className={`dialog-shell-header-button ${classPrefix}-header-button`}
-              onClick={onToggleMaximized}
-              title={maximizeButtonTitle}
-              type="button"
-            >
-              <span className="top-bar-toggle-icon">
-                <WorkbenchIcon kind={dialogState.maximized ? "shrink" : "expand"} />
-              </span>
-              <span className="sr-only">{maximizeButtonTitle}</span>
-            </button>
+            {showMaximizeButton ? (
+              <button
+                aria-label={maximizeButtonTitle}
+                className={`dialog-shell-header-button ${classPrefix}-header-button`}
+                onClick={onToggleMaximized}
+                title={maximizeButtonTitle}
+                type="button"
+              >
+                <span className="top-bar-toggle-icon">
+                  <WorkbenchIcon kind={dialogState.maximized ? "shrink" : "expand"} />
+                </span>
+                <span className="sr-only">{maximizeButtonTitle}</span>
+              </button>
+            ) : null}
             <button
               aria-label={closeTitle}
               className={`dialog-shell-header-button ${classPrefix}-header-button ${classPrefix}-close`}

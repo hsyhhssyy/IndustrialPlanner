@@ -442,6 +442,70 @@ describe("GenericDeviceSprite", () => {
     ))
   })
 
+  it("uses the preview blue tint for marquee candidates before apply", async () => {
+    const resolvedTexture = createLoadedTextureMock("belt-device-texture")
+    const entityLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      "device-sprite-belt_straight_1x1": resolvedTexture,
+    })
+    const sprite = new BeltSprite(
+      "belt-entity-marquee",
+      createBeltEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: {} as never,
+    })
+
+    await flushMicrotasks(4)
+
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+      marqueeIds: ["belt-entity-marquee"],
+    }))
+
+    expect(resolveEntitySprite(entityLayer)?.tint).toBe(resolveAppThemeColorNumber(
+      AYU_LIGHT_THEME,
+      AYU_LIGHT_THEME.renderer.worldPreviewRectFillColorKey,
+    ))
+  })
+
+  it("falls back to the ordinary tint when reverse marquee suppresses selection", async () => {
+    const resolvedTexture = createLoadedTextureMock("belt-device-texture")
+    const entityLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      "device-sprite-belt_straight_1x1": resolvedTexture,
+    })
+    const sprite = new BeltSprite(
+      "belt-entity-reverse-marquee",
+      createBeltEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: {} as never,
+    })
+
+    await flushMicrotasks(4)
+
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+      selectionIds: ["belt-entity-reverse-marquee"],
+      previewIds: [],
+      reverseMarqueeIds: ["belt-entity-reverse-marquee"],
+    }))
+
+    expect(resolveEntitySprite(entityLayer)?.tint).toBe(resolveAppThemeColorNumber(
+      AYU_LIGHT_THEME,
+      AYU_LIGHT_THEME.renderer.beltTileStrokeColorKey,
+    ))
+  })
+
   it("uses white tint for preview and logistics head under the dark theme", async () => {
     const resolvedTexture = createLoadedTextureMock("belt-device-texture")
     const entityLayer = createLayerStub()
@@ -1180,6 +1244,8 @@ function createBeltEntityDefinitionStub(): EntityDefinition {
 function createRenderContextStub(options: {
   selectionIds: readonly string[];
   previewIds: readonly string[];
+  marqueeIds?: readonly string[];
+  reverseMarqueeIds?: readonly string[];
   logisticsHeadIds?: readonly string[];
   theme?: typeof AYU_LIGHT_THEME;
 }) {
@@ -1194,8 +1260,8 @@ function createRenderContextStub(options: {
           },
           collections: {
             [EntityCollectionType.selection]: createCollectionStub(options.selectionIds),
-            [EntityCollectionType.marquee]: createCollectionStub([]),
-            [EntityCollectionType.reverseMarquee]: createCollectionStub([]),
+            [EntityCollectionType.marquee]: createCollectionStub(options.marqueeIds ?? []),
+            [EntityCollectionType.reverseMarquee]: createCollectionStub(options.reverseMarqueeIds ?? []),
             [EntityCollectionType.preview]: createCollectionStub(options.previewIds),
             [EntityCollectionType.ghost]: createCollectionStub([]),
             [EntityCollectionType.logisticsHead]: createCollectionStub(options.logisticsHeadIds ?? []),

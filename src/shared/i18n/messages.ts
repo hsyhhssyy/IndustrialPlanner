@@ -145,6 +145,10 @@ export type MessageKey =
   | "toolboxDialog.empty"
   | "toolboxDialog.maximize"
   | "toolboxDialog.restore"
+  | "debugLogDialog.title"
+  | "debugLogDialog.empty"
+  | "debugLogDialog.maximize"
+  | "debugLogDialog.restore"
   | "helpDialog.title"
   | "helpDialog.description"
   | "helpDialog.tab.overview"
@@ -180,6 +184,10 @@ export type MessageKey =
   | "settingsField.arknightsImmediateMoveDescription"
   | "settingsField.arknightsImmediateMarquee"
   | "settingsField.arknightsImmediateMarqueeDescription"
+  | "settingsField.arknightsSelectionRightDockSync"
+  | "settingsField.arknightsSelectionRightDockSyncDescription"
+  | "settingsField.arknightsInspectorOpenOnSecondClick"
+  | "settingsField.arknightsInspectorOpenOnSecondClickDescription"
   | "settingsField.shortcut-place-conveyor"
   | "settingsField.shortcut-place-conveyorDescription"
   | "settingsField.shortcut-place-pipe"
@@ -200,6 +208,8 @@ export type MessageKey =
   | "settingsField.shortcut-delete-deviceDescription"
   | "settingsField.useSimplifiedDeviceIcons"
   | "settingsField.useSimplifiedDeviceIconsDescription"
+  | "settingsField.useInspectorPanel"
+  | "settingsField.useInspectorPanelDescription"
   | "settingsField.showHotkeys"
   | "settingsField.showHotkeysDescription"
   | "settingsField.alwaysShowGridLines"
@@ -328,7 +338,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "rightDock.collapsed": "检视",
     "rightDock.base": "基地",
     "rightDock.power": "电力",
-    "rightDock.selection": "属性",
+    "rightDock.selection": "设备属性",
     "rightDock.simulation": "仿真",
     "section.configFields": "配置字段",
     "section.runtimeDetails": "运行态细节",
@@ -405,6 +415,10 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "toolboxDialog.empty": "当前工具箱内容尚未填充，这里先保留为空面板。",
     "toolboxDialog.maximize": "最大化工具箱",
     "toolboxDialog.restore": "还原工具箱",
+    "debugLogDialog.title": "调试日志",
+    "debugLogDialog.empty": "当前还没有捕获到调试日志。",
+    "debugLogDialog.maximize": "最大化调试日志",
+    "debugLogDialog.restore": "还原调试日志",
     "moduleBalancing.canvas": "画布",
     "moduleBalancing.newCanvas": "新建画布",
     "moduleBalancing.deleteCanvas": "删除画布",
@@ -492,6 +506,10 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.arknightsImmediateMoveDescription": "从一个已选择的设备拖动时，立即触发移动。",
     "settingsField.arknightsImmediateMarquee": "立即框选",
     "settingsField.arknightsImmediateMarqueeDescription": "鼠标模式：从画布空白处开始拖动时，立即开始框选。\n触控模式：从画布空白处长按并拖动时，立即开始框选。\n开启该选项会强制打开立即移动。",
+    "settingsField.arknightsSelectionRightDockSync": "右侧面板与选择联动",
+    "settingsField.arknightsSelectionRightDockSyncDescription": "选择模式下，单选设备时自动打开右侧面板；关闭右侧面板时同步取消单选，取消单选时同步关闭右侧面板。",
+    "settingsField.arknightsInspectorOpenOnSecondClick": "再次点击打开设备属性",
+    "settingsField.arknightsInspectorOpenOnSecondClickDescription": "开启后，首次点击设备只会选中；再次点击已选中设备时才打开 inspector 面板或对话框，并禁用再次点击取消选择。",
     "settingsField.shortcut-place-conveyor": "布设传送带",
     "settingsField.shortcut-place-conveyorDescription": "设置布设传送带的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-place-pipe": "布设管道",
@@ -510,8 +528,10 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-rotateDescription": "设置旋转预览设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-delete-device": "删除设备",
     "settingsField.shortcut-delete-deviceDescription": "设置删除选中设备的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
-    "settingsField.useSimplifiedDeviceIcons": "使用简笔画设备图片",
-    "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图简笔画显示方式，不会提高性能。",
+    "settingsField.useSimplifiedDeviceIcons": "使用蓝图样式的设备图片",
+    "settingsField.useSimplifiedDeviceIconsDescription": "使用蓝图样式显示设备图片，不会提高性能。",
+    "settingsField.useInspectorPanel": "使用右侧面板显示设备属性",
+    "settingsField.useInspectorPanelDescription": "开启后在右侧面板显示 inspector；关闭后改为在选择模式下弹出 inspector 对话框。",
     "settingsField.showHotkeys": "显示快捷键",
     "settingsField.showHotkeysDescription": "在界面按钮上展示对应的快捷键提示。",
     "settingsField.alwaysShowGridLines": "总是显示网格线",
@@ -639,7 +659,7 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "rightDock.collapsed": "Inspector",
     "rightDock.base": "Base",
     "rightDock.power": "Power",
-    "rightDock.selection": "Properties",
+    "rightDock.selection": "Device Properties",
     "rightDock.simulation": "Simulation",
     "section.configFields": "Config Fields",
     "section.runtimeDetails": "Runtime Details",
@@ -716,6 +736,10 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "toolboxDialog.empty": "Toolbox content has not been filled in yet, so this panel is intentionally empty for now.",
     "toolboxDialog.maximize": "Maximize Toolbox",
     "toolboxDialog.restore": "Restore Toolbox",
+    "debugLogDialog.title": "Debug Logs",
+    "debugLogDialog.empty": "No debug logs have been captured yet.",
+    "debugLogDialog.maximize": "Maximize Debug Logs",
+    "debugLogDialog.restore": "Restore Debug Logs",
     "moduleBalancing.canvas": "Canvas",
     "moduleBalancing.newCanvas": "New Canvas",
     "moduleBalancing.deleteCanvas": "Delete Canvas",
@@ -803,6 +827,10 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.arknightsImmediateMoveDescription": "Immediately trigger move when dragging from a selected device.",
     "settingsField.arknightsImmediateMarquee": "Immediate Marquee",
     "settingsField.arknightsImmediateMarqueeDescription": "Mouse mode: Immediately start marquee selection when dragging from empty canvas space.\nTouch mode: Immediately start marquee selection when long-pressing and dragging from empty canvas space.\nEnabling this option forces Immediate Move on.",
+    "settingsField.arknightsSelectionRightDockSync": "Sync Right Dock With Selection",
+    "settingsField.arknightsSelectionRightDockSyncDescription": "In select mode, automatically open the right dock for a single selected device, and keep dock closing and deselection in sync.",
+    "settingsField.arknightsInspectorOpenOnSecondClick": "Open Inspector On Second Click",
+    "settingsField.arknightsInspectorOpenOnSecondClickDescription": "When enabled, the first click only selects a device. Click the selected device again to open the inspector panel or dialog, and disable deselect-on-second-click.",
     "settingsField.shortcut-place-conveyor": "Place Conveyor",
     "settingsField.shortcut-place-conveyorDescription": "Set the shortcut key for placing conveyors; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-place-pipe": "Place Pipe",
@@ -823,6 +851,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-delete-deviceDescription": "Set the shortcut key for deleting selected devices; editable only when Arknights Operation Mode is off.",
     "settingsField.useSimplifiedDeviceIcons": "Use Simplified Device Icons",
     "settingsField.useSimplifiedDeviceIconsDescription": "Render devices with blueprint-style icons; this does not improve performance.",
+    "settingsField.useInspectorPanel": "Use Right Panel For Device Properties",
+    "settingsField.useInspectorPanelDescription": "When enabled, render the inspector in the right dock. When disabled, open it as a dialog in select mode.",
     "settingsField.alwaysShowGridLines": "Always Show Grid Lines",
     "settingsField.alwaysShowGridLinesDescription": "When enabled, grid lines are always visible. When disabled, marquee mode still shows the full grid, while other modes only show grid lines near the current preview.",
     "settingsField.showGrassBackground": "Grass Background",

@@ -170,6 +170,32 @@ describe("createSimulationHost", () => {
     host.dispose()
   })
 
+  it("snaps playback forward when it asks for a tick already cleared by the worker", async () => {
+    vi.stubGlobal("Worker", undefined)
+
+    const { workspace } = createWorkspace(createDummyWorldDocument())
+    const host = createSimulationHost(workspace)
+
+    await host.actions.start()
+    const retainedTick = await host.internalActions.syncToTick(50)
+
+    expect(retainedTick.status).toBe("ready")
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(50)
+    expect(host.internalState.currentPlaybackTickNumber).toBe(0)
+
+    await host.actions.advancePlaybackByDeltaMs(1000 / STANDARD_TICK_RATE_PER_SECOND)
+
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(50)
+    expect(host.internalState.currentPlaybackTickNumber).toBe(50)
+
+    await host.actions.advancePlaybackByDeltaMs(1000 / STANDARD_TICK_RATE_PER_SECOND)
+
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(51)
+    expect(host.internalState.currentPlaybackTickNumber).toBe(51)
+
+    host.dispose()
+  })
+
   it("does nothing when playback advances outside the start state", async () => {
     vi.stubGlobal("Worker", undefined)
 

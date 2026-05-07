@@ -92,6 +92,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
               appHost: context.appHost,
               editor,
               position: event.position,
+              allowMouseEntryAnchorInit: true,
             });
 
           case "mouse dragmove":
@@ -103,6 +104,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
               appHost: context.appHost,
               editor,
               position: event.position,
+              allowMouseEntryAnchorInit: false,
             });
 
           case "touch dragmove":
@@ -110,6 +112,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
               appHost: context.appHost,
               editor,
               position: event.position,
+              allowMouseEntryAnchorInit: false,
             });
 
           case "mouse dragend":
@@ -547,16 +550,36 @@ function driveMovePreview(options: {
   appHost: AppHost;
   editor: EditorContract;
   position: GesturePosition;
+  allowMouseEntryAnchorInit: boolean;
 }): GestureHandleResult {
   try {
-    const moveAnchor = options.appHost.internalState.runtime.moveAnchor;
+    const beforeRect = options.editor.queries.findEntityCollectionGridRect(
+      EntityCollectionType.preview,
+    );
+    if (beforeRect === null) {
+      options.appHost.internalState.runtime.moveAnchor = null;
+      return { status: "ignored" };
+    }
+
+    const moveAnchor = resolveMovePreviewAnchor({
+      appHost: options.appHost,
+      beforeRect,
+      allowMouseEntryAnchorInit: options.allowMouseEntryAnchorInit,
+    });
+
     if (moveAnchor === null) {
       return { status: "ignored" };
     }
 
-    const nextGridPoint = options.editor.queries.findGridCellForClientPixlePoint(
-      options.position,
-    );
+    if (options.appHost.internalState.runtime.moveAnchor === null) {
+      options.appHost.internalState.runtime.moveAnchor = moveAnchor;
+    }
+
+    const nextGridPoint = resolveMovePreviewTargetGridPoint({
+      editor: options.editor,
+      position: options.position,
+      moveAnchor,
+    });
 
     if (nextGridPoint === null) {
       return { status: "ignored" };
@@ -564,14 +587,6 @@ function driveMovePreview(options: {
 
     if (areGridPointsEqual(moveAnchor, nextGridPoint)) {
       return { status: "handled" };
-    }
-
-    const beforeRect = options.editor.queries.findEntityCollectionGridRect(
-      EntityCollectionType.preview,
-    );
-    if (beforeRect === null) {
-      options.appHost.internalState.runtime.moveAnchor = null;
-      return { status: "ignored" };
     }
 
     options.editor.actions.moveCollectionTo({
@@ -602,6 +617,63 @@ function driveMovePreview(options: {
     options.appHost.internalState.runtime.moveAnchor = null;
     return { status: "ignored" };
   }
+}
+
+function resolveMovePreviewAnchor(options: {
+  appHost: AppHost;
+  beforeRect: GridRect;
+  allowMouseEntryAnchorInit: boolean;
+}): GridPoint | null {
+  const currentAnchor = options.appHost.internalState.runtime.moveAnchor;
+
+  if (currentAnchor !== null) {
+    return currentAnchor;
+  }
+
+  if (
+    !options.allowMouseEntryAnchorInit
+    || options.appHost.internalState.runtime.movePointerMode !== "mouse"
+  ) {
+    return null;
+  }
+
+  return resolveGridCellCenterPoint(resolveGridRectCenterCell(options.beforeRect));
+}
+
+function resolveMovePreviewTargetGridPoint(options: {
+  editor: EditorContract;
+  position: GesturePosition;
+  moveAnchor: GridPoint;
+}): GridPoint | null {
+  const gridCell = options.editor.queries.findGridCellForClientPixlePoint(
+    options.position,
+  );
+
+  if (gridCell === null) {
+    return null;
+  }
+
+  return usesGridCellCenterTracking(options.moveAnchor)
+    ? resolveGridCellCenterPoint(gridCell)
+    : gridCell;
+}
+
+function resolveGridRectCenterCell(gridRect: GridRect): GridPoint {
+  return {
+    x: gridRect.x + Math.floor((gridRect.width - 1) / 2),
+    y: gridRect.y + Math.floor((gridRect.height - 1) / 2),
+  };
+}
+
+function resolveGridCellCenterPoint(gridPoint: GridPoint): GridPoint {
+  return {
+    x: gridPoint.x + 0.5,
+    y: gridPoint.y + 0.5,
+  };
+}
+
+function usesGridCellCenterTracking(gridPoint: GridPoint): boolean {
+  return !Number.isInteger(gridPoint.x) || !Number.isInteger(gridPoint.y);
 }
 
 function rotateMovePreview(appHost: AppHost, editor: EditorContract): void {
