@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost, type AppHost } from "@/app/host/app-host";
 import { SelectionInspectorSlot } from "@/app/shell/inspector/selection-inspector-slot";
+import type { SimulationRunState } from "@/domain/contract/simulation-contract";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createDummyWorldDocument } from "@/editor/dummy-document";
@@ -34,37 +35,41 @@ function queryInspectorKeys(container: HTMLElement): string[] {
 function attachSimulationStub(
   workspace: WorkspaceContract,
   options: {
-    state: "stop" | "start" | "pause";
+    state: SimulationRunState;
     runtimeStatus: ReturnType<NonNullable<WorkspaceContract["simulation"]>["queries"]["getDeviceRuntimeStatus"]>;
   },
 ) {
   const getDeviceRuntimeStatus = vi.fn(() => options.runtimeStatus);
 
   workspace.simulation = {
-    state: options.state,
-    simulationSpeed: 1,
+    state: {
+      runningState: options.state,
+      simulationSpeed: 1,
+    },
     topology: createSnapshotStore(null),
     queries: {
-      getStatus: () => ({
-        mode: options.state === "start" ? "running" : "stopped",
-        topologyId: null,
-        documentHash: null,
-        retainedFromTick: null,
-        latestTickNumber: null,
-        bufferSize: 0,
-        maxBufferSize: 180,
-        error: null,
+      getStatusRuntimeJson: () => JSON.stringify({
+        state: {
+          runningState: options.state,
+          simulationSpeed: 1,
+          currentPlaybackTickNumber: 0,
+        },
+        runtimeStatus: {
+          mode: options.state === "start" ? "running" : "stopped",
+          topologyId: null,
+          documentHash: null,
+          retainedFromTick: null,
+          latestTickNumber: null,
+          bufferSize: 0,
+          maxBufferSize: 180,
+          error: null,
+        },
+        currentTick: null,
       }),
-      getCurrentTick: () => null,
-      getBeltCargoEntries: () => [],
       getDeviceRuntimeStatus,
     },
     actions: {
-      start: vi.fn(async () => ({
-        status: "started",
-        topologyId: null,
-        diagnostics: [],
-      })),
+      start: vi.fn(async () => {}),
       pause: vi.fn(),
       resume: vi.fn(),
       stop: vi.fn(),
@@ -127,10 +132,7 @@ describe("SelectionInspectorSlot", () => {
       vi.advanceTimersByTime(50);
     });
 
-    expect(queryInspectorKeys(container)).toEqual([
-      SIMULATION_RUNTIME_INSPECTOR_KEY,
-      "slot-config",
-    ]);
+    expect(queryInspectorKeys(container)).toEqual(["slot-config"]);
     expect(container.querySelector("[data-slot-config-group='item_storage']")).not.toBeNull();
     expect(container.querySelector("[data-slot-id='slot_1']")?.textContent).toContain("slot_1");
     expect(container.querySelector("[data-slot-id='slot_6']")?.textContent).toContain("slot_6");
@@ -217,7 +219,7 @@ describe("SelectionInspectorSlot", () => {
     expect(container.querySelector("[data-runtime-field='progressPercent']")?.textContent).toContain("25%");
   });
 
-  it("does not mount the simulation runtime inspector outside running simulation", () => {
+  it("keeps the simulation runtime inspector mounted outside stop state", () => {
     const workspace = createWorkspace();
     editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());

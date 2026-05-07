@@ -1060,8 +1060,6 @@ function createEntityDefinitionStub(): EntityDefinition {
     tags: [],
     requiresPower: false,
     powerDemand: 5,
-    recipe: null,
-    cacheLinks: [],
     inspectors: [],
     portGroups: [
       {

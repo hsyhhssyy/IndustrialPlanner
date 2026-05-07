@@ -75,6 +75,16 @@ export function findInputSlotForItem(options: {
   node: CompiledSimulationNode;
   itemType: string;
 }): string | null {
+  // 运输组件域锁检查：若该节点所属组件已锁定为其他物品类型，拒绝接受。
+  const device = options.topology.devices[options.node.deviceId];
+  const componentId = device?.transportComponentId ?? null;
+  if (componentId !== null) {
+    const domain = options.state.persistent.transportComponentDomain[componentId];
+    if (domain !== null && domain !== options.itemType) {
+      return null;
+    }
+  }
+
   const nodeState = options.state.transient.nodes[options.node.id];
   const excluded = new Set(nodeState?.excludedItemTypes ?? []);
 
@@ -312,15 +322,20 @@ function resolveRecipes(options: {
   device: CompiledSimulationDevice;
   ingredientSlotContents: readonly IngredientSlotContent[];
 }): readonly CompiledSimulationRecipePlan[] {
-  if (options.device.transportClass === "strict-belt") {
+  if (options.device.transportClass === "strict-belt" || options.device.transportClass === "strict-pipe") {
     if (options.ingredientSlotContents.length === 0) {
       return [];
     }
 
+    const durationSeconds = options.device.transportClass === "strict-belt" ? 2 : 0.5;
+    const recipeIdSuffix = options.device.transportClass === "strict-belt"
+      ? "dynamic-belt-transfer"
+      : "dynamic-pipe-transfer";
+
     return [{
-      recipeId: `${options.device.definitionId}:dynamic-belt-transfer`,
+      recipeId: `${options.device.definitionId}:${recipeIdSuffix}`,
       recipeType: "reserved-item",
-      durationTicks: Math.max(1, options.topology.standardTickRate),
+      durationTicks: Math.max(1, Math.round(durationSeconds * options.topology.standardTickRate)),
       inputs: [{ itemId: "any", amount: 1 }],
       outputs: [{ itemId: "same-as-input", amount: 1 }],
       ingredientNodeIds: options.device.ingredientNodeIds,
@@ -522,4 +537,41 @@ function recipeInputMatches(input: CompiledSimulationRecipeItem, itemType: strin
 
 function cloneSlotStates(slots: Record<string, RuntimeSlotState>): Record<string, RuntimeSlotState> {
   return Object.fromEntries(Object.entries(slots).map(([slotId, slot]) => [slotId, { ...slot }]));
+}
+
+/**
+ * 在每个 tick 结束后维护运输组件的域锁：
+ * - 若组件内任一槽位有物品，将域锁设置为该物品类型；
+ * - 若组件内所有槽位均已排空，清除域锁（设为 null），允许新类型物品进入。
+ *
+ * 订正（2026-05-07）：引入运输组件域锁机制，替代合并设备的方案。
+ */
+export function maintainTransportComponentDomains(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+): void {
+  for (const [componentId, component] of Object.entries(topology.transportComponents)) {
+    const domain = state.persistent.transportComponentDomain[componentId];
+    // 若组件已锁定，确认锁定的物品类型是否仍在组件内。
+    if (domain !== null) {
+      const domainStillPresent = component.slotIds.some((slotId) => {
+        const storageSlotId = resolveStorageSlotId(state, slotId);
+        return state.persistent.slots[storageSlotId]?.itemType === domain;
+      });
+      if (!domainStillPresent) {
+        state.persistent.transportComponentDomain[componentId] = null;
+      }
+      continue;
+    }
+
+    // 组件未锁定：扫描槽位，将域锁设为第一个非空槽位的物品类型。
+    for (const slotId of component.slotIds) {
+      const storageSlotId = resolveStorageSlotId(state, slotId);
+      const slotState = state.persistent.slots[storageSlotId];
+      if (slotState !== undefined && slotState.count > 0 && slotState.itemType !== null) {
+        state.persistent.transportComponentDomain[componentId] = slotState.itemType;
+        break;
+      }
+    }
+  }
 }

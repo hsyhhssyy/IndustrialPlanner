@@ -239,6 +239,8 @@ function createSlots(
  *   "input"         → ingredient
  *   "output"        → product
  *   "bidirectional" → universal
+ * 订正（2026-05-07）：当同组同时绑定输入/输出端口时，splitLinkType 决定拆分 link 类型；
+ *   share-all 保持两视图继承原 role，share-cap 则仅在 bidirectional 组上拆为输入 ingredient + 输出 product。
  *
  * 每个存储槽组编译后 = 一个 CacheGroup（求解图节点）。
  * 组内 slot 互斥（同物品不能出现在多槽），跨组不互斥（§3.4）。
@@ -248,12 +250,14 @@ function createStorageSlotGroup(
   kind: StorageSlotGroupDefinition["kind"],
   role: StorageSlotGroupDefinition["role"],
   slots: StorageSlotDefinition[],
+  splitLinkType: StorageSlotGroupDefinition["splitLinkType"] = "share-all",
 ): StorageSlotGroupDefinition {
   return {
     id,
     kind,
     role,
     slots,
+    splitLinkType,
   };
 }
 
@@ -717,6 +721,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   //
   // 传送带设备的特点（对应《仿真运行原理》§5.1.1-5.1.3）：
   //   - 2 个缓存组：ingredient + product（各 1 槽 × 1 容量）
+  // 订正（2026-05-07）：传送带现定义为 1 个 bidirectional 缓存组（1 槽 × 1 容量），编译时按 share-cap 分解为 ingredient 输入视图 + product 输出视图。
   //   - 2 个求解图节点
   //   - Cache Link 约束两端累计容量上限=1
   //   - reserved-item 搬运配方：any × 1s → same-as-input
@@ -755,21 +760,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [
       createStorageSlotGroup(
-        "item_input_buffer",
+        "item_buffer",
         "item",
-        "input",  // → ingredient
-        createSlots("input_slot", [1], "solid"),
-      ),
-      createStorageSlotGroup(
-        "item_output_buffer",
-        "item",
-        "output",  // → product
-        createSlots("output_slot", [1], "solid"),
+        "bidirectional",
+        createSlots("slot", [1], "solid"),
+        "share-cap",
       ),
     ],
     portStorageBindings: [
-      createBinding("bind_item_input", "item_input", "item_input_buffer"),
-      createBinding("bind_item_output", "item_output", "item_output_buffer"),
+      createBinding("bind_item_input", "item_input", "item_buffer"),
+      createBinding("bind_item_output", "item_output", "item_buffer"),
     ],
   }),
 
@@ -802,21 +802,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [
       createStorageSlotGroup(
-        "item_input_buffer",
+        "item_buffer",
         "item",
-        "input",
-        createSlots("input_slot", [1], "solid"),
-      ),
-      createStorageSlotGroup(
-        "item_output_buffer",
-        "item",
-        "output",
-        createSlots("output_slot", [1], "solid"),
+        "bidirectional",
+        createSlots("slot", [1], "solid"),
+        "share-cap",
       ),
     ],
     portStorageBindings: [
-      createBinding("bind_item_input", "item_input", "item_input_buffer"),
-      createBinding("bind_item_output", "item_output", "item_output_buffer"),
+      createBinding("bind_item_input", "item_input", "item_buffer"),
+      createBinding("bind_item_output", "item_output", "item_buffer"),
     ],
   }),
 
@@ -849,21 +844,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     storageSlotGroups: [
       createStorageSlotGroup(
-        "item_input_buffer",
+        "item_buffer",
         "item",
-        "input",
-        createSlots("input_slot", [1], "solid"),
-      ),
-      createStorageSlotGroup(
-        "item_output_buffer",
-        "item",
-        "output",
-        createSlots("output_slot", [1], "solid"),
+        "bidirectional",
+        createSlots("slot", [1], "solid"),
+        "share-cap",
       ),
     ],
     portStorageBindings: [
-      createBinding("bind_item_input", "item_input", "item_input_buffer"),
-      createBinding("bind_item_output", "item_output", "item_output_buffer"),
+      createBinding("bind_item_input", "item_input", "item_buffer"),
+      createBinding("bind_item_output", "item_output", "item_buffer"),
     ],
   }),
   /**

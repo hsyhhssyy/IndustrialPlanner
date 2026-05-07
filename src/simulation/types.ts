@@ -55,6 +55,8 @@ export interface CompiledSimulationTopology {
     readonly physicalConnectionOrder: readonly string[];
     readonly edgeOrder: readonly string[];
   };
+  /** 相连的同类型严格运输设备构成的组件集合。键为组件 ID。 */
+  readonly transportComponents: Record<string, CompiledTransportComponent>;
   readonly diagnostics: readonly SimulationCompileDiagnostic[];
 }
 
@@ -83,6 +85,8 @@ export interface CompiledSimulationDevice {
   readonly rotation: GridRotation | null;
   readonly tags: readonly string[];
   readonly transportClass: SimulationTransportClass;
+  /** 若属于 strict-belt/strict-pipe 运输组件，则为该组件的 ID；否则为 null。 */
+  readonly transportComponentId: string | null;
   readonly nodeIds: readonly string[];
   readonly ingredientNodeIds: readonly string[];
   readonly productNodeIds: readonly string[];
@@ -142,6 +146,19 @@ export interface CompiledSimulationPhysicalConnection {
   readonly targetPortId: string;
   readonly sourceInsideGridPoint: GridPoint;
   readonly targetInsideGridPoint: GridPoint;
+}
+
+/**
+ * 运输组件：相连的 strict-belt 或 strict-pipe 设备构成的无向连通分量。
+ * 组件内所有槽位共享同一个物品类型域锁（domain），确保管道/传送带链路不混合多种物品。
+ */
+export interface CompiledTransportComponent {
+  /** 同组件内所有设备的 ID 集合。 */
+  readonly deviceIds: readonly string[];
+  /** 同组件内所有节点的 ID 集合。 */
+  readonly nodeIds: readonly string[];
+  /** 同组件内所有槽位的 ID 集合。 */
+  readonly slotIds: readonly string[];
 }
 
 export interface CompiledSimulationTransferEdge {

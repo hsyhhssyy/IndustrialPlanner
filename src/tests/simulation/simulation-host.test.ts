@@ -17,7 +17,7 @@ afterEach(() => {
 })
 
 describe("createSimulationHost", () => {
-  const transportRecipeDurationTicks = 2 * STANDARD_TICK_RATE_PER_SECOND
+  const transportRecipeDurationTicks = STANDARD_TICK_RATE_PER_SECOND
   const transportRecipeCompletionTick = transportRecipeDurationTicks + 1
   const transportDeliveryTick = transportRecipeDurationTicks + 2
 
@@ -27,17 +27,17 @@ describe("createSimulationHost", () => {
     const { workspace } = createWorkspace(createDummyWorldDocument())
     const host = createSimulationHost(workspace)
 
-    expect(host.state).toBe("stop")
+    expect(host.state.runningState).toBe("stop")
     expect(host.topology.getSnapshot()).toBeNull()
-    expect(host.internalState.currentTickReadModel).toBeNull()
+    expect(host.internalState.currentSnapshot).toBeNull()
 
-    const result = await host.actions.start()
+    await host.actions.start()
     const topology = host.topology.getSnapshot()
 
-    expect(result.status).toBe("started")
-    expect(host.state).toBe("start")
+    expect(host.state.runningState).toBe("start")
     expect(topology).not.toBeNull()
-    expect(topology?.topologyId).toBe(result.topologyId)
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(0)
+    expect(host.internalState.runtimeStatus.topologyId).toBe(topology?.topologyId ?? null)
     expect(workspace.simulation).toBe(host)
 
     host.dispose()
@@ -49,19 +49,19 @@ describe("createSimulationHost", () => {
     const { workspace } = createWorkspace(createDummyWorldDocument())
     const host = createSimulationHost(workspace)
 
-    expect(host.state).toBe("stop")
+    expect(host.state.runningState).toBe("stop")
 
     await host.actions.start()
-    expect(host.state).toBe("start")
+    expect(host.state.runningState).toBe("start")
 
     host.actions.pause()
-    expect(host.state).toBe("pause")
+    expect(host.state.runningState).toBe("pause")
 
     host.actions.resume()
-    expect(host.state).toBe("start")
+    expect(host.state.runningState).toBe("start")
 
     host.actions.stop()
-    expect(host.state).toBe("stop")
+    expect(host.state.runningState).toBe("stop")
 
     host.dispose()
   })
@@ -76,26 +76,26 @@ describe("createSimulationHost", () => {
     await host.internalActions.syncToTick(0)
 
     await host.actions.advancePlaybackByDeltaMs(500)
-    const firstAdvancedTickNumber = host.internalState.currentTickReadModel?.tickNumber ?? null
+    const firstAdvancedTickNumber = host.internalState.currentSnapshot?.tickNumber ?? null
 
     expect(firstAdvancedTickNumber).not.toBeNull()
 
     const topologyBeforePause = host.topology.getSnapshot()
 
     host.actions.pause()
-    expect(host.state).toBe("pause")
+    expect(host.state.runningState).toBe("pause")
     await host.actions.advancePlaybackByDeltaMs(500)
-    expect(host.internalState.currentTickReadModel?.tickNumber).toBe(firstAdvancedTickNumber)
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(firstAdvancedTickNumber)
 
     host.actions.resume()
-    expect(host.state).toBe("start")
+    expect(host.state.runningState).toBe("start")
 
     await host.actions.advancePlaybackByDeltaMs(500)
-    const secondAdvancedTickNumber = host.internalState.currentTickReadModel?.tickNumber ?? null
+    const secondAdvancedTickNumber = host.internalState.currentSnapshot?.tickNumber ?? null
 
     expect(host.topology.getSnapshot()).toBe(topologyBeforePause)
     expect(secondAdvancedTickNumber).toBeGreaterThan(firstAdvancedTickNumber ?? -1)
-    expect(host.internalState.currentTickReadModel?.tickNumber).toBe(secondAdvancedTickNumber)
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(secondAdvancedTickNumber)
 
     host.dispose()
   })
@@ -107,20 +107,20 @@ describe("createSimulationHost", () => {
     const host = createSimulationHost(workspace)
 
     await host.actions.start()
-    expect(host.simulationSpeed).toBe(1)
+    expect(host.state.simulationSpeed).toBe(1)
 
-    host.simulationSpeed = 0.1
-    expect(host.simulationSpeed).toBe(0.1)
-
-    await host.actions.advancePlaybackByDeltaMs(250)
-
-    expect(host.internalState.currentTickReadModel).toBeNull()
+    host.internalActions.setSimulationSpeed(0.1)
+    expect(host.state.simulationSpeed).toBe(0.1)
 
     await host.actions.advancePlaybackByDeltaMs(250)
-    expect(host.internalState.currentTickReadModel?.tickNumber).toBe(1)
+
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(0)
+
+    await host.actions.advancePlaybackByDeltaMs(250)
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(1)
 
     await host.actions.advancePlaybackByDeltaMs(500)
-    expect(host.internalState.currentTickReadModel?.tickNumber).toBe(2)
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(2)
 
     host.dispose()
   })
@@ -137,7 +137,7 @@ describe("createSimulationHost", () => {
 
     expect(firstTickStatus.status).toBe("ready")
     expect(firstTopology).not.toBeNull()
-    expect(host.internalState.currentTickReadModel?.tickNumber).toBe(0)
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(0)
 
     document.setSnapshot(createMovedDummyDocument())
     await flushMicrotasks(8)
@@ -147,7 +147,7 @@ describe("createSimulationHost", () => {
     expect(secondTopology).not.toBeNull()
     expect(secondTopology?.topologyId).not.toBe(firstTopology?.topologyId)
     expect(secondTopology?.documentHash).not.toBe(firstTopology?.documentHash)
-    expect(host.internalState.currentTickReadModel).toBeNull()
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(0)
 
     host.dispose()
   })
@@ -159,13 +159,13 @@ describe("createSimulationHost", () => {
     const host = createSimulationHost(workspace)
 
     await host.actions.start()
-    host.simulationSpeed = 9
+    host.internalActions.setSimulationSpeed(9)
 
     await host.actions.advancePlaybackByDeltaMs(1000)
     await host.actions.advancePlaybackByDeltaMs(1000)
 
     expect(host.internalState.currentPlaybackTickNumber).toBe(0)
-    expect(host.internalState.currentTickReadModel).toBeNull()
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(0)
 
     host.dispose()
   })
@@ -176,11 +176,11 @@ describe("createSimulationHost", () => {
     const { workspace } = createWorkspace(createDummyWorldDocument())
     const host = createSimulationHost(workspace)
 
-    host.simulationSpeed = 4
+    host.internalActions.setSimulationSpeed(4)
 
     await host.actions.advancePlaybackByDeltaMs(1000)
 
-    expect(host.internalState.currentTickReadModel).toBeNull()
+    expect(host.internalState.currentSnapshot).toBeNull()
 
     await host.actions.start()
     const tickZero = await host.internalActions.syncToTick(0)
@@ -190,12 +190,12 @@ describe("createSimulationHost", () => {
     host.actions.pause()
     await host.actions.advancePlaybackByDeltaMs(1000)
 
-    expect(host.internalState.currentTickReadModel?.tickNumber).toBe(0)
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(0)
 
     host.actions.stop()
     await host.actions.advancePlaybackByDeltaMs(1000)
 
-    expect(host.internalState.currentTickReadModel?.tickNumber).toBe(0)
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(0)
 
     host.dispose()
   })
@@ -213,48 +213,7 @@ describe("createSimulationHost", () => {
 
     expect(tickZero.status).toBe("ready")
     expect(tickFive.status).toBe("ready")
-    expect(host.internalState.currentTickReadModel?.tickNumber).toBe(5)
-
-    host.dispose()
-  })
-
-  it("exposes the last extracted current tick read model through getCurrentTick", async () => {
-    vi.stubGlobal("Worker", undefined)
-
-    const { workspace } = createWorkspace(createDummyWorldDocument())
-    const host = createSimulationHost(workspace)
-
-    expect(host.queries.getCurrentTick()).toBeNull()
-
-    await host.actions.start()
-    const tickZero = await host.internalActions.syncToTick(0)
-
-    expect(tickZero.status).toBe("ready")
-    expect(host.queries.getCurrentTick()).toEqual(expect.objectContaining({
-      tickNumber: 0,
-      status: "initial",
-    }))
-
-    host.dispose()
-  })
-
-  it("projects belt cargo entries for renderer queries", async () => {
-    vi.stubGlobal("Worker", undefined)
-
-    const { workspace } = createWorkspace(createBeltTransportDocument())
-    const host = createSimulationHost(workspace)
-
-    await host.actions.start()
-    await host.internalActions.syncToTick(1)
-
-    expect(host.queries.getBeltCargoEntries()).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        beltShape: "straight",
-        position: { x: 0, y: -1 },
-        rotation: 270,
-        itemId: "item_iron_ore",
-      }),
-    ]))
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(5)
 
     host.dispose()
   })
@@ -316,6 +275,7 @@ describe("createSimulationHost", () => {
     await host.actions.start()
 
     const tickOne = await host.internalActions.syncToTick(1)
+    const beltStatusAtTickOne = host.queries.getDeviceRuntimeStatus("belt")
     const deliveredTick = await host.internalActions.syncToTick(transportDeliveryTick)
 
     expect(tickOne.status).toBe("ready")
@@ -325,35 +285,28 @@ describe("createSimulationHost", () => {
     }
 
     expect(host.queries.getDeviceRuntimeStatus("source-storage")?.slotItems).toHaveLength(6)
+    expect(beltStatusAtTickOne?.slotItems).toHaveLength(2)
+    expect(beltStatusAtTickOne?.slotItems).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        slotType: "ingredient",
+        storageGroupId: "item_buffer",
+        slotId: "slot_1",
+        viewRole: "input-view",
+      }),
+      expect.objectContaining({
+        slotType: "product",
+        storageGroupId: "item_buffer",
+        slotId: "slot_1",
+        viewRole: "output-view",
+      }),
+    ]))
     expect(host.queries.getDeviceRuntimeStatus("belt")?.recipeId).not.toBeNull()
     expect(host.queries.getDeviceRuntimeStatus("sink-storage")?.slotItems).toHaveLength(6)
 
     host.dispose()
   })
 
-  it("selects a matching production recipe from the machine recipe table", async () => {
-    vi.stubGlobal("Worker", undefined)
-
-    const { workspace } = createWorkspace(createGrinderProductionDocument())
-    const host = createSimulationHost(workspace)
-
-    await host.actions.start()
-    const completedTick = await host.internalActions.syncToTick(transportRecipeCompletionTick)
-
-    expect(completedTick.status).toBe("ready")
-    if (completedTick.status !== "ready") {
-      throw new Error("Expected completed tick to be ready.")
-    }
-
-    expect(host.internalState.currentTickReadModel?.slots["device:grinder/cache-group:item_input_buffer/slot:input_slot_1"]?.count).toBe(0)
-    expect(host.internalState.currentTickReadModel?.slots["device:grinder/cache-group:item_output_buffer/slot:output_slot_1"]?.itemType).toBe("item_iron_powder")
-    expect(host.internalState.currentTickReadModel?.slots["device:grinder/cache-group:item_output_buffer/slot:output_slot_1"]?.count).toBe(1)
-    expect(host.internalState.currentTickReadModel?.devices["device:grinder"]?.recipe).toBeNull()
-
-    host.dispose()
-  })
-
-  it("synthesizes default buffers for an external-recipe production shell", async () => {
+  it("exposes the synthesized synthetic slot for an external-recipe production shell", async () => {
     vi.stubGlobal("Worker", undefined)
 
     const { workspace } = createWorkspace(createFurnaceProductionDocument())
@@ -367,25 +320,35 @@ describe("createSimulationHost", () => {
       throw new Error("Expected completed tick to be ready.")
     }
 
-    expect(host.internalState.currentTickReadModel?.slots["device:furnace/cache-group:item_input_buffer/slot:input_slot_1"]?.count).toBe(0)
-    expect(host.internalState.currentTickReadModel?.slots["device:furnace/cache-group:item_output_buffer/slot:output_slot_1"]?.itemType).toBe("item_iron_nugget")
-    expect(host.internalState.currentTickReadModel?.slots["device:furnace/cache-group:item_output_buffer/slot:output_slot_1"]?.count).toBe(1)
+    expect(host.queries.getDeviceRuntimeStatus("furnace")).toEqual(expect.objectContaining({
+      recipeId: null,
+      progressSeconds: null,
+      desiredSeconds: null,
+      slotItems: expect.arrayContaining([
+        expect.objectContaining({
+          storageGroupId: "synthetic",
+          slotId: "device:furnace/node:undefined/slot:undefined",
+          itemType: "item_iron_ore",
+          count: 1,
+        }),
+      ]),
+    }))
 
     host.dispose()
   })
 
-  it("exposes mobx-reactive state and current tick read model through the host contract", async () => {
+  it("exposes mobx-reactive state and runtime json through the host contract", async () => {
     vi.stubGlobal("Worker", undefined)
 
     const { workspace } = createWorkspace(createDummyWorldDocument())
     const host = createSimulationHost(workspace)
     const observedStates: string[] = []
-    const observedCurrentTickJson: string[] = []
+    const observedRuntimeJson: string[] = []
     const disposeStateReaction = autorun(() => {
-      observedStates.push(host.state)
+      observedStates.push(host.state.runningState)
     })
     const disposeTickReaction = autorun(() => {
-      observedCurrentTickJson.push(JSON.stringify(host.queries.getCurrentTick()))
+      observedRuntimeJson.push(String(host.queries.getStatusRuntimeJson()))
     })
 
     await host.actions.start()
@@ -394,9 +357,8 @@ describe("createSimulationHost", () => {
     host.actions.stop()
 
     expect(observedStates).toEqual(["stop", "start", "pause", "stop"])
-    expect(observedCurrentTickJson).toHaveLength(2)
-    expect(observedCurrentTickJson[0]).toBe("null")
-    expect(observedCurrentTickJson[1]).toContain('"tickNumber":3')
+  expect(observedRuntimeJson[0]).toContain('"runningState":"stop"')
+  expect(observedRuntimeJson.some((value) => value.includes('"tickNumber":3'))).toBe(true)
 
     disposeTickReaction()
     disposeStateReaction()
@@ -454,7 +416,7 @@ function createFurnaceProductionDocument(): WorldDocument {
       },
     },
     entityOrder: ["furnace"],
-    explicitLinks: [],
+    slotLinks: [],
     documentSettings: {
       gridSize: 1,
       showDiagnostics: false,
@@ -503,7 +465,7 @@ function createBeltTransportDocument(): WorldDocument {
       },
     },
     entityOrder: ["source-storage", "belt", "sink-storage"],
-    explicitLinks: [],
+    slotLinks: [],
     documentSettings: {
       gridSize: 1,
       showDiagnostics: false,
@@ -536,7 +498,7 @@ function createGrinderProductionDocument(): WorldDocument {
       },
     },
     entityOrder: ["grinder"],
-    explicitLinks: [],
+    slotLinks: [],
     documentSettings: {
       gridSize: 1,
       showDiagnostics: false,

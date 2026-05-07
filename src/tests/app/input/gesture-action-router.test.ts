@@ -11,6 +11,7 @@ import {
   type GestureMappingModule,
 } from "@/app/input/gesture/actions";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
+import type { ActiveTool } from "@/domain/state/types";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
 
@@ -18,7 +19,7 @@ interface FakeAppHost {
   readonly id: string;
 }
 
-function createAdapterHost(activeTool = "select") {
+function createAdapterHost(activeTool: ActiveTool = "select") {
   return {
     workspace: {
       editor: null,

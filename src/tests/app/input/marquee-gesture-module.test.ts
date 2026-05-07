@@ -323,6 +323,10 @@ function createContext(options: {
   const toolInfo = {
     marqueeType: EntityCollectionType.marquee,
   };
+  const workbenchState = {
+    leftDockOpen: options.leftDockOpen ?? true,
+    rightDockOpen: options.rightDockOpen ?? true,
+  };
   const appHost = {
     state: {
       settings: {
@@ -333,17 +337,12 @@ function createContext(options: {
       screenProfile: {
         deviceClass: options.deviceClass ?? "desktop",
       },
-      workbench: {
-        leftDockOpen: options.leftDockOpen ?? true,
-      },
+      workbench: workbenchState,
     },
     internalState: {
       activeTool: options.activeTool ?? "select",
       toolInfo,
-      workbench: {
-        leftDockOpen: options.leftDockOpen ?? true,
-        rightDockOpen: options.rightDockOpen ?? true,
-      },
+      workbench: workbenchState,
       runtime: {
         moveAnchor: null,
         marqueeAnchor: options.marqueeAnchor ?? null,
@@ -363,7 +362,6 @@ function createContext(options: {
       }),
       toggleLeftDock: vi.fn(() => {
         appHost.internalState.workbench.leftDockOpen = !appHost.internalState.workbench.leftDockOpen;
-        appHost.state.workbench.leftDockOpen = appHost.internalState.workbench.leftDockOpen;
       }),
       toggleRightDock: vi.fn(() => {
         appHost.internalState.workbench.rightDockOpen =

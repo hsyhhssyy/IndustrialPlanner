@@ -21,6 +21,7 @@ import type {
   CompiledSimulationSlotLink,
   CompiledSimulationTopology,
   CompiledSimulationTransferEdge,
+  CompiledTransportComponent,
   SimulationAcceptRule,
   SimulationCompileDiagnostic,
   SimulationCountLimit,
@@ -194,6 +195,24 @@ export function compileSimulationTopology(
     }
   }
 
+  const { transportComponents, transportComponentIdByDeviceId } = compileTransportComponents(
+    devices,
+    physicalConnections,
+    ports,
+    nodes,
+  );
+
+  // Patch transportComponentId onto each device.
+  for (const [deviceId, componentId] of transportComponentIdByDeviceId) {
+    const device = devices[deviceId];
+    if (device !== undefined) {
+      (devices as Record<string, CompiledSimulationDevice>)[deviceId] = {
+        ...device,
+        transportComponentId: componentId,
+      };
+    }
+  }
+
   const registryHash = hashStable({
     entities: options.registry.entityDefinitions,
     items: options.registry.itemDefinitions,
@@ -226,6 +245,7 @@ export function compileSimulationTopology(
       physicalConnectionOrder,
       edgeOrder,
     },
+    transportComponents,
   };
 
   return {
@@ -252,6 +272,7 @@ export function compileSimulationTopology(
       physicalConnectionOrder,
       edgeOrder,
     },
+    transportComponents,
     diagnostics,
   };
 }
@@ -362,6 +383,7 @@ function compileWarehouseDevice(
       rotation: null,
       tags: ["warehouse"],
       transportClass: "anchor",
+      transportComponentId: null,
       nodeIds: [nodeId],
       ingredientNodeIds: [nodeId],
       productNodeIds: [nodeId],
@@ -426,6 +448,7 @@ function compileEntityDevice(options: {
     rotation: options.entity.rotation,
     tags: [...definition.tags].sort(),
     transportClass,
+    transportComponentId: null,
     nodeIds: nodes.map((node) => node.id),
     ingredientNodeIds: resolveDeviceRecipeNodeIds(nodeBindingsByStorageGroupId, "ingredient"),
     productNodeIds: resolveDeviceRecipeNodeIds(nodeBindingsByStorageGroupId, "product"),
@@ -488,6 +511,7 @@ function compileStorageNodeSet(options: {
 }): StorageGroupNodeBinding {
   const slotType = resolveSlotType(options.storageGroup.role);
   if (options.hasInputBinding && options.hasOutputBinding) {
+    const splitViewConfig = resolveSplitStorageViewConfig(options.storageGroup);
     const inputNodeId = `${options.baseNodeId}.input-view`;
     const outputNodeId = `${options.baseNodeId}.output-view`;
     const inputSlotIds: string[] = [];
@@ -522,7 +546,7 @@ function compileStorageNodeSet(options: {
       id: inputNodeId,
       deviceId: options.deviceId,
       sourceStorageSlotGroupId: options.storageGroup.id,
-      slotType,
+      slotType: splitViewConfig.inputSlotType,
       slotIds: inputSlotIds,
       groupOrder: options.groupOrder,
       viewRole: "input-view",
@@ -531,25 +555,25 @@ function compileStorageNodeSet(options: {
       id: outputNodeId,
       deviceId: options.deviceId,
       sourceStorageSlotGroupId: options.storageGroup.id,
-      slotType,
+      slotType: splitViewConfig.outputSlotType,
       slotIds: outputSlotIds,
       groupOrder: options.groupOrder + 0.5,
       viewRole: "output-view",
     }));
     options.links.push({
       id: ["link", options.deviceId, options.storageGroup.id, "input-view-to-output-view"].join(":"),
-      linkType: "share-all",
+      linkType: splitViewConfig.linkType,
       sourceSlotIds: inputSlotIds,
       targetSlotIds: outputSlotIds,
       targetSlotIdBySourceSlotId,
     });
 
-    return {
-      inputNodeIds: [inputNodeId],
-      outputNodeIds: [outputNodeId],
-      ingredientNodeIds: [outputNodeId],
-      productNodeIds: [outputNodeId],
-    };
+    return createSplitStorageGroupNodeBinding({
+      inputNodeId,
+      outputNodeId,
+      inputSlotType: splitViewConfig.inputSlotType,
+      outputSlotType: splitViewConfig.outputSlotType,
+    });
   }
 
   const nodeId = options.baseNodeId;
@@ -576,9 +600,62 @@ function compileStorageNodeSet(options: {
   return {
     inputNodeIds: options.hasInputBinding ? [nodeId] : [],
     outputNodeIds: options.hasOutputBinding ? [nodeId] : [],
-    ingredientNodeIds: slotType === "ingredient" || slotType === "universal" ? [nodeId] : [],
-    productNodeIds: slotType === "product" || slotType === "universal" ? [nodeId] : [],
+    ingredientNodeIds: isIngredientSlotType(slotType) ? [nodeId] : [],
+    productNodeIds: isProductSlotType(slotType) ? [nodeId] : [],
   };
+}
+
+function resolveSplitStorageViewConfig(storageGroup: StorageSlotGroupDefinition): {
+  readonly inputSlotType: SimulationSlotType;
+  readonly outputSlotType: SimulationSlotType;
+  readonly linkType: CompiledSimulationSlotLink["linkType"];
+} {
+  const slotType = resolveSlotType(storageGroup.role);
+  const linkType = storageGroup.splitLinkType ?? "share-all";
+  if (linkType === "share-all" || slotType !== "universal") {
+    return {
+      inputSlotType: slotType,
+      outputSlotType: slotType,
+      linkType,
+    };
+  }
+
+  return {
+    inputSlotType: "ingredient",
+    outputSlotType: "product",
+    linkType,
+  };
+}
+
+function createSplitStorageGroupNodeBinding(options: {
+  readonly inputNodeId: string;
+  readonly outputNodeId: string;
+  readonly inputSlotType: SimulationSlotType;
+  readonly outputSlotType: SimulationSlotType;
+}): StorageGroupNodeBinding {
+  const splitViews = [
+    { nodeId: options.inputNodeId, slotType: options.inputSlotType },
+    { nodeId: options.outputNodeId, slotType: options.outputSlotType },
+  ];
+
+  return {
+    inputNodeIds: [options.inputNodeId],
+    outputNodeIds: [options.outputNodeId],
+    ingredientNodeIds: splitViews
+      .filter((view) => isIngredientSlotType(view.slotType))
+      .map((view) => view.nodeId),
+    productNodeIds: splitViews
+      .filter((view) => isProductSlotType(view.slotType))
+      .map((view) => view.nodeId),
+  };
+}
+
+function isIngredientSlotType(slotType: SimulationSlotType): boolean {
+  return slotType === "ingredient" || slotType === "universal";
+}
+
+function isProductSlotType(slotType: SimulationSlotType): boolean {
+  return slotType === "product" || slotType === "universal";
 }
 
 function createCompiledNode(options: {
@@ -1203,6 +1280,122 @@ function resolveTransportClass(
     return "non-graph";
   }
   return "anchor";
+}
+
+/**
+ * 检测相连的同类型严格管道设备构成的无向连通分量。
+ * 仅 strict-pipe 需要域锁（管道独占一种液体）；strict-belt 可混合运输，不建组件。
+ */
+function compileTransportComponents(
+  devices: Record<string, CompiledSimulationDevice>,
+  physicalConnections: Record<string, CompiledSimulationPhysicalConnection>,
+  ports: Record<string, CompiledSimulationPort>,
+  nodes: Record<string, CompiledSimulationNode>,
+): {
+  readonly transportComponents: Record<string, CompiledTransportComponent>;
+  readonly transportComponentIdByDeviceId: ReadonlyMap<string, string>;
+} {
+  const targetClasses = new Set<SimulationTransportClass>(["strict-pipe"]);
+  const targetDeviceIds = new Set(
+    Object.values(devices)
+      .filter((device) => targetClasses.has(device.transportClass))
+      .map((device) => device.id),
+  );
+
+  if (targetDeviceIds.size === 0) {
+    return { transportComponents: {}, transportComponentIdByDeviceId: new Map() };
+  }
+
+  // 构建邻接表：通过 physical connections 找到相连的设备。
+  const adjacency = new Map<string, Set<string>>();
+  for (const deviceId of targetDeviceIds) {
+    adjacency.set(deviceId, new Set());
+  }
+
+  for (const connection of Object.values(physicalConnections)) {
+    const sourceDeviceId = ports[connection.sourcePortId]?.deviceId;
+    const targetDeviceId = ports[connection.targetPortId]?.deviceId;
+
+    if (sourceDeviceId === undefined || targetDeviceId === undefined) {
+      continue;
+    }
+    if (!targetDeviceIds.has(sourceDeviceId) || !targetDeviceIds.has(targetDeviceId)) {
+      continue;
+    }
+
+    const sourceDevice = devices[sourceDeviceId];
+    const targetDevice = devices[targetDeviceId];
+    if (sourceDevice === undefined || targetDevice === undefined) {
+      continue;
+    }
+    // 仅同 transportClass 的设备才连通。
+    if (sourceDevice.transportClass !== targetDevice.transportClass) {
+      continue;
+    }
+
+    adjacency.get(sourceDeviceId)?.add(targetDeviceId);
+    adjacency.get(targetDeviceId)?.add(sourceDeviceId);
+  }
+
+  // BFS 找连通分量，收集 nodeIds 与 slotIds。
+  const visited = new Set<string>();
+  const transportComponents: Record<string, CompiledTransportComponent> = {};
+  const transportComponentIdByDeviceId = new Map<string, string>();
+  let componentIndex = 0;
+
+  for (const deviceId of targetDeviceIds) {
+    if (visited.has(deviceId)) {
+      continue;
+    }
+
+    const componentDeviceIds: string[] = [];
+    const queue = [deviceId];
+    visited.add(deviceId);
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      componentDeviceIds.push(current);
+
+      for (const neighbor of adjacency.get(current) ?? []) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          queue.push(neighbor);
+        }
+      }
+    }
+
+    componentDeviceIds.sort();
+
+    // 收集该组件内所有 nodeIds 与 slotIds。
+    const componentNodeIds: string[] = [];
+    const componentSlotIds: string[] = [];
+    for (const id of componentDeviceIds) {
+      const device = devices[id];
+      if (device === undefined) {
+        continue;
+      }
+      for (const nodeId of device.nodeIds) {
+        componentNodeIds.push(nodeId);
+        const node = nodes[nodeId];
+        if (node !== undefined) {
+          componentSlotIds.push(...node.slotIds);
+        }
+      }
+    }
+
+    const componentId = `transport-component:${componentIndex}`;
+    transportComponents[componentId] = {
+      deviceIds: componentDeviceIds,
+      nodeIds: [...new Set(componentNodeIds)].sort(),
+      slotIds: [...new Set(componentSlotIds)].sort(),
+    };
+    for (const id of componentDeviceIds) {
+      transportComponentIdByDeviceId.set(id, componentId);
+    }
+    componentIndex += 1;
+  }
+
+  return { transportComponents, transportComponentIdByDeviceId };
 }
 
 function rotateLocalPortCell(options: {

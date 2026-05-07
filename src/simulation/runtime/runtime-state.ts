@@ -20,6 +20,8 @@ export interface SimulationPersistentRuntimeState {
   sharedCapacitySlotIdsBySlotId: Record<string, readonly string[]>;
   sharedCapacityLimitBySlotId: Record<string, number>;
   nextRecipeRunIndex: number;
+  /** 运输组件的当前域锁：组件内所有槽位只能存在该物品类型。null 表示组件为空，无限制。 */
+  transportComponentDomain: Record<string, string | null>;
 }
 
 export interface RuntimeSlotState {
@@ -138,6 +140,9 @@ export function createSimulationMutableRuntimeState(
       routingCursors,
       ...linkState,
       nextRecipeRunIndex: 1,
+      transportComponentDomain: Object.fromEntries(
+        Object.keys(topology.transportComponents).map((id) => [id, null]),
+      ),
     },
     transient: createEmptyTransientState(),
   };

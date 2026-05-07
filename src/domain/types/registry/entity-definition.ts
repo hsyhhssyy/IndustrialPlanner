@@ -139,8 +139,17 @@ interface StorageSlotGroupDefinition {
    *   "input"         → ingredient（链接到输入端口的缓存，接收物品、作配方原料）
    *   "output"        → product（链接到输出端口的缓存，存放配方产物）
    *   "bidirectional" → universal（同时链接输入和输出，如反应池共享槽位）
+   * 订正（2026-05-07）：当同一存储组同时绑定输入/输出端口且 splitLinkType="share-cap" 时，
+   *   "bidirectional" 会在编译时拆为 ingredient 输入视图 + product 输出视图；
+   *   "input"/"output" 则保持两视图同型。
    */
   role: "input" | "output" | "bidirectional";
+  /**
+   * 当同一存储组同时绑定输入/输出端口并被编译器拆为 input-view/output-view 时，
+   * 决定两视图之间采用 share-all 还是 share-cap 连接。
+   * 默认值由注册表工厂补为 "share-all"。
+   */
+  splitLinkType?: StorageGroupSplitLinkType;
   /**
    * 槽位列表。
    * 关键规则（《仿真运行原理》§3.4）：
@@ -154,6 +163,7 @@ interface StorageSlotGroupDefinition {
 
 export type CountLimit = number | "unlimited";
 export type SubmitMode = "never" | "every-tick" | "every-n-seconds";
+export type StorageGroupSplitLinkType = "share-all" | "share-cap";
 
 /**
  * 存储槽位定义。

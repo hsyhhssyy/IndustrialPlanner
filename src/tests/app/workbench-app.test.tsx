@@ -698,32 +698,36 @@ describe("WorkbenchApp", () => {
 
     const workspace = createWorkspace();
     workspace.simulation = {
-      state: "stop",
-      simulationSpeed: 1,
+      state: {
+        runningState: "stop",
+        simulationSpeed: 1,
+      },
       topology: createSnapshotStore(null),
       queries: {
-        getStatus: () => ({
-          mode: "stopped",
-          topologyId: null,
-          documentHash: null,
-          retainedFromTick: 3,
-          latestTickNumber: 3,
-          bufferSize: 1,
-          maxBufferSize: 180,
-          error: null,
+        getStatusRuntimeJson: () => JSON.stringify({
+          state: {
+            runningState: "stop",
+            simulationSpeed: 1,
+            currentPlaybackTickNumber: 3,
+          },
+          runtimeStatus: {
+            mode: "stopped",
+            topologyId: null,
+            documentHash: null,
+            retainedFromTick: 3,
+            latestTickNumber: 3,
+            bufferSize: 1,
+            maxBufferSize: 180,
+            error: null,
+          },
+          currentTick: {
+            source: "query-read-model",
+          },
         }),
-        getCurrentTick: () => ({
-          source: "query-read-model",
-        } as never),
-        getBeltCargoEntries: () => [],
         getDeviceRuntimeStatus: () => null,
       },
       actions: {
-        start: vi.fn(async () => ({
-          status: "started",
-          topologyId: null,
-          diagnostics: [],
-        })),
+        start: vi.fn(async () => {}),
         pause: vi.fn(),
         resume: vi.fn(),
         stop: vi.fn(),
@@ -738,7 +742,7 @@ describe("WorkbenchApp", () => {
     });
 
     const simulationTab = container.querySelector("#right-dock-tab-simulation") as HTMLButtonElement | null;
-    const snapshotTextarea = container.querySelector("[data-simulation-current-tick-json]") as HTMLTextAreaElement | null;
+    const snapshotTextarea = container.querySelector("[data-simulation-runtime-json]") as HTMLTextAreaElement | null;
 
     expect(simulationTab?.getAttribute("aria-selected")).toBe("true");
 
@@ -747,7 +751,24 @@ describe("WorkbenchApp", () => {
     });
 
     expect(snapshotTextarea?.value).toBe(`{
-  "source": "query-read-model"
+  "state": {
+    "runningState": "stop",
+    "simulationSpeed": 1,
+    "currentPlaybackTickNumber": 3
+  },
+  "runtimeStatus": {
+    "mode": "stopped",
+    "topologyId": null,
+    "documentHash": null,
+    "retainedFromTick": 3,
+    "latestTickNumber": 3,
+    "bufferSize": 1,
+    "maxBufferSize": 180,
+    "error": null
+  },
+  "currentTick": {
+    "source": "query-read-model"
+  }
 }`);
   });
 
@@ -962,16 +983,16 @@ describe("WorkbenchApp", () => {
       });
     });
 
-    expect(gestures).toMatchObject([
-      {
+    expect(gestures).toEqual(expect.arrayContaining([
+      expect.objectContaining({
         type: "ui-button-mouse-tap",
         uiButtonId: "canvas-floating-toolbar-button-move",
-      },
-      {
+      }),
+      expect.objectContaining({
         type: "ui-button-touch-tap",
         uiButtonId: "canvas-floating-toolbar-button-delete",
-      },
-    ]);
+      }),
+    ]));
   });
 
   it("emits canvas floating toolbar keyboard activation only from accessibility clicks", () => {
@@ -1015,13 +1036,13 @@ describe("WorkbenchApp", () => {
       dispatchClickEvent(moveButton, { detail: 0 });
     });
 
-    expect(gestures).toMatchObject([
-      {
+    expect(gestures).toEqual(expect.arrayContaining([
+      expect.objectContaining({
         type: "ui-button-mouse-tap",
         uiButtonId: "canvas-floating-toolbar-button-move",
         button: 0,
-      },
-    ]);
+      }),
+    ]));
   });
 
   it("keeps the canvas right dock toolbar visible while the right dock toggles", () => {

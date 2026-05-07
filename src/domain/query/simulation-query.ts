@@ -7,13 +7,16 @@ export interface SimulationDeviceRuntimeStatusReadModel {
 }
 
 export interface SimulationDeviceRuntimeSlotItemReadModel {
+  readonly slotType: "ingredient" | "product" | "universal";
+  readonly storageGroupId: string;
   readonly slotId: string;
+  readonly viewRole: "single-view" | "input-view" | "output-view";
   readonly itemType: string | null;
   readonly count: number;
   readonly reserved: number;
 }
 
 export interface SimulationQuery {
-  getStatusRuntimeJson(): String;
+  getStatusRuntimeJson(): string;
   getDeviceRuntimeStatus(deviceId: string): SimulationDeviceRuntimeStatusReadModel | null;
 }

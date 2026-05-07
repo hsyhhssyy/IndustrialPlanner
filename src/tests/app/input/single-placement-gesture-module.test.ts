@@ -464,6 +464,9 @@ function createContext(options: {
     "shortcut-synthesis": "B",
     "shortcut-rotate": "R",
   };
+  const workbenchState = {
+    leftDockOpen: options.leftDockOpen ?? true,
+  };
 
   const appHost = {
     state: {
@@ -474,12 +477,11 @@ function createContext(options: {
       screenProfile: {
         deviceClass: options.deviceClass ?? "desktop",
       },
-      workbench: {
-        leftDockOpen: options.leftDockOpen ?? true,
-      },
+      workbench: workbenchState,
     },
     internalState: {
       activeTool: options.activeTool ?? "select",
+      workbench: workbenchState,
       runtime: {
         placementAnchor: options.placementAnchor ?? null,
         singlePlacementDeviceId: options.singlePlacementDeviceId ?? null,
@@ -496,10 +498,9 @@ function createContext(options: {
     internalActions: {
       setActiveTool: vi.fn((activeTool) => {
         appHost.internalState.activeTool = activeTool;
-        appHost.state.activeTool = activeTool;
       }),
       toggleLeftDock: vi.fn(() => {
-        appHost.state.workbench.leftDockOpen = !appHost.state.workbench.leftDockOpen;
+        appHost.internalState.workbench.leftDockOpen = !appHost.internalState.workbench.leftDockOpen;
       }),
       showCanvasFloatingToolbarForCollection: vi.fn((buttonIds, collectionType) => {
         if (editor.queries.findEntityCollectionGridRect(collectionType) === null) {

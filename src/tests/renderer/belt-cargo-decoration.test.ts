@@ -228,6 +228,96 @@ describe("createBeltCargoDecoration", () => {
     }
   })
 
+  it("shows stationary ingredient cargo at the belt start", () => {
+    const decoration = createBeltCargoDecoration()
+    const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+    const ctx = createContext({
+      getTexture,
+      entries: [{
+        beltShape: "straight",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        itemId: "item_iron_ore",
+        progress: 0.5,
+        runtimeStatus: {
+          recipeId: null,
+          progressSeconds: null,
+          desiredSeconds: null,
+          slotItems: [{
+            slotType: "ingredient",
+            storageGroupId: "item_buffer",
+            slotId: "slot_1",
+            viewRole: "input-view",
+            itemType: "item_iron_ore",
+            count: 1,
+            reserved: 0,
+          }],
+        },
+      }],
+    })
+
+    decoration.sync(ctx as never)
+
+    const boxGraphics = decoration.container.children[0] as unknown as {
+      drawCommands: Array<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }>;
+    }
+    expect(boxGraphics.drawCommands).toHaveLength(1)
+    expect(boxGraphics.drawCommands[0]?.x).toBeCloseTo(20)
+    expect(boxGraphics.drawCommands[0]?.y).toBeCloseTo(70)
+
+    decoration.destroy()
+  })
+
+  it("shows stationary product cargo at the belt end", () => {
+    const decoration = createBeltCargoDecoration()
+    const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+    const ctx = createContext({
+      getTexture,
+      entries: [{
+        beltShape: "straight",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        itemId: "item_iron_ore",
+        progress: 0.5,
+        runtimeStatus: {
+          recipeId: null,
+          progressSeconds: null,
+          desiredSeconds: null,
+          slotItems: [{
+            slotType: "product",
+            storageGroupId: "item_buffer",
+            slotId: "slot_1",
+            viewRole: "output-view",
+            itemType: "item_iron_ore",
+            count: 1,
+            reserved: 0,
+          }],
+        },
+      }],
+    })
+
+    decoration.sync(ctx as never)
+
+    const boxGraphics = decoration.container.children[0] as unknown as {
+      drawCommands: Array<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }>;
+    }
+    expect(boxGraphics.drawCommands).toHaveLength(1)
+    expect(boxGraphics.drawCommands[0]?.x).toBeCloseTo(120)
+    expect(boxGraphics.drawCommands[0]?.y).toBeCloseTo(70)
+
+    decoration.destroy()
+  })
+
   it("stays hidden when the running belt has no matching reserved item", () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
@@ -253,6 +343,20 @@ function createContext(options: {
     rotation: 0 | 90 | 180 | 270;
     itemId: string;
     progress: number;
+    runtimeStatus?: {
+      recipeId: string | null;
+      progressSeconds: number | null;
+      desiredSeconds: number | null;
+      slotItems: Array<{
+        slotType: "ingredient" | "product" | "universal";
+        storageGroupId: string;
+        slotId: string;
+        viewRole: "single-view" | "input-view" | "output-view";
+        itemType: string | null;
+        count: number;
+        reserved: number;
+      }>;
+    };
   }[];
   beltShape?: "straight" | "turn-cw" | "turn-ccw";
 }) {
@@ -321,17 +425,20 @@ function createContext(options: {
               return null
             }
 
-            return {
+              return entry.runtimeStatus ?? {
               recipeId: `${entry.definitionId}:dynamic-belt-transfer`,
               progressSeconds: entry.progress,
               desiredSeconds: 1,
               slotItems: [{
+                  slotType: "ingredient",
+                  storageGroupId: "item_buffer",
                 slotId: "input_slot_1",
+                  viewRole: "input-view",
                 itemType: entry.itemId,
                 count: 1,
                 reserved: 1,
               }],
-            }
+              }
           },
         },
       },

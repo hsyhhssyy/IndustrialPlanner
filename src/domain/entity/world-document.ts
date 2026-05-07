@@ -53,6 +53,7 @@ export interface WorldDocument {
   documentSettings: {
     // 需要添加zoom
     // 需要添加viewportRect
+    [key: string]: unknown;
   };
 }
 

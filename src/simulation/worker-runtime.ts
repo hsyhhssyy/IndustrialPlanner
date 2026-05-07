@@ -17,6 +17,7 @@ import { buildSolveGraph } from "./runtime/stage-2-build-solve-graph";
 import { solveTransferGraph } from "./runtime/stage-3-layered-reverse-solve";
 import { rotateRoutingCursors } from "./runtime/stage-4-rotate-routing-cursors";
 import { settleRecipes } from "./runtime/stage-5-settle-recipes";
+import { maintainTransportComponentDomains } from "./runtime/runtime-slot-access";
 import {
   createSimulationMutableRuntimeState,
   type SimulationMutableRuntimeState,
@@ -192,6 +193,7 @@ export class SimulationWorkerRuntime {
       solveTransferGraph(this.topology, this.runtimeState);
       rotateRoutingCursors(this.topology, this.runtimeState);
       settleRecipes(this.topology, this.runtimeState);
+      maintainTransportComponentDomains(this.topology, this.runtimeState);
       return createTickSnapshot(this.topology, this.runtimeState);
     }
 

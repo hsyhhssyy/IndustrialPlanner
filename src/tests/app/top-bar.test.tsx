@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/host/app-host";
 import { TopBar } from "@/app/shell/layout/top-bar";
+import type { SimulationRunState } from "@/domain/contract/simulation-contract";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import { createWorkspaceState } from "@/domain/state/workspace-state";
 import { createRegistryContract } from "@/registry";
@@ -20,6 +21,58 @@ function createWorkspace(): WorkspaceContract {
     render: null,
     simulation: null,
   };
+}
+
+function attachSimulationStub(
+  workspace: WorkspaceContract,
+  options: {
+    state: SimulationRunState;
+    start?: ReturnType<typeof vi.fn>;
+    pause?: ReturnType<typeof vi.fn>;
+    resume?: ReturnType<typeof vi.fn>;
+  },
+) {
+  const start = options.start ?? vi.fn(async () => {});
+  const pause = options.pause ?? vi.fn();
+  const resume = options.resume ?? vi.fn();
+
+  workspace.simulation = {
+    state: {
+      runningState: options.state,
+      simulationSpeed: 1,
+    },
+    topology: createSnapshotStore(null),
+    queries: {
+      getStatusRuntimeJson: () => JSON.stringify({
+        state: {
+          runningState: options.state,
+          simulationSpeed: 1,
+          currentPlaybackTickNumber: 0,
+        },
+        runtimeStatus: {
+          mode: options.state === "start" ? "running" : options.state === "pause" ? "stopped" : "idle",
+          topologyId: null,
+          documentHash: null,
+          retainedFromTick: null,
+          latestTickNumber: options.state === "stop" ? null : 0,
+          bufferSize: options.state === "stop" ? 0 : 1,
+          maxBufferSize: 180,
+          error: null,
+        },
+        currentTick: null,
+      }),
+      getDeviceRuntimeStatus: () => null,
+    },
+    actions: {
+      start,
+      pause,
+      resume,
+      stop: vi.fn(),
+      advancePlaybackByDeltaMs: vi.fn(async () => {}),
+    },
+  } as NonNullable<WorkspaceContract["simulation"]>;
+
+  return { start, pause, resume };
 }
 
 describe("TopBar", () => {
@@ -224,41 +277,8 @@ describe("TopBar", () => {
   });
 
   it("starts the simulation through the simulation contract when the control button is idle", async () => {
-    const start = vi.fn(async () => ({
-      status: "started" as const,
-      topologyId: null,
-      diagnostics: [],
-    }));
-    const pause = vi.fn();
-    const resume = vi.fn();
     const workspace = createWorkspace();
-    workspace.simulation = {
-      state: "stop",
-      simulationSpeed: 1,
-      topology: createSnapshotStore(null),
-      queries: {
-        getStatus: () => ({
-          mode: "idle",
-          topologyId: null,
-          documentHash: null,
-          retainedFromTick: null,
-          latestTickNumber: null,
-          bufferSize: 0,
-          maxBufferSize: 180,
-          error: null,
-        }),
-        getCurrentTick: () => null,
-        getBeltCargoEntries: () => [],
-        getDeviceRuntimeStatus: () => null,
-      },
-      actions: {
-        start,
-        pause,
-        resume,
-        stop: vi.fn(),
-        advancePlaybackByDeltaMs: vi.fn(async () => {}),
-      },
-    } as NonNullable<WorkspaceContract["simulation"]>;
+    const { start, pause, resume } = attachSimulationStub(workspace, { state: "stop" });
     const appHost = createAppHost(workspace);
 
     act(() => {
@@ -281,41 +301,8 @@ describe("TopBar", () => {
   });
 
   it("pauses the simulation through the simulation contract when the control button is running", async () => {
-    const start = vi.fn(async () => ({
-      status: "started" as const,
-      topologyId: null,
-      diagnostics: [],
-    }));
-    const pause = vi.fn();
-    const resume = vi.fn();
     const workspace = createWorkspace();
-    workspace.simulation = {
-      state: "start",
-      simulationSpeed: 1,
-      topology: createSnapshotStore(null),
-      queries: {
-        getStatus: () => ({
-          mode: "running",
-          topologyId: null,
-          documentHash: null,
-          retainedFromTick: null,
-          latestTickNumber: 0,
-          bufferSize: 1,
-          maxBufferSize: 180,
-          error: null,
-        }),
-        getCurrentTick: () => null,
-        getBeltCargoEntries: () => [],
-        getDeviceRuntimeStatus: () => null,
-      },
-      actions: {
-        start,
-        pause,
-        resume,
-        stop: vi.fn(),
-        advancePlaybackByDeltaMs: vi.fn(async () => {}),
-      },
-    } as NonNullable<WorkspaceContract["simulation"]>;
+    const { start, pause, resume } = attachSimulationStub(workspace, { state: "start" });
     const appHost = createAppHost(workspace);
 
     act(() => {
@@ -338,41 +325,8 @@ describe("TopBar", () => {
   });
 
   it("resumes the simulation through the simulation contract when the control button is paused", async () => {
-    const start = vi.fn(async () => ({
-      status: "started" as const,
-      topologyId: null,
-      diagnostics: [],
-    }));
-    const pause = vi.fn();
-    const resume = vi.fn();
     const workspace = createWorkspace();
-    workspace.simulation = {
-      state: "pause",
-      simulationSpeed: 1,
-      topology: createSnapshotStore(null),
-      queries: {
-        getStatus: () => ({
-          mode: "stopped",
-          topologyId: null,
-          documentHash: null,
-          retainedFromTick: 0,
-          latestTickNumber: 2,
-          bufferSize: 1,
-          maxBufferSize: 180,
-          error: null,
-        }),
-        getCurrentTick: () => null,
-        getBeltCargoEntries: () => [],
-        getDeviceRuntimeStatus: () => null,
-      },
-      actions: {
-        start,
-        pause,
-        resume,
-        stop: vi.fn(),
-        advancePlaybackByDeltaMs: vi.fn(async () => {}),
-      },
-    } as NonNullable<WorkspaceContract["simulation"]>;
+    const { start, pause, resume } = attachSimulationStub(workspace, { state: "pause" });
     const appHost = createAppHost(workspace);
 
     act(() => {

@@ -171,6 +171,11 @@ function resolveDeviceRuntimeSlotItems(options: {
     return [];
   }
 
+  const shareCapSlotIds = new Set(
+    Object.values(options.topology.links)
+      .filter((link) => link.linkType === "share-cap")
+      .flatMap((link) => [...link.sourceSlotIds, ...link.targetSlotIds]),
+  );
   const slotItemsByRealSlotKey = new Map<string, SimulationDeviceRuntimeSlotItemReadModel>();
   for (const nodeId of device.nodeIds) {
     const node = options.topology.nodes[nodeId];
@@ -185,12 +190,18 @@ function resolveDeviceRuntimeSlotItems(options: {
         continue;
       }
 
+      const isShareCapSlot = shareCapSlotIds.has(compiledSlotId);
       const storageGroupId = compiledSlot.sourceStorageSlotGroupId ?? "synthetic";
       const sourceSlotId = compiledSlot.sourceSlotId ?? compiledSlot.id;
-      const realSlotKey = `${storageGroupId}:${sourceSlotId}`;
+      const realSlotKey = isShareCapSlot
+        ? compiledSlotId
+        : `${storageGroupId}:${sourceSlotId}`;
       const existing = slotItemsByRealSlotKey.get(realSlotKey);
       slotItemsByRealSlotKey.set(realSlotKey, {
+        slotType: existing?.slotType ?? node.slotType,
+        storageGroupId,
         slotId: sourceSlotId,
+        viewRole: isShareCapSlot ? node.viewRole : "single-view",
         itemType: existing?.itemType ?? slotSnapshot.itemType,
         count: Math.max(existing?.count ?? 0, slotSnapshot.count),
         reserved: Math.max(existing?.reserved ?? 0, slotSnapshot.reserved),

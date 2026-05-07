@@ -193,9 +193,8 @@ function resolveBeltCargoEntries(ctx: DecorationSyncContext): BeltCargoEntry[] {
     }
 
     const runtimeStatus = simulation.queries.getDeviceRuntimeStatus(entity.id)
-    const itemId = resolveRuntimeCargoItemId(runtimeStatus)
-    const progress = resolveRuntimeProgress(runtimeStatus)
-    if (itemId === null || progress === null) {
+    const cargoState = resolveRuntimeCargoState(runtimeStatus)
+    if (cargoState === null) {
       continue
     }
 
@@ -203,8 +202,8 @@ function resolveBeltCargoEntries(ctx: DecorationSyncContext): BeltCargoEntry[] {
       beltShape,
       position: entity.position,
       rotation: entity.rotation,
-      itemId,
-      progress,
+      itemId: cargoState.itemId,
+      progress: cargoState.progress,
     })
   }
 
@@ -224,7 +223,22 @@ function resolveBeltCargoShape(entity: WorldEntity): BeltCargoShape | null {
   }
 }
 
-function resolveRuntimeCargoItemId(
+function resolveRuntimeCargoState(
+  runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
+): { readonly itemId: string; readonly progress: number } | null {
+  const runningItemId = resolveRunningCargoItemId(runtimeStatus)
+  const runningProgress = resolveRuntimeProgress(runtimeStatus)
+  if (runningItemId !== null && runningProgress !== null) {
+    return {
+      itemId: runningItemId,
+      progress: runningProgress,
+    }
+  }
+
+  return resolveStationaryCargoState(runtimeStatus)
+}
+
+function resolveRunningCargoItemId(
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
 ): string | null {
   if (runtimeStatus === null || runtimeStatus.recipeId === null) {
@@ -241,6 +255,50 @@ function resolveRuntimeCargoItemId(
   return runtimeStatus.slotItems.find((slotItem) =>
     slotItem.itemType !== null && slotItem.count > 0,
   )?.itemType ?? null
+}
+
+function resolveStationaryCargoState(
+  runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
+): { readonly itemId: string; readonly progress: number } | null {
+  if (runtimeStatus === null) {
+    return null
+  }
+
+  const ingredientSlot = runtimeStatus.slotItems.find((slotItem) =>
+    slotItem.slotType === "ingredient"
+    && slotItem.itemType !== null
+    && slotItem.count > 0,
+  )
+  if (ingredientSlot?.itemType !== undefined && ingredientSlot.itemType !== null) {
+    return {
+      itemId: ingredientSlot.itemType,
+      progress: 0,
+    }
+  }
+
+  const productSlot = runtimeStatus.slotItems.find((slotItem) =>
+    slotItem.slotType === "product"
+    && slotItem.itemType !== null
+    && slotItem.count > 0,
+  )
+  if (productSlot?.itemType !== undefined && productSlot.itemType !== null) {
+    return {
+      itemId: productSlot.itemType,
+      progress: 1,
+    }
+  }
+
+  const fallbackSlot = runtimeStatus.slotItems.find((slotItem) =>
+    slotItem.itemType !== null && slotItem.count > 0,
+  )
+  if (fallbackSlot?.itemType === undefined || fallbackSlot.itemType === null) {
+    return null
+  }
+
+  return {
+    itemId: fallbackSlot.itemType,
+    progress: fallbackSlot.slotType === "product" ? 1 : 0,
+  }
 }
 
 function resolveRuntimeProgress(

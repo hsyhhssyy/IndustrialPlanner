@@ -349,7 +349,6 @@ describe("createHypergryphSelectGestureModule", () => {
         type: "ui-button-mouse-tap",
         gestureId: "select-tool-button-mouse-1",
         button: 0,
-        buttons: 0,
         uiButtonId: "placement-tool-select",
         modifiers: emptyModifiers(),
         sourceEvent: null,
@@ -360,7 +359,6 @@ describe("createHypergryphSelectGestureModule", () => {
       {
         type: "ui-button-touch-tap",
         gestureId: "select-tool-button-touch-1",
-        primaryId: 1,
         uiButtonId: "placement-tool-select",
         modifiers: emptyModifiers(),
         sourceEvent: null,
@@ -384,7 +382,6 @@ describe("createHypergryphSelectGestureModule", () => {
           type: "ui-button-mouse-tap",
           gestureId: "select-tool-button-ignore-1",
           button: 2,
-          buttons: 0,
           uiButtonId: "placement-tool-select",
           modifiers: emptyModifiers(),
           sourceEvent: null,
@@ -398,7 +395,6 @@ describe("createHypergryphSelectGestureModule", () => {
         {
           type: "ui-button-touch-tap",
           gestureId: "select-tool-button-ignore-2",
-          primaryId: 1,
           uiButtonId: "placement-tool-delete",
           modifiers: emptyModifiers(),
           sourceEvent: null,
@@ -521,7 +517,7 @@ describe("createHypergryphSelectGestureModule", () => {
 });
 
 function createContext(
-  activeTool: "select" | "move" | "marquee" = "select",
+  activeTool: ActiveTool = "select",
   hypergryphOperationMode = true,
   selectedEntityIds: readonly string[] = [],
   rightDockOpen = false,

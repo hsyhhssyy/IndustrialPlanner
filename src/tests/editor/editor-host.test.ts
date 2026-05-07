@@ -19,19 +19,12 @@ import {
   readFromIndexedDb,
   saveToIndexedDb,
 } from "@/shared/storage/browser-storage";
-import { saveToIndexedDbWithVersion } from "@/shared/storage/migration";
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 
 const WORLD_DOCUMENT_DATABASE_LOCATION = {
   databaseName: "industrial-planner",
   storeName: "worddocument",
 };
-const WORLD_DOCUMENT_PERSIST_VERSION = 1;
-
-interface StoredWorldDocumentPayload {
-  _v: number;
-  data: WorldDocument;
-}
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -1587,12 +1580,7 @@ describe("createEditorHost", () => {
       expect(editorHost.internalState.internalPersistState.lastDocumentId).toBe(
         document.documentKey,
       );
-      await expect(readStoredWorldDocument(document.documentKey)).resolves.toEqual(
-        {
-          _v: WORLD_DOCUMENT_PERSIST_VERSION,
-          data: document,
-        },
-      );
+      await expect(readStoredWorldDocument(document.documentKey)).resolves.toEqual(document);
     },
   );
 
@@ -1625,40 +1613,6 @@ describe("createEditorHost", () => {
     );
   });
 
-  it("falls back to the Wuling protocol core when persisted baseId is missing from registry", async () => {
-    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
-    const persistedDocument: WorldDocument = {
-      ...createDummyWorldDocument(),
-      documentKey: "33333333-3333-4333-8333-333333333333",
-      baseId: "legacy-missing-base",
-    };
-    await saveLegacyStoredWorldDocument(persistedDocument);
-    localStorage.setItem(
-      EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY,
-      JSON.stringify({
-        lastDocumentId: persistedDocument.documentKey,
-      }),
-    );
-
-    const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-
-    await flushMicrotasks();
-
-    const expectedDocument: WorldDocument = {
-      ...persistedDocument,
-      baseId: DEFAULT_WORLD_BASE_ID,
-    };
-
-    expect(editorHost.document.getSnapshot()).toEqual(expectedDocument);
-    await expect(readStoredWorldDocument(expectedDocument.documentKey)).resolves.toEqual(
-      {
-        _v: WORLD_DOCUMENT_PERSIST_VERSION,
-        data: expectedDocument,
-      },
-    );
-  });
-
   it("writes document snapshot changes back into IndexedDB", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     const workspace = createWorkspace();
@@ -1679,12 +1633,7 @@ describe("createEditorHost", () => {
 
     await flushMicrotasks();
 
-    await expect(readStoredWorldDocument(nextDocument.documentKey)).resolves.toEqual(
-      {
-        _v: WORLD_DOCUMENT_PERSIST_VERSION,
-        data: nextDocument,
-      },
-    );
+    await expect(readStoredWorldDocument(nextDocument.documentKey)).resolves.toEqual(nextDocument);
   });
 
   it("hydrates internal persist state from localStorage and persists later changes", () => {
@@ -1734,25 +1683,14 @@ async function flushMicrotasks(iterations = 20): Promise<void> {
 
 function readStoredWorldDocument(
   documentKey: string,
-): Promise<StoredWorldDocumentPayload | null> {
-  return readFromIndexedDb<StoredWorldDocumentPayload>({
+): Promise<WorldDocument | null> {
+  return readFromIndexedDb<WorldDocument>({
     ...WORLD_DOCUMENT_DATABASE_LOCATION,
     key: documentKey,
   });
 }
 
 function saveStoredWorldDocument(document: WorldDocument): Promise<WorldDocument> {
-  return saveToIndexedDbWithVersion(
-    {
-      ...WORLD_DOCUMENT_DATABASE_LOCATION,
-      key: document.documentKey,
-    },
-    WORLD_DOCUMENT_PERSIST_VERSION,
-    document,
-  );
-}
-
-function saveLegacyStoredWorldDocument(document: WorldDocument): Promise<WorldDocument> {
   return saveToIndexedDb(
     {
       ...WORLD_DOCUMENT_DATABASE_LOCATION,

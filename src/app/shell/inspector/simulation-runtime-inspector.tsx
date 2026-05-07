@@ -42,7 +42,11 @@ function formatProgressPercent(progressPercent: number | null): string {
 }
 
 function formatSlotItemLabel(slotItem: SimulationDeviceRuntimeSlotItemReadModel): string {
-  return slotItem.slotId;
+  if (slotItem.viewRole === "single-view") {
+    return `${slotItem.storageGroupId}.${slotItem.slotId}`;
+  }
+
+  return `${slotItem.storageGroupId}.${slotItem.slotId}.${slotItem.viewRole}`;
 }
 
 function formatReservedItems(slotItem: SimulationDeviceRuntimeSlotItemReadModel): string | null {
