@@ -6,6 +6,7 @@ import type { RuntimeDeviceRecipeState, SimulationMutableRuntimeState } from "./
 import {
   aggregateInputItems,
   finishRecipeIfPossible,
+  resolveDeviceRecipePlans,
   selectRecipeInputs,
 } from "./runtime-slot-access";
 
@@ -76,7 +77,7 @@ function selectStartableRecipe(
   state: SimulationMutableRuntimeState,
   device: CompiledSimulationDevice,
 ): RuntimeDeviceRecipeState | null {
-  for (const plan of device.recipePlans) {
+  for (const plan of resolveDeviceRecipePlans({ topology, state, device })) {
     const reservations = selectRecipeInputs({ topology, state, plan });
     if (reservations === null) {
       continue;

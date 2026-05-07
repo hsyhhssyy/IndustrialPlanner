@@ -52,6 +52,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           return { status: "ignored" };
         }
 
+        closeCompactLeftDockOnSinglePlacementEnter(context.appHost);
         syncPlacementEntryUi(context.appHost);
         return { status: "handled" };
       }
@@ -104,6 +105,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             editor,
             deviceId,
             source: "touch",
+            allowFromAnyTool: true,
           });
         }
       }
@@ -116,6 +118,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             editor,
             deviceId,
             source: "mouse",
+            allowFromAnyTool: true,
           });
         }
       }
@@ -261,6 +264,7 @@ function handlePlacementEntryButtonTap(options: {
   deviceId: string;
   source: "mouse" | "touch";
   initialPlacementAnchor?: GridPoint | null;
+  allowFromAnyTool?: boolean;
 }): GestureHandleResult {
   const previousTool = options.appHost.internalState.activeTool;
 
@@ -285,7 +289,7 @@ function handlePlacementEntryButtonTap(options: {
     });
   }
 
-  if (previousTool !== "select") {
+  if (previousTool !== "select" && !options.allowFromAnyTool) {
     return { status: "ignored" };
   }
 
@@ -559,6 +563,18 @@ function clearPlacementUi(appHost: AppHost): void {
   appHost.internalState.runtime.singlePlacementDeviceId = null;
   appHost.internalState.runtime.singlePlacementPointerMode = null;
   appHost.internalActions.hideCanvasFloatingToolbar();
+}
+
+function closeCompactLeftDockOnSinglePlacementEnter(appHost: AppHost): void {
+  const deviceClass = appHost.state.screenProfile.deviceClass;
+  if (
+    (deviceClass !== "mobile" && deviceClass !== "tablet")
+    || !appHost.state.workbench.leftDockOpen
+  ) {
+    return;
+  }
+
+  appHost.internalActions.toggleLeftDock();
 }
 
 function restoreFailedPlacementEnter(appHost: AppHost, editor: EditorContract): void {

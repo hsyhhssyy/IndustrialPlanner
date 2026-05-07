@@ -1,33 +1,6 @@
+import type { LinkType } from "@/domain/entity/world-document";
 import type { GridEdge, GridPoint, GridRotation } from "@/domain/types/grid";
-import type {
-  SimulationRuntimeStatus,
-} from "@/domain/contract/simulation-contract-types";
-import type {
-  SimulationCurrentTickReadModel,
-} from "@/domain/query/simulation-read-model";
-import type {
-  SimulationLinkType,
-  SimulationRecipeType,
-} from "@/domain/types/registry/simulation-definition";
-
-export type {
-  SimulationRuntimeStatus,
-};
-
-export interface SimulationCompileDiagnostic {
-  readonly severity: "info" | "warning" | "error";
-  readonly code: string;
-  readonly message: string;
-  readonly entityId?: string;
-  readonly definitionId?: string;
-}
-
-export interface SimulationStartResult {
-  readonly status: "started" | "failed";
-  readonly topologyId: string | null;
-  readonly diagnostics: readonly SimulationCompileDiagnostic[];
-  readonly error?: string;
-}
+import type { RecipeDefinition, RecipeType } from "@/domain/types/registry/recipe-definition";
 
 export type SimulationItemDomain = "solid" | "liquid";
 export type SimulationPortKind = "item" | "fluid";
@@ -38,9 +11,8 @@ export type SimulationCountLimit = number | "unlimited";
 export type SimulationTransportClass = "strict-belt" | "strict-pipe" | "anchor" | "non-graph";
 export type SimulationSubmitMode = "never" | "every-tick" | "every-n-seconds";
 export type SimulationWorkerStatusMode = "idle" | "starting" | "running" | "stopped" | "error";
-export type SimulationPlaybackState = "stop" | "start" | "pause";
-export type SimulationState = SimulationPlaybackState;
-export type SimulationCacheType = SimulationSlotType;
+export type SimulationRecipeType = RecipeType;
+export type SimulationLinkType = LinkType;
 
 export interface SimulationAcceptRule {
   readonly base:
@@ -51,19 +23,25 @@ export interface SimulationAcceptRule {
   readonly exclude: readonly string[];
 }
 
+export interface SimulationCompileDiagnostic {
+  readonly severity: "info" | "warning" | "error";
+  readonly code: string;
+  readonly message: string;
+  readonly entityId?: string;
+  readonly definitionId?: string;
+}
+
 export interface CompiledSimulationTopology {
-  readonly schemaVersion: 2;
+  readonly schemaVersion: 3;
   readonly topologyId: string;
   readonly documentKey: string;
   readonly documentHash: string;
   readonly registryHash: string;
   readonly standardTickRate: number;
   readonly itemCatalog: Record<string, CompiledSimulationItem>;
+  readonly recipeCatalog: Record<string, CompiledSimulationRecipeDefinition>;
   readonly devices: Record<string, CompiledSimulationDevice>;
-  /** 对应《仿真运行原理》§6.0 / §6.1：Node 是编译后的求解图基本单元。 */
   readonly nodes: Record<string, CompiledSimulationNode>;
-  /** 迁移期只供未改造消费侧读取；runtime 新实现不得以该字段作为主语义。 */
-  readonly cacheGroups: Record<string, CompiledSimulationNode>;
   readonly slots: Record<string, CompiledSimulationSlot>;
   readonly ports: Record<string, CompiledSimulationPort>;
   readonly links: Record<string, CompiledSimulationSlotLink>;
@@ -72,8 +50,6 @@ export interface CompiledSimulationTopology {
   readonly ordering: {
     readonly deviceOrder: readonly string[];
     readonly nodeOrder: readonly string[];
-    /** 迁移期只供旧消费侧读取；等 renderer/app 消费面重构后删除。 */
-    readonly cacheGroupOrder: readonly string[];
     readonly slotOrder: readonly string[];
     readonly portOrder: readonly string[];
     readonly physicalConnectionOrder: readonly string[];
@@ -88,6 +64,17 @@ export interface CompiledSimulationItem {
   readonly tags: readonly string[];
 }
 
+export interface CompiledSimulationRecipeDefinition {
+  readonly id: string;
+  readonly nameKey: string;
+  readonly durationTicks: number;
+  readonly inputs: readonly CompiledSimulationRecipeItem[];
+  readonly outputs: readonly CompiledSimulationRecipeItem[];
+  readonly machineId: string;
+  readonly recipeType: SimulationRecipeType;
+  readonly tags: readonly string[];
+}
+
 export interface CompiledSimulationDevice {
   readonly id: string;
   readonly sourceEntityId: string | null;
@@ -96,13 +83,10 @@ export interface CompiledSimulationDevice {
   readonly rotation: GridRotation | null;
   readonly tags: readonly string[];
   readonly transportClass: SimulationTransportClass;
-  /** 对应《仿真运行原理》§8.1：求解顺序按设备视角组织，再处理设备内节点。 */
   readonly nodeIds: readonly string[];
-  /** 迁移期只供旧消费侧读取；runtime 新实现使用 nodeIds。 */
-  readonly cacheGroupIds: readonly string[];
+  readonly ingredientNodeIds: readonly string[];
+  readonly productNodeIds: readonly string[];
   readonly portIds: readonly string[];
-  readonly recipePlan: CompiledSimulationRecipePlan | null;
-  readonly recipePlans: readonly CompiledSimulationRecipePlan[];
   readonly routing: Record<string, CompiledSimulationRoutingEntry>;
   readonly configHash: string;
 }
@@ -111,9 +95,7 @@ export interface CompiledSimulationNode {
   readonly id: string;
   readonly deviceId: string;
   readonly sourceStorageSlotGroupId: string | null;
-  /** 对应《仿真运行原理》§3.5：slot type 只表达配方存储角色，不决定端口方向。 */
-  readonly cacheType: SimulationSlotType;
-  /** 对应《仿真运行原理》§3.8：双向真实组必须展开为 input-view / output-view。 */
+  readonly slotType: SimulationSlotType;
   readonly viewRole: SimulationNodeViewRole;
   readonly slotIds: readonly string[];
   readonly inputPortIds: readonly string[];
@@ -121,12 +103,10 @@ export interface CompiledSimulationNode {
   readonly groupOrder: number;
 }
 
-export type CompiledSimulationCacheGroup = CompiledSimulationNode;
-
 export interface CompiledSimulationSlot {
   readonly id: string;
-  readonly cacheGroupId: string;
   readonly nodeId: string;
+  readonly sourceStorageSlotGroupId: string | null;
   readonly sourceSlotId: string | null;
   readonly capacity: number;
   readonly domain: SimulationItemDomain | "any";
@@ -138,8 +118,6 @@ export interface CompiledSimulationSlot {
   readonly submitIntervalTicks: number | null;
 }
 
-export type CompiledSimulationSlotTemplate = CompiledSimulationSlot;
-
 export interface CompiledSimulationPort {
   readonly id: string;
   readonly deviceId: string;
@@ -150,12 +128,11 @@ export interface CompiledSimulationPort {
   readonly insideGridPoint: GridPoint;
   readonly outsideGridPoint: GridPoint;
   readonly edge: GridEdge;
-  /** 对应《仿真运行原理》§6.2：port 绑定到编译后 Node，再由 port connection 生成边。 */
   readonly boundNodeIds: readonly string[];
-  /** 迁移期只供旧 compiler 局部变量命名与旧消费侧读取。 */
-  readonly boundCacheGroupIds: readonly string[];
   readonly acceptRule: SimulationAcceptRule;
   readonly count: SimulationCountLimit;
+  readonly priorityGroup: number;
+  readonly roundRobinSeed: number;
   readonly order: number;
 }
 
@@ -172,12 +149,8 @@ export interface CompiledSimulationTransferEdge {
   readonly physicalConnectionId: string;
   readonly sourcePortId: string;
   readonly targetPortId: string;
-  /** 对应《仿真运行原理》§6.2：边从 output-view Node 流向 input-view Node。 */
   readonly sourceNodeId: string;
   readonly targetNodeId: string;
-  /** 迁移期只供旧字段消费；runtime 新实现使用 sourceNodeId / targetNodeId。 */
-  readonly sourceCacheGroupId: string;
-  readonly targetCacheGroupId: string;
   readonly acceptRule: SimulationAcceptRule;
   readonly count: SimulationCountLimit;
 }
@@ -190,16 +163,14 @@ export interface CompiledSimulationSlotLink {
   readonly targetSlotIdBySourceSlotId: Readonly<Record<string, string>>;
 }
 
-export type CompiledSimulationCacheLink = CompiledSimulationSlotLink;
-
 export interface CompiledSimulationRecipePlan {
   readonly recipeId: string;
   readonly recipeType: SimulationRecipeType;
   readonly durationTicks: number;
   readonly inputs: readonly CompiledSimulationRecipeItem[];
   readonly outputs: readonly CompiledSimulationRecipeItem[];
-  readonly ingredientCacheGroupIds: readonly string[];
-  readonly productCacheGroupIds: readonly string[];
+  readonly ingredientNodeIds: readonly string[];
+  readonly productNodeIds: readonly string[];
 }
 
 export interface CompiledSimulationRecipeItem {
@@ -235,7 +206,98 @@ export type SimulationTickPullStatus =
       readonly bufferSize: number;
     };
 
-export interface SimulationTickReadResult {
+export interface SimulationRuntimeStatus {
+  readonly mode: SimulationWorkerStatusMode;
+  readonly topologyId: string | null;
+  readonly documentHash: string | null;
+  readonly retainedFromTick: number | null;
+  readonly latestTickNumber: number | null;
+  readonly bufferSize: number;
+  readonly maxBufferSize: number;
+  readonly error: string | null;
+}
+
+export interface SimulationStartResult {
+  readonly status: "started" | "failed";
+  readonly topologyId: string | null;
+  readonly diagnostics: readonly SimulationCompileDiagnostic[];
+  readonly error?: string;
+}
+
+export interface SimulationTickSnapshotResult {
   readonly status: SimulationTickPullStatus;
-  readonly currentTick: SimulationCurrentTickReadModel | null;
+  readonly currentTick: RuntimeTickSnapshot | null;
+}
+
+export interface RuntimeTickSnapshot {
+  readonly topologyId: string;
+  readonly documentHash: string;
+  readonly tickNumber: number;
+  readonly status: "initial" | "running";
+  readonly slots: Record<string, RuntimeSlotSnapshot>;
+  readonly devices: Record<string, RuntimeDeviceSnapshot>;
+  readonly nodes: Record<string, RuntimeNodeSnapshot>;
+  readonly transfers: readonly RuntimeTransferSnapshot[];
+  readonly routingCursors: Record<string, number>;
+  readonly diagnostics: readonly RuntimeDiagnosticSnapshot[];
+}
+
+export interface RuntimeSlotSnapshot {
+  readonly slotId: string;
+  readonly itemType: string | null;
+  readonly count: number;
+  readonly reserved: number;
+}
+
+export interface RuntimeDeviceSnapshot {
+  readonly deviceId: string;
+  readonly block: boolean;
+  readonly recipe: RuntimeDeviceRecipeSnapshot | null;
+}
+
+export interface RuntimeDeviceRecipeSnapshot {
+  readonly runId: string;
+  readonly recipeId: string;
+  readonly recipeType: SimulationRecipeType;
+  readonly progressTicks: number;
+  readonly durationTicks: number;
+  readonly state: "running" | "waiting-output";
+}
+
+export interface RuntimeNodeSnapshot {
+  readonly nodeId: string;
+  readonly result: "uncertain" | "solved-run" | "solved-block";
+  readonly acceptedInputEdgeIds: readonly string[];
+  readonly acceptedOutputEdgeIds: readonly string[];
+  readonly blockReason?: string;
+}
+
+export interface RuntimeTransferSnapshot {
+  readonly edgeId: string;
+  readonly sourceSlotId: string;
+  readonly targetSlotId: string;
+  readonly itemType: string;
+  readonly amount: number;
+}
+
+export interface RuntimeDiagnosticSnapshot {
+  readonly severity: "info" | "warning" | "error";
+  readonly code: string;
+  readonly message: string;
+}
+
+export function compileRecipeDefinition(
+  recipe: RecipeDefinition,
+  durationTicks: number,
+): CompiledSimulationRecipeDefinition {
+  return {
+    id: recipe.id,
+    nameKey: recipe.nameKey,
+    durationTicks,
+    inputs: recipe.inputs.map((input) => ({ ...input })),
+    outputs: recipe.outputs.map((output) => ({ ...output })),
+    machineId: recipe.machineId,
+    recipeType: recipe.recipeType,
+    tags: [...recipe.tags].sort(),
+  };
 }

@@ -41,13 +41,30 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(appHost.internalActions.hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
-  it("only enters from select unless it is switching an existing single-placement draft", () => {
+  it("enters from a placement button even when the current tool is not select", () => {
     const { context, editor, appHost } = createContext({
       activeTool: "marquee",
     });
     const module = createHypergryphSinglePlacementGestureModule();
 
     const result = module.handle(placementMouseTapEvent("device-a"), context);
+
+    expect(result).toEqual({ status: "handled" });
+    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-a", {
+      x: 50,
+      y: 40,
+    });
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+  });
+
+  it("still only enters from select when using a number shortcut", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "marquee",
+      selectingPlacementGroup: "warehouse",
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    const result = module.handle(keyDownEvent({ code: "Digit3", key: "3" }), context);
 
     expect(result).toEqual({ status: "ignored" });
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
@@ -71,6 +88,27 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
     );
+  });
+
+  it("closes the left dock when entering single-placement on mobile and tablet", () => {
+    for (const deviceClass of ["mobile", "tablet"] as const) {
+      const { context, appHost } = createContext({
+        deviceClass,
+        leftDockOpen: true,
+      });
+      const module = createHypergryphSinglePlacementGestureModule();
+
+      const result = module.handle(placementMouseTapEvent("device-a"), context);
+
+      expect(result).toEqual({ status: "handled" });
+      expect(appHost.internalActions.toggleLeftDock).not.toHaveBeenCalled();
+
+      expect(
+        module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
+      ).toEqual({ status: "handled" });
+      expect(appHost.internalActions.toggleLeftDock).toHaveBeenCalledTimes(1);
+      expect(appHost.state.workbench.leftDockOpen).toBe(false);
+    }
   });
 
   it("selects a placement group from its configured shortcut while in select", () => {
@@ -294,6 +332,8 @@ function createContext(options: {
   selectingPlacementGroup?: "beltLogistics" | "pipeLogistics" | "resourcePower" | "warehouse" | "basicProduction" | "advancedManufacturing" | null;
   initialPreview?: boolean;
   previewRect?: GridRect;
+  deviceClass?: "desktop" | "tablet" | "mobile";
+  leftDockOpen?: boolean;
 } = {}): {
   context: GestureActionContext<AppHost>;
   editor: MockEditor;
@@ -431,6 +471,12 @@ function createContext(options: {
         hypergryphOperationMode: true,
       },
       activeTool: options.activeTool ?? "select",
+      screenProfile: {
+        deviceClass: options.deviceClass ?? "desktop",
+      },
+      workbench: {
+        leftDockOpen: options.leftDockOpen ?? true,
+      },
     },
     internalState: {
       activeTool: options.activeTool ?? "select",
@@ -450,6 +496,10 @@ function createContext(options: {
     internalActions: {
       setActiveTool: vi.fn((activeTool) => {
         appHost.internalState.activeTool = activeTool;
+        appHost.state.activeTool = activeTool;
+      }),
+      toggleLeftDock: vi.fn(() => {
+        appHost.state.workbench.leftDockOpen = !appHost.state.workbench.leftDockOpen;
       }),
       showCanvasFloatingToolbarForCollection: vi.fn((buttonIds, collectionType) => {
         if (editor.queries.findEntityCollectionGridRect(collectionType) === null) {

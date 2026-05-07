@@ -1,11 +1,9 @@
 import type { SimulationContract } from "@/domain/contract/simulation-contract";
 import type { WorkspaceContract } from "@/domain/contract/workspace-contract";
 import type {
-  SimulationBeltCargoReadModel,
-  SimulationDeviceRuntimeReadModel,
   SimulationDeviceRuntimeSlotItemReadModel,
-  SimulationReservedItemReadModel,
-} from "@/domain/query/simulation-read-model";
+  SimulationDeviceRuntimeStatusReadModel,
+} from "@/domain/query/simulation-query";
 import {
   createSnapshotStore,
   type SnapshotStoreReadWrite,
@@ -21,13 +19,14 @@ import {
   createSimulationStateReadWrite,
   type SimulationStateReadWrite,
 } from "./state-impl";
-import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
+import { SimulationWorkerRuntime } from "./worker-runtime";
 import type {
   SimulationWorkerRequest,
   SimulationWorkerResponse,
 } from "./worker-protocol";
 import type {
   CompiledSimulationTopology,
+  RuntimeTickSnapshot,
 } from "./types";
 
 export interface SimulationHost extends SimulationContract {
@@ -38,15 +37,8 @@ export interface SimulationHost extends SimulationContract {
   dispose: () => void;
 }
 
-const BELT_INPUT_BUFFER_ID = "item_input_buffer";
-
-type BeltDefinitionId =
-  | "belt_straight_1x1"
-  | "belt_turn_cw_1x1"
-  | "belt_turn_ccw_1x1";
-
 export function createSimulationHost(
-  workspace: WorkspaceContract
+  workspace: WorkspaceContract,
 ): SimulationHost {
   const bridge = createSimulationWorkerBridge();
   const disposers: Array<() => void> = [];
@@ -66,26 +58,30 @@ export function createSimulationHost(
     internalState,
     internalActions,
     get state() {
-      return internalState.state;
-    },
-    get simulationSpeed() {
-      return internalState.simulationSpeed;
-    },
-    set simulationSpeed(value: number) {
-      internalActions.setSimulationSpeed(value);
+      return internalState;
     },
     topology: topologyStore,
     queries: {
-      getStatus: () => internalState.runtimeStatus,
-      getCurrentTick: () => internalState.currentTickReadModel,
-      getBeltCargoEntries: () => resolveBeltCargoEntries({
-        topology: topologyStore.getSnapshot(),
-        currentTickReadModel: internalState.currentTickReadModel,
+      getStatusRuntimeJson: () => JSON.stringify({
+        state: {
+          runningState: internalState.runningState,
+          simulationSpeed: internalState.simulationSpeed,
+          currentPlaybackTickNumber: internalState.currentPlaybackTickNumber,
+        },
+        runtimeStatus: internalState.runtimeStatus,
+        currentTick: internalState.currentSnapshot === null
+          ? null
+          : {
+              tickNumber: internalState.currentSnapshot.tickNumber,
+              status: internalState.currentSnapshot.status,
+              transferCount: internalState.currentSnapshot.transfers.length,
+              diagnosticCount: internalState.currentSnapshot.diagnostics.length,
+            },
       }),
       getDeviceRuntimeStatus: (deviceId) => resolveDeviceRuntimeStatus({
         topology: topologyStore.getSnapshot(),
         deviceId,
-        currentTickReadModel: internalState.currentTickReadModel,
+        snapshot: internalState.currentSnapshot,
       }),
     },
     actions,
@@ -112,158 +108,63 @@ export function createSimulationHost(
   return host;
 }
 
-function resolveBeltCargoEntries(options: {
-  topology: CompiledSimulationTopology | null;
-  currentTickReadModel: SimulationHost["internalState"]["currentTickReadModel"];
-}): readonly SimulationBeltCargoReadModel[] {
-  if (options.topology === null || options.currentTickReadModel === null) {
-    return [];
-  }
-
-  const entries: SimulationBeltCargoReadModel[] = [];
-  for (const compiledDeviceId of options.topology.ordering.deviceOrder) {
-    const device = options.topology.devices[compiledDeviceId];
-    const beltShape = resolveBeltCargoShape(device?.definitionId ?? null);
-    if (
-      device === undefined
-      || beltShape === null
-      || device.sourceEntityId === null
-      || device.position === null
-      || device.rotation === null
-    ) {
-      continue;
-    }
-
-    const recipe = options.currentTickReadModel.devices[compiledDeviceId]?.recipe ?? null;
-    if (recipe === null || recipe.durationTicks <= 0) {
-      continue;
-    }
-
-    const inputSlotId = resolveDeviceInputSlotId(options.topology, device.cacheGroupIds);
-    if (inputSlotId === null) {
-      continue;
-    }
-
-    const reservationSlotId = resolveReservationSlotId(options.topology, inputSlotId);
-    const itemId = resolveReservedItemId(
-      options.currentTickReadModel,
-      reservationSlotId,
-      recipe.runId,
-    );
-    if (itemId === null) {
-      continue;
-    }
-
-    entries.push({
-      beltShape,
-      position: device.position,
-      rotation: device.rotation,
-      itemId,
-      progress: clamp01(recipe.progressTicks / recipe.durationTicks),
-    });
-  }
-
-  return entries;
-}
-
-function resolveBeltCargoShape(definitionId: string | null): SimulationBeltCargoReadModel["beltShape"] | null {
-  switch (definitionId as BeltDefinitionId | null) {
-    case "belt_straight_1x1":
-      return "straight";
-    case "belt_turn_cw_1x1":
-      return "turn-cw";
-    case "belt_turn_ccw_1x1":
-      return "turn-ccw";
-    default:
-      return null;
-  }
-}
-
-function resolveDeviceInputSlotId(
-  topology: CompiledSimulationTopology,
-  cacheGroupIds: readonly string[],
-): string | null {
-  for (const cacheGroupId of cacheGroupIds) {
-    const cacheGroup = topology.cacheGroups[cacheGroupId];
-    if (cacheGroup?.sourceStorageSlotGroupId !== BELT_INPUT_BUFFER_ID) {
-      continue;
-    }
-
-    return cacheGroup.slotIds[0] ?? null;
-  }
-
-  return null;
-}
-
-function resolveReservationSlotId(
-  topology: CompiledSimulationTopology,
-  sourceSlotId: string,
-): string {
-  for (const link of Object.values(topology.links)) {
-    if (link.linkType !== "share-all") {
-      continue;
-    }
-
-    const targetSlotId = link.targetSlotIdBySourceSlotId[sourceSlotId];
-    if (targetSlotId !== undefined) {
-      return targetSlotId;
-    }
-  }
-
-  return sourceSlotId;
-}
-
-function resolveReservedItemId(
-  currentTickReadModel: NonNullable<SimulationHost["internalState"]["currentTickReadModel"]>,
-  reservationSlotId: string,
-  recipeRunId: string,
-): string | null {
-  const slotReadModel = currentTickReadModel.slots[reservationSlotId];
-  const reservation = slotReadModel?.reserved.find((entry) => entry.recipeRunId === recipeRunId);
-  return reservation?.itemType ?? null;
-}
-
 function resolveDeviceRuntimeStatus(options: {
   topology: CompiledSimulationTopology | null;
   deviceId: string;
-  currentTickReadModel: SimulationHost["internalState"]["currentTickReadModel"];
-}): SimulationDeviceRuntimeReadModel | null {
-  if (options.topology === null || options.currentTickReadModel === null) {
+  snapshot: RuntimeTickSnapshot | null;
+}): SimulationDeviceRuntimeStatusReadModel | null {
+  if (options.topology === null || options.snapshot === null) {
     return null;
   }
 
-  const compiledDeviceId = options.topology.ordering.deviceOrder.find((topologyDeviceId) =>
-    options.topology?.devices[topologyDeviceId]?.sourceEntityId === options.deviceId
-  );
-  if (compiledDeviceId === undefined) {
+  const compiledDeviceId = resolveCompiledDeviceId(options.topology, options.deviceId);
+  if (compiledDeviceId === null) {
     return null;
   }
 
-  const deviceReadModel = options.currentTickReadModel.devices[compiledDeviceId];
-  if (deviceReadModel === undefined) {
+  const deviceSnapshot = options.snapshot.devices[compiledDeviceId];
+  if (deviceSnapshot === undefined) {
     return null;
   }
 
   return {
-    recipeId: deviceReadModel.recipe?.recipeId ?? null,
-    progressSeconds: deviceReadModel.recipe === null
+    recipeId: deviceSnapshot.recipe?.recipeId ?? null,
+    progressSeconds: deviceSnapshot.recipe === null
       ? null
-      : convertSimulationTicksToSeconds(deviceReadModel.recipe.progressTicks),
-    desiredSeconds: deviceReadModel.recipe === null
+      : convertSimulationTicksToSeconds(deviceSnapshot.recipe.progressTicks),
+    desiredSeconds: deviceSnapshot.recipe === null
       ? null
-      : convertSimulationTicksToSeconds(deviceReadModel.recipe.durationTicks),
+      : convertSimulationTicksToSeconds(deviceSnapshot.recipe.durationTicks),
     slotItems: resolveDeviceRuntimeSlotItems({
       topology: options.topology,
       compiledDeviceId,
-      currentTickReadModel: options.currentTickReadModel,
+      snapshot: options.snapshot,
     }),
   };
+}
+
+function resolveCompiledDeviceId(
+  topology: CompiledSimulationTopology,
+  deviceId: string,
+): string | null {
+  if (topology.devices[deviceId] !== undefined) {
+    return deviceId;
+  }
+
+  const directCompiledId = `device:${deviceId}`;
+  if (topology.devices[directCompiledId] !== undefined) {
+    return directCompiledId;
+  }
+
+  return topology.ordering.deviceOrder.find((topologyDeviceId) =>
+    topology.devices[topologyDeviceId]?.sourceEntityId === deviceId,
+  ) ?? null;
 }
 
 function resolveDeviceRuntimeSlotItems(options: {
   topology: CompiledSimulationTopology;
   compiledDeviceId: string;
-  currentTickReadModel: NonNullable<SimulationHost["internalState"]["currentTickReadModel"]>;
+  snapshot: RuntimeTickSnapshot;
 }): SimulationDeviceRuntimeSlotItemReadModel[] {
   const device = options.topology.devices[options.compiledDeviceId];
   if (device === undefined) {
@@ -271,64 +172,33 @@ function resolveDeviceRuntimeSlotItems(options: {
   }
 
   const slotItemsByRealSlotKey = new Map<string, SimulationDeviceRuntimeSlotItemReadModel>();
-  for (const cacheGroupId of device.cacheGroupIds) {
-    const cacheGroup = options.topology.cacheGroups[cacheGroupId];
-    if (cacheGroup === undefined) {
+  for (const nodeId of device.nodeIds) {
+    const node = options.topology.nodes[nodeId];
+    if (node === undefined) {
       continue;
     }
 
-    for (const compiledSlotId of cacheGroup.slotIds) {
+    for (const compiledSlotId of node.slotIds) {
       const compiledSlot = options.topology.slots[compiledSlotId];
-      const slotReadModel = options.currentTickReadModel.slots[compiledSlotId];
-      if (compiledSlot === undefined || slotReadModel === undefined) {
+      const slotSnapshot = options.snapshot.slots[compiledSlotId];
+      if (compiledSlot === undefined || slotSnapshot === undefined) {
         continue;
       }
 
-      const storageGroupId = cacheGroup.sourceStorageSlotGroupId;
-      const slotId = compiledSlot.sourceSlotId ?? compiledSlot.id;
-      const realSlotKey = `${storageGroupId ?? "<synthetic>"}:${slotId}`;
+      const storageGroupId = compiledSlot.sourceStorageSlotGroupId ?? "synthetic";
+      const sourceSlotId = compiledSlot.sourceSlotId ?? compiledSlot.id;
+      const realSlotKey = `${storageGroupId}:${sourceSlotId}`;
       const existing = slotItemsByRealSlotKey.get(realSlotKey);
-      const reserved = mergeReservedItems([
-        ...(existing?.reserved ?? []),
-        ...slotReadModel.reserved,
-      ]);
-
       slotItemsByRealSlotKey.set(realSlotKey, {
-        storageGroupId,
-        slotId,
-        itemType: existing?.itemType ?? slotReadModel.itemType,
-        count: (existing?.count ?? 0) + slotReadModel.count,
-        reserved,
+        slotId: sourceSlotId,
+        itemType: existing?.itemType ?? slotSnapshot.itemType,
+        count: Math.max(existing?.count ?? 0, slotSnapshot.count),
+        reserved: Math.max(existing?.reserved ?? 0, slotSnapshot.reserved),
       });
     }
   }
 
   return [...slotItemsByRealSlotKey.values()];
-}
-
-function mergeReservedItems(
-  reservedItems: readonly SimulationReservedItemReadModel[],
-): SimulationReservedItemReadModel[] {
-  const reservedByKey = new Map<string, SimulationReservedItemReadModel>();
-  for (const reservedItem of reservedItems) {
-    const key = `${reservedItem.recipeRunId}:${reservedItem.itemType}`;
-    const existing = reservedByKey.get(key);
-    if (existing === undefined) {
-      reservedByKey.set(key, { ...reservedItem });
-      continue;
-    }
-
-    reservedByKey.set(key, {
-      ...existing,
-      amount: existing.amount + reservedItem.amount,
-    });
-  }
-
-  return [...reservedByKey.values()];
-}
-
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
 }
 
 function createSimulationWorkerBridge(): SimulationWorkerBridge {
@@ -373,15 +243,15 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     }, "topology-loaded");
   }
 
-  public getTickReadModel(tickNumber: number): Promise<Extract<
+  public getTickSnapshot(tickNumber: number): Promise<Extract<
     SimulationWorkerResponse,
-    { readonly type: "tick-read-model-result" }
+    { readonly type: "tick-snapshot-result" }
   >> {
     return this.request({
-      type: "get-tick-read-model",
+      type: "get-tick-snapshot",
       requestId: this.createRequestId(),
       tickNumber,
-    }, "tick-read-model-result");
+    }, "tick-snapshot-result");
   }
 
   public dispose(): void {
@@ -430,23 +300,22 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
     return Promise.resolve(response);
   }
 
-  public getTickReadModel(tickNumber: number): Promise<Extract<
+  public getTickSnapshot(tickNumber: number): Promise<Extract<
     SimulationWorkerResponse,
-    { readonly type: "tick-read-model-result" }
+    { readonly type: "tick-snapshot-result" }
   >> {
     const response = this.runtime.handleRequest({
-      type: "get-tick-read-model",
+      type: "get-tick-snapshot",
       requestId: this.createRequestId(),
       tickNumber,
     });
-    if (response.type !== "tick-read-model-result") {
+    if (response.type !== "tick-snapshot-result") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);
     }
     return Promise.resolve(response);
   }
 
   public dispose(): void {
-    // Local runtime has no external resources.
   }
 
   private createRequestId(): number {

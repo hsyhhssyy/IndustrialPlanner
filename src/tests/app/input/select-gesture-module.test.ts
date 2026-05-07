@@ -20,7 +20,9 @@ describe("createHypergryphSelectGestureModule", () => {
       addToCollection,
       clearCollection,
       isDedicatedLogisticsDevice,
+      setRightDockActiveTab,
       showCanvasFloatingToolbarForCollection,
+      toggleRightDock,
     } = createContext();
     const module = createHypergryphSelectGestureModule();
 
@@ -45,6 +47,8 @@ describe("createHypergryphSelectGestureModule", () => {
       collectionType: EntityCollectionType.selection,
       entityId: "entity-1",
     });
+    expect(setRightDockActiveTab).toHaveBeenCalledWith("selection");
+    expect(toggleRightDock).toHaveBeenCalledTimes(1);
     expect(showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
       [
         "canvas-floating-toolbar-button-move",
@@ -62,6 +66,8 @@ describe("createHypergryphSelectGestureModule", () => {
       clearCollection,
       showCanvasFloatingToolbarForCollection,
       hideCanvasFloatingToolbar,
+      setRightDockActiveTab,
+      toggleRightDock,
     } = createContext("select", true, ["entity-1"]);
     const module = createHypergryphSelectGestureModule();
 
@@ -83,8 +89,38 @@ describe("createHypergryphSelectGestureModule", () => {
     expect(result).toEqual({ status: "handled" });
     expect(clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
     expect(addToCollection).not.toHaveBeenCalled();
+    expect(setRightDockActiveTab).not.toHaveBeenCalled();
     expect(showCanvasFloatingToolbarForCollection).not.toHaveBeenCalled();
     expect(hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+    expect(toggleRightDock).not.toHaveBeenCalled();
+  });
+
+  it("switches to the selection tab without reopening the right dock when it is already open", () => {
+    const {
+      context,
+      setRightDockActiveTab,
+      toggleRightDock,
+    } = createContext("select", true, [], true);
+    const module = createHypergryphSelectGestureModule();
+
+    const result = module.handle(
+      {
+        type: "mouse tap",
+        gestureId: "mouse-select-right-dock-open-1",
+        button: 0,
+        buttons: 0,
+        position: { x: 48, y: 32 },
+        longPress: false,
+        pointerEntity: entity("entity-1"),
+        modifiers: emptyModifiers(),
+        sourceEvent: null,
+      },
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(setRightDockActiveTab).toHaveBeenCalledWith("selection");
+    expect(toggleRightDock).not.toHaveBeenCalled();
   });
 
   it("keeps the current selection when the clicked entity is already part of a multi-selection", () => {
@@ -488,6 +524,7 @@ function createContext(
   activeTool: "select" | "move" | "marquee" = "select",
   hypergryphOperationMode = true,
   selectedEntityIds: readonly string[] = [],
+  rightDockOpen = false,
 ): {
   context: GestureActionContext<AppHost>;
   addToCollection: ReturnType<typeof vi.fn>;
@@ -497,12 +534,16 @@ function createContext(
   isDedicatedLogisticsDevice: ReturnType<typeof vi.fn>;
   isShortcutFor: ReturnType<typeof vi.fn>;
   setActiveTool: ReturnType<typeof vi.fn>;
+  setRightDockActiveTab: ReturnType<typeof vi.fn>;
+  toggleRightDock: ReturnType<typeof vi.fn>;
 } {
   const addToCollection = vi.fn();
   const clearCollection = vi.fn();
   const showCanvasFloatingToolbarForCollection = vi.fn(() => true);
   const hideCanvasFloatingToolbar = vi.fn();
   const setActiveTool = vi.fn();
+  const setRightDockActiveTab = vi.fn();
+  const toggleRightDock = vi.fn();
   const isShortcutFor = vi.fn((shortcutKeyId: string, code: string | null) => (
     shortcutKeyId === SHORTCUT_KEY.RETURN_SELECT && code === "Escape"
   ));
@@ -541,15 +582,23 @@ function createContext(
           settings: {
             hypergryphOperationMode,
           },
+          workbench: {
+            rightDockOpen,
+          },
         },
         internalState: {
           activeTool,
+          workbench: {
+            rightDockOpen,
+          },
         },
         internalActions: {
           isShortcutFor,
           setActiveTool,
+          setRightDockActiveTab,
           showCanvasFloatingToolbarForCollection,
           hideCanvasFloatingToolbar,
+          toggleRightDock,
         },
       } as unknown as AppHost,
       keyboard: emptyKeyboardSnapshot(),
@@ -561,6 +610,8 @@ function createContext(
     isDedicatedLogisticsDevice,
     isShortcutFor,
     setActiveTool,
+    setRightDockActiveTab,
+    toggleRightDock,
   };
 }
 

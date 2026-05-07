@@ -31,13 +31,13 @@ describe("createSimulationHost", () => {
     expect(host.topology.getSnapshot()).toBeNull()
     expect(host.internalState.currentTickReadModel).toBeNull()
 
-    await host.actions.start()
+    const result = await host.actions.start()
     const topology = host.topology.getSnapshot()
 
+    expect(result.status).toBe("started")
     expect(host.state).toBe("start")
-    expect(host.internalState.runtimeStatus.mode).toBe("running")
     expect(topology).not.toBeNull()
-    expect(topology?.topologyId).toBe(host.internalState.runtimeStatus.topologyId)
+    expect(topology?.topologyId).toBe(result.topologyId)
     expect(workspace.simulation).toBe(host)
 
     host.dispose()

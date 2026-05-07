@@ -4,8 +4,17 @@ import type { AppHost } from "@/app/host/app-host";
 
 const SIMULATION_PANEL_INTERVAL_MS = 250;
 
-function formatCurrentTickReadModelJson(appHost: AppHost): string {
-  return JSON.stringify(appHost.workspace.simulation?.queries.getCurrentTick() ?? null, null, 2);
+function formatSimulationRuntimeJson(appHost: AppHost): string {
+  const runtimeJson = appHost.workspace.simulation?.queries.getStatusRuntimeJson() ?? null;
+  if (runtimeJson === null) {
+    return "null";
+  }
+
+  try {
+    return JSON.stringify(JSON.parse(String(runtimeJson)), null, 2);
+  } catch {
+    return String(runtimeJson);
+  }
 }
 
 export function RightDockSimulationPanel({
@@ -15,11 +24,11 @@ export function RightDockSimulationPanel({
   appHost: AppHost;
   translate: (key: string) => string;
 }) {
-  const [currentTickJson, setCurrentTickJson] = useState(() => formatCurrentTickReadModelJson(appHost));
+  const [runtimeJson, setRuntimeJson] = useState(() => formatSimulationRuntimeJson(appHost));
 
   useEffect(() => {
     const tick = () => {
-      setCurrentTickJson(formatCurrentTickReadModelJson(appHost));
+      setRuntimeJson(formatSimulationRuntimeJson(appHost));
     };
 
     tick();
@@ -35,10 +44,10 @@ export function RightDockSimulationPanel({
       <h4>{translate("label.currentTickSnapshot")}</h4>
       <textarea
         className="json-debug-textarea"
-        data-simulation-current-tick-json
+        data-simulation-runtime-json
         readOnly
         rows={20}
-        value={currentTickJson}
+        value={runtimeJson}
       />
     </article>
   );

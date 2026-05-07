@@ -91,6 +91,11 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
           entityId: options.entityId,
         });
 
+        context.appHost.internalActions.setRightDockActiveTab("selection");
+        if (!context.appHost.internalState.workbench.rightDockOpen) {
+          context.appHost.internalActions.toggleRightDock();
+        }
+
         context.appHost.internalActions.showCanvasFloatingToolbarForCollection(
           resolveSelectionToolbarButtonIds(
             context.workspace.registry.queries.isDedicatedLogisticsDevice(options.definitionId),

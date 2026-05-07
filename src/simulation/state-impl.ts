@@ -1,11 +1,11 @@
 import { makeAutoObservable } from "mobx";
 
-import type { SimulationCurrentTickReadModel } from "@/domain/query/simulation-read-model";
+import type { SimulationState } from "@/domain/contract/simulation-contract";
 
 import { DEFAULT_SIMULATION_SPEED } from "./tick-rate";
 import type {
+  RuntimeTickSnapshot,
   SimulationRuntimeStatus,
-  SimulationState,
 } from "./types";
 
 export function createInitialSimulationRuntimeStatus(): SimulationRuntimeStatus {
@@ -21,22 +21,22 @@ export function createInitialSimulationRuntimeStatus(): SimulationRuntimeStatus 
   };
 }
 
-export interface SimulationStateReadWrite {
-  state: SimulationState;
+export interface SimulationStateReadWrite extends SimulationState {
+  runningState: SimulationState["runningState"];
   simulationSpeed: number;
   hasStarted: boolean;
   runtimeStatus: SimulationRuntimeStatus;
-  currentTickReadModel: SimulationCurrentTickReadModel | null;
+  currentSnapshot: RuntimeTickSnapshot | null;
   currentPlaybackTickNumber: number;
 }
 
 class SimulationStateReadWriteImpl implements SimulationStateReadWrite {
-  state: SimulationState = "stop";
-  simulationSpeed = DEFAULT_SIMULATION_SPEED;
-  hasStarted = false;
-  runtimeStatus: SimulationRuntimeStatus = createInitialSimulationRuntimeStatus();
-  currentTickReadModel: SimulationCurrentTickReadModel | null = null;
-  currentPlaybackTickNumber = 0;
+  public runningState: SimulationState["runningState"] = "stop";
+  public simulationSpeed = DEFAULT_SIMULATION_SPEED;
+  public hasStarted = false;
+  public runtimeStatus: SimulationRuntimeStatus = createInitialSimulationRuntimeStatus();
+  public currentSnapshot: RuntimeTickSnapshot | null = null;
+  public currentPlaybackTickNumber = 0;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

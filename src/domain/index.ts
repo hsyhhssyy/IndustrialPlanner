@@ -10,5 +10,6 @@ export type {
 	GridRotation,
 } from "./types/grid";
 export type {
+	SimulationRunState,
 	SimulationState,
-} from "./contract/simulation-contract-types";
+} from "./contract/simulation-contract";

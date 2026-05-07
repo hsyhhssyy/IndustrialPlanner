@@ -3,7 +3,7 @@ import type {
 } from "@/domain/types/registry/entity-definition";
 import type { AppLocale } from "@/shared/i18n/messages";
 import type {
-  ExplicitLink,
+  SlotLinkDefinition,
   WorldEntity,
 } from "@/domain/entity/world-document";
 
@@ -11,7 +11,7 @@ export interface SelectionInspectorContext {
   selectedEntityId: string;
   selectedEntity: WorldEntity;
   selectedDefinition: EntityDefinition;
-  selectedLinks: ExplicitLink[];
+  selectedLinks: SlotLinkDefinition[];
 }
 
 export interface SelectionInspectorState {

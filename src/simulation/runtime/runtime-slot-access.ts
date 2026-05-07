@@ -1,5 +1,7 @@
 import type {
+  CompiledSimulationDevice,
   CompiledSimulationNode,
+  CompiledSimulationRecipeDefinition,
   CompiledSimulationRecipeItem,
   CompiledSimulationRecipePlan,
   CompiledSimulationSlot,
@@ -15,11 +17,11 @@ import type {
   SimulationMutableRuntimeState,
 } from "./runtime-state";
 
-/**
- * 对应《仿真运行原理》§3.3、§3.4、§4 与 §5。
- * 五个阶段都会读写 slot、Link、reservation 与 recipe output；这些公共操作集中在这里，
- * 避免阶段文件各自重新实现 share-all/share-cap、组内互斥、库存预留和产物落位规则。
- */
+export interface IngredientSlotContent {
+  readonly slotId: string;
+  readonly itemType: string;
+  readonly availableAmount: number;
+}
 
 export function resolveStorageSlotId(
   state: SimulationMutableRuntimeState,
@@ -132,11 +134,29 @@ export function moveOneItem(options: {
   itemType: string;
 }): boolean {
   const sourceSlot = options.topology.slots[options.sourceSlotId];
+  const targetSlot = options.topology.slots[options.targetSlotId];
   const sourceStorageSlotId = resolveStorageSlotId(options.state, options.sourceSlotId);
   const targetStorageSlotId = resolveStorageSlotId(options.state, options.targetSlotId);
   const sourceState = options.state.persistent.slots[sourceStorageSlotId];
   const targetState = options.state.persistent.slots[targetStorageSlotId];
-  if (sourceSlot === undefined || sourceState === undefined || targetState === undefined) {
+  if (
+    sourceSlot === undefined
+    || targetSlot === undefined
+    || sourceState === undefined
+    || targetState === undefined
+  ) {
+    return false;
+  }
+
+  if (!slotCanHold(options.topology, targetSlot, options.itemType)) {
+    return false;
+  }
+
+  if (targetState.itemType !== null && targetState.itemType !== options.itemType) {
+    return false;
+  }
+
+  if (getRemainingCapacity(options.topology, options.state, options.targetSlotId) <= 0) {
     return false;
   }
 
@@ -150,6 +170,24 @@ export function moveOneItem(options: {
   targetState.itemType = targetState.itemType ?? options.itemType;
   targetState.count += 1;
   return true;
+}
+
+export function resolveDeviceRecipePlans(options: {
+  topology: CompiledSimulationTopology;
+  state: SimulationMutableRuntimeState;
+  device: CompiledSimulationDevice;
+}): readonly CompiledSimulationRecipePlan[] {
+  const ingredientSlotContents = readIngredientSlotContents({
+    topology: options.topology,
+    state: options.state,
+    device: options.device,
+  });
+
+  return resolveRecipes({
+    topology: options.topology,
+    device: options.device,
+    ingredientSlotContents,
+  });
 }
 
 export function placeRecipeOutputs(
@@ -236,9 +274,137 @@ export function aggregateInputItems(selections: readonly RuntimeReservedItem[]):
   return [...amountByItemType.entries()].map(([itemType, amount]) => ({ itemType, amount }));
 }
 
-export function getItemDomain(topology: CompiledSimulationTopology, itemType: string): SimulationItemDomain {
+export function getItemDomain(
+  topology: CompiledSimulationTopology,
+  itemType: string,
+): SimulationItemDomain {
   return topology.itemCatalog[itemType]?.domain
     ?? (itemType.includes("_liquid") || itemType.startsWith("liquid_") ? "liquid" : "solid");
+}
+
+export function finishRecipeIfPossible(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  recipe: RuntimeDeviceRecipeState,
+): boolean {
+  const simulatedSlots = cloneSlotStates(state.persistent.slots);
+  if (recipe.reservations.length > 0) {
+    consumeSelections(simulatedSlots, recipe.reservations);
+  }
+
+  const simulatedState: SimulationMutableRuntimeState = {
+    ...state,
+    persistent: {
+      ...state.persistent,
+      slots: simulatedSlots,
+    },
+  };
+  if (!placeRecipeOutputs(topology, simulatedState, recipe.plan, recipe.inputItems)) {
+    return false;
+  }
+
+  state.persistent.slots = simulatedState.persistent.slots;
+  return true;
+}
+
+function resolveRecipes(options: {
+  topology: CompiledSimulationTopology;
+  device: CompiledSimulationDevice;
+  ingredientSlotContents: readonly IngredientSlotContent[];
+}): readonly CompiledSimulationRecipePlan[] {
+  if (options.device.transportClass === "strict-belt") {
+    if (options.ingredientSlotContents.length === 0) {
+      return [];
+    }
+
+    return [{
+      recipeId: `${options.device.definitionId}:dynamic-belt-transfer`,
+      recipeType: "reserved-item",
+      durationTicks: Math.max(1, options.topology.standardTickRate),
+      inputs: [{ itemId: "any", amount: 1 }],
+      outputs: [{ itemId: "same-as-input", amount: 1 }],
+      ingredientNodeIds: options.device.ingredientNodeIds,
+      productNodeIds: options.device.productNodeIds,
+    }];
+  }
+
+  return Object.values(options.topology.recipeCatalog)
+    .filter((recipe) => recipe.machineId === options.device.definitionId)
+    .filter((recipe) => recipeCanMatchContents(recipe, options.ingredientSlotContents))
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((recipe) => ({
+      recipeId: recipe.id,
+      recipeType: recipe.recipeType,
+      durationTicks: recipe.durationTicks,
+      inputs: recipe.inputs,
+      outputs: recipe.outputs,
+      ingredientNodeIds: options.device.ingredientNodeIds,
+      productNodeIds: options.device.productNodeIds,
+    }));
+}
+
+function readIngredientSlotContents(options: {
+  topology: CompiledSimulationTopology;
+  state: SimulationMutableRuntimeState;
+  device: CompiledSimulationDevice;
+}): readonly IngredientSlotContent[] {
+  const contents: IngredientSlotContent[] = [];
+  for (const nodeId of options.device.ingredientNodeIds) {
+    const node = options.topology.nodes[nodeId];
+    if (node === undefined) {
+      continue;
+    }
+
+    for (const slotId of node.slotIds) {
+      const storageSlotId = resolveStorageSlotId(options.state, slotId);
+      const slotState = options.state.persistent.slots[storageSlotId];
+      const itemType = slotState?.itemType ?? options.topology.slots[slotId]?.lock ?? null;
+      if (slotState === undefined || itemType === null) {
+        continue;
+      }
+
+      const availableAmount = Math.max(0, slotState.count - getReservedAmount(options.state, storageSlotId));
+      if (availableAmount > 0) {
+        contents.push({ slotId: storageSlotId, itemType, availableAmount });
+      }
+    }
+  }
+  return contents;
+}
+
+function recipeCanMatchContents(
+  recipe: CompiledSimulationRecipeDefinition,
+  contents: readonly IngredientSlotContent[],
+): boolean {
+  if (recipe.inputs.length === 0) {
+    return true;
+  }
+
+  const availableByItemType = new Map<string, number>();
+  let totalAvailable = 0;
+  for (const content of contents) {
+    availableByItemType.set(content.itemType, (availableByItemType.get(content.itemType) ?? 0) + content.availableAmount);
+    totalAvailable += content.availableAmount;
+  }
+
+  for (const input of recipe.inputs) {
+    if (input.itemId === "any") {
+      if (totalAvailable < input.amount) {
+        return false;
+      }
+      totalAvailable -= input.amount;
+      continue;
+    }
+
+    const available = availableByItemType.get(input.itemId) ?? 0;
+    if (available < input.amount) {
+      return false;
+    }
+    availableByItemType.set(input.itemId, available - input.amount);
+    totalAvailable -= input.amount;
+  }
+
+  return true;
 }
 
 function getRemainingCapacity(
@@ -270,11 +436,18 @@ function getRemainingCapacity(
   return Math.max(0, (state.persistent.sharedCapacityLimitBySlotId[slotId] ?? slot.capacity) - occupiedCount);
 }
 
-function getReadableComponentSlotIds(state: SimulationMutableRuntimeState, slotId: string): readonly string[] {
+function getReadableComponentSlotIds(
+  state: SimulationMutableRuntimeState,
+  slotId: string,
+): readonly string[] {
   return state.persistent.sharedCapacitySlotIdsBySlotId[slotId] ?? [slotId];
 }
 
-function slotCanHold(topology: CompiledSimulationTopology, slot: CompiledSimulationSlot, itemType: string): boolean {
+function slotCanHold(
+  topology: CompiledSimulationTopology,
+  slot: CompiledSimulationSlot,
+  itemType: string,
+): boolean {
   if (slot.lock !== null && slot.lock !== itemType) {
     return false;
   }
@@ -287,8 +460,8 @@ function findRecipeOutputSlot(
   plan: CompiledSimulationRecipePlan,
   itemType: string,
 ): string | null {
-  for (const nodeId of plan.productCacheGroupIds) {
-    const node = topology.nodes[nodeId] ?? topology.cacheGroups[nodeId];
+  for (const nodeId of plan.productNodeIds) {
+    const node = topology.nodes[nodeId];
     if (node === undefined) {
       continue;
     }
@@ -306,10 +479,7 @@ function resolveRecipeOutputItems(
 ): Array<{ readonly itemType: string; readonly amount: number }> {
   const firstInputItemType = inputItems[0]?.itemType ?? null;
   return outputs.flatMap((output) => {
-    if (output.itemId === "same-as-input") {
-      return firstInputItemType === null ? [] : [{ itemType: firstInputItemType, amount: output.amount }];
-    }
-    if (output.itemId === "any") {
+    if (output.itemId === "same-as-input" || output.itemId === "any") {
       return firstInputItemType === null ? [] : [{ itemType: firstInputItemType, amount: output.amount }];
     }
     return [{ itemType: output.itemId, amount: output.amount }];
@@ -323,8 +493,8 @@ function findRecipeInputSelection(
   input: CompiledSimulationRecipeItem,
   localTakenBySlot: Record<string, number>,
 ): { readonly slotId: string; readonly itemType: string; readonly availableAmount: number } | null {
-  for (const nodeId of plan.ingredientCacheGroupIds) {
-    const node = topology.nodes[nodeId] ?? topology.cacheGroups[nodeId];
+  for (const nodeId of plan.ingredientNodeIds) {
+    const node = topology.nodes[nodeId];
     if (node === undefined) {
       continue;
     }
@@ -352,29 +522,4 @@ function recipeInputMatches(input: CompiledSimulationRecipeItem, itemType: strin
 
 function cloneSlotStates(slots: Record<string, RuntimeSlotState>): Record<string, RuntimeSlotState> {
   return Object.fromEntries(Object.entries(slots).map(([slotId, slot]) => [slotId, { ...slot }]));
-}
-
-export function finishRecipeIfPossible(
-  topology: CompiledSimulationTopology,
-  state: SimulationMutableRuntimeState,
-  recipe: RuntimeDeviceRecipeState,
-): boolean {
-  const simulatedSlots = cloneSlotStates(state.persistent.slots);
-  if (recipe.reservations.length > 0) {
-    consumeSelections(simulatedSlots, recipe.reservations);
-  }
-
-  const simulatedState: SimulationMutableRuntimeState = {
-    ...state,
-    persistent: {
-      ...state.persistent,
-      slots: simulatedSlots,
-    },
-  };
-  if (!placeRecipeOutputs(topology, simulatedState, recipe.plan, recipe.inputItems)) {
-    return false;
-  }
-
-  state.persistent.slots = simulatedState.persistent.slots;
-  return true;
 }

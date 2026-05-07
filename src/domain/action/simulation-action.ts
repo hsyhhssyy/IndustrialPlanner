@@ -1,3 +1,4 @@
+
 export interface SimulationAction {
   start(): Promise<void>;
   pause(): void;

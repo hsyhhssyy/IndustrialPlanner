@@ -28,10 +28,12 @@ export interface SlotLinkDefinition {
 }
 
 export interface CacheLinkEndpointDefinition {
+  /** 该槽位对应的设备的ID **/
+  readonly entityId: string;
   /** 端点绑定的存储槽组 ID */
   readonly storageSlotGroupId: string;
-  /** 可选：精确到具体槽位 ID */
-  readonly slotId?: string;
+  /** 精确到具体槽位 ID */
+  readonly slotId: string;
 }
 
 export interface WorldDocument {

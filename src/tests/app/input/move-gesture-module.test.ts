@@ -156,6 +156,54 @@ describe("createHypergryphMoveGestureModule", () => {
     );
   });
 
+  it("enters move from the select floating button with mouse and reuses the mouse move ui", () => {
+    const { context, editor, appHost } = createContext();
+    const module = createHypergryphMoveGestureModule();
+
+    const result = module.handle(
+      uiButtonMouseTapEvent("canvas-floating-toolbar-button-move"),
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
+    expect(appHost.internalState.activeTool).toBe("move");
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.internalState.runtime.moveEnterFrom).toBe("select");
+    expect(appHost.internalActions.hideCanvasFloatingToolbar).not.toHaveBeenCalled();
+
+    expect(module.handle(onEnterActiveToolEvent("select", "move"), context)).toEqual({
+      status: "handled",
+    });
+    expect(appHost.internalActions.hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).not.toHaveBeenCalled();
+  });
+
+  it("enters move from the select floating button with touch and initializes the touch move ui", () => {
+    const { context, editor, appHost } = createContext();
+    const module = createHypergryphMoveGestureModule();
+
+    const result = module.handle(
+      uiButtonTouchTapEvent("canvas-floating-toolbar-button-move"),
+      context,
+    );
+
+    expect(result).toEqual({ status: "handled" });
+    expect(editor.actions.createMoveOperationDraft).toHaveBeenCalledTimes(1);
+    expect(appHost.internalState.activeTool).toBe("move");
+    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.internalState.runtime.moveEnterFrom).toBe("select");
+    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).not.toHaveBeenCalled();
+
+    expect(module.handle(onEnterActiveToolEvent("select", "move"), context)).toEqual({
+      status: "handled",
+    });
+    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
+      MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST,
+      EntityCollectionType.preview,
+    );
+  });
+
   it("primes the mouse anchor from the preview after entering move from the right dock button", () => {
     const { context, appHost } = createContext({
       activeTool: "marquee",

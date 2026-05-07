@@ -52,6 +52,25 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
   });
 
+  it("closes the left dock on marquee enter for mobile and tablet", () => {
+    for (const deviceClass of ["mobile", "tablet"] as const) {
+      const { context, appHost } = createContext({
+        deviceClass,
+        leftDockOpen: true,
+      });
+      const module = createHypergryphMarqueeGestureModule();
+
+      expect(module.handle(keyDownEvent("KeyX"), context)).toEqual({ status: "handled" });
+      expect(appHost.internalActions.toggleLeftDock).not.toHaveBeenCalled();
+
+      expect(
+        module.handle(onEnterActiveToolEvent("select", "marquee"), context),
+      ).toEqual({ status: "handled" });
+      expect(appHost.internalActions.toggleLeftDock).toHaveBeenCalledTimes(1);
+      expect(appHost.state.workbench.leftDockOpen).toBe(false);
+    }
+  });
+
   it("starts immediate mouse marquee from empty select drag start", () => {
     const { context, appHost, editor } = createContext({
       hypergryphImmediateMarquee: true,
@@ -277,6 +296,8 @@ function createContext(options: {
   hypergryphImmediateMarquee?: boolean;
   marqueeAnchor?: GridPoint | null;
   rightDockOpen?: boolean;
+  leftDockOpen?: boolean;
+  deviceClass?: "desktop" | "tablet" | "mobile";
 } = {}): {
   context: GestureActionContext<AppHost>;
   editor: MockEditor;
@@ -309,11 +330,18 @@ function createContext(options: {
         hypergryphImmediateMarquee: options.hypergryphImmediateMarquee ?? false,
       },
       toolInfo,
+      screenProfile: {
+        deviceClass: options.deviceClass ?? "desktop",
+      },
+      workbench: {
+        leftDockOpen: options.leftDockOpen ?? true,
+      },
     },
     internalState: {
       activeTool: options.activeTool ?? "select",
       toolInfo,
       workbench: {
+        leftDockOpen: options.leftDockOpen ?? true,
         rightDockOpen: options.rightDockOpen ?? true,
       },
       runtime: {
@@ -332,6 +360,10 @@ function createContext(options: {
     internalActions: {
       setActiveTool: vi.fn((activeTool) => {
         appHost.internalState.activeTool = activeTool;
+      }),
+      toggleLeftDock: vi.fn(() => {
+        appHost.internalState.workbench.leftDockOpen = !appHost.internalState.workbench.leftDockOpen;
+        appHost.state.workbench.leftDockOpen = appHost.internalState.workbench.leftDockOpen;
       }),
       toggleRightDock: vi.fn(() => {
         appHost.internalState.workbench.rightDockOpen =
@@ -495,6 +527,20 @@ function emptyKeyboardSnapshot(): KeyboardSnapshot {
     lastKey: null,
     lastKeyCode: null,
     modifiers: emptyModifiers(),
+  };
+}
+
+function onEnterActiveToolEvent(
+  from: "select" | "move" | "marquee" | "single-placement" | "logistics-placement",
+  to: "select" | "move" | "marquee" | "single-placement" | "logistics-placement",
+) {
+  return {
+    type: "on-enter-active-tool" as const,
+    gestureId: "enter-active-tool-1",
+    from,
+    to,
+    modifiers: emptyModifiers(),
+    sourceEvent: null,
   };
 }
 

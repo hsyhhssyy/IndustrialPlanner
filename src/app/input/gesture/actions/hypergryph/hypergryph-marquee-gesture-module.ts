@@ -34,6 +34,14 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
       const editor = context.workspace.editor;
 
       switch (event.type) {
+        case "on-enter-active-tool":
+          if (event.to !== "marquee") {
+            return { status: "ignored" };
+          }
+
+          closeCompactLeftDockOnMarqueeEnter(context.appHost);
+          return { status: "handled" };
+
         case "on-exit-active-tool":
           if (event.from !== "marquee" || event.to === "marquee") {
             return { status: "ignored" };
@@ -264,6 +272,18 @@ function enterMarqueeMode(options: {
     }
     options.appHost.internalActions.showCanvasTopLeftCornerToolbar(MARQUEE_TOP_LEFT_BUTTON_IDS);
   }
+}
+
+function closeCompactLeftDockOnMarqueeEnter(appHost: AppHost): void {
+  const deviceClass = appHost.state.screenProfile.deviceClass;
+  if (
+    (deviceClass !== "mobile" && deviceClass !== "tablet")
+    || !appHost.state.workbench.leftDockOpen
+  ) {
+    return;
+  }
+
+  appHost.internalActions.toggleLeftDock();
 }
 
 function startMouseMarqueeDrag(options: {

@@ -1,16 +1,10 @@
 import type {
   CompiledSimulationRecipePlan,
   CompiledSimulationTopology,
+  SimulationRecipeType,
 } from "../types";
-import type { SimulationRecipeType } from "@/domain/types/registry/simulation-definition";
 
-/**
- * 对应《仿真运行原理》§6.4、§6.6 与 §3.3。
- * 这里保存 worker 内部可变运行态：persistent 是跨 tick 保留的库存、设备、游标与 Link 解析结果；
- * transient 是每个 tick 重新生成的 Node/Edge 求解状态。该文件不执行阶段逻辑，只提供五阶段共享状态模型。
- */
-
-export type RuntimeShadowState = "uncertain" | "accept";
+export type RuntimeShadowState = "uncertain" | "accept" | "moved";
 
 export interface SimulationMutableRuntimeState {
   tickNumber: number;
@@ -201,13 +195,10 @@ function normalizeShareAllSources(
       continue;
     }
 
-    if (source.count > 0) {
-      target.itemType = target.itemType ?? source.itemType;
-      if (target.itemType === source.itemType || source.itemType === null) {
-        target.count += source.count;
-      }
+    if (target.itemType === null && source.itemType !== null) {
+      target.itemType = source.itemType;
     }
-
+    target.count += source.count;
     source.itemType = null;
     source.count = 0;
   }

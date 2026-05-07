@@ -150,7 +150,7 @@ describe("createBeltCargoDecoration", () => {
     decoration.destroy()
   })
 
-  it("draws every cargo entry returned by the simulation query", () => {
+  it("draws every running belt reported by device runtime status", () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
     const ctx = createContext({
@@ -263,6 +263,22 @@ function createContext(options: {
     itemId: "item_iron_ore",
     progress: 0.5,
   }]
+  const runtimeEntries = entries.map((entry, index) => ({
+    ...entry,
+    id: `belt-${index + 1}`,
+    definitionId: resolveBeltDefinitionId(entry.beltShape),
+  }))
+  const entriesByEntityId = new Map(
+    runtimeEntries.map((entry) => [entry.id, entry]),
+  )
+  const entities = runtimeEntries.map((entry) => ({
+    id: entry.id,
+    definitionId: entry.definitionId,
+    position: entry.position,
+    rotation: entry.rotation,
+    config: {},
+    tags: [],
+  }))
 
   return {
     viewportState: {
@@ -294,12 +310,49 @@ function createContext(options: {
         },
       },
       simulation: {
+        state: {
+          runningState: "start",
+          simulationSpeed: 1,
+        },
         queries: {
-          getBeltCargoEntries: () => entries,
+          getDeviceRuntimeStatus: (entityId: string) => {
+            const entry = entriesByEntityId.get(entityId)
+            if (entry === undefined) {
+              return null
+            }
+
+            return {
+              recipeId: `${entry.definitionId}:dynamic-belt-transfer`,
+              progressSeconds: entry.progress,
+              desiredSeconds: 1,
+              slotItems: [{
+                slotId: "input_slot_1",
+                itemType: entry.itemId,
+                count: 1,
+                reserved: 1,
+              }],
+            }
+          },
+        },
+      },
+      editor: {
+        queries: {
+          listEntities: () => entities,
         },
       },
     },
     nowMs: 1000,
+  }
+}
+
+function resolveBeltDefinitionId(beltShape: "straight" | "turn-cw" | "turn-ccw"): string {
+  switch (beltShape) {
+    case "turn-cw":
+      return "belt_turn_cw_1x1"
+    case "turn-ccw":
+      return "belt_turn_ccw_1x1"
+    default:
+      return "belt_straight_1x1"
   }
 }
 

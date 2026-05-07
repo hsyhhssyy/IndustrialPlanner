@@ -102,6 +102,10 @@ function solveDeviceOutputs(
         edgeState.sourceSlotId = sourceSlotId;
         edgeState.amount += 1;
         edgeState.currentThroughCount += 1;
+        // §8.2.3: 移动物品后将边的 shadowPull 与 shadowPush 置为 moved，
+        // 阻止本 tick 内同一条边被再次选中，防止存储箱一次性清空所有物品到传送带。
+        edgeState.shadowPull = "moved";
+        edgeState.shadowPush = "moved";
         state.transient.nodes[node.id]?.acceptedOutputEdgeIds.push(edgeId);
         state.transient.transfers.push({
           edgeId,

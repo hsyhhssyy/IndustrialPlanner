@@ -1,11 +1,10 @@
 import type {
   GridFloatPoint,
+  GridPoint,
   GridRotation,
 } from "@/domain/types/grid"
-import type {
-  SimulationBeltCargoReadModel,
-  SimulationBeltCargoShape,
-} from "@/domain/query/simulation-read-model"
+import type { WorldEntity } from "@/domain/entity/world-document"
+import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/query/simulation-query"
 import {
   Container,
   Graphics,
@@ -25,6 +24,16 @@ interface BeltCargoRenderEntry {
   readonly centerX: number;
   readonly centerY: number;
   readonly itemId: string;
+}
+
+type BeltCargoShape = "straight" | "turn-cw" | "turn-ccw"
+
+interface BeltCargoEntry {
+  readonly beltShape: BeltCargoShape;
+  readonly position: GridPoint;
+  readonly rotation: GridRotation;
+  readonly itemId: string;
+  readonly progress: number;
 }
 
 export function createBeltCargoDecoration(): DecorationLayer {
@@ -106,9 +115,8 @@ export function createBeltCargoDecoration(): DecorationLayer {
         return
       }
 
-      const simulation = ctx.workspace.simulation
-      const beltCargoEntries = simulation?.queries.getBeltCargoEntries() ?? []
-      if (simulation === null || beltCargoEntries.length === 0) {
+      const beltCargoEntries = resolveBeltCargoEntries(ctx)
+      if (beltCargoEntries.length === 0) {
         hideAll()
         return
       }
@@ -168,6 +176,94 @@ export function createBeltCargoDecoration(): DecorationLayer {
       container.destroy({ children: true })
     },
   }
+}
+
+function resolveBeltCargoEntries(ctx: DecorationSyncContext): BeltCargoEntry[] {
+  const simulation = ctx.workspace.simulation
+  const editor = ctx.workspace.editor
+  if (simulation === null || editor === null || simulation.state.runningState === "stop") {
+    return []
+  }
+
+  const entries: BeltCargoEntry[] = []
+  for (const entity of editor.queries.listEntities()) {
+    const beltShape = resolveBeltCargoShape(entity)
+    if (beltShape === null) {
+      continue
+    }
+
+    const runtimeStatus = simulation.queries.getDeviceRuntimeStatus(entity.id)
+    const itemId = resolveRuntimeCargoItemId(runtimeStatus)
+    const progress = resolveRuntimeProgress(runtimeStatus)
+    if (itemId === null || progress === null) {
+      continue
+    }
+
+    entries.push({
+      beltShape,
+      position: entity.position,
+      rotation: entity.rotation,
+      itemId,
+      progress,
+    })
+  }
+
+  return entries
+}
+
+function resolveBeltCargoShape(entity: WorldEntity): BeltCargoShape | null {
+  switch (entity.definitionId) {
+    case "belt_straight_1x1":
+      return "straight"
+    case "belt_turn_cw_1x1":
+      return "turn-cw"
+    case "belt_turn_ccw_1x1":
+      return "turn-ccw"
+    default:
+      return null
+  }
+}
+
+function resolveRuntimeCargoItemId(
+  runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
+): string | null {
+  if (runtimeStatus === null || runtimeStatus.recipeId === null) {
+    return null
+  }
+
+  const reservedSlot = runtimeStatus.slotItems.find((slotItem) =>
+    slotItem.itemType !== null && slotItem.reserved > 0,
+  )
+  if (reservedSlot?.itemType !== undefined && reservedSlot.itemType !== null) {
+    return reservedSlot.itemType
+  }
+
+  return runtimeStatus.slotItems.find((slotItem) =>
+    slotItem.itemType !== null && slotItem.count > 0,
+  )?.itemType ?? null
+}
+
+function resolveRuntimeProgress(
+  runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
+): number | null {
+  if (
+    runtimeStatus === null
+    || runtimeStatus.progressSeconds === null
+    || runtimeStatus.desiredSeconds === null
+  ) {
+    return null
+  }
+
+  if (runtimeStatus.desiredSeconds <= 0) {
+    return null
+  }
+
+  const progress = runtimeStatus.progressSeconds / runtimeStatus.desiredSeconds
+  if (!Number.isFinite(progress)) {
+    return null
+  }
+
+  return Math.max(0, Math.min(1, progress))
 }
 
 function resolveItemIconTextureKey(
@@ -241,7 +337,7 @@ function syncBeltCargoIcons(options: {
 }
 
 function resolveBeltCargoViewportCenter(options: {
-  entry: SimulationBeltCargoReadModel;
+  entry: BeltCargoEntry;
   viewportBounds: {
     left: number;
     top: number;
@@ -275,7 +371,7 @@ function resolveBeltCargoViewportCenter(options: {
 }
 
 function resolveBeltCargoLocalPoint(
-  beltShape: SimulationBeltCargoShape,
+  beltShape: BeltCargoShape,
   progress: number,
 ): GridFloatPoint {
   if (beltShape === "straight") {

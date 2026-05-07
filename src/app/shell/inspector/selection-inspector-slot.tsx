@@ -8,7 +8,7 @@ import type {
   EntityInspectorType,
 } from "@/domain/types/registry/entity-inspector";
 import { INSPECTOR_TYPE } from "@/domain/types/registry/entity-inspector";
-import type { SimulationDeviceRuntimeReadModel } from "@/domain/query/simulation-read-model";
+import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/query/simulation-query";
 
 import { SimulationRuntimeInspector } from "./simulation-runtime-inspector";
 import { SlotConfigInspector } from "./slot-config-inspector";
@@ -26,7 +26,7 @@ interface InspectorSlotState {
   selectedEntity: WorldEntity;
   selectedDefinition: EntityDefinition;
   inspectors: InspectorDescriptor[];
-  simulationRuntimeStatus: SimulationDeviceRuntimeReadModel | null;
+  simulationRuntimeStatus: SimulationDeviceRuntimeStatusReadModel | null;
   showSimulationRuntimeInspector: boolean;
   debugEntityJson: string | null;
 }
@@ -148,7 +148,7 @@ export function SelectionInspectorSlot({
         };
       });
       const simulation = appHost.workspace.simulation;
-      const showSimulationRuntimeInspector = simulation?.state !== "stop";
+      const showSimulationRuntimeInspector = simulation !== null && simulation.state.runningState !== "stop";
 
       setSlotState({
         selectedEntity,

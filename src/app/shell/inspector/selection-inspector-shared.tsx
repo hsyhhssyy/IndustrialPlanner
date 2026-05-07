@@ -1,5 +1,5 @@
 import type {
-  ExplicitLink,
+  SlotLinkDefinition,
 } from "@/domain/entity/world-document";
 import type { AppLocale } from "@/shared/i18n/messages";
 import type {
@@ -83,7 +83,7 @@ export function ConnectionList({
   translate,
 }: {
   locale: AppLocale;
-  links: ExplicitLink[];
+  links: SlotLinkDefinition[];
   removeDisabled: boolean;
   translate: Translate;
 }) {
@@ -106,8 +106,8 @@ export function ConnectionList({
           {links.map((link, index) => (
             <article className="definition-card" key={link.id}>
               <h4>{`${translate("label.links")} #${index + 1}`}</h4>
-              <p>{`${link.sourceEntityId} -> ${link.targetEntityId}`}</p>
-              <p>{link.kind}</p>
+              <p>{`${link.source.entityId}.${link.source.storageSlotGroupId}.${link.source.slotId} -> ${link.target.entityId}.${link.target.storageSlotGroupId}.${link.target.slotId}`}</p>
+              <p>{link.linkType}</p>
             </article>
           ))}
           <button

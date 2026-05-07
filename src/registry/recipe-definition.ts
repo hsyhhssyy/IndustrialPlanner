@@ -8,6 +8,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_originium_ore", amount: 1 }],
     outputs: [{ itemId: "item_originium_powder", amount: 1 }],
     machineId: "item_port_grinder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -17,6 +18,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_iron_ore", amount: 1 }],
     outputs: [{ itemId: "item_iron_nugget", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -26,6 +28,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_iron_powder", amount: 1 }],
     outputs: [{ itemId: "item_iron_nugget", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -41,6 +44,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_sewage", amount: 1 },
     ],
     machineId: "item_port_liquid_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -50,6 +54,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_liquid_sewage", amount: 1 }],
     outputs: [],
     machineId: "item_liquid_cleaner_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -59,6 +64,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_liquid_xiranite_poly", amount: 1 }],
     outputs: [],
     machineId: "item_liquid_cleaner_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -68,6 +74,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_liquid_xiranite_lowpoly", amount: 1 }],
     outputs: [],
     machineId: "item_liquid_cleaner_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -80,6 +87,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_equip_script_4_1", amount: 1 }],
     machineId: "item_port_winder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -95,6 +103,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_lowpoly", amount: 1 },
     ],
     machineId: "item_port_mix_pool_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -110,6 +119,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_lowpoly", amount: 1 },
     ],
     machineId: "item_port_mix_pool_large_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -125,6 +135,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_xiranite_poly", amount: 1 },
     ],
     machineId: "item_port_mix_pool_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -140,6 +151,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_xiranite_poly", amount: 1 },
     ],
     machineId: "item_port_mix_pool_large_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -152,6 +164,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_proc_battery_5", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -161,6 +174,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_iron_nugget", amount: 1 }],
     outputs: [{ itemId: "item_iron_powder", amount: 1 }],
     machineId: "item_port_grinder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -170,6 +184,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_copper_nugget", amount: 1 }],
     outputs: [{ itemId: "item_copper_powder", amount: 1 }],
     machineId: "item_port_grinder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -179,6 +194,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_quartz_glass", amount: 1 }],
     outputs: [{ itemId: "item_quartz_powder", amount: 1 }],
     machineId: "item_port_grinder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -188,6 +204,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_carbon_mtl", amount: 1 }],
     outputs: [{ itemId: "item_carbon_powder", amount: 2 }],
     machineId: "item_port_grinder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -197,6 +214,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_crystal_shell", amount: 1 }],
     outputs: [{ itemId: "item_crystal_powder", amount: 1 }],
     machineId: "item_port_grinder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -206,6 +224,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_1", amount: 1 }],
     outputs: [{ itemId: "item_plant_moss_powder_1", amount: 2 }],
     machineId: "item_port_grinder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -215,6 +234,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_2", amount: 1 }],
     outputs: [{ itemId: "item_plant_moss_powder_2", amount: 2 }],
     machineId: "item_port_grinder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -224,6 +244,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_3", amount: 1 }],
     outputs: [{ itemId: "item_plant_moss_seed_3", amount: 2 }],
     machineId: "item_port_seedcol_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -233,6 +254,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_1", amount: 1 }],
     outputs: [{ itemId: "item_plant_moss_seed_1", amount: 2 }],
     machineId: "item_port_seedcol_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -242,6 +264,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_2", amount: 1 }],
     outputs: [{ itemId: "item_plant_moss_seed_2", amount: 2 }],
     machineId: "item_port_seedcol_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -251,6 +274,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_bbflower_1", amount: 1 }],
     outputs: [{ itemId: "item_plant_bbflower_seed_1", amount: 2 }],
     machineId: "item_port_seedcol_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -260,6 +284,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_grass_1", amount: 1 }],
     outputs: [{ itemId: "item_plant_grass_seed_1", amount: 1 }],
     machineId: "item_port_seedcol_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -269,6 +294,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_grass_2", amount: 1 }],
     outputs: [{ itemId: "item_plant_grass_seed_2", amount: 1 }],
     machineId: "item_port_seedcol_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -278,6 +304,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_seed_3", amount: 1 }],
     outputs: [{ itemId: "item_plant_moss_3", amount: 1 }],
     machineId: "item_port_planter_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -287,6 +314,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_seed_1", amount: 1 }],
     outputs: [{ itemId: "item_plant_moss_1", amount: 1 }],
     machineId: "item_port_planter_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -296,6 +324,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_seed_2", amount: 1 }],
     outputs: [{ itemId: "item_plant_moss_2", amount: 1 }],
     machineId: "item_port_planter_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -305,6 +334,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_bbflower_seed_1", amount: 1 }],
     outputs: [{ itemId: "item_plant_bbflower_1", amount: 1 }],
     machineId: "item_port_planter_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -314,6 +344,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_3", amount: 1 }],
     outputs: [{ itemId: "item_plant_moss_powder_3", amount: 3 }],
     machineId: "item_port_grinder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -323,6 +354,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_bbflower_1", amount: 1 }],
     outputs: [{ itemId: "item_plant_bbflower_powder_1", amount: 2 }],
     machineId: "item_port_grinder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -332,6 +364,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_grass_1", amount: 1 }],
     outputs: [{ itemId: "item_plant_grass_powder_1", amount: 2 }],
     machineId: "item_port_grinder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -341,6 +374,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_grass_2", amount: 1 }],
     outputs: [{ itemId: "item_plant_grass_powder_2", amount: 2 }],
     machineId: "item_port_grinder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -353,6 +387,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_enr_powder", amount: 1 }],
     machineId: "item_port_thickener_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -365,6 +400,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_quartz_enr_powder", amount: 1 }],
     machineId: "item_port_thickener_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -374,6 +410,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_iron_enr_powder", amount: 1 }],
     outputs: [{ itemId: "item_iron_enr", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -383,6 +420,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_quartz_sand", amount: 1 }],
     outputs: [{ itemId: "item_quartz_glass", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -392,6 +430,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_originium_ore", amount: 1 }],
     outputs: [{ itemId: "item_crystal_shell", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -401,6 +440,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_quartz_powder", amount: 1 }],
     outputs: [{ itemId: "item_quartz_glass", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -410,6 +450,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_crystal_powder", amount: 1 }],
     outputs: [{ itemId: "item_crystal_shell", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -419,6 +460,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_originium_powder", amount: 1 }],
     outputs: [{ itemId: "item_crystal_powder", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -428,6 +470,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_originium_enr_powder", amount: 1 }],
     outputs: [{ itemId: "item_crystal_enr_powder", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -437,6 +480,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_crystal_enr_powder", amount: 1 }],
     outputs: [{ itemId: "item_crystal_enr", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -446,6 +490,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_quartz_enr_powder", amount: 1 }],
     outputs: [{ itemId: "item_quartz_enr", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -455,6 +500,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_carbon_enr_powder", amount: 1 }],
     outputs: [{ itemId: "item_carbon_enr", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -464,6 +510,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_1", amount: 1 }],
     outputs: [{ itemId: "item_carbon_mtl", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -473,6 +520,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_2", amount: 1 }],
     outputs: [{ itemId: "item_carbon_mtl", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -482,6 +530,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_3", amount: 1 }],
     outputs: [{ itemId: "item_carbon_mtl", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -491,6 +540,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_grass_1", amount: 1 }],
     outputs: [{ itemId: "item_carbon_mtl", amount: 2 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -500,6 +550,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_grass_2", amount: 1 }],
     outputs: [{ itemId: "item_carbon_mtl", amount: 2 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -509,6 +560,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_powder_1", amount: 1 }],
     outputs: [{ itemId: "item_carbon_powder", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -518,6 +570,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_powder_2", amount: 1 }],
     outputs: [{ itemId: "item_carbon_powder", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -527,6 +580,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_powder_3", amount: 3 }],
     outputs: [{ itemId: "item_carbon_powder", amount: 2 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -536,6 +590,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_grass_powder_1", amount: 1 }],
     outputs: [{ itemId: "item_carbon_powder", amount: 2 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -545,6 +600,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_grass_powder_2", amount: 1 }],
     outputs: [{ itemId: "item_carbon_powder", amount: 2 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -554,6 +610,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_enr_powder_1", amount: 1 }],
     outputs: [{ itemId: "item_carbon_enr_powder", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -563,6 +620,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_plant_moss_enr_powder_2", amount: 1 }],
     outputs: [{ itemId: "item_carbon_enr_powder", amount: 1 }],
     machineId: "item_port_furnance_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -572,6 +630,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_iron_enr", amount: 1 }],
     outputs: [{ itemId: "item_iron_enr_cmpt", amount: 1 }],
     machineId: "item_port_cmpt_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -581,6 +640,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_iron_nugget", amount: 1 }],
     outputs: [{ itemId: "item_iron_cmpt", amount: 1 }],
     machineId: "item_port_cmpt_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -590,6 +650,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_copper_nugget", amount: 1 }],
     outputs: [{ itemId: "item_copper_cmpt", amount: 1 }],
     machineId: "item_port_cmpt_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -599,6 +660,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_copper_enr", amount: 5 }],
     outputs: [{ itemId: "item_copper_enr_cmpt", amount: 1 }],
     machineId: "item_port_cmpt_mc_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -608,6 +670,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_xiranite_powder", amount: 1 }],
     outputs: [{ itemId: "item_activity_xiranite_cmpt", amount: 1 }],
     machineId: "item_port_cmpt_mc_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -617,6 +680,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_xiranite_enr_powder", amount: 1 }],
     outputs: [{ itemId: "item_activity_xiranite_enr_cmpt", amount: 2 }],
     machineId: "item_port_cmpt_mc_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -626,6 +690,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_quartz_glass", amount: 1 }],
     outputs: [{ itemId: "item_glass_cmpt", amount: 1 }],
     machineId: "item_port_cmpt_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -635,6 +700,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_quartz_enr", amount: 1 }],
     outputs: [{ itemId: "item_glass_enr_cmpt", amount: 1 }],
     machineId: "item_port_cmpt_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -647,6 +713,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_originium_enr_powder", amount: 1 }],
     machineId: "item_port_thickener_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -659,6 +726,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_carbon_enr_powder", amount: 1 }],
     machineId: "item_port_thickener_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -671,6 +739,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_crystal_enr_powder", amount: 1 }],
     machineId: "item_port_thickener_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -683,6 +752,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_plant_moss_enr_powder_1", amount: 1 }],
     machineId: "item_port_thickener_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -695,6 +765,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_plant_moss_enr_powder_2", amount: 1 }],
     machineId: "item_port_thickener_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -707,6 +778,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_proc_battery_3", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -719,6 +791,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_proc_bomb_1", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -731,6 +804,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_proc_battery_1", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -743,6 +817,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_proc_battery_2", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -755,6 +830,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_proc_battery_4", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -767,6 +843,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_bottled_rec_hp_4", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -779,6 +856,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_bottled_food_4", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -791,6 +869,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_bottled_rec_hp_5", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -803,6 +882,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_bottled_food_5", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -815,6 +895,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_activity_xiranite_enr_tool", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -827,6 +908,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_activity_xiranite_hulu", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -839,6 +921,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_activity_xiranite_enr_hulu", amount: 1 }],
     machineId: "item_port_tools_asm_mc_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -851,6 +934,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_equip_script_1", amount: 1 }],
     machineId: "item_port_winder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -863,6 +947,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_equip_script_2", amount: 1 }],
     machineId: "item_port_winder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -875,6 +960,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_equip_script_3", amount: 1 }],
     machineId: "item_port_winder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -887,6 +973,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_equip_script_4", amount: 1 }],
     machineId: "item_port_winder_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -899,6 +986,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_equip_script_4_2", amount: 1 }],
     machineId: "item_port_winder_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -911,6 +999,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_bottled_food_1", amount: 1 }],
     machineId: "item_port_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -923,6 +1012,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_bottled_food_2", amount: 1 }],
     machineId: "item_port_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -935,6 +1025,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_bottled_food_3", amount: 1 }],
     machineId: "item_port_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -947,6 +1038,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_bottled_rec_hp_1", amount: 1 }],
     machineId: "item_port_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -959,6 +1051,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_bottled_rec_hp_2", amount: 1 }],
     machineId: "item_port_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -971,6 +1064,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_bottled_rec_hp_3", amount: 1 }],
     machineId: "item_port_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -983,6 +1077,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_bottle_filled_water", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -995,6 +1090,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_bottle_filled_liquid_plant_grass_1", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1007,6 +1103,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_bottle_filled_liquid_plant_grass_2", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1019,6 +1116,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_bottle_filled_liquid_xiranite", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1031,6 +1129,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_bottle_filled_water", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1043,6 +1142,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_bottle_filled_liquid_plant_grass_1", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1055,6 +1155,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_bottle_filled_liquid_plant_grass_2", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1067,6 +1168,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_bottle_filled_liquid_xiranite", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1079,6 +1181,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_enr_bottle_filled_water", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1091,6 +1194,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_enr_bottle_filled_liquid_plant_grass_1", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1103,6 +1207,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_enr_bottle_filled_liquid_plant_grass_2", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1115,6 +1220,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_enr_bottle_filled_liquid_xiranite", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1127,6 +1233,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_enr_bottle_filled_water", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1139,6 +1246,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_enr_bottle_filled_liquid_plant_grass_1", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1151,6 +1259,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_enr_bottle_filled_liquid_plant_grass_2", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1163,6 +1272,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_enr_bottle_filled_liquid_xiranite", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1175,6 +1285,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_bottle_filled_liquid_sewage", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1187,6 +1298,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_bottle_filled_liquid_xiranite_poly", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1199,6 +1311,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_bottle_filled_liquid_xiranite_lowpoly", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1211,6 +1324,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_bottle_filled_liquid_sewage", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1223,6 +1337,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_bottle_filled_liquid_xiranite_poly", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1235,6 +1350,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_bottle_filled_liquid_xiranite_lowpoly", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1247,6 +1363,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_enr_bottle_filled_liquid_sewage", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1259,6 +1376,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_enr_bottle_filled_liquid_xiranite_poly", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1271,6 +1389,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_enr_bottle_filled_liquid_xiranite_lowpoly", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1283,6 +1402,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_enr_bottle_filled_liquid_sewage", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1295,6 +1415,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_enr_bottle_filled_liquid_xiranite_poly", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1307,6 +1428,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_enr_bottle_filled_liquid_xiranite_lowpoly", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1319,6 +1441,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_bottle_filled_water", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1331,6 +1454,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_bottle_filled_liquid_plant_grass_1", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1343,6 +1467,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_bottle_filled_liquid_plant_grass_2", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1355,6 +1480,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_bottle_filled_liquid_xiranite", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1367,6 +1493,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_bottle_filled_liquid_sewage", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1379,6 +1506,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_bottle_filled_liquid_xiranite_poly", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1391,6 +1519,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_bottle_filled_liquid_xiranite_lowpoly", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1403,6 +1532,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_enr_bottle_filled_water", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1415,6 +1545,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_enr_bottle_filled_liquid_plant_grass_1", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1427,6 +1558,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_enr_bottle_filled_liquid_plant_grass_2", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1439,6 +1571,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_enr_bottle_filled_liquid_xiranite", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1451,6 +1584,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_enr_bottle_filled_liquid_sewage", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1463,6 +1597,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_enr_bottle_filled_liquid_xiranite_poly", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1475,6 +1610,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_enr_bottle_filled_liquid_xiranite_lowpoly", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling"],
   },
   {
@@ -1487,6 +1623,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_bottle_filled_liquid_acid", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1499,6 +1636,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_bottle_filled_liquid_copper", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1511,6 +1649,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_bottle_filled_liquid_copper_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1523,6 +1662,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_bottle_filled_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1535,6 +1675,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_bottle_filled_liquid_acid", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1547,6 +1688,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_bottle_filled_liquid_copper", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1559,6 +1701,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_bottle_filled_liquid_copper_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1571,6 +1714,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_bottle_filled_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1583,6 +1727,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_enr_bottle_filled_liquid_acid", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1595,6 +1740,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_enr_bottle_filled_liquid_copper", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1607,6 +1753,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_enr_bottle_filled_liquid_copper_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1619,6 +1766,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_glass_enr_bottle_filled_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1631,6 +1779,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_enr_bottle_filled_liquid_acid", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1643,6 +1792,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_enr_bottle_filled_liquid_copper", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1655,6 +1805,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_enr_bottle_filled_liquid_copper_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1667,6 +1818,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_iron_enr_bottle_filled_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1679,6 +1831,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_bottle_filled_liquid_acid", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1691,6 +1844,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_bottle_filled_liquid_copper", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1703,6 +1857,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_bottle_filled_liquid_copper_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1715,6 +1870,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_bottle_filled_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1727,6 +1883,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_enr_bottle_filled_liquid_acid", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1739,6 +1896,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_enr_bottle_filled_liquid_copper", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1751,6 +1909,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_enr_bottle_filled_liquid_copper_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1763,6 +1922,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_copper_enr_bottle_filled_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["bottle_filling", "new"],
   },
   {
@@ -1775,6 +1935,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_activity_xiranite_enr_bottle_filled_liquid_plant_grass_2", amount: 1 }],
     machineId: "item_port_liquid_filling_pd_mc_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -1787,6 +1948,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_plant_grass_2", amount: 5 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -1799,6 +1961,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_water", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1811,6 +1974,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_plant_grass_1", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1823,6 +1987,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_plant_grass_2", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1835,6 +2000,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1847,6 +2013,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_water", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1859,6 +2026,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_plant_grass_1", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1871,6 +2039,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_plant_grass_2", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1883,6 +2052,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1895,6 +2065,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_water", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1907,6 +2078,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_plant_grass_1", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1919,6 +2091,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_plant_grass_2", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1931,6 +2104,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1943,6 +2117,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_water", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1955,6 +2130,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_plant_grass_1", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1967,6 +2143,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_plant_grass_2", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1979,6 +2156,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -1991,6 +2169,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_sewage", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2003,6 +2182,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_poly", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2015,6 +2195,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_lowpoly", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2027,6 +2208,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_sewage", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2039,6 +2221,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_poly", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2051,6 +2234,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_lowpoly", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2063,6 +2247,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_sewage", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2075,6 +2260,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_poly", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2087,6 +2273,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_lowpoly", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2099,6 +2286,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_sewage", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2111,6 +2299,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_poly", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2123,6 +2312,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_lowpoly", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2135,6 +2325,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_water", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2147,6 +2338,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_plant_grass_1", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2159,6 +2351,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_plant_grass_2", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2171,6 +2364,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2183,6 +2377,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_sewage", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2195,6 +2390,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_poly", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2207,6 +2403,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_lowpoly", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2219,6 +2416,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_water", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2231,6 +2429,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_plant_grass_1", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2243,6 +2442,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_plant_grass_2", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2255,6 +2455,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2267,6 +2468,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_sewage", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2279,6 +2481,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_poly", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2291,6 +2494,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_lowpoly", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle"],
   },
   {
@@ -2303,6 +2507,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_acid", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2315,6 +2520,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_copper", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2327,6 +2533,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_copper_enr", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2339,6 +2546,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_enr", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2351,6 +2559,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_acid", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2363,6 +2572,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_copper", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2375,6 +2585,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_copper_enr", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2387,6 +2598,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_enr", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2399,6 +2611,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_acid", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2411,6 +2624,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_copper", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2423,6 +2637,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_copper_enr", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2435,6 +2650,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_enr", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2447,6 +2663,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_acid", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2459,6 +2676,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_copper", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2471,6 +2689,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_copper_enr", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2483,6 +2702,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_enr", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2495,6 +2715,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_acid", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2507,6 +2728,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_copper", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2519,6 +2741,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_copper_enr", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2531,6 +2754,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_enr", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2543,6 +2767,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_acid", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2555,6 +2780,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_copper", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2567,6 +2793,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_copper_enr", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2579,6 +2806,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_enr", amount: 1 },
     ],
     machineId: "item_port_dismantler_1",
+    recipeType: "immediate-consume",
     tags: ["liquid_bottle_dismantle", "new"],
   },
   {
@@ -2588,6 +2816,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_iron_nugget", amount: 2 }],
     outputs: [{ itemId: "item_iron_bottle", amount: 1 }],
     machineId: "item_port_shaper_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -2597,6 +2826,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_copper_nugget", amount: 2 }],
     outputs: [{ itemId: "item_copper_bottle", amount: 1 }],
     machineId: "item_port_shaper_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -2606,6 +2836,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_quartz_glass", amount: 2 }],
     outputs: [{ itemId: "item_glass_bottle", amount: 1 }],
     machineId: "item_port_shaper_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -2615,6 +2846,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_iron_enr", amount: 2 }],
     outputs: [{ itemId: "item_iron_enr_bottle", amount: 1 }],
     machineId: "item_port_shaper_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -2624,6 +2856,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_copper_enr", amount: 2 }],
     outputs: [{ itemId: "item_copper_enr_bottle", amount: 1 }],
     machineId: "item_port_shaper_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -2633,6 +2866,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_quartz_enr", amount: 2 }],
     outputs: [{ itemId: "item_glass_enr_bottle", amount: 1 }],
     machineId: "item_port_shaper_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -2642,6 +2876,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_xiranite_powder", amount: 2 }],
     outputs: [{ itemId: "item_activity_xiranite_bottle", amount: 1 }],
     machineId: "item_port_shaper_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -2651,6 +2886,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     inputs: [{ itemId: "item_xiranite_enr_powder", amount: 1 }],
     outputs: [{ itemId: "item_activity_xiranite_enr_bottle", amount: 2 }],
     machineId: "item_port_shaper_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -2663,6 +2899,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_xiranite_powder", amount: 1 }],
     machineId: "item_port_xiranite_oven_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -2675,6 +2912,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_xiranite_enr_powder", amount: 1 }],
     machineId: "item_port_xiranite_oven_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -2687,6 +2925,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_muck_xiranite_1", amount: 1 }],
     machineId: "item_port_xiranite_oven_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -2699,6 +2938,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_plant_grass_1", amount: 2 }],
     machineId: "item_port_hydro_planter_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -2711,6 +2951,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_plant_grass_2", amount: 2 }],
     machineId: "item_port_hydro_planter_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -2723,6 +2964,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_liquid_plant_grass_1", amount: 1 }],
     machineId: "item_port_mix_pool_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -2735,6 +2977,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_liquid_plant_grass_1", amount: 1 }],
     machineId: "item_port_mix_pool_large_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -2747,6 +2990,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_liquid_plant_grass_2", amount: 1 }],
     machineId: "item_port_mix_pool_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -2759,6 +3003,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_liquid_plant_grass_2", amount: 1 }],
     machineId: "item_port_mix_pool_large_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -2771,6 +3016,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_liquid_xiranite", amount: 1 }],
     machineId: "item_port_mix_pool_1",
+    recipeType: "immediate-consume",
     tags: [],
   },
   {
@@ -2783,6 +3029,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_liquid_xiranite", amount: 1 }],
     machineId: "item_port_mix_pool_large_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -2795,6 +3042,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_mix_pool_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -2807,6 +3055,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_liquid_xiranite_enr", amount: 1 }],
     machineId: "item_port_mix_pool_large_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -2819,6 +3068,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_liquid_copper", amount: 1 }],
     machineId: "item_port_mix_pool_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -2831,6 +3081,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     ],
     outputs: [{ itemId: "item_liquid_copper", amount: 1 }],
     machineId: "item_port_mix_pool_large_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -2846,6 +3097,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_sewage", amount: 1 },
     ],
     machineId: "item_port_mix_pool_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -2861,6 +3113,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_sewage", amount: 1 },
     ],
     machineId: "item_port_mix_pool_large_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -2873,6 +3126,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_xiranite_poly", amount: 1 },
     ],
     machineId: "item_port_liquid_purifier_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
   {
@@ -2885,6 +3139,7 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
       { itemId: "item_liquid_copper_enr", amount: 1 },
     ],
     machineId: "item_port_liquid_purifier_1",
+    recipeType: "immediate-consume",
     tags: ["new"],
   },
 ];

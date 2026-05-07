@@ -25,9 +25,7 @@
 // =========================================================================
 
 import type {
-  CacheLinkDefinition,
   EntityDefinition,
-  EntityRecipeDefinition,
   ItemFilterDefinition,
 } from "@/domain/types/registry/entity-definition";
 import {
@@ -60,11 +58,9 @@ type PortDefinitionInput = Pick<
   "acceptRule" | "count" | "priorityGroup" | "roundRobinSeed"
 >>;
 
-/** createEntityDefinition() 的输入类型 — inspectors/recipe/cacheLinks 可选 */
-type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "recipe" | "cacheLinks"> & {
+/** createEntityDefinition() 的输入类型 — inspectors 可选 */
+type EntityDefinitionInput = Omit<EntityDefinition, "inspectors"> & {
   readonly inspectors?: readonly EntityInspectorDeclaration[];
-  readonly recipe?: EntityRecipeDefinition | null;
-  readonly cacheLinks?: readonly CacheLinkDefinition[];
 };
 
 /** createEmptyEntityDefinition() 的输入类型 — 基础字段必填，电力字段可选 */
@@ -81,12 +77,11 @@ type EmptyEntityDefinitionInput = Pick<
  * 创建完整实体定义。
  * 确保 recipe/cacheLinks/inspectors 始终为非 null/undefined 的规范化值。
  * 对应《模拟器抽象方式》§2 — Entity 定义层的完整属性默认值。
+ * 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks，当前仅在此规范化 inspectors。
  */
 function createEntityDefinition(definition: EntityDefinitionInput): EntityDefinition {
   return {
     ...definition,
-    recipe: definition.recipe ?? null,
-    cacheLinks: [...(definition.cacheLinks ?? [])],
     inspectors: [...(definition.inspectors ?? [])],
   };
 }
@@ -96,6 +91,7 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
  * 只声明 id/nameKey/spriteId/footprint/uiGroup/tags + 电力字段。
  * recipe=null, cacheLinks=[], inspectors=[], portGroups=[], storageSlotGroups=[],
  * portStorageBindings=[]。
+ * 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks，空壳定义仅补齐仍存在的静态字段。
  *
  * 空壳设备的实际端口/槽位/配方由外部配方注册表（recipe-definition.ts）中
  * machineId 对应关系在 Topology Compiler 编译时注入。
@@ -108,8 +104,6 @@ function createEmptyEntityDefinition(
     ...definition,
     requiresPower: definition.requiresPower ?? false,
     powerDemand: definition.powerDemand ?? 0,
-    recipe: null,
-    cacheLinks: [],
     inspectors: [],
     portGroups: [],
     storageSlotGroups: [],
@@ -309,15 +303,7 @@ function acceptRuleFromPortKind(kind: PortGroupDefinition["kind"]): PortDefiniti
  * 订正（2026-05-04）：传送带默认 2 秒；管道类设备在定义处显式传入 0.5 秒。
  * 订正（2026-05-05）：推进阶段若输出缓存可接收，则立即写入产物、消耗原料并结束当前 run；仅在推进阶段无法完整输出时，才留待二次结算阶段处理。
  */
-function createTransportRecipe(durationSeconds = 2): EntityRecipeDefinition {
-  return {
-    recipeId: null,
-    recipeType: "reserved-item",
-    durationSeconds,
-    inputs: [{ itemId: "any", amount: 1 }],
-    outputs: [{ itemId: "same-as-input", amount: 1 }],
-  };
-}
+// 订正（2026-05-06）：domain EntityDefinition 已移除 recipe 字段，createTransportRecipe 已删除。
 
 /**
  * 创建空配方壳（生产设备初始配方占位）。
@@ -329,43 +315,13 @@ function createTransportRecipe(durationSeconds = 2): EntityRecipeDefinition {
  * recipeId=null 时表示使用内联配方；
  * 用户在 recipeConfig 面板中选择外部配方后 recipeId 被设置为实际配方 ID。
  */
-function createRecipeShell(): EntityRecipeDefinition {
-  return {
-    recipeId: null,
-    recipeType: "immediate-consume",
-    durationSeconds: 1,
-    inputs: [],
-    outputs: [],
-  };
-}
+// 订正（2026-05-06）：domain EntityDefinition 已移除 recipe 字段，createRecipeShell 已删除。
 
 /** 创建有向缓存代理链接定义。 */
-function createCacheLink(
-  id: string,
-  sourceStorageSlotGroupId: string,
-  targetStorageSlotGroupId: string,
-  linkType: CacheLinkDefinition["linkType"] = "share-all",
-): CacheLinkDefinition {
-  return {
-    id,
-    linkType,
-    source: { storageSlotGroupId: sourceStorageSlotGroupId },
-    target: { storageSlotGroupId: targetStorageSlotGroupId },
-  };
-}
+// 订正（2026-05-06）：domain EntityDefinition 已移除 cacheLinks 字段，createCacheLink 已删除。
 
 /** 创建传送带/管道标准有向代理链接。 */
-function createTransportCacheLink(
-  inputStorageSlotGroupId = "synthetic-input",
-  outputStorageSlotGroupId = "synthetic-output",
-): CacheLinkDefinition {
-  return createCacheLink(
-    "transport-cache-link",
-    inputStorageSlotGroupId,
-    outputStorageSlotGroupId,
-    "share-cap",
-  );
-}
+// 订正（2026-05-06）：domain EntityDefinition 已移除 cacheLinks 字段，createTransportCacheLink 已删除。
 
 // =========================================================================
 // ENTITY_DEFINITIONS — 全部设备定义注册表
@@ -544,7 +500,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵"],
     requiresPower: true,
     powerDemand: 50,
-    recipe: createRecipeShell(),
     portGroups: [
       createPortGroup(
         "item_output",
@@ -599,6 +554,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   //   - immediate-consume 配方：进度 0% 时立即扣除原料
   //   - 独立的 ingredient 缓存组（输入缓冲）+ product 缓存组（输出缓冲）
   //   - recipe 通过 recipeConfig 面板选择外部配方
+  // 订正（2026-05-06）：domain EntityDefinition 已移除 recipe 字段，本注册表仅保留静态端口与缓存结构。
   // =========================================================================
 
   /**
@@ -617,7 +573,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [],
     requiresPower: true,
     powerDemand: 5,
-    recipe: createRecipeShell(),
     portGroups: [
       createPortGroup(
         "item_input",
@@ -669,7 +624,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["alter:item_port_filling_pd_mc_1", "alter-variant:liquid"],
     requiresPower: true,
     powerDemand: 20,
-    recipe: createRecipeShell(),
     portGroups: [
       createPortGroup(
         "item_input",
@@ -725,7 +679,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [],
     requiresPower: true,
     powerDemand: 20,
-    recipe: createRecipeShell(),
     portGroups: [
       createPortGroup(
         "item_input",
@@ -770,6 +723,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   // 订正（2026-05-04）：传送带搬运配方时间为 2 秒。
   //   - 分流器/汇流器/连接器：多端口绑定到同一组节点
   //   - uiGroup="hidden" 的设备不显示在放置面板（由传送带绘制工具自动生成）
+  // 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks 字段，本注册表不再内联这些运行时配置。
   // =========================================================================
 
   /**
@@ -785,8 +739,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["BeltFamily", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(),
-    cacheLinks: [createTransportCacheLink("item_input_buffer", "item_output_buffer")],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -834,8 +786,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["BeltFamily", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(),
-    cacheLinks: [createTransportCacheLink("item_input_buffer", "item_output_buffer")],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -883,8 +833,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["BeltFamily", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(),
-    cacheLinks: [createTransportCacheLink("item_input_buffer", "item_output_buffer")],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -939,8 +887,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["BeltFamily", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(),
-    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -978,8 +924,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["BeltFamily", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(),
-    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -1015,8 +959,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["BeltFamily", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(),
-    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "item_input",
@@ -1053,6 +995,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   //   - reserved-item 搬运配方
   // 订正（2026-05-04）：管道类搬运配方时间为 0.5 秒。
   //   - 仅物品域为 liquid
+  // 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks 字段，本注册表不再内联这些运行时配置。
   // =========================================================================
 
   /**
@@ -1068,8 +1011,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(0.5),
-    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -1100,8 +1041,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(0.5),
-    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -1132,8 +1071,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(0.5),
-    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -1165,8 +1102,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(0.5),
-    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -1201,8 +1136,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(0.5),
-    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -1238,8 +1171,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "PipeFamily", "OuterRingAllowed", "ChevronHidden"],
     requiresPower: false,
     powerDemand: 0,
-    recipe: createTransportRecipe(0.5),
-    cacheLinks: [createTransportCacheLink()],
     portGroups: [
       createPortGroup(
         "fluid_input",

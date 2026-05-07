@@ -1,12 +1,12 @@
 import type {
-  SimulationDeviceRuntimeReadModel,
+  SimulationDeviceRuntimeStatusReadModel,
   SimulationDeviceRuntimeSlotItemReadModel,
-} from "@/domain/query/simulation-read-model";
+} from "@/domain/query/simulation-query";
 
 export const SIMULATION_RUNTIME_INSPECTOR_KEY = "simulation-runtime-inspecotr";
 
 export function resolveSimulationRuntimeProgressPercent(
-  runtimeStatus: SimulationDeviceRuntimeReadModel | null,
+  runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
 ): number | null {
   if (runtimeStatus === null) {
     return null;
@@ -42,19 +42,15 @@ function formatProgressPercent(progressPercent: number | null): string {
 }
 
 function formatSlotItemLabel(slotItem: SimulationDeviceRuntimeSlotItemReadModel): string {
-  return slotItem.storageGroupId === null
-    ? slotItem.slotId
-    : `${slotItem.storageGroupId}.${slotItem.slotId}`;
+  return slotItem.slotId;
 }
 
 function formatReservedItems(slotItem: SimulationDeviceRuntimeSlotItemReadModel): string | null {
-  if (slotItem.reserved.length === 0) {
+  if (slotItem.reserved <= 0) {
     return null;
   }
 
-  return slotItem.reserved
-    .map((reservedItem) => `${reservedItem.itemType} x ${reservedItem.amount}`)
-    .join(", ");
+  return String(slotItem.reserved);
 }
 
 function formatSlotItemValue(slotItem: SimulationDeviceRuntimeSlotItemReadModel): string {
@@ -69,7 +65,7 @@ function formatSlotItemValue(slotItem: SimulationDeviceRuntimeSlotItemReadModel)
 export function SimulationRuntimeInspector({
   runtimeStatus,
 }: {
-  runtimeStatus: SimulationDeviceRuntimeReadModel | null;
+  runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null;
 }) {
   const progressPercent = resolveSimulationRuntimeProgressPercent(runtimeStatus);
   const rows = [

@@ -114,7 +114,7 @@ export function createDummyWorldDocument(): WorldDocument {
       "dummy-entity-7",
       "dummy-entity-8",
     ],
-    explicitLinks: [],
+    slotLinks: [],
     documentSettings: {
       gridSize: 1,
       showDiagnostics: false,

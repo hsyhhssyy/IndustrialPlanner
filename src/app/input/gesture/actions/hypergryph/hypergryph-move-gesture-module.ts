@@ -17,7 +17,10 @@ const MOVE_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-ok",
 ] as const;
 
-const MOVE_ENTRY_BUTTON_ID = "canvas-right-dock-toolbar-button-move";
+const MOVE_ENTRY_BUTTON_IDS = {
+  marquee: "canvas-right-dock-toolbar-button-move",
+  select: "canvas-floating-toolbar-button-move",
+} as const;
 const PLACEMENT_MARQUEE_TOOL_BUTTON_ID = "placement-tool-marquee";
 
 export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHost> {
@@ -252,10 +255,6 @@ function handleMoveEntryButtonTap(options: {
   uiButtonId: string;
   source: "mouse" | "touch";
 }): GestureHandleResult {
-  if (options.uiButtonId !== MOVE_ENTRY_BUTTON_ID) {
-    return { status: "ignored" };
-  }
-
   return tryEnterMoveModeFromSelection(options);
 }
 
@@ -328,10 +327,12 @@ function tryEnterMoveMode(options: {
 function tryEnterMoveModeFromSelection(options: {
   appHost: AppHost;
   editor: EditorContract;
+  uiButtonId: string;
   source: "mouse" | "touch";
 }): GestureHandleResult {
   const previousTool = options.appHost.internalState.activeTool;
-  if (previousTool !== "marquee") {
+  const entryButtonId = resolveMoveEntryButtonId(previousTool);
+  if (entryButtonId === null || options.uiButtonId !== entryButtonId) {
     return { status: "ignored" };
   }
 
@@ -349,6 +350,20 @@ function tryEnterMoveModeFromSelection(options: {
     anchor: null,
     requireAnchor: false,
   });
+}
+
+function resolveMoveEntryButtonId(
+  activeTool: AppHost["internalState"]["activeTool"],
+): string | null {
+  if (activeTool === "marquee") {
+    return MOVE_ENTRY_BUTTON_IDS.marquee;
+  }
+
+  if (activeTool === "select") {
+    return MOVE_ENTRY_BUTTON_IDS.select;
+  }
+
+  return null;
 }
 
 function finalizeMoveEnter(options: {
