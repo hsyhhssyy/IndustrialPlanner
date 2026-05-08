@@ -6,7 +6,6 @@ import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
-import { useEffect, useState } from "react";
 import {
   isTouchLandscapeScreenProfile,
 } from "@/shared/browser/screen-profile";
@@ -42,6 +41,11 @@ export const SimulationControlButton = observer(function SimulationControlButton
 }) {
   const simulationState = appHost.workspace.simulation?.state.runningState ?? "stop";
   const isRunning = simulationState === "start";
+  const iconKind = simulationState === "start"
+    ? "pause"
+    : simulationState === "pause"
+      ? "resume"
+      : "play";
   const label = appHost.actions.translate(
     isRunning
       ? "action.pause"
@@ -104,7 +108,7 @@ export const SimulationControlButton = observer(function SimulationControlButton
       type="button"
     >
       <span className="top-bar-toggle-icon">
-        <WorkbenchIcon kind={isRunning ? "pause" : "play"} />
+        <WorkbenchIcon kind={iconKind} />
       </span>
       <span className="sr-only">{label}</span>
     </button>
@@ -120,23 +124,22 @@ export const SimulationSecondaryButton = observer(function SimulationSecondaryBu
   const simulationState = simulation?.state.runningState ?? "stop";
   const isRunning = simulationState === "start";
   const simulationSpeed = simulation?.state.simulationSpeed ?? 1;
-  const [displaySpeed, setDisplaySpeed] = useState(() => simulationSpeed);
-
-  useEffect(() => {
-    setDisplaySpeed(simulationSpeed);
-  }, [simulationSpeed, simulationState]);
-
-  const speedLabel = formatSimulationSpeedLabel(displaySpeed);
+  const speedLabel = formatSimulationSpeedLabel(simulationSpeed);
   const label = isRunning
     ? `${appHost.actions.translate("statusBar.speed")} ${speedLabel}`
     : appHost.actions.translate("action.stop");
 
   const handleClick = () => {
-    if (!isRunning) {
+    if (simulation === null) {
       return;
     }
 
-    setDisplaySpeed((current) => getNextSimulationSpeed(current));
+    if (!isRunning) {
+      simulation.actions.stop();
+      return;
+    }
+
+    simulation.actions.setSimulationSpeed(getNextSimulationSpeed(simulation.state.simulationSpeed));
   };
 
   return (

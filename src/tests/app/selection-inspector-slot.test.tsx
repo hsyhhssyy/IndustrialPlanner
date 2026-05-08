@@ -73,6 +73,7 @@ function attachSimulationStub(
       pause: vi.fn(),
       resume: vi.fn(),
       stop: vi.fn(),
+      setSimulationSpeed: vi.fn(),
       advancePlaybackByDeltaMs: vi.fn(async () => {}),
     },
   } as NonNullable<WorkspaceContract["simulation"]>;

@@ -90,8 +90,7 @@ implements SimulationAction, SimulationInternalAction {
   });
 
   public readonly stop: SimulationAction["stop"] = action(() => {
-    this.stateReadWrite.hasStarted = false;
-    this.stateReadWrite.runningState = "stop";
+    this.clearPlaybackProgress();
   });
 
   public readonly advancePlaybackByDeltaMs: SimulationAction["advancePlaybackByDeltaMs"] = async (
@@ -209,14 +208,8 @@ implements SimulationAction, SimulationInternalAction {
   });
 
   public readonly reset: SimulationInternalAction["reset"] = action(() => {
-    this.topology.setSnapshot(null);
-    this.compiledDocument = null;
-    this.stateReadWrite.runningState = "stop";
+    this.clearPlaybackProgress();
     this.stateReadWrite.simulationSpeed = DEFAULT_SIMULATION_SPEED;
-    this.stateReadWrite.hasStarted = false;
-    this.stateReadWrite.runtimeStatus = createInitialSimulationRuntimeStatus();
-    this.stateReadWrite.currentSnapshot = null;
-    this.stateReadWrite.currentPlaybackTickNumber = 0;
   });
 
   public readonly syncToTick: SimulationInternalAction["syncToTick"] = async (
@@ -259,6 +252,16 @@ implements SimulationAction, SimulationInternalAction {
         this.stateReadWrite.currentPlaybackTickNumber = fallbackPlaybackTickNumber;
       });
     }
+  }
+
+  private clearPlaybackProgress(): void {
+    this.topology.setSnapshot(null);
+    this.compiledDocument = null;
+    this.stateReadWrite.runningState = "stop";
+    this.stateReadWrite.hasStarted = false;
+    this.stateReadWrite.runtimeStatus = createInitialSimulationRuntimeStatus();
+    this.stateReadWrite.currentSnapshot = null;
+    this.stateReadWrite.currentPlaybackTickNumber = 0;
   }
 }
 

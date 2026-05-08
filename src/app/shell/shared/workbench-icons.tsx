@@ -37,6 +37,9 @@ import LucideTablet from "~icons/lucide/tablet";
 import LucideTrash2 from "~icons/lucide/trash-2";
 import LucideX from "~icons/lucide/x";
 import MaterialSymbolsDeleteSweep from "~icons/material-symbols/delete-sweep";
+import MaterialSymbolsPauseRounded from "~icons/material-symbols/pause-rounded";
+import MaterialSymbolsPlayArrowRounded from "~icons/material-symbols/play-arrow-rounded";
+import MaterialSymbolsResumeRounded from "~icons/material-symbols/resume-rounded";
 import MdiSelection from "~icons/mdi/selection";
 import GisArrowO from "~icons/gis/arrow-o";
 
@@ -64,6 +67,7 @@ type WorkbenchIconKind =
   | "panel-top-open"
   | "play"
   | "pause"
+  | "resume"
   | "stop"
   | "expand"
   | "shrink"
@@ -110,8 +114,9 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   "panel-right-open": LucidePanelRightOpen,
   "panel-top-close": LucidePanelTopClose,
   "panel-top-open": LucidePanelTopOpen,
-  play: LucidePlay,
-  pause: LucidePause,
+  play: MaterialSymbolsPlayArrowRounded,
+  pause: MaterialSymbolsPauseRounded,
+  resume: MaterialSymbolsResumeRounded,
   stop: LucideSquare,
   expand: LucideMaximize,
   shrink: LucideMinimize,

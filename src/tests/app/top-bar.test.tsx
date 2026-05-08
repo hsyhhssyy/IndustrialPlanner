@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { action, observable } from "mobx";
 import { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -30,32 +31,47 @@ function attachSimulationStub(
     start?: ReturnType<typeof vi.fn>;
     pause?: ReturnType<typeof vi.fn>;
     resume?: ReturnType<typeof vi.fn>;
+    stop?: ReturnType<typeof vi.fn>;
+    setSimulationSpeed?: ReturnType<typeof vi.fn>;
   },
 ) {
-  const start = options.start ?? vi.fn(async () => {});
-  const pause = options.pause ?? vi.fn();
-  const resume = options.resume ?? vi.fn();
+  const state = observable({
+    runningState: options.state,
+    simulationSpeed: 1,
+  });
+  const start = options.start ?? vi.fn(action(async () => {
+    state.runningState = "start";
+  }));
+  const pause = options.pause ?? vi.fn(action(() => {
+    state.runningState = "pause";
+  }));
+  const resume = options.resume ?? vi.fn(action(() => {
+    state.runningState = "start";
+  }));
+  const stop = options.stop ?? vi.fn(action(() => {
+    state.runningState = "stop";
+  }));
+  const setSimulationSpeed = options.setSimulationSpeed ?? vi.fn(action((value: number) => {
+    state.simulationSpeed = value;
+  }));
 
   workspace.simulation = {
-    state: {
-      runningState: options.state,
-      simulationSpeed: 1,
-    },
+    state,
     topology: createSnapshotStore(null),
     queries: {
       getStatusRuntimeJson: () => JSON.stringify({
         state: {
-          runningState: options.state,
-          simulationSpeed: 1,
+          runningState: state.runningState,
+          simulationSpeed: state.simulationSpeed,
           currentPlaybackTickNumber: 0,
         },
         runtimeStatus: {
-          mode: options.state === "start" ? "running" : options.state === "pause" ? "stopped" : "idle",
+          mode: state.runningState === "start" ? "running" : state.runningState === "pause" ? "stopped" : "idle",
           topologyId: null,
           documentHash: null,
           retainedFromTick: null,
-          latestTickNumber: options.state === "stop" ? null : 0,
-          bufferSize: options.state === "stop" ? 0 : 1,
+          latestTickNumber: state.runningState === "stop" ? null : 0,
+          bufferSize: state.runningState === "stop" ? 0 : 1,
           maxBufferSize: 180,
           error: null,
         },
@@ -67,12 +83,13 @@ function attachSimulationStub(
       start,
       pause,
       resume,
-      stop: vi.fn(),
+      stop,
+      setSimulationSpeed,
       advancePlaybackByDeltaMs: vi.fn(async () => {}),
     },
   } as NonNullable<WorkspaceContract["simulation"]>;
 
-  return { start, pause, resume };
+  return { start, pause, resume, stop, setSimulationSpeed };
 }
 
 describe("TopBar", () => {
@@ -260,6 +277,9 @@ describe("TopBar", () => {
     ) as HTMLButtonElement | null;
 
     expect(simulationButton).not.toBeNull();
+    expect(
+      simulationButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("play");
 
     await act(async () => {
       simulationButton?.click();
@@ -284,6 +304,9 @@ describe("TopBar", () => {
     ) as HTMLButtonElement | null;
 
     expect(simulationButton).not.toBeNull();
+    expect(
+      simulationButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("pause");
 
     await act(async () => {
       simulationButton?.click();
@@ -309,6 +332,9 @@ describe("TopBar", () => {
 
     expect(simulationButton).not.toBeNull();
     expect(simulationButton?.title).toBe("继续");
+    expect(
+      simulationButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
+    ).toBe("resume");
 
     await act(async () => {
       simulationButton?.click();
@@ -321,7 +347,7 @@ describe("TopBar", () => {
 
   it("shows a local speed cycle button beside the pause button while running", async () => {
     const workspace = createWorkspace();
-    attachSimulationStub(workspace, { state: "start" });
+    const { setSimulationSpeed } = attachSimulationStub(workspace, { state: "start" });
     const appHost = createAppHost(workspace);
 
     act(() => {
@@ -336,18 +362,26 @@ describe("TopBar", () => {
     expect(speedButton?.textContent).toBe("x1");
     expect(speedButton?.title).toBe("速率 x1");
 
-    for (const expected of ["x2", "x4", "x8", "x16", "x0.25", "x1"]) {
+    for (const [expectedCall, expectedLabel] of [
+      [2, "x2"],
+      [4, "x4"],
+      [8, "x8"],
+      [16, "x16"],
+      [0.25, "x0.25"],
+      [1, "x1"],
+    ] as const) {
       await act(async () => {
         speedButton?.click();
       });
 
-      expect(speedButton?.textContent).toBe(expected);
+      expect(setSimulationSpeed).toHaveBeenLastCalledWith(expectedCall);
+      expect(speedButton?.textContent).toBe(expectedLabel);
     }
   });
 
-  it("shows a stop button beside the play button while the simulation is not running", () => {
+  it("shows a stop button beside the play button while the simulation is not running", async () => {
     const workspace = createWorkspace();
-    attachSimulationStub(workspace, { state: "pause" });
+    const { stop } = attachSimulationStub(workspace, { state: "pause" });
     const appHost = createAppHost(workspace);
 
     act(() => {
@@ -363,6 +397,12 @@ describe("TopBar", () => {
     expect(
       secondaryButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
     ).toBe("stop");
+
+    await act(async () => {
+      secondaryButton?.click();
+    });
+
+    expect(stop).toHaveBeenCalledTimes(1);
   });
 
   it("removes all top-right status text and keeps only control buttons", () => {
