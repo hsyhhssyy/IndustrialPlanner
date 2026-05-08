@@ -66,10 +66,12 @@ export interface SimulationTickTransientState {
   diagnostics: RuntimeTickDiagnosticRecord[];
 }
 
+export type RuntimeNodeResolveState = "unresolved" | "visited" | "blocked-resolved";
+
 export interface RuntimeTickNodeState {
   nodeId: string;
   result: "uncertain" | "solved-run" | "solved-block";
-  visited: boolean;
+  resolveState: RuntimeNodeResolveState;
   excludedItemTypes: readonly string[];
   acceptedInputEdgeIds: string[];
   acceptedOutputEdgeIds: string[];

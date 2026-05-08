@@ -32,7 +32,7 @@ export function buildSolveGraph(
     state.transient.nodes[nodeId] = {
       nodeId,
       result: "uncertain",
-      visited: false,
+      resolveState: "unresolved",
       excludedItemTypes: [...excludedItemTypes].sort(),
       acceptedInputEdgeIds: [],
       acceptedOutputEdgeIds: [],

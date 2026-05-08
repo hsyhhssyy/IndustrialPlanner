@@ -26,13 +26,14 @@ interface SourceSelection {
  * 从可接收的 input-view Node 作为第 1 层锚点开始，先求解 input-view 产生
  * shadowPull，再沿入边向上游处理 output-view。严格物流设备在搜索过程中立即
  * 穿透处理，非严格物流设备则等待其 output-view 的所有下游 input-view 已遍历。
+ * 订正（2026-05-08）：非严格 output-view 等待的是所有下游 input-view 已求解完成；
+ * 无容量的 input-view 会标记为 blocked-resolved，不再误阻塞同 output-view 的其他出口。
  */
 export function solveTransferGraph(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): void {
-  const visitedNodeIds = new Set<string>();
-  let currentLayer = collectFirstLayerAnchors(topology, state, visitedNodeIds);
+  let currentLayer = collectFirstLayerAnchors(topology, state);
 
   while (currentLayer.length > 0) {
     const nextAnchors = new Map<string, CompiledSimulationNode>();
@@ -42,14 +43,14 @@ export function solveTransferGraph(
         topology,
         state,
         node,
-        visitedNodeIds,
         nextAnchors,
       });
     }
 
-    currentLayer = sortInputAnchors(
+    currentLayer = collectAvailableInputAnchors(
       topology,
-      [...nextAnchors.values()].filter((node) => !visitedNodeIds.has(node.id)),
+      state,
+      [...nextAnchors.values()],
     );
   }
 }
@@ -57,18 +58,11 @@ export function solveTransferGraph(
 function collectFirstLayerAnchors(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
-  visitedNodeIds: ReadonlySet<string>,
 ): readonly CompiledSimulationNode[] {
-  return sortInputAnchors(
+  return collectAvailableInputAnchors(
     topology,
-    topology.ordering.nodeOrder
-      .map((nodeId) => topology.nodes[nodeId])
-      .filter((node): node is CompiledSimulationNode =>
-        node !== undefined
-        && node.viewRole === "input-view"
-        && !visitedNodeIds.has(node.id)
-        && inputNodeHasAnyCapacity(topology, state, node),
-      ),
+    state,
+    topology.ordering.nodeOrder.map((nodeId) => topology.nodes[nodeId]),
   );
 }
 
@@ -76,15 +70,18 @@ function processInputAnchor(options: {
   readonly topology: CompiledSimulationTopology;
   readonly state: SimulationMutableRuntimeState;
   readonly node: CompiledSimulationNode;
-  readonly visitedNodeIds: Set<string>;
   readonly nextAnchors: Map<string, CompiledSimulationNode>;
 }): void {
-  if (options.visitedNodeIds.has(options.node.id)) {
+  if (isNodeVisited(options.state, options.node)) {
+    return;
+  }
+
+  if (!prepareInputNodeForProcessing(options.topology, options.state, options.node)) {
     return;
   }
 
   solveInputNode(options.topology, options.state, options.node);
-  markNodeVisited(options.state, options.visitedNodeIds, options.node);
+  markNodeVisited(options.state, options.node);
 
   for (const edgeId of getOrderedInputEdgeIds(options.topology, options.state, options.node)) {
     const edge = options.topology.transferEdges[edgeId];
@@ -97,7 +94,6 @@ function processInputAnchor(options: {
       topology: options.topology,
       state: options.state,
       outputNode: sourceNode,
-      visitedNodeIds: options.visitedNodeIds,
       nextAnchors: options.nextAnchors,
     });
   }
@@ -107,10 +103,9 @@ function searchUpstreamFromOutputNode(options: {
   readonly topology: CompiledSimulationTopology;
   readonly state: SimulationMutableRuntimeState;
   readonly outputNode: CompiledSimulationNode;
-  readonly visitedNodeIds: Set<string>;
   readonly nextAnchors: Map<string, CompiledSimulationNode>;
 }): void {
-  if (options.outputNode.viewRole !== "output-view" || options.visitedNodeIds.has(options.outputNode.id)) {
+  if (options.outputNode.viewRole !== "output-view" || isNodeVisited(options.state, options.outputNode)) {
     return;
   }
 
@@ -120,16 +115,19 @@ function searchUpstreamFromOutputNode(options: {
   }
 
   if (isStrictLogisticsDevice(device)) {
-    solveOutputNode(options.topology, options.state, options.outputNode);
-    markNodeVisited(options.state, options.visitedNodeIds, options.outputNode);
+    solveOutputNode(options.topology, options.state, options.outputNode, options.nextAnchors);
+    markNodeVisited(options.state, options.outputNode);
 
     const inputNode = getDeviceInputViewNodes(options.topology, device)[0];
-    if (inputNode === undefined || options.visitedNodeIds.has(inputNode.id)) {
+    if (inputNode === undefined || isNodeVisited(options.state, inputNode)) {
+      return;
+    }
+    if (!prepareInputNodeForProcessing(options.topology, options.state, inputNode)) {
       return;
     }
 
     solveInputNode(options.topology, options.state, inputNode);
-    markNodeVisited(options.state, options.visitedNodeIds, inputNode);
+    markNodeVisited(options.state, inputNode);
     for (const edgeId of getOrderedInputEdgeIds(options.topology, options.state, inputNode)) {
       const edge = options.topology.transferEdges[edgeId];
       const sourceNode = edge === undefined ? undefined : options.topology.nodes[edge.sourceNodeId];
@@ -138,7 +136,6 @@ function searchUpstreamFromOutputNode(options: {
           topology: options.topology,
           state: options.state,
           outputNode: sourceNode,
-          visitedNodeIds: options.visitedNodeIds,
           nextAnchors: options.nextAnchors,
         });
       }
@@ -146,15 +143,15 @@ function searchUpstreamFromOutputNode(options: {
     return;
   }
 
-  if (!allDownstreamInputNodesVisited(options.topology, options.outputNode, options.visitedNodeIds)) {
+  if (!allDownstreamInputNodesResolved(options.topology, options.state, options.outputNode)) {
     return;
   }
 
-  solveOutputNode(options.topology, options.state, options.outputNode);
-  markNodeVisited(options.state, options.visitedNodeIds, options.outputNode);
+  solveOutputNode(options.topology, options.state, options.outputNode, options.nextAnchors);
+  markNodeVisited(options.state, options.outputNode);
 
   for (const inputNode of getDeviceInputViewNodes(options.topology, device)) {
-    if (!options.visitedNodeIds.has(inputNode.id)) {
+    if (prepareInputNodeForAnchor(options.topology, options.state, inputNode)) {
       options.nextAnchors.set(inputNode.id, inputNode);
     }
   }
@@ -164,6 +161,7 @@ function solveOutputNode(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   node: CompiledSimulationNode,
+  nextAnchors: Map<string, CompiledSimulationNode>,
 ): void {
   let moved = true;
   while (moved) {
@@ -205,6 +203,8 @@ function solveOutputNode(
         itemType: edgeState.itemType,
         amount: 1,
       });
+
+      refreshBlockedInputNodesAfterMove(topology, state, nextAnchors);
 
       const targetNode = topology.nodes[edge.targetNodeId];
       if (targetNode !== undefined) {
@@ -336,14 +336,15 @@ function inputNodeHasAnyCapacity(
   return false;
 }
 
-function allDownstreamInputNodesVisited(
+function allDownstreamInputNodesResolved(
   topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
   outputNode: CompiledSimulationNode,
-  visitedNodeIds: ReadonlySet<string>,
 ): boolean {
   for (const edgeId of getRawOutputEdgeIds(topology, outputNode)) {
     const targetNodeId = topology.transferEdges[edgeId]?.targetNodeId;
-    if (targetNodeId !== undefined && !visitedNodeIds.has(targetNodeId)) {
+    const targetNode = targetNodeId === undefined ? undefined : topology.nodes[targetNodeId];
+    if (targetNode !== undefined && !isInputNodeResolved(state, targetNode)) {
       return false;
     }
   }
@@ -382,15 +383,114 @@ function getReadableSourceSlotIds(
   return result;
 }
 
-function markNodeVisited(
+function collectAvailableInputAnchors(
+  topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
-  visitedNodeIds: Set<string>,
+  maybeNodes: readonly (CompiledSimulationNode | undefined)[],
+): readonly CompiledSimulationNode[] {
+  const anchors: CompiledSimulationNode[] = [];
+  for (const node of maybeNodes) {
+    if (node === undefined || node.viewRole !== "input-view") {
+      continue;
+    }
+    if (prepareInputNodeForAnchor(topology, state, node)) {
+      anchors.push(node);
+    }
+  }
+  return sortInputAnchors(topology, anchors);
+}
+
+function prepareInputNodeForAnchor(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  node: CompiledSimulationNode,
+): boolean {
+  if (node.viewRole !== "input-view" || isNodeVisited(state, node)) {
+    return false;
+  }
+  if (inputNodeHasAnyCapacity(topology, state, node)) {
+    markInputNodeUnresolved(state, node);
+    return true;
+  }
+  markInputNodeBlocked(state, node);
+  return false;
+}
+
+function prepareInputNodeForProcessing(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  node: CompiledSimulationNode,
+): boolean {
+  return prepareInputNodeForAnchor(topology, state, node);
+}
+
+function refreshBlockedInputNodesAfterMove(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  nextAnchors: Map<string, CompiledSimulationNode>,
+): void {
+  for (const nodeId of topology.ordering.nodeOrder) {
+    const node = topology.nodes[nodeId];
+    const nodeState = node === undefined ? undefined : state.transient.nodes[node.id];
+    if (node === undefined || node.viewRole !== "input-view" || nodeState?.resolveState !== "blocked-resolved") {
+      continue;
+    }
+    if (inputNodeHasAnyCapacity(topology, state, node)) {
+      markInputNodeUnresolved(state, node);
+      nextAnchors.set(node.id, node);
+    }
+  }
+}
+
+function isNodeVisited(
+  state: SimulationMutableRuntimeState,
+  node: CompiledSimulationNode,
+): boolean {
+  return state.transient.nodes[node.id]?.resolveState === "visited";
+}
+
+function isInputNodeResolved(
+  state: SimulationMutableRuntimeState,
+  node: CompiledSimulationNode,
+): boolean {
+  const resolveState = state.transient.nodes[node.id]?.resolveState ?? "unresolved";
+  return resolveState === "visited" || resolveState === "blocked-resolved";
+}
+
+function markInputNodeBlocked(
+  state: SimulationMutableRuntimeState,
   node: CompiledSimulationNode,
 ): void {
-  visitedNodeIds.add(node.id);
+  const nodeState = state.transient.nodes[node.id];
+  if (nodeState === undefined || nodeState.resolveState === "visited") {
+    return;
+  }
+  nodeState.resolveState = "blocked-resolved";
+  if (nodeState.result === "uncertain") {
+    nodeState.result = "solved-block";
+  }
+}
+
+function markInputNodeUnresolved(
+  state: SimulationMutableRuntimeState,
+  node: CompiledSimulationNode,
+): void {
+  const nodeState = state.transient.nodes[node.id];
+  if (nodeState === undefined || nodeState.resolveState !== "blocked-resolved") {
+    return;
+  }
+  nodeState.resolveState = "unresolved";
+  nodeState.result = "uncertain";
+  nodeState.blockReason = undefined;
+}
+
+function markNodeVisited(
+  state: SimulationMutableRuntimeState,
+  node: CompiledSimulationNode,
+): void {
   const nodeState = state.transient.nodes[node.id];
   if (nodeState !== undefined) {
-    nodeState.visited = true;
+    nodeState.resolveState = "visited";
   }
 }
 

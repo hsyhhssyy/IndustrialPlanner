@@ -81,6 +81,7 @@ function createNodeSnapshots(
     {
       nodeId,
       result: node.result,
+      resolveState: node.resolveState,
       acceptedInputEdgeIds: [...node.acceptedInputEdgeIds],
       acceptedOutputEdgeIds: [...node.acceptedOutputEdgeIds],
       blockReason: node.blockReason,

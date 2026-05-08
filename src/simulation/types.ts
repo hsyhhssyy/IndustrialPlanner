@@ -289,6 +289,7 @@ export interface RuntimeDeviceRecipeSnapshot {
 export interface RuntimeNodeSnapshot {
   readonly nodeId: string;
   readonly result: "uncertain" | "solved-run" | "solved-block";
+  readonly resolveState: "unresolved" | "visited" | "blocked-resolved";
   readonly acceptedInputEdgeIds: readonly string[];
   readonly acceptedOutputEdgeIds: readonly string[];
   readonly blockReason?: string;
