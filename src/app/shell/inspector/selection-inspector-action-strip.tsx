@@ -6,6 +6,7 @@ import type { CanvasFloatingToolbarButtonId } from "@/app/state/state-impl";
 
 const SELECTION_ACTION_BUTTON_IDS = [
   "canvas-floating-toolbar-button-move",
+  "canvas-floating-toolbar-button-save-blueprint",
   "canvas-floating-toolbar-button-delete",
 ] as const satisfies readonly CanvasFloatingToolbarButtonId[];
 

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  listFromIndexedDb,
   readFromIndexedDb,
   readFromLocalStorage,
   saveToIndexedDb,
@@ -53,6 +54,40 @@ describe("browser-storage", () => {
     await expect(readFromIndexedDb<typeof snapshot>(location)).resolves.toEqual(
       snapshot,
     );
+  });
+
+  it("lists all JSON documents from IndexedDB", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const storeLocation = {
+      databaseName: "industrial-planner",
+      storeName: "workspace",
+    } satisfies {
+      databaseName: string;
+      storeName: string;
+    };
+
+    await saveToIndexedDb(
+      {
+        ...storeLocation,
+        key: "primary",
+      },
+      { locale: "zh-CN", zoom: 1 },
+    );
+    await saveToIndexedDb(
+      {
+        ...storeLocation,
+        key: "secondary",
+      },
+      { locale: "en-US", zoom: 4 },
+    );
+
+    await expect(
+      listFromIndexedDb<{ locale: string; zoom: number }>(storeLocation),
+    ).resolves.toEqual([
+      { locale: "zh-CN", zoom: 1 },
+      { locale: "en-US", zoom: 4 },
+    ]);
   });
 
   it("returns null when IndexedDB is unavailable", async () => {

@@ -29,6 +29,7 @@ export const RightDock = observer(function RightDock({ appHost }: { appHost: App
           <EditSelectionInspector
             appHost={appHost}
             context={null}
+            mode="dock"
             state={{ locale }}
             translate={t}
           />

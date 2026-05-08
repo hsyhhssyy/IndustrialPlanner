@@ -128,6 +128,7 @@ function createWorkbenchStorageSnapshot(options: {
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
   inspectorDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  saveBlueprintDialog?: ReturnType<typeof createDialogStateSnapshot>;
   toolboxWiki?: ReturnType<typeof createToolboxWikiStorageSnapshot>;
   moduleBalancing?: ReturnType<typeof createModuleBalancingStorageSnapshot>;
 } = {}) {
@@ -142,6 +143,7 @@ function createWorkbenchStorageSnapshot(options: {
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
       inspector: options.inspectorDialog ?? createDialogStateSnapshot(),
+      "save-blueprint": options.saveBlueprintDialog ?? createDialogStateSnapshot(),
     },
     toolbox: {
       wiki: options.toolboxWiki ?? createToolboxWikiStorageSnapshot(),
@@ -228,6 +230,7 @@ describe("createAppHost", () => {
         "hypergryph-move-gesture",
         "hypergryph-marquee-gesture",
         "hypergryph-select-gesture",
+        "hypergryph-save-blueprint-gesture",
         "hypergryph-mouse-viewport-pan",
         "hypergryph-viewport-zoom",
         "simulation-control-button",
@@ -1537,6 +1540,36 @@ describe("createAppHost", () => {
       "canvas-right-dock-toolbar-button-move",
       "canvas-right-dock-toolbar-button-delete",
     ]);
+  });
+
+  it("opens the save blueprint dialog from the save shortcut and selection action button", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
+    const appHost = createAppHost(workspace);
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyN",
+      key: "n",
+      keyCode: 78,
+    }));
+
+    expect(appHost.internalState.workbench.dialogState["save-blueprint"].visible).toBe(true);
+
+    appHost.internalActions.closeDialog("save-blueprint");
+    expect(appHost.internalState.workbench.dialogState["save-blueprint"].visible).toBe(false);
+
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: "canvas-floating-toolbar-button-save-blueprint",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.workbench.dialogState["save-blueprint"].visible).toBe(true);
   });
 
   it("returns to select mode from any active tool using the return-select shortcut", () => {

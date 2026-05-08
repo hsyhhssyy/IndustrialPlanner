@@ -16,6 +16,7 @@ import {
   APP_SETTINGS_LOCAL_STORAGE_KEY,
   WORKBENCH_STATE_LOCAL_STORAGE_KEY,
 } from "@/app/state/storage-hook";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import {
   DEFAULT_HELP_DIALOG_TAB_ID,
@@ -30,8 +31,10 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
+import { listBlueprintDirectory } from "@/shared/storage";
 import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
+import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -68,6 +71,7 @@ const DEFAULT_APP_SHORTCUTS_STORAGE = {
   [SHORTCUT_KEY.WAREHOUSE]: "C",
   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
   [SHORTCUT_KEY.SYNTHESIS]: "B",
+  [SHORTCUT_KEY.SAVE_BLUEPRINT]: "N",
   [SHORTCUT_KEY.RETURN_SELECT]: "Esc",
   [SHORTCUT_KEY.ROTATE]: "R",
   [SHORTCUT_KEY.DELETE_DEVICE]: "F",
@@ -163,6 +167,7 @@ function createWorkbenchStorageSnapshot(options: {
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
   inspectorDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  saveBlueprintDialog?: ReturnType<typeof createDialogStateSnapshot>;
   toolboxWiki?: ReturnType<typeof createToolboxWikiStorageSnapshot>;
   moduleBalancing?: ReturnType<typeof createModuleBalancingStorageSnapshot>;
 } = {}) {
@@ -177,6 +182,7 @@ function createWorkbenchStorageSnapshot(options: {
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
       inspector: options.inspectorDialog ?? createDialogStateSnapshot(),
+      "save-blueprint": options.saveBlueprintDialog ?? createDialogStateSnapshot(),
     },
     toolbox: {
       wiki: options.toolboxWiki ?? createToolboxWikiStorageSnapshot(),
@@ -255,6 +261,25 @@ function dispatchClickEvent(
   });
   target.dispatchEvent(event);
   return event;
+}
+
+function dispatchInputEvent(
+  target: HTMLInputElement | HTMLTextAreaElement,
+  value: string,
+): Event {
+  const prototype = Object.getPrototypeOf(target) as HTMLInputElement | HTMLTextAreaElement;
+  const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
+
+  descriptor?.set?.call(target, value);
+  const event = new Event("input", { bubbles: true, cancelable: true });
+  target.dispatchEvent(event);
+  return event;
+}
+
+async function flushMicrotasks(iterations = 8): Promise<void> {
+  for (let index = 0; index < iterations; index += 1) {
+    await Promise.resolve();
+  }
 }
 
 describe("WorkbenchApp", () => {
@@ -725,6 +750,9 @@ describe("WorkbenchApp", () => {
     const moveButton = container.querySelector(
       '.dock-right [data-ui-button-id="canvas-floating-toolbar-button-move"]',
     ) as HTMLButtonElement | null;
+    const saveBlueprintButton = container.querySelector(
+      '.dock-right [data-ui-button-id="canvas-floating-toolbar-button-save-blueprint"]',
+    ) as HTMLButtonElement | null;
     const deleteButton = container.querySelector(
       '.dock-right [data-ui-button-id="canvas-floating-toolbar-button-delete"]',
     ) as HTMLButtonElement | null;
@@ -735,6 +763,7 @@ describe("WorkbenchApp", () => {
     expect(actionStrip).not.toBeNull();
     expect(container.querySelector(".canvas-floating-toolbar")).toBeNull();
     expect(moveButton).not.toBeNull();
+    expect(saveBlueprintButton).not.toBeNull();
     expect(deleteButton).not.toBeNull();
     expect(deleteManyButton).not.toBeNull();
     expect(
@@ -786,6 +815,102 @@ describe("WorkbenchApp", () => {
         uiButtonId: "canvas-floating-toolbar-button-delete-many",
       }),
     ]));
+  });
+
+  it("saves the current multi-selection into blueprint storage from the save blueprint dialog", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    await flushMicrotasks(20);
+    editorHost.internalDocument.setSnapshot({
+      ...createDummyWorldDocument(),
+      slotLinks: [
+        {
+          id: "slot-link-selected",
+          linkType: "share-all",
+          source: {
+            entityId: "dummy-entity-2",
+            storageSlotGroupId: "source-group",
+            slotId: "source-slot",
+          },
+          target: {
+            entityId: "dummy-entity-3",
+            storageSlotGroupId: "target-group",
+            slotId: "target-slot",
+          },
+        },
+        {
+          id: "slot-link-external",
+          linkType: "share-cap",
+          source: {
+            entityId: "dummy-entity-2",
+            storageSlotGroupId: "source-group",
+            slotId: "source-slot",
+          },
+          target: {
+            entityId: "dummy-entity-1",
+            storageSlotGroupId: "other-group",
+            slotId: "other-slot",
+          },
+        },
+      ],
+    });
+    await flushMicrotasks(8);
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2", "dummy-entity-3"]);
+    const selectionRect = editorHost.queries.findEntityCollectionGridRect(EntityCollectionType.selection);
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    act(() => {
+      appHost.internalActions.openDialog("save-blueprint");
+    });
+
+    const dialog = container.querySelector('[data-dialog-key="save-blueprint"]');
+    const nameInput = container.querySelector('.save-blueprint-input') as HTMLInputElement | null;
+    const descriptionInput = container.querySelector('.save-blueprint-textarea') as HTMLTextAreaElement | null;
+    const submitButton = container.querySelector('.save-blueprint-primary-button') as HTMLButtonElement | null;
+
+    expect(dialog).not.toBeNull();
+    expect(nameInput).not.toBeNull();
+    expect(descriptionInput).not.toBeNull();
+    expect(submitButton).not.toBeNull();
+
+    if (!nameInput || !descriptionInput || !submitButton || selectionRect === null) {
+      throw new Error("Save blueprint dialog did not render expected controls.");
+    }
+
+    await act(async () => {
+      dispatchInputEvent(nameInput, "双节点蓝图");
+      dispatchInputEvent(descriptionInput, "R1 集成测试");
+      submitButton.click();
+    });
+
+    await act(async () => {
+      await flushMicrotasks(12);
+    });
+
+    const listing = await listBlueprintDirectory(null);
+
+    expect(container.querySelector('[data-dialog-key="save-blueprint"]')).toBeNull();
+    expect(listing.blueprints).toHaveLength(1);
+    expect(listing.blueprints[0]).toMatchObject({
+      name: "双节点蓝图",
+      description: "R1 集成测试",
+      entityOrder: ["dummy-entity-2", "dummy-entity-3"],
+      slotLinks: [
+        {
+          id: "slot-link-selected",
+        },
+      ],
+      initialGridPoint: {
+        x: Math.round(selectionRect.x + selectionRect.width / 2),
+        y: Math.round(selectionRect.y + selectionRect.height / 2),
+      },
+    });
   });
 
   it("renders current tick snapshot json in the simulation left dock panel", () => {
@@ -1000,6 +1125,47 @@ describe("WorkbenchApp", () => {
 
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe(`${MOBILE_LEFT_DOCK_WIDTH}px`);
     expect(container.querySelector(".canvas-left-bottom-toolbar")).toBeNull();
+  });
+
+  it("keeps desktop dock layout on touch-enabled desktop devices", () => {
+    setViewport({
+      width: 1234,
+      height: 899,
+      userAgent:
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0",
+      maxTouchPoints: 20,
+    });
+
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        leftDockOpen: true,
+        rightDockOpen: true,
+        leftDockWidth: 512,
+        topBarCollapsed: false,
+        rightDockActiveTab: DEFAULT_RIGHT_DOCK_TAB_ID,
+      }),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
+    expect(appHost.state.screenProfile.hasTouch).toBe(true);
+    expect(appHost.state.workbench.leftDockWidth).toBe(512);
+    expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("512px");
+    expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("68px");
+    expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("1");
+    expect(container.querySelector(".dock-resize-handle")).not.toBeNull();
+    expect(container.querySelector(".canvas-left-bottom-toolbar")).toBeNull();
+    expect(container.querySelector(".placement-panel-group-operation.is-mobile-layout")).toBeNull();
+    expect(container.querySelector(".placement-button-list.is-single-column")).toBeNull();
   });
 
   it("prevents middle mouse native pointerdown behavior at the outer shell", () => {
@@ -1289,7 +1455,9 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
     expect(editorHost.state.collections.selection).toEqual(["dummy-entity-2"]);
     expect(container.querySelector(".dock-right")).toBeNull();
-    expect(container.querySelector('[data-dialog-key="inspector"]')).not.toBeNull();
+    // 2026-05-08 订正：关闭"使用面板"后不应自动弹出 inspector，避免 inspector 跳脸。
+    // 原断言 expect(...).not.toBeNull() 与修复后的预期行为不一致。
+    expect(container.querySelector('[data-dialog-key="inspector"]')).toBeNull();
   });
 
   it("does not auto-open the inspector dialog until it is explicitly requested when second-click opening is enabled", () => {

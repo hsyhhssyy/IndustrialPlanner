@@ -2353,6 +2353,12 @@ body.is-resizing-left-dock * {
   gap: 0;
 }
 
+.blueprint-panel {
+  display: grid;
+  align-content: start;
+  gap: 0;
+}
+
 .placement-panel-divider {
   height: 0;
   margin: 10px 0 8px;
@@ -2537,6 +2543,230 @@ body.is-resizing-left-dock * {
     monospace;
 }
 
+.blueprint-action-button:disabled,
+.blueprint-entry-button:disabled,
+.blueprint-utility-button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.blueprint-panel-note {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.blueprint-library-group {
+  gap: 10px;
+}
+
+.blueprint-tab-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.blueprint-tab-button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.blueprint-tab-button.is-active {
+  border-color: var(--highlight-ring);
+  background: var(--surface-3);
+  color: var(--text-0);
+}
+
+.blueprint-library-pane {
+  display: grid;
+  gap: 10px;
+}
+
+.blueprint-browser-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.blueprint-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.blueprint-path-label {
+  min-width: 0;
+  color: var(--text-1);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.blueprint-utility-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.blueprint-utility-button.is-secondary {
+  background: transparent;
+  color: var(--text-1);
+}
+
+.blueprint-back-button {
+  min-width: 32px;
+  padding: 0;
+}
+
+.blueprint-library-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.blueprint-folder-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px;
+}
+
+.blueprint-folder-input {
+  min-width: 0;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  padding: 0 10px;
+  font: inherit;
+}
+
+.blueprint-folder-input::placeholder {
+  color: var(--text-3);
+}
+
+.blueprint-panel-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.blueprint-browser-list {
+  display: grid;
+  gap: 6px;
+}
+
+.blueprint-entry-button {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  text-align: left;
+}
+
+.blueprint-entry-button:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-3);
+}
+
+.blueprint-entry-button.is-selected {
+  border-color: var(--highlight-ring);
+  box-shadow: inset 0 0 0 1px var(--highlight-ring);
+}
+
+.blueprint-entry-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.blueprint-entry-title {
+  min-width: 0;
+  color: var(--text-0);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blueprint-entry-description,
+.blueprint-entry-meta,
+.blueprint-empty-state p,
+.blueprint-detail-grid dt,
+.blueprint-detail-grid dd {
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.blueprint-entry-description,
+.blueprint-entry-meta,
+.blueprint-empty-state p,
+.blueprint-detail-grid dt {
+  color: var(--text-2);
+}
+
+.blueprint-entry-description {
+  overflow-wrap: anywhere;
+}
+
+.blueprint-detail-card {
+  gap: 10px;
+}
+
+.blueprint-detail-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 10px;
+  margin: 0;
+}
+
+.blueprint-detail-grid dd {
+  margin: 0;
+  color: var(--text-0);
+  overflow-wrap: anywhere;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-folder-form {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.blueprint-panel.is-touch-layout .blueprint-entry-button {
+  grid-template-columns: 24px minmax(0, 1fr);
+}
+
+.blueprint-panel.is-touch-layout .blueprint-entry-button .pill {
+  grid-column: 2;
+  justify-self: start;
+}
+
 .cluster,
 .definition-list {
   display: grid;
@@ -2647,6 +2877,118 @@ body.is-resizing-left-dock * {
 .selection-inspector-action-label {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.save-blueprint-form {
+  display: grid;
+  gap: 16px;
+}
+
+.save-blueprint-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.save-blueprint-subtitle,
+.save-blueprint-selection-summary,
+.save-blueprint-error {
+  margin: 0;
+}
+
+.save-blueprint-subtitle,
+.save-blueprint-selection-summary {
+  color: var(--text-1);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.save-blueprint-selection-summary {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-1);
+}
+
+.save-blueprint-field {
+  display: grid;
+  gap: 8px;
+}
+
+.save-blueprint-label {
+  color: var(--text-0);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.save-blueprint-input,
+.save-blueprint-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-1);
+  color: var(--text-0);
+  font: inherit;
+}
+
+.save-blueprint-input:disabled,
+.save-blueprint-textarea:disabled,
+.save-blueprint-primary-button:disabled,
+.save-blueprint-secondary-button:disabled {
+  opacity: 0.65;
+}
+
+.save-blueprint-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.save-blueprint-error {
+  color: var(--danger-500);
+  font-size: 0.82rem;
+}
+
+.save-blueprint-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.save-blueprint-primary-button,
+.save-blueprint-secondary-button {
+  min-width: 104px;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 600;
+}
+
+.save-blueprint-secondary-button {
+  border: 1px solid var(--line);
+  background: var(--surface-1);
+  color: var(--text-0);
+}
+
+.save-blueprint-primary-button {
+  border: 1px solid transparent;
+  background: var(--accent-500);
+  color: var(--accent-contrast, #fff);
+}
+
+@media (max-width: 720px) {
+  .save-blueprint-actions {
+    flex-direction: column-reverse;
+  }
+
+  .save-blueprint-primary-button,
+  .save-blueprint-secondary-button {
+    width: 100%;
+  }
 }
 
 .expandable-card-header {
@@ -3397,6 +3739,17 @@ body.is-resizing-left-dock * {
   gap: 8px;
 }
 
+/* 对话框模式下槽位列表双列排列 */
+.slot-config-list[data-render-mode="dialog"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 480px) {
+  .slot-config-list[data-render-mode="dialog"] {
+    grid-template-columns: 1fr;
+  }
+}
+
 .slot-config-group-header,
 .slot-config-row-header {
   display: flex;
@@ -4041,7 +4394,7 @@ body.is-resizing-left-dock * {
 .encyclopedia-recipe-col {
   display: grid;
   gap: 1px;
-  padding: 6px 8px;
+  padding: 4px 6px;
 }
 
 .encyclopedia-recipe-col.is-input {
@@ -4055,7 +4408,7 @@ body.is-resizing-left-dock * {
 .encyclopedia-recipe-arrow-col {
   display: flex;
   align-items: center;
-  padding: 0 4px;
+  padding: 0 3px;
   background: var(--surface-1);
 }
 
@@ -4068,15 +4421,16 @@ body.is-resizing-left-dock * {
 .encyclopedia-recipe-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 6px;
+  gap: 1px;
+  padding: 2px 4px;
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
   cursor: pointer;
-  font-size: 0.74rem;
+  font-size: 0.8rem;
+  line-height: 1.1;
   color: var(--text-0);
-  min-height: 32px;
+  min-height: 30px;
 }
 
 .encyclopedia-recipe-row:hover {
@@ -4094,8 +4448,9 @@ body.is-resizing-left-dock * {
 }
 
 .encyclopedia-recipe-item-icon {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
+  margin-right: -2px;
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -4110,7 +4465,7 @@ body.is-resizing-left-dock * {
 }
 
 .encyclopedia-recipe-item-amount {
-  font-size: 0.7rem;
+  font-size: 0.76rem;
   color: var(--text-2);
   white-space: nowrap;
   flex-shrink: 0;

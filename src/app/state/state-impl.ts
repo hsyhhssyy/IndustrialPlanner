@@ -36,6 +36,7 @@ import type { LogisticsKind, LogisticsRouteOrder } from "@/domain/shared/logisti
 import type { UiGroup } from "@/domain/registry/types/entity-definition";
 import type { AppLocale } from "@/shared/i18n/messages";
 import {
+  isMobileOrTabletScreenProfile,
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
 import { DEFAULT_APP_THEME_ID, resolveAppTheme } from "../theme";
@@ -52,9 +53,9 @@ export function clampLeftDockWidth(width: number): number {
 
 export function resolveLeftDockWidthForScreenProfile(
   width: number,
-  screenProfile: Pick<ScreenProfile, "hasTouch">,
+  screenProfile: Pick<ScreenProfile, "deviceClass">,
 ): number {
-  if (screenProfile.hasTouch) {
+  if (isMobileOrTabletScreenProfile(screenProfile)) {
     return MOBILE_LEFT_DOCK_WIDTH;
   }
 
@@ -146,6 +147,7 @@ export const CANVAS_FLOATING_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-cancel",
   "canvas-floating-toolbar-button-rotate",
   "canvas-floating-toolbar-button-move",
+  "canvas-floating-toolbar-button-save-blueprint",
   "canvas-floating-toolbar-button-delete",
   "canvas-floating-toolbar-button-delete-many",
 ] as const;
@@ -272,7 +274,7 @@ export function isRightDockTabId(value: unknown): value is RightDockTabId {
   return typeof value === "string" && RIGHT_DOCK_TAB_IDS.includes(value as RightDockTabId);
 }
 
-export const DIALOG_KEYS = ["toolbox", "help", "settings", "debug-log", "inspector"] as const;
+export const DIALOG_KEYS = ["toolbox", "help", "settings", "debug-log", "inspector", "save-blueprint"] as const;
 export type DialogKey = typeof DIALOG_KEYS[number];
 
 export interface DialogStateReadWrite {
@@ -291,6 +293,7 @@ export interface DialogStateMapReadWrite extends Record<string, DialogStateReadW
   settings: DialogStateReadWrite;
   "debug-log": DialogStateReadWrite | undefined;
   inspector: DialogStateReadWrite;
+  "save-blueprint": DialogStateReadWrite;
 }
 
 export function resolveDefaultDialogTabId(dialogKey: string): string | null {
@@ -400,6 +403,7 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
     settings: createDefaultDialogStateForKey("settings"),
     "debug-log": undefined,
     inspector: createDefaultDialogStateForKey("inspector"),
+    "save-blueprint": createDefaultDialogStateForKey("save-blueprint"),
   };
   toolbox: ToolboxStateReadWrite = new ToolboxStateReadWriteImpl();
 

@@ -11,7 +11,7 @@ import {
   clampLeftDockWidth,
   type ActivePanel,
 } from "@/app/state/state-impl";
-import { isTouchScreenProfile } from "@/shared/browser/screen-profile";
+import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
 
 type LeftDockPanelId = Exclude<ActivePanel, null>;
 
@@ -43,7 +43,7 @@ const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppH
   const currentPanelLabel = t(PANEL_TITLE_KEYS[activePanel]);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
   const screenProfile = appHost.state.screenProfile;
-  const isTouchLayout = isTouchScreenProfile(screenProfile);
+  const isTouchLayout = isMobileOrTabletScreenProfile(screenProfile);
 
   useEffect(() => {
     return () => {

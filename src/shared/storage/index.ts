@@ -1,4 +1,5 @@
 export {
+  listFromIndexedDb,
   readFromIndexedDb,
   readFromLocalStorage,
   saveToIndexedDb,
@@ -6,6 +7,27 @@ export {
 } from "@/shared/storage/browser-storage";
 
 export type {
+  BlueprintDirectoryListing,
+  BlueprintFolderRecord,
+  BlueprintReadOptions,
+  BlueprintRecord,
+  BlueprintStorageEntry,
+  CreateBlueprintFolderInput,
+  SaveBlueprintOptions,
+} from "@/shared/storage/blueprint-storage";
+
+export {
+  createBlueprintFolder,
+  deleteBlueprintDocument,
+  listBlueprintDirectory,
+  readBlueprintFolder,
+  readBlueprintRecord,
+  saveBlueprintDocument,
+  BLUEPRINT_STORE_LOCATION,
+} from "@/shared/storage/blueprint-storage";
+
+export type {
+  IndexedDbStoreLocation,
   IndexedDbStorageLocation,
   JsonStorageCodec,
 } from "@/shared/storage/browser-storage";

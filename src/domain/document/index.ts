@@ -1,4 +1,13 @@
 export type {
+	BlueprintDocument,
+	CreateBlueprintDocumentInput,
+} from "./blueprint-document";
+export {
+	BLUEPRINT_SCHEMA_VERSION,
+	BLUEPRINT_VERSION,
+	createBlueprintDocument,
+} from "./blueprint-document";
+export type {
 	WorldEntity,
 	WorldDocument,
 	SlotLinkDefinition,

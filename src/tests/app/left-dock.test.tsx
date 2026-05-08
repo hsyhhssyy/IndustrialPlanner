@@ -10,9 +10,15 @@ import type { GestureEvent } from "@/app/input/gesture/adapter";
 import { LeftDock } from "@/app/shell/layout/left-dock";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
+import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
+import {
+  createBlueprintFolder,
+  saveBlueprintDocument,
+} from "@/shared/storage/blueprint-storage";
+import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -481,8 +487,9 @@ describe("Left dock panel switching", () => {
     expect(appHost.internalState.runtime.activePanel).toBe("blueprint");
     expect(blueprintButton.getAttribute("aria-pressed")).toBe("true");
     expect(blueprintPanel?.getAttribute("data-panel-id")).toBe("blueprint");
-    expect(blueprintPanel?.textContent).toContain("导入蓝图");
-    expect(blueprintPanel?.textContent).toContain("仓库总线样例");
+    expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-action-import-file"]')).not.toBeNull();
+    expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-tab-user"]')).not.toBeNull();
+    expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')).not.toBeNull();
 
     const deleteButton = clickTab("删除模式");
     const deletePanel = queryVisibleLeftDockPanel(container);
@@ -685,4 +692,139 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.querySelectorAll(".placement-button-hotkey")).toHaveLength(0);
     expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
   });
+
+  it("browses user blueprints and creates nested folders inside the blueprint panel", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const rootFolder = await createBlueprintFolder({
+      name: "总线蓝图",
+    });
+
+    await saveBlueprintDocument(createTestBlueprint({
+      name: "根目录蓝图",
+    }));
+
+    await saveBlueprintDocument(createTestBlueprint({
+      name: "仓储总线样例",
+      description: "四路汇流",
+    }), {
+      parentFolderId: rootFolder?.folderId,
+    });
+
+    const nestedFolder = await createBlueprintFolder({
+      name: "炼油分支",
+      parentFolderId: rootFolder?.folderId,
+    });
+
+    await saveBlueprintDocument(createTestBlueprint({
+      name: "炼油总线样例",
+      description: "双线回流",
+    }), {
+      parentFolderId: nestedFolder?.folderId,
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+
+    await act(async () => {
+      root.render(<LeftDock appHost={appHost} />);
+      await flushAsyncEffects();
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const rootFolderButton = visiblePanel?.querySelector(
+      `[data-blueprint-folder-id="${rootFolder?.folderId ?? ""}"]`,
+    ) as HTMLButtonElement | null;
+
+    expect(visiblePanel?.getAttribute("data-panel-id")).toBe("blueprint");
+    expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-tab-user"]')?.getAttribute("aria-selected")).toBe("true");
+    expect(visiblePanel?.textContent).toContain("根目录");
+    expect(visiblePanel?.textContent).toContain("总线蓝图");
+    expect(visiblePanel?.textContent).toContain("根目录蓝图");
+    expect(rootFolderButton).not.toBeNull();
+
+    await act(async () => {
+      rootFolderButton?.click();
+      await flushAsyncEffects();
+    });
+
+    expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-folder-back"]')).not.toBeNull();
+    expect(visiblePanel?.textContent).toContain("炼油分支");
+    expect(visiblePanel?.textContent).toContain("仓储总线样例");
+
+    const createFolderToggle = visiblePanel?.querySelector(
+      '[data-ui-button-id="blueprint-folder-create-toggle"]',
+    ) as HTMLButtonElement | null;
+
+    await act(async () => {
+      createFolderToggle?.click();
+    });
+
+    const createFolderInput = visiblePanel?.querySelector(
+      "[data-blueprint-folder-input]",
+    ) as HTMLInputElement | null;
+
+    expect(createFolderInput).not.toBeNull();
+
+    await act(async () => {
+      if (!createFolderInput) {
+        throw new Error("Expected the create folder input to render.");
+      }
+
+      const valueSetter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )?.set;
+
+      valueSetter?.call(createFolderInput, "新建目录");
+      createFolderInput.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    const createFolderSubmit = visiblePanel?.querySelector(
+      '[data-ui-button-id="blueprint-folder-create-submit"]',
+    ) as HTMLButtonElement | null;
+
+    expect(createFolderSubmit).not.toBeNull();
+
+    await act(async () => {
+      createFolderSubmit?.click();
+      await flushAsyncEffects();
+    });
+
+    expect(visiblePanel?.textContent).toContain("新建目录");
+  });
 });
+
+async function flushAsyncEffects() {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+function createTestBlueprint(
+  overrides: Partial<ReturnType<typeof createBlueprintDocument>> = {},
+) {
+  return createBlueprintDocument({
+    name: "蓝图样例",
+    description: "",
+    baseId: "wuling_protocol_core",
+    initialGridPoint: { x: 10, y: 12 },
+    entities: {
+      assembler_1: {
+        id: "assembler_1",
+        definitionId: "assembler",
+        position: { x: 10, y: 12 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+    },
+    entityOrder: ["assembler_1"],
+    slotLinks: [],
+    ...overrides,
+  });
+}

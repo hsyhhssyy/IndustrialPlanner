@@ -28,6 +28,12 @@ function getCardLabels(container: HTMLDivElement): string[] {
     .filter((text) => text.length > 0);
 }
 
+function getRecipeGroupTitles(container: HTMLDivElement): string[] {
+  return Array.from(container.querySelectorAll(".encyclopedia-recipe-group-title"))
+    .map((node) => node.textContent ?? "")
+    .filter((text) => text.length > 0);
+}
+
 describe("EncyclopediaPanel", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -137,5 +143,132 @@ describe("EncyclopediaPanel", () => {
       kind: "item",
       id: "item_copper_ore",
     });
+  });
+
+  it("shows output recipes above input recipes for item pages", () => {
+    const workspace = createWorkspace();
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    runInAction(() => {
+      currentAppHost.internalState.workbench.toolbox.wiki.navigationStack = [
+        { type: "item", id: "item_iron_cmpt" },
+      ];
+      currentAppHost.internalState.workbench.toolbox.wiki.openedPage = {
+        kind: "item",
+        id: "item_iron_cmpt",
+      };
+    });
+
+    act(() => {
+      root.render(<EncyclopediaPanel appHost={currentAppHost} isTouch={false} />);
+    });
+
+    expect(getRecipeGroupTitles(container)).toEqual([
+      currentAppHost.actions.translate("encyclopedia.group.asOutput"),
+      currentAppHost.actions.translate("encyclopedia.group.asInput"),
+    ]);
+  });
+
+  it("moves tagged liquid bottle recipes into dedicated groups", () => {
+    const workspace = createWorkspace();
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    runInAction(() => {
+      currentAppHost.internalState.workbench.toolbox.wiki.navigationStack = [
+        { type: "item", id: "item_iron_bottle_filled_water" },
+      ];
+      currentAppHost.internalState.workbench.toolbox.wiki.openedPage = {
+        kind: "item",
+        id: "item_iron_bottle_filled_water",
+      };
+    });
+
+    act(() => {
+      root.render(<EncyclopediaPanel appHost={currentAppHost} isTouch={false} />);
+    });
+
+    expect(getRecipeGroupTitles(container)).toEqual([
+      currentAppHost.actions.translate("encyclopedia.group.liquidFilling"),
+      currentAppHost.actions.translate("encyclopedia.group.liquidDismantle"),
+    ]);
+  });
+
+  it("renders regular recipe groups before liquid bottle groups", () => {
+    const workspace = createWorkspace();
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    runInAction(() => {
+      currentAppHost.internalState.workbench.toolbox.wiki.navigationStack = [
+        { type: "item", id: "item_liquid_water" },
+      ];
+      currentAppHost.internalState.workbench.toolbox.wiki.openedPage = {
+        kind: "item",
+        id: "item_liquid_water",
+      };
+    });
+
+    act(() => {
+      root.render(<EncyclopediaPanel appHost={currentAppHost} isTouch={false} />);
+    });
+
+    expect(getRecipeGroupTitles(container)).toEqual([
+      currentAppHost.actions.translate("encyclopedia.group.asOutput"),
+      currentAppHost.actions.translate("encyclopedia.group.asInput"),
+      currentAppHost.actions.translate("encyclopedia.group.liquidFilling"),
+      currentAppHost.actions.translate("encyclopedia.group.liquidDismantle"),
+    ]);
+  });
+
+  it("shows liquid filling recipes below generic machine recipes", () => {
+    const workspace = createWorkspace();
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    runInAction(() => {
+      currentAppHost.internalState.workbench.toolbox.wiki.navigationStack = [
+        { type: "entity", id: "item_port_liquid_filling_pd_mc_1" },
+      ];
+      currentAppHost.internalState.workbench.toolbox.wiki.openedPage = {
+        kind: "entity",
+        id: "item_port_liquid_filling_pd_mc_1",
+      };
+    });
+
+    act(() => {
+      root.render(<EncyclopediaPanel appHost={currentAppHost} isTouch={false} />);
+    });
+
+    expect(getRecipeGroupTitles(container)).toEqual([
+      currentAppHost.actions.translate("encyclopedia.group.asMachine"),
+      currentAppHost.actions.translate("encyclopedia.group.liquidFilling"),
+    ]);
+  });
+
+  it("shows liquid dismantle recipes below generic machine recipes", () => {
+    const workspace = createWorkspace();
+    const currentAppHost = createAppHost(workspace);
+    appHost = currentAppHost;
+
+    runInAction(() => {
+      currentAppHost.internalState.workbench.toolbox.wiki.navigationStack = [
+        { type: "entity", id: "item_port_dismantler_1" },
+      ];
+      currentAppHost.internalState.workbench.toolbox.wiki.openedPage = {
+        kind: "entity",
+        id: "item_port_dismantler_1",
+      };
+    });
+
+    act(() => {
+      root.render(<EncyclopediaPanel appHost={currentAppHost} isTouch={false} />);
+    });
+
+    expect(getRecipeGroupTitles(container)).toEqual([
+      currentAppHost.actions.translate("encyclopedia.group.asMachine"),
+      currentAppHost.actions.translate("encyclopedia.group.liquidDismantle"),
+    ]);
   });
 });

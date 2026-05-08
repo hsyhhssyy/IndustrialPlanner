@@ -281,6 +281,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const shouldAutoOpenInspectorDialog = canKeepInspectorDialogOpen && !openInspectorOnSecondClick;
   const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;
   const previousScreenProfileRef = useRef(screenProfile);
+  const prevUseInspectorPanelRef = useRef(useInspectorPanel);
+  const justToggledOffPanelRef = useRef(false);
   const hasVisibleDialogShell = isAnyDialogShellVisible(appHost);
 
   useEffect(() => {
@@ -381,6 +383,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   }, [appHost, hasVisibleDialogShell]);
 
   useEffect(() => {
+    const prev = prevUseInspectorPanelRef.current;
+    prevUseInspectorPanelRef.current = useInspectorPanel;
+
     if (useInspectorPanel) {
       if (inspectorDialogState.visible) {
         appHost.internalActions.closeDialog("inspector");
@@ -390,6 +395,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     }
 
     if (rightDockOpen) {
+      if (prev) {
+        justToggledOffPanelRef.current = true;
+      }
       appHost.internalActions.setRightDockOpen(false, { preserveSingleSelection: true });
     }
   }, [appHost, inspectorDialogState.visible, rightDockOpen, useInspectorPanel]);
@@ -400,7 +408,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     }
 
     if (shouldAutoOpenInspectorDialog) {
-      if (!inspectorDialogState.visible) {
+      if (justToggledOffPanelRef.current) {
+        justToggledOffPanelRef.current = false;
+      } else if (!inspectorDialogState.visible) {
         appHost.internalActions.openDialog("inspector");
       }
 

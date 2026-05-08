@@ -302,6 +302,17 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         },
       },
       {
+        id: "shortcut-save-blueprint",
+        kind: "keybinding",
+        labelKey: shortcutKeybindingLabelKey("shortcut-save-blueprint"),
+        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-save-blueprint"),
+        defaultValue: "N",
+        editableWhen: {
+          settingId: "game-arknights-operation-mode",
+          equals: false,
+        },
+      },
+      {
         id: "shortcut-return-select",
         kind: "keybinding",
         labelKey: shortcutKeybindingLabelKey("shortcut-return-select"),

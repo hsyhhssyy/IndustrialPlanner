@@ -138,6 +138,16 @@ function createObjectStoreHandle(
 
       return request;
     },
+    getAll: () => {
+      const request = createRequest<unknown[]>();
+
+      queueMicrotask(() => {
+        assignRequestResult(request, Array.from(store.values()));
+        request.onsuccess?.(new Event("success"));
+      });
+
+      return request;
+    },
   } as unknown as IDBObjectStore;
 }
 

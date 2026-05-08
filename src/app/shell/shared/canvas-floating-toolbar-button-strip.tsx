@@ -60,6 +60,13 @@ const CANVAS_FLOATING_TOOLBAR_DEFINITIONS: Record<CanvasFloatingToolbarButtonId,
     },
     icon: "move",
   },
+  "canvas-floating-toolbar-button-save-blueprint": {
+    label: {
+      "zh-CN": "保存蓝图",
+      "en-US": "Save Blueprint",
+    },
+    icon: "save-blueprint",
+  },
   "canvas-floating-toolbar-button-delete": {
     label: {
       "zh-CN": "删除",

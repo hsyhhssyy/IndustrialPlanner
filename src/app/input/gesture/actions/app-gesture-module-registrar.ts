@@ -19,6 +19,7 @@ import {
 import {
   createHypergryphSinglePlacementGestureModule,
 } from "./hypergryph/hypergryph-single-placement-gesture-module";
+import { createHypergryphSaveBlueprintGestureModule } from "./hypergryph/hypergryph-save-blueprint-gesture-module";
 import { createHypergryphMouseViewportPanModule } from "./hypergryph/hypergryph-mouse-viewport-pan-module";
 import {
   createHypergryphSelectGestureModule,
@@ -43,6 +44,7 @@ export class AppGestureModuleRegistrar {
       options.router.registerModule(createHypergryphMoveGestureModule()),
       options.router.registerModule(createHypergryphMarqueeGestureModule()),
       options.router.registerModule(createHypergryphSelectGestureModule()),
+      options.router.registerModule(createHypergryphSaveBlueprintGestureModule()),
       options.router.registerModule(createHypergryphDeleteSelectionGestureModule()),
       options.router.registerModule(createHypergryphMouseViewportPanModule()),
       options.router.registerModule(createHypergryphViewportZoomModule()),

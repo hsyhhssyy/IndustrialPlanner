@@ -41,6 +41,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "shortcut-warehouse": "C",
         "shortcut-basic-production": "V",
         "shortcut-synthesis": "B",
+        "shortcut-save-blueprint": "N",
         "shortcut-return-select": "Esc",
         "shortcut-rotate": "R",
         "shortcut-delete-device": "F",
@@ -72,6 +73,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["shortcut-warehouse"]).toBe("C");
     expect(hydratedController.values["shortcut-basic-production"]).toBe("V");
     expect(hydratedController.values["shortcut-synthesis"]).toBe("B");
+    expect(hydratedController.values["shortcut-save-blueprint"]).toBe("N");
     expect(hydratedController.values["shortcut-return-select"]).toBe("Esc");
     expect(hydratedController.values["shortcut-rotate"]).toBe("R");
     expect(hydratedController.values["shortcut-delete-device"]).toBe("F");
@@ -182,6 +184,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "shortcut-warehouse": "C",
         "shortcut-basic-production": "V",
         "shortcut-synthesis": "B",
+        "shortcut-save-blueprint": "N",
         "shortcut-return-select": "Esc",
         "shortcut-rotate": "R",
         "shortcut-delete-device": "F",

@@ -10,7 +10,7 @@ import {
   getVisiblePlacementOperationButtons,
   type PlacementOperationButtonDefinition,
 } from "@/app/shell/panels/placement-operation-buttons";
-import { isTouchScreenProfile } from "@/shared/browser/screen-profile";
+import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
 
 const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
 
@@ -133,7 +133,7 @@ function buildPlacementDeviceSections(appHost: AppHost): readonly PlacementSecti
 export const PlacementPanel = observer(function PlacementPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const screenProfile = appHost.state.screenProfile;
-  const isTouchLayout = isTouchScreenProfile(screenProfile);
+  const isTouchLayout = isMobileOrTabletScreenProfile(screenProfile);
   const showShortcutHints = !isTouchLayout && appHost.state.settings.gameShowHotkeys;
   const deviceSections = buildPlacementDeviceSections(appHost);
   const visibleOperationButtons = getVisiblePlacementOperationButtons(appHost);

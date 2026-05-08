@@ -233,12 +233,16 @@ export function isMobilePortraitScreenProfile(profile: Pick<ScreenProfile, "devi
   return profile.deviceClass === "mobile" && profile.screenShape === "portrait";
 }
 
+export function isMobileOrTabletScreenProfile(profile: Pick<ScreenProfile, "deviceClass">): boolean {
+  return profile.deviceClass === "mobile" || profile.deviceClass === "tablet";
+}
+
 export function isTouchScreenProfile(profile: Pick<ScreenProfile, "hasTouch">): boolean {
   return profile.hasTouch;
 }
 
 export function isTouchLandscapeScreenProfile(profile: Pick<ScreenProfile, "deviceClass" | "screenShape">): boolean {
-  return (profile.deviceClass === "mobile" || profile.deviceClass === "tablet") && profile.screenShape === "landscape";
+  return isMobileOrTabletScreenProfile(profile) && profile.screenShape === "landscape";
 }
 
 export function resolveScreenProfileFromWindow(

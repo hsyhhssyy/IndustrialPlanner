@@ -602,6 +602,11 @@ function normalizePersistedDialogStateMap(
       persistedDialogStateMap.inspector,
       fallback.inspector,
     ),
+    "save-blueprint": normalizePersistedDialogState(
+      "save-blueprint",
+      persistedDialogStateMap["save-blueprint"],
+      fallback["save-blueprint"],
+    ),
   };
 
   for (const [dialogKey, persistedDialogState] of Object.entries(persistedDialogStateMap)) {

@@ -63,6 +63,7 @@ export const InspectorDialog = observer(function InspectorDialog({ appHost }: { 
         <EditSelectionInspector
           appHost={appHost}
           context={null}
+          mode="dialog"
           state={{ locale: appHost.state.settings.locale }}
           translate={t}
         />

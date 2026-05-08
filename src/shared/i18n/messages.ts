@@ -200,6 +200,8 @@ export type MessageKey =
   | "settingsField.shortcut-basic-productionDescription"
   | "settingsField.shortcut-synthesis"
   | "settingsField.shortcut-synthesisDescription"
+  | "settingsField.shortcut-save-blueprint"
+  | "settingsField.shortcut-save-blueprintDescription"
   | "settingsField.shortcut-return-select"
   | "settingsField.shortcut-return-selectDescription"
   | "settingsField.shortcut-rotate"
@@ -259,6 +261,8 @@ export type MessageKey =
   | "encyclopedia.filter.excludeBottledLiquid"
   | "encyclopedia.group.asInput"
   | "encyclopedia.group.asOutput"
+  | "encyclopedia.group.liquidFilling"
+  | "encyclopedia.group.liquidDismantle"
   | "encyclopedia.group.asMachine"
   | "encyclopedia.noResults"
   | "encyclopedia.noRecipes"
@@ -522,6 +526,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-basic-productionDescription": "设置基础生产的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-synthesis": "合成制造",
     "settingsField.shortcut-synthesisDescription": "设置合成制造的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
+    "settingsField.shortcut-save-blueprint": "保存蓝图",
+    "settingsField.shortcut-save-blueprintDescription": "设置将当前选中实体保存为蓝图的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-return-select": "返回选择模式",
     "settingsField.shortcut-return-selectDescription": "设置返回选择模式的快捷键；仅在鹰角网络操作模式关闭时可编辑。",
     "settingsField.shortcut-rotate": "旋转",
@@ -581,6 +587,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "encyclopedia.filter.excludeBottledLiquid": "排除瓶装液体",
     "encyclopedia.group.asInput": "作为原料",
     "encyclopedia.group.asOutput": "作为产物",
+    "encyclopedia.group.liquidFilling": "液体装瓶",
+    "encyclopedia.group.liquidDismantle": "液体拆瓶",
     "encyclopedia.group.asMachine": "适用机器",
     "encyclopedia.noResults": "未找到匹配项",
     "encyclopedia.noRecipes": "暂无相关配方",
@@ -843,6 +851,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "settingsField.shortcut-basic-productionDescription": "Set the shortcut key for basic production; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-synthesis": "Synthesis",
     "settingsField.shortcut-synthesisDescription": "Set the shortcut key for synthesis manufacturing; editable only when Arknights Operation Mode is off.",
+    "settingsField.shortcut-save-blueprint": "Save Blueprint",
+    "settingsField.shortcut-save-blueprintDescription": "Set the shortcut key for saving the current selection as a blueprint; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-return-select": "Return To Select",
     "settingsField.shortcut-return-selectDescription": "Set the shortcut key for returning to select mode; editable only when Arknights Operation Mode is off.",
     "settingsField.shortcut-rotate": "Rotate",
@@ -902,6 +912,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "encyclopedia.filter.excludeBottledLiquid": "Exclude Bottled Liquids",
     "encyclopedia.group.asInput": "As Input",
     "encyclopedia.group.asOutput": "As Output",
+    "encyclopedia.group.liquidFilling": "Liquid Bottling",
+    "encyclopedia.group.liquidDismantle": "Liquid Unbottling",
     "encyclopedia.group.asMachine": "Machines",
     "encyclopedia.noResults": "No results found",
     "encyclopedia.noRecipes": "No related recipes",

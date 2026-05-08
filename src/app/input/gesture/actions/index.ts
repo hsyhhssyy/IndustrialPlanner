@@ -24,6 +24,7 @@ export {
   cleanupPlacementDraft,
   createHypergryphSinglePlacementGestureModule,
 } from "./hypergryph/hypergryph-single-placement-gesture-module";
+export { createHypergryphSaveBlueprintGestureModule } from "./hypergryph/hypergryph-save-blueprint-gesture-module";
 export { createSimulationControlGestureModule } from "./simulation-control-gesture-module";
 export { createHypergryphMouseViewportPanModule } from "./hypergryph/hypergryph-mouse-viewport-pan-module";
 export {

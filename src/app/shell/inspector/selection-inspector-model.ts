@@ -1,3 +1,5 @@
+import { createContext, useContext } from "react";
+
 import type {
   EntityDefinition,
 } from "@/domain/registry/types/entity-definition";
@@ -6,6 +8,17 @@ import type {
   SlotLinkDefinition,
   WorldEntity,
 } from "@/domain/document/world-document";
+
+/** inspector 渲染时所在的宿主容器 */
+export type InspectorRenderMode = "dock" | "dialog";
+
+/** 当前 inspector 子树的渲染宿主 */
+export const InspectorRenderModeContext = createContext<InspectorRenderMode>("dock");
+
+/** 在任何深度的子 inspector 中读取当前渲染宿主 */
+export function useInspectorRenderMode(): InspectorRenderMode {
+  return useContext(InspectorRenderModeContext);
+}
 
 export interface SelectionInspectorContext {
   selectedEntityId: string;
@@ -21,6 +34,7 @@ export interface SelectionInspectorState {
 export interface SelectionInspectorPanelProps {
   state: SelectionInspectorState;
   context: SelectionInspectorContext | null;
+  mode: InspectorRenderMode;
 }
 
 export function formatConfigValue(value: unknown): string {

@@ -9,6 +9,7 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { EntityInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
+import { useInspectorRenderMode } from "@/app/shell/inspector/selection-inspector-model";
 
 type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
 type StorageSlotDefinition = StorageSlotGroupDefinition["slots"][number];
@@ -39,6 +40,7 @@ export function SlotConfigInspector({
   definition: EntityDefinition;
   translate: (key: string) => string;
 }) {
+  const mode = useInspectorRenderMode();
   const [pendingSlotId, setPendingSlotId] = useState<string | null>(null);
   const slotGroupIndex = resolveSlotGroupIndex(declaration.targetPath);
 
@@ -126,6 +128,7 @@ export function SlotConfigInspector({
     <article
       className="definition-card slot-config-inspector"
       data-inspector-key="slot-config"
+      data-render-mode={mode}
       data-slot-config-group={storageGroup.id}
     >
       <div className="slot-config-group-header">
@@ -134,7 +137,10 @@ export function SlotConfigInspector({
           <p>{`${translate("inspector.slotConfig.group")} ${storageGroup.id}`}</p>
         </div>
       </div>
-      <div className="slot-config-list">
+      <div
+        className="slot-config-list"
+        data-render-mode={mode}
+      >
         {rows.map((row) => {
           const itemDefinition = row.displayItemId === null
             ? null

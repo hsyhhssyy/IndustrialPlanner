@@ -3,11 +3,14 @@ export interface JsonStorageCodec<TValue> {
   deserialize?: (rawValue: string) => TValue;
 }
 
-export interface IndexedDbStorageLocation {
+export interface IndexedDbStoreLocation {
   databaseName: string;
   storeName: string;
-  key: IDBValidKey;
   version?: number;
+}
+
+export interface IndexedDbStorageLocation extends IndexedDbStoreLocation {
+  key: IDBValidKey;
 }
 
 export function readFromLocalStorage<TValue>(
@@ -82,15 +85,61 @@ export async function readFromIndexedDb<TValue>(
   }
 }
 
+export async function listFromIndexedDb<TValue>(
+  location: IndexedDbStoreLocation,
+  codec: JsonStorageCodec<TValue> = {},
+): Promise<TValue[]> {
+  const database = await openIndexedDb(location);
+
+  if (database === null) {
+    return [];
+  }
+
+  try {
+    const request = database
+      .transaction(location.storeName, "readonly")
+      .objectStore(location.storeName)
+      .getAll();
+    const rawValues = await waitForRequest<unknown[]>(request);
+    const deserialize = getCodec(codec).deserialize;
+
+    return rawValues.flatMap((rawValue) => {
+      if (typeof rawValue !== "string") {
+        return [];
+      }
+
+      try {
+        return [deserialize(rawValue)];
+      } catch {
+        return [];
+      }
+    });
+  } catch {
+    return [];
+  } finally {
+    database.close();
+  }
+}
+
 export async function saveToIndexedDb<TValue>(
   location: IndexedDbStorageLocation,
   value: TValue,
   codec: JsonStorageCodec<TValue> = {},
 ): Promise<TValue> {
+  await trySaveToIndexedDb(location, value, codec);
+
+  return value;
+}
+
+export async function trySaveToIndexedDb<TValue>(
+  location: IndexedDbStorageLocation,
+  value: TValue,
+  codec: JsonStorageCodec<TValue> = {},
+): Promise<boolean> {
   const database = await openIndexedDb(location);
 
   if (database === null) {
-    return value;
+    return false;
   }
 
   try {
@@ -103,13 +152,13 @@ export async function saveToIndexedDb<TValue>(
         .put(getCodec(codec).serialize(value), location.key),
     );
     await completion;
+
+    return true;
   } catch {
-    return value;
+    return false;
   } finally {
     database.close();
   }
-
-  return value;
 }
 
 function getLocalStorage(): Storage | null {
@@ -132,7 +181,7 @@ function getCodec<TValue>(codec: JsonStorageCodec<TValue>) {
 }
 
 async function openIndexedDb(
-  location: IndexedDbStorageLocation,
+  location: IndexedDbStoreLocation,
 ): Promise<IDBDatabase | null> {
   if (typeof globalThis.indexedDB === "undefined") {
     return null;

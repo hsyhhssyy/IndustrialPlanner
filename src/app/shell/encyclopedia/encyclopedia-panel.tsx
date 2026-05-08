@@ -32,6 +32,26 @@ function isSameNavigationEntry(left: NavEntry | null, right: NavEntry | null): b
   return left.type === right.type && left.id === right.id;
 }
 
+const LIQUID_FILLING_RECIPE_TAG = "bottle_filling";
+const LIQUID_DISMANTLE_RECIPE_TAG = "liquid_bottle_dismantle";
+
+function hasRecipeTag(recipe: RecipeDefinition, tag: string): boolean {
+  return recipe.tags.includes(tag);
+}
+
+function dedupeRecipes(recipes: readonly RecipeDefinition[]): RecipeDefinition[] {
+  const seen = new Set<string>();
+
+  return recipes.filter((recipe) => {
+    if (seen.has(recipe.id)) {
+      return false;
+    }
+
+    seen.add(recipe.id);
+    return true;
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
@@ -257,15 +277,40 @@ function DetailView({
 
   const tags = isItem ? itemDef?.tags ?? [] : entityDef?.tags ?? [];
 
-  const asInputRecipes = isItem
+  const inputRecipes = isItem
     ? index.recipesByInputItem.get(entry.id) ?? []
     : [];
-  const asOutputRecipes = isItem
+  const outputRecipes = isItem
     ? index.recipesByOutputItem.get(entry.id) ?? []
     : [];
-  const asMachineRecipes = !isItem
+  const machineRecipes = !isItem
     ? index.recipesByMachine.get(entry.id) ?? []
     : [];
+
+  const liquidFillingRecipes = isItem
+    ? dedupeRecipes([
+      ...inputRecipes.filter((recipe) => hasRecipeTag(recipe, LIQUID_FILLING_RECIPE_TAG)),
+      ...outputRecipes.filter((recipe) => hasRecipeTag(recipe, LIQUID_FILLING_RECIPE_TAG)),
+    ])
+    : machineRecipes.filter((recipe) => hasRecipeTag(recipe, LIQUID_FILLING_RECIPE_TAG));
+  const liquidDismantleRecipes = isItem
+    ? dedupeRecipes([
+      ...inputRecipes.filter((recipe) => hasRecipeTag(recipe, LIQUID_DISMANTLE_RECIPE_TAG)),
+      ...outputRecipes.filter((recipe) => hasRecipeTag(recipe, LIQUID_DISMANTLE_RECIPE_TAG)),
+    ])
+    : machineRecipes.filter((recipe) => hasRecipeTag(recipe, LIQUID_DISMANTLE_RECIPE_TAG));
+  const asInputRecipes = inputRecipes.filter(
+    (recipe) => !hasRecipeTag(recipe, LIQUID_FILLING_RECIPE_TAG)
+      && !hasRecipeTag(recipe, LIQUID_DISMANTLE_RECIPE_TAG),
+  );
+  const asOutputRecipes = outputRecipes.filter(
+    (recipe) => !hasRecipeTag(recipe, LIQUID_FILLING_RECIPE_TAG)
+      && !hasRecipeTag(recipe, LIQUID_DISMANTLE_RECIPE_TAG),
+  );
+  const asMachineRecipes = machineRecipes.filter(
+    (recipe) => !hasRecipeTag(recipe, LIQUID_FILLING_RECIPE_TAG)
+      && !hasRecipeTag(recipe, LIQUID_DISMANTLE_RECIPE_TAG),
+  );
 
   return (
     <div className="encyclopedia-detail">
@@ -299,16 +344,6 @@ function DetailView({
       </div>
 
       <RecipeGroup
-        title={t("encyclopedia.group.asInput")}
-        recipes={asInputRecipes}
-        index={index}
-        onItemClick={onItemClick}
-        onEntityClick={onEntityClick}
-        isExpanded={expandedGroups.has("asInput")}
-        onToggle={() => onToggleGroup("asInput")}
-        t={t}
-      />
-      <RecipeGroup
         title={t("encyclopedia.group.asOutput")}
         recipes={asOutputRecipes}
         index={index}
@@ -316,6 +351,16 @@ function DetailView({
         onEntityClick={onEntityClick}
         isExpanded={expandedGroups.has("asOutput")}
         onToggle={() => onToggleGroup("asOutput")}
+        t={t}
+      />
+      <RecipeGroup
+        title={t("encyclopedia.group.asInput")}
+        recipes={asInputRecipes}
+        index={index}
+        onItemClick={onItemClick}
+        onEntityClick={onEntityClick}
+        isExpanded={expandedGroups.has("asInput")}
+        onToggle={() => onToggleGroup("asInput")}
         t={t}
       />
       <RecipeGroup
@@ -328,8 +373,32 @@ function DetailView({
         onToggle={() => onToggleGroup("asMachine")}
         t={t}
       />
+      <RecipeGroup
+        title={t("encyclopedia.group.liquidFilling")}
+        recipes={liquidFillingRecipes}
+        index={index}
+        onItemClick={onItemClick}
+        onEntityClick={onEntityClick}
+        isExpanded={expandedGroups.has("liquidFilling")}
+        onToggle={() => onToggleGroup("liquidFilling")}
+        t={t}
+      />
+      <RecipeGroup
+        title={t("encyclopedia.group.liquidDismantle")}
+        recipes={liquidDismantleRecipes}
+        index={index}
+        onItemClick={onItemClick}
+        onEntityClick={onEntityClick}
+        isExpanded={expandedGroups.has("liquidDismantle")}
+        onToggle={() => onToggleGroup("liquidDismantle")}
+        t={t}
+      />
 
-      {asInputRecipes.length === 0 && asOutputRecipes.length === 0 && asMachineRecipes.length === 0 && (
+      {asInputRecipes.length === 0
+        && asOutputRecipes.length === 0
+        && liquidFillingRecipes.length === 0
+        && liquidDismantleRecipes.length === 0
+        && asMachineRecipes.length === 0 && (
         <p className="encyclopedia-empty">{t("encyclopedia.noRecipes")}</p>
       )}
     </div>
@@ -362,7 +431,7 @@ export const EncyclopediaPanel = observer(function EncyclopediaPanel({
   const wikiState = appHost.internalState.workbench.toolbox.wiki;
   const navStack = wikiState.navigationStack;
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    () => new Set(["asInput", "asOutput", "asMachine"]),
+    () => new Set(["asInput", "asOutput", "liquidFilling", "liquidDismantle", "asMachine"]),
   );
   const currentEntry = wikiState.openedPage.kind === "browser"
     ? null
