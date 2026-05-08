@@ -118,18 +118,16 @@ export function findOutputSlotForItem(options: {
   itemType: string;
 }): string | null {
   for (const slotId of options.node.slotIds) {
-    for (const candidateSlotId of getReadableComponentSlotIds(options.state, slotId)) {
-      const slot = options.topology.slots[candidateSlotId] ?? options.topology.slots[slotId];
-      const storageSlotId = resolveStorageSlotId(options.state, candidateSlotId);
-      const slotState = options.state.persistent.slots[storageSlotId];
-      const itemType = slotState?.itemType ?? slot?.lock ?? null;
-      if (slot === undefined || slotState === undefined || itemType !== options.itemType) {
-        continue;
-      }
+    const slot = options.topology.slots[slotId];
+    const storageSlotId = resolveStorageSlotId(options.state, slotId);
+    const slotState = options.state.persistent.slots[storageSlotId];
+    const itemType = slotState?.itemType ?? slot?.lock ?? null;
+    if (slot === undefined || slotState === undefined || itemType !== options.itemType) {
+      continue;
+    }
 
-      if (slot.ignoreStock || slotState.count - getReservedAmount(options.state, storageSlotId) > 0) {
-        return candidateSlotId;
-      }
+    if (slot.ignoreStock || slotState.count - getReservedAmount(options.state, storageSlotId) > 0) {
+      return slotId;
     }
   }
 
@@ -475,13 +473,6 @@ function getRemainingCapacity(
   }
 
   return Math.max(0, (state.persistent.sharedCapacityLimitBySlotId[slotId] ?? slot.capacity) - occupiedCount);
-}
-
-function getReadableComponentSlotIds(
-  state: SimulationMutableRuntimeState,
-  slotId: string,
-): readonly string[] {
-  return state.persistent.sharedCapacitySlotIdsBySlotId[slotId] ?? [slotId];
 }
 
 function slotCanHold(

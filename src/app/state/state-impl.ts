@@ -52,9 +52,9 @@ export function clampLeftDockWidth(width: number): number {
 
 export function resolveLeftDockWidthForScreenProfile(
   width: number,
-  screenProfile: Pick<ScreenProfile, "deviceClass">,
+  screenProfile: Pick<ScreenProfile, "hasTouch">,
 ): number {
-  if (screenProfile.deviceClass === "mobile") {
+  if (screenProfile.hasTouch) {
     return MOBILE_LEFT_DOCK_WIDTH;
   }
 

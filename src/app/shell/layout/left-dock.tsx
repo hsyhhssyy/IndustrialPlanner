@@ -11,6 +11,7 @@ import {
   clampLeftDockWidth,
   type ActivePanel,
 } from "@/app/state/state-impl";
+import { isTouchScreenProfile } from "@/shared/browser/screen-profile";
 
 type LeftDockPanelId = Exclude<ActivePanel, null>;
 
@@ -42,7 +43,7 @@ const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppH
   const currentPanelLabel = t(PANEL_TITLE_KEYS[activePanel]);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
   const screenProfile = appHost.state.screenProfile;
-  const isMobileLayout = screenProfile.deviceClass === "mobile";
+  const isTouchLayout = isTouchScreenProfile(screenProfile);
 
   useEffect(() => {
     return () => {
@@ -51,7 +52,7 @@ const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppH
   }, []);
 
   const handleResizeStart = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (isMobileLayout) {
+    if (isTouchLayout) {
       return;
     }
 
@@ -85,7 +86,7 @@ const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppH
     <div className="dock-shell-left">
       <aside className="dock dock-left panel-surface">
         <section className="dock-section">
-          {isMobileLayout ? null : (
+          {isTouchLayout ? null : (
             <div className="section-header">
               <div className="section-header-copy">
                 <h2>{currentPanelLabel}</h2>
@@ -112,7 +113,7 @@ const LeftDockView = observer(function LeftDockView({ appHost }: { appHost: AppH
           </div>
         </section>
       </aside>
-      {isMobileLayout ? null : <div className="dock-resize-handle" onMouseDown={handleResizeStart} />}
+      {isTouchLayout ? null : <div className="dock-resize-handle" onMouseDown={handleResizeStart} />}
     </div>
   );
 });

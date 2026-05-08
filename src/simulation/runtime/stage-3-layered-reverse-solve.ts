@@ -268,7 +268,7 @@ function selectAcceptedSourceForEdge(options: {
   readonly targetNode: CompiledSimulationNode;
   readonly acceptRule: SimulationAcceptRule;
 }): SourceSelection | null {
-  for (const sourceSlotId of getReadableSourceSlotIds(options.state, options.sourceNode)) {
+  for (const sourceSlotId of getReadableSourceSlotIds(options.sourceNode)) {
     const slot = options.topology.slots[sourceSlotId];
     const storageSlotId = resolveStorageSlotId(options.state, sourceSlotId);
     const itemType = options.state.persistent.slots[storageSlotId]?.itemType ?? slot?.lock ?? null;
@@ -366,18 +366,14 @@ function isStrictLogisticsDevice(device: CompiledSimulationDevice): boolean {
 }
 
 function getReadableSourceSlotIds(
-  state: SimulationMutableRuntimeState,
   sourceNode: CompiledSimulationNode,
 ): readonly string[] {
   const result: string[] = [];
   const seen = new Set<string>();
   for (const slotId of sourceNode.slotIds) {
-    const readableSlotIds = state.persistent.sharedCapacitySlotIdsBySlotId[slotId] ?? [slotId];
-    for (const readableSlotId of readableSlotIds) {
-      if (!seen.has(readableSlotId)) {
-        seen.add(readableSlotId);
-        result.push(readableSlotId);
-      }
+    if (!seen.has(slotId)) {
+      seen.add(slotId);
+      result.push(slotId);
     }
   }
   return result;

@@ -952,6 +952,56 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".dock-resize-handle")).toBeNull();
   });
 
+  it("uses the same touch left dock width and floating operation toolbar on tablets", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 1024,
+      height: 768,
+      userAgent:
+        "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    localStorage.setItem(
+      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        leftDockOpen: false,
+        rightDockOpen: true,
+        leftDockWidth: 512,
+        topBarCollapsed: false,
+        rightDockActiveTab: DEFAULT_RIGHT_DOCK_TAB_ID,
+      }),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
+    const canvasLeftBottomToolbar = container.querySelector(".canvas-left-bottom-toolbar") as HTMLDivElement | null;
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
+    expect(appHost.state.screenProfile.hasTouch).toBe(true);
+    expect(appHost.state.workbench.leftDockWidth).toBe(512);
+    expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("0px");
+    expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("51px");
+    expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("0.75");
+    expect(container.querySelector(".dock-resize-handle")).toBeNull();
+    expect(canvasLeftBottomToolbar).not.toBeNull();
+    expect(canvasLeftBottomToolbar?.querySelectorAll(".canvas-left-bottom-toolbar-button")).toHaveLength(4);
+
+    act(() => {
+      appHost.internalActions.toggleLeftDock();
+    });
+
+    expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe(`${MOBILE_LEFT_DOCK_WIDTH}px`);
+    expect(container.querySelector(".canvas-left-bottom-toolbar")).toBeNull();
+  });
+
   it("prevents middle mouse native pointerdown behavior at the outer shell", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);

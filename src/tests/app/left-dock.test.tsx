@@ -647,4 +647,42 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.querySelectorAll(".placement-button-hotkey")).toHaveLength(0);
     expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
   });
+
+  it("uses the same touch placement layout on tablets", () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 1024,
+      height: 768,
+      userAgent:
+        "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(
+        <>
+          <LeftToolbar appHost={appHost} />
+          <LeftDock appHost={appHost} />
+        </>,
+      );
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const operationGroup = visiblePanel?.querySelector(".placement-panel-group-operation") as HTMLElement | null;
+    const operationButtonList = operationGroup?.querySelector(".placement-operation-button-list") as HTMLElement | null;
+
+    expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
+    expect(appHost.state.screenProfile.hasTouch).toBe(true);
+    expect(visiblePanel?.querySelector(".section-header")).toBeNull();
+    expect(operationGroup?.querySelector(".placement-panel-group-header")).toBeNull();
+    expect(operationButtonList?.classList.contains("is-mobile-icon-grid")).toBe(true);
+    expect(operationGroup?.querySelectorAll(".placement-action-button")).toHaveLength(4);
+    expect(visiblePanel?.querySelector(".placement-button-list")?.classList.contains("is-single-column")).toBe(true);
+    expect(visiblePanel?.querySelectorAll(".placement-button-hotkey")).toHaveLength(0);
+    expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
+  });
 });

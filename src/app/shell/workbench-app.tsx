@@ -45,6 +45,7 @@ import {
 import {
   isMobileLandscapeScreenProfile,
   isMobilePortraitScreenProfile,
+  isTouchScreenProfile,
   isTouchLandscapeScreenProfile,
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
@@ -268,11 +269,12 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const selectionCount = appHost.workspace.editor?.state.collections.selection.length ?? 0;
   const openInspectorOnSecondClick = appHost.state.settings.hypergryphInspectorOpenOnSecondClick;
   const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
-  const isCompactLeftToolbar = screenProfile.deviceClass === "mobile" || screenProfile.deviceClass === "tablet";
+  const isTouchLayout = isTouchScreenProfile(screenProfile);
+  const isCompactLeftToolbar = isTouchLayout;
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
   const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
   const showBottomStatusBar = !showFloatingTopBarControls;
-  const showCanvasLeftBottomToolbar = screenProfile.deviceClass === "mobile" && !leftDockOpen;
+  const showCanvasLeftBottomToolbar = isTouchLayout && !leftDockOpen;
   const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
   const showRightDock = useInspectorPanel && rightDockOpen;
   const canKeepInspectorDialogOpen = !useInspectorPanel && activeTool === "select" && selectionCount === 1;

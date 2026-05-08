@@ -124,6 +124,26 @@ describe("solveTransferGraph", () => {
     });
     expect(state.persistent.slots["belt.output.slot"]?.count).toBe(0);
   });
+
+  it("does not let strict logistics outputs read their share-cap input view", () => {
+    const topology = createStrictBeltTopology({
+      beltInputCount: 1,
+      beltOutputCount: 0,
+    });
+    const state = createSimulationMutableRuntimeState(topology);
+
+    buildSolveGraph(topology, state);
+    solveTransferGraph(topology, state);
+
+    expect(state.transient.transfers).toEqual([]);
+    expect(state.persistent.slots["source.slot"]?.count).toBe(1);
+    expect(state.persistent.slots["belt.input.slot"]).toMatchObject({
+      itemType: "item_zinc_plate",
+      count: 1,
+    });
+    expect(state.persistent.slots["belt.output.slot"]?.count).toBe(0);
+    expect(state.persistent.slots["sink.slot"]?.count).toBe(0);
+  });
 });
 
 function createSourceSinkTopology(options: {

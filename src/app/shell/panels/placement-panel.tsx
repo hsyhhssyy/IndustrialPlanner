@@ -10,6 +10,7 @@ import {
   getVisiblePlacementOperationButtons,
   type PlacementOperationButtonDefinition,
 } from "@/app/shell/panels/placement-operation-buttons";
+import { isTouchScreenProfile } from "@/shared/browser/screen-profile";
 
 const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
 
@@ -132,8 +133,8 @@ function buildPlacementDeviceSections(appHost: AppHost): readonly PlacementSecti
 export const PlacementPanel = observer(function PlacementPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const screenProfile = appHost.state.screenProfile;
-  const isMobileLayout = screenProfile.deviceClass === "mobile";
-  const showShortcutHints = screenProfile.deviceClass !== "mobile" && appHost.state.settings.gameShowHotkeys;
+  const isTouchLayout = isTouchScreenProfile(screenProfile);
+  const showShortcutHints = !isTouchLayout && appHost.state.settings.gameShowHotkeys;
   const deviceSections = buildPlacementDeviceSections(appHost);
   const visibleOperationButtons = getVisiblePlacementOperationButtons(appHost);
 
@@ -199,8 +200,8 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
           {button.icon ? <WorkbenchIcon className="button-icon-image" kind={button.icon} /> : null}
           {button.iconSrc ? <img alt="" className="button-icon-image" src={button.iconSrc} /> : null}
         </span>
-        {isMobileLayout ? null : <span className="placement-button-label">{buttonLabel}</span>}
-        {!isMobileLayout && showShortcutHints && hotkey ? (
+        {isTouchLayout ? null : <span className="placement-button-label">{buttonLabel}</span>}
+        {!isTouchLayout && showShortcutHints && hotkey ? (
           <span className="placement-button-hotkey">{hotkey}</span>
         ) : null}
       </button>
@@ -210,19 +211,19 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
   return (
     <div className="placement-panel">
       <section
-        aria-label={isMobileLayout ? t("workbench.section.operation") : undefined}
-        aria-labelledby={isMobileLayout ? undefined : "placement-operation-section"}
-        className={isMobileLayout
+        aria-label={isTouchLayout ? t("workbench.section.operation") : undefined}
+        aria-labelledby={isTouchLayout ? undefined : "placement-operation-section"}
+        className={isTouchLayout
           ? "placement-panel-group placement-panel-group-operation is-mobile-layout"
           : "placement-panel-group placement-panel-group-operation"}
       >
-        {isMobileLayout ? null : (
+        {isTouchLayout ? null : (
           <div className="placement-panel-group-header">
             <h3 id="placement-operation-section">{t("workbench.section.operation")}</h3>
           </div>
         )}
         <div
-          className={isMobileLayout
+          className={isTouchLayout
             ? "placement-operation-button-list is-mobile-icon-grid"
             : "placement-button-list placement-operation-button-list"}
         >
@@ -257,7 +258,7 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
                   <span className="placement-panel-group-shortcut">{section.shortcutKey}</span>
                 ) : null}
               </div>
-              <div className={isMobileLayout ? "placement-button-list is-single-column" : "placement-button-list"}>
+              <div className={isTouchLayout ? "placement-button-list is-single-column" : "placement-button-list"}>
                 {section.buttons.map((button, buttonIndex) => {
                   const hotkey = button.hotkey
                     ?? (button.hotkeyKeyId
@@ -266,7 +267,7 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
                   const deviceId = button.uiButtonId.replace("placement-", "");
                   const isActive = appHost.state.activeTool === "single-placement"
                     && appHost.internalState.runtime.singlePlacementDeviceId === deviceId;
-                  const showDeviceHotkey = !isMobileLayout && isPlacementGroupActive && hotkey;
+                  const showDeviceHotkey = !isTouchLayout && isPlacementGroupActive && hotkey;
                   const className = isActive
                     ? "placement-button placement-device-button is-active"
                     : "placement-button placement-device-button";
