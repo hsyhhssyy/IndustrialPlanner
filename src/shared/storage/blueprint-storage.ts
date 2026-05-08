@@ -1,6 +1,6 @@
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
-import { createUuid } from "@/shared/browser/uuid";
+import { createUuid } from "@/domain/shared/uuid";
 
 import {
   listFromIndexedDb,

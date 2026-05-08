@@ -1,0 +1,2857 @@
+{
+  "schemaVersion": 1,
+  "blueprintId": "429609a4-61cb-4083-98fa-b8de1268bec4",
+  "version": "v1.3.0",
+  "name": "精选荞愈胶囊产线",
+  "description": "精选荞愈胶囊完整产线示例。",
+  "baseId": "valley4_protocol_core",
+  "initialGridPoint": {
+    "x": 12,
+    "y": 22
+  },
+  "entities": {
+    "premium_capsule_line_0001": {
+      "id": "premium_capsule_line_0001",
+      "definitionId": "item_port_unloader_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "pickupItemId": "item_iron_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_iron_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "tags": []
+    },
+    "premium_capsule_line_0002": {
+      "id": "premium_capsule_line_0002",
+      "definitionId": "item_port_unloader_1",
+      "position": {
+        "x": 3,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "pickupItemId": "item_iron_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_iron_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "tags": []
+    },
+    "premium_capsule_line_0003": {
+      "id": "premium_capsule_line_0003",
+      "definitionId": "item_port_unloader_1",
+      "position": {
+        "x": 6,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "pickupItemId": "item_iron_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_iron_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "tags": []
+    },
+    "premium_capsule_line_0004": {
+      "id": "premium_capsule_line_0004",
+      "definitionId": "item_port_unloader_1",
+      "position": {
+        "x": 9,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "pickupItemId": "item_iron_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_iron_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "tags": []
+    },
+    "premium_capsule_line_0005": {
+      "id": "premium_capsule_line_0005",
+      "definitionId": "item_port_unloader_1",
+      "position": {
+        "x": 12,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "pickupItemId": "item_iron_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_iron_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "tags": []
+    },
+    "premium_capsule_line_0006": {
+      "id": "premium_capsule_line_0006",
+      "definitionId": "item_port_unloader_1",
+      "position": {
+        "x": 15,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "pickupItemId": "item_iron_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_iron_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "tags": []
+    },
+    "premium_capsule_line_0007": {
+      "id": "premium_capsule_line_0007",
+      "definitionId": "item_port_unloader_1",
+      "position": {
+        "x": 18,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "pickupItemId": "item_iron_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_iron_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "tags": []
+    },
+    "premium_capsule_line_0008": {
+      "id": "premium_capsule_line_0008",
+      "definitionId": "item_port_unloader_1",
+      "position": {
+        "x": 21,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {
+        "pickupItemId": "item_iron_ore",
+        "protocolHubOutputs": [
+          {
+            "portId": "p_out_mid",
+            "itemId": "item_iron_ore",
+            "ignoreInventory": true
+          }
+        ],
+        "pickupIgnoreInventory": true
+      },
+      "tags": []
+    },
+    "premium_capsule_line_0009": {
+      "id": "premium_capsule_line_0009",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 0,
+        "y": 2
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0010": {
+      "id": "premium_capsule_line_0010",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 3,
+        "y": 2
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0011": {
+      "id": "premium_capsule_line_0011",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 6,
+        "y": 2
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0012": {
+      "id": "premium_capsule_line_0012",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 9,
+        "y": 2
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0013": {
+      "id": "premium_capsule_line_0013",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 12,
+        "y": 2
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0014": {
+      "id": "premium_capsule_line_0014",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 15,
+        "y": 2
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0015": {
+      "id": "premium_capsule_line_0015",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 18,
+        "y": 2
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0016": {
+      "id": "premium_capsule_line_0016",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 21,
+        "y": 2
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0017": {
+      "id": "premium_capsule_line_0017",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 1
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0018": {
+      "id": "premium_capsule_line_0018",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 4,
+        "y": 1
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0019": {
+      "id": "premium_capsule_line_0019",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 7,
+        "y": 1
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0020": {
+      "id": "premium_capsule_line_0020",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 1
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0021": {
+      "id": "premium_capsule_line_0021",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 13,
+        "y": 1
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0022": {
+      "id": "premium_capsule_line_0022",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 16,
+        "y": 1
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0023": {
+      "id": "premium_capsule_line_0023",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 19,
+        "y": 1
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0024": {
+      "id": "premium_capsule_line_0024",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 22,
+        "y": 1
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0025": {
+      "id": "premium_capsule_line_0025",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 0,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0026": {
+      "id": "premium_capsule_line_0026",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 6,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0027": {
+      "id": "premium_capsule_line_0027",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 9,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0028": {
+      "id": "premium_capsule_line_0028",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 12,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0029": {
+      "id": "premium_capsule_line_0029",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 15,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0030": {
+      "id": "premium_capsule_line_0030",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 21,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0031": {
+      "id": "premium_capsule_line_0031",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 3,
+        "y": 10
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0032": {
+      "id": "premium_capsule_line_0032",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 18,
+        "y": 10
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0033": {
+      "id": "premium_capsule_line_0033",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0034": {
+      "id": "premium_capsule_line_0034",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 22,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0035": {
+      "id": "premium_capsule_line_0035",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 7,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0036": {
+      "id": "premium_capsule_line_0036",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0037": {
+      "id": "premium_capsule_line_0037",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 13,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0038": {
+      "id": "premium_capsule_line_0038",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 16,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0039": {
+      "id": "premium_capsule_line_0039",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0040": {
+      "id": "premium_capsule_line_0040",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 6
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0041": {
+      "id": "premium_capsule_line_0041",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 7
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0042": {
+      "id": "premium_capsule_line_0042",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 8
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0043": {
+      "id": "premium_capsule_line_0043",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0044": {
+      "id": "premium_capsule_line_0044",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 6
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0045": {
+      "id": "premium_capsule_line_0045",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 7
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0046": {
+      "id": "premium_capsule_line_0046",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 8
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0047": {
+      "id": "premium_capsule_line_0047",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 4,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0048": {
+      "id": "premium_capsule_line_0048",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 18,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0049": {
+      "id": "premium_capsule_line_0049",
+      "definitionId": "item_port_thickener_1",
+      "position": {
+        "x": 6,
+        "y": 10
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0050": {
+      "id": "premium_capsule_line_0050",
+      "definitionId": "item_port_thickener_1",
+      "position": {
+        "x": 12,
+        "y": 10
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0051": {
+      "id": "premium_capsule_line_0051",
+      "definitionId": "item_port_thickener_1",
+      "position": {
+        "x": 2,
+        "y": 14
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0052": {
+      "id": "premium_capsule_line_0052",
+      "definitionId": "item_port_thickener_1",
+      "position": {
+        "x": 16,
+        "y": 14
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0053": {
+      "id": "premium_capsule_line_0053",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 7,
+        "y": 9
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0054": {
+      "id": "premium_capsule_line_0054",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 9
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0055": {
+      "id": "premium_capsule_line_0055",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 13,
+        "y": 9
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0056": {
+      "id": "premium_capsule_line_0056",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 16,
+        "y": 9
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0057": {
+      "id": "premium_capsule_line_0057",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 18,
+        "y": 13
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0058": {
+      "id": "premium_capsule_line_0058",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 5,
+        "y": 13
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0059": {
+      "id": "premium_capsule_line_0059",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 10
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0060": {
+      "id": "premium_capsule_line_0060",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 11
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0061": {
+      "id": "premium_capsule_line_0061",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 12
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0062": {
+      "id": "premium_capsule_line_0062",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 21,
+        "y": 10
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0063": {
+      "id": "premium_capsule_line_0063",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 21,
+        "y": 11
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0064": {
+      "id": "premium_capsule_line_0064",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 21,
+        "y": 12
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0065": {
+      "id": "premium_capsule_line_0065",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 9,
+        "y": 15
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0066": {
+      "id": "premium_capsule_line_0066",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 12,
+        "y": 15
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0067": {
+      "id": "premium_capsule_line_0067",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 15,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0068": {
+      "id": "premium_capsule_line_0068",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 6,
+        "y": 18
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0069": {
+      "id": "premium_capsule_line_0069",
+      "definitionId": "item_port_shaper_1",
+      "position": {
+        "x": 9,
+        "y": 19
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0070": {
+      "id": "premium_capsule_line_0070",
+      "definitionId": "item_port_shaper_1",
+      "position": {
+        "x": 12,
+        "y": 19
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0071": {
+      "id": "premium_capsule_line_0071",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 0,
+        "y": 19
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0072": {
+      "id": "premium_capsule_line_0072",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 21,
+        "y": 19
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0073": {
+      "id": "premium_capsule_line_0073",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0074": {
+      "id": "premium_capsule_line_0074",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 17
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0075": {
+      "id": "premium_capsule_line_0075",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 16
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0076": {
+      "id": "premium_capsule_line_0076",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 15
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0077": {
+      "id": "premium_capsule_line_0077",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 14
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0078": {
+      "id": "premium_capsule_line_0078",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 13
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0079": {
+      "id": "premium_capsule_line_0079",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 12
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0080": {
+      "id": "premium_capsule_line_0080",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 11
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0081": {
+      "id": "premium_capsule_line_0081",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 10
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0082": {
+      "id": "premium_capsule_line_0082",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 0,
+        "y": 9
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0083": {
+      "id": "premium_capsule_line_0083",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 9
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0084": {
+      "id": "premium_capsule_line_0084",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 2,
+        "y": 9
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0085": {
+      "id": "premium_capsule_line_0085",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 3,
+        "y": 9
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0086": {
+      "id": "premium_capsule_line_0086",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 4,
+        "y": 9
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0087": {
+      "id": "premium_capsule_line_0087",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 5,
+        "y": 9
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0088": {
+      "id": "premium_capsule_line_0088",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 6,
+        "y": 9
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0089": {
+      "id": "premium_capsule_line_0089",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 17
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0090": {
+      "id": "premium_capsule_line_0090",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0091": {
+      "id": "premium_capsule_line_0091",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 16
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0092": {
+      "id": "premium_capsule_line_0092",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 15
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0093": {
+      "id": "premium_capsule_line_0093",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 14
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0094": {
+      "id": "premium_capsule_line_0094",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 1,
+        "y": 13
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0095": {
+      "id": "premium_capsule_line_0095",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 2,
+        "y": 13
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0096": {
+      "id": "premium_capsule_line_0096",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 3,
+        "y": 13
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0097": {
+      "id": "premium_capsule_line_0097",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0098": {
+      "id": "premium_capsule_line_0098",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 17
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0099": {
+      "id": "premium_capsule_line_0099",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 16
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0100": {
+      "id": "premium_capsule_line_0100",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 15
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0101": {
+      "id": "premium_capsule_line_0101",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 14
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0102": {
+      "id": "premium_capsule_line_0102",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 13
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0103": {
+      "id": "premium_capsule_line_0103",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 12
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0104": {
+      "id": "premium_capsule_line_0104",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 11
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0105": {
+      "id": "premium_capsule_line_0105",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 10
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0106": {
+      "id": "premium_capsule_line_0106",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 23,
+        "y": 9
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0107": {
+      "id": "premium_capsule_line_0107",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 22,
+        "y": 9
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0108": {
+      "id": "premium_capsule_line_0108",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 21,
+        "y": 9
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0109": {
+      "id": "premium_capsule_line_0109",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 20,
+        "y": 9
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0110": {
+      "id": "premium_capsule_line_0110",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 19,
+        "y": 9
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0111": {
+      "id": "premium_capsule_line_0111",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 18,
+        "y": 9
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0112": {
+      "id": "premium_capsule_line_0112",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 17,
+        "y": 9
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0113": {
+      "id": "premium_capsule_line_0113",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 22,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0114": {
+      "id": "premium_capsule_line_0114",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 22,
+        "y": 17
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0115": {
+      "id": "premium_capsule_line_0115",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 22,
+        "y": 16
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0116": {
+      "id": "premium_capsule_line_0116",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 22,
+        "y": 15
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0117": {
+      "id": "premium_capsule_line_0117",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 22,
+        "y": 14
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0118": {
+      "id": "premium_capsule_line_0118",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 22,
+        "y": 13
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0119": {
+      "id": "premium_capsule_line_0119",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 21,
+        "y": 13
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0120": {
+      "id": "premium_capsule_line_0120",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 20,
+        "y": 13
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0121": {
+      "id": "premium_capsule_line_0121",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 14
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0122": {
+      "id": "premium_capsule_line_0122",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 14,
+        "y": 14
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0123": {
+      "id": "premium_capsule_line_0123",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 18
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0124": {
+      "id": "premium_capsule_line_0124",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 13,
+        "y": 18
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0125": {
+      "id": "premium_capsule_line_0125",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 14,
+        "y": 18
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0126": {
+      "id": "premium_capsule_line_0126",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 9,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0127": {
+      "id": "premium_capsule_line_0127",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 5,
+        "y": 18
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0128": {
+      "id": "premium_capsule_line_0128",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 18,
+        "y": 18
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0129": {
+      "id": "premium_capsule_line_0129",
+      "definitionId": "item_port_thickener_1",
+      "position": {
+        "x": 5,
+        "y": 21
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0130": {
+      "id": "premium_capsule_line_0130",
+      "definitionId": "item_port_thickener_1",
+      "position": {
+        "x": 15,
+        "y": 21
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0131": {
+      "id": "premium_capsule_line_0131",
+      "definitionId": "item_port_filling_pd_mc_1",
+      "position": {
+        "x": 9,
+        "y": 23
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0132": {
+      "id": "premium_capsule_line_0132",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 2,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0133": {
+      "id": "premium_capsule_line_0133",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 3,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0134": {
+      "id": "premium_capsule_line_0134",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 19
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0135": {
+      "id": "premium_capsule_line_0135",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 20
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0136": {
+      "id": "premium_capsule_line_0136",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 3,
+        "y": 21
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0137": {
+      "id": "premium_capsule_line_0137",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 4,
+        "y": 21
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0138": {
+      "id": "premium_capsule_line_0138",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 4,
+        "y": 19
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0139": {
+      "id": "premium_capsule_line_0139",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 18,
+        "y": 19
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0140": {
+      "id": "premium_capsule_line_0140",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 21,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0141": {
+      "id": "premium_capsule_line_0141",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 20,
+        "y": 18
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0142": {
+      "id": "premium_capsule_line_0142",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 19
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0143": {
+      "id": "premium_capsule_line_0143",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 20
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0144": {
+      "id": "premium_capsule_line_0144",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 20,
+        "y": 21
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0145": {
+      "id": "premium_capsule_line_0145",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 19,
+        "y": 21
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0146": {
+      "id": "premium_capsule_line_0146",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 2,
+        "y": 24
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0147": {
+      "id": "premium_capsule_line_0147",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 19,
+        "y": 24
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0148": {
+      "id": "premium_capsule_line_0148",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 4,
+        "y": 23
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0149": {
+      "id": "premium_capsule_line_0149",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 23
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0150": {
+      "id": "premium_capsule_line_0150",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 3,
+        "y": 22
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0151": {
+      "id": "premium_capsule_line_0151",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 4,
+        "y": 22
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0152": {
+      "id": "premium_capsule_line_0152",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 19,
+        "y": 23
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0153": {
+      "id": "premium_capsule_line_0153",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 23
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0154": {
+      "id": "premium_capsule_line_0154",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 20,
+        "y": 22
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0155": {
+      "id": "premium_capsule_line_0155",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 19,
+        "y": 22
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0156": {
+      "id": "premium_capsule_line_0156",
+      "definitionId": "item_port_planter_1",
+      "position": {
+        "x": 5,
+        "y": 27
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0157": {
+      "id": "premium_capsule_line_0157",
+      "definitionId": "item_port_planter_1",
+      "position": {
+        "x": 14,
+        "y": 27
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0158": {
+      "id": "premium_capsule_line_0158",
+      "definitionId": "item_port_storager_1",
+      "position": {
+        "x": 10,
+        "y": 28
+      },
+      "rotation": 180,
+      "config": {
+        "submitToWarehouse": true
+      },
+      "tags": []
+    },
+    "premium_capsule_line_0159": {
+      "id": "premium_capsule_line_0159",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 11,
+        "y": 27
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0160": {
+      "id": "premium_capsule_line_0160",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 4,
+        "y": 27
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0161": {
+      "id": "premium_capsule_line_0161",
+      "definitionId": "item_port_planter_1",
+      "position": {
+        "x": 0,
+        "y": 28
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0162": {
+      "id": "premium_capsule_line_0162",
+      "definitionId": "item_port_planter_1",
+      "position": {
+        "x": 19,
+        "y": 28
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0163": {
+      "id": "premium_capsule_line_0163",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 27
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0164": {
+      "id": "premium_capsule_line_0164",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 26
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0165": {
+      "id": "premium_capsule_line_0165",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 25
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0166": {
+      "id": "premium_capsule_line_0166",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 24
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0167": {
+      "id": "premium_capsule_line_0167",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 23
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0168": {
+      "id": "premium_capsule_line_0168",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 22
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0169": {
+      "id": "premium_capsule_line_0169",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 1,
+        "y": 22
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0170": {
+      "id": "premium_capsule_line_0170",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 21,
+        "y": 22
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0171": {
+      "id": "premium_capsule_line_0171",
+      "definitionId": "item_port_seedcol_1",
+      "position": {
+        "x": 6,
+        "y": 32
+      },
+      "rotation": 90,
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_moss_3",
+            "amount": 50
+          }
+        ]
+      },
+      "tags": []
+    },
+    "premium_capsule_line_0172": {
+      "id": "premium_capsule_line_0172",
+      "definitionId": "item_port_seedcol_1",
+      "position": {
+        "x": 13,
+        "y": 32
+      },
+      "rotation": 270,
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_moss_1",
+            "amount": 50
+          }
+        ]
+      },
+      "tags": []
+    },
+    "premium_capsule_line_0173": {
+      "id": "premium_capsule_line_0173",
+      "definitionId": "item_port_planter_1",
+      "position": {
+        "x": 1,
+        "y": 33
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0174": {
+      "id": "premium_capsule_line_0174",
+      "definitionId": "item_port_planter_1",
+      "position": {
+        "x": 18,
+        "y": 33
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0175": {
+      "id": "premium_capsule_line_0175",
+      "definitionId": "item_port_seedcol_1",
+      "position": {
+        "x": 2,
+        "y": 38
+      },
+      "rotation": 270,
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_moss_3",
+            "amount": 50
+          }
+        ]
+      },
+      "tags": []
+    },
+    "premium_capsule_line_0176": {
+      "id": "premium_capsule_line_0176",
+      "definitionId": "item_port_seedcol_1",
+      "position": {
+        "x": 17,
+        "y": 38
+      },
+      "rotation": 90,
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_moss_1",
+            "amount": 50
+          }
+        ]
+      },
+      "tags": []
+    },
+    "premium_capsule_line_0177": {
+      "id": "premium_capsule_line_0177",
+      "definitionId": "item_port_planter_1",
+      "position": {
+        "x": 7,
+        "y": 37
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0178": {
+      "id": "premium_capsule_line_0178",
+      "definitionId": "item_port_planter_1",
+      "position": {
+        "x": 12,
+        "y": 37
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0179": {
+      "id": "premium_capsule_line_0179",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 5,
+        "y": 32
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0180": {
+      "id": "premium_capsule_line_0180",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 18,
+        "y": 32
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0181": {
+      "id": "premium_capsule_line_0181",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 11,
+        "y": 32
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0182": {
+      "id": "premium_capsule_line_0182",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 11,
+        "y": 31
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0183": {
+      "id": "premium_capsule_line_0183",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 31
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0184": {
+      "id": "premium_capsule_line_0184",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 11,
+        "y": 33
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0185": {
+      "id": "premium_capsule_line_0185",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 12,
+        "y": 33
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0186": {
+      "id": "premium_capsule_line_0186",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 12,
+        "y": 32
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0187": {
+      "id": "premium_capsule_line_0187",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 12,
+        "y": 31
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0188": {
+      "id": "premium_capsule_line_0188",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 13,
+        "y": 31
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0189": {
+      "id": "premium_capsule_line_0189",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 12,
+        "y": 36
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0190": {
+      "id": "premium_capsule_line_0190",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 11,
+        "y": 36
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0191": {
+      "id": "premium_capsule_line_0191",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 1,
+        "y": 38
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0192": {
+      "id": "premium_capsule_line_0192",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 39
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0193": {
+      "id": "premium_capsule_line_0193",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 0,
+        "y": 39
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0194": {
+      "id": "premium_capsule_line_0194",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 38
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0195": {
+      "id": "premium_capsule_line_0195",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 37
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0196": {
+      "id": "premium_capsule_line_0196",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 36
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0197": {
+      "id": "premium_capsule_line_0197",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 35
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0198": {
+      "id": "premium_capsule_line_0198",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 34
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0199": {
+      "id": "premium_capsule_line_0199",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 33
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0200": {
+      "id": "premium_capsule_line_0200",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 22,
+        "y": 38
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0201": {
+      "id": "premium_capsule_line_0201",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 22,
+        "y": 39
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0202": {
+      "id": "premium_capsule_line_0202",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 23,
+        "y": 39
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0203": {
+      "id": "premium_capsule_line_0203",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 38
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0204": {
+      "id": "premium_capsule_line_0204",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 37
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0205": {
+      "id": "premium_capsule_line_0205",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 36
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0206": {
+      "id": "premium_capsule_line_0206",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 35
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0207": {
+      "id": "premium_capsule_line_0207",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 34
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0208": {
+      "id": "premium_capsule_line_0208",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 33
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0209": {
+      "id": "premium_capsule_line_0209",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 11,
+        "y": 34
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0210": {
+      "id": "premium_capsule_line_0210",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 0,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0211": {
+      "id": "premium_capsule_line_0211",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 22,
+        "y": 40
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0212": {
+      "id": "premium_capsule_line_0212",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 9,
+        "y": 22
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0213": {
+      "id": "premium_capsule_line_0213",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 14,
+        "y": 22
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0214": {
+      "id": "premium_capsule_line_0214",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 13,
+        "y": 22
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0215": {
+      "id": "premium_capsule_line_0215",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 22
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0216": {
+      "id": "premium_capsule_line_0216",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 16,
+        "y": 42
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0217": {
+      "id": "premium_capsule_line_0217",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 7,
+        "y": 42
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0218": {
+      "id": "premium_capsule_line_0218",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 19,
+        "y": 27
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0219": {
+      "id": "premium_capsule_line_0219",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 27
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0220": {
+      "id": "premium_capsule_line_0220",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 22,
+        "y": 27
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0221": {
+      "id": "premium_capsule_line_0221",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 23,
+        "y": 27
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0222": {
+      "id": "premium_capsule_line_0222",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 26
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0223": {
+      "id": "premium_capsule_line_0223",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 25
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0224": {
+      "id": "premium_capsule_line_0224",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 24
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0225": {
+      "id": "premium_capsule_line_0225",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 23
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0226": {
+      "id": "premium_capsule_line_0226",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 23,
+        "y": 22
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0227": {
+      "id": "premium_capsule_line_0227",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 21,
+        "y": 27
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "premium_capsule_line_0001",
+    "premium_capsule_line_0002",
+    "premium_capsule_line_0003",
+    "premium_capsule_line_0004",
+    "premium_capsule_line_0005",
+    "premium_capsule_line_0006",
+    "premium_capsule_line_0007",
+    "premium_capsule_line_0008",
+    "premium_capsule_line_0009",
+    "premium_capsule_line_0010",
+    "premium_capsule_line_0011",
+    "premium_capsule_line_0012",
+    "premium_capsule_line_0013",
+    "premium_capsule_line_0014",
+    "premium_capsule_line_0015",
+    "premium_capsule_line_0016",
+    "premium_capsule_line_0017",
+    "premium_capsule_line_0018",
+    "premium_capsule_line_0019",
+    "premium_capsule_line_0020",
+    "premium_capsule_line_0021",
+    "premium_capsule_line_0022",
+    "premium_capsule_line_0023",
+    "premium_capsule_line_0024",
+    "premium_capsule_line_0025",
+    "premium_capsule_line_0026",
+    "premium_capsule_line_0027",
+    "premium_capsule_line_0028",
+    "premium_capsule_line_0029",
+    "premium_capsule_line_0030",
+    "premium_capsule_line_0031",
+    "premium_capsule_line_0032",
+    "premium_capsule_line_0033",
+    "premium_capsule_line_0034",
+    "premium_capsule_line_0035",
+    "premium_capsule_line_0036",
+    "premium_capsule_line_0037",
+    "premium_capsule_line_0038",
+    "premium_capsule_line_0039",
+    "premium_capsule_line_0040",
+    "premium_capsule_line_0041",
+    "premium_capsule_line_0042",
+    "premium_capsule_line_0043",
+    "premium_capsule_line_0044",
+    "premium_capsule_line_0045",
+    "premium_capsule_line_0046",
+    "premium_capsule_line_0047",
+    "premium_capsule_line_0048",
+    "premium_capsule_line_0049",
+    "premium_capsule_line_0050",
+    "premium_capsule_line_0051",
+    "premium_capsule_line_0052",
+    "premium_capsule_line_0053",
+    "premium_capsule_line_0054",
+    "premium_capsule_line_0055",
+    "premium_capsule_line_0056",
+    "premium_capsule_line_0057",
+    "premium_capsule_line_0058",
+    "premium_capsule_line_0059",
+    "premium_capsule_line_0060",
+    "premium_capsule_line_0061",
+    "premium_capsule_line_0062",
+    "premium_capsule_line_0063",
+    "premium_capsule_line_0064",
+    "premium_capsule_line_0065",
+    "premium_capsule_line_0066",
+    "premium_capsule_line_0067",
+    "premium_capsule_line_0068",
+    "premium_capsule_line_0069",
+    "premium_capsule_line_0070",
+    "premium_capsule_line_0071",
+    "premium_capsule_line_0072",
+    "premium_capsule_line_0073",
+    "premium_capsule_line_0074",
+    "premium_capsule_line_0075",
+    "premium_capsule_line_0076",
+    "premium_capsule_line_0077",
+    "premium_capsule_line_0078",
+    "premium_capsule_line_0079",
+    "premium_capsule_line_0080",
+    "premium_capsule_line_0081",
+    "premium_capsule_line_0082",
+    "premium_capsule_line_0083",
+    "premium_capsule_line_0084",
+    "premium_capsule_line_0085",
+    "premium_capsule_line_0086",
+    "premium_capsule_line_0087",
+    "premium_capsule_line_0088",
+    "premium_capsule_line_0089",
+    "premium_capsule_line_0090",
+    "premium_capsule_line_0091",
+    "premium_capsule_line_0092",
+    "premium_capsule_line_0093",
+    "premium_capsule_line_0094",
+    "premium_capsule_line_0095",
+    "premium_capsule_line_0096",
+    "premium_capsule_line_0097",
+    "premium_capsule_line_0098",
+    "premium_capsule_line_0099",
+    "premium_capsule_line_0100",
+    "premium_capsule_line_0101",
+    "premium_capsule_line_0102",
+    "premium_capsule_line_0103",
+    "premium_capsule_line_0104",
+    "premium_capsule_line_0105",
+    "premium_capsule_line_0106",
+    "premium_capsule_line_0107",
+    "premium_capsule_line_0108",
+    "premium_capsule_line_0109",
+    "premium_capsule_line_0110",
+    "premium_capsule_line_0111",
+    "premium_capsule_line_0112",
+    "premium_capsule_line_0113",
+    "premium_capsule_line_0114",
+    "premium_capsule_line_0115",
+    "premium_capsule_line_0116",
+    "premium_capsule_line_0117",
+    "premium_capsule_line_0118",
+    "premium_capsule_line_0119",
+    "premium_capsule_line_0120",
+    "premium_capsule_line_0121",
+    "premium_capsule_line_0122",
+    "premium_capsule_line_0123",
+    "premium_capsule_line_0124",
+    "premium_capsule_line_0125",
+    "premium_capsule_line_0126",
+    "premium_capsule_line_0127",
+    "premium_capsule_line_0128",
+    "premium_capsule_line_0129",
+    "premium_capsule_line_0130",
+    "premium_capsule_line_0131",
+    "premium_capsule_line_0132",
+    "premium_capsule_line_0133",
+    "premium_capsule_line_0134",
+    "premium_capsule_line_0135",
+    "premium_capsule_line_0136",
+    "premium_capsule_line_0137",
+    "premium_capsule_line_0138",
+    "premium_capsule_line_0139",
+    "premium_capsule_line_0140",
+    "premium_capsule_line_0141",
+    "premium_capsule_line_0142",
+    "premium_capsule_line_0143",
+    "premium_capsule_line_0144",
+    "premium_capsule_line_0145",
+    "premium_capsule_line_0146",
+    "premium_capsule_line_0147",
+    "premium_capsule_line_0148",
+    "premium_capsule_line_0149",
+    "premium_capsule_line_0150",
+    "premium_capsule_line_0151",
+    "premium_capsule_line_0152",
+    "premium_capsule_line_0153",
+    "premium_capsule_line_0154",
+    "premium_capsule_line_0155",
+    "premium_capsule_line_0156",
+    "premium_capsule_line_0157",
+    "premium_capsule_line_0158",
+    "premium_capsule_line_0159",
+    "premium_capsule_line_0160",
+    "premium_capsule_line_0161",
+    "premium_capsule_line_0162",
+    "premium_capsule_line_0163",
+    "premium_capsule_line_0164",
+    "premium_capsule_line_0165",
+    "premium_capsule_line_0166",
+    "premium_capsule_line_0167",
+    "premium_capsule_line_0168",
+    "premium_capsule_line_0169",
+    "premium_capsule_line_0170",
+    "premium_capsule_line_0171",
+    "premium_capsule_line_0172",
+    "premium_capsule_line_0173",
+    "premium_capsule_line_0174",
+    "premium_capsule_line_0175",
+    "premium_capsule_line_0176",
+    "premium_capsule_line_0177",
+    "premium_capsule_line_0178",
+    "premium_capsule_line_0179",
+    "premium_capsule_line_0180",
+    "premium_capsule_line_0181",
+    "premium_capsule_line_0182",
+    "premium_capsule_line_0183",
+    "premium_capsule_line_0184",
+    "premium_capsule_line_0185",
+    "premium_capsule_line_0186",
+    "premium_capsule_line_0187",
+    "premium_capsule_line_0188",
+    "premium_capsule_line_0189",
+    "premium_capsule_line_0190",
+    "premium_capsule_line_0191",
+    "premium_capsule_line_0192",
+    "premium_capsule_line_0193",
+    "premium_capsule_line_0194",
+    "premium_capsule_line_0195",
+    "premium_capsule_line_0196",
+    "premium_capsule_line_0197",
+    "premium_capsule_line_0198",
+    "premium_capsule_line_0199",
+    "premium_capsule_line_0200",
+    "premium_capsule_line_0201",
+    "premium_capsule_line_0202",
+    "premium_capsule_line_0203",
+    "premium_capsule_line_0204",
+    "premium_capsule_line_0205",
+    "premium_capsule_line_0206",
+    "premium_capsule_line_0207",
+    "premium_capsule_line_0208",
+    "premium_capsule_line_0209",
+    "premium_capsule_line_0210",
+    "premium_capsule_line_0211",
+    "premium_capsule_line_0212",
+    "premium_capsule_line_0213",
+    "premium_capsule_line_0214",
+    "premium_capsule_line_0215",
+    "premium_capsule_line_0216",
+    "premium_capsule_line_0217",
+    "premium_capsule_line_0218",
+    "premium_capsule_line_0219",
+    "premium_capsule_line_0220",
+    "premium_capsule_line_0221",
+    "premium_capsule_line_0222",
+    "premium_capsule_line_0223",
+    "premium_capsule_line_0224",
+    "premium_capsule_line_0225",
+    "premium_capsule_line_0226",
+    "premium_capsule_line_0227"
+  ],
+  "slotLinks": [],
+  "createdAt": "2026-03-04T09:13:42.276Z",
+  "updatedAt": "2026-03-04T09:13:42.276Z"
+}

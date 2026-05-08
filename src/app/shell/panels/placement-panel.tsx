@@ -4,6 +4,7 @@ import { Fragment, type ComponentProps } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
+import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import type { PlacementGroup } from "@/app/state/state-impl";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import {
@@ -138,6 +139,10 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
   const deviceSections = buildPlacementDeviceSections(appHost);
   const visibleOperationButtons = getVisiblePlacementOperationButtons(appHost);
 
+  const handleButtonPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    preventTouchPointerCompatibilityMouseEvents(event);
+  };
+
   const handleButtonPointerUp = (
     event: ReactPointerEvent<HTMLButtonElement>,
     button: Pick<PlacementButtonDefinition, "uiButtonId">,
@@ -190,6 +195,7 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
         className={className}
         data-ui-button-id={button.uiButtonId}
         key={button.uiButtonId}
+        onPointerDown={handleButtonPointerDown}
         onPointerUp={(event) => {
           handleButtonPointerUp(event, button, false);
         }}
@@ -278,6 +284,7 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
                       className={className}
                       data-ui-button-id={button.uiButtonId}
                       key={button.uiButtonId}
+                      onPointerDown={handleButtonPointerDown}
                       onPointerUp={(event) => {
                         handleButtonPointerUp(event, button, true);
                       }}

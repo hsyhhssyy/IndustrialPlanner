@@ -1,0 +1,11 @@
+{
+  "version": "v1.3.0",
+  "folders": [
+    {
+      "name": "产线样例",
+      "blueprints": [
+        "premium-capsule-line"
+      ]
+    }
+  ]
+}

@@ -306,6 +306,6 @@ export interface GestureUiButtonMouseTapEventLike extends GestureUiButtonEventLi
   readonly button: number;
 }
 
-export type GestureListener = (event: GestureEvent) => void;
+export type GestureListener = (event: GestureEvent) => unknown;
 export type KeyboardSnapshotListener = (snapshot: KeyboardSnapshot) => void;
 export type LongPressStateListener = (state: LongPressState) => void;

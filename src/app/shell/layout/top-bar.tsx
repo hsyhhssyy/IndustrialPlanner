@@ -1,4 +1,5 @@
 import { FullscreenToggleButton } from "@/app/shell/layout/fullscreen-toggle-button";
+import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { AppHost } from "@/app/host/app-host";
 import { observer } from "mobx-react-lite";
@@ -103,6 +104,7 @@ export const SimulationControlButton = observer(function SimulationControlButton
       className={className}
       data-ui-button-id={SIMULATION_CONTROL_BUTTON_ID}
       onClick={handleClick}
+      onPointerDown={preventTouchPointerCompatibilityMouseEvents}
       onPointerUp={handlePointerUp}
       title={label}
       type="button"

@@ -16,6 +16,7 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
           SHORTCUT_KEY.RETURN_SELECT,
           event.code,
           event.key,
+          event.modifiers,
         )) {
           return { status: "ignored" };
         }

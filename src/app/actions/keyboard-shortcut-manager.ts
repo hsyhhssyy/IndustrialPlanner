@@ -20,6 +20,13 @@ export const SHORTCUT_KEY = {
 /** 从 SHORTCUT_KEY 推导出的联合类型 */
 export type ShortcutKeyId = typeof SHORTCUT_KEY[keyof typeof SHORTCUT_KEY];
 
+export interface ShortcutEventModifiers {
+  readonly alt?: boolean;
+  readonly ctrl?: boolean;
+  readonly meta?: boolean;
+  readonly shift?: boolean;
+}
+
 /** 所有有效的 key id 集合（用于运行时校验） */
 const VALID_SHORTCUT_KEYS: ReadonlySet<string> = new Set(Object.values(SHORTCUT_KEY));
 
@@ -32,10 +39,14 @@ const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
   [SHORTCUT_KEY.WAREHOUSE]:        "C",
   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
   [SHORTCUT_KEY.SYNTHESIS]:        "B",
-  [SHORTCUT_KEY.SAVE_BLUEPRINT]:   "N",
+  [SHORTCUT_KEY.SAVE_BLUEPRINT]:   "Ctrl+S",
   [SHORTCUT_KEY.RETURN_SELECT]:    "Esc",
   [SHORTCUT_KEY.ROTATE]:           "R",
   [SHORTCUT_KEY.DELETE_DEVICE]:    "F",
+};
+
+const LEGACY_SHORTCUT_MIGRATIONS: Partial<Record<ShortcutKeyId, string>> = {
+  [SHORTCUT_KEY.SAVE_BLUEPRINT]: "N",
 };
 
 // ─── Contract State 类型 ───
@@ -64,7 +75,7 @@ export class KeyboardShortcutManager {
     if (persisted !== null) {
       for (const [k, v] of Object.entries(persisted)) {
         if (isShortcutKey(k) && typeof v === "string" && v.trim() !== "") {
-          initial[k] = v.trim();
+          initial[k] = migrateLegacyShortcutValue(k, v.trim());
         }
       }
     }
@@ -129,6 +140,7 @@ export class KeyboardShortcutManager {
     key: string,
     code: string | null,
     eventKey: string | null = null,
+    modifiers: ShortcutEventModifiers = {},
   ): boolean {
     if (!isShortcutKey(key)) return false;
 
@@ -136,6 +148,7 @@ export class KeyboardShortcutManager {
       shortcut: this.getKeyboardShortcutFor(key),
       code,
       key: eventKey,
+      modifiers,
     });
   }
 
@@ -155,27 +168,111 @@ function doesShortcutMatchKeyEvent(options: {
   shortcut: string;
   code: string | null;
   key: string | null;
+  modifiers: ShortcutEventModifiers;
 }): boolean {
-  const shortcut = normalizeShortcut(options.shortcut);
-  if (shortcut === "" || shortcut.includes("+")) {
+  const parsedShortcut = parseShortcutBinding(options.shortcut);
+  if (parsedShortcut === null) {
     return false;
   }
 
-  const key = normalizeShortcut(options.key ?? "");
-  if (key === shortcut) {
+  if (!doShortcutModifiersMatch(parsedShortcut.modifiers, options.modifiers)) {
+    return false;
+  }
+
+  return doesShortcutPrimaryKeyMatch(parsedShortcut.primaryKey, options.code, options.key);
+}
+
+function doesShortcutPrimaryKeyMatch(
+  primaryKey: string,
+  code: string | null,
+  eventKey: string | null,
+): boolean {
+  const key = normalizeShortcut(eventKey ?? "");
+  if (key === primaryKey) {
     return true;
   }
 
-  const code = options.code ?? "";
-  if (shortcut.length === 1 && shortcut >= "a" && shortcut <= "z") {
-    return code === `Key${shortcut.toUpperCase()}`;
+  const normalizedCode = code ?? "";
+  if (primaryKey.length === 1 && primaryKey >= "a" && primaryKey <= "z") {
+    return normalizedCode === `Key${primaryKey.toUpperCase()}`;
   }
 
-  if (shortcut.length === 1 && shortcut >= "0" && shortcut <= "9") {
-    return code === `Digit${shortcut}` || code === `Numpad${shortcut}`;
+  if (primaryKey.length === 1 && primaryKey >= "0" && primaryKey <= "9") {
+    return normalizedCode === `Digit${primaryKey}` || normalizedCode === `Numpad${primaryKey}`;
   }
 
-  return normalizeShortcutCode(code) === shortcut;
+  return normalizeShortcutCode(normalizedCode) === primaryKey;
+}
+
+function parseShortcutBinding(shortcut: string): {
+  modifiers: Required<ShortcutEventModifiers>;
+  primaryKey: string;
+} | null {
+  const parts = shortcut
+    .split("+")
+    .map((part) => normalizeShortcut(part))
+    .filter((part) => part !== "");
+
+  if (parts.length === 0) {
+    return null;
+  }
+
+  const modifiers: Required<ShortcutEventModifiers> = {
+    alt: false,
+    ctrl: false,
+    meta: false,
+    shift: false,
+  };
+  let primaryKey: string | null = null;
+
+  for (const part of parts) {
+    if (part === "alt" || part === "option") {
+      modifiers.alt = true;
+      continue;
+    }
+
+    if (part === "ctrl" || part === "control") {
+      modifiers.ctrl = true;
+      continue;
+    }
+
+    if (part === "meta" || part === "cmd" || part === "command") {
+      modifiers.meta = true;
+      continue;
+    }
+
+    if (part === "shift") {
+      modifiers.shift = true;
+      continue;
+    }
+
+    if (primaryKey !== null) {
+      return null;
+    }
+
+    primaryKey = part;
+  }
+
+  if (primaryKey === null) {
+    return null;
+  }
+
+  return {
+    modifiers,
+    primaryKey,
+  };
+}
+
+function doShortcutModifiersMatch(
+  expected: Required<ShortcutEventModifiers>,
+  actual: ShortcutEventModifiers,
+): boolean {
+  return (
+    expected.alt === (actual.alt ?? false)
+    && expected.ctrl === (actual.ctrl ?? false)
+    && expected.meta === (actual.meta ?? false)
+    && expected.shift === (actual.shift ?? false)
+  );
 }
 
 function normalizeShortcut(shortcut: string): string {
@@ -204,4 +301,13 @@ function normalizeShortcutCode(code: string): string {
   }
 
   return code.trim().toLowerCase();
+}
+
+function migrateLegacyShortcutValue(key: ShortcutKeyId, value: string): string {
+  const legacyValue = LEGACY_SHORTCUT_MIGRATIONS[key];
+  if (legacyValue !== undefined && normalizeShortcut(value) === normalizeShortcut(legacyValue)) {
+    return SHORTCUT_DEFAULTS[key];
+  }
+
+  return value;
 }

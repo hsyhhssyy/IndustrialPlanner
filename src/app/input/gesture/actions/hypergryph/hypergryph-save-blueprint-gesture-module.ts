@@ -25,6 +25,7 @@ export function createHypergryphSaveBlueprintGestureModule(): GestureMappingModu
             SHORTCUT_KEY.SAVE_BLUEPRINT,
             event.code,
             event.key,
+            event.modifiers,
           )) {
             return { status: "ignored" };
           }

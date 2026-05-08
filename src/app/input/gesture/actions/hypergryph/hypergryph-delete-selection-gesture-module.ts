@@ -27,6 +27,7 @@ export function createHypergryphDeleteSelectionGestureModule(): GestureMappingMo
             SHORTCUT_KEY.DELETE_DEVICE,
             event.code,
             event.key,
+            event.modifiers,
           )) {
             return { status: "ignored" };
           }

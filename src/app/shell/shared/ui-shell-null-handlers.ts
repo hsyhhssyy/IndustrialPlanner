@@ -4,6 +4,15 @@ export function preventNativeBrowserEvent(event: { preventDefault: () => void })
   event.preventDefault();
 }
 
+export function preventTouchPointerCompatibilityMouseEvents(event: {
+  pointerType: string;
+  preventDefault: () => void;
+}): void {
+  if (event.pointerType === "touch" || event.pointerType === "pen") {
+    event.preventDefault();
+  }
+}
+
 export function preventMiddleMousePointerDownBrowserBehavior(event: {
   pointerType: string;
   button: number;

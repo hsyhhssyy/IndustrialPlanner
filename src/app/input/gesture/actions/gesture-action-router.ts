@@ -38,7 +38,7 @@ export class GestureActionRouter<THost = unknown> {
     }
 
     this.unsubscribeAdapter = this.gestureAdapter.subscribe((event) => {
-      this.handleGesture(event);
+      return this.handleGesture(event);
     });
   }
 

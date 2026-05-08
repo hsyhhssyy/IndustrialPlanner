@@ -12,7 +12,7 @@ import type {
 import type { AppLocale } from "@/shared/i18n/messages";
 import { lookupMessageText } from "@/shared/i18n/messages";
 import { lookupWorkbenchText } from "@/shared/i18n/workbench-placeholders";
-import type { KeyboardShortcutManager } from "./keyboard-shortcut-manager";
+import type { KeyboardShortcutManager, ShortcutEventModifiers } from "./keyboard-shortcut-manager";
 
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import {
@@ -76,7 +76,12 @@ export interface AppInternalAction {
   setScreenProfile: (screenProfile: ScreenProfile) => void;
   setLocale: (locale: AppLocale) => void;
   getKeyboardShortcutFor: (key: string) => string;
-  isShortcutFor: (key: string, code: string | null, eventKey?: string | null) => boolean;
+  isShortcutFor: (
+    key: string,
+    code: string | null,
+    eventKey?: string | null,
+    modifiers?: ShortcutEventModifiers,
+  ) => boolean;
   setShortcutFor: (key: string, value: string) => void;
 }
 
@@ -551,8 +556,13 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     return this.shortcutManager.getKeyboardShortcutFor(key);
   };
 
-  public readonly isShortcutFor: AppInternalAction["isShortcutFor"] = (key, code, eventKey) => {
-    return this.shortcutManager.isShortcutFor(key, code, eventKey);
+  public readonly isShortcutFor: AppInternalAction["isShortcutFor"] = (
+    key,
+    code,
+    eventKey,
+    modifiers,
+  ) => {
+    return this.shortcutManager.isShortcutFor(key, code, eventKey, modifiers);
   };
 
   public readonly setShortcutFor: AppInternalAction["setShortcutFor"] = (key, value) => {

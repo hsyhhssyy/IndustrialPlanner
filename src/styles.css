@@ -2879,42 +2879,54 @@ body.is-resizing-left-dock * {
   text-overflow: ellipsis;
 }
 
+.save-blueprint-dialog {
+  width: min(520px, 100%);
+  height: min(440px, 100%);
+}
+
+.save-blueprint-dialog-body {
+  display: grid;
+  min-height: 0;
+  padding: 14px;
+}
+
+.save-blueprint-dialog-content {
+  display: grid;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 .save-blueprint-form {
   display: grid;
-  gap: 16px;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 100%;
+  min-width: 0;
+  height: 100%;
 }
 
-.save-blueprint-copy {
+.save-blueprint-form-content {
   display: grid;
-  gap: 8px;
+  gap: 12px;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  padding-right: 2px;
 }
 
-.save-blueprint-subtitle,
-.save-blueprint-selection-summary,
 .save-blueprint-error {
   margin: 0;
-}
-
-.save-blueprint-subtitle,
-.save-blueprint-selection-summary {
-  color: var(--text-1);
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.save-blueprint-selection-summary {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  padding: 6px 10px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface-1);
 }
 
 .save-blueprint-field {
   display: grid;
   gap: 8px;
+  min-width: 0;
+}
+
+.save-blueprint-field-description {
+  min-height: 0;
 }
 
 .save-blueprint-label {
@@ -2933,6 +2945,10 @@ body.is-resizing-left-dock * {
   background: var(--surface-1);
   color: var(--text-0);
   font: inherit;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    background-color 120ms ease;
 }
 
 .save-blueprint-input:disabled,
@@ -2942,8 +2958,19 @@ body.is-resizing-left-dock * {
   opacity: 0.65;
 }
 
+.save-blueprint-input:hover,
+.save-blueprint-textarea:hover {
+  border-color: var(--line-strong);
+}
+
+.save-blueprint-input:focus-visible,
+.save-blueprint-textarea:focus-visible {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 1px var(--accent-strong);
+}
+
 .save-blueprint-textarea {
-  min-height: 120px;
+  min-height: 136px;
   resize: vertical;
 }
 
@@ -2956,16 +2983,31 @@ body.is-resizing-left-dock * {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  padding-right: 2px;
+  padding-left: 2px;
+  padding-top: 14px;
+  padding-bottom: 2px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-1);
 }
 
 .save-blueprint-primary-button,
 .save-blueprint-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 104px;
   min-height: 38px;
   padding: 0 16px;
+  border: 1px solid transparent;
   border-radius: 10px;
   font: inherit;
   font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
 }
 
 .save-blueprint-secondary-button {
@@ -2974,13 +3016,30 @@ body.is-resizing-left-dock * {
   color: var(--text-0);
 }
 
+.save-blueprint-secondary-button:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--surface-2);
+}
+
 .save-blueprint-primary-button {
-  border: 1px solid transparent;
-  background: var(--accent-500);
-  color: var(--accent-contrast, #fff);
+  background: var(--accent, #399ee6);
+  color: #fff;
+}
+
+.save-blueprint-primary-button:hover:not(:disabled) {
+  background: var(--accent-strong, var(--accent, #399ee6));
 }
 
 @media (max-width: 720px) {
+  .save-blueprint-dialog {
+    width: 100%;
+    height: min(520px, 100%);
+  }
+
+  .save-blueprint-dialog-body {
+    padding: 12px;
+  }
+
   .save-blueprint-actions {
     flex-direction: column-reverse;
   }
@@ -2988,6 +3047,47 @@ body.is-resizing-left-dock * {
   .save-blueprint-primary-button,
   .save-blueprint-secondary-button {
     width: 100%;
+  }
+}
+
+@media (max-height: 440px) and (orientation: landscape) {
+  .save-blueprint-dialog-backdrop {
+    padding: 8px;
+  }
+
+  .save-blueprint-dialog {
+    width: 100%;
+    height: 100%;
+    border-radius: 14px;
+  }
+
+  .save-blueprint-dialog-body {
+    padding: 10px;
+  }
+
+  .save-blueprint-dialog-content {
+    overflow: hidden;
+  }
+
+  .save-blueprint-form {
+    gap: 10px;
+  }
+
+  .save-blueprint-form-content {
+    gap: 10px;
+  }
+
+  .save-blueprint-textarea {
+    min-height: 120px;
+  }
+
+  .save-blueprint-actions {
+    padding-top: 10px;
+  }
+
+  .save-blueprint-primary-button,
+  .save-blueprint-secondary-button {
+    width: auto;
   }
 }
 

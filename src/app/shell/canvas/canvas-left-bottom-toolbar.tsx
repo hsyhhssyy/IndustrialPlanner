@@ -1,4 +1,5 @@
 import type { AppHost } from "@/app/host/app-host";
+import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import {
   getVisiblePlacementOperationButtons,
   type PlacementOperationButtonDefinition,
@@ -47,6 +48,11 @@ export function CanvasLeftBottomToolbar({ appHost }: { appHost: AppHost }) {
     event: ReactMouseEvent<HTMLElement> | ReactWheelEvent<HTMLElement>,
   ) => {
     event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const stopTouchPointerDownPropagation = (event: ReactPointerEvent<HTMLElement>) => {
+    preventTouchPointerCompatibilityMouseEvents(event);
     event.stopPropagation();
   };
 
@@ -111,7 +117,7 @@ export function CanvasLeftBottomToolbar({ appHost }: { appHost: AppHost }) {
             onClick={stopUiPropagation}
             onContextMenu={stopUiPropagationAndDefault}
             onPointerCancel={stopUiPropagation}
-            onPointerDown={stopUiPropagation}
+            onPointerDown={stopTouchPointerDownPropagation}
             onPointerMove={stopUiPropagation}
             onPointerUp={(event) => {
               handleButtonPointerUp(event, button);

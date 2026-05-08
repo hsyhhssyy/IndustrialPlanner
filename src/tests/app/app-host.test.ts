@@ -2,6 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { runInAction } from "mobx";
 
 import { createAppHost } from "@/app/host/app-host";
+import {
+  APP_SHORTCUTS_LOCAL_STORAGE_KEY,
+  SHORTCUT_KEY,
+} from "@/app/actions/keyboard-shortcut-manager";
 import type {
   GestureEvent,
   GestureKeyboardEventLike,
@@ -1550,9 +1554,10 @@ describe("createAppHost", () => {
     const appHost = createAppHost(workspace);
 
     appHost.gestureAdapter.handleKeyDown(keyEvent({
-      code: "KeyN",
-      key: "n",
-      keyCode: 78,
+      code: "KeyS",
+      key: "s",
+      keyCode: 83,
+      ctrlKey: true,
     }));
 
     expect(appHost.internalState.workbench.dialogState["save-blueprint"].visible).toBe(true);
@@ -1570,6 +1575,17 @@ describe("createAppHost", () => {
     });
 
     expect(appHost.internalState.workbench.dialogState["save-blueprint"].visible).toBe(true);
+  });
+
+  it("migrates the legacy save blueprint shortcut to Ctrl+S", () => {
+    localStorage.setItem(APP_SHORTCUTS_LOCAL_STORAGE_KEY, JSON.stringify({
+      [SHORTCUT_KEY.SAVE_BLUEPRINT]: "N",
+    }));
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    expect(appHost.internalActions.getKeyboardShortcutFor(SHORTCUT_KEY.SAVE_BLUEPRINT)).toBe("Ctrl+S");
   });
 
   it("returns to select mode from any active tool using the return-select shortcut", () => {

@@ -306,7 +306,7 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         kind: "keybinding",
         labelKey: shortcutKeybindingLabelKey("shortcut-save-blueprint"),
         descriptionKey: shortcutKeybindingDescriptionKey("shortcut-save-blueprint"),
-        defaultValue: "N",
+        defaultValue: "Ctrl+S",
         editableWhen: {
           settingId: "game-arknights-operation-mode",
           equals: false,

@@ -16,6 +16,7 @@ import { DebugLogDialog } from "@/app/shell/dialogs/debug-log-dialog";
 import { HelpDialog } from "@/app/shell/dialogs/help-dialog";
 import { InspectorDialog } from "@/app/shell/dialogs/inspector-dialog";
 import { MobilePortraitGate } from "@/app/shell/layout/mobile-portrait-gate";
+import { SaveBlueprintDialog } from "@/app/shell/dialogs/save-blueprint-dialog";
 import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
 import { EncyclopediaPickerDialog } from "@/app/shell/encyclopedia/encyclopedia-picker-dialog";
 import { ToolboxDialog } from "@/app/shell/dialogs/toolbox-dialog";
@@ -282,7 +283,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;
   const previousScreenProfileRef = useRef(screenProfile);
   const prevUseInspectorPanelRef = useRef(useInspectorPanel);
-  const justToggledOffPanelRef = useRef(false);
   const hasVisibleDialogShell = isAnyDialogShellVisible(appHost);
 
   useEffect(() => {
@@ -362,7 +362,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         return;
       }
 
-      appHost.gestureAdapter.handleKeyDown(event);
+      if (appHost.gestureAdapter.handleKeyDown(event) && event.cancelable) {
+        event.preventDefault();
+      }
     };
 
     const handleWindowKeyUp = (event: KeyboardEvent) => {
@@ -395,10 +397,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     }
 
     if (rightDockOpen) {
-      if (prev) {
-        justToggledOffPanelRef.current = true;
-      }
-      appHost.internalActions.setRightDockOpen(false, { preserveSingleSelection: true });
+      // 初始渲染时 rightDockOpen 默认 true，此时应保留选中以允许 auto-open inspector。
+      // 用户主动关掉"使用面板"时，清除选中，避免"有选中但无 inspector"的中间态。
+      appHost.internalActions.setRightDockOpen(false, { preserveSingleSelection: !prev });
     }
   }, [appHost, inspectorDialogState.visible, rightDockOpen, useInspectorPanel]);
 
@@ -408,9 +409,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
     }
 
     if (shouldAutoOpenInspectorDialog) {
-      if (justToggledOffPanelRef.current) {
-        justToggledOffPanelRef.current = false;
-      } else if (!inspectorDialogState.visible) {
+      if (!inspectorDialogState.visible) {
         appHost.internalActions.openDialog("inspector");
       }
 
@@ -513,6 +512,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       {showBottomStatusBar ? <BottomStatusBar appHost={appHost} /> : null}
       {appHost.state.settings.debugMode ? <DebugLogDialog appHost={appHost} /> : null}
       <InspectorDialog appHost={appHost} />
+      <SaveBlueprintDialog appHost={appHost} />
       <ToolboxDialog appHost={appHost} />
       <EncyclopediaPickerDialog appHost={appHost} />
       <HelpDialog appHost={appHost} />

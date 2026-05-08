@@ -54,7 +54,7 @@ function EmptyInspector({
   return (
     <article className="definition-card" data-inspector-key={declaration.type}>
       <h4>{INSPECTOR_LABELS[declaration.type] ?? declaration.type}</h4>
-      <p>该 inspector 尚未接入真实编辑器。</p>
+      <p>该配置当前不可用。</p>
     </article>
   );
 }

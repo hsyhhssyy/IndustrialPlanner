@@ -314,24 +314,28 @@ export class GestureAdapter {
     });
   }
 
-  public handleKeyDown(event: GestureKeyboardEventLike): void {
+  public handleKeyDown(event: GestureKeyboardEventLike): boolean {
     const code = getKeyboardCode(event);
     if (code !== null) {
       this.pressedKeys.add(code);
     }
 
     this.publishKeyboardSnapshot(event);
-    this.dispatchGesture(createKeyboardGestureEvent("key down", event, this.nextGestureId("key")));
+    return this.dispatchGesture(
+      createKeyboardGestureEvent("key down", event, this.nextGestureId("key")),
+    );
   }
 
-  public handleKeyUp(event: GestureKeyboardEventLike): void {
+  public handleKeyUp(event: GestureKeyboardEventLike): boolean {
     const code = getKeyboardCode(event);
     if (code !== null) {
       this.pressedKeys.delete(code);
     }
 
     this.publishKeyboardSnapshot(event);
-    this.dispatchGesture(createKeyboardGestureEvent("key up", event, this.nextGestureId("key")));
+    return this.dispatchGesture(
+      createKeyboardGestureEvent("key up", event, this.nextGestureId("key")),
+    );
   }
 
   public handleUiButtonTouchTap(event: GestureUiButtonTouchTapEventLike): void {
@@ -967,12 +971,18 @@ export class GestureAdapter {
     });
   }
 
-  private dispatchGesture(event: GestureEvent): void {
+  private dispatchGesture(event: GestureEvent): boolean {
+    let consumed = false;
+
     for (const listener of this.gestureListeners) {
-      listener(event);
+      const result = listener(event);
+      if (isConsumedGestureDispatchResult(result)) {
+        consumed = consumed || result.consumedBy !== null;
+      }
     }
 
     this.persistDragPayload(event);
+    return consumed;
   }
 
   private dispatchActiveToolEvents(from: ActiveTool, to: ActiveTool): void {
@@ -1019,6 +1029,15 @@ export function createGestureAdapter(
   options?: GestureAdapterOptions,
 ): GestureAdapter {
   return new GestureAdapter(appHost, options);
+}
+
+function isConsumedGestureDispatchResult(value: unknown): value is { consumedBy: string | null } {
+  if (typeof value !== "object" || value === null || !("consumedBy" in value)) {
+    return false;
+  }
+
+  const consumedBy = value.consumedBy;
+  return consumedBy === null || typeof consumedBy === "string";
 }
 
 function getPointerKind(pointerType: string): "mouse" | "touch" | "unknown" {

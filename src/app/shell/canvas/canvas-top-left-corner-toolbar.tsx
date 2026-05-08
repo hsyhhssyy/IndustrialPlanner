@@ -1,4 +1,5 @@
 import type { AppHost } from "@/app/host/app-host";
+import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { CanvasTopLeftCornerToolbarButtonId } from "@/app/state/state-impl";
 import type { MessageKey } from "@/shared/i18n/messages";
@@ -91,6 +92,11 @@ export function CanvasTopLeftCornerToolbar({
     event.stopPropagation();
   };
 
+  const stopTouchPointerDownPropagation = (event: ReactPointerEvent<HTMLElement>) => {
+    preventTouchPointerCompatibilityMouseEvents(event);
+    event.stopPropagation();
+  };
+
   const handleButtonPointerUp = (
     event: ReactPointerEvent<HTMLButtonElement>,
     buttonId: CanvasTopLeftCornerToolbarButtonId,
@@ -165,7 +171,7 @@ export function CanvasTopLeftCornerToolbar({
             onClick={stopUiPropagation}
             onContextMenu={stopUiPropagationAndDefault}
             onPointerCancel={stopUiPropagation}
-            onPointerDown={stopUiPropagation}
+            onPointerDown={stopTouchPointerDownPropagation}
             onPointerMove={stopUiPropagation}
             onPointerUp={(event) => {
               handleButtonPointerUp(event, buttonId);

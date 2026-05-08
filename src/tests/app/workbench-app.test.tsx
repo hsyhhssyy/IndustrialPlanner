@@ -71,7 +71,7 @@ const DEFAULT_APP_SHORTCUTS_STORAGE = {
   [SHORTCUT_KEY.WAREHOUSE]: "C",
   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
   [SHORTCUT_KEY.SYNTHESIS]: "B",
-  [SHORTCUT_KEY.SAVE_BLUEPRINT]: "N",
+  [SHORTCUT_KEY.SAVE_BLUEPRINT]: "Ctrl+S",
   [SHORTCUT_KEY.RETURN_SELECT]: "Esc",
   [SHORTCUT_KEY.ROTATE]: "R",
   [SHORTCUT_KEY.DELETE_DEVICE]: "F",
@@ -1453,10 +1453,9 @@ describe("WorkbenchApp", () => {
     });
 
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
-    expect(editorHost.state.collections.selection).toEqual(["dummy-entity-2"]);
+    // 2026-05-08：关闭"使用面板"时清除选择，避免"有选中但无 inspector"的中间态。
+    expect(editorHost.state.collections.selection).toEqual([]);
     expect(container.querySelector(".dock-right")).toBeNull();
-    // 2026-05-08 订正：关闭"使用面板"后不应自动弹出 inspector，避免 inspector 跳脸。
-    // 原断言 expect(...).not.toBeNull() 与修复后的预期行为不一致。
     expect(container.querySelector('[data-dialog-key="inspector"]')).toBeNull();
   });
 
@@ -1668,6 +1667,72 @@ describe("WorkbenchApp", () => {
         uiButtonId: "canvas-right-dock-toolbar-button-move",
       },
     ]);
+  });
+
+  it("prevents compatibility mouse events when touch taps the canvas right dock save blueprint button", async () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    await flushMicrotasks(20);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    await flushMicrotasks(8);
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2", "dummy-entity-3"]);
+    const appHost = createAppHost(workspace);
+
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 1024,
+      height: 1366,
+      userAgent:
+        "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    runInAction(() => {
+      appHost.internalState.settings.gameUseInspectorPanel = true;
+      appHost.internalState.activeTool = "marquee";
+      appHost.internalActions.showCanvasRightDockToolbar([
+        "canvas-right-dock-toolbar-button-exit",
+        "canvas-right-dock-toolbar-button-save-blueprint",
+      ]);
+    });
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const saveButton = container.querySelector(
+      '[data-ui-button-id="canvas-right-dock-toolbar-button-save-blueprint"]',
+    ) as HTMLButtonElement | null;
+
+    expect(saveButton).not.toBeNull();
+
+    if (saveButton === null) {
+      throw new Error("Canvas right dock save blueprint button did not render.");
+    }
+
+    let pointerDown: Event;
+
+    await act(async () => {
+      pointerDown = dispatchPointerEvent(saveButton, "pointerdown", {
+        pointerId: 27,
+        pointerType: "touch",
+        clientX: 1200,
+        clientY: 332,
+        buttons: 1,
+      });
+      dispatchPointerEvent(saveButton, "pointerup", {
+        pointerId: 27,
+        pointerType: "touch",
+        clientX: 1200,
+        clientY: 332,
+        buttons: 0,
+      });
+      await flushMicrotasks();
+    });
+
+    expect(pointerDown!.defaultPrevented).toBe(true);
+    expect(container.querySelector('[data-dialog-key="save-blueprint"]')).not.toBeNull();
   });
 
   it("shows the canvas top left corner toolbar and updates toggle labels locally", () => {
@@ -2017,7 +2082,7 @@ describe("WorkbenchApp", () => {
     expect(helpButton?.getAttribute("aria-pressed")).toBe("true");
     expect(container.querySelector(".help-dialog-placeholder h3")?.textContent).toBe("概览");
     expect(container.querySelector(".help-dialog-placeholder p")?.textContent).toBe(
-      "当前帮助内容尚未填充，这里先保留为空面板。",
+      "当前没有可显示的帮助内容。",
     );
 
     act(() => {
@@ -2729,6 +2794,36 @@ describe("WorkbenchApp", () => {
     });
 
     expect(gestures).toHaveLength(2);
+  });
+
+  it("opens the save blueprint dialog from Ctrl+S on desktop multi-selection and prevents the browser default", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2", "dummy-entity-3"]);
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const shortcutEvent = new KeyboardEvent("keydown", {
+      bubbles: true,
+      cancelable: true,
+      code: "KeyS",
+      ctrlKey: true,
+      key: "s",
+    });
+
+    let dispatchResult = true;
+
+    act(() => {
+      dispatchResult = window.dispatchEvent(shortcutEvent);
+    });
+
+    expect(dispatchResult).toBe(false);
+    expect(shortcutEvent.defaultPrevented).toBe(true);
+    expect(container.querySelector('[data-dialog-key="save-blueprint"]')).not.toBeNull();
   });
 
   it("hides the settings group sidebar on phones while keeping the full settings list scrollable", () => {

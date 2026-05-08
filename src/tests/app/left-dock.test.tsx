@@ -797,6 +797,44 @@ describe("Left dock panel switching", () => {
 
     expect(visiblePanel?.textContent).toContain("新建目录");
   });
+
+  it("shows an empty read-only system blueprint library", async () => {
+    vi.stubGlobal("fetch", createFetchStub({
+      "/blueprints/index.json": {
+        version: "v1.3.0",
+        folders: [],
+      },
+    }));
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+
+    await act(async () => {
+      root.render(<LeftDock appHost={appHost} />);
+      await flushAsyncEffects();
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const systemTabButton = visiblePanel?.querySelector(
+      '[data-ui-button-id="blueprint-tab-system"]',
+    ) as HTMLButtonElement | null;
+
+    expect(systemTabButton).not.toBeNull();
+
+    await act(async () => {
+      systemTabButton?.click();
+      await flushAsyncEffects();
+    });
+
+    expect(systemTabButton?.getAttribute("aria-selected")).toBe("true");
+    expect(visiblePanel?.textContent).toContain("系统蓝图库为空");
+    expect(visiblePanel?.textContent).toContain("当前还没有可用的系统蓝图");
+    expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')).toBeNull();
+  });
 });
 
 async function flushAsyncEffects() {
@@ -827,4 +865,37 @@ function createTestBlueprint(
     slotLinks: [],
     ...overrides,
   });
+}
+
+function createFetchStub(payloads: Record<string, unknown>) {
+  return vi.fn(async (input: string | URL | Request) => {
+    const path = normalizeFetchPath(input);
+    const payload = payloads[path];
+
+    if (payload === undefined) {
+      return {
+        ok: false,
+        status: 404,
+        json: async () => null,
+      } as Response;
+    }
+
+    return {
+      ok: true,
+      status: 200,
+      json: async () => payload,
+    } as Response;
+  });
+}
+
+function normalizeFetchPath(input: string | URL | Request): string {
+  if (typeof input === "string") {
+    return new URL(input, "https://placeholder.local").pathname;
+  }
+
+  if (input instanceof URL) {
+    return input.pathname;
+  }
+
+  return new URL(input.url, "https://placeholder.local").pathname;
 }

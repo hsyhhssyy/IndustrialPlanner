@@ -1,4 +1,5 @@
 import type { AppHost } from "@/app/host/app-host";
+import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { CanvasFloatingToolbarButtonId } from "@/app/state/state-impl";
 import {
@@ -112,6 +113,11 @@ export function CanvasFloatingToolbarButtonStrip({
     event.stopPropagation();
   };
 
+  const stopTouchPointerDownPropagation = (event: ReactPointerEvent<HTMLElement>) => {
+    preventTouchPointerCompatibilityMouseEvents(event);
+    event.stopPropagation();
+  };
+
   const handleButtonPointerUp = (
     event: ReactPointerEvent<HTMLButtonElement>,
     buttonId: CanvasFloatingToolbarButtonId,
@@ -185,7 +191,7 @@ export function CanvasFloatingToolbarButtonStrip({
             }}
             onContextMenu={stopUiPropagationAndDefault}
             onPointerCancel={stopUiPropagation}
-            onPointerDown={stopUiPropagation}
+            onPointerDown={stopTouchPointerDownPropagation}
             onPointerMove={stopUiPropagation}
             onPointerUp={(event) => {
               handleButtonPointerUp(event, buttonId);

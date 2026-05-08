@@ -31,7 +31,7 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
   const dialogState = appHost.internalState.workbench.dialogState["save-blueprint"];
   const isMobileCompactLayout = appHost.state.screenProfile.deviceClass === "mobile";
   const isPhoneLayout = appHost.state.screenProfile.deviceClass === "mobile";
-  const selectionCount = appHost.workspace.editor?.state.collections.selection.length ?? 0;
+  const isTabletLayout = appHost.state.screenProfile.deviceClass === "tablet";
   const canSaveSelection = canSaveSelectionAsBlueprint(appHost.workspace);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -55,33 +55,29 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
     locale === "zh-CN"
       ? {
         title: "保存蓝图",
-        subtitle: `将当前选中的 ${selectionCount} 个实体保存为蓝图。`,
         nameLabel: "蓝图名称",
         namePlaceholder: "输入蓝图名称",
         descriptionLabel: "描述",
         descriptionPlaceholder: "可选，补充说明用途或布局特点",
-        selectionSummary: `当前选中 ${selectionCount} 个实体`,
         cancel: "取消",
-        save: "保存",
+        save: "保存蓝图",
         emptySelection: "当前没有可保存的选中实体。",
         requiredName: "请输入蓝图名称。",
         saveFailed: "蓝图保存失败，请检查浏览器存储是否可用。",
       }
       : {
         title: "Save Blueprint",
-        subtitle: `Save the current selection of ${selectionCount} entities as a blueprint.`,
         nameLabel: "Blueprint Name",
         namePlaceholder: "Enter a blueprint name",
         descriptionLabel: "Description",
         descriptionPlaceholder: "Optional notes about purpose or layout",
-        selectionSummary: `${selectionCount} selected entities`,
         cancel: "Cancel",
-        save: "Save",
+        save: "Save Blueprint",
         emptySelection: "There is no selection to save.",
         requiredName: "Please enter a blueprint name.",
         saveFailed: "Failed to save blueprint. Check browser storage availability.",
       }
-  ), [locale, selectionCount]);
+  ), [locale]);
 
   const handleClose = useCallback(() => {
     if (isSaving) {
@@ -97,8 +93,9 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
 
   const initialShellStyle: CSSProperties | undefined = dialogState.width === null && dialogState.height === null
     ? {
-      width: isPhoneLayout ? "92%" : "460px",
-      minHeight: isPhoneLayout ? "auto" : "360px",
+      width: isPhoneLayout ? "100%" : isTabletLayout ? "560px" : "520px",
+      height: isPhoneLayout ? "min(520px, 100%)" : isTabletLayout ? "520px" : "440px",
+      minHeight: isPhoneLayout ? "320px" : isTabletLayout ? "480px" : "400px",
     }
     : undefined;
 
@@ -140,6 +137,7 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
 
   return (
     <DialogShell
+      bodyClassName="save-blueprint-dialog-body"
       className="save-blueprint-dialog"
       closeTitle={t("action.close")}
       compactMobileLayout={isMobileCompactLayout}
@@ -163,66 +161,66 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
       title={copy.title}
       titleId="save-blueprint-dialog-title"
     >
-      <form className="save-blueprint-form" onSubmit={(event) => {
-        void handleSubmit(event);
-      }}>
-        <div className="save-blueprint-copy">
-          <p className="save-blueprint-subtitle">{copy.subtitle}</p>
-          <div className="save-blueprint-selection-summary">{copy.selectionSummary}</div>
-        </div>
-        <label className="save-blueprint-field">
-          <span className="save-blueprint-label">{copy.nameLabel}</span>
-          <input
-            autoFocus
-            className="save-blueprint-input"
-            disabled={isSaving}
-            maxLength={120}
-            onChange={(event) => {
-              setName(event.target.value);
-              if (errorMessage !== null) {
-                setErrorMessage(null);
-              }
-            }}
-            placeholder={copy.namePlaceholder}
-            type="text"
-            value={name}
-          />
-        </label>
-        <label className="save-blueprint-field">
-          <span className="save-blueprint-label">{copy.descriptionLabel}</span>
-          <textarea
-            className="save-blueprint-textarea"
-            disabled={isSaving}
-            maxLength={500}
-            onChange={(event) => {
-              setDescription(event.target.value);
-            }}
-            placeholder={copy.descriptionPlaceholder}
-            rows={5}
-            value={description}
-          />
-        </label>
-        {errorMessage === null ? null : (
-          <p className="save-blueprint-error" role="alert">{errorMessage}</p>
-        )}
-        <div className="save-blueprint-actions">
-          <button
-            className="save-blueprint-secondary-button"
-            disabled={isSaving}
-            onClick={handleClose}
-            type="button"
-          >
-            {copy.cancel}
-          </button>
-          <button
-            className="save-blueprint-primary-button"
-            disabled={isSaving || !canSaveSelection}
-            type="submit"
-          >
-            {isSaving ? `${copy.save}...` : copy.save}
-          </button>
-        </div>
-      </form>
+      <div className="save-blueprint-dialog-content">
+        <form className="save-blueprint-form" onSubmit={(event) => {
+          void handleSubmit(event);
+        }}>
+          <div className="save-blueprint-form-content">
+            <label className="save-blueprint-field">
+              <span className="save-blueprint-label">{copy.nameLabel}</span>
+              <input
+                autoFocus
+                className="save-blueprint-input"
+                disabled={isSaving}
+                maxLength={120}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  if (errorMessage !== null) {
+                    setErrorMessage(null);
+                  }
+                }}
+                placeholder={copy.namePlaceholder}
+                type="text"
+                value={name}
+              />
+            </label>
+            <label className="save-blueprint-field save-blueprint-field-description">
+              <span className="save-blueprint-label">{copy.descriptionLabel}</span>
+              <textarea
+                className="save-blueprint-textarea"
+                disabled={isSaving}
+                maxLength={500}
+                onChange={(event) => {
+                  setDescription(event.target.value);
+                }}
+                placeholder={copy.descriptionPlaceholder}
+                rows={5}
+                value={description}
+              />
+            </label>
+            {errorMessage === null ? null : (
+              <p className="save-blueprint-error" role="alert">{errorMessage}</p>
+            )}
+          </div>
+          <div className="save-blueprint-actions">
+            <button
+              className="save-blueprint-secondary-button"
+              disabled={isSaving}
+              onClick={handleClose}
+              type="button"
+            >
+              {copy.cancel}
+            </button>
+            <button
+              className="save-blueprint-primary-button"
+              disabled={isSaving || !canSaveSelection}
+              type="submit"
+            >
+              {isSaving ? `${copy.save}...` : copy.save}
+            </button>
+          </div>
+        </form>
+      </div>
     </DialogShell>
   );
 });
