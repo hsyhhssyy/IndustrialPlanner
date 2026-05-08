@@ -129,6 +129,12 @@ export function createSimulationMutableRuntimeState(
     for (const [portRef, entry] of Object.entries(device.routing)) {
       routingCursors[`${deviceId}:${portRef}`] = entry.roundRobinSeed;
     }
+    for (const portId of device.portIds) {
+      const port = topology.ports[portId];
+      if (port !== undefined) {
+        routingCursors[`${port.deviceId}:${port.portGroupId}:${port.direction}:priority-${port.priorityGroup}`] ??= 0;
+      }
+    }
   }
 
   return {

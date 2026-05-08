@@ -26,6 +26,7 @@ import type {
   SimulationCompileDiagnostic,
   SimulationCountLimit,
   SimulationItemDomain,
+  SimulationNodeViewRole,
   SimulationPortDirection,
   SimulationPortKind,
   SimulationSlotType,
@@ -370,7 +371,7 @@ function compileWarehouseDevice(
     slotIds: slots.map((slot) => slot.id),
     inputPortIds: [],
     outputPortIds: [],
-    viewRole: "single-view",
+    viewRole: "input-view",
     groupOrder: 0,
   };
 
@@ -595,6 +596,11 @@ function compileStorageNodeSet(options: {
     slotType,
     slotIds,
     groupOrder: options.groupOrder,
+    viewRole: resolveSingleStorageNodeViewRole({
+      hasInputBinding: options.hasInputBinding,
+      hasOutputBinding: options.hasOutputBinding,
+      slotType,
+    }),
   }));
 
   return {
@@ -625,6 +631,22 @@ function resolveSplitStorageViewConfig(storageGroup: StorageSlotGroupDefinition)
     outputSlotType: "product",
     linkType,
   };
+}
+
+function resolveSingleStorageNodeViewRole(options: {
+  readonly hasInputBinding: boolean;
+  readonly hasOutputBinding: boolean;
+  readonly slotType: SimulationSlotType;
+}): SimulationNodeViewRole {
+  if (options.hasInputBinding) {
+    return "input-view";
+  }
+  if (options.hasOutputBinding) {
+    return "output-view";
+  }
+  return isProductSlotType(options.slotType) && !isIngredientSlotType(options.slotType)
+    ? "output-view"
+    : "input-view";
 }
 
 function createSplitStorageGroupNodeBinding(options: {
@@ -665,14 +687,14 @@ function createCompiledNode(options: {
   readonly slotType: SimulationSlotType;
   readonly slotIds: readonly string[];
   readonly groupOrder: number;
-  readonly viewRole?: "single-view" | "input-view" | "output-view";
+  readonly viewRole: SimulationNodeViewRole;
 }): CompiledSimulationNode {
   return {
     id: options.id,
     deviceId: options.deviceId,
     sourceStorageSlotGroupId: options.sourceStorageSlotGroupId,
     slotType: options.slotType,
-    viewRole: options.viewRole ?? "single-view",
+    viewRole: options.viewRole,
     slotIds: options.slotIds,
     inputPortIds: [],
     outputPortIds: [],
@@ -746,6 +768,7 @@ function addSyntheticNode(options: {
     slotType: options.slotType,
     slotIds: [slotId],
     groupOrder: options.groupOrder,
+    viewRole: options.bindDirection === "input" ? "input-view" : "output-view",
   }));
   options.slots.push({
     id: slotId,

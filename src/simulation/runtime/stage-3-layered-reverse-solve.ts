@@ -1,5 +1,7 @@
 import type {
+  CompiledSimulationDevice,
   CompiledSimulationNode,
+  CompiledSimulationPort,
   CompiledSimulationTopology,
   SimulationAcceptRule,
   SimulationCountLimit,
@@ -7,120 +9,208 @@ import type {
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 import {
   acceptsItem,
+  canOutputSlotProvideItem,
   findInputSlotForItem,
-  findOutputSlotForItem,
   moveOneItem,
+  resolveStorageSlotId,
 } from "./runtime-slot-access";
+
+interface SourceSelection {
+  readonly sourceSlotId: string;
+  readonly targetSlotId: string;
+  readonly itemType: string;
+}
 
 /**
  * 对应《仿真运行原理》§5.3 Tick 阶段 3 与 §8 分层逆向求解。
- * 算法从终端设备向上游分层遍历：先让输入 Node 产生 shadowPull，再让上游输出 Node
- * 响应 shadowPush 并执行真实移动。每次真实移动后，会重新求解目标输入 Node，保证链路在同
- * 一个 tick 内按“目标需要 -> 来源供给”的因果顺序传播。
+ * 从可接收的 input-view Node 作为第 1 层锚点开始，先求解 input-view 产生
+ * shadowPull，再沿入边向上游处理 output-view。严格物流设备在搜索过程中立即
+ * 穿透处理，非严格物流设备则等待其 output-view 的所有下游 input-view 已遍历。
  */
 export function solveTransferGraph(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): void {
-  const deviceLayers = buildReverseDeviceLayers(topology);
-  for (const layer of deviceLayers) {
-    for (const deviceId of layer) {
-      solveDeviceOutputs(topology, state, deviceId);
-      solveDeviceInputs(topology, state, deviceId);
+  const visitedNodeIds = new Set<string>();
+  let currentLayer = collectFirstLayerAnchors(topology, state, visitedNodeIds);
+
+  while (currentLayer.length > 0) {
+    const nextAnchors = new Map<string, CompiledSimulationNode>();
+
+    for (const node of currentLayer) {
+      processInputAnchor({
+        topology,
+        state,
+        node,
+        visitedNodeIds,
+        nextAnchors,
+      });
     }
+
+    currentLayer = sortInputAnchors(
+      topology,
+      [...nextAnchors.values()].filter((node) => !visitedNodeIds.has(node.id)),
+    );
   }
 }
 
-function solveDeviceInputs(
+function collectFirstLayerAnchors(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
-  deviceId: string,
-): void {
-  const device = topology.devices[deviceId];
+  visitedNodeIds: ReadonlySet<string>,
+): readonly CompiledSimulationNode[] {
+  return sortInputAnchors(
+    topology,
+    topology.ordering.nodeOrder
+      .map((nodeId) => topology.nodes[nodeId])
+      .filter((node): node is CompiledSimulationNode =>
+        node !== undefined
+        && node.viewRole === "input-view"
+        && !visitedNodeIds.has(node.id)
+        && inputNodeHasAnyCapacity(topology, state, node),
+      ),
+  );
+}
+
+function processInputAnchor(options: {
+  readonly topology: CompiledSimulationTopology;
+  readonly state: SimulationMutableRuntimeState;
+  readonly node: CompiledSimulationNode;
+  readonly visitedNodeIds: Set<string>;
+  readonly nextAnchors: Map<string, CompiledSimulationNode>;
+}): void {
+  if (options.visitedNodeIds.has(options.node.id)) {
+    return;
+  }
+
+  solveInputNode(options.topology, options.state, options.node);
+  markNodeVisited(options.state, options.visitedNodeIds, options.node);
+
+  for (const edgeId of getOrderedInputEdgeIds(options.topology, options.state, options.node)) {
+    const edge = options.topology.transferEdges[edgeId];
+    const sourceNode = edge === undefined ? undefined : options.topology.nodes[edge.sourceNodeId];
+    if (edge === undefined || sourceNode === undefined) {
+      continue;
+    }
+
+    searchUpstreamFromOutputNode({
+      topology: options.topology,
+      state: options.state,
+      outputNode: sourceNode,
+      visitedNodeIds: options.visitedNodeIds,
+      nextAnchors: options.nextAnchors,
+    });
+  }
+}
+
+function searchUpstreamFromOutputNode(options: {
+  readonly topology: CompiledSimulationTopology;
+  readonly state: SimulationMutableRuntimeState;
+  readonly outputNode: CompiledSimulationNode;
+  readonly visitedNodeIds: Set<string>;
+  readonly nextAnchors: Map<string, CompiledSimulationNode>;
+}): void {
+  if (options.outputNode.viewRole !== "output-view" || options.visitedNodeIds.has(options.outputNode.id)) {
+    return;
+  }
+
+  const device = options.topology.devices[options.outputNode.deviceId];
   if (device === undefined) {
     return;
   }
 
-  for (const nodeId of device.nodeIds) {
-    const node = topology.nodes[nodeId];
-    if (node === undefined || node.viewRole === "output-view") {
-      continue;
-    }
-    solveInputNode(topology, state, node);
-  }
-}
+  if (isStrictLogisticsDevice(device)) {
+    solveOutputNode(options.topology, options.state, options.outputNode);
+    markNodeVisited(options.state, options.visitedNodeIds, options.outputNode);
 
-function solveDeviceOutputs(
-  topology: CompiledSimulationTopology,
-  state: SimulationMutableRuntimeState,
-  deviceId: string,
-): void {
-  const device = topology.devices[deviceId];
-  if (device === undefined) {
-    return;
-  }
-
-  for (const nodeId of [...device.nodeIds].reverse()) {
-    const node = topology.nodes[nodeId];
-    if (node === undefined || node.viewRole === "input-view") {
-      continue;
+    const inputNode = getDeviceInputViewNodes(options.topology, device)[0];
+    if (inputNode === undefined || options.visitedNodeIds.has(inputNode.id)) {
+      return;
     }
 
-    let moved = true;
-    while (moved) {
-      moved = false;
-      for (const edgeId of getOrderedOutputEdgeIds(topology, state, node)) {
-        const edge = topology.transferEdges[edgeId];
-        const edgeState = state.transient.edges[edgeId];
-        if (edge === undefined || edgeState === undefined || edgeState.shadowPull !== "accept") {
-          continue;
-        }
-        if (edgeState.currentThroughCount >= resolvePerTickLimit(edge.count)) {
-          continue;
-        }
-
-        const itemType = edgeState.itemType;
-        if (itemType === null) {
-          continue;
-        }
-        const sourceSlotId = findOutputSlotForItem({ topology, state, node, itemType });
-        if (sourceSlotId === null || edgeState.targetSlotId === null) {
-          continue;
-        }
-        const ok = moveOneItem({
-          topology,
-          state,
-          sourceSlotId,
-          targetSlotId: edgeState.targetSlotId,
-          itemType,
+    solveInputNode(options.topology, options.state, inputNode);
+    markNodeVisited(options.state, options.visitedNodeIds, inputNode);
+    for (const edgeId of getOrderedInputEdgeIds(options.topology, options.state, inputNode)) {
+      const edge = options.topology.transferEdges[edgeId];
+      const sourceNode = edge === undefined ? undefined : options.topology.nodes[edge.sourceNodeId];
+      if (sourceNode !== undefined) {
+        searchUpstreamFromOutputNode({
+          topology: options.topology,
+          state: options.state,
+          outputNode: sourceNode,
+          visitedNodeIds: options.visitedNodeIds,
+          nextAnchors: options.nextAnchors,
         });
-        if (!ok) {
-          continue;
-        }
-
-        edgeState.shadowPush = "accept";
-        edgeState.sourceSlotId = sourceSlotId;
-        edgeState.amount += 1;
-        edgeState.currentThroughCount += 1;
-        // §8.2.3: 移动物品后将边的 shadowPull 与 shadowPush 置为 moved，
-        // 阻止本 tick 内同一条边被再次选中，防止存储箱一次性清空所有物品到传送带。
-        edgeState.shadowPull = "moved";
-        edgeState.shadowPush = "moved";
-        state.transient.nodes[node.id]?.acceptedOutputEdgeIds.push(edgeId);
-        state.transient.transfers.push({
-          edgeId,
-          sourceSlotId,
-          targetSlotId: edgeState.targetSlotId,
-          itemType,
-          amount: 1,
-        });
-
-        const targetNode = topology.nodes[edge.targetNodeId];
-        if (targetNode !== undefined) {
-          solveInputNode(topology, state, targetNode);
-        }
-        moved = true;
       }
+    }
+    return;
+  }
+
+  if (!allDownstreamInputNodesVisited(options.topology, options.outputNode, options.visitedNodeIds)) {
+    return;
+  }
+
+  solveOutputNode(options.topology, options.state, options.outputNode);
+  markNodeVisited(options.state, options.visitedNodeIds, options.outputNode);
+
+  for (const inputNode of getDeviceInputViewNodes(options.topology, device)) {
+    if (!options.visitedNodeIds.has(inputNode.id)) {
+      options.nextAnchors.set(inputNode.id, inputNode);
+    }
+  }
+}
+
+function solveOutputNode(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  node: CompiledSimulationNode,
+): void {
+  let moved = true;
+  while (moved) {
+    moved = false;
+    for (const edgeId of getOrderedOutputEdgeIds(topology, state, node)) {
+      const edge = topology.transferEdges[edgeId];
+      const edgeState = state.transient.edges[edgeId];
+      if (edge === undefined || edgeState === undefined || edgeState.shadowPull !== "accept") {
+        continue;
+      }
+      if (edgeState.currentThroughCount >= resolvePerTickLimit(edge.count)) {
+        continue;
+      }
+      if (edgeState.sourceSlotId === null || edgeState.targetSlotId === null || edgeState.itemType === null) {
+        continue;
+      }
+
+      const ok = moveOneItem({
+        topology,
+        state,
+        sourceSlotId: edgeState.sourceSlotId,
+        targetSlotId: edgeState.targetSlotId,
+        itemType: edgeState.itemType,
+      });
+      if (!ok) {
+        continue;
+      }
+
+      edgeState.shadowPush = "accept";
+      edgeState.amount += 1;
+      edgeState.currentThroughCount += 1;
+      edgeState.shadowPull = "moved";
+      edgeState.shadowPush = "moved";
+      pushUnique(state.transient.nodes[node.id]?.acceptedOutputEdgeIds, edgeId);
+      state.transient.transfers.push({
+        edgeId,
+        sourceSlotId: edgeState.sourceSlotId,
+        targetSlotId: edgeState.targetSlotId,
+        itemType: edgeState.itemType,
+        amount: 1,
+      });
+
+      const targetNode = topology.nodes[edge.targetNodeId];
+      if (targetNode !== undefined) {
+        solveInputNode(topology, state, targetNode);
+      }
+      moved = true;
     }
   }
 }
@@ -146,20 +236,24 @@ function solveInputNode(
     if (sourceNode === undefined) {
       continue;
     }
-    const itemType = selectAcceptedSourceItemType(topology, state, sourceNode, edge.acceptRule);
-    if (itemType === null) {
-      continue;
-    }
-    const targetSlotId = findInputSlotForItem({ topology, state, node, itemType });
-    if (targetSlotId === null) {
+
+    const selection = selectAcceptedSourceForEdge({
+      topology,
+      state,
+      sourceNode,
+      targetNode: node,
+      acceptRule: edge.acceptRule,
+    });
+    if (selection === null) {
       continue;
     }
 
     edgeState.shadowPull = "accept";
-    edgeState.targetSlotId = targetSlotId;
-    edgeState.itemType = itemType;
+    edgeState.sourceSlotId = selection.sourceSlotId;
+    edgeState.targetSlotId = selection.targetSlotId;
+    edgeState.itemType = selection.itemType;
     nodeState.result = "solved-run";
-    nodeState.acceptedInputEdgeIds.push(edgeId);
+    pushUnique(nodeState.acceptedInputEdgeIds, edgeId);
   }
 
   if (nodeState.result === "uncertain") {
@@ -167,26 +261,151 @@ function solveInputNode(
   }
 }
 
-function selectAcceptedSourceItemType(
-  topology: CompiledSimulationTopology,
-  state: SimulationMutableRuntimeState,
-  sourceNode: CompiledSimulationNode,
-  acceptRule: SimulationAcceptRule,
-): string | null {
-  const candidates = new Set<string>();
-  for (const slotId of sourceNode.slotIds) {
-    const slot = topology.slots[slotId];
-    const storageSlotId = state.persistent.shareAllTargetSlotIdBySourceSlotId[slotId] ?? slotId;
-    const itemType = state.persistent.slots[storageSlotId]?.itemType ?? slot?.lock ?? null;
-    if (itemType !== null) {
-      candidates.add(itemType);
+function selectAcceptedSourceForEdge(options: {
+  readonly topology: CompiledSimulationTopology;
+  readonly state: SimulationMutableRuntimeState;
+  readonly sourceNode: CompiledSimulationNode;
+  readonly targetNode: CompiledSimulationNode;
+  readonly acceptRule: SimulationAcceptRule;
+}): SourceSelection | null {
+  for (const sourceSlotId of getReadableSourceSlotIds(options.state, options.sourceNode)) {
+    const slot = options.topology.slots[sourceSlotId];
+    const storageSlotId = resolveStorageSlotId(options.state, sourceSlotId);
+    const itemType = options.state.persistent.slots[storageSlotId]?.itemType ?? slot?.lock ?? null;
+    if (slot === undefined || itemType === null || !acceptsItem(options.topology, options.acceptRule, itemType)) {
+      continue;
+    }
+    if (!canOutputSlotProvideItem({
+      topology: options.topology,
+      state: options.state,
+      sourceSlotId,
+      itemType,
+    })) {
+      continue;
+    }
+
+    const targetSlotId = findInputSlotForItem({
+      topology: options.topology,
+      state: options.state,
+      node: options.targetNode,
+      itemType,
+    });
+    if (targetSlotId !== null) {
+      return { sourceSlotId, targetSlotId, itemType };
     }
   }
 
-  return [...candidates].sort().find((itemType) =>
-    acceptsItem(topology, acceptRule, itemType)
-    && findOutputSlotForItem({ topology, state, node: sourceNode, itemType }) !== null,
-  ) ?? null;
+  return null;
+}
+
+function inputNodeHasAnyCapacity(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  node: CompiledSimulationNode,
+): boolean {
+  for (const slotId of node.slotIds) {
+    const slot = topology.slots[slotId];
+    const storageSlotId = resolveStorageSlotId(state, slotId);
+    const slotState = state.persistent.slots[storageSlotId];
+    if (slot === undefined || slotState === undefined) {
+      continue;
+    }
+
+    const sharedSlotIds = state.persistent.sharedCapacitySlotIdsBySlotId[slotId];
+    if (sharedSlotIds === undefined) {
+      if (slotState.count < slot.capacity) {
+        return true;
+      }
+      continue;
+    }
+
+    const occupiedStorageSlotIds = new Set<string>();
+    let occupied = 0;
+    for (const sharedSlotId of sharedSlotIds) {
+      const sharedStorageSlotId = resolveStorageSlotId(state, sharedSlotId);
+      if (occupiedStorageSlotIds.has(sharedStorageSlotId)) {
+        continue;
+      }
+      occupiedStorageSlotIds.add(sharedStorageSlotId);
+      occupied += state.persistent.slots[sharedStorageSlotId]?.count ?? 0;
+    }
+    if (occupied < (state.persistent.sharedCapacityLimitBySlotId[slotId] ?? slot.capacity)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function allDownstreamInputNodesVisited(
+  topology: CompiledSimulationTopology,
+  outputNode: CompiledSimulationNode,
+  visitedNodeIds: ReadonlySet<string>,
+): boolean {
+  for (const edgeId of getRawOutputEdgeIds(topology, outputNode)) {
+    const targetNodeId = topology.transferEdges[edgeId]?.targetNodeId;
+    if (targetNodeId !== undefined && !visitedNodeIds.has(targetNodeId)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function getDeviceInputViewNodes(
+  topology: CompiledSimulationTopology,
+  device: CompiledSimulationDevice,
+): readonly CompiledSimulationNode[] {
+  return device.nodeIds
+    .map((nodeId) => topology.nodes[nodeId])
+    .filter((node): node is CompiledSimulationNode => node !== undefined && node.viewRole === "input-view")
+    .sort((left, right) => left.groupOrder - right.groupOrder);
+}
+
+function isStrictLogisticsDevice(device: CompiledSimulationDevice): boolean {
+  return device.transportClass === "strict-belt" || device.transportClass === "strict-pipe";
+}
+
+function getReadableSourceSlotIds(
+  state: SimulationMutableRuntimeState,
+  sourceNode: CompiledSimulationNode,
+): readonly string[] {
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (const slotId of sourceNode.slotIds) {
+    const readableSlotIds = state.persistent.sharedCapacitySlotIdsBySlotId[slotId] ?? [slotId];
+    for (const readableSlotId of readableSlotIds) {
+      if (!seen.has(readableSlotId)) {
+        seen.add(readableSlotId);
+        result.push(readableSlotId);
+      }
+    }
+  }
+  return result;
+}
+
+function markNodeVisited(
+  state: SimulationMutableRuntimeState,
+  visitedNodeIds: Set<string>,
+  node: CompiledSimulationNode,
+): void {
+  visitedNodeIds.add(node.id);
+  const nodeState = state.transient.nodes[node.id];
+  if (nodeState !== undefined) {
+    nodeState.visited = true;
+  }
+}
+
+function sortInputAnchors(
+  topology: CompiledSimulationTopology,
+  nodes: readonly CompiledSimulationNode[],
+): readonly CompiledSimulationNode[] {
+  return [...nodes].sort((left, right) => {
+    const deviceOrder = topology.ordering.deviceOrder.indexOf(right.deviceId)
+      - topology.ordering.deviceOrder.indexOf(left.deviceId);
+    if (deviceOrder !== 0) {
+      return deviceOrder;
+    }
+    return left.groupOrder - right.groupOrder;
+  });
 }
 
 function resolvePerTickLimit(count: SimulationCountLimit): number {
@@ -198,7 +417,12 @@ function getOrderedInputEdgeIds(
   state: SimulationMutableRuntimeState,
   node: CompiledSimulationNode,
 ): readonly string[] {
-  return applyRoutingCursor(topology, state, node.inputPortIds.flatMap((portId) => getPortInputEdgeIds(topology, portId)));
+  return getOrderedEdgeIdsForPorts({
+    topology,
+    state,
+    portIds: node.inputPortIds,
+    edgeSelector: getPortInputEdgeIds,
+  });
 }
 
 function getOrderedOutputEdgeIds(
@@ -206,7 +430,60 @@ function getOrderedOutputEdgeIds(
   state: SimulationMutableRuntimeState,
   node: CompiledSimulationNode,
 ): readonly string[] {
-  return applyRoutingCursor(topology, state, node.outputPortIds.flatMap((portId) => getPortOutputEdgeIds(topology, portId)));
+  return getOrderedEdgeIdsForPorts({
+    topology,
+    state,
+    portIds: node.outputPortIds,
+    edgeSelector: getPortOutputEdgeIds,
+  });
+}
+
+function getOrderedEdgeIdsForPorts(options: {
+  readonly topology: CompiledSimulationTopology;
+  readonly state: SimulationMutableRuntimeState;
+  readonly portIds: readonly string[];
+  readonly edgeSelector: (topology: CompiledSimulationTopology, portId: string) => readonly string[];
+}): readonly string[] {
+  return getOrderedPorts(options.topology, options.state, options.portIds)
+    .flatMap((port) => options.edgeSelector(options.topology, port.id));
+}
+
+function getOrderedPorts(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  portIds: readonly string[],
+): readonly CompiledSimulationPort[] {
+  const ports = portIds
+    .map((portId) => topology.ports[portId])
+    .filter((port): port is CompiledSimulationPort => port !== undefined)
+    .sort(comparePortsForRouting);
+  const priorityGroups = [...new Set(ports.map((port) => port.priorityGroup))].sort((left, right) => left - right);
+  const ordered: CompiledSimulationPort[] = [];
+  for (const priorityGroup of priorityGroups) {
+    const groupPorts = ports.filter((port) => port.priorityGroup === priorityGroup);
+    const cursor = state.persistent.routingCursors[getRoutingCursorGroupKey(groupPorts[0])] ?? 0;
+    const normalizedCursor = groupPorts.length === 0 ? 0 : ((cursor % groupPorts.length) + groupPorts.length) % groupPorts.length;
+    ordered.push(...groupPorts.slice(normalizedCursor), ...groupPorts.slice(0, normalizedCursor));
+  }
+  return ordered;
+}
+
+function comparePortsForRouting(left: CompiledSimulationPort, right: CompiledSimulationPort): number {
+  return left.priorityGroup - right.priorityGroup
+    || left.roundRobinSeed - right.roundRobinSeed
+    || left.order - right.order
+    || left.id.localeCompare(right.id);
+}
+
+function getRoutingCursorGroupKey(port: CompiledSimulationPort | undefined): string {
+  if (port === undefined) {
+    return "unknown";
+  }
+  return `${port.deviceId}:${port.portGroupId}:${port.direction}:priority-${port.priorityGroup}`;
+}
+
+function getRawOutputEdgeIds(topology: CompiledSimulationTopology, node: CompiledSimulationNode): readonly string[] {
+  return node.outputPortIds.flatMap((portId) => getPortOutputEdgeIds(topology, portId));
 }
 
 function getPortInputEdgeIds(topology: CompiledSimulationTopology, portId: string): readonly string[] {
@@ -217,75 +494,8 @@ function getPortOutputEdgeIds(topology: CompiledSimulationTopology, portId: stri
   return topology.ordering.edgeOrder.filter((edgeId) => topology.transferEdges[edgeId]?.sourcePortId === portId);
 }
 
-function applyRoutingCursor(
-  topology: CompiledSimulationTopology,
-  state: SimulationMutableRuntimeState,
-  edgeIds: readonly string[],
-): readonly string[] {
-  if (edgeIds.length <= 1) {
-    return edgeIds;
+function pushUnique(values: string[] | undefined, value: string): void {
+  if (values !== undefined && !values.includes(value)) {
+    values.push(value);
   }
-
-  const firstEdge = topology.transferEdges[edgeIds[0] ?? ""];
-  const portId = firstEdge?.targetPortId ?? firstEdge?.sourcePortId;
-  const port = portId === undefined ? undefined : topology.ports[portId];
-  const cursorKey = port === undefined ? null : `${port.deviceId}:${port.portGroupId}.${port.portDefinitionId}`;
-  const cursor = cursorKey === null ? 0 : state.persistent.routingCursors[cursorKey] ?? 0;
-  const normalizedCursor = ((cursor % edgeIds.length) + edgeIds.length) % edgeIds.length;
-  return [...edgeIds.slice(normalizedCursor), ...edgeIds.slice(0, normalizedCursor)];
-}
-
-function buildReverseDeviceLayers(topology: CompiledSimulationTopology): readonly (readonly string[])[] {
-  const incomingDeviceIdsByDeviceId = new Map<string, Set<string>>();
-  const outgoingEdgeCountByDeviceId = new Map<string, number>();
-  for (const deviceId of topology.ordering.deviceOrder) {
-    incomingDeviceIdsByDeviceId.set(deviceId, new Set());
-    outgoingEdgeCountByDeviceId.set(deviceId, 0);
-  }
-
-  for (const edge of Object.values(topology.transferEdges)) {
-    const sourceDeviceId = topology.nodes[edge.sourceNodeId]?.deviceId;
-    const targetDeviceId = topology.nodes[edge.targetNodeId]?.deviceId;
-    if (sourceDeviceId === undefined || targetDeviceId === undefined || sourceDeviceId === targetDeviceId) {
-      continue;
-    }
-    incomingDeviceIdsByDeviceId.get(targetDeviceId)?.add(sourceDeviceId);
-    outgoingEdgeCountByDeviceId.set(sourceDeviceId, (outgoingEdgeCountByDeviceId.get(sourceDeviceId) ?? 0) + 1);
-  }
-
-  const visited = new Set<string>();
-  const layers: string[][] = [];
-  let currentLayer = topology.ordering.deviceOrder
-    .filter((deviceId) => (outgoingEdgeCountByDeviceId.get(deviceId) ?? 0) === 0)
-    .reverse();
-
-  while (currentLayer.length > 0) {
-    const layer = currentLayer.filter((deviceId) => !visited.has(deviceId));
-    if (layer.length === 0) {
-      break;
-    }
-    layers.push(layer);
-    for (const deviceId of layer) {
-      visited.add(deviceId);
-    }
-
-    const nextLayerSet = new Set<string>();
-    for (const deviceId of layer) {
-      for (const upstreamDeviceId of incomingDeviceIdsByDeviceId.get(deviceId) ?? []) {
-        if (!visited.has(upstreamDeviceId)) {
-          nextLayerSet.add(upstreamDeviceId);
-        }
-      }
-    }
-    currentLayer = [...nextLayerSet].sort((left, right) =>
-      topology.ordering.deviceOrder.indexOf(right) - topology.ordering.deviceOrder.indexOf(left),
-    );
-  }
-
-  const remaining = topology.ordering.deviceOrder.filter((deviceId) => !visited.has(deviceId)).reverse();
-  if (remaining.length > 0) {
-    layers.push(remaining);
-  }
-
-  return layers;
 }

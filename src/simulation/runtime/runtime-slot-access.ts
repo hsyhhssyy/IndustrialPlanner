@@ -136,6 +136,23 @@ export function findOutputSlotForItem(options: {
   return null;
 }
 
+export function canOutputSlotProvideItem(options: {
+  topology: CompiledSimulationTopology;
+  state: SimulationMutableRuntimeState;
+  sourceSlotId: string;
+  itemType: string;
+}): boolean {
+  const slot = options.topology.slots[options.sourceSlotId];
+  const storageSlotId = resolveStorageSlotId(options.state, options.sourceSlotId);
+  const slotState = options.state.persistent.slots[storageSlotId];
+  const itemType = slotState?.itemType ?? slot?.lock ?? null;
+  if (slot === undefined || slotState === undefined || itemType !== options.itemType) {
+    return false;
+  }
+
+  return slot.ignoreStock || slotState.count - getReservedAmount(options.state, storageSlotId) > 0;
+}
+
 export function moveOneItem(options: {
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
@@ -155,6 +172,15 @@ export function moveOneItem(options: {
     || sourceState === undefined
     || targetState === undefined
   ) {
+    return false;
+  }
+
+  if (!canOutputSlotProvideItem({
+    topology: options.topology,
+    state: options.state,
+    sourceSlotId: options.sourceSlotId,
+    itemType: options.itemType,
+  })) {
     return false;
   }
 
