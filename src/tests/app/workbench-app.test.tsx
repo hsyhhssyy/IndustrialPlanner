@@ -55,6 +55,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   hypergryphImmediateMarquee: false,
   hypergryphSelectionRightDockSync: true,
   hypergryphInspectorOpenOnSecondClick: false,
+  gameUseSimplifiedDeviceIcons: false,
   gameUseInspectorPanel: false,
   gameShowHotkeys: false,
   gameAlwaysShowGridLines: true,
@@ -2648,6 +2649,72 @@ describe("WorkbenchApp", () => {
       JSON.stringify({
         ...DEFAULT_APP_SETTINGS_STORAGE,
         gameAlwaysShowGridLines: false,
+      }),
+    );
+  });
+
+  it("forces grass off and grid on when simplified device icons are enabled", () => {
+    localStorage.setItem(
+      APP_SETTINGS_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULT_APP_SETTINGS_STORAGE,
+        gameAlwaysShowGridLines: false,
+        showGrassBackground: true,
+      }),
+    );
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const settingsButton = container.querySelector(
+      ".toolbar-rail-utility .rail-button:last-child",
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      settingsButton?.click();
+    });
+
+    const simplifiedDeviceIconsToggle = container.querySelector(
+      'input[name="game-use-simplified-device-icons"]',
+    ) as HTMLInputElement | null;
+    const alwaysShowGridLinesToggle = container.querySelector(
+      'input[name="game-always-show-grid-lines"]',
+    ) as HTMLInputElement | null;
+    const showGrassBackgroundToggle = container.querySelector(
+      'input[name="game-show-grass-background"]',
+    ) as HTMLInputElement | null;
+
+    expect(simplifiedDeviceIconsToggle).not.toBeNull();
+    expect(alwaysShowGridLinesToggle).not.toBeNull();
+    expect(showGrassBackgroundToggle).not.toBeNull();
+    expect(simplifiedDeviceIconsToggle?.checked).toBe(false);
+    expect(alwaysShowGridLinesToggle?.checked).toBe(false);
+    expect(alwaysShowGridLinesToggle?.disabled).toBe(false);
+    expect(showGrassBackgroundToggle?.checked).toBe(true);
+    expect(showGrassBackgroundToggle?.disabled).toBe(false);
+
+    act(() => {
+      simplifiedDeviceIconsToggle?.click();
+    });
+
+    expect(appHost.state.settings.gameUseSimplifiedDeviceIcons).toBe(true);
+    expect(appHost.state.settings.gameAlwaysShowGridLines).toBe(true);
+    expect(appHost.state.settings.showGrassBackground).toBe(false);
+    expect(simplifiedDeviceIconsToggle?.checked).toBe(true);
+    expect(alwaysShowGridLinesToggle?.checked).toBe(true);
+    expect(alwaysShowGridLinesToggle?.disabled).toBe(true);
+    expect(showGrassBackgroundToggle?.checked).toBe(false);
+    expect(showGrassBackgroundToggle?.disabled).toBe(true);
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        ...DEFAULT_APP_SETTINGS_STORAGE,
+        gameUseSimplifiedDeviceIcons: true,
+        gameAlwaysShowGridLines: true,
+        showGrassBackground: false,
       }),
     );
   });

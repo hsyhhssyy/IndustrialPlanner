@@ -8,17 +8,26 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { observer } from "mobx-react-lite";
+import LucideChevronLeft from "~icons/lucide/chevron-left";
+import LucideFolder from "~icons/lucide/folder";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { WorkbenchBlueprintPreviewController } from "@/app/shell/state/blueprint-preview-dialog-state";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
-import type {
-  BlueprintPreviewHandle,
-  BlueprintPreviewViewport,
-} from "@/domain/renderer";
-import type { BlueprintLibraryRecord } from "@/shared/blueprints/blueprint-library";
-import { deleteBlueprintDocument } from "@/shared/storage/blueprint-storage";
+import type { BlueprintPreviewHandle, BlueprintPreviewViewport } from "@/domain/renderer";
+import {
+  createEmptyBlueprintLibraryDirectory,
+  type BlueprintLibraryDirectoryListing,
+  type BlueprintLibraryFolder,
+  type BlueprintLibraryRecord,
+} from "@/shared/blueprints/blueprint-library";
+import {
+  deleteBlueprintDocument,
+  listBlueprintDirectory,
+  readBlueprintFolder,
+  saveBlueprintDocument,
+} from "@/shared/storage/blueprint-storage";
 
 const DEFAULT_BLUEPRINT_PREVIEW_VIEWPORT: BlueprintPreviewViewport = {
   zoom: 1,
@@ -150,6 +159,59 @@ function mountBlueprintPreviewCanvas(
   host.replaceChildren(canvas);
 }
 
+function formatBlueprintFolderPath(options: {
+  readonly rootLabel: string;
+  readonly folderStack: readonly BlueprintLibraryFolder[];
+}): {
+  readonly displayLabel: string;
+  readonly fullLabel: string;
+} {
+  if (options.folderStack.length === 0) {
+    return {
+      displayLabel: options.rootLabel,
+      fullLabel: options.rootLabel,
+    };
+  }
+
+  const fullLabel = [options.rootLabel, ...options.folderStack.map((folder) => folder.name)].join(" / ");
+
+  if (options.folderStack.length === 1) {
+    return {
+      displayLabel: fullLabel,
+      fullLabel,
+    };
+  }
+
+  const currentFolder = options.folderStack.at(-1);
+
+  return {
+    displayLabel: `${options.rootLabel} / … / ${currentFolder?.name ?? ""}`,
+    fullLabel,
+  };
+}
+
+async function resolveBlueprintFolderStack(
+  parentFolderId: string | null,
+): Promise<BlueprintLibraryFolder[]> {
+  const folderStack: BlueprintLibraryFolder[] = [];
+  const visitedFolderIds = new Set<string>();
+  let currentFolderId = parentFolderId;
+
+  while (currentFolderId !== null && !visitedFolderIds.has(currentFolderId)) {
+    visitedFolderIds.add(currentFolderId);
+    const folder = await readBlueprintFolder(currentFolderId);
+
+    if (folder === null) {
+      break;
+    }
+
+    folderStack.unshift(folder);
+    currentFolderId = folder.parentFolderId;
+  }
+
+  return folderStack;
+}
+
 export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   appHost,
   controller,
@@ -176,6 +238,8 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   const previewCanvasHostRef = useRef<HTMLDivElement | null>(null);
   const previewHandleRef = useRef<BlueprintPreviewHandle | null>(null);
   const previewViewportRef = useRef<BlueprintPreviewViewport>(DEFAULT_BLUEPRINT_PREVIEW_VIEWPORT);
+  const moveFolderInitializationRequestIdRef = useRef(0);
+  const moveDirectoryRequestIdRef = useRef(0);
   const dragStateRef = useRef<{
     pointerId: number;
     clientX: number;
@@ -187,15 +251,185 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   });
   const [isDeleteConfirming, setIsDeleteConfirming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isMoveMode, setIsMoveMode] = useState(false);
+  const [isMoveLoading, setIsMoveLoading] = useState(false);
+  const [isMovePickerReady, setIsMovePickerReady] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+  const [moveErrorMessage, setMoveErrorMessage] = useState<string | null>(null);
+  const [moveFolderStack, setMoveFolderStack] = useState<BlueprintLibraryFolder[]>([]);
+  const [moveDirectoryListing, setMoveDirectoryListing] = useState<BlueprintLibraryDirectoryListing>(
+    createEmptyBlueprintLibraryDirectory(null),
+  );
   const useImmersiveShell = isPhoneLayout
     || (dialogState.maximized && shouldUseImmersiveMaximizedDialog(appHost.state.screenProfile));
+  const currentMoveFolder = moveFolderStack.length > 0 ? moveFolderStack[moveFolderStack.length - 1] ?? null : null;
+  const currentMoveFolderId = currentMoveFolder?.folderId ?? null;
+  const copy = appHost.state.settings.locale === "zh-CN"
+    ? {
+      title: "蓝图预览",
+      close: "关闭",
+      maximize: "最大化",
+      restore: "还原",
+      previewTitle: "蓝图预览",
+      previewHint: "布局总览",
+      place: "放置",
+      placeHint: "将当前蓝图放置到场景",
+      version: "版本",
+      base: "地图",
+      entities: "实体数",
+      links: "连线数",
+      footprint: "预估范围",
+      boundingBox: "包围盒范围",
+      anchor: "初始坐标",
+      updatedAt: "更新时间",
+      noDescription: "暂无描述",
+      rendererNote: "蓝图信息",
+      delete: "删除",
+      deleteConfirm: "确认删除",
+      deleteCancel: "取消",
+      deleteFailed: "删除蓝图失败，请检查浏览器存储是否可用。",
+      deleteHint: "将当前蓝图移入已删除列表",
+      deleting: "删除中...",
+      move: "移动",
+      moveHint: "将当前蓝图移动到其他文件夹",
+      moveCancel: "取消移动",
+      moveConfirm: "移动",
+      moveFailed: "移动蓝图失败，请检查浏览器存储是否可用。",
+      moveLoading: "正在读取目录...",
+      moving: "移动中...",
+      moveTargetFolder: "目标文件夹",
+      moveBack: "返回上一级",
+      moveEmpty: "当前目录下没有子文件夹，可以直接移动到这里。",
+      moveCurrentFolderNote: "当前蓝图已经位于这个目录。",
+    }
+    : {
+      title: "Blueprint Preview",
+      previewTitle: "Blueprint Preview",
+      previewHint: "Layout Overview",
+      place: "Place",
+      placeHint: "Place this blueprint into the scene",
+      version: "Version",
+      base: "Base",
+      entities: "Entities",
+      links: "Links",
+      footprint: "Footprint",
+      boundingBox: "Bounding Box",
+      anchor: "Anchor",
+      updatedAt: "Updated",
+      noDescription: "No description",
+      rendererNote: "Blueprint Information",
+      delete: "Delete",
+      deleteConfirm: "Confirm Delete",
+      deleteCancel: "Cancel",
+      deleteFailed: "Failed to delete the blueprint. Check browser storage availability.",
+      deleteHint: "Move this blueprint into deleted items",
+      deleting: "Deleting...",
+      move: "Move",
+      moveHint: "Move this blueprint to another folder",
+      moveCancel: "Cancel Move",
+      moveConfirm: "Move Here",
+      moveFailed: "Failed to move the blueprint. Check browser storage availability.",
+      moveLoading: "Loading folders...",
+      moving: "Moving...",
+      moveTargetFolder: "Target Folder",
+      moveBack: "Up One Level",
+      moveEmpty: "This folder has no subfolders. You can move the blueprint here.",
+      moveCurrentFolderNote: "This blueprint is already in the current folder.",
+    };
+  const rootFolderLabel = t("workbench.blueprint.rootFolder");
 
   useEffect(() => {
     setIsDeleteConfirming(false);
     setIsDeleting(false);
     setDeleteErrorMessage(null);
+    setIsMoveMode(false);
+    setIsMoveLoading(false);
+    setIsMovePickerReady(false);
+    setIsMoving(false);
+    setMoveErrorMessage(null);
+    setMoveFolderStack([]);
+    setMoveDirectoryListing(createEmptyBlueprintLibraryDirectory(null));
   }, [controller.canDelete, dialogState.visible, record?.blueprintId]);
+
+  useEffect(() => {
+    if (!dialogState.visible || record === null || !controller.canDelete || !isMoveMode) {
+      return;
+    }
+
+    let cancelled = false;
+    const requestId = moveFolderInitializationRequestIdRef.current + 1;
+    moveFolderInitializationRequestIdRef.current = requestId;
+
+    setIsMoveLoading(true);
+    setIsMovePickerReady(false);
+    setMoveErrorMessage(null);
+
+    void resolveBlueprintFolderStack(record.parentFolderId)
+      .then((folderStack) => {
+        if (cancelled || moveFolderInitializationRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        setMoveFolderStack(folderStack);
+        setMoveDirectoryListing(
+          createEmptyBlueprintLibraryDirectory(folderStack.at(-1)?.folderId ?? null),
+        );
+        setIsMovePickerReady(true);
+      })
+      .finally(() => {
+        if (cancelled || moveFolderInitializationRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        setIsMoveLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [controller.canDelete, dialogState.visible, isMoveMode, record]);
+
+  useEffect(() => {
+    if (!dialogState.visible || record === null || !controller.canDelete || !isMoveMode || !isMovePickerReady) {
+      return;
+    }
+
+    let cancelled = false;
+    const requestId = moveDirectoryRequestIdRef.current + 1;
+    moveDirectoryRequestIdRef.current = requestId;
+
+    setIsMoveLoading(true);
+    setMoveErrorMessage(null);
+    setMoveDirectoryListing(createEmptyBlueprintLibraryDirectory(currentMoveFolderId));
+
+    void listBlueprintDirectory(currentMoveFolderId)
+      .then((listing) => {
+        if (cancelled || moveDirectoryRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        setMoveDirectoryListing(listing);
+      })
+      .catch(() => {
+        if (cancelled || moveDirectoryRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        setMoveErrorMessage(copy.moveFailed);
+      })
+      .finally(() => {
+        if (cancelled || moveDirectoryRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        setIsMoveLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [controller.canDelete, copy.moveFailed, currentMoveFolderId, dialogState.visible, isMoveMode, isMovePickerReady, record]);
 
   const syncPreviewViewport = (viewport: Partial<BlueprintPreviewViewport>) => {
     previewViewportRef.current = {
@@ -361,58 +595,13 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   if (!dialogState.visible || record === null) {
     return null;
   }
-
-  const copy = appHost.state.settings.locale === "zh-CN"
-    ? {
-      title: "蓝图预览",
-      close: "关闭",
-      maximize: "最大化",
-      restore: "还原",
-      previewTitle: "蓝图预览",
-      previewHint: "布局总览",
-      place: "放置",
-      placeHint: "将当前蓝图放置到场景",
-      version: "版本",
-      base: "地图",
-      entities: "实体数",
-      links: "连线数",
-      footprint: "预估范围",
-      boundingBox: "包围盒范围",
-      anchor: "初始坐标",
-      updatedAt: "更新时间",
-      noDescription: "暂无描述",
-      rendererNote: "蓝图信息",
-      delete: "删除",
-      deleteConfirm: "确认删除",
-      deleteCancel: "取消",
-      deleteFailed: "删除蓝图失败，请检查浏览器存储是否可用。",
-      deleteHint: "将当前蓝图移入已删除列表",
-      deleting: "删除中...",
-    }
-    : {
-      title: "Blueprint Preview",
-      previewTitle: "Blueprint Preview",
-      previewHint: "Layout Overview",
-      place: "Place",
-      placeHint: "Place this blueprint into the scene",
-      version: "Version",
-      base: "Base",
-      entities: "Entities",
-      links: "Links",
-      footprint: "Footprint",
-      boundingBox: "Bounding Box",
-      anchor: "Anchor",
-      updatedAt: "Updated",
-      noDescription: "No description",
-      rendererNote: "Blueprint Information",
-      delete: "Delete",
-      deleteConfirm: "Confirm Delete",
-      deleteCancel: "Cancel",
-      deleteFailed: "Failed to delete the blueprint. Check browser storage availability.",
-      deleteHint: "Move this blueprint into deleted items",
-      deleting: "Deleting...",
-    };
   const footprint = resolveBlueprintFootprint(record);
+  const moveFolderPath = formatBlueprintFolderPath({
+    rootLabel: rootFolderLabel,
+    folderStack: moveFolderStack,
+  });
+  const isMoveTargetCurrent = currentMoveFolderId === record.parentFolderId;
+  const activeErrorMessage = moveErrorMessage ?? deleteErrorMessage;
   // AI-REMOVED 2026-05-09:
   // Reason: 用户要求去掉画布叠层，并且不要再找地方安排这些信息。
   // Trigger: 当前预览面板底部叠层继续显示“布局总览”、实体数、连线数、预估范围、初始坐标、地图、更新时间，和最新布局要求冲突。
@@ -494,8 +683,47 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       setIsDeleting(false);
     }
   };
+  const handleOpenMoveMode = () => {
+    if (!controller.canDelete) {
+      return;
+    }
+
+    setIsDeleteConfirming(false);
+    setDeleteErrorMessage(null);
+    setMoveErrorMessage(null);
+    setIsMoveMode(true);
+  };
+  const handleMoveSubmit = async () => {
+    if (!controller.canDelete || isMoveLoading || isMoving || isMoveTargetCurrent) {
+      return;
+    }
+
+    setIsMoving(true);
+    setMoveErrorMessage(null);
+
+    try {
+      const movedRecord = await saveBlueprintDocument(record, {
+        parentFolderId: currentMoveFolderId,
+      });
+
+      if (movedRecord === null) {
+        setMoveErrorMessage(copy.moveFailed);
+        return;
+      }
+
+      controller.markMoved();
+      controller.close();
+    } finally {
+      setIsMoving(false);
+    }
+  };
   const showDeleteAction = controller.canDelete;
-  const hasDualActions = showDeleteAction || isDeleteConfirming;
+  const showMoveAction = controller.canDelete;
+  const actionsClassName = isDeleteConfirming
+    ? "blueprint-preview-actions is-dual-action"
+    : showMoveAction && showDeleteAction
+      ? "blueprint-preview-actions is-triple-action"
+      : "blueprint-preview-actions";
   const handlePreviewWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
@@ -669,83 +897,185 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                 <p aria-label={copy.rendererNote} className="blueprint-preview-renderer-note">{rendererSummary}</p>
             */}
           </div>
-          <div className="blueprint-preview-summary-card">
-            <div className="blueprint-preview-header">
-              <div className="blueprint-preview-header-copy">
-                <h3>{record.name}</h3>
-                <p>{record.description.length > 0 ? record.description : copy.noDescription}</p>
-              </div>
-            </div>
-            {deleteErrorMessage === null ? null : (
-              <p className="save-blueprint-error" role="alert">{deleteErrorMessage}</p>
-            )}
-            <div className={hasDualActions
-              ? "blueprint-preview-actions is-dual-action"
-              : "blueprint-preview-actions"}
-            >
-              {isDeleteConfirming ? (
-                <>
-                  <button
-                    className="save-blueprint-secondary-button"
-                    data-ui-button-id="blueprint-preview-delete-cancel-button"
-                    disabled={isDeleting}
-                    onClick={() => {
-                      setIsDeleteConfirming(false);
-                      setDeleteErrorMessage(null);
-                    }}
-                    type="button"
-                  >
-                    {copy.deleteCancel}
-                  </button>
-                  <button
-                    className="save-blueprint-primary-button blueprint-preview-danger-button is-confirm"
-                    data-ui-button-id="blueprint-preview-delete-confirm-button"
-                    disabled={isDeleting}
-                    onClick={() => {
-                      void handleDeleteButtonClick();
-                    }}
-                    type="button"
-                  >
-                    {isDeleting ? copy.deleting : copy.deleteConfirm}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    className="save-blueprint-primary-button"
-                    data-ui-button-id="blueprint-preview-place-button"
-                    onClick={handlePlaceButtonClick}
-                    onPointerDown={preventTouchPointerCompatibilityMouseEvents}
-                    onPointerUp={handlePlaceButtonPointerUp}
-                    title={copy.placeHint}
-                    type="button"
-                  >
-                    {copy.place}
-                  </button>
-                  {showDeleteAction ? (
+          <div className={isMoveMode
+            ? "blueprint-preview-summary-card is-folder-picker-mode"
+            : "blueprint-preview-summary-card"}
+          >
+            {isMoveMode ? (
+              <section
+                aria-label={copy.moveTargetFolder}
+                className="blueprint-preview-folder-picker-card"
+              >
+                {activeErrorMessage === null ? null : (
+                  <p className="save-blueprint-error" role="alert">{activeErrorMessage}</p>
+                )}
+                <div className="blueprint-preview-folder-picker-toolbar">
+                  {currentMoveFolder === null ? null : (
                     <button
-                      className="save-blueprint-secondary-button blueprint-preview-danger-button"
-                      data-ui-button-id="blueprint-preview-delete-button"
+                      aria-label={copy.moveBack}
+                      className="blueprint-utility-button blueprint-preview-folder-picker-back-button"
+                      data-ui-button-id="blueprint-preview-move-back-button"
+                      disabled={isMoveLoading || isMoving}
                       onClick={() => {
-                        void handleDeleteButtonClick();
+                        setMoveErrorMessage(null);
+                        setMoveFolderStack((currentValue) => currentValue.slice(0, -1));
                       }}
-                      title={copy.deleteHint}
                       type="button"
                     >
-                      {copy.delete}
+                      <LucideChevronLeft className="button-icon-image" />
                     </button>
-                  ) : null}
-                </>
-              )}
-            </div>
-            <dl className="blueprint-preview-metadata">
-              <dt>{copy.entities}</dt>
-              <dd>{record.entityOrder.length}</dd>
-              <dt>{copy.version}</dt>
-              <dd>{record.version}</dd>
-              <dt>{copy.boundingBox}</dt>
-              <dd>{footprint.width} x {footprint.height}</dd>
-            </dl>
+                  )}
+                  <span
+                    className="blueprint-preview-folder-picker-path"
+                    data-blueprint-preview-move-breadcrumb
+                    title={moveFolderPath.fullLabel}
+                  >
+                    {moveFolderPath.displayLabel}
+                  </span>
+                </div>
+                {isMoveLoading ? (
+                  <p className="blueprint-preview-footnote">{copy.moveLoading}</p>
+                ) : moveDirectoryListing.folders.length === 0 ? (
+                  <p className="blueprint-preview-footnote">{copy.moveEmpty}</p>
+                ) : (
+                  <div className="blueprint-preview-folder-picker-list">
+                    {moveDirectoryListing.folders.map((folder) => (
+                      <button
+                        className="save-blueprint-secondary-button blueprint-preview-folder-picker-entry"
+                        data-blueprint-preview-folder-id={folder.folderId}
+                        key={folder.folderId}
+                        onClick={() => {
+                          setMoveErrorMessage(null);
+                          setMoveFolderStack((currentValue) => [...currentValue, folder]);
+                        }}
+                        title={folder.name}
+                        type="button"
+                      >
+                        <span aria-hidden="true" className="button-icon blueprint-preview-folder-picker-entry-icon">
+                          <LucideFolder className="button-icon-image" />
+                        </span>
+                        <span className="blueprint-preview-folder-picker-entry-label">{folder.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {isMoveTargetCurrent ? (
+                  <p className="blueprint-preview-footnote">{copy.moveCurrentFolderNote}</p>
+                ) : null}
+                <div className="blueprint-preview-actions is-dual-action blueprint-preview-folder-picker-actions">
+                  <button
+                    className="save-blueprint-secondary-button"
+                    data-ui-button-id="blueprint-preview-move-cancel-button"
+                    disabled={isMoveLoading || isMoving}
+                    onClick={() => {
+                      setIsMoveMode(false);
+                      setMoveErrorMessage(null);
+                    }}
+                    type="button"
+                  >
+                    {copy.moveCancel}
+                  </button>
+                  <button
+                    className="save-blueprint-primary-button"
+                    data-ui-button-id="blueprint-preview-move-confirm-button"
+                    disabled={isMoveLoading || isMoving || isMoveTargetCurrent}
+                    onClick={() => {
+                      void handleMoveSubmit();
+                    }}
+                    type="button"
+                  >
+                    {isMoving ? copy.moving : copy.moveConfirm}
+                  </button>
+                </div>
+              </section>
+            ) : (
+              <>
+                <div className="blueprint-preview-header">
+                  <div className="blueprint-preview-header-copy">
+                    <h3>{record.name}</h3>
+                    <p>{record.description.length > 0 ? record.description : copy.noDescription}</p>
+                  </div>
+                </div>
+                {activeErrorMessage === null ? null : (
+                  <p className="save-blueprint-error" role="alert">{activeErrorMessage}</p>
+                )}
+                <div className={actionsClassName}>
+                  {isDeleteConfirming ? (
+                    <>
+                      <button
+                        className="save-blueprint-secondary-button"
+                        data-ui-button-id="blueprint-preview-delete-cancel-button"
+                        disabled={isDeleting}
+                        onClick={() => {
+                          setIsDeleteConfirming(false);
+                          setDeleteErrorMessage(null);
+                        }}
+                        type="button"
+                      >
+                        {copy.deleteCancel}
+                      </button>
+                      <button
+                        className="save-blueprint-primary-button blueprint-preview-danger-button is-confirm"
+                        data-ui-button-id="blueprint-preview-delete-confirm-button"
+                        disabled={isDeleting}
+                        onClick={() => {
+                          void handleDeleteButtonClick();
+                        }}
+                        type="button"
+                      >
+                        {isDeleting ? copy.deleting : copy.deleteConfirm}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        className="save-blueprint-primary-button"
+                        data-ui-button-id="blueprint-preview-place-button"
+                        onClick={handlePlaceButtonClick}
+                        onPointerDown={preventTouchPointerCompatibilityMouseEvents}
+                        onPointerUp={handlePlaceButtonPointerUp}
+                        title={copy.placeHint}
+                        type="button"
+                      >
+                        {copy.place}
+                      </button>
+                      {showMoveAction ? (
+                        <button
+                          className="save-blueprint-secondary-button"
+                          data-ui-button-id="blueprint-preview-move-button"
+                          onClick={handleOpenMoveMode}
+                          title={copy.moveHint}
+                          type="button"
+                        >
+                          {copy.move}
+                        </button>
+                      ) : null}
+                      {showDeleteAction ? (
+                        <button
+                          className="save-blueprint-secondary-button blueprint-preview-danger-button"
+                          data-ui-button-id="blueprint-preview-delete-button"
+                          onClick={() => {
+                            void handleDeleteButtonClick();
+                          }}
+                          title={copy.deleteHint}
+                          type="button"
+                        >
+                          {copy.delete}
+                        </button>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+                <dl className="blueprint-preview-metadata">
+                  <dt>{copy.entities}</dt>
+                  <dd>{record.entityOrder.length}</dd>
+                  <dt>{copy.version}</dt>
+                  <dd>{record.version}</dd>
+                  <dt>{copy.boundingBox}</dt>
+                  <dd>{footprint.width} x {footprint.height}</dd>
+                </dl>
+              </>
+            )}
             {/* AI-REMOVED 2026-05-09:
                 Reason: 右侧数据栏收窄后，只保留 name / desc、实体数、版本和包围盒范围；放置按钮独立成一行，避免压缩说明文字宽度。
                 Trigger: 用户要求右侧只留下窄数据面板，且放置按钮不要挤占说明文字空间。

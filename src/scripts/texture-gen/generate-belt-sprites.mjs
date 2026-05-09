@@ -6,10 +6,10 @@ import sharp from 'sharp';
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, '..', '..', '..');
 const outputSpriteDirectory = path.resolve(
-  process.argv[2] ?? path.join(projectRoot, 'public', 'sprites'),
+  process.argv[2] ?? path.join(projectRoot, 'public', '3d-top-view', 'sprites'),
 );
 const outputMaskDirectory = path.resolve(
-  process.argv[3] ?? path.join(projectRoot, 'public', 'sprite-masks'),
+  process.argv[3] ?? path.join(projectRoot, 'public', '3d-top-view', 'sprite-masks'),
 );
 
 const SPRITE_SIZE = 256;

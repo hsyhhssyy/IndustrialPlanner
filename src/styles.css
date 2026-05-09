@@ -3607,10 +3607,19 @@ Original code:
 
 .blueprint-preview-summary-card {
   align-content: start;
+  min-width: 0;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%);
+}
+
+.blueprint-preview-summary-card.is-folder-picker-mode {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .blueprint-preview-header {
@@ -3642,10 +3651,98 @@ Original code:
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.blueprint-preview-actions.is-triple-action {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.blueprint-preview-actions.is-triple-action > :first-child {
+  grid-column: 1 / -1;
+}
+
 .blueprint-preview-actions .save-blueprint-primary-button,
 .blueprint-preview-actions .save-blueprint-secondary-button,
 .blueprint-preview-actions .blueprint-preview-danger-button {
   width: 100%;
+}
+
+.blueprint-preview-folder-picker-card {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  gap: 12px;
+}
+
+.blueprint-preview-folder-picker-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.blueprint-preview-folder-picker-path {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text-0);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blueprint-preview-folder-picker-back-button {
+  flex: 0 0 auto;
+  width: 32px;
+  min-width: 32px;
+  padding: 0;
+}
+
+.blueprint-preview-folder-picker-list {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 8px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  align-content: start;
+}
+
+.blueprint-preview-folder-picker-entry {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  justify-items: start;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.blueprint-preview-folder-picker-entry-icon {
+  color: var(--text-1);
+}
+
+.blueprint-preview-folder-picker-entry-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blueprint-preview-folder-picker-actions {
+  margin-top: auto;
+}
+
+.blueprint-preview-folder-picker-entry {
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .blueprint-preview-danger-button,
@@ -3854,6 +3951,18 @@ Original code:
 
 .save-blueprint-primary-button:hover:not(:disabled) {
   background: var(--accent-strong, var(--accent, #399ee6));
+}
+
+.save-blueprint-secondary-button.blueprint-preview-folder-picker-entry {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  justify-content: flex-start;
+  justify-items: start;
+  width: 100%;
+  padding: 10px 12px;
+  overflow: hidden;
+  text-align: left;
 }
 
 @media (max-width: 720px) {

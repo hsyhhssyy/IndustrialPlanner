@@ -169,6 +169,10 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: "settingsField.alwaysShowGridLines",
         descriptionKey: "settingsField.alwaysShowGridLinesDescription",
         defaultValue: true,
+        editableWhen: {
+          settingId: "game-use-simplified-device-icons",
+          equals: false,
+        },
       },
       {
         id: "game-show-grass-background",
@@ -176,6 +180,10 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: "settingsField.showGrassBackground",
         descriptionKey: "settingsField.showGrassBackgroundDescription",
         defaultValue: false,
+        editableWhen: {
+          settingId: "game-use-simplified-device-icons",
+          equals: false,
+        },
       },
     ],
   },

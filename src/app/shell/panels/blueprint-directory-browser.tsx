@@ -13,6 +13,7 @@ import LucideFolderPlus from "~icons/lucide/folder-plus";
 interface BlueprintDirectoryBrowserProps {
   readonly translate: (key: string) => string;
   readonly libraryDescriptor: BlueprintLibraryDescriptor;
+  readonly isTouchLayout: boolean;
   readonly formatTimestamp: (value: string) => string;
   readonly currentFolder: BlueprintLibraryFolder | null;
   readonly folderStack: readonly BlueprintLibraryFolder[];
@@ -109,9 +110,22 @@ function formatBreadcrumbPath(options: {
   };
 }
 
+function formatCreateFolderButtonLabel(label: string): string {
+  if (label.endsWith("文件夹")) {
+    return label.slice(0, Math.max(0, label.length - "文件夹".length)).trim();
+  }
+
+  if (/\s+folder$/iu.test(label)) {
+    return label.replace(/\s+folder$/iu, "").trim();
+  }
+
+  return label;
+}
+
 export function BlueprintDirectoryBrowser({
   translate,
   libraryDescriptor,
+  isTouchLayout,
   formatTimestamp,
   currentFolder,
   folderStack,
@@ -130,17 +144,88 @@ export function BlueprintDirectoryBrowser({
     translate,
     folderStack,
   });
+  const createFolderLabel = translate("workbench.blueprint.createFolder");
+  const createFolderButtonLabel = formatCreateFolderButtonLabel(createFolderLabel);
+  const toolbarStyle = {
+    display: "flex",
+    alignItems: "center",
+    gap: isTouchLayout ? "6px" : "8px",
+    flexWrap: "nowrap" as const,
+    minWidth: 0,
+    width: "100%",
+    overflow: "hidden",
+    padding: isTouchLayout ? "4px 6px" : "5px 8px",
+    border: "1px solid var(--line)",
+    borderRadius: isTouchLayout ? "14px" : "16px",
+    background: "var(--surface-2)",
+  };
+  const breadcrumbStyle = {
+    display: "flex",
+    alignItems: "center",
+    gap: isTouchLayout ? "6px" : "8px",
+    flex: "1 1 auto",
+    minWidth: 0,
+    overflow: "hidden",
+    flexWrap: "nowrap" as const,
+  };
+  const pathLabelStyle = isTouchLayout
+    ? {
+        display: "block",
+        flex: "1 1 auto",
+        minWidth: 0,
+        color: "var(--text-0)",
+        fontSize: "0.86rem",
+        fontWeight: 600,
+        lineHeight: 1.2,
+        whiteSpace: "nowrap" as const,
+        overflowX: "auto" as const,
+        overflowY: "hidden" as const,
+      }
+    : {
+        display: "block",
+        flex: "1 1 auto",
+        minWidth: 0,
+        color: "var(--text-0)",
+        fontSize: "0.9rem",
+        fontWeight: 600,
+        lineHeight: 1.2,
+        whiteSpace: "nowrap" as const,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+      };
+  const navigationButtonStyle = {
+    minWidth: isTouchLayout ? "30px" : "32px",
+    minHeight: isTouchLayout ? "30px" : "32px",
+    padding: 0,
+    borderWidth: 0,
+    borderRadius: "10px",
+    flex: "0 0 auto",
+    background: "var(--surface-3)",
+  };
+  const createButtonStyle = {
+    minWidth: isTouchLayout ? "30px" : undefined,
+    minHeight: isTouchLayout ? "30px" : "32px",
+    padding: isTouchLayout ? 0 : "0 10px",
+    borderWidth: 0,
+    borderRadius: "10px",
+    flex: "0 0 auto",
+    gap: isTouchLayout ? 0 : "5px",
+    marginLeft: "auto",
+    background: "var(--surface-3)",
+    whiteSpace: "nowrap" as const,
+  };
 
   return (
     <div className="blueprint-library-pane" role="tabpanel">
-      <div className="blueprint-browser-toolbar">
-        <div className="blueprint-breadcrumb">
+      <div className="blueprint-browser-toolbar" style={toolbarStyle}>
+        <div className="blueprint-breadcrumb" style={breadcrumbStyle}>
           {currentFolder === null ? null : (
             <button
               aria-label={translate("workbench.blueprint.rootFolder")}
               className="blueprint-utility-button blueprint-back-button"
               data-ui-button-id="blueprint-folder-back"
               onClick={onBack}
+              style={navigationButtonStyle}
               type="button"
             >
               <LucideChevronLeft className="button-icon-image" />
@@ -160,6 +245,7 @@ export function BlueprintDirectoryBrowser({
           <span
             aria-label={breadcrumbPath.fullLabel}
             className="blueprint-path-label"
+            style={pathLabelStyle}
             title={breadcrumbPath.fullLabel}
           >
             {breadcrumbPath.displayLabel}
@@ -167,13 +253,16 @@ export function BlueprintDirectoryBrowser({
         </div>
         {libraryDescriptor.canCreateFolders ? (
           <button
-            className="blueprint-utility-button"
+            aria-label={createFolderLabel}
+            className="blueprint-utility-button blueprint-create-button"
             data-ui-button-id="blueprint-folder-create-toggle"
             onClick={onToggleCreateFolder}
+            style={createButtonStyle}
+            title={createFolderLabel}
             type="button"
           >
             <LucideFolderPlus className="button-icon-image" />
-            <span>{translate("workbench.blueprint.createFolder")}</span>
+            {isTouchLayout ? null : <span className="blueprint-create-button-label">{createFolderButtonLabel}</span>}
           </button>
         ) : null}
       </div>

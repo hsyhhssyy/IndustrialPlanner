@@ -17,6 +17,7 @@ import {
 } from "@/shared/blueprints/system-blueprint-library";
 import {
   listBlueprintDirectory,
+  readBlueprintFolder,
 } from "@/shared/storage/blueprint-storage";
 import LucideClipboard from "~icons/lucide/clipboard";
 import LucideCopy from "~icons/lucide/copy";
@@ -45,6 +46,77 @@ function formatBlueprintTimestamp(locale: string, value: string): string {
   }).format(timestamp);
 }
 
+function createEmptyBlueprintFolderStacks(): Record<BlueprintLibraryKind, BlueprintLibraryFolder[]> {
+  return {
+    system: [],
+    user: [],
+  };
+}
+
+function areBlueprintFolderStacksEqual(
+  left: readonly BlueprintLibraryFolder[],
+  right: readonly BlueprintLibraryFolder[],
+): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((folder, index) => {
+    const rightFolder = right[index];
+
+    return rightFolder !== undefined
+      && folder.folderId === rightFolder.folderId
+      && folder.parentFolderId === rightFolder.parentFolderId
+      && folder.name === rightFolder.name
+      && folder.updatedAt === rightFolder.updatedAt;
+  });
+}
+
+async function resolveUserBlueprintFolderStack(
+  folderIds: readonly string[],
+): Promise<BlueprintLibraryFolder[]> {
+  const resolvedFolders: BlueprintLibraryFolder[] = [];
+  let expectedParentFolderId: string | null = null;
+
+  for (const folderId of folderIds) {
+    const folder = await readBlueprintFolder(folderId);
+
+    if (folder === null || folder.parentFolderId !== expectedParentFolderId) {
+      return [];
+    }
+
+    resolvedFolders.push(folder);
+    expectedParentFolderId = folder.folderId;
+  }
+
+  return resolvedFolders;
+}
+
+function resolveSystemBlueprintFolderStack(options: {
+  readonly snapshot: SystemBlueprintLibrarySnapshot;
+  readonly folderIds: readonly string[];
+}): BlueprintLibraryFolder[] {
+  const resolvedFolders: BlueprintLibraryFolder[] = [];
+  let currentDirectory = options.snapshot.rootListing;
+  let expectedParentFolderId: string | null = null;
+
+  for (const folderId of options.folderIds) {
+    const nextFolder = currentDirectory.folders.find((folder) => {
+      return folder.folderId === folderId && folder.parentFolderId === expectedParentFolderId;
+    });
+
+    if (nextFolder === undefined) {
+      return [];
+    }
+
+    resolvedFolders.push(nextFolder);
+    expectedParentFolderId = nextFolder.folderId;
+    currentDirectory = listSystemBlueprintDirectory(options.snapshot, nextFolder.folderId);
+  }
+
+  return resolvedFolders;
+}
+
 export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const isTouchLayout = isMobileOrTabletScreenProfile(appHost.state.screenProfile);
@@ -52,9 +124,11 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
   const isPanelVisible = (appHost.internalState.runtime.activePanel ?? "placement") === "blueprint";
   const saveBlueprintDialogVisible = appHost.internalState.workbench.dialogState["save-blueprint"].visible;
   const folderMutationCompletedCount = appHost.blueprintFolderDialog.completedMutationCount;
-  const previewDeleteCompletedCount = appHost.blueprintPreview.completedDeleteCount;
+  const previewMutationCompletedCount = appHost.blueprintPreview.completedMutationCount;
   const [activeTab, setActiveTab] = useState<BlueprintLibraryKind>("user");
-  const [folderStack, setFolderStack] = useState<BlueprintLibraryFolder[]>([]);
+  const [folderStacksByLibrary, setFolderStacksByLibrary] = useState<Record<BlueprintLibraryKind, BlueprintLibraryFolder[]>>(
+    createEmptyBlueprintFolderStacks,
+  );
   const [directoryListing, setDirectoryListing] = useState<BlueprintLibraryDirectoryListing>(
     createEmptyBlueprintLibraryDirectory(null),
   );
@@ -63,8 +137,10 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
   const [selectedBlueprintId, setSelectedBlueprintId] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const systemBlueprintLibraryRef = useRef<SystemBlueprintLibrarySnapshot | null>(null);
+  const folderStack = folderStacksByLibrary[activeTab];
   const currentFolder = folderStack.length > 0 ? folderStack[folderStack.length - 1] ?? null : null;
   const currentFolderId = currentFolder?.folderId ?? null;
+  const currentFolderPathSignature = folderStack.map((folder) => folder.folderId).join("/");
   const activeLibrary = getBlueprintLibraryDescriptor(activeTab);
   const formatTimestamp = (value: string) => formatBlueprintTimestamp(appHost.state.settings.locale, value);
 
@@ -81,25 +157,57 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
     setErrorMessage(null);
     setDirectoryListing(createEmptyBlueprintLibraryDirectory(currentFolderId));
 
-    const loadDirectoryListing = async (): Promise<BlueprintLibraryDirectoryListing> => {
+    const rememberedFolderIds = folderStack.map((folder) => folder.folderId);
+
+    const loadDirectoryListing = async (): Promise<{
+      readonly listing: BlueprintLibraryDirectoryListing;
+      readonly resolvedFolderStack: BlueprintLibraryFolder[];
+    }> => {
       if (activeLibrary.kind === "user") {
-        return await listBlueprintDirectory(currentFolderId);
+        const resolvedFolderStack = await resolveUserBlueprintFolderStack(rememberedFolderIds);
+        const resolvedCurrentFolderId = resolvedFolderStack.at(-1)?.folderId ?? null;
+
+        return {
+          listing: await listBlueprintDirectory(resolvedCurrentFolderId),
+          resolvedFolderStack,
+        };
       }
 
       const systemLibrary = systemBlueprintLibraryRef.current ?? await readSystemBlueprintLibrary();
 
       systemBlueprintLibraryRef.current = systemLibrary;
 
-      return listSystemBlueprintDirectory(systemLibrary, currentFolderId);
+      const resolvedFolderStack = resolveSystemBlueprintFolderStack({
+        snapshot: systemLibrary,
+        folderIds: rememberedFolderIds,
+      });
+      const resolvedCurrentFolderId = resolvedFolderStack.at(-1)?.folderId ?? null;
+
+      return {
+        listing: listSystemBlueprintDirectory(systemLibrary, resolvedCurrentFolderId),
+        resolvedFolderStack,
+      };
     };
 
     void loadDirectoryListing()
-      .then((listing) => {
+      .then(({ listing, resolvedFolderStack }) => {
         if (cancelled || requestIdRef.current !== requestId) {
           return;
         }
 
         setDirectoryListing(listing);
+        setFolderStacksByLibrary((currentValue) => {
+          const currentFolderStack = currentValue[activeTab];
+
+          if (areBlueprintFolderStacksEqual(currentFolderStack, resolvedFolderStack)) {
+            return currentValue;
+          }
+
+          return {
+            ...currentValue,
+            [activeTab]: resolvedFolderStack,
+          };
+        });
         setSelectedBlueprintId((currentBlueprintId) => {
           if (currentBlueprintId === null) {
             return null;
@@ -131,9 +239,11 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
   }, [
     activeLibrary,
     currentFolderId,
+    currentFolderPathSignature,
     folderMutationCompletedCount,
+    folderStack,
     isPanelVisible,
-    previewDeleteCompletedCount,
+    previewMutationCompletedCount,
     saveBlueprintDialogVisible,
     t,
   ]);
@@ -324,12 +434,19 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
           folderStack={folderStack}
           formatTimestamp={formatTimestamp}
           isLoading={isLoading}
+          isTouchLayout={isTouchLayout}
           libraryDescriptor={activeLibrary}
           onBack={() => {
-            setFolderStack((currentValue) => currentValue.slice(0, -1));
+            setFolderStacksByLibrary((currentValue) => ({
+              ...currentValue,
+              [activeTab]: currentValue[activeTab].slice(0, -1),
+            }));
           }}
           onOpenFolder={(folder) => {
-            setFolderStack((currentValue) => [...currentValue, folder]);
+            setFolderStacksByLibrary((currentValue) => ({
+              ...currentValue,
+              [activeTab]: [...currentValue[activeTab], folder],
+            }));
           }}
           onEditFolder={(folder) => {
             if (!activeLibrary.canCreateFolders) {

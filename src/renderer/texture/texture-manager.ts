@@ -15,6 +15,7 @@ const PREFIX_DEVICE_SPRITE = "device-sprite-"
 const PREFIX_TEXTURE = "texture-"
 const PREFIX_DEVICE_MASKS = "device-masks-"
 const PREFIX_ITEM_ICON = "item-icon-"
+const TOP_VIEW_ASSET_ROOT = "/3d-top-view"
 
 /**
  * TextureActions 是 src/renderer/texture 对外唯一出口。
@@ -116,7 +117,7 @@ class TextureActionsImpl implements TextureActions {
 
   private resolveCandidatePaths(key: string): string[] {
     if (key.startsWith(PREFIX_DEVICE_SPRITE)) {
-      return [`/sprites/${key.slice(PREFIX_DEVICE_SPRITE.length)}.webp`]
+      return [`${TOP_VIEW_ASSET_ROOT}/sprites/${key.slice(PREFIX_DEVICE_SPRITE.length)}.webp`]
     }
 
     if (key.startsWith(PREFIX_TEXTURE)) {
@@ -126,7 +127,10 @@ class TextureActionsImpl implements TextureActions {
 
     if (key.startsWith(PREFIX_DEVICE_MASKS)) {
       const id = key.slice(PREFIX_DEVICE_MASKS.length)
-      return [`/sprite-masks/${id}.webp`, `/sprite-masks/${id}.png`]
+      return [
+        `${TOP_VIEW_ASSET_ROOT}/sprite-masks/${id}.webp`,
+        `${TOP_VIEW_ASSET_ROOT}/sprite-masks/${id}.png`,
+      ]
     }
 
     if (key.startsWith(PREFIX_ITEM_ICON)) {

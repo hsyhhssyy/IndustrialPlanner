@@ -48,7 +48,7 @@ describe("TextureActions", () => {
     expect(firstTexture).toBe(bitmapTexture)
     expect(secondTexture).toBe(bitmapTexture)
     expect(loadTexture).toHaveBeenCalledTimes(1)
-    expect(loadTexture).toHaveBeenCalledWith("/sprites/item_port_storager_1.webp")
+    expect(loadTexture).toHaveBeenCalledWith("/3d-top-view/sprites/item_port_storager_1.webp")
 
     manager.destroy()
   })
@@ -86,10 +86,10 @@ describe("TextureActions", () => {
     const maskTexture = createLoadedTextureMock("mask")
 
     loadTexture.mockImplementation((path: string) => {
-      if (path === "/sprite-masks/item_port_storager_1.webp") {
+      if (path === "/3d-top-view/sprite-masks/item_port_storager_1.webp") {
         return Promise.reject(new Error("missing webp"))
       }
-      if (path === "/sprite-masks/item_port_storager_1.png") {
+      if (path === "/3d-top-view/sprite-masks/item_port_storager_1.png") {
         return Promise.resolve(maskTexture)
       }
       return Promise.reject(new Error("unexpected path"))
@@ -102,8 +102,8 @@ describe("TextureActions", () => {
 
     const texture = await manager.getTexture(maskKey)
     expect(texture).toBe(maskTexture)
-    expect(loadTexture).toHaveBeenCalledWith("/sprite-masks/item_port_storager_1.webp")
-    expect(loadTexture).toHaveBeenCalledWith("/sprite-masks/item_port_storager_1.png")
+  expect(loadTexture).toHaveBeenCalledWith("/3d-top-view/sprite-masks/item_port_storager_1.webp")
+  expect(loadTexture).toHaveBeenCalledWith("/3d-top-view/sprite-masks/item_port_storager_1.png")
 
     manager.destroy()
   })

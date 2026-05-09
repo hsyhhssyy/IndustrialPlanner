@@ -5,8 +5,8 @@ import sharp from 'sharp';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, '..', '..');
-const defaultSourceDirectory = path.join(projectRoot, 'public', 'sprites');
-const defaultOutputDirectory = path.join(projectRoot, 'public', 'sprite-masks');
+const defaultSourceDirectory = path.join(projectRoot, 'public', '3d-top-view', 'sprites');
+const defaultOutputDirectory = path.join(projectRoot, 'public', '3d-top-view', 'sprite-masks');
 
 async function collectWebpFiles(directoryPath) {
   const entries = await readdir(directoryPath, { withFileTypes: true });

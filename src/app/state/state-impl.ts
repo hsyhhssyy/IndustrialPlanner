@@ -72,6 +72,7 @@ export interface AppSettingsReadWrite extends AppSettings {
   hypergryphImmediateMarquee: boolean;
   hypergryphSelectionRightDockSync: boolean;
   hypergryphInspectorOpenOnSecondClick: boolean;
+  gameUseSimplifiedDeviceIcons: boolean;
   gameUseInspectorPanel: boolean;
   gameShowHotkeys: boolean;
   gameAlwaysShowGridLines: boolean;
@@ -542,6 +543,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphImmediateMarquee: false,
     hypergryphSelectionRightDockSync: true,
     hypergryphInspectorOpenOnSecondClick: false,
+    gameUseSimplifiedDeviceIcons: false,
     gameUseInspectorPanel: false,
     gameShowHotkeys: false,
     gameAlwaysShowGridLines: true,

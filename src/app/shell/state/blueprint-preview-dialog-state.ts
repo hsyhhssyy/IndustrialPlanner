@@ -20,6 +20,7 @@ export class WorkbenchBlueprintPreviewController {
   record: BlueprintLibraryRecord | null = null;
   canDelete = false;
   completedDeleteCount = 0;
+  completedMutationCount = 0;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -41,6 +42,11 @@ export class WorkbenchBlueprintPreviewController {
 
   public markDeleted() {
     this.completedDeleteCount += 1;
+    this.completedMutationCount += 1;
+  }
+
+  public markMoved() {
+    this.completedMutationCount += 1;
   }
 
   public setOffset(offsetX: number, offsetY: number) {

@@ -126,6 +126,24 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(controller.getValue("game-arknights-operation-mode")).toBe(true);
   });
 
+  it("disables grass and grid toggles when simplified device icons are enabled", () => {
+    const controller = new WorkbenchSettingsDialogController();
+
+    expect(controller.isSettingEditable("game-always-show-grid-lines")).toBe(true);
+    expect(controller.isSettingEditable("game-show-grass-background")).toBe(true);
+
+    controller.updateSwitchValue("game-use-simplified-device-icons", true);
+
+    expect(controller.isSettingEditable("game-always-show-grid-lines")).toBe(false);
+    expect(controller.isSettingEditable("game-show-grass-background")).toBe(false);
+
+    controller.updateSwitchValue("game-always-show-grid-lines", false);
+    controller.updateSwitchValue("game-show-grass-background", true);
+
+    expect(controller.values["game-always-show-grid-lines"]).toBe(true);
+    expect(controller.values["game-show-grass-background"]).toBe(false);
+  });
+
   it("uses external bindings as the source of truth for connected settings", () => {
     let locale = "zh-CN";
     let themeId = "ayu-light";

@@ -6,16 +6,16 @@
  * 作用：
  * 1. 从 resources/device-sprite-original 读取按中文设备名命名的 PNG 原图。
  * 2. 按 DEVICE_SPRITE_MAPPINGS 映射为运行时使用的 spriteId。
- * 3. 输出无损 WebP 精灵图到 public/sprites。
- * 4. 基于原图 alpha 通道生成对应的遮罩图到 public/sprite-masks。
+ * 3. 输出无损 WebP 精灵图到 public/3d-top-view/sprites。
+ * 4. 基于原图 alpha 通道生成对应的遮罩图到 public/3d-top-view/sprite-masks。
  *
  * 用法：
  *   node src/scripts/sync-device-sprites.mjs [sourceDir] [spriteDir] [maskDir]
  *
  * 参数：
  * - sourceDir: 原始 PNG 目录，默认 resources/device-sprite-original
- * - spriteDir: 精灵图输出目录，默认 public/sprites
- * - maskDir: 遮罩图输出目录，默认 public/sprite-masks
+ * - spriteDir: 精灵图输出目录，默认 public/3d-top-view/sprites
+ * - maskDir: 遮罩图输出目录，默认 public/3d-top-view/sprite-masks
  */
 
 import { mkdir } from 'node:fs/promises';
@@ -26,8 +26,8 @@ import sharp from 'sharp';
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, '..', '..');
 const defaultSourceDirectory = path.join(projectRoot, 'resources', 'device-sprite-original');
-const defaultSpriteDirectory = path.join(projectRoot, 'public', 'sprites');
-const defaultMaskDirectory = path.join(projectRoot, 'public', 'sprite-masks');
+const defaultSpriteDirectory = path.join(projectRoot, 'public', '3d-top-view', 'sprites');
+const defaultMaskDirectory = path.join(projectRoot, 'public', '3d-top-view', 'sprite-masks');
 
 // 资源目录使用中文设备名，运行时资源使用 registry spriteId。
 const DEVICE_SPRITE_MAPPINGS = [

@@ -20,6 +20,7 @@ import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
 import {
   createBlueprintFolder,
+  deleteBlueprintFolder,
   readBlueprintFolder,
   readBlueprintRecord,
   saveBlueprintDocument,
@@ -74,6 +75,15 @@ function createBlueprintPreviewRenderStub() {
 
 function queryVisibleLeftDockPanel(container: HTMLDivElement): HTMLDivElement | null {
   return container.querySelector(".left-dock-panel:not([hidden])") as HTMLDivElement | null;
+}
+
+function queryBlueprintFolderButtonByText(
+  container: ParentNode | null,
+  text: string,
+): HTMLButtonElement | null {
+  const buttons = Array.from(container?.querySelectorAll("[data-blueprint-folder-id]") ?? []);
+
+  return buttons.find((button) => button.textContent?.includes(text)) as HTMLButtonElement | null;
 }
 
 function dispatchPointerEvent(
@@ -546,6 +556,7 @@ describe("Left dock panel switching", () => {
     expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-tab-user"]')).not.toBeNull();
     expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-tab-user"]')?.classList.contains("dialog-shell-tab")).toBe(true);
     expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')).not.toBeNull();
+    expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')?.textContent?.trim()).toBe("新建");
 
     const deleteButton = clickTab("删除模式");
     const deletePanel = queryVisibleLeftDockPanel(container);
@@ -793,6 +804,8 @@ describe("Left dock panel switching", () => {
     expect(operationGroup?.textContent).toContain("剪贴板导入");
     expect(operationGroup?.textContent).not.toContain("从文件导入");
     expect(operationGroup?.textContent).not.toContain("从剪贴板导入");
+    expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')?.getAttribute("aria-label")).toBe("新建文件夹");
+    expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')?.textContent?.trim()).toBe("");
   });
 
   it("browses user blueprints and creates nested folders inside the blueprint panel", async () => {
@@ -847,6 +860,7 @@ describe("Left dock panel switching", () => {
       `[data-blueprint-folder-id="${rootFolder?.folderId ?? ""}"]`,
     ) as HTMLButtonElement | null;
     const breadcrumbLabel = visiblePanel?.querySelector(".blueprint-path-label") as HTMLSpanElement | null;
+    const toolbar = visiblePanel?.querySelector(".blueprint-browser-toolbar") as HTMLDivElement | null;
 
     expect(visiblePanel?.getAttribute("data-panel-id")).toBe("blueprint");
     expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-tab-user"]')?.getAttribute("aria-selected")).toBe("true");
@@ -855,6 +869,7 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.textContent).toContain("总线蓝图");
     expect(visiblePanel?.textContent).toContain("根目录蓝图");
     expect(rootFolderButton).not.toBeNull();
+    expect(toolbar?.style.flexWrap).toBe("nowrap");
 
     await act(async () => {
       rootFolderButton?.click();
@@ -863,7 +878,12 @@ describe("Left dock panel switching", () => {
 
     expect(breadcrumbLabel?.textContent?.trim()).toBe("根目录 / 总线蓝图");
     expect(breadcrumbLabel?.getAttribute("title")).toBe("根目录 / 总线蓝图");
-    expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-folder-back"]')).not.toBeNull();
+    const backButton = visiblePanel?.querySelector(
+      '[data-ui-button-id="blueprint-folder-back"]',
+    ) as HTMLButtonElement | null;
+
+    expect(backButton).not.toBeNull();
+    expect(backButton?.style.borderWidth).toBe("0px");
     expect(visiblePanel?.textContent).toContain("炼油分支");
     expect(visiblePanel?.textContent).toContain("仓储总线样例");
 
@@ -882,6 +902,9 @@ describe("Left dock panel switching", () => {
     const createFolderToggle = visiblePanel?.querySelector(
       '[data-ui-button-id="blueprint-folder-create-toggle"]',
     ) as HTMLButtonElement | null;
+
+    expect(createFolderToggle?.textContent?.trim()).toBe("新建");
+    expect(createFolderToggle?.style.borderWidth).toBe("0px");
 
     await act(async () => {
       createFolderToggle?.click();
@@ -1122,6 +1145,144 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.textContent).toContain("系统蓝图库为空");
     expect(visiblePanel?.textContent).toContain("当前还没有可用的系统蓝图");
     expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')).toBeNull();
+  });
+
+  it("remembers separate system and user folder paths and falls back to root when the remembered path is gone", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    vi.stubGlobal("fetch", createFetchStub({
+      "/blueprints/index.json": {
+        version: "v1.3.0",
+        folders: [
+          {
+            name: "系统总线",
+            blueprints: [],
+            subfolders: [
+              {
+                name: "系统炼油",
+                blueprints: ["system-oil"],
+              },
+            ],
+          },
+        ],
+      },
+      "/blueprints/system-oil.json": createTestBlueprint({
+        name: "系统炼油蓝图",
+      }),
+    }));
+
+    const userRootFolder = await createBlueprintFolder({
+      name: "用户总线",
+    });
+    const userNestedFolder = await createBlueprintFolder({
+      name: "用户炼油",
+      parentFolderId: userRootFolder?.folderId,
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+
+    await act(async () => {
+      root.render(<LeftDock appHost={appHost} />);
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const breadcrumbLabel = visiblePanel?.querySelector(".blueprint-path-label") as HTMLSpanElement | null;
+    const systemTabButton = visiblePanel?.querySelector(
+      '[data-ui-button-id="blueprint-tab-system"]',
+    ) as HTMLButtonElement | null;
+    const userTabButton = visiblePanel?.querySelector(
+      '[data-ui-button-id="blueprint-tab-user"]',
+    ) as HTMLButtonElement | null;
+
+    expect(userTabButton?.getAttribute("aria-selected")).toBe("true");
+
+    const userRootFolderButton = queryBlueprintFolderButtonByText(visiblePanel, "用户总线");
+
+    expect(userRootFolderButton).not.toBeNull();
+
+    await act(async () => {
+      userRootFolderButton?.click();
+      await flushAsyncEffects();
+    });
+
+    const userNestedFolderButton = queryBlueprintFolderButtonByText(visiblePanel, "用户炼油");
+
+    expect(userNestedFolderButton).not.toBeNull();
+
+    await act(async () => {
+      userNestedFolderButton?.click();
+      await flushAsyncEffects();
+    });
+
+    expect(breadcrumbLabel?.textContent?.trim()).toBe("根目录 / … / 用户炼油");
+    expect(breadcrumbLabel?.getAttribute("title")).toBe("根目录 / 用户总线 / 用户炼油");
+
+    await act(async () => {
+      systemTabButton?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    expect(systemTabButton?.getAttribute("aria-selected")).toBe("true");
+
+    const systemRootFolderButton = queryBlueprintFolderButtonByText(visiblePanel, "系统总线");
+
+    expect(systemRootFolderButton).not.toBeNull();
+
+    await act(async () => {
+      systemRootFolderButton?.click();
+      await flushAsyncEffects();
+    });
+
+    const systemNestedFolderButton = queryBlueprintFolderButtonByText(visiblePanel, "系统炼油");
+
+    expect(systemNestedFolderButton).not.toBeNull();
+
+    await act(async () => {
+      systemNestedFolderButton?.click();
+      await flushAsyncEffects();
+    });
+
+    expect(breadcrumbLabel?.textContent?.trim()).toBe("根目录 / … / 系统炼油");
+    expect(breadcrumbLabel?.getAttribute("title")).toBe("根目录 / 系统总线 / 系统炼油");
+
+    await act(async () => {
+      userTabButton?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    expect(userTabButton?.getAttribute("aria-selected")).toBe("true");
+    expect(breadcrumbLabel?.textContent?.trim()).toBe("根目录 / … / 用户炼油");
+    expect(breadcrumbLabel?.getAttribute("title")).toBe("根目录 / 用户总线 / 用户炼油");
+
+    await expect(deleteBlueprintFolder(userRootFolder?.folderId ?? "")).resolves.not.toBeNull();
+
+    await act(async () => {
+      systemTabButton?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    expect(breadcrumbLabel?.textContent?.trim()).toBe("根目录 / … / 系统炼油");
+
+    await act(async () => {
+      userTabButton?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    expect(breadcrumbLabel?.textContent?.trim()).toBe("根目录");
+    expect(breadcrumbLabel?.getAttribute("title")).toBe("根目录");
+    expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-folder-back"]')).toBeNull();
+    expect(visiblePanel?.querySelector(`[data-blueprint-folder-id="${userRootFolder?.folderId ?? ""}"]`)).toBeNull();
+    expect(visiblePanel?.querySelector(`[data-blueprint-folder-id="${userNestedFolder?.folderId ?? ""}"]`)).toBeNull();
   });
 
   it("opens the blueprint preview dialog when clicking a blueprint entry", async () => {
@@ -1480,6 +1641,164 @@ describe("Left dock panel switching", () => {
     expect(appHost.blueprintPreview.dialogState.visible).toBe(false);
     await expect(readBlueprintRecord(blueprint.blueprintId)).resolves.toBeNull();
     expect(visiblePanel?.querySelector(`[data-blueprint-id="${blueprint.blueprintId}"]`)).toBeNull();
+  });
+
+  it("moves a user blueprint from the preview dialog into a nested folder", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const targetRootFolder = await createBlueprintFolder({
+      name: "生产线目录",
+    });
+
+    const targetNestedFolder = await createBlueprintFolder({
+      name: "炼油支线",
+      parentFolderId: targetRootFolder?.folderId,
+    });
+
+    const blueprint = createPlacementBlueprint({
+      name: "待移动蓝图",
+      description: "从预览窗口移动",
+    });
+
+    await saveBlueprintDocument(blueprint);
+
+    const workspace = createWorkspace();
+    const renderStub = createBlueprintPreviewRenderStub();
+    workspace.render = renderStub.render;
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+
+    await act(async () => {
+      root.render(
+        <>
+          <LeftDock appHost={appHost} />
+          <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
+        </>,
+      );
+      await flushAsyncEffects();
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const blueprintButton = visiblePanel?.querySelector(
+      `[data-blueprint-id="${blueprint.blueprintId}"]`,
+    ) as HTMLButtonElement | null;
+
+    expect(blueprintButton).not.toBeNull();
+
+    await act(async () => {
+      blueprintButton?.click();
+      await flushAsyncEffects();
+    });
+
+    const previewDialog = container.querySelector('[data-dialog-key="blueprint-preview"]');
+    const moveButton = previewDialog?.querySelector(
+      '[data-ui-button-id="blueprint-preview-move-button"]',
+    ) as HTMLButtonElement | null;
+
+    expect(moveButton).not.toBeNull();
+
+    await act(async () => {
+      moveButton?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    const summaryCard = previewDialog?.querySelector(
+      ".blueprint-preview-summary-card",
+    ) as HTMLDivElement | null;
+    const moveBreadcrumb = previewDialog?.querySelector(
+      "[data-blueprint-preview-move-breadcrumb]",
+    ) as HTMLSpanElement | null;
+    const moveActions = previewDialog?.querySelector(
+      ".blueprint-preview-folder-picker-actions",
+    ) as HTMLDivElement | null;
+
+    expect(summaryCard?.classList.contains("is-folder-picker-mode")).toBe(true);
+    expect(summaryCard?.querySelector(".blueprint-preview-header")).toBeNull();
+    expect(moveBreadcrumb?.textContent?.trim()).toBe("根目录");
+    expect(moveActions).not.toBeNull();
+
+    const rootFolderEntry = previewDialog?.querySelector(
+      `[data-blueprint-preview-folder-id="${targetRootFolder?.folderId ?? ""}"]`,
+    ) as HTMLButtonElement | null;
+
+    expect(rootFolderEntry).not.toBeNull();
+    expect(rootFolderEntry?.querySelector(".button-icon-image")).not.toBeNull();
+
+    await act(async () => {
+      rootFolderEntry?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    const backButton = previewDialog?.querySelector(
+      '[data-ui-button-id="blueprint-preview-move-back-button"]',
+    ) as HTMLButtonElement | null;
+
+    expect(backButton).not.toBeNull();
+    expect(backButton?.textContent?.trim()).toBe("");
+    expect(moveBreadcrumb?.textContent?.trim()).toBe("根目录 / 生产线目录");
+
+    const nestedFolderEntry = previewDialog?.querySelector(
+      `[data-blueprint-preview-folder-id="${targetNestedFolder?.folderId ?? ""}"]`,
+    ) as HTMLButtonElement | null;
+
+    expect(nestedFolderEntry).not.toBeNull();
+
+    await act(async () => {
+      nestedFolderEntry?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    expect(moveBreadcrumb?.textContent?.trim()).toBe("根目录 / … / 炼油支线");
+
+    const confirmMoveButton = previewDialog?.querySelector(
+      '[data-ui-button-id="blueprint-preview-move-confirm-button"]',
+    ) as HTMLButtonElement | null;
+
+    expect(confirmMoveButton).not.toBeNull();
+    expect(confirmMoveButton?.disabled).toBe(false);
+    expect(confirmMoveButton?.textContent?.trim()).toBe("移动");
+
+    await act(async () => {
+      confirmMoveButton?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    expect(appHost.blueprintPreview.dialogState.visible).toBe(false);
+    await expect(readBlueprintRecord(blueprint.blueprintId)).resolves.toMatchObject({
+      parentFolderId: targetNestedFolder?.folderId ?? null,
+    });
+    expect(visiblePanel?.querySelector(`[data-blueprint-id="${blueprint.blueprintId}"]`)).toBeNull();
+
+    const targetRootFolderButton = visiblePanel?.querySelector(
+      `[data-blueprint-folder-id="${targetRootFolder?.folderId ?? ""}"]`,
+    ) as HTMLButtonElement | null;
+
+    expect(targetRootFolderButton).not.toBeNull();
+
+    await act(async () => {
+      targetRootFolderButton?.click();
+      await flushAsyncEffects();
+    });
+
+    const targetNestedFolderButton = visiblePanel?.querySelector(
+      `[data-blueprint-folder-id="${targetNestedFolder?.folderId ?? ""}"]`,
+    ) as HTMLButtonElement | null;
+
+    expect(targetNestedFolderButton).not.toBeNull();
+
+    await act(async () => {
+      targetNestedFolderButton?.click();
+      await flushAsyncEffects();
+    });
+
+    expect(visiblePanel?.querySelector(`[data-blueprint-id="${blueprint.blueprintId}"]`)).not.toBeNull();
   });
 });
 

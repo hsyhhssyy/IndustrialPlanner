@@ -86,6 +86,11 @@ function normalizePersistedAppSettings(
   persistedAppSettings: AppSettingsReadWrite,
   fallback: AppSettingsReadWrite,
 ): AppSettingsReadWrite {
+  const gameUseSimplifiedDeviceIcons =
+    typeof persistedAppSettings.gameUseSimplifiedDeviceIcons === "boolean"
+      ? persistedAppSettings.gameUseSimplifiedDeviceIcons
+      : fallback.gameUseSimplifiedDeviceIcons;
+
   return {
     locale: persistedAppSettings.locale === "zh-CN" || persistedAppSettings.locale === "en-US"
       ? persistedAppSettings.locale
@@ -110,18 +115,23 @@ function normalizePersistedAppSettings(
       typeof persistedAppSettings.hypergryphInspectorOpenOnSecondClick === "boolean"
         ? persistedAppSettings.hypergryphInspectorOpenOnSecondClick
         : fallback.hypergryphInspectorOpenOnSecondClick,
+    gameUseSimplifiedDeviceIcons,
     gameUseInspectorPanel: typeof persistedAppSettings.gameUseInspectorPanel === "boolean"
       ? persistedAppSettings.gameUseInspectorPanel
       : fallback.gameUseInspectorPanel,
     gameShowHotkeys: typeof persistedAppSettings.gameShowHotkeys === "boolean"
       ? persistedAppSettings.gameShowHotkeys
       : fallback.gameShowHotkeys,
-    gameAlwaysShowGridLines: typeof persistedAppSettings.gameAlwaysShowGridLines === "boolean"
-      ? persistedAppSettings.gameAlwaysShowGridLines
-      : fallback.gameAlwaysShowGridLines,
-    showGrassBackground: typeof persistedAppSettings.showGrassBackground === "boolean"
-      ? persistedAppSettings.showGrassBackground
-      : fallback.showGrassBackground,
+    gameAlwaysShowGridLines: gameUseSimplifiedDeviceIcons
+      ? true
+      : typeof persistedAppSettings.gameAlwaysShowGridLines === "boolean"
+        ? persistedAppSettings.gameAlwaysShowGridLines
+        : fallback.gameAlwaysShowGridLines,
+    showGrassBackground: gameUseSimplifiedDeviceIcons
+      ? false
+      : typeof persistedAppSettings.showGrassBackground === "boolean"
+        ? persistedAppSettings.showGrassBackground
+        : fallback.showGrassBackground,
     debugShowFps: typeof persistedAppSettings.debugShowFps === "boolean"
       ? persistedAppSettings.debugShowFps
       : fallback.debugShowFps,

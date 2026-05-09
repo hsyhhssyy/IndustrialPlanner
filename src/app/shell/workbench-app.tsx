@@ -167,6 +167,32 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.gameShowHotkeys = value;
         }),
       },
+      "game-use-simplified-device-icons": {
+        readValue: () => appHost.state.settings.gameUseSimplifiedDeviceIcons,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          const shouldEnforceLinkedSettings = value
+            && (
+              !appHost.internalState.settings.gameAlwaysShowGridLines
+              || appHost.internalState.settings.showGrassBackground
+            );
+
+          if (appHost.internalState.settings.gameUseSimplifiedDeviceIcons === value
+            && !shouldEnforceLinkedSettings) {
+            return;
+          }
+
+          appHost.internalState.settings.gameUseSimplifiedDeviceIcons = value;
+
+          if (value) {
+            appHost.internalState.settings.gameAlwaysShowGridLines = true;
+            appHost.internalState.settings.showGrassBackground = false;
+          }
+        }),
+      },
       "game-use-inspector-panel": {
         readValue: () => appHost.state.settings.gameUseInspectorPanel,
         writeValue: action((value) => {
@@ -188,6 +214,14 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             return;
           }
 
+          if (appHost.internalState.settings.gameUseSimplifiedDeviceIcons) {
+            if (!appHost.internalState.settings.gameAlwaysShowGridLines) {
+              appHost.internalState.settings.gameAlwaysShowGridLines = true;
+            }
+
+            return;
+          }
+
           if (appHost.internalState.settings.gameAlwaysShowGridLines === value) {
             return;
           }
@@ -199,6 +233,14 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         readValue: () => appHost.state.settings.showGrassBackground,
         writeValue: action((value) => {
           if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.gameUseSimplifiedDeviceIcons) {
+            if (appHost.internalState.settings.showGrassBackground) {
+              appHost.internalState.settings.showGrassBackground = false;
+            }
+
             return;
           }
 

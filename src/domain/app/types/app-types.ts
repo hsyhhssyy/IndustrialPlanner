@@ -12,6 +12,7 @@ export interface AppSettings {
   readonly hypergryphImmediateMarquee: boolean;
   readonly hypergryphSelectionRightDockSync: boolean;
   readonly hypergryphInspectorOpenOnSecondClick: boolean;
+  readonly gameUseSimplifiedDeviceIcons: boolean;
   readonly gameUseInspectorPanel: boolean;
   readonly gameShowHotkeys: boolean;
   readonly gameAlwaysShowGridLines: boolean;
