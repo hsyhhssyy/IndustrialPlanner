@@ -2,6 +2,7 @@ import type { GridPoint } from "../shared/grid";
 import { createUuid } from "../shared/uuid";
 import type {
 	SlotLinkDefinition,
+	WorldDocument,
 	WorldEntity,
 } from "./world-document";
 
@@ -55,5 +56,57 @@ export function createBlueprintDocument(
 		slotLinks: [...input.slotLinks],
 		createdAt: timestamp,
 		updatedAt: input.updatedAt ?? timestamp,
+	};
+}
+
+export function createWorldDocumentFromBlueprint(
+	blueprint: BlueprintDocument,
+): WorldDocument {
+	return {
+		schemaVersion: 1,
+		documentKey: blueprint.blueprintId,
+		baseId: blueprint.baseId,
+		meta: {
+			id: `blueprint-${blueprint.blueprintId}`,
+			name: blueprint.name,
+			createdAt: blueprint.createdAt,
+			updatedAt: blueprint.updatedAt,
+		},
+		entities: cloneBlueprintEntities(blueprint.entities),
+		entityOrder: [...blueprint.entityOrder],
+		slotLinks: blueprint.slotLinks.map(cloneSlotLinkDefinition),
+		documentSettings: {},
+	};
+}
+
+function cloneBlueprintEntities(
+	entities: BlueprintDocument["entities"],
+): Record<string, WorldEntity> {
+	const nextEntities: Record<string, WorldEntity> = {};
+
+	for (const [entityId, entity] of Object.entries(entities)) {
+		nextEntities[entityId] = {
+			...entity,
+			position: {
+				x: entity.position.x,
+				y: entity.position.y,
+			},
+			config: { ...entity.config },
+			tags: [...entity.tags],
+		};
+	}
+
+	return nextEntities;
+}
+
+function cloneSlotLinkDefinition(slotLink: SlotLinkDefinition): SlotLinkDefinition {
+	return {
+		...slotLink,
+		source: {
+			...slotLink.source,
+		},
+		target: {
+			...slotLink.target,
+		},
 	};
 }

@@ -29,7 +29,7 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "handled" });
-    expect(isShortcutFor).toHaveBeenCalledWith(SHORTCUT_KEY.DELETE_DEVICE, "KeyF", "f");
+    expect(isShortcutFor).toHaveBeenCalledWith(SHORTCUT_KEY.DELETE_DEVICE, "KeyF", "f", { alt: false, ctrl: false, meta: false, shift: false });
     expect(deleteCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
     expect(hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
     expect(hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);

@@ -138,6 +138,7 @@ export const DialogShell = observer(function DialogShell({
   const shellClassName = [
     "dialog-shell",
     className,
+    tabs.length > 0 ? "has-tabs" : "",
     compactMobileLayout ? "is-mobile-compact" : "",
     dialogState.maximized ? "is-maximized" : "",
   ].filter(Boolean).join(" ");
@@ -149,8 +150,13 @@ export const DialogShell = observer(function DialogShell({
   const headerClassName = [
     "dialog-shell-header",
     `${classPrefix}-header`,
+    tabs.length > 0 ? "has-tabs" : "",
     isDraggable ? "is-draggable" : "",
   ].filter(Boolean).join(" ");
+  const headerMainClassName = [
+    "dialog-shell-header-main",
+    `${classPrefix}-header-main`,
+  ].join(" ");
   const bodyClassNames = [
     "dialog-shell-body",
     bodyClassName,
@@ -307,64 +313,149 @@ export const DialogShell = observer(function DialogShell({
         style={resolvedShellStyle}
       >
         <header className={headerClassName} onPointerDown={handleHeaderPointerDown}>
-          <div className={["dialog-shell-header-copy", `${classPrefix}-header-copy`].join(" ")}>
-            <h2 id={titleId}>{title}</h2>
-          </div>
-          {tabs.length > 0 ? (
-            <div aria-label={title} className={["dialog-shell-tab-list", `${classPrefix}-tab-list`].join(" ")} role="tablist">
-              {tabs.map((tab) => {
-                const isActive = activeTab?.id === tab.id;
-
-                return (
-                  <button
-                    aria-controls={`${dialogKey}-dialog-panel-${tab.id}`}
-                    aria-selected={isActive}
-                    className={isActive
-                      ? `dialog-shell-tab ${classPrefix}-tab is-active`
-                      : `dialog-shell-tab ${classPrefix}-tab`}
-                    id={`${dialogKey}-dialog-tab-${tab.id}`}
-                    key={tab.id}
-                    onClick={() => {
-                      onTabChange?.(tab.id);
-                    }}
-                    role="tab"
-                    type="button"
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
+          <div className={headerMainClassName}>
+            <div className={["dialog-shell-header-copy", `${classPrefix}-header-copy`].join(" ")}>
+              <h2 id={titleId}>{title}</h2>
             </div>
-          ) : null}
-          <div className={["dialog-shell-header-actions", `${classPrefix}-header-actions`].join(" ")}>
-            {showMaximizeButton ? (
+            {/* AI-CORRECTION 2026-05-09:
+                Archived note below记录的是“标题旁直接塞 tab 按钮”的旧失败方案。
+                当前有效实现改为固定高度的 tab 轨道，仍与标题同行，但不会把 tab 渲染成右上角按钮组。
+            */}
+            {tabs.length > 0 ? (
+              <div
+                className={["dialog-shell-tab-strip", `${classPrefix}-tab-strip`].join(" ")}
+                data-dialog-shell-no-drag
+              >
+                <div aria-label={title} className={["dialog-shell-tab-list", `${classPrefix}-tab-list`].join(" ")} role="tablist">
+                  {tabs.map((tab) => {
+                    const isActive = activeTab?.id === tab.id;
+
+                    return (
+                      <button
+                        aria-controls={`${dialogKey}-dialog-panel-${tab.id}`}
+                        aria-selected={isActive}
+                        className={isActive
+                          ? `dialog-shell-tab ${classPrefix}-tab is-active`
+                          : `dialog-shell-tab ${classPrefix}-tab`}
+                        id={`${dialogKey}-dialog-tab-${tab.id}`}
+                        key={tab.id}
+                        onClick={() => {
+                          onTabChange?.(tab.id);
+                        }}
+                        role="tab"
+                        type="button"
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+            <div className={["dialog-shell-header-actions", `${classPrefix}-header-actions`].join(" ")}>
+              {showMaximizeButton ? (
+                <button
+                  aria-label={maximizeButtonTitle}
+                  className={`dialog-shell-header-button ${classPrefix}-header-button`}
+                  onClick={onToggleMaximized}
+                  title={maximizeButtonTitle}
+                  type="button"
+                >
+                  <span className="top-bar-toggle-icon">
+                    <WorkbenchIcon kind={dialogState.maximized ? "shrink" : "expand"} />
+                  </span>
+                  <span className="sr-only">{maximizeButtonTitle}</span>
+                </button>
+              ) : null}
               <button
-                aria-label={maximizeButtonTitle}
-                className={`dialog-shell-header-button ${classPrefix}-header-button`}
-                onClick={onToggleMaximized}
-                title={maximizeButtonTitle}
+                aria-label={closeTitle}
+                className={`dialog-shell-header-button ${classPrefix}-header-button ${classPrefix}-close`}
+                onClick={onClose}
+                title={closeTitle}
                 type="button"
               >
                 <span className="top-bar-toggle-icon">
-                  <WorkbenchIcon kind={dialogState.maximized ? "shrink" : "expand"} />
+                  <WorkbenchIcon kind="cancel" />
                 </span>
-                <span className="sr-only">{maximizeButtonTitle}</span>
+                <span className="sr-only">{closeTitle}</span>
               </button>
-            ) : null}
-            <button
-              aria-label={closeTitle}
-              className={`dialog-shell-header-button ${classPrefix}-header-button ${classPrefix}-close`}
-              onClick={onClose}
-              title={closeTitle}
-              type="button"
-            >
-              <span className="top-bar-toggle-icon">
-                <WorkbenchIcon kind="cancel" />
-              </span>
-              <span className="sr-only">{closeTitle}</span>
-            </button>
+            </div>
           </div>
+          {/* AI-REMOVED 2026-05-09:
+              Reason: 将 tab 保留在 header 内会持续呈现为标题右侧按钮组，而不是独立页签带。
+              Trigger: 用户反馈“都是问题”，且最新截图中 help/toolbox 对话框的 tab 仍然浮在 header 右侧，并带有错误的下划线与碎弧。
+              Evidence: .temp/playwright-test/dialog-shell-help-tabs-v7.png 与 .temp/playwright-test/dialog-shell-toolbox-tabs-v7.png。
+              Replacement: header 下方的 dialog-shell-tab-strip，同文件当前有效实现。
+              Risk: Low
+              Human Review: Required
+
+              Original code:
+              {tabs.length > 0 ? (
+                <div aria-label={title} className={["dialog-shell-tab-list", `${classPrefix}-tab-list`].join(" ")} role="tablist">
+                  {tabs.map((tab) => {
+                    const isActive = activeTab?.id === tab.id;
+
+                    return (
+                      <button
+                        aria-controls={`${dialogKey}-dialog-panel-${tab.id}`}
+                        aria-selected={isActive}
+                        className={isActive
+                          ? `dialog-shell-tab ${classPrefix}-tab is-active`
+                          : `dialog-shell-tab ${classPrefix}-tab`}
+                        id={`${dialogKey}-dialog-tab-${tab.id}`}
+                        key={tab.id}
+                        onClick={() => {
+                          onTabChange?.(tab.id);
+                        }}
+                        role="tab"
+                        type="button"
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+          */}
         </header>
+        {/* AI-REMOVED 2026-05-09:
+            Reason: 用户要求标题与 tab 同行，独立第二行 tab-strip 不再满足目标。
+            Trigger: 需求明确要求“先 dialog 标题，然后后面跟 tab”，同时要求切换 tab 时 content 尺寸不能跳动。
+            Evidence: 当前实现虽然形态正确，但 tab-strip 单独占一行，和最新要求冲突。
+            Replacement: dialog-shell-header-main 内的固定高度 dialog-shell-tab-strip。
+            Risk: Low
+            Human Review: Required
+
+            Original code:
+            {tabs.length > 0 ? (
+              <div className={["dialog-shell-tab-strip", `${classPrefix}-tab-strip`].join(" ")}>
+                <div aria-label={title} className={["dialog-shell-tab-list", `${classPrefix}-tab-list`].join(" ")} role="tablist">
+                  {tabs.map((tab) => {
+                    const isActive = activeTab?.id === tab.id;
+
+                    return (
+                      <button
+                        aria-controls={`${dialogKey}-dialog-panel-${tab.id}`}
+                        aria-selected={isActive}
+                        className={isActive
+                          ? `dialog-shell-tab ${classPrefix}-tab is-active`
+                          : `dialog-shell-tab ${classPrefix}-tab`}
+                        id={`${dialogKey}-dialog-tab-${tab.id}`}
+                        key={tab.id}
+                        onClick={() => {
+                          onTabChange?.(tab.id);
+                        }}
+                        role="tab"
+                        type="button"
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+        */}
         <div className={bodyClassNames}>
           {activeTab === null ? children : (
             <section

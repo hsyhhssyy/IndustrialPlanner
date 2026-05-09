@@ -7,12 +7,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/host/app-host";
 import type { GestureEvent } from "@/app/input/gesture/adapter";
+import { BlueprintPreviewDialog } from "@/app/shell/dialogs/blueprint-preview-dialog";
 import { LeftDock } from "@/app/shell/layout/left-dock";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
+import { createDummyWorldDocument } from "@/editor/dummy-document";
+import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
 import {
   createBlueprintFolder,
@@ -693,6 +696,50 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
   });
 
+  it("shows only compact import actions in narrow touch layout", async () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 390,
+      height: 844,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+
+    await act(async () => {
+      root.render(<LeftDock appHost={appHost} />);
+      await flushAsyncEffects();
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const operationGroup = visiblePanel?.querySelector(".placement-panel-group-operation") as HTMLElement | null;
+    const operationButtonList = operationGroup?.querySelector(".placement-operation-button-list") as HTMLElement | null;
+
+    expect(visiblePanel?.getAttribute("data-panel-id")).toBe("blueprint");
+    expect(operationGroup?.querySelector(".placement-panel-group-header")).toBeNull();
+    expect(operationButtonList).not.toBeNull();
+    expect(operationButtonList?.classList.contains("is-compact-import-actions")).toBe(true);
+    expect(operationGroup?.querySelectorAll(".blueprint-action-button")).toHaveLength(2);
+    expect(operationGroup?.querySelectorAll(".placement-button-label")).toHaveLength(2);
+    expect(operationGroup?.querySelector('[data-ui-button-id="blueprint-action-import-file"]')).not.toBeNull();
+    expect(operationGroup?.querySelector('[data-ui-button-id="blueprint-action-import-clipboard"]')).not.toBeNull();
+    expect(operationGroup?.querySelector('[data-ui-button-id="blueprint-action-export-file"]')).toBeNull();
+    expect(operationGroup?.querySelector('[data-ui-button-id="blueprint-action-copy-clipboard"]')).toBeNull();
+    expect(operationGroup?.textContent).toContain("文件导入");
+    expect(operationGroup?.textContent).toContain("剪贴板导入");
+    expect(operationGroup?.textContent).not.toContain("从文件导入");
+    expect(operationGroup?.textContent).not.toContain("从剪贴板导入");
+  });
+
   it("browses user blueprints and creates nested folders inside the blueprint panel", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
@@ -739,6 +786,7 @@ describe("Left dock panel switching", () => {
     const rootFolderButton = visiblePanel?.querySelector(
       `[data-blueprint-folder-id="${rootFolder?.folderId ?? ""}"]`,
     ) as HTMLButtonElement | null;
+    const breadcrumbLabel = visiblePanel?.querySelector(".blueprint-path-label") as HTMLSpanElement | null;
 
     expect(visiblePanel?.getAttribute("data-panel-id")).toBe("blueprint");
     expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-tab-user"]')?.getAttribute("aria-selected")).toBe("true");
@@ -752,9 +800,23 @@ describe("Left dock panel switching", () => {
       await flushAsyncEffects();
     });
 
+    expect(breadcrumbLabel?.textContent?.trim()).toBe("根目录 / 总线蓝图");
+    expect(breadcrumbLabel?.getAttribute("title")).toBe("根目录 / 总线蓝图");
     expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-folder-back"]')).not.toBeNull();
     expect(visiblePanel?.textContent).toContain("炼油分支");
     expect(visiblePanel?.textContent).toContain("仓储总线样例");
+
+    const nestedFolderButton = visiblePanel?.querySelector(
+      `[data-blueprint-folder-id="${nestedFolder?.folderId ?? ""}"]`,
+    ) as HTMLButtonElement | null;
+
+    await act(async () => {
+      nestedFolderButton?.click();
+      await flushAsyncEffects();
+    });
+
+    expect(breadcrumbLabel?.textContent?.trim()).toBe("根目录 / … / 炼油分支");
+    expect(breadcrumbLabel?.getAttribute("title")).toBe("根目录 / 总线蓝图 / 炼油分支");
 
     const createFolderToggle = visiblePanel?.querySelector(
       '[data-ui-button-id="blueprint-folder-create-toggle"]',
@@ -835,6 +897,97 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.textContent).toContain("当前还没有可用的系统蓝图");
     expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')).toBeNull();
   });
+
+  it("opens the blueprint preview dialog when clicking a blueprint entry", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    await saveBlueprintDocument(createTestBlueprint({
+      name: "根目录蓝图",
+      description: "四路汇流测试",
+    }));
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+
+    await act(async () => {
+      root.render(
+        <>
+          <LeftDock appHost={appHost} />
+          <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
+        </>,
+      );
+      await flushAsyncEffects();
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const blueprintButton = visiblePanel?.querySelector("[data-blueprint-id]") as HTMLButtonElement | null;
+
+    expect(blueprintButton).not.toBeNull();
+
+    await act(async () => {
+      blueprintButton?.click();
+    });
+
+    const previewDialog = container.querySelector('[data-dialog-key="blueprint-preview"]');
+
+    expect(appHost.blueprintPreview.dialogState.visible).toBe(true);
+    expect(previewDialog).not.toBeNull();
+    expect(previewDialog?.textContent).toContain("根目录蓝图");
+    expect(previewDialog?.textContent).toContain("蓝图预览");
+    expect(previewDialog?.querySelector('[data-ui-button-id="blueprint-preview-place-button"]')).not.toBeNull();
+  });
+
+  it("enters blueprint placement directly from the library detail place action", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    await saveBlueprintDocument(createPlacementBlueprint({
+      name: "详情卡放置蓝图",
+      description: "直接从列表详情进入放置",
+    }));
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+
+    await act(async () => {
+      root.render(<LeftDock appHost={appHost} />);
+      await flushAsyncEffects();
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const blueprintButton = visiblePanel?.querySelector("[data-blueprint-id]") as HTMLButtonElement | null;
+
+    expect(blueprintButton).not.toBeNull();
+
+    await act(async () => {
+      blueprintButton?.click();
+      await flushAsyncEffects();
+    });
+
+    const placeButton = visiblePanel?.querySelector(
+      '[data-ui-button-id="blueprint-detail-place-button"]',
+    ) as HTMLButtonElement | null;
+
+    expect(placeButton).not.toBeNull();
+
+    await act(async () => {
+      placeButton?.click();
+      await flushAsyncEffects();
+    });
+
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.internalState.runtime.activePanel).toBe("blueprint");
+    expect(appHost.blueprintPreview.dialogState.visible).toBe(false);
+  });
 });
 
 async function flushAsyncEffects() {
@@ -863,6 +1016,51 @@ function createTestBlueprint(
     },
     entityOrder: ["assembler_1"],
     slotLinks: [],
+    ...overrides,
+  });
+}
+
+function createPlacementBlueprint(
+  overrides: Partial<ReturnType<typeof createBlueprintDocument>> = {},
+) {
+  return createBlueprintDocument({
+    name: "蓝图放置样例",
+    description: "",
+    baseId: "wuling_protocol_core",
+    initialGridPoint: { x: 10, y: 10 },
+    entities: {
+      source: {
+        id: "source",
+        definitionId: "item_port_storager_1",
+        position: { x: 9, y: 9 },
+        rotation: 0,
+        config: {},
+        tags: [],
+      },
+      target: {
+        id: "target",
+        definitionId: "item_port_storager_1",
+        position: { x: 12, y: 9 },
+        rotation: 90,
+        config: {},
+        tags: [],
+      },
+    },
+    entityOrder: ["source", "target"],
+    slotLinks: [{
+      id: "source-target-link",
+      linkType: "share-all",
+      source: {
+        entityId: "source",
+        storageSlotGroupId: "output",
+        slotId: "output-slot",
+      },
+      target: {
+        entityId: "target",
+        storageSlotGroupId: "input",
+        slotId: "input-slot",
+      },
+    }],
     ...overrides,
   });
 }

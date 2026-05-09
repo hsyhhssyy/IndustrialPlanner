@@ -8,16 +8,66 @@ import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
 
 const WORLD_GRID_LINE_ALPHA = 0.30;
-const WORLD_GRID_LINE_WIDTH = 1.5;
+// AI-REMOVED 2026-05-09:
+// Reason: 固定 1.5px 线宽无法表达 REQ-059 的分级降级规则。
+// Trigger: ST1-RQ-059 要求格线宽度随缩放级别从 2px 逐级收敛到 1px。
+// Evidence: .docs/stages/stage1/requirements/REQ-059-fluid-grid-line-drawing-rules.md
+// Replacement: 同文件中的 WORLD_GRID_FINE_LINE_WIDTH、WORLD_GRID_MAJOR_LINE_WIDTH、WORLD_GRID_REDUCED_LINE_WIDTH。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const WORLD_GRID_LINE_WIDTH = 1.5;
+const WORLD_GRID_FINE_LINE_WIDTH = 1;
+const WORLD_GRID_MAJOR_LINE_WIDTH = 2;
+const WORLD_GRID_REDUCED_LINE_WIDTH = 1;
 const WORLD_GRID_MAJOR_LINE_INTERVAL = 5;
-const WORLD_GRID_MAJOR_LINE_WIDTH_MULTIPLIER = 2;
-const WORLD_GRID_FINE_LINE_MIN_CELL_PIXEL_SIZE = 10;
+// AI-REMOVED 2026-05-09:
+// Reason: 粗格线不再通过固定倍率从细线样式推导，而是按 Level 直接指定 2px 或 1px。
+// Trigger: ST1-RQ-059 要求 Level 1-3 粗线 2px，Level 4-5 粗线 1px。
+// Evidence: .docs/stages/stage1/requirements/REQ-059-fluid-grid-line-drawing-rules.md
+// Replacement: 同文件中的 WORLD_GRID_MAJOR_LINE_WIDTH 与 WORLD_GRID_REDUCED_LINE_WIDTH。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const WORLD_GRID_MAJOR_LINE_WIDTH_MULTIPLIER = 2;
+/** 缩放阈值：zoom >= A 时所有格线都不需要 pixelLine。 */
+export const WORLD_GRID_ZOOM_THRESHOLD_A = 48;
+/** 缩放阈值：B <= zoom < A 时仅细格线启用 pixelLine。 */
+export const WORLD_GRID_ZOOM_THRESHOLD_B = 28;
+/** 缩放阈值：C <= zoom < B 时全部格线启用 pixelLine，粗线保持 2px。 */
+export const WORLD_GRID_ZOOM_THRESHOLD_C = 16;
+/** 缩放阈值：D <= zoom < C 时细格线开始淡出，粗线和交点切换到 1px。 */
+export const WORLD_GRID_ZOOM_THRESHOLD_D = 8;
+/** 缩放阈值：E <= zoom < D 时仅粗线与交点继续淡出。 */
+export const WORLD_GRID_ZOOM_THRESHOLD_E = 4;
 const WORLD_GRID_PREVIEW_PADDING_CELLS = 4;
 const WORLD_GRID_PREVIEW_MIN_HALF_SPAN_CELLS = 8;
 const WORLD_GRID_SEGMENT_LENGTH_RATIO = 0.5;
 const WORLD_GRID_INTERSECTION_DOT_SIZE_RATIO = 0.24;
-const WORLD_GRID_INTERSECTION_DOT_MIN_SIZE = 2.5;
-const WORLD_GRID_INTERSECTION_DOT_MAX_SIZE = 4.5;
+// AI-REMOVED 2026-05-09:
+// Reason: 交点尺寸不再使用固定最小值，避免远缩放下放大成噪声。
+// Trigger: ST1-RQ-059 要求交点尺寸按 Level 上限收敛到 2px / 1px。
+// Evidence: .docs/stages/stage1/requirements/REQ-059-fluid-grid-line-drawing-rules.md
+// Replacement: 同文件中的 WORLD_GRID_INTERSECTION_DOT_FULL_SIZE 与 WORLD_GRID_INTERSECTION_DOT_REDUCED_SIZE。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const WORLD_GRID_INTERSECTION_DOT_MIN_SIZE = 2.5;
+// AI-REMOVED 2026-05-09:
+// Reason: 交点尺寸不再使用固定最大值，而是按缩放 Level 选择 2px 或 1px 的上限。
+// Trigger: ST1-RQ-059 需要交点在 Level 4-5 缩到 1px。
+// Evidence: .docs/stages/stage1/requirements/REQ-059-fluid-grid-line-drawing-rules.md
+// Replacement: 同文件中的 WORLD_GRID_INTERSECTION_DOT_FULL_SIZE 与 WORLD_GRID_INTERSECTION_DOT_REDUCED_SIZE。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// const WORLD_GRID_INTERSECTION_DOT_MAX_SIZE = 4.5;
+const WORLD_GRID_INTERSECTION_DOT_FULL_SIZE = 2;
+const WORLD_GRID_INTERSECTION_DOT_REDUCED_SIZE = 1;
 const WORLD_GRID_INTERSECTION_DOT_ALPHA_MULTIPLIER = 1.75;
 const GRASS_BACKGROUND_GRID_LINE_COLOR = 0x000000;
 
@@ -51,38 +101,119 @@ export type WorldGridVisibilityScope =
 export function resolveWorldGridStrokeStyle(
   theme: AppTheme,
   options: {
-    widthMultiplier?: number;
+    width?: number;
+    alpha?: number;
+    pixelLine?: boolean;
     forceColor?: number;
   } = {},
 ): {
   width: number;
   color: number;
   alpha: number;
+  pixelLine?: boolean;
 } {
-  return {
-    width: WORLD_GRID_LINE_WIDTH * (options.widthMultiplier ?? 1),
+  const strokeStyle: {
+    width: number;
+    color: number;
+    alpha: number;
+    pixelLine?: boolean;
+  } = {
+    width: options.width ?? WORLD_GRID_FINE_LINE_WIDTH,
     color:
       options.forceColor ??
       resolveAppThemeColorNumber(
         theme,
         theme.renderer.worldGridLineColorKey,
       ),
-    alpha: WORLD_GRID_LINE_ALPHA,
+    alpha: options.alpha ?? WORLD_GRID_LINE_ALPHA,
   };
+
+  if (options.pixelLine === true) {
+    strokeStyle.pixelLine = true;
+  }
+
+  return strokeStyle;
 }
 
 export function resolveWorldGridMajorStrokeStyle(
   theme: AppTheme,
-  options?: { forceColor?: number },
+  options: {
+    width?: number;
+    alpha?: number;
+    pixelLine?: boolean;
+    forceColor?: number;
+  } = {},
 ): {
   width: number;
   color: number;
   alpha: number;
+  pixelLine?: boolean;
 } {
   return resolveWorldGridStrokeStyle(theme, {
-    widthMultiplier: WORLD_GRID_MAJOR_LINE_WIDTH_MULTIPLIER,
-    forceColor: options?.forceColor,
+    width: options.width ?? WORLD_GRID_MAJOR_LINE_WIDTH,
+    alpha: options.alpha,
+    pixelLine: options.pixelLine,
+    forceColor: options.forceColor,
   });
+}
+
+export function computeFadeAlpha(
+  zoom: number,
+  upper: number,
+  lower: number,
+): number {
+  if (upper <= lower) {
+    return zoom > lower ? 1 : 0;
+  }
+
+  return Math.max(0, Math.min(1, (zoom - lower) / (upper - lower)));
+}
+
+export function resolveWorldGridRenderState(gridCellPixelSize: number): {
+  fineVisible: boolean;
+  fineAlpha: number;
+  fineWidth: number;
+  finePixelLine: boolean;
+  majorVisible: boolean;
+  majorAlpha: number;
+  majorWidth: number;
+  majorPixelLine: boolean;
+  dotVisible: boolean;
+  dotAlpha: number;
+  dotMaxSize: number;
+} {
+  const fineAlpha = gridCellPixelSize >= WORLD_GRID_ZOOM_THRESHOLD_C
+    ? 1
+    : computeFadeAlpha(
+      gridCellPixelSize,
+      WORLD_GRID_ZOOM_THRESHOLD_C,
+      WORLD_GRID_ZOOM_THRESHOLD_D,
+    );
+  const majorAlpha = gridCellPixelSize >= WORLD_GRID_ZOOM_THRESHOLD_D
+    ? 1
+    : computeFadeAlpha(
+      gridCellPixelSize,
+      WORLD_GRID_ZOOM_THRESHOLD_D,
+      WORLD_GRID_ZOOM_THRESHOLD_E,
+    );
+
+  return {
+    fineVisible: fineAlpha > 0,
+    fineAlpha,
+    fineWidth: WORLD_GRID_FINE_LINE_WIDTH,
+    finePixelLine: gridCellPixelSize < WORLD_GRID_ZOOM_THRESHOLD_A,
+    majorVisible: majorAlpha > 0,
+    majorAlpha,
+    majorWidth: gridCellPixelSize >= WORLD_GRID_ZOOM_THRESHOLD_C
+      ? WORLD_GRID_MAJOR_LINE_WIDTH
+      : WORLD_GRID_REDUCED_LINE_WIDTH,
+    majorPixelLine: gridCellPixelSize < WORLD_GRID_ZOOM_THRESHOLD_B,
+    dotVisible: majorAlpha > 0,
+    dotAlpha: majorAlpha,
+    dotMaxSize: gridCellPixelSize >= WORLD_GRID_ZOOM_THRESHOLD_C
+      ? WORLD_GRID_INTERSECTION_DOT_FULL_SIZE
+      : WORLD_GRID_INTERSECTION_DOT_REDUCED_SIZE,
+  };
 }
 
 export function resolveWorldGridLineAxes(options: {
@@ -181,20 +312,25 @@ function resolveWorldGridAxisGroup(options: {
   gridCellSize: number;
 }): WorldGridLineAxisGroup {
   const linePositions = resolveWorldGridAxisPositions(options);
-  const shouldShowFineLines = options.gridCellSize
-    >= WORLD_GRID_FINE_LINE_MIN_CELL_PIXEL_SIZE;
+  const renderState = resolveWorldGridRenderState(options.gridCellSize);
   const group: WorldGridLineAxisGroup = {
     fine: [],
     major: [],
   };
 
+  if (!renderState.fineVisible && !renderState.majorVisible) {
+    return group;
+  }
+
   for (const linePosition of linePositions) {
     if (linePosition.lineIndex % WORLD_GRID_MAJOR_LINE_INTERVAL === 0) {
-      group.major.push(linePosition.position);
+      if (renderState.majorVisible) {
+        group.major.push(linePosition.position);
+      }
       continue;
     }
 
-    if (shouldShowFineLines) {
+    if (renderState.fineVisible) {
       group.fine.push(linePosition.position);
     }
   }
@@ -337,11 +473,8 @@ export function resolveWorldGridIntersectionDotSize(
   gridCellPixelSize: number,
 ): number {
   return Math.min(
-    WORLD_GRID_INTERSECTION_DOT_MAX_SIZE,
-    Math.max(
-      WORLD_GRID_INTERSECTION_DOT_MIN_SIZE,
-      gridCellPixelSize * WORLD_GRID_INTERSECTION_DOT_SIZE_RATIO,
-    ),
+    resolveWorldGridRenderState(gridCellPixelSize).dotMaxSize,
+    gridCellPixelSize * WORLD_GRID_INTERSECTION_DOT_SIZE_RATIO,
   );
 }
 
@@ -531,6 +664,14 @@ export function createGridLineDecoration(): DecorationLayer {
         return;
       }
 
+      const renderState = resolveWorldGridRenderState(
+        ctx.viewportState.gridCellPixelSize,
+      );
+
+      if (!renderState.fineVisible && !renderState.majorVisible) {
+        return;
+      }
+
       const fullViewportLineAxes = resolveWorldGridLineAxes({
         viewportBounds: ctx.viewportBounds,
         viewportCenter: {
@@ -552,16 +693,34 @@ export function createGridLineDecoration(): DecorationLayer {
       const allHorizontalPositions = resolveWorldGridVisibleAxisPositions(
         lineAxes.horizontal,
       );
-      const fineLinesVisible =
-        ctx.viewportState.gridCellPixelSize >= WORLD_GRID_FINE_LINE_MIN_CELL_PIXEL_SIZE;
-      const fineStrokeStyle = resolveWorldGridStrokeStyle(theme, { forceColor });
-      const majorStrokeStyle = fineLinesVisible
-        ? resolveWorldGridMajorStrokeStyle(theme, { forceColor })
-        : fineStrokeStyle;
+      const fineStrokeStyle = renderState.fineVisible
+        ? resolveWorldGridStrokeStyle(theme, {
+          forceColor,
+          width: renderState.fineWidth,
+          alpha: WORLD_GRID_LINE_ALPHA * renderState.fineAlpha,
+          pixelLine: renderState.finePixelLine,
+        })
+        : null;
+      const majorStrokeStyle = renderState.majorVisible
+        ? resolveWorldGridMajorStrokeStyle(theme, {
+          forceColor,
+          width: renderState.majorWidth,
+          alpha: WORLD_GRID_LINE_ALPHA * renderState.majorAlpha,
+          pixelLine: renderState.majorPixelLine,
+        })
+        : null;
+      const dotStyle = renderState.dotVisible
+        ? resolveWorldGridStrokeStyle(theme, {
+          forceColor,
+          alpha: WORLD_GRID_LINE_ALPHA * renderState.dotAlpha,
+        })
+        : null;
 
       if (
+        fineStrokeStyle !== null && (
         lineAxes.vertical.fine.length > 0
         || lineAxes.horizontal.fine.length > 0
+        )
       ) {
         drawGridLineAxes({
           graphics,
@@ -572,18 +731,13 @@ export function createGridLineDecoration(): DecorationLayer {
           viewportBounds: drawViewportBounds,
         });
         graphics.stroke(fineStrokeStyle);
-        drawGridIntersectionDots({
-          graphics,
-          vertical: allVerticalPositions,
-          horizontal: allHorizontalPositions,
-          gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-          style: fineStrokeStyle,
-        });
       }
 
       if (
+        majorStrokeStyle !== null && (
         lineAxes.vertical.major.length > 0
         || lineAxes.horizontal.major.length > 0
+        )
       ) {
         drawGridLineAxes({
           graphics,
@@ -594,19 +748,22 @@ export function createGridLineDecoration(): DecorationLayer {
           viewportBounds: drawViewportBounds,
         });
         graphics.stroke(majorStrokeStyle);
+      }
+
+      const dotVerticalPositions = renderState.fineVisible
+        ? allVerticalPositions
+        : lineAxes.vertical.major;
+      const dotHorizontalPositions = renderState.fineVisible
+        ? allHorizontalPositions
+        : lineAxes.horizontal.major;
+
+      if (dotStyle !== null) {
         drawGridIntersectionDots({
           graphics,
-          vertical: lineAxes.vertical.major,
-          horizontal: allHorizontalPositions,
+          vertical: dotVerticalPositions,
+          horizontal: dotHorizontalPositions,
           gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-          style: majorStrokeStyle,
-        });
-        drawGridIntersectionDots({
-          graphics,
-          vertical: lineAxes.vertical.fine,
-          horizontal: lineAxes.horizontal.major,
-          gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-          style: majorStrokeStyle,
+          style: dotStyle,
         });
       }
     },

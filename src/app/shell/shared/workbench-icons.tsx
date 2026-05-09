@@ -15,14 +15,32 @@ import LucideMonitor from "~icons/lucide/monitor";
 import LucideMove from "~icons/lucide/move";
 import LucideMousePointer2 from "~icons/lucide/mouse-pointer-2";
 import LucidePackage2 from "~icons/lucide/package-2";
-import LucidePause from "~icons/lucide/pause";
+// AI-REMOVED 2026-05-09:
+// Reason: WorkbenchIcon now renders material pause and play glyphs instead of the lucide variants.
+// Trigger: ESLint reported unused icon imports.
+// Evidence: npm run lint flagged LucidePause and LucidePlay as unused.
+// Replacement: MaterialSymbolsPauseRounded and MaterialSymbolsPlayArrowRounded in this file.
+// Risk: Low.
+// Human Review: Required.
+//
+// Original code:
+// import LucidePause from "~icons/lucide/pause";
 import LucidePanelLeftClose from "~icons/lucide/panel-left-close";
 import LucidePanelLeftOpen from "~icons/lucide/panel-left-open";
 import LucidePanelRightClose from "~icons/lucide/panel-right-close";
 import LucidePanelTopClose from "~icons/lucide/panel-top-close";
 import LucidePanelTopOpen from "~icons/lucide/panel-top-open";
 import LucidePanelRightOpen from "~icons/lucide/panel-right-open";
-import LucidePlay from "~icons/lucide/play";
+// AI-REMOVED 2026-05-09:
+// Reason: WorkbenchIcon now renders material pause and play glyphs instead of the lucide variants.
+// Trigger: ESLint reported unused icon imports.
+// Evidence: npm run lint flagged LucidePause and LucidePlay as unused.
+// Replacement: MaterialSymbolsPauseRounded and MaterialSymbolsPlayArrowRounded in this file.
+// Risk: Low.
+// Human Review: Required.
+//
+// Original code:
+// import LucidePlay from "~icons/lucide/play";
 import LucideActivity from "~icons/lucide/activity";
 import LucideRectangleHorizontal from "~icons/lucide/rectangle-horizontal";
 import LucideRectangleVertical from "~icons/lucide/rectangle-vertical";

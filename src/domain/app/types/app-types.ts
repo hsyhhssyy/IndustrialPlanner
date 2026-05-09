@@ -132,6 +132,7 @@ export type ActiveTool =
   | "select"
   | "move"
   | "marquee"
+  | "blueprint-placement"
   | "single-placement"
   | "logistics-placement";
 

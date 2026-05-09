@@ -616,6 +616,7 @@ describe("createHypergryphSelectGestureModule", () => {
       SHORTCUT_KEY.RETURN_SELECT,
       "Escape",
       "Escape",
+      { alt: false, ctrl: false, meta: false, shift: false },
     );
     expect(setActiveTool).toHaveBeenCalledWith("select");
   });

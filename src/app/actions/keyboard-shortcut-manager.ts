@@ -217,7 +217,7 @@ function parseShortcutBinding(shortcut: string): {
     return null;
   }
 
-  const modifiers: Required<ShortcutEventModifiers> = {
+  const modifiers: { alt: boolean; ctrl: boolean; meta: boolean; shift: boolean } = {
     alt: false,
     ctrl: false,
     meta: false,

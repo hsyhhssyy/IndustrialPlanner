@@ -173,20 +173,38 @@ export const TopBar = observer(function TopBar({ appHost }: { appHost: AppHost }
   const t = appHost.actions.translate;
   const {
     screenProfile,
-    workbench: { rightDockOpen, topBarCollapsed },
+    workbench: { topBarCollapsed },
   } = appHost.state;
 
-  const toggleRightDock = () => {
-    appHost.internalActions.toggleRightDock();
-  };
+  // AI-REMOVED 2026-05-09:
+  // Reason: The right dock toggle controls were removed from TopBar.
+  // Trigger: ESLint reported unused vars in TopBar.
+  // Evidence: npm run lint flagged toggleRightDock, rightPanelLabel, and rightPanelIconKind.
+  // Replacement: None.
+  // Risk: Low.
+  // Human Review: Required.
+  //
+  // Original code:
+  // const toggleRightDock = () => {
+  //   appHost.internalActions.toggleRightDock();
+  // };
   const toggleTopBarCollapsed = () => {
     appHost.internalActions.toggleTopBarCollapsed();
   };
-  const rightPanelLabel = `${t(rightDockOpen ? "action.close" : "action.open")} ${t("topBar.rightPanel")}`;
   const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
   const collapseActionKey = isTouchLandscape && topBarCollapsed ? "action.expand" : "action.collapse";
   const collapseButtonLabel = `${t(collapseActionKey)} ${t("topBar.controls")}`;
-  const rightPanelIconKind = rightDockOpen ? "panel-right-close" : "panel-right-open";
+  // AI-REMOVED 2026-05-09:
+  // Reason: Right dock button label and icon state are no longer rendered by TopBar.
+  // Trigger: ESLint reported unused vars after the layout toggle buttons were removed.
+  // Evidence: npm run lint flagged rightPanelLabel and rightPanelIconKind.
+  // Replacement: None.
+  // Risk: Low.
+  // Human Review: Required.
+  //
+  // Original code:
+  // const rightPanelLabel = `${t(rightDockOpen ? "action.close" : "action.open")} ${t("topBar.rightPanel")}`;
+  // const rightPanelIconKind = rightDockOpen ? "panel-right-close" : "panel-right-open";
 
   if (isTouchLandscape && topBarCollapsed) {
     return null;

@@ -12,6 +12,7 @@ import type {
 	LogisticsDraftActionResult,
 	MoveLogisticsDraftEndOptions,
 } from "../shared/logistics";
+import type { BlueprintDocument } from "../document/blueprint-document";
 
 export interface EditorAction {
 	setViewportClientRect(clientRect: ClientPixelRect): void;
@@ -40,6 +41,7 @@ export interface EditorAction {
 	cancelMoveOperationDraft(): void;
 
 	createSinglePlacementDraft(deviceDefinitionId: string, centerGridPoint: GridPoint): void;
+	createBlueprintPlacementDraft?(blueprint: BlueprintDocument, centerGridPoint: GridPoint): void;
 	applyPlacementDraft(): boolean;
 	cancelPlacementDraft(): void;
 

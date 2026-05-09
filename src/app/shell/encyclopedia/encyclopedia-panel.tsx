@@ -433,9 +433,15 @@ export const EncyclopediaPanel = observer(function EncyclopediaPanel({
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set(["asInput", "asOutput", "liquidFilling", "liquidDismantle", "asMachine"]),
   );
-  const currentEntry = wikiState.openedPage.kind === "browser"
-    ? null
-    : { type: wikiState.openedPage.kind, id: wikiState.openedPage.id };
+  const openedPage = wikiState.openedPage;
+  const openedPageId = openedPage.kind === "browser" ? null : openedPage.id;
+  const currentEntry = useMemo(() => {
+    if (openedPage.kind === "browser" || openedPageId === null) {
+      return null;
+    }
+
+    return { type: openedPage.kind, id: openedPageId };
+  }, [openedPage.kind, openedPageId]);
 
   const persistNavigation = useCallback((nextNavigationStack: NavEntry[]) => {
     runInAction(() => {

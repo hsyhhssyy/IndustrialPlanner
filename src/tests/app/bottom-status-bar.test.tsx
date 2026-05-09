@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { action, observable } from "mobx";
 import { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -99,6 +100,17 @@ describe("BottomStatusBar", () => {
 
   it("keeps only device and screen icons on the right side while left side holds text", () => {
     const workspace = createWorkspace();
+    const editorState = observable({
+      viewport: {
+        gridSize: 1,
+      },
+    });
+    const setGridSize = action((value: number) => {
+      editorState.viewport.gridSize = value;
+    });
+    workspace.editor = {
+      state: editorState,
+    } as unknown as WorkspaceContract["editor"];
     const appHost = createAppHost(workspace);
 
     act(() => {
@@ -120,15 +132,18 @@ describe("BottomStatusBar", () => {
     }
 
     expect(leftGroup.textContent).toContain("工具:select");
-    expect(leftGroup.textContent).toContain("集成工业仿真");
-    expect(leftGroup.textContent).toContain("语言: 中文");
-    expect(leftGroup.textContent).toContain("当前视图: 左侧面板 / 右侧面板");
+    expect(leftGroup.textContent).toContain("缩放: 100%");
+    expect(leftGroup.textContent).not.toContain("集成工业仿真");
+    expect(leftGroup.textContent).not.toContain("语言: 中文");
+    expect(leftGroup.textContent).not.toContain("当前视图: 左侧面板");
 
     act(() => {
       appHost.internalActions.setActiveTool("move");
+      setGridSize(1.25);
     });
 
     expect(leftGroup.textContent).toContain("工具:move");
+    expect(leftGroup.textContent).toContain("缩放: 125%");
 
     const icons = rightGroup.querySelectorAll(".status-bar-icon-chip");
 

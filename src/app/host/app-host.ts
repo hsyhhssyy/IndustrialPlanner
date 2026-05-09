@@ -15,6 +15,7 @@ import { KeyboardShortcutManager } from "../actions/keyboard-shortcut-manager";
 import { hookLocalstorage } from "../state/storage-hook";
 import { createUiStateReadWrite, UiStateReadWrite } from "../state/state-impl";
 import { hookThemeApplicator } from "../theme/theme-applicator";
+import { WorkbenchBlueprintPreviewController } from "../shell/state/blueprint-preview-dialog-state";
 import { WorkbenchEncyclopediaPickerController } from "../shell/state/encyclopedia-picker-state";
 
 export interface AppHost extends AppContract {
@@ -24,6 +25,7 @@ export interface AppHost extends AppContract {
   gestureDiagnostics: GestureDiagnosticsStore;
   internalState: UiStateReadWrite;
   internalActions: AppInternalAction;
+  blueprintPreview: WorkbenchBlueprintPreviewController;
   encyclopediaPicker: WorkbenchEncyclopediaPickerController;
   dispose: () => void;
 }
@@ -60,6 +62,7 @@ export function createAppHost(
   };
   const gestureAdapter = createGestureAdapter(host);
   const gestureDiagnostics = createGestureDiagnosticsStore();
+  const blueprintPreview = new WorkbenchBlueprintPreviewController();
   const encyclopediaPicker = new WorkbenchEncyclopediaPickerController(
     () => internalState.workbench.toolbox.wiki,
   );
@@ -77,6 +80,7 @@ export function createAppHost(
     gestureActionRouter,
     gestureDiagnostics,
     internalState,
+    blueprintPreview,
     encyclopediaPicker,
   });
 
@@ -123,6 +127,7 @@ export function createAppHost(
   Object.assign(host, {
     internalActions,
     dispose: () => {
+      blueprintPreview.close();
       encyclopediaPicker.dispose();
       gestureActionRouter.dispose();
       gestureAdapter.dispose();

@@ -1,9 +1,19 @@
-import type { BlueprintDocument } from "@/domain/document/blueprint-document";
+// AI-REMOVED 2026-05-09:
+// Reason: This module no longer uses the BlueprintDocument type directly.
+// Trigger: ESLint reported an unused type import.
+// Evidence: npm run lint flagged BlueprintDocument as unused.
+// Replacement: None.
+// Risk: Low.
+// Human Review: Required.
+//
+// Original code:
+// import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type {
   BlueprintLibraryDirectoryListing,
   BlueprintLibraryFolder,
   BlueprintLibraryRecord,
 } from "@/shared/blueprints/blueprint-library";
+import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
 
 const SYSTEM_BLUEPRINT_ROOT = "blueprints";
 const SYSTEM_BLUEPRINT_INDEX_PATH = `${SYSTEM_BLUEPRINT_ROOT}/index.json`;
@@ -243,44 +253,6 @@ function normalizeSystemBlueprintIndexFolder(value: unknown): SystemBlueprintInd
   };
 }
 
-function normalizeBlueprintDocument(value: unknown): BlueprintDocument | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  if (
-    typeof value.schemaVersion !== "number" ||
-    !isNonEmptyString(value.blueprintId) ||
-    !isNonEmptyString(value.version) ||
-    !isNonEmptyString(value.name) ||
-    typeof value.description !== "string" ||
-    !isNonEmptyString(value.baseId) ||
-    !isGridPoint(value.initialGridPoint) ||
-    !isRecord(value.entities) ||
-    !isStringArray(value.entityOrder) ||
-    !Array.isArray(value.slotLinks) ||
-    !isNonEmptyString(value.createdAt) ||
-    !isNonEmptyString(value.updatedAt)
-  ) {
-    return null;
-  }
-
-  return {
-    schemaVersion: value.schemaVersion,
-    blueprintId: value.blueprintId,
-    version: value.version,
-    name: value.name,
-    description: value.description,
-    baseId: value.baseId,
-    initialGridPoint: value.initialGridPoint,
-    entities: value.entities as BlueprintDocument["entities"],
-    entityOrder: [...value.entityOrder],
-    slotLinks: value.slotLinks as BlueprintDocument["slotLinks"],
-    createdAt: value.createdAt,
-    updatedAt: value.updatedAt,
-  };
-}
-
 function createPublicAssetUrl(path: string): string {
   const baseUrl = import.meta.env.BASE_URL;
   const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
@@ -299,17 +271,22 @@ function createSystemFolderId(
   return parentFolderId === null ? encodedName : `${parentFolderId}/${encodedName}`;
 }
 
-function isGridPoint(value: unknown): value is { x: number; y: number } {
-  return isRecord(value) && typeof value.x === "number" && typeof value.y === "number";
-}
-
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
-}
+// AI-REMOVED 2026-05-09:
+// Reason: The helper is no longer used after the index parser was simplified.
+// Trigger: ESLint reported an unused local function.
+// Evidence: npm run lint flagged isStringArray as unused.
+// Replacement: None.
+// Risk: Low.
+// Human Review: Required.
+//
+// Original code:
+// function isStringArray(value: unknown): value is string[] {
+//   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+// }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

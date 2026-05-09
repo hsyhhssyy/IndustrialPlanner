@@ -5,10 +5,19 @@ import { createUuid } from "@/domain/shared/uuid";
 import {
   listFromIndexedDb,
   readFromIndexedDb,
-  saveToIndexedDb,
   trySaveToIndexedDb,
   type IndexedDbStoreLocation,
 } from "./browser-storage";
+// AI-REMOVED 2026-05-09:
+// Reason: blueprint-storage writes entries through writeBlueprintEntry and no longer calls saveToIndexedDb directly.
+// Trigger: ESLint reported an unused import.
+// Evidence: npm run lint flagged saveToIndexedDb as unused.
+// Replacement: writeBlueprintEntry and trySaveToIndexedDb in this module.
+// Risk: Low.
+// Human Review: Required.
+//
+// Original code:
+// import { saveToIndexedDb } from "./browser-storage";
 
 const BLUEPRINT_DATABASE_NAME = "industrial-planner";
 const BLUEPRINT_STORE_NAME = "blueprints";

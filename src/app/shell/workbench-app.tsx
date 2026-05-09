@@ -13,6 +13,7 @@ import {
   resolveFullscreenState,
 } from "@/app/shell/layout/fullscreen-toggle-button";
 import { DebugLogDialog } from "@/app/shell/dialogs/debug-log-dialog";
+import { BlueprintPreviewDialog } from "@/app/shell/dialogs/blueprint-preview-dialog";
 import { HelpDialog } from "@/app/shell/dialogs/help-dialog";
 import { InspectorDialog } from "@/app/shell/dialogs/inspector-dialog";
 import { MobilePortraitGate } from "@/app/shell/layout/mobile-portrait-gate";
@@ -511,6 +512,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       {showRightDock ? <RightDock appHost={appHost} /> : null}
       {showBottomStatusBar ? <BottomStatusBar appHost={appHost} /> : null}
       {appHost.state.settings.debugMode ? <DebugLogDialog appHost={appHost} /> : null}
+      <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
       <InspectorDialog appHost={appHost} />
       <SaveBlueprintDialog appHost={appHost} />
       <ToolboxDialog appHost={appHost} />
@@ -531,5 +533,5 @@ function isAnyDialogShellVisible(appHost: AppHost): boolean {
 
       return dialogState?.visible === true;
     },
-  ) || appHost.encyclopediaPicker.dialogState.visible;
+  ) || appHost.encyclopediaPicker.dialogState.visible || appHost.blueprintPreview.dialogState.visible;
 }

@@ -13,6 +13,7 @@ import type { EditorState } from "@/domain/editor/editor-state";
 import type { ClientPixelRect } from "@/domain/shared/client-pixel";
 import type { GridRect } from "@/domain/shared/grid";
 import type { LogisticsDraftReadonlyState } from "@/domain/shared/logistics";
+import type { SlotLinkDefinition } from "@/domain/document/world-document";
 
 import type { DraftEntity } from "./draft-entity";
 import { EDITOR_GRID_CELL_PIXEL_SIZE } from "./viewport-constants";
@@ -43,6 +44,7 @@ export interface EditorInternalPersistStateReadWrite {
 export interface EditorInternalTransientStateReadWrite {
   hasMeasuredViewportClientRect: boolean;
   logisticsDraft: LogisticsDraftReadonlyState | null;
+  placementDraftSlotLinks: SlotLinkDefinition[] | null;
 }
 
 class EditorInternalPersistStateReadWriteImpl
@@ -60,6 +62,7 @@ class EditorInternalTransientStateReadWriteImpl
 {
   hasMeasuredViewportClientRect = false;
   logisticsDraft: LogisticsDraftReadonlyState | null = null;
+  placementDraftSlotLinks: SlotLinkDefinition[] | null = null;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

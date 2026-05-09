@@ -5,6 +5,9 @@ import {
 } from "@/app/input/gesture/diagnostics";
 import type { GestureActionRouter } from "./gesture-action-router";
 import {
+  createHypergryphBlueprintPlacementGestureModule,
+} from "./hypergryph/hypergryph-blueprint-placement-gesture-module";
+import {
   createHypergryphDeleteSelectionGestureModule,
 } from "./hypergryph/hypergryph-delete-selection-gesture-module";
 import {
@@ -39,6 +42,7 @@ export class AppGestureModuleRegistrar {
 
   public constructor(options: AppGestureModuleRegistrarOptions) {
     this.unregisterModules.push(
+      options.router.registerModule(createHypergryphBlueprintPlacementGestureModule()),
       options.router.registerModule(createHypergryphLogisticsPlacementGestureModule()),
       options.router.registerModule(createHypergryphSinglePlacementGestureModule()),
       options.router.registerModule(createHypergryphMoveGestureModule()),

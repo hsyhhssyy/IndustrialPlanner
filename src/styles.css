@@ -232,12 +232,34 @@ button.is-active {
 }
 
 .dialog-shell-header {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
   padding: 12px 14px;
   border-bottom: 1px solid var(--line);
+}
+
+.dialog-shell-header-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.dialog-shell-header.has-tabs {
+  gap: 0;
+  padding: 12px 16px 0;
+  border-bottom: 0;
+}
+
+.dialog-shell-header.has-tabs .dialog-shell-header-main {
+  padding-bottom: 0;
+}
+
+.dialog-shell-header.has-tabs + .dialog-shell-body {
+  border-top: 0;
 }
 
 .dialog-shell-header.is-draggable {
@@ -248,7 +270,7 @@ button.is-active {
 .dialog-shell-header-copy {
   display: flex;
   align-items: center;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -276,35 +298,304 @@ button.is-active {
 }
 
 .dialog-shell-tab-list {
+  position: relative;
   display: flex;
+  isolation: isolate;
+  align-items: flex-end;
   flex: 1 1 auto;
+  width: 100%;
   gap: 8px;
   min-width: 0;
   overflow-y: hidden;
   overflow-x: auto;
-  padding: 0;
+  padding: 0 8px;
+}
+
+.dialog-shell-tab-list::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: color-mix(in srgb, var(--accent-strong) 42%, var(--line));
 }
 
 .dialog-shell-tab {
-  min-height: 34px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface-1);
-  color: var(--text-1);
+  --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 66%, var(--line));
+  --dialog-shell-tab-top: color-mix(in srgb, var(--accent) 24%, var(--surface-1));
+  --dialog-shell-tab-bottom: color-mix(in srgb, var(--accent) 14%, var(--surface-1));
+  position: relative;
+  z-index: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 24px 4px;
+  margin: 0 0 -1px;
+  border: 1px solid var(--dialog-shell-tab-border);
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(180deg, var(--dialog-shell-tab-top) 0%, var(--dialog-shell-tab-bottom) 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.82),
+    0 4px 10px rgb(15 23 42 / 0.05);
+  color: color-mix(in srgb, var(--accent-strong) 78%, var(--text-0));
+  font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
+  transition:
+    background 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    min-height 140ms ease;
 }
 
-.dialog-shell-tab:hover,
+.dialog-shell-tab::before,
+.dialog-shell-tab::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  z-index: -1;
+  width: 12px;
+  height: 14px;
+  background: linear-gradient(180deg, var(--dialog-shell-tab-top) 0%, var(--dialog-shell-tab-bottom) 100%);
+}
+
+.dialog-shell-tab::before {
+  left: -12px;
+  border-bottom: 1px solid var(--dialog-shell-tab-border);
+  border-left: 1px solid var(--dialog-shell-tab-border);
+  border-bottom-left-radius: 10px;
+}
+
+.dialog-shell-tab::after {
+  right: -12px;
+  border-right: 1px solid var(--dialog-shell-tab-border);
+  border-bottom: 1px solid var(--dialog-shell-tab-border);
+  border-bottom-right-radius: 10px;
+}
+
+.dialog-shell-tab:hover {
+  z-index: 2;
+  --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 82%, var(--line));
+  --dialog-shell-tab-top: color-mix(in srgb, var(--accent) 30%, var(--surface-1));
+  --dialog-shell-tab-bottom: color-mix(in srgb, var(--accent) 18%, var(--surface-1));
+  color: color-mix(in srgb, var(--accent-strong) 88%, var(--text-0));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.88),
+    0 6px 12px rgb(15 23 42 / 0.07);
+}
+
 .dialog-shell-tab.is-active {
-  background: var(--surface-3);
+  z-index: 3;
+  --dialog-shell-tab-border: var(--accent-strong);
+  --dialog-shell-tab-top: color-mix(in srgb, var(--accent) 38%, var(--surface-1));
+  --dialog-shell-tab-bottom: color-mix(in srgb, var(--accent) 24%, var(--surface-1));
+  min-height: 52px;
+  color: color-mix(in srgb, var(--accent-strong) 92%, var(--text-0));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.92),
+    0 1px 0 var(--surface-1),
+    0 10px 20px rgb(15 23 42 / 0.07);
+}
+
+.dialog-shell.has-tabs {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.dialog-shell.has-tabs .dialog-shell-header {
+  --dialog-shell-tab-track-height: 34px;
+  position: relative;
+  gap: 0;
+  padding: 8px 18px 0;
+  border-bottom: 0;
+}
+
+.dialog-shell.has-tabs .dialog-shell-header::after {
+  content: "";
+  position: absolute;
+  right: 18px;
+  bottom: 0;
+  left: 18px;
+  height: 1px;
+  background: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  z-index: 0;
+}
+
+.dialog-shell.has-tabs .dialog-shell-header-main {
+  align-items: flex-end;
+  gap: 14px;
+  width: 100%;
+  min-height: var(--dialog-shell-tab-track-height);
+}
+
+.dialog-shell.has-tabs .dialog-shell-header-copy {
+  flex: 0 1 auto;
+  padding-bottom: 3px;
+}
+
+.dialog-shell.has-tabs .dialog-shell-header-actions {
+  padding-bottom: 3px;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab-strip {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--dialog-shell-tab-track-height);
+  margin-bottom: -2px;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab-strip::after {
+  content: none;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab-list {
+  gap: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  justify-content: flex-start;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab-list::after {
+  content: none;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab {
+  --dialog-shell-tab-border: color-mix(in srgb, var(--line-strong) 84%, var(--line));
+  --dialog-shell-tab-top: color-mix(in srgb, var(--surface-2) 82%, var(--surface-1));
+  --dialog-shell-tab-bottom: color-mix(in srgb, var(--surface-3) 48%, var(--surface-1));
+  min-height: 0;
+  height: 24px;
+  padding: 0 18px 2px;
+  margin: 0 0 -1px;
+  border-color: var(--dialog-shell-tab-border);
+  border-radius: 12px 12px 0 0;
+  background: linear-gradient(180deg, var(--dialog-shell-tab-top) 0%, var(--dialog-shell-tab-bottom) 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.92);
+  color: color-mix(in srgb, var(--text-0) 86%, var(--text-1));
+  transform: translateY(4px);
+  transition:
+    background 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab::before,
+.dialog-shell.has-tabs .dialog-shell-tab::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  z-index: -1;
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+  background: linear-gradient(180deg, var(--dialog-shell-tab-top) 0%, var(--dialog-shell-tab-bottom) 100%);
+  transition:
+    opacity 180ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms ease,
+    background 180ms ease;
+  pointer-events: none;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab::before,
+.dialog-shell.has-tabs .dialog-shell-tab::after {
+  content: none;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab::before {
+  left: -8px;
+  border-bottom: 1px solid var(--dialog-shell-tab-border);
+  border-left: 1px solid var(--dialog-shell-tab-border);
+  border-bottom-left-radius: 0;
+  transform: translate(6px, 8px) scale(0.72);
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab::after {
+  right: -8px;
+  border-right: 1px solid var(--dialog-shell-tab-border);
+  border-bottom: 1px solid var(--dialog-shell-tab-border);
+  border-bottom-right-radius: 0;
+  transform: translate(-6px, 8px) scale(0.72);
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab:hover {
+  --dialog-shell-tab-border: var(--line-strong);
+  --dialog-shell-tab-top: color-mix(in srgb, var(--surface-2) 92%, var(--surface-1));
+  --dialog-shell-tab-bottom: color-mix(in srgb, var(--surface-3) 58%, var(--surface-1));
+  border-color: var(--dialog-shell-tab-border);
+  background: linear-gradient(180deg, var(--dialog-shell-tab-top) 0%, var(--dialog-shell-tab-bottom) 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.94),
+    0 4px 10px rgb(15 23 42 / 0.05);
   color: var(--text-0);
+  transform: translateY(2px);
 }
 
-.dialog-shell-tab.is-active {
-  border-color: var(--accent-strong);
-  background: var(--accent-soft);
+.dialog-shell.has-tabs .dialog-shell-tab.is-active {
+  --dialog-shell-tab-border: var(--line-strong);
+  --dialog-shell-tab-top: color-mix(in srgb, var(--surface-1) 96%, var(--surface-2));
+  --dialog-shell-tab-bottom: color-mix(in srgb, var(--surface-2) 74%, var(--surface-1));
+  height: 36px;
+  padding-inline: 22px;
+  border-color: var(--dialog-shell-tab-border);
+  background: linear-gradient(180deg, var(--dialog-shell-tab-top) 0%, var(--dialog-shell-tab-bottom) 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.96),
+    0 3px 0 var(--surface-1);
+  color: var(--text-0);
+  transform: translateY(1px);
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab.is-active::before,
+.dialog-shell.has-tabs .dialog-shell-tab.is-active::after {
+  opacity: 1;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab.is-active::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  bottom: -3px;
+  left: -1px;
+  height: 4px;
+  background: var(--surface-1);
+  pointer-events: none;
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab.is-active::before {
+  transform: translate(0, 0) scale(1);
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab.is-active::after {
+  transform: translate(0, 0) scale(1);
+}
+
+.dialog-shell.has-tabs .dialog-shell-tab::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  bottom: -2px;
+  left: -6px;
+  z-index: 1;
+  width: auto;
+  height: auto;
+  opacity: 1;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  transform: none;
+  pointer-events: auto;
 }
 
 .dialog-shell-body,
@@ -1755,9 +2046,68 @@ body.is-resizing-dialog-shell * {
   border-radius: 14px 14px 0 0;
 }
 
+/* AI-REMOVED 2026-05-09:
+   Reason: 之前的 patch 切坏了 mobile-compact dialog-shell 段，产生了游离声明和拼接错误的 selector。
+   Trigger: 本轮按标题文本高度继续压缩桌面 tab 时复查到这段 CSS 已经结构损坏。
+   Evidence: 该段包含裸露的 padding/transform/height 声明，脱离 selector，且 body 拖拽规则被错误替换成尺寸声明。
+   Replacement: 下方重写后的 mobile-compact dialog-shell 规则。
+   Risk: Low
+   Human Review: Required
+
+   Original code:
+   .dialog-shell.is-mobile-compact .dialog-shell-header {
+     --dialog-shell-tab-track-height: 42px;
+     padding: 6px 8px;
+   }
+     padding: 12px 18px 0;
+   .dialog-shell.is-mobile-compact .dialog-shell-header-copy h2 {
+     font-size: 0.75rem;
+     line-height: 1.1;
+   }
+     padding-bottom: 7px;
+   .dialog-shell.is-mobile-compact .dialog-shell-header-actions {
+     gap: 4px;
+   }
+     padding-bottom: 7px;
+   .dialog-shell.is-mobile-compact .dialog-shell-header-button {
+     width: 24px;
+     height: 24px;
+   }
+
+   .dialog-shell.is-mobile-compact .dialog-shell-tab-list {
+     height: 30px;
+   }
+
+   .dialog-shell.is-mobile-compact .dialog-shell-tab {
+     min-height: 24px;
+     padding: 0 6px;
+     font-size: 0.5rem;
+     line-height: 1;
+   }
+
+   .dialog-shell.is-mobile-compact .help-dialog-content,
+     transform: translateY(6px);
+   .dialog-shell.is-mobile-compact .settings-dialog-content,
+   .dialog-shell.is-mobile-compact .settings-dialog-sidebar {
+     transform: translateY(3px);
+   }
+
+   body.is-dragging-help-dialog,
+   body.is-dragging-help-dialog *,
+   body.is-dragging-toolbox-dialog,
+   body.is-dragging-toolbox-dialog * {
+     height: 36px;
+     padding-inline: 24px;
+   }
+*/
+
 .dialog-shell.is-mobile-compact .dialog-shell-header {
-  gap: 6px;
-  padding: 6px 8px;
+  --dialog-shell-tab-track-height: 28px;
+  padding: 6px 8px 0;
+}
+
+.dialog-shell.is-mobile-compact .dialog-shell-header-copy {
+  padding-bottom: 2px;
 }
 
 .dialog-shell.is-mobile-compact .dialog-shell-header-copy h2 {
@@ -1767,6 +2117,7 @@ body.is-resizing-dialog-shell * {
 
 .dialog-shell.is-mobile-compact .dialog-shell-header-actions {
   gap: 4px;
+  padding-bottom: 2px;
 }
 
 .dialog-shell.is-mobile-compact .dialog-shell-header-button {
@@ -1774,30 +2125,31 @@ body.is-resizing-dialog-shell * {
   height: 24px;
 }
 
+.dialog-shell.is-mobile-compact .dialog-shell-tab-strip {
+  height: var(--dialog-shell-tab-track-height);
+}
+
 .dialog-shell.is-mobile-compact .dialog-shell-tab-list {
-  gap: 4px;
+  height: 100%;
+  gap: 6px;
 }
 
 .dialog-shell.is-mobile-compact .dialog-shell-tab {
-  min-height: 24px;
-  padding: 0 6px;
+  min-height: 0;
+  height: 18px;
+  padding: 0 6px 1px;
   font-size: 0.5rem;
   line-height: 1;
+  transform: translateY(3px);
 }
 
-.dialog-shell.is-mobile-compact .help-dialog-content,
-.dialog-shell.is-mobile-compact .toolbox-dialog-content,
-.dialog-shell.is-mobile-compact .settings-dialog-content,
-.dialog-shell.is-mobile-compact .settings-dialog-sidebar {
-  padding-top: 8px;
+.dialog-shell.is-mobile-compact .dialog-shell-tab:hover {
+  transform: translateY(2px);
 }
 
-body.is-dragging-help-dialog,
-body.is-dragging-help-dialog *,
-body.is-dragging-toolbox-dialog,
-body.is-dragging-toolbox-dialog * {
-  cursor: grabbing !important;
-  user-select: none;
+.dialog-shell.is-mobile-compact .dialog-shell-tab.is-active {
+  height: 22px;
+  padding-inline: 8px;
 }
 
 @media (max-width: 900px) {
@@ -2453,8 +2805,13 @@ body.is-resizing-left-dock * {
   gap: 6px;
 }
 
+/* 2026-05-09: 窄左栏下只有指定操作按钮会收缩成无文字四宫格，并在面板收起后以悬浮工具条继续存在。 */
 .placement-operation-button-list.is-mobile-icon-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.blueprint-operation-button-list.is-compact-import-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .placement-button {
@@ -2491,6 +2848,12 @@ body.is-resizing-left-dock * {
   text-align: center;
 }
 
+.blueprint-operation-button-list.is-compact-import-actions .placement-action-button {
+  grid-template-columns: 18px minmax(0, 1fr);
+  column-gap: 3px;
+  padding: 3px 4px;
+}
+
 .placement-operation-button-list.is-mobile-icon-grid .button-icon,
 .placement-operation-button-list.is-mobile-icon-grid .button-icon-image {
   width: 28px;
@@ -2507,6 +2870,12 @@ body.is-resizing-left-dock * {
   height: 24px;
 }
 
+.blueprint-operation-button-list.is-compact-import-actions .button-icon,
+.blueprint-operation-button-list.is-compact-import-actions .button-icon-image {
+  width: 18px;
+  height: 18px;
+}
+
 .placement-button-label {
   display: flex;
   align-items: center;
@@ -2516,6 +2885,16 @@ body.is-resizing-left-dock * {
   line-height: 1.2;
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+.blueprint-operation-button-list.is-compact-import-actions .placement-button-label {
+  min-height: 18px;
+  font-size: 0.62rem;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  overflow-wrap: normal;
 }
 
 .placement-button-hotkey {
@@ -2562,24 +2941,25 @@ body.is-resizing-left-dock * {
 }
 
 .blueprint-tab-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .blueprint-tab-button {
-  min-height: 36px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-2);
+  justify-content: center;
+  min-height: 24px;
+  padding: 0.18rem 0.62rem;
   color: var(--text-1);
-  font-size: 0.9rem;
+  font-size: 0.72rem;
   font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .blueprint-tab-button.is-active {
-  border-color: var(--highlight-ring);
-  background: var(--surface-3);
   color: var(--text-0);
 }
 
@@ -2758,6 +3138,38 @@ body.is-resizing-left-dock * {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.blueprint-panel.is-touch-layout .blueprint-browser-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.blueprint-panel.is-narrow-column .blueprint-breadcrumb {
+  flex: 1 0 100%;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-breadcrumb {
+  width: 100%;
+  flex-wrap: nowrap;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-path-label {
+  flex: 1 1 auto;
+  display: block;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-path-label::-webkit-scrollbar {
+  display: none;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-browser-toolbar > .blueprint-utility-button {
+  justify-self: start;
+}
+
 .blueprint-panel.is-touch-layout .blueprint-entry-button {
   grid-template-columns: 24px minmax(0, 1fr);
 }
@@ -2882,6 +3294,170 @@ body.is-resizing-left-dock * {
 .save-blueprint-dialog {
   width: min(520px, 100%);
   height: min(440px, 100%);
+}
+
+.blueprint-preview-dialog {
+  width: min(760px, 100%);
+  height: min(680px, 100%);
+}
+
+.blueprint-preview-dialog-body {
+  display: grid;
+  min-height: 0;
+  padding: 14px;
+}
+
+.blueprint-preview-dialog-content {
+  display: grid;
+  min-height: 0;
+  height: 100%;
+}
+
+.blueprint-preview-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.9fr);
+  gap: 14px;
+  min-height: 100%;
+}
+
+.blueprint-preview-stage,
+.blueprint-preview-summary-card {
+  display: grid;
+  min-height: 0;
+  gap: 12px;
+}
+
+.blueprint-preview-canvas-shell {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  flex: 1 1 auto;
+  border: 1px solid color-mix(in srgb, var(--accent-strong) 18%, var(--line));
+  border-radius: 18px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent-soft) 75%, transparent) 0%, transparent 48%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-3) 80%, white 6%) 0%, var(--surface-1) 100%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
+}
+
+.blueprint-preview-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  background:
+    linear-gradient(color-mix(in srgb, var(--line) 52%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--line) 52%, transparent) 1px, transparent 1px),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-3) 84%, white 3%) 0%, color-mix(in srgb, var(--surface-1) 96%, black 2%) 100%);
+  background-size: 28px 28px, 28px 28px, auto;
+}
+
+.blueprint-preview-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: end;
+  justify-items: start;
+  gap: 8px;
+  padding: 24px;
+  text-align: left;
+  background: linear-gradient(180deg, transparent 18%, color-mix(in srgb, var(--surface-1) 72%, transparent) 100%);
+}
+
+.blueprint-preview-canvas-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-strong) 42%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-1) 85%, white 5%);
+  color: var(--text-0);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.blueprint-preview-overlay p,
+.blueprint-preview-renderer-note,
+.blueprint-preview-header-copy p,
+.blueprint-preview-footnote {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.blueprint-preview-stage-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.blueprint-preview-renderer-note {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-2) 94%, white 3%);
+}
+
+.blueprint-preview-summary-card {
+  align-content: start;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%);
+}
+
+.blueprint-preview-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.blueprint-preview-header-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.blueprint-preview-header-copy h3 {
+  margin: 0;
+  color: var(--text-0);
+  font-size: 1.02rem;
+  line-height: 1.3;
+}
+
+.blueprint-preview-metadata {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: 8px 12px;
+  margin: 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.blueprint-preview-metadata dt {
+  color: var(--text-2);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.blueprint-preview-metadata dd {
+  margin: 0;
+  color: var(--text-0);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.blueprint-preview-footnote {
+  padding-top: 2px;
 }
 
 .save-blueprint-dialog-body {
@@ -3031,6 +3607,31 @@ body.is-resizing-left-dock * {
 }
 
 @media (max-width: 720px) {
+  .blueprint-preview-dialog {
+    width: 100%;
+    height: min(720px, 100%);
+  }
+
+  .blueprint-preview-dialog-body {
+    padding: 12px;
+  }
+
+  .blueprint-preview-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .blueprint-preview-canvas {
+    min-height: 260px;
+  }
+
+  .blueprint-preview-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .blueprint-preview-header .save-blueprint-primary-button {
+    width: 100%;
+  }
+
   .save-blueprint-dialog {
     width: 100%;
     height: min(520px, 100%);
@@ -3051,6 +3652,25 @@ body.is-resizing-left-dock * {
 }
 
 @media (max-height: 440px) and (orientation: landscape) {
+  .blueprint-preview-dialog {
+    width: 100%;
+    height: 100%;
+    border-radius: 14px;
+  }
+
+  .blueprint-preview-dialog-body {
+    padding: 10px;
+  }
+
+  .blueprint-preview-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 0.88fr);
+    gap: 10px;
+  }
+
+  .blueprint-preview-canvas {
+    min-height: 220px;
+  }
+
   .save-blueprint-dialog-backdrop {
     padding: 8px;
   }

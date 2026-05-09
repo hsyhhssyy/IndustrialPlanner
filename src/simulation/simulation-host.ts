@@ -38,10 +38,17 @@ export interface SimulationHost extends SimulationContract {
   dispose: () => void;
 }
 
+export type SimulationHostWorkerMode = "auto" | "runtime";
+
+export interface CreateSimulationHostOptions {
+  readonly workerMode?: SimulationHostWorkerMode;
+}
+
 export function createSimulationHost(
   workspace: WorkspaceContract,
+  options: CreateSimulationHostOptions = {},
 ): SimulationHost {
-  const bridge = createSimulationWorkerBridge();
+  const bridge = createSimulationWorkerBridge(options.workerMode ?? "auto");
   const disposers: Array<() => void> = [];
   const topologyStore: SnapshotStoreReadWrite<CompiledSimulationTopology | null> = createSnapshotStore<CompiledSimulationTopology | null>(null);
   const internalState = createSimulationStateReadWrite();
@@ -213,8 +220,8 @@ function resolveDeviceRuntimeSlotItems(options: {
   return [...slotItemsByRealSlotKey.values()];
 }
 
-function createSimulationWorkerBridge(): SimulationWorkerBridge {
-  if (typeof Worker === "function") {
+function createSimulationWorkerBridge(workerMode: SimulationHostWorkerMode): SimulationWorkerBridge {
+  if (workerMode === "auto" && typeof Worker === "function") {
     return new BrowserSimulationWorkerBridge();
   }
 

@@ -19,14 +19,17 @@ import {
   createBlueprintFolder,
   listBlueprintDirectory,
 } from "@/shared/storage/blueprint-storage";
+import type { BlueprintLibraryRecord } from "@/shared/blueprints/blueprint-library";
 import LucideClipboard from "~icons/lucide/clipboard";
 import LucideCopy from "~icons/lucide/copy";
 import LucideDownload from "~icons/lucide/download";
 import LucideUpload from "~icons/lucide/upload";
+import type { BlueprintDetailPlaceEventInput } from "./blueprint-detail-card";
 
 interface BlueprintOperationButtonDefinition {
   readonly uiButtonId: string;
   readonly labelKey: string;
+  readonly compactLabelKey?: string;
   readonly Icon: typeof LucideUpload;
 }
 
@@ -48,6 +51,7 @@ function formatBlueprintTimestamp(locale: string, value: string): string {
 export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const isTouchLayout = isMobileOrTabletScreenProfile(appHost.state.screenProfile);
+  const isNarrowColumn = !isTouchLayout && appHost.state.workbench.leftDockWidth <= 420;
   const isPanelVisible = (appHost.internalState.runtime.activePanel ?? "placement") === "blueprint";
   const dialogVisible = appHost.internalState.workbench.dialogState["save-blueprint"].visible;
   const [activeTab, setActiveTab] = useState<BlueprintLibraryKind>("user");
@@ -145,11 +149,13 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
     {
       uiButtonId: "blueprint-action-import-file",
       labelKey: "workbench.button.importBlueprintFromFile",
+      compactLabelKey: "workbench.button.importBlueprintFromFileCompact",
       Icon: LucideUpload,
     },
     {
       uiButtonId: "blueprint-action-import-clipboard",
       labelKey: "workbench.button.importBlueprintFromClipboard",
+      compactLabelKey: "workbench.button.importBlueprintFromClipboardCompact",
       Icon: LucideClipboard,
     },
     {
@@ -163,6 +169,9 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
       Icon: LucideCopy,
     },
   ];
+  const visibleOperationButtons = isTouchLayout
+    ? operationButtons.filter((button) => button.compactLabelKey !== undefined)
+    : operationButtons;
 
   const handleCreateFolder = async () => {
     if (!activeLibrary.canCreateFolders || isCreatingFolder) {
@@ -198,6 +207,9 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
 
   const renderOperationButton = (button: BlueprintOperationButtonDefinition) => {
     const label = t(button.labelKey);
+    const visibleLabel = isTouchLayout && button.compactLabelKey !== undefined
+      ? t(button.compactLabelKey)
+      : label;
 
     return (
       <button
@@ -212,13 +224,51 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
         <span aria-hidden="true" className="button-icon">
           <button.Icon className="button-icon-image" />
         </span>
-        {isTouchLayout ? null : <span className="placement-button-label">{label}</span>}
+        <span className="placement-button-label">{visibleLabel}</span>
       </button>
     );
   };
 
+  const handlePlaceBlueprintFromLibrary = (
+    record: BlueprintLibraryRecord,
+    input: BlueprintDetailPlaceEventInput,
+  ) => {
+    if (appHost.workspace.editor === null) {
+      return;
+    }
+
+    appHost.blueprintPreview.open(record);
+
+    if (input.source === "mouse") {
+      appHost.gestureAdapter.handleUiButtonMouseTap({
+        uiButtonId: "blueprint-preview-place-button",
+        button: input.button,
+        altKey: input.altKey,
+        ctrlKey: input.ctrlKey,
+        metaKey: input.metaKey,
+        shiftKey: input.shiftKey,
+        sourceEvent: input.sourceEvent,
+      });
+      return;
+    }
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "blueprint-preview-place-button",
+      altKey: input.altKey,
+      ctrlKey: input.ctrlKey,
+      metaKey: input.metaKey,
+      shiftKey: input.shiftKey,
+      sourceEvent: input.sourceEvent,
+    });
+  };
+
   return (
-    <div className={isTouchLayout ? "blueprint-panel placement-panel is-touch-layout" : "blueprint-panel placement-panel"}>
+    <div className={isTouchLayout
+      ? "blueprint-panel placement-panel is-touch-layout"
+      : isNarrowColumn
+        ? "blueprint-panel placement-panel is-narrow-column"
+        : "blueprint-panel placement-panel"}
+    >
       <section
         aria-label={isTouchLayout ? t("workbench.section.blueprintActions") : undefined}
         aria-labelledby={isTouchLayout ? undefined : "blueprint-operation-section"}
@@ -231,11 +281,13 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
             <h3 id="blueprint-operation-section">{t("workbench.section.blueprintActions")}</h3>
           </div>
         )}
+        {/* 2026-05-09: 蓝图面板在窄左栏下不走四宫格纯图标模式，顶部四个按钮保持单列并保留文字。 */}
+        {/* 2026-05-09 订正: 窄左栏蓝图模式顶部现在只保留两个导入按钮，并以双列小字号标签显示。 */}
         <div className={isTouchLayout
-          ? "placement-operation-button-list is-mobile-icon-grid"
+          ? "placement-button-list placement-operation-button-list blueprint-operation-button-list is-compact-import-actions"
           : "placement-button-list placement-operation-button-list"}
         >
-          {operationButtons.map((button) => renderOperationButton(button))}
+          {visibleOperationButtons.map((button) => renderOperationButton(button))}
         </div>
       </section>
 
@@ -258,7 +310,7 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
             return (
               <button
                 aria-selected={isActive}
-                className={isActive ? "blueprint-tab-button is-active" : "blueprint-tab-button"}
+                className={isActive ? "pill blueprint-tab-button is-active" : "pill blueprint-tab-button"}
                 data-ui-button-id={tab.uiButtonId}
                 key={tab.id}
                 onClick={() => {
@@ -301,8 +353,10 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
           onOpenFolder={(folder) => {
             setFolderStack((currentValue) => [...currentValue, folder]);
           }}
-          onSelectBlueprint={(blueprintId) => {
-            setSelectedBlueprintId(blueprintId);
+          onPlaceBlueprint={handlePlaceBlueprintFromLibrary}
+          onSelectBlueprint={(record) => {
+            setSelectedBlueprintId(record.blueprintId);
+            appHost.blueprintPreview.open(record);
           }}
           onToggleCreateFolder={() => {
             if (!activeLibrary.canCreateFolders) {

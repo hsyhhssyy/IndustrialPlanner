@@ -16,6 +16,7 @@ import {
   APP_SETTINGS_LOCAL_STORAGE_KEY,
   WORKBENCH_STATE_LOCAL_STORAGE_KEY,
 } from "@/app/state/storage-hook";
+import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import {
   DEFAULT_HELP_DIALOG_TAB_ID,
   DEFAULT_MODULE_BALANCING_CANVAS_ID,
@@ -229,6 +230,7 @@ describe("createAppHost", () => {
     expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual(
       expect.arrayContaining([
         "gesture-diagnostics",
+        "hypergryph-blueprint-placement-gesture",
         "hypergryph-logistics-placement-gesture",
         "hypergryph-single-placement-gesture",
         "hypergryph-move-gesture",
@@ -1467,6 +1469,133 @@ describe("createAppHost", () => {
     expect(editorHost.state.collections.preview).toEqual([]);
   });
 
+  it("enters blueprint-placement from the preview place button without changing the active panel", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+    const blueprintRecord = createTestBlueprintRecord();
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+    appHost.blueprintPreview.open(blueprintRecord);
+
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: "blueprint-preview-place-button",
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.internalState.runtime.activePanel).toBe("blueprint");
+    expect(appHost.blueprintPreview.dialogState.visible).toBe(false);
+    expect(appHost.internalState.runtime.blueprintPlacementRecord?.blueprintId).toBe(
+      blueprintRecord.blueprintId,
+    );
+    expect(editorHost.state.collections.preview).toHaveLength(2);
+    expect(editorHost.internalState.internalTransientState.placementDraftSlotLinks).toHaveLength(1);
+  });
+
+  it("re-arms blueprint-placement after apply and exits cleanly on cancel", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    const appHost = createAppHost(workspace);
+    const blueprintRecord = createTestBlueprintRecord();
+    const initialEntityOrderLength = editorHost.document.getSnapshot().entityOrder.length;
+
+    appHost.blueprintPreview.open(blueprintRecord);
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "blueprint-preview-place-button",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    const previewBeforeApply = editorHost.state.collections.preview.map((entityId) => {
+      const entity = editorHost.queries.getEntityById(entityId);
+
+      return entity === null
+        ? null
+        : {
+          definitionId: entity.definitionId,
+          position: { ...entity.position },
+          rotation: entity.rotation,
+        };
+    });
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyR",
+      key: "r",
+      keyCode: 82,
+    }));
+
+    const rotatedPreview = editorHost.state.collections.preview.map((entityId) => {
+      const entity = editorHost.queries.getEntityById(entityId);
+
+      return entity === null
+        ? null
+        : {
+          definitionId: entity.definitionId,
+          position: { ...entity.position },
+          rotation: entity.rotation,
+        };
+    });
+
+    expect(rotatedPreview).not.toEqual(previewBeforeApply);
+    expect(appHost.internalState.runtime.blueprintPlacementRotationSteps).toBe(1);
+    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "canvas-floating-toolbar-button-ok",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.internalState.runtime.blueprintPlacementRecord?.blueprintId).toBe(
+      blueprintRecord.blueprintId,
+    );
+    expect(appHost.internalState.runtime.blueprintPlacementRotationSteps).toBe(1);
+    expect(editorHost.document.getSnapshot().entityOrder).toHaveLength(initialEntityOrderLength + 2);
+    expect(editorHost.document.getSnapshot().slotLinks).toHaveLength(1);
+    expect(editorHost.state.collections.preview).toHaveLength(2);
+
+    const rearmedPreview = editorHost.state.collections.preview.map((entityId) => {
+      const entity = editorHost.queries.getEntityById(entityId);
+
+      return entity === null
+        ? null
+        : {
+          definitionId: entity.definitionId,
+          position: { ...entity.position },
+          rotation: entity.rotation,
+        };
+    });
+
+    expect(rearmedPreview).toEqual(rotatedPreview);
+
+    appHost.gestureAdapter.handleUiButtonTouchTap({
+      uiButtonId: "canvas-floating-toolbar-button-cancel",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.internalState.runtime.blueprintPlacementRecord).toBeNull();
+    expect(appHost.internalState.runtime.blueprintPlacementPointerMode).toBeNull();
+    expect(editorHost.state.collections.preview).toEqual([]);
+  });
+
   it("enters logistics-placement from E/Q and arms logistics device shortcuts", () => {
     const workspace = createWorkspace();
     createEditorHost(workspace);
@@ -2174,5 +2303,50 @@ function resolveClientPixelPointForGridCell(
       +
       editorHost.state.viewport.clientRect.height / 2
       + (cell.y + 0.5 - editorHost.state.viewport.center.y) * gridCellSize,
+  };
+}
+
+function createTestBlueprintRecord() {
+  return {
+    ...createBlueprintDocument({
+      name: "测试蓝图",
+      description: "蓝图放置测试",
+      baseId: "wuling_protocol_core",
+      initialGridPoint: { x: 10, y: 10 },
+      entities: {
+        source: {
+          id: "source",
+          definitionId: "item_port_storager_1",
+          position: { x: 9, y: 9 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+        target: {
+          id: "target",
+          definitionId: "item_port_storager_1",
+          position: { x: 12, y: 9 },
+          rotation: 90,
+          config: {},
+          tags: [],
+        },
+      },
+      entityOrder: ["source", "target"],
+      slotLinks: [{
+        id: "source-target-link",
+        linkType: "share-all",
+        source: {
+          entityId: "source",
+          storageSlotGroupId: "output",
+          slotId: "output-slot",
+        },
+        target: {
+          entityId: "target",
+          storageSlotGroupId: "input",
+          slotId: "input-slot",
+        },
+      }],
+    }),
+    parentFolderId: null,
   };
 }

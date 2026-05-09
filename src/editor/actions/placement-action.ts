@@ -1,13 +1,19 @@
+import type { BlueprintDocument } from "@/domain/document/blueprint-document";
+import type { SlotLinkDefinition, WorldEntity } from "@/domain/document/world-document";
 import type { EditorAction } from "@/domain/editor/editor-action";
 import type { DraftEntity } from "../draft-entity";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRectSize } from "@/domain/shared/grid";
+import { createUuid } from "@/domain/shared/uuid";
 
 import type { EditorActionsContext } from "./types";
 
 type EditorPlacementActions = Pick<
   EditorAction,
-  "createSinglePlacementDraft" | "applyPlacementDraft" | "cancelPlacementDraft"
+  | "createSinglePlacementDraft"
+  | "createBlueprintPlacementDraft"
+  | "applyPlacementDraft"
+  | "cancelPlacementDraft"
 >;
 
 export function createEditorPlacementActions({
@@ -65,6 +71,78 @@ export function createEditorPlacementActions({
         nextPreviewDrafts: [draft],
       });
       preview.replace([draft.id]);
+      state.internalTransientState.placementDraftSlotLinks = null;
+    },
+
+    createBlueprintPlacementDraft: (
+      blueprint: BlueprintDocument,
+      centerGridPoint: GridPoint,
+    ) => {
+      const currentDocument = document.getSnapshot();
+      const preview = resolveCollection(EntityCollectionType.preview);
+      const reservedIds = new Set<string>([
+        ...Object.keys(currentDocument.entities),
+        ...state.drafts.map((entity) => entity.id),
+      ]);
+      const placementVector = {
+        x: centerGridPoint.x - blueprint.initialGridPoint.x,
+        y: centerGridPoint.y - blueprint.initialGridPoint.y,
+      };
+      const nextPreviewDrafts: DraftEntity[] = [];
+      const entityIdMap = new Map<string, string>();
+
+      for (const entityId of blueprint.entityOrder) {
+        const entity = blueprint.entities[entityId];
+
+        if (entity === undefined) {
+          continue;
+        }
+
+        const draftId = generatePlacementDraftId(
+          entity.definitionId,
+          ++placementDraftCounter,
+          reservedIds,
+        );
+
+        entityIdMap.set(entity.id, draftId);
+        nextPreviewDrafts.push({
+          ...cloneWorldEntity(entity),
+          id: draftId,
+          originalEntityId: draftId,
+          position: {
+            x: entity.position.x + placementVector.x,
+            y: entity.position.y + placementVector.y,
+          },
+        });
+      }
+
+      state.drafts = replacePreviewDrafts({
+        drafts: state.drafts,
+        previewDraftIds: preview,
+        nextPreviewDrafts,
+      });
+      preview.replace(nextPreviewDrafts.map((draft) => draft.id));
+      state.internalTransientState.placementDraftSlotLinks = blueprint.slotLinks.flatMap((slotLink) => {
+        const sourceEntityId = entityIdMap.get(slotLink.source.entityId);
+        const targetEntityId = entityIdMap.get(slotLink.target.entityId);
+
+        if (sourceEntityId === undefined || targetEntityId === undefined) {
+          return [];
+        }
+
+        return [{
+          ...cloneSlotLinkDefinition(slotLink),
+          id: createUuid(),
+          source: {
+            ...slotLink.source,
+            entityId: sourceEntityId,
+          },
+          target: {
+            ...slotLink.target,
+            entityId: targetEntityId,
+          },
+        } satisfies SlotLinkDefinition];
+      });
     },
 
     applyPlacementDraft: () => {
@@ -75,6 +153,7 @@ export function createEditorPlacementActions({
       });
       const nextEntities = { ...currentDocument.entities };
       const nextEntityOrder = [...currentDocument.entityOrder];
+      const nextSlotLinks = [...currentDocument.slotLinks];
 
       for (const draft of previewDrafts) {
         nextEntities[draft.id] = {
@@ -88,10 +167,17 @@ export function createEditorPlacementActions({
         nextEntityOrder.push(draft.id);
       }
 
+      if (state.internalTransientState.placementDraftSlotLinks !== null) {
+        nextSlotLinks.push(
+          ...state.internalTransientState.placementDraftSlotLinks.map(cloneSlotLinkDefinition),
+        );
+      }
+
       document.setSnapshot({
         ...currentDocument,
         entities: nextEntities,
         entityOrder: nextEntityOrder,
+        slotLinks: nextSlotLinks,
       });
 
       clearPlacementState(state);
@@ -129,6 +215,7 @@ function clearPlacementState(state: EditorActionsContext["state"]): void {
 
   state.drafts = state.drafts.filter((entity) => !previewDraftIds.includes(entity.id));
   preview.replace([]);
+  state.internalTransientState.placementDraftSlotLinks = null;
 }
 
 function replacePreviewDrafts(options: {
@@ -178,4 +265,29 @@ function generatePlacementDraftId(
 
   reservedIds.add(nextId);
   return nextId;
+}
+
+function cloneWorldEntity(entity: WorldEntity): WorldEntity {
+  return {
+    ...entity,
+    position: {
+      ...entity.position,
+    },
+    config: {
+      ...entity.config,
+    },
+    tags: [...entity.tags],
+  };
+}
+
+function cloneSlotLinkDefinition(slotLink: SlotLinkDefinition): SlotLinkDefinition {
+  return {
+    ...slotLink,
+    source: {
+      ...slotLink.source,
+    },
+    target: {
+      ...slotLink.target,
+    },
+  };
 }

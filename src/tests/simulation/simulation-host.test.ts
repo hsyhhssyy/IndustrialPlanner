@@ -221,7 +221,7 @@ describe("createSimulationHost", () => {
     host.actions.stop()
     await host.actions.advancePlaybackByDeltaMs(1000)
 
-    expect(host.internalState.currentSnapshot?.tickNumber).toBe(0)
+    expect(host.internalState.currentSnapshot).toBeNull()
 
     host.dispose()
   })

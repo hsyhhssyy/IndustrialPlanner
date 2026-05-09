@@ -4,6 +4,7 @@ import type {
   BlueprintLibraryRecord,
 } from "@/shared/blueprints/blueprint-library";
 import type { BlueprintLibraryDescriptor } from "@/shared/blueprints/blueprint-library";
+import type { BlueprintDetailPlaceEventInput } from "./blueprint-detail-card";
 import LucideChevronLeft from "~icons/lucide/chevron-left";
 import LucideFileText from "~icons/lucide/file-text";
 import LucideFolder from "~icons/lucide/folder";
@@ -31,7 +32,8 @@ interface BlueprintDirectoryBrowserProps {
   readonly onCreateFolderSubmit: () => void | Promise<void>;
   readonly onCancelCreateFolder: () => void;
   readonly onOpenFolder: (folder: BlueprintLibraryFolder) => void;
-  readonly onSelectBlueprint: (blueprintId: string) => void;
+  readonly onSelectBlueprint: (record: BlueprintLibraryRecord) => void;
+  readonly onPlaceBlueprint: (record: BlueprintLibraryRecord, input: BlueprintDetailPlaceEventInput) => void;
 }
 
 function formatCountLabel(
@@ -41,6 +43,39 @@ function formatCountLabel(
   pluralKey: string,
 ): string {
   return `${count} ${translate(count === 1 ? singularKey : pluralKey)}`;
+}
+
+function formatBreadcrumbPath(options: {
+  readonly translate: BlueprintDirectoryBrowserProps["translate"];
+  readonly folderStack: readonly BlueprintLibraryFolder[];
+}): {
+  readonly displayLabel: string;
+  readonly fullLabel: string;
+} {
+  const rootLabel = options.translate("workbench.blueprint.rootFolder");
+
+  if (options.folderStack.length === 0) {
+    return {
+      displayLabel: rootLabel,
+      fullLabel: rootLabel,
+    };
+  }
+
+  const fullLabel = [rootLabel, ...options.folderStack.map((folder) => folder.name)].join(" / ");
+
+  if (options.folderStack.length === 1) {
+    return {
+      displayLabel: fullLabel,
+      fullLabel,
+    };
+  }
+
+  const currentFolder = options.folderStack.at(-1);
+
+  return {
+    displayLabel: `${rootLabel} / … / ${currentFolder?.name ?? ""}`,
+    fullLabel,
+  };
 }
 
 export function BlueprintDirectoryBrowser({
@@ -64,8 +99,13 @@ export function BlueprintDirectoryBrowser({
   onCancelCreateFolder,
   onOpenFolder,
   onSelectBlueprint,
+  onPlaceBlueprint,
 }: BlueprintDirectoryBrowserProps) {
   const hasEntries = directoryListing.folders.length > 0 || directoryListing.blueprints.length > 0;
+  const breadcrumbPath = formatBreadcrumbPath({
+    translate,
+    folderStack,
+  });
 
   return (
     <div className="blueprint-library-pane" role="tabpanel">
@@ -82,11 +122,23 @@ export function BlueprintDirectoryBrowser({
               <LucideChevronLeft className="button-icon-image" />
             </button>
           )}
+          {/* AI-REMOVED 2026-05-09:
+          Reason: 蓝图库名与当前面包屑根节点重复表达当前所在库，只保留路径根节点。
+          Trigger: 用户要求不要在下方面包屑同时显示“根目录”和“用户蓝图”。
+          Evidence: 当前库已经由上方系统/用户标签页表达，工具栏里重复显示库名会造成重复信息。
+          Replacement: 同一工具栏内的 blueprint-path-label
+          Risk: Low
+          Human Review: Required
+
+          Original code:
           <span className="pill">{translate(libraryDescriptor.labelKey)}</span>
-          <span className="blueprint-path-label">
-            {currentFolder === null
-              ? translate("workbench.blueprint.rootFolder")
-              : folderStack.map((folder) => folder.name).join(" / ")}
+          */}
+          <span
+            aria-label={breadcrumbPath.fullLabel}
+            className="blueprint-path-label"
+            title={breadcrumbPath.fullLabel}
+          >
+            {breadcrumbPath.displayLabel}
           </span>
         </div>
         {libraryDescriptor.canCreateFolders ? (
@@ -179,7 +231,7 @@ export function BlueprintDirectoryBrowser({
                 data-blueprint-id={record.blueprintId}
                 key={record.blueprintId}
                 onClick={() => {
-                  onSelectBlueprint(record.blueprintId);
+                  onSelectBlueprint(record);
                 }}
                 type="button"
               >
@@ -205,7 +257,13 @@ export function BlueprintDirectoryBrowser({
       ) : null}
 
       {selectedBlueprint === null ? null : (
-        <BlueprintDetailCard record={selectedBlueprint} translate={translate} />
+        <BlueprintDetailCard
+          onPlace={(input) => {
+            onPlaceBlueprint(selectedBlueprint, input);
+          }}
+          record={selectedBlueprint}
+          translate={translate}
+        />
       )}
     </div>
   );

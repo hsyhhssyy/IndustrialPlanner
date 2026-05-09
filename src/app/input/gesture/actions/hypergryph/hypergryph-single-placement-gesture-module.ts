@@ -13,7 +13,7 @@ import type { GridPoint, GridRect } from "@/domain/shared/grid";
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
-const PLACEMENT_TOOLBAR_BUTTON_IDS = [
+export const PLACEMENT_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-cancel",
   "canvas-floating-toolbar-button-rotate",
   "canvas-floating-toolbar-button-ok",
@@ -52,7 +52,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           return { status: "ignored" };
         }
 
-        closeCompactLeftDockOnSinglePlacementEnter(context.appHost);
+        closeCompactLeftDockOnPlacementEnter(context.appHost);
         syncPlacementEntryUi(context.appHost);
         return { status: "handled" };
       }
@@ -435,7 +435,7 @@ function handlePlacementMouseDragStart(options: {
   });
 }
 
-function primePlacementAnchorFromPreview(options: {
+export function primePlacementAnchorFromPreview(options: {
   appHost: AppHost;
   editor: EditorContract;
   position: GesturePosition;
@@ -463,7 +463,7 @@ function primePlacementAnchorFromPreview(options: {
   }
 }
 
-function drivePlacementPreview(options: {
+export function drivePlacementPreview(options: {
   appHost: AppHost;
   editor: EditorContract;
   position: GesturePosition;
@@ -544,7 +544,7 @@ function cancelPlacementOperation(appHost: AppHost, editor: EditorContract): voi
   }
 }
 
-function rotatePlacementPreview(appHost: AppHost, editor: EditorContract): void {
+export function rotatePlacementPreview(appHost: AppHost, editor: EditorContract): void {
   editor.actions.rotateCollection(EntityCollectionType.preview);
   appHost.internalActions.alignCanvasFloatingToolbar();
 }
@@ -565,7 +565,7 @@ function clearPlacementUi(appHost: AppHost): void {
   appHost.internalActions.hideCanvasFloatingToolbar();
 }
 
-function closeCompactLeftDockOnSinglePlacementEnter(appHost: AppHost): void {
+export function closeCompactLeftDockOnPlacementEnter(appHost: AppHost): void {
   const deviceClass = appHost.state.screenProfile.deviceClass;
   if (
     (deviceClass !== "mobile" && deviceClass !== "tablet")
@@ -591,8 +591,10 @@ function safelyCancelPlacementDraft(editor: EditorContract): void {
   }
 }
 
-function syncPlacementEntryUi(appHost: AppHost): boolean {
-  const pointerMode = appHost.internalState.runtime.singlePlacementPointerMode;
+export function syncPlacementEntryUi(
+  appHost: AppHost,
+  pointerMode = appHost.internalState.runtime.singlePlacementPointerMode,
+): boolean {
   if (pointerMode === null) {
     return true;
   }
@@ -629,7 +631,7 @@ function parsePlacementModeDeviceId(
   return deviceId.length > 0 ? deviceId : null;
 }
 
-function resolveViewportCenterGridPoint(editor: EditorContract): GridPoint | null {
+export function resolveViewportCenterGridPoint(editor: EditorContract): GridPoint | null {
   const clientRect = editor.state.viewport.clientRect;
 
   return editor.queries.findGridCellForClientPixlePoint({

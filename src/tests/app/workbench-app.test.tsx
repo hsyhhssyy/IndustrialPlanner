@@ -1160,8 +1160,8 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.screenProfile.hasTouch).toBe(true);
     expect(appHost.state.workbench.leftDockWidth).toBe(512);
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("512px");
-    expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("68px");
-    expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("1");
+    expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("51px");
+    expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("0.75");
     expect(container.querySelector(".dock-resize-handle")).not.toBeNull();
     expect(container.querySelector(".canvas-left-bottom-toolbar")).toBeNull();
     expect(container.querySelector(".placement-panel-group-operation.is-mobile-layout")).toBeNull();

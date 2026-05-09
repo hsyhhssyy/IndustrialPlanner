@@ -35,6 +35,7 @@ import type { GridPoint } from "@/domain/shared/grid";
 import type { LogisticsKind, LogisticsRouteOrder } from "@/domain/shared/logistics";
 import type { UiGroup } from "@/domain/registry/types/entity-definition";
 import type { AppLocale } from "@/shared/i18n/messages";
+import type { BlueprintLibraryRecord } from "@/shared/blueprints/blueprint-library";
 import {
   isMobileOrTabletScreenProfile,
   resolveScreenProfileFromWindow,
@@ -51,6 +52,7 @@ export function clampLeftDockWidth(width: number): number {
   return Math.min(MAX_LEFT_DOCK_WIDTH, Math.max(MIN_LEFT_DOCK_WIDTH, Math.round(width)));
 }
 
+// 2026-05-09: 当前版本要求 mobile 和 tablet 始终共用窄左栏；只有 PC 使用宽左栏与双列布局。
 export function resolveLeftDockWidthForScreenProfile(
   width: number,
   screenProfile: Pick<ScreenProfile, "deviceClass">,
@@ -341,6 +343,9 @@ export interface RuntimeStateReadWrite {
   moveEnterFrom: ActiveTool | null;
   movePointerMode: "mouse" | "touch" | null;
   placementAnchor: GridPoint | null;
+  blueprintPlacementRecord: BlueprintLibraryRecord | null;
+  blueprintPlacementPointerMode: "mouse" | "touch" | null;
+  blueprintPlacementRotationSteps: number;
   singlePlacementDeviceId: string | null;
   singlePlacementPointerMode: "mouse" | "touch" | null;
   selectingPlacementGroup: PlacementGroup | null;
@@ -503,6 +508,9 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   moveEnterFrom: ActiveTool | null = null;
   movePointerMode: "mouse" | "touch" | null = null;
   placementAnchor: GridPoint | null = null;
+  blueprintPlacementRecord: BlueprintLibraryRecord | null = null;
+  blueprintPlacementPointerMode: "mouse" | "touch" | null = null;
+  blueprintPlacementRotationSteps = 0;
   singlePlacementDeviceId: string | null = null;
   singlePlacementPointerMode: "mouse" | "touch" | null = null;
   selectingPlacementGroup: PlacementGroup | null = null;

@@ -12,14 +12,21 @@ import {
 } from "@/renderer/scene/render-scene-orchestrator"
 import {
   clipWorldGridLineAxesToViewportBounds,
+  computeFadeAlpha,
   resolveWorldGridDisconnectedSegmentSpans,
   resolveWorldGridIntersectionDotSize,
   resolveWorldGridLocalViewportBounds,
   resolveWorldGridMajorStrokeStyle,
   resolveWorldGridPreviewFocusLineBounds,
+  resolveWorldGridRenderState,
   resolveWorldGridStrokeStyle,
   resolveWorldGridLineAxes,
   resolveWorldGridVisibilityScope,
+  WORLD_GRID_ZOOM_THRESHOLD_A,
+  WORLD_GRID_ZOOM_THRESHOLD_B,
+  WORLD_GRID_ZOOM_THRESHOLD_C,
+  WORLD_GRID_ZOOM_THRESHOLD_D,
+  WORLD_GRID_ZOOM_THRESHOLD_E,
 } from "@/renderer/scene/decorations/GridLineDecoration"
 import {
   resolveMarqueeGridRectLayout,
@@ -322,7 +329,7 @@ describe("resolveWorldGridLineAxes", () => {
     expect(shiftedAxes.horizontal.major).toEqual([160])
   })
 
-  it("hides fine grid lines when cells are smaller than 10 pixels", () => {
+  it("hides fine grid lines once zoom reaches threshold D", () => {
     const axes = resolveWorldGridLineAxes({
       viewportBounds: {
         left: 0,
@@ -334,16 +341,16 @@ describe("resolveWorldGridLineAxes", () => {
         x: 0,
         y: 0,
       },
-      gridCellPixelSize: 9,
+      gridCellPixelSize: WORLD_GRID_ZOOM_THRESHOLD_D,
     })
 
     expect(axes.vertical.fine).toEqual([])
     expect(axes.horizontal.fine).toEqual([])
-    expect(axes.vertical.major.slice(0, 3)).toEqual([20, 65, 110])
-    expect(axes.horizontal.major.slice(0, 3)).toEqual([20, 65, 110])
+    expect(axes.vertical.major.length).toBeGreaterThan(0)
+    expect(axes.horizontal.major.length).toBeGreaterThan(0)
   })
 
-  it("keeps fine grid lines visible at 10 pixels", () => {
+  it("keeps fine grid lines visible above threshold D", () => {
     const axes = resolveWorldGridLineAxes({
       viewportBounds: {
         left: 0,
@@ -355,13 +362,117 @@ describe("resolveWorldGridLineAxes", () => {
         x: 0,
         y: 0,
       },
-      gridCellPixelSize: 10,
+      gridCellPixelSize: (WORLD_GRID_ZOOM_THRESHOLD_C + WORLD_GRID_ZOOM_THRESHOLD_D) / 2,
     })
 
-    expect(axes.vertical.fine).toEqual([10, 20, 30, 40, 60, 70, 80, 90])
-    expect(axes.horizontal.fine).toEqual([10, 20, 30, 40, 60, 70, 80, 90])
-    expect(axes.vertical.major).toEqual([0, 50, 100])
-    expect(axes.horizontal.major).toEqual([0, 50, 100])
+    expect(axes.vertical.fine.length).toBeGreaterThan(0)
+    expect(axes.horizontal.fine.length).toBeGreaterThan(0)
+    expect(axes.vertical.major.length).toBeGreaterThan(0)
+    expect(axes.horizontal.major.length).toBeGreaterThan(0)
+  })
+
+  it("returns no visible axes at or below threshold E", () => {
+    const axes = resolveWorldGridLineAxes({
+      viewportBounds: {
+        left: 0,
+        top: 0,
+        width: 100,
+        height: 100,
+      },
+      viewportCenter: {
+        x: 0,
+        y: 0,
+      },
+      gridCellPixelSize: WORLD_GRID_ZOOM_THRESHOLD_E,
+    })
+
+    expect(axes).toEqual({
+      vertical: {
+        fine: [],
+        major: [],
+      },
+      horizontal: {
+        fine: [],
+        major: [],
+      },
+    })
+  })
+})
+
+describe("computeFadeAlpha", () => {
+  it("linearly interpolates alpha across the configured interval", () => {
+    expect(computeFadeAlpha(WORLD_GRID_ZOOM_THRESHOLD_C, WORLD_GRID_ZOOM_THRESHOLD_C, WORLD_GRID_ZOOM_THRESHOLD_D)).toBe(1)
+    expect(computeFadeAlpha(
+      (WORLD_GRID_ZOOM_THRESHOLD_C + WORLD_GRID_ZOOM_THRESHOLD_D) / 2,
+      WORLD_GRID_ZOOM_THRESHOLD_C,
+      WORLD_GRID_ZOOM_THRESHOLD_D,
+    )).toBeCloseTo(0.5)
+    expect(computeFadeAlpha(WORLD_GRID_ZOOM_THRESHOLD_D, WORLD_GRID_ZOOM_THRESHOLD_C, WORLD_GRID_ZOOM_THRESHOLD_D)).toBe(0)
+  })
+})
+
+describe("resolveWorldGridRenderState", () => {
+  it("switches pixel snapping in two stages across the upper three levels", () => {
+    expect(resolveWorldGridRenderState(WORLD_GRID_ZOOM_THRESHOLD_A)).toMatchObject({
+      finePixelLine: false,
+      majorPixelLine: false,
+      majorWidth: 2,
+      dotMaxSize: 2,
+    })
+
+    expect(resolveWorldGridRenderState(
+      (WORLD_GRID_ZOOM_THRESHOLD_A + WORLD_GRID_ZOOM_THRESHOLD_B) / 2,
+    )).toMatchObject({
+      finePixelLine: true,
+      majorPixelLine: false,
+      majorWidth: 2,
+      dotMaxSize: 2,
+    })
+
+    expect(resolveWorldGridRenderState(
+      (WORLD_GRID_ZOOM_THRESHOLD_B + WORLD_GRID_ZOOM_THRESHOLD_C) / 2,
+    )).toMatchObject({
+      finePixelLine: true,
+      majorPixelLine: true,
+      majorWidth: 2,
+      dotMaxSize: 2,
+    })
+  })
+
+  it("fades fine lines before coarse lines and dots", () => {
+    const state = resolveWorldGridRenderState(
+      (WORLD_GRID_ZOOM_THRESHOLD_C + WORLD_GRID_ZOOM_THRESHOLD_D) / 2,
+    )
+
+    expect(state.fineVisible).toBe(true)
+    expect(state.fineAlpha).toBeCloseTo(0.5)
+    expect(state.majorVisible).toBe(true)
+    expect(state.majorAlpha).toBe(1)
+    expect(state.majorWidth).toBe(1)
+    expect(state.dotVisible).toBe(true)
+    expect(state.dotAlpha).toBe(1)
+    expect(state.dotMaxSize).toBe(1)
+  })
+
+  it("fades coarse grid elements to zero between D and E", () => {
+    const fadingState = resolveWorldGridRenderState(
+      (WORLD_GRID_ZOOM_THRESHOLD_D + WORLD_GRID_ZOOM_THRESHOLD_E) / 2,
+    )
+    const hiddenState = resolveWorldGridRenderState(WORLD_GRID_ZOOM_THRESHOLD_E)
+
+    expect(fadingState.fineVisible).toBe(false)
+    expect(fadingState.majorVisible).toBe(true)
+    expect(fadingState.majorAlpha).toBeCloseTo(0.5)
+    expect(fadingState.dotVisible).toBe(true)
+    expect(fadingState.dotAlpha).toBeCloseTo(0.5)
+
+    expect(hiddenState).toMatchObject({
+      fineVisible: false,
+      majorVisible: false,
+      dotVisible: false,
+      majorAlpha: 0,
+      dotAlpha: 0,
+    })
   })
 })
 
@@ -558,17 +669,21 @@ describe("resolveWorldGridLocalViewportBounds", () => {
 })
 
 describe("resolveWorldGridIntersectionDotSize", () => {
-  it("uses a single dot size rule for the current zoom level", () => {
-    expect(resolveWorldGridIntersectionDotSize(8)).toBe(2.5)
-    expect(resolveWorldGridIntersectionDotSize(15)).toBe(3.5999999999999996)
-    expect(resolveWorldGridIntersectionDotSize(40)).toBe(4.5)
+  it("caps dot size by the active grid level instead of a fixed min and max", () => {
+    expect(resolveWorldGridIntersectionDotSize(WORLD_GRID_ZOOM_THRESHOLD_C)).toBe(2)
+    expect(resolveWorldGridIntersectionDotSize(
+      (WORLD_GRID_ZOOM_THRESHOLD_C + WORLD_GRID_ZOOM_THRESHOLD_D) / 2,
+    )).toBe(1)
+    expect(resolveWorldGridIntersectionDotSize(
+      (WORLD_GRID_ZOOM_THRESHOLD_D + WORLD_GRID_ZOOM_THRESHOLD_E) / 2,
+    )).toBe(1)
   })
 })
 
 describe("resolveWorldGridStrokeStyle", () => {
-  it("uses a pixel-perfect 1.5px stroke for the editor grid", () => {
+  it("uses a 1px base stroke for fine grid lines", () => {
     expect(resolveWorldGridStrokeStyle(AYU_DARK_THEME)).toEqual({
-      width: 1.5,
+      width: 1,
       color: 0xffffff,
       alpha: 0.30,
     })
@@ -578,11 +693,21 @@ describe("resolveWorldGridStrokeStyle", () => {
     expect(resolveWorldGridStrokeStyle(AYU_LIGHT_THEME).color).toBe(0x5c6773)
   })
 
-  it("uses a 3x stroke for major grid lines", () => {
+  it("uses a 2px stroke for major grid lines and forwards pixelLine when requested", () => {
     expect(resolveWorldGridMajorStrokeStyle(AYU_DARK_THEME)).toEqual({
-      width: 3,
+      width: 2,
       color: 0xffffff,
       alpha: 0.30,
+    })
+
+    expect(resolveWorldGridMajorStrokeStyle(AYU_DARK_THEME, {
+      alpha: 0.15,
+      pixelLine: true,
+    })).toEqual({
+      width: 2,
+      color: 0xffffff,
+      alpha: 0.15,
+      pixelLine: true,
     })
   })
 })

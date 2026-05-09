@@ -6,6 +6,7 @@ import { createDummyWorldDocument } from "@/editor/dummy-document";
 import { createEditorHost } from "@/editor/editor-host";
 import { EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY } from "@/editor/storage-hook";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import {
   DEFAULT_WORLD_BASE_ID,
   type WorldDocument,
@@ -623,6 +624,103 @@ describe("createEditorHost", () => {
       width: 4,
       height: 8,
     });
+  });
+
+  it("creates and applies blueprint placement drafts with remapped slot links", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const blueprint = createBlueprintDocument({
+      name: "双设备蓝图",
+      baseId: DEFAULT_WORLD_BASE_ID,
+      initialGridPoint: { x: 10, y: 10 },
+      entities: {
+        source: {
+          id: "source",
+          definitionId: "item_port_storager_1",
+          position: { x: 9, y: 9 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+        target: {
+          id: "target",
+          definitionId: "item_port_storager_1",
+          position: { x: 12, y: 9 },
+          rotation: 90,
+          config: {},
+          tags: ["test"],
+        },
+      },
+      entityOrder: ["source", "target"],
+      slotLinks: [{
+        id: "blueprint-link",
+        linkType: "share-all",
+        source: {
+          entityId: "source",
+          storageSlotGroupId: "output",
+          slotId: "output-slot",
+        },
+        target: {
+          entityId: "target",
+          storageSlotGroupId: "input",
+          slotId: "input-slot",
+        },
+      }],
+    });
+
+    editorHost.actions.createBlueprintPlacementDraft?.(blueprint, { x: 30, y: 15 });
+
+    expect(editorHost.state.collections.preview).toHaveLength(2);
+
+    const [sourceDraftId, targetDraftId] = editorHost.state.collections.preview;
+
+    expect(editorHost.queries.getEntityById(sourceDraftId ?? "")).toMatchObject({
+      definitionId: "item_port_storager_1",
+      position: { x: 29, y: 14 },
+      rotation: 0,
+    });
+    expect(editorHost.queries.getEntityById(targetDraftId ?? "")).toMatchObject({
+      definitionId: "item_port_storager_1",
+      position: { x: 32, y: 14 },
+      rotation: 90,
+      tags: ["test"],
+    });
+    expect(editorHost.internalState.internalTransientState.placementDraftSlotLinks).toEqual([{
+      id: expect.any(String),
+      linkType: "share-all",
+      source: {
+        entityId: sourceDraftId,
+        storageSlotGroupId: "output",
+        slotId: "output-slot",
+      },
+      target: {
+        entityId: targetDraftId,
+        storageSlotGroupId: "input",
+        slotId: "input-slot",
+      },
+    }]);
+
+    expect(editorHost.actions.applyPlacementDraft()).toBe(true);
+    expect(editorHost.state.collections.preview).toEqual([]);
+    expect(editorHost.document.getSnapshot().entityOrder.slice(-2)).toEqual([
+      sourceDraftId,
+      targetDraftId,
+    ]);
+    expect(editorHost.document.getSnapshot().slotLinks).toEqual([{
+      id: expect.any(String),
+      linkType: "share-all",
+      source: {
+        entityId: sourceDraftId,
+        storageSlotGroupId: "output",
+        slotId: "output-slot",
+      },
+      target: {
+        entityId: targetDraftId,
+        storageSlotGroupId: "input",
+        slotId: "input-slot",
+      },
+    }]);
+    expect(editorHost.internalState.internalTransientState.placementDraftSlotLinks).toBeNull();
   });
 
   it("creates and applies a single-bend belt logistics draft from an empty cell", () => {
