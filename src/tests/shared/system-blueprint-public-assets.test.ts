@@ -12,7 +12,7 @@ afterEach(() => {
 });
 
 describe("system-blueprint public assets", () => {
-  it("loads the migrated premium capsule system blueprint from public assets", async () => {
+  it("loads the migrated system blueprints from public assets", async () => {
     vi.stubGlobal("fetch", createPublicAssetFetch());
 
     const snapshot = await readSystemBlueprintLibrary();
@@ -30,7 +30,7 @@ describe("system-blueprint public assets", () => {
       rootDirectory.folders[0]?.folderId ?? null,
     );
 
-    expect(sampleFolderDirectory.blueprints).toHaveLength(1);
+    expect(sampleFolderDirectory.blueprints).toHaveLength(2);
     expect(sampleFolderDirectory.blueprints[0]).toMatchObject({
       blueprintId: "429609a4-61cb-4083-98fa-b8de1268bec4",
       name: "精选荞愈胶囊产线",
@@ -43,6 +43,35 @@ describe("system-blueprint public assets", () => {
     });
     expect(sampleFolderDirectory.blueprints[0]?.entityOrder).toHaveLength(227);
     expect(sampleFolderDirectory.blueprints[0]?.slotLinks).toEqual([]);
+    expect(sampleFolderDirectory.blueprints[0]?.entities.premium_capsule_line_0082).toMatchObject({
+      definitionId: "belt_turn_cw_1x1",
+      rotation: 270,
+    });
+    expect(sampleFolderDirectory.blueprints[0]?.entities.premium_capsule_line_0106).toMatchObject({
+      definitionId: "belt_turn_ccw_1x1",
+      rotation: 270,
+    });
+
+    expect(sampleFolderDirectory.blueprints[1]).toMatchObject({
+      blueprintId: "c96944de-0608-4abf-901a-8b3d27a476d1",
+      name: "双烘炉息壤产线",
+      baseId: "wuling_tianwangping_aid",
+      sourcePath: "dual-oven-xiranite.json",
+      initialGridPoint: {
+        x: 15,
+        y: 13,
+      },
+    });
+    expect(sampleFolderDirectory.blueprints[1]?.entityOrder).toHaveLength(148);
+    expect(sampleFolderDirectory.blueprints[1]?.slotLinks).toEqual([]);
+    expect(sampleFolderDirectory.blueprints[1]?.entities.dual_oven_xiranite_0009).toMatchObject({
+      definitionId: "belt_turn_cw_1x1",
+      rotation: 90,
+    });
+    expect(sampleFolderDirectory.blueprints[1]?.entities.dual_oven_xiranite_0031).toMatchObject({
+      definitionId: "pipe_turn_ccw_1x1",
+      rotation: 270,
+    });
   });
 });
 

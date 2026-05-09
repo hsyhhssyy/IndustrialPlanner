@@ -3,6 +3,8 @@ import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
 import { createUuid } from "@/domain/shared/uuid";
 
 import {
+  applyIndexedDbStoreMutations,
+  deleteFromIndexedDb,
   listFromIndexedDb,
   readFromIndexedDb,
   trySaveToIndexedDb,
@@ -21,6 +23,8 @@ import {
 
 const BLUEPRINT_DATABASE_NAME = "industrial-planner";
 const BLUEPRINT_STORE_NAME = "blueprints";
+const BLUEPRINT_DELETED_RETENTION_DAYS = 30;
+const BLUEPRINT_DELETED_RETENTION_MS = BLUEPRINT_DELETED_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
 export const BLUEPRINT_STORE_LOCATION: IndexedDbStoreLocation = {
   databaseName: BLUEPRINT_DATABASE_NAME,
@@ -55,6 +59,11 @@ export interface BlueprintDirectoryListing {
 export interface CreateBlueprintFolderInput {
   name: string;
   parentFolderId?: string | null;
+}
+
+export interface RenameBlueprintFolderInput {
+  folderId: string;
+  name: string;
 }
 
 export interface SaveBlueprintOptions {
@@ -99,6 +108,8 @@ export async function readBlueprintFolder(
   folderId: string,
   options: BlueprintReadOptions = {},
 ): Promise<BlueprintFolderRecord | null> {
+  await purgeExpiredDeletedBlueprintLibraryEntries();
+
   const entry = await readBlueprintEntry(createFolderKey(folderId));
 
   if (entry?.kind !== "folder") {
@@ -110,6 +121,25 @@ export async function readBlueprintFolder(
   }
 
   return entry;
+}
+
+export async function renameBlueprintFolder(
+  input: RenameBlueprintFolderInput,
+): Promise<BlueprintFolderRecord | null> {
+  const folder = await readBlueprintFolder(input.folderId);
+  const name = normalizeName(input.name);
+
+  if (folder === null || name === null) {
+    return null;
+  }
+
+  const updatedFolder: BlueprintFolderRecord = {
+    ...folder,
+    name,
+    updatedAt: new Date().toISOString(),
+  };
+
+  return await writeBlueprintEntry(createFolderKey(folder.folderId), updatedFolder);
 }
 
 export async function saveBlueprintDocument(
@@ -152,6 +182,8 @@ export async function readBlueprintRecord(
   blueprintId: string,
   options: BlueprintReadOptions = {},
 ): Promise<BlueprintRecord | null> {
+  await purgeExpiredDeletedBlueprintLibraryEntries();
+
   const entry = await readBlueprintEntry(createBlueprintKey(blueprintId));
 
   if (entry?.kind !== "blueprint") {
@@ -189,11 +221,73 @@ export async function deleteBlueprintDocument(
   });
 }
 
+export async function deleteBlueprintFolder(
+  folderId: string,
+): Promise<BlueprintFolderRecord | null> {
+  const rootFolder = await readBlueprintFolder(folderId, {
+    includeDeleted: true,
+  });
+
+  if (rootFolder === null) {
+    return null;
+  }
+
+  if (rootFolder.deletedAt !== null) {
+    return rootFolder;
+  }
+
+  const entries = await listBlueprintStorageEntries({ includeDeleted: true });
+  const folderTreeIds = collectBlueprintFolderTreeIds(folderId, entries);
+  const deletedAt = new Date().toISOString();
+  const pendingEntries = entries.flatMap((entry) => {
+    if (entry.kind === "folder") {
+      if (!folderTreeIds.has(entry.folderId) || entry.deletedAt !== null) {
+        return [];
+      }
+
+      return [{
+        key: createFolderKey(entry.folderId),
+        entry: {
+          ...entry,
+          deletedAt,
+          updatedAt: deletedAt,
+        } satisfies BlueprintFolderRecord,
+      }];
+    }
+
+    if (!folderTreeIds.has(entry.parentFolderId ?? "") || entry.deletedAt !== null) {
+      return [];
+    }
+
+    return [{
+      key: createBlueprintKey(entry.blueprintId),
+      entry: {
+        ...entry,
+        deletedAt,
+        updatedAt: deletedAt,
+      } satisfies BlueprintRecord,
+    }];
+  });
+
+  const didWrite = await writeBlueprintEntries(pendingEntries);
+
+  if (!didWrite) {
+    return null;
+  }
+
+  return {
+    ...rootFolder,
+    deletedAt,
+    updatedAt: deletedAt,
+  };
+}
+
 export async function listBlueprintDirectory(
   parentFolderId: string | null = null,
   options: BlueprintReadOptions = {},
 ): Promise<BlueprintDirectoryListing> {
   const normalizedParentFolderId = normalizeOptionalId(parentFolderId);
+  await purgeExpiredDeletedBlueprintLibraryEntries();
   const entries = await listBlueprintStorageEntries(options);
 
   return {
@@ -244,19 +338,63 @@ async function writeBlueprintEntry<TEntry extends BlueprintStorageEntry>(
   key: string,
   entry: TEntry,
 ): Promise<TEntry | null> {
-  const didWrite = await trySaveToIndexedDb(
-    {
-      ...BLUEPRINT_STORE_LOCATION,
-      key,
-    },
-    entry,
-  );
+  const didWrite = await writeBlueprintEntries([{ key, entry }]);
 
   if (!didWrite) {
     return null;
   }
 
   return entry;
+}
+
+async function writeBlueprintEntries(
+  entries: readonly {
+    key: string;
+    entry: BlueprintStorageEntry;
+  }[],
+): Promise<boolean> {
+  return await applyIndexedDbStoreMutations(BLUEPRINT_STORE_LOCATION, entries.map((entry) => ({
+    type: "put" as const,
+    key: entry.key,
+    value: entry.entry,
+  })));
+}
+
+async function deleteBlueprintEntries(keys: readonly string[]): Promise<boolean> {
+  return await applyIndexedDbStoreMutations(BLUEPRINT_STORE_LOCATION, keys.map((key) => ({
+    type: "delete" as const,
+    key,
+  })));
+}
+
+async function purgeExpiredDeletedBlueprintLibraryEntries(): Promise<void> {
+  const entries = await listFromIndexedDb<unknown>(BLUEPRINT_STORE_LOCATION);
+  const now = Date.now();
+  const expiredEntryKeys = entries
+    .map((entry) => normalizeBlueprintStorageEntry(entry))
+    .flatMap((entry) => {
+      if (
+        entry === null
+        || entry.deletedAt === null
+        || !isDeletedBlueprintLibraryEntryExpired(entry.deletedAt, now)
+      ) {
+        return [];
+      }
+
+      return [entry.kind === "blueprint"
+        ? createBlueprintKey(entry.blueprintId)
+        : createFolderKey(entry.folderId)];
+    });
+
+  if (expiredEntryKeys.length === 0) {
+    return;
+  }
+
+  await deleteBlueprintEntries(expiredEntryKeys);
+}
+
+function isDeletedBlueprintLibraryEntryExpired(deletedAt: string, now: number): boolean {
+  return now - Date.parse(deletedAt) >= BLUEPRINT_DELETED_RETENTION_MS;
 }
 
 async function doesFolderExist(folderId: string | null): Promise<boolean> {
@@ -267,6 +405,34 @@ async function doesFolderExist(folderId: string | null): Promise<boolean> {
   const folder = await readBlueprintFolder(folderId);
 
   return folder !== null;
+}
+
+function collectBlueprintFolderTreeIds(
+  folderId: string,
+  entries: readonly BlueprintStorageEntry[],
+): Set<string> {
+  const folderTreeIds = new Set<string>([folderId]);
+  let didGrow = true;
+
+  while (didGrow) {
+    didGrow = false;
+
+    for (const entry of entries) {
+      if (
+        entry.kind !== "folder"
+        || folderTreeIds.has(entry.folderId)
+        || entry.parentFolderId === null
+        || !folderTreeIds.has(entry.parentFolderId)
+      ) {
+        continue;
+      }
+
+      folderTreeIds.add(entry.folderId);
+      didGrow = true;
+    }
+  }
+
+  return folderTreeIds;
 }
 
 function normalizeBlueprintStorageEntry(

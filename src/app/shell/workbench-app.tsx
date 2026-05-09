@@ -13,6 +13,7 @@ import {
   resolveFullscreenState,
 } from "@/app/shell/layout/fullscreen-toggle-button";
 import { DebugLogDialog } from "@/app/shell/dialogs/debug-log-dialog";
+import { BlueprintFolderDialog } from "@/app/shell/dialogs/blueprint-folder-dialog";
 import { BlueprintPreviewDialog } from "@/app/shell/dialogs/blueprint-preview-dialog";
 import { HelpDialog } from "@/app/shell/dialogs/help-dialog";
 import { InspectorDialog } from "@/app/shell/dialogs/inspector-dialog";
@@ -45,9 +46,9 @@ import {
   setLogLevel,
 } from "@/shared/logging/logger";
 import {
+  isMobileOrTabletScreenProfile,
   isMobileLandscapeScreenProfile,
   isMobilePortraitScreenProfile,
-  isTouchScreenProfile,
   isTouchLandscapeScreenProfile,
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
@@ -271,7 +272,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const selectionCount = appHost.workspace.editor?.state.collections.selection.length ?? 0;
   const openInspectorOnSecondClick = appHost.state.settings.hypergryphInspectorOpenOnSecondClick;
   const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
-  const isTouchLayout = isTouchScreenProfile(screenProfile);
+  const isTouchLayout = isMobileOrTabletScreenProfile(screenProfile);
   const isCompactLeftToolbar = isTouchLayout;
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
   const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
@@ -512,6 +513,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
       {showRightDock ? <RightDock appHost={appHost} /> : null}
       {showBottomStatusBar ? <BottomStatusBar appHost={appHost} /> : null}
       {appHost.state.settings.debugMode ? <DebugLogDialog appHost={appHost} /> : null}
+      <BlueprintFolderDialog appHost={appHost} controller={appHost.blueprintFolderDialog} />
       <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
       <InspectorDialog appHost={appHost} />
       <SaveBlueprintDialog appHost={appHost} />
@@ -533,5 +535,8 @@ function isAnyDialogShellVisible(appHost: AppHost): boolean {
 
       return dialogState?.visible === true;
     },
-  ) || appHost.encyclopediaPicker.dialogState.visible || appHost.blueprintPreview.dialogState.visible;
+  )
+    || appHost.encyclopediaPicker.dialogState.visible
+    || appHost.blueprintFolderDialog.dialogState.visible
+    || appHost.blueprintPreview.dialogState.visible;
 }

@@ -3,6 +3,12 @@ interface FakeDatabaseState {
   stores: Map<string, Map<IDBValidKey, unknown>>;
 }
 
+interface FakeTransactionState {
+  pendingRequestCount: number;
+  completionQueued: boolean;
+  aborted: boolean;
+}
+
 export function createFakeIndexedDbFactory(): IDBFactory {
   const databases = new Map<string, FakeDatabaseState>();
 
@@ -84,6 +90,11 @@ function createTransactionHandle(
   storeName: string,
   store: Map<IDBValidKey, unknown>,
 ): IDBTransaction {
+  const transactionState: FakeTransactionState = {
+    pendingRequestCount: 0,
+    completionQueued: false,
+    aborted: false,
+  };
   const transaction = {
     error: null,
     oncomplete: null,
@@ -94,7 +105,11 @@ function createTransactionHandle(
         throw new Error(`Unexpected store "${requestedStoreName}".`);
       }
 
-      return createObjectStoreHandle(store, transaction as unknown as IDBTransaction);
+      return createObjectStoreHandle(
+        store,
+        transaction as unknown as IDBTransaction,
+        transactionState,
+      );
     },
   };
 
@@ -104,6 +119,7 @@ function createTransactionHandle(
 function createObjectStoreHandle(
   store: Map<IDBValidKey, unknown>,
   transaction: IDBTransaction,
+  transactionState: FakeTransactionState,
 ): IDBObjectStore {
   return {
     get: (key: IDBValidKey) => {
@@ -118,9 +134,11 @@ function createObjectStoreHandle(
     },
     put: (value: unknown, key?: IDBValidKey) => {
       const request = createRequest<IDBValidKey>();
+      trackFakeTransactionRequest(transactionState);
 
       queueMicrotask(() => {
         if (key === undefined) {
+          transactionState.aborted = true;
           assignRequestError(request, new Error("Key is required."));
           request.onerror?.(new Event("error"));
           transaction.onabort?.(new Event("abort"));
@@ -130,10 +148,20 @@ function createObjectStoreHandle(
         store.set(key, value);
         assignRequestResult(request, key);
         request.onsuccess?.(new Event("success"));
+        finishFakeTransactionRequest(transactionState, transaction);
+      });
 
-        queueMicrotask(() => {
-          transaction.oncomplete?.(new Event("complete"));
-        });
+      return request;
+    },
+    delete: (key: IDBValidKey) => {
+      const request = createRequest<undefined>();
+      trackFakeTransactionRequest(transactionState);
+
+      queueMicrotask(() => {
+        store.delete(key);
+        assignRequestResult(request, undefined);
+        request.onsuccess?.(new Event("success"));
+        finishFakeTransactionRequest(transactionState, transaction);
       });
 
       return request;
@@ -149,6 +177,35 @@ function createObjectStoreHandle(
       return request;
     },
   } as unknown as IDBObjectStore;
+}
+
+function trackFakeTransactionRequest(transactionState: FakeTransactionState): void {
+  transactionState.pendingRequestCount += 1;
+}
+
+function finishFakeTransactionRequest(
+  transactionState: FakeTransactionState,
+  transaction: IDBTransaction,
+): void {
+  transactionState.pendingRequestCount = Math.max(0, transactionState.pendingRequestCount - 1);
+
+  if (
+    transactionState.pendingRequestCount > 0
+    || transactionState.completionQueued
+    || transactionState.aborted
+  ) {
+    return;
+  }
+
+  transactionState.completionQueued = true;
+
+  queueMicrotask(() => {
+    transactionState.completionQueued = false;
+
+    if (transactionState.pendingRequestCount === 0 && !transactionState.aborted) {
+      transaction.oncomplete?.(new Event("complete"));
+    }
+  });
 }
 
 function createDomStringList(databaseState: FakeDatabaseState): DOMStringList {

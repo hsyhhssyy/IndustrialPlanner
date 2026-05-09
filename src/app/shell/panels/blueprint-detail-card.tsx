@@ -1,3 +1,12 @@
+/* AI-REMOVED 2026-05-09:
+Reason: 蓝图 dock 已删除底部预览 inspector，详情卡实现整体归档。
+Trigger: 用户要求删除蓝图 dock 下方的预览 inspector。
+Evidence: BlueprintDirectoryBrowser 已移除 BlueprintDetailCard 渲染，蓝图预览统一由 BlueprintPreviewDialog 承载。
+Replacement: src/app/shell/dialogs/blueprint-preview-dialog.tsx
+Risk: Low
+Human Review: Required
+
+Original code:
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
@@ -110,3 +119,4 @@ export function BlueprintDetailCard({
     </section>
   );
 }
+*/

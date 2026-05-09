@@ -4,7 +4,8 @@
     {
       "name": "产线样例",
       "blueprints": [
-        "premium-capsule-line"
+        "premium-capsule-line",
+        "dual-oven-xiranite"
       ]
     }
   ]

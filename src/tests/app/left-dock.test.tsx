@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppHost } from "@/app/host/app-host";
 import type { GestureEvent } from "@/app/input/gesture/adapter";
+import { BlueprintFolderDialog } from "@/app/shell/dialogs/blueprint-folder-dialog";
 import { BlueprintPreviewDialog } from "@/app/shell/dialogs/blueprint-preview-dialog";
 import { LeftDock } from "@/app/shell/layout/left-dock";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
@@ -19,6 +20,8 @@ import { createEditorHost } from "@/editor/editor-host";
 import { createRegistryContract } from "@/registry";
 import {
   createBlueprintFolder,
+  readBlueprintFolder,
+  readBlueprintRecord,
   saveBlueprintDocument,
 } from "@/shared/storage/blueprint-storage";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
@@ -31,6 +34,41 @@ function createWorkspace(): WorkspaceContract {
     editor: null,
     render: null,
     simulation: null,
+  };
+}
+
+function createBlueprintPreviewRenderStub() {
+  const previewCanvas = document.createElement("canvas");
+  const mountBlueprintPreview = vi.fn(async () => "preview-handle");
+  const updateBlueprintPreviewViewport = vi.fn();
+  const resizeBlueprintPreview = vi.fn();
+  const disposeBlueprintPreview = vi.fn();
+
+  return {
+    previewCanvas,
+    mountBlueprintPreview,
+    updateBlueprintPreviewViewport,
+    resizeBlueprintPreview,
+    disposeBlueprintPreview,
+    render: {
+      canvas: document.createElement("canvas"),
+      textureManager: {
+        getTexture: vi.fn(async () => {
+          throw new Error("Test stub should not load shared render textures.");
+        }),
+        destroy: vi.fn(),
+      },
+      queries: {
+        getBlueprintPreviewCanvas: vi.fn(() => previewCanvas),
+      },
+      actions: {
+        mountBlueprintPreview,
+        updateBlueprintPreviewViewport,
+        resizeBlueprintPreview,
+        disposeBlueprintPreview,
+      },
+      destroy: vi.fn(),
+    } satisfies NonNullable<WorkspaceContract["render"]>,
   };
 }
 
@@ -63,6 +101,20 @@ function dispatchPointerEvent(
     metaKey: { value: false },
     shiftKey: { value: false },
   });
+  target.dispatchEvent(event);
+  return event;
+}
+
+function dispatchWheelEvent(
+  target: Element,
+  deltaY: number,
+): Event {
+  const event = new Event("wheel", { bubbles: true, cancelable: true });
+
+  Object.defineProperties(event, {
+    deltaY: { value: deltaY },
+  });
+
   target.dispatchEvent(event);
   return event;
 }
@@ -492,6 +544,7 @@ describe("Left dock panel switching", () => {
     expect(blueprintPanel?.getAttribute("data-panel-id")).toBe("blueprint");
     expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-action-import-file"]')).not.toBeNull();
     expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-tab-user"]')).not.toBeNull();
+    expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-tab-user"]')?.classList.contains("dialog-shell-tab")).toBe(true);
     expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')).not.toBeNull();
 
     const deleteButton = clickTab("删除模式");
@@ -723,11 +776,13 @@ describe("Left dock panel switching", () => {
     const visiblePanel = queryVisibleLeftDockPanel(container);
     const operationGroup = visiblePanel?.querySelector(".placement-panel-group-operation") as HTMLElement | null;
     const operationButtonList = operationGroup?.querySelector(".placement-operation-button-list") as HTMLElement | null;
+    const tabShell = visiblePanel?.querySelector(".blueprint-tab-shell") as HTMLDivElement | null;
 
     expect(visiblePanel?.getAttribute("data-panel-id")).toBe("blueprint");
     expect(operationGroup?.querySelector(".placement-panel-group-header")).toBeNull();
     expect(operationButtonList).not.toBeNull();
     expect(operationButtonList?.classList.contains("is-compact-import-actions")).toBe(true);
+    expect(tabShell?.classList.contains("is-touch-compact")).toBe(true);
     expect(operationGroup?.querySelectorAll(".blueprint-action-button")).toHaveLength(2);
     expect(operationGroup?.querySelectorAll(".placement-button-label")).toHaveLength(2);
     expect(operationGroup?.querySelector('[data-ui-button-id="blueprint-action-import-file"]')).not.toBeNull();
@@ -778,7 +833,12 @@ describe("Left dock panel switching", () => {
     });
 
     await act(async () => {
-      root.render(<LeftDock appHost={appHost} />);
+      root.render(
+        <>
+          <LeftDock appHost={appHost} />
+          <BlueprintFolderDialog appHost={appHost} controller={appHost.blueprintFolderDialog} />
+        </>,
+      );
       await flushAsyncEffects();
     });
 
@@ -790,6 +850,7 @@ describe("Left dock panel switching", () => {
 
     expect(visiblePanel?.getAttribute("data-panel-id")).toBe("blueprint");
     expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-tab-user"]')?.getAttribute("aria-selected")).toBe("true");
+    expect(visiblePanel?.querySelector(".blueprint-library-status")).toBeNull();
     expect(visiblePanel?.textContent).toContain("根目录");
     expect(visiblePanel?.textContent).toContain("总线蓝图");
     expect(visiblePanel?.textContent).toContain("根目录蓝图");
@@ -824,12 +885,17 @@ describe("Left dock panel switching", () => {
 
     await act(async () => {
       createFolderToggle?.click();
+      await flushAsyncEffects();
     });
 
-    const createFolderInput = visiblePanel?.querySelector(
+    const createFolderDialog = container.querySelector(
+      '[data-dialog-key="blueprint-folder-create"]',
+    ) as HTMLDivElement | null;
+    const createFolderInput = createFolderDialog?.querySelector(
       "[data-blueprint-folder-input]",
     ) as HTMLInputElement | null;
 
+    expect(createFolderDialog).not.toBeNull();
     expect(createFolderInput).not.toBeNull();
 
     await act(async () => {
@@ -846,7 +912,7 @@ describe("Left dock panel switching", () => {
       createFolderInput.dispatchEvent(new Event("input", { bubbles: true }));
     });
 
-    const createFolderSubmit = visiblePanel?.querySelector(
+    const createFolderSubmit = createFolderDialog?.querySelector(
       '[data-ui-button-id="blueprint-folder-create-submit"]',
     ) as HTMLButtonElement | null;
 
@@ -858,6 +924,166 @@ describe("Left dock panel switching", () => {
     });
 
     expect(visiblePanel?.textContent).toContain("新建目录");
+  });
+
+  it("renames a folder from the folder edit dialog", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const folder = await createBlueprintFolder({
+      name: "旧目录",
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+
+    await act(async () => {
+      root.render(
+        <>
+          <LeftDock appHost={appHost} />
+          <BlueprintFolderDialog appHost={appHost} controller={appHost.blueprintFolderDialog} />
+        </>,
+      );
+      await flushAsyncEffects();
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const editButton = visiblePanel?.querySelector(
+      `[data-blueprint-folder-edit-id="${folder?.folderId ?? ""}"]`,
+    ) as HTMLButtonElement | null;
+
+    expect(editButton).not.toBeNull();
+
+    await act(async () => {
+      editButton?.click();
+      await flushAsyncEffects();
+    });
+
+    const editDialog = container.querySelector(
+      '[data-dialog-key="blueprint-folder-edit"]',
+    ) as HTMLDivElement | null;
+    const folderInput = editDialog?.querySelector(
+      "[data-blueprint-folder-input]",
+    ) as HTMLInputElement | null;
+
+    expect(editDialog).not.toBeNull();
+    expect(folderInput?.value).toBe("旧目录");
+
+    await act(async () => {
+      if (!folderInput) {
+        throw new Error("Expected the edit folder input to render.");
+      }
+
+      const valueSetter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )?.set;
+
+      valueSetter?.call(folderInput, "新目录");
+      folderInput.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    const renameButton = editDialog?.querySelector(
+      '[data-ui-button-id="blueprint-folder-edit-submit"]',
+    ) as HTMLButtonElement | null;
+
+    await act(async () => {
+      renameButton?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    expect(container.querySelector('[data-dialog-key="blueprint-folder-edit"]')).toBeNull();
+    await expect(readBlueprintFolder(folder?.folderId ?? "")).resolves.toMatchObject({
+      folderId: folder?.folderId,
+      name: "新目录",
+    });
+    expect(visiblePanel?.textContent).toContain("新目录");
+    expect(visiblePanel?.textContent).not.toContain("旧目录");
+  });
+
+  it("deletes a folder from the folder edit dialog together with its descendants", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const folder = await createBlueprintFolder({
+      name: "待删除目录",
+    });
+    const nestedFolder = await createBlueprintFolder({
+      name: "待删除子目录",
+      parentFolderId: folder?.folderId,
+    });
+    const blueprint = createTestBlueprint({
+      blueprintId: "folder-delete-blueprint",
+      name: "目录删除蓝图",
+    });
+
+    await saveBlueprintDocument(blueprint, {
+      parentFolderId: nestedFolder?.folderId,
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+
+    await act(async () => {
+      root.render(
+        <>
+          <LeftDock appHost={appHost} />
+          <BlueprintFolderDialog appHost={appHost} controller={appHost.blueprintFolderDialog} />
+        </>,
+      );
+      await flushAsyncEffects();
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const editButton = visiblePanel?.querySelector(
+      `[data-blueprint-folder-edit-id="${folder?.folderId ?? ""}"]`,
+    ) as HTMLButtonElement | null;
+
+    expect(editButton).not.toBeNull();
+
+    await act(async () => {
+      editButton?.click();
+      await flushAsyncEffects();
+    });
+
+    const editDialog = container.querySelector(
+      '[data-dialog-key="blueprint-folder-edit"]',
+    ) as HTMLDivElement | null;
+    const deleteTrigger = editDialog?.querySelector(
+      '[data-ui-button-id="blueprint-folder-delete-trigger"]',
+    ) as HTMLButtonElement | null;
+
+    expect(deleteTrigger).not.toBeNull();
+
+    await act(async () => {
+      deleteTrigger?.click();
+      await flushAsyncEffects();
+    });
+
+    const confirmDeleteButton = editDialog?.querySelector(
+      '[data-ui-button-id="blueprint-folder-delete-confirm"]',
+    ) as HTMLButtonElement | null;
+
+    expect(confirmDeleteButton).not.toBeNull();
+
+    await act(async () => {
+      confirmDeleteButton?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    expect(container.querySelector('[data-dialog-key="blueprint-folder-edit"]')).toBeNull();
+    await expect(readBlueprintFolder(folder?.folderId ?? "")).resolves.toBeNull();
+    await expect(readBlueprintFolder(nestedFolder?.folderId ?? "")).resolves.toBeNull();
+    await expect(readBlueprintRecord(blueprint.blueprintId)).resolves.toBeNull();
+    expect(visiblePanel?.querySelector(`[data-blueprint-folder-id="${folder?.folderId ?? ""}"]`)).toBeNull();
   });
 
   it("shows an empty read-only system blueprint library", async () => {
@@ -907,6 +1133,8 @@ describe("Left dock panel switching", () => {
     }));
 
     const workspace = createWorkspace();
+    const renderStub = createBlueprintPreviewRenderStub();
+    workspace.render = renderStub.render;
     const appHost = createAppHost(workspace);
 
     runInAction(() => {
@@ -939,17 +1167,203 @@ describe("Left dock panel switching", () => {
     expect(previewDialog?.textContent).toContain("根目录蓝图");
     expect(previewDialog?.textContent).toContain("蓝图预览");
     expect(previewDialog?.querySelector('[data-ui-button-id="blueprint-preview-place-button"]')).not.toBeNull();
+    expect(renderStub.mountBlueprintPreview).toHaveBeenCalledTimes(1);
+    expect(renderStub.updateBlueprintPreviewViewport).toHaveBeenCalled();
+    expect(previewDialog?.querySelector('[data-blueprint-preview-canvas="true"]')).toBe(renderStub.previewCanvas);
   });
 
-  it("enters blueprint placement directly from the library detail place action", async () => {
+  it("forwards preview zoom gestures to render actions", async () => {
+    const workspace = createWorkspace();
+    const renderStub = createBlueprintPreviewRenderStub();
+    workspace.render = renderStub.render;
+    const appHost = createAppHost(workspace);
+
+    appHost.blueprintPreview.open({
+      ...createTestBlueprint({
+        name: "缩放预览蓝图",
+      }),
+      parentFolderId: null,
+    });
+
+    await act(async () => {
+      root.render(<BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />);
+      await flushAsyncEffects();
+    });
+
+    renderStub.updateBlueprintPreviewViewport.mockClear();
+    const previewSurface = container.querySelector(".blueprint-preview-canvas") as HTMLDivElement | null;
+
+    expect(previewSurface).not.toBeNull();
+
+    await act(async () => {
+      if (previewSurface !== null) {
+        dispatchWheelEvent(previewSurface, -120);
+      }
+      await flushAsyncEffects();
+    });
+
+    expect(renderStub.updateBlueprintPreviewViewport).toHaveBeenLastCalledWith(
+      "preview-handle",
+      expect.objectContaining({
+        zoom: 1.12,
+        offsetX: 0,
+        offsetY: 0,
+      }),
+    );
+  });
+
+  it("forwards preview pinch zoom gestures to render actions on touch", async () => {
+    const workspace = createWorkspace();
+    const renderStub = createBlueprintPreviewRenderStub();
+    workspace.render = renderStub.render;
+    const appHost = createAppHost(workspace);
+
+    appHost.blueprintPreview.open({
+      ...createTestBlueprint({
+        name: "触控缩放预览蓝图",
+      }),
+      parentFolderId: null,
+    });
+
+    await act(async () => {
+      root.render(<BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />);
+      await flushAsyncEffects();
+    });
+
+    renderStub.updateBlueprintPreviewViewport.mockClear();
+    const previewSurface = container.querySelector(".blueprint-preview-canvas") as HTMLDivElement | null;
+
+    expect(previewSurface).not.toBeNull();
+
+    await act(async () => {
+      if (previewSurface !== null) {
+        dispatchPointerEvent(previewSurface, "pointerdown", {
+          pointerId: 1,
+          pointerType: "touch",
+          clientX: 100,
+          clientY: 120,
+          button: 0,
+          buttons: 1,
+        });
+        dispatchPointerEvent(previewSurface, "pointerdown", {
+          pointerId: 2,
+          pointerType: "touch",
+          clientX: 160,
+          clientY: 120,
+          button: 0,
+          buttons: 1,
+        });
+        dispatchPointerEvent(previewSurface, "pointermove", {
+          pointerId: 2,
+          pointerType: "touch",
+          clientX: 220,
+          clientY: 120,
+          button: 0,
+          buttons: 1,
+        });
+        dispatchPointerEvent(previewSurface, "pointerup", {
+          pointerId: 1,
+          pointerType: "touch",
+          clientX: 100,
+          clientY: 120,
+          button: 0,
+          buttons: 0,
+        });
+        dispatchPointerEvent(previewSurface, "pointerup", {
+          pointerId: 2,
+          pointerType: "touch",
+          clientX: 220,
+          clientY: 120,
+          button: 0,
+          buttons: 0,
+        });
+      }
+      await flushAsyncEffects();
+    });
+
+    const lastCall = renderStub.updateBlueprintPreviewViewport.mock.calls.at(-1);
+
+    expect(lastCall).toBeDefined();
+    expect(lastCall?.[0]).toBe("preview-handle");
+    expect(lastCall?.[1].offsetX).toBe(0);
+    expect(lastCall?.[1].offsetY).toBe(0);
+    expect(lastCall?.[1].zoom).toBeCloseTo(2, 5);
+  });
+
+  it("forwards preview pan gestures to render actions", async () => {
+    const workspace = createWorkspace();
+    const renderStub = createBlueprintPreviewRenderStub();
+    workspace.render = renderStub.render;
+    const appHost = createAppHost(workspace);
+
+    appHost.blueprintPreview.open({
+      ...createTestBlueprint({
+        name: "平移预览蓝图",
+      }),
+      parentFolderId: null,
+    });
+
+    await act(async () => {
+      root.render(<BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />);
+      await flushAsyncEffects();
+    });
+
+    renderStub.updateBlueprintPreviewViewport.mockClear();
+    const previewSurface = container.querySelector(".blueprint-preview-canvas") as HTMLDivElement | null;
+
+    expect(previewSurface).not.toBeNull();
+
+    await act(async () => {
+      if (previewSurface !== null) {
+        dispatchPointerEvent(previewSurface, "pointerdown", {
+          pointerId: 1,
+          pointerType: "mouse",
+          clientX: 100,
+          clientY: 100,
+          button: 0,
+          buttons: 1,
+        });
+        dispatchPointerEvent(previewSurface, "pointermove", {
+          pointerId: 1,
+          pointerType: "mouse",
+          clientX: 132,
+          clientY: 118,
+          button: 0,
+          buttons: 1,
+        });
+        dispatchPointerEvent(previewSurface, "pointerup", {
+          pointerId: 1,
+          pointerType: "mouse",
+          clientX: 132,
+          clientY: 118,
+          button: 0,
+          buttons: 0,
+        });
+      }
+      await flushAsyncEffects();
+    });
+
+    expect(renderStub.updateBlueprintPreviewViewport).toHaveBeenCalledWith(
+      "preview-handle",
+      expect.objectContaining({
+        zoom: 1,
+        offsetX: 32,
+        offsetY: 18,
+      }),
+    );
+  });
+
+  it("uses the preview dialog place action instead of rendering a dock detail inspector", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
     await saveBlueprintDocument(createPlacementBlueprint({
       name: "详情卡放置蓝图",
-      description: "直接从列表详情进入放置",
+      description: "从预览窗口进入放置",
     }));
 
     const workspace = createWorkspace();
+    const renderStub = createBlueprintPreviewRenderStub();
+    workspace.render = renderStub.render;
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppHost(workspace);
@@ -959,7 +1373,12 @@ describe("Left dock panel switching", () => {
     });
 
     await act(async () => {
-      root.render(<LeftDock appHost={appHost} />);
+      root.render(
+        <>
+          <LeftDock appHost={appHost} />
+          <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
+        </>,
+      );
       await flushAsyncEffects();
     });
 
@@ -973,11 +1392,15 @@ describe("Left dock panel switching", () => {
       await flushAsyncEffects();
     });
 
-    const placeButton = visiblePanel?.querySelector(
-      '[data-ui-button-id="blueprint-detail-place-button"]',
+    const previewDialog = container.querySelector('[data-dialog-key="blueprint-preview"]');
+    const placeButton = previewDialog?.querySelector(
+      '[data-ui-button-id="blueprint-preview-place-button"]',
     ) as HTMLButtonElement | null;
 
+    expect(visiblePanel?.querySelector(".blueprint-detail-card")).toBeNull();
+    expect(previewDialog).not.toBeNull();
     expect(placeButton).not.toBeNull();
+    expect(renderStub.mountBlueprintPreview).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       placeButton?.click();
@@ -987,6 +1410,76 @@ describe("Left dock panel switching", () => {
     expect(appHost.internalState.activeTool).toBe("blueprint-placement");
     expect(appHost.internalState.runtime.activePanel).toBe("blueprint");
     expect(appHost.blueprintPreview.dialogState.visible).toBe(false);
+  });
+
+  it("deletes a user blueprint from the preview dialog and refreshes the list", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const blueprint = createPlacementBlueprint({
+      name: "待删除蓝图",
+      description: "从预览窗口删除",
+    });
+
+    await saveBlueprintDocument(blueprint);
+
+    const workspace = createWorkspace();
+    const renderStub = createBlueprintPreviewRenderStub();
+    workspace.render = renderStub.render;
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+
+    await act(async () => {
+      root.render(
+        <>
+          <LeftDock appHost={appHost} />
+          <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
+        </>,
+      );
+      await flushAsyncEffects();
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const blueprintButton = visiblePanel?.querySelector(
+      `[data-blueprint-id="${blueprint.blueprintId}"]`,
+    ) as HTMLButtonElement | null;
+
+    expect(blueprintButton).not.toBeNull();
+
+    await act(async () => {
+      blueprintButton?.click();
+      await flushAsyncEffects();
+    });
+
+    const previewDialog = container.querySelector('[data-dialog-key="blueprint-preview"]');
+    const deleteButton = previewDialog?.querySelector(
+      '[data-ui-button-id="blueprint-preview-delete-button"]',
+    ) as HTMLButtonElement | null;
+
+    expect(deleteButton).not.toBeNull();
+
+    await act(async () => {
+      deleteButton?.click();
+      await flushAsyncEffects();
+    });
+
+    const confirmButton = previewDialog?.querySelector(
+      '[data-ui-button-id="blueprint-preview-delete-confirm-button"]',
+    ) as HTMLButtonElement | null;
+
+    expect(confirmButton).not.toBeNull();
+
+    await act(async () => {
+      confirmButton?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    expect(appHost.blueprintPreview.dialogState.visible).toBe(false);
+    await expect(readBlueprintRecord(blueprint.blueprintId)).resolves.toBeNull();
+    expect(visiblePanel?.querySelector(`[data-blueprint-id="${blueprint.blueprintId}"]`)).toBeNull();
   });
 });
 

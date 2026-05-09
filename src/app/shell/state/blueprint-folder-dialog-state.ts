@@ -1,7 +1,9 @@
 import { makeAutoObservable } from "mobx";
 
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
-import type { BlueprintLibraryRecord } from "@/shared/blueprints/blueprint-library";
+import type { BlueprintLibraryFolder } from "@/shared/blueprints/blueprint-library";
+
+type BlueprintFolderDialogMode = "create" | "edit";
 
 function createDefaultDialogState(): DialogStateReadWrite {
   return {
@@ -15,32 +17,46 @@ function createDefaultDialogState(): DialogStateReadWrite {
   };
 }
 
-export class WorkbenchBlueprintPreviewController {
+export class WorkbenchBlueprintFolderDialogController {
   dialogState: DialogStateReadWrite = createDefaultDialogState();
-  record: BlueprintLibraryRecord | null = null;
-  canDelete = false;
-  completedDeleteCount = 0;
+  mode: BlueprintFolderDialogMode = "create";
+  folder: BlueprintLibraryFolder | null = null;
+  parentFolderId: string | null = null;
+  completedCreateCount = 0;
+  completedMutationCount = 0;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
   }
 
-  public open(record: BlueprintLibraryRecord, options: {
-    canDelete?: boolean;
-  } = {}) {
-    this.record = record;
-    this.canDelete = options.canDelete ?? false;
+  public open(parentFolderId: string | null) {
+    this.mode = "create";
+    this.folder = null;
+    this.parentFolderId = parentFolderId;
+    this.dialogState.visible = true;
+  }
+
+  public openEdit(folder: BlueprintLibraryFolder) {
+    this.mode = "edit";
+    this.folder = folder;
+    this.parentFolderId = folder.parentFolderId;
     this.dialogState.visible = true;
   }
 
   public close() {
     this.dialogState.visible = false;
-    this.record = null;
-    this.canDelete = false;
+    this.mode = "create";
+    this.folder = null;
+    this.parentFolderId = null;
   }
 
-  public markDeleted() {
-    this.completedDeleteCount += 1;
+  public markCreated() {
+    this.completedCreateCount += 1;
+    this.completedMutationCount += 1;
+  }
+
+  public markMutated() {
+    this.completedMutationCount += 1;
   }
 
   public setOffset(offsetX: number, offsetY: number) {

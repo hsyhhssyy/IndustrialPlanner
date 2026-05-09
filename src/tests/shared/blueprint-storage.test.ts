@@ -5,10 +5,12 @@ import { saveToIndexedDb } from "@/shared/storage/browser-storage";
 import {
   BLUEPRINT_STORE_LOCATION,
   createBlueprintFolder,
+  deleteBlueprintFolder,
   deleteBlueprintDocument,
   listBlueprintDirectory,
   readBlueprintFolder,
   readBlueprintRecord,
+  renameBlueprintFolder,
   saveBlueprintDocument,
 } from "@/shared/storage/blueprint-storage";
 import { createFakeIndexedDbFactory } from "./fake-indexed-db";
@@ -143,6 +145,187 @@ describe("blueprint-storage", () => {
     await expect(listBlueprintDirectory()).resolves.toMatchObject({
       folders: [],
       blueprints: [],
+    });
+  });
+
+  it("renames folders and updates their directory listings", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const folder = await createBlueprintFolder({
+      name: "旧目录名",
+    });
+
+    expect(folder).not.toBeNull();
+
+    const renamedFolder = await renameBlueprintFolder({
+      folderId: folder?.folderId ?? "",
+      name: "新目录名",
+    });
+
+    expect(renamedFolder).toMatchObject({
+      folderId: folder?.folderId,
+      name: "新目录名",
+    });
+    await expect(readBlueprintFolder(folder?.folderId ?? "")).resolves.toMatchObject({
+      folderId: folder?.folderId,
+      name: "新目录名",
+    });
+    await expect(listBlueprintDirectory(null)).resolves.toMatchObject({
+      folders: [
+        {
+          folderId: folder?.folderId,
+          name: "新目录名",
+        },
+      ],
+      blueprints: [],
+    });
+  });
+
+  it("recursively deletes folders together with nested folders and blueprints", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const rootFolder = await createBlueprintFolder({
+      name: "待删除总线",
+    });
+    const nestedFolder = await createBlueprintFolder({
+      name: "待删除子目录",
+      parentFolderId: rootFolder?.folderId,
+    });
+    const rootBlueprint = createTestBlueprint({
+      blueprintId: "root-folder-blueprint",
+      name: "根目录蓝图",
+    });
+    const nestedBlueprint = createTestBlueprint({
+      blueprintId: "nested-folder-blueprint",
+      name: "子目录蓝图",
+    });
+
+    await saveBlueprintDocument(rootBlueprint, {
+      parentFolderId: rootFolder?.folderId,
+    });
+    await saveBlueprintDocument(nestedBlueprint, {
+      parentFolderId: nestedFolder?.folderId,
+    });
+
+    const deletedFolder = await deleteBlueprintFolder(rootFolder?.folderId ?? "");
+
+    expect(deletedFolder?.deletedAt).not.toBeNull();
+    await expect(readBlueprintFolder(rootFolder?.folderId ?? "")).resolves.toBeNull();
+    await expect(readBlueprintFolder(nestedFolder?.folderId ?? "")).resolves.toBeNull();
+    await expect(readBlueprintRecord(rootBlueprint.blueprintId)).resolves.toBeNull();
+    await expect(readBlueprintRecord(nestedBlueprint.blueprintId)).resolves.toBeNull();
+    await expect(
+      readBlueprintFolder(rootFolder?.folderId ?? "", { includeDeleted: true }),
+    ).resolves.toMatchObject({
+      folderId: rootFolder?.folderId,
+      deletedAt: deletedFolder?.deletedAt,
+    });
+    await expect(listBlueprintDirectory(null)).resolves.toMatchObject({
+      folders: [],
+      blueprints: [],
+    });
+  });
+
+  it("purges blueprints that have been deleted for at least 30 days", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const expiredDeletedBlueprint = createTestBlueprint({
+      blueprintId: "expired-deleted-blueprint",
+      name: "过期已删除蓝图",
+    });
+    const retainedDeletedBlueprint = createTestBlueprint({
+      blueprintId: "retained-deleted-blueprint",
+      name: "未过期已删除蓝图",
+    });
+
+    await saveToIndexedDb(
+      {
+        ...BLUEPRINT_STORE_LOCATION,
+        key: "folder:expired-deleted-folder",
+      },
+      {
+        schemaVersion: 1,
+        kind: "folder" as const,
+        folderId: "expired-deleted-folder",
+        name: "过期已删除目录",
+        parentFolderId: null,
+        createdAt: "2026-04-01T10:00:00.000Z",
+        updatedAt: "2026-04-08T11:59:59.000Z",
+        deletedAt: "2026-04-08T11:59:59.000Z",
+      },
+    );
+    await saveToIndexedDb(
+      {
+        ...BLUEPRINT_STORE_LOCATION,
+        key: "folder:retained-deleted-folder",
+      },
+      {
+        schemaVersion: 1,
+        kind: "folder" as const,
+        folderId: "retained-deleted-folder",
+        name: "未过期已删除目录",
+        parentFolderId: null,
+        createdAt: "2026-04-01T10:00:00.000Z",
+        updatedAt: "2026-04-10T12:00:01.000Z",
+        deletedAt: "2026-04-10T12:00:01.000Z",
+      },
+    );
+    await saveToIndexedDb(
+      {
+        ...BLUEPRINT_STORE_LOCATION,
+        key: `blueprint:${expiredDeletedBlueprint.blueprintId}`,
+      },
+      {
+        ...expiredDeletedBlueprint,
+        kind: "blueprint" as const,
+        parentFolderId: null,
+        deletedAt: "2026-04-08T11:59:59.000Z",
+      },
+    );
+    await saveToIndexedDb(
+      {
+        ...BLUEPRINT_STORE_LOCATION,
+        key: `blueprint:${retainedDeletedBlueprint.blueprintId}`,
+      },
+      {
+        ...retainedDeletedBlueprint,
+        kind: "blueprint" as const,
+        parentFolderId: null,
+        deletedAt: "2026-04-10T12:00:01.000Z",
+      },
+    );
+
+    vi.setSystemTime(new Date("2026-05-10T12:00:00.000Z"));
+
+    await expect(
+      readBlueprintRecord(expiredDeletedBlueprint.blueprintId, { includeDeleted: true }),
+    ).resolves.toBeNull();
+    await expect(
+      readBlueprintFolder("expired-deleted-folder", { includeDeleted: true }),
+    ).resolves.toBeNull();
+    await expect(
+      readBlueprintRecord(retainedDeletedBlueprint.blueprintId, { includeDeleted: true }),
+    ).resolves.toMatchObject({
+      blueprintId: retainedDeletedBlueprint.blueprintId,
+      deletedAt: "2026-04-10T12:00:01.000Z",
+    });
+    await expect(
+      readBlueprintFolder("retained-deleted-folder", { includeDeleted: true }),
+    ).resolves.toMatchObject({
+      folderId: "retained-deleted-folder",
+      deletedAt: "2026-04-10T12:00:01.000Z",
+    });
+    await expect(listBlueprintDirectory(null, { includeDeleted: true })).resolves.toMatchObject({
+      folders: [
+        {
+          folderId: "retained-deleted-folder",
+        },
+      ],
+      blueprints: [
+        {
+          blueprintId: retainedDeletedBlueprint.blueprintId,
+        },
+      ],
     });
   });
 

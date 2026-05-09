@@ -3,7 +3,7 @@
   "blueprintId": "429609a4-61cb-4083-98fa-b8de1268bec4",
   "version": "v1.3.0",
   "name": "精选荞愈胶囊产线",
-  "description": "精选荞愈胶囊完整产线示例。",
+  "description": "",
   "baseId": "valley4_protocol_core",
   "initialGridPoint": {
     "x": 12,
@@ -983,12 +983,12 @@
     },
     "premium_capsule_line_0082": {
       "id": "premium_capsule_line_0082",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 0,
         "y": 9
       },
-      "rotation": 180,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1049,12 +1049,12 @@
     },
     "premium_capsule_line_0088": {
       "id": "premium_capsule_line_0088",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 6,
         "y": 9
       },
-      "rotation": 270,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -1115,12 +1115,12 @@
     },
     "premium_capsule_line_0094": {
       "id": "premium_capsule_line_0094",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 1,
         "y": 13
       },
-      "rotation": 180,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1137,12 +1137,12 @@
     },
     "premium_capsule_line_0096": {
       "id": "premium_capsule_line_0096",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 3,
         "y": 13
       },
-      "rotation": 270,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -1247,12 +1247,12 @@
     },
     "premium_capsule_line_0106": {
       "id": "premium_capsule_line_0106",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 23,
         "y": 9
       },
-      "rotation": 180,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1313,12 +1313,12 @@
     },
     "premium_capsule_line_0112": {
       "id": "premium_capsule_line_0112",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 17,
         "y": 9
       },
-      "rotation": 90,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1379,12 +1379,12 @@
     },
     "premium_capsule_line_0118": {
       "id": "premium_capsule_line_0118",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 22,
         "y": 13
       },
-      "rotation": 180,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1401,12 +1401,12 @@
     },
     "premium_capsule_line_0120": {
       "id": "premium_capsule_line_0120",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 20,
         "y": 13
       },
-      "rotation": 90,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1456,45 +1456,45 @@
     },
     "premium_capsule_line_0125": {
       "id": "premium_capsule_line_0125",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 14,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0126": {
+      "id": "premium_capsule_line_0126",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 9,
+        "y": 18
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "premium_capsule_line_0127": {
+      "id": "premium_capsule_line_0127",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 5,
         "y": 18
       },
       "rotation": 90,
       "config": {},
       "tags": []
     },
-    "premium_capsule_line_0126": {
-      "id": "premium_capsule_line_0126",
-      "definitionId": "belt_turn_ccw_1x1",
-      "position": {
-        "x": 9,
-        "y": 18
-      },
-      "rotation": 270,
-      "config": {},
-      "tags": []
-    },
-    "premium_capsule_line_0127": {
-      "id": "premium_capsule_line_0127",
-      "definitionId": "belt_turn_cw_1x1",
-      "position": {
-        "x": 5,
-        "y": 18
-      },
-      "rotation": 0,
-      "config": {},
-      "tags": []
-    },
     "premium_capsule_line_0128": {
       "id": "premium_capsule_line_0128",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 18,
         "y": 18
       },
-      "rotation": 0,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -1533,23 +1533,23 @@
     },
     "premium_capsule_line_0132": {
       "id": "premium_capsule_line_0132",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 2,
         "y": 18
       },
-      "rotation": 180,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
     "premium_capsule_line_0133": {
       "id": "premium_capsule_line_0133",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 3,
         "y": 18
       },
-      "rotation": 270,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -1577,12 +1577,12 @@
     },
     "premium_capsule_line_0136": {
       "id": "premium_capsule_line_0136",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 3,
         "y": 21
       },
-      "rotation": 0,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -1621,23 +1621,23 @@
     },
     "premium_capsule_line_0140": {
       "id": "premium_capsule_line_0140",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 21,
         "y": 18
       },
-      "rotation": 180,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
     "premium_capsule_line_0141": {
       "id": "premium_capsule_line_0141",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 20,
         "y": 18
       },
-      "rotation": 90,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -1665,12 +1665,12 @@
     },
     "premium_capsule_line_0144": {
       "id": "premium_capsule_line_0144",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 20,
         "y": 21
       },
-      "rotation": 0,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -1709,12 +1709,12 @@
     },
     "premium_capsule_line_0148": {
       "id": "premium_capsule_line_0148",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 4,
         "y": 23
       },
-      "rotation": 180,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1731,12 +1731,12 @@
     },
     "premium_capsule_line_0150": {
       "id": "premium_capsule_line_0150",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 3,
         "y": 22
       },
-      "rotation": 180,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1753,12 +1753,12 @@
     },
     "premium_capsule_line_0152": {
       "id": "premium_capsule_line_0152",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 19,
         "y": 23
       },
-      "rotation": 180,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1775,12 +1775,12 @@
     },
     "premium_capsule_line_0154": {
       "id": "premium_capsule_line_0154",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 20,
         "y": 22
       },
-      "rotation": 180,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -1843,12 +1843,12 @@
     },
     "premium_capsule_line_0160": {
       "id": "premium_capsule_line_0160",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 4,
         "y": 27
       },
-      "rotation": 90,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -2084,45 +2084,45 @@
     },
     "premium_capsule_line_0179": {
       "id": "premium_capsule_line_0179",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 5,
         "y": 32
       },
-      "rotation": 180,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
     "premium_capsule_line_0180": {
       "id": "premium_capsule_line_0180",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 18,
         "y": 32
       },
-      "rotation": 180,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
     "premium_capsule_line_0181": {
       "id": "premium_capsule_line_0181",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 11,
         "y": 32
       },
-      "rotation": 90,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
     "premium_capsule_line_0182": {
       "id": "premium_capsule_line_0182",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 11,
         "y": 31
       },
-      "rotation": 180,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -2150,12 +2150,12 @@
     },
     "premium_capsule_line_0185": {
       "id": "premium_capsule_line_0185",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 12,
         "y": 33
       },
-      "rotation": 270,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -2172,12 +2172,12 @@
     },
     "premium_capsule_line_0187": {
       "id": "premium_capsule_line_0187",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 12,
         "y": 31
       },
-      "rotation": 180,
+      "rotation": 270,
       "config": {},
       "tags": []
     },
@@ -2194,34 +2194,34 @@
     },
     "premium_capsule_line_0189": {
       "id": "premium_capsule_line_0189",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 12,
         "y": 36
       },
-      "rotation": 90,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
     "premium_capsule_line_0190": {
       "id": "premium_capsule_line_0190",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 11,
         "y": 36
       },
-      "rotation": 270,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
     "premium_capsule_line_0191": {
       "id": "premium_capsule_line_0191",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 1,
         "y": 38
       },
-      "rotation": 90,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -2238,12 +2238,12 @@
     },
     "premium_capsule_line_0193": {
       "id": "premium_capsule_line_0193",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 0,
         "y": 39
       },
-      "rotation": 90,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -2315,12 +2315,12 @@
     },
     "premium_capsule_line_0200": {
       "id": "premium_capsule_line_0200",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 22,
         "y": 38
       },
-      "rotation": 270,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -2337,12 +2337,12 @@
     },
     "premium_capsule_line_0202": {
       "id": "premium_capsule_line_0202",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 23,
         "y": 39
       },
-      "rotation": 270,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
@@ -2447,23 +2447,23 @@
     },
     "premium_capsule_line_0212": {
       "id": "premium_capsule_line_0212",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 9,
         "y": 22
       },
-      "rotation": 270,
+      "rotation": 0,
       "config": {},
       "tags": []
     },
     "premium_capsule_line_0213": {
       "id": "premium_capsule_line_0213",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 14,
         "y": 22
       },
-      "rotation": 90,
+      "rotation": 180,
       "config": {},
       "tags": []
     },
@@ -2491,23 +2491,23 @@
     },
     "premium_capsule_line_0216": {
       "id": "premium_capsule_line_0216",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 16,
         "y": 42
       },
-      "rotation": 0,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
     "premium_capsule_line_0217": {
       "id": "premium_capsule_line_0217",
-      "definitionId": "belt_turn_ccw_1x1",
+      "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 7,
         "y": 42
       },
-      "rotation": 0,
+      "rotation": 90,
       "config": {},
       "tags": []
     },
@@ -2546,12 +2546,12 @@
     },
     "premium_capsule_line_0221": {
       "id": "premium_capsule_line_0221",
-      "definitionId": "belt_turn_cw_1x1",
+      "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 23,
         "y": 27
       },
-      "rotation": 270,
+      "rotation": 0,
       "config": {},
       "tags": []
     },

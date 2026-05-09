@@ -13,6 +13,17 @@ export interface IndexedDbStorageLocation extends IndexedDbStoreLocation {
   key: IDBValidKey;
 }
 
+export type IndexedDbMutationOperation<TValue> =
+  | {
+    type: "put";
+    key: IDBValidKey;
+    value: TValue;
+  }
+  | {
+    type: "delete";
+    key: IDBValidKey;
+  };
+
 export function readFromLocalStorage<TValue>(
   key: string,
   codec: JsonStorageCodec<TValue> = {},
@@ -131,11 +142,15 @@ export async function saveToIndexedDb<TValue>(
   return value;
 }
 
-export async function trySaveToIndexedDb<TValue>(
-  location: IndexedDbStorageLocation,
-  value: TValue,
+export async function applyIndexedDbStoreMutations<TValue>(
+  location: IndexedDbStoreLocation,
+  operations: readonly IndexedDbMutationOperation<TValue>[],
   codec: JsonStorageCodec<TValue> = {},
 ): Promise<boolean> {
+  if (operations.length === 0) {
+    return true;
+  }
+
   const database = await openIndexedDb(location);
 
   if (database === null) {
@@ -145,12 +160,20 @@ export async function trySaveToIndexedDb<TValue>(
   try {
     const transaction = database.transaction(location.storeName, "readwrite");
     const completion = waitForTransaction(transaction);
+    const objectStore = transaction.objectStore(location.storeName);
+    const serialize = getCodec(codec).serialize;
 
-    await waitForRequest(
-      transaction
-        .objectStore(location.storeName)
-        .put(getCodec(codec).serialize(value), location.key),
-    );
+    for (const operation of operations) {
+      if (operation.type === "put") {
+        await waitForRequest(
+          objectStore.put(serialize(operation.value), operation.key),
+        );
+        continue;
+      }
+
+      await waitForRequest(objectStore.delete(operation.key));
+    }
+
     await completion;
 
     return true;
@@ -159,6 +182,27 @@ export async function trySaveToIndexedDb<TValue>(
   } finally {
     database.close();
   }
+}
+
+export async function deleteFromIndexedDb(
+  location: IndexedDbStorageLocation,
+): Promise<boolean> {
+  return await applyIndexedDbStoreMutations(location, [{
+    type: "delete",
+    key: location.key,
+  }]);
+}
+
+export async function trySaveToIndexedDb<TValue>(
+  location: IndexedDbStorageLocation,
+  value: TValue,
+  codec: JsonStorageCodec<TValue> = {},
+): Promise<boolean> {
+  return await applyIndexedDbStoreMutations(location, [{
+    type: "put",
+    key: location.key,
+    value,
+  }], codec);
 }
 
 function getLocalStorage(): Storage | null {

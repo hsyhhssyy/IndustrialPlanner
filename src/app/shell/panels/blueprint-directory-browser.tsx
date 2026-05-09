@@ -4,13 +4,11 @@ import type {
   BlueprintLibraryRecord,
 } from "@/shared/blueprints/blueprint-library";
 import type { BlueprintLibraryDescriptor } from "@/shared/blueprints/blueprint-library";
-import type { BlueprintDetailPlaceEventInput } from "./blueprint-detail-card";
 import LucideChevronLeft from "~icons/lucide/chevron-left";
+import LucideEdit3 from "~icons/lucide/edit-3";
 import LucideFileText from "~icons/lucide/file-text";
 import LucideFolder from "~icons/lucide/folder";
 import LucideFolderPlus from "~icons/lucide/folder-plus";
-import { BlueprintDetailCard } from "./blueprint-detail-card";
-import { BlueprintFolderForm } from "./blueprint-folder-form";
 
 interface BlueprintDirectoryBrowserProps {
   readonly translate: (key: string) => string;
@@ -19,23 +17,55 @@ interface BlueprintDirectoryBrowserProps {
   readonly currentFolder: BlueprintLibraryFolder | null;
   readonly folderStack: readonly BlueprintLibraryFolder[];
   readonly directoryListing: BlueprintLibraryDirectoryListing;
-  readonly createFolderOpen: boolean;
-  readonly createFolderName: string;
-  readonly isCreatingFolder: boolean;
   readonly isLoading: boolean;
   readonly errorMessage: string | null;
   readonly selectedBlueprintId: string | null;
-  readonly selectedBlueprint: BlueprintLibraryRecord | null;
   readonly onBack: () => void;
   readonly onToggleCreateFolder: () => void;
+  readonly onOpenFolder: (folder: BlueprintLibraryFolder) => void;
+  readonly onEditFolder: (folder: BlueprintLibraryFolder) => void;
+  readonly onSelectBlueprint: (record: BlueprintLibraryRecord) => void;
+}
+
+/* AI-REMOVED 2026-05-09:
+Reason: 蓝图 dock 已删除底部预览 inspector，不再向目录浏览器传入详情卡和放置动作桥接参数。
+Trigger: 用户要求删除蓝图 dock 下方的预览 inspector。
+Evidence: 选中蓝图后已经直接打开独立预览窗口，dock 内不再存在 BlueprintDetailCard 渲染入口。
+Replacement: src/app/shell/dialogs/blueprint-preview-dialog.tsx
+Risk: Low
+Human Review: Required
+
+Original code:
+  readonly selectedBlueprint: BlueprintLibraryRecord | null;
+  readonly onPlaceBlueprint: (record: BlueprintLibraryRecord, input: BlueprintDetailPlaceEventInput) => void;
+*/
+
+/* AI-REMOVED 2026-05-09:
+Reason: 新建文件夹入口已从蓝图 dock 内联表单升级为顶层 DialogShell，不再需要目录浏览器承载表单状态。
+Trigger: 用户要求把“新建文件夹”从弹出输入框改为 dialog shell。
+Evidence: BlueprintFolderDialog 已接管输入、提交和取消逻辑；目录浏览器只保留打开对话框按钮。
+Replacement: src/app/shell/dialogs/blueprint-folder-dialog.tsx
+Risk: Low
+Human Review: Required
+
+Original code:
+  readonly createFolderOpen: boolean;
+  readonly createFolderName: string;
+  readonly isCreatingFolder: boolean;
   readonly onCreateFolderNameChange: (value: string) => void;
   readonly onCreateFolderSubmit: () => void | Promise<void>;
   readonly onCancelCreateFolder: () => void;
-  readonly onOpenFolder: (folder: BlueprintLibraryFolder) => void;
-  readonly onSelectBlueprint: (record: BlueprintLibraryRecord) => void;
-  readonly onPlaceBlueprint: (record: BlueprintLibraryRecord, input: BlueprintDetailPlaceEventInput) => void;
-}
+*/
 
+/* AI-REMOVED 2026-05-09:
+Reason: 蓝图库 dock 不再显示“x 个文件夹 / x 个文件”的统计 badge。
+Trigger: 用户要求去掉蓝图库面板下方无意义的数量 badge。
+Evidence: 统计文案仅在当前组件的 blueprint-library-status 区块渲染，移除此区块即可消除 badge。
+Replacement: None
+Risk: Low
+Human Review: Required
+
+Original code:
 function formatCountLabel(
   translate: BlueprintDirectoryBrowserProps["translate"],
   count: number,
@@ -44,6 +74,7 @@ function formatCountLabel(
 ): string {
   return `${count} ${translate(count === 1 ? singularKey : pluralKey)}`;
 }
+*/
 
 function formatBreadcrumbPath(options: {
   readonly translate: BlueprintDirectoryBrowserProps["translate"];
@@ -85,21 +116,14 @@ export function BlueprintDirectoryBrowser({
   currentFolder,
   folderStack,
   directoryListing,
-  createFolderOpen,
-  createFolderName,
-  isCreatingFolder,
   isLoading,
   errorMessage,
   selectedBlueprintId,
-  selectedBlueprint,
   onBack,
   onToggleCreateFolder,
-  onCreateFolderNameChange,
-  onCreateFolderSubmit,
-  onCancelCreateFolder,
   onOpenFolder,
+  onEditFolder,
   onSelectBlueprint,
-  onPlaceBlueprint,
 }: BlueprintDirectoryBrowserProps) {
   const hasEntries = directoryListing.folders.length > 0 || directoryListing.blueprints.length > 0;
   const breadcrumbPath = formatBreadcrumbPath({
@@ -154,6 +178,15 @@ export function BlueprintDirectoryBrowser({
         ) : null}
       </div>
 
+      {/* AI-REMOVED 2026-05-09:
+      Reason: 蓝图库 dock 不再显示“x 个文件夹 / x 个文件”的统计 badge。
+      Trigger: 用户要求去掉蓝图库面板下方无意义的数量 badge。
+      Evidence: 当前统计信息仅用于视觉提示，没有后续交互或状态依赖。
+      Replacement: None
+      Risk: Low
+      Human Review: Required
+
+      Original code:
       <div className="blueprint-library-status" aria-live="polite">
         <span className="pill">{formatCountLabel(
           translate,
@@ -168,7 +201,17 @@ export function BlueprintDirectoryBrowser({
           "workbench.blueprint.blueprintCount.other",
         )}</span>
       </div>
+      */}
 
+      {/* AI-REMOVED 2026-05-09:
+      Reason: 新建文件夹流程已迁移到顶层 DialogShell，目录浏览器不再渲染内联输入表单。
+      Trigger: 用户要求把“新建文件夹”从弹出输入框改为 dialog shell。
+      Evidence: BlueprintFolderDialog 已在 Workbench 顶层挂载，这里继续保留内联表单会形成重复入口和裁剪风险。
+      Replacement: src/app/shell/dialogs/blueprint-folder-dialog.tsx
+      Risk: Low
+      Human Review: Required
+
+      Original code:
       {libraryDescriptor.canCreateFolders && createFolderOpen ? (
         <BlueprintFolderForm
           isCreatingFolder={isCreatingFolder}
@@ -179,6 +222,7 @@ export function BlueprintDirectoryBrowser({
           value={createFolderName}
         />
       ) : null}
+      */}
 
       {errorMessage === null ? null : (
         <p className="blueprint-panel-error" role="alert">{errorMessage}</p>
@@ -198,26 +242,53 @@ export function BlueprintDirectoryBrowser({
 
       {hasEntries ? (
         <div className="blueprint-browser-list">
-          {directoryListing.folders.map((folder) => (
-            <button
-              className="blueprint-entry-button blueprint-folder-entry-button"
-              data-blueprint-folder-id={folder.folderId}
-              key={folder.folderId}
-              onClick={() => {
-                onOpenFolder(folder);
-              }}
-              type="button"
-            >
-              <span aria-hidden="true" className="button-icon blueprint-entry-icon">
-                <LucideFolder className="button-icon-image" />
-              </span>
-              <span className="blueprint-entry-copy">
-                <span className="blueprint-entry-title">{folder.name}</span>
-                <span className="blueprint-entry-meta">{formatTimestamp(folder.updatedAt)}</span>
-              </span>
-              <span className="pill">{translate("workbench.blueprint.folderBadge")}</span>
-            </button>
-          ))}
+          {directoryListing.folders.map((folder) => {
+            const folderEntryButton = (
+              <button
+                className="blueprint-entry-button blueprint-folder-entry-button"
+                data-blueprint-folder-id={folder.folderId}
+                onClick={() => {
+                  onOpenFolder(folder);
+                }}
+                type="button"
+              >
+                <span aria-hidden="true" className="button-icon blueprint-entry-icon">
+                  <LucideFolder className="button-icon-image" />
+                </span>
+                <span className="blueprint-entry-copy">
+                  <span className="blueprint-entry-title">{folder.name}</span>
+                  <span className="blueprint-entry-meta">{formatTimestamp(folder.updatedAt)}</span>
+                </span>
+                <span className="pill">{translate("workbench.blueprint.folderBadge")}</span>
+              </button>
+            );
+
+            if (!libraryDescriptor.canCreateFolders) {
+              return (
+                <div className="blueprint-entry-row blueprint-folder-entry-row" key={folder.folderId}>
+                  {folderEntryButton}
+                </div>
+              );
+            }
+
+            return (
+              <div className="blueprint-entry-row blueprint-folder-entry-row" key={folder.folderId}>
+                {folderEntryButton}
+                <button
+                  aria-label={translate("workbench.blueprint.editFolderAction")}
+                  className="blueprint-utility-button is-secondary blueprint-folder-edit-button"
+                  data-blueprint-folder-edit-id={folder.folderId}
+                  onClick={() => {
+                    onEditFolder(folder);
+                  }}
+                  title={translate("workbench.blueprint.editFolderAction")}
+                  type="button"
+                >
+                  <LucideEdit3 className="button-icon-image" />
+                </button>
+              </div>
+            );
+          })}
 
           {directoryListing.blueprints.map((record) => {
             const isSelected = record.blueprintId === selectedBlueprintId;
@@ -256,6 +327,15 @@ export function BlueprintDirectoryBrowser({
         </div>
       ) : null}
 
+      {/* AI-REMOVED 2026-05-09:
+      Reason: 蓝图 dock 已删除底部预览 inspector，预览与放置统一由独立预览窗口承载。
+      Trigger: 用户要求删除蓝图 dock 下方的预览 inspector。
+      Evidence: BlueprintPanel 的 onSelectBlueprint 已直接打开 BlueprintPreviewDialog，这里继续渲染详情卡会形成重复预览入口。
+      Replacement: src/app/shell/dialogs/blueprint-preview-dialog.tsx
+      Risk: Low
+      Human Review: Required
+
+      Original code:
       {selectedBlueprint === null ? null : (
         <BlueprintDetailCard
           onPlace={(input) => {
@@ -265,6 +345,7 @@ export function BlueprintDirectoryBrowser({
           translate={translate}
         />
       )}
+      */}
     </div>
   );
 }

@@ -16,15 +16,12 @@ import {
   type SystemBlueprintLibrarySnapshot,
 } from "@/shared/blueprints/system-blueprint-library";
 import {
-  createBlueprintFolder,
   listBlueprintDirectory,
 } from "@/shared/storage/blueprint-storage";
-import type { BlueprintLibraryRecord } from "@/shared/blueprints/blueprint-library";
 import LucideClipboard from "~icons/lucide/clipboard";
 import LucideCopy from "~icons/lucide/copy";
 import LucideDownload from "~icons/lucide/download";
 import LucideUpload from "~icons/lucide/upload";
-import type { BlueprintDetailPlaceEventInput } from "./blueprint-detail-card";
 
 interface BlueprintOperationButtonDefinition {
   readonly uiButtonId: string;
@@ -53,26 +50,21 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
   const isTouchLayout = isMobileOrTabletScreenProfile(appHost.state.screenProfile);
   const isNarrowColumn = !isTouchLayout && appHost.state.workbench.leftDockWidth <= 420;
   const isPanelVisible = (appHost.internalState.runtime.activePanel ?? "placement") === "blueprint";
-  const dialogVisible = appHost.internalState.workbench.dialogState["save-blueprint"].visible;
+  const saveBlueprintDialogVisible = appHost.internalState.workbench.dialogState["save-blueprint"].visible;
+  const folderMutationCompletedCount = appHost.blueprintFolderDialog.completedMutationCount;
+  const previewDeleteCompletedCount = appHost.blueprintPreview.completedDeleteCount;
   const [activeTab, setActiveTab] = useState<BlueprintLibraryKind>("user");
   const [folderStack, setFolderStack] = useState<BlueprintLibraryFolder[]>([]);
   const [directoryListing, setDirectoryListing] = useState<BlueprintLibraryDirectoryListing>(
     createEmptyBlueprintLibraryDirectory(null),
   );
   const [isLoading, setIsLoading] = useState(false);
-  const [reloadVersion, setReloadVersion] = useState(0);
-  const [createFolderOpen, setCreateFolderOpen] = useState(false);
-  const [createFolderName, setCreateFolderName] = useState("");
-  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedBlueprintId, setSelectedBlueprintId] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const systemBlueprintLibraryRef = useRef<SystemBlueprintLibrarySnapshot | null>(null);
   const currentFolder = folderStack.length > 0 ? folderStack[folderStack.length - 1] ?? null : null;
   const currentFolderId = currentFolder?.folderId ?? null;
-  const selectedBlueprint = directoryListing.blueprints.find(
-    (record) => record.blueprintId === selectedBlueprintId,
-  ) ?? null;
   const activeLibrary = getBlueprintLibraryDescriptor(activeTab);
   const formatTimestamp = (value: string) => formatBlueprintTimestamp(appHost.state.settings.locale, value);
 
@@ -136,14 +128,21 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
     return () => {
       cancelled = true;
     };
-  }, [activeLibrary, currentFolderId, dialogVisible, isPanelVisible, reloadVersion, t]);
+  }, [
+    activeLibrary,
+    currentFolderId,
+    folderMutationCompletedCount,
+    isPanelVisible,
+    previewDeleteCompletedCount,
+    saveBlueprintDialogVisible,
+    t,
+  ]);
 
   useEffect(() => {
-    setCreateFolderOpen(false);
-    setCreateFolderName("");
+    appHost.blueprintFolderDialog.close();
     setErrorMessage(null);
     setSelectedBlueprintId(null);
-  }, [activeTab, currentFolderId]);
+  }, [activeTab, appHost, currentFolderId]);
 
   const operationButtons: readonly BlueprintOperationButtonDefinition[] = [
     {
@@ -173,38 +172,6 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
     ? operationButtons.filter((button) => button.compactLabelKey !== undefined)
     : operationButtons;
 
-  const handleCreateFolder = async () => {
-    if (!activeLibrary.canCreateFolders || isCreatingFolder) {
-      return;
-    }
-
-    const normalizedName = createFolderName.trim();
-
-    if (normalizedName.length === 0) {
-      setErrorMessage(t("workbench.blueprint.folderNameRequired"));
-      return;
-    }
-
-    setIsCreatingFolder(true);
-    setErrorMessage(null);
-
-    const createdFolder = await createBlueprintFolder({
-      name: normalizedName,
-      parentFolderId: currentFolderId,
-    });
-
-    setIsCreatingFolder(false);
-
-    if (createdFolder === null) {
-      setErrorMessage(t("workbench.blueprint.folderCreateFailed"));
-      return;
-    }
-
-    setCreateFolderOpen(false);
-    setCreateFolderName("");
-    setReloadVersion((currentValue) => currentValue + 1);
-  };
-
   const renderOperationButton = (button: BlueprintOperationButtonDefinition) => {
     const label = t(button.labelKey);
     const visibleLabel = isTouchLayout && button.compactLabelKey !== undefined
@@ -228,6 +195,19 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
       </button>
     );
   };
+
+  /* AI-REMOVED 2026-05-09:
+  Reason: 蓝图 dock 已删除底部预览 inspector，不再需要详情卡内部的放置动作桥接。
+  Trigger: 用户要求删除蓝图 dock 下方的预览 inspector。
+  Evidence: 目录条目点击已直接打开 BlueprintPreviewDialog，放置动作由该对话框自身处理。
+  Replacement: src/app/shell/dialogs/blueprint-preview-dialog.tsx
+  Risk: Low
+  Human Review: Required
+
+  Original code:
+  const selectedBlueprint = directoryListing.blueprints.find(
+    (record) => record.blueprintId === selectedBlueprintId,
+  ) ?? null;
 
   const handlePlaceBlueprintFromLibrary = (
     record: BlueprintLibraryRecord,
@@ -261,6 +241,7 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
       sourceEvent: input.sourceEvent,
     });
   };
+  */
 
   return (
     <div className={isTouchLayout
@@ -300,73 +281,76 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
           </div>
         )}
 
-        <div aria-label={t("workbench.section.blueprintLibrary")} className="blueprint-tab-list" role="tablist">
-          {[
-            { id: "system" as const, uiButtonId: "blueprint-tab-system", labelKey: "workbench.tab.systemBlueprints" },
-            { id: "user" as const, uiButtonId: "blueprint-tab-user", labelKey: "workbench.tab.userBlueprints" },
-          ].map((tab) => {
-            const isActive = activeTab === tab.id;
-
-            return (
-              <button
-                aria-selected={isActive}
-                className={isActive ? "pill blueprint-tab-button is-active" : "pill blueprint-tab-button"}
-                data-ui-button-id={tab.uiButtonId}
-                key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                }}
-                role="tab"
-                type="button"
+        <div className={isTouchLayout ? "blueprint-tab-shell is-touch-compact" : "blueprint-tab-shell"}>
+          <div className="blueprint-tab-header">
+            <div className="blueprint-tab-strip">
+              <div
+                aria-label={t("workbench.section.blueprintLibrary")}
+                className="blueprint-tab-list"
+                role="tablist"
               >
-                {t(tab.labelKey)}
-              </button>
-            );
-          })}
+                {[
+                  { id: "system" as const, uiButtonId: "blueprint-tab-system", labelKey: "workbench.tab.systemBlueprints" },
+                  { id: "user" as const, uiButtonId: "blueprint-tab-user", labelKey: "workbench.tab.userBlueprints" },
+                ].map((tab) => {
+                  const isActive = activeTab === tab.id;
+
+                  return (
+                    <button
+                      aria-selected={isActive}
+                      className={isActive
+                        ? "blueprint-tab-button dialog-shell-tab is-active"
+                        : "blueprint-tab-button dialog-shell-tab"}
+                      data-ui-button-id={tab.uiButtonId}
+                      key={tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id);
+                      }}
+                      role="tab"
+                      type="button"
+                    >
+                      {t(tab.labelKey)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
         <BlueprintDirectoryBrowser
-          createFolderName={createFolderName}
-          createFolderOpen={activeLibrary.canCreateFolders && createFolderOpen}
           currentFolder={currentFolder}
           directoryListing={directoryListing}
           errorMessage={errorMessage}
           folderStack={folderStack}
           formatTimestamp={formatTimestamp}
-          isCreatingFolder={isCreatingFolder}
           isLoading={isLoading}
           libraryDescriptor={activeLibrary}
           onBack={() => {
             setFolderStack((currentValue) => currentValue.slice(0, -1));
           }}
-          onCancelCreateFolder={() => {
-            setCreateFolderOpen(false);
-            setCreateFolderName("");
-            setErrorMessage(null);
-          }}
-          onCreateFolderNameChange={(value) => {
-            setCreateFolderName(value);
-            if (errorMessage !== null) {
-              setErrorMessage(null);
-            }
-          }}
-          onCreateFolderSubmit={handleCreateFolder}
           onOpenFolder={(folder) => {
             setFolderStack((currentValue) => [...currentValue, folder]);
           }}
-          onPlaceBlueprint={handlePlaceBlueprintFromLibrary}
+          onEditFolder={(folder) => {
+            if (!activeLibrary.canCreateFolders) {
+              return;
+            }
+
+            appHost.blueprintFolderDialog.openEdit(folder);
+          }}
           onSelectBlueprint={(record) => {
             setSelectedBlueprintId(record.blueprintId);
-            appHost.blueprintPreview.open(record);
+            appHost.blueprintPreview.open(record, {
+              canDelete: !activeLibrary.isReadOnly,
+            });
           }}
           onToggleCreateFolder={() => {
             if (!activeLibrary.canCreateFolders) {
               return;
             }
 
-            setCreateFolderOpen((currentValue) => !currentValue);
-            setErrorMessage(null);
+            appHost.blueprintFolderDialog.open(currentFolderId);
           }}
-          selectedBlueprint={selectedBlueprint}
           selectedBlueprintId={selectedBlueprintId}
           translate={t}
         />

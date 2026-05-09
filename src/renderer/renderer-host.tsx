@@ -2,6 +2,7 @@ import { RenderContract } from "@/domain/renderer/render-contract";
 import { WorkspaceContract } from "@/domain/document/workspace-contract";
 
 import { Application } from "pixi.js";
+import { createBlueprintPreviewManager } from "./blueprint-preview/blueprint-preview-manager";
 import { resolveRenderResolutionFromApp } from "./render-resolution";
 import {
   createRenderSceneOrchestrator,
@@ -65,6 +66,9 @@ export async function createRenderHost(
   const internalState: RenderHost["internalState"] = {
     textureConfig: null,
   };
+  const blueprintPreviewManager = createBlueprintPreviewManager({
+    workspace,
+  });
   const textureManager = createTextureActions({
     renderer: app.renderer,
     app: workspace.app,
@@ -80,9 +84,10 @@ export async function createRenderHost(
     textureManager,
     internalState,
     canvas: app.canvas,
-    queries: {},
-    actions: {},
+    queries: blueprintPreviewManager.queries,
+    actions: blueprintPreviewManager.actions,
     destroy: () => {
+      blueprintPreviewManager.destroy();
       orchestrator?.destroy();
       orchestrator = null;
       textureManager.destroy();

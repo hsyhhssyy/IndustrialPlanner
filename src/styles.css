@@ -406,7 +406,8 @@ button.is-active {
 }
 
 .dialog-shell.has-tabs .dialog-shell-header {
-  --dialog-shell-tab-track-height: 34px;
+  --dialog-shell-tab-track-height: 36px;
+  --dialog-shell-tab-divider: color-mix(in srgb, var(--line-strong) 72%, var(--line));
   position: relative;
   gap: 0;
   padding: 8px 18px 0;
@@ -420,7 +421,7 @@ button.is-active {
   bottom: 0;
   left: 18px;
   height: 1px;
-  background: color-mix(in srgb, var(--line-strong) 72%, var(--line));
+  background: var(--dialog-shell-tab-divider);
   z-index: 0;
 }
 
@@ -448,7 +449,7 @@ button.is-active {
   flex: 1 1 auto;
   min-width: 0;
   height: var(--dialog-shell-tab-track-height);
-  margin-bottom: -2px;
+  margin-bottom: 0;
 }
 
 .dialog-shell.has-tabs .dialog-shell-tab-strip::after {
@@ -469,24 +470,24 @@ button.is-active {
 
 .dialog-shell.has-tabs .dialog-shell-tab {
   --dialog-shell-tab-border: color-mix(in srgb, var(--line-strong) 84%, var(--line));
-  --dialog-shell-tab-top: color-mix(in srgb, var(--surface-2) 82%, var(--surface-1));
-  --dialog-shell-tab-bottom: color-mix(in srgb, var(--surface-3) 48%, var(--surface-1));
+  --dialog-shell-tab-bg: color-mix(in srgb, var(--surface-2) 90%, var(--surface-1));
   min-height: 0;
-  height: 24px;
-  padding: 0 18px 2px;
-  margin: 0 0 -1px;
+  height: 36px;
+  padding: 0 18px;
+  margin: 0;
   border-color: var(--dialog-shell-tab-border);
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: var(--dialog-shell-tab-divider);
   border-radius: 12px 12px 0 0;
-  background: linear-gradient(180deg, var(--dialog-shell-tab-top) 0%, var(--dialog-shell-tab-bottom) 100%);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.92);
+  background: var(--dialog-shell-tab-bg);
+  box-shadow: none;
   color: color-mix(in srgb, var(--text-0) 86%, var(--text-1));
-  transform: translateY(4px);
+  transform: none;
   transition:
     background 180ms ease,
-    box-shadow 180ms ease,
     border-color 180ms ease,
-    color 180ms ease,
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    color 180ms ease;
 }
 
 .dialog-shell.has-tabs .dialog-shell-tab::before,
@@ -498,10 +499,9 @@ button.is-active {
   width: 10px;
   height: 10px;
   opacity: 0;
-  background: linear-gradient(180deg, var(--dialog-shell-tab-top) 0%, var(--dialog-shell-tab-bottom) 100%);
+  background: var(--dialog-shell-tab-bg);
   transition:
     opacity 180ms ease,
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 180ms ease,
     background 180ms ease;
   pointer-events: none;
@@ -530,30 +530,26 @@ button.is-active {
 
 .dialog-shell.has-tabs .dialog-shell-tab:hover {
   --dialog-shell-tab-border: var(--line-strong);
-  --dialog-shell-tab-top: color-mix(in srgb, var(--surface-2) 92%, var(--surface-1));
-  --dialog-shell-tab-bottom: color-mix(in srgb, var(--surface-3) 58%, var(--surface-1));
+  --dialog-shell-tab-bg: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
   border-color: var(--dialog-shell-tab-border);
-  background: linear-gradient(180deg, var(--dialog-shell-tab-top) 0%, var(--dialog-shell-tab-bottom) 100%);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.94),
-    0 4px 10px rgb(15 23 42 / 0.05);
+  border-bottom-color: var(--dialog-shell-tab-divider);
+  background: var(--dialog-shell-tab-bg);
+  box-shadow: none;
   color: var(--text-0);
-  transform: translateY(2px);
+  transform: none;
 }
 
 .dialog-shell.has-tabs .dialog-shell-tab.is-active {
   --dialog-shell-tab-border: var(--line-strong);
-  --dialog-shell-tab-top: color-mix(in srgb, var(--surface-1) 96%, var(--surface-2));
-  --dialog-shell-tab-bottom: color-mix(in srgb, var(--surface-2) 74%, var(--surface-1));
+  --dialog-shell-tab-bg: var(--surface-1);
   height: 36px;
-  padding-inline: 22px;
+  padding-inline: 18px;
   border-color: var(--dialog-shell-tab-border);
-  background: linear-gradient(180deg, var(--dialog-shell-tab-top) 0%, var(--dialog-shell-tab-bottom) 100%);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.96),
-    0 3px 0 var(--surface-1);
+  border-bottom-color: transparent;
+  background: var(--dialog-shell-tab-bg);
+  box-shadow: none;
   color: var(--text-0);
-  transform: translateY(1px);
+  transform: none;
 }
 
 .dialog-shell.has-tabs .dialog-shell-tab.is-active::before,
@@ -564,11 +560,16 @@ button.is-active {
 .dialog-shell.has-tabs .dialog-shell-tab.is-active::after {
   content: "";
   position: absolute;
-  right: -1px;
-  bottom: -3px;
-  left: -1px;
-  height: 4px;
+  right: 1px;
+  bottom: -1px;
+  left: 1px;
+  z-index: 2;
+  width: auto;
+  height: 2px;
+  opacity: 1;
+  border: 0;
   background: var(--surface-1);
+  transform: none;
   pointer-events: none;
 }
 
@@ -2940,11 +2941,144 @@ body.is-resizing-left-dock * {
   gap: 10px;
 }
 
-.blueprint-tab-list {
+.blueprint-tab-shell {
+  min-width: 0;
+  --blueprint-tab-border: color-mix(in srgb, var(--line-strong) 74%, var(--line));
+  --blueprint-tab-divider: color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  --blueprint-tab-bg: var(--surface-3);
+  --blueprint-tab-bg-hover: color-mix(in srgb, var(--surface-3) 44%, var(--surface-2));
+  --blueprint-tab-bg-active: var(--surface-2);
+  --dialog-shell-tab-track-height: 36px;
+  --dialog-shell-tab-divider: var(--blueprint-tab-divider);
+}
+
+.blueprint-tab-shell.is-touch-compact {
+  --dialog-shell-tab-track-height: 28px;
+}
+
+.blueprint-tab-header {
+  position: relative;
+  display: grid;
+  gap: 0;
+  min-width: 0;
+  padding: 0;
+  border-bottom: 0;
+}
+
+.blueprint-tab-header::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: var(--dialog-shell-tab-divider);
+  z-index: 0;
+}
+
+.blueprint-tab-strip {
+  position: relative;
+  z-index: 1;
   display: flex;
+  align-items: flex-end;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  height: var(--dialog-shell-tab-track-height);
+  margin-bottom: 0;
+}
+
+.blueprint-tab-list {
+  position: relative;
+  display: flex;
+  isolation: isolate;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 0;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow-y: hidden;
+  overflow-x: auto;
+  padding: 0;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+}
+
+.blueprint-tab-shell .dialog-shell-tab {
+  --dialog-shell-tab-border: var(--blueprint-tab-border);
+  --dialog-shell-tab-bg: var(--blueprint-tab-bg);
+  min-height: 0;
+  height: 36px;
+  padding: 0 18px;
+  margin: 0;
+  border-color: var(--dialog-shell-tab-border);
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: var(--dialog-shell-tab-divider);
+  border-radius: 12px 12px 0 0;
+  background: var(--dialog-shell-tab-bg);
+  box-shadow: none;
+  color: color-mix(in srgb, var(--text-0) 72%, var(--text-1));
+  transform: none;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.blueprint-tab-shell .dialog-shell-tab::before,
+.blueprint-tab-shell .dialog-shell-tab::after {
+  content: none;
+}
+
+.blueprint-tab-shell .blueprint-tab-button:hover {
+  --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 26%, var(--line-strong));
+  --dialog-shell-tab-bg: var(--blueprint-tab-bg-hover);
+  border-color: var(--dialog-shell-tab-border);
+  border-bottom-color: var(--dialog-shell-tab-divider);
+  background: var(--dialog-shell-tab-bg);
+  color: var(--text-0);
+  transform: none;
+}
+
+.blueprint-tab-shell .blueprint-tab-button.is-active {
+  --dialog-shell-tab-border: color-mix(in srgb, var(--accent-strong) 40%, var(--line-strong));
+  --dialog-shell-tab-bg: var(--blueprint-tab-bg-active);
+  border-color: var(--dialog-shell-tab-border);
+  border-bottom-color: transparent;
+  background: var(--dialog-shell-tab-bg);
+  color: var(--text-0);
+}
+
+.blueprint-tab-shell .blueprint-tab-button.is-active::after {
+  content: "";
+  position: absolute;
+  right: 1px;
+  bottom: -1px;
+  left: 1px;
+  z-index: 2;
+  width: auto;
+  height: 2px;
+  border: 0;
+  background: var(--blueprint-tab-bg-active);
+  pointer-events: none;
+}
+
+.blueprint-tab-shell.is-touch-compact .blueprint-tab-list {
+  height: 100%;
+}
+
+.blueprint-tab-shell.is-touch-compact .dialog-shell-tab {
+  height: 24px;
+  padding: 0 10px 1px;
+  font-size: 0.62rem;
+  line-height: 1.05;
+}
+
+.blueprint-tab-shell.is-touch-compact .blueprint-tab-button.is-active {
+  height: 28px;
+  padding-inline: 12px;
 }
 
 .blueprint-tab-button {
@@ -3057,6 +3191,13 @@ body.is-resizing-left-dock * {
   gap: 6px;
 }
 
+.blueprint-entry-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: stretch;
+}
+
 .blueprint-entry-button {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;
@@ -3080,6 +3221,16 @@ body.is-resizing-left-dock * {
   box-shadow: inset 0 0 0 1px var(--highlight-ring);
 }
 
+.blueprint-folder-edit-button {
+  min-width: 32px;
+  padding: 0;
+}
+
+.blueprint-folder-edit-button .button-icon-image {
+  width: 16px;
+  height: 16px;
+}
+
 .blueprint-entry-copy {
   display: grid;
   gap: 2px;
@@ -3099,6 +3250,32 @@ body.is-resizing-left-dock * {
 
 .blueprint-entry-description,
 .blueprint-entry-meta,
+.blueprint-empty-state p {
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.blueprint-entry-description,
+.blueprint-entry-meta,
+.blueprint-empty-state p {
+  color: var(--text-2);
+}
+
+.blueprint-entry-description {
+  overflow-wrap: anywhere;
+}
+
+/* AI-REMOVED 2026-05-09:
+Reason: 蓝图 dock 已删除底部预览 inspector，相关详情卡样式不再保留为活跃实现。
+Trigger: 用户要求删除蓝图 dock 下方的预览 inspector。
+Evidence: BlueprintDirectoryBrowser 已移除 BlueprintDetailCard 渲染，预览与放置统一由 BlueprintPreviewDialog 处理。
+Replacement: src/app/shell/dialogs/blueprint-preview-dialog.tsx
+Risk: Low
+Human Review: Required
+
+Original code:
+.blueprint-entry-description,
+.blueprint-entry-meta,
 .blueprint-empty-state p,
 .blueprint-detail-grid dt,
 .blueprint-detail-grid dd {
@@ -3111,10 +3288,6 @@ body.is-resizing-left-dock * {
 .blueprint-empty-state p,
 .blueprint-detail-grid dt {
   color: var(--text-2);
-}
-
-.blueprint-entry-description {
-  overflow-wrap: anywhere;
 }
 
 .blueprint-detail-card {
@@ -3133,6 +3306,7 @@ body.is-resizing-left-dock * {
   color: var(--text-0);
   overflow-wrap: anywhere;
 }
+*/
 
 .blueprint-panel.is-touch-layout .blueprint-folder-form {
   grid-template-columns: minmax(0, 1fr);
@@ -3167,11 +3341,17 @@ body.is-resizing-left-dock * {
 }
 
 .blueprint-panel.is-touch-layout .blueprint-browser-toolbar > .blueprint-utility-button {
-  justify-self: start;
+  justify-self: stretch;
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .blueprint-panel.is-touch-layout .blueprint-entry-button {
   grid-template-columns: 24px minmax(0, 1fr);
+}
+
+.blueprint-panel.is-touch-layout .blueprint-entry-row {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .blueprint-panel.is-touch-layout .blueprint-entry-button .pill {
@@ -3315,7 +3495,7 @@ body.is-resizing-left-dock * {
 
 .blueprint-preview-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.9fr);
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 248px);
   gap: 14px;
   min-height: 100%;
 }
@@ -3345,41 +3525,61 @@ body.is-resizing-left-dock * {
   width: 100%;
   height: 100%;
   min-height: 360px;
+  touch-action: none;
+  cursor: grab;
   background:
-    linear-gradient(color-mix(in srgb, var(--line) 52%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--line) 52%, transparent) 1px, transparent 1px),
     linear-gradient(180deg, color-mix(in srgb, var(--surface-3) 84%, white 3%) 0%, color-mix(in srgb, var(--surface-1) 96%, black 2%) 100%);
-  background-size: 28px 28px, 28px 28px, auto;
 }
 
-.blueprint-preview-overlay {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  align-content: end;
-  justify-items: start;
-  gap: 8px;
-  padding: 24px;
-  text-align: left;
-  background: linear-gradient(180deg, transparent 18%, color-mix(in srgb, var(--surface-1) 72%, transparent) 100%);
+.blueprint-preview-canvas > canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.blueprint-preview-canvas-label {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 12px;
-  border: 1px solid color-mix(in srgb, var(--accent-strong) 42%, var(--line));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-1) 85%, white 5%);
-  color: var(--text-0);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
+/* AI-REMOVED 2026-05-09:
+   Reason: 用户要求去掉画布叠层，并且不要再安排叠层文案的显示位置。
+   Trigger: 当前蓝图预览画布仍挂载 overlay / badge / 摘要文本样式。
+   Evidence: blueprint-preview-dialog.tsx 已移除对应 JSX 节点，这些样式已不应继续作为活跃实现。
+   Replacement: None
+   Risk: Low
+   Human Review: Required
 
-.blueprint-preview-overlay p,
+   Original code:
+   .blueprint-preview-overlay {
+     position: absolute;
+     inset: 0;
+     display: grid;
+     align-content: end;
+     justify-items: start;
+     gap: 8px;
+     padding: 24px;
+     pointer-events: none;
+     text-align: left;
+     background: linear-gradient(180deg, transparent 18%, color-mix(in srgb, var(--surface-1) 72%, transparent) 100%);
+   }
+
+   .blueprint-preview-overlay-copy {
+     display: grid;
+     gap: 4px;
+   }
+
+   .blueprint-preview-canvas-label {
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+     padding: 6px 12px;
+     border: 1px solid color-mix(in srgb, var(--accent-strong) 42%, var(--line));
+     border-radius: 999px;
+     background: color-mix(in srgb, var(--surface-1) 85%, white 5%);
+     color: var(--text-0);
+     font-size: 0.78rem;
+     font-weight: 700;
+     letter-spacing: 0.08em;
+     text-transform: uppercase;
+   }
+*/
+
 .blueprint-preview-renderer-note,
 .blueprint-preview-header-copy p,
 .blueprint-preview-footnote {
@@ -3415,8 +3615,8 @@ body.is-resizing-left-dock * {
 
 .blueprint-preview-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
   align-items: start;
 }
 
@@ -3431,6 +3631,45 @@ body.is-resizing-left-dock * {
   color: var(--text-0);
   font-size: 1.02rem;
   line-height: 1.3;
+}
+
+.blueprint-preview-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.blueprint-preview-actions.is-dual-action {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.blueprint-preview-actions .save-blueprint-primary-button,
+.blueprint-preview-actions .save-blueprint-secondary-button,
+.blueprint-preview-actions .blueprint-preview-danger-button {
+  width: 100%;
+}
+
+.blueprint-preview-danger-button,
+.blueprint-folder-danger-button {
+  border-color: color-mix(in srgb, var(--danger, #dc2626) 45%, var(--line));
+  color: var(--danger, #dc2626);
+}
+
+.blueprint-preview-danger-button:hover:not(:disabled),
+.blueprint-folder-danger-button:hover:not(:disabled) {
+  border-color: var(--danger, #dc2626);
+  background: color-mix(in srgb, var(--danger, #dc2626) 8%, var(--surface-2));
+}
+
+.blueprint-preview-danger-button.is-confirm,
+.blueprint-folder-danger-button.is-confirm {
+  border-color: var(--danger, #dc2626);
+  background: var(--danger, #dc2626);
+  color: #fff;
+}
+
+.blueprint-preview-danger-button.is-confirm:hover:not(:disabled),
+.blueprint-folder-danger-button.is-confirm:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger, #dc2626) 88%, #000);
 }
 
 .blueprint-preview-metadata {
@@ -3555,6 +3794,13 @@ body.is-resizing-left-dock * {
   font-size: 0.82rem;
 }
 
+.blueprint-folder-dialog-note {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 .save-blueprint-actions {
   display: flex;
   justify-content: flex-end;
@@ -3565,6 +3811,10 @@ body.is-resizing-left-dock * {
   padding-bottom: 2px;
   border-top: 1px solid var(--line);
   background: var(--surface-1);
+}
+
+.save-blueprint-actions.is-triple-action {
+  flex-wrap: wrap;
 }
 
 .save-blueprint-primary-button,
@@ -3616,6 +3866,10 @@ body.is-resizing-left-dock * {
     padding: 12px;
   }
 
+  .blueprint-preview-actions.is-dual-action {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .blueprint-preview-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -3628,7 +3882,7 @@ body.is-resizing-left-dock * {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .blueprint-preview-header .save-blueprint-primary-button {
+  .blueprint-preview-actions .save-blueprint-primary-button {
     width: 100%;
   }
 

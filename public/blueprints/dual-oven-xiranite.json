@@ -1,0 +1,1831 @@
+{
+  "schemaVersion": 1,
+  "blueprintId": "c96944de-0608-4abf-901a-8b3d27a476d1",
+  "version": "v1.3.0",
+  "name": "双烘炉息壤产线",
+  "description": "",
+  "baseId": "wuling_tianwangping_aid",
+  "initialGridPoint": {
+    "x": 15,
+    "y": 13
+  },
+  "entities": {
+    "dual_oven_xiranite_0001": {
+      "id": "dual_oven_xiranite_0001",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 27,
+        "y": 23
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0002": {
+      "id": "dual_oven_xiranite_0002",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 26,
+        "y": 20
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0003": {
+      "id": "dual_oven_xiranite_0003",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 25,
+        "y": 16
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0004": {
+      "id": "dual_oven_xiranite_0004",
+      "definitionId": "item_port_hydro_planter_1",
+      "position": {
+        "x": 21,
+        "y": 19
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0005": {
+      "id": "dual_oven_xiranite_0005",
+      "definitionId": "item_port_seedcol_1",
+      "position": {
+        "x": 15,
+        "y": 19
+      },
+      "rotation": 0,
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_grass_2",
+            "amount": 50
+          }
+        ]
+      },
+      "tags": []
+    },
+    "dual_oven_xiranite_0006": {
+      "id": "dual_oven_xiranite_0006",
+      "definitionId": "item_port_planter_1",
+      "position": {
+        "x": 10,
+        "y": 19
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0007": {
+      "id": "dual_oven_xiranite_0007",
+      "definitionId": "item_port_seedcol_1",
+      "position": {
+        "x": 5,
+        "y": 19
+      },
+      "rotation": 180,
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_moss_3",
+            "amount": 50
+          }
+        ]
+      },
+      "tags": []
+    },
+    "dual_oven_xiranite_0008": {
+      "id": "dual_oven_xiranite_0008",
+      "definitionId": "item_port_planter_1",
+      "position": {
+        "x": 0,
+        "y": 19
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0009": {
+      "id": "dual_oven_xiranite_0009",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 21,
+        "y": 24
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0010": {
+      "id": "dual_oven_xiranite_0010",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 24
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0011": {
+      "id": "dual_oven_xiranite_0011",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 19,
+        "y": 24
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0012": {
+      "id": "dual_oven_xiranite_0012",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 25,
+        "y": 24
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0013": {
+      "id": "dual_oven_xiranite_0013",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 26,
+        "y": 24
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0014": {
+      "id": "dual_oven_xiranite_0014",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 23
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0015": {
+      "id": "dual_oven_xiranite_0015",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 26,
+        "y": 19
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0016": {
+      "id": "dual_oven_xiranite_0016",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 24
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0017": {
+      "id": "dual_oven_xiranite_0017",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 23
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0018": {
+      "id": "dual_oven_xiranite_0018",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 22
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0019": {
+      "id": "dual_oven_xiranite_0019",
+      "definitionId": "item_pipe_splitter",
+      "position": {
+        "x": 20,
+        "y": 21
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0020": {
+      "id": "dual_oven_xiranite_0020",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 20
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0021": {
+      "id": "dual_oven_xiranite_0021",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 19,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0022": {
+      "id": "dual_oven_xiranite_0022",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 18
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0023": {
+      "id": "dual_oven_xiranite_0023",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 21,
+        "y": 18
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0024": {
+      "id": "dual_oven_xiranite_0024",
+      "definitionId": "item_port_thickener_1",
+      "position": {
+        "x": 21,
+        "y": 12
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0025": {
+      "id": "dual_oven_xiranite_0025",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 18,
+        "y": 15
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0026": {
+      "id": "dual_oven_xiranite_0026",
+      "definitionId": "item_port_xiranite_oven_1",
+      "position": {
+        "x": 12,
+        "y": 13
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0027": {
+      "id": "dual_oven_xiranite_0027",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 18,
+        "y": 18
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0028": {
+      "id": "dual_oven_xiranite_0028",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 17,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0029": {
+      "id": "dual_oven_xiranite_0029",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 16,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0030": {
+      "id": "dual_oven_xiranite_0030",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 20,
+        "y": 19
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0031": {
+      "id": "dual_oven_xiranite_0031",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 20,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0032": {
+      "id": "dual_oven_xiranite_0032",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 19,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0033": {
+      "id": "dual_oven_xiranite_0033",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 18,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0034": {
+      "id": "dual_oven_xiranite_0034",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 17,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0035": {
+      "id": "dual_oven_xiranite_0035",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 17,
+        "y": 17
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0036": {
+      "id": "dual_oven_xiranite_0036",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 17,
+        "y": 16
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0037": {
+      "id": "dual_oven_xiranite_0037",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 17,
+        "y": 15
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0038": {
+      "id": "dual_oven_xiranite_0038",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 25,
+        "y": 14
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0039": {
+      "id": "dual_oven_xiranite_0039",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 26,
+        "y": 15
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0040": {
+      "id": "dual_oven_xiranite_0040",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 25,
+        "y": 15
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0041": {
+      "id": "dual_oven_xiranite_0041",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 26,
+        "y": 12
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0042": {
+      "id": "dual_oven_xiranite_0042",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 28,
+        "y": 19
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0043": {
+      "id": "dual_oven_xiranite_0043",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 28,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0044": {
+      "id": "dual_oven_xiranite_0044",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 28,
+        "y": 17
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0045": {
+      "id": "dual_oven_xiranite_0045",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 28,
+        "y": 16
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0046": {
+      "id": "dual_oven_xiranite_0046",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 28,
+        "y": 15
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0047": {
+      "id": "dual_oven_xiranite_0047",
+      "definitionId": "item_port_storager_1",
+      "position": {
+        "x": 17,
+        "y": 12
+      },
+      "rotation": 90,
+      "config": {
+        "submitToWarehouse": true
+      },
+      "tags": []
+    },
+    "dual_oven_xiranite_0048": {
+      "id": "dual_oven_xiranite_0048",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 9,
+        "y": 24
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0049": {
+      "id": "dual_oven_xiranite_0049",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 10,
+        "y": 24
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0050": {
+      "id": "dual_oven_xiranite_0050",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 5,
+        "y": 24
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0051": {
+      "id": "dual_oven_xiranite_0051",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 4,
+        "y": 24
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0052": {
+      "id": "dual_oven_xiranite_0052",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 10,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0053": {
+      "id": "dual_oven_xiranite_0053",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 9,
+        "y": 18
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0054": {
+      "id": "dual_oven_xiranite_0054",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 1,
+        "y": 16
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0055": {
+      "id": "dual_oven_xiranite_0055",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 0,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0056": {
+      "id": "dual_oven_xiranite_0056",
+      "definitionId": "item_port_thickener_1",
+      "position": {
+        "x": 5,
+        "y": 13
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0057": {
+      "id": "dual_oven_xiranite_0057",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 4,
+        "y": 18
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0058": {
+      "id": "dual_oven_xiranite_0058",
+      "definitionId": "item_port_seedcol_1",
+      "position": {
+        "x": 20,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_moss_3",
+            "amount": 50
+          }
+        ]
+      },
+      "tags": []
+    },
+    "dual_oven_xiranite_0059": {
+      "id": "dual_oven_xiranite_0059",
+      "definitionId": "item_port_planter_1",
+      "position": {
+        "x": 25,
+        "y": 1
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0060": {
+      "id": "dual_oven_xiranite_0060",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 20,
+        "y": 0
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0061": {
+      "id": "dual_oven_xiranite_0061",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 19,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0062": {
+      "id": "dual_oven_xiranite_0062",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 24,
+        "y": 0
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0063": {
+      "id": "dual_oven_xiranite_0063",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 25,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0064": {
+      "id": "dual_oven_xiranite_0064",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 19,
+        "y": 6
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0065": {
+      "id": "dual_oven_xiranite_0065",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 20,
+        "y": 6
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0066": {
+      "id": "dual_oven_xiranite_0066",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 26,
+        "y": 6
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0067": {
+      "id": "dual_oven_xiranite_0067",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 29,
+        "y": 6
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0068": {
+      "id": "dual_oven_xiranite_0068",
+      "definitionId": "item_port_thickener_1",
+      "position": {
+        "x": 21,
+        "y": 6
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0069": {
+      "id": "dual_oven_xiranite_0069",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 25,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0070": {
+      "id": "dual_oven_xiranite_0070",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 1,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0071": {
+      "id": "dual_oven_xiranite_0071",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 1,
+        "y": 2
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0072": {
+      "id": "dual_oven_xiranite_0072",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 2,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0073": {
+      "id": "dual_oven_xiranite_0073",
+      "definitionId": "item_port_hydro_planter_1",
+      "position": {
+        "x": 4,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0074": {
+      "id": "dual_oven_xiranite_0074",
+      "definitionId": "item_port_seedcol_1",
+      "position": {
+        "x": 10,
+        "y": 1
+      },
+      "rotation": 180,
+      "config": {
+        "preloadInputs": [
+          {
+            "slotIndex": 0,
+            "itemId": "item_plant_grass_2",
+            "amount": 50
+          }
+        ]
+      },
+      "tags": []
+    },
+    "dual_oven_xiranite_0075": {
+      "id": "dual_oven_xiranite_0075",
+      "definitionId": "item_port_planter_1",
+      "position": {
+        "x": 15,
+        "y": 1
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0076": {
+      "id": "dual_oven_xiranite_0076",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 8,
+        "y": 0
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0077": {
+      "id": "dual_oven_xiranite_0077",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0078": {
+      "id": "dual_oven_xiranite_0078",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 10,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0079": {
+      "id": "dual_oven_xiranite_0079",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 4,
+        "y": 0
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0080": {
+      "id": "dual_oven_xiranite_0080",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 3,
+        "y": 0
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0081": {
+      "id": "dual_oven_xiranite_0081",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 1
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0082": {
+      "id": "dual_oven_xiranite_0082",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 3,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0083": {
+      "id": "dual_oven_xiranite_0083",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 1
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0084": {
+      "id": "dual_oven_xiranite_0084",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 2
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0085": {
+      "id": "dual_oven_xiranite_0085",
+      "definitionId": "item_pipe_splitter",
+      "position": {
+        "x": 9,
+        "y": 3
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0086": {
+      "id": "dual_oven_xiranite_0086",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 4
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0087": {
+      "id": "dual_oven_xiranite_0087",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 10,
+        "y": 6
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0088": {
+      "id": "dual_oven_xiranite_0088",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0089": {
+      "id": "dual_oven_xiranite_0089",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 8,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0090": {
+      "id": "dual_oven_xiranite_0090",
+      "definitionId": "item_port_thickener_1",
+      "position": {
+        "x": 5,
+        "y": 7
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0091": {
+      "id": "dual_oven_xiranite_0091",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 9,
+        "y": 7
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0092": {
+      "id": "dual_oven_xiranite_0092",
+      "definitionId": "item_port_xiranite_oven_1",
+      "position": {
+        "x": 13,
+        "y": 7
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0093": {
+      "id": "dual_oven_xiranite_0093",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 11,
+        "y": 6
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0094": {
+      "id": "dual_oven_xiranite_0094",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 6
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0095": {
+      "id": "dual_oven_xiranite_0095",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 13,
+        "y": 6
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0096": {
+      "id": "dual_oven_xiranite_0096",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0097": {
+      "id": "dual_oven_xiranite_0097",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 9,
+        "y": 6
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0098": {
+      "id": "dual_oven_xiranite_0098",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 10,
+        "y": 6
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0099": {
+      "id": "dual_oven_xiranite_0099",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 11,
+        "y": 6
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0100": {
+      "id": "dual_oven_xiranite_0100",
+      "definitionId": "pipe_turn_cw_1x1",
+      "position": {
+        "x": 12,
+        "y": 6
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0101": {
+      "id": "dual_oven_xiranite_0101",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 7
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0102": {
+      "id": "dual_oven_xiranite_0102",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 12,
+        "y": 8
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0103": {
+      "id": "dual_oven_xiranite_0103",
+      "definitionId": "pipe_turn_ccw_1x1",
+      "position": {
+        "x": 12,
+        "y": 9
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0104": {
+      "id": "dual_oven_xiranite_0104",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 4,
+        "y": 10
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0105": {
+      "id": "dual_oven_xiranite_0105",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 3,
+        "y": 9
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0106": {
+      "id": "dual_oven_xiranite_0106",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 4,
+        "y": 9
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0107": {
+      "id": "dual_oven_xiranite_0107",
+      "definitionId": "item_port_grinder_1",
+      "position": {
+        "x": 1,
+        "y": 10
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0108": {
+      "id": "dual_oven_xiranite_0108",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 5
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0109": {
+      "id": "dual_oven_xiranite_0109",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 6
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0110": {
+      "id": "dual_oven_xiranite_0110",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 7
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0111": {
+      "id": "dual_oven_xiranite_0111",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 8
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0112": {
+      "id": "dual_oven_xiranite_0112",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 9
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0113": {
+      "id": "dual_oven_xiranite_0113",
+      "definitionId": "item_port_storager_1",
+      "position": {
+        "x": 10,
+        "y": 10
+      },
+      "rotation": 270,
+      "config": {
+        "submitToWarehouse": true
+      },
+      "tags": []
+    },
+    "dual_oven_xiranite_0114": {
+      "id": "dual_oven_xiranite_0114",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 3,
+        "y": 14
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0115": {
+      "id": "dual_oven_xiranite_0115",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 4,
+        "y": 17
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0116": {
+      "id": "dual_oven_xiranite_0116",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 4,
+        "y": 16
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0117": {
+      "id": "dual_oven_xiranite_0117",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 4,
+        "y": 15
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0118": {
+      "id": "dual_oven_xiranite_0118",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 4,
+        "y": 14
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0119": {
+      "id": "dual_oven_xiranite_0119",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 4,
+        "y": 12
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0120": {
+      "id": "dual_oven_xiranite_0120",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 2,
+        "y": 13
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0121": {
+      "id": "dual_oven_xiranite_0121",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 3,
+        "y": 13
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0122": {
+      "id": "dual_oven_xiranite_0122",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 4,
+        "y": 13
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0123": {
+      "id": "dual_oven_xiranite_0123",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 1,
+        "y": 14
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0124": {
+      "id": "dual_oven_xiranite_0124",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 9,
+        "y": 15
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0125": {
+      "id": "dual_oven_xiranite_0125",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 9,
+        "y": 14
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0126": {
+      "id": "dual_oven_xiranite_0126",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 11,
+        "y": 18
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0127": {
+      "id": "dual_oven_xiranite_0127",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 12,
+        "y": 18
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0128": {
+      "id": "dual_oven_xiranite_0128",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 10,
+        "y": 13
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0129": {
+      "id": "dual_oven_xiranite_0129",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 13,
+        "y": 12
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0130": {
+      "id": "dual_oven_xiranite_0130",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 16,
+        "y": 12
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0131": {
+      "id": "dual_oven_xiranite_0131",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 9,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0132": {
+      "id": "dual_oven_xiranite_0132",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 20,
+        "y": 14
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0133": {
+      "id": "dual_oven_xiranite_0133",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 25,
+        "y": 7
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0134": {
+      "id": "dual_oven_xiranite_0134",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 25,
+        "y": 8
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0135": {
+      "id": "dual_oven_xiranite_0135",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 25,
+        "y": 9
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0136": {
+      "id": "dual_oven_xiranite_0136",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 25,
+        "y": 12
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0137": {
+      "id": "dual_oven_xiranite_0137",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 26,
+        "y": 10
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0138": {
+      "id": "dual_oven_xiranite_0138",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 25,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0139": {
+      "id": "dual_oven_xiranite_0139",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 27,
+        "y": 11
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0140": {
+      "id": "dual_oven_xiranite_0140",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 26,
+        "y": 11
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0141": {
+      "id": "dual_oven_xiranite_0141",
+      "definitionId": "item_log_connector",
+      "position": {
+        "x": 25,
+        "y": 11
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0142": {
+      "id": "dual_oven_xiranite_0142",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 27,
+        "y": 9
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0143": {
+      "id": "dual_oven_xiranite_0143",
+      "definitionId": "item_port_furnance_1",
+      "position": {
+        "x": 18,
+        "y": 7
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0144": {
+      "id": "dual_oven_xiranite_0144",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 18,
+        "y": 6
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0145": {
+      "id": "dual_oven_xiranite_0145",
+      "definitionId": "belt_turn_ccw_1x1",
+      "position": {
+        "x": 17,
+        "y": 6
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0146": {
+      "id": "dual_oven_xiranite_0146",
+      "definitionId": "belt_turn_cw_1x1",
+      "position": {
+        "x": 20,
+        "y": 10
+      },
+      "rotation": 180,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0147": {
+      "id": "dual_oven_xiranite_0147",
+      "definitionId": "item_port_power_diffuser_1",
+      "position": {
+        "x": 18,
+        "y": 10
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "dual_oven_xiranite_0148": {
+      "id": "dual_oven_xiranite_0148",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 9,
+        "y": 0
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "dual_oven_xiranite_0001",
+    "dual_oven_xiranite_0002",
+    "dual_oven_xiranite_0003",
+    "dual_oven_xiranite_0004",
+    "dual_oven_xiranite_0005",
+    "dual_oven_xiranite_0006",
+    "dual_oven_xiranite_0007",
+    "dual_oven_xiranite_0008",
+    "dual_oven_xiranite_0009",
+    "dual_oven_xiranite_0010",
+    "dual_oven_xiranite_0011",
+    "dual_oven_xiranite_0012",
+    "dual_oven_xiranite_0013",
+    "dual_oven_xiranite_0014",
+    "dual_oven_xiranite_0015",
+    "dual_oven_xiranite_0016",
+    "dual_oven_xiranite_0017",
+    "dual_oven_xiranite_0018",
+    "dual_oven_xiranite_0019",
+    "dual_oven_xiranite_0020",
+    "dual_oven_xiranite_0021",
+    "dual_oven_xiranite_0022",
+    "dual_oven_xiranite_0023",
+    "dual_oven_xiranite_0024",
+    "dual_oven_xiranite_0025",
+    "dual_oven_xiranite_0026",
+    "dual_oven_xiranite_0027",
+    "dual_oven_xiranite_0028",
+    "dual_oven_xiranite_0029",
+    "dual_oven_xiranite_0030",
+    "dual_oven_xiranite_0031",
+    "dual_oven_xiranite_0032",
+    "dual_oven_xiranite_0033",
+    "dual_oven_xiranite_0034",
+    "dual_oven_xiranite_0035",
+    "dual_oven_xiranite_0036",
+    "dual_oven_xiranite_0037",
+    "dual_oven_xiranite_0038",
+    "dual_oven_xiranite_0039",
+    "dual_oven_xiranite_0040",
+    "dual_oven_xiranite_0041",
+    "dual_oven_xiranite_0042",
+    "dual_oven_xiranite_0043",
+    "dual_oven_xiranite_0044",
+    "dual_oven_xiranite_0045",
+    "dual_oven_xiranite_0046",
+    "dual_oven_xiranite_0047",
+    "dual_oven_xiranite_0048",
+    "dual_oven_xiranite_0049",
+    "dual_oven_xiranite_0050",
+    "dual_oven_xiranite_0051",
+    "dual_oven_xiranite_0052",
+    "dual_oven_xiranite_0053",
+    "dual_oven_xiranite_0054",
+    "dual_oven_xiranite_0055",
+    "dual_oven_xiranite_0056",
+    "dual_oven_xiranite_0057",
+    "dual_oven_xiranite_0058",
+    "dual_oven_xiranite_0059",
+    "dual_oven_xiranite_0060",
+    "dual_oven_xiranite_0061",
+    "dual_oven_xiranite_0062",
+    "dual_oven_xiranite_0063",
+    "dual_oven_xiranite_0064",
+    "dual_oven_xiranite_0065",
+    "dual_oven_xiranite_0066",
+    "dual_oven_xiranite_0067",
+    "dual_oven_xiranite_0068",
+    "dual_oven_xiranite_0069",
+    "dual_oven_xiranite_0070",
+    "dual_oven_xiranite_0071",
+    "dual_oven_xiranite_0072",
+    "dual_oven_xiranite_0073",
+    "dual_oven_xiranite_0074",
+    "dual_oven_xiranite_0075",
+    "dual_oven_xiranite_0076",
+    "dual_oven_xiranite_0077",
+    "dual_oven_xiranite_0078",
+    "dual_oven_xiranite_0079",
+    "dual_oven_xiranite_0080",
+    "dual_oven_xiranite_0081",
+    "dual_oven_xiranite_0082",
+    "dual_oven_xiranite_0083",
+    "dual_oven_xiranite_0084",
+    "dual_oven_xiranite_0085",
+    "dual_oven_xiranite_0086",
+    "dual_oven_xiranite_0087",
+    "dual_oven_xiranite_0088",
+    "dual_oven_xiranite_0089",
+    "dual_oven_xiranite_0090",
+    "dual_oven_xiranite_0091",
+    "dual_oven_xiranite_0092",
+    "dual_oven_xiranite_0093",
+    "dual_oven_xiranite_0094",
+    "dual_oven_xiranite_0095",
+    "dual_oven_xiranite_0096",
+    "dual_oven_xiranite_0097",
+    "dual_oven_xiranite_0098",
+    "dual_oven_xiranite_0099",
+    "dual_oven_xiranite_0100",
+    "dual_oven_xiranite_0101",
+    "dual_oven_xiranite_0102",
+    "dual_oven_xiranite_0103",
+    "dual_oven_xiranite_0104",
+    "dual_oven_xiranite_0105",
+    "dual_oven_xiranite_0106",
+    "dual_oven_xiranite_0107",
+    "dual_oven_xiranite_0108",
+    "dual_oven_xiranite_0109",
+    "dual_oven_xiranite_0110",
+    "dual_oven_xiranite_0111",
+    "dual_oven_xiranite_0112",
+    "dual_oven_xiranite_0113",
+    "dual_oven_xiranite_0114",
+    "dual_oven_xiranite_0115",
+    "dual_oven_xiranite_0116",
+    "dual_oven_xiranite_0117",
+    "dual_oven_xiranite_0118",
+    "dual_oven_xiranite_0119",
+    "dual_oven_xiranite_0120",
+    "dual_oven_xiranite_0121",
+    "dual_oven_xiranite_0122",
+    "dual_oven_xiranite_0123",
+    "dual_oven_xiranite_0124",
+    "dual_oven_xiranite_0125",
+    "dual_oven_xiranite_0126",
+    "dual_oven_xiranite_0127",
+    "dual_oven_xiranite_0128",
+    "dual_oven_xiranite_0129",
+    "dual_oven_xiranite_0130",
+    "dual_oven_xiranite_0131",
+    "dual_oven_xiranite_0132",
+    "dual_oven_xiranite_0133",
+    "dual_oven_xiranite_0134",
+    "dual_oven_xiranite_0135",
+    "dual_oven_xiranite_0136",
+    "dual_oven_xiranite_0137",
+    "dual_oven_xiranite_0138",
+    "dual_oven_xiranite_0139",
+    "dual_oven_xiranite_0140",
+    "dual_oven_xiranite_0141",
+    "dual_oven_xiranite_0142",
+    "dual_oven_xiranite_0143",
+    "dual_oven_xiranite_0144",
+    "dual_oven_xiranite_0145",
+    "dual_oven_xiranite_0146",
+    "dual_oven_xiranite_0147",
+    "dual_oven_xiranite_0148"
+  ],
+  "slotLinks": [],
+  "createdAt": "2026-03-04T15:00:38.701Z",
+  "updatedAt": "2026-03-04T15:00:38.701Z"
+}
