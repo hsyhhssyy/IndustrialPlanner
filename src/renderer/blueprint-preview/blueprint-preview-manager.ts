@@ -324,7 +324,7 @@ function loadBlueprintPreviewSpriteTexture(
   sprite: Sprite,
   definition: EntityDefinition,
 ): void {
-  void state.textureManager.getTexture(`device-sprite-${definition.spriteId}`).then((texture) => {
+  void state.textureManager.getTexture(`blueprint-sprite-${definition.spriteId}`).then((texture) => {
     if (state.disposed || sprite.destroyed) {
       return
     }

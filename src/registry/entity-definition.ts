@@ -282,6 +282,38 @@ function createBinding(
   };
 }
 
+type DirectionalBufferLayoutInput = {
+  kind: StorageSlotGroupDefinition["kind"];
+  role: Exclude<StorageSlotGroupDefinition["role"], "bidirectional">;
+  capacities: number[];
+};
+
+function resolveSlotFilterType(kind: DirectionalBufferLayoutInput["kind"]): FilterType {
+  return kind === "fluid" ? "liquid" : "solid";
+}
+
+function createDirectionalBuffers(
+  layouts: readonly DirectionalBufferLayoutInput[],
+): Pick<EntityDefinition, "storageSlotGroups" | "portStorageBindings"> {
+  return {
+    storageSlotGroups: layouts.map((layout) => createStorageSlotGroup(
+      `${layout.kind}_${layout.role}_buffer`,
+      layout.kind,
+      layout.role,
+      createSlots(
+        `${layout.role}_${layout.kind}_slot`,
+        layout.capacities,
+        resolveSlotFilterType(layout.kind),
+      ),
+    )),
+    portStorageBindings: layouts.map((layout) => createBinding(
+      `bind_${layout.kind}_${layout.role}`,
+      `${layout.kind}_${layout.role}`,
+      `${layout.kind}_${layout.role}_buffer`,
+    )),
+  };
+}
+
 /**
  * 从端口 kind 推导默认 acceptRule。
  * item → { base: { kind: "solid" }, exclude: [] }
@@ -776,6 +808,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   /**
    * belt_turn_cw_1x1 — 传送带顺时针转弯（1×1）
    * 端口：W→S 流向
+   * 订正（2026-05-10）：当前端口基准改为 E→N 流向。
    */
   createEntityDefinition({
     id: "belt_turn_cw_1x1",
@@ -791,13 +824,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         "item",
         "input",
-        [createPort("in_w", 0, 0, "W")],
+        [createPort("in_e", 0, 0, "E")],
       ),
       createPortGroup(
         "item_output",
         "item",
         "output",
-        [createPort("out_s", 0, 0, "S")],
+        [createPort("out_n", 0, 0, "N")],
       ),
     ],
     storageSlotGroups: [
@@ -818,6 +851,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   /**
    * belt_turn_ccw_1x1 — 传送带逆时针转弯（1×1）
    * 端口：W→N 流向
+   * 订正（2026-05-10）：当前端口基准改为 N→E 流向。
    */
   createEntityDefinition({
     id: "belt_turn_ccw_1x1",
@@ -833,13 +867,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_input",
         "item",
         "input",
-        [createPort("in_w", 0, 0, "W")],
+        [createPort("in_n", 0, 0, "N")],
       ),
       createPortGroup(
         "item_output",
         "item",
         "output",
-        [createPort("out_n", 0, 0, "N")],
+        [createPort("out_e", 0, 0, "E")],
       ),
     ],
     storageSlotGroups: [
@@ -1021,6 +1055,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 
   /**
    * pipe_turn_cw_1x1 — 管道顺时针转弯（1×1）
+   * 订正（2026-05-10）：当前端口基准为 E→N 流向。
    */
   createEntityDefinition({
     id: "pipe_turn_cw_1x1",
@@ -1036,13 +1071,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         "fluid",
         "input",
-        [createPort("in_w", 0, 0, "W")],
+        [createPort("in_e", 0, 0, "E")],
       ),
       createPortGroup(
         "fluid_output",
         "fluid",
         "output",
-        [createPort("out_s", 0, 0, "S")],
+        [createPort("out_n", 0, 0, "N")],
       ),
     ],
     storageSlotGroups: [],
@@ -1051,6 +1086,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 
   /**
    * pipe_turn_ccw_1x1 — 管道逆时针转弯（1×1）
+   * 订正（2026-05-10）：当前端口基准为 N→E 流向。
    */
   createEntityDefinition({
     id: "pipe_turn_ccw_1x1",
@@ -1066,13 +1102,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "fluid_input",
         "fluid",
         "input",
-        [createPort("in_w", 0, 0, "W")],
+        [createPort("in_n", 0, 0, "N")],
       ),
       createPortGroup(
         "fluid_output",
         "fluid",
         "output",
-        [createPort("out_n", 0, 0, "N")],
+        [createPort("out_e", 0, 0, "E")],
       ),
     ],
     storageSlotGroups: [],
@@ -1252,182 +1288,657 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   // 这些设备属于"未完成迁移"的设备，等待在后续 v2 迭代中
   // 补全 portGroups/storageSlotGroups/portStorageBindings/recipe 定义。
   // =========================================================================
+  // 订正（2026-05-09）：本区块中的大部分设备已按 v2 静态端口补齐为完整定义；
+  // 目前仍保留为空壳的仅有 v2 本身未提供静态端口的设备。
 
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_loader_1",
     nameKey: "registry.entity.item_port_loader_1.name",
     spriteId: "item_port_loader_1",
     footprint: { width: 3, height: 1 },
     uiGroup: "warehouse",
     tags: [],
+    requiresPower: false,
+    powerDemand: 0,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [createPort("p_in_mid", 1, 0, "N")],
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [1] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_furnance_1",
     nameKey: "registry.entity.item_port_furnance_1.name",
     spriteId: "item_port_furnance_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
     tags: [],
+    requiresPower: true,
+    powerDemand: 5,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [50] },
+      { kind: "item", role: "output", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_liquid_furnance_1",
     nameKey: "registry.entity.item_port_liquid_furnance_1.name",
     spriteId: "item_port_liquid_furnance_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
     tags: ["武陵", "alter:item_port_furnance_1", "alter-variant:liquid"],
+    requiresPower: true,
+    powerDemand: 5,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
+      ),
+      createPortGroup(
+        "fluid_input",
+        "fluid",
+        "input",
+        [createPort("in_e_1", 2, 1, "E")],
+      ),
+      createPortGroup(
+        "fluid_output",
+        "fluid",
+        "output",
+        [createPort("out_w_1", 0, 1, "W")],
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [50] },
+      { kind: "fluid", role: "input", capacities: [50] },
+      { kind: "fluid", role: "output", capacities: [50] },
+      { kind: "item", role: "output", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_cmpt_mc_1",
     nameKey: "registry.entity.item_port_cmpt_mc_1.name",
     spriteId: "item_port_cmpt_mc_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
     tags: [],
+    requiresPower: true,
+    powerDemand: 20,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [50] },
+      { kind: "item", role: "output", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_shaper_1",
     nameKey: "registry.entity.item_port_shaper_1.name",
     spriteId: "item_port_shaper_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
     tags: [],
+    requiresPower: true,
+    powerDemand: 10,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2].map((x) => createPort(`in_s_${x}`, x, 2, "S")),
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [0, 1, 2].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [50] },
+      { kind: "item", role: "output", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_seedcol_1",
     nameKey: "registry.entity.item_port_seedcol_1.name",
     spriteId: "item_port_seedcol_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
     tags: [],
+    requiresPower: true,
+    powerDemand: 10,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [50] },
+      { kind: "item", role: "output", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_planter_1",
     nameKey: "registry.entity.item_port_planter_1.name",
     spriteId: "item_port_planter_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
     tags: [],
+    requiresPower: true,
+    powerDemand: 20,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [50] },
+      { kind: "item", role: "output", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_hydro_planter_1",
     nameKey: "registry.entity.item_port_hydro_planter_1.name",
     spriteId: "item_port_planter_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "basicProduction",
     tags: ["武陵", "alter:item_port_planter_1", "alter-variant:liquid"],
+    requiresPower: true,
+    powerDemand: 20,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+      ),
+      createPortGroup(
+        "fluid_input",
+        "fluid",
+        "input",
+        [createPort("in_e_2", 4, 2, "E")],
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [50] },
+      { kind: "fluid", role: "input", capacities: [50] },
+      { kind: "item", role: "output", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_winder_1",
     nameKey: "registry.entity.item_port_winder_1.name",
     spriteId: "item_port_winder_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
     tags: [],
+    requiresPower: true,
+    powerDemand: 10,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [50, 50] },
+      { kind: "item", role: "output", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_tools_asm_mc_1",
     nameKey: "registry.entity.item_port_tools_asm_mc_1.name",
     spriteId: "item_port_tools_asm_mc_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
     tags: [],
+    requiresPower: true,
+    powerDemand: 20,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [50, 50] },
+      { kind: "item", role: "output", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_thickener_1",
     nameKey: "registry.entity.item_port_thickener_1.name",
     spriteId: "item_port_thickener_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
     tags: [],
+    requiresPower: true,
+    powerDemand: 50,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [50, 50] },
+      { kind: "item", role: "output", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_power_sta_1",
     nameKey: "registry.entity.item_port_power_sta_1.name",
     spriteId: "item_port_power_sta_1",
     footprint: { width: 2, height: 2 },
     uiGroup: "resourcePower",
     tags: [],
+    requiresPower: false,
+    powerDemand: 0,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1].map((x) => createPort(`in_s_${x}`, x, 1, "S")),
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_mix_pool_large_1",
     nameKey: "registry.entity.item_port_mix_pool_large_1.name",
     spriteId: "item_port_mix_pool_large_1",
     footprint: { width: 6, height: 5 },
     uiGroup: "advancedManufacturing",
     tags: ["武陵"],
+    requiresPower: true,
+    powerDemand: 50,
+    portGroups: [
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+      ),
+      createPortGroup(
+        "fluid_output",
+        "fluid",
+        "output",
+        [1, 3].map((y) => createPort(`out_w_${y}`, 0, y, "W")),
+      ),
+      createPortGroup(
+        "fluid_input",
+        "fluid",
+        "input",
+        [1, 3].map((y) => createPort(`in_e_${y}`, 5, y, "E")),
+      ),
+    ],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "shared_input_buffer",
+        "item",
+        "input",
+        createSlots("input_slot", [50, 50, 50, 50, 50], "any"),
+      ),
+      createStorageSlotGroup(
+        "shared_output_buffer",
+        "item",
+        "output",
+        createSlots("output_slot", [1], "any"),
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input", "item_input", "shared_input_buffer"),
+      createBinding("bind_fluid_input", "fluid_input", "shared_input_buffer"),
+      createBinding("bind_item_output", "item_output", "shared_output_buffer"),
+      createBinding("bind_fluid_output", "fluid_output", "shared_output_buffer"),
+    ],
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_liquid_purifier_1",
     nameKey: "registry.entity.item_port_liquid_purifier_1.name",
     spriteId: "item_port_liquid_purifier_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
     tags: ["武陵"],
+    requiresPower: true,
+    powerDemand: 50,
+    portGroups: [
+      createPortGroup(
+        "fluid_input",
+        "fluid",
+        "input",
+        [1, 3].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+      ),
+      createPortGroup(
+        "fluid_output",
+        "fluid",
+        "output",
+        [1, 3].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "fluid", role: "input", capacities: [50] },
+      { kind: "fluid", role: "output", capacities: [50, 50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_xiranite_oven_1",
     nameKey: "registry.entity.item_port_xiranite_oven_1.name",
     spriteId: "item_port_xiranite_oven_1",
     footprint: { width: 5, height: 5 },
     uiGroup: "advancedManufacturing",
     tags: ["武陵"],
+    requiresPower: true,
+    powerDemand: 50,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2, 3, 4].map((x) => createPort(`in_s_${x}`, x, 4, "S")),
+      ),
+      createPortGroup(
+        "fluid_input",
+        "fluid",
+        "input",
+        [createPort("in_e_2", 4, 2, "E")],
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [0, 1, 2, 3, 4].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [50] },
+      { kind: "fluid", role: "input", capacities: [50] },
+      { kind: "item", role: "output", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_dismantler_1",
     nameKey: "registry.entity.item_port_dismantler_1.name",
     spriteId: "item_port_dismantler_1",
     footprint: { width: 6, height: 4 },
     uiGroup: "advancedManufacturing",
     tags: ["武陵"],
+    requiresPower: true,
+    powerDemand: 20,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`in_s_${x}`, x, 3, "S")),
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [0, 1, 2, 3, 4, 5].map((x) => createPort(`out_n_${x}`, x, 0, "N")),
+      ),
+      createPortGroup(
+        "fluid_output",
+        "fluid",
+        "output",
+        [createPort("out_w_2", 0, 2, "W")],
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [50] },
+      { kind: "item", role: "output", capacities: [50] },
+      { kind: "fluid", role: "output", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_sp_hub_1",
     nameKey: "registry.entity.item_port_sp_hub_1.name",
     spriteId: "item_port_sp_hub_1",
     footprint: { width: 9, height: 9 },
     uiGroup: "hidden",
     tags: [],
+    requiresPower: false,
+    powerDemand: 0,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [
+          ...[1, 2, 3, 4, 5, 6, 7].map((x) => createPort(`in_n_${x + 1}`, x, 0, "N")),
+          ...[1, 2, 3, 4, 5, 6, 7].map((x) => createPort(`in_s_${x + 1}`, x, 8, "S")),
+        ],
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [
+          ...[1, 4, 7].map((y) => createPort(`out_w_${y + 1}`, 0, y, "W")),
+          ...[1, 4, 7].map((y) => createPort(`out_e_${y + 1}`, 8, y, "E")),
+        ],
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [50] },
+      { kind: "item", role: "output", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_water_pump_1",
     nameKey: "registry.entity.item_port_water_pump_1.name",
     spriteId: "item_port_water_pump_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "resourcePower",
     tags: ["武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
+    requiresPower: false,
+    powerDemand: 10,
+    portGroups: [
+      createPortGroup(
+        "fluid_output",
+        "fluid",
+        "output",
+        [createPort("out_e_1", 2, 1, "E")],
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "fluid", role: "output", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_udpipe_loader_2",
     nameKey: "registry.entity.item_port_udpipe_loader_2.name",
     spriteId: "item_port_udpipe_loader_2",
     footprint: { width: 3, height: 5 },
     uiGroup: "warehouse",
     tags: ["武陵", "OuterRingAllowed"],
+    requiresPower: false,
+    powerDemand: 10,
+    portGroups: [
+      createPortGroup(
+        "fluid_input",
+        "fluid",
+        "input",
+        [
+          createPort("in_w_1", 0, 1, "W"),
+          createPort("in_w_2", 0, 3, "W"),
+        ],
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "fluid", role: "input", capacities: [1] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_udpipe_unloader_2",
     nameKey: "registry.entity.item_port_udpipe_unloader_2.name",
     spriteId: "item_port_udpipe_unloader_2",
     footprint: { width: 3, height: 5 },
     uiGroup: "warehouse",
     tags: ["武陵", "OuterRingAllowed"],
+    requiresPower: false,
+    powerDemand: 10,
+    portGroups: [
+      createPortGroup(
+        "fluid_output",
+        "fluid",
+        "output",
+        [
+          createPort("out_e_1", 0, 1, "W"),
+          createPort("out_e_2", 0, 3, "W"),
+        ],
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "fluid", role: "output", capacities: [1] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_liquid_cleaner_1",
     nameKey: "registry.entity.item_liquid_cleaner_1.name",
     spriteId: "item_liquid_cleaner_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "basicProduction",
     tags: ["武陵", "OuterRingAllowed"],
+    requiresPower: true,
+    powerDemand: 20,
+    portGroups: [
+      createPortGroup(
+        "fluid_input",
+        "fluid",
+        "input",
+        [createPort("in_w_1", 0, 1, "W")],
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "fluid", role: "input", capacities: [50] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_port_liquid_storager_1",
     nameKey: "registry.entity.item_port_liquid_storager_1.name",
     spriteId: "item_port_liquid_storager_1",
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",
     tags: ["武陵", "OuterRingAllowed", "alter:item_port_storager_1", "alter-variant:liquid"],
+    requiresPower: false,
+    powerDemand: 0,
+    portGroups: [
+      createPortGroup(
+        "fluid_input",
+        "fluid",
+        "input",
+        [createPort("in_w_1", 0, 1, "W")],
+      ),
+      createPortGroup(
+        "fluid_output",
+        "fluid",
+        "output",
+        [createPort("out_e_1", 2, 1, "E")],
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "fluid", role: "input", capacities: [50] },
+      { kind: "fluid", role: "output", capacities: [50] },
+    ]),
   }),
   createEmptyEntityDefinition({
     id: "item_port_power_diffuser_1",
@@ -1437,20 +1948,60 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "resourcePower",
     tags: [],
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_log_admission",
     nameKey: "registry.entity.item_log_admission.name",
     spriteId: "item_log_admission",
     footprint: { width: 1, height: 1 },
     uiGroup: "beltLogistics",
     tags: ["BeltFamily"],
+    requiresPower: false,
+    powerDemand: 0,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        "item",
+        "input",
+        [createPort("in_w", 0, 0, "W")],
+      ),
+      createPortGroup(
+        "item_output",
+        "item",
+        "output",
+        [createPort("out_e", 0, 0, "E")],
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "item", role: "input", capacities: [1] },
+      { kind: "item", role: "output", capacities: [1] },
+    ]),
   }),
-  createEmptyEntityDefinition({
+  createEntityDefinition({
     id: "item_pipe_admission",
     nameKey: "registry.entity.item_pipe_admission.name",
     spriteId: "item_pipe_admission",
     footprint: { width: 1, height: 1 },
     uiGroup: "pipeLogistics",
     tags: ["武陵", "PipeFamily", "OuterRingAllowed"],
+    requiresPower: false,
+    powerDemand: 0,
+    portGroups: [
+      createPortGroup(
+        "fluid_input",
+        "fluid",
+        "input",
+        [createPort("in_w", 0, 0, "W")],
+      ),
+      createPortGroup(
+        "fluid_output",
+        "fluid",
+        "output",
+        [createPort("out_e", 0, 0, "E")],
+      ),
+    ],
+    ...createDirectionalBuffers([
+      { kind: "fluid", role: "input", capacities: [1] },
+      { kind: "fluid", role: "output", capacities: [1] },
+    ]),
   }),
 ];

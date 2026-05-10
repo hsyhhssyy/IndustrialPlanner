@@ -80,6 +80,7 @@ function formatCountLabel(
 function formatBreadcrumbPath(options: {
   readonly translate: BlueprintDirectoryBrowserProps["translate"];
   readonly folderStack: readonly BlueprintLibraryFolder[];
+  readonly isTouchLayout: boolean;
 }): {
   readonly displayLabel: string;
   readonly fullLabel: string;
@@ -94,6 +95,15 @@ function formatBreadcrumbPath(options: {
   }
 
   const fullLabel = [rootLabel, ...options.folderStack.map((folder) => folder.name)].join(" / ");
+
+  if (options.isTouchLayout) {
+    const currentFolder = options.folderStack.at(-1);
+
+    return {
+      displayLabel: currentFolder === undefined ? rootLabel : `../${currentFolder.name}`,
+      fullLabel,
+    };
+  }
 
   if (options.folderStack.length === 1) {
     return {
@@ -143,6 +153,7 @@ export function BlueprintDirectoryBrowser({
   const breadcrumbPath = formatBreadcrumbPath({
     translate,
     folderStack,
+    isTouchLayout,
   });
   const createFolderLabel = translate("workbench.blueprint.createFolder");
   const createFolderButtonLabel = formatCreateFolderButtonLabel(createFolderLabel);
@@ -164,6 +175,7 @@ export function BlueprintDirectoryBrowser({
     alignItems: "center",
     gap: isTouchLayout ? "6px" : "8px",
     flex: "1 1 auto",
+    width: isTouchLayout ? "auto" : undefined,
     minWidth: 0,
     overflow: "hidden",
     flexWrap: "nowrap" as const,
@@ -180,6 +192,7 @@ export function BlueprintDirectoryBrowser({
         whiteSpace: "nowrap" as const,
         overflowX: "auto" as const,
         overflowY: "hidden" as const,
+        textOverflow: "clip" as const,
       }
     : {
         display: "block",
@@ -205,6 +218,7 @@ export function BlueprintDirectoryBrowser({
   const createButtonStyle = {
     minWidth: isTouchLayout ? "30px" : undefined,
     minHeight: isTouchLayout ? "30px" : "32px",
+    width: isTouchLayout ? "30px" : undefined,
     padding: isTouchLayout ? 0 : "0 10px",
     borderWidth: 0,
     borderRadius: "10px",
@@ -212,6 +226,7 @@ export function BlueprintDirectoryBrowser({
     gap: isTouchLayout ? 0 : "5px",
     marginLeft: "auto",
     background: "var(--surface-3)",
+    justifyContent: isTouchLayout ? "center" : undefined,
     whiteSpace: "nowrap" as const,
   };
 

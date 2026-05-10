@@ -92,48 +92,42 @@ function createStraightLogisticsSvg(spec) {
   `;
 }
 
-function createTurnLogisticsSvg(spec, turnType) {
-  const isCw = turnType === 'cw';
-
-  // CW: bottom-left corner, curve from left to bottom (WEST→SOUTH)
-  // CCW: top-left corner, curve from left to top (WEST→NORTH)
-  const centerY = isCw ? SPRITE_SIZE : 0;
+function createTurnLogisticsSvg(spec) {
+  // 订正（2026-05-10）：3d-top 的基础 turn sprite 只表达管线/带体几何，
+  // 不表达流向；在当前基准下，cw(E→N) 与 ccw(N→E) 共用同一张右上角四分之一圆弧轮廓。
+  const centerX = SPRITE_SIZE;
+  const centerY = 0;
   const outerRadius = SPRITE_SIZE - spec.sideInset;
   const innerRadius = spec.sideInset;
   const edgeInset = spec.edgeWidth / 2;
   const outerEdgeRadius = outerRadius - edgeInset;
   const innerEdgeRadius = innerRadius + edgeInset;
 
-  const outerStartY = isCw ? SPRITE_SIZE - outerRadius : outerRadius;
-  const outerEndX = outerRadius;
-  const innerStartY = isCw ? SPRITE_SIZE - innerRadius : innerRadius;
-  const innerEndX = innerRadius;
-  const outerEdgeStartY = isCw ? SPRITE_SIZE - outerEdgeRadius : outerEdgeRadius;
-  const outerEdgeEndX = outerEdgeRadius;
-  const innerEdgeStartY = isCw ? SPRITE_SIZE - innerEdgeRadius : innerEdgeRadius;
-  const innerEdgeEndX = innerEdgeRadius;
-
-  // Outer arc goes CW for CW turn (sweep=1), CCW for CCW turn (sweep=0)
-  const outerSweep = isCw ? 1 : 0;
-  // Inner arc goes the opposite direction to close the band
-  const innerSweep = isCw ? 0 : 1;
+  const outerStartX = SPRITE_SIZE - outerRadius;
+  const outerEndY = outerRadius;
+  const innerStartX = SPRITE_SIZE - innerRadius;
+  const innerEndY = innerRadius;
+  const outerEdgeStartX = SPRITE_SIZE - outerEdgeRadius;
+  const outerEdgeEndY = outerEdgeRadius;
+  const innerEdgeStartX = SPRITE_SIZE - innerEdgeRadius;
+  const innerEdgeEndY = innerEdgeRadius;
 
   const fillPath = [
-    `M 0 ${outerStartY}`,
-    `A ${outerRadius} ${outerRadius} 0 0 ${outerSweep} ${outerEndX} ${centerY}`,
-    `L ${innerEndX} ${centerY}`,
-    `A ${innerRadius} ${innerRadius} 0 0 ${innerSweep} 0 ${innerStartY}`,
+    `M ${outerStartX} 0`,
+    `A ${outerRadius} ${outerRadius} 0 0 1 ${centerX} ${outerEndY}`,
+    `L ${centerX} ${innerEndY}`,
+    `A ${innerRadius} ${innerRadius} 0 0 0 ${innerStartX} 0`,
     'Z',
   ].join(' ');
 
   const outerEdgePath = [
-    `M 0 ${outerEdgeStartY}`,
-    `A ${outerEdgeRadius} ${outerEdgeRadius} 0 0 ${outerSweep} ${outerEdgeEndX} ${centerY}`,
+    `M ${outerEdgeStartX} 0`,
+    `A ${outerEdgeRadius} ${outerEdgeRadius} 0 0 1 ${centerX} ${outerEdgeEndY}`,
   ].join(' ');
 
   const innerEdgePath = [
-    `M 0 ${innerEdgeStartY}`,
-    `A ${innerEdgeRadius} ${innerEdgeRadius} 0 0 ${outerSweep} ${innerEdgeEndX} ${centerY}`,
+    `M ${innerEdgeStartX} 0`,
+    `A ${innerEdgeRadius} ${innerEdgeRadius} 0 0 1 ${centerX} ${innerEdgeEndY}`,
   ].join(' ');
 
   return `
@@ -204,8 +198,8 @@ async function main() {
     console.log(`Generated ${spec.straightSpriteId} sprite (${SPRITE_SIZE}x${SPRITE_SIZE}) at ${straightOutputs.spriteOutputFilePath}`);
     console.log(`Generated ${spec.straightSpriteId} mask (${SPRITE_SIZE}x${SPRITE_SIZE}) at ${straightOutputs.maskOutputFilePath}`);
 
-    for (const [index, spriteId] of spec.turnSpriteIds.entries()) {
-      const turnSvg = createTurnLogisticsSvg(spec, index === 0 ? 'cw' : 'ccw');
+    const turnSvg = createTurnLogisticsSvg(spec);
+    for (const spriteId of spec.turnSpriteIds) {
       const turnOutputs = await writeSpriteAndMask(spriteId, turnSvg);
       console.log(`Generated ${spriteId} sprite (${SPRITE_SIZE}x${SPRITE_SIZE}) at ${turnOutputs.spriteOutputFilePath}`);
       console.log(`Generated ${spriteId} mask (${SPRITE_SIZE}x${SPRITE_SIZE}) at ${turnOutputs.maskOutputFilePath}`);

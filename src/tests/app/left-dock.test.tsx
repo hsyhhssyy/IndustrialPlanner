@@ -808,6 +808,86 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')?.textContent?.trim()).toBe("");
   });
 
+  it("keeps the blueprint breadcrumb visible in touch layout while browsing folders", async () => {
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 390,
+      height: 844,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const rootFolder = await createBlueprintFolder({
+      name: "总线蓝图",
+    });
+
+    const nestedFolder = await createBlueprintFolder({
+      name: "炼油分支",
+      parentFolderId: rootFolder?.folderId,
+    });
+
+    await saveBlueprintDocument(createTestBlueprint({
+      name: "炼油总线样例",
+    }), {
+      parentFolderId: nestedFolder?.folderId,
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+
+    await act(async () => {
+      root.render(<LeftDock appHost={appHost} />);
+      await flushAsyncEffects();
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const toolbar = visiblePanel?.querySelector(".blueprint-browser-toolbar") as HTMLDivElement | null;
+    const breadcrumb = visiblePanel?.querySelector(".blueprint-breadcrumb") as HTMLDivElement | null;
+    const breadcrumbLabel = visiblePanel?.querySelector(".blueprint-path-label") as HTMLSpanElement | null;
+    const createFolderToggle = visiblePanel?.querySelector(
+      '[data-ui-button-id="blueprint-folder-create-toggle"]',
+    ) as HTMLButtonElement | null;
+    const rootFolderButton = visiblePanel?.querySelector(
+      `[data-blueprint-folder-id="${rootFolder?.folderId ?? ""}"]`,
+    ) as HTMLButtonElement | null;
+
+    expect(toolbar?.style.display).toBe("flex");
+    expect(toolbar?.style.flexWrap).toBe("nowrap");
+    expect(breadcrumb?.style.width).toBe("auto");
+    expect(createFolderToggle?.textContent?.trim()).toBe("");
+    expect(rootFolderButton).not.toBeNull();
+
+    await act(async () => {
+      rootFolderButton?.click();
+      await flushAsyncEffects();
+    });
+
+    expect(breadcrumbLabel?.textContent?.trim()).toBe("../总线蓝图");
+    expect(breadcrumbLabel?.getAttribute("title")).toBe("根目录 / 总线蓝图");
+    expect(breadcrumbLabel?.style.overflowX).toBe("auto");
+
+    const nestedFolderButton = visiblePanel?.querySelector(
+      `[data-blueprint-folder-id="${nestedFolder?.folderId ?? ""}"]`,
+    ) as HTMLButtonElement | null;
+
+    expect(nestedFolderButton).not.toBeNull();
+
+    await act(async () => {
+      nestedFolderButton?.click();
+      await flushAsyncEffects();
+    });
+
+    expect(breadcrumbLabel?.textContent?.trim()).toBe("../炼油分支");
+    expect(breadcrumbLabel?.getAttribute("title")).toBe("根目录 / 总线蓝图 / 炼油分支");
+  });
+
   it("browses user blueprints and creates nested folders inside the blueprint panel", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 

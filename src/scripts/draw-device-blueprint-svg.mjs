@@ -1,3 +1,7 @@
+// TEMPORARILY UNUSED 2026-05-09:
+// This script is currently parked and should not be treated as an active
+// production asset pipeline entry until it is explicitly resumed.
+
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';

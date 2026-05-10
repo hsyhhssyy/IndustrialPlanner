@@ -12,6 +12,7 @@ import {
 } from "./texture-config"
 
 const PREFIX_DEVICE_SPRITE = "device-sprite-"
+const PREFIX_BLUEPRINT_SPRITE = "blueprint-sprite-"
 const PREFIX_TEXTURE = "texture-"
 const PREFIX_DEVICE_MASKS = "device-masks-"
 const PREFIX_ITEM_ICON = "item-icon-"
@@ -118,6 +119,11 @@ class TextureActionsImpl implements TextureActions {
   private resolveCandidatePaths(key: string): string[] {
     if (key.startsWith(PREFIX_DEVICE_SPRITE)) {
       return [`${TOP_VIEW_ASSET_ROOT}/sprites/${key.slice(PREFIX_DEVICE_SPRITE.length)}.webp`]
+    }
+
+    if (key.startsWith(PREFIX_BLUEPRINT_SPRITE)) {
+      const id = key.slice(PREFIX_BLUEPRINT_SPRITE.length)
+      return [`/blueprint-view/sprites/${id}.png`]
     }
 
     if (key.startsWith(PREFIX_TEXTURE)) {

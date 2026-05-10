@@ -11,14 +11,16 @@
  *
  * 用法：
  *   node src/scripts/sync-device-sprites.mjs [sourceDir] [spriteDir] [maskDir]
+ *   node src/scripts/sync-device-sprites.mjs --blueprint
  *
  * 参数：
  * - sourceDir: 原始 PNG 目录，默认 resources/device-sprite-original
  * - spriteDir: 精灵图输出目录，默认 public/3d-top-view/sprites
  * - maskDir: 遮罩图输出目录，默认 public/3d-top-view/sprite-masks
+ * - --blueprint: 为 public/blueprint-view/sprites 下的蓝图精灵生成 mask
  */
 
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
@@ -89,7 +91,68 @@ async function publishDeviceSprite(sourceFilePath, spriteOutputFilePath, maskOut
   };
 }
 
+async function generateMaskOnly(sourceFilePath, maskOutputFilePath) {
+  await mkdir(path.dirname(maskOutputFilePath), { recursive: true });
+
+  const { data, info } = await sharp(sourceFilePath)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const maskBuffer = createMaskBuffer(data, info.width, info.height, info.channels);
+
+  await sharp(maskBuffer, {
+    raw: {
+      width: info.width,
+      height: info.height,
+      channels: 4,
+    },
+  })
+    .png()
+    .toFile(maskOutputFilePath);
+
+  return {
+    width: info.width,
+    height: info.height,
+  };
+}
+
+async function processBlueprintMasks() {
+  const spriteDir = path.join(projectRoot, 'public', 'blueprint-view', 'sprites');
+  const maskDir = path.join(projectRoot, 'public', 'blueprint-view', 'sprite-masks');
+
+  const entries = await readdir(spriteDir, { withFileTypes: true });
+  const pngFiles = entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.png'))
+    .map((entry) => entry.name);
+
+  if (pngFiles.length === 0) {
+    console.log('No PNG files found in blueprint-view/sprites.');
+    return;
+  }
+
+  console.log(`Found ${pngFiles.length} blueprint sprites. Generating masks...`);
+
+  for (const fileName of pngFiles) {
+    const spriteId = fileName.replace(/\.png$/, '');
+    const sourceFilePath = path.join(spriteDir, fileName);
+    const maskOutputFilePath = path.join(maskDir, `${spriteId}.png`);
+
+    const { width, height } = await generateMaskOnly(sourceFilePath, maskOutputFilePath);
+    console.log(`  ${spriteId}: ${width}x${height}`);
+  }
+
+  console.log('Blueprint masks generated.');
+}
+
 async function main() {
+  const isBlueprintMode = process.argv.includes('--blueprint');
+
+  if (isBlueprintMode) {
+    await processBlueprintMasks();
+    return;
+  }
+
   const sourceDirectory = path.resolve(process.argv[2] ?? defaultSourceDirectory);
   const spriteDirectory = path.resolve(process.argv[3] ?? defaultSpriteDirectory);
   const maskDirectory = path.resolve(process.argv[4] ?? defaultMaskDirectory);

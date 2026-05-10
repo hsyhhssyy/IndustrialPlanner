@@ -3313,9 +3313,10 @@ Original code:
 }
 
 .blueprint-panel.is-touch-layout .blueprint-browser-toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
 }
 
 .blueprint-panel.is-narrow-column .blueprint-breadcrumb {
@@ -3323,7 +3324,9 @@ Original code:
 }
 
 .blueprint-panel.is-touch-layout .blueprint-breadcrumb {
-  width: 100%;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
   flex-wrap: nowrap;
 }
 
@@ -3333,6 +3336,7 @@ Original code:
   overflow-x: auto;
   overflow-y: hidden;
   white-space: nowrap;
+  text-overflow: clip;
   scrollbar-width: none;
 }
 
@@ -3341,9 +3345,9 @@ Original code:
 }
 
 .blueprint-panel.is-touch-layout .blueprint-browser-toolbar > .blueprint-utility-button {
-  justify-self: stretch;
-  width: 100%;
-  justify-content: flex-start;
+  justify-self: auto;
+  width: auto;
+  justify-content: center;
 }
 
 .blueprint-panel.is-touch-layout .blueprint-entry-button {
@@ -4520,8 +4524,8 @@ Original code:
 }
 
 .canvas-floating-toolbar-icon {
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
   fill: currentColor;
 }
 
@@ -4564,8 +4568,8 @@ Original code:
 }
 
 .canvas-top-left-corner-toolbar-icon {
-  width: 11px;
-  height: 11px;
+  width: 14px;
+  height: 14px;
   flex: 0 0 auto;
   fill: currentColor;
 }
@@ -4624,9 +4628,9 @@ Original code:
 }
 
 .canvas-right-dock-toolbar-icon {
-  width: 18px;
-  height: 18px;
-  padding: 10px;
+  width: 22px;
+  height: 22px;
+  padding: 7px;
   flex: 0 0 auto;
   fill: currentColor;
   color: var(--canvas-floating-toolbar-button-text);
@@ -4643,6 +4647,8 @@ Original code:
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.01em;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
 }
 
 .canvas-left-bottom-toolbar {
@@ -4688,14 +4694,14 @@ Original code:
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
 .canvas-left-bottom-toolbar-icon,
 .canvas-left-bottom-toolbar-image {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
 .canvas-left-bottom-toolbar-icon {

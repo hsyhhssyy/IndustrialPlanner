@@ -19,19 +19,19 @@ const LEGACY_DEVICE_REMAPPERS: Readonly<Record<string, {
 }>> = {
   belt_turn_cw_1x1: {
     definitionId: "belt_turn_ccw_1x1",
-    rotationOffset: 90,
+    rotationOffset: 0,
   },
   belt_turn_ccw_1x1: {
     definitionId: "belt_turn_cw_1x1",
-    rotationOffset: 90,
+    rotationOffset: 270,
   },
   pipe_turn_cw_1x1: {
     definitionId: "pipe_turn_ccw_1x1",
-    rotationOffset: 90,
+    rotationOffset: 0,
   },
   pipe_turn_ccw_1x1: {
     definitionId: "pipe_turn_cw_1x1",
-    rotationOffset: 90,
+    rotationOffset: 270,
   },
 };
 

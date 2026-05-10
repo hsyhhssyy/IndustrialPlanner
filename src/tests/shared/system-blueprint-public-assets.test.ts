@@ -45,11 +45,11 @@ describe("system-blueprint public assets", () => {
     expect(sampleFolderDirectory.blueprints[0]?.slotLinks).toEqual([]);
     expect(sampleFolderDirectory.blueprints[0]?.entities.premium_capsule_line_0082).toMatchObject({
       definitionId: "belt_turn_cw_1x1",
-      rotation: 270,
+      rotation: 90,
     });
     expect(sampleFolderDirectory.blueprints[0]?.entities.premium_capsule_line_0106).toMatchObject({
       definitionId: "belt_turn_ccw_1x1",
-      rotation: 270,
+      rotation: 180,
     });
 
     expect(sampleFolderDirectory.blueprints[1]).toMatchObject({
@@ -66,11 +66,11 @@ describe("system-blueprint public assets", () => {
     expect(sampleFolderDirectory.blueprints[1]?.slotLinks).toEqual([]);
     expect(sampleFolderDirectory.blueprints[1]?.entities.dual_oven_xiranite_0009).toMatchObject({
       definitionId: "belt_turn_cw_1x1",
-      rotation: 90,
+      rotation: 270,
     });
     expect(sampleFolderDirectory.blueprints[1]?.entities.dual_oven_xiranite_0031).toMatchObject({
       definitionId: "pipe_turn_ccw_1x1",
-      rotation: 270,
+      rotation: 180,
     });
   });
 });

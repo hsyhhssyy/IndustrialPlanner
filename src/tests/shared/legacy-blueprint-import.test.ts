@@ -106,19 +106,19 @@ describe("legacy-blueprint-import", () => {
     expect(converted?.entities).toMatchObject({
       turn_remap_0001: {
         definitionId: "belt_turn_ccw_1x1",
-        rotation: 90,
+        rotation: 0,
       },
       turn_remap_0002: {
         definitionId: "belt_turn_cw_1x1",
-        rotation: 0,
+        rotation: 180,
       },
       turn_remap_0003: {
         definitionId: "pipe_turn_ccw_1x1",
-        rotation: 270,
+        rotation: 180,
       },
       turn_remap_0004: {
         definitionId: "pipe_turn_cw_1x1",
-        rotation: 180,
+        rotation: 0,
       },
     });
   });
