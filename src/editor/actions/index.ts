@@ -1,6 +1,7 @@
 import type { EditorAction } from "@/domain/editor/editor-action";
 
 import { createEditorConfigActions } from "./config-action";
+import { createEditorHistoryActions } from "./history-action";
 import { createEditorLogisticsActions } from "./logistics-action";
 import { createEditorMoveActions } from "./move-action";
 import { createEditorPlacementActions } from "./placement-action";
@@ -13,6 +14,7 @@ export function createEditorActions(
 ): EditorAction {
   return {
     ...createEditorConfigActions(context),
+    ...createEditorHistoryActions(context),
     ...createEditorLogisticsActions(context),
     ...createEditorMoveActions(context),
     ...createEditorPlacementActions(context),

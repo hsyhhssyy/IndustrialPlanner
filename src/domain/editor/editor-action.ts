@@ -51,4 +51,9 @@ export interface EditorAction {
 	moveLogisticEnd(options: MoveLogisticsDraftEndOptions): LogisticsDraftActionResult;
 	applyLogisticDraft(): boolean;
 	cancelLogisticsDraft(): void;
+
+	undoDocumentHistory(): boolean;
+	redoDocumentHistory(): boolean;
+	restoreDocumentHistoryTo(sequence: number): boolean;
+	clearDocumentHistory(): void;
 }
