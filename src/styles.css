@@ -2047,61 +2047,6 @@ body.is-resizing-dialog-shell * {
   border-radius: 14px 14px 0 0;
 }
 
-/* AI-REMOVED 2026-05-09:
-   Reason: 之前的 patch 切坏了 mobile-compact dialog-shell 段，产生了游离声明和拼接错误的 selector。
-   Trigger: 本轮按标题文本高度继续压缩桌面 tab 时复查到这段 CSS 已经结构损坏。
-   Evidence: 该段包含裸露的 padding/transform/height 声明，脱离 selector，且 body 拖拽规则被错误替换成尺寸声明。
-   Replacement: 下方重写后的 mobile-compact dialog-shell 规则。
-   Risk: Low
-   Human Review: Required
-
-   Original code:
-   .dialog-shell.is-mobile-compact .dialog-shell-header {
-     --dialog-shell-tab-track-height: 42px;
-     padding: 6px 8px;
-   }
-     padding: 12px 18px 0;
-   .dialog-shell.is-mobile-compact .dialog-shell-header-copy h2 {
-     font-size: 0.75rem;
-     line-height: 1.1;
-   }
-     padding-bottom: 7px;
-   .dialog-shell.is-mobile-compact .dialog-shell-header-actions {
-     gap: 4px;
-   }
-     padding-bottom: 7px;
-   .dialog-shell.is-mobile-compact .dialog-shell-header-button {
-     width: 24px;
-     height: 24px;
-   }
-
-   .dialog-shell.is-mobile-compact .dialog-shell-tab-list {
-     height: 30px;
-   }
-
-   .dialog-shell.is-mobile-compact .dialog-shell-tab {
-     min-height: 24px;
-     padding: 0 6px;
-     font-size: 0.5rem;
-     line-height: 1;
-   }
-
-   .dialog-shell.is-mobile-compact .help-dialog-content,
-     transform: translateY(6px);
-   .dialog-shell.is-mobile-compact .settings-dialog-content,
-   .dialog-shell.is-mobile-compact .settings-dialog-sidebar {
-     transform: translateY(3px);
-   }
-
-   body.is-dragging-help-dialog,
-   body.is-dragging-help-dialog *,
-   body.is-dragging-toolbox-dialog,
-   body.is-dragging-toolbox-dialog * {
-     height: 36px;
-     padding-inline: 24px;
-   }
-*/
-
 .dialog-shell.is-mobile-compact .dialog-shell-header {
   --dialog-shell-tab-track-height: 28px;
   padding: 6px 8px 0;
@@ -3265,49 +3210,6 @@ body.is-resizing-left-dock * {
   overflow-wrap: anywhere;
 }
 
-/* AI-REMOVED 2026-05-09:
-Reason: 蓝图 dock 已删除底部预览 inspector，相关详情卡样式不再保留为活跃实现。
-Trigger: 用户要求删除蓝图 dock 下方的预览 inspector。
-Evidence: BlueprintDirectoryBrowser 已移除 BlueprintDetailCard 渲染，预览与放置统一由 BlueprintPreviewDialog 处理。
-Replacement: src/app/shell/dialogs/blueprint-preview-dialog.tsx
-Risk: Low
-Human Review: Required
-
-Original code:
-.blueprint-entry-description,
-.blueprint-entry-meta,
-.blueprint-empty-state p,
-.blueprint-detail-grid dt,
-.blueprint-detail-grid dd {
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
-
-.blueprint-entry-description,
-.blueprint-entry-meta,
-.blueprint-empty-state p,
-.blueprint-detail-grid dt {
-  color: var(--text-2);
-}
-
-.blueprint-detail-card {
-  gap: 10px;
-}
-
-.blueprint-detail-grid {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 4px 10px;
-  margin: 0;
-}
-
-.blueprint-detail-grid dd {
-  margin: 0;
-  color: var(--text-0);
-  overflow-wrap: anywhere;
-}
-*/
-
 .blueprint-panel.is-touch-layout .blueprint-folder-form {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -3540,49 +3442,6 @@ Original code:
   width: 100%;
   height: 100%;
 }
-
-/* AI-REMOVED 2026-05-09:
-   Reason: 用户要求去掉画布叠层，并且不要再安排叠层文案的显示位置。
-   Trigger: 当前蓝图预览画布仍挂载 overlay / badge / 摘要文本样式。
-   Evidence: blueprint-preview-dialog.tsx 已移除对应 JSX 节点，这些样式已不应继续作为活跃实现。
-   Replacement: None
-   Risk: Low
-   Human Review: Required
-
-   Original code:
-   .blueprint-preview-overlay {
-     position: absolute;
-     inset: 0;
-     display: grid;
-     align-content: end;
-     justify-items: start;
-     gap: 8px;
-     padding: 24px;
-     pointer-events: none;
-     text-align: left;
-     background: linear-gradient(180deg, transparent 18%, color-mix(in srgb, var(--surface-1) 72%, transparent) 100%);
-   }
-
-   .blueprint-preview-overlay-copy {
-     display: grid;
-     gap: 4px;
-   }
-
-   .blueprint-preview-canvas-label {
-     display: inline-flex;
-     align-items: center;
-     justify-content: center;
-     padding: 6px 12px;
-     border: 1px solid color-mix(in srgb, var(--accent-strong) 42%, var(--line));
-     border-radius: 999px;
-     background: color-mix(in srgb, var(--surface-1) 85%, white 5%);
-     color: var(--text-0);
-     font-size: 0.78rem;
-     font-weight: 700;
-     letter-spacing: 0.08em;
-     text-transform: uppercase;
-   }
-*/
 
 .blueprint-preview-renderer-note,
 .blueprint-preview-header-copy p,
@@ -4658,7 +4517,7 @@ Original code:
   z-index: 4;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   pointer-events: auto;
 }
 
@@ -4666,12 +4525,12 @@ Original code:
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
+  width: 35px;
+  min-width: 35px;
+  height: 35px;
   padding: 0;
   border-color: var(--canvas-floating-toolbar-button-border);
-  border-radius: 14px;
+  border-radius: 11px;
   background: var(--canvas-floating-toolbar-button-bg);
   box-shadow: 0 10px 24px var(--canvas-floating-toolbar-shadow);
   color: var(--canvas-floating-toolbar-button-text);
@@ -4694,14 +4553,14 @@ Original code:
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
 }
 
 .canvas-left-bottom-toolbar-icon,
 .canvas-left-bottom-toolbar-image {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
 }
 
 .canvas-left-bottom-toolbar-icon {

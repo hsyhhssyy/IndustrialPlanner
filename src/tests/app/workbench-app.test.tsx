@@ -56,6 +56,8 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   hypergryphSelectionRightDockSync: true,
   hypergryphInspectorOpenOnSecondClick: false,
   gameUseSimplifiedDeviceIcons: false,
+  gameShowDeviceNames: true,
+  gameShowDeviceIcons: false,
   gameUseInspectorPanel: false,
   gameShowHotkeys: false,
   gameAlwaysShowGridLines: true,
@@ -2713,10 +2715,64 @@ describe("WorkbenchApp", () => {
       JSON.stringify({
         ...DEFAULT_APP_SETTINGS_STORAGE,
         gameUseSimplifiedDeviceIcons: true,
+        gameShowDeviceIcons: true,
         gameAlwaysShowGridLines: true,
         showGrassBackground: false,
       }),
     );
+  });
+
+  it("shows device name and icon toggles and locks device icons on with simplified device icons", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const settingsButton = container.querySelector(
+      ".toolbar-rail-utility .rail-button:last-child",
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      settingsButton?.click();
+    });
+
+    const simplifiedDeviceIconsToggle = container.querySelector(
+      'input[name="game-use-simplified-device-icons"]',
+    ) as HTMLInputElement | null;
+    const showDeviceNamesToggle = container.querySelector(
+      'input[name="game-show-device-names"]',
+    ) as HTMLInputElement | null;
+    const showDeviceIconsToggle = container.querySelector(
+      'input[name="game-show-device-icons"]',
+    ) as HTMLInputElement | null;
+
+    expect(simplifiedDeviceIconsToggle).not.toBeNull();
+    expect(showDeviceNamesToggle).not.toBeNull();
+    expect(showDeviceIconsToggle).not.toBeNull();
+    expect(appHost.state.settings.gameShowDeviceNames).toBe(true);
+    expect(appHost.state.settings.gameShowDeviceIcons).toBe(false);
+    expect(showDeviceNamesToggle?.checked).toBe(true);
+    expect(showDeviceIconsToggle?.checked).toBe(false);
+    expect(showDeviceIconsToggle?.disabled).toBe(false);
+
+    act(() => {
+      simplifiedDeviceIconsToggle?.click();
+    });
+
+    expect(appHost.state.settings.gameUseSimplifiedDeviceIcons).toBe(true);
+    expect(appHost.state.settings.gameShowDeviceIcons).toBe(true);
+    expect(showDeviceIconsToggle?.checked).toBe(true);
+    expect(showDeviceIconsToggle?.disabled).toBe(true);
+    expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        ...DEFAULT_APP_SETTINGS_STORAGE,
+        gameUseSimplifiedDeviceIcons: true,
+        gameShowDeviceIcons: true,
+      }),
+    );
+    expect(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY)).toBeNull();
   });
 
   it("captures keybinding settings when operation mode is externally off and keeps the mode toggle disabled", () => {

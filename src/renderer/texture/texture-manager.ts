@@ -13,6 +13,9 @@ import {
 
 const PREFIX_DEVICE_SPRITE = "device-sprite-"
 const PREFIX_BLUEPRINT_SPRITE = "blueprint-sprite-"
+const PREFIX_BLUEPRINT_MASKS = "blueprint-masks-"
+const PREFIX_TOP_VIEW_AVATAR = "top-view-avatar-"
+const PREFIX_BLUEPRINT_AVATAR = "blueprint-avatar-"
 const PREFIX_TEXTURE = "texture-"
 const PREFIX_DEVICE_MASKS = "device-masks-"
 const PREFIX_ITEM_ICON = "item-icon-"
@@ -124,6 +127,21 @@ class TextureActionsImpl implements TextureActions {
     if (key.startsWith(PREFIX_BLUEPRINT_SPRITE)) {
       const id = key.slice(PREFIX_BLUEPRINT_SPRITE.length)
       return [`/blueprint-view/sprites/${id}.png`]
+    }
+
+    if (key.startsWith(PREFIX_BLUEPRINT_MASKS)) {
+      const id = key.slice(PREFIX_BLUEPRINT_MASKS.length)
+      return [`/blueprint-view/sprite-masks/${id}.png`]
+    }
+
+    if (key.startsWith(PREFIX_TOP_VIEW_AVATAR)) {
+      const id = key.slice(PREFIX_TOP_VIEW_AVATAR.length)
+      return [`${TOP_VIEW_ASSET_ROOT}/avatar/${id}.webp`]
+    }
+
+    if (key.startsWith(PREFIX_BLUEPRINT_AVATAR)) {
+      const id = key.slice(PREFIX_BLUEPRINT_AVATAR.length)
+      return [`/blueprint-view/avatar/${id}.webp`]
     }
 
     if (key.startsWith(PREFIX_TEXTURE)) {

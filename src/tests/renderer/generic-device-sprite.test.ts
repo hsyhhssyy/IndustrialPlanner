@@ -69,6 +69,28 @@ vi.mock("pixi.js", () => {
     }
   }
 
+  class MockText {
+    public readonly anchor = {
+      set: vi.fn(),
+    }
+    public parent: {
+      removeChild: (child: MockText) => void;
+    } | null = null
+    public x = 0
+    public y = 0
+    public rotation = 0
+    public visible = true
+    public text: string
+    public style: unknown
+
+    public constructor(options: { text: string; style: unknown }) {
+      this.text = options.text
+      this.style = options.style
+    }
+
+    public destroy(): void {}
+  }
+
   class MockTilingSprite {
     public readonly anchor = {
       set: vi.fn(),
@@ -159,12 +181,13 @@ vi.mock("pixi.js", () => {
   }
 
   const MockAssets = {
-    load: vi.fn().mockResolvedValue({ id: "scanline-texture", width: 64 }),
+    load: vi.fn((path: string) => Promise.resolve({ id: path, width: 64 })),
   }
 
   return {
     Container: MockContainer,
     Sprite: MockSprite,
+    Text: MockText,
     TilingSprite: MockTilingSprite,
     Graphics: MockGraphics,
     Texture: MockTexture,
@@ -177,6 +200,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import { BeltSprite } from "@/renderer/sprites/belt-sprite"
 import { GenericDeviceSprite } from "@/renderer/sprites/generic-device-sprite"
+import { PipeSprite } from "@/renderer/sprites/pipe-sprite"
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
@@ -199,9 +223,34 @@ interface RenderedGraphicsSnapshot {
   strokeCalls: unknown[];
 }
 
+interface RenderedTextSnapshot {
+  x: number;
+  y: number;
+  rotation: number;
+  visible: boolean;
+  text: string;
+  style: {
+    fill?: number;
+    fontSize?: number;
+    stroke?: unknown;
+    dropShadow?: unknown;
+    wordWrapWidth?: number;
+  };
+}
+
 describe("GenericDeviceSprite", () => {
   const BODY_KEY = "device-sprite-item_port_storager_1"
   const MASK_KEY = "device-masks-item_port_storager_1"
+  const BLUEPRINT_BODY_KEY = "blueprint-sprite-item_port_storager_1"
+  const BLUEPRINT_MASK_KEY = "blueprint-masks-item_port_storager_1"
+  const TOP_VIEW_AVATAR_KEY = "top-view-avatar-item_port_storager_1"
+  const BLUEPRINT_AVATAR_KEY = "blueprint-avatar-item_port_storager_1"
+  const PIPE_BODY_KEY = "device-sprite-pipe_straight_1x1"
+  const PIPE_MASK_KEY = "device-masks-pipe_straight_1x1"
+  const PIPE_TOP_VIEW_AVATAR_KEY = "top-view-avatar-pipe_straight_1x1"
+  const LOGISTICS_BODY_KEY = "device-sprite-item_log_splitter"
+  const LOGISTICS_MASK_KEY = "device-masks-item_log_splitter"
+  const LOGISTICS_TOP_VIEW_AVATAR_KEY = "top-view-avatar-item_log_splitter"
   const SOLID_INPUT_KEY = "texture-solid-port-chevron-input"
   const SOLID_OUTPUT_KEY = "texture-solid-port-chevron-output"
   const LIQUID_INPUT_KEY = "texture-liquid-port-chevron-input"
@@ -303,6 +352,278 @@ describe("GenericDeviceSprite", () => {
     expect(attachedSprite.rotation).toBeCloseTo(Math.PI / 2)
   })
 
+  it("draws device icon above the name with top-view avatar and outlined white text", async () => {
+    const resolvedTexture = createLoadedTextureMock("device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: resolvedTexture,
+      [MASK_KEY]: resolvedMaskTexture,
+      [TOP_VIEW_AVATAR_KEY]: createLoadedTextureMock("top-view-avatar"),
+    }, {
+      gameShowDeviceIcons: true,
+      gameShowDeviceNames: true,
+    })
+    const sprite = new GenericDeviceSprite(
+      "dummy-entity-1",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 96,
+      height: 96,
+      rotation: 0,
+    }, createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    }))
+
+    await flushMicrotasks(8)
+
+    const labelRoot = resolveDeviceLabelRoot(entityLayer)
+    const icon = labelRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+    const text = labelRoot?.children?.[1] as RenderedTextSnapshot | undefined
+
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(TOP_VIEW_AVATAR_KEY)
+    expect(labelRoot?.visible).toBe(true)
+    expect(icon?.visible).toBe(true)
+    expect(icon?.y).toBeLessThan(text?.y ?? 0)
+    expect(text?.visible).toBe(true)
+    expect(text?.text).toBe("Storage")
+    expect(text?.style.fill).toBe(0xffffff)
+    expect(text?.style.stroke).toEqual(expect.objectContaining({ color: 0x20242a }))
+    expect(text?.style.dropShadow).toEqual(expect.objectContaining({ color: 0x20242a }))
+  })
+
+  it("uses blueprint avatar and black unoutlined text when simplified device icons are enabled", async () => {
+    const resolvedTexture = createLoadedTextureMock("blueprint-device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("blueprint-mask-texture")
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BLUEPRINT_BODY_KEY]: resolvedTexture,
+      [BLUEPRINT_MASK_KEY]: resolvedMaskTexture,
+      [BLUEPRINT_AVATAR_KEY]: createLoadedTextureMock("blueprint-avatar"),
+    }, {
+      gameUseSimplifiedDeviceIcons: true,
+      gameShowDeviceIcons: true,
+      gameShowDeviceNames: true,
+    })
+    const sprite = new GenericDeviceSprite(
+      "dummy-entity-1",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 96,
+      height: 96,
+      rotation: 0,
+    }, createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    }))
+
+    await flushMicrotasks(8)
+
+    const labelRoot = resolveDeviceLabelRoot(entityLayer)
+    const icon = labelRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+    const text = labelRoot?.children?.[1] as RenderedTextSnapshot | undefined
+
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(BLUEPRINT_AVATAR_KEY)
+    expect(labelRoot?.visible).toBe(true)
+    expect(icon?.visible).toBe(true)
+    expect(icon?.y).toBeLessThan(text?.y ?? 0)
+    expect(text?.visible).toBe(true)
+    expect(text?.text).toBe("Storage")
+    expect(text?.style.fill).toBe(0x111111)
+    expect(text?.style.stroke).toBeUndefined()
+    expect(text?.style.dropShadow).toBeUndefined()
+  })
+
+  it("keeps device icon and font size fixed across device sizes", async () => {
+    const resolvedTexture = createLoadedTextureMock("device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("device-mask-texture")
+    const resolvedAvatarTexture = createLoadedTextureMock("top-view-avatar")
+
+    const smallEntityLayer = createLayerStub()
+    const smallOverlayLayer = createLayerStub()
+    const largeEntityLayer = createLayerStub()
+    const largeOverlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: resolvedTexture,
+      [MASK_KEY]: resolvedMaskTexture,
+      [TOP_VIEW_AVATAR_KEY]: resolvedAvatarTexture,
+    }, {
+      gameShowDeviceIcons: true,
+      gameShowDeviceNames: true,
+    })
+    const smallSprite = new GenericDeviceSprite(
+      "dummy-entity-small",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+    const largeSprite = new GenericDeviceSprite(
+      "dummy-entity-large",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    smallSprite.attach({
+      background: {} as never,
+      entity: smallEntityLayer as never,
+      overlay: smallOverlayLayer as never,
+    })
+    largeSprite.attach({
+      background: {} as never,
+      entity: largeEntityLayer as never,
+      overlay: largeOverlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    })
+
+    // 32px 对应 2x2 供电桩当前的渲染基准尺寸。
+    smallSprite.syncLayout({
+      x: 0,
+      y: 0,
+      width: 32,
+      height: 32,
+      rotation: 0,
+    }, context)
+    largeSprite.syncLayout({
+      x: 0,
+      y: 0,
+      width: 96,
+      height: 96,
+      rotation: 0,
+    }, context)
+
+    await flushMicrotasks(8)
+
+    const smallLabelRoot = resolveDeviceLabelRoot(smallEntityLayer)
+    const largeLabelRoot = resolveDeviceLabelRoot(largeEntityLayer)
+    const smallIcon = smallLabelRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+    const largeIcon = largeLabelRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
+    const smallText = smallLabelRoot?.children?.[1] as RenderedTextSnapshot | undefined
+    const largeText = largeLabelRoot?.children?.[1] as RenderedTextSnapshot | undefined
+
+    expect(smallIcon).toMatchObject({
+      width: 14,
+      height: 14,
+    })
+    expect(largeIcon).toMatchObject({
+      width: 14,
+      height: 14,
+    })
+    expect(smallText?.style.fontSize).toBe(8)
+    expect(largeText?.style.fontSize).toBe(8)
+  })
+
+  it("does not draw labels for pipe-family devices even when settings enable them", async () => {
+    const resolvedTexture = createLoadedTextureMock("pipe-device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("pipe-mask-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [PIPE_BODY_KEY]: resolvedTexture,
+      [PIPE_MASK_KEY]: resolvedMaskTexture,
+      [PIPE_TOP_VIEW_AVATAR_KEY]: createLoadedTextureMock("pipe-avatar"),
+    }, {
+      gameShowDeviceIcons: true,
+      gameShowDeviceNames: true,
+    })
+    const sprite = new GenericDeviceSprite(
+      "pipe-device-1",
+      createPipeEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 48,
+      rotation: 0,
+    }, createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    }))
+
+    await flushMicrotasks(8)
+
+    const labelRoot = resolveDeviceLabelRoot(entityLayer)
+    expect(labelRoot?.visible).toBe(false)
+    expect(renderHost.textureManager.getTexture).not.toHaveBeenCalledWith(PIPE_TOP_VIEW_AVATAR_KEY)
+  })
+
+  it("does not draw labels for logistics devices even when settings enable them", async () => {
+    const resolvedTexture = createLoadedTextureMock("logistics-device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("logistics-mask-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [LOGISTICS_BODY_KEY]: resolvedTexture,
+      [LOGISTICS_MASK_KEY]: resolvedMaskTexture,
+      [LOGISTICS_TOP_VIEW_AVATAR_KEY]: createLoadedTextureMock("logistics-avatar"),
+    }, {
+      gameShowDeviceIcons: true,
+      gameShowDeviceNames: true,
+    })
+    const sprite = new GenericDeviceSprite(
+      "logistics-device-1",
+      createBeltLogisticsEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 48,
+      rotation: 0,
+    }, createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    }))
+
+    await flushMicrotasks(8)
+
+    const labelRoot = resolveDeviceLabelRoot(entityLayer)
+    expect(labelRoot?.visible).toBe(false)
+    expect(renderHost.textureManager.getTexture).not.toHaveBeenCalledWith(LOGISTICS_TOP_VIEW_AVATAR_KEY)
+  })
+
   it("loads only the generated belt sprite texture through BeltSprite", async () => {
     const beltBodyKey = "device-sprite-belt_straight_1x1"
     const beltMaskKey = "device-masks-belt_straight_1x1"
@@ -369,6 +690,220 @@ describe("GenericDeviceSprite", () => {
     })
   })
 
+  it("loads only the generated pipe sprite texture through PipeSprite", async () => {
+    const resolvedTexture = createLoadedTextureMock("pipe-device-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [PIPE_BODY_KEY]: resolvedTexture,
+    })
+    const sprite = new PipeSprite(
+      "pipe-entity-1",
+      createPipeEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+    sprite.syncLayout({
+      x: 10,
+      y: 20,
+      width: 32,
+      height: 32,
+      rotation: 0,
+    }, createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    }))
+
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(PIPE_BODY_KEY)
+    expect(renderHost.textureManager.getTexture).not.toHaveBeenCalledWith(PIPE_MASK_KEY)
+
+    await flushMicrotasks(8)
+
+    expect(overlayLayer.addChild).not.toHaveBeenCalled()
+    expect(resolveEntitySprite(entityLayer)).toMatchObject({
+      texture: resolvedTexture,
+      visible: true,
+      x: 26,
+      y: 36,
+      width: 32,
+      height: 32,
+      rotation: 0,
+      tint: resolveAppThemeColorNumber(
+        AYU_LIGHT_THEME,
+        "accent-strong",
+      ),
+    })
+  })
+
+  it("loads blueprint body and mask textures when simplified device icons are enabled", async () => {
+    const resolvedTexture = createLoadedTextureMock("blueprint-device-texture")
+    const resolvedMaskTexture = createLoadedTextureMock("blueprint-device-mask-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BLUEPRINT_BODY_KEY]: resolvedTexture,
+      [BLUEPRINT_MASK_KEY]: resolvedMaskTexture,
+    }, {
+      gameUseSimplifiedDeviceIcons: true,
+    })
+    const sprite = new GenericDeviceSprite(
+      "dummy-blueprint-entity",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 32,
+      rotation: 90,
+    }, createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    }))
+
+    await flushMicrotasks(8)
+
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(BLUEPRINT_BODY_KEY)
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(BLUEPRINT_MASK_KEY)
+    expect(resolveEntitySprite(entityLayer)?.texture).toBe(resolvedTexture)
+
+    const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
+      children?: unknown[];
+    } | undefined
+    const previewEffectRoot = overlayRoot?.children?.[0] as {
+      children?: unknown[];
+    } | undefined
+    const previewMask = previewEffectRoot?.children?.[1] as RenderedSpriteSnapshot | undefined
+
+    expect(previewMask?.texture).toBe(resolvedMaskTexture)
+  })
+
+  it("reloads the generic device textures after the simplified icon setting changes", async () => {
+    const defaultTexture = createLoadedTextureMock("device-texture")
+    const defaultMaskTexture = createLoadedTextureMock("device-mask-texture")
+    const blueprintTexture = createLoadedTextureMock("blueprint-device-texture")
+    const blueprintMaskTexture = createLoadedTextureMock("blueprint-device-mask-texture")
+
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      [BODY_KEY]: defaultTexture,
+      [MASK_KEY]: defaultMaskTexture,
+      [BLUEPRINT_BODY_KEY]: blueprintTexture,
+      [BLUEPRINT_MASK_KEY]: blueprintMaskTexture,
+    })
+    const sprite = new GenericDeviceSprite(
+      "dummy-entity-toggle",
+      createEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: overlayLayer as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    })
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 32,
+      rotation: 90,
+    }, context)
+
+    await flushMicrotasks(8)
+
+    expect(resolveEntitySprite(entityLayer)?.texture).toBe(defaultTexture)
+
+    renderHost.workspace.app.state.settings.gameUseSimplifiedDeviceIcons = true
+
+    sprite.syncLayout({
+      x: 16,
+      y: 24,
+      width: 48,
+      height: 32,
+      rotation: 90,
+    }, context)
+
+    await flushMicrotasks(8)
+
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(BLUEPRINT_BODY_KEY)
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(BLUEPRINT_MASK_KEY)
+    expect(resolveEntitySprite(entityLayer)?.texture).toBe(blueprintTexture)
+
+    const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
+      children?: unknown[];
+    } | undefined
+    const previewEffectRoot = overlayRoot?.children?.[0] as {
+      children?: unknown[];
+    } | undefined
+    const previewMask = previewEffectRoot?.children?.[1] as RenderedSpriteSnapshot | undefined
+
+    expect(previewMask?.texture).toBe(blueprintMaskTexture)
+  })
+
+  it("reloads belt textures after the simplified icon setting changes", async () => {
+    const defaultTexture = createLoadedTextureMock("belt-device-texture")
+    const blueprintTexture = createLoadedTextureMock("belt-blueprint-texture")
+
+    const entityLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      "device-sprite-belt_straight_1x1": defaultTexture,
+      "blueprint-sprite-belt_straight_1x1": blueprintTexture,
+    })
+    const sprite = new BeltSprite(
+      "belt-entity-style-toggle",
+      createBeltEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: {} as never,
+    })
+
+    const context = createRenderContextStub({
+      selectionIds: [],
+      previewIds: [],
+    })
+
+    sprite.syncLayout(createBeltLayout(), context)
+
+    await flushMicrotasks(8)
+
+    expect(resolveEntitySprite(entityLayer)?.texture).toBe(defaultTexture)
+
+    renderHost.workspace.app.state.settings.gameUseSimplifiedDeviceIcons = true
+
+    sprite.syncLayout(createBeltLayout(), context)
+
+    await flushMicrotasks(8)
+
+    expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith("blueprint-sprite-belt_straight_1x1")
+    expect(resolveEntitySprite(entityLayer)?.texture).toBe(blueprintTexture)
+  })
+
   it("uses the muted light-theme tint for single selection, preview, and logistics head", async () => {
     const resolvedTexture = createLoadedTextureMock("belt-device-texture")
     const entityLayer = createLayerStub()
@@ -433,6 +968,37 @@ describe("GenericDeviceSprite", () => {
 
     sprite.syncLayout(createBeltLayout(), createRenderContextStub({
       selectionIds: ["belt-entity-3", "other-entity"],
+      previewIds: [],
+    }))
+
+    expect(resolveEntitySprite(entityLayer)?.tint).toBe(resolveAppThemeColorNumber(
+      AYU_LIGHT_THEME,
+      AYU_LIGHT_THEME.renderer.worldPreviewRectFillColorKey,
+    ))
+  })
+
+  it("keeps the pipe multi-selection tint aligned with belt states", async () => {
+    const resolvedTexture = createLoadedTextureMock("pipe-device-texture")
+    const entityLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      "device-sprite-pipe_straight_1x1": resolvedTexture,
+    })
+    const sprite = new PipeSprite(
+      "pipe-entity-3",
+      createPipeEntityDefinitionStub(),
+      renderHost as never,
+    )
+
+    sprite.attach({
+      background: {} as never,
+      entity: entityLayer as never,
+      overlay: {} as never,
+    })
+
+    await flushMicrotasks(4)
+
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+      selectionIds: ["pipe-entity-3", "other-entity"],
       previewIds: [],
     }))
 
@@ -1241,6 +1807,30 @@ function createBeltEntityDefinitionStub(): EntityDefinition {
   }
 }
 
+function createPipeEntityDefinitionStub(): EntityDefinition {
+  return {
+    ...createEntityDefinitionStub(),
+    id: "pipe_straight_1x1",
+    nameKey: "registry.entity.pipe_straight_1x1.name",
+    spriteId: "pipe_straight_1x1",
+    footprint: { width: 1, height: 1 },
+    uiGroup: "hidden",
+    tags: ["PipeFamily"],
+  }
+}
+
+function createBeltLogisticsEntityDefinitionStub(): EntityDefinition {
+  return {
+    ...createEntityDefinitionStub(),
+    id: "item_log_splitter",
+    nameKey: "registry.entity.item_log_splitter.name",
+    spriteId: "item_log_splitter",
+    footprint: { width: 1, height: 1 },
+    uiGroup: "beltLogistics",
+    tags: ["BeltFamily"],
+  }
+}
+
 function createRenderContextStub(options: {
   selectionIds: readonly string[];
   previewIds: readonly string[];
@@ -1300,6 +1890,17 @@ function resolveEntitySprite(entityLayer: ReturnType<typeof createLayerStub>) {
   return entityRoot?.children?.[0] as RenderedSpriteSnapshot | undefined
 }
 
+function resolveDeviceLabelRoot(entityLayer: ReturnType<typeof createLayerStub>) {
+  const entityRoot = entityLayer.addChild.mock.calls[0]?.[0] as {
+    children?: unknown[];
+  } | undefined
+
+  return entityRoot?.children?.[1] as {
+    visible?: boolean;
+    children?: unknown[];
+  } | undefined
+}
+
 function resolvePortOverlayRoot(overlayLayer: ReturnType<typeof createLayerStub>) {
   const overlayRoot = overlayLayer.addChild.mock.calls[0]?.[0] as {
     children?: unknown[];
@@ -1340,7 +1941,14 @@ function createLayerStub() {
   return layer
 }
 
-function createRenderHostStub(textureByKey: Record<string, object>) {
+function createRenderHostStub(
+  textureByKey: Record<string, object>,
+  options?: {
+    gameUseSimplifiedDeviceIcons?: boolean;
+    gameShowDeviceIcons?: boolean;
+    gameShowDeviceNames?: boolean;
+  },
+) {
   const getTexture = vi.fn((key: string) => {
     const resolvedTexture = textureByKey[key]
 
@@ -1355,6 +1963,26 @@ function createRenderHostStub(textureByKey: Record<string, object>) {
     app: {
       ticker: {
         lastTime: 1000,
+      },
+    },
+    workspace: {
+      app: {
+        actions: {
+          translate: vi.fn((key: string) => {
+            if (key === "registry.entity.item_port_storager_1.name") {
+              return "Storage"
+            }
+
+            return key
+          }),
+        },
+        state: {
+          settings: {
+            gameUseSimplifiedDeviceIcons: options?.gameUseSimplifiedDeviceIcons ?? false,
+            gameShowDeviceIcons: options?.gameShowDeviceIcons ?? false,
+            gameShowDeviceNames: options?.gameShowDeviceNames ?? true,
+          },
+        },
       },
     },
     textureManager: {

@@ -2,6 +2,7 @@ import {
   Container,
   Graphics,
   Sprite,
+  Text,
   Texture,
   TilingSprite,
   Assets,
@@ -13,6 +14,11 @@ import type { GridRectSize, GridRotation } from "@/domain/shared/grid"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import type { RenderHost } from "@/renderer/renderer-host"
+import {
+  resolveDeviceBodyTextureKey,
+  resolveDeviceLabelIconTextureKey,
+  resolveDeviceMaskTextureKey,
+} from "@/renderer/sprites/device-texture-key"
 import {
   RenderSpriteLayout,
   RenderSpriteSyncContext,
@@ -33,6 +39,15 @@ const SCANLINE_SCROLL_INTERVAL_MS = 2000;
 const BLUEPRINT_MASK_TEXTURE_PATH = "/textures/blueprint-mask-50opacity.png";
 const PREVIEW_BORDER_WIDTH = 1;
 const PREVIEW_BORDER_ALPHA = 0.5;
+
+const DEVICE_LABEL_ICON_SIZE = 14;
+const DEVICE_LABEL_FONT_SIZE = 8;
+const DEVICE_LABEL_TEXT_WIDTH_RATIO = 0.88;
+const DEVICE_LABEL_GAP = 2;
+const DEVICE_LABEL_LINE_HEIGHT_RATIO = 1.16;
+const DEVICE_LABEL_DEFAULT_TEXT_COLOR = 0xffffff;
+const DEVICE_LABEL_DEFAULT_STROKE_COLOR = 0x20242a;
+const DEVICE_LABEL_BLUEPRINT_TEXT_COLOR = 0x111111;
 
 const FLOW_GLOW_TEXTURE_PATH = "/textures/flow-glow.png";
 /** 边缘流光内边框粗细（px），默认 5px */
@@ -57,12 +72,24 @@ const PORT_CHEVRON_TEXTURE_KEYS = [
 ] as const satisfies readonly PortChevronTextureKey[];
 
 export class GenericDeviceSprite extends BaseRenderSprite {
+  private readonly spriteId: string
   private readonly body: Sprite
   private readonly previewEffectRoot: Container
   private readonly previewMask: Sprite
+  private readonly deviceLabelRoot: Container
+  private readonly deviceIcon: Sprite
+  private readonly deviceNameText: Text
   private currentLayout: RenderSpriteLayout | null = null
   private disposed = false
   private isTextureReady = false
+  private currentBodyTextureKey: string | null = null
+  private currentMaskTextureKey: string | null = null
+  private currentDeviceIconTextureKey: string | null = null
+  private currentDeviceNameText: string | null = null
+  private currentDeviceNameStyleKey: string | null = null
+  private textureLoadVersion = 0
+  private deviceIconLoadVersion = 0
+  private isDeviceIconReady = false
 
   /** 扫描线 TilingSprite，完全由 GenericDeviceSprite 自己管理 */
   protected readonly scanlineTiling: TilingSprite;
@@ -73,6 +100,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly previewBorderGraphics: Graphics;
 
   /** selection 特效：blueprint mask 平铺 + device mask 裁剪 */
+  /** AI-CORRECTION 2026-05-10: 开启蓝图样式设备图片后，此处裁剪遮罩改为 blueprint-view/sprite-masks；关闭时仍使用 device mask。 */
   private readonly selectionEffectRoot: Container;
   private readonly selectionMask: Sprite;
   protected readonly selectionTiling: TilingSprite;
@@ -106,12 +134,36 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     super(entityId)
 
     const spriteId = definition.spriteId
+    this.spriteId = spriteId
 
     this.body = new Sprite(Texture.EMPTY)
     this.body.anchor.set(0.5)
     this.body.roundPixels = true
     this.body.visible = false
     this.getRootOfLayer("entity").addChild(this.body)
+
+    this.deviceLabelRoot = new Container()
+    this.deviceLabelRoot.visible = false
+
+    this.deviceIcon = new Sprite(Texture.EMPTY)
+    this.deviceIcon.anchor.set(0.5)
+    this.deviceIcon.roundPixels = true
+    this.deviceIcon.visible = false
+
+    this.deviceNameText = new Text({
+      text: "",
+      style: createDeviceNameTextStyle({
+        useBlueprintStyle: false,
+        fontSize: DEVICE_LABEL_FONT_SIZE,
+        wordWrapWidth: 64,
+      }),
+    })
+    this.deviceNameText.anchor.set(0.5)
+    this.deviceNameText.visible = false
+
+    this.deviceLabelRoot.addChild(this.deviceIcon)
+    this.deviceLabelRoot.addChild(this.deviceNameText)
+    this.getRootOfLayer("entity").addChild(this.deviceLabelRoot)
 
     this.previewEffectRoot = new Container()
     this.previewEffectRoot.visible = false
@@ -141,6 +193,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.getRootOfLayer("overlay").addChild(this.previewEffectRoot)
 
     // selection 特效：blueprint mask 平铺 + device mask 裁剪
+    // AI-CORRECTION 2026-05-10: 开启蓝图样式设备图片后，此处裁剪遮罩改为 blueprint-view/sprite-masks；关闭时仍使用 device mask。
     this.selectionEffectRoot = new Container()
     this.selectionEffectRoot.visible = false
 
@@ -183,34 +236,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.portOverlayRoot.visible = false
     this.getRootOfLayer("overlay").addChild(this.portOverlayRoot)
 
-    const bodyTextureLoad = this.renderHost.textureManager.getTexture(`device-sprite-${spriteId}`)
-    const previewMaskTextureLoad = this.renderHost.textureManager.getTexture(`device-masks-${spriteId}`)
-
-    void Promise.all([bodyTextureLoad, previewMaskTextureLoad]).then(([
-      bodyTexture,
-      previewMaskTexture,
-    ]) => {
-      if (this.disposed) {
-        return
-      }
-
-      this.body.texture = bodyTexture
-      this.previewMask.texture = previewMaskTexture
-      this.selectionMask.texture = previewMaskTexture
-      this.isTextureReady = true
-      this.body.visible = true
-
-      if (this.currentLayout !== null) {
-        this.applyLayout(this.currentLayout)
-      }
-    }).catch(() => {
-      if (this.disposed) {
-        return
-      }
-
-      this.body.visible = false
-      this.previewEffectRoot.visible = false
-    })
+    this.syncDeviceTextures()
   }
 
   protected syncSpriteLayout(
@@ -220,6 +246,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     void context
 
     this.currentLayout = layout
+    this.syncDeviceTextures()
 
     if (!this.isTextureReady) {
       return
@@ -342,6 +369,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
+    this.syncDeviceLabel(layout);
+
     if (this.shouldDrawLogisticsEndpointOverlay(context)) {
       this.drawPreviewOverlay(layout, context);
     }
@@ -413,6 +442,178 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.scanlineTiling.texture = texture;
     }).catch(() => {
       // 扫描线纹理加载失败，无伤大雅
+    });
+  }
+
+  private syncDeviceTextures(): void {
+    const bodyTextureKey = resolveDeviceBodyTextureKey(
+      this.spriteId,
+      this.renderHost.workspace.app,
+    )
+    const maskTextureKey = resolveDeviceMaskTextureKey(
+      this.spriteId,
+      this.renderHost.workspace.app,
+    )
+
+    if (
+      this.currentBodyTextureKey === bodyTextureKey
+      && this.currentMaskTextureKey === maskTextureKey
+    ) {
+      return
+    }
+
+    this.currentBodyTextureKey = bodyTextureKey
+    this.currentMaskTextureKey = maskTextureKey
+    this.textureLoadVersion += 1
+    const activeLoadVersion = this.textureLoadVersion
+
+    this.isTextureReady = false
+    this.body.visible = false
+    this.deviceLabelRoot.visible = false
+
+    const bodyTextureLoad = this.renderHost.textureManager.getTexture(bodyTextureKey)
+    const previewMaskTextureLoad = this.renderHost.textureManager.getTexture(maskTextureKey)
+
+    void Promise.all([bodyTextureLoad, previewMaskTextureLoad]).then(([
+      bodyTexture,
+      previewMaskTexture,
+    ]) => {
+      if (this.disposed || activeLoadVersion !== this.textureLoadVersion) {
+        return
+      }
+
+      this.body.texture = bodyTexture
+      this.previewMask.texture = previewMaskTexture
+      this.selectionMask.texture = previewMaskTexture
+      this.isTextureReady = true
+      this.body.visible = true
+
+      if (this.currentLayout !== null) {
+        this.applyLayout(this.currentLayout)
+      }
+    }).catch(() => {
+      if (this.disposed || activeLoadVersion !== this.textureLoadVersion) {
+        return
+      }
+
+      this.body.visible = false
+      this.previewEffectRoot.visible = false
+      this.selectionEffectRoot.visible = false
+      this.flowGlowEffectRoot.visible = false
+      this.portOverlayRoot.visible = false
+      this.deviceLabelRoot.visible = false
+      this.hidePortChevronSprites()
+    })
+  }
+
+  private syncDeviceLabel(layout: RenderSpriteLayout): void {
+    const app = this.renderHost.workspace.app;
+    if (!shouldRenderDeviceLabel(this.definition)) {
+      this.deviceLabelRoot.visible = false;
+      this.deviceIcon.visible = false;
+      this.deviceNameText.visible = false;
+      return;
+    }
+
+    const useBlueprintStyle = app?.state.settings.gameUseSimplifiedDeviceIcons ?? false;
+    const showDeviceName = app?.state.settings.gameShowDeviceNames ?? true;
+    const showDeviceIcon = app?.state.settings.gameShowDeviceIcons ?? false;
+
+    if (!this.isTextureReady || (!showDeviceName && !showDeviceIcon)) {
+      this.deviceLabelRoot.visible = false;
+      this.deviceIcon.visible = false;
+      this.deviceNameText.visible = false;
+      return;
+    }
+
+    const labelLayout = resolveDeviceLabelLayout({
+      layout,
+      showDeviceIcon,
+      showDeviceName,
+    });
+
+    this.deviceLabelRoot.visible = true;
+
+    if (showDeviceIcon) {
+      this.syncDeviceIconTexture();
+      this.deviceIcon.x = labelLayout.icon.x;
+      this.deviceIcon.y = labelLayout.icon.y;
+      this.deviceIcon.width = labelLayout.icon.size;
+      this.deviceIcon.height = labelLayout.icon.size;
+      this.deviceIcon.rotation = 0;
+      this.deviceIcon.visible = this.isDeviceIconReady;
+    } else {
+      this.deviceIcon.visible = false;
+    }
+
+    if (showDeviceName) {
+      const nextText = resolveDeviceDisplayName(this.definition, app);
+      if (this.currentDeviceNameText !== nextText) {
+        this.currentDeviceNameText = nextText;
+        this.deviceNameText.text = nextText;
+      }
+
+      const nextStyleKey = createDeviceNameTextStyleKey({
+        useBlueprintStyle,
+        fontSize: labelLayout.text.fontSize,
+        wordWrapWidth: labelLayout.text.maxWidth,
+      });
+      if (this.currentDeviceNameStyleKey !== nextStyleKey) {
+        this.currentDeviceNameStyleKey = nextStyleKey;
+        this.deviceNameText.style = createDeviceNameTextStyle({
+          useBlueprintStyle,
+          fontSize: labelLayout.text.fontSize,
+          wordWrapWidth: labelLayout.text.maxWidth,
+        });
+      }
+
+      this.deviceNameText.x = labelLayout.text.x;
+      this.deviceNameText.y = labelLayout.text.y;
+      this.deviceNameText.rotation = 0;
+      this.deviceNameText.visible = true;
+    } else {
+      this.deviceNameText.visible = false;
+    }
+  }
+
+  private syncDeviceIconTexture(): void {
+    const nextTextureKey = resolveDeviceLabelIconTextureKey(
+      this.definition.id,
+      this.renderHost.workspace.app,
+    );
+
+    if (this.currentDeviceIconTextureKey === nextTextureKey) {
+      return;
+    }
+
+    this.currentDeviceIconTextureKey = nextTextureKey;
+    this.deviceIconLoadVersion += 1;
+    this.isDeviceIconReady = false;
+    this.deviceIcon.visible = false;
+    const activeLoadVersion = this.deviceIconLoadVersion;
+
+    void this.renderHost.textureManager.getTexture(nextTextureKey).then((texture) => {
+      if (
+        this.disposed
+        || activeLoadVersion !== this.deviceIconLoadVersion
+        || this.currentDeviceIconTextureKey !== nextTextureKey
+      ) {
+        return;
+      }
+
+      this.deviceIcon.texture = texture;
+      this.isDeviceIconReady = true;
+
+      if (this.currentLayout !== null) {
+        this.syncDeviceLabel(this.currentLayout);
+      }
+    }).catch(() => {
+      if (this.disposed || activeLoadVersion !== this.deviceIconLoadVersion) {
+        return;
+      }
+
+      this.isDeviceIconReady = false;
+      this.deviceIcon.visible = false;
     });
   }
 
@@ -747,8 +948,124 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     applyCenteredSpriteLayout(this.body, normalizedLayout)
     applyCenteredSpriteLayout(this.previewMask, normalizedLayout)
     applyCenteredSpriteLayout(this.selectionMask, normalizedLayout)
+    this.syncDeviceLabel(layout)
   }
 
+}
+
+function resolveDeviceDisplayName(
+  definition: EntityDefinition,
+  app: RenderHost["workspace"]["app"],
+): string {
+  const translated = app?.actions.translate(definition.nameKey);
+
+  return translated && translated !== definition.nameKey ? translated : definition.id;
+}
+
+function shouldRenderDeviceLabel(definition: EntityDefinition): boolean {
+  return !definition.tags.some((tag) => tag === "BeltFamily" || tag === "PipeFamily");
+}
+
+function createDeviceNameTextStyleKey(options: {
+  useBlueprintStyle: boolean;
+  fontSize: number;
+  wordWrapWidth: number;
+}): string {
+  return [
+    options.useBlueprintStyle ? "blueprint" : "default",
+    options.fontSize.toFixed(2),
+    options.wordWrapWidth.toFixed(2),
+  ].join(":");
+}
+
+function createDeviceNameTextStyle(options: {
+  useBlueprintStyle: boolean;
+  fontSize: number;
+  wordWrapWidth: number;
+}) {
+  if (options.useBlueprintStyle) {
+    return {
+      fontFamily: "sans-serif",
+      fontSize: options.fontSize,
+      fontWeight: "600",
+      fill: DEVICE_LABEL_BLUEPRINT_TEXT_COLOR,
+      align: "center",
+      wordWrap: true,
+      wordWrapWidth: options.wordWrapWidth,
+      lineHeight: options.fontSize * DEVICE_LABEL_LINE_HEIGHT_RATIO,
+    };
+  }
+
+  return {
+    fontFamily: "sans-serif",
+    fontSize: options.fontSize,
+    fontWeight: "600",
+    fill: DEVICE_LABEL_DEFAULT_TEXT_COLOR,
+    align: "center",
+    wordWrap: true,
+    wordWrapWidth: options.wordWrapWidth,
+    lineHeight: options.fontSize * DEVICE_LABEL_LINE_HEIGHT_RATIO,
+    stroke: {
+      color: DEVICE_LABEL_DEFAULT_STROKE_COLOR,
+      width: Math.max(1, Math.round(options.fontSize * 0.16)),
+      alpha: 0.42,
+    },
+    dropShadow: {
+      color: DEVICE_LABEL_DEFAULT_STROKE_COLOR,
+      alpha: 0.32,
+      blur: 2,
+      distance: 1,
+      angle: Math.PI / 2,
+    },
+  };
+}
+
+function resolveDeviceLabelLayout(options: {
+  layout: RenderSpriteLayout;
+  showDeviceIcon: boolean;
+  showDeviceName: boolean;
+}): {
+  icon: {
+    x: number;
+    y: number;
+    size: number;
+  };
+  text: {
+    x: number;
+    y: number;
+    fontSize: number;
+    maxWidth: number;
+  };
+} {
+  const { layout, showDeviceIcon, showDeviceName } = options;
+  const centerX = layout.x + layout.width / 2;
+  const centerY = layout.y + layout.height / 2;
+  const iconSize = showDeviceIcon ? DEVICE_LABEL_ICON_SIZE : 0;
+  const fontSize = DEVICE_LABEL_FONT_SIZE;
+  const lineHeight = showDeviceName ? fontSize * DEVICE_LABEL_LINE_HEIGHT_RATIO : 0;
+  const gap = showDeviceIcon && showDeviceName ? DEVICE_LABEL_GAP : 0;
+  const totalHeight = iconSize + gap + lineHeight;
+  const top = centerY - totalHeight / 2;
+  const iconY = showDeviceIcon
+    ? top + iconSize / 2
+    : centerY;
+  const textY = showDeviceName
+    ? top + iconSize + gap + lineHeight / 2
+    : centerY;
+
+  return {
+    icon: {
+      x: centerX,
+      y: iconY,
+      size: iconSize,
+    },
+    text: {
+      x: centerX,
+      y: textY,
+      fontSize,
+      maxWidth: Math.max(24, layout.width * DEVICE_LABEL_TEXT_WIDTH_RATIO),
+    },
+  };
 }
 
 function isOnlyEntityInCollection(

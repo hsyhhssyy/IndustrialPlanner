@@ -49,7 +49,6 @@ interface PreviewTouchGestureState {
   pinchDistance: number | null;
 }
 
-// AI-REMOVED 2026-05-09:
 // Reason: 画布叠层已删除，更新时间文案不再显示，因此格式化函数没有活跃调用点。
 // Trigger: 用户要求去掉画布叠层，并且不要再找地方安排这些信息。
 // Evidence: blueprint-preview-dialog.tsx 中原先唯一消费格式化结果的 previewTimeSummary 已按同一轮需求归档删除。
@@ -224,8 +223,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   const dialogState = controller.dialogState;
   const isPhoneLayout = appHost.state.screenProfile.deviceClass === "mobile";
   const isTabletLayout = appHost.state.screenProfile.deviceClass === "tablet";
-  // AI-REMOVED 2026-05-09:
-  // Reason: 画布叠层与更新时间文案已删除，locale 不再参与任何活跃格式化逻辑。
+    // Reason: 画布叠层与更新时间文案已删除，locale 不再参与任何活跃格式化逻辑。
   // Trigger: 用户要求去掉画布叠层并直接删除这些信息，而不是迁移显示位置。
   // Evidence: formatBlueprintTimestamp 与 previewTimeSummary 已归档移除，locale 在当前组件内已无读取点。
   // Replacement: None
@@ -602,8 +600,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   });
   const isMoveTargetCurrent = currentMoveFolderId === record.parentFolderId;
   const activeErrorMessage = moveErrorMessage ?? deleteErrorMessage;
-  // AI-REMOVED 2026-05-09:
-  // Reason: 用户要求去掉画布叠层，并且不要再找地方安排这些信息。
+    // Reason: 用户要求去掉画布叠层，并且不要再找地方安排这些信息。
   // Trigger: 当前预览面板底部叠层继续显示“布局总览”、实体数、连线数、预估范围、初始坐标、地图、更新时间，和最新布局要求冲突。
   // Evidence: 当前 blueprint-preview-overlay 直接消费这些派生文案，删除叠层后这些派生值不再有有效承载位置。
   // Replacement: None
@@ -861,41 +858,9 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                 onWheel={handlePreviewWheel}
                 ref={previewCanvasHostRef}
               />
-              {/* AI-REMOVED 2026-05-09:
-                  Reason: 用户要求去掉画布叠层，并且这些信息不要再迁移到其他区域。
-                  Trigger: blueprint preview 左侧画布仍然显示布局总览 badge 和底部摘要文字。
-                  Evidence: 当前 blueprint-preview-overlay 仍占用画布前景层并渲染 previewHint / previewSummary / previewContextSummary / previewTimeSummary。
-                  Replacement: None
-                  Risk: Low
-                  Human Review: Required
-
-                  Original code:
-                  <div className="blueprint-preview-overlay">
-                    <span className="blueprint-preview-canvas-label">{copy.previewHint}</span>
-                    <div className="blueprint-preview-overlay-copy">
-                      <p>{previewSummary}</p>
-                      <p>{previewContextSummary}</p>
-                      <p>{previewTimeSummary}</p>
-                    </div>
-                  </div>
-              */}
+              {}
             </div>
-            {/* AI-REMOVED 2026-05-09:
-                Reason: 左侧只保留预览面板本体，指标信息收拢到画布叠层，避免预览区下方再挂独立信息块。
-                Trigger: 用户要求左侧只留下预览面板，并把实体数、连线数、预估范围、初始坐标、地图、更新时间等都归到预览面板内。
-                Evidence: 当前 stage metrics 与 renderer note 会把左侧切成多块，不符合“只留下预览面板”的布局目标。
-                Replacement: blueprint-preview-overlay-copy
-                Risk: Low
-                Human Review: Required
-
-                Original code:
-                <div className="blueprint-preview-stage-metrics">
-                  <span className="pill">{copy.entities}: {record.entityOrder.length}</span>
-                  <span className="pill">{copy.footprint}: {footprint.width} x {footprint.height}</span>
-                  <span className="pill">{copy.anchor}: ({record.initialGridPoint.x}, {record.initialGridPoint.y})</span>
-                </div>
-                <p aria-label={copy.rendererNote} className="blueprint-preview-renderer-note">{rendererSummary}</p>
-            */}
+            {}
           </div>
           <div className={isMoveMode
             ? "blueprint-preview-summary-card is-folder-picker-mode"
@@ -1076,48 +1041,8 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                 </dl>
               </>
             )}
-            {/* AI-REMOVED 2026-05-09:
-                Reason: 右侧数据栏收窄后，只保留 name / desc、实体数、版本和包围盒范围；放置按钮独立成一行，避免压缩说明文字宽度。
-                Trigger: 用户要求右侧只留下窄数据面板，且放置按钮不要挤占说明文字空间。
-                Evidence: 旧 header 采用“说明文字 + 按钮”双列布局，长名称或描述会被按钮直接压缩；metadata 项也超出用户要求。
-                Replacement: blueprint-preview-actions + 精简后的 blueprint-preview-metadata
-                Risk: Low
-                Human Review: Required
-
-                Original code:
-                <button
-                  className="save-blueprint-primary-button"
-                  data-ui-button-id="blueprint-preview-place-button"
-                  onClick={handlePlaceButtonClick}
-                  onPointerDown={preventTouchPointerCompatibilityMouseEvents}
-                  onPointerUp={handlePlaceButtonPointerUp}
-                  title={copy.placeHint}
-                  type="button"
-                >
-                  {copy.place}
-                </button>
-                <dt>{copy.base}</dt>
-                <dd>{record.baseId}</dd>
-                <dt>{copy.links}</dt>
-                <dd>{record.slotLinks.length}</dd>
-                <dt>{copy.footprint}</dt>
-                <dd>{footprint.width} x {footprint.height}</dd>
-                <dt>{copy.anchor}</dt>
-                <dd>({record.initialGridPoint.x}, {record.initialGridPoint.y})</dd>
-                <dt>{copy.updatedAt}</dt>
-                <dd>{formattedUpdatedAt}</dd>
-            */}
-            {/* AI-REMOVED 2026-05-09:
-                Reason: 移除预览卡底部的说明性脚注，避免 UI 出现不必要的提示性副标题。
-                Trigger: 用户要求新建 UI 不要展示开发性质 hint，也不要添加不需要的说明性质文案。
-                Evidence: 当前卡片已有主动作按钮与完整元信息，脚注只是在重复说明“放置”动作。
-                Replacement: None
-                Risk: Low
-                Human Review: Required
-
-                Original code:
-                <p className="blueprint-preview-footnote">{copy.placeHint}</p>
-            */}
+            {}
+            {}
           </div>
         </section>
       </div>

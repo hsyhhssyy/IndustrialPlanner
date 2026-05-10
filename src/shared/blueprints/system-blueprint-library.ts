@@ -1,4 +1,3 @@
-// AI-REMOVED 2026-05-09:
 // Reason: This module no longer uses the BlueprintDocument type directly.
 // Trigger: ESLint reported an unused type import.
 // Evidence: npm run lint flagged BlueprintDocument as unused.
@@ -275,7 +274,6 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-// AI-REMOVED 2026-05-09:
 // Reason: The helper is no longer used after the index parser was simplified.
 // Trigger: ESLint reported an unused local function.
 // Evidence: npm run lint flagged isStringArray as unused.

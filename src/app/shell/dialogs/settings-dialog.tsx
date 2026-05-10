@@ -199,8 +199,8 @@ export const SettingsDialog = observer(function SettingsDialog({
                         key={setting.id}
                       >
                         <div className="settings-dialog-setting-copy">
-                          <h4>{t(setting.labelKey)}</h4>
-                          {!isKeybinding && <p>{t(setting.descriptionKey)}</p>}
+                          <h4>{resolveSettingLabel(setting, t)}</h4>
+                          {!isKeybinding && <p>{resolveSettingDescription(setting, t)}</p>}
                         </div>
                         <div className="settings-dialog-setting-control">
                           {renderSettingControl({
@@ -242,6 +242,28 @@ function scrollSettingsDialogContentToSection(options: {
   }
 
   contentElement.scrollTop = nextScrollTop;
+}
+
+function resolveSettingLabel(
+  setting: WorkbenchSettingDefinition,
+  translate: AppHost["actions"]["translate"],
+): string {
+  if (typeof setting.labelText === "string") {
+    return setting.labelText;
+  }
+
+  return setting.labelKey ? translate(setting.labelKey) : "";
+}
+
+function resolveSettingDescription(
+  setting: WorkbenchSettingDefinition,
+  translate: AppHost["actions"]["translate"],
+): string {
+  if (typeof setting.descriptionText === "string") {
+    return setting.descriptionText;
+  }
+
+  return setting.descriptionKey ? translate(setting.descriptionKey) : "";
 }
 
 function renderSettingControl(options: {

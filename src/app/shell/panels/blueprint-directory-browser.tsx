@@ -28,55 +28,6 @@ interface BlueprintDirectoryBrowserProps {
   readonly onSelectBlueprint: (record: BlueprintLibraryRecord) => void;
 }
 
-/* AI-REMOVED 2026-05-09:
-Reason: 蓝图 dock 已删除底部预览 inspector，不再向目录浏览器传入详情卡和放置动作桥接参数。
-Trigger: 用户要求删除蓝图 dock 下方的预览 inspector。
-Evidence: 选中蓝图后已经直接打开独立预览窗口，dock 内不再存在 BlueprintDetailCard 渲染入口。
-Replacement: src/app/shell/dialogs/blueprint-preview-dialog.tsx
-Risk: Low
-Human Review: Required
-
-Original code:
-  readonly selectedBlueprint: BlueprintLibraryRecord | null;
-  readonly onPlaceBlueprint: (record: BlueprintLibraryRecord, input: BlueprintDetailPlaceEventInput) => void;
-*/
-
-/* AI-REMOVED 2026-05-09:
-Reason: 新建文件夹入口已从蓝图 dock 内联表单升级为顶层 DialogShell，不再需要目录浏览器承载表单状态。
-Trigger: 用户要求把“新建文件夹”从弹出输入框改为 dialog shell。
-Evidence: BlueprintFolderDialog 已接管输入、提交和取消逻辑；目录浏览器只保留打开对话框按钮。
-Replacement: src/app/shell/dialogs/blueprint-folder-dialog.tsx
-Risk: Low
-Human Review: Required
-
-Original code:
-  readonly createFolderOpen: boolean;
-  readonly createFolderName: string;
-  readonly isCreatingFolder: boolean;
-  readonly onCreateFolderNameChange: (value: string) => void;
-  readonly onCreateFolderSubmit: () => void | Promise<void>;
-  readonly onCancelCreateFolder: () => void;
-*/
-
-/* AI-REMOVED 2026-05-09:
-Reason: 蓝图库 dock 不再显示“x 个文件夹 / x 个文件”的统计 badge。
-Trigger: 用户要求去掉蓝图库面板下方无意义的数量 badge。
-Evidence: 统计文案仅在当前组件的 blueprint-library-status 区块渲染，移除此区块即可消除 badge。
-Replacement: None
-Risk: Low
-Human Review: Required
-
-Original code:
-function formatCountLabel(
-  translate: BlueprintDirectoryBrowserProps["translate"],
-  count: number,
-  singularKey: string,
-  pluralKey: string,
-): string {
-  return `${count} ${translate(count === 1 ? singularKey : pluralKey)}`;
-}
-*/
-
 function formatBreadcrumbPath(options: {
   readonly translate: BlueprintDirectoryBrowserProps["translate"];
   readonly folderStack: readonly BlueprintLibraryFolder[];
@@ -246,17 +197,7 @@ export function BlueprintDirectoryBrowser({
               <LucideChevronLeft className="button-icon-image" />
             </button>
           )}
-          {/* AI-REMOVED 2026-05-09:
-          Reason: 蓝图库名与当前面包屑根节点重复表达当前所在库，只保留路径根节点。
-          Trigger: 用户要求不要在下方面包屑同时显示“根目录”和“用户蓝图”。
-          Evidence: 当前库已经由上方系统/用户标签页表达，工具栏里重复显示库名会造成重复信息。
-          Replacement: 同一工具栏内的 blueprint-path-label
-          Risk: Low
-          Human Review: Required
-
-          Original code:
-          <span className="pill">{translate(libraryDescriptor.labelKey)}</span>
-          */}
+          {}
           <span
             aria-label={breadcrumbPath.fullLabel}
             className="blueprint-path-label"
@@ -282,51 +223,9 @@ export function BlueprintDirectoryBrowser({
         ) : null}
       </div>
 
-      {/* AI-REMOVED 2026-05-09:
-      Reason: 蓝图库 dock 不再显示“x 个文件夹 / x 个文件”的统计 badge。
-      Trigger: 用户要求去掉蓝图库面板下方无意义的数量 badge。
-      Evidence: 当前统计信息仅用于视觉提示，没有后续交互或状态依赖。
-      Replacement: None
-      Risk: Low
-      Human Review: Required
+      {}
 
-      Original code:
-      <div className="blueprint-library-status" aria-live="polite">
-        <span className="pill">{formatCountLabel(
-          translate,
-          directoryListing.folders.length,
-          "workbench.blueprint.folderCount.one",
-          "workbench.blueprint.folderCount.other",
-        )}</span>
-        <span className="pill">{formatCountLabel(
-          translate,
-          directoryListing.blueprints.length,
-          "workbench.blueprint.blueprintCount.one",
-          "workbench.blueprint.blueprintCount.other",
-        )}</span>
-      </div>
-      */}
-
-      {/* AI-REMOVED 2026-05-09:
-      Reason: 新建文件夹流程已迁移到顶层 DialogShell，目录浏览器不再渲染内联输入表单。
-      Trigger: 用户要求把“新建文件夹”从弹出输入框改为 dialog shell。
-      Evidence: BlueprintFolderDialog 已在 Workbench 顶层挂载，这里继续保留内联表单会形成重复入口和裁剪风险。
-      Replacement: src/app/shell/dialogs/blueprint-folder-dialog.tsx
-      Risk: Low
-      Human Review: Required
-
-      Original code:
-      {libraryDescriptor.canCreateFolders && createFolderOpen ? (
-        <BlueprintFolderForm
-          isCreatingFolder={isCreatingFolder}
-          onCancel={onCancelCreateFolder}
-          onSubmit={onCreateFolderSubmit}
-          onValueChange={onCreateFolderNameChange}
-          translate={translate}
-          value={createFolderName}
-        />
-      ) : null}
-      */}
+      {}
 
       {errorMessage === null ? null : (
         <p className="blueprint-panel-error" role="alert">{errorMessage}</p>
@@ -431,25 +330,7 @@ export function BlueprintDirectoryBrowser({
         </div>
       ) : null}
 
-      {/* AI-REMOVED 2026-05-09:
-      Reason: 蓝图 dock 已删除底部预览 inspector，预览与放置统一由独立预览窗口承载。
-      Trigger: 用户要求删除蓝图 dock 下方的预览 inspector。
-      Evidence: BlueprintPanel 的 onSelectBlueprint 已直接打开 BlueprintPreviewDialog，这里继续渲染详情卡会形成重复预览入口。
-      Replacement: src/app/shell/dialogs/blueprint-preview-dialog.tsx
-      Risk: Low
-      Human Review: Required
-
-      Original code:
-      {selectedBlueprint === null ? null : (
-        <BlueprintDetailCard
-          onPlace={(input) => {
-            onPlaceBlueprint(selectedBlueprint, input);
-          }}
-          record={selectedBlueprint}
-          translate={translate}
-        />
-      )}
-      */}
+      {}
     </div>
   );
 }

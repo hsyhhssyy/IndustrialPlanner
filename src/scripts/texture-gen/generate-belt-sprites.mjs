@@ -95,6 +95,8 @@ function createStraightLogisticsSvg(spec) {
 function createTurnLogisticsSvg(spec) {
   // 订正（2026-05-10）：3d-top 的基础 turn sprite 只表达管线/带体几何，
   // 不表达流向；在当前基准下，cw(E→N) 与 ccw(N→E) 共用同一张右上角四分之一圆弧轮廓。
+  // 订正（2026-05-10）：turn 条带需要填充 tile 内“位于外圆以内、内圆以外”的区域；
+  // 不能直接用 top/right 边界把两条弧连起来，否则会变成贴着右上角的一条窄弧带。
   const centerX = SPRITE_SIZE;
   const centerY = 0;
   const outerRadius = SPRITE_SIZE - spec.sideInset;
@@ -112,30 +114,39 @@ function createTurnLogisticsSvg(spec) {
   const innerEdgeStartX = SPRITE_SIZE - innerEdgeRadius;
   const innerEdgeEndY = innerEdgeRadius;
 
-  const fillPath = [
+  const outerShellPath = [
     `M ${outerStartX} 0`,
-    `A ${outerRadius} ${outerRadius} 0 0 1 ${centerX} ${outerEndY}`,
-    `L ${centerX} ${innerEndY}`,
-    `A ${innerRadius} ${innerRadius} 0 0 0 ${innerStartX} 0`,
+    `H ${SPRITE_SIZE}`,
+    `V ${outerEndY}`,
+    `A ${outerRadius} ${outerRadius} 0 0 1 ${outerStartX} 0`,
+    'Z',
+  ].join(' ');
+
+  const innerHolePath = [
+    `M ${innerStartX} 0`,
+    `H ${SPRITE_SIZE}`,
+    `V ${innerEndY}`,
+    `A ${innerRadius} ${innerRadius} 0 0 1 ${innerStartX} 0`,
     'Z',
   ].join(' ');
 
   const outerEdgePath = [
     `M ${outerEdgeStartX} 0`,
-    `A ${outerEdgeRadius} ${outerEdgeRadius} 0 0 1 ${centerX} ${outerEdgeEndY}`,
+    `A ${outerEdgeRadius} ${outerEdgeRadius} 0 0 0 ${centerX} ${outerEdgeEndY}`,
   ].join(' ');
 
   const innerEdgePath = [
     `M ${innerEdgeStartX} 0`,
-    `A ${innerEdgeRadius} ${innerEdgeRadius} 0 0 1 ${centerX} ${innerEdgeEndY}`,
+    `A ${innerEdgeRadius} ${innerEdgeRadius} 0 0 0 ${centerX} ${innerEdgeEndY}`,
   ].join(' ');
 
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="${SPRITE_SIZE}" height="${SPRITE_SIZE}" viewBox="0 0 ${SPRITE_SIZE} ${SPRITE_SIZE}">
       <path
-        d="${fillPath}"
+        d="${outerShellPath} ${innerHolePath}"
         fill="${spec.fillColor}"
         fill-opacity="${spec.fillOpacity}"
+        fill-rule="evenodd"
       />
       <path
         d="${outerEdgePath}"

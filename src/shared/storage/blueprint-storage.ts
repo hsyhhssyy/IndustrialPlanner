@@ -10,7 +10,6 @@ import {
   trySaveToIndexedDb,
   type IndexedDbStoreLocation,
 } from "./browser-storage";
-// AI-REMOVED 2026-05-09:
 // Reason: blueprint-storage writes entries through writeBlueprintEntry and no longer calls saveToIndexedDb directly.
 // Trigger: ESLint reported an unused import.
 // Evidence: npm run lint flagged saveToIndexedDb as unused.

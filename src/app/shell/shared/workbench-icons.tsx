@@ -15,7 +15,6 @@ import LucideMonitor from "~icons/lucide/monitor";
 import LucideMove from "~icons/lucide/move";
 import LucideMousePointer2 from "~icons/lucide/mouse-pointer-2";
 import LucidePackage2 from "~icons/lucide/package-2";
-// AI-REMOVED 2026-05-09:
 // Reason: WorkbenchIcon now renders material pause and play glyphs instead of the lucide variants.
 // Trigger: ESLint reported unused icon imports.
 // Evidence: npm run lint flagged LucidePause and LucidePlay as unused.
@@ -31,7 +30,6 @@ import LucidePanelRightClose from "~icons/lucide/panel-right-close";
 import LucidePanelTopClose from "~icons/lucide/panel-top-close";
 import LucidePanelTopOpen from "~icons/lucide/panel-top-open";
 import LucidePanelRightOpen from "~icons/lucide/panel-right-open";
-// AI-REMOVED 2026-05-09:
 // Reason: WorkbenchIcon now renders material pause and play glyphs instead of the lucide variants.
 // Trigger: ESLint reported unused icon imports.
 // Evidence: npm run lint flagged LucidePause and LucidePlay as unused.

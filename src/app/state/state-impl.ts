@@ -73,6 +73,8 @@ export interface AppSettingsReadWrite extends AppSettings {
   hypergryphSelectionRightDockSync: boolean;
   hypergryphInspectorOpenOnSecondClick: boolean;
   gameUseSimplifiedDeviceIcons: boolean;
+  gameShowDeviceNames: boolean;
+  gameShowDeviceIcons: boolean;
   gameUseInspectorPanel: boolean;
   gameShowHotkeys: boolean;
   gameAlwaysShowGridLines: boolean;
@@ -544,6 +546,8 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphSelectionRightDockSync: true,
     hypergryphInspectorOpenOnSecondClick: false,
     gameUseSimplifiedDeviceIcons: false,
+    gameShowDeviceNames: true,
+    gameShowDeviceIcons: false,
     gameUseInspectorPanel: false,
     gameShowHotkeys: false,
     gameAlwaysShowGridLines: true,

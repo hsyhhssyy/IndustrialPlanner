@@ -102,8 +102,27 @@ describe("TextureActions", () => {
 
     const texture = await manager.getTexture(maskKey)
     expect(texture).toBe(maskTexture)
-  expect(loadTexture).toHaveBeenCalledWith("/3d-top-view/sprite-masks/item_port_storager_1.webp")
-  expect(loadTexture).toHaveBeenCalledWith("/3d-top-view/sprite-masks/item_port_storager_1.png")
+    expect(loadTexture).toHaveBeenCalledWith("/3d-top-view/sprite-masks/item_port_storager_1.webp")
+    expect(loadTexture).toHaveBeenCalledWith("/3d-top-view/sprite-masks/item_port_storager_1.png")
+
+    manager.destroy()
+  })
+
+  it("prefix blueprint-masks- maps to blueprint-view sprite-masks assets", async () => {
+    const maskKey = "blueprint-masks-item_port_storager_1"
+    const maskTexture = createLoadedTextureMock("blueprint-mask")
+
+    loadTexture.mockResolvedValue(maskTexture)
+
+    const manager = createTextureActions({
+      renderer: {} as never,
+      app: null,
+    })
+
+    const texture = await manager.getTexture(maskKey)
+
+    expect(texture).toBe(maskTexture)
+    expect(loadTexture).toHaveBeenCalledWith("/blueprint-view/sprite-masks/item_port_storager_1.png")
 
     manager.destroy()
   })

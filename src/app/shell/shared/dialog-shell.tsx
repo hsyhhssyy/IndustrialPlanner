@@ -381,81 +381,9 @@ export const DialogShell = observer(function DialogShell({
               </button>
             </div>
           </div>
-          {/* AI-REMOVED 2026-05-09:
-              Reason: 将 tab 保留在 header 内会持续呈现为标题右侧按钮组，而不是独立页签带。
-              Trigger: 用户反馈“都是问题”，且最新截图中 help/toolbox 对话框的 tab 仍然浮在 header 右侧，并带有错误的下划线与碎弧。
-              Evidence: .temp/playwright-test/dialog-shell-help-tabs-v7.png 与 .temp/playwright-test/dialog-shell-toolbox-tabs-v7.png。
-              Replacement: header 下方的 dialog-shell-tab-strip，同文件当前有效实现。
-              Risk: Low
-              Human Review: Required
-
-              Original code:
-              {tabs.length > 0 ? (
-                <div aria-label={title} className={["dialog-shell-tab-list", `${classPrefix}-tab-list`].join(" ")} role="tablist">
-                  {tabs.map((tab) => {
-                    const isActive = activeTab?.id === tab.id;
-
-                    return (
-                      <button
-                        aria-controls={`${dialogKey}-dialog-panel-${tab.id}`}
-                        aria-selected={isActive}
-                        className={isActive
-                          ? `dialog-shell-tab ${classPrefix}-tab is-active`
-                          : `dialog-shell-tab ${classPrefix}-tab`}
-                        id={`${dialogKey}-dialog-tab-${tab.id}`}
-                        key={tab.id}
-                        onClick={() => {
-                          onTabChange?.(tab.id);
-                        }}
-                        role="tab"
-                        type="button"
-                      >
-                        {tab.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
-          */}
+          {}
         </header>
-        {/* AI-REMOVED 2026-05-09:
-            Reason: 用户要求标题与 tab 同行，独立第二行 tab-strip 不再满足目标。
-            Trigger: 需求明确要求“先 dialog 标题，然后后面跟 tab”，同时要求切换 tab 时 content 尺寸不能跳动。
-            Evidence: 当前实现虽然形态正确，但 tab-strip 单独占一行，和最新要求冲突。
-            Replacement: dialog-shell-header-main 内的固定高度 dialog-shell-tab-strip。
-            Risk: Low
-            Human Review: Required
-
-            Original code:
-            {tabs.length > 0 ? (
-              <div className={["dialog-shell-tab-strip", `${classPrefix}-tab-strip`].join(" ")}>
-                <div aria-label={title} className={["dialog-shell-tab-list", `${classPrefix}-tab-list`].join(" ")} role="tablist">
-                  {tabs.map((tab) => {
-                    const isActive = activeTab?.id === tab.id;
-
-                    return (
-                      <button
-                        aria-controls={`${dialogKey}-dialog-panel-${tab.id}`}
-                        aria-selected={isActive}
-                        className={isActive
-                          ? `dialog-shell-tab ${classPrefix}-tab is-active`
-                          : `dialog-shell-tab ${classPrefix}-tab`}
-                        id={`${dialogKey}-dialog-tab-${tab.id}`}
-                        key={tab.id}
-                        onClick={() => {
-                          onTabChange?.(tab.id);
-                        }}
-                        role="tab"
-                        type="button"
-                      >
-                        {tab.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-        */}
+        {}
         <div className={bodyClassNames}>
           {activeTab === null ? children : (
             <section

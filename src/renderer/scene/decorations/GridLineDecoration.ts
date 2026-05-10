@@ -8,7 +8,6 @@ import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
 
 const WORLD_GRID_LINE_ALPHA = 0.30;
-// AI-REMOVED 2026-05-09:
 // Reason: 固定 1.5px 线宽无法表达 REQ-059 的分级降级规则。
 // Trigger: ST1-RQ-059 要求格线宽度随缩放级别从 2px 逐级收敛到 1px。
 // Evidence: .docs/stages/stage1/requirements/REQ-059-fluid-grid-line-drawing-rules.md
@@ -22,7 +21,6 @@ const WORLD_GRID_FINE_LINE_WIDTH = 1;
 const WORLD_GRID_MAJOR_LINE_WIDTH = 2;
 const WORLD_GRID_REDUCED_LINE_WIDTH = 1;
 const WORLD_GRID_MAJOR_LINE_INTERVAL = 5;
-// AI-REMOVED 2026-05-09:
 // Reason: 粗格线不再通过固定倍率从细线样式推导，而是按 Level 直接指定 2px 或 1px。
 // Trigger: ST1-RQ-059 要求 Level 1-3 粗线 2px，Level 4-5 粗线 1px。
 // Evidence: .docs/stages/stage1/requirements/REQ-059-fluid-grid-line-drawing-rules.md
@@ -46,7 +44,6 @@ const WORLD_GRID_PREVIEW_PADDING_CELLS = 4;
 const WORLD_GRID_PREVIEW_MIN_HALF_SPAN_CELLS = 8;
 const WORLD_GRID_SEGMENT_LENGTH_RATIO = 0.5;
 const WORLD_GRID_INTERSECTION_DOT_SIZE_RATIO = 0.24;
-// AI-REMOVED 2026-05-09:
 // Reason: 交点尺寸不再使用固定最小值，避免远缩放下放大成噪声。
 // Trigger: ST1-RQ-059 要求交点尺寸按 Level 上限收敛到 2px / 1px。
 // Evidence: .docs/stages/stage1/requirements/REQ-059-fluid-grid-line-drawing-rules.md
@@ -56,7 +53,6 @@ const WORLD_GRID_INTERSECTION_DOT_SIZE_RATIO = 0.24;
 //
 // Original code:
 // const WORLD_GRID_INTERSECTION_DOT_MIN_SIZE = 2.5;
-// AI-REMOVED 2026-05-09:
 // Reason: 交点尺寸不再使用固定最大值，而是按缩放 Level 选择 2px 或 1px 的上限。
 // Trigger: ST1-RQ-059 需要交点在 Level 4-5 缩到 1px。
 // Evidence: .docs/stages/stage1/requirements/REQ-059-fluid-grid-line-drawing-rules.md

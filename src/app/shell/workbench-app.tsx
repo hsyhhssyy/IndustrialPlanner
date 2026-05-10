@@ -167,6 +167,42 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           appHost.internalState.settings.gameShowHotkeys = value;
         }),
       },
+      "game-show-device-names": {
+        readValue: () => appHost.state.settings.gameShowDeviceNames,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.gameShowDeviceNames === value) {
+            return;
+          }
+
+          appHost.internalState.settings.gameShowDeviceNames = value;
+        }),
+      },
+      "game-show-device-icons": {
+        readValue: () => appHost.state.settings.gameShowDeviceIcons,
+        writeValue: action((value) => {
+          if (typeof value !== "boolean") {
+            return;
+          }
+
+          if (appHost.internalState.settings.gameUseSimplifiedDeviceIcons) {
+            if (!appHost.internalState.settings.gameShowDeviceIcons) {
+              appHost.internalState.settings.gameShowDeviceIcons = true;
+            }
+
+            return;
+          }
+
+          if (appHost.internalState.settings.gameShowDeviceIcons === value) {
+            return;
+          }
+
+          appHost.internalState.settings.gameShowDeviceIcons = value;
+        }),
+      },
       "game-use-simplified-device-icons": {
         readValue: () => appHost.state.settings.gameUseSimplifiedDeviceIcons,
         writeValue: action((value) => {
@@ -178,6 +214,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
             && (
               !appHost.internalState.settings.gameAlwaysShowGridLines
               || appHost.internalState.settings.showGrassBackground
+              || !appHost.internalState.settings.gameShowDeviceIcons
             );
 
           if (appHost.internalState.settings.gameUseSimplifiedDeviceIcons === value
@@ -190,6 +227,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
           if (value) {
             appHost.internalState.settings.gameAlwaysShowGridLines = true;
             appHost.internalState.settings.showGrassBackground = false;
+            appHost.internalState.settings.gameShowDeviceIcons = true;
           }
         }),
       },

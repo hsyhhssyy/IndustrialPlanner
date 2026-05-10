@@ -45,6 +45,8 @@ describe("WorkbenchSettingsDialogController", () => {
         "shortcut-return-select": "Esc",
         "shortcut-rotate": "R",
         "shortcut-delete-device": "F",
+        "game-show-device-names": true,
+        "game-show-device-icons": true,
         "game-show-hotkeys": true,
         "game-always-show-grid-lines": true,
         "game-show-grass-background": false,
@@ -77,6 +79,8 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["shortcut-return-select"]).toBe("Esc");
     expect(hydratedController.values["shortcut-rotate"]).toBe("R");
     expect(hydratedController.values["shortcut-delete-device"]).toBe("F");
+    expect(hydratedController.values["game-show-device-names"]).toBe(true);
+    expect(hydratedController.values["game-show-device-icons"]).toBe(true);
     expect(hydratedController.values["game-always-show-grid-lines"]).toBe(true);
     expect(hydratedController.values["game-show-grass-background"]).toBe(false);
     expect(hydratedController.values["game-use-simplified-device-icons"]).toBe(true);
@@ -144,6 +148,23 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(controller.values["game-show-grass-background"]).toBe(false);
   });
 
+  it("locks device icons on when simplified device icons are enabled", () => {
+    const controller = new WorkbenchSettingsDialogController();
+
+    expect(controller.getValue("game-show-device-names")).toBe(true);
+    expect(controller.getValue("game-show-device-icons")).toBe(false);
+    expect(controller.isSettingEditable("game-show-device-icons")).toBe(true);
+
+    controller.updateSwitchValue("game-use-simplified-device-icons", true);
+
+    expect(controller.getValue("game-show-device-icons")).toBe(true);
+    expect(controller.isSettingEditable("game-show-device-icons")).toBe(false);
+
+    controller.updateSwitchValue("game-show-device-icons", false);
+
+    expect(controller.getValue("game-show-device-icons")).toBe(true);
+  });
+
   it("uses external bindings as the source of truth for connected settings", () => {
     let locale = "zh-CN";
     let themeId = "ayu-light";
@@ -206,6 +227,8 @@ describe("WorkbenchSettingsDialogController", () => {
         "shortcut-return-select": "Esc",
         "shortcut-rotate": "R",
         "shortcut-delete-device": "F",
+        "game-show-device-names": true,
+        "game-show-device-icons": false,
         "game-show-hotkeys": true,
         "game-always-show-grid-lines": true,
         "game-show-grass-background": false,

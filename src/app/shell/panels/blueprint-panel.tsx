@@ -306,53 +306,7 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
     );
   };
 
-  /* AI-REMOVED 2026-05-09:
-  Reason: 蓝图 dock 已删除底部预览 inspector，不再需要详情卡内部的放置动作桥接。
-  Trigger: 用户要求删除蓝图 dock 下方的预览 inspector。
-  Evidence: 目录条目点击已直接打开 BlueprintPreviewDialog，放置动作由该对话框自身处理。
-  Replacement: src/app/shell/dialogs/blueprint-preview-dialog.tsx
-  Risk: Low
-  Human Review: Required
-
-  Original code:
-  const selectedBlueprint = directoryListing.blueprints.find(
-    (record) => record.blueprintId === selectedBlueprintId,
-  ) ?? null;
-
-  const handlePlaceBlueprintFromLibrary = (
-    record: BlueprintLibraryRecord,
-    input: BlueprintDetailPlaceEventInput,
-  ) => {
-    if (appHost.workspace.editor === null) {
-      return;
-    }
-
-    appHost.blueprintPreview.open(record);
-
-    if (input.source === "mouse") {
-      appHost.gestureAdapter.handleUiButtonMouseTap({
-        uiButtonId: "blueprint-preview-place-button",
-        button: input.button,
-        altKey: input.altKey,
-        ctrlKey: input.ctrlKey,
-        metaKey: input.metaKey,
-        shiftKey: input.shiftKey,
-        sourceEvent: input.sourceEvent,
-      });
-      return;
-    }
-
-    appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "blueprint-preview-place-button",
-      altKey: input.altKey,
-      ctrlKey: input.ctrlKey,
-      metaKey: input.metaKey,
-      shiftKey: input.shiftKey,
-      sourceEvent: input.sourceEvent,
-    });
-  };
-  */
-
+  
   return (
     <div className={isTouchLayout
       ? "blueprint-panel placement-panel is-touch-layout"

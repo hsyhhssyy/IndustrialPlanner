@@ -16,8 +16,10 @@ interface WorkbenchSettingEditableWhenDefinition {
 
 interface WorkbenchSettingBaseDefinition {
   readonly id: string;
-  readonly labelKey: MessageKey;
-  readonly descriptionKey: MessageKey;
+  readonly labelKey?: MessageKey;
+  readonly labelText?: string;
+  readonly descriptionKey?: MessageKey;
+  readonly descriptionText?: string;
   readonly disabled?: boolean;
   readonly editableWhen?: WorkbenchSettingEditableWhenDefinition;
 }
@@ -79,6 +81,12 @@ interface PersistedUserSettingsDialogState {
   readonly selectedGroupId: SettingsGroupId;
   readonly values: Record<string, WorkbenchSettingControlValue>;
 }
+
+const SIMPLIFIED_DEVICE_ICONS_SETTING_ID = "game-use-simplified-device-icons";
+const ALWAYS_SHOW_GRID_LINES_SETTING_ID = "game-always-show-grid-lines";
+const SHOW_GRASS_BACKGROUND_SETTING_ID = "game-show-grass-background";
+const SHOW_DEVICE_NAMES_SETTING_ID = "game-show-device-names";
+const SHOW_DEVICE_ICONS_SETTING_ID = "game-show-device-icons";
 
 export const WORKBENCH_SETTINGS_GROUPS = [
   {
@@ -148,6 +156,24 @@ export const WORKBENCH_SETTINGS_GROUPS = [
         labelKey: "settingsField.useSimplifiedDeviceIcons",
         descriptionKey: "settingsField.useSimplifiedDeviceIconsDescription",
         defaultValue: false,
+      },
+      {
+        id: SHOW_DEVICE_NAMES_SETTING_ID,
+        kind: "switch",
+        labelText: "显示设备名称",
+        descriptionText: "在设备上显示名称文本。",
+        defaultValue: true,
+      },
+      {
+        id: SHOW_DEVICE_ICONS_SETTING_ID,
+        kind: "switch",
+        labelText: "显示设备图标",
+        descriptionText: "在设备上显示图标；开启蓝图样式设备图片时会锁定为开启。",
+        defaultValue: false,
+        editableWhen: {
+          settingId: SIMPLIFIED_DEVICE_ICONS_SETTING_ID,
+          equals: false,
+        },
       },
       {
         id: "game-use-inspector-panel",
@@ -420,13 +446,17 @@ function shortcutKeybindingDescriptionKey(id: string): MessageKey {
 }
 
 function createDefaultValues(externalBindingIds: ReadonlySet<string> = new Set()): Record<string, WorkbenchSettingControlValue> {
-  return Object.fromEntries(
+  const values = Object.fromEntries(
     WORKBENCH_SETTINGS_GROUPS.flatMap((group) =>
       group.items
         .filter((setting) => !externalBindingIds.has(setting.id))
         .map((setting) => [setting.id, setting.defaultValue])
     ),
   );
+
+  normalizeLocalValues(values, (settingId) => externalBindingIds.has(settingId) ? undefined : values[settingId]);
+
+  return values;
 }
 
 export class WorkbenchSettingsDialogController {
@@ -565,10 +595,15 @@ export class WorkbenchSettingsDialogController {
     if (externalBinding) {
       externalBinding.writeValue(checked);
 
+      if (this.normalizeLocalValues()) {
+        this.persist();
+      }
+
       return;
     }
 
     this.values[settingId] = checked;
+    this.normalizeLocalValues();
     this.persist();
   }
 
@@ -648,6 +683,7 @@ export class WorkbenchSettingsDialogController {
     }
 
     this.values = nextValues;
+    this.normalizeLocalValues();
   }
 
   private persist(): PersistedUserSettingsDialogState {
@@ -657,6 +693,41 @@ export class WorkbenchSettingsDialogController {
     });
   }
 
+  private normalizeLocalValues(): boolean {
+    return normalizeLocalValues(this.values, (settingId) => this.getValue(settingId), (settingId, value) => {
+      this.values[settingId] = value;
+    });
+  }
+
+}
+
+function normalizeLocalValues(
+  values: Record<string, WorkbenchSettingControlValue>,
+  getValue: (settingId: string) => WorkbenchSettingControlValue | undefined,
+  setValue?: (settingId: string, value: boolean) => void,
+): boolean {
+  let changed = false;
+  const applyValue = (settingId: string, nextValue: boolean) => {
+    if (getValue(settingId) === nextValue) {
+      return;
+    }
+
+    if (setValue) {
+      setValue(settingId, nextValue);
+    } else {
+      values[settingId] = nextValue;
+    }
+
+    changed = true;
+  };
+
+  if (getValue(SIMPLIFIED_DEVICE_ICONS_SETTING_ID) === true) {
+    applyValue(ALWAYS_SHOW_GRID_LINES_SETTING_ID, true);
+    applyValue(SHOW_GRASS_BACKGROUND_SETTING_ID, false);
+    applyValue(SHOW_DEVICE_ICONS_SETTING_ID, true);
+  }
+
+  return changed;
 }
 
 function normalizeSliderValue(

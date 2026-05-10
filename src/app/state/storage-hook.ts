@@ -90,6 +90,14 @@ function normalizePersistedAppSettings(
     typeof persistedAppSettings.gameUseSimplifiedDeviceIcons === "boolean"
       ? persistedAppSettings.gameUseSimplifiedDeviceIcons
       : fallback.gameUseSimplifiedDeviceIcons;
+  const gameShowDeviceNames = typeof persistedAppSettings.gameShowDeviceNames === "boolean"
+    ? persistedAppSettings.gameShowDeviceNames
+    : fallback.gameShowDeviceNames;
+  const gameShowDeviceIcons = gameUseSimplifiedDeviceIcons
+    ? true
+    : typeof persistedAppSettings.gameShowDeviceIcons === "boolean"
+      ? persistedAppSettings.gameShowDeviceIcons
+      : fallback.gameShowDeviceIcons;
 
   return {
     locale: persistedAppSettings.locale === "zh-CN" || persistedAppSettings.locale === "en-US"
@@ -116,6 +124,8 @@ function normalizePersistedAppSettings(
         ? persistedAppSettings.hypergryphInspectorOpenOnSecondClick
         : fallback.hypergryphInspectorOpenOnSecondClick,
     gameUseSimplifiedDeviceIcons,
+    gameShowDeviceNames,
+    gameShowDeviceIcons,
     gameUseInspectorPanel: typeof persistedAppSettings.gameUseInspectorPanel === "boolean"
       ? persistedAppSettings.gameUseInspectorPanel
       : fallback.gameUseInspectorPanel,
