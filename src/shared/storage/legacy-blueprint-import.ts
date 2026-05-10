@@ -17,6 +17,25 @@ const LEGACY_DEVICE_REMAPPERS: Readonly<Record<string, {
   readonly definitionId: string;
   readonly rotationOffset: GridRotation;
 }>> = {
+  // AI-REMOVED 2026-05-10:
+  // Reason: Blanket warehouse-unloader rotation remap is incorrect for the current
+  //   legacy blueprint corpus.
+  // Trigger: Rechecking the current two system blueprints showed their legacy
+  //   sources already use the same functional direction as the migrated public
+  //   assets.
+  // Evidence: The premium capsule legacy source places item_port_unloader_1 at
+  //   y=0 with rotation=180, and the migrated public asset preserves rotation=180
+  //   while feeding belts at y=1 directly below; applying +180 here would flip
+  //   those unloaders to 0 and break the topology.
+  // Replacement: None
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // item_port_unloader_1: {
+  //   definitionId: "item_port_unloader_1",
+  //   rotationOffset: 180,
+  // },
   belt_turn_cw_1x1: {
     definitionId: "belt_turn_ccw_1x1",
     rotationOffset: 0,

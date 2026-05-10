@@ -6,6 +6,22 @@ import {
 import type { AppHost } from "@/app/host/app-host";
 import type { ActivePanel } from "@/app/state/state-impl";
 
+// AI-REMOVED 2026-05-10:
+// Reason: 左侧删除模式按钮已废弃，不再注册到主工具栏。
+// Trigger: 产品要求移除左侧“删除模式”和整个删除面板。
+// Evidence: 删除面板只通过 LeftToolbar 和 LeftDock 暴露，没有其他入口设置 activePanel 为 delete。
+// Replacement: None
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// {
+//   id: "primary-delete",
+//   icon: "delete" as const,
+//   labelKey: "workbench.leftRail.delete",
+//   panel: "delete" as LeftToolbarPanel,
+// },
+
 type LeftToolbarPanel = Exclude<ActivePanel, null>;
 
 const PRIMARY_TOOLBAR_ITEMS = [
@@ -14,12 +30,6 @@ const PRIMARY_TOOLBAR_ITEMS = [
     icon: "placement" as const,
     labelKey: "workbench.leftRail.placement",
     panel: "placement" as LeftToolbarPanel,
-  },
-  {
-    id: "primary-delete",
-    icon: "delete" as const,
-    labelKey: "workbench.leftRail.delete",
-    panel: "delete" as LeftToolbarPanel,
   },
   {
     id: "primary-blueprint",

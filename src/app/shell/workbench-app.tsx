@@ -357,7 +357,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
   const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
   const showBottomStatusBar = !showFloatingTopBarControls;
-  const showCanvasLeftBottomToolbar = isTouchLayout && !leftDockOpen;
+  const showCanvasLeftBottomToolbar = !leftDockOpen;
   const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
   const showRightDock = useInspectorPanel && rightDockOpen;
   const canKeepInspectorDialogOpen = !useInspectorPanel && activeTool === "select" && selectionCount === 1;

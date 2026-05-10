@@ -3329,15 +3329,37 @@ body.is-resizing-left-dock * {
 
 .history-action-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .history-action-grid button {
   min-width: 0;
   min-height: 34px;
-  padding: 7px 8px;
+  padding: 7px 10px;
   text-align: center;
+}
+
+.history-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.history-action-button .button-icon {
+  flex-shrink: 0;
+}
+
+.history-action-button .button-icon-image {
+  width: 18px;
+  height: 18px;
+}
+
+.history-action-label {
+  min-width: 0;
+  line-height: 1.2;
 }
 
 .history-record-list {
@@ -3346,11 +3368,12 @@ body.is-resizing-left-dock * {
 }
 
 .history-record-button {
-  display: grid;
+  display: flex;
+  align-items: center;
   min-width: 0;
-  gap: 4px;
   padding: 8px;
   text-align: left;
+  overflow: hidden;
 }
 
 .history-record-button.is-current {
@@ -3362,13 +3385,22 @@ body.is-resizing-left-dock * {
 .history-record-meta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   min-width: 0;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.history-record-sequence {
+  flex: 0 0 auto;
+  color: var(--text-2);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .history-record-title,
 .history-record-detail {
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

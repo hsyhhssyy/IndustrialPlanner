@@ -42,6 +42,7 @@ import LucidePanelRightOpen from "~icons/lucide/panel-right-open";
 import LucideActivity from "~icons/lucide/activity";
 import LucideRectangleHorizontal from "~icons/lucide/rectangle-horizontal";
 import LucideRectangleVertical from "~icons/lucide/rectangle-vertical";
+import LucideRedo2 from "~icons/lucide/redo-2";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
 import LucideSave from "~icons/lucide/save";
 import LucideSettings from "~icons/lucide/settings";
@@ -51,6 +52,7 @@ import LucideMoon from "~icons/lucide/moon";
 import LucideSun from "~icons/lucide/sun";
 import LucideTablet from "~icons/lucide/tablet";
 import LucideTrash2 from "~icons/lucide/trash-2";
+import LucideUndo2 from "~icons/lucide/undo-2";
 import LucideX from "~icons/lucide/x";
 import MaterialSymbolsDeleteSweep from "~icons/material-symbols/delete-sweep";
 import MaterialSymbolsPauseRounded from "~icons/material-symbols/pause-rounded";
@@ -93,6 +95,8 @@ type WorkbenchIconKind =
   | "eye-off"
   | "cancel"
   | "confirm"
+  | "undo"
+  | "redo"
   | "rotate"
   | "device-mobile"
   | "device-tablet"
@@ -142,6 +146,8 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   "eye-off": LucideEyeOff,
   cancel: LucideX,
   confirm: LucideCheck,
+  undo: LucideUndo2,
+  redo: LucideRedo2,
   rotate: LucideRotateCcw,
   "device-mobile": LucideSmartphone,
   "device-tablet": LucideTablet,

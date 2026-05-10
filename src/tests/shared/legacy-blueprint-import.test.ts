@@ -123,6 +123,57 @@ describe("legacy-blueprint-import", () => {
     });
   });
 
+  // AI-REMOVED 2026-05-10:
+  // Reason: The warehouse-unloader blanket remap assertion was based on a false
+  //   hypothesis and would force the current system blueprints to migrate into an
+  //   incorrect direction.
+  // Trigger: The premium capsule legacy source already stores its top-row unloaders
+  //   at rotation=180, and the current migrated system blueprint preserves those
+  //   rotations to feed the belts below.
+  // Evidence: Legacy source and migrated public asset agree on the unloader line;
+  //   the added assertion contradicted that corpus.
+  // Replacement: The existing import tests remain the active coverage until a
+  //   version-gated warehouse-port migration rule is identified.
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // it("remaps legacy warehouse unloader rotation to the current port basis", () => {
+  //   const converted = convertLegacyBlueprintJson({
+  //     schema: "industrial-planner-blueprint",
+  //     name: "仓库取货口朝向兼容测试",
+  //     createdAt: "2026-03-04T15:00:38.701Z",
+  //     baseId: "wuling_tianwangping_aid",
+  //     devices: [
+  //       {
+  //         typeId: "item_port_unloader_1",
+  //         rotation: 0,
+  //         origin: { x: 6, y: 4 },
+  //         config: {},
+  //       },
+  //       {
+  //         typeId: "item_port_unloader_1",
+  //         rotation: 90,
+  //         origin: { x: 9, y: 4 },
+  //         config: {},
+  //       },
+  //     ],
+  //   }, {
+  //     entityIdPrefix: "warehouse_unloader_remap",
+  //   });
+  //
+  //   expect(converted?.entities).toMatchObject({
+  //     warehouse_unloader_remap_0001: {
+  //       definitionId: "item_port_unloader_1",
+  //       rotation: 180,
+  //     },
+  //     warehouse_unloader_remap_0002: {
+  //       definitionId: "item_port_unloader_1",
+  //       rotation: 270,
+  //     },
+  //   });
+  // });
+
   it("rejects legacy blueprints that contain unsupported dark-pipe links", () => {
     expect(convertLegacyBlueprintJson({
       schema: "industrial-planner-blueprint",

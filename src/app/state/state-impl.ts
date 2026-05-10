@@ -380,7 +380,23 @@ export interface ToolInfoReadWrite extends ToolInfo {
 
 const DEFAULT_APP_LOCALE: AppLocale = "zh-CN";
 
-export type ActivePanel = "placement" | "delete" | "blueprint" | "history" | "base" | "simulation" | null;
+export type ActivePanel =
+  | "placement"
+  // AI-REMOVED 2026-05-10:
+  // Reason: 左侧删除模式与删除面板已废弃，activePanel 不再接受 delete。
+  // Trigger: 产品要求移除左侧“删除模式”和整个删除面板。
+  // Evidence: 左侧工具栏与左侧 dock 的 delete 注册已同步移除，runtime.activePanel 也明确标记为不持久化。
+  // Replacement: src/app/shell/layout/left-toolbar.tsx, src/app/shell/layout/left-dock.tsx
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  // | "delete"
+  | "blueprint"
+  | "history"
+  | "base"
+  | "simulation"
+  | null;
 export type PlacementGroup = Exclude<UiGroup, "hidden">;
 
 export interface UiStateReadWrite extends UiState {

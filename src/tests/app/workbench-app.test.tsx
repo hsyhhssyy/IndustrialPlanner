@@ -1169,6 +1169,16 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".canvas-left-bottom-toolbar")).toBeNull();
     expect(container.querySelector(".placement-panel-group-operation.is-mobile-layout")).toBeNull();
     expect(container.querySelector(".placement-button-list.is-single-column")).toBeNull();
+
+    act(() => {
+      appHost.internalActions.toggleLeftDock();
+    });
+
+    const canvasLeftBottomToolbar = container.querySelector(".canvas-left-bottom-toolbar") as HTMLDivElement | null;
+
+    expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("0px");
+    expect(canvasLeftBottomToolbar).not.toBeNull();
+    expect(canvasLeftBottomToolbar?.querySelectorAll(".canvas-left-bottom-toolbar-button")).toHaveLength(4);
   });
 
   it("prevents middle mouse native pointerdown behavior at the outer shell", () => {

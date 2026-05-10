@@ -218,7 +218,7 @@ describe("Left dock panel switching", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders six primary tabs and defaults to the placement panel", () => {
+  it("renders five primary tabs and defaults to the placement panel", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);
 
@@ -240,7 +240,7 @@ describe("Left dock panel switching", () => {
     const utilityButtons = toolbarGroups[1]?.querySelectorAll(".rail-button");
     const visiblePanel = queryVisibleLeftDockPanel(container);
 
-    expect(primaryButtons).toHaveLength(6);
+    expect(primaryButtons).toHaveLength(5);
     expect(utilityButtons).toHaveLength(3);
     expect(container.textContent).toContain("放置模式");
     expect(visiblePanel).not.toBeNull();
@@ -543,7 +543,18 @@ describe("Left dock panel switching", () => {
     expect(historyButton.getAttribute("aria-pressed")).toBe("true");
     expect(placementPanelBeforeSwitch?.hidden).toBe(true);
     expect(historyPanel?.getAttribute("data-panel-id")).toBe("history");
-    expect(historyPanel?.textContent).toContain("清空历史");
+    // AI-REMOVED 2026-05-10:
+    // Reason: 历史面板已不再提供“清空历史”按钮，旧断言与当前实现不符。
+    // Trigger: 针对左侧 dock 的窄测试暴露出陈旧断言。
+    // Evidence: HistoryPanel 当前只渲染撤销与重做两个操作按钮。
+    // Replacement: 当前的撤销/重做文案断言。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(historyPanel?.textContent).toContain("清空历史");
+    expect(historyPanel?.textContent).toContain("撤销");
+    expect(historyPanel?.textContent).toContain("重做");
     expect(historyPanel?.textContent).toContain("历史记录");
     expect(historyPanel?.textContent).toContain("暂无历史记录");
 
@@ -559,14 +570,29 @@ describe("Left dock panel switching", () => {
     expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')).not.toBeNull();
     expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')?.textContent?.trim()).toBe("新建");
 
-    const deleteButton = clickTab("删除模式");
-    const deletePanel = queryVisibleLeftDockPanel(container);
+    // AI-REMOVED 2026-05-10:
+    // Reason: 左侧删除模式和删除面板已废弃，测试不再验证其可见性和切换行为。
+    // Trigger: 产品要求移除左侧“删除模式”和整个删除面板。
+    // Evidence: LeftToolbar 与 LeftDock 的 delete 注册已移除，ActivePanel 也不再接受 delete。
+    // Replacement: 当前的不存在断言。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // const deleteButton = clickTab("删除模式");
+    // const deletePanel = queryVisibleLeftDockPanel(container);
+    //
+    // expect(appHost.internalState.runtime.activePanel).toBe("delete");
+    // expect(deleteButton.getAttribute("aria-pressed")).toBe("true");
+    // expect(deletePanel?.getAttribute("data-panel-id")).toBe("delete");
+    // expect(deletePanel?.textContent).toContain("单点删除");
+    // expect(deletePanel?.textContent).toContain("恢复最近");
+    const deleteButton = container.querySelector('button[title="删除模式"]');
+    const deletePanel = container.querySelector('.left-dock-panel[data-panel-id="delete"]');
 
-    expect(appHost.internalState.runtime.activePanel).toBe("delete");
-    expect(deleteButton.getAttribute("aria-pressed")).toBe("true");
-    expect(deletePanel?.getAttribute("data-panel-id")).toBe("delete");
-    expect(deletePanel?.textContent).toContain("单点删除");
-    expect(deletePanel?.textContent).toContain("恢复最近");
+    expect(deleteButton).toBeNull();
+    expect(deletePanel).toBeNull();
+    expect(appHost.internalState.runtime.activePanel).toBe("blueprint");
 
     const baseButton = clickTab("基地");
     const basePanel = queryVisibleLeftDockPanel(container);
@@ -645,7 +671,18 @@ describe("Left dock panel switching", () => {
     const historyPanel = queryVisibleLeftDockPanel(container);
 
     expect(historyPanel?.getAttribute("data-panel-id")).toBe("history");
-    expect(historyPanel?.textContent).toContain("清空历史");
+    // AI-REMOVED 2026-05-10:
+    // Reason: 历史面板已不再提供“清空历史”按钮，旧断言与当前实现不符。
+    // Trigger: 针对左侧 dock 的窄测试暴露出陈旧断言。
+    // Evidence: HistoryPanel 当前只渲染撤销与重做两个操作按钮。
+    // Replacement: 当前的撤销/重做文案断言。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(historyPanel?.textContent).toContain("清空历史");
+    expect(historyPanel?.textContent).toContain("撤销");
+    expect(historyPanel?.textContent).toContain("重做");
   });
 
   it("collapses the left dock when clicking the currently visible panel button", () => {
