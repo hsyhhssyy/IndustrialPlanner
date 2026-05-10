@@ -47,18 +47,21 @@ export function createEditorDocumentWriter(options: {
     mode: EditorDocumentWriteMode,
   ): WorldDocument | null => {
     const currentDocument = options.document.getSnapshot();
+    const documentToWrite = mode === "record"
+      ? stampWorldDocumentUpdatedAt(nextDocument)
+      : nextDocument;
 
-    if (currentDocument === nextDocument) {
+    if (currentDocument === documentToWrite) {
       return null;
     }
 
-    const delta = createWorldDocumentDelta(currentDocument, nextDocument);
+    const delta = createWorldDocumentDelta(currentDocument, documentToWrite);
 
     if (delta === null) {
       return null;
     }
 
-    const committedDocument = options.document.setSnapshot(nextDocument);
+    const committedDocument = options.document.setSnapshot(documentToWrite);
 
     if (mode === "record") {
       options.history.record({
@@ -87,6 +90,16 @@ export function createEditorDocumentWriter(options: {
       } = {},
     ) => {
       return writeDocument(nextDocument, action, mode);
+    },
+  };
+}
+
+function stampWorldDocumentUpdatedAt(document: WorldDocument): WorldDocument {
+  return {
+    ...document,
+    meta: {
+      ...document.meta,
+      updatedAt: new Date().toISOString(),
     },
   };
 }

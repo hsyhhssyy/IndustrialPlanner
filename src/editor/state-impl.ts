@@ -44,6 +44,7 @@ export interface EditorViewportStateReadWrite {
 
 export interface EditorInternalPersistStateReadWrite {
   lastDocumentId: string | null;
+  latestDocumentIdByBaseId: Record<string, string>;
 }
 
 export interface EditorInternalTransientStateReadWrite {
@@ -57,6 +58,7 @@ class EditorInternalPersistStateReadWriteImpl
   implements EditorInternalPersistStateReadWrite
 {
   lastDocumentId: string | null = null;
+  latestDocumentIdByBaseId: Record<string, string> = {};
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

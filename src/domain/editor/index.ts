@@ -1,4 +1,5 @@
 export type { EditorAction } from "./editor-action";
+export type { EditorBaseDocumentSummary } from "./editor-document";
 export type {
 	EditorHistoryActionDescriptor,
 	EditorHistoryActionType,

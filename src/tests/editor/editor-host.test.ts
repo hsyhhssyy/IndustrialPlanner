@@ -1695,6 +1695,9 @@ describe("createEditorHost", () => {
       expect(editorHost.internalState.internalPersistState.lastDocumentId).toBe(
         document.documentKey,
       );
+      expect(editorHost.internalState.internalPersistState.latestDocumentIdByBaseId).toEqual({
+        [DEFAULT_WORLD_BASE_ID]: document.documentKey,
+      });
       await expect(readStoredWorldDocument(document.documentKey)).resolves.toEqual(document);
     },
   );
@@ -1726,6 +1729,9 @@ describe("createEditorHost", () => {
     expect(editorHost.internalState.internalPersistState.lastDocumentId).toBe(
       persistedDocument.documentKey,
     );
+    expect(editorHost.internalState.internalPersistState.latestDocumentIdByBaseId).toEqual({
+      [DEFAULT_WORLD_BASE_ID]: persistedDocument.documentKey,
+    });
   });
 
   it("writes document snapshot changes back into IndexedDB", async () => {
@@ -1774,6 +1780,7 @@ describe("createEditorHost", () => {
     expect(localStorage.getItem(EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
         lastDocumentId: "document-2",
+        latestDocumentIdByBaseId: {},
       }),
     );
 
@@ -1785,8 +1792,88 @@ describe("createEditorHost", () => {
     expect(localStorage.getItem(EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
         lastDocumentId: "document-2",
+        latestDocumentIdByBaseId: {},
       }),
     );
+  });
+
+  it("lists base document summaries and loads the latest document for a base", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    const wulingDocument = {
+      ...createDummyWorldDocument(),
+      documentKey: "22222222-2222-4222-8222-222222222222",
+      baseId: "wuling_protocol_core",
+      meta: {
+        ...createDummyWorldDocument().meta,
+        updatedAt: "2026-05-10T08:00:00.000Z",
+      },
+      entityOrder: ["dummy-entity-2", "dummy-entity-3"],
+    };
+    const valleyDocument = {
+      ...createDummyWorldDocument(),
+      documentKey: "33333333-3333-4333-8333-333333333333",
+      baseId: "valley4_protocol_core",
+      meta: {
+        ...createDummyWorldDocument().meta,
+        updatedAt: "2026-05-10T09:00:00.000Z",
+      },
+      entityOrder: ["dummy-entity-2"],
+    };
+
+    await saveStoredWorldDocument(wulingDocument);
+    await saveStoredWorldDocument(valleyDocument);
+    localStorage.setItem(
+      EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY,
+      JSON.stringify({
+        lastDocumentId: wulingDocument.documentKey,
+        latestDocumentIdByBaseId: {
+          wuling_protocol_core: wulingDocument.documentKey,
+          valley4_protocol_core: valleyDocument.documentKey,
+        },
+      }),
+    );
+
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    await flushMicrotasks();
+
+    const summaries = await editorHost.queries.listBaseDocumentSummaries();
+    const valleySummary = summaries.find((summary) => summary.baseId === "valley4_protocol_core");
+
+    expect(valleySummary).toEqual({
+      baseId: "valley4_protocol_core",
+      documentKey: valleyDocument.documentKey,
+      entityCount: 1,
+      updatedAt: "2026-05-10T09:00:00.000Z",
+    });
+
+    await expect(editorHost.actions.loadLatestBaseDocument("valley4_protocol_core")).resolves.toBe(true);
+
+    expect(editorHost.document.getSnapshot()).toEqual(valleyDocument);
+    expect(editorHost.internalState.internalPersistState.lastDocumentId).toBe(valleyDocument.documentKey);
+    expect(editorHost.internalState.internalPersistState.latestDocumentIdByBaseId).toMatchObject({
+      valley4_protocol_core: valleyDocument.documentKey,
+    });
+  });
+
+  it("creates a new document when a base has no latest document", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    await flushMicrotasks();
+
+    await expect(editorHost.actions.loadLatestBaseDocument("valley4_infra_outpost")).resolves.toBe(true);
+
+    const document = editorHost.document.getSnapshot();
+
+    expect(document.baseId).toBe("valley4_infra_outpost");
+    expect(document.entityOrder).toEqual([]);
+    expect(editorHost.internalState.internalPersistState.latestDocumentIdByBaseId.valley4_infra_outpost).toBe(
+      document.documentKey,
+    );
+    await expect(readStoredWorldDocument(document.documentKey)).resolves.toEqual(document);
   });
 });
 

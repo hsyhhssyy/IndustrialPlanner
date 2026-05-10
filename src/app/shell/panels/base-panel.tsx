@@ -1,26 +1,9 @@
-import { handleUiEvent } from "@/app/shell/shared/ui-shell-null-handlers";
+import { observer } from "mobx-react-lite";
+
+import { useEditorDocumentSnapshot } from "@/app/shell/hooks/use-editor-document";
+import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { AppHost } from "@/app/host/app-host";
-
-const BASE_OPTIONS = [
-  "workbench.base.valley4",
-  "workbench.base.wuling",
-  "workbench.base.protocolCore",
-] as const;
-
-const BASE_SUMMARY_ROWS = [
-  {
-    labelKey: "workbench.summary.buildableArea",
-    valueKey: "workbench.summaryValue.buildableArea",
-  },
-  {
-    labelKey: "workbench.summary.expansion",
-    valueKey: "workbench.summaryValue.expansion",
-  },
-  {
-    labelKey: "workbench.summary.baseTag",
-    valueKey: "workbench.summaryValue.baseTag",
-  },
-] as const;
+import { DEFAULT_WORLD_BASE_ID } from "@/domain/document/world-document";
 
 const POWER_ROWS = [
   {
@@ -41,8 +24,15 @@ const POWER_ROWS = [
   },
 ] as const;
 
-export function BasePanel({ appHost }: { appHost: AppHost }) {
+export const BasePanel = observer(function BasePanel({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
+  const editor = appHost.workspace.editor;
+  const currentDocument = useEditorDocumentSnapshot(editor);
+  const currentBaseId = currentDocument?.baseId ?? DEFAULT_WORLD_BASE_ID;
+  const currentBase = appHost.workspace.registry.baseDefinitions.find(
+    (definition) => definition.id === currentBaseId,
+  ) ?? appHost.workspace.registry.baseDefinitions[0] ?? null;
+  const currentBaseName = currentBase?.name ?? currentBaseId;
 
   return (
     <div className="stack">
@@ -50,21 +40,20 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
         <div className="card-header">
           <h3>{t("rightDock.base")}</h3>
         </div>
-        <div className="inspector-option-grid">
-          {BASE_OPTIONS.map((entryKey, index) => (
-            <button key={`left-dock-base-${index}`} onClick={handleUiEvent} type="button">
-              {t(entryKey)}
-            </button>
-          ))}
-        </div>
-        <dl className="inspector-summary-list">
-          {BASE_SUMMARY_ROWS.map((entry, index) => (
-            <div className="inspector-summary-row" key={`left-dock-base-summary-${index}`}>
-              <dt>{t(entry.labelKey)}</dt>
-              <dd>{t(entry.valueKey)}</dd>
-            </div>
-          ))}
-        </dl>
+        <button
+          className="base-current-button"
+          data-ui-button-id="base-current-select"
+          disabled={editor === null}
+          onClick={() => {
+            appHost.internalActions.openDialog("base-select");
+          }}
+          type="button"
+        >
+          <span className="base-current-button-label">{currentBaseName}</span>
+          <span className="base-current-button-icon">
+            <WorkbenchIcon kind="edit" />
+          </span>
+        </button>
       </article>
       <article className="inspector-card">
         <div className="card-header">
@@ -81,4 +70,4 @@ export function BasePanel({ appHost }: { appHost: AppHost }) {
       </article>
     </div>
   );
-}
+});

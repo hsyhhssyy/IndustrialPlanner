@@ -56,4 +56,5 @@ export interface EditorAction {
 	redoDocumentHistory(): boolean;
 	restoreDocumentHistoryTo(sequence: number): boolean;
 	clearDocumentHistory(): void;
+	loadLatestBaseDocument(baseId: string): Promise<boolean>;
 }

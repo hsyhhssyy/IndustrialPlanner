@@ -9,6 +9,7 @@ export interface BaseOuterRingDefinition {
 
 export interface BaseDefinition {
   id: string;
+  name: string;
   placeableArea: GridRectSize;
   outerRing: BaseOuterRingDefinition;
   tag: string;

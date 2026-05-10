@@ -3437,6 +3437,165 @@ body.is-resizing-left-dock * {
   font-weight: 600;
 }
 
+.base-current-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-0);
+  text-align: left;
+}
+
+.base-current-button:not(:disabled):hover {
+  border-color: var(--line-strong);
+  background: var(--surface-3);
+}
+
+.base-current-button-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.base-current-button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: var(--text-1);
+}
+
+.base-current-button-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.base-select-dialog {
+  width: min(560px, 100%);
+  height: min(560px, 100%);
+}
+
+.base-select-dialog-body {
+  display: grid;
+  min-height: 0;
+  padding: 14px;
+}
+
+.base-select-dialog-content {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 0;
+  height: 100%;
+}
+
+.base-select-group-list {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.base-select-group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.base-select-group h3 {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.base-select-option-list {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.base-select-option {
+  display: grid;
+  min-width: 0;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-0);
+  text-align: left;
+}
+
+.base-select-option:not(:disabled):hover {
+  border-color: var(--line-strong);
+  background: var(--surface-2);
+}
+
+.base-select-option.is-selected {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.base-select-option-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.base-select-option-name,
+.base-select-option-meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.base-select-option-name {
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.base-select-option-meta {
+  color: var(--text-2);
+  font-size: 0.78rem;
+}
+
+.base-select-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.base-select-status {
+  min-width: 0;
+  color: var(--text-2);
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.base-select-status[role="alert"] {
+  color: var(--danger-500);
+}
+
 .card-subheader {
   padding: 0;
   border: 0;
@@ -3994,8 +4153,21 @@ body.is-resizing-left-dock * {
     height: min(520px, 100%);
   }
 
+  .base-select-dialog {
+    width: 100%;
+    height: min(620px, 100%);
+  }
+
   .save-blueprint-dialog-body {
     padding: 12px;
+  }
+
+  .base-select-dialog-body {
+    padding: 12px;
+  }
+
+  .base-select-actions {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .save-blueprint-actions {
@@ -4038,7 +4210,17 @@ body.is-resizing-left-dock * {
     border-radius: 14px;
   }
 
+  .base-select-dialog {
+    width: 100%;
+    height: 100%;
+    border-radius: 14px;
+  }
+
   .save-blueprint-dialog-body {
+    padding: 10px;
+  }
+
+  .base-select-dialog-body {
     padding: 10px;
   }
 

@@ -13,6 +13,7 @@ import type {
 	LogisticsKind,
 } from "../shared/logistics";
 import type { EntityCollectionType } from "./types/editor-types";
+import type { EditorBaseDocumentSummary } from "./editor-document";
 
 export interface EditorQuery {
 	getEntityById(entityId: string): WorldEntity | null;
@@ -37,4 +38,5 @@ export interface EditorQuery {
 		kind: LogisticsKind,
 	): LogisticsDraftEndpoint | null;
 	canCreateLogisticsDraftStartHere(gridPoint: GridPoint, kind: LogisticsKind): boolean;
+	listBaseDocumentSummaries(): Promise<readonly EditorBaseDocumentSummary[]>;
 }

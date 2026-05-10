@@ -3,6 +3,7 @@ import {
   createWorldDocument,
 } from "@/domain/document/world-document";
 import {
+  listFromIndexedDb,
   readFromIndexedDb,
   saveToIndexedDb,
 } from "@/shared/storage";
@@ -12,6 +13,11 @@ import type { EditorHost } from "./editor-host";
 
 const DOCUMENT_DATABASE_NAME = "industrial-planner";
 const WORD_DOCUMENT_STORE_NAME = "worddocument";
+
+export const WORLD_DOCUMENT_DATABASE_LOCATION = {
+  databaseName: DOCUMENT_DATABASE_NAME,
+  storeName: WORD_DOCUMENT_STORE_NAME,
+};
 
 export function hookDocumentStorage(editorHost: EditorHost): () => void {
   let disposed = false;
@@ -31,12 +37,12 @@ export function hookDocumentStorage(editorHost: EditorHost): () => void {
       return;
     }
 
-    setLastDocumentId(editorHost, initialDocument.documentKey);
+    rememberLatestWorldDocument(editorHost, initialDocument);
     editorHost.internalDocument.setSnapshot(initialDocument);
     enqueueWrite(initialDocument);
 
     unsubscribeDocument = editorHost.internalDocument.subscribe((document) => {
-      setLastDocumentId(editorHost, document.documentKey);
+      rememberLatestWorldDocument(editorHost, document);
       enqueueWrite(document);
     });
   })();
@@ -64,7 +70,7 @@ async function resolveInitialDocument(
   return createWorldDocument();
 }
 
-async function readWorldDocument(
+export async function readWorldDocument(
   documentKey: string,
 ): Promise<WorldDocument | null> {
   const persistedDocument = await readFromIndexedDb<unknown>(
@@ -74,17 +80,85 @@ async function readWorldDocument(
   return normalizeWorldDocument(persistedDocument);
 }
 
-async function writeWorldDocument(document: WorldDocument): Promise<void> {
+export async function writeWorldDocument(document: WorldDocument): Promise<void> {
   await saveToIndexedDb(
     createWordDocumentLocation(document.documentKey),
     document,
   );
 }
 
+export async function listWorldDocuments(): Promise<WorldDocument[]> {
+  const persistedDocuments = await listFromIndexedDb<unknown>(
+    WORLD_DOCUMENT_DATABASE_LOCATION,
+  );
+
+  return persistedDocuments.flatMap((persistedDocument) => {
+    const document = normalizeWorldDocument(persistedDocument);
+
+    return document === null ? [] : [document];
+  });
+}
+
+export async function resolveLatestWorldDocumentForBase(options: {
+  baseId: string;
+  latestDocumentIdByBaseId: Readonly<Record<string, string>>;
+}): Promise<WorldDocument | null> {
+  const latestDocumentId = options.latestDocumentIdByBaseId[options.baseId];
+
+  if (typeof latestDocumentId === "string" && latestDocumentId.trim() !== "") {
+    const document = await readWorldDocument(latestDocumentId);
+
+    if (document?.baseId === options.baseId) {
+      return document;
+    }
+  }
+
+  const documents = await listWorldDocuments();
+
+  return documents
+    .filter((document) => document.baseId === options.baseId)
+    .sort(compareWorldDocumentRecency)[0] ?? null;
+}
+
+export async function listLatestWorldDocumentsByBase(
+  latestDocumentIdByBaseId: Readonly<Record<string, string>>,
+): Promise<Map<string, WorldDocument>> {
+  const documents = await listWorldDocuments();
+  const latestByBaseId = new Map<string, WorldDocument>();
+
+  for (const document of documents) {
+    const currentLatest = latestByBaseId.get(document.baseId);
+
+    if (
+      currentLatest === undefined
+      || compareWorldDocumentRecency(document, currentLatest) < 0
+    ) {
+      latestByBaseId.set(document.baseId, document);
+    }
+  }
+
+  for (const [baseId, documentKey] of Object.entries(latestDocumentIdByBaseId)) {
+    const indexedDocument = await readWorldDocument(documentKey);
+
+    if (indexedDocument?.baseId === baseId) {
+      latestByBaseId.set(baseId, indexedDocument);
+    }
+  }
+
+  return latestByBaseId;
+}
+
+export function rememberLatestWorldDocument(
+  editorHost: EditorHost,
+  document: WorldDocument,
+): void {
+  setLastDocumentId(editorHost, document.documentKey);
+  setLatestDocumentIdByBaseId(editorHost, document.baseId, document.documentKey);
+}
+
 function createWordDocumentLocation(documentKey: string) {
   return {
-    databaseName: DOCUMENT_DATABASE_NAME,
-    storeName: WORD_DOCUMENT_STORE_NAME,
+    ...WORLD_DOCUMENT_DATABASE_LOCATION,
     key: documentKey,
   };
 }
@@ -109,6 +183,48 @@ function setLastDocumentId(
   runInAction(() => {
     editorHost.internalState.internalPersistState.lastDocumentId = documentKey;
   });
+}
+
+function setLatestDocumentIdByBaseId(
+  editorHost: EditorHost,
+  baseId: string,
+  documentKey: string,
+): void {
+  if (
+    editorHost.internalState.internalPersistState.latestDocumentIdByBaseId[baseId]
+    === documentKey
+  ) {
+    return;
+  }
+
+  runInAction(() => {
+    editorHost.internalState.internalPersistState.latestDocumentIdByBaseId = {
+      ...editorHost.internalState.internalPersistState.latestDocumentIdByBaseId,
+      [baseId]: documentKey,
+    };
+  });
+}
+
+function compareWorldDocumentRecency(left: WorldDocument, right: WorldDocument): number {
+  const updatedAtDelta = timestampToNumber(right.meta.updatedAt) - timestampToNumber(left.meta.updatedAt);
+
+  if (updatedAtDelta !== 0) {
+    return updatedAtDelta;
+  }
+
+  const createdAtDelta = timestampToNumber(right.meta.createdAt) - timestampToNumber(left.meta.createdAt);
+
+  if (createdAtDelta !== 0) {
+    return createdAtDelta;
+  }
+
+  return right.documentKey.localeCompare(left.documentKey);
+}
+
+function timestampToNumber(value: string): number {
+  const timestamp = Date.parse(value);
+
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
 function normalizeWorldDocument(

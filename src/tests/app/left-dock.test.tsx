@@ -600,7 +600,9 @@ describe("Left dock panel switching", () => {
     expect(appHost.internalState.runtime.activePanel).toBe("base");
     expect(baseButton.getAttribute("aria-pressed")).toBe("true");
     expect(basePanel?.getAttribute("data-panel-id")).toBe("base");
-    expect(basePanel?.textContent).toContain("可放置区域");
+    expect(basePanel?.querySelector('[data-ui-button-id="base-current-select"]')).not.toBeNull();
+    expect(basePanel?.querySelector(".inspector-option-grid")).toBeNull();
+    expect(basePanel?.textContent).toContain("协议核心区");
     expect(basePanel?.textContent).toContain("总耗电");
 
     const simulationButton = clickTab("仿真");
@@ -625,6 +627,58 @@ describe("Left dock panel switching", () => {
 
     expect(placementPanelAfterSwitch).toBe(placementPanelBeforeSwitch);
     expect(placementPanelAfterSwitch?.hidden).toBe(false);
+  });
+
+  it("opens a grouped base selection dialog from the current base button", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const appHost = createAppHost(workspace);
+
+    await flushAsyncEffects();
+
+    editorHost.internalDocument.setSnapshot({
+      ...createDummyWorldDocument(),
+      baseId: "valley4_protocol_core",
+      entityOrder: ["dummy-entity-2"],
+    });
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const baseToolbarButton = container.querySelector(
+      'button[title="基地"]',
+    ) as HTMLButtonElement | null;
+
+    expect(baseToolbarButton).not.toBeNull();
+
+    act(() => {
+      baseToolbarButton?.click();
+    });
+
+    const basePanel = queryVisibleLeftDockPanel(container);
+    const currentBaseButton = basePanel?.querySelector(
+      '[data-ui-button-id="base-current-select"]',
+    ) as HTMLButtonElement | null;
+
+    expect(currentBaseButton).not.toBeNull();
+    expect(currentBaseButton?.textContent).toContain("协议核心区");
+    expect(currentBaseButton?.querySelector('[data-workbench-icon="edit"]')).not.toBeNull();
+
+    await act(async () => {
+      currentBaseButton?.click();
+      await flushAsyncEffects();
+    });
+
+    const dialog = container.querySelector(".base-select-dialog") as HTMLElement | null;
+
+    expect(dialog).not.toBeNull();
+    expect(dialog?.textContent).toContain("四号谷地");
+    expect(dialog?.textContent).toContain("武陵");
+    expect(dialog?.textContent).toContain("1 台设备");
+    expect(dialog?.querySelector('[data-base-id="valley4_protocol_core"]')?.getAttribute("aria-pressed")).toBe("true");
+    expect(dialog?.querySelector('[data-base-id="wuling_protocol_core"]')).not.toBeNull();
   });
 
   it("reopens the left dock and switches to the clicked panel when the dock is closed", () => {
