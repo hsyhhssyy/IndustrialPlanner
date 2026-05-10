@@ -1,4 +1,12 @@
 export type { EditorAction } from "./editor-action";
+export type {
+	EditorHistoryActionDescriptor,
+	EditorHistoryActionType,
+	EditorHistoryDocumentDelta,
+	EditorHistoryRecord,
+	EditorHistoryState,
+	EditorHistoryValueChange,
+} from "./editor-history";
 export type { EditorQuery } from "./editor-query";
 export type { EditorState } from "./editor-state";
 export type { EditorContract, EditorSnapshotStore } from "./editor-contract";
