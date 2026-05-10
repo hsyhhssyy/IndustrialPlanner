@@ -7,6 +7,7 @@ import {
   SnapshotStoreReadWrite,
 } from "@/shared/snapshot/snapshot-store";
 import { createEditorActions } from "./actions";
+import { applyWorldDocumentViewportSettings } from "./document-viewport";
 import { hookDocumentStorage } from "./document-storage";
 import {
   createEditorDocumentWriter,
@@ -79,6 +80,7 @@ export function createEditorHost(
 
   workspace.editor = host;
   disposers.push(hookDocumentHistory(host));
+  disposers.push(hookDocumentViewport(host));
   disposers.push(hookLocalstorage(host));
   disposers.push(hookDocumentStorage(host));
 
@@ -100,4 +102,24 @@ function hookDocumentHistory(editorHost: EditorHost): () => void {
   loadHistoryForDocument(editorHost.internalDocument.getSnapshot());
 
   return editorHost.internalDocument.subscribe(loadHistoryForDocument);
+}
+
+function hookDocumentViewport(editorHost: EditorHost): () => void {
+  let documentKey: string | null = null;
+
+  const loadViewportForDocument = (document: WorldDocument): void => {
+    if (documentKey === document.documentKey) {
+      return;
+    }
+
+    documentKey = document.documentKey;
+    applyWorldDocumentViewportSettings({
+      document,
+      state: editorHost.internalState,
+    });
+  };
+
+  loadViewportForDocument(editorHost.internalDocument.getSnapshot());
+
+  return editorHost.internalDocument.subscribe(loadViewportForDocument);
 }

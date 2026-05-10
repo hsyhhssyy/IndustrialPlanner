@@ -3,8 +3,14 @@ import {
   resolveCompensatedViewportCenter,
 } from "@/shared/geometry/viewport-transform";
 
+import {
+  persistWorldDocumentViewportSettings,
+} from "../document-viewport";
 import type { EditorStateReadWrite } from "../state-impl";
-import { EDITOR_GRID_CELL_PIXEL_SIZE } from "../viewport-constants";
+import {
+  resolveViewportGridCellPixelSize,
+  resolveViewportGridSizeAfterZoom,
+} from "../viewport-settings";
 import type { EditorActionsContext } from "./types";
 
 type EditorViewportActions = Pick<
@@ -12,13 +18,19 @@ type EditorViewportActions = Pick<
   "moveViewportByClientPixelVector" | "setViewportClientRect" | "zoom"
 >;
 
-const VIEWPORT_ZOOM_STEPS_PER_DOUBLING = 6;
-const MIN_VIEWPORT_GRID_SIZE = 1 / 16;
-const MAX_VIEWPORT_GRID_SIZE = 16;
-
 export function createEditorViewportActions({
+  document,
+  documentWriter,
   state,
 }: EditorActionsContext): EditorViewportActions {
+  const persistViewportSettings = (): void => {
+    persistWorldDocumentViewportSettings({
+      document,
+      documentWriter,
+      state,
+    });
+  };
+
   return {
     setViewportClientRect: ({ left, top, width, height }) => {
       const previousClientRect = {
@@ -61,6 +73,8 @@ export function createEditorViewportActions({
       state.viewport.clientRect.top = nextClientRect.top;
       state.viewport.clientRect.width = nextClientRect.width;
       state.viewport.clientRect.height = nextClientRect.height;
+
+      persistViewportSettings();
     },
     moveViewportByClientPixelVector: ({
       startClientPixel,
@@ -89,6 +103,8 @@ export function createEditorViewportActions({
 
       state.viewport.center.x -= viewportPixelVector.x / gridCellSize;
       state.viewport.center.y -= viewportPixelVector.y / gridCellSize;
+
+      persistViewportSettings();
     },
     zoom: (step) => {
       const nextGridSize = resolveViewportGridSizeAfterZoom({
@@ -101,7 +117,11 @@ export function createEditorViewportActions({
       }
 
       state.viewport.gridSize = nextGridSize;
-      state.viewport.gridCellPixelSize = EDITOR_GRID_CELL_PIXEL_SIZE * nextGridSize;
+      state.viewport.gridCellPixelSize = resolveViewportGridCellPixelSize(
+        nextGridSize,
+      );
+
+      persistViewportSettings();
     },
   };
 }
@@ -126,36 +146,6 @@ function resolveViewportAxisSize(
   }
 
   return Math.floor(value);
-}
-
-function resolveViewportGridSizeAfterZoom(options: {
-  currentGridSize: number;
-  step: number;
-}): number | null {
-  if (!Number.isFinite(options.step) || options.step === 0) {
-    return null;
-  }
-
-  const zoomFactor = Math.pow(
-    2,
-    options.step / VIEWPORT_ZOOM_STEPS_PER_DOUBLING,
-  );
-
-  if (!Number.isFinite(zoomFactor) || zoomFactor <= 0) {
-    return null;
-  }
-
-  return clampViewportGridSize(
-    clampViewportGridSize(options.currentGridSize) * zoomFactor,
-  );
-}
-
-function clampViewportGridSize(value: number): number {
-  if (!Number.isFinite(value) || value <= 0) {
-    return 1;
-  }
-
-  return Math.min(MAX_VIEWPORT_GRID_SIZE, Math.max(MIN_VIEWPORT_GRID_SIZE, value));
 }
 
 function resolveViewportPixelVector(options: {

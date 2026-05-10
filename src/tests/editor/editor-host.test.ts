@@ -127,6 +127,42 @@ describe("createEditorHost", () => {
     expect(workspace.editor?.state.viewport.gridSize).toBe(1);
   });
 
+  it("persists viewport center and grid size without recording history", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    await flushMicrotasks();
+
+    const documentKey = editorHost.document.getSnapshot().documentKey;
+
+    editorHost.actions.moveViewportByClientPixelVector({
+      startClientPixel: {
+        x: 16,
+        y: 0,
+      },
+      endClientPixel: {
+        x: 0,
+        y: 32,
+      },
+    });
+    editorHost.actions.zoom(2);
+
+    await flushMicrotasks();
+
+    const storedDocument = await readStoredWorldDocument(documentKey);
+
+    expect(storedDocument?.documentSettings.viewport).toEqual({
+      center: {
+        x: 1,
+        y: -2,
+      },
+      gridSize: editorHost.state.viewport.gridSize,
+    });
+    expect(editorHost.state.history.records).toHaveLength(0);
+    expect(editorHost.state.history.undoDepth).toBe(0);
+  });
+
   it("compensates viewport center after later rect changes to preserve screen position", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -1711,6 +1747,16 @@ describe("createEditorHost", () => {
         ...createDummyWorldDocument().meta,
         name: "Persisted World",
       },
+      documentSettings: {
+        ...createDummyWorldDocument().documentSettings,
+        viewport: {
+          center: {
+            x: 12.5,
+            y: -8.25,
+          },
+          gridSize: 4,
+        },
+      },
     };
     await saveStoredWorldDocument(persistedDocument);
     localStorage.setItem(
@@ -1732,6 +1778,14 @@ describe("createEditorHost", () => {
     expect(editorHost.internalState.internalPersistState.latestDocumentIdByBaseId).toEqual({
       [DEFAULT_WORLD_BASE_ID]: persistedDocument.documentKey,
     });
+    expect(editorHost.state.viewport.center).toEqual({
+      x: 12.5,
+      y: -8.25,
+    });
+    expect(editorHost.state.viewport.gridSize).toBe(4);
+    expect(editorHost.state.viewport.gridCellPixelSize).toBe(
+      EDITOR_GRID_CELL_PIXEL_SIZE * 4,
+    );
   });
 
   it("writes document snapshot changes back into IndexedDB", async () => {
@@ -1818,6 +1872,16 @@ describe("createEditorHost", () => {
         updatedAt: "2026-05-10T09:00:00.000Z",
       },
       entityOrder: ["dummy-entity-2"],
+      documentSettings: {
+        ...createDummyWorldDocument().documentSettings,
+        viewport: {
+          center: {
+            x: -3.5,
+            y: 9.25,
+          },
+          gridSize: 2,
+        },
+      },
     };
 
     await saveStoredWorldDocument(wulingDocument);
@@ -1855,6 +1919,14 @@ describe("createEditorHost", () => {
     expect(editorHost.internalState.internalPersistState.latestDocumentIdByBaseId).toMatchObject({
       valley4_protocol_core: valleyDocument.documentKey,
     });
+    expect(editorHost.state.viewport.center).toEqual({
+      x: -3.5,
+      y: 9.25,
+    });
+    expect(editorHost.state.viewport.gridSize).toBe(2);
+    expect(editorHost.state.viewport.gridCellPixelSize).toBe(
+      EDITOR_GRID_CELL_PIXEL_SIZE * 2,
+    );
   });
 
   it("creates a new document when a base has no latest document", async () => {

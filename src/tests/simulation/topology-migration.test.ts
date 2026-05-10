@@ -549,6 +549,13 @@ function createWorldDocument(options: {
     entityOrder: options.entityOrder,
     slotLinks: [],
     documentSettings: {
+      viewport: {
+        center: {
+          x: 0,
+          y: 0,
+        },
+        gridSize: 1,
+      },
       gridSize: 1,
       showDiagnostics: false,
     },

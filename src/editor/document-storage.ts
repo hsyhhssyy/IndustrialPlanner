@@ -250,7 +250,32 @@ function isWorldDocumentLike(
     isRecord(value.entities) &&
     Array.isArray(value.entityOrder) &&
     Array.isArray(value.slotLinks) &&
-    isRecord(value.documentSettings)
+    isWorldDocumentSettingsLike(value.documentSettings)
+  );
+}
+
+function isWorldDocumentSettingsLike(
+  value: unknown,
+): value is WorldDocument["documentSettings"] {
+  return (
+    isRecord(value)
+    && isWorldDocumentViewportSettingsLike(value.viewport)
+  );
+}
+
+function isWorldDocumentViewportSettingsLike(
+  value: unknown,
+): value is WorldDocument["documentSettings"]["viewport"] {
+  return (
+    isRecord(value)
+    && isRecord(value.center)
+    && typeof value.center.x === "number"
+    && Number.isFinite(value.center.x)
+    && typeof value.center.y === "number"
+    && Number.isFinite(value.center.y)
+    && typeof value.gridSize === "number"
+    && Number.isFinite(value.gridSize)
+    && value.gridSize > 0
   );
 }
 

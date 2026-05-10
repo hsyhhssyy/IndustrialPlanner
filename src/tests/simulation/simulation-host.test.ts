@@ -450,6 +450,13 @@ function createFurnaceProductionDocument(): WorldDocument {
     entityOrder: ["furnace"],
     slotLinks: [],
     documentSettings: {
+      viewport: {
+        center: {
+          x: 0,
+          y: 0,
+        },
+        gridSize: 1,
+      },
       gridSize: 1,
       showDiagnostics: false,
     },
@@ -499,6 +506,13 @@ function createBeltTransportDocument(): WorldDocument {
     entityOrder: ["source-storage", "belt", "sink-storage"],
     slotLinks: [],
     documentSettings: {
+      viewport: {
+        center: {
+          x: 0,
+          y: 0,
+        },
+        gridSize: 1,
+      },
       gridSize: 1,
       showDiagnostics: false,
     },
@@ -532,6 +546,13 @@ function createGrinderProductionDocument(): WorldDocument {
     entityOrder: ["grinder"],
     slotLinks: [],
     documentSettings: {
+      viewport: {
+        center: {
+          x: 0,
+          y: 0,
+        },
+        gridSize: 1,
+      },
       gridSize: 1,
       showDiagnostics: false,
     },

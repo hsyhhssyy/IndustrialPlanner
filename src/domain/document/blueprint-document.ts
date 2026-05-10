@@ -75,7 +75,15 @@ export function createWorldDocumentFromBlueprint(
 		entities: cloneBlueprintEntities(blueprint.entities),
 		entityOrder: [...blueprint.entityOrder],
 		slotLinks: blueprint.slotLinks.map(cloneSlotLinkDefinition),
-		documentSettings: {},
+		documentSettings: {
+			viewport: {
+				center: {
+					x: 0,
+					y: 0,
+				},
+				gridSize: 1,
+			},
+		},
 	};
 }
 

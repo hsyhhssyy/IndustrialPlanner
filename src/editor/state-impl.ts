@@ -21,7 +21,10 @@ import type {
 } from "@/domain/editor/editor-history";
 
 import type { DraftEntity } from "./draft-entity";
-import { EDITOR_GRID_CELL_PIXEL_SIZE } from "./viewport-constants";
+import {
+  DEFAULT_VIEWPORT_GRID_SIZE,
+  resolveViewportGridCellPixelSize,
+} from "./viewport-settings";
 
 export interface GridFloatPointReadWrite {
   x: number;
@@ -148,7 +151,6 @@ class EditorHistoryStateReadWriteImpl implements EditorHistoryStateReadWrite {
 
 const DEFAULT_VIEWPORT_WIDTH = 800;
 const DEFAULT_VIEWPORT_HEIGHT = 600;
-const DEFAULT_VIEWPORT_GRID_SIZE = 1;
 const DEFAULT_VIEWPORT_CLIENT_RECT: ClientPixelRect = {
   left: 0,
   top: 0,
@@ -166,7 +168,9 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
       ...DEFAULT_VIEWPORT_CLIENT_RECT,
     },
     gridSize: DEFAULT_VIEWPORT_GRID_SIZE,
-    gridCellPixelSize: EDITOR_GRID_CELL_PIXEL_SIZE,
+    gridCellPixelSize: resolveViewportGridCellPixelSize(
+      DEFAULT_VIEWPORT_GRID_SIZE,
+    ),
   };
   marqueeGridRect: GridRect | null = null;
   history: EditorHistoryStateReadWrite = new EditorHistoryStateReadWriteImpl();

@@ -116,6 +116,13 @@ export function createDummyWorldDocument(): WorldDocument {
     ],
     slotLinks: [],
     documentSettings: {
+      viewport: {
+        center: {
+          x: 0,
+          y: 0,
+        },
+        gridSize: 1,
+      },
       gridSize: 1,
       showDiagnostics: false,
     },
