@@ -26,6 +26,20 @@ describe("createRegistryContract", () => {
       expect(definition.outerRing.right).toBeGreaterThanOrEqual(0);
       expect(definition.outerRing.bottom).toBeGreaterThanOrEqual(0);
       expect(definition.outerRing.left).toBeGreaterThanOrEqual(0);
+
+      const expandedWidth =
+        definition.placeableArea.width
+        + definition.outerRing.left
+        + definition.outerRing.right;
+      const expandedHeight =
+        definition.placeableArea.height
+        + definition.outerRing.top
+        + definition.outerRing.bottom;
+      const expansionArea =
+        expandedWidth * expandedHeight
+        - definition.placeableArea.width * definition.placeableArea.height;
+
+      expect(expansionArea % 5).toBe(0);
     }
   });
 

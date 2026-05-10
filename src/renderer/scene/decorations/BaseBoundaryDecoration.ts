@@ -17,21 +17,10 @@ const BASE_BOUNDARY_STROKE_WIDTH_SCALE = 1.15;
 export function resolveBaseBoundaryGridRect(
   baseDefinition: BaseDefinition,
 ): GridRect | null {
-  const left = baseDefinition.outerRing.left;
-  const top = baseDefinition.outerRing.top;
-  const width =
-    left
-    + baseDefinition.placeableArea.width
-    + baseDefinition.outerRing.right;
-  const height =
-    top
-    + baseDefinition.placeableArea.height
-    + baseDefinition.outerRing.bottom;
+  const { width, height } = baseDefinition.placeableArea;
 
   if (
-    !Number.isFinite(left)
-    || !Number.isFinite(top)
-    || !Number.isFinite(width)
+    !Number.isFinite(width)
     || !Number.isFinite(height)
     || width <= 0
     || height <= 0
@@ -40,8 +29,8 @@ export function resolveBaseBoundaryGridRect(
   }
 
   return {
-    x: left === 0 ? 0 : -left,
-    y: top === 0 ? 0 : -top,
+    x: 0,
+    y: 0,
     width,
     height,
   };

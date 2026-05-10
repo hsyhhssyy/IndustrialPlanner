@@ -531,7 +531,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *
    * 缓存组：1 个 product（单一槽位 × 1 容量，自动合成）
    * 求解图节点：1 个
-   * 端口：1 output(北)
+   * 端口：1 output(南)
    *
    * 通过 warehouse-item-link 面板将槽位连接到仓库。
    * ignoreStock 可设为 true 实现无限取货。
@@ -550,7 +550,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "item_output",
         "item",
         "output",
-        [createPort("p_out_mid", 1, 0, "N")],
+        [createPort("p_out_mid", 1, 0, "S")],
       ),
     ],
     storageSlotGroups: [],

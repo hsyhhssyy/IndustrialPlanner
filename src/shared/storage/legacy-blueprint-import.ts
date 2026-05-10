@@ -36,6 +36,13 @@ const LEGACY_DEVICE_REMAPPERS: Readonly<Record<string, {
   //   definitionId: "item_port_unloader_1",
   //   rotationOffset: 180,
   // },
+  // AI-CORRECTION 2026-05-10: item_port_unloader_1 在当前 registry 中已改为
+  //   rotation=0 时端口朝南，因此旧版蓝图导入需要重新补回 +180 度，才能保留
+  //   旧资产的功能流向。
+  item_port_unloader_1: {
+    definitionId: "item_port_unloader_1",
+    rotationOffset: 180,
+  },
   belt_turn_cw_1x1: {
     definitionId: "belt_turn_ccw_1x1",
     rotationOffset: 0,

@@ -174,6 +174,44 @@ describe("legacy-blueprint-import", () => {
   //   });
   // });
 
+  // AI-CORRECTION 2026-05-10: item_port_unloader_1 的 registry 基准已改为
+  //   rotation=0 时端口朝南，因此旧版蓝图迁移重新需要 +180 度补偿。
+  it("remaps legacy warehouse unloader rotation to the current port basis", () => {
+    const converted = convertLegacyBlueprintJson({
+      schema: "industrial-planner-blueprint",
+      name: "仓库取货口朝向兼容测试",
+      createdAt: "2026-03-04T15:00:38.701Z",
+      baseId: "wuling_tianwangping_aid",
+      devices: [
+        {
+          typeId: "item_port_unloader_1",
+          rotation: 0,
+          origin: { x: 6, y: 4 },
+          config: {},
+        },
+        {
+          typeId: "item_port_unloader_1",
+          rotation: 90,
+          origin: { x: 9, y: 4 },
+          config: {},
+        },
+      ],
+    }, {
+      entityIdPrefix: "warehouse_unloader_remap",
+    });
+
+    expect(converted?.entities).toMatchObject({
+      warehouse_unloader_remap_0001: {
+        definitionId: "item_port_unloader_1",
+        rotation: 180,
+      },
+      warehouse_unloader_remap_0002: {
+        definitionId: "item_port_unloader_1",
+        rotation: 270,
+      },
+    });
+  });
+
   it("rejects legacy blueprints that contain unsupported dark-pipe links", () => {
     expect(convertLegacyBlueprintJson({
       schema: "industrial-planner-blueprint",

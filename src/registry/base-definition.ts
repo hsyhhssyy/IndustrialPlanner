@@ -10,7 +10,7 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
     },
     outerRing: {
       top: 4,
-      right: 4,
+      right: 6,
       bottom: 4,
       left: 4,
     },
@@ -25,7 +25,7 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
     },
     outerRing: {
       top: 4,
-      right: 4,
+      right: 6,
       bottom: 4,
       left: 4,
     },
@@ -40,7 +40,7 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
     },
     outerRing: {
       top: 4,
-      right: 2,
+      right: 6,
       bottom: 2,
       left: 4,
     },

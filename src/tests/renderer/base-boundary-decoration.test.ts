@@ -71,7 +71,7 @@ import {
 import type { DecorationSyncContext } from "@/renderer/scene/decorations/DecorationSyncContext"
 
 describe("BaseBoundaryDecoration", () => {
-  it("resolves the full base boundary from placeable area and outer ring", () => {
+  it("resolves the placeable area boundary without the outer ring", () => {
     const registry = createRegistryContract()
     const wuling = registry.baseDefinitions.find(
       (definition) => definition.id === "wuling_protocol_core",
@@ -88,16 +88,16 @@ describe("BaseBoundaryDecoration", () => {
     }
 
     expect(resolveBaseBoundaryGridRect(wuling)).toEqual({
-      x: -4,
-      y: -4,
-      width: 88,
-      height: 88,
+      x: 0,
+      y: 0,
+      width: 80,
+      height: 80,
     })
     expect(resolveBaseBoundaryGridRect(valleyShelter)).toEqual({
       x: 0,
-      y: -4,
+      y: 0,
       width: 40,
-      height: 44,
+      height: 40,
     })
   })
 
@@ -111,10 +111,10 @@ describe("BaseBoundaryDecoration", () => {
     expect(graphics?.clearCount).toBe(1)
     expect(graphics?.rectCommands).toHaveLength(1)
     expect(graphics?.rectCommands[0]).toEqual({
-      x: 60,
-      y: 10,
-      width: 880,
-      height: 880,
+      x: 100,
+      y: 50,
+      width: 800,
+      height: 800,
     })
     expect(graphics?.strokeCommands[0]).toEqual({
       width: resolveBaseBoundaryStrokeWidth(10),
