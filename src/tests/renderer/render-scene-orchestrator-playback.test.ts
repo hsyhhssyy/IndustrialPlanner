@@ -58,6 +58,10 @@ vi.mock("@/renderer/scene/decorations/GridLineDecoration", () => ({
   createGridLineDecoration: () => orchestratorTestState.createDecoration(),
 }))
 
+vi.mock("@/renderer/scene/decorations/BaseBoundaryDecoration", () => ({
+  createBaseBoundaryDecoration: () => orchestratorTestState.createDecoration(),
+}))
+
 vi.mock("@/renderer/scene/decorations/DiagnosticsDecoration", () => ({
   createDiagnosticsDecoration: () => orchestratorTestState.createDecoration(),
 }))
@@ -118,6 +122,7 @@ describe("createRenderSceneOrchestrator", () => {
         state: {} as never,
         registry: {
           entityDefinitions: [],
+          baseDefinitions: [],
         },
         app: {
           state: {

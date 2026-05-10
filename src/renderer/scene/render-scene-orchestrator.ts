@@ -29,6 +29,7 @@ import {
   type RenderViewportState,
 } from "./decorations/DecorationSyncContext"
 import { createGridLineDecoration } from "./decorations/GridLineDecoration"
+import { createBaseBoundaryDecoration } from "./decorations/BaseBoundaryDecoration"
 import { createDiagnosticsDecoration } from "./decorations/DiagnosticsDecoration"
 import { createLogisticsPlacementCanvasDecoration } from "./decorations/LogisticsPlacementCanvasDecoration"
 import { createMarqueeRectDecoration } from "./decorations/MarqueeRectDecoration"
@@ -55,6 +56,7 @@ export function createRenderSceneOrchestrator(
   const app = renderHost.app
   const layers = createRenderLayers()
   const gridDecoration = createGridLineDecoration()
+  const baseBoundaryDecoration = createBaseBoundaryDecoration()
   const previewRectDecoration = createPreviewRectDecoration()
   const marqueeDecoration = createMarqueeRectDecoration()
   const diagnosticsDecoration = createDiagnosticsDecoration()
@@ -90,6 +92,8 @@ export function createRenderSceneOrchestrator(
     }
 
     gridDecoration.sync(ctx)
+
+    baseBoundaryDecoration.sync(ctx)
 
     previewRectDecoration.sync(ctx)
 
@@ -128,6 +132,7 @@ export function createRenderSceneOrchestrator(
   )
   app.stage.addChildAt(grassBackgroundDecoration.container, 0)
   layers.background.addChild(gridDecoration.container)
+  layers.background.addChild(baseBoundaryDecoration.container)
   layers.background.addChild(previewRectDecoration.container)
   beltCargoOverlayLayer.addChild(beltCargoDecoration.container)
   marqueeOverlayLayer.addChild(marqueeCanvasDecoration.container)
@@ -146,6 +151,7 @@ export function createRenderSceneOrchestrator(
 
       entitySprites.clear()
       gridDecoration.destroy()
+      baseBoundaryDecoration.destroy()
       previewRectDecoration.destroy()
       marqueeDecoration.destroy()
       marqueeCanvasDecoration.destroy()
