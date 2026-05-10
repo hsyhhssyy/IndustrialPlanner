@@ -544,7 +544,8 @@ describe("Left dock panel switching", () => {
     expect(placementPanelBeforeSwitch?.hidden).toBe(true);
     expect(historyPanel?.getAttribute("data-panel-id")).toBe("history");
     expect(historyPanel?.textContent).toContain("清空历史");
-    expect(historyPanel?.textContent).toContain("文档命令流");
+    expect(historyPanel?.textContent).toContain("历史记录");
+    expect(historyPanel?.textContent).toContain("暂无历史记录");
 
     const blueprintButton = clickTab("蓝图模式");
     const blueprintPanel = queryVisibleLeftDockPanel(container);

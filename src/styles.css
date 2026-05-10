@@ -3323,6 +3323,88 @@ body.is-resizing-left-dock * {
   text-transform: none;
 }
 
+.history-panel {
+  min-width: 0;
+}
+
+.history-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.history-action-grid button {
+  min-width: 0;
+  min-height: 34px;
+  padding: 7px 8px;
+  text-align: center;
+}
+
+.history-record-list {
+  display: grid;
+  gap: 6px;
+}
+
+.history-record-button {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  padding: 8px;
+  text-align: left;
+}
+
+.history-record-button.is-current {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.history-record-main,
+.history-record-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.history-record-title,
+.history-record-detail {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-record-title {
+  color: var(--text-0);
+  font-weight: 600;
+}
+
+.history-record-status,
+.history-record-meta,
+.history-record-detail {
+  color: var(--text-2);
+  font-size: 0.78rem;
+}
+
+.history-record-status {
+  flex: 0 0 auto;
+}
+
+.history-empty-state {
+  display: grid;
+  place-items: center;
+  min-height: 76px;
+  color: var(--text-2);
+  text-align: center;
+}
+
+.history-empty-state h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .card-subheader {
   padding: 0;
   border: 0;
