@@ -863,6 +863,9 @@ describe("Left dock panel switching", () => {
     expect(breadcrumb?.style.width).toBe("auto");
     expect(createFolderToggle?.textContent?.trim()).toBe("");
     expect(rootFolderButton).not.toBeNull();
+    expect(rootFolderButton?.querySelector(".blueprint-entry-title")?.textContent).toBe("总线蓝图");
+    expect(rootFolderButton?.querySelector(".blueprint-entry-meta")).toBeNull();
+    expect(rootFolderButton?.querySelector(".pill")).toBeNull();
 
     await act(async () => {
       rootFolderButton?.click();
@@ -939,6 +942,7 @@ describe("Left dock panel switching", () => {
     const rootFolderButton = visiblePanel?.querySelector(
       `[data-blueprint-folder-id="${rootFolder?.folderId ?? ""}"]`,
     ) as HTMLButtonElement | null;
+    const rootBlueprintButton = visiblePanel?.querySelector("[data-blueprint-id]") as HTMLButtonElement | null;
     const breadcrumbLabel = visiblePanel?.querySelector(".blueprint-path-label") as HTMLSpanElement | null;
     const toolbar = visiblePanel?.querySelector(".blueprint-browser-toolbar") as HTMLDivElement | null;
 
@@ -949,6 +953,9 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.textContent).toContain("总线蓝图");
     expect(visiblePanel?.textContent).toContain("根目录蓝图");
     expect(rootFolderButton).not.toBeNull();
+    expect(rootBlueprintButton?.querySelector(".blueprint-entry-description")).toBeNull();
+    expect(rootBlueprintButton?.querySelector(".blueprint-entry-meta")).toBeNull();
+    expect(rootBlueprintButton?.querySelector(".pill")).toBeNull();
     expect(toolbar?.style.flexWrap).toBe("nowrap");
 
     await act(async () => {
@@ -966,6 +973,12 @@ describe("Left dock panel switching", () => {
     expect(backButton?.style.borderWidth).toBe("0px");
     expect(visiblePanel?.textContent).toContain("炼油分支");
     expect(visiblePanel?.textContent).toContain("仓储总线样例");
+
+    const describedBlueprintButton = visiblePanel?.querySelector("[data-blueprint-id]") as HTMLButtonElement | null;
+
+    expect(describedBlueprintButton?.querySelector(".blueprint-entry-description")?.textContent).toBe("四路汇流");
+    expect(describedBlueprintButton?.querySelector(".blueprint-entry-meta")).toBeNull();
+    expect(describedBlueprintButton?.querySelector(".pill")).toBeNull();
 
     const nestedFolderButton = visiblePanel?.querySelector(
       `[data-blueprint-folder-id="${nestedFolder?.folderId ?? ""}"]`,

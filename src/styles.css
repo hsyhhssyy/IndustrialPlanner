@@ -3145,11 +3145,12 @@ body.is-resizing-left-dock * {
 
 .blueprint-entry-button {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) auto;
+  grid-template-columns: 22px minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   width: 100%;
-  padding: 8px;
+  min-height: 36px;
+  padding: 6px 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-2);
@@ -3194,20 +3195,21 @@ body.is-resizing-left-dock * {
 }
 
 .blueprint-entry-description,
-.blueprint-entry-meta,
 .blueprint-empty-state p {
   font-size: 0.78rem;
   line-height: 1.45;
 }
 
 .blueprint-entry-description,
-.blueprint-entry-meta,
 .blueprint-empty-state p {
   color: var(--text-2);
 }
 
 .blueprint-entry-description {
+  overflow: hidden;
+  text-overflow: ellipsis;
   overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 .blueprint-panel.is-touch-layout .blueprint-folder-form {
@@ -3253,16 +3255,31 @@ body.is-resizing-left-dock * {
 }
 
 .blueprint-panel.is-touch-layout .blueprint-entry-button {
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 6px;
+  min-height: 34px;
+  padding: 5px 7px;
 }
 
 .blueprint-panel.is-touch-layout .blueprint-entry-row {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.blueprint-panel.is-touch-layout .blueprint-entry-button .pill {
-  grid-column: 2;
-  justify-self: start;
+.blueprint-panel.is-touch-layout .blueprint-entry-title {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.blueprint-panel.is-touch-layout .blueprint-entry-description {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
 }
 
 .cluster,

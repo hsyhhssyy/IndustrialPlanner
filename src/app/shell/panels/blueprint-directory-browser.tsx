@@ -14,7 +14,6 @@ interface BlueprintDirectoryBrowserProps {
   readonly translate: (key: string) => string;
   readonly libraryDescriptor: BlueprintLibraryDescriptor;
   readonly isTouchLayout: boolean;
-  readonly formatTimestamp: (value: string) => string;
   readonly currentFolder: BlueprintLibraryFolder | null;
   readonly folderStack: readonly BlueprintLibraryFolder[];
   readonly directoryListing: BlueprintLibraryDirectoryListing;
@@ -87,7 +86,6 @@ export function BlueprintDirectoryBrowser({
   translate,
   libraryDescriptor,
   isTouchLayout,
-  formatTimestamp,
   currentFolder,
   folderStack,
   directoryListing,
@@ -260,9 +258,7 @@ export function BlueprintDirectoryBrowser({
                 </span>
                 <span className="blueprint-entry-copy">
                   <span className="blueprint-entry-title">{folder.name}</span>
-                  <span className="blueprint-entry-meta">{formatTimestamp(folder.updatedAt)}</span>
                 </span>
-                <span className="pill">{translate("workbench.blueprint.folderBadge")}</span>
               </button>
             );
 
@@ -314,16 +310,10 @@ export function BlueprintDirectoryBrowser({
                 </span>
                 <span className="blueprint-entry-copy">
                   <span className="blueprint-entry-title">{record.name}</span>
-                  <span className="blueprint-entry-description">
-                    {record.description.length > 0
-                      ? record.description
-                      : translate("workbench.blueprint.noDescription")}
-                  </span>
-                  <span className="blueprint-entry-meta">
-                    {translate("workbench.blueprint.detailsEntities")}: {record.entityOrder.length} · {translate("workbench.blueprint.detailsUpdatedAt")}: {formatTimestamp(record.updatedAt)}
-                  </span>
+                  {record.description.length > 0 ? (
+                    <span className="blueprint-entry-description">{record.description}</span>
+                  ) : null}
                 </span>
-                <span className="pill">{translate("workbench.blueprint.blueprintBadge")}</span>
               </button>
             );
           })}

@@ -31,21 +31,6 @@ interface BlueprintOperationButtonDefinition {
   readonly Icon: typeof LucideUpload;
 }
 
-function formatBlueprintTimestamp(locale: string, value: string): string {
-  const timestamp = new Date(value);
-
-  if (Number.isNaN(timestamp.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(locale, {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(timestamp);
-}
-
 function createEmptyBlueprintFolderStacks(): Record<BlueprintLibraryKind, BlueprintLibraryFolder[]> {
   return {
     system: [],
@@ -142,7 +127,6 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
   const currentFolderId = currentFolder?.folderId ?? null;
   const currentFolderPathSignature = folderStack.map((folder) => folder.folderId).join("/");
   const activeLibrary = getBlueprintLibraryDescriptor(activeTab);
-  const formatTimestamp = (value: string) => formatBlueprintTimestamp(appHost.state.settings.locale, value);
 
   useEffect(() => {
     if (!isPanelVisible) {
@@ -237,6 +221,7 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
       cancelled = true;
     };
   }, [
+    activeTab,
     activeLibrary,
     currentFolderId,
     currentFolderPathSignature,
@@ -386,7 +371,6 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
           directoryListing={directoryListing}
           errorMessage={errorMessage}
           folderStack={folderStack}
-          formatTimestamp={formatTimestamp}
           isLoading={isLoading}
           isTouchLayout={isTouchLayout}
           libraryDescriptor={activeLibrary}
