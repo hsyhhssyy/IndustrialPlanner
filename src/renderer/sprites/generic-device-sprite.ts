@@ -6,6 +6,7 @@ import {
   Texture,
   TilingSprite,
   Assets,
+  type TextStyleOptions,
 } from "pixi.js"
 
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
@@ -982,7 +983,7 @@ function createDeviceNameTextStyle(options: {
   useBlueprintStyle: boolean;
   fontSize: number;
   wordWrapWidth: number;
-}) {
+}): TextStyleOptions {
   if (options.useBlueprintStyle) {
     return {
       fontFamily: "sans-serif",

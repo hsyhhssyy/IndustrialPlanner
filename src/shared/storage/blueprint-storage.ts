@@ -4,21 +4,10 @@ import { createUuid } from "@/domain/shared/uuid";
 
 import {
   applyIndexedDbStoreMutations,
-  deleteFromIndexedDb,
   listFromIndexedDb,
   readFromIndexedDb,
-  trySaveToIndexedDb,
   type IndexedDbStoreLocation,
 } from "./browser-storage";
-// Reason: blueprint-storage writes entries through writeBlueprintEntry and no longer calls saveToIndexedDb directly.
-// Trigger: ESLint reported an unused import.
-// Evidence: npm run lint flagged saveToIndexedDb as unused.
-// Replacement: writeBlueprintEntry and trySaveToIndexedDb in this module.
-// Risk: Low.
-// Human Review: Required.
-//
-// Original code:
-// import { saveToIndexedDb } from "./browser-storage";
 
 const BLUEPRINT_DATABASE_NAME = "industrial-planner";
 const BLUEPRINT_STORE_NAME = "blueprints";
@@ -238,7 +227,13 @@ export async function deleteBlueprintFolder(
   const entries = await listBlueprintStorageEntries({ includeDeleted: true });
   const folderTreeIds = collectBlueprintFolderTreeIds(folderId, entries);
   const deletedAt = new Date().toISOString();
-  const pendingEntries = entries.flatMap((entry) => {
+  const pendingEntries: Array<{
+    key: string;
+    entry: BlueprintStorageEntry;
+  }> = entries.flatMap((entry): Array<{
+    key: string;
+    entry: BlueprintStorageEntry;
+  }> => {
     if (entry.kind === "folder") {
       if (!folderTreeIds.has(entry.folderId) || entry.deletedAt !== null) {
         return [];

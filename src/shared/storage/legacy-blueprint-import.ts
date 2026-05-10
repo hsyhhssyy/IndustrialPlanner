@@ -75,7 +75,7 @@ export function convertLegacyBlueprintJson(
 ): BlueprintDocument | null {
   const legacyBlueprint = normalizeLegacyBlueprintJson(value);
 
-  if (legacyBlueprint === null || legacyBlueprint.links.length > 0) {
+  if (legacyBlueprint === null || (legacyBlueprint.links?.length ?? 0) > 0) {
     return null;
   }
 
@@ -150,7 +150,11 @@ export function normalizeLegacyBlueprintJson(value: unknown): LegacyBlueprintJso
         .flatMap((link) => (link === null ? [] : [link]))
       : null;
 
-  if (links === null || (linksValue !== undefined && links.length !== linksValue.length)) {
+  if (links === null) {
+    return null;
+  }
+
+  if (Array.isArray(linksValue) && links.length !== linksValue.length) {
     return null;
   }
 
@@ -306,8 +310,8 @@ function createDeterministicUuid(input: string): string {
     bytes[offset + 3] = hash & 0xff;
   });
 
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;
+  bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
 
   return formatUuidBytes(bytes);
 }

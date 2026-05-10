@@ -17,6 +17,11 @@ import type {
 
 export type EditorDocumentWriteMode = "record" | "silent" | "replay";
 
+const DEFAULT_DOCUMENT_ACTION: EditorHistoryActionDescriptor = {
+  type: "document.unknown",
+  label: "Document update",
+};
+
 export interface EditorDocumentWriter {
   commit(options: {
     action: EditorHistoryActionDescriptor;
@@ -77,10 +82,7 @@ export function createEditorDocumentWriter(options: {
     setSnapshot: (
       nextDocument,
       {
-        action = {
-          type: "document.unknown",
-          label: "Document update",
-        },
+        action = DEFAULT_DOCUMENT_ACTION,
         mode = "record",
       } = {},
     ) => {

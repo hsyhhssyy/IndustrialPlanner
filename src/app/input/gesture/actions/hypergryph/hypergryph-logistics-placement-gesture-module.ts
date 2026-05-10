@@ -9,6 +9,7 @@ import type {
 } from "@/domain/shared/logistics";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+import { runInAction } from "mobx";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
@@ -799,10 +800,14 @@ function handleLogisticsDeviceShortcut(options: {
 
   try {
     options.editor.actions.createSinglePlacementDraft(deviceId, anchor);
-    options.appHost.internalState.runtime.singlePlacementDeviceId = deviceId;
+    runInAction(() => {
+      options.appHost.internalState.runtime.singlePlacementDeviceId = deviceId;
+    });
   } catch {
-    options.appHost.internalState.runtime.placementAnchor = null;
-    options.appHost.internalState.runtime.singlePlacementDeviceId = null;
+    runInAction(() => {
+      options.appHost.internalState.runtime.placementAnchor = null;
+      options.appHost.internalState.runtime.singlePlacementDeviceId = null;
+    });
     options.appHost.internalActions.setActiveTool("select");
     return { status: "ignored" };
   }

@@ -65,6 +65,8 @@ export class EditorHistoryRuntime {
     action: EditorHistoryActionDescriptor;
     delta: EditorHistoryDocumentDelta;
   }): EditorHistoryRecord {
+    this.loadSerial += 1;
+
     const nextSequence = this.state.cursorSequence + 1;
     const recordsBeforeCursor = this.state.records.filter((record) =>
       record.sequence <= this.state.cursorSequence,
@@ -98,6 +100,8 @@ export class EditorHistoryRuntime {
   }
 
   public setCursorSequence(documentKey: string, cursorSequence: number): void {
+    this.loadSerial += 1;
+
     if (this.state.documentKey !== documentKey) {
       return;
     }
@@ -115,6 +119,8 @@ export class EditorHistoryRuntime {
   }
 
   public clear(documentKey: string): void {
+    this.loadSerial += 1;
+
     runInAction(() => {
       this.state.documentKey = documentKey;
       this.state.records.replace([]);

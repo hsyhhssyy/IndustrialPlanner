@@ -9,6 +9,7 @@ import type { EditorContract } from "@/domain/editor/editor-contract";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRect } from "@/domain/shared/grid";
+import { runInAction } from "mobx";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
@@ -398,7 +399,9 @@ function finalizePlacementEnter(options: {
       return { status: "ignored" };
     }
 
-    options.appHost.internalState.runtime.singlePlacementDeviceId = options.deviceId;
+    runInAction(() => {
+      options.appHost.internalState.runtime.singlePlacementDeviceId = options.deviceId;
+    });
 
     if (options.shouldSetActiveTool) {
       options.appHost.internalActions.setActiveTool("single-placement");
@@ -559,9 +562,11 @@ export function cleanupPlacementDraft(appHost: AppHost): void {
 }
 
 function clearPlacementUi(appHost: AppHost): void {
-  appHost.internalState.runtime.placementAnchor = null;
-  appHost.internalState.runtime.singlePlacementDeviceId = null;
-  appHost.internalState.runtime.singlePlacementPointerMode = null;
+  runInAction(() => {
+    appHost.internalState.runtime.placementAnchor = null;
+    appHost.internalState.runtime.singlePlacementDeviceId = null;
+    appHost.internalState.runtime.singlePlacementPointerMode = null;
+  });
   appHost.internalActions.hideCanvasFloatingToolbar();
 }
 

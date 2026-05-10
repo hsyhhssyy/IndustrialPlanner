@@ -332,7 +332,7 @@ describe("createSimulationHost", () => {
     host.dispose()
   })
 
-  it("exposes the synthesized synthetic slot for an external-recipe production shell", async () => {
+  it("exposes resolved buffer slots for an external-recipe production shell", async () => {
     vi.stubGlobal("Worker", undefined)
 
     const { workspace } = createWorkspace(createFurnaceProductionDocument())
@@ -352,9 +352,15 @@ describe("createSimulationHost", () => {
       desiredSeconds: null,
       slotItems: expect.arrayContaining([
         expect.objectContaining({
-          storageGroupId: "synthetic",
-          slotId: "device:furnace/node:undefined/slot:undefined",
-          itemType: "item_iron_ore",
+          storageGroupId: "item_input_buffer",
+          slotId: "input_item_slot_1",
+          itemType: null,
+          count: 0,
+        }),
+        expect.objectContaining({
+          storageGroupId: "item_output_buffer",
+          slotId: "output_item_slot_1",
+          itemType: "item_iron_nugget",
           count: 1,
         }),
       ]),

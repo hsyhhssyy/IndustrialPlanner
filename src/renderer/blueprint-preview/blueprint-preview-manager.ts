@@ -4,7 +4,6 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract"
 import type {
   BlueprintPreviewHandle,
   BlueprintPreviewViewport,
-  MountBlueprintPreviewOptions,
   RenderAction,
   RenderQuery,
 } from "@/domain/renderer"

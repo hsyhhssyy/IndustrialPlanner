@@ -80,7 +80,7 @@ export const HistoryPanel = observer(function HistoryPanel({ appHost }: { appHos
             ))}
             {records.length > 0 ? (
               <button
-                className={history.cursorSequence === 0
+                className={cursorSequence === 0
                   ? "history-record-button is-current"
                   : "history-record-button"}
                 data-history-record-sequence="0"
