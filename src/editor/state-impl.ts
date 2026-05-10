@@ -15,6 +15,7 @@ import type { GridRect } from "@/domain/shared/grid";
 import type { LogisticsDraftReadonlyState } from "@/domain/shared/logistics";
 import type { SlotLinkDefinition } from "@/domain/document/world-document";
 import type {
+  EditorHistoryActionDescriptor,
   EditorHistoryRecord,
   EditorHistoryState,
 } from "@/domain/editor/editor-history";
@@ -49,6 +50,7 @@ export interface EditorInternalTransientStateReadWrite {
   hasMeasuredViewportClientRect: boolean;
   logisticsDraft: LogisticsDraftReadonlyState | null;
   placementDraftSlotLinks: SlotLinkDefinition[] | null;
+  placementHistoryAction: EditorHistoryActionDescriptor | null;
 }
 
 class EditorInternalPersistStateReadWriteImpl
@@ -67,6 +69,7 @@ class EditorInternalTransientStateReadWriteImpl
   hasMeasuredViewportClientRect = false;
   logisticsDraft: LogisticsDraftReadonlyState | null = null;
   placementDraftSlotLinks: SlotLinkDefinition[] | null = null;
+  placementHistoryAction: EditorHistoryActionDescriptor | null = null;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

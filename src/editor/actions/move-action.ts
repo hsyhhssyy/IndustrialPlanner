@@ -16,6 +16,7 @@ type EditorMoveActions = Pick<
 
 export function createEditorMoveActions({
   document,
+  documentWriter,
   state,
 }: EditorActionsContext): EditorMoveActions {
   const resolveCollection = (collectionType: EntityCollectionType) =>
@@ -104,9 +105,20 @@ export function createEditorMoveActions({
       }
 
       if (didUpdateDocument) {
-        document.setSnapshot({
-          ...currentDocument,
-          entities: nextEntities,
+        documentWriter.commit({
+          action: {
+            type: "entity.move",
+            label: "移动设备",
+            entityIds: previewDrafts.map((draft) => draft.originalEntityId),
+            definitionIds: resolveUniqueStrings(
+              previewDrafts.map((draft) => draft.definitionId),
+            ),
+            count: previewDrafts.length,
+          },
+          update: (documentSnapshot) => ({
+            ...documentSnapshot,
+            entities: nextEntities,
+          }),
         });
       }
 
@@ -122,6 +134,10 @@ export function createEditorMoveActions({
       clearMoveOperationState(state);
     },
   };
+}
+
+function resolveUniqueStrings(values: readonly string[]): string[] {
+  return Array.from(new Set(values));
 }
 
 function clearMoveOperationState(state: EditorActionsContext["state"]): void {

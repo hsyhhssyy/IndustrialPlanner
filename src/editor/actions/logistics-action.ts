@@ -299,10 +299,21 @@ export function createEditorLogisticsActions(
         nextEntityOrder.push(previewDraft.id);
       }
 
-      logisticsContext.document.setSnapshot({
-        ...currentDocument,
-        entities: nextEntities,
-        entityOrder: nextEntityOrder,
+      logisticsContext.documentWriter.commit({
+        action: {
+          type: "logistics.place",
+          label: "铺设物流",
+          entityIds: previewDrafts.map((draft) => draft.id),
+          definitionIds: resolveUniqueStrings(
+            previewDrafts.map((draft) => draft.definitionId),
+          ),
+          count: previewDrafts.length,
+        },
+        update: (documentSnapshot) => ({
+          ...documentSnapshot,
+          entities: nextEntities,
+          entityOrder: nextEntityOrder,
+        }),
       });
 
       clearLogisticsDraftState(logisticsContext);
@@ -315,6 +326,10 @@ export function createEditorLogisticsActions(
       clearLogisticsDraftState(logisticsContext);
     },
   };
+}
+
+function resolveUniqueStrings(values: readonly string[]): string[] {
+  return Array.from(new Set(values));
 }
 
 function resolveCreateSourceEndpoint(

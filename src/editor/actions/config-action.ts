@@ -6,6 +6,7 @@ type EditorConfigActions = Pick<EditorAction, "patchEntityConfig">;
 
 export function createEditorConfigActions({
   document,
+  documentWriter,
 }: EditorActionsContext): EditorConfigActions {
   return {
     patchEntityConfig: (entityId, patch) => {
@@ -38,15 +39,25 @@ export function createEditorConfigActions({
         return;
       }
 
-      document.setSnapshot({
-        ...currentDocument,
-        entities: {
-          ...currentDocument.entities,
-          [entityId]: {
-            ...entity,
-            config: nextConfig,
-          },
+      documentWriter.commit({
+        action: {
+          type: "entity.config.patch",
+          label: "修改设备配置",
+          detail: Object.keys(patch).join(", "),
+          entityIds: [entityId],
+          definitionIds: [entity.definitionId],
+          count: Object.keys(patch).length,
         },
+        update: (documentSnapshot) => ({
+          ...documentSnapshot,
+          entities: {
+            ...documentSnapshot.entities,
+            [entityId]: {
+              ...entity,
+              config: nextConfig,
+            },
+          },
+        }),
       });
     },
   };

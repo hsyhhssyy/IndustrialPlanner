@@ -18,6 +18,7 @@ type EditorPlacementActions = Pick<
 
 export function createEditorPlacementActions({
   document,
+  documentWriter,
   state,
   workspace,
 }: EditorActionsContext): EditorPlacementActions {
@@ -72,6 +73,14 @@ export function createEditorPlacementActions({
       });
       preview.replace([draft.id]);
       state.internalTransientState.placementDraftSlotLinks = null;
+      state.internalTransientState.placementHistoryAction = {
+        type: "entity.place",
+        label: "放置设备",
+        detail: deviceDefinitionId,
+        entityIds: [draft.id],
+        definitionIds: [deviceDefinitionId],
+        count: 1,
+      };
     },
 
     createBlueprintPlacementDraft: (
@@ -143,6 +152,18 @@ export function createEditorPlacementActions({
           },
         } satisfies SlotLinkDefinition];
       });
+      state.internalTransientState.placementHistoryAction = {
+        type: "blueprint.place",
+        label: "放置蓝图",
+        detail: blueprint.name,
+        entityIds: nextPreviewDrafts.map((draft) => draft.id),
+        definitionIds: resolveUniqueStrings(
+          nextPreviewDrafts.map((draft) => draft.definitionId),
+        ),
+        blueprintId: blueprint.blueprintId,
+        blueprintName: blueprint.name,
+        count: nextPreviewDrafts.length,
+      };
     },
 
     applyPlacementDraft: () => {
@@ -173,11 +194,15 @@ export function createEditorPlacementActions({
         );
       }
 
-      document.setSnapshot({
-        ...currentDocument,
-        entities: nextEntities,
-        entityOrder: nextEntityOrder,
-        slotLinks: nextSlotLinks,
+      documentWriter.commit({
+        action: state.internalTransientState.placementHistoryAction
+          ?? createPlacementHistoryAction(previewDrafts),
+        update: (documentSnapshot) => ({
+          ...documentSnapshot,
+          entities: nextEntities,
+          entityOrder: nextEntityOrder,
+          slotLinks: nextSlotLinks,
+        }),
       });
 
       clearPlacementState(state);
@@ -216,6 +241,7 @@ function clearPlacementState(state: EditorActionsContext["state"]): void {
   state.drafts = state.drafts.filter((entity) => !previewDraftIds.includes(entity.id));
   preview.replace([]);
   state.internalTransientState.placementDraftSlotLinks = null;
+  state.internalTransientState.placementHistoryAction = null;
 }
 
 function replacePreviewDrafts(options: {
@@ -278,6 +304,24 @@ function cloneWorldEntity(entity: WorldEntity): WorldEntity {
     },
     tags: [...entity.tags],
   };
+}
+
+function createPlacementHistoryAction(
+  previewDrafts: readonly DraftEntity[],
+) {
+  return {
+    type: "entity.place" as const,
+    label: "放置设备",
+    entityIds: previewDrafts.map((draft) => draft.id),
+    definitionIds: resolveUniqueStrings(
+      previewDrafts.map((draft) => draft.definitionId),
+    ),
+    count: previewDrafts.length,
+  };
+}
+
+function resolveUniqueStrings(values: readonly string[]): string[] {
+  return Array.from(new Set(values));
 }
 
 function cloneSlotLinkDefinition(slotLink: SlotLinkDefinition): SlotLinkDefinition {

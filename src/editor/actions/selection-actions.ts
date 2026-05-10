@@ -31,6 +31,7 @@ type EditorCollectionActions = Pick<
 
 export function createEditorSelectionActions({
   document,
+  documentWriter,
   state,
   workspace,
 }: EditorActionsContext): EditorCollectionActions {
@@ -129,9 +130,27 @@ export function createEditorSelectionActions({
       }
 
       if (didUpdateDocument) {
-        document.setSnapshot({
-          ...currentDocument,
-          entities: nextEntities,
+        const deletedEntities = Array.from(deletedEntityIds)
+          .flatMap((entityId) => {
+            const entity = currentDocument.entities[entityId];
+
+            return entity === undefined ? [] : [entity];
+          });
+
+        documentWriter.commit({
+          action: {
+            type: "entity.delete",
+            label: "删除设备",
+            entityIds: Array.from(deletedEntityIds),
+            definitionIds: resolveUniqueStrings(
+              deletedEntities.map((entity) => entity.definitionId),
+            ),
+            count: deletedEntities.length,
+          },
+          update: (documentSnapshot) => ({
+            ...documentSnapshot,
+            entities: nextEntities,
+          }),
         });
       }
 
@@ -263,9 +282,24 @@ export function createEditorSelectionActions({
       }
 
       if (didUpdateDocument) {
-        document.setSnapshot({
-          ...currentDocument,
-          entities: nextEntities,
+        const movedEntities = collection
+          .map((entityId) => currentDocument.entities[entityId])
+          .filter((entity): entity is WorldEntity => entity !== undefined);
+
+        documentWriter.commit({
+          action: {
+            type: "entity.move",
+            label: "移动设备",
+            entityIds: movedEntities.map((entity) => entity.id),
+            definitionIds: resolveUniqueStrings(
+              movedEntities.map((entity) => entity.definitionId),
+            ),
+            count: movedEntities.length,
+          },
+          update: (documentSnapshot) => ({
+            ...documentSnapshot,
+            entities: nextEntities,
+          }),
         });
       }
 
@@ -330,9 +364,24 @@ export function createEditorSelectionActions({
       }
 
       if (didUpdateDocument) {
-        document.setSnapshot({
-          ...currentDocument,
-          entities: nextEntities,
+        const rotatedEntities = collection
+          .map((entityId) => currentDocument.entities[entityId])
+          .filter((entity): entity is WorldEntity => entity !== undefined);
+
+        documentWriter.commit({
+          action: {
+            type: "entity.rotate",
+            label: "旋转设备",
+            entityIds: rotatedEntities.map((entity) => entity.id),
+            definitionIds: resolveUniqueStrings(
+              rotatedEntities.map((entity) => entity.definitionId),
+            ),
+            count: rotatedEntities.length,
+          },
+          update: (documentSnapshot) => ({
+            ...documentSnapshot,
+            entities: nextEntities,
+          }),
         });
       }
 
@@ -493,6 +542,10 @@ function resolveCenteredGridPointWithoutClamp(
     x: Math.round(centerCells.x - footprint.width / 2),
     y: Math.round(centerCells.y - footprint.height / 2),
   };
+}
+
+function resolveUniqueStrings(values: readonly string[]): string[] {
+  return Array.from(new Set(values));
 }
 
 function isValidGridRect(gridRect: GridRect): boolean {
