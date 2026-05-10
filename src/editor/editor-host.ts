@@ -8,6 +8,11 @@ import {
 } from "@/shared/snapshot/snapshot-store";
 import { createEditorActions } from "./actions";
 import { hookDocumentStorage } from "./document-storage";
+import {
+  createEditorDocumentWriter,
+  EditorDocumentWriter,
+  EditorHistoryRuntime,
+} from "./history";
 import { createEditorQueries } from "./queries";
 import { hookLocalstorage } from "./storage-hook";
 import { createEditorStateReadWrite, EditorStateReadWrite } from "./state-impl";
@@ -15,6 +20,8 @@ import { createEditorStateReadWrite, EditorStateReadWrite } from "./state-impl";
 // state 和 document 都是外部使用的，editor组件内部使用internal来获取可写的state和document
 export interface EditorHost extends EditorContract {
   internalDocument: SnapshotStoreReadWrite<WorldDocument>;
+  internalDocumentWriter: EditorDocumentWriter;
+  internalHistory: EditorHistoryRuntime;
   workspace: WorkspaceContract;
   internalState: EditorStateReadWrite;
   dispose: () => void;
@@ -26,6 +33,11 @@ export function createEditorHost(
   const disposers: Array<() => void> = [];
   const internalDocument = createSnapshotStore(createWorldDocument());
   const editorState = createEditorStateReadWrite();
+  const internalHistory = new EditorHistoryRuntime(editorState.history);
+  const internalDocumentWriter = createEditorDocumentWriter({
+    document: internalDocument,
+    history: internalHistory,
+  });
   const actions: EditorContract["actions"] = createEditorActions({
     document: internalDocument,
     state: editorState,
@@ -42,6 +54,7 @@ export function createEditorHost(
     get marqueeGridRect() {
       return editorState.marqueeGridRect;
     },
+    history: editorState.history,
     collections: editorState.collections,
   };
 
@@ -49,6 +62,8 @@ export function createEditorHost(
     document: internalDocument,
     state: publicState,
     internalDocument,
+    internalDocumentWriter,
+    internalHistory,
     workspace,
     dispose: () => {
       while (disposers.length > 0) {
@@ -61,8 +76,26 @@ export function createEditorHost(
   };
 
   workspace.editor = host;
+  disposers.push(hookDocumentHistory(host));
   disposers.push(hookLocalstorage(host));
   disposers.push(hookDocumentStorage(host));
 
   return host;
+}
+
+function hookDocumentHistory(editorHost: EditorHost): () => void {
+  let documentKey: string | null = null;
+
+  const loadHistoryForDocument = (document: WorldDocument): void => {
+    if (documentKey === document.documentKey) {
+      return;
+    }
+
+    documentKey = document.documentKey;
+    editorHost.internalHistory.loadDocumentHistory(document.documentKey);
+  };
+
+  loadHistoryForDocument(editorHost.internalDocument.getSnapshot());
+
+  return editorHost.internalDocument.subscribe(loadHistoryForDocument);
 }

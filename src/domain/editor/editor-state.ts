@@ -1,5 +1,8 @@
 import type { GridRect } from "../shared/grid";
 import type {
+  EditorHistoryState,
+} from "./editor-history";
+import type {
 	EditorViewportState,
 	EntityCollections,
 } from "./types/editor-types";
@@ -11,6 +14,7 @@ export interface EditorState {
 
   readonly viewport: EditorViewportState;
   readonly marqueeGridRect: GridRect | null;
+  readonly history: EditorHistoryState;
 
   readonly collections: EntityCollections;
 }

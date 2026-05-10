@@ -14,6 +14,10 @@ import type { ClientPixelRect } from "@/domain/shared/client-pixel";
 import type { GridRect } from "@/domain/shared/grid";
 import type { LogisticsDraftReadonlyState } from "@/domain/shared/logistics";
 import type { SlotLinkDefinition } from "@/domain/document/world-document";
+import type {
+  EditorHistoryRecord,
+  EditorHistoryState,
+} from "@/domain/editor/editor-history";
 
 import type { DraftEntity } from "./draft-entity";
 import { EDITOR_GRID_CELL_PIXEL_SIZE } from "./viewport-constants";
@@ -92,12 +96,49 @@ function createEntityCollection(
 export interface EditorStateReadWrite extends EditorState {
   viewport: EditorViewportStateReadWrite;
   marqueeGridRect: GridRect | null;
+  history: EditorHistoryStateReadWrite;
   drafts: DraftEntity[];
   collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite>;
 
   // 私有State, 不属于Contract, 但是自己用
   internalPersistState: EditorInternalPersistStateReadWrite;
   internalTransientState: EditorInternalTransientStateReadWrite;
+}
+
+export interface EditorHistoryStateReadWrite extends EditorHistoryState {
+  documentKey: string | null;
+  records: IObservableArray<EditorHistoryRecord>;
+  cursorSequence: number;
+  headSequence: number;
+  lastRecordId: string | null;
+  isReady: boolean;
+}
+
+class EditorHistoryStateReadWriteImpl implements EditorHistoryStateReadWrite {
+  documentKey: string | null = null;
+  records = observable.array<EditorHistoryRecord>([], {
+    deep: false,
+  });
+  cursorSequence = 0;
+  headSequence = 0;
+  lastRecordId: string | null = null;
+  isReady = false;
+
+  public constructor() {
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
+
+  public get undoDepth(): number {
+    return this.records.filter((record) =>
+      record.sequence <= this.cursorSequence,
+    ).length;
+  }
+
+  public get redoDepth(): number {
+    return this.records.filter((record) =>
+      record.sequence > this.cursorSequence,
+    ).length;
+  }
 }
 
 const DEFAULT_VIEWPORT_WIDTH = 800;
@@ -123,6 +164,7 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
     gridCellPixelSize: EDITOR_GRID_CELL_PIXEL_SIZE,
   };
   marqueeGridRect: GridRect | null = null;
+  history: EditorHistoryStateReadWrite = new EditorHistoryStateReadWriteImpl();
 
   drafts: DraftEntity[] = [];
   collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite> = {
