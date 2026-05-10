@@ -1,4 +1,5 @@
 import { BASE_DEFINITIONS } from "@/registry/base-definition";
+import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import { createRegistryContract } from "@/registry";
 import { describe, expect, it } from "vitest";
 
@@ -51,5 +52,41 @@ describe("createRegistryContract", () => {
     expect(registry.queries.resolveDedicatedLogisticsKind("belt_straight_1x1")).toBe("belt");
     expect(registry.queries.resolveDedicatedLogisticsKind("pipe_turn_ccw_1x1")).toBe("pipe");
     expect(registry.queries.resolveDedicatedLogisticsKind("item_log_splitter")).toBeNull();
+  });
+
+  it("mounts slot-config inspectors on every recipe machine input storage group", () => {
+    const registry = createRegistryContract();
+    const recipeMachineIds = new Set(
+      registry.recipeDefinitions.map((recipe) => recipe.machineId),
+    );
+
+    for (const machineId of recipeMachineIds) {
+      const definition = registry.entityDefinitions.find(
+        (candidate) => candidate.id === machineId,
+      );
+
+      expect(definition, `${machineId} must have an entity definition`).toBeDefined();
+
+      if (definition === undefined) {
+        continue;
+      }
+
+      const inputStorageSlotGroupIndexes = definition.storageSlotGroups
+        .flatMap((storageSlotGroup, storageSlotGroupIndex) =>
+          storageSlotGroup.role === "input" ? [storageSlotGroupIndex] : [],
+        );
+
+      expect(inputStorageSlotGroupIndexes.length, `${machineId} must have input storage slot groups`).toBeGreaterThan(0);
+
+      for (const storageSlotGroupIndex of inputStorageSlotGroupIndexes) {
+        const targetPath = `storageSlotGroups[${storageSlotGroupIndex}].slots`;
+        const matchedInspectors = definition.inspectors.filter((inspector) =>
+          inspector.type === INSPECTOR_TYPE.slotConfig
+          && inspector.targetPath === targetPath
+        );
+
+        expect(matchedInspectors, `${machineId} must expose ${targetPath}`).toHaveLength(1);
+      }
+    }
   });
 });

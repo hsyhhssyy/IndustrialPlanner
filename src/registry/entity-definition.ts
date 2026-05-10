@@ -33,6 +33,8 @@ import {
   type EntityInspectorDeclaration,
 } from "@/domain/registry/types/entity-inspector";
 
+import { RECIPE_DEFINITIONS } from "./recipe-definition";
+
 // ---------------------------------------------------------------------------
 // 类型别名 — 从 EntityDefinition 中提取子类型
 // ---------------------------------------------------------------------------
@@ -69,6 +71,10 @@ type EmptyEntityDefinitionInput = Pick<
   "id" | "nameKey" | "spriteId" | "footprint" | "uiGroup" | "tags"
 > & Partial<Pick<EntityDefinitionInput, "requiresPower" | "powerDemand">>;
 
+const RECIPE_MACHINE_IDS = new Set(
+  RECIPE_DEFINITIONS.map((recipe) => recipe.machineId),
+);
+
 // =========================================================================
 // 工厂函数
 // =========================================================================
@@ -80,10 +86,50 @@ type EmptyEntityDefinitionInput = Pick<
  * 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks，当前仅在此规范化 inspectors。
  */
 function createEntityDefinition(definition: EntityDefinitionInput): EntityDefinition {
+  const declaredInspectors = [...(definition.inspectors ?? [])];
+  const recipeMachineInspectors = createRecipeMachineIngredientSlotInspectors(definition);
+
   return {
     ...definition,
-    inspectors: [...(definition.inspectors ?? [])],
+    inspectors: appendMissingInspectors(declaredInspectors, recipeMachineInspectors),
   };
+}
+
+function createRecipeMachineIngredientSlotInspectors(
+  definition: EntityDefinitionInput,
+): EntityInspectorDeclaration[] {
+  if (!RECIPE_MACHINE_IDS.has(definition.id)) {
+    return [];
+  }
+
+  return definition.storageSlotGroups.flatMap((storageSlotGroup, storageSlotGroupIndex) =>
+    storageSlotGroup.role === "input"
+      ? [{
+          type: INSPECTOR_TYPE.slotConfig,
+          targetPath: `storageSlotGroups[${storageSlotGroupIndex}].slots`,
+        }]
+      : [],
+  );
+}
+
+function appendMissingInspectors(
+  declaredInspectors: EntityInspectorDeclaration[],
+  generatedInspectors: readonly EntityInspectorDeclaration[],
+): EntityInspectorDeclaration[] {
+  const inspectors = [...declaredInspectors];
+
+  for (const generatedInspector of generatedInspectors) {
+    if (inspectors.some((inspector) =>
+      inspector.type === generatedInspector.type
+      && inspector.targetPath === generatedInspector.targetPath
+    )) {
+      continue;
+    }
+
+    inspectors.push(generatedInspector);
+  }
+
+  return inspectors;
 }
 
 /**
