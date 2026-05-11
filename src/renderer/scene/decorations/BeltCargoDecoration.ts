@@ -1,9 +1,7 @@
 import type {
   GridFloatPoint,
   GridPoint,
-  GridRotation,
 } from "@/domain/shared/grid"
-import type { WorldEntity } from "@/domain/document/world-document"
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types"
 import {
   Container,
@@ -14,40 +12,76 @@ import {
 
 import type { DecorationLayer } from "./DecorationLayer"
 import type { DecorationSyncContext } from "./DecorationSyncContext"
+import {
+  BELT_INSERTION_DEPTH_CELLS,
+  createEntityDefinitionMap,
+  resolveBeltInsertionEntries,
+  resolveBeltPathSample,
+  resolveViewportPoint,
+} from "./BeltVisualGeometry"
 
 const ITEM_ICON_TEXTURE_PREFIX = "item-icon-"
 const BOX_SIZE_RATIO = 0.6
 const BOX_ICON_SIZE_RATIO = 0.72
 const BOX_STROKE_WIDTH_PX = 1
+const HANDOFF_DURATION_MS = 650
+const HANDOFF_SPAWN_PROGRESS_THRESHOLD = 0.85
 
 interface BeltCargoRenderEntry {
   readonly centerX: number;
   readonly centerY: number;
+  readonly angleRadians: number;
   readonly itemId: string;
 }
 
-type BeltCargoShape = "straight" | "turn-cw" | "turn-ccw"
-
 interface BeltCargoEntry {
-  readonly beltShape: BeltCargoShape;
+  readonly entityId: string;
   readonly position: GridPoint;
-  readonly rotation: GridRotation;
   readonly itemId: string;
   readonly progress: number;
+  readonly angleRadians: number;
+  readonly localPoint: GridFloatPoint;
+  readonly isRunning: boolean;
+}
+
+interface BeltCargoHandoffState {
+  readonly sourceEntityId: string;
+  readonly itemId: string;
+  readonly startedAtMs: number;
+}
+
+interface BeltCargoHandoffRenderEntry {
+  readonly sourceEntityId: string;
+  readonly itemId: string;
+  readonly startedAtMs: number;
+  readonly progress: number;
+}
+
+interface BeltCargoHandoffView {
+  readonly root: Container;
+  readonly mask: Graphics;
+  readonly cargoRoot: Container;
+  readonly boxGraphics: Graphics;
+  readonly icon: Sprite;
 }
 
 export function createBeltCargoDecoration(): DecorationLayer {
   const container = new Container()
   const boxGraphics = new Graphics({ roundPixels: true })
   const iconLayer = new Container()
+  const handoffLayer = new Container()
   const iconSprites: Sprite[] = []
+  const handoffViews: BeltCargoHandoffView[] = []
   const resolvedTextures = new Map<string, Texture>()
   const pendingTextures = new Map<string, Promise<Texture>>()
   container.addChild(boxGraphics)
   container.addChild(iconLayer)
+  container.addChild(handoffLayer)
 
   let destroyed = false
   let itemIconIdByItemId: Map<string, string> | null = null
+  const previousMovingCargoByEntityId = new Map<string, BeltCargoEntry>()
+  const handoffCargoByEntityId = new Map<string, BeltCargoHandoffState>()
 
   const hideAll = (): void => {
     container.visible = false
@@ -55,6 +89,10 @@ export function createBeltCargoDecoration(): DecorationLayer {
 
     for (const sprite of iconSprites) {
       sprite.visible = false
+    }
+
+    for (const view of handoffViews) {
+      view.root.visible = false
     }
   }
 
@@ -101,10 +139,43 @@ export function createBeltCargoDecoration(): DecorationLayer {
     }
 
     sprite = new Sprite(Texture.EMPTY)
+    sprite.anchor.set(0.5)
     sprite.roundPixels = true
     iconLayer.addChild(sprite)
     iconSprites.push(sprite)
     return sprite
+  }
+
+  const ensureHandoffView = (index: number): BeltCargoHandoffView => {
+    let view = handoffViews[index]
+    if (view !== undefined) {
+      return view
+    }
+
+    const root = new Container()
+    const mask = new Graphics({ roundPixels: true })
+    const cargoRoot = new Container()
+    const box = new Graphics({ roundPixels: true })
+    const icon = new Sprite(Texture.EMPTY)
+    icon.anchor.set(0.5)
+    icon.roundPixels = true
+
+    cargoRoot.addChild(box)
+    cargoRoot.addChild(icon)
+    root.mask = mask
+    root.addChild(mask)
+    root.addChild(cargoRoot)
+    handoffLayer.addChild(root)
+
+    view = {
+      root,
+      mask,
+      cargoRoot,
+      boxGraphics: box,
+      icon,
+    }
+    handoffViews.push(view)
+    return view
   }
 
   return {
@@ -115,8 +186,26 @@ export function createBeltCargoDecoration(): DecorationLayer {
         return
       }
 
+      if (ctx.workspace.simulation?.state.runningState === "stop") {
+        previousMovingCargoByEntityId.clear()
+        handoffCargoByEntityId.clear()
+        hideAll()
+        return
+      }
+
       const beltCargoEntries = resolveBeltCargoEntries(ctx)
-      if (beltCargoEntries.length === 0) {
+      const beltInsertionEntries = resolveBeltInsertionEntries(ctx)
+      const handoffEntries = syncBeltCargoHandoffs({
+        nowMs: ctx.nowMs,
+        beltCargoEntries,
+        beltInsertionSourceEntityIds: new Set(
+          beltInsertionEntries.map((entry) => entry.sourceEntityId),
+        ),
+        previousMovingCargoByEntityId,
+        handoffCargoByEntityId,
+      })
+
+      if (beltCargoEntries.length === 0 && handoffEntries.length === 0) {
         hideAll()
         return
       }
@@ -140,11 +229,16 @@ export function createBeltCargoDecoration(): DecorationLayer {
         entries.push({
           centerX: center.x,
           centerY: center.y,
+          angleRadians: beltCargoEntry.angleRadians,
           itemId: beltCargoEntry.itemId,
         })
       }
 
-      if (entries.length === 0) {
+      for (const handoffEntry of handoffEntries) {
+        ensureTexture(ctx, resolveItemIconTextureKey(handoffEntry.itemId, itemIconMap))
+      }
+
+      if (entries.length === 0 && handoffEntries.length === 0) {
         hideAll()
         return
       }
@@ -159,6 +253,16 @@ export function createBeltCargoDecoration(): DecorationLayer {
         itemIconMap,
         resolvedTextures,
       })
+      syncBeltCargoHandoffViews({
+        ctx,
+        entries: handoffEntries,
+        insertionEntries: beltInsertionEntries,
+        boxSize,
+        ensureHandoffView,
+        handoffViews,
+        itemIconMap,
+        resolvedTextures,
+      })
     },
 
     destroy(): void {
@@ -170,9 +274,15 @@ export function createBeltCargoDecoration(): DecorationLayer {
         sprite.destroy()
       }
 
+      for (const view of handoffViews) {
+        view.root.destroy({ children: true })
+      }
+
       iconSprites.length = 0
+      handoffViews.length = 0
       boxGraphics.destroy()
       iconLayer.destroy({ children: true })
+      handoffLayer.destroy({ children: true })
       container.destroy({ children: true })
     },
   }
@@ -185,10 +295,11 @@ function resolveBeltCargoEntries(ctx: DecorationSyncContext): BeltCargoEntry[] {
     return []
   }
 
+  const definitionMap = createEntityDefinitionMap(ctx)
   const entries: BeltCargoEntry[] = []
   for (const entity of editor.queries.listEntities()) {
-    const beltShape = resolveBeltCargoShape(entity)
-    if (beltShape === null) {
+    const definition = definitionMap.get(entity.definitionId)
+    if (definition === undefined) {
       continue
     }
 
@@ -198,40 +309,39 @@ function resolveBeltCargoEntries(ctx: DecorationSyncContext): BeltCargoEntry[] {
       continue
     }
 
+    const pathSample = resolveBeltPathSample({
+      entity,
+      definition,
+      progress: cargoState.progress,
+    })
+    if (pathSample === null) {
+      continue
+    }
+
     entries.push({
-      beltShape,
+      entityId: entity.id,
       position: entity.position,
-      rotation: entity.rotation,
       itemId: cargoState.itemId,
       progress: cargoState.progress,
+      angleRadians: pathSample.angleRadians,
+      localPoint: pathSample.point,
+      isRunning: cargoState.isRunning,
     })
   }
 
   return entries
 }
 
-function resolveBeltCargoShape(entity: WorldEntity): BeltCargoShape | null {
-  switch (entity.definitionId) {
-    case "belt_straight_1x1":
-      return "straight"
-    case "belt_turn_cw_1x1":
-      return "turn-cw"
-    case "belt_turn_ccw_1x1":
-      return "turn-ccw"
-    default:
-      return null
-  }
-}
-
 function resolveRuntimeCargoState(
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
-): { readonly itemId: string; readonly progress: number } | null {
+): { readonly itemId: string; readonly progress: number; readonly isRunning: boolean } | null {
   const runningItemId = resolveRunningCargoItemId(runtimeStatus)
   const runningProgress = resolveRuntimeProgress(runtimeStatus)
   if (runningItemId !== null && runningProgress !== null) {
     return {
       itemId: runningItemId,
       progress: runningProgress,
+      isRunning: true,
     }
   }
 
@@ -259,7 +369,7 @@ function resolveRunningCargoItemId(
 
 function resolveStationaryCargoState(
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
-): { readonly itemId: string; readonly progress: number } | null {
+): { readonly itemId: string; readonly progress: number; readonly isRunning: boolean } | null {
   if (runtimeStatus === null) {
     return null
   }
@@ -273,6 +383,7 @@ function resolveStationaryCargoState(
     return {
       itemId: ingredientSlot.itemType,
       progress: 0,
+      isRunning: false,
     }
   }
 
@@ -285,6 +396,7 @@ function resolveStationaryCargoState(
     return {
       itemId: productSlot.itemType,
       progress: 1,
+      isRunning: false,
     }
   }
 
@@ -298,6 +410,7 @@ function resolveStationaryCargoState(
   return {
     itemId: fallbackSlot.itemType,
     progress: fallbackSlot.slotType === "product" ? 1 : 0,
+    isRunning: false,
   }
 }
 
@@ -336,18 +449,11 @@ function drawBeltCargoBoxes(
   entries: readonly BeltCargoRenderEntry[],
   boxSize: number,
 ): void {
-  const boxHalfSize = boxSize / 2
-
   graphics.clear()
 
   for (const entry of entries) {
     graphics
-      .rect(
-        entry.centerX - boxHalfSize,
-        entry.centerY - boxHalfSize,
-        boxSize,
-        boxSize,
-      )
+      .poly(resolveRotatedSquarePoints(entry, boxSize), true)
       .fill(0xffffff)
       .stroke({
         width: BOX_STROKE_WIDTH_PX,
@@ -381,8 +487,9 @@ function syncBeltCargoIcons(options: {
     sprite.texture = texture
     sprite.width = iconSize
     sprite.height = iconSize
-    sprite.x = entry.centerX - iconSize / 2
-    sprite.y = entry.centerY - iconSize / 2
+    sprite.x = entry.centerX
+    sprite.y = entry.centerY
+    sprite.rotation = entry.angleRadians
     visibleIconCount += 1
   }
 
@@ -392,6 +499,179 @@ function syncBeltCargoIcons(options: {
       sprite.visible = false
     }
   }
+}
+
+function syncBeltCargoHandoffs(options: {
+  nowMs: number;
+  beltCargoEntries: readonly BeltCargoEntry[];
+  beltInsertionSourceEntityIds: ReadonlySet<string>;
+  previousMovingCargoByEntityId: Map<string, BeltCargoEntry>;
+  handoffCargoByEntityId: Map<string, BeltCargoHandoffState>;
+}): BeltCargoHandoffRenderEntry[] {
+  const currentEntryIds = new Set(options.beltCargoEntries.map((entry) => entry.entityId))
+
+  for (const entry of options.beltCargoEntries) {
+    options.handoffCargoByEntityId.delete(entry.entityId)
+
+    if (entry.isRunning) {
+      options.previousMovingCargoByEntityId.set(entry.entityId, entry)
+    }
+  }
+
+  for (const [entityId, previousEntry] of options.previousMovingCargoByEntityId) {
+    if (currentEntryIds.has(entityId)) {
+      continue
+    }
+
+    options.previousMovingCargoByEntityId.delete(entityId)
+
+    if (
+      previousEntry.progress < HANDOFF_SPAWN_PROGRESS_THRESHOLD
+      || !options.beltInsertionSourceEntityIds.has(entityId)
+    ) {
+      continue
+    }
+
+    options.handoffCargoByEntityId.set(entityId, {
+      sourceEntityId: entityId,
+      itemId: previousEntry.itemId,
+      startedAtMs: options.nowMs,
+    })
+  }
+
+  const handoffEntries: BeltCargoHandoffRenderEntry[] = []
+  for (const [entityId, handoffState] of options.handoffCargoByEntityId) {
+    if (!options.beltInsertionSourceEntityIds.has(entityId)) {
+      options.handoffCargoByEntityId.delete(entityId)
+      continue
+    }
+
+    const elapsedMs = Math.max(0, options.nowMs - handoffState.startedAtMs)
+    const progress = elapsedMs / HANDOFF_DURATION_MS
+    if (!Number.isFinite(progress) || progress > 1) {
+      options.handoffCargoByEntityId.delete(entityId)
+      continue
+    }
+
+    handoffEntries.push({
+      ...handoffState,
+      progress,
+    })
+  }
+
+  return handoffEntries
+}
+
+function syncBeltCargoHandoffViews(options: {
+  ctx: DecorationSyncContext;
+  entries: readonly BeltCargoHandoffRenderEntry[];
+  insertionEntries: ReturnType<typeof resolveBeltInsertionEntries>;
+  boxSize: number;
+  ensureHandoffView: (index: number) => BeltCargoHandoffView;
+  handoffViews: readonly BeltCargoHandoffView[];
+  itemIconMap: ReadonlyMap<string, string>;
+  resolvedTextures: ReadonlyMap<string, Texture>;
+}): void {
+  const insertionEntryBySourceId = new Map(
+    options.insertionEntries.map((entry) => [entry.sourceEntityId, entry]),
+  )
+  const gridCellSize = options.ctx.viewportState.gridCellPixelSize
+  const insertionLength = gridCellSize * BELT_INSERTION_DEPTH_CELLS
+  const handoffStartX = insertionLength - options.boxSize / 2
+  const handoffEndX = insertionLength + options.boxSize / 2
+  let visibleCount = 0
+
+  for (const entry of options.entries) {
+    const insertionEntry = insertionEntryBySourceId.get(entry.sourceEntityId)
+    if (insertionEntry === undefined) {
+      continue
+    }
+
+    const view = options.ensureHandoffView(visibleCount)
+    const boundary = resolveViewportPoint({
+      point: insertionEntry.boundary,
+      viewportBounds: options.ctx.viewportBounds,
+      viewportState: options.ctx.viewportState,
+    })
+    const iconTexture = options.resolvedTextures.get(
+      resolveItemIconTextureKey(entry.itemId, options.itemIconMap),
+    )
+
+    view.root.visible = true
+    view.root.x = boundary.x
+    view.root.y = boundary.y
+    view.root.rotation = insertionEntry.angleRadians
+    view.mask
+      .clear()
+      .rect(
+        -options.boxSize,
+        -gridCellSize / 2,
+        options.boxSize + insertionLength,
+        gridCellSize,
+      )
+      .fill(0xffffff)
+
+    view.cargoRoot.x = lerp(handoffStartX, handoffEndX, entry.progress)
+    view.cargoRoot.y = 0
+    view.cargoRoot.rotation = 0
+
+    view.boxGraphics
+      .clear()
+      .rect(
+        -options.boxSize / 2,
+        -options.boxSize / 2,
+        options.boxSize,
+        options.boxSize,
+      )
+      .fill(0xffffff)
+      .stroke({
+        width: BOX_STROKE_WIDTH_PX,
+        color: 0x000000,
+        pixelLine: true,
+      })
+
+    view.icon.visible = iconTexture !== undefined
+    view.icon.texture = iconTexture ?? Texture.EMPTY
+    view.icon.width = options.boxSize * BOX_ICON_SIZE_RATIO
+    view.icon.height = options.boxSize * BOX_ICON_SIZE_RATIO
+    view.icon.x = 0
+    view.icon.y = 0
+    view.icon.rotation = 0
+
+    visibleCount += 1
+  }
+
+  for (let index = visibleCount; index < options.handoffViews.length; index += 1) {
+    const view = options.handoffViews[index]
+    if (view !== undefined) {
+      view.root.visible = false
+    }
+  }
+}
+
+function resolveRotatedSquarePoints(
+  entry: Pick<BeltCargoRenderEntry, "centerX" | "centerY" | "angleRadians">,
+  boxSize: number,
+): number[] {
+  const halfSize = boxSize / 2
+  const cos = Math.cos(entry.angleRadians)
+  const sin = Math.sin(entry.angleRadians)
+  const corners = [
+    { x: -halfSize, y: -halfSize },
+    { x: halfSize, y: -halfSize },
+    { x: halfSize, y: halfSize },
+    { x: -halfSize, y: halfSize },
+  ]
+  const points: number[] = []
+
+  for (const corner of corners) {
+    points.push(
+      entry.centerX + corner.x * cos - corner.y * sin,
+      entry.centerY + corner.x * sin + corner.y * cos,
+    )
+  }
+
+  return points
 }
 
 function resolveBeltCargoViewportCenter(options: {
@@ -408,10 +688,6 @@ function resolveBeltCargoViewportCenter(options: {
     gridCellPixelSize: number;
   };
 }): GridFloatPoint {
-  const localPoint = rotatePointClockwise(
-    resolveBeltCargoLocalPoint(options.entry.beltShape, options.entry.progress),
-    options.entry.rotation,
-  )
   const gridCellSize = options.viewportState.gridCellPixelSize
   const cellLeft =
     options.viewportBounds.left
@@ -423,57 +699,8 @@ function resolveBeltCargoViewportCenter(options: {
     + (options.entry.position.y - options.viewportState.centerY) * gridCellSize
 
   return {
-    x: cellLeft + localPoint.x * gridCellSize,
-    y: cellTop + localPoint.y * gridCellSize,
-  }
-}
-
-function resolveBeltCargoLocalPoint(
-  beltShape: BeltCargoShape,
-  progress: number,
-): GridFloatPoint {
-  if (beltShape === "straight") {
-    return {
-      x: progress,
-      y: 0.5,
-    }
-  }
-
-  const turnCenter = beltShape === "turn-cw"
-    ? { x: 0, y: 1 }
-    : { x: 0, y: 0 }
-  const angle = beltShape === "turn-cw"
-    ? lerp(-Math.PI / 2, 0, progress)
-    : lerp(Math.PI / 2, 0, progress)
-
-  return {
-    x: turnCenter.x + Math.cos(angle) * 0.5,
-    y: turnCenter.y + Math.sin(angle) * 0.5,
-  }
-}
-
-function rotatePointClockwise(
-  point: GridFloatPoint,
-  rotation: GridRotation,
-): GridFloatPoint {
-  switch (rotation) {
-    case 90:
-      return {
-        x: 1 - point.y,
-        y: point.x,
-      }
-    case 180:
-      return {
-        x: 1 - point.x,
-        y: 1 - point.y,
-      }
-    case 270:
-      return {
-        x: point.y,
-        y: 1 - point.x,
-      }
-    default:
-      return point
+    x: cellLeft + options.entry.localPoint.x * gridCellSize,
+    y: cellTop + options.entry.localPoint.y * gridCellSize,
   }
 }
 

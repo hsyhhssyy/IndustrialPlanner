@@ -5,6 +5,10 @@ vi.mock("pixi.js", () => {
     public readonly children: unknown[] = []
     public parent: MockContainer | null = null
     public visible = true
+    public x = 0
+    public y = 0
+    public rotation = 0
+    public mask: unknown = null
 
     public addChild<T extends { parent: MockContainer | null }>(child: T): T {
       child.parent = this
@@ -20,10 +24,12 @@ vi.mock("pixi.js", () => {
 
   class MockGraphics {
     public readonly drawCommands: Array<{
-      x: number;
-      y: number;
-      width: number;
-      height: number;
+      type: "rect" | "poly";
+      x?: number;
+      y?: number;
+      width?: number;
+      height?: number;
+      points?: number[];
       fill?: unknown;
       stroke?: unknown;
     }> = []
@@ -33,7 +39,12 @@ vi.mock("pixi.js", () => {
     public constructor(_options?: { roundPixels?: boolean }) {}
 
     public rect(x: number, y: number, width: number, height: number): this {
-      this.drawCommands.push({ x, y, width, height })
+      this.drawCommands.push({ type: "rect", x, y, width, height })
+      return this
+    }
+
+    public poly(points: number[]): this {
+      this.drawCommands.push({ type: "poly", points })
       return this
     }
 
@@ -70,6 +81,15 @@ vi.mock("pixi.js", () => {
     public height = 0
     public visible = true
     public roundPixels = false
+    public rotation = 0
+    public readonly anchor = {
+      x: 0,
+      y: 0,
+      set: (x: number, y = x) => {
+        this.anchor.x = x
+        this.anchor.y = y
+      },
+    }
 
     public constructor(texture: unknown) {
       this.texture = texture
@@ -89,6 +109,7 @@ vi.mock("pixi.js", () => {
 })
 
 import { createBeltCargoDecoration } from "@/renderer/scene/decorations/BeltCargoDecoration"
+import { createRegistryContract } from "@/registry"
 
 describe("createBeltCargoDecoration", () => {
   it("draws the moving cargo box and only requests each item icon once", async () => {
@@ -105,20 +126,16 @@ describe("createBeltCargoDecoration", () => {
 
     const boxGraphics = decoration.container.children[0] as unknown as {
       drawCommands: Array<{
-        x: number;
-        y: number;
-        width: number;
-        height: number;
+        type: "poly";
+        points: number[];
         fill?: unknown;
         stroke?: unknown;
       }>;
     }
     expect(boxGraphics.drawCommands).toHaveLength(1)
     expect(boxGraphics.drawCommands[0]).toMatchObject({
-      x: 70,
-      y: 70,
-      width: 60,
-      height: 60,
+      type: "poly",
+      points: [70, 70, 130, 70, 130, 130, 70, 130],
       fill: 0xffffff,
       stroke: {
         width: 1,
@@ -140,12 +157,14 @@ describe("createBeltCargoDecoration", () => {
       y: number;
       width: number;
       height: number;
+      rotation: number;
     }
     expect(sprite.texture).toBe(iconTexture)
-    expect(sprite.x).toBeCloseTo(78.4)
-    expect(sprite.y).toBeCloseTo(78.4)
+    expect(sprite.x).toBeCloseTo(100)
+    expect(sprite.y).toBeCloseTo(100)
     expect(sprite.width).toBeCloseTo(43.2)
     expect(sprite.height).toBeCloseTo(43.2)
+    expect(sprite.rotation).toBeCloseTo(0)
 
     decoration.destroy()
   })
@@ -184,20 +203,22 @@ describe("createBeltCargoDecoration", () => {
     decoration.destroy()
   })
 
-  it("draws turn belts along the belt centerline", () => {
+  it("draws turn belts along the belt centerline and rotates cargo with the tangent", async () => {
     const cases = [
       {
         beltShape: "turn-cw" as const,
         expected: {
-          x: 55.35533905932738,
-          y: 84.64466094067262,
+          x: 114.64466094067262,
+          y: 85.35533905932738,
+          rotation: -2.356194490192345,
         },
       },
       {
         beltShape: "turn-ccw" as const,
         expected: {
-          x: 55.35533905932738,
-          y: 55.35533905932738,
+          x: 114.64466094067262,
+          y: 85.35533905932738,
+          rotation: 0.7853981633974483,
         },
       },
     ]
@@ -214,15 +235,19 @@ describe("createBeltCargoDecoration", () => {
 
       const boxGraphics = decoration.container.children[0] as unknown as {
         drawCommands: Array<{
-          x: number;
-          y: number;
-          width: number;
-          height: number;
+          points: number[];
         }>;
       }
       expect(boxGraphics.drawCommands).toHaveLength(1)
-      expect(boxGraphics.drawCommands[0]?.x).toBeCloseTo(testCase.expected.x)
-      expect(boxGraphics.drawCommands[0]?.y).toBeCloseTo(testCase.expected.y)
+      const center = resolvePolygonCenter(boxGraphics.drawCommands[0]?.points ?? [])
+      expect(center.x).toBeCloseTo(testCase.expected.x)
+      expect(center.y).toBeCloseTo(testCase.expected.y)
+
+      await flushMicrotasks()
+      decoration.sync(ctx as never)
+      const iconLayer = decoration.container.children[1] as { children: unknown[] }
+      const sprite = iconLayer.children[0] as { rotation: number }
+      expect(sprite.rotation).toBeCloseTo(testCase.expected.rotation)
 
       decoration.destroy()
     }
@@ -260,15 +285,13 @@ describe("createBeltCargoDecoration", () => {
 
     const boxGraphics = decoration.container.children[0] as unknown as {
       drawCommands: Array<{
-        x: number;
-        y: number;
-        width: number;
-        height: number;
+        points: number[];
       }>;
     }
     expect(boxGraphics.drawCommands).toHaveLength(1)
-    expect(boxGraphics.drawCommands[0]?.x).toBeCloseTo(20)
-    expect(boxGraphics.drawCommands[0]?.y).toBeCloseTo(70)
+    const center = resolvePolygonCenter(boxGraphics.drawCommands[0]?.points ?? [])
+    expect(center.x).toBeCloseTo(50)
+    expect(center.y).toBeCloseTo(100)
 
     decoration.destroy()
   })
@@ -305,15 +328,13 @@ describe("createBeltCargoDecoration", () => {
 
     const boxGraphics = decoration.container.children[0] as unknown as {
       drawCommands: Array<{
-        x: number;
-        y: number;
-        width: number;
-        height: number;
+        points: number[];
       }>;
     }
     expect(boxGraphics.drawCommands).toHaveLength(1)
-    expect(boxGraphics.drawCommands[0]?.x).toBeCloseTo(120)
-    expect(boxGraphics.drawCommands[0]?.y).toBeCloseTo(70)
+    const center = resolvePolygonCenter(boxGraphics.drawCommands[0]?.points ?? [])
+    expect(center.x).toBeCloseTo(150)
+    expect(center.y).toBeCloseTo(100)
 
     decoration.destroy()
   })
@@ -330,6 +351,133 @@ describe("createBeltCargoDecoration", () => {
 
     expect(decoration.container.visible).toBe(false)
     expect(getTexture).not.toHaveBeenCalled()
+
+    decoration.destroy()
+  })
+
+  it("renders accepted cargo as a masked handoff into the target device", () => {
+    const decoration = createBeltCargoDecoration()
+    const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+    const firstFrame = createContext({
+      getTexture,
+      includeInsertionTarget: true,
+      nowMs: 1000,
+      entries: [{
+        beltShape: "straight",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        itemId: "item_iron_ore",
+        progress: 0.95,
+      }],
+    })
+    const secondFrame = createContext({
+      getTexture,
+      includeInsertionTarget: true,
+      nowMs: 1100,
+      entries: [{
+        beltShape: "straight",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        itemId: "item_iron_ore",
+        progress: 0.95,
+        runtimeStatus: createEmptyBeltRuntimeStatus(),
+      }],
+    })
+    const thirdFrame = createContext({
+      getTexture,
+      includeInsertionTarget: true,
+      nowMs: 1200,
+      entries: [{
+        beltShape: "straight",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        itemId: "item_iron_ore",
+        progress: 0.95,
+        runtimeStatus: createEmptyBeltRuntimeStatus(),
+      }],
+    })
+
+    decoration.sync(firstFrame as never)
+    decoration.sync(secondFrame as never)
+    decoration.sync(thirdFrame as never)
+
+    const handoffLayer = decoration.container.children[2] as {
+      children: Array<{
+        visible: boolean;
+        x: number;
+        y: number;
+        rotation: number;
+        children: unknown[];
+      }>;
+    }
+    expect(handoffLayer.children).toHaveLength(1)
+    const root = handoffLayer.children[0]
+    expect(root?.visible).toBe(true)
+    expect(root?.x).toBeCloseTo(150)
+    expect(root?.y).toBeCloseTo(100)
+    expect(root?.rotation).toBeCloseTo(0)
+
+    const mask = root?.children[0] as {
+      drawCommands: Array<{
+        type: "rect";
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }>;
+    }
+    expect(mask.drawCommands[0]).toMatchObject({
+      type: "rect",
+      x: -60,
+      y: -50,
+      width: 80,
+      height: 100,
+    })
+
+    const cargoRoot = root?.children[1] as {
+      x: number;
+    }
+    expect(cargoRoot.x).toBeGreaterThan(-10)
+    expect(cargoRoot.x).toBeLessThan(50)
+
+    decoration.destroy()
+  })
+
+  it("does not render handoff masks in simplified blueprint-style display", () => {
+    const decoration = createBeltCargoDecoration()
+    const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+    const firstFrame = createContext({
+      getTexture,
+      includeInsertionTarget: true,
+      simplifiedDeviceIcons: true,
+      nowMs: 1000,
+      entries: [{
+        beltShape: "straight",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        itemId: "item_iron_ore",
+        progress: 0.95,
+      }],
+    })
+    const secondFrame = createContext({
+      getTexture,
+      includeInsertionTarget: true,
+      simplifiedDeviceIcons: true,
+      nowMs: 1100,
+      entries: [{
+        beltShape: "straight",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        itemId: "item_iron_ore",
+        progress: 0.95,
+        runtimeStatus: createEmptyBeltRuntimeStatus(),
+      }],
+    })
+
+    decoration.sync(firstFrame as never)
+    decoration.sync(secondFrame as never)
+
+    expect(decoration.container.visible).toBe(false)
 
     decoration.destroy()
   })
@@ -359,7 +507,11 @@ function createContext(options: {
     };
   }[];
   beltShape?: "straight" | "turn-cw" | "turn-ccw";
+  includeInsertionTarget?: boolean;
+  simplifiedDeviceIcons?: boolean;
+  nowMs?: number;
 }) {
+  const registry = createRegistryContract()
   const entries = options.entries ?? [{
     beltShape: options.beltShape ?? "straight",
     position: { x: 0, y: 0 },
@@ -383,6 +535,16 @@ function createContext(options: {
     config: {},
     tags: [],
   }))
+  if (options.includeInsertionTarget === true) {
+    entities.push({
+      id: "target-admission",
+      definitionId: "item_log_admission",
+      position: { x: 1, y: 0 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    })
+  }
 
   return {
     viewportState: {
@@ -400,13 +562,16 @@ function createContext(options: {
       height: 200,
     },
     workspace: {
+      app: {
+        state: {
+          settings: {
+            gameUseSimplifiedDeviceIcons: options.simplifiedDeviceIcons ?? false,
+          },
+        },
+      },
       registry: {
-        itemDefinitions: [{
-          id: "item_iron_ore",
-          nameKey: "registry.item.item_iron_ore.name",
-          iconId: "item_iron_ore",
-          tags: [],
-        }],
+        itemDefinitions: registry.itemDefinitions,
+        entityDefinitions: registry.entityDefinitions,
       },
       render: {
         textureManager: {
@@ -448,7 +613,7 @@ function createContext(options: {
         },
       },
     },
-    nowMs: 1000,
+    nowMs: options.nowMs ?? 1000,
   }
 }
 
@@ -463,8 +628,33 @@ function resolveBeltDefinitionId(beltShape: "straight" | "turn-cw" | "turn-ccw")
   }
 }
 
+function createEmptyBeltRuntimeStatus() {
+  return {
+    recipeId: null,
+    progressSeconds: null,
+    desiredSeconds: null,
+    slotItems: [],
+  }
+}
+
 async function flushMicrotasks(iterations = 4): Promise<void> {
   for (let index = 0; index < iterations; index += 1) {
     await Promise.resolve()
+  }
+}
+
+function resolvePolygonCenter(points: readonly number[]): { x: number; y: number } {
+  let x = 0
+  let y = 0
+  const pointCount = points.length / 2
+
+  for (let index = 0; index < points.length; index += 2) {
+    x += points[index] ?? 0
+    y += points[index + 1] ?? 0
+  }
+
+  return {
+    x: x / pointCount,
+    y: y / pointCount,
   }
 }
