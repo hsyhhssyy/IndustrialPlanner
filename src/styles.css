@@ -3668,8 +3668,8 @@ body.is-resizing-left-dock * {
 }
 
 .save-blueprint-dialog {
-  width: min(520px, 100%);
-  height: min(440px, 100%);
+  width: min(760px, 100%);
+  height: min(680px, 100%);
 }
 
 .blueprint-preview-dialog {
@@ -3816,6 +3816,7 @@ body.is-resizing-left-dock * {
 .blueprint-preview-actions .save-blueprint-secondary-button,
 .blueprint-preview-actions .blueprint-preview-danger-button {
   width: 100%;
+  font-size: 0.875rem;
 }
 
 .blueprint-preview-folder-picker-card {
@@ -3962,13 +3963,50 @@ body.is-resizing-left-dock * {
   overflow: hidden;
 }
 
+.save-blueprint-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  gap: 14px;
+  min-height: 100%;
+  min-width: 0;
+}
+
+.save-blueprint-preview-pane {
+  display: grid;
+  min-height: 0;
+  min-width: 0;
+}
+
+.save-blueprint-preview-canvas-shell {
+  min-height: 0;
+}
+
+.save-blueprint-preview-canvas {
+  min-height: 360px;
+}
+
+.save-blueprint-preview-empty {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+  padding: 18px;
+  color: var(--text-2);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .save-blueprint-form {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 12px;
-  min-height: 100%;
+  min-height: 0;
   min-width: 0;
   height: 100%;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%);
 }
 
 .save-blueprint-form-content {
@@ -3991,6 +4029,10 @@ body.is-resizing-left-dock * {
 }
 
 .save-blueprint-field-description {
+  min-height: 0;
+}
+
+.save-blueprint-folder-field {
   min-height: 0;
 }
 
@@ -4037,6 +4079,24 @@ body.is-resizing-left-dock * {
 .save-blueprint-textarea {
   min-height: 136px;
   resize: vertical;
+}
+
+.save-blueprint-folder-picker-card {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-1) 92%, white 4%);
+}
+
+.save-blueprint-folder-picker-toolbar {
+  min-height: 32px;
+}
+
+.save-blueprint-folder-picker-list {
+  max-height: 164px;
 }
 
 .save-blueprint-error {
@@ -4097,6 +4157,16 @@ body.is-resizing-left-dock * {
   background: var(--surface-2);
 }
 
+.save-blueprint-secondary-button.blueprint-preview-danger-button {
+  border-color: color-mix(in srgb, var(--danger, #dc2626) 45%, var(--line));
+  color: var(--danger, #dc2626);
+}
+
+.save-blueprint-secondary-button.blueprint-preview-danger-button:hover:not(:disabled) {
+  border-color: var(--danger, #dc2626);
+  background: color-mix(in srgb, var(--danger, #dc2626) 8%, var(--surface-2));
+}
+
 .save-blueprint-primary-button {
   background: var(--accent, #399ee6);
   color: #fff;
@@ -4150,7 +4220,7 @@ body.is-resizing-left-dock * {
 
   .save-blueprint-dialog {
     width: 100%;
-    height: min(520px, 100%);
+    height: min(720px, 100%);
   }
 
   .base-select-dialog {
@@ -4160,6 +4230,14 @@ body.is-resizing-left-dock * {
 
   .save-blueprint-dialog-body {
     padding: 12px;
+  }
+
+  .save-blueprint-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .save-blueprint-preview-canvas {
+    min-height: 260px;
   }
 
   .base-select-dialog-body {
@@ -4230,6 +4308,7 @@ body.is-resizing-left-dock * {
 
   .save-blueprint-form {
     gap: 10px;
+    padding: 12px;
   }
 
   .save-blueprint-form-content {

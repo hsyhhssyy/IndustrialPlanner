@@ -9,6 +9,7 @@ import { createAppHost } from "@/app/host/app-host";
 import type { GestureEvent } from "@/app/input/gesture/adapter";
 import { BlueprintFolderDialog } from "@/app/shell/dialogs/blueprint-folder-dialog";
 import { BlueprintPreviewDialog } from "@/app/shell/dialogs/blueprint-preview-dialog";
+import { SaveBlueprintDialog } from "@/app/shell/dialogs/save-blueprint-dialog";
 import { LeftDock } from "@/app/shell/layout/left-dock";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
@@ -112,6 +113,19 @@ function dispatchPointerEvent(
     metaKey: { value: false },
     shiftKey: { value: false },
   });
+  target.dispatchEvent(event);
+  return event;
+}
+
+function dispatchInputEvent(
+  target: HTMLInputElement | HTMLTextAreaElement,
+  value: string,
+): Event {
+  const prototype = Object.getPrototypeOf(target) as HTMLInputElement | HTMLTextAreaElement;
+  const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
+
+  descriptor?.set?.call(target, value);
+  const event = new Event("input", { bubbles: true, cancelable: true });
   target.dispatchEvent(event);
   return event;
 }
@@ -1510,6 +1524,7 @@ describe("Left dock panel switching", () => {
         <>
           <LeftDock appHost={appHost} />
           <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
+          <SaveBlueprintDialog appHost={appHost} />
         </>,
       );
       await flushAsyncEffects();
@@ -1568,6 +1583,7 @@ describe("Left dock panel switching", () => {
         <>
           <LeftDock appHost={appHost} />
           <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
+          <SaveBlueprintDialog appHost={appHost} />
         </>,
       );
       await flushAsyncEffects();
@@ -1585,17 +1601,31 @@ describe("Left dock panel switching", () => {
       await flushAsyncEffects();
     });
 
-    const importedDirectory = await listBlueprintDirectory();
-    const previewDialog = container.querySelector('[data-dialog-key="blueprint-preview"]');
+    const importedDirectoryBeforeSave = await listBlueprintDirectory();
+    const saveDialog = container.querySelector('[data-dialog-key="save-blueprint"]');
+    const nameInput = saveDialog?.querySelector(".save-blueprint-input") as HTMLInputElement | null;
+    const submitButton = saveDialog?.querySelector(".save-blueprint-primary-button") as HTMLButtonElement | null;
 
     expect(clipboard.readText).toHaveBeenCalledTimes(1);
+    expect(importedDirectoryBeforeSave.blueprints).toHaveLength(0);
+    expect(saveDialog).not.toBeNull();
+    expect(nameInput?.value).toBe("剪贴板旧版蓝图");
+    expect(submitButton).not.toBeNull();
+
+    await act(async () => {
+      submitButton?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    const importedDirectory = await listBlueprintDirectory();
+
     expect(importedDirectory.blueprints).toHaveLength(1);
     expect(importedDirectory.blueprints[0]).toMatchObject({
       name: "剪贴板旧版蓝图",
       parentFolderId: null,
     });
-    expect(previewDialog?.textContent).toContain("剪贴板旧版蓝图");
-    expect(appHost.blueprintPreview.dialogState.visible).toBe(true);
+    expect(appHost.blueprintPreview.dialogState.visible).toBe(false);
   });
 
   it("imports a blueprint file into the current user folder", async () => {
@@ -1619,6 +1649,7 @@ describe("Left dock panel switching", () => {
         <>
           <LeftDock appHost={appHost} />
           <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
+          <SaveBlueprintDialog appHost={appHost} />
         </>,
       );
       await flushAsyncEffects();
@@ -1662,15 +1693,32 @@ describe("Left dock panel switching", () => {
       await flushAsyncEffects();
     });
 
+    const importedDirectoryBeforeSave = await listBlueprintDirectory(parentFolder?.folderId ?? null);
+    const saveDialog = container.querySelector('[data-dialog-key="save-blueprint"]');
+    const nameInput = saveDialog?.querySelector(".save-blueprint-input") as HTMLInputElement | null;
+    const breadcrumb = saveDialog?.querySelector("[data-save-blueprint-folder-breadcrumb]") as HTMLSpanElement | null;
+    const submitButton = saveDialog?.querySelector(".save-blueprint-primary-button") as HTMLButtonElement | null;
+
+    expect(importedDirectoryBeforeSave.blueprints).toHaveLength(0);
+    expect(saveDialog).not.toBeNull();
+    expect(nameInput?.value).toBe("文件导入蓝图");
+    expect(breadcrumb?.textContent?.trim()).toBe("根目录 / 导入目录");
+    expect(submitButton).not.toBeNull();
+
+    await act(async () => {
+      submitButton?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
     const importedDirectory = await listBlueprintDirectory(parentFolder?.folderId ?? null);
-    const previewDialog = container.querySelector('[data-dialog-key="blueprint-preview"]');
 
     expect(importedDirectory.blueprints).toHaveLength(1);
     expect(importedDirectory.blueprints[0]).toMatchObject({
       name: "文件导入蓝图",
       parentFolderId: parentFolder?.folderId ?? null,
     });
-    expect(previewDialog?.textContent).toContain("文件导入蓝图");
+    expect(container.querySelector('[data-dialog-key="save-blueprint"]')).toBeNull();
   });
 
   it("copies the previewed blueprint to the clipboard as a portable document", async () => {
@@ -1713,7 +1761,7 @@ describe("Left dock panel switching", () => {
   });
 
   it("exports the previewed blueprint to a downloadable file", async () => {
-    const createObjectURL = vi.fn(() => "blob:blueprint");
+    const createObjectURL = vi.fn<(blob: Blob) => string>(() => "blob:blueprint");
     const revokeObjectURL = vi.fn();
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
 
@@ -2072,7 +2120,7 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.querySelector(`[data-blueprint-id="${blueprint.blueprintId}"]`)).toBeNull();
   });
 
-  it("moves a user blueprint from the preview dialog into a nested folder", async () => {
+  it("edits a user blueprint from the preview dialog and saves it into a nested folder", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
     const targetRootFolder = await createBlueprintFolder({
@@ -2105,6 +2153,7 @@ describe("Left dock panel switching", () => {
         <>
           <LeftDock appHost={appHost} />
           <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
+          <SaveBlueprintDialog appHost={appHost} />
         </>,
       );
       await flushAsyncEffects();
@@ -2123,35 +2172,45 @@ describe("Left dock panel switching", () => {
     });
 
     const previewDialog = container.querySelector('[data-dialog-key="blueprint-preview"]');
-    const moveButton = previewDialog?.querySelector(
+    const editButton = previewDialog?.querySelector(
       '[data-ui-button-id="blueprint-preview-move-button"]',
     ) as HTMLButtonElement | null;
 
-    expect(moveButton).not.toBeNull();
+    expect(editButton).not.toBeNull();
+    expect(editButton?.textContent?.trim()).toBe("修改");
 
     await act(async () => {
-      moveButton?.click();
+      editButton?.click();
       await flushAsyncEffects();
+      await flushAsyncEffects();
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
       await flushAsyncEffects();
     });
 
-    const summaryCard = previewDialog?.querySelector(
-      ".blueprint-preview-summary-card",
-    ) as HTMLDivElement | null;
-    const moveBreadcrumb = previewDialog?.querySelector(
-      "[data-blueprint-preview-move-breadcrumb]",
+    const saveDialog = container.querySelector('[data-dialog-key="save-blueprint"]');
+    const nameInput = saveDialog?.querySelector(".save-blueprint-input") as HTMLInputElement | null;
+    const descriptionInput = saveDialog?.querySelector(".save-blueprint-textarea") as HTMLTextAreaElement | null;
+    const folderBreadcrumb = saveDialog?.querySelector(
+      "[data-save-blueprint-folder-breadcrumb]",
     ) as HTMLSpanElement | null;
-    const moveActions = previewDialog?.querySelector(
-      ".blueprint-preview-folder-picker-actions",
-    ) as HTMLDivElement | null;
 
-    expect(summaryCard?.classList.contains("is-folder-picker-mode")).toBe(true);
-    expect(summaryCard?.querySelector(".blueprint-preview-header")).toBeNull();
-    expect(moveBreadcrumb?.textContent?.trim()).toBe("根目录");
-    expect(moveActions).not.toBeNull();
+    expect(appHost.blueprintPreview.dialogState.visible).toBe(false);
+    expect(saveDialog).not.toBeNull();
+    expect(nameInput?.value).toBe("待移动蓝图");
+    expect(descriptionInput?.value).toBe("从预览窗口移动");
+    expect(folderBreadcrumb?.textContent?.trim()).toBe("根目录");
 
-    const rootFolderEntry = previewDialog?.querySelector(
-      `[data-blueprint-preview-folder-id="${targetRootFolder?.folderId ?? ""}"]`,
+    if (!nameInput || !descriptionInput) {
+      throw new Error("Save blueprint edit dialog did not render expected controls.");
+    }
+
+    await act(async () => {
+      dispatchInputEvent(nameInput, "已修改蓝图");
+      dispatchInputEvent(descriptionInput, "从修改窗口保存");
+    });
+
+    const rootFolderEntry = saveDialog?.querySelector(
+      `[data-save-blueprint-folder-id="${targetRootFolder?.folderId ?? ""}"]`,
     ) as HTMLButtonElement | null;
 
     expect(rootFolderEntry).not.toBeNull();
@@ -2163,16 +2222,16 @@ describe("Left dock panel switching", () => {
       await flushAsyncEffects();
     });
 
-    const backButton = previewDialog?.querySelector(
-      '[data-ui-button-id="blueprint-preview-move-back-button"]',
+    const backButton = saveDialog?.querySelector(
+      '[data-ui-button-id="save-blueprint-folder-back-button"]',
     ) as HTMLButtonElement | null;
 
     expect(backButton).not.toBeNull();
     expect(backButton?.textContent?.trim()).toBe("");
-    expect(moveBreadcrumb?.textContent?.trim()).toBe("根目录 / 生产线目录");
+    expect(folderBreadcrumb?.textContent?.trim()).toBe("根目录 / 生产线目录");
 
-    const nestedFolderEntry = previewDialog?.querySelector(
-      `[data-blueprint-preview-folder-id="${targetNestedFolder?.folderId ?? ""}"]`,
+    const nestedFolderEntry = saveDialog?.querySelector(
+      `[data-save-blueprint-folder-id="${targetNestedFolder?.folderId ?? ""}"]`,
     ) as HTMLButtonElement | null;
 
     expect(nestedFolderEntry).not.toBeNull();
@@ -2183,24 +2242,26 @@ describe("Left dock panel switching", () => {
       await flushAsyncEffects();
     });
 
-    expect(moveBreadcrumb?.textContent?.trim()).toBe("根目录 / … / 炼油支线");
+    expect(folderBreadcrumb?.textContent?.trim()).toBe("根目录 / … / 炼油支线");
 
-    const confirmMoveButton = previewDialog?.querySelector(
-      '[data-ui-button-id="blueprint-preview-move-confirm-button"]',
+    const saveButton = saveDialog?.querySelector(
+      ".save-blueprint-primary-button",
     ) as HTMLButtonElement | null;
 
-    expect(confirmMoveButton).not.toBeNull();
-    expect(confirmMoveButton?.disabled).toBe(false);
-    expect(confirmMoveButton?.textContent?.trim()).toBe("移动");
+    expect(saveButton).not.toBeNull();
+    expect(saveButton?.disabled).toBe(false);
+    expect(saveButton?.textContent?.trim()).toBe("保存");
 
     await act(async () => {
-      confirmMoveButton?.click();
+      saveButton?.click();
       await flushAsyncEffects();
       await flushAsyncEffects();
     });
 
     expect(appHost.blueprintPreview.dialogState.visible).toBe(false);
     await expect(readBlueprintRecord(blueprint.blueprintId)).resolves.toMatchObject({
+      name: "已修改蓝图",
+      description: "从修改窗口保存",
       parentFolderId: targetNestedFolder?.folderId ?? null,
     });
     expect(visiblePanel?.querySelector(`[data-blueprint-id="${blueprint.blueprintId}"]`)).toBeNull();

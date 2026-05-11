@@ -295,6 +295,8 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       deleteFailed: "删除蓝图失败，请检查浏览器存储是否可用。",
       deleteHint: "将当前蓝图移入已删除列表",
       deleting: "删除中...",
+      edit: "修改",
+      editHint: "修改蓝图名称、描述或保存位置",
       move: "移动",
       moveHint: "将当前蓝图移动到其他文件夹",
       moveCancel: "取消移动",
@@ -329,6 +331,8 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       deleteFailed: "Failed to delete the blueprint. Check browser storage availability.",
       deleteHint: "Move this blueprint into deleted items",
       deleting: "Deleting...",
+      edit: "Edit",
+      editHint: "Edit the blueprint name, description, or saved folder",
       move: "Move",
       moveHint: "Move this blueprint to another folder",
       moveCancel: "Cancel Move",
@@ -699,7 +703,18 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
     setDeleteErrorMessage(null);
     setMoveErrorMessage(null);
     setTransferErrorMessage(null);
-    setIsMoveMode(true);
+    const editableRecord = record;
+
+    controller.close();
+
+    if (typeof window === "undefined") {
+      appHost.saveBlueprintDialog.openEdit(editableRecord);
+      return;
+    }
+
+    window.setTimeout(() => {
+      appHost.saveBlueprintDialog.openEdit(editableRecord);
+    }, 0);
   };
   const handleExportButtonClick = () => {
     setTransferErrorMessage(null);
@@ -1074,10 +1089,10 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                           className="save-blueprint-secondary-button"
                           data-ui-button-id="blueprint-preview-move-button"
                           onClick={handleOpenMoveMode}
-                          title={copy.moveHint}
+                          title={copy.editHint}
                           type="button"
                         >
-                          {copy.move}
+                          {copy.edit}
                         </button>
                       ) : null}
                       {showDeleteAction ? (

@@ -872,6 +872,10 @@ describe("WorkbenchApp", () => {
       appHost.internalActions.openDialog("save-blueprint");
     });
 
+    await act(async () => {
+      await flushMicrotasks(12);
+    });
+
     const dialog = container.querySelector('[data-dialog-key="save-blueprint"]');
     const nameInput = container.querySelector('.save-blueprint-input') as HTMLInputElement | null;
     const descriptionInput = container.querySelector('.save-blueprint-textarea') as HTMLTextAreaElement | null;

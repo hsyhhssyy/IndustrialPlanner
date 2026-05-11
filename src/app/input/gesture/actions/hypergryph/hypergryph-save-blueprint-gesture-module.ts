@@ -30,7 +30,7 @@ export function createHypergryphSaveBlueprintGestureModule(): GestureMappingModu
             return { status: "ignored" };
           }
 
-          context.appHost.internalActions.openDialog("save-blueprint");
+          context.appHost.saveBlueprintDialog.openSelection();
           return { status: "handled" };
 
         case "ui-button-touch-tap":
@@ -61,6 +61,6 @@ function isSaveBlueprintButton(uiButtonId: string): boolean {
 }
 
 function openSaveBlueprintDialog(appHost: AppHost): GestureHandleResult {
-  appHost.internalActions.openDialog("save-blueprint");
+  appHost.saveBlueprintDialog.openSelection();
   return { status: "handled" };
 }

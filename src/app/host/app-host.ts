@@ -18,6 +18,7 @@ import { hookThemeApplicator } from "../theme/theme-applicator";
 import { WorkbenchBlueprintFolderDialogController } from "../shell/state/blueprint-folder-dialog-state";
 import { WorkbenchBlueprintPreviewController } from "../shell/state/blueprint-preview-dialog-state";
 import { WorkbenchEncyclopediaPickerController } from "../shell/state/encyclopedia-picker-state";
+import { WorkbenchSaveBlueprintDialogController } from "../shell/state/save-blueprint-dialog-state";
 
 export interface AppHost extends AppContract {
   workspace: WorkspaceContract;
@@ -28,6 +29,7 @@ export interface AppHost extends AppContract {
   internalActions: AppInternalAction;
   blueprintFolderDialog: WorkbenchBlueprintFolderDialogController;
   blueprintPreview: WorkbenchBlueprintPreviewController;
+  saveBlueprintDialog: WorkbenchSaveBlueprintDialogController;
   encyclopediaPicker: WorkbenchEncyclopediaPickerController;
   dispose: () => void;
 }
@@ -66,6 +68,9 @@ export function createAppHost(
   const gestureDiagnostics = createGestureDiagnosticsStore();
   const blueprintFolderDialog = new WorkbenchBlueprintFolderDialogController();
   const blueprintPreview = new WorkbenchBlueprintPreviewController();
+  const saveBlueprintDialog = new WorkbenchSaveBlueprintDialogController(
+    internalState.workbench.dialogState["save-blueprint"],
+  );
   const encyclopediaPicker = new WorkbenchEncyclopediaPickerController(
     () => internalState.workbench.toolbox.wiki,
   );
@@ -85,6 +90,7 @@ export function createAppHost(
     internalState,
     blueprintFolderDialog,
     blueprintPreview,
+    saveBlueprintDialog,
     encyclopediaPicker,
   });
 
@@ -133,6 +139,7 @@ export function createAppHost(
     dispose: () => {
       blueprintFolderDialog.close();
       blueprintPreview.close();
+      saveBlueprintDialog.close();
       encyclopediaPicker.dispose();
       gestureActionRouter.dispose();
       gestureAdapter.dispose();

@@ -24,7 +24,6 @@ import {
 import {
   listBlueprintDirectory,
   readBlueprintFolder,
-  saveBlueprintDocument,
 } from "@/shared/storage/blueprint-storage";
 import LucideClipboard from "~icons/lucide/clipboard";
 import LucideCopy from "~icons/lucide/copy";
@@ -115,6 +114,7 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
   const isNarrowColumn = !isTouchLayout && appHost.state.workbench.leftDockWidth <= 420;
   const isPanelVisible = (appHost.internalState.runtime.activePanel ?? "placement") === "blueprint";
   const saveBlueprintDialogVisible = appHost.internalState.workbench.dialogState["save-blueprint"].visible;
+  const saveBlueprintMutationCompletedCount = appHost.saveBlueprintDialog.completedMutationCount;
   const folderMutationCompletedCount = appHost.blueprintFolderDialog.completedMutationCount;
   const previewMutationCompletedCount = appHost.blueprintPreview.completedMutationCount;
   const [activeTab, setActiveTab] = useState<BlueprintLibraryKind>("user");
@@ -246,6 +246,7 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
     importCompletedCount,
     isPanelVisible,
     previewMutationCompletedCount,
+    saveBlueprintMutationCompletedCount,
     saveBlueprintDialogVisible,
     t,
   ]);
@@ -296,24 +297,13 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
     setErrorMessage(null);
 
     try {
-      const importedRecord = await saveBlueprintDocument(
+      appHost.saveBlueprintDialog.openImported(
         createImportedBlueprintDocument(parsedBlueprint),
-        {
-          parentFolderId: importTargetFolderId,
-        },
+        importTargetFolderId,
       );
 
-      if (importedRecord === null) {
-        setErrorMessage(t("workbench.blueprint.importSaveFailed"));
-        return;
-      }
-
       setActiveTab("user");
-      setSelectedBlueprintId(importedRecord.blueprintId);
       setImportCompletedCount((currentValue) => currentValue + 1);
-      appHost.blueprintPreview.open(importedRecord, {
-        canDelete: true,
-      });
     } finally {
       setIsImporting(false);
     }
@@ -407,10 +397,9 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
       : label;
     const isExportAction = button.uiButtonId === "blueprint-action-export-file"
       || button.uiButtonId === "blueprint-action-copy-clipboard";
-    const isDisabled = button.uiButtonId === "blueprint-action-import-file"
-      || button.uiButtonId === "blueprint-action-import-clipboard"
-      ? isImporting
-      : selectedBlueprintRecord === null || isCopying;
+    const isDisabled = isExportAction
+      ? selectedBlueprintRecord === null || isCopying
+      : isImporting;
 
     return (
       <button
