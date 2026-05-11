@@ -7,6 +7,7 @@ import {
   resolveBeltPathLengthCells,
   resolveBeltPathSample,
   resolveBeltPathSampleAtDistance,
+  resolveBeltPortExtensionEntries,
   resolveBeltVisualPathEntries,
 } from "@/renderer/scene/decorations/BeltVisualGeometry"
 
@@ -93,6 +94,44 @@ describe("BeltVisualGeometry", () => {
 
     expect(resolveBeltInsertionEntries(beltToBeltCtx as never)).toEqual([])
     expect(resolveBeltInsertionEntries(simplifiedCtx as never)).toEqual([])
+  })
+
+  it("resolves a device output protrusion into a strict belt input", () => {
+    const ctx = createGeometryContext({
+      entities: [
+        {
+          id: "source-connector",
+          definitionId: "item_log_connector",
+          position: { x: -1, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+        {
+          id: "target-belt",
+          definitionId: "belt_straight_1x1",
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+      ],
+    })
+
+    expect(resolveBeltPortExtensionEntries(ctx as never)).toEqual([{
+      kind: "device-output-to-belt",
+      beltEntityId: "target-belt",
+      deviceEntityId: "source-connector",
+      boundary: {
+        x: 0,
+        y: 0.5,
+      },
+      edge: "EAST",
+      angleRadians: 0,
+      localStartCells: -0.2,
+      localEndCells: 0,
+      spriteCenterXCells: 0.3,
+    }])
   })
 
   it("samples turn belt cargo pose from the definition port path", () => {

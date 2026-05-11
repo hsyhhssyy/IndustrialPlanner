@@ -1,4 +1,9 @@
-import { Container, Graphics } from "pixi.js"
+import {
+  Container,
+  Graphics,
+  Sprite,
+  Texture,
+} from "pixi.js"
 
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
@@ -11,34 +16,77 @@ import {
 } from "./BeltVisualGeometry"
 
 const BELT_VISUAL_SPEED_CELLS_PER_SECOND = 0.5
-const LIGHT_SPEED_MULTIPLIER = 2
-const LIGHT_SPACING_CELLS = 2
+const HIGHLIGHT_TEXTURE_KEY = "texture-belt-highlight-strip-texture"
+const HIGHLIGHT_SPEED_MULTIPLIER = 2
+const HIGHLIGHT_SPACING_CELLS = 2
+const HIGHLIGHT_LENGTH_CELLS = 0.56
+const HIGHLIGHT_WIDTH_CELLS = 0.78
+const HIGHLIGHT_ALPHA = 0.82
+const HIGHLIGHT_TURN_SEGMENT_COUNT = 4
 const ARROW_SPACING_CELLS = 1
-const LIGHT_LENGTH_RATIO = 0.34
-const LIGHT_WIDTH_RATIO = 0.16
-const ARROW_LENGTH_RATIO = 0.34
-const ARROW_WIDTH_RATIO = 0.3
+const ARROW_LENGTH_RATIO = 0.28
+const ARROW_WIDTH_RATIO = 0.24
 const DISTANCE_EPSILON = 0.000001
 
-type BeltFlowMarkKind = "light" | "arrow"
+type BeltFlowMarkKind = "highlight" | "arrow"
 
 interface BeltFlowMark {
   readonly kind: BeltFlowMarkKind;
   readonly centerX: number;
   readonly centerY: number;
   readonly angleRadians: number;
+  readonly lengthCells: number;
 }
 
 interface BeltFlowPalette {
-  readonly lightColor: number;
-  readonly arrowColor: number;
-  readonly arrowStrokeColor: number;
+  readonly beltColor: number;
 }
 
 export function createBeltFlowDecoration(): DecorationLayer {
   const container = new Container()
-  const graphics = new Graphics({ roundPixels: true })
-  container.addChild(graphics)
+  const highlightLayer = new Container()
+  const arrowGraphics = new Graphics({ roundPixels: true })
+  const highlightSprites: Sprite[] = []
+  let destroyed = false
+  let highlightTexture: Texture | null = null
+  let highlightTextureLoadStarted = false
+
+  container.addChild(highlightLayer)
+  container.addChild(arrowGraphics)
+
+  const ensureHighlightTexture = (ctx: DecorationSyncContext): void => {
+    if (highlightTextureLoadStarted || highlightTexture !== null) {
+      return
+    }
+
+    const textureManager = ctx.workspace.render?.textureManager
+    if (textureManager === undefined) {
+      return
+    }
+
+    highlightTextureLoadStarted = true
+    void textureManager.getTexture(HIGHLIGHT_TEXTURE_KEY).then((texture) => {
+      if (destroyed) {
+        return
+      }
+
+      highlightTexture = texture
+    })
+  }
+
+  const ensureHighlightSprite = (index: number): Sprite => {
+    let sprite = highlightSprites[index]
+    if (sprite !== undefined) {
+      return sprite
+    }
+
+    sprite = new Sprite(Texture.EMPTY)
+    sprite.anchor.set(0.5)
+    sprite.roundPixels = true
+    highlightLayer.addChild(sprite)
+    highlightSprites.push(sprite)
+    return sprite
+  }
 
   return {
     container,
@@ -49,6 +97,7 @@ export function createBeltFlowDecoration(): DecorationLayer {
         return
       }
 
+      ensureHighlightTexture(ctx)
       const entries = resolveBeltVisualPathEntries(ctx)
       if (entries.length === 0) {
         hide()
@@ -62,25 +111,47 @@ export function createBeltFlowDecoration(): DecorationLayer {
       }
 
       container.visible = true
-      graphics.visible = true
+      highlightLayer.visible = true
+      arrowGraphics.visible = true
+      const palette = resolveBeltFlowPalette(ctx)
+      syncHighlightSprites({
+        marks,
+        texture: highlightTexture,
+        gridCellSize: ctx.viewportState.gridCellPixelSize,
+        palette,
+        ensureHighlightSprite,
+        highlightSprites,
+      })
       drawBeltFlowMarks({
-        graphics,
+        graphics: arrowGraphics,
         marks,
         gridCellSize: ctx.viewportState.gridCellPixelSize,
-        palette: resolveBeltFlowPalette(ctx),
+        palette,
       })
     },
 
     destroy(): void {
-      graphics.destroy()
+      destroyed = true
+      for (const sprite of highlightSprites) {
+        sprite.destroy()
+      }
+
+      highlightSprites.length = 0
+      arrowGraphics.destroy()
+      highlightLayer.destroy({ children: true })
       container.destroy({ children: true })
     },
   }
 
   function hide(): void {
     container.visible = false
-    graphics.visible = false
-    graphics.clear()
+    highlightLayer.visible = false
+    arrowGraphics.visible = false
+    arrowGraphics.clear()
+
+    for (const sprite of highlightSprites) {
+      sprite.visible = false
+    }
   }
 }
 
@@ -89,11 +160,11 @@ export function resolveBeltFlowMarks(ctx: DecorationSyncContext): BeltFlowMark[]
   const marks: BeltFlowMark[] = []
 
   for (const entry of entries) {
-    const lightDistances = resolveRepeatingLocalDistances({
+    const highlightDistances = resolveRepeatingLocalDistances({
       phaseOffsetCells: entry.phaseOffsetCells,
       pathLengthCells: entry.lengthCells,
-      spacingCells: LIGHT_SPACING_CELLS,
-      speedCellsPerSecond: BELT_VISUAL_SPEED_CELLS_PER_SECOND * LIGHT_SPEED_MULTIPLIER,
+      spacingCells: HIGHLIGHT_SPACING_CELLS,
+      speedCellsPerSecond: BELT_VISUAL_SPEED_CELLS_PER_SECOND * HIGHLIGHT_SPEED_MULTIPLIER,
       nowMs: ctx.nowMs,
     })
     const arrowDistances = resolveRepeatingLocalDistances({
@@ -104,15 +175,18 @@ export function resolveBeltFlowMarks(ctx: DecorationSyncContext): BeltFlowMark[]
       nowMs: ctx.nowMs,
     })
 
-    for (const distanceCells of lightDistances) {
-      const mark = resolveBeltFlowMark({
-        kind: "light",
-        ctx,
-        entry,
-        distanceCells,
-      })
-      if (mark !== null) {
-        marks.push(mark)
+    for (const distanceCells of highlightDistances) {
+      for (const segment of resolveHighlightSegmentDistances(entry, distanceCells)) {
+        const mark = resolveBeltFlowMark({
+          kind: "highlight",
+          ctx,
+          entry,
+          distanceCells: segment.distanceCells,
+          lengthCells: segment.lengthCells,
+        })
+        if (mark !== null) {
+          marks.push(mark)
+        }
       }
     }
 
@@ -122,6 +196,7 @@ export function resolveBeltFlowMarks(ctx: DecorationSyncContext): BeltFlowMark[]
         ctx,
         entry,
         distanceCells,
+        lengthCells: 0,
       })
       if (mark !== null) {
         marks.push(mark)
@@ -186,6 +261,7 @@ function resolveBeltFlowMark(options: {
   ctx: DecorationSyncContext;
   entry: ReturnType<typeof resolveBeltVisualPathEntries>[number];
   distanceCells: number;
+  lengthCells: number;
 }): BeltFlowMark | null {
   const sample = resolveBeltPathSampleAtDistance({
     entity: options.entry.entity,
@@ -210,6 +286,79 @@ function resolveBeltFlowMark(options: {
     centerX: center.x,
     centerY: center.y,
     angleRadians: sample.angleRadians,
+    lengthCells: options.lengthCells,
+  }
+}
+
+function resolveHighlightSegmentDistances(
+  entry: ReturnType<typeof resolveBeltVisualPathEntries>[number],
+  centerDistanceCells: number,
+): Array<{
+  readonly distanceCells: number;
+  readonly lengthCells: number;
+}> {
+  if (entry.entity.definitionId === "belt_straight_1x1") {
+    return [{
+      distanceCells: centerDistanceCells,
+      lengthCells: HIGHLIGHT_LENGTH_CELLS,
+    }]
+  }
+
+  const segmentLengthCells = HIGHLIGHT_LENGTH_CELLS / HIGHLIGHT_TURN_SEGMENT_COUNT
+  const segmentStartCells = centerDistanceCells - HIGHLIGHT_LENGTH_CELLS / 2
+  const segments: Array<{
+    readonly distanceCells: number;
+    readonly lengthCells: number;
+  }> = []
+
+  for (let index = 0; index < HIGHLIGHT_TURN_SEGMENT_COUNT; index += 1) {
+    const distanceCells = segmentStartCells + segmentLengthCells * (index + 0.5)
+    if (distanceCells < 0 || distanceCells >= entry.lengthCells) {
+      continue
+    }
+
+    segments.push({
+      distanceCells,
+      lengthCells: segmentLengthCells,
+    })
+  }
+
+  return segments
+}
+
+function syncHighlightSprites(options: {
+  marks: readonly BeltFlowMark[];
+  texture: Texture | null;
+  gridCellSize: number;
+  palette: BeltFlowPalette;
+  ensureHighlightSprite: (index: number) => Sprite;
+  highlightSprites: readonly Sprite[];
+}): void {
+  let visibleCount = 0
+
+  for (const mark of options.marks) {
+    if (mark.kind !== "highlight" || options.texture === null) {
+      continue
+    }
+
+    const sprite = options.ensureHighlightSprite(visibleCount)
+    sprite.visible = true
+    sprite.texture = options.texture
+    sprite.x = mark.centerX
+    sprite.y = mark.centerY
+    sprite.rotation = mark.angleRadians
+    sprite.width = options.gridCellSize * mark.lengthCells
+    sprite.height = options.gridCellSize * HIGHLIGHT_WIDTH_CELLS
+    sprite.tint = options.palette.beltColor
+    sprite.alpha = HIGHLIGHT_ALPHA
+    visibleCount += 1
+  }
+
+  for (let index = visibleCount; index < options.highlightSprites.length; index += 1) {
+    const sprite = options.highlightSprites[index]
+    if (sprite !== undefined) {
+      sprite.visible = false
+    }
   }
 }
 
@@ -219,22 +368,10 @@ function drawBeltFlowMarks(options: {
   gridCellSize: number;
   palette: BeltFlowPalette;
 }): void {
-  const lightLength = options.gridCellSize * LIGHT_LENGTH_RATIO
-  const lightWidth = options.gridCellSize * LIGHT_WIDTH_RATIO
   const arrowLength = options.gridCellSize * ARROW_LENGTH_RATIO
   const arrowWidth = options.gridCellSize * ARROW_WIDTH_RATIO
 
   options.graphics.clear()
-
-  for (const mark of options.marks) {
-    if (mark.kind !== "light") {
-      continue
-    }
-
-    options.graphics
-      .poly(resolveRotatedRectanglePoints(mark, lightLength, lightWidth), true)
-      .fill({ color: options.palette.lightColor, alpha: 0.72 })
-  }
 
   for (const mark of options.marks) {
     if (mark.kind !== "arrow") {
@@ -243,13 +380,7 @@ function drawBeltFlowMarks(options: {
 
     options.graphics
       .poly(resolveRotatedArrowPoints(mark, arrowLength, arrowWidth), true)
-      .fill({ color: options.palette.arrowColor, alpha: 0.9 })
-      .stroke({
-        width: Math.max(1, options.gridCellSize * 0.018),
-        color: options.palette.arrowStrokeColor,
-        alpha: 0.82,
-        pixelLine: true,
-      })
+      .fill({ color: options.palette.beltColor, alpha: 1 })
   }
 }
 
@@ -257,35 +388,13 @@ function resolveBeltFlowPalette(ctx: DecorationSyncContext): BeltFlowPalette {
   const theme = ctx.workspace.app?.state.theme
   if (theme === undefined) {
     return {
-      lightColor: 0xffffff,
-      arrowColor: 0xffffff,
-      arrowStrokeColor: 0x334155,
+      beltColor: 0xf59e0b,
     }
   }
 
   return {
-    lightColor: resolveAppThemeColorNumber(theme, theme.renderer.spritePreviewBorderBoxColorKey),
-    arrowColor: resolveAppThemeColorNumber(theme, theme.renderer.portChevronColorKey),
-    arrowStrokeColor: resolveAppThemeColorNumber(theme, theme.renderer.flowGlowStrokeColorKey),
+    beltColor: resolveAppThemeColorNumber(theme, theme.renderer.beltTileStrokeColorKey),
   }
-}
-
-function resolveRotatedRectanglePoints(
-  mark: Pick<BeltFlowMark, "centerX" | "centerY" | "angleRadians">,
-  length: number,
-  width: number,
-): number[] {
-  return rotateLocalPoints({
-    centerX: mark.centerX,
-    centerY: mark.centerY,
-    angleRadians: mark.angleRadians,
-    localPoints: [
-      { x: -length / 2, y: -width / 2 },
-      { x: length / 2, y: -width / 2 },
-      { x: length / 2, y: width / 2 },
-      { x: -length / 2, y: width / 2 },
-    ],
-  })
 }
 
 function resolveRotatedArrowPoints(
@@ -302,12 +411,8 @@ function resolveRotatedArrowPoints(
     angleRadians: mark.angleRadians,
     localPoints: [
       { x: halfLength, y: 0 },
-      { x: -length * 0.08, y: -halfWidth },
-      { x: -length * 0.08, y: -width * 0.18 },
-      { x: -halfLength, y: -width * 0.18 },
-      { x: -halfLength, y: width * 0.18 },
-      { x: -length * 0.08, y: width * 0.18 },
-      { x: -length * 0.08, y: halfWidth },
+      { x: -halfLength, y: -halfWidth },
+      { x: -halfLength, y: halfWidth },
     ],
   })
 }

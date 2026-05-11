@@ -5,11 +5,12 @@ import {
   Texture,
 } from "pixi.js"
 
+import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
+
 import type { DecorationLayer } from "./DecorationLayer"
 import type { DecorationSyncContext } from "./DecorationSyncContext"
 import {
-  BELT_INSERTION_DEPTH_CELLS,
-  resolveBeltInsertionEntries,
+  resolveBeltPortExtensionEntries,
   resolveViewportPoint,
 } from "./BeltVisualGeometry"
 
@@ -89,7 +90,7 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
         return
       }
 
-      const entries = resolveBeltInsertionEntries(ctx)
+      const entries = resolveBeltPortExtensionEntries(ctx)
       if (entries.length === 0) {
         hideAll()
         return
@@ -99,8 +100,7 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
       container.visible = true
 
       const gridCellSize = ctx.viewportState.gridCellPixelSize
-      const insertionLength = gridCellSize * BELT_INSERTION_DEPTH_CELLS
-      const spriteCenterX = gridCellSize * (BELT_INSERTION_DEPTH_CELLS - 0.5)
+      const tint = resolveBeltPortExtensionTint(ctx)
 
       entries.forEach((entry, index) => {
         const view = ensureSpriteView(index)
@@ -115,22 +115,25 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
         view.root.y = boundary.y
         view.root.rotation = entry.angleRadians
 
+        const localStartX = entry.localStartCells * gridCellSize
+        const localEndX = entry.localEndCells * gridCellSize
         view.mask
           .clear()
           .rect(
-            0,
+            localStartX,
             -gridCellSize / 2,
-            insertionLength,
+            localEndX - localStartX,
             gridCellSize,
           )
           .fill(0xffffff)
 
         view.sprite.texture = texture ?? Texture.EMPTY
-        view.sprite.x = spriteCenterX
+        view.sprite.x = entry.spriteCenterXCells * gridCellSize
         view.sprite.y = 0
         view.sprite.width = gridCellSize
         view.sprite.height = gridCellSize
         view.sprite.rotation = 0
+        view.sprite.tint = tint
       })
 
       for (let index = entries.length; index < spriteViews.length; index += 1) {
@@ -152,4 +155,13 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
       container.destroy({ children: true })
     },
   }
+}
+
+function resolveBeltPortExtensionTint(ctx: DecorationSyncContext): number {
+  const theme = ctx.workspace.app?.state.theme
+  if (theme === undefined) {
+    return 0xf59e0b
+  }
+
+  return resolveAppThemeColorNumber(theme, theme.renderer.beltTileStrokeColorKey)
 }

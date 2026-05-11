@@ -108,7 +108,10 @@ vi.mock("pixi.js", () => {
   }
 })
 
-import { createBeltCargoDecoration } from "@/renderer/scene/decorations/BeltCargoDecoration"
+import {
+  createBeltCargoDecoration,
+  resolveBeltCargoBoxSize,
+} from "@/renderer/scene/decorations/BeltCargoDecoration"
 import { createRegistryContract } from "@/registry"
 
 describe("createBeltCargoDecoration", () => {
@@ -124,18 +127,30 @@ describe("createBeltCargoDecoration", () => {
     expect(getTexture).toHaveBeenCalledTimes(1)
     expect(getTexture).toHaveBeenCalledWith("item-icon-item_iron_ore")
 
-    const boxGraphics = decoration.container.children[0] as unknown as {
+    const cargoRoot = resolveCargoRoot(decoration, 0)
+    expect(cargoRoot.x).toBeCloseTo(100)
+    expect(cargoRoot.y).toBeCloseTo(100)
+    expect(cargoRoot.rotation).toBeCloseTo(0)
+
+    const boxGraphics = cargoRoot.children[1] as unknown as {
       drawCommands: Array<{
-        type: "poly";
-        points: number[];
+        type: "rect";
+        x: number;
+        y: number;
+        width: number;
+        height: number;
         fill?: unknown;
         stroke?: unknown;
       }>;
     }
+    const boxSize = resolveBeltCargoBoxSize(100)
     expect(boxGraphics.drawCommands).toHaveLength(1)
     expect(boxGraphics.drawCommands[0]).toMatchObject({
-      type: "poly",
-      points: [70, 70, 130, 70, 130, 130, 70, 130],
+      type: "rect",
+      x: -boxSize / 2,
+      y: -boxSize / 2,
+      width: boxSize,
+      height: boxSize,
       fill: 0xffffff,
       stroke: {
         width: 1,
@@ -144,14 +159,8 @@ describe("createBeltCargoDecoration", () => {
       },
     })
 
-    const iconLayer = decoration.container.children[1] as { children: unknown[] }
-    expect(iconLayer.children).toHaveLength(0)
-
-    await flushMicrotasks()
-    decoration.sync(ctx as never)
-
-    expect(iconLayer.children).toHaveLength(1)
-    const sprite = iconLayer.children[0] as {
+    const sprite = cargoRoot.children[2] as {
+      visible: boolean;
       texture: unknown;
       x: number;
       y: number;
@@ -159,11 +168,17 @@ describe("createBeltCargoDecoration", () => {
       height: number;
       rotation: number;
     }
+    expect(sprite.visible).toBe(false)
+
+    await flushMicrotasks()
+    decoration.sync(ctx as never)
+
+    expect(sprite.visible).toBe(true)
     expect(sprite.texture).toBe(iconTexture)
-    expect(sprite.x).toBeCloseTo(100)
-    expect(sprite.y).toBeCloseTo(100)
-    expect(sprite.width).toBeCloseTo(43.2)
-    expect(sprite.height).toBeCloseTo(43.2)
+    expect(sprite.x).toBeCloseTo(0)
+    expect(sprite.y).toBeCloseTo(0)
+    expect(sprite.width).toBeCloseTo(boxSize * 0.72)
+    expect(sprite.height).toBeCloseTo(boxSize * 0.72)
     expect(sprite.rotation).toBeCloseTo(0)
 
     decoration.destroy()
@@ -195,10 +210,8 @@ describe("createBeltCargoDecoration", () => {
     decoration.sync(ctx as never)
 
     expect(decoration.container.visible).toBe(true)
-    const boxGraphics = decoration.container.children[0] as unknown as {
-      drawCommands: Array<unknown>;
-    }
-    expect(boxGraphics.drawCommands).toHaveLength(2)
+    const cargoLayer = decoration.container.children[0] as { children: unknown[] }
+    expect(cargoLayer.children).toHaveLength(2)
 
     decoration.destroy()
   })
@@ -233,21 +246,15 @@ describe("createBeltCargoDecoration", () => {
 
       decoration.sync(ctx as never)
 
-      const boxGraphics = decoration.container.children[0] as unknown as {
-        drawCommands: Array<{
-          points: number[];
-        }>;
-      }
-      expect(boxGraphics.drawCommands).toHaveLength(1)
-      const center = resolvePolygonCenter(boxGraphics.drawCommands[0]?.points ?? [])
-      expect(center.x).toBeCloseTo(testCase.expected.x)
-      expect(center.y).toBeCloseTo(testCase.expected.y)
+      const cargoRoot = resolveCargoRoot(decoration, 0)
+      expect(cargoRoot.x).toBeCloseTo(testCase.expected.x)
+      expect(cargoRoot.y).toBeCloseTo(testCase.expected.y)
+      expect(cargoRoot.rotation).toBeCloseTo(testCase.expected.rotation)
 
       await flushMicrotasks()
       decoration.sync(ctx as never)
-      const iconLayer = decoration.container.children[1] as { children: unknown[] }
-      const sprite = iconLayer.children[0] as { rotation: number }
-      expect(sprite.rotation).toBeCloseTo(testCase.expected.rotation)
+      const sprite = cargoRoot.children[2] as { rotation: number }
+      expect(sprite.rotation).toBeCloseTo(0)
 
       decoration.destroy()
     }
@@ -283,15 +290,9 @@ describe("createBeltCargoDecoration", () => {
 
     decoration.sync(ctx as never)
 
-    const boxGraphics = decoration.container.children[0] as unknown as {
-      drawCommands: Array<{
-        points: number[];
-      }>;
-    }
-    expect(boxGraphics.drawCommands).toHaveLength(1)
-    const center = resolvePolygonCenter(boxGraphics.drawCommands[0]?.points ?? [])
-    expect(center.x).toBeCloseTo(50)
-    expect(center.y).toBeCloseTo(100)
+    const cargoRoot = resolveCargoRoot(decoration, 0)
+    expect(cargoRoot.x).toBeCloseTo(50)
+    expect(cargoRoot.y).toBeCloseTo(100)
 
     decoration.destroy()
   })
@@ -326,15 +327,9 @@ describe("createBeltCargoDecoration", () => {
 
     decoration.sync(ctx as never)
 
-    const boxGraphics = decoration.container.children[0] as unknown as {
-      drawCommands: Array<{
-        points: number[];
-      }>;
-    }
-    expect(boxGraphics.drawCommands).toHaveLength(1)
-    const center = resolvePolygonCenter(boxGraphics.drawCommands[0]?.points ?? [])
-    expect(center.x).toBeCloseTo(150)
-    expect(center.y).toBeCloseTo(100)
+    const cargoRoot = resolveCargoRoot(decoration, 0)
+    expect(cargoRoot.x).toBeCloseTo(150)
+    expect(cargoRoot.y).toBeCloseTo(100)
 
     decoration.destroy()
   })
@@ -355,10 +350,10 @@ describe("createBeltCargoDecoration", () => {
     decoration.destroy()
   })
 
-  it("renders accepted cargo as a masked handoff into the target device", () => {
+  it("clips moving cargo to the belt insertion segment when it overlaps a target device", () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    const firstFrame = createContext({
+    const ctx = createContext({
       getTexture,
       includeInsertionTarget: true,
       nowMs: 1000,
@@ -370,20 +365,34 @@ describe("createBeltCargoDecoration", () => {
         progress: 0.95,
       }],
     })
-    const secondFrame = createContext({
-      getTexture,
-      includeInsertionTarget: true,
-      nowMs: 1100,
-      entries: [{
-        beltShape: "straight",
-        position: { x: 0, y: 0 },
-        rotation: 0,
-        itemId: "item_iron_ore",
-        progress: 0.95,
-        runtimeStatus: createEmptyBeltRuntimeStatus(),
-      }],
+
+    decoration.sync(ctx as never)
+
+    const cargoRoot = resolveCargoRoot(decoration, 0)
+    expect(cargoRoot.visible).toBe(true)
+    expect(cargoRoot.x).toBeCloseTo(145)
+    expect(cargoRoot.y).toBeCloseTo(100)
+    expect(cargoRoot.rotation).toBeCloseTo(0)
+    expect(cargoRoot.mask).toBe(cargoRoot.children[0])
+
+    const mask = cargoRoot.children[0] as {
+      drawCommands: Array<{
+        type: "rect";
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }>;
+    }
+    expect(mask.drawCommands[0]).toMatchObject({
+      type: "rect",
+      x: -200,
+      y: -200,
+      width: 225,
+      height: 400,
     })
-    const thirdFrame = createContext({
+
+    const emptyFrame = createContext({
       getTexture,
       includeInsertionTarget: true,
       nowMs: 1200,
@@ -397,56 +406,53 @@ describe("createBeltCargoDecoration", () => {
       }],
     })
 
-    decoration.sync(firstFrame as never)
-    decoration.sync(secondFrame as never)
-    decoration.sync(thirdFrame as never)
+    decoration.sync(emptyFrame as never)
 
-    const handoffLayer = decoration.container.children[2] as {
-      children: Array<{
-        visible: boolean;
-        x: number;
-        y: number;
-        rotation: number;
-        children: unknown[];
-      }>;
-    }
-    expect(handoffLayer.children).toHaveLength(1)
-    const root = handoffLayer.children[0]
-    expect(root?.visible).toBe(true)
-    expect(root?.x).toBeCloseTo(150)
-    expect(root?.y).toBeCloseTo(100)
-    expect(root?.rotation).toBeCloseTo(0)
-
-    const mask = root?.children[0] as {
-      drawCommands: Array<{
-        type: "rect";
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-      }>;
-    }
-    expect(mask.drawCommands[0]).toMatchObject({
-      type: "rect",
-      x: -60,
-      y: -50,
-      width: 80,
-      height: 100,
-    })
-
-    const cargoRoot = root?.children[1] as {
-      x: number;
-    }
-    expect(cargoRoot.x).toBeGreaterThan(-10)
-    expect(cargoRoot.x).toBeLessThan(50)
+    expect(decoration.container.visible).toBe(false)
 
     decoration.destroy()
   })
 
-  it("does not render handoff masks in simplified blueprint-style display", () => {
+  it("clips cargo to the belt protrusion segment when it starts from a source device", () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    const firstFrame = createContext({
+    const ctx = createContext({
+      getTexture,
+      includeOutputSource: true,
+      entries: [{
+        beltShape: "straight",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        itemId: "item_iron_ore",
+        progress: 0.05,
+      }],
+    })
+
+    decoration.sync(ctx as never)
+
+    const cargoRoot = resolveCargoRoot(decoration, 0)
+    expect(cargoRoot.x).toBeCloseTo(55)
+    expect(cargoRoot.mask).toBe(cargoRoot.children[0])
+    const mask = cargoRoot.children[0] as {
+      drawCommands: Array<{
+        type: "rect";
+        x: number;
+        width: number;
+      }>;
+    }
+    expect(mask.drawCommands[0]).toMatchObject({
+      type: "rect",
+      x: -25,
+      width: 225,
+    })
+
+    decoration.destroy()
+  })
+
+  it("does not apply device-overlap masks in simplified blueprint-style display", () => {
+    const decoration = createBeltCargoDecoration()
+    const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+    const ctx = createContext({
       getTexture,
       includeInsertionTarget: true,
       simplifiedDeviceIcons: true,
@@ -459,25 +465,12 @@ describe("createBeltCargoDecoration", () => {
         progress: 0.95,
       }],
     })
-    const secondFrame = createContext({
-      getTexture,
-      includeInsertionTarget: true,
-      simplifiedDeviceIcons: true,
-      nowMs: 1100,
-      entries: [{
-        beltShape: "straight",
-        position: { x: 0, y: 0 },
-        rotation: 0,
-        itemId: "item_iron_ore",
-        progress: 0.95,
-        runtimeStatus: createEmptyBeltRuntimeStatus(),
-      }],
-    })
 
-    decoration.sync(firstFrame as never)
-    decoration.sync(secondFrame as never)
+    decoration.sync(ctx as never)
 
-    expect(decoration.container.visible).toBe(false)
+    const cargoRoot = resolveCargoRoot(decoration, 0)
+    expect(decoration.container.visible).toBe(true)
+    expect(cargoRoot.mask).toBe(null)
 
     decoration.destroy()
   })
@@ -508,6 +501,7 @@ function createContext(options: {
   }[];
   beltShape?: "straight" | "turn-cw" | "turn-ccw";
   includeInsertionTarget?: boolean;
+  includeOutputSource?: boolean;
   simplifiedDeviceIcons?: boolean;
   nowMs?: number;
 }) {
@@ -540,6 +534,16 @@ function createContext(options: {
       id: "target-admission",
       definitionId: "item_log_admission",
       position: { x: 1, y: 0 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    })
+  }
+  if (options.includeOutputSource === true) {
+    entities.push({
+      id: "source-connector",
+      definitionId: "item_log_connector",
+      position: { x: -1, y: 0 },
       rotation: 0,
       config: {},
       tags: [],
@@ -643,18 +647,24 @@ async function flushMicrotasks(iterations = 4): Promise<void> {
   }
 }
 
-function resolvePolygonCenter(points: readonly number[]): { x: number; y: number } {
-  let x = 0
-  let y = 0
-  const pointCount = points.length / 2
-
-  for (let index = 0; index < points.length; index += 2) {
-    x += points[index] ?? 0
-    y += points[index + 1] ?? 0
+function resolveCargoRoot(
+  decoration: ReturnType<typeof createBeltCargoDecoration>,
+  index: number,
+) {
+  const cargoLayer = decoration.container.children[0] as {
+    children: Array<{
+      visible: boolean;
+      x: number;
+      y: number;
+      rotation: number;
+      mask: unknown;
+      children: unknown[];
+    }>;
+  }
+  const root = cargoLayer.children[index]
+  if (root === undefined) {
+    throw new Error(`Expected cargo root at index ${index}.`)
   }
 
-  return {
-    x: x / pointCount,
-    y: y / pointCount,
-  }
+  return root
 }

@@ -15,23 +15,24 @@ import type { DecorationSyncContext } from "./DecorationSyncContext"
 import {
   BELT_INSERTION_DEPTH_CELLS,
   createEntityDefinitionMap,
-  resolveBeltInsertionEntries,
+  resolveBeltPortExtensionEntries,
   resolveBeltPathSample,
   resolveViewportPoint,
+  type BeltPortExtensionEntry,
 } from "./BeltVisualGeometry"
 
 const ITEM_ICON_TEXTURE_PREFIX = "item-icon-"
-const BOX_SIZE_RATIO = 0.6
 const BOX_ICON_SIZE_RATIO = 0.72
 const BOX_STROKE_WIDTH_PX = 1
-const HANDOFF_DURATION_MS = 650
-const HANDOFF_SPAWN_PROGRESS_THRESHOLD = 0.85
+const BOX_TURN_CLEARANCE_PX = 2
+const CLIP_MASK_PADDING_CELLS = 2
 
 interface BeltCargoRenderEntry {
   readonly centerX: number;
   readonly centerY: number;
   readonly angleRadians: number;
   readonly itemId: string;
+  readonly clipRect: BeltCargoClipRect | null;
 }
 
 interface BeltCargoEntry {
@@ -44,54 +45,35 @@ interface BeltCargoEntry {
   readonly isRunning: boolean;
 }
 
-interface BeltCargoHandoffState {
-  readonly sourceEntityId: string;
-  readonly itemId: string;
-  readonly startedAtMs: number;
-}
-
-interface BeltCargoHandoffRenderEntry {
-  readonly sourceEntityId: string;
-  readonly itemId: string;
-  readonly startedAtMs: number;
-  readonly progress: number;
-}
-
-interface BeltCargoHandoffView {
+interface BeltCargoView {
   readonly root: Container;
   readonly mask: Graphics;
-  readonly cargoRoot: Container;
   readonly boxGraphics: Graphics;
   readonly icon: Sprite;
 }
 
+interface BeltCargoClipRect {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
 export function createBeltCargoDecoration(): DecorationLayer {
   const container = new Container()
-  const boxGraphics = new Graphics({ roundPixels: true })
-  const iconLayer = new Container()
-  const handoffLayer = new Container()
-  const iconSprites: Sprite[] = []
-  const handoffViews: BeltCargoHandoffView[] = []
+  const cargoLayer = new Container()
+  const cargoViews: BeltCargoView[] = []
   const resolvedTextures = new Map<string, Texture>()
   const pendingTextures = new Map<string, Promise<Texture>>()
-  container.addChild(boxGraphics)
-  container.addChild(iconLayer)
-  container.addChild(handoffLayer)
+  container.addChild(cargoLayer)
 
   let destroyed = false
   let itemIconIdByItemId: Map<string, string> | null = null
-  const previousMovingCargoByEntityId = new Map<string, BeltCargoEntry>()
-  const handoffCargoByEntityId = new Map<string, BeltCargoHandoffState>()
 
   const hideAll = (): void => {
     container.visible = false
-    boxGraphics.clear()
 
-    for (const sprite of iconSprites) {
-      sprite.visible = false
-    }
-
-    for (const view of handoffViews) {
+    for (const view of cargoViews) {
       view.root.visible = false
     }
   }
@@ -132,49 +114,31 @@ export function createBeltCargoDecoration(): DecorationLayer {
       })
   }
 
-  const ensureIconSprite = (index: number): Sprite => {
-    let sprite = iconSprites[index]
-    if (sprite !== undefined) {
-      return sprite
-    }
-
-    sprite = new Sprite(Texture.EMPTY)
-    sprite.anchor.set(0.5)
-    sprite.roundPixels = true
-    iconLayer.addChild(sprite)
-    iconSprites.push(sprite)
-    return sprite
-  }
-
-  const ensureHandoffView = (index: number): BeltCargoHandoffView => {
-    let view = handoffViews[index]
+  const ensureCargoView = (index: number): BeltCargoView => {
+    let view = cargoViews[index]
     if (view !== undefined) {
       return view
     }
 
     const root = new Container()
     const mask = new Graphics({ roundPixels: true })
-    const cargoRoot = new Container()
     const box = new Graphics({ roundPixels: true })
     const icon = new Sprite(Texture.EMPTY)
     icon.anchor.set(0.5)
     icon.roundPixels = true
 
-    cargoRoot.addChild(box)
-    cargoRoot.addChild(icon)
-    root.mask = mask
     root.addChild(mask)
-    root.addChild(cargoRoot)
-    handoffLayer.addChild(root)
+    root.addChild(box)
+    root.addChild(icon)
+    cargoLayer.addChild(root)
 
     view = {
       root,
       mask,
-      cargoRoot,
       boxGraphics: box,
       icon,
     }
-    handoffViews.push(view)
+    cargoViews.push(view)
     return view
   }
 
@@ -187,32 +151,20 @@ export function createBeltCargoDecoration(): DecorationLayer {
       }
 
       if (ctx.workspace.simulation?.state.runningState === "stop") {
-        previousMovingCargoByEntityId.clear()
-        handoffCargoByEntityId.clear()
         hideAll()
         return
       }
 
       const beltCargoEntries = resolveBeltCargoEntries(ctx)
-      const beltInsertionEntries = resolveBeltInsertionEntries(ctx)
-      const handoffEntries = syncBeltCargoHandoffs({
-        nowMs: ctx.nowMs,
-        beltCargoEntries,
-        beltInsertionSourceEntityIds: new Set(
-          beltInsertionEntries.map((entry) => entry.sourceEntityId),
-        ),
-        previousMovingCargoByEntityId,
-        handoffCargoByEntityId,
-      })
-
-      if (beltCargoEntries.length === 0 && handoffEntries.length === 0) {
+      if (beltCargoEntries.length === 0) {
         hideAll()
         return
       }
 
       const itemIconMap = ensureItemIconMap(ctx)
-      const boxSize = ctx.viewportState.gridCellPixelSize * BOX_SIZE_RATIO
+      const boxSize = resolveBeltCargoBoxSize(ctx.viewportState.gridCellPixelSize)
       const boxHalfSize = boxSize / 2
+      const portExtensionEntries = resolveBeltPortExtensionEntries(ctx)
       const entries: BeltCargoRenderEntry[] = []
 
       for (const beltCargoEntry of beltCargoEntries) {
@@ -231,35 +183,27 @@ export function createBeltCargoDecoration(): DecorationLayer {
           centerY: center.y,
           angleRadians: beltCargoEntry.angleRadians,
           itemId: beltCargoEntry.itemId,
+          clipRect: resolveBeltCargoClipRect({
+            ctx,
+            entry: beltCargoEntry,
+            center,
+            angleRadians: beltCargoEntry.angleRadians,
+            portExtensionEntries,
+          }),
         })
       }
 
-      for (const handoffEntry of handoffEntries) {
-        ensureTexture(ctx, resolveItemIconTextureKey(handoffEntry.itemId, itemIconMap))
-      }
-
-      if (entries.length === 0 && handoffEntries.length === 0) {
+      if (entries.length === 0) {
         hideAll()
         return
       }
 
       container.visible = true
-      drawBeltCargoBoxes(boxGraphics, entries, boxSize)
-      syncBeltCargoIcons({
+      syncBeltCargoViews({
         entries,
         boxSize,
-        ensureIconSprite,
-        iconSprites,
-        itemIconMap,
-        resolvedTextures,
-      })
-      syncBeltCargoHandoffViews({
-        ctx,
-        entries: handoffEntries,
-        insertionEntries: beltInsertionEntries,
-        boxSize,
-        ensureHandoffView,
-        handoffViews,
+        ensureCargoView,
+        cargoViews,
         itemIconMap,
         resolvedTextures,
       })
@@ -270,19 +214,12 @@ export function createBeltCargoDecoration(): DecorationLayer {
       pendingTextures.clear()
       resolvedTextures.clear()
 
-      for (const sprite of iconSprites) {
-        sprite.destroy()
-      }
-
-      for (const view of handoffViews) {
+      for (const view of cargoViews) {
         view.root.destroy({ children: true })
       }
 
-      iconSprites.length = 0
-      handoffViews.length = 0
-      boxGraphics.destroy()
-      iconLayer.destroy({ children: true })
-      handoffLayer.destroy({ children: true })
+      cargoViews.length = 0
+      cargoLayer.destroy({ children: true })
       container.destroy({ children: true })
     },
   }
@@ -444,176 +381,107 @@ function resolveItemIconTextureKey(
   return `${ITEM_ICON_TEXTURE_PREFIX}${itemIconMap.get(itemId) ?? itemId}`
 }
 
-function drawBeltCargoBoxes(
-  graphics: Graphics,
-  entries: readonly BeltCargoRenderEntry[],
-  boxSize: number,
-): void {
-  graphics.clear()
+export function resolveBeltCargoBoxSize(gridCellSize: number): number {
+  const maxTurnSafeSize = gridCellSize / Math.SQRT2
 
-  for (const entry of entries) {
-    graphics
-      .poly(resolveRotatedSquarePoints(entry, boxSize), true)
-      .fill(0xffffff)
-      .stroke({
-        width: BOX_STROKE_WIDTH_PX,
-        color: 0x000000,
-        pixelLine: true,
-      })
+  return Math.max(1, Math.floor(maxTurnSafeSize - BOX_TURN_CLEARANCE_PX))
+}
+
+function resolveBeltCargoClipRect(options: {
+  ctx: DecorationSyncContext;
+  entry: BeltCargoEntry;
+  center: GridFloatPoint;
+  angleRadians: number;
+  portExtensionEntries: readonly BeltPortExtensionEntry[];
+}): BeltCargoClipRect | null {
+  const extensions = options.portExtensionEntries.filter((extension) =>
+    extension.beltEntityId === options.entry.entityId,
+  )
+  if (extensions.length === 0) {
+    return null
+  }
+
+  const gridCellSize = options.ctx.viewportState.gridCellPixelSize
+  const insertionLength = gridCellSize * BELT_INSERTION_DEPTH_CELLS
+  const maskPadding = gridCellSize * CLIP_MASK_PADDING_CELLS
+  let minX = -maskPadding
+  let maxX = maskPadding
+
+  for (const extension of extensions) {
+    const boundary = resolveViewportPoint({
+      point: extension.boundary,
+      viewportBounds: options.ctx.viewportBounds,
+      viewportState: options.ctx.viewportState,
+    })
+    const boundaryLocalX = resolveLocalX({
+      point: boundary,
+      origin: options.center,
+      angleRadians: options.angleRadians,
+    })
+
+    if (extension.kind === "device-output-to-belt") {
+      minX = Math.max(minX, boundaryLocalX - insertionLength)
+    } else {
+      maxX = Math.min(maxX, boundaryLocalX + insertionLength)
+    }
+  }
+
+  if (maxX <= minX) {
+    return {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    }
+  }
+
+  return {
+    x: minX,
+    y: -maskPadding,
+    width: maxX - minX,
+    height: maskPadding * 2,
   }
 }
 
-function syncBeltCargoIcons(options: {
+function syncBeltCargoViews(options: {
   entries: readonly BeltCargoRenderEntry[];
   boxSize: number;
-  ensureIconSprite: (index: number) => Sprite;
-  iconSprites: readonly Sprite[];
+  ensureCargoView: (index: number) => BeltCargoView;
+  cargoViews: readonly BeltCargoView[];
   itemIconMap: ReadonlyMap<string, string>;
   resolvedTextures: ReadonlyMap<string, Texture>;
 }): void {
   const iconSize = options.boxSize * BOX_ICON_SIZE_RATIO
-  let visibleIconCount = 0
-
-  for (const entry of options.entries) {
-    const texture = options.resolvedTextures.get(
-      resolveItemIconTextureKey(entry.itemId, options.itemIconMap),
-    )
-    if (texture === undefined) {
-      continue
-    }
-
-    const sprite = options.ensureIconSprite(visibleIconCount)
-    sprite.visible = true
-    sprite.texture = texture
-    sprite.width = iconSize
-    sprite.height = iconSize
-    sprite.x = entry.centerX
-    sprite.y = entry.centerY
-    sprite.rotation = entry.angleRadians
-    visibleIconCount += 1
-  }
-
-  for (let index = visibleIconCount; index < options.iconSprites.length; index += 1) {
-    const sprite = options.iconSprites[index]
-    if (sprite !== undefined) {
-      sprite.visible = false
-    }
-  }
-}
-
-function syncBeltCargoHandoffs(options: {
-  nowMs: number;
-  beltCargoEntries: readonly BeltCargoEntry[];
-  beltInsertionSourceEntityIds: ReadonlySet<string>;
-  previousMovingCargoByEntityId: Map<string, BeltCargoEntry>;
-  handoffCargoByEntityId: Map<string, BeltCargoHandoffState>;
-}): BeltCargoHandoffRenderEntry[] {
-  const currentEntryIds = new Set(options.beltCargoEntries.map((entry) => entry.entityId))
-
-  for (const entry of options.beltCargoEntries) {
-    options.handoffCargoByEntityId.delete(entry.entityId)
-
-    if (entry.isRunning) {
-      options.previousMovingCargoByEntityId.set(entry.entityId, entry)
-    }
-  }
-
-  for (const [entityId, previousEntry] of options.previousMovingCargoByEntityId) {
-    if (currentEntryIds.has(entityId)) {
-      continue
-    }
-
-    options.previousMovingCargoByEntityId.delete(entityId)
-
-    if (
-      previousEntry.progress < HANDOFF_SPAWN_PROGRESS_THRESHOLD
-      || !options.beltInsertionSourceEntityIds.has(entityId)
-    ) {
-      continue
-    }
-
-    options.handoffCargoByEntityId.set(entityId, {
-      sourceEntityId: entityId,
-      itemId: previousEntry.itemId,
-      startedAtMs: options.nowMs,
-    })
-  }
-
-  const handoffEntries: BeltCargoHandoffRenderEntry[] = []
-  for (const [entityId, handoffState] of options.handoffCargoByEntityId) {
-    if (!options.beltInsertionSourceEntityIds.has(entityId)) {
-      options.handoffCargoByEntityId.delete(entityId)
-      continue
-    }
-
-    const elapsedMs = Math.max(0, options.nowMs - handoffState.startedAtMs)
-    const progress = elapsedMs / HANDOFF_DURATION_MS
-    if (!Number.isFinite(progress) || progress > 1) {
-      options.handoffCargoByEntityId.delete(entityId)
-      continue
-    }
-
-    handoffEntries.push({
-      ...handoffState,
-      progress,
-    })
-  }
-
-  return handoffEntries
-}
-
-function syncBeltCargoHandoffViews(options: {
-  ctx: DecorationSyncContext;
-  entries: readonly BeltCargoHandoffRenderEntry[];
-  insertionEntries: ReturnType<typeof resolveBeltInsertionEntries>;
-  boxSize: number;
-  ensureHandoffView: (index: number) => BeltCargoHandoffView;
-  handoffViews: readonly BeltCargoHandoffView[];
-  itemIconMap: ReadonlyMap<string, string>;
-  resolvedTextures: ReadonlyMap<string, Texture>;
-}): void {
-  const insertionEntryBySourceId = new Map(
-    options.insertionEntries.map((entry) => [entry.sourceEntityId, entry]),
-  )
-  const gridCellSize = options.ctx.viewportState.gridCellPixelSize
-  const insertionLength = gridCellSize * BELT_INSERTION_DEPTH_CELLS
-  const handoffStartX = insertionLength - options.boxSize / 2
-  const handoffEndX = insertionLength + options.boxSize / 2
   let visibleCount = 0
 
   for (const entry of options.entries) {
-    const insertionEntry = insertionEntryBySourceId.get(entry.sourceEntityId)
-    if (insertionEntry === undefined) {
-      continue
-    }
-
-    const view = options.ensureHandoffView(visibleCount)
-    const boundary = resolveViewportPoint({
-      point: insertionEntry.boundary,
-      viewportBounds: options.ctx.viewportBounds,
-      viewportState: options.ctx.viewportState,
-    })
-    const iconTexture = options.resolvedTextures.get(
+    const view = options.ensureCargoView(visibleCount)
+    const texture = options.resolvedTextures.get(
       resolveItemIconTextureKey(entry.itemId, options.itemIconMap),
     )
 
     view.root.visible = true
-    view.root.x = boundary.x
-    view.root.y = boundary.y
-    view.root.rotation = insertionEntry.angleRadians
-    view.mask
-      .clear()
-      .rect(
-        -options.boxSize,
-        -gridCellSize / 2,
-        options.boxSize + insertionLength,
-        gridCellSize,
-      )
-      .fill(0xffffff)
+    view.root.x = entry.centerX
+    view.root.y = entry.centerY
+    view.root.rotation = entry.angleRadians
 
-    view.cargoRoot.x = lerp(handoffStartX, handoffEndX, entry.progress)
-    view.cargoRoot.y = 0
-    view.cargoRoot.rotation = 0
+    if (entry.clipRect === null) {
+      view.root.mask = null
+      view.mask.visible = false
+      view.mask.clear()
+    } else {
+      view.root.mask = view.mask
+      view.mask.visible = true
+      view.mask
+        .clear()
+        .rect(
+          entry.clipRect.x,
+          entry.clipRect.y,
+          entry.clipRect.width,
+          entry.clipRect.height,
+        )
+        .fill(0xffffff)
+    }
 
     view.boxGraphics
       .clear()
@@ -630,10 +498,10 @@ function syncBeltCargoHandoffViews(options: {
         pixelLine: true,
       })
 
-    view.icon.visible = iconTexture !== undefined
-    view.icon.texture = iconTexture ?? Texture.EMPTY
-    view.icon.width = options.boxSize * BOX_ICON_SIZE_RATIO
-    view.icon.height = options.boxSize * BOX_ICON_SIZE_RATIO
+    view.icon.visible = texture !== undefined
+    view.icon.texture = texture ?? Texture.EMPTY
+    view.icon.width = iconSize
+    view.icon.height = iconSize
     view.icon.x = 0
     view.icon.y = 0
     view.icon.rotation = 0
@@ -641,37 +509,25 @@ function syncBeltCargoHandoffViews(options: {
     visibleCount += 1
   }
 
-  for (let index = visibleCount; index < options.handoffViews.length; index += 1) {
-    const view = options.handoffViews[index]
+  for (let index = visibleCount; index < options.cargoViews.length; index += 1) {
+    const view = options.cargoViews[index]
     if (view !== undefined) {
       view.root.visible = false
+      view.root.mask = null
+      view.mask.clear()
     }
   }
 }
 
-function resolveRotatedSquarePoints(
-  entry: Pick<BeltCargoRenderEntry, "centerX" | "centerY" | "angleRadians">,
-  boxSize: number,
-): number[] {
-  const halfSize = boxSize / 2
-  const cos = Math.cos(entry.angleRadians)
-  const sin = Math.sin(entry.angleRadians)
-  const corners = [
-    { x: -halfSize, y: -halfSize },
-    { x: halfSize, y: -halfSize },
-    { x: halfSize, y: halfSize },
-    { x: -halfSize, y: halfSize },
-  ]
-  const points: number[] = []
+function resolveLocalX(options: {
+  point: GridFloatPoint;
+  origin: GridFloatPoint;
+  angleRadians: number;
+}): number {
+  const dx = options.point.x - options.origin.x
+  const dy = options.point.y - options.origin.y
 
-  for (const corner of corners) {
-    points.push(
-      entry.centerX + corner.x * cos - corner.y * sin,
-      entry.centerY + corner.x * sin + corner.y * cos,
-    )
-  }
-
-  return points
+  return dx * Math.cos(options.angleRadians) + dy * Math.sin(options.angleRadians)
 }
 
 function resolveBeltCargoViewportCenter(options: {
@@ -720,8 +576,4 @@ function isPointVisible(
     || point.y < viewportBounds.top - padding
     || point.y > viewportBounds.top + viewportBounds.height + padding
   )
-}
-
-function lerp(start: number, end: number, t: number): number {
-  return start + (end - start) * t
 }

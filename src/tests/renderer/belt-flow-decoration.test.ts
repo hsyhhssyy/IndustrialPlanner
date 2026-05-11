@@ -13,6 +13,33 @@ vi.mock("pixi.js", () => {
     public destroy = vi.fn()
   }
 
+  class MockSprite {
+    public texture: unknown
+    public visible = true
+    public x = 0
+    public y = 0
+    public width = 0
+    public height = 0
+    public rotation = 0
+    public roundPixels = false
+    public tint = 0xffffff
+    public alpha = 1
+    public readonly anchor = {
+      x: 0,
+      y: 0,
+      set: (x: number, y = x) => {
+        this.anchor.x = x
+        this.anchor.y = y
+      },
+    }
+
+    public constructor(texture: unknown) {
+      this.texture = texture
+    }
+
+    public destroy = vi.fn()
+  }
+
   class MockGraphics {
     public readonly drawCommands: Array<{
       type: "poly";
@@ -59,6 +86,10 @@ vi.mock("pixi.js", () => {
   return {
     Container: MockContainer,
     Graphics: MockGraphics,
+    Sprite: MockSprite,
+    Texture: {
+      EMPTY: { id: "empty-texture" },
+    },
   }
 })
 
@@ -71,27 +102,42 @@ import {
 } from "@/renderer/scene/decorations/BeltFlowDecoration"
 
 describe("BeltFlowDecoration", () => {
-  it("resolves arrow and light marks with path-continuous phase across belt tiles", () => {
+  it("resolves arrow and highlight marks with path-continuous phase across belt tiles", () => {
     const marksAtStart = resolveBeltFlowMarks(createFlowContext({ nowMs: 0 }) as never)
     const marksAfterHalfSecond = resolveBeltFlowMarks(createFlowContext({ nowMs: 500 }) as never)
 
-    expect(marksAtStart.map((mark) => mark.kind)).toEqual(["light", "arrow", "arrow"])
+    expect(marksAtStart.map((mark) => mark.kind)).toEqual(["highlight", "arrow", "arrow"])
     expect(marksAtStart.map((mark) => mark.centerX)).toEqual([100, 100, 200])
     expect(marksAfterHalfSecond.map((mark) => ({
       kind: mark.kind,
       x: Math.round(mark.centerX),
     }))).toEqual([
-      { kind: "light", x: 150 },
+      { kind: "highlight", x: 150 },
       { kind: "arrow", x: 125 },
       { kind: "arrow", x: 225 },
     ])
   })
 
-  it("draws lights before arrows and hides in simplified display mode", () => {
+  it("draws textured highlights and solid belt-colored arrows", async () => {
     const decoration = createBeltFlowDecoration()
-    decoration.sync(createFlowContext({ nowMs: 0 }) as never)
+    const highlightTexture = { id: "highlight-texture" }
+    const getTexture = vi.fn().mockResolvedValue(highlightTexture)
+    decoration.sync(createFlowContext({ nowMs: 0, getTexture }) as never)
 
-    const graphics = decoration.container.children[0] as unknown as {
+    expect(getTexture).toHaveBeenCalledWith("texture-belt-highlight-strip-texture")
+
+    await flushMicrotasks()
+    decoration.sync(createFlowContext({ nowMs: 0, getTexture }) as never)
+
+    const highlightLayer = decoration.container.children[0] as { children: unknown[] }
+    const highlight = highlightLayer.children[0] as {
+      texture: unknown;
+      width: number;
+      height: number;
+      tint: number;
+      alpha: number;
+    }
+    const graphics = decoration.container.children[1] as unknown as {
       drawCommands: Array<{
         type: "poly";
         fill?: unknown;
@@ -99,15 +145,28 @@ describe("BeltFlowDecoration", () => {
       }>;
     }
     expect(decoration.container.visible).toBe(true)
-    expect(graphics.drawCommands).toHaveLength(3)
+    expect(highlight.texture).toBe(highlightTexture)
+    expect(highlight.width).toBeCloseTo(56)
+    expect(highlight.height).toBeCloseTo(78)
+    expect(highlight.tint).toBe(0xd9822b)
+    expect(highlight.alpha).toBeCloseTo(0.82)
+    expect(graphics.drawCommands).toHaveLength(2)
     expect(graphics.drawCommands[0]?.fill).toMatchObject({
-      color: 0xffffff,
-      alpha: 0.72,
+      color: 0xd9822b,
+      alpha: 1,
     })
-    expect(graphics.drawCommands[1]?.stroke).toMatchObject({
-      color: 0x555555,
-      pixelLine: true,
-    })
+    expect(graphics.drawCommands[0]?.stroke).toBeUndefined()
+
+    decoration.destroy()
+  })
+
+  it("hides in simplified display mode", () => {
+    const decoration = createBeltFlowDecoration()
+    decoration.sync(createFlowContext({ nowMs: 0 }) as never)
+
+    const graphics = decoration.container.children[1] as unknown as {
+      drawCommands: Array<unknown>;
+    }
 
     decoration.sync(createFlowContext({
       nowMs: 0,
@@ -141,6 +200,7 @@ describe("BeltFlowDecoration", () => {
 function createFlowContext(options: {
   nowMs: number;
   simplifiedDeviceIcons?: boolean;
+  getTexture?: (key: string) => Promise<unknown>;
 }) {
   const registry = createRegistryContract()
 
@@ -171,6 +231,13 @@ function createFlowContext(options: {
       registry: {
         entityDefinitions: registry.entityDefinitions,
       },
+      render: options.getTexture === undefined
+        ? null
+        : {
+          textureManager: {
+            getTexture: options.getTexture,
+          },
+        },
       editor: {
         queries: {
           listEntities: () => [
@@ -195,5 +262,11 @@ function createFlowContext(options: {
       },
     },
     nowMs: options.nowMs,
+  }
+}
+
+async function flushMicrotasks(iterations = 4): Promise<void> {
+  for (let index = 0; index < iterations; index += 1) {
+    await Promise.resolve()
   }
 }
