@@ -1,3 +1,5 @@
+import { observer } from "mobx-react-lite";
+
 import type { AppHost } from "@/app/host/app-host";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
@@ -55,11 +57,15 @@ function joinClassNames(values: Array<string | undefined | false>): string {
   return values.filter(Boolean).join(" ");
 }
 
-export function CanvasRightDockToolbar({
+export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
   appHost,
   buttonIds,
 }: CanvasRightDockToolbarProps) {
   const t = appHost.actions.translate;
+  const canSaveBlueprint = (appHost.workspace.editor?.state.collections.selection.length ?? 0) > 1;
+  const visibleButtonIds = buttonIds.filter(
+    (buttonId) => canSaveBlueprint || buttonId !== "canvas-right-dock-toolbar-button-save-blueprint",
+  );
 
   const stopUiPropagation = (
     event:
@@ -126,7 +132,7 @@ export function CanvasRightDockToolbar({
       onPointerUp={stopUiPropagation}
       onWheel={stopUiPropagationAndDefault}
     >
-      {buttonIds.map((buttonId) => {
+      {visibleButtonIds.map((buttonId) => {
         const definition = CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS[buttonId];
         const label = t(definition.labelKey);
 
@@ -156,4 +162,4 @@ export function CanvasRightDockToolbar({
       })}
     </div>
   );
-}
+});

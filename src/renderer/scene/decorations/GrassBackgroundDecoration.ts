@@ -1,42 +1,126 @@
-import { Container, TilingSprite } from "pixi.js";
+import { Container, Graphics, Texture, TilingSprite } from "pixi.js";
+import {
+  BASE_OUTER_WARNING_PADDING_CELLS,
+  resolveBaseOuterGridRect,
+  resolveCurrentBaseDefinition,
+  resolveExpandedGridRect,
+} from "./BaseBoundaryDecoration";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { resolveMarqueeGridRectLayout } from "./MarqueeRectDecoration";
 import type { RenderHost } from "../../renderer-host";
 
 const GRASS_TEXTURE_KEY = "texture-Grass005_1K-PNG_Color";
+const SCANLINE_TEXTURE_KEY = "texture-scanline-45deg-50opacity";
 const GRASS_TILE_GRID_CELLS = 5;
+const WARNING_FILL_COLOR = 0xff4d4f;
+const WARNING_FILL_ALPHA = 0.18;
+const WARNING_SCANLINE_TINT = 0xff4d4f;
+const WARNING_SCANLINE_ALPHA = 0.92;
 
 export function createGrassBackgroundDecoration(
   renderHost: RenderHost,
 ): DecorationLayer {
   const container = new Container();
-  let grassSprite: TilingSprite | null = null;
-
-  renderHost.textureManager.getTexture(GRASS_TEXTURE_KEY).then((texture) => {
-    grassSprite = new TilingSprite({
-      texture,
-      width: 0,
-      height: 0,
-    });
-    container.addChild(grassSprite);
+  const grassSprite = new TilingSprite({
+    texture: Texture.EMPTY,
+    width: 0,
+    height: 0,
   });
+  const grassMask = new Graphics({ roundPixels: true });
+  const warningFill = new Graphics({ roundPixels: true });
+  const warningScanlineSprite = new TilingSprite({
+    texture: Texture.EMPTY,
+    width: 0,
+    height: 0,
+  });
+  const warningMask = new Graphics({ roundPixels: true });
+  let isGrassTextureReady = false;
+  let isWarningTextureReady = false;
+
+  grassMask.renderable = false;
+  grassSprite.mask = grassMask;
+
+  warningMask.renderable = false;
+  warningScanlineSprite.mask = warningMask;
+  warningScanlineSprite.tint = WARNING_SCANLINE_TINT;
+  warningScanlineSprite.alpha = WARNING_SCANLINE_ALPHA;
+
+  container.addChild(grassSprite);
+  container.addChild(warningFill);
+  container.addChild(warningScanlineSprite);
+  container.addChild(grassMask);
+  container.addChild(warningMask);
+
+  void renderHost.textureManager.getTexture(GRASS_TEXTURE_KEY).then((texture) => {
+    grassSprite.texture = texture;
+    isGrassTextureReady = true;
+  });
+
+  void renderHost.textureManager.getTexture(SCANLINE_TEXTURE_KEY).then((texture) => {
+    warningScanlineSprite.texture = texture;
+    isWarningTextureReady = true;
+  });
+
+  function hideBackgroundLayers(): void {
+    grassSprite.visible = false;
+    warningScanlineSprite.visible = false;
+    grassMask.clear();
+    warningFill.clear();
+    warningMask.clear();
+  }
 
   return {
     container,
 
     sync(ctx: DecorationSyncContext): void {
-      const showGrass =
-        ctx.workspace.app!.state.settings.showGrassBackground;
-
-      if (!grassSprite) {
+      const app = ctx.workspace.app;
+      if (app === null) {
+        hideBackgroundLayers();
         return;
       }
 
-      grassSprite.visible = showGrass;
+      const baseDefinition = resolveCurrentBaseDefinition(ctx);
+      const outerGridRect = baseDefinition === null
+        ? null
+        : resolveBaseOuterGridRect(baseDefinition);
+      const warningGridRect = outerGridRect === null
+        ? null
+        : resolveExpandedGridRect(
+          outerGridRect,
+          BASE_OUTER_WARNING_PADDING_CELLS,
+        );
 
-      if (!showGrass) {
+      if (outerGridRect === null || warningGridRect === null) {
+        hideBackgroundLayers();
         return;
       }
+
+      const outerLayout = resolveMarqueeGridRectLayout({
+        gridRect: outerGridRect,
+        viewportBounds: ctx.viewportBounds,
+        viewportCenter: {
+          x: ctx.viewportState.centerX,
+          y: ctx.viewportState.centerY,
+        },
+        gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+      });
+      const warningLayout = resolveMarqueeGridRectLayout({
+        gridRect: warningGridRect,
+        viewportBounds: ctx.viewportBounds,
+        viewportCenter: {
+          x: ctx.viewportState.centerX,
+          y: ctx.viewportState.centerY,
+        },
+        gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+      });
+
+      if (outerLayout === null || warningLayout === null) {
+        hideBackgroundLayers();
+        return;
+      }
+
+      const showGrass = app.state.settings.showGrassBackground;
 
       const gridCellSize = ctx.viewportState.gridCellPixelSize;
       const tilePixelSize = gridCellSize * GRASS_TILE_GRID_CELLS;
@@ -47,15 +131,51 @@ export function createGrassBackgroundDecoration(
       const gridOriginPxX = viewportCenterX - ctx.viewportState.centerX * gridCellSize;
       const gridOriginPxY = viewportCenterY - ctx.viewportState.centerY * gridCellSize;
 
-      grassSprite.width = ctx.viewportBounds.width;
-      grassSprite.height = ctx.viewportBounds.height;
-      grassSprite.tileScale.set(
-        tilePixelSize / (grassSprite.texture.width || tilePixelSize),
-      );
+      grassMask
+        .clear()
+        .rect(outerLayout.x, outerLayout.y, outerLayout.width, outerLayout.height)
+        .fill({ color: 0xffffff });
 
-      // Align grass tile corners with grid origin, handling negative modulo
-      grassSprite.tilePosition.x = ((gridOriginPxX % tilePixelSize) + tilePixelSize) % tilePixelSize;
-      grassSprite.tilePosition.y = ((gridOriginPxY % tilePixelSize) + tilePixelSize) % tilePixelSize;
+      warningFill
+        .clear()
+        .rect(warningLayout.x, warningLayout.y, warningLayout.width, warningLayout.height)
+        .fill({
+          color: WARNING_FILL_COLOR,
+          alpha: WARNING_FILL_ALPHA,
+        })
+        .rect(outerLayout.x, outerLayout.y, outerLayout.width, outerLayout.height)
+        .cut();
+
+      warningMask
+        .clear()
+        .rect(warningLayout.x, warningLayout.y, warningLayout.width, warningLayout.height)
+        .fill({ color: 0xffffff })
+        .rect(outerLayout.x, outerLayout.y, outerLayout.width, outerLayout.height)
+        .cut();
+
+      grassSprite.visible = showGrass && isGrassTextureReady;
+      if (grassSprite.visible) {
+        grassSprite.width = ctx.viewportBounds.width;
+        grassSprite.height = ctx.viewportBounds.height;
+        grassSprite.tileScale.set(
+          tilePixelSize / (grassSprite.texture.width || tilePixelSize),
+        );
+
+        // Align grass tile corners with grid origin, handling negative modulo
+        grassSprite.tilePosition.x = ((gridOriginPxX % tilePixelSize) + tilePixelSize) % tilePixelSize;
+        grassSprite.tilePosition.y = ((gridOriginPxY % tilePixelSize) + tilePixelSize) % tilePixelSize;
+      }
+
+      warningScanlineSprite.visible = isWarningTextureReady;
+      if (warningScanlineSprite.visible) {
+        const warningTilePixelSize = warningScanlineSprite.texture.width || 64;
+
+        warningScanlineSprite.width = ctx.viewportBounds.width;
+        warningScanlineSprite.height = ctx.viewportBounds.height;
+        warningScanlineSprite.tileScale.set(1);
+        warningScanlineSprite.tilePosition.x = ((gridOriginPxX % warningTilePixelSize) + warningTilePixelSize) % warningTilePixelSize;
+        warningScanlineSprite.tilePosition.y = ((gridOriginPxY % warningTilePixelSize) + warningTilePixelSize) % warningTilePixelSize;
+      }
     },
 
     destroy(): void {

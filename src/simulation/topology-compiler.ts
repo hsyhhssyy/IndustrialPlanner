@@ -64,6 +64,15 @@ interface StorageGroupNodeBinding {
 
 const EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
 
+export function createSimulationDocumentHash(document: WorldDocument): string {
+  return hashStable({
+    baseId: document.baseId,
+    entities: document.entities,
+    entityOrder: document.entityOrder,
+    slotLinks: document.slotLinks,
+  });
+}
+
 export function compileSimulationTopology(
   options: CompileOptions,
 ): CompiledSimulationTopology {
@@ -219,12 +228,7 @@ export function compileSimulationTopology(
     items: options.registry.itemDefinitions,
     recipes: options.registry.recipeDefinitions,
   });
-  const documentHash = hashStable({
-    baseId: options.document.baseId,
-    entities: options.document.entities,
-    entityOrder: options.document.entityOrder,
-    slotLinks: options.document.slotLinks,
-  });
+  const documentHash = createSimulationDocumentHash(options.document);
   const topologyHashInput = {
     documentHash,
     registryHash,

@@ -27,6 +27,7 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
   }
 
   const selectionIds = [...editor.state.collections.selection];
+  const canSaveBlueprint = selectionIds.length > 1;
 
   if (selectionIds.length === 0) {
     return null;
@@ -40,9 +41,10 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
       && appHost.workspace.registry.queries.isDedicatedLogisticsDevice(entity.definitionId)
     );
   });
-  const buttonIds = showDeleteMany
+  const buttonIds = (showDeleteMany
     ? SELECTION_LOGISTICS_ACTION_BUTTON_IDS
-    : SELECTION_ACTION_BUTTON_IDS;
+    : SELECTION_ACTION_BUTTON_IDS
+  ).filter((buttonId) => canSaveBlueprint || buttonId !== "canvas-floating-toolbar-button-save-blueprint");
 
   const locale = appHost.state.settings.locale;
 

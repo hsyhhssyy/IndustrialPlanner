@@ -21,6 +21,7 @@ import { createRegistryContract } from "@/registry";
 import {
   createBlueprintFolder,
   deleteBlueprintFolder,
+  listBlueprintDirectory,
   readBlueprintFolder,
   readBlueprintRecord,
   saveBlueprintDocument,
@@ -127,6 +128,23 @@ function dispatchWheelEvent(
 
   target.dispatchEvent(event);
   return event;
+}
+
+function stubNavigatorClipboard(options: {
+  readText?: () => Promise<string>;
+  writeText?: (value: string) => Promise<void>;
+} = {}) {
+  const clipboard = {
+    readText: vi.fn(options.readText ?? (async () => "")),
+    writeText: vi.fn(options.writeText ?? (async () => undefined)),
+  };
+
+  Object.defineProperty(window.navigator, "clipboard", {
+    configurable: true,
+    value: clipboard,
+  });
+
+  return clipboard;
 }
 
 describe("Left dock panel switching", () => {
@@ -1513,9 +1531,235 @@ describe("Left dock panel switching", () => {
     expect(previewDialog?.textContent).toContain("根目录蓝图");
     expect(previewDialog?.textContent).toContain("蓝图预览");
     expect(previewDialog?.querySelector('[data-ui-button-id="blueprint-preview-place-button"]')).not.toBeNull();
+    expect(previewDialog?.querySelector('[data-ui-button-id="blueprint-preview-export-file-button"]')).not.toBeNull();
+    expect(previewDialog?.querySelector('[data-ui-button-id="blueprint-preview-copy-clipboard-button"]')).not.toBeNull();
     expect(renderStub.mountBlueprintPreview).toHaveBeenCalledTimes(1);
     expect(renderStub.updateBlueprintPreviewViewport).toHaveBeenCalled();
     expect(previewDialog?.querySelector('[data-blueprint-preview-canvas="true"]')).toBe(renderStub.previewCanvas);
+  });
+
+  it("imports a legacy blueprint from the clipboard into the user library", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const clipboard = stubNavigatorClipboard({
+      readText: async () => JSON.stringify({
+        schema: "industrial-planner-blueprint",
+        name: "剪贴板旧版蓝图",
+        createdAt: "2026-05-11T00:00:00.000Z",
+        baseId: "wuling_protocol_core",
+        devices: [{
+          typeId: "belt_straight_1x1",
+          rotation: 0,
+          origin: { x: 5, y: 7 },
+        }],
+      }),
+    });
+    const workspace = createWorkspace();
+    const renderStub = createBlueprintPreviewRenderStub();
+    workspace.render = renderStub.render;
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+
+    await act(async () => {
+      root.render(
+        <>
+          <LeftDock appHost={appHost} />
+          <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
+        </>,
+      );
+      await flushAsyncEffects();
+    });
+
+    const importButton = container.querySelector(
+      '[data-ui-button-id="blueprint-action-import-clipboard"]',
+    ) as HTMLButtonElement | null;
+
+    expect(importButton).not.toBeNull();
+
+    await act(async () => {
+      importButton?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    const importedDirectory = await listBlueprintDirectory();
+    const previewDialog = container.querySelector('[data-dialog-key="blueprint-preview"]');
+
+    expect(clipboard.readText).toHaveBeenCalledTimes(1);
+    expect(importedDirectory.blueprints).toHaveLength(1);
+    expect(importedDirectory.blueprints[0]).toMatchObject({
+      name: "剪贴板旧版蓝图",
+      parentFolderId: null,
+    });
+    expect(previewDialog?.textContent).toContain("剪贴板旧版蓝图");
+    expect(appHost.blueprintPreview.dialogState.visible).toBe(true);
+  });
+
+  it("imports a blueprint file into the current user folder", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const parentFolder = await createBlueprintFolder({
+      name: "导入目录",
+    });
+
+    const workspace = createWorkspace();
+    const renderStub = createBlueprintPreviewRenderStub();
+    workspace.render = renderStub.render;
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+
+    await act(async () => {
+      root.render(
+        <>
+          <LeftDock appHost={appHost} />
+          <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
+        </>,
+      );
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    const targetFolderButton = container.querySelector(
+      `[data-blueprint-folder-id="${parentFolder?.folderId ?? ""}"]`,
+    ) as HTMLButtonElement | null;
+
+    expect(targetFolderButton).not.toBeNull();
+
+    await act(async () => {
+      targetFolderButton?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    const fileImportInput = container.querySelector(
+      '[data-blueprint-import-file-input]',
+    ) as HTMLInputElement | null;
+    const blueprintFile = new File([
+      JSON.stringify(createTestBlueprint({
+        name: "文件导入蓝图",
+        description: "导入文件内容",
+      })),
+    ], "import-blueprint.json", {
+      type: "application/json",
+    });
+
+    expect(fileImportInput).not.toBeNull();
+
+    Object.defineProperty(fileImportInput, "files", {
+      configurable: true,
+      value: [blueprintFile],
+    });
+
+    await act(async () => {
+      fileImportInput?.dispatchEvent(new Event("change", { bubbles: true }));
+      await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    const importedDirectory = await listBlueprintDirectory(parentFolder?.folderId ?? null);
+    const previewDialog = container.querySelector('[data-dialog-key="blueprint-preview"]');
+
+    expect(importedDirectory.blueprints).toHaveLength(1);
+    expect(importedDirectory.blueprints[0]).toMatchObject({
+      name: "文件导入蓝图",
+      parentFolderId: parentFolder?.folderId ?? null,
+    });
+    expect(previewDialog?.textContent).toContain("文件导入蓝图");
+  });
+
+  it("copies the previewed blueprint to the clipboard as a portable document", async () => {
+    const clipboard = stubNavigatorClipboard();
+    const workspace = createWorkspace();
+    const renderStub = createBlueprintPreviewRenderStub();
+    workspace.render = renderStub.render;
+    const appHost = createAppHost(workspace);
+
+    appHost.blueprintPreview.open({
+      ...createTestBlueprint({
+        name: "导出剪贴板蓝图",
+      }),
+      parentFolderId: "folder-1",
+    });
+
+    await act(async () => {
+      root.render(<BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />);
+      await flushAsyncEffects();
+    });
+
+    const copyButton = container.querySelector(
+      '[data-ui-button-id="blueprint-preview-copy-clipboard-button"]',
+    ) as HTMLButtonElement | null;
+
+    expect(copyButton).not.toBeNull();
+
+    await act(async () => {
+      copyButton?.click();
+      await flushAsyncEffects();
+    });
+
+    expect(clipboard.writeText).toHaveBeenCalledTimes(1);
+
+    const exportedBlueprint = JSON.parse(clipboard.writeText.mock.calls[0]?.[0] ?? "null") as Record<string, unknown>;
+
+    expect(exportedBlueprint.name).toBe("导出剪贴板蓝图");
+    expect(exportedBlueprint.parentFolderId).toBeUndefined();
+    expect(exportedBlueprint.kind).toBeUndefined();
+  });
+
+  it("exports the previewed blueprint to a downloadable file", async () => {
+    const createObjectURL = vi.fn(() => "blob:blueprint");
+    const revokeObjectURL = vi.fn();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    vi.stubGlobal("URL", {
+      createObjectURL,
+      revokeObjectURL,
+    });
+
+    const workspace = createWorkspace();
+    const renderStub = createBlueprintPreviewRenderStub();
+    workspace.render = renderStub.render;
+    const appHost = createAppHost(workspace);
+
+    appHost.blueprintPreview.open({
+      ...createTestBlueprint({
+        name: "导出文件蓝图",
+      }),
+      parentFolderId: null,
+    });
+
+    await act(async () => {
+      root.render(<BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />);
+      await flushAsyncEffects();
+    });
+
+    const exportButton = container.querySelector(
+      '[data-ui-button-id="blueprint-preview-export-file-button"]',
+    ) as HTMLButtonElement | null;
+
+    expect(exportButton).not.toBeNull();
+
+    await act(async () => {
+      exportButton?.click();
+      await flushAsyncEffects();
+    });
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:blueprint");
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    const exportedBlob = createObjectURL.mock.calls[0]?.[0] as Blob | undefined;
+
+    expect(exportedBlob).toBeInstanceOf(Blob);
+    await expect(exportedBlob?.text() ?? Promise.resolve("")).resolves.toContain("导出文件蓝图");
+
+    clickSpy.mockRestore();
   });
 
   it("forwards preview zoom gestures to render actions", async () => {

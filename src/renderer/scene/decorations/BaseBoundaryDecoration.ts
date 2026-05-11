@@ -13,27 +13,76 @@ import {
 const BASE_BOUNDARY_STROKE_COLOR = 0xf2c94c;
 const BASE_BOUNDARY_STROKE_ALPHA = 0.95;
 const BASE_BOUNDARY_STROKE_WIDTH_SCALE = 1.15;
+export const BASE_OUTER_WARNING_PADDING_CELLS = 2;
+
+function isValidGridRect(gridRect: GridRect): boolean {
+  return Number.isFinite(gridRect.x)
+    && Number.isFinite(gridRect.y)
+    && Number.isFinite(gridRect.width)
+    && Number.isFinite(gridRect.height)
+    && gridRect.width > 0
+    && gridRect.height > 0;
+}
+
+export function resolveCurrentBaseDefinition(
+  ctx: Pick<DecorationSyncContext, "workspace">,
+): BaseDefinition | null {
+  const editor = ctx.workspace.editor;
+  if (editor === null) {
+    return null;
+  }
+
+  const baseId = editor.document.getSnapshot().baseId;
+
+  return ctx.workspace.registry.baseDefinitions.find(
+    (definition) => definition.id === baseId,
+  ) ?? null;
+}
 
 export function resolveBaseBoundaryGridRect(
   baseDefinition: BaseDefinition,
 ): GridRect | null {
-  const { width, height } = baseDefinition.placeableArea;
-
-  if (
-    !Number.isFinite(width)
-    || !Number.isFinite(height)
-    || width <= 0
-    || height <= 0
-  ) {
-    return null;
-  }
-
-  return {
+  const gridRect: GridRect = {
     x: 0,
     y: 0,
-    width,
-    height,
+    width: baseDefinition.placeableArea.width,
+    height: baseDefinition.placeableArea.height,
   };
+
+  return isValidGridRect(gridRect) ? gridRect : null;
+}
+
+export function resolveBaseOuterGridRect(
+  baseDefinition: BaseDefinition,
+): GridRect | null {
+  const gridRect: GridRect = {
+    x: -baseDefinition.outerRing.left,
+    y: -baseDefinition.outerRing.top,
+    width:
+      baseDefinition.outerRing.left
+      + baseDefinition.placeableArea.width
+      + baseDefinition.outerRing.right,
+    height:
+      baseDefinition.outerRing.top
+      + baseDefinition.placeableArea.height
+      + baseDefinition.outerRing.bottom,
+  };
+
+  return isValidGridRect(gridRect) ? gridRect : null;
+}
+
+export function resolveExpandedGridRect(
+  gridRect: GridRect,
+  paddingCells: number,
+): GridRect | null {
+  const expandedGridRect: GridRect = {
+    x: gridRect.x - paddingCells,
+    y: gridRect.y - paddingCells,
+    width: gridRect.width + paddingCells * 2,
+    height: gridRect.height + paddingCells * 2,
+  };
+
+  return isValidGridRect(expandedGridRect) ? expandedGridRect : null;
 }
 
 export function resolveBaseBoundaryStrokeWidth(
@@ -52,17 +101,8 @@ export function createBaseBoundaryDecoration(): DecorationLayer {
     sync(ctx: DecorationSyncContext): void {
       graphics.clear();
 
-      const editor = ctx.workspace.editor;
-      if (editor === null) {
-        return;
-      }
-
-      const baseId = editor.document.getSnapshot().baseId;
-      const baseDefinition = ctx.workspace.registry.baseDefinitions.find(
-        (definition) => definition.id === baseId,
-      );
-
-      if (baseDefinition === undefined) {
+      const baseDefinition = resolveCurrentBaseDefinition(ctx);
+      if (baseDefinition === null) {
         return;
       }
 

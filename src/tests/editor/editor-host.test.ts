@@ -96,6 +96,43 @@ describe("createEditorHost", () => {
     expect(workspace.editor?.state.viewport.center.y).toBeCloseTo(2);
   });
 
+  it("clamps viewport center to the current base warning bounds while panning", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.moveViewportByClientPixelVector({
+      startClientPixel: {
+        x: 0,
+        y: 0,
+      },
+      endClientPixel: {
+        x: 1600,
+        y: 1600,
+      },
+    });
+
+    expect(editorHost.state.viewport.center).toEqual({
+      x: -7,
+      y: -7,
+    });
+
+    editorHost.actions.moveViewportByClientPixelVector({
+      startClientPixel: {
+        x: 1600,
+        y: 1600,
+      },
+      endClientPixel: {
+        x: 0,
+        y: 0,
+      },
+    });
+
+    expect(editorHost.state.viewport.center).toEqual({
+      x: 87,
+      y: 87,
+    });
+  });
+
   it("zooms viewport through multiplicative steps in both directions", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -125,6 +162,21 @@ describe("createEditorHost", () => {
 
     expect(editorHost.state.viewport.gridSize).toBe(1);
     expect(workspace.editor?.state.viewport.gridSize).toBe(1);
+  });
+
+  it("clamps zoom to the 50% and 800% gridSize limits", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+
+    editorHost.actions.zoom(999);
+
+    expect(editorHost.state.viewport.gridSize).toBe(8);
+    expect(editorHost.state.viewport.gridCellPixelSize).toBe(EDITOR_GRID_CELL_PIXEL_SIZE * 8);
+
+    editorHost.actions.zoom(-999);
+
+    expect(editorHost.state.viewport.gridSize).toBe(0.5);
+    expect(editorHost.state.viewport.gridCellPixelSize).toBe(EDITOR_GRID_CELL_PIXEL_SIZE * 0.5);
   });
 
   it("persists viewport center and grid size without recording history", async () => {
@@ -1780,12 +1832,38 @@ describe("createEditorHost", () => {
     });
     expect(editorHost.state.viewport.center).toEqual({
       x: 12.5,
-      y: -8.25,
+      y: -7,
     });
     expect(editorHost.state.viewport.gridSize).toBe(4);
     expect(editorHost.state.viewport.gridCellPixelSize).toBe(
       EDITOR_GRID_CELL_PIXEL_SIZE * 4,
     );
+  });
+
+  it("clamps loaded viewport center to the current base warning bounds", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    const nextDocument = createDummyWorldDocument();
+
+    editorHost.internalDocument.setSnapshot({
+      ...nextDocument,
+      baseId: DEFAULT_WORLD_BASE_ID,
+      documentSettings: {
+        ...nextDocument.documentSettings,
+        viewport: {
+          center: {
+            x: 999,
+            y: -999,
+          },
+          gridSize: 1,
+        },
+      },
+    });
+
+    expect(editorHost.state.viewport.center).toEqual({
+      x: 87,
+      y: -7,
+    });
   });
 
   it("writes document snapshot changes back into IndexedDB", async () => {

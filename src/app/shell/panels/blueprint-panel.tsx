@@ -1,6 +1,12 @@
 import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
 import type { AppHost } from "@/app/host/app-host";
+import {
+  createImportedBlueprintDocument,
+  downloadBlueprintDocumentForTransfer,
+  parseBlueprintTransferText,
+  serializeBlueprintDocumentForTransfer,
+} from "@/app/blueprint/blueprint-transfer";
 import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
 import {
   createEmptyBlueprintLibraryDirectory,
@@ -18,6 +24,7 @@ import {
 import {
   listBlueprintDirectory,
   readBlueprintFolder,
+  saveBlueprintDocument,
 } from "@/shared/storage/blueprint-storage";
 import LucideClipboard from "~icons/lucide/clipboard";
 import LucideCopy from "~icons/lucide/copy";
@@ -118,15 +125,24 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
     createEmptyBlueprintLibraryDirectory(null),
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
+  const [importCompletedCount, setImportCompletedCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedBlueprintId, setSelectedBlueprintId] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const fileImportInputRef = useRef<HTMLInputElement | null>(null);
   const systemBlueprintLibraryRef = useRef<SystemBlueprintLibrarySnapshot | null>(null);
   const folderStack = folderStacksByLibrary[activeTab];
   const currentFolder = folderStack.length > 0 ? folderStack[folderStack.length - 1] ?? null : null;
   const currentFolderId = currentFolder?.folderId ?? null;
   const currentFolderPathSignature = folderStack.map((folder) => folder.folderId).join("/");
+  const userFolderStack = folderStacksByLibrary.user;
+  const importTargetFolderId = userFolderStack.at(-1)?.folderId ?? null;
   const activeLibrary = getBlueprintLibraryDescriptor(activeTab);
+  const selectedBlueprintRecord = directoryListing.blueprints.find((record) => {
+    return record.blueprintId === selectedBlueprintId;
+  }) ?? null;
 
   useEffect(() => {
     if (!isPanelVisible) {
@@ -227,6 +243,7 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
     currentFolderPathSignature,
     folderMutationCompletedCount,
     folderStack,
+    importCompletedCount,
     isPanelVisible,
     previewMutationCompletedCount,
     saveBlueprintDialogVisible,
@@ -267,19 +284,161 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
     ? operationButtons.filter((button) => button.compactLabelKey !== undefined)
     : operationButtons;
 
+  const handleImportBlueprintText = async (text: string) => {
+    const parsedBlueprint = parseBlueprintTransferText(text);
+
+    if (parsedBlueprint === null) {
+      setErrorMessage(t("workbench.blueprint.importInvalid"));
+      return;
+    }
+
+    setIsImporting(true);
+    setErrorMessage(null);
+
+    try {
+      const importedRecord = await saveBlueprintDocument(
+        createImportedBlueprintDocument(parsedBlueprint),
+        {
+          parentFolderId: importTargetFolderId,
+        },
+      );
+
+      if (importedRecord === null) {
+        setErrorMessage(t("workbench.blueprint.importSaveFailed"));
+        return;
+      }
+
+      setActiveTab("user");
+      setSelectedBlueprintId(importedRecord.blueprintId);
+      setImportCompletedCount((currentValue) => currentValue + 1);
+      appHost.blueprintPreview.open(importedRecord, {
+        canDelete: true,
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleImportClipboardClick = async () => {
+    if (isImporting) {
+      return;
+    }
+
+    if (typeof navigator === "undefined" || typeof navigator.clipboard?.readText !== "function") {
+      setErrorMessage(t("workbench.blueprint.importClipboardUnavailable"));
+      return;
+    }
+
+    let clipboardText: string;
+
+    try {
+      clipboardText = await navigator.clipboard.readText();
+    } catch {
+      setErrorMessage(t("workbench.blueprint.importClipboardFailed"));
+      return;
+    }
+
+    await handleImportBlueprintText(clipboardText);
+  };
+
+  const handleImportFileInputChange = async (inputElement: HTMLInputElement) => {
+    const selectedFile = inputElement.files?.[0] ?? null;
+
+    inputElement.value = "";
+
+    if (selectedFile === null || isImporting) {
+      return;
+    }
+
+    let fileText: string;
+
+    try {
+      fileText = await selectedFile.text();
+    } catch {
+      setErrorMessage(t("workbench.blueprint.importFileFailed"));
+      return;
+    }
+
+    await handleImportBlueprintText(fileText);
+  };
+
+  const handleExportFileClick = () => {
+    if (selectedBlueprintRecord === null) {
+      return;
+    }
+
+    setErrorMessage(null);
+
+    try {
+      downloadBlueprintDocumentForTransfer(selectedBlueprintRecord);
+    } catch {
+      setErrorMessage(t("workbench.blueprint.exportFileFailed"));
+    }
+  };
+
+  const handleCopyClipboardClick = async () => {
+    if (selectedBlueprintRecord === null || isCopying) {
+      return;
+    }
+
+    if (typeof navigator === "undefined" || typeof navigator.clipboard?.writeText !== "function") {
+      setErrorMessage(t("workbench.blueprint.copyClipboardUnavailable"));
+      return;
+    }
+
+    setIsCopying(true);
+    setErrorMessage(null);
+
+    try {
+      await navigator.clipboard.writeText(
+        serializeBlueprintDocumentForTransfer(selectedBlueprintRecord),
+      );
+    } catch {
+      setErrorMessage(t("workbench.blueprint.copyClipboardFailed"));
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
   const renderOperationButton = (button: BlueprintOperationButtonDefinition) => {
     const label = t(button.labelKey);
     const visibleLabel = isTouchLayout && button.compactLabelKey !== undefined
       ? t(button.compactLabelKey)
       : label;
+    const isExportAction = button.uiButtonId === "blueprint-action-export-file"
+      || button.uiButtonId === "blueprint-action-copy-clipboard";
+    const isDisabled = button.uiButtonId === "blueprint-action-import-file"
+      || button.uiButtonId === "blueprint-action-import-clipboard"
+      ? isImporting
+      : selectedBlueprintRecord === null || isCopying;
 
     return (
       <button
         aria-label={label}
         className="placement-button placement-action-button blueprint-action-button"
         data-ui-button-id={button.uiButtonId}
-        disabled
+        disabled={isDisabled}
         key={button.uiButtonId}
+        onClick={() => {
+          if (button.uiButtonId === "blueprint-action-import-file") {
+            fileImportInputRef.current?.click();
+            return;
+          }
+
+          if (button.uiButtonId === "blueprint-action-import-clipboard") {
+            void handleImportClipboardClick();
+            return;
+          }
+
+          if (button.uiButtonId === "blueprint-action-export-file") {
+            handleExportFileClick();
+            return;
+          }
+
+          if (button.uiButtonId === "blueprint-action-copy-clipboard") {
+            void handleCopyClipboardClick();
+          }
+        }}
         title={label}
         type="button"
       >
@@ -313,6 +472,16 @@ export const BlueprintPanel = observer(function BlueprintPanel({ appHost }: { ap
         )}
         {/* 2026-05-09: 蓝图面板在窄左栏下不走四宫格纯图标模式，顶部四个按钮保持单列并保留文字。 */}
         {/* 2026-05-09 订正: 窄左栏蓝图模式顶部现在只保留两个导入按钮，并以双列小字号标签显示。 */}
+        <input
+          accept=".json,application/json"
+          data-blueprint-import-file-input
+          hidden
+          onChange={(event) => {
+            void handleImportFileInputChange(event.currentTarget);
+          }}
+          ref={fileImportInputRef}
+          type="file"
+        />
         <div className={isTouchLayout
           ? "placement-button-list placement-operation-button-list blueprint-operation-button-list is-compact-import-actions"
           : "placement-button-list placement-operation-button-list"}

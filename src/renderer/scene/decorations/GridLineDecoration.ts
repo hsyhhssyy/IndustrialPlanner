@@ -4,6 +4,12 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import type { GridRect } from "@/domain/shared/grid";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
+import {
+  BASE_OUTER_WARNING_PADDING_CELLS,
+  resolveBaseOuterGridRect,
+  resolveCurrentBaseDefinition,
+  resolveExpandedGridRect,
+} from "./BaseBoundaryDecoration";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
 
@@ -93,6 +99,46 @@ export type WorldGridVisibilityScope =
   | { kind: "all" }
   | { kind: "hidden" }
   | { kind: "local"; lineBounds: WorldGridLineBounds };
+
+export function resolveWorldGridLineBoundsFromGridRect(
+  gridRect: GridRect,
+): WorldGridLineBounds | null {
+  if (
+    !Number.isFinite(gridRect.x)
+    || !Number.isFinite(gridRect.y)
+    || !Number.isFinite(gridRect.width)
+    || !Number.isFinite(gridRect.height)
+    || gridRect.width <= 0
+    || gridRect.height <= 0
+  ) {
+    return null;
+  }
+
+  return {
+    left: gridRect.x,
+    top: gridRect.y,
+    right: gridRect.x + gridRect.width,
+    bottom: gridRect.y + gridRect.height,
+  };
+}
+
+export function intersectWorldGridLineBounds(
+  leftBounds: WorldGridLineBounds,
+  rightBounds: WorldGridLineBounds,
+): WorldGridLineBounds | null {
+  const bounds: WorldGridLineBounds = {
+    left: Math.max(leftBounds.left, rightBounds.left),
+    top: Math.max(leftBounds.top, rightBounds.top),
+    right: Math.min(leftBounds.right, rightBounds.right),
+    bottom: Math.min(leftBounds.bottom, rightBounds.bottom),
+  };
+
+  if (bounds.right <= bounds.left || bounds.bottom <= bounds.top) {
+    return null;
+  }
+
+  return bounds;
+}
 
 export function resolveWorldGridStrokeStyle(
   theme: AppTheme,
@@ -644,17 +690,45 @@ export function createGridLineDecoration(): DecorationLayer {
         return;
       }
 
-      const drawViewportBounds = visibilityScope.kind === "local"
-        ? resolveWorldGridLocalViewportBounds({
+      const baseDefinition = resolveCurrentBaseDefinition(ctx)
+      const baseOuterGridRect = baseDefinition === null
+        ? null
+        : resolveBaseOuterGridRect(baseDefinition)
+      const baseWarningGridRect = baseOuterGridRect === null
+        ? null
+        : resolveExpandedGridRect(
+          baseOuterGridRect,
+          BASE_OUTER_WARNING_PADDING_CELLS,
+        )
+      const baseLineBounds = baseWarningGridRect === null
+        ? null
+        : resolveWorldGridLineBoundsFromGridRect(baseWarningGridRect)
+      const lineBounds = visibilityScope.kind === "all"
+        ? baseLineBounds
+        : visibilityScope.kind === "local"
+          ? (baseLineBounds === null
+            ? visibilityScope.lineBounds
+            : intersectWorldGridLineBounds(
+              baseLineBounds,
+              visibilityScope.lineBounds,
+            ))
+          : null
+
+      if (visibilityScope.kind === "local" && lineBounds === null) {
+        return
+      }
+
+      const drawViewportBounds = lineBounds === null
+        ? ctx.viewportBounds
+        : resolveWorldGridLocalViewportBounds({
           viewportBounds: ctx.viewportBounds,
           viewportCenter: {
             x: ctx.viewportState.centerX,
             y: ctx.viewportState.centerY,
           },
           gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-          lineBounds: visibilityScope.lineBounds,
+          lineBounds,
         })
-        : ctx.viewportBounds;
 
       if (drawViewportBounds === null) {
         return;
@@ -676,7 +750,7 @@ export function createGridLineDecoration(): DecorationLayer {
         },
         gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
       });
-      const lineAxes = visibilityScope.kind === "local"
+      const lineAxes = lineBounds !== null
         ? clipWorldGridLineAxesToViewportBounds({
           lineAxes: fullViewportLineAxes,
           viewportBounds: drawViewportBounds,

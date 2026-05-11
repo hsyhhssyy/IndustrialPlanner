@@ -774,9 +774,9 @@ function resolveRotationForShape(options: {
   toEdge: GridEdge;
 }): GridRotation {
   const base = options.shape === "turn-cw"
-    ? { fromEdge: "WEST" as const, toEdge: "SOUTH" as const }
+    ? { fromEdge: "EAST" as const, toEdge: "NORTH" as const }
     : options.shape === "turn-ccw"
-      ? { fromEdge: "WEST" as const, toEdge: "NORTH" as const }
+      ? { fromEdge: "NORTH" as const, toEdge: "EAST" as const }
       : { fromEdge: "WEST" as const, toEdge: "EAST" as const };
 
   for (const rotation of [0, 90, 180, 270] as const) {

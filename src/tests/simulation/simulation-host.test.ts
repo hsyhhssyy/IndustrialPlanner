@@ -152,6 +152,46 @@ describe("createSimulationHost", () => {
     host.dispose()
   })
 
+  it("keeps the existing topology when only documentSettings change", async () => {
+    vi.stubGlobal("Worker", undefined)
+
+    const initialDocument = createDummyWorldDocument()
+    const { workspace, document } = createWorkspace(initialDocument)
+    const host = createSimulationHost(workspace)
+
+    await host.actions.start()
+    await host.internalActions.syncToTick(3)
+
+    const topologyBeforeSettingsChange = host.topology.getSnapshot()
+    const tickBeforeSettingsChange = host.internalState.currentSnapshot
+
+    expect(topologyBeforeSettingsChange).not.toBeNull()
+    expect(tickBeforeSettingsChange?.tickNumber).toBe(3)
+
+    document.setSnapshot({
+      ...initialDocument,
+      documentSettings: {
+        ...initialDocument.documentSettings,
+        viewport: {
+          ...initialDocument.documentSettings.viewport,
+          center: {
+            x: 12,
+            y: -8,
+          },
+          gridSize: 2,
+        },
+        showDiagnostics: true,
+      },
+    })
+    await flushMicrotasks(8)
+
+    expect(host.topology.getSnapshot()).toBe(topologyBeforeSettingsChange)
+    expect(host.internalState.currentSnapshot).toBe(tickBeforeSettingsChange)
+    expect(host.internalState.currentSnapshot?.tickNumber).toBe(3)
+
+    host.dispose()
+  })
+
   it("rolls back playback progress when the target tick is not ready", async () => {
     vi.stubGlobal("Worker", undefined)
 

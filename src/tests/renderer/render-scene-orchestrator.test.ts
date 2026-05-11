@@ -16,12 +16,14 @@ import {
   resolveWorldGridDisconnectedSegmentSpans,
   resolveWorldGridIntersectionDotSize,
   resolveWorldGridLocalViewportBounds,
+  resolveWorldGridLineBoundsFromGridRect,
   resolveWorldGridMajorStrokeStyle,
   resolveWorldGridPreviewFocusLineBounds,
   resolveWorldGridRenderState,
   resolveWorldGridStrokeStyle,
   resolveWorldGridLineAxes,
   resolveWorldGridVisibilityScope,
+  intersectWorldGridLineBounds,
   WORLD_GRID_ZOOM_THRESHOLD_A,
   WORLD_GRID_ZOOM_THRESHOLD_B,
   WORLD_GRID_ZOOM_THRESHOLD_C,
@@ -665,6 +667,72 @@ describe("resolveWorldGridLocalViewportBounds", () => {
     expect(lineAxes.vertical.major).toEqual([50])
     expect(lineAxes.horizontal.fine).toEqual([40, 60, 70])
     expect(lineAxes.horizontal.major).toEqual([50])
+  })
+})
+
+describe("resolveWorldGridLineBoundsFromGridRect", () => {
+  it("converts a grid rect into line bounds using the exclusive right and bottom edge", () => {
+    expect(resolveWorldGridLineBoundsFromGridRect({
+      x: -7,
+      y: -7,
+      width: 94,
+      height: 94,
+    })).toEqual({
+      left: -7,
+      top: -7,
+      right: 87,
+      bottom: 87,
+    })
+  })
+
+  it("returns null for invalid grid rects", () => {
+    expect(resolveWorldGridLineBoundsFromGridRect({
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 10,
+    })).toBeNull()
+  })
+})
+
+describe("intersectWorldGridLineBounds", () => {
+  it("clips preview-local grid visibility to the base warning bounds", () => {
+    expect(intersectWorldGridLineBounds(
+      {
+        left: -7,
+        top: -7,
+        right: 87,
+        bottom: 87,
+      },
+      {
+        left: 80,
+        top: 80,
+        right: 100,
+        bottom: 100,
+      },
+    )).toEqual({
+      left: 80,
+      top: 80,
+      right: 87,
+      bottom: 87,
+    })
+  })
+
+  it("returns null when the requested local region is fully outside the base warning bounds", () => {
+    expect(intersectWorldGridLineBounds(
+      {
+        left: -7,
+        top: -7,
+        right: 87,
+        bottom: 87,
+      },
+      {
+        left: 90,
+        top: 90,
+        right: 100,
+        bottom: 100,
+      },
+    )).toBeNull()
   })
 })
 

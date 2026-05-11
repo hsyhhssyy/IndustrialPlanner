@@ -1675,12 +1675,23 @@ describe("createAppHost", () => {
     ]);
   });
 
-  it("opens the save blueprint dialog from the save shortcut and selection action button", () => {
+  it("opens the save blueprint dialog from the save shortcut and selection action button only for multi-selection", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
     const appHost = createAppHost(workspace);
+
+    appHost.gestureAdapter.handleKeyDown(keyEvent({
+      code: "KeyS",
+      key: "s",
+      keyCode: 83,
+      ctrlKey: true,
+    }));
+
+    expect(appHost.internalState.workbench.dialogState["save-blueprint"].visible).toBe(false);
+
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2", "dummy-entity-3"]);
 
     appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "KeyS",

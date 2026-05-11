@@ -100,9 +100,9 @@ describe("EditSelectionInspector", () => {
   const actionButtonList = container.querySelector(".selection-inspector-action-button-list") as HTMLElement | null;
 
   expect(actionStrip).not.toBeNull();
-  expect(actionButtonList?.style.gridTemplateColumns).toBe("repeat(3, minmax(0, 1fr))");
+  expect(actionButtonList?.style.gridTemplateColumns).toBe("repeat(2, minmax(0, 1fr))");
     expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-move"]')).not.toBeNull();
-    expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-save-blueprint"]')).not.toBeNull();
+    expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-save-blueprint"]')).toBeNull();
     expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-delete"]')).not.toBeNull();
     expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-delete-many"]')).toBeNull();
 
@@ -141,8 +141,8 @@ describe("EditSelectionInspector", () => {
     const actionButtonList = container.querySelector(".selection-inspector-action-button-list") as HTMLElement | null;
 
     expect(actionStrip).not.toBeNull();
-    expect(actionButtonList?.style.gridTemplateColumns).toBe("repeat(4, minmax(0, 1fr))");
-    expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-save-blueprint"]')).not.toBeNull();
+    expect(actionButtonList?.style.gridTemplateColumns).toBe("repeat(3, minmax(0, 1fr))");
+    expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-save-blueprint"]')).toBeNull();
     expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-delete-many"]')).not.toBeNull();
   });
 });

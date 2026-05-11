@@ -5,7 +5,10 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument } from "@/domain/document/world-document";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 
-import { compileSimulationTopology } from "./topology-compiler";
+import {
+  compileSimulationTopology,
+  createSimulationDocumentHash,
+} from "./topology-compiler";
 import { createSimulationTopologyMigration } from "./topology-migration";
 import {
   createInitialSimulationRuntimeStatus,
@@ -156,6 +159,21 @@ implements SimulationAction, SimulationInternalAction {
       };
     }
 
+    const previousTopology = this.topology.getSnapshot();
+    const nextDocumentHash = createSimulationDocumentHash(document);
+    if (
+      this.compiledDocument !== null
+      && previousTopology !== null
+      && this.stateReadWrite.runtimeStatus.mode !== "error"
+      && previousTopology.documentHash === nextDocumentHash
+    ) {
+      return {
+        status: "started",
+        topologyId: previousTopology.topologyId,
+        diagnostics: previousTopology.diagnostics,
+      };
+    }
+
     runInAction(() => {
       this.stateReadWrite.runtimeStatus = {
         ...this.stateReadWrite.runtimeStatus,
@@ -168,7 +186,6 @@ implements SimulationAction, SimulationInternalAction {
       document,
       registry: this.workspace.registry,
     });
-    const previousTopology = this.topology.getSnapshot();
     const previousDocument = this.compiledDocument;
     const baseTickNumber = this.stateReadWrite.currentSnapshot?.tickNumber ?? 0;
     const playbackTickNumber = this.stateReadWrite.currentPlaybackTickNumber;

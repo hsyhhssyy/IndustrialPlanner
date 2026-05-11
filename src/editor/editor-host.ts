@@ -116,6 +116,7 @@ function hookDocumentViewport(editorHost: EditorHost): () => void {
     applyWorldDocumentViewportSettings({
       document,
       state: editorHost.internalState,
+      workspace: editorHost.workspace,
     });
   };
 

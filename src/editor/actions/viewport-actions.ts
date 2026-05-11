@@ -8,6 +8,7 @@ import {
 } from "../document-viewport";
 import type { EditorStateReadWrite } from "../state-impl";
 import {
+  clampViewportCenterToBaseWarningBounds,
   resolveViewportGridCellPixelSize,
   resolveViewportGridSizeAfterZoom,
 } from "../viewport-settings";
@@ -22,6 +23,7 @@ export function createEditorViewportActions({
   document,
   documentWriter,
   state,
+  workspace,
 }: EditorActionsContext): EditorViewportActions {
   const persistViewportSettings = (): void => {
     persistWorldDocumentViewportSettings({
@@ -29,6 +31,19 @@ export function createEditorViewportActions({
       documentWriter,
       state,
     });
+  };
+
+  const clampViewportCenter = (): void => {
+    const baseDefinition = workspace.registry.baseDefinitions.find(
+      (definition) => definition.id === document.getSnapshot().baseId,
+    ) ?? null;
+    const nextViewportCenter = clampViewportCenterToBaseWarningBounds({
+      center: state.viewport.center,
+      baseDefinition,
+    });
+
+    state.viewport.center.x = nextViewportCenter.x;
+    state.viewport.center.y = nextViewportCenter.y;
   };
 
   return {
@@ -69,6 +84,8 @@ export function createEditorViewportActions({
         state.internalTransientState.hasMeasuredViewportClientRect = true;
       }
 
+      clampViewportCenter();
+
       state.viewport.clientRect.left = nextClientRect.left;
       state.viewport.clientRect.top = nextClientRect.top;
       state.viewport.clientRect.width = nextClientRect.width;
@@ -103,6 +120,8 @@ export function createEditorViewportActions({
 
       state.viewport.center.x -= viewportPixelVector.x / gridCellSize;
       state.viewport.center.y -= viewportPixelVector.y / gridCellSize;
+
+      clampViewportCenter();
 
       persistViewportSettings();
     },

@@ -766,7 +766,7 @@ describe("WorkbenchApp", () => {
     expect(actionStrip).not.toBeNull();
     expect(container.querySelector(".canvas-floating-toolbar")).toBeNull();
     expect(moveButton).not.toBeNull();
-    expect(saveBlueprintButton).not.toBeNull();
+    expect(saveBlueprintButton).toBeNull();
     expect(deleteButton).not.toBeNull();
     expect(deleteManyButton).not.toBeNull();
     expect(
@@ -1746,6 +1746,43 @@ describe("WorkbenchApp", () => {
 
     expect(pointerDown!.defaultPrevented).toBe(true);
     expect(container.querySelector('[data-dialog-key="save-blueprint"]')).not.toBeNull();
+  });
+
+  it("hides the canvas right dock save blueprint button for a single selection", async () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    await flushMicrotasks(20);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    await flushMicrotasks(8);
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
+    const appHost = createAppHost(workspace);
+
+    coarsePointer = true;
+    hoverNone = true;
+    setViewport({
+      width: 1024,
+      height: 1366,
+      userAgent:
+        "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    });
+
+    runInAction(() => {
+      appHost.internalState.settings.gameUseInspectorPanel = true;
+      appHost.internalState.activeTool = "marquee";
+      appHost.internalActions.showCanvasRightDockToolbar([
+        "canvas-right-dock-toolbar-button-exit",
+        "canvas-right-dock-toolbar-button-save-blueprint",
+      ]);
+    });
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    expect(container.querySelector(
+      '[data-ui-button-id="canvas-right-dock-toolbar-button-save-blueprint"]',
+    )).toBeNull();
   });
 
   it("shows the canvas top left corner toolbar and updates toggle labels locally", () => {

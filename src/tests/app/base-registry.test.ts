@@ -30,6 +30,10 @@ describe("createRegistryContract", () => {
       expect(definition.outerRing.right % 5).toBe(0);
       expect(definition.outerRing.bottom % 5).toBe(0);
       expect(definition.outerRing.left % 5).toBe(0);
+      expect([5, 10]).toContain(definition.outerRing.top);
+      expect([5, 10]).toContain(definition.outerRing.right);
+      expect([5, 10]).toContain(definition.outerRing.bottom);
+      expect([5, 10]).toContain(definition.outerRing.left);
 
       // AI-REMOVED 2026-05-10:
       // Reason: 用户澄清约束是 outerRing 每个方向的格数分别必须是 5 的整数倍，不是外扩总面积满足 5 整除。

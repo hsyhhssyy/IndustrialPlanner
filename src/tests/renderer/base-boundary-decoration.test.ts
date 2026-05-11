@@ -67,6 +67,8 @@ import {
   createBaseBoundaryDecoration,
   resolveBaseBoundaryGridRect,
   resolveBaseBoundaryStrokeWidth,
+  resolveBaseOuterGridRect,
+  resolveExpandedGridRect,
 } from "@/renderer/scene/decorations/BaseBoundaryDecoration"
 import type { DecorationSyncContext } from "@/renderer/scene/decorations/DecorationSyncContext"
 
@@ -98,6 +100,50 @@ describe("BaseBoundaryDecoration", () => {
       y: 0,
       width: 40,
       height: 40,
+    })
+  })
+
+  it("resolves the full outer expansion rect from placeable area and outer ring", () => {
+    const registry = createRegistryContract()
+    const wuling = registry.baseDefinitions.find(
+      (definition) => definition.id === "wuling_protocol_core",
+    )
+    const valleyShelter = registry.baseDefinitions.find(
+      (definition) => definition.id === "valley4_refugee_shelter",
+    )
+
+    expect(wuling).toBeDefined()
+    expect(valleyShelter).toBeDefined()
+
+    if (wuling === undefined || valleyShelter === undefined) {
+      throw new Error("Expected base definitions to exist.")
+    }
+
+    expect(resolveBaseOuterGridRect(wuling)).toEqual({
+      x: -5,
+      y: -5,
+      width: 90,
+      height: 90,
+    })
+    expect(resolveBaseOuterGridRect(valleyShelter)).toEqual({
+      x: -5,
+      y: -5,
+      width: 50,
+      height: 50,
+    })
+  })
+
+  it("expands a grid rect symmetrically for the out-of-bounds warning ring", () => {
+    expect(resolveExpandedGridRect({
+      x: -5,
+      y: -5,
+      width: 90,
+      height: 90,
+    }, 2)).toEqual({
+      x: -7,
+      y: -7,
+      width: 94,
+      height: 94,
     })
   })
 

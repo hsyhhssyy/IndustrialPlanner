@@ -61,7 +61,7 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
         descriptionPlaceholder: "可选，补充说明用途或布局特点",
         cancel: "取消",
         save: "保存蓝图",
-        emptySelection: "当前没有可保存的选中实体。",
+        emptySelection: "当前至少需要选中两个实体才能保存蓝图。",
         requiredName: "请输入蓝图名称。",
         saveFailed: "蓝图保存失败，请检查浏览器存储是否可用。",
       }
@@ -73,7 +73,7 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
         descriptionPlaceholder: "Optional notes about purpose or layout",
         cancel: "Cancel",
         save: "Save Blueprint",
-        emptySelection: "There is no selection to save.",
+        emptySelection: "Select at least two entities to save a blueprint.",
         requiredName: "Please enter a blueprint name.",
         saveFailed: "Failed to save blueprint. Check browser storage availability.",
       }

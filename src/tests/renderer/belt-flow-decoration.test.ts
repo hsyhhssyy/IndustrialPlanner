@@ -161,18 +161,11 @@ import {
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
 describe("BeltFlowDecoration", () => {
-  it("resolves arrow and highlight marks with path-continuous phase across belt tiles", () => {
+  it("resolves only arrow marks with path-continuous phase across belt tiles", () => {
     const marksAtStart = resolveBeltFlowMarks(createFlowContext({ nowMs: 0 }) as never)
     const marksAfterHalfSecond = resolveBeltFlowMarks(createFlowContext({ nowMs: 500 }) as never)
 
-    expect(marksAtStart.filter((mark) => mark.kind === "highlight").map((mark) => ({
-      kind: mark.kind,
-      x: Math.round(mark.centerX),
-      length: mark.lengthCells,
-    }))).toEqual([
-      { kind: "highlight", x: 150, length: 1 },
-      { kind: "highlight", x: 250, length: 1 },
-    ])
+    expect(marksAtStart.filter((mark) => mark.kind === "highlight")).toEqual([])
     expect(marksAtStart.filter((mark) => mark.kind === "arrow").map((mark) => ({
       kind: mark.kind,
       x: Math.round(mark.centerX),
@@ -180,14 +173,7 @@ describe("BeltFlowDecoration", () => {
       { kind: "arrow", x: 100 },
       { kind: "arrow", x: 200 },
     ])
-    expect(marksAfterHalfSecond.filter((mark) => mark.kind === "highlight").map((mark) => ({
-      kind: mark.kind,
-      x: Math.round(mark.centerX),
-      length: mark.lengthCells,
-    }))).toEqual([
-      { kind: "highlight", x: 175, length: 1.5 },
-      { kind: "highlight", x: 275, length: 0.5 },
-    ])
+    expect(marksAfterHalfSecond.filter((mark) => mark.kind === "highlight")).toEqual([])
     expect(marksAfterHalfSecond.filter((mark) => mark.kind === "arrow").map((mark) => ({
       kind: mark.kind,
       x: Math.round(mark.centerX),
@@ -197,46 +183,43 @@ describe("BeltFlowDecoration", () => {
     ])
   })
 
-  it("draws textured highlight paths and solid belt-colored arrows", async () => {
+  it("draws only solid belt-colored arrows after removing highlight ribbons", async () => {
     const decoration = createBeltFlowDecoration()
     const highlightTexture = { id: "highlight-texture" }
     const getTexture = vi.fn().mockResolvedValue(highlightTexture)
     decoration.sync(createFlowContext({ nowMs: 0, getTexture }) as never)
 
-    expect(getTexture).toHaveBeenCalledWith("texture-belt-highlight-strip-texture")
+    expect(getTexture).not.toHaveBeenCalled()
 
     await flushMicrotasks()
     decoration.sync(createFlowContext({ nowMs: 0, getTexture }) as never)
 
-    const highlightLayer = decoration.container.children[0] as { children: unknown[] }
-    const highlight = highlightLayer.children[0] as {
-      texture: unknown;
-      geometry: {
-        points: Array<{ x: number; y: number }>;
-        width: number;
-        textureScale: number;
-      };
-      tint: number;
-      alpha: number;
+    const highlightLayer = decoration.container.children[0] as {
+      children: unknown[];
+      visible: boolean;
     }
     const graphics = decoration.container.children[2] as unknown as {
       drawCommands: Array<{
         type: "poly";
+        points?: number[];
         fill?: unknown;
         stroke?: unknown;
       }>;
     }
     expect(decoration.container.visible).toBe(true)
-    expect(highlight.texture).toBe(highlightTexture)
-    expect(highlight.geometry.points).toEqual([
-      { x: 100, y: 100 },
-      { x: 200, y: 100 },
-    ])
-    expect(highlight.geometry.width).toBeCloseTo(78)
-    expect(highlight.geometry.textureScale).toBeCloseTo(2 / 0.78)
-    expect(highlight.tint).toBe(0xd9822b)
-    expect(highlight.alpha).toBeCloseTo(0.82)
+    expect(highlightLayer.visible).toBe(false)
+    expect(highlightLayer.children).toHaveLength(0)
     expect(graphics.drawCommands).toHaveLength(2)
+    expect(graphics.drawCommands[0]?.points?.map((value) => Number(value.toFixed(2)))).toEqual([
+      114,
+      100,
+      86,
+      88,
+      91.04,
+      100,
+      86,
+      112,
+    ])
     expect(graphics.drawCommands[0]?.fill).toMatchObject({
       color: 0xd9822b,
       alpha: 1,
@@ -246,7 +229,7 @@ describe("BeltFlowDecoration", () => {
     decoration.destroy()
   })
 
-  it("uses the current belt collection tint for highlights and arrows", () => {
+  it("uses the current belt collection tint for arrows", () => {
     const marks = resolveBeltFlowMarks(createFlowContext({
       nowMs: 0,
       selectionIds: ["belt-a", "other-entity"],
@@ -256,14 +239,7 @@ describe("BeltFlowDecoration", () => {
       AYU_LIGHT_THEME.renderer.worldPreviewRectFillColorKey,
     )
 
-    expect(marks.filter((mark) => mark.kind === "highlight").map((mark) => ({
-      kind: mark.kind,
-      x: Math.round(mark.centerX),
-      tint: mark.tint,
-    }))).toEqual([
-      { kind: "highlight", x: 150, tint: selectionTint },
-      { kind: "highlight", x: 250, tint: 0xd9822b },
-    ])
+    expect(marks.filter((mark) => mark.kind === "highlight")).toEqual([])
     expect(marks.filter((mark) => mark.kind === "arrow").map((mark) => ({
       kind: mark.kind,
       x: Math.round(mark.centerX),
@@ -272,6 +248,25 @@ describe("BeltFlowDecoration", () => {
       { kind: "arrow", x: 100, tint: selectionTint },
       { kind: "arrow", x: 200, tint: 0xd9822b },
     ])
+  })
+
+  it("skips highlight ribbons on turn belts while keeping flow arrows", () => {
+    const marks = resolveBeltFlowMarks(createFlowContext({
+      nowMs: 0,
+      entities: [
+        {
+          id: "belt-turn",
+          definitionId: "belt_turn_cw_1x1",
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+      ],
+    }) as never)
+
+    expect(marks.some((mark) => mark.kind === "highlight")).toBe(false)
+    expect(marks.some((mark) => mark.kind === "arrow")).toBe(true)
   })
 
   it("hides in simplified display mode", () => {
@@ -347,6 +342,14 @@ function createFlowContext(options: {
   simplifiedDeviceIcons?: boolean;
   getTexture?: (key: string) => Promise<unknown>;
   selectionIds?: readonly string[];
+  entities?: Array<{
+    id: string;
+    definitionId: string;
+    position: { x: number; y: number };
+    rotation: number;
+    config: Record<string, never>;
+    tags: string[];
+  }>;
 }) {
   const registry = createRegistryContract()
 
@@ -391,7 +394,7 @@ function createFlowContext(options: {
           },
         },
         queries: {
-          listEntities: () => [
+          listEntities: () => options.entities ?? [
             {
               id: "belt-a",
               definitionId: "belt_straight_1x1",

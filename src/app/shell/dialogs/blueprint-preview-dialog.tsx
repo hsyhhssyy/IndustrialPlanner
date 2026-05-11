@@ -11,6 +11,10 @@ import { observer } from "mobx-react-lite";
 import LucideChevronLeft from "~icons/lucide/chevron-left";
 import LucideFolder from "~icons/lucide/folder";
 
+import {
+  downloadBlueprintDocumentForTransfer,
+  serializeBlueprintDocumentForTransfer,
+} from "@/app/blueprint/blueprint-transfer";
 import type { AppHost } from "@/app/host/app-host";
 import type { WorkbenchBlueprintPreviewController } from "@/app/shell/state/blueprint-preview-dialog-state";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
@@ -253,8 +257,10 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   const [isMoveLoading, setIsMoveLoading] = useState(false);
   const [isMovePickerReady, setIsMovePickerReady] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
   const [moveErrorMessage, setMoveErrorMessage] = useState<string | null>(null);
+  const [transferErrorMessage, setTransferErrorMessage] = useState<string | null>(null);
   const [moveFolderStack, setMoveFolderStack] = useState<BlueprintLibraryFolder[]>([]);
   const [moveDirectoryListing, setMoveDirectoryListing] = useState<BlueprintLibraryDirectoryListing>(
     createEmptyBlueprintLibraryDirectory(null),
@@ -345,7 +351,9 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
     setIsMoveLoading(false);
     setIsMovePickerReady(false);
     setIsMoving(false);
+    setIsCopying(false);
     setMoveErrorMessage(null);
+    setTransferErrorMessage(null);
     setMoveFolderStack([]);
     setMoveDirectoryListing(createEmptyBlueprintLibraryDirectory(null));
   }, [controller.canDelete, dialogState.visible, record?.blueprintId]);
@@ -599,7 +607,7 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
     folderStack: moveFolderStack,
   });
   const isMoveTargetCurrent = currentMoveFolderId === record.parentFolderId;
-  const activeErrorMessage = moveErrorMessage ?? deleteErrorMessage;
+  const activeErrorMessage = transferErrorMessage ?? moveErrorMessage ?? deleteErrorMessage;
     // Reason: 用户要求去掉画布叠层，并且不要再找地方安排这些信息。
   // Trigger: 当前预览面板底部叠层继续显示“布局总览”、实体数、连线数、预估范围、初始坐标、地图、更新时间，和最新布局要求冲突。
   // Evidence: 当前 blueprint-preview-overlay 直接消费这些派生文案，删除叠层后这些派生值不再有有效承载位置。
@@ -657,6 +665,8 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       return;
     }
 
+    setTransferErrorMessage(null);
+
     if (!isDeleteConfirming) {
       setIsDeleteConfirming(true);
       setDeleteErrorMessage(null);
@@ -688,7 +698,38 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
     setIsDeleteConfirming(false);
     setDeleteErrorMessage(null);
     setMoveErrorMessage(null);
+    setTransferErrorMessage(null);
     setIsMoveMode(true);
+  };
+  const handleExportButtonClick = () => {
+    setTransferErrorMessage(null);
+
+    try {
+      downloadBlueprintDocumentForTransfer(record);
+    } catch {
+      setTransferErrorMessage(t("workbench.blueprint.exportFileFailed"));
+    }
+  };
+  const handleCopyButtonClick = async () => {
+    if (isCopying) {
+      return;
+    }
+
+    if (typeof navigator === "undefined" || typeof navigator.clipboard?.writeText !== "function") {
+      setTransferErrorMessage(t("workbench.blueprint.copyClipboardUnavailable"));
+      return;
+    }
+
+    setIsCopying(true);
+    setTransferErrorMessage(null);
+
+    try {
+      await navigator.clipboard.writeText(serializeBlueprintDocumentForTransfer(record));
+    } catch {
+      setTransferErrorMessage(t("workbench.blueprint.copyClipboardFailed"));
+    } finally {
+      setIsCopying(false);
+    }
   };
   const handleMoveSubmit = async () => {
     if (!controller.canDelete || isMoveLoading || isMoving || isMoveTargetCurrent) {
@@ -716,10 +757,13 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   };
   const showDeleteAction = controller.canDelete;
   const showMoveAction = controller.canDelete;
+  const defaultActionCount = 3 + (showMoveAction ? 1 : 0) + (showDeleteAction ? 1 : 0);
   const actionsClassName = isDeleteConfirming
     ? "blueprint-preview-actions is-dual-action"
-    : showMoveAction && showDeleteAction
+    : defaultActionCount >= 3
       ? "blueprint-preview-actions is-triple-action"
+      : defaultActionCount === 2
+        ? "blueprint-preview-actions is-dual-action"
       : "blueprint-preview-actions";
   const handlePreviewWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -1003,6 +1047,27 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                         type="button"
                       >
                         {copy.place}
+                      </button>
+                      <button
+                        className="save-blueprint-secondary-button"
+                        data-ui-button-id="blueprint-preview-export-file-button"
+                        onClick={handleExportButtonClick}
+                        title={t("workbench.button.exportBlueprintToFile")}
+                        type="button"
+                      >
+                        {t("workbench.button.exportBlueprintToFile")}
+                      </button>
+                      <button
+                        className="save-blueprint-secondary-button"
+                        data-ui-button-id="blueprint-preview-copy-clipboard-button"
+                        disabled={isCopying}
+                        onClick={() => {
+                          void handleCopyButtonClick();
+                        }}
+                        title={t("workbench.button.copyBlueprintToClipboard")}
+                        type="button"
+                      >
+                        {t("workbench.button.copyBlueprintToClipboard")}
                       </button>
                       {showMoveAction ? (
                         <button

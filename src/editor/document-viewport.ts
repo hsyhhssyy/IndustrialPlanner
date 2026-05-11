@@ -2,6 +2,7 @@ import type {
   WorldDocument,
   WorldDocumentViewportSettings,
 } from "@/domain/document/world-document";
+import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 
 import type {
@@ -12,6 +13,7 @@ import type {
   EditorViewportStateReadWrite,
 } from "./state-impl";
 import {
+  clampViewportCenterToBaseWarningBounds,
   DEFAULT_VIEWPORT_GRID_SIZE,
   clampViewportGridSize,
   resolveViewportGridCellPixelSize,
@@ -30,6 +32,7 @@ export function createDefaultWorldDocumentViewportSettings(): WorldDocumentViewp
 export function applyWorldDocumentViewportSettings(options: {
   document: WorldDocument;
   state: EditorStateReadWrite;
+  workspace: WorkspaceContract;
 }): void {
   const viewportSettings = normalizeWorldDocumentViewportSettings(
     options.document.documentSettings.viewport,
@@ -39,8 +42,16 @@ export function applyWorldDocumentViewportSettings(options: {
     return;
   }
 
-  options.state.viewport.center.x = viewportSettings.center.x;
-  options.state.viewport.center.y = viewportSettings.center.y;
+  const baseDefinition = options.workspace.registry.baseDefinitions.find(
+    (definition) => definition.id === options.document.baseId,
+  ) ?? null;
+  const nextViewportCenter = clampViewportCenterToBaseWarningBounds({
+    center: viewportSettings.center,
+    baseDefinition,
+  });
+
+  options.state.viewport.center.x = nextViewportCenter.x;
+  options.state.viewport.center.y = nextViewportCenter.y;
   options.state.viewport.gridSize = viewportSettings.gridSize;
   options.state.viewport.gridCellPixelSize = resolveViewportGridCellPixelSize(
     viewportSettings.gridSize,

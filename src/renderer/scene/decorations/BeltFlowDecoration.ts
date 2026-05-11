@@ -19,6 +19,7 @@ import {
 } from "./BeltVisualGeometry"
 
 const BELT_VISUAL_SPEED_CELLS_PER_SECOND = 0.5
+const BELT_HIGHLIGHT_ENABLED = false
 const HIGHLIGHT_TEXTURE_KEY = "texture-belt-highlight-strip-texture"
 const HIGHLIGHT_SPEED_MULTIPLIER = 2
 const HIGHLIGHT_SPACING_CELLS = 2
@@ -29,6 +30,7 @@ const HIGHLIGHT_TURN_SAMPLE_COUNT = 16
 const ARROW_SPACING_CELLS = 1
 const ARROW_LENGTH_RATIO = 0.28
 const ARROW_WIDTH_RATIO = 0.24
+const ARROW_TAIL_NOTCH_LENGTH_RATIO = 0.18
 const DISTANCE_EPSILON = 0.000001
 
 type BeltFlowMarkKind = "highlight" | "arrow"
@@ -126,7 +128,6 @@ export function createBeltFlowDecoration(): DecorationLayer {
         return
       }
 
-      ensureHighlightTexture(ctx)
       const entries = resolveBeltVisualPathEntries(ctx)
       if (entries.length === 0) {
         hide()
@@ -139,14 +140,24 @@ export function createBeltFlowDecoration(): DecorationLayer {
         return
       }
 
+      const hasHighlightMarks = marks.some((mark) => mark.kind === "highlight")
+      if (hasHighlightMarks) {
+        ensureHighlightTexture(ctx)
+      }
+
       container.visible = true
-      highlightLayer.visible = true
-      highlightMask.visible = true
+      highlightLayer.visible = hasHighlightMarks
+      highlightMask.visible = hasHighlightMarks
       arrowGraphics.visible = true
-      drawHighlightMask(ctx, highlightMask)
+      if (hasHighlightMarks) {
+        drawHighlightMask(ctx, highlightMask)
+      } else {
+        highlightMask.clear()
+      }
+
       syncHighlightMeshes({
         marks,
-        texture: highlightTexture,
+        texture: hasHighlightMarks ? highlightTexture : null,
         gridCellSize: ctx.viewportState.gridCellPixelSize,
         ensureHighlightMesh,
         highlightMeshes,
@@ -216,22 +227,24 @@ export function resolveBeltFlowMarks(ctx: DecorationSyncContext): BeltFlowMark[]
   const entries = resolveBeltVisualPathEntries(ctx)
   const marks: BeltFlowMark[] = []
 
-  for (const chain of resolveBeltFlowChains(entries)) {
-    const highlightIntervals = resolveRepeatingLocalIntervals({
-      phaseOffsetCells: chain.phaseOffsetCells,
-      pathLengthCells: chain.lengthCells,
-      spacingCells: HIGHLIGHT_SPACING_CELLS,
-      lengthCells: HIGHLIGHT_LENGTH_CELLS,
-      speedCellsPerSecond: BELT_VISUAL_SPEED_CELLS_PER_SECOND * HIGHLIGHT_SPEED_MULTIPLIER,
-      nowMs: ctx.nowMs,
-    })
+  if (BELT_HIGHLIGHT_ENABLED) {
+    for (const chain of resolveBeltFlowChains(entries)) {
+      const highlightIntervals = resolveRepeatingLocalIntervals({
+        phaseOffsetCells: chain.phaseOffsetCells,
+        pathLengthCells: chain.lengthCells,
+        spacingCells: HIGHLIGHT_SPACING_CELLS,
+        lengthCells: HIGHLIGHT_LENGTH_CELLS,
+        speedCellsPerSecond: BELT_VISUAL_SPEED_CELLS_PER_SECOND * HIGHLIGHT_SPEED_MULTIPLIER,
+        nowMs: ctx.nowMs,
+      })
 
-    for (const interval of highlightIntervals) {
-      marks.push(...resolveHighlightMarksForInterval({
-        ctx,
-        chain,
-        interval,
-      }))
+      for (const interval of highlightIntervals) {
+        marks.push(...resolveHighlightMarksForInterval({
+          ctx,
+          chain,
+          interval,
+        }))
+      }
     }
   }
 
@@ -570,6 +583,11 @@ function resolveHighlightMarksForInterval(options: {
   }
 
   for (const chainEntry of options.chain.entries) {
+    if (chainEntry.entry.entity.definitionId !== "belt_straight_1x1") {
+      flushActiveSegments()
+      continue
+    }
+
     const startCells = Math.max(
       options.interval.startCells,
       chainEntry.startDistanceCells,
@@ -809,6 +827,7 @@ function resolveRotatedArrowPoints(
 ): number[] {
   const halfLength = length / 2
   const halfWidth = width / 2
+  const tailNotchX = -halfLength + length * ARROW_TAIL_NOTCH_LENGTH_RATIO
 
   return rotateLocalPoints({
     centerX: mark.centerX,
@@ -817,6 +836,7 @@ function resolveRotatedArrowPoints(
     localPoints: [
       { x: halfLength, y: 0 },
       { x: -halfLength, y: -halfWidth },
+      { x: tailNotchX, y: 0 },
       { x: -halfLength, y: halfWidth },
     ],
   })
