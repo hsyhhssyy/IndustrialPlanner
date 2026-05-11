@@ -5,6 +5,7 @@ import type { AppHost } from "@/app/host/app-host";
 import { DialogShell, type DialogShellTab } from "@/app/shell/shared/dialog-shell";
 import { EncyclopediaPanel } from "@/app/shell/encyclopedia/encyclopedia-panel";
 import { ModuleBalancingPanel } from "@/app/shell/module-balancing/module-balancing-panel";
+import { ProductionPlanningPanel } from "@/app/shell/production-planning";
 import { TOOLBOX_DIALOG_TAB_IDS, type ToolboxDialogTabId } from "@/app/state/state-impl";
 
 function shouldUseImmersiveMaximizedDialog(
@@ -40,6 +41,9 @@ export const ToolboxDialog = observer(function ToolboxDialog({ appHost }: { appH
   const tabContents: Record<string, ReactNode> = {
     [TOOLBOX_DIALOG_TAB_IDS[0]]: (
       <EncyclopediaPanel appHost={appHost} isTouch={isTouch} />
+    ),
+    [TOOLBOX_DIALOG_TAB_IDS[1]]: (
+      <ProductionPlanningPanel appHost={appHost} isTouch={isTouch} />
     ),
     [TOOLBOX_DIALOG_TAB_IDS[2]]: (
       <ModuleBalancingPanel appHost={appHost} isTouch={isTouch} />
