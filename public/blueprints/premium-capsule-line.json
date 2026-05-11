@@ -17,7 +17,7 @@
         "x": 0,
         "y": 0
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
         "pickupItemId": "item_iron_ore",
         "protocolHubOutputs": [
@@ -38,7 +38,7 @@
         "x": 3,
         "y": 0
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
         "pickupItemId": "item_iron_ore",
         "protocolHubOutputs": [
@@ -59,7 +59,7 @@
         "x": 6,
         "y": 0
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
         "pickupItemId": "item_iron_ore",
         "protocolHubOutputs": [
@@ -80,7 +80,7 @@
         "x": 9,
         "y": 0
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
         "pickupItemId": "item_iron_ore",
         "protocolHubOutputs": [
@@ -101,7 +101,7 @@
         "x": 12,
         "y": 0
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
         "pickupItemId": "item_iron_ore",
         "protocolHubOutputs": [
@@ -122,7 +122,7 @@
         "x": 15,
         "y": 0
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
         "pickupItemId": "item_iron_ore",
         "protocolHubOutputs": [
@@ -143,7 +143,7 @@
         "x": 18,
         "y": 0
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
         "pickupItemId": "item_iron_ore",
         "protocolHubOutputs": [
@@ -164,7 +164,7 @@
         "x": 21,
         "y": 0
       },
-      "rotation": 180,
+      "rotation": 0,
       "config": {
         "pickupItemId": "item_iron_ore",
         "protocolHubOutputs": [

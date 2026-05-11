@@ -26,20 +26,33 @@ describe("createRegistryContract", () => {
       expect(definition.outerRing.right).toBeGreaterThanOrEqual(0);
       expect(definition.outerRing.bottom).toBeGreaterThanOrEqual(0);
       expect(definition.outerRing.left).toBeGreaterThanOrEqual(0);
+      expect(definition.outerRing.top % 5).toBe(0);
+      expect(definition.outerRing.right % 5).toBe(0);
+      expect(definition.outerRing.bottom % 5).toBe(0);
+      expect(definition.outerRing.left % 5).toBe(0);
 
-      const expandedWidth =
-        definition.placeableArea.width
-        + definition.outerRing.left
-        + definition.outerRing.right;
-      const expandedHeight =
-        definition.placeableArea.height
-        + definition.outerRing.top
-        + definition.outerRing.bottom;
-      const expansionArea =
-        expandedWidth * expandedHeight
-        - definition.placeableArea.width * definition.placeableArea.height;
-
-      expect(expansionArea % 5).toBe(0);
+      // AI-REMOVED 2026-05-10:
+      // Reason: 用户澄清约束是 outerRing 每个方向的格数分别必须是 5 的整数倍，不是外扩总面积满足 5 整除。
+      // Trigger: 之前基于错误前提新增了面积整除校验，会放过方向值不是 5 倍数但总面积凑巧满足条件的错误配置。
+      // Evidence: 当前会话中的用户更正；base-definition 的数据模型明确按 top/right/bottom/left 四个方向存储外扩值。
+      // Replacement: 使用上面的四个方向逐项取模断言。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // const expandedWidth =
+      //   definition.placeableArea.width
+      //   + definition.outerRing.left
+      //   + definition.outerRing.right;
+      // const expandedHeight =
+      //   definition.placeableArea.height
+      //   + definition.outerRing.top
+      //   + definition.outerRing.bottom;
+      // const expansionArea =
+      //   expandedWidth * expandedHeight
+      //   - definition.placeableArea.width * definition.placeableArea.height;
+      //
+      // expect(expansionArea % 5).toBe(0);
     }
   });
 
