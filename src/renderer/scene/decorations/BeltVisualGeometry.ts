@@ -40,6 +40,15 @@ export interface BeltPathSample {
   readonly angleRadians: number;
 }
 
+export interface BeltVisualPathEntry {
+  readonly entity: WorldEntity;
+  readonly definition: EntityDefinition;
+  readonly inputConnectionKey: string;
+  readonly outputConnectionKey: string;
+  readonly lengthCells: number;
+  readonly phaseOffsetCells: number;
+}
+
 interface WorldPortReference {
   readonly entity: WorldEntity;
   readonly definition: EntityDefinition;
@@ -138,6 +147,53 @@ export function resolveBeltInsertionEntries(ctx: DecorationSyncContext): BeltIns
   return entries
 }
 
+export function resolveBeltVisualPathEntries(ctx: DecorationSyncContext): BeltVisualPathEntry[] {
+  const editor = ctx.workspace.editor
+  if (editor === null) {
+    return []
+  }
+
+  const definitionMap = createEntityDefinitionMap(ctx)
+  const entities = editor.queries.listEntities()
+  const entityOrderIndexById = new Map(
+    entities.map((entity, index) => [entity.id, index]),
+  )
+  const rawEntries = entities.flatMap((entity) => {
+    const definition = definitionMap.get(entity.definitionId)
+    if (definition === undefined || !isStrictBeltDefinitionId(entity.definitionId)) {
+      return []
+    }
+
+    const inputPort = resolveSingleWorldPortReferenceByDirection(entity, definition, "input")
+    const outputPort = resolveSingleWorldPortReferenceByDirection(entity, definition, "output")
+    const lengthCells = resolveBeltPathLengthCells(definition)
+    if (inputPort === null || outputPort === null || lengthCells === null) {
+      return []
+    }
+
+    return [{
+      entity,
+      definition,
+      inputConnectionKey: createConnectionKey(inputPort.cell, inputPort.edge),
+      outputConnectionKey: createConnectionKey(
+        addGridPoints(outputPort.cell, resolveEdgeDelta(outputPort.edge)),
+        oppositeEdge(outputPort.edge),
+      ),
+      lengthCells,
+    }]
+  })
+
+  const phaseOffsetByEntityId = resolveBeltPathPhaseOffsets({
+    entries: rawEntries,
+    entityOrderIndexById,
+  })
+
+  return rawEntries.map((entry) => ({
+    ...entry,
+    phaseOffsetCells: phaseOffsetByEntityId.get(entry.entity.id) ?? 0,
+  }))
+}
+
 export function resolveBeltPathSample(options: {
   entity: WorldEntity;
   definition: EntityDefinition;
@@ -165,6 +221,46 @@ export function resolveBeltPathSample(options: {
       baseSample.angleRadians + rotationToRadians(options.entity.rotation),
     ),
   }
+}
+
+export function resolveBeltPathSampleAtDistance(options: {
+  entity: WorldEntity;
+  definition: EntityDefinition;
+  distanceCells: number;
+}): BeltPathSample | null {
+  const lengthCells = resolveBeltPathLengthCells(options.definition)
+  if (lengthCells === null || lengthCells <= 0) {
+    return null
+  }
+
+  return resolveBeltPathSample({
+    entity: options.entity,
+    definition: options.definition,
+    progress: options.distanceCells / lengthCells,
+  })
+}
+
+export function resolveBeltPathLengthCells(definition: EntityDefinition): number | null {
+  const endpoints = resolveBeltPathEndpoints(definition)
+  if (endpoints === null) {
+    return null
+  }
+
+  if (areOppositeEdges(endpoints.input.edge, endpoints.output.edge)) {
+    return distanceBetweenPoints(endpoints.input.point, endpoints.output.point)
+  }
+
+  const corner = resolveSharedCorner(endpoints.input.edge, endpoints.output.edge)
+  if (corner === null) {
+    return null
+  }
+
+  const startAngle = angleBetweenPoints(corner, endpoints.input.point)
+  const endAngle = angleBetweenPoints(corner, endpoints.output.point)
+  const delta = normalizeTurnDelta(startAngle, endAngle)
+  const radius = distanceBetweenPoints(corner, endpoints.input.point)
+
+  return Math.abs(delta) * radius
 }
 
 export function resolveViewportPoint(options: {
@@ -285,6 +381,140 @@ function resolveSinglePortByDirection(
   }
 
   return null
+}
+
+function resolveSingleWorldPortReferenceByDirection(
+  entity: WorldEntity,
+  definition: EntityDefinition,
+  direction: "input" | "output",
+): WorldPortReference | null {
+  for (const portReference of resolveWorldPortReferences(entity, definition)) {
+    if (portReference.group.kind !== "item" || portReference.group.direction !== direction) {
+      continue
+    }
+
+    return portReference
+  }
+
+  return null
+}
+
+function resolveBeltPathPhaseOffsets(options: {
+  entries: ReadonlyArray<Omit<BeltVisualPathEntry, "phaseOffsetCells">>;
+  entityOrderIndexById: ReadonlyMap<string, number>;
+}): Map<string, number> {
+  const entryByEntityId = new Map(
+    options.entries.map((entry) => [entry.entity.id, entry]),
+  )
+  const entriesByInputConnectionKey = new Map<string, Array<Omit<BeltVisualPathEntry, "phaseOffsetCells">>>()
+  for (const entry of options.entries) {
+    const entries = entriesByInputConnectionKey.get(entry.inputConnectionKey)
+    if (entries === undefined) {
+      entriesByInputConnectionKey.set(entry.inputConnectionKey, [entry])
+    } else {
+      entries.push(entry)
+    }
+  }
+
+  for (const entries of entriesByInputConnectionKey.values()) {
+    entries.sort((left, right) => compareBeltPathEntries(left, right, options.entityOrderIndexById))
+  }
+
+  const nextEntityIdByEntityId = new Map<string, string>()
+  const predecessorIdsByEntityId = new Map<string, Set<string>>()
+  for (const entry of options.entries) {
+    const nextEntry = entriesByInputConnectionKey
+      .get(entry.outputConnectionKey)
+      ?.find((candidate) => candidate.entity.id !== entry.entity.id)
+    if (nextEntry === undefined) {
+      continue
+    }
+
+    nextEntityIdByEntityId.set(entry.entity.id, nextEntry.entity.id)
+    let predecessorIds = predecessorIdsByEntityId.get(nextEntry.entity.id)
+    if (predecessorIds === undefined) {
+      predecessorIds = new Set()
+      predecessorIdsByEntityId.set(nextEntry.entity.id, predecessorIds)
+    }
+
+    predecessorIds.add(entry.entity.id)
+  }
+
+  const phaseOffsetByEntityId = new Map<string, number>()
+  const sortedEntries = [...options.entries].sort((left, right) =>
+    compareBeltPathEntries(left, right, options.entityOrderIndexById),
+  )
+
+  for (const entry of sortedEntries) {
+    const predecessorIds = predecessorIdsByEntityId.get(entry.entity.id)
+    if (predecessorIds !== undefined && predecessorIds.size > 0) {
+      continue
+    }
+
+    assignBeltPathPhaseOffsetsFrom({
+      startEntityId: entry.entity.id,
+      startPhaseOffsetCells: 0,
+      entryByEntityId,
+      nextEntityIdByEntityId,
+      phaseOffsetByEntityId,
+    })
+  }
+
+  for (const entry of sortedEntries) {
+    if (phaseOffsetByEntityId.has(entry.entity.id)) {
+      continue
+    }
+
+    assignBeltPathPhaseOffsetsFrom({
+      startEntityId: entry.entity.id,
+      startPhaseOffsetCells: 0,
+      entryByEntityId,
+      nextEntityIdByEntityId,
+      phaseOffsetByEntityId,
+    })
+  }
+
+  return phaseOffsetByEntityId
+}
+
+function assignBeltPathPhaseOffsetsFrom(options: {
+  startEntityId: string;
+  startPhaseOffsetCells: number;
+  entryByEntityId: ReadonlyMap<string, Omit<BeltVisualPathEntry, "phaseOffsetCells">>;
+  nextEntityIdByEntityId: ReadonlyMap<string, string>;
+  phaseOffsetByEntityId: Map<string, number>;
+}): void {
+  let currentEntityId: string | undefined = options.startEntityId
+  let phaseOffsetCells = options.startPhaseOffsetCells
+
+  while (currentEntityId !== undefined) {
+    if (options.phaseOffsetByEntityId.has(currentEntityId)) {
+      return
+    }
+
+    const entry = options.entryByEntityId.get(currentEntityId)
+    if (entry === undefined) {
+      return
+    }
+
+    options.phaseOffsetByEntityId.set(currentEntityId, phaseOffsetCells)
+    phaseOffsetCells += entry.lengthCells
+    currentEntityId = options.nextEntityIdByEntityId.get(currentEntityId)
+  }
+}
+
+function compareBeltPathEntries(
+  left: Pick<BeltVisualPathEntry, "entity">,
+  right: Pick<BeltVisualPathEntry, "entity">,
+  entityOrderIndexById: ReadonlyMap<string, number>,
+): number {
+  const leftIndex = entityOrderIndexById.get(left.entity.id) ?? Number.MAX_SAFE_INTEGER
+  const rightIndex = entityOrderIndexById.get(right.entity.id) ?? Number.MAX_SAFE_INTEGER
+  const indexDelta = leftIndex - rightIndex
+
+  return indexDelta === 0
+    ? left.entity.id.localeCompare(right.entity.id)
+    : indexDelta
 }
 
 function sampleBaseBeltPath(

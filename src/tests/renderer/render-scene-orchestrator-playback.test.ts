@@ -90,6 +90,14 @@ vi.mock("@/renderer/scene/decorations/BeltCargoDecoration", () => ({
   createBeltCargoDecoration: () => orchestratorTestState.createDecoration(),
 }))
 
+vi.mock("@/renderer/scene/decorations/BeltPortInsertionDecoration", () => ({
+  createBeltPortInsertionDecoration: () => orchestratorTestState.createDecoration(),
+}))
+
+vi.mock("@/renderer/scene/decorations/BeltFlowDecoration", () => ({
+  createBeltFlowDecoration: () => orchestratorTestState.createDecoration(),
+}))
+
 import { createRenderSceneOrchestrator } from "@/renderer/scene/render-scene-orchestrator"
 import type { RenderHost } from "@/renderer/renderer-host"
 
@@ -182,6 +190,7 @@ describe("createRenderSceneOrchestrator", () => {
 
     expect(ticker.add).toHaveBeenCalledTimes(1)
     expect(renderHost.app.stage.addChild).toHaveBeenCalledWith(
+      expect.anything(),
       expect.anything(),
       expect.anything(),
       expect.anything(),
