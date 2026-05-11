@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { observer } from "mobx-react-lite";
 import LucideBox from "~icons/lucide/box";
 import LucideBoxes from "~icons/lucide/boxes";
@@ -9,7 +9,6 @@ import LucideFactory from "~icons/lucide/factory";
 import LucideGauge from "~icons/lucide/gauge";
 import LucideInfinity from "~icons/lucide/infinity";
 import LucideListTree from "~icons/lucide/list-tree";
-import LucideNetwork from "~icons/lucide/network";
 import LucidePackagePlus from "~icons/lucide/package-plus";
 import LucidePlus from "~icons/lucide/plus";
 import LucideTarget from "~icons/lucide/target";
@@ -37,7 +36,6 @@ import {
   type ProductionPlanningItemNode,
   type ProductionPlanningPort,
   type ProductionPlanningRecipeNode,
-  type ProductionPlanningRecipeTotal,
   type ProductionPlanningResult,
   type ProductionPlanningViewMode,
 } from "@/app/shell/production-planning/production-planning-model";
@@ -50,6 +48,12 @@ type ProductionPlanningCalculation = {
   readonly infiniteItemIds: ReadonlySet<string>;
   readonly recipeChoices: Readonly<Record<string, string>>;
   readonly plan: ProductionPlanningResult;
+};
+
+type ProductionPlanningSwipeState = {
+  readonly pointerId: number;
+  readonly startX: number;
+  readonly startY: number;
 };
 
 export const ProductionPlanningPanel = observer(function ProductionPlanningPanel({
@@ -72,6 +76,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   const [recipeChoices, setRecipeChoices] = useState<Record<string, string>>({});
   const [activeScreen, setActiveScreen] = useState<ProductionPlanningScreen>("input");
   const [calculation, setCalculation] = useState<ProductionPlanningCalculation | null>(null);
+  const swipeStateRef = useRef<ProductionPlanningSwipeState | null>(null);
   const infiniteItemIds = useMemo(() => {
     const result = new Set(index.mineralItemIds);
     for (const itemId of specialInfiniteItemIds) {
@@ -171,6 +176,43 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     setActiveScreen("result");
   };
 
+  const handleSwipePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (!isTouch || event.pointerType !== "touch" || shouldIgnoreProductionPlanningSwipeStart(event.target)) {
+      return;
+    }
+
+    swipeStateRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+    };
+  };
+
+  const handleSwipePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const state = swipeStateRef.current;
+    swipeStateRef.current = null;
+
+    if (!isTouch || event.pointerId !== state?.pointerId) {
+      return;
+    }
+
+    const deltaX = event.clientX - state.startX;
+    const deltaY = event.clientY - state.startY;
+    if (Math.abs(deltaX) < 64 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) {
+      return;
+    }
+
+    if (deltaX < 0 && activeScreen === "input" && targets.length > 0) {
+      calculate();
+    } else if (deltaX > 0 && activeScreen === "result") {
+      setActiveScreen("input");
+    }
+  };
+
+  const handleSwipePointerCancel = () => {
+    swipeStateRef.current = null;
+  };
+
   const panelClassName = [
     "production-planning-panel",
     activeScreen === "result" ? "is-result-screen" : "is-input-screen",
@@ -178,7 +220,12 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   ].filter(Boolean).join(" ");
 
   return (
-    <div className={panelClassName}>
+    <div
+      className={panelClassName}
+      onPointerDown={handleSwipePointerDown}
+      onPointerUp={handleSwipePointerUp}
+      onPointerCancel={handleSwipePointerCancel}
+    >
       <div className="production-planning-stage">
         <section className="production-planning-screen production-planning-input-screen">
           <div className="production-planning-config">
@@ -279,11 +326,6 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
                 />
               )}
             </div>
-            {calculation === null ? (
-              <EmptySummaryPanel t={t} />
-            ) : (
-              <SummaryPanel plan={calculation.plan} index={index} t={t} />
-            )}
           </div>
         </section>
       </div>
@@ -709,7 +751,7 @@ function RecipeCard({
   index,
   t,
 }: {
-  recipeNode: ProductionPlanningRecipeNode | ProductionPlanningRecipeTotal;
+  recipeNode: ProductionPlanningRecipeNode;
   index: ProductionPlanningIndex;
   t: (key: string) => string;
 }) {
@@ -892,97 +934,6 @@ function PortChipList({
   );
 }
 
-function SummaryPanel({
-  plan,
-  index,
-  t,
-}: {
-  plan: ProductionPlanningResult;
-  index: ProductionPlanningIndex;
-  t: (key: string) => string;
-}) {
-  return (
-    <aside className="production-planning-summary">
-      <div className="production-planning-summary-cards">
-        <SummaryCard icon={<LucideTarget />} label={t("productionPlanning.totalItems")} value={String(plan.itemTotals.length)} />
-        <SummaryCard icon={<LucideFactory />} label={t("productionPlanning.recipeCount")} value={String(plan.recipeTotals.length)} />
-        <SummaryCard
-          icon={<LucideNetwork />}
-          label={t("productionPlanning.missingRate")}
-          value={`${formatProductionFlow(plan.unresolvedPerMinute)}/min`}
-          tone={plan.unresolvedPerMinute > 0 ? "bad" : "good"}
-        />
-      </div>
-      <section className="production-planning-summary-section">
-        <h3>{t("productionPlanning.summary")}</h3>
-        {plan.itemTotals.length === 0 ? (
-          <p className="production-planning-muted">{t("productionPlanning.noSummary")}</p>
-        ) : (
-          <div className="production-planning-summary-list">
-            {plan.itemTotals.slice(0, 14).map((item) => (
-              <div key={item.itemId} className="production-planning-summary-row">
-                <ItemIdentity itemId={item.itemId} index={index} t={t} />
-                <span>{t("productionPlanning.demand")} {formatProductionFlow(item.demandPerMinute)}</span>
-                <span>{t("productionPlanning.produced")} {formatProductionFlow(item.producedPerMinute)}</span>
-                <strong className={item.unresolvedPerMinute > 0 ? "is-bad" : "is-good"}>
-                  {t("productionPlanning.missing")} {formatProductionFlow(item.unresolvedPerMinute)}
-                </strong>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-      <section className="production-planning-summary-section">
-        <h3>{t("productionPlanning.recipes")}</h3>
-        {plan.recipeTotals.length === 0 ? (
-          <p className="production-planning-muted">{t("productionPlanning.noRecipes")}</p>
-        ) : (
-          <div className="production-planning-recipe-total-list">
-            {plan.recipeTotals.map((recipe) => (
-              <RecipeCard key={recipe.recipeId} recipeNode={recipe} index={index} t={t} />
-            ))}
-          </div>
-        )}
-      </section>
-    </aside>
-  );
-}
-
-function EmptySummaryPanel({
-  t,
-}: {
-  t: (key: string) => string;
-}) {
-  return (
-    <aside className="production-planning-summary">
-      <section className="production-planning-summary-section">
-        <h3>{t("productionPlanning.summary")}</h3>
-        <p className="production-planning-muted">{t("productionPlanning.noResult")}</p>
-      </section>
-    </aside>
-  );
-}
-
-function SummaryCard({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  tone?: "good" | "bad";
-}) {
-  return (
-    <div className={["production-planning-summary-card", tone === "good" ? "is-good" : "", tone === "bad" ? "is-bad" : ""].filter(Boolean).join(" ")}>
-      {icon}
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
 function createPort(itemId: string, perMinute: number): ProductionPlanningPort {
   return {
     id: createProductionPlanningId("port"),
@@ -1024,4 +975,12 @@ function updatePort(
 function normalizeFlowInput(value: string): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function shouldIgnoreProductionPlanningSwipeStart(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) {
+    return true;
+  }
+
+  return target.closest("button, input, select, textarea, [role='button'], [role='tab']") !== null;
 }

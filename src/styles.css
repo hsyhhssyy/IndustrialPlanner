@@ -2086,8 +2086,7 @@ body.is-resizing-dialog-shell * {
 
 .production-planning-config,
 .production-planning-workspace,
-.production-planning-graph,
-.production-planning-summary {
+.production-planning-graph {
   min-width: 0;
   min-height: 0;
 }
@@ -2142,13 +2141,12 @@ body.is-resizing-dialog-shell * {
 
 .production-planning-main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
 }
 
-.production-planning-graph,
-.production-planning-summary {
+.production-planning-graph {
   overflow: auto;
 }
 
@@ -2156,28 +2154,17 @@ body.is-resizing-dialog-shell * {
   padding: 12px;
 }
 
-.production-planning-summary {
-  display: grid;
-  align-content: start;
-  gap: 10px;
-  padding: 12px;
-  border-left: 1px solid var(--line);
-  background: var(--surface-1);
-}
-
 .production-planning-config-section,
 .production-planning-item-node,
 .production-planning-recipe-node,
 .production-planning-device-root,
-.production-planning-summary-section,
 .production-planning-empty {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-1);
 }
 
-.production-planning-config-section,
-.production-planning-summary-section {
+.production-planning-config-section {
   display: grid;
   align-content: start;
   gap: 10px;
@@ -2199,8 +2186,7 @@ body.is-resizing-dialog-shell * {
   justify-content: space-between;
 }
 
-.production-planning-section-header h3,
-.production-planning-summary-section h3 {
+.production-planning-section-header h3 {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2215,7 +2201,6 @@ body.is-resizing-dialog-shell * {
 .production-planning-primary-button svg,
 .production-planning-back-button svg,
 .production-planning-segmented svg,
-.production-planning-summary-card svg,
 .production-planning-device-root-target svg,
 .production-planning-source-pill svg,
 .production-planning-metric svg {
@@ -2288,9 +2273,7 @@ body.is-resizing-dialog-shell * {
 
 .production-planning-line-list,
 .production-planning-source-policy,
-.production-planning-tree,
-.production-planning-summary-list,
-.production-planning-recipe-total-list {
+.production-planning-tree {
   display: grid;
   gap: 8px;
 }
@@ -2331,7 +2314,6 @@ body.is-resizing-dialog-shell * {
 .production-planning-item-identity strong,
 .production-planning-recipe-header h4,
 .production-planning-recipe-header span,
-.production-planning-summary-row span,
 .production-planning-port-chip span {
   min-width: 0;
   overflow: hidden;
@@ -2461,8 +2443,7 @@ body.is-resizing-dialog-shell * {
 }
 
 .production-planning-node-metrics,
-.production-planning-recipe-meta,
-.production-planning-summary-cards {
+.production-planning-recipe-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -2470,7 +2451,6 @@ body.is-resizing-dialog-shell * {
 
 .production-planning-metric,
 .production-planning-status,
-.production-planning-summary-card,
 .production-planning-port-chip {
   display: inline-flex;
   align-items: center;
@@ -2492,16 +2472,12 @@ body.is-resizing-dialog-shell * {
 }
 
 .production-planning-metric.is-good strong,
-.production-planning-summary-card.is-good strong,
-.production-planning-status.is-good,
-.production-planning-summary-row .is-good {
+.production-planning-status.is-good {
   color: #22a06b;
 }
 
 .production-planning-metric.is-bad strong,
-.production-planning-summary-card.is-bad strong,
-.production-planning-status.is-bad,
-.production-planning-summary-row .is-bad {
+.production-planning-status.is-bad {
   color: var(--danger);
 }
 
@@ -2654,45 +2630,6 @@ body.is-resizing-dialog-shell * {
   display: none;
 }
 
-.production-planning-summary-card {
-  flex: 1 1 90px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 3px 6px;
-  padding: 8px;
-}
-
-.production-planning-summary-card strong {
-  grid-column: 1 / -1;
-  color: var(--text-0);
-  font-size: 1rem;
-}
-
-.production-planning-summary-card span {
-  color: var(--text-2);
-  font-size: 0.68rem;
-}
-
-.production-planning-summary-row {
-  display: grid;
-  grid-template-columns: minmax(110px, 1fr) auto auto auto;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 7px;
-  border-radius: 8px;
-  background: var(--surface-2);
-  font-size: 0.7rem;
-}
-
-.production-planning-summary-row span {
-  color: var(--text-2);
-}
-
-.production-planning-recipe-total-list .production-planning-recipe-node {
-  background: var(--surface-2);
-}
-
 .production-planning-muted {
   margin: 0;
   color: var(--text-2);
@@ -2712,14 +2649,8 @@ body.is-resizing-dialog-shell * {
 }
 
 .production-planning-panel.is-touch .production-planning-main {
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 34vw);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
-}
-
-.production-planning-panel.is-touch .production-planning-summary {
-  border-left: 0;
-  border-top: 0;
-  border-left: 1px solid var(--line);
 }
 
 .production-planning-panel.is-touch .production-planning-graph {
@@ -2740,15 +2671,6 @@ body.is-resizing-dialog-shell * {
 
 .production-planning-panel.is-touch .production-planning-line-row {
   grid-template-columns: minmax(0, 1fr) 84px 32px;
-}
-
-.production-planning-panel.is-touch .production-planning-summary-row {
-  grid-template-columns: minmax(110px, 1fr) auto;
-}
-
-.production-planning-panel.is-touch .production-planning-summary-row span:nth-of-type(1),
-.production-planning-panel.is-touch .production-planning-summary-row span:nth-of-type(2) {
-  display: none;
 }
 
 .dialog-shell.is-mobile-compact .dialog-shell-header {
