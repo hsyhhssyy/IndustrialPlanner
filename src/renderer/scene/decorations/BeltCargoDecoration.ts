@@ -13,7 +13,6 @@ import {
 import type { DecorationLayer } from "./DecorationLayer"
 import type { DecorationSyncContext } from "./DecorationSyncContext"
 import {
-  BELT_INSERTION_DEPTH_CELLS,
   createEntityDefinitionMap,
   resolveBeltPortExtensionEntries,
   resolveBeltPathSample,
@@ -25,14 +24,13 @@ const ITEM_ICON_TEXTURE_PREFIX = "item-icon-"
 const BOX_ICON_SIZE_RATIO = 0.72
 const BOX_STROKE_WIDTH_PX = 1
 const BOX_TURN_CLEARANCE_PX = 2
-const CLIP_MASK_PADDING_CELLS = 2
 
 interface BeltCargoRenderEntry {
   readonly centerX: number;
   readonly centerY: number;
   readonly angleRadians: number;
   readonly itemId: string;
-  readonly clipRect: BeltCargoClipRect | null;
+  readonly clipMask: BeltCargoClipMask | null;
 }
 
 interface BeltCargoEntry {
@@ -48,8 +46,14 @@ interface BeltCargoEntry {
 interface BeltCargoView {
   readonly root: Container;
   readonly mask: Graphics;
+  readonly cargoRoot: Container;
   readonly boxGraphics: Graphics;
   readonly icon: Sprite;
+}
+
+interface BeltCargoClipMask {
+  readonly cellRect: BeltCargoClipRect;
+  readonly extensions: readonly BeltCargoClipExtensionRect[];
 }
 
 interface BeltCargoClipRect {
@@ -57,6 +61,13 @@ interface BeltCargoClipRect {
   readonly y: number;
   readonly width: number;
   readonly height: number;
+}
+
+interface BeltCargoClipExtensionRect {
+  readonly center: GridFloatPoint;
+  readonly angleRadians: number;
+  readonly length: number;
+  readonly width: number;
 }
 
 export function createBeltCargoDecoration(): DecorationLayer {
@@ -122,19 +133,22 @@ export function createBeltCargoDecoration(): DecorationLayer {
 
     const root = new Container()
     const mask = new Graphics({ roundPixels: true })
+    const cargoRoot = new Container()
     const box = new Graphics({ roundPixels: true })
     const icon = new Sprite(Texture.EMPTY)
     icon.anchor.set(0.5)
     icon.roundPixels = true
 
+    cargoRoot.addChild(box)
+    cargoRoot.addChild(icon)
     root.addChild(mask)
-    root.addChild(box)
-    root.addChild(icon)
+    root.addChild(cargoRoot)
     cargoLayer.addChild(root)
 
     view = {
       root,
       mask,
+      cargoRoot,
       boxGraphics: box,
       icon,
     }
@@ -183,11 +197,9 @@ export function createBeltCargoDecoration(): DecorationLayer {
           centerY: center.y,
           angleRadians: beltCargoEntry.angleRadians,
           itemId: beltCargoEntry.itemId,
-          clipRect: resolveBeltCargoClipRect({
+          clipMask: resolveBeltCargoClipMask({
             ctx,
             entry: beltCargoEntry,
-            center,
-            angleRadians: beltCargoEntry.angleRadians,
             portExtensionEntries,
           }),
         })
@@ -382,18 +394,16 @@ function resolveItemIconTextureKey(
 }
 
 export function resolveBeltCargoBoxSize(gridCellSize: number): number {
-  const maxTurnSafeSize = gridCellSize / Math.SQRT2
+  const maxTurnEndpointNonOverlapSize = gridCellSize * 0.5
 
-  return Math.max(1, Math.floor(maxTurnSafeSize - BOX_TURN_CLEARANCE_PX))
+  return Math.max(1, Math.floor(maxTurnEndpointNonOverlapSize - BOX_TURN_CLEARANCE_PX))
 }
 
-function resolveBeltCargoClipRect(options: {
+function resolveBeltCargoClipMask(options: {
   ctx: DecorationSyncContext;
   entry: BeltCargoEntry;
-  center: GridFloatPoint;
-  angleRadians: number;
   portExtensionEntries: readonly BeltPortExtensionEntry[];
-}): BeltCargoClipRect | null {
+}): BeltCargoClipMask | null {
   const extensions = options.portExtensionEntries.filter((extension) =>
     extension.beltEntityId === options.entry.entityId,
   )
@@ -402,44 +412,52 @@ function resolveBeltCargoClipRect(options: {
   }
 
   const gridCellSize = options.ctx.viewportState.gridCellPixelSize
-  const insertionLength = gridCellSize * BELT_INSERTION_DEPTH_CELLS
-  const maskPadding = gridCellSize * CLIP_MASK_PADDING_CELLS
-  let minX = -maskPadding
-  let maxX = maskPadding
+  const cellTopLeft = resolveViewportPoint({
+    point: options.entry.position,
+    viewportBounds: options.ctx.viewportBounds,
+    viewportState: options.ctx.viewportState,
+  })
 
-  for (const extension of extensions) {
-    const boundary = resolveViewportPoint({
-      point: extension.boundary,
-      viewportBounds: options.ctx.viewportBounds,
-      viewportState: options.ctx.viewportState,
-    })
-    const boundaryLocalX = resolveLocalX({
-      point: boundary,
-      origin: options.center,
-      angleRadians: options.angleRadians,
-    })
-
-    if (extension.kind === "device-output-to-belt") {
-      minX = Math.max(minX, boundaryLocalX - insertionLength)
-    } else {
-      maxX = Math.min(maxX, boundaryLocalX + insertionLength)
-    }
+  return {
+    cellRect: {
+      x: cellTopLeft.x,
+      y: cellTopLeft.y,
+      width: gridCellSize,
+      height: gridCellSize,
+    },
+    extensions: extensions.map((extension) =>
+      resolveBeltCargoClipExtensionRect({
+        ctx: options.ctx,
+        extension,
+      }),
+    ),
   }
+}
 
-  if (maxX <= minX) {
-    return {
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
-    }
+function resolveBeltCargoClipExtensionRect(options: {
+  ctx: DecorationSyncContext;
+  extension: BeltPortExtensionEntry;
+}): BeltCargoClipExtensionRect {
+  const gridCellSize = options.ctx.viewportState.gridCellPixelSize
+  const boundary = resolveViewportPoint({
+    point: options.extension.boundary,
+    viewportBounds: options.ctx.viewportBounds,
+    viewportState: options.ctx.viewportState,
+  })
+  const midpointCells = (options.extension.localStartCells + options.extension.localEndCells) / 2
+  const direction = {
+    x: Math.cos(options.extension.angleRadians),
+    y: Math.sin(options.extension.angleRadians),
   }
 
   return {
-    x: minX,
-    y: -maskPadding,
-    width: maxX - minX,
-    height: maskPadding * 2,
+    center: {
+      x: boundary.x + direction.x * midpointCells * gridCellSize,
+      y: boundary.y + direction.y * midpointCells * gridCellSize,
+    },
+    angleRadians: options.extension.angleRadians,
+    length: (options.extension.localEndCells - options.extension.localStartCells) * gridCellSize,
+    width: gridCellSize,
   }
 }
 
@@ -461,27 +479,23 @@ function syncBeltCargoViews(options: {
     )
 
     view.root.visible = true
-    view.root.x = entry.centerX
-    view.root.y = entry.centerY
-    view.root.rotation = entry.angleRadians
+    view.root.x = 0
+    view.root.y = 0
+    view.root.rotation = 0
 
-    if (entry.clipRect === null) {
+    if (entry.clipMask === null) {
       view.root.mask = null
       view.mask.visible = false
       view.mask.clear()
     } else {
       view.root.mask = view.mask
       view.mask.visible = true
-      view.mask
-        .clear()
-        .rect(
-          entry.clipRect.x,
-          entry.clipRect.y,
-          entry.clipRect.width,
-          entry.clipRect.height,
-        )
-        .fill(0xffffff)
+      drawBeltCargoClipMask(view.mask, entry.clipMask)
     }
+
+    view.cargoRoot.x = entry.centerX
+    view.cargoRoot.y = entry.centerY
+    view.cargoRoot.rotation = entry.angleRadians
 
     view.boxGraphics
       .clear()
@@ -519,15 +533,55 @@ function syncBeltCargoViews(options: {
   }
 }
 
-function resolveLocalX(options: {
-  point: GridFloatPoint;
-  origin: GridFloatPoint;
-  angleRadians: number;
-}): number {
-  const dx = options.point.x - options.origin.x
-  const dy = options.point.y - options.origin.y
+function drawBeltCargoClipMask(graphics: Graphics, mask: BeltCargoClipMask): void {
+  graphics
+    .clear()
+    .rect(
+      mask.cellRect.x,
+      mask.cellRect.y,
+      mask.cellRect.width,
+      mask.cellRect.height,
+    )
+    .fill(0xffffff)
 
-  return dx * Math.cos(options.angleRadians) + dy * Math.sin(options.angleRadians)
+  for (const extension of mask.extensions) {
+    graphics
+      .poly(resolveRotatedRectanglePoints({
+        center: extension.center,
+        angleRadians: extension.angleRadians,
+        length: extension.length,
+        width: extension.width,
+      }), true)
+      .fill(0xffffff)
+  }
+}
+
+function resolveRotatedRectanglePoints(options: {
+  center: GridFloatPoint;
+  angleRadians: number;
+  length: number;
+  width: number;
+}): number[] {
+  const cos = Math.cos(options.angleRadians)
+  const sin = Math.sin(options.angleRadians)
+  const halfLength = options.length / 2
+  const halfWidth = options.width / 2
+  const localPoints = [
+    { x: -halfLength, y: -halfWidth },
+    { x: halfLength, y: -halfWidth },
+    { x: halfLength, y: halfWidth },
+    { x: -halfLength, y: halfWidth },
+  ]
+  const points: number[] = []
+
+  for (const point of localPoints) {
+    points.push(
+      options.center.x + point.x * cos - point.y * sin,
+      options.center.y + point.x * sin + point.y * cos,
+    )
+  }
+
+  return points
 }
 
 function resolveBeltCargoViewportCenter(options: {

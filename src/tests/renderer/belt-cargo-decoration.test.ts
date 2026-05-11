@@ -132,7 +132,7 @@ describe("createBeltCargoDecoration", () => {
     expect(cargoRoot.y).toBeCloseTo(100)
     expect(cargoRoot.rotation).toBeCloseTo(0)
 
-    const boxGraphics = cargoRoot.children[1] as unknown as {
+    const boxGraphics = cargoRoot.children[0] as unknown as {
       drawCommands: Array<{
         type: "rect";
         x: number;
@@ -159,7 +159,7 @@ describe("createBeltCargoDecoration", () => {
       },
     })
 
-    const sprite = cargoRoot.children[2] as {
+    const sprite = cargoRoot.children[1] as {
       visible: boolean;
       texture: unknown;
       x: number;
@@ -253,11 +253,16 @@ describe("createBeltCargoDecoration", () => {
 
       await flushMicrotasks()
       decoration.sync(ctx as never)
-      const sprite = cargoRoot.children[2] as { rotation: number }
+      const sprite = cargoRoot.children[1] as { rotation: number }
       expect(sprite.rotation).toBeCloseTo(0)
 
       decoration.destroy()
     }
+  })
+
+  it("sizes cargo boxes so turn endpoint boxes do not overlap", () => {
+    expect(resolveBeltCargoBoxSize(100)).toBe(48)
+    expect(resolveBeltCargoBoxSize(64)).toBe(30)
   })
 
   it("shows stationary ingredient cargo at the belt start", () => {
@@ -368,28 +373,38 @@ describe("createBeltCargoDecoration", () => {
 
     decoration.sync(ctx as never)
 
+    const cargoViewRoot = resolveCargoViewRoot(decoration, 0)
     const cargoRoot = resolveCargoRoot(decoration, 0)
-    expect(cargoRoot.visible).toBe(true)
+    expect(cargoViewRoot.visible).toBe(true)
+    expect(cargoViewRoot.x).toBe(0)
+    expect(cargoViewRoot.y).toBe(0)
+    expect(cargoViewRoot.rotation).toBe(0)
     expect(cargoRoot.x).toBeCloseTo(145)
     expect(cargoRoot.y).toBeCloseTo(100)
     expect(cargoRoot.rotation).toBeCloseTo(0)
-    expect(cargoRoot.mask).toBe(cargoRoot.children[0])
+    expect(cargoViewRoot.mask).toBe(cargoViewRoot.children[0])
 
-    const mask = cargoRoot.children[0] as {
+    const mask = cargoViewRoot.children[0] as {
       drawCommands: Array<{
-        type: "rect";
+        type: "rect" | "poly";
         x: number;
         y: number;
         width: number;
         height: number;
+        points?: number[];
       }>;
     }
+    expect(mask.drawCommands).toHaveLength(2)
     expect(mask.drawCommands[0]).toMatchObject({
       type: "rect",
-      x: -200,
-      y: -200,
-      width: 225,
-      height: 400,
+      x: 50,
+      y: 50,
+      width: 100,
+      height: 100,
+    })
+    expect(mask.drawCommands[1]).toMatchObject({
+      type: "poly",
+      points: [150, 50, 170, 50, 170, 150, 150, 150],
     })
 
     const emptyFrame = createContext({
@@ -430,20 +445,31 @@ describe("createBeltCargoDecoration", () => {
 
     decoration.sync(ctx as never)
 
+    const cargoViewRoot = resolveCargoViewRoot(decoration, 0)
     const cargoRoot = resolveCargoRoot(decoration, 0)
     expect(cargoRoot.x).toBeCloseTo(55)
-    expect(cargoRoot.mask).toBe(cargoRoot.children[0])
-    const mask = cargoRoot.children[0] as {
+    expect(cargoViewRoot.mask).toBe(cargoViewRoot.children[0])
+    const mask = cargoViewRoot.children[0] as {
       drawCommands: Array<{
-        type: "rect";
+        type: "rect" | "poly";
         x: number;
+        y?: number;
         width: number;
+        height?: number;
+        points?: number[];
       }>;
     }
+    expect(mask.drawCommands).toHaveLength(2)
     expect(mask.drawCommands[0]).toMatchObject({
       type: "rect",
-      x: -25,
-      width: 225,
+      x: 50,
+      y: 50,
+      width: 100,
+      height: 100,
+    })
+    expect(mask.drawCommands[1]).toMatchObject({
+      type: "poly",
+      points: [30, 50, 50, 50, 50, 150, 30, 150],
     })
 
     decoration.destroy()
@@ -468,9 +494,9 @@ describe("createBeltCargoDecoration", () => {
 
     decoration.sync(ctx as never)
 
-    const cargoRoot = resolveCargoRoot(decoration, 0)
+    const cargoViewRoot = resolveCargoViewRoot(decoration, 0)
     expect(decoration.container.visible).toBe(true)
-    expect(cargoRoot.mask).toBe(null)
+    expect(cargoViewRoot.mask).toBe(null)
 
     decoration.destroy()
   })
@@ -647,7 +673,7 @@ async function flushMicrotasks(iterations = 4): Promise<void> {
   }
 }
 
-function resolveCargoRoot(
+function resolveCargoViewRoot(
   decoration: ReturnType<typeof createBeltCargoDecoration>,
   index: number,
 ) {
@@ -663,8 +689,28 @@ function resolveCargoRoot(
   }
   const root = cargoLayer.children[index]
   if (root === undefined) {
-    throw new Error(`Expected cargo root at index ${index}.`)
+    throw new Error(`Expected cargo view root at index ${index}.`)
   }
 
   return root
+}
+
+function resolveCargoRoot(
+  decoration: ReturnType<typeof createBeltCargoDecoration>,
+  index: number,
+) {
+  const root = resolveCargoViewRoot(decoration, index)
+  const cargoRoot = root.children[1] as {
+    visible: boolean;
+    x: number;
+    y: number;
+    rotation: number;
+    mask: unknown;
+    children: unknown[];
+  } | undefined
+  if (cargoRoot === undefined) {
+    throw new Error(`Expected cargo root at index ${index}.`)
+  }
+
+  return cargoRoot
 }
