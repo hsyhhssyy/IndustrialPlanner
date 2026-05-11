@@ -14,6 +14,7 @@ import type { DecorationLayer } from "./DecorationLayer"
 import type { DecorationSyncContext } from "./DecorationSyncContext"
 import {
   createEntityDefinitionMap,
+  isStrictBeltDefinitionId,
   resolveBeltPortExtensionEntries,
   resolveBeltPathSample,
   resolveViewportPoint,
@@ -52,7 +53,7 @@ interface BeltCargoView {
 }
 
 interface BeltCargoClipMask {
-  readonly cellRect: BeltCargoClipRect;
+  readonly beltRects: readonly BeltCargoClipRect[];
   readonly extensions: readonly BeltCargoClipExtensionRect[];
 }
 
@@ -412,19 +413,8 @@ function resolveBeltCargoClipMask(options: {
   }
 
   const gridCellSize = options.ctx.viewportState.gridCellPixelSize
-  const cellTopLeft = resolveViewportPoint({
-    point: options.entry.position,
-    viewportBounds: options.ctx.viewportBounds,
-    viewportState: options.ctx.viewportState,
-  })
-
   return {
-    cellRect: {
-      x: cellTopLeft.x,
-      y: cellTopLeft.y,
-      width: gridCellSize,
-      height: gridCellSize,
-    },
+    beltRects: resolveBeltCargoClipBeltRects(options.ctx, gridCellSize),
     extensions: extensions.map((extension) =>
       resolveBeltCargoClipExtensionRect({
         ctx: options.ctx,
@@ -432,6 +422,33 @@ function resolveBeltCargoClipMask(options: {
       }),
     ),
   }
+}
+
+function resolveBeltCargoClipBeltRects(
+  ctx: DecorationSyncContext,
+  gridCellSize: number,
+): BeltCargoClipRect[] {
+  const editor = ctx.workspace.editor
+  if (editor === null) {
+    return []
+  }
+
+  return editor.queries.listEntities()
+    .filter((entity) => isStrictBeltDefinitionId(entity.definitionId))
+    .map((entity) => {
+      const cellTopLeft = resolveViewportPoint({
+        point: entity.position,
+        viewportBounds: ctx.viewportBounds,
+        viewportState: ctx.viewportState,
+      })
+
+      return {
+        x: cellTopLeft.x,
+        y: cellTopLeft.y,
+        width: gridCellSize,
+        height: gridCellSize,
+      }
+    })
 }
 
 function resolveBeltCargoClipExtensionRect(options: {
@@ -534,15 +551,18 @@ function syncBeltCargoViews(options: {
 }
 
 function drawBeltCargoClipMask(graphics: Graphics, mask: BeltCargoClipMask): void {
-  graphics
-    .clear()
-    .rect(
-      mask.cellRect.x,
-      mask.cellRect.y,
-      mask.cellRect.width,
-      mask.cellRect.height,
-    )
-    .fill(0xffffff)
+  graphics.clear()
+
+  for (const beltRect of mask.beltRects) {
+    graphics
+      .rect(
+        beltRect.x,
+        beltRect.y,
+        beltRect.width,
+        beltRect.height,
+      )
+      .fill(0xffffff)
+  }
 
   for (const extension of mask.extensions) {
     graphics

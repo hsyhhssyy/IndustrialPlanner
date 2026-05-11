@@ -5,7 +5,7 @@ import {
   Texture,
 } from "pixi.js"
 
-import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
+import { resolveDedicatedLogisticTintColor } from "@/renderer/sprites/dedicated-logistic-sprite"
 
 import type { DecorationLayer } from "./DecorationLayer"
 import type { DecorationSyncContext } from "./DecorationSyncContext"
@@ -100,8 +100,6 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
       container.visible = true
 
       const gridCellSize = ctx.viewportState.gridCellPixelSize
-      const tint = resolveBeltPortExtensionTint(ctx)
-
       entries.forEach((entry, index) => {
         const view = ensureSpriteView(index)
         const boundary = resolveViewportPoint({
@@ -133,7 +131,7 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
         view.sprite.width = gridCellSize
         view.sprite.height = gridCellSize
         view.sprite.rotation = 0
-        view.sprite.tint = tint
+        view.sprite.tint = resolveBeltPortExtensionTint(ctx, entry.beltEntityId)
       })
 
       for (let index = entries.length; index < spriteViews.length; index += 1) {
@@ -157,11 +155,19 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
   }
 }
 
-function resolveBeltPortExtensionTint(ctx: DecorationSyncContext): number {
+function resolveBeltPortExtensionTint(
+  ctx: DecorationSyncContext,
+  beltEntityId: string,
+): number {
   const theme = ctx.workspace.app?.state.theme
   if (theme === undefined) {
     return 0xf59e0b
   }
 
-  return resolveAppThemeColorNumber(theme, theme.renderer.beltTileStrokeColorKey)
+  return resolveDedicatedLogisticTintColor({
+    entityId: beltEntityId,
+    spriteId: "belt_straight_1x1",
+    theme,
+    workspace: ctx.workspace,
+  })
 }

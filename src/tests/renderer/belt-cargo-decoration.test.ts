@@ -475,6 +475,58 @@ describe("createBeltCargoDecoration", () => {
     decoration.destroy()
   })
 
+  it("keeps cargo visible when a device-port belt continues into another belt", () => {
+    const decoration = createBeltCargoDecoration()
+    const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
+    const ctx = createContext({
+      getTexture,
+      includeOutputSource: true,
+      extraEntities: [createEntity("next-belt", "belt_straight_1x1", { x: 1, y: 0 }, 0)],
+      entries: [{
+        beltShape: "straight",
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        itemId: "item_iron_ore",
+        progress: 0.95,
+      }],
+    })
+
+    decoration.sync(ctx as never)
+
+    const cargoViewRoot = resolveCargoViewRoot(decoration, 0)
+    const mask = cargoViewRoot.children[0] as {
+      drawCommands: Array<{
+        type: "rect" | "poly";
+        x: number;
+        y?: number;
+        width: number;
+        height?: number;
+        points?: number[];
+      }>;
+    }
+    expect(mask.drawCommands).toHaveLength(3)
+    expect(mask.drawCommands[0]).toMatchObject({
+      type: "rect",
+      x: 50,
+      y: 50,
+      width: 100,
+      height: 100,
+    })
+    expect(mask.drawCommands[1]).toMatchObject({
+      type: "rect",
+      x: 150,
+      y: 50,
+      width: 100,
+      height: 100,
+    })
+    expect(mask.drawCommands[2]).toMatchObject({
+      type: "poly",
+      points: [30, 50, 50, 50, 50, 150, 30, 150],
+    })
+
+    decoration.destroy()
+  })
+
   it("does not apply device-overlap masks in simplified blueprint-style display", () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
@@ -528,6 +580,14 @@ function createContext(options: {
   beltShape?: "straight" | "turn-cw" | "turn-ccw";
   includeInsertionTarget?: boolean;
   includeOutputSource?: boolean;
+  extraEntities?: Array<{
+    id: string;
+    definitionId: string;
+    position: { x: number; y: number };
+    rotation: 0 | 90 | 180 | 270;
+    config: Record<string, unknown>;
+    tags: string[];
+  }>;
   simplifiedDeviceIcons?: boolean;
   nowMs?: number;
 }) {
@@ -547,7 +607,14 @@ function createContext(options: {
   const entriesByEntityId = new Map(
     runtimeEntries.map((entry) => [entry.id, entry]),
   )
-  const entities = runtimeEntries.map((entry) => ({
+  const entities: Array<{
+    id: string;
+    definitionId: string;
+    position: { x: number; y: number };
+    rotation: 0 | 90 | 180 | 270;
+    config: Record<string, unknown>;
+    tags: string[];
+  }> = runtimeEntries.map((entry) => ({
     id: entry.id,
     definitionId: entry.definitionId,
     position: entry.position,
@@ -575,6 +642,7 @@ function createContext(options: {
       tags: [],
     })
   }
+  entities.push(...(options.extraEntities ?? []))
 
   return {
     viewportState: {
@@ -644,6 +712,22 @@ function createContext(options: {
       },
     },
     nowMs: options.nowMs ?? 1000,
+  }
+}
+
+function createEntity(
+  id: string,
+  definitionId: string,
+  position: { x: number; y: number },
+  rotation: 0 | 90 | 180 | 270,
+) {
+  return {
+    id,
+    definitionId,
+    position,
+    rotation,
+    config: {},
+    tags: [],
   }
 }
 

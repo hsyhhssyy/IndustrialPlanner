@@ -1,5 +1,7 @@
 import { Sprite, Texture } from "pixi.js"
 
+import type { AppTheme } from "@/domain/app/types/theme"
+import type { WorkspaceContract } from "@/domain/document/workspace-contract"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import type { RenderHost } from "@/renderer/renderer-host"
@@ -57,7 +59,8 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     this.body.tint = resolveDedicatedLogisticTintColor({
       entityId: this.entityId,
       spriteId: this.spriteId,
-      context,
+      theme: context.theme,
+      workspace: context.workspace,
     })
   }
 
@@ -143,7 +146,8 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
             this.body.tint = resolveDedicatedLogisticTintColor({
               entityId: this.entityId,
               spriteId: this.spriteId,
-              context: this.currentSyncContext,
+              theme: this.currentSyncContext.theme,
+              workspace: this.currentSyncContext.workspace,
             })
           }
         }
@@ -158,25 +162,26 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   }
 }
 
-function resolveDedicatedLogisticTintColor(options: {
+export function resolveDedicatedLogisticTintColor(options: {
   entityId: string;
   spriteId: string;
-  context: RenderSpriteSyncContext;
+  theme: AppTheme;
+  workspace: WorkspaceContract;
 }): number {
-  const { entityId, spriteId, context } = options
-  const collections = context.workspace.editor?.state.collections
+  const { entityId, spriteId, theme, workspace } = options
+  const collections = workspace.editor?.state?.collections
   const ordinaryColor = spriteId.startsWith("pipe_")
     ? resolveAppThemeColorNumber(
-      context.theme,
-      context.theme.colorScheme === "dark" ? "accent" : "accent-strong",
+      theme,
+      theme.colorScheme === "dark" ? "accent" : "accent-strong",
     )
     : resolveAppThemeColorNumber(
-      context.theme,
-      context.theme.renderer.beltTileStrokeColorKey,
+      theme,
+      theme.renderer.beltTileStrokeColorKey,
     )
   const selectionTintColor = resolveAppThemeColorNumber(
-    context.theme,
-    context.theme.renderer.worldPreviewRectFillColorKey,
+    theme,
+    theme.renderer.worldPreviewRectFillColorKey,
   )
 
   if (!collections) {
@@ -208,9 +213,9 @@ function resolveDedicatedLogisticTintColor(options: {
     || isPlacementHead
     || (isSelected && (selectionCollection?.length ?? 0) === 1 && !isReverseMarquee)
   ) {
-    return context.theme.colorScheme === "dark"
+    return theme.colorScheme === "dark"
       ? 0xffffff
-      : resolveAppThemeColorNumber(context.theme, "text-2")
+      : resolveAppThemeColorNumber(theme, "text-2")
   }
 
   return ordinaryColor

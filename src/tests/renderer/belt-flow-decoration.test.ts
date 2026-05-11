@@ -40,10 +40,53 @@ vi.mock("pixi.js", () => {
     public destroy = vi.fn()
   }
 
+  class MockRopeGeometry {
+    public points: Array<{ x: number; y: number }>
+    public width: number
+    public textureScale: number
+
+    public constructor(options: {
+      points: Array<{ x: number; y: number }>;
+      width: number;
+      textureScale?: number;
+    }) {
+      this.points = options.points
+      this.width = options.width
+      this.textureScale = options.textureScale ?? 0
+    }
+
+    public destroy = vi.fn()
+  }
+
+  class MockMesh {
+    public texture: unknown
+    public geometry: MockRopeGeometry
+    public visible = true
+    public tint = 0xffffff
+    public alpha = 1
+    public roundPixels = false
+
+    public constructor(options: {
+      texture: unknown;
+      geometry: MockRopeGeometry;
+      roundPixels?: boolean;
+    }) {
+      this.texture = options.texture
+      this.geometry = options.geometry
+      this.roundPixels = options.roundPixels ?? false
+    }
+
+    public destroy = vi.fn()
+  }
+
   class MockGraphics {
     public readonly drawCommands: Array<{
-      type: "poly";
-      points: number[];
+      type: "poly" | "rect";
+      points?: number[];
+      x?: number;
+      y?: number;
+      width?: number;
+      height?: number;
       fill?: unknown;
       stroke?: unknown;
     }> = []
@@ -53,6 +96,17 @@ vi.mock("pixi.js", () => {
 
     public clear(): this {
       this.drawCommands.length = 0
+      return this
+    }
+
+    public rect(x: number, y: number, width: number, height: number): this {
+      this.drawCommands.push({
+        type: "rect",
+        x,
+        y,
+        width,
+        height,
+      })
       return this
     }
 
@@ -86,6 +140,8 @@ vi.mock("pixi.js", () => {
   return {
     Container: MockContainer,
     Graphics: MockGraphics,
+    Mesh: MockMesh,
+    RopeGeometry: MockRopeGeometry,
     Sprite: MockSprite,
     Texture: {
       EMPTY: { id: "empty-texture" },
@@ -94,31 +150,54 @@ vi.mock("pixi.js", () => {
 })
 
 import { AYU_LIGHT_THEME } from "@/app/theme"
+import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import { createRegistryContract } from "@/registry"
 import {
   createBeltFlowDecoration,
   resolveBeltFlowMarks,
   resolveRepeatingLocalDistances,
+  resolveRepeatingLocalIntervals,
 } from "@/renderer/scene/decorations/BeltFlowDecoration"
+import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
 describe("BeltFlowDecoration", () => {
   it("resolves arrow and highlight marks with path-continuous phase across belt tiles", () => {
     const marksAtStart = resolveBeltFlowMarks(createFlowContext({ nowMs: 0 }) as never)
     const marksAfterHalfSecond = resolveBeltFlowMarks(createFlowContext({ nowMs: 500 }) as never)
 
-    expect(marksAtStart.map((mark) => mark.kind)).toEqual(["highlight", "arrow", "arrow"])
-    expect(marksAtStart.map((mark) => mark.centerX)).toEqual([100, 100, 200])
-    expect(marksAfterHalfSecond.map((mark) => ({
+    expect(marksAtStart.filter((mark) => mark.kind === "highlight").map((mark) => ({
+      kind: mark.kind,
+      x: Math.round(mark.centerX),
+      length: mark.lengthCells,
+    }))).toEqual([
+      { kind: "highlight", x: 150, length: 1 },
+      { kind: "highlight", x: 250, length: 1 },
+    ])
+    expect(marksAtStart.filter((mark) => mark.kind === "arrow").map((mark) => ({
       kind: mark.kind,
       x: Math.round(mark.centerX),
     }))).toEqual([
-      { kind: "highlight", x: 150 },
+      { kind: "arrow", x: 100 },
+      { kind: "arrow", x: 200 },
+    ])
+    expect(marksAfterHalfSecond.filter((mark) => mark.kind === "highlight").map((mark) => ({
+      kind: mark.kind,
+      x: Math.round(mark.centerX),
+      length: mark.lengthCells,
+    }))).toEqual([
+      { kind: "highlight", x: 175, length: 1.5 },
+      { kind: "highlight", x: 275, length: 0.5 },
+    ])
+    expect(marksAfterHalfSecond.filter((mark) => mark.kind === "arrow").map((mark) => ({
+      kind: mark.kind,
+      x: Math.round(mark.centerX),
+    }))).toEqual([
       { kind: "arrow", x: 125 },
       { kind: "arrow", x: 225 },
     ])
   })
 
-  it("draws textured highlights and solid belt-colored arrows", async () => {
+  it("draws textured highlight paths and solid belt-colored arrows", async () => {
     const decoration = createBeltFlowDecoration()
     const highlightTexture = { id: "highlight-texture" }
     const getTexture = vi.fn().mockResolvedValue(highlightTexture)
@@ -132,12 +211,15 @@ describe("BeltFlowDecoration", () => {
     const highlightLayer = decoration.container.children[0] as { children: unknown[] }
     const highlight = highlightLayer.children[0] as {
       texture: unknown;
-      width: number;
-      height: number;
+      geometry: {
+        points: Array<{ x: number; y: number }>;
+        width: number;
+        textureScale: number;
+      };
       tint: number;
       alpha: number;
     }
-    const graphics = decoration.container.children[1] as unknown as {
+    const graphics = decoration.container.children[2] as unknown as {
       drawCommands: Array<{
         type: "poly";
         fill?: unknown;
@@ -146,8 +228,12 @@ describe("BeltFlowDecoration", () => {
     }
     expect(decoration.container.visible).toBe(true)
     expect(highlight.texture).toBe(highlightTexture)
-    expect(highlight.width).toBeCloseTo(56)
-    expect(highlight.height).toBeCloseTo(78)
+    expect(highlight.geometry.points).toEqual([
+      { x: 100, y: 100 },
+      { x: 200, y: 100 },
+    ])
+    expect(highlight.geometry.width).toBeCloseTo(78)
+    expect(highlight.geometry.textureScale).toBeCloseTo(2 / 0.78)
     expect(highlight.tint).toBe(0xd9822b)
     expect(highlight.alpha).toBeCloseTo(0.82)
     expect(graphics.drawCommands).toHaveLength(2)
@@ -160,11 +246,39 @@ describe("BeltFlowDecoration", () => {
     decoration.destroy()
   })
 
+  it("uses the current belt collection tint for highlights and arrows", () => {
+    const marks = resolveBeltFlowMarks(createFlowContext({
+      nowMs: 0,
+      selectionIds: ["belt-a", "other-entity"],
+    }) as never)
+    const selectionTint = resolveAppThemeColorNumber(
+      AYU_LIGHT_THEME,
+      AYU_LIGHT_THEME.renderer.worldPreviewRectFillColorKey,
+    )
+
+    expect(marks.filter((mark) => mark.kind === "highlight").map((mark) => ({
+      kind: mark.kind,
+      x: Math.round(mark.centerX),
+      tint: mark.tint,
+    }))).toEqual([
+      { kind: "highlight", x: 150, tint: selectionTint },
+      { kind: "highlight", x: 250, tint: 0xd9822b },
+    ])
+    expect(marks.filter((mark) => mark.kind === "arrow").map((mark) => ({
+      kind: mark.kind,
+      x: Math.round(mark.centerX),
+      tint: mark.tint,
+    }))).toEqual([
+      { kind: "arrow", x: 100, tint: selectionTint },
+      { kind: "arrow", x: 200, tint: 0xd9822b },
+    ])
+  })
+
   it("hides in simplified display mode", () => {
     const decoration = createBeltFlowDecoration()
     decoration.sync(createFlowContext({ nowMs: 0 }) as never)
 
-    const graphics = decoration.container.children[1] as unknown as {
+    const graphics = decoration.container.children[2] as unknown as {
       drawCommands: Array<unknown>;
     }
 
@@ -195,12 +309,44 @@ describe("BeltFlowDecoration", () => {
       nowMs: 0,
     })).toEqual([])
   })
+
+  it("clips repeated highlight intervals to each belt tile span", () => {
+    expect(resolveRepeatingLocalIntervals({
+      phaseOffsetCells: 0,
+      pathLengthCells: 1,
+      spacingCells: 2,
+      lengthCells: 2,
+      speedCellsPerSecond: 1,
+      nowMs: 0,
+    })).toEqual([{
+      startCells: 0,
+      endCells: 1,
+    }])
+    expect(resolveRepeatingLocalIntervals({
+      phaseOffsetCells: 1,
+      pathLengthCells: 1,
+      spacingCells: 2,
+      lengthCells: 2,
+      speedCellsPerSecond: 1,
+      nowMs: 500,
+    })).toEqual([
+      {
+        startCells: 0,
+        endCells: 0.5,
+      },
+      {
+        startCells: 0.5,
+        endCells: 1,
+      },
+    ])
+  })
 })
 
 function createFlowContext(options: {
   nowMs: number;
   simplifiedDeviceIcons?: boolean;
   getTexture?: (key: string) => Promise<unknown>;
+  selectionIds?: readonly string[];
 }) {
   const registry = createRegistryContract()
 
@@ -239,6 +385,11 @@ function createFlowContext(options: {
           },
         },
       editor: {
+        state: {
+          collections: {
+            [EntityCollectionType.selection]: createCollectionStub(options.selectionIds ?? []),
+          },
+        },
         queries: {
           listEntities: () => [
             {
@@ -262,6 +413,13 @@ function createFlowContext(options: {
       },
     },
     nowMs: options.nowMs,
+  }
+}
+
+function createCollectionStub(ids: readonly string[]) {
+  return {
+    length: ids.length,
+    contains: (entityId: string) => ids.includes(entityId),
   }
 }
 
