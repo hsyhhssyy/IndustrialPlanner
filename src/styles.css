@@ -2050,13 +2050,38 @@ body.is-resizing-dialog-shell * {
 /* --- Production Planning --- */
 
 .production-planning-panel {
-  display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   height: 100%;
   overflow: hidden;
   background: var(--surface-1);
+}
+
+.production-planning-stage {
+  display: flex;
+  width: 200%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  transition: transform 220ms ease;
+}
+
+.production-planning-panel.is-result-screen .production-planning-stage {
+  transform: translateX(-50%);
+}
+
+.production-planning-screen {
+  flex: 0 0 50%;
+  width: 50%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.production-planning-input-screen {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  background: var(--surface-2);
 }
 
 .production-planning-config,
@@ -2069,11 +2094,23 @@ body.is-resizing-dialog-shell * {
 
 .production-planning-config {
   display: grid;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
   align-content: start;
+  align-items: start;
   gap: 10px;
   overflow: auto;
-  padding: 12px;
-  border-right: 1px solid var(--line);
+  padding: 16px;
+  background: var(--surface-2);
+}
+
+.production-planning-input-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
   background: var(--surface-1);
 }
 
@@ -2093,6 +2130,14 @@ body.is-resizing-dialog-shell * {
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
   background: var(--surface-1);
+}
+
+.production-planning-toolbar-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
 }
 
 .production-planning-main {
@@ -2134,6 +2179,7 @@ body.is-resizing-dialog-shell * {
 .production-planning-config-section,
 .production-planning-summary-section {
   display: grid;
+  align-content: start;
   gap: 10px;
   padding: 10px;
 }
@@ -2166,6 +2212,8 @@ body.is-resizing-dialog-shell * {
 .production-planning-section-header h3 svg,
 .production-planning-icon-text-button svg,
 .production-planning-icon-button svg,
+.production-planning-primary-button svg,
+.production-planning-back-button svg,
 .production-planning-segmented svg,
 .production-planning-summary-card svg,
 .production-planning-device-root-target svg,
@@ -2178,6 +2226,8 @@ body.is-resizing-dialog-shell * {
 
 .production-planning-icon-text-button,
 .production-planning-icon-button,
+.production-planning-primary-button,
+.production-planning-back-button,
 .production-planning-segmented button,
 .production-planning-two-option-toggle button {
   border: 1px solid var(--line);
@@ -2185,6 +2235,8 @@ body.is-resizing-dialog-shell * {
   color: var(--text-0);
 }
 
+.production-planning-primary-button,
+.production-planning-back-button,
 .production-planning-icon-text-button {
   display: inline-flex;
   align-items: center;
@@ -2194,6 +2246,25 @@ body.is-resizing-dialog-shell * {
   padding: 0 10px;
   border-radius: 7px;
   font-size: 0.74rem;
+}
+
+.production-planning-primary-button {
+  min-height: 38px;
+  padding: 0 14px;
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+  font-weight: 800;
+}
+
+.production-planning-primary-button:disabled {
+  border-color: var(--line);
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: not-allowed;
+}
+
+.production-planning-back-button {
+  min-height: 32px;
 }
 
 .production-planning-icon-button {
@@ -2208,6 +2279,8 @@ body.is-resizing-dialog-shell * {
 
 .production-planning-icon-text-button:hover,
 .production-planning-icon-button:hover,
+.production-planning-primary-button:not(:disabled):hover,
+.production-planning-back-button:hover,
 .production-planning-segmented button:hover,
 .production-planning-two-option-toggle button:hover {
   background: var(--surface-3);
@@ -2626,23 +2699,15 @@ body.is-resizing-dialog-shell * {
   font-size: 0.72rem;
 }
 
-.production-planning-panel.is-touch {
-  grid-template-columns: 1fr;
-  grid-template-rows: auto minmax(0, 1fr);
-}
-
 .production-planning-panel.is-touch .production-planning-config {
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, minmax(210px, 1fr));
   align-items: start;
-  max-height: 32vh;
-  overflow-x: auto;
-  border-right: 0;
-  border-bottom: 1px solid var(--line);
+  overflow: auto;
   padding: 8px;
 }
 
 .production-planning-panel.is-touch .production-planning-config-section {
-  max-height: calc(32vh - 16px);
+  max-height: none;
   overflow: auto;
 }
 
@@ -2663,6 +2728,14 @@ body.is-resizing-dialog-shell * {
 
 .production-planning-panel.is-touch .production-planning-toolbar {
   padding: 7px 8px;
+}
+
+.production-planning-panel.is-touch .production-planning-input-footer {
+  padding: 7px 8px;
+}
+
+.production-planning-panel.is-touch .production-planning-toolbar-controls {
+  flex: 1 1 auto;
 }
 
 .production-planning-panel.is-touch .production-planning-line-row {

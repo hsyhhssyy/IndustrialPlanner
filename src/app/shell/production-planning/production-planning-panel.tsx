@@ -3,6 +3,8 @@ import { observer } from "mobx-react-lite";
 import LucideBox from "~icons/lucide/box";
 import LucideBoxes from "~icons/lucide/boxes";
 import LucideClock3 from "~icons/lucide/clock-3";
+import LucideArrowLeft from "~icons/lucide/arrow-left";
+import LucideCalculator from "~icons/lucide/calculator";
 import LucideFactory from "~icons/lucide/factory";
 import LucideGauge from "~icons/lucide/gauge";
 import LucideInfinity from "~icons/lucide/infinity";
@@ -40,6 +42,16 @@ import {
   type ProductionPlanningViewMode,
 } from "@/app/shell/production-planning/production-planning-model";
 
+type ProductionPlanningScreen = "input" | "result";
+
+type ProductionPlanningCalculation = {
+  readonly targets: readonly ProductionPlanningPort[];
+  readonly supplies: readonly ProductionPlanningPort[];
+  readonly infiniteItemIds: ReadonlySet<string>;
+  readonly recipeChoices: Readonly<Record<string, string>>;
+  readonly plan: ProductionPlanningResult;
+};
+
 export const ProductionPlanningPanel = observer(function ProductionPlanningPanel({
   appHost,
   isTouch,
@@ -58,6 +70,8 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   const [viewMode, setViewMode] = useState<ProductionPlanningViewMode>("tree");
   const [specialInfiniteItemIds, setSpecialInfiniteItemIds] = useState<Set<string>>(() => new Set());
   const [recipeChoices, setRecipeChoices] = useState<Record<string, string>>({});
+  const [activeScreen, setActiveScreen] = useState<ProductionPlanningScreen>("input");
+  const [calculation, setCalculation] = useState<ProductionPlanningCalculation | null>(null);
   const infiniteItemIds = useMemo(() => {
     const result = new Set(index.mineralItemIds);
     for (const itemId of specialInfiniteItemIds) {
@@ -65,15 +79,9 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     }
     return result;
   }, [index.mineralItemIds, specialInfiniteItemIds]);
-  const recipeChoiceMap = useMemo(() => new Map(Object.entries(recipeChoices)), [recipeChoices]);
-  const plan = useMemo(
-    () => computeProductionPlan({
-      targets,
-      supplies,
-      infiniteItemIds,
-      recipeChoices: recipeChoiceMap,
-    }, index),
-    [index, infiniteItemIds, recipeChoiceMap, supplies, targets],
+  const resultRecipeChoiceMap = useMemo(
+    () => new Map(Object.entries(calculation?.recipeChoices ?? recipeChoices)),
+    [calculation?.recipeChoices, recipeChoices],
   );
 
   const requestItemSelection = async (onSelect: (itemId: string) => void) => {
@@ -107,14 +115,25 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   };
 
   const selectRecipe = (itemId: string, recipeId: string | null) => {
-    setRecipeChoices((current) => {
-      const next = { ...current };
-      if (recipeId === null) {
-        delete next[itemId];
-      } else {
-        next[itemId] = recipeId;
+    const nextRecipeChoices = updateRecipeChoices(recipeChoices, itemId, recipeId);
+    setRecipeChoices(nextRecipeChoices);
+    setCalculation((current) => {
+      if (current === null) {
+        return null;
       }
-      return next;
+
+      const nextPlan = computeProductionPlan({
+        targets: current.targets,
+        supplies: current.supplies,
+        infiniteItemIds: current.infiniteItemIds,
+        recipeChoices: new Map(Object.entries(nextRecipeChoices)),
+      }, index);
+
+      return {
+        ...current,
+        recipeChoices: nextRecipeChoices,
+        plan: nextPlan,
+      };
     });
   };
 
@@ -130,92 +149,144 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     });
   };
 
+  const calculate = () => {
+    const calculationTargets = targets.map(clonePort);
+    const calculationSupplies = supplies.map(clonePort);
+    const calculationInfiniteItemIds = new Set(infiniteItemIds);
+    const calculationRecipeChoices = { ...recipeChoices };
+    const plan = computeProductionPlan({
+      targets: calculationTargets,
+      supplies: calculationSupplies,
+      infiniteItemIds: calculationInfiniteItemIds,
+      recipeChoices: new Map(Object.entries(calculationRecipeChoices)),
+    }, index);
+
+    setCalculation({
+      targets: calculationTargets,
+      supplies: calculationSupplies,
+      infiniteItemIds: calculationInfiniteItemIds,
+      recipeChoices: calculationRecipeChoices,
+      plan,
+    });
+    setActiveScreen("result");
+  };
+
   const panelClassName = [
     "production-planning-panel",
+    activeScreen === "result" ? "is-result-screen" : "is-input-screen",
     isTouch ? "is-touch" : "",
   ].filter(Boolean).join(" ");
 
   return (
     <div className={panelClassName}>
-      <section className="production-planning-config">
-        <LineSection
-          icon={<LucideTarget />}
-          title={t("productionPlanning.targets")}
-          addLabel={t("productionPlanning.addTarget")}
-          lines={targets}
-          index={index}
-          onAdd={addTarget}
-          onPickItem={(id) => {
-            void requestItemSelection((itemId) => updateTarget(id, { itemId }));
-          }}
-          onRemove={(id) => setTargets((current) => current.filter((line) => line.id !== id))}
-          onUpdateRate={(id, perMinute) => updateTarget(id, { perMinute })}
-          t={t}
-        />
-        <LineSection
-          icon={<LucidePackagePlus />}
-          title={t("productionPlanning.supplies")}
-          addLabel={t("productionPlanning.addSupply")}
-          lines={supplies}
-          index={index}
-          onAdd={addSupply}
-          onPickItem={(id) => {
-            void requestItemSelection((itemId) => updateSupply(id, { itemId }));
-          }}
-          onRemove={(id) => setSupplies((current) => current.filter((line) => line.id !== id))}
-          onUpdateRate={(id, perMinute) => updateSupply(id, { perMinute })}
-          t={t}
-        />
-        <SourcePolicyPanel
-          index={index}
-          infiniteItemIds={infiniteItemIds}
-          specialInfiniteItemIds={specialInfiniteItemIds}
-          onToggleSpecialInfiniteItem={toggleSpecialInfiniteItem}
-          t={t}
-        />
-      </section>
+      <div className="production-planning-stage">
+        <section className="production-planning-screen production-planning-input-screen">
+          <div className="production-planning-config">
+            <LineSection
+              icon={<LucideTarget />}
+              title={t("productionPlanning.targets")}
+              addLabel={t("productionPlanning.addTarget")}
+              lines={targets}
+              index={index}
+              onAdd={addTarget}
+              onPickItem={(id) => {
+                void requestItemSelection((itemId) => updateTarget(id, { itemId }));
+              }}
+              onRemove={(id) => setTargets((current) => current.filter((line) => line.id !== id))}
+              onUpdateRate={(id, perMinute) => updateTarget(id, { perMinute })}
+              t={t}
+            />
+            <LineSection
+              icon={<LucidePackagePlus />}
+              title={t("productionPlanning.supplies")}
+              addLabel={t("productionPlanning.addSupply")}
+              lines={supplies}
+              index={index}
+              onAdd={addSupply}
+              onPickItem={(id) => {
+                void requestItemSelection((itemId) => updateSupply(id, { itemId }));
+              }}
+              onRemove={(id) => setSupplies((current) => current.filter((line) => line.id !== id))}
+              onUpdateRate={(id, perMinute) => updateSupply(id, { perMinute })}
+              t={t}
+            />
+            <SourcePolicyPanel
+              index={index}
+              infiniteItemIds={infiniteItemIds}
+              specialInfiniteItemIds={specialInfiniteItemIds}
+              onToggleSpecialInfiniteItem={toggleSpecialInfiniteItem}
+              t={t}
+            />
+          </div>
+          <div className="production-planning-input-footer">
+            <button
+              type="button"
+              className="production-planning-primary-button"
+              disabled={targets.length === 0}
+              onClick={calculate}
+            >
+              <LucideCalculator />
+              <span>{t("productionPlanning.calculate")}</span>
+            </button>
+          </div>
+        </section>
 
-      <section className="production-planning-workspace">
-        <div className="production-planning-toolbar">
-          <SegmentedControl<ProductionPlanningDisplayMode>
-            label={t("productionPlanning.displayMode")}
-            value={displayMode}
-            options={[
-              { value: "item", label: t("productionPlanning.modeItem"), icon: <LucideBox /> },
-              { value: "device", label: t("productionPlanning.modeDevice"), icon: <LucideFactory /> },
-            ]}
-            onChange={setDisplayMode}
-          />
-          <SegmentedControl<ProductionPlanningViewMode>
-            label={t("productionPlanning.viewMode")}
-            value={viewMode}
-            options={[
-              { value: "tree", label: t("productionPlanning.viewTree"), icon: <LucideListTree /> },
-              { value: "flow", label: t("productionPlanning.viewFlow"), icon: <LucideWorkflow /> },
-            ]}
-            onChange={setViewMode}
-          />
-        </div>
-
-        <div className="production-planning-main">
-          <div className="production-planning-graph">
-            {targets.length === 0 ? (
-              <div className="production-planning-empty">{t("productionPlanning.noTargets")}</div>
-            ) : (
-              <PlanGraph
-                displayMode={displayMode}
-                viewMode={viewMode}
-                plan={plan}
-                index={index}
-                recipeChoices={recipeChoiceMap}
-                onSelectRecipe={selectRecipe}
-                t={t}
+        <section className="production-planning-screen production-planning-workspace">
+          <div className="production-planning-toolbar">
+            <button
+              type="button"
+              className="production-planning-back-button"
+              onClick={() => setActiveScreen("input")}
+            >
+              <LucideArrowLeft />
+              <span>{t("productionPlanning.modify")}</span>
+            </button>
+            <div className="production-planning-toolbar-controls">
+              <SegmentedControl<ProductionPlanningDisplayMode>
+                label={t("productionPlanning.displayMode")}
+                value={displayMode}
+                options={[
+                  { value: "item", label: t("productionPlanning.modeItem"), icon: <LucideBox /> },
+                  { value: "device", label: t("productionPlanning.modeDevice"), icon: <LucideFactory /> },
+                ]}
+                onChange={setDisplayMode}
               />
+              <SegmentedControl<ProductionPlanningViewMode>
+                label={t("productionPlanning.viewMode")}
+                value={viewMode}
+                options={[
+                  { value: "tree", label: t("productionPlanning.viewTree"), icon: <LucideListTree /> },
+                  { value: "flow", label: t("productionPlanning.viewFlow"), icon: <LucideWorkflow /> },
+                ]}
+                onChange={setViewMode}
+              />
+            </div>
+          </div>
+
+          <div className="production-planning-main">
+            <div className="production-planning-graph">
+              {calculation === null ? (
+                <div className="production-planning-empty">{t("productionPlanning.noResult")}</div>
+              ) : (
+                <PlanGraph
+                  displayMode={displayMode}
+                  viewMode={viewMode}
+                  plan={calculation.plan}
+                  index={index}
+                  recipeChoices={resultRecipeChoiceMap}
+                  onSelectRecipe={selectRecipe}
+                  t={t}
+                />
+              )}
+            </div>
+            {calculation === null ? (
+              <EmptySummaryPanel t={t} />
+            ) : (
+              <SummaryPanel plan={calculation.plan} index={index} t={t} />
             )}
           </div>
-          <SummaryPanel plan={plan} index={index} t={t} />
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 });
@@ -877,6 +948,21 @@ function SummaryPanel({
   );
 }
 
+function EmptySummaryPanel({
+  t,
+}: {
+  t: (key: string) => string;
+}) {
+  return (
+    <aside className="production-planning-summary">
+      <section className="production-planning-summary-section">
+        <h3>{t("productionPlanning.summary")}</h3>
+        <p className="production-planning-muted">{t("productionPlanning.noResult")}</p>
+      </section>
+    </aside>
+  );
+}
+
 function SummaryCard({
   icon,
   label,
@@ -903,6 +989,28 @@ function createPort(itemId: string, perMinute: number): ProductionPlanningPort {
     itemId,
     perMinute,
   };
+}
+
+function clonePort(port: ProductionPlanningPort): ProductionPlanningPort {
+  return {
+    id: port.id,
+    itemId: port.itemId,
+    perMinute: port.perMinute,
+  };
+}
+
+function updateRecipeChoices(
+  current: Readonly<Record<string, string>>,
+  itemId: string,
+  recipeId: string | null,
+): Record<string, string> {
+  const next = { ...current };
+  if (recipeId === null) {
+    delete next[itemId];
+  } else {
+    next[itemId] = recipeId;
+  }
+  return next;
 }
 
 function updatePort(
