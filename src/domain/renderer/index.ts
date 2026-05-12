@@ -5,4 +5,5 @@ export type {
 	BlueprintPreviewHandle,
 	BlueprintPreviewViewport,
 	MountBlueprintPreviewOptions,
+	MountNeighborhoodPreviewOptions,
 } from "./types/blueprint-preview-types";

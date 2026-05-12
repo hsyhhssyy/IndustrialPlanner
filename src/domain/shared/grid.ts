@@ -23,3 +23,10 @@ export interface GridRect {
   readonly width: number;
   readonly height: number;
 }
+
+export interface GridBounds {
+  readonly left: number;
+  readonly top: number;
+  readonly width: number;
+  readonly height: number;
+}
