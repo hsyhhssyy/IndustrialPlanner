@@ -2724,6 +2724,34 @@ body.is-resizing-dialog-shell * {
   padding-inline: 8px;
 }
 
+/* AI-CORRECTION 2026-05-11:
+   上面的 compact mobile 规则保留用于审计，但当前有效实现不再让手机端 tab
+   使用高低差和额外间距。手机端沿用桌面/平板的平面轨道，只保留更小字号。 */
+.dialog-shell.has-tabs.is-mobile-compact .dialog-shell-header {
+  --dialog-shell-tab-track-height: 36px;
+}
+
+.dialog-shell.has-tabs.is-mobile-compact .dialog-shell-tab-list {
+  gap: 0;
+}
+
+.dialog-shell.has-tabs.is-mobile-compact .dialog-shell-tab {
+  height: var(--dialog-shell-tab-track-height);
+  padding: 0 18px;
+  font-size: 0.625rem;
+  line-height: 1;
+  transform: none;
+}
+
+.dialog-shell.has-tabs.is-mobile-compact .dialog-shell-tab:hover {
+  transform: none;
+}
+
+.dialog-shell.has-tabs.is-mobile-compact .dialog-shell-tab.is-active {
+  height: var(--dialog-shell-tab-track-height);
+  padding-inline: 18px;
+}
+
 @media (max-width: 900px) {
   .settings-dialog {
     height: min(680px, 100%);
@@ -3563,7 +3591,7 @@ body.is-resizing-left-dock * {
   position: relative;
   display: flex;
   isolation: isolate;
-  align-items: center;
+  align-items: flex-end;
   gap: 0;
   flex: 1 1 auto;
   width: 100%;
