@@ -179,7 +179,7 @@ function HistoryRecordButton({
   currentSequence,
   onRestore,
   record,
-  translate,
+  translate: _translate,
 }: {
   currentSequence: number;
   onRestore: () => void;
@@ -187,8 +187,8 @@ function HistoryRecordButton({
   translate: (key: string) => string;
 }) {
   const isCurrent = record.sequence === currentSequence;
-  const isRedoable = record.sequence > currentSequence;
-  const detail = resolveRecordDetail(record);
+  const _isRedoable = record.sequence > currentSequence;
+  const _detail = resolveRecordDetail(record);
 
   return (
     <button
@@ -245,7 +245,7 @@ function resolveRecordDetail(record: EditorHistoryRecord): string {
   return detailParts.join(" · ");
 }
 
-function formatHistoryTime(createdAt: string): string {
+function _formatHistoryTime(createdAt: string): string {
   const date = new Date(createdAt);
 
   if (Number.isNaN(date.getTime())) {

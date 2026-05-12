@@ -280,9 +280,10 @@ function drawArrowMask(ctx: DecorationSyncContext, graphics: Graphics): void {
 export function resolveBeltFlowMarks(ctx: DecorationSyncContext): BeltFlowMark[] {
   const entries = resolveBeltVisualPathEntries(ctx)
   const marks: BeltFlowMark[] = []
+  const chains = resolveBeltFlowChains(entries)
 
   if (BELT_HIGHLIGHT_ENABLED) {
-    for (const chain of resolveBeltFlowChains(entries)) {
+    for (const chain of chains) {
       const highlightIntervals = resolveRepeatingLocalIntervals({
         phaseOffsetCells: chain.phaseOffsetCells,
         pathLengthCells: chain.lengthCells,
@@ -302,22 +303,27 @@ export function resolveBeltFlowMarks(ctx: DecorationSyncContext): BeltFlowMark[]
     }
   }
 
-  for (const entry of entries) {
+  const portExtensionEntries = resolveBeltPortExtensionEntries(ctx)
+  for (const chain of chains) {
+    const overflowCells = resolveBeltFlowChainArrowOverflowCells({
+      chain,
+      portExtensionEntries,
+    })
     const arrowDistances = resolveRepeatingLocalDistances({
-      phaseOffsetCells: entry.phaseOffsetCells,
-      pathLengthCells: entry.lengthCells,
+      phaseOffsetCells: chain.phaseOffsetCells,
+      pathLengthCells: chain.lengthCells,
       spacingCells: ARROW_SPACING_CELLS,
       speedCellsPerSecond: BELT_VISUAL_SPEED_CELLS_PER_SECOND,
       nowMs: ctx.nowMs,
+      startOverflowCells: overflowCells.startCells,
+      endOverflowCells: overflowCells.endCells,
     })
 
     for (const distanceCells of arrowDistances) {
-      const mark = resolveBeltFlowMark({
-        kind: "arrow",
+      const mark = resolveBeltFlowMarkAtChainDistance({
         ctx,
-        entry,
+        chain,
         distanceCells,
-        lengthCells: 0,
       })
       if (mark !== null) {
         marks.push(mark)
@@ -325,7 +331,82 @@ export function resolveBeltFlowMarks(ctx: DecorationSyncContext): BeltFlowMark[]
     }
   }
 
+  // AI-REMOVED 2026-05-12:
+  // Reason: Arrow marks must survive while only the arrow tail remains inside the belt mask; per-tile generation removed marks as soon as their center left a tile.
+  // Trigger: User observed arrows disappearing abruptly after mask clipping fixed overdraw into empty cells and general logistics devices.
+  // Evidence: resolveRepeatingLocalDistances() excluded distanceCells >= entry.lengthCells, so drawBeltFlowMarks() never received the final partially visible arrow.
+  // Replacement: Chain-level arrow generation in resolveBeltFlowMarks(), using resolveBeltFlowMarkAtChainDistance().
+  // Risk: Low; chain-internal seams no longer generate duplicate endpoint arrows, and tests cover empty/general-logistics/admission boundaries.
+  // Human Review: Required
+  //
+  // Original code:
+  // for (const entry of entries) {
+  //   const arrowDistances = resolveRepeatingLocalDistances({
+  //     phaseOffsetCells: entry.phaseOffsetCells,
+  //     pathLengthCells: entry.lengthCells,
+  //     spacingCells: ARROW_SPACING_CELLS,
+  //     speedCellsPerSecond: BELT_VISUAL_SPEED_CELLS_PER_SECOND,
+  //     nowMs: ctx.nowMs,
+  //   })
+  //
+  //   for (const distanceCells of arrowDistances) {
+  //     const mark = resolveBeltFlowMark({
+  //       kind: "arrow",
+  //       ctx,
+  //       entry,
+  //       distanceCells,
+  //       lengthCells: 0,
+  //     })
+  //     if (mark !== null) {
+  //       marks.push(mark)
+  //     }
+  //   }
+  // }
+
   return marks
+}
+
+function resolveBeltFlowChainArrowOverflowCells(options: {
+  chain: BeltFlowChain;
+  portExtensionEntries: ReturnType<typeof resolveBeltPortExtensionEntries>;
+}): {
+  readonly startCells: number;
+  readonly endCells: number;
+} {
+  const firstEntry = options.chain.entries[0]?.entry
+  const lastEntry = options.chain.entries.at(-1)?.entry
+  const halfArrowLengthCells = ARROW_LENGTH_RATIO / 2
+  const startExtensionCells = firstEntry === undefined
+    ? 0
+    : resolveBeltPortExtensionLengthCells(
+      options.portExtensionEntries.find((entry) =>
+        entry.kind === "device-output-to-belt"
+        && entry.beltEntityId === firstEntry.entity.id,
+      ),
+    )
+  const endExtensionCells = lastEntry === undefined
+    ? 0
+    : resolveBeltPortExtensionLengthCells(
+      options.portExtensionEntries.find((entry) =>
+        entry.kind === "belt-output-to-device"
+        && entry.beltEntityId === lastEntry.entity.id,
+      ),
+    )
+
+  return {
+    startCells: halfArrowLengthCells + startExtensionCells,
+    endCells: halfArrowLengthCells + endExtensionCells,
+  }
+}
+
+function resolveBeltPortExtensionLengthCells(
+  entry: ReturnType<typeof resolveBeltPortExtensionEntries>[number] | undefined,
+): number {
+  if (entry === undefined) {
+    return 0
+  }
+
+  return Math.abs(entry.localEndCells - entry.localStartCells)
 }
 
 function resolveBeltFlowChains(entries: readonly BeltVisualPathEntry[]): BeltFlowChain[] {
@@ -452,13 +533,20 @@ export function resolveRepeatingLocalDistances(options: {
   readonly spacingCells: number;
   readonly speedCellsPerSecond: number;
   readonly nowMs: number;
+  readonly startOverflowCells?: number;
+  readonly endOverflowCells?: number;
 }): number[] {
+  const startOverflowCells = Math.max(0, options.startOverflowCells ?? 0)
+  const endOverflowCells = Math.max(0, options.endOverflowCells ?? 0)
+
   if (
     options.pathLengthCells <= 0
     || options.spacingCells <= 0
     || !Number.isFinite(options.pathLengthCells)
     || !Number.isFinite(options.spacingCells)
     || !Number.isFinite(options.speedCellsPerSecond)
+    || !Number.isFinite(startOverflowCells)
+    || !Number.isFinite(endOverflowCells)
   ) {
     return []
   }
@@ -468,31 +556,107 @@ export function resolveRepeatingLocalDistances(options: {
     options.spacingCells,
   )
   const firstRepeatIndex = Math.ceil(
-    (options.phaseOffsetCells - traveledCells) / options.spacingCells,
+    (options.phaseOffsetCells - startOverflowCells - traveledCells) / options.spacingCells,
   )
   const distances: number[] = []
 
   for (
     let repeatIndex = firstRepeatIndex;
-    repeatIndex < firstRepeatIndex + Math.ceil(options.pathLengthCells / options.spacingCells) + 2;
+    repeatIndex < firstRepeatIndex + Math.ceil(
+      (options.pathLengthCells + startOverflowCells + endOverflowCells) / options.spacingCells,
+    ) + 2;
     repeatIndex += 1
   ) {
     const distanceCells = repeatIndex * options.spacingCells
       + traveledCells
       - options.phaseOffsetCells
 
-    if (distanceCells < -DISTANCE_EPSILON) {
+    if (distanceCells < -startOverflowCells - DISTANCE_EPSILON) {
       continue
     }
 
-    if (distanceCells >= options.pathLengthCells - DISTANCE_EPSILON) {
+    if (distanceCells >= options.pathLengthCells + endOverflowCells - DISTANCE_EPSILON) {
       continue
     }
 
-    distances.push(Math.max(0, distanceCells))
+    distances.push(Math.abs(distanceCells) <= DISTANCE_EPSILON ? 0 : distanceCells)
   }
 
   return distances
+}
+
+function resolveBeltFlowMarkAtChainDistance(options: {
+  ctx: DecorationSyncContext;
+  chain: BeltFlowChain;
+  distanceCells: number;
+}): BeltFlowMark | null {
+  const target = resolveBeltFlowChainDistanceTarget(options.chain, options.distanceCells)
+  if (target === null) {
+    return null
+  }
+
+  return resolveBeltFlowMark({
+    kind: "arrow",
+    ctx: options.ctx,
+    entry: target.entry,
+    distanceCells: target.distanceCells,
+    lengthCells: 0,
+    overflowCells: target.overflowCells,
+  })
+}
+
+function resolveBeltFlowChainDistanceTarget(
+  chain: BeltFlowChain,
+  distanceCells: number,
+): {
+  readonly entry: BeltVisualPathEntry;
+  readonly distanceCells: number;
+  readonly overflowCells: number;
+} | null {
+  const firstChainEntry = chain.entries[0]
+  if (firstChainEntry === undefined) {
+    return null
+  }
+
+  if (distanceCells < 0) {
+    return {
+      entry: firstChainEntry.entry,
+      distanceCells: 0,
+      overflowCells: distanceCells,
+    }
+  }
+
+  if (distanceCells >= chain.lengthCells) {
+    const lastChainEntry = chain.entries.at(-1)
+    if (lastChainEntry === undefined) {
+      return null
+    }
+
+    return {
+      entry: lastChainEntry.entry,
+      distanceCells: lastChainEntry.entry.lengthCells,
+      overflowCells: distanceCells - chain.lengthCells,
+    }
+  }
+
+  const chainEntry = chain.entries.find((entry) =>
+    distanceCells >= entry.startDistanceCells - DISTANCE_EPSILON
+    && distanceCells < entry.endDistanceCells - DISTANCE_EPSILON,
+  ) ?? chain.entries.at(-1)
+  if (chainEntry === undefined) {
+    return null
+  }
+
+  const localDistanceCells = distanceCells - chainEntry.startDistanceCells
+
+  return {
+    entry: chainEntry.entry,
+    distanceCells: Math.min(
+      Math.max(0, localDistanceCells),
+      chainEntry.entry.lengthCells,
+    ),
+    overflowCells: 0,
+  }
 }
 
 export function resolveRepeatingLocalIntervals(options: {
@@ -563,6 +727,7 @@ function resolveBeltFlowMark(options: {
   entry: ReturnType<typeof resolveBeltVisualPathEntries>[number];
   distanceCells: number;
   lengthCells: number;
+  overflowCells?: number;
 }): BeltFlowMark | null {
   const sample = resolveBeltPathSampleAtDistance({
     entity: options.entry.entity,
@@ -575,8 +740,14 @@ function resolveBeltFlowMark(options: {
 
   const center = resolveViewportPoint({
     point: {
-      x: options.entry.entity.position.x + sample.point.x,
-      y: options.entry.entity.position.y + sample.point.y,
+      x:
+        options.entry.entity.position.x
+        + sample.point.x
+        + Math.cos(sample.angleRadians) * (options.overflowCells ?? 0),
+      y:
+        options.entry.entity.position.y
+        + sample.point.y
+        + Math.sin(sample.angleRadians) * (options.overflowCells ?? 0),
     },
     viewportBounds: options.ctx.viewportBounds,
     viewportState: options.ctx.viewportState,

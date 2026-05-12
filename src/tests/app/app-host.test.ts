@@ -134,6 +134,7 @@ function createWorkbenchStorageSnapshot(options: {
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
   inspectorDialog?: ReturnType<typeof createDialogStateSnapshot>;
   saveBlueprintDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  baseSelectDialog?: ReturnType<typeof createDialogStateSnapshot>;
   toolboxWiki?: ReturnType<typeof createToolboxWikiStorageSnapshot>;
   moduleBalancing?: ReturnType<typeof createModuleBalancingStorageSnapshot>;
 } = {}) {
@@ -149,6 +150,7 @@ function createWorkbenchStorageSnapshot(options: {
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
       inspector: options.inspectorDialog ?? createDialogStateSnapshot(),
       "save-blueprint": options.saveBlueprintDialog ?? createDialogStateSnapshot(),
+      "base-select": options.baseSelectDialog ?? createDialogStateSnapshot(),
     },
     toolbox: {
       wiki: options.toolboxWiki ?? createToolboxWikiStorageSnapshot(),

@@ -172,6 +172,7 @@ describe("BeltFlowDecoration", () => {
     }))).toEqual([
       { kind: "arrow", x: 100 },
       { kind: "arrow", x: 200 },
+      { kind: "arrow", x: 300 },
     ])
     expect(marksAfterHalfSecond.filter((mark) => mark.kind === "highlight")).toEqual([])
     expect(marksAfterHalfSecond.filter((mark) => mark.kind === "arrow").map((mark) => ({
@@ -214,7 +215,7 @@ describe("BeltFlowDecoration", () => {
     expect(decoration.container.visible).toBe(true)
     expect(highlightLayer.visible).toBe(false)
     expect(highlightLayer.children).toHaveLength(0)
-    expect(graphics.drawCommands).toHaveLength(2)
+    expect(graphics.drawCommands).toHaveLength(3)
     expect(arrowMask.drawCommands).toHaveLength(2)
     expect(graphics.drawCommands[0]?.points?.map((value) => Number(value.toFixed(2)))).toEqual([
       114,
@@ -233,6 +234,37 @@ describe("BeltFlowDecoration", () => {
     expect(graphics.drawCommands[0]?.stroke).toBeUndefined()
 
     decoration.destroy()
+  })
+
+  it("keeps chain-end arrows alive while the mask still contains part of the arrow", () => {
+    const emptyEndMarks = resolveBeltFlowMarks(createFlowContext({
+      nowMs: 250,
+      entities: [createEntity("belt-a", "belt_straight_1x1", { x: 0, y: 0 })],
+    }) as never)
+    const admissionEndMarks = resolveBeltFlowMarks(createFlowContext({
+      nowMs: 500,
+      entities: [
+        createEntity("belt-a", "belt_straight_1x1", { x: 0, y: 0 }),
+        createEntity("target-admission", "item_log_admission", { x: 1, y: 0 }),
+      ],
+    }) as never)
+    const generalLogisticsEndMarks = resolveBeltFlowMarks(createFlowContext({
+      nowMs: 250,
+      entities: [
+        createEntity("belt-a", "belt_straight_1x1", { x: 0, y: 0 }),
+        createEntity("target-connector", "item_log_connector", { x: 1, y: 0 }),
+      ],
+    }) as never)
+
+    expect(emptyEndMarks.filter((mark) => mark.kind === "arrow").map((mark) =>
+      Number(mark.centerX.toFixed(1)),
+    )).toEqual([112.5, 212.5])
+    expect(admissionEndMarks.filter((mark) => mark.kind === "arrow").map((mark) =>
+      Number(mark.centerX.toFixed(1)),
+    )).toEqual([125, 225])
+    expect(generalLogisticsEndMarks.filter((mark) => mark.kind === "arrow").map((mark) =>
+      Number(mark.centerX.toFixed(1)),
+    )).toEqual([112.5, 212.5])
   })
 
   it("extends the arrow mask into device insertion segments but not into general logistics devices", () => {
@@ -325,6 +357,7 @@ describe("BeltFlowDecoration", () => {
     }))).toEqual([
       { kind: "arrow", x: 100, tint: selectionTint },
       { kind: "arrow", x: 200, tint: 0xd9822b },
+      { kind: "arrow", x: 300, tint: 0xd9822b },
     ])
   })
 
@@ -385,6 +418,14 @@ describe("BeltFlowDecoration", () => {
       speedCellsPerSecond: 1,
       nowMs: 0,
     })).toEqual([])
+    expect(resolveRepeatingLocalDistances({
+      phaseOffsetCells: 0,
+      pathLengthCells: 1,
+      spacingCells: 1,
+      speedCellsPerSecond: 0,
+      nowMs: 0,
+      endOverflowCells: 0.14,
+    })).toEqual([0, 1])
   })
 
   it("clips repeated highlight intervals to each belt tile span", () => {
@@ -498,6 +539,21 @@ function createFlowContext(options: {
       },
     },
     nowMs: options.nowMs,
+  }
+}
+
+function createEntity(
+  id: string,
+  definitionId: string,
+  position: { x: number; y: number },
+) {
+  return {
+    id,
+    definitionId,
+    position,
+    rotation: 0,
+    config: {},
+    tags: [],
   }
 }
 

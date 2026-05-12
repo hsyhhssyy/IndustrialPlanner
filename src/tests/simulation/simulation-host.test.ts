@@ -18,7 +18,7 @@ afterEach(() => {
 
 describe("createSimulationHost", () => {
   const transportRecipeDurationTicks = STANDARD_TICK_RATE_PER_SECOND
-  const transportRecipeCompletionTick = transportRecipeDurationTicks + 1
+  const _transportRecipeCompletionTick = transportRecipeDurationTicks + 1
   const transportDeliveryTick = transportRecipeDurationTicks + 2
   const productionRecipeDurationTicks = 2 * STANDARD_TICK_RATE_PER_SECOND
   const productionRecipeCompletionTick = productionRecipeDurationTicks + 1

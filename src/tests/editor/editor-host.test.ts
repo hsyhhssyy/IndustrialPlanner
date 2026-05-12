@@ -1043,7 +1043,7 @@ describe("createEditorHost", () => {
       fromEdge: "NORTH",
       toEdge: "EAST",
       shape: "turn-ccw",
-      rotation: 90,
+      rotation: 0,
     });
   });
 

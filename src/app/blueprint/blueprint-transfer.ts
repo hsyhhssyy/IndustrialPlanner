@@ -124,7 +124,10 @@ function resolveBlueprintTransferFileName(name: string): string {
   const normalizedStem = name
     .trim()
     .replace(/\s+/g, "-")
-    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_")
+    .replace(/[<>:"/\\|?*]/g, "_")
+    .split("")
+    .map((character) => (character.charCodeAt(0) <= 0x1F ? "_" : character))
+    .join("")
     .replace(/\.+$/g, "");
 
   return `${normalizedStem.length > 0 ? normalizedStem : "blueprint"}.json`;

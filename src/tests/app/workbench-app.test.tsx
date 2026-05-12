@@ -171,6 +171,7 @@ function createWorkbenchStorageSnapshot(options: {
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
   inspectorDialog?: ReturnType<typeof createDialogStateSnapshot>;
   saveBlueprintDialog?: ReturnType<typeof createDialogStateSnapshot>;
+  baseSelectDialog?: ReturnType<typeof createDialogStateSnapshot>;
   toolboxWiki?: ReturnType<typeof createToolboxWikiStorageSnapshot>;
   moduleBalancing?: ReturnType<typeof createModuleBalancingStorageSnapshot>;
 } = {}) {
@@ -186,6 +187,7 @@ function createWorkbenchStorageSnapshot(options: {
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
       inspector: options.inspectorDialog ?? createDialogStateSnapshot(),
       "save-blueprint": options.saveBlueprintDialog ?? createDialogStateSnapshot(),
+      "base-select": options.baseSelectDialog ?? createDialogStateSnapshot(),
     },
     toolbox: {
       wiki: options.toolboxWiki ?? createToolboxWikiStorageSnapshot(),
@@ -2413,38 +2415,49 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".help-dialog-placeholder h3")?.textContent).toBe("版本更新");
   });
 
-  it("opens the toolbox dialog through toolbar interaction", () => {
-    const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    /*
+      AI-REMOVED 2026-05-12:
+      Reason: 该测试断言依赖已移除的 toolbox placeholder DOM 结构，当前实现已改为正式的 production planning 面板。
+      Trigger: 用户要求删除这条过时测试，避免继续因旧 DOM 选择器导致全量测试失败。
+      Evidence: 当前失败断言查询 .toolbox-dialog-placeholder h3，但 production-planning tab 现在渲染的是 .production-planning-panel。
+      Replacement: None
+      Risk: Low
+      Human Review: Required
 
-    act(() => {
-      root.render(<WorkbenchApp appHost={appHost} />);
-    });
+      Original code:
+      it("opens the toolbox dialog through toolbar interaction", () => {
+        const workspace = createWorkspace();
+        const appHost = createAppHost(workspace);
 
-    const toolboxButton = container.querySelector(
-      'button[title="工具箱"]',
-    ) as HTMLButtonElement | null;
+        act(() => {
+          root.render(<WorkbenchApp appHost={appHost} />);
+        });
 
-    expect(toolboxButton).not.toBeNull();
+        const toolboxButton = container.querySelector(
+          'button[title="工具箱"]',
+        ) as HTMLButtonElement | null;
 
-    act(() => {
-      toolboxButton?.click();
-    });
+        expect(toolboxButton).not.toBeNull();
 
-    expect(container.querySelector(".toolbox-dialog")).not.toBeNull();
-    expect(container.querySelector("#toolbox-dialog-tab-item-encyclopedia")?.getAttribute("aria-selected")).toBe("true");
+        act(() => {
+          toolboxButton?.click();
+        });
 
-    const productionPlanningTab = container.querySelector(
-      "#toolbox-dialog-tab-production-planning",
-    ) as HTMLButtonElement | null;
+        expect(container.querySelector(".toolbox-dialog")).not.toBeNull();
+        expect(container.querySelector("#toolbox-dialog-tab-item-encyclopedia")?.getAttribute("aria-selected")).toBe("true");
 
-    act(() => {
-      productionPlanningTab?.click();
-    });
+        const productionPlanningTab = container.querySelector(
+          "#toolbox-dialog-tab-production-planning",
+        ) as HTMLButtonElement | null;
 
-    expect(appHost.internalState.workbench.dialogState.toolbox.activeTab).toBe("production-planning");
-    expect(container.querySelector(".toolbox-dialog-placeholder h3")?.textContent).toBe("产线规划");
-  });
+        act(() => {
+          productionPlanningTab?.click();
+        });
+
+        expect(appHost.internalState.workbench.dialogState.toolbox.activeTab).toBe("production-planning");
+        expect(container.querySelector(".toolbox-dialog-placeholder h3")?.textContent).toBe("产线规划");
+      });
+    */
 
   it("opens the global encyclopedia picker and resolves the selected item", async () => {
     const workspace = createWorkspace();
