@@ -12,6 +12,7 @@ import type { DecorationLayer } from "./DecorationLayer"
 import type { DecorationSyncContext } from "./DecorationSyncContext"
 import {
   isStrictBeltDefinitionId,
+  resolveBeltPortExtensionEntries,
   resolveBeltPathSampleAtDistance,
   resolveBeltVisualPathEntries,
   resolveViewportPoint,
@@ -67,15 +68,18 @@ export function createBeltFlowDecoration(): DecorationLayer {
   const highlightLayer = new Container()
   const highlightMask = new Graphics({ roundPixels: true })
   const arrowGraphics = new Graphics({ roundPixels: true })
+  const arrowMask = new Graphics({ roundPixels: true })
   const highlightMeshes: Array<Mesh<RopeGeometry>> = []
   let destroyed = false
   let highlightTexture: Texture | null = null
   let highlightTextureLoadStarted = false
 
   highlightLayer.mask = highlightMask
+  arrowGraphics.mask = arrowMask
   container.addChild(highlightLayer)
   container.addChild(highlightMask)
   container.addChild(arrowGraphics)
+  container.addChild(arrowMask)
 
   const ensureHighlightTexture = (ctx: DecorationSyncContext): void => {
     if (highlightTextureLoadStarted || highlightTexture !== null) {
@@ -149,11 +153,13 @@ export function createBeltFlowDecoration(): DecorationLayer {
       highlightLayer.visible = hasHighlightMarks
       highlightMask.visible = hasHighlightMarks
       arrowGraphics.visible = true
+      arrowMask.visible = true
       if (hasHighlightMarks) {
         drawHighlightMask(ctx, highlightMask)
       } else {
         highlightMask.clear()
       }
+      drawArrowMask(ctx, arrowMask)
 
       syncHighlightMeshes({
         marks,
@@ -177,6 +183,7 @@ export function createBeltFlowDecoration(): DecorationLayer {
 
       highlightMeshes.length = 0
       arrowGraphics.destroy()
+      arrowMask.destroy()
       highlightMask.destroy()
       highlightLayer.destroy({ children: true })
       container.destroy({ children: true })
@@ -190,6 +197,8 @@ export function createBeltFlowDecoration(): DecorationLayer {
     highlightMask.clear()
     arrowGraphics.visible = false
     arrowGraphics.clear()
+    arrowMask.visible = false
+    arrowMask.clear()
 
     for (const mesh of highlightMeshes) {
       mesh.visible = false
@@ -219,6 +228,51 @@ function drawHighlightMask(ctx: DecorationSyncContext, graphics: Graphics): void
 
     graphics
       .rect(cellTopLeft.x, cellTopLeft.y, gridCellSize, gridCellSize)
+      .fill(0xffffff)
+  }
+}
+
+function drawArrowMask(ctx: DecorationSyncContext, graphics: Graphics): void {
+  graphics.clear()
+
+  const editor = ctx.workspace.editor
+  if (editor === null) {
+    return
+  }
+
+  const gridCellSize = ctx.viewportState.gridCellPixelSize
+  for (const entity of editor.queries.listEntities()) {
+    if (!isStrictBeltDefinitionId(entity.definitionId)) {
+      continue
+    }
+
+    const cellTopLeft = resolveViewportPoint({
+      point: entity.position,
+      viewportBounds: ctx.viewportBounds,
+      viewportState: ctx.viewportState,
+    })
+
+    graphics
+      .rect(cellTopLeft.x, cellTopLeft.y, gridCellSize, gridCellSize)
+      .fill(0xffffff)
+  }
+
+  for (const entry of resolveBeltPortExtensionEntries(ctx)) {
+    const boundary = resolveViewportPoint({
+      point: entry.boundary,
+      viewportBounds: ctx.viewportBounds,
+      viewportState: ctx.viewportState,
+    })
+
+    graphics
+      .poly(resolveRotatedExtensionMaskPoints({
+        centerX: boundary.x,
+        centerY: boundary.y,
+        angleRadians: entry.angleRadians,
+        startX: entry.localStartCells * gridCellSize,
+        endX: entry.localEndCells * gridCellSize,
+        halfWidth: gridCellSize / 2,
+      }), true)
       .fill(0xffffff)
   }
 }
@@ -838,6 +892,27 @@ function resolveRotatedArrowPoints(
       { x: -halfLength, y: -halfWidth },
       { x: tailNotchX, y: 0 },
       { x: -halfLength, y: halfWidth },
+    ],
+  })
+}
+
+function resolveRotatedExtensionMaskPoints(options: {
+  centerX: number;
+  centerY: number;
+  angleRadians: number;
+  startX: number;
+  endX: number;
+  halfWidth: number;
+}): number[] {
+  return rotateLocalPoints({
+    centerX: options.centerX,
+    centerY: options.centerY,
+    angleRadians: options.angleRadians,
+    localPoints: [
+      { x: options.startX, y: -options.halfWidth },
+      { x: options.endX, y: -options.halfWidth },
+      { x: options.endX, y: options.halfWidth },
+      { x: options.startX, y: options.halfWidth },
     ],
   })
 }

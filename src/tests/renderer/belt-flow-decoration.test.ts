@@ -206,10 +206,16 @@ describe("BeltFlowDecoration", () => {
         stroke?: unknown;
       }>;
     }
+    const arrowMask = decoration.container.children[3] as unknown as {
+      drawCommands: Array<{
+        type: "poly" | "rect";
+      }>;
+    }
     expect(decoration.container.visible).toBe(true)
     expect(highlightLayer.visible).toBe(false)
     expect(highlightLayer.children).toHaveLength(0)
     expect(graphics.drawCommands).toHaveLength(2)
+    expect(arrowMask.drawCommands).toHaveLength(2)
     expect(graphics.drawCommands[0]?.points?.map((value) => Number(value.toFixed(2)))).toEqual([
       114,
       100,
@@ -227,6 +233,78 @@ describe("BeltFlowDecoration", () => {
     expect(graphics.drawCommands[0]?.stroke).toBeUndefined()
 
     decoration.destroy()
+  })
+
+  it("extends the arrow mask into device insertion segments but not into general logistics devices", () => {
+    const admissionDecoration = createBeltFlowDecoration()
+    admissionDecoration.sync(createFlowContext({
+      nowMs: 0,
+      entities: [
+        {
+          id: "belt-a",
+          definitionId: "belt_straight_1x1",
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+        {
+          id: "target-admission",
+          definitionId: "item_log_admission",
+          position: { x: 1, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+      ],
+    }) as never)
+
+    const admissionMask = admissionDecoration.container.children[3] as unknown as {
+      drawCommands: Array<{
+        type: "poly" | "rect";
+        points?: number[];
+      }>;
+    }
+    expect(admissionMask.drawCommands).toHaveLength(2)
+    expect(admissionMask.drawCommands[1]).toMatchObject({
+      type: "poly",
+      points: [200, 50, 220, 50, 220, 150, 200, 150],
+    })
+    admissionDecoration.destroy()
+
+    const logisticsDecoration = createBeltFlowDecoration()
+    logisticsDecoration.sync(createFlowContext({
+      nowMs: 0,
+      entities: [
+        {
+          id: "belt-a",
+          definitionId: "belt_straight_1x1",
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+        {
+          id: "target-connector",
+          definitionId: "item_log_connector",
+          position: { x: 1, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+      ],
+    }) as never)
+
+    const logisticsMask = logisticsDecoration.container.children[3] as unknown as {
+      drawCommands: Array<{
+        type: "poly" | "rect";
+      }>;
+    }
+    expect(logisticsMask.drawCommands).toHaveLength(1)
+    expect(logisticsMask.drawCommands[0]).toMatchObject({
+      type: "rect",
+    })
+    logisticsDecoration.destroy()
   })
 
   it("uses the current belt collection tint for arrows", () => {
@@ -276,6 +354,9 @@ describe("BeltFlowDecoration", () => {
     const graphics = decoration.container.children[2] as unknown as {
       drawCommands: Array<unknown>;
     }
+    const arrowMask = decoration.container.children[3] as unknown as {
+      drawCommands: Array<unknown>;
+    }
 
     decoration.sync(createFlowContext({
       nowMs: 0,
@@ -284,6 +365,7 @@ describe("BeltFlowDecoration", () => {
 
     expect(decoration.container.visible).toBe(false)
     expect(graphics.drawCommands).toHaveLength(0)
+    expect(arrowMask.drawCommands).toHaveLength(0)
 
     decoration.destroy()
   })
@@ -378,7 +460,7 @@ function createFlowContext(options: {
         },
       },
       registry: {
-        entityDefinitions: registry.entityDefinitions,
+        ...registry,
       },
       render: options.getTexture === undefined
         ? null
