@@ -172,10 +172,15 @@ export type CanvasRightDockToolbarButtonId = typeof CANVAS_RIGHT_DOCK_TOOLBAR_BU
 export const CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS = [
   "canvas-top-left-corner-toolbar-button-toggle-pipe",
   "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
+  "canvas-top-left-corner-toolbar-button-toggle-continuous-placement",
 ] as const;
 
 export type CanvasTopLeftCornerToolbarButtonId =
   typeof CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS[number];
+
+export type CanvasTopLeftCornerToolbarShowButtonId =
+  | CanvasTopLeftCornerToolbarButtonId
+  | `${CanvasTopLeftCornerToolbarButtonId}-off`;
 
 export const TOOLBOX_DIALOG_TAB_IDS = [
   "item-encyclopedia",
@@ -339,6 +344,7 @@ export interface CanvasRightDockToolbarStateReadWrite {
 export interface CanvasTopLeftCornerToolbarStateReadWrite {
   visible: boolean;
   buttonIds: CanvasTopLeftCornerToolbarButtonId[];
+  initialOffButtonIds: CanvasTopLeftCornerToolbarButtonId[];
 }
 
 export interface RuntimeStateReadWrite {
@@ -352,6 +358,7 @@ export interface RuntimeStateReadWrite {
   blueprintPlacementRotationSteps: number;
   singlePlacementDeviceId: string | null;
   singlePlacementPointerMode: "mouse" | "touch" | null;
+  singlePlacementContinuous: boolean;
   selectingPlacementGroup: PlacementGroup | null;
   logisticsPlacement: LogisticsPlacementRuntimeStateReadWrite;
   marqueeAnchor: GridPoint | null;
@@ -498,6 +505,7 @@ class CanvasRightDockToolbarStateReadWriteImpl implements CanvasRightDockToolbar
 class CanvasTopLeftCornerToolbarStateReadWriteImpl implements CanvasTopLeftCornerToolbarStateReadWrite {
   visible = false;
   buttonIds: CanvasTopLeftCornerToolbarButtonId[] = [];
+  initialOffButtonIds: CanvasTopLeftCornerToolbarButtonId[] = [];
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -534,6 +542,7 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   blueprintPlacementRotationSteps = 0;
   singlePlacementDeviceId: string | null = null;
   singlePlacementPointerMode: "mouse" | "touch" | null = null;
+  singlePlacementContinuous = false;
   selectingPlacementGroup: PlacementGroup | null = null;
   logisticsPlacement: LogisticsPlacementRuntimeStateReadWrite = new LogisticsPlacementRuntimeStateReadWriteImpl();
   marqueeAnchor: GridPoint | null = null;

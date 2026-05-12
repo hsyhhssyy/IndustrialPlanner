@@ -6,6 +6,7 @@ import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation
 import {
   Container,
   Graphics,
+  Rectangle,
   Sprite,
   Texture,
 } from "pixi.js"
@@ -23,6 +24,8 @@ import {
 
 const ITEM_ICON_TEXTURE_PREFIX = "item-icon-"
 const BOX_ICON_SIZE_RATIO = 0.72
+const ITEM_ICON_TEXTURE_INSET_PX = 2
+const BOX_CORNER_RADIUS_RATIO = 0.1
 const BOX_STROKE_WIDTH_PX = 1
 const BOX_TURN_CLEARANCE_PX = 2
 
@@ -76,6 +79,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
   const cargoLayer = new Container()
   const cargoViews: BeltCargoView[] = []
   const resolvedTextures = new Map<string, Texture>()
+  const insetTextures = new Map<string, Texture>()
   const pendingTextures = new Map<string, Promise<Texture>>()
   container.addChild(cargoLayer)
 
@@ -217,6 +221,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
         boxSize,
         ensureCargoView,
         cargoViews,
+        insetTextures,
         itemIconMap,
         resolvedTextures,
       })
@@ -226,6 +231,10 @@ export function createBeltCargoDecoration(): DecorationLayer {
       destroyed = true
       pendingTextures.clear()
       resolvedTextures.clear()
+      for (const texture of insetTextures.values()) {
+        texture.destroy()
+      }
+      insetTextures.clear()
 
       for (const view of cargoViews) {
         view.root.destroy({ children: true })
@@ -483,17 +492,22 @@ function syncBeltCargoViews(options: {
   boxSize: number;
   ensureCargoView: (index: number) => BeltCargoView;
   cargoViews: readonly BeltCargoView[];
+  insetTextures: Map<string, Texture>;
   itemIconMap: ReadonlyMap<string, string>;
   resolvedTextures: ReadonlyMap<string, Texture>;
 }): void {
   const iconSize = options.boxSize * BOX_ICON_SIZE_RATIO
+  const boxCornerRadius = options.boxSize * BOX_CORNER_RADIUS_RATIO
   let visibleCount = 0
 
   for (const entry of options.entries) {
     const view = options.ensureCargoView(visibleCount)
-    const texture = options.resolvedTextures.get(
-      resolveItemIconTextureKey(entry.itemId, options.itemIconMap),
-    )
+    const textureKey = resolveItemIconTextureKey(entry.itemId, options.itemIconMap)
+    const texture = resolveInsetItemIconTexture({
+      textureKey,
+      resolvedTextures: options.resolvedTextures,
+      insetTextures: options.insetTextures,
+    })
 
     view.root.visible = true
     view.root.x = 0
@@ -516,11 +530,12 @@ function syncBeltCargoViews(options: {
 
     view.boxGraphics
       .clear()
-      .rect(
+      .roundRect(
         -options.boxSize / 2,
         -options.boxSize / 2,
         options.boxSize,
         options.boxSize,
+        boxCornerRadius,
       )
       .fill(0xffffff)
       .stroke({
@@ -548,6 +563,65 @@ function syncBeltCargoViews(options: {
       view.mask.clear()
     }
   }
+}
+
+function resolveInsetItemIconTexture(options: {
+  textureKey: string;
+  resolvedTextures: ReadonlyMap<string, Texture>;
+  insetTextures: Map<string, Texture>;
+}): Texture | undefined {
+  const texture = options.resolvedTextures.get(options.textureKey)
+  if (texture === undefined || ITEM_ICON_TEXTURE_INSET_PX <= 0) {
+    return texture
+  }
+
+  const existing = options.insetTextures.get(options.textureKey)
+  if (existing !== undefined) {
+    return existing
+  }
+
+  const insetTexture = createInsetTexture(texture, ITEM_ICON_TEXTURE_INSET_PX)
+  if (insetTexture !== texture) {
+    options.insetTextures.set(options.textureKey, insetTexture)
+  }
+
+  return insetTexture
+}
+
+function createInsetTexture(texture: Texture, insetPx: number): Texture {
+  const frame = texture.frame
+  if (
+    frame === undefined
+    || !Number.isFinite(frame.width)
+    || !Number.isFinite(frame.height)
+  ) {
+    return texture
+  }
+
+  const maxHorizontalInset = Math.max(0, Math.floor((frame.width - 1) / 2))
+  const maxVerticalInset = Math.max(0, Math.floor((frame.height - 1) / 2))
+  const safeInset = Math.min(insetPx, maxHorizontalInset, maxVerticalInset)
+  if (safeInset <= 0) {
+    return texture
+  }
+
+  const width = frame.width - safeInset * 2
+  const height = frame.height - safeInset * 2
+
+  return new Texture({
+    source: texture.source,
+    label: texture.label,
+    frame: new Rectangle(
+      frame.x + safeInset,
+      frame.y + safeInset,
+      width,
+      height,
+    ),
+    orig: new Rectangle(0, 0, width, height),
+    defaultAnchor: texture.defaultAnchor,
+    defaultBorders: texture.defaultBorders,
+    rotate: texture.rotate,
+  })
 }
 
 function drawBeltCargoClipMask(graphics: Graphics, mask: BeltCargoClipMask): void {

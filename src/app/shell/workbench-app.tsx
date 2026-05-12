@@ -349,6 +349,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
   const canvasFloatingToolbar = appHost.internalState.runtime.canvasFloatingToolbar;
   const canvasRightDockToolbar = appHost.internalState.runtime.canvasRightDockToolbar;
   const canvasTopLeftCornerToolbar = appHost.internalState.runtime.canvasTopLeftCornerToolbar;
+  const canvasTopLeftCornerToolbarKey = `${canvasTopLeftCornerToolbar.buttonIds.join("|")}::${canvasTopLeftCornerToolbar.initialOffButtonIds.join("|")}`;
   const inspectorDialogState = appHost.internalState.workbench.dialogState.inspector;
   const selectionCount = appHost.workspace.editor?.state.collections.selection.length ?? 0;
   const openInspectorOnSecondClick = appHost.state.settings.hypergryphInspectorOpenOnSecondClick;
@@ -576,6 +577,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({ appHost }: { appHos
         <CanvasTopLeftCornerToolbar
           appHost={appHost}
           buttonIds={canvasTopLeftCornerToolbar.buttonIds}
+          initialOffButtonIds={canvasTopLeftCornerToolbar.initialOffButtonIds}
+          key={canvasTopLeftCornerToolbarKey}
         />
       ) : null}
       {canvasFloatingToolbar.visible && canvasFloatingToolbar.anchor !== null && canvasFloatingToolbar.buttonIds.length > 0 ? (

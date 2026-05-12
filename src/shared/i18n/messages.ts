@@ -31,6 +31,8 @@ export type MessageKey =
   | "action.removeLink"
   | "action.applyValue"
   | "action.rotatePlacement"
+  | "action.continuousPlacement"
+  | "action.cancelContinuousPlacement"
   | "action.rotateSelection"
   | "action.cancelPlacement"
   | "action.confirmPlacement"
@@ -305,6 +307,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "action.removeLink": "移除链接",
     "action.applyValue": "应用",
     "action.rotatePlacement": "旋转",
+    "action.continuousPlacement": "连续放置",
+    "action.cancelContinuousPlacement": "取消连续放置",
     "action.rotateSelection": "旋转",
     "action.saveBlueprint": "保存蓝图",
     "action.copySelection": "复制选中",
@@ -676,6 +680,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "action.removeLink": "Remove Link",
     "action.applyValue": "Apply",
     "action.rotatePlacement": "Rotate",
+    "action.continuousPlacement": "Continuous placement",
+    "action.cancelContinuousPlacement": "Cancel continuous placement",
     "action.rotateSelection": "Rotate",
     "action.saveBlueprint": "Save Blueprint",
     "action.copySelection": "Copy Selection",

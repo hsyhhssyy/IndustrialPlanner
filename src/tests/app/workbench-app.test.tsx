@@ -1875,6 +1875,57 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".canvas-top-left-corner-toolbar")).toBeNull();
   });
 
+  it("honors the off-suffixed initial top-left toolbar button state", () => {
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+    const gestures: GestureEvent[] = [];
+    appHost.gestureAdapter.subscribe((event) => gestures.push(event));
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+      appHost.internalActions.showCanvasTopLeftCornerToolbar([
+        "canvas-top-left-corner-toolbar-button-toggle-continuous-placement-off",
+      ]);
+    });
+
+    const continuousButton = container.querySelector(
+      '[data-ui-button-id="canvas-top-left-corner-toolbar-button-toggle-continuous-placement"]',
+    ) as HTMLButtonElement | null;
+
+    expect(continuousButton?.textContent).toBe("取消连续放置");
+    expect(continuousButton?.getAttribute("aria-pressed")).toBe("true");
+
+    act(() => {
+      if (continuousButton === null) {
+        return;
+      }
+
+      dispatchPointerEvent(continuousButton, "pointerdown", {
+        pointerId: 37,
+        pointerType: "mouse",
+        clientX: 464,
+        clientY: 156,
+        buttons: 1,
+      });
+      dispatchPointerEvent(continuousButton, "pointerup", {
+        pointerId: 37,
+        pointerType: "mouse",
+        clientX: 464,
+        clientY: 156,
+        buttons: 0,
+      });
+    });
+
+    expect(continuousButton?.textContent).toBe("连续放置");
+    expect(continuousButton?.getAttribute("aria-pressed")).toBe("false");
+    expect(gestures).toMatchObject([
+      {
+        type: "ui-button-mouse-tap",
+        uiButtonId: "canvas-top-left-corner-toolbar-button-toggle-continuous-placement-off",
+      },
+    ]);
+  });
+
   it("emits toggle ui-button events from the canvas top left corner toolbar without leaking canvas gestures", () => {
     const workspace = createWorkspace();
     const appHost = createAppHost(workspace);

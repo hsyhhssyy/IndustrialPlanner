@@ -23,6 +23,7 @@ import {
   type CanvasFloatingToolbarSize,
   type CanvasRightDockToolbarButtonId,
   type CanvasTopLeftCornerToolbarButtonId,
+  type CanvasTopLeftCornerToolbarShowButtonId,
   clampLeftDockWidth,
   createDefaultDialogStateForKey,
   DEFAULT_RIGHT_DOCK_WIDTH,
@@ -69,7 +70,7 @@ export interface AppInternalAction {
   ) => void;
   hideCanvasRightDockToolbar: () => void;
   showCanvasTopLeftCornerToolbar: (
-    buttonIds: readonly CanvasTopLeftCornerToolbarButtonId[],
+    buttonIds: readonly CanvasTopLeftCornerToolbarShowButtonId[],
   ) => void;
   hideCanvasTopLeftCornerToolbar: () => void;
   setLeftDockWidth: (width: number) => void;
@@ -509,27 +510,31 @@ export class AppActionImpl implements AppAction, AppInternalAction {
   public readonly showCanvasTopLeftCornerToolbar: AppInternalAction["showCanvasTopLeftCornerToolbar"] = action((
     buttonIds,
   ) => {
-    const nextButtonIds = normalizeCanvasTopLeftCornerToolbarButtonIds(buttonIds);
+    const nextToolbarState = normalizeCanvasTopLeftCornerToolbarButtons(buttonIds);
 
-    if (nextButtonIds.length === 0) {
+    if (nextToolbarState.buttonIds.length === 0) {
       this.hideCanvasTopLeftCornerToolbar();
       return;
     }
 
     this.internalState.runtime.canvasTopLeftCornerToolbar.visible = true;
-    this.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = nextButtonIds;
+    this.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = nextToolbarState.buttonIds;
+    this.internalState.runtime.canvasTopLeftCornerToolbar.initialOffButtonIds =
+      nextToolbarState.initialOffButtonIds;
   });
 
   public readonly hideCanvasTopLeftCornerToolbar: AppInternalAction["hideCanvasTopLeftCornerToolbar"] = action(() => {
     if (
       !this.internalState.runtime.canvasTopLeftCornerToolbar.visible
       && this.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds.length === 0
+      && this.internalState.runtime.canvasTopLeftCornerToolbar.initialOffButtonIds.length === 0
     ) {
       return;
     }
 
     this.internalState.runtime.canvasTopLeftCornerToolbar.visible = false;
     this.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [];
+    this.internalState.runtime.canvasTopLeftCornerToolbar.initialOffButtonIds = [];
   });
 
   public readonly setLeftDockWidth: AppInternalAction["setLeftDockWidth"] = action((width) => {
@@ -739,23 +744,39 @@ function normalizeCanvasRightDockToolbarButtonIds(
   return deduped;
 }
 
-function normalizeCanvasTopLeftCornerToolbarButtonIds(
-  buttonIds: readonly CanvasTopLeftCornerToolbarButtonId[],
-): CanvasTopLeftCornerToolbarButtonId[] {
+function normalizeCanvasTopLeftCornerToolbarButtons(
+  buttonIds: readonly CanvasTopLeftCornerToolbarShowButtonId[],
+): {
+  buttonIds: CanvasTopLeftCornerToolbarButtonId[];
+  initialOffButtonIds: CanvasTopLeftCornerToolbarButtonId[];
+} {
   const knownButtonIds = new Set<CanvasTopLeftCornerToolbarButtonId>(
     CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS,
   );
   const deduped: CanvasTopLeftCornerToolbarButtonId[] = [];
+  const initialOffButtonIds: CanvasTopLeftCornerToolbarButtonId[] = [];
 
-  for (const buttonId of buttonIds) {
+  for (const requestedButtonId of buttonIds) {
+    const isInitialOffButton = requestedButtonId.endsWith("-off");
+    const buttonId = (isInitialOffButton
+      ? requestedButtonId.slice(0, -4)
+      : requestedButtonId) as CanvasTopLeftCornerToolbarButtonId;
+
     if (!knownButtonIds.has(buttonId) || deduped.includes(buttonId)) {
       continue;
     }
 
     deduped.push(buttonId);
+
+    if (isInitialOffButton) {
+      initialOffButtonIds.push(buttonId);
+    }
   }
 
-  return deduped;
+  return {
+    buttonIds: deduped,
+    initialOffButtonIds,
+  };
 }
 
 function normalizeHelpDialogTab(tabId: string): string | null {

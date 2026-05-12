@@ -1245,7 +1245,7 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.textContent).not.toContain("旧目录");
   });
 
-  it("deletes a folder from the folder edit dialog together with its descendants", async () => {
+  it("blocks deleting a non-empty folder from the folder edit dialog before confirmation", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
     const folder = await createBlueprintFolder({
@@ -1305,6 +1305,76 @@ describe("Left dock panel switching", () => {
     await act(async () => {
       deleteTrigger?.click();
       await flushAsyncEffects();
+      await flushAsyncEffects();
+    });
+
+    const confirmDeleteButton = editDialog?.querySelector(
+      '[data-ui-button-id="blueprint-folder-delete-confirm"]',
+    ) as HTMLButtonElement | null;
+
+    expect(confirmDeleteButton).toBeNull();
+    expect(editDialog?.textContent).toContain("文件夹内仍有子文件夹或蓝图，请先清空后再删除。");
+    await expect(readBlueprintFolder(folder?.folderId ?? "")).resolves.toMatchObject({
+      folderId: folder?.folderId,
+    });
+    await expect(readBlueprintFolder(nestedFolder?.folderId ?? "")).resolves.toMatchObject({
+      folderId: nestedFolder?.folderId,
+    });
+    await expect(readBlueprintRecord(blueprint.blueprintId)).resolves.toMatchObject({
+      blueprintId: blueprint.blueprintId,
+    });
+    expect(visiblePanel?.querySelector(`[data-blueprint-folder-id="${folder?.folderId ?? ""}"]`)).not.toBeNull();
+  });
+
+  it("deletes an empty folder from the folder edit dialog after confirmation", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const folder = await createBlueprintFolder({
+      name: "待删除空目录",
+    });
+
+    const workspace = createWorkspace();
+    const appHost = createAppHost(workspace);
+
+    runInAction(() => {
+      appHost.internalState.runtime.activePanel = "blueprint";
+    });
+
+    await act(async () => {
+      root.render(
+        <>
+          <LeftDock appHost={appHost} />
+          <BlueprintFolderDialog appHost={appHost} controller={appHost.blueprintFolderDialog} />
+        </>,
+      );
+      await flushAsyncEffects();
+    });
+
+    const visiblePanel = queryVisibleLeftDockPanel(container);
+    const editButton = visiblePanel?.querySelector(
+      `[data-blueprint-folder-edit-id="${folder?.folderId ?? ""}"]`,
+    ) as HTMLButtonElement | null;
+
+    expect(editButton).not.toBeNull();
+
+    await act(async () => {
+      editButton?.click();
+      await flushAsyncEffects();
+    });
+
+    const editDialog = container.querySelector(
+      '[data-dialog-key="blueprint-folder-edit"]',
+    ) as HTMLDivElement | null;
+    const deleteTrigger = editDialog?.querySelector(
+      '[data-ui-button-id="blueprint-folder-delete-trigger"]',
+    ) as HTMLButtonElement | null;
+
+    expect(deleteTrigger).not.toBeNull();
+
+    await act(async () => {
+      deleteTrigger?.click();
+      await flushAsyncEffects();
+      await flushAsyncEffects();
     });
 
     const confirmDeleteButton = editDialog?.querySelector(
@@ -1321,8 +1391,6 @@ describe("Left dock panel switching", () => {
 
     expect(container.querySelector('[data-dialog-key="blueprint-folder-edit"]')).toBeNull();
     await expect(readBlueprintFolder(folder?.folderId ?? "")).resolves.toBeNull();
-    await expect(readBlueprintFolder(nestedFolder?.folderId ?? "")).resolves.toBeNull();
-    await expect(readBlueprintRecord(blueprint.blueprintId)).resolves.toBeNull();
     expect(visiblePanel?.querySelector(`[data-blueprint-folder-id="${folder?.folderId ?? ""}"]`)).toBeNull();
   });
 
@@ -1479,6 +1547,7 @@ describe("Left dock panel switching", () => {
     expect(breadcrumbLabel?.textContent?.trim()).toBe("根目录 / … / 用户炼油");
     expect(breadcrumbLabel?.getAttribute("title")).toBe("根目录 / 用户总线 / 用户炼油");
 
+    await expect(deleteBlueprintFolder(userNestedFolder?.folderId ?? "")).resolves.not.toBeNull();
     await expect(deleteBlueprintFolder(userRootFolder?.folderId ?? "")).resolves.not.toBeNull();
 
     await act(async () => {

@@ -4326,6 +4326,10 @@ body.is-resizing-left-dock * {
   height: min(680px, 100%);
 }
 
+.save-blueprint-dialog .dialog-shell-header {
+  border-bottom-color: color-mix(in srgb, var(--line) 58%, transparent);
+}
+
 .blueprint-preview-dialog {
   width: min(760px, 100%);
   height: min(680px, 100%);
@@ -4663,6 +4667,15 @@ body.is-resizing-left-dock * {
   background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%);
 }
 
+.save-blueprint-dialog .save-blueprint-form {
+  gap: 14px;
+  padding: 16px;
+  border: 0;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 94%, white 3%) 0%, var(--surface-1) 100%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 40%, transparent);
+}
+
 .save-blueprint-form-content {
   display: grid;
   gap: 12px;
@@ -4670,6 +4683,12 @@ body.is-resizing-left-dock * {
   min-width: 0;
   overflow: auto;
   padding-right: 2px;
+}
+
+.save-blueprint-dialog .save-blueprint-form-content {
+  gap: 14px;
+  overflow: hidden;
+  padding-right: 0;
 }
 
 .save-blueprint-error {
@@ -4724,15 +4743,26 @@ body.is-resizing-left-dock * {
   border-color: var(--line-strong);
 }
 
-.save-blueprint-input:focus-visible,
-.save-blueprint-textarea:focus-visible {
+.save-blueprint-dialog .save-blueprint-input:focus-visible,
+.save-blueprint-dialog .save-blueprint-textarea:focus-visible {
+  outline: none;
   border-color: var(--accent-strong);
-  box-shadow: 0 0 0 1px var(--accent-strong);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-strong) 20%, transparent);
 }
 
 .save-blueprint-textarea {
   min-height: 136px;
   resize: vertical;
+}
+
+.save-blueprint-dialog .save-blueprint-textarea {
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+
+.save-blueprint-dialog .save-blueprint-textarea::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .save-blueprint-folder-picker-card {
@@ -4743,6 +4773,15 @@ body.is-resizing-left-dock * {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: color-mix(in srgb, var(--surface-1) 92%, white 4%);
+}
+
+.save-blueprint-dialog .save-blueprint-folder-picker-card {
+  gap: 8px;
+  padding: 12px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 95%, white 3%) 0%, color-mix(in srgb, var(--surface-2) 92%, var(--surface-1)) 100%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 34%, transparent);
 }
 
 .save-blueprint-folder-picker-toolbar {
@@ -4775,6 +4814,13 @@ body.is-resizing-left-dock * {
   padding-bottom: 2px;
   border-top: 1px solid var(--line);
   background: var(--surface-1);
+}
+
+.save-blueprint-dialog .save-blueprint-actions {
+  gap: 12px;
+  padding: 0;
+  border-top: 0;
+  background: transparent;
 }
 
 .save-blueprint-actions.is-triple-action {

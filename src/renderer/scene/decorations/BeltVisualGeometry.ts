@@ -87,6 +87,13 @@ export function isStrictBeltDefinitionId(definitionId: string): boolean {
   return STRICT_BELT_DEFINITION_IDS.has(definitionId)
 }
 
+function isBeltPortExtensionEndpointDevice(
+  ctx: DecorationSyncContext,
+  definitionId: string,
+): boolean {
+  return !ctx.workspace.registry.queries.isGeneralLogisticsDevice(definitionId)
+}
+
 export function resolveBeltInsertionEntries(ctx: DecorationSyncContext): BeltInsertionEntry[] {
   return resolveBeltPortExtensionEntries(ctx)
     .filter((entry) => entry.kind === "belt-output-to-device")
@@ -164,7 +171,7 @@ export function resolveBeltPortExtensionEntries(ctx: DecorationSyncContext): Bel
     const targetPorts = inputPortsByConnectionKey.get(targetKey) ?? []
     const targetPort = targetPorts.find((candidate) =>
       candidate.entity.id !== outputPort.entity.id
-      && !isStrictBeltDefinitionId(candidate.entity.definitionId),
+      && isBeltPortExtensionEndpointDevice(ctx, candidate.entity.definitionId),
     )
 
     if (targetPort === undefined) {
@@ -194,7 +201,7 @@ export function resolveBeltPortExtensionEntries(ctx: DecorationSyncContext): Bel
     const sourcePorts = outputPortsByConnectionKey.get(sourceKey) ?? []
     const sourcePort = sourcePorts.find((candidate) =>
       candidate.entity.id !== inputPort.entity.id
-      && !isStrictBeltDefinitionId(candidate.entity.definitionId),
+      && isBeltPortExtensionEndpointDevice(ctx, candidate.entity.definitionId),
     )
 
     if (sourcePort === undefined) {

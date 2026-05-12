@@ -6,6 +6,7 @@ import { BlueprintFolderForm } from "@/app/shell/panels/blueprint-folder-form";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import type { WorkbenchBlueprintFolderDialogController } from "@/app/shell/state/blueprint-folder-dialog-state";
 import {
+  canDeleteBlueprintFolder,
   createBlueprintFolder,
   deleteBlueprintFolder,
   renameBlueprintFolder,
@@ -149,12 +150,47 @@ export const BlueprintFolderDialog = observer(function BlueprintFolderDialog({
       const deletedFolder = await deleteBlueprintFolder(editingFolder.folderId);
 
       if (deletedFolder === null) {
+        const canDelete = await canDeleteBlueprintFolder(editingFolder.folderId);
+
+        if (canDelete === false) {
+          setIsDeleteConfirming(false);
+          setErrorMessage(t("workbench.blueprint.folderDeleteNotEmpty"));
+          return;
+        }
+
         setErrorMessage(t("workbench.blueprint.folderDeleteFailed"));
         return;
       }
 
       controller.markMutated();
       controller.close();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteTrigger = async () => {
+    if (editingFolder === null) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      const canDelete = await canDeleteBlueprintFolder(editingFolder.folderId);
+
+      if (canDelete === false) {
+        setErrorMessage(t("workbench.blueprint.folderDeleteNotEmpty"));
+        return;
+      }
+
+      if (canDelete === null) {
+        setErrorMessage(t("workbench.blueprint.folderDeleteFailed"));
+        return;
+      }
+
+      setIsDeleteConfirming(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -274,8 +310,7 @@ export const BlueprintFolderDialog = observer(function BlueprintFolderDialog({
                     data-ui-button-id="blueprint-folder-delete-trigger"
                     disabled={isSubmitting}
                     onClick={() => {
-                      setIsDeleteConfirming(true);
-                      setErrorMessage(null);
+                      void handleDeleteTrigger();
                     }}
                     type="button"
                   >

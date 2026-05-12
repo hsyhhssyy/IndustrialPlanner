@@ -209,6 +209,29 @@ export async function deleteBlueprintDocument(
   });
 }
 
+export async function canDeleteBlueprintFolder(folderId: string): Promise<boolean | null> {
+  const rootFolder = await readBlueprintFolder(folderId);
+
+  if (rootFolder === null) {
+    return null;
+  }
+
+  const entries = await listBlueprintStorageEntries({});
+  const folderTreeIds = collectBlueprintFolderTreeIds(folderId, entries);
+
+  if (folderTreeIds.size > 1) {
+    return false;
+  }
+
+  const hasBlueprintDescendant = entries.some((entry) => (
+    entry.kind === "blueprint"
+      && entry.parentFolderId !== null
+      && folderTreeIds.has(entry.parentFolderId)
+  ));
+
+  return !hasBlueprintDescendant;
+}
+
 export async function deleteBlueprintFolder(
   folderId: string,
 ): Promise<BlueprintFolderRecord | null> {
@@ -224,56 +247,19 @@ export async function deleteBlueprintFolder(
     return rootFolder;
   }
 
-  const entries = await listBlueprintStorageEntries({ includeDeleted: true });
-  const folderTreeIds = collectBlueprintFolderTreeIds(folderId, entries);
-  const deletedAt = new Date().toISOString();
-  const pendingEntries: Array<{
-    key: string;
-    entry: BlueprintStorageEntry;
-  }> = entries.flatMap((entry): Array<{
-    key: string;
-    entry: BlueprintStorageEntry;
-  }> => {
-    if (entry.kind === "folder") {
-      if (!folderTreeIds.has(entry.folderId) || entry.deletedAt !== null) {
-        return [];
-      }
+  const canDelete = await canDeleteBlueprintFolder(folderId);
 
-      return [{
-        key: createFolderKey(entry.folderId),
-        entry: {
-          ...entry,
-          deletedAt,
-          updatedAt: deletedAt,
-        } satisfies BlueprintFolderRecord,
-      }];
-    }
-
-    if (!folderTreeIds.has(entry.parentFolderId ?? "") || entry.deletedAt !== null) {
-      return [];
-    }
-
-    return [{
-      key: createBlueprintKey(entry.blueprintId),
-      entry: {
-        ...entry,
-        deletedAt,
-        updatedAt: deletedAt,
-      } satisfies BlueprintRecord,
-    }];
-  });
-
-  const didWrite = await writeBlueprintEntries(pendingEntries);
-
-  if (!didWrite) {
+  if (canDelete !== true) {
     return null;
   }
 
-  return {
+  const deletedAt = new Date().toISOString();
+
+  return await writeBlueprintEntry(createFolderKey(rootFolder.folderId), {
     ...rootFolder,
     deletedAt,
     updatedAt: deletedAt,
-  };
+  });
 }
 
 export async function listBlueprintDirectory(

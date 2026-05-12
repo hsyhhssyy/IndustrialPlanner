@@ -84,10 +84,40 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(
       module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
     ).toEqual({ status: "handled" });
+    expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
+      CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST,
+    ]);
     expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
       PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
     );
+  });
+
+  it("toggles touch continuous placement from the top-left toolbar", () => {
+    const { context, appHost } = createContext({
+      activeTool: "single-placement",
+      initialPreview: true,
+      placementAnchor: { x: 5, y: 5 },
+      singlePlacementDeviceId: "device-a",
+      singlePlacementPointerMode: "touch",
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    expect(
+      module.handle(
+        uiButtonTouchTapEvent(`${CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST}-on`),
+        context,
+      ),
+    ).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.singlePlacementContinuous).toBe(true);
+
+    expect(
+      module.handle(
+        uiButtonTouchTapEvent(`${CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST}-off`),
+        context,
+      ),
+    ).toEqual({ status: "handled" });
+    expect(appHost.internalState.runtime.singlePlacementContinuous).toBe(false);
   });
 
   it("closes the left dock when entering single-placement on mobile and tablet", () => {
@@ -292,17 +322,82 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(toolbar.appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps mouse placement active when apply uses ctrl", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "single-placement",
+      initialPreview: true,
+      placementAnchor: { x: 5, y: 5 },
+      singlePlacementDeviceId: "device-a",
+      singlePlacementPointerMode: "mouse",
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    expect(
+      module.handle(
+        mouseTapEvent({
+          button: 0,
+          longPress: false,
+          modifiers: { ctrl: true },
+        }),
+        context,
+      ),
+    ).toEqual({ status: "handled" });
+
+    expect(editor.actions.applyPlacementDraft).toHaveBeenCalledTimes(1);
+    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-a", {
+      x: 5,
+      y: 5,
+    });
+    expect(appHost.internalActions.setActiveTool).not.toHaveBeenCalled();
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 5, y: 5 });
+    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-a");
+  });
+
+  it("keeps touch placement active and preserves rotation when continuous placement is enabled", () => {
+    const { context, editor, appHost } = createContext({
+      activeTool: "single-placement",
+      initialPreview: true,
+      placementAnchor: { x: 5, y: 5 },
+      previewRotation: 180,
+      singlePlacementContinuous: true,
+      singlePlacementDeviceId: "device-a",
+      singlePlacementPointerMode: "touch",
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    expect(
+      module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-ok"), context),
+    ).toEqual({ status: "handled" });
+
+    expect(editor.actions.applyPlacementDraft).toHaveBeenCalledTimes(1);
+    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-a", {
+      x: 5,
+      y: 5,
+    });
+    expect(editor.actions.rotateCollection).toHaveBeenCalledTimes(2);
+    expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
+      `${CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST}-off`,
+    ]);
+    expect(appHost.internalActions.setActiveTool).not.toHaveBeenCalled();
+    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(appHost.internalState.runtime.singlePlacementContinuous).toBe(true);
+  });
+
   it("applies with mouse left tap and cancels from the toolbar", () => {
     const apply = createContext({
       activeTool: "single-placement",
       placementAnchor: { x: 5, y: 5 },
       singlePlacementDeviceId: "device-a",
+      singlePlacementPointerMode: "mouse",
       initialPreview: true,
     });
     const cancel = createContext({
       activeTool: "single-placement",
       placementAnchor: { x: 5, y: 5 },
+      singlePlacementContinuous: true,
       singlePlacementDeviceId: "device-a",
+      singlePlacementPointerMode: "touch",
       initialPreview: true,
     });
     const module = createHypergryphSinglePlacementGestureModule();
@@ -319,8 +414,10 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-cancel"), cancel.context),
     ).toEqual({ status: "handled" });
     expect(cancel.editor.actions.cancelPlacementDraft).toHaveBeenCalledTimes(1);
+    expect(cancel.appHost.internalActions.hideCanvasTopLeftCornerToolbar).toHaveBeenCalledTimes(1);
     expect(cancel.appHost.internalState.activeTool).toBe("select");
     expect(cancel.appHost.internalState.runtime.placementAnchor).toBeNull();
+    expect(cancel.appHost.internalState.runtime.singlePlacementContinuous).toBe(false);
     expect(cancel.appHost.internalState.runtime.singlePlacementDeviceId).toBeNull();
   });
 });
@@ -328,7 +425,10 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
 function createContext(options: {
   activeTool?: "select" | "move" | "marquee" | "single-placement";
   placementAnchor?: GridPoint | null;
+  previewRotation?: 0 | 90 | 180 | 270;
+  singlePlacementContinuous?: boolean;
   singlePlacementDeviceId?: string | null;
+  singlePlacementPointerMode?: "mouse" | "touch" | null;
   selectingPlacementGroup?: "beltLogistics" | "pipeLogistics" | "resourcePower" | "warehouse" | "basicProduction" | "advancedManufacturing" | null;
   initialPreview?: boolean;
   previewRect?: GridRect;
@@ -357,7 +457,7 @@ function createContext(options: {
   const previewEntity = entity("preview-entity", {
     x: previewRectRef.current.x,
     y: previewRectRef.current.y,
-  });
+  }, options.previewRotation ?? 0);
   const viewportClientRect: ClientPixelRect = {
     left: 0,
     top: 0,
@@ -382,6 +482,7 @@ function createContext(options: {
       },
     },
     queries: {
+      getEntityById: vi.fn((entityId) => (entityId === previewEntity.id ? previewEntity : null)),
       findEntityAtClientPixelPoint: vi.fn((point) => {
         const gridCell = {
           x: Math.floor(point.x),
@@ -421,6 +522,7 @@ function createContext(options: {
         (deviceDefinitionId: string, centerGridPoint: GridPoint) => {
           previewEntity.definitionId = deviceDefinitionId;
           previewEntity.position = { ...centerGridPoint };
+          previewEntity.rotation = 0;
           previewRectRef.current = {
             x: centerGridPoint.x,
             y: centerGridPoint.y,
@@ -433,7 +535,10 @@ function createContext(options: {
       cancelPlacementDraft: vi.fn(() => {
         preview.replace([]);
       }),
-      applyPlacementDraft: vi.fn(() => true),
+      applyPlacementDraft: vi.fn(() => {
+        preview.replace([]);
+        return true;
+      }),
       moveCollectionTo: vi.fn(({
         startGridPoint,
         endGridPoint,
@@ -452,7 +557,9 @@ function createContext(options: {
           y: previewEntity.position.y + vector.y,
         };
       }),
-      rotateCollection: vi.fn(),
+      rotateCollection: vi.fn(() => {
+        previewEntity.rotation = rotateClockwise(previewEntity.rotation);
+      }),
     },
   };
   const shortcuts: Record<string, string> = {
@@ -484,7 +591,9 @@ function createContext(options: {
       workbench: workbenchState,
       runtime: {
         placementAnchor: options.placementAnchor ?? null,
+        singlePlacementContinuous: options.singlePlacementContinuous ?? false,
         singlePlacementDeviceId: options.singlePlacementDeviceId ?? null,
+        singlePlacementPointerMode: options.singlePlacementPointerMode ?? null,
         selectingPlacementGroup: options.selectingPlacementGroup ?? null,
         canvasFloatingToolbar: {
           visible: false,
@@ -492,6 +601,11 @@ function createContext(options: {
           anchor: null,
           attachedCollection: null,
           measuredSize: null,
+        },
+        canvasTopLeftCornerToolbar: {
+          visible: false,
+          buttonIds: [],
+          initialOffButtonIds: [],
         },
       },
     },
@@ -516,6 +630,15 @@ function createContext(options: {
         appHost.internalState.runtime.canvasFloatingToolbar.visible = false;
         appHost.internalState.runtime.canvasFloatingToolbar.buttonIds = [];
         appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
+      }),
+      showCanvasTopLeftCornerToolbar: vi.fn((buttonIds) => {
+        appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible = true;
+        appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [...buttonIds];
+      }),
+      hideCanvasTopLeftCornerToolbar: vi.fn(() => {
+        appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible = false;
+        appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [];
+        appHost.internalState.runtime.canvasTopLeftCornerToolbar.initialOffButtonIds = [];
       }),
       alignCanvasFloatingToolbar: vi.fn(() => true),
       getKeyboardShortcutFor: vi.fn((key: string) => shortcuts[key] ?? ""),
@@ -568,6 +691,9 @@ const PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST = [
   "canvas-floating-toolbar-button-ok",
 ] as const;
 
+const CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST =
+  "canvas-top-left-corner-toolbar-button-toggle-continuous-placement";
+
 type MockCollection = string[] & {
   contains(entityId: string): boolean;
   replace(entityIds: readonly string[]): void;
@@ -585,6 +711,7 @@ type MockEditor = {
   >;
   queries: Pick<
     EditorContract["queries"],
+    | "getEntityById"
     | "findClientRectForGridCell"
     | "findEntityAtClientPixelPoint"
     | "findEntityCollectionGridRect"
@@ -601,12 +728,12 @@ function createCollection(entityIds: readonly string[]): MockCollection {
   return collection;
 }
 
-function entity(id: string, position: GridPoint): WorldEntity {
+function entity(id: string, position: GridPoint, rotation: 0 | 90 | 180 | 270): WorldEntity {
   return {
     id,
     definitionId: "device-a",
     position,
-    rotation: 0,
+    rotation,
     config: {},
     tags: [],
   };
@@ -665,6 +792,7 @@ function touchDragMoveEvent(options: { position: GridPoint }) {
 function mouseTapEvent(options: {
   button: number;
   longPress: boolean;
+  modifiers?: Partial<ReturnType<typeof emptyModifiers>>;
 }) {
   return {
     type: "mouse tap" as const,
@@ -674,7 +802,10 @@ function mouseTapEvent(options: {
     position: { x: 6, y: 4 },
     longPress: options.longPress,
     pointerEntity: null,
-    modifiers: emptyModifiers(),
+    modifiers: {
+      ...emptyModifiers(),
+      ...options.modifiers,
+    },
     sourceEvent: null,
   };
 }
@@ -747,4 +878,17 @@ function emptyModifiers() {
     meta: false,
     shift: false,
   };
+}
+
+function rotateClockwise(rotation: 0 | 90 | 180 | 270): 0 | 90 | 180 | 270 {
+  switch (rotation) {
+    case 0:
+      return 90;
+    case 90:
+      return 180;
+    case 180:
+      return 270;
+    case 270:
+      return 0;
+  }
 }

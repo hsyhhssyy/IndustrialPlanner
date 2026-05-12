@@ -5,6 +5,7 @@ import type {
 import type { RuntimeDeviceRecipeState, SimulationMutableRuntimeState } from "./runtime-state";
 import {
   aggregateInputItems,
+  consumeSelections,
   finishRecipeIfPossible,
   resolveDeviceRecipePlans,
   selectRecipeInputs,
@@ -15,6 +16,7 @@ import {
  * 阶段职责：先让 waiting-output 的配方再次尝试落产物，然后为空闲设备按计划启动一轮配方。
  * instant 配方在结算阶段直接消耗输入并尝试输出；reserved-item 配方只预留输入，完成时再扣除。
  */
+/** AI-CORRECTION 2026-05-12: immediate-consume 与 reserved-item 都会在启动后进入 running，并按 durationTicks 累积进度；前者只是在启动时立即扣除输入，不会在同一 tick 直接完成。 */
 export function settleRecipes(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
@@ -59,12 +61,8 @@ function startIdleDevices(
     }
 
     if (recipe.recipeType === "immediate-consume") {
-      if (finishInstantRecipe(topology, state, recipe)) {
-        deviceState.block = false;
-      } else {
-        deviceState.block = true;
-      }
-      continue;
+      consumeSelections(state.persistent.slots, recipe.reservations);
+      recipe.reservations = [];
     }
 
     deviceState.recipe = recipe;
@@ -91,7 +89,7 @@ function selectStartableRecipe(
       recipeType: plan.recipeType,
       progressTicks: 0,
       durationTicks: plan.durationTicks,
-      state: plan.recipeType === "immediate-consume" ? "waiting-output" : "running",
+      state: "running",
       plan,
       reservations,
       inputItems: aggregateInputItems(reservations),
@@ -101,20 +99,29 @@ function selectStartableRecipe(
   return null;
 }
 
-function finishInstantRecipe(
-  topology: CompiledSimulationTopology,
-  state: SimulationMutableRuntimeState,
-  recipe: RuntimeDeviceRecipeState,
-): boolean {
-  const syntheticRecipe: RuntimeDeviceRecipeState = {
-    ...recipe,
-    runId: recipe.runId,
-    recipeId: recipe.plan.recipeId,
-    recipeType: "immediate-consume",
-    progressTicks: recipe.plan.durationTicks,
-    durationTicks: recipe.plan.durationTicks,
-    state: "waiting-output",
-    inputItems: aggregateInputItems(recipe.reservations),
-  };
-  return finishRecipeIfPossible(topology, state, syntheticRecipe);
-}
+// AI-REMOVED 2026-05-12:
+// Reason: immediate-consume 配方不应在启动 tick 直接完成，而应在启动时扣料后进入正常 running 生命周期。
+// Trigger: 仿真中生产配方瞬间完成，忽略了 durationTicks；设计文档已明确两类配方都必须逐 tick 推进。
+// Evidence: stage-5 旧逻辑对 immediate-consume 直接调用 finishInstantRecipe，绕过了 stage-1 的 progressTicks 累积。
+// Replacement: /home/coder/IndustrialPlanner/src/simulation/runtime/stage-5-settle-recipes.ts 中的 startIdleDevices immediate-consume 启动分支
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function finishInstantRecipe(
+//   topology: CompiledSimulationTopology,
+//   state: SimulationMutableRuntimeState,
+//   recipe: RuntimeDeviceRecipeState,
+// ): boolean {
+//   const syntheticRecipe: RuntimeDeviceRecipeState = {
+//     ...recipe,
+//     runId: recipe.runId,
+//     recipeId: recipe.plan.recipeId,
+//     recipeType: "immediate-consume",
+//     progressTicks: recipe.plan.durationTicks,
+//     durationTicks: recipe.plan.durationTicks,
+//     state: "waiting-output",
+//     inputItems: aggregateInputItems(recipe.reservations),
+//   };
+//   return finishRecipeIfPossible(topology, state, syntheticRecipe);
+// }

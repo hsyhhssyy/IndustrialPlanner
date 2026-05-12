@@ -20,6 +20,8 @@ describe("createSimulationHost", () => {
   const transportRecipeDurationTicks = STANDARD_TICK_RATE_PER_SECOND
   const transportRecipeCompletionTick = transportRecipeDurationTicks + 1
   const transportDeliveryTick = transportRecipeDurationTicks + 2
+  const productionRecipeDurationTicks = 2 * STANDARD_TICK_RATE_PER_SECOND
+  const productionRecipeCompletionTick = productionRecipeDurationTicks + 1
 
   it("keeps the compiled topology on the simulation owner host", async () => {
     vi.stubGlobal("Worker", undefined)
@@ -297,19 +299,26 @@ describe("createSimulationHost", () => {
     expect(tickOne.status).toBe("ready")
     expect(host.queries.getDeviceRuntimeStatus("missing-device")).toBeNull()
     expect(grinderStatusAtRequestedTick).toEqual(expect.objectContaining({
+      recipeId: "r_crusher_iron_powder_from_iron_nugget_basic",
+      progressSeconds: 0,
+      desiredSeconds: 2,
       slotItems: expect.arrayContaining([
         expect.objectContaining({
           storageGroupId: "item_input_buffer",
           slotId: "input_slot_1",
+          itemType: null,
+          count: 0,
         }),
         expect.objectContaining({
           storageGroupId: "item_output_buffer",
           slotId: "output_slot_1",
+          itemType: null,
+          count: 0,
         }),
       ]),
     }))
 
-    await host.internalActions.syncToTick(transportRecipeCompletionTick)
+    await host.internalActions.syncToTick(productionRecipeCompletionTick)
 
     expect(host.queries.getDeviceRuntimeStatus("grinder")).toEqual(expect.objectContaining({
       recipeId: null,
@@ -379,7 +388,7 @@ describe("createSimulationHost", () => {
     const host = createSimulationHost(workspace)
 
     await host.actions.start()
-    const completedTick = await host.internalActions.syncToTick(transportRecipeCompletionTick)
+    const completedTick = await host.internalActions.syncToTick(productionRecipeCompletionTick)
 
     expect(completedTick.status).toBe("ready")
     if (completedTick.status !== "ready") {

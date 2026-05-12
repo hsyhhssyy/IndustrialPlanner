@@ -16,15 +16,16 @@ import {
 type CanvasTopLeftCornerToolbarIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
 
 interface CanvasTopLeftCornerToolbarDefinition {
-  readonly iconWhenOff: CanvasTopLeftCornerToolbarIconKind;
-  readonly iconWhenOn: CanvasTopLeftCornerToolbarIconKind;
-  readonly labelKeyWhenOff: MessageKey;
-  readonly labelKeyWhenOn: MessageKey;
+  readonly iconForOnButton: CanvasTopLeftCornerToolbarIconKind;
+  readonly iconForOffButton: CanvasTopLeftCornerToolbarIconKind;
+  readonly labelKeyForOnButton: MessageKey;
+  readonly labelKeyForOffButton: MessageKey;
 }
 
 interface CanvasTopLeftCornerToolbarProps {
   appHost: AppHost;
   buttonIds: readonly CanvasTopLeftCornerToolbarButtonId[];
+  initialOffButtonIds: readonly CanvasTopLeftCornerToolbarButtonId[];
 }
 
 const CANVAS_TOP_LEFT_CORNER_TOOLBAR_DEFINITIONS: Record<
@@ -32,16 +33,22 @@ const CANVAS_TOP_LEFT_CORNER_TOOLBAR_DEFINITIONS: Record<
   CanvasTopLeftCornerToolbarDefinition
 > = {
   "canvas-top-left-corner-toolbar-button-toggle-pipe": {
-    iconWhenOff: "eye-off",
-    iconWhenOn: "eye",
-    labelKeyWhenOff: "action.deemphasizePipe",
-    labelKeyWhenOn: "action.showPipe",
+    iconForOnButton: "eye-off",
+    iconForOffButton: "eye",
+    labelKeyForOnButton: "action.deemphasizePipe",
+    labelKeyForOffButton: "action.showPipe",
   },
   "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee": {
-    iconWhenOff: "batch-select",
-    iconWhenOn: "batch-select",
-    labelKeyWhenOff: "action.switchToReverseMarquee",
-    labelKeyWhenOn: "action.switchToNormalMarquee",
+    iconForOnButton: "batch-select",
+    iconForOffButton: "batch-select",
+    labelKeyForOnButton: "action.switchToReverseMarquee",
+    labelKeyForOffButton: "action.switchToNormalMarquee",
+  },
+  "canvas-top-left-corner-toolbar-button-toggle-continuous-placement": {
+    iconForOnButton: "placement",
+    iconForOffButton: "placement",
+    labelKeyForOnButton: "action.continuousPlacement",
+    labelKeyForOffButton: "action.cancelContinuousPlacement",
   },
 };
 
@@ -51,29 +58,33 @@ function joinClassNames(values: Array<string | undefined | false>): string {
 
 function resolveToggleUiButtonId(
   buttonId: CanvasTopLeftCornerToolbarButtonId,
-  nextPressed: boolean,
+  isShowingOffButton: boolean,
 ): string {
-  return `${buttonId}-${nextPressed ? "on" : "off"}`;
+  return `${buttonId}-${isShowingOffButton ? "off" : "on"}`;
 }
 
 export function CanvasTopLeftCornerToolbar({
   appHost,
   buttonIds,
+  initialOffButtonIds,
 }: CanvasTopLeftCornerToolbarProps) {
   const t = appHost.actions.translate;
-  const [pressedButtonIds, setPressedButtonIds] = useState<CanvasTopLeftCornerToolbarButtonId[]>([]);
-  const pressedButtonIdsRef = useRef<CanvasTopLeftCornerToolbarButtonId[]>([]);
+  const [showingOffButtonIds, setShowingOffButtonIds] = useState<CanvasTopLeftCornerToolbarButtonId[]>(
+    () => initialOffButtonIds.filter((buttonId) => buttonIds.includes(buttonId)),
+  );
+  const showingOffButtonIdsRef = useRef<CanvasTopLeftCornerToolbarButtonId[]>(showingOffButtonIds);
   const buttonIdsKey = buttonIds.join("|");
   const visibleButtonIds = new Set(buttonIds);
-  const visiblePressedButtonIds = pressedButtonIds.filter((buttonId) =>
+  const visibleOffButtonIds = showingOffButtonIds.filter((buttonId) =>
     visibleButtonIds.has(buttonId),
   );
 
   useEffect(() => {
-    const nextPressedButtonIds = pressedButtonIdsRef.current.filter((buttonId) =>
+    const nextOffButtonIds = showingOffButtonIdsRef.current.filter((buttonId) =>
       buttonIds.includes(buttonId),
     );
-    pressedButtonIdsRef.current = nextPressedButtonIds;
+    showingOffButtonIdsRef.current = nextOffButtonIds;
+    setShowingOffButtonIds(nextOffButtonIds);
   }, [buttonIds, buttonIdsKey]);
 
   const stopUiPropagation = (
@@ -101,18 +112,17 @@ export function CanvasTopLeftCornerToolbar({
     event: ReactPointerEvent<HTMLButtonElement>,
     buttonId: CanvasTopLeftCornerToolbarButtonId,
   ) => {
-    const currentPressedButtonIds = pressedButtonIdsRef.current.filter((currentButtonId) =>
+    const currentOffButtonIds = showingOffButtonIdsRef.current.filter((currentButtonId) =>
       buttonIds.includes(currentButtonId),
     );
-    const isPressed = currentPressedButtonIds.includes(buttonId);
-    const nextPressed = !isPressed;
-    const uiButtonId = resolveToggleUiButtonId(buttonId, nextPressed);
+    const isShowingOffButton = currentOffButtonIds.includes(buttonId);
+    const uiButtonId = resolveToggleUiButtonId(buttonId, isShowingOffButton);
 
     event.stopPropagation();
-    pressedButtonIdsRef.current = nextPressed
-      ? [...currentPressedButtonIds, buttonId]
-      : currentPressedButtonIds.filter((currentButtonId) => currentButtonId !== buttonId);
-    setPressedButtonIds(pressedButtonIdsRef.current);
+    showingOffButtonIdsRef.current = isShowingOffButton
+      ? currentOffButtonIds.filter((currentButtonId) => currentButtonId !== buttonId)
+      : [...currentOffButtonIds, buttonId];
+    setShowingOffButtonIds(showingOffButtonIdsRef.current);
 
     if (event.pointerType === "mouse") {
       appHost.gestureAdapter.handleUiButtonMouseTap({
@@ -154,17 +164,23 @@ export function CanvasTopLeftCornerToolbar({
     >
       {buttonIds.map((buttonId) => {
         const definition = CANVAS_TOP_LEFT_CORNER_TOOLBAR_DEFINITIONS[buttonId];
-        const isPressed = visiblePressedButtonIds.includes(buttonId);
-        const label = t(isPressed ? definition.labelKeyWhenOn : definition.labelKeyWhenOff);
-        const icon = isPressed ? definition.iconWhenOn : definition.iconWhenOff;
+        const isShowingOffButton = visibleOffButtonIds.includes(buttonId);
+        const label = t(
+          isShowingOffButton
+            ? definition.labelKeyForOffButton
+            : definition.labelKeyForOnButton,
+        );
+        const icon = isShowingOffButton
+          ? definition.iconForOffButton
+          : definition.iconForOnButton;
 
         return (
           <button
             aria-label={label}
-            aria-pressed={isPressed}
+            aria-pressed={isShowingOffButton}
             className={joinClassNames([
               "canvas-top-left-corner-toolbar-button",
-              isPressed ? "is-active" : undefined,
+              isShowingOffButton ? "is-active" : undefined,
             ])}
             data-ui-button-id={buttonId}
             key={buttonId}

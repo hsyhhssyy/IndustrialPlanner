@@ -4,6 +4,7 @@ import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import { saveToIndexedDb } from "@/shared/storage/browser-storage";
 import {
   BLUEPRINT_STORE_LOCATION,
+  canDeleteBlueprintFolder,
   createBlueprintFolder,
   deleteBlueprintFolder,
   deleteBlueprintDocument,
@@ -181,7 +182,7 @@ describe("blueprint-storage", () => {
     });
   });
 
-  it("recursively deletes folders together with nested folders and blueprints", async () => {
+  it("rejects deleting folders that still contain nested folders or blueprints", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
     const rootFolder = await createBlueprintFolder({
@@ -207,17 +208,51 @@ describe("blueprint-storage", () => {
       parentFolderId: nestedFolder?.folderId,
     });
 
+    await expect(canDeleteBlueprintFolder(rootFolder?.folderId ?? "")).resolves.toBe(false);
+
     const deletedFolder = await deleteBlueprintFolder(rootFolder?.folderId ?? "");
 
-    expect(deletedFolder?.deletedAt).not.toBeNull();
-    await expect(readBlueprintFolder(rootFolder?.folderId ?? "")).resolves.toBeNull();
-    await expect(readBlueprintFolder(nestedFolder?.folderId ?? "")).resolves.toBeNull();
-    await expect(readBlueprintRecord(rootBlueprint.blueprintId)).resolves.toBeNull();
-    await expect(readBlueprintRecord(nestedBlueprint.blueprintId)).resolves.toBeNull();
-    await expect(
-      readBlueprintFolder(rootFolder?.folderId ?? "", { includeDeleted: true }),
-    ).resolves.toMatchObject({
+    expect(deletedFolder).toBeNull();
+    await expect(readBlueprintFolder(rootFolder?.folderId ?? "")).resolves.toMatchObject({
       folderId: rootFolder?.folderId,
+    });
+    await expect(readBlueprintFolder(nestedFolder?.folderId ?? "")).resolves.toMatchObject({
+      folderId: nestedFolder?.folderId,
+    });
+    await expect(readBlueprintRecord(rootBlueprint.blueprintId)).resolves.toMatchObject({
+      blueprintId: rootBlueprint.blueprintId,
+    });
+    await expect(readBlueprintRecord(nestedBlueprint.blueprintId)).resolves.toMatchObject({
+      blueprintId: nestedBlueprint.blueprintId,
+    });
+    await expect(listBlueprintDirectory(null)).resolves.toMatchObject({
+      folders: [
+        {
+          folderId: rootFolder?.folderId,
+          name: "待删除总线",
+        },
+      ],
+      blueprints: [],
+    });
+  });
+
+  it("deletes empty folders", async () => {
+    vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+
+    const folder = await createBlueprintFolder({
+      name: "空目录",
+    });
+
+    await expect(canDeleteBlueprintFolder(folder?.folderId ?? "")).resolves.toBe(true);
+
+    const deletedFolder = await deleteBlueprintFolder(folder?.folderId ?? "");
+
+    expect(deletedFolder?.deletedAt).not.toBeNull();
+    await expect(readBlueprintFolder(folder?.folderId ?? "")).resolves.toBeNull();
+    await expect(
+      readBlueprintFolder(folder?.folderId ?? "", { includeDeleted: true }),
+    ).resolves.toMatchObject({
+      folderId: folder?.folderId,
       deletedAt: deletedFolder?.deletedAt,
     });
     await expect(listBlueprintDirectory(null)).resolves.toMatchObject({

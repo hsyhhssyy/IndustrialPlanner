@@ -1,6 +1,15 @@
 import { describe, expect, it, vi } from "vitest"
 
 vi.mock("pixi.js", () => {
+  class MockRectangle {
+    public constructor(
+      public x = 0,
+      public y = 0,
+      public width = 0,
+      public height = 0,
+    ) {}
+  }
+
   class MockContainer {
     public readonly children: unknown[] = []
     public parent: MockContainer | null = null
@@ -24,11 +33,12 @@ vi.mock("pixi.js", () => {
 
   class MockGraphics {
     public readonly drawCommands: Array<{
-      type: "rect" | "poly";
+      type: "rect" | "roundRect" | "poly";
       x?: number;
       y?: number;
       width?: number;
       height?: number;
+      radius?: number;
       points?: number[];
       fill?: unknown;
       stroke?: unknown;
@@ -40,6 +50,17 @@ vi.mock("pixi.js", () => {
 
     public rect(x: number, y: number, width: number, height: number): this {
       this.drawCommands.push({ type: "rect", x, y, width, height })
+      return this
+    }
+
+    public roundRect(
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+      radius = 0,
+    ): this {
+      this.drawCommands.push({ type: "roundRect", x, y, width, height, radius })
       return this
     }
 
@@ -98,15 +119,54 @@ vi.mock("pixi.js", () => {
     public destroy(): void {}
   }
 
+  class MockTexture {
+    public static readonly EMPTY = { id: "empty-texture" }
+
+    public readonly source: unknown
+    public readonly label: string | undefined
+    public readonly frame: MockRectangle
+    public readonly orig: MockRectangle
+    public readonly trim: MockRectangle
+    public readonly defaultAnchor: { x: number; y: number } | undefined
+    public readonly defaultBorders: unknown
+    public readonly rotate: number
+
+    public constructor(options?: {
+      source?: unknown;
+      label?: string;
+      frame?: MockRectangle;
+      orig?: MockRectangle;
+      trim?: MockRectangle;
+      defaultAnchor?: { x: number; y: number };
+      defaultBorders?: unknown;
+      rotate?: number;
+    }) {
+      this.source = options?.source ?? { width: 0, height: 0 }
+      this.label = options?.label
+      this.frame = options?.frame ?? new MockRectangle(0, 0, 0, 0)
+      this.orig = options?.orig ?? new MockRectangle(0, 0, this.frame.width, this.frame.height)
+      this.trim = options?.trim ?? new MockRectangle(0, 0, this.frame.width, this.frame.height)
+      this.defaultAnchor = options?.defaultAnchor
+      this.defaultBorders = options?.defaultBorders
+      this.rotate = options?.rotate ?? 0
+    }
+
+    public destroy(): void {}
+  }
+
   return {
     Container: MockContainer,
     Graphics: MockGraphics,
+    Rectangle: MockRectangle,
     Sprite: MockSprite,
-    Texture: {
-      EMPTY: { id: "empty-texture" },
-    },
+    Texture: MockTexture,
   }
 })
+
+import {
+  Rectangle,
+  Texture,
+} from "pixi.js"
 
 import {
   createBeltCargoDecoration,
@@ -117,7 +177,7 @@ import { createRegistryContract } from "@/registry"
 describe("createBeltCargoDecoration", () => {
   it("draws the moving cargo box and only requests each item icon once", async () => {
     const decoration = createBeltCargoDecoration()
-    const iconTexture = { id: "item-iron-ore-texture" }
+    const iconTexture = createIconTexture(32, 32)
     const getTexture = vi.fn().mockResolvedValue(iconTexture)
     const ctx = createContext({ getTexture })
 
@@ -134,11 +194,12 @@ describe("createBeltCargoDecoration", () => {
 
     const boxGraphics = cargoRoot.children[0] as unknown as {
       drawCommands: Array<{
-        type: "rect";
+        type: "roundRect";
         x: number;
         y: number;
         width: number;
         height: number;
+        radius: number;
         fill?: unknown;
         stroke?: unknown;
       }>;
@@ -146,7 +207,7 @@ describe("createBeltCargoDecoration", () => {
     const boxSize = resolveBeltCargoBoxSize(100)
     expect(boxGraphics.drawCommands).toHaveLength(1)
     expect(boxGraphics.drawCommands[0]).toMatchObject({
-      type: "rect",
+      type: "roundRect",
       x: -boxSize / 2,
       y: -boxSize / 2,
       width: boxSize,
@@ -158,6 +219,7 @@ describe("createBeltCargoDecoration", () => {
         pixelLine: true,
       },
     })
+    expect(boxGraphics.drawCommands[0]?.radius).toBeCloseTo(boxSize / 10)
 
     const sprite = cargoRoot.children[1] as {
       visible: boolean;
@@ -174,7 +236,22 @@ describe("createBeltCargoDecoration", () => {
     decoration.sync(ctx as never)
 
     expect(sprite.visible).toBe(true)
-    expect(sprite.texture).toBe(iconTexture)
+    expect(sprite.texture).not.toBe(iconTexture)
+    expect(sprite.texture).toMatchObject({
+      source: iconTexture.source,
+      frame: {
+        x: 2,
+        y: 2,
+        width: 28,
+        height: 28,
+      },
+      orig: {
+        x: 0,
+        y: 0,
+        width: 28,
+        height: 28,
+      },
+    })
     expect(sprite.x).toBeCloseTo(0)
     expect(sprite.y).toBeCloseTo(0)
     expect(sprite.width).toBeCloseTo(boxSize * 0.72)
@@ -634,8 +711,8 @@ function createContext(options: {
   }
   if (options.includeOutputSource === true) {
     entities.push({
-      id: "source-connector",
-      definitionId: "item_log_connector",
+      id: "source-admission",
+      definitionId: "item_log_admission",
       position: { x: -1, y: 0 },
       rotation: 0,
       config: {},
@@ -668,8 +745,7 @@ function createContext(options: {
         },
       },
       registry: {
-        itemDefinitions: registry.itemDefinitions,
-        entityDefinitions: registry.entityDefinitions,
+        ...registry,
       },
       render: {
         textureManager: {
@@ -797,4 +873,12 @@ function resolveCargoRoot(
   }
 
   return cargoRoot
+}
+
+function createIconTexture(width: number, height: number) {
+  return new Texture({
+    source: { width, height },
+    frame: new Rectangle(0, 0, width, height),
+    orig: new Rectangle(0, 0, width, height),
+  })
 }

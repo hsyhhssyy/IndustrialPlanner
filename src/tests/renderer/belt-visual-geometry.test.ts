@@ -96,12 +96,44 @@ describe("BeltVisualGeometry", () => {
     expect(resolveBeltInsertionEntries(simplifiedCtx as never)).toEqual([])
   })
 
-  it("resolves a device output protrusion into a strict belt input", () => {
-    const ctx = createGeometryContext({
+  it("does not create extension entries when strict belts connect to general logistics devices", () => {
+    const beltToLogisticsCtx = createGeometryContext({
+      entities: [
+        createBeltEntity("source-belt", { x: 0, y: 0 }, 0),
+        {
+          id: "target-splitter",
+          definitionId: "item_log_splitter",
+          position: { x: 1, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+      ],
+    })
+    const logisticsToBeltCtx = createGeometryContext({
       entities: [
         {
           id: "source-connector",
           definitionId: "item_log_connector",
+          position: { x: -1, y: 0 },
+          rotation: 0,
+          config: {},
+          tags: [],
+        },
+        createBeltEntity("target-belt", { x: 0, y: 0 }, 0),
+      ],
+    })
+
+    expect(resolveBeltPortExtensionEntries(beltToLogisticsCtx as never)).toEqual([])
+    expect(resolveBeltPortExtensionEntries(logisticsToBeltCtx as never)).toEqual([])
+  })
+
+  it("resolves a device output protrusion into a strict belt input", () => {
+    const ctx = createGeometryContext({
+      entities: [
+        {
+          id: "source-admission",
+          definitionId: "item_log_admission",
           position: { x: -1, y: 0 },
           rotation: 0,
           config: {},
@@ -121,7 +153,7 @@ describe("BeltVisualGeometry", () => {
     expect(resolveBeltPortExtensionEntries(ctx as never)).toEqual([{
       kind: "device-output-to-belt",
       beltEntityId: "target-belt",
-      deviceEntityId: "source-connector",
+      deviceEntityId: "source-admission",
       boundary: {
         x: 0,
         y: 0.5,
@@ -277,10 +309,7 @@ function createGeometryContext(options: {
           },
         },
       },
-      registry: {
-        entityDefinitions: registry.entityDefinitions,
-        itemDefinitions: registry.itemDefinitions,
-      },
+      registry,
       editor: {
         queries: {
           listEntities: () => options.entities,
