@@ -14,6 +14,8 @@ spec:
       labels:
         app: industrial-planner
     spec:
+      imagePullSecrets:
+        - name: docker.hsyhhssyy.net
       containers:
         - name: industrial-planner
           image: ${IMAGE}
