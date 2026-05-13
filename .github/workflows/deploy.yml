@@ -1,0 +1,78 @@
+name: Build and Deploy to K8s
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # --- 读取部署配置 ---
+      - name: Load deploy config
+        env:
+          DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
+        run: |
+          echo "$DEPLOY_CONFIG" > /tmp/deploy-config.json
+          REGISTRY=$(jq -r '.registry' /tmp/deploy-config.json)
+          USERNAME=$(jq -r '.username' /tmp/deploy-config.json)
+          PASSWORD=$(jq -r '.password' /tmp/deploy-config.json)
+          IMAGE_NAME=$(jq -r '.image_name' /tmp/deploy-config.json)
+          DOMAIN=$(jq -r '.domain' /tmp/deploy-config.json)
+          NAMESPACE=$(jq -r '.namespace' /tmp/deploy-config.json)
+          echo "registry=$REGISTRY" >> $GITHUB_ENV
+          echo "username=$USERNAME" >> $GITHUB_ENV
+          echo "password=$PASSWORD" >> $GITHUB_ENV
+          echo "image_name=$IMAGE_NAME" >> $GITHUB_ENV
+          echo "domain=$DOMAIN" >> $GITHUB_ENV
+          echo "namespace=$NAMESPACE" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to private registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.registry }}
+          username: ${{ env.username }}
+          password: ${{ env.password }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./dist
+          file: .github/Dockerfile
+          push: true
+          tags: |
+            ${{ env.registry }}/${{ env.image_name }}:${{ github.sha }}
+            ${{ env.registry }}/${{ env.image_name }}:latest
+
+      # --- 替换 K8s 清单中的占位符并部署 ---
+      - name: Render and apply K8s manifests
+        env:
+          IMAGE: ${{ env.registry }}/${{ env.image_name }}:${{ github.sha }}
+          DOMAIN: ${{ env.domain }}
+          NAMESPACE: ${{ env.namespace }}
+          KUBECONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          mkdir -p $HOME/.kube
+          echo "$KUBECONFIG_DATA" > $HOME/.kube/config
+          envsubst < .github/k8s/deployment.yaml | kubectl apply -n "$NAMESPACE" -f -
+          kubectl rollout status deployment/industrial-planner -n "$NAMESPACE" --timeout=120s
