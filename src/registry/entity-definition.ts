@@ -328,6 +328,14 @@ function createBinding(
   };
 }
 
+function createRecipeChannel(
+  id: string,
+  ingredientStorageGroupIds: string[],
+  productStorageGroupIds: string[],
+): RecipeChannelDefinition {
+  return { id, ingredientStorageGroupIds, productStorageGroupIds };
+}
+
 type DirectionalBufferLayoutInput = {
   kind: StorageSlotGroupDefinition["kind"];
   role: Exclude<StorageSlotGroupDefinition["role"], "bidirectional">;
@@ -340,8 +348,13 @@ function resolveSlotFilterType(kind: DirectionalBufferLayoutInput["kind"]): Filt
 
 function createDirectionalBuffers(
   layouts: readonly DirectionalBufferLayoutInput[],
-): Pick<EntityDefinition, "storageSlotGroups" | "portStorageBindings"> {
+): Pick<EntityDefinition, "storageSlotGroups" | "portStorageBindings" | "recipeChannels"> {
+  const ingGroupIds = layouts.filter(l => l.role === "input").map(l => `${l.kind}_${l.role}_buffer`);
+  const prodGroupIds = layouts.filter(l => l.role === "output").map(l => `${l.kind}_${l.role}_buffer`);
   return {
+    recipeChannels: (ingGroupIds.length > 0 || prodGroupIds.length > 0)
+      ? [createRecipeChannel("default", ingGroupIds, prodGroupIds)]
+      : [],
     storageSlotGroups: layouts.map((layout) => createStorageSlotGroup(
       `${layout.kind}_${layout.role}_buffer`,
       layout.kind,
@@ -477,6 +490,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "bidirectional",  // → universal 缓存类型
         createSlots("slot", [50, 50, 50, 50, 50, 50], "solid"),
       ),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_storage"], ["item_storage"]),
     ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_storage"),
@@ -622,6 +638,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("output_slot", [1], "any"),
       ),
     ],
+    recipeChannels: [
+      createRecipeChannel("default", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"]),
+    ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "shared_input_buffer"),
       createBinding("bind_fluid_input", "fluid_input", "shared_input_buffer"),
@@ -682,6 +701,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "output",
         createSlots("output_slot", [50], "solid"),
       ),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_input_buffer", "item_output_buffer"], ["item_input_buffer", "item_output_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
@@ -746,6 +768,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("output_slot", [50], "solid"),
       ),
     ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_input_buffer", "fluid_input_buffer", "item_output_buffer"], ["item_input_buffer", "fluid_input_buffer", "item_output_buffer"]),
+    ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_fluid_input", "fluid_input", "fluid_input_buffer"),
@@ -788,6 +813,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "output",
         createSlots("output_slot", [50], "solid"),
       ),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_input_buffer", "item_output_buffer"], ["item_input_buffer", "item_output_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
@@ -845,6 +873,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "share-cap",
       ),
     ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_buffer"], ["item_buffer"]),
+    ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_buffer"),
       createBinding("bind_item_output", "item_output", "item_buffer"),
@@ -888,6 +919,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "share-cap",
       ),
     ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_buffer"], ["item_buffer"]),
+    ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_buffer"),
       createBinding("bind_item_output", "item_output", "item_buffer"),
@@ -930,6 +964,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("slot", [1], "solid"),
         "share-cap",
       ),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_buffer"], ["item_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_buffer"),
@@ -987,6 +1024,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "share-cap",
       ),
     ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_buffer"], ["item_buffer"]),
+    ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_buffer"),
       createBinding("bind_item_output", "item_output", "item_buffer"),
@@ -1037,6 +1077,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "share-cap",
       ),
     ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_buffer"], ["item_buffer"]),
+    ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_buffer"),
       createBinding("bind_item_output", "item_output", "item_buffer"),
@@ -1081,6 +1124,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     storageSlotGroups: [],
+    recipeChannels: [
+      createRecipeChannel("default", ["synthetic-input"], ["synthetic-output"]),
+    ],
     portStorageBindings: [],
   }),
   // =========================================================================
@@ -1123,6 +1169,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     storageSlotGroups: [],
+    recipeChannels: [
+      createRecipeChannel("default", ["synthetic-input"], ["synthetic-output"]),
+    ],
     portStorageBindings: [],
   }),
 
@@ -1154,6 +1203,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     storageSlotGroups: [],
+    recipeChannels: [
+      createRecipeChannel("default", ["synthetic-input"], ["synthetic-output"]),
+    ],
     portStorageBindings: [],
   }),
 
@@ -1185,6 +1237,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     storageSlotGroups: [],
+    recipeChannels: [
+      createRecipeChannel("default", ["synthetic-input"], ["synthetic-output"]),
+    ],
     portStorageBindings: [],
   }),
 
@@ -1229,6 +1284,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("slot", [1], "liquid"),
         "share-cap",
       ),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["fluid_buffer"], ["fluid_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_fluid_input", "fluid_input", "fluid_buffer"),
@@ -1277,6 +1335,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "share-cap",
       ),
     ],
+    recipeChannels: [
+      createRecipeChannel("default", ["fluid_buffer"], ["fluid_buffer"]),
+    ],
     portStorageBindings: [
       createBinding("bind_fluid_input", "fluid_input", "fluid_buffer"),
       createBinding("bind_fluid_output", "fluid_output", "fluid_buffer"),
@@ -1321,6 +1382,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     storageSlotGroups: [],
+    recipeChannels: [
+      createRecipeChannel("default", ["synthetic-input"], ["synthetic-output"]),
+    ],
     portStorageBindings: [],
   }),
 
@@ -1782,6 +1846,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("output_slot", [1], "any"),
       ),
     ],
+    recipeChannels: [
+      createRecipeChannel("default", ["shared_input_buffer", "shared_output_buffer"], ["shared_input_buffer", "shared_output_buffer"]),
+    ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "shared_input_buffer"),
       createBinding("bind_fluid_input", "fluid_input", "shared_input_buffer"),
@@ -2081,6 +2148,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         "share-cap",
       ),
     ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_buffer"], ["item_buffer"]),
+    ],
     portStorageBindings: [
       createBinding("bind_item_input", "item_input", "item_buffer"),
       createBinding("bind_item_output", "item_output", "item_buffer"),
@@ -2119,6 +2189,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("slot", [1], "liquid"),
         "share-cap",
       ),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["fluid_buffer"], ["fluid_buffer"]),
     ],
     portStorageBindings: [
       createBinding("bind_fluid_input", "fluid_input", "fluid_buffer"),

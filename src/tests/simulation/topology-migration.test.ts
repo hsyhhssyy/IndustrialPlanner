@@ -320,7 +320,19 @@ function startRecipe(
     throw new Error(`Expected ${deviceId} to exist.`);
   }
 
-  const plan = resolveDeviceRecipePlans({ topology, state, device })[0];
+  const channel = device.recipeChannels[0];
+  if (channel === undefined) {
+    throw new Error(`Expected ${deviceId} to have at least one recipe channel.`);
+  }
+  const plan = resolveDeviceRecipePlans({
+    topology,
+    state,
+    definitionId: device.definitionId,
+    tags: device.tags,
+    transportClass: device.transportClass,
+    ingredientNodeIds: channel.ingredientNodeIds,
+    productNodeIds: channel.productNodeIds,
+  })[0];
   if (plan === undefined) {
     throw new Error(`Expected ${deviceId} to have a startable recipe plan.`);
   }

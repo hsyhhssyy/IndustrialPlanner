@@ -16,6 +16,7 @@ import type {
   CompiledSimulationPhysicalConnection,
   CompiledSimulationPort,
   CompiledSimulationRecipeDefinition,
+  CompiledSimulationRecipeChannel,
   CompiledSimulationRoutingEntry,
   CompiledSimulationSlot,
   CompiledSimulationSlotLink,
@@ -29,7 +30,6 @@ import type {
   SimulationNodeViewRole,
   SimulationPortDirection,
   SimulationPortKind,
-  SimulationSlotType,
   SimulationTransportClass,
 } from "./types";
 import { compileRecipeDefinition } from "./types";
@@ -455,8 +455,7 @@ function compileEntityDevice(options: {
     transportClass,
     transportComponentId: null,
     nodeIds: nodes.map((node) => node.id),
-    ingredientNodeIds: resolveDeviceRecipeNodeIds(nodeBindingsByStorageGroupId, "ingredient"),
-    productNodeIds: resolveDeviceRecipeNodeIds(nodeBindingsByStorageGroupId, "product"),
+    recipeChannels: compileRecipeChannels(definition.recipeChannels, nodeBindingsByStorageGroupId),
     portIds: ports.map((port) => port.id),
     routing: compileRouting(definition),
     configHash: hashStable({
@@ -514,9 +513,8 @@ function compileStorageNodeSet(options: {
   readonly compiledSlots: CompiledSimulationSlot[];
   readonly links: CompiledSimulationSlotLink[];
 }): StorageGroupNodeBinding {
-  const slotType = resolveSlotType(options.storageGroup.role);
   if (options.hasInputBinding && options.hasOutputBinding) {
-    const splitViewConfig = resolveSplitStorageViewConfig(options.storageGroup);
+    const linkType = options.storageGroup.splitLinkType ?? "share-all";
     const inputNodeId = `${options.baseNodeId}.input-view`;
     const outputNodeId = `${options.baseNodeId}.output-view`;
     const inputSlotIds: string[] = [];
@@ -551,7 +549,6 @@ function compileStorageNodeSet(options: {
       id: inputNodeId,
       deviceId: options.deviceId,
       sourceStorageSlotGroupId: options.storageGroup.id,
-      slotType: splitViewConfig.inputSlotType,
       slotIds: inputSlotIds,
       groupOrder: options.groupOrder,
       viewRole: "input-view",
@@ -560,14 +557,13 @@ function compileStorageNodeSet(options: {
       id: outputNodeId,
       deviceId: options.deviceId,
       sourceStorageSlotGroupId: options.storageGroup.id,
-      slotType: splitViewConfig.outputSlotType,
       slotIds: outputSlotIds,
       groupOrder: options.groupOrder + 0.5,
       viewRole: "output-view",
     }));
     options.links.push({
       id: ["link", options.deviceId, options.storageGroup.id, "input-view-to-output-view"].join(":"),
-      linkType: splitViewConfig.linkType,
+      linkType: linkType,
       sourceSlotIds: inputSlotIds,
       targetSlotIds: outputSlotIds,
       targetSlotIdBySourceSlotId,
@@ -576,8 +572,6 @@ function compileStorageNodeSet(options: {
     return createSplitStorageGroupNodeBinding({
       inputNodeId,
       outputNodeId,
-      inputSlotType: splitViewConfig.inputSlotType,
-      outputSlotType: splitViewConfig.outputSlotType,
     });
   }
 
@@ -593,111 +587,72 @@ function compileStorageNodeSet(options: {
     options.compiledSlots.push(compiledSlot);
     slotIds.push(compiledSlot.id);
   });
+  // AI-CORRECTION 2026-05-13: viewRole 现在纯粹由端口绑定方向决定，不需要 slotType。
+  const viewRole: SimulationNodeViewRole = options.hasInputBinding ? "input-view"
+    : options.hasOutputBinding ? "output-view"
+    : "input-view";
   options.nodes.push(createCompiledNode({
     id: nodeId,
     deviceId: options.deviceId,
     sourceStorageSlotGroupId: options.storageGroup.id,
-    slotType,
     slotIds,
     groupOrder: options.groupOrder,
-    viewRole: resolveSingleStorageNodeViewRole({
-      hasInputBinding: options.hasInputBinding,
-      hasOutputBinding: options.hasOutputBinding,
-      slotType,
-    }),
+    viewRole,
   }));
 
   return {
     inputNodeIds: options.hasInputBinding ? [nodeId] : [],
     outputNodeIds: options.hasOutputBinding ? [nodeId] : [],
-    ingredientNodeIds: isIngredientSlotType(slotType) ? [nodeId] : [],
-    productNodeIds: isProductSlotType(slotType) ? [nodeId] : [],
+    ingredientNodeIds: options.hasInputBinding ? [nodeId] : [],
+    productNodeIds: options.hasOutputBinding ? [nodeId] : [],
   };
 }
 
-function resolveSplitStorageViewConfig(storageGroup: StorageSlotGroupDefinition): {
-  readonly inputSlotType: SimulationSlotType;
-  readonly outputSlotType: SimulationSlotType;
-  readonly linkType: CompiledSimulationSlotLink["linkType"];
-} {
-  const slotType = resolveSlotType(storageGroup.role);
-  const linkType = storageGroup.splitLinkType ?? "share-all";
-  if (linkType === "share-all" || slotType !== "universal") {
-    return {
-      inputSlotType: slotType,
-      outputSlotType: slotType,
-      linkType,
-    };
-  }
+// AI-REMOVED 2026-05-13: resolveSplitStorageViewConfig
+// Reason: slotType no longer exists; split linkType is now read directly from storageGroup.splitLinkType.
+// Trigger: Recipe Channel 重构
+// Replacement: storageGroup.splitLinkType ?? "share-all"
+// Risk: Low
 
-  return {
-    inputSlotType: "ingredient",
-    outputSlotType: "product",
-    linkType,
-  };
-}
-
-function resolveSingleStorageNodeViewRole(options: {
-  readonly hasInputBinding: boolean;
-  readonly hasOutputBinding: boolean;
-  readonly slotType: SimulationSlotType;
-}): SimulationNodeViewRole {
-  if (options.hasInputBinding) {
-    return "input-view";
-  }
-  if (options.hasOutputBinding) {
-    return "output-view";
-  }
-  return isProductSlotType(options.slotType) && !isIngredientSlotType(options.slotType)
-    ? "output-view"
-    : "input-view";
-}
+// AI-REMOVED 2026-05-13: resolveSingleStorageNodeViewRole
+// Reason: viewRole is now purely determined by port binding direction, not slotType.
+// Trigger: Recipe Channel 重构
+// Replacement: hasInputBinding ? "input-view" : hasOutputBinding ? "output-view" : "input-view"
+// Risk: Low
 
 function createSplitStorageGroupNodeBinding(options: {
   readonly inputNodeId: string;
   readonly outputNodeId: string;
-  readonly inputSlotType: SimulationSlotType;
-  readonly outputSlotType: SimulationSlotType;
 }): StorageGroupNodeBinding {
-  const splitViews = [
-    { nodeId: options.inputNodeId, slotType: options.inputSlotType },
-    { nodeId: options.outputNodeId, slotType: options.outputSlotType },
-  ];
-
+  // AI-CORRECTION 2026-05-13: ingredientNodeIds/productNodeIds 现在由 Recipe Channel 编译决定。
+  // 展开后的 input-view 始终标记为 ingredient，output-view 始终标记为 product。
   return {
     inputNodeIds: [options.inputNodeId],
     outputNodeIds: [options.outputNodeId],
-    ingredientNodeIds: splitViews
-      .filter((view) => isIngredientSlotType(view.slotType))
-      .map((view) => view.nodeId),
-    productNodeIds: splitViews
-      .filter((view) => isProductSlotType(view.slotType))
-      .map((view) => view.nodeId),
+    ingredientNodeIds: [options.inputNodeId],
+    productNodeIds: [options.outputNodeId],
   };
 }
 
-function isIngredientSlotType(slotType: SimulationSlotType): boolean {
-  return slotType === "ingredient" || slotType === "universal";
-}
-
-function isProductSlotType(slotType: SimulationSlotType): boolean {
-  return slotType === "product" || slotType === "universal";
-}
+// AI-REMOVED 2026-05-13: isIngredientSlotType / isProductSlotType
+// Reason: SimulationSlotType no longer exists.
+// Trigger: Recipe Channel 重构, slotType field removed.
+// Replacement: ingredientNodeIds/productNodeIds now come from Recipe Channel compilation.
+// Risk: Low
 
 function createCompiledNode(options: {
   readonly id: string;
   readonly deviceId: string;
   readonly sourceStorageSlotGroupId: string | null;
-  readonly slotType: SimulationSlotType;
   readonly slotIds: readonly string[];
   readonly groupOrder: number;
   readonly viewRole: SimulationNodeViewRole;
 }): CompiledSimulationNode {
+  // AI-CORRECTION 2026-05-13: slotType 字段已从 CompiledSimulationNode 删除。
   return {
     id: options.id,
     deviceId: options.deviceId,
     sourceStorageSlotGroupId: options.sourceStorageSlotGroupId,
-    slotType: options.slotType,
     viewRole: options.viewRole,
     slotIds: options.slotIds,
     inputPortIds: [],
@@ -727,7 +682,6 @@ function compileSyntheticNodesForUnboundPorts(options: {
     addSyntheticNode({
       deviceId: options.deviceId,
       sourceStorageSlotGroupId: "synthetic-input",
-      slotType: "ingredient",
       groupOrder: options.nodes.length,
       nodes: options.nodes,
       slots: options.slots,
@@ -741,7 +695,6 @@ function compileSyntheticNodesForUnboundPorts(options: {
     addSyntheticNode({
       deviceId: options.deviceId,
       sourceStorageSlotGroupId: "synthetic-output",
-      slotType: "product",
       groupOrder: options.nodes.length,
       nodes: options.nodes,
       slots: options.slots,
@@ -755,7 +708,6 @@ function compileSyntheticNodesForUnboundPorts(options: {
 function addSyntheticNode(options: {
   readonly deviceId: string;
   readonly sourceStorageSlotGroupId: string;
-  readonly slotType: SimulationSlotType;
   readonly groupOrder: number;
   readonly nodes: CompiledSimulationNode[];
   readonly slots: CompiledSimulationSlot[];
@@ -765,11 +717,11 @@ function addSyntheticNode(options: {
 }): void {
   const nodeId = `${options.deviceId}/node:${options.sourceStorageSlotGroupId}`;
   const slotId = `${nodeId}/slot:slot_1`;
+  // AI-CORRECTION 2026-05-13: slotType removed. ingredientNodeIds/productNodeIds now determined by Recipe Channel.
   options.nodes.push(createCompiledNode({
     id: nodeId,
     deviceId: options.deviceId,
     sourceStorageSlotGroupId: options.sourceStorageSlotGroupId,
-    slotType: options.slotType,
     slotIds: [slotId],
     groupOrder: options.groupOrder,
     viewRole: options.bindDirection === "input" ? "input-view" : "output-view",
@@ -791,8 +743,8 @@ function addSyntheticNode(options: {
   options.nodeBindingsByStorageGroupId.set(options.sourceStorageSlotGroupId, {
     inputNodeIds: options.bindDirection === "input" ? [nodeId] : [],
     outputNodeIds: options.bindDirection === "output" ? [nodeId] : [],
-    ingredientNodeIds: options.slotType === "ingredient" || options.slotType === "universal" ? [nodeId] : [],
-    productNodeIds: options.slotType === "product" || options.slotType === "universal" ? [nodeId] : [],
+    ingredientNodeIds: options.bindDirection === "input" ? [nodeId] : [],
+    productNodeIds: options.bindDirection === "output" ? [nodeId] : [],
   });
 }
 
@@ -1059,6 +1011,25 @@ function pairSourceSlotsToTargetSlots(
   return targetSlotIdBySourceSlotId;
 }
 
+
+// AI-CORRECTION 2026-05-13: compileRecipeChannels 替代 resolveDeviceRecipeNodeIds。
+// 从 Recipe Channel 声明编译 ingredientNodeIds / productNodeIds。
+function compileRecipeChannels(
+  channelDefs: readonly RecipeChannelDefinition[],
+  bindings: ReadonlyMap<string, StorageGroupNodeBinding>,
+): readonly CompiledSimulationRecipeChannel[] {
+  if (!channelDefs || channelDefs.length === 0) { return []; }
+  return channelDefs.map((ch) => ({
+    id: ch.id,
+    ingredientNodeIds: [...new Set(ch.ingredientStorageGroupIds.flatMap(
+      (gid) => bindings.get(gid)?.ingredientNodeIds ?? [],
+    ))],
+    productNodeIds: [...new Set(ch.productStorageGroupIds.flatMap(
+      (gid) => bindings.get(gid)?.productNodeIds ?? [],
+    ))],
+  }));
+}
+
 function compilePhysicalConnections(
   maybePorts: readonly (CompiledSimulationPort | undefined)[],
 ): CompiledSimulationPhysicalConnection[] {
@@ -1128,26 +1099,17 @@ function resolveStorageGroupPortDirections(
   return { hasInput, hasOutput };
 }
 
-function resolveSlotType(role: StorageSlotGroupDefinition["role"]): SimulationSlotType {
-  switch (role) {
-    case "input":
-      return "ingredient";
-    case "output":
-      return "product";
-    case "bidirectional":
-      return "universal";
-  }
-}
+// AI-REMOVED 2026-05-13: resolveSlotType
+// Reason: role field removed from StorageSlotGroupDefinition.
+// Trigger: Recipe Channel 重构.
+// Replacement: None needed; slotType concept eliminated.
+// Risk: Low
 
-function resolveDeviceRecipeNodeIds(
-  bindings: ReadonlyMap<string, StorageGroupNodeBinding>,
-  side: "ingredient" | "product",
-): readonly string[] {
-  const nodeIds = [...bindings.values()].flatMap((binding) =>
-    side === "ingredient" ? binding.ingredientNodeIds : binding.productNodeIds,
-  );
-  return [...new Set(nodeIds)];
-}
+// AI-REMOVED 2026-05-13: resolveDeviceRecipeNodeIds
+// Reason: ingredientNodeIds/productNodeIds now compiled from Recipe Channel declarations.
+// Trigger: Recipe Channel 重构.
+// Replacement: compileRecipeChannels()
+// Risk: Low
 
 function resolveSlotDomain(
   storageGroup: StorageSlotGroupDefinition,

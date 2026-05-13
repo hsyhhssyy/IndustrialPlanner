@@ -101,8 +101,9 @@ function createDeviceRuntimeShapeSignature(
   return hashStable({
     definitionId: device.definitionId,
     nodeIds: [...device.nodeIds].sort(),
-    ingredientNodeIds: [...device.ingredientNodeIds].sort(),
-    productNodeIds: [...device.productNodeIds].sort(),
+    // AI-CORRECTION 2026-05-13: ingredientNodeIds replaced by recipeChannels.
+ingredientNodeIds: [...device.recipeChannels.flatMap(ch => ch.ingredientNodeIds)].sort(),
+    productNodeIds: [...device.recipeChannels.flatMap(ch => ch.productNodeIds)].sort(),
     slots: slotIds.map((slotId) => createSlotRuntimeShape(topology.slots[slotId])),
     links: linkSignatureInput,
   });

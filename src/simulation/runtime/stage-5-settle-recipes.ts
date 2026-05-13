@@ -1,5 +1,6 @@
 import type {
   CompiledSimulationDevice,
+  CompiledSimulationRecipeChannel,
   CompiledSimulationTopology,
 } from "../types";
 import type { RuntimeDeviceRecipeState, SimulationMutableRuntimeState } from "./runtime-state";
@@ -31,18 +32,24 @@ function settleWaitingOutputs(
 ): void {
   for (const deviceId of topology.ordering.deviceOrder) {
     const deviceState = state.persistent.devices[deviceId];
-    const recipe = deviceState?.recipe;
-    if (deviceState === undefined || recipe?.state !== "waiting-output") {
+    if (deviceState === undefined) {
       continue;
     }
 
-    if (finishRecipeIfPossible(topology, state, recipe)) {
-      deviceState.recipe = null;
-      deviceState.block = false;
+    for (const [chId, recipe] of Object.entries(deviceState.channelRecipes)) {
+      if (recipe === null || recipe.state !== "waiting-output") {
+        continue;
+      }
+
+      if (finishRecipeIfPossible(topology, state, recipe)) {
+        deviceState.channelRecipes[chId] = null;
+        deviceState.block = false;
+      }
     }
   }
 }
 
+// AI-CORRECTION 2026-05-13: 空闲设备启动遍历每个 channel。
 function startIdleDevices(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
@@ -50,32 +57,51 @@ function startIdleDevices(
   for (const deviceId of topology.ordering.deviceOrder) {
     const device = topology.devices[deviceId];
     const deviceState = state.persistent.devices[deviceId];
-    if (device === undefined || deviceState === undefined || deviceState.recipe !== null) {
+    if (device === undefined || deviceState === undefined) {
       continue;
     }
 
-    const recipe = selectStartableRecipe(topology, state, device);
-    if (recipe === null) {
-      deviceState.block = true;
-      continue;
-    }
+    for (const channel of device.recipeChannels) {
+      // Skip channels already running a recipe
+      if (deviceState.channelRecipes[channel.id] !== undefined && deviceState.channelRecipes[channel.id] !== null) {
+        continue;
+      }
 
-    if (recipe.recipeType === "immediate-consume") {
-      consumeSelections(state.persistent.slots, recipe.reservations);
-      recipe.reservations = [];
-    }
+      const recipe = selectStartableRecipe(topology, state, device, channel);
+      if (recipe === null) {
+        continue;
+      }
 
-    deviceState.recipe = recipe;
-    deviceState.block = false;
+      if (recipe.recipeType === "immediate-consume") {
+        consumeSelections(state.persistent.slots, recipe.reservations);
+        recipe.reservations = [];
+      }
+
+      deviceState.channelRecipes[channel.id] = recipe;
+    }
+    
+    // Block if any channel is stuck
+    const hasRunning = Object.values(deviceState.channelRecipes).some(r => r !== null);
+    deviceState.block = !hasRunning;
   }
 }
 
+// AI-CORRECTION 2026-05-13: selectStartableRecipe 现在接受 channel 参数。
 function selectStartableRecipe(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   device: CompiledSimulationDevice,
+  channel: CompiledSimulationRecipeChannel,
 ): RuntimeDeviceRecipeState | null {
-  for (const plan of resolveDeviceRecipePlans({ topology, state, device })) {
+  for (const plan of resolveDeviceRecipePlans({
+    topology,
+    state,
+    definitionId: device.definitionId,
+    tags: device.tags,
+    transportClass: device.transportClass,
+    ingredientNodeIds: channel.ingredientNodeIds,
+    productNodeIds: channel.productNodeIds,
+  })) {
     const reservations = selectRecipeInputs({ topology, state, plan });
     if (reservations === null) {
       continue;

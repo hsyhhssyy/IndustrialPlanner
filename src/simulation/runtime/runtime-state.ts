@@ -33,7 +33,9 @@ export interface RuntimeSlotState {
 
 export interface RuntimeDeviceState {
   block: boolean;
-  recipe: RuntimeDeviceRecipeState | null;
+  // AI-CORRECTION 2026-05-13: recipe → channelRecipes.
+  // 每个 channel 独立运行一个配方。key 为 channel id。
+  channelRecipes: Record<string, RuntimeDeviceRecipeState | null>;
 }
 
 export interface RuntimeDeviceRecipeState {
@@ -127,7 +129,7 @@ export function createSimulationMutableRuntimeState(
       continue;
     }
 
-    devices[deviceId] = { block: false, recipe: null };
+    devices[deviceId] = { block: false, channelRecipes: {} };
     for (const [portRef, entry] of Object.entries(device.routing)) {
       routingCursors[`${deviceId}:${portRef}`] = entry.roundRobinSeed;
     }
@@ -315,14 +317,17 @@ function cloneRuntimeSlotState(slot: RuntimeSlotState): RuntimeSlotState {
 function cloneRuntimeDeviceState(device: RuntimeDeviceState): RuntimeDeviceState {
   return {
     block: device.block,
-    recipe: device.recipe === null
-      ? null
-      : {
-          ...device.recipe,
-          plan: cloneRecipePlan(device.recipe.plan),
-          reservations: device.recipe.reservations.map((reservation) => ({ ...reservation })),
-          inputItems: device.recipe.inputItems.map((item) => ({ ...item })),
+    channelRecipes: Object.fromEntries(
+      Object.entries(device.channelRecipes).map(([chId, recipe]) => [
+        chId,
+        recipe === null ? null : {
+          ...recipe,
+          plan: cloneRecipePlan(recipe.plan),
+          reservations: recipe.reservations.map((reservation) => ({ ...reservation })),
+          inputItems: recipe.inputItems.map((item) => ({ ...item })),
         },
+      ]),
+    ),
   };
 }
 
@@ -393,7 +398,7 @@ function resetConflictingTransportComponents(
       const deviceState = state.persistent.devices[deviceId];
       if (deviceState !== undefined) {
         deviceState.block = false;
-        deviceState.recipe = null;
+        deviceState.channelRecipes = {};
       }
     }
     state.persistent.transportComponentDomain[componentId] = null;

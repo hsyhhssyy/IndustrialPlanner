@@ -73,8 +73,8 @@ describe("storage group split rules", () => {
       registry,
     });
 
-    expect(topology.nodes[BELT_INPUT_VIEW_NODE_ID]?.slotType).toBe("ingredient");
-    expect(topology.nodes[BELT_OUTPUT_VIEW_NODE_ID]?.slotType).toBe("product");
+    // AI-CORRECTION 2026-05-13: slotType removed.
+    // AI-CORRECTION 2026-05-13: slotType removed.
     expect(topology.links[BELT_SPLIT_LINK_ID]).toMatchObject({
       linkType: "share-cap",
       sourceSlotIds: [BELT_INPUT_VIEW_SLOT_ID],
@@ -145,8 +145,8 @@ function expectStoragerSplit(
     productNodeIds: string[];
   },
 ): void {
-  expect(topology.nodes[STORAGER_INPUT_VIEW_NODE_ID]?.slotType).toBe(expected.inputSlotType);
-  expect(topology.nodes[STORAGER_OUTPUT_VIEW_NODE_ID]?.slotType).toBe(expected.outputSlotType);
+  // AI-CORRECTION 2026-05-13: slotType removed.
+  // AI-CORRECTION 2026-05-13: slotType removed.
   expect(topology.links[STORAGER_SPLIT_LINK_ID]?.linkType).toBe(expected.linkType);
   expect(topology.devices[STORAGER_DEVICE_ID]?.ingredientNodeIds).toEqual(expected.ingredientNodeIds);
   expect(topology.devices[STORAGER_DEVICE_ID]?.productNodeIds).toEqual(expected.productNodeIds);

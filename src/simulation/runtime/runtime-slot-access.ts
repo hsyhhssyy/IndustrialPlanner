@@ -36,13 +36,14 @@ export function getReservedAmount(
 ): number {
   let reservedAmount = 0;
   for (const deviceState of Object.values(state.persistent.devices)) {
-    const recipe = deviceState.recipe;
-    if (recipe === null) {
-      continue;
-    }
-    for (const reservation of recipe.reservations) {
-      if (reservation.slotId === storageSlotId) {
-        reservedAmount += reservation.amount;
+    for (const recipe of Object.values(deviceState.channelRecipes)) {
+      if (recipe === null) {
+        continue;
+      }
+      for (const reservation of recipe.reservations) {
+        if (reservation.slotId === storageSlotId) {
+          reservedAmount += reservation.amount;
+        }
       }
     }
   }
@@ -206,15 +207,21 @@ export function moveOneItem(options: {
   return true;
 }
 
+// AI-CORRECTION 2026-05-13: resolveDeviceRecipePlans 现在接受 channel 级参数。
+// ingredientNodeIds / productNodeIds 从 channel 获取而非从 device 全局获取。
 export function resolveDeviceRecipePlans(options: {
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
-  device: CompiledSimulationDevice;
+  definitionId: string;
+  tags: readonly string[];
+  transportClass: SimulationTransportClass;
+  ingredientNodeIds: readonly string[];
+  productNodeIds: readonly string[];
 }): readonly CompiledSimulationRecipePlan[] {
   const ingredientSlotContents = readIngredientSlotContents({
     topology: options.topology,
     state: options.state,
-    device: options.device,
+    ingredientNodeIds: options.ingredientNodeIds,
   });
 
   return resolveRecipes({
@@ -343,27 +350,31 @@ export function finishRecipeIfPossible(
 
 function resolveRecipes(options: {
   topology: CompiledSimulationTopology;
-  device: CompiledSimulationDevice;
+  definitionId: string;
+  tags: readonly string[];
+  transportClass: SimulationTransportClass;
+  ingredientNodeIds: readonly string[];
+  productNodeIds: readonly string[];
   ingredientSlotContents: readonly IngredientSlotContent[];
 }): readonly CompiledSimulationRecipePlan[] {
-  if (options.device.transportClass === "strict-belt" || options.device.transportClass === "strict-pipe") {
+  if (options.transportClass === "strict-belt" || options.transportClass === "strict-pipe") {
     if (options.ingredientSlotContents.length === 0) {
       return [];
     }
 
-    const durationSeconds = options.device.transportClass === "strict-belt" ? 2 : 0.5;
-    const recipeIdSuffix = options.device.transportClass === "strict-belt"
+    const durationSeconds = options.transportClass === "strict-belt" ? 2 : 0.5;
+    const recipeIdSuffix = options.transportClass === "strict-belt"
       ? "dynamic-belt-transfer"
       : "dynamic-pipe-transfer";
 
     return [{
-      recipeId: `${options.device.definitionId}:${recipeIdSuffix}`,
+      recipeId: `${options.definitionId}:${recipeIdSuffix}`,
       recipeType: "reserved-item",
       durationTicks: Math.max(1, Math.round(durationSeconds * options.topology.standardTickRate)),
       inputs: [{ itemId: "any", amount: 1 }],
       outputs: [{ itemId: "same-as-input", amount: 1 }],
-      ingredientNodeIds: options.device.ingredientNodeIds,
-      productNodeIds: options.device.productNodeIds,
+      ingredientNodeIds: options.ingredientNodeIds,
+      productNodeIds: options.productNodeIds,
     }];
   }
 
@@ -372,24 +383,24 @@ function resolveRecipes(options: {
   // also use reserved-item transport recipes, matching §6.1.2–§6.1.5 of 仿真运行原理.
   // Detect via BeltFamily/PipeFamily tags to cover all logistics devices uniformly.
   // Strict devices are already handled above and won't re-enter here.
-  const isGeneralBelt = options.device.tags.includes("BeltFamily");
-  const isGeneralPipe = options.device.tags.includes("PipeFamily");
+  const isGeneralBelt = options.tags.includes("BeltFamily");
+  const isGeneralPipe = options.tags.includes("PipeFamily");
   if ((isGeneralBelt || isGeneralPipe) && options.ingredientSlotContents.length > 0) {
     const durationSeconds = isGeneralBelt ? 2 : 0.5;
     const recipeIdSuffix = isGeneralBelt ? "dynamic-belt-transfer" : "dynamic-pipe-transfer";
     return [{
-      recipeId: `${options.device.definitionId}:${recipeIdSuffix}`,
+      recipeId: `${options.definitionId}:${recipeIdSuffix}`,
       recipeType: "reserved-item",
       durationTicks: Math.max(1, Math.round(durationSeconds * options.topology.standardTickRate)),
       inputs: [{ itemId: "any", amount: 1 }],
       outputs: [{ itemId: "same-as-input", amount: 1 }],
-      ingredientNodeIds: options.device.ingredientNodeIds,
-      productNodeIds: options.device.productNodeIds,
+      ingredientNodeIds: options.ingredientNodeIds,
+      productNodeIds: options.productNodeIds,
     }];
   }
 
   return Object.values(options.topology.recipeCatalog)
-    .filter((recipe) => recipe.machineId === options.device.definitionId)
+    .filter((recipe) => recipe.machineId === options.definitionId)
     .filter((recipe) => recipeCanMatchContents(recipe, options.ingredientSlotContents))
     .sort((left, right) => left.id.localeCompare(right.id))
     .map((recipe) => ({
@@ -398,8 +409,8 @@ function resolveRecipes(options: {
       durationTicks: recipe.durationTicks,
       inputs: recipe.inputs,
       outputs: recipe.outputs,
-      ingredientNodeIds: options.device.ingredientNodeIds,
-      productNodeIds: options.device.productNodeIds,
+      ingredientNodeIds: options.ingredientNodeIds,
+      productNodeIds: options.productNodeIds,
     }));
 }
 
@@ -409,7 +420,7 @@ function readIngredientSlotContents(options: {
   device: CompiledSimulationDevice;
 }): readonly IngredientSlotContent[] {
   const contents: IngredientSlotContent[] = [];
-  for (const nodeId of options.device.ingredientNodeIds) {
+  for (const nodeId of options.ingredientNodeIds) {
     const node = options.topology.nodes[nodeId];
     if (node === undefined) {
       continue;

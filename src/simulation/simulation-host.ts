@@ -206,7 +206,7 @@ function resolveDeviceRuntimeSlotItems(options: {
         : `${storageGroupId}:${sourceSlotId}`;
       const existing = slotItemsByRealSlotKey.get(realSlotKey);
       slotItemsByRealSlotKey.set(realSlotKey, {
-        slotType: existing?.slotType ?? node.slotType,
+        // AI-CORRECTION 2026-05-13: slotType removed. viewRole alone determines slot role for display.
         storageGroupId,
         slotId: sourceSlotId,
         viewRole: isShareCapSlot ? node.viewRole : "single-view",

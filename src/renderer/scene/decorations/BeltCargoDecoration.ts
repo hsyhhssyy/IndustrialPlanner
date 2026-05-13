@@ -325,7 +325,7 @@ function resolveStationaryCargoState(
   }
 
   const ingredientSlot = runtimeStatus.slotItems.find((slotItem) =>
-    slotItem.slotType === "ingredient"
+    slotItem.viewRole === "input-view"
     && slotItem.itemType !== null
     && slotItem.count > 0,
   )
@@ -338,7 +338,7 @@ function resolveStationaryCargoState(
   }
 
   const productSlot = runtimeStatus.slotItems.find((slotItem) =>
-    slotItem.slotType === "product"
+    slotItem.viewRole === "output-view"
     && slotItem.itemType !== null
     && slotItem.count > 0,
   )
@@ -359,7 +359,7 @@ function resolveStationaryCargoState(
 
   return {
     itemId: fallbackSlot.itemType,
-    progress: fallbackSlot.slotType === "product" ? 1 : 0,
+    progress: fallbackSlot.viewRole === "output-view" ? 1 : 0,
     isRunning: false,
   }
 }

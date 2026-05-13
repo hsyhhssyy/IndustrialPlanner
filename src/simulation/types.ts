@@ -5,7 +5,6 @@ import type { RecipeDefinition, RecipeType } from "@/domain/registry/types/recip
 export type SimulationItemDomain = "solid" | "liquid";
 export type SimulationPortKind = "item" | "fluid";
 export type SimulationPortDirection = "input" | "output";
-export type SimulationSlotType = "ingredient" | "product" | "universal";
 export type SimulationNodeViewRole = "input-view" | "output-view";
 export type SimulationCountLimit = number | "unlimited";
 export type SimulationTransportClass = "strict-belt" | "strict-pipe" | "anchor" | "non-graph";
@@ -88,18 +87,22 @@ export interface CompiledSimulationDevice {
   /** 若属于 strict-belt/strict-pipe 运输组件，则为该组件的 ID；否则为 null。 */
   readonly transportComponentId: string | null;
   readonly nodeIds: readonly string[];
-  readonly ingredientNodeIds: readonly string[];
-  readonly productNodeIds: readonly string[];
+  readonly recipeChannels: readonly CompiledSimulationRecipeChannel[];
   readonly portIds: readonly string[];
   readonly routing: Record<string, CompiledSimulationRoutingEntry>;
   readonly configHash: string;
+}
+
+export interface CompiledSimulationRecipeChannel {
+  readonly id: string;
+  readonly ingredientNodeIds: readonly string[];
+  readonly productNodeIds: readonly string[];
 }
 
 export interface CompiledSimulationNode {
   readonly id: string;
   readonly deviceId: string;
   readonly sourceStorageSlotGroupId: string | null;
-  readonly slotType: SimulationSlotType;
   readonly viewRole: SimulationNodeViewRole;
   readonly slotIds: readonly string[];
   readonly inputPortIds: readonly string[];

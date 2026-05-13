@@ -55,18 +55,20 @@ function createDeviceSnapshots(
       continue;
     }
 
+    // AI-CORRECTION 2026-05-13: snapshot 投影遍历所有 channel，取第一个运行中的 recipe。
+    const firstRecipe = Object.values(runtimeDevice.channelRecipes).find(r => r !== null) ?? null;
     devices[deviceId] = {
       deviceId,
       block: runtimeDevice.block,
-      recipe: runtimeDevice.recipe === null
+      recipe: firstRecipe === null
         ? null
         : {
-            runId: runtimeDevice.recipe.runId,
-            recipeId: runtimeDevice.recipe.recipeId,
-            recipeType: runtimeDevice.recipe.recipeType,
-            progressTicks: runtimeDevice.recipe.progressTicks,
-            durationTicks: runtimeDevice.recipe.durationTicks,
-            state: runtimeDevice.recipe.state,
+            runId: firstRecipe.runId,
+            recipeId: firstRecipe.recipeId,
+            recipeType: firstRecipe.recipeType,
+            progressTicks: firstRecipe.progressTicks,
+            durationTicks: firstRecipe.durationTicks,
+            state: firstRecipe.state,
           },
     };
   }

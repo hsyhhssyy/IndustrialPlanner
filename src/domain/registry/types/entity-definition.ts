@@ -72,14 +72,19 @@ export interface EntityDefinition {
 
   /**
    * 存储槽组（对应《仿真运行原理》§3.1 缓存类型 + §3.4 缓存组）。
-   * role 决定该存储组的缓存类型：
-   *   - "input"  → ingredient（连输入端口的缓存）
-   *   - "output" → product（连输出端口的缓存）
-   *   - "bidirectional" → universal（同时连输入输出）
-   * 每个存储槽组编译为一个求解图节点（CacheGroup）。
-   * 组内 slot 互斥（同物品不能出现在组内多个槽），跨组不互斥（见 §3.4）。
+   *
+   * 存储槽组 = 设备内部的一个缓存区域，编译后对应一个求解图节点。
+   * 存储组的输入/输出能力由 portStorageBindings 中绑定的端口方向决定；
+   * 配方原料/产物角色由 Recipe Channel 声明。
    */
   storageSlotGroups: StorageSlotGroupDefinition[];
+
+  /**
+   * Recipe Channel（配方通道）声明。
+   * 一个设备可声明 0~N 个 channel，每个 channel 独立运行一个配方。
+   * 未声明 channel 的设备不运行配方。
+   */
+  recipeChannels: RecipeChannelDefinition[];
 
   /**
    * 端口-存储绑定（对应《仿真运行原理》§5.1）。
@@ -87,6 +92,19 @@ export interface EntityDefinition {
    * 无显式绑定时，编译器自动生成 synthetic-input/synthetic-output 缓存组。
    */
   portStorageBindings: PortStorageBindingDefinition[];
+}
+
+// ---------------------------------------------------------------------------
+// Recipe Channel
+// ---------------------------------------------------------------------------
+
+export interface RecipeChannelDefinition {
+  /** channel 标识 */
+  id: string;
+  /** 配方原料从哪些存储组取 */
+  ingredientStorageGroupIds: string[];
+  /** 配方产物写入哪些存储组 */
+  productStorageGroupIds: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -126,24 +144,17 @@ export interface PortGroupDefinition {
 // ---------------------------------------------------------------------------
 // 存储槽组（对应《仿真运行原理》§3.1 缓存类型 + §3.4 缓存组）
 //
-// 存储槽组 = 设备内部的一个缓存区域，编译后对应一个 CacheGroup（求解图节点）。
-// role 字段决定缓存类型（ingredient / product / universal）。
+// 存储槽组 = 设备内部的一个缓存区域，编译后对应一个求解图节点。
+// 输入/输出能力由绑定的端口方向决定；配方参与由 Recipe Channel 声明。
 // ---------------------------------------------------------------------------
 
 export interface StorageSlotGroupDefinition {
   id: string;
   /** 物品域：item / fluid */
   kind: "item" | "fluid";
-  /**
-   * 存储角色 → 缓存类型映射：
-   *   "input"         → ingredient（链接到输入端口的缓存，接收物品、作配方原料）
-   *   "output"        → product（链接到输出端口的缓存，存放配方产物）
-   *   "bidirectional" → universal（同时链接输入和输出，如反应池共享槽位）
-   * 订正（2026-05-07）：当同一存储组同时绑定输入/输出端口且 splitLinkType="share-cap" 时，
-   *   "bidirectional" 会在编译时拆为 ingredient 输入视图 + product 输出视图；
-   *   "input"/"output" 则保持两视图同型。
-   */
-  role: "input" | "output" | "bidirectional";
+  // AI-CORRECTION 2026-05-13: role 字段已删除。
+  // 存储组的输入/输出能力由 portStorageBindings 绑定的端口方向推导；
+  // 配方原料/产物角色由 Recipe Channel 的 ingredientStorageGroupIds / productStorageGroupIds 决定。
   /**
    * 当同一存储组同时绑定输入/输出端口并被编译器拆为 input-view/output-view 时，
    * 决定两视图之间采用 share-all 还是 share-cap 连接。
@@ -196,6 +207,15 @@ export interface StorageSlotDefinition extends ItemFilterDefinition {
 // ---------------------------------------------------------------------------
 // 端口-存储绑定
 // ---------------------------------------------------------------------------
+
+export interface RecipeChannelDefinition {
+  /** channel 标识 */
+  id: string;
+  /** 配方原料从哪些存储组取 */
+  ingredientStorageGroupIds: string[];
+  /** 配方产物写入哪些存储组 */
+  productStorageGroupIds: string[];
+}
 
 export interface PortStorageBindingDefinition {
   id: string;
