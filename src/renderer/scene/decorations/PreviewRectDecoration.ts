@@ -16,7 +16,7 @@ export function createPreviewRectDecoration(): DecorationLayer {
     sync(ctx: DecorationSyncContext): void {
       graphics.clear();
 
-      const app = ctx.workspace.app;
+      const app = ctx.renderHost.workspace.app;
       if (!app) {
         return;
       }
@@ -26,7 +26,7 @@ export function createPreviewRectDecoration(): DecorationLayer {
         return;
       }
 
-      const editor = ctx.workspace.editor;
+      const editor = ctx.renderHost.workspace.editor;
       if (!editor) {
         return;
       }

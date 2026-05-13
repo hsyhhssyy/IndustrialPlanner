@@ -126,7 +126,7 @@ export function createMarqueeRectDecoration(): DecorationLayer {
 
     sync(ctx: DecorationSyncContext): void {
       const marqueeGridRect =
-        ctx.workspace.editor!.state.marqueeGridRect;
+        ctx.renderHost.workspace.editor!.state.marqueeGridRect;
 
       graphics.clear();
       glowStroke.clear();
@@ -150,7 +150,7 @@ export function createMarqueeRectDecoration(): DecorationLayer {
         return;
       }
 
-      const theme = ctx.workspace.app!.state.theme;
+      const theme = ctx.renderHost.workspace.app!.state.theme;
       const strokeStyle = resolveMarqueeGridRectStrokeStyle(
         ctx.viewportState.gridCellPixelSize,
         theme,

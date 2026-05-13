@@ -991,52 +991,61 @@ body.is-resizing-dialog-shell * {
 }
 
 .inspector-dialog {
-  width: min(540px, 100%);
+  width: min(920px, 100%);
   height: min(720px, 100%);
 }
 
 .inspector-dialog-body {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   min-height: 0;
+  overflow: hidden;
+  padding: 10px;
 }
 
-.inspector-dialog-layout {
-  display: flex;
-  flex-direction: row;
-  gap: 12px;
-  min-height: 0;
-  flex: 1;
+.inspector-dialog-body.has-neighborhood-preview {
+  grid-template-columns: minmax(280px, 1.25fr) minmax(240px, 0.9fr);
+  gap: 10px;
 }
 
-.inspector-dialog-neighborhood-preview {
+.inspector-dialog-inspector-pane {
+  min-height: 0;
+  overflow: auto;
+}
+
+.inspector-neighborhood-preview {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.inspector-neighborhood-preview-frame {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  width: 55%;
   min-width: 0;
   min-height: 0;
+  padding: 8px;
 }
 
-.inspector-dialog-neighborhood-canvas {
+.inspector-neighborhood-preview-canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+  outline: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  background: color-mix(in srgb, var(--surface-1) 84%, var(--text-0) 4%);
+  pointer-events: none;
+}
+
+.inspector-neighborhood-preview-canvas > canvas {
+  display: block;
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.inspector-dialog-neighborhood-canvas > canvas {
-  display: block;
-  image-rendering: auto;
-}
-
-.inspector-dialog-inspector-panel {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  overflow-y: auto;
 }
 
 .help-dialog-backdrop,
@@ -2841,14 +2850,9 @@ body.is-resizing-dialog-shell * {
     border-radius: 12px;
   }
 
-  .inspector-dialog-layout {
-    flex-direction: column;
-  }
-
-  .inspector-dialog-neighborhood-preview {
-    width: 100%;
-    min-height: 180px;
-    max-height: 50vh;
+  .inspector-dialog-body.has-neighborhood-preview {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(180px, 42%) minmax(0, 1fr);
   }
 
   .settings-dialog-header,

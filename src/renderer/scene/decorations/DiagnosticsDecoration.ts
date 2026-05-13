@@ -22,7 +22,7 @@ export function createDiagnosticsDecoration(): DecorationLayer {
 
     sync(ctx: DecorationSyncContext): void {
       const showFps =
-        ctx.workspace.app!.state.settings.debugShowFps;
+        ctx.renderHost.workspace.app!.state.settings.debugShowFps;
 
       if (!showFps) {
         text.visible = false;

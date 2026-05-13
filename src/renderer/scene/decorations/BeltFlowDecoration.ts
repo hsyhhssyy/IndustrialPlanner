@@ -86,13 +86,8 @@ export function createBeltFlowDecoration(): DecorationLayer {
       return
     }
 
-    const textureManager = ctx.workspace.render?.textureManager
-    if (textureManager === undefined) {
-      return
-    }
-
     highlightTextureLoadStarted = true
-    void textureManager.getTexture(HIGHLIGHT_TEXTURE_KEY).then((texture) => {
+    void ctx.renderHost.textureManager.getTexture(HIGHLIGHT_TEXTURE_KEY).then((texture) => {
       if (destroyed) {
         return
       }
@@ -127,7 +122,7 @@ export function createBeltFlowDecoration(): DecorationLayer {
     container,
 
     sync(ctx: DecorationSyncContext): void {
-      if (ctx.workspace.app?.state?.settings?.gameUseSimplifiedDeviceIcons === true) {
+      if (ctx.renderHost.workspace.app?.state?.settings?.gameUseSimplifiedDeviceIcons === true) {
         hide()
         return
       }
@@ -209,7 +204,7 @@ export function createBeltFlowDecoration(): DecorationLayer {
 function drawHighlightMask(ctx: DecorationSyncContext, graphics: Graphics): void {
   graphics.clear()
 
-  const editor = ctx.workspace.editor
+  const editor = ctx.renderHost.workspace.editor
   if (editor === null) {
     return
   }
@@ -235,7 +230,7 @@ function drawHighlightMask(ctx: DecorationSyncContext, graphics: Graphics): void
 function drawArrowMask(ctx: DecorationSyncContext, graphics: Graphics): void {
   graphics.clear()
 
-  const editor = ctx.workspace.editor
+  const editor = ctx.renderHost.workspace.editor
   if (editor === null) {
     return
   }
@@ -1032,7 +1027,7 @@ function resolveBeltFlowTintColor(
   ctx: DecorationSyncContext,
   entry: ReturnType<typeof resolveBeltVisualPathEntries>[number],
 ): number {
-  const theme = ctx.workspace.app?.state.theme
+  const theme = ctx.renderHost.workspace.app?.state.theme
   if (theme === undefined) {
     return 0xf59e0b
   }
@@ -1041,7 +1036,7 @@ function resolveBeltFlowTintColor(
     entityId: entry.entity.id,
     spriteId: entry.definition.spriteId,
     theme,
-    workspace: ctx.workspace,
+    workspace: ctx.renderHost.workspace,
   })
 }
 

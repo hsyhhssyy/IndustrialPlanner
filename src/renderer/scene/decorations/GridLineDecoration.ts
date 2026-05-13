@@ -667,7 +667,7 @@ export function createGridLineDecoration(): DecorationLayer {
     sync(ctx: DecorationSyncContext): void {
       graphics.clear();
 
-      const app = ctx.workspace.app;
+      const app = ctx.renderHost.workspace.app;
       if (!app) {
         return;
       }
@@ -681,7 +681,7 @@ export function createGridLineDecoration(): DecorationLayer {
         alwaysShowGridLines: app.state.settings.gameAlwaysShowGridLines,
         activeTool: app.state.activeTool,
         previewGridRect:
-          ctx.workspace.editor?.queries.findEntityCollectionGridRect(
+          ctx.renderHost.workspace.editor?.queries.findEntityCollectionGridRect(
             EntityCollectionType.preview,
           ) ?? null,
       });

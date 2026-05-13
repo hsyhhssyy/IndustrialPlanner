@@ -14,16 +14,8 @@ export interface MountBlueprintPreviewOptions {
 	width: number;
 	height: number;
 	viewport?: Partial<BlueprintPreviewViewport>;
-}
-
-export interface MountNeighborhoodPreviewOptions {
-	blueprint: BlueprintDocument;
-	/** 固定的视口矩形（网格坐标），内容会被裁切到此边界 */
-	viewportBounds: GridBounds;
-	/** 需要扫描线高亮的实体 ID */
-	highlightedEntityId: string;
-	/** 可用容器宽度 */
-	width: number;
-	/** 可用容器高度 */
-	height: number;
+	/** 固定视口边界，传入后不根据蓝图实体自动计算 bounds */
+	viewportBounds?: GridBounds;
+	/** 需要在预览中叠加扫描线高亮特效的实体 ID */
+	highlightedEntityId?: string;
 }

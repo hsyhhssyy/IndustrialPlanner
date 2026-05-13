@@ -34,13 +34,8 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
       return
     }
 
-    const textureManager = ctx.workspace.render?.textureManager
-    if (textureManager === undefined) {
-      return
-    }
-
     textureLoadStarted = true
-    void textureManager.getTexture(BELT_STRAIGHT_TEXTURE_KEY).then((loadedTexture) => {
+    void ctx.renderHost.textureManager.getTexture(BELT_STRAIGHT_TEXTURE_KEY).then((loadedTexture) => {
       if (destroyed) {
         return
       }
@@ -159,7 +154,7 @@ function resolveBeltPortExtensionTint(
   ctx: DecorationSyncContext,
   beltEntityId: string,
 ): number {
-  const theme = ctx.workspace.app?.state.theme
+  const theme = ctx.renderHost.workspace.app?.state.theme
   if (theme === undefined) {
     return 0xf59e0b
   }
@@ -168,6 +163,6 @@ function resolveBeltPortExtensionTint(
     entityId: beltEntityId,
     spriteId: "belt_straight_1x1",
     theme,
-    workspace: ctx.workspace,
+    workspace: ctx.renderHost.workspace,
   })
 }

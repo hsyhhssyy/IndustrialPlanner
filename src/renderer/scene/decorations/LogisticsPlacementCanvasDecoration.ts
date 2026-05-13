@@ -55,7 +55,7 @@ function resolveGlowAlpha(nowMs: number): number {
 function resolveLogisticsPlacementKind(
   ctx: DecorationSyncContext,
 ): keyof typeof LOGISTICS_PLACEMENT_LABELS | null {
-  const app = ctx.workspace.app;
+  const app = ctx.renderHost.workspace.app;
 
   if (app === null || !("internalState" in app)) {
     return null;
@@ -93,7 +93,7 @@ export function createLogisticsPlacementCanvasDecoration(): DecorationLayer {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
-      const appState = ctx.workspace.app!.state;
+      const appState = ctx.renderHost.workspace.app!.state;
       const kind = resolveLogisticsPlacementKind(ctx);
 
       if (appState.activeTool !== "logistics-placement" || kind === null) {

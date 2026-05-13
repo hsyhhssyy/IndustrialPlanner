@@ -1502,6 +1502,25 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector('[data-dialog-key="inspector"]')).not.toBeNull();
   });
 
+  it("renders the neighborhood preview beside the inspector for a single selection", () => {
+    const workspace = createWorkspace();
+    const editorHost = createEditorHost(workspace);
+    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
+    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
+    const appHost = createAppHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    const dialogBody = container.querySelector(".inspector-dialog-body") as HTMLElement | null;
+
+    expect(dialogBody).not.toBeNull();
+    expect(dialogBody?.classList.contains("has-neighborhood-preview")).toBe(true);
+    expect(dialogBody?.querySelector(".inspector-neighborhood-preview")).not.toBeNull();
+    expect(dialogBody?.querySelector(".inspector-dialog-inspector-pane")).not.toBeNull();
+  });
+
   it("clears the selection when the inspector dialog backdrop closes", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorHost(workspace);
@@ -1560,7 +1579,7 @@ describe("WorkbenchApp", () => {
     expect(dialog?.querySelector('button[title="最大化"]')).toBeNull();
   });
 
-  it("uses a 60% by 80% inspector dialog with resize handles on tablets", () => {
+  it("uses a 72% by 80% inspector dialog with resize handles on tablets", () => {
     coarsePointer = true;
     hoverNone = true;
     setViewport({
@@ -1585,7 +1604,7 @@ describe("WorkbenchApp", () => {
 
     expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
     expect(dialog).not.toBeNull();
-    expect(dialog?.style.width).toBe("60%");
+  expect(dialog?.style.width).toBe("72%");
     expect(dialog?.style.height).toBe("80%");
     expect(dialog?.querySelector(".dialog-shell-resize-grip")).not.toBeNull();
     expect(dialog?.querySelector('button[title="最大化"]')).not.toBeNull();

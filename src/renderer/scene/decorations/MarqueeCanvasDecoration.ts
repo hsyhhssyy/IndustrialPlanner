@@ -91,7 +91,7 @@ export function createMarqueeCanvasDecoration(): DecorationLayer {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
-      const activeTool = ctx.workspace.app!.state.activeTool;
+      const activeTool = ctx.renderHost.workspace.app!.state.activeTool;
 
       if (activeTool !== "marquee") {
         graphics.visible = false;
@@ -114,8 +114,8 @@ export function createMarqueeCanvasDecoration(): DecorationLayer {
         .fill(0xffffff);
 
       const color = resolveAppThemeColorNumber(
-        ctx.workspace.app!.state.theme,
-        ctx.workspace.app!.state.toolInfo.marqueeType === EntityCollectionType.marquee
+        ctx.renderHost.workspace.app!.state.theme,
+        ctx.renderHost.workspace.app!.state.toolInfo.marqueeType === EntityCollectionType.marquee
           ? "accent"
           : "danger",
       );
@@ -152,7 +152,7 @@ export function createMarqueeCanvasDecoration(): DecorationLayer {
 
       // 左上角模式标签（仅阴影，不跟随发光颜色）
       const isReverse =
-        ctx.workspace.app!.state.toolInfo.marqueeType === EntityCollectionType.reverseMarquee;
+        ctx.renderHost.workspace.app!.state.toolInfo.marqueeType === EntityCollectionType.reverseMarquee;
       modeLabel.text = isReverse ? "批量反选模式" : "批量选择模式";
       modeLabel.x = 12;
       modeLabel.y = 12;

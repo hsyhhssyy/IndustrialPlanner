@@ -74,7 +74,7 @@ export function createGrassBackgroundDecoration(
     container,
 
     sync(ctx: DecorationSyncContext): void {
-      const app = ctx.workspace.app;
+      const app = ctx.renderHost.workspace.app;
       if (app === null) {
         hideBackgroundLayers();
         return;

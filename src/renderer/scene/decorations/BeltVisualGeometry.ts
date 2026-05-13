@@ -91,7 +91,7 @@ function isBeltPortExtensionEndpointDevice(
   ctx: DecorationSyncContext,
   definitionId: string,
 ): boolean {
-  return !ctx.workspace.registry.queries.isGeneralLogisticsDevice(definitionId)
+  return !ctx.renderHost.workspace.registry.queries.isGeneralLogisticsDevice(definitionId)
 }
 
 export function resolveBeltInsertionEntries(ctx: DecorationSyncContext): BeltInsertionEntry[] {
@@ -107,12 +107,12 @@ export function resolveBeltInsertionEntries(ctx: DecorationSyncContext): BeltIns
 }
 
 export function resolveBeltPortExtensionEntries(ctx: DecorationSyncContext): BeltPortExtensionEntry[] {
-  const app = ctx.workspace.app
+  const app = ctx.renderHost.workspace.app
   if (app?.state?.settings?.gameUseSimplifiedDeviceIcons === true) {
     return []
   }
 
-  const editor = ctx.workspace.editor
+  const editor = ctx.renderHost.workspace.editor
   if (editor === null) {
     return []
   }
@@ -226,7 +226,7 @@ export function resolveBeltPortExtensionEntries(ctx: DecorationSyncContext): Bel
 }
 
 export function resolveBeltVisualPathEntries(ctx: DecorationSyncContext): BeltVisualPathEntry[] {
-  const editor = ctx.workspace.editor
+  const editor = ctx.renderHost.workspace.editor
   if (editor === null) {
     return []
   }
@@ -377,7 +377,7 @@ export function createEntityDefinitionMap(
   ctx: DecorationSyncContext,
 ): Map<string, EntityDefinition> {
   return new Map(
-    ctx.workspace.registry.entityDefinitions.map((definition) => [
+    ctx.renderHost.workspace.registry.entityDefinitions.map((definition) => [
       definition.id,
       definition,
     ]),

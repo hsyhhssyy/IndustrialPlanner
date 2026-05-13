@@ -204,19 +204,24 @@ function createDecorationContext(baseId: string): DecorationSyncContext {
       width: 200,
       height: 100,
     },
-    workspace: {
-      state: {} as never,
-      registry,
-      app: null,
-      editor: {
-        document: {
-          getSnapshot: () => document,
-          subscribe: () => () => undefined,
-        },
+    renderHost: {
+      workspace: {
+        state: {} as never,
+        registry,
+        app: null,
+        editor: {
+          document: {
+            getSnapshot: () => document,
+            subscribe: () => () => undefined,
+          },
+        } as never,
+        render: null,
+        simulation: null,
       } as never,
-      render: null,
-      simulation: null,
-    },
+      textureManager: {
+        getTexture: (async () => ({ width: 32, height: 32 })) as never,
+      } as never,
+    } as never,
     nowMs: 0,
   }
 }

@@ -25,16 +25,16 @@ function isValidGridRect(gridRect: GridRect): boolean {
 }
 
 export function resolveCurrentBaseDefinition(
-  ctx: Pick<DecorationSyncContext, "workspace">,
+  ctx: Pick<DecorationSyncContext, "renderHost">,
 ): BaseDefinition | null {
-  const editor = ctx.workspace.editor;
+  const editor = ctx.renderHost.workspace.editor;
   if (editor === null) {
     return null;
   }
 
   const baseId = editor.document.getSnapshot().baseId;
 
-  return ctx.workspace.registry.baseDefinitions.find(
+  return ctx.renderHost.workspace.registry.baseDefinitions.find(
     (definition) => definition.id === baseId,
   ) ?? null;
 }

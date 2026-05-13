@@ -55,12 +55,6 @@ function createBlueprintPreviewRenderStub() {
     disposeBlueprintPreview,
     render: {
       canvas: document.createElement("canvas"),
-      textureManager: {
-        getTexture: vi.fn(async () => {
-          throw new Error("Test stub should not load shared render textures.");
-        }),
-        destroy: vi.fn(),
-      },
       queries: {
         getBlueprintPreviewCanvas: vi.fn(() => previewCanvas),
       },

@@ -491,53 +491,54 @@ function createFlowContext(options: {
       width: 400,
       height: 200,
     },
-    workspace: {
-      app: {
-        state: {
-          theme: AYU_LIGHT_THEME,
-          settings: {
-            gameUseSimplifiedDeviceIcons: options.simplifiedDeviceIcons ?? false,
-          },
-        },
-      },
-      registry: {
-        ...registry,
-      },
-      render: options.getTexture === undefined
-        ? null
-        : {
-          textureManager: {
-            getTexture: options.getTexture,
-          },
-        },
-      editor: {
-        state: {
-          collections: {
-            [EntityCollectionType.selection]: createCollectionStub(options.selectionIds ?? []),
-          },
-        },
-        queries: {
-          listEntities: () => options.entities ?? [
-            {
-              id: "belt-a",
-              definitionId: "belt_straight_1x1",
-              position: { x: 0, y: 0 },
-              rotation: 0,
-              config: {},
-              tags: [],
+    renderHost: {
+      workspace: {
+        state: {} as never,
+        app: {
+          state: {
+            theme: AYU_LIGHT_THEME,
+            settings: {
+              gameUseSimplifiedDeviceIcons: options.simplifiedDeviceIcons ?? false,
             },
-            {
-              id: "belt-b",
-              definitionId: "belt_straight_1x1",
-              position: { x: 1, y: 0 },
-              rotation: 0,
-              config: {},
-              tags: [],
-            },
-          ],
+          },
         },
-      },
-    },
+        registry: {
+          ...registry,
+        },
+        render: {},
+        simulation: null,
+        editor: {
+          state: {
+            collections: {
+              [EntityCollectionType.selection]: createCollectionStub(options.selectionIds ?? []),
+            },
+          },
+          queries: {
+            listEntities: () => options.entities ?? [
+              {
+                id: "belt-a",
+                definitionId: "belt_straight_1x1",
+                position: { x: 0, y: 0 },
+                rotation: 0,
+                config: {},
+                tags: [],
+              },
+              {
+                id: "belt-b",
+                definitionId: "belt_straight_1x1",
+                position: { x: 1, y: 0 },
+                rotation: 0,
+                config: {},
+                tags: [],
+              },
+            ],
+          },
+        },
+      } as never,
+      textureManager: {
+        getTexture: options.getTexture ?? (async () => ({ width: 32, height: 32 })),
+      } as never,
+    } as never,
     nowMs: options.nowMs,
   }
 }

@@ -736,57 +736,58 @@ function createContext(options: {
       width: 200,
       height: 200,
     },
-    workspace: {
-      app: {
-        state: {
-          settings: {
-            gameUseSimplifiedDeviceIcons: options.simplifiedDeviceIcons ?? false,
+    renderHost: {
+      workspace: {
+        app: {
+          state: {
+            settings: {
+              gameUseSimplifiedDeviceIcons: options.simplifiedDeviceIcons ?? false,
+            },
           },
         },
-      },
-      registry: {
-        ...registry,
-      },
-      render: {
-        textureManager: {
-          getTexture: options.getTexture,
+        registry: {
+          ...registry,
         },
-      },
-      simulation: {
-        state: {
-          runningState: "start",
-          simulationSpeed: 1,
-        },
-        queries: {
-          getDeviceRuntimeStatus: (entityId: string) => {
-            const entry = entriesByEntityId.get(entityId)
-            if (entry === undefined) {
-              return null
-            }
-
-              return entry.runtimeStatus ?? {
-              recipeId: `${entry.definitionId}:dynamic-belt-transfer`,
-              progressSeconds: entry.progress,
-              desiredSeconds: 1,
-              slotItems: [{
-                  slotType: "ingredient",
-                  storageGroupId: "item_buffer",
-                slotId: "input_slot_1",
-                  viewRole: "input-view",
-                itemType: entry.itemId,
-                count: 1,
-                reserved: 1,
-              }],
+        render: {},
+        simulation: {
+          state: {
+            runningState: "start",
+            simulationSpeed: 1,
+          },
+          queries: {
+            getDeviceRuntimeStatus: (entityId: string) => {
+              const entry = entriesByEntityId.get(entityId)
+              if (entry === undefined) {
+                return null
               }
+
+                return entry.runtimeStatus ?? {
+                recipeId: `${entry.definitionId}:dynamic-belt-transfer`,
+                progressSeconds: entry.progress,
+                desiredSeconds: 1,
+                slotItems: [{
+                    slotType: "ingredient",
+                    storageGroupId: "item_buffer",
+                  slotId: "input_slot_1",
+                    viewRole: "input-view",
+                  itemType: entry.itemId,
+                  count: 1,
+                  reserved: 1,
+                }],
+                }
+            },
           },
         },
-      },
-      editor: {
-        queries: {
-          listEntities: () => entities,
+        editor: {
+          queries: {
+            listEntities: () => entities,
+          },
         },
-      },
-    },
+      } as never,
+      textureManager: {
+        getTexture: options.getTexture ?? (async () => ({ width: 32, height: 32 })),
+      } as never,
+    } as never,
     nowMs: options.nowMs ?? 1000,
   }
 }
@@ -877,7 +878,8 @@ function resolveCargoRoot(
 
 function createIconTexture(width: number, height: number) {
   return new Texture({
-    source: { width, height },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    source: { width, height } as any,
     frame: new Rectangle(0, 0, width, height),
     orig: new Rectangle(0, 0, width, height),
   })

@@ -1,4 +1,4 @@
-import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { RenderHost } from "@/renderer/renderer-host";
 
 export interface RenderViewportState {
   width: number;
@@ -19,6 +19,6 @@ export interface DecorationViewportBounds {
 export interface DecorationSyncContext {
   viewportState: RenderViewportState;
   viewportBounds: DecorationViewportBounds;
-  workspace: WorkspaceContract;
+  renderHost: RenderHost;
   nowMs: number;
 }

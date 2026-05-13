@@ -25,7 +25,7 @@ import {
   type RenderSpriteLayout,
 } from "../sprites/render-sprite"
 import {
-  type DecorationSyncContext,
+  DecorationSyncContext,
   type RenderViewportState,
 } from "./decorations/DecorationSyncContext"
 import { createGridLineDecoration } from "./decorations/GridLineDecoration"
@@ -93,7 +93,7 @@ export function createRenderSceneOrchestrator(
         width: app.renderer.width,
         height: app.renderer.height,
       },
-      workspace: renderHost.workspace,
+      renderHost,
       nowMs: frameTime.nowMs,
     }
 

@@ -301,21 +301,26 @@ function createGeometryContext(options: {
       width: 200,
       height: 200,
     },
-    workspace: {
-      app: {
-        state: {
-          settings: {
-            gameUseSimplifiedDeviceIcons: options.simplifiedDeviceIcons ?? false,
+    renderHost: {
+      workspace: {
+        app: {
+          state: {
+            settings: {
+              gameUseSimplifiedDeviceIcons: options.simplifiedDeviceIcons ?? false,
+            },
           },
         },
-      },
-      registry,
-      editor: {
-        queries: {
-          listEntities: () => options.entities,
+        registry,
+        editor: {
+          queries: {
+            listEntities: () => options.entities,
+          },
         },
-      },
-    },
+      } as never,
+      textureManager: {
+        getTexture: (async () => ({ width: 32, height: 32 })) as never,
+      } as never,
+    } as never,
     nowMs: 1000,
   }
 }

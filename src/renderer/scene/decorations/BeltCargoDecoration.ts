@@ -100,22 +100,13 @@ export function createBeltCargoDecoration(): DecorationLayer {
     }
 
     itemIconIdByItemId = new Map(
-      ctx.workspace.registry.itemDefinitions.map((item) => [item.id, item.iconId]),
+      ctx.renderHost.workspace.registry.itemDefinitions.map((item) => [item.id, item.iconId]),
     )
     return itemIconIdByItemId
   }
 
   const ensureTexture = (ctx: DecorationSyncContext, textureKey: string): void => {
-    const textureManager = ctx.workspace.render?.textureManager
-    if (
-      textureManager === undefined
-      || resolvedTextures.has(textureKey)
-      || pendingTextures.has(textureKey)
-    ) {
-      return
-    }
-
-    const promise = textureManager.getTexture(textureKey)
+    const promise = ctx.renderHost.textureManager.getTexture(textureKey)
     pendingTextures.set(textureKey, promise)
     void promise
       .then((texture) => {
@@ -169,7 +160,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
         return
       }
 
-      if (ctx.workspace.simulation?.state.runningState === "stop") {
+      if (ctx.renderHost.workspace.simulation?.state.runningState === "stop") {
         hideAll()
         return
       }
@@ -248,8 +239,8 @@ export function createBeltCargoDecoration(): DecorationLayer {
 }
 
 function resolveBeltCargoEntries(ctx: DecorationSyncContext): BeltCargoEntry[] {
-  const simulation = ctx.workspace.simulation
-  const editor = ctx.workspace.editor
+  const simulation = ctx.renderHost.workspace.simulation
+  const editor = ctx.renderHost.workspace.editor
   if (simulation === null || editor === null || simulation.state.runningState === "stop") {
     return []
   }
@@ -437,7 +428,7 @@ function resolveBeltCargoClipBeltRects(
   ctx: DecorationSyncContext,
   gridCellSize: number,
 ): BeltCargoClipRect[] {
-  const editor = ctx.workspace.editor
+  const editor = ctx.renderHost.workspace.editor
   if (editor === null) {
     return []
   }
