@@ -975,8 +975,22 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    storageSlotGroups: [],  // 无显式存储组 → 编译器自动合成
-    portStorageBindings: [],
+    // AI-CORRECTION 2026-05-13: 原"无显式存储组 → 编译器自动合成"已失效。
+    // 现改为显式 bidirectional+share-cap，与 belt_straight_1x1 结构一致，
+    // 使编译器生成 input-view/output-view 节点 + share-cap link + reserved-item 搬运配方。
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "item_buffer",
+        "item",
+        "bidirectional",
+        createSlots("slot", [1], "solid"),
+        "share-cap",
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input", "item_input", "item_buffer"),
+      createBinding("bind_item_output", "item_output", "item_buffer"),
+    ],
   }),
 
   /**
@@ -1012,8 +1026,21 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_w", 0, 0, "W")],
       ),
     ],
-    storageSlotGroups: [],
-    portStorageBindings: [],
+    // AI-CORRECTION 2026-05-13: 原 storageSlotGroups: [] 已失效。
+    // 现改为显式 bidirectional+share-cap，与 belt_straight_1x1 结构一致。
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "item_buffer",
+        "item",
+        "bidirectional",
+        createSlots("slot", [1], "solid"),
+        "share-cap",
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input", "item_input", "item_buffer"),
+      createBinding("bind_item_output", "item_output", "item_buffer"),
+    ],
   }),
 
   /**
@@ -1192,8 +1219,21 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    storageSlotGroups: [],
-    portStorageBindings: [],
+    // AI-CORRECTION 2026-05-13: 原 storageSlotGroups: [] 已失效。
+    // 现改为显式 bidirectional+share-cap（fluid），与 pipe 直段结构一致。
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "fluid_buffer",
+        "fluid",
+        "bidirectional",
+        createSlots("slot", [1], "liquid"),
+        "share-cap",
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_fluid_input", "fluid_input", "fluid_buffer"),
+      createBinding("bind_fluid_output", "fluid_output", "fluid_buffer"),
+    ],
   }),
 
   /**
@@ -1226,8 +1266,21 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_w", 0, 0, "W")],
       ),
     ],
-    storageSlotGroups: [],
-    portStorageBindings: [],
+    // AI-CORRECTION 2026-05-13: 原 storageSlotGroups: [] 已失效。
+    // 现改为显式 bidirectional+share-cap（fluid），与 pipe 直段结构一致。
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "fluid_buffer",
+        "fluid",
+        "bidirectional",
+        createSlots("slot", [1], "liquid"),
+        "share-cap",
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_fluid_input", "fluid_input", "fluid_buffer"),
+      createBinding("bind_fluid_output", "fluid_output", "fluid_buffer"),
+    ],
   }),
 
   /**
@@ -2017,10 +2070,21 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_e", 0, 0, "E")],
       ),
     ],
-    ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [1] },
-      { kind: "item", role: "output", capacities: [1] },
-    ]),
+    // AI-CORRECTION 2026-05-13: 原 createDirectionalBuffers（分离 input+output 组）已失效。
+    // 现改为 bidirectional+share-cap，与 belt_straight_1x1 结构一致。
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "item_buffer",
+        "item",
+        "bidirectional",
+        createSlots("slot", [1], "solid"),
+        "share-cap",
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input", "item_input", "item_buffer"),
+      createBinding("bind_item_output", "item_output", "item_buffer"),
+    ],
   }),
   createEntityDefinition({
     id: "item_pipe_admission",
@@ -2045,9 +2109,20 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_e", 0, 0, "E")],
       ),
     ],
-    ...createDirectionalBuffers([
-      { kind: "fluid", role: "input", capacities: [1] },
-      { kind: "fluid", role: "output", capacities: [1] },
-    ]),
+    // AI-CORRECTION 2026-05-13: 原 createDirectionalBuffers（分离 input+output 组）已失效。
+    // 现改为 bidirectional+share-cap，与 pipe 直段结构一致。
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "fluid_buffer",
+        "fluid",
+        "bidirectional",
+        createSlots("slot", [1], "liquid"),
+        "share-cap",
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_fluid_input", "fluid_input", "fluid_buffer"),
+      createBinding("bind_fluid_output", "fluid_output", "fluid_buffer"),
+    ],
   }),
 ];

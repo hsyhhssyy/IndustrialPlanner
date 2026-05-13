@@ -11,6 +11,7 @@ import {
 
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import { getRotatedGridFootprint } from "@/shared/geometry/grid"
+import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
 import type { GridRectSize, GridRotation } from "@/domain/shared/grid"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
@@ -44,6 +45,7 @@ const PREVIEW_BORDER_ALPHA = 0.5;
 const DEVICE_LABEL_ICON_SIZE = 14;
 const DEVICE_LABEL_FONT_SIZE = 8;
 const DEVICE_LABEL_TEXT_WIDTH_RATIO = 0.88;
+const DEVICE_LABEL_MIN_TEXT_WIDTH = 24;
 const DEVICE_LABEL_GAP = 2;
 const DEVICE_LABEL_LINE_HEIGHT_RATIO = 1.16;
 const DEVICE_LABEL_DEFAULT_TEXT_COLOR = 0xffffff;
@@ -88,6 +90,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private currentDeviceIconTextureKey: string | null = null
   private currentDeviceNameText: string | null = null
   private currentDeviceNameStyleKey: string | null = null
+  private currentGridCellPixelSize = WORLD_GRID_CELL_PIXEL_SIZE
   private textureLoadVersion = 0
   private deviceIconLoadVersion = 0
   private isDeviceIconReady = false
@@ -244,9 +247,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
-    void context
-
     this.currentLayout = layout
+    this.currentGridCellPixelSize = this.resolveWorkspaceGridCellPixelSize(context)
     this.syncDeviceTextures()
 
     if (!this.isTextureReady) {
@@ -531,6 +533,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       layout,
       showDeviceIcon,
       showDeviceName,
+      gridCellPixelSize: this.currentGridCellPixelSize,
     });
 
     this.deviceLabelRoot.visible = true;
@@ -1025,6 +1028,7 @@ function resolveDeviceLabelLayout(options: {
   layout: RenderSpriteLayout;
   showDeviceIcon: boolean;
   showDeviceName: boolean;
+  gridCellPixelSize: number;
 }): {
   icon: {
     x: number;
@@ -1038,13 +1042,16 @@ function resolveDeviceLabelLayout(options: {
     maxWidth: number;
   };
 } {
-  const { layout, showDeviceIcon, showDeviceName } = options;
+  const { layout, showDeviceIcon, showDeviceName, gridCellPixelSize } = options;
   const centerX = layout.x + layout.width / 2;
   const centerY = layout.y + layout.height / 2;
-  const iconSize = showDeviceIcon ? DEVICE_LABEL_ICON_SIZE : 0;
-  const fontSize = DEVICE_LABEL_FONT_SIZE;
+  const zoomRatio = Number.isFinite(gridCellPixelSize) && gridCellPixelSize > 0
+    ? gridCellPixelSize / WORLD_GRID_CELL_PIXEL_SIZE
+    : 1;
+  const iconSize = showDeviceIcon ? DEVICE_LABEL_ICON_SIZE * zoomRatio : 0;
+  const fontSize = DEVICE_LABEL_FONT_SIZE * zoomRatio;
   const lineHeight = showDeviceName ? fontSize * DEVICE_LABEL_LINE_HEIGHT_RATIO : 0;
-  const gap = showDeviceIcon && showDeviceName ? DEVICE_LABEL_GAP : 0;
+  const gap = showDeviceIcon && showDeviceName ? DEVICE_LABEL_GAP * zoomRatio : 0;
   const totalHeight = iconSize + gap + lineHeight;
   const top = centerY - totalHeight / 2;
   const iconY = showDeviceIcon
@@ -1064,7 +1071,10 @@ function resolveDeviceLabelLayout(options: {
       x: centerX,
       y: textY,
       fontSize,
-      maxWidth: Math.max(24, layout.width * DEVICE_LABEL_TEXT_WIDTH_RATIO),
+      maxWidth: Math.max(
+        DEVICE_LABEL_MIN_TEXT_WIDTH * zoomRatio,
+        layout.width * DEVICE_LABEL_TEXT_WIDTH_RATIO,
+      ),
     },
   };
 }

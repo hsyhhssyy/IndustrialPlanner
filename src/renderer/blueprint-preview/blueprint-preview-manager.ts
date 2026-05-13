@@ -31,11 +31,13 @@ const DEFAULT_BLUEPRINT_PREVIEW_HEIGHT = 360
 const DEFAULT_BLUEPRINT_PREVIEW_ZOOM = 1
 const MIN_BLUEPRINT_PREVIEW_ZOOM = 0.1
 const MAX_BLUEPRINT_PREVIEW_ZOOM = 8
+const BLUEPRINT_PREVIEW_LIGHT_CANVAS_BACKGROUND_COLOR = 0xeef3f8
+const BLUEPRINT_PREVIEW_LIGHT_GRID_LINE_COLOR = 0x5c6773
 const BLUEPRINT_PREVIEW_PADDING_CELLS = 1
 const BLUEPRINT_PREVIEW_GRID_LINE_ALPHA = 0.30
 // Keep preview grid uniform: every cell boundary uses the same pixel-line stroke.
 const BLUEPRINT_PREVIEW_MAJOR_GRID_INTERVAL = 1
-const BLUEPRINT_PREVIEW_SCANLINE_INTERVAL_MS = 2000
+const BLUEPRINT_PREVIEW_SCANLINE_INTERVAL_MS = 400000
 const BLUEPRINT_PREVIEW_SCANLINE_PADDING_TILES = 2
 const BLUEPRINT_PREVIEW_SCANLINE_TINT = 0x8fd8ff
 const DEGREE_TO_RADIAN = Math.PI / 180
@@ -96,7 +98,8 @@ export function createBlueprintPreviewManager(options: {
       await app.init({
         width,
         height,
-        backgroundAlpha: 0,
+        backgroundAlpha: 1,
+        backgroundColor: BLUEPRINT_PREVIEW_LIGHT_CANVAS_BACKGROUND_COLOR,
         antialias: true,
         autoDensity: true,
         resolution,
@@ -469,6 +472,7 @@ function syncBlueprintPreviewGrid(
       width: renderState.fineWidth,
       alpha: BLUEPRINT_PREVIEW_GRID_LINE_ALPHA * renderState.fineAlpha,
       pixelLine: renderState.finePixelLine,
+      forceColor: BLUEPRINT_PREVIEW_LIGHT_GRID_LINE_COLOR,
     }))
   }
 
@@ -486,6 +490,7 @@ function syncBlueprintPreviewGrid(
       width: 1,
       alpha: BLUEPRINT_PREVIEW_GRID_LINE_ALPHA * renderState.majorAlpha,
       pixelLine: true,
+      forceColor: BLUEPRINT_PREVIEW_LIGHT_GRID_LINE_COLOR,
     }))
   }
 }
@@ -561,7 +566,6 @@ function mountBlueprintPreviewHighlight(state: PreviewState): void {
   scanlineTiling.roundPixels = true
   scanlineTiling.tint = BLUEPRINT_PREVIEW_SCANLINE_TINT
   scanlineTiling.visible = false
-  maskGraphics.renderable = false
 
   state.scanlineTiling = scanlineTiling
   state.scanlineMaskGraphics = maskGraphics
@@ -588,8 +592,8 @@ function mountBlueprintPreviewHighlight(state: PreviewState): void {
     const spriteWidth = isQuarterTurn ? layoutHeight : layoutWidth
     const spriteHeight = isQuarterTurn ? layoutWidth : layoutHeight
 
-    const tilePixelSize = scanlineTexture.width || 64
-    const paddingPixels = BLUEPRINT_PREVIEW_SCANLINE_PADDING_TILES * tilePixelSize
+    const tilePixelWidth = scanlineTexture.width || 64
+    const tilePixelHeight = scanlineTexture.height || tilePixelWidth
 
     const maskLeft = entityCenterCells.x - boundsCenterCells.x - layoutWidth / 2
     const maskTop = entityCenterCells.y - boundsCenterCells.y - layoutHeight / 2
@@ -600,11 +604,15 @@ function mountBlueprintPreviewHighlight(state: PreviewState): void {
 
     scanlineTiling.mask = maskGraphics
     scanlineTiling.texture = scanlineTexture
+    scanlineTiling.tileScale.set(
+      1 / tilePixelWidth,
+      1 / tilePixelHeight,
+    )
     scanlineTiling.x = entityCenterCells.x - boundsCenterCells.x
     scanlineTiling.y = entityCenterCells.y - boundsCenterCells.y
     scanlineTiling.rotation = 0
-    scanlineTiling.width = spriteWidth + paddingPixels * 2
-    scanlineTiling.height = spriteHeight + paddingPixels * 2
+    scanlineTiling.width = spriteWidth + BLUEPRINT_PREVIEW_SCANLINE_PADDING_TILES * 2
+    scanlineTiling.height = spriteHeight + BLUEPRINT_PREVIEW_SCANLINE_PADDING_TILES * 2
     scanlineTiling.visible = true
 
     state.app.ticker.add(() => {
@@ -614,7 +622,7 @@ function mountBlueprintPreviewHighlight(state: PreviewState): void {
 
       const phase = (Date.now() % BLUEPRINT_PREVIEW_SCANLINE_INTERVAL_MS)
         / BLUEPRINT_PREVIEW_SCANLINE_INTERVAL_MS
-      scanlineTiling.tilePosition.x = phase * tilePixelSize
+      scanlineTiling.tilePosition.x = phase * tilePixelWidth
     })
   })
 }

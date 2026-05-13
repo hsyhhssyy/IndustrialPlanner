@@ -367,6 +367,27 @@ function resolveRecipes(options: {
     }];
   }
 
+  // AI-CORRECTION 2026-05-13:
+  // General logistics devices (splitter, converger, admission — anchor transportClass)
+  // also use reserved-item transport recipes, matching §6.1.2–§6.1.5 of 仿真运行原理.
+  // Detect via BeltFamily/PipeFamily tags to cover all logistics devices uniformly.
+  // Strict devices are already handled above and won't re-enter here.
+  const isGeneralBelt = options.device.tags.includes("BeltFamily");
+  const isGeneralPipe = options.device.tags.includes("PipeFamily");
+  if ((isGeneralBelt || isGeneralPipe) && options.ingredientSlotContents.length > 0) {
+    const durationSeconds = isGeneralBelt ? 2 : 0.5;
+    const recipeIdSuffix = isGeneralBelt ? "dynamic-belt-transfer" : "dynamic-pipe-transfer";
+    return [{
+      recipeId: `${options.device.definitionId}:${recipeIdSuffix}`,
+      recipeType: "reserved-item",
+      durationTicks: Math.max(1, Math.round(durationSeconds * options.topology.standardTickRate)),
+      inputs: [{ itemId: "any", amount: 1 }],
+      outputs: [{ itemId: "same-as-input", amount: 1 }],
+      ingredientNodeIds: options.device.ingredientNodeIds,
+      productNodeIds: options.device.productNodeIds,
+    }];
+  }
+
   return Object.values(options.topology.recipeCatalog)
     .filter((recipe) => recipe.machineId === options.device.definitionId)
     .filter((recipe) => recipeCanMatchContents(recipe, options.ingredientSlotContents))
