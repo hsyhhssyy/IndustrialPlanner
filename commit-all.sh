@@ -34,17 +34,38 @@ list_direct_submodules() {
   git -C "$repo_path" config --file .gitmodules --get-regexp path 2>/dev/null | awk '{ print $2 }'
 }
 
+push_if_has_upstream() {
+  local repo_path="$1"
+  local repo_label="$2"
+
+  if ! git -C "$repo_path" rev-parse --abbrev-ref @{u} >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local unpushed
+  unpushed=$(git -C "$repo_path" rev-list --count @{u}..HEAD 2>/dev/null || echo 0)
+  if [[ "$unpushed" -gt 0 ]]; then
+    if git -C "$repo_path" push; then
+      echo "已推送: $repo_label"
+    else
+      echo "推送失败: $repo_label（提交已保存，请稍后手动推送）" >&2
+    fi
+  fi
+}
+
 commit_repo_if_needed() {
   local repo_path="$1"
   local repo_label="$2"
 
   if [[ -z "$(git -C "$repo_path" status --porcelain)" ]]; then
+    push_if_has_upstream "$repo_path" "$repo_label"
     return 0
   fi
 
   git -C "$repo_path" add .
 
   if [[ -z "$(git -C "$repo_path" status --porcelain)" ]]; then
+    push_if_has_upstream "$repo_path" "$repo_label"
     return 0
   fi
 
@@ -52,9 +73,7 @@ commit_repo_if_needed() {
   echo "已提交: $repo_label"
   did_commit=1
 
-  # Push changes
-  git -C "$repo_path" push
-  echo "已推送: $repo_label"
+  push_if_has_upstream "$repo_path" "$repo_label"
 }
 
 commit_submodules_recursively() {

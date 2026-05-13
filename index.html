@@ -6,10 +6,22 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>Industrial Planner</title>
+    <title>集成工业仿真</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      const hostname = location.hostname
+      const analyticsDisabled = hostname === 'coder-page.hsyhhssyy.net' || hostname.endsWith('.coder-page.hsyhhssyy.net')
+
+      if (!analyticsDisabled) {
+        const script = document.createElement('script')
+        script.defer = true
+        script.src = 'https://static.cloudflareinsights.com/beacon.min.js'
+        script.setAttribute('data-cf-beacon', '{"token":"19c349feefc344acab603c33ddee4b39"}')
+        document.head.appendChild(script)
+      }
+    </script>
   </body>
 </html>
