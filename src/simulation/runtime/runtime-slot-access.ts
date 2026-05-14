@@ -383,8 +383,8 @@ function resolveRecipes(options: {
   // also use reserved-item transport recipes, matching §6.1.2–§6.1.5 of 仿真运行原理.
   // Detect via BeltFamily/PipeFamily tags to cover all logistics devices uniformly.
   // Strict devices are already handled above and won't re-enter here.
-  const isGeneralBelt = options.tags.includes("BeltFamily");
-  const isGeneralPipe = options.tags.includes("PipeFamily");
+  const isGeneralBelt = (options.tags ?? []).includes("BeltFamily");
+  const isGeneralPipe = (options.tags ?? []).includes("PipeFamily");
   if ((isGeneralBelt || isGeneralPipe) && options.ingredientSlotContents.length > 0) {
     const durationSeconds = isGeneralBelt ? 2 : 0.5;
     const recipeIdSuffix = isGeneralBelt ? "dynamic-belt-transfer" : "dynamic-pipe-transfer";

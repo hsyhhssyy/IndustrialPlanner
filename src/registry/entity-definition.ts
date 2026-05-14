@@ -103,7 +103,9 @@ function createRecipeMachineIngredientSlotInspectors(
   }
 
   return definition.storageSlotGroups.flatMap((storageSlotGroup, storageSlotGroupIndex) =>
-    storageSlotGroup.role === "input"
+    // AI-CORRECTION 2026-05-13: storageSlotGroup.role no longer exists.
+    // Slot inspector registration now uses portStorageBindings to determine direction.
+    definition.portStorageBindings.some(b => b.storageSlotGroupId === storageSlotGroup.id)
       ? [{
           type: INSPECTOR_TYPE.slotConfig,
           targetPath: `storageSlotGroups[${storageSlotGroupIndex}].slots`,
@@ -153,6 +155,7 @@ function createEmptyEntityDefinition(
     inspectors: [],
     portGroups: [],
     storageSlotGroups: [],
+    recipeChannels: [],
     portStorageBindings: [],
   });
 }
@@ -346,8 +349,8 @@ function resolveSlotFilterType(kind: DirectionalBufferLayoutInput["kind"]): Filt
 function createDirectionalBuffers(
   layouts: readonly DirectionalBufferLayoutInput[],
 ): Pick<EntityDefinition, "storageSlotGroups" | "portStorageBindings" | "recipeChannels"> {
-  const ingGroupIds = layouts.filter(l => l.role === "input").map(l => `${l.kind}_${l.role}_buffer`);
-  const prodGroupIds = layouts.filter(l => l.role === "output").map(l => `${l.kind}_${l.role}_buffer`);
+  const ingGroupIds = layouts.filter(l => l.direction === "input").map(l => `${l.kind}_${l.direction}_buffer`);
+  const prodGroupIds = layouts.filter(l => l.direction === "output").map(l => `${l.kind}_${l.direction}_buffer`);
   return {
     recipeChannels: (ingGroupIds.length > 0 || prodGroupIds.length > 0)
       ? [createRecipeChannel("default", ingGroupIds, prodGroupIds)]
@@ -1451,7 +1454,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [1] },
+      { kind: "item", direction: "input", capacities: [1] },
     ]),
   }),
   createEntityDefinition({
@@ -1478,8 +1481,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [50] },
-      { kind: "item", role: "output", capacities: [50] },
+      { kind: "item", direction: "input", capacities: [50] },
+      { kind: "item", direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -1518,10 +1521,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [50] },
-      { kind: "fluid", role: "input", capacities: [50] },
-      { kind: "fluid", role: "output", capacities: [50] },
-      { kind: "item", role: "output", capacities: [50] },
+      { kind: "item", direction: "input", capacities: [50] },
+      { kind: "fluid", direction: "input", capacities: [50] },
+      { kind: "fluid", direction: "output", capacities: [50] },
+      { kind: "item", direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -1548,8 +1551,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [50] },
-      { kind: "item", role: "output", capacities: [50] },
+      { kind: "item", direction: "input", capacities: [50] },
+      { kind: "item", direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -1576,8 +1579,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [50] },
-      { kind: "item", role: "output", capacities: [50] },
+      { kind: "item", direction: "input", capacities: [50] },
+      { kind: "item", direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -1604,8 +1607,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [50] },
-      { kind: "item", role: "output", capacities: [50] },
+      { kind: "item", direction: "input", capacities: [50] },
+      { kind: "item", direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -1632,8 +1635,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [50] },
-      { kind: "item", role: "output", capacities: [50] },
+      { kind: "item", direction: "input", capacities: [50] },
+      { kind: "item", direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -1666,9 +1669,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [50] },
-      { kind: "fluid", role: "input", capacities: [50] },
-      { kind: "item", role: "output", capacities: [50] },
+      { kind: "item", direction: "input", capacities: [50] },
+      { kind: "fluid", direction: "input", capacities: [50] },
+      { kind: "item", direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -1695,8 +1698,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [50, 50] },
-      { kind: "item", role: "output", capacities: [50] },
+      { kind: "item", direction: "input", capacities: [50, 50] },
+      { kind: "item", direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -1723,8 +1726,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [50, 50] },
-      { kind: "item", role: "output", capacities: [50] },
+      { kind: "item", direction: "input", capacities: [50, 50] },
+      { kind: "item", direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -1751,8 +1754,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [50, 50] },
-      { kind: "item", role: "output", capacities: [50] },
+      { kind: "item", direction: "input", capacities: [50, 50] },
+      { kind: "item", direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -1773,7 +1776,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [50] },
+      { kind: "item", direction: "input", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -1857,8 +1860,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "fluid", role: "input", capacities: [50] },
-      { kind: "fluid", role: "output", capacities: [50, 50] },
+      { kind: "fluid", direction: "input", capacities: [50] },
+      { kind: "fluid", direction: "output", capacities: [50, 50] },
     ]),
   }),
   createEntityDefinition({
@@ -1891,9 +1894,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [50] },
-      { kind: "fluid", role: "input", capacities: [50] },
-      { kind: "item", role: "output", capacities: [50] },
+      { kind: "item", direction: "input", capacities: [50] },
+      { kind: "fluid", direction: "input", capacities: [50] },
+      { kind: "item", direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -1926,9 +1929,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [50] },
-      { kind: "item", role: "output", capacities: [50] },
-      { kind: "fluid", role: "output", capacities: [50] },
+      { kind: "item", direction: "input", capacities: [50] },
+      { kind: "item", direction: "output", capacities: [50] },
+      { kind: "fluid", direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -1961,8 +1964,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "item", role: "input", capacities: [50] },
-      { kind: "item", role: "output", capacities: [50] },
+      { kind: "item", direction: "input", capacities: [50] },
+      { kind: "item", direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -1983,7 +1986,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "fluid", role: "output", capacities: [50] },
+      { kind: "fluid", direction: "output", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -2007,7 +2010,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "fluid", role: "input", capacities: [1] },
+      { kind: "fluid", direction: "input", capacities: [1] },
     ]),
   }),
   createEntityDefinition({
@@ -2031,7 +2034,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "fluid", role: "output", capacities: [1] },
+      { kind: "fluid", direction: "output", capacities: [1] },
     ]),
   }),
   createEntityDefinition({
@@ -2052,7 +2055,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "fluid", role: "input", capacities: [50] },
+      { kind: "fluid", direction: "input", capacities: [50] },
     ]),
   }),
   createEntityDefinition({
@@ -2079,8 +2082,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     ...createDirectionalBuffers([
-      { kind: "fluid", role: "input", capacities: [50] },
-      { kind: "fluid", role: "output", capacities: [50] },
+      { kind: "fluid", direction: "input", capacities: [50] },
+      { kind: "fluid", direction: "output", capacities: [50] },
     ]),
   }),
   createEmptyEntityDefinition({

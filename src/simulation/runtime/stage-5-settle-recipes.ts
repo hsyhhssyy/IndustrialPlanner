@@ -61,7 +61,7 @@ function startIdleDevices(
       continue;
     }
 
-    for (const channel of device.recipeChannels) {
+    for (const channel of (device.recipeChannels ?? [])) {
       // Skip channels already running a recipe
       if (deviceState.channelRecipes[channel.id] !== undefined && deviceState.channelRecipes[channel.id] !== null) {
         continue;
