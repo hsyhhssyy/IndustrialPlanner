@@ -281,27 +281,24 @@ function createSlots(
  * 创建存储槽组。
  *
  * 对应《仿真运行原理》§3.1 缓存类型 + §3.4 缓存组。
- * role 决定编译时的缓存类型：
- *   "input"         → ingredient
- *   "output"        → product
- *   "bidirectional" → universal
- * 订正（2026-05-07）：当同组同时绑定输入/输出端口时，splitLinkType 决定拆分 link 类型；
- *   share-all 保持两视图继承原 role，share-cap 则仅在 bidirectional 组上拆为输入 ingredient + 输出 product。
+ * 存储组的输入/输出能力由绑定的端口方向决定；
+ * 配方原料/产物角色由 Recipe Channel 声明。
  *
- * 每个存储槽组编译后 = 一个 CacheGroup（求解图节点）。
+ * AI-CORRECTION 2026-05-13: role 参数已删除。
+ * 原 role 推导 slotType → ingredientNodeIds/productNodeIds 的职责已由 Recipe Channel 接管。
+ *
+ * 每个存储槽组编译后对应一个求解图节点。
  * 组内 slot 互斥（同物品不能出现在多槽），跨组不互斥（§3.4）。
  */
 function createStorageSlotGroup(
   id: string,
   kind: StorageSlotGroupDefinition["kind"],
-  role: StorageSlotGroupDefinition["role"],
   slots: StorageSlotDefinition[],
   splitLinkType: StorageSlotGroupDefinition["splitLinkType"] = "share-all",
 ): StorageSlotGroupDefinition {
   return {
     id,
     kind,
-    role,
     slots,
     splitLinkType,
   };
@@ -338,7 +335,7 @@ function createRecipeChannel(
 
 type DirectionalBufferLayoutInput = {
   kind: StorageSlotGroupDefinition["kind"];
-  role: Exclude<StorageSlotGroupDefinition["role"], "bidirectional">;
+  direction: "input" | "output";
   capacities: number[];
 };
 
@@ -356,19 +353,18 @@ function createDirectionalBuffers(
       ? [createRecipeChannel("default", ingGroupIds, prodGroupIds)]
       : [],
     storageSlotGroups: layouts.map((layout) => createStorageSlotGroup(
-      `${layout.kind}_${layout.role}_buffer`,
+      `${layout.kind}_${layout.direction}_buffer`,
       layout.kind,
-      layout.role,
       createSlots(
-        `${layout.role}_${layout.kind}_slot`,
+        `${layout.direction}_${layout.kind}_slot`,
         layout.capacities,
         resolveSlotFilterType(layout.kind),
       ),
     )),
     portStorageBindings: layouts.map((layout) => createBinding(
-      `bind_${layout.kind}_${layout.role}`,
-      `${layout.kind}_${layout.role}`,
-      `${layout.kind}_${layout.role}_buffer`,
+      `bind_${layout.kind}_${layout.direction}`,
+      `${layout.kind}_${layout.direction}`,
+      `${layout.kind}_${layout.direction}_buffer`,
     )),
   };
 }
@@ -487,7 +483,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "item_storage",
         "item",
-        "bidirectional",  // → universal 缓存类型
         createSlots("slot", [50, 50, 50, 50, 50, 50], "solid"),
       ),
     ],
@@ -628,13 +623,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "shared_input_buffer",
         "item",
-        "input",  // → ingredient 缓存类型
         createSlots("input_slot", [50, 50, 50, 50, 50], "any"),
       ),
       createStorageSlotGroup(
         "shared_output_buffer",
         "item",
-        "output",  // → product 缓存类型
         createSlots("output_slot", [1], "any"),
       ),
     ],
@@ -692,13 +685,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "item_input_buffer",
         "item",
-        "input",
         createSlots("input_slot", [50], "solid"),
       ),
       createStorageSlotGroup(
         "item_output_buffer",
         "item",
-        "output",
         createSlots("output_slot", [50], "solid"),
       ),
     ],
@@ -752,19 +743,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "item_input_buffer",
         "item",
-        "input",
         createSlots("input_item_slot", [50], "solid"),
       ),
       createStorageSlotGroup(
         "fluid_input_buffer",
         "fluid",
-        "input",
         createSlots("input_fluid_slot", [50], "liquid"),
       ),
       createStorageSlotGroup(
         "item_output_buffer",
         "item",
-        "output",
         createSlots("output_slot", [50], "solid"),
       ),
     ],
@@ -804,13 +792,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "item_input_buffer",
         "item",
-        "input",
         createSlots("input_item_slot", [50,50], "solid"),
       ),
       createStorageSlotGroup(
         "item_output_buffer",
         "item",
-        "output",
         createSlots("output_slot", [50], "solid"),
       ),
     ],
@@ -868,7 +854,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "item_buffer",
         "item",
-        "bidirectional",
         createSlots("slot", [1], "solid"),
         "share-cap",
       ),
@@ -914,7 +899,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "item_buffer",
         "item",
-        "bidirectional",
         createSlots("slot", [1], "solid"),
         "share-cap",
       ),
@@ -960,7 +944,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "item_buffer",
         "item",
-        "bidirectional",
         createSlots("slot", [1], "solid"),
         "share-cap",
       ),
@@ -1019,7 +1002,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "item_buffer",
         "item",
-        "bidirectional",
         createSlots("slot", [1], "solid"),
         "share-cap",
       ),
@@ -1072,7 +1054,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "item_buffer",
         "item",
-        "bidirectional",
         createSlots("slot", [1], "solid"),
         "share-cap",
       ),
@@ -1280,7 +1261,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "fluid_buffer",
         "fluid",
-        "bidirectional",
         createSlots("slot", [1], "liquid"),
         "share-cap",
       ),
@@ -1330,7 +1310,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "fluid_buffer",
         "fluid",
-        "bidirectional",
         createSlots("slot", [1], "liquid"),
         "share-cap",
       ),
@@ -1836,13 +1815,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "shared_input_buffer",
         "item",
-        "input",
         createSlots("input_slot", [50, 50, 50, 50, 50], "any"),
       ),
       createStorageSlotGroup(
         "shared_output_buffer",
         "item",
-        "output",
         createSlots("output_slot", [1], "any"),
       ),
     ],
@@ -2143,7 +2120,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "item_buffer",
         "item",
-        "bidirectional",
         createSlots("slot", [1], "solid"),
         "share-cap",
       ),
@@ -2185,7 +2161,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "fluid_buffer",
         "fluid",
-        "bidirectional",
         createSlots("slot", [1], "liquid"),
         "share-cap",
       ),

@@ -22,6 +22,7 @@ const originalConsoleMethods = new Map<DebugConsoleMethod, typeof console.log>()
 const logLines: string[] = [];
 
 let captureEnabled = false;
+let disposeGlobalExceptionCapture = () => {};
 let installCount = 0;
 let snapshotVersion = 0;
 let snapshot: DebugLogSnapshot = {
@@ -142,6 +143,85 @@ function appendConsoleLine(level: DebugConsoleMethod, args: unknown[]): void {
   emitSnapshot();
 }
 
+function readEventField(event: Event, key: string): unknown {
+  if (typeof event !== "object" || event === null || !(key in event)) {
+    return undefined;
+  }
+
+  return (event as unknown as Record<string, unknown>)[key];
+}
+
+function formatErrorLocation(filename: unknown, lineno: unknown, colno: unknown): string | undefined {
+  if (typeof filename !== "string" || filename.length === 0) {
+    return undefined;
+  }
+
+  const line = typeof lineno === "number" ? `:${lineno}` : "";
+  const column = typeof colno === "number" ? `:${colno}` : "";
+
+  return `${filename}${line}${column}`;
+}
+
+function appendGlobalErrorEvent(event: Event): void {
+  const message = readEventField(event, "message");
+  const error = readEventField(event, "error");
+
+  if (message === undefined && error === undefined) {
+    return;
+  }
+
+  const location = formatErrorLocation(
+    readEventField(event, "filename"),
+    readEventField(event, "lineno"),
+    readEventField(event, "colno"),
+  );
+  const args: unknown[] = ["[window.error]"];
+
+  if (typeof message === "string" && message.length > 0) {
+    args.push(message);
+  }
+
+  if (location !== undefined) {
+    args.push(`at ${location}`);
+  }
+
+  if (error !== undefined && error !== message) {
+    args.push(error);
+  }
+
+  appendConsoleLine("error", args);
+}
+
+function appendUnhandledRejectionEvent(event: Event): void {
+  const reason = readEventField(event, "reason");
+
+  appendConsoleLine("error", [
+    "[window.unhandledrejection]",
+    reason ?? "Promise rejected without a reason.",
+  ]);
+}
+
+function installGlobalExceptionCapture(): () => void {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  const handleError = (event: Event) => {
+    appendGlobalErrorEvent(event);
+  };
+  const handleUnhandledRejection = (event: Event) => {
+    appendUnhandledRejectionEvent(event);
+  };
+
+  window.addEventListener("error", handleError);
+  window.addEventListener("unhandledrejection", handleUnhandledRejection);
+
+  return () => {
+    window.removeEventListener("error", handleError);
+    window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+  };
+}
+
 function patchConsole(): void {
   for (const method of DEBUG_CONSOLE_METHODS) {
     if (originalConsoleMethods.has(method)) {
@@ -176,6 +256,7 @@ export function installDebugLogCapture(): () => void {
 
   if (installCount === 1) {
     patchConsole();
+    disposeGlobalExceptionCapture = installGlobalExceptionCapture();
     clearLogLines();
   }
 
@@ -187,6 +268,7 @@ export function installDebugLogCapture(): () => void {
     }
 
     captureEnabled = false;
+    disposeGlobalExceptionCapture();
     restoreConsole();
   };
 }

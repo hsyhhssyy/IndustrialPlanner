@@ -2291,6 +2291,37 @@ describe("WorkbenchApp", () => {
     expect(textarea?.value).toContain("debug log panel smoke");
 
     act(() => {
+      const errorEvent = new Event("error");
+
+      Object.defineProperties(errorEvent, {
+        message: { value: "uncaught error smoke" },
+        filename: { value: "workbench-app.test.tsx" },
+        lineno: { value: 12 },
+        colno: { value: 34 },
+        error: { value: new Error("uncaught error smoke") },
+      });
+
+      window.dispatchEvent(errorEvent);
+    });
+
+    expect(textarea?.value).toContain("[window.error]");
+    expect(textarea?.value).toContain("uncaught error smoke");
+    expect(textarea?.value).toContain("workbench-app.test.tsx:12:34");
+
+    act(() => {
+      const rejectionEvent = new Event("unhandledrejection");
+
+      Object.defineProperty(rejectionEvent, "reason", {
+        value: new Error("unhandled rejection smoke"),
+      });
+
+      window.dispatchEvent(rejectionEvent);
+    });
+
+    expect(textarea?.value).toContain("[window.unhandledrejection]");
+    expect(textarea?.value).toContain("unhandled rejection smoke");
+
+    act(() => {
       runInAction(() => {
         appHost.internalState.settings.debugMode = false;
       });
