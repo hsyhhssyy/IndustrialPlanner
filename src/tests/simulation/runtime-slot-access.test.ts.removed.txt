@@ -1,0 +1,94 @@
+// AI-REMOVED 2026-05-14:
+// Reason: REQ-076 Phase1 removes legacy Simulation unit/host/runtime tests from the active Vitest suite.
+// Trigger: User requested all Simulation-related tests be migrated to blueprint-driven coverage.
+// Evidence: .docs/stages/stage1/requirements/REQ-076-test-architecture-migration.md Phase 1 and src/tests/simulation/blueprint-phase1.test.ts.
+// Replacement: /home/coder/IndustrialPlanner/src/tests/simulation/blueprint-phase1.test.ts
+// Risk: Old low-level assertions are now covered through end-to-end blueprint reports; known production bugs may make some new assertions fail.
+// Human Review: Required
+//
+// Original code:
+// import { describe, expect, it } from "vitest";
+// 
+// import { createDummyWorldDocument } from "@/editor/dummy-document";
+// import { createRegistryContract } from "@/registry";
+// import { resolveDeviceRecipePlans } from "@/simulation/runtime/runtime-slot-access";
+// import { createSimulationMutableRuntimeState } from "@/simulation/runtime/runtime-state";
+// import { compileSimulationTopology } from "@/simulation/topology-compiler";
+// import type { CompiledSimulationDevice, CompiledSimulationTopology } from "@/simulation/types";
+// 
+// describe("resolveDeviceRecipePlans", () => {
+//   it("synthesizes a fixed 2 second transport recipe for belts", () => {
+//     const topology = compileSimulationTopology({
+//       document: createDummyWorldDocument(),
+//       registry: createRegistryContract(),
+//     });
+//     const state = createSimulationMutableRuntimeState(topology);
+//     const belt = topology.devices["device:dummy-entity-1"];
+// 
+//     if (belt === undefined) {
+//       throw new Error("Expected dummy belt device to exist.");
+//     }
+// 
+//     seedIngredientSlot(topology, state, belt, "item_iron_ore");
+// 
+//     expect(resolveDeviceRecipePlans({ topology, state, device: belt })).toEqual([
+//       expect.objectContaining({
+//         recipeId: "belt_straight_1x1:dynamic-belt-transfer",
+//         recipeType: "reserved-item",
+//         durationTicks: 2 * topology.standardTickRate,
+//         inputs: [{ itemId: "any", amount: 1 }],
+//         outputs: [{ itemId: "same-as-input", amount: 1 }],
+//       }),
+//     ]);
+//   });
+// 
+//   it("synthesizes a fixed 0.5 second transport recipe for pipes", () => {
+//     const topology = compileSimulationTopology({
+//       document: createDummyWorldDocument(),
+//       registry: createRegistryContract(),
+//     });
+//     const state = createSimulationMutableRuntimeState(topology);
+//     const pipe = topology.devices["device:dummy-entity-7"];
+// 
+//     if (pipe === undefined) {
+//       throw new Error("Expected dummy pipe device to exist.");
+//     }
+// 
+//     seedIngredientSlot(topology, state, pipe, "item_liquid_acid");
+// 
+//     expect(resolveDeviceRecipePlans({ topology, state, device: pipe })).toEqual([
+//       expect.objectContaining({
+//         recipeId: "pipe_straight_1x1:dynamic-pipe-transfer",
+//         recipeType: "reserved-item",
+//         durationTicks: Math.max(1, Math.round(0.5 * topology.standardTickRate)),
+//         inputs: [{ itemId: "any", amount: 1 }],
+//         outputs: [{ itemId: "same-as-input", amount: 1 }],
+//       }),
+//     ]);
+//   });
+// });
+// 
+// function seedIngredientSlot(
+//   topology: CompiledSimulationTopology,
+//   state: ReturnType<typeof createSimulationMutableRuntimeState>,
+//   device: CompiledSimulationDevice,
+//   itemType: string,
+// ): void {
+//   const ingredientNodeId = device.ingredientNodeIds[0];
+//   if (ingredientNodeId === undefined) {
+//     throw new Error(`Expected ${device.id} to have an ingredient node.`);
+//   }
+// 
+//   const ingredientSlotId = topology.nodes[ingredientNodeId]?.slotIds[0];
+//   if (ingredientSlotId === undefined) {
+//     throw new Error(`Expected ${device.id} ingredient node to have a slot.`);
+//   }
+// 
+//   const ingredientSlot = state.persistent.slots[ingredientSlotId];
+//   if (ingredientSlot === undefined) {
+//     throw new Error(`Expected runtime state to include ${ingredientSlotId}.`);
+//   }
+// 
+//   ingredientSlot.itemType = itemType;
+//   ingredientSlot.count = 1;
+// }

@@ -1,6 +1,7 @@
 import type {
   CompiledSimulationDevice,
   CompiledSimulationNode,
+  CompiledSimulationRecipeChannel,
   CompiledSimulationRecipeDefinition,
   CompiledSimulationRecipeItem,
   CompiledSimulationRecipePlan,
@@ -209,24 +210,23 @@ export function moveOneItem(options: {
 
 // AI-CORRECTION 2026-05-13: resolveDeviceRecipePlans 现在接受 channel 级参数。
 // ingredientNodeIds / productNodeIds 从 channel 获取而非从 device 全局获取。
+// AI-CORRECTION 2026-05-14: 签名重构为 device + channel 对象，消除字段散落导致的传参遗漏 bug。
 export function resolveDeviceRecipePlans(options: {
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
-  definitionId: string;
-  tags: readonly string[];
-  transportClass: SimulationTransportClass;
-  ingredientNodeIds: readonly string[];
-  productNodeIds: readonly string[];
+  device: CompiledSimulationDevice;
+  channel: CompiledSimulationRecipeChannel;
 }): readonly CompiledSimulationRecipePlan[] {
   const ingredientSlotContents = readIngredientSlotContents({
     topology: options.topology,
     state: options.state,
-    ingredientNodeIds: options.ingredientNodeIds,
+    ingredientNodeIds: options.channel.ingredientNodeIds,
   });
 
   return resolveRecipes({
     topology: options.topology,
     device: options.device,
+    channel: options.channel,
     ingredientSlotContents,
   });
 }
@@ -352,29 +352,28 @@ function resolveRecipes(options: {
   topology: CompiledSimulationTopology;
   definitionId: string;
   tags: readonly string[];
-  transportClass: SimulationTransportClass;
-  ingredientNodeIds: readonly string[];
-  productNodeIds: readonly string[];
+  device: CompiledSimulationDevice;
+  channel: CompiledSimulationRecipeChannel;
   ingredientSlotContents: readonly IngredientSlotContent[];
 }): readonly CompiledSimulationRecipePlan[] {
-  if (options.transportClass === "strict-belt" || options.transportClass === "strict-pipe") {
+  if (options.device.transportClass === "strict-belt" || options.device.transportClass === "strict-pipe") {
     if (options.ingredientSlotContents.length === 0) {
       return [];
     }
 
-    const durationSeconds = options.transportClass === "strict-belt" ? 2 : 0.5;
-    const recipeIdSuffix = options.transportClass === "strict-belt"
+    const durationSeconds = options.device.transportClass === "strict-belt" ? 2 : 0.5;
+    const recipeIdSuffix = options.device.transportClass === "strict-belt"
       ? "dynamic-belt-transfer"
       : "dynamic-pipe-transfer";
 
     return [{
-      recipeId: `${options.definitionId}:${recipeIdSuffix}`,
+      recipeId: `${options.device.definitionId}:${recipeIdSuffix}`,
       recipeType: "reserved-item",
       durationTicks: Math.max(1, Math.round(durationSeconds * options.topology.standardTickRate)),
       inputs: [{ itemId: "any", amount: 1 }],
       outputs: [{ itemId: "same-as-input", amount: 1 }],
-      ingredientNodeIds: options.ingredientNodeIds,
-      productNodeIds: options.productNodeIds,
+      ingredientNodeIds: options.channel.ingredientNodeIds,
+      productNodeIds: options.channel.productNodeIds,
     }];
   }
 
@@ -383,24 +382,24 @@ function resolveRecipes(options: {
   // also use reserved-item transport recipes, matching §6.1.2–§6.1.5 of 仿真运行原理.
   // Detect via BeltFamily/PipeFamily tags to cover all logistics devices uniformly.
   // Strict devices are already handled above and won't re-enter here.
-  const isGeneralBelt = (options.tags ?? []).includes("BeltFamily");
-  const isGeneralPipe = (options.tags ?? []).includes("PipeFamily");
+  const isGeneralBelt = (options.device.tags ?? []).includes("BeltFamily");
+  const isGeneralPipe = (options.device.tags ?? []).includes("PipeFamily");
   if ((isGeneralBelt || isGeneralPipe) && options.ingredientSlotContents.length > 0) {
     const durationSeconds = isGeneralBelt ? 2 : 0.5;
     const recipeIdSuffix = isGeneralBelt ? "dynamic-belt-transfer" : "dynamic-pipe-transfer";
     return [{
-      recipeId: `${options.definitionId}:${recipeIdSuffix}`,
+      recipeId: `${options.device.definitionId}:${recipeIdSuffix}`,
       recipeType: "reserved-item",
       durationTicks: Math.max(1, Math.round(durationSeconds * options.topology.standardTickRate)),
       inputs: [{ itemId: "any", amount: 1 }],
       outputs: [{ itemId: "same-as-input", amount: 1 }],
-      ingredientNodeIds: options.ingredientNodeIds,
-      productNodeIds: options.productNodeIds,
+      ingredientNodeIds: options.channel.ingredientNodeIds,
+      productNodeIds: options.channel.productNodeIds,
     }];
   }
 
   return Object.values(options.topology.recipeCatalog)
-    .filter((recipe) => recipe.machineId === options.definitionId)
+    .filter((recipe) => recipe.machineId === options.device.definitionId)
     .filter((recipe) => recipeCanMatchContents(recipe, options.ingredientSlotContents))
     .sort((left, right) => left.id.localeCompare(right.id))
     .map((recipe) => ({
@@ -409,15 +408,15 @@ function resolveRecipes(options: {
       durationTicks: recipe.durationTicks,
       inputs: recipe.inputs,
       outputs: recipe.outputs,
-      ingredientNodeIds: options.ingredientNodeIds,
-      productNodeIds: options.productNodeIds,
+      ingredientNodeIds: options.channel.ingredientNodeIds,
+      productNodeIds: options.channel.productNodeIds,
     }));
 }
 
 function readIngredientSlotContents(options: {
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
-  device: CompiledSimulationDevice;
+  ingredientNodeIds: readonly string[];
 }): readonly IngredientSlotContent[] {
   const contents: IngredientSlotContent[] = [];
   for (const nodeId of options.ingredientNodeIds) {

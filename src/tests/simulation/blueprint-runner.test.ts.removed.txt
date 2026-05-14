@@ -1,0 +1,46 @@
+// AI-REMOVED 2026-05-14:
+// Reason: REQ-076 Phase1 removes legacy Simulation unit/host/runtime tests from the active Vitest suite.
+// Trigger: User requested all Simulation-related tests be migrated to blueprint-driven coverage.
+// Evidence: .docs/stages/stage1/requirements/REQ-076-test-architecture-migration.md Phase 1 and src/tests/simulation/blueprint-phase1.test.ts.
+// Replacement: /home/coder/IndustrialPlanner/src/tests/simulation/blueprint-phase1.test.ts
+// Risk: Old low-level assertions are now covered through end-to-end blueprint reports; known production bugs may make some new assertions fail.
+// Human Review: Required
+//
+// Original code:
+// import { describe, expect, it } from "vitest";
+// 
+// import { createBlueprintDocument } from "@/domain/document/blueprint-document";
+// import { createDummyWorldDocument } from "@/editor/dummy-document";
+// import { runBlueprintSimulation } from "@/simulation/blueprint-runner";
+// 
+// describe("runBlueprintSimulation", () => {
+//   it("captures headless simulation snapshots from a blueprint document", async () => {
+//     const world = createDummyWorldDocument();
+//     const blueprint = createBlueprintDocument({
+//       name: "Dummy Blueprint",
+//       description: "",
+//       baseId: world.baseId,
+//       initialGridPoint: {
+//         x: 0,
+//         y: 0,
+//       },
+//       entities: world.entities,
+//       entityOrder: world.entityOrder,
+//       slotLinks: world.slotLinks,
+//       createdAt: new Date(0).toISOString(),
+//       updatedAt: new Date(0).toISOString(),
+//     });
+// 
+//     const report = await runBlueprintSimulation({
+//       blueprint,
+//       maxTickNumber: 2,
+//     });
+// 
+//     expect(report.blueprint.name).toBe("Dummy Blueprint");
+//     expect(report.execution.maxTickNumber).toBe(2);
+//     expect(report.execution.totalTicksCaptured).toBe(3);
+//     expect(report.ticks.map((tick) => tick.tickNumber)).toEqual([0, 1, 2]);
+//     expect(report.summary.totalTicksCaptured).toBe(3);
+//     expect(report.topology.topologyId.length).toBeGreaterThan(0);
+//   });
+// });

@@ -1,0 +1,15 @@
+// AI-REMOVED 2026-05-14:
+// Reason: 按用户要求拆分为 helpers + 按蓝图分文件。所有代码已完整迁移至新位置，无丢失。
+// Trigger: 用户要求 "helper放原位，用例再起一个子文件夹放"。
+// Evidence: 原文件包含 6 个测试 + 所有 helper 函数和蓝图工厂。
+// Replacement:
+//   Helpers:    src/tests/simulation/blueprint-test-helpers.ts
+//   用例文件夹:  src/tests/simulation/blueprint-phase1/
+//     - config-override.test.ts   (用例 1: 配置覆盖)
+//     - belt-transport.test.ts    (用例 2: 传送带传输)
+//     - fanout-routing.test.ts    (用例 3: Fan-out 路由)
+//     - pipe-transport.test.ts    (用例 4: 管道传输)
+//     - production.test.ts        (用例 5: 生产配方)
+//     - topology-migration.test.ts(用例 6: 拓扑迁移)
+// Risk: Low — 纯文件拆分，无逻辑变更。
+// Human Review: Not Required

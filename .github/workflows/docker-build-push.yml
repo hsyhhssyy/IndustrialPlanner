@@ -1,0 +1,72 @@
+name: Docker Build and Push
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+    secrets:
+      DEPLOY_CONFIG:
+        required: true
+    outputs:
+      image:
+        description: "构建的镜像完整引用"
+        value: ${{ jobs.build.outputs.image }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.set-image.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Load deploy config
+        env:
+          DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
+        run: |
+          echo "$DEPLOY_CONFIG" > /tmp/deploy-config.json
+          echo "registry=$(jq -r '.registry' /tmp/deploy-config.json)" >> $GITHUB_ENV
+          echo "username=$(jq -r '.username' /tmp/deploy-config.json)" >> $GITHUB_ENV
+          echo "password=$(jq -r '.password' /tmp/deploy-config.json)" >> $GITHUB_ENV
+          echo "image_name=$(jq -r '.image_name' /tmp/deploy-config.json)" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.registry }}
+          username: ${{ env.username }}
+          password: ${{ env.password }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./dist
+          file: .github/Dockerfile
+          push: true
+          tags: |
+            ${{ env.registry }}/${{ env.image_name }}:${{ inputs.tag }}
+            ${{ env.registry }}/${{ env.image_name }}:latest
+
+      - name: Set image output
+        id: set-image
+        run: echo "image=${{ env.registry }}/${{ env.image_name }}:${{ inputs.tag }}" >> $GITHUB_OUTPUT

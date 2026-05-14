@@ -96,11 +96,8 @@ function selectStartableRecipe(
   for (const plan of resolveDeviceRecipePlans({
     topology,
     state,
-    definitionId: device.definitionId,
-    tags: device.tags,
-    transportClass: device.transportClass,
-    ingredientNodeIds: channel.ingredientNodeIds,
-    productNodeIds: channel.productNodeIds,
+    device,
+    channel,
   })) {
     const reservations = selectRecipeInputs({ topology, state, plan });
     if (reservations === null) {
