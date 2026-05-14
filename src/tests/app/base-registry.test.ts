@@ -85,7 +85,7 @@ describe("createRegistryContract", () => {
     expect(registry.queries.resolveDedicatedLogisticsKind("item_log_splitter")).toBeNull();
   });
 
-  it("mounts slot-config inspectors on every recipe machine input storage group", () => {
+  it("mounts slot-config inspectors on every recipe machine storage group", () => {
     const registry = createRegistryContract();
     const recipeMachineIds = new Set(
       registry.recipeDefinitions.map((recipe) => recipe.machineId),
@@ -102,22 +102,39 @@ describe("createRegistryContract", () => {
         continue;
       }
 
-      const inputStorageSlotGroupIndexes = definition.storageSlotGroups
-        .flatMap((storageSlotGroup, storageSlotGroupIndex) =>
-          storageSlotGroup.role === "input" ? [storageSlotGroupIndex] : [],
-        );
+      // 找出所有通过 portStorageBindings 绑定了端口的存储槽组
+      const boundStorageSlotGroupIds = definition.storageSlotGroups
+        .filter((storageSlotGroup) =>
+          definition.portStorageBindings.some((b) => b.storageSlotGroupId === storageSlotGroup.id),
+        )
+        .map((g) => g.id);
 
-      expect(inputStorageSlotGroupIndexes.length, `${machineId} must have input storage slot groups`).toBeGreaterThan(0);
-
-      for (const storageSlotGroupIndex of inputStorageSlotGroupIndexes) {
-        const targetPath = `storageSlotGroups[${storageSlotGroupIndex}].slots`;
-        const matchedInspectors = definition.inspectors.filter((inspector) =>
-          inspector.type === INSPECTOR_TYPE.slotConfig
-          && inspector.targetPath === targetPath
-        );
-
-        expect(matchedInspectors, `${machineId} must expose ${targetPath}`).toHaveLength(1);
+      if (boundStorageSlotGroupIds.length === 0) {
+        continue;
       }
+
+      // 必须有且仅有一个 slotConfig inspector，包含所有绑定的槽组 ID
+      const slotConfigInspectors = definition.inspectors.filter(
+        (inspector) => inspector.type === INSPECTOR_TYPE.slotConfig,
+      );
+
+      expect(
+        slotConfigInspectors,
+        `${machineId} must have exactly one slotConfig inspector`,
+      ).toHaveLength(1);
+
+      const inspector = slotConfigInspectors[0];
+
+      if (inspector === undefined) continue;
+
+      // 验证 slotConfig 声明确实有 slotGroupIds
+      expect(
+        "slotGroupIds" in inspector,
+        `${machineId} slotConfig must use slotGroupIds`,
+      ).toBe(true);
+
+      const slotGroupIds = (inspector as { slotGroupIds: readonly string[] }).slotGroupIds;
+      expect([...slotGroupIds].sort()).toEqual([...boundStorageSlotGroupIds].sort());
     }
   });
 });

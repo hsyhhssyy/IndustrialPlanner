@@ -1,136 +1,216 @@
 // =========================================================================
 // Inspector 面板类型定义（对应《模拟器抽象方式》§4 Inspector 层）
 //
-// Inspector 不持有数据，只声明三件事：
-//   1. 面板类型（type）— 前端按此挂载对应 React 组件
-//   2. 编辑目标路径（targetPath）— 写入 entity.config 的位置
-//   3. 最少必要参数（slotIndex / portRef / cacheLinkIndex）— 面板绑定的具体元素
+// Inspector 声明采用可辨识联合（discriminated union），
+// 每种 type 只携带自己需要的参数，不使用泛化的 targetPath。
+// UI 组件根据 type 收窄到具体声明，自行从 EntityDefinition 中定位数据。
 //
-// 约束由面板实现通过领域知识处理，不进入类型系统。
+// 每个 INSPECTOR_TYPE 的注释是该 Inspector 的 UI 契约，
+// 描述面板需要实现的编辑功能。UI 开发者据此实现组件。
 // =========================================================================
 
 /**
  * 所有 Inspector 面板类型枚举。
  *
- * 每个类型对应的面板功能详见下方注释。
+ * 每个类型的注释即为 UI 契约——描述该面板需要实现的编辑功能、
+ * 绑定的领域对象和写入 config 的字段。
+ *
  * 实体定义在 inspectors[] 中声明需要哪些面板，
- * 前端 SelectionInspectorSlot 遍历挂载，运行时（Sim 模式）变为只读。
+ * 前端 SelectionInspectorSlot 按 type 挂载对应 React 组件。
+ * 运行时（Sim 模式）面板变为只读。
  */
 export const INSPECTOR_TYPE = {
+  // ========================================================================
+  // 只读展示类
+  // ========================================================================
+
   /**
-   * 通用设备面板。
-   * 显示设备 ID、定义 ID、位置、旋转、链接数、tags 等基础信息。
+   * ## 通用设备面板
+   *
+   * **只读展示。** 不编辑任何 config 字段。
+   *
+   * 显示内容：
+   * - 设备 id、definitionId
+   * - 世界坐标 (x, y)、旋转角度
+   * - 端口数量、链接数量
+   * - tags 列表
+   *
    * 对应 SelectionInspectorSummary 组件。
-   * 不需要 targetPath——只读展示，不编辑 config。
    */
   genericDevice: "generic-device",
 
   /**
-   * 运行时统计面板。
-   * 在 Sim 模式下显示设备当前 tick 的生产/搬运进度、缓存占用率、
-   * 电力消耗等运行时数据。只读。
+   * ## 运行时统计面板
+   *
+   * **只读展示，仅在 Sim 模式下出现。**
+   *
+   * 显示内容：
+   * - 当前 tick 的配方执行进度（recipeId、progressSeconds）
+   * - 各槽位缓存占用率（当前数量 / 容量）
+   * - 电力消耗
+   * - 传输速率
+   *
+   * 数据来源：SimulationDeviceRuntimeStatusReadModel。
    */
   runtimeStatistics: "runtime-statistics",
 
+  // ========================================================================
+  // 槽位编辑类
+  // ========================================================================
+
   /**
-   * 缓存管理面板。
-   * 编辑存储槽组的锁物品（lock）、是否忽略库存（ignoreStock）、
-   * 初始物品/数量（initialItemType/initialCount）等配置。
-   * targetPath 绑定到 storageSlotGroups[N].slots[M]。
+   * ## 槽位配置面板
    *
-   * 对应 EntityDefinition 中 storageSlotGroups 的 slot 配置项，
-   * 与设计文档《仿真运行原理》§3.1 缓存类型相关。
-   */
-  storageManagement: "storage-management",
-
-  /**
-   * 缓存类型过滤器面板。
-   * 编辑槽位的 itemFilterType（solid/liquid/any），
-   * 决定该槽位能接收什么域的物品。
-   * 对应 StorageSlotDefinition.itemFilterType。
-   */
-  storageTypeFilter: "storage-type-filter",
-
-  /**
-   * 端口过滤器面板。
-   * 编辑端口的 acceptRule（base + exclude 列表）和 count（每 tick 通过上限）。
-   * portRef 绑定到具体端口，对应 PortDefinition.acceptRule / count，
-   * 与设计文档《仿真运行原理》§3.1 中 Port 的两个通用配置直接对应：
-   *   - acceptRule：允许通过的物品类型
-   *   - count：每 tick 允许通过的物品数量上限
-   * 也用于编辑准入口的预设 acceptRule=itemId(X) 和 count=N（见 §5.1.5）。
-   */
-  portFilter: "port-filter",
-
-  /**
-   * 配方配置面板。
-   * 编辑设备的 recipe 配置——选择外部配方或配置内联配方的
-   * 输入输出物品及数量、配方类型（immediate-consume/reserved-item）、
-   * durationSeconds 等。
-   * targetPath 绑定到 recipe 字段。
+   * **编辑目标**：`storageSlotGroups[*].slots[*]` 的各项属性。
    *
-   * 对应 EntityRecipeDefinition，与设计文档《仿真运行原理》§3.2 配方类型相关。
-   */
-  recipeConfig: "recipe-config",
-
-  /**
-   * 槽位配置面板。
-   * 编辑单个槽位的 capacity、lock、ignoreStock、submitMode、
-   * submitIntervalSeconds 等详细配置。
-   * slotIndex 绑定到具体槽位。
-   * targetPath 如 "storageSlotGroups[0].slots[0]"。
+   * 绑定方式：`slotGroupIds` 直接引用 EntityDefinition.storageSlotGroups 的 id。
    *
-   * 对应 StorageSlotDefinition，与设计文档《仿真运行原理》§3.4 缓存组相关。
+   * 编辑功能：
+   * - **物品选择**：为槽位设置 initialItemType（从百科全书选择物品）
+   * - **数量编辑**：编辑 initialCount（步进器 + 直接输入，范围 0~capacity）
+   * - **锁定检查**：若槽位定义了 `lock`，则物品不可更改，显示锁定标签
+   * - **清除**：将 initialItemType 置 null、initialCount 置 0
+   *
+   * 写入路径：`storageSlotGroups[${groupIndex}].slots[${slotIndex}].initialItemType`
+   *          `storageSlotGroups[${groupIndex}].slots[${slotIndex}].initialCount`
+   *
+   * 互斥规则：同一 storageSlotGroup 内的多个槽位不能选择相同物品。
+   *
+   * 渲染模式：
+   * - 单组：面板内直接列出该组所有槽位
+   * - 多组（slotGroupIds.length > 1）：每组一个 section，标注 group id
    */
   slotConfig: "slot-config",
 
   /**
-   * 链接配置面板。
-  * 编辑 cacheLinks 的 linkType、shareLimit、endpoints 等。
-  * 2026-05-04 订正：CacheLinkDefinition 现为 source -> target 的有向 share-all 代理，不再编辑 shareLimit/endpoints。
-   * cacheLinkIndex 绑定到具体链接。
+   * ## 缓存管理面板
    *
-   * 对应 CacheLinkDefinition，与设计文档《仿真运行原理》§3.3 缓存链接相关：
-   *   - share-all：共享内容和上限
-  *   - share-cap：仅共享容量上限
-  *   - 2026-05-04 订正：share-cap 已删除，保留本行仅作历史语义说明。
-  *   - 订正（2026-05-05）：share-cap 已恢复，用于库存分离但容量联动的场景。
+   * **编辑目标**：storageSlotGroups[*].slots[*] 的通用属性。
+   *
+   * 绑定方式：待定（slotGroupIds 或 slotIds）。
+   *
+   * 编辑功能：
+   * - lock：锁定槽位物品
+   * - ignoreStock：忽略库存
+   * - initialItemType / initialCount：初始物品与数量
+   * - itemFilterType：类型过滤器（solid/liquid/any）
+   *
+   * 与 slotConfig 的区别：slotConfig 聚焦物品选择与数量，storageManagement 聚焦更多结构属性。
    */
-  linkConfig: "link-config",
+  storageManagement: "storage-management",
 
   /**
-   * 分流/优先级面板。
-   * 编辑端口的 priorityGroup 和 roundRobinSeed。
-   * portRef 绑定到具体端口。
+   * ## 缓存类型过滤器面板
    *
-   * 对应 PortDefinition.priorityGroup / roundRobinSeed，
+   * **编辑目标**：storageSlotGroups[*].slots[*].itemFilterType。
+   *
+   * 编辑功能：
+   * - 切换槽位的 itemFilterType（solid / liquid / any）
+   *
+   * 该值决定槽位能接收什么域（domain）的物品。
+   */
+  storageTypeFilter: "storage-type-filter",
+
+  // ========================================================================
+  // 端口编辑类
+  // ========================================================================
+
+  /**
+   * ## 端口过滤器面板
+   *
+   * **编辑目标**：portGroups[*].ports[*] 的 acceptRule 和 count。
+   *
+   * 绑定方式：`portRef` — 格式为 `"groupId:portId"` 或 `"groupIndex:portIndex"`。
+   *
+   * 编辑功能：
+   * - **acceptRule 编辑**：设置端口允许通过的物品类型（base 规则 + exclude 列表）
+   * - **count 编辑**：设置每 tick 允许通过的物品数量上限
+   *
+   * 语义：
+   * - 输入口（准入口）：不选物品 = 接受所有，可编辑 count
+   * - 输出口：不选物品 = 拒绝所有，不可编辑 count
+   * - 这些语义由面板根据端口所在 group 的 direction 自行判断
+   */
+  portFilter: "port-filter",
+
+  /**
+   * ## 分流/优先级面板
+   *
+   * **编辑目标**：portGroups[*].ports[*] 的 priorityGroup 和 roundRobinSeed。
+   *
+   * 绑定方式：`portRef`。
+   *
+   * 编辑功能：
+   * - priorityGroup：设置端口所属的优先级组
+   * - roundRobinSeed：设置轮询种子
+   *
    * 用于分流器/汇流器的多输出/多输入调度策略。
    */
   routing: "routing",
 
+  // ========================================================================
+  // 设备级编辑类
+  // ========================================================================
+
   /**
-   * 结构配置面板。
-   * 编辑设备的结构性属性（footprint 相关约束等）。
-   * 具体功能由面板实现自行定义。
+   * ## 配方配置面板
+   *
+   * **编辑目标**：设备的 recipe 配置。
+   *
+   * 编辑功能：
+   * - 选择外部配方（从 recipeDefinitions 中选择）
+   * - 或配置内联配方：输入输出物品及数量、配方类型（immediate-consume/reserved-item）、durationSeconds
+   *
+   * 对应 EntityDefinition 中的 recipe 字段。
+   */
+  recipeConfig: "recipe-config",
+
+  /**
+   * ## 链接配置面板
+   *
+   * **编辑目标**：cacheLinks[*] 的属性。
+   *
+   * 绑定方式：`cacheLinkIndex`。
+   *
+   * 编辑功能：
+   * - 查看/编辑 cacheLink 的 linkType、shareLimit、endpoints 等
+   *
+   * 对应 CacheLinkDefinition。share-all：共享内容和上限；share-cap：仅共享容量上限。
+   */
+  linkConfig: "link-config",
+
+  /**
+   * ## 结构配置面板
+   *
+   * **编辑目标**：设备的结构性属性（footprint 相关约束等）。
+   *
+   * 编辑功能：待定（由具体设备需求驱动）。
    */
   structure: "structure",
 
   /**
-   * 行为开关面板。
-   * 编辑设备的布尔行为开关（如是否启用某种模式）。
-   * 具体功能由面板实现自行定义。
+   * ## 行为开关面板
+   *
+   * **编辑目标**：设备的布尔行为开关。
+   *
+   * 编辑功能：待定（如是否启用某种模式）。
    */
   behaviorToggle: "behavior-toggle",
 
   /**
-   * 仓库物品链接面板。
-   * 提供一个物品选择器，选择后将 slot[slotIndex] 通过 share-all Link
-   * 连接到 warehouse 中对应物品的槽位。
-   * 写入 entity.config.links[slotIndex].itemId。
+   * ## 仓库物品链接面板
    *
-   * 这是仓储设备（取货口/出货口）专用的面板，
+   * **编辑目标**：links[slotIndex].itemId。
+   *
+   * 绑定方式：`slotIndex`。
+   *
+   * 编辑功能：
+   * - 从百科全书选择物品
+   * - 将选中物品的 itemId 写入 entity.config.links[slotIndex].itemId
+   * - 通过 share-all Link 将槽位连接到 warehouse 中对应物品的槽位
+   *
+   * 这是仓储设备（取货口/出货口）专用的面板。
    * 与设计文档《仿真运行原理》§3.3 中的 share-all Link 对应。
-   * 通过此 Link，取货口槽位直接共享仓库中对应物品的无限存储。
    */
   warehouseItemLink: "warehouse-item-link",
 } as const;
@@ -138,37 +218,89 @@ export const INSPECTOR_TYPE = {
 export type EntityInspectorType =
   typeof INSPECTOR_TYPE[keyof typeof INSPECTOR_TYPE];
 
-/**
- * Inspector 声明（对应《模拟器抽象方式》§4）
- *
- * EntityDefinition.inspectors[] 中的每一项都是一个 InspectorDeclaration。
- * 它不持有数据，只告诉前端：
- *   - type：用哪个面板组件
- *   - 其他字段：面板绑定的具体元素和编辑路径
- *
- * 例如仓储取货口：
- *   [
- *     { type: "warehouse-item-link", slotIndex: 0, targetPath: "links[0].itemId" }
- *   ]
- */
-export interface EntityInspectorDeclaration {
-  /** 面板类型，决定前端挂载哪个组件 */
-  readonly type: EntityInspectorType;
+// =========================================================================
+// Inspector 声明 — 可辨识联合（discriminated union）
+//
+// 每种 type 只携带自己需要的参数。UI 组件根据 type 收窄后，
+// 从 EntityDefinition 中自行定位数据、构建 config 路径。
+// =========================================================================
 
+/** slotConfig 声明：编辑指定存储槽组的槽位配置 */
+export interface SlotConfigInspectorDeclaration {
+  readonly type: typeof INSPECTOR_TYPE.slotConfig;
   /**
-   * 编辑目标路径。
-   * 使用 entity.config 的 JSON 路径语法，如 "slots[0].lock"、"links[0].itemId"。
-   * 面板 UI 的修改通过此路径写入 entity.config，
-   * 编译时 deepMerge(definitionDefaults, entityConfig) 合并。
+   * 要编辑的存储槽组 ID 列表。
+   * 每个 ID 对应 EntityDefinition.storageSlotGroups 中的一项。
+   * UI 通过 ID 在 storageSlotGroups 中定位槽组，
+   * 自行构建 config 路径 `storageSlotGroups[${index}].slots[${slotIndex}]`。
    */
-  readonly targetPath?: string;
-
-  /** 绑定的槽位索引（用于 slotConfig / warehouseItemLink 等） */
-  readonly slotIndex?: number;
-
-  /** 绑定的端口引用（用于 portFilter / routing 等） */
-  readonly portRef?: string;
-
-  /** 绑定的缓存链接索引（用于 linkConfig） */
-  readonly cacheLinkIndex?: number;
+  readonly slotGroupIds: readonly string[];
 }
+
+/** warehouseItemLink 声明：为指定槽位选择仓库物品 */
+export interface WarehouseItemLinkInspectorDeclaration {
+  readonly type: typeof INSPECTOR_TYPE.warehouseItemLink;
+  /** 绑定的槽位索引 */
+  readonly slotIndex: number;
+}
+
+/** portFilter 声明：编辑指定端口的过滤器 */
+export interface PortFilterInspectorDeclaration {
+  readonly type: typeof INSPECTOR_TYPE.portFilter;
+  /**
+   * 端口引用。
+   * 格式待 UI 实现时确定（建议 `"groupId:portId"`）。
+   */
+  readonly portRef: string;
+}
+
+/** routing 声明：编辑指定端口的调度策略 */
+export interface RoutingInspectorDeclaration {
+  readonly type: typeof INSPECTOR_TYPE.routing;
+  /** 端口引用 */
+  readonly portRef: string;
+}
+
+/** linkConfig 声明：编辑指定缓存链接 */
+export interface LinkConfigInspectorDeclaration {
+  readonly type: typeof INSPECTOR_TYPE.linkConfig;
+  /** 绑定的缓存链接索引 */
+  readonly cacheLinkIndex: number;
+}
+
+/**
+ * EntityInspectorDeclaration — 可辨识联合。
+ *
+ * 每种 Inspector type 对应一个成员，携带该类型专属的参数。
+ * 无参数的类型使用内联 `{ readonly type: T }`。
+ *
+ * 例：
+ * ```ts
+ * // Registry 声明
+ * inspectors: [
+ *   { type: "slot-config", slotGroupIds: ["item_input_buffer", "item_output_buffer"] },
+ *   { type: "generic-device" },
+ * ]
+ *
+ * // UI 消费
+ * function renderInspector(decl: EntityInspectorDeclaration) {
+ *   switch (decl.type) {
+ *     case "slot-config":    decl.slotGroupIds;  // ✅ 类型收窄，可直接访问
+ *     case "generic-device":                      // 无额外参数
+ *   }
+ * }
+ * ```
+ */
+export type EntityInspectorDeclaration =
+  | SlotConfigInspectorDeclaration
+  | WarehouseItemLinkInspectorDeclaration
+  | PortFilterInspectorDeclaration
+  | RoutingInspectorDeclaration
+  | LinkConfigInspectorDeclaration
+  | { readonly type: typeof INSPECTOR_TYPE.genericDevice }
+  | { readonly type: typeof INSPECTOR_TYPE.runtimeStatistics }
+  | { readonly type: typeof INSPECTOR_TYPE.storageManagement }
+  | { readonly type: typeof INSPECTOR_TYPE.storageTypeFilter }
+  | { readonly type: typeof INSPECTOR_TYPE.recipeConfig }
+  | { readonly type: typeof INSPECTOR_TYPE.structure }
+  | { readonly type: typeof INSPECTOR_TYPE.behaviorToggle };

@@ -139,7 +139,7 @@ export function SelectionInspectorSlot({
         const id = [
           selectedEntity.id,
           declaration.type,
-          declaration.targetPath ?? declarationIndex,
+          resolveInspectorDiscriminator(declaration, declarationIndex),
         ].join(":");
 
         return {
@@ -218,4 +218,23 @@ export function SelectionInspectorSlot({
       </div>
     </div>
   );
+}
+
+function resolveInspectorDiscriminator(
+  declaration: EntityInspectorDeclaration,
+  fallbackIndex: number,
+): string {
+  switch (declaration.type) {
+    case INSPECTOR_TYPE.slotConfig:
+      return declaration.slotGroupIds.join(",");
+    case INSPECTOR_TYPE.warehouseItemLink:
+      return String(declaration.slotIndex);
+    case INSPECTOR_TYPE.portFilter:
+    case INSPECTOR_TYPE.routing:
+      return declaration.portRef;
+    case INSPECTOR_TYPE.linkConfig:
+      return String(declaration.cacheLinkIndex);
+    default:
+      return String(fallbackIndex);
+  }
 }

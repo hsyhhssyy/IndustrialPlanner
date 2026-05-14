@@ -7,7 +7,7 @@ import LucideX from "~icons/lucide/x";
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import type { EntityInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
+import type { SlotConfigInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import { useInspectorRenderMode } from "@/app/shell/inspector/selection-inspector-model";
 
@@ -27,6 +27,12 @@ interface EffectiveSlotRow {
   domain: "solid" | "liquid" | "any";
 }
 
+interface SlotConfigGroupView {
+  storageGroup: StorageSlotGroupDefinition;
+  groupIndex: number;
+  rows: EffectiveSlotRow[];
+}
+
 export function SlotConfigInspector({
   appHost,
   declaration,
@@ -35,31 +41,21 @@ export function SlotConfigInspector({
   translate,
 }: {
   appHost: AppHost;
-  declaration: EntityInspectorDeclaration;
+  declaration: SlotConfigInspectorDeclaration;
   entity: WorldEntity;
   definition: EntityDefinition;
   translate: (key: string) => string;
 }) {
   const mode = useInspectorRenderMode();
   const [pendingSlotId, setPendingSlotId] = useState<string | null>(null);
-  const slotGroupIndex = resolveSlotGroupIndex(declaration.targetPath);
 
-  if (slotGroupIndex === null) {
+  const groupViews = resolveSlotConfigGroupViews(declaration.slotGroupIds, definition, entity);
+
+  if (groupViews.length === 0) {
     return (
       <article className="definition-card" data-inspector-key="slot-config">
         <h4>槽位配置</h4>
-        <p>当前槽位路径不受支持。</p>
-      </article>
-    );
-  }
-
-  const storageGroup = definition.storageSlotGroups[slotGroupIndex];
-
-  if (storageGroup === undefined) {
-    return (
-      <article className="definition-card" data-inspector-key="slot-config">
-        <h4>槽位配置</h4>
-        <p>目标槽位组不存在。</p>
+        <p>未找到可编辑的槽位组。</p>
       </article>
     );
   }
@@ -67,21 +63,15 @@ export function SlotConfigInspector({
   const itemById = new Map(
     appHost.workspace.registry.itemDefinitions.map((item) => [item.id, item]),
   );
-  const rows = storageGroup.slots.map((slot, slotIndex) =>
-    resolveEffectiveSlotRow({
-      slot,
-      slotIndex,
-      storageGroup,
-      targetPath: declaration.targetPath ?? "",
-      config: entity.config,
-    }),
-  );
 
   const patchEntityConfig = (patch: Record<string, unknown>) => {
     appHost.workspace.editor?.actions.patchEntityConfig(entity.id, patch);
   };
 
-  const requestItemSelection = async (row: EffectiveSlotRow) => {
+  const requestItemSelection = async (
+    row: EffectiveSlotRow,
+    rows: readonly EffectiveSlotRow[],
+  ) => {
     if (row.lockItemId !== null) {
       return;
     }
@@ -129,127 +119,158 @@ export function SlotConfigInspector({
       className="definition-card slot-config-inspector"
       data-inspector-key="slot-config"
       data-render-mode={mode}
-      data-slot-config-group={storageGroup.id}
     >
-      <div className="slot-config-group-header">
-        <div>
-          <h4>槽位配置</h4>
-          <p>{`${translate("inspector.slotConfig.group")} ${storageGroup.id}`}</p>
-        </div>
-      </div>
-      <div
-        className="slot-config-list"
-        data-render-mode={mode}
-      >
-        {rows.map((row) => {
-          const itemDefinition = row.displayItemId === null
-            ? null
-            : itemById.get(row.displayItemId) ?? null;
-          const itemLabel = itemDefinition === null
-            ? translate("inspector.slotConfig.selectItem")
-            : translate(itemDefinition.nameKey);
-          const canClear = row.initialItemType !== null || row.count > 0;
+      {groupViews.map((groupView) => (
+        <section
+          className="slot-config-group"
+          data-slot-config-group={groupView.storageGroup.id}
+          key={groupView.storageGroup.id}
+        >
+          <div className="slot-config-group-header">
+            <div>
+              <h4>槽位配置</h4>
+              <p>{`${translate("inspector.slotConfig.group")} ${groupView.storageGroup.id}`}</p>
+            </div>
+          </div>
+          <div className="slot-config-list" data-render-mode={mode}>
+            {groupView.rows.map((row) => {
+              const itemDefinition = row.displayItemId === null
+                ? null
+                : itemById.get(row.displayItemId) ?? null;
+              const itemLabel = itemDefinition === null
+                ? translate("inspector.slotConfig.selectItem")
+                : translate(itemDefinition.nameKey);
+              const canClear = row.initialItemType !== null || row.count > 0;
 
-          return (
-            <section
-              className="slot-config-row"
-              data-slot-id={row.slotId}
-              key={row.slotId}
-            >
-              <div className="slot-config-row-header">
-                <strong>{row.slotId}</strong>
-                <span className="slot-config-meta">{`${translate("inspector.slotConfig.capacity")} ${row.count} / ${row.capacity}`}</span>
-              </div>
-              <div className="slot-config-row-main">
-                <button
-                  className="slot-config-item-button"
-                  data-slot-action="pick-item"
-                  disabled={pendingSlotId === row.slotId || row.lockItemId !== null}
-                  onClick={() => {
-                    void requestItemSelection(row);
-                  }}
-                  type="button"
+              return (
+                <div
+                  className="slot-config-row"
+                  data-slot-id={row.slotId}
+                  key={row.slotId}
                 >
-                  <span>{itemLabel}</span>
-                  {row.lockItemId !== null ? (
-                    <span className="slot-config-lock-tag">{translate("inspector.slotConfig.locked")}</span>
-                  ) : null}
-                </button>
-                <div className="slot-config-row-actions">
-                  <div className="slot-config-stepper">
-                    <button
-                      className="slot-config-step-button"
-                      data-slot-action="decrement-count"
-                      disabled={row.displayItemId === null || row.count <= 0}
-                      onClick={() => {
-                        updateCount(row, row.count - 1);
-                      }}
-                      type="button"
-                    >
-                      <LucideMinus aria-hidden="true" />
-                    </button>
-                    <input
-                      className="slot-config-count-input"
-                      data-slot-input="count"
-                      disabled={row.displayItemId === null}
-                      max={row.capacity}
-                      min={0}
-                      onChange={(event) => {
-                        const rawValue = event.currentTarget.value.trim();
-                        const parsedValue = rawValue === "" ? 0 : Number(rawValue);
-
-                        if (!Number.isFinite(parsedValue)) {
-                          return;
-                        }
-
-                        updateCount(row, parsedValue);
-                      }}
-                      type="number"
-                      value={row.count}
-                    />
-                    <button
-                      className="slot-config-step-button"
-                      data-slot-action="increment-count"
-                      disabled={row.displayItemId === null || row.count >= row.capacity}
-                      onClick={() => {
-                        updateCount(row, row.count + 1);
-                      }}
-                      type="button"
-                    >
-                      <LucidePlus aria-hidden="true" />
-                    </button>
+                  <div className="slot-config-row-header">
+                    <strong>{row.slotId}</strong>
+                    <span className="slot-config-meta">
+                      {`${translate("inspector.slotConfig.capacity")} ${row.count} / ${row.capacity}`}
+                    </span>
                   </div>
-                  <button
-                    className="slot-config-clear-button"
-                    data-slot-action="clear-item"
-                    disabled={!canClear}
-                    onClick={() => {
-                      clearSlot(row);
-                    }}
-                    type="button"
-                  >
-                    <LucideX aria-hidden="true" />
-                    <span>{translate("inspector.slotConfig.clearSlot")}</span>
-                  </button>
+                  <div className="slot-config-row-main">
+                    <button
+                      className="slot-config-item-button"
+                      data-slot-action="pick-item"
+                      disabled={pendingSlotId === row.slotId || row.lockItemId !== null}
+                      onClick={() => {
+                        void requestItemSelection(row, groupView.rows);
+                      }}
+                      type="button"
+                    >
+                      <span>{itemLabel}</span>
+                      {row.lockItemId !== null ? (
+                        <span className="slot-config-lock-tag">{translate("inspector.slotConfig.locked")}</span>
+                      ) : null}
+                    </button>
+                    <div className="slot-config-row-actions">
+                      <div className="slot-config-stepper">
+                        <button
+                          className="slot-config-step-button"
+                          data-slot-action="decrement-count"
+                          disabled={row.displayItemId === null || row.count <= 0}
+                          onClick={() => {
+                            updateCount(row, row.count - 1);
+                          }}
+                          type="button"
+                        >
+                          <LucideMinus aria-hidden="true" />
+                        </button>
+                        <input
+                          className="slot-config-count-input"
+                          data-slot-input="count"
+                          disabled={row.displayItemId === null}
+                          max={row.capacity}
+                          min={0}
+                          onChange={(event) => {
+                            const rawValue = event.currentTarget.value.trim();
+                            const parsedValue = rawValue === "" ? 0 : Number(rawValue);
+
+                            if (!Number.isFinite(parsedValue)) {
+                              return;
+                            }
+
+                            updateCount(row, parsedValue);
+                          }}
+                          type="number"
+                          value={row.count}
+                        />
+                        <button
+                          className="slot-config-step-button"
+                          data-slot-action="increment-count"
+                          disabled={row.displayItemId === null || row.count >= row.capacity}
+                          onClick={() => {
+                            updateCount(row, row.count + 1);
+                          }}
+                          type="button"
+                        >
+                          <LucidePlus aria-hidden="true" />
+                        </button>
+                      </div>
+                      <button
+                        className="slot-config-clear-button"
+                        data-slot-action="clear-item"
+                        disabled={!canClear}
+                        onClick={() => {
+                          clearSlot(row);
+                        }}
+                        type="button"
+                      >
+                        <LucideX aria-hidden="true" />
+                        <span>{translate("inspector.slotConfig.clearSlot")}</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </section>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </section>
+      ))}
     </article>
   );
 }
 
-function resolveSlotGroupIndex(targetPath: string | undefined): number | null {
-  const match = targetPath?.match(/^storageSlotGroups\[(\d+)\]\.slots$/);
+function resolveSlotConfigGroupViews(
+  slotGroupIds: readonly string[],
+  definition: EntityDefinition,
+  entity: WorldEntity,
+): SlotConfigGroupView[] {
+  return slotGroupIds.flatMap((groupId) => {
+    const groupIndex = definition.storageSlotGroups.findIndex((g) => g.id === groupId);
 
-  if (match === null || match === undefined) {
-    return null;
-  }
+    if (groupIndex === -1) {
+      return [];
+    }
 
-  const index = Number(match[1]);
-  return Number.isInteger(index) && index >= 0 ? index : null;
+    const storageGroup = definition.storageSlotGroups[groupIndex];
+
+    if (storageGroup === undefined) {
+      return [];
+    }
+
+    const targetPath = `storageSlotGroups[${groupIndex}].slots`;
+
+    return [{
+      storageGroup,
+      groupIndex,
+      rows: storageGroup.slots.map((slot, slotIndex) =>
+        resolveEffectiveSlotRow({
+          slot,
+          slotIndex,
+          storageGroup,
+          targetPath,
+          config: entity.config,
+        }),
+      ),
+    }];
+  });
 }
 
 function resolveEffectiveSlotRow(options: {

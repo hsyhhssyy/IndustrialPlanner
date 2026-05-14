@@ -107,7 +107,7 @@ describe("SlotConfigInspector", () => {
             appHost={currentAppHost}
             declaration={{
               type: INSPECTOR_TYPE.slotConfig,
-              targetPath: "storageSlotGroups[0].slots",
+              slotGroupIds: ["item_storage"],
             }}
             definition={definition}
             entity={currentEntity}

@@ -44,6 +44,7 @@ type PortDefinition = PortGroupDefinition["ports"][number];
 type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
 type StorageSlotDefinition = StorageSlotGroupDefinition["slots"][number];
 type PortStorageBindingDefinition = EntityDefinition["portStorageBindings"][number];
+type RecipeChannelDefinition = EntityDefinition["recipeChannels"][number];
 
 /** 端口朝向简写：N=北 S=南 W=西 E=东（相对于设备 rotation=0） */
 type PortEdgeInput = "N" | "S" | "W" | "E";
@@ -60,9 +61,10 @@ type PortDefinitionInput = Pick<
   "acceptRule" | "count" | "priorityGroup" | "roundRobinSeed"
 >>;
 
-/** createEntityDefinition() 的输入类型 — inspectors 可选 */
-type EntityDefinitionInput = Omit<EntityDefinition, "inspectors"> & {
+/** createEntityDefinition() 的输入类型 — inspectors / recipeChannels 可选，由工厂补全默认值 */
+type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "recipeChannels"> & {
   readonly inspectors?: readonly EntityInspectorDeclaration[];
+  readonly recipeChannels?: readonly EntityDefinition["recipeChannels"][number][];
 };
 
 /** createEmptyEntityDefinition() 的输入类型 — 基础字段必填，电力字段可选 */
@@ -91,6 +93,7 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
 
   return {
     ...definition,
+    recipeChannels: [...(definition.recipeChannels ?? [])],
     inspectors: appendMissingInspectors(declaredInspectors, recipeMachineInspectors),
   };
 }
@@ -102,16 +105,21 @@ function createRecipeMachineIngredientSlotInspectors(
     return [];
   }
 
-  return definition.storageSlotGroups.flatMap((storageSlotGroup, storageSlotGroupIndex) =>
-    // AI-CORRECTION 2026-05-13: storageSlotGroup.role no longer exists.
-    // Slot inspector registration now uses portStorageBindings to determine direction.
-    definition.portStorageBindings.some(b => b.storageSlotGroupId === storageSlotGroup.id)
-      ? [{
-          type: INSPECTOR_TYPE.slotConfig,
-          targetPath: `storageSlotGroups[${storageSlotGroupIndex}].slots`,
-        }]
-      : [],
-  );
+  // 找出所有绑定了端口的存储槽组（即参与实际物流的槽组）
+  const boundStorageSlotGroupIds = definition.storageSlotGroups
+    .filter((storageSlotGroup) =>
+      definition.portStorageBindings.some(b => b.storageSlotGroupId === storageSlotGroup.id),
+    )
+    .map(g => g.id);
+
+  if (boundStorageSlotGroupIds.length === 0) {
+    return [];
+  }
+
+  return [{
+    type: INSPECTOR_TYPE.slotConfig,
+    slotGroupIds: boundStorageSlotGroupIds,
+  }];
 }
 
 function appendMissingInspectors(
@@ -121,10 +129,8 @@ function appendMissingInspectors(
   const inspectors = [...declaredInspectors];
 
   for (const generatedInspector of generatedInspectors) {
-    if (inspectors.some((inspector) =>
-      inspector.type === generatedInspector.type
-      && inspector.targetPath === generatedInspector.targetPath
-    )) {
+    // 该 type 是否已有声明（手写声明优先于自动生成）
+    if (inspectors.some((inspector) => inspector.type === generatedInspector.type)) {
       continue;
     }
 
@@ -499,7 +505,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     inspectors: [
       {
         type: INSPECTOR_TYPE.slotConfig,
-        targetPath: "storageSlotGroups[0].slots",
+        slotGroupIds: ["item_storage"],
       },
     ],
   }),
