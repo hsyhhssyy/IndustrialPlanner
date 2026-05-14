@@ -16,8 +16,9 @@ export interface SimulationDeviceRuntimeStatusReadModel {
   readonly slotItems: readonly SimulationDeviceRuntimeSlotItemReadModel[];
 }
 
+// AI-CORRECTION 2026-05-14: slotType 字段已删除。
+// viewRole alone determines slot role for display.
 export interface SimulationDeviceRuntimeSlotItemReadModel {
-  readonly slotType: "ingredient" | "product" | "universal";
   readonly storageGroupId: string;
   readonly slotId: string;
   readonly viewRole: "single-view" | "input-view" | "output-view";

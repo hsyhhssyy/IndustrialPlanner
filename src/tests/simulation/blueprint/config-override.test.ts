@@ -16,6 +16,8 @@ describe("REQ-076: config overrides", () => {
         "storageSlotGroups[0].slots[0].initialCount": 7,
         "storageSlotGroups[0].slots[0].ignoreStock": true,
         "portGroups[1].ports[0].count": 3,
+        "portGroups[1].ports[1].count": 3,
+        "portGroups[1].ports[2].count": 3,
       }),
       createEntity("sink-storage", "item_port_storager_1", 0, -3),
     ]);
@@ -46,11 +48,14 @@ describe("REQ-076: config overrides", () => {
       });
     expect(findSlot(report, 1, "source-storage", "item_storage", "slot_1").count)
       .toBe(7);
+    // AI-CORRECTION 2026-05-14: item_port_storager_1 有 3 对物理端口，
+    // 仅限制 1 个端口会导致另外 2 个 unlimited 端口把 6 个槽填满。
+    // 现在三板口都限为 3，每 tick 共 9 次传输。
     expect(findSlot(report, 1, "sink-storage", "item_storage", "slot_1"))
       .toMatchObject({
         itemType: "item_iron_ore",
-        count: 3,
+        count: 9,
       });
-    expect(getTick(report, 1).transfers).toHaveLength(3);
+    expect(getTick(report, 1).transfers).toHaveLength(9);
   });
 });

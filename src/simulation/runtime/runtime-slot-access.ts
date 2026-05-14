@@ -348,10 +348,10 @@ export function finishRecipeIfPossible(
   return true;
 }
 
+// AI-CORRECTION 2026-05-14: definitionId/tags 已从签名中移除。
+// 函数体内本身就从 options.device 读取 definitionId 和 tags，签名中的冗余参数从未被使用。
 function resolveRecipes(options: {
   topology: CompiledSimulationTopology;
-  definitionId: string;
-  tags: readonly string[];
   device: CompiledSimulationDevice;
   channel: CompiledSimulationRecipeChannel;
   ingredientSlotContents: readonly IngredientSlotContent[];

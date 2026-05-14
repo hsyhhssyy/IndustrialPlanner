@@ -41,6 +41,7 @@ type PortDefinition = PortGroupDefinition["ports"][number];
 type StorageSlotGroupDefinition = EntityDefinition["storageSlotGroups"][number];
 type StorageSlotDefinition = StorageSlotGroupDefinition["slots"][number];
 type PortStorageBindingDefinition = EntityDefinition["portStorageBindings"][number];
+type RecipeChannelDefinition = EntityDefinition["recipeChannels"][number];
 
 interface CompileOptions {
   readonly document: WorldDocument;
@@ -1020,10 +1021,10 @@ function compileRecipeChannels(
   return channelDefs.map((ch) => ({
     id: ch.id,
     ingredientNodeIds: [...new Set(ch.ingredientStorageGroupIds.flatMap(
-      (gid) => bindings.get(gid)?.ingredientNodeIds ?? [],
+      (gid: string) => bindings.get(gid)?.ingredientNodeIds ?? [],
     ))],
     productNodeIds: [...new Set(ch.productStorageGroupIds.flatMap(
-      (gid) => bindings.get(gid)?.productNodeIds ?? [],
+      (gid: string) => bindings.get(gid)?.productNodeIds ?? [],
     ))],
   }));
 }
