@@ -1265,6 +1265,31 @@ body.is-resizing-dialog-shell * {
   padding: 14px;
 }
 
+.debug-log-dialog-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.debug-log-dialog-toolbar button {
+  padding: 4px 12px;
+  font: 12px/1.4 inherit;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-1);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.debug-log-dialog-toolbar button:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.debug-log-dialog-toolbar button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .debug-log-dialog-textarea {
   height: 100%;
   min-height: 100%;

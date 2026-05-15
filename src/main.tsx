@@ -24,7 +24,9 @@ const workspace : WorkspaceContract = {
 const appHost = createAppHost(workspace);
 createEditorHost(workspace);
 await createRenderHost(workspace);
-createSimulationHost(workspace);
+createSimulationHost(workspace, {
+  getPerfEnabled: () => appHost.internalState.settings.debugMode,
+});
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

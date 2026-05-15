@@ -152,6 +152,8 @@ export type MessageKey =
   | "toolboxDialog.restore"
   | "debugLogDialog.title"
   | "debugLogDialog.empty"
+  | "debugLogDialog.copy"
+  | "debugLogDialog.copied"
   | "debugLogDialog.maximize"
   | "debugLogDialog.restore"
   | "helpDialog.title"
@@ -431,6 +433,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "toolboxDialog.restore": "还原工具箱",
     "debugLogDialog.title": "调试日志",
     "debugLogDialog.empty": "当前还没有捕获到调试日志。",
+    "debugLogDialog.copy": "复制日志",
+    "debugLogDialog.copied": "已复制",
     "debugLogDialog.maximize": "最大化调试日志",
     "debugLogDialog.restore": "还原调试日志",
     "moduleBalancing.canvas": "画布",
@@ -807,6 +811,8 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "toolboxDialog.restore": "Restore Toolbox",
     "debugLogDialog.title": "Debug Logs",
     "debugLogDialog.empty": "No debug logs have been captured yet.",
+    "debugLogDialog.copy": "Copy Logs",
+    "debugLogDialog.copied": "Copied",
     "debugLogDialog.maximize": "Maximize Debug Logs",
     "debugLogDialog.restore": "Restore Debug Logs",
     "moduleBalancing.canvas": "Canvas",

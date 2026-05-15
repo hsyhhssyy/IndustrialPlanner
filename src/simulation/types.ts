@@ -327,3 +327,39 @@ export function compileRecipeDefinition(
     tags: [...recipe.tags].sort(),
   };
 }
+
+// ============================================================
+// Perf instrumentation types
+// ============================================================
+
+export interface TickPerfEntry {
+  readonly tickNumber: number;
+  readonly totalMs: number;
+  readonly stages: {
+    readonly advanceDevices: number;
+    readonly buildSolveGraph: number;
+    readonly solveTransferGraph: number;
+    readonly rotateRoutingCursors: number;
+    readonly settleRecipes: number;
+    readonly maintainDomains: number;
+    readonly createSnapshot: number;
+  };
+}
+
+export interface SimulationPerfReport {
+  readonly tickRange: { readonly from: number; readonly to: number };
+  readonly entries: readonly TickPerfEntry[];
+  readonly summary: {
+    readonly avgMs: number;
+    readonly maxMs: number;
+    readonly avgStageMs: {
+      readonly advanceDevices: number;
+      readonly buildSolveGraph: number;
+      readonly solveTransferGraph: number;
+      readonly rotateRoutingCursors: number;
+      readonly settleRecipes: number;
+      readonly maintainDomains: number;
+      readonly createSnapshot: number;
+    };
+  };
+}

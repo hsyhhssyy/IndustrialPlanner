@@ -1,11 +1,13 @@
 import type {
   CompiledSimulationTopology,
   RuntimeTickSnapshot,
+  SimulationPerfReport,
   SimulationTickPullStatus,
   SimulationTickSnapshotResult,
   SimulationRuntimeStatus,
   SimulationStartResult,
   SimulationTopologyMigration,
+  TickPerfEntry,
 } from "./types";
 import type {
   SimulationWorkerRequest,
@@ -45,9 +47,14 @@ export class SimulationWorkerRuntime {
   // 后台填充定时器 ID，用于取消和防重入。
   private fillTimerId: ReturnType<typeof setTimeout> | null = null;
 
+  // Perf instrumentation
+  private perfEnabled = false;
+  private perfEntries: TickPerfEntry[] = [];
+
   public handleRequest(request: SimulationWorkerRequest): SimulationWorkerResponse {
     switch (request.type) {
       case "load-topology":
+        this.perfEnabled = request.perfEnabled ?? false;
         return {
           type: "topology-loaded",
           requestId: request.requestId,
@@ -59,6 +66,13 @@ export class SimulationWorkerRuntime {
           type: "tick-snapshot-result",
           requestId: request.requestId,
           result: this.getTickSnapshot(request.tickNumber),
+          status: this.getStatus(),
+        };
+      case "get-perf-report":
+        return {
+          type: "perf-report",
+          requestId: request.requestId,
+          report: this.flushPerfReport(),
           status: this.getStatus(),
         };
     }
@@ -295,18 +309,124 @@ export class SimulationWorkerRuntime {
     const shouldAdvance = tickNumber > this.runtimeState.tickNumber;
     this.runtimeState.tickNumber = tickNumber;
 
+    const perfTiming = this.perfEnabled ? { tickNumber, start: performance.now(), stages: {} as Record<string, number> } : null;
+
     if (shouldAdvance) {
+      const t0 = this.perfEnabled ? performance.now() : 0;
       advanceDevices(this.topology, this.runtimeState);
+      if (this.perfEnabled) { perfTiming!.stages["advanceDevices"] = performance.now() - t0; }
+
+      const t1 = this.perfEnabled ? performance.now() : 0;
       buildSolveGraph(this.topology, this.runtimeState);
+      if (this.perfEnabled) { perfTiming!.stages["buildSolveGraph"] = performance.now() - t1; }
+
+      const t2 = this.perfEnabled ? performance.now() : 0;
       solveTransferGraph(this.topology, this.runtimeState);
+      if (this.perfEnabled) { perfTiming!.stages["solveTransferGraph"] = performance.now() - t2; }
+
+      const t3 = this.perfEnabled ? performance.now() : 0;
       rotateRoutingCursors(this.topology, this.runtimeState);
+      if (this.perfEnabled) { perfTiming!.stages["rotateRoutingCursors"] = performance.now() - t3; }
+
+      const t4 = this.perfEnabled ? performance.now() : 0;
       settleRecipes(this.topology, this.runtimeState);
+      if (this.perfEnabled) { perfTiming!.stages["settleRecipes"] = performance.now() - t4; }
+
+      const t5 = this.perfEnabled ? performance.now() : 0;
       maintainTransportComponentDomains(this.topology, this.runtimeState);
-      return createTickSnapshot(this.topology, this.runtimeState);
+      if (this.perfEnabled) { perfTiming!.stages["maintainDomains"] = performance.now() - t5; }
+
+      const t6 = this.perfEnabled ? performance.now() : 0;
+      const snapshot = createTickSnapshot(this.topology, this.runtimeState);
+      if (this.perfEnabled) {
+        perfTiming!.stages["createSnapshot"] = performance.now() - t6;
+        const total = performance.now() - perfTiming!.start;
+        this.perfEntries.push({
+          tickNumber,
+          totalMs: total,
+          stages: {
+            advanceDevices: perfTiming!.stages["advanceDevices"] ?? 0,
+            buildSolveGraph: perfTiming!.stages["buildSolveGraph"] ?? 0,
+            solveTransferGraph: perfTiming!.stages["solveTransferGraph"] ?? 0,
+            rotateRoutingCursors: perfTiming!.stages["rotateRoutingCursors"] ?? 0,
+            settleRecipes: perfTiming!.stages["settleRecipes"] ?? 0,
+            maintainDomains: perfTiming!.stages["maintainDomains"] ?? 0,
+            createSnapshot: perfTiming!.stages["createSnapshot"] ?? 0,
+          },
+        });
+      }
+      return snapshot;
     }
 
+    // tick-0: 只走 buildSolveGraph + createSnapshot
+    const t0 = this.perfEnabled ? performance.now() : 0;
     buildSolveGraph(this.topology, this.runtimeState);
-    return createTickSnapshot(this.topology, this.runtimeState);
+    if (this.perfEnabled) { perfTiming!.stages["buildSolveGraph"] = performance.now() - t0; }
+
+    const t1 = this.perfEnabled ? performance.now() : 0;
+    const snapshot = createTickSnapshot(this.topology, this.runtimeState);
+    if (this.perfEnabled) {
+      perfTiming!.stages["createSnapshot"] = performance.now() - t1;
+      const total = performance.now() - perfTiming!.start;
+      this.perfEntries.push({
+        tickNumber,
+        totalMs: total,
+        stages: {
+          advanceDevices: 0,
+          buildSolveGraph: perfTiming!.stages["buildSolveGraph"] ?? 0,
+          solveTransferGraph: 0,
+          rotateRoutingCursors: 0,
+          settleRecipes: 0,
+          maintainDomains: 0,
+          createSnapshot: perfTiming!.stages["createSnapshot"] ?? 0,
+        },
+      });
+    }
+    return snapshot;
+  }
+
+  private flushPerfReport(): SimulationPerfReport | null {
+    if (this.perfEntries.length === 0) return null;
+
+    const entries = [...this.perfEntries];
+    this.perfEntries = [];
+
+    const firstTick = entries[0]!.tickNumber;
+    const lastTick = entries[entries.length - 1]!.tickNumber;
+    const totalMs = entries.reduce((sum, e) => sum + e.totalMs, 0);
+    const maxMs = entries.reduce((max, e) => Math.max(max, e.totalMs), 0);
+    const avgMs = entries.length > 0 ? totalMs / entries.length : 0;
+
+    const stageSums = { advanceDevices: 0, buildSolveGraph: 0, solveTransferGraph: 0, rotateRoutingCursors: 0, settleRecipes: 0, maintainDomains: 0, createSnapshot: 0 };
+    for (const e of entries) {
+      stageSums.advanceDevices += e.stages.advanceDevices;
+      stageSums.buildSolveGraph += e.stages.buildSolveGraph;
+      stageSums.solveTransferGraph += e.stages.solveTransferGraph;
+      stageSums.rotateRoutingCursors += e.stages.rotateRoutingCursors;
+      stageSums.settleRecipes += e.stages.settleRecipes;
+      stageSums.maintainDomains += e.stages.maintainDomains;
+      stageSums.createSnapshot += e.stages.createSnapshot;
+    }
+    const n = entries.length;
+    const avgStageMs = {
+      advanceDevices: Math.round(stageSums.advanceDevices / n * 100) / 100,
+      buildSolveGraph: Math.round(stageSums.buildSolveGraph / n * 100) / 100,
+      solveTransferGraph: Math.round(stageSums.solveTransferGraph / n * 100) / 100,
+      rotateRoutingCursors: Math.round(stageSums.rotateRoutingCursors / n * 100) / 100,
+      settleRecipes: Math.round(stageSums.settleRecipes / n * 100) / 100,
+      maintainDomains: Math.round(stageSums.maintainDomains / n * 100) / 100,
+      createSnapshot: Math.round(stageSums.createSnapshot / n * 100) / 100,
+    };
+
+    return {
+      tickRange: { from: firstTick, to: lastTick },
+      entries,
+      summary: {
+        avgMs: Math.round(avgMs * 1000) / 1000,
+        maxMs: Math.round(maxMs * 1000) / 1000,
+        avgStageMs,
+      },
+    };
   }
 }
 

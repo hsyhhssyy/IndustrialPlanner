@@ -42,6 +42,7 @@ export type SimulationHostWorkerMode = "auto" | "runtime";
 
 export interface CreateSimulationHostOptions {
   readonly workerMode?: SimulationHostWorkerMode;
+  readonly getPerfEnabled?: () => boolean;
 }
 
 export function createSimulationHost(
@@ -57,6 +58,7 @@ export function createSimulationHost(
     state: internalState,
     topology: topologyStore,
     bridge,
+    getPerfEnabled: options.getPerfEnabled,
   });
   const actions: SimulationContract["actions"] = actionImpl;
   const internalActions: SimulationInternalAction = actionImpl;
@@ -278,7 +280,7 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     });
   }
 
-  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration): Promise<Extract<
+  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >> {
@@ -287,6 +289,7 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
       requestId: this.createRequestId(),
       topology,
       migration,
+      perfEnabled,
     }, "topology-loaded");
   }
 
@@ -299,6 +302,16 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
       requestId: this.createRequestId(),
       tickNumber,
     }, "tick-snapshot-result");
+  }
+
+  public getPerfReport(): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "perf-report" }
+  >> {
+    return this.request({
+      type: "get-perf-report",
+      requestId: this.createRequestId(),
+    }, "perf-report");
   }
 
   public dispose(): void {
@@ -332,7 +345,7 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
   private readonly runtime = new SimulationWorkerRuntime();
   private nextRequestId = 1;
 
-  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration): Promise<Extract<
+  public loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >> {
@@ -341,6 +354,7 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       requestId: this.createRequestId(),
       topology,
       migration,
+      perfEnabled,
     });
     if (response.type !== "topology-loaded") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);
@@ -360,6 +374,20 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
       tickNumber,
     });
     if (response.type !== "tick-snapshot-result") {
+      throw new Error(`Unexpected simulation worker response "${response.type}".`);
+    }
+    return Promise.resolve(response);
+  }
+
+  public getPerfReport(): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "perf-report" }
+  >> {
+    const response = this.runtime.handleRequest({
+      type: "get-perf-report",
+      requestId: this.createRequestId(),
+    });
+    if (response.type !== "perf-report") {
       throw new Error(`Unexpected simulation worker response "${response.type}".`);
     }
     return Promise.resolve(response);

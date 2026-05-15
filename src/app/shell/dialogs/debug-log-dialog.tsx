@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore, useState } from "react";
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -23,6 +23,24 @@ export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { ap
     getDebugLogSnapshot,
   );
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const text = snapshot.text;
+    if (!text) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard API 不可用时降级：选中 textarea 内容让用户手动复制
+      const textarea = textareaRef.current;
+      if (textarea !== null) {
+        textarea.select();
+      }
+    }
+  };
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -64,6 +82,16 @@ export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { ap
       title={t("debugLogDialog.title")}
       titleId="debug-log-dialog-title"
     >
+      <div className="debug-log-dialog-toolbar">
+        <button
+          className="global-dialog-btn"
+          disabled={snapshot.text.length === 0}
+          onClick={() => void handleCopy()}
+          type="button"
+        >
+          {copied ? t("debugLogDialog.copied") : t("debugLogDialog.copy")}
+        </button>
+      </div>
       <textarea
         aria-label={t("debugLogDialog.title")}
         className="json-debug-textarea debug-log-dialog-textarea"

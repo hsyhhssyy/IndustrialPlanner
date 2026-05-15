@@ -23,6 +23,7 @@ import {
 const TPS_WINDOW_MS = 1000;
 import type {
   CompiledSimulationTopology,
+  SimulationPerfReport,
   SimulationStartResult,
   SimulationTickPullStatus,
   SimulationTopologyMigration,
@@ -30,13 +31,17 @@ import type {
 import type { SimulationWorkerResponse } from "./worker-protocol";
 
 export interface SimulationWorkerBridge {
-  loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration): Promise<Extract<
+  loadTopology(topology: CompiledSimulationTopology, migration?: SimulationTopologyMigration, perfEnabled?: boolean): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "topology-loaded" }
   >>;
   getTickSnapshot(tickNumber: number): Promise<Extract<
     SimulationWorkerResponse,
     { readonly type: "tick-snapshot-result" }
+  >>;
+  getPerfReport(): Promise<Extract<
+    SimulationWorkerResponse,
+    { readonly type: "perf-report" }
   >>;
   dispose(): void;
 }
@@ -53,6 +58,7 @@ interface SimulationActionImplOptions {
   state: SimulationStateReadWrite;
   topology: SnapshotStoreReadWrite<CompiledSimulationTopology | null>;
   bridge: SimulationWorkerBridge;
+  getPerfEnabled?: () => boolean;
 }
 
 export class SimulationActionImpl
@@ -61,15 +67,18 @@ implements SimulationAction, SimulationInternalAction {
   private readonly stateReadWrite: SimulationStateReadWrite;
   private readonly topology: SnapshotStoreReadWrite<CompiledSimulationTopology | null>;
   private readonly bridge: SimulationWorkerBridge;
+  private readonly getPerfEnabled: (() => boolean) | undefined;
   private compiledDocument: WorldDocument | null = null;
   private tpsAccumulatedTicks = 0;
   private tpsAccumulatedMs = 0;
+  private nextPerfReportTick = 180;
 
   public constructor(options: SimulationActionImplOptions) {
     this.workspace = options.workspace;
     this.stateReadWrite = options.state;
     this.topology = options.topology;
     this.bridge = options.bridge;
+    this.getPerfEnabled = options.getPerfEnabled;
   }
 
   public readonly start: SimulationAction["start"] = async () => {
@@ -213,7 +222,8 @@ implements SimulationAction, SimulationInternalAction {
       nextTopology: compiledTopology,
       baseTickNumber,
     });
-    const response = await this.bridge.loadTopology(compiledTopology, migration ?? undefined);
+    const perfEnabled = this.getPerfEnabled?.() ?? false;
+    const response = await this.bridge.loadTopology(compiledTopology, migration ?? undefined, perfEnabled);
     this.topology.setSnapshot(compiledTopology);
     this.compiledDocument = cloneWorldDocument(document);
 
@@ -263,6 +273,11 @@ implements SimulationAction, SimulationInternalAction {
       }
     });
 
+    // Perf 轮询：每 180 tick 阈值追赶
+    if (response.result.status.status === "ready" && this.getPerfEnabled?.()) {
+      this.pollPerfReport(tickNumber);
+    }
+
     return response.result.status;
   };
 
@@ -299,6 +314,7 @@ implements SimulationAction, SimulationInternalAction {
     this.stateReadWrite.statistics = { tickPerSecond: 0 };
     this.tpsAccumulatedTicks = 0;
     this.tpsAccumulatedMs = 0;
+    this.nextPerfReportTick = 180;
   }
 
   /** 累积 tick 和时间，每 TPS_WINDOW_MS 刷新一次 TPS 统计 */
@@ -320,6 +336,35 @@ implements SimulationAction, SimulationInternalAction {
       this.tpsAccumulatedTicks = 0;
       this.tpsAccumulatedMs = 0;
     }
+  }
+
+  /** 每 180 tick 阈值追赶：从 Worker 拉取 perf 报告并打印到 console */
+  private async pollPerfReport(tickNumber: number): Promise<void> {
+    if (tickNumber < this.nextPerfReportTick) return;
+
+    try {
+      const response = await this.bridge.getPerfReport();
+      if (response.report !== null) {
+        const s = response.report.summary;
+        const r = response.report.tickRange;
+        const st = s.avgStageMs;
+        console.log(
+          `[SimPerf] ticks ${r.from}-${r.to} | avg=${s.avgMs}ms max=${s.maxMs}ms | ` +
+          `target=${Math.round(1000 / 20)}ms/tick @20TPS`,
+        );
+        console.log(
+          `[SimPerf]   stages: ` +
+          `advDev=${st.advanceDevices}ms buildGraph=${st.buildSolveGraph}ms ` +
+          `solve=${st.solveTransferGraph}ms cursor=${st.rotateRoutingCursors}ms ` +
+          `settle=${st.settleRecipes}ms domain=${st.maintainDomains}ms snap=${st.createSnapshot}ms`,
+        );
+      }
+    } catch {
+      // perf 失败不影响主流程
+    }
+
+    // 追赶：跳到下一个 ≥ tickNumber 的 180 倍
+    this.nextPerfReportTick = Math.ceil((tickNumber + 1) / 180) * 180;
   }
 }
 
