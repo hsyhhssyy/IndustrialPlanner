@@ -122,7 +122,10 @@ export function convertLegacyBlueprintJson(
         y: normalizedDevice.origin.y,
       },
       rotation: normalizedDevice.rotation,
-      config: cloneJsonRecord(normalizedDevice.config ?? {}),
+      config: convertLegacyDeviceConfig({
+        definitionId: normalizedDevice.typeId,
+        config: cloneJsonRecord(normalizedDevice.config ?? {}),
+      }),
       tags: [],
     };
     entityOrder.push(entityId);
@@ -141,6 +144,90 @@ export function convertLegacyBlueprintJson(
     createdAt: legacyBlueprint.createdAt,
     updatedAt: legacyBlueprint.updatedAt ?? legacyBlueprint.createdAt,
   });
+}
+
+/**
+ * 将旧版设备 config 转换为新版 config contract。
+ *
+ * 取货口（item_port_unloader_1）：
+ *   旧：pickupItemId + pickupIgnoreInventory + protocolHubOutputs[0].ignoreInventory
+ *   新：links[0]（完整 SlotLinkDefinition）+ storageSlotGroups[0].slots[0].ignoreStock
+ *
+ * 存储箱（item_port_storager_1）：
+ *   旧：submitToWarehouse = true
+ *   新：storageSlotGroups[0].slots[N].submitMode = "every-tick"
+ */
+function convertLegacyDeviceConfig(options: {
+  definitionId: string;
+  config: Record<string, unknown>;
+}): Record<string, unknown> {
+  if (options.definitionId === "item_port_unloader_1") {
+    return convertLegacyUnloaderConfig(options.config);
+  }
+
+  if (options.definitionId === "item_port_storager_1") {
+    return convertLegacyStoragerConfig(options.config);
+  }
+
+  return options.config;
+}
+
+function convertLegacyUnloaderConfig(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const itemId = config.pickupItemId;
+  if (typeof itemId !== "string" || itemId === "") {
+    return config;
+  }
+
+  // 取 ignoreStock：pickupIgnoreInventory 或 protocolHubOutputs[0].ignoreInventory
+  const ignoreStock =
+    config.pickupIgnoreInventory === true
+    || (
+      Array.isArray(config.protocolHubOutputs)
+      && config.protocolHubOutputs.length > 0
+      && isRecord(config.protocolHubOutputs[0])
+      && config.protocolHubOutputs[0].ignoreInventory === true
+    );
+
+  const nextConfig: Record<string, unknown> = { ...config };
+
+  // 移除旧 key
+  delete nextConfig.pickupItemId;
+  delete nextConfig.pickupIgnoreInventory;
+  delete nextConfig.protocolHubOutputs;
+
+  // 写入新格式 links[0]（完整 SlotLinkDefinition）
+  nextConfig["links[0].id"] = "";
+  nextConfig["links[0].linkType"] = "share-all";
+  // source.entityId 留空，applyPlacementDraft 时由 rewriteEntityIdInConfig 处理
+  nextConfig["links[0].source.entityId"] = "";
+  nextConfig["links[0].source.storageSlotGroupId"] = "unloader_buffer";
+  nextConfig["links[0].source.slotId"] = "slot_1";
+  nextConfig["links[0].target.entityId"] = "warehouse";
+  nextConfig["links[0].target.storageSlotGroupId"] = "warehouse";
+  nextConfig["links[0].target.slotId"] = itemId;
+  nextConfig["storageSlotGroups[0].slots[0].ignoreStock"] = ignoreStock;
+
+  return nextConfig;
+}
+
+function convertLegacyStoragerConfig(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  if (config.submitToWarehouse !== true) {
+    return config;
+  }
+
+  const nextConfig: Record<string, unknown> = { ...config };
+  delete nextConfig.submitToWarehouse;
+
+  // 存储箱有 6 个槽位，全部设为 every-tick 提交
+  for (let slotIndex = 0; slotIndex < 6; slotIndex += 1) {
+    nextConfig[`storageSlotGroups[0].slots[${slotIndex}].submitMode`] = "every-tick";
+  }
+
+  return nextConfig;
 }
 
 export function normalizeLegacyBlueprintJson(value: unknown): LegacyBlueprintJson | null {
