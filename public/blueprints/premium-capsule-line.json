@@ -19,15 +19,15 @@
       },
       "rotation": 0,
       "config": {
-        "pickupItemId": "item_iron_ore",
-        "protocolHubOutputs": [
-          {
-            "portId": "p_out_mid",
-            "itemId": "item_iron_ore",
-            "ignoreInventory": true
-          }
-        ],
-        "pickupIgnoreInventory": true
+        "links[0].id": "",
+        "links[0].linkType": "share-all",
+        "links[0].source.entityId": "",
+        "links[0].source.storageSlotGroupId": "unloader_buffer",
+        "links[0].source.slotId": "slot_1",
+        "links[0].target.entityId": "warehouse",
+        "links[0].target.storageSlotGroupId": "warehouse",
+        "links[0].target.slotId": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].ignoreStock": true
       },
       "tags": []
     },
@@ -40,15 +40,15 @@
       },
       "rotation": 0,
       "config": {
-        "pickupItemId": "item_iron_ore",
-        "protocolHubOutputs": [
-          {
-            "portId": "p_out_mid",
-            "itemId": "item_iron_ore",
-            "ignoreInventory": true
-          }
-        ],
-        "pickupIgnoreInventory": true
+        "links[0].id": "",
+        "links[0].linkType": "share-all",
+        "links[0].source.entityId": "",
+        "links[0].source.storageSlotGroupId": "unloader_buffer",
+        "links[0].source.slotId": "slot_1",
+        "links[0].target.entityId": "warehouse",
+        "links[0].target.storageSlotGroupId": "warehouse",
+        "links[0].target.slotId": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].ignoreStock": true
       },
       "tags": []
     },
@@ -61,15 +61,15 @@
       },
       "rotation": 0,
       "config": {
-        "pickupItemId": "item_iron_ore",
-        "protocolHubOutputs": [
-          {
-            "portId": "p_out_mid",
-            "itemId": "item_iron_ore",
-            "ignoreInventory": true
-          }
-        ],
-        "pickupIgnoreInventory": true
+        "links[0].id": "",
+        "links[0].linkType": "share-all",
+        "links[0].source.entityId": "",
+        "links[0].source.storageSlotGroupId": "unloader_buffer",
+        "links[0].source.slotId": "slot_1",
+        "links[0].target.entityId": "warehouse",
+        "links[0].target.storageSlotGroupId": "warehouse",
+        "links[0].target.slotId": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].ignoreStock": true
       },
       "tags": []
     },
@@ -82,15 +82,15 @@
       },
       "rotation": 0,
       "config": {
-        "pickupItemId": "item_iron_ore",
-        "protocolHubOutputs": [
-          {
-            "portId": "p_out_mid",
-            "itemId": "item_iron_ore",
-            "ignoreInventory": true
-          }
-        ],
-        "pickupIgnoreInventory": true
+        "links[0].id": "",
+        "links[0].linkType": "share-all",
+        "links[0].source.entityId": "",
+        "links[0].source.storageSlotGroupId": "unloader_buffer",
+        "links[0].source.slotId": "slot_1",
+        "links[0].target.entityId": "warehouse",
+        "links[0].target.storageSlotGroupId": "warehouse",
+        "links[0].target.slotId": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].ignoreStock": true
       },
       "tags": []
     },
@@ -103,15 +103,15 @@
       },
       "rotation": 0,
       "config": {
-        "pickupItemId": "item_iron_ore",
-        "protocolHubOutputs": [
-          {
-            "portId": "p_out_mid",
-            "itemId": "item_iron_ore",
-            "ignoreInventory": true
-          }
-        ],
-        "pickupIgnoreInventory": true
+        "links[0].id": "",
+        "links[0].linkType": "share-all",
+        "links[0].source.entityId": "",
+        "links[0].source.storageSlotGroupId": "unloader_buffer",
+        "links[0].source.slotId": "slot_1",
+        "links[0].target.entityId": "warehouse",
+        "links[0].target.storageSlotGroupId": "warehouse",
+        "links[0].target.slotId": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].ignoreStock": true
       },
       "tags": []
     },
@@ -124,15 +124,15 @@
       },
       "rotation": 0,
       "config": {
-        "pickupItemId": "item_iron_ore",
-        "protocolHubOutputs": [
-          {
-            "portId": "p_out_mid",
-            "itemId": "item_iron_ore",
-            "ignoreInventory": true
-          }
-        ],
-        "pickupIgnoreInventory": true
+        "links[0].id": "",
+        "links[0].linkType": "share-all",
+        "links[0].source.entityId": "",
+        "links[0].source.storageSlotGroupId": "unloader_buffer",
+        "links[0].source.slotId": "slot_1",
+        "links[0].target.entityId": "warehouse",
+        "links[0].target.storageSlotGroupId": "warehouse",
+        "links[0].target.slotId": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].ignoreStock": true
       },
       "tags": []
     },
@@ -145,15 +145,15 @@
       },
       "rotation": 0,
       "config": {
-        "pickupItemId": "item_iron_ore",
-        "protocolHubOutputs": [
-          {
-            "portId": "p_out_mid",
-            "itemId": "item_iron_ore",
-            "ignoreInventory": true
-          }
-        ],
-        "pickupIgnoreInventory": true
+        "links[0].id": "",
+        "links[0].linkType": "share-all",
+        "links[0].source.entityId": "",
+        "links[0].source.storageSlotGroupId": "unloader_buffer",
+        "links[0].source.slotId": "slot_1",
+        "links[0].target.entityId": "warehouse",
+        "links[0].target.storageSlotGroupId": "warehouse",
+        "links[0].target.slotId": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].ignoreStock": true
       },
       "tags": []
     },
@@ -166,15 +166,15 @@
       },
       "rotation": 0,
       "config": {
-        "pickupItemId": "item_iron_ore",
-        "protocolHubOutputs": [
-          {
-            "portId": "p_out_mid",
-            "itemId": "item_iron_ore",
-            "ignoreInventory": true
-          }
-        ],
-        "pickupIgnoreInventory": true
+        "links[0].id": "",
+        "links[0].linkType": "share-all",
+        "links[0].source.entityId": "",
+        "links[0].source.storageSlotGroupId": "unloader_buffer",
+        "links[0].source.slotId": "slot_1",
+        "links[0].target.entityId": "warehouse",
+        "links[0].target.storageSlotGroupId": "warehouse",
+        "links[0].target.slotId": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].ignoreStock": true
       },
       "tags": []
     },
@@ -1826,7 +1826,12 @@
       },
       "rotation": 180,
       "config": {
-        "submitToWarehouse": true
+        "storageSlotGroups[0].slots[0].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[1].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[2].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[3].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[4].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[5].submitMode": "every-tick"
       },
       "tags": []
     },

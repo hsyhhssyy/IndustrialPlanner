@@ -541,7 +541,12 @@
       },
       "rotation": 90,
       "config": {
-        "submitToWarehouse": true
+        "storageSlotGroups[0].slots[0].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[1].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[2].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[3].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[4].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[5].submitMode": "every-tick"
       },
       "tags": []
     },
@@ -1285,7 +1290,12 @@
       },
       "rotation": 270,
       "config": {
-        "submitToWarehouse": true
+        "storageSlotGroups[0].slots[0].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[1].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[2].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[3].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[4].submitMode": "every-tick",
+        "storageSlotGroups[0].slots[5].submitMode": "every-tick"
       },
       "tags": []
     },
