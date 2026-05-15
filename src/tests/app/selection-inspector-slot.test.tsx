@@ -133,7 +133,15 @@ describe("SelectionInspectorSlot", () => {
       vi.advanceTimersByTime(50);
     });
 
-    expect(queryInspectorKeys(container)).toEqual(["slot-config"]);
+    expect(queryInspectorKeys(container)).toEqual([
+      "slot-config",
+      "warehouse-item-link",
+      "warehouse-item-link",
+      "warehouse-item-link",
+      "warehouse-item-link",
+      "warehouse-item-link",
+      "warehouse-item-link",
+    ]);
     expect(container.querySelector("[data-slot-config-group='item_storage']")).not.toBeNull();
     expect(container.querySelector("[data-slot-id='slot_1']")?.textContent).toContain("slot_1");
     expect(container.querySelector("[data-slot-id='slot_6']")?.textContent).toContain("slot_6");

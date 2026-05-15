@@ -35,5 +35,22 @@ export const createRegistryQuery = (): RegistryQuery => {
         isGeneralLogisticsDevice(definitionId) {
             return GENERAL_LOGISTICS_DEVICE_IDS.has(definitionId)
         },
+        buildWarehouseSlotLinkForEntity({
+            entityId,
+            storageSlotGroupId,
+            slotId,
+            itemId,
+        }) {
+            return {
+                id: "",
+                linkType: "share-all",
+                source: { entityId, storageSlotGroupId, slotId },
+                target: {
+                    entityId: "warehouse",
+                    storageSlotGroupId: "warehouse",
+                    slotId: itemId,
+                },
+            };
+        },
     }
 }

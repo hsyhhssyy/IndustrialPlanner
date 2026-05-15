@@ -24,7 +24,9 @@ const TEST_REGISTRY: RegistryContract = {
       inspectors: [],
       portGroups: [],
       storageSlotGroups: [],
+      recipeChannels: [],
       portStorageBindings: [],
+      links: [],
     },
     {
       id: "machine_assembler",
@@ -38,7 +40,9 @@ const TEST_REGISTRY: RegistryContract = {
       inspectors: [],
       portGroups: [],
       storageSlotGroups: [],
+      recipeChannels: [],
       portStorageBindings: [],
+      links: [],
     },
   ],
   itemDefinitions: [

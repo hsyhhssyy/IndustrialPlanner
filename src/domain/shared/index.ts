@@ -28,3 +28,8 @@ export {
 	TAG_PREFIX_ALTER_ENTITY,
 	TAG_PREFIX_ALTER_TYPE,
 } from "./tages";
+export type {
+	SlotLinkDefinition,
+	CacheLinkEndpointDefinition,
+	LinkType,
+} from "./slot-link";

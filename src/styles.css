@@ -5828,11 +5828,13 @@ body.is-resizing-left-dock * {
 }
 
 .slot-config-inspector,
+.warehouse-item-link-inspector,
 .slot-config-list,
 .slot-config-row,
 .slot-config-row-main,
 .slot-config-row-actions,
-.slot-config-stepper {
+.slot-config-stepper,
+.warehouse-link-ignore-stock {
   display: grid;
   gap: 8px;
 }

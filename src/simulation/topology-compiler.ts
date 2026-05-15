@@ -142,6 +142,7 @@ export function compileSimulationTopology(
         definition,
         registryQueries: options.registry.queries,
         itemCatalog,
+        baseId: options.document.baseId,
       }),
       devices,
       nodes,
@@ -153,6 +154,20 @@ export function compileSimulationTopology(
       slotOrder,
       portOrder,
     });
+
+    // 编译设备级 links（来自 EntityDefinition.links，经 entity.config 合并）。
+    // Inspector 保证写入完整的 SlotLinkDefinition，编译器直接消费。
+    for (const link of compileDefinitionSlotLinks({
+      definition,
+      entityConfig: entity.config,
+      compiledEntityId: `device:${entity.id}`,
+      compiledDevice: devices[`device:${entity.id}`],
+      compiledSlots: slots,
+      compiledNodes: nodes,
+      baseId: options.document.baseId,
+    })) {
+      links[link.id] = link;
+    }
   }
 
   for (const link of compileDocumentSlotLinks({
@@ -407,6 +422,7 @@ function compileEntityDevice(options: {
   readonly definition: EntityDefinition;
   readonly registryQueries: RegistryContract["queries"];
   readonly itemCatalog: Record<string, CompiledSimulationItem>;
+  readonly baseId: string;
 }): DeviceCompileResult {
   const deviceId = `device:${options.entity.id}`;
   const definition = mergeEntityDefinitionConfig(options.definition, options.entity.config);
@@ -915,6 +931,85 @@ function compileRouting(
   }
 
   return routing;
+}
+
+function compileDefinitionSlotLinks(options: {
+  readonly definition: EntityDefinition;
+  readonly entityConfig: WorldEntity["config"];
+  readonly compiledEntityId: string;
+  readonly compiledDevice: CompiledSimulationDevice | undefined;
+  readonly compiledSlots: Readonly<Record<string, CompiledSimulationSlot>>;
+  readonly compiledNodes: Readonly<Record<string, CompiledSimulationNode>>;
+  readonly baseId: string;
+}): CompiledSimulationSlotLink[] {
+  const merged = mergeEntityDefinitionConfig(options.definition, options.entityConfig);
+  if (merged.links.length === 0 || options.compiledDevice === undefined) {
+    return [];
+  }
+
+  const links: CompiledSimulationSlotLink[] = [];
+  for (const link of merged.links) {
+    if (link.source === undefined || link.target === undefined) {
+      continue;
+    }
+
+    // Resolve source slot: find compiled slot by storageSlotGroupId + slotId
+    const sourceSlotId = findCompiledSlotId({
+      compiledDevice: options.compiledDevice,
+      compiledSlots: options.compiledSlots,
+      compiledNodes: options.compiledNodes,
+      storageSlotGroupId: link.source.storageSlotGroupId,
+      slotId: link.source.slotId,
+    });
+    if (sourceSlotId === null) {
+      continue;
+    }
+
+    // Resolve target entityId
+    let targetEntityId = link.target.entityId;
+    if (targetEntityId === "warehouse" || targetEntityId.startsWith("warehouse:")) {
+      targetEntityId = `device:warehouse:${options.baseId}`;
+    }
+
+    // Target compiled slot: warehouse slot for the item
+    const targetSlotId = `${targetEntityId}/node:warehouse/slot:${link.target.slotId}`;
+    if (options.compiledSlots[targetSlotId] === undefined) {
+      continue;
+    }
+
+    const linkId = `definition-link:${options.compiledEntityId}:${sourceSlotId}`;
+    links.push({
+      id: linkId,
+      linkType: link.linkType,
+      sourceSlotIds: [sourceSlotId],
+      targetSlotIds: [targetSlotId],
+      targetSlotIdBySourceSlotId: { [sourceSlotId]: targetSlotId },
+    });
+  }
+
+  return links;
+}
+
+function findCompiledSlotId(options: {
+  readonly compiledDevice: CompiledSimulationDevice;
+  readonly compiledSlots: Readonly<Record<string, CompiledSimulationSlot>>;
+  readonly compiledNodes: Readonly<Record<string, CompiledSimulationNode>>;
+  readonly storageSlotGroupId: string;
+  readonly slotId: string;
+}): string | null {
+  for (const nodeId of options.compiledDevice.nodeIds) {
+    const node = options.compiledNodes[nodeId];
+    if (node === undefined || node.sourceStorageSlotGroupId !== options.storageSlotGroupId) {
+      continue;
+    }
+    for (const compiledSlotId of node.slotIds) {
+      const slot = options.compiledSlots[compiledSlotId];
+      if (slot?.sourceSlotId === options.slotId) {
+        return compiledSlotId;
+      }
+    }
+  }
+  return null;
 }
 
 function compileDocumentSlotLinks(options: {

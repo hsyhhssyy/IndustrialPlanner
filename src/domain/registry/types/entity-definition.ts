@@ -1,4 +1,5 @@
 import type { GridEdge, GridRectSize } from "../../shared/grid";
+import type { SlotLinkDefinition } from "../../shared/slot-link";
 import type { EntityInspectorDeclaration } from "./entity-inspector";
 
 // ---------------------------------------------------------------------------
@@ -92,6 +93,13 @@ export interface EntityDefinition {
    * 无显式绑定时，编译器自动生成 synthetic-input/synthetic-output 缓存组。
    */
   portStorageBindings: PortStorageBindingDefinition[];
+
+  /**
+   * 设备级缓存链接（对应《仿真运行原理》§3.3 与《模拟器抽象方式》§2）。
+   * 复用 SlotLinkDefinition 结构，source.entityId 为当前设备（编译时填充）。
+   * 与 document.slotLinks 合并后生成最终的 CompiledSimulationSlotLink。
+   */
+  links: SlotLinkDefinition[];
 }
 
 // ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@ import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation
 
 import { SimulationRuntimeInspector } from "./simulation-runtime-inspector";
 import { SlotConfigInspector } from "./slot-config-inspector";
+import { WarehouseItemLinkInspector } from "./warehouse-item-link-inspector";
 
 const INSPECTOR_SLOT_INTERVAL_MS = 50;
 
@@ -70,6 +71,16 @@ function renderInspector(options: {
     case INSPECTOR_TYPE.slotConfig:
       return (
         <SlotConfigInspector
+          appHost={options.appHost}
+          declaration={options.declaration}
+          definition={options.definition}
+          entity={options.entity}
+          translate={options.translate}
+        />
+      );
+    case INSPECTOR_TYPE.warehouseItemLink:
+      return (
+        <WarehouseItemLinkInspector
           appHost={options.appHost}
           declaration={options.declaration}
           definition={options.definition}
@@ -228,7 +239,10 @@ function resolveInspectorDiscriminator(
     case INSPECTOR_TYPE.slotConfig:
       return declaration.slotGroupIds.join(",");
     case INSPECTOR_TYPE.warehouseItemLink:
-      return String(declaration.slotIndex);
+      return [
+        ...declaration.slotGroupIds,
+        ...(declaration.slotIds ?? []),
+      ].join(",");
     case INSPECTOR_TYPE.portFilter:
     case INSPECTOR_TYPE.routing:
       return declaration.portRef;

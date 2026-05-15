@@ -28,6 +28,7 @@ import type {
   EntityDefinition,
   ItemFilterDefinition,
 } from "@/domain/registry/types/entity-definition";
+import type { SlotLinkDefinition } from "@/domain/shared/slot-link";
 import {
   INSPECTOR_TYPE,
   type EntityInspectorDeclaration,
@@ -61,10 +62,11 @@ type PortDefinitionInput = Pick<
   "acceptRule" | "count" | "priorityGroup" | "roundRobinSeed"
 >>;
 
-/** createEntityDefinition() 的输入类型 — inspectors / recipeChannels 可选，由工厂补全默认值 */
-type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "recipeChannels"> & {
+/** createEntityDefinition() 的输入类型 — inspectors / recipeChannels / links 可选，由工厂补全默认值 */
+type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "recipeChannels" | "links"> & {
   readonly inspectors?: readonly EntityInspectorDeclaration[];
   readonly recipeChannels?: readonly EntityDefinition["recipeChannels"][number][];
+  readonly links?: readonly SlotLinkDefinition[];
 };
 
 /** createEmptyEntityDefinition() 的输入类型 — 基础字段必填，电力字段可选 */
@@ -83,9 +85,10 @@ const RECIPE_MACHINE_IDS = new Set(
 
 /**
  * 创建完整实体定义。
- * 确保 recipe/cacheLinks/inspectors 始终为非 null/undefined 的规范化值。
+ * 确保 recipeChannels/inspectors/links 始终为非 null/undefined 的规范化值。
  * 对应《模拟器抽象方式》§2 — Entity 定义层的完整属性默认值。
- * 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks，当前仅在此规范化 inspectors。
+ * 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks，当前仅在此规范化 inspectors 与 links。
+ * 订正（2026-05-15）：新增 links 归一化为 []，支持设备级 SlotLink 预配置。
  */
 function createEntityDefinition(definition: EntityDefinitionInput): EntityDefinition {
   const declaredInspectors = [...(definition.inspectors ?? [])];
@@ -94,6 +97,7 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
   return {
     ...definition,
     recipeChannels: [...(definition.recipeChannels ?? [])],
+    links: [...(definition.links ?? [])],
     inspectors: appendMissingInspectors(declaredInspectors, recipeMachineInspectors),
   };
 }
@@ -143,9 +147,9 @@ function appendMissingInspectors(
 /**
  * 创建空壳实体定义。
  * 只声明 id/nameKey/spriteId/footprint/uiGroup/tags + 电力字段。
- * recipe=null, cacheLinks=[], inspectors=[], portGroups=[], storageSlotGroups=[],
- * portStorageBindings=[]。
+ * inspectors/portGroups/storageSlotGroups/recipeChannels/portStorageBindings/links 均为空数组。
  * 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks，空壳定义仅补齐仍存在的静态字段。
+ * 订正（2026-05-15）：新增 links: []。
  *
  * 空壳设备的实际端口/槽位/配方由外部配方注册表（recipe-definition.ts）中
  * machineId 对应关系在 Topology Compiler 编译时注入。
@@ -163,6 +167,7 @@ function createEmptyEntityDefinition(
     storageSlotGroups: [],
     recipeChannels: [],
     portStorageBindings: [],
+    links: [],
   });
 }
 
@@ -507,6 +512,36 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         type: INSPECTOR_TYPE.slotConfig,
         slotGroupIds: ["item_storage"],
       },
+      {
+        type: INSPECTOR_TYPE.warehouseItemLink,
+        slotGroupIds: ["item_storage"],
+        slotIds: ["slot_1"],
+      },
+      {
+        type: INSPECTOR_TYPE.warehouseItemLink,
+        slotGroupIds: ["item_storage"],
+        slotIds: ["slot_2"],
+      },
+      {
+        type: INSPECTOR_TYPE.warehouseItemLink,
+        slotGroupIds: ["item_storage"],
+        slotIds: ["slot_3"],
+      },
+      {
+        type: INSPECTOR_TYPE.warehouseItemLink,
+        slotGroupIds: ["item_storage"],
+        slotIds: ["slot_4"],
+      },
+      {
+        type: INSPECTOR_TYPE.warehouseItemLink,
+        slotGroupIds: ["item_storage"],
+        slotIds: ["slot_5"],
+      },
+      {
+        type: INSPECTOR_TYPE.warehouseItemLink,
+        slotGroupIds: ["item_storage"],
+        slotIds: ["slot_6"],
+      },
     ],
   }),
 
@@ -549,7 +584,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   /**
    * item_port_unloader_1 — 取货口（3×1）
    *
-   * 缓存组：1 个 product（单一槽位 × 1 容量，自动合成）
+   * 缓存组：1 个 universal（单槽 × 1 容量）
    * 求解图节点：1 个
    * 端口：1 output(南)
    *
@@ -573,8 +608,22 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("p_out_mid", 1, 0, "S")],
       ),
     ],
-    storageSlotGroups: [],
-    portStorageBindings: [],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "unloader_buffer",
+        "item",
+        createSlots("slot", [1], "solid"),
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_output", "item_output", "unloader_buffer"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.warehouseItemLink,
+        slotGroupIds: ["unloader_buffer"],
+      },
+    ],
   }),
 
   /**

@@ -31,6 +31,42 @@ export function resolveStorageSlotId(
   return state.persistent.shareAllTargetSlotIdBySourceSlotId[slotId] ?? slotId;
 }
 
+/**
+ * 沿 share-all 链向上查找 ignoreStock。
+ * 若链上任意槽位 ignoreStock=true，则整个链条视为无限输出。
+ * 对应《仿真运行原理》§7.2 share-all 写入代理模型 ——
+ *   source 端读写全部代理到 target 端存储，ignoreStock 作为 slot 属性应沿链继承。
+ * 订正（2026-05-15）：ignoreStock 不再仅是编译槽位局部属性，支持跨链 OR 语义。
+ */
+export function resolveEffectiveIgnoreStock(
+  topology: CompiledSimulationTopology,
+  state: SimulationMutableRuntimeState,
+  slotId: string,
+): boolean {
+  const visited = new Set<string>();
+  let current = slotId;
+
+  while (true) {
+    if (visited.has(current)) {
+      // 防御性：避免因数据错误导致死循环
+      return false;
+    }
+    visited.add(current);
+
+    const slot = topology.slots[current];
+    if (slot?.ignoreStock) {
+      return true;
+    }
+
+    const next = state.persistent.shareAllTargetSlotIdBySourceSlotId[current];
+    if (next === undefined || next === current) {
+      return false;
+    }
+
+    current = next;
+  }
+}
+
 export function getReservedAmount(
   state: SimulationMutableRuntimeState,
   storageSlotId: string,
@@ -128,7 +164,7 @@ export function findOutputSlotForItem(options: {
       continue;
     }
 
-    if (slot.ignoreStock || slotState.count - getReservedAmount(options.state, storageSlotId) > 0) {
+    if (resolveEffectiveIgnoreStock(options.topology, options.state, slotId) || slotState.count - getReservedAmount(options.state, storageSlotId) > 0) {
       return slotId;
     }
   }
@@ -150,7 +186,7 @@ export function canOutputSlotProvideItem(options: {
     return false;
   }
 
-  return slot.ignoreStock || slotState.count - getReservedAmount(options.state, storageSlotId) > 0;
+  return resolveEffectiveIgnoreStock(options.topology, options.state, options.sourceSlotId) || slotState.count - getReservedAmount(options.state, storageSlotId) > 0;
 }
 
 export function moveOneItem(options: {
@@ -196,7 +232,7 @@ export function moveOneItem(options: {
     return false;
   }
 
-  if (!sourceSlot.ignoreStock) {
+  if (!resolveEffectiveIgnoreStock(options.topology, options.state, options.sourceSlotId)) {
     sourceState.count = Math.max(0, sourceState.count - 1);
     if (sourceState.count === 0) {
       sourceState.itemType = null;

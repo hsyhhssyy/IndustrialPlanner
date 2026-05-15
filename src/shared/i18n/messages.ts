@@ -107,6 +107,9 @@ export type MessageKey =
   | "inspector.slotConfig.clearSlot"
   | "inspector.slotConfig.capacity"
   | "inspector.slotConfig.locked"
+  | "inspector.warehouseItemLink.description"
+  | "inspector.warehouseItemLink.selectItem"
+  | "inspector.warehouseItemLink.ignoreStock"
   | "status.ready"
   | "status.edit"
   | "statusBar.mode"
@@ -383,6 +386,9 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "inspector.slotConfig.clearSlot": "清空槽位",
     "inspector.slotConfig.capacity": "容量",
     "inspector.slotConfig.locked": "锁定",
+    "inspector.warehouseItemLink.description": "为每个槽位选择从仓库取出的物品。",
+    "inspector.warehouseItemLink.selectItem": "选择仓库物品",
+    "inspector.warehouseItemLink.ignoreStock": "无限物品",
     "status.ready": "Stage1 工作台脚手架已就绪。",
     "status.edit": "编辑态聚焦文档事实与编译产物。",
     "statusBar.mode": "当前模式",
@@ -756,6 +762,9 @@ const MESSAGES: Record<AppLocale, Record<string, string>> = {
     "inspector.slotConfig.clearSlot": "Clear Slot",
     "inspector.slotConfig.capacity": "Capacity",
     "inspector.slotConfig.locked": "Locked",
+    "inspector.warehouseItemLink.description": "Choose a warehouse item for each slot.",
+    "inspector.warehouseItemLink.selectItem": "Select Warehouse Item",
+    "inspector.warehouseItemLink.ignoreStock": "Unlimited",
     "status.ready": "Stage1 workbench scaffold is ready.",
     "status.edit": "Edit mode focuses on document facts and compiled topology.",
     "statusBar.mode": "Mode",

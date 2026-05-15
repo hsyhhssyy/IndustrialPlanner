@@ -176,21 +176,37 @@ export function createEditorPlacementActions({
       const nextEntityOrder = [...currentDocument.entityOrder];
       const nextSlotLinks = [...currentDocument.slotLinks];
 
+      // 替换 entity ID：去掉 "placement-draft:" 前缀后成为正式实体 ID。
+      const oldIdToNewId = new Map<string, string>();
       for (const draft of previewDrafts) {
-        nextEntities[draft.id] = {
-          id: draft.id,
+        const newId = draft.id.startsWith("placement-draft:")
+          ? draft.id.slice("placement-draft:".length)
+          : draft.id;
+        oldIdToNewId.set(draft.id, newId);
+      }
+
+      for (const draft of previewDrafts) {
+        const newId = oldIdToNewId.get(draft.id) ?? draft.id;
+
+        // 重写 entity.config 中的 entity ID 引用（如 links[N].source.entityId）。
+        const nextConfig = rewriteEntityIdInConfig(draft.config, oldIdToNewId);
+
+        nextEntities[newId] = {
+          id: newId,
           definitionId: draft.definitionId,
           position: { ...draft.position },
           rotation: draft.rotation,
-          config: { ...draft.config },
+          config: nextConfig,
           tags: [...draft.tags],
         };
-        nextEntityOrder.push(draft.id);
+        nextEntityOrder.push(newId);
       }
 
       if (state.internalTransientState.placementDraftSlotLinks !== null) {
         nextSlotLinks.push(
-          ...state.internalTransientState.placementDraftSlotLinks.map(cloneSlotLinkDefinition),
+          ...state.internalTransientState.placementDraftSlotLinks.map((link) =>
+            rewriteSlotLinkEntityIds(link, oldIdToNewId),
+          ),
         );
       }
 
@@ -291,6 +307,50 @@ function generatePlacementDraftId(
 
   reservedIds.add(nextId);
   return nextId;
+}
+
+/**
+ * 将 entity.config 中所有引用旧 entity ID 的字符串值替换为新 ID。
+ * 处理场景：
+ *   - links[N].source.entityId（取货口/出货口通过 inspector 写入的自身 ID）
+ *   - links[N].target.entityId（若引用同一批 draft 中的其他设备）
+ */
+function rewriteEntityIdInConfig(
+  config: Record<string, unknown>,
+  oldIdToNewId: ReadonlyMap<string, string>,
+): Record<string, unknown> {
+  let didChange = false;
+  const nextConfig: Record<string, unknown> = { ...config };
+
+  for (const [key, value] of Object.entries(nextConfig)) {
+    if (typeof value === "string" && oldIdToNewId.has(value)) {
+      nextConfig[key] = oldIdToNewId.get(value);
+      didChange = true;
+    }
+  }
+
+  return didChange ? nextConfig : config;
+}
+
+/**
+ * 替换 slotLink 中 source / target 的 entityId。
+ */
+function rewriteSlotLinkEntityIds(
+  link: SlotLinkDefinition,
+  oldIdToNewId: ReadonlyMap<string, string>,
+): SlotLinkDefinition {
+  const newSourceId = oldIdToNewId.get(link.source.entityId) ?? link.source.entityId;
+  const newTargetId = oldIdToNewId.get(link.target.entityId) ?? link.target.entityId;
+
+  if (newSourceId === link.source.entityId && newTargetId === link.target.entityId) {
+    return link;
+  }
+
+  return {
+    ...link,
+    source: { ...link.source, entityId: newSourceId },
+    target: { ...link.target, entityId: newTargetId },
+  };
 }
 
 function cloneWorldEntity(entity: WorldEntity): WorldEntity {

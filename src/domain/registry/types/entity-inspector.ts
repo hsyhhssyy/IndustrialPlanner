@@ -200,14 +200,32 @@ export const INSPECTOR_TYPE = {
   /**
    * ## 仓库物品链接面板
    *
-   * **编辑目标**：links[slotIndex].itemId。
+   * **编辑目标**：entity.config.links[N]（完整 SlotLinkDefinition 结构）+ slot ignoreStock。
    *
-   * 绑定方式：`slotIndex`。
+   * 绑定方式：`slotGroupIds` + `slotIds`，按声明顺序展开为索引 N（0-based）。
    *
    * 编辑功能：
    * - 从百科全书选择物品
-   * - 将选中物品的 itemId 写入 entity.config.links[slotIndex].itemId
-   * - 通过 share-all Link 将槽位连接到 warehouse 中对应物品的槽位
+   * - 调用 RegistryQuery.buildWarehouseSlotLinkForEntity() 构造完整 SlotLinkDefinition
+   * - 将完整 Link 写入 config，通过 share-all Link 将设备槽位连接到 warehouse 对应物品槽位
+   *
+   * ### Config Contract（编译器直接消费，不得修改路径）
+   *
+   * 选择物品时写入：
+   *
+   * | 字段 | config key | 说明 |
+   * |------|-----------|------|
+   * | Link ID | `links[N].id` | 空字符串 |
+   * | Link 类型 | `links[N].linkType` | `"share-all"` |
+   * | source 实体 | `links[N].source.entityId` | 当前设备实体 ID（placement 时由 apply 重写） |
+   * | source 存储组 | `links[N].source.storageSlotGroupId` | 如 `"unloader_buffer"` |
+   * | source 槽位 | `links[N].source.slotId` | 如 `"slot_1"` |
+   * | target 实体 | `links[N].target.entityId` | `"warehouse"`（编译器运行时解析 baseId） |
+   * | target 存储组 | `links[N].target.storageSlotGroupId` | `"warehouse"` |
+   * | target 物品 | `links[N].target.slotId` | 选中的物品 ID |
+   * | 无限取货 | `storageSlotGroups[G].slots[S].ignoreStock` | `true` / `false`（slot 属性） |
+   *
+   * 清除链接时：`links[N]` 整体置 null，`ignoreStock` 置 false。
    *
    * 这是仓储设备（取货口/出货口）专用的面板。
    * 与设计文档《仿真运行原理》§3.3 中的 share-all Link 对应。
@@ -240,8 +258,17 @@ export interface SlotConfigInspectorDeclaration {
 /** warehouseItemLink 声明：为指定槽位选择仓库物品 */
 export interface WarehouseItemLinkInspectorDeclaration {
   readonly type: typeof INSPECTOR_TYPE.warehouseItemLink;
-  /** 绑定的槽位索引 */
-  readonly slotIndex: number;
+  /**
+   * 要链接的存储槽组 ID 列表。
+   * 每个 ID 对应 EntityDefinition.storageSlotGroups 中的一项。
+   * 组内所有 slotIds 展开后按顺序分配 link 索引。
+   */
+  readonly slotGroupIds: readonly string[];
+  /**
+   * 要链接的具体槽位 ID 列表（对应 StorageSlotDefinition.id）。
+   * 若省略则展开 slotGroupIds 中所有组的全部槽位。
+   */
+  readonly slotIds?: readonly string[];
 }
 
 /** portFilter 声明：编辑指定端口的过滤器 */
