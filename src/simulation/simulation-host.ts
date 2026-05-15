@@ -86,11 +86,29 @@ export function createSimulationHost(
               diagnosticCount: internalState.currentSnapshot.diagnostics.length,
             },
       }),
-      getDeviceRuntimeStatus: (deviceId) => resolveDeviceRuntimeStatus({
-        topology: topologyStore.getSnapshot(),
-        deviceId,
-        snapshot: internalState.currentSnapshot,
-      }),
+      getDeviceRuntimeStatus: (() => {
+        // 帧级缓存：topology 在同一帧内引用不变，shareCapSlotIds 只需计算一次。
+        // BeltCargoDecoration 等 decoration 每帧对多个 entity 调用此方法时命中缓存。
+        let cachedTopology: CompiledSimulationTopology | null = null;
+        let cachedShareCapSlotIds: Set<string> | null = null;
+
+        return (deviceId: string) => {
+          const topology = topologyStore.getSnapshot();
+          if (topology !== cachedTopology) {
+            cachedTopology = topology;
+            cachedShareCapSlotIds = topology === null
+              ? null
+              : resolveShareCapSlotIds(topology);
+          }
+
+          return resolveDeviceRuntimeStatus({
+            topology,
+            deviceId,
+            snapshot: internalState.currentSnapshot,
+            shareCapSlotIds: cachedShareCapSlotIds,
+          });
+        };
+      })(),
     },
     actions,
     dispose: () => {
@@ -120,6 +138,7 @@ function resolveDeviceRuntimeStatus(options: {
   topology: CompiledSimulationTopology | null;
   deviceId: string;
   snapshot: RuntimeTickSnapshot | null;
+  shareCapSlotIds: Set<string> | null;
 }): SimulationDeviceRuntimeStatusReadModel | null {
   if (options.topology === null || options.snapshot === null) {
     return null;
@@ -147,6 +166,7 @@ function resolveDeviceRuntimeStatus(options: {
       topology: options.topology,
       compiledDeviceId,
       snapshot: options.snapshot,
+      shareCapSlotIds: options.shareCapSlotIds,
     }),
   };
 }
@@ -169,21 +189,28 @@ function resolveCompiledDeviceId(
   ) ?? null;
 }
 
+function resolveShareCapSlotIds(
+  topology: CompiledSimulationTopology,
+): Set<string> {
+  return new Set(
+    Object.values(topology.links)
+      .filter((link) => link.linkType === "share-cap")
+      .flatMap((link) => [...link.sourceSlotIds, ...link.targetSlotIds]),
+  );
+}
+
 function resolveDeviceRuntimeSlotItems(options: {
   topology: CompiledSimulationTopology;
   compiledDeviceId: string;
   snapshot: RuntimeTickSnapshot;
+  shareCapSlotIds: Set<string> | null;
 }): SimulationDeviceRuntimeSlotItemReadModel[] {
   const device = options.topology.devices[options.compiledDeviceId];
   if (device === undefined) {
     return [];
   }
 
-  const shareCapSlotIds = new Set(
-    Object.values(options.topology.links)
-      .filter((link) => link.linkType === "share-cap")
-      .flatMap((link) => [...link.sourceSlotIds, ...link.targetSlotIds]),
-  );
+  const shareCapSlotIds = options.shareCapSlotIds ?? new Set<string>();
   const slotItemsByRealSlotKey = new Map<string, SimulationDeviceRuntimeSlotItemReadModel>();
   for (const nodeId of device.nodeIds) {
     const node = options.topology.nodes[nodeId];

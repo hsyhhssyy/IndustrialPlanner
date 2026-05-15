@@ -11,6 +11,7 @@
     "typecheck": "tsc -b",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:heavy": "HEAVY=1 vitest run",
     "test:watch": "vitest",
     "blueprint:run": "tsx --tsconfig tsconfig.app.json src/scripts/run-blueprint-simulation.ts",
     "blueprint:convert": "tsx --tsconfig tsconfig.app.json src/scripts/convert-legacy-blueprint.ts",

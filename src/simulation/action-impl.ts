@@ -18,6 +18,9 @@ import {
   DEFAULT_SIMULATION_SPEED,
   STANDARD_TICK_RATE_PER_SECOND,
 } from "./tick-rate";
+
+/** TPS 统计的累积窗口，毫秒 */
+const TPS_WINDOW_MS = 1000;
 import type {
   CompiledSimulationTopology,
   SimulationStartResult,
@@ -59,6 +62,8 @@ implements SimulationAction, SimulationInternalAction {
   private readonly topology: SnapshotStoreReadWrite<CompiledSimulationTopology | null>;
   private readonly bridge: SimulationWorkerBridge;
   private compiledDocument: WorldDocument | null = null;
+  private tpsAccumulatedTicks = 0;
+  private tpsAccumulatedMs = 0;
 
   public constructor(options: SimulationActionImplOptions) {
     this.workspace = options.workspace;
@@ -117,17 +122,29 @@ implements SimulationAction, SimulationInternalAction {
 
     const previousIntegerTickNumber = Math.trunc(previousPlaybackTickNumber);
     const nextIntegerTickNumber = Math.trunc(this.stateReadWrite.currentPlaybackTickNumber);
+
+    // 计算本 delta 内实际获得的整数 tick 数，用于 TPS 统计
+    let actualTicksProcessed = 0;
+
     if (previousIntegerTickNumber === nextIntegerTickNumber) {
+      // 未跨越整数 tick 边界
+      this.accumulateTps(deltaMs, actualTicksProcessed);
       return;
     }
 
     const result = await this.syncToTick(nextIntegerTickNumber);
     if (result.status === "not-ready") {
+      // worker 尚未就绪，本 delta 未实际获得 tick
+      this.accumulateTps(deltaMs, actualTicksProcessed);
       runInAction(() => {
         this.stateReadWrite.currentPlaybackTickNumber = previousPlaybackTickNumber;
       });
       return;
     }
+
+    // tick 获取成功
+    actualTicksProcessed = nextIntegerTickNumber - previousIntegerTickNumber;
+    this.accumulateTps(deltaMs, actualTicksProcessed);
 
     if (result.status === "not-found") {
       await this.recoverPlaybackFromUnavailableTick(result, previousPlaybackTickNumber);
@@ -279,6 +296,30 @@ implements SimulationAction, SimulationInternalAction {
     this.stateReadWrite.runtimeStatus = createInitialSimulationRuntimeStatus();
     this.stateReadWrite.currentSnapshot = null;
     this.stateReadWrite.currentPlaybackTickNumber = 0;
+    this.stateReadWrite.statistics = { tickPerSecond: 0 };
+    this.tpsAccumulatedTicks = 0;
+    this.tpsAccumulatedMs = 0;
+  }
+
+  /** 累积 tick 和时间，每 TPS_WINDOW_MS 刷新一次 TPS 统计 */
+  private accumulateTps(deltaMs: number, actualTicks: number): void {
+    this.tpsAccumulatedTicks += actualTicks;
+    this.tpsAccumulatedMs += deltaMs;
+
+    if (this.tpsAccumulatedMs >= TPS_WINDOW_MS) {
+      const tps = this.tpsAccumulatedMs > 0
+        ? this.tpsAccumulatedTicks / (this.tpsAccumulatedMs / 1000)
+        : 0;
+
+      runInAction(() => {
+        this.stateReadWrite.statistics = {
+          tickPerSecond: Math.round(tps * 10) / 10,
+        };
+      });
+
+      this.tpsAccumulatedTicks = 0;
+      this.tpsAccumulatedMs = 0;
+    }
   }
 }
 

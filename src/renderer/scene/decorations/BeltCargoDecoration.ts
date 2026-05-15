@@ -261,6 +261,11 @@ function resolveBeltCargoEntries(ctx: DecorationSyncContext): BeltCargoEntry[] {
       continue
     }
 
+    // 非传送带实体不可能有货物动画，跳过昂贵的 getDeviceRuntimeStatus 调用
+    if (!isStrictBeltDefinitionId(entity.definitionId)) {
+      continue
+    }
+
     const runtimeStatus = simulation.queries.getDeviceRuntimeStatus(entity.id)
     const cargoState = resolveRuntimeCargoState(runtimeStatus)
     if (cargoState === null) {

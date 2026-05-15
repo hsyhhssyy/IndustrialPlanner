@@ -1,5 +1,9 @@
 export type SimulationRunState = "stop" | "start" | "pause";
 
+export interface SimulationRuntimeStatistics {
+  readonly tickPerSecond: number;
+}
+
 export interface SimulationState{
   readonly runningState: SimulationRunState;
   /**
@@ -7,6 +11,7 @@ export interface SimulationState{
    * 禁止在任何其他逻辑中直接消费该值；tick 和 second 的换算一律使用 standard tick rate。
    */
   readonly simulationSpeed: number;
+  readonly statistics: SimulationRuntimeStatistics;
 }
 
 export interface SimulationDeviceRuntimeStatusReadModel {
