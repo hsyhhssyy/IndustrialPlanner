@@ -16,6 +16,9 @@ import {
   resolveBeltPathSampleAtDistance,
   resolveBeltVisualPathEntries,
   resolveViewportPoint,
+  resolveVisibleWorldRect,
+  isWorldEntityVisible,
+  createEntityDefinitionMap,
   type BeltVisualPathEntry,
 } from "./BeltVisualGeometry"
 
@@ -210,8 +213,15 @@ function drawHighlightMask(ctx: DecorationSyncContext, graphics: Graphics): void
   }
 
   const gridCellSize = ctx.viewportState.gridCellPixelSize
+  const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
+  const definitionMap = createEntityDefinitionMap(ctx)
   for (const entity of editor.queries.listEntities()) {
     if (!isStrictBeltDefinitionId(entity.definitionId)) {
+      continue
+    }
+
+    const definition = definitionMap.get(entity.definitionId)
+    if (definition === undefined || !isWorldEntityVisible(entity, definition.footprint, visibleRect)) {
       continue
     }
 
@@ -236,8 +246,15 @@ function drawArrowMask(ctx: DecorationSyncContext, graphics: Graphics): void {
   }
 
   const gridCellSize = ctx.viewportState.gridCellPixelSize
+  const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
+  const definitionMap = createEntityDefinitionMap(ctx)
   for (const entity of editor.queries.listEntities()) {
     if (!isStrictBeltDefinitionId(entity.definitionId)) {
+      continue
+    }
+
+    const definition = definitionMap.get(entity.definitionId)
+    if (definition === undefined || !isWorldEntityVisible(entity, definition.footprint, visibleRect)) {
       continue
     }
 

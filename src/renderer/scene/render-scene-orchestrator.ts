@@ -28,6 +28,10 @@ import {
   DecorationSyncContext,
   type RenderViewportState,
 } from "./decorations/DecorationSyncContext"
+import {
+  resolveVisibleWorldRect,
+  isWorldEntityVisible,
+} from "./decorations/BeltVisualGeometry"
 import { createGridLineDecoration } from "./decorations/GridLineDecoration"
 import { createBaseBoundaryDecoration } from "./decorations/BaseBoundaryDecoration"
 import { createDiagnosticsDecoration } from "./decorations/DiagnosticsDecoration"
@@ -317,10 +321,23 @@ function syncWorldEntitySprites(options: {
   theme: AppTheme;
 }): void {
   const nextEntityIds = new Set<string>()
+  const visibleRect = resolveVisibleWorldRect(options.viewportState, options.viewportBounds)
 
   for (const entity of options.entities) {
     const definition = options.entityDefinitionMap.get(entity.definitionId)
     if (!definition) {
+      continue
+    }
+
+    const isVisible = isWorldEntityVisible(entity, definition.footprint, visibleRect)
+
+    if (!isVisible) {
+      // 离屏实体的 sprite 保留但隐藏，避免反复创建/销毁
+      const existingSprite = options.entitySprites.get(entity.id) ?? null
+      if (existingSprite !== null) {
+        existingSprite.setVisible(false)
+      }
+      nextEntityIds.add(entity.id)
       continue
     }
 
@@ -335,6 +352,7 @@ function syncWorldEntitySprites(options: {
       options.entitySprites.set(entity.id, sprite)
     }
 
+    sprite.setVisible(true)
     sprite.syncLayout(
       resolveWorldEntitySpriteLayout({
         entity,

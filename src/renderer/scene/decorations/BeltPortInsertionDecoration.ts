@@ -12,6 +12,9 @@ import type { DecorationSyncContext } from "./DecorationSyncContext"
 import {
   resolveBeltPortExtensionEntries,
   resolveViewportPoint,
+  resolveVisibleWorldRect,
+  isWorldEntityVisible,
+  createEntityDefinitionMap,
 } from "./BeltVisualGeometry"
 
 const BELT_STRAIGHT_TEXTURE_KEY = "device-sprite-belt_straight_1x1"
@@ -85,7 +88,29 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
         return
       }
 
-      const entries = resolveBeltPortExtensionEntries(ctx)
+      const allEntries = resolveBeltPortExtensionEntries(ctx)
+      if (allEntries.length === 0) {
+        hideAll()
+        return
+      }
+
+      // 过滤：只保留 belt 或 device 任一在视口内的 extension
+      const editor = ctx.renderHost.workspace.editor
+      const definitionMap = createEntityDefinitionMap(ctx)
+      const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
+      const entityById = editor !== null
+        ? new Map(editor.queries.listEntities().map((e) => [e.id, e]))
+        : new Map()
+
+      const entries = allEntries.filter((entry) => {
+        const beltEntity = entityById.get(entry.beltEntityId)
+        const deviceEntity = entityById.get(entry.deviceEntityId)
+        const beltDef = beltEntity ? definitionMap.get(beltEntity.definitionId) : undefined
+        const deviceDef = deviceEntity ? definitionMap.get(deviceEntity.definitionId) : undefined
+        return (beltEntity !== undefined && beltDef !== undefined && isWorldEntityVisible(beltEntity, beltDef.footprint, visibleRect))
+          || (deviceEntity !== undefined && deviceDef !== undefined && isWorldEntityVisible(deviceEntity, deviceDef.footprint, visibleRect))
+      })
+
       if (entries.length === 0) {
         hideAll()
         return
@@ -95,8 +120,8 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
       container.visible = true
 
       const gridCellSize = ctx.viewportState.gridCellPixelSize
-      entries.forEach((entry, index) => {
-        const view = ensureSpriteView(index)
+      entries.forEach((entry, visibleIndex) => {
+        const view = ensureSpriteView(visibleIndex)
         const boundary = resolveViewportPoint({
           point: entry.boundary,
           viewportBounds: ctx.viewportBounds,

@@ -7,7 +7,7 @@ import {
 } from "../blueprint-test-helpers";
 
 const BLUEPRINT_PATH = "public/blueprints/premium-capsule-line.json";
-const STORAGER_ID = "premium_capsule_line_0158";
+const STORAGER_ID = "legacy_429609a4_0158";
 const WARMUP_TICKS = 180;
 const WINDOW_SIZE = 120;
 const OBSERVATION_TICKS = 360; // 滑动窗口持续观察的 tick 数

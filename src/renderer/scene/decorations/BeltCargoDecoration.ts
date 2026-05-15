@@ -19,6 +19,8 @@ import {
   resolveBeltPortExtensionEntries,
   resolveBeltPathSample,
   resolveViewportPoint,
+  resolveVisibleWorldRect,
+  isWorldEntityVisible,
   type BeltPortExtensionEntry,
 } from "./BeltVisualGeometry"
 
@@ -246,10 +248,16 @@ function resolveBeltCargoEntries(ctx: DecorationSyncContext): BeltCargoEntry[] {
   }
 
   const definitionMap = createEntityDefinitionMap(ctx)
+  const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
   const entries: BeltCargoEntry[] = []
   for (const entity of editor.queries.listEntities()) {
     const definition = definitionMap.get(entity.definitionId)
     if (definition === undefined) {
+      continue
+    }
+
+    // 只收集可见 belt 上的货物
+    if (!isWorldEntityVisible(entity, definition.footprint, visibleRect)) {
       continue
     }
 
@@ -433,8 +441,16 @@ function resolveBeltCargoClipBeltRects(
     return []
   }
 
+  const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
+  const definitionMap = createEntityDefinitionMap(ctx)
   return editor.queries.listEntities()
-    .filter((entity) => isStrictBeltDefinitionId(entity.definitionId))
+    .filter((entity) => {
+      if (!isStrictBeltDefinitionId(entity.definitionId)) {
+        return false
+      }
+      const definition = definitionMap.get(entity.definitionId)
+      return definition !== undefined && isWorldEntityVisible(entity, definition.footprint, visibleRect)
+    })
     .map((entity) => {
       const cellTopLeft = resolveViewportPoint({
         point: entity.position,

@@ -72,6 +72,14 @@ export abstract class BaseRenderSprite implements RenderSprite {
     this.layerRoots.clear();
   }
 
+  public setVisible(visible: boolean): void {
+    this.ensureNotDestroyed();
+
+    for (const root of this.layerRoots.values()) {
+      root.visible = visible;
+    }
+  }
+
   protected abstract syncSpriteLayout(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,

@@ -5,17 +5,70 @@ import type {
   GridPoint,
   GridRotation,
 } from "@/domain/shared/grid"
+import type { GridRectSize } from "@/domain/shared/grid"
 import type {
   EntityDefinition,
   PortDefinition,
   PortGroupDefinition,
 } from "@/domain/registry/types/entity-definition"
 
+import { getRotatedGridFootprint } from "@/shared/geometry/grid"
+
 import type {
   DecorationSyncContext,
   DecorationViewportBounds,
   RenderViewportState,
 } from "./DecorationSyncContext"
+
+/** 视口裁剪边距（cell 数），避免设备在视口边缘闪烁 */
+const VIEWPORT_CULL_MARGIN_CELLS = 2
+
+/** 当前视口对应的世界坐标可见矩形 */
+export interface VisibleWorldRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/**
+ * 根据当前视口状态计算世界坐标系下的可见矩形（含 margin）
+ */
+export function resolveVisibleWorldRect(
+  viewportState: Pick<RenderViewportState, "centerX" | "centerY" | "gridCellPixelSize">,
+  viewportBounds: DecorationViewportBounds,
+  marginCells = VIEWPORT_CULL_MARGIN_CELLS,
+): VisibleWorldRect {
+  const halfW = viewportBounds.width / 2 / viewportState.gridCellPixelSize
+  const halfH = viewportBounds.height / 2 / viewportState.gridCellPixelSize
+
+  return {
+    left: viewportState.centerX - halfW - marginCells,
+    right: viewportState.centerX + halfW + marginCells,
+    top: viewportState.centerY - halfH - marginCells,
+    bottom: viewportState.centerY + halfH + marginCells,
+  }
+}
+
+/**
+ * 判断 entity 的 footprint（含旋转）是否与可见矩形相交
+ */
+export function isWorldEntityVisible(
+  entity: WorldEntity,
+  footprint: GridRectSize,
+  visibleRect: VisibleWorldRect,
+): boolean {
+  const rotated = getRotatedGridFootprint(footprint, entity.rotation)
+  const eLeft = entity.position.x
+  const eTop = entity.position.y
+  const eRight = eLeft + rotated.width
+  const eBottom = eTop + rotated.height
+
+  return eRight > visibleRect.left
+    && eLeft < visibleRect.right
+    && eBottom > visibleRect.top
+    && eTop < visibleRect.bottom
+}
 
 export const BELT_INSERTION_DEPTH_CELLS = 0.2
 

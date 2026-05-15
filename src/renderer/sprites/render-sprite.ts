@@ -39,5 +39,6 @@ export interface RenderSpriteSyncContext {
 export interface RenderSprite {
   attach(layers: RenderLayerMap): void;
   syncLayout(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void;
+  setVisible(visible: boolean): void;
   destroy(): void;
 }
