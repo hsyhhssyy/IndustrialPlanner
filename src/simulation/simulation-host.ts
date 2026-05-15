@@ -325,6 +325,8 @@ class LocalSimulationWorkerBridge implements SimulationWorkerBridge {
     SimulationWorkerResponse,
     { readonly type: "tick-snapshot-result" }
   >> {
+    // Local 模式无事件循环，setTimeout 不触发，需同步推进到目标 tick。
+    this.runtime.advanceToTick(tickNumber);
     const response = this.runtime.handleRequest({
       type: "get-tick-snapshot",
       requestId: this.createRequestId(),

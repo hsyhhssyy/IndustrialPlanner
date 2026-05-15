@@ -156,6 +156,10 @@ export function convertLegacyBlueprintJson(
  * 存储箱（item_port_storager_1）：
  *   旧：submitToWarehouse = true
  *   新：storageSlotGroups[0].slots[N].submitMode = "every-tick"
+ *
+ * 通用预置物品（preloadInputs）：
+ *   旧：preloadInputs: [{ slotIndex, itemId, amount }]
+ *   新：storageSlotGroups[0].slots[slotIndex].initialItemType / initialCount
  */
 function convertLegacyDeviceConfig(options: {
   definitionId: string;
@@ -169,7 +173,51 @@ function convertLegacyDeviceConfig(options: {
     return convertLegacyStoragerConfig(options.config);
   }
 
-  return options.config;
+  return convertLegacyPreloadInputs(options.config);
+}
+
+/**
+ * 将旧版 preloadInputs 转换为新版 slot 初始物品配置。
+ *
+ * 旧格式：
+ *   preloadInputs: [{ slotIndex: 0, itemId: "item_plant_grass_2", amount: 50 }]
+ *
+ * 新格式：
+ *   storageSlotGroups[0].slots[0].initialItemType: "item_plant_grass_2"
+ *   storageSlotGroups[0].slots[0].initialCount: 50
+ *
+ * slotIndex 映射到 storageSlotGroups[0]（输入缓存始终是第一组）。
+ */
+function convertLegacyPreloadInputs(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const preloadInputs = config.preloadInputs;
+  if (!Array.isArray(preloadInputs) || preloadInputs.length === 0) {
+    return config;
+  }
+
+  const nextConfig: Record<string, unknown> = { ...config };
+  delete nextConfig.preloadInputs;
+
+  for (const entry of preloadInputs) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+
+    const slotIndex = entry.slotIndex;
+    const itemId = entry.itemId;
+    const amount = entry.amount;
+
+    if (typeof slotIndex !== "number" || typeof itemId !== "string" || itemId === "") {
+      continue;
+    }
+
+    const count = typeof amount === "number" && Number.isFinite(amount) ? amount : 0;
+    nextConfig[`storageSlotGroups[0].slots[${slotIndex}].initialItemType`] = itemId;
+    nextConfig[`storageSlotGroups[0].slots[${slotIndex}].initialCount`] = count;
+  }
+
+  return nextConfig;
 }
 
 function convertLegacyUnloaderConfig(

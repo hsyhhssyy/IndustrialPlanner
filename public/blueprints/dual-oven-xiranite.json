@@ -10,8 +10,8 @@
     "y": 13
   },
   "entities": {
-    "dual_oven_xiranite_0001": {
-      "id": "dual_oven_xiranite_0001",
+    "legacy_c96944de_0001": {
+      "id": "legacy_c96944de_0001",
       "definitionId": "item_port_power_diffuser_1",
       "position": {
         "x": 27,
@@ -21,8 +21,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0002": {
-      "id": "dual_oven_xiranite_0002",
+    "legacy_c96944de_0002": {
+      "id": "legacy_c96944de_0002",
       "definitionId": "item_port_furnance_1",
       "position": {
         "x": 26,
@@ -32,8 +32,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0003": {
-      "id": "dual_oven_xiranite_0003",
+    "legacy_c96944de_0003": {
+      "id": "legacy_c96944de_0003",
       "definitionId": "item_port_grinder_1",
       "position": {
         "x": 25,
@@ -43,8 +43,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0004": {
-      "id": "dual_oven_xiranite_0004",
+    "legacy_c96944de_0004": {
+      "id": "legacy_c96944de_0004",
       "definitionId": "item_port_hydro_planter_1",
       "position": {
         "x": 21,
@@ -54,8 +54,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0005": {
-      "id": "dual_oven_xiranite_0005",
+    "legacy_c96944de_0005": {
+      "id": "legacy_c96944de_0005",
       "definitionId": "item_port_seedcol_1",
       "position": {
         "x": 15,
@@ -63,18 +63,13 @@
       },
       "rotation": 0,
       "config": {
-        "preloadInputs": [
-          {
-            "slotIndex": 0,
-            "itemId": "item_plant_grass_2",
-            "amount": 50
-          }
-        ]
+        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
+        "storageSlotGroups[0].slots[0].initialCount": 50
       },
       "tags": []
     },
-    "dual_oven_xiranite_0006": {
-      "id": "dual_oven_xiranite_0006",
+    "legacy_c96944de_0006": {
+      "id": "legacy_c96944de_0006",
       "definitionId": "item_port_planter_1",
       "position": {
         "x": 10,
@@ -84,8 +79,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0007": {
-      "id": "dual_oven_xiranite_0007",
+    "legacy_c96944de_0007": {
+      "id": "legacy_c96944de_0007",
       "definitionId": "item_port_seedcol_1",
       "position": {
         "x": 5,
@@ -93,18 +88,13 @@
       },
       "rotation": 180,
       "config": {
-        "preloadInputs": [
-          {
-            "slotIndex": 0,
-            "itemId": "item_plant_moss_3",
-            "amount": 50
-          }
-        ]
+        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
+        "storageSlotGroups[0].slots[0].initialCount": 50
       },
       "tags": []
     },
-    "dual_oven_xiranite_0008": {
-      "id": "dual_oven_xiranite_0008",
+    "legacy_c96944de_0008": {
+      "id": "legacy_c96944de_0008",
       "definitionId": "item_port_planter_1",
       "position": {
         "x": 0,
@@ -114,8 +104,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0009": {
-      "id": "dual_oven_xiranite_0009",
+    "legacy_c96944de_0009": {
+      "id": "legacy_c96944de_0009",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 21,
@@ -125,8 +115,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0010": {
-      "id": "dual_oven_xiranite_0010",
+    "legacy_c96944de_0010": {
+      "id": "legacy_c96944de_0010",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 20,
@@ -136,8 +126,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0011": {
-      "id": "dual_oven_xiranite_0011",
+    "legacy_c96944de_0011": {
+      "id": "legacy_c96944de_0011",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 19,
@@ -147,8 +137,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0012": {
-      "id": "dual_oven_xiranite_0012",
+    "legacy_c96944de_0012": {
+      "id": "legacy_c96944de_0012",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 25,
@@ -158,8 +148,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0013": {
-      "id": "dual_oven_xiranite_0013",
+    "legacy_c96944de_0013": {
+      "id": "legacy_c96944de_0013",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 26,
@@ -169,8 +159,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0014": {
-      "id": "dual_oven_xiranite_0014",
+    "legacy_c96944de_0014": {
+      "id": "legacy_c96944de_0014",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 26,
@@ -180,8 +170,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0015": {
-      "id": "dual_oven_xiranite_0015",
+    "legacy_c96944de_0015": {
+      "id": "legacy_c96944de_0015",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 26,
@@ -191,8 +181,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0016": {
-      "id": "dual_oven_xiranite_0016",
+    "legacy_c96944de_0016": {
+      "id": "legacy_c96944de_0016",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 20,
@@ -202,8 +192,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0017": {
-      "id": "dual_oven_xiranite_0017",
+    "legacy_c96944de_0017": {
+      "id": "legacy_c96944de_0017",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 20,
@@ -213,8 +203,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0018": {
-      "id": "dual_oven_xiranite_0018",
+    "legacy_c96944de_0018": {
+      "id": "legacy_c96944de_0018",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 20,
@@ -224,8 +214,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0019": {
-      "id": "dual_oven_xiranite_0019",
+    "legacy_c96944de_0019": {
+      "id": "legacy_c96944de_0019",
       "definitionId": "item_pipe_splitter",
       "position": {
         "x": 20,
@@ -235,8 +225,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0020": {
-      "id": "dual_oven_xiranite_0020",
+    "legacy_c96944de_0020": {
+      "id": "legacy_c96944de_0020",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 20,
@@ -246,8 +236,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0021": {
-      "id": "dual_oven_xiranite_0021",
+    "legacy_c96944de_0021": {
+      "id": "legacy_c96944de_0021",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 19,
@@ -257,8 +247,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0022": {
-      "id": "dual_oven_xiranite_0022",
+    "legacy_c96944de_0022": {
+      "id": "legacy_c96944de_0022",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 20,
@@ -268,8 +258,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0023": {
-      "id": "dual_oven_xiranite_0023",
+    "legacy_c96944de_0023": {
+      "id": "legacy_c96944de_0023",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 21,
@@ -279,8 +269,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0024": {
-      "id": "dual_oven_xiranite_0024",
+    "legacy_c96944de_0024": {
+      "id": "legacy_c96944de_0024",
       "definitionId": "item_port_thickener_1",
       "position": {
         "x": 21,
@@ -290,8 +280,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0025": {
-      "id": "dual_oven_xiranite_0025",
+    "legacy_c96944de_0025": {
+      "id": "legacy_c96944de_0025",
       "definitionId": "item_port_furnance_1",
       "position": {
         "x": 18,
@@ -301,8 +291,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0026": {
-      "id": "dual_oven_xiranite_0026",
+    "legacy_c96944de_0026": {
+      "id": "legacy_c96944de_0026",
       "definitionId": "item_port_xiranite_oven_1",
       "position": {
         "x": 12,
@@ -312,8 +302,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0027": {
-      "id": "dual_oven_xiranite_0027",
+    "legacy_c96944de_0027": {
+      "id": "legacy_c96944de_0027",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 18,
@@ -323,8 +313,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0028": {
-      "id": "dual_oven_xiranite_0028",
+    "legacy_c96944de_0028": {
+      "id": "legacy_c96944de_0028",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 17,
@@ -334,8 +324,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0029": {
-      "id": "dual_oven_xiranite_0029",
+    "legacy_c96944de_0029": {
+      "id": "legacy_c96944de_0029",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 16,
@@ -345,8 +335,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0030": {
-      "id": "dual_oven_xiranite_0030",
+    "legacy_c96944de_0030": {
+      "id": "legacy_c96944de_0030",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 20,
@@ -356,8 +346,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0031": {
-      "id": "dual_oven_xiranite_0031",
+    "legacy_c96944de_0031": {
+      "id": "legacy_c96944de_0031",
       "definitionId": "pipe_turn_ccw_1x1",
       "position": {
         "x": 20,
@@ -367,8 +357,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0032": {
-      "id": "dual_oven_xiranite_0032",
+    "legacy_c96944de_0032": {
+      "id": "legacy_c96944de_0032",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 19,
@@ -378,8 +368,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0033": {
-      "id": "dual_oven_xiranite_0033",
+    "legacy_c96944de_0033": {
+      "id": "legacy_c96944de_0033",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 18,
@@ -389,8 +379,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0034": {
-      "id": "dual_oven_xiranite_0034",
+    "legacy_c96944de_0034": {
+      "id": "legacy_c96944de_0034",
       "definitionId": "pipe_turn_cw_1x1",
       "position": {
         "x": 17,
@@ -400,8 +390,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0035": {
-      "id": "dual_oven_xiranite_0035",
+    "legacy_c96944de_0035": {
+      "id": "legacy_c96944de_0035",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 17,
@@ -411,8 +401,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0036": {
-      "id": "dual_oven_xiranite_0036",
+    "legacy_c96944de_0036": {
+      "id": "legacy_c96944de_0036",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 17,
@@ -422,8 +412,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0037": {
-      "id": "dual_oven_xiranite_0037",
+    "legacy_c96944de_0037": {
+      "id": "legacy_c96944de_0037",
       "definitionId": "pipe_turn_ccw_1x1",
       "position": {
         "x": 17,
@@ -433,8 +423,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0038": {
-      "id": "dual_oven_xiranite_0038",
+    "legacy_c96944de_0038": {
+      "id": "legacy_c96944de_0038",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 25,
@@ -444,8 +434,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0039": {
-      "id": "dual_oven_xiranite_0039",
+    "legacy_c96944de_0039": {
+      "id": "legacy_c96944de_0039",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 26,
@@ -455,8 +445,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0040": {
-      "id": "dual_oven_xiranite_0040",
+    "legacy_c96944de_0040": {
+      "id": "legacy_c96944de_0040",
       "definitionId": "item_log_connector",
       "position": {
         "x": 25,
@@ -466,8 +456,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0041": {
-      "id": "dual_oven_xiranite_0041",
+    "legacy_c96944de_0041": {
+      "id": "legacy_c96944de_0041",
       "definitionId": "item_port_grinder_1",
       "position": {
         "x": 26,
@@ -477,8 +467,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0042": {
-      "id": "dual_oven_xiranite_0042",
+    "legacy_c96944de_0042": {
+      "id": "legacy_c96944de_0042",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 28,
@@ -488,8 +478,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0043": {
-      "id": "dual_oven_xiranite_0043",
+    "legacy_c96944de_0043": {
+      "id": "legacy_c96944de_0043",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 28,
@@ -499,8 +489,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0044": {
-      "id": "dual_oven_xiranite_0044",
+    "legacy_c96944de_0044": {
+      "id": "legacy_c96944de_0044",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 28,
@@ -510,8 +500,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0045": {
-      "id": "dual_oven_xiranite_0045",
+    "legacy_c96944de_0045": {
+      "id": "legacy_c96944de_0045",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 28,
@@ -521,8 +511,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0046": {
-      "id": "dual_oven_xiranite_0046",
+    "legacy_c96944de_0046": {
+      "id": "legacy_c96944de_0046",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 28,
@@ -532,8 +522,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0047": {
-      "id": "dual_oven_xiranite_0047",
+    "legacy_c96944de_0047": {
+      "id": "legacy_c96944de_0047",
       "definitionId": "item_port_storager_1",
       "position": {
         "x": 17,
@@ -550,8 +540,8 @@
       },
       "tags": []
     },
-    "dual_oven_xiranite_0048": {
-      "id": "dual_oven_xiranite_0048",
+    "legacy_c96944de_0048": {
+      "id": "legacy_c96944de_0048",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 9,
@@ -561,8 +551,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0049": {
-      "id": "dual_oven_xiranite_0049",
+    "legacy_c96944de_0049": {
+      "id": "legacy_c96944de_0049",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 10,
@@ -572,8 +562,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0050": {
-      "id": "dual_oven_xiranite_0050",
+    "legacy_c96944de_0050": {
+      "id": "legacy_c96944de_0050",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 5,
@@ -583,8 +573,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0051": {
-      "id": "dual_oven_xiranite_0051",
+    "legacy_c96944de_0051": {
+      "id": "legacy_c96944de_0051",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 4,
@@ -594,8 +584,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0052": {
-      "id": "dual_oven_xiranite_0052",
+    "legacy_c96944de_0052": {
+      "id": "legacy_c96944de_0052",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 10,
@@ -605,8 +595,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0053": {
-      "id": "dual_oven_xiranite_0053",
+    "legacy_c96944de_0053": {
+      "id": "legacy_c96944de_0053",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 9,
@@ -616,8 +606,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0054": {
-      "id": "dual_oven_xiranite_0054",
+    "legacy_c96944de_0054": {
+      "id": "legacy_c96944de_0054",
       "definitionId": "item_port_grinder_1",
       "position": {
         "x": 1,
@@ -627,8 +617,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0055": {
-      "id": "dual_oven_xiranite_0055",
+    "legacy_c96944de_0055": {
+      "id": "legacy_c96944de_0055",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 0,
@@ -638,8 +628,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0056": {
-      "id": "dual_oven_xiranite_0056",
+    "legacy_c96944de_0056": {
+      "id": "legacy_c96944de_0056",
       "definitionId": "item_port_thickener_1",
       "position": {
         "x": 5,
@@ -649,8 +639,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0057": {
-      "id": "dual_oven_xiranite_0057",
+    "legacy_c96944de_0057": {
+      "id": "legacy_c96944de_0057",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 4,
@@ -660,8 +650,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0058": {
-      "id": "dual_oven_xiranite_0058",
+    "legacy_c96944de_0058": {
+      "id": "legacy_c96944de_0058",
       "definitionId": "item_port_seedcol_1",
       "position": {
         "x": 20,
@@ -669,18 +659,13 @@
       },
       "rotation": 0,
       "config": {
-        "preloadInputs": [
-          {
-            "slotIndex": 0,
-            "itemId": "item_plant_moss_3",
-            "amount": 50
-          }
-        ]
+        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
+        "storageSlotGroups[0].slots[0].initialCount": 50
       },
       "tags": []
     },
-    "dual_oven_xiranite_0059": {
-      "id": "dual_oven_xiranite_0059",
+    "legacy_c96944de_0059": {
+      "id": "legacy_c96944de_0059",
       "definitionId": "item_port_planter_1",
       "position": {
         "x": 25,
@@ -690,8 +675,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0060": {
-      "id": "dual_oven_xiranite_0060",
+    "legacy_c96944de_0060": {
+      "id": "legacy_c96944de_0060",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 20,
@@ -701,8 +686,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0061": {
-      "id": "dual_oven_xiranite_0061",
+    "legacy_c96944de_0061": {
+      "id": "legacy_c96944de_0061",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 19,
@@ -712,8 +697,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0062": {
-      "id": "dual_oven_xiranite_0062",
+    "legacy_c96944de_0062": {
+      "id": "legacy_c96944de_0062",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 24,
@@ -723,8 +708,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0063": {
-      "id": "dual_oven_xiranite_0063",
+    "legacy_c96944de_0063": {
+      "id": "legacy_c96944de_0063",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 25,
@@ -734,8 +719,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0064": {
-      "id": "dual_oven_xiranite_0064",
+    "legacy_c96944de_0064": {
+      "id": "legacy_c96944de_0064",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 19,
@@ -745,8 +730,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0065": {
-      "id": "dual_oven_xiranite_0065",
+    "legacy_c96944de_0065": {
+      "id": "legacy_c96944de_0065",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 20,
@@ -756,8 +741,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0066": {
-      "id": "dual_oven_xiranite_0066",
+    "legacy_c96944de_0066": {
+      "id": "legacy_c96944de_0066",
       "definitionId": "item_port_grinder_1",
       "position": {
         "x": 26,
@@ -767,8 +752,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0067": {
-      "id": "dual_oven_xiranite_0067",
+    "legacy_c96944de_0067": {
+      "id": "legacy_c96944de_0067",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 29,
@@ -778,8 +763,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0068": {
-      "id": "dual_oven_xiranite_0068",
+    "legacy_c96944de_0068": {
+      "id": "legacy_c96944de_0068",
       "definitionId": "item_port_thickener_1",
       "position": {
         "x": 21,
@@ -789,8 +774,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0069": {
-      "id": "dual_oven_xiranite_0069",
+    "legacy_c96944de_0069": {
+      "id": "legacy_c96944de_0069",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 25,
@@ -800,8 +785,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0070": {
-      "id": "dual_oven_xiranite_0070",
+    "legacy_c96944de_0070": {
+      "id": "legacy_c96944de_0070",
       "definitionId": "item_port_power_diffuser_1",
       "position": {
         "x": 1,
@@ -811,8 +796,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0071": {
-      "id": "dual_oven_xiranite_0071",
+    "legacy_c96944de_0071": {
+      "id": "legacy_c96944de_0071",
       "definitionId": "item_port_furnance_1",
       "position": {
         "x": 1,
@@ -822,8 +807,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0072": {
-      "id": "dual_oven_xiranite_0072",
+    "legacy_c96944de_0072": {
+      "id": "legacy_c96944de_0072",
       "definitionId": "item_port_grinder_1",
       "position": {
         "x": 2,
@@ -833,8 +818,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0073": {
-      "id": "dual_oven_xiranite_0073",
+    "legacy_c96944de_0073": {
+      "id": "legacy_c96944de_0073",
       "definitionId": "item_port_hydro_planter_1",
       "position": {
         "x": 4,
@@ -844,8 +829,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0074": {
-      "id": "dual_oven_xiranite_0074",
+    "legacy_c96944de_0074": {
+      "id": "legacy_c96944de_0074",
       "definitionId": "item_port_seedcol_1",
       "position": {
         "x": 10,
@@ -853,18 +838,13 @@
       },
       "rotation": 180,
       "config": {
-        "preloadInputs": [
-          {
-            "slotIndex": 0,
-            "itemId": "item_plant_grass_2",
-            "amount": 50
-          }
-        ]
+        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
+        "storageSlotGroups[0].slots[0].initialCount": 50
       },
       "tags": []
     },
-    "dual_oven_xiranite_0075": {
-      "id": "dual_oven_xiranite_0075",
+    "legacy_c96944de_0075": {
+      "id": "legacy_c96944de_0075",
       "definitionId": "item_port_planter_1",
       "position": {
         "x": 15,
@@ -874,8 +854,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0076": {
-      "id": "dual_oven_xiranite_0076",
+    "legacy_c96944de_0076": {
+      "id": "legacy_c96944de_0076",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 8,
@@ -885,8 +865,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0077": {
-      "id": "dual_oven_xiranite_0077",
+    "legacy_c96944de_0077": {
+      "id": "legacy_c96944de_0077",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 9,
@@ -896,8 +876,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0078": {
-      "id": "dual_oven_xiranite_0078",
+    "legacy_c96944de_0078": {
+      "id": "legacy_c96944de_0078",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 10,
@@ -907,8 +887,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0079": {
-      "id": "dual_oven_xiranite_0079",
+    "legacy_c96944de_0079": {
+      "id": "legacy_c96944de_0079",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 4,
@@ -918,8 +898,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0080": {
-      "id": "dual_oven_xiranite_0080",
+    "legacy_c96944de_0080": {
+      "id": "legacy_c96944de_0080",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 3,
@@ -929,8 +909,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0081": {
-      "id": "dual_oven_xiranite_0081",
+    "legacy_c96944de_0081": {
+      "id": "legacy_c96944de_0081",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 3,
@@ -940,8 +920,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0082": {
-      "id": "dual_oven_xiranite_0082",
+    "legacy_c96944de_0082": {
+      "id": "legacy_c96944de_0082",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 3,
@@ -951,8 +931,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0083": {
-      "id": "dual_oven_xiranite_0083",
+    "legacy_c96944de_0083": {
+      "id": "legacy_c96944de_0083",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 9,
@@ -962,8 +942,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0084": {
-      "id": "dual_oven_xiranite_0084",
+    "legacy_c96944de_0084": {
+      "id": "legacy_c96944de_0084",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 9,
@@ -973,8 +953,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0085": {
-      "id": "dual_oven_xiranite_0085",
+    "legacy_c96944de_0085": {
+      "id": "legacy_c96944de_0085",
       "definitionId": "item_pipe_splitter",
       "position": {
         "x": 9,
@@ -984,8 +964,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0086": {
-      "id": "dual_oven_xiranite_0086",
+    "legacy_c96944de_0086": {
+      "id": "legacy_c96944de_0086",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 9,
@@ -995,8 +975,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0087": {
-      "id": "dual_oven_xiranite_0087",
+    "legacy_c96944de_0087": {
+      "id": "legacy_c96944de_0087",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 10,
@@ -1006,8 +986,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0088": {
-      "id": "dual_oven_xiranite_0088",
+    "legacy_c96944de_0088": {
+      "id": "legacy_c96944de_0088",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 9,
@@ -1017,8 +997,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0089": {
-      "id": "dual_oven_xiranite_0089",
+    "legacy_c96944de_0089": {
+      "id": "legacy_c96944de_0089",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 8,
@@ -1028,8 +1008,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0090": {
-      "id": "dual_oven_xiranite_0090",
+    "legacy_c96944de_0090": {
+      "id": "legacy_c96944de_0090",
       "definitionId": "item_port_thickener_1",
       "position": {
         "x": 5,
@@ -1039,8 +1019,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0091": {
-      "id": "dual_oven_xiranite_0091",
+    "legacy_c96944de_0091": {
+      "id": "legacy_c96944de_0091",
       "definitionId": "item_port_furnance_1",
       "position": {
         "x": 9,
@@ -1050,8 +1030,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0092": {
-      "id": "dual_oven_xiranite_0092",
+    "legacy_c96944de_0092": {
+      "id": "legacy_c96944de_0092",
       "definitionId": "item_port_xiranite_oven_1",
       "position": {
         "x": 13,
@@ -1061,8 +1041,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0093": {
-      "id": "dual_oven_xiranite_0093",
+    "legacy_c96944de_0093": {
+      "id": "legacy_c96944de_0093",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 11,
@@ -1072,8 +1052,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0094": {
-      "id": "dual_oven_xiranite_0094",
+    "legacy_c96944de_0094": {
+      "id": "legacy_c96944de_0094",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 12,
@@ -1083,8 +1063,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0095": {
-      "id": "dual_oven_xiranite_0095",
+    "legacy_c96944de_0095": {
+      "id": "legacy_c96944de_0095",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 13,
@@ -1094,8 +1074,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0096": {
-      "id": "dual_oven_xiranite_0096",
+    "legacy_c96944de_0096": {
+      "id": "legacy_c96944de_0096",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 9,
@@ -1105,8 +1085,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0097": {
-      "id": "dual_oven_xiranite_0097",
+    "legacy_c96944de_0097": {
+      "id": "legacy_c96944de_0097",
       "definitionId": "pipe_turn_ccw_1x1",
       "position": {
         "x": 9,
@@ -1116,8 +1096,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0098": {
-      "id": "dual_oven_xiranite_0098",
+    "legacy_c96944de_0098": {
+      "id": "legacy_c96944de_0098",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 10,
@@ -1127,8 +1107,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0099": {
-      "id": "dual_oven_xiranite_0099",
+    "legacy_c96944de_0099": {
+      "id": "legacy_c96944de_0099",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 11,
@@ -1138,8 +1118,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0100": {
-      "id": "dual_oven_xiranite_0100",
+    "legacy_c96944de_0100": {
+      "id": "legacy_c96944de_0100",
       "definitionId": "pipe_turn_cw_1x1",
       "position": {
         "x": 12,
@@ -1149,8 +1129,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0101": {
-      "id": "dual_oven_xiranite_0101",
+    "legacy_c96944de_0101": {
+      "id": "legacy_c96944de_0101",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 12,
@@ -1160,8 +1140,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0102": {
-      "id": "dual_oven_xiranite_0102",
+    "legacy_c96944de_0102": {
+      "id": "legacy_c96944de_0102",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 12,
@@ -1171,8 +1151,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0103": {
-      "id": "dual_oven_xiranite_0103",
+    "legacy_c96944de_0103": {
+      "id": "legacy_c96944de_0103",
       "definitionId": "pipe_turn_ccw_1x1",
       "position": {
         "x": 12,
@@ -1182,8 +1162,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0104": {
-      "id": "dual_oven_xiranite_0104",
+    "legacy_c96944de_0104": {
+      "id": "legacy_c96944de_0104",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 4,
@@ -1193,8 +1173,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0105": {
-      "id": "dual_oven_xiranite_0105",
+    "legacy_c96944de_0105": {
+      "id": "legacy_c96944de_0105",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 3,
@@ -1204,8 +1184,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0106": {
-      "id": "dual_oven_xiranite_0106",
+    "legacy_c96944de_0106": {
+      "id": "legacy_c96944de_0106",
       "definitionId": "item_log_connector",
       "position": {
         "x": 4,
@@ -1215,8 +1195,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0107": {
-      "id": "dual_oven_xiranite_0107",
+    "legacy_c96944de_0107": {
+      "id": "legacy_c96944de_0107",
       "definitionId": "item_port_grinder_1",
       "position": {
         "x": 1,
@@ -1226,8 +1206,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0108": {
-      "id": "dual_oven_xiranite_0108",
+    "legacy_c96944de_0108": {
+      "id": "legacy_c96944de_0108",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 1,
@@ -1237,8 +1217,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0109": {
-      "id": "dual_oven_xiranite_0109",
+    "legacy_c96944de_0109": {
+      "id": "legacy_c96944de_0109",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 1,
@@ -1248,8 +1228,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0110": {
-      "id": "dual_oven_xiranite_0110",
+    "legacy_c96944de_0110": {
+      "id": "legacy_c96944de_0110",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 1,
@@ -1259,8 +1239,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0111": {
-      "id": "dual_oven_xiranite_0111",
+    "legacy_c96944de_0111": {
+      "id": "legacy_c96944de_0111",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 1,
@@ -1270,8 +1250,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0112": {
-      "id": "dual_oven_xiranite_0112",
+    "legacy_c96944de_0112": {
+      "id": "legacy_c96944de_0112",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 1,
@@ -1281,8 +1261,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0113": {
-      "id": "dual_oven_xiranite_0113",
+    "legacy_c96944de_0113": {
+      "id": "legacy_c96944de_0113",
       "definitionId": "item_port_storager_1",
       "position": {
         "x": 10,
@@ -1299,8 +1279,8 @@
       },
       "tags": []
     },
-    "dual_oven_xiranite_0114": {
-      "id": "dual_oven_xiranite_0114",
+    "legacy_c96944de_0114": {
+      "id": "legacy_c96944de_0114",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 3,
@@ -1310,8 +1290,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0115": {
-      "id": "dual_oven_xiranite_0115",
+    "legacy_c96944de_0115": {
+      "id": "legacy_c96944de_0115",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 4,
@@ -1321,8 +1301,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0116": {
-      "id": "dual_oven_xiranite_0116",
+    "legacy_c96944de_0116": {
+      "id": "legacy_c96944de_0116",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 4,
@@ -1332,8 +1312,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0117": {
-      "id": "dual_oven_xiranite_0117",
+    "legacy_c96944de_0117": {
+      "id": "legacy_c96944de_0117",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 4,
@@ -1343,8 +1323,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0118": {
-      "id": "dual_oven_xiranite_0118",
+    "legacy_c96944de_0118": {
+      "id": "legacy_c96944de_0118",
       "definitionId": "item_log_connector",
       "position": {
         "x": 4,
@@ -1354,8 +1334,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0119": {
-      "id": "dual_oven_xiranite_0119",
+    "legacy_c96944de_0119": {
+      "id": "legacy_c96944de_0119",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 4,
@@ -1365,8 +1345,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0120": {
-      "id": "dual_oven_xiranite_0120",
+    "legacy_c96944de_0120": {
+      "id": "legacy_c96944de_0120",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 2,
@@ -1376,8 +1356,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0121": {
-      "id": "dual_oven_xiranite_0121",
+    "legacy_c96944de_0121": {
+      "id": "legacy_c96944de_0121",
       "definitionId": "item_log_connector",
       "position": {
         "x": 3,
@@ -1387,8 +1367,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0122": {
-      "id": "dual_oven_xiranite_0122",
+    "legacy_c96944de_0122": {
+      "id": "legacy_c96944de_0122",
       "definitionId": "item_log_connector",
       "position": {
         "x": 4,
@@ -1398,8 +1378,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0123": {
-      "id": "dual_oven_xiranite_0123",
+    "legacy_c96944de_0123": {
+      "id": "legacy_c96944de_0123",
       "definitionId": "item_port_power_diffuser_1",
       "position": {
         "x": 1,
@@ -1409,8 +1389,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0124": {
-      "id": "dual_oven_xiranite_0124",
+    "legacy_c96944de_0124": {
+      "id": "legacy_c96944de_0124",
       "definitionId": "item_port_furnance_1",
       "position": {
         "x": 9,
@@ -1420,8 +1400,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0125": {
-      "id": "dual_oven_xiranite_0125",
+    "legacy_c96944de_0125": {
+      "id": "legacy_c96944de_0125",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 9,
@@ -1431,8 +1411,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0126": {
-      "id": "dual_oven_xiranite_0126",
+    "legacy_c96944de_0126": {
+      "id": "legacy_c96944de_0126",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 11,
@@ -1442,8 +1422,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0127": {
-      "id": "dual_oven_xiranite_0127",
+    "legacy_c96944de_0127": {
+      "id": "legacy_c96944de_0127",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 12,
@@ -1453,8 +1433,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0128": {
-      "id": "dual_oven_xiranite_0128",
+    "legacy_c96944de_0128": {
+      "id": "legacy_c96944de_0128",
       "definitionId": "item_port_power_diffuser_1",
       "position": {
         "x": 10,
@@ -1464,8 +1444,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0129": {
-      "id": "dual_oven_xiranite_0129",
+    "legacy_c96944de_0129": {
+      "id": "legacy_c96944de_0129",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 13,
@@ -1475,8 +1455,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0130": {
-      "id": "dual_oven_xiranite_0130",
+    "legacy_c96944de_0130": {
+      "id": "legacy_c96944de_0130",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 16,
@@ -1486,8 +1466,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0131": {
-      "id": "dual_oven_xiranite_0131",
+    "legacy_c96944de_0131": {
+      "id": "legacy_c96944de_0131",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 9,
@@ -1497,8 +1477,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0132": {
-      "id": "dual_oven_xiranite_0132",
+    "legacy_c96944de_0132": {
+      "id": "legacy_c96944de_0132",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 20,
@@ -1508,8 +1488,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0133": {
-      "id": "dual_oven_xiranite_0133",
+    "legacy_c96944de_0133": {
+      "id": "legacy_c96944de_0133",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 25,
@@ -1519,8 +1499,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0134": {
-      "id": "dual_oven_xiranite_0134",
+    "legacy_c96944de_0134": {
+      "id": "legacy_c96944de_0134",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 25,
@@ -1530,8 +1510,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0135": {
-      "id": "dual_oven_xiranite_0135",
+    "legacy_c96944de_0135": {
+      "id": "legacy_c96944de_0135",
       "definitionId": "belt_straight_1x1",
       "position": {
         "x": 25,
@@ -1541,8 +1521,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0136": {
-      "id": "dual_oven_xiranite_0136",
+    "legacy_c96944de_0136": {
+      "id": "legacy_c96944de_0136",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 25,
@@ -1552,8 +1532,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0137": {
-      "id": "dual_oven_xiranite_0137",
+    "legacy_c96944de_0137": {
+      "id": "legacy_c96944de_0137",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 26,
@@ -1563,8 +1543,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0138": {
-      "id": "dual_oven_xiranite_0138",
+    "legacy_c96944de_0138": {
+      "id": "legacy_c96944de_0138",
       "definitionId": "item_log_connector",
       "position": {
         "x": 25,
@@ -1574,8 +1554,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0139": {
-      "id": "dual_oven_xiranite_0139",
+    "legacy_c96944de_0139": {
+      "id": "legacy_c96944de_0139",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 27,
@@ -1585,8 +1565,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0140": {
-      "id": "dual_oven_xiranite_0140",
+    "legacy_c96944de_0140": {
+      "id": "legacy_c96944de_0140",
       "definitionId": "item_log_connector",
       "position": {
         "x": 26,
@@ -1596,8 +1576,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0141": {
-      "id": "dual_oven_xiranite_0141",
+    "legacy_c96944de_0141": {
+      "id": "legacy_c96944de_0141",
       "definitionId": "item_log_connector",
       "position": {
         "x": 25,
@@ -1607,8 +1587,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0142": {
-      "id": "dual_oven_xiranite_0142",
+    "legacy_c96944de_0142": {
+      "id": "legacy_c96944de_0142",
       "definitionId": "item_port_power_diffuser_1",
       "position": {
         "x": 27,
@@ -1618,8 +1598,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0143": {
-      "id": "dual_oven_xiranite_0143",
+    "legacy_c96944de_0143": {
+      "id": "legacy_c96944de_0143",
       "definitionId": "item_port_furnance_1",
       "position": {
         "x": 18,
@@ -1629,8 +1609,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0144": {
-      "id": "dual_oven_xiranite_0144",
+    "legacy_c96944de_0144": {
+      "id": "legacy_c96944de_0144",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 18,
@@ -1640,8 +1620,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0145": {
-      "id": "dual_oven_xiranite_0145",
+    "legacy_c96944de_0145": {
+      "id": "legacy_c96944de_0145",
       "definitionId": "belt_turn_ccw_1x1",
       "position": {
         "x": 17,
@@ -1651,8 +1631,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0146": {
-      "id": "dual_oven_xiranite_0146",
+    "legacy_c96944de_0146": {
+      "id": "legacy_c96944de_0146",
       "definitionId": "belt_turn_cw_1x1",
       "position": {
         "x": 20,
@@ -1662,8 +1642,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0147": {
-      "id": "dual_oven_xiranite_0147",
+    "legacy_c96944de_0147": {
+      "id": "legacy_c96944de_0147",
       "definitionId": "item_port_power_diffuser_1",
       "position": {
         "x": 18,
@@ -1673,8 +1653,8 @@
       "config": {},
       "tags": []
     },
-    "dual_oven_xiranite_0148": {
-      "id": "dual_oven_xiranite_0148",
+    "legacy_c96944de_0148": {
+      "id": "legacy_c96944de_0148",
       "definitionId": "pipe_straight_1x1",
       "position": {
         "x": 9,
@@ -1686,154 +1666,154 @@
     }
   },
   "entityOrder": [
-    "dual_oven_xiranite_0001",
-    "dual_oven_xiranite_0002",
-    "dual_oven_xiranite_0003",
-    "dual_oven_xiranite_0004",
-    "dual_oven_xiranite_0005",
-    "dual_oven_xiranite_0006",
-    "dual_oven_xiranite_0007",
-    "dual_oven_xiranite_0008",
-    "dual_oven_xiranite_0009",
-    "dual_oven_xiranite_0010",
-    "dual_oven_xiranite_0011",
-    "dual_oven_xiranite_0012",
-    "dual_oven_xiranite_0013",
-    "dual_oven_xiranite_0014",
-    "dual_oven_xiranite_0015",
-    "dual_oven_xiranite_0016",
-    "dual_oven_xiranite_0017",
-    "dual_oven_xiranite_0018",
-    "dual_oven_xiranite_0019",
-    "dual_oven_xiranite_0020",
-    "dual_oven_xiranite_0021",
-    "dual_oven_xiranite_0022",
-    "dual_oven_xiranite_0023",
-    "dual_oven_xiranite_0024",
-    "dual_oven_xiranite_0025",
-    "dual_oven_xiranite_0026",
-    "dual_oven_xiranite_0027",
-    "dual_oven_xiranite_0028",
-    "dual_oven_xiranite_0029",
-    "dual_oven_xiranite_0030",
-    "dual_oven_xiranite_0031",
-    "dual_oven_xiranite_0032",
-    "dual_oven_xiranite_0033",
-    "dual_oven_xiranite_0034",
-    "dual_oven_xiranite_0035",
-    "dual_oven_xiranite_0036",
-    "dual_oven_xiranite_0037",
-    "dual_oven_xiranite_0038",
-    "dual_oven_xiranite_0039",
-    "dual_oven_xiranite_0040",
-    "dual_oven_xiranite_0041",
-    "dual_oven_xiranite_0042",
-    "dual_oven_xiranite_0043",
-    "dual_oven_xiranite_0044",
-    "dual_oven_xiranite_0045",
-    "dual_oven_xiranite_0046",
-    "dual_oven_xiranite_0047",
-    "dual_oven_xiranite_0048",
-    "dual_oven_xiranite_0049",
-    "dual_oven_xiranite_0050",
-    "dual_oven_xiranite_0051",
-    "dual_oven_xiranite_0052",
-    "dual_oven_xiranite_0053",
-    "dual_oven_xiranite_0054",
-    "dual_oven_xiranite_0055",
-    "dual_oven_xiranite_0056",
-    "dual_oven_xiranite_0057",
-    "dual_oven_xiranite_0058",
-    "dual_oven_xiranite_0059",
-    "dual_oven_xiranite_0060",
-    "dual_oven_xiranite_0061",
-    "dual_oven_xiranite_0062",
-    "dual_oven_xiranite_0063",
-    "dual_oven_xiranite_0064",
-    "dual_oven_xiranite_0065",
-    "dual_oven_xiranite_0066",
-    "dual_oven_xiranite_0067",
-    "dual_oven_xiranite_0068",
-    "dual_oven_xiranite_0069",
-    "dual_oven_xiranite_0070",
-    "dual_oven_xiranite_0071",
-    "dual_oven_xiranite_0072",
-    "dual_oven_xiranite_0073",
-    "dual_oven_xiranite_0074",
-    "dual_oven_xiranite_0075",
-    "dual_oven_xiranite_0076",
-    "dual_oven_xiranite_0077",
-    "dual_oven_xiranite_0078",
-    "dual_oven_xiranite_0079",
-    "dual_oven_xiranite_0080",
-    "dual_oven_xiranite_0081",
-    "dual_oven_xiranite_0082",
-    "dual_oven_xiranite_0083",
-    "dual_oven_xiranite_0084",
-    "dual_oven_xiranite_0085",
-    "dual_oven_xiranite_0086",
-    "dual_oven_xiranite_0087",
-    "dual_oven_xiranite_0088",
-    "dual_oven_xiranite_0089",
-    "dual_oven_xiranite_0090",
-    "dual_oven_xiranite_0091",
-    "dual_oven_xiranite_0092",
-    "dual_oven_xiranite_0093",
-    "dual_oven_xiranite_0094",
-    "dual_oven_xiranite_0095",
-    "dual_oven_xiranite_0096",
-    "dual_oven_xiranite_0097",
-    "dual_oven_xiranite_0098",
-    "dual_oven_xiranite_0099",
-    "dual_oven_xiranite_0100",
-    "dual_oven_xiranite_0101",
-    "dual_oven_xiranite_0102",
-    "dual_oven_xiranite_0103",
-    "dual_oven_xiranite_0104",
-    "dual_oven_xiranite_0105",
-    "dual_oven_xiranite_0106",
-    "dual_oven_xiranite_0107",
-    "dual_oven_xiranite_0108",
-    "dual_oven_xiranite_0109",
-    "dual_oven_xiranite_0110",
-    "dual_oven_xiranite_0111",
-    "dual_oven_xiranite_0112",
-    "dual_oven_xiranite_0113",
-    "dual_oven_xiranite_0114",
-    "dual_oven_xiranite_0115",
-    "dual_oven_xiranite_0116",
-    "dual_oven_xiranite_0117",
-    "dual_oven_xiranite_0118",
-    "dual_oven_xiranite_0119",
-    "dual_oven_xiranite_0120",
-    "dual_oven_xiranite_0121",
-    "dual_oven_xiranite_0122",
-    "dual_oven_xiranite_0123",
-    "dual_oven_xiranite_0124",
-    "dual_oven_xiranite_0125",
-    "dual_oven_xiranite_0126",
-    "dual_oven_xiranite_0127",
-    "dual_oven_xiranite_0128",
-    "dual_oven_xiranite_0129",
-    "dual_oven_xiranite_0130",
-    "dual_oven_xiranite_0131",
-    "dual_oven_xiranite_0132",
-    "dual_oven_xiranite_0133",
-    "dual_oven_xiranite_0134",
-    "dual_oven_xiranite_0135",
-    "dual_oven_xiranite_0136",
-    "dual_oven_xiranite_0137",
-    "dual_oven_xiranite_0138",
-    "dual_oven_xiranite_0139",
-    "dual_oven_xiranite_0140",
-    "dual_oven_xiranite_0141",
-    "dual_oven_xiranite_0142",
-    "dual_oven_xiranite_0143",
-    "dual_oven_xiranite_0144",
-    "dual_oven_xiranite_0145",
-    "dual_oven_xiranite_0146",
-    "dual_oven_xiranite_0147",
-    "dual_oven_xiranite_0148"
+    "legacy_c96944de_0001",
+    "legacy_c96944de_0002",
+    "legacy_c96944de_0003",
+    "legacy_c96944de_0004",
+    "legacy_c96944de_0005",
+    "legacy_c96944de_0006",
+    "legacy_c96944de_0007",
+    "legacy_c96944de_0008",
+    "legacy_c96944de_0009",
+    "legacy_c96944de_0010",
+    "legacy_c96944de_0011",
+    "legacy_c96944de_0012",
+    "legacy_c96944de_0013",
+    "legacy_c96944de_0014",
+    "legacy_c96944de_0015",
+    "legacy_c96944de_0016",
+    "legacy_c96944de_0017",
+    "legacy_c96944de_0018",
+    "legacy_c96944de_0019",
+    "legacy_c96944de_0020",
+    "legacy_c96944de_0021",
+    "legacy_c96944de_0022",
+    "legacy_c96944de_0023",
+    "legacy_c96944de_0024",
+    "legacy_c96944de_0025",
+    "legacy_c96944de_0026",
+    "legacy_c96944de_0027",
+    "legacy_c96944de_0028",
+    "legacy_c96944de_0029",
+    "legacy_c96944de_0030",
+    "legacy_c96944de_0031",
+    "legacy_c96944de_0032",
+    "legacy_c96944de_0033",
+    "legacy_c96944de_0034",
+    "legacy_c96944de_0035",
+    "legacy_c96944de_0036",
+    "legacy_c96944de_0037",
+    "legacy_c96944de_0038",
+    "legacy_c96944de_0039",
+    "legacy_c96944de_0040",
+    "legacy_c96944de_0041",
+    "legacy_c96944de_0042",
+    "legacy_c96944de_0043",
+    "legacy_c96944de_0044",
+    "legacy_c96944de_0045",
+    "legacy_c96944de_0046",
+    "legacy_c96944de_0047",
+    "legacy_c96944de_0048",
+    "legacy_c96944de_0049",
+    "legacy_c96944de_0050",
+    "legacy_c96944de_0051",
+    "legacy_c96944de_0052",
+    "legacy_c96944de_0053",
+    "legacy_c96944de_0054",
+    "legacy_c96944de_0055",
+    "legacy_c96944de_0056",
+    "legacy_c96944de_0057",
+    "legacy_c96944de_0058",
+    "legacy_c96944de_0059",
+    "legacy_c96944de_0060",
+    "legacy_c96944de_0061",
+    "legacy_c96944de_0062",
+    "legacy_c96944de_0063",
+    "legacy_c96944de_0064",
+    "legacy_c96944de_0065",
+    "legacy_c96944de_0066",
+    "legacy_c96944de_0067",
+    "legacy_c96944de_0068",
+    "legacy_c96944de_0069",
+    "legacy_c96944de_0070",
+    "legacy_c96944de_0071",
+    "legacy_c96944de_0072",
+    "legacy_c96944de_0073",
+    "legacy_c96944de_0074",
+    "legacy_c96944de_0075",
+    "legacy_c96944de_0076",
+    "legacy_c96944de_0077",
+    "legacy_c96944de_0078",
+    "legacy_c96944de_0079",
+    "legacy_c96944de_0080",
+    "legacy_c96944de_0081",
+    "legacy_c96944de_0082",
+    "legacy_c96944de_0083",
+    "legacy_c96944de_0084",
+    "legacy_c96944de_0085",
+    "legacy_c96944de_0086",
+    "legacy_c96944de_0087",
+    "legacy_c96944de_0088",
+    "legacy_c96944de_0089",
+    "legacy_c96944de_0090",
+    "legacy_c96944de_0091",
+    "legacy_c96944de_0092",
+    "legacy_c96944de_0093",
+    "legacy_c96944de_0094",
+    "legacy_c96944de_0095",
+    "legacy_c96944de_0096",
+    "legacy_c96944de_0097",
+    "legacy_c96944de_0098",
+    "legacy_c96944de_0099",
+    "legacy_c96944de_0100",
+    "legacy_c96944de_0101",
+    "legacy_c96944de_0102",
+    "legacy_c96944de_0103",
+    "legacy_c96944de_0104",
+    "legacy_c96944de_0105",
+    "legacy_c96944de_0106",
+    "legacy_c96944de_0107",
+    "legacy_c96944de_0108",
+    "legacy_c96944de_0109",
+    "legacy_c96944de_0110",
+    "legacy_c96944de_0111",
+    "legacy_c96944de_0112",
+    "legacy_c96944de_0113",
+    "legacy_c96944de_0114",
+    "legacy_c96944de_0115",
+    "legacy_c96944de_0116",
+    "legacy_c96944de_0117",
+    "legacy_c96944de_0118",
+    "legacy_c96944de_0119",
+    "legacy_c96944de_0120",
+    "legacy_c96944de_0121",
+    "legacy_c96944de_0122",
+    "legacy_c96944de_0123",
+    "legacy_c96944de_0124",
+    "legacy_c96944de_0125",
+    "legacy_c96944de_0126",
+    "legacy_c96944de_0127",
+    "legacy_c96944de_0128",
+    "legacy_c96944de_0129",
+    "legacy_c96944de_0130",
+    "legacy_c96944de_0131",
+    "legacy_c96944de_0132",
+    "legacy_c96944de_0133",
+    "legacy_c96944de_0134",
+    "legacy_c96944de_0135",
+    "legacy_c96944de_0136",
+    "legacy_c96944de_0137",
+    "legacy_c96944de_0138",
+    "legacy_c96944de_0139",
+    "legacy_c96944de_0140",
+    "legacy_c96944de_0141",
+    "legacy_c96944de_0142",
+    "legacy_c96944de_0143",
+    "legacy_c96944de_0144",
+    "legacy_c96944de_0145",
+    "legacy_c96944de_0146",
+    "legacy_c96944de_0147",
+    "legacy_c96944de_0148"
   ],
   "slotLinks": [],
   "createdAt": "2026-03-04T15:00:38.701Z",

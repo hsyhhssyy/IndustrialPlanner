@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import {
   createBlueprintDocument,
   type BlueprintDocument,
@@ -6,6 +9,7 @@ import type {
   SlotLinkDefinition,
   WorldEntity,
 } from "@/domain/document/world-document";
+import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
 import type {
   BlueprintSimulationReport,
   BlueprintSimulationTickReport,
@@ -102,4 +106,32 @@ export function findSlotWithItem(
     throw new Error(`Expected ${deviceId} to contain ${itemType} at tick ${tickNumber}.`);
   }
   return slot;
+}
+
+/**
+ * 从 JSON 文件路径加载并校验 BlueprintDocument。
+ * 内部使用 normalizeBlueprintDocument 进行运行时校验。
+ */
+export function loadBlueprintFromFile(filePath: string): BlueprintDocument {
+  const absolutePath = resolve(filePath);
+  let content: string;
+  try {
+    content = readFileSync(absolutePath, "utf8");
+  } catch {
+    throw new Error(`Cannot read blueprint file: ${absolutePath}`);
+  }
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(content) as unknown;
+  } catch {
+    throw new Error(`Invalid JSON in blueprint file: ${absolutePath}`);
+  }
+
+  const blueprint = normalizeBlueprintDocument(payload);
+  if (blueprint === null) {
+    throw new Error(`Blueprint document validation failed: ${absolutePath}`);
+  }
+
+  return blueprint;
 }

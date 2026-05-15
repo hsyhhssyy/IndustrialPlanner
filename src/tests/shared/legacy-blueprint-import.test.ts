@@ -60,7 +60,8 @@ describe("legacy-blueprint-import", () => {
         position: { x: 3, y: 4 },
         rotation: 0,
         config: {
-          preloadInputs: [{ slotIndex: 0, itemId: "item_plant_grass_2", amount: 50 }],
+          "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_2",
+          "storageSlotGroups[0].slots[0].initialCount": 50,
         },
         tags: [],
       },
