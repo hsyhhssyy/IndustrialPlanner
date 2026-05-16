@@ -28,6 +28,7 @@ dist-ssr
 .temp/
 .playwright-cli/
 .serena
+test-results/
 
 # Deployment config (contains credentials)
 .github/deploy-config.json
