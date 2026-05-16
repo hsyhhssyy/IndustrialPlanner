@@ -190,6 +190,9 @@ function solveOutputNode(
   while (moved) {
     moved = false;
     for (const edgeId of getOrderedOutputEdgeIds(topology, state, node)) {
+      const perf = state.transient._perf;
+      if (perf !== undefined) { perf.solveOutputEdgeChecks += 1; }
+
       const edge = topology.transferEdges[edgeId];
       const edgeState = state.transient.edges[edgeId];
       if (edge === undefined || edgeState === undefined || edgeState.shadowPull !== "accept") {
@@ -298,6 +301,9 @@ function selectAcceptedSourceForEdge(options: {
   readonly targetNode: CompiledSimulationNode;
   readonly acceptRule: SimulationAcceptRule;
 }): SourceSelection | null {
+  const perf = options.state.transient._perf;
+  if (perf !== undefined) { perf.selectSourceCalls += 1; }
+
   for (const sourceSlotId of getReadableSourceSlotIds(options.sourceNode)) {
     const slot = options.topology.slots[sourceSlotId];
     const storageSlotId = resolveStorageSlotId(options.state, sourceSlotId);

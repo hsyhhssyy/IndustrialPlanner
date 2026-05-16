@@ -369,8 +369,13 @@ implements SimulationAction, SimulationInternalAction {
           console.log(
             `[SimPerf]   stage3: layers=${avg("layerCount")} anchors=${avg("anchorCount")} ` +
             `outNodes=${avg("outputNodeCount")} moves=${avg("moveCount")} ` +
-            `refreshBlocked=${avg("refreshBlockedMs")}ms (${Math.round(avg("refreshBlockedCalls"))}x) ` +
-            `getReserved=${Math.round(avg("getReservedCalls"))}x`,
+            `refreshBlocked=${avg("refreshBlockedMs")}ms(${Math.round(avg("refreshBlockedCalls"))}x)`,
+          );
+          console.log(
+            `[SimPerf]   stage3 calls: selectSrc=${Math.round(avg("selectSourceCalls"))} ` +
+            `canOut=${Math.round(avg("canOutputProvideCalls"))} findIn=${Math.round(avg("findInputSlotCalls"))} ` +
+            `remCap=${Math.round(avg("getRemainingCapacityCalls"))} getRsv=${Math.round(avg("getReservedCalls"))} ` +
+            `edgeChk=${Math.round(avg("solveOutputEdgeChecks"))}`,
           );
         }
       }

@@ -326,12 +326,12 @@ export class SimulationWorkerRuntime {
         ? { layerCount: 0, anchorCount: 0, outputNodeCount: 0, moveCount: 0, refreshBlockedMs: 0, refreshBlockedCalls: 0 }
         : undefined;
       if (this.perfEnabled) {
-        this.runtimeState!.transient._perf = { getReservedCalls: 0 };
+        this.runtimeState!.transient._perf = { getReservedCalls: 0, canOutputProvideCalls: 0, findInputSlotCalls: 0, getRemainingCapacityCalls: 0, selectSourceCalls: 0, solveOutputEdgeChecks: 0 };
       }
       solveTransferGraph(this.topology, this.runtimeState, stage3Perf);
       if (this.perfEnabled) {
         perfTiming!.stages["solveTransferGraph"] = performance.now() - t2;
-        const calls = this.runtimeState!.transient._perf?.getReservedCalls ?? 0;
+        const p = this.runtimeState!.transient._perf!;
         delete this.runtimeState!.transient._perf;
         perfTiming!.stage3 = {
           layerCount: stage3Perf!.layerCount,
@@ -340,7 +340,12 @@ export class SimulationWorkerRuntime {
           moveCount: stage3Perf!.moveCount,
           refreshBlockedMs: Math.round(stage3Perf!.refreshBlockedMs * 100) / 100,
           refreshBlockedCalls: stage3Perf!.refreshBlockedCalls,
-          getReservedCalls: calls,
+          getReservedCalls: p.getReservedCalls,
+          canOutputProvideCalls: p.canOutputProvideCalls,
+          findInputSlotCalls: p.findInputSlotCalls,
+          getRemainingCapacityCalls: p.getRemainingCapacityCalls,
+          selectSourceCalls: p.selectSourceCalls,
+          solveOutputEdgeChecks: p.solveOutputEdgeChecks,
         };
       }
 

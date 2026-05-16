@@ -74,6 +74,11 @@ export interface SimulationTickTransientState {
 
 export interface SimulationRuntimePerf {
   getReservedCalls: number;
+  canOutputProvideCalls: number;
+  findInputSlotCalls: number;
+  getRemainingCapacityCalls: number;
+  selectSourceCalls: number;
+  solveOutputEdgeChecks: number;
 }
 
 export type RuntimeNodeResolveState = "unresolved" | "visited" | "blocked-resolved";

@@ -118,6 +118,9 @@ export function findInputSlotForItem(options: {
   node: CompiledSimulationNode;
   itemType: string;
 }): string | null {
+  const perf = options.state.transient._perf;
+  if (perf !== undefined) { perf.findInputSlotCalls += 1; }
+
   // 运输组件域锁检查：若该节点所属组件已锁定为其他物品类型，拒绝接受。
   const device = options.topology.devices[options.node.deviceId];
   const componentId = device?.transportComponentId ?? null;
@@ -183,6 +186,9 @@ export function canOutputSlotProvideItem(options: {
   sourceSlotId: string;
   itemType: string;
 }): boolean {
+  const perf = options.state.transient._perf;
+  if (perf !== undefined) { perf.canOutputProvideCalls += 1; }
+
   const slot = options.topology.slots[options.sourceSlotId];
   const storageSlotId = resolveStorageSlotId(options.state, options.sourceSlotId);
   const slotState = options.state.persistent.slots[storageSlotId];
@@ -523,6 +529,9 @@ function getRemainingCapacity(
   state: SimulationMutableRuntimeState,
   slotId: string,
 ): number {
+  const perf = state.transient._perf;
+  if (perf !== undefined) { perf.getRemainingCapacityCalls += 1; }
+
   const slot = topology.slots[slotId];
   if (slot === undefined) {
     return 0;

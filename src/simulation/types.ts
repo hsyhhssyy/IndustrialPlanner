@@ -355,6 +355,11 @@ export interface TickPerfStage3Details {
   readonly refreshBlockedMs: number;
   readonly refreshBlockedCalls: number;
   readonly getReservedCalls: number;
+  readonly canOutputProvideCalls: number;
+  readonly findInputSlotCalls: number;
+  readonly getRemainingCapacityCalls: number;
+  readonly selectSourceCalls: number;
+  readonly solveOutputEdgeChecks: number;
 }
 
 export interface SimulationPerfReport {
