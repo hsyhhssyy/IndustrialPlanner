@@ -1127,7 +1127,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 
   /**
    * item_log_connector — 连接器/十字路口（1×1）
-   * 4 方向全连接，用于传送带交叉。
+   * 4 方向双通道独立运输：N↔S 与 W↔E 互不干扰。
+   * 对应《仿真运行原理》§5.1 桥类设备双通道双槽位模型。
+   * AI-CORRECTION 2026-05-16: 从单通道 synthetic 节点重构为 NS/EW 双通道。
+   *   - ns_buffer: N+S 端口绑定，share-cap 拆分 input-view/output-view
+   *   - ew_buffer: W+E 端口绑定，share-cap 拆分 input-view/output-view
+   *   - NS channel: ns_buffer → ns_buffer（同通道搬运）
+   *   - EW channel: ew_buffer → ew_buffer（同通道搬运）
+   *   禁止 N↔E、N↔W 等跨方向输送。
    */
   createEntityDefinition({
     id: "item_log_connector",
@@ -1140,33 +1147,66 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     powerDemand: 0,
     portGroups: [
       createPortGroup(
-        "item_input",
+        "item_input_ns",
         "item",
         "input",
         [
           createPort("in_n", 0, 0, "N"),
           createPort("in_s", 0, 0, "S"),
-          createPort("in_w", 0, 0, "W"),
-          createPort("in_e", 0, 0, "E"),
         ],
       ),
       createPortGroup(
-        "item_output",
+        "item_output_ns",
         "item",
         "output",
         [
           createPort("out_n", 0, 0, "N"),
           createPort("out_s", 0, 0, "S"),
+        ],
+      ),
+      createPortGroup(
+        "item_input_ew",
+        "item",
+        "input",
+        [
+          createPort("in_w", 0, 0, "W"),
+          createPort("in_e", 0, 0, "E"),
+        ],
+      ),
+      createPortGroup(
+        "item_output_ew",
+        "item",
+        "output",
+        [
           createPort("out_w", 0, 0, "W"),
           createPort("out_e", 0, 0, "E"),
         ],
       ),
     ],
-    storageSlotGroups: [],
-    recipeChannels: [
-      createRecipeChannel("default", ["synthetic-input"], ["synthetic-output"]),
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "ns_buffer",
+        "item",
+        createSlots("ns_slot", [1], "solid"),
+        "share-cap",
+      ),
+      createStorageSlotGroup(
+        "ew_buffer",
+        "item",
+        createSlots("ew_slot", [1], "solid"),
+        "share-cap",
+      ),
     ],
-    portStorageBindings: [],
+    recipeChannels: [
+      createRecipeChannel("NS", ["ns_buffer"], ["ns_buffer"]),
+      createRecipeChannel("EW", ["ew_buffer"], ["ew_buffer"]),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input_ns", "item_input_ns", "ns_buffer"),
+      createBinding("bind_item_output_ns", "item_output_ns", "ns_buffer"),
+      createBinding("bind_item_input_ew", "item_input_ew", "ew_buffer"),
+      createBinding("bind_item_output_ew", "item_output_ew", "ew_buffer"),
+    ],
   }),
   // =========================================================================
   // 管道物流设备 (uiGroup: "pipeLogistics" 或 "hidden")
@@ -1383,7 +1423,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 
   /**
    * item_pipe_connector — 管道连接器/十字路口（1×1）
-   * 4 方向全连接，ChevronHidden=不显示方向箭头。
+   * 4 方向双通道独立运输：N↔S 与 W↔E 互不干扰，ChevronHidden=不显示方向箭头。
+   * 对应《仿真运行原理》§5.1 桥类设备双通道双槽位模型。
+   * AI-CORRECTION 2026-05-16: 从单通道 synthetic 节点重构为 NS/EW 双通道。
+   *   - ns_buffer: N+S 端口绑定，share-cap 拆分 input-view/output-view
+   *   - ew_buffer: W+E 端口绑定，share-cap 拆分 input-view/output-view
+   *   - NS channel: ns_buffer → ns_buffer（同通道搬运）
+   *   - EW channel: ew_buffer → ew_buffer（同通道搬运）
+   *   禁止 N↔E、N↔W 等跨方向输送。
    */
   createEntityDefinition({
     id: "item_pipe_connector",
@@ -1396,33 +1443,66 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     powerDemand: 0,
     portGroups: [
       createPortGroup(
-        "fluid_input",
+        "fluid_input_ns",
         "fluid",
         "input",
         [
           createPort("in_n", 0, 0, "N"),
           createPort("in_s", 0, 0, "S"),
-          createPort("in_w", 0, 0, "W"),
-          createPort("in_e", 0, 0, "E"),
         ],
       ),
       createPortGroup(
-        "fluid_output",
+        "fluid_output_ns",
         "fluid",
         "output",
         [
           createPort("out_n", 0, 0, "N"),
           createPort("out_s", 0, 0, "S"),
+        ],
+      ),
+      createPortGroup(
+        "fluid_input_ew",
+        "fluid",
+        "input",
+        [
+          createPort("in_w", 0, 0, "W"),
+          createPort("in_e", 0, 0, "E"),
+        ],
+      ),
+      createPortGroup(
+        "fluid_output_ew",
+        "fluid",
+        "output",
+        [
           createPort("out_w", 0, 0, "W"),
           createPort("out_e", 0, 0, "E"),
         ],
       ),
     ],
-    storageSlotGroups: [],
-    recipeChannels: [
-      createRecipeChannel("default", ["synthetic-input"], ["synthetic-output"]),
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "ns_buffer",
+        "fluid",
+        createSlots("ns_slot", [1], "liquid"),
+        "share-cap",
+      ),
+      createStorageSlotGroup(
+        "ew_buffer",
+        "fluid",
+        createSlots("ew_slot", [1], "liquid"),
+        "share-cap",
+      ),
     ],
-    portStorageBindings: [],
+    recipeChannels: [
+      createRecipeChannel("NS", ["ns_buffer"], ["ns_buffer"]),
+      createRecipeChannel("EW", ["ew_buffer"], ["ew_buffer"]),
+    ],
+    portStorageBindings: [
+      createBinding("bind_fluid_input_ns", "fluid_input_ns", "ns_buffer"),
+      createBinding("bind_fluid_output_ns", "fluid_output_ns", "ns_buffer"),
+      createBinding("bind_fluid_input_ew", "fluid_input_ew", "ew_buffer"),
+      createBinding("bind_fluid_output_ew", "fluid_output_ew", "ew_buffer"),
+    ],
   }),
 
   /**
